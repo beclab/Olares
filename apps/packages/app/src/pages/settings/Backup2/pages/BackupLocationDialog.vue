@@ -88,7 +88,7 @@
 			</account-item>
 
 			<div
-				class="row justify-start items-center item-empty cursor-pointer integration-account-item"
+				class="row justify-start items-center item-empty cursor-pointer q-mt-md integration-account-item"
 				@click="addAccount"
 			>
 				<q-icon class="text-info" size="30px" name="sym_r_add" />

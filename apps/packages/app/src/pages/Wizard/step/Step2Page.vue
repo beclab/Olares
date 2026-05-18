@@ -21,7 +21,6 @@
 					@update:model-value="updateLanguage"
 					class="Account_input"
 					popup-content-class="options_selected_Account"
-					style="background: #f6f6f6"
 				>
 					<template v-slot:option="{ itemProps, opt, selected, toggleOption }">
 						<q-item v-bind="itemProps">
@@ -69,7 +68,7 @@ const updateLanguage = (value: 'en-US' | 'zh-CN') => {
 };
 
 const click = async (): Promise<boolean> => {
-	if (tokenStore.user.enableReverseProxy) {
+	if (tokenStore.user.enableReverseProxy && tokenStore.isMainAccountWizard()) {
 		tokenStore.wizard.network.enable_tunnel = true;
 		tokenStore.setStep(3);
 	} else {

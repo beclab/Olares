@@ -1,3 +1,5 @@
+import lang from '../../zh-CN';
+
 export default {
 	launch_input_placehoder: '搜索',
 	launch_no_result: '没有结果',
@@ -8,6 +10,20 @@ export default {
 	home_start: '开始',
 	home_create: '创建新应用',
 	home_update: '上传 chart 包',
+	home_upload_compose: '上传 Docker Compose',
+	home_compose_title: 'Compose 标题',
+	home_compose_title_hint: '为此 Docker Compose 指定一个标题',
+	home_compose_title_rules: '请输入 Compose 标题',
+	home_compose_file_hint: '点击选择 docker-compose.yml 文件',
+	home_compose_file_required: '请选择 docker-compose.yml 文件',
+	home_compose_entrance_tip:
+		'为了识别应用入口，请在作为入口的 service 下添加以下标签：',
+	home_compose_entrance_label: '标识应用入口',
+	home_compose_entrance_why: '系统会根据此标签自动生成对应的 Deployment 配置',
+	home_compose_entrance_example_title: '完整示例',
+	home_compose_entrance_learn_more: '了解更多',
+	home_compose_entrance_note:
+		'注意：如果您的 Compose 文件中有多个服务，只需在主入口服务上添加此标签',
 	home_recent: '最近',
 	home_recent_resc_1: '您最近开发的应用',
 	home_recent_resc_2: '将显示在这里',
@@ -17,6 +33,7 @@ export default {
 	home_doc_3: '理解 Olares 应用 chart',
 	home_doc_4: 'OlaresManifest 配置指南 ',
 	home_doc_5: '如何提交应用',
+	home_doc_6: '如何为你的应用添加图标和其他图片',
 	home_visit_1: '访问',
 	home_visit_2: '了解更多信息。',
 	home_appname: '应用名称',
@@ -83,6 +100,8 @@ export default {
 	btn_binding: '正在绑定',
 	btn_open_ide: '打开 IDE',
 	btn_rename: '重命名',
+	btn_copy: '复制',
+	btn_copied: '已复制',
 	application: '应用',
 	container_list: '开发容器列表',
 	requirementNotSpecified: '未指定要求',
@@ -287,6 +306,10 @@ export default {
 		rename_failed: '应用重命名失败',
 		delete_file_success: '删除成功',
 		delete_file_failed: '删除失败',
+		upload_compose_success: 'Docker Compose 上传成功',
+		upload_compose_failed: 'Docker Compose 上传失败',
+		copy_success: '复制成功',
+		download_success: '下载成功',
 		deleteTip: '确定删除 {name} 吗？',
 		save_file: '是否保存当前文件？',
 		rename_file: '重命名',
@@ -337,21 +360,14 @@ export default {
 	},
 
 	appInstallStatus: {
-		pending: '等待中',
 		downloading: '下载中',
 		processing: '处理中',
 		canceled: '已取消',
-		failed: '失败',
 		completed: '已完成',
-		installing: '安装中',
 		upgrading: '升级中',
-		uninstalling: '卸载中',
 		uninstalled: '已卸载',
-		resuming: '恢复中',
 		resumed: '已恢复',
-		canceling: '取消中',
-		stopping: '停止中',
-		running: '运行中'
+		...lang.app
 	},
 
 	waitingForInstall: '等待安装',
@@ -401,5 +417,24 @@ export default {
 	image_ports_rule_1: '端口号格式不正确，请使用逗号分割的数字',
 	image_ports_rule_2: '端口号必须在1-65535之间',
 	image_ports_rule_3: '不能使用端口5000、80、443',
-	installing: '资源创建中'
+	installing: '资源创建中',
+
+	editor: {
+		format: '格式化',
+		find: '查找',
+		replace: '替换',
+		foldAll: '折叠全部',
+		unfoldAll: '展开全部',
+		problems: '问题',
+		undo: '撤销',
+		redo: '重做',
+		formatDocument: '格式化文档',
+		findAndReplace: '查找和替换',
+		toggleFold: '切换折叠',
+		jumpToLine: '跳转到行',
+		noProblems: '没有问题',
+		errorCount: '{count} 个错误',
+		warningCount: '{count} 个警告',
+		formatOnSave: '保存时自动格式化'
+	}
 };

@@ -4,13 +4,14 @@ import { DownloadFileOptions, ProgressStatus } from '@capacitor/filesystem';
 export interface FileDownloadOptions extends DownloadFileOptions {
 	id: number;
 	fileSize?: number;
+	auth_token: string;
 }
 export interface FileDownloadProgressStatus extends ProgressStatus {
 	id: number;
 }
 
 export interface FileDownloadMoreResult {
-	code: number; //0 成功 1失败
+	code: number; // 0 success, 1 failure
 	message: string;
 	path: string;
 	id: number;

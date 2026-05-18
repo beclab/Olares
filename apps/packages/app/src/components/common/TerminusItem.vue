@@ -49,7 +49,11 @@
 					<slot name="title"></slot>
 				</div>
 
-				<div class="detail text-body3 text-ink-2" v-if="$slots.detail">
+				<div
+					class="detail text-body3 text-ink-2"
+					:class="detailClasses"
+					v-if="$slots.detail"
+				>
 					<slot name="detail"></slot>
 				</div>
 			</div>
@@ -159,6 +163,11 @@ const prop = defineProps({
 		type: Number,
 		required: false,
 		default: 16
+	},
+	detailClasses: {
+		type: String,
+		required: false,
+		default: ''
 	}
 });
 

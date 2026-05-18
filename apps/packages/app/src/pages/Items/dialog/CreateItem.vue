@@ -39,9 +39,15 @@
 						<template
 							v-slot:option="{ itemProps, opt, selected, toggleOption }"
 						>
-							<q-item v-bind="itemProps">
-								<q-item-section>
-									<q-item-label>{{ opt.label }}</q-item-label>
+							<q-item
+								v-bind="itemProps"
+								:style="{ 'max-width': isWeb ? '500px' : 'calc(100vw - 80px)' }"
+							>
+								<q-item-section
+									class="ellipsis"
+									style="overflow: hidden; text-overflow: ellipsis"
+								>
+									{{ opt.label }}
 								</q-item-section>
 								<q-item-section side>
 									<q-checkbox
@@ -73,7 +79,7 @@
 						@click="selectTemplate(item)"
 						:active="isSelected(item)"
 						class="item-web q-px-sm"
-						active-class="border-color-yellow activeItem text-black"
+						active-class="border-color-primary activeItem text-black"
 						style="padding-top: 10px; padding-bottom: 10px"
 					>
 						<q-item-section side class="q-ml-xs q-pr-sm">
@@ -157,7 +163,7 @@
 						@click="selectTemplate(item)"
 						:active="isSelected(item)"
 						class="item-web q-px-xs q-py-sm"
-						active-class="border-color-yellow activeItem text-black"
+						active-class="border-color-primary activeItem text-black"
 					>
 						<q-item-section side class="q-ml-xs q-pr-sm">
 							<q-icon :name="showItemIcon(item.icon)" />
@@ -300,11 +306,11 @@ onMounted(async () => {
 .select-vault {
 	::v-deep(.q-field__control) {
 		background: $background-1 !important;
-		color: $ink-2;
+		color: $ink-2 !important;
 	}
 
 	::v-deep(.q-field__native) {
-		color: $ink-2;
+		color: $ink-2 !important;
 	}
 }
 .s-dialog-plugin-web {

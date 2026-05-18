@@ -55,7 +55,7 @@
 				<bt-form-item :width-separator="false">
 					<template #title>
 						<span class="text-body1 text-ink-1">
-							{{ t('Reverse Proxy') }}
+							{{ t('Reverse proxy') }}
 							<q-btn dense>
 								<q-icon name="sym_r_help" size="16px" color="ink-3"></q-icon>
 								<q-tooltip>{{

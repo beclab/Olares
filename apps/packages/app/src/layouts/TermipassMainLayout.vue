@@ -1,17 +1,21 @@
 <template>
 	<div
 		class="container"
-		:class="$q.dark.isActive ? 'container-bg-dark' : 'container-bg-light'"
+		:class="
+			$q.dark.isActive ? 'theme-desktop-dark-bg' : 'theme-desktop-light-bg'
+		"
 	>
 		<DesktopDefaultHeaderView
 			class="headerBar"
 			:height="30"
-			v-if="$q.platform.is.win && $q.platform.is.electron"
+			v-if="
+				($q.platform.is.win || $q.platform.is.linux) && $q.platform.is.electron
+			"
 		/>
 		<div
 			class="contain-content"
 			:class="
-				$q.platform.is.win && $q.platform.is.electron
+				($q.platform.is.win || $q.platform.is.linux) && $q.platform.is.electron
 					? 'contain-content-win'
 					: $q.platform.is.ipad
 					? 'contain-content-ipad'
@@ -109,7 +113,7 @@ import { useUserStore } from '../stores/user';
 import { useMenuStore } from '../stores/menu';
 import { useSearchStore } from '../stores/search';
 
-import FilesMainLayout from './FilesMainLayout.vue';
+import FilesMainLayout from './files/LayoutPc.vue';
 import VaultMainLayout from './MainLayout.vue';
 import TransferLayout from './TransferLayout.vue';
 
@@ -129,7 +133,9 @@ import TermipassMobileUnlockContent from '../components/unlock/mobile/TermipassU
 
 import { LayoutMenuIdetify } from '../utils/constants';
 import { useI18n } from 'vue-i18n';
-import '../css/terminus.scss';
+
+import HotkeyManager from 'src/directives/hotkeyManager';
+import { FILES_HOTKEY } from 'src/api/files/hotKeys';
 
 const route = useRoute();
 const userStore = useUserStore();
@@ -140,30 +146,20 @@ const { t } = useI18n();
 
 const showSearchDialog = ref(false);
 
-const keydownEnter = (event: any) => {
-	if ((event.metaKey || event.ctrlKey) && event.keyCode === 75) {
-		event.stopPropagation();
-		showSearchDialog.value = !showSearchDialog.value;
-	}
-};
-
-window.addEventListener('keydown', keydownEnter);
-
 onMounted(async () => {
 	if (process.env.PLATFORM === 'DESKTOP' || process.env.PLATFORM == 'MOBILE') {
-		import('../css/layout-desktop.scss').then(() => {});
+		import('../css/larepass/layout-desktop.scss').then(() => {});
 	}
 
 	menuStore.pushTerminusMenuCache(LayoutMenuIdetify.FILES);
 
 	getAppPlatform().homeMounted();
-	console.log('request app list');
 
-	await searchStore.getAppList();
-
-	// if ($q.platform.is.android) {
-	// 	StatusBar.setOverlaysWebView({ overlay: true });
-	// }
+	HotkeyManager.registerHotkeys({
+		[FILES_HOTKEY.DESKTOP_SEARCH.DISPLAY]: () => {
+			showSearchDialog.value = !showSearchDialog.value;
+		}
+	});
 });
 
 watch(
@@ -180,6 +176,11 @@ watch(
 
 onUnmounted(() => {
 	getAppPlatform().homeUnMounted();
+	HotkeyManager.unregisterHotkeys({
+		[FILES_HOTKEY.DESKTOP_SEARCH.DISPLAY]: () => {
+			showSearchDialog.value = !showSearchDialog.value;
+		}
+	});
 });
 
 const changeSearchDialog = (value: boolean) => {
@@ -188,25 +189,6 @@ const changeSearchDialog = (value: boolean) => {
 </script>
 
 <style lang="scss" scoped>
-.container-bg-light {
-	background: linear-gradient(
-			234.72deg,
-			rgba(254, 251, 228, 0.9) 3.44%,
-			rgba(255, 255, 255, 0.9) 24.04%,
-			rgba(251, 251, 233, 0.9) 54.51%,
-			rgba(255, 243, 183, 0.9) 77.26%,
-			rgba(255, 255, 243, 0.9) 99.53%
-		),
-		linear-gradient(
-			180deg,
-			rgba(254, 255, 228, 0.3) 1.13%,
-			rgba(255, 229, 135, 0.3) 98.87%
-		);
-}
-.container-bg-dark {
-	background: rgba(22, 22, 21, 1);
-}
-
 .container {
 	width: 100vw;
 	height: 100vh;

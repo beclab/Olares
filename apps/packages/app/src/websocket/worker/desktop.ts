@@ -20,6 +20,7 @@ export class DesktopWebsocketBean extends BaseWebsocketBean {
 
 			const item: NotificationItem = {
 				appName: message.message?.appName ? message.message.appName : undefined,
+				icon: message.message?.icon ? message.message.icon : undefined,
 				createTime: time,
 				updateTime: time,
 				childrens: [

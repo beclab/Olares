@@ -109,20 +109,18 @@
 
 <script setup lang="ts">
 import BtLoading from '../../../components/base/BtLoading.vue';
-import { isUpgradable, uninstalledApp } from '../../../constant/config';
 import { uploadLocalPackage } from '../../../api/market/private/operations';
+import { isUpgradable, uninstalledApp } from '../../../constant/config';
+import { MARKET_SOURCE_OFFICIAL } from '../../../constant/constants';
+import { usePreCheckStore } from '../../../stores/market/preCheck';
 import { useCenterStore } from '../../../stores/market/center';
 import { AppService } from '../../../stores/market/appService';
-import { getRequireImage } from '../../../utils/imageUtils';
-import { useUserStore } from '../../../stores/market/user';
-import { withMountedGuard } from './withMountedGuard';
+import { useAppStore } from '../../../stores/market/appStore';
 import { bus, BUS_EVENT, busEmit } from '../../../utils/bus';
+import { getRequireImage } from '../../../utils/imageUtils';
+import { withMountedGuard } from './withMountedGuard';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
-import {
-	APP_STATUS,
-	MARKET_SOURCE_OFFICIAL
-} from '../../../constant/constants';
 import {
 	ref,
 	defineProps,
@@ -140,6 +138,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['close']);
 const centerStore = useCenterStore();
+const appStore = useAppStore();
 
 const enum UploadStatus {
 	PENDING = 'pending',
@@ -177,19 +176,19 @@ onUnmounted(() => {
 });
 
 watch(
-	() => [centerStore.appFullInfoMap, centerStore.appStatusMap],
+	() => [appStore.appFullInfoMap, appStore.appStatusMap],
 	() => {
 		if (
 			appName.value &&
-			centerStore
+			appStore
 				.getSourceInstalledApp(MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD)
 				.includes(appName.value)
 		) {
-			const appStatus = centerStore.getAppStatus(
+			const appStatus = appStore.getAppStatus(
 				appName.value,
 				MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD
 			);
-			const fullLatest = centerStore.getAppFullInfo(
+			const fullLatest = appStore.getAppFullInfo(
 				appName.value,
 				MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD
 			);
@@ -284,11 +283,11 @@ const cancelText = computed(() => {
 });
 
 const onOKClick = () => {
-	const appStatus = centerStore.getAppStatus(
+	const appStatus = appStore.getAppStatus(
 		appName.value,
 		MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD
 	);
-	const userStore = useUserStore();
+	const preCheckStore = usePreCheckStore();
 	switch (chartStatus.value) {
 		case UploadStatus.SUCCESS:
 			if (
@@ -310,8 +309,8 @@ const onOKClick = () => {
 					return;
 				}
 
-				const errorGroup = userStore.frontendPreflight(
-					centerStore.getAppFullInfo(
+				const errorGroup = preCheckStore.frontendPreflight(
+					appStore.getAppFullInfo(
 						appName.value,
 						MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD
 					).app_info.app_entry
@@ -398,6 +397,7 @@ function cancelUpload() {
 	width: 72px;
 	height: 72px;
 }
+
 .upload-tips {
 	width: calc(100% - 87px);
 

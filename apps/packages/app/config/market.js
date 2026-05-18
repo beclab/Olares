@@ -1,5 +1,5 @@
 const boot = ['i18n', 'marketUI', 'baseAxios', 'application/market'];
-const css = ['market.scss'];
+const css = ['market/app.scss', 'quasar-layout.scss'];
 
 const getConfig = (ctx) => {
 	if (!ctx.dev) {
@@ -34,7 +34,8 @@ const getConfig = (ctx) => {
 			distDir: 'dist/apps/market'
 		},
 		sourceFiles: {
-			indexHtmlTemplate: 'src/index.template.market.html'
+			indexHtmlTemplate: 'src/index.template.market.html',
+			variables: 'market/variables.scss'
 		},
 		htmlVariables: {
 			productName: process.env.PUBLIC_URL
@@ -45,7 +46,7 @@ const getConfig = (ctx) => {
 		devServer: {
 			proxy: proxyConfig,
 			host: process.env.PUBLIC_URL ? 'localhost' : undefined,
-			https: true
+			https: process.env.PROTOCOL === 'https://'
 		}
 	};
 };

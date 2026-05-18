@@ -5,11 +5,11 @@ import { bus } from '@apps/dashboard/src/utils/bus';
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 import { WebsocketSharedWorkerEnum } from 'src/websocket/interface';
 import { throttle } from 'lodash';
-
+import { i18n } from '../boot/dashboard-i18n';
 export class DashboardApplication extends NormalApplication {
 	applicationName = 'dashboard';
 	async appLoadPrepare(data: any): Promise<void> {
-		super.appLoadPrepare(data);
+		super.appLoadPrepare({ ...data, i18n });
 		const socketStore = useWebsocketManager2Store();
 		socketStore.start();
 

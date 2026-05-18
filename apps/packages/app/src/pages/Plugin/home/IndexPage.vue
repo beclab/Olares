@@ -55,6 +55,7 @@
 						<WiseAbilityTooltipContainer
 							:tooltip="collectTooltip"
 							v-if="wiseActionShow"
+							style="display: none"
 						>
 							<CustomButton
 								outline
@@ -93,42 +94,57 @@
 								</template>
 							</CustomButton>
 						</WiseAbilityTooltipContainer>
-						<CustomButton
-							outline
-							class="q-px-md"
-							@click="handleTransToggle"
-							:loading="translateLoading"
-						>
-							<template #label>
-								<div
-									class="row items-center flex-gap-xs no-wrap"
-									style="white-space: nowrap"
-								>
+
+						<BtTooltip2>
+							<CustomButton
+								outline
+								class="q-px-md"
+								@click="handleTransToggle"
+								:loading="translateLoading"
+								:disable="!contentScriptReady"
+							>
+								<template #label>
 									<div
-										class="relative-position"
-										style="height: 16px; height: 16px; flex: 0 0 16px"
+										class="row items-center flex-gap-xs no-wrap"
+										style="white-space: nowrap"
 									>
-										<q-icon
-											name="sym_r_translate"
-											size="16px"
-											color="ink-1"
-											class="absolute-center"
-										/>
-										<img
-											:src="checkedIcon"
-											alt="checked"
-											style="width: 8px; height: 8px"
-											class="absolute-bottom-right z-top"
-											v-show="transOpen"
-										/>
+										<div
+											class="relative-position"
+											style="height: 16px; height: 16px; flex: 0 0 16px"
+										>
+											<q-icon
+												name="sym_r_translate"
+												size="16px"
+												color="ink-1"
+												class="absolute-center"
+											/>
+											<img
+												:src="checkedIcon"
+												alt="checked"
+												style="width: 8px; height: 8px"
+												class="absolute-bottom-right z-top"
+												v-show="transOpen"
+											/>
+										</div>
+										<span class="text-ink-1 text-subtitle3">{{
+											transOpen ? $t('bex.show_original') : $t('bex.translate')
+										}}</span>
 									</div>
-									<span class="text-ink-1 text-subtitle3">{{
-										transOpen ? $t('bex.show_original') : $t('bex.translate')
-									}}</span>
+								</template>
+							</CustomButton>
+
+							<template #tooltip v-if="!contentScriptReady">
+								<div class="text-body3 translate-tooltip-wrapper">
+									{{ $t('bex.translate_script_not_ready') }}
 								</div>
 							</template>
-						</CustomButton>
-						<CookieUploadButton v-if="wiseActionShow"></CookieUploadButton>
+						</BtTooltip2>
+						<CookieUploadButton
+							style="display: none"
+							v-if="wiseActionShow"
+							:tooltip="validate?.reason"
+							:disable="!validate.valid"
+						></CookieUploadButton>
 					</div>
 				</div>
 			</template>
@@ -151,7 +167,10 @@ import { useAppsStore } from 'src/stores/bex/apps';
 import { computed, onMounted, onUnmounted, watch } from 'vue';
 import EmptyData from 'src/pages/Plugin/components/EmptyData.vue';
 import CustomButton from 'src/pages/Plugin/components/CustomButton.vue';
-import { createTabChangeListenerInCurrentWindow } from 'src/utils/bex/tabs';
+import {
+	createTabChangeListenerInCurrentWindow,
+	TAB_CHANGE_TYPE
+} from 'src/utils/bex/tabs';
 import AccountHeader from 'src/pages/Plugin/containers/AccountHeader.vue';
 import { useTranslate } from 'src/composables/mobile/useTranslate';
 import checkedIcon from 'src/assets/plugin/checked.svg';
@@ -162,6 +181,11 @@ import { URL_VALID_STATUS } from 'src/utils/url2';
 import CookieUploadButton from 'src/pages/Mobile/collect/CookieContent2.vue';
 import { useCookieStatus } from 'src/composables/bex/useCookieStatus';
 import { useWiseAbility } from 'src/composables/common/useWiseAbility';
+import {
+	bexFrontBusOn,
+	bexFrontBusOff
+} from 'src/platform/interface/bex/utils';
+import BtTooltip2 from 'src/components/base/BtTooltip2.vue';
 let listener;
 
 const appsStore = useAppsStore();
@@ -184,7 +208,9 @@ const {
 	handleTransToggle,
 	transOpen,
 	loading: translateLoading,
-	getTransRule
+	getTransRule,
+	contentScriptReady,
+	checkContentScriptReady
 } = useTranslate();
 
 const { ytdlpRequire, cookieRequire, cookieIcon, collectSiteStore } =
@@ -237,6 +263,15 @@ onMounted(() => {
 
 	listener = createTabChangeListenerInCurrentWindow((info) => {
 		handleActivated(info);
+
+		if (info.type === TAB_CHANGE_TYPE.STATUS_CHANGE) {
+			return;
+		}
+		getTransRule();
+	});
+
+	bexFrontBusOn('TRANSLATE_SCRIPT_READY', () => {
+		checkContentScriptReady();
 	});
 });
 
@@ -247,6 +282,8 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .bex-home-container {
+	position: relative;
+	min-height: 100vh;
 	.apps-list {
 		border-radius: 12px;
 		border: 1px solid $separator-2;
@@ -268,5 +305,9 @@ onUnmounted(() => {
 	text-underline-offset: auto;
 	text-underline-position: from-font;
 	cursor: pointer;
+}
+.translate-tooltip-wrapper {
+	width: 150px;
+	white-space: break-spaces;
 }
 </style>

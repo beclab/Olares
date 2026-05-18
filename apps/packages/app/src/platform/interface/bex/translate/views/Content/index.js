@@ -16,6 +16,7 @@ import { useTranslate } from '../../hooks/Translate';
 import { styled, css } from '@mui/material/styles';
 import { APP_LCNAME } from '../../config';
 import interpreter from '../../libs/interpreter';
+import { shouldUseNewline } from '../../libs/utils';
 
 const LINE_STYLES = {
 	[OPT_STYLE_LINE]: 'solid',
@@ -27,10 +28,10 @@ const LINE_STYLES = {
 const StyledSpan = styled('span')`
 	${({ textStyle, textDiyStyle, bgColor }) => {
 		switch (textStyle) {
-			case OPT_STYLE_LINE: // 下划线
-			case OPT_STYLE_DOTLINE: // 点状线
-			case OPT_STYLE_DASHLINE: // 虚线
-			case OPT_STYLE_WAVYLINE: // 波浪线
+			case OPT_STYLE_LINE:
+			case OPT_STYLE_DOTLINE:
+			case OPT_STYLE_DASHLINE:
+			case OPT_STYLE_WAVYLINE:
 				return css`
 					opacity: 0.6;
 					-webkit-opacity: 0.6;
@@ -49,7 +50,7 @@ const StyledSpan = styled('span')`
 						-webkit-opacity: 1;
 					}
 				`;
-			case OPT_STYLE_FUZZY: // 模糊
+			case OPT_STYLE_FUZZY:
 				return css`
 					filter: blur(0.2em);
 					-webkit-filter: blur(0.2em);
@@ -58,12 +59,12 @@ const StyledSpan = styled('span')`
 						-webkit-filter: none;
 					}
 				`;
-			case OPT_STYLE_HIGHLIGHT: // 高亮
+			case OPT_STYLE_HIGHLIGHT:
 				return css`
 					color: #fff;
 					background-color: ${bgColor || DEFAULT_COLOR};
 				`;
-			case OPT_STYLE_BLOCKQUOTE: // 引用
+			case OPT_STYLE_BLOCKQUOTE:
 				return css`
 					opacity: 0.6;
 					-webkit-opacity: 0.6;
@@ -75,7 +76,7 @@ const StyledSpan = styled('span')`
 						-webkit-opacity: 1;
 					}
 				`;
-			case OPT_STYLE_DIY: // 自定义
+			case OPT_STYLE_DIY:
 				return textDiyStyle;
 			default:
 				return ``;
@@ -116,7 +117,6 @@ export default function Content({ q, keeps, translator, $el }) {
 	}, [translator.eventName]);
 
 	useEffect(() => {
-		// 运行钩子函数
 		if (text && transEndHook?.trim()) {
 			interpreter.run(`exports.transEndHook = ${transEndHook}`);
 			interpreter.exports.transEndHook($el, q, text, keeps);
@@ -127,8 +127,8 @@ export default function Content({ q, keeps, translator, $el }) {
 		if (transOnly === 'true') {
 			return '';
 		}
-		return q.length >= newlineLength ? <br /> : ' ';
-	}, [q, transOnly, newlineLength]);
+		return shouldUseNewline($el, q, newlineLength) ? <br /> : ' ';
+	}, [q, transOnly, newlineLength, $el]);
 
 	const styles = useMemo(
 		() => ({

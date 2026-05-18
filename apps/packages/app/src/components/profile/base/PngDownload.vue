@@ -1,10 +1,8 @@
 <template>
 	<div class="png-download-root row justify-between items-center">
 		<div class="column">
-			<span class="png-download-title">{{ t('share.download_png') }}</span>
-			<span class="png-download-label">{{
-				t('share.high_quality_image')
-			}}</span>
+			<span class="png-download-title">{{ t('download_png') }}</span>
+			<span class="png-download-label">{{ t('high_quality_image') }}</span>
 		</div>
 		<div class="row justify-center">
 			<span class="png-download-tip">.png</span>
@@ -27,12 +25,11 @@
 
 <script lang="ts" setup>
 import html2canvas from 'html2canvas';
-import { useQuasar } from 'quasar';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getRequireImage } from 'src/utils/helper';
+import { notifyFailed } from 'src/utils/settings/btNotify';
 const { t } = useI18n();
-const $q = useQuasar();
 const props = defineProps({
 	elementId: {
 		type: String,
@@ -65,7 +62,7 @@ const download = () => {
 				document.body.removeChild(eleLink);
 			})
 			.catch((e) => {
-				$q.notify(`File download failed : ${e.message}`);
+				notifyFailed(`File download failed : ${e.message}`);
 			})
 			.finally(() => {
 				setTimeout(() => {
@@ -73,7 +70,7 @@ const download = () => {
 				}, 1000);
 			});
 	} else {
-		$q.notify('File download failed');
+		notifyFailed('File download failed');
 	}
 };
 </script>

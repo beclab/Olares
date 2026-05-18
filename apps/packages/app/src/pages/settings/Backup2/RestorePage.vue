@@ -107,7 +107,7 @@ const router = useRouter();
 const backupStore = useBackupStore();
 
 function newRestore(type: BackupLocationType) {
-	router.push('/backup/restoreOptions/' + type);
+	router.push('/restore/restoreOptions/' + type);
 }
 </script>
 

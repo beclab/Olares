@@ -32,7 +32,7 @@ import { computed, ref } from 'vue';
 
 import { createPatch } from 'diff';
 import { parse, html, Diff2HtmlConfig } from 'diff2html';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import 'diff2html/bundles/css/diff2html.min.css';
 import { useQuasar } from 'quasar';
 

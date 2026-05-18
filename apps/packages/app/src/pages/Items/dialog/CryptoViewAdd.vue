@@ -387,7 +387,7 @@ export default {
 				//         reader.readAsText(input[0]);
 				//         reader.onload = async function () {
 				//             if (reader.result) {
-				//                 //显示文件内容
+				//                 // Display file content
 				//                 const result = reader.result;
 				//                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 				//                 Wallet

@@ -8,8 +8,6 @@ import { notifyFailed, notifySuccess } from 'src/utils/notifyRedefinedUtil';
 import { computed, ref } from 'vue';
 import { i18n } from 'src/boot/i18n';
 import { useFilesStore } from 'src/stores/files';
-import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
-import en from 'element-plus/dist/locale/en.mjs';
 import { generatePasword } from 'src/utils/format';
 import share from '../../../../api/files/v2/common/share';
 import { useDataStore } from 'src/stores/data';
@@ -59,6 +57,8 @@ export function usePublicShare(origin_id: number) {
 
 	const store = useDataStore();
 
+	const isHttp = ref(window.location.protocol == 'http:');
+
 	const copyShareLink = (e) => {
 		e.stopPropagation();
 		const copyTxt = getShareLink.value;
@@ -72,17 +72,18 @@ export function usePublicShare(origin_id: number) {
 			});
 	};
 
-	const copyLinkAndPassword = (e) => {
-		e.stopPropagation();
-
-		const copyTxt =
-			i18n.global.t('Link') +
-			':' +
-			getShareLink.value +
-			'<br>' +
-			i18n.global.t('password') +
-			':' +
-			publicPassword.value;
+	const copyLinkAndPassword = (includePassword = true) => {
+		let copyTxt = getShareLink.value;
+		if (includePassword) {
+			copyTxt =
+				i18n.global.t('Link') +
+				':' +
+				getShareLink.value +
+				'<br>' +
+				i18n.global.t('password') +
+				':' +
+				publicPassword.value;
+		}
 
 		getApplication()
 			.copyToClipboard(copyTxt.replace(/<br>/g, '\r\n'))
@@ -100,10 +101,6 @@ export function usePublicShare(origin_id: number) {
 		}
 		return '';
 	});
-
-	const lang = computed(() =>
-		i18n.global.locale.value.substring(0, 2) === 'zh' ? zhCn : en
-	);
 
 	const fileLimitSize = () => {
 		let base = 1024 * 1024;
@@ -214,7 +211,6 @@ export function usePublicShare(origin_id: number) {
 
 	return {
 		copyShareLink,
-		lang,
 		shareResult,
 		publicPassword,
 		setExpirationInDays,
@@ -233,6 +229,7 @@ export function usePublicShare(origin_id: number) {
 		uploadLimiteOpen,
 		uploadFileSizeLimit,
 		uploadFileSizeUnit,
-		filesSizeLimitRule
+		filesSizeLimitRule,
+		isHttp
 	};
 }

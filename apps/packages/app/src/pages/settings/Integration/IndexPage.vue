@@ -1,7 +1,7 @@
 <template>
 	<page-title-component
 		:show-back="false"
-		:title="t(`home_menus.${MENU_TYPE.Integration.toLowerCase()}`)"
+		:title="t(`home_menus.integrations`)"
 	/>
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<app-menu-feature
@@ -11,12 +11,19 @@
 		/>
 		<app-menu-feature
 			image="settings/imgs/root/cookie.svg"
-			:label="t('Manage Your Cookies')"
+			:label="t('Manage your cookies')"
 			:description="
 				t('View and modify cookies to manage your site data in one place')
 			"
 			:clickable="true"
 			@click="onCookieManagement"
+		/>
+		<app-menu-feature
+			image="settings/imgs/root/smb.svg"
+			:label="t('SMB account management')"
+			:description="t('Manage your SMB network storage connections')"
+			:clickable="true"
+			@click="onSMBAccountManagement"
 		/>
 	</bt-scroll-area>
 </template>
@@ -29,8 +36,13 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
-
 const router = useRouter();
+
+const onAddIntegrationAccount = () => {
+	router.push({
+		path: '/integration/accountList'
+	});
+};
 
 const onCookieManagement = () => {
 	router.push({
@@ -38,9 +50,9 @@ const onCookieManagement = () => {
 	});
 };
 
-const onAddIntegrationAccount = () => {
+const onSMBAccountManagement = () => {
 	router.push({
-		path: '/integration/accountList'
+		path: '/integration/smbAccount'
 	});
 };
 </script>

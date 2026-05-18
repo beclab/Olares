@@ -57,7 +57,7 @@ export const userBindTerminus = async (
 
 		const token: Token = await onFirstFactor(
 			baseURL,
-			user.name,
+			user,
 			user.local_name,
 			osPwd,
 			false,
@@ -363,7 +363,7 @@ export async function loginTerminus(
 	const userStore = useUserStore();
 	const token = await onFirstFactor(
 		baseURL,
-		user.name,
+		user,
 		user.local_name,
 		password,
 		true,
@@ -408,7 +408,8 @@ export async function loginTerminus(
 				'access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization',
 			'Access-Control-Allow-Methods': 'PUT,POST,GET,DELETE,OPTIONS',
 			'X-Unauth-Error': 'Non-Redirect',
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			'X-Authorization': user.access_token
 		};
 		let withCredentials = true;
 		if (process.env.IS_PC_TEST && use_local) {
@@ -423,8 +424,7 @@ export async function loginTerminus(
 			headers
 		});
 
-		const targetUrl = 'https://desktop.' + user.name.replace('@', '.') + '/';
-
+		const targetUrl = user.desktop_target_url;
 		const response = await instance.post('/api/secondfactor/totp', {
 			targetUrl,
 			token: oneTimePasswordMethod
@@ -541,29 +541,31 @@ export async function connectTerminus(
 export async function getTerminusInfo(
 	user: UserItem,
 	timeout = 5000,
-	params = {} as any
+	params = {} as any,
+	use_local = false
 ): Promise<OlaresInfo | null> {
 	try {
 		let data: OlaresInfo | null = null;
+		const baseUrl = !use_local ? user.terminus_url : user.local_terminus_url;
 		if (user.os_version && user.isLargeVersion12_2) {
-			data = await axios.get(user.terminus_url + '/api/olares-info', {
+			data = await axios.get(baseUrl + '/api/olares-info', {
 				timeout: timeout,
 				params: params
 			});
 		} else {
 			if (user.os_version) {
-				data = await axios.get(user.terminus_url + '/api/terminus-info', {
+				data = await axios.get(baseUrl + '/api/terminus-info', {
 					timeout: timeout,
 					params: params
 				});
 			} else {
 				try {
-					data = await axios.get(user.terminus_url + '/api/olares-info', {
+					data = await axios.get(baseUrl + '/api/olares-info', {
 						timeout: timeout,
 						params: params
 					});
 				} catch (error) {
-					data = await axios.get(user.terminus_url + '/api/terminus-info', {
+					data = await axios.get(baseUrl + '/api/terminus-info', {
 						timeout: timeout,
 						params: params
 					});

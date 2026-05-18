@@ -1,4 +1,4 @@
-FROM node:16.13.1-alpine as server_dist
+FROM node:24.0.2-alpine as server_dist
 
 WORKDIR /server_dist
 
@@ -8,6 +8,7 @@ WORKDIR /server_dist
 COPY package*.json lerna.json tsconfig.json ./
 COPY packages/admin/package*.json ./packages/admin/
 COPY packages/sdk/package*.json ./packages/sdk/
+COPY packages/core/package*.json ./packages/core/
 # COPY packages/locale/package*.json ./packages/locale/
 # Install dependencies and bootstrap packages
 RUN npm ci --unsafe-perm
@@ -15,10 +16,12 @@ RUN npm ci --unsafe-perm
 # Now copy over source files and assets
 COPY packages/admin/src ./packages/admin/src
 COPY packages/sdk/src ./packages/sdk/src
+COPY packages/core/src ./packages/core/src
 # COPY packages/locale/src ./packages/locale/src
 # COPY packages/locale/res ./packages/locale/res
 COPY packages/admin/tsconfig.json ./packages/admin/
 COPY packages/sdk/tsconfig.json ./packages/sdk/
+COPY packages/core/tsconfig.json ./packages/core/
 # COPY packages/locale/tsconfig*.json ./packages/locale/
 COPY packages/admin/webpack.config.js ./packages/admin/webpack.config.js
 

@@ -50,6 +50,25 @@ export async function downloadFile(
 	}
 }
 
+export async function downloadTaskOperate(
+	taskId: string,
+	operate: DOWNLOAD_OPERATE,
+	removeFile?: boolean
+): Promise<boolean> {
+	const req = new DownloadRecordOperateRequest(
+		taskId + '',
+		operate,
+		removeFile
+	);
+	const configStore = useConfigStore();
+	try {
+		await axios.get(configStore.url + '/knowledge/download/' + req.toString());
+		return true;
+	} catch (e: any) {
+		return false;
+	}
+}
+
 export async function downloadFileNew(params: {
 	name: string;
 	download_url: string;

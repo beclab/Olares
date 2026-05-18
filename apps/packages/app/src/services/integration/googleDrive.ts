@@ -20,8 +20,7 @@ export class GoogleAuthService extends OperateIntegrationAuth<GoogleIntegrationA
 		await LarePassSocialLogin.initialize({
 			google: {
 				webClientId: getAppPlatform().socialKeys.google.webClientId,
-				iOSClientId:
-					getAppPlatform().socialKeys.google.iOSClientId,
+				iOSClientId: getAppPlatform().socialKeys.google.iOSClientId,
 				mode: getAppPlatform().getQuasar()?.platform.is?.android
 					? 'offline'
 					: 'online' // replaces grantOfflineAccess

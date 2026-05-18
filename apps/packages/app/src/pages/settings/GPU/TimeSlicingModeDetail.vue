@@ -39,6 +39,7 @@
 						<UnbindGPU
 							v-if="unBindEnable(props.row.value)"
 							:app="props.row.app"
+							:app-name="props.row.value"
 							@un-bind-app="emit('unbind', props.row.value)"
 						/>
 						<SwitchGPU
@@ -60,7 +61,7 @@
 		<q-btn
 			dense
 			class="bind-app q-px-md q-py-sm text-body3 text-ink-2 bg-background-1"
-			:label="t('Bind App')"
+			:label="t('Assign app')"
 			no-caps
 			@click="bindApp"
 		/>
@@ -136,11 +137,12 @@ const appColumns: any = computed(() => {
 });
 
 const unBindEnable = (appName: string) => {
-	return (
-		gpuStore.gpuList.filter(
-			(e) => e.apps && e.apps.find((app) => app.appName == appName) != undefined
-		).length > 1
-	);
+	// return (
+	// 	gpuStore.gpuList.filter(
+	// 		(e) => e.apps && e.apps.find((app) => app.appName == appName) != undefined
+	// 	).length > 1
+	// );
+	return true;
 };
 </script>
 

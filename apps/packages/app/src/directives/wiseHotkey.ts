@@ -18,7 +18,8 @@ export const WISE_HOTKEY = {
 		UPLOAD: 'u'
 	},
 	SETTING: {
-		TRANSACTION: 'alt+q',
+		DOWNLOAD: 'alt+d',
+		UPLOAD: 'alt+u',
 		TAG: 'alt+t',
 		RSS: 'alt+f',
 		VIEW: 'alt+v',

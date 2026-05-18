@@ -24,4 +24,25 @@ export class SettingsWebsocketBean extends BaseWebsocketBean {
 			});
 		});
 	}
+
+	otherTypeMethods(data: {
+		type: string;
+		data: any;
+		_port?: MessagePort;
+	}): boolean {
+		switch (data.type) {
+			case 'usersUpdate':
+				this.websocket?.send({
+					event: 'message',
+					data: {
+						...data.data,
+						eventType: 'usersUpdate'
+					}
+				});
+				return true;
+
+			default:
+				return false;
+		}
+	}
 }

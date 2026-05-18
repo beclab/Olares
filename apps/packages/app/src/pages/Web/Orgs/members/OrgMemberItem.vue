@@ -7,11 +7,12 @@
 					:size="28"
 				/>
 			</div>
-			<div class="column justify-between">
+			<div class="column justify-between did-content">
 				<div class="did text-body text-ink-1">{{ member.name }}</div>
-				<div>
-					<!-- TODO: snowning.com error-->
-					<span class="text-ink-2">@{{ userStore.getCurrentDomain() }}</span>
+				<div class="full-width meta">
+					<span class="domain text-ink-2">
+						@{{ userStore.getCurrentDomain() }}
+					</span>
 					<span
 						class="tag text-subtitle3 owner"
 						v-if="member.role === OrgRole.Owner"
@@ -70,16 +71,38 @@ const { t } = useI18n();
 		width: 100%;
 		height: 40px;
 		border-radius: 8px;
+
 		.avator {
 			width: 28px;
 			height: 28px;
 			border-radius: 14px;
 			overflow: hidden;
 		}
-		.did {
-			width: 90%;
+
+		.did-content {
+			max-width: calc(100% - 40px);
 		}
+
+		.did {
+			width: 100%;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.meta {
+			display: flex;
+		}
+
+		.domain {
+			min-width: 0;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
 		.tag {
+			flex: none;
 			padding: 0 4px;
 			border-radius: 4px;
 			margin-left: 10px;

@@ -14,14 +14,14 @@
 			}}
 		</div>
 
-		<div class="row justify-end items-center q-mt-md">
+		<div class="row justify-end items-center q-mt-lg">
 			<q-btn
-				class="bg-blue-default text-white text-subtitle1 text-capitalize"
+				class="btn-class bg-blue-default text-white text-subtitle1 text-capitalize"
 				:label="t('Unpaid, Pay Again')"
 				@click="onOK('unpaid')"
 			/>
 			<q-btn
-				class="bg-blue-default text-white text-subtitle1 q-ml-lg text-capitalize"
+				class="btn-class bg-blue-default text-white text-subtitle1 q-ml-lg text-capitalize"
 				:label="t('Paid, Refresh Result')"
 				@click="onOK('paid')"
 			/>
@@ -46,5 +46,8 @@ const onOK = (status: string) => {
 <style scoped lang="scss">
 ::v-deep(.dialog-content) {
 	margin: 20px 0 0 !important;
+}
+.btn-class {
+	height: 40px;
 }
 </style>

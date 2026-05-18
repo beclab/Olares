@@ -211,6 +211,7 @@
 											:description="
 												getI18nValue(appEntry.fullDescription, locale)
 											"
+											:markdown="supportMarkdown"
 										/>
 
 										<app-intro-card
@@ -220,6 +221,7 @@
 											:description="
 												getI18nValue(appEntry.upgradeDescription, locale)
 											"
+											:markdown="supportMarkdown"
 										/>
 
 										<app-permission
@@ -316,6 +318,7 @@
 										:description="
 											getI18nValue(appEntry.fullDescription, locale)
 										"
+										:markdown="supportMarkdown"
 									/>
 
 									<app-intro-card
@@ -325,6 +328,7 @@
 										:description="
 											getI18nValue(appEntry.upgradeDescription, locale)
 										"
+										:markdown="supportMarkdown"
 									/>
 
 									<app-information
@@ -420,92 +424,52 @@ import AppInstallConfig from './AppInstallConfig.vue';
 import AppInformation from './AppInformation.vue';
 import AppPermission from './AppPermission.vue';
 import AppClient from './AppClient.vue';
-import { useDeviceStore } from '../../../../stores/settings/device';
-import { useCenterStore } from '../../../../stores/market/center';
 import { CFG_TYPE, isCloneApp, showIcon } from '../../../../constant/config';
+import { useDeviceStore } from '../../../../stores/settings/device';
+import { useAppStore } from '../../../../stores/market/appStore';
 import { OnUpdateUITask, TaskHandler } from '../TaskHandler';
 import globalConfig from '../../../../api/market/config';
 import { onActivated, onDeactivated } from 'vue-demi';
 import { useRoute, useRouter } from 'vue-router';
 import { computed, ref, watch } from 'vue';
-import ins_plugin from 'markdown-it-mark';
-import markdownit from 'markdown-it';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
-import hljs from 'highlight.js';
 import {
 	AppEntry,
 	DEPENDENCIES_TYPE,
 	getI18nValue,
 	TRANSACTION_PAGE
 } from '../../../../constant/constants';
+import { handleMarketBack } from '../../../../utils/marketBack';
 
 const $q = useQuasar();
 const route = useRoute();
 const router = useRouter();
 const deviceStore = useDeviceStore();
+const supportMarkdown = ref(true);
 
 const paddingX = computed(() => {
 	return deviceStore.isMobile ? 20 : 44;
 });
 
-const onHandleErrorGroup = (value) => {
+const onHandleErrorGroup = (value: any) => {
 	errorGroup.value = value;
 };
-
-const loadStyle = async () => {
-	if ($q.dark.isActive) {
-		await import('highlight.js/styles/github-dark.css');
-	} else {
-		await import('highlight.js/styles/github.css');
-	}
-};
-loadStyle();
-const md = markdownit({
-	html: true,
-	linkify: true,
-	typographer: true,
-	highlight: function (str, lang) {
-		// console.log('str ===> ', str);
-		// console.log('lang ===> ', lang);
-		if (lang && hljs.getLanguage(lang)) {
-			try {
-				return (
-					// '<div class="code-container">' +
-					// '<button class="copy-button text-caption q-ml-lg text-grey-8" @click="copyCode(\'' +
-					// str +
-					// '\')">Copy</button>' +
-					'<pre><code class="hljs">' +
-					hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
-					'</code></pre>'
-					// '</div>'
-				);
-			} catch (e) {
-				console.log('error ===> ', e);
-			}
-		}
-
-		return (
-			'<pre><code class="hljs">' + md.utils.escapeHtml(str) + '</code></pre>'
-		);
-	}
-}).use(ins_plugin);
 
 const showHeaderBar = ref(false);
 const dependencies = ref<string[]>([]);
 const cloneApps = ref<string[]>([]);
 
 const cfgType = ref<string>(CFG_TYPE.APPLICATION);
-// const readMeHtml = ref('');
 const { t, locale } = useI18n();
-const centerStore = useCenterStore();
+const appStore = useAppStore();
 const sourceId = route.params.sourceId as string;
 const appName = route.params.appName as string;
 const taskHandler = new TaskHandler();
-const errorGroup = ref([]);
+const errorGroup = ref<any[]>([]);
 
 const appAggregation = computed(() => {
-	return centerStore.getAppAggregationInfo(appName, sourceId);
+	return appStore.getAppAggregationInfo(appName, sourceId);
 });
 
 onActivated(() => {
@@ -577,25 +541,10 @@ const appScopeTask: OnUpdateUITask = {
 	onInit() {
 		cloneApps.value = [];
 	},
-	onUpdate(app: AppEntry) {
-		cloneApps.value = centerStore.getCloneApp(appName, sourceId);
+	onUpdate(_app: AppEntry) {
+		cloneApps.value = appStore.getCloneApp(appName, sourceId);
 	}
 };
-
-// const markdownTask: OnUpdateUITask = {
-// 	onInit() {
-// 		readMeHtml.value = '';
-// 	},
-// 	onUpdate(app: AppEntry) {
-// 		getMarkdown(app.name).then((result) => {
-// 			if (result) {
-// 				// console.log(result);
-// 				readMeHtml.value = md.render(result);
-// 				// console.log(readMeHtml.value);
-// 			}
-// 		});
-// 	}
-// };
 
 const goImagePreview = (index: number) => {
 	router.push({
@@ -612,6 +561,9 @@ const goImagePreview = (index: number) => {
 };
 
 const clickReturn = () => {
+	if (handleMarketBack(router, route)) {
+		return;
+	}
 	router.back();
 };
 </script>

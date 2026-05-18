@@ -18,7 +18,7 @@ import hard_drive_icon_dark from '@apps/dashboard/src/assets/hard_drive-dark.svg
 import package_2_active_icon from '@apps/dashboard/src/assets/package_2_active.svg';
 import package_2_icon from '@apps/dashboard/src/assets/package_2.svg';
 import package_2_icon_dark from '@apps/dashboard/src/assets/package_2-dark.svg';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 
 const resourceName_ = 'resource_name';
 

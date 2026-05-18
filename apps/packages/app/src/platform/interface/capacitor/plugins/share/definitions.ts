@@ -38,4 +38,6 @@ export interface FileSharePlugin {
 	reset(options?: { clear?: boolean }): Promise<{
 		status: boolean;
 	}>;
+
+	setPasteboardEnable(options?: { enable?: boolean }): Promise<void>;
 }

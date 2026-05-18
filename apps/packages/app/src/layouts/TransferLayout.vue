@@ -5,7 +5,8 @@
 			<q-page
 				class="transfer-table"
 				:class="
-					$q.platform.is.win && $q.platform.is.electron
+					($q.platform.is.win || $q.platform.is.linux) &&
+					$q.platform.is.electron
 						? 'transfer-table-win'
 						: isPad
 						? 'transfer-table-pad'
@@ -37,6 +38,6 @@ const isPad = ref(getAppPlatform() && getAppPlatform().isPad);
 
 .transfer-table-pad {
 	height: calc(100vh - 165px) !important;
-	background: $white;
+	background: white;
 }
 </style>

@@ -12,7 +12,6 @@
 .web-login-layout {
 	height: 100vh;
 	width: 100vw;
-	background: $background-1;
 
 	.web-login-root {
 		height: 530px;

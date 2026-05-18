@@ -86,7 +86,7 @@ export interface TransferClient {
 
 export enum ClouderTransferStatus {
 	DOWNLOADING = 'downloading',
-	PAUSE = 'pause',
+	PAUSE = 'paused',
 	CANCEL = 'cancel',
 	ERROR = 'error',
 	COMPLETE = 'complete',

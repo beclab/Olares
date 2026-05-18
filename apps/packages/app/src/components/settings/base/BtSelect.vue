@@ -90,7 +90,7 @@ onMounted(() => {
 });
 
 watch(
-	() => props.modelValue,
+	() => [props.modelValue, props.options],
 	() => {
 		selected.value = props.options?.find((e) => e.value == props.modelValue);
 	},

@@ -73,7 +73,7 @@ const displayUrl = ref();
 const onDeleteClick = () => {
 	if (userStore.user) {
 		userStore.user.social.data = userStore.user.social.data.filter(
-			(item) => item.platform !== props.platform
+			(item) => item && item.platform !== props.platform
 		);
 	}
 };

@@ -33,7 +33,7 @@ import { useI18n } from 'vue-i18n';
 
 const AppDetailStore = useAppDetailStore();
 const { t } = useI18n();
-const options = [
+const options = computed(() => [
 	{
 		key: 'overview',
 		label: t('OVERVIEW'),
@@ -52,7 +52,7 @@ const options = [
 	// 	icon: 'sym_r_leaderboard',
 	// 	link: '/analytics'
 	// }
-];
+]);
 const initOption = {
 	key: 'sub1',
 	label: `${AppDetailStore.user.username}’s Olares`,
@@ -62,12 +62,12 @@ const items = ref([initOption]);
 
 const router = useRouter();
 const route = useRoute();
-const active = ref(options[0].key);
+const active = ref(options.value[0].key);
 const userData = ref();
 const scrollRef = ref();
 
 const currentItem = computed(
-	() => options.find((item) => item.key === active.value) || { label: '' }
+	() => options.value.find((item) => item.key === active.value) || { label: '' }
 );
 
 const selectHandler = (data: any) => {
@@ -78,7 +78,7 @@ const selectHandler = (data: any) => {
 
 const menuActive = () => {
 	const link = route.path.split('/')[1];
-	const target = options.find((item) => item.link === `/${link}`);
+	const target = options.value.find((item) => item.link === `/${link}`);
 	if (target) {
 		active.value = target.key;
 		scrollRef.value &&
@@ -109,8 +109,8 @@ watch(
 	padding: 20px 32px 0 32px;
 }
 ::v-deep(.my-active-link) {
-	color: $light-blue-default;
-	background: $light-blue-soft;
+	color: $theme-menu-color-hover;
+	background: $theme-menu-bg-hover;
 }
 ::v-deep(.q-drawer.q-drawer--bordered) {
 	border-color: $separator;

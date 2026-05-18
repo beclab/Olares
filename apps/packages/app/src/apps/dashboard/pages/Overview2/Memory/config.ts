@@ -4,7 +4,7 @@ import {
 	getLastMonitoringData
 } from '@apps/dashboard/src/utils/monitoring';
 import { get, round } from 'lodash';
-import { t } from '@apps/dashboard/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import { getDiskSize } from '@apps/dashboard/src/utils/disk';
 import { getThroughput } from '@apps/dashboard/src/utils/memory';
 import { timeRangeFormate } from '@apps/control-panel-common/src/containers/Monitoring/utils';

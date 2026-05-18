@@ -24,7 +24,10 @@ const options_update = {
 	CPU: 'CPU',
 	REMOVE_CONFIRM_DSC:
 		'Enter the { name } name <strong>{ resource }</strong> to confirm that you understand the risks of this operation.',
-	POD: 'POD'
+	POD: 'POD',
+	VIEW_FULL_COMMAND: 'View full command',
+	confirm: 'Confirm',
+	cancel: 'Cancel'
 };
 
 const options = {
@@ -311,7 +314,7 @@ const options = {
 	IMAGE_ID: 'Image ID',
 	IMAGE_PULL_POLICY: 'Image Pull Policy',
 	CONTAINER_DETAILS_PAGE_SCAP: 'Container details page.',
-	CPU_VALUE: 'CPU: {value, plural, =1 {1 core} other {# cores}}',
+	CPU_VALUE: 'CPU: {value}',
 	MEMORY_VALUE: 'Memory: {value}',
 	NVIDIA_COM_GPU_VALUE: 'GPU: {value}',
 	LOADING: 'Loading...',
@@ -2962,7 +2965,9 @@ const options = {
 	POD_IP_ADDRESS_SCAP: 'Pod IP address',
 	TOTAL_CAPACITY: 'Total capacity',
 	UPDATE_SUCCESSFUL: 'Updated successfully.',
-	UPDATE_FAILED: 'Update failed'
+	UPDATE_FAILED: 'Update failed',
+	'The token has expired, please log in again':
+		'The token has expired, please log in again'
 };
 
 export default { ...options, ...options_update };

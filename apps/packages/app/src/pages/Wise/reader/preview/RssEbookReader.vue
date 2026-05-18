@@ -1,5 +1,10 @@
 <template>
-	<terminus-ebook v-if="path" :src="path" :played-time="playedTime" />
+	<terminus-ebook
+		v-if="path"
+		:src="path"
+		:played-time="playedTime"
+		:show-internal-progress="false"
+	/>
 </template>
 
 <script lang="ts" setup>

@@ -17,7 +17,7 @@
 			</p>
 
 			<div
-				class="active-tip row items-center justify-center text-grey-8 q-px-sm q-py-xs q-mt-md"
+				class="active-tip row items-center justify-center q-px-sm q-py-xs q-mt-md"
 				v-if="isAdminAccount"
 			>
 				<q-icon class="q-mr-sm" name="sym_r_error" />
@@ -26,7 +26,7 @@
 
 			<div class="qrcode_scanning">
 				<div class="qrcode_scanning_itme">
-					<qrcode-vue :value="url" class="qrcode_img" level="L"></qrcode-vue>
+					<qrcode-vue :value="url" class="qrcode_img" :size="200" level="L" />
 				</div>
 			</div>
 		</div>

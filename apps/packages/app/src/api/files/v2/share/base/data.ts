@@ -23,7 +23,7 @@ import { appendPath } from '../../path';
 import * as filesUtil from '../../common/utils';
 import { checkSameName } from 'src/utils/file';
 import { SharePermission, ShareType } from 'src/utils/interface/share';
-import { useDataStore } from 'src/stores/data';
+import { decodeURIComponentSafe } from '../../utils';
 
 export default class ShareAPI extends DriveDataAPI {
 	breadcrumbsBase = '';
@@ -95,12 +95,7 @@ export default class ShareAPI extends DriveDataAPI {
 		}
 
 		const { path, path_id } = files.getShareDataPath(file.path);
-		let curPath = path;
-		try {
-			curPath = decodeURIComponent(curPath);
-		} catch (error) {
-			console.log(path);
-		}
+		const curPath = decodeURIComponentSafe(path);
 
 		const params = {
 			inline: 'true',
@@ -123,13 +118,8 @@ export default class ShareAPI extends DriveDataAPI {
 
 		// let curPath = files.shareRemovePrefix(file.path);
 		const { path, path_id } = files.getShareDataPath(file.path);
-		let curPath = path;
+		const curPath = decodeURIComponentSafe(path);
 
-		try {
-			curPath = decodeURIComponent(curPath);
-		} catch (error) {
-			console.log(curPath);
-		}
 		const url = createURL(
 			files.shareCommonUrl('raw', path_id, curPath),
 			params
@@ -172,7 +162,14 @@ export default class ShareAPI extends DriveDataAPI {
 	}
 
 	formatCopyPath(path: string, destname: string, isDir: boolean): string {
-		return appendPath(getPurePath(path), destname, isDir ? '/' : '');
+		const { path: newPath, path_id } = files.getShareDataPath(path);
+		const curPath = decodeURIComponentSafe(newPath);
+		const formatPath = files.displayPath({
+			isDir: isDir,
+			fileExtend: path_id,
+			path: curPath
+		});
+		return appendPath(getPurePath(formatPath), destname, isDir ? '/' : '');
 	}
 
 	formatSearchPath(search: string): string {
@@ -301,19 +298,24 @@ export default class ShareAPI extends DriveDataAPI {
 			permission: permisson_scopes
 		};
 	}
-	async getFileServerUploadLink(folderPath: string): Promise<any> {
-		const dataStore = useDataStore();
-		const baseURL = dataStore.baseURL();
+	async getFileServerUploadLink(
+		folderPath: string,
+		repoID?: string,
+		dirName?: string,
+		externalQuery?: any
+	): Promise<any> {
 		const node = this.getUploadNode();
 		const path = folderPath;
-		const url =
-			baseURL +
-			`/upload/upload-link/${node}/?file_path=` +
-			encodeUrl(path) +
-			'&from=web';
-		const res = await this.commonAxios.get(url, {
-			responseType: 'text'
-		});
+
+		const params = {
+			...externalQuery,
+			file_path: path,
+			from: 'web'
+		};
+
+		const url = createURL(`/upload/upload-link/${node}/`, params);
+
+		const res = await this.commonAxios.get(url);
 
 		return res + '?ret-json=1&share=1';
 	}

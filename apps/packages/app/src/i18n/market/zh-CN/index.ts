@@ -218,17 +218,17 @@ export default {
 	'Source URL already exists. Please use a different source URL':
 		'数据源 URL 已存在，请使用其他数据源 URL',
 	'Also uninstall the shared server (affects all users)':
-		'同时卸载共享服务（影响所有用户）',
+		'同时卸载共享服务（影响所有用户）。',
 	'Warning! Uninstalling the shared server will:':
 		'警告！卸载共享服务器将：\n• 立即终止所有用户的应用程序访问权限\n• 永久删除所有存储的用户数据\n\n此操作无法撤销。请确认您了解这些后果，并希望继续完全卸载{appName}。',
 	'Cannot delete this source. Please uninstall all apps installed from this source, then try again.':
 		'无法删除此源。请先删除所有从此源安装的应用，然后重试。',
-	'Configure Environment Variables': '配置环境变量',
+	'Configure Environment Variables': '配置 {title} 环境变量',
 	httpsRequired: '链接必须以 https:// 开头',
 	invalidUrlFormat: '无效的 URL 格式',
 	upgrade_app_version: `应用版本更新：从 {currentVersion} 升级至 {targetVersion}`,
 	'This value is set by a system environment variable':
-		'此值由系统环境变量设置。若要修改，请前往 “设置”>“开发者”>“系统环境”，并更改 [{envName}]',
+		'此值由系统环境变量设置。若要修改，请前往 “设置”>“高级”>“系统环境变量”，并更改 [{envName}]',
 	'Clone App': '克隆应用',
 	'Only lowercase letters and numbers are allowed; special characters and spaces are not permitted.':
 		'仅支持小写字母和数字，不允许特殊符号或空格',
@@ -279,9 +279,168 @@ export default {
 	'Desktop shortcut name for': '{name}的桌面图标名称',
 	Clone: '克隆',
 	'Also stop the shared server （affects all users)':
-		'同时停止共享服务器（影响所有用户）',
+		'同时停止共享服务器（影响所有用户）。',
 	'Are you sure you want to stop the shared app':
 		'你确定要停止该共享应用"{app}"吗？',
 	'Are you sure you want to resume the shared app "{app}" ?（affects all users）':
-		'你确定要恢复该共享应用"{app}"吗？（影响所有用户）'
+		'你确定要恢复该共享应用"{app}"吗？（影响所有用户）',
+	'Do you want to buy app for': '您要使用 {price}{unit} 购买“{name}”吗?',
+	'Purchase App': '购买应用',
+	Cancel: '取消',
+	Buy: '购买',
+	'Restore purchase': '恢复购买',
+	'This app has been removed, the operation is rejected.':
+		'该应用已下架，相关操作被拒绝。',
+	'NSFW settings': 'NSFW设置',
+	'Blocking NSFW applications': '隐藏NSFW应用',
+	'No log records available': '暂无日志记录',
+	'get log records error': '获取日志记录失败',
+
+	debug: {
+		common: {
+			appName: 'App 名称',
+			version: '版本',
+			copied: '已复制',
+			copy: '复制',
+			refresh: '刷新',
+			export: '导出',
+			clear: '清空',
+			all: '全部',
+			noMatchedData: '没有匹配的数据'
+		},
+		panel: {
+			nav: {
+				monitor: '状态监控',
+				map: 'Map 数据',
+				search: 'App 查询',
+				labels: 'Labels',
+				entryDiff: 'Entry 对比'
+			}
+		},
+		appSearch: {
+			title: 'App 查询',
+			keyword: '搜索关键词',
+			placeholder: '输入 app 名称、标题或描述...',
+			found: '找到 {count} 个结果',
+			emptyKeyword: '输入关键词搜索 App',
+			noMatch: '未找到匹配的 App',
+			resultList: '搜索结果',
+			selectHint: '选择一个结果查看详情',
+			weight: '权重'
+		},
+		jsonView: {
+			selectKey: '选择一个 Key 查看数据',
+			copyFailed: '复制失败:'
+		},
+		sidebar: {
+			searchPlaceholder: '搜索 Key...',
+			noMatchedKey: '没有匹配的 Key'
+		},
+		mapViewer: {
+			title: 'Map 数据查看'
+		},
+		labels: {
+			title: 'App Labels 查看',
+			totalWithLabels: '共 {count} 个带标签的 App',
+			groupStats: '标签组合统计',
+			singleStats: '单个标签统计',
+			appList: 'App 列表',
+			selectApp: '选择一个 App 查看详情'
+		},
+		statusFloat: {
+			title: '状态监控',
+			clickToStart: '点击 ▶ 开始监控',
+			dragHint: '拖动标题栏移动 | 共 {count} 条',
+			openFullPage: '打开完整页面'
+		},
+		statusMonitor: {
+			title: 'App 状态监控',
+			stop: '停止',
+			start: '开始',
+			import: '导入',
+			filterPlaceholder: '过滤 App 名称...',
+			clear: '清空',
+			export: '导出',
+			importReadonlyMode: '当前为导入快照模式（只读）',
+			fileLabel: '文件：',
+			exportTimeLabel: '导出时间：',
+			importTimeLabel: '导入时间：',
+			appCount: 'App 数量',
+			callCount: '调用次数',
+			total: '总计',
+			api: '接口',
+			socket: '推送',
+			local: '本地',
+			anomaly: '异常',
+			rejected: '被拒绝',
+			regression: '回退',
+			clearFilter: '清除筛选',
+			monitoredApps: '监控的 App',
+			updatesCount: '{count} 次更新',
+			waitingStateChange: '等待状态变化...',
+			clickStartMonitor: '点击开始监控',
+			stateTransitionLog: '状态流转日志',
+			viewAll: '看全部',
+			onlySelectedApp: '仅看选中App',
+			currentSelectedDetail: '当前选中详情',
+			oldTime: '旧时间:',
+			newTime: '新时间:',
+			diff: '差值:',
+			collapse: '收起',
+			detail: '详情',
+			noLogsForApp: '该 App 暂无日志',
+			noLogs: '暂无日志记录',
+			importFailed: '导入失败',
+			importMissingLogsArray: '导入失败：缺少 logs 数组',
+			importSuccess: '导入成功：{count} 条日志（已切换为快照模式）',
+			importSnapshotFailed: '导入状态快照失败：{message}',
+			checkFileFormat: '请检查文件格式',
+			noDetailData: '暂无详情数据',
+			serializeFailed: '详情数据序列化失败'
+		},
+		entryDiff: {
+			title: 'app_entry / raw_data 对比',
+			exportJson: '导出 JSON',
+			exportDoc: '导出文档',
+			total: '总数',
+			comparable: '可对比',
+			mismatch: '不一致',
+			missingRaw: '缺少 raw_data',
+			searchPlaceholder: '搜索 key / app / diff path',
+			allSources: '全部来源',
+			currentSource: '当前来源',
+			allFields: '全部字段',
+			mismatchItems: '不一致项',
+			noMismatchDetected: '当前没有检测到不一致',
+			detail: '详情',
+			selectLeftItem: '选择左侧条目查看详情',
+			missingAppEntry: '缺少 app_entry',
+			fieldMismatch: '字段不一致',
+			generatedAt: '生成时间',
+			filters: '过滤条件',
+			report: {
+				overview: '## 总览',
+				metricValue: '| 指标 | 数值 |',
+				appFullInfoTotal: 'appFullInfo 总数',
+				currentViewCount: '当前视图条目数',
+				currentViewMismatchCount: '当前视图 mismatch 数',
+				currentViewMissingCount: '当前视图缺失项数',
+				bySource: '## 按来源统计',
+				bySourceHeader: '| 来源 | 总数 | mismatch | 缺失项 |',
+				byField: '## 按不一致字段统计',
+				byFieldHeader: '| 字段 | 条目数 |',
+				topDiffPaths: '## 高频差异路径 Top 30',
+				pathCountHeader: '| 路径 | 次数 |',
+				fieldExamples: '## 字段样例（按不一致字段，每类 1 条）',
+				noFieldExamples: '当前筛选下没有字段差异样例。',
+				fieldLabel: '字段',
+				relatedPaths: '相关路径',
+				appEntryBlock: '**app_entry 对象块**',
+				rawDataBlock: '**raw_data 对象块**',
+				itemsCurrentView: '## 条目清单（当前视图）',
+				itemsHeader:
+					'| key | source | app | status | 字段组 | diffPathCount | diffPathsPreview |'
+			}
+		}
+	}
 };

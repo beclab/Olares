@@ -98,9 +98,9 @@ export function useCookieStatus() {
 		openUrl(url);
 	};
 
-	const cookieHandler = () => {
+	const cookieHandler = (url?: string) => {
 		if (process.env.PLATFORM_BEX_ALL) {
-			browserCookieStore.pushCookie();
+			browserCookieStore.pushCookie(url);
 		} else {
 			openSettingsCookieManager();
 		}

@@ -20,9 +20,28 @@
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<AdaptiveLayout>
 			<template v-slot:pc>
+				<div class="row items-center full-width">
+					<bt-select-v3
+						v-model="mirrorName"
+						width="100px"
+						height="32px"
+						:options="mirrorOptions"
+					/>
+					<q-input
+						style="flex: 1"
+						class="q-ml-md q-px-md search-input"
+						borderless
+						dense
+						v-model="searchContent"
+					>
+						<template v-slot:after>
+							<q-icon name="sym_r_search" size="16px" color="ink-2" />
+						</template>
+					</q-input>
+				</div>
 				<q-list class="q-py-md q-list-class q-mt-md">
 					<div
-						v-if="images && images.length > 0"
+						v-if="filterImages && filterImages.length > 0"
 						class="column item-margin-left item-margin-right"
 					>
 						<q-table
@@ -30,7 +49,7 @@
 							table-header-class="text-body3 text-ink-2"
 							flat
 							:bordered="false"
-							:rows="images"
+							:rows="filterImages"
 							:columns="columns"
 							row-key="id"
 							hide-pagination
@@ -79,19 +98,39 @@
 				</q-list>
 			</template>
 			<template v-slot:mobile>
-				<div v-if="images.length > 0">
+				<div class="row items-center full-width">
+					<div style="flex: 1" class="q-mr-sm">
+						<bt-select-v3
+							v-model="mirrorName"
+							height="32px"
+							:options="mirrorOptions"
+						/>
+					</div>
+					<q-input
+						style="flex: 1"
+						class="q-ml-sm q-px-md search-input"
+						borderless
+						dense
+						v-model="searchContent"
+					>
+						<template v-slot:after>
+							<q-icon name="sym_r_search" size="16px" color="ink-2" />
+						</template>
+					</q-input>
+				</div>
+				<div v-if="filterImages.length > 0">
 					<bt-grid
 						class="mobile-items-list"
 						:repeat-count="2"
-						v-for="(image, index) in images"
+						v-for="(image, index) in filterImages"
 						:key="index"
 						:paddingY="12"
 					>
 						<template v-slot:title>
 							<div
-								class="text-subtitle3-m row justify-between items-center clickable-view q-mb-md"
+								class="text-subtitle3-m row justify-between items-center clickable-view q-mb-md mobile-image-title-row"
 							>
-								<div>
+								<div class="mobile-image-title">
 									{{ getImageName(image.repo_tags) }}
 								</div>
 								<!-- <q-icon
@@ -107,8 +146,12 @@
 								v-if="image.repo_tags && image.repo_tags.length > 0"
 								:label="t('Repo name')"
 								mobileTitleClasses="text-body3-m"
-								:value="getImageStoreName(image.repo_tags[0])"
 							>
+								<template v-slot:value>
+									<div class="text-body3-m mobile-repo-name">
+										{{ getImageStoreName(image.repo_tags[0]) }}
+									</div>
+								</template>
 							</bt-grid-item>
 							<bt-grid-item
 								:label="t('Image size')"
@@ -130,24 +173,21 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
 import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
-import { useI18n } from 'vue-i18n';
 import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
-import BtGridItem from 'src/components/settings/base/BtGridItem.vue';
-import BtGrid from 'src/components/settings/base/BtGrid.vue';
-
 import EmptyComponent from 'src/components/settings/EmptyComponent.vue';
-import {
-	useMirrorStore,
-	RegistryImage
-} from '../../../../stores/settings/mirror';
-// import BtActionIcon from '../../../../components/settings/base/BtActionIcon.vue';
-
+import BtGridItem from 'src/components/settings/base/BtGridItem.vue';
+import BtSelectV3 from 'src/components/settings/base/BtSelectV3.vue';
+import BtGrid from 'src/components/settings/base/BtGrid.vue';
+import { useMirrorStore, RegistryImage } from 'src/stores/settings/mirror';
+import { computed, onMounted, ref } from 'vue';
+import { SelectorProps } from 'src/constant';
+import { format } from 'src/utils/format';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+// import BtActionIcon from '../../../../components/settings/base/BtActionIcon.vue';
 // import ReminderDialogComponent from '../../../../components/settings/ReminderDialogComponent.vue';
 // import { useQuasar } from 'quasar';
-import { format } from '../../../../utils/format';
 // import {
 // 	notifyFailed,
 // 	notifySuccess
@@ -155,26 +195,65 @@ import { format } from '../../../../utils/format';
 // import { useDeviceStore } from '../../../../stores/settings/device';
 
 const { t } = useI18n();
-
-const mirrorStore = useMirrorStore();
-
 const route = useRoute();
-
-const registry = ref((route.query.registry as string) || undefined);
-
+const mirrorStore = useMirrorStore();
 const images = ref([] as RegistryImage[]);
-
+const registry = ref((route.query.registry as string) || undefined);
+const mirrorName = ref(registry.value ? registry.value : 'all');
+const mirrorOptions = ref<SelectorProps[]>([
+	{
+		label: t('all'),
+		value: 'all'
+	}
+]);
+const searchContent = ref('');
 // const $q = useQuasar();
 
 // const deviceStore = useDeviceStore();
 
-onMounted(async () => {
+onMounted(() => {
 	getImageList();
 });
 
 const getImageList = async () => {
-	images.value = await mirrorStore.getRegistryImages(registry.value);
+	images.value = await mirrorStore.getRegistryImages();
+	const set = new Set<string>();
+	images.value.forEach((image) => {
+		const storeName = getImageStoreName(image.repo_tags[0]);
+		set.add(storeName);
+	});
+	if (images.value.length > 0) {
+		mirrorOptions.value = [
+			{
+				label: t('all'),
+				value: 'all'
+			}
+		];
+		for (const item of set) {
+			mirrorOptions.value.push({
+				label: item,
+				value: item
+			});
+		}
+	}
 };
+
+const filterImages = computed(() => {
+	return images.value
+		.filter((item) => {
+			if (mirrorName.value === 'all') {
+				return true;
+			}
+			return getImageStoreName(item.repo_tags[0]) === mirrorName.value;
+		})
+		.filter((item) => {
+			if (searchContent.value) {
+				return getImageName(item.repo_tags).includes(searchContent.value);
+			} else {
+				return true;
+			}
+		});
+});
 
 const columns: any = [
 	{
@@ -268,6 +347,11 @@ const getImageStoreName = (itemName: string) => {
 </script>
 
 <style scoped lang="scss">
+.search-input {
+	border: 1px solid $input-stroke;
+	border-radius: 8px;
+}
+
 .add-btn {
 	border-radius: 8px;
 	padding: 6px 12px;
@@ -279,6 +363,7 @@ const getImageStoreName = (itemName: string) => {
 		color: $ink-2;
 	}
 }
+
 .add-btn:hover {
 	background-color: $background-3;
 }
@@ -305,6 +390,7 @@ const getImageStoreName = (itemName: string) => {
 			margin-left: 8px;
 			color: $ink-2;
 		}
+
 		// &:hover {
 		// 	background-color: $background-5;
 		// }
@@ -318,5 +404,28 @@ const getImageStoreName = (itemName: string) => {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	overflow: hidden;
+}
+
+.mobile-image-title-row {
+	min-width: 0;
+}
+
+.mobile-image-title,
+.mobile-repo-name {
+	min-width: 0;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+::v-deep(
+		.q-field--dense .q-field__control,
+		.q-field--dense .q-field__marginal
+	) {
+	height: 30px;
+}
+
+::v-deep(.q-field--dense .q-field__after, .q-field--dense .q-field__append) {
+	height: 30px;
 }
 </style>

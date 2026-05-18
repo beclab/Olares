@@ -100,14 +100,6 @@ const mobile: RouteRecordRaw[] = [
 			},
 
 			{
-				path: '/scan',
-				meta: {
-					backgroundHide: true
-				},
-				component: () =>
-					import('src/pages/Mobile/connect/activate/ScanPage.vue')
-			},
-			{
 				path: '/scan_local',
 				component: () =>
 					import('src/pages/Mobile/connect/activate/ScanLocalPage.vue')

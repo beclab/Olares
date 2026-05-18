@@ -2,7 +2,7 @@ import { date } from 'quasar';
 import { MenuItem } from './contact';
 import { i18n } from 'src/boot/i18n';
 import { DriveType } from './../utils/interface/files';
-import { common, filesIsV2 } from './../api';
+import { common } from './../api';
 
 export function checkSeahub(url: string) {
 	// return url.startsWith('/Seahub/')
@@ -69,10 +69,7 @@ export function checkSameName(fileName: string, items: any, index = 0) {
 }
 
 export function disabledClick(path: string) {
-	const disabledRightClick = ['/Cache/'];
-	if (filesIsV2()) {
-		disabledRightClick.push('/Files/External/');
-	}
+	const disabledRightClick = ['/Cache/', '/Files/External/'];
 	if (disabledRightClick.includes(path)) {
 		return false;
 	}
@@ -80,11 +77,8 @@ export function disabledClick(path: string) {
 }
 
 export function hideHeaderOpt(path: string) {
-	const disabledRightClick = ['/Cache/'];
+	const disabledRightClick = ['/Cache/', '/Files/External/'];
 
-	if (filesIsV2()) {
-		disabledRightClick.push('/Files/External/');
-	}
 	let prefix = path;
 	if (!prefix.endsWith('/')) {
 		prefix = prefix + '/';

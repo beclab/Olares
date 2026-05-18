@@ -36,6 +36,15 @@
 						</span>
 						<span> {{ t('home_update') }}</span>
 					</div>
+					<div
+						class="text-subtitle1 text-ink-1 create-btn create-con-btn row items-center justify-start"
+						@click="uploadDockerCompose"
+					>
+						<span class="add_wrap bg-background-3">
+							<q-icon name="sym_r_cloud_upload" size="20px" color="grey-5" />
+						</span>
+						<span> {{ t('home_upload_compose') }}</span>
+					</div>
 				</div>
 
 				<div class="col-6" style="padding-left: 40px">
@@ -72,6 +81,7 @@ import { pushToSystem } from './../utils/utils';
 
 import DocumentLink from '../components/common/DocumentLink.vue';
 import CreateAppName from '../components/dialog/CreateAppName.vue';
+import UploadDockerCompose from '../components/dialog/UploadDockerCompose.vue';
 import { useDockerStore } from '@apps/studio/src/stores/docker';
 
 const { t } = useI18n();
@@ -97,6 +107,12 @@ function onCreate() {
 const uploadChat = () => {
 	uploadInput.value.click();
 };
+
+function uploadDockerCompose() {
+	$q.dialog({
+		component: UploadDockerCompose
+	});
+}
 
 async function uploadFile(event: any) {
 	console.log(event);
@@ -234,7 +250,7 @@ async function upload_dev_file(
 		.create-con-btn {
 			margin-top: 20px;
 			border: 1px solid $separator;
-			margin-bottom: 32px;
+			margin-bottom: 20px;
 			.add_wrap {
 				background-color: rgba(246, 246, 246, 1);
 			}

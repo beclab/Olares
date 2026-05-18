@@ -20,13 +20,18 @@ import { notifyFailed } from 'src/utils/settings/btNotify';
 import { DeviceType } from '@bytetrade/core';
 import { useRouter } from 'vue-router';
 import { useCookieStore } from 'src/stores/settings/cookie';
+import { i18n } from 'src/boot/i18n';
+import { useAppStore } from 'src/stores/market/appStore';
+import { CacheRequestBarrier } from 'src/stores/market/CacheRequestBarrier';
+import { useUserStore } from 'src/stores/settings/user';
+import { usePreCheckStore } from 'src/stores/market/preCheck';
 
 export class SettingsApplication extends NormalApplication {
 	applicationName = 'settings';
 
 	async appLoadPrepare(data: any): Promise<void> {
 		//@ts-ignore
-		(() => import('../css/styles.css'))();
+		// (() => import('../css/styles.css'))();
 		await super.appLoadPrepare(data);
 
 		const tokenStore = useTokenStore();
@@ -54,8 +59,10 @@ export class SettingsApplication extends NormalApplication {
 			adminStore.thisDevice = deviceInfo;
 		});
 
-		const websocketStore = useWebsocketManager2Store();
-		websocketStore.start();
+		setTimeout(() => {
+			const websocketStore = useWebsocketManager2Store();
+			websocketStore.start();
+		}, 1000);
 	}
 
 	async appRedirectUrl(): Promise<void> {
@@ -66,10 +73,21 @@ export class SettingsApplication extends NormalApplication {
 		tokenStore.setUrl(host);
 
 		const router = useRouter();
+		const userStore = useUserStore();
 		const adminStore = useAdminStore();
 		const accountStore = useAccountStore();
 		const backgroundStore = useBackgroundStore();
+		const appStore = useAppStore();
 		backgroundStore.init();
+		userStore.get_accounts();
+
+		await appStore.init(true);
+		const sourceRequest = appStore.initSourceRequest();
+
+		const barrier = new CacheRequestBarrier(['source'], (data) => {
+			appStore.fetchAppState();
+		});
+		barrier.addRequest('source', sourceRequest);
 
 		let terminusLanguage = '';
 		const terminusLanguageInfo: any = document.querySelector(
@@ -146,13 +164,29 @@ export class SettingsApplication extends NormalApplication {
 					if (body) {
 						const applicationStore = useApplicationStore();
 						const backupStore = useBackupStore();
+						const appStore = useAppStore();
 						if (body['notify_type'] == 'app_state_change') {
+							appStore.updateAppStatusBySocket(body);
 							applicationStore.updateOneApplicationState(
 								body.app_name,
 								body.app_state_latest.status.state,
-								body.app_state_latest.status.entranceStatuses
+								body.app_state_latest.status.entranceStatuses,
+								body.app_state_latest.status.sharedEntrances
 							);
 							bus.emit('entrance_state_event', body);
+						} else if (body['notify_type'] == 'market_system_point') {
+							appStore.updateMarketSystemBySocket(body);
+						} else if (body['notify_type'] == 'image_state_change') {
+							appStore.updateDownloadedImageSizeBySocket(body);
+						} else if (body['notify_type'] == 'payment_state_update') {
+							appStore.updateLocalStatus(
+								body.extensions.app_name,
+								body.extensions.source_id,
+								{
+									status: body.extensions.status,
+									data: body?.extensions_obj?.payment_data
+								}
+							);
 						} else if (body.type && body.type === 'backup') {
 							backupStore.updateBackupBySocket(body);
 							bus.emit('backup_state_event', body);
@@ -161,6 +195,9 @@ export class SettingsApplication extends NormalApplication {
 							bus.emit('restore_state_event', body);
 						} else if (body.type == 'olaresStatusUpdate') {
 							bus.emit('olaresStatusUpdate', body.data);
+						} else if (body.eventType == 'userAvatarUpdate') {
+							const adminStore = useAdminStore();
+							adminStore.terminus = body.data.info;
 						}
 					}
 				} catch (e) {
@@ -199,6 +236,10 @@ export class SettingsApplication extends NormalApplication {
 		});
 
 		this.responseIntercepts.push((response) => {
+			if (response.config.url!.indexOf('market-backend') >= 0) {
+				return response.data;
+			}
+
 			const store = useAccountStore();
 			if (
 				response.config.url &&
@@ -255,7 +296,8 @@ export class SettingsApplication extends NormalApplication {
 							response.config.url!.indexOf('permissions') < 0
 						) {
 							notifyFailed(
-								data.message || 'Something wrong, please try again.'
+								i18n.global.t(data.message) ||
+									'Something wrong, please try again.'
 							);
 						}
 						//return response;

@@ -32,11 +32,14 @@
 				style="width: 100%"
 			>
 				<template v-slot:option="{ itemProps, opt, selected, toggleOption }">
-					<q-item v-bind="itemProps">
-						<q-item-section>
-							<q-item-label>{{ opt.label }}</q-item-label>
+					<q-item v-bind="itemProps" style="max-width: 500px">
+						<q-item-section
+							class="ellipsis"
+							:style="{ 'max-width': isWeb ? '500px' : 'calc(100vw - 95px)' }"
+						>
+							{{ opt.label }}
 						</q-item-section>
-						<q-item-section side>
+						<q-item-section side v-if="selected">
 							<q-checkbox
 								:model-value="selected"
 								checked-icon="sym_r_check_circle"
@@ -71,6 +74,10 @@ const moving = ref(false);
 
 const { t } = useI18n();
 
+const isWeb = ref(
+	process.env.APPLICATION == 'VAULT' || process.env.PLATFORM == 'DESKTOP'
+);
+
 const changeModel = (value) => {
 	vaultSelect.value = vaults.value.find((item) => item.id === value);
 };
@@ -102,7 +109,7 @@ onMounted(() => {
 			? app.vaults.filter(
 					(v) =>
 						app.hasWritePermissions(v) &&
-						v !== sourceVaults.values().next().value
+						v.id !== sourceVaults.values().next().value.id
 			  )
 			: app.vaults.filter((v) => app.hasWritePermissions(v));
 });
@@ -122,11 +129,11 @@ const onDialogOK = () => {
 
 	::v-deep(.q-field__control) {
 		background: $background-1 !important;
-		color: $ink-2;
+		color: $ink-2 !important;
 	}
 
 	::v-deep(.q-field__native) {
-		color: $ink-2;
+		color: $ink-2 !important;
 	}
 }
 .d-creatVault {

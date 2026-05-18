@@ -15,7 +15,7 @@
     },
     "dependencies": {
         "dotenv": "16.0.0",
-        "express": "4.21.2",
+        "express": "4.22.1",
         "ts-node": "10.9.2",
         "typescript": "4.5.4",
         "level": "7.0.0"
@@ -29,7 +29,11 @@
         "clean" : "rm -rf ./data"
     },
     "engines": {
-        "node": "16.13.1",
-        "npm": "8.2.0"
+        "node": ">=16.14.0",
+        "npm": ">=8.3.0"
+    },
+    "overrides": {
+        "path-to-regexp@<0.1.13": "^0.1.13",
+        "qs@<6.14.2": "^6.14.2"
     }
 }

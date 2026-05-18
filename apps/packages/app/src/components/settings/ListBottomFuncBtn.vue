@@ -1,6 +1,7 @@
 <template>
 	<div
-		class="func-btn-bg row items-center justify-end clickable-view"
+		class="func-btn-bg row items-center clickable-view"
+		:class="justifyEnd ? 'justify-end' : ''"
 		:style="{
 			'--height': height
 		}"
@@ -28,6 +29,11 @@ defineProps({
 		type: Number,
 		required: false,
 		default: 40
+	},
+	justifyEnd: {
+		boolean: Boolean,
+		required: false,
+		default: true
 	}
 });
 

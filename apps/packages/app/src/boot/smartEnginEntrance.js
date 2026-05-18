@@ -1,6 +1,11 @@
 import { boot } from 'quasar/wrappers';
 import BaseComponents from 'components/base';
-import BytetradeUi, { BtNotify, BtDialog, BtCustomDialog } from '@bytetrade/ui';
+import BytetradeUi, {
+	BtNotify,
+	BtDialog,
+	BtCustomDialog,
+	TerminusAvatar
+} from '@bytetrade/ui';
 import VueLazyload from 'vue-lazyload';
 import { Notify, Dialog } from 'quasar';
 
@@ -14,6 +19,8 @@ export default boot(async ({ app }) => {
 	app.use(BtCustomDialog, {
 		defaultOkClass: 'larepass-global-ok-button'
 	});
+	app.provide('defaultCacheAvatar', true);
+
 	BtNotify.init(Notify);
 	BtDialog.init(Dialog);
 });

@@ -31,7 +31,6 @@
 <script lang="ts" setup>
 import TabbarComponent from '../components/common/TerminusTabbarComponent.vue';
 import { useMobileMainLayout } from '../composables/mobile/useMobileMainLayout';
-import '../css/terminus.scss';
 
 const { menuStore, isBex, tabbarShow, defaultIndex, updateCurrent } =
 	useMobileMainLayout();

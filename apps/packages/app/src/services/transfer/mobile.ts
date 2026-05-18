@@ -4,13 +4,13 @@ import {
 } from '../abstractions/transfer/interface';
 import { useUserStore } from 'src/stores/user';
 import { dataAPIs } from 'src/api';
-import { filesIsV2 } from 'src/api/files';
 import { dataAPIs as dataAPIsV2 } from 'src/api/files/v2';
 import { compareUrlHost, replaceUrlHost } from 'src/utils/file';
 import { TransferItem } from 'src/utils/interface/transfer';
 import { busEmit } from 'src/utils/bus';
 import { FileDownloadPlugin } from 'src/platform/interface/capacitor/plugins/download';
 import { FileUploadPlugin } from 'src/platform/interface/capacitor/plugins/upload';
+import { decodeURIComponentSafe } from 'src/api/files/v2/utils';
 
 export class MobileTransfer implements TransferClientService {
 	downloader = {
@@ -19,6 +19,7 @@ export class MobileTransfer implements TransferClientService {
 				return false;
 			}
 			try {
+				const userStore = useUserStore();
 				const result = await FileDownloadPlugin.getTransferInfo({
 					id: item.id
 				});
@@ -39,7 +40,11 @@ export class MobileTransfer implements TransferClientService {
 							url: options.url!,
 							path: item.name || item.path,
 							progress: true,
-							fileSize: item.size
+							fileSize: item.size,
+							auth_token:
+								(item.userId
+									? userStore.users?.items.get(item.userId)?.access_token
+									: '') || ''
 						})
 					).status;
 				} else {
@@ -108,7 +113,7 @@ export class MobileTransfer implements TransferClientService {
 
 				const dataAPI = dataAPIs(item.driveType);
 
-				if (item.size == 0 && filesIsV2()) {
+				if (item.size == 0) {
 					const apiV2 = dataAPIsV2(item.driveType);
 					apiV2.uploadEmptyFile(item.id!).then(() => {
 						FileUploadPlugin.clearData({
@@ -137,13 +142,7 @@ export class MobileTransfer implements TransferClientService {
 
 				const moreInfo = dataAPI.getUploadTransferItemMoreInfo(item);
 
-				let uploadPath = pathname;
-
-				try {
-					uploadPath = decodeURIComponent(pathname);
-				} catch (error) {
-					/* empty */
-				}
+				let uploadPath = decodeURIComponentSafe(pathname);
 
 				let account = '';
 
@@ -151,6 +150,8 @@ export class MobileTransfer implements TransferClientService {
 					account = moreInfo.account;
 					uploadPath = moreInfo.cloudFilePath;
 				}
+
+				const userStore = useUserStore();
 
 				const uploadOptions = {
 					id: item.id!,
@@ -161,7 +162,11 @@ export class MobileTransfer implements TransferClientService {
 					repoId: item.repo_id,
 					uniqueIdentifier: item.uniqueIdentifier,
 					account,
-					node: item.node
+					node: item.node,
+					auth_token:
+						(item.userId
+							? userStore.users?.items.get(item.userId)?.access_token
+							: '') || ''
 				};
 				return (await FileUploadPlugin.start(uploadOptions)).status;
 			} catch (error) {

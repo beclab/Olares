@@ -14,7 +14,7 @@
 </template>
 
 <script lang="ts" setup>
-import 'src/css/mobile.scss';
+import 'src/css/settings/mobile.scss';
 const appHeight = () => {
 	const doc = document.documentElement;
 	doc.style.setProperty('--app-height', `${window.innerHeight}px`);

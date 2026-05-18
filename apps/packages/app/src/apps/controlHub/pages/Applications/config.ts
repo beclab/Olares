@@ -9,7 +9,7 @@ import package_2_active_icon from '@apps/dashboard/src/assets/package_2_active.s
 import package_2_icon from '@apps/dashboard/src/assets/package_2.svg';
 import { get } from 'lodash';
 import { PodItem } from '@apps/control-panel-common/src/network/network';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 const getValue = (data: PodItem) => get(data, 'value[1]', 0);
 
 export const MetricTypesFormat = (type = 'cluster') => ({

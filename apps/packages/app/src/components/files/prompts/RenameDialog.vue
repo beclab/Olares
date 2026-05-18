@@ -7,6 +7,7 @@
 		:okLoading="loading ? t('loading') : false"
 		:size="$q.platform.is.mobile ? 'small' : 'medium'"
 		:platform="$q.platform.is.mobile ? 'mobile' : 'web'"
+		:okDisabled="!name"
 		@onSubmit="submit"
 		@onHide="onCancel"
 		@onCancel="onCancel"
@@ -72,7 +73,6 @@ const oldName = () => {
 
 const submit = async () => {
 	if (!name.value) {
-		notifyWarning('The input content cannot be empty!');
 		return false;
 	}
 	if (name.value.includes('\\') || name.value.includes('/')) {
@@ -88,6 +88,10 @@ const submit = async () => {
 		props.origin_id
 	);
 	if (!item) {
+		return;
+	}
+
+	if (loading.value) {
 		return;
 	}
 
@@ -128,7 +132,7 @@ const onCancel = () => {
 		border: 1px solid $input-stroke;
 		background-color: transparent;
 		&:focus {
-			border: 1px solid $yellow-disabled;
+			border: 1px solid $theme-input-focus-border;
 		}
 	}
 }

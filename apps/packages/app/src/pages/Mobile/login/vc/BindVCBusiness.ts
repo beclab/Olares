@@ -18,6 +18,8 @@ import { i18n } from '../../../../boot/i18n';
 import { Submission } from '@bytetrade/core';
 import { useMenuStore } from 'src/stores/menu';
 import { signJWS } from 'src/layouts/dialog/sign';
+import { PrivateJwk } from 'src/jose/types';
+import { GeneralJwsSigner } from 'src/jose/jws/general/signer';
 
 export async function requestBindVC(
 	request_type: TERMINUS_VC_TYPE,
@@ -168,6 +170,9 @@ export const getBasicTerminusName = async (
 	uid: string,
 	version: string,
 	agent: string,
+	channel: string,
+	platform: string,
+	captcha: string,
 	callback: BusinessCallback
 ) => {
 	try {
@@ -207,7 +212,10 @@ export const getBasicTerminusName = async (
 			uid,
 			version,
 			agent,
-			address
+			address,
+			channel,
+			platform,
+			captcha
 		};
 
 		const jws = await signJWS(did, body, privateJWK);
@@ -280,8 +288,59 @@ export const precheckDidHadBindTerminusName = async () => {
 	}
 };
 
+export const joinOrganization = async (
+	member_name: string,
+	member_password: string,
+	callback: BusinessAsyncCallback
+) => {
+	try {
+		const members = member_name.split('@');
+		if (members.length < 2) {
+			throw new Error(i18n.global.t('errors.get_user_failure'));
+		}
+		const userStore = useUserStore();
+		const ssiStore = useSSIStore();
+		const mnemonic: MnemonicItem = userStore.users!.mnemonics.get(
+			userStore.current_id!
+		)!;
+		if (!mnemonic) {
+			throw new Error(i18n.global.t('errors.get_user_failure'));
+		}
+
+		const user: UserItem = userStore.users!.items.get(userStore.current_id!)!;
+
+		const did = await getDID(mnemonic.mnemonic);
+		const privateJWK = await getPrivateJWK(mnemonic.mnemonic);
+
+		const address = await getEthereumAddress(mnemonic.mnemonic);
+
+		const payload = {
+			member_name: members[0],
+			member_password,
+			org_domain: members[1],
+			address,
+			id: did
+		};
+
+		const jws = await signJWS(did, payload, privateJWK);
+
+		const result: {
+			terminus_name: string;
+		} = await ssiStore.join_organization(jws);
+
+		user.name = result.terminus_name;
+		userStore.users!.items.update(user);
+		await userStore.save();
+		callback.onSuccess('');
+	} catch (error) {
+		callback.onFailure(error.message);
+	}
+};
+
 export const basicTerminusNameMinLength = 8;
 
-export const basicTerminusNameMaxLength = 63;
+export const basicTerminusNameMaxLength = 24;
 
-export const basicTerminusNameRule = '^(?=[a-z0-9]{8,64}$)[a-z0-9]+$';
+export const basicOrganizationTerminusNameMineLength = 2;
+
+export const basicTerminusNameRule = '^(?=[a-z0-9]{8,24}$)[a-z0-9]+$';

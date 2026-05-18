@@ -1,8 +1,5 @@
 <template>
-	<div
-		class="row justify-center content-center items-center layout-root"
-		:class="hideBackground ? '' : 'background-white'"
-	>
+	<div class="row justify-center content-center items-center layout-root">
 		<div
 			:class="
 				menuStore.useSafeArea && $q.platform.is.ios
@@ -22,7 +19,6 @@ import { useMenuStore } from 'src/stores/menu';
 import { useQuasar } from 'quasar';
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import '../../css/terminus.scss';
 
 const $q = useQuasar();
 const menuStore = useMenuStore();
@@ -67,9 +63,5 @@ if (Route.meta && Route.meta.backgroundHide != undefined) {
 		padding-top: env(safe-area-inset-top);
 		padding-bottom: env(safe-area-inset-bottom);
 	}
-}
-
-.background-white {
-	background-color: $white;
 }
 </style>

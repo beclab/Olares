@@ -62,9 +62,15 @@
 
 		<BtList>
 			<bt-form-item
-				:title="t('Communication and Feedback')"
+				:title="t('Communication and feedback')"
 				:chevron-right="true"
 				@click="gotoForum"
+			/>
+
+			<bt-form-item
+				:title="t('Acknowledgements')"
+				:chevron-right="true"
+				@click="gotoAcknowledgment"
 				:width-separator="false"
 			/>
 		</BtList>
@@ -72,7 +78,7 @@
 		<BtList
 			class="q-mb-lg"
 			v-if="adminStore.isAdmin || !isDemo"
-			:label="t('device')"
+			:label="t('devices')"
 		>
 			<device-item
 				v-for="(device, index) in adminStore.devices"
@@ -82,6 +88,12 @@
 				:is-first="index == 0"
 			/>
 		</BtList>
+		<ListBottomFuncBtn
+			@funcClick="signOut"
+			:justify-end="false"
+			:title="t('Sign out')"
+			style="margin-bottom: 20px"
+		/>
 	</bt-scroll-area>
 </template>
 
@@ -100,6 +112,9 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { checkDomainSuffix } from 'src/constant';
 import { useTerminusDStore } from 'src/stores/settings/terminusd';
+import ListBottomFuncBtn from 'src/components/settings/ListBottomFuncBtn.vue';
+import ReminderDialogComponent from 'src/components/settings/ReminderDialogComponent.vue';
+import { notifyFailed } from 'src/utils/settings/btNotify';
 
 const adminStore = useAdminStore();
 const userStore = useUserStore();
@@ -108,6 +123,7 @@ const quasar = useQuasar();
 const { t } = useI18n();
 const terminusDStore = useTerminusDStore();
 const userInfo = ref<AccountInfo | undefined>();
+const $q = useQuasar();
 const isDemo = computed(() => {
 	return !!process.env.DEMO;
 });
@@ -141,11 +157,56 @@ const goLoginHistory = () => {
 };
 
 const gotoForum = () => {
-	checkDomainSuffix('olares.cn').then((isOlaresCN: boolean) => {
-		if (isOlaresCN) {
-			window.open('https://forum.olares.cn/');
-		} else {
-			window.open('https://forum.olares.com/');
+	// checkDomainSuffix('olares.cn').then((isOlaresCN: boolean) => {
+	// 	if (isOlaresCN) {
+	// 		window.open('https://forum.olares.cn/');
+	// 	} else {
+	// 		window.open('https://forum.olares.com/');
+	// 	}
+	// });
+	router.push('/feedback');
+};
+
+const gotoAcknowledgment = () => {
+	// checkDomainSuffix('olares.cn').then((isOlaresCN: boolean) => {
+	// 	if (isOlaresCN) {
+	// 		window.open('https://forum.olares.cn/');
+	// 	} else {
+	// 		window.open('https://forum.olares.com/');
+	// 	}
+	// });
+	router.push('/acknowledgment');
+};
+
+const signOut = () => {
+	$q.dialog({
+		component: ReminderDialogComponent,
+		componentProps: {
+			title: t('Sign out'),
+			message: t('Your changes may not be saved.'),
+			useCancel: true,
+			confirmText: t('confirm'),
+			cancelText: t('cancel')
+		}
+	}).onOk(async () => {
+		try {
+			$q.loading.show();
+			await adminStore.logout();
+			const auth_url = adminStore.getAuthURL() + '?logout=1';
+			if (window.top == window) {
+				window.location.replace(auth_url);
+			} else {
+				window.parent.postMessage(
+					{
+						message: 'sign_out'
+					},
+					'*'
+				);
+			}
+		} catch (err) {
+			notifyFailed((err as Error).message);
+		} finally {
+			$q.loading.hide();
 		}
 	});
 };

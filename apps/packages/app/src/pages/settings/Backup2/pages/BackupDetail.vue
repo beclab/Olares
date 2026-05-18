@@ -5,7 +5,7 @@
 			<bt-list first>
 				<bt-form-item
 					v-if="backup && backup.backupType === BackupResourcesType.app"
-					:title="t('Backup App')"
+					:title="t('Back up app')"
 				>
 					<div class="text-body2 text-ink-2">
 						{{ backup.backupAppTypeName }}
@@ -16,11 +16,19 @@
 					v-if="backup && backup.backupType === BackupResourcesType.files"
 					:title="t('backup_path')"
 				>
-					<div class="text-body2 text-ink-2">{{ backup.path }}</div>
+					<div class="text-body2 text-ink-2">
+						{{ generateStringEllipsis(backup.path, 30) }}
+
+						<bt-tooltip max-width="240px" :label="backup.path" />
+					</div>
 				</bt-form-item>
 
 				<bt-form-item v-if="backup" :title="t('backup_name')">
-					<div class="text-body2 text-ink-2">{{ backup.name }}</div>
+					<div class="text-body2 text-ink-2">
+						{{ generateStringEllipsis(backup.name) }}
+
+						<bt-tooltip max-width="240px" :label="backup.name" />
+					</div>
 				</bt-form-item>
 
 				<bt-form-item :title="t('snapshot_frequency')">
@@ -106,6 +114,7 @@
 			<q-btn
 				dense
 				flat
+				no-caps
 				class="confirm-btn q-px-md q-mt-lg"
 				:label="t('snapshot_now')"
 				@click="onSubmit"
@@ -134,7 +143,11 @@
 			/>
 		</bt-list>
 
-		<bt-list v-if="snapshots.length > 0" :label="t('snapshots')">
+		<bt-list
+			v-if="snapshots.length > 0"
+			class="q-mb-lg"
+			:label="t('snapshots')"
+		>
 			<q-table
 				tableHeaderStyle="height: 32px;"
 				table-header-class="text-body3 text-ink-2"
@@ -204,6 +217,8 @@ import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import BtPopup from '../../../../components/base/BtPopup.vue';
 import { useBackupStore } from 'src/stores/settings/backup';
 import BtForm from 'src/components/settings/base/BtForm.vue';
+import BtTooltip from 'src/components/base/BtTooltip.vue';
+import { generateStringEllipsis } from 'src/utils/utils';
 import { timestampToTime } from './FormatBackupTime';
 import { BackupFrequency } from '@bytetrade/core';
 import { date, format, useQuasar } from 'quasar';
@@ -280,16 +295,9 @@ function updateBackupDetail(data: BackupMessage) {
 				backup.value.restoreSize = data.restoreSize;
 			}
 		} else {
-			getBackupSnapshot(backupId, data.id)
-				.then((newSnapshot: BackupSnapshot) => {
-					if (newSnapshot && newSnapshot.id) {
-						const list = snapshots.value;
-						snapshots.value = binaryInsert(list, newSnapshot, CompareBackup);
-					}
-				})
-				.catch((e) => {
-					console.log(e);
-				});
+			getSnapshots().catch((e) => {
+				console.log(e);
+			});
 		}
 	}
 }
@@ -524,6 +532,15 @@ const pagination = ref({
 	rowsNumber: 0
 });
 
+let snapshotsRequestSeq = 0;
+
+function normalizeRowsPerPage(rowsPerPage: number) {
+	if (rowsPerPage && rowsPerPage > 0) return rowsPerPage;
+	return pagination.value.rowsNumber && pagination.value.rowsNumber > 0
+		? pagination.value.rowsNumber
+		: 9999;
+}
+
 const onRequest = (props: {
 	pagination: {
 		sortBy: string;
@@ -535,12 +552,14 @@ const onRequest = (props: {
 }) => {
 	if (!backupId) return;
 	const { page, rowsPerPage } = props.pagination;
+	const normalizedRowsPerPage = normalizeRowsPerPage(rowsPerPage);
+	const normalizedPage = rowsPerPage && rowsPerPage > 0 ? page : 1;
 	const params = {
-		offset: rowsPerPage * (page - 1),
-		limit: rowsPerPage,
+		offset: normalizedRowsPerPage * (normalizedPage - 1),
+		limit: normalizedRowsPerPage,
 		backupId
 	};
-	pagination.value.page = page;
+	pagination.value.page = normalizedPage;
 	pagination.value.rowsPerPage = rowsPerPage;
 	getSnapshots(params);
 };
@@ -548,13 +567,17 @@ const onRequest = (props: {
 const getSnapshots = (
 	params: any = {
 		backupId,
-		offset: pagination.value.rowsPerPage * (pagination.value.page - 1),
-		limit: pagination.value.rowsPerPage
+		offset:
+			normalizeRowsPerPage(pagination.value.rowsPerPage) *
+			(pagination.value.page - 1),
+		limit: normalizeRowsPerPage(pagination.value.rowsPerPage)
 	}
 ) => {
+	const requestSeq = ++snapshotsRequestSeq;
 	return backupStore
 		.getSnapshots(params.backupId, params.offset, params.limit)
 		.then((response: any) => {
+			if (requestSeq !== snapshotsRequestSeq) return;
 			console.log(response);
 			snapshots.value = response.snapshots;
 			pagination.value.rowsNumber = response.totalCount;

@@ -18,7 +18,7 @@ import {
 	getSuitableUnit,
 	getValueByUnit
 } from '@apps/dashboard/src/utils/monitoring';
-import { t } from '@apps/dashboard/src/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import { useAppList } from '@apps/dashboard/src/stores/AppList';
 import { timeParams } from '../../../controlPanelCommon/config/resource.common';
 import { ref } from 'vue';
@@ -34,9 +34,14 @@ const NamespaceMetricTypes = {
 	cpu_usage: 'namespace_cpu_usage',
 	memory_usage: 'namespace_memory_usage_wo_cache',
 	net_transmitted: 'namespace_net_bytes_transmitted',
-	net_received: 'namespace_net_bytes_received'
+	net_received: 'namespace_net_bytes_received',
+	pod_count: 'namespace_pod_count'
 };
 const appList = useAppList();
+
+export type WorkloadsMetricsFormatOptions = {
+	preserveOrder?: string[];
+};
 
 export const loadingApps = new Array(
 	appList.appsWithNamespace.length || 9
@@ -49,22 +54,54 @@ export const loadingData: any = {
 	net_received: loadingApps
 };
 
-const podResultData = ref([]);
-const userResultData = ref([]);
+export const buildSkeletonMonitoringData = (rowCount: number) => {
+	const n = Math.max(1, rowCount);
+	return {
+		cpu_usage: Array.from({ length: n }, () => ({})),
+		memory_usage: Array.from({ length: n }, () => ({})),
+		net_transmitted: Array.from({ length: n }, () => ({})),
+		net_received: Array.from({ length: n }, () => ({}))
+	};
+};
+
+const podResultData = ref<any>([]);
+const userResultData = ref<any>([]);
 
 let metricsAbortController: AbortController | null = null;
 let namespacesAbortController: AbortController | null = null;
+
+let partialMetricsAbortController: AbortController | null = null;
+let partialNamespacesAbortController: AbortController | null = null;
 
 export const resetAppMetricsData = () => {
 	podResultData.value = [];
 	userResultData.value = [];
 };
 
+export const cancelMainMetricsFetch = () => {
+	metricsAbortController?.abort();
+	namespacesAbortController?.abort();
+};
+
+const buildEmptyDateRangeValues = (params: any): any[] => {
+	if (!params?.times || !params?.start || !params?.end) return [];
+	const step = Math.floor((params.end - params.start) / params.times);
+	const correctCount = params.times + 1;
+	const format = (num: number) => String(num).replace(/\..*$/, '');
+	const result: any[] = [];
+	for (let i = 0; i < correctCount; i++) {
+		const time = format(params.start + i * step);
+		result.push([time, undefined]);
+	}
+	return result;
+};
+
 export const fetchWorkloadsMetrics = async (
 	apps,
 	namespace,
 	sort = 'desc',
-	autofresh = false
+	autofresh = false,
+	formatOptions?: WorkloadsMetricsFormatOptions
 ) => {
 	if (metricsAbortController) {
 		metricsAbortController.abort();
@@ -97,6 +134,7 @@ export const fetchWorkloadsMetrics = async (
 	const resources_filter_custom = compact(
 		customApps.map((item) => item.namespace)
 	);
+
 	const param_filter = {
 		cluster: 'default',
 		metrics_filter: `${metricsPods.join('|')}$`,
@@ -124,15 +162,23 @@ export const fetchWorkloadsMetrics = async (
 	const param = getParams(param_filter);
 	const namespaceParams = getParams(namespaceParams_filter);
 
-	const [res, namespaceRes] = await Promise.all([
-		getMetrics(namespace, param, {
-			signal: metricsAbortController?.signal
-		}),
+	const metricsPromise =
+		systemApps.length > 0 && resources_filter_system.length > 0
+			? getMetrics(namespace, param, {
+					signal: metricsAbortController?.signal
+			  })
+			: Promise.resolve({ data: { results: [] } });
+
+	const namespacesPromise =
 		resources_filter_custom.length > 0
 			? getNamespaces(namespaceParams, {
 					signal: namespacesAbortController?.signal
 			  })
-			: Promise.resolve({ data: { results: [] } })
+			: Promise.resolve({ data: { results: [] } });
+
+	const [res, namespaceRes] = await Promise.all([
+		metricsPromise,
+		namespacesPromise
 	]);
 
 	let podFormateData = getResult(res.data.results);
@@ -144,7 +190,8 @@ export const fetchWorkloadsMetrics = async (
 
 		namespaceFormatData = getRefreshResult(
 			namespaceFormatData,
-			userResultData.value
+			userResultData.value,
+			'namespace'
 		);
 	}
 
@@ -152,12 +199,10 @@ export const fetchWorkloadsMetrics = async (
 		param,
 		podFormateData
 	);
-	userResultData.value = namespaceFormatData = fillEmptyMetrics(
-		namespaceParams,
-		namespaceFormatData
-	);
+	namespaceFormatData = fillEmptyMetrics(namespaceParams, namespaceFormatData);
 
 	const tempObj = {};
+	const emptyDateRangeValues = buildEmptyDateRangeValues(namespaceParams);
 
 	for (const key in namespaceFormatData) {
 		const target = namespaceFormatData[key];
@@ -172,7 +217,7 @@ export const fetchWorkloadsMetrics = async (
 				namespace: item,
 				workspace: 'system-workspace'
 			},
-			values: [[]],
+			values: emptyDateRangeValues.map((v) => [...v]),
 			min_value: '',
 			max_value: '',
 			avg_value: '',
@@ -203,9 +248,302 @@ export const fetchWorkloadsMetrics = async (
 		? {}
 		: fillEmptyMetrics(namespaceParams, namespaceResult);
 
-	return Promise.resolve(
-		formatResult(podFormateData, namespaceData, apps, sort)
+	userResultData.value = isEmpty(namespaceData)
+		? namespaceFormatData
+		: namespaceData;
+
+	const appsForFormat = [...systemApps, ...customApps];
+	const formatted = formatResult(
+		podFormateData,
+		namespaceData,
+		appsForFormat,
+		sort,
+		formatOptions
 	);
+	return Promise.resolve(formatted);
+};
+
+const mergeIntoCache = (
+	currentCache: any,
+	additionData: any,
+	resourceKey: string
+) => {
+	const cache =
+		currentCache && !Array.isArray(currentCache) ? { ...currentCache } : {};
+	Object.entries(additionData || {}).forEach(([metricName, metricObj]: any) => {
+		if (!cache[metricName]) {
+			cache[metricName] = metricObj;
+			return;
+		}
+		const existingResult = get(cache[metricName], 'data.result', []) as any[];
+		const additionResult = get(metricObj, 'data.result', []) as any[];
+		const additionKeys = new Set(
+			additionResult
+				.map((r: any) => get(r, `metric.${resourceKey}`))
+				.filter(Boolean)
+		);
+		const filteredExisting = existingResult.filter(
+			(r: any) => !additionKeys.has(get(r, `metric.${resourceKey}`))
+		);
+		cache[metricName] = {
+			...cache[metricName],
+			data: {
+				...get(cache[metricName], 'data', {}),
+				result: [...filteredExisting, ...additionResult]
+			}
+		};
+	});
+	return cache;
+};
+
+export const fetchWorkloadsMetricsForApps = async (
+	apps: any[],
+	namespace: string,
+	sort = 'desc'
+) => {
+	if (!apps || apps.length === 0) {
+		return null;
+	}
+
+	if (partialMetricsAbortController) {
+		partialMetricsAbortController.abort();
+	}
+	if (partialNamespacesAbortController) {
+		partialNamespacesAbortController.abort();
+	}
+
+	partialMetricsAbortController = new AbortController();
+	partialNamespacesAbortController = new AbortController();
+
+	const metricsPods = Object.values(MetricTypes);
+	const metricsNamespace = Object.values(NamespaceMetricTypes);
+
+	const systemApps = apps.filter((item) => item.isSystem);
+	const customApps = apps.filter((item) => !item.isSystem);
+
+	const timeRange = getTimeRange(timeParams);
+
+	const resources_filter_system = systemApps
+		.map((item, index) =>
+			index !== systemApps.length - 1
+				? `${item.deployment}.*|`
+				: `${item.deployment}.*`
+		)
+		.join('');
+
+	const resources_filter_custom = compact(
+		customApps.map((item) => item.namespace)
+	);
+
+	const param_filter = {
+		cluster: 'default',
+		metrics_filter: `${metricsPods.join('|')}$`,
+		resources_filter: `${resources_filter_system}$`,
+		sort_type: 'desc',
+		...timeRange,
+		...timeParams,
+		last: false
+	};
+
+	const namespaceParams_filter = {
+		metrics_filter: `${metricsNamespace.join('|')}$`,
+		resources_filter: `${resources_filter_custom.join('|')}`,
+		sort_type: 'desc',
+		...timeRange,
+		...timeParams,
+		last: false
+	};
+
+	const param = getParams(param_filter);
+	const namespaceParams = getParams(namespaceParams_filter);
+
+	const metricsPromise =
+		systemApps.length > 0 && resources_filter_system.length > 0
+			? getMetrics(namespace, param, {
+					signal: partialMetricsAbortController?.signal
+			  })
+			: Promise.resolve({ data: { results: [] } });
+
+	const namespacesPromise =
+		resources_filter_custom.length > 0
+			? getNamespaces(namespaceParams, {
+					signal: partialNamespacesAbortController?.signal
+			  })
+			: Promise.resolve({ data: { results: [] } });
+
+	const [res, namespaceRes] = await Promise.all([
+		metricsPromise,
+		namespacesPromise
+	]);
+
+	let podFormateData = getResult(res.data.results);
+	let namespaceFormatData = getResult(namespaceRes.data.results);
+
+	podFormateData = fillEmptyMetrics(param, podFormateData);
+	namespaceFormatData = fillEmptyMetrics(namespaceParams, namespaceFormatData);
+
+	const tempObj: any = {};
+	const emptyDateRangeValues = buildEmptyDateRangeValues(namespaceParams);
+	for (const key in namespaceFormatData) {
+		const target = namespaceFormatData[key];
+		const namespaces = target?.data?.result?.map(
+			(item: any) => item.metric.namespace
+		);
+		const rest = resources_filter_custom.filter(
+			(item) => !namespaces?.includes(item)
+		);
+		const restObj = rest.map((item) => ({
+			metric: {
+				namespace: item,
+				workspace: 'system-workspace'
+			},
+			values: emptyDateRangeValues.map((v) => [...v]),
+			min_value: '',
+			max_value: '',
+			avg_value: '',
+			sum_value: '',
+			fee: '',
+			resource_unit: '',
+			currency_unit: ''
+		}));
+
+		if (
+			resources_filter_custom.length <= 1 &&
+			isEmpty(get(target, 'data.result'))
+		) {
+			tempObj[key] = {
+				...target,
+				data: { ...target.data, result: restObj }
+			};
+		} else {
+			tempObj[key] = {
+				...target,
+				data: { ...target.data, result: target?.data?.result?.concat(restObj) }
+			};
+		}
+	}
+
+	const namespaceData = isEmpty(tempObj)
+		? {}
+		: fillEmptyMetrics(namespaceParams, tempObj);
+
+	podResultData.value = mergeIntoCache(
+		podResultData.value,
+		podFormateData,
+		'pod'
+	);
+	userResultData.value = mergeIntoCache(
+		userResultData.value,
+		namespaceData,
+		'namespace'
+	);
+
+	const appsForFormat = [...systemApps, ...customApps];
+	const formatted = formatResult(
+		podFormateData,
+		namespaceData,
+		appsForFormat,
+		sort
+	);
+	return formatted;
+};
+
+export const removeAppsFromMetricsCache = (
+	removedApps: any[],
+	remainingApps: any[]
+) => {
+	if (!removedApps?.length) return;
+
+	const remainingPodKeys = new Set<string>();
+	remainingApps
+		.filter((a) => a.isSystem)
+		.forEach((a) => {
+			if (a.deployment) remainingPodKeys.add(a.deployment);
+			if (a.name) remainingPodKeys.add(a.name);
+		});
+
+	const podCache = podResultData.value;
+	if (podCache && !Array.isArray(podCache)) {
+		Object.values(podCache).forEach((metric: any) => {
+			const result = get(metric, 'data.result');
+			if (Array.isArray(result)) {
+				metric.data.result = result.filter((row: any) => {
+					const dep = get(row, 'metric.pod') ? podDeploymentName(row) : null;
+					return dep ? remainingPodKeys.has(dep) : true;
+				});
+			}
+		});
+	}
+
+	const remainingNsKeys = new Set<string>();
+	remainingApps
+		.filter((a) => !a.isSystem)
+		.forEach((a) => {
+			if (a.namespace) remainingNsKeys.add(a.namespace);
+		});
+
+	const nsCache = userResultData.value;
+	if (nsCache && !Array.isArray(nsCache)) {
+		Object.values(nsCache).forEach((metric: any) => {
+			const result = get(metric, 'data.result');
+			if (Array.isArray(result)) {
+				metric.data.result = result.filter((row: any) => {
+					const ns = get(row, 'metric.namespace');
+					return ns ? remainingNsKeys.has(ns) : true;
+				});
+			}
+		});
+	}
+};
+
+const MONITORING_METRIC_KEYS = [
+	'cpu_usage',
+	'memory_usage',
+	'net_transmitted',
+	'net_received'
+] as const;
+
+export const mergeMonitoringData = (
+	existing: any,
+	addition: any,
+	sort: string
+) => {
+	const sortDirs = [sort as 'desc' | 'asc', 'asc'] as const;
+	const merged: any = {};
+	MONITORING_METRIC_KEYS.forEach((key) => {
+		const existingRows: any[] = Array.isArray(existing?.[key])
+			? existing[key]
+			: [];
+		const additionRows: any[] = Array.isArray(addition?.[key])
+			? addition[key]
+			: [];
+		const byName = new Map<string, any>();
+		existingRows.forEach((r: any) => {
+			if (r?.name) byName.set(r.name, r);
+		});
+		additionRows.forEach((r: any) => {
+			if (r?.name) byName.set(r.name, r);
+		});
+		const total = Array.from(byName.values());
+		merged[key] = unionBy(
+			orderBy(total, ['value', 'title'], sortDirs),
+			'title'
+		);
+	});
+	return merged;
+};
+
+export const removeMonitoringDataApps = (
+	existing: any,
+	removedNames: string[]
+) => {
+	const removedSet = new Set(removedNames);
+	const result: any = {};
+	MONITORING_METRIC_KEYS.forEach((key) => {
+		const rows: any[] = Array.isArray(existing?.[key]) ? existing[key] : [];
+		result[key] = rows.filter((r: any) => !removedSet.has(r?.name));
+	});
+	return result;
 };
 
 const getLastMonitoringData = (data: any) => {
@@ -242,46 +580,74 @@ function chartConfigTraffic(data: any) {
 	};
 }
 
+const podDeploymentName = (item: any) =>
+	item.metric.pod.split('-').slice(0, -2).join('-');
+
+const podCountByDeploymentFromPodMetrics = (data: any) => {
+	const rows = get(data, `${MetricTypes.cpu_usage}.data.result`, []) as any[];
+	return rows.reduce<Record<string, number>>((acc, item) => {
+		const key = podDeploymentName(item);
+		acc[key] = (acc[key] || 0) + 1;
+		return acc;
+	}, {});
+};
+
 const getTabOptions = (data: any, apps: any[]) => {
+	const podCountByDeployment = podCountByDeploymentFromPodMetrics(data);
 	const result = {
 		cpu_usage: get(data, `${MetricTypes.cpu_usage}.data.result`, []).map(
-			(item: any) => ({
-				isSystem: true,
-				ownerKind: item.metric.owner_kind,
-				name: item.metric.pod.split('-').slice(0, -2).join('-'),
-				value: getLastMonitoringData(item),
-				chartData: getAreaChartOps(chartConfigCpu(item))
-			})
+			(item: any) => {
+				const name = podDeploymentName(item);
+				return {
+					isSystem: true,
+					ownerKind: item.metric.owner_kind,
+					name,
+					value: getLastMonitoringData(item),
+					pod_acount: podCountByDeployment[name] || 0,
+					chartData: getAreaChartOps(chartConfigCpu(item))
+				};
+			}
 		),
 		memory_usage: get(data, `${MetricTypes.memory_usage}.data.result`, []).map(
-			(item: any) => ({
-				isSystem: true,
-				ownerKind: item.metric.owner_kind,
-				name: item.metric.pod.split('-').slice(0, -2).join('-'),
-				value: getLastMonitoringData(item),
-				chartData: getAreaChartOps(chartConfigMemory(item))
-			})
+			(item: any) => {
+				const name = podDeploymentName(item);
+				return {
+					isSystem: true,
+					ownerKind: item.metric.owner_kind,
+					name,
+					value: getLastMonitoringData(item),
+					pod_acount: podCountByDeployment[name] || 0,
+					chartData: getAreaChartOps(chartConfigMemory(item))
+				};
+			}
 		),
 		net_transmitted: get(
 			data,
 			`${MetricTypes.net_transmitted}.data.result`,
 			[]
-		).map((item: any) => ({
-			isSystem: true,
-			ownerKind: item.metric.owner_kind,
-			name: item.metric.pod.split('-').slice(0, -2).join('-'),
-			value: getLastMonitoringData(item),
-			chartData: getAreaChartOps(chartConfigTraffic(item))
-		})),
-		net_received: get(data, `${MetricTypes.net_received}.data.result`, []).map(
-			(item: any) => ({
+		).map((item: any) => {
+			const name = podDeploymentName(item);
+			return {
 				isSystem: true,
 				ownerKind: item.metric.owner_kind,
-				name: item.metric.pod.split('-').slice(0, -2).join('-'),
+				name,
 				value: getLastMonitoringData(item),
-
+				pod_acount: podCountByDeployment[name] || 0,
 				chartData: getAreaChartOps(chartConfigTraffic(item))
-			})
+			};
+		}),
+		net_received: get(data, `${MetricTypes.net_received}.data.result`, []).map(
+			(item: any) => {
+				const name = podDeploymentName(item);
+				return {
+					isSystem: true,
+					ownerKind: item.metric.owner_kind,
+					name,
+					value: getLastMonitoringData(item),
+					pod_acount: podCountByDeployment[name] || 0,
+					chartData: getAreaChartOps(chartConfigTraffic(item))
+				};
+			}
 		)
 	};
 	for (const key in result) {
@@ -298,7 +664,21 @@ const getTabOptions = (data: any, apps: any[]) => {
 	return result;
 };
 
+const namespacePodCountByNs = (data: any) => {
+	const rows = get(
+		data,
+		`${NamespaceMetricTypes.pod_count}.data.result`,
+		[]
+	) as any[];
+	return rows.reduce<Record<string, number>>((acc, item) => {
+		const ns = item.metric?.namespace;
+		if (ns) acc[ns] = getLastMonitoringData(item);
+		return acc;
+	}, {});
+};
+
 const getTabOptions2 = (data: any) => {
+	const podCountByNs = namespacePodCountByNs(data);
 	const result = {
 		cpu_usage: get(
 			data,
@@ -307,6 +687,7 @@ const getTabOptions2 = (data: any) => {
 		).map((item: any) => ({
 			name: item.metric.namespace,
 			value: getLastMonitoringData(item),
+			pod_acount: podCountByNs[item.metric.namespace] ?? 0,
 			chartData: getAreaChartOps(chartConfigCpu(item))
 		})),
 		memory_usage: get(
@@ -316,6 +697,7 @@ const getTabOptions2 = (data: any) => {
 		).map((item: any) => ({
 			name: item.metric.namespace,
 			value: getLastMonitoringData(item),
+			pod_acount: podCountByNs[item.metric.namespace] ?? 0,
 			chartData: getAreaChartOps(chartConfigMemory(item))
 		})),
 		net_transmitted: get(
@@ -325,6 +707,7 @@ const getTabOptions2 = (data: any) => {
 		).map((item: any) => ({
 			name: item.metric.namespace,
 			value: getLastMonitoringData(item),
+			pod_acount: podCountByNs[item.metric.namespace] ?? 0,
 			chartData: getAreaChartOps(chartConfigMemory(item))
 		})),
 		net_received: get(
@@ -334,6 +717,7 @@ const getTabOptions2 = (data: any) => {
 		).map((item: any) => ({
 			name: item.metric.namespace,
 			value: getLastMonitoringData(item),
+			pod_acount: podCountByNs[item.metric.namespace] ?? 0,
 			chartData: getAreaChartOps(chartConfigMemory(item))
 		}))
 	};
@@ -341,7 +725,37 @@ const getTabOptions2 = (data: any) => {
 	return result;
 };
 
-const formatResult = (res: any, namespaceRes: any, apps, sort) => {
+const orderMetricRows = (
+	total: any[],
+	sort: string,
+	preserveOrder?: string[]
+) => {
+	const sortDirs = [sort as 'desc' | 'asc', 'asc'] as const;
+	const representatives = unionBy(
+		orderBy(total, ['value', 'title'], ['desc', 'asc']),
+		'title'
+	);
+	const sortedRepresentatives = orderBy(
+		representatives,
+		['value', 'title'],
+		sortDirs
+	);
+	if (preserveOrder?.length) {
+		return preserveOrder
+			.map((n) => representatives.find((item: any) => item.name === n))
+			.filter(Boolean);
+	}
+	return sortedRepresentatives;
+};
+
+const formatResult = (
+	res: any,
+	namespaceRes: any,
+	apps,
+	sort,
+	options?: WorkloadsMetricsFormatOptions
+) => {
+	const preserveOrder = options?.preserveOrder;
 	const data1 = getTabOptions(res, apps);
 	const data2 = getTabOptions2(namespaceRes);
 	const cpu_usage_total = data1.cpu_usage
@@ -366,10 +780,7 @@ const formatResult = (res: any, namespaceRes: any, apps, sort) => {
 			return false;
 		})
 		.filter((item: any) => item);
-	const cpu_usage = unionBy(
-		orderBy(cpu_usage_total, ['value', 'title'], [sort, 'asc']),
-		'title'
-	);
+	const cpu_usage = orderMetricRows(cpu_usage_total, sort, preserveOrder);
 
 	const net_transmitted_total = data1.net_transmitted
 		.concat(data2.net_transmitted)
@@ -394,9 +805,10 @@ const formatResult = (res: any, namespaceRes: any, apps, sort) => {
 			return false;
 		})
 		.filter((item: any) => item);
-	const net_transmitted = unionBy(
-		orderBy(net_transmitted_total, ['value', 'title'], [sort, 'asc']),
-		'title'
+	const net_transmitted = orderMetricRows(
+		net_transmitted_total,
+		sort,
+		preserveOrder
 	);
 
 	const memory_usage_total = data1.memory_usage
@@ -421,10 +833,7 @@ const formatResult = (res: any, namespaceRes: any, apps, sort) => {
 			return false;
 		})
 		.filter((item: any) => item);
-	const memory_usage = unionBy(
-		orderBy(memory_usage_total, ['value', 'title'], [sort, 'asc']),
-		'title'
-	);
+	const memory_usage = orderMetricRows(memory_usage_total, sort, preserveOrder);
 
 	const net_received_total = data1.net_received
 		.concat(data2.net_received)
@@ -448,10 +857,7 @@ const formatResult = (res: any, namespaceRes: any, apps, sort) => {
 			return false;
 		})
 		.filter((item: any) => item);
-	const net_received = unionBy(
-		orderBy(net_received_total, ['value', 'title'], [sort, 'asc']),
-		'title'
-	);
+	const net_received = orderMetricRows(net_received_total, sort, preserveOrder);
 	return {
 		cpu_usage: cpu_usage,
 		memory_usage: memory_usage,

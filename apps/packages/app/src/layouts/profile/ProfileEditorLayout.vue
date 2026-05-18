@@ -1,5 +1,5 @@
 <template>
-	<div class="index-root row justify-center bg-background-1">
+	<div class="index-root row justify-center">
 		<div v-if="!userStore.user" class="index-loading">
 			<BtLoading
 				:show="true"
@@ -29,8 +29,8 @@
 							dense
 							inline-label
 							narrow-indicator
-							active-color="light-green-default"
-							indicator-color="light-green-default"
+							active-color="theme-menu-color-hover"
+							indicator-color="theme-menu-color-hover"
 							active-class="tab-item-title-selected"
 						>
 							<template v-for="item in tabs" :key="item.value">
@@ -98,37 +98,39 @@ import { User } from '@apps/profile/src/types/User';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { debounce } from 'quasar';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import axios from 'axios';
 
 const userStore = useUserStore();
 const { t } = useI18n();
 const router = useRouter();
 
-const tabs = [
-	{
-		label: t('base.header'),
-		value: 'Header',
-		icon: 'sym_r_responsive_layout'
-	},
-	{
-		label: t('base.social'),
-		value: 'Social',
-		icon: 'sym_r_diversity_2'
-	},
-	{
-		label: t('base.blocks'),
-		value: 'Blocks',
-		icon: 'sym_r_note_stack'
-	},
-	{
-		label: t('base.appearance'),
-		value: 'Appearance',
-		icon: 'sym_r_draw'
-	}
-];
+const tabs = computed(() => {
+	return [
+		{
+			label: t('base.header'),
+			value: 'Header',
+			icon: 'sym_r_responsive_layout'
+		},
+		{
+			label: t('base.social'),
+			value: 'Social',
+			icon: 'sym_r_diversity_2'
+		},
+		{
+			label: t('base.blocks'),
+			value: 'Blocks',
+			icon: 'sym_r_note_stack'
+		},
+		{
+			label: t('base.appearance'),
+			value: 'Appearance',
+			icon: 'sym_r_draw'
+		}
+	];
+});
 
-const tab = ref(tabs[0].value);
+const tab = ref(tabs.value[0].value);
 
 const onTabUpdate = (value: string) => {
 	tab.value = value;

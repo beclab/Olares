@@ -26,6 +26,6 @@ defineProps({
 <style lang="scss" scoped>
 .indexView {
 	width: 100%;
-	background: $white;
+	background: white;
 }
 </style>

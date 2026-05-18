@@ -23,6 +23,7 @@
 import throttle from 'lodash.throttle';
 import UTIF from 'utif';
 import heic2any from 'heic2any';
+import { useUserStore } from 'src/stores/user';
 
 export default {
 	props: {
@@ -65,10 +66,18 @@ export default {
 	},
 	mounted() {
 		const url = new URL(this.src);
+		console.log('url.host', url.hostname);
+		console.log('url.host', url.host);
+
+		const userStore = useUserStore();
+
 		let suff = url.pathname.split('.').pop().toLowerCase();
 		if (suff === 'heic') {
 			this.changeHeic();
 			return false;
+		}
+		if (userStore.current_user && userStore.current_user.isLocal) {
+			this.loadImageContent();
 		}
 		if (!this.decodeUTIF()) {
 			this.$refs.imgex.src = this.src;
@@ -92,13 +101,20 @@ export default {
 	watch: {
 		src: function () {
 			const url = new URL(this.src);
+			console.log('url.host', url.hostname);
+			console.log('url.host', url.host);
+			const userStore = useUserStore();
+
 			let suff = url.pathname.split('.').pop().toLowerCase();
 			if (suff === 'heic') {
 				this.changeHeic();
 				return false;
 			}
+			if (userStore.current_user && userStore.current_user.isLocal) {
+				this.loadImageContent();
+				return false;
+			}
 			if (!this.decodeUTIF()) {
-				console.log('watch src', this.src);
 				this.$refs.imgex.src = this.src;
 			}
 
@@ -141,6 +157,24 @@ export default {
 			}
 		},
 
+		async loadImageContent() {
+			try {
+				const userStore = useUserStore();
+
+				const response = await fetch(this.src, {
+					headers: {
+						'X-Authorization': userStore.current_user.access_token
+					}
+				});
+				const blob = await response.blob();
+				const url = URL.createObjectURL(blob);
+				this.$refs.imgex.src = url;
+				this.onLoad();
+			} catch (error) {
+				console.error('Error converting HEIC to JPEG:', error);
+			}
+		},
+
 		updateDimensions() {
 			this.screenWidth = window.innerWidth;
 			this.screenHeight = window.innerHeight;
@@ -164,12 +198,15 @@ export default {
 			let img = this.$refs.imgex;
 
 			this.imageLoaded = true;
+			console.log('111');
 
 			if (img === undefined) {
 				return;
 			}
 
 			this.imgWidth = img.width;
+			console.log('img --->', img.height);
+
 			this.imgHeight = img.height;
 
 			this.updateImgSize();

@@ -11,7 +11,7 @@
 				:items="store.menus"
 				@select="selectHandler"
 				style="width: 240px"
-				active-class="text-subtitle2 bg-yellow-soft text-ink-1"
+				active-class="text-subtitle2 bg-menu-active-color"
 				class="text-ink-2"
 				:key="locale"
 			>
@@ -66,27 +66,22 @@ import { getAppPlatform } from '../../application/platform';
 import { computed } from 'vue';
 import { useDeviceStore } from '../../stores/device';
 import { _t } from '../../utils/i18n';
-// const $q = useQuasar();
+
 const Router = useRouter();
 const deviceStore = useDeviceStore();
 
-// const isMobile = ref(
-// 	(process.env.PLATFORM == 'MOBILE' && ||
-// 		process.env.IS_BEX
-// );
-
 const store = useMenuStore();
-// const userStore = useUserStore();
-// const current_user = ref(userStore.current_user);
+
 const scrollVaultMenuRef = ref();
 const { t, locale } = useI18n();
 
 const selectHandler = (value) => {
+	store.vaultId = '';
+	store.tag = '';
 	store.currentItem = value.item.key;
 	if (isLeftDrawerOpen.value) {
 		store.leftDrawerOpen = !store.leftDrawerOpen;
 	}
-
 	if (
 		value.item.key === VaultMenuItem.SECURITYREPORT ||
 		value.item.key === VaultMenuItem.PASSWORDGENERATOR ||
@@ -97,10 +92,16 @@ const selectHandler = (value) => {
 		lock();
 	} else if (value.item && value.item.org_id) {
 		selectOrgMenu(value.item.org_id, value.item.key);
+		if (process.env.PLATFORM != 'MOBILE') {
+			store.currentItem = value.item.key;
+		}
 	} else if (value.item && value.item.orgId) {
 		gotoInvited(value.item, OrgMenu.INVITES);
 	} else if (value.item && value.item.vaultId) {
 		changeItemMenu(value.item.vaultId);
+	} else if (value.item && value.item.tagId) {
+		store.setTag(value.item.tagId);
+		goto('/items/');
 	} else {
 		changeItemMenu();
 	}
@@ -145,12 +146,9 @@ async function sync() {
 	store.handleSync();
 }
 
-const changeItemMenu = (vaultID = ''): void => {
+const changeItemMenu = (vaultID = '') => {
 	if (vaultID) {
 		store.changeItemMenu(vaultID);
-		store.currentItem = 'vault';
-	} else {
-		store.vaultId = '';
 	}
 	goto('/items/');
 };
@@ -193,7 +191,6 @@ const getScroll = (info: any) => {
 	height: 80px;
 	display: flex;
 	align-items: center;
-	justify-center: justify-between;
 
 	.name,
 	.did {
@@ -253,5 +250,12 @@ const getScroll = (info: any) => {
 	100% {
 		transform: rotate(0deg);
 	}
+}
+</style>
+
+<style lang="scss">
+.menu-active .bg-menu-active-color {
+	background: $theme-menu-bg-hover;
+	color: $theme-menu-color-hover;
 }
 </style>

@@ -1,11 +1,15 @@
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
+import { busEmit, busOff, busOn, NetworkErrorMode } from 'src/utils/bus';
 import { WebsocketSharedWorkerEnum } from 'src/websocket/interface';
+import { useBlacklistStore } from 'src/stores/settings/blacklist';
+import { useCookieStore } from 'src/stores/settings/cookie';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { useTransferStore } from 'src/stores/rss-transfer';
 import { useTransfer2Store } from 'src/stores/transfer2';
 import { useTerminusStore } from 'src/stores/terminus';
 import { useFilterStore } from 'src/stores/rss-filter';
 import { useConfigStore } from 'src/stores/rss-config';
-import { busEmit, busOff, busOn, NetworkErrorMode } from 'src/utils/bus';
+import { WiseWSType } from 'src/websocket/public/wise';
 import { useReaderStore } from '../stores/rss-reader';
 import TransferClient from '../services/transfer';
 import { importFilesStyle } from './utils/files';
@@ -14,11 +18,9 @@ import { useRssStore } from 'src/stores/rss';
 import { NormalApplication } from './base';
 import {
 	DATABASE_VERSION,
+	KNOWLEDGE_DATABASE,
 	WISE_DATABASE
 } from 'src/utils/localStorageConstant';
-import { useTransferStore } from 'src/stores/rss-transfer';
-import { useCookieStore } from 'src/stores/settings/cookie';
-import { useBlacklistStore } from 'src/stores/settings/blacklist';
 
 export class WiseApplication extends NormalApplication {
 	applicationName = 'wise';
@@ -53,39 +55,67 @@ export class WiseApplication extends NormalApplication {
 
 		const rssStore = useRssStore();
 		const socketStore = useWebsocketManager2Store();
-		const terminusStore = useTerminusStore();
-		await terminusStore.getTerminusInfo();
-		const filterStore = useFilterStore();
-		await filterStore.init();
-		busEmit('account_update');
-		await terminusStore.validateTerminusInfo(
-			(currentId, lastId) => {
-				const currentVersion = localStorage.getItem(WISE_DATABASE);
-				return currentId === lastId && currentVersion === DATABASE_VERSION;
-			},
-			async () => {
-				await Promise.all([configStore.load(), rssStore.load()]);
-			},
-			async () => {
-				await Promise.all([configStore.clear(), rssStore.clear()]);
-			}
-		);
-		if (terminusStore?.olaresId) {
-			const cookieStore = useCookieStore();
-			await cookieStore.init(
-				terminusStore.olaresId.split('@')[0],
-				configStore.url + '/knowledge'
-			);
-		}
 		const blacklistStore = useBlacklistStore();
-		blacklistStore.init(base_url);
-		await rssStore.sync();
 		const transferStore2 = useTransfer2Store();
 		const rssTransferStore = useTransferStore();
+		const filterStore = useFilterStore();
+		blacklistStore.init(base_url);
 		transferStore2.init();
 		rssTransferStore.init();
-		socketStore.dispose();
-		socketStore.restart();
+		configStore.load();
+		await rssStore.load();
+		await filterStore.init();
+		await rssStore.sync();
+		const terminusStore = useTerminusStore();
+		Promise.all([
+			terminusStore.getTerminusInfo(),
+			configStore.getKnowledgeDBInit()
+		]).then(() => {
+			terminusStore.validateTerminusInfo(
+				(currentId, lastId) => {
+					const currentVersion = localStorage.getItem(WISE_DATABASE);
+					const currentKnowVersion = localStorage.getItem(KNOWLEDGE_DATABASE);
+
+					if (!lastId) {
+						return true;
+					}
+
+					return (
+						currentId === lastId &&
+						currentVersion === DATABASE_VERSION &&
+						currentKnowVersion === configStore.knowledgeDBInitTime
+					);
+				},
+				async () => {
+					//Do Nothing
+				},
+				async () => {
+					filterStore.inited = false;
+					await Promise.all([configStore.clear(), rssStore.clear()]);
+					await Promise.all([configStore.load(), rssStore.load()]);
+					transferStore2.init();
+					await filterStore.init();
+					await rssStore.sync();
+				},
+				async () => {
+					if (configStore.knowledgeDBInitTime) {
+						localStorage.setItem(
+							KNOWLEDGE_DATABASE,
+							configStore.knowledgeDBInitTime
+						);
+					}
+				}
+			);
+			if (terminusStore?.olaresId) {
+				const cookieStore = useCookieStore();
+				cookieStore.init(
+					terminusStore.olaresId.split('@')[0],
+					configStore.url + '/knowledge'
+				);
+			}
+			busEmit('account_update');
+			socketStore.restart();
+		});
 		socketStore.appMount();
 		this.socketTimer = setInterval(() => {
 			rssStore.sync();
@@ -135,8 +165,29 @@ export class WiseApplication extends NormalApplication {
 			};
 		},
 		responseShareWorkerMessage(data: any) {
-			busEmit('wiseDownloadProcess', data);
-			busEmit('CloudTransferUpdate', data);
+			if (data.type == 'transfer') {
+				busEmit('wiseDownloadProcess', data);
+				busEmit('CloudTransferUpdate', data);
+			} else if (data.type == WiseWSType.ENCLOSURE) {
+				busEmit('enclosureUpdate', data);
+			} else if (data.type == WiseWSType.SYNC) {
+				const rssStore = useRssStore();
+				if (data.data.kind === 'entry') {
+					rssStore.pushTrigger('syncEntries');
+					// eslint-disable-next-line no-dupe-else-if
+				} else if (data.data.kind === 'feed') {
+					rssStore.pushTrigger('syncFeeds');
+					// eslint-disable-next-line no-dupe-else-if
+				} else if (data.data.kind === 'note') {
+					rssStore.pushTrigger('syncNotes');
+					// eslint-disable-next-line no-dupe-else-if
+				} else if (data.data.kind === 'label') {
+					rssStore.pushTrigger('syncLabels');
+					// eslint-disable-next-line no-dupe-else-if
+				} else if (data.data.kind === 'remove') {
+					rssStore.pushTrigger('syncRemoveData');
+				}
+			}
 		}
 	};
 

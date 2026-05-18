@@ -191,7 +191,7 @@ import MyLoading2 from '@apps/control-panel-common/src/components/MyLoading2.vue
 import MoreSelection from '@apps/control-panel-common/src/components/MoreSelection.vue';
 import Yaml3 from '../NamespacePods/Yaml3.vue';
 import DeleteDialog from '@apps/control-panel-common/src/components/DeleteDialog.vue';
-import { useQuasar } from 'quasar';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { API_VERSIONS } from '@apps/control-hub/src/utils/constants';
 import EditDialog from '@apps/control-hub/components/dialog/src/IndexDialog.vue';
 import { useI18n } from 'vue-i18n';
@@ -205,7 +205,6 @@ const { color: blueDefault } = useColor('blue-default');
 const { color: inkOnBrand } = useColor('ink-on-brand');
 
 const { t } = useI18n();
-const $q = useQuasar();
 
 const VOLUME_STATUS = [
 	{ text: 'ALL', value: undefined },
@@ -373,15 +372,15 @@ const confirmHandler = async () => {
 	deleteLoading.value = true;
 	try {
 		const res = await deletePersistentvolumeclaims(params);
-		$q.notify({
-			type: 'positive',
+		BtNotify.show({
+			type: NotifyDefinedType.SUCCESS,
 			message: t('DELETED_SUCCESSFULLY')
 		});
 		fetchData();
 		deleteDialogRef.value && deleteDialogRef.value.hide();
 	} catch (error) {
-		$q.notify({
-			type: 'negative',
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
 			message: JSON.stringify(error || '')
 		});
 	}
@@ -423,14 +422,14 @@ const onSubmit = async () => {
 	try {
 		await patchPersistentvolumeclaims(params, newData);
 		fetchData();
-		$q.notify({
-			type: 'positive',
+		BtNotify.show({
+			type: NotifyDefinedType.SUCCESS,
 			message: t('UPDATE_SUCCESSFUL')
 		});
 		editRef.value && editRef.value.close();
 	} catch (error) {
-		$q.notify({
-			type: 'negative',
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
 			message: JSON.stringify(error || '')
 		});
 	}

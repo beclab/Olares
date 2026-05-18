@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import Origin from './../origin';
-import { createURL, getPurePath } from '../utils';
+import { createURL, decodeURIComponentSafe, getPurePath } from '../utils';
 import { formatDrive } from './filesFormat';
 import { MenuItem } from 'src/utils/contact';
 import { OPERATE_ACTION } from 'src/utils/contact';
@@ -338,11 +338,7 @@ export default class DriveDataAPI extends Origin {
 		let file_path = files.driveRemovePrefix(file.path);
 
 		if (decodeUrl) {
-			try {
-				file_path = decodeURIComponent(file_path);
-			} catch (error) {
-				console.log(file_path);
-			}
+			file_path = decodeURIComponentSafe(file_path);
 		}
 
 		const url = createURL(files.driveCommonUrl('raw', file_path), params);
@@ -404,26 +400,30 @@ export default class DriveDataAPI extends Origin {
 	}
 
 	getAttrPath(item: FileItem): string {
-		const path = decodeURIComponent(item.path);
+		const path = decodeURIComponentSafe(item.path);
 		if (item.name) return path.slice(0, path.indexOf(item.name));
 
 		return path;
 	}
 
-	async getFileServerUploadLink(folderPath: string): Promise<any> {
-		const dataStore = useDataStore();
-		const baseURL = dataStore.baseURL();
+	async getFileServerUploadLink(
+		folderPath: string,
+		repoID?: string,
+		dirName?: string,
+		externalQuery?: any
+	): Promise<any> {
 		const node = this.getUploadNode();
 		const path = folderPath;
 
-		const url =
-			baseURL +
-			`/upload/upload-link/${node}/?file_path=` +
-			encodeUrl(path) +
-			'&from=web';
-		const res = await this.commonAxios.get(url, {
-			responseType: 'text'
-		});
+		const params = {
+			...externalQuery,
+			file_path: path,
+			from: 'web'
+		};
+
+		const url = createURL(`/upload/upload-link/${node}/`, params);
+
+		const res = await this.commonAxios.get(url.toString());
 
 		return res + '?ret-json=1';
 	}
@@ -466,6 +466,13 @@ export default class DriveDataAPI extends Origin {
 			item.path = item.path + '/';
 		}
 
+		const oPath = this.pathToFrontendFile(item.path).path;
+
+		const oParentPath = oPath.substring(
+			0,
+			oPath.length - item.name.length - (item.path.endsWith('/') ? 1 : 0)
+		);
+
 		const res: FileItem = {
 			extension,
 			isDir: item.isFolder,
@@ -482,7 +489,15 @@ export default class DriveDataAPI extends Origin {
 			url: item.url || '',
 			driveType: item.driveType!,
 			param: '',
-			fileExtend: ''
+			fileExtend:
+				this.driveType === DriveType.Drive
+					? 'Home'
+					: this.driveType == DriveType.Data
+					? 'Data'
+					: '',
+			fileType: 'drive',
+			oPath,
+			oParentPath
 		};
 
 		return res;
@@ -532,7 +547,7 @@ export default class DriveDataAPI extends Origin {
 
 		const path = appendPath(
 			filesUtil.commonUrlTypeExtend('raw', file.fileType, file.fileExtend),
-			encodeUrl(file.path)
+			decodeURIComponentSafe(file.path)
 		);
 
 		const url = createURL(path, params);
@@ -627,19 +642,8 @@ export default class DriveDataAPI extends Origin {
 			}
 
 			const cur_file = this.formatTransferToFileItem(transferItem);
-			let decodeCurlFilePath = cur_file.path;
-			try {
-				decodeCurlFilePath = decodeURIComponent(cur_file.path);
-			} catch (error) {
-				console.log('error', error);
-			}
-
-			let decoodeFullPath = fullPath;
-			try {
-				decoodeFullPath = decodeURIComponent(fullPath);
-			} catch (error) {
-				console.log('error', error);
-			}
+			const decodeCurlFilePath = decodeURIComponentSafe(cur_file.path);
+			const decoodeFullPath = decodeURIComponentSafe(fullPath);
 
 			if (decodeCurlFilePath.indexOf(decoodeFullPath) >= 0) {
 				filesStore.setBrowserUrl(
@@ -651,12 +655,8 @@ export default class DriveDataAPI extends Origin {
 			} else {
 				let parentPath = decodeCurlFilePath;
 
-				let decodeCurlFileName = cur_file.name;
-				try {
-					decodeCurlFileName = decodeURIComponent(decodeCurlFileName);
-				} catch (error) {
-					/* empty */
-				}
+				const decodeCurlFileName = decodeURIComponentSafe(cur_file.name);
+
 				if (
 					!parentPath.endsWith('/') &&
 					parentPath.endsWith(decodeCurlFileName)

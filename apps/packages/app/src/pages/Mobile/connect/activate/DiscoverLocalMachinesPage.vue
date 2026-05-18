@@ -231,7 +231,7 @@ const activeLocal = async (machine: TerminusServiceInfo) => {
 			try {
 				await onFirstFactor(
 					baseURL,
-					user.name,
+					user,
 					user.local_name,
 					password,
 					false,
@@ -246,7 +246,7 @@ const activeLocal = async (machine: TerminusServiceInfo) => {
 		return;
 	}
 	const hostInfo = JSON.parse(userStore.current_user?.localMachine);
-	if (hostInfo.host != machine.host || !hostInfo.password) {
+	if (!hostInfo.password) {
 		return;
 	}
 	activeTerminus(machine, hostInfo.password);
@@ -262,7 +262,10 @@ const activeTerminus = async (
 		mdnsStore.isNewActivedMineVersion(machine.status.terminusVersion)
 	) {
 		$q.loading.show();
-		const frpList = await mdnsStore.getFrpList(user.name);
+		const frpList = await mdnsStore.getFrpList(
+			user.name,
+			machine.status.device_name
+		);
 		$q.loading.hide();
 		if (!frpList) {
 			notifyFailed('get frp list error');

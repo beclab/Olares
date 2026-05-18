@@ -1,5 +1,6 @@
 import { useTokenStore } from 'src/stores/settings/token';
 import axios from 'axios';
+import { ExcludePatternItem } from 'src/constant';
 
 export async function getSearchTaskStatus(): Promise<any> {
 	const tokenStore = useTokenStore();
@@ -11,7 +12,7 @@ export async function rebuildSearchTask(): Promise<any> {
 	return await axios.post(`${tokenStore.url}/api/search/task/rebuild`);
 }
 
-export async function getExcludePatterns() {
+export async function getExcludePatterns(): Promise<ExcludePatternItem[]> {
 	const tokenStore = useTokenStore();
 	return await axios.get(
 		`${tokenStore.url}/api/search/monitorsetting/exclude-pattern`
@@ -67,4 +68,9 @@ export async function deleteSearchDirectories(values: string[]) {
 			}
 		}
 	);
+}
+
+export async function getFailedPathList(values: string[]) {
+	const tokenStore = useTokenStore();
+	return await axios.get(`${tokenStore.url}/api/search/file/extract-fail`);
 }

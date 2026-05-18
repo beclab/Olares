@@ -7,13 +7,13 @@ self.onconnect = (event) => {
 	const port = event.ports[0];
 	const name = (event.currentTarget as any).name;
 	const sharedWebsocket = getWebSocketBean(name);
-	sharedWebsocket.connections.add(port);
 
 	port.onmessage = (messageEvent) => {
 		const { type, data } = messageEvent.data;
 
 		switch (type) {
 			case 'connect':
+				sharedWebsocket.addConnection(port);
 				sharedWebsocket.initWebSocket(data, () => {
 					sharedWebsocket.connections.forEach((port) =>
 						port.postMessage({
@@ -36,9 +36,6 @@ self.onconnect = (event) => {
 				}
 				break;
 			case 'disconnect':
-				// sharedWebsocket.connections = sharedWebsocket.connections.filter(
-				// 	(conn) => conn !== port
-				// );
 				sharedWebsocket.connections.delete(port);
 				if (sharedWebsocket.connections.size === 0) {
 					if (sharedWebsocket.websocket) {
@@ -64,7 +61,7 @@ self.onconnect = (event) => {
 				});
 				break;
 			default:
-				sharedWebsocket.otherTypeMethods(messageEvent.data);
+				sharedWebsocket.otherTypeMethods({ ...messageEvent.data, _port: port });
 		}
 	};
 };

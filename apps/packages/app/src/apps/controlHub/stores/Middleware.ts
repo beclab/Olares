@@ -31,7 +31,6 @@ export const useMiddlewareStore = defineStore('middleware', {
 				this.refresh();
 			} catch (error) {
 				this.loading = false;
-				this.list = [];
 			}
 			this.loading = false;
 		},
@@ -39,7 +38,7 @@ export const useMiddlewareStore = defineStore('middleware', {
 			this.clearLocker();
 			this.locker = setTimeout(() => {
 				this.getList(true);
-			}, 5000);
+			}, 10000);
 		},
 		clearLocker() {
 			this.locker && clearTimeout(this.locker);

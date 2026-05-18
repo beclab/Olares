@@ -34,7 +34,7 @@
 					class="q-mt-md"
 					v-model="factorMode"
 					:title="t('second_factor_model')"
-					:options="factorModelOptions()"
+					:options="subPolicyFactorModelOptions()"
 					:border="true"
 				/>
 
@@ -81,8 +81,8 @@ import { ref, onMounted, PropType } from 'vue';
 import {
 	EntrancePolicy,
 	FACTOR_MODEL,
-	factorModelOptions
-} from 'src/constant/index';
+	subPolicyFactorModelOptions
+} from 'src/constant';
 import BtTimePicker from '../../base/BtTimePicker.vue';
 import ErrorMessageTip from '../../base/ErrorMessageTip.vue';
 import TerminusEdit from 'src/components/settings/base/TerminusEdit.vue';

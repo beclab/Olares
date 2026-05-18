@@ -64,7 +64,7 @@ import { getAnalyticsMetrics } from '@apps/dashboard/src/network';
 import { dateRange, dateValue } from './DatefilterState';
 import Empty from '@apps/control-panel-common/src/components/Empty2.vue';
 import WebsiteCard from '@apps/dashboard/components/Skeleton/WebsiteCard.vue';
-import { t } from '@apps/dashboard/src/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 
 interface Props {
 	websiteId: string;

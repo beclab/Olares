@@ -144,7 +144,12 @@ const onConfirm = async () => {
 		$q.loading.show();
 		const inputs = integrationAddInputs.value.allAccountValues();
 		try {
-			await integrationStore.createAccount(inputs);
+			const accountResult = await integrationStore.createAccount(inputs);
+			if (!accountResult.data || accountResult.data.code != 0) {
+				$q.loading.hide();
+				notifyFailed(accountResult.data?.message || '');
+				return;
+			}
 			step.value = AwsAddStep.display;
 			$q.loading.hide();
 		} catch (error) {

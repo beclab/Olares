@@ -1,11 +1,12 @@
 import { useCenterStore } from 'src/stores/market/center';
 import axios from 'axios';
+import { useAppStore } from 'src/stores/market/appStore';
 
 export async function getAppPaymentStatus(
 	appId: string,
 	sourceId: string
 ): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = `${store.appUrl}/sources/${sourceId}/apps/${appId}/payment-status`;
 	const { data } = await axios.get(url);
 	console.log(data);
@@ -13,8 +14,16 @@ export async function getAppPaymentStatus(
 }
 
 export async function getAppPurchase(appId: string, sourceId: string) {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = `${store.appUrl}/sources/${sourceId}/apps/${appId}/purchase`;
+	const { data } = await axios.post(url);
+	console.log(data);
+	return data;
+}
+
+export async function recoverAppPurchase(appId: string, sourceId: string) {
+	const store = useAppStore();
+	const url = `${store.appUrl}/sources/${sourceId}/apps/${appId}/restore-purchase`;
 	const { data } = await axios.post(url);
 	console.log(data);
 	return data;
@@ -26,7 +35,7 @@ export async function submitTransaction(
 	productId: string,
 	transaction: any
 ) {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = `${store.appUrl}/payment/frontend-start`;
 	const { data } = await axios.post(url, {
 		app_id: appId,
@@ -44,7 +53,7 @@ export async function startBackendPolling(
 	txHash: string,
 	productId: string
 ): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = `${store.appUrl}/payment/start-polling`;
 	const { data } = await axios.post(url, {
 		app_id: appId,

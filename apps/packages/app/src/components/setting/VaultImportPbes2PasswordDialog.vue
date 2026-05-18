@@ -60,7 +60,7 @@ const unlock = async () => {
 		border: 1px solid $input-stroke;
 		background-color: transparent;
 		&:focus {
-			border: 1px solid $yellow-disabled;
+			border: 1px solid $theme-input-focus-border;
 		}
 	}
 }

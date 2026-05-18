@@ -59,12 +59,12 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { getConfigmapsData } from '@apps/control-hub/src/network';
 import { ObjectMapper } from '@apps/control-panel-common/src/utils/object.mapper';
 import { isEmpty } from 'lodash-es';
 import DetailPage from '@apps/control-panel-common/src/containers/DetailPage.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { getLocalTime } from '@apps/control-hub/src/utils';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';
 import MyPage from '@apps/control-panel-common/src/containers/MyPage.vue';
@@ -79,7 +79,8 @@ const isStudio = useIsStudio();
 const isStudio2 = useIsStudio2();
 
 let loading = ref(false);
-const detail = ref();
+const rawData = ref();
+const detail = computed(() => getAttrs(rawData.value));
 const route = useRoute();
 const configmapsData = ref<{ [key: string]: string }>({});
 const yamlRef = ref();
@@ -114,14 +115,14 @@ const getAttrs = (detail: any) => {
 const fetchDetail = () => {
 	const { namespace, name }: any = route.params;
 	loading.value = true;
-	detail.value = [];
+	rawData.value = undefined;
 	configmapsData.value = {};
 
 	getConfigmapsData({ name, namespace })
 		.then((res) => {
 			const result = ObjectMapper.configmaps(res.data);
 			configmapsData.value = result.data;
-			detail.value = getAttrs(result);
+			rawData.value = result;
 		})
 		.finally(() => {
 			loading.value = false;

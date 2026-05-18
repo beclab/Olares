@@ -77,7 +77,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useDialogPluginComponent } from 'quasar';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import Title from './Title.vue';
 import MyCard from '@apps/control-hub/src/components/MyCard.vue';
 import { CLUSTER_PROVIDERS } from '@apps/control-panel-common/src/utils/constants';

@@ -42,7 +42,6 @@ import TerminusUserHeaderReminder from 'src/components/common/TerminusUserHeader
 import settingsIcon from 'src/assets/plugin/settings.svg';
 import { linkToSetting } from 'src/utils/bex/link';
 import { ROUTE_CONST } from 'src/router/route-const';
-import '../css/terminus.scss';
 import { useRouter } from 'vue-router';
 import { onMounted } from 'vue';
 import { useLarepassWebsocketManagerStore } from 'src/stores/larepassWebsocketManager';

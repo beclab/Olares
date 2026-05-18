@@ -36,11 +36,13 @@ export const PASSWORD_RULE = {
 	LENGTH_RULE: '^.{8,32}$',
 	LOWERCASE_RULE: '^(?=.*[a-z])',
 	UPPERCASE_RULE: '^(?=.*[A-Z])',
+	LETTERS_RULE: '^(?=.*[A-Za-z])',
 	DIGIT_RULE: '^(?=.*[0-9])',
-	SYMBOL_RULE: '^(?=.*[@$!%*?&_.])[A-Za-z0-9@$!%*?&_.]+$',
-	ALL_RULE:
-		'^(?=.*[@$!%*?&_.])(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[A-Za-z0-9@$!%*?&_.]{8,32}$'
+	SYMBOL_RULE: '^(?=.*[@$!%*?&_.])',
+	ALL_RULE: '^(?=.*[@$!%*?&_.])(?=.*[A-Za-z])[A-Za-z0-9@$!%*?&_.]{8,32}$'
 };
+
+export const passwordInavlidRule = /[^A-Za-z0-9@$!%*?&_.]/g;
 
 export const SSH_PASSWORD_RULE = {
 	LENGTH_RULE: '^.{10,32}$'

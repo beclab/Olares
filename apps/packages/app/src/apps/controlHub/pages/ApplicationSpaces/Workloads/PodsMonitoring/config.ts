@@ -1,6 +1,6 @@
 import { ResourcesResponse } from '@apps/control-hub/src/types/network';
 import { get, isArray, isEmpty } from 'lodash';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 
 interface metric {
 	metric: {

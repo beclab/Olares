@@ -34,17 +34,20 @@ export default defineComponent({
 		const menuStore = useMenuStore();
 
 		onMounted(async () => {
-			getAppPlatform().homeMounted();
-
 			menuStore.syncInfo = {
 				syncing: app.state.syncing || false,
 				lastSyncTime: date.formatDate(app.state.lastSync, 'HH:mm:ss')
 			};
 			menuStore.handleSync();
+			if (platform.value === 'WEB') {
+				getAppPlatform().homeMounted();
+			}
 		});
 
 		onUnmounted(() => {
-			getAppPlatform().homeUnMounted();
+			if (platform.value === 'WEB') {
+				getAppPlatform().homeUnMounted();
+			}
 		});
 
 		return {

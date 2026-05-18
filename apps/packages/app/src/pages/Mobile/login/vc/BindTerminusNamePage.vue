@@ -25,7 +25,7 @@
 				>
 					{{
 						t(
-							'Must be 8 to 63 characters long, containing only numbers [0-9] and lowercase letters [a-z].'
+							'Must be 8 to 24 characters long, containing only numbers [0-9] and lowercase letters [a-z].'
 						)
 					}}
 				</div>
@@ -181,29 +181,49 @@ const bindVC = () => {
 const createTerminusName = async () => {
 	const deviceId = await getNativeAppPlatform().getDeviceId();
 	const appVersion = (await getNativeAppPlatform().getDeviceInfo()).appVersion;
+
 	if (deviceId.length == 0) {
 		return;
 	}
 	$q.loading.show();
-	await getBasicTerminusName(
-		terminusNameRef.value,
-		deviceId,
-		appVersion,
-		window.navigator.userAgent,
-		{
-			onSuccess() {
-				$q.loading.hide();
-				userStore.isNewCreateUser = true;
-				router.replace({
-					path: '/Activate/1/1'
-				});
-			},
-			onFailure(message: string) {
-				$q.loading.hide();
-				notifyFailed(message);
-			}
+
+	try {
+		const captcha = await getNativeAppPlatform().getCaptchaToken();
+		console.log('captcha --->', captcha);
+
+		if (captcha.length == 0) {
+			return;
 		}
-	);
+
+		const info = await getNativeAppPlatform().getCaptchaInfo();
+		console.log('info ---->', info);
+
+		await getBasicTerminusName(
+			terminusNameRef.value,
+			deviceId,
+			appVersion,
+			window.navigator.userAgent,
+			info.channel,
+			info.platform,
+			captcha,
+			{
+				onSuccess() {
+					$q.loading.hide();
+					userStore.isNewCreateUser = true;
+					router.replace({
+						path: '/Activate/1/1'
+					});
+				},
+				onFailure(message: string) {
+					$q.loading.hide();
+					notifyFailed(message);
+				}
+			}
+		);
+	} catch (error) {
+		notifyFailed(error.message);
+		$q.loading.hide();
+	}
 };
 
 onMounted(async () => {

@@ -1,5 +1,5 @@
 <template>
-	<page-title-component :title="t('Hardware Acceleration')" :show-back="true" />
+	<page-title-component :title="t('Hardware acceleration')" :show-back="true" />
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<adaptive-layout>
 			<template v-slot:pc>
@@ -9,7 +9,7 @@
 							<div class="column justify-start">
 								<div class="row">
 									<div class="text-subtitle2 text-ink-1 q-mt-md">
-										{{ t('Hardware Acceleration') }}
+										{{ t('Hardware acceleration') }}
 									</div>
 								</div>
 								<div class="text-body3 text-ink-3 q-mt-xs q-mb-md">
@@ -94,7 +94,7 @@
 			>
 				<bt-switch
 					size="sm"
-					truthy-track-color="light-blue-default"
+					truthy-track-color="blue-default"
 					v-model="decoding.value"
 					@update:model-value="updateItem(decoding)"
 				/>
@@ -113,7 +113,7 @@
 			>
 				<bt-switch
 					size="sm"
-					truthy-track-color="light-blue-default"
+					truthy-track-color="blue-default"
 					v-model="
 						videoStore.hardwareAcceleration.enableDecodingColorDepth10Hevc.value
 					"
@@ -132,7 +132,7 @@
 			>
 				<bt-switch
 					size="sm"
-					truthy-track-color="light-blue-default"
+					truthy-track-color="blue-default"
 					v-model="
 						videoStore.hardwareAcceleration.enableDecodingColorDepth10Vp9.value
 					"
@@ -155,7 +155,7 @@
 				>
 					<bt-switch
 						size="sm"
-						truthy-track-color="light-blue-default"
+						truthy-track-color="blue-default"
 						v-model="
 							videoStore.hardwareAcceleration.enableEnhancedNvdecDecoder.value
 						"
@@ -192,7 +192,7 @@
 				>
 					<bt-switch
 						size="sm"
-						truthy-track-color="light-blue-default"
+						truthy-track-color="blue-default"
 						v-model="
 							videoStore.hardwareAcceleration.preferSystemNativeHwDecoder.value
 						"
@@ -233,7 +233,7 @@
 			>
 				<bt-switch
 					size="sm"
-					truthy-track-color="light-blue-default"
+					truthy-track-color="blue-default"
 					v-model="videoStore.hardwareAcceleration.enableHardwareEncoding.value"
 					@update:model-value="updateEnableHardwareEncoding"
 				/>
@@ -254,7 +254,7 @@
 			>
 				<bt-switch
 					size="sm"
-					truthy-track-color="light-blue-default"
+					truthy-track-color="blue-default"
 					v-model="
 						videoStore.hardwareAcceleration.enableIntelLowPowerH264HwEncoder
 							.value
@@ -283,7 +283,7 @@
 					</template>
 					<bt-switch
 						size="sm"
-						truthy-track-color="light-blue-default"
+						truthy-track-color="blue-default"
 						v-model="
 							videoStore.hardwareAcceleration.enableIntelLowPowerHevcHwEncoder
 								.value

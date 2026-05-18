@@ -18,7 +18,13 @@
 					'Please provide a unique title for your cloned application to avoid confusion with existing ones.'
 				)
 			]"
-			:error-message="data.titleValidation.message"
+			:is-error="!!titleErrorMsg"
+			:error-message="titleErrorMsg"
+			@update:modelValue="
+				() => {
+					titleErrorMsg = '';
+				}
+			"
 		/>
 
 		<terminus-edit
@@ -82,6 +88,7 @@ const { t } = useI18n();
 const CustomRef = ref();
 
 const titleRef = ref('');
+const titleErrorMsg = ref(props.data?.titleValidation?.message);
 const missingValues = ref<CloneEntrance[]>([]);
 const invalidValues = ref<CloneEntrance[]>([]);
 

@@ -132,7 +132,7 @@
 
 <script setup lang="ts">
 import { get, isEmpty, toPairs } from 'lodash-es';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { getNetworkpoliciesDetail } from '@apps/control-hub/src/network';
 import { NetworkPoliciesMapper } from '@apps/control-hub/src/utils/object.mapper';
 import { computed, onMounted, ref, watch } from 'vue';

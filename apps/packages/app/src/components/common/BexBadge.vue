@@ -44,7 +44,7 @@
 								@update:model-value="setAutofillBadgeEnable"
 							/>
 						</div>
-						<div class="row items-center justify-between q-py-xs">
+						<!-- <div class="row items-center justify-between q-py-xs">
 							<div class="text-subtitle2 text-ink-1">
 								{{ t('enable_rss_badge') }}
 							</div>
@@ -56,7 +56,7 @@
 								v-model="rssBadgeEnableRef"
 								@update:model-value="setRssBadgeEnable"
 							/>
-						</div>
+						</div> -->
 					</div>
 				</template>
 			</div>

@@ -96,12 +96,14 @@ onMounted(() => {
 	border-radius: 8px;
 	cursor: pointer;
 	text-decoration: none;
+	color: $ink-1;
 
 	&:hover {
 		background: var(
 			--profile,
 			linear-gradient(90deg, #8ce3ff -2.75%, #7fff93 102.75%)
 		);
+		color: $ink-on-brand-black;
 	}
 
 	&:active {
@@ -110,13 +112,13 @@ onMounted(() => {
 			linear-gradient(90deg, #8ce3ff -2.75%, #7fff93 102.75%)
 		);
 		filter: brightness(0.9);
+		color: $ink-on-brand-black;
 		//transform: scale(0.98);
 	}
 
 	&__label {
 		text-align: center;
 		overflow: hidden;
-		color: $ink-on-brand-black;
 		text-overflow: ellipsis;
 	}
 }

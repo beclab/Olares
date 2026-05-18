@@ -60,7 +60,6 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DesktopDefaultHeaderView from '../components/DesktopDefaultHeaderView.vue';
-import '../css/terminus.scss';
 
 const slide = ref(1);
 const autoplay = ref(false);

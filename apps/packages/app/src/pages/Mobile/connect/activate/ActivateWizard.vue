@@ -125,6 +125,7 @@ async function updateTerminusInfo(): Promise<string | undefined> {
 		if (commonInterceptValue.includes(data as any)) {
 			return undefined;
 		}
+
 		await userStore.setUserTerminusInfo(user.id, data);
 
 		wizardStatus.value = data.wizardStatus;
@@ -133,18 +134,24 @@ async function updateTerminusInfo(): Promise<string | undefined> {
 		}
 		return wizardStatus.value;
 	} catch (e) {
-		// failed.value = true;
-		// return undefined;
-		try {
-			return await authRequestTerminusInfo();
-		} catch (error) {
-			if (getHostTerminusCount < 10) {
-				getHostTerminusCount += 1;
-			} else {
-				failed.value = true;
+		if (
+			e.response &&
+			e.response.status == 421 &&
+			typeof e.response.data == 'string' &&
+			commonInterceptValue.includes(e.response.data)
+		) {
+			wizardStatus.value = 'wait_reset_password';
+		} else {
+			try {
+				return await authRequestTerminusInfo();
+			} catch (error) {
+				if (getHostTerminusCount < 10) {
+					getHostTerminusCount += 1;
+				} else {
+					failed.value = true;
+				}
+				return undefined;
 			}
-
-			return undefined;
 		}
 	} finally {
 		updateTerminusInfoIng = false;

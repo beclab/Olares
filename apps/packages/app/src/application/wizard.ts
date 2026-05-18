@@ -85,15 +85,12 @@ export class WizardApplication extends NormalApplication {
 			}
 		});
 		this.responseErrorInterceps = (error: any) => {
-			console.log('wizard error ====>', error.response);
 			if (
 				error.response &&
 				error.response.status == 421 &&
 				typeof error.response.data == 'string' &&
 				commonInterceptValue.includes(error.response.data)
 			) {
-				console.log('default error 1');
-
 				throw Error('Default');
 			}
 			throw error;

@@ -30,7 +30,12 @@
 								{{ account.name }}
 							</div>
 							<setting-connect-status
-								v-if="!account.wizard_complete"
+								v-if="account.state === AccountStatus.Failed"
+								:label="$t('Failed')"
+								icon="sym_r_devices_off"
+							/>
+							<setting-connect-status
+								v-else-if="!account.wizard_complete"
 								:label="$t('not_activated')"
 								icon="sym_r_devices_off"
 							/>
@@ -51,12 +56,12 @@
 </template>
 
 <script lang="ts" setup>
-import { PropType } from 'vue';
-import { AccountInfo } from 'src/constant/global';
-import { getRoleName } from 'src/constant/index';
 import SettingConnectStatus from 'src/components/settings/base/SettingConnectStatus.vue';
+import { AccountInfo, AccountStatus } from 'src/constant/global';
 import { useDeviceStore } from 'src/stores/settings/device';
 import BtSeparator from '../base/BtSeparator.vue';
+import { getRoleName } from 'src/constant';
+import { PropType } from 'vue';
 
 defineProps({
 	account: {

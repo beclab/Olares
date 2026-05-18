@@ -34,7 +34,7 @@ import { getAreaChartOps } from '@apps/dashboard/src/utils/monitoring';
 import InfoCardRadio from '@apps/dashboard/components/InfoCard/InfoCardRadio.vue';
 import { getContentOptions, getTabOptions, MetricTypesFormat } from './config';
 import { InfoCardItemProps } from '@apps/dashboard/src/components/InfoCard/InfoCardItem.vue';
-import { t } from '@apps/dashboard/src/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import { useRouter } from 'vue-router';
 
 interface Props {

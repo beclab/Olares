@@ -1,6 +1,6 @@
 <template>
 	<div class="my-bottom-sheet-container" @click.prevent="closeHanlder">
-		<div class="my-bottom-sheet-wrapper bg-white" @click.stop>
+		<div class="my-bottom-sheet-wrapper" @click.stop>
 			<div class="my-bottom-sheet-header row items-center justify-between">
 				<span class="text-h5 text-grey-10">{{ title }}</span>
 				<QBtnToggleStyle size="xl">

@@ -1,5 +1,5 @@
 <template>
-	<page-title-component :title="t('Transcoding Settings')" :show-back="true" />
+	<page-title-component :title="t('Transcoding settings')" :show-back="true" />
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<bt-list first>
 			<adaptive-layout>

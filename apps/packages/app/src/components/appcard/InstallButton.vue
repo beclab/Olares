@@ -211,13 +211,14 @@ import InstallButtonOperationDialog from 'src/components/appcard/InstallButtonOp
 import ProgressButton from '../../components/base/ProgressButton.vue';
 import SimpleWaiter from 'src/utils/simpleWaiter';
 import { getSuitableUnit, getValueByUnit } from 'src/utils/settings/monitoring';
+import { usePreCheckStore } from 'src/stores/market/preCheck';
 import useAppAction from 'src/components/appcard/useAppAction';
+import { useDeviceStore as useThemeDeviceStore } from 'src/stores/device';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { notifyFailed } from 'src/utils/settings/btNotify';
 import { usePaymentStore } from 'src/stores/market/payment';
-import { useCenterStore } from 'src/stores/market/center';
 import { AppService } from 'src/stores/market/appService';
-import { useUserStore } from 'src/stores/market/user';
+import { useAppStore } from 'src/stores/market/appStore';
 import globalConfig from '../../api/market/config';
 import { busOff, busOn } from 'src/utils/bus';
 import { useColor } from '@bytetrade/ui';
@@ -302,10 +303,12 @@ const { color: white } = useColor('ink-on-brand');
 const emit = defineEmits(['onError']);
 const simpleWaiter = new SimpleWaiter();
 const appPaymentType = ref<APP_PAYMENT_TYPE>(APP_PAYMENT_TYPE.APP_TYPE_UNKNOWN);
-const deviceStore = useDeviceStore();
-const centerStore = useCenterStore();
+const isFetchingFullInfo = ref(false);
 const paymentStore = usePaymentStore();
-const userStore = useUserStore();
+const themeDeviceStore = useThemeDeviceStore();
+const deviceStore = useDeviceStore();
+const appStore = useAppStore();
+const preCheckStore = usePreCheckStore();
 const { t } = useI18n();
 const $q = useQuasar();
 
@@ -369,7 +372,7 @@ const uiState = reactive<UIConfig>({
 });
 
 const currentAppLocalStatus = computed(() => {
-	return centerStore.getLocalStatus(props.appName, props.sourceId);
+	return appStore.getLocalStatus(props.appName, props.sourceId);
 });
 
 const currentStateMeta = ref<{
@@ -401,27 +404,37 @@ const stateConfigs: Array<{
 				(currentAppLocalStatus.value.status ===
 					LOCAL_STATUS.PRE_CHECK_FINISHED &&
 					currentAppLocalStatus.value.data.length > 0)),
-		uiConfig: {
+		uiConfig: () => ({
 			statusText: 'app.get',
 			textColor: blueDefault.value,
 			backgroundColor: grey.value,
 			border: '1px solid transparent',
-			isDisabled: false,
-			isLoading: false,
+			isDisabled: isFetchingFullInfo.value,
+			isLoading: isFetchingFullInfo.value,
 			isErrorStatus: false,
 			isStopStatus: false
-		},
+		}),
 		handler: async () => {
-			const appFullInfo = centerStore.getAppFullInfo(
-				props.appName,
-				props.sourceId
-			);
+			let appFullInfo = appStore.getAppFullInfo(props.appName, props.sourceId);
 			if (!appFullInfo) {
-				notifyFailed('Fetching the full data of the current app, please wait.');
+				isFetchingFullInfo.value = true;
+				updateUIAndMeta();
+				try {
+					appFullInfo = await appStore.fetchAppFullInfoNow(
+						props.appName,
+						props.sourceId
+					);
+				} finally {
+					isFetchingFullInfo.value = false;
+					updateUIAndMeta();
+				}
+			}
+			if (!appFullInfo) {
+				notifyFailed('Failed to load app details, please try again.');
 				return;
 			}
 
-			const errorGroup = userStore.frontendPreflight(
+			const errorGroup = preCheckStore.frontendPreflight(
 				appFullInfo.app_info.app_entry
 			);
 			emit('onError', errorGroup);
@@ -432,9 +445,14 @@ const stateConfigs: Array<{
 				appPaymentType.value === APP_PAYMENT_TYPE.APP_TYPE_PAID &&
 				errorGroup.length === 0
 			) {
-				await paymentStore.fetchPaymentInfo(props.appName, props.sourceId);
+				await paymentStore.fetchPaymentInfo(
+					props.appName,
+					props.sourceId,
+					t,
+					$q
+				);
 			} else {
-				centerStore.updateLocalStatus(props.appName, props.sourceId, {
+				appStore.updateLocalStatus(props.appName, props.sourceId, {
 					status: LOCAL_STATUS.PRE_CHECK_FINISHED,
 					data: errorGroup
 				});
@@ -483,7 +501,7 @@ const stateConfigs: Array<{
 			}
 			return true;
 		},
-		uiConfig: {
+		uiConfig: () => ({
 			statusText: 'app.install',
 			textColor: blueDefault.value,
 			backgroundColor: blueAlpha.value,
@@ -492,7 +510,7 @@ const stateConfigs: Array<{
 			isLoading: false,
 			isErrorStatus: false,
 			isStopStatus: false
-		},
+		}),
 		handler: async () => {
 			AppService.installApp(
 				props.item.status,
@@ -536,10 +554,9 @@ const stateConfigs: Array<{
 		uiConfig: (params) => ({
 			statusText: getBaseTextByState(params),
 			textColor: white.value,
-			backgroundColor:
-				props.item.status.state === APP_STATUS.DOWNLOAD.DEFAULT
-					? blueAlpha.value
-					: blueDefault.value,
+			backgroundColor: showDownloadProgress(props.item.status)
+				? blueAlpha.value
+				: blueDefault.value,
 			border: '1px solid transparent',
 			isDisabled: false,
 			isLoading: true,
@@ -551,7 +568,7 @@ const stateConfigs: Array<{
 	{
 		type: 'canceling',
 		checker: () => isCanceling(props.item.status),
-		uiConfig: {
+		uiConfig: () => ({
 			statusText: 'app.canceling',
 			textColor: white.value,
 			backgroundColor: blueDefault.value,
@@ -560,13 +577,13 @@ const stateConfigs: Array<{
 			isLoading: true,
 			isErrorStatus: false,
 			isStopStatus: false
-		}
+		})
 	},
 
 	{
 		type: 'installed',
 		checker: () => props.item.status.state === APP_STATUS.MODEL.INSTALLED,
-		uiConfig: {
+		uiConfig: () => ({
 			statusText: 'app.installed',
 			textColor: blueDefault.value,
 			backgroundColor: blueAlpha.value,
@@ -575,7 +592,7 @@ const stateConfigs: Array<{
 			isLoading: false,
 			isErrorStatus: false,
 			isStopStatus: false
-		}
+		})
 	},
 
 	{
@@ -587,7 +604,7 @@ const stateConfigs: Array<{
 				canUpgrade(props.item, props.appName, props.sourceId)
 			);
 		},
-		uiConfig: {
+		uiConfig: () => ({
 			statusText: 'app.update',
 			textColor: blueDefault.value,
 			backgroundColor: blueAlpha.value,
@@ -596,7 +613,7 @@ const stateConfigs: Array<{
 			isLoading: false,
 			isErrorStatus: false,
 			isStopStatus: false
-		},
+		}),
 		handler: async () => {
 			AppService.upgradeApp(props.item.status, {
 				app_name: props.appName,
@@ -611,7 +628,7 @@ const stateConfigs: Array<{
 		checker: () =>
 			props.item.status.state === APP_STATUS.STOP.COMPLETED &&
 			!canUpgrade(props.item, props.appName, props.sourceId),
-		uiConfig: {
+		uiConfig: () => ({
 			statusText: 'app.stopped',
 			textColor: orangeDefault.value,
 			backgroundColor: orangeSoft.value,
@@ -620,7 +637,7 @@ const stateConfigs: Array<{
 			isLoading: false,
 			isErrorStatus: false,
 			isStopStatus: true
-		}
+		})
 	},
 
 	{
@@ -683,14 +700,27 @@ const onDropClick = () => {
 };
 
 watch(
-	() => props.item,
+	() =>
+		[
+			props.item?.status?.state,
+			props.item?.status?.progress,
+			props.item?.status?.reason,
+			props.item?.status?.entranceStatuses
+				?.map((item: any) => `${item.name}:${item.state}:${item.invisible}`)
+				.join('|'),
+			props.item?.version,
+			props.version,
+			props.appName,
+			props.sourceId,
+			themeDeviceStore.theme,
+			$q.dark.isActive
+		] as const,
 	() => {
 		if (props.item) {
 			updateUIAndMeta();
 		}
 	},
 	{
-		deep: true,
 		immediate: true
 	}
 );
@@ -705,7 +735,7 @@ const showImageSize = computed(() => {
 
 const calcImageSize = computed(() => {
 	let needDownloadSize = 0;
-	const fullLatest = centerStore.getAppFullInfo(props.appName, props.sourceId);
+	const fullLatest = appStore.getAppFullInfo(props.appName, props.sourceId);
 	if (fullLatest?.app_info?.image_analysis?.images) {
 		Object.values(fullLatest?.app_info?.image_analysis?.images).forEach(
 			(item: any) => {
@@ -790,7 +820,7 @@ onMounted(() => {
 	busOn('local_state_update', updateUiByLocal);
 	simpleWaiter.waitForCondition(
 		() => {
-			const appFullInfo = centerStore.getAppFullInfo(
+			const appFullInfo = appStore.getAppFullInfo(
 				props.appName,
 				props.sourceId
 			);
@@ -798,7 +828,7 @@ onMounted(() => {
 			return !!appFullInfo;
 		},
 		async () => {
-			const appFullInfo = centerStore.getAppFullInfo(
+			const appFullInfo = appStore.getAppFullInfo(
 				props.appName,
 				props.sourceId
 			);

@@ -4,6 +4,8 @@ export type COLLECT_THEME_TYPE = {
 	btnTextDefaultColor: string;
 	btnTextActiveColor: string;
 	btnTextFeedActiveColor: string;
+	btnMoreTextDefaultColor: string;
+	btnMoreDefaultColor: string;
 };
 
 export const WISE_COLLECT_THEME: COLLECT_THEME_TYPE = {
@@ -11,7 +13,9 @@ export const WISE_COLLECT_THEME: COLLECT_THEME_TYPE = {
 	btnFeedDefaultColor: 'background-3',
 	btnTextDefaultColor: 'ink-on-brand',
 	btnTextActiveColor: 'ink-2',
-	btnTextFeedActiveColor: 'ink-3'
+	btnTextFeedActiveColor: 'ink-3',
+	btnMoreDefaultColor: 'background-2',
+	btnMoreTextDefaultColor: 'ink-on-brand-black'
 };
 
 export const BEX_COLLECT_THEME: COLLECT_THEME_TYPE = {
@@ -19,5 +23,7 @@ export const BEX_COLLECT_THEME: COLLECT_THEME_TYPE = {
 	btnFeedDefaultColor: 'background-3',
 	btnTextDefaultColor: 'ink-on-brand-black',
 	btnTextActiveColor: 'ink-2',
-	btnTextFeedActiveColor: 'ink-3'
+	btnTextFeedActiveColor: 'ink-3',
+	btnMoreDefaultColor: 'background-2',
+	btnMoreTextDefaultColor: 'ink-on-brand-black'
 };

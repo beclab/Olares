@@ -176,8 +176,6 @@ const submit = async () => {
 	try {
 		await shareToUser().setSharedItems(userModel.value, primaryModel.value);
 		await menuStore.listSharedItems();
-		filesStore.getMenu();
-
 		userModel.value = null;
 	} catch (error) {
 		console.error('error', error);
@@ -188,7 +186,6 @@ const updateItem = async (name: string, permission: string) => {
 	try {
 		await shareToUser().updateItem(name, permission);
 		await menuStore.listSharedItems();
-		filesStore.getMenu();
 	} catch (error) {
 		console.error('error', error);
 	}
@@ -198,7 +195,6 @@ const deleteShareItem = async (name: string) => {
 	try {
 		await shareToUser().deleteItem(name);
 		await menuStore.listSharedItems();
-		filesStore.getMenu();
 	} catch (error) {
 		console.error('error', error);
 	}
@@ -248,7 +244,7 @@ onMounted(async () => {
 		padding: 0 10px;
 		margin-left: 10px;
 		border-radius: 8px;
-		border: 1px solid $yellow-disabled;
+		border: 1px solid $theme-input-focus-border;
 		word-break: normal;
 		white-space: nowrap;
 		color: $ink-1;
@@ -259,7 +255,7 @@ onMounted(async () => {
 		}
 		&.adduserdisable {
 			color: $ink-3;
-			border: 1px solid $yellow-disabled;
+			border: 1px solid $theme-input-focus-border;
 		}
 	}
 }
