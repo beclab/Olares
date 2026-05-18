@@ -37,6 +37,16 @@ func populateVendor(t *testing.T, vendorDir string) {
 		}
 		writeChart(t, filepath.Join(vendorDir, name), ver)
 	}
+	if err := os.WriteFile(filepath.Join(vendorDir, vendorLinkerdCertScriptRel), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	npDir := filepath.Join(vendorDir, "network-policies")
+	if err := os.MkdirAll(npDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(vendorDir, vendorMeshNetworkPolicyRel), []byte("---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestValidateVendorDir_missing(t *testing.T) {

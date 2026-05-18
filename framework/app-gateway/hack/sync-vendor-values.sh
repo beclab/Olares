@@ -13,4 +13,11 @@ for f in envoy-gateway-values.yaml envoy-gateway-crds-values.yaml linkerd-values
   cp -f "${VALS_SRC}/${f}" "${OUT}/${f}"
 done
 
-echo "OK: synced values into ${OUT}"
+# Installer-only assets (PKI script + bootstrap mesh NP); charts stay unchanged.
+cp -f "${SCRIPT_DIR}/generate-linkerd-identity-certs.sh" "${OUT}/generate-linkerd-identity-certs.sh"
+chmod 755 "${OUT}/generate-linkerd-identity-certs.sh"
+mkdir -p "${OUT}/network-policies"
+cp -f "${AGW_ROOT}/deploy/network-policies/linkerd-mesh-ingress.yaml" \
+  "${OUT}/network-policies/linkerd-mesh-ingress.yaml"
+
+echo "OK: synced values and installer assets into ${OUT}"
