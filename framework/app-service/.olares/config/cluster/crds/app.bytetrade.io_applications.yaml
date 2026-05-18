@@ -199,6 +199,18 @@ spec:
                   - port
                   type: object
                 type: array
+              userSettings:
+                additionalProperties:
+                  additionalProperties:
+                    type: string
+                  type: object
+                description: |-
+                  Per-user override of selected entries in Settings. Outer key is
+                  the user name; inner map mirrors a subset of Settings keys
+                  ("policy", "customDomain", "authLevel"). Reads overlay this
+                  on top of Settings for v3 apps; missing keys fall back to
+                  Settings.
+                type: object
               tailscale:
                 properties:
                   acls:

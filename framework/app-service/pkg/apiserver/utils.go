@@ -83,9 +83,8 @@ func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Appli
 	if v3App != nil {
 		return v3App, nil
 	}
-
 	api.HandleNotFound(resp, req, fmt.Errorf("the application %s not found", appName))
-	return nil, err
+	return nil, fmt.Errorf("the application %s not found", appName)
 }
 
 // CheckDependencies check application dependencies, returns unsatisfied dependency.

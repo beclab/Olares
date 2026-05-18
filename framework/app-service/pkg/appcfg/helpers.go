@@ -11,6 +11,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 )
@@ -34,10 +35,7 @@ type DefaultThirdLevelDomainConfig struct {
 // stamped at install time by the v3 install handler and propagated by the
 // Application controller.
 func IsV3(o metav1.Object) bool {
-	if o == nil {
-		return false
-	}
-	return o.GetLabels()[constants.AppApiVersionLabel] == constants.AppVersionV3
+	return appv1alpha1.IsV3(o)
 }
 
 // IsClusterScoped reports whether the given application is cluster scoped,

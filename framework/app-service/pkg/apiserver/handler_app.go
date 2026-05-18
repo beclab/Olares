@@ -650,6 +650,10 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		// iam user so consumers grouping by Owner see them under every
 		// account (matching the v1/v2 per-user-AM shape). Every user may
 		// open the app; lifecycle is admin-only.
+		//
+		// For each fanned-out copy, overlay Spec.UserSettings[u] on top
+		// of Spec.Settings / Spec.Entrances so consumers see that user's
+		// effective customDomain / policy / authLevel.
 		if appcfg.IsV3(app) {
 			users, uErr := loadAllUsers()
 			if uErr != nil {
@@ -659,6 +663,8 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			for _, u := range users {
 				cp := *app
 				cp.Spec.Owner = u
+				cp.Spec.Settings = app.EffectiveSettings(u)
+				cp.Spec.Entrances = app.EffectiveEntrances(u)
 				filteredApps = append(filteredApps, cp)
 			}
 			continue

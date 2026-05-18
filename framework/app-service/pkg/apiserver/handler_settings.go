@@ -88,14 +88,13 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Response) {
 	app, err := getAppByName(req, resp)
 	if err != nil {
-		api.HandleError(resp, req, err)
-		klog.Errorf("Failed to get app name=%s err=%v", app.Spec.Name, err)
+		klog.Errorf("Failed to get app name=%s err=%v", req.PathParameter(ParamAppName), err)
 		// if error, response in function. Do nothing
 		return
 	}
-	if !h.gateSharedAppWrite(req, resp, app) {
-		return
-	}
+	// Per-user settings handlers do NOT call gateSharedAppWrite: every
+	// authenticated user may set their own customDomain for a v3 shared
+	// app. Global Settings mutations stay admin-only via setupApp.
 	entranceName := req.PathParameter(ParamEntranceName)
 	validName := false
 	for _, e := range app.Spec.Entrances {
@@ -120,20 +119,22 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 		return
 	}
 	appCopy := app.DeepCopy()
+	caller := req.Attribute(constants.UserContextAttribute).(string)
+	isV3 := appcfg.IsV3(app)
 
 	kclient := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 
 	customDomain, ok := settings["customDomain"].(map[string]interface{})
 
-	// get the origin custom domain settings and do a merge
-	a := appCopy.Spec.Settings["customDomain"]
+	existing := appCopy.EffectiveSettings(caller)["customDomain"]
+
 	merge := make(map[string]interface{})
 
 	keys := []string{"third_level_domain", "third_party_domain"}
 
-	if len(a) > 0 {
+	if len(existing) > 0 {
 		var origins map[string]interface{}
-		err = json.Unmarshal([]byte(a), &origins)
+		err = json.Unmarshal([]byte(existing), &origins)
 		if err != nil {
 			api.HandleError(resp, req, err)
 			return
@@ -170,12 +171,28 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 		return
 	}
 
-	patchData := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"settings": map[string]string{
-				"customDomain": string(settingsBytes),
+	var patchData map[string]interface{}
+	if isV3 {
+		// Patch only Spec.UserSettings[caller]["customDomain"]. JSON
+		// merge-patch leaves other users' entries and other Settings
+		// keys untouched.
+		patchData = map[string]interface{}{
+			"spec": map[string]interface{}{
+				"userSettings": map[string]interface{}{
+					caller: map[string]string{
+						"customDomain": string(settingsBytes),
+					},
+				},
 			},
-		},
+		}
+	} else {
+		patchData = map[string]interface{}{
+			"spec": map[string]interface{}{
+				"settings": map[string]string{
+					"customDomain": string(settingsBytes),
+				},
+			},
+		}
 	}
 	patchByte, err := json.Marshal(patchData)
 	if err != nil {
@@ -276,7 +293,9 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			return
 		}
 	}
-	resp.WriteAsJson(appUpdated.Spec.Settings)
+	// Respond with the caller's effective view so the UI sees their own
+	// customDomain entries (the global Spec.Settings is admin-only for v3).
+	resp.WriteAsJson(appUpdated.EffectiveSettings(caller))
 }
 
 func (h *Handler) getAppEntrances(req *restful.Request, resp *restful.Response) {
@@ -286,8 +305,8 @@ func (h *Handler) getAppEntrances(req *restful.Request, resp *restful.Response) 
 		// if error, response in function. Do nothing
 		return
 	}
-
-	resp.WriteAsJson(app.Spec.Entrances)
+	caller := req.Attribute(constants.UserContextAttribute).(string)
+	resp.WriteAsJson(app.EffectiveEntrances(caller))
 }
 
 func (h *Handler) getAppEntrancesSettings(req *restful.Request, resp *restful.Response) {
@@ -297,7 +316,8 @@ func (h *Handler) getAppEntrancesSettings(req *restful.Request, resp *restful.Re
 		// if error, response in function. Do nothing
 		return
 	}
-	resp.WriteAsJson(app.Spec.Settings)
+	caller := req.Attribute(constants.UserContextAttribute).(string)
+	resp.WriteAsJson(app.EffectiveSettings(caller))
 }
 
 func (h *Handler) getAppSettings(req *restful.Request, resp *restful.Response) {
@@ -307,7 +327,8 @@ func (h *Handler) getAppSettings(req *restful.Request, resp *restful.Response) {
 		// if error, response in function. Do nothing
 		return
 	}
-	resp.WriteAsJson(app.Spec.Settings)
+	caller := req.Attribute(constants.UserContextAttribute).(string)
+	resp.WriteAsJson(app.EffectiveSettings(caller))
 }
 
 func getRepoURL() string {
@@ -317,11 +338,8 @@ func getRepoURL() string {
 func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response) {
 	app, err := getAppByName(req, resp)
 	if err != nil {
-		klog.Errorf("Failed to get app name=%s err=%v", app.Spec.Name, err)
+		klog.Errorf("Failed to get app name=%s err=%v", req.PathParameter(ParamAppName), err)
 		// if error, response in function. Do nothing
-		return
-	}
-	if !h.gateSharedAppWrite(req, resp, app) {
 		return
 	}
 
@@ -334,14 +352,32 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 	}
 
 	var data map[string]map[string]string
-	err = json.Unmarshal(bodyData, &data)
-	if err != nil {
+	if err = json.Unmarshal(bodyData, &data); err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
 
-	entrance := entranceName
 	authLevel := data["authorizationLevel"]["authorization_level"]
+	switch authLevel {
+	case constants.AuthorizationLevelOfPublic, constants.AuthorizationLevelOfPrivate, constants.AuthorizationLevelOfInternal:
+	default:
+		api.HandleBadRequest(resp, req, fmt.Errorf("invalid authorization_level: %q", authLevel))
+		return
+	}
+
+	entranceValid := false
+	for _, e := range app.Spec.Entrances {
+		if e.Name == entranceName {
+			entranceValid = true
+			break
+		}
+	}
+	if !entranceValid {
+		api.HandleBadRequest(resp, req, fmt.Errorf("invalid entrance name: %q", entranceName))
+		return
+	}
+
+	caller := req.Attribute(constants.UserContextAttribute).(string)
 	kclient := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 
 	var updated *v1alpha1.Application
@@ -351,33 +387,124 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 			return err
 		}
 		appCopy := current.DeepCopy()
-		entrances := appCopy.Spec.Entrances
+
+		if appcfg.IsV3(appCopy) {
+			// v3: only Spec.UserSettings[caller]["authLevel"] +
+			// ["policy"] for the affected entrance are touched. The
+			// global Spec.Entrances[*].AuthLevel stays as the install-
+			// time default for everybody else.
+			//
+			// Uses a JSON merge-patch on spec.userSettings.<caller> so
+			// concurrent edits by *other* users (different keys in the
+			// same map) don't fight over resourceVersion.
+			perEntranceLevel := make(map[string]string)
+			if u := appCopy.Spec.UserSettings[caller]; u != nil {
+				if raw := u["authLevel"]; raw != "" {
+					if err := json.Unmarshal([]byte(raw), &perEntranceLevel); err != nil {
+						klog.Warningf("corrupt UserSettings[%s][authLevel] for app %s, resetting: %v", caller, appCopy.Name, err)
+						return err
+					}
+				}
+			}
+
+			// Baseline auth used to decide whether default_policy needs
+			// to flip back from "public" to "system" on a public→private
+			// transition. Prefer the user's previously stored value
+			// (their current effective auth); fall back to the global
+			// install-time default when this is the first toggle.
+			baselineAuth, ok := perEntranceLevel[entranceName]
+			if !ok {
+				for _, e := range appCopy.Spec.Entrances {
+					if e.Name == entranceName {
+						baselineAuth = e.AuthLevel
+						break
+					}
+				}
+			}
+
+			perEntranceLevel[entranceName] = authLevel
+			lvlBytes, err := json.Marshal(perEntranceLevel)
+			if err != nil {
+				return err
+			}
+
+			policy := make(map[string]map[string]interface{})
+			if u := appCopy.Spec.UserSettings[caller]; u != nil {
+				if raw := u["policy"]; raw != "" {
+					if err := json.Unmarshal([]byte(raw), &policy); err != nil {
+						klog.Warningf("corrupt UserSettings[%s][policy] for app %s, resetting: %v", caller, appCopy.Name, err)
+						policy = make(map[string]map[string]interface{})
+					}
+				}
+			}
+			if _, ok := policy[entranceName]; !ok {
+				policy[entranceName] = make(map[string]interface{})
+			}
+			switch {
+			case authLevel == constants.AuthorizationLevelOfPublic:
+				policy[entranceName]["default_policy"] = constants.AuthorizationLevelOfPublic
+			case authLevel == constants.AuthorizationLevelOfPrivate &&
+				baselineAuth == constants.AuthorizationLevelOfPublic:
+				policy[entranceName]["default_policy"] = "system"
+			}
+			policyStr, err := json.Marshal(policy)
+			if err != nil {
+				return err
+			}
+
+			patchData := map[string]interface{}{
+				"spec": map[string]interface{}{
+					"userSettings": map[string]interface{}{
+						caller: map[string]string{
+							"authLevel": string(lvlBytes),
+							"policy":    string(policyStr),
+						},
+					},
+				},
+			}
+			patchByte, err := json.Marshal(patchData)
+			if err != nil {
+				return err
+			}
+			updated, err = kclient.AppClient.AppV1alpha1().Applications().Patch(req.Request.Context(), appCopy.Name, types.MergePatchType, patchByte, metav1.PatchOptions{})
+			return err
+		}
+
+		// v1/v2: write Spec.Entrances[i].AuthLevel + Spec.Settings["policy"].
 		policy := make(map[string]map[string]interface{})
 		if p := appCopy.Spec.Settings["policy"]; p != "" {
 			if err := json.Unmarshal([]byte(p), &policy); err != nil {
 				return err
 			}
 		}
-		for i := range entrances {
-			if entrances[i].Name == entrance {
-				if authLevel == constants.AuthorizationLevelOfPublic {
-					policy[entrances[i].Name]["default_policy"] = constants.AuthorizationLevelOfPublic
-				}
-				if authLevel == constants.AuthorizationLevelOfPrivate &&
-					entrances[i].AuthLevel == constants.AuthorizationLevelOfPublic {
-					policy[entrances[i].Name]["default_policy"] = "system"
-				}
+		for i := range appCopy.Spec.Entrances {
+			e := &appCopy.Spec.Entrances[i]
+			if e.Name != entranceName {
+				continue
 			}
-		}
-		for i := range entrances {
-			if entrances[i].Name == entrance {
-				entrances[i].AuthLevel = authLevel
+			// Ensure the per-entrance policy entry exists before
+			// writing into it — a freshly installed app or an entrance
+			// added later may not have one yet, and assigning into a
+			// nil sub-map would panic.
+			if _, ok := policy[e.Name]; !ok {
+				policy[e.Name] = make(map[string]interface{})
 			}
+			switch {
+			case authLevel == constants.AuthorizationLevelOfPublic:
+				policy[e.Name]["default_policy"] = constants.AuthorizationLevelOfPublic
+			case authLevel == constants.AuthorizationLevelOfPrivate &&
+				e.AuthLevel == constants.AuthorizationLevelOfPublic:
+				policy[e.Name]["default_policy"] = "system"
+			}
+			e.AuthLevel = authLevel
+			break
 		}
-		appCopy.Spec.Entrances = entrances
 		policyStr, err := json.Marshal(policy)
 		if err != nil {
 			return err
+		}
+		if appCopy.Spec.Settings == nil {
+			appCopy.Spec.Settings = make(map[string]string)
 		}
 		appCopy.Spec.Settings["policy"] = string(policyStr)
 		updated, err = kclient.AppClient.AppV1alpha1().Applications().Update(req.Request.Context(), appCopy, metav1.UpdateOptions{})
@@ -387,7 +514,7 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 		api.HandleError(resp, req, err)
 		return
 	}
-	resp.WriteAsJson(updated.Spec.Settings)
+	resp.WriteAsJson(updated.EffectiveSettings(caller))
 }
 
 func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Response) {
@@ -397,11 +524,9 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 		// if error, response in function. Do nothing
 		return
 	}
-	if !h.gateSharedAppWrite(req, resp, app) {
-		return
-	}
 
 	entranceName := req.PathParameter(ParamEntranceName)
+	caller := req.Attribute(constants.UserContextAttribute).(string)
 
 	bodyData, err := ioutil.ReadAll(req.Request.Body)
 	if err != nil {
@@ -427,11 +552,17 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 			return err
 		}
 		appCopy := current.DeepCopy()
-		var origin map[string]interface{}
+		isV3 := appcfg.IsV3(appCopy)
 
-		err = json.Unmarshal([]byte(appCopy.Spec.Settings["policy"]), &origin)
-		if err != nil {
-			return err
+		effSettings := appCopy.EffectiveSettings(caller)
+
+		originBlob := effSettings["policy"]
+
+		origin := make(map[string]interface{})
+		if originBlob != "" {
+			if err = json.Unmarshal([]byte(originBlob), &origin); err != nil {
+				return err
+			}
 		}
 
 		merge := make(map[string]interface{})
@@ -446,12 +577,26 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 		if err != nil {
 			return err
 		}
-		patchData := map[string]interface{}{
-			"spec": map[string]interface{}{
-				"settings": map[string]string{
-					"policy": string(settingsBytes),
+
+		var patchData map[string]interface{}
+		if isV3 {
+			patchData = map[string]interface{}{
+				"spec": map[string]interface{}{
+					"userSettings": map[string]interface{}{
+						caller: map[string]string{
+							"policy": string(settingsBytes),
+						},
+					},
 				},
-			},
+			}
+		} else {
+			patchData = map[string]interface{}{
+				"spec": map[string]interface{}{
+					"settings": map[string]string{
+						"policy": string(settingsBytes),
+					},
+				},
+			}
 		}
 		patchByte, err := json.Marshal(patchData)
 		if err != nil {
@@ -465,7 +610,7 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 		return
 	}
 
-	resp.WriteAsJson(updated.Spec.Settings)
+	resp.WriteAsJson(updated.EffectiveSettings(caller))
 }
 
 func (h *Handler) tryToPatchDeploymentAnnotations(patchData map[string]interface{}, app *v1alpha1.Application) error {
