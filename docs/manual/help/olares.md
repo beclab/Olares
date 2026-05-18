@@ -66,7 +66,7 @@ LarePass is the official client for Olares. It acts as a secure bridge to enable
 
 We are working on decoupling functions to support usage without the LarePass app:
 
-* **CLI activation**: Use the `olares-cli` tool to activate Olares directly from the terminal without using the LarePass app for the activation step. However, note that you must still use the LarePass app to create your Olares ID before running the `olares-cli` tool. For detailed instructions, see Activate an Olares device using the Olares CLI.
+* **CLI activation**: Use the `olares-cli` tool to activate Olares directly from the terminal without using the LarePass app for the activation step. However, note that you must still use the LarePass app to create your Olares ID before running the `olares-cli` tool. For detailed instructions, see [Activate an Olares device using the Olares CLI](/manual/best-practices/activate-olares-using-cli.md).
 * **Standalone components**: We plan to provide standalone deployment options for components like the Reverse Proxy, DID service, and Market repo in future updates.
 <!-- #region custom-domain -->
 ### Can I use my own domain name?
