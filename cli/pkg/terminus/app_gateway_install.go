@@ -116,13 +116,27 @@ func (t *InstallAppGatewayVendor) Execute(runtime connector.Runtime) error {
 	if err := utils.UpgradeCharts(ctx, actionLinkerd, settingsLinkerd, helmReleaseLinkerdCRDs, linkerdCRDsChart, "", linkerdNamespace, crdsVals, false); err != nil {
 		return errors.Wrap(err, "install linkerd-crds")
 	}
+	k8sClient, err := client.New(config, client.Options{})
+	if err != nil {
+		return err
+	}
+
 	linkerdVals, err := utils.LoadValuesFile(filepath.Join(vendor, "linkerd-values.yaml"))
 	if err != nil {
 		linkerdVals = map[string]interface{}{}
 	}
+	if err := enrichLinkerdHelmValues(ctx, k8sClient, linkerdNamespace, vendor, linkerdVals); err != nil {
+		return errors.Wrap(err, "prepare linkerd identity certificates")
+	}
 	logger.InfoInstallationProgress("Installing Linkerd control plane (helm SDK) ...")
 	if err := utils.UpgradeCharts(ctx, actionLinkerd, settingsLinkerd, helmReleaseLinkerd, linkerdCPChart, "", linkerdNamespace, linkerdVals, false); err != nil {
 		return errors.Wrap(err, "install linkerd control plane")
+	}
+	if err := applyLinkerdMeshNetworkPolicies(ctx, k8sClient, settingsLinkerd, vendor); err != nil {
+		return errors.Wrap(err, "apply linkerd mesh network policies")
+	}
+	if err := ensureLinkerdPKIGuardian(ctx, k8sClient, linkerdNamespace); err != nil {
+		return errors.Wrap(err, "configure linkerd pki guardian")
 	}
 
 	// Envoy Gateway CRDs + control plane
@@ -283,8 +297,10 @@ func ensureAppGatewayNamespaceMetadata(ctx context.Context, c client.Client, ns 
 	if existing.Annotations == nil {
 		existing.Annotations = map[string]string{}
 	}
-	existing.Annotations["linkerd.io/inject"] = "enabled"
+	// Do not set linkerd.io/inject on the namespace: it would inject EG data-plane pods and break PostStartHook.
+	// Demo workloads opt in via pod template annotation linkerd.io/inject: enabled in the app-gateway chart.
 	existing.Annotations["bytetrade.io/ns-type"] = "platform"
+	existing.Labels["bytetrade.io/ns-type"] = "system"
 	if err := c.Patch(ctx, &existing, patch); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
