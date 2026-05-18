@@ -28,6 +28,12 @@ var requiredVendorChartDirs = []string{
 	"linkerd-control-plane-chart",
 }
 
+// Installer assets copied from framework/app-gateway/hack and deploy (see hack/sync-vendor-values.sh).
+const (
+	vendorLinkerdCertScriptRel = "generate-linkerd-identity-certs.sh"
+	vendorMeshNetworkPolicyRel = "network-policies/linkerd-mesh-ingress.yaml"
+)
+
 var linkerdChartDirs = []string{
 	"linkerd-crds-chart",
 	"linkerd-control-plane-chart",
@@ -49,6 +55,12 @@ func ValidateVendorDir(vendorDir string) error {
 		st, err := os.Stat(p)
 		if err != nil || !st.IsDir() {
 			return fmt.Errorf("missing %s under %s (commit complete vendor; see %s)", name, vendorDir, archdocVendorDoc)
+		}
+	}
+	for _, rel := range []string{vendorLinkerdCertScriptRel, vendorMeshNetworkPolicyRel} {
+		p := filepath.Join(vendorDir, rel)
+		if st, err := os.Stat(p); err != nil || st.IsDir() {
+			return fmt.Errorf("missing installer asset %s under %s (run framework/app-gateway/hack/sync-vendor-values.sh)", rel, vendorDir)
 		}
 	}
 	return validateApprovedVersions(vendorDir)
