@@ -10,14 +10,14 @@ This tutorial walks you through activating an Olares device (e.g., Olares One) u
 The process assumes the device is freshly unboxed and has not been installed or activated.
 
 :::warning Important
-The default `olares-cli` included in the current system lacks the activation feature. You must download a standalone daily build CLI to perform the activation as outlined in Step 1.
+The default `olares-cli` included in the current system does not have the activation feature. You must download a standalone daily build CLI to perform the activation as outlined in Step 1.
 :::
 
 ## Learning objectives
 
 In this tutorial, you will learn how to:
 
-- Download and extract the Olares CLI tool.
+- Download and extract the standalone Olares CLI tool.
 - Install Olares on a new device.
 - Retrieve a Fast Reverse Proxy (FRP) host for remote access.
 - Run the activation command to configure your device.
@@ -33,10 +33,9 @@ Before you begin, ensure the following requirements are met:
 
     ![Fast creation](/images/manual/get-started/create-olares-id.png)
 
-- You have reviewed the followig notes:
+- You have reviewed the followig notes on CLI execution:
 
-    - **Version dependencies**: A strict version correspondence exists between `olares-cli`, `olaresd`, and the cluster version.
-    - **Do not overwrite system files**: Never move or copy the downloaded standalone CLI to overwrite the system `/usr/bin/olares-cli` file. Overwriting this file breaks the version chain and impacts future system upgrades.
+    - **Do not overwrite system files**: A strict version correspondence exists between the system's built-in `olares-cli`, `olaresd`, and the cluster version. Therefore, never move or copy the downloaded standalone CLI to overwrite the system `/usr/bin/olares-cli` file. Doing so breaks this version chain and impacts future system upgrades.
     - **Execution path differences**: Run `./olares-cli` to execute the standalone version downloaded to the current directory. Do not run `olares-cli` directly, because it executes the built-in system version which lacks activation features.
 
 ## Step 1: Download and prepare the standalone CLI tool
@@ -61,7 +60,7 @@ Before you begin, ensure the following requirements are met:
 
 ## Step 2: Retrieve the FRP list
 
-Find an available FRP host to enable remote access to your device.
+Find an available FRP host to enable remote access to your device using the standalone CLI.
 
 1. Run the following command. Replace `{olares-id}` with your registered Olares ID.
 
@@ -72,10 +71,10 @@ Find an available FRP host to enable remote access to your device.
     **Example:**
 
     ```bash
-    ./olares-cli wizard frp alice123@olares.com
+    ./olares-cli wizard frp alice2026@olares.com
     ```
 
-2. Select a host address from the output list and save it for the activation step.
+2. Select a host address from the output list and note it down for the activation step. For example, `bb.hongkong.frp.olares.com`.
 
 ## Step 3: Install Olares
 
@@ -88,15 +87,15 @@ A fresh Olares One device is shipped in an uninstalled state. You must run the 
     ```bash
     sudo olares-cli install
     ```
-2. when prompted to Enter the domain name (olares.com by default): enter `olares.com`.
-3. enter the olares ID (which you registered in the LarePAss app): Enter `alice2026@olares.com`
-2. Wait for the installation process to finish. The terminal outputs a wizard URL, which serves as the local gateway address, and a default password. Save these details for the activation step.
+2. When prompted to enter the domain name, enter `olares.com`.
+3. When prompted for the Olares ID, enter the one you registered in the LarePass app.
+4. Wait for the installation process to finish. The terminal outputs a wizard URL and a default password. Note down these details for the activation step.
 
     **Example:**
-    - **Wizard URL**: The local gateway address, such as `http://192.168.50.123:30180`.
+    - **Wizard URL**: The local gateway address, such as `http://192.168.31.127:30180`.
     - **Password**: The default Olares login password.
 
-    ![Wizard URL](/images/manual/get-started/wizard-url-and-login-password.png)
+    ![Wizard URL](/images/manual/get-started/wizard-url-and-login-password1.png)
 
 ## Step 4: Activate Olares
 
@@ -106,7 +105,7 @@ Run the activation command to configure and secure your device. This process con
 
     | Parameter | Description |
     |:----------|:------------|
-    | `olares-id` | The Olares ID you created in LarePass, for example `alice123@olares.com`. |
+    | `olares-id` | The Olares ID you created in LarePass, for example `alice2026@olares.com`. |
     | `mnemonic` | The 12-word mnemonic phrase of your Olares ID. |
     | `password` | The default Olares login password from Step 3. |
     | `reset-password` | A new login password to replace the default one. |
@@ -132,19 +131,21 @@ Run the activation command to configure and secure your device. This process con
 
     **Example:**
     
-    If the Olares ID is `alice123@olares.com`, the Wizard URL is `http://192.168.50.123:30180`, and the selected FRP host is `bb.hongkong.frp.olares.com`, run:
+    If the Olares ID is `alice2026@olares.com`, the Wizard URL is `http://192.168.50.127:30180`, and the selected FRP host is `bb.hongkong.frp.olares.com`, run:
 
     ```bash
-    sudo ./olares-cli wizard activate alice123@olares.com \
+    sudo ./olares-cli wizard activate alice2026@olares.com \
     --mnemonic "abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef" \
-    --password="v0kSmyVN" \
+    --password="b8Ln6qbz" \
     --reset-password="Ab1234@" \
-    --authurl=http://192.168.50.123:30180 \
-    --vault=http://192.168.50.123:30180/server \
-    --bfl=http://192.168.50.123:30180 \
+    --authurl=http://192.168.31.127:30180 \
+    --vault=http://192.168.31.127:30180/server \
+    --bfl=http://192.168.31.127:30180 \
     --host=bb.hongkong.frp.olares.com \
     --enable-tunnel=true
     ```
+
+3. Wait until the terminal displays a message indicating that activation finished successfully.
 
 ## Next step
 
