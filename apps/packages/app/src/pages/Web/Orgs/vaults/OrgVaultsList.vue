@@ -1,58 +1,49 @@
 <template>
 	<div class="vault-list bg-background-1" :class="{ borderRight: isWeb }">
-		<div style="width: 100%; height: 60px">
-			<div class="row items-center justify-between">
-				<div class="row items-center">
-					<div class="row items-center q-pl-md">
-						<q-icon
-							v-if="isMobile"
-							name="sym_r_chevron_left"
-							size="24px"
-							@click="goBack"
-						/>
-						<q-icon :name="heading.icon" size="20px" class="q-pa-xs q-mr-xs" />
-
-						<div class="column q-pl-md" v-if="!isMobile">
-							<div class="text-ink-3 text-overline">
-								{{ org?.name }}
-							</div>
-							<div class="text-subtitle2 text-ink-1 text-weight-bold">
-								{{ heading.title }}
-							</div>
-						</div>
-					</div>
-
-					<div class="column" v-if="isMobile">
-						<div class="text-ink-3 text-overline">
-							{{ org?.name }}
-						</div>
-						<div class="text-subtitle2 text-ink-1 text-weight-bold">
-							{{ heading.title }}
-						</div>
-					</div>
+		<div class="row items-center justify-between header">
+			<div class="row items-center" style="flex: 1">
+				<div class="row items-center q-pl-md" @click="goBack">
+					<q-icon v-if="isMobile" name="sym_r_chevron_left" size="24px" />
+					<q-icon :name="heading.icon" size="20px" class="q-pa-xs q-mr-xs" />
 				</div>
-
-				<div class="row items-center q-py-xs q-my-md">
-					<q-icon
-						class="q-mr-md cursor-pointer"
-						name="sym_r_add"
-						size="24px"
-						clickable
-						color="ink-1"
-						@click="onCreate"
+				<div class="column q-ml-sm mobile-content" v-if="!isMobile">
+					<div class="text-ink-3 text-overline ellipsis full-width">
+						{{ org?.name }}
+					</div>
+					<div
+						class="text-subtitle2 text-ink-1 text-weight-bold ellipsis full-width"
 					>
-						<q-tooltip>{{ t('add_vault') }}</q-tooltip>
-					</q-icon>
+						{{ heading.title }}
+					</div>
 				</div>
+				<div class="column q-pl-md mobile-content" v-else>
+					<div class="text-ink-3 text-overline ellipsis full-width">
+						{{ org?.name }}
+					</div>
+					<div
+						class="text-subtitle2 text-ink-1 text-weight-bold ellipsis full-width"
+					>
+						{{ heading.title }}
+					</div>
+				</div>
+			</div>
+
+			<div class="row items-center q-py-xs q-my-md" style="flex: 0 0 40px">
+				<q-icon
+					class="q-mr-md cursor-pointer"
+					name="sym_r_add"
+					size="24px"
+					clickable
+					color="ink-1"
+					@click="onCreate"
+				>
+					<q-tooltip>{{ t('add_vault') }}</q-tooltip>
+				</q-icon>
 			</div>
 		</div>
 		<q-list style="width: 100%; height: calc(100% - 60px); overflow: hidden">
 			<template v-if="itemList.length > 0">
-				<q-scroll-area
-					style="height: 100%"
-					content-style="height: 100%;"
-					:thumb-style="scrollBarStyle.thumbStyle"
-				>
+				<terminus-scroll-area style="height: 100%">
 					<template v-for="(item, index) in itemList" :key="index">
 						<div class="card-wrap full-width">
 							<q-card
@@ -71,9 +62,11 @@
 									<q-icon name="sym_r_deployed_code" size="24px" />
 								</q-card-section>
 								<q-card-section
-									class="column items-start justify-start q-pa-none q-ml-sm"
+									class="column items-start justify-start q-pa-none q-ml-sm name-section"
 								>
-									<div>{{ item.name }}</div>
+									<div class="name">
+										{{ item.name }}
+									</div>
 									<div class="row items-center justify-start">
 										<div
 											class="members text-body3 row items-center justify-center"
@@ -86,7 +79,7 @@
 							</q-card>
 						</div>
 					</template>
-				</q-scroll-area>
+				</terminus-scroll-area>
 			</template>
 			<div
 				class="text-ink-2 column items-center justify-center full-height"
@@ -112,6 +105,8 @@ import { busOn, busOff } from '../../../../utils/bus';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { watch } from 'vue';
+import TerminusScrollArea from 'src/components/common/TerminusScrollArea2.vue';
+
 const router = useRouter();
 const route = useRoute();
 const meunStore = useMenuStore();
@@ -175,7 +170,9 @@ function stateUpdate() {
 }
 
 const goBack = () => {
-	router.go(-1);
+	if (isMobile.value) {
+		router.go(-1);
+	}
 };
 
 onMounted(() => {
@@ -245,6 +242,30 @@ watch(
 		&.vaultActive {
 			background: $background-hover;
 		}
+
+		.name-section {
+			width: calc(100% - 40px);
+			overflow: hidden;
+
+			.name {
+				width: 100%;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+		}
+	}
+}
+
+.header {
+	flex: 0 0 auto;
+	height: 60px;
+	width: 100%;
+
+	.mobile-content {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		width: calc(100% - 70px);
 	}
 }
 </style>

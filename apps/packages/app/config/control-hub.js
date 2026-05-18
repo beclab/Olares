@@ -3,9 +3,10 @@ const boot = [
 	'baseAxios',
 	'controlHubUI',
 	'control-hub-permission',
-	'application/controlHub'
+	'application/controlHub',
+	'adaptive-body-class'
 ];
-const css = ['controlHub/app.scss'];
+const css = ['controlHub/app.scss', 'quasar-layout.scss'];
 
 const proxyTarget = `control-hub.${process.env.ACCOUNT_DOMAIN}`;
 

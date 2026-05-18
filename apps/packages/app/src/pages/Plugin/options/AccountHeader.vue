@@ -1,7 +1,7 @@
 <template>
 	<div class="row no-wrap items-center flex-gap-sm account-header-container">
 		<div class="avatar-wrapper">
-			<TerminusAvatar :info="userStore.terminusInfo()" :size="40" />
+			<TerminusAvatar :info="userStore.currentUserOlaresInfo" :size="40" />
 		</div>
 
 		<div>

@@ -46,6 +46,10 @@ export interface IOSUniversalPlugin {
 		freeSpace: number;
 		totalSpace: number;
 	}>;
+
+	getRecaptchaToken(): Promise<{
+		token: string;
+	}>;
 }
 
 const iOSStoragePlugin = registerPlugin<StorageiOSPlugin>('StorageiOS');

@@ -123,8 +123,8 @@ const filterItem = (item: any) => {
 
 	const hasSelected = filesStore.currentFileList[
 		props.origin_id
-	]?.items?.filter((_, index) => {
-		return filesStore.selected[props.origin_id].includes(index);
+	]?.items?.filter((item) => {
+		return filesStore.selected[props.origin_id].includes(item.index);
 	});
 
 	const hasSameValue = hasSelected?.find((item) =>

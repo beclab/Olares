@@ -11,7 +11,7 @@
 import DetailPage from '@apps/control-panel-common/src/containers/DetailPage.vue';
 import { computed, ref } from 'vue';
 import { getNodeRoles, getNodeStatus } from '@apps/control-hub/src/utils/node';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { getLocalTime } from '@apps/control-hub/src/utils';
 import { get, isEmpty } from 'lodash';
 import { useRoute } from 'vue-router';

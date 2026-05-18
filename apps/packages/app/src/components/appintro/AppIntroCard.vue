@@ -8,13 +8,18 @@
 			{{ title }}
 		</div>
 		<slot v-if="contentSlot" name="content" />
-		<expend-text-view :display-line="10" :text="description" />
+		<expend-text-view
+			:display-line="10"
+			:text="description"
+			:markdown="markdown"
+			:highlight="highlight"
+		/>
 	</div>
 </template>
 
 <script lang="ts" setup>
 import { useSlots } from 'vue';
-import ExpendTextView from '@apps/market/src/components/appintro/ExpendTextView.vue';
+import ExpendTextView from './ExpendTextView.vue';
 import { useDeviceStore } from '../../stores/settings/device';
 
 defineProps({
@@ -27,6 +32,14 @@ defineProps({
 		type: String,
 		default: '',
 		require: false
+	},
+	markdown: {
+		type: Boolean,
+		default: false
+	},
+	highlight: {
+		type: Boolean,
+		default: false
 	}
 });
 

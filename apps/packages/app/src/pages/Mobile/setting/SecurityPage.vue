@@ -102,6 +102,31 @@
 				</terminus-item>
 
 				<terminus-item
+					v-if="unlockByBiometricStatus"
+					@click="displayPassword"
+					icon-name="sym_r_lock"
+					class="q-mt-md"
+					:wholePictureSize="20"
+				>
+					<template v-slot:title>
+						<div class="text-subtitle2 security-root__title">
+							{{ t('local_password') }}
+						</div>
+					</template>
+					<template v-slot:side>
+						<div v-if="biometricPassword">
+							{{ biometricPassword }}
+						</div>
+						<q-icon
+							name="keyboard_arrow_right"
+							size="20px"
+							color="grey-3"
+							v-else
+						/>
+					</template>
+				</terminus-item>
+
+				<terminus-item
 					class="q-mt-md"
 					v-if="!isBex"
 					:clickable="false"
@@ -116,7 +141,7 @@
 					<template v-slot:side>
 						<bt-switch
 							size="sm"
-							truthy-track-color="light-blue-default"
+							truthy-track-color="blue-default"
 							v-model="unlockByBiometricStatus"
 							@update:model-value="changeBiometric"
 						/>
@@ -136,7 +161,7 @@
 
 						<bt-switch
 							size="sm"
-							truthy-track-color="light-blue-default"
+							truthy-track-color="blue-default"
 							v-model="lockStatus"
 							@update:model-value="changeAutoLock"
 						/>
@@ -164,7 +189,7 @@
 									<q-slider
 										v-model="lockTime"
 										:step="5"
-										:min="0"
+										:min="10"
 										:max="3 * 24 * 60"
 										style="width: auto; margin-left: 5px; flex: 1"
 										color="yellow"
@@ -250,22 +275,33 @@ const changeAutoLock = (value: any) => {
 const unlockByBiometricStatus = ref<boolean>(userStore.openBiometric);
 
 const changeBiometric = async () => {
-	if (!(await userStore.unlockFirst())) {
-		return;
-	}
-	let result = {
-		status: false,
-		message: ''
-	};
+	try {
+		if (!userStore.passwordReseted) {
+			busEmit('configPassword');
+			return;
+		}
 
-	if (!userStore.openBiometric) {
-		result = await getNativeAppPlatform().openBiometric();
-	} else {
-		result = await getNativeAppPlatform().closeBiometric();
-	}
-	unlockByBiometricStatus.value = userStore.openBiometric;
-	if (!result.status && result.message.length > 0) {
-		notifyFailed(result.message);
+		if (!(await userStore.unlockFirst())) {
+			return;
+		}
+		let result = {
+			status: false,
+			message: ''
+		};
+
+		if (!userStore.openBiometric) {
+			result = await getNativeAppPlatform().openBiometric();
+		} else {
+			result = await getNativeAppPlatform().closeBiometric();
+		}
+		unlockByBiometricStatus.value = userStore.openBiometric;
+		if (!result.status && result.message.length > 0) {
+			notifyFailed(result.message);
+		}
+	} catch (error) {
+		notifyFailed(error.message);
+	} finally {
+		unlockByBiometricStatus.value = userStore.openBiometric;
 	}
 };
 
@@ -277,6 +313,24 @@ const changePwd = async () => {
 	$router.push({
 		path: '/change_pwd'
 	});
+};
+
+const biometricPassword = ref('');
+
+const displayPassword = async () => {
+	if (biometricPassword.value) {
+		return;
+	}
+
+	if (!userStore.isUnlocked) {
+		if (!(await userStore.unlockFirst())) {
+			return;
+		}
+		biometricPassword.value = userStore.password || '';
+	} else {
+		const password = await getNativeAppPlatform().unlockByBiometric();
+		biometricPassword.value = password || '';
+	}
 };
 
 const selectionReport = ref([] as string[]);
@@ -410,7 +464,7 @@ const setPath = (path: string) => {
 			}
 
 			.backup {
-				background: $yellow;
+				background: $primary;
 				border-radius: 8px;
 				height: 32px;
 				text-align: center;

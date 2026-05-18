@@ -1,6 +1,6 @@
 import { useMiddlewareStore } from '@apps/control-hub/stores/Middleware';
 import { ref, computed } from 'vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { useAppDetailStore } from '@apps/control-hub/src/stores/AppDetail';
 import { useTerminalStore } from '@apps/control-hub/src/stores/TerminalStore';
 import { capitalize } from 'lodash';

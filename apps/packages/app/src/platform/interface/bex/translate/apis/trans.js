@@ -29,7 +29,7 @@ import {
 	INPUT_PLACE_TEXT,
 	INPUT_PLACE_KEY,
 	INPUT_PLACE_MODEL,
-	URL_OLARES_TRAN,
+	getOlaresTransUrl,
 	OPT_TRANS_OLARES
 } from '../config';
 import { msAuth } from '../libs/auth';
@@ -40,7 +40,6 @@ import interpreter from '../libs/interpreter';
 const keyMap = new Map();
 const urlMap = new Map();
 
-// Poll key/url
 const keyPick = (translator, key = '', cacheMap) => {
 	const keys = key
 		.split(/\n|,/)
@@ -102,13 +101,20 @@ const genMicrosoft = async ({ text, from, to }) => {
 };
 
 const genOlares = async ({ text, from, to }) => {
-	// const [token] = await msAuth();
+	const olaresUrl = await getOlaresTransUrl();
+
+	if (!olaresUrl) {
+		throw new Error(
+			'Olares translation URL not configured. Please ensure user is logged in.'
+		);
+	}
+
 	const params = {
 		source_lang: from,
 		target_lang: to,
 		text_list: [text]
 	};
-	const input = `${URL_OLARES_TRAN}`;
+	const input = olaresUrl;
 	const init = {
 		headers: {
 			'Content-type': 'application/json'

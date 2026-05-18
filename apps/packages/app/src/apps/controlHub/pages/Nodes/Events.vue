@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';
 import Event from '@apps/control-panel-common/src/containers/NodeEvent.vue';
 

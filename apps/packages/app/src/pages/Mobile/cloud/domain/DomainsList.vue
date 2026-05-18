@@ -50,7 +50,7 @@
 				style="width: 100%; margin-top: 80px"
 			>
 				<img src="../../../../assets/nodata.svg" alt="empty" />
-				<span class="text-body2">{{ t('there_is_nothing_for_now') }}</span>
+				<span class="text-body2">{{ t('No domains available yet') }}</span>
 				<div
 					class="row items-center justify-center"
 					style="margin-top: 40px"

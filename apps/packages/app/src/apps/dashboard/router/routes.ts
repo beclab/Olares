@@ -138,14 +138,6 @@ const routes: RouteRecordRaw[] = [
 				]
 			},
 			{
-				path: 'nodes',
-				component: () => import('@apps/dashboard/src/pages/Nodes/IndexPage.vue')
-			},
-			{
-				path: 'logs/:namespace/:name/:container',
-				component: () => import('@apps/dashboard/src/pages/Logs/LogDetail.vue')
-			},
-			{
 				path: 'applications',
 				component: () =>
 					import('@apps/dashboard/src/pages/Applications2/IndexPage.vue'),

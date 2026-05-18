@@ -22,7 +22,9 @@ description: 在 Olares Space 中设置自定义域名，包括域名验证和 D
 
 ## 添加域名
 
-<!--@include: ../../reusables/custom-domain.md{34,73}-->
+以下步骤以 `space.n1.monster` 为例。
+
+<!--@include: ../../reusables/custom-domain.md#custom-domain-add-domain-steps-->
 
 ## 下一步
 

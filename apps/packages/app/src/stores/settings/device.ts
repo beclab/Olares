@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia';
-import { DeviceType, onDeviceChange, useDevice } from '@bytetrade/core';
+import {
+	DeviceType,
+	getInitialDeviceScreenState,
+	onDeviceChange,
+	useDevice
+} from '@bytetrade/core';
 import { useBackgroundStore } from 'src/stores/settings/background';
 
 export type DeviceStoreState = {
@@ -12,10 +17,7 @@ export type DeviceStoreState = {
 export const useDeviceStore = defineStore('deviceStore', {
 	state: () => {
 		return {
-			deviceInfo: {
-				device: DeviceType.DESKTOP,
-				isVerticalScreen: false
-			}
+			deviceInfo: getInitialDeviceScreenState()
 		} as DeviceStoreState;
 	},
 

@@ -175,16 +175,27 @@ const requestCommonCallBack = async (
 		}
 	}
 
+	if (
+		config.headers['X-Authorization'] &&
+		(!config.params || config.params['hideCookie'] == undefined)
+	) {
+		const params = config.params || {};
+		params['hideCookie'] = true;
+		config.params = params;
+	}
+
+	const request = {
+		method: method.toUpperCase(),
+		url: fullUrl,
+		params: config.params,
+		data: config.data,
+		headers: config.headers,
+		responseType: config.responseType as any,
+		connectTimeout: config.timeout
+	};
+
 	const response: HttpResponse =
-		await getAppPlatform().hookCapacitorHttp.request({
-			method: method.toUpperCase(),
-			url: fullUrl,
-			params: config.params,
-			data: config.data,
-			headers: config.headers,
-			responseType: config.responseType as any,
-			connectTimeout: config.timeout
-		});
+		await getAppPlatform().hookCapacitorHttp.request(request);
 
 	let axiosResponse: AxiosResponse = {
 		data: response.data,
@@ -192,7 +203,7 @@ const requestCommonCallBack = async (
 		statusText: '',
 		headers: response.headers,
 		config: config,
-		request: null
+		request: request
 	};
 
 	for (const interceptor of interceptors.response) {
@@ -204,6 +215,21 @@ const requestCommonCallBack = async (
 	}
 
 	if (axiosResponse.status !== 200 && axiosResponse.status !== 201) {
+		const responseError = new ErrorResponse(
+			axiosResponse,
+			axiosResponse.data.message
+				? `${axiosResponse.data.message}`
+				: `Request failed with status code ${axiosResponse.status}`
+		);
+
+		const application = getApplication();
+		if (
+			application.tokenInvalidErrorIntercep &&
+			application.tokenInvalidErrorIntercep(responseError)
+		) {
+			return;
+		}
+
 		return Promise.reject(
 			new ErrorResponse(
 				axiosResponse,
@@ -258,6 +284,8 @@ export const axiosInstanceProxy = (
 			return response;
 		},
 		(error: any) => {
+			console.log('error 1 =>', error);
+
 			const application = getApplication();
 			if (
 				application.tokenInvalidErrorIntercep &&

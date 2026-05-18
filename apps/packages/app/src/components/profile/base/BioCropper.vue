@@ -55,27 +55,27 @@ const previews = ref({
 	img: ''
 });
 const option = ref({
-	img: '', // 裁剪图片的地址
-	size: 1, // 裁剪生成图片的质量
-	full: false, // 是否输出原图比例的截图 默认false
-	outputType: 'png', // 裁剪生成图片的格式 默认jpg
-	canMove: true, // 上传图片是否可以移动
-	fixedBox: true, // 固定截图框大小 不允许改变
-	original: false, // 上传图片按照原始比例渲染
-	canMoveBox: true, // 截图框能否拖动
-	autoCrop: true, // 是否默认生成截图框
-	// 只有自动截图开启 宽度高度才生效
-	// autoCropWidth: 182, // 默认生成截图框宽度
-	// autoCropHeight: 182, // 默认生成截图框高度
-	centerBox: true, // 截图框是否被限制在图片里面
-	high: false, // 是否按照设备的dpr 输出等比例图片
-	enlarge: 1, // 图片根据截图框输出比例倍数
-	mode: 'contain', // 图片默认渲染方式
-	maxImgSize: 2000, // 限制图片最大宽度和高度
-	limitMinSize: [100, 100], // 更新裁剪框最小属性
-	infoTrue: false, // true 为展示真实输出图片宽高 false 展示看到的截图框宽高
-	fixed: true, // 是否开启截图框宽高固定比例  (默认:true)
-	fixedNumber: [1, 1] // 截图框的宽高比例
+	img: '', // Source image URL
+	size: 1, // Output image quality
+	full: false, // Export crop with original aspect ratio (default: false)
+	outputType: 'png', // Output format (default: jpg)
+	canMove: true, // Whether uploaded image can be moved
+	fixedBox: true, // Keep crop box size fixed
+	original: false, // Render uploaded image with original ratio
+	canMoveBox: true, // Whether crop box can be dragged
+	autoCrop: true, // Create crop box by default
+	// Width/height options only work when autoCrop is enabled.
+	// autoCropWidth: 182, // Default crop box width
+	// autoCropHeight: 182, // Default crop box height
+	centerBox: true, // Keep crop box inside image bounds
+	high: false, // Output with device DPR scale
+	enlarge: 1, // Output scale multiplier based on crop box
+	mode: 'contain', // Default image fit mode
+	maxImgSize: 2000, // Max image width/height
+	limitMinSize: [100, 100], // Min crop box size
+	infoTrue: false, // true: real output size; false: visible crop box size
+	fixed: true, // Keep fixed crop ratio (default: true)
+	fixedNumber: [1, 1] // Crop box width/height ratio
 });
 
 const cropper = ref();

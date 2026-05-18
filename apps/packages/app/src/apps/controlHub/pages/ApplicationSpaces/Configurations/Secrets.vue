@@ -80,7 +80,7 @@ import { getSecretsData } from '@apps/control-hub/src/network';
 import { ObjectMapper } from '@apps/control-hub/src/utils/object.mapper';
 import { isEmpty } from 'lodash-es';
 import DetailPage from '@apps/control-panel-common/src/containers/DetailPage.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { getLocalTime } from '@apps/control-hub/src/utils';
 import { SECRET_TYPES } from '@apps/control-hub/src/utils/constants';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';
@@ -98,7 +98,8 @@ const isStudio2 = useIsStudio2();
 
 let loading = ref(false);
 const secretValueVisible = ref(false);
-const detail = ref();
+const rawData = ref();
+const detail = computed(() => getAttrs(rawData.value));
 const route = useRoute();
 const secretsData = ref<{ [key: string]: string }>({});
 const yamlRef = ref();
@@ -150,12 +151,12 @@ const fetchDetail = () => {
 	const { name, namespace }: any = route.params;
 	loading.value = true;
 	secretsData.value = {};
-	detail.value = [];
+	rawData.value = undefined;
 	getSecretsData({ name, namespace })
 		.then((res) => {
 			const result = ObjectMapper.secrets(res.data);
 			secretsData.value = result.data;
-			detail.value = getAttrs(result);
+			rawData.value = result;
 		})
 		.finally(() => {
 			loading.value = false;

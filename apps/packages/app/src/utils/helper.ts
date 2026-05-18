@@ -23,7 +23,7 @@ export const scrollBarStyle = {
 	}
 };
 
-// 防抖函数
+// Debounce helper.
 // export const debounce = <F extends (...args: unknown[]) => unknown>(
 //   func: F,
 //   wait: number
@@ -46,7 +46,7 @@ export const scrollBarStyle = {
 //   return debounced as (...args: Parameters<F>) => ReturnType<F>;
 // };
 
-// 发起http请求，支持post和get请求，并可用传post请求的body,默认为get请求
+// Send HTTP request, supports GET/POST and optional POST body.
 // export function fetchData(
 //   url: string,
 //   method = 'GET',
@@ -73,7 +73,7 @@ export const scrollBarStyle = {
 //   const options: Record<string, unknown> = {
 //     method,
 //     url,
-//     withCredentials: true, // 注意这里是 `withCredentials` 而不是 `credentials`
+//     withCredentials: true, // Use `withCredentials` instead of `credentials`
 //     data: {},
 //   };
 //   if (data) {
@@ -82,7 +82,7 @@ export const scrollBarStyle = {
 //   return axios(options).then((res) => res.data);
 // };
 
-// // debounce函数调用fetchData函数
+// // Debounce wrapper for fetchData.
 // const debouncedFetchData = debounce(
 //   fetchData as (...args: unknown[]) => unknown,
 //   500

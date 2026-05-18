@@ -34,5 +34,6 @@ const updateSplitter = (value: number) => {
 <style lang="scss" scoped>
 .itemWrap {
 	height: 100%;
+	width: 100%;
 }
 </style>

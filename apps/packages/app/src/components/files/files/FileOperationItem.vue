@@ -66,10 +66,10 @@ const handle = (e: any, action: OPERATE_ACTION) => {
 };
 
 const deleteRepo = async () => {
-	const foucsItem =
-		filesStore.currentFileList[props.origin_id]?.items[
-			filesStore.selected[props.origin_id][0]
-		];
+	const foucsItem = filesStore.getTargetFileItem(
+		filesStore.selected[props.origin_id][0],
+		props.origin_id
+	);
 	const repo_id = getParams(foucsItem?.path || '', 'id');
 	const res = await menuStore.fetchShareInfo(repo_id);
 
@@ -85,10 +85,10 @@ const deleteRepo = async () => {
 };
 
 const renameRepo = async () => {
-	const foucsItem =
-		filesStore.currentFileList[props.origin_id]?.items[
-			filesStore.selected[props.origin_id][0]
-		];
+	const foucsItem = filesStore.getTargetFileItem(
+		filesStore.selected[props.origin_id][0],
+		props.origin_id
+	);
 	const repo_id = getParams(foucsItem?.path || '', 'id');
 
 	$q.dialog({

@@ -18,3 +18,10 @@ export const notifyFailed = (info = 'Failed') => {
 export const notifyWarning = (info = 'Warning') => {
 	showNotify(info, NotifyDefinedType.WARNING);
 };
+
+export const notifyMessage = (info: string) => {
+	if (!info) {
+		return;
+	}
+	showNotify(info, NotifyDefinedType.MESSAGE);
+};

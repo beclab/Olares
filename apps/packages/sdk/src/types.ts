@@ -9,6 +9,7 @@ export interface ListItem {
 	lastInSection?: boolean;
 	warning?: boolean;
 	selectedEnable?: boolean;
+	dispaly?: boolean;
 }
 
 export interface ItemsFilter {

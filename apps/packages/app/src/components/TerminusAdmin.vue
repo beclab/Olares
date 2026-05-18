@@ -3,7 +3,7 @@
 		<div class="header q-mt-md">
 			<div class="fill"></div>
 			<div class="users">
-				<TerminusAvatar :info="userStore.terminusInfo()" :size="40" />
+				<TerminusAvatar :info="userStore.currentUserOlaresInfo" :size="40" />
 			</div>
 
 			<div class="info q-mt-sm">
@@ -38,13 +38,25 @@
 				</div>
 			</q-item>
 
-			<q-item dense class="row items-center q-px-sm item-li">
+			<q-item
+				dense
+				class="row items-center q-px-sm item-li"
+				v-if="scaleStore.vpnAbility"
+			>
 				<div class="row items-center justify-between item-content">
 					<div class="row items-center justify-start">
 						<q-icon name="sym_r_sync_lock" size="20px" />
-						<span class="text-body2 q-ml-xs">{{
-							t('encrypted_connection')
-						}}</span>
+						<span class="text-body2 q-ml-xs">
+							{{ t('encrypted_connection') }}
+						</span>
+						<q-icon
+							name="sym_r_info"
+							class="status-color q-ml-xs"
+							v-if="scaleStore.localAddress"
+						/>
+						<q-tooltip anchor="bottom middle" v-if="scaleStore.localAddress">
+							{{ scaleStore.localAddress }}
+						</q-tooltip>
 					</div>
 
 					<bt-switch

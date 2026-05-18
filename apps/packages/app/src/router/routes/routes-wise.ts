@@ -28,10 +28,16 @@ const routes: RouteRecordRaw[] = [
 				component: () => import('src/pages/Wise/manager/RecentlyReadPage.vue')
 			},
 			{
-				path: MenuType.Transmission,
-				name: MenuType.Transmission,
+				path: MenuType.Download,
+				name: MenuType.Download,
 				component: () =>
-					import('src/pages/Wise/manager/transmission/TransmissionPage.vue')
+					import('src/pages/Wise/manager/transmission/DownloadPage.vue')
+			},
+			{
+				path: MenuType.Upload,
+				name: MenuType.Upload,
+				component: () =>
+					import('src/pages/Wise/manager/transmission/UploadPage.vue')
 			},
 			{
 				path: MenuType.Filtered_Views,

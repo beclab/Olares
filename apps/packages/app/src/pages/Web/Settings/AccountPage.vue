@@ -98,6 +98,7 @@ import {
 	notifySuccess
 } from '../../../utils/notifyRedefinedUtil';
 import { useI18n } from 'vue-i18n';
+import { getApplication } from '../../../application/base';
 
 export default defineComponent({
 	name: 'AccountPage',
@@ -135,8 +136,11 @@ export default defineComponent({
 		};
 
 		const copyMnemonic = () => {
-			getPlatform()
-				.setClipboard(mnemonic.value)
+			if (!mnemonic.value) {
+				return;
+			}
+			getApplication()
+				.copyToClipboard(mnemonic.value)
 				.then(() => {
 					notifySuccess(t('copy_success'));
 				})
@@ -173,7 +177,7 @@ export default defineComponent({
 .accountfooter {
 	.web-confirm-btn {
 		background: $blue;
-		color: $white;
+		color: white;
 	}
 
 	.web-confirm-btn[disabled] {
@@ -197,7 +201,7 @@ export default defineComponent({
 	}
 
 	.web-bg-white {
-		background: $white;
+		background: white;
 	}
 
 	.deleteAccount {

@@ -56,6 +56,7 @@ import { useDeviceStore } from 'src/stores/settings/device';
 import { notifySuccess } from 'src/utils/settings/btNotify';
 import { passwordAddSort } from 'src/utils/account';
 import { useAdminStore } from 'src/stores/settings/admin';
+import { PASSWORD_RULE } from 'src/utils/constants';
 
 const oldPassword = ref('');
 const newPassword = ref('');
@@ -65,6 +66,12 @@ const accountStore = useUserStore();
 const quasar = useQuasar();
 const { t } = useI18n();
 const adminStore = useAdminStore();
+
+const allRule = new RegExp(PASSWORD_RULE.ALL_RULE);
+
+const lettersRule = new RegExp(PASSWORD_RULE.LETTERS_RULE);
+
+const symbolRule = new RegExp(PASSWORD_RULE.SYMBOL_RULE);
 
 const props = defineProps({
 	name: {
@@ -91,9 +98,11 @@ const oldPasswordRule = (val: string) => {
 
 const passwordRule = (val: string) => {
 	if (val.length < 8) return t('errors.at_least_8_digits_long');
-	let rule = /^(?=.*[A-Z])(?=.*[a-z])[A-Za-z0-9@$!%*?&_.]{8,}$/;
-	if (!rule.test(val)) {
-		return t('errors.at_least_one_uppercase_and_lowercase_letter');
+	if (!allRule.test(val)) {
+		if (!lettersRule.test(val)) {
+			return t('errors.at_least_one_letter');
+		}
+		return t('Contains symbols');
 	}
 	return '';
 };

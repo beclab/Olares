@@ -120,7 +120,6 @@ const onScroll = async (info: any) => {
 .page-container-root {
 	height: 100%;
 	width: 100%;
-	background: $background-1;
 
 	.page-container-title {
 		height: var(--titleHeight);
@@ -132,8 +131,22 @@ const onScroll = async (info: any) => {
 		width: 100%;
 		height: calc(100% - var(--titleHeight));
 
+		&.my-scroll-area-no-header {
+			height: 100vh;
+			margin-top: 0;
+		}
+
+		& > ::v-deep(.q-scrollarea__container) {
+			min-width: 0;
+			overflow-x: hidden;
+		}
+
+		& > ::v-deep(.q-scrollarea__container > .q-scrollarea__content) {
+			min-width: 0;
+			width: 100% !important;
+		}
+
 		.page-container-scroll-area {
-			width: 100%;
 			height: 100%;
 			position: relative;
 
@@ -147,6 +160,7 @@ const onScroll = async (info: any) => {
 				background: $blue-6;
 				opacity: 10%;
 				filter: blur(80px);
+				pointer-events: none;
 			}
 
 			.fill2 {
@@ -159,6 +173,7 @@ const onScroll = async (info: any) => {
 				background: $teal-6;
 				opacity: 10%;
 				filter: blur(80px);
+				pointer-events: none;
 			}
 		}
 

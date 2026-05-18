@@ -5,7 +5,7 @@
 				v-if="tokenStore.config.bg"
 				fit="fill"
 				class="desktop-bg"
-				:src="`/desktop${tokenStore.config.bg}`"
+				:src="tokenStore.config.bg ? bgSrc : '/desktop/bg/0.jpg'"
 			/>
 			<img v-else fit="fill" class="desktop-bg" src="/desktop/bg/0.jpg" />
 		</div>
@@ -55,7 +55,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import HomeView from './HomeView.vue';
 import NotificationView from './NotificationView.vue';
 import { useTokenStore } from '../../../stores/desktop/token';
@@ -64,6 +64,13 @@ import { useNotificationStore } from '../../../stores/desktop/notification';
 const panel = ref('home');
 const tokenStore = useTokenStore();
 const notificationStore = useNotificationStore();
+
+const bgSrc = computed(() => {
+	if (tokenStore.config.bg.startsWith('http')) {
+		return tokenStore.config.bg;
+	}
+	return '/desktop' + tokenStore.config.bg;
+});
 
 watch(
 	() => panel.value,
@@ -97,8 +104,11 @@ watch(
 }
 
 .tab-panels-bg {
-	width: 100vw;
+	width: 100%;
+	max-width: 100vw;
 	height: 100vh;
+	height: 100svh;
+	height: 100dvh;
 	padding: 0;
 	background: transparent;
 

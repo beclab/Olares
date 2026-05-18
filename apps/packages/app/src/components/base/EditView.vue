@@ -80,7 +80,6 @@ function onInput(value: string) {
 		line-height: 16px;
 		letter-spacing: 0em;
 		text-align: left;
-		color: $sub-title;
 	}
 }
 </style>

@@ -47,7 +47,7 @@ const inputRef = ref();
 const cpuValue = ref('');
 const cpuUnit = ref<string>(cpuUnitOptions[0]);
 
-// 解析初始值
+// Parse initial value.
 const parseInitialValue = (value: string) => {
 	if (!value) return;
 
@@ -64,10 +64,10 @@ const parseInitialValue = (value: string) => {
 	}
 };
 
-// 初始化
+// Initialize.
 parseInitialValue(props.modelValue);
 
-// CPU 验证规则
+// CPU validation rules.
 const cpuRules = computed(() => [
 	(val: string) => (val && val.length > 0) || t('cpu_rule'),
 	(val: string) => {
@@ -78,21 +78,21 @@ const cpuRules = computed(() => [
 			return t('cpu_rule_invalid') || 'CPU 值无效';
 		}
 
-		// 检查是否为 0 或负数
+		// Validate against zero or negative values.
 		if (numValue <= 0) {
 			return t('cpu_rule_not_zero') || 'CPU 不能为 0';
 		}
 
-		// 根据单位转换为 millicores
+		// Convert to millicores based on unit.
 		let cpuInMillicores = 0;
 		if (cpuUnit.value === 'm') {
 			cpuInMillicores = numValue;
 		} else {
-			// 'core' 单位
+			// 'core' unit
 			cpuInMillicores = numValue * 1000;
 		}
 
-		// 检查是否超过最大值
+		// Check upper bound.
 		if (cpuInMillicores > maxCpu) {
 			return (
 				t('cpu_rule_max', { max: maxCpu / 1000 }) ||
@@ -104,7 +104,7 @@ const cpuRules = computed(() => [
 	}
 ]);
 
-// 组合值并发出更新
+// Compose value and emit update.
 const emitValue = () => {
 	if (!cpuValue.value) {
 		emit('update:modelValue', '');
@@ -116,21 +116,21 @@ const emitValue = () => {
 	emit('update:modelValue', fullValue);
 };
 
-// 监听数值变化
+// Watch numeric value changes.
 watch(cpuValue, () => {
 	emitValue();
 });
 
-// 处理单位变化
+// Handle unit changes.
 const handleUnitChange = () => {
 	emitValue();
-	// 触发验证
+	// Trigger validation.
 	if (inputRef.value) {
 		inputRef.value.validate();
 	}
 };
 
-// 监听外部 modelValue 变化
+// Watch external modelValue changes.
 watch(
 	() => props.modelValue,
 	(newVal) => {
@@ -142,7 +142,7 @@ watch(
 	}
 );
 
-// 暴露验证方法
+// Expose validation method.
 const validate = () => {
 	return inputRef.value?.validate();
 };

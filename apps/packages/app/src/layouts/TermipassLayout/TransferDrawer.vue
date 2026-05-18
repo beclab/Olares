@@ -16,7 +16,7 @@
 				@select="updateCurrentMenu"
 				style="width: 100%"
 				class="title-norla"
-				active-class="text-subtitle2 bg-yellow-soft text-ink-1"
+				active-class="text-subtitle2 bg-menu-active-color"
 			>
 			</bt-menu>
 		</q-scroll-area>
@@ -27,7 +27,6 @@
 import { ref, watch } from 'vue';
 import { useTransfer2Store } from '../../stores/transfer2';
 import { scrollBarStyle } from '../../utils/contact';
-import { filesIsV2 } from 'src/api';
 
 const transferStore = useTransfer2Store();
 
@@ -83,7 +82,7 @@ watch(
 );
 
 watch(
-	() => transferStore.clouding,
+	() => transferStore.copying,
 	(newVal) => {
 		let count: string | number = newVal.length;
 		if (count > 99) {
@@ -101,28 +100,6 @@ watch(
 		immediate: true
 	}
 );
-
-if (filesIsV2()) {
-	watch(
-		() => transferStore.copying,
-		(newVal) => {
-			let count: string | number = newVal.length;
-			if (count > 99) {
-				count = '99+';
-			}
-
-			if (!count) {
-				delete menus.value[0].children[3].count;
-			} else {
-				menus.value[0].children[3].count = count;
-			}
-		},
-		{
-			deep: true,
-			immediate: true
-		}
-	);
-}
 </script>
 
 <style lang="scss">
@@ -134,5 +111,10 @@ if (filesIsV2()) {
 	overflow: hidden;
 	padding-top: 6px;
 	// border-right: 1px solid $separator;
+}
+
+.myDrawer .bg-menu-active-color {
+	background: $theme-menu-bg-hover;
+	color: $theme-menu-color-hover;
 }
 </style>

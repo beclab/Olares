@@ -6,7 +6,7 @@
 			:label="option.label"
 			:class="
 				option.value === accountType
-					? 'bg-white text-blue text-subtitle2 select-btn'
+					? 'text-blue text-subtitle2 select-btn'
 					: 'text-color-sub-detail text-subtitle2 normal-btn'
 			"
 			flat

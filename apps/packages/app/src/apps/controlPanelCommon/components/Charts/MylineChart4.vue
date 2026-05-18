@@ -13,7 +13,9 @@
 					></div>
 					<span class="q-ml-sm text-body2 text-ink-2">{{ item }}</span>
 					<div class="q-ml-md text-subtitle2 text-ink-1">
-						<span>{{ lastValue(index) }}</span>
+						<span>{{
+							isNaN(Number(lastValue(index))) ? '-' : lastValue(index)
+						}}</span>
 						<span>&nbsp;</span>
 						<span>{{ unit[index] }}</span>
 					</div>
@@ -30,6 +32,7 @@
 				:theme="theme"
 				autoresize
 				ref="chartRef"
+				@legendselectchanged="onLegendSelectChanged"
 			/>
 			<q-resize-observer @resize="onResize" />
 		</div>
@@ -68,7 +71,7 @@ import VChart, { THEME_KEY } from 'vue-echarts';
 import { provide, computed, ref } from 'vue';
 import tinycolor from 'tinycolor2';
 import { theme } from '@apps/control-panel-common/src/components/Charts/theme';
-import { capitalize, get, indexOf, isArray, last } from 'lodash';
+import { capitalize, get, indexOf, isArray, isNil, last } from 'lodash';
 import { date } from 'quasar';
 import { colors } from 'quasar';
 import { getValue } from '@apps/control-panel-common/src/utils/yaml';
@@ -129,6 +132,7 @@ const props = withDefaults(defineProps<LineProps>(), {
 
 const chartInterval = ref<number | 'auto'>(2);
 const chartRef = ref();
+const secondSeriesVisible = ref(true);
 
 const unit = computed(() => props.data?.unit ?? '');
 
@@ -154,6 +158,16 @@ const option = computed(() => {
 	const dataRight = get(props.data, 'data[1]', []);
 	const maxWidthLeft = labelMaxWidth(dataLeft);
 	const maxWidthRight = labelMaxWidth(dataRight);
+	const splitLineStyle = {
+		lineStyle: {
+			type: 'dashed' as const,
+			color: separator.value
+		}
+	};
+	const showRightSplitLine =
+		legend.value.length < 2 ? true : secondSeriesVisible.value;
+	const showLeftSplitLine =
+		legend.value.length >= 2 && !secondSeriesVisible.value;
 	return {
 		title: {
 			text: title.value,
@@ -190,13 +204,17 @@ const option = computed(() => {
 		tooltip: {
 			trigger: 'axis',
 			formatter: (params: any, ticket: string) => {
-				const data = params.map((item: any) => ({
-					marker: item.marker,
-					seriesName: item.seriesName,
-					data: seriesData.value[item.seriesIndex][item.dataIndex][1],
-					unit: unit.value[item.seriesIndex],
-					axisValueLabel: params[0].axisValueLabel
-				}));
+				const data = params.map((item: any) => {
+					const seriesIndexData =
+						seriesData.value[item.seriesIndex][item.dataIndex][1];
+					return {
+						marker: item.marker,
+						seriesName: item.seriesName,
+						data: isNaN(seriesIndexData) ? '-' : seriesIndexData,
+						unit: unit.value[item.seriesIndex],
+						axisValueLabel: params[0].axisValueLabel
+					};
+				});
 				return formatter(data, unit.value);
 			},
 			axisPointer: {
@@ -242,9 +260,9 @@ const option = computed(() => {
 				type: 'value',
 				splitNumber: props.splitNumberY ? props.splitNumberY : 5,
 				onZero: true,
-				splitLine: {
-					show: false
-				},
+				splitLine: showLeftSplitLine
+					? { show: true, ...splitLineStyle }
+					: { show: false },
 				axisLabel: {
 					show: true,
 					margin: maxWidthLeft,
@@ -257,12 +275,9 @@ const option = computed(() => {
 			{
 				type: 'value',
 				splitNumber: props.splitNumberY ? props.splitNumberY : 5,
-				splitLine: {
-					lineStyle: {
-						type: 'dashed',
-						color: separator.value
-					}
-				},
+				splitLine: showRightSplitLine
+					? { show: true, ...splitLineStyle }
+					: { show: false },
 				axisLabel: {
 					show: true,
 					margin: maxWidthRight,
@@ -310,6 +325,14 @@ const legendHandler = (name: string) => {
 		type: 'legendToggleSelect',
 		name: name
 	});
+};
+
+const onLegendSelectChanged = (params: {
+	selected?: Record<string, boolean>;
+}) => {
+	const name = legend.value[1];
+	if (!name || !params.selected || !(name in params.selected)) return;
+	secondSeriesVisible.value = params.selected[name] !== false;
 };
 
 const onResize = (size: { width: number; height: number }) => {

@@ -1,3 +1,5 @@
+import lang from '../../en-US';
+
 export default {
 	launch_input_placehoder: 'Search',
 	launch_no_result: 'No results',
@@ -8,6 +10,21 @@ export default {
 	home_start: 'Start',
 	home_create: 'Create a new application',
 	home_update: 'Upload a chart package',
+	home_upload_compose: 'Upload Docker Compose',
+	home_compose_title: 'Compose Title',
+	home_compose_title_hint: 'Specify a title for this Docker Compose',
+	home_compose_title_rules: 'Enter the Compose title',
+	home_compose_file_hint: 'Click to select docker-compose.yml file',
+	home_compose_file_required: 'Please select a docker-compose.yml file',
+	home_compose_entrance_tip:
+		'To identify the application entrance, add the following label to the service that serves as the entry point:',
+	home_compose_entrance_label: 'Identifies the app entrance',
+	home_compose_entrance_why:
+		'The system will automatically generate the corresponding Deployment configuration based on this label',
+	home_compose_entrance_example_title: 'Complete Example',
+	home_compose_entrance_learn_more: 'Learn more',
+	home_compose_entrance_note:
+		'Note: If your Compose file contains multiple services, only add this label to the main entrance service',
 	home_recent: 'Recent',
 	home_recent_resc_1: 'Your recently developed apps',
 	home_recent_resc_2: ' will appear here',
@@ -17,6 +34,7 @@ export default {
 	home_doc_3: 'Understand Olares Application Chart',
 	home_doc_4: 'OlaresManifest configuration guide',
 	home_doc_5: 'How to submit an application',
+	home_doc_6: 'How to add icons and other images to your app',
 	home_visit_1: 'Visit',
 	home_visit_2: 'for more information.',
 	home_appname: 'App name',
@@ -83,6 +101,8 @@ export default {
 	btn_binding: 'Binding',
 	btn_open_ide: 'Open IDE',
 	btn_rename: 'Rename',
+	btn_copy: 'Copy',
+	btn_copied: 'Copied',
 	application: 'Application',
 	container_list: 'Dev container list',
 	requirementNotSpecified: 'Requirement not specified',
@@ -314,6 +334,10 @@ export default {
 		rename_failed: 'Failed to rename app',
 		delete_file_success: 'File deleted successfully',
 		delete_file_failed: 'Failed to delete',
+		upload_compose_success: 'Docker Compose uploaded successfully',
+		upload_compose_failed: 'Failed to upload Docker Compose',
+		copy_success: 'Copied successfully',
+		download_success: 'Downloaded successfully',
 		deleteTip: 'Delete {name} ?',
 		save_file: 'Do you want to save the current file?',
 		rename_file: 'Rename File',
@@ -342,7 +366,7 @@ export default {
 		instance_specifications: 'Instance Specifications',
 		memory: 'Memory',
 		manufacturer: 'vendor',
-		env_variables: 'Environment Variables',
+		env_variables: 'Environment variables',
 		key: 'key',
 		value: 'value',
 		storage_volume: 'Storage Volume',
@@ -365,21 +389,14 @@ export default {
 	},
 
 	appInstallStatus: {
-		pending: 'Pending',
 		downloading: 'Downloading',
 		processing: 'Processing',
 		canceled: 'Canceled',
-		failed: 'Failed',
 		completed: 'Completed',
-		installing: 'Installing',
 		upgrading: 'Upgrading',
-		uninstalling: 'Uninstalling',
 		uninstalled: 'Uninstalled',
-		resuming: 'Resuming',
 		resumed: 'Resumed',
-		canceling: 'Canceling',
-		stopping: 'Stopping',
-		running: 'Running'
+		...lang.app
 	},
 
 	waitingForInstall: 'Waiting for install',
@@ -431,5 +448,25 @@ export default {
 		'Port number format is incorrect, please use comma-separated numbers',
 	image_ports_rule_2: 'Port numbers must be between 1-65535',
 	image_ports_rule_3: 'Cannot use ports 5000, 80, 443',
-	installing: 'Creating resources'
+	installing: 'Creating resources',
+
+	// Editor features
+	editor: {
+		format: 'Format',
+		find: 'Find',
+		replace: 'Replace',
+		foldAll: 'Fold All',
+		unfoldAll: 'Unfold All',
+		problems: 'Problems',
+		undo: 'Undo',
+		redo: 'Redo',
+		formatDocument: 'Format Document',
+		findAndReplace: 'Find and Replace',
+		toggleFold: 'Toggle Fold',
+		jumpToLine: 'Jump to Line',
+		noProblems: 'No problems',
+		errorCount: '{count} errors',
+		warningCount: '{count} warnings',
+		formatOnSave: 'Format on Save'
+	}
 };

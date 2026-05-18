@@ -323,6 +323,8 @@ export default defineComponent({
 	transition: all 0.3s;
 	width: 100vw !important;
 	height: 100vh !important;
+	height: 100svh !important;
+	height: 100dvh !important;
 	z-index: 10 !important;
 }
 </style>
@@ -358,6 +360,7 @@ export default defineComponent({
 		left: 0;
 
 		.app_title {
+			// font-family: 'Source Han Sans CN';
 			font-family: 'Roboto' !important;
 			font-style: normal;
 			font-weight: 500;

@@ -1,5 +1,5 @@
 <template>
-	<q-page class="column orgs bg-white" :style-fn="myTweak">
+	<q-page class="column orgs" :style-fn="myTweak">
 		<OrgVaultsView v-if="orgMode === OrgMenu.VAULTES" />
 		<OrgInvitesView v-if="orgMode === OrgMenu.INVITES" />
 		<OrgMembersView v-if="orgMode === OrgMenu.MEMBERS" />

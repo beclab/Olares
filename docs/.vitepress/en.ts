@@ -69,6 +69,10 @@ const side = {
               text: "Cannot remove a stopped app in App exclusive mode",
               link: "/manual/help/ts-cs-app-reappears",
             },
+            {
+              text: "App status differs after Control Hub start or stop",
+              link: "/manual/help/ts-inconsistent-app-status",
+            },
           ],
         },
         {
@@ -524,6 +528,10 @@ const side = {
       link: "/manual/best-practices/",
       collapsed: true,
       items: [
+        {
+          text: "Activate Olares device using Olares CLI",
+          link: "/manual/best-practices/activate-olares-using-cli",
+        },        
         {
           text: "Set up custom domain",
           link: "/manual/best-practices/set-custom-domain",

@@ -6,14 +6,15 @@ export class CacheRequestBarrier {
 	private updateCounts = new Map<string, number>();
 	private readonly finalCallback: (
 		results: Record<string, any>,
-		isFirstLoad: boolean
+		isFromCache: boolean
 	) => void;
 	private firstLoadTriggered = false;
 	private currentRound = 0;
+	private hasColdStart = false;
 
 	constructor(
 		trackedKeys: string[],
-		finalCallback: (results: Record<string, any>, isFirstLoad: boolean) => void
+		finalCallback: (results: Record<string, any>, isFromCache: boolean) => void
 	) {
 		this.trackedKeys = trackedKeys;
 		this.finalCallback = finalCallback;
@@ -32,11 +33,17 @@ export class CacheRequestBarrier {
 
 	private async trackFirstCompletion<T>(key: string, request: CacheRequest<T>) {
 		try {
+			const preCache = request.getCacheData();
+			if (preCache === null || preCache === undefined) {
+				this.hasColdStart = true;
+			}
+
 			await request.get();
 			if (!this.firstLoadTriggered && this.allFirstCompleted()) {
 				this.firstLoadTriggered = true;
 				console.log('Barrier trackFirstCompletion');
-				this.triggerFinalCallback(true);
+				const isFromCache = !this.hasColdStart;
+				this.triggerFinalCallback(isFromCache);
 			}
 		} catch (err) {
 			console.error(`Barrier request ${key} first load error:`, err);
@@ -45,6 +52,10 @@ export class CacheRequestBarrier {
 
 	private trackUpdates<T>(key: string, request: CacheRequest<T>) {
 		request.on('requestFinish', async (newData) => {
+			if (!this.firstLoadTriggered) {
+				return;
+			}
+
 			const currentCount = this.updateCounts.get(key) || 0;
 			this.updateCounts.set(key, currentCount + 1);
 
@@ -62,7 +73,7 @@ export class CacheRequestBarrier {
 	}
 
 	private allFirstCompleted(): boolean {
-		return Array.from(this.requests.keys()).every((key) => {
+		return this.trackedKeys.every((key) => {
 			const request = this.requests.get(key);
 			return request?.getCacheData() !== null;
 		});
@@ -77,11 +88,11 @@ export class CacheRequestBarrier {
 		return counts.every((count) => count === targetCount);
 	}
 
-	private triggerFinalCallback(isFirstLoad: boolean) {
+	private triggerFinalCallback(isFromCache: boolean) {
 		const results: Record<string, any> = {};
 		this.requests.forEach((request, key) => {
 			results[key] = request.getCacheData();
 		});
-		this.finalCallback(results, isFirstLoad);
+		this.finalCallback(results, isFromCache);
 	}
 }

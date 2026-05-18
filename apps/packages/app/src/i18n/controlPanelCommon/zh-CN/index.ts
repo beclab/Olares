@@ -22,7 +22,10 @@ const options_update = {
 	CPU: 'CPU',
 	REMOVE_CONFIRM_DSC:
 		'请输入{ name }名称 <strong>{ resource }</strong> 确保您已了解操作所带来的风险。',
-	POD: 'POD'
+	POD: 'POD',
+	VIEW_FULL_COMMAND: '查看完整命令',
+	confirm: '确认',
+	cancel: '取消'
 };
 
 const options = {
@@ -193,7 +196,7 @@ const options = {
 	IMAGE_ID: '镜像 ID',
 	IMAGE_PULL_POLICY: '镜像拉取策略',
 	CONTAINER_DETAILS_PAGE_SCAP: '容器详情页。',
-	CPU_VALUE: 'CPU：{value, plural, =1 {1 核} other {# 核}}',
+	CPU_VALUE: 'CPU：{value}',
 	MEMORY_VALUE: '内存：{value}',
 	NVIDIA_COM_GPU_VALUE: 'GPU：{value}',
 	LOADING: '加载中...',
@@ -2663,7 +2666,8 @@ const options = {
 	POD_IP_ADDRESS_SCAP: '容器组 IP 地址',
 	TOTAL_CAPACITY: '总容量',
 	UPDATE_SUCCESSFUL: '更新成功。',
-	UPDATE_FAILED: '更新失败'
+	UPDATE_FAILED: '更新失败',
+	'The token has expired, please log in again': 'token已过期，请重新登录'
 };
 
 export default { ...options, ...options_update };

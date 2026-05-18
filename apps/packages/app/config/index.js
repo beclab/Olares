@@ -136,13 +136,22 @@ const extendWebpack = (ctx, cfg) => {
 			__dirname,
 			'../src/apps/controlPanelCommon'
 		),
-		'@apps/desktop': path.resolve(__dirname, '../src/apps/Desktop')
+		'@apps/desktop': path.resolve(__dirname, '../src/apps/Desktop'),
+		'@bytetrade/ui': path.resolve(__dirname, '../src/components/ui/index.ts')
 	};
 };
 
 const chainWebpack = (ctx, chain, { isClient }) => {
 	const nodePolyfillWebpackPlugin = require('node-polyfill-webpack-plugin');
 	chain.plugin('node-polyfill').use(nodePolyfillWebpackPlugin);
+
+	// webpack 5 treats packages with "type": "module" as ESM with fullySpecified=true,
+	// which prevents resolving bare directory imports (e.g. "./avatar" -> "./avatar/index.js").
+	chain.module
+		.rule('esm-fullyspecified')
+		.test(/\.m?js$/)
+		.resolve.set('fullySpecified', false);
+
 	const isBex = ctx.modeName === 'bex';
 
 	if (isClient && !isBex) {
@@ -279,7 +288,7 @@ module.exports = (ctx) => {
 			https:
 				config?.devServer?.https != undefined
 					? config.devServer.https
-					: httpsApplications.includes(process.env.APPLICATION),
+					: process.env.PROTOCOL === 'https://',
 			host:
 				config?.devServer?.host != undefined
 					? config.devServer.host

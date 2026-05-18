@@ -4,7 +4,7 @@
 		class="simple-social-view"
 		:style="{ justifyContent: justify }"
 	>
-		<template v-for="item in social.data" :key="item.url">
+		<template v-for="item in displaySocialItems" :key="item.platform">
 			<div
 				class="bio-social"
 				:class="clickable ? 'cursor-pointer' : ''"
@@ -47,6 +47,10 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+
+const displaySocialItems = computed(
+	() => props.social?.data?.filter((i) => i && i.platform) ?? []
+);
 
 const socialSize = computed(() => {
 	switch (props.social.size) {

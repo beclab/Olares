@@ -9,7 +9,7 @@ Many AI applications on Olares follow the same pattern: one app provides AI capa
 
 This tutorial explains the core concepts and walks you through practical examples using Ollama as the AI service app.
 
-## Objectives
+## Learning objectives
 
 By the end of this tutorial, you will be able to:
 

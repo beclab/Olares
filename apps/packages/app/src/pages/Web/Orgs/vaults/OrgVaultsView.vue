@@ -28,6 +28,7 @@
 							v-if="isMobile"
 							name="sym_r_chevron_left"
 							size="24px"
+							style="flex: 0 0 24px"
 							@click="goBack"
 						/>
 						<q-input
@@ -75,10 +76,7 @@
 			</div>
 		</div>
 		<div class="container2">
-			<q-scroll-area
-				style="height: 100%"
-				:thumb-style="scrollBarStyle.thumbStyle"
-			>
+			<terminus-scroll-area style="height: 100%">
 				<div class="listRow column justify-center q-mx-md">
 					<div class="header q-pa-md row justify-between">
 						<div class="items-center">
@@ -140,25 +138,25 @@
 								v-for="(member, index) in members"
 								:key="'member' + index"
 							>
-								<div class="col-7 rowLeft">
+								<div class="col-8 rowLeft">
 									<div class="avator q-mr-md">
 										<TerminusAvatar
 											:info="userStore.getUserTerminusInfo(member.id || '')"
 											:size="28"
 										/>
 									</div>
-									<div>
-										<div class="text-body1 text-weight-bold">
+									<div class="info">
+										<div class="text-body1 text-weight-bold content">
 											{{ member.did }}
 										</div>
-										<div class="text-caption text-ink-1">
+										<div class="text-caption text-ink-1 content">
 											{{ userStore.getCurrentDomain() }}
 										</div>
 									</div>
 								</div>
 								<!-- v-if="accountDid !== member.did" -->
 
-								<div class="col-5 rowRight">
+								<div class="col-4 rowRight">
 									<q-select
 										class="select-input"
 										popup-content-class="options_selected_Account"
@@ -210,7 +208,7 @@
 						</template>
 					</div>
 				</div>
-			</q-scroll-area>
+			</terminus-scroll-area>
 		</div>
 		<div
 			v-if="editing_t1"
@@ -219,7 +217,7 @@
 				'margin-bottom': isMobile ? '20px' : 0
 			}"
 		>
-			<q-btn
+			<!-- <q-btn
 				class="reset"
 				:label="t('cancel')"
 				type="reset"
@@ -238,6 +236,30 @@
 				no-caps
 				color="yellow-6"
 				:loading="saveLoading"
+			/> -->
+			<q-btn
+				class="reset text-ink-1"
+				:class="isMobile ? 'text-subtitle1' : 'text-body3 btn-height-web'"
+				:label="t('cancel')"
+				type="reset"
+				flat
+				dense
+				no-caps
+				@click="onCancel"
+				unelevated
+				color="ink-2"
+			/>
+			<q-btn
+				class="confirm text-grey-10"
+				:class="isMobile ? 'text-subtitle1' : 'text-body3 btn-height-web'"
+				:label="t('buttons.save')"
+				type="submit"
+				@click="onSave"
+				unelevated
+				no-caps
+				dense
+				color="yellow-6"
+				:loading="saveLoading"
 			/>
 		</div>
 	</div>
@@ -251,7 +273,6 @@ import { OrgMemberStatus } from '@didvault/sdk/src/core';
 import { app } from '../../../../globals';
 import { useQuasar, Dialog } from 'quasar';
 import { useMenuStore } from '../../../../stores/menu';
-import { scrollBarStyle } from '../../../../utils/contact';
 import { useUserStore } from '../../../../stores/user';
 import {
 	notifyFailed,
@@ -260,6 +281,9 @@ import {
 } from '../../../../utils/notifyRedefinedUtil';
 import { useI18n } from 'vue-i18n';
 import DeleteVault from './DeleteVault.vue';
+
+import TerminusScrollArea from 'src/components/common/TerminusScrollArea2.vue';
+
 const $q = useQuasar();
 const route = useRoute();
 const router = useRouter();
@@ -523,8 +547,9 @@ async function onSave() {
 				});
 			}
 		} catch (error) {
+			saveLoading.value = false;
 			notifyFailed(error.message);
-			clearChanges();
+			return false;
 		}
 	} else {
 		try {
@@ -646,6 +671,11 @@ const { t } = useI18n();
 			.text {
 				height: 40px;
 				line-height: 40px;
+				width: 100%;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				flex: 1;
 			}
 			.create-valut-input {
 				border: 1px solid $input-stroke;
@@ -683,10 +713,18 @@ const { t } = useI18n();
 	.confirm {
 		width: 48%;
 		height: 48px;
+		&.btn-height-web {
+			height: 32px;
+		}
 	}
 	.reset {
 		width: 48%;
 		height: 48px;
+		border: 1px solid $separator;
+
+		&.btn-height-web {
+			height: 32px;
+		}
 	}
 }
 
@@ -696,6 +734,7 @@ const { t } = useI18n();
 	overflow: hidden;
 	cursor: pointer;
 	.header {
+		width: 100%;
 		background-color: $background-3;
 		border-bottom: 1px solid $input-stroke;
 	}
@@ -703,6 +742,21 @@ const { t } = useI18n();
 		display: flex;
 		align-items: center;
 		justify-content: flex-start;
+
+		.info {
+			width: calc(100% - 50px);
+
+			.content {
+				width: 100%;
+				align-items: center;
+				flex-wrap: nowrap;
+				min-width: 0;
+				// overflow:;
+				// overflow: ;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+		}
 	}
 	.rowRight {
 		display: flex;
@@ -712,6 +766,7 @@ const { t } = useI18n();
 }
 
 .body1 {
+	width: 100%;
 	.listRow-content {
 		&.borderBottom {
 			border-bottom: 1px solid $separator;

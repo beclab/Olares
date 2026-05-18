@@ -5,163 +5,156 @@
 		<Terminus-user-header :title="t('files.files')"> </Terminus-user-header>
 		<terminus-scroll-area class="files-content-mobile q-mt-sm">
 			<template v-slot:content>
-				<bind-terminus-name :border-show="false">
-					<template v-slot:success>
-						<div class="home-module-title">
-							{{ t('files.drive') }}
-						</div>
-						<div class="module-content q-mt-md">
-							<div v-for="(cell, index) in driveMenus" :key="index">
-								<terminus-item
-									:show-board="false"
-									img-bg-classes="bg-background-3"
-									:image-path="cell.icon"
-									:whole-picture-size="32"
-									:icon-size="16"
-									@click="seahubAtion(cell.menu, cell.name)"
-								>
-									<template v-slot:title>
-										<div class="text-subtitle1">{{ cell.name }}</div>
-									</template>
-									<template v-slot:side>
-										<q-icon
-											name="sym_r_keyboard_arrow_right"
-											size="20px"
-											color="ink-3"
-										/>
-									</template>
-								</terminus-item>
-								<q-separator
-									inset
-									class="bg-separator"
-									v-if="index + 1 < driveMenus.length"
-								/>
-							</div>
-						</div>
-
-						<div class="home-module-title q-mt-lg" v-if="syncMenus.length > 0">
-							{{ t('files.sync') }}
-						</div>
-						<div
-							class="module-content q-mt-md bg-background-1"
-							v-if="syncMenus.length > 0"
+				<div class="home-module-title">
+					{{ t('files.drive') }}
+				</div>
+				<div class="module-content q-mt-md">
+					<div v-for="(cell, index) in driveMenus" :key="index">
+						<terminus-item
+							:show-board="false"
+							img-bg-classes="bg-background-3"
+							:image-path="cell.icon"
+							:whole-picture-size="32"
+							:icon-size="16"
+							@click="seahubAtion(cell.menu, cell.name)"
 						>
-							<div v-for="(cell, index) in syncMenus" :key="index">
-								<terminus-item
-									:show-board="false"
-									img-bg-classes="bg-background-3"
-									:icon-name="cell.icon"
-									:whole-picture-size="32"
-									@click="seahubAtion(cell.menu, cell.name)"
-								>
-									<template v-slot:title>
-										<div class="text-subtitle1">{{ cell.name }}</div>
-									</template>
-									<template v-slot:side>
-										<q-icon
-											name="sym_r_keyboard_arrow_right"
-											size="20px"
-											color="ink-3"
-										/>
-									</template>
-								</terminus-item>
-								<q-separator
-									inset
-									class="bg-separator"
-									v-if="index + 1 < syncMenus.length"
+							<template v-slot:title>
+								<div class="text-subtitle1">{{ cell.name }}</div>
+							</template>
+							<template v-slot:side>
+								<q-icon
+									name="sym_r_keyboard_arrow_right"
+									size="20px"
+									color="ink-3"
 								/>
-							</div>
-						</div>
-
-						<div
-							class="home-module-title q-mt-lg"
-							v-if="cloudDriveMenus.length > 0"
-						>
-							{{ t('files.cloud_drive') }}
-						</div>
-						<div
-							class="module-content q-mt-md bg-background-1"
-							v-if="cloudDriveMenus.length > 0"
-						>
-							<div v-for="(cell, index) in cloudDriveMenus" :key="index">
-								<terminus-item
-									:show-board="false"
-									img-bg-classes="bg-background-3"
-									:image-path="getAccountIcon(cell)"
-									:whole-picture-size="32"
-									:icon-size="32"
-									contentFrontendClasses="terminus-item-title-part"
-									@click="openCloudDrive(cell)"
-								>
-									<template v-slot:title>
-										<div class="text-subtitle1 terminus-text-ellipsis">
-											{{ cell.name }}
-										</div>
-									</template>
-									<template v-slot:side>
-										<q-icon
-											name="sym_r_keyboard_arrow_right"
-											size="20px"
-											color="ink-3"
-										/>
-									</template>
-								</terminus-item>
-								<q-separator
-									inset
-									class="bg-separator"
-									v-if="index + 1 < cloudDriveMenus.length"
-								/>
-							</div>
-						</div>
-
-						<div class="home-module-title q-mt-lg" v-if="shareMenus.length > 0">
-							{{ t('files.Shared') }}
-						</div>
-						<div
-							class="module-content q-mt-md bg-background-1"
-							v-if="shareMenus.length > 0"
-						>
-							<div v-for="(cell, index) in shareMenus" :key="index">
-								<terminus-item
-									:show-board="false"
-									img-bg-classes="bg-background-3"
-									:icon-name="cell.icon"
-									:whole-picture-size="32"
-									@click="seahubAtion(cell.menu, cell.name)"
-								>
-									<template v-slot:title>
-										<div class="text-subtitle1">{{ cell.name }}</div>
-									</template>
-									<template v-slot:side>
-										<q-icon
-											name="sym_r_keyboard_arrow_right"
-											size="20px"
-											color="ink-3"
-										/>
-									</template>
-								</terminus-item>
-								<q-separator
-									inset
-									class="bg-separator"
-									v-if="index + 1 < syncMenus.length"
-								/>
-							</div>
-						</div>
-
-						<div
-							v-if="
-								termipassStore &&
-								termipassStore.totalStatus &&
-								termipassStore.totalStatus.isError == 2
-							"
-							style="padding-bottom: 60px; width: 100%; height: 1px"
+							</template>
+						</terminus-item>
+						<q-separator
+							inset
+							class="bg-separator"
+							v-if="index + 1 < driveMenus.length"
 						/>
-						<div
-							v-else
-							style="padding-bottom: 30px; width: 100%; height: 1px"
+					</div>
+				</div>
+
+				<div class="home-module-title q-mt-lg" v-if="syncMenus.length > 0">
+					{{ t('files.sync') }}
+				</div>
+				<div
+					class="module-content q-mt-md bg-background-1"
+					v-if="syncMenus.length > 0"
+				>
+					<div v-for="(cell, index) in syncMenus" :key="index">
+						<terminus-item
+							:show-board="false"
+							img-bg-classes="bg-background-3"
+							:icon-name="cell.icon"
+							:whole-picture-size="32"
+							@click="seahubAtion(cell.menu, cell.name)"
+						>
+							<template v-slot:title>
+								<div class="text-subtitle1">{{ cell.name }}</div>
+							</template>
+							<template v-slot:side>
+								<q-icon
+									name="sym_r_keyboard_arrow_right"
+									size="20px"
+									color="ink-3"
+								/>
+							</template>
+						</terminus-item>
+						<q-separator
+							inset
+							class="bg-separator"
+							v-if="index + 1 < syncMenus.length"
 						/>
-					</template>
-				</bind-terminus-name>
+					</div>
+				</div>
+
+				<div
+					class="home-module-title q-mt-lg"
+					v-if="cloudDriveMenus.length > 0"
+				>
+					{{ t('files.cloud_drive') }}
+				</div>
+				<div
+					class="module-content q-mt-md bg-background-1"
+					v-if="cloudDriveMenus.length > 0"
+				>
+					<div v-for="(cell, index) in cloudDriveMenus" :key="index">
+						<terminus-item
+							:show-board="false"
+							img-bg-classes="bg-background-3"
+							:image-path="getAccountIcon(cell)"
+							:whole-picture-size="32"
+							:icon-size="32"
+							contentFrontendClasses="terminus-item-title-part"
+							@click="openCloudDrive(cell)"
+						>
+							<template v-slot:title>
+								<div class="text-subtitle1 terminus-text-ellipsis">
+									{{ cell.name }}
+								</div>
+							</template>
+							<template v-slot:side>
+								<q-icon
+									name="sym_r_keyboard_arrow_right"
+									size="20px"
+									color="ink-3"
+								/>
+							</template>
+						</terminus-item>
+						<q-separator
+							inset
+							class="bg-separator"
+							v-if="index + 1 < cloudDriveMenus.length"
+						/>
+					</div>
+				</div>
+
+				<div class="home-module-title q-mt-lg" v-if="shareMenus.length > 0">
+					{{ t('files.Shared') }}
+				</div>
+				<div
+					class="module-content q-mt-md bg-background-1"
+					v-if="shareMenus.length > 0"
+				>
+					<div v-for="(cell, index) in shareMenus" :key="index">
+						<terminus-item
+							:show-board="false"
+							img-bg-classes="bg-background-3"
+							:icon-name="cell.icon"
+							:whole-picture-size="32"
+							@click="seahubAtion(cell.menu, cell.name)"
+						>
+							<template v-slot:title>
+								<div class="text-subtitle1">{{ cell.name }}</div>
+							</template>
+							<template v-slot:side>
+								<q-icon
+									name="sym_r_keyboard_arrow_right"
+									size="20px"
+									color="ink-3"
+								/>
+							</template>
+						</terminus-item>
+						<q-separator
+							inset
+							class="bg-separator"
+							v-if="index + 1 < shareMenus.length"
+						/>
+					</div>
+				</div>
+
+				<div
+					v-if="
+						termipassStore &&
+						termipassStore.totalStatus &&
+						termipassStore.totalStatus.isError == 2
+					"
+					style="padding-bottom: 60px; width: 100%; height: 1px"
+				/>
+				<div v-else style="padding-bottom: 30px; width: 100%; height: 1px" />
 			</template>
 		</terminus-scroll-area>
 	</div>
@@ -174,7 +167,6 @@ import { useI18n } from 'vue-i18n';
 import { ref, onMounted, computed } from 'vue';
 import { MenuItem } from '../../../utils/contact';
 import { useRouter } from 'vue-router';
-import BindTerminusName from '../../../components/common/BindTerminusName.vue';
 import TerminusScrollArea from '../../../components/common/TerminusScrollArea.vue';
 import { useTermipassStore } from '../../../stores/termipass';
 import { FilesIdType, useFilesStore } from '../../../stores/files';
@@ -182,8 +174,10 @@ import { useIntegrationStore } from '../../../stores/integration';
 import { AccountType, IntegrationAccountMiniData } from '@bytetrade/core';
 import integrationService from '../../../services/integration';
 import { DriveType } from '../../../utils/interface/files';
-import { filesIsV2 } from '../../../api';
+import { isShareEnable } from '../../../api';
 import * as filesUtil from '../../../api/files/v2/common/utils';
+import { getApplication } from 'src/application/base';
+import * as googleUtil from 'src/api/files/v2/google/utils';
 
 const { t } = useI18n();
 const fileStore = useFilesStore();
@@ -227,19 +221,6 @@ const driveMenus = ref([
 ]);
 
 const seahubAtion = (menu: MenuItem, name?: string) => {
-	// const userStore = useUserStore();
-	// const termipassStore = useTermipassStore();
-	// if (termipassStore.totalStatus?.isError != UserStatusActive.active) {
-	// 	notifyFailed(
-	// 		t('the_current_status_this_module_cannot_be_accessed', {
-	// 			status: termipassStore.totalStatus?.title
-	// 		})
-	// 	);
-	// 	return;
-	// }
-
-	// dataStore.updateActiveMenu(menu);
-
 	const query = {
 		name: name ? name : menu
 	};
@@ -270,12 +251,17 @@ const seahubAtion = (menu: MenuItem, name?: string) => {
 			break;
 
 		case MenuItem.EXTERNAL:
-			fileStore.setBrowserUrl('/Files/External/', DriveType.External);
+			if (fileStore.nodes.length == 1 && fileStore.masterNode) {
+				fileStore.setBrowserUrl(
+					`/Files/External/${fileStore.masterNode}/`,
+					DriveType.External
+				);
+			} else {
+				fileStore.setBrowserUrl('/Files/External/', DriveType.External);
+			}
+
 			break;
 		case MenuItem.SHARE:
-			// Router.push({
-			// 	path: '/Share/'
-			// });
 			fileStore.setBrowserUrl('/Share/', DriveType.Share);
 			break;
 
@@ -287,7 +273,6 @@ const seahubAtion = (menu: MenuItem, name?: string) => {
 				const url = `/Files/Home/${menu}/`;
 				openDriveFolder(menu, url);
 			}
-
 			break;
 	}
 };
@@ -296,23 +281,16 @@ const openDriveFolder = (menu: string, url: string) => {
 	fileStore.setBrowserUrl(url, DriveType.Drive);
 };
 
-//0730 hide sync
 const syncMenus = computed(() => {
-	// if (filesIsV2()) {
-	// 	return [];
-	// }
-
+	if (!isShareEnable()) {
+		return [];
+	}
 	return [
 		{
 			name: t(`files_menu.${MenuItem.MYLIBRARIES}`),
 			icon: 'sym_r_library_books',
 			menu: MenuItem.MYLIBRARIES
 		}
-		// {
-		// 	name: t(`files_menu.${MenuItem.SHAREDWITH}`),
-		// 	icon: 'sym_r_folder_copy',
-		// 	menu: MenuItem.SHAREDWITH
-		// }
 	];
 });
 
@@ -325,13 +303,16 @@ const cloudDriveMenus = computed(() => {
 });
 
 onMounted(async () => {
-	integrationStore.getAccount('all');
 	fileStore.mobileRepo = undefined;
-
 	fileStore.initIdState(FilesIdType.PAGEID);
-
+	if (getApplication().applicationName == 'files') {
+		const res1: any = await googleUtil.fetchRepo();
+		integrationStore.accounts = res1;
+	} else {
+		integrationStore.getAccount('all');
+	}
 	const filesStore = useFilesStore();
-	if (filesStore.nodes.length == 0 && filesIsV2()) {
+	if (filesStore.nodes.length == 0) {
 		await filesUtil.fetchNodeList();
 	}
 });
@@ -357,10 +338,9 @@ const openCloudDrive = async (value: IntegrationAccountMiniData) => {
 };
 
 const shareMenus = computed(() => {
-	// if (filesIsV2()) {
-	// 	return [];
-	// }
-
+	if (!isShareEnable()) {
+		return [];
+	}
 	return [
 		{
 			name: t(`files_menu.${MenuItem.SHARE}`),

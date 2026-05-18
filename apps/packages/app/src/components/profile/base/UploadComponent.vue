@@ -2,8 +2,9 @@
 	<BtUploader
 		class="bio-img"
 		:size="5"
+		:file-guard="imagesUploadFormatGuard"
 		fileName="image"
-		accept=".jpg, .jpeg, .png, .gif, image/*"
+		:accept="IMAGES_UPLOAD_V1_ACCEPT"
 		action="/images/upload/v1"
 		@ok="ok"
 		@loading="update"
@@ -37,10 +38,14 @@
 </template>
 
 <script lang="ts" setup>
-import { useQuasar } from 'quasar';
-import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { notifyFailed } from 'src/utils/settings/btNotify';
 import BaseInnerLoading from '@apps/profile/src/components/profile/base/BaseInnerLoading.vue';
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import {
+	createImagesUploadV1FormatGuard,
+	IMAGES_UPLOAD_V1_ACCEPT
+} from '../../../utils/upload/imagesUploadV1Formats';
 
 defineProps({
 	imgUrl: {
@@ -62,7 +67,8 @@ defineProps({
 });
 const emit = defineEmits(['update:imgUrl']);
 const loading = ref(false);
-const $q = useQuasar();
+const { t } = useI18n();
+const imagesUploadFormatGuard = createImagesUploadV1FormatGuard(t);
 
 const ok = (response: {
 	code: number;
@@ -72,19 +78,15 @@ const ok = (response: {
 	loading.value = false;
 	console.log('ok ');
 	if (response.code !== 200) {
-		$q.notify(response.message);
+		notifyFailed(String(response.message ?? ''));
 		return;
 	}
 
 	emit('update:imgUrl', response.data.imageUrl);
 };
 
-const fail = (response: unknown) => {
+const fail = () => {
 	loading.value = false;
-	BtNotify.show({
-		type: NotifyDefinedType.FAILED,
-		message: response
-	});
 };
 
 const update = (status: boolean) => {

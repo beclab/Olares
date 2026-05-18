@@ -112,14 +112,14 @@
 				>
 					{{ translateFolderName(route.path, item.name) }}
 				</p>
+				<p class="size" :data-order="humanSize()">
+					{{ humanSize() }}
+				</p>
+				<p class="type">{{ item.externalType || item.type || 'Folder' }}</p>
 				<p class="modified">
 					<time :datetime="item.modified">
 						{{ humanTime() }}
 					</time>
-				</p>
-				<p class="type">{{ item.externalType || item.type || 'Folder' }}</p>
-				<p class="size" :data-order="humanSize()">
-					{{ humanSize() }}
 				</p>
 			</template>
 		</div>
@@ -242,10 +242,8 @@ const canDrop = computed(function () {
 	if (!props.item.isDir) return false;
 
 	for (let i of filesStore.selected[props.origin_id]) {
-		if (
-			filesStore.currentFileList[props.origin_id]?.items[i].path ===
-			props.item.path
-		) {
+		const item = filesStore.getTargetFileItem(i, props.origin_id);
+		if (item && item.path == props.item.path) {
 			return false;
 		}
 	}
@@ -305,12 +303,11 @@ const drop = async (event: any) => {
 
 	let canMove = true;
 	for (const item of filesStore.selected[props.origin_id]) {
-		if (
-			operateinStore.isDisableMenuItem(
-				filesStore.currentFileList[props.origin_id]?.items[item].name || '',
-				route.path
-			)
-		) {
+		const fileItem = filesStore.getTargetFileItem(item, props.origin_id);
+		if (!fileItem) {
+			continue;
+		}
+		if (operateinStore.isDisableMenuItem(fileItem.name, route.path)) {
 			canMove = false;
 			notifyWarning(t('files.the_files_contains_unmovable_items'));
 			break;
@@ -355,16 +352,19 @@ const click = (event: any) => {
 	if (event.shiftKey && filesStore.selected[props.origin_id].length > 0) {
 		let fi = 0;
 		let la = 0;
-		const fileRes = filesStore.currentFileList[props.origin_id];
+		const fileRes =
+			filesStore
+				.currentDirItems(props.origin_id)
+				?.concat(filesStore.currentFileItems(props.origin_id) || []) || [];
 		if (!fileRes) {
 			return;
 		}
 
-		const curFilesIndex = fileRes.items.findIndex(
+		const curFilesIndex = fileRes.findIndex(
 			(item) => item.index === props.item.index
 		);
 
-		const firstFilesIndex = fileRes.items.findIndex(
+		const firstFilesIndex = fileRes.findIndex(
 			(item) => item.index === filesStore.selected[props.origin_id][0]
 		);
 
@@ -377,7 +377,7 @@ const click = (event: any) => {
 		}
 
 		for (; fi <= la; fi++) {
-			const selectFileIndex = fileRes.items[fi].index;
+			const selectFileIndex = fileRes[fi].index;
 
 			if (filesStore.selected[props.origin_id].indexOf(selectFileIndex) == -1) {
 				filesStore.addSelected(selectFileIndex, props.origin_id);

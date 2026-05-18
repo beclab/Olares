@@ -1,4 +1,4 @@
-import { getFileType } from '@bytetrade/core';
+import { getFileTypeI18nKey } from '@bytetrade/core';
 import { FileItem, useFilesStore } from 'src/stores/files';
 import { getextension } from 'src/utils/utils';
 import { i18n } from 'src/boot/i18n';
@@ -74,7 +74,9 @@ export function formatDrive(
 		el.driveType = driveType;
 		el.extension = extension;
 		el.modified = new Date(el.modified).getTime();
-		el.type = isDir ? i18n.global.t('files.folders') : getFileType(el.name);
+		el.type = isDir
+			? i18n.global.t('files.folders')
+			: i18n.global.t(getFileTypeI18nKey(el.name));
 	});
 
 	data.items = curItems;

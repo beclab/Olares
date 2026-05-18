@@ -1,7 +1,7 @@
 <template>
 	<bt-custom-dialog
 		ref="CustomRef"
-		:title="t('Add repo')"
+		:title="t('Add mirror')"
 		:skip="false"
 		:ok="t('confirm')"
 		size="medium"
@@ -10,26 +10,25 @@
 		:okDisabled="!isUpdateEnable"
 		@onSubmit="updateEndpoints"
 	>
-		<terminus-edit
-			v-model="repoName"
-			:label="t('Repo name')"
-			:show-password-img="false"
-			style="width: 100%"
-			class=""
-		/>
+		<!--		<terminus-edit-->
+		<!--			v-model="repoName"-->
+		<!--			:label="t('Repo name')"-->
+		<!--			:show-password-img="false"-->
+		<!--			style="width: 100%"-->
+		<!--			class=""-->
+		<!--		/>-->
 
 		<terminus-edit
 			v-model="endpoint"
-			:label="t('Starting endpoint')"
+			:label="t('Mirror')"
 			:show-password-img="false"
-			class="q-mt-md"
 		/>
 	</bt-custom-dialog>
 </template>
 
 <script setup lang="ts">
 import TerminusEdit from '../../../../../components/settings/base/TerminusEdit.vue';
-import { useDeviceStore } from '../../../../../stores/settings/device';
+import { useDeviceStore } from 'src/stores/settings/device';
 import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -47,7 +46,7 @@ const CustomRef = ref();
 
 const deviceStore = useDeviceStore();
 
-const repoName = ref('');
+// const repoName = ref('');
 const endpoint = ref('');
 
 onMounted(() => {});
@@ -63,12 +62,7 @@ onMounted(() => {});
 // };
 
 const isUpdateEnable = computed(() => {
-	if (
-		!repoName.value ||
-		repoName.value.length == 0 ||
-		!endpoint.value ||
-		endpoint.value.length == 0
-	) {
+	if (!endpoint.value || endpoint.value.length == 0) {
 		return false;
 	}
 	// if (endpointDuplicate()) {
@@ -79,7 +73,6 @@ const isUpdateEnable = computed(() => {
 
 const updateEndpoints = async () => {
 	CustomRef.value.onDialogOK({
-		repoName: repoName.value,
 		endpoint: endpoint.value
 	});
 };

@@ -237,13 +237,19 @@ spec:
         - sh
         - -c
         - |
+          init=$(test -d /userspace/Home; echo $?) && \          
           mkdir -p /userspace/Home/Documents && \
           mkdir -p /userspace/Home/Downloads && \
           mkdir -p /userspace/Home/Pictures && \
           mkdir -p /userspace/Home/Movies && \
           mkdir -p /userspace/Home/Music && \
           mkdir -p /userspace/Home/Code && \
-          mkdir -p /userspace/Data
+          mkdir -p /userspace/Data && \
+          if [ $init -ne 0 ]; then \
+          chown -R 1000:1000 /userspace/Home && \
+          chown -R 1000:1000 /userspace/Data && \
+          chown -R 1000:1000 /appdata; \
+          fi 
       - name: setsysctl
         image: 'busybox:1.28'
         command:
@@ -297,7 +303,7 @@ spec:
         - name: BACKUP_SERVER
           value: backup-server.os-framework:8082
         - name: L4_PROXY_IMAGE_VERSION
-          value: v0.3.17
+          value: v0.3.18
         - name: L4_PROXY_SERVICE_ACCOUNT
           value: os-network-internal
         - name: L4_PROXY_NAMESPACE

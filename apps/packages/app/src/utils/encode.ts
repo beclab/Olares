@@ -29,3 +29,11 @@ export function decodeUrl(url: string): string {
 
 	return encodedPath;
 }
+
+export const decodeURIComponentSafe = (path: string): string => {
+	try {
+		return decodeURIComponent(path);
+	} catch (error) {
+		return path;
+	}
+};

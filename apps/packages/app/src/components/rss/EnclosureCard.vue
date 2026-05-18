@@ -104,6 +104,7 @@ import { TransferStatus } from '../../utils/interface/transfer';
 import { DOWNLOAD_RECORD_STATUS } from '../../utils/rss-types';
 import { FILE_TYPE, Enclosure } from '../../utils/rss-types';
 import { useTransferStore } from '../../stores/rss-transfer';
+import { DownloadStatusEnum } from '../../types/commonApi';
 import { useTransfer2Store } from '../../stores/transfer2';
 import { getRequireImage } from '../../utils/rss-utils';
 import TransferClient from '../../services/transfer';
@@ -121,7 +122,8 @@ const { t } = useI18n();
 const userShowCard = ref(false);
 const showReading = computed(() => {
 	return (
-		enclosureStatus.value === TransferStatus.Completed &&
+		(enclosureStatus.value === TransferStatus.Completed ||
+			props.enclosure?.download_status === DownloadStatusEnum.COMPLETE) &&
 		filePath.value &&
 		!userShowCard.value
 	);
@@ -163,12 +165,18 @@ const enclosureStatus = computed(() => {
 	if (transferItem.value) {
 		return transferItem.value.status;
 	}
+	if (props.enclosure?.download_status) {
+		return props.enclosure?.download_status;
+	}
 	return DOWNLOAD_RECORD_STATUS.LOSS;
 });
 
 const filePath = computed(() => {
 	if (transferItem.value) {
 		return transferItem.value.path;
+	}
+	if (props.enclosure?.local_file_path) {
+		return props.enclosure?.local_file_path;
 	}
 	return '';
 });
@@ -210,19 +218,24 @@ const operateIcon = computed(() => {
 	}
 	if (transferItem.value) {
 		switch (enclosureStatus.value) {
+			case TransferStatus.Prepare:
 			case TransferStatus.Pending:
 				return 'sym_r_cancel';
 			case TransferStatus.Running:
 				return 'sym_r_pause_circle';
 			case TransferStatus.Removed:
+			case TransferStatus.Paused:
 				return 'sym_r_download';
 			case TransferStatus.Error:
+			case TransferStatus.Canceled:
 				return 'sym_r_autorenew';
 			case TransferStatus.Completed:
 				return 'sym_r_play_circle';
 			default:
 				return '';
 		}
+	} else if (props.enclosure?.download_status === DownloadStatusEnum.COMPLETE) {
+		return 'sym_r_play_circle';
 	} else {
 		return '';
 	}
@@ -247,12 +260,15 @@ const enclosureOperate = () => {
 				transfer2Store.remove(transferItem.value.id);
 				break;
 			case TransferStatus.Error:
+			case TransferStatus.Canceled:
 				transfer2Store.resume(transferItem.value);
 				break;
 			case TransferStatus.Completed:
 				userShowCard.value = false;
 				break;
 		}
+	} else if (props.enclosure?.download_status === DownloadStatusEnum.COMPLETE) {
+		userShowCard.value = false;
 	}
 };
 
@@ -281,8 +297,8 @@ const entryImage = computed(() => {
 .enclosure-root {
 	width: 100%;
 	height: auto;
-	padding-left: var(--padding);
-	padding-right: var(--padding);
+	padding-left: var(--enclosure-padding);
+	padding-right: var(--enclosure-padding);
 
 	.enclosure-card {
 		width: 100%;

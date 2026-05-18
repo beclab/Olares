@@ -1,15 +1,54 @@
 <template>
-	<div class="Launch_pad_page in-center-page" @click="dismiss">
-		<div class="launch_pad_box in-center" ref="launchpadPage">
-			<template
+	<div
+		class="Launch_pad_page in-center-page"
+		@touchstart.stop
+		@touchmove.stop
+		@click.prevent="dismiss"
+	>
+		<div
+			class="launch_pad_box in-center column items-center"
+			ref="launchpadPage"
+		>
+			<div class="launch_pad_search" @click.stop>
+				<q-input
+					ref="searchInputRef"
+					dense
+					stack-label
+					class="launch_search"
+					v-model="searchVal"
+					@focus="focusSearch"
+					@blur="blurSearch"
+					@update:model-value="updateSearch"
+					input-style="color: var(--q-ink-on-brand) "
+				>
+					<template v-slot:prepend>
+						<q-icon class="search_icon" name="search" size="16px" />
+					</template>
+					<template v-slot:append>
+						<img
+							v-if="searchVal"
+							class="search_clean cursor-pointer"
+							src="../../../assets/desktop/cancel.svg"
+							style="width: 20px"
+							@click="cleanSearchVal"
+						/>
+						<div v-else class="search_input">
+							{{ t('launch_input_placeholder') }}
+						</div>
+					</template>
+				</q-input>
+			</div>
+			<div
 				v-if="appStore.launchPadApps && appStore.launchPadApps.length > 0"
+				ref="launchPadAppsEl"
+				class="launch_pad_APPs"
 			>
 				<q-carousel
 					v-model="slide"
 					transition-prev="slide-right"
 					transition-next="slide-left"
 					swipeable
-					animated
+					:animated="carouselAnimated"
 					ref="carousel"
 					class="bg-grey-1 shadow-2 rounded-borders q_vackgr_carousel"
 				>
@@ -18,11 +57,13 @@
 						:key="'deskp0' + Indexlist"
 						:name="Indexlist"
 						class="column_launchpadapps column no-wrap column_none"
+						:style="slideGridStyle"
 					>
 						<div
-							class="row items-center justify-center"
-							v-for="(element, index) in appStore.launchPadApps[Indexlist]"
-							:key="'adod+index' + index"
+							class="row items-center justify-center pad-app-item"
+							:class="isDisplay ? 'vibrate-1' : ''"
+							v-for="element in appStore.launchPadApps[Indexlist]"
+							:key="appStore.desktopApps[element].id"
 							style="
 								border-radius: 16px;
 								-webkit-touch-callout: none;
@@ -33,12 +74,8 @@
 								user-select: none;
 								position: relative;
 							"
-							v-touch-hold:1200.mouse="handleHold"
 							:id="appStore.desktopApps[element].id"
-							@click="openWindow(appStore.desktopApps[element])"
-							@contextmenu.prevent
 						>
-							<!-- <div class="dragMask"></div> -->
 							<div
 								:style="
 									isDisplay && !appStore.desktopApps[element].isSysApp
@@ -47,48 +84,46 @@
 								"
 								class="delete_launch"
 								@click.stop="
-									deleteLaunch(
-										appStore.desktopApps[element].icon,
-										appStore.desktopApps[element].title,
-										element,
-										Indexlist
-									)
+									deleteLaunch(appStore.desktopApps[element], $event)
 								"
-							></div>
-
-							<div
-								class="install_loading_status"
-								:style="`
-										width:58px;
-										height:58px;
-										`"
-								v-if="isDoingState(appStore.desktopApps[element].fatherState)"
-							>
-								<svg viewBox="0 0 32 32" id="install_loading_speed">
-									<circle r="16" cx="16" cy="16" />
-								</svg>
-							</div>
-
-							<img
-								class="pad-img"
-								:key="appStore.desktopApps[element].title"
-								crossorigin="anonymous"
-								:src="appStore.desktopApps[element].icon"
-								:style="`border-radius: ${borderRadiusFormat(
-									appStore.DESKTOP_APP_SIZE,
-									appStore.DESKTOP_APP_SIZE
-								)}px;${
-									appStore.desktopApps[element].state ==
-										ENTRANCE_STATUS.NOT_READY ||
-									appStore.desktopApps[element].fatherState ==
-										APP_STATUS.UPGRADE.FAILED
-										? 'filter: grayscale(100%) brightness(0.8)'
-										: 'filter: grayscale(0%)'
-								}`"
 							/>
+							<div class="relative-position" style="font-size: 0px">
+								<div
+									class="install_loading_status"
+									v-if="isDoingState(appStore.desktopApps[element].fatherState)"
+								>
+									<svg viewBox="0 0 32 32" id="install_loading_speed">
+										<circle r="16" cx="16" cy="16" />
+									</svg>
+								</div>
+
+								<img
+									v-touch-hold:1200.mouse="handleHold"
+									:id="appStore.desktopApps[element].id"
+									@click.stop="openWindow(appStore.desktopApps[element])"
+									@contextmenu.prevent
+									draggable="false"
+									class="pad-img"
+									:key="
+										appStore.desktopApps[element].id +
+										'-' +
+										appStore.desktopApps[element].fatherState
+									"
+									:src="appStore.desktopApps[element].icon"
+									:style="`border-radius: 15px;${
+										appStore.desktopApps[element].state ==
+											ENTRANCE_STATUS.NOT_READY ||
+										appStore.desktopApps[element].fatherState ==
+											APP_STATUS.UPGRADE.FAILED
+											? 'filter: grayscale(100%) brightness(0.8)'
+											: 'filter: grayscale(0%)'
+									}`"
+								/>
+							</div>
 							<div
 								class="launchpadapps_name"
 								:data-index="appStore.desktopApps[element].id"
+								@click.stop
 							>
 								<span
 									class="app_state q-mr-xs suspend_color"
@@ -124,26 +159,30 @@
 						</q-carousel-control>
 					</template>
 				</q-carousel>
-			</template>
-			<div class="no-result" v-else>{{ t('launch_no_result') }}</div>
-
-			<div class="close row items-center justify-center" @click="dismiss">
-				<img src="../../../assets/desktop/close-icon.svg" />
+			</div>
+			<div class="no-result absolute-center" v-else>
+				{{ t('launch_no_result') }}
 			</div>
 		</div>
 	</div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
-import { useQuasar } from 'quasar';
-import { DesktopAppInfo, AppClickInfo } from '../type/types';
-import { useI18n } from 'vue-i18n';
-import { useAppStore } from '../../../stores/desktop/app';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
-import { borderRadiusFormat } from '../../../utils/desktop/utils';
-import { isDoingState } from 'src/constant/config';
 import { APP_STATUS, ENTRANCE_STATUS } from 'src/constant/constants';
+import { useApplicationStore } from 'src/stores/desktop/app';
+import { DesktopAppInfo, AppClickInfo } from '../type/types';
+import { notifyFailed } from 'src/utils/settings/btNotify';
+import { AppService } from 'src/stores/market/appService';
+import { useAppStore } from 'src/stores/market/appStore';
+import { isDoingState } from 'src/constant/config';
+import { useI18n } from 'vue-i18n';
+import { useQuasar } from 'quasar';
+import { onBeforeUnmount, ref } from 'vue';
+import { useMobileLaunchpad } from 'src/application/mobile';
+import { useLaunchpadSearch } from 'src/application/launchpadSearch';
+import { useStableViewportHeight } from 'src/composables/useStableViewportHeight';
+import { borderRadiusFormat } from 'src/utils/desktop/utils';
 
 defineProps({
 	isShowLaunc: {
@@ -156,16 +195,36 @@ const emits = defineEmits(['appClick', 'dismiss', 'drag_launch_app']);
 
 const { t } = useI18n();
 const launchpadPage = ref<HTMLElement>();
+const launchPadAppsEl = ref<HTMLElement | null>(null);
 
 const $q = useQuasar();
-const appStore = useAppStore();
-const searchVal = ref<string>('');
-const isFocus = ref<boolean>(true);
+const appStore = useApplicationStore();
 
 const isDisplay = ref<boolean>(false);
 const carousel = ref();
-
+const searchInputRef = ref<{ blur?: () => void } | null>(null);
 let slide = ref(0);
+
+const {
+	searchVal,
+	isFocus,
+	carouselAnimated,
+	focusSearch,
+	blurSearch,
+	updateSearch,
+	cleanSearchVal
+} = useLaunchpadSearch(slide, searchInputRef);
+
+const { stableHeight, keyboardOpen } = useStableViewportHeight();
+
+const { slideGridStyle } = useMobileLaunchpad(
+	launchPadAppsEl,
+	carousel,
+	slide,
+	isFocus,
+	keyboardOpen
+);
+
 let isDelete = false;
 let lastDragFinishTime = 0;
 
@@ -210,19 +269,11 @@ const openWindow = async (item: DesktopAppInfo) => {
 const dismiss = () => {
 	if (isDelete) {
 		isDelete = false;
-		for (var i = 0; i < appStore.desktopApps.length; i++) {
-			const draggedEl: any = document.getElementById(
-				appStore.desktopApps[i].id
-			);
-
-			draggedEl?.classList.remove('vibrate-1');
-			isDisplay.value = false;
-		}
+		isDisplay.value = false;
 	} else {
 		if (isFocus.value) {
-			appStore.dismiss_search_result();
+			cleanSearchVal();
 			isFocus.value = false;
-			searchVal.value = '';
 		}
 		emits('dismiss');
 	}
@@ -237,47 +288,41 @@ const handleHold = () => {
 
 	isDelete = true;
 
-	for (var i = 0; i < appStore.desktopApps.length; i++) {
-		const draggedEl: any = document.getElementById(appStore.desktopApps[i].id);
-
-		draggedEl?.classList.add('vibrate-1');
-		isDisplay.value = true;
-	}
+	isDisplay.value = true;
 };
 
-function deleteLaunch(
-	launchlogo: string,
-	launchTitle: string,
-	index: number,
-	Indexlist: number
-) {
-	const message = t('message_desktop.delete_app', {
-		appName: launchTitle
-	});
-
-	$q.dialog({
-		component: ConfirmDialog,
-		componentProps: {
-			title: t('delete'),
-			icon: launchlogo,
-			message,
-			showCancel: true
-		}
-	}).onOk(async () => {
-		const fatherName = appStore.desktopApps[index].fatherName;
-		let categoryLaunchPadApps = appStore.launchPadApps[Indexlist];
-		appStore.launchPadApps[Indexlist] = categoryLaunchPadApps.filter(
-			(itme, indexs) => indexs !== index
-		);
-
-		await appStore.uninstall_application(fatherName);
-		await appStore.get_my_apps_info(true);
-	});
+function deleteLaunch(appInfo: DesktopAppInfo, e: any) {
+	const marketAppStore = useAppStore();
+	const marketApp = marketAppStore.findAppByName(
+		appInfo && appInfo.fatherName ? appInfo.fatherName : ''
+	);
+	if (marketApp) {
+		e.target.parentNode.classList.add('uninstallAni');
+		setTimeout(async () => {
+			await AppService.uninstallApp(
+				marketApp.status,
+				{
+					app_name: marketApp.appId,
+					source: marketApp.sourceId,
+					version: marketApp.version
+				},
+				$q
+			);
+			e.target.parentNode.classList.remove('uninstallAni');
+		}, 500);
+	} else {
+		notifyFailed('Failed to retrieve app information');
+	}
 }
 
 const goto = (value: number) => {
 	carousel.value.goTo(value);
 };
+
+onBeforeUnmount(() => {
+	cleanSearchVal();
+	updateSearch('');
+});
 </script>
 
 <style lang="scss" scoped>
@@ -295,25 +340,51 @@ const goto = (value: number) => {
 		min-height: 155px;
 		border-radius: 8px;
 	}
+
 	.launch_dialog_span {
 		width: 300px;
 	}
+
 	.launch_dialog_btn {
 		position: absolute;
 		bottom: 0px;
 		right: 0px;
 	}
+
 	.launch_pad_dialog {
 		width: 70px;
 		height: 70px;
 		border-radius: 16px;
 	}
 }
+
+.launch_pad_APPs {
+	position: absolute;
+	top: 104px;
+	left: 0px;
+	right: 0px;
+	bottom: auto;
+	height: calc(var(--stable-vh, 100svh) - 104px);
+	box-sizing: border-box;
+
+	::v-deep(.q-carousel__control) {
+		margin-bottom: 43px !important;
+	}
+	::v-deep(.q-carousel__slide) {
+		padding: 0px 6px !important;
+	}
+	::v-deep(.q-panel) {
+		overflow: unset;
+		padding-top: 10px;
+	}
+}
+
 .q_vackgr_carousel {
 	background: transparent !important;
 	box-shadow: none !important;
-	height: 90% !important;
+	height: 100% !important;
 	overflow: hidden !important;
+	touch-action: pan-x;
 }
 
 .dragMask {
@@ -330,21 +401,20 @@ const goto = (value: number) => {
 }
 
 .column_none {
-	overflow: hidden !important;
+	// overflow: hidden !important;
 }
+
 .column_launchpadapps {
 	display: grid;
-	grid-template-rows: 80px 80px 80px 80px;
-	grid-template-columns: repeat(4, 25%);
+	grid-template-rows: repeat(var(--lp-rows, 4), var(--lp-row-track));
+	grid-template-columns: repeat(var(--lp-cols, 4), minmax(0, 1fr));
 	grid-row-gap: 30px;
-	padding-top: 60px;
+
 	.pad-img {
 		width: 58px;
 		height: 58px;
-		-webkit-touch-callout: none;
-		-webkit-user-select: none;
-		-webkit-user-drag: none;
 	}
+
 	.launchpadapps_name {
 		width: 100%;
 		text-align: center;
@@ -357,26 +427,32 @@ const goto = (value: number) => {
 		overflow: hidden;
 		white-space: nowrap;
 		text-overflow: ellipsis;
-		margin-top: 12px;
+		margin-top: 6px;
+
 		.app_state {
 			display: inline-block;
 			width: 8px;
 			height: 8px;
 			border-radius: 4px;
+
 			&.suspend_color {
 				background-color: $warning;
 			}
+
 			&.crash_color {
 				background-color: $negative;
 			}
+
 			&.running_color {
 				background-color: $positive;
 			}
+
 			&.upgrade_error_color {
 				background-color: $blue;
 			}
 		}
 	}
+
 	.delete_launch {
 		width: 36px;
 		height: 36px;
@@ -390,24 +466,26 @@ const goto = (value: number) => {
 		z-index: 99;
 		cursor: pointer;
 	}
+
 	.install_loading_status {
 		position: absolute;
-		top: 0px;
-		left: calc((100% - 58px) / 2);
-		z-index: 99;
+		inset: 0px;
+		z-index: 98;
 		background-image: url('../../../assets/desktop/installing.svg');
 		background-position: center;
-		background-size: 100% 100%;
+		background-size: contain;
 		background-repeat: no-repeat;
-		border-radius: 16px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		border-radius: 15px;
+
 		svg {
 			transform: rotate(-90deg);
 			border-radius: 50%;
 			height: 40%;
 		}
+
 		circle {
 			fill: rgba(0, 0, 0, 0.5);
 			stroke: rgba(255, 255, 255, 1);
@@ -415,6 +493,7 @@ const goto = (value: number) => {
 			stroke-dasharray: 0 100;
 			animation: fillup 5s linear infinite;
 		}
+
 		@keyframes fillup {
 			to {
 				stroke-dasharray: 158 158;
@@ -423,31 +502,86 @@ const goto = (value: number) => {
 		}
 	}
 }
+
 .Launch_pad_page {
 	width: 100%;
-	height: 100%;
+	min-height: var(--stable-vh, 100svh);
+	height: var(--stable-vh, 100svh);
+
 	background: rgba(0, 0, 0, 0.5);
 	backdrop-filter: blur(10px);
 	z-index: 9;
 	position: absolute;
 	top: 0px;
 	left: 0px;
-	touch-action: none;
+	right: 0px;
+	touch-action: manipulation;
+	overscroll-behavior: contain;
+
+	.launch_search {
+		width: 100% !important;
+		height: 40px !important;
+		line-height: 40px !important;
+		border-radius: 8px;
+		position: relative;
+		font-size: 12px !important;
+		padding-left: 8px;
+
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		background: rgba(246, 246, 246, 0.1);
+		box-shadow: 0px 0px 40px 0px rgba(0, 0, 0, 0.2),
+			0px 0px 2px 0px rgba(0, 0, 0, 0.4);
+
+		.search_icon {
+			color: rgba(255, 255, 255, 0.8);
+		}
+
+		.search_clean {
+			color: rgba(255, 255, 255, 0.8);
+		}
+
+		.search_input {
+			position: absolute;
+			top: 0px;
+			left: 20px;
+			color: rgba(255, 255, 255, 0.6);
+			width: 100%;
+			height: 38px;
+			margin-bottom: 2px;
+			font-size: 14px;
+			font-weight: 500;
+			z-index: -1;
+		}
+	}
 }
+
 .launch_pad_box {
 	width: 100%;
 	height: 100%;
 	box-shadow: none;
 	overflow: hidden;
+
+	.launch_pad_search {
+		width: 64%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		position: relative;
+		z-index: 10;
+		margin-top: 32px;
+	}
+
 	.launch_pad_APPs {
 		width: 100%;
 		display: flex;
 		flex-wrap: wrap;
+
 		.launch_pad_Dragg {
 			width: 100%;
 			display: flex;
 			flex-wrap: wrap;
 			align-content: flex-start;
+
 			.launch_pad_drag {
 				width: calc(100% / 7);
 				margin-bottom: 48px;
@@ -457,6 +591,7 @@ const goto = (value: number) => {
 
 		.launch_myapps_box {
 			width: 70%;
+
 			.contain_img {
 				display: flex;
 				justify-content: center;
@@ -476,6 +611,7 @@ const goto = (value: number) => {
 				box-shadow: 0px 2px 12px 0px rgba(0, 0, 0, 0.2);
 				border-radius: 16px;
 			}
+
 			.launch_myapps_text {
 				width: 100%;
 				font-size: 14px;
@@ -494,23 +630,30 @@ const goto = (value: number) => {
 		margin-top: calc(50% - 180px);
 		text-align: center;
 	}
+}
 
-	.close {
-		position: absolute;
-		top: calc(100vh - 188px);
-		left: 0;
-		right: 0;
-		margin: auto;
-		width: 56px;
-		height: 56px;
-		border-radius: 28px;
-		background-color: rgba(255, 255, 255, 0.9);
+.close {
+	position: absolute;
+	top: 0;
+	right: 0;
+	margin: auto;
+	width: 52px;
+	height: 52px;
+	margin-top: -20px;
+	margin-right: -20px;
+	border-radius: 50%;
+
+	img {
+		margin-top: 12px;
+		margin-right: 12px;
 	}
 }
+
 .in-center-page {
 	-webkit-animation: puff-in-center-page 0.6s;
 	animation: puff-in-center-page 0.6s;
 }
+
 @-webkit-keyframes puff-in-center-page {
 	0% {
 		opacity: 0;
@@ -519,6 +662,7 @@ const goto = (value: number) => {
 		opacity: 1;
 	}
 }
+
 @keyframes puff-in-center-page {
 	0% {
 		opacity: 0;
@@ -527,6 +671,7 @@ const goto = (value: number) => {
 		opacity: 1;
 	}
 }
+
 .in-center {
 	-webkit-animation: puff-in-center 0.6s;
 	animation: puff-in-center 0.6s;
@@ -554,6 +699,7 @@ const goto = (value: number) => {
 		opacity: 1;
 	}
 }
+
 @keyframes puff-in-center {
 	0% {
 		-webkit-transform: scale(0);
@@ -577,27 +723,34 @@ const goto = (value: number) => {
 		opacity: 1;
 	}
 }
+
 :global(.q-field--standard .q-field__control:before) {
 	border: none;
 }
+
 :global(.q-field--standard .q-field__control:after) {
 	height: 0px;
 }
+
 :global(.q-field__native) {
 	font-family: Roboto-Medium, Roboto;
 	font-weight: 500;
 	// color: #ffffff;
 }
+
 :global(.q-field__marginal) {
 	height: 100%;
 	padding-right: 4px !important;
 }
+
 .q-field__marginal :global(.q-field__control) {
-	height: 44px;
+	height: 38px;
 }
+
 .ghost {
 	opacity: 0 !important;
 }
+
 .vibrate-1 {
 	-webkit-animation: vibrate-1 0.3s linear infinite both;
 	animation: vibrate-1 0.3s linear infinite both;
@@ -618,6 +771,7 @@ const goto = (value: number) => {
 		-webkit-transform: rotate(6deg);
 	}
 }
+
 @keyframes vibrate-1 {
 	0% {
 		transform: rotate(6deg);
@@ -645,6 +799,7 @@ const goto = (value: number) => {
 	background-color: rgba(255, 255, 255, 0.3);
 	border-radius: 4px;
 	cursor: pointer;
+
 	&.active {
 		background-color: rgba(255, 255, 255, 1);
 	}

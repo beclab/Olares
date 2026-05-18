@@ -1,0 +1,468 @@
+#listing {
+	height: 100%;
+	--item-selected: white;
+}
+
+body.rtl #listing {
+	margin-right: 16em;
+}
+
+#listing h2 {
+	margin: 0 0 0 0.5em;
+	font-size: 0.9em;
+	color: rgba(0, 0, 0, 0.38);
+	font-weight: 500;
+}
+
+#listing .item .common-div:last-of-type * {
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+
+#listing .common-div {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	/* display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); */
+}
+
+#listing.mosaic .common-div {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+#listing .item {
+	position: relative;
+	display: flex;
+	flex-wrap: nowrap;
+	transition: 0.1s ease background, 0.1s ease opacity;
+	align-items: center;
+	cursor: pointer;
+	user-select: none;
+}
+
+#listing .item div:last-of-type {
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+#listing .item p {
+	margin: 0;
+	height: 32px;
+	line-height: 32px;
+}
+
+#listing .item .size,
+#listing .item .modified {
+	/* font-size: 0.9em; */
+	/* font-size: 14px; */
+}
+
+#listing .item .name {
+	font-weight: bold;
+}
+
+#listing .item i {
+	font-size: 4em;
+	margin-right: 0.1em;
+	vertical-align: bottom;
+}
+
+#listing .item img {
+	/* width: 5.625em;
+	height: 5.625em; */
+	margin-right: 0.1em;
+	vertical-align: bottom;
+}
+
+#listing .message {
+	text-align: center;
+	font-size: 2em;
+	margin: 1em auto;
+	display: block !important;
+	width: 95%;
+	color: rgba(0, 0, 0, 0.3);
+	font-weight: 500;
+}
+
+#listing .message i {
+	font-size: 2.5em;
+	margin-bottom: 0.2em;
+	display: block;
+}
+
+#listing.mosaic .item {
+	width: 6.625rem;
+	margin: 0.5em;
+	padding: 0.5rem 0;
+	/* padding: 1.25em; */
+	border-radius: 0.2em;
+	background-color: rgba(0, 0, 0, 0);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: space-between;
+	border-radius: 10px;
+}
+
+#listing.mosaic .header {
+	display: none;
+}
+
+#listing.mosaic .item div:first-of-type {
+	/* width: 5.625em; */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+#listing.mosaic .item div:last-of-type {
+	width: 100%;
+	text-align: center;
+}
+
+#listing.mosaic.gallery .item div:first-of-type {
+	width: 100%;
+	height: 12em;
+}
+
+#listing.mosaic.gallery .item div:last-of-type {
+	position: absolute;
+	bottom: 0.5em;
+	padding: 1em;
+	width: calc(100% - 1em);
+	text-align: center;
+}
+
+#listing.mosaic.gallery .item[data-type='image'] div:last-of-type {
+	color: white;
+	background: linear-gradient(#0000, #0009);
+}
+
+#listing.mosaic.gallery .item i {
+	width: 100%;
+	margin-right: 0;
+	font-size: 8em;
+	text-align: center;
+}
+
+#listing.mosaic.gallery .item img {
+	width: 100%;
+	height: 100%;
+}
+
+#listing.gallery .size,
+#listing.gallery .modified {
+	display: none;
+}
+
+#listing.list {
+	flex-direction: column;
+	width: 100%;
+	max-width: 100%;
+	margin: 0;
+}
+
+#listing.list .item {
+	width: 100%;
+	margin: 0;
+	border-top: 1px solid rgba(0, 0, 0, 0.1);
+	padding: 1em;
+	border-top: 0;
+	padding-left: 0;
+	padding-right: 20px;
+}
+
+#listing.list h2 {
+	display: none;
+}
+
+#listing.list .item div:first-of-type {
+	width: 3em;
+}
+
+#listing.list .item div:first-of-type i {
+	font-size: 2em;
+}
+
+#listing.list .item div:first-of-type img {
+	width: 2em;
+	height: 2em;
+}
+
+#listing.list .item div:last-of-type {
+	width: 100%;
+	/* display: flex;
+  align-items: center; */
+}
+
+#listing.list .item .name {
+	float: left;
+	width: calc(100% - 400px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+
+
+#listing.list .item .size {
+	width: 100px;
+	float: right;
+}
+
+#listing.list .item .type {
+	width: 100px;
+	float: right;
+}
+
+
+#listing.list .item .modified {
+	width: 144px;
+	float: right;
+	text-align: right;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#listing .item.header {
+	display: none !important;
+}
+
+#listing.list .header i {
+	font-size: 1.5em;
+	vertical-align: middle;
+	margin-left: 0.2em;
+}
+
+#listing.list .item.header {
+	display: flex !important;
+	border: 0;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+	box-sizing: border-box;
+	color: $ink-3;
+
+	font-size: map-get($map: $body3, $key: size);
+	font-weight: map-get($map: $body3, $key: weight);
+	line-height: map-get($map: $body3, $key: line-height);
+	letter-spacing: map-get($map: $body3, $key: letter-spacing);
+}
+
+#listing.list .item.header>div:first-child {
+	width: 0;
+}
+
+#listing.list .item.header .name {
+	margin-right: 3em;
+}
+
+#listing.list .header a {
+	color: inherit;
+}
+
+
+#listing.list .name {
+	font-weight: normal;
+}
+
+#listing.list .item.header .name {
+	margin-right: 3em;
+}
+
+#listing.list .header span {
+	vertical-align: middle;
+}
+
+#listing.list .header i {
+	opacity: 0;
+	transition: 0.1s ease all;
+}
+
+#listing.list .header p:hover i,
+#listing.list .header .active i {
+	opacity: 1;
+}
+
+#listing.list .item.header .active {
+	// font-weight: bold;
+	color: $ink-2;
+}
+
+
+
+
+// new
+
+#listing.list .item .expiration-date {
+	width: 160px;
+	float: right;
+	text-align: right;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#listing.list .item .permission {
+	float: right;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	width: 120px;
+}
+
+#listing.list .item .owner {
+	width: 120px;
+	float: right;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#listing.list .item .share-scope {
+	width: 120px;
+	float: right;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#listing.list .item .share-name {
+	float: left;
+	width: calc(100% - 580px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+// ─── col-grid mode (dialog folder picker) ──────────────────────────────────
+// Activated by adding the .col-grid class to #listing (via DialogListing.vue).
+// Uses CSS Grid so the Name column fills remaining space (1fr, Finder-style),
+// while Size / Type / Modified are fixed-width.
+// Column widths are driven by CSS custom properties injected from
+// useColumnResize.ts, allowing drag-to-resize without touching this file.
+
+// Data rows: first column is the file icon (see #listing.list .item div:first-of-type { width: 3em }).
+// Header uses an empty first div with the same width so column boundaries line up with body rows.
+#listing.list.col-grid .item.header > div:first-child {
+	width: 3em;
+	min-width: 3em;
+	flex-shrink: 0;
+}
+
+#listing.list.col-grid .item.header > div:last-of-type {
+	flex: 1;
+	min-width: 0;
+}
+
+#listing.list.col-grid .item:not(.header) > div:last-of-type {
+	flex: 1;
+	min-width: 0;
+}
+
+#listing.list.col-grid .item div:last-of-type {
+	display: grid;
+	grid-template-columns:
+		minmax(120px, 1fr)
+		minmax(72px, var(--col-width-size, 72px))
+		minmax(64px, var(--col-width-type, 80px))
+		minmax(72px, var(--col-width-modified, 144px));
+	column-gap: 8px;
+	align-items: center;
+	min-width: 0;
+}
+
+// Reset float-based widths; let the grid take over
+#listing.list.col-grid .item .name,
+#listing.list.col-grid .item .modified,
+#listing.list.col-grid .item .type,
+#listing.list.col-grid .item .size {
+	float: none;
+	width: auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
+}
+
+// Modified column (rightmost) is right-aligned so the timestamp hugs the
+// row's right edge. Size and Type stay left-aligned to keep values close to
+// the column label.
+#listing.list.col-grid .item:not(.header) .size {
+	text-align: left;
+}
+
+#listing.list.col-grid .item:not(.header) .modified {
+	text-align: right;
+}
+
+// Header cells: position:relative for the resize handle anchor,
+// plus flex layout so the column label sits on the LEFT and sort icon on the RIGHT.
+// Also reset margin-right that the base CSS sets on .name header (margin-right: 3em).
+#listing.list.col-grid .item.header .name,
+#listing.list.col-grid .item.header .modified,
+#listing.list.col-grid .item.header .type,
+#listing.list.col-grid .item.header .size {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 2px;
+	text-align: left;
+	margin-right: 0;
+}
+
+// Keep sort icon always visible on the right while label can ellipsis on narrow columns.
+#listing.list.col-grid .item.header .name span,
+#listing.list.col-grid .item.header .modified span,
+#listing.list.col-grid .item.header .type span,
+#listing.list.col-grid .item.header .size span {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#listing.list.col-grid .item.header .name i.material-icons,
+#listing.list.col-grid .item.header .modified i.material-icons,
+#listing.list.col-grid .item.header .type i.material-icons,
+#listing.list.col-grid .item.header .size i.material-icons {
+	flex: 0 0 auto;
+}
+
+// modified DOM order is <i>icon</i><span>text</span>; push the icon to the end
+// so the label appears on the left and the sort icon appears on the right
+#listing.list.col-grid .item.header .modified i.material-icons {
+	order: 1;
+}
+
+// Resize handle – a thin vertical bar at the right edge of each resizable header cell
+#listing.list.col-grid .item.header .col-resize-handle {
+	position: absolute;
+	right: 0;
+	top: 15%;
+	width: 5px;
+	height: 70%;
+	cursor: col-resize;
+	border-radius: 2px;
+
+	&::after {
+		content: '';
+		position: absolute;
+		left: 2px;
+		top: 0;
+		width: 1px;
+		height: 100%;
+		background: $separator;
+		border-radius: 1px;
+		transition: background 0.15s, width 0.15s;
+	}
+
+	&:hover::after {
+		width: 2px;
+		background: $ink-2;
+	}
+}

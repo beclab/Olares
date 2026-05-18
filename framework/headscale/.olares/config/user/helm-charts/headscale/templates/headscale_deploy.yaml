@@ -20,6 +20,9 @@
 {{ $corednsIP = (index $corednsService "spec" "clusterIP") }}
 {{- end -}}
 
+{{- $tls_ns := printf "user-space-%s" .Values.bfl.username -}}
+{{- $tls_lookup := lookup "v1" "Secret" $tls_ns "headscale-tls" -}}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -96,6 +99,30 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: headscale-tls
+  namespace: user-space-{{ .Values.bfl.username }}
+  labels:
+    app: headscale
+type: Opaque
+data:
+{{- if $tls_lookup }}
+  tls.crt: {{ index $tls_lookup.data "tls.crt" | quote }}
+  tls.key: {{ index $tls_lookup.data "tls.key" | quote }}
+  ca.crt: {{ index $tls_lookup.data "ca.crt" | quote }}
+{{- else }}
+  {{- $ca := genCA "headscale-local-ca" 36500 }}
+  {{- $u := .Values.bfl.username }}
+  {{- $dns := list "headscale-server-svc" (printf "headscale-server-svc.user-space-%s" $u) (printf "headscale-server-svc.user-space-%s.svc" $u) (printf "headscale-server-svc.user-space-%s.svc.cluster.local" $u) }}
+  {{- $cert := genSignedCert "headscale-server-svc" nil $dns 36500 $ca }}
+  tls.crt: {{ $cert.Cert | b64enc | quote }}
+  tls.key: {{ $cert.Key | b64enc | quote }}
+  ca.crt: {{ $ca.Cert | b64enc | quote }}
+{{- end }}
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -150,38 +177,6 @@ spec:
         - -c
         - |
           chown -R 1000:1000 /headscale 
-      - args:
-        - |
-          set -euo pipefail
-
-          if [ ! -f /certs/tls.crt ]; then
-            echo "→ Generating self-signed cert for ${DOMAIN}"
-            openssl req -x509 -newkey rsa:4096 -nodes \
-              -keyout /certs/tls.key \
-              -out /certs/tls.crt \
-              -days 36500 \
-              -subj "/CN=${DOMAIN}" \
-              -addext "subjectAltName=DNS:${DOMAIN},DNS:${DOMAIN}.user-space-{{ .Values.bfl.username }},DNS:${DOMAIN}.user-space-{{ .Values.bfl.username }}.svc,DNS:${DOMAIN}.user-space-{{ .Values.bfl.username }}.svc.cluster.local"
-            cp -v /certs/tls.crt /certs/ca.crt
-          else
-            echo "→ Certificate already exists, skipping generation"
-          fi
-
-          echo "→ Fixing permissions..."
-          chmod 644 /certs/tls.crt /certs/ca.crt
-          chmod 600 /certs/tls.key
-        command:
-        - sh
-        - -c
-        env:
-        - name: DOMAIN
-          value: headscale-server-svc
-        image: alpine/openssl:3.5.5
-        imagePullPolicy: IfNotPresent
-        name: init-cert
-        volumeMounts:
-        - mountPath: /certs
-          name: tls-cert
       - name: init
         image: beclab/headscale-init:v0.1.13
         imagePullPolicy: IfNotPresent
@@ -290,9 +285,14 @@ spec:
         - containerPort: 8000
       volumes:
       - name: tls-cert
-        hostPath:
-          path: '{{ .Values.userspace.appCache  }}/headscale/config/certs'
-          type: DirectoryOrCreate
+        secret:
+          secretName: headscale-tls
+          defaultMode: 420
+          items:
+            - key: tls.crt
+              path: tls.crt
+            - key: tls.key
+              path: tls.key
       - name: config
         hostPath:
           type: DirectoryOrCreate
@@ -421,9 +421,12 @@ spec:
           type: DirectoryOrCreate
           path: '{{ .Values.userspace.appCache }}/tailscale/data'
       - name: tls-cert
-        hostPath:
-          path: '{{ .Values.userspace.appCache }}/headscale/config/certs'
-          type: DirectoryOrCreate
+        secret:
+          secretName: headscale-tls
+          defaultMode: 420
+          items:
+            - key: ca.crt
+              path: ca.crt
 
 ---
 apiVersion: v1

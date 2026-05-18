@@ -120,7 +120,7 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
       <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">管理 VPN 连接</td>
+      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">管理专用网络连接</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td> -->

@@ -5,6 +5,7 @@ description: In-depth guides and proven best practices to help you get the most 
 
 This section offers in-depth guides and proven best practices to help you get the most out of Olares.
 
+- [Activate an Olares device using the Olares CLI](activate-olares-using-cli.md)
 - [Configure a custom domain for your Olares](set-custom-domain.md)
 - [Install a multi-node Olares cluster](install-olares-multi-node.md)
 <!-- - [Build your knowledge hub with Wise](organize-content.md) -->

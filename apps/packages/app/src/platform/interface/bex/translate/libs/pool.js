@@ -1,65 +1,78 @@
 import { kissLog } from './log';
 
-/**
- * 任务池
- * @param {*} fn
- * @param {*} preFn
- * @param {*} _interval
- * @param {*} _limit
- * @returns
- */
 export const taskPool = (
 	fn,
 	preFn,
 	_interval = 100,
 	_limit = 100,
-	_retryInteral = 1000
+	_retryInterval = 1000
 ) => {
 	const pool = [];
-	const maxRetry = 2; // 最大重试次数
-	let maxCount = _limit; // 最大数量
-	let curCount = 0; // 当前数量
-	let interval = _interval; // 间隔时间
-	let timer = null;
+	const maxRetry = 2;
+	let maxCount = _limit;
+	let curCount = 0;
+	let interval = _interval;
+	let lastExecutionTime = 0;
+	let schedulerTimer = null;
 
-	const run = async () => {
-		// console.log("timer", timer);
-		timer && clearTimeout(timer);
-		timer = setTimeout(run, interval);
+	const scheduleNext = () => {
+		if (schedulerTimer) {
+			return;
+		}
 
-		if (curCount < maxCount) {
-			const item = pool.shift();
-			if (item) {
-				curCount++;
-				const { args, resolve, reject, retry } = item;
-				try {
-					const preArgs = preFn ? await preFn(item.args) : {};
-					const res = await fn({ ...args, ...preArgs });
-					resolve(res);
-				} catch (err) {
-					kissLog(err, 'task');
-					if (retry < maxRetry) {
-						const retryTimer = setTimeout(() => {
-							clearTimeout(retryTimer);
-							pool.push({ args, resolve, reject, retry: retry + 1 });
-						}, _retryInteral);
-					} else {
-						reject(err);
-					}
-				} finally {
-					curCount--;
+		if (curCount >= maxCount || pool.length === 0) {
+			return;
+		}
+
+		const now = Date.now();
+		const timeSinceLast = now - lastExecutionTime;
+		const delay = Math.max(0, interval - timeSinceLast);
+
+		schedulerTimer = setTimeout(() => {
+			schedulerTimer = null;
+			if (curCount < maxCount && pool.length > 0) {
+				const task = pool.shift();
+				if (task) {
+					lastExecutionTime = Date.now();
+					execute(task);
 				}
 			}
+
+			if (pool.length > 0) {
+				scheduleNext();
+			}
+		}, delay);
+	};
+
+	const execute = async (task) => {
+		curCount++;
+		const { args, resolve, reject, retry } = task;
+
+		try {
+			const preArgs = preFn ? await preFn(args) : {};
+			const res = await fn({ ...args, ...preArgs });
+			resolve(res);
+		} catch (err) {
+			kissLog(err, 'task');
+			if (retry < maxRetry) {
+				setTimeout(() => {
+					pool.unshift({ ...task, retry: retry + 1 });
+					scheduleNext();
+				}, _retryInterval);
+			} else {
+				reject(err);
+			}
+		} finally {
+			curCount--;
+			scheduleNext();
 		}
 	};
 
 	return {
 		push: async (args) => {
-			if (!timer) {
-				run();
-			}
 			return new Promise((resolve, reject) => {
 				pool.push({ args, resolve, reject, retry: 0 });
+				scheduleNext();
 			});
 		},
 		update: (_interval = 100, _limit = 100) => {
@@ -69,12 +82,18 @@ export const taskPool = (
 			if (_limit >= 1 && _limit <= 100 && _limit !== maxCount) {
 				maxCount = _limit;
 			}
+			scheduleNext();
 		},
 		clear: () => {
+			for (const task of pool) {
+				task.reject(new Error('Task pool was cleared'));
+			}
 			pool.length = 0;
 			curCount = 0;
-			timer && clearTimeout(timer);
-			timer = null;
+			if (schedulerTimer) {
+				clearTimeout(schedulerTimer);
+				schedulerTimer = null;
+			}
 		}
 	};
 };

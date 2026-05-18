@@ -74,7 +74,7 @@
 									<q-img
 										src="../../assets/wizard-web/progress_activity.svg"
 										spinner-color="white"
-										style="width: 18px; height: 18px"
+										style="width: 50%"
 									/>
 								</div>
 								<q-btn

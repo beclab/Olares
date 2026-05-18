@@ -22,16 +22,14 @@
 </template>
 
 <script lang="ts" setup>
-import { useRouter } from 'vue-router';
+import { getNativeAppPlatform } from 'src/application/platform';
 import TerminusTitleBar from '../../../../components/common/TerminusTitleBar.vue';
 import DomainsList from './DomainsList.vue';
 import { getRequireImage } from 'src/utils/imageUtils';
 
-const router = useRouter();
 const scanQrCode = () => {
-	router.push({
-		path: '/scanQrCode'
-	});
+	const nativalPlatform = getNativeAppPlatform();
+	nativalPlatform.scanQRCodeAndDispatch();
 };
 </script>
 

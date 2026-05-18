@@ -1,5 +1,5 @@
 const boot = ['i18n', 'wizardUI', 'baseAxios', 'application/wizard'];
-const css = ['app.scss', 'animation.scss', 'wizard.index.scss'];
+const css = ['wizard/app.scss'];
 
 const getConfig = (ctx) => {
 	if (!ctx.dev) {
@@ -9,6 +9,8 @@ const getConfig = (ctx) => {
 		const chainWebpackWizard = require('./Wizard/config');
 		chainWebpackWizard.build.chainWebpack(ctx, chain, { isClient });
 	};
+
+	const proxy = require('./Wizard/proxy');
 	return {
 		boot,
 		css,
@@ -16,8 +18,14 @@ const getConfig = (ctx) => {
 			env: {},
 			chainWebpack
 		},
+		devServer: {
+			proxy: proxy,
+			host: process.env.DEV_DOMAIN,
+			https: true
+		},
 		sourceFiles: {
-			indexHtmlTemplate: 'src/index.template.wizard.html'
+			indexHtmlTemplate: 'src/index.template.wizard.html',
+			variables: 'wizard/variables.scss'
 		},
 		htmlVariables: {
 			productName: 'Olares'

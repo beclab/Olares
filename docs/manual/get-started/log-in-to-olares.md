@@ -3,6 +3,7 @@ search: false
 ---
 ## Log in to Olares
 
+<!-- #region log-in-to-olares-steps -->
 1. Open the Olares desktop address in your browser, and press any key to continue.
 2. On the login page, enter your Olares login password.
 
@@ -15,3 +16,4 @@ search: false
    :::
 
 Once you've logged in, you'll be directed to the Olares desktop.🎉
+<!-- #endregion log-in-to-olares-steps -->

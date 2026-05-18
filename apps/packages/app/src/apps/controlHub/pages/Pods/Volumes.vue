@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 import { UsePod } from '@apps/control-panel-common/src/stores/PodData';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';
 import { computed, ref, watchEffect } from 'vue';
 import { getWorkloadVolumes } from '@apps/control-panel-common/src/utils/workload';

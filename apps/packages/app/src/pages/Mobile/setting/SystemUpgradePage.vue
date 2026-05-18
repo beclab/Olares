@@ -164,7 +164,7 @@
 						<template v-slot:side>
 							<bt-switch
 								size="sm"
-								truthy-track-color="light-blue-default"
+								truthy-track-color="blue-default"
 								v-model="includeRC"
 								@update:model-value="updateIncludeRc"
 							/>
@@ -298,7 +298,7 @@ onMounted(() => {
 	mdnsStore.startSearchMdnsService();
 	checkLastOlaresVersion();
 
-	// 为目标元素添加点击事件监听
+	// Add click listener to target element.
 	const targetElement = document.querySelector('#debug-trigger');
 	if (targetElement) {
 		targetElement.addEventListener('click', handleClick);

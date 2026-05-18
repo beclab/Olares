@@ -9,14 +9,13 @@
 					<div class="topic-detail-container">
 						<div class="row justify-between topic-detail-content">
 							<q-img
-								v-if="topicRef?.detailimg && !$q.screen.xs && !$q.screen.sm"
+								v-if="topicRef?.detailimg"
 								class="topic-detail-img"
 								ratio="3/4"
 								:src="topicRef?.detailimg"
-								v-show="!$q.screen.xs && !$q.screen.sm"
 							>
 								<template v-slot:loading>
-									<q-skeleton class="topic-detail-img" style="height: 100%" />
+									<q-skeleton class="topic-detail-img-skeleton" />
 								</template>
 
 								<div
@@ -76,7 +75,7 @@
 								:src="topicRef?.mobileDetailImg || topicRef?.detailimg"
 							>
 								<template v-slot:loading>
-									<q-skeleton class="topic-detail-img" style="height: 100%" />
+									<q-skeleton class="topic-detail-img-skeleton-mobile" />
 								</template>
 							</q-img>
 
@@ -129,7 +128,6 @@ import { useCenterStore } from '../../../stores/market/center';
 import SimpleWaiter from '../../../utils/simpleWaiter';
 import { useRoute, useRouter } from 'vue-router';
 import { onActivated } from 'vue-demi';
-import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { ref } from 'vue';
 import {
@@ -137,13 +135,14 @@ import {
 	getI18nValue,
 	TopicInfo
 } from '../../../constant/constants';
+import { useAppStore } from '../../../stores/market/appStore';
 
 const Router = useRouter();
 const route = useRoute();
-const $q = useQuasar();
 const settingStore = useSettingStore();
 const topicRef = ref<TopicInfo>();
 const centerStore = useCenterStore();
+const appStore = useAppStore();
 const topicId = route.params.topicId;
 const category = route.params.category;
 const { locale } = useI18n();
@@ -152,7 +151,7 @@ const waiter = new SimpleWaiter();
 onActivated(async () => {
 	waiter.waitForCondition(
 		() => {
-			return Array.from(centerStore.appSimpleInfoMap.keys()).length > 0;
+			return Array.from(appStore.appSimpleInfoMap.keys()).length > 0;
 		},
 		() => {
 			const pageData = centerStore.pagesMap.get(category);
@@ -183,7 +182,10 @@ onActivated(async () => {
 	overflow: hidden;
 
 	.topic-detail-content {
+		flex-direction: row;
 		flex-wrap: nowrap;
+		align-items: stretch;
+		justify-content: flex-start;
 		width: 100%;
 		height: 100%;
 		box-sizing: border-box;
@@ -194,7 +196,9 @@ onActivated(async () => {
 			height: calc(100% - 32px);
 			border-radius: 12px;
 			padding-bottom: 32px;
-			flex-shrink: 0;
+			flex: 0 1 33%;
+			min-width: 0;
+			max-width: 640px;
 			margin: 0 32px 0;
 			transition: all 0.2s ease;
 			opacity: 1;
@@ -211,25 +215,42 @@ onActivated(async () => {
 			}
 		}
 
+		.topic-detail-img-skeleton {
+			width: 100%;
+			height: 100%;
+			border-radius: inherit;
+		}
+
 		.topic-detail-rich {
 			overflow: hidden;
-			flex-grow: 1;
+			flex: 1 1 0;
+			min-width: 0;
+			padding-left: 32px;
+			padding-right: 80px;
+			box-sizing: border-box;
+		}
+	}
+
+	@media (max-width: 1023px) {
+		.topic-detail-content {
+			.topic-detail-img {
+				flex: 0 1 40%;
+				max-width: min(420px, 44vw);
+				margin: 0 12px 0 16px;
+			}
+
+			.topic-detail-rich {
+				padding-left: 12px;
+				padding-right: 20px;
+			}
 		}
 	}
 
 	@media (min-width: 1024px) and (max-width: 1600px) {
 		.topic-detail-content {
 			.topic-detail-img {
-				min-width: 480px;
+				min-width: min(480px, 36vw);
 				max-width: 640px;
-				width: 33%;
-			}
-
-			.topic-detail-rich {
-				min-width: 540px;
-				width: 67%;
-				padding-left: 32px;
-				padding-right: 80px;
 			}
 		}
 	}
@@ -239,26 +260,6 @@ onActivated(async () => {
 			.topic-detail-img {
 				min-width: 640px;
 				max-width: 810px;
-				width: 33%;
-			}
-
-			.topic-detail-rich {
-				min-width: 960px;
-				width: 67%;
-				padding-left: 32px;
-				padding-right: 80px;
-			}
-		}
-	}
-
-	@media (max-width: 1023px) {
-		.topic-detail-content {
-			flex-direction: column;
-
-			.topic-detail-rich {
-				width: 100%;
-				min-width: auto;
-				padding: 0 80px;
 			}
 		}
 	}
@@ -281,6 +282,13 @@ onActivated(async () => {
 			margin-bottom: 32px;
 			height: auto;
 		}
+
+		.topic-detail-img-skeleton-mobile {
+			width: 100%;
+			height: 100%;
+			min-height: 209px;
+			border-radius: 12px;
+		}
 	}
 }
 
@@ -295,8 +303,8 @@ onActivated(async () => {
 	background: linear-gradient(90deg, #ebf1ff 0%, #ffffff 100%);
 	backdrop-filter: blur(6.07811px);
 
-	.dark-mode & {
-		background: linear-gradient(90deg, #222637 0%, #1f1f1f 100%);
+	body.body--dark & {
+		background: linear-gradient(90deg, #222637, #1f1f1f 87.02%);
 	}
 }
 
@@ -311,8 +319,8 @@ onActivated(async () => {
 	background: linear-gradient(180deg, #f2f6ff 0%, white 100%);
 	backdrop-filter: blur(6.07811px);
 
-	.dark-mode & {
-		background: linear-gradient(90deg, #222637 0%, #1f1f1f 100%);
+	body.body--dark & {
+		background: linear-gradient(90deg, #222637, #1f1f1f 87.02%);
 	}
 }
 </style>

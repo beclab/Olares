@@ -36,11 +36,12 @@ export interface ConfigVPNInterface {
 		authKey: string;
 		server: string;
 		acceptDns: boolean;
+		authToken: string;
 	}): Promise<void>;
 	vpnStop(): Promise<void>;
 	currentNodeId(): Promise<string>;
 	hostPeerInfo(): Promise<HostPeerInfo | undefined>;
-	resendCache(options: { server: string }): Promise<void>;
+	resendCache(options: { server: string; authToken: string }): Promise<void>;
 }
 
 export const instanceOfConfigVPNInterface = (obj: any) => {

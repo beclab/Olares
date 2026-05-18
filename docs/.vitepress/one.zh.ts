@@ -17,16 +17,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Known issues",
           link: "/zh/one/known-issues",
-        },
-        {
-          text: "Troubleshooting",
-          collapsed: true,
-          items: [
-            {
-              text: "Cannot enter BIOS",
-              link: "/zh/one/ts-bios-black-screen",
-            },
-          ],
         },         
       ],
     },
@@ -248,11 +238,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Update OS",
           link: "/zh/one/update",
-        },
-        {
-          text: "Update firmware",
-          link: "/zh/one/update-firmware",
-        },        
+        },       
         {
           text: "Restore Olares One",
           items: [
@@ -274,6 +260,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
             },
           ],
         },
+        {
+          text: "Manage BIOS",
+          link: "/zh/one/update-firmware",
+        },         
       ]
     },
   ],

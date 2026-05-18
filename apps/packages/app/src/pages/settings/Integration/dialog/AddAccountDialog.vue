@@ -112,7 +112,7 @@ const createAccount = async () => {
 		step.value = 2;
 	} catch (error) {
 		console.log(error);
-		notifyFailed(error.message);
+		// notifyFailed(error.message);
 	}
 };
 

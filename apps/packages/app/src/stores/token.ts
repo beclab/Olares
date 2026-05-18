@@ -4,6 +4,9 @@ import queryString from 'query-string';
 import { Token, OlaresInfo, DeviceType } from '@bytetrade/core';
 import { CurrentView } from 'src/utils/constants';
 import { saltedMD5 } from './../utils/salted-md5';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { i18n } from 'src/boot/i18n';
+import { getLoginResponseErrorMessage } from 'src/utils/interface/login';
 
 export type RootState = {
 	token: Token | null;
@@ -34,7 +37,7 @@ export const useTokenStore = defineStore('token', {
 	getters: {
 		target_url(): string {
 			const name = this.user.olaresId.replace('@', '.');
-			const desktopURL = 'https://desktop.' + name;
+			// const desktopURL = 'https://desktop.' + name;
 			const urlParams = new URLSearchParams(window.location.search);
 			let targetUrl = urlParams.get('redirect') || urlParams.get('rd');
 			if (targetUrl) {
@@ -44,11 +47,24 @@ export const useTokenStore = defineStore('token', {
 					console.error('Failed to decode redirect URL:', e);
 				}
 			}
-			const targetURL = targetUrl ? targetUrl : desktopURL;
+			const targetURL = targetUrl ? targetUrl : this.desktopURL;
 			return targetURL;
 		},
 		olaresId(): string {
 			return this.user.olaresId || this.user.terminusName;
+		},
+		islocal(): boolean {
+			return window.location.hostname.endsWith('olares.local');
+		},
+		desktopURL() {
+			let url = window.location.protocol + '//' + 'desktop.';
+			if (this.islocal) {
+				url = url + this.olaresId.split('@')[0] + '.olares.local';
+			} else {
+				const name = this.olaresId.replace('@', '.');
+				url = url + name;
+			}
+			return url;
 		}
 	},
 	actions: {
@@ -63,27 +79,50 @@ export const useTokenStore = defineStore('token', {
 		async login(username: string, password: string) {
 			// const requestMethod = this.urlParams.rm;
 
-			const saltedPassword = saltedMD5(password, {
-				osVersion: this.user.osVersion
-			});
+			try {
+				const saltedPassword = saltedMD5(password, {
+					osVersion: this.user.osVersion
+				});
 
-			const data: Token = await axios.post(
-				this.url + '/api/firstfactor',
-				{
-					username,
-					password: saltedPassword,
-					keepMeLoggedIn: false,
-					// requestMethod,
-					targetURL: this.target_url,
-					requestTermiPass: this.requestTermiPass
-				},
-				{
-					timeout: 30000
+				const data: Token = await axios.post(
+					this.url + '/api/firstfactor',
+					{
+						username,
+						password: saltedPassword,
+						keepMeLoggedIn: false,
+						// requestMethod,
+						targetURL: this.target_url,
+						requestTermiPass: this.requestTermiPass
+					},
+					{
+						timeout: 30000
+					}
+				);
+				this.setToken(data);
+				return data;
+			} catch (err) {
+				//
+				if (err.response) {
+					const message =
+						typeof err.response.data == 'string'
+							? err.response.data
+							: err.response.data?.message
+							? err.response.data.message
+							: '';
+					if (message && typeof message == 'string') {
+						BtNotify.show({
+							type: NotifyDefinedType.MESSAGE,
+							message: i18n.global.t(getLoginResponseErrorMessage(message))
+						});
+					}
+				} else {
+					BtNotify.show({
+						type: NotifyDefinedType.MESSAGE,
+						message: err.message
+					});
 				}
-			);
-			this.setToken(data);
-
-			return data;
+				throw err;
+			}
 		},
 
 		async apiState(): Promise<boolean> {
@@ -110,14 +149,10 @@ export const useTokenStore = defineStore('token', {
 			}
 		},
 
-		async refresh_token(logout: string | null = null, fa2 = false) {
+		async refresh_token(logout: string | null = null) {
 			if (logout) {
 				localStorage.removeItem('auth_refresh_token');
 				throw new Error('Logout');
-			}
-
-			if (fa2) {
-				throw new Error('Need fa2');
 			}
 
 			const refresh_token = localStorage.getItem('auth_refresh_token');
@@ -147,15 +182,38 @@ export const useTokenStore = defineStore('token', {
 		},
 
 		async secondFactor(token: string): Promise<Token> {
-			const data: Token = await axios.post(
-				this.url + '/api/secondfactor/totp',
-				{
-					targetURL: this.target_url,
-					token
+			try {
+				const data: Token = await axios.post(
+					this.url + '/api/secondfactor/totp',
+					{
+						targetURL: this.target_url,
+						token
+					}
+				);
+				this.setToken(data);
+				return data;
+			} catch (err) {
+				if (err.response) {
+					const message =
+						typeof err.response.data == 'string'
+							? err.response.data
+							: err.response.data?.message
+							? err.response.data.message
+							: '';
+					if (message && typeof message == 'string') {
+						BtNotify.show({
+							type: NotifyDefinedType.MESSAGE,
+							message: i18n.global.t(getLoginResponseErrorMessage(message))
+						});
+					}
+				} else {
+					BtNotify.show({
+						type: NotifyDefinedType.MESSAGE,
+						message: err.message
+					});
 				}
-			);
-			this.setToken(data);
-			return data;
+				throw err;
+			}
 		},
 
 		async replaceToDesktopUrl(redirect?: string): Promise<void> {

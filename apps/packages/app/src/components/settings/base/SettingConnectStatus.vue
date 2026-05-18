@@ -4,7 +4,7 @@
 		:class="!connected ? 'bg-red-1' : ''"
 	>
 		<div
-			class="text-overline connect-title"
+			class="text-overline"
 			:class="connected ? 'connected-title' : 'text-red-6'"
 		>
 			{{ label ? label : connected ? t('already_bound') : t('not_bound') }}
@@ -29,10 +29,6 @@ const { t } = useI18n();
 	border-radius: 4px;
 	width: auto;
 	height: 20px;
-
-	.connect-title {
-		margin-left: 4px;
-	}
 
 	.connected-title {
 		color: $blue;

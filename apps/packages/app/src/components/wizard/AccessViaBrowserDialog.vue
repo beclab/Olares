@@ -52,6 +52,7 @@ import { getPlatform } from '@didvault/sdk/src/core';
 import { useUserStore } from '../../stores/user';
 import { ref } from 'vue';
 import { notifyFailed, notifySuccess } from '../../utils/notifyRedefinedUtil';
+import { getApplication } from 'src/application/base';
 
 const { t } = useI18n();
 
@@ -62,9 +63,8 @@ const url = ref(
 );
 
 const copyFunc = async () => {
-	const platform = getPlatform();
-	platform
-		.setClipboard(url.value)
+	getApplication()
+		.copyToClipboard(url.value)
 		.then(() => {
 			notifySuccess(t('copy_success'));
 			onDialogOK();

@@ -41,7 +41,7 @@ import MyContentPage from '../../components/MyContentPage2.vue';
 import MyPage from '@apps/control-panel-common/src/containers/MyPage.vue';
 import Yaml from './Yaml.vue';
 import MoreSelection from '@apps/control-panel-common/src/components/MoreSelection.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import QButtonStyle from '@apps/control-panel-common/src/components/QButtonStyle.vue';
 
 const usePod = UsePod();

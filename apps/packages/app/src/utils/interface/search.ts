@@ -26,6 +26,8 @@ export interface TextSearchItem {
 		published_at: number;
 		updated: number;
 		id: string;
+		entry_id: string;
+		filter_id: string;
 	};
 	// created_at: number;
 }

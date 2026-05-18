@@ -14,17 +14,16 @@ export default {
 			'Unable to retrieve the NFT image because you have not bound a blockchain address and cannot access the corresponding NFT image. Please bind your wallet in Settings and then return here to select your NFT.',
 		go_to_binding: 'Bind your wallet',
 		upload_image: 'Upload image',
-		select_local_image_desc:
-			'Select local image, upload, and edit your own avatar',
+		select_local_image_desc: 'Upload & crop',
 		recommend_sizes:
-			'Use PNG or JPG image over 400x400 pixels for best display, and no larger than 5MB.',
+			'Please upload a JPG, JPEG, PNG, or GIF image larger than 400×400 px, up to 5 MB.',
 		header_style: 'Header style',
 		classic: 'Classic',
 		portrait: 'Portrait',
 		banner: 'Banner',
 		profile_picture: 'Profile picture',
 		upload_avatar_desc:
-			'Upload an image of at least 400x400 pixels in JPG, PNG format, and no larger than 5MB.',
+			'Please upload a JPG, JPEG, PNG, or GIF image larger than 400×400 px, up to 5 MB.',
 		profile_picture_shape: 'Profile picture shape',
 		profile_picture_size: 'Profile picture size',
 		profile_picture_outline: 'Profile picture outline',
@@ -107,16 +106,14 @@ export default {
 		corner_radius: 'Corner radius',
 		font: 'Font'
 	},
-	share: {
-		share_your_profile: 'Share your profile',
-		share_your_profile_desc: 'Share your profile to boost your audience',
-		share_via_qr_code: 'Share via QR code',
-		share_via_qr_code_desc: 'Share your profile instantly with this QR code',
-		share_profile_picture: 'Share profile picture',
-		share_on_x: 'Share on X',
-		share_on_facebook: 'Share on Facebook',
-		share_on_linkedin: 'Share on Linkedin',
-		download_png: 'Download PNG',
-		high_quality_image: 'High quality image'
-	}
+	share_your_profile: 'Share your profile',
+	share_your_profile_desc: 'Share your profile to boost your audience',
+	share_via_qr_code: 'Share via QR code',
+	share_via_qr_code_desc: 'Share your profile instantly with this QR code',
+	share_profile_picture: 'Share profile picture',
+	share_on_x: 'Share on X',
+	share_on_facebook: 'Share on Facebook',
+	share_on_linkedin: 'Share on Linkedin',
+	download_png: 'Download PNG',
+	high_quality_image: 'High quality image'
 };

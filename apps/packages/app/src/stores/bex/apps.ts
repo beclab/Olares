@@ -35,6 +35,7 @@ const olaresDesktop = (domain: string) => {
 	return {
 		id: 'desktop',
 		name: 'desktop',
+		rawAppName: 'desktop',
 		namespace: '',
 		deployment: '',
 		owner: '',

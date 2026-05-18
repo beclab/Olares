@@ -4,7 +4,7 @@ interface Task<T> {
 	id: string;
 	callback: Callback<T>;
 	args?: T;
-	executed: boolean; // 是否已执行
+	executed: boolean; // Whether already executed
 }
 
 class Waiter<T = void> {
@@ -19,11 +19,11 @@ class Waiter<T = void> {
 	private conditionMet = false;
 
 	/**
-	 * 设置共享检查条件
-	 * @param condition 检查条件函数
-	 * @param interval 检查间隔（毫秒）
-	 * @param timeout 超时时间（毫秒）
-	 * @param maxAttempts 最大尝试次数
+	 * Set shared check condition.
+	 * @param condition condition check function
+	 * @param interval check interval in milliseconds
+	 * @param timeout timeout in milliseconds
+	 * @param maxAttempts max number of attempts
 	 */
 	public setCondition(
 		condition: () => boolean,
@@ -38,38 +38,38 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 添加任务到队列（不立即执行，等待条件满足）
-	 * @param id 任务唯一标识
-	 * @param callback 条件满足时的回调
-	 * @param args 传递给回调的参数
+	 * Add task to queue (wait until condition is met).
+	 * @param id unique task id
+	 * @param callback callback when condition is met
+	 * @param args args passed to callback
 	 */
 	public addTask(id: string, callback: Callback<T>, args?: T): void {
 		if (!this.sharedCondition) {
 			throw new Error('请先设置共享检查条件');
 		}
 
-		// 如果任务已存在，先移除
+		// If task already exists, remove it first.
 		if (this.taskQueue.has(id)) {
 			this.removeTask(id);
 		}
 
-		// 添加新任务
+		// Add new task.
 		this.taskQueue.set(id, { id, callback, args, executed: false });
 
-		// 如果队列未运行，启动条件检查
+		// Start checking if queue is not running.
 		if (!this.running) {
 			this.startChecking();
 		}
 
-		// 如果条件已满足，立即执行新添加的任务
+		// Run newly added task immediately if condition is already met.
 		if (this.conditionMet) {
 			this.executeTask(id);
 		}
 	}
 
 	/**
-	 * 批量添加任务
-	 * @param tasks 任务数组
+	 * Add tasks in batch.
+	 * @param tasks task list
 	 */
 	public addTasks(
 		tasks: { id: string; callback: Callback<T>; args?: T }[]
@@ -78,7 +78,7 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 启动条件检查
+	 * Start condition checking.
 	 */
 	private startChecking(): void {
 		if (this.running) return;
@@ -86,12 +86,12 @@ class Waiter<T = void> {
 		this.running = true;
 		this.attempts = 0;
 
-		// 设置主定时器
+		// Start main timer.
 		this.intervalId = setInterval(() => {
 			this.checkCondition();
 		}, this.checkInterval);
 
-		// 设置超时定时器
+		// Start timeout timer.
 		setTimeout(() => {
 			if (this.running && !this.conditionMet) {
 				console.warn('条件检查已超时');
@@ -101,7 +101,7 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 检查共享条件
+	 * Check shared condition.
 	 */
 	private checkCondition(): void {
 		if (this.conditionMet || this.attempts >= this.maxAttempts) {
@@ -118,13 +118,13 @@ class Waiter<T = void> {
 				this.stopChecking();
 			}
 		} catch (error) {
-			console.error('条件检查出错:', error);
+			console.error('Condition check failed:', error);
 			this.stopChecking();
 		}
 	}
 
 	/**
-	 * 执行单个任务
+	 * Execute a single task.
 	 */
 	private executeTask(id: string): void {
 		const task = this.taskQueue.get(id);
@@ -133,13 +133,13 @@ class Waiter<T = void> {
 				task.callback(task.args);
 				task.executed = true;
 			} catch (error) {
-				console.error(`执行任务 ${id} 时出错:`, error);
+				console.error(`Failed to execute task ${id}:`, error);
 			}
 		}
 	}
 
 	/**
-	 * 执行所有任务
+	 * Execute all tasks.
 	 */
 	private executeAllTasks(): void {
 		this.taskQueue.forEach((task) => {
@@ -150,7 +150,7 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 停止条件检查
+	 * Stop condition checking.
 	 */
 	private stopChecking(): void {
 		this.running = false;
@@ -161,36 +161,36 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 移除任务
-	 * @param id 任务唯一标识
+	 * Remove task.
+	 * @param id unique task id
 	 */
 	public removeTask(id: string): void {
 		this.taskQueue.delete(id);
 	}
 
 	/**
-	 * 清空所有任务
+	 * Clear all tasks.
 	 */
 	public clearTasks(): void {
 		this.taskQueue.clear();
 	}
 
 	/**
-	 * 获取队列中任务数量
+	 * Get queue size.
 	 */
 	public getQueueSize(): number {
 		return this.taskQueue.size;
 	}
 
 	/**
-	 * 检查条件是否已满足
+	 * Check whether condition has been met.
 	 */
 	public hasConditionMet(): boolean {
 		return this.conditionMet;
 	}
 
 	/**
-	 * 重置状态，允许重新检查条件
+	 * Reset state and allow condition re-check.
 	 */
 	public reset(): void {
 		this.stopChecking();

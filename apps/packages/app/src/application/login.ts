@@ -37,34 +37,44 @@ export class LoginApplication extends NormalApplication {
 		console.log('redirect:', redirect);
 		console.log('urlParams ===>', urlParams);
 
-		return await tokenStore
-			.refresh_token(logout, fa2 == 'true')
-			.then(async () => {
-				const hostUrl = new URL(host);
-				let defaultPath = host;
-				if (hostUrl.host.startsWith('test.')) {
-					defaultPath =
-						'https://' +
-						hostUrl.host.split(':')[0].replace('test.', 'desktop.');
-				} else {
-					defaultPath = host.replace('auth.', 'desktop.');
+		const redictToLogin = async (isFa2 = false) => {
+			await tokenStore.loadData().then(async () => {
+				if (document.getElementById('Loading'))
+					document.getElementById('Loading')?.remove();
+				if (isFa2) {
+					tokenStore.currentView = CurrentView.SECOND_FACTOR;
 				}
+			});
+		};
 
-				const path = url_redirect || defaultPath;
-				window.location.replace(path);
+		return await tokenStore
+			.refresh_token(logout)
+			.then(async () => {
+				if (fa2 == 'true') {
+					await redictToLogin(true);
+				} else {
+					const hostUrl = new URL(host);
+					let defaultPath = host;
+					if (hostUrl.host.startsWith('test.')) {
+						defaultPath =
+							window.location.protocol +
+							'//' +
+							hostUrl.host.split(':')[0].replace('test.', 'desktop.');
+					} else {
+						defaultPath = host.replace('auth.', 'desktop.');
+					}
+
+					const path = url_redirect || defaultPath;
+					window.location.replace(path);
+				}
 			})
 			.catch(async () => {
-				await tokenStore.loadData().then(async () => {
-					if (document.getElementById('Loading'))
-						document.getElementById('Loading')?.remove();
-					if (fa2 == 'true') {
-						tokenStore.currentView = CurrentView.SECOND_FACTOR;
-					}
-				});
+				await redictToLogin();
 			});
 	}
 
 	async appUnMounted() {
+		await super.appUnMounted();
 		const { cleanup } = useDevice();
 		cleanup();
 	}

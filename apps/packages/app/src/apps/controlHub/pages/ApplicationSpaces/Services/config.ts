@@ -1,7 +1,7 @@
 import { getNameSpaceServicesList } from '@apps/control-panel-common/src/network';
 import { PodsParam } from '@apps/control-panel-common/src/network/network';
 import Services from '@apps/control-hub/src/assets/Services.svg';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { componentName } from '@apps/control-hub/src/router/const';
 
 const group = {

@@ -1,6 +1,6 @@
 import { PodItem } from '@apps/dashboard/src/types/network';
 import { get } from 'lodash';
-import { t } from '@apps/dashboard/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import { timeRangeFormate } from '@apps/control-panel-common/src/containers/Monitoring/utils';
 import { getAreaChartOps } from '@apps/control-hub/src/utils/monitoring';
 

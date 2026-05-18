@@ -1,5 +1,6 @@
 <template>
 	<div
+		ref="swiperRootRef"
 		:style="{
 			'--NavigationOffsite': `${navigationOffsite}px`,
 			'--paddingAll': paddingX * 2 + 'px'
@@ -64,14 +65,7 @@
 
 <script lang="ts" setup>
 import { Navigation, Pagination, Virtual } from 'swiper/modules';
-import {
-	computed,
-	onBeforeUnmount,
-	onMounted,
-	PropType,
-	ref,
-	watch
-} from 'vue';
+import { onBeforeUnmount, onMounted, PropType, ref, watch } from 'vue';
 import { getRequireImage } from '../../utils/imageUtils';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { useQuasar } from 'quasar';
@@ -79,8 +73,6 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 import 'swiper/css/virtual';
-import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
 import { useDeviceStore } from '../../stores/settings/device';
 
 const modules = [Pagination, Navigation, Virtual];
@@ -89,13 +81,14 @@ const canPrev = ref(false);
 const $q = useQuasar();
 const swiperSize = ref();
 let swiperRef: any = null;
-const route = useRoute();
-let resizeTimer: NodeJS.Timeout | null = null;
+let resizeRafId: number | null = null;
+const swiperRootRef = ref<HTMLElement | null>(null);
+let rootResizeObserver: ResizeObserver | null = null;
 
 const props = defineProps({
 	dataArray: {
-		type: Object as PropType<any[]>,
-		require: true
+		type: Array as PropType<any[]>,
+		required: true
 	},
 	slidesPerView: {
 		type: Number,
@@ -142,15 +135,24 @@ const showAppSize = ref(
 onMounted(async () => {
 	updateSwiper();
 	window.addEventListener('resize', resize);
+	rootResizeObserver = new ResizeObserver(() => {
+		resize();
+	});
+	if (swiperRootRef.value) {
+		rootResizeObserver.observe(swiperRootRef.value);
+	}
 });
 
 onBeforeUnmount(() => {
 	window.removeEventListener('resize', resize);
-});
-
-const showMenu = computed(() => {
-	const menuParam = route.query.showMenu;
-	return menuParam === undefined ? true : menuParam === 'true';
+	if (resizeRafId !== null) {
+		window.cancelAnimationFrame(resizeRafId);
+		resizeRafId = null;
+	}
+	if (rootResizeObserver) {
+		rootResizeObserver.disconnect();
+		rootResizeObserver = null;
+	}
 });
 
 const slideChange = () => {
@@ -162,23 +164,18 @@ const slideChange = () => {
 };
 
 const resize = () => {
-	if (resizeTimer) {
-		clearTimeout(resizeTimer);
+	if (resizeRafId !== null) {
+		return;
 	}
-	resizeTimer = setTimeout(function () {
+	resizeRafId = window.requestAnimationFrame(() => {
+		resizeRafId = null;
 		updateSwiper();
-	}, 200);
+	});
 };
 
 const updateSwiper = () => {
-	if ($q.screen.width < 864) {
-		swiperSize.value = 800;
-	} else if ($q.screen.width < 1024) {
-		swiperSize.value = $q.screen.width - props.paddingX * 2;
-	} else {
-		swiperSize.value = $q.screen.width - (showMenu.value ? 240 : 0);
-		props.paddingX * 2;
-	}
+	const rootWidth = swiperRootRef.value?.clientWidth || $q.screen.width;
+	swiperSize.value = Math.max(rootWidth - props.paddingX * 2, 0);
 	// console.log(swiperSize.value);
 	if (props.maxHeight && props.ratio) {
 		const height = swiperSize.value / props.ratio;
@@ -196,6 +193,16 @@ const updateSwiper = () => {
 				? Number(sizeArray[1])
 				: Number(sizeArray[2])
 			: props.slidesPerView;
+	if (swiperRef) {
+		swiperRef.update();
+		const maxStartIndex = Math.max(
+			0,
+			(props.dataArray?.length || 0) - showAppSize.value
+		);
+		if (swiperRef.activeIndex > maxStartIndex) {
+			swiperRef.slideTo(maxStartIndex, 0);
+		}
+	}
 	slideChange();
 };
 
@@ -229,7 +236,7 @@ const customNext = () => {
 		swiperRef.slideNext();
 	}
 };
-// 自定义上一个按钮点击事件
+
 const customPrev = () => {
 	if (swiperRef) {
 		swiperRef.slidePrev();
@@ -257,7 +264,8 @@ defineExpose({ slideTo });
 		top: calc(50% - var(--NavigationOffsite));
 		right: 25px;
 	}
-	.buttion-cursor {
+
+	.button-cursor {
 		cursor: pointer;
 	}
 

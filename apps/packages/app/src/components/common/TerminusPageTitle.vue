@@ -13,7 +13,7 @@
 		</div>
 		<div
 			class="login-sub-title page-title__desc text-ink-2"
-			:style="center ? 'text-align : center' : 'color : $prompt-message'"
+			:style="center ? 'text-align : center' : 'color : $ink-2'"
 			v-show="desc"
 		>
 			{{ desc }}

@@ -83,11 +83,13 @@ export interface AppPlatform extends Platform, PlatformExtension {
 		facebook: {
 			appId: string;
 			clientToken: string;
-		},
+		};
 		google: {
 			webClientId: string;
 			iOSClientId: string;
 			androidClientId: string;
-		}
-	}
+		};
+	};
+
+	vaultSync: () => Promise<void>;
 }

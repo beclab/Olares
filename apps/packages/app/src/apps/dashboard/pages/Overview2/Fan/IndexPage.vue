@@ -94,6 +94,7 @@ import {
 	cpuFanColorStops
 } from './config';
 import { useFanStore } from '@apps/dashboard/stores/Fan';
+import { round } from 'lodash';
 const { t } = useI18n();
 const FanStore = useFanStore();
 
@@ -130,6 +131,19 @@ const list = computed(() => {
 						legend: ['Used'],
 						data: [[FanStore.data.cpu_temperature / 100]],
 						unit: 'RPM'
+					}
+				},
+				{
+					title: t('FAN_OP.POWER'),
+					value: FanStore.cpuData.cpu_power,
+					unit: 'W',
+					colorStops: [0, FanStore.cpuwarningRatio, 0.8],
+					ProgressChartData: {
+						legend: ['Used'],
+						data: [
+							[FanStore.cpuData.cpu_power / FanStore.cpuData.cpu_power_limit]
+						],
+						unit: 'W'
 					}
 				},
 				{
@@ -188,6 +202,7 @@ const list = computed(() => {
 		}
 	];
 });
+
 const fetchData = () => {
 	//
 };

@@ -145,7 +145,8 @@ export const useDockerStore = defineStore('studio-docker', {
 					title: appStore.current_app?.title,
 					exposePorts,
 					requiredGpu: item.requiredGpu,
-					gpuVendor
+					gpuVendor,
+					sshEnable: item.sshEnable
 				}
 			);
 		},

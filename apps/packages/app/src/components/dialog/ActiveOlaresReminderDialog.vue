@@ -15,6 +15,7 @@
 			v-model="host"
 			:options="olaresTunnelsV2Options()"
 			:border="true"
+			max-height="200px"
 			color="text-blue-default"
 		/>
 	</bt-custom-dialog>

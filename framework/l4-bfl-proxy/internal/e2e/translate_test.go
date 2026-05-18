@@ -189,6 +189,59 @@ func TestE2E_UDPPort(t *testing.T) {
 	runE2E(t, "udp-port", resources)
 }
 
+// TestE2E_SharedAppOpenToAllUsers exercises the v3 / shared-app routing
+// end-to-end: every user — admin and normal — reaches the same shared
+// upstream cluster. Shared apps no longer carry a 403 gate.
+func TestE2E_SharedAppOpenToAllUsers(t *testing.T) {
+	sharedApp := func(owner string) *message.AppInfo {
+		return &message.AppInfo{
+			Name:      "shareme",
+			Appid:     "shareme",
+			Namespace: "shareme-shared",
+			Owner:     owner,
+			IsShared:  true,
+			Entrances: []*message.EntranceInfo{
+				{Name: "web", Host: "shareme-svc", Port: 8080},
+			},
+		}
+	}
+	resources := &message.Resources{
+		Users: []*message.UserInfo{
+			{
+				Name:              "admin",
+				Namespace:         "user-space-admin",
+				Zone:              "snowinning.com",
+				IsEphemeral:       false,
+				DenyAll:           false,
+				ServerNameDomains: []string{"admin.snowinning.com"},
+				SSL:               &message.SSLConfig{Zone: "admin.snowinning.com", CertData: "cert-admin", KeyData: "key-admin"},
+				Apps:              []*message.AppInfo{sharedApp("admin")},
+			},
+			{
+				Name:              "alice",
+				Namespace:         "user-space-alice",
+				Zone:              "snowinning.com",
+				IsEphemeral:       false,
+				DenyAll:           false,
+				ServerNameDomains: []string{"alice.snowinning.com"},
+				SSL:               &message.SSLConfig{Zone: "alice.snowinning.com", CertData: "cert-alice", KeyData: "key-alice"},
+				Apps:              []*message.AppInfo{sharedApp("admin")},
+			},
+			{
+				Name:              "bob",
+				Namespace:         "user-space-bob",
+				Zone:              "snowinning.com",
+				IsEphemeral:       false,
+				DenyAll:           false,
+				ServerNameDomains: []string{"bob.snowinning.com"},
+				SSL:               &message.SSLConfig{Zone: "bob.snowinning.com", CertData: "cert-bob", KeyData: "key-bob"},
+				Apps:              []*message.AppInfo{sharedApp("admin")},
+			},
+		},
+	}
+	runE2E(t, "shared-app-open", resources)
+}
+
 // ---------------------------------------------------------------------------
 // pipeline runner + golden file comparison
 // ---------------------------------------------------------------------------

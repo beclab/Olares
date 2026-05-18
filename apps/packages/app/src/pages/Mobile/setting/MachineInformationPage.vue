@@ -72,7 +72,7 @@
 							class="item-width item-padding item-padding-y item-border column justify-center"
 						>
 							<div class="text-subtitle2 text-ink-1">
-								{{ t('Memroy') }}
+								{{ t('Memory') }}
 							</div>
 							<div class="text-body3 text-ink-3">
 								{{ mdnsStore.activedMachine.status.memory || '--' }}

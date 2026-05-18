@@ -1,4 +1,5 @@
-import { getFileIcon, getFileType } from '@bytetrade/core';
+import { getFileIcon, getFileTypeI18nKey } from '@bytetrade/core';
+import { i18n } from 'src/boot/i18n';
 import axios from 'axios';
 import { useUserStore } from 'src/stores/user';
 import {
@@ -7,9 +8,8 @@ import {
 	SearchV2Type
 } from 'src/utils/interface/search';
 
-import { dataAPIs, filesIsV1, common } from 'src/api/files';
+import { dataAPIs } from 'src/api/files';
 import { driveTypeBySearchPathV2 } from '../files/v2/common/common';
-import { dataAPIs as dataAPIsV2 } from 'src/api/files/v2';
 import { getApplication } from 'src/application/base';
 import { appendPath } from '../files/v2/path';
 import { driveTypeByFileTypeAndFileExtend } from 'src/api/files/v2/common/common';
@@ -64,7 +64,11 @@ export const searchMore = async (
 };
 
 export const searchCancel = async (reqid: string): Promise<void> => {
-	await axios.post(searchBaseUrl() + '/api/search/cancel', { reqid });
+	try {
+		await axios.post(searchBaseUrl() + '/api/search/cancel', { reqid });
+	} catch (error) {
+		console.log('error--->', error);
+	}
 };
 
 const paramSearchResult = (res: TextSearchItem[]) => {
@@ -72,24 +76,16 @@ const paramSearchResult = (res: TextSearchItem[]) => {
 
 	for (let i = 0; i < res.length; i++) {
 		const el = res[i];
-		el.fileType = getFileType(el.title);
+		el.fileType = i18n.global.t(getFileTypeI18nKey(el.title));
 		el.fileIcon = getFileIcon(el.title);
 		if (el.resource_uri) {
-			if (filesIsV1()) {
-				el.driveType = common().driveTypeBySearchPath(el.resource_uri);
-			} else {
-				el.driveType = driveTypeBySearchPathV2(el.resource_uri);
-			}
+			el.driveType = driveTypeBySearchPathV2(el.resource_uri);
 			if (el.driveType) {
-				if (filesIsV1()) {
-					el.isDir = el.resource_uri.endsWith('/');
-					const path = dataAPIs(el.driveType).formatSearchPath(el.resource_uri);
-					el.path = path;
-				} else {
-					const meta = dataAPIsV2(el.driveType).pathToFrontendFile(
+				if (!el.resource_uri.startsWith('http')) {
+					const meta = dataAPIs(el.driveType).pathToFrontendFile(
 						appendPath('/', el.resource_uri)
 					);
-					const path = dataAPIsV2(el.driveType).displayPath({
+					const path = dataAPIs(el.driveType).displayPath({
 						isDir: meta.isDir,
 						fileExtend: meta.fileExtend,
 						path: meta.path,
@@ -97,6 +93,8 @@ const paramSearchResult = (res: TextSearchItem[]) => {
 					});
 					el.isDir = meta.isDir;
 					el.path = path;
+				} else {
+					el.path = el.resource_uri;
 				}
 			} else {
 				el.path = el.resource_uri;
@@ -135,7 +133,7 @@ export const syncSearch = async (
 };
 
 const syncSearchItemFormat = (id: string, data: any, query: string) => {
-	const fileType = getFileType(data.title) || 'blob';
+	const fileType = i18n.global.t(getFileTypeI18nKey(data.title)) || 'blob';
 	const fileIcon = getFileIcon(data.title) || 'other';
 
 	const driveType = driveTypeByFileTypeAndFileExtend(
@@ -153,7 +151,7 @@ const syncSearchItemFormat = (id: string, data: any, query: string) => {
 			appendPath('/Seahub', data.repo_name, data.path, isDir ? '/' : '') +
 			`?id=${data.file_extend}`;
 	} else if (driveType == DriveType.Share) {
-		path = dataAPIsV2(DriveType.Share).displayPath({
+		path = dataAPIs(DriveType.Share).displayPath({
 			isDir: isDir,
 			fileExtend: data.file_extend,
 			path: data.path,

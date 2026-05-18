@@ -1,0 +1,53 @@
+.vdr {
+	position: absolute;
+	box-sizing: border-box;
+}
+.vdr.active:before {
+	content: '';
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	box-sizing: border-box;
+	outline: 1px dashed #00000000;
+}
+.vdr-stick {
+	box-sizing: border-box;
+	position: absolute;
+	font-size: 1px;
+	border: 1px solid #00000000;
+	background: #00000000;
+	box-shadow: 0 0 2px #00000000;
+}
+.inactive .vdr-stick {
+	display: none;
+}
+.vdr-stick-tl,
+.vdr-stick-br {
+	cursor: nwse-resize;
+}
+.vdr-stick-tm,
+.vdr-stick-bm {
+	left: 50%;
+	cursor: ns-resize;
+}
+.vdr-stick-tr,
+.vdr-stick-bl {
+	cursor: nesw-resize;
+}
+.vdr-stick-ml,
+.vdr-stick-mr {
+	top: 50%;
+	cursor: ew-resize;
+}
+.vdr-stick.not-resizable {
+	display: none;
+}
+
+.content-container {
+	display: block;
+	position: relative;
+	overflow: hidden;
+	border-radius: 10px;
+}

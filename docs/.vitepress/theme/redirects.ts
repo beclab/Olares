@@ -39,6 +39,10 @@ export const redirects = {
     '/use-cases/ace-step': '/use-cases/ace-step-1.5',
     '/zh/use-cases/ace-step': '/zh/use-cases/ace-step-1.5',
 
+    // Refactor: openwebui-ollama → openwebui (merged: Ollama is now Option A in the unified quick start)
+    '/use-cases/openwebui-ollama': '/use-cases/openwebui',
+    '/zh/use-cases/openwebui-ollama': '/zh/use-cases/openwebui',
+
     // Refactor: /manual/concepts/** → /developer/concepts/**
     '/manual/system-architecture': '/developer/concepts/system-architecture',
     '/manual/concepts/': '/developer/concepts/',

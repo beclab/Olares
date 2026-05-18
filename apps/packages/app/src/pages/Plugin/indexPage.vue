@@ -17,7 +17,6 @@ import CommentArea from './CommentArea.vue';
 	left: 0;
 	top: 0;
 	// padding: 32px 20px 20px;
-	background: $white;
 	border-radius: 12px;
 }
 </style>

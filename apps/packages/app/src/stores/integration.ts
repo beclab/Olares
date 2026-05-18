@@ -3,6 +3,7 @@ import { axiosInstanceProxy } from 'src/platform/httpProxy';
 import { useUserStore } from './user';
 import { IntegrationAccount } from 'src/services/abstractions/integration/integrationService';
 import { AccountType, IntegrationAccountMiniData } from '@bytetrade/core';
+import { getApplication } from 'src/application/base';
 
 export type IntegrationState = {
 	accounts: IntegrationAccountMiniData[];
@@ -75,7 +76,7 @@ export const useIntegrationStore = defineStore('integration', {
 			}
 		},
 		clientFilesCloudSupportList() {
-			if (process.env.APPLICATION == 'FILES') {
+			if (getApplication().applicationName == 'files') {
 				return [AccountType.Google, AccountType.Dropbox, AccountType.AWSS3];
 			}
 
@@ -85,7 +86,7 @@ export const useIntegrationStore = defineStore('integration', {
 				return [];
 			}
 
-			if (process.env.APPLICATION == 'LAREPASS') {
+			if (getApplication().applicationName == 'larepass') {
 				return [AccountType.Google, AccountType.Dropbox, AccountType.AWSS3];
 			}
 

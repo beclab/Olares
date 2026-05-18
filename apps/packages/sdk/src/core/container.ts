@@ -139,7 +139,52 @@ export class PBES2Container extends BaseContainer {
 		await this._deriveAndSetKey(password);
 		// If this container has data already, make sure the derived key properly decrypts it.
 		if (this.encryptedData) {
-			await this.getData();
+			try {
+				await this.getData();
+			} catch (e) {
+				// Validation failed: the derived key does not decrypt the existing
+				// data, which means the password is wrong. Clear the bad key so the
+				// container does not stay in a "half-unlocked" state where
+				// `locked === false` but no data could actually be decrypted.
+				delete this._key;
+				throw e;
+			}
+		}
+	}
+
+	/**
+	 * Read-only password check. Derives a candidate key from `password` and
+	 * tries to decrypt the existing `encryptedData` with it, **without
+	 * touching `this._key` or any other container state**. Returns `true` if
+	 * the password matches the encrypted data, `false` otherwise.
+	 *
+	 * Use this instead of `unlock()` when you only need to verify the
+	 * password (e.g. before changing the master password) and don't want a
+	 * potentially wrong password to overwrite the currently active key.
+	 */
+	async verifyPassword(password: string): Promise<boolean> {
+		// No encrypted data yet → no previous password to verify against.
+		if (!this.encryptedData) {
+			return true;
+		}
+		// Without a salt we have never derived a real key for this container,
+		// so there is nothing meaningful to check against.
+		if (!this.keyParams.salt.length) {
+			return false;
+		}
+		try {
+			const candidateKey = await getProvider().deriveKey(
+				stringToBytes(password),
+				this.keyParams
+			);
+			await getProvider().decrypt(
+				candidateKey,
+				this.encryptedData,
+				this.encryptionParams
+			);
+			return true;
+		} catch {
+			return false;
 		}
 	}
 }

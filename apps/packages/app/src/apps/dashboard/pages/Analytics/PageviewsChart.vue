@@ -60,7 +60,7 @@ import { useRoute } from 'vue-router';
 import { dateFormatStr, dateRange } from './DatefilterState';
 import MylineChart2 from '@apps/control-panel-common/src/components/Charts/MylineChart2.vue';
 import QBtnToggleStyle from '@apps/control-panel-common/src/components/QBtnToggleStyle.vue';
-import { t } from '@apps/dashboard/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 interface Props {
 	data: any;
 	websiteId: string;

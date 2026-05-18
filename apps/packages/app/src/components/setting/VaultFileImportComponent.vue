@@ -95,8 +95,7 @@ const openImportVaultDialog = () => {
 
 <style scoped lang="scss">
 .adminBtn {
-	border: 1px solid $yellow;
-	background-color: $yellow;
+	background-color: $primary;
 	display: inline-block;
 	color: $grey-10;
 	padding: 7px 12px;
@@ -104,7 +103,7 @@ const openImportVaultDialog = () => {
 	cursor: pointer;
 
 	&:hover {
-		background-color: $yellow-3;
+		background-color: $theme-primary-hover;
 	}
 }
 </style>

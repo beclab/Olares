@@ -50,10 +50,11 @@ class CloudUpload implements OlaresCloudUploadTask {
 			return item;
 		}
 
-		await this.formatTransferData(item);
-		const transferStore = useTransfer2Store();
 		const dstDriveType = getUploadTaskDriveType(item);
 		const dataAPI = dataAPIs(dstDriveType);
+
+		await this.formatTransferData(item);
+		const transferStore = useTransfer2Store();
 
 		switch (item.status) {
 			case OlaresTaskStatus.RUNNING:
@@ -150,6 +151,8 @@ class CloudUpload implements OlaresCloudUploadTask {
 	}
 
 	private async formatTransferData(updatedTask: UploadTaskItem) {
+		updatedTask.dest = updatedTask.dest.replace(/\/\//g, '/');
+
 		const transferStore = useTransfer2Store();
 
 		const isDir = updatedTask.is_dir;
@@ -157,7 +160,6 @@ class CloudUpload implements OlaresCloudUploadTask {
 		const appendDestDir = appendPath(updatedTask.dest, isDir ? '/' : '');
 
 		const dstDriveType = getUploadTaskDriveType(updatedTask);
-		console.log('dstDriveType ===>', dstDriveType);
 
 		updatedTask.dest = (dataAPIs(dstDriveType) as OriginV2).formatCopyPath(
 			appendDestDir,

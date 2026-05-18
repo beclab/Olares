@@ -4,14 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/l4-bfl-proxy/internal/envoy"
 	"github.com/beclab/l4-bfl-proxy/internal/message"

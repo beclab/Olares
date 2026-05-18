@@ -50,7 +50,7 @@ onMounted(async () => {
 });
 
 const updateMaximized = async () => {
-	if ($q.platform.is.electron && $q.platform.is.win) {
+	if ($q.platform.is.electron && ($q.platform.is.win || $q.platform.is.linux)) {
 		maximized.value = await window.electron.api.windows.isMaximized();
 	}
 };

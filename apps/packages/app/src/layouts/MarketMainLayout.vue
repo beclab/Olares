@@ -221,17 +221,21 @@
 			</q-layout>
 		</template>
 	</adaptive-layout>
+
+	<status-monitor-float v-if="showDebugMonitor" />
 </template>
 
 <script lang="ts" setup>
+import StatusMonitorFloat from 'src/pages/market/debug/StatusMonitorFloat.vue';
 import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
+import { bytetrade } from '@bytetrade/core';
 import { useSettingStore } from '@apps/market/src/stores/market/setting';
 import { useMenuStore } from '@apps/market/src/stores/market/menu';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { useCenterStore } from 'src/stores/market/center';
 import { TRANSACTION_PAGE } from '../constant/constants';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import globalConfig from 'src/api/market/config';
 import { SupportLanguageType } from 'src/i18n';
 import { SelectorProps } from 'src/constant';
@@ -252,6 +256,8 @@ const supportLanguages: SelectorProps[] = [
 	{ value: 'zh-CN', label: 'ZH' },
 	{ value: 'en-US', label: 'EN' }
 ];
+
+const showDebugMonitor = computed(() => route.query._dm === 'Olares');
 
 const onLanguagechange = (language: SupportLanguageType) => {
 	settingStore.languageUpdate(language);
@@ -372,31 +378,24 @@ watch(
 	}
 );
 
-// nsfw restore
-// watch(() => {
-//   return settingStore.restore
-// },(newValue) => {
-//   console.log('reload')
-//   if (newValue){
-//     keepAliveExclude.value = 'LogPage,InstalledPage,HomePage,DiscoverPage,CategoryPage,AppListPage,AppDetailPage'
-//   }else {
-//     keepAliveExclude.value = 'SearchPage,LogPage';
-//   }
-// })
-
 watch(
 	() => {
-		return menuStore.currentItem;
+		return settingStore.reload;
 	},
 	() => {
-		if (settingStore.restore) {
-			settingStore.restore = false;
+		if (settingStore.reload) {
+			location.reload();
 		}
 	}
 );
 
 onMounted(async () => {
 	updateMenu();
+	nextTick(() => {
+		bytetrade.observeUrlChange.childPostMessage({
+			type: 'locationHref'
+		});
+	});
 });
 
 const updateMenu = () => {
@@ -406,6 +405,27 @@ const updateMenu = () => {
 				menuStore.changeItemMenu(route.params.categories as string);
 			}
 			break;
+		case TRANSACTION_PAGE.List:
+			if (route.params?.categories) {
+				menuStore.changeItemMenu(route.params.categories as string);
+			} else {
+				menuStore.changeItemMenu(TRANSACTION_PAGE.All);
+			}
+			break;
+		case TRANSACTION_PAGE.TOPIC:
+			if (route.params?.category) {
+				menuStore.changeItemMenu(route.params.category as string);
+			} else {
+				menuStore.changeItemMenu(TRANSACTION_PAGE.All);
+			}
+			break;
+		case TRANSACTION_PAGE.App:
+		case TRANSACTION_PAGE.Preview:
+		case TRANSACTION_PAGE.Version:
+			if (typeof route.query.menuItem === 'string' && route.query.menuItem) {
+				menuStore.changeItemMenu(route.query.menuItem);
+			}
+			break;
 		case TRANSACTION_PAGE.All:
 		case TRANSACTION_PAGE.MyTerminus:
 		case TRANSACTION_PAGE.Search:
@@ -413,6 +433,7 @@ const updateMenu = () => {
 			menuStore.changeItemMenu(route.name);
 			break;
 		case TRANSACTION_PAGE.Preference:
+		case TRANSACTION_PAGE.Log:
 			menuStore.changeItemMenu(TRANSACTION_PAGE.MyTerminus);
 			break;
 	}
@@ -506,7 +527,7 @@ const installOS = async () => {
 }
 
 .main-layout ::v-deep(.my-active-link) {
-	color: $blue-default !important;
-	background-color: $blue-soft !important;
+	color: $theme-menu-color-hover !important;
+	background-color: $theme-menu-bg-hover !important;
 }
 </style>

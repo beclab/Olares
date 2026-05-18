@@ -48,7 +48,7 @@ Follow these steps if your device and your Olares One are on the same local netw
 This password logs you in to the Olares One host system over SSH. It's different from the password you use to sign in to the Olares Desktop in your browser.
 :::
 
-<!--@include: ./reusables-reset-ssh.md{7,17}-->
+<!--@include: ./reusables-reset-ssh.md#reset-ssh-upon-activation-->
 
 ### Step 3: Connect via SSH
 
@@ -83,7 +83,7 @@ If your device is not on the same local network as your Olares One, use LarePass
 
 ### Step 3: Get the login password from Vault
 
-<!--@include: ./reusables-reset-ssh.md{7,17}-->
+<!--@include: ./reusables-reset-ssh.md#reset-ssh-upon-activation-->
 
 ### Step 4: Connect via SSH
 
@@ -104,4 +104,4 @@ If **Subnet routes** is enabled in **Settings** > **VPN**, all devices on Olares
 :::
 
 ## Reset SSH password
-<!--@include: ./reusables-reset-ssh.md{19,}-->
+<!--@include: ./reusables-reset-ssh.md#reset-ssh-in-settings-->

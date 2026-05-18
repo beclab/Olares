@@ -28,7 +28,6 @@
 		>
 			<confirm-button
 				style="width: 45%"
-				bg-classes="bg-white"
 				:btn-title="t('reject')"
 				@onConfirm="rejectAction"
 				class="button-cancel"
@@ -130,7 +129,7 @@ const approveAction = async () => {
 			});
 		}
 
-		await resolveApproval();
+		await resolveApproval(undefined, undefined, '/items');
 	} else {
 		await resolveApproval();
 	}

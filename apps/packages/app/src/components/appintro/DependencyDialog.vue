@@ -21,8 +21,8 @@
 
 <script lang="ts" setup>
 import RecommendAppCard from 'src/components/appcard/RecommendAppCard.vue';
+import { usePreCheckStore } from 'src/stores/market/preCheck';
 import { useCenterStore } from 'src/stores/market/center';
-import { useUserStore } from 'src/stores/market/user';
 import { Dependency } from 'src/constant/constants';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -38,7 +38,7 @@ const props = defineProps({
 	}
 });
 
-const userStore = useUserStore();
+const preCheckStore = usePreCheckStore();
 const centerStore = useCenterStore();
 const dependencies = ref<Dependency[]>([]);
 const onDialogOK = () => {
@@ -50,7 +50,7 @@ const customRef = ref();
 onMounted(() => {
 	const fullInfo = centerStore.getAppFullInfo(props.appName, props.sourceId);
 	if (fullInfo) {
-		dependencies.value = userStore.getUnInstallDependencies(
+		dependencies.value = preCheckStore.getUnInstallDependencies(
 			fullInfo.app_info?.app_entry
 		);
 	}

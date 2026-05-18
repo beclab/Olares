@@ -73,7 +73,7 @@ You can view, pause, or cancel the download tasks in **Transfer** > **Download**
 </template>
 </Tabs>
 
-<!--@include: ../../reusables/sync-files.md{8,50}-->
+<!--@include: ../../reusables/sync-files.md#sync-files-to-local-->
 
 ## Delete files
 :::warning

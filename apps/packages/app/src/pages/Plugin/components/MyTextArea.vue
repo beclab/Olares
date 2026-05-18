@@ -18,7 +18,7 @@ const handleEnter = (event: KeyboardEvent) => {
 	if (event.ctrlKey) {
 		emit('update:modelValue', text.value + '\n');
 	} else {
-		// 在这里调用提交函数（假设为 submit 方法）
+		// Trigger submit behavior here.
 		event.preventDefault();
 		emit('update:modelValue', text.value);
 		emit('submit', text.value);

@@ -10,13 +10,6 @@
 				class="absolute-center"
 				btnHidden
 			></EmptyData>
-			<!-- <EmptyData
-				v-else-if="collectSiteStore.dataEmpty"
-				title="Oops! Connection Lost"
-				subtitle="Check your network or try again later."
-				class="absolute-center"
-				@click="getInfo"
-			></EmptyData> -->
 			<CollectionContent v-else></CollectionContent>
 		</div>
 		<EmptyUninstallWise v-else></EmptyUninstallWise>
@@ -45,7 +38,8 @@ import PageCard from 'src/pages/Plugin/components/PageCard.vue';
 import EmptyUninstallWise from 'src/pages/Plugin/components/EmptyUninstallWise.vue';
 import {
 	createTabChangeListenerInCurrentWindow,
-	getCurrentTabInfo
+	getCurrentTabInfo,
+	TAB_CHANGE_TYPE
 } from 'src/utils/bex/tabs';
 import { COLLECT_THEME } from 'src/constant/provide';
 import { BEX_COLLECT_THEME } from 'src/constant/theme';
@@ -100,11 +94,8 @@ const handleTabInfo = (tab) => {
 	}
 };
 
-const handleActivated = async (activeInfo) => {
-	const tab = await browser.tabs.get(activeInfo.tabId);
-	setTimeout(() => {
-		handleTabInfo(tab);
-	}, 300);
+const handleActivated = async (tab) => {
+	handleTabInfo(tab);
 };
 
 onMounted(async () => {
@@ -122,12 +113,20 @@ onMounted(async () => {
 	}
 
 	listener = createTabChangeListenerInCurrentWindow(async (info) => {
-		handleActivated(info);
+		if (info.type === TAB_CHANGE_TYPE.STATUS_CHANGE) {
+			return;
+		}
 
-		const tab2 = await browser.tabs.get(info.tabId);
+		let tab = info.tab;
+		if (!tab) {
+			tab = await browser.tabs.get(info.tabId);
+		}
+
+		handleActivated(tab);
+
 		if (userStore.current_user?.name) {
 			browserCookieStore.init(
-				tab2,
+				tab,
 				userStore.current_user?.name.split('@')[0],
 				url
 			);

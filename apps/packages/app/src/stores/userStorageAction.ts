@@ -12,7 +12,8 @@ type UserStorageSaveType =
 	| 'passwordReseted'
 	| 'defaultDomain'
 	| 'transferOnlyWifi'
-	| 'upgradeIncludeRC';
+	| 'upgradeIncludeRC'
+	| 'temporaryLockUsers';
 
 export const userModeGetItem = async (key: UserStorageSaveType) => {
 	return await getAppPlatform().userStorage.getItem(key);

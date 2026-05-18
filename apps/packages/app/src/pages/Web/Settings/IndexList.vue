@@ -1,5 +1,5 @@
 <template>
-	<q-page class="column setting bg-white" :style-fn="myTweak">
+	<q-page class="column setting" :style-fn="myTweak">
 		<div class="row items-center q-ml-lg" style="margin-bottom: 20px">
 			<BtIcon src="settings" />
 			<q-toolbar-title>{{ t('setting') }}</q-toolbar-title>
@@ -64,6 +64,15 @@ const { t } = useI18n();
 
 		&.itemActive {
 			border-left: 2px solid $blue;
+		}
+	}
+	.bg-blue-1-hover {
+		border-left: 2px solid $blue-1;
+
+		&:hover {
+			border-left: 2px solid $blue-1;
+			background-color: $blue-1;
+			opacity: 1;
 		}
 	}
 }

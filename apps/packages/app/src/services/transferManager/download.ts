@@ -112,16 +112,16 @@ class DownloadTransferType implements TransferBaseType {
 		if (!item.id) {
 			return;
 		}
-
+		const store = useTransfer2Store();
 		let result = false;
 		if (item.isFolder) {
 			await this.pauseOrResumeFolderTask(item);
+			delete store.taskCurrentSingleFiles[TransferFront.download][item.id];
 			result = true;
 		} else {
-			result = await TransferClient.client.uploader.pause(item);
+			result = await TransferClient.client.downloader.pause(item);
 		}
 
-		const store = useTransfer2Store();
 		if (result) {
 			await store.pausedOrResumeTaskStatus(item.id, true);
 			await store.updateTaskStatus(item.id, TransferStatus.Pending);

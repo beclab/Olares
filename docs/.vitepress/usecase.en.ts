@@ -42,6 +42,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "Hermes Agent",
+              link: "/use-cases/hermes",  
+            },             
+            {
               text: "OpenCode",
               link: "/use-cases/opencode",
               collapsed: true,
@@ -66,15 +70,28 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Open WebUI",
+              link: "/use-cases/openwebui",
               collapsed: true,
               items: [
                 {
-                  text: "Set up with model apps",
-                  link: "/use-cases/openwebui",
+                  text: "Set up multi-user access",
+                  link: "/use-cases/openwebui-multiuser",
                 },
                 {
-                  text: "Set up with Ollama",
-                  link: "/use-cases/openwebui-ollama",
+                  text: "Configure voice interactions",
+                  link: "/use-cases/openwebui-audio",
+                },
+                {
+                  text: "Enable web search",
+                  link: "/use-cases/openwebui-search",
+                },
+                {
+                  text: "Query documents in chat",
+                  link: "/use-cases/openwebui-knowledge",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/openwebui-common-issues",
                 },
               ]
             },
@@ -203,7 +220,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "TensorZero",
               link: "/use-cases/tensorzero",
-            },            
+            },           
             // {
             //   text: "DeerFlow",
             //   link: "/use-cases/deerflow",

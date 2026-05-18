@@ -1,5 +1,5 @@
 <template>
-	<div class="row items-center justify-between">
+	<div class="row justify-between">
 		<terminus-edit
 			:inputHeight="40"
 			class="q-mr-md"
@@ -7,6 +7,12 @@
 			:modelValue="modelValue"
 			@update:modelValue="$emit('update:modelValue', $event)"
 			:show-password-img="false"
+			:is-error="
+				modelValue != undefined &&
+				modelValue.length > 0 &&
+				modelValue.length < props.passwordLength
+			"
+			:error-message="passwordRule(modelValue || '')"
 		>
 			<template v-slot:right v-if="copy">
 				<div
@@ -74,6 +80,14 @@ const copyPassword = () => {
 			notifySuccess(t('copy_successfully'));
 		});
 };
+
+const passwordRule = (val: string) => {
+	if (val.length < props.passwordLength)
+		return t('errors.at_least_number_digits_long', {
+			number: props.passwordLength
+		});
+	return '';
+};
 </script>
 
 <style scoped lang="scss">
@@ -83,6 +97,7 @@ const copyPassword = () => {
 	border-radius: 8px;
 	height: 40px;
 	cursor: pointer;
+	margin-top: 4px;
 
 	-webkit-tap-highlight-color: transparent;
 	background-color: transparent;

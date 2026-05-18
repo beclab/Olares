@@ -66,7 +66,7 @@
 				<permission-request
 					v-if="systemEnvsPermission.length > 0"
 					name="sym_r_stacks"
-					:title="t('Using System Environment Variables')"
+					:title="t('Using System environment variables')"
 					:nodes="systemEnvsPermission"
 				/>
 

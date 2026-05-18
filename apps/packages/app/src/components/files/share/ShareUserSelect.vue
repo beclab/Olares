@@ -183,11 +183,11 @@ const usersOptions = computed(() => {
 	}
 
 	.terminus_input_border_editing {
-		border: 1px solid $blue-default;
+		border: 1px solid $theme-input-focus-border;
 	}
 
 	.terminus_input_border_edit_error {
-		border: 1px solid $red;
+		border: 1px solid $negative;
 	}
 
 	&__label {

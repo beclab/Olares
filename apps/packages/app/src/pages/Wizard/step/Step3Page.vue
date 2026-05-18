@@ -52,11 +52,10 @@
 
 <script lang="ts" setup>
 import { useQuasar } from 'quasar';
-import { onMounted, ref } from 'vue';
+import { onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTokenStore } from '../../../stores/wizard-step';
 
-import NeedFrpDialog from './../components/NeedFrpDialog.vue';
 import NotNeedFrpDialog from '../components/NotNeedFrpDialog.vue';
 
 const { t } = useI18n();

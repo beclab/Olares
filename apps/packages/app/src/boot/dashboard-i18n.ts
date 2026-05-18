@@ -23,7 +23,7 @@ declare module 'vue-i18n' {
 }
 /* eslint-enable @typescript-eslint/no-empty-interface */
 
-const i18n = createI18n<{ message: MessageLanguages }, MessageLanguages>({
+const i18n = createI18n({
 	locale: locale,
 	legacy: false,
 	fallbackLocale: 'en-US',
@@ -38,4 +38,4 @@ export default boot(({ app }) => {
 
 const { t } = i18n.global;
 
-export { t };
+export { t, i18n };

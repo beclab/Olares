@@ -27,6 +27,8 @@ import WebCryptoProviderLocal from '@didvault/sdk/src/localcrypto';
 // import { i18n } from 'src/boot/i18n';
 import { translate as $l } from '@didvault/sdk/src/util';
 
+import { copyToClipboard } from 'quasar';
+
 let publicKey: RSAPublicKey;
 
 const browserInfo = (async () => {
@@ -35,8 +37,6 @@ const browserInfo = (async () => {
 
 export class WebPlatform extends StubPlatform implements Platform {
 	private _clipboardTextArea: HTMLTextAreaElement;
-	private _qrVideo: HTMLVideoElement;
-	private _qrCanvas: HTMLCanvasElement;
 
 	constructor() {
 		super();
@@ -62,27 +62,7 @@ export class WebPlatform extends StubPlatform implements Platform {
 	// Set clipboard text using `document.execCommand("cut")`.
 	// NOTE: This only works in certain environments like Google Chrome apps with the appropriate permissions set
 	async setClipboard(text: string): Promise<void> {
-		this._clipboardTextArea =
-			this._clipboardTextArea || document.createElement('textarea');
-		this._clipboardTextArea.contentEditable = 'true';
-		this._clipboardTextArea.readOnly = false;
-		this._clipboardTextArea.value = text;
-		document.body.appendChild(this._clipboardTextArea);
-		const range = document.createRange();
-		range.selectNodeContents(this._clipboardTextArea);
-
-		const s = window.getSelection();
-		s!.removeAllRanges();
-		s!.addRange(range);
-		this._clipboardTextArea.select();
-
-		this._clipboardTextArea.setSelectionRange(
-			0,
-			this._clipboardTextArea.value.length
-		);
-
-		document.execCommand('cut');
-		document.body.removeChild(this._clipboardTextArea);
+		return await copyToClipboard(text);
 	}
 
 	// Get clipboard text using `document.execCommand("paste")`
@@ -137,93 +117,6 @@ export class WebPlatform extends StubPlatform implements Platform {
 					  }),
 			runtime: 'web'
 		});
-	}
-
-	async scanQR() {
-		return new Promise<string>((resolve, reject) => {
-			const tick = async () => {
-				if (this._qrVideo.readyState !== this._qrVideo.HAVE_ENOUGH_DATA) {
-					requestAnimationFrame(() => tick());
-					return;
-				}
-
-				const { default: jsQR } = await import(
-					/* webpackChunkName: "jsqr" */ 'jsqr'
-				);
-
-				const canvas = this._qrCanvas.getContext('2d')!;
-				this._qrCanvas.height = this._qrVideo.videoHeight;
-				this._qrCanvas.width = this._qrVideo.videoWidth;
-				canvas.drawImage(
-					this._qrVideo,
-					0,
-					0,
-					this._qrCanvas.width,
-					this._qrCanvas.height
-				);
-				const imageData = canvas.getImageData(
-					0,
-					0,
-					this._qrCanvas.width,
-					this._qrCanvas.height
-				);
-				const code = jsQR(imageData.data, imageData.width, imageData.height, {
-					inversionAttempts: 'dontInvert'
-				});
-				if (code) {
-					resolve(code.data);
-				}
-				requestAnimationFrame(() => tick());
-			};
-
-			if (!this._qrVideo) {
-				this._qrVideo = document.createElement('video');
-				this._qrVideo.setAttribute('playsinline', '');
-				this._qrVideo.setAttribute('muted', '');
-				this._qrVideo.setAttribute('autoplay', '');
-			}
-
-			if (!this._qrCanvas) {
-				this._qrCanvas = document.createElement('canvas');
-				Object.assign(this._qrCanvas.style, {
-					position: 'absolute',
-					top: '0',
-					left: '0',
-					width: '100%',
-					height: '100%',
-					objectFit: 'cover',
-					zIndex: '-1'
-				});
-				document.body.appendChild(this._qrCanvas);
-			}
-
-			this._qrCanvas.style.display = 'block';
-
-			navigator.mediaDevices
-				.getUserMedia({
-					audio: false,
-					video: { facingMode: 'environment' }
-				})
-				.then((stream) => {
-					// Use facingMode: environment to attemt to get the front camera on phones
-					this._qrVideo.srcObject = stream;
-					this._qrVideo.play();
-					requestAnimationFrame(() => tick());
-				}, reject);
-		});
-	}
-
-	async stopScanQR() {
-		const stream: MediaStream | null =
-			this._qrVideo && (this._qrVideo.srcObject as MediaStream);
-		if (stream) {
-			for (const track of stream.getTracks()) {
-				track.stop();
-			}
-		}
-
-		this._qrVideo && (this._qrVideo.srcObject = null);
-		this._qrCanvas.style.display = 'none';
 	}
 
 	async composeEmail(addr: string, subj: string, msg: string) {
@@ -390,7 +283,7 @@ export class WebPlatform extends StubPlatform implements Platform {
 		if (!data) {
 			throw new Err(
 				ErrorCode.AUTHENTICATION_FAILED,
-				$l('The request was canceled.')
+				$l('The request was canceled')
 			);
 		}
 

@@ -1,7 +1,7 @@
 import { DriveDataAPI } from './../index';
 import { getFileIcon } from '@bytetrade/core';
 import { formatGd } from './filesFormat';
-import { createURL, getPurePath } from '../utils';
+import { createURL, decodeURIComponentSafe, getPurePath } from '../utils';
 
 import {
 	FileItem,
@@ -258,12 +258,8 @@ export default class TencentDataAPI extends DriveDataAPI {
 			size: thumb
 		};
 
-		let path = files.tencentRemovePrefix(pathSplit);
-		try {
-			path = decodeURIComponent(path);
-		} catch (error) {
-			/* empty */
-		}
+		const path = decodeURIComponentSafe(files.tencentRemovePrefix(pathSplit));
+
 		return createURL(files.tencentCommonUrl('preview', path), params);
 	}
 
@@ -271,12 +267,7 @@ export default class TencentDataAPI extends DriveDataAPI {
 		const params = {
 			...(inline && { inline: 'true' })
 		};
-		let path = files.tencentRemovePrefix(file.path);
-		try {
-			path = decodeURIComponent(path);
-		} catch (error) {
-			/* empty */
-		}
+		const path = decodeURIComponentSafe(files.tencentRemovePrefix(file.path));
 		const url = createURL(files.tencentCommonUrl('raw', path), params);
 		return url;
 	}
@@ -357,12 +348,23 @@ export default class TencentDataAPI extends DriveDataAPI {
 			...(inline && { inline: 'true' }),
 			src: DriveType.Tencent
 		};
-		const url = createURL('api/raw/Drive' + file.path, params);
+		const url = createURL(
+			'api/raw/Drive' + decodeURIComponentSafe(file.path),
+			params
+		);
 		return url;
 	}
 
 	formatTransferToFileItem(item: TransferItem): FileItem {
 		const extension = getextension(item.name);
+		const account = item.path.split('/')[3];
+		const path = files.tencentRemoveHomePrefix(item.path);
+		const oPath = path.split('/').slice(2).join('/');
+		const oParentPath = oPath.substring(
+			0,
+			oPath.length - item.name.length - (item.path.endsWith('/') ? 1 : 0)
+		);
+
 		const res: FileItem = {
 			extension,
 			isDir: item.isFolder,
@@ -379,7 +381,10 @@ export default class TencentDataAPI extends DriveDataAPI {
 			url: item.url || '',
 			driveType: item.driveType!,
 			param: '',
-			fileExtend: 'tencent'
+			fileExtend: account,
+			fileType: 'tencent',
+			oPath,
+			oParentPath
 		};
 		return res;
 	}

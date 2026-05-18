@@ -10,14 +10,7 @@
 	>
 		<app-icon :src="appIcon" :size="56" :cs-app="clusterScopedApp" />
 		<div class="app-card-right row justify-between items-center">
-			<div
-				class="app-card-text column justify-center"
-				:style="
-					globalConfig.isOfficial
-						? 'width: calc(100% - 22px);'
-						: 'width: calc(100% - 108px - 22px);'
-				"
-			>
+			<div class="app-card-text column justify-center" :style="textAreaStyle">
 				<div class="app-card-title text-subtitle2 text-ink-1">
 					{{ appTitle }}
 				</div>
@@ -31,7 +24,7 @@
 				:layout="layout"
 				:larger="deviceStore.isMobile"
 				:version="appVersion"
-				:app-name="appName"
+				:app-name="appName || ''"
 				:source-id="sourceId"
 				:image-size="imageSize"
 			/>
@@ -61,6 +54,7 @@ import AppIcon from '../../components/appcard/AppIcon.vue';
 import { useDeviceStore } from 'src/stores/settings/device';
 import globalConfig from '../../api/market/config';
 import useAppCard from './useAppCard';
+import { computed } from 'vue';
 
 const props = defineProps({
 	appName: {
@@ -89,6 +83,13 @@ const props = defineProps({
 	}
 });
 const deviceStore = useDeviceStore();
+const textAreaStyle = computed(() => {
+	if (globalConfig.isOfficial) {
+		return 'flex: 1; min-width: 0; width: auto;';
+	}
+	const buttonWidth = deviceStore.isMobile ? 108 : 88;
+	return `flex: 1; min-width: 0; width: auto; max-width: calc(100% - ${buttonWidth}px - 8px);`;
+});
 
 const {
 	appAggregation,
@@ -113,11 +114,13 @@ defineExpose({ goAppDetails });
 		width: calc(100% - 56px);
 		height: 100%;
 		position: relative;
+		min-width: 0;
 
 		.app-card-text {
 			height: 56px;
 			padding-right: 4px;
 			margin-left: 8px;
+			min-width: 0;
 
 			.app-card-title {
 				width: 100%;
@@ -125,12 +128,14 @@ defineExpose({ goAppDetails });
 				text-overflow: ellipsis;
 				display: -webkit-box;
 				-webkit-line-clamp: 1;
+				line-clamp: 1;
 				-webkit-box-orient: vertical;
 			}
 
 			.app-card-content {
 				@extend .app-card-title;
 				-webkit-line-clamp: 2;
+				line-clamp: 2;
 			}
 		}
 	}

@@ -1,5 +1,5 @@
 <template>
-	<page-title-component :show-back="false" :title="t('system')" />
+	<page-title-component :show-back="false" :title="t('home_menus.advanced')" />
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<bt-list first>
 			<bt-form-item
@@ -24,7 +24,7 @@
 			/>
 
 			<bt-form-item
-				:title="t('System Environment Variables')"
+				:title="t('System environment variables')"
 				@click="gotoPage('/developer/environment')"
 				:chevron-right="true"
 				:width-separator="false"

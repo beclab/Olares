@@ -89,16 +89,16 @@ export const useMonitorStore = defineStore('monitor', {
 			this.net = undefined;
 			this.status = TerminusStatus.ERROR;
 		},
-		async loadMonitor() {
+		async loadMonitor(forbiddenLocal = false) {
 			const userStore = useUserStore();
 			if (!userStore.current_user) {
 				this.clear();
-				return;
+				return false;
 			}
 
 			if (!userStore.current_user.setup_finished) {
 				this.clear();
-				return;
+				return false;
 			}
 
 			if (process.env.IS_PC_TEST) {
@@ -138,13 +138,13 @@ export const useMonitorStore = defineStore('monitor', {
 				this.usages.push(data.disk);
 				this.net = data.net;
 				this.status = TerminusStatus.NORMAL;
-				return;
+				return false;
 			}
 
 			try {
-				const response = await this.getMonitorInfo();
+				const response = await this.getMonitorInfo(forbiddenLocal);
 				if (!response) {
-					return;
+					return false;
 				}
 				if (
 					!response ||
@@ -162,6 +162,7 @@ export const useMonitorStore = defineStore('monitor', {
 							type: NetworkErrorMode.monitor
 						});
 					}
+					return false;
 				} else {
 					const data = response.data.data;
 					console.log('cpu', data);
@@ -184,23 +185,32 @@ export const useMonitorStore = defineStore('monitor', {
 
 					this.net = data.net;
 					this.status = TerminusStatus.NORMAL;
+					return true;
 				}
 			} catch (error) {
+				this.error();
 				busEmit('network_error', {
 					type: NetworkErrorMode.monitor
 				});
+				return false;
 			}
 		},
-		async getMonitorInfo() {
+		async getMonitorInfo(forbiddenLocal = false) {
 			const userStore = useUserStore();
 			if (userStore.current_user?.isLargeVersion12_3) {
-				const baseURL = userStore.getSelectUserModuleServer('settings');
+				const baseURL = userStore.getSelectUserModuleServer(
+					'settings',
+					undefined,
+					undefined,
+					forbiddenLocal ? false : true
+				);
 				if (baseURL) {
 					const instance = axiosInstanceProxy({
 						baseURL: baseURL,
 						timeout: 1000 * 10,
 						headers: {
-							'Content-Type': 'application/json'
+							'Content-Type': 'application/json',
+							'X-Authorization': userStore.current_user?.access_token || ''
 						}
 					});
 					return await instance.get('/api/users/monitor/cluster');
@@ -219,6 +229,17 @@ export const useMonitorStore = defineStore('monitor', {
 				});
 				return await instance.get('/bfl/monitor/v1alpha1/cluster', {});
 			}
+		},
+		async loadMonitors() {
+			const userStore = useUserStore();
+			if (!userStore.current_user?.isLocal) {
+				return await this.loadMonitor();
+			}
+			const result = await this.loadMonitor(false);
+			if (result) {
+				return;
+			}
+			await this.loadMonitor(true);
 		}
 	}
 });

@@ -1,13 +1,18 @@
 <template>
 	<div class="files-list-root">
 		<terminus-title-bar
-			:title="title"
+			:title="pageTitle"
 			:is-dark="isDark"
 			:hook-back-action="true"
 			@on-return-action="back"
 		>
 			<template v-slot:right>
-				<div class="row items-center" v-if="origin === 'dialog'">
+				<div
+					class="row items-center"
+					v-if="
+						props.origin_id != null && props.origin_id !== FilesIdType.PAGEID
+					"
+				>
 					<q-btn
 						class="text-ink-1 btn-size-sm btn-no-text btn-no-border"
 						icon="sym_r_close"
@@ -18,8 +23,7 @@
 				</div>
 			</template>
 		</terminus-title-bar>
-		<!-- :right-icon="rightIcon"
-			@on-right-click="showOperation" -->
+
 		<div class="content">
 			<div
 				v-if="store.loading"
@@ -38,17 +42,21 @@
 				v-else
 			/>
 		</div>
+
+		<add-files @addFile="addFile" />
 	</div>
 </template>
 
 <script lang="ts" setup>
 import { useDataStore } from '../../../stores/data';
 
-import { ref, onMounted, PropType } from 'vue';
+import { ref, onMounted, PropType, onUnmounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import Errors from '../../Files/Errors.vue';
 import ListingFiles from './ListingFiles.vue';
 import TerminusTitleBar from '../../../components/common/TerminusTitleBar.vue';
+import AddFiles from './AddFiles.vue';
 // import DirOperationDialog from './DirOperationDialog.vue';
 // import { useQuasar } from 'quasar';
 import {
@@ -58,13 +66,15 @@ import {
 	FileItem
 } from '../../../stores/files';
 import { seahub } from './../../../api';
-import { MenuItem } from '../../../utils/contact';
+import { MenuItem, OPERATE_ACTION } from '../../../utils/contact';
 import { syncFilesFormat } from './../../../api';
+import { useOperateinStore } from 'src/stores/operation';
+import { busOff, busOn } from 'src/utils/bus';
 
 const props = defineProps({
 	origin_id: {
 		type: Number,
-		required: true
+		required: false
 	},
 	selectType: {
 		type: String as PropType<PickType>,
@@ -80,14 +90,27 @@ const store = useDataStore();
 const filesStore = useFilesStore();
 const error = ref<any>(null);
 const route = useRoute();
+const { t } = useI18n();
 // const $q = useQuasar();
 
-const title = ref(route.query.name);
+const pageTitle = computed(() => {
+	const repo = route.params.repo as string | undefined;
+	if (repo === MenuItem.MYLIBRARIES || repo === MenuItem.SHAREDWITH) {
+		return t(`files_menu.${repo}`);
+	}
+	const qname = route.query.name as string | undefined;
+	if (qname) {
+		return t(`files_menu.${qname}`);
+	}
+	return t(`files_menu.${MenuItem.MYLIBRARIES}`);
+});
 
 // const rightIcon = ref('sym_r_more_horiz');
 
 const isDark = ref(false);
 const origin_id = ref(props.origin_id || FilesIdType.PAGEID);
+
+const operateinStore = useOperateinStore();
 
 if (!props.origin_id) {
 	filesStore.initIdState(origin_id.value);
@@ -116,6 +139,15 @@ const back = () => {
 };
 
 onMounted(async () => {
+	updateReposList();
+	busOn('reposUpdate', updateReposList);
+});
+
+onUnmounted(() => {
+	busOff('reposUpdate', updateReposList);
+});
+
+const updateReposList = async () => {
 	filesStore.currentFileList[origin_id.value] = undefined;
 	if (route.params.repo === MenuItem.MYLIBRARIES || origin_id.value) {
 		const res = await seahub().fetchMineRepo();
@@ -149,7 +181,18 @@ onMounted(async () => {
 			items: [...formatMineRes.items, ...formatSharedToMeRes.items]
 		};
 	}
-});
+};
+
+const addFile = () => {
+	operateinStore.handleFileOperate(
+		origin_id.value,
+		null,
+		route,
+		OPERATE_ACTION.CREATE_REPO,
+		filesStore.activeMenu(origin_id.value).driveType,
+		async () => {}
+	);
+};
 </script>
 
 <style lang="scss" scoped>

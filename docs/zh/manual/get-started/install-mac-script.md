@@ -13,7 +13,7 @@ Mac 版 Olares 目前存在以下限制：
 建议仅用于开发或测试环境。
 :::
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## 系统要求
 
@@ -41,9 +41,14 @@ Mac 版 Olares 目前存在以下限制：
 ## 安装 Olares
 在终端中运行以下命令：
 
-<!--@include: ./reusables.md{4,21}-->
+<!--@include: ./reusables.md#install-script-command-->
 
-## 配置 Wizard
+<!--@include: ./reusables.md#root-password-tip-->
+
+<!--@include: ./reusables.md#installation-error-tip-->
+
+<!--@include: ./reusables.md#prepare-wizard-heading-->
+
 在安装过程结束时，你需要提供下列信息：
 1. 检查 Mac 的 IP 地址（例如，`192.168.x.x`）。
 
@@ -54,10 +59,10 @@ Mac 版 Olares 目前存在以下限制：
    - 使用命令行：打开终端窗口，Wi-Fi 网络输入 `ipconfig getifaddr en0`，有线网络输入 `ipconfig getifaddr en1`。
    :::
 
-2. <!--@include: ./reusables.md{25,37}-->
+2. <!--@include: ./reusables.md#prepare-wizard-details-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

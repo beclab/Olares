@@ -10,7 +10,7 @@
 		<div
 			id="preview-previewer"
 			:class="{
-				'preview-safe-area': menuStore.useSafeArea || $q.platform.is.android,
+				'preview-safe-area': menuStore.useSafeArea,
 				'bg-dark-page': isDark,
 				'bg-white-page': !isDark
 			}"
@@ -55,6 +55,8 @@ import { busOn } from '../../../utils/bus';
 import { busOff } from '../../../utils/bus';
 import { dataAPIs } from '../../../api';
 import { useMenuStore } from '../../../stores/menu';
+import FileEpubPreview from '../../Files/common-files/FileEpubPreview.vue';
+import { txtReadonlyTypes } from '@bytetrade/core';
 
 const props = defineProps({
 	origin_id: {
@@ -104,7 +106,10 @@ watch(
 			newVal.type.toLowerCase() === 'textImmutable'
 		) {
 			store.preview.isEditEnable =
-				dataAPI.fileEditEnable && newVal.size <= dataAPI.fileEditLimitSize;
+				dataAPI.fileEditEnable &&
+				newVal.size <= dataAPI.fileEditLimitSize &&
+				!txtReadonlyTypes.includes(newVal.extension.replace('.', ''));
+
 			return (currentView.value = FileEditor);
 		} else {
 			rightIcon.value = '';
@@ -117,6 +122,8 @@ watch(
 				return (currentView.value = FileMediumPreview);
 			} else if (newVal.type.toLowerCase() == 'pdf') {
 				return (currentView.value = FilePDFPreview);
+			} else if (newVal.type.toLowerCase() === 'epub') {
+				return (currentView.value = FileEpubPreview);
 			}
 
 			return (currentView.value = FileUnavailable);
@@ -136,6 +143,8 @@ watch(
 			} else {
 				rightIcon.value = 'sym_r_edit_square';
 			}
+		} else {
+			rightIcon.value = '';
 		}
 	},
 	{ deep: true }

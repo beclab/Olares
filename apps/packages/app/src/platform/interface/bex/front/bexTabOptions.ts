@@ -12,14 +12,14 @@ export const tabbarItems = [
 		activeImage: 'home-highlight',
 		to: '/home'
 	},
-	{
-		name: 'collect',
-		identify: collectIdentify,
-		normalImage: 'collect',
-		hoverImage: 'collect-hover',
-		activeImage: 'collect-highlight',
-		to: '/collect'
-	},
+	// {
+	// 	name: 'collect',
+	// 	identify: collectIdentify,
+	// 	normalImage: 'collect',
+	// 	hoverImage: 'collect-hover',
+	// 	activeImage: 'collect-highlight',
+	// 	to: '/collect'
+	// },
 	{
 		name: 'translate',
 		identify: 'translate',

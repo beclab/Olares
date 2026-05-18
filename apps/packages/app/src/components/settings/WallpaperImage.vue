@@ -20,16 +20,26 @@
 				:src="src"
 				height="auto"
 				:width="`${width}px`"
-				:fit="imgContentModeRef"
+				:fit="imageFit"
 				:noSpinner="true"
 				:ratio="deviceStore.isMobile ? 6 / 11 : 16 / 9"
 				style="border-radius: 4px"
+			/>
+			<div
+				v-if="style === IMG_CONTENT_MODE.Tile"
+				:style="{
+					width: '300px',
+					height: '200px',
+					border: '1px solid #eee',
+					backgroundImage: `url(${src})`,
+					backgroundRepeat: 'repeat',
+					backgroundSize: '80px 80px'
+				}"
 			/>
 		</div>
 		<div class="row items-center justify-center">
 			<slot name="legend" />
 		</div>
-		{{ deleteEnable }}
 		<div
 			v-if="deleteEnable"
 			class="delete row items-center justify-center"
@@ -45,14 +55,15 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
-import { imgContentModes } from 'src/constant/index';
 import { useDeviceStore } from 'src/stores/settings/device';
+import { IMG_CONTENT_MODE } from 'src/constant';
 const deviceStore = useDeviceStore();
+import { computed, ref } from 'vue';
 
-defineProps({
+const props = defineProps({
 	width: Number,
 	src: String,
+	style: String,
 	padding: {
 		type: Number,
 		default: 4
@@ -78,11 +89,18 @@ defineProps({
 	}
 });
 
-const imgContentModeRef = ref(imgContentModes[0]);
 const emits = defineEmits(['deleteI']);
 const deleteAction = () => {
 	emits('deleteI');
 };
+const imageFit = computed(() => {
+	if (props.style === IMG_CONTENT_MODE.Stretch) {
+		return 'fill';
+	} else if (props.style === IMG_CONTENT_MODE.Fill) {
+		return 'cover';
+	}
+	return 'fill';
+});
 </script>
 
 <style scoped lang="scss">

@@ -1,3 +1,5 @@
+import { FilesSortType } from '../contact';
+
 export enum DriveType {
 	Drive = 'drive',
 	Sync = 'sync',
@@ -33,3 +35,30 @@ export interface ActiveMenuType {
 	driveType: DriveType;
 	params?: string;
 }
+
+export const filesSortOptions = [
+	{
+		name: 'name',
+		icon: 'sym_r_grid_view',
+		action: 'name',
+		type: FilesSortType.NAME
+	},
+	{
+		name: 'type',
+		icon: 'sym_r_edit_calendar',
+		action: 'type',
+		type: FilesSortType.TYPE
+	},
+	{
+		name: 'modified',
+		icon: 'sym_r_edit_document',
+		action: 'modified',
+		type: FilesSortType.Modified
+	},
+	{
+		name: 'size',
+		icon: 'sym_r_folder_copy',
+		action: 'size',
+		type: FilesSortType.SIZE
+	}
+];
