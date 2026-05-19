@@ -1,4 +1,7 @@
-# Linkerd control-plane values — archdoc/方案/app-gateway/app-gateway-Olares发版与安装说明-2026-05-15.md
+# Linkerd control-plane values — identity PEM injected at install from olares-linkerd-pki.
 identity:
   issuer:
     scheme: linkerd.io/tls
+
+# Heartbeat queries platform Prometheus (linkerd-viz bundled Prometheus disabled).
+prometheusUrl: "http://prometheus-k8s.kubesphere-monitoring-system.svc.cluster.local:9090"
