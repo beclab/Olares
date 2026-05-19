@@ -18,14 +18,13 @@ Claude Code is Anthropic's official AI coding assistant command-line interface (
 
 In this guide, you will learn how to:
 - Install the Claude Code app from the Olares Market.
-- Initialize the terminal and authenticate your account using an Anthropic subscription or a local model.
-- Configure local environment variables for model connections.
+- Connect the Claude Code CLI to a model using an Anthropic subscription or a local model.
 - Execute basic and advanced natural language coding workflows.
 - Manage dependencies and understand the secure container environment.
 
 ## Prerequisites
 
-- A Claude Pro or Max subscription for remote model connectivity, or a compatible local model installed on your Olares device for local execution.
+- A Claude Pro or Max subscription for remote model connectivity, or a local model optimized for coding (e.g., `qwen3-coder:30b`) installed on your Olares device for local execution.
 
 ## Install Claude Code
 
@@ -35,11 +34,11 @@ In this guide, you will learn how to:
 
 2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
-## Initialize and connect to a model
+## Connect to a model
 
-Start the Claude Code CLI and connect it to a language model. Authenticate using an external Anthropic subscription (OAuth) or configure the application to use a local model hosted on your Olares device.
+Start the Claude Code CLI and connect it to a language model. Choose one of the following connection methods.
 
-### Authenticate using an Anthropic subscription
+### Connect using an Anthropic subscription
 
 Use this method if you hold an active Claude Pro or Max subscription.
 
@@ -50,20 +49,22 @@ Use this method if you hold an active Claude Pro or Max subscription.
    claude
    ```
    
-3. Select a terminal theme, for example, **Dark mode**.
-4. Select **Claude account with subscription**. A browser window opens for sign-in. If the browser fails to open, select the provided URL to sign in manually.
+3. Select a terminal theme such as **Dark mode**, and then press **Enter**.
+4. Select **Claude account with subscription** as the login method, and then press **Enter**. A browser window opens for sign-in. If the browser fails to open, click the provided URL to sign in manually.
 
    ![Claude Code sign in using subscription account](/images/manual/use-cases/claude-sign-subscription.png#bordered)
 
-5. Complete the sign-in flow in your browser, and copy the authentication code.
-6. Return to the terminal, paste the code, and select your workspace.
-7. Confirm the trust settings. The Terminal User Interface (TUI) opens automatically.
+5. Complete the sign-in flow in your browser, and then copy the authentication code.
+6. Return to the terminal, paste the code, and then press **Enter** to complete the login.
+7. Review the **Accessing workspace: /opt/data** security prompt, and then select **Yes, I trust this folder**. 
 
-   <!-- ![Claude Code TUI](/images/manual/use-cases/claude-code-tui.png#bordered) -->
+   The Terminal User Interface (TUI) opens automatically.
 
-### Connect to a local model
+   ![Claude Code TUI](/images/manual/use-cases/claude-code-tui.png#bordered)
 
-Use this method to run Claude Code locally. This example uses the Qwen3-Coder 30B (Ollama) model app.
+### Connect using a local model
+
+Use this method to run Claude Code locally. This example uses the model app **Qwen3-Coder 30B (Ollama)**.
 
 1. Install the model app **Qwen3-Coder 30B (Ollama)** from Market.
 
@@ -98,44 +99,42 @@ If you switch between remote and local models, run `/clear` in Claude Code first
 
 All project work happens in the `/opt/data` directory, which serves as `$HOME` in the container. This directory persists your files across app restarts.
 
+The following examples demonstrate how to interact with Claude Code to complete everyday development tasks.
+
 ### Run basic queries
 
-1. In the Claude Code CLI, run the `claude` command. The following security prompt is displayed:
+1. In the Claude Code CLI, enter the following command:
 
-   ```
-   Accessing workspace:
-
-   /opt/data
-
-   Quick safety check: Is this a project you created or one you trust? (Like your own code, a well-known open source project, or work from your team). If not, take a moment to review what's in this folder first.
-
-   Claude Code'll be able to read, edit, and execute files here.
+   ```bash
+   claude
    ```
 
-2. Select **Yes, I trust this folder** to grant Claude Code read, edit, and execute permissions.
-3. Press **Enter**. You enter the TUI.
+2. Review the **Accessing workspace: /opt/data** security prompt, and then select **Yes, I trust this folder** to grant Claude Code read, edit, and execute permissions.
+3. (Optional) In the TUI, run the `/clear` command to start a new session with empty context.
 
    ![Claude Code first chat](/images/manual/use-cases/claude-first-chat.png#bordered)
-
-4. (Optional) Run the `/clear` command to start a new session with empty context.
 
    :::info Switching between modes
    If you switch between remote and local models, run `/clear` in Claude Code first before starting a new session. This prevents context from the previous model from affecting the new workspace.
    :::
 
-5. Describe your task in natural language. For example:
+4. Describe your task in natural language. For example:
 
    ```text
    List the files in the current directory
    ```
 
-   <!--![Claude Code first chat result](/images/manual/use-cases/claude-first-chat-result.png#bordered)-->
+   The assistant automatically executes the necessary internal commands to explore the directory and returns a detailed list of your files.
+
+   ![Claude Code first chat result](/images/manual/use-cases/claude-first-chat-result.png#bordered)
+
+5. Review the results.
 
 ### Build a full-stack project
 
 Claude Code creates multi-service projects, runs tests, and verifies end-to-end integrations. The following example demonstrates how to build a Backend For Frontend (BFF) stack with a Python FastAPI backend and a Node.js gateway.
 
-1. In the Claude Code TUI, enter the following detailed prompt:
+1. In the TUI, enter the following detailed prompt:
 
    ::: details Example prompt
    ```text
@@ -191,47 +190,56 @@ Claude Code creates multi-service projects, runs tests, and verifies end-to-end 
    ```
    :::
 
-2. Wait for Claude Code to process the prompt. The assistant automatically creates both services, installs dependencies, runs tests, starts the servers, and performs live integration checks.
-3. Review the final report returned by the assistant, which includes the directory tree, test summaries, and execution transcripts.
+2. When the assistant prompts you for permission to proceed with the directory creation, select **Yes, and always allow access to mini-bff/ from this project** (or press `2`). This grants the assistant the necessary permissions to build the rest of the project without asking for approval for every new file.
+3. Wait for Claude Code to process the prompt. The assistant automatically creates both services, installs dependencies, runs tests, starts the servers, and performs live integration checks.
+4. Review the final report returned by the assistant, which includes the directory tree, test summaries, and execution transcripts.
 
-   <!-- ![Claude Code mini BFF result](/images/manual/use-cases/claude-code-mini-bff.png#bordered) -->
+   ![Claude Code mini BFF result](/images/manual/use-cases/claude-code-mini-bff.png#bordered)
 
-## Mange security and development environments
+## Manage security and development environments
 
 The Claude Code container operates under strict least-privilege settings to ensure security.
 
 The main process and all executed commands use a non-root user (UID/GID 1000). The container disables `allowPrivilegeEscalation` and drops all Linux capabilities. Consequently, administrative commands like `sudo` and `apt install` are unavailable.
 
-To install additional software, use project-level tools instead of system package managers:
+### What you cannot install yourself
 
-<Tabs>
-<template #Python>
+If your project requires a system‑level library (e.g., `libpq-dev`, `ffmpeg`, `libssl-dev`), you cannot install it directly. These dependencies must be added to the base container image by the application maintainer.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install <package>
-```
-</template>
-<template #Node.js>
+### What you can install in your workspace
 
-```bash
-npm install
-```
-</template>
-<template #Other-languages>
+Inside your writable directories (primarily `/opt/data`), you can install project‑level dependencies without root privileges using common tools:
 
-Install tools and dependencies to user-writable paths under `/opt/data`.
-</template>
-</Tabs>
+- **Python**: Create a virtual environment and use `pip`. For example:
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install <package>
+   ```
+
+- **Node.js**: Use `npm` inside your project folder. For example:
+
+   ```bash
+   npm install <package>
+   ```
+
+- **Rust/Go** (or other compiled languages): Install binaries to a user‑writable path. For example:
+
+   ```bash
+   cargo install --root ~/.local <package>   # Rust
+   go install <package>@latest               # Go (installs to ~/go/bin)
+   ```
+
+For any language, you can always install tools and dependencies directly to user‑writable paths under `/opt/data`.
 
 :::info
-The container preconfigures the environment variable `PIP_BREAK_SYSTEM_PACKAGES=1`. While the environment permits system-wide Python package installations, use a virtual environment to maintain a clean and reliable workspace.
+The container preconfigures the environment variable `PIP_BREAK_SYSTEM_PACKAGES=1`. While this permits system‑wide Python package installations, using a virtual environment is recommended to keep your workspace clean and reliable.
 :::
 
 ## Pre-installed development tools
 
-The container image is based on Ubuntu 24.04 and comes with common development tools already installed:
+The container image is based on Ubuntu 24.04 and includes common development tools:
 
 | Category | Included tools |
 |:---------|:---------------|
