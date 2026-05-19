@@ -34,6 +34,10 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "Known issues",
+              link: "/manual/help/known-issues",
+            },
+            {
               text: "Insufficient memory or memory not freed",
               link: "/manual/help/ts-free-memory",
             },

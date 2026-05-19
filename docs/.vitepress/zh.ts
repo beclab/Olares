@@ -33,6 +33,10 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "已知问题",
+              link: "/zh/manual/help/known-issues",
+            },
+            {
               text: "内存不足或没有释放",
               link: "/zh/manual/help/ts-free-memory",
             },
