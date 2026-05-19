@@ -73,6 +73,16 @@ shareBaseUrl + /sharable-link/<id>/ pattern).
 Management verbs (` + "`list`" + ` / ` + "`get`" + ` / ` + "`rm`" + `) target the share id and are
 share-type-agnostic.
 
+Per-flavor update verbs (each rejects mismatched share types up
+front so a typo doesn't reach the server):
+
+    set-password   roll the access password of a Public-link share
+                   (PUT /api/share/share_password/)
+    set-members    REPLACE the member list of an Internal share
+                   (PUT /api/share/share_path/share_members/)
+    set-smb        REPLACE the SMB account list, or flip to public-
+                   SMB mode (POST /api/share/smb_share_member/)
+
 Examples:
 
     # Internal share with two members.
@@ -86,6 +96,16 @@ Examples:
     olares-cli files share smb drive/Home/Movies/ \
         --users smb-uid-1:edit,smb-uid-2:edit
 
+    # Roll a Public link's password.
+    olares-cli files share set-password <share-id>
+
+    # Promote bob from view to admin on an Internal share.
+    olares-cli files share set-members <share-id> \
+        --users alice:edit,bob:admin
+
+    # Switch an SMB share to public-SMB.
+    olares-cli files share set-smb <share-id> --public
+
     # List, inspect, remove.
     olares-cli files share list --shared-by-me
     olares-cli files share get <share-id>
@@ -96,6 +116,9 @@ Examples:
 		newShareInternalCommand(f),
 		newSharePublicCommand(f),
 		newShareSMBCommand(f),
+		newShareSetPasswordCommand(f),
+		newShareSetMembersCommand(f),
+		newShareSetSMBCommand(f),
 		newShareListCommand(f),
 		newShareGetCommand(f),
 		newShareRmCommand(f),
@@ -288,14 +311,19 @@ func runShareList(
 
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tTYPE\tNAME\tOWNER\tPATH\tPERMISSION\tEXPIRE")
-	for _, r := range rows {
+	for i := range rows {
+		r := &rows[i]
 		expire := r.ExpireTime
 		if expire == "" {
 			expire = "-"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s/%s%s\t%s\t%s\n",
+		// list trusts r.SyncRepoName (the server already echoes
+		// it on every shared sync library) — calling
+		// resolveShareDisplayPath here would N+1 a `repos.Get`
+		// per row, which is unacceptable for `share list`.
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			r.ID, r.ShareType, r.Name, r.Owner,
-			r.FileType, r.Extend, r.Path,
+			formatSharePathLine(r, ""),
 			r.Permission.String(), expire)
 	}
 	return w.Flush()
@@ -326,7 +354,12 @@ func runShareGet(ctx context.Context, f *cmdutil.Factory, out io.Writer, shareID
 	fmt.Fprintf(w, "Name:\t%s\n", r.Name)
 	fmt.Fprintf(w, "Type:\t%s\n", r.ShareType)
 	fmt.Fprintf(w, "Owner:\t%s\n", r.Owner)
-	fmt.Fprintf(w, "Path:\t%s/%s%s\n", r.FileType, r.Extend, r.Path)
+	// Single-record read: it's worth one extra /api/repos/ list
+	// call to swap the bare repo_id for a human library name in
+	// the Path line. resolveShareDisplayPath is a no-op on
+	// non-sync namespaces and on sync records the server already
+	// labelled.
+	fmt.Fprintf(w, "Path:\t%s\n", resolveShareDisplayPath(ctx, f, r))
 	fmt.Fprintf(w, "Permission:\t%s\n", r.Permission)
 	if r.ExpireTime != "" {
 		fmt.Fprintf(w, "Expires at:\t%s\n", r.ExpireTime)
@@ -439,15 +472,246 @@ func setupShareClient(ctx context.Context, f *cmdutil.Factory) (*share.Client, *
 	return &share.Client{HTTPClient: httpClient, BaseURL: rp.FilesURL}, rp, nil
 }
 
+// shareFlavorAllowedNamespaces is the per-flavor white-list of
+// fileType namespaces that share-create accepts client-side.
+//
+// Source of truth on the policy is the LarePass app's
+// [`apps/packages/app/src/stores/operation.ts`](apps/packages/app/src/stores/operation.ts)
+// per-driver share-menu condition list. Each row below mirrors the
+// GUI's allow-set, minus the cloud namespaces (those are gated
+// separately via cloudFileTypes — defense in depth, even if a row
+// here ever accidentally includes one).
+//
+//   - Internal: Drive / Sync / External / Cache (every non-cloud
+//     namespace).
+//
+//   - SMB: Drive / External / Cache. NOT Sync — the GUI excludes
+//     it, and exposing a Seafile library through SMB doesn't have
+//     a working server-side path either (Seafile uses its own
+//     mount story, not Samba). The CLI was tightened to match.
+//
+//   - Public: Drive only. This is the strictest flavor — the GUI's
+//     per-driver Share-to-Public condition allows ONLY
+//     `event.type === DriveType.Drive || DriveType.Data`, both of
+//     which live under the wire-level `drive` fileType.
+//
+// Three things this map intentionally does NOT do:
+//
+//   - It does not gate `drive/Home` vs `drive/Data` separately —
+//     the share endpoints work uniformly across both extends, and
+//     the GUI's UI-level differentiation isn't load-bearing on the
+//     wire.
+//   - It does not encode the volume-listing-layer / node-picker-
+//     layer rules for `external/<node>/` and `cache/<node>/`; those
+//     are namespace-orthogonal and applied separately via
+//     IsExternalNodeRoot / IsCacheNodeRoot below.
+//   - It does not replicate the GUI's `event.isDir` constraint for
+//     SMB / Internal share menus — sharing a single file IS a
+//     legitimate Internal-share use case, and the CLI accepts it
+//     (the server is the authoritative gate for "is this resource
+//     shareable").
+var shareFlavorAllowedNamespaces = map[share.Type]map[string]struct{}{
+	share.TypeInternal: {
+		"drive":    {},
+		"sync":     {},
+		"external": {},
+		"cache":    {},
+	},
+	share.TypeSMB: {
+		"drive":    {},
+		"external": {},
+		"cache":    {},
+	},
+	share.TypePublic: {
+		"drive": {},
+	},
+}
+
+// cloudFileTypes lists the cloud-drive namespaces (awss3 / google /
+// dropbox / tencent) that are uniformly NOT supported by any
+// share-create flavor.
+//
+// Why a dedicated set rather than just "any fileType not in the
+// per-flavor allow-list":
+//
+//   - The error message for cloud rejections cites a different
+//     root cause than the per-flavor mismatch (cross-account
+//     credentials, not "this namespace doesn't fit this flavor"),
+//     so we want a distinct branch in validateShareNamespace.
+//
+//   - Listing them explicitly catches the case where a future
+//     flavor's allow-list accidentally permits a cloud namespace —
+//     the cloud rejection then short-circuits regardless. Defense
+//     in depth against a regression.
+var cloudFileTypes = map[string]struct{}{
+	"awss3":   {},
+	"google":  {},
+	"dropbox": {},
+	"tencent": {},
+}
+
+// shareFlavorFriendlyName maps a wire-level [share.Type] (whose
+// values are the JSON-body discriminators "internal" / "external"
+// / "smb") to the user-facing CLI verb name ("internal" / "public"
+// / "smb"). The wire value for Public is the historically confusing
+// `"external"` string; using that verbatim in error messages would
+// be misleading, hence this small translation step.
+func shareFlavorFriendlyName(t share.Type) string {
+	switch t {
+	case share.TypeInternal:
+		return "internal"
+	case share.TypePublic:
+		return "public"
+	case share.TypeSMB:
+		return "smb"
+	}
+	return string(t)
+}
+
+// validateShareNamespace returns nil when fileType is allowed for
+// the given share flavor, or a self-describing error otherwise.
+//
+// Order of checks:
+//
+//  1. Flavor allow-list lookup. If the fileType is in
+//     shareFlavorAllowedNamespaces[flavor], we're done.
+//  2. Cloud rejection (awss3 / google / dropbox / tencent) gets a
+//     dedicated message citing cross-cloud-account semantics — the
+//     recovery path is "download then re-upload to drive", which
+//     differs from the per-flavor recovery path.
+//  3. Per-flavor rejection (e.g. Public refusing sync / external /
+//     cache) cites the allow-list and points at the alternative
+//     flavors that accept this fileType, plus the "copy into drive"
+//     fallback.
+//
+// Pulled out of the cobra layer so the gate is independently
+// testable without standing up cobra / the factory / the share
+// client; the gate itself is pure (string in → error out).
+func validateShareNamespace(flavor share.Type, fileType, displayPath string) error {
+	allowed, ok := shareFlavorAllowedNamespaces[flavor]
+	if !ok {
+		// Defense in depth — flavor must be one of the three
+		// known types that the cobra layer constructs. Returning
+		// a typed error here beats a silent "everything is
+		// allowed" failure mode if a future verb forgets to call
+		// us with a real flavor.
+		return fmt.Errorf("validateShareNamespace: unknown share flavor %q", string(flavor))
+	}
+	if _, accepted := allowed[fileType]; accepted {
+		return nil
+	}
+	flavorName := shareFlavorFriendlyName(flavor)
+
+	if _, isCloud := cloudFileTypes[fileType]; isCloud {
+		return fmt.Errorf(
+			"refusing to create a %s share for %s: cloud namespaces "+
+				"(awss3 / google / dropbox / tencent) do not support sharing through "+
+				"`files share` — the share endpoints don't grant cross-cloud-account access, "+
+				"and the resulting share record would point at a path that no other "+
+				"Olares user has the credential to read. "+
+				"If you need to share cloud-backed data, download it first "+
+				"(`files download`) and re-upload it to drive/Home or drive/Data, "+
+				"then share that.",
+			flavorName, displayPath)
+	}
+
+	// Non-cloud namespace failing this flavor's allow-list. Today
+	// only Public hits this branch (it allows only `drive` while
+	// the user might pass sync / external / cache). Build a
+	// recovery hint citing the OTHER flavors that DO accept this
+	// fileType, so the user has a concrete next command to try.
+	var fallbacks []string
+	for _, alt := range []share.Type{share.TypeInternal, share.TypeSMB} {
+		if alt == flavor {
+			continue
+		}
+		if _, ok := shareFlavorAllowedNamespaces[alt][fileType]; ok {
+			fallbacks = append(fallbacks, "`files share "+shareFlavorFriendlyName(alt)+"`")
+		}
+	}
+	hint := "copy the data into drive/Home or drive/Data first."
+	if len(fallbacks) > 0 {
+		hint = "use " + strings.Join(fallbacks, " or ") + " for that namespace, " +
+			"or copy the data into drive/Home or drive/Data first."
+	}
+	return fmt.Errorf(
+		"refusing to create a %s share for %s: `files share %s` only supports the "+
+			"{%s} namespace(s) (matches the LarePass GUI's per-driver gating). %s",
+		flavorName, displayPath, flavorName,
+		sortedNamespaceList(allowed), hint)
+}
+
+// sortedNamespaceList renders an allowed-namespace set as a
+// stable, alphabetical, comma-joined string — used in error
+// messages so the list is deterministic across runs and easy to
+// snapshot in tests.
+func sortedNamespaceList(m map[string]struct{}) string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, ", ")
+}
+
 // frontendPathToShareTarget converts a user-supplied path into the
-// share package's Target. Same shape as cp / rename's converters; we
-// don't reject the volume root here because (a) sharing the root of
-// drive/Home is an unusual but legitimate use case, and (b) the
-// server is the authoritative gate for "can this be shared".
-func frontendPathToShareTarget(raw string) (share.Target, error) {
+// share package's Target, applying every share-create policy gate
+// in order. Used by every share-create cobra command (internal /
+// public / smb); `list` / `get` / `rm` and `smb-users` don't go
+// through this helper, so the rejections below scope cleanly to
+// share creation only.
+//
+// The flavor parameter selects which per-verb namespace allow-list
+// to enforce — see shareFlavorAllowedNamespaces. Caller passes
+// share.TypeInternal / share.TypePublic / share.TypeSMB; passing
+// any other value lands on the defense-in-depth branch in
+// validateShareNamespace.
+//
+// Order of checks:
+//
+//  1. Path parse via [ParseFrontendPath] (catches bad fileType,
+//     missing extend, drive-extend-not-Home/Data, etc.).
+//
+//  2. Flavor namespace allow-list / cloud rejection via
+//     [validateShareNamespace]. Runs before the volume-listing /
+//     node-picker checks below so a Public share against
+//     `external/<node>/` surfaces the broader "Public only allows
+//     drive" message rather than the narrower "external/<node>/
+//     is the volume listing layer" one — same final answer, but a
+//     more actionable error for the user.
+//
+//  3. `external/<node>/` (volume-listing layer) rejection. Applies
+//     uniformly to internal / SMB; never reachable for Public
+//     because step (2) already rejected the entire `external`
+//     namespace.
+//
+//  4. `cache/<node>/` (node-picker layer) rejection. Same
+//     rationale as (3).
+//
+// Volume-root targets (e.g. `drive/Home/`, `sync/<repo>/`) are NOT
+// rejected here: sharing the entire Home volume is unusual but
+// legitimate, and the server is the authoritative gate.
+func frontendPathToShareTarget(raw string, flavor share.Type) (share.Target, error) {
 	fp, err := ParseFrontendPath(raw)
 	if err != nil {
 		return share.Target{}, err
+	}
+	if err := validateShareNamespace(flavor, fp.FileType, raw); err != nil {
+		return share.Target{}, err
+	}
+	if fp.IsExternalNodeRoot() {
+		return share.Target{}, fmt.Errorf(
+			"refusing to share external/%s/: this is the volume listing layer (read-only); "+
+				"point at a real volume, e.g. external/%s/<volume>/<sub>/. "+
+				"Use `files ls external/%s/` first to discover the attached volumes.",
+			fp.Extend, fp.Extend, fp.Extend)
+	}
+	if fp.IsCacheNodeRoot() {
+		return share.Target{}, fmt.Errorf(
+			"refusing to share cache/%s/: this is the node-picker layer (no concrete dataset to share); "+
+				"point at a directory inside the node, e.g. cache/%s/<sub>/. "+
+				"Use `files ls cache/%s/` first to discover the available subdirectories.",
+			fp.Extend, fp.Extend, fp.Extend)
 	}
 	return share.Target{
 		FileType:    fp.FileType,
@@ -462,18 +726,132 @@ func frontendPathToShareTarget(raw string) (share.Target, error) {
 // `decodeURI(file.name)` for this — for the CLI we fall back to the
 // last subPath segment, which matches what `files ls` would show.
 //
-// Empty subPath (extend root) falls back to the extend itself, so
-// e.g. sharing `drive/Home/` yields name="Home", which is the
-// least-surprising default.
-func shareNameFromPath(t share.Target) string {
+// syncRepoName is the (optional) resolved repo display name for
+// `sync/<repo_id>/...` paths; the cobra layer feeds it in via
+// [lookupSyncRepoName]. When the path is the sync repo root
+// (empty subPath), we prefer the repo name over the bare repo_id —
+// otherwise the share record's `name` would be a UUID, which is
+// unfriendly in `share list` and on recipients' screens. Pass ""
+// for non-sync paths or when the lookup didn't resolve; in those
+// cases the function falls through to the legacy "extend as name"
+// behavior.
+//
+// Subpath cases (non-empty) are unaffected: a directory inside the
+// repo gets named after the directory, regardless of namespace.
+func shareNameFromPath(t share.Target, syncRepoName string) string {
 	sub := strings.Trim(t.SubPath, "/")
-	if sub == "" {
-		return t.Extend
+	if sub != "" {
+		if i := strings.LastIndex(sub, "/"); i >= 0 {
+			return sub[i+1:]
+		}
+		return sub
 	}
-	if i := strings.LastIndex(sub, "/"); i >= 0 {
-		return sub[i+1:]
+	if t.FileType == "sync" && syncRepoName != "" {
+		return syncRepoName
 	}
-	return sub
+	return t.Extend
+}
+
+// lookupSyncRepoName tries to resolve a Sync (Seafile) library's
+// human-readable name from its UUID via repos.Client.Get. Returns
+// the empty string on any error — every caller falls back to
+// displaying the repo_id when the lookup doesn't resolve, so an
+// unreachable /api/repos/ endpoint or a missing repo never blocks
+// a share-create / share-display call.
+//
+// This is intentionally fire-and-forget on the error path: the
+// /api/share/ surface is independent from /api/repos/, and we'd
+// rather surface a UUID-shaped name than fail the whole verb just
+// because the repo lookup couldn't complete.
+//
+// Cost: one /api/repos/ list call (Get internally lists `mine`,
+// then `share_to_me`, then `shared` until it finds the id). That's
+// fine for the create-flavor commands and for single-record reads
+// (`share get`, the `set-*` update verbs); list-style commands
+// must NOT call this per row to avoid an N+1 explosion — they
+// trust the server's r.SyncRepoName field instead.
+func lookupSyncRepoName(ctx context.Context, f *cmdutil.Factory, repoID string) string {
+	if repoID == "" {
+		return ""
+	}
+	client, _, err := setupReposClient(ctx, f)
+	if err != nil {
+		return ""
+	}
+	repo, err := client.Get(ctx, repoID)
+	if err != nil || repo == nil {
+		return ""
+	}
+	return repo.RepoName
+}
+
+// formatSharePathLine renders the user-facing path of a share record
+// for `share list` / `share get` / the `set-*` update verbs.
+//
+// For sync namespace the wire-level <extend> is the repo's UUID,
+// which is too noisy for human consumption — we prefer the
+// resolved name (server-supplied or looked up) and append the
+// repo_id in parentheses so the user can still cross-reference the
+// underlying repo (e.g. for `repos rename` / `repos rm`).
+//
+// Falls back to the wire shape (FileType + Extend + Path) for
+// every other namespace, AND for sync records where neither the
+// server-supplied SyncRepoName nor the optional override resolved.
+//
+// override takes precedence over r.SyncRepoName: the get / update
+// callers do a [lookupSyncRepoName] when r.SyncRepoName is empty
+// and pass the resolved name in via override; list does NOT
+// override (per-row repos lookups would be an N+1).
+func formatSharePathLine(r *share.Result, override string) string {
+	if r == nil {
+		return ""
+	}
+	base := r.FileType + "/" + r.Extend + r.Path
+	if r.FileType != "sync" {
+		return base
+	}
+	name := override
+	if name == "" {
+		name = r.SyncRepoName
+	}
+	if name == "" {
+		return base
+	}
+	return r.FileType + "/" + name + r.Path + "  (repo " + r.Extend + ")"
+}
+
+// shareTargetDisplay renders the same friendly path form as
+// [formatSharePathLine] but from a share.Target (the shape the
+// cobra layer holds BEFORE the share record exists). Used by the
+// create-flavor commands so the "created share" output reads like
+// a list / get row rather than echoing the raw UUID the user
+// typed in.
+func shareTargetDisplay(t share.Target, syncRepoName string) string {
+	base := t.FileType + "/" + t.Extend + t.SubPath
+	if t.FileType != "sync" || syncRepoName == "" {
+		return base
+	}
+	return t.FileType + "/" + syncRepoName + t.SubPath + "  (repo " + t.Extend + ")"
+}
+
+// resolveShareDisplayPath is the single-record convenience for
+// get / update verbs: it tries r.SyncRepoName first (the server's
+// echo, free) and falls back to a one-shot [lookupSyncRepoName]
+// when the field is empty. List-style commands skip the fallback
+// to avoid N+1 queries; they call formatSharePathLine directly
+// with override="".
+func resolveShareDisplayPath(ctx context.Context, f *cmdutil.Factory, r *share.Result) string {
+	if r == nil {
+		return ""
+	}
+	if r.FileType != "sync" {
+		return formatSharePathLine(r, "")
+	}
+	name := r.SyncRepoName
+	if name == "" {
+		name = lookupSyncRepoName(ctx, f, r.Extend)
+	}
+	return formatSharePathLine(r, name)
 }
 
 // reformatShareHTTPErr maps share.HTTPError onto user-friendly
@@ -521,4 +899,48 @@ func pluralS(n int) string {
 		return ""
 	}
 	return "s"
+}
+
+// requireShareType is the share-type check every share-update verb
+// runs after fetching the share record by id. It returns nil when
+// the record's wire-level share_type matches `want`, and a self-
+// describing error otherwise.
+//
+// The `verb` argument is interpolated verbatim into the rejection
+// message (e.g. "set the password of"). Pass an action phrase that
+// reads naturally after "refusing to ", since that's how the
+// composed error sentence starts.
+//
+// Why pull this out of each cobra layer:
+//
+//   - Keeps the per-verb run-funcs trivial — they do a Query, hand
+//     the result to requireShareType, and bail on error.
+//
+//   - The mismatch error is the same shape across all three update
+//     verbs (set-password / set-members / set-smb), and centralizing
+//     the wording makes it easy to keep them in sync if the recovery
+//     hint ever needs to change.
+//
+//   - It's a pure function (string in → error out), so unit tests
+//     don't need to stand up a share.Client / fake server.
+//
+// The friendly-name translation through shareFlavorFriendlyName is
+// load-bearing: the wire value for Public is `"external"`, but the
+// CLI verb is `share public` / `share set-password`, so the error
+// must say "public" or the user will hunt for a non-existent
+// `share external` command.
+func requireShareType(actual *share.Result, want share.Type, verb, shareID string) error {
+	if actual == nil {
+		return fmt.Errorf("share %s: not found on the server", shareID)
+	}
+	if actual.ShareType == want {
+		return nil
+	}
+	gotFriendly := shareFlavorFriendlyName(actual.ShareType)
+	wantFriendly := shareFlavorFriendlyName(want)
+	return fmt.Errorf(
+		"refusing to %s share %s: the share is %s (wire type %q), not %s; "+
+			"use the matching update verb instead — `share set-password` for public shares, "+
+			"`share set-members` for internal shares, `share set-smb` for SMB shares",
+		verb, shareID, gotFriendly, string(actual.ShareType), wantFriendly)
 }

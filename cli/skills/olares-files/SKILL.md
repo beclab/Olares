@@ -1,7 +1,7 @@
 ---
 name: olares-files
-version: 1.5.0
-description: "olares-cli files command tree: list (ls), upload, download, cat, mkdir (-p / md), rm, cp, mv, rename (rn), share (internal / public / smb), and Sync-repo CRUD (repos list / get / create / rename / rm) against the per-user files-backend (drive/Home, drive/Data, sync, cache, external, awss3, dropbox, google, tencent, share). Covers the 3-segment frontend path schema (<fileType>/<extend>/<subPath>), resumable chunked upload (Drive v2 protocol), Range-based resumable download, recursive directory transfer with errgroup parallelism, batch DELETE wire shape, server-side copy/move via PATCH /api/paste/<node>/ (async task_id queue, cross-volume supported), synchronous in-place rename via PATCH /api/resources/.../?destination=..., directory creation via POST /api/resources/.../<sub>/ (uniform across all namespaces; -p mode does parent-listing existence checks to side-step the auto-rename quirk), folder-share creation across the three flavors (Internal cross-user, Public link with password+expiration, SMB Samba mount) via POST /api/share/share_path/<...>/, share management (list / get / rm) plus SMB-account roster (smb-users list/create), Sync (Seafile) library catalog management via /api/repos/ (GET list with type=mine|share_to_me|shared, POST create with ?repoName=, PATCH rename with ?destination=&repoId=, DELETE with ?repoId=), and two server-side quirks the user MUST know about (POST mkdir auto-renames existing dirs to 'Foo (1)'; GET single-file resource returns HTTP 500). Use whenever the user mentions files / drive / Home / Data / sync / cache, uploading or downloading files, listing a remote directory, creating a directory, deleting remote files, cat-ting a remote file, copying or moving (renaming) remote files / directories, in-place renaming, sharing a folder with other users, public links with password / expiration, SMB / Samba network shares, listing / creating / renaming / deleting Sync (Seafile) libraries, repo_id discovery, /api/resources, /api/raw, /api/paste, /api/share, /api/repos, frontend path, or sees errors like 'Documents (1)' appearing on the server."
+version: 1.15.1
+description: "olares-cli files command tree: list (ls), upload, download, cat, mkdir (-p / md), rm, cp, mv, rename (rn), chown (POSIX owner uid get/set, recursive), share (internal / public / smb), smb (mount / unmount external SMB shares + per-node history book — LarePass \"Connect to Server\" CLI counterpart), and Sync-repo CRUD (repos list / get / create / rename / rm) against the per-user files-backend (drive/Home, drive/Data, sync, cache, external, awss3, dropbox, google, tencent, share). Covers the 3-segment frontend path schema (<fileType>/<extend>/<subPath>), resumable chunked upload (Drive v2 protocol), Range-based resumable download, recursive directory transfer with errgroup parallelism, batch DELETE wire shape, server-side copy/move via PATCH /api/paste/<node>/ (async task_id queue, cross-volume supported), synchronous in-place rename via PATCH /api/resources/.../?destination=..., directory creation via POST /api/resources/.../<sub>/ (uniform across all namespaces; -p mode does parent-listing existence checks to side-step the auto-rename quirk), folder-share creation across the three flavors (Internal cross-user, Public link with password+expiration, SMB Samba mount) via POST /api/share/share_path/<...>/, share management (list / get / rm) plus per-flavor update verbs (set-password rolls a Public-link password via PUT /api/share/share_password/, set-members REPLACES an Internal share's member list via PUT /api/share/share_path/share_members/, set-smb REPLACES an SMB share's account list or flips public-SMB mode via POST /api/share/smb_share_member/) plus SMB-account roster (smb-users list/create), Sync (Seafile) library catalog management via /api/repos/ (GET list with type=mine|share_to_me|shared, POST create with ?repoName=, PATCH rename with ?destination=&repoId=, DELETE with ?repoId=), and four server-side / GUI quirks the user MUST know about (POST mkdir auto-renames existing dirs to 'Foo (1)'; GET single-file resource returns HTTP 500; external/<node>/ is a virtual volume-listing layer with no underlying filesystem so writes there fail / auto-rename — mkdir / cp / mv dst / upload all reject it client-side and the user must point at external/<node>/<volume>/<sub>; the system-managed first-level children directly under drive/Home/ — Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface — refuse rename / rm / mv-source client-side to mirror the LarePass GUI's `disableMenuItem` policy and protect bootstrap dirs that user apps assume exist; share-create on external/<node>/ AND cache/<node>/ is rejected client-side because the LarePass app's /Files/External and /Files/Cache root views render node / volume pickers via formatAppDataNode, not concrete datasets — the user must point at a real volume `external/<node>/<volume>/<sub>` or per-node directory `cache/<node>/<sub>`; share-create namespace gates further restrict each flavor (each row mirrors the LarePass GUI's per-driver share-menu condition): Internal allows drive / sync / external / cache; SMB allows drive / external / cache (sync excluded — Seafile-via-SMB has no working server-side path, the GUI excludes it too); Public is locked to drive ONLY (mirrors the GUI's per-driver Share-to-Public condition `event.type === DriveType.Drive || DriveType.Data`); ALL three flavors uniformly refuse the cloud namespaces awss3 / google / dropbox / tencent because the share endpoints don't grant cross-cloud-account access — recovery is `files download` followed by re-uploading to drive/Home or drive/Data, then sharing that. For sync namespace shares, every share-create command pre-resolves the repo's display name via /api/repos/ before posting the share record, so the share's `name` and the CLI's path output read like `sync/<repo-name>/<sub>  (repo <repo-id>)` instead of leaking the bare repo UUID; list output trusts the server-supplied SyncRepoName (no extra lookups), get / set-* update output falls back to a one-shot repos.Get when the server didn't echo it. POSIX file ownership is exposed via `files chown <path> [--uid <int>] [--recursive]` against /api/permission/<fileType>/<extend><subPath>/ — without --uid it does a GET and prints `uid=<int> (Root|User)`; with --uid it does a PUT with ?uid=<int>[&recursive=1] and an empty `{}` body, byte-for-byte matching the LarePass app's Permission tab in the file properties dialog (operationStore.getPermission / setPermission); namespace allow-list mirrors the GUI's `permissionInDriveType` exactly (drive/Home, drive/Data, cache/<node>/...) and rejects sync (use `files repos` for ACLs), external (GUI hides the Permission tab), and every cloud account (object stores have no POSIX uid concept) with per-namespace recovery hints; volume roots are refused to keep the blast radius bounded. External SMB shares are managed via `files smb mount|unmount|history` — `files smb mount <smb-url>` POSTs `/api/mount/<node>/?external_type=smb` with `{smbPath, user, password}` and surfaces the server's two-branch reply (code 200 → mounted at external/<node>/<entry>/; code 300 → host-only address, server returns the discovered share-paths so the user can re-run with one of them); `files smb unmount <name>` POSTs `/api/unmount/external/<node>/<name>/?external_type=smb`; `files smb history list/add/rm` plumbs the per-node \"Favorite Servers\" book through GET/PUT/DELETE `/api/smb_history/<node>/` (list shows URL + username + has-password; add stores URL with optional saved credentials so a future mount can reuse them; rm batches by URL). Password handling supports interactive (TTY only, no echo via golang.org/x/term), `--password` (echoed in shell history — convenience only), and `--password-stdin` (script-friendly, reads first stdin line) modes; `--node` defaults to the first /api/nodes/ entry, same as `files cp`. Use whenever the user mentions files / drive / Home / Data / sync / cache, uploading or downloading files, listing a remote directory, creating a directory, deleting remote files, cat-ting a remote file, copying or moving (renaming) remote files / directories, in-place renaming, getting/setting POSIX file ownership (uid 0 root / uid 1000 user), the LarePass file properties Permission tab, sharing a folder with other users, public links with password / expiration, SMB / Samba network shares (incoming Samba export AND outgoing SMB-server mount), connecting to / mounting / unmounting external SMB servers, the LarePass \"Connect to Server\" dialog, SMB favorite servers / history, listing / creating / renaming / deleting Sync (Seafile) libraries, repo_id discovery, /api/resources, /api/raw, /api/paste, /api/share, /api/permission, /api/repos, /api/mount, /api/unmount, /api/smb_history, frontend path, or sees errors like 'Documents (1)' appearing on the server, 'volume listing layer (read-only)' on external paths, or 'system-managed Home folder reserved by LarePass' on rename / rm / mv attempts under drive/Home/."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -24,7 +24,7 @@ Every resource on the per-user files-backend is addressed by a 3-segment "fronte
 |---------|---------|
 | `fileType` | Storage class (lowercase, case-sensitive). One of: `drive`, `cache`, `sync`, `external`, `awss3`, `dropbox`, `google`, `tencent`, `share`, `internal` |
 | `extend` | Volume / repo / account inside that class. **Case-sensitive.** Drive: only `Home` or `Data`. Cache / external: node name. Sync: seafile repo id. Cloud (`awss3`/`dropbox`/`google`/`tencent`): account key |
-| `subPath` | Path inside `extend` (root if omitted). The leading `/` is implicit |
+| `subPath` | Path inside `extend` (root if omitted). The leading `/` is implicit. **For `external` ONLY**, `subPath` MUST contain at least one segment (the `<volume>`) for any write — `external/<node>/` is the virtual volume-listing layer (see "Server-side quirks" below). |
 
 Examples:
 
@@ -45,10 +45,15 @@ All verbs except `files repos` consume frontend paths. The reachable namespaces 
 
 | Verb | Supported namespaces | Notes |
 |------|----------------------|-------|
-| `ls` / `cat` / `download` / `rm` / `rename` / `share` | **all** of: `drive`, `cache`, `sync`, `external`, `awss3`, `google`, `dropbox`, `tencent` | These verbs hit the generic backend endpoints (`/api/resources/...`, `/api/raw/...`, `/api/share/share_path/...`, `PATCH /api/resources/.../?destination=...`) with FrontendPath passed straight through. **Cloud-drive divergences:** `ls` decodes the cloud envelope's `data` array (instead of `items`) plus empty-string `mode`/`modified` fields; `cat` dispatches to `GET /drive/download_sync_stream?drive=<type>&cloud_file_path=<path>&name=<extend>` for `awss3`/`google`/`dropbox`/`tencent` because `/api/raw/<path>` doesn't return raw bytes on those namespaces. See the per-verb sections for the exact wire shapes. |
-| `mkdir` | **all** of: `drive`, `cache`, `sync`, `external`, `awss3`, `google`, `dropbox`, `tencent` | `POST /api/resources/<fileType>/<extend><subPath>/` (trailing '/' is the "this is a directory" marker). Uniform across every namespace — the LarePass web app's per-driver `createDir` helpers all funnel through the same endpoint. **Auto-rename on collision** (POST against an existing dir creates `Foo (1)` instead of returning 409); `-p` mode side-steps this for parents by listing each prefix's parent and skipping when the basename is already there as a directory. |
-| `cp` / `mv` | **all** of the above | Goes through `PATCH /api/paste/<node>/`. Node selection cascades `--node > External/Cache extend > /api/nodes/`; cloud drives use the `/api/nodes/` default since their `<extend>` is an account, not a node. |
-| `upload` | `drive/Home`, `drive/Data`, `sync/<repo_id>`, `cache/<node>`, `external/<node>/<volume>`, `awss3/<account>`, `google/<account>`, `dropbox/<account>` | **`tencent` is rejected** because `TencentDataAPI` in v2 uses an octet-only `/drive/direct_upload_file/<task_id>` protocol the CLI's chunk pipeline does not implement. `share`/`internal` are also rejected (they're read-only views into other namespaces). Cloud drives (`awss3`/`google`/`dropbox`) are uploaded in **two stages**: stage 1 chunks bytes to Olares-internal staging via the regular Drive multipart pipeline, then stage 2 polls the server-side "Olares-staging → cloud bucket" transfer task to completion (taskId returned in the FINAL chunk's response body, polled via `/api/task/<node>/?task_id=<id>`). |
+| `ls` / `cat` / `download` / `rm` / `rename` | **all** of: `drive`, `cache`, `sync`, `external`, `awss3`, `google`, `dropbox`, `tencent` | These verbs hit the generic backend endpoints (`/api/resources/...`, `/api/raw/...`, `PATCH /api/resources/.../?destination=...`) with FrontendPath passed straight through. **Cloud-drive divergences:** `ls` decodes the cloud envelope's `data` array (instead of `items`) plus empty-string `mode`/`modified` fields; `cat` dispatches to `GET /drive/download_sync_stream?drive=<type>&cloud_file_path=<path>&name=<extend>` for `awss3`/`google`/`dropbox`/`tencent` because `/api/raw/<path>` doesn't return raw bytes on those namespaces. See the per-verb sections for the exact wire shapes. **`rm` and `rename` reject system-managed Home children client-side** — `drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface}` refuse rename/delete to mirror the LarePass GUI's `disableMenuItem` policy (Server-side quirks #4); deeper paths under those dirs (e.g. `drive/Home/Pictures/Trip2024/`) remain freely editable. |
+| `share internal` | `drive`, `sync`, `external`, `cache` (cloud refused) | `POST /api/share/share_path/<fileType>/<extend><subPath>/` with `share_type:"internal"`. **Cloud namespaces (awss3 / google / dropbox / tencent) are rejected client-side** — the share endpoints don't grant cross-cloud-account access (recovery: `files download` then re-upload to drive, then share that). **`external/<node>/` and `cache/<node>/` roots are rejected** because those layers are virtual node / volume pickers (Server-side quirks #3 and #5); deeper paths (e.g. `external/<node>/<volume>/`, `cache/<node>/<sub>/`) work fine. |
+| `share smb` | `drive`, `external`, `cache` — sync AND cloud refused | Same wire shape as `share internal`, with `share_type:"smb"`. Allow-list matches the LarePass GUI's per-driver Share-to-SMB condition exactly (`DriveType.Drive\|Data\|External\|Cache`). **`sync` is rejected** — Seafile libraries have their own mount story, not Samba, so an SMB share record over a `sync/<repo>/` path has no working server-side mount path (the GUI excludes sync for the same reason); the CLI's error suggests `files share internal` as the only remaining flavor that accepts sync. **Cloud namespaces are rejected** with the same uniform cloud-rejection message as the other flavors. **`external/<node>/` and `cache/<node>/` roots are rejected** (Server-side quirks #3 and #5); deeper paths work. |
+| `share public` | `drive` only — every other namespace refused | Tightest of the three flavors. Mirrors the LarePass GUI's per-driver Share-to-Public condition (`event.type === DriveType.Drive \|\| event.type === DriveType.Data`, both under the `drive` fileType). **All other namespaces are rejected at every depth**: sync / external / cache get a "Public only supports the {drive} namespace" message pointing at the other flavors that DO accept that fileType (sync → `share internal` only; external / cache → `share internal` or `share smb`); cloud namespaces get the same uniform cloud-rejection message as the other flavors. The Public namespace gate fires BEFORE the volume-listing / node-picker root checks, so `share public external/<node>/` surfaces the broader "Public only supports drive" error rather than the narrower volume-listing-layer one. |
+| `mkdir` | **all** of: `drive`, `cache`, `sync`, `external`, `awss3`, `google`, `dropbox`, `tencent` | `POST /api/resources/<fileType>/<extend><subPath>/` (trailing '/' is the "this is a directory" marker). Uniform across every namespace — the LarePass web app's per-driver `createDir` helpers all funnel through the same endpoint. **Auto-rename on collision** (POST against an existing dir creates `Foo (1)` instead of returning 409); `-p` mode side-steps this for parents by listing each prefix's parent and skipping when the basename is already there as a directory. **`external/<node>/` is rejected client-side** — that layer is the virtual volume listing (see Server-side quirks #3); mkdir there has nowhere to land and would trip the auto-rename quirk. |
+| `cp` / `mv` | **all** of the above | Goes through `PATCH /api/paste/<node>/`. Node selection cascades `--node > External/Cache extend > /api/nodes/`; cloud drives use the `/api/nodes/` default since their `<extend>` is an account, not a node. **Destinations at `external/<node>/` are rejected client-side** — same volume-listing-layer rule as `mkdir` (Server-side quirks #3); point at `external/<node>/<volume>/<sub>/` instead. **`mv` source-side rejects system-managed Home children** — `mv drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface}` is refused client-side because moving would unlink bootstrap dirs that user apps depend on (Server-side quirks #4); `cp` (copy) is intentionally NOT gated since it preserves the source — a `Pictures-Backup` clone via `cp -r` is fine. |
+| `upload` | `drive/Home`, `drive/Data`, `sync/<repo_id>`, `cache/<node>`, `external/<node>/<volume>`, `awss3/<account>`, `google/<account>`, `dropbox/<account>` | **`tencent` is rejected** because `TencentDataAPI` in v2 uses an octet-only `/drive/direct_upload_file/<task_id>` protocol the CLI's chunk pipeline does not implement. `share`/`internal` are also rejected (they're read-only views into other namespaces). **`external/<node>/` (no `<volume>`) is rejected client-side** — that layer is the virtual volume listing (see Server-side quirks #3); the `<volume>` segment is required for upload to land on a real filesystem. Cloud drives (`awss3`/`google`/`dropbox`) are uploaded in **two stages**: stage 1 chunks bytes to Olares-internal staging via the regular Drive multipart pipeline, then stage 2 polls the server-side "Olares-staging → cloud bucket" transfer task to completion (taskId returned in the FINAL chunk's response body, polled via `/api/task/<node>/?task_id=<id>`). |
+| `chown` | `drive/Home`, `drive/Data`, `cache/<node>` only | `GET /api/permission/<fileType>/<extend><subPath>/` for read, `PUT /api/permission/<fileType>/<extend><subPath>/?uid=<int>[&recursive=1]` (body `{}`) for write. Allow-list mirrors the LarePass file-properties dialog's `permissionInDriveType` array exactly (DriveType.Drive + Data + Cache). **`sync` is rejected client-side** because Seafile permissions live on the library itself (use `files repos`), **`external` is rejected** because the LarePass GUI hides the Permission tab for external mounts, and **all four cloud namespaces are rejected** because object stores have no POSIX uid concept. Volume roots (`drive/Home/`, `drive/Data/`, `cache/<node>/`) are refused — the blast radius if a typo set the uid on the entire volume is too high; pick a one-level-deeper path with `-r` if you need to fan out. |
+| `smb mount` / `unmount` / `history` | n/a — the SMB-mount surface is keyed by `<node>` and `<smb-url>`, not by frontend paths. **The mount RESULT lives at `external/<node>/<entry>/` and is consumed by every other `files` verb the same way any external mount is.** See `files smb` below. |
 | `repos` | n/a — this verb operates on the Sync (Seafile) library catalog (`/api/repos/...`), not on frontend paths |
 
 ## Trailing-slash convention (critical)
@@ -88,6 +93,54 @@ Consequence baked into the CLI: `Stat` always lists the **parent** directory and
 
 If the user reports `HTTP 500` against `/api/resources/.../<filename>` with no trailing slash, do NOT suggest "just retry". The right answer is: use the CLI command (`files cat` / `files download`), or list the parent and look at items.
 
+### 3. `external/<node>/` is a virtual volume-listing layer (read-only on the wire)
+
+Unlike `cache/<node>/` (which is a real per-node directory), `external/<node>/` does NOT have an underlying filesystem. The web app's [`ExternalDataAPI.fetchDrive`](apps/packages/app/src/api/files/v2/external/data.ts) short-circuits this layer through `formatAppDataNode` and synthesizes children from the attached-volume list (`hdd1` / `usb1` / `smb-...` mount points) — the backend at `/api/resources/external/<node>/` returns the same list. There is nowhere to write at that level: a POST mkdir, a PATCH paste destination, or a chunked upload landing on `external/<node>/` either fails server-side or trips the [auto-rename quirk](#1-post-apiresourcesdir-auto-renames-existing-directories) against a non-existent target.
+
+Consequence baked into the CLI: `mkdir`, `cp` / `mv` destination, `upload`, **AND `share` (create)** all fail fast client-side via [`FrontendPath.IsExternalNodeRoot`](cli/cmd/ctl/files/path.go) when the target is `external/<node>/` (i.e. SubPath is just `/`). The error message points at the corrected shape (`external/<node>/<volume>/<sub>/`) so the next invocation works without server-round-trip trial-and-error. Pure reads (`ls`, `cat`, `rm`, `rename`) DO work at this layer — that's how the user discovers what volumes are attached. Share-CREATE is rejected because a share record on the volume-listing layer points at no concrete dataset (recipients would land on an empty mount-point list); share `list` / `get` / `rm` are share-id-driven and unaffected.
+
+User-visible signal of the client-side guard: errors phrased `external/<node>/ is the volume listing layer (read-only); point at a real volume, e.g. external/<node>/<volume>/<sub>/` (writes) or `refusing to share external/<node>/: this is the volume listing layer (read-only); ...` (share). Do NOT suggest workarounds — the constraint reflects the wire reality, and `mkdir external/<node>/Foo/` would either error server-side or create a phantom `Foo` next to the real volumes.
+
+### 4. `drive/Home/{Pictures,Music,Movies,Downloads,Documents,Code,Cache,Data,Home,Ollama,Huggingface}` are system-managed (no rename / rm / mv-source)
+
+Unlike the other quirks here (which document **server** behavior), this one is a **GUI-aligned client policy** that the CLI enforces to keep scripts from producing states the LarePass web app cannot reach.
+
+The web app's [`disableMenuItem` array in `apps/packages/app/src/stores/operation.ts`](apps/packages/app/src/stores/operation.ts) — gated by `path === '/Files/Home/'` in `isDisableMenuItem` — greys out cut / copy / paste / delete / rename for these eleven names whenever the user is sitting at `/Files/Home/`. The names are LarePass's bootstrap directories under the Home volume:
+
+| Name | Typical role |
+|------|--------------|
+| `Documents`, `Pictures`, `Movies`, `Downloads`, `Music` | Standard user content folders, surfaced as "shortcut" tiles in the LarePass sidebar |
+| `Code` | Project workspace — referenced by the Code app integration |
+| `Cache`, `Data` | App-data scratch space — system-bootstrapped by user apps |
+| `Ollama`, `Huggingface` | LLM model caches — created by the model-runtime apps and consumed by them by exact name |
+| `Home` | Defensive entry mirrored from the GUI array (guards against historical nested `Home/Home/` shapes) |
+
+Note the LarePass-quirk casing: `Huggingface` is one word (not `HuggingFace`), and the names are case-sensitive across the GUI and CLI.
+
+The backend itself does not refuse these renames / deletes — it does not encode the policy. So a CLI without this guard would happily POST `DELETE /api/resources/drive/Home/Pictures/` for a user, removing a directory that user apps look up by exact name (e.g. the model-runtime app's `Ollama` cache, or the LarePass UI's "Pictures" sidebar tile that points at this exact path). The result would be a state the GUI couldn't restore (re-creating a same-named dir doesn't republish the sidebar entry) and apps quietly breaking their fixed-name lookups.
+
+Consequence baked into the CLI: three verbs reject these names client-side via [`FrontendPath.IsProtectedDriveHomeChild`](cli/cmd/ctl/files/path.go) (and the duplicated `protectedDriveHomeChildren` maps in `cli/internal/files/{rename,rm,cp}` that mirror it):
+
+- **`rename`** refuses to rename `drive/Home/<protected>` to anything.
+- **`rm`** refuses to delete `drive/Home/<protected>` (with or without `-r`).
+- **`mv`** refuses these names AS THE SOURCE — moving would unlink the dir from `drive/Home/`. **`cp` (copy) is intentionally NOT gated** — duplicating the bytes (e.g. `cp -r drive/Home/Pictures/ drive/Home/Pictures-Backup/`) preserves the original and is a perfectly reasonable workflow even if the GUI happens to disable the menu item.
+
+Match scope is **exact first level only**. User content nested inside (e.g. `drive/Home/Pictures/Trip2024/`, `drive/Home/Documents/notes.md`) is fully editable through every verb — the same scope the GUI uses by gating per-row on the user being at `/Files/Home/` rather than disabling the entire subtree. Other namespaces and volumes (`drive/Data/Pictures`, `sync/<repo>/Pictures`, `external/<node>/<vol>/Pictures`) are also unaffected — the policy is `drive/Home/` only.
+
+User-visible signal of the client-side guard: errors phrased `refusing to {rename|delete|mv source} drive/Home/<name>: this is a system-managed Home folder reserved by Files; the Files GUI also disables {rename|delete|move} for {<list>} under drive/Home/.` Do NOT suggest workarounds (e.g. "use the API directly with curl") — the names are load-bearing for user apps, and bypassing the guard would be a footgun, not a feature.
+
+### 5. `cache/<node>/` is a node-picker layer (no share-create)
+
+This one is much narrower than #3 — `cache/<node>/` IS a real per-node directory on the wire, so `ls` / `cat` / `cp` / `mv` / `mkdir` / `upload` / `rm` / `rename` all work fine against it. The constraint is share-create-only.
+
+The LarePass web app's [`CacheDataAPI.fetchCache`](apps/packages/app/src/api/files/v2/cache/data.ts) short-circuits the root URL `/Cache/` (note: not `/Cache/<node>/`) via `formatAppDataNode` and synthesizes children from `filesStore.nodes` — so the user sitting at `/Files/Cache/` is picking a NODE, not browsing a directory. Once a node is picked, navigation drops into `/Files/Cache/<node>/<sub>/` and the wire goes back to the regular `/api/resources/cache/<node>/...` directory listing.
+
+Sharing a node selector does not produce a useful share record: recipients would arrive at a path that resolves to "the cache root of node X" with no concrete dataset behind it, and the LarePass UI's per-row context menu only fires on rows that map to actual files / directories — so a "share this node" affordance doesn't exist in the GUI either.
+
+Consequence baked into the CLI: `share internal` / `share public` / `share smb` reject `cache/<node>/` (SubPath is just `/`) client-side via [`FrontendPath.IsCacheNodeRoot`](cli/cmd/ctl/files/path.go), with an error pointing at the corrected `cache/<node>/<sub>/` shape and at `files ls cache/<node>/` for discovery. **Other verbs against `cache/<node>/` are unaffected** — `ls`, `cp`, `mkdir`, etc. work normally because the per-user files-backend's `/api/resources/cache/<node>/` IS a real per-node filesystem.
+
+User-visible signal: errors phrased `refusing to share cache/<node>/: this is the node-picker layer (no concrete dataset to share); point at a directory inside the node, e.g. cache/<node>/<sub>/`. Note the wording (`node-picker layer`) is intentionally different from external's `volume listing layer` — it tells the reader the underlying reasons differ (cache subpaths ARE shareable; external volume roots are too) so they don't infer a wider rejection than the policy enforces.
+
 ## Authentication transport
 
 Every files API call carries `X-Authorization: <access_token>` as a header (NOT the standard `Authorization: Bearer ...`). The Factory's `refreshingTransport` injects this automatically; see [`cli/pkg/cmdutil/factory.go`](cli/pkg/cmdutil/factory.go). Do not try to call the backend via `curl` with a Bearer token — that header shape is not what the per-user files-backend expects and the request will fail.
@@ -105,7 +158,7 @@ Stat / Range probes inside `download` and `cat` use the reactive path normally �
 
 When the refresh leg itself fails (`/api/refresh` rejects the refresh_token), the typed `*credential.ErrTokenInvalidated` propagates through `reformatHTTPErr` / `reformatRmHTTPErr` so the user sees the canonical "run profile login" CTA directly, without a `Get "https://...":` URL prefix. Recovery rules live in `olares-shared`.
 
-## Command cheatsheet (11 top-level verbs)
+## Command cheatsheet (13 top-level verbs)
 
 ### `files ls <path> [--json]`
 
@@ -196,6 +249,7 @@ Wire protocol (Drive v2 / Resumable.js-compatible):
 Constraints / flags:
 
 - **Destination MUST be one of the supported namespaces above**; tencent and unknown fileTypes fail fast.
+- **`external/<node>/` (no `<volume>`) is rejected** with `... is the volume listing layer (read-only); point at a real volume, e.g. external/<node>/<volume>/<sub>/`. The volume-listing layer has no underlying filesystem to land bytes on (see Server-side quirks #3).
 - **Destination directory MUST already exist** — see "POST auto-renames" above.
 - A trailing `/` on `<remote-path>` means "into this directory"; without one, `<remote-path>` is treated as the full target path (rename on the way in).
 - `--parallel N` (default 2): per-file concurrency. **Per-file chunks remain sequential** by design — the resume probe assumes one in-flight chunk per file.
@@ -309,6 +363,7 @@ The trailing '/' on the URL is what the backend uses to disambiguate "create dir
 Refusals:
 
 - The volume root (`drive/Home/`, `sync/<repo>/`, etc.) is rejected — those always exist; trying to "create" them would just trigger the auto-rename on the extend folder, which is never what you want.
+- **`external/<node>/` is rejected with a customized message** pointing at `external/<node>/<volume>/<sub>/` — the volume-listing layer has no underlying filesystem (see Server-side quirks #3). The generic "pick a subdirectory name (e.g. external/<node>/NewFolder)" hint other namespaces emit would be misleading here, since `NewFolder` would still land at the volume-list level.
 - Bare `.` / `..` / empty segments are rejected as obvious typos / path-traversal grenades.
 - In `-p` mode, a prefix that exists as a NON-directory (e.g. you asked for `mkdir -p Foo/Bar` but `Foo` is a file) errors out instead of letting the auto-rename quirk silently create a `Foo (1)/` sibling.
 
@@ -317,13 +372,15 @@ Refusals:
 Delete one or more remote files / directories. See [`cli/cmd/ctl/files/rm.go`](cli/cmd/ctl/files/rm.go) and [`cli/internal/files/rm/`](cli/internal/files/rm/).
 
 ```bash
-# Delete one file.
+# Delete one file (no -r → FILE form, wire dirent `/old.pdf`).
 olares-cli files rm drive/Home/Documents/old.pdf
 
-# Recursively remove a directory.
+# Recursively remove a directory — both forms produce the same
+# wire request (`/2024/` dirent); pick whichever reads naturally.
+olares-cli files rm -r drive/Home/Backups/2024
 olares-cli files rm -r drive/Home/Backups/2024/
 
-# Multiple targets, no prompt (scripts).
+# Multiple folders, no prompt (scripts).
 olares-cli files rm -rf drive/Home/junk drive/Home/scratch/
 ```
 
@@ -337,10 +394,11 @@ Targets sharing a parent collapse into a single request (matches the LarePass we
 
 Flags / rules:
 
-- `-r` / `-R` / `--recursive`: required for directories. A trailing `/` on a target IS a directory-intent signal and triggers the same check (so `files rm drive/Home/Foo/` errors without `-r` even if `Foo` is technically empty).
+- `-r` / `-R` / `--recursive`: required for directories. A trailing `/` on a target IS a directory-intent signal and triggers the same check (so `files rm drive/Home/Foo/` errors without `-r` even if `Foo` is technically empty). **`-r` also FORCES every target in the same invocation to be sent as a directory dirent (`/<name>/` on the wire) regardless of whether the path string ended in `/`** — that's the Unix `rm -r foo` semantic and the only one that reliably routes the request through the server's POSIX directory-removal path. Practical consequence: `files rm` (no `-r`) is the FILE form (wire dirent `/<name>`), `files rm -r` is the FOLDER form (wire dirent `/<name>/`); don't mix files and folders in a single `-r` call. If you have a file to delete alongside a directory tree, run two `files rm` invocations — one with `-r` for the folder, one without for the file.
 - `-f` / `--force`: skip the y/N prompt. **In a non-TTY context (CI, piped stdin) the command refuses without `--force`** rather than guessing.
 - Without `-f`: prints "will delete N entries in M batches" with the full list, then prompts `[y/N]`.
 - Removing the root of a volume (`drive/Home/`, `sync/<repo>/`, ...) is rejected by the planner: `refusing to delete the root of <fileType>/<extend>`.
+- **System-managed Home children are rejected**: `files rm [-r] drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface}` errors with `refusing to delete drive/Home/<name>: this is a system-managed Home folder reserved by Files; ...`. The names match the LarePass app's `disableMenuItem` array (Server-side quirks #4); their casing is fixed (`Huggingface` is one word). Children INSIDE these dirs (e.g. `drive/Home/Pictures/Trip2024/`) are user content and remain freely deletable. To clear out a protected folder, delete its contents (`files rm -r drive/Home/Pictures/<entry>`); the folder itself stays.
 
 Aliases: `olares-cli files remove ...`, `olares-cli files delete ...` are the same command.
 
@@ -385,8 +443,10 @@ Recursion + safety rules:
 
 - **`-r` / `-R` / `--recursive` is required for directory sources.** A trailing `/` on a `<src>` IS a directory-intent signal — without `-r` you get `... is a directory: pass -r/-R to copy it recursively`.
 - **Volume-root sources are rejected**: `cp drive/Home/ ...` errors with `refusing to copy the root of drive/Home`. Same rule that protects `rm`.
-- **`src == dst` is rejected** — almost always a typo.
-- **Cycle detection**: copying `drive/Home/a/` into `drive/Home/a/sub/` errors with `destination ... is inside source ... (would create a cycle)`.
+- **`external/<node>/` destinations are rejected**: `cp src external/<node>/` errors with `... destination external/<node>/ is the volume listing layer (read-only); point at a real volume, e.g. external/<node>/<volume>/<sub>/`. The volume-listing layer has no underlying filesystem (see Server-side quirks #3). Volume roots like `external/<node>/hdd1/` ARE valid destinations — the strict rule is only on the bare-node form.
+- **`src == dst` is NOT rejected client-side** — the LarePass web app doesn't enforce this either. For a **file** target (`cp drive/Home/foo.pdf drive/Home/foo.pdf`) the backend auto-renames into `foo (1).pdf` (same POST-mkdir auto-rename quirk users already work with from `mkdir`); for a **directory** target the cycle check below catches it. `mv foo foo` on a file is a server-side no-op.
+- **Cycle detection**: copying `drive/Home/a/` into `drive/Home/a/sub/` (or `drive/Home/a/` into itself, since dir-onto-same-dir would create an infinitely-recursing tree) errors with `destination ... is inside source ... (would create a cycle)`.
+- **`mv` source-side rejects system-managed Home children**: `mv drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface} ...` errors with `refusing to mv source drive/Home/<name>: this is a system-managed Home folder reserved by Files; ...`. Moving would unlink bootstrap dirs that user apps depend on (Server-side quirks #4). **`cp` (copy) is intentionally NOT gated** — `cp -r drive/Home/Pictures/ drive/Home/Pictures-Backup/` is fine because the source is preserved. Children inside these dirs (e.g. `drive/Home/Pictures/Trip2024/`) are user content and remain freely movable.
 
 Async / task semantics — important:
 
@@ -422,6 +482,8 @@ olares-cli files mv -r drive/Home/Photos/ drive/Home/Backups/
 `mv` is a separate cobra command (not a `cp --move` alias) so the help text stays honest about what each verb does and so `olares-cli files mv` reads the way users expect.
 
 > **`mv` is a single-step destructive operation from the user's POV.** Even though it's just a flag flip on the wire, treat it the way you would a `mv` on local disk: confirm with the user before running it on directories, and prefer `cp` then `rm` when you want a "verify then delete" workflow.
+
+> **System-managed Home children refuse `mv` as the source** (see `cp` section above). `mv drive/Home/Pictures ...` and the other ten LarePass-protected names will fail client-side with a self-describing error. If the goal is to relocate the *contents*, mv the children (`mv drive/Home/Pictures/* drive/Home/Backups/`) — the protected folder will stay where it is. If the goal is a renamed clone, use `cp -r` instead, then optionally clear the originals via `rm` (which the policy also blocks for the protected folder itself, but allows on its children).
 
 ### `files rename <remote-path> <new-name>` (alias `files rn`)
 
@@ -461,10 +523,83 @@ Validation rules (rejected client-side, before any HTTP call):
 - `<new-name>` MUST NOT be empty, `.`, or `..`.
 - The source MUST NOT be the volume root (`drive/Home/`, `sync/<repo>/`, ...).
 - `<new-name>` MUST differ from the source's current basename — same-name rename is a no-op the server would silently accept; we reject it client-side so a typo doesn't go unnoticed.
+- **System-managed Home children are rejected**: `files rename drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface} ...` errors with `refusing to rename drive/Home/<name>: this is a system-managed Home folder reserved by Files; ...`. These names mirror the LarePass app's `disableMenuItem` array exactly (case-sensitive — `Huggingface` is one word) and protect bootstrap dirs that user apps look up by name (Server-side quirks #4). Children INSIDE these dirs (e.g. `drive/Home/Pictures/Album1/`) are user content and remain freely renamable.
 
 If the server replies HTTP 409, that's typically a basename collision (a sibling under the same parent already has `<new-name>`). The CLI surfaces this as `... server reported a conflict (HTTP 409); ...`. Pick a different name or `rm` the existing sibling first.
 
 > **Use `rename` for in-place basename changes; use `mv` for moves between directories or volumes.** Picking the right verb keeps the wire shape simple and makes the user's intent legible in shell history.
+
+### `files chown <remote-path> [--uid <int>] [--recursive | -r]`
+
+Read or write the POSIX owner UID of a single file or directory. CLI counterpart of the LarePass app's "Permission" tab in the file properties dialog ([`apps/packages/app/src/components/files/prompts/InfoDialog.vue`](apps/packages/app/src/components/files/prompts/InfoDialog.vue), `permissionInDriveType` + `permissionOption` + `onSubmit`). The dialog exposes exactly two presets — `Root`=0 and `User`=1000 — plus a "Recursive" toggle; the CLI accepts any non-negative integer for flexibility but those two are what the GUI plumbs the user through.
+
+See [`cli/cmd/ctl/files/chown.go`](cli/cmd/ctl/files/chown.go) and [`cli/internal/files/permission/`](cli/internal/files/permission/).
+
+#### Two modes (no subcommands — flag presence picks the verb)
+
+| Invocation | Wire | Behavior |
+|------------|------|----------|
+| `files chown <path>` | `GET /api/permission/<fileType>/<extend><subPath>/` | Print the current uid as `drive/Home/foo  uid=1000 (User)`. The `(Root)` / `(User)` annotation is added only for the LarePass preset values; other UIDs render bare. |
+| `files chown <path> --uid <int>` | `PUT /api/permission/<fileType>/<extend><subPath>/?uid=<int>` body `{}` | Replace the uid on the named entry only. |
+| `files chown <path> --uid <int> -r` | `PUT /api/permission/<fileType>/<extend><subPath>/?uid=<int>&recursive=1` body `{}` | Replace the uid on the entry AND every descendant. Mirrors the LarePass GUI's "Recursive" checkbox; the GUI sends literal `recursive=1` (not `true`), so the CLI does too. |
+
+The body is unconditionally `{}` (an explicit empty JSON object); the actual parameters travel in the query string. `setPermission` in [`apps/packages/app/src/stores/operation.ts`](apps/packages/app/src/stores/operation.ts) does the same byte-for-byte.
+
+#### Namespace gate (allow-list of two)
+
+| `<fileType>` | Accepted? | Why |
+|--------------|-----------|-----|
+| `drive` (Home, Data) | ✓ | LarePass's `permissionInDriveType` lists `DriveType.Drive` + `DriveType.Data`, both of which wire to `fileType="drive"`. |
+| `cache` (per-node) | ✓ | LarePass lists `DriveType.Cache`. |
+| `sync` | ✗ — error suggests `files repos` | Seafile permissions live on the library itself (per-user library ACLs); POSIX uid is not the right concept. |
+| `external` | ✗ — error mentions the GUI hides the Permission tab | The LarePass file-properties dialog hides the Permission tab when `currentFile.driveType` is External, so the wire surface there is not part of this contract. |
+| `awss3` / `dropbox` / `google` / `tencent` | ✗ — error reads "object stores have no POSIX uid concept" | Cloud accounts are object stores; ownership is meaningless at this layer. |
+
+#### Volume-root refusal
+
+Chowning the root of a namespace is refused client-side regardless of the gate above:
+
+```
+$ olares-cli files chown drive/Home/
+Error: refusing to chown the root of drive/Home; pick a child path (use -r to fan out across the volume)
+
+$ olares-cli files chown cache/<node>/
+Error: refusing to chown the root of cache/<node>; pick a child path (use -r to fan out across the volume)
+```
+
+This is purely a CLI-layer guard (the wire would accept it). The blast radius if a typo set every entry under `drive/Home/` to uid 0 is severe enough to be worth one extra keystroke; recover by pointing at a subdirectory and using `-r`.
+
+#### Other refusals
+
+- `--recursive` without `--uid` → `--recursive only applies when setting a uid; pass --uid <int> to use it, or drop --recursive to GET the current uid`. The GUI's recursive toggle only makes sense alongside Submit; surfacing the inconsistency early prevents a script that meant to PUT but forgot `--uid` from silently no-op'ing as a GET.
+- `--uid` without an integer → `--uid "<input>" is not an integer (LarePass GUI uses 0 for Root and 1000 for User)`.
+- `--uid -1` (negative) → `--uid must be non-negative (got -1)`. The wire casts to uint server-side, so -1 would silently become a huge UID; reject it client-side.
+
+#### Examples
+
+```bash
+# Inspect the current owner of a file.
+olares-cli files chown drive/Home/Documents/foo.pdf
+# → drive/Home/Documents/foo.pdf  uid=1000 (User)
+
+# Hand a single file to root.
+olares-cli files chown drive/Home/Documents/foo.pdf --uid 0
+# → set uid: drive/Home/Documents/foo.pdf → uid=0 (Root)
+#   ✓ drive/Home/Documents/foo.pdf  uid=0 (Root)
+
+# Hand an entire subtree back to the default user (recursive).
+olares-cli files chown drive/Home/Pictures/Trip2024/ --uid 1000 -r
+# → set uid (recursive): drive/Home/Pictures/Trip2024/ → uid=1000 (User)
+#   ✓ drive/Home/Pictures/Trip2024/  uid=1000 (User) (recursive)
+
+# Cache namespace works the same way.
+olares-cli files chown cache/<node>/scratch/build/ --uid 1000 -r
+
+# drive/Data is also supported (separate volume from drive/Home).
+olares-cli files chown drive/Data/builds/out.bin --uid 0
+```
+
+`olares-cli files chmod` is **not** an alias — POSIX `chmod` changes mode bits, which the per-user files-backend doesn't expose at this layer. If you reach for `chmod`, swap it for `chown` and the wire shape will line up with the GUI.
 
 ### `files share <subcommand>`
 
@@ -499,6 +634,28 @@ Permission integers (`SharePermission` in the LarePass app):
 | 4 | admin | full control (default Internal-share owner perm) |
 
 The CLI accepts canonical labels OR the numeric form: `--permission edit`, `--permission 3`, and `view` / `read` / `ro` / `read-only` are all aliases for `1`. See `share.ParsePermission` in [`cli/internal/files/share/share.go`](cli/internal/files/share/share.go) for the full alias list.
+
+#### Sync repo name resolution (auto-applied to every share verb)
+
+When a share path is in the `sync` namespace, the `<extend>` segment is the Seafile library's UUID (e.g. `sync/b7ffab7f-3ceb-4e36-aeb7-74d958ad0a7a/`). UUIDs are noisy in CLI output and meaningless to share recipients, so every share verb that touches sync paths swaps the bare UUID for the repo's display name where possible.
+
+Mechanics:
+
+- **Create flavors** (`share internal` / `share public` / `share smb`) call [`lookupSyncRepoName`](cli/cmd/ctl/files/share.go) (one-shot `/api/repos/` list, internally `Get` walks `mine` → `share_to_me` → `shared`) BEFORE posting the share record. The resolved name becomes the share's wire-level `name` field (instead of the legacy "last segment / extend" derivation, which would yield the UUID for repo-root shares), and the CLI's "created share" output renders the path as `sync/<repo-name>/<sub>/  (repo <repo-id>)` so the user sees both labels at a glance.
+- **Single-record reads** (`share get`) and **the three update verbs** (`set-password` / `set-members` / `set-smb`) use [`resolveShareDisplayPath`](cli/cmd/ctl/files/share.go), which trusts the server's `SyncRepoName` echo when present and falls back to a one-shot `lookupSyncRepoName` only when the field is empty. Same display format.
+- **List output** (`share list`) uses [`formatSharePathLine`](cli/cmd/ctl/files/share.go) with `override=""`, i.e. it consumes the server-supplied `SyncRepoName` only and **never** falls back to a per-row `repos.Get` — that would be an N+1 explosion on large lists.
+
+Failure semantics:
+
+- `lookupSyncRepoName` is fire-and-forget on the error path: any error / missing repo / unreachable `/api/repos/` returns `""`, and the caller falls back to displaying the UUID. The share-create / share-display call NEVER fails because of a repo lookup hiccup.
+- For repo-root shares with no resolved name, the legacy "extend as name" behavior wins — the share record's `name` becomes the UUID. Less pretty but still functional.
+
+Display format detail:
+
+- Resolved: `sync/Project Alpha/Reports/Q1/  (repo b7ffab7f-3ceb-4e36-aeb7-74d958ad0a7a)`
+- Unresolved: `sync/b7ffab7f-3ceb-4e36-aeb7-74d958ad0a7a/Reports/Q1/`
+
+The parenthesised `(repo <id>)` is preserved on resolved sync paths so users can still cross-reference `repos rename` / `repos rm` / `repos get` against the same UUID. Non-sync namespaces (`drive` / `external` / `cache` / cloud) render unchanged — the resolution helpers no-op.
 
 #### `files share internal <remote-path> [--users name:perm,...] [--permission admin]`
 
@@ -551,6 +708,27 @@ Optional flags:
 
 The CLI prints the share id, password, expiration, and a **link template** of the form `<share-host>/sharable-link/<id>/`. The full link is built by the LarePass app from the user's hostname (`shareBaseUrl()` in `apps/.../stores/files.ts`); the CLI deliberately does NOT guess this prefix because the right value depends on subdomain layout the CLI can't observe — copy the id and let the LarePass app or the share-recipient's browser resolve the prefix.
 
+Namespace gate (Public-only — distinct from the all-flavors gates further down):
+
+Public is locked to the `drive` namespace. Every other fileType is refused, at every depth (root, volume root, deeper subpath). This mirrors the LarePass GUI's per-driver Share-to-Public condition in `apps/packages/app/src/stores/operation.ts`:
+
+```js
+condition: (event) =>
+    event.type === DriveType.Drive ||
+    event.type === DriveType.Data
+```
+
+Both `DriveType.Drive` (drive/Home) and `DriveType.Data` (drive/Data) live under the same `drive` fileType on the wire, so the CLI's allow-list is `{drive}` — the path's `<extend>` (`Home` vs `Data`) is not gated client-side, and the server is the authoritative gate for whether a Drive subpath is shareable.
+
+Refusals by namespace (with the recovery hint the CLI surfaces in the error):
+
+- **`sync/<repo>/<...>`** → `files share public` only supports drive; use `files share internal` for the same path (SMB also refuses sync — Seafile-via-SMB has no working server-side mount), or copy the data into `drive/Home` / `drive/Data` first.
+- **`external/<node>/<...>`** → same Public-only message. External volumes are mounted under `external/<node>/<volume>/` and a public link is awkward there in practice (volumes detach, mount points move between reboots, the link recipient can't tell which volume the link points at); the recovery is the same — `share internal` / `share smb` for in-place sharing, or copy into Drive first.
+- **`cache/<node>/<...>`** → same Public-only message. Per-node cache holds transient app data unsuitable for long-lived public links.
+- **`awss3/<...>` / `google/<...>` / `dropbox/<...>` / `tencent/<...>`** → cloud rejection (see the next section); the message is the uniform "no cloud sharing" one, NOT the per-flavor Public-only one. Recovery is `files download` + re-upload to Drive + share that.
+
+The Public namespace gate fires BEFORE the volume-listing / node-picker root checks below, so `share public external/<node>/` surfaces the broader "Public only supports drive" error rather than the narrower volume-listing-layer one — same final answer (the share isn't created), but the more useful explanation wins. Internal / SMB still go through their own narrower gate (next sub-section) plus the volume-listing / node-picker root checks.
+
 #### `files share smb <remote-path> [--public | --users id:perm,...] [--read-only]`
 
 ```bash
@@ -575,6 +753,24 @@ Mutually exclusive recipient model:
 
 Exactly one of these flags MUST be passed — the CLI rejects an empty SMB share at parse time because a share visible to no one is rarely intentional.
 
+Namespace gate (SMB-only — distinct from the all-flavors cloud gate further down):
+
+SMB allows only `drive`, `external`, `cache`. The allow-list mirrors the LarePass GUI's per-driver Share-to-SMB condition:
+
+```js
+condition: (event) =>
+    event.type === DriveType.Drive ||
+    event.type === DriveType.Data ||
+    event.type === DriveType.External ||
+    event.type === DriveType.Cache
+```
+
+`DriveType.Drive` (drive/Home) and `DriveType.Data` (drive/Data) both live under the `drive` fileType on the wire, so the CLI's allow-list collapses to `{drive, external, cache}`.
+
+- **`sync/<repo>/<...>` is rejected**. Seafile libraries have their own mount story (the web app's `/Files/Sync/` view uses Seafile's HTTP API, not Samba); an SMB share record pointing at a sync path would have no working server-side path to mount. Use `files share internal` for sync paths instead — Internal cross-user access is the supported flow for Seafile content. (Public is also out for sync — see the Public-only gate above.)
+- **`external/<node>/<...>` and `cache/<node>/<...>`** are allowed at every depth (subject to the volume-listing / node-picker root rejections below — those still fire for `external/<node>/` and `cache/<node>/` exactly).
+- **Cloud namespaces** are rejected by the all-flavors cloud gate covered in the next section.
+
 Permission shape:
 
 - SMB shares accept only `view` (1) or `edit` (3) per recipient. The CLI rejects `upload` / `admin` in `--users` parsing with a clean message.
@@ -594,6 +790,41 @@ olares-cli files share smb-users create <name> <password>
 ```
 
 The output of `share smb` includes the `smb_link` (UNC path), `smb_user`, and `smb_password` — these are what a Finder / Explorer / `mount.cifs` client needs to mount the share.
+
+#### Cloud rejection (applies to all three create flavors)
+
+Every share-create flavor (`share internal` / `share public` / `share smb`) refuses every cloud namespace — `awss3`, `google`, `dropbox`, `tencent` — at every depth. Implemented as a uniform branch in `validateShareNamespace` ([`cli/cmd/ctl/files/share.go`](cli/cmd/ctl/files/share.go)).
+
+Why it's uniform across flavors: the share endpoints record a `<fileType>/<extend><subPath>` reference into the share table, but the cloud namespaces' `<extend>` is a per-Olares-user account credential, not a node mount. Recipients of an internal / SMB / Public share have no credential to read the cloud-side path, so the share record would resolve to "404 / 403 / no access" for everyone except the original owner — making the share record meaningless. The CLI fast-fails up front rather than letting the user create a guaranteed-broken share.
+
+Error template (the `<flavor>` slot is `internal` / `public` / `smb`):
+
+```
+refusing to create a <flavor> share for <path>: cloud namespaces
+(awss3 / google / dropbox / tencent) do not support sharing through
+`files share` — the share endpoints don't grant cross-cloud-account
+access, and the resulting share record would point at a path that no
+other Olares user has the credential to read. If you need to share
+cloud-backed data, download it first (`files download`) and re-upload
+it to drive/Home or drive/Data, then share that.
+```
+
+The recovery step is the same regardless of flavor — copy the bytes through Drive first, then share the Drive path. There is no in-place fallback; the cloud rejection is a hard policy.
+
+#### Path refusals (apply to share internal / share smb only — Public's namespace gate already handled these)
+
+The conversion from user path to share Target lives in `frontendPathToShareTarget` ([`cli/cmd/ctl/files/share.go`](cli/cmd/ctl/files/share.go)) and is shared by all three flavors. After the per-flavor namespace gate (above) and the all-flavors cloud rejection, two more checks fire for the remaining cases:
+
+- **`external/<node>/` is rejected**: `refusing to share external/<node>/: this is the volume listing layer (read-only); point at a real volume, e.g. external/<node>/<volume>/<sub>/`. The volume-listing layer has no real filesystem (Server-side quirks #3); pass a volume root or any subpath under it (e.g. `external/<node>/hdd1/` or `external/<node>/hdd1/Backups/`). Public never reaches this branch (the namespace gate already refused all of `external/*`); only `share internal` / `share smb` actually surface this message.
+- **`cache/<node>/` is rejected**: `refusing to share cache/<node>/: this is the node-picker layer (no concrete dataset to share); point at a directory inside the node, e.g. cache/<node>/<sub>/`. The LarePass app's `/Files/Cache/` view is a node selector, not a directory listing (Server-side quirks #5). Subpaths under the node — including `cache/<node>/<app>/` — work fine. Public never reaches this branch either.
+- **Volume roots ARE allowed** for `drive/Home/`, `drive/Data/`, and `sync/<repo>/` (subject to each flavor's own namespace allow-list — `share public sync/<repo>/` is still refused by the Public-only gate). Sharing `drive/Home/` itself is unusual but legitimate; the server is the authoritative gate for whether the resulting share is meaningful — the CLI doesn't second-guess.
+
+To recover from either rejection, use `files ls` on the rejected path to find the navigable children:
+
+```bash
+olares-cli files ls external/<node>/   # → hdd1 / usb1 / smb-... mount points
+olares-cli files ls cache/<node>/      # → per-node directory listing
+```
 
 #### Management verbs
 
@@ -619,6 +850,274 @@ olares-cli files share rm <share-id> [<share-id>...]
 `get` renders the full share record key:value-style; SMB shares' `smb_link` / `smb_user` / `smb_password` print on their own lines so they're easy to copy.
 
 `rm` accepts multiple IDs and joins them into a single `DELETE /api/share/share_path/?path_ids=<comma-joined>` call (atomic from the CLI's perspective).
+
+#### Per-flavor update verbs (`set-password` / `set-members` / `set-smb`)
+
+Three verbs for editing an existing share without re-creating it. Each one targets a single flavor and rejects mismatched share types client-side via [`requireShareType`](cli/cmd/ctl/files/share.go), pointing the user at the correct verb in the error message — `requireShareType` runs after a `Query` (single GET), so the type check happens before the mutation hits the wire and the server never sees the wrong-flavor request.
+
+Common mismatch error template (anchored by tests in [`share_update_test.go`](cli/cmd/ctl/files/share_update_test.go)):
+
+```
+refusing to <verb> share <id>: the share is <friendly-type> (wire type "<wire-type>"),
+not <expected-friendly-type>; use the matching update verb instead — `share set-password`
+for public shares, `share set-members` for internal shares, `share set-smb` for SMB shares
+```
+
+Note: the friendly-name translation for Public is load-bearing — the wire `share_type` discriminator for Public is the historically confusing `"external"` string, so the error always says "public" rather than "external" to keep users from hunting for a non-existent `share external` command.
+
+##### `files share set-password <share-id> [--password STR]`
+
+Roll the access password of a Public-link share. Wire shape:
+
+```
+PUT /api/share/share_password/
+    body: {path_id: "<share-id>", password: "<new-password>"}
+```
+
+Mirrors LarePass's "Reset Password" modal at `apps/.../components/files/share/ShareResetPassword.vue` (calls `share.resetPassword(path_id, password)`). The share id stays stable across the reset — recipients keep the same `/sharable-link/<id>/` URL but need the new password the next time they open it.
+
+Password rules — same as `share public` create:
+
+- `--password` is optional; when omitted the CLI generates an 8-byte URL-safe random password (`crypto/rand` → `base64.RawURLEncoding`, ≈11 chars) and prints it ONCE. The server does not echo passwords back on subsequent `share get` / `share list`, so capture the first-print output.
+- Minimum length is 6 characters (LarePass's `passwordLimitRule`).
+
+Type gate: only Public shares accept this verb. `set-password` against an Internal or SMB share fails with the standard share-type-mismatch error.
+
+```bash
+# Auto-generated random password.
+olares-cli files share set-password <share-id>
+
+# Explicit password.
+olares-cli files share set-password <share-id> --password "n3w-pw-1"
+```
+
+##### `files share set-members <share-id> (--users name:perm,... | --clear)`
+
+REPLACE the entire member list of an Internal share. Wire shape:
+
+```
+PUT /api/share/share_path/share_members/
+    body: {path_id: "<share-id>",
+           share_members: [{share_member: "<name>", permission: <int>}, ...]}
+```
+
+Mirrors LarePass's "Edit Permissions" modal at `apps/.../components/files/share/Internal/internal.ts` (calls `share.updateInternalShareMembers` when `internalShareId` already exists, around L137-147 there).
+
+**REPLACES, not appends** — every existing member NOT listed in `--users` is dropped. The endpoint has no append / single-member-PATCH variant on the wire, and the LarePass app uses the same `PUT` for additive flows (it carries every existing member through plus the new one). For an additive update from the CLI, list every existing member plus the new one in `--users`.
+
+Flag rules:
+
+- `--users` and `--clear` are mutually exclusive; exactly one MUST be passed (the no-flag form is rejected to guard against shell-quoting accidents wiping a member list).
+- `--users` format mirrors `share internal --users`: `name1:perm1,name2:perm2,name3` — perm defaults to `view` when omitted.
+- `--users` accepts permissions: `view` / `upload` / `edit` / `admin` (or `1..4`). `parseShareMembers` is shared with `share internal` so the parsing rules are identical between create and update.
+- `--clear` drops every member; the share record stays but becomes private to its owner until the next `set-members`.
+- `--users " ,, "` (all-whitespace, no usable entries) is rejected with a hint to use `--clear` for intentional empties.
+
+Type gate: only Internal shares accept this verb. SMB shares use a different account model (SMB-account IDs, not Olares user names) and have their own `set-smb` verb.
+
+```bash
+# Replace with two users.
+olares-cli files share set-members <share-id> --users alice:edit,bob:view
+
+# Promote bob from view to admin (carry alice through unchanged).
+olares-cli files share set-members <share-id> --users alice:edit,bob:admin
+
+# Drop every member.
+olares-cli files share set-members <share-id> --clear
+```
+
+##### `files share set-smb <share-id> (--public | --users smb-id:perm,...) [--read-only]`
+
+REPLACE the SMB-account list of an SMB share, or flip it to public-SMB mode. Wire shape:
+
+```
+POST /api/share/smb_share_member/
+    body: {path_id: "<share-id>",
+           users: [{id: "<smb-account-id>", permission: <int>}, ...],
+           public_smb: <bool>}
+```
+
+Mirrors LarePass's SMB edit-mode at `apps/.../components/files/share/SMB/smb.ts` L79-104 (calls `share.updateSMBShareMember(path_id, users, public_smb)`).
+
+Flag rules — same shape as `share smb` create, so muscle memory carries over:
+
+- `--public` and `--users` are mutually exclusive; exactly one MUST be passed.
+- `--public` flips the share to public-SMB; the CLI sends `users: []` (typed empty slice, NOT `null`) so the wire shape matches LarePass exactly.
+- `--users` entries are SMB-account IDs (NOT Olares user names — list them via `share smb-users list`); per-entry perm is `view` / `edit` (or `1` / `3`) — `upload` and `admin` are rejected because the SMB endpoint doesn't grant those.
+- `--read-only` forces every entry's perm to `view`, regardless of each entry's `:perm` annotation. Public-SMB mode is independent of `--read-only`.
+- Shared parser with `share smb` create (`parseSMBUsers`) — single source of truth for the format, no drift between create and update.
+
+Type gate: only SMB shares accept this verb. Public / Internal shares fail with the share-type-mismatch error.
+
+```bash
+# Switch to public-SMB.
+olares-cli files share set-smb <share-id> --public
+
+# Replace member list with two SMB users.
+olares-cli files share set-smb <share-id> --users smb-uid-1:edit,smb-uid-2:view
+
+# Demote everyone to read-only.
+olares-cli files share set-smb <share-id> --users smb-uid-1,smb-uid-2 --read-only
+```
+
+### `files smb <subcommand>`
+
+CLI counterpart of the LarePass web app's "Connect to Server" modal — mount external SMB shares into the per-user files-backend's `external/<node>/...` namespace, and manage the per-node "Favorite Servers" history book. See [`cli/cmd/ctl/files/smb.go`](cli/cmd/ctl/files/smb.go) and [`cli/internal/files/smbmount/smbmount.go`](cli/internal/files/smbmount/smbmount.go); the GUI references are [`apps/.../components/files/smb/ConnectServerStep1.vue`](apps/packages/app/src/components/files/smb/ConnectServerStep1.vue) (favorites + URL entry), [`ConnectServerStep3.vue`](apps/packages/app/src/components/files/smb/ConnectServerStep3.vue) (credential entry), [`apps/.../stores/files.ts`](apps/packages/app/src/stores/files.ts) `mountSmbInExternal`, and [`apps/.../stores/operation.ts`](apps/packages/app/src/stores/operation.ts) `unmount`.
+
+> **Why this is its own verb tree, not part of `files share`.** `files share smb` creates an OUTGOING Samba share (the user's data exposed over SMB to other clients). `files smb mount` is the INCOMING direction — the per-user files-backend mounts a remote SMB server into `external/<node>/<entry>/` so the user can browse it as if it were local. They share the "SMB" word and nothing else.
+
+#### Wire shape (three endpoints, five methods)
+
+| Verb | HTTP method + URL | Body | Source |
+|------|-------------------|------|--------|
+| `mount` | `POST /api/mount/[<node>/]?external_type=smb` | `{smbPath, user, password}` | `mountSmbInExternal` (stores/files.ts L1263-L1302) |
+| `unmount` | `POST /api/unmount/external/<node>/<name>/?external_type=smb` | `{}` | `unmount` (stores/operation.ts L844-L887) |
+| `history list` | `GET /api/smb_history/<node>/` | — | `getFavoriteList` (ConnectServerStep1.vue L113-L122) |
+| `history add` (upsert) | `PUT /api/smb_history/<node>/` | `[{url, username?, password?}]` | `saveFavorite` (ConnectServerStep1.vue L124-L134) |
+| `history rm` | `DELETE /api/smb_history/<node>/` | `[{url}]` | `removeFavorite` (ConnectServerStep1.vue L136-L140) |
+
+`{<node>}` is conditionally present in the mount URL — when the per-user files-backend has no clustered nodes, the LarePass app drops it entirely (`/api/mount/?external_type=smb`); the CLI replicates that branch byte-for-byte. **For `unmount` and the three `history` verbs the `<node>` segment is mandatory** (the URL shape is fixed).
+
+#### Mount-reply envelope: code 200 vs code 300
+
+The mount endpoint has TWO valid success-shape replies:
+
+| Code | Meaning | CLI behavior |
+|------|---------|--------------|
+| `200` | Mounted successfully; the share is now visible at `external/<node>/<entry>/` | Print `✓ mounted; the share is now visible at external/<node>/<entry>/` plus a hint to confirm via `files ls external/<node>/`; exit 0 |
+| `300` | The supplied `smbPath` was a host-only address (e.g. `//host`); `data` is `[{path:"//host/share[/sub]"}, ...]` — the list of shares the server discovered | Print the candidate paths (one per line, OR JSON when `--json`); exit non-zero with `mount returned a multi-share list (code 300); re-run with one of the paths above` so a script can detect the case |
+
+Any other code is surfaced as `server rejected (code N): <message>` — a 200/HTTP envelope-error, NOT a `*HTTPError`. This matches the LarePass GUI flow: code 300 pops up `ConnectServerPath.vue` (a chooser dialog) and the user re-runs; code-other shows a toast and bails.
+
+#### `files smb mount <smb-url> [-u <user>] [-p <password> | --password-stdin] [--node <node>] [--json]`
+
+`<smb-url>` MUST start with `//` (the SMB convention). Three credential modes, in priority order:
+
+| Mode | Trigger | Behavior |
+|------|---------|----------|
+| Explicit | `-p <password>` | Used as-is. Convenient for one-offs but **echoed in shell history** — never use this in scripts. |
+| Stdin pipe | `--password-stdin` | Reads the first stdin line, strips trailing CR/LF. Mutually exclusive with `-p`. The script-friendly form: `printf '%s' "$SMB_PASSWORD" \| olares-cli files smb mount ... --password-stdin`. Empty stdin is rejected. |
+| Interactive | (none of the above) | Reads via `golang.org/x/term` so the password is **not** echoed. Requires a real TTY — failing the TTY check produces `stdin is not a terminal — pipe a password with --password-stdin or pass --password explicitly`. Anonymous SMB shares (empty password) are accepted at the wire layer; if the server rejects them, the error surfaces verbatim. |
+
+`-u` is OPTIONAL — anonymous shares (where the server allows un-authenticated `guest` access) work without it; the progress line then reads `(user=(anonymous))`. Most modern SMB targets need a real username, so the CLI does NOT auto-supply one.
+
+`--node` is OPTIONAL — without it the CLI calls `/api/nodes/` and uses `nodes[0].Name` (same default cascade `files cp` and `files upload` use). Pass `--node <name>` only when the auto-detected first node isn't the one you want.
+
+```bash
+# Mount a specific share (server already knows which one).
+olares-cli files smb mount //host.local/Public -u alice -p s3cret
+
+# CI-friendly: pipe the password from a secret store.
+printf '%s' "$SMB_PASSWORD" | \
+    olares-cli files smb mount //host.local/Public -u alice --password-stdin
+
+# Interactive (TTY-only, no echo).
+olares-cli files smb mount //host.local/Public -u alice
+# → SMB password: ********
+
+# Server-side share discovery — pass the host alone, get a list,
+# re-run with the chosen share path.
+olares-cli files smb mount //host.local
+# → server returned 3 candidate share path(s) — pick one and re-run mount:
+#     //host.local/Public
+#     //host.local/Movies
+#     //host.local/Backups
+# (exit code 1)
+
+olares-cli files smb mount //host.local/Public
+
+# JSON form of the code-300 list (script consumption).
+olares-cli files smb mount //host.local --json
+# → {"code":300,"paths":["//host.local/Public","//host.local/Movies",...]}
+```
+
+After a successful mount, every other `files` verb works against the resulting `external/<node>/<entry>/` path the same way it does for any other namespace — `files ls external/<node>/` shows the new entry, `files cp` works against subpaths, and so on.
+
+#### `files smb unmount <name> [--node <node>]`
+
+`<name>` is the entry name AS IT APPEARS in `files ls external/<node>/` — typically something like `smb-host-share`. **The CLI rejects names that contain `/` or `\` client-side** because the URL shape is `/api/unmount/external/<node>/<name>/...` — passing a multi-segment path as `<name>` would silently 404. Discover the right name first:
+
+```bash
+olares-cli files ls external/main/
+# → smb-host-share/    drwxr-xr-x  ...
+#   hdd1/              drwxr-xr-x  ...
+
+olares-cli files smb unmount smb-host-share --node main
+# → unmount: external/main/smb-host-share
+#   ✓ unmounted external/main/smb-host-share
+```
+
+`unmount` is **not interactive** — there's no `[y/N]` prompt — because losing a mount is recoverable (just re-run `mount`); preserve the audit trail in the user's terminal output and that's it.
+
+`--node` defaults to the first `/api/nodes/` entry, same as `mount`.
+
+#### `files smb history <subcommand>`
+
+Per-node SMB favorites — the same "Favorite Servers" list the LarePass app keeps in its "Connect to Server" dialog. Each entry carries a `url` plus optional saved credentials (`username` + `password`); a history entry with credentials makes a future `mount` one keystroke faster (the user / app picks the URL, credentials autofill). Three subverbs:
+
+##### `files smb history list [--node <node>] [--json]`
+
+Default columns: `URL  USERNAME  HAS-PASSWORD`. `HAS-PASSWORD` is `yes` / `no` — the saved password itself is **never printed** in default mode; pass `--json` if you need the raw fields (e.g. to migrate a favorites list across instances). Each `--json` line is one entry, including `url`, `username`, `password`, `timestamp`.
+
+```bash
+olares-cli files smb history list
+# URL                       USERNAME      HAS-PASSWORD
+# //host.local/Public       alice         yes
+# //backup.local/Archive    (anonymous)   no
+
+# Full record for migration / scripting.
+olares-cli files smb history list --json
+```
+
+The wire reply tolerates both shapes the GUI has used historically — bare array (`[{url:..., ...}, ...]`) AND envelope (`{code, data:[...]}`) — so the CLI keeps working across server-side refactors.
+
+##### `files smb history add <smb-url> [-u <user>] [-p <password> | --password-stdin] [--node <node>]`
+
+Add or update (upsert) an entry by URL. The wire is a PUT — the server merges by `url`, replacing existing rows in place. Three flag combinations:
+
+| Combination | Resulting entry |
+|-------------|-----------------|
+| no `-u` / no `-p` | URL-only favorite. Subsequent `mount` calls prompt for credentials. |
+| `-u` only | URL + username, no saved password. `mount` will still prompt for the password. |
+| `-u` + (`-p` or `--password-stdin`) | URL + saved credentials. `mount` can pull both halves from the favorites list (LarePass auto-uses them). |
+
+**`-p` / `--password-stdin` without `-u` is rejected client-side** with `--password / --password-stdin requires --user; SMB auth needs both halves` — a saved password without a username is unusable for SMB auth and almost always indicates a typo.
+
+```bash
+# URL-only favorite.
+olares-cli files smb history add //host.local/Public
+
+# With a saved username (mount still prompts for password).
+olares-cli files smb history add //host.local/Public -u alice
+
+# Full saved credentials (one-step mount later).
+olares-cli files smb history add //host.local/Public -u alice -p s3cret
+# → ✓ saved favorite //host.local/Public on node main (user=alice, password saved)
+
+# CI-friendly secret pipe.
+printf '%s' "$SMB_PASSWORD" | \
+    olares-cli files smb history add //host.local/Public -u alice --password-stdin
+```
+
+##### `files smb history rm <smb-url>... [--node <node>]`
+
+Remove one or more entries by URL. Multiple URLs are batched into a single DELETE request. Each URL must start with `//` (same shape rule as `mount` and `add`); whitespace-only / empty entries are skipped (the all-empty case is rejected with `no SMB urls given` so a typo can't silently no-op).
+
+```bash
+olares-cli files smb history rm //host.local/Public
+olares-cli files smb history rm //a/Public //b/Movies
+# → ✓ removed favorite //a/Public on node main
+#   ✓ removed favorite //b/Movies on node main
+```
+
+The DELETE is unconditional — the favorites list is small and easily re-built, so there's no `[y/N]` prompt. Pair with `history list` first if you want a safety net.
+
+#### Operational notes
+
+- **Saved passwords are stored server-side as plaintext** (the LarePass GUI does the same — there's no client-side encryption). Treat the favorites list the same way you'd treat any other credential blob: don't expose it via `--json` to a logger / chat / public artifact, and prefer URL-only or username-only entries when the convenience is small.
+- **Unmount BEFORE deleting an SMB favorite if the favorite was the only record of the connection** — once the entry is out of the history list, the user has to manually re-type the URL / credentials to remount.
+- **Mount entries persist across CLI invocations and reboots** until explicitly unmounted (or until the underlying SMB server goes unreachable for long enough that the per-user files-backend GCs the entry — out of scope for the CLI).
+- **`<entry>` (the name visible in `external/<node>/`) is server-chosen** — the CLI does NOT let you pick it. If you mount the same SMB share twice the entry name will collide; unmount the old one first.
 
 ### `files repos <subcommand>`
 
@@ -733,6 +1232,9 @@ Multiple ids are deleted in turn. Per-id failures are printed as `failed: <id> (
 | `mkdir -p ... already exists but is NOT a directory` | A prefix in your `-p` path is a file (e.g. `mkdir -p Foo/Bar/` but `Foo` is a file) | Pick a different path; the auto-rename quirk would otherwise create a `Foo (1)/` sibling silently. |
 | `mkdir <path>: parent directory does not exist (HTTP 404); pass -p to create missing intermediates` | Tried `files mkdir A/B/C` where `A/B` doesn't exist | Add `-p` to create the missing intermediates in one shot. |
 | `refusing to mkdir the root of <fileType>/<extend>` | Tried `files mkdir drive/Home/` (or another volume root) | Pick a subdirectory name (e.g. `drive/Home/NewFolder`). |
+| `refusing to mkdir at external/<node>/: this is the volume listing layer (read-only); point at a real volume, e.g. external/<node>/<volume>/<sub>/` | Tried `files mkdir external/<node>/` or `files mkdir external/<node>/NewVolume/` (creating an entry at the volume-list level) | `external/<node>/` is the virtual volume listing — there is no real filesystem there (see Server-side quirks #3). Point `mkdir` at a directory inside an existing volume, e.g. `external/<node>/hdd1/NewFolder/`. Use `files ls external/<node>/` first to discover the attached volumes. |
+| `cp/mv: destination external/<node>/ is the volume listing layer (read-only); point at a real volume, e.g. external/<node>/<volume>/<sub>/` | Tried `cp src external/<node>/` (drop-into-dir at the volume-list level) | Same root cause as the mkdir variant. Use `files ls external/<node>/` to find the right volume, then re-run with `external/<node>/<volume>/...` as the destination. Volume roots like `external/<node>/hdd1/` are valid destinations. |
+| `upload destination external/<node>/ is the volume listing layer (read-only); point at a real volume, e.g. external/<node>/<volume>/<sub>/` | Tried `files upload <local> external/<node>/` (no `<volume>` segment) | Same root cause. Add the `<volume>` segment so the upload targets a real attached volume, e.g. `external/<node>/hdd1/Backups/`. |
 | `--overwrite and --resume are mutually exclusive` | Passed both download flags | Pick one |
 | `refusing to delete without --force in a non-interactive context (no TTY)` | `files rm` from a script with no TTY | Add `-f` after **explicitly listing the targets to the user first** |
 | `refusing to delete the root of <fileType>/<extend>` | Tried `files rm -r drive/Home/` (or another volume root) | The CLI does not support volume-root deletion; remove children individually |
@@ -742,8 +1244,7 @@ Multiple ids are deleted in turn. Per-id failures are printed as `failed: <id> (
 | `HTTP 500` against `/api/resources/.../<filename>` (no trailing slash) | Hit the backend's single-file List quirk directly (e.g. via curl) | Don't bypass the CLI; the CLI uses parent-listing Stat for a reason |
 | `... is a directory: pass -r/-R to copy/move it recursively` | `cp` / `mv` on a path with trailing `/` (or any directory) without `-r` | Add `-r` after confirming the user wants the whole tree |
 | `target ... must end with '/' when more than one source is given` | `cp src1 src2 dst` with `dst` not ending in `/` | Add a trailing `/` to `<dst>` (drop-into-dir) or split into separate single-source `cp` calls |
-| `source and destination are the same` | `cp foo foo` (typo) | Pick a real destination |
-| `destination ... is inside source ... (would create a cycle)` | `cp -r drive/Home/a/ drive/Home/a/sub/` | Pick a destination outside the source tree |
+| `destination ... is inside source ... (would create a cycle)` | `cp -r drive/Home/a/ drive/Home/a/sub/` (or `cp -r drive/Home/a/ drive/Home/a/`, i.e. dir → same dir) | Pick a destination outside the source tree. Note: `cp foo foo` on a **file** is no longer rejected client-side — the backend auto-renames into `foo (1)` (same POST-mkdir quirk); `mv foo foo` is a server-side no-op. |
 | `refusing to copy/move the root of <fileType>/<extend>` | `cp drive/Home/ ...` | Volume-root copy/move is unsupported; specify a child path |
 | `paste <src> → <dst>: <message>` (HTTP 200, code -1) | Server-side rejection — typically a literal backslash in the path | Fix the path; don't retry verbatim |
 | `cannot resolve {node} URL segment` | Neither side has an External/Cache hint and `/api/nodes/` returned no usable default | Pass `--node <name>` explicitly |
@@ -752,7 +1253,15 @@ Multiple ids are deleted in turn. Per-id failures are printed as `failed: <id> (
 | `<new-name> is "."` / `is ".."` / `is empty` | `rename` was given a sentinel basename | Pick a real basename |
 | `<new-name> equals the current basename` | `rename` was a no-op | If the user intended a cross-directory move, use `mv` |
 | `refusing to rename the root of <fileType>/<extend>` | `rename drive/Home/ ...` | Volume roots can't be renamed; pick a child path |
+| `refusing to rename drive/Home/<name>: this is a system-managed Home folder reserved by Files; ...` | Tried `files rename drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface}` (the LarePass app's `disableMenuItem` set) | These names are LarePass-bootstrapped Home folders that user apps look up by exact name (Server-side quirks #4) — the Files GUI also greys out rename for them. Rename a child instead (e.g. `drive/Home/Pictures/<album>`), or copy the contents into a new sibling (`cp -r drive/Home/Pictures/ drive/Home/PicturesArchive/`). |
+| `refusing to delete drive/Home/<name>: this is a system-managed Home folder reserved by Files; ...` | Tried `files rm [-r] drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface}` | Same root cause as the rename variant (Server-side quirks #4). Children INSIDE the protected folder are freely deletable — `files rm -r drive/Home/Pictures/<entry>` works, the protected folder itself stays. |
+| `refusing to mv source drive/Home/<name>: this is a system-managed Home folder reserved by Files; ...` | Tried `files mv drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface} ...` | Moving would unlink bootstrap dirs that user apps depend on (Server-side quirks #4). For a renamed clone, use `cp` instead (`cp -r drive/Home/Pictures/ drive/Home/Pictures-Backup/`); for relocating contents, mv the children (`mv drive/Home/Pictures/* drive/Home/Backups/`) — the protected folder will remain in place. |
 | `... server reported a conflict (HTTP 409)` (rename) | A sibling with `<new-name>` already exists under the same parent | Pick a different name or `rm` the existing sibling first |
+| `refusing to share external/<node>/: this is the volume listing layer (read-only); point at a real volume, e.g. external/<node>/<volume>/<sub>/` | Tried `files share internal\|public\|smb external/<node>/` (the volume-listing layer has no real filesystem behind it) | Same root cause as the mkdir / cp / upload variants of this rejection (Server-side quirks #3). Run `files ls external/<node>/` to discover attached volumes, then re-run the share with `external/<node>/<volume>/...` as the path. Volume roots like `external/<node>/hdd1/` are valid share targets. |
+| `refusing to create a public share for <path>: 'files share public' only supports the {drive} namespace(s) (matches the LarePass GUI's per-driver gating). Use 'files share internal' or 'files share smb' for that namespace, or copy the data into drive/Home or drive/Data first.` | Tried `files share public <path>` where the path is in `sync` / `external` / `cache` (Public is locked to `drive` only — mirrors the LarePass GUI's per-driver Share-to-Public condition `event.type === DriveType.Drive || event.type === DriveType.Data`). The gate fires at every depth (root, volume root, deeper subpath). | If the same recipients are Olares users on this node, switch to `files share internal <path>` (cross-user access). For external / cache, `files share smb <path>` also works (network mount). For sync, only `files share internal` works — SMB also refuses sync. If a public link is genuinely required, copy the data into `drive/Home/` or `drive/Data/` first (`files cp -r <path> drive/Home/<sub>/`) and run `files share public` against the Drive copy. |
+| `refusing to create a smb share for <path>: 'files share smb' only supports the {cache, drive, external} namespace(s) (matches the LarePass GUI's per-driver gating). Use 'files share internal' for that namespace, or copy the data into drive/Home or drive/Data first.` | Tried `files share smb sync/<repo>/<...>`. SMB rejects the entire `sync` namespace because Seafile libraries don't have a Samba-compatible mount path on the server (the LarePass GUI excludes sync from its Share-to-SMB condition for the same reason). | Use `files share internal sync/<repo>/<...>` to share the Seafile library with other Olares users — that's the only flavor that accepts sync paths. If a network mount is genuinely required, copy / sync the data into `drive/Home/<sub>/` first and `files share smb` against the Drive copy. |
+| `refusing to create a <flavor> share for <path>: cloud namespaces (awss3 / google / dropbox / tencent) do not support sharing through 'files share' — the share endpoints don't grant cross-cloud-account access ...` (`<flavor>` ∈ `internal` / `public` / `smb`) | Tried `files share internal\|public\|smb` against an `awss3/`, `google/`, `dropbox/`, or `tencent/` path. Every share-create flavor refuses cloud namespaces uniformly because the resulting share record would point at a per-account credential the recipient has no way to use. | Cloud-backed data has no in-place share path. Recovery: `files download awss3/<account>/<path>` (or the equivalent for the cloud you're using), then `files upload <local> drive/Home/<sub>/`, then `files share <flavor> drive/Home/<sub>/`. The Drive copy is what's actually shareable. |
+| `refusing to share cache/<node>/: this is the node-picker layer (no concrete dataset to share); point at a directory inside the node, e.g. cache/<node>/<sub>/` | Tried `files share internal\|public\|smb cache/<node>/` (the LarePass app renders /Files/Cache/ as a node picker, not a directory) | Server-side quirks #5: cache subpaths ARE shareable (`cache/<node>/<app>/...`), but `cache/<node>/` itself is a node selector. Run `files ls cache/<node>/` to see the navigable subdirectories, then re-run with `cache/<node>/<sub>/`. Other verbs (`ls`, `cp`, `upload`, ...) DO work at `cache/<node>/` — the rejection is share-create-only. |
 | `Public shares require an expiration` | `share public` without `--expire-days` or `--expire-time` | Pass exactly one expiration flag (Public-link shares need a TTL) |
 | `--expire-days and --expire-time are mutually exclusive` | Both flags passed together | Pick one |
 | `--password must be at least 6 characters` | `share public --password` shorter than 6 chars | Use a longer password (or omit `--password` to auto-generate one) |
@@ -762,6 +1271,28 @@ Multiple ids are deleted in turn. Per-id failures are printed as `failed: <id> (
 | `share <id> created, but adding members failed: ...` | `share internal --users` post-create call failed | The share record IS on the server (id is in the message); fix the underlying error and re-run `share internal` with the same `--users`, or call member-add directly through the LarePass app |
 | `share ... not found on the server` (`share get`) | Share id is wrong / already removed | List shares to confirm: `files share list` |
 | `share ... server reported a conflict (HTTP 409)` (share) | Resource is already shared, or the share id is in use | Use `share list` to find the existing share id; `share rm` it first if you intended to recreate |
+| `refusing to <verb> share <id>: the share is <X> (wire type "..."), not <Y>; use the matching update verb instead — share set-password for public shares, share set-members for internal shares, share set-smb for SMB shares` | Ran `share set-password` / `set-members` / `set-smb` against the wrong flavor — e.g. `set-password` on an Internal share (no recipient password); `set-members` on an SMB share (different account model); `set-smb` on a Public share (no SMB user list) | The error already lists every update verb's flavor; switch to the one that matches your share. Run `files share get <id>` if you need to re-confirm what type the share is. Note: Public's wire type is `"external"`, but the CLI / error always says "public" — that's the right verb name. |
+| `share set-members requires --users <list> OR --clear` | `files share set-members <id>` with neither flag | Either pass `--users alice:view,bob:edit` (REPLACE the member list) or `--clear` (drop every member). The no-flag form is rejected so a shell-quoting accident can't silently wipe members. |
+| `--users contained no usable entries; use --clear to empty the member list intentionally` | `share set-members --users " ,, "` (whitespace-only / commas-only) | If you meant to clear, use `--clear`; if you meant to replace, list at least one entry. |
+| `share set-smb requires either --public OR --users` | `files share set-smb <id>` with neither flag | Same recipient-model rule as `share smb` create. |
+| `namespace "sync" is not supported by 'files chown'; Seafile permissions live on the library itself — use 'olares-cli files repos' for sync ACLs` | Tried `files chown sync/<repo_id>/<...>` | Sync permissions are managed at the library level (per-user library ACLs in Seahub), not via POSIX uid. Use `olares-cli files repos` (list/get/rename/rm) for the surface that ships today; there is no `files chown` equivalent for sync. |
+| `namespace "external" is not supported by 'files chown'; the LarePass GUI hides the Permission tab for external mounts. Allowed: cache, drive` | Tried `files chown external/<node>/<volume>/<...>` | External mounts are supplied by the host (USB / SMB / etc.) and the LarePass file-properties dialog hides the Permission tab for them; the wire surface there is not part of the `chown` contract. If the underlying mount supports POSIX permissions, change them on the host instead. |
+| `namespace "<cloud>" is a cloud account; object stores have no POSIX uid concept. Allowed: cache, drive` (`<cloud>` ∈ awss3 / google / dropbox / tencent) | Tried `files chown awss3/<account>/<...>` (or another cloud) | Cloud accounts wrap object stores (S3, Drive, Dropbox, COS); ownership / mode are not part of the object-store data model. There is no recovery path on the cloud namespace itself; if you need POSIX permissions on the data, copy it into `drive/Home/<sub>/` or `drive/Data/<sub>/` (`files cp -r awss3/<account>/<path> drive/Home/<sub>/`) and chown the Drive copy. |
+| `refusing to chown the root of <fileType>/<extend>; pick a child path (use -r to fan out across the volume)` | Tried `files chown drive/Home/`, `drive/Data/`, or `cache/<node>/` (`<extend>`-only paths) | Chowning a volume root is a CLI-layer guard — the wire would accept it but the blast radius is severe. Pick a one-level-deeper path (e.g. `drive/Home/Pictures/`) and add `-r` if you want to fan out across that subtree. |
+| `--recursive only applies when setting a uid; pass --uid <int> to use it, or drop --recursive to GET the current uid` | Ran `files chown <path> -r` without `--uid` | Without `--uid` the verb is a GET; `-r` is meaningless. Either add `--uid <int>` to make it a recursive PUT, or drop `-r` to inspect the current uid. |
+| `--uid "..." is not an integer (LarePass GUI uses 0 for Root and 1000 for User)` | `files chown <path> --uid User` (or any non-integer) | LarePass plumbs human-readable labels into integer wire values; pass the integer directly (`--uid 0` for Root, `--uid 1000` for User). Other UIDs (custom POSIX users on the node) are accepted unchanged. |
+| `--uid must be non-negative (got -1)` | `files chown <path> --uid -1` | Negative values are rejected client-side because the server casts to uint and `-1` would silently become a huge UID. Use `0` for Root or `1000` for User. |
+| `chown set drive/Home/...: not found on the server (HTTP 404)` | Tried `files chown <path> --uid <int>` against a path that doesn't exist | Confirm the path with `files ls <parent>/`; the chown endpoint is a thin wrapper over the same backend that serves `/api/resources/...`, so a 404 here usually means the file is gone. The same wording is used for the GET path (`chown get ...`). |
+| `smb url "..." must start with `//`` | `files smb mount` / `history add` / `history rm` was passed an SMB URL without the leading `//` (e.g. `host.local/Public`) | SMB URLs MUST start with two slashes — fix the path and re-run (`//host.local/Public`). |
+| `--password and --password-stdin are mutually exclusive` | Passed both `-p` and `--password-stdin` to `files smb mount` / `history add` | Pick one — `-p <password>` for one-offs (echoed in shell history), `--password-stdin` for scripts (preferred). |
+| `--password / --password-stdin requires --user; SMB auth needs both halves` | `files smb history add <url> -p s3cret` (saved password without username) | Add `-u <user>` — a password without a username is unusable for SMB auth, so the CLI assumes it's a typo. If you genuinely want a URL-only favorite, drop `-p` / `--password-stdin`. |
+| `--password-stdin: password is empty` | `printf '' \| olares-cli files smb mount ... --password-stdin` (or the pipe died before sending anything) | Make sure the upstream command actually emits the password. For anonymous shares, omit `--password-stdin` and `-p` altogether — interactive mode accepts empty input. |
+| `stdin is not a terminal — pipe a password with --password-stdin or pass --password explicitly` | `files smb mount` invoked from a script / CI / heredoc without `-p` or `--password-stdin` | The interactive password prompt requires a TTY. Either pipe the secret with `--password-stdin` or pass `-p` (acceptable when the surrounding tooling already redacts the command line). |
+| `mount returned a multi-share list (code 300); re-run with one of the paths above` | `files smb mount //host.local` (host-only address — server replied with the list of discovered shares) | Pick one of the printed paths and re-run mount. Use `--json` if you're scripting around this — it puts the path list under `paths` for jq pipelines. |
+| `server rejected (code N): <message>` (smb mount) | The server returned 200/HTTP but a non-200/300 envelope code (typically `code 401` for bad credentials, `code 500` for server-side mount failure) | The wire `<message>` is the server's diagnostic — surface it to the user verbatim. For `code 401` the most common cause is wrong username / password; for `code 500` the SMB target itself is unreachable or the server-side `cifs-utils` mount call failed (verify the share is reachable from the Olares node). |
+| `entry name "..." must not contain '/' or '\\'` | `files smb unmount external/main/smb-host-share` (passed a 3-segment frontend path instead of the bare entry name) | The wire URL shape is `/api/unmount/external/<node>/<name>/`; pass only the `<name>` segment. Discover it with `files ls external/<node>/` first, then re-run `files smb unmount <name> --node <node>`. |
+| `could not resolve a node for ... ; pass --node <name> explicitly` | `files smb mount` / `unmount` / `history` was called and the auto-detected `--node` came back empty | Pass `--node <name>` explicitly. Use `olares-cli files cp --help` (the same `--node` cascade lives there) or check the LarePass app's node picker for the right name. |
+| `files-backend returned no Drive nodes; cannot resolve default {node}` | The server's `/api/nodes/` returned an empty list AND `--node` was not passed | Pass `--node <name>` explicitly — every SMB verb needs a concrete `<node>` segment in its URL. |
 | `unknown repos type "..."` (`files repos list --type ...`) | Misspelled `--type` value | Use `mine`, `share-to-me`, `shared`, or `all` |
 | `repos Create: empty repo name` | `files repos create ""` (or whitespace-only) | Pass a non-empty `<name>` argument |
 | `repos Create: server accepted the request but did not return a repo_id` | Rare Seahub path that 200s but elides the response payload | Run `files repos list` to discover the new repo; the create likely succeeded |
@@ -795,6 +1326,12 @@ olares-cli files mv -r drive/Home/scratch/ drive/Home/Old/scratch/
 # 5b. In-place basename change (synchronous, no task queue).
 olares-cli files rename drive/Home/Documents/notes.md 2026-Q1-notes.md
 
+# 5c. Inspect / change the POSIX owner uid (LarePass file-properties Permission tab).
+olares-cli files chown drive/Home/Documents/foo.pdf                       # GET — print current uid
+olares-cli files chown drive/Home/Documents/foo.pdf --uid 1000            # PUT — hand to default User
+olares-cli files chown drive/Home/Pictures/Trip2024/ --uid 0 -r           # PUT recursively to Root
+olares-cli files chown cache/<node>/scratch/build/ --uid 1000 -r          # cache namespace works the same way
+
 # 6. Clean up after confirming with `ls` first.
 olares-cli files ls drive/Home/Old/
 olares-cli files rm -r drive/Home/Old/
@@ -804,6 +1341,12 @@ olares-cli files share internal drive/Home/Reports/Q1.pdf \
     --users alice:edit,bob:view
 olares-cli files share public drive/Home/Photos/ --expire-days 7
 olares-cli files share smb drive/Home/Movies/ --public
+
+# Edit existing shares without re-creating them.
+olares-cli files share set-password <public-share-id>                 # roll the password
+olares-cli files share set-members <internal-share-id> \
+    --users alice:edit,bob:admin                                       # REPLACE member list
+olares-cli files share set-smb <smb-share-id> --public                 # flip to public-SMB
 
 # Inspect / clean up.
 olares-cli files share list --shared-by-me
@@ -815,6 +1358,24 @@ REPO_ID=$(olares-cli files repos create "Project Alpha" --json | jq -r .repo_id)
 olares-cli files upload ~/local-tree sync/$REPO_ID/Backups/  # use it like any other path
 olares-cli files repos rename $REPO_ID "Project Alpha (archived)"
 olares-cli files repos rm $REPO_ID --yes
+
+# 9. Mount an external SMB server, browse it as a regular path, unmount.
+#    CLI counterpart of the LarePass "Connect to Server" dialog.
+olares-cli files smb mount //host.local/Public -u alice -p s3cret      # ad-hoc
+printf '%s' "$SMB_PASSWORD" | \
+    olares-cli files smb mount //host.local/Public -u alice --password-stdin   # CI
+
+# Once mounted, every other files verb works against external/<node>/<entry>/.
+olares-cli files ls external/main/                  # discover the new entry name
+olares-cli files cp ./report.pdf external/main/smb-host-share/Reports/
+olares-cli files download external/main/smb-host-share/Movies/ ./local --parallel 4
+
+# Save credentials as a per-node favorite for next time.
+olares-cli files smb history add //host.local/Public -u alice -p s3cret
+olares-cli files smb history list
+
+# When done.
+olares-cli files smb unmount smb-host-share --node main
 ```
 
 When operating across multiple Olares instances, run `olares-cli profile use <name>` to switch identity before issuing commands. There is no per-invocation `--profile` override — agents/scripts must commit to one profile up-front rather than silently hopping identities mid-pipeline. See `olares-shared` for the full rationale.
@@ -833,3 +1394,5 @@ When operating across multiple Olares instances, run `olares-cli profile use <na
 - **`share public --password ""` is rejected** (the CLI minimum is 6 chars). Don't try to bypass it by passing a single character — the wire-side check exists, you'll get an opaque server rejection a few seconds later.
 - **`files repos rm` is irreversible from the CLI.** There is no `restore` verb; the Seafile-side trash window (if the deployment has one) is reachable only through the LarePass app or direct Seahub access. On a TTY the command lists id + name and asks y/N; in scripts, require `-y` after explicit user intent. Prefer `repos rename "<old> (archived)"` for "soft delete" workflows.
 - **`files repos create` cannot make encrypted libraries.** Don't suggest a password flag — the CLI will refuse, and the per-user files-backend has no endpoint for it. Encrypted libraries must be created from the LarePass app; the CLI can only enumerate / rename / delete them after the fact.
+- **`files smb mount` / `history add` SMB passwords MUST go through `--password-stdin` (or the interactive prompt) in any non-throwaway context.** The `-p <password>` form is documented for one-off ad-hoc invocations only — it leaves the secret in shell history (`bash`, `zsh`, the IDE terminal scrollback, CI command-line logs, ...). For scripts: `printf '%s' "$SMB_PASSWORD" | olares-cli files smb mount --password-stdin ...`. For agents / chat: never inline an SMB password in a suggested command — use the env-var-pipe shape every time. The same rule applies to `files smb history add -p ...`: that wire-PUT stores the password server-side **as plaintext** in the favorites book, which is fine for the LarePass GUI's local-network use case but means a `history list --json` dump is a credential blob — treat it that way (don't pipe it to a logger or an LLM context).
+- **`files smb history` is per-NODE, not per-user.** A favorite added against `--node main` is invisible from `--node backup` and vice versa. If a user reports "my saved server isn't appearing", confirm they're on the same node the entry was added under (the default `--node` cascade picks the first `/api/nodes/` entry, which can swap order across deployments).

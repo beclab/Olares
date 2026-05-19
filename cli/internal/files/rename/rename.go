@@ -137,6 +137,32 @@ func Plan(t Target, newName string) (Op, error) {
 			"refusing to rename the root of %s/%s",
 			t.FileType, t.Extend)
 	}
+	// LarePass-aligned policy: the system-managed first-level
+	// children directly under drive/Home/ (Pictures / Music /
+	// Movies / Downloads / Documents / Code / Ollama / Huggingface
+	// / Cache / Data / Home) refuse rename — the GUI's
+	// `disableMenuItem` array in
+	// apps/packages/app/src/stores/operation.ts greys out the
+	// rename action for these entries when the user is at
+	// /Files/Home/, and a scripted CLI rename here would silently
+	// produce a state the GUI cannot reach. The CLI mirrors the
+	// list verbatim (case-sensitive, including the LarePass-quirk
+	// `Huggingface` one-word casing). Names of authoritative truth
+	// live in cli/cmd/ctl/files/path.go's ProtectedDriveHomeChildren
+	// — keep the two in sync if the web app's array ever changes.
+	//
+	// Scope: only the EXACT first-level entry under drive/Home/ is
+	// guarded; user content nested inside (e.g.
+	// drive/Home/Pictures/Trip2024/) is fully writable so existing
+	// workflows that rename albums / sub-folders are unaffected.
+	if isProtectedDriveHomeChild(t.FileType, t.Extend, t.SubPath) {
+		base := lastSegment(t.SubPath)
+		return Op{}, fmt.Errorf(
+			"refusing to rename drive/Home/%s: this is a system-managed Home folder reserved by Files; "+
+				"the Files GUI also disables rename for {%s} under drive/Home/. "+
+				"Rename a child instead (e.g. drive/Home/%s/<your-folder>) or move your data into a sibling folder.",
+			base, protectedDriveHomeChildrenList, base)
+	}
 
 	clean := strings.TrimSpace(newName)
 	if clean == "" {
@@ -239,6 +265,56 @@ func (c *Client) Rename(ctx context.Context, op Op) error {
 		}
 	}
 	return nil
+}
+
+// protectedDriveHomeChildren mirrors the LarePass web app's
+// disableMenuItem array (apps/packages/app/src/stores/operation.ts)
+// gated by `path === '/Files/Home/'`. Names are case-sensitive and
+// match the GUI 1:1, including the one-word `Huggingface` casing
+// LarePass uses for the HF cache directory.
+//
+// Authoritative source on the CLI side is
+// cli/cmd/ctl/files/path.go's ProtectedDriveHomeChildren — the
+// duplication here keeps the rename package free of a cmd/ctl/files
+// dependency (same pattern the rest of internal/files/* uses for
+// policy that originates in the cobra layer).
+//
+// protectedDriveHomeChildrenList is the alphabetically sorted,
+// comma-joined rendering shown in error messages so the user knows
+// exactly which names are affected without having to consult the
+// docs.
+var protectedDriveHomeChildren = map[string]struct{}{
+	"Home":        {},
+	"Documents":   {},
+	"Pictures":    {},
+	"Movies":      {},
+	"Downloads":   {},
+	"Data":        {},
+	"Cache":       {},
+	"Code":        {},
+	"Music":       {},
+	"Ollama":      {},
+	"Huggingface": {},
+}
+
+const protectedDriveHomeChildrenList = "Cache, Code, Data, Documents, Downloads, Home, Huggingface, Movies, Music, Ollama, Pictures"
+
+// isProtectedDriveHomeChild reports whether the given (FileType,
+// Extend, SubPath) tuple points exactly at one of the system-managed
+// first-level children under drive/Home/. Mirrors
+// FrontendPath.IsProtectedDriveHomeChild in cli/cmd/ctl/files/path.go;
+// see ProtectedDriveHomeChildren there for the policy rationale and
+// scope rules.
+func isProtectedDriveHomeChild(fileType, extend, subPath string) bool {
+	if fileType != "drive" || extend != "Home" {
+		return false
+	}
+	seg := strings.Trim(subPath, "/")
+	if seg == "" || strings.Contains(seg, "/") {
+		return false
+	}
+	_, ok := protectedDriveHomeChildren[seg]
+	return ok
 }
 
 // lastSegment returns the basename of a slash-separated subpath,

@@ -156,21 +156,232 @@ func TestPlan_RefusesRoot(t *testing.T) {
 	}
 }
 
-// TestPlan_RefusesSameSrcDst rejects `cp foo foo` outright — the
-// frontend silently allows it (the backend then no-ops or errors),
-// but on a CLI it's almost always a typo.
-func TestPlan_RefusesSameSrcDst(t *testing.T) {
+// TestPlan_RefusesExternalNodeRootDestination guards the
+// volume-listing-layer destination (`external/<node>/`). The
+// per-user files-backend exposes attached volumes (hdd1 / usb1 /
+// smb-...) as virtual children of this layer, so a paste landing
+// here either fails server-side or auto-renames against a
+// non-existent target. The error must point the user at the
+// `external/<node>/<volume>/<sub>` shape so the next invocation
+// works without trial and error.
+func TestPlan_RefusesExternalNodeRootDestination(t *testing.T) {
+	srcs := []Source{
+		{FileType: "drive", Extend: "Home", SubPath: "/foo.pdf"},
+	}
+	dst := Destination{FileType: "external", Extend: "node-1", SubPath: "/", IsDirIntent: true}
+
+	_, err := Plan(srcs, dst, ActionCopy, false, "node-default", "")
+	if err == nil {
+		t.Fatal("expected error for external/<node>/ destination")
+	}
+	if !strings.Contains(err.Error(), "volume listing layer") {
+		t.Errorf("error should mention 'volume listing layer', got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "external/node-1/<volume>/<sub>/") {
+		t.Errorf("error should suggest the corrected shape, got: %v", err)
+	}
+
+	// Same rule applies to mv (action="move"). Anchoring both
+	// actions in one helper test keeps the constraint visible
+	// for both verbs without doubling the test surface.
+	_, errMv := Plan(srcs, dst, ActionMove, false, "node-default", "")
+	if errMv == nil {
+		t.Fatal("expected error for external/<node>/ destination on mv")
+	}
+}
+
+// TestPlan_RefusesProtectedDriveHomeChildOnMove pins the
+// LarePass-aligned policy that the system-managed first-level
+// children directly under drive/Home/ (Pictures / Music / Movies /
+// Downloads / Documents / Code / Cache / Data / Home / Ollama /
+// Huggingface) refuse `mv` as the source — the GUI's
+// `disableMenuItem` array in
+// apps/packages/app/src/stores/operation.ts greys out cut/move when
+// the user is at /Files/Home/, and a CLI mv would silently produce a
+// state the GUI cannot reach (and would unlink bootstrap dirs that
+// user apps assume exist).
+//
+// The matrix below covers all 11 LarePass-protected names plus a
+// trailing-slash variant, and ensures the SAME sources stay valid
+// for `cp` (copy) — the policy is intentionally narrower than the
+// GUI for actions that don't unlink the source.
+func TestPlan_RefusesProtectedDriveHomeChildOnMove(t *testing.T) {
+	rejectCases := []struct {
+		name string
+		sub  string
+		dir  bool
+	}{
+		{"Pictures", "/Pictures", true},
+		{"Pictures with trailing slash", "/Pictures/", true},
+		{"Music", "/Music", true},
+		{"Movies", "/Movies", true},
+		{"Downloads", "/Downloads", true},
+		{"Documents", "/Documents", true},
+		{"Code", "/Code", true},
+		{"Cache", "/Cache", true},
+		{"Data", "/Data", true},
+		{"Home nested", "/Home", true},
+		{"Ollama", "/Ollama", true},
+		{"Huggingface one-word", "/Huggingface", true},
+	}
+	dst := Destination{FileType: "drive", Extend: "Home", SubPath: "/Backups/", IsDirIntent: true}
+
+	for _, c := range rejectCases {
+		t.Run("reject mv "+c.name, func(t *testing.T) {
+			srcs := []Source{
+				{FileType: "drive", Extend: "Home", SubPath: c.sub, IsDirIntent: c.dir},
+			}
+			_, err := Plan(srcs, dst, ActionMove, true, "node-a", "")
+			if err == nil {
+				t.Fatalf("Plan: expected mv refusal for drive/Home%s", c.sub)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, "system-managed Home folder") {
+				t.Errorf("error should mention 'system-managed Home folder'; got: %v", err)
+			}
+			if !strings.Contains(msg, "Files GUI") {
+				t.Errorf("error should reference the Files GUI for context; got: %v", err)
+			}
+			if !strings.Contains(msg, "Pictures") || !strings.Contains(msg, "Huggingface") {
+				t.Errorf("error should enumerate protected names; got: %v", err)
+			}
+
+			// Mirror operation: cp (copy) MUST go through. Copy
+			// preserves the source unchanged, so the data-loss
+			// risk that justifies the move guard does not apply.
+			// Anchoring the cp-allowed branch in the same test
+			// keeps the cp-vs-mv asymmetry visible at the test
+			// site (rather than requiring a reader to check two
+			// tests).
+			if _, err := Plan(srcs, dst, ActionCopy, true, "node-a", ""); err != nil {
+				t.Errorf("Plan: cp must NOT be gated by the protected-children policy, got: %v", err)
+			}
+		})
+	}
+
+	// User-content paths and other namespaces / extends MUST stay
+	// movable — the policy must not over-extend.
+	allowMoveCases := []struct {
+		name string
+		src  Source
+	}{
+		{
+			// Album/sub-folder under Pictures: pure user content.
+			name: "deeper path under Pictures",
+			src: Source{
+				FileType: "drive", Extend: "Home",
+				SubPath: "/Pictures/Trip2024/", IsDirIntent: true,
+			},
+		},
+		{
+			// File inside Documents.
+			name: "file inside Documents",
+			src: Source{
+				FileType: "drive", Extend: "Home",
+				SubPath: "/Documents/notes.md",
+			},
+		},
+		{
+			// drive/Data/<same-name>: different volume root, the
+			// policy is Home-only.
+			name: "drive Data same name",
+			src: Source{
+				FileType: "drive", Extend: "Data",
+				SubPath: "/Pictures", IsDirIntent: true,
+			},
+		},
+		{
+			// Other namespace: out of scope.
+			name: "sync repo same name",
+			src: Source{
+				FileType: "sync", Extend: "abc-repo",
+				SubPath: "/Pictures", IsDirIntent: true,
+			},
+		},
+		{
+			// User-created folder at drive/Home/<name> not in the
+			// protected list.
+			name: "drive Home user folder",
+			src: Source{
+				FileType: "drive", Extend: "Home",
+				SubPath: "/MyProjects", IsDirIntent: true,
+			},
+		},
+	}
+	for _, c := range allowMoveCases {
+		t.Run("allow mv "+c.name, func(t *testing.T) {
+			if _, err := Plan([]Source{c.src}, dst, ActionMove, true, "node-a", ""); err != nil {
+				t.Errorf("Plan: unexpected mv refusal for %s/%s%s: %v",
+					c.src.FileType, c.src.Extend, c.src.SubPath, err)
+			}
+		})
+	}
+}
+
+// TestPlan_AllowsExternalVolumeRootDestination confirms the writer
+// guard is narrow: pointing at `external/<node>/<volume>/` (one
+// segment past the node) DOES go through. The strict rule the user
+// agreed on is `SubPath != "/"` for external destinations, so a
+// volume root is a valid drop target — whether <volume> is a real
+// mount is the server's call.
+func TestPlan_AllowsExternalVolumeRootDestination(t *testing.T) {
+	srcs := []Source{
+		{FileType: "drive", Extend: "Home", SubPath: "/foo.pdf"},
+	}
+	dst := Destination{FileType: "external", Extend: "node-1", SubPath: "/hdd1/", IsDirIntent: true}
+
+	ops, err := Plan(srcs, dst, ActionCopy, false, "node-default", "")
+	if err != nil {
+		t.Fatalf("Plan: %v (volume root should be allowed)", err)
+	}
+	if len(ops) != 1 || ops[0].Destination != "/external/node-1/hdd1/foo.pdf" {
+		t.Errorf("Destination shape unexpected: %+v", ops)
+	}
+}
+
+// TestPlan_AllowsSameFileSrcDst confirms `cp foo foo` (same wire
+// path on both sides, file target) is NOT rejected client-side —
+// the LarePass web app doesn't enforce this and the backend's paste
+// endpoint auto-renames into `foo (1)` (same POST-mkdir quirk users
+// already work with). The cycle check below is dir-only (gated by
+// IsDirIntent), so a same-path FILE pair must reach Plan's tail and
+// produce a normal Op.
+func TestPlan_AllowsSameFileSrcDst(t *testing.T) {
 	srcs := []Source{
 		{FileType: "drive", Extend: "Home", SubPath: "/Documents/foo.pdf"},
 	}
 	dst := Destination{FileType: "drive", Extend: "Home", SubPath: "/Documents/foo.pdf"}
 
-	_, err := Plan(srcs, dst, ActionCopy, false, "node-a", "")
-	if err == nil {
-		t.Fatal("expected error for src==dst")
+	ops, err := Plan(srcs, dst, ActionCopy, false, "node-a", "")
+	if err != nil {
+		t.Fatalf("Plan: unexpected error for same-path file copy: %v", err)
 	}
-	if !strings.Contains(err.Error(), "same") {
-		t.Errorf("error should mention 'same', got: %v", err)
+	if len(ops) != 1 {
+		t.Fatalf("Plan: want 1 op, got %d", len(ops))
+	}
+	if ops[0].Source != "/drive/Home/Documents/foo.pdf" || ops[0].Destination != "/drive/Home/Documents/foo.pdf" {
+		t.Errorf("Plan: source/destination shape unexpected: %+v", ops[0])
+	}
+}
+
+// TestPlan_RefusesSameDirSrcDst keeps the dir-to-same-dir case
+// rejected — but via the cycle check (`destination ... is inside
+// source`), not the removed `source and destination are the same`
+// guard. A dir copy onto itself would create an infinitely-recursing
+// tree, which the cycle check catches because dstWire == srcWire ⇒
+// HasPrefix(srcWire+"/", srcWire+"/") is true.
+func TestPlan_RefusesSameDirSrcDst(t *testing.T) {
+	srcs := []Source{
+		{FileType: "drive", Extend: "Home", SubPath: "/Documents/", IsDirIntent: true},
+	}
+	dst := Destination{FileType: "drive", Extend: "Home", SubPath: "/Documents/"}
+
+	_, err := Plan(srcs, dst, ActionCopy, true, "node-a", "")
+	if err == nil {
+		t.Fatal("expected cycle error for dir src == dst")
+	}
+	if !strings.Contains(err.Error(), "cycle") {
+		t.Errorf("error should mention 'cycle', got: %v", err)
 	}
 }
 

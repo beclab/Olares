@@ -109,6 +109,23 @@ type Group struct {
 // is sorted by (FileType, Extend, ParentSubPath) so callers iterate
 // in a stable order; within each group dirents are also sorted.
 //
+// Dirent shape on the wire:
+//
+//   - File deletion (no -r): dirent is `/<name>` (no trailing slash).
+//     The server's POSIX driver routes this through the file-removal
+//     path; sending it against a directory is a noisy server-side
+//     error that's hard to recover from in scripts.
+//   - Directory deletion (-r in scope): dirent is `/<name>/` (WITH a
+//     trailing slash). `recursive=true` is taken as the user's
+//     declaration of intent — every target in the call is treated
+//     as a directory regardless of whether the original path string
+//     had a trailing slash. This matches Unix `rm -r foo` semantics:
+//     once `-r` is in play, the user has accepted that they want
+//     directory-recursive removal, and forcing them to also remember
+//     to type the trailing `/` is needless ceremony (and was the
+//     source of "I added -r, why didn't it delete the folder?"
+//     reports against an earlier revision of this planner).
+//
 // Errors:
 //   - any IsDirIntent=true target with recursive=false → `is a
 //     directory: pass -r/-R to remove it` (matches Unix `rm`'s
@@ -138,13 +155,47 @@ func Plan(targets []Target, recursive bool) ([]*Group, error) {
 			return nil, fmt.Errorf("refusing to delete the root of %s/%s",
 				t.FileType, t.Extend)
 		}
+		// LarePass-aligned policy: the system-managed first-level
+		// children directly under drive/Home/ (Pictures / Music /
+		// Movies / Downloads / Documents / Code / Ollama /
+		// Huggingface / Cache / Data / Home) refuse deletion. The
+		// LarePass GUI greys out the delete action for these
+		// entries when the user is at /Files/Home/ via the
+		// `disableMenuItem` array in
+		// apps/packages/app/src/stores/operation.ts; without this
+		// guard a scripted `files rm -r drive/Home/Pictures` would
+		// produce a state the GUI couldn't reach (and would
+		// destroy bootstrap directories that user apps assume
+		// exist).
+		//
+		// The match scope is the EXACT first-level entry —
+		// children of these dirs (e.g. drive/Home/Pictures/Trip/)
+		// are user content and remain freely deletable. The
+		// authoritative names live in cli/cmd/ctl/files/path.go's
+		// ProtectedDriveHomeChildren; the duplicate map below
+		// keeps this package free of a cmd/ctl/files dependency
+		// (same pattern internal/files/* uses for other policy).
+		if isProtectedDriveHomeChild(t.FileType, t.Extend, t.ParentSubPath, t.Name) {
+			return nil, fmt.Errorf(
+			"refusing to delete drive/Home/%s: this is a system-managed Home folder reserved by Files; "+
+				"the Files GUI also disables delete for {%s} under drive/Home/. "+
+				"Delete its contents instead (e.g. files rm -r drive/Home/%s/<entry>) and the folder itself will stay.",
+				t.Name, protectedDriveHomeChildrenList, t.Name)
+		}
 		if t.IsDirIntent && !recursive {
 			return nil, fmt.Errorf(
 				"%s/%s%s%s is a directory: pass -r/-R to remove it recursively",
 				t.FileType, t.Extend, t.ParentSubPath, t.Name)
 		}
 		dirent := "/" + t.Name
-		if t.IsDirIntent {
+		// `-r` on the command line is the user's declaration that
+		// every supplied target is a directory; force the trailing
+		// slash so the wire request matches the Unix-style `rm -r
+		// foo` shape regardless of whether the user typed `foo` or
+		// `foo/`. Without `-r`, IsDirIntent has already been
+		// rejected by the guard above, so this branch is a pure
+		// "treat as file" shape.
+		if t.IsDirIntent || recursive {
 			dirent += "/"
 		}
 
@@ -184,6 +235,53 @@ func Plan(targets []Target, recursive bool) ([]*Group, error) {
 	}
 
 	return groups, nil
+}
+
+// protectedDriveHomeChildren mirrors the LarePass web app's
+// disableMenuItem array (apps/packages/app/src/stores/operation.ts)
+// that the GUI uses — gated by `path === '/Files/Home/'` — to grey
+// out cut / copy / delete / rename for system-managed Home children.
+// Names are case-sensitive and align 1:1 with the GUI, including
+// LarePass-quirk casings like the one-word `Huggingface`.
+//
+// Authoritative source on the CLI is
+// cli/cmd/ctl/files/path.go's ProtectedDriveHomeChildren — keep the
+// two synchronized if the web app's array ever changes.
+var protectedDriveHomeChildren = map[string]struct{}{
+	"Home":        {},
+	"Documents":   {},
+	"Pictures":    {},
+	"Movies":      {},
+	"Downloads":   {},
+	"Data":        {},
+	"Cache":       {},
+	"Code":        {},
+	"Music":       {},
+	"Ollama":      {},
+	"Huggingface": {},
+}
+
+const protectedDriveHomeChildrenList = "Cache, Code, Data, Documents, Downloads, Home, Huggingface, Movies, Music, Ollama, Pictures"
+
+// isProtectedDriveHomeChild reports whether (fileType, extend,
+// parent, name) addresses one of the system-managed first-level
+// children directly under drive/Home/. Mirrors
+// FrontendPath.IsProtectedDriveHomeChild semantics from
+// cli/cmd/ctl/files/path.go: only EXACT first-level entries match
+// (parent must be the drive/Home/ root), and the comparison is
+// case-sensitive against protectedDriveHomeChildren.
+func isProtectedDriveHomeChild(fileType, extend, parent, name string) bool {
+	if fileType != "drive" || extend != "Home" {
+		return false
+	}
+	if strings.Trim(parent, "/") != "" {
+		return false
+	}
+	if name == "" {
+		return false
+	}
+	_, ok := protectedDriveHomeChildren[name]
+	return ok
 }
 
 // deleteRequestBody is the JSON body shape the files-backend's DELETE
