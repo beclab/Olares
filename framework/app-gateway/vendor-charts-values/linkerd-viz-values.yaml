@@ -1,0 +1,8 @@
+# linkerd-viz extension — Olares default: no bundled Prometheus (use platform Prometheus).
+# Install: linkerd viz install -f linkerd-viz-values.yaml (see hack/install-linkerd-viz.sh)
+# Override URL: OLARES_LINKERD_PROMETHEUS_URL or --set prometheusUrl=...
+
+prometheus:
+  enabled: false
+
+prometheusUrl: "http://prometheus-k8s.kubesphere-monitoring-system.svc.cluster.local:9090"
