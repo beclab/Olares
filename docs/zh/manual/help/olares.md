@@ -67,7 +67,7 @@ LarePass 是 Olares 的官方客户端。它作为一个安全桥梁，实现无
 
 我们正在解耦各项功能，以支持不依赖 LarePass 应用的使用方式：
 
-* **CLI 激活**：使用 `olares-cli` 工具直接从终端激活 Olares，无需在激活步骤中使用 LarePass 应用。但注意，在运行 `olares-cli` 工具之前，仍需使用 LarePass 应用创建你的 Olares ID。详细操作请参考 [使用 Olares CLI 激活 Olares 设备](/manual/best-practices/activate-olares-using-cli.md)。
+* **CLI 激活**：使用 `olares-cli` 工具直接从终端激活 Olares，无需在激活步骤中使用 LarePass 应用。但注意，在运行 `olares-cli` 工具之前，仍需使用 LarePass 应用创建你的 Olares ID。详细操作请参考 [使用 Olares CLI 激活 Olares 设备](/zh/manual/best-practices/activate-olares-using-cli.md)。
 * **独立组件**：我们计划在未来的更新中，为反向代理、DID 服务、市场仓库等组件提供独立的部署选项。
 
 <!-- #region custom-domain -->
