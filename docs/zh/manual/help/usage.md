@@ -1,7 +1,8 @@
 ---
 outline: [2, 3]
-description: 查找关于 Olares 使用及社区应用的常见问题解答。
+description: 查找关于 Olares 日常使用、应用及系统管理的常见问题解答。
 ---
+
 # 使用常见问题
 
 本文汇总了关于 Olares 日常使用、应用及系统管理的常见问题。
@@ -14,16 +15,16 @@ description: 查找关于 Olares 使用及社区应用的常见问题解答。
 
 如果你有 Docker 使用经验，也可以在测试环境中[手动部署](../../developer/develop/tutorial/index.md)应用市场未收录的应用。
 
-### 我可以在 Olares 设备上玩游戏吗？
+### 可以在 Olares 设备上玩游戏吗？
 
-可以。通过 Steam Headless 应用，你可以将 Olares 设备转变为游戏服务器。
+可以。安装 Steam Headless 应用，就能把 Olares 设备变成游戏服务器。
 
-* [**串流**](../../use-cases/stream-game.md)：你可以在 Olares 上本地运行游戏，并将其画面串流到手机或平板等设备上。
-* [**直接游玩**](../../use-cases/play-games-directly.md)：你可以将显示器、键盘和鼠标直接连接到 Olares 设备，无需串流即可游玩。
+* [**串流**](../../use-cases/stream-game.md)：你可以在 Olares 上本地运行游戏，并将其画面串流到手机或平板等设备上玩。
+* [**直连玩**](../../use-cases/play-games-directly.md)：你可以将显示器、键盘和鼠标直接连接到 Olares 设备，无需串流即可玩游戏。
 
 ### 如何在 Olares 中使用 Windows 环境？
 
-你可以从应用市场运行 Windows 虚拟机，并使用任意标准 RDP 客户端进行连接。
+从 Olares 应用市场安装并运行一个 Windows 虚拟机，然后使用任意标准 RDP 客户端连接访问。
 
 ### 可以在 Olares 上开发应用吗？
 
@@ -112,18 +113,20 @@ description: 查找关于 Olares 使用及社区应用的常见问题解答。
 :::
 
 ## 存储
+
 ### 如果在运行中的 Olares 机器上添加新硬盘，系统会自动使用吗？
 
 这取决于硬盘类型：
-* **USB 驱动器**：是的，系统会自动挂载，并立即显示在文件管理器中。
-* **内置硬盘**：不会。内置 HDD 或 SSD 不会自动加入存储池，你需要手动配置。
-* **SMB 共享**：网络存储可以通过文件管理器中的**外部设备** > **连接服务器**进行添加。
+* **USB 驱动器**：会。系统会自动挂载，并立即在文件管理器中显示。
+* **内置硬盘**：不会。内置 HDD 或 SSD 需要手动配置才能加入存储池。
+* **SMB 共享**：需要手动添加网络存储。可以通过文件管理器中的**外部设备** > **连接服务器**进行添加。
 
-详细步骤参见[扩展 Olares 存储](../best-practices/expand-storage-in-olares.md)。
+详细步骤参见[在 Olares 中扩展存储空间](../best-practices/expand-storage-in-olares.md)。
 
 ## 多节点集群
+
 ### 如何向集群添加更多机器？
 
-默认情况下，Olares 安装为单节点集群。不过，你可以将 Olares 安装为 Master 节点，然后添加 Worker 节点，从而构建可扩展的多节点集群。
+默认情况下，Olares 安装为单节点集群。要创建可扩展的多节点集群，需要先将 Olares 安装为 master 节点，然后再添加 worker 节点。
 
-注意，多节点目前为实验性功能，仅支持 Linux 系统。详细步骤参见[安装 Olares 多节点集群](../best-practices/install-olares-multi-node.md)。
+注意，多节点功能当前为 Alpha 版本，仅支持 Linux 系统。详细步骤参见[安装多节点 Olares 集群](../best-practices/install-olares-multi-node.md)。
