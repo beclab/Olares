@@ -1,15 +1,15 @@
 ---
 outline: [2, 3]
-description: Learn how to manage the BIOS on your Olares One, including checking firmware versions, downloading firmware update packages, executing updates, unlocking advanced mode, and troubleshooting issues such as black screen.
+description: Learn how to manage the BIOS and EC firmware on your Olares One, including checking firmware versions, downloading firmware update packages, executing updates, unlocking advanced mode, and troubleshooting issues such as black screen.
 head:
   - - meta
     - name: keywords
       content: Olares One, firmware update, Embedded Controller (EC), BIOS
 ---
 
-# Manage BIOS
+# Manage BIOS and EC
 
-This document explains how to manage the BIOS settings on your Olares One device, including how to check the current firmware versions, download and perform firmware updates, unlock advanced settings, and troubleshoot the black screen issue caused by display configurations.
+This document explains how to manage the BIOS and Embedded Controller (EC) firmware on your Olares One device, including how to check current versions, download and perform firmware updates, unlock advanced settings, and troubleshoot the black screen issue caused by display configurations.
 
 ## Check firmware versions
 
