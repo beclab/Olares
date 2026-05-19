@@ -9,7 +9,7 @@ AGW_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 OUT="${AGW_ROOT}/.olares/config/app-gateway-vendor"
 VALS_SRC="${AGW_ROOT}/vendor-charts-values"
 
-for f in envoy-gateway-values.yaml envoy-gateway-crds-values.yaml linkerd-values.yaml linkerd-crds-values.yaml; do
+for f in envoy-gateway-values.yaml envoy-gateway-crds-values.yaml linkerd-values.yaml linkerd-crds-values.yaml linkerd-viz-values.yaml; do
   cp -f "${VALS_SRC}/${f}" "${OUT}/${f}"
 done
 
@@ -19,5 +19,8 @@ chmod 755 "${OUT}/generate-linkerd-identity-certs.sh"
 mkdir -p "${OUT}/network-policies"
 cp -f "${AGW_ROOT}/deploy/network-policies/linkerd-mesh-ingress.yaml" \
   "${OUT}/network-policies/linkerd-mesh-ingress.yaml"
+mkdir -p "${OUT}/deploy/linkerd"
+cp -f "${AGW_ROOT}/deploy/linkerd/prometheus-pod-proxy-rbac.yaml" \
+  "${OUT}/deploy/linkerd/prometheus-pod-proxy-rbac.yaml"
 
 echo "OK: synced values and installer assets into ${OUT}"
