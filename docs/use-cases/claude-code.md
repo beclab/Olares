@@ -1,109 +1,141 @@
 ---
 outline: [2, 3]
-description: Run Anthropic's Claude Code on Olares to write, test, and manage code through natural language. Connect via OAuth or a local model.
+description: Set up Claude Code on Olares to write, test, and manage code through natural language. Connect via OAuth or a local model.
 head:
   - - meta
     - name: keywords
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
-app_version: "1.0.0"
+app_version: "0.1.3"
 doc_version: "1.0"
-doc_updated: "2026-05-15"
+doc_updated: "2026-05-19"
 ---
 
-# Run Claude Code on Olares
+# Write code using Claude Code
 
-Claude Code is Anthropic's official AI coding assistant CLI. It lets you write, test, and manage code through natural language in a terminal-based interface.
+Claude Code is Anthropic's official AI coding assistant command-line interface (CLI). Use it to write, test, and manage code through natural language directly in a terminal-based interface. On Olares, Claude Code runs inside a browser-based terminal equipped with a pre-configured Ubuntu development environment.
 
-On Olares, Claude Code runs inside a browser-based terminal with a pre-configured Ubuntu development environment. This guide demonstrates both authentication methods. The local model example uses a single-model app.
+## Learning objectives
+
+In this guide, you will learn how to:
+- Install the Claude Code app from the Olares Market.
+- Initialize the terminal and authenticate your account using an Anthropic subscription or a local model.
+- Configure local environment variables for model connections.
+- Execute basic and advanced natural language coding workflows.
+- Manage dependencies and understand the secure container environment.
 
 ## Prerequisites
 
-- Admin privileges to install apps from Market
+- A Claude Pro or Max subscription for remote model connectivity, or a compatible local model installed on your Olares device for local execution.
 
 ## Install Claude Code
 
-1. Open Market and search for "Claude Code".
-   <!-- ![Claude Code](/images/manual/use-cases/claude-code.png#bordered) -->
+1. Open Market, and search for "Claude Code".
+   
+   ![Claude Code](/images/manual/use-cases/claude-code.png#bordered)
 
-2. Click **Get**, then **Install**, and wait for installation to complete.
+2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
-## Initialize Claude Code
+## Initialize and connect to a model
 
-1. Open **Claude Code CLI** from Launchpad.
-2. In the terminal, run:
+Start the Claude Code CLI and connect it to a language model. Authenticate using an external Anthropic subscription (OAuth) or configure the application to use a local model hosted on your Olares device.
+
+### Authenticate using an Anthropic subscription
+
+Use this method if you hold an active Claude Pro or Max subscription.
+
+1. Open the Claude Code CLI from the Launchpad.
+2. Enter the following command:
+
    ```bash
    claude
    ```
+   
+3. Select a terminal theme, for example, **Dark mode**.
+4. Select **Claude account with subscription**. A browser window opens for sign-in. If the browser fails to open, select the provided URL to sign in manually.
 
-### Authenticate with OAuth
+   ![Claude Code sign in using subscription account](/images/manual/use-cases/claude-sign-subscription.png#bordered)
 
-Use this option if you have a Claude Pro or Max subscription.
+5. Complete the sign-in flow in your browser, and copy the authentication code.
+6. Return to the terminal, paste the code, and select your workspace.
+7. Confirm the trust settings. The Terminal User Interface (TUI) opens automatically.
 
-1. Select the browser OAuth option when prompted.
-2. Complete the sign-in flow in your browser.
-3. Return to the terminal, select your workspace, and confirm trust settings.
-4. The TUI opens automatically.
    <!-- ![Claude Code TUI](/images/manual/use-cases/claude-code-tui.png#bordered) -->
 
-### Use a local model
+### Connect to a local model
 
-Use this option if you want to run Claude Code with a local model. This example uses **Qwen3.5 27B Q4_K_M (Ollama)**.
+Use this method to run Claude Code locally. This example uses the Qwen3-Coder 30B (Ollama) model app.
 
-1. Install **Qwen3.5 27B Q4_K_M (Ollama)** from Market.
-2. Open the model app from Launchpad and wait for the download to complete. Note the model name displayed on the page (for example, `qwen3.5:27b-q4_K_M`).
+1. Install the model app **Qwen3-Coder 30B (Ollama)** from Market.
 
-   ![Model name on the model app page](/images/manual/use-cases/deerflow2-get-model-name.png#bordered)
-3. Open **Settings**, then navigate to **Applications** > **Qwen3.5 27B Q4_K_M (Ollama)**.
-4. Under **Shared entrances**, select the model app to view the endpoint URL.
+   ![Qwen3-Coder 30B (Ollama)](/images/manual/use-cases/qwen3-coder-30b.png#bordered)
 
-   ![Qwen3.5 27B shared entrance](/images/manual/use-cases/deerflow2-shared-entrance.png#bordered){width=70%}
-5. Copy the shared endpoint. For example:
-   ```plain
-   http://bd5355000.shared.olares.com
-   ```
-6. Open **Settings**, then navigate to **Applications** > **Claude Code**.
-7. Add the following environment variables:
-   - **ANTHROPIC_AUTH_TOKEN**: Enter `ollama`. The model app does not verify this value, but Claude Code requires an auth token to be set.
-   - **ANTHROPIC_BASE_URL**: Enter the endpoint URL with `/v1` appended. For example:
-     ```plain
-     http://bd5355000.shared.olares.com/v1
-     ```
-   - **ANTHROPIC_MODEL**: Enter the model identifier from step 2. For example:
-     ```plain
-     qwen3.5:27b-q4_K_M
-     ```
-8. Save the changes and wait about 10 seconds for the container to restart.
-9. Return to the Claude Code CLI terminal and run `claude`.
+2. Open the model app from the Launchpad and wait for the download to complete.
+3. Note down the exact model name displayed on the page. For example, `qwen3-coder:30b`.
+
+   ![Model name on the model app page](/images/manual/use-cases/qwen3-coder-model-name.png#bordered){width=50%}
+
+4. Open Settings, and then go to **Applications** > **Qwen3-Coder 30B (Ollama)** > **Shared entrances**.
+
+   ![Model app endpoint in Settings](/images/manual/use-cases/qwen3-coder-30b-endpoint.png#bordered){width=70%}
+
+5. Click **Qwen3-Coder 30B**, and then note down the endpoint URL. For example, `http://609c5d0c0.shared.olares.com`.
+6. Go to **Applications** > **Claude Code** > **Manage environment variables**, and then specify the following environment variables:
+
+   - **ANTHROPIC_AUTH_TOKEN**: Enter any text, such as `ollama`. The model app does not verify this value, but Claude Code requires a populated authentication token.
+   - **ANTHROPIC_BASE_URL**: Enter the model app's endpoint URL. For example, `http://609c5d0c0.shared.olares.com`.
+   - **ANTHROPIC_MODEL**: Enter the model name you noted down earlier. For example, `qwen3-coder:30b`.
+
+   ![Claude Code environment variables settings](/images/manual/use-cases/claude-env-var.png#bordered){width=70%}  
+
+7. Click **Apply**. Wait about 10 seconds for the container to restart.
+8. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
 
 :::info Switching between modes
-If you switch between remote and local models, run `/clear` in Claude Code before starting a new session. This prevents context from one model from affecting the other.
+If you switch between remote and local models, run `/clear` in Claude Code first before starting a new session. This prevents context from the previous model from affecting the new workspace.
 :::
 
 ## Use Claude Code
 
-All work happens under `/opt/data`, which is `$HOME` in the container. This directory persists across pod restarts.
+All project work happens in the `/opt/data` directory, which serves as `$HOME` in the container. This directory persists your files across app restarts.
 
-### Ask your first question
+### Run basic queries
 
-1. In the Claude Code CLI terminal, run:
-   ```bash
-   cd /opt/data
-   claude
+1. In the Claude Code CLI, run the `claude` command. The following security prompt is displayed:
+
    ```
-2. In the TUI, describe your task in natural language. For example:
-   - "List the files in the current directory"
-   - "Explain what main.py does"
+   Accessing workspace:
+
+   /opt/data
+
+   Quick safety check: Is this a project you created or one you trust? (Like your own code, a well-known open source project, or work from your team). If not, take a moment to review what's in this folder first.
+
+   Claude Code'll be able to read, edit, and execute files here.
+   ```
+
+2. Select **Yes, I trust this folder** to grant Claude Code read, edit, and execute permissions.
+3. Press **Enter**. You enter the TUI.
+
+   ![Claude Code first chat](/images/manual/use-cases/claude-first-chat.png#bordered)
+
+4. (Optional) Run the `/clear` command to start a new session with empty context.
+
+   :::info Switching between modes
+   If you switch between remote and local models, run `/clear` in Claude Code first before starting a new session. This prevents context from the previous model from affecting the new workspace.
+   :::
+
+5. Describe your task in natural language. For example:
+
+   ```text
+   List the files in the current directory
+   ```
+
+   <!--![Claude Code first chat result](/images/manual/use-cases/claude-first-chat-result.png#bordered)-->
 
 ### Build a full-stack project
 
-Claude Code can scaffold multi-service projects, run tests, and verify integrations end to end.
+Claude Code creates multi-service projects, runs tests, and verifies end-to-end integrations. The following example demonstrates how to build a Backend For Frontend (BFF) stack with a Python FastAPI backend and a Node.js gateway.
 
-The example below shows how to build a mini BFF (Backend For Frontend) stack inside `$HOME/tmp/mini-bff/` with two services:
-
-- **Backend** (`backend/`, port 8801): A Python FastAPI app with a single endpoint `GET /internal/user/{user_id}` that returns fake user data. Tests use pytest.
-- **Gateway** (`gateway/`, port 8802): A Node.js + TypeScript + Express app that proxies requests from `GET /user/:id` to the backend. Tests use Vitest + Supertest.
-
-1. In the Claude Code TUI, enter the following prompt:
+1. In the Claude Code TUI, enter the following detailed prompt:
 
    ::: details Example prompt
    ```text
@@ -159,35 +191,42 @@ The example below shows how to build a mini BFF (Backend For Frontend) stack ins
    ```
    :::
 
-2. Claude Code creates both services, installs dependencies, runs tests, starts the servers, performs the live integration curl checks, and returns a report with the directory tree, test results, and curl transcripts.
+2. Wait for Claude Code to process the prompt. The assistant automatically creates both services, installs dependencies, runs tests, starts the servers, and performs live integration checks.
+3. Review the final report returned by the assistant, which includes the directory tree, test summaries, and execution transcripts.
+
    <!-- ![Claude Code mini BFF result](/images/manual/use-cases/claude-code-mini-bff.png#bordered) -->
 
-## Security and environment
+## Mange security and development environments
 
-The Claude Code container runs with least-privilege settings. The main process and every command you run inside it use UID / GID 1000 (non-root), with `allowPrivilegeEscalation: false` and all Linux capabilities dropped. `sudo` and `apt install` are not available by design.
+The Claude Code container operates under strict least-privilege settings to ensure security.
+
+The main process and all executed commands use a non-root user (UID/GID 1000). The container disables `allowPrivilegeEscalation` and drops all Linux capabilities. Consequently, administrative commands like `sudo` and `apt install` are unavailable.
 
 To install additional software, use project-level tools instead of system package managers:
 
-**Python**
+<Tabs>
+<template #Python>
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install <package>
 ```
-
-**Node.js**
+</template>
+<template #Node.js>
 
 ```bash
 npm install
 ```
-
-**Other languages**
+</template>
+<template #Other-languages>
 
 Install tools and dependencies to user-writable paths under `/opt/data`.
+</template>
+</Tabs>
 
 :::info
-The environment variable `PIP_BREAK_SYSTEM_PACKAGES=1` is set. If needed, you can install packages to the system Python, but using a virtual environment is recommended.
+The container preconfigures the environment variable `PIP_BREAK_SYSTEM_PACKAGES=1`. While the environment permits system-wide Python package installations, use a virtual environment to maintain a clean and reliable workspace.
 :::
 
 ## Pre-installed development tools
@@ -201,26 +240,25 @@ The container image is based on Ubuntu 24.04 and comes with common development t
 | CLI utilities | `git`, `git-lfs`, `curl`, `wget`, `jq`, `yq`, `openssh-client`, `unzip`, `zip`, `rsync`, `tmux`, `htop`, `shellcheck` |
 | Database clients | `postgresql-client`, `mysql-client`, `redis-tools` |
 
-:::warning
-`ripgrep` (`rg`) is intentionally not pre-installed to avoid conflicts with Claude Code's built-in search behavior.
+:::info
+The `ripgrep` (`rg`) utility is intentionally excluded to prevent conflicts with Claude Code's native search behavior.
 :::
 
 ## Troubleshooting
 
 ### `claude: command not found`
 
-Wait for the init container to finish installing Claude Code. Confirm that `$HOME/.local/bin` is in your `PATH`.
+Wait a few moments for the init container to finish installing Claude Code. Verify that the `$HOME/.local/bin` directory exists in your system `PATH`.
 
 ### OAuth or install script fails
 
-Check your cluster's outbound network. The init container downloads from `https://claude.ai/install.sh`.
+Verify your Olares cluster's outbound network connection. The init container requires internet access to download dependencies from https://claude.ai/install.sh.
 
 ### Missing language or library
 
-Determine if it is a system-level dependency. If so, it must be added to the base image by the app maintainer. Otherwise, use `venv`, `npm install`, or similar user-level tools.
+Determine if the missing tool is a system-level dependency. System-level dependencies require app maintainers to add them directly to the base image. For user-level dependencies, use virtual environments (`venv`), `npm install`, or similar local management tools.
 
 ## Learn more
 
-- [Ollama use case](./ollama.md): Host local models on Olares.
-- [OpenCode use case](./opencode.md): Another AI coding agent for Olares.
+- [Set up OpenCode as your AI coding agent](./opencode.md)
 - [Claude Code official documentation](https://code.claude.com/docs)
