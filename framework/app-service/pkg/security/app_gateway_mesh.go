@@ -17,20 +17,26 @@ const (
 // app-gateway data-plane proxies must reach (identity, destination, policy, webhooks).
 var LinkerdMeshIngressPortsFromAppGateway = []int32{8080, 8086, 8090, 9443, 443}
 
+// LinkerdControlPlaneIngressPeerNamespaces lists namespaces whose meshed proxies may reach
+// the linkerd control plane (app-gateway data plane and linkerd-viz observability stack).
+var LinkerdControlPlaneIngressPeerNamespaces = []string{"app-gateway", "linkerd-viz"}
+
 // NewAppGatewayMeshNetworkPolicy builds the supplemental ingress policy for app-gateway / Linkerd.
 // It is applied in addition to others-np (union of rules); others-np is unchanged.
 func NewAppGatewayMeshNetworkPolicy(ns, peerNS string) *netv1.NetworkPolicy {
-	ingress := netv1.NetworkPolicyIngressRule{
-		From: []netv1.NetworkPolicyPeer{
-			{
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"kubernetes.io/metadata.name": peerNS,
-					},
+	from := []netv1.NetworkPolicyPeer{
+		{
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"kubernetes.io/metadata.name": peerNS,
 				},
 			},
 		},
 	}
+	if ns == "linkerd" {
+		from = linkerdControlPlaneIngressPeers()
+	}
+	ingress := netv1.NetworkPolicyIngressRule{From: from}
 	if ns == "linkerd" {
 		tcp := (*corev1.Protocol)(pointer.String(string(corev1.ProtocolTCP)))
 		for _, port := range LinkerdMeshIngressPortsFromAppGateway {
@@ -62,4 +68,18 @@ func NewAppGatewayMeshNetworkPolicy(ns, peerNS string) *netv1.NetworkPolicy {
 func intstrPtr(port int32) *intstr.IntOrString {
 	v := intstr.FromInt32(port)
 	return &v
+}
+
+func linkerdControlPlaneIngressPeers() []netv1.NetworkPolicyPeer {
+	peers := make([]netv1.NetworkPolicyPeer, 0, len(LinkerdControlPlaneIngressPeerNamespaces))
+	for _, ns := range LinkerdControlPlaneIngressPeerNamespaces {
+		peers = append(peers, netv1.NetworkPolicyPeer{
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"kubernetes.io/metadata.name": ns,
+				},
+			},
+		})
+	}
+	return peers
 }
