@@ -27,3 +27,16 @@ func TestNewAppGatewayMeshNetworkPolicy_appGateway_noPortList(t *testing.T) {
 	np := NewAppGatewayMeshNetworkPolicy("app-gateway", "linkerd")
 	require.Empty(t, np.Spec.Ingress[0].Ports, "app-gateway side allows all TCP from linkerd")
 }
+
+func TestNewLinkerdMeshPrometheusScrapeNetworkPolicy(t *testing.T) {
+	np := NewLinkerdMeshPrometheusScrapeNetworkPolicy("linkerd-viz")
+	require.Equal(t, LinkerdMeshPrometheusScrapeNPName, np.Name)
+	require.Equal(t, PlatformPrometheusNamespace,
+		np.Spec.Ingress[0].From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"])
+	require.Contains(t, LinkerdMeshPrometheusScrapePorts, int32(4191))
+}
+
+func TestAppGatewayMeshNamespaces_includeLinkerdViz(t *testing.T) {
+	require.True(t, IsAppGatewayMeshNamespace("linkerd-viz"))
+	require.Equal(t, "linkerd", AppGatewayMeshPeerNamespace("linkerd-viz"))
+}

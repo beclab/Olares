@@ -44,6 +44,7 @@ var (
 	AppGatewayMeshNamespaces = []string{
 		"linkerd",
 		"app-gateway",
+		"linkerd-viz",
 	}
 )
 
@@ -57,7 +58,7 @@ func AppGatewayMeshPeerNamespace(ns string) string {
 	switch ns {
 	case "linkerd":
 		return "app-gateway"
-	case "app-gateway":
+	case "app-gateway", "linkerd-viz":
 		return "linkerd"
 	default:
 		return ""
