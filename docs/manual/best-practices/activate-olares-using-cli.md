@@ -9,7 +9,7 @@ This tutorial walks you through activating an Olares device (e.g., Olares One) u
 
 The process assumes the device is freshly unboxed and has not been installed or activated.
 
-:::warning Important
+:::warning CLI version mismatch
 The default `olares-cli` included in the current system does not have the activation feature. You must download a standalone daily build CLI to perform the activation as outlined in Step 1.
 :::
 
@@ -33,7 +33,7 @@ Before you begin, ensure the following requirements are met:
 
     ![Fast creation](/images/manual/get-started/create-olares-id.png)
 
-- You have reviewed the followig notes on CLI execution:
+- You have reviewed the following notes on CLI execution:
 
     - **Do not overwrite system files**: A strict version correspondence exists between the system's built-in `olares-cli`, `olaresd`, and the cluster version. Therefore, never move or copy the downloaded standalone CLI to overwrite the system `/usr/bin/olares-cli` file. Doing so breaks this version chain and impacts future system upgrades.
     - **Execution path differences**: Run `./olares-cli` to execute the standalone version downloaded to the current directory. Do not run `olares-cli` directly, because it executes the built-in system version which lacks activation features.
@@ -131,7 +131,7 @@ Run the activation command to configure and secure your device. This process con
 
     **Example:**
     
-    If the Olares ID is `alice2026@olares.com`, the Wizard URL is `http://192.168.50.127:30180`, and the selected FRP host is `bb.hongkong.frp.olares.com`, run:
+    If the Olares ID is `alice2026@olares.com`, the Wizard URL is `http://192.168.31.127:30180`, and the selected FRP host is `bb.hongkong.frp.olares.com`, run:
 
     ```bash
     sudo ./olares-cli wizard activate alice2026@olares.com \
