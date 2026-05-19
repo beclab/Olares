@@ -52,18 +52,8 @@ func linkerdMeshNPReconciledByAppService(ctx context.Context, c client.Client) (
 }
 
 func linkerdMeshNetworkPolicyManifest(vendorDir string) string {
-	candidates := []string{}
-	if vendorDir != "" {
-		candidates = append(candidates, filepath.Join(vendorDir, "network-policies", "linkerd-mesh-ingress.yaml"))
-	}
-	if d := os.Getenv("OLARES_INSTALLER_DIR"); d != "" {
-		candidates = append(candidates, filepath.Join(d, "wizard", "config", "app-gateway-vendor", "network-policies", "linkerd-mesh-ingress.yaml"))
-	}
-	if root := os.Getenv("OLARES_SOURCE_ROOT"); root != "" {
-		candidates = append(candidates, filepath.Join(root, "framework", "app-gateway", "deploy", "network-policies", "linkerd-mesh-ingress.yaml"))
-	}
-	candidates = append(candidates, filepath.Join("framework", "app-gateway", "deploy", "network-policies", "linkerd-mesh-ingress.yaml"))
-	for _, p := range candidates {
+	for _, dir := range appGatewayVendorDirCandidates(vendorDir) {
+		p := filepath.Join(dir, "network-policies", "linkerd-mesh-ingress.yaml")
 		if st, err := os.Stat(p); err == nil && !st.IsDir() {
 			return p
 		}
