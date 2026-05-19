@@ -260,7 +260,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
-          text: "Manage BIOS",
+          text: "Manage BIOS and EC",
           link: "/one/update-firmware",
         },        
       ]

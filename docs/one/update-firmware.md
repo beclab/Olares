@@ -1,15 +1,15 @@
 ---
 outline: [2, 3]
-description: Learn how to manage the BIOS on your Olares One, including checking firmware versions, downloading firmware update packages, executing updates, unlocking advanced mode, and troubleshooting issues such as black screen.
+description: Learn how to manage the BIOS and EC firmware on your Olares One, including checking firmware versions, downloading firmware update packages, executing updates, unlocking advanced mode, and troubleshooting issues such as black screen.
 head:
   - - meta
     - name: keywords
       content: Olares One, firmware update, Embedded Controller (EC), BIOS
 ---
 
-# Manage BIOS
+# Manage BIOS and EC
 
-This document explains how to manage the BIOS settings on your Olares One device, including how to check the current firmware versions, download and perform firmware updates, unlock advanced settings, and troubleshoot the black screen issue caused by display configurations.
+This document explains how to manage the BIOS and Embedded Controller (EC) firmware on your Olares One device, including how to check current versions, download and perform firmware updates, unlock advanced settings, and troubleshoot the black screen issue caused by display configurations.
 
 ## Check firmware versions
 
@@ -37,7 +37,9 @@ If your current versions are older than the ones listed below, download the corr
 
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
-| [1.01 (Download)](http://cdn.olares.com/common/OlaresOne_BIOS_1.01.zip) | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
+| [1.04 (Download)](http://cdn.olares.com/common/OlaresOne_BIOS_1.04.zip) | 2026-05-09 | <ul><li>Add a warning prompt when changing the **Primary Display** setting to **HG**.</li><li>Fix the issue where the GPU unexpectedly disconnects by locking the GPU PCIe speed to Gen4.</li><li>Fix the issue where performance degrades and power consumption is abnormally limited after prolonged use by disabling the function that puts the GPU into sleep mode when the product is idle.</li></ul> |
+| 1.03  | 2026-03-19 | <ul><li>Fix the ACPI error that occurs during Ubuntu system boot.</li><li>Update the Intel CPU microcode to version 0x121.</li></ul> |
+| 1.01  | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
 | 1.00 | 2025-11-28 | <ul><li>Update version naming convention.</li></ul> |
 | C400 | 2025-11-05 | <ul><li>Hide advanced BIOS options by default.</li><li>Remove MCU version display.</li><li>Fix the issue where memory tests report errors by enabling SAGV.</li></ul> |
 
@@ -82,7 +84,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 8. Run the following commands one by one to navigate to the AFU directory and start the flash script:
 
     ```bash
-    cd AGBOX4_BIOS_101
+    cd AGBOX4_BIOS_<version> # e.g., cd AGBOX4_BIOS_101
     cd AFU
     FlashAFU.nsh
     ```
@@ -114,7 +116,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 
     ![Enter setup for BIOS](/images/one/enter-setup.png#bordered)  
 
-    d. On the **Main** tab, verify that the **System BIOS Version** displays `1.01` (or your target version) to confirm the update was successful.
+    d. On the **Main** tab, verify that the **System BIOS Version** displays your target version (e.g., `1.01`) to confirm the update was successful.
 
     ![Verify BIOS version](/images/one/enter-setup-bios1.png#bordered)
 
@@ -136,7 +138,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 8. Enter the following command, and then press **Enter** to navigate to the EC directory:
 
     ```bash
-    cd AGBOX4_EC_01_02
+    cd AGBOX4_EC_<version> # e.g., cd AGBOX4_EC_01_02
     ```
 
     ![Navigate to EC directory](/images/one/ec-cd-command.png#bordered)
@@ -144,7 +146,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 9. Enter the following command, and then press **Enter** to execute the update tool:
 
     ```bash
-    ECFlashTool.efi AGBOX4_EC_01_02.bin
+    ECFlashTool.efi AGBOX4_EC_<version>.bin # e.g., ECFlashTool.efi AGBOX4_EC_01_02.bin
     ```
 
     ![Run EC flash tool](/images/one/ec-flash-command.png#bordered)
@@ -158,7 +160,7 @@ Do not disconnect the power supply or turn off the device during the BIOS update
 
     ![Enter setup for BIOS](/images/one/enter-setup-bios.png#bordered)
 
-12. On the **Main** tab, verify that the **EC FW Version** displays `1.02` (or your target version) to confirm the update was successful.
+12. On the **Main** tab, verify that the **EC FW Version** displays your target version (e.g., `1.02`) to confirm the update was successful.
 
     ![Verify EC version in BIOS](/images/one/verify-ec-version.png#bordered)
 
