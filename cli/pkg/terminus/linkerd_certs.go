@@ -45,18 +45,12 @@ func linkerdIdentityCertsPresent(certDir string) bool {
 }
 
 func linkerdIdentityCertScript(vendorDir string) string {
-	candidates := []string{}
-	if vendorDir != "" {
-		candidates = append(candidates, filepath.Join(vendorDir, "generate-linkerd-identity-certs.sh"))
+	if vendorDir == "" {
+		return ""
 	}
-	if root := os.Getenv("OLARES_SOURCE_ROOT"); root != "" {
-		candidates = append(candidates, filepath.Join(root, "framework", "app-gateway", "hack", "generate-linkerd-identity-certs.sh"))
-	}
-	candidates = append(candidates, filepath.Join("framework", "app-gateway", "hack", "generate-linkerd-identity-certs.sh"))
-	for _, p := range candidates {
-		if st, err := os.Stat(p); err == nil && !st.IsDir() {
-			return p
-		}
+	p := filepath.Join(vendorDir, "generate-linkerd-identity-certs.sh")
+	if st, err := os.Stat(p); err == nil && !st.IsDir() {
+		return p
 	}
 	return ""
 }

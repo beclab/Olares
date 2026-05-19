@@ -6,12 +6,27 @@ import (
 	"path/filepath"
 	"time"
 
+	cc "github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/cli"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func initLinkerdVizLogger(installerDir string) {
+	logBase := installerDir
+	if logBase == "" {
+		logBase = os.Getenv("OLARES_INSTALLER_DIR")
+	}
+	if logBase == "" {
+		logBase = filepath.Join(os.TempDir(), "olares-linkerd-viz-install")
+	}
+	logDir := filepath.Join(logBase, cc.LogsDir, "linkerd-viz-install")
+	consoleLog := filepath.Join(logDir, cc.InstallLogFile)
+	logger.InitLog(logDir, consoleLog, true)
+}
 
 func NewCmdInstallLinkerdViz() *cobra.Command {
 	var installerDir string
@@ -26,7 +41,14 @@ func NewCmdInstallLinkerdViz() *cobra.Command {
 			if prometheusURL == "" {
 				prometheusURL = os.Getenv("OLARES_LINKERD_PROMETHEUS_URL")
 			}
-			vendor := resolveVendorDirForLinkerdViz(installerDir)
+			initLinkerdVizLogger(installerDir)
+			defer func() { _ = logger.Sync() }()
+
+			vendor := terminus.ResolveAppGatewayVendorDir(installerDir, terminus.LinkerdVizValuesFileName)
+			if vendor == "" {
+				return terminus.ErrLinkerdVizVendorNotFound
+			}
+
 			config, err := ctrl.GetConfig()
 			if err != nil {
 				return err
@@ -44,17 +66,7 @@ func NewCmdInstallLinkerdViz() *cobra.Command {
 			return terminus.InstallLinkerdViz(ctx, c, settings, vendor, prometheusURL)
 		},
 	}
-	cmd.Flags().StringVar(&installerDir, "installer-dir", "", "Olares installer dir (wizard/config/app-gateway-vendor)")
+	cmd.Flags().StringVar(&installerDir, "installer-dir", "", "Installer root (.dist) or app-gateway-vendor directory")
 	cmd.Flags().StringVar(&prometheusURL, "prometheus-url", "", "Platform Prometheus base URL (default: KubeSphere prometheus-k8s)")
 	return cmd
-}
-
-func resolveVendorDirForLinkerdViz(installerDir string) string {
-	if installerDir != "" {
-		return filepath.Join(installerDir, "wizard", "config", "app-gateway-vendor")
-	}
-	if root := os.Getenv("OLARES_SOURCE_ROOT"); root != "" {
-		return filepath.Join(root, "framework", "app-gateway", ".olares", "config", "app-gateway-vendor")
-	}
-	return ""
 }

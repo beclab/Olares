@@ -3,10 +3,10 @@ package os
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/terminus"
+	"github.com/pkg/errors"
 	agwconfig "github.com/beclab/Olares/framework/app-gateway/pkg/config"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/spf13/cobra"
@@ -23,9 +23,13 @@ func NewCmdMaintainLinkerdPKI() *cobra.Command {
 			if installerDir == "" {
 				installerDir = os.Getenv("OLARES_INSTALLER_DIR")
 			}
-			if installerDir != "" {
-				initInstallAppGatewayLogger(installerDir)
+			vendor := terminus.ResolveAppGatewayVendorDir(installerDir, "linkerd-values.yaml")
+			if vendor == "" {
+				return errors.New("app-gateway-vendor not found (pass --installer-dir or set OLARES_INSTALLER_DIR; run sync-vendor-values.sh)")
 			}
+			initInstallAppGatewayLogger(installerDir)
+			defer func() { _ = logger.Sync() }()
+
 			config, err := ctrl.GetConfig()
 			if err != nil {
 				return err
@@ -34,7 +38,6 @@ func NewCmdMaintainLinkerdPKI() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			vendor := resolveVendorDirForLinkerdPKI(installerDir)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 			defer cancel()
 			if err := terminus.MaintainLinkerdPKI(ctx, c, agwconfig.LinkerdNamespace(), vendor); err != nil {
@@ -48,12 +51,3 @@ func NewCmdMaintainLinkerdPKI() *cobra.Command {
 	return cmd
 }
 
-func resolveVendorDirForLinkerdPKI(installerDir string) string {
-	if installerDir != "" {
-		return filepath.Join(installerDir, "wizard", "config", "app-gateway-vendor")
-	}
-	if root := os.Getenv("OLARES_SOURCE_ROOT"); root != "" {
-		return filepath.Join(root, "framework", "app-gateway")
-	}
-	return ""
-}

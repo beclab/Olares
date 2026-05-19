@@ -19,19 +19,22 @@ import (
 const (
 	linkerdVizNamespace            = "linkerd-viz"
 	defaultLinkerdPrometheusURL    = "http://prometheus-k8s.kubesphere-monitoring-system.svc.cluster.local:9090"
-	linkerdVizValuesFileName       = "linkerd-viz-values.yaml"
+	LinkerdVizValuesFileName       = "linkerd-viz-values.yaml"
 	linkerdPrometheusProxyRBACFile = "deploy/linkerd/prometheus-pod-proxy-rbac.yaml"
 )
+
+// ErrLinkerdVizVendorNotFound is returned when values/RBAC assets are missing from the installer vendor tree.
+var ErrLinkerdVizVendorNotFound = errors.New("linkerd-viz-values.yaml not found under app-gateway-vendor (run framework/app-gateway/hack/sync-vendor-values.sh and package installer; pass --installer-dir .dist or app-gateway-vendor)")
 
 // InstallLinkerdViz installs the optional linkerd-viz extension without bundled Prometheus.
 func InstallLinkerdViz(ctx context.Context, c client.Client, settings *cli.EnvSettings, vendorDir, prometheusURL string) error {
 	if prometheusURL == "" {
 		prometheusURL = defaultLinkerdPrometheusURL
 	}
-	vals := linkerdVizValuesPath(vendorDir)
-	if vals == "" {
-		return errors.New("linkerd-viz-values.yaml not found in vendor (run framework/app-gateway/hack/sync-vendor-values.sh)")
+	if vendorDir == "" || !markerFilePresent(vendorDir, LinkerdVizValuesFileName) {
+		return ErrLinkerdVizVendorNotFound
 	}
+	vals := filepath.Join(vendorDir, LinkerdVizValuesFileName)
 	if err := applyLinkerdVizManifest(ctx, settings, vals, prometheusURL); err != nil {
 		return err
 	}
@@ -121,35 +124,13 @@ func applyLinkerdPrometheusRBAC(ctx context.Context, settings *cli.EnvSettings, 
 	return utils.KubectlApplyFile(ctx, settings, path)
 }
 
-func linkerdVizValuesPath(vendorDir string) string {
-	if vendorDir != "" {
-		p := filepath.Join(vendorDir, linkerdVizValuesFileName)
-		if st, err := os.Stat(p); err == nil && !st.IsDir() {
-			return p
-		}
-	}
-	if root := os.Getenv("OLARES_SOURCE_ROOT"); root != "" {
-		p := filepath.Join(root, "framework", "app-gateway", "vendor-charts-values", linkerdVizValuesFileName)
-		if st, err := os.Stat(p); err == nil && !st.IsDir() {
-			return p
-		}
-	}
-	return ""
-}
-
 func linkerdPrometheusRBACManifest(vendorDir string) string {
-	candidates := []string{}
-	if vendorDir != "" {
-		candidates = append(candidates, filepath.Join(vendorDir, "deploy", "linkerd", "prometheus-pod-proxy-rbac.yaml"))
+	if vendorDir == "" {
+		return ""
 	}
-	if root := os.Getenv("OLARES_SOURCE_ROOT"); root != "" {
-		candidates = append(candidates, filepath.Join(root, "framework", "app-gateway", linkerdPrometheusProxyRBACFile))
-	}
-	candidates = append(candidates, filepath.Join("framework", "app-gateway", linkerdPrometheusProxyRBACFile))
-	for _, p := range candidates {
-		if st, err := os.Stat(p); err == nil && !st.IsDir() {
-			return p
-		}
+	p := filepath.Join(vendorDir, linkerdPrometheusProxyRBACFile)
+	if st, err := os.Stat(p); err == nil && !st.IsDir() {
+		return p
 	}
 	return ""
 }
