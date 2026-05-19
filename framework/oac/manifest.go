@@ -1,6 +1,7 @@
 package oac
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -109,13 +110,41 @@ func (c *OAC) parseManifest(raw []byte) (Manifest, error) {
 	return m, nil
 }
 
+// validateManifestBytes runs the pipeline's structural validation. When
+// WithAutoOwnerScenarios() is set the validation is repeated for every
+// (owner, admin) pair returned by ownerScenarios(), so manifests whose
+// content branches on `eq .Values.admin .Values.bfl.username` are exercised
+// in both the admin-self-install and regular-user-install configurations.
+//
+// The single-scenario fast path reuses the pre-parsed Manifest m to avoid a
+// second YAML parse; the multi-scenario path passes parsed=nil so each
+// scenario re-renders + re-parses through the pipeline with its own
+// (owner, admin) values.
 func (c *OAC) validateManifestBytes(raw []byte, m Manifest) error {
 	pipe, err := c.resolvePipeline(raw)
 	if err != nil {
 		return err
 	}
-	if err := pipe.Validate(raw, m, c.manifestRenderer(), c.owner, c.admin); err != nil {
-		return WrapValidation(m.APIVersion(), err)
+	scenarios := c.ownerScenarios()
+	if len(scenarios) == 1 {
+		sc := scenarios[0]
+		if err := pipe.Validate(raw, m, c.manifestRenderer(), sc.owner, sc.admin); err != nil {
+			return WrapValidation(m.APIVersion(), err)
+		}
+		return nil
+	}
+	var errs []error
+	for _, sc := range scenarios {
+		if err := pipe.Validate(raw, nil, c.manifestRenderer(), sc.owner, sc.admin); err != nil {
+			if sc.label != "" {
+				errs = append(errs, fmt.Errorf("%s scenario: %w", sc.label, err))
+			} else {
+				errs = append(errs, err)
+			}
+		}
+	}
+	if len(errs) > 0 {
+		return WrapValidation(m.APIVersion(), errors.Join(errs...))
 	}
 	return nil
 }

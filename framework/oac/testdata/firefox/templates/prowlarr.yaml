@@ -12,6 +12,8 @@ metadata:
     app: prowlarr
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
 {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
