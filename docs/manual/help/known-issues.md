@@ -19,7 +19,7 @@ Olares will update this page when issues are identified, mitigated, or resolved.
 | --- | --- |
 | Affected platform | macOS |
 | Affected browser | Google Chrome 148 or later |
-| Trigger conditions | LarePass VPN enabled and accessing Olares through an `olares.com` URL |
+| Trigger conditions | Accessing Olares through an `olares.com` URL in Chrome while LarePass VPN is enabled |
 | Impact | WebSocket-based real-time updates may stop working |
 | Status | Pending fix in an upcoming Olares release |
 
@@ -47,7 +47,25 @@ Olares does not currently include this header in the WebSocket upgrade response,
 
 Use one of the following workarounds until you upgrade to an Olares version that includes the fix.
 
-#### Option 1: Use the .local address
+#### Option 1: Temporarily disable Chrome's local network access check
+
+If you need to keep using the `olares.com` URL with LarePass VPN, you can temporarily disable Chrome's local network access check.
+
+:::warning
+This changes a browser security setting. Use it only as a temporary workaround. After you upgrade to an Olares version that includes the fix, restore this flag to **Default** or **Enabled**.
+:::
+
+1. In Chrome, open:
+
+   ```text
+   chrome://flags/#local-network-access-check
+   ```
+
+2. Set **Local Network Access Checks** to **Disabled**.
+3. Click **Relaunch** to restart Chrome.
+4. Open Olares again using your `olares.com` URL.
+
+#### Option 2: Use the .local address
 
 If your Mac and Olares are on the same local network, use the `.local` address instead of the `olares.com` address. This is the recommended workaround for LAN access.
 
@@ -69,29 +87,3 @@ If Chrome cannot open the `.local` address, make sure Chrome has local network a
 2. Go to **Privacy & Security** > **Local Network**.
 3. Turn on **Google Chrome** and **Google Chrome Helper**.
 4. Restart Chrome and try the `.local` URL again.
-
-#### Option 2: Temporarily disable Chrome's local network access check
-
-If you need to keep using the `olares.com` URL with LarePass VPN, you can temporarily disable Chrome's local network access check.
-
-:::warning
-This changes a browser security setting. Use it only as a temporary workaround. After you upgrade to an Olares version that includes the fix, restore this flag to **Default** or **Enabled**.
-:::
-
-1. In Chrome, open:
-
-   ```text
-   chrome://flags/#local-network-access-check
-   ```
-
-2. Set **Local Network Access Checks** to **Disabled**.
-3. Click **Relaunch** to restart Chrome.
-4. Open Olares again using your `olares.com` URL.
-
-#### Option 3: Refresh the page to recover
-
-If you cannot apply the workarounds above, refresh the page when you notice stalled updates. This restores the current view until the next disconnect.
-
-1. Press `F5`, or click the refresh button in Chrome.
-2. Wait for the page to reload.
-3. Check whether the app status or real-time content updates correctly.

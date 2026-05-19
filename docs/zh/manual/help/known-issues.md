@@ -19,7 +19,7 @@ Olares 会在问题确认、缓解或修复后同步更新本页面。
 | --- | --- |
 | 影响平台 | macOS |
 | 影响浏览器 | Google Chrome 148 或更高版本 |
-| 触发条件 | 在 LarePass 专用网络下通过 `olares.com` 地址访问 Olares |
+| 触发条件 | 启用 LarePass 专用网络后通过 Chrome 使用 `olares.com` 地址访问 Olares |
 | 影响 | 依赖 WebSocket 的实时更新可能停止工作 |
 | 状态 | 计划在后续 Olares 版本中修复 |
 
@@ -47,7 +47,25 @@ Olares 目前未在 WebSocket upgrade 响应中携带该响应头，因此会被
 
 在升级到包含修复的 Olares 新版本前，可使用以下任一方式临时绕过。
 
-#### 方案 1：使用 .local 地址
+#### 方案 1：临时关闭 Chrome 本地网络访问检查
+
+如果你需要继续通过 `olares.com` 地址在 LarePass 专用网络下访问 Olares，可临时关闭 Chrome 的本地网络访问检查。
+
+:::warning
+这会修改浏览器安全设置。建议仅作为临时绕过方式使用。升级到包含修复的 Olares 新版本后，请将该设置恢复为 **Default** 或 **Enabled**。
+:::
+
+1. 在 Chrome 中打开：
+
+   ```text
+   chrome://flags/#local-network-access-check
+   ```
+
+2. 将 **Local Network Access Checks** 设置为 **Disabled**。
+3. 点击 **Relaunch** 重启 Chrome。
+4. 重新使用 `olares.com` 地址打开 Olares。
+
+#### 方案 2：使用 .local 地址
 
 如果你的 Mac 和 Olares 位于同一局域网，建议使用 `.local` 地址，而不是 `olares.com` 地址。这是推荐的局域网访问方式。
 
@@ -69,29 +87,3 @@ http://<entrance_id>.<username>.olares.local
 2. 进入**隐私与安全性** > **本地网络**。
 3. 打开 **Google Chrome** 和 **Google Chrome Helper** 的开关。
 4. 重启 Chrome 后再次尝试 `.local` URL。
-
-#### 方案 2：临时关闭 Chrome 本地网络访问检查
-
-如果你需要继续通过 `olares.com` 地址在 LarePass 专用网络下访问 Olares，可临时关闭 Chrome 的本地网络访问检查。
-
-:::warning
-这会修改浏览器安全设置。建议仅作为临时绕过方式使用。升级到包含修复的 Olares 新版本后，请将该设置恢复为 **Default** 或 **Enabled**。
-:::
-
-1. 在 Chrome 中打开：
-
-   ```text
-   chrome://flags/#local-network-access-check
-   ```
-
-2. 将 **Local Network Access Checks** 设置为 **Disabled**。
-3. 点击 **Relaunch** 重启 Chrome。
-4. 重新使用 `olares.com` 地址打开 Olares。
-
-#### 方案 3：刷新页面以恢复
-
-如果暂时无法采用上述方案，可在实时更新停止时刷新页面查看最新进度。
-
-1. 按 `F5`，或点击 Chrome 的刷新按钮。
-2. 等待页面重新加载。
-3. 检查应用状态或实时内容是否恢复更新。
