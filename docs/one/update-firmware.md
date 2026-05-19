@@ -38,8 +38,8 @@ If your current versions are older than the ones listed below, download the corr
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
 | [1.04 (Download)](http://cdn.olares.com/common/OlaresOne_BIOS_1.04.zip) | 2026-05-09 | <ul><li>Add a warning prompt when changing the **Primary Display** setting to **HG**.</li><li>Fix the issue where the GPU unexpectedly disconnects by locking the GPU PCIe speed to Gen4.</li><li>Fix the issue where performance degrades and power consumption is abnormally limited after prolonged use by disabling the function that puts the GPU into sleep mode when the product is idle.</li></ul> |
-| 1.03    | 2026-03-19 | <ul><li>Fix the ACPI error that occurs during Ubuntu system boot.</li><li>Update the Intel CPU microcode to version 0x121.</li></ul> |
-| [1.01 (Download)](http://cdn.olares.com/common/OlaresOne_BIOS_1.01.zip) | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
+| 1.03  | 2026-03-19 | <ul><li>Fix the ACPI error that occurs during Ubuntu system boot.</li><li>Update the Intel CPU microcode to version 0x121.</li></ul> |
+| 1.01  | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
 | 1.00 | 2025-11-28 | <ul><li>Update version naming convention.</li></ul> |
 | C400 | 2025-11-05 | <ul><li>Hide advanced BIOS options by default.</li><li>Remove MCU version display.</li><li>Fix the issue where memory tests report errors by enabling SAGV.</li></ul> |
 
