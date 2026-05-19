@@ -539,6 +539,19 @@ func uploadRootAndDriveType(fp FrontendPath) (apiRoot, chunkRoot, driveType, pat
 		if fp.Extend == "" {
 			return "", "", "", "", fmt.Errorf("upload destination external extend(node) must be non-empty (e.g. external/<node>/<volume>/<sub>/)")
 		}
+		// `external/<node>/` is the volume-listing layer (hdd1 /
+		// usb1 / smb-... mount points). It has no underlying
+		// filesystem, so an upload landing here either fails or
+		// triggers the auto-rename quirk against a non-existent
+		// target. Require the user to point at a real volume.
+		// See FrontendPath.IsExternalNodeRoot for the wire-side
+		// rationale.
+		if fp.IsExternalNodeRoot() {
+			return "", "", "", "", fmt.Errorf(
+				"upload destination external/%s/ is the volume listing layer (read-only); "+
+					"point at a real volume, e.g. external/%s/<volume>/<sub>/",
+				fp.Extend, fp.Extend)
+		}
 		root := "/external/" + fp.Extend
 		return root, root, "External", fp.Extend, nil
 

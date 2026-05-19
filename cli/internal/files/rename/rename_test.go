@@ -162,6 +162,143 @@ func TestPlan_RejectsSameName(t *testing.T) {
 	}
 }
 
+// TestPlan_RejectsProtectedDriveHomeChild pins the LarePass-aligned
+// policy that the system-managed first-level children directly under
+// drive/Home/ (Pictures / Music / Movies / Downloads / Documents /
+// Code / Cache / Data / Home / Ollama / Huggingface) refuse rename
+// — same effective UX as the LarePass GUI's `disableMenuItem` array
+// in apps/packages/app/src/stores/operation.ts (gated by the user
+// being at /Files/Home/), so a scripted `files rename` cannot
+// silently produce a state the GUI couldn't reach.
+//
+// The matrix below encodes the full LarePass list verbatim plus a
+// handful of negative cases: deeper paths under a protected name
+// (user content, must NOT trip), drive/Data/<same-name> (different
+// extend), and other namespaces (out of scope by construction).
+func TestPlan_RejectsProtectedDriveHomeChild(t *testing.T) {
+	rejectCases := []struct {
+		name string
+		sub  string
+		dir  bool
+	}{
+		{"Pictures dir", "/Pictures", true},
+		{"Pictures with trailing slash", "/Pictures/", true},
+		{"Music", "/Music", true},
+		{"Movies", "/Movies", true},
+		{"Downloads", "/Downloads", true},
+		{"Documents", "/Documents", true},
+		{"Code", "/Code", true},
+		{"Cache", "/Cache", true},
+		{"Data", "/Data", true},
+		{"Home nested", "/Home", true},
+		{"Ollama", "/Ollama", true},
+		{"Huggingface one-word", "/Huggingface", true},
+	}
+	for _, c := range rejectCases {
+		t.Run("reject "+c.name, func(t *testing.T) {
+			tgt := Target{
+				FileType:    "drive",
+				Extend:      "Home",
+				SubPath:     c.sub,
+				IsDirIntent: c.dir,
+			}
+			_, err := Plan(tgt, "Renamed")
+			if err == nil {
+				t.Fatalf("Plan: expected refusal for drive/Home%s", c.sub)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, "system-managed Home folder") {
+				t.Errorf("error should mention 'system-managed Home folder'; got: %v", err)
+			}
+			if !strings.Contains(msg, "Files GUI") {
+				t.Errorf("error should reference the Files GUI for context; got: %v", err)
+			}
+			// Sanity-check that the message enumerates the
+			// protected names so the user can see the full set
+			// without consulting docs.
+			if !strings.Contains(msg, "Pictures") || !strings.Contains(msg, "Huggingface") {
+				t.Errorf("error should enumerate protected names (Pictures / Huggingface); got: %v", err)
+			}
+		})
+	}
+
+	// User-content paths and other namespaces / extends MUST stay
+	// renamable — the policy must not over-extend.
+	allowCases := []struct {
+		name string
+		t    Target
+		dst  string
+	}{
+		{
+			// Album/sub-folder under Pictures: pure user content.
+			name: "deeper path under Pictures",
+			t: Target{
+				FileType: "drive", Extend: "Home",
+				SubPath: "/Pictures/Trip2024/", IsDirIntent: true,
+			},
+			dst: "Trip2025",
+		},
+		{
+			// File inside Documents.
+			name: "file inside Documents",
+			t: Target{
+				FileType: "drive", Extend: "Home",
+				SubPath: "/Documents/notes.md",
+			},
+			dst: "draft.md",
+		},
+		{
+			// drive/Data/<same-name>: different volume root, the
+			// policy is Home-only (the GUI also gates on
+			// /Files/Home/, not /Files/Data/).
+			name: "drive Data same name",
+			t: Target{
+				FileType: "drive", Extend: "Data",
+				SubPath: "/Pictures", IsDirIntent: true,
+			},
+			dst: "PicturesArchive",
+		},
+		{
+			// Other namespace: same-named entry but out of scope.
+			name: "sync repo same name",
+			t: Target{
+				FileType: "sync", Extend: "abc-repo",
+				SubPath: "/Pictures", IsDirIntent: true,
+			},
+			dst: "PicturesArchive",
+		},
+		{
+			// User-created folder at drive/Home/<name> not in the
+			// protected list.
+			name: "drive Home user folder",
+			t: Target{
+				FileType: "drive", Extend: "Home",
+				SubPath: "/MyProjects", IsDirIntent: true,
+			},
+			dst: "WorkProjects",
+		},
+		{
+			// Lowercase variant — even if it happened to exist as
+			// a real dir, it isn't in the case-sensitive policy
+			// list, so it must not be guarded.
+			name: "lowercase pictures not protected",
+			t: Target{
+				FileType: "drive", Extend: "Home",
+				SubPath: "/pictures", IsDirIntent: true,
+			},
+			dst: "renamed",
+		},
+	}
+	for _, c := range allowCases {
+		t.Run("allow "+c.name, func(t *testing.T) {
+			if _, err := Plan(c.t, c.dst); err != nil {
+				t.Errorf("Plan: unexpected refusal for %s/%s%s: %v",
+					c.t.FileType, c.t.Extend, c.t.SubPath, err)
+			}
+		})
+	}
+}
+
 // TestRename_WireShape inspects the actual PATCH that lands on the
 // server — this is the test that breaks loudly if the wire protocol
 // drifts (verb, URL path, query encoding, no body).

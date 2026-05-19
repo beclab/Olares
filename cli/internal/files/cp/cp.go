@@ -185,6 +185,39 @@ func Plan(
 				"refusing to %s the root of %s/%s",
 				action, s.FileType, s.Extend)
 		}
+		// LarePass-aligned policy for `mv` only: the
+		// system-managed first-level children directly under
+		// drive/Home/ (Pictures / Music / Movies / Downloads /
+		// Documents / Code / Ollama / Huggingface / Cache / Data
+		// / Home) refuse to be MOVED — moving would unlink them
+		// from drive/Home/ and produce a state the LarePass GUI
+		// cannot reach (the GUI greys out cut/move via
+		// `disableMenuItem` in
+		// apps/packages/app/src/stores/operation.ts when the user
+		// is at /Files/Home/), and the bootstrap dirs disappearing
+		// from Home would break user apps that look them up by
+		// name. The match scope is the EXACT first-level entry —
+		// children of these dirs (e.g. drive/Home/Pictures/Trip/)
+		// are user content and remain freely movable.
+		//
+		// `cp` (copy) is intentionally NOT gated: copy preserves
+		// the source unchanged, so duplicating Pictures/ to
+		// Pictures-Backup/ is a perfectly reasonable workflow even
+		// though the GUI's `disableMenuItem` array also disables
+		// copy for these entries. The CLI prefers the narrower
+		// rule that mirrors the actual data-loss / GUI-divergence
+		// risk: the source disappearing on `mv`. Authoritative
+		// names live in cli/cmd/ctl/files/path.go's
+		// ProtectedDriveHomeChildren — keep this list in sync if
+		// the web app's `disableMenuItem` array ever changes.
+		if action == ActionMove && isProtectedDriveHomeChild(s.FileType, s.Extend, s.SubPath) {
+			base := lastSegment(s.SubPath)
+			return nil, fmt.Errorf(
+				"refusing to mv source drive/Home/%s: this is a system-managed Home folder reserved by Files; "+
+					"the Files GUI also disables move for {%s} under drive/Home/. "+
+					"Copy with `files cp` instead, or move a child (e.g. drive/Home/%s/<entry>).",
+				base, protectedDriveHomeChildrenList, base)
+		}
 		if s.IsDirIntent && !recursive {
 			return nil, fmt.Errorf(
 				"%s/%s%s is a directory: pass -r/-R to %s it recursively",
@@ -195,6 +228,20 @@ func Plan(
 		return nil, fmt.Errorf(
 			"%s: target %q must end with '/' when more than one source is given (got %d sources)",
 			action, dst.FileType+"/"+dst.Extend+dst.SubPath, len(srcs))
+	}
+	// Destination at `external/<node>/` is the virtual volume-listing
+	// layer (hdd1 / usb1 / smb-... mount points) — it has no
+	// underlying filesystem to drop bytes into, so a paste that
+	// lands here either fails server-side or auto-renames against a
+	// non-existent target. Require the user to point at a real
+	// volume, mirroring the LarePass web app's UX (the volume-list
+	// view disables paste / upload affordances). See
+	// FrontendPath.IsExternalNodeRoot for the wire-side rationale.
+	if dst.FileType == "external" && strings.Trim(dst.SubPath, "/") == "" {
+		return nil, fmt.Errorf(
+			"%s: destination external/%s/ is the volume listing layer (read-only); "+
+				"point at a real volume, e.g. external/%s/<volume>/<sub>/",
+			action, dst.Extend, dst.Extend)
 	}
 
 	ops := make([]Op, 0, len(srcs))
@@ -247,15 +294,21 @@ func planOne(s Source, dst Destination, action Action, defaultNode, flagNode str
 		}
 	}
 
-	if srcWire == dstWire {
-		return Op{}, fmt.Errorf(
-			"%s: source and destination are the same (%s); nothing to do",
-			action, srcWire)
-	}
+	// No client-side rejection of literal src==dst: the LarePass
+	// web app doesn't enforce this either, and the backend's paste
+	// endpoint handles it on its own (auto-rename for files, error
+	// for dirs through the cycle path below). Refusing it client-
+	// side blocked the legitimate "duplicate this file in place,
+	// let the server pick a `(1)` suffix" workflow that mirrors the
+	// POST-mkdir auto-rename quirk users already work with.
+	//
 	// Cycle check: dst inside src (e.g. cp -r /a /a/sub). The cheap
 	// way is to anchor src with a trailing '/' so a substring like
 	// "/a/sub" is required (not "/abc"); both sides already use the
 	// directory marker for dir paths so the prefix test is reliable.
+	// This also catches the dir-to-dir same-path case (dstWire ==
+	// srcWire ⇒ HasPrefix(srcWire+"/", srcWire+"/") = true), which
+	// would otherwise produce an infinitely-recursing tree.
 	if s.IsDirIntent {
 		anchor := srcWire
 		if !strings.HasSuffix(anchor, "/") {
@@ -282,6 +335,54 @@ func planOne(s Source, dst Destination, action Action, defaultNode, flagNode str
 		IsDir:       s.IsDirIntent,
 		Node:        node,
 	}, nil
+}
+
+// protectedDriveHomeChildren mirrors the LarePass web app's
+// disableMenuItem array (apps/packages/app/src/stores/operation.ts),
+// gated by `path === '/Files/Home/'`. The CLI's `mv` planner uses
+// it (via isProtectedDriveHomeChild) to refuse moving a
+// system-managed Home child — see Plan's docstring for the
+// `cp`-vs-`mv` rationale on why only mv is gated.
+//
+// Authoritative list lives in cli/cmd/ctl/files/path.go's
+// ProtectedDriveHomeChildren; the duplication keeps this package
+// free of a cmd/ctl/files dependency (same pattern as `external`'s
+// volume-listing-layer guard). Names are case-sensitive and align
+// 1:1 with the GUI, including the LarePass-quirk one-word
+// `Huggingface` casing.
+var protectedDriveHomeChildren = map[string]struct{}{
+	"Home":        {},
+	"Documents":   {},
+	"Pictures":    {},
+	"Movies":      {},
+	"Downloads":   {},
+	"Data":        {},
+	"Cache":       {},
+	"Code":        {},
+	"Music":       {},
+	"Ollama":      {},
+	"Huggingface": {},
+}
+
+const protectedDriveHomeChildrenList = "Cache, Code, Data, Documents, Downloads, Home, Huggingface, Movies, Music, Ollama, Pictures"
+
+// isProtectedDriveHomeChild reports whether (fileType, extend,
+// subPath) addresses one of the system-managed first-level children
+// directly under drive/Home/. Mirrors
+// FrontendPath.IsProtectedDriveHomeChild semantics from
+// cli/cmd/ctl/files/path.go: only EXACT first-level entries match,
+// and the comparison is case-sensitive against the
+// protectedDriveHomeChildren map.
+func isProtectedDriveHomeChild(fileType, extend, subPath string) bool {
+	if fileType != "drive" || extend != "Home" {
+		return false
+	}
+	seg := strings.Trim(subPath, "/")
+	if seg == "" || strings.Contains(seg, "/") {
+		return false
+	}
+	_, ok := protectedDriveHomeChildren[seg]
+	return ok
 }
 
 // ResolveNode reproduces the web app's `dst_node || src_node ||

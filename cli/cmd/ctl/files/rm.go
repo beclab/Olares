@@ -34,7 +34,12 @@ type rmOptions struct {
 //
 //   - --recursive / -r / -R is required to remove directories. A
 //     trailing '/' on a target is interpreted as "this is a
-//     directory" intent and triggers the same check.
+//     directory" intent and triggers the same check. Once -r is in
+//     play, EVERY target in the same invocation is treated as a
+//     directory — the wire dirent carries a trailing slash regardless
+//     of whether the user's path string ended in `/` or not. This
+//     mirrors `rm -r foo` in Unix shells: the user has declared
+//     directory intent, the CLI follows through.
 //   - --force / -f skips the interactive confirmation prompt. Without
 //     it, we list what would be deleted and ask y/N. In a non-TTY
 //     environment (CI, piped stdin) we refuse rather than guessing —
@@ -68,11 +73,23 @@ Confirmation:
 
 Trailing slash on a target signals "this is a directory" — the
 planner errors out without --recursive in that case (Unix-style).
-With --recursive both forms (` + "`foo`" + ` and ` + "`foo/`" + `) are accepted.
+With --recursive both forms (` + "`foo`" + ` and ` + "`foo/`" + `) are accepted, and
+the wire dirent ALWAYS gets a trailing slash so the server's POSIX
+driver routes the request through the directory-removal path. In
+practice this means:
+
+    files rm     <path>      → "<path> is a file"   (no trailing slash on the wire)
+    files rm -r  <path>      → "<path> is a folder" (trailing slash on the wire)
+
+regardless of how the user typed the path. Mixing files and folders
+in one ` + "`-r`" + ` invocation is unusual; if you have a file to delete
+alongside directories, drop the file into a separate ` + "`files rm`" + ` call
+without ` + "`-r`" + `.
 
 Examples:
 
     olares-cli files rm drive/Home/Documents/old.pdf
+    olares-cli files rm -r drive/Home/Backups/2024
     olares-cli files rm -r drive/Home/Backups/2024/
     olares-cli files rm -rf drive/Home/junk drive/Home/scratch/
 `,
