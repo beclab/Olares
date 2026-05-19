@@ -646,6 +646,7 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 			networkPolicy = security.NetworkPolicies{
 				security.NPDenyAll.DeepCopy(),
 				meshNP,
+				security.NewLinkerdMeshPrometheusScrapeNetworkPolicy(ns.Name),
 			}
 			networkPolicy.SetName("others-np")
 			networkPolicy.SetNamespace(ns.Name)
