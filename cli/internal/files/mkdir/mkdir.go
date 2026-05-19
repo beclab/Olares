@@ -128,6 +128,21 @@ func Plan(t Target) (Op, error) {
 	}
 	clean := strings.Trim(t.SubPath, "/")
 	if clean == "" {
+		// `external/<node>/` is the virtual volume-listing layer
+		// (hdd1 / usb1 / smb-... mount points). The generic
+		// "pick a subdirectory name" hint suggests
+		// `external/<node>/NewFolder`, which would be at the
+		// volume-list level — exactly the wire shape that has no
+		// real filesystem behind it. Customize the message so
+		// the user sees the correct shape (`external/<node>/<volume>/<sub>`)
+		// instead. See FrontendPath.IsExternalNodeRoot in
+		// cli/cmd/ctl/files/path.go for the wire-side rationale.
+		if t.FileType == "external" {
+			return Op{}, fmt.Errorf(
+				"refusing to mkdir at external/%s/: this is the volume listing layer (read-only); "+
+					"point at a real volume, e.g. external/%s/<volume>/<sub>/",
+				t.Extend, t.Extend)
+		}
 		return Op{}, fmt.Errorf(
 			"refusing to mkdir the root of %s/%s; pick a subdirectory name (e.g. %s/%s/NewFolder)",
 			t.FileType, t.Extend, t.FileType, t.Extend)
