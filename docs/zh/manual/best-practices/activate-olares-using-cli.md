@@ -90,7 +90,7 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 4. 等待安装过程完成。终端会输出一个本地网关地址和一个默认密码。记录下这些信息，用于激活步骤使用。
 
     **示例**：
-    - **Wizard URL**：本地网关地址，例如 `http://192.168.50.127:30180`。
+    - **Wizard URL**：本地网关地址，例如 `http://192.168.31.127:30180`。
     - **密码**：Olares 的默认登录密码。
 
     ![Wizard URL](/images/manual/get-started/wizard-url-and-login-password1.png)
@@ -129,16 +129,16 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 
     **示例**：
     
-    如果 Olares ID 是 `alice2026@olares.com`，Wizard URL 是 `http://192.168.50.127:30180`，选择的 FRP 主机是 `bb.hongkong.frp.olares.com`，则运行：
+    如果 Olares ID 是 `alice2026@olares.com`，Wizard URL 是 `http://192.168.31.127:30180`，选择的 FRP 主机是 `bb.hongkong.frp.olares.com`，则运行：
 
     ```bash
     sudo olares-cli wizard activate alice2026@olares.com \
     --mnemonic "abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef" \
     --password="b8Ln6qbz" \
     --reset-password="Ab1234@" \
-    --authurl=http://192.168.50.127:30180 \
-    --vault=http://192.168.50.127:30180/server \
-    --bfl=http://192.168.50.127:30180 \
+    --authurl=http://192.168.31.127:30180 \
+    --vault=http://192.168.31.127:30180/server \
+    --bfl=http://192.168.31.127:30180 \
     --host=bb.hongkong.frp.olares.com \
     --enable-tunnel=true
     ```
