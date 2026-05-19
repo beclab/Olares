@@ -710,6 +710,61 @@ func TestAPIVersionV2_ModernOlaresRejectsSpecResources(t *testing.T) {
 	}
 }
 
+func TestSpec_SupportArch_AcceptsKnownArches(t *testing.T) {
+	for _, arch := range []string{"amd64", "arm64"} {
+		c := newValidConfig()
+		c.Spec.SupportArch = []string{arch}
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("supportArch=%q must be accepted: %v", arch, err)
+		}
+	}
+
+	c := newValidConfig()
+	c.Spec.SupportArch = []string{"amd64", "arm64"}
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("supportArch=[amd64 arm64] must be accepted: %v", err)
+	}
+}
+
+func TestSpec_SupportArch_EmptyIsAccepted(t *testing.T) {
+	c := newValidConfig()
+	c.Spec.SupportArch = nil
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("empty supportArch must remain valid (no enum gate): %v", err)
+	}
+
+	c.Spec.SupportArch = []string{}
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("zero-length supportArch slice must remain valid: %v", err)
+	}
+}
+
+func TestSpec_SupportArch_RejectsUnknownArch(t *testing.T) {
+	for _, bad := range []string{"x86", "x86_64", "AMD64", "ARM64", "i386", "riscv64", ""} {
+		c := newValidConfig()
+		c.Spec.SupportArch = []string{bad}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatalf("supportArch=%q must be rejected", bad)
+		}
+		if !strings.Contains(err.Error(), "amd64") || !strings.Contains(err.Error(), "arm64") {
+			t.Fatalf("error should mention the enum constraint, got: %v", err)
+		}
+	}
+}
+
+func TestSpec_SupportArch_RejectsDuplicates(t *testing.T) {
+	c := newValidConfig()
+	c.Spec.SupportArch = []string{"amd64", "amd64"}
+	err := ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("expected duplicate supportArch entries to be rejected")
+	}
+	if !strings.Contains(err.Error(), "duplicate value") {
+		t.Fatalf("error should mention duplicate, got: %v", err)
+	}
+}
+
 func TestDependency_TypeEnum(t *testing.T) {
 	c := newValidConfig()
 	c.Options.Dependencies = []Dependency{{Name: "foo", Version: "1.0.0", Type: "bogus"}}

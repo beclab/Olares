@@ -109,16 +109,45 @@ func WithServiceAccountRulesCheck() Option {
 	return func(c *OAC) { c.runRBAC = true }
 }
 
-// WithAutoOwnerScenarios makes Lint ignore any explicit WithOwner / WithAdmin
-// / WithOwnerAdmin values and instead run the chart-rendering portion of the
-// pipeline twice:
+// WithSecurityContextCheck enables the non-beclab image privileged
+// securityContext check. The check rejects any container (init or main)
+// whose image is NOT published under the beclab/ namespace and whose
+// effective securityContext grants root-equivalent privileges (any of
+// `privileged: true`, `runAsUser: 0`, `runAsNonRoot: false`, including
+// the value inherited from a pod-level securityContext). It is disabled
+// by default because some legacy charts still embed third-party images
+// that need a manual review before this rule applies; turn it on
+// explicitly when publishing to the app store.
+func WithSecurityContextCheck() Option {
+	return func(c *OAC) { c.runSecurityContext = true }
+}
+
+// SkipSecurityContextCheck clears the non-beclab image securityContext
+// flag. The check is OFF by default, so calling this on a fresh Checker
+// is a no-op; it exists for option-set composition where a previously
+// applied set may have turned the check on.
+func SkipSecurityContextCheck() Option {
+	return func(c *OAC) { c.runSecurityContext = false }
+}
+
+// WithAutoOwnerScenarios makes Lint / ValidateManifestFile /
+// ValidateManifestContent ignore any explicit WithOwner / WithAdmin /
+// WithOwnerAdmin values and instead run every owner-dependent step twice:
 //
 //  1. owner == admin (cluster-admin install)
 //  2. owner != admin (regular user install)
 //
-// Both scenarios must pass. The manifest-level checks (folder layout, ozzo
-// validation, custom validators, same-version) are owner-independent and
-// still only run once.
+// This covers:
+//
+//   - The chart-rendering portion of Lint (helm dry-run + workload integrity
+//     checks, container resource limits, RBAC inspection).
+//   - The manifest structural validation (validateManifestBytes), so
+//     OlaresManifest.yaml bodies that branch on
+//     `eq .Values.admin .Values.bfl.username` are exercised in both
+//     configurations.
+//
+// Both scenarios must pass; failures are aggregated. Owner-independent steps
+// (folder layout, appdata cross-check, same-version) still run once.
 //
 // This is the programmatic equivalent of the LintBothOwnerScenarios helper —
 // use it whenever the caller does not have a concrete owner/admin pair and
@@ -168,4 +197,37 @@ func SkipAppDataCheck() Option {
 // runs exactly once even when this option is passed multiple times).
 func WithAppDataValidator() Option {
 	return func(c *OAC) { c.skipAppData = false }
+}
+
+// SkipHostPathCheck disables the built-in hostPath + rolling-update
+// incompatibility check. The check is on by default since combining a
+// hostPath volume with a rolling update silently produces broken
+// installations (the new pod can't see the old node's host directory);
+// only opt out when a chart legitimately handles this in another way.
+func SkipHostPathCheck() Option {
+	return func(c *OAC) { c.skipHostPath = true }
+}
+
+// WithHostPathCheck re-enables the built-in hostPath + rolling-update
+// incompatibility check after a previous option set disabled it. The
+// check is on by default, so calling this on a fresh Checker is a no-op.
+func WithHostPathCheck() Option {
+	return func(c *OAC) { c.skipHostPath = false }
+}
+
+// SkipResourceNamespaceCheck disables the built-in rendered-resource
+// namespace check. The check enforces that Deployment/StatefulSet/DaemonSet
+// workloads land in "app-namespace" and that other namespaced resources
+// land in "app-namespace" or a "user-system-*" namespace; cluster-scoped
+// resources are skipped. It is on by default; only opt out when a chart
+// legitimately renders resources into a different namespace.
+func SkipResourceNamespaceCheck() Option {
+	return func(c *OAC) { c.skipResourceNamespace = true }
+}
+
+// WithResourceNamespaceCheck re-enables the built-in rendered-resource
+// namespace check after a previous option set disabled it. The check is on
+// by default, so calling this on a fresh Checker is a no-op.
+func WithResourceNamespaceCheck() Option {
+	return func(c *OAC) { c.skipResourceNamespace = false }
 }
