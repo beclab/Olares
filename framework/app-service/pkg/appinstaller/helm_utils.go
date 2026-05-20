@@ -55,10 +55,10 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 	values["admin"] = admin
 
 	values["GPU"] = map[string]interface{}{
-		"Type": appConfig.GetSelectedGpuTypeValue(),
+		"Type": appConfig.SelectedGpuType,
 		"Cuda": os.Getenv("OLARES_SYSTEM_CUDA_VERSION"),
 	}
-	values["gpu"] = appConfig.GetSelectedGpuTypeValue()
+	values["gpu"] = appConfig.SelectedGpuType
 
 	terminus, err := utils.GetTerminusVersion(ctx, kubeConfig)
 	if err != nil {

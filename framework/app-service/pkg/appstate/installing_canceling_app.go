@@ -11,6 +11,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -152,6 +153,10 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 	}
 	if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
 		klog.Errorf("execute uninstall failed %v", err)
+		return err
+	}
+	if err := compute.DeleteAllocationsForApp(ctx, p.client, appCfg.AppName, appCfg.OwnerName); err != nil {
+		klog.Errorf("delete compute allocation for canceled install app %s failed %v", appCfg.AppName, err)
 		return err
 	}
 

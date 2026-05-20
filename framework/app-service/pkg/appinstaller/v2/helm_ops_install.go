@@ -113,6 +113,10 @@ func (h *HelmOpsV2) Install() error {
 	if h.App().Type == appv1alpha1.Middleware.String() {
 		return nil
 	}
+	if h.Options().SkipWaitForStartUp {
+		klog.Infof("skip waiting for app %s startup", h.App().AppName)
+		return nil
+	}
 	ok, err := h.WaitForStartUp()
 	if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
 		klog.Errorf("App %s is pending, err=%v", h.App().AppName, err)

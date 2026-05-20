@@ -10,6 +10,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -194,6 +195,10 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 	}
 	if err != nil {
 		klog.Errorf("uninstall app %s failed %v", p.manager.Spec.AppName, err)
+		return err
+	}
+	if err = compute.DeleteAllocationsForComputeTarget(ctx, p.client, appCfg, uninstallAll == "true"); err != nil {
+		klog.Errorf("delete compute allocation for app %s failed %v", p.manager.Spec.AppName, err)
 		return err
 	}
 	err = p.waitForDeleteNamespace(ctx)

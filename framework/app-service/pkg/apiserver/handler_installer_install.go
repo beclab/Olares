@@ -5,9 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"slices"
+	"strconv"
+
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -17,15 +22,9 @@ import (
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
-	"golang.org/x/exp/maps"
-	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"slices"
-	"strconv"
 
 	"github.com/emicklei/go-restful/v3"
 	"helm.sh/helm/v3/pkg/time"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -109,36 +108,6 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		if err != nil {
 			api.HandleBadRequest(resp, req, err)
 			return
-		}
-	}
-
-	// check selected gpu type can be supported
-	// if selectedGpuType != "" , then check if the gpu type exists in cluster
-	// if selectedGpuType == "" , and only one gpu type exists in cluster, then use it
-	var nodes corev1.NodeList
-	err = h.ctrlClient.List(req.Request.Context(), &nodes, &client.ListOptions{})
-	if err != nil {
-		klog.Errorf("list node failed %v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-	gpuTypes, err := utils.GetAllGpuTypesFromNodes(&nodes)
-	if err != nil {
-		klog.Errorf("get gpu type failed %v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
-	if insReq.SelectedGpuType != "" {
-		if _, ok := gpuTypes[insReq.SelectedGpuType]; !ok {
-			klog.Errorf("selected gpu type %s not found in cluster", insReq.SelectedGpuType)
-			api.HandleBadRequest(resp, req, fmt.Errorf("selected gpu type %s not found in cluster", insReq.SelectedGpuType))
-			return
-		}
-	} else {
-		if len(gpuTypes) == 1 {
-			insReq.SelectedGpuType = maps.Keys(gpuTypes)[0]
-			klog.Infof("only one gpu type %s found in cluster, use it as selected gpu type", insReq.SelectedGpuType)
 		}
 	}
 
@@ -252,6 +221,65 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		(appCfg.AllowMultipleInstall && apiVersion == appcfg.V2) {
 		klog.Errorf("app %s can not be clone", app)
 		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
+		return
+	}
+
+	// When the caller didn't explicitly pick a compute mode, try to derive
+	// one from the cluster + manifest. An empty SelectedGpuType is treated
+	// as "no selection" (NOT as "cpu") — callers who genuinely want cpu
+	// must pass "cpu" explicitly. See compute.AutoSelectMode for the rules.
+	//
+	// If the caller did pass something explicitly we leave it alone here;
+	// the subsequent compute.AppInstallable check is what surfaces the
+	// "you picked a mode the cluster doesn't have" error.
+	if insReq.SelectedGpuType == "" {
+		var chosen string
+		chosen, err = compute.AutoSelectMode(req.Request.Context(), h.ctrlClient, appCfg)
+		// More than one declared mode is runnable on this cluster — let the
+		// caller pick by surfacing the full per-mode install plan with a
+		// dedicated code, instead of failing the install outright.
+		if errors.Is(err, compute.ErrAmbiguousComputeMode) {
+			plan, planErr := compute.BuildInstallComputePlan(req.Request.Context(), h.ctrlClient, appCfg)
+			if planErr != nil {
+				api.HandleError(resp, req, planErr)
+				return
+			}
+			resp.WriteAsJson(InstallComputePlanResponse{
+				Response: api.Response{Code: api.CodeComputeAmbiguousMode},
+				Data:     plan,
+			})
+			return
+		}
+		if err != nil {
+			klog.Errorf("Failed to auto-select compute mode for app %s: %v", app, err)
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+		// Reload appCfg with the chosen mode so its Requirement reflects
+		// the GPU-mode resource needs we'll actually schedule against.
+		// Just patching SelectedGpuType in place isn't enough: for legacy
+		// apps the first GetAppConfig call (with empty selectedGpu) ran
+		// ResolveRequirement under cpu mode and dropped the GPU values
+		// from appCfg.Requirement, so we need to re-parse from the
+		// manifest with the chosen mode to recover them.
+		if chosen != appCfg.SelectedGpuType {
+			appCfg, err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, chosen)
+			if err != nil {
+				klog.Errorf("Failed to reload appConfig with auto-selected gpu type %s: %v", chosen, err)
+				api.HandleError(resp, req, err)
+				return
+			}
+		}
+	}
+
+	computeEnough, err := compute.AppInstallable(req.Request.Context(), h.ctrlClient, appCfg)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	if !computeEnough {
+		api.HandleBadRequest(resp, req, fmt.Errorf("compute resource is not enough for app %s with mode %s", app, appCfg.SelectedGpuType))
 		return
 	}
 
@@ -600,6 +628,12 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 		images = h.insReq.Images
 	}
 	imagesStr, _ := json.Marshal(images)
+	// For v1/v2 appConfig.OwnerName == h.owner (the install caller). For
+	// v3 it is the cluster owner that GetAppConfig resolved at chart
+	// load time — independent of which admin is currently operating, so
+	// the AM stays addressed to a stable user across multi-admin
+	// install / upgrade cycles.
+	appOwner := h.appConfig.OwnerName
 	appMgr := &v1alpha1.ApplicationManager{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -617,7 +651,7 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 			AppName:      h.app,
 			RawAppName:   h.rawAppName,
 			AppNamespace: h.appConfig.Namespace,
-			AppOwner:     h.owner,
+			AppOwner:     appOwner,
 			Config:       string(config),
 			Source:       h.insReq.Source.String(),
 			Type:         v1alpha1.Type(h.appConfig.Type),
@@ -671,6 +705,7 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 				"opType":     v1alpha1.InstallOp,
 				"config":     string(config),
 				"source":     h.insReq.Source.String(),
+				"appOwner":   appOwner,
 				"rawAppName": h.rawAppName,
 			},
 		}
