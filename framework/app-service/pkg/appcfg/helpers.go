@@ -116,6 +116,61 @@ func (s AppName) SharedEntranceIdPrefix() string {
 	return hashString[:8]
 }
 
+// SharedEntranceHostPrefix returns the 8-char lowercase md5 prefix that
+// identifies one sharedEntrance in the v2 URL scheme (PR-6 / R-V2-1):
+//
+//	hash8 = md5(<appid> + ":shared:" + <entranceName>)[:8]
+//
+// It is intentionally independent of the user / viewer because the prefix
+// must be stable across viewers and across SRR reconciles. Callers that need
+// the full URL use GenSharedEntranceURLForUser; callers that need the SRR
+// hostPattern use LogicalHostPattern.
+func SharedEntranceHostPrefix(appid, entranceName string) string {
+	appid = strings.ToLower(strings.TrimSpace(appid))
+	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
+	sum := md5.Sum([]byte(appid + ":shared:" + entranceName))
+	return hex.EncodeToString(sum[:])[:8]
+}
+
+// GenSharedEntranceURLForUser composes the per-viewer Shared URL described in
+// the明确方案 §1.1:
+//
+//	https://<hash8>.<viewer>.<platformDomain>
+//
+// All inputs are lowercased and trimmed. An empty viewer / platformDomain /
+// appid / entranceName returns "" so the caller can decide what to do (the
+// helper deliberately avoids panicking inside the controller hot path).
+func GenSharedEntranceURLForUser(appid, entranceName, viewer, platformDomain string) string {
+	appid = strings.ToLower(strings.TrimSpace(appid))
+	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
+	viewer = strings.ToLower(strings.TrimSpace(viewer))
+	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
+	if appid == "" || entranceName == "" || viewer == "" || platformDomain == "" {
+		return ""
+	}
+	host := SharedEntranceHostPrefix(appid, entranceName) + "." + viewer + "." + platformDomain
+	return "https://" + host
+}
+
+// LogicalHostPattern returns the SRR hostPattern used by the app-service-routecontrol
+// to materialize a single HTTPRoute that covers every viewer of an entrance
+// (R-V2-2 / R-V2-3):
+//
+//	<hash8>.*.<platformDomain>
+//
+// The literal "*" segment is the marker that app-service-routecontrol looks for when
+// translating the SRR into HTTPRoute hostnames + Host RegularExpression
+// (PR-7 §7.4). Empty inputs return "" so the caller can detect misuse.
+func LogicalHostPattern(appid, entranceName, platformDomain string) string {
+	appid = strings.ToLower(strings.TrimSpace(appid))
+	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
+	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
+	if appid == "" || entranceName == "" || platformDomain == "" {
+		return ""
+	}
+	return SharedEntranceHostPrefix(appid, entranceName) + ".*." + platformDomain
+}
+
 // GenEntranceURL fills in entrance URLs on app.Spec.Entrances based on the
 // user's zone. It is a package-level re-implementation of the in-tree
 // (*Application).GenEntranceURL method.

@@ -1,0 +1,117 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterconfigs.cluster.olares.io
+spec:
+  group: cluster.olares.io
+  names:
+    categories:
+      - olares
+    kind: ClusterConfig
+    listKind: ClusterConfigList
+    plural: clusterconfigs
+    singular: clusterconfig
+    shortNames:
+      - cc
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      additionalPrinterColumns:
+        - jsonPath: .spec.platformDomain
+          name: platform
+          type: string
+        - jsonPath: .spec.sharedURLViewerScheme
+          name: shared-viewer
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: age
+          type: date
+      schema:
+        openAPIV3Schema:
+          description: |-
+            ClusterConfig is the cluster-wide singleton (name=cluster) that
+            carries cluster-scope platform settings consumed by app-service and
+            app-gateway. Phase-A v2 only introduces two fields:
+
+              spec.platformDomain        — the apex domain used to compose
+                                           per-viewer Shared URLs and the
+                                           SharedRouteRegistry logical hostPattern
+                                           (<hash8>.*.<platformDomain>).
+
+              spec.sharedURLViewerScheme — gate for the v2 per-viewer Shared
+                                           URL scheme. "enabled" turns on
+                                           <hash8>.<viewer>.<platformDomain>
+                                           URL generation; "disabled" preserves
+                                           Phase-A behaviour.
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+                platformDomain:
+                  description: |-
+                    Apex DNS domain shared by every user zone, e.g. olares.com
+                    (with users at alice.olares.com, alice.olares.com, ...).
+                    Lower-case. Used by app-service to compute SRR logical
+                    hostPatterns and per-viewer Shared URLs.
+                  type: string
+                  pattern: '^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$'
+                  maxLength: 253
+                sharedURLViewerScheme:
+                  description: |-
+                    Feature gate for the per-viewer Shared URL scheme. Set to
+                    "enabled" to opt into v2 (default: "disabled" keeps
+                    Phase-A semantics).
+                  type: string
+                  enum:
+                    - enabled
+                    - disabled
+                  default: disabled
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+      served: true
+      storage: true
+      subresources:
+        status: {}
