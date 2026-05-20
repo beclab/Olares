@@ -7,6 +7,6 @@ metadata:
     app.kubernetes.io/name: app-gateway
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
-    linkerd.io/inject: enabled
+    # Do not set linkerd.io/inject on the namespace: EG data plane opts in via EnvoyProxy pod template.
     bytetrade.io/ns-type: platform
 {{- end }}
