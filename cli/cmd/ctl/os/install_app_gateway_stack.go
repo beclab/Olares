@@ -27,7 +27,7 @@ func NewCmdInstallAppGatewayStack() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "install-app-gateway",
-		Short: "Re-install unified ingress stack (Linkerd + Envoy Gateway + app-gateway); normal installs use olares-cli os install",
+		Short: "Re-install unified ingress stack (Linkerd + Envoy Gateway + app-gateway with EG data-plane mesh); normal installs use olares-cli os install",
 		Run: func(cmd *cobra.Command, args []string) {
 			if installerDir == "" {
 				_ = cmd.Usage()
@@ -51,18 +51,21 @@ func NewCmdInstallAppGatewayStack() *cobra.Command {
 				if err := (&terminus.InstallAppGatewayChart{KubeAction: kubeAction}).Execute(runtime); err != nil {
 					log.Fatalf("error: install app-gateway chart: %v", err)
 				}
+				if err := (&terminus.WaitAppGatewayDataPlaneMeshed{KubeAction: kubeAction}).Execute(runtime); err != nil {
+					log.Fatalf("error: wait EG data-plane mesh: %v", err)
+				}
 				return
 			}
 
 			if err := (&terminus.InstallAppGatewayVendor{KubeAction: kubeAction}).Execute(runtime); err != nil {
 				log.Fatalf("error: install vendor: %v", err)
 			}
-			if err := (&terminus.WaitAppGatewayReady{KubeAction: kubeAction}).Execute(runtime); err != nil {
-				log.Fatalf("error: wait ready: %v", err)
-			}
 			if withAppGatewayChart {
 				if err := (&terminus.InstallAppGatewayChart{KubeAction: kubeAction}).Execute(runtime); err != nil {
 					log.Fatalf("error: install app-gateway chart: %v", err)
+				}
+				if err := (&terminus.WaitAppGatewayDataPlaneMeshed{KubeAction: kubeAction}).Execute(runtime); err != nil {
+					log.Fatalf("error: wait EG data-plane mesh: %v", err)
 				}
 			}
 		},
