@@ -12,7 +12,7 @@ doc_updated: "2026-05-19"
 
 # Write code using Claude Code
 
-Claude Code is Anthropic's official AI coding assistant command-line interface (CLI). Use it to write, test, and manage code through natural language directly in a terminal-based interface. On Olares, Claude Code runs inside a browser-based terminal equipped with a pre-configured Ubuntu development environment.
+Claude Code is an AI coding assistant that helps you write, test, and manage code using natural language. On Olares, this command-line interface runs inside a browser-based terminal equipped with a pre-configured Ubuntu development environment.
 
 ## Learning objectives
 
@@ -24,7 +24,13 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- A Claude Pro or Max subscription for remote model connectivity, or a local model optimized for coding (e.g., `qwen3-coder:30b`) installed on your Olares device for local execution.
+- An Olares device with sufficient disk space and memory.
+- An active Claude Pro or Max subscription, if you plan to use remote model connectivity.
+- A local model optimized for coding running on your Olares device, if you plan to use local execution.
+
+   You can install local models using one of the following methods:
+   - **Ollama application**: One app that hosts multiple models. Ensure [Ollama is installed](ollama.md) with at least one model downloaded, such as `qwen3-coder:30b`.
+   - **Single-model application**: Runs one specific model as a standalone application. Ensure the model app is installed from Market with the model fully downloaded. This guide uses **Qwen3-Coder 30B (Ollama)**.
 
 ## Install Claude Code
 
@@ -132,7 +138,30 @@ The following examples demonstrate how to interact with Claude Code to complete 
 
 ### Build a full-stack project
 
-Claude Code creates multi-service projects, runs tests, and verifies end-to-end integrations. The following example demonstrates how to build a Backend For Frontend (BFF) stack with a Python FastAPI backend and a Node.js gateway.
+Claude Code creates multi-service projects, runs tests, and verifies end-to-end integrations.
+
+The following example demonstrates how to build a lightweight "Hello Olares" web application using a single Node.js Express server to handle both the backend API and the frontend display.
+
+1. In the Claude Code TUI, enter the following prompt:
+
+   ```text
+   Create a simple full-stack "Hello Olares" application in a new directory called `hello-olares`.
+   
+   Please do the following:
+   1. Initialize a Node.js project and install the `express` package.
+   2. Create a backend API (`server.js`) that runs on port 3000 and has a single endpoint `/api/message` returning `{"message": "Hello Olares!"}`.
+   3. Create a frontend (`public/index.html`) with vanilla JavaScript that fetches the message from the API and displays it on the screen. Configure the server to serve this static directory.
+   4. Start the server in the background, use `curl` to verify the `/api/message` endpoint works, and then stop the server cleanly.
+   ```
+
+2. Wait for Claude Code to process the prompt. The assistant automatically initializes the project, installs Express, writes the code, starts the server, and performs a live curl integration check.
+3. When the assistant prompts you for permission to proceed, select **Yes, and don't ask again...**. You might need to approve several prompts for different types of actions.
+4.	Review the final summary report returned by the assistant. It outlines the newly created project structure, the configured backend API, the frontend setup, and the successful curl test results.
+
+   ![Claude Code coding project result](/images/manual/use-cases/claude-code-report.png#bordered)
+
+<!--
+The following example demonstrates how to build a Backend For Frontend (BFF) stack with a Python FastAPI backend and a Node.js gateway.
 
 1. In the TUI, enter the following detailed prompt:
 
@@ -195,6 +224,7 @@ Claude Code creates multi-service projects, runs tests, and verifies end-to-end 
 4. Review the final report returned by the assistant, which includes the directory tree, test summaries, and execution transcripts.
 
    ![Claude Code mini BFF result](/images/manual/use-cases/claude-code-mini-bff.png#bordered)
+-->
 
 ## Manage security and development environments
 
@@ -252,7 +282,7 @@ The container image is based on Ubuntu 24.04 and includes common development too
 The `ripgrep` (`rg`) utility is intentionally excluded to prevent conflicts with Claude Code's native search behavior.
 :::
 
-## Troubleshooting
+## FAQs
 
 ### `claude: command not found`
 
