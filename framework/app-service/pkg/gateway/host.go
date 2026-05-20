@@ -78,6 +78,120 @@ func NormalizeHostPatterns(raw []string) ([]string, error) {
 	return out, nil
 }
 
+// NormalizeHostOrLogicalPattern accepts both Phase-A exact hosts (handled by
+// NormalizeHostPattern) and the v2 "logical" hostPattern introduced in PR-6:
+//
+//	<hash8>.*.<platformDomain>
+//
+// The wildcard label MUST appear as a single literal "*" exactly once and
+// MUST be the second label from the left, matching the URL scheme
+// "<hash8>.<viewer>.<platformDomain>" (R-V2-2). The output is the lowercase
+// canonical form; trailing dots and surrounding whitespace are stripped.
+//
+// This is a strict superset of NormalizeHostPattern: callers that must reject
+// wildcards (e.g. Phase-A SRR ingestion) keep using NormalizeHostPattern;
+// SRR writers and app-service-routecontrol use this function.
+func NormalizeHostOrLogicalPattern(raw string) (string, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return "", fmt.Errorf("%w: empty host", ErrInvalidHostPattern)
+	}
+	if strings.Contains(s, "://") {
+		return "", fmt.Errorf("%w: scheme not allowed (%q)", ErrInvalidHostPattern, raw)
+	}
+	if strings.ContainsAny(s, "/?#") {
+		return "", fmt.Errorf("%w: path/query not allowed (%q)", ErrInvalidHostPattern, raw)
+	}
+	if idx := strings.LastIndex(s, ":"); idx >= 0 {
+		host := s[:idx]
+		port := s[idx+1:]
+		if host == "" || port == "" {
+			return "", fmt.Errorf("%w: malformed host:port (%q)", ErrInvalidHostPattern, raw)
+		}
+		if !isAllDigits(port) {
+			return "", fmt.Errorf("%w: port must be numeric (%q)", ErrInvalidHostPattern, raw)
+		}
+		s = host
+	}
+	s = strings.ToLower(s)
+
+	if !strings.Contains(s, "*") {
+		if !isValidHostLabel(s) {
+			return "", fmt.Errorf("%w: %q does not match host pattern", ErrInvalidHostPattern, raw)
+		}
+		return s, nil
+	}
+
+	labels := strings.Split(s, ".")
+	if len(labels) < 3 {
+		return "", fmt.Errorf("%w: logical pattern needs <hash8>.*.<domain> (got %q)", ErrInvalidHostPattern, raw)
+	}
+	if labels[1] != "*" {
+		return "", fmt.Errorf("%w: wildcard must be the 2nd label (got %q)", ErrInvalidHostPattern, raw)
+	}
+	for i, lab := range labels {
+		if i == 1 {
+			continue
+		}
+		if lab == "" || strings.Contains(lab, "*") {
+			return "", fmt.Errorf("%w: only one literal '*' label allowed (got %q)", ErrInvalidHostPattern, raw)
+		}
+		if !isValidDNSLabel(lab) {
+			return "", fmt.Errorf("%w: label %q invalid in %q", ErrInvalidHostPattern, lab, raw)
+		}
+	}
+	return s, nil
+}
+
+// NormalizeHostOrLogicalPatterns is the slice form of
+// NormalizeHostOrLogicalPattern. See NormalizeHostPatterns for semantics.
+func NormalizeHostOrLogicalPatterns(raw []string) ([]string, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	seen := make(map[string]struct{}, len(raw))
+	out := make([]string, 0, len(raw))
+	for _, r := range raw {
+		h, err := NormalizeHostOrLogicalPattern(r)
+		if err != nil {
+			return nil, err
+		}
+		if _, dup := seen[h]; dup {
+			continue
+		}
+		seen[h] = struct{}{}
+		out = append(out, h)
+	}
+	return out, nil
+}
+
+// IsLogicalHostPattern reports whether s is a v2 logical hostPattern
+// (<hash8>.*.<domain>) rather than a Phase-A exact host.
+func IsLogicalHostPattern(s string) bool {
+	labels := strings.Split(s, ".")
+	return len(labels) >= 3 && labels[1] == "*"
+}
+
+// isValidDNSLabel applies the RFC-1035 LDH (letters/digits/hyphen) check used
+// inside multi-label logical patterns. The label must already be lowercase.
+func isValidDNSLabel(s string) bool {
+	if s == "" || len(s) > 63 {
+		return false
+	}
+	if !isAlphaNum(rune(s[0])) {
+		return false
+	}
+	if len(s) > 1 && !isAlphaNum(rune(s[len(s)-1])) {
+		return false
+	}
+	for _, r := range s {
+		if !(isAlphaNum(r) || r == '-') {
+			return false
+		}
+	}
+	return true
+}
+
 func isAllDigits(s string) bool {
 	if s == "" {
 		return false

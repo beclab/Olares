@@ -70,11 +70,17 @@ spec:
                   description: |-
                     Externally-visible hostnames Envoy Gateway must route to
                     the upstream. Must be lowercase and contain no port.
+                    Two forms are accepted:
+                      - Phase-A exact host:    abc.shared.example.com
+                      - v2 logical pattern:    <hash8>.*.<platformDomain>
+                        (the literal "*" segment is required to be the 2nd
+                        label; app-service-routecontrol translates it into a Host
+                        RegularExpression header match).
                   type: array
                   minItems: 1
                   items:
                     type: string
-                    pattern: '^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$'
+                    pattern: '^([a-z0-9]([-a-z0-9.]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*[a-z0-9])?\.\*\.[a-z0-9]([-a-z0-9.]*[a-z0-9])?)$'
                 upstream:
                   description: Backend Service inside the same namespace.
                   type: object
