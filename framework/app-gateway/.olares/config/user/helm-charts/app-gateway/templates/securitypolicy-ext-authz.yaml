@@ -1,0 +1,30 @@
+{{- if .Values.extAuthz.enabled }}
+{{- /*
+ext_authz backend is the in-process PEP on app-service. When the Service
+namespace differs from the Gateway namespace, ReferenceGrant in the target
+namespace authorises the cross-namespace backendRef (see
+securitypolicy-ext-authz-referencegrant.yaml).
+*/}}
+{{- $authzNS := default (include "app-gateway.namespace" .) .Values.extAuthz.service.namespace -}}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: {{ .Values.extAuthz.name }}
+  namespace: {{ include "app-gateway.namespace" . }}
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: ext-authz
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Values.gateway.name }}
+  extAuth:
+    failOpen: {{ .Values.extAuthz.failOpen }}
+    grpc:
+      backendRefs:
+        - name: {{ .Values.extAuthz.service.name }}
+          namespace: {{ $authzNS }}
+          port: {{ .Values.extAuthz.service.port }}
+{{- end }}
