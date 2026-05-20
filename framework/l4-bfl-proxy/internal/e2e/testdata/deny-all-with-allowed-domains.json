@@ -335,7 +335,7 @@
                       "path": "/dev/stdout",
                       "logFormat": {
                         "textFormatSource": {
-                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON% upstream_connection_id=%UPSTREAM_CONNECTION_ID% connection_termination_details=%CONNECTION_TERMINATION_DETAILS%\n"
+                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% host_user=%REQ(X-BFL-USER)% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON% upstream_connection_id=%UPSTREAM_CONNECTION_ID% connection_termination_details=%CONNECTION_TERMINATION_DETAILS%\n"
                         }
                       }
                     }
@@ -533,7 +533,7 @@
                       "path": "/dev/stdout",
                       "logFormat": {
                         "textFormatSource": {
-                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON% upstream_connection_id=%UPSTREAM_CONNECTION_ID% connection_termination_details=%CONNECTION_TERMINATION_DETAILS%\n"
+                          "inlineString": "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -\u003e %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% host_user=%REQ(X-BFL-USER)% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON% upstream_connection_id=%UPSTREAM_CONNECTION_ID% connection_termination_details=%CONNECTION_TERMINATION_DETAILS%\n"
                         }
                       }
                     }
@@ -660,7 +660,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -748,7 +748,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -836,7 +836,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -924,7 +924,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -1117,7 +1117,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -1205,7 +1205,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -1293,7 +1293,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -1381,7 +1381,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
