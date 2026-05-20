@@ -154,7 +154,7 @@ The following example demonstrates how to build a lightweight "Hello Olares" web
 3. When the assistant prompts you for permission to proceed, select **Yes, and don't ask again...**. You might need to approve several prompts for different types of actions.
 4.	Review the final summary report returned by the assistant. It outlines the newly created project structure, the configured backend API, the frontend setup, and the successful curl test results.
 
-   ![Claude Code coding project result](/images/manual/use-cases/claude-code-report.png#bordered)
+      ![Claude Code coding project result](/images/manual/use-cases/claude-code-report.png#bordered)
 
 ## Manage security and development environments
 
