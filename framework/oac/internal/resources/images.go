@@ -5,13 +5,14 @@ import (
 
 	"helm.sh/helm/v3/pkg/kube"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // ExtractWorkloadImages walks Deployment and StatefulSet resources in list
 // and returns the distinct set of container images declared on the primary
-// Pod template (initContainers are not included, per the "basic" decision
-// in the refactor plan).
+// Pod template -- including init containers, since they are pulled by every
+// node that schedules the workload exactly like the main containers.
 //
 // DaemonSet is intentionally skipped: the resource-limits and upload-mount
 // checks in walkPodContainers only inspect Deployment / StatefulSet, and the
@@ -23,6 +24,18 @@ import (
 // collapsed.
 func ExtractWorkloadImages(list kube.ResourceList) []string {
 	set := make(map[string]struct{})
+	collect := func(spec corev1.PodSpec) {
+		for _, c := range spec.InitContainers {
+			if c.Image != "" {
+				set[c.Image] = struct{}{}
+			}
+		}
+		for _, c := range spec.Containers {
+			if c.Image != "" {
+				set[c.Image] = struct{}{}
+			}
+		}
+	}
 	for _, r := range list {
 		kind := r.Object.GetObjectKind().GroupVersionKind().Kind
 		switch kind {
@@ -31,21 +44,19 @@ func ExtractWorkloadImages(list kube.ResourceList) []string {
 			if err := scheme.Scheme.Convert(r.Object, &dep, nil); err != nil {
 				continue
 			}
-			for _, c := range dep.Spec.Template.Spec.Containers {
-				if c.Image != "" {
-					set[c.Image] = struct{}{}
-				}
-			}
+			collect(dep.Spec.Template.Spec)
 		case KindStatefulSet:
 			var sts appsv1.StatefulSet
 			if err := scheme.Scheme.Convert(r.Object, &sts, nil); err != nil {
 				continue
 			}
-			for _, c := range sts.Spec.Template.Spec.Containers {
-				if c.Image != "" {
-					set[c.Image] = struct{}{}
-				}
+			collect(sts.Spec.Template.Spec)
+		case KindDaemonSet:
+			var ds appsv1.DaemonSet
+			if err := scheme.Scheme.Convert(r.Object, &ds, nil); err != nil {
+				continue
 			}
+			collect(ds.Spec.Template.Spec)
 		}
 	}
 	out := make([]string, 0, len(set))

@@ -25,12 +25,15 @@ type OAC struct {
 	// WithAutoOwnerScenarios().
 	autoOwner bool
 
-	skipManifest    bool
-	skipResource    bool
-	skipFolder      bool
-	skipSameVersion bool
-	skipAppData     bool
-	runRBAC         bool
+	skipManifest          bool
+	skipResource          bool
+	skipFolder            bool
+	skipSameVersion       bool
+	skipAppData           bool
+	skipHostPath          bool
+	skipResourceNamespace bool
+	runRBAC               bool
+	runSecurityContext    bool
 
 	customValidators []CustomValidator
 
@@ -50,7 +53,11 @@ type OAC struct {
 //     (RBAC is off by default; the Chart.yaml <-> manifest same-version
 //     check runs by default — turn it off with SkipSameVersionCheck;
 //     the .Values.userspace.appdata template-vs-manifest cross-check runs
-//     by default — turn it off with SkipAppDataCheck)
+//     by default — turn it off with SkipAppDataCheck;
+//     the hostPath + rolling-update incompatibility check runs by default
+//     — turn it off with SkipHostPathCheck;
+//     the rendered-resource namespace check runs by default — turn it
+//     off with SkipResourceNamespaceCheck)
 func New(opts ...Option) *OAC {
 	c := &OAC{}
 	for _, opt := range opts {

@@ -56,6 +56,42 @@ func TestCheckResourceLimits_ModernV3_SameAsV1Inline(t *testing.T) {
 	}
 }
 
+// TestCheckResourceLimits_V2_SkipsRegardlessOfManifestVersion pins down the
+// contract that apiVersion=v2 always short-circuits the limit check before
+// either the legacy or the modern branch can fire. It reuses the modern
+// "toobig" fixture (whose containers exceed the inline spec.requiredCpu /
+// spec.requiredMemory and would normally fail on v1) and:
+//   - first verifies v2 + modern returns nil,
+//   - then flips ConfigVersion to legacy ("0.11.0") and clears
+//     spec.resources[], so absent the v2 short-circuit the legacy branch
+//     would run resources.CheckResourceLimits against zero limits and fail
+//     for every container that declares any CPU/memory request. The
+//     check must still return nil.
+func TestCheckResourceLimits_V2_SkipsRegardlessOfManifestVersion(t *testing.T) {
+	c := New(WithOwner("alice"), WithAdmin("admin"))
+	dir := filepath.Join("testdata", "resourcelimits_v1_inline_toobig")
+	m, err := c.LoadManifestFile(dir)
+	if err != nil {
+		t.Fatalf("LoadManifestFile: %v", err)
+	}
+	cfg, ok := m.Raw().(*manifest.AppConfiguration)
+	if !ok {
+		t.Fatal("expected *AppConfiguration")
+	}
+	sc := ownerScenario{owner: "alice", admin: "admin"}
+
+	cfg.APIVersion = manifest.APIVersionV2
+	if err := c.checkResourceLimits(dir, m, sc, nil); err != nil {
+		t.Fatalf("v2 + modern must skip the limit check, got: %v", err)
+	}
+
+	cfg.ConfigVersion = "0.11.0"
+	cfg.Spec.Resources = nil
+	if err := c.checkResourceLimits(dir, m, sc, nil); err != nil {
+		t.Fatalf("v2 + legacy must skip the limit check, got: %v", err)
+	}
+}
+
 func TestCheckResourceLimits_UnsupportedAPIVersion(t *testing.T) {
 	c := New(WithOwner("alice"), WithAdmin("admin"))
 	dir := filepath.Join("testdata", "resourcelimits_v1_inline")
@@ -73,7 +109,7 @@ func TestCheckResourceLimits_UnsupportedAPIVersion(t *testing.T) {
 	if limErr == nil {
 		t.Fatal("expected unsupported apiVersion error")
 	}
-	if !strings.Contains(limErr.Error(), "不支持该版本") {
-		t.Fatalf("expected 不支持该版本 in error, got: %v", limErr)
+	if !strings.Contains(limErr.Error(), "not supported version") {
+		t.Fatalf("expected not supported version in error, got: %v", limErr)
 	}
 }
