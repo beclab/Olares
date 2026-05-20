@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
@@ -25,8 +27,28 @@ const (
 // ResourceName derives the SRR name from the Application short name (D-A10).
 // Using the same prefix as the rest of the v3 shared family makes the object
 // easy to find with `kubectl get srr -A`.
+//
+// Deprecated by PR-7: per-entrance SRRs use ResourceNameForEntrance so a
+// single Application with multiple sharedEntrances no longer collapses into
+// one SRR. The function is kept for cleanup (the controller deletes any
+// surviving Phase-A SRR named "shared-<appName>" before reconciling the new
+// per-entrance objects) and for backwards-compatible tests.
 func ResourceName(appName string) string {
 	return fmt.Sprintf("shared-%s", appName)
+}
+
+// ResourceNameForEntrance is the v2 SRR name scheme (R-V2-2 / D-V2-14):
+// one SRR per sharedEntrance, identified by appid + entranceName so the
+// name survives Application rename / Helm release upgrades.
+//
+// Returns "" if either input is empty so the caller can fail closed.
+func ResourceNameForEntrance(appid, entranceName string) string {
+	appid = strings.ToLower(strings.TrimSpace(appid))
+	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
+	if appid == "" || entranceName == "" {
+		return ""
+	}
+	return fmt.Sprintf("shared-%s-%s", appid, entranceName)
 }
 
 // IsOptedIn reports whether the Application carries the gateway opt-in
@@ -83,6 +105,62 @@ func BuildSpec(app *appv1alpha1.Application, svc *corev1.Service) (srrv1alpha1.S
 	return srrv1alpha1.SharedRouteRegistrySpec{
 		RouteMode:    srrv1alpha1.RouteModeGateway,
 		HostPatterns: patterns,
+		Upstream:     upstream,
+		AuthzRef: &srrv1alpha1.AuthzRef{
+			DefaultAction: srrv1alpha1.AuthzDefaultAllow,
+		},
+	}, nil
+}
+
+// BuildSpecForEntrance projects one sharedEntrance of a v3 Application into
+// a SharedRouteRegistrySpec carrying the v2 logical hostPattern
+// (<hash8>.*.<platformDomain>). The caller resolves the backing Service so
+// this helper stays I/O-free.
+//
+// Errors:
+//   - empty appid / entranceName / platformDomain
+//   - empty backing service or no usable TCP port
+//   - normalized logical pattern fails NormalizeHostOrLogicalPattern
+func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Entrance,
+	svc *corev1.Service, platformDomain string) (srrv1alpha1.SharedRouteRegistrySpec, error) {
+	if app == nil {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("application is nil")
+	}
+	if entrance.Name == "" {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("shared entrance has empty name")
+	}
+	if svc == nil {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("upstream service is nil")
+	}
+	appid := strings.TrimSpace(app.Spec.Appid)
+	if appid == "" {
+		// Application.spec.appid is only populated for v3 apps; fall back
+		// to the deterministic appName-derived appid so PR-7 still works
+		// when callers haven't fully migrated.
+		appid = appcfg.AppName(app.Spec.Name).GetAppID()
+	}
+	pattern := appcfg.LogicalHostPattern(appid, entrance.Name, platformDomain)
+	if pattern == "" {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("compute logical hostPattern: appid=%q entrance=%q platformDomain=%q", appid, entrance.Name, platformDomain)
+	}
+	norm, err := NormalizeHostOrLogicalPattern(pattern)
+	if err != nil {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("normalize logical pattern %q: %w", pattern, err)
+	}
+
+	upstream := srrv1alpha1.UpstreamRef{
+		ServiceName:      svc.Name,
+		ServiceNamespace: svc.Namespace,
+	}
+	if port := pickHTTPPort(svc, entrance.Port); port > 0 {
+		upstream.Port = port
+	} else {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("service %s/%s has no usable TCP port", svc.Namespace, svc.Name)
+	}
+
+	return srrv1alpha1.SharedRouteRegistrySpec{
+		RouteMode:    srrv1alpha1.RouteModeGateway,
+		HostPatterns: []string{norm},
 		Upstream:     upstream,
 		AuthzRef: &srrv1alpha1.AuthzRef{
 			DefaultAction: srrv1alpha1.AuthzDefaultAllow,
@@ -171,8 +249,9 @@ func Reconcile(ctx context.Context, c client.Client, app *appv1alpha1.Applicatio
 	return patched, nil
 }
 
-// Delete removes the SRR associated with the Application, if any. Missing
-// objects are not treated as an error.
+// Delete removes the legacy SRR associated with the Application. Missing
+// objects are not treated as an error. Per-entrance SRRs are removed by
+// DeleteForEntrance / DeleteAllForApp.
 func Delete(ctx context.Context, c client.Client, app *appv1alpha1.Application) error {
 	if app == nil || app.Spec.Namespace == "" {
 		return nil
@@ -185,6 +264,149 @@ func Delete(ctx context.Context, c client.Client, app *appv1alpha1.Application) 
 	}
 	if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("delete SRR %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
+	return nil
+}
+
+// ReconcileForEntrance creates or updates the per-entrance SRR. It is the
+// v2 counterpart of Reconcile and is the only writer used by the
+// ApplicationController after PR-7.
+func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1.Application,
+	entrance appv1alpha1.Entrance, spec srrv1alpha1.SharedRouteRegistrySpec) (*srrv1alpha1.SharedRouteRegistry, error) {
+	if app == nil {
+		return nil, errors.New("application is nil")
+	}
+	ns := app.Spec.Namespace
+	if ns == "" {
+		return nil, errors.New("application has empty spec.namespace")
+	}
+	appid := strings.TrimSpace(app.Spec.Appid)
+	if appid == "" {
+		appid = appcfg.AppName(app.Spec.Name).GetAppID()
+	}
+	name := ResourceNameForEntrance(appid, entrance.Name)
+	if name == "" {
+		return nil, fmt.Errorf("compute SRR name for entrance %q on app %s", entrance.Name, app.Spec.Name)
+	}
+
+	got := &srrv1alpha1.SharedRouteRegistry{}
+	getErr := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, got)
+	switch {
+	case apierrors.IsNotFound(getErr):
+		obj := &srrv1alpha1.SharedRouteRegistry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: ns,
+				Labels: map[string]string{
+					"app.kubernetes.io/managed-by": "app-service",
+					"app.kubernetes.io/instance":   app.Spec.Name,
+					"gateway.olares.io/appid":      appid,
+					"gateway.olares.io/entrance":   entrance.Name,
+				},
+				OwnerReferences: ownerRefs(app),
+			},
+			Spec: spec,
+		}
+		if err := c.Create(ctx, obj); err != nil {
+			return nil, fmt.Errorf("create SRR %s/%s: %w", ns, name, err)
+		}
+		return obj, nil
+	case getErr != nil:
+		return nil, fmt.Errorf("get SRR %s/%s: %w", ns, name, getErr)
+	}
+
+	patched := got.DeepCopy()
+	patched.Spec = spec
+	if !ownerRefAlreadyPresent(patched.OwnerReferences, app.UID) {
+		patched.OwnerReferences = append(patched.OwnerReferences, ownerRefs(app)...)
+	}
+	if patched.Labels == nil {
+		patched.Labels = map[string]string{}
+	}
+	patched.Labels["app.kubernetes.io/managed-by"] = "app-service"
+	patched.Labels["app.kubernetes.io/instance"] = app.Spec.Name
+	patched.Labels["gateway.olares.io/appid"] = appid
+	patched.Labels["gateway.olares.io/entrance"] = entrance.Name
+
+	if err := c.Patch(ctx, patched, client.MergeFrom(got)); err != nil {
+		return nil, fmt.Errorf("patch SRR %s/%s: %w", ns, name, err)
+	}
+	return patched, nil
+}
+
+// DeleteForEntrance removes a single per-entrance SRR. Missing objects are
+// ignored.
+func DeleteForEntrance(ctx context.Context, c client.Client, ns, appid, entranceName string) error {
+	if ns == "" {
+		return nil
+	}
+	name := ResourceNameForEntrance(appid, entranceName)
+	if name == "" {
+		return nil
+	}
+	obj := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+	}
+	if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("delete SRR %s/%s: %w", ns, name, err)
+	}
+	return nil
+}
+
+// PruneEntranceSRRs removes any SRR labeled
+// app.kubernetes.io/instance=<app.Spec.Name> whose name is not in keep.
+// keep should contain the per-entrance SRR names produced by
+// ResourceNameForEntrance. The legacy "shared-<appName>" SRR is not pruned
+// here — callers that need it gone should invoke Delete separately.
+func PruneEntranceSRRs(ctx context.Context, c client.Client, app *appv1alpha1.Application, keep map[string]struct{}) error {
+	if app == nil || app.Spec.Namespace == "" {
+		return nil
+	}
+	list := &srrv1alpha1.SharedRouteRegistryList{}
+	if err := c.List(ctx, list,
+		client.InNamespace(app.Spec.Namespace),
+		client.MatchingLabels{"app.kubernetes.io/instance": app.Spec.Name},
+	); err != nil {
+		return fmt.Errorf("list SRRs for prune: %w", err)
+	}
+	legacyName := ResourceName(app.Spec.Name)
+	for i := range list.Items {
+		obj := &list.Items[i]
+		if obj.Name == legacyName {
+			continue
+		}
+		if _, ok := keep[obj.Name]; ok {
+			continue
+		}
+		if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("prune SRR %s/%s: %w", obj.Namespace, obj.Name, err)
+		}
+	}
+	return nil
+}
+
+// DeleteAllForApp removes every SRR owned by the application — both the
+// Phase-A "shared-<appName>" form and any "shared-<appid>-<entrance>" forms
+// — that currently exist in the namespace. Used when the Application is
+// uninstalled or opts out of gateway mode.
+func DeleteAllForApp(ctx context.Context, c client.Client, app *appv1alpha1.Application) error {
+	if app == nil || app.Spec.Namespace == "" {
+		return nil
+	}
+	if err := Delete(ctx, c, app); err != nil {
+		return err
+	}
+	list := &srrv1alpha1.SharedRouteRegistryList{}
+	if err := c.List(ctx, list, client.InNamespace(app.Spec.Namespace), client.MatchingLabels{
+		"app.kubernetes.io/instance": app.Spec.Name,
+	}); err != nil {
+		return fmt.Errorf("list SRRs for app %s: %w", app.Spec.Name, err)
+	}
+	for i := range list.Items {
+		obj := &list.Items[i]
+		if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete SRR %s/%s: %w", obj.Namespace, obj.Name, err)
+		}
 	}
 	return nil
 }

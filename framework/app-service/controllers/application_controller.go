@@ -12,6 +12,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
@@ -546,24 +547,67 @@ func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context
 		return nil
 	}
 	if !appcfg.IsV3(app) || !gateway.IsOptedIn(app) || len(app.Spec.SharedEntrances) == 0 {
-		return gateway.Delete(ctx, r.Client, app)
+		return gateway.DeleteAllForApp(ctx, r.Client, app)
 	}
-	primary := app.Spec.SharedEntrances[0]
-	if primary.Host == "" {
-		return fmt.Errorf("shared entrance %q on app %s has empty host", primary.Name, app.Spec.Name)
+
+	// PR-7: every reconcile pass removes the legacy Phase-A "shared-<appName>"
+	// SRR if present, then writes one SRR per sharedEntrance carrying the v2
+	// logical hostPattern (<hash8>.*.<platformDomain>).
+	if err := gateway.Delete(ctx, r.Client, app); err != nil {
+		return fmt.Errorf("remove legacy SRR: %w", err)
 	}
-	svc := &corev1.Service{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: app.Spec.Namespace, Name: primary.Host}, svc); err != nil {
-		return fmt.Errorf("get backing service %s/%s: %w", app.Spec.Namespace, primary.Host, err)
+
+	platformDomain := cluster.GetPlatformDomain(ctx)
+	if platformDomain == "" {
+		return fmt.Errorf("platformDomain is empty (ClusterConfig missing and env unset)")
 	}
-	spec, err := gateway.BuildSpec(app, svc)
-	if err != nil {
-		return fmt.Errorf("build SRR spec: %w", err)
+
+	appid := strings.TrimSpace(app.Spec.Appid)
+	if appid == "" {
+		appid = appcfg.AppName(app.Spec.Name).GetAppID()
 	}
-	if _, err := gateway.Reconcile(ctx, r.Client, app, spec); err != nil {
-		return err
+
+	// Track which entrance SRRs should exist after this pass; everything else
+	// owned by the Application gets cleaned up to handle entrance removals.
+	desired := make(map[string]struct{}, len(app.Spec.SharedEntrances))
+
+	for i := range app.Spec.SharedEntrances {
+		entrance := app.Spec.SharedEntrances[i]
+		if entrance.Name == "" {
+			klog.Warningf("SRR skip: app=%s entrance#%d has empty name", app.Spec.Name, i)
+			continue
+		}
+		if entrance.Host == "" {
+			return fmt.Errorf("shared entrance %q on app %s has empty host", entrance.Name, app.Spec.Name)
+		}
+		svc := &corev1.Service{}
+		if err := r.Get(ctx, types.NamespacedName{Namespace: app.Spec.Namespace, Name: entrance.Host}, svc); err != nil {
+			return fmt.Errorf("get backing service %s/%s: %w", app.Spec.Namespace, entrance.Host, err)
+		}
+		spec, err := gateway.BuildSpecForEntrance(app, entrance, svc, platformDomain)
+		if err != nil {
+			return fmt.Errorf("build SRR spec for entrance %q: %w", entrance.Name, err)
+		}
+		name := gateway.ResourceNameForEntrance(appid, entrance.Name)
+		if err := gateway.CheckLogicalPatternUniqueness(ctx, r.Client, spec.HostPatterns[0], app.Spec.Namespace, name); err != nil {
+			return fmt.Errorf("uniqueness check for entrance %q: %w", entrance.Name, err)
+		}
+		if _, err := gateway.ReconcileForEntrance(ctx, r.Client, app, entrance, spec); err != nil {
+			return err
+		}
+		desired[name] = struct{}{}
+		klog.V(1).Infof("SRR reconciled app=%s/%s entrance=%s name=%s hostPatterns=%v upstream=%s/%s:%d",
+			app.Spec.Namespace, app.Spec.Name, entrance.Name, name, spec.HostPatterns,
+			spec.Upstream.ServiceNamespace, spec.Upstream.ServiceName, spec.Upstream.Port)
 	}
-	klog.V(1).Infof("SRR reconciled for app=%s/%s hostPatterns=%v upstream=%s/%s:%d", app.Spec.Namespace, app.Spec.Name, spec.HostPatterns, spec.Upstream.ServiceNamespace, spec.Upstream.ServiceName, spec.Upstream.Port)
+
+	// Garbage-collect stale per-entrance SRRs (e.g. when sharedEntrances was
+	// trimmed in a Helm upgrade). OwnerReferences ultimately delete on app
+	// removal, but this keeps an opted-in Application's SRR set tight while
+	// the Application still exists.
+	if err := gateway.PruneEntranceSRRs(ctx, r.Client, app, desired); err != nil {
+		return fmt.Errorf("prune stale SRRs: %w", err)
+	}
 	return nil
 }
 

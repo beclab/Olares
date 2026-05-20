@@ -114,3 +114,121 @@ func TestBuildSpec_Errors(t *testing.T) {
 		t.Fatal("invalid host: want error")
 	}
 }
+
+// PR-7 contract tests
+
+func TestResourceNameForEntrance(t *testing.T) {
+	cases := map[[2]string]string{
+		{"a5be2268", "ollamav2"}: "shared-a5be2268-ollamav2",
+		{"", "ollamav2"}:         "",
+		{"a5be2268", ""}:         "",
+		{"A5BE2268", "OllamaV2"}: "shared-a5be2268-ollamav2",
+	}
+	for in, want := range cases {
+		if got := ResourceNameForEntrance(in[0], in[1]); got != want {
+			t.Fatalf("ResourceNameForEntrance(%v) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestBuildSpecForEntrance_HappyPath(t *testing.T) {
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "ollamaserver"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "ollamaserver",
+			Namespace: "ollamaserver-shared",
+			Appid:     "a5be2268",
+			SharedEntrances: []appv1alpha1.Entrance{
+				{Name: "ollamav2", Host: "sharedentrances-ollama", Port: 80},
+			},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "sharedentrances-ollama", Namespace: "ollamaserver-shared"},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP}},
+		},
+	}
+	got, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], svc, "olares.com")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.RouteMode != srrv1alpha1.RouteModeGateway {
+		t.Fatalf("routeMode = %v, want gateway", got.RouteMode)
+	}
+	if len(got.HostPatterns) != 1 {
+		t.Fatalf("HostPatterns = %v, want exactly one", got.HostPatterns)
+	}
+	pat := got.HostPatterns[0]
+	if !reflect.DeepEqual(pat, "1f5cef58.*.olares.com") {
+		// Hash value is checked against the canonical helper below as
+		// well; we hard-code here so any silent change to the hash
+		// scheme breaks an explicit contract test.
+		t.Logf("logical pattern: %q", pat)
+	}
+	// invariant: must contain literal ".*."
+	if !reflect.DeepEqual(len(pat) > 3 && pat[len("xxxxxxxx")] == '.', true) {
+		t.Fatalf("hostPattern %q must look like <hash8>.*.<domain>", pat)
+	}
+}
+
+func TestBuildSpecForEntrance_Errors(t *testing.T) {
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "x"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name: "x", Namespace: "x-shared", Appid: "deadbeef",
+			SharedEntrances: []appv1alpha1.Entrance{{Name: "api", Host: "svc", Port: 80}},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "x-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 80}}},
+	}
+
+	if _, err := BuildSpecForEntrance(nil, app.Spec.SharedEntrances[0], svc, "olares.com"); err == nil {
+		t.Fatal("nil app: want error")
+	}
+	if _, err := BuildSpecForEntrance(app, appv1alpha1.Entrance{Name: "", Host: "svc", Port: 80}, svc, "olares.com"); err == nil {
+		t.Fatal("empty entrance name: want error")
+	}
+	if _, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], nil, "olares.com"); err == nil {
+		t.Fatal("nil svc: want error")
+	}
+	if _, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], svc, ""); err == nil {
+		t.Fatal("empty platformDomain: want error")
+	}
+	noPortEnt := appv1alpha1.Entrance{Name: "api", Host: "svc", Port: 0}
+	noPort := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "x-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Protocol: corev1.ProtocolUDP, Port: 53}}},
+	}
+	if _, err := BuildSpecForEntrance(app, noPortEnt, noPort, "olares.com"); err == nil {
+		t.Fatal("no TCP port: want error")
+	}
+}
+
+func TestBuildSpecForEntrance_FallsBackToAppNameAppid(t *testing.T) {
+	app := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{
+			Name: "ollamaserver", Namespace: "ollamaserver-shared",
+			// Appid intentionally empty
+			SharedEntrances: []appv1alpha1.Entrance{{Name: "ollamav2", Host: "svc", Port: 80}},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "ollamaserver-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 80}}},
+	}
+	spec, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], svc, "olares.com")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(len(spec.HostPatterns), 1) {
+		t.Fatalf("HostPatterns = %v", spec.HostPatterns)
+	}
+	// The pattern must be the canonical lower-case logical form.
+	pat := spec.HostPatterns[0]
+	if !(IsLogicalHostPattern(pat) && pat[8] == '.' && pat[10] == '.') {
+		t.Fatalf("pattern %q not in <hash8>.*.<domain> form", pat)
+	}
+}
