@@ -1,11 +1,21 @@
-# Keep in sync with framework/app-gateway/config/defaults.yaml
+# AUTO-GENERATED from config/defaults.yaml — run sync-app-gateway-config.sh after editing defaults
 namespace: app-gateway
-# EG vendor install creates app-gateway NS first (helm --create-namespace); do not re-apply Namespace here.
 namespaceCreate: false
 
 gateway:
   name: app-gateway
   gatewayClassName: olares-app-gateway
+
+envoyProxy:
+  enabled: true
+  name: app-gateway-envoy-proxy
+  accessLog:
+    enabled: true
+
+mesh:
+  linkerd:
+    enabled: true
+    opaquePorts: "10080,19001"
 
 demo:
   enabled: true

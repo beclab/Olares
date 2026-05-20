@@ -15,12 +15,36 @@ type Defaults struct {
 		GatewayClassName string `yaml:"gatewayClassName"`
 	} `yaml:"gateway"`
 	Demo struct {
-		Enabled bool   `yaml:"enabled"`
-		Host    string `yaml:"host"`
+		Enabled   bool   `yaml:"enabled"`
+		Host      string `yaml:"host"`
+		MeshDebug bool   `yaml:"meshDebug"`
 	} `yaml:"demo"`
+	EnvoyProxy struct {
+		Enabled   bool `yaml:"enabled"`
+		Name      string `yaml:"name"`
+		AccessLog struct {
+			Enabled bool `yaml:"enabled"`
+		} `yaml:"accessLog"`
+	} `yaml:"envoyProxy"`
+	Mesh struct {
+		Linkerd struct {
+			Enabled     bool   `yaml:"enabled"`
+			OpaquePorts string `yaml:"opaquePorts"`
+		} `yaml:"linkerd"`
+	} `yaml:"mesh"`
 	Vendor struct {
 		LinkerdNamespace string `yaml:"linkerdNamespace"`
 	} `yaml:"vendor"`
+}
+
+// MeshLinkerdEnabled reports whether EG data-plane pods should get linkerd-proxy via EnvoyProxy CR.
+func (d Defaults) MeshLinkerdEnabled() bool {
+	return d.Mesh.Linkerd.Enabled
+}
+
+// DemoMeshDebugEnabled reports whether install should rollout/wait demo workloads for mesh (dev/debug only).
+func (d Defaults) DemoMeshDebugEnabled() bool {
+	return d.Demo.MeshDebug && d.Demo.Enabled
 }
 
 var (
