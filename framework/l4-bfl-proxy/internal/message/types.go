@@ -40,6 +40,11 @@ type AppInfo struct {
 	Entrances []*EntranceInfo
 	Ports     []*PortInfo
 	Settings  map[string]string
+	// Annotations mirrors Application.metadata.annotations. The translator
+	// inspects gateway.olares.io/route-mode (PR-5) to decide whether shared
+	// HTTP traffic flows through app-gateway-data or stays on the direct
+	// upstream Service path.
+	Annotations map[string]string
 	// IsShared marks v3 / shared apps (cluster-wide, admin-managed). Kept
 	// as a marker on AppInfo so future per-app behaviour (logging, metrics,
 	// etc.) can distinguish them; access itself is no longer gated.
@@ -182,6 +187,12 @@ func (a *AppInfo) DeepCopy() *AppInfo {
 		out.Settings = make(map[string]string, len(a.Settings))
 		for k, v := range a.Settings {
 			out.Settings[k] = v
+		}
+	}
+	if a.Annotations != nil {
+		out.Annotations = make(map[string]string, len(a.Annotations))
+		for k, v := range a.Annotations {
+			out.Annotations[k] = v
 		}
 	}
 	return &out
