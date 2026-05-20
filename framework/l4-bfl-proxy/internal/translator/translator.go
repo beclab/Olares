@@ -2,6 +2,8 @@ package translator
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -43,6 +45,64 @@ func isGatewayMode(app *message.AppInfo) bool {
 		return false
 	}
 	return app.Annotations[annotationRouteMode] == annotationRouteModeGateway
+}
+
+// sharedEntranceHostPrefix returns the v2 8-char lowercase md5 prefix that
+// identifies a shared entrance in the per-viewer URL scheme:
+//
+//	hash8 = md5(<appid> + ":shared:" + <entranceName>)[:8]
+//
+// Mirrors framework/app-service/pkg/appcfg.SharedEntranceHostPrefix. We
+// re-implement here to keep l4-bfl-proxy independent of app-service.
+func sharedEntranceHostPrefix(appid, entranceName string) string {
+	appid = strings.ToLower(strings.TrimSpace(appid))
+	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
+	sum := md5.Sum([]byte(appid + ":shared:" + entranceName))
+	return hex.EncodeToString(sum[:])[:8]
+}
+
+// platformDomainFromZone strips the leading viewer label from a user zone:
+//
+//	"alice.olares.com", viewer="alice"  -> "olares.com"
+//
+// Returns "" when zone does not start with "<viewer>.". The caller treats
+// "" as "cannot compute v2 host" and falls back to the legacy hostname.
+func platformDomainFromZone(zone, viewer string) string {
+	zone = strings.ToLower(strings.TrimSpace(zone))
+	viewer = strings.ToLower(strings.TrimSpace(viewer))
+	if zone == "" || viewer == "" {
+		return ""
+	}
+	prefix := viewer + "."
+	if !strings.HasPrefix(zone, prefix) {
+		return ""
+	}
+	rest := strings.TrimPrefix(zone, prefix)
+	if rest == "" {
+		return ""
+	}
+	return rest
+}
+
+// gatewayV2EntranceHostname returns <hash8>.<viewer>.<platformDomain> when
+// every input is well-formed, "" otherwise. The empty return signals the
+// caller to keep the legacy Phase-A hostname.
+func gatewayV2EntranceHostname(app *message.AppInfo, entranceName, viewer, zone string) string {
+	if app == nil || entranceName == "" || viewer == "" {
+		return ""
+	}
+	dom := platformDomainFromZone(zone, viewer)
+	if dom == "" {
+		return ""
+	}
+	appid := strings.TrimSpace(app.Appid)
+	if appid == "" {
+		appid = strings.TrimSpace(app.Name)
+	}
+	if appid == "" {
+		return ""
+	}
+	return sharedEntranceHostPrefix(appid, entranceName) + "." + viewer + "." + dom
 }
 
 var nodeLocationPrefixes = []string{
@@ -527,6 +587,18 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		hostname := fmt.Sprintf("%s.%s", prefix, zone)
 		if isEphemeral {
 			hostname = fmt.Sprintf("%s-%s.%s", prefix, user.Name, zone)
+		}
+
+		// PR-9: in gateway mode the externally-visible host follows the v2
+		// per-viewer scheme <hash8>.<viewer>.<platformDomain> so the EG
+		// HTTPRoute's Host RegularExpression match (PR-7) can pin the
+		// entrance. The helper returns "" if any prerequisite is missing
+		// (e.g. zone does not begin with the viewer label), in which case
+		// we keep the legacy Phase-A hostname for safety.
+		if isGatewayMode(app) && !isEphemeral {
+			if v2 := gatewayV2EntranceHostname(app, entrance.Name, user.Name, zone); v2 != "" {
+				hostname = v2
+			}
 		}
 
 		localHost := toLocalDomain(hostname)

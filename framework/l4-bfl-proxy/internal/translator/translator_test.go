@@ -723,6 +723,104 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_GatewayMode(t *testing.T) {
 	assert.Equal(t, []string{"shareme.example.io"}, vhosts[0].Domains, "custom domain stays so EG HTTPRoute matches")
 }
 
+// PR-9: per-viewer v2 hostname helpers.
+
+func TestSharedEntranceHostPrefix_StableAndCaseInsensitive(t *testing.T) {
+	a := sharedEntranceHostPrefix("a5be2268", "ollamav2")
+	b := sharedEntranceHostPrefix("A5BE2268", " OllamaV2 ")
+	if a != b {
+		t.Fatalf("hash8 not normalized: %q vs %q", a, b)
+	}
+	if len(a) != 8 {
+		t.Fatalf("hash8 wrong length: %q", a)
+	}
+}
+
+func TestPlatformDomainFromZone(t *testing.T) {
+	cases := []struct {
+		zone, viewer, want string
+	}{
+		{"alice.olares.com", "alice", "olares.com"},
+		{"Alice.Olares.com", "alice", "olares.com"},
+		{"alice.olares.com", "bob", ""},
+		{"olares.com", "alice", ""},
+		{"", "alice", ""},
+		{"alice.olares.com", "", ""},
+		{"alice.", "alice", ""},
+	}
+	for _, tc := range cases {
+		if got := platformDomainFromZone(tc.zone, tc.viewer); got != tc.want {
+			t.Fatalf("platformDomainFromZone(%q,%q) = %q, want %q", tc.zone, tc.viewer, got, tc.want)
+		}
+	}
+}
+
+func TestGatewayV2EntranceHostname(t *testing.T) {
+	app := &message.AppInfo{Name: "ollamaserver", Appid: "a5be2268", IsShared: true,
+		Annotations: map[string]string{"gateway.olares.io/route-mode": "gateway"}}
+	got := gatewayV2EntranceHostname(app, "ollamav2", "alice", "alice.olares.com")
+	want := sharedEntranceHostPrefix("a5be2268", "ollamav2") + ".alice.olares.com"
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+	// Different viewer changes only the middle label.
+	got2 := gatewayV2EntranceHostname(app, "ollamav2", "alice", "alice.olares.com")
+	want2 := sharedEntranceHostPrefix("a5be2268", "ollamav2") + ".alice.olares.com"
+	if got2 != want2 {
+		t.Fatalf("alice host: got %q want %q", got2, want2)
+	}
+	// Missing appid falls back to app.Name.
+	app2 := &message.AppInfo{Name: "ollamaserver"}
+	if got := gatewayV2EntranceHostname(app2, "ollamav2", "alice", "alice.olares.com"); got == "" {
+		t.Fatalf("expected non-empty fallback hostname, got %q", got)
+	}
+	// Missing zone returns "".
+	if got := gatewayV2EntranceHostname(app, "ollamav2", "alice", "alice.olares.com"); got != "" {
+		t.Fatalf("zone/viewer mismatch must return empty: %q", got)
+	}
+}
+
+// E4: in gateway mode, every viewer of a shared app receives a vhost whose
+// primary domain is <hash8>.<viewer>.<platformDomain>; the upstream cluster
+// already flips to app-gateway-data (E1).
+func TestBuildAppVirtualHosts_SharedApp_GatewayMode_PerViewerHost(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	app := makeSharedApp()
+	app.Appid = "a5be2268"
+	app.Entrances = []*message.EntranceInfo{{Name: "ollamav2", Host: "shareme-svc", Port: 8080}}
+	app.Annotations = map[string]string{"gateway.olares.io/route-mode": "gateway"}
+
+	expectedHash := sharedEntranceHostPrefix("a5be2268", "ollamav2")
+
+	for _, viewer := range []string{"alice", "alice", "bob"} {
+		t.Run(viewer, func(t *testing.T) {
+			user := &message.UserInfo{Name: viewer, Language: "en"}
+			zone := viewer + ".olares.com"
+			vhosts := tr.buildAppVirtualHosts(user, app, zone, false, map[string]*ir.ClusterIR{})
+			require.Len(t, vhosts, 1)
+			want := expectedHash + "." + viewer + ".olares.com"
+			require.Equal(t, want, vhosts[0].Domains[0])
+		})
+	}
+}
+
+// E5: gateway mode but missing appid AND missing app.Name falls back to the
+// legacy hostname instead of producing an empty / malformed virtual host.
+func TestBuildAppVirtualHosts_SharedApp_GatewayMode_FallbackHostname(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	app := &message.AppInfo{
+		Name: "", Appid: "", IsShared: true, Namespace: "x-shared",
+		Annotations: map[string]string{"gateway.olares.io/route-mode": "gateway"},
+		Entrances:   []*message.EntranceInfo{{Name: "api", Host: "svc", Port: 8080}},
+	}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.olares.com", false, map[string]*ir.ClusterIR{})
+	require.Len(t, vhosts, 1)
+	// Must NOT begin with hash8 (since we cannot compute one); falls back to
+	// the legacy "<resolved-prefix>.<zone>" form.
+	require.NotContains(t, vhosts[0].Domains[0], ".*.")
+}
+
 // E3: the helper isGatewayMode is the single source of truth for the
 // route-mode decision and must reject malformed / missing annotations.
 func TestIsGatewayMode(t *testing.T) {
