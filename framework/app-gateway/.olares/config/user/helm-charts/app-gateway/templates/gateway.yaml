@@ -7,6 +7,13 @@ metadata:
     applications.app.bytetrade.io/author: bytetrade.io
 spec:
   gatewayClassName: {{ .Values.gateway.gatewayClassName }}
+  {{- if .Values.envoyProxy.enabled }}
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: {{ .Values.envoyProxy.name }}
+  {{- end }}
   listeners:
     - name: http
       protocol: HTTP
