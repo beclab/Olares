@@ -64,8 +64,8 @@ func TestAppConfiguration_APIVersionEnum(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for apiVersion=v99")
 	}
-	if !strings.Contains(err.Error(), "不支持该版本") {
-		t.Fatalf("error should mention 不支持该版本, got: %v", err)
+	if !strings.Contains(err.Error(), "not supported version") {
+		t.Fatalf("error should mention not supported version, got: %v", err)
 	}
 
 	c = newValidConfig()
@@ -97,7 +97,7 @@ func TestValidateKnownAPIVersion(t *testing.T) {
 	if errV0 == nil {
 		t.Fatal("expected error for v0")
 	}
-	if !strings.Contains(errV0.Error(), "不支持该版本") {
+	if !strings.Contains(errV0.Error(), "not supported version") {
 		t.Fatalf("got: %v", errV0)
 	}
 }

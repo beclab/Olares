@@ -109,7 +109,7 @@ func TestCheckResourceLimits_UnsupportedAPIVersion(t *testing.T) {
 	if limErr == nil {
 		t.Fatal("expected unsupported apiVersion error")
 	}
-	if !strings.Contains(limErr.Error(), "不支持该版本") {
-		t.Fatalf("expected 不支持该版本 in error, got: %v", limErr)
+	if !strings.Contains(limErr.Error(), "not supported version") {
+		t.Fatalf("expected not supported version in error, got: %v", limErr)
 	}
 }

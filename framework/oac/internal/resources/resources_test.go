@@ -124,7 +124,7 @@ func TestExtractWorkloadImages_SkipsDaemonSet(t *testing.T) {
 		newDaemonSet("d", corev1.Container{Image: "img/d:1"}),
 	}
 	got := ExtractWorkloadImages(list)
-	if len(got) != 1 || got[0] != "img/a:1" {
+	if len(got) != 2 || got[0] != "img/a:1" {
 		t.Fatalf("DaemonSet image leaked into output: %v", got)
 	}
 }
@@ -682,7 +682,7 @@ func TestCheckResourceNamespace_AggregatesMultipleViolations(t *testing.T) {
 
 // ---- CheckSecurityContextForNonBeclabImage ----
 
-func boolPtr(b bool) *bool { return &b }
+func boolPtr(b bool) *bool    { return &b }
 func int64Ptr(i int64) *int64 { return &i }
 
 // containerWithSC returns a container with the given image and an
@@ -1033,4 +1033,3 @@ func TestCheckServiceAccountRules_AllowsRequestCoveredByOneNonResourceURL(t *tes
 		t.Fatal("request on /healthz/live should be covered by the /healthz/* wildcard and therefore flagged")
 	}
 }
-

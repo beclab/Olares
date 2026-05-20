@@ -86,8 +86,8 @@ options: {}
 	if err == nil {
 		t.Fatalf("expected validation error for apiVersion=v99")
 	}
-	if !strings.Contains(err.Error(), "不支持该版本") {
-		t.Fatalf("expected 不支持该版本 in error, got: %v", err)
+	if !strings.Contains(err.Error(), "not supported version") {
+		t.Fatalf("expected not supported version in error, got: %v", err)
 	}
 }
 

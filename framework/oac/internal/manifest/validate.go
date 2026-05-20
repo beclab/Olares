@@ -12,6 +12,15 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
+var validChartName = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
+
+var (
+	errInvalidSubChartName = fmt.Errorf(
+		"invalid subchart name, must match regex %s and the length must not be longer than 53",
+		validChartName.String())
+	errMissingSubChartName = errors.New("no name provided")
+)
+
 var isSemver = validation.NewStringRuleWithError(func(s string) bool {
 	if s == "" {
 		return false
@@ -66,7 +75,7 @@ func ValidateKnownAPIVersion(api string) error {
 	case APIVersionV1, APIVersionV2, APIVersionV3:
 		return nil
 	default:
-		return fmt.Errorf("不支持该版本")
+		return fmt.Errorf("not supported version")
 	}
 }
 
@@ -229,6 +238,7 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 			validation.Each(validation.By(validateSupportArchEntry)),
 			validation.By(uniqueSupportArches),
 		),
+		validation.Field(&s.SubCharts),
 	}
 
 	api := normalizeAPIVersion(apiVersion)
@@ -351,10 +361,18 @@ func checkSubCharts(cfg *AppConfiguration) error {
 	if len(cfg.Spec.SubCharts) == 0 {
 		return fmt.Errorf("spec.subCharts is required for apiVersion=v2")
 	}
+	hasSharedChart := false
 	for _, c := range cfg.Spec.SubCharts {
-		if c.Shared {
-			return nil
+		err := isSafeSubChartName(c.Name)
+		if err != nil {
+			return err
 		}
+		if c.Shared {
+			hasSharedChart = true
+		}
+	}
+	if hasSharedChart {
+		return nil
 	}
 	return fmt.Errorf("spec.subCharts must contain at least one entry with shared=true")
 }
@@ -406,6 +424,16 @@ func uniqueSupportArches(value interface{}) error {
 			return fmt.Errorf("spec.supportArch[%d]: duplicate value %q", i, a)
 		}
 		seen[a] = struct{}{}
+	}
+	return nil
+}
+
+func isSafeSubChartName(name string) error {
+	if name == "" {
+		return errMissingSubChartName
+	}
+	if len(name) > 53 || !validChartName.MatchString(name) {
+		return errInvalidSubChartName
 	}
 	return nil
 }

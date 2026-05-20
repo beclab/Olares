@@ -261,7 +261,7 @@ func (c *OAC) CheckSameVersion(oacPath string, m Manifest) error {
 // apiVersion v2 skips this check entirely (returns nil). v1, v3, and empty
 // apiVersion (v1 default) share the same logic: one helm render at oacPath
 // for the legacy path, and per-mode renders at oacPath for modern manifests.
-// A non-empty apiVersion outside v1/v2/v3 yields 不支持该版本.
+// A non-empty apiVersion outside v1/v2/v3 yields not supported version.
 //
 // For legacy manifests (<0.12.0) the chart is rendered once and the
 // container-level limits are compared against spec.required*/spec.limited*.
@@ -368,7 +368,7 @@ func (c *OAC) ValidateManifestContent(content []byte) error {
 //     Limits come from the inline ResourceRequirement on each mode row.
 //     Each mode renders the chart once at oacPath.
 //
-// A non-empty apiVersion outside v1/v2/v3 yields 不支持该版本.
+// A non-empty apiVersion outside v1/v2/v3 yields not supported version.
 //
 // Charts that carry no resources[] on a modern manifest skip the check
 // entirely — Rule 7 already guaranteed the legacy flat fields are empty,

@@ -574,7 +574,7 @@ Each `spec.resources[i]` is a `ResourceMode`:
 
 `Checker.CheckResources` also does one `BuildValues` + `Render` (except it returns immediately for **`apiVersion: v2`**, which skips container limit checks), then forwards the chart path and manifest to `checkResourceLimits`; for modern manifests the list produced by that render is not used by the limit branch (limit checks are entirely driven by per-mode re-renders), so it **does not include** §3.2 / §3.3.
 
-For **`apiVersion: v2`** the parent OAC root is not a renderable workload chart in the multi-chart install layout, so the helm dry-run for **`Lint` / `CheckServiceAccountRules` / `ListImages`** iterates `spec.subCharts[]` and concatenates the per-subchart `kube.ResourceList`s. **`apiVersion: v3`** follows the same single-chart render path as **v1** (whole chart at the OAC root). A non-empty `apiVersion` outside `v1` / `v2` / `v3` fails validation and resource checks with **不支持该版本**.
+For **`apiVersion: v2`** the parent OAC root is not a renderable workload chart in the multi-chart install layout, so the helm dry-run for **`Lint` / `CheckServiceAccountRules` / `ListImages`** iterates `spec.subCharts[]` and concatenates the per-subchart `kube.ResourceList`s. **`apiVersion: v3`** follows the same single-chart render path as **v1** (whole chart at the OAC root). A non-empty `apiVersion` outside `v1` / `v2` / `v3` fails validation and resource checks with **not supported version**.
 
 > `Lint` always runs the helm render. Upload mount and workload naming (§3.2, §3.3) are **always** enforced; container limits (§3.1) are gated by `SkipResourceCheck()`; RBAC (§3.4) is gated by `WithServiceAccountRulesCheck()`.
 
