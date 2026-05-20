@@ -135,16 +135,16 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Delay:  30 * time.Second,
 		},
 		&task.LocalTask{
-			Name:   "WaitAppGatewayReady",
-			Action: &terminus.WaitAppGatewayReady{},
-			Retry:  30,
-			Delay:  10 * time.Second,
-		},
-		&task.LocalTask{
 			Name:   "UpgradeAppGatewayChart",
 			Action: &terminus.InstallAppGatewayChart{},
 			Retry:  2,
 			Delay:  20 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "WaitAppGatewayDataPlaneMeshed",
+			Action: &terminus.WaitAppGatewayDataPlaneMeshed{},
+			Retry:  30,
+			Delay:  10 * time.Second,
 		},
 		&task.LocalTask{
 			Name:   "UpgradeSystemComponents",

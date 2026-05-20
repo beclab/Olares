@@ -31,12 +31,7 @@ func (m *InstallAppGatewayVendorModule) Init() {
 		Delay:  30 * time.Second,
 	}
 
-	waitEG := &task.LocalTask{
-		Name:   "WaitAppGatewayReady",
-		Action: &WaitAppGatewayReady{},
-		Retry:  30,
-		Delay:  10 * time.Second,
-	}
+	// EG readiness is verified inside InstallAppGatewayVendor (helm --wait + short poll).
 
 	installChart := &task.LocalTask{
 		Name:   "InstallAppGatewayChart",
@@ -45,11 +40,18 @@ func (m *InstallAppGatewayVendorModule) Init() {
 		Delay:  20 * time.Second,
 	}
 
+	waitMesh := &task.LocalTask{
+		Name:   "WaitAppGatewayDataPlaneMeshed",
+		Action: &WaitAppGatewayDataPlaneMeshed{},
+		Retry:  30,
+		Delay:  10 * time.Second,
+	}
+
 	m.Tasks = []task.Interface{
 		checkInstaller,
 		installVendor,
-		waitEG,
 		installChart,
+		waitMesh,
 	}
 }
 

@@ -16,7 +16,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -154,16 +153,32 @@ func (t *InstallAppGatewayVendor) Execute(runtime connector.Runtime) error {
 		return err
 	}
 
+	if err := ensureAppGatewayNamespace(ctx, k8sClient, appGatewayNS); err != nil {
+		return errors.Wrap(err, "ensure app-gateway namespace")
+	}
+
 	crdsChart := filepath.Join(vendor, "envoy-gateway-crds-helm")
-	logger.InfoInstallationProgress(fmt.Sprintf("Installing Envoy Gateway CRDs into %s (helm template + kubectl apply) ...", appGatewayNS))
-	if err := utils.TemplateAndServerSideApply(ctx, actionEG, settingsEG, helmReleaseEGCRDs, crdsChart, appGatewayNS, egCRDsVals); err != nil {
-		return errors.Wrap(err, "install envoy gateway crds")
+	if envoyGatewayCRDsPresent(config) {
+		logger.InfoInstallationProgress("Envoy Gateway CRDs already present; skip server-side apply")
+	} else {
+		logger.InfoInstallationProgress(fmt.Sprintf(
+			"Installing Envoy Gateway CRDs into %s (helm template + kubectl server-side apply; first install may take several minutes) ...",
+			appGatewayNS))
+		if err := utils.TemplateAndServerSideApply(ctx, actionEG, settingsEG, helmReleaseEGCRDs, crdsChart, appGatewayNS, egCRDsVals); err != nil {
+			return errors.Wrap(err, "install envoy gateway crds")
+		}
 	}
 
 	egChart := filepath.Join(vendor, "envoy-gateway-helm")
-	logger.InfoInstallationProgress(fmt.Sprintf("Installing Envoy Gateway control plane into %s (helm SDK) ...", appGatewayNS))
-	if err := utils.UpgradeChartsSkipCRDs(ctx, actionEG, settingsEG, helmReleaseEG, egChart, "", appGatewayNS, egVals, false); err != nil {
+	logger.InfoInstallationProgress(fmt.Sprintf(
+		"Installing Envoy Gateway control plane into %s (helm SDK, wait for certgen Job + envoy-gateway deployment; typically 1–3 min) ...",
+		appGatewayNS))
+	if err := UpgradeEnvoyGatewayHelmWait(ctx, actionEG, settingsEG, helmReleaseEG, egChart, "", appGatewayNS, egVals, false); err != nil {
 		return errors.Wrap(err, "install envoy gateway")
+	}
+	logger.InfoInstallationProgress("Envoy Gateway Helm release eg is deployed; verifying control plane ...")
+	if err := waitEnvoyGatewayControlPlaneReady(ctx, k8sClient, appGatewayNS, 3*time.Minute); err != nil {
+		return errors.Wrap(err, "verify envoy gateway control plane")
 	}
 
 	return nil
@@ -188,32 +203,11 @@ func (t *WaitAppGatewayReady) Execute(runtime connector.Runtime) error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	appGatewayNS, _ := vendorNamespaces()
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		var eg appsv1.Deployment
-		err = c.Get(ctx, types.NamespacedName{Namespace: appGatewayNS, Name: "envoy-gateway"}, &eg)
-		if err == nil && eg.Status.ReadyReplicas >= 1 {
-			logger.InfoInstallationProgress("Envoy Gateway control plane is ready")
-			return nil
-		}
-		if err != nil {
-			err = errors.Wrap(err, "envoy-gateway deployment not found")
-		} else {
-			err = fmt.Errorf("envoy-gateway not ready yet")
-		}
-
-		select {
-		case <-ctx.Done():
-			return err
-		case <-ticker.C:
-		}
-	}
+	return waitEnvoyGatewayControlPlaneReady(ctx, c, appGatewayNS, 10*time.Minute)
 }
 
 // InstallAppGatewayChart installs Gateway API resources into namespace from config/defaults.yaml.
@@ -250,24 +244,7 @@ func (t *InstallAppGatewayChart) Execute(runtime connector.Runtime) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	vals := map[string]interface{}{
-		"namespace":       ns,
-		"namespaceCreate": false,
-		"gateway": map[string]interface{}{
-			"name":             def.Gateway.Name,
-			"gatewayClassName": def.Gateway.GatewayClassName,
-		},
-		"demo": map[string]interface{}{
-			"enabled": def.Demo.Enabled,
-			"host":    def.Demo.Host,
-		},
-	}
-	if def.Gateway.Name == "" || def.Gateway.GatewayClassName == "" {
-		vals["gateway"] = map[string]interface{}{
-			"name":             "app-gateway",
-			"gatewayClassName": "olares-app-gateway",
-		}
-	}
+	vals := buildAppGatewayHelmValues(ns, def)
 
 	k8sClient, err := client.New(config, client.Options{})
 	if err != nil {
@@ -277,8 +254,11 @@ func (t *InstallAppGatewayChart) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(err, "prepare app-gateway namespace")
 	}
 
-	logger.InfoInstallationProgress(fmt.Sprintf("Installing app-gateway chart into namespace %s (helm SDK) ...", ns))
-	return utils.UpgradeChartsInExistingNamespace(ctx, actionConfig, settings, helmReleaseAppGateway, chartPath, "", ns, vals, false)
+	logger.InfoInstallationProgress(fmt.Sprintf("Installing app-gateway chart into namespace %s (helm SDK, EnvoyProxy mesh=%v) ...", ns, def.MeshLinkerdEnabled()))
+	if err := utils.UpgradeChartsInExistingNamespace(ctx, actionConfig, settings, helmReleaseAppGateway, chartPath, "", ns, vals, false); err != nil {
+		return err
+	}
+	return finalizeAppGatewayMesh(ctx, k8sClient, ns, def)
 }
 
 // ensureAppGatewayNamespaceMetadata applies Olares platform labels/annotations when EG install
@@ -297,8 +277,8 @@ func ensureAppGatewayNamespaceMetadata(ctx context.Context, c client.Client, ns 
 	if existing.Annotations == nil {
 		existing.Annotations = map[string]string{}
 	}
-	// Do not set linkerd.io/inject on the namespace: it would inject EG data-plane pods and break PostStartHook.
-	// Demo workloads opt in via pod template annotation linkerd.io/inject: enabled in the app-gateway chart.
+	// Do not set linkerd.io/inject on the namespace: EG data plane uses EnvoyProxy pod annotations only.
+	delete(existing.Annotations, "linkerd.io/inject")
 	existing.Annotations["bytetrade.io/ns-type"] = "platform"
 	existing.Labels["bytetrade.io/ns-type"] = "system"
 	if err := c.Patch(ctx, &existing, patch); err != nil && !apierrors.IsNotFound(err) {
