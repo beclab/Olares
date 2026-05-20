@@ -175,9 +175,14 @@ func resolveServicePort(svc *corev1.Service, ref gwapi.UpstreamRef) (int32, erro
 
 func (r *SRRReconciler) applyHTTPRoute(ctx context.Context, srr *gwapi.SharedRouteRegistry, port int32) (string, error) {
 	name := httpRouteName(srr)
-	hosts := make([]any, 0, len(srr.Spec.HostPatterns))
-	for _, h := range srr.Spec.HostPatterns {
-		hosts = append(hosts, h)
+	// PR-7: logical patterns translate into one HTTPRoute hostname
+	// (`*.<platformDomain>`) plus a per-pattern Host RegularExpression
+	// header match. Exact-host patterns keep Phase-A behaviour
+	// (hostnames carries the verbatim host, no header match).
+	hosts := MaterializeHostnames(srr.Spec.HostPatterns)
+	headerMatches := MaterializeHostHeaders(srr.Spec.HostPatterns)
+	if len(hosts) == 0 {
+		return "", fmt.Errorf("hostPatterns produced no usable hostnames: %v", srr.Spec.HostPatterns)
 	}
 	parentRef := map[string]any{
 		"group":       "gateway.networking.k8s.io",
@@ -197,12 +202,21 @@ func (r *SRRReconciler) applyHTTPRoute(ctx context.Context, srr *gwapi.SharedRou
 	if ns := srr.Spec.Upstream.ServiceNamespace; ns != "" && ns != srr.Namespace {
 		backendRef["namespace"] = ns
 	}
+	matches := []any{}
+	if len(headerMatches) == 0 {
+		matches = append(matches, map[string]any{
+			"path": map[string]any{"type": "PathPrefix", "value": "/"},
+		})
+	} else {
+		for _, hm := range headerMatches {
+			matches = append(matches, map[string]any{
+				"path":    map[string]any{"type": "PathPrefix", "value": "/"},
+				"headers": []any{hm},
+			})
+		}
+	}
 	rule := map[string]any{
-		"matches": []any{
-			map[string]any{
-				"path": map[string]any{"type": "PathPrefix", "value": "/"},
-			},
-		},
+		"matches":     matches,
 		"backendRefs": []any{backendRef},
 	}
 	desired := &unstructured.Unstructured{Object: map[string]any{

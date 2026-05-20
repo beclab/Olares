@@ -213,3 +213,65 @@ func unstructuredFieldList(obj map[string]any, path ...string) ([]any, bool, err
 	v, found, err := unstructured.NestedSlice(obj, path...)
 	return v, found, err
 }
+
+// PR-7: logical hostPattern <hash8>.*.<domain> must produce
+// spec.hostnames=["*.<domain>"] AND a Host RegularExpression header match.
+func TestReconcile_GatewayMode_LogicalPattern(t *testing.T) {
+	srr := &gwapi.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "shared-a5be2268-ollamav2",
+			Namespace: "ollama-shared",
+			UID:       types.UID("srr-v2-uid"),
+		},
+		Spec: gwapi.SharedRouteRegistrySpec{
+			RouteMode:    gwapi.RouteModeGateway,
+			HostPatterns: []string{"a5be2268.*.olares.com"},
+			Upstream: gwapi.UpstreamRef{
+				ServiceName: "ollama",
+				Port:        11434,
+			},
+		},
+	}
+	svc := makeService(11434)
+	r, c := newReconciler(t, srr, svc)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: srr.Name, Namespace: srr.Namespace}}); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	hr := &unstructured.Unstructured{}
+	hr.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(ctx, types.NamespacedName{Namespace: srr.Namespace, Name: srr.Name}, hr); err != nil {
+		t.Fatalf("HTTPRoute missing: %v", err)
+	}
+
+	hostnames, _, _ := unstructuredFieldList(hr.Object, "spec", "hostnames")
+	if len(hostnames) != 1 || hostnames[0] != "*.olares.com" {
+		t.Fatalf("hostnames mismatch: got %v, want [*.olares.com]", hostnames)
+	}
+
+	rules, _, _ := unstructuredFieldList(hr.Object, "spec", "rules")
+	if len(rules) != 1 {
+		t.Fatalf("expected 1 rule, got %d", len(rules))
+	}
+	rule, _ := rules[0].(map[string]any)
+	matches, _ := rule["matches"].([]any)
+	if len(matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(matches))
+	}
+	m, _ := matches[0].(map[string]any)
+	hdrs, _ := m["headers"].([]any)
+	if len(hdrs) != 1 {
+		t.Fatalf("expected 1 header match, got %v", hdrs)
+	}
+	h, _ := hdrs[0].(map[string]any)
+	if h["name"] != "Host" || h["type"] != "RegularExpression" {
+		t.Fatalf("header match wrong: %+v", h)
+	}
+	val, _ := h["value"].(string)
+	want := HostRegexValue(LogicalPattern{Hash8: "a5be2268", PlatformDomain: "olares.com"})
+	if val != want {
+		t.Fatalf("Host regex value mismatch: got %q want %q", val, want)
+	}
+}

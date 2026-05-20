@@ -112,3 +112,110 @@ func TestDelete_IdempotentAndCleansUp(t *testing.T) {
 		t.Fatalf("second Delete should be idempotent: %v", err)
 	}
 }
+
+// PR-7: per-entrance SRRs and uniqueness.
+
+func TestReconcileForEntrance_CreateAndUpdate(t *testing.T) {
+	c, app, svc := newReconcileFixture(t)
+	app.Spec.Appid = "a5be2268"
+	ctx := context.Background()
+	ent := app.Spec.SharedEntrances[0]
+	ent.Name = "ollamav2"
+	app.Spec.SharedEntrances[0] = ent
+
+	spec, err := BuildSpecForEntrance(app, ent, svc, "olares.com")
+	if err != nil {
+		t.Fatalf("BuildSpecForEntrance: %v", err)
+	}
+	if _, err := ReconcileForEntrance(ctx, c, app, ent, spec); err != nil {
+		t.Fatalf("ReconcileForEntrance create: %v", err)
+	}
+	got := &srrv1alpha1.SharedRouteRegistry{}
+	name := ResourceNameForEntrance("a5be2268", "ollamav2")
+	if err := c.Get(ctx, types.NamespacedName{Namespace: "ollama-shared", Name: name}, got); err != nil {
+		t.Fatalf("get %s: %v", name, err)
+	}
+	if got.Labels["gateway.olares.io/appid"] != "a5be2268" {
+		t.Fatalf("missing appid label: %v", got.Labels)
+	}
+	if got.Labels["gateway.olares.io/entrance"] != "ollamav2" {
+		t.Fatalf("missing entrance label: %v", got.Labels)
+	}
+	if len(got.Spec.HostPatterns) != 1 || !IsLogicalHostPattern(got.Spec.HostPatterns[0]) {
+		t.Fatalf("HostPatterns not logical: %v", got.Spec.HostPatterns)
+	}
+	// Update path: re-reconcile with same spec should be a no-op (object stable).
+	if _, err := ReconcileForEntrance(ctx, c, app, ent, spec); err != nil {
+		t.Fatalf("re-reconcile: %v", err)
+	}
+}
+
+func TestCheckLogicalPatternUniqueness(t *testing.T) {
+	c, app, svc := newReconcileFixture(t)
+	app.Spec.Appid = "a5be2268"
+	ctx := context.Background()
+	ent := app.Spec.SharedEntrances[0]
+	ent.Name = "ollamav2"
+	spec, err := BuildSpecForEntrance(app, ent, svc, "olares.com")
+	if err != nil {
+		t.Fatalf("BuildSpecForEntrance: %v", err)
+	}
+	if _, err := ReconcileForEntrance(ctx, c, app, ent, spec); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	pat := spec.HostPatterns[0]
+
+	// Self-namespaced lookup should not flag collision.
+	if err := CheckLogicalPatternUniqueness(ctx, c, pat, "ollama-shared", ResourceNameForEntrance("a5be2268", "ollamav2")); err != nil {
+		t.Fatalf("self-uniqueness false positive: %v", err)
+	}
+	// A different SRR carrying the same pattern in another namespace must fail.
+	other := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "shared-x-y", Namespace: "x-shared"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:    srrv1alpha1.RouteModeGateway,
+			HostPatterns: []string{pat},
+			Upstream:     srrv1alpha1.UpstreamRef{ServiceName: "svc", Port: 80},
+		},
+	}
+	if err := c.Create(ctx, other); err != nil {
+		t.Fatalf("seed other: %v", err)
+	}
+	err = CheckLogicalPatternUniqueness(ctx, c, pat, "ollama-shared", ResourceNameForEntrance("a5be2268", "ollamav2"))
+	if err == nil {
+		t.Fatal("expected HASH8_COLLISION error")
+	}
+}
+
+func TestPruneEntranceSRRs(t *testing.T) {
+	c, app, svc := newReconcileFixture(t)
+	app.Spec.Appid = "a5be2268"
+	ctx := context.Background()
+
+	// Seed two per-entrance SRRs labeled with the same instance.
+	for _, name := range []string{"ollamav2", "ollamav3"} {
+		ent := app.Spec.SharedEntrances[0]
+		ent.Name = name
+		spec, _ := BuildSpecForEntrance(app, ent, svc, "olares.com")
+		if _, err := ReconcileForEntrance(ctx, c, app, ent, spec); err != nil {
+			t.Fatalf("seed %s: %v", name, err)
+		}
+	}
+	keep := map[string]struct{}{
+		ResourceNameForEntrance("a5be2268", "ollamav2"): {},
+	}
+	if err := PruneEntranceSRRs(ctx, c, app, keep); err != nil {
+		t.Fatalf("PruneEntranceSRRs: %v", err)
+	}
+	got := &srrv1alpha1.SharedRouteRegistry{}
+	err := c.Get(ctx, types.NamespacedName{Namespace: "ollama-shared", Name: ResourceNameForEntrance("a5be2268", "ollamav3")}, got)
+	if err == nil {
+		t.Fatal("stale SRR not pruned")
+	}
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: "ollama-shared", Name: ResourceNameForEntrance("a5be2268", "ollamav2")}, got); err != nil {
+		t.Fatalf("kept SRR missing: %v", err)
+	}
+}
