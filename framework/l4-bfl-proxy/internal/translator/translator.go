@@ -24,7 +24,26 @@ const (
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
+
+	// PR-5: shared v3 apps opt into the gateway data path by setting this
+	// annotation on Application; the translator then points the upstream
+	// cluster at app-gateway-data.app-gateway.svc.cluster.local:80 while
+	// preserving the original Host header for HTTPRoute matching.
+	annotationRouteMode        = "gateway.olares.io/route-mode"
+	annotationRouteModeGateway = "gateway"
+	gatewayDataPlaneHost       = "app-gateway-data.app-gateway.svc.cluster.local"
+	gatewayDataPlanePort       = uint32(80)
 )
+
+// isGatewayMode reports whether the v3 app has opted into routing through the
+// shared Envoy Gateway data plane (PR-5, D-A10). Non-v3 / non-shared apps and
+// apps without the opt-in annotation always stay on the direct upstream path.
+func isGatewayMode(app *message.AppInfo) bool {
+	if app == nil || !app.IsShared || app.Annotations == nil {
+		return false
+	}
+	return app.Annotations[annotationRouteMode] == annotationRouteModeGateway
+}
 
 var nodeLocationPrefixes = []string{
 	"/api/resources/cache/",
@@ -528,9 +547,18 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 
 		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
 		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
-		clusterSet[clusterName] = &ir.ClusterIR{
-			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
+		upstreamPort := uint32(entrance.Port)
+		routeMode := "direct"
+		if isGatewayMode(app) {
+			upstreamHost = gatewayDataPlaneHost
+			upstreamPort = gatewayDataPlanePort
+			routeMode = "gateway"
 		}
+		clusterSet[clusterName] = &ir.ClusterIR{
+			Name: clusterName, Host: upstreamHost, Port: upstreamPort, UseDNS: true,
+		}
+		klog.V(2).Infof("buildAppVirtualHosts: app=%s/%s entrance=%s cluster=%s upstream=%s:%d route_mode=%s",
+			app.Namespace, app.Name, entrance.Name, clusterName, upstreamHost, upstreamPort, routeMode)
 
 		_, enableOIDC := app.Settings["oidc.client.id"]
 
@@ -702,9 +730,18 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 
 		clusterName := fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name)
 		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
-		clusterSet[clusterName] = &ir.ClusterIR{
-			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
+		upstreamPort := uint32(entrance.Port)
+		routeMode := "direct"
+		if isGatewayMode(app) {
+			upstreamHost = gatewayDataPlaneHost
+			upstreamPort = gatewayDataPlanePort
+			routeMode = "gateway"
 		}
+		clusterSet[clusterName] = &ir.ClusterIR{
+			Name: clusterName, Host: upstreamHost, Port: upstreamPort, UseDNS: true,
+		}
+		klog.V(2).Infof("buildCustomDomainVirtualHosts: app=%s/%s entrance=%s cluster=%s upstream=%s:%d route_mode=%s",
+			app.Namespace, app.Name, entrance.Name, clusterName, upstreamHost, upstreamPort, routeMode)
 
 		vhost := &ir.VirtualHostIR{
 			Name:     fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),

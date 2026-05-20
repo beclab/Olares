@@ -452,16 +452,22 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			owner = username
 		}
 
+		annotations := map[string]string{}
+		for k, v := range app.Annotations {
+			annotations[k] = v
+		}
+
 		result = append(result, &message.AppInfo{
-			Name:      app.Spec.Name,
-			Appid:     app.Spec.Appid,
-			IsSysApp:  app.Spec.IsSysApp,
-			Namespace: app.Spec.Namespace,
-			Owner:     owner,
-			Entrances: entrances,
-			Ports:     ports,
-			Settings:  settings,
-			IsShared:  isV3App(app),
+			Name:        app.Spec.Name,
+			Appid:       app.Spec.Appid,
+			IsSysApp:    app.Spec.IsSysApp,
+			Namespace:   app.Spec.Namespace,
+			Owner:       owner,
+			Entrances:   entrances,
+			Ports:       ports,
+			Settings:    settings,
+			Annotations: annotations,
+			IsShared:    isV3App(app),
 		})
 	}
 	return result
