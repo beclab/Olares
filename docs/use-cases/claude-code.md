@@ -97,10 +97,6 @@ Use this method to run Claude Code locally. This example uses the model app **Qw
 7. Click **Apply**. Wait about 10 seconds for the container to restart.
 8. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
 
-:::info Switching between modes
-If you switch between remote and local models, run `/clear` in Claude Code first before starting a new session. This prevents context from the previous model from affecting the new workspace.
-:::
-
 ## Use Claude Code
 
 All project work happens in the `/opt/data` directory, which serves as `$HOME` in the container. This directory persists your files across app restarts.
