@@ -20,3 +20,11 @@ mesh:
 demo:
   enabled: true
   host: demo.agw.local
+
+extAuthz:
+  enabled: true
+  name: app-gateway-ext-authz-allowall
+  failOpen: false
+  service:
+    name: app-service-ext-authz
+    port: 9001

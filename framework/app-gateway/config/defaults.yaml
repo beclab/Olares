@@ -24,6 +24,17 @@ demo:
   # Debug-only: CLI rollout/wait for curl-client & http-echo mesh. Release builds keep false.
   meshDebug: false
 
+# F-5: Envoy Gateway delegates authorization to app-service-ext-authz via
+# ext_authz. Phase A always allows; failOpen=false enforces the fail-closed
+# behaviour when the adapter is unavailable.
+extAuthz:
+  enabled: true
+  name: app-gateway-ext-authz-allowall
+  failOpen: false
+  service:
+    name: app-service-ext-authz
+    port: 9001
+
 # Linkerd 控制面独立命名空间；Envoy Gateway 控制面与 Gateway API 业务对象共用上方 namespace。
 vendor:
   linkerdNamespace: linkerd
