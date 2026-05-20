@@ -298,5 +298,5 @@ Determine if the missing tool is a system-level dependency. System-level depende
 
 ## Learn more
 
-- [Set up OpenCode as your AI coding agent](./opencode.md)
+- [Set up OpenCode as your AI coding agent](opencode.md)
 - [Claude Code official documentation](https://code.claude.com/docs)
