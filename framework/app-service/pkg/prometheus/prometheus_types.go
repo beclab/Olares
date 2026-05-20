@@ -165,6 +165,12 @@ var promQLTemplates = map[string]string{
 	"cluster_memory_utilisation":   ":node_memory_utilisation:",
 	"node_cpu_frequency_max_hertz": "node_cpu_frequency_max_hertz",
 	"node_cpu_info":                "node_cpu_info",
+	"node_cpu_capacity":            "node:node_num_cpu:sum",
+	"node_cpu_utilisation":         "node:node_cpu_utilisation:avg1m",
+	"node_memory_capacity":         "node:node_memory_bytes_total:sum",
+	"node_memory_available":        "node:node_memory_bytes_available:sum",
+	"node_disk_capacity":           "sum(node:disk_capacity:size) by (node)",
+	"node_disk_available":          "sum(node:disk_avail:size) by (node)",
 }
 
 type NamespaceMetricSlice []struct {

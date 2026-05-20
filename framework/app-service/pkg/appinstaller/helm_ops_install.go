@@ -81,8 +81,9 @@ type HelmOpsInterface interface {
 
 // Opt options for helm ops.
 type Opt struct {
-	Source       string
-	MarketSource string
+	Source             string
+	MarketSource       string
+	SkipWaitForStartUp bool
 }
 
 var _ HelmOpsInterface = &HelmOps{}
@@ -936,6 +937,10 @@ func (h *HelmOps) Install() error {
 	}
 
 	if h.app.Type == appv1alpha1.Middleware.String() {
+		return nil
+	}
+	if h.options.SkipWaitForStartUp {
+		klog.Infof("skip waiting for app %s startup", h.app.AppName)
 		return nil
 	}
 	ok, err := h.WaitForStartUp()
