@@ -76,4 +76,19 @@ echo "== mesh NetworkPolicy (bootstrap / app-service) =="
 kubectl -n "${NS}" get networkpolicy app-gateway-mesh-np -o name 2>/dev/null || warn "app-gateway-mesh-np missing in ${NS}"
 kubectl -n "${LINKERD_NS}" get networkpolicy app-gateway-mesh-np -o name 2>/dev/null || warn "app-gateway-mesh-np missing in ${LINKERD_NS}"
 
+echo "== stable data-plane Service (F-1: app-gateway-data) =="
+DATA_SVC="${DATA_SVC:-app-gateway-data}"
+if ! kubectl -n "${NS}" get svc "${DATA_SVC}" >/dev/null 2>&1; then
+  fail "Service ${NS}/${DATA_SVC} missing (PR-1: data-plane-svc.yaml not applied)"
+fi
+data_target_port="$(kubectl -n "${NS}" get svc "${DATA_SVC}" -o jsonpath='{.spec.ports[?(@.port==80)].targetPort}')"
+[[ "${data_target_port}" == "10080" ]] || fail "Service ${DATA_SVC} port 80 targetPort=${data_target_port:-<unset>} (want 10080)"
+mapfile -t data_eps < <(kubectl -n "${NS}" get endpoints "${DATA_SVC}" -o jsonpath='{range .subsets[*].addresses[*]}{.ip}{"\n"}{end}' | sort -u)
+[[ ${#data_eps[@]} -gt 0 ]] || fail "Endpoints ${DATA_SVC} has no addresses (selector mismatch or EG data-plane not Ready)"
+mapfile -t envoy_eps < <(kubectl -n "${NS}" get endpoints -l gateway.envoyproxy.io/owning-gateway-name="${GW_NAME}" -o jsonpath='{range .items[*].subsets[*].addresses[*]}{.ip}{"\n"}{end}' | sort -u)
+[[ ${#envoy_eps[@]} -gt 0 ]] || fail "EG data-plane endpoints (label gateway.envoyproxy.io/owning-gateway-name=${GW_NAME}) empty"
+diff_lines="$(comm -3 <(printf '%s\n' "${data_eps[@]}") <(printf '%s\n' "${envoy_eps[@]}") || true)"
+[[ -z "${diff_lines}" ]] || fail "Endpoints ${DATA_SVC} differ from EG data-plane: ${diff_lines}"
+echo "OK: ${DATA_SVC} endpoints (${#data_eps[@]}) match EG data-plane"
+
 echo "PASS: verify-app-gateway-mesh (${NS}, gateway=${GW_NAME}, mesh=${MESH_LINKERD_ENABLED})"
