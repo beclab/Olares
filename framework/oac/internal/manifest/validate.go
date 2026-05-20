@@ -12,6 +12,15 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
+var validChartName = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
+
+var (
+	errInvalidSubChartName = fmt.Errorf(
+		"invalid subchart name, must match regex %s and the length must not be longer than 53",
+		validChartName.String())
+	errMissingSubChartName = errors.New("no name provided")
+)
+
 var isSemver = validation.NewStringRuleWithError(func(s string) bool {
 	if s == "" {
 		return false
@@ -46,6 +55,15 @@ var (
 	validOpenMethods     = []any{"", "default", "iframe", "window"}
 )
 
+// validSupportArchSet enumerates the architectures spec.supportArch may
+// declare. The check intentionally rejects empty strings and case variants
+// (e.g. "AMD64") since the downstream installer compares against exactly
+// these two lowercase values.
+var validSupportArchSet = map[string]struct{}{
+	"amd64": {},
+	"arm64": {},
+}
+
 // ValidateKnownAPIVersion returns nil if api is empty (treated as v1) or one
 // of v1, v2, v3 (case-insensitive). Otherwise it returns an error with the
 // message used by manifest validation and resource checks.
@@ -57,7 +75,7 @@ func ValidateKnownAPIVersion(api string) error {
 	case APIVersionV1, APIVersionV2, APIVersionV3:
 		return nil
 	default:
-		return fmt.Errorf("不支持该版本")
+		return fmt.Errorf("not supported version")
 	}
 }
 
@@ -68,7 +86,7 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 			validation.Required.Error("olaresManifest.version is required")),
 		validation.Field(&c.APIVersion,
 			validation.When(c.APIVersion != "",
-				validation.In(validAPIVersions...).Error("不支持该版本"),
+				validation.In(validAPIVersions...).Error("not supported version"),
 			),
 		),
 		validation.Field(&c.Metadata, validation.By(validateAppMetaData)),
@@ -216,6 +234,11 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 	fields := []*validation.FieldRules{
 		validation.Field(&s.RequiredGPU, optionalGPUQuantity),
 		validation.Field(&s.LimitedGPU, optionalLimitedGPUQuantity),
+		validation.Field(&s.SupportArch,
+			validation.Each(validation.By(validateSupportArchEntry)),
+			validation.By(uniqueSupportArches),
+		),
+		validation.Field(&s.SubCharts),
 	}
 
 	api := normalizeAPIVersion(apiVersion)
@@ -338,10 +361,18 @@ func checkSubCharts(cfg *AppConfiguration) error {
 	if len(cfg.Spec.SubCharts) == 0 {
 		return fmt.Errorf("spec.subCharts is required for apiVersion=v2")
 	}
+	hasSharedChart := false
 	for _, c := range cfg.Spec.SubCharts {
-		if c.Shared {
-			return nil
+		err := isSafeSubChartName(c.Name)
+		if err != nil {
+			return err
 		}
+		if c.Shared {
+			hasSharedChart = true
+		}
+	}
+	if hasSharedChart {
+		return nil
 	}
 	return fmt.Errorf("spec.subCharts must contain at least one entry with shared=true")
 }
@@ -357,6 +388,52 @@ func uniqueEntranceNames(value interface{}) error {
 			return fmt.Errorf("entrances[%d].name: duplicate entrance name %q", i, e.Name)
 		}
 		seen[e.Name] = struct{}{}
+	}
+	return nil
+}
+
+// validateSupportArchEntry enforces that each spec.supportArch element is
+// one of the two architectures the downstream installer accepts. Empty
+// strings, case variants ("AMD64"), and other CPU families are rejected
+// here so the manifest fails fast instead of silently misbehaving at
+// install time.
+func validateSupportArchEntry(value interface{}) error {
+	s, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("spec.supportArch: unexpected type %T", value)
+	}
+	if _, allowed := validSupportArchSet[s]; allowed {
+		return nil
+	}
+	return fmt.Errorf(`spec.supportArch entries must be "amd64" or "arm64" (got %q)`, s)
+}
+
+// uniqueSupportArches reports duplicate entries in spec.supportArch. The
+// per-element "amd64"/"arm64" enum is enforced separately by
+// validation.Each; this rule guards against the same architecture being
+// listed twice, which is silently ignored downstream but almost always a
+// manifest authoring mistake.
+func uniqueSupportArches(value interface{}) error {
+	arches, ok := value.([]string)
+	if !ok {
+		return fmt.Errorf("spec.supportArch: unexpected type %T", value)
+	}
+	seen := make(map[string]struct{}, len(arches))
+	for i, a := range arches {
+		if _, dup := seen[a]; dup {
+			return fmt.Errorf("spec.supportArch[%d]: duplicate value %q", i, a)
+		}
+		seen[a] = struct{}{}
+	}
+	return nil
+}
+
+func isSafeSubChartName(name string) error {
+	if name == "" {
+		return errMissingSubChartName
+	}
+	if len(name) > 53 || !validChartName.MatchString(name) {
+		return errInvalidSubChartName
 	}
 	return nil
 }

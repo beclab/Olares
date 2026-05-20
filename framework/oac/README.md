@@ -70,6 +70,10 @@ imgs, err := c.ListImages(path)
 // Same, but render the chart with .Values.GPU.Type = mode so GPU-gated
 // templates contribute their workloads (empty mode == ListImages).
 imgs, err := c.ListImagesForMode(path, "nvidia")
+// Multi-mode: union of images across each mode, dedup'd. Pass nil/empty for
+// default-branch render; pass "all" to expand into oac.AllImageRenderModes.
+imgs, err := c.ListImagesForModes(path, []string{"nvidia", "cpu"})
+imgs, err := c.ListImagesForModes(path, []string{"all"})
 ```
 
 > Every helm dry-run (`Lint`, `ListImages` / `ListImagesForMode`, `CheckResources`, `CheckServiceAccountRules`, ...) deep-merges any values registered via `oac.WithValues(map[string]interface{}{...})` on top of the scaffold built by `helmrender.BuildValues`. External keys win on conflicts; map keys recurse so siblings the caller did not override survive. The per-mode `.Values.GPU.Type` set by `ListImagesForMode` and the resource-limit per-mode loop runs **after** the merge, so it still wins on `GPU.Type`.
@@ -84,6 +88,8 @@ err  := oac.ValidateManifestFile(path, opts...)
 err  := oac.ValidateManifestContent(bytes, opts...)
 imgs, err := oac.ListImagesFromOAC(path, opts...)
 imgs, err := oac.ListImagesFromOACForMode(path, "nvidia", opts...)
+imgs, err := oac.ListImagesFromOACForModes(path, []string{"nvidia", "cpu"}, opts...)
+imgs, err := oac.ListImagesFromOACForModes(path, []string{"all"}, opts...) // expands to oac.AllImageRenderModes
 
 // Parse straight into a typed *AppConfiguration (no validation)
 cfg, err  := oac.LoadAppConfiguration(path, opts...)
@@ -213,11 +219,17 @@ cfg := &oac.AppConfiguration{ // equivalent to *manifest.AppConfiguration
 | `SkipSameVersionCheck()` | **on**      | Disable the Chart.yaml ↔ manifest version match check. It is on by default; turn it off when you want to align version numbers separately before publishing to the app store |
 | `WithSameVersionCheck()` | —           | Turn the match check back on (useful when composing option sets to re-enable it at a specific call site) |
 | `WithServiceAccountRulesCheck()` | off         | Enable the ServiceAccount RBAC forbidden-rules check |
+| `WithSecurityContextCheck()` | off         | Enable the non-beclab image privileged securityContext check. The check rejects any container (init or main) whose image is NOT under the `beclab/` namespace (matched as `beclab/...` prefix or as a `/beclab/...` path segment after a registry hostname) and whose effective securityContext sets any of `privileged: true`, `runAsUser: 0`, `runAsNonRoot: false`. Pod-level securityContext is considered: if the pod sets `runAsUser: 0` or `runAsNonRoot: false`, every non-beclab container inherits the unsafe default and is reported. Walks `Deployment` / `StatefulSet` / `DaemonSet` workloads |
+| `SkipSecurityContextCheck()` | —           | Clears the non-beclab securityContext check flag. The check is OFF by default; this option only matters when composing on top of an option set that previously turned it on |
 | `WithCustomValidator(fn)` | —           | Register a custom `CustomValidator`; can be called multiple times to append |
 | `SkipAppDataCheck()` | **on**      | Disable the built-in `.Values.userspace.appdata` cross-check. The check is on by default; turn it off only when a chart legitimately renders appdata via a non-standard path |
 | `WithAppDataValidator()` | —           | Re-enable the built-in `.Values.userspace.appdata` cross-check. Kept as a back-compat alias — the check now runs by default and is disabled with `SkipAppDataCheck()`. Calling this on a fresh checker is a no-op |
+| `SkipHostPathCheck()` | **on**      | Disable the built-in hostPath + rolling-update incompatibility check. The check rejects any `Deployment` (strategy = `RollingUpdate` / unset) or `StatefulSet` (updateStrategy = `RollingUpdate` / unset) that mounts a hostPath volume, because a rolling update can land the new pod on a different node where the host directory does not exist. Allowed strategies: `Recreate` (Deployment) and `OnDelete` (StatefulSet) |
+| `WithHostPathCheck()` | —           | Re-enable the built-in hostPath + rolling-update check after a previous option set disabled it. No-op on a fresh checker |
+| `SkipResourceNamespaceCheck()` | **on**      | Disable the rendered-resource namespace check. The check enforces: workloads (`Deployment` / `StatefulSet` / `DaemonSet`) must have `metadata.namespace = "app-namespace"`; other namespaced resources must be in `"app-namespace"` or a `"user-system-*"` namespace; cluster-scoped resources (empty namespace) are skipped |
+| `WithResourceNamespaceCheck()` | —           | Re-enable the rendered-resource namespace check after a previous option set disabled it. No-op on a fresh checker |
 
-> Note: `New()`'s default behavior is "run everything except `ServiceAccountRules`" — the Chart.yaml ↔ manifest version match check and the `.Values.userspace.appdata` cross-check both run by default. Use `Skip*` to turn off a built-in check, and `With*Check` to turn on one that is off by default.
+> Note: `New()`'s default behavior is "run everything except `ServiceAccountRules`" — the Chart.yaml ↔ manifest version match check, the `.Values.userspace.appdata` cross-check, the hostPath + rolling-update check, and the rendered-resource namespace check all run by default. Use `Skip*` to turn off a built-in check, and `With*Check` to turn on one that is off by default.
 
 ### 6. Typical usage
 
@@ -255,7 +267,25 @@ for _, p := range paths {
 **Just the image list**:
 
 ```go
+// Default branch only.
 images, err := oac.ListImagesFromOAC("./my-app", oac.WithOwnerAdmin("root"))
+
+// Union across a few specific GPU.Type modes (deduped + sorted).
+images, err := oac.ListImagesFromOACForModes(
+    "./my-app",
+    []string{"nvidia", "cpu"},
+    oac.WithOwnerAdmin("root"),
+)
+
+// Union across *every* mode advertised by AllImageRenderModes
+// (currently cpu / apple-m / nvidia / nvidia-gb10 / mthreads-m1000 /
+// strix-halo). Mixing "all" with explicit modes is fine — duplicates
+// collapse to a single render per mode.
+images, err := oac.ListImagesFromOACForModes(
+    "./my-app",
+    []string{"all"},
+    oac.WithOwnerAdmin("root"),
+)
 ```
 
 **Validate manifest content only (no chart directory needed)**:
@@ -544,7 +574,7 @@ Each `spec.resources[i]` is a `ResourceMode`:
 
 `Checker.CheckResources` also does one `BuildValues` + `Render` (except it returns immediately for **`apiVersion: v2`**, which skips container limit checks), then forwards the chart path and manifest to `checkResourceLimits`; for modern manifests the list produced by that render is not used by the limit branch (limit checks are entirely driven by per-mode re-renders), so it **does not include** §3.2 / §3.3.
 
-For **`apiVersion: v2`** the parent OAC root is not a renderable workload chart in the multi-chart install layout, so the helm dry-run for **`Lint` / `CheckServiceAccountRules` / `ListImages`** iterates `spec.subCharts[]` and concatenates the per-subchart `kube.ResourceList`s. **`apiVersion: v3`** follows the same single-chart render path as **v1** (whole chart at the OAC root). A non-empty `apiVersion` outside `v1` / `v2` / `v3` fails validation and resource checks with **不支持该版本**.
+For **`apiVersion: v2`** the parent OAC root is not a renderable workload chart in the multi-chart install layout, so the helm dry-run for **`Lint` / `CheckServiceAccountRules` / `ListImages`** iterates `spec.subCharts[]` and concatenates the per-subchart `kube.ResourceList`s. **`apiVersion: v3`** follows the same single-chart render path as **v1** (whole chart at the OAC root). A non-empty `apiVersion` outside `v1` / `v2` / `v3` fails validation and resource checks with **not supported version**.
 
 > `Lint` always runs the helm render. Upload mount and workload naming (§3.2, §3.3) are **always** enforced; container limits (§3.1) are gated by `SkipResourceCheck()`; RBAC (§3.4) is gated by `WithServiceAccountRulesCheck()`.
 
@@ -560,13 +590,13 @@ For each `Deployment` and `StatefulSet` in the render, on the primary container:
 
 **Where the manifest-side limits come from (dispatched by `olaresManifest.version` and `apiVersion`)**:
 
-- **Legacy (`< 0.12.0`)**: read directly from the four flat fields `spec.requiredCpu` / `spec.limitedCpu` / `spec.requiredMemory` / `spec.limitedMemory`. `Lint` renders the chart once (sharing the render with §3.2 / §3.3) and compares that single `kube.ResourceList` against the four fields.
+- **`apiVersion: v2` (any `olaresManifest.version`)**: the container limit check is **skipped entirely**. `checkResourceLimits` short-circuits before either the legacy or the modern branch, and `CheckResources` returns nil at its `isV2Manifest` guard without even rendering. Rationale: v2 is the multi-chart install layout — each `spec.subCharts[]` entry has its own quota, so summing container limits against the parent manifest's `spec.required*/spec.limited*` (or any single `spec.resources[]` row) is meaningless.
+- **Legacy (`< 0.12.0`) with `apiVersion` unset, `v1`, or `v3`**: read directly from the four flat fields `spec.requiredCpu` / `spec.limitedCpu` / `spec.requiredMemory` / `spec.limitedMemory`. `Lint` renders the chart once (sharing the render with §3.2 / §3.3) and compares that single `kube.ResourceList` against the four fields.
 - **Modern (`>= 0.12.0`) with `apiVersion` unset, `v1`, or `v3`**: `validateAppSpec` requires `spec.resources[]` and Rule 7 forbids mixing it with the flat fields, so limits come from `spec.resources[]`. For each `ResourceMode rm`:
   1. `BuildValues(...)` + `SetGPUType(values, rm.Mode)` (`.Values.GPU.Type = <mode>`).
   2. `helmrender.Render(...)` at `oacPath` produces the `kube.ResourceList` for that mode.
   3. Limits use the **inline** `ResourceRequirement` on that mode (`requiredCpu`, `limitedCpu`, `requiredMemory`, `limitedMemory`).
   4. `CheckResourceLimits(list, limits)`. Failure prefix: `resources mode=<mode>:`.
-- **Modern (`>= 0.12.0`) with `apiVersion` v2**: the container limit check is **skipped** (`checkResourceLimits` returns nil when `spec.resources` is non-empty; `CheckResources` also returns nil without rendering for limits).
 - Failures across modes are aggregated via `errors.Join`.
 - If `spec.resources` is empty (a modern manifest without any `ResourceMode`), this check is **skipped entirely** — such a chart has no limits to compare against, so there is nothing more to validate.
 - The upload-mount and workload-naming checks (§3.2 / §3.3) run **only on the default render**; per-mode re-renders serve **only** §3.1 and do not re-run §3.2 / §3.3.
@@ -627,6 +657,24 @@ type CustomValidator func(oacPath string, m Manifest) error
 ```
 
 A built-in equivalent runs as a separate, always-on step (not via `customValidators`): if any file under the chart's `templates/*.yaml` references `.Values.userspace.appdata`, `OlaresManifest.yaml` must declare `permission.appData: true`, otherwise the check fails. It runs by default in `Lint`; pass `SkipAppDataCheck()` to disable it for a particular call. The legacy entry point `WithAppDataValidator()` is kept as a back-compat alias that simply re-asserts the on-by-default state.
+
+Another always-on built-in (after the helm dry-run) is the **hostPath + rolling-update incompatibility check**: any `Deployment` whose `spec.strategy.type` is `RollingUpdate` (or empty, since that defaults to `RollingUpdate` on the API server side) and that mounts a hostPath volume — or any `StatefulSet` with `spec.updateStrategy.type` = `RollingUpdate` / empty doing the same — will fail Lint. The reason: a rolling update can land the new pod on a different node where the host directory does not exist, so the new pod silently starves on a volume that's "present" in the manifest but absent in practice. Use `spec.strategy.type: Recreate` on Deployments and `updateStrategy.type: OnDelete` on StatefulSets when you legitimately need a hostPath mount. Pass `SkipHostPathCheck()` to bypass the check; `WithHostPathCheck()` re-enables it after a previous disable.
+
+A third always-on built-in (also after the helm dry-run) is the **rendered-resource namespace check**: every workload that comes out of the dry-run with `metadata.namespace` set must conform to the install-time contract. Specifically:
+
+- `Deployment` / `StatefulSet` / `DaemonSet` must declare `metadata.namespace = "app-namespace"` (the same value as `helmrender.RenderNamespace`, i.e. the namespace Olares uses to install every app's chart). Workloads in any other namespace would silently miss the app's quota / NetworkPolicy / sidecar injection.
+- Any other namespaced resource (`Service`, `ConfigMap`, `Secret`, `Role`, `RoleBinding`, `ProviderRegistry`, ...) must land in `app-namespace` or in a namespace whose name starts with `user-system-` (the convention for cross-namespace bridges into the owner's user-system namespace).
+- Cluster-scoped resources (`ClusterRole`, `ClusterRoleBinding`, `PersistentVolume`, ...) and any resource whose `metadata.namespace` is empty are skipped — they have no notion of namespace by design.
+
+Use `{{ .Release.Namespace }}` for in-app resources (helm fills it with `app-namespace`) and an explicit `user-system-{{ .Values.bfl.username }}` for bridges into the owner's user-system namespace; both render to compliant values. Pass `SkipResourceNamespaceCheck()` to bypass the check; `WithResourceNamespaceCheck()` re-enables it after a previous disable.
+
+An opt-in built-in is the **non-beclab image privileged securityContext check**: rejects any container (init or main) whose image lives outside the `beclab/` namespace and whose effective securityContext grants root-equivalent privileges:
+
+- `container.securityContext.privileged: true`
+- `container.securityContext.runAsUser: 0`
+- `container.securityContext.runAsNonRoot: false`
+
+Pod-level `spec.securityContext` is also examined; if it sets `runAsUser: 0` or `runAsNonRoot: false`, every non-beclab container that does not override those fields is reported. Beclab-published images (matched by repository path `beclab/...` or `<registry>/beclab/...`) are exempt. This check is **OFF by default**; enable it with `WithSecurityContextCheck()` (typically before publishing to the app store). It walks `Deployment` / `StatefulSet` / `DaemonSet` workloads.
 
 ---
 

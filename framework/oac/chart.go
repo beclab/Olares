@@ -25,15 +25,26 @@ import (
 //  5. Helm dry-run and mandatory workload-integrity checks (upload mount
 //     path, `type=app` workload naming) - ALWAYS run; not governed by any
 //     Skip* option
-//  6. Container-level resource limits check - skipped by SkipResourceCheck
-//  7. Chart.yaml <-> manifest same-version check - ON by default, turn off
+//  6. HostPath + rolling-update incompatibility check - ON by default,
+//     turn off with SkipHostPathCheck()
+//  7. Rendered-resource namespace check (workloads in app-namespace;
+//     other resources in app-namespace or user-system-*) - ON by default,
+//     turn off with SkipResourceNamespaceCheck()
+//  8. Container-level resource limits check - skipped by SkipResourceCheck
+//  9. Chart.yaml <-> manifest same-version check - ON by default, turn off
 //     with SkipSameVersionCheck()
-//  8. ServiceAccount RBAC inspection - OFF by default, turn on with
+//  10. ServiceAccount RBAC inspection - OFF by default, turn on with
 //     WithServiceAccountRulesCheck()
+//  11. Non-beclab image privileged securityContext check - OFF by default,
+//     turn on with WithSecurityContextCheck()
 //
-// When WithAutoOwnerScenarios() is set, step 5/6/8 — the portions that
-// depend on the rendered chart — run twice: once with owner == admin and
-// once with owner != admin. All other steps run once.
+// When WithAutoOwnerScenarios() is set, every owner-dependent step runs
+// twice — once with owner == admin and once with owner != admin. That
+// covers the rendered-chart steps (5/6/7/8/10) AND step 2's manifest
+// validation, so manifests that branch on
+// `eq .Values.admin .Values.bfl.username` are exercised in both install
+// modes. Owner-independent steps (folder layout, appdata cross-check,
+// same-version) still run once.
 func (c *OAC) Lint(oacPath string) error {
 	if !c.skipFolder {
 		if err := c.CheckChartFolder(oacPath); err != nil {
@@ -67,12 +78,17 @@ func (c *OAC) Lint(oacPath string) error {
 			return err
 		}
 	}
-
-	for _, sc := range c.ownerScenarios() {
-		if err := c.lintRenderedScenario(oacPath, m, sc); err != nil {
-			if sc.label != "" {
-				return fmt.Errorf("%s scenario: %w", sc.label, err)
+	if m.APIVersion() == "v2" {
+		for _, sc := range c.ownerScenarios() {
+			if err := c.lintRenderedScenario(oacPath, m, sc); err != nil {
+				if sc.label != "" {
+					return fmt.Errorf("%s scenario: %w", sc.label, err)
+				}
+				return err
 			}
+		}
+	} else {
+		if err := c.lintRenderedScenario(oacPath, m, ownerScenario{label: "", owner: "owner", admin: "admin"}); err != nil {
 			return err
 		}
 	}
@@ -126,6 +142,18 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 		return err
 	}
 
+	if !c.skipHostPath {
+		if err := resources.CheckHostPath(list); err != nil {
+			return err
+		}
+	}
+
+	if !c.skipResourceNamespace {
+		if err := resources.CheckResourceNamespace(list); err != nil {
+			return err
+		}
+	}
+
 	if !c.skipResource {
 		if err := c.checkResourceLimits(oacPath, m, sc, list); err != nil {
 			return err
@@ -138,6 +166,12 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 			return err
 		}
 		if err := resources.CheckServiceAccountRules(list, rules); err != nil {
+			return err
+		}
+	}
+
+	if c.runSecurityContext {
+		if err := resources.CheckSecurityContextForNonBeclabImage(list); err != nil {
 			return err
 		}
 	}
@@ -227,7 +261,7 @@ func (c *OAC) CheckSameVersion(oacPath string, m Manifest) error {
 // apiVersion v2 skips this check entirely (returns nil). v1, v3, and empty
 // apiVersion (v1 default) share the same logic: one helm render at oacPath
 // for the legacy path, and per-mode renders at oacPath for modern manifests.
-// A non-empty apiVersion outside v1/v2/v3 yields 不支持该版本.
+// A non-empty apiVersion outside v1/v2/v3 yields not supported version.
 //
 // For legacy manifests (<0.12.0) the chart is rendered once and the
 // container-level limits are compared against spec.required*/spec.limited*.
@@ -292,6 +326,12 @@ func (c *OAC) CheckServiceAccountRules(oacPath string) error {
 // underlying pipeline re-parses the payload under both admin=owner and
 // admin!=owner scenarios and aggregates any failures into a single
 // ValidationError.
+//
+// When WithAutoOwnerScenarios() is set, the manifest validation is repeated
+// for each (owner, admin) pair (owner==admin / owner!=admin) so manifests
+// whose body branches on `eq .Values.admin .Values.bfl.username` are
+// exercised in both configurations. Failures from each scenario are
+// aggregated into a single *ValidationError.
 func (c *OAC) ValidateManifestFile(oacPath string) error {
 	raw, err := readManifestFile(oacPath)
 	if err != nil {
@@ -301,6 +341,8 @@ func (c *OAC) ValidateManifestFile(oacPath string) error {
 }
 
 // ValidateManifestContent is the byte-slice counterpart of ValidateManifestFile.
+// It honors WithAutoOwnerScenarios() the same way (manifest validation runs
+// once per owner scenario).
 func (c *OAC) ValidateManifestContent(content []byte) error {
 	m, err := c.parseManifest(content)
 	if err != nil {
@@ -312,17 +354,21 @@ func (c *OAC) ValidateManifestContent(content []byte) error {
 // checkResourceLimits runs CheckResourceLimits against the right render for
 // the manifest's schema version.
 //
-//   - Legacy (<0.12.0): the defaultList that was already rendered by the
-//     caller is reused and limits come from the flat
+//   - apiVersion v2: the whole check is **skipped** regardless of
+//     olaresManifest.version. v2 is the multi-chart install layout where
+//     each spec.subCharts[] entry has its own quota, so summing container
+//     limits against the parent manifest's spec.required*/spec.limited*
+//     (or any single spec.resources[] row) is meaningless.
+//   - Legacy (<0.12.0) + v1/v3/empty: the defaultList that was already
+//     rendered by the caller is reused and limits come from the flat
 //     spec.required*/spec.limited* fields.
-//   - Modern (>=0.12.0): every entry in spec.resources[] drives dedicated
-//     helm renders with .Values.GPU.Type set to rm.Mode, because chart
-//     templates may emit different workloads per GPU family. Limits come
-//     from the inline ResourceRequirement on each mode row. Each mode
-//     renders the chart once at oacPath (same for apiVersion v1, v3, or
-//     empty). apiVersion v2 skips the entire modern branch (nil).
+//   - Modern (>=0.12.0) + v1/v3/empty: every entry in spec.resources[]
+//     drives dedicated helm renders with .Values.GPU.Type set to rm.Mode,
+//     because chart templates may emit different workloads per GPU family.
+//     Limits come from the inline ResourceRequirement on each mode row.
+//     Each mode renders the chart once at oacPath.
 //
-// A non-empty apiVersion outside v1/v2/v3 yields 不支持该版本.
+// A non-empty apiVersion outside v1/v2/v3 yields not supported version.
 //
 // Charts that carry no resources[] on a modern manifest skip the check
 // entirely — Rule 7 already guaranteed the legacy flat fields are empty,
@@ -339,6 +385,9 @@ func (c *OAC) checkResourceLimits(oacPath string, m Manifest, sc ownerScenario, 
 	if err := manifest.ValidateKnownAPIVersion(cfg.APIVersion); err != nil {
 		return err
 	}
+	if strings.EqualFold(cfg.APIVersion, manifest.APIVersionV2) {
+		return nil
+	}
 	if !manifest.IsModernResourcesManifest(cfg.ConfigVersion) {
 		return resources.CheckResourceLimits(defaultList, resources.ResourceLimits{
 			RequiredCPU:    cfg.Spec.RequiredCPU,
@@ -348,9 +397,6 @@ func (c *OAC) checkResourceLimits(oacPath string, m Manifest, sc ownerScenario, 
 		})
 	}
 	if len(cfg.Spec.Resources) == 0 {
-		return nil
-	}
-	if strings.EqualFold(cfg.APIVersion, manifest.APIVersionV2) {
 		return nil
 	}
 	var errs []error
