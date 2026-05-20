@@ -44,7 +44,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Hermes Agent",
               link: "/zh/use-cases/hermes", 
-            },            
+            },
+            {
+              text: "Claude Code",
+              link: "/zh/use-cases/claude-code",
+            },                        
             {
               text: "OpenCode",
               link: "/zh/use-cases/opencode",
@@ -180,10 +184,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Bifrost",
               link: "/zh/use-cases/bifrost",
-            },
-            {
-              text: "Claude Code",
-              link: "/zh/use-cases/claude-code",
             },
             /*{
               text: "Duix.Avatar",

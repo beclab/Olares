@@ -160,72 +160,6 @@ The following example demonstrates how to build a lightweight "Hello Olares" web
 
    ![Claude Code coding project result](/images/manual/use-cases/claude-code-report.png#bordered)
 
-<!--
-The following example demonstrates how to build a Backend For Frontend (BFF) stack with a Python FastAPI backend and a Node.js gateway.
-
-1. In the TUI, enter the following detailed prompt:
-
-   ::: details Example prompt
-   ```text
-   You are in a Linux dev container. All work MUST stay under:
-
-     $HOME/tmp/mini-bff/
-
-   Do not use apt, do not modify system Python site-packages, and do not use Docker-in-Docker.
-
-   ## Layout (create exactly this split)
-
-   - backend/   → Python only (FastAPI). No package.json here.
-   - gateway/   → Node + TypeScript + Express only. No Python venv here.
-
-   Never run npm, npx, or node for the gateway while cwd is backend/.
-   Never run pytest or .venv/bin/... while cwd is gateway/ unless you intentionally test nothing there.
-
-   Prefer explicit paths every time, e.g.:
-
-     cd "$HOME/tmp/mini-bff/backend" && .venv/bin/pytest ...
-     cd "$HOME/tmp/mini-bff/gateway" && npm test
-
-   ## backend/ (Python, port 8801)
-
-   - FastAPI app: GET /internal/user/{user_id} → JSON with at least id and name (fake data is fine; seed user id 1 if helpful).
-   - Use a Python venv inside backend/: python3 -m venv .venv, then install deps with pip.
-   - Tests: pytest + httpx or Starlette TestClient under backend/tests/, cover success + unknown id (404).
-
-   ## gateway/ (Node + TypeScript + Express, port 8802)
-
-   - GET /user/:id proxies to http://127.0.0.1:8801/internal/user/:id using fetch (built-in) or axios.
-   - Document and implement an error-mapping contract in code comments.
-   - Tests: vitest + supertest. Mock/stub upstream fetch for error cases.
-   - package.json scripts: at least build (tsc), test (vitest run).
-
-   ## Live integration (mandatory)
-
-   1) Start backend on 127.0.0.1:8801 in the background.
-   2) Start gateway on 127.0.0.1:8802 in the background after npm run build.
-   3) curl -sS -i http://127.0.0.1:8802/user/1 and curl -sS -i http://127.0.0.1:8802/user/999.
-   4) Stop both background processes cleanly.
-
-   ## Final report (required)
-
-   Reply with:
-   1) tree -L 3 rooted at mini-bff/
-   2) Exact commands for backend tests and gateway build/test
-   3) Pytest summary and Vitest summary
-   4) The two curl transcripts
-   5) One sentence about any benign warnings
-
-   Execute everything yourself; do not ask me to run commands manually.
-   ```
-   :::
-
-2. When the assistant prompts you for permission to proceed with the directory creation, select **Yes, and always allow access to mini-bff/ from this project** (or press `2`). This grants the assistant the necessary permissions to build the rest of the project without asking for approval for every new file.
-3. Wait for Claude Code to process the prompt. The assistant automatically creates both services, installs dependencies, runs tests, starts the servers, and performs live integration checks.
-4. Review the final report returned by the assistant, which includes the directory tree, test summaries, and execution transcripts.
-
-   ![Claude Code mini BFF result](/images/manual/use-cases/claude-code-mini-bff.png#bordered)
--->
-
 ## Manage security and development environments
 
 The Claude Code container operates under strict least-privilege settings to ensure security.
@@ -234,13 +168,15 @@ The main process and all executed commands use a non-root user (UID/GID 1000). T
 
 ### Review pre-installed development tools
 
-Before you install additional software, review the tools already included in your workspace. The container image is based on Ubuntu 24.04 and comes with the following common development tools pre-installed:
+Before you install additional software, review the tools already included in your workspace. The container image is based on Ubuntu 24.04 and comes with many common development tools pre-installed.
+
+The following table lists the key categories and examples.
 
 | Category | Included tools |
 |:---------|:---------------|
-| Languages and runtimes | Python 3, Node.js, Go, Rust, Java (OpenJDK 21), Ruby, PHP 8.3, Lua, Perl, SQLite |
-| Build tools | `build-essential`, `cmake`, `ninja-build`, `clang`, `pkg-config`, common `-dev` headers |
-| CLI utilities | `git`, `git-lfs`, `curl`, `wget`, `jq`, `yq`, `openssh-client`, `unzip`, `zip`, `rsync`, `tmux`, `htop`, `shellcheck` |
+| Languages and runtimes | Python 3, Node.js, Go, Rust, Java (OpenJDK 21), Ruby, PHP 8.3,<br>Lua, Perl, SQLite |
+| Build tools | `build-essential`, `cmake`, `ninja-build`, `clang`, `pkg-config`,<br>common `-dev` headers |
+| CLI utilities | `git`, `git-lfs`, `curl`, `wget`, `jq`, `yq`, `openssh-client`, `unzip`,<br>`zip`, `rsync`, `tmux`, `htop`, `shellcheck` |
 | Database clients | `postgresql-client`, `mysql-client`, `redis-tools` |
 
 :::info
@@ -296,7 +232,10 @@ Verify your Olares cluster's outbound network connection. The init container req
 
 ### Missing language or library
 
-Determine if the missing tool is a system-level dependency. System-level dependencies require app maintainers to add them directly to the base image. For user-level dependencies, use virtual environments (`venv`), `npm install`, or similar local management tools.
+Determine if the missing tool is a system-level dependency:
+
+- System-level dependencies: You cannot install these yourself. The app maintainers must add them to the base image. If you need a system-level library that is not currently available, [submit a GitHub Issue](https://github.com/beclab/apps/issues) to request it.
+- User-level dependencies: Use `venv`, `npm install`, or similar local tools to install them.
 
 ## Learn more
 
