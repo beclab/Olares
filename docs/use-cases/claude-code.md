@@ -20,7 +20,7 @@ In this guide, you will learn how to:
 - Install the Claude Code app from the Olares Market.
 - Connect the Claude Code CLI to a model using an Anthropic subscription or a local model.
 - Execute basic and advanced natural language coding workflows.
-- Manage dependencies and understand the secure container environment.
+- Manage software dependencies securely.
 
 ## Prerequisites
 
@@ -232,11 +232,30 @@ The Claude Code container operates under strict least-privilege settings to ensu
 
 The main process and all executed commands use a non-root user (UID/GID 1000). The container disables `allowPrivilegeEscalation` and drops all Linux capabilities. Consequently, administrative commands like `sudo` and `apt install` are unavailable.
 
-### What you cannot install yourself
+### Review pre-installed development tools
+
+Before you install additional software, review the tools already included in your workspace. The container image is based on Ubuntu 24.04 and comes with the following common development tools pre-installed:
+
+| Category | Included tools |
+|:---------|:---------------|
+| Languages and runtimes | Python 3, Node.js, Go, Rust, Java (OpenJDK 21), Ruby, PHP 8.3, Lua, Perl, SQLite |
+| Build tools | `build-essential`, `cmake`, `ninja-build`, `clang`, `pkg-config`, common `-dev` headers |
+| CLI utilities | `git`, `git-lfs`, `curl`, `wget`, `jq`, `yq`, `openssh-client`, `unzip`, `zip`, `rsync`, `tmux`, `htop`, `shellcheck` |
+| Database clients | `postgresql-client`, `mysql-client`, `redis-tools` |
+
+:::info
+The `ripgrep` (`rg`) utility is intentionally excluded to prevent conflicts with Claude Code's native search behavior.
+:::
+
+### Install additional software
+
+If your project requires tools or libraries beyond the pre-installed ones, you must manage them within the container's security boundaries.
+
+#### What you cannot install yourself
 
 If your project requires a system‑level library (e.g., `libpq-dev`, `ffmpeg`, `libssl-dev`), you cannot install it directly. These dependencies must be added to the base container image by the application maintainer.
 
-### What you can install in your workspace
+#### What you can install in your workspace
 
 Inside your writable directories (primarily `/opt/data`), you can install project‑level dependencies without root privileges using common tools:
 
@@ -261,25 +280,8 @@ Inside your writable directories (primarily `/opt/data`), you can install projec
    go install <package>@latest               # Go (installs to ~/go/bin)
    ```
 
-For any language, you can always install tools and dependencies directly to user‑writable paths under `/opt/data`.
-
 :::info
 The container preconfigures the environment variable `PIP_BREAK_SYSTEM_PACKAGES=1`. While this permits system‑wide Python package installations, using a virtual environment is recommended to keep your workspace clean and reliable.
-:::
-
-## Pre-installed development tools
-
-The container image is based on Ubuntu 24.04 and includes common development tools:
-
-| Category | Included tools |
-|:---------|:---------------|
-| Languages and runtimes | Python 3, Node.js, Go, Rust, Java (OpenJDK 21), Ruby, PHP 8.3, Lua, Perl, SQLite |
-| Build tools | `build-essential`, `cmake`, `ninja-build`, `clang`, `pkg-config`, common `-dev` headers |
-| CLI utilities | `git`, `git-lfs`, `curl`, `wget`, `jq`, `yq`, `openssh-client`, `unzip`, `zip`, `rsync`, `tmux`, `htop`, `shellcheck` |
-| Database clients | `postgresql-client`, `mysql-client`, `redis-tools` |
-
-:::info
-The `ripgrep` (`rg`) utility is intentionally excluded to prevent conflicts with Claude Code's native search behavior.
 :::
 
 ## FAQs
