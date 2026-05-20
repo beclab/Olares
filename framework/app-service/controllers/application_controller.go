@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -376,6 +377,10 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 		klog.Infof("Failed to patch err=%v", err)
 	}
 
+	if srrErr := r.reconcileSharedRouteRegistry(ctx, app); srrErr != nil {
+		klog.Warningf("reconcile SharedRouteRegistry for app=%s err=%v", app.Spec.Name, srrErr)
+	}
+
 	return err
 }
 
@@ -385,6 +390,12 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	if app.Annotations != nil {
 		if lastVersion := app.Annotations[deploymentResourceVersionAnnotation]; lastVersion == deployment.GetResourceVersion() {
 			klog.Infof("skip updateApplication: deployment %s not changed, triggered by app modification", deployment.GetName())
+			// Annotation changes (e.g. gateway.olares.io/route-mode opt-in/out)
+			// don't bump the deployment resource version. Run the SRR
+			// reconciler so toggling routeMode is declarative.
+			if srrErr := r.reconcileSharedRouteRegistry(ctx, app); srrErr != nil {
+				klog.Warningf("reconcile SharedRouteRegistry on app-only update for %s err=%v", app.Spec.Name, srrErr)
+			}
 			return nil
 		}
 	}
@@ -517,7 +528,43 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	//	return err
 	//}
 	//klog.Infof("appState: ..%v", a.Status.State)
+	if srrErr := r.reconcileSharedRouteRegistry(ctx, appCopy); srrErr != nil {
+		klog.Warningf("reconcile SharedRouteRegistry for app=%s err=%v", appCopy.Spec.Name, srrErr)
+	}
+
 	return err
+}
+
+// reconcileSharedRouteRegistry writes / deletes the SharedRouteRegistry that
+// declares this v3 app's exposure through the shared Envoy Gateway data plane.
+// Phase A only acts when the Application carries the opt-in annotation
+// gateway.olares.io/route-mode=gateway (D-A10). For any other case (non-v3,
+// no annotation, direct mode) the SRR is removed so toggling routeMode is
+// truly declarative.
+func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context, app *appv1alpha1.Application) error {
+	if app == nil || app.Spec.Namespace == "" || app.Spec.Name == "" {
+		return nil
+	}
+	if !appcfg.IsV3(app) || !gateway.IsOptedIn(app) || len(app.Spec.SharedEntrances) == 0 {
+		return gateway.Delete(ctx, r.Client, app)
+	}
+	primary := app.Spec.SharedEntrances[0]
+	if primary.Host == "" {
+		return fmt.Errorf("shared entrance %q on app %s has empty host", primary.Name, app.Spec.Name)
+	}
+	svc := &corev1.Service{}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: app.Spec.Namespace, Name: primary.Host}, svc); err != nil {
+		return fmt.Errorf("get backing service %s/%s: %w", app.Spec.Namespace, primary.Host, err)
+	}
+	spec, err := gateway.BuildSpec(app, svc)
+	if err != nil {
+		return fmt.Errorf("build SRR spec: %w", err)
+	}
+	if _, err := gateway.Reconcile(ctx, r.Client, app, spec); err != nil {
+		return err
+	}
+	klog.V(1).Infof("SRR reconciled for app=%s/%s hostPatterns=%v upstream=%s/%s:%d", app.Spec.Namespace, app.Spec.Name, spec.HostPatterns, spec.Upstream.ServiceNamespace, spec.Upstream.ServiceName, spec.Upstream.Port)
+	return nil
 }
 
 func (r *ApplicationReconciler) getEntranceServiceAddress(ctx context.Context, deployment client.Object, isMultiApp bool) (map[string][]appv1alpha1.Entrance, error) {

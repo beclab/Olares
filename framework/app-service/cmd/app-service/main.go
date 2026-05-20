@@ -14,6 +14,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/controllers"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
@@ -51,6 +52,7 @@ func init() {
 	utilruntime.Must(iamv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(kbappsv1.AddToScheme(scheme))
 	utilruntime.Must(kbopv1alphav1.AddToScheme(scheme))
+	utilruntime.Must(srrv1alpha1.AddToScheme(scheme))
 
 	//+kubebuilder:scaffold:scheme
 }
