@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -13,7 +14,11 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/controllers"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver"
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/authz"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
+	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
@@ -51,6 +56,7 @@ func init() {
 	utilruntime.Must(iamv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(kbappsv1.AddToScheme(scheme))
 	utilruntime.Must(kbopv1alphav1.AddToScheme(scheme))
+	utilruntime.Must(srrv1alpha1.AddToScheme(scheme))
 
 	//+kubebuilder:scaffold:scheme
 }
@@ -66,11 +72,27 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var authzEnabled bool
+	var authzGRPCAddr, authzHTTPAddr, authzMode, authzHostUserCheck, authzSkipViewers string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":6080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":6081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	// In-process Envoy ext_authz PEP for the shared app-gateway data plane
+	// (gRPC :9001, HTTP probes :9002).
+	flag.BoolVar(&authzEnabled, "gateway-authz-enabled", envBool("APP_SERVICE_GATEWAY_AUTHZ_ENABLED", true),
+		"Run the in-process Envoy ext_authz PEP for the shared app-gateway data plane.")
+	flag.StringVar(&authzGRPCAddr, "gateway-authz-grpc-listen", envOr("APP_SERVICE_GATEWAY_AUTHZ_GRPC", ":9001"),
+		"gRPC ext_authz listen address for app-gateway SecurityPolicy.")
+	flag.StringVar(&authzHTTPAddr, "gateway-authz-http-listen", envOr("APP_SERVICE_GATEWAY_AUTHZ_HTTP", ":9002"),
+		"HTTP listen address for /healthz, /readyz, /metrics.")
+	flag.StringVar(&authzMode, "gateway-authz-mode", envOr("APP_SERVICE_GATEWAY_AUTHZ_MODE", "allow"),
+		"Authorization decision baseline: 'allow' (default) or 'deny'.")
+	flag.StringVar(&authzHostUserCheck, "gateway-authz-host-user-check", envOr("APP_SERVICE_GATEWAY_AUTHZ_HOST_USER", "enabled"),
+		"Enable v2 host-user enforcement: 'enabled' (default) or 'disabled'.")
+	flag.StringVar(&authzSkipViewers, "gateway-authz-skip-viewers", envOr("APP_SERVICE_GATEWAY_AUTHZ_SKIP_VIEWERS", ""),
+		"Comma-separated viewer labels that bypass host-user check (admin SAs).")
 	opts := zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
@@ -256,6 +278,42 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Register in-process ext_authz as a manager Runnable so shutdown follows
+	// the controller manager (readyz drains, gRPC GracefulStop).
+	if authzEnabled {
+		authzSrv := authz.NewServer(authz.ServerOptions{
+			Enabled:   true,
+			GRPCAddr:  authzGRPCAddr,
+			HTTPAddr:  authzHTTPAddr,
+			AllowMode: !strings.EqualFold(authzMode, "deny"),
+			HostUser: authz.HostUserConfig{
+				Enabled:      strings.EqualFold(authzHostUserCheck, "enabled"),
+				SkipPrefixes: authz.ParseSkipViewers(authzSkipViewers),
+			},
+			SnapshotFunc: cluster.DefaultSnapshotFunc(),
+			K8sClient:    mgr.GetClient(),
+		})
+		if err := mgr.Add(authzSrv); err != nil {
+			setupLog.Error(err, "Unable to register in-process gateway authz server")
+			os.Exit(1)
+		}
+		setupLog.Info("registered in-process gateway authz server",
+			"grpc", authzGRPCAddr, "http", authzHTTPAddr,
+			"mode", authzMode, "host_user_check", authzHostUserCheck)
+	} else {
+		setupLog.Info("in-process gateway authz server disabled by flag")
+	}
+
+	if err = (&routecontrol.EntranceTLSReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "EntranceTLS")
+		os.Exit(1)
+	}
+
+	if err = (&routecontrol.SharedHostsReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "SharedHosts")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -331,4 +389,27 @@ func runAPIServer(ctx context.Context, ksHost string, kubeConfig *rest.Config, c
 
 	err = server.Run()
 	return err
+}
+
+// envOr returns os.Getenv(key) when set; def otherwise.
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+// envBool parses a boolean env var, falling back to def when empty or
+// malformed. Accepted truthy: 1/true/yes/on. Accepted falsey: 0/false/no/off.
+func envBool(key string, def bool) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	switch v {
+	case "":
+		return def
+	case "1", "true", "yes", "on", "enabled":
+		return true
+	case "0", "false", "no", "off", "disabled":
+		return false
+	}
+	return def
 }
