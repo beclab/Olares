@@ -24,7 +24,62 @@ const (
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
+
+	// Shared v3 apps opt into the gateway path via Application annotation
+	// gateway.olares.io/route-mode=gateway; upstream becomes app-gateway-data
+	// while preserving Host for HTTPRoute matching.
+	annotationRouteMode        = "gateway.olares.io/route-mode"
+	annotationRouteModeGateway = "gateway"
+	gatewayDataPlaneHost       = "app-gateway-data.app-gateway.svc.cluster.local"
+	gatewayDataPlanePort       = uint32(80)
 )
+
+// isGatewayMode reports whether the v3 app has opted into routing through the
+// shared Envoy Gateway data plane. Non-v3 / non-shared apps and
+// apps without the opt-in annotation always stay on the direct upstream path.
+func isGatewayMode(app *message.AppInfo) bool {
+	if app == nil || !app.IsShared || app.Annotations == nil {
+		return false
+	}
+	return app.Annotations[annotationRouteMode] == annotationRouteModeGateway
+}
+
+// platformDomainFromZone strips the leading viewer label from a user zone:
+//
+//	"alice.olares.com", viewer="alice"  -> "olares.com"
+//
+// Returns "" when zone does not start with "<viewer>.". The caller treats
+// "" as "cannot compute v2 host" and falls back to the legacy hostname.
+func platformDomainFromZone(zone, viewer string) string {
+	zone = strings.ToLower(strings.TrimSpace(zone))
+	viewer = strings.ToLower(strings.TrimSpace(viewer))
+	if zone == "" || viewer == "" {
+		return ""
+	}
+	prefix := viewer + "."
+	if !strings.HasPrefix(zone, prefix) {
+		return ""
+	}
+	rest := strings.TrimPrefix(zone, prefix)
+	if rest == "" {
+		return ""
+	}
+	return rest
+}
+
+// gatewayV2EntranceHostname returns <hash8>.<viewer>.<platformDomain> when
+// every input is well-formed, "" otherwise. The empty return signals the
+// caller to keep the legacy hostname.
+func gatewayV2EntranceHostname(entrance *message.EntranceInfo, viewer, zone string) string {
+	if entrance == nil || !entrance.IsShared || strings.TrimSpace(entrance.SharedEntranceID) == "" || viewer == "" {
+		return ""
+	}
+	dom := platformDomainFromZone(zone, viewer)
+	if dom == "" {
+		return ""
+	}
+	return strings.TrimSpace(entrance.SharedEntranceID) + "." + viewer + "." + dom
+}
 
 var nodeLocationPrefixes = []string{
 	"/api/resources/cache/",
@@ -503,11 +558,24 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			continue
 		}
 
-		prefix := resolveEntrancePrefix(app.Entrances, index, app.Appid, appDomainConfigs)
+		// Per-user entrances keep the legacy index-prefix layout even on
+		// gateway-mode apps; only true SharedEntrances (entrance.IsShared)
+		// participate in the v2 <hash8>.<viewer>.<domain> rewrite.
+		useGatewayRewrite := isGatewayMode(app) && entrance.IsShared && !isEphemeral
 
-		hostname := fmt.Sprintf("%s.%s", prefix, zone)
-		if isEphemeral {
-			hostname = fmt.Sprintf("%s-%s.%s", prefix, user.Name, zone)
+		var prefix, hostname string
+		if useGatewayRewrite {
+			if v2 := gatewayV2EntranceHostname(entrance, user.Name, zone); v2 != "" {
+				hostname = v2
+				prefix = strings.TrimSpace(entrance.SharedEntranceID)
+			}
+		}
+		if hostname == "" {
+			prefix = resolveEntrancePrefix(app.Entrances, index, app.Appid, appDomainConfigs)
+			hostname = fmt.Sprintf("%s.%s", prefix, zone)
+			if isEphemeral {
+				hostname = fmt.Sprintf("%s-%s.%s", prefix, user.Name, zone)
+			}
 		}
 
 		localHost := toLocalDomain(hostname)
@@ -528,9 +596,22 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 
 		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
 		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
-		clusterSet[clusterName] = &ir.ClusterIR{
-			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
+		upstreamPort := uint32(entrance.Port)
+		routeMode := "direct"
+		// Only re-route to the shared EG data plane for SharedEntrances.
+		// Per-user entrances of the same gateway-mode app keep going directly
+		// to their per-user Service so private/internal UIs (e.g. an app's
+		// management terminal) remain reachable for their owner.
+		if useGatewayRewrite {
+			upstreamHost = gatewayDataPlaneHost
+			upstreamPort = gatewayDataPlanePort
+			routeMode = "gateway"
 		}
+		clusterSet[clusterName] = &ir.ClusterIR{
+			Name: clusterName, Host: upstreamHost, Port: upstreamPort, UseDNS: true,
+		}
+		klog.V(2).Infof("buildAppVirtualHosts: app=%s/%s entrance=%s cluster=%s upstream=%s:%d route_mode=%s",
+			app.Namespace, app.Name, entrance.Name, clusterName, upstreamHost, upstreamPort, routeMode)
 
 		_, enableOIDC := app.Settings["oidc.client.id"]
 
@@ -702,9 +783,18 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 
 		clusterName := fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name)
 		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
-		clusterSet[clusterName] = &ir.ClusterIR{
-			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
+		upstreamPort := uint32(entrance.Port)
+		routeMode := "direct"
+		if isGatewayMode(app) {
+			upstreamHost = gatewayDataPlaneHost
+			upstreamPort = gatewayDataPlanePort
+			routeMode = "gateway"
 		}
+		clusterSet[clusterName] = &ir.ClusterIR{
+			Name: clusterName, Host: upstreamHost, Port: upstreamPort, UseDNS: true,
+		}
+		klog.V(2).Infof("buildCustomDomainVirtualHosts: app=%s/%s entrance=%s cluster=%s upstream=%s:%d route_mode=%s",
+			app.Namespace, app.Name, entrance.Name, clusterName, upstreamHost, upstreamPort, routeMode)
 
 		vhost := &ir.VirtualHostIR{
 			Name:     fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),

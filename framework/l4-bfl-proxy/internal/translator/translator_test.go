@@ -567,7 +567,10 @@ func makeSharedApp() *message.AppInfo {
 		Owner:     "admin",
 		IsShared:  true,
 		Entrances: []*message.EntranceInfo{
-			{Name: "web", Host: "shareme-svc", Port: 8080},
+			// IsShared=true on the EntranceInfo signals that this entrance
+			// participates in gateway-mode rewriting (mirrors what
+			// provider.buildAppInfos sets for Application.Spec.SharedEntrances).
+			{Name: "web", Host: "shareme-svc", Port: 8080, IsShared: true},
 		},
 	}
 }
@@ -638,6 +641,283 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 			assert.NotEmpty(t, vhosts[0].Routes[0].Cluster)
 			assert.NotEmpty(t, clusterSet)
 			assert.Equal(t, []string{"shareme.example.io"}, vhosts[0].Domains)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// gateway/direct route-mode switching
+// ---------------------------------------------------------------------------
+
+// E1: a shared app annotated with route-mode=gateway must rewrite its upstream
+// cluster to the shared Envoy Gateway data-plane Service (app-gateway-data:80),
+// while non-annotated shared apps keep the direct Service upstream.
+func TestBuildAppVirtualHosts_SharedApp_GatewayModeSwitchesUpstream(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+
+	t.Run("direct mode keeps service upstream", func(t *testing.T) {
+		clusterSet := make(map[string]*ir.ClusterIR)
+		app := makeSharedApp()
+		vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+		require.Len(t, vhosts, 1)
+		require.Len(t, vhosts[0].Routes, 1)
+		cluster := clusterSet[vhosts[0].Routes[0].Cluster]
+		require.NotNil(t, cluster)
+		assert.Equal(t, "shareme-svc.shareme-shared.svc.cluster.local", cluster.Host)
+		assert.Equal(t, uint32(8080), cluster.Port)
+	})
+
+	t.Run("gateway mode rewrites to app-gateway-data", func(t *testing.T) {
+		clusterSet := make(map[string]*ir.ClusterIR)
+		app := makeSharedApp()
+		app.Annotations = map[string]string{"gateway.olares.io/route-mode": "gateway"}
+		vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+		require.Len(t, vhosts, 1)
+		require.Len(t, vhosts[0].Routes, 1)
+		cluster := clusterSet[vhosts[0].Routes[0].Cluster]
+		require.NotNil(t, cluster)
+		assert.Equal(t, "app-gateway-data.app-gateway.svc.cluster.local", cluster.Host)
+		assert.Equal(t, uint32(80), cluster.Port)
+	})
+
+	t.Run("non-shared app ignores annotation", func(t *testing.T) {
+		clusterSet := make(map[string]*ir.ClusterIR)
+		app := &message.AppInfo{
+			Name:      "v1app",
+			Appid:     "v1app",
+			Namespace: "v1app-alice",
+			Owner:     "alice",
+			IsShared:  false,
+			Annotations: map[string]string{
+				"gateway.olares.io/route-mode": "gateway",
+			},
+			Entrances: []*message.EntranceInfo{
+				{Name: "web", Host: "v1app-svc", Port: 8080},
+			},
+		}
+		vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+		require.Len(t, vhosts, 1)
+		cluster := clusterSet[vhosts[0].Routes[0].Cluster]
+		require.NotNil(t, cluster)
+		assert.Equal(t, "v1app-svc.v1app-alice.svc.cluster.local", cluster.Host)
+		assert.Equal(t, uint32(8080), cluster.Port)
+	})
+}
+
+// E2: shared app with custom domain in gateway mode also flips the upstream
+// cluster, but keeps the custom domain in the virtual host (the Host header
+// reaches the HTTPRoute unchanged so EG can match it).
+func TestBuildCustomDomainVirtualHosts_SharedApp_GatewayMode(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", Zone: "alice.example.com"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := makeSharedAppWithCustom()
+	app.Annotations = map[string]string{"gateway.olares.io/route-mode": "gateway"}
+
+	vhosts := tr.buildCustomDomainVirtualHosts(user, app, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	cluster := clusterSet[vhosts[0].Routes[0].Cluster]
+	require.NotNil(t, cluster)
+	assert.Equal(t, "app-gateway-data.app-gateway.svc.cluster.local", cluster.Host)
+	assert.Equal(t, uint32(80), cluster.Port)
+	assert.Equal(t, []string{"shareme.example.io"}, vhosts[0].Domains, "custom domain stays so EG HTTPRoute matches")
+}
+
+// per-viewer hostname helpers (<entranceid>.<viewer>.<platformDomain>).
+
+func TestPlatformDomainFromZone(t *testing.T) {
+	cases := []struct {
+		zone, viewer, want string
+	}{
+		{"alice.olares.com", "alice", "olares.com"},
+		{"Alice.Olares.com", "alice", "olares.com"},
+		{"alice.olares.com", "bob", ""},
+		{"olares.com", "alice", ""},
+		{"", "alice", ""},
+		{"alice.olares.com", "", ""},
+		{"alice.", "alice", ""},
+	}
+	for _, tc := range cases {
+		if got := platformDomainFromZone(tc.zone, tc.viewer); got != tc.want {
+			t.Fatalf("platformDomainFromZone(%q,%q) = %q, want %q", tc.zone, tc.viewer, got, tc.want)
+		}
+	}
+}
+
+func TestGatewayV2EntranceHostname(t *testing.T) {
+	entrance := &message.EntranceInfo{Name: "ollamav2", IsShared: true, SharedEntranceID: "a5be2268"}
+	got := gatewayV2EntranceHostname(entrance, "alice", "alice.olares.com")
+	want := "a5be2268.alice.olares.com"
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+	// Different viewer changes only the middle label.
+	got2 := gatewayV2EntranceHostname(entrance, "alice", "alice.olares.com")
+	want2 := "a5be2268.alice.olares.com"
+	if got2 != want2 {
+		t.Fatalf("alice host: got %q want %q", got2, want2)
+	}
+	// Empty shared entrance id returns "".
+	entrance2 := &message.EntranceInfo{Name: "ollamav2", IsShared: true}
+	if got := gatewayV2EntranceHostname(entrance2, "alice", "alice.olares.com"); got != "" {
+		t.Fatalf("expected empty hostname, got %q", got)
+	}
+	// Zone/viewer mismatch returns "".
+	if got := gatewayV2EntranceHostname(entrance, "bob", "alice.olares.com"); got != "" {
+		t.Fatalf("zone/viewer mismatch must return empty: %q", got)
+	}
+}
+
+// E4: in gateway mode, every viewer of a shared app receives a vhost whose
+// primary domain is <hash8>.<viewer>.<platformDomain>; the upstream cluster
+// already flips to app-gateway-data (E1).
+func TestBuildAppVirtualHosts_SharedApp_GatewayMode_PerViewerHost(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	app := makeSharedApp()
+	app.Appid = "a5be2268"
+	app.Entrances = []*message.EntranceInfo{{
+		Name: "ollamav2", Host: "shareme-svc", Port: 8080, IsShared: true, SharedEntranceID: "a5be2268",
+	}}
+	app.Annotations = map[string]string{"gateway.olares.io/route-mode": "gateway"}
+
+	for _, viewer := range []string{"alice", "bob"} {
+		t.Run(viewer, func(t *testing.T) {
+			user := &message.UserInfo{Name: viewer, Language: "en"}
+			zone := viewer + ".olares.com"
+			vhosts := tr.buildAppVirtualHosts(user, app, zone, false, map[string]*ir.ClusterIR{})
+			require.Len(t, vhosts, 1)
+			want := "a5be2268." + viewer + ".olares.com"
+			require.Equal(t, want, vhosts[0].Domains[0])
+		})
+	}
+}
+
+// E5: gateway mode but missing appid AND missing app.Name falls back to the
+// legacy hostname instead of producing an empty / malformed virtual host.
+func TestBuildAppVirtualHosts_SharedApp_GatewayMode_FallbackHostname(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	app := &message.AppInfo{
+		Name: "", Appid: "", IsShared: true, Namespace: "x-shared",
+		Annotations: map[string]string{"gateway.olares.io/route-mode": "gateway"},
+		Entrances:   []*message.EntranceInfo{{Name: "api", Host: "svc", Port: 8080, IsShared: true}},
+	}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.olares.com", false, map[string]*ir.ClusterIR{})
+	require.Len(t, vhosts, 1)
+	// Must NOT begin with hash8 (since we cannot compute one); falls back to
+	// the legacy "<resolved-prefix>.<zone>" form.
+	require.NotContains(t, vhosts[0].Domains[0], ".*.")
+}
+
+// E6: v2 cluster-scoped gateway-mode apps that mix per-user entrances with
+// SharedEntrances must keep the per-user entrances on the legacy
+// <appid><idx>.<zone> direct path and only rewrite the SharedEntrances to
+// <hash8>.<viewer>.<domain> through the EG data plane. This guards against
+// the regression that broke ollamav2's management terminal URL when the
+// gateway pilot landed.
+func TestBuildAppVirtualHosts_GatewayMode_MixedEntrances_PerUserKeptLegacy(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	app := &message.AppInfo{
+		Name:      "ollamav2",
+		Appid:     "a5be2268",
+		Namespace: "ollamav2-alice",
+		Owner:     "alice",
+		IsShared:  true,
+		Annotations: map[string]string{
+			"gateway.olares.io/route-mode": "gateway",
+		},
+		Entrances: []*message.EntranceInfo{
+			// Per-user entrance, must keep legacy <appid><idx>.<zone>:
+			{Name: "terminal", Host: "terminalclient", Port: 8081, AuthLevel: "private"},
+			{Name: "ollamaclient", Host: "ollamaclient", Port: 8080, AuthLevel: "internal"},
+			// SharedEntrance, must use <hash8>.<viewer>.<domain> via EG:
+			{Name: "ollamav2", Host: "sharedentrances-ollama", Port: 80, AuthLevel: "internal", IsShared: true, SharedEntranceID: "a5be2268"},
+		},
+	}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	zone := "alice.olares.com"
+	clusterSet := map[string]*ir.ClusterIR{}
+
+	vhosts := tr.buildAppVirtualHosts(user, app, zone, false, clusterSet)
+	require.Len(t, vhosts, 3)
+
+	byName := map[string]*ir.VirtualHostIR{}
+	for _, v := range vhosts {
+		byName[v.Name] = v
+	}
+
+	// 1. terminal: index 0 of 3 entrances → "a5be22680.alice.olares.com",
+	//    upstream is the per-user Service (not the EG data plane).
+	term := byName["app_alice_ollamav2_terminal"]
+	require.NotNil(t, term)
+	assert.Equal(t, "a5be22680.alice.olares.com", term.Domains[0])
+	require.NotNil(t, clusterSet["app_alice_ollamav2_terminal"])
+	assert.Equal(t, "terminalclient.ollamav2-alice.svc.cluster.local",
+		clusterSet["app_alice_ollamav2_terminal"].Host)
+	assert.Equal(t, uint32(8081), clusterSet["app_alice_ollamav2_terminal"].Port)
+
+	// 2. ollamaclient: index 1 → "a5be22681...", also direct upstream.
+	oc := byName["app_alice_ollamav2_ollamaclient"]
+	require.NotNil(t, oc)
+	assert.Equal(t, "a5be22681.alice.olares.com", oc.Domains[0])
+	assert.Equal(t, "ollamaclient.ollamav2-alice.svc.cluster.local",
+		clusterSet["app_alice_ollamav2_ollamaclient"].Host)
+
+	// 3. ollamav2 (sharedEntrance): entranceid host AND upstream pointing at the
+	//    shared EG data plane.
+	wantSharedHost := "a5be2268.alice.olares.com"
+	shared := byName["app_alice_ollamav2_ollamav2"]
+	require.NotNil(t, shared)
+	assert.Equal(t, wantSharedHost, shared.Domains[0])
+	assert.Equal(t, gatewayDataPlaneHost, clusterSet["app_alice_ollamav2_ollamav2"].Host)
+	assert.Equal(t, uint32(gatewayDataPlanePort), clusterSet["app_alice_ollamav2_ollamav2"].Port)
+}
+
+// E7: when an app has only per-user entrances and no SharedEntrances, even
+// the route-mode=gateway annotation must be ignored — every entrance keeps
+// the legacy URL + direct upstream.
+func TestBuildAppVirtualHosts_GatewayMode_OnlyPerUser_NoRewrite(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	app := &message.AppInfo{
+		Name: "ollamav2", Appid: "a5be2268", Namespace: "ollamav2-alice",
+		Owner: "alice", IsShared: true,
+		Annotations: map[string]string{"gateway.olares.io/route-mode": "gateway"},
+		Entrances: []*message.EntranceInfo{
+			{Name: "terminal", Host: "terminalclient", Port: 8081, AuthLevel: "private"},
+		},
+	}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := map[string]*ir.ClusterIR{}
+
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.olares.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	assert.Equal(t, "a5be2268.alice.olares.com", vhosts[0].Domains[0])
+	assert.Equal(t, "terminalclient.ollamav2-alice.svc.cluster.local",
+		clusterSet["app_alice_ollamav2_terminal"].Host)
+}
+
+// E3: the helper isGatewayMode is the single source of truth for the
+// route-mode decision and must reject malformed / missing annotations.
+func TestIsGatewayMode(t *testing.T) {
+	cases := []struct {
+		name string
+		app  *message.AppInfo
+		want bool
+	}{
+		{"nil app", nil, false},
+		{"non-shared with annotation", &message.AppInfo{IsShared: false, Annotations: map[string]string{"gateway.olares.io/route-mode": "gateway"}}, false},
+		{"shared without annotations", &message.AppInfo{IsShared: true}, false},
+		{"shared with direct mode", &message.AppInfo{IsShared: true, Annotations: map[string]string{"gateway.olares.io/route-mode": "direct"}}, false},
+		{"shared with empty mode", &message.AppInfo{IsShared: true, Annotations: map[string]string{"gateway.olares.io/route-mode": ""}}, false},
+		{"shared with wrong key", &message.AppInfo{IsShared: true, Annotations: map[string]string{"gateway.olares.io/mode": "gateway"}}, false},
+		{"shared with gateway mode", &message.AppInfo{IsShared: true, Annotations: map[string]string{"gateway.olares.io/route-mode": "gateway"}}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isGatewayMode(tc.app))
 		})
 	}
 }
