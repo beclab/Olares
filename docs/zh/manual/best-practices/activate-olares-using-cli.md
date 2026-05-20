@@ -7,8 +7,10 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 
 本教程介绍如何使用 Olares CLI 工具激活 Olares 设备（例如 Olares One）。以下步骤假定设备是全新开箱的，尚未安装或激活。
 
-:::warning 重要提示
-当前系统自带的 `olares-cli` 不具备激活功能。必须下载一个独立的每日构建版（daily build）CLI，并按照步骤 1 中的说明执行激活。
+:::warning 使用独立的 CLI 工具
+当前系统自带的 `olares-cli` 不具备激活功能。你需要下载独立的每日构建版 CLI 来执行激活。使用该工具前，确保阅读以下要求：
+- **不要覆盖系统文件**：系统内置的 `olares-cli`、`olaresd` 和集群版本之间存在严格的版本对应关系。切勿将下载的独立 CLI 移动或复制到系统 `/usr/bin/olares-cli` 文件上进行覆盖。这样做会破坏版本链，影响未来的系统升级。
+- **执行路径差异**：运行 `./olares-cli` 来执行下载到当前目录的独立版本。不要直接运行 `olares-cli`，因为那样会调用缺少激活功能的系统内置版本。
 :::
 
 ## 学习目标
@@ -29,11 +31,6 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 - 已使用 LarePass 应用注册了 Olares ID，并[备份了 12 个单词的助记词](/zh/manual/larepass/back-up-mnemonics.md)。
 
     ![快速创建](/images/zh/manual/tutorials/create-olares-id.png)
-
-- 已阅读以下关于 CLI 执行方式的说明：
-
-    - **不要覆盖系统文件**：系统自带的 `olares-cli`、`olaresd` 和集群版本之间存在严格的版本对应关系。因此，切勿将下载的独立 CLI 移动或复制到系统中，以免覆盖 `/usr/bin/olares-cli` 文件。这样做会破坏版本链，影响未来的系统升级。
-    - **执行路径差异**：运行 `./olares-cli` 来执行当前目录下下载的独立版本。不要直接运行 `olares-cli`，因为那将执行系统自带的、缺少激活功能的版本。
 
 ## 步骤 1：下载并准备独立的 CLI 工具
 
@@ -62,13 +59,13 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 1. 运行以下命令，将 `{olares-id}` 替换为你已注册的 Olares ID。
 
     ```bash
-    olares-cli wizard frp {olares-id}
+    ./olares-cli wizard frp {olares-id}
     ```
 
     **示例**：
 
     ```bash
-    olares-cli wizard frp alice2026@olares.com
+    ./olares-cli wizard frp alice2026@olares.com
     ```
 
 2. 从输出列表中选择一个主机地址，并将其记录下来供激活步骤使用。例如，`bb.hongkong.frp.olares.com`。
@@ -79,7 +76,7 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 全新开箱的 Olares One 设备是处于未安装状态的。在尝试激活之前，必须首先运行安装命令来设置 Olares。
 :::
 
-1. 运行安装命令。
+1. 以 root 身份运行安装命令。
 
     ```bash
     sudo olares-cli install
@@ -116,7 +113,7 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 2. 将以下命令中的占位符替换为实际值，然后运行。
 
     ```bash
-    sudo olares-cli wizard activate {olares-id} \
+    sudo ./olares-cli wizard activate {olares-id} \
     --mnemonic "{mnemonic}" \
     --password="{password}" \
     --reset-password="{reset-password}" \
@@ -132,7 +129,7 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
     如果 Olares ID 是 `alice2026@olares.com`，Wizard URL 是 `http://192.168.31.127:30180`，选择的 FRP 主机是 `bb.hongkong.frp.olares.com`，则运行：
 
     ```bash
-    sudo olares-cli wizard activate alice2026@olares.com \
+    sudo ./olares-cli wizard activate alice2026@olares.com \
     --mnemonic "abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef" \
     --password="b8Ln6qbz" \
     --reset-password="Ab1234@" \
