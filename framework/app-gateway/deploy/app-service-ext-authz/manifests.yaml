@@ -19,7 +19,11 @@ metadata:
     app.kubernetes.io/component: ext-authz
     applications.app.bytetrade.io/author: bytetrade.io
 spec:
-  replicas: 2
+  # PR-8 (R-V2-8 + Rec-5/6): default to a single replica so we keep blast
+  # radius small while iterating; operators can scale up via `kubectl scale`
+  # once the host-user decider is stable. PDB minAvailable stays 1 so a
+  # subsequent scale-up keeps strict availability guarantees.
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: app-service-ext-authz
@@ -54,6 +58,7 @@ spec:
             - --grpc-listen=:9001
             - --http-listen=:9002
             - --mode=allow
+            - --host-user-check=enabled
           ports:
             - containerPort: 9001
               name: grpc
