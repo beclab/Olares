@@ -88,7 +88,7 @@ To connect OpenCode to Ollama, get the shared entrance URL:
 
 To connect OpenCode to a single-model app, get its shared entrance URL. The example below uses Qwen3.5 9B Q4_K_M:
 
-1. Open Settings, go to **Applications** > **Qwen3.5 9B Q4_K_M (Ollama)** > **Entrances**, and then click the model name under **Shared entrances**. 
+1. Open Settings, go to **Applications** > **Qwen3.5 9B Q4_K_M (Ollama)**, and then click the model name under **Shared entrances**. 
 
    ![Qwen3.5 9B Q4_K_M shared entrance in Settings](/images/manual/use-cases/litellm-model-endpoint.png#bordered){width=80%}
 
