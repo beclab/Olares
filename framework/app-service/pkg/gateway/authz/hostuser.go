@@ -1,9 +1,8 @@
-// Package authz contains the pure-function deciders that app-service-ext-authz
-// composes into a Check decision. Each decider returns one of three actions
-// (Allow, Deny, Pass) plus a stable error code so the call site can log a
-// single line per request.
+// Package authz contains the pure-function deciders that the in-process
+// PEP composes into a Check decision. The Shared external-access stack
+// runs ext_authz inside app-service (no separate authz workload).
 //
-// Phase-A v2 introduces a single decider — HostUser — that enforces the
+// The in-process PEP currently ships one decider — HostUser — that enforces the
 // invariant
 //
 //	Host[1] == X-BFL-USER
@@ -12,16 +11,9 @@
 // <hash8>.<viewer>.<platformDomain>). The check is intentionally
 // independent of the platform PDP: any mismatch returns INVALID_HOST_USER
 // and never escalates to system-server.
-//
-// References:
-//   - archdoc/方案/shared应用/Shared外部访问主流程打通方案-2026-05-20-明确方案.md §6
-//   - archdoc/方案/shared应用/Shared外部访问v2评审决议-2026-05-20.md      R-V2-9
-//   - archdoc/方案/shared应用/统一认证组件设计与开发方案-2026-05-20-明确方案.md
 package authz
 
-import (
-	"strings"
-)
+import "strings"
 
 // Action is the trinary decision returned by a Decider.
 type Action int
@@ -39,48 +31,33 @@ const (
 // into an ext_authz Check response.
 type Decision struct {
 	Action   Action
-	Code     string // stable machine code (e.g. INVALID_HOST_USER), "" for Allow/Pass
-	Message  string // human-friendly reason; safe to put into Denied.body
-	Viewer   string // extracted viewer (Host label[1]) for logging
-	Username string // value of X-BFL-USER (lower-case) for logging
+	Code     string
+	Message  string
+	Viewer   string
+	Username string
 }
 
 // HostUserConfig controls the HostUser decider.
 type HostUserConfig struct {
-	// Enabled toggles the entire decider. When false the decider always
-	// returns ActionPass (PR-8 §6.3 H10).
-	Enabled bool
-	// SkipPrefixes lets local operators bypass the check for specific
-	// host prefixes. Each entry is matched as a DNS label suffix against
-	// Host[1] (the viewer label). Empty by default.
+	Enabled      bool
 	SkipPrefixes []string
 }
 
-// DefaultHostUserConfig returns a config that enables host-user enforcement.
+// DefaultHostUserConfig enables host-user enforcement.
 func DefaultHostUserConfig() HostUserConfig {
 	return HostUserConfig{Enabled: true}
 }
 
 // HostUser returns a Decision for the given request inputs. It never panics.
 //
-// Inputs:
-//
-//	authority — :authority pseudo-header (typically Host); already lower-cased
-//	            by Envoy; the decider re-lowercases defensively.
-//	headers   — map of lower-case headers (Envoy ext_authz contract).
-//	cfg       — decider configuration.
-//
 // Behaviour:
 //
 //	cfg.Enabled=false                   → Pass
 //	host has <3 labels                  → Deny INVALID_HOST_USER
 //	header X-BFL-USER missing/empty     → Deny INVALID_HOST_USER
+//	host[0] is not 8-char lowercase hex → Deny INVALID_HOST_PREFIX
 //	host[1] != x-bfl-user (lc compare)  → Deny INVALID_HOST_USER
 //	otherwise                           → Allow
-//
-// Hash label (host[0]) must be 8-char lowercase hex; otherwise Deny
-// INVALID_HOST_PREFIX (defence-in-depth: the SRR uniqueness check already
-// rejects collisions on the control plane).
 func HostUser(authority string, headers map[string]string, cfg HostUserConfig) Decision {
 	if !cfg.Enabled {
 		return Decision{Action: ActionPass}
@@ -144,8 +121,6 @@ func normalizeHost(s string) string {
 		return ""
 	}
 	if i := strings.LastIndex(s, ":"); i >= 0 {
-		// Only strip when the suffix is purely numeric (IPv4 with port).
-		// IPv6 literals are not expected on this code path.
 		hostPart := s[:i]
 		portPart := s[i+1:]
 		allDigit := portPart != ""

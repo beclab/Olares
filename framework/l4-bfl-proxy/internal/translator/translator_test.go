@@ -643,7 +643,7 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// PR-5: gateway/direct route-mode switching
+// gateway/direct route-mode switching
 // ---------------------------------------------------------------------------
 
 // E1: a shared app annotated with route-mode=gateway must rewrite its upstream
@@ -723,7 +723,7 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_GatewayMode(t *testing.T) {
 	assert.Equal(t, []string{"shareme.example.io"}, vhosts[0].Domains, "custom domain stays so EG HTTPRoute matches")
 }
 
-// PR-9: per-viewer v2 hostname helpers.
+// per-viewer hostname helpers (<hash8>.<viewer>.<platformDomain>).
 
 func TestSharedEntranceHostPrefix_StableAndCaseInsensitive(t *testing.T) {
 	a := sharedEntranceHostPrefix("a5be2268", "ollamav2")

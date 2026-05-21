@@ -13,7 +13,7 @@ import (
 // ErrHash8Collision is returned when a SharedEntrance's logical hostPattern
 // is already owned by a different SRR somewhere in the cluster. The error
 // message embeds the conflicting object reference so platform operators can
-// run `kubectl get srr -A` to find the owner (R-V2-3 / Rec-2).
+// run `kubectl get srr -A` to find the conflicting owner.
 var ErrHash8Collision = errors.New("HASH8_COLLISION")
 
 // CheckLogicalPatternUniqueness lists every SRR across the cluster and

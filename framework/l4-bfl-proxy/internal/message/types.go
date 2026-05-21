@@ -41,7 +41,7 @@ type AppInfo struct {
 	Ports     []*PortInfo
 	Settings  map[string]string
 	// Annotations mirrors Application.metadata.annotations. The translator
-	// inspects gateway.olares.io/route-mode (PR-5) to decide whether shared
+	// inspects gateway.olares.io/route-mode to decide whether shared
 	// HTTP traffic flows through app-gateway-data or stays on the direct
 	// upstream Service path.
 	Annotations map[string]string

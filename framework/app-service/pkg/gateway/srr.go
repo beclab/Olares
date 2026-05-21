@@ -17,27 +17,24 @@ import (
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
-// AnnotationRouteMode is the per-Application opt-in (D-A10): only when the
+// AnnotationRouteMode is the per-Application opt-in: only when the
 // value equals AnnotationRouteModeGateway does app-service emit a SRR.
 const (
 	AnnotationRouteMode        = "gateway.olares.io/route-mode"
 	AnnotationRouteModeGateway = "gateway"
 )
 
-// ResourceName derives the SRR name from the Application short name (D-A10).
+// ResourceName derives the legacy SRR name from the Application short name.
 // Using the same prefix as the rest of the v3 shared family makes the object
 // easy to find with `kubectl get srr -A`.
 //
-// Deprecated by PR-7: per-entrance SRRs use ResourceNameForEntrance so a
-// single Application with multiple sharedEntrances no longer collapses into
-// one SRR. The function is kept for cleanup (the controller deletes any
-// surviving Phase-A SRR named "shared-<appName>" before reconciling the new
-// per-entrance objects) and for backwards-compatible tests.
+// Deprecated: per-entrance SRRs use ResourceNameForEntrance. Kept to delete
+// legacy SRRs named "shared-<appName>" and for backwards-compatible tests.
 func ResourceName(appName string) string {
 	return fmt.Sprintf("shared-%s", appName)
 }
 
-// ResourceNameForEntrance is the v2 SRR name scheme (R-V2-2 / D-V2-14):
+// ResourceNameForEntrance names one SRR per sharedEntrance:
 // one SRR per sharedEntrance, identified by appid + entranceName so the
 // name survives Application rename / Helm release upgrades.
 //
@@ -135,8 +132,7 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 	appid := strings.TrimSpace(app.Spec.Appid)
 	if appid == "" {
 		// Application.spec.appid is only populated for v3 apps; fall back
-		// to the deterministic appName-derived appid so PR-7 still works
-		// when callers haven't fully migrated.
+		// to the deterministic appName-derived appid when spec.appid is unset.
 		appid = appcfg.AppName(app.Spec.Name).GetAppID()
 	}
 	pattern := appcfg.LogicalHostPattern(appid, entrance.Name, platformDomain)
@@ -195,7 +191,7 @@ func pickHTTPPort(svc *corev1.Service, preferred int32) int32 {
 
 // Reconcile creates or updates a SharedRouteRegistry whose contents match
 // spec, placing it in the same namespace as the v3 Application's workload
-// (Application.spec.namespace = {app}-shared, F-2/F-4). The Application is
+// in Application.spec.namespace ({app}-shared). The Application is
 // recorded as the OwnerReference so garbage collection wipes the SRR on
 // uninstall without an explicit finalizer.
 func Reconcile(ctx context.Context, c client.Client, app *appv1alpha1.Application, spec srrv1alpha1.SharedRouteRegistrySpec) (*srrv1alpha1.SharedRouteRegistry, error) {
@@ -269,8 +265,7 @@ func Delete(ctx context.Context, c client.Client, app *appv1alpha1.Application) 
 }
 
 // ReconcileForEntrance creates or updates the per-entrance SRR. It is the
-// v2 counterpart of Reconcile and is the only writer used by the
-// ApplicationController after PR-7.
+// Per-entrance writer used by ApplicationController for gateway-mode apps.
 func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1.Application,
 	entrance appv1alpha1.Entrance, spec srrv1alpha1.SharedRouteRegistrySpec) (*srrv1alpha1.SharedRouteRegistry, error) {
 	if app == nil {
@@ -386,7 +381,7 @@ func PruneEntranceSRRs(ctx context.Context, c client.Client, app *appv1alpha1.Ap
 }
 
 // DeleteAllForApp removes every SRR owned by the application — both the
-// Phase-A "shared-<appName>" form and any "shared-<appid>-<entrance>" forms
+// legacy "shared-<appName>" form and per-entrance "shared-<appid>-<entrance>" forms
 // — that currently exist in the namespace. Used when the Application is
 // uninstalled or opts out of gateway mode.
 func DeleteAllForApp(ctx context.Context, c client.Client, app *appv1alpha1.Application) error {

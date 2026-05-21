@@ -9,10 +9,10 @@ import (
 )
 
 // ErrInvalidHostPattern is returned when a host string cannot be normalized
-// into a Phase A hostPattern (lowercase, no port, no scheme — F-3).
+// into a strict hostPattern (lowercase, no port, no scheme).
 var ErrInvalidHostPattern = errors.New("invalid host pattern")
 
-// NormalizeHostPattern returns a Phase-A-compliant hostPattern derived from
+// NormalizeHostPattern returns a strict hostPattern derived from
 // the (possibly noisy) string the caller produced via GenSharedEntranceURL:
 //
 //   - whitespace is trimmed
@@ -22,7 +22,7 @@ var ErrInvalidHostPattern = errors.New("invalid host pattern")
 //   - empty strings, paths, query strings, port-only inputs are rejected
 //
 // The output matches the openAPIV3 pattern declared on the CRD
-// (^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$). Wildcards are not accepted in Phase A.
+// (^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$). Wildcards are not accepted.
 func NormalizeHostPattern(raw string) (string, error) {
 	s := strings.TrimSpace(raw)
 	if s == "" {
@@ -78,19 +78,18 @@ func NormalizeHostPatterns(raw []string) ([]string, error) {
 	return out, nil
 }
 
-// NormalizeHostOrLogicalPattern accepts both Phase-A exact hosts (handled by
-// NormalizeHostPattern) and the v2 "logical" hostPattern introduced in PR-6:
+// NormalizeHostOrLogicalPattern accepts exact hosts (via NormalizeHostPattern)
+// and per-viewer logical patterns:
 //
 //	<hash8>.*.<platformDomain>
 //
 // The wildcard label MUST appear as a single literal "*" exactly once and
-// MUST be the second label from the left, matching the URL scheme
-// "<hash8>.<viewer>.<platformDomain>" (R-V2-2). The output is the lowercase
-// canonical form; trailing dots and surrounding whitespace are stripped.
+// MUST be the second label from the left, matching external URLs
+// "<hash8>.<viewer>.<platformDomain>". The output is the lowercase canonical
+// form; trailing dots and surrounding whitespace are stripped.
 //
-// This is a strict superset of NormalizeHostPattern: callers that must reject
-// wildcards (e.g. Phase-A SRR ingestion) keep using NormalizeHostPattern;
-// SRR writers and app-service-routecontrol use this function.
+// Callers that must reject wildcards use NormalizeHostPattern; SRR writers
+// and route control use this function for logical patterns.
 func NormalizeHostOrLogicalPattern(raw string) (string, error) {
 	s := strings.TrimSpace(raw)
 	if s == "" {
@@ -166,7 +165,7 @@ func NormalizeHostOrLogicalPatterns(raw []string) ([]string, error) {
 }
 
 // IsLogicalHostPattern reports whether s is a v2 logical hostPattern
-// (<hash8>.*.<domain>) rather than a Phase-A exact host.
+// (<hash8>.*.<domain>) rather than an exact hostname.
 func IsLogicalHostPattern(s string) bool {
 	labels := strings.Split(s, ".")
 	return len(labels) >= 3 && labels[1] == "*"

@@ -113,7 +113,7 @@ func TestDelete_IdempotentAndCleansUp(t *testing.T) {
 	}
 }
 
-// PR-7: per-entrance SRRs and uniqueness.
+// Per-entrance SRRs and logical hostPattern uniqueness.
 
 func TestReconcileForEntrance_CreateAndUpdate(t *testing.T) {
 	c, app, svc := newReconcileFixture(t)
