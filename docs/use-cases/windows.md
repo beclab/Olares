@@ -10,7 +10,7 @@ Olares lets you run a full Windows virtual machine directly on your device, givi
 :::info System capabilities
 - Olares supports running essential Windows applications. 
 - By default, the Windows VM uses CPU-based virtualization and virtual display output.
-- Intel integrated GPU support is available only on supported hardware and requires additional host configuration. See [Advanced: Enable Intel integrated GPU for Windows VM](#advanced-enable-intel-integrated-gpu-for-windows-vm).
+- Intel integrated GPU support is available only on supported hardware and requires additional host configuration. See [Advanced: Enable Intel integrated GPU passthrough for Windows VM](#advanced-enable-intel-integrated-gpu-passthrough-for-windows-vm).
 - Audio output is **only supported** when connected via Remote Desktop (RDP).
 :::
 
@@ -146,7 +146,7 @@ To end your RDP session, simply close the RDP window.
 
 The Windows VM continues running on your Olares device and is always ready for you to reconnect.
 
-## Advanced: Enable Intel integrated GPU for Windows VM
+## Advanced: Enable Intel integrated GPU passthrough for Windows VM
 
 You can pass an Intel integrated GPU (iGPU) from the Olares host to the Windows VM on supported devices. After configuration, Windows can detect the Intel graphics device through RDP.
 
@@ -222,6 +222,7 @@ Make sure you can access the Olares host terminal through SSH before continuing.
    cd ~
    git clone https://github.com/strongtz/i915-sriov-dkms.git
    cd ~/i915-sriov-dkms
+   git checkout 2025.07.22
 
    cp -a dkms.conf{,.bak}
    KERNEL=$(uname -r)
@@ -240,10 +241,18 @@ Make sure you can access the Olares host terminal through SSH before continuing.
 
    **Update GRUB**
 
-   Add or modify the following line in `/etc/default/grub`:
+   Add or modify `GRUB_CMDLINE_LINUX_DEFAULT` in `/etc/default/grub`. Use the command line that matches your Ubuntu version.
+
+   For Ubuntu 24.10 or later, use:
 
    ```text
    GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt i915.enable_guc=3 i915.max_vfs=7"
+   ```
+
+   For Ubuntu 24.04, add `i915.force_probe=7d67`:
+
+   ```text
+   GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt i915.enable_guc=3 i915.max_vfs=7 i915.force_probe=7d67"
    ```
 
    If the line already contains other parameters, keep them and add the new parameters inside the quotation marks.
