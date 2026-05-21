@@ -82,7 +82,7 @@ Ensure your phone and Olares device are on the same network. If they are not, La
 
 If you cannot connect via Wi-Fi, use the Bluetooth network setup in the LarePass app to connect Olares to the same network as your phone.
 
-For details, see [Activate Olares using Bluetooth](../../manual/larepass/activate-olares.md#activate-olares-using-bluetooth).
+For detailed instructions, refer to [Activate Olares using Bluetooth](../../manual/larepass/activate-olares.md#activate-olares-using-bluetooth).
 
 ### I received the MFA binding error. How to resolve it?
 

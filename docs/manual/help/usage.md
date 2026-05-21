@@ -122,7 +122,7 @@ It depends on the type of drive:
 * **Internal drives**: No. Iternal HDDs or SSDs require manual configuration to join the storage pool.
 * **SMB shares**: Add network storage manually. Go to **External** > **Connect to server** in the Files app.
 
-For detailed instructions, see [Expand storage in Olares](../best-practices/expand-storage-in-olares.md).
+For detailed instructions, refer to [Expand storage in Olares](../best-practices/expand-storage-in-olares.md).
 
 ## Multi-node clusters
 
@@ -130,4 +130,4 @@ For detailed instructions, see [Expand storage in Olares](../best-practices/expa
 
 By default, Olares installs as a single-node cluster. To create a scalable, multi-node cluster, install Olares as a master node and then add worker nodes.
 
-Note that this is currently an Alpha feature and works on Linux only. For detailed steps, refer to [Install a multi-node Olares cluster](../best-practices/install-olares-multi-node.md).
+Note that this is currently an Alpha feature and works on Linux only. For detailed instructions, refer to [Install a multi-node Olares cluster](../best-practices/install-olares-multi-node.md).

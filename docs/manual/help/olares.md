@@ -66,14 +66,14 @@ LarePass is the official client for Olares. It acts as a secure bridge to enable
 
 We are working on decoupling functions to support usage without the LarePass app:
 
-* **CLI activation**: Use the `olares-cli` tool to activate Olares directly from the terminal without using the LarePass app for the activation step. However, note that you must still use the LarePass app to create your Olares ID before running the `olares-cli` tool. For detailed instructions, see [Activate an Olares device using the Olares CLI](/manual/best-practices/activate-olares-using-cli.md).
+* **CLI activation**: Use the `olares-cli` tool to activate Olares directly from the terminal without using the LarePass app for the activation step. However, note that you must still use the LarePass app to create your Olares ID before running the `olares-cli` tool. For detailed instructions, refer to [Activate an Olares device using the Olares CLI](/manual/best-practices/activate-olares-using-cli.md).
 * **Standalone components**: We plan to provide standalone deployment options for components like the Reverse Proxy, DID service, and Market repo in future updates.
 <!-- #region custom-domain -->
 ### Can I use my own domain name?
 
 Yes. You can use your own custom domain instead of the default `olares.com` domain. Setting this up currently requires the LarePass app.
 <!-- #endregion custom-domain -->
-For details, refer to [Set up a custom domain for your Olares](../best-practices/set-custom-domain.md).
+For detailed instructions, refer to [Set up a custom domain for your Olares](../best-practices/set-custom-domain.md).
 
 ### Do I need to pay for Olares?
 
@@ -85,7 +85,7 @@ Olares offers two optional cloud-assisted services for convenience, but free alt
 
 ### How often does Olares update?
 
-Olares releases a major update approximately every 2 months. View specific changes in the [Changelog](https://www.olares.com/changelog).
+Olares releases a major update approximately every 2 months. For detailed changes, refer to the [Changelog](https://www.olares.com/changelog).
 
 ## License
 
@@ -93,7 +93,7 @@ Olares releases a major update approximately every 2 months. View specific chang
 
 Yes. The Olares OS software is open source, ensuring transparency and community collaboration. The project includes a family of repositories licensed under different models:
 
-* **Olares and LarePass**: Licensed under AGPL-3.0. View the [GitHub organization](https://github.com/beclab) for details.
+* **Olares and LarePass**: Licensed under AGPL-3.0. For details, refer to the [GitHub organization](https://github.com/beclab).
 * **Protocol projects**: Projects like the Smart contract system for Olares ID use Apache 2.0.
 * **Third-party apps**: Developers adopt their chosen licenses.
 
