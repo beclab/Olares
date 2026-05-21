@@ -269,15 +269,15 @@ func (p *Provider) buildResources(ctx context.Context) (*message.Resources, erro
 	return res, nil
 }
 
-// fanOutSharedApps mutates the per-owner apps map so v3 / shared apps
-// (labelled app.bytetrade.io/scope=shared) appear in EVERY user's slice
-// unconditionally. Shared apps are open to all users, so every user gets
-// the real upstream cluster routes — there is no per-user gate.
+// fanOutSharedApps mutates the per-owner apps map so cluster-wide shared apps
+// appear in EVERY user's slice unconditionally. Shared apps are open to all
+// users, so every user gets the real upstream cluster routes — there is no
+// per-user gate.
 //
-// v1 / v2 apps are left untouched — they remain only under their installer
-// (Spec.Owner). The original entries for shared apps under their install-user
-// owner are preserved (the admin who installed it still sees it via the
-// admin branch anyway, and other users are added on top).
+// Qualifying apps: v3 label, or v2 with spec.sharedEntrances and
+// settings.clusterScoped=true (see isSharedGatewayApp).
+//
+// v1 / non-shared v2 apps remain only under their installer (Spec.Owner).
 func fanOutSharedApps(rawAppsMap map[string][]*appv1alpha1.Application,
 	userList []iamv1alpha2.User,
 ) map[string][]*appv1alpha1.Application {
@@ -285,31 +285,26 @@ func fanOutSharedApps(rawAppsMap map[string][]*appv1alpha1.Application,
 		return rawAppsMap
 	}
 
-	// Collect v3 apps and de-dupe by name (the same v3 app should
-	// only appear once in the cluster — but be defensive).
-	v3Apps := make(map[string]*appv1alpha1.Application)
+	// Collect shared gateway apps and de-dupe by name.
+	sharedApps := make(map[string]*appv1alpha1.Application)
 	for _, apps := range rawAppsMap {
 		for _, app := range apps {
-			if isV3App(app) {
-				if _, ok := v3Apps[app.Spec.Name]; !ok {
-					v3Apps[app.Spec.Name] = app
+			if isSharedGatewayApp(app) {
+				if _, ok := sharedApps[app.Spec.Name]; !ok {
+					sharedApps[app.Spec.Name] = app
 				}
 			}
 		}
 	}
-	if len(v3Apps) == 0 {
+	if len(sharedApps) == 0 {
 		return rawAppsMap
 	}
 
-	// Iterate shared apps in a deterministic (sorted) order so the
-	// resulting per-user slice is stable across reconciles. Without this
-	// the map-range randomness would produce different append orders each
-	// pass and force unnecessary Envoy snapshot diffs downstream.
-	v3Names := make([]string, 0, len(v3Apps))
-	for name := range v3Apps {
-		v3Names = append(v3Names, name)
+	sharedNames := make([]string, 0, len(sharedApps))
+	for name := range sharedApps {
+		sharedNames = append(sharedNames, name)
 	}
-	sort.Strings(v3Names)
+	sort.Strings(sharedNames)
 
 	for _, u := range userList {
 		existing := make(map[string]bool, len(rawAppsMap[u.Name]))
@@ -317,11 +312,11 @@ func fanOutSharedApps(rawAppsMap map[string][]*appv1alpha1.Application,
 			existing[app.Spec.Name] = true
 		}
 
-		for _, name := range v3Names {
+		for _, name := range sharedNames {
 			if existing[name] {
 				continue
 			}
-			rawAppsMap[u.Name] = append(rawAppsMap[u.Name], v3Apps[name])
+			rawAppsMap[u.Name] = append(rawAppsMap[u.Name], sharedApps[name])
 			existing[name] = true
 		}
 	}
@@ -333,6 +328,21 @@ func fanOutSharedApps(rawAppsMap map[string][]*appv1alpha1.Application,
 // stamp on it.
 func isV3App(app *appv1alpha1.Application) bool {
 	return appv1alpha1.IsV3(app)
+}
+
+// isSharedGatewayApp reports whether the Application uses the shared gateway
+// path (v3, or v2 cluster-scoped with sharedEntrances).
+func isSharedGatewayApp(app *appv1alpha1.Application) bool {
+	if app == nil || len(app.Spec.SharedEntrances) == 0 {
+		return false
+	}
+	if appv1alpha1.IsV3(app) {
+		return true
+	}
+	if app.Spec.Settings != nil && app.Spec.Settings["clusterScoped"] == "true" {
+		return true
+	}
+	return false
 }
 
 // fileserverGlobalData holds pod/node data shared across all users within a
@@ -444,11 +454,10 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 
 		settings := app.EffectiveSettings(username)
 
-		// For v3 fan-out, expose the viewer as Owner so downstream
-		// per-user grouping by AppInfo.Owner keeps working. Non-v3
-		// keeps the original install-owner.
+		// For shared gateway apps, expose the viewer as Owner so downstream
+		// per-user grouping by AppInfo.Owner keeps working.
 		owner := app.Spec.Owner
-		if isV3App(app) {
+		if isSharedGatewayApp(app) {
 			owner = username
 		}
 
@@ -467,7 +476,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			Ports:       ports,
 			Settings:    settings,
 			Annotations: annotations,
-			IsShared:    isV3App(app),
+			IsShared:    isSharedGatewayApp(app),
 		})
 	}
 	return result
@@ -710,11 +719,10 @@ func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha
 		var customDomains []string
 		var customDomainsPrefix []string
 		entranceCount := len(effectiveEntrances)
-		// For v3 the install-owner is irrelevant — every user observing
-		// the app gets their own customDomain bucket. For v1/v2 keep
-		// the legacy behaviour: customDomain is keyed by install-owner.
+		// For shared gateway apps the install-owner is irrelevant — every
+		// user gets their own customDomain bucket.
 		owner := app.Spec.Owner
-		if isV3App(app) {
+		if isSharedGatewayApp(app) {
 			owner = username
 		}
 		customDomainEntrancesMap := getSettingsKeyMap(app, username, settingsCustomDomain)

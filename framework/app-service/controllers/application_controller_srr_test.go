@@ -114,3 +114,70 @@ func TestReconcileSharedRouteRegistry_WritesRouteObjects(t *testing.T) {
 		t.Fatalf("status conditions: %+v", got.Status.Conditions)
 	}
 }
+
+func TestReconcileSharedRouteRegistry_v2ClusterScopedSharedNS(t *testing.T) {
+	t.Setenv("OLARES_PLATFORM_DOMAIN", "olares.com")
+
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		t.Fatalf("clientgo scheme: %v", err)
+	}
+	if err := appv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("app scheme: %v", err)
+	}
+	if err := srrv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("srr scheme: %v", err)
+	}
+	httpRouteGVK := schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"}
+	scheme.AddKnownTypeWithName(httpRouteGVK, &unstructured.Unstructured{})
+
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ollamav2-brucedai-ollamav2",
+			UID:  types.UID("app-uid-v2"),
+			Annotations: map[string]string{
+				gateway.AnnotationRouteMode: gateway.AnnotationRouteModeGateway,
+			},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "ollamav2",
+			Namespace: "ollamav2-brucedai",
+			Appid:     "a5be2268",
+			Settings:  map[string]string{"clusterScoped": "true"},
+			SharedEntrances: []appv1alpha1.Entrance{
+				{Name: "ollamav2", Host: "sharedentrances-ollama", Port: 80},
+			},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "sharedentrances-ollama", Namespace: "ollamaserver-shared"},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}},
+		},
+	}
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "ollamaserver-shared",
+			Labels: map[string]string{gateway.NamespaceSharedLabel: "true"},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&srrv1alpha1.SharedRouteRegistry{}).
+		WithObjects(app, svc, ns).
+		Build()
+
+	r := &ApplicationReconciler{Client: c, Scheme: scheme}
+	if err := r.reconcileSharedRouteRegistry(context.Background(), app); err != nil {
+		t.Fatalf("reconcileSharedRouteRegistry: %v", err)
+	}
+
+	srrName := gateway.ResourceNameForEntrance("a5be2268", "ollamav2")
+	srr := &srrv1alpha1.SharedRouteRegistry{}
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "ollamav2-brucedai", Name: srrName}, srr); err != nil {
+		t.Fatalf("get SRR: %v", err)
+	}
+	if srr.Spec.Upstream.ServiceNamespace != "ollamaserver-shared" {
+		t.Fatalf("upstream NS: got %q", srr.Spec.Upstream.ServiceNamespace)
+	}
+}

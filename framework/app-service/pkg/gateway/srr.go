@@ -49,8 +49,8 @@ func ResourceNameForEntrance(appid, entranceName string) string {
 }
 
 // IsOptedIn reports whether the Application carries the gateway opt-in
-// annotation. Returns false for non-v3 apps; the caller must additionally
-// check appcfg.IsV3(app) before reconciling a SRR.
+// annotation. The caller must additionally check appcfg.IsGatewaySharedApp(app)
+// before reconciling a SRR.
 func IsOptedIn(app *appv1alpha1.Application) bool {
 	if app == nil || app.Annotations == nil {
 		return false
