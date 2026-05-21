@@ -7,6 +7,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 )
 
@@ -35,7 +36,21 @@ func GetAppInstallationConfig(app, owner string) (*ApplicationConfig, error) {
 	}
 
 	appcfg.Namespace = namespace
-	appcfg.OwnerName = owner
+	// v3 apps share one cluster-wide installation across admins. Persist
+	// the cluster owner as a stable real-user identity so every consumer
+	// (compute allocation, HAMI binding labels, pod labels, kubesphere
+	// user APIs, user-scoped namespaces) sees the same value no matter
+	// which admin operates the app. See pkg/utils/app::GetAppConfig for
+	// the canonical write site at install time.
+	if appcfg.IsV3() {
+		clusterOwner, err := kubesphere.GetClusterOwner(context.TODO())
+		if err != nil {
+			return nil, err
+		}
+		appcfg.OwnerName = clusterOwner
+	} else {
+		appcfg.OwnerName = owner
+	}
 
 	return appcfg, nil
 }

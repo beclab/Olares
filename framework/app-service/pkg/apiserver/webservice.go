@@ -20,6 +20,8 @@ const (
 	ParamServiceName    = "service"
 	ParamEntranceName   = "entrance_name"
 	ParamModelID        = "model_id"
+	ParamNodeName       = "node"
+	ParamDeviceID       = "device"
 
 	ParamWorkflowName = "name"
 	UserName          = "name"
@@ -251,6 +253,21 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get ", &ResultResponse{}))
 
+	ws.Route(ws.GET("/compute-resources").
+		To(handler.listComputeResources).
+		Doc("list compute resources in the cluster").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Success to list compute resources", &ComputeResourcesResponse{}))
+
+	ws.Route(ws.PUT("/compute-resources/nodes/{"+ParamNodeName+"}/devices/{"+ParamDeviceID+"}/support-type").
+		To(handler.updateDeviceSupportType).
+		Doc("switch compute device support type").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamNodeName, "the node name")).
+		Param(ws.PathParameter(ParamDeviceID, "the device id")).
+		Reads(UpdateDeviceSupportTypeRequest{}).
+		Returns(http.StatusOK, "Success to switch compute device support type", &DeviceSupportTypeSwitchResponse{}))
+
 	// handler_webhook
 	ws.Route(ws.POST("/sandbox/inject").
 		To(handler.sandboxInject).
@@ -335,6 +352,20 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to begin a installation of the application", &api.InstallationResponse{}))
+
+	ws.Route(ws.GET("/apps/{"+ParamAppName+"}/compute-resources/bindings").
+		To(handler.listComputeBindings).
+		Doc("List compute resource bindings for the application").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamAppName, "the name of a application")).
+		Returns(http.StatusOK, "Success to list compute resource bindings", &ComputeBindingResponse{}))
+
+	ws.Route(ws.DELETE("/apps/{"+ParamAppName+"}/compute-resources/bindings").
+		To(handler.queued(handler.suspend)).
+		Doc("Suspend the application to release compute resource bindings").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamAppName, "the name of a application")).
+		Returns(http.StatusOK, "Success to suspend the application", &api.InstallationResponse{}))
 
 	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/uninstall").
 		To(handler.queued(handler.uninstall)).

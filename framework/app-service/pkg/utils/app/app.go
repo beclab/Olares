@@ -22,6 +22,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
@@ -794,7 +795,23 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	}
 
 	appcfg.Namespace = namespace
-	appcfg.OwnerName = options.Owner
+	// v3 apps are cluster-shared and admin-managed: any admin may
+	// install / upgrade / suspend / uninstall the single cluster-wide
+	// instance, so the install caller is not a stable identity. Persist
+	// the cluster owner here so allocation rows, HAMI binding labels,
+	// pod owner labels and every downstream user-scoped API call
+	// (kubesphere user CR, user-system / user-space namespaces,
+	// X-Bfl-User header, helm bfl.username) all key off the same real
+	// user regardless of which admin operates the app.
+	if appcfg.IsV3() {
+		clusterOwner, err := kubesphere.GetClusterOwner(ctx)
+		if err != nil {
+			return nil, chartPath, err
+		}
+		appcfg.OwnerName = clusterOwner
+	} else {
+		appcfg.OwnerName = options.Owner
+	}
 	appcfg.RepoURL = options.RepoURL
 	return appcfg, chartPath, nil
 }
@@ -870,11 +887,27 @@ func parseLegacyAppRequirement(cfg *appcfg.AppConfiguration, selectedGpu string)
 	if err != nil {
 		return appcfg.AppRequirement{}, err
 	}
+	limMem, err := parseQty(cfg.Spec.LimitedMemory)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	limDisk, err := parseQty(cfg.Spec.LimitedDisk)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	limCPU, err := parseQty(cfg.Spec.LimitedCPU)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	limGPU, err := parseQty(cfg.Spec.LimitedGPU)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
 
 	if !oac.IsNewOlaresManifestVersion(cfg.ConfigVersion) {
 		// Default supportedGpu list when the manifest leaves it empty.
 		if len(cfg.Spec.SupportedGpu) == 0 {
-			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType, utils.StrixHaloChipType}
+			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType, utils.StrixHaloChipType, utils.CPUType, utils.MthreadsM100ChipType, utils.AppleMChipType}
 		}
 
 		if selectedGpu != "" && gpu != nil && !gpu.IsZero() {
@@ -906,6 +939,10 @@ func parseLegacyAppRequirement(cfg *appcfg.AppConfiguration, selectedGpu string)
 					{dst: &disk, src: sr.RequiredDisk},
 					{dst: &cpu, src: sr.RequiredCPU},
 					{dst: &gpu, src: sr.RequiredGPU},
+					{dst: &limMem, src: sr.LimitedMemory},
+					{dst: &limDisk, src: sr.LimitedDisk},
+					{dst: &limCPU, src: sr.LimitedCPU},
+					{dst: &limGPU, src: sr.LimitedGPU},
 				} {
 					if setter.src == nil || *setter.src == "" {
 						continue
@@ -925,10 +962,14 @@ func parseLegacyAppRequirement(cfg *appcfg.AppConfiguration, selectedGpu string)
 	}
 
 	return appcfg.AppRequirement{
-		Memory: mem,
-		CPU:    cpu,
-		Disk:   disk,
-		GPU:    gpu,
+		Memory:        mem,
+		CPU:           cpu,
+		Disk:          disk,
+		GPU:           gpu,
+		LimitedMemory: limMem,
+		LimitedCPU:    limCPU,
+		LimitedDisk:   limDisk,
+		LimitedGPU:    limGPU,
 	}, nil
 }
 

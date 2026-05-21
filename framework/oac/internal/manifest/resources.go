@@ -19,6 +19,7 @@ const (
 	ResourceModeNvidia        = "nvidia"
 	ResourceModeNvidiaGB10    = "nvidia-gb10"
 	ResourceModeMThreadsM1000 = "mthreads-m1000"
+	ResourceModeStrixHalo     = "strix-halo"
 )
 
 var validResourceModes = []any{
@@ -29,6 +30,7 @@ var validResourceModes = []any{
 	ResourceModeNvidia,
 	ResourceModeNvidiaGB10,
 	ResourceModeMThreadsM1000,
+	ResourceModeStrixHalo,
 }
 
 var modeArchRequirement = map[string]string{
@@ -36,6 +38,7 @@ var modeArchRequirement = map[string]string{
 	ResourceModeNvidia:        "amd64",
 	ResourceModeNvidiaGB10:    "arm64",
 	ResourceModeMThreadsM1000: "arm64",
+	ResourceModeStrixHalo:     "amd64",
 }
 
 var gpuMemoryModes = map[string]struct{}{
