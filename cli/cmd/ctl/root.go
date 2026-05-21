@@ -5,7 +5,6 @@ import (
 
 	"github.com/beclab/Olares/cli/cmd/config"
 	"github.com/beclab/Olares/cli/cmd/ctl/amdgpu"
-	"github.com/beclab/Olares/cli/cmd/ctl/app"
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster"
 	"github.com/beclab/Olares/cli/cmd/ctl/dashboard"
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
@@ -28,9 +27,9 @@ import (
 func NewDefaultCommand() *cobra.Command {
 	var showVendor bool
 	// One Factory per process. Subcommands that need an authenticated HTTP
-	// client (today: files; future: user/app/settings) all reach into this
-	// same instance so credential resolution and HTTPClient construction are
-	// memoized across verbs in the same invocation.
+	// client (market, profile, files, dashboard, settings, cluster) all
+	// reach into this same instance so credential resolution and HTTPClient
+	// construction are memoized across verbs in the same invocation.
 	factory := cmdutil.NewFactory()
 	cobra.OnInitialize(func() {
 		config.Init()
@@ -74,7 +73,6 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(wizard.NewWizardCommand())
 	cmds.AddCommand(disk.NewDiskCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
-	cmds.AddCommand(app.NewAppCommand())
 	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(files.NewFilesCommand(factory))
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
