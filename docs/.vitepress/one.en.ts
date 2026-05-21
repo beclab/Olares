@@ -226,6 +226,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               {
                 text: "Install drivers on Windows",
                 link: "/one/install-nvidia-driver",
+              },
+              {
+                text: "Troubleshooting",
+                link: "/one/dual-boot-windows-troubleshooting",
               }
             ]
         },
