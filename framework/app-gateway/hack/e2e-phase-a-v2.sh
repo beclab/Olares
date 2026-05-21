@@ -1,22 +1,18 @@
 #!/usr/bin/env bash
-# Shared外部访问 Phase-A v2 end-to-end gate (G1～G11).
+# Shared 外部访问 v2 端到端门禁 (G1～G11).
 #
-# Verifies the per-viewer Shared URL scheme introduced by PR-6 through PR-9
-# end to end:
+# 验证 per-viewer Shared URL 全链路：
 #
 #   https://<HASH8>.<viewer>.<PLATFORM_DOMAIN>/<PILOT_PATH>
 #
-# against a multi-user cluster. See:
-#   archdoc/方案/shared应用/Shared外部访问主流程打通方案-2026-05-20-明确方案.md §8
-#   archdoc/方案/shared应用/Shared外部访问v2评审决议-2026-05-20.md            §4
-#   archdoc/计划/Shared外部访问v2开发执行计划-2026-05-20-待评审.md            §10
+# 覆盖：ClusterConfig、SRR/HTTPRoute、ext_authz host-user、多 viewer、fail-closed。
 #
 # Inputs (env vars; required unless marked optional):
 #   EDGE_IP            edge node IP exposing the L4 proxy (NodePort/LoadBalancer)
 #   PLATFORM_DOMAIN    cluster-level apex (ClusterConfig.spec.platformDomain)
 #   PILOT_NS           {app}-shared namespace of the v3 pilot (e.g. ollamaserver-shared)
 #   PILOT_APP          Application.spec.name (default: derived from PILOT_NS)
-#   PILOT_APPID        Application.spec.appid (required; PR-7 hash input)
+#   PILOT_APPID        Application.spec.appid (required; hash8 input)
 #   PILOT_ENTRANCE     sharedEntrances[*].name to probe (required)
 #   PILOT_VIEWERS      comma-separated viewers (≥2 required for G3b)
 #   APP_GATEWAY_NS     app-gateway namespace (default: app-gateway)
@@ -24,7 +20,12 @@
 #   PILOT_HTTPS        "1" to curl https on EDGE_IP, "0" for http (default: 1)
 #   EG_LABEL           label selector for EG data-plane pods
 #                      (default: gateway.envoyproxy.io/owning-gateway-name=app-gateway)
-#   AUTHZ_DEPLOY       adapter deployment name (default: app-service-ext-authz)
+#   AUTHZ_TARGET       authz workload reference in `kind/name` form
+#                      (default: sts/app-service, in-process PEP)
+#   AUTHZ_NS           namespace of the authz workload (default: os-framework)
+#   AUTHZ_CONTAINER    container name inside the Pod (default: app-service)
+#   AUTHZ_FAILCLOSED   "auto" (default), "scale" (scale AUTHZ_TARGET to 0/1)
+#                      or "skip" (do not run G10; PEP shares app-service lifecycle).
 #
 # Exit code 0 iff every gate passes; prints "PASS phase-a-v2" as last line.
 
@@ -42,7 +43,12 @@ APP_GATEWAY_NS="${APP_GATEWAY_NS:-app-gateway}"
 PILOT_PATH="${PILOT_PATH:-/}"
 PILOT_HTTPS="${PILOT_HTTPS:-1}"
 EG_LABEL="${EG_LABEL:-gateway.envoyproxy.io/owning-gateway-name=app-gateway}"
-AUTHZ_DEPLOY="${AUTHZ_DEPLOY:-app-service-ext-authz}"
+AUTHZ_TARGET="${AUTHZ_TARGET:-sts/app-service}"
+AUTHZ_KIND="${AUTHZ_TARGET%%/*}"
+AUTHZ_NAME="${AUTHZ_TARGET#*/}"
+AUTHZ_NS="${AUTHZ_NS:-os-framework}"
+AUTHZ_CONTAINER="${AUTHZ_CONTAINER:-app-service}"
+AUTHZ_FAILCLOSED="${AUTHZ_FAILCLOSED:-auto}"
 
 PASS=0
 FAIL=0
@@ -76,6 +82,17 @@ require_env() {
 }
 
 require_env EDGE_IP PLATFORM_DOMAIN PILOT_NS PILOT_APPID PILOT_ENTRANCE PILOT_VIEWERS
+
+# authz_logs prints the last --tail=N lines of the authz target (default:
+# in-process PEP inside app-service StatefulSet). Returns "" on failure.
+authz_logs() {
+  local tail="${1:-500}"
+  if [[ "${AUTHZ_KIND}" == "sts" || "${AUTHZ_KIND}" == "statefulset" ]]; then
+    kubectl -n "${AUTHZ_NS}" logs "statefulset/${AUTHZ_NAME}" -c "${AUTHZ_CONTAINER}" --tail="${tail}" 2>/dev/null || true
+  else
+    kubectl -n "${AUTHZ_NS}" logs "${AUTHZ_KIND}/${AUTHZ_NAME}" --tail="${tail}" 2>/dev/null || true
+  fi
+}
 
 if ! command -v python3 >/dev/null 2>&1; then
   red "python3 required to compute HASH8"
@@ -229,17 +246,17 @@ for v in "${VIEWERS[@]}"; do
   fi
 done
 
-hdr "G8 adapter allow log for every viewer"
-AUTHZ_LOG=$(kubectl -n "${APP_GATEWAY_NS}" logs deploy/"${AUTHZ_DEPLOY}" --tail=500 2>/dev/null || true)
+hdr "G8 authz allow log for every viewer (target=${AUTHZ_TARGET} ns=${AUTHZ_NS})"
+AUTHZ_LOG=$(authz_logs 500)
 for v in "${VIEWERS[@]}"; do
   v_trim="${v// /}"; [[ -z "${v_trim}" ]] && continue
   rid="${RIDS[${v_trim}]}"
   if printf '%s' "${AUTHZ_LOG}" \
        | grep -F "${rid}" \
        | grep -qE '"decision":"allow"|"decision":"allow_all"'; then
-    record "G8:${v_trim}" PASS "adapter allow log for rid=${rid}"
+    record "G8:${v_trim}" PASS "authz allow log for rid=${rid}"
   else
-    record "G8:${v_trim}" FAIL "adapter allow log missing for rid=${rid}"
+    record "G8:${v_trim}" FAIL "authz allow log missing for rid=${rid}"
     G8_FAIL=$((G8_FAIL + 1))
   fi
 done
@@ -258,42 +275,66 @@ MIS_CODE=$(curl "${CURL_FLAGS[@]}" -o /tmp/e2e-phase-a-v2-mismatch-body \
               "${SCHEME}://${EDGE_IP}${PILOT_PATH}" 2>/dev/null)
 MIS_CODE="${MIS_CODE:-000}"
 sleep 2
-AUTHZ_LOG2=$(kubectl -n "${APP_GATEWAY_NS}" logs deploy/"${AUTHZ_DEPLOY}" --tail=500 2>/dev/null || true)
+AUTHZ_LOG2=$(authz_logs 500)
 if [[ "${MIS_CODE}" == "403" ]] \
    && printf '%s' "${AUTHZ_LOG2}" | grep -F "${MIS_RID}" | grep -q 'INVALID_HOST_USER'; then
-  record G9 PASS "mismatch curl -> 403 + adapter log INVALID_HOST_USER"
+  record G9 PASS "mismatch curl -> 403 + authz log INVALID_HOST_USER"
 else
-  record G9 FAIL "mismatch curl -> HTTP ${MIS_CODE}; adapter log missing INVALID_HOST_USER for rid=${MIS_RID}"
+  record G9 FAIL "mismatch curl -> HTTP ${MIS_CODE}; authz log missing INVALID_HOST_USER for rid=${MIS_RID}"
 fi
 
 # ---------------------------------------------------------------------------
-# G10: adapter scale 0 -> 5xx, scale back -> 2xx
+# G10: fail-closed when the authz target is unavailable.
+#   - AUTHZ_FAILCLOSED=skip  : explicit opt-out (e.g. in-process PEP shares
+#                              lifecycle with app-service; scaling app-service
+#                              to 0 would break the cluster).
+#   - AUTHZ_FAILCLOSED=scale : scale AUTHZ_TARGET to 0 and back (only if
+#                              you point AUTHZ_TARGET at a scalable workload).
+#   - AUTHZ_FAILCLOSED=auto  : default — "scale" for Deployment, else "skip".
 # ---------------------------------------------------------------------------
-hdr "G10 fail-closed when adapter is scaled to 0"
-if ! kubectl -n "${APP_GATEWAY_NS}" get deploy "${AUTHZ_DEPLOY}" >/dev/null 2>&1; then
-  record G10 FAIL "${AUTHZ_DEPLOY} deployment missing"
-else
-  ORIG_REPLICAS=$(kubectl -n "${APP_GATEWAY_NS}" get deploy "${AUTHZ_DEPLOY}" -o jsonpath='{.spec.replicas}')
-  kubectl -n "${APP_GATEWAY_NS}" scale deploy/"${AUTHZ_DEPLOY}" --replicas=0 >/dev/null
-  kubectl -n "${APP_GATEWAY_NS}" rollout status deploy/"${AUTHZ_DEPLOY}" --timeout=60s >/dev/null 2>&1 || true
-  sleep 3
-  DOWN_CODE=$(curl "${CURL_FLAGS[@]}" -o /dev/null -w '%{http_code}' \
-                 -H "Host: ${HASH8}.${PRIMARY}.${PLATFORM_DOMAIN}" \
-                 -H "X-BFL-USER: ${PRIMARY}" \
-                 "${SCHEME}://${EDGE_IP}${PILOT_PATH}" 2>/dev/null)
-  kubectl -n "${APP_GATEWAY_NS}" scale deploy/"${AUTHZ_DEPLOY}" --replicas="${ORIG_REPLICAS:-1}" >/dev/null
-  kubectl -n "${APP_GATEWAY_NS}" rollout status deploy/"${AUTHZ_DEPLOY}" --timeout=90s >/dev/null 2>&1 || true
-  sleep 3
-  UP_CODE=$(curl "${CURL_FLAGS[@]}" -o /dev/null -w '%{http_code}' \
-               -H "Host: ${HASH8}.${PRIMARY}.${PLATFORM_DOMAIN}" \
-               -H "X-BFL-USER: ${PRIMARY}" \
-               "${SCHEME}://${EDGE_IP}${PILOT_PATH}" 2>/dev/null)
-  if [[ "${DOWN_CODE:-000}" =~ ^5[0-9][0-9]$ ]] && [[ "${UP_CODE:-000}" =~ ^2[0-9][0-9]$ ]]; then
-    record G10 PASS "scale-0 -> ${DOWN_CODE} ; recover -> ${UP_CODE}"
+hdr "G10 fail-closed when authz target is unavailable (mode=${AUTHZ_FAILCLOSED})"
+FAILCLOSED_MODE="${AUTHZ_FAILCLOSED}"
+if [[ "${FAILCLOSED_MODE}" == "auto" ]]; then
+  if [[ "${AUTHZ_KIND}" == "deploy" || "${AUTHZ_KIND}" == "deployment" ]]; then
+    FAILCLOSED_MODE="scale"
   else
-    record G10 FAIL "scale-0 -> ${DOWN_CODE} ; recover -> ${UP_CODE}"
+    FAILCLOSED_MODE="skip"
   fi
 fi
+case "${FAILCLOSED_MODE}" in
+  skip)
+    record G10 SKIP "in-process PEP shares lifecycle with ${AUTHZ_TARGET}; skip scale-down (set AUTHZ_FAILCLOSED=scale with a deploy/* target to test)"
+    ;;
+  scale)
+    if ! kubectl -n "${AUTHZ_NS}" get "${AUTHZ_KIND}" "${AUTHZ_NAME}" >/dev/null 2>&1; then
+      record G10 FAIL "${AUTHZ_TARGET} missing in ${AUTHZ_NS}"
+    else
+      ORIG_REPLICAS=$(kubectl -n "${AUTHZ_NS}" get "${AUTHZ_KIND}" "${AUTHZ_NAME}" -o jsonpath='{.spec.replicas}')
+      kubectl -n "${AUTHZ_NS}" scale "${AUTHZ_KIND}/${AUTHZ_NAME}" --replicas=0 >/dev/null
+      kubectl -n "${AUTHZ_NS}" rollout status "${AUTHZ_KIND}/${AUTHZ_NAME}" --timeout=60s >/dev/null 2>&1 || true
+      sleep 3
+      DOWN_CODE=$(curl "${CURL_FLAGS[@]}" -o /dev/null -w '%{http_code}' \
+                     -H "Host: ${HASH8}.${PRIMARY}.${PLATFORM_DOMAIN}" \
+                     -H "X-BFL-USER: ${PRIMARY}" \
+                     "${SCHEME}://${EDGE_IP}${PILOT_PATH}" 2>/dev/null)
+      kubectl -n "${AUTHZ_NS}" scale "${AUTHZ_KIND}/${AUTHZ_NAME}" --replicas="${ORIG_REPLICAS:-1}" >/dev/null
+      kubectl -n "${AUTHZ_NS}" rollout status "${AUTHZ_KIND}/${AUTHZ_NAME}" --timeout=90s >/dev/null 2>&1 || true
+      sleep 3
+      UP_CODE=$(curl "${CURL_FLAGS[@]}" -o /dev/null -w '%{http_code}' \
+                   -H "Host: ${HASH8}.${PRIMARY}.${PLATFORM_DOMAIN}" \
+                   -H "X-BFL-USER: ${PRIMARY}" \
+                   "${SCHEME}://${EDGE_IP}${PILOT_PATH}" 2>/dev/null)
+      if [[ "${DOWN_CODE:-000}" =~ ^5[0-9][0-9]$ ]] && [[ "${UP_CODE:-000}" =~ ^2[0-9][0-9]$ ]]; then
+        record G10 PASS "scale-0 -> ${DOWN_CODE} ; recover -> ${UP_CODE}"
+      else
+        record G10 FAIL "scale-0 -> ${DOWN_CODE} ; recover -> ${UP_CODE}"
+      fi
+    fi
+    ;;
+  *)
+    record G10 FAIL "unknown AUTHZ_FAILCLOSED=${AUTHZ_FAILCLOSED} (expect auto|scale|skip)"
+    ;;
+esac
 
 # ---------------------------------------------------------------------------
 hdr "summary"

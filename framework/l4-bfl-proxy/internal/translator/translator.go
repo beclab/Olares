@@ -27,10 +27,9 @@ const (
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
 
-	// PR-5: shared v3 apps opt into the gateway data path by setting this
-	// annotation on Application; the translator then points the upstream
-	// cluster at app-gateway-data.app-gateway.svc.cluster.local:80 while
-	// preserving the original Host header for HTTPRoute matching.
+	// Shared v3 apps opt into the gateway path via Application annotation
+	// gateway.olares.io/route-mode=gateway; upstream becomes app-gateway-data
+	// while preserving Host for HTTPRoute matching.
 	annotationRouteMode        = "gateway.olares.io/route-mode"
 	annotationRouteModeGateway = "gateway"
 	gatewayDataPlaneHost       = "app-gateway-data.app-gateway.svc.cluster.local"
@@ -38,7 +37,7 @@ const (
 )
 
 // isGatewayMode reports whether the v3 app has opted into routing through the
-// shared Envoy Gateway data plane (PR-5, D-A10). Non-v3 / non-shared apps and
+// shared Envoy Gateway data plane. Non-v3 / non-shared apps and
 // apps without the opt-in annotation always stay on the direct upstream path.
 func isGatewayMode(app *message.AppInfo) bool {
 	if app == nil || !app.IsShared || app.Annotations == nil {
@@ -86,7 +85,7 @@ func platformDomainFromZone(zone, viewer string) string {
 
 // gatewayV2EntranceHostname returns <hash8>.<viewer>.<platformDomain> when
 // every input is well-formed, "" otherwise. The empty return signals the
-// caller to keep the legacy Phase-A hostname.
+// caller to keep the legacy hostname.
 func gatewayV2EntranceHostname(app *message.AppInfo, entranceName, viewer, zone string) string {
 	if app == nil || entranceName == "" || viewer == "" {
 		return ""
@@ -589,12 +588,9 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			hostname = fmt.Sprintf("%s-%s.%s", prefix, user.Name, zone)
 		}
 
-		// PR-9: in gateway mode the externally-visible host follows the v2
-		// per-viewer scheme <hash8>.<viewer>.<platformDomain> so the EG
-		// HTTPRoute's Host RegularExpression match (PR-7) can pin the
-		// entrance. The helper returns "" if any prerequisite is missing
-		// (e.g. zone does not begin with the viewer label), in which case
-		// we keep the legacy Phase-A hostname for safety.
+		// In gateway mode use per-viewer host <hash8>.<viewer>.<platformDomain>
+		// so EG HTTPRoute Host regex can match the entrance. Falls back to the
+		// legacy hostname when prerequisites are missing (e.g. zone prefix).
 		if isGatewayMode(app) && !isEphemeral {
 			if v2 := gatewayV2EntranceHostname(app, entrance.Name, user.Name, zone); v2 != "" {
 				hostname = v2

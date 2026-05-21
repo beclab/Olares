@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared外部访问 Phase-A end-to-end gate (G1～G8).
+# Shared 外部访问端到端门禁 (G1～G8)：L4 → EG → ext_authz → HTTPRoute → 后端。
 #
 # Inputs (env vars; required unless marked optional):
 #   EDGE_IP          edge node IP exposing the L4 proxy (NodePort/LoadBalancer)
@@ -11,7 +11,8 @@
 #   PILOT_HTTPS      "1" to curl https on EDGE_IP, "0" for http (default: 1)
 #   EG_LABEL         label selector for EG data-plane pods
 #                    (default: gateway.envoyproxy.io/owning-gateway-name=app-gateway)
-#   AUTHZ_DEPLOY     adapter deployment name (default: app-service-ext-authz)
+#   AUTHZ_NS         namespace of app-service (default: os-framework)
+#   AUTHZ_STS        StatefulSet name (default: app-service)
 #
 # Exit code 0 iff every gate passes; prints "PASS phase-a" as last line.
 
@@ -26,7 +27,8 @@ APP_GATEWAY_NS="${APP_GATEWAY_NS:-app-gateway}"
 PILOT_PATH="${PILOT_PATH:-/}"
 PILOT_HTTPS="${PILOT_HTTPS:-1}"
 EG_LABEL="${EG_LABEL:-gateway.envoyproxy.io/owning-gateway-name=app-gateway}"
-AUTHZ_DEPLOY="${AUTHZ_DEPLOY:-app-service-ext-authz}"
+AUTHZ_NS="${AUTHZ_NS:-os-framework}"
+AUTHZ_STS="${AUTHZ_STS:-app-service}"
 
 PASS=0
 FAIL=0
@@ -136,16 +138,16 @@ else
   record G6 FAIL "EG log missing ${SHARED_HOST} (tail=200)"
 fi
 
-hdr "G7 adapter allow log (optional)"
-if kubectl -n "${APP_GATEWAY_NS}" get deploy "${AUTHZ_DEPLOY}" >/dev/null 2>&1; then
-  if kubectl -n "${APP_GATEWAY_NS}" logs deploy/"${AUTHZ_DEPLOY}" --tail=100 2>/dev/null \
+hdr "G7 app-service ext_authz allow log (optional)"
+if kubectl -n "${AUTHZ_NS}" get sts "${AUTHZ_STS}" >/dev/null 2>&1; then
+  if kubectl -n "${AUTHZ_NS}" logs "sts/${AUTHZ_STS}" -c app-service --tail=100 2>/dev/null \
        | grep -qi 'allow'; then
-    record G7 PASS "${AUTHZ_DEPLOY} log shows allow decision"
+    record G7 PASS "${AUTHZ_STS} log shows allow decision"
   else
-    record G7 PASS "${AUTHZ_DEPLOY} present but no recent allow log (non-fatal)"
+    record G7 PASS "${AUTHZ_STS} present but no recent allow log (non-fatal)"
   fi
 else
-  record G7 FAIL "${AUTHZ_DEPLOY} deployment missing in ${APP_GATEWAY_NS}"
+  record G7 FAIL "sts/${AUTHZ_STS} missing in ${AUTHZ_NS}"
 fi
 
 hdr "summary"

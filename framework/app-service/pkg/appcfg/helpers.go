@@ -117,7 +117,7 @@ func (s AppName) SharedEntranceIdPrefix() string {
 }
 
 // SharedEntranceHostPrefix returns the 8-char lowercase md5 prefix that
-// identifies one sharedEntrance in the v2 URL scheme (PR-6 / R-V2-1):
+// identifies one sharedEntrance in the per-viewer URL scheme:
 //
 //	hash8 = md5(<appid> + ":shared:" + <entranceName>)[:8]
 //
@@ -132,8 +132,7 @@ func SharedEntranceHostPrefix(appid, entranceName string) string {
 	return hex.EncodeToString(sum[:])[:8]
 }
 
-// GenSharedEntranceURLForUser composes the per-viewer Shared URL described in
-// the明确方案 §1.1:
+// GenSharedEntranceURLForUser composes the per-viewer Shared entrance URL:
 //
 //	https://<hash8>.<viewer>.<platformDomain>
 //
@@ -152,15 +151,14 @@ func GenSharedEntranceURLForUser(appid, entranceName, viewer, platformDomain str
 	return "https://" + host
 }
 
-// LogicalHostPattern returns the SRR hostPattern used by the app-service-routecontrol
-// to materialize a single HTTPRoute that covers every viewer of an entrance
-// (R-V2-2 / R-V2-3):
+// LogicalHostPattern returns the SRR hostPattern for a shared entrance
+// One logical pattern covers all viewers of an entrance:
 //
 //	<hash8>.*.<platformDomain>
 //
-// The literal "*" segment is the marker that app-service-routecontrol looks for when
-// translating the SRR into HTTPRoute hostnames + Host RegularExpression
-// (PR-7 §7.4). Empty inputs return "" so the caller can detect misuse.
+// The literal "*" segment is the marker app-service route control uses when
+// building HTTPRoute hostnames + Host RegularExpression header match.
+// Empty inputs return "" so the caller can detect misuse.
 func LogicalHostPattern(appid, entranceName, platformDomain string) string {
 	appid = strings.ToLower(strings.TrimSpace(appid))
 	entranceName = strings.ToLower(strings.TrimSpace(entranceName))

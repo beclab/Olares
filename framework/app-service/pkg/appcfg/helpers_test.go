@@ -1,4 +1,4 @@
-// Package appcfg helpers test (PR-6, R-V2-1).
+// Package appcfg helpers test: per-viewer Shared URL and logical hostPattern.
 //
 // Covers SharedEntranceHostPrefix / GenSharedEntranceURLForUser /
 // LogicalHostPattern. These three are the only public surfaces v2 adds to

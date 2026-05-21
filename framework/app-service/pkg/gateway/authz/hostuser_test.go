@@ -95,12 +95,12 @@ func TestHostUser_EmptyAuthority(t *testing.T) {
 
 func TestNormalizeHost(t *testing.T) {
 	cases := map[string]string{
-		"":                              "",
-		"  Foo.Bar.com  ":               "foo.bar.com",
-		"Foo.Bar.com:443":               "foo.bar.com",
-		"Foo.Bar.com.":                  "foo.bar.com",
-		"olares.com:NOTANUMBER":         "olares.com:notanumber",
-		"01234567.alice.olares.com:65":  "01234567.alice.olares.com",
+		"":                             "",
+		"  Foo.Bar.com  ":              "foo.bar.com",
+		"Foo.Bar.com:443":              "foo.bar.com",
+		"Foo.Bar.com.":                 "foo.bar.com",
+		"olares.com:NOTANUMBER":        "olares.com:notanumber",
+		"01234567.alice.olares.com:65": "01234567.alice.olares.com",
 	}
 	for in, want := range cases {
 		if got := normalizeHost(in); got != want {

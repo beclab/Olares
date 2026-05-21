@@ -26,5 +26,6 @@ extAuthz:
   name: app-gateway-ext-authz-allowall
   failOpen: false
   service:
-    name: app-service-ext-authz
+    name: app-service
+    namespace: os-framework
     port: 9001

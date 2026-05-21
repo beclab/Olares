@@ -157,6 +157,10 @@ spec:
     metadata:
       labels:
         tier: app-service
+      # Skip Linkerd inbound proxy on ext_authz ports (:9001 gRPC, :9002 probes)
+      # so Envoy Gateway reaches the in-process PEP without mTLS on those ports.
+      annotations:
+        config.linkerd.io/skip-inbound-ports: "9001,9002"
     spec:
       affinity:
         nodeAffinity:
@@ -174,6 +178,11 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
+        # In-process ext_authz PEP for app-gateway: gRPC :9001, HTTP :9002 probes.
+        - name: authz-grpc
+          containerPort: 9001
+        - name: authz-http
+          containerPort: 9002
         readinessProbe:
           failureThreshold: 5
           initialDelaySeconds: 10
@@ -310,6 +319,16 @@ spec:
     port: 8433
     protocol: TCP
     targetPort: 8433
+  # Expose in-process ext_authz (SecurityPolicy backendRef app-service:9001).
+  - name: authz-grpc
+    port: 9001
+    protocol: TCP
+    targetPort: 9001
+    appProtocol: grpc
+  - name: authz-http
+    port: 9002
+    protocol: TCP
+    targetPort: 9002
   selector:
     tier: app-service
   type: ClusterIP

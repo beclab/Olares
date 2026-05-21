@@ -32,18 +32,16 @@ spec:
           description: |-
             ClusterConfig is the cluster-wide singleton (name=cluster) that
             carries cluster-scope platform settings consumed by app-service and
-            app-gateway. Phase-A v2 only introduces two fields:
+            app-gateway. Relevant fields for Shared external access:
 
               spec.platformDomain        — the apex domain used to compose
                                            per-viewer Shared URLs and the
                                            SharedRouteRegistry logical hostPattern
                                            (<hash8>.*.<platformDomain>).
 
-              spec.sharedURLViewerScheme — gate for the v2 per-viewer Shared
-                                           URL scheme. "enabled" turns on
-                                           <hash8>.<viewer>.<platformDomain>
-                                           URL generation; "disabled" preserves
-                                           Phase-A behaviour.
+              spec.sharedURLViewerScheme — gate for per-viewer Shared URLs.
+                                           "enabled" uses <hash8>.<viewer>.<platformDomain>;
+                                           "disabled" keeps the legacy single-host scheme.
           type: object
           required:
             - spec
@@ -69,8 +67,7 @@ spec:
                 sharedURLViewerScheme:
                   description: |-
                     Feature gate for the per-viewer Shared URL scheme. Set to
-                    "enabled" to opt into v2 (default: "disabled" keeps
-                    Phase-A semantics).
+                    "enabled" for per-viewer URLs (default "disabled" keeps legacy hosts).
                   type: string
                   enum:
                     - enabled

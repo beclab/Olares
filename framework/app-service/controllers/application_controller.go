@@ -15,6 +15,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -538,8 +539,8 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 
 // reconcileSharedRouteRegistry writes / deletes the SharedRouteRegistry that
 // declares this v3 app's exposure through the shared Envoy Gateway data plane.
-// Phase A only acts when the Application carries the opt-in annotation
-// gateway.olares.io/route-mode=gateway (D-A10). For any other case (non-v3,
+// Only acts when the Application carries gateway.olares.io/route-mode=gateway.
+// For any other case (non-v3,
 // no annotation, direct mode) the SRR is removed so toggling routeMode is
 // truly declarative.
 func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context, app *appv1alpha1.Application) error {
@@ -550,9 +551,8 @@ func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context
 		return gateway.DeleteAllForApp(ctx, r.Client, app)
 	}
 
-	// PR-7: every reconcile pass removes the legacy Phase-A "shared-<appName>"
-	// SRR if present, then writes one SRR per sharedEntrance carrying the v2
-	// logical hostPattern (<hash8>.*.<platformDomain>).
+	// Remove legacy "shared-<appName>" SRR if present, then write one SRR per
+	// sharedEntrance with logical hostPattern <hash8>.*.<platformDomain>.
 	if err := gateway.Delete(ctx, r.Client, app); err != nil {
 		return fmt.Errorf("remove legacy SRR: %w", err)
 	}
@@ -592,13 +592,31 @@ func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context
 		if err := gateway.CheckLogicalPatternUniqueness(ctx, r.Client, spec.HostPatterns[0], app.Spec.Namespace, name); err != nil {
 			return fmt.Errorf("uniqueness check for entrance %q: %w", entrance.Name, err)
 		}
-		if _, err := gateway.ReconcileForEntrance(ctx, r.Client, app, entrance, spec); err != nil {
+		srrObj, err := gateway.ReconcileForEntrance(ctx, r.Client, app, entrance, spec)
+		if err != nil {
 			return err
 		}
 		desired[name] = struct{}{}
 		klog.V(1).Infof("SRR reconciled app=%s/%s entrance=%s name=%s hostPatterns=%v upstream=%s/%s:%d",
 			app.Spec.Namespace, app.Spec.Name, entrance.Name, name, spec.HostPatterns,
 			spec.Upstream.ServiceNamespace, spec.Upstream.ServiceName, spec.Upstream.Port)
+
+		// Shared ingress route control: after the SRR is written, app-service
+		// ensures the HTTPRoute and NetworkPolicy for this entrance exist in
+		// the Application namespace. Route apply errors are recorded on
+		// SRR.status and do not fail the Application reconcile loop.
+		routeRes, routeErr := routecontrol.ReconcileSharedRoute(ctx, r.Client, routecontrol.GatewayRef{}, srrObj)
+		if routeErr != nil {
+			klog.Warningf("reconcile shared route %s/%s failed: %v", srrObj.Namespace, srrObj.Name, routeErr)
+			routeRes = routecontrol.ReconcileResult{
+				Status:  metav1.ConditionFalse,
+				Reason:  routecontrol.ReasonRouteApplyFailed,
+				Message: routeErr.Error(),
+			}
+		}
+		if statusErr := routecontrol.UpdateSRRStatus(ctx, r.Client, srrObj, routeRes); statusErr != nil {
+			klog.Warningf("update SRR route status %s/%s failed: %v", srrObj.Namespace, srrObj.Name, statusErr)
+		}
 	}
 
 	// Garbage-collect stale per-entrance SRRs (e.g. when sharedEntrances was

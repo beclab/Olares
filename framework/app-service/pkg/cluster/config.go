@@ -1,16 +1,9 @@
 // Package cluster exposes read helpers for the cluster.olares.io/v1alpha1
-// ClusterConfig singleton introduced in Phase-A v2 (PR-6). The package only
-// reads — write operations stay with the operator that owns the CRD lifecycle.
+// Package cluster reads the cluster.olares.io/v1alpha1 ClusterConfig singleton.
+// Write operations stay with the operator that owns the CRD lifecycle.
 //
-// ClusterConfig is intentionally consumed via the dynamic client so this
-// package does not need to register the type with the in-tree scheme; that
-// keeps the v2 increment additive and free of cross-cutting controller-runtime
-// changes (Olares/framework/app-service has multiple controllers sharing the
-// same scheme).
-//
-// References:
-//   - archdoc/方案/shared应用/Shared外部访问主流程打通方案-2026-05-20-明确方案.md §4
-//   - archdoc/方案/shared应用/Shared外部访问v2评审决议-2026-05-20.md  R-V2-1
+// The type is accessed via the dynamic client so app-service does not register
+// it on the controller-runtime scheme shared by other controllers.
 package cluster
 
 import (
@@ -38,11 +31,11 @@ const (
 
 	// DefaultPlatformDomain is the conservative fallback used when no
 	// ClusterConfig exists yet and no environment override is supplied.
-	// Aligned with the dev/test platform domain in archdoc.
+	// Fallback when ClusterConfig is missing and OLARES_PLATFORM_DOMAIN is unset.
 	DefaultPlatformDomain = "olares.com"
 
-	// SharedURLViewerSchemeEnabled signals that per-viewer Shared URLs and
-	// logical hostPatterns should be emitted (R-V2-1).
+	// SharedURLViewerSchemeEnabled signals per-viewer Shared URLs and logical
+	// hostPatterns (<hash8>.*.<platformDomain>).
 	SharedURLViewerSchemeEnabled  = "enabled"
 	SharedURLViewerSchemeDisabled = "disabled"
 
@@ -66,7 +59,7 @@ type Snapshot struct {
 }
 
 // SharedURLViewerEnabled reports whether the v2 per-viewer Shared URL scheme
-// should be used. Treats absent / "disabled" as false (Phase-A behaviour).
+// should be used. Treats absent / "disabled" as false.
 func (s Snapshot) SharedURLViewerEnabled() bool {
 	return strings.EqualFold(s.SharedURLViewerScheme, SharedURLViewerSchemeEnabled)
 }

@@ -1,4 +1,11 @@
 {{- if .Values.extAuthz.enabled }}
+{{- /*
+ext_authz backend is the in-process PEP on app-service. When the Service
+namespace differs from the Gateway namespace, ReferenceGrant in the target
+namespace authorises the cross-namespace backendRef (see
+securitypolicy-ext-authz-referencegrant.yaml).
+*/}}
+{{- $authzNS := default (include "app-gateway.namespace" .) .Values.extAuthz.service.namespace -}}
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -18,6 +25,6 @@ spec:
     grpc:
       backendRefs:
         - name: {{ .Values.extAuthz.service.name }}
-          namespace: {{ include "app-gateway.namespace" . }}
+          namespace: {{ $authzNS }}
           port: {{ .Values.extAuthz.service.port }}
 {{- end }}

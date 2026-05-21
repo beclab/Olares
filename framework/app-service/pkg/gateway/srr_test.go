@@ -115,7 +115,7 @@ func TestBuildSpec_Errors(t *testing.T) {
 	}
 }
 
-// PR-7 contract tests
+// Per-entrance SRR contract tests
 
 func TestResourceNameForEntrance(t *testing.T) {
 	cases := map[[2]string]string{

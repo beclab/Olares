@@ -37,9 +37,9 @@ spec:
         openAPIV3Schema:
           description: |-
             SharedRouteRegistry (SRR) declares one v3 shared-app entry that the
-            app-gateway should expose. app-service writes SRRs; app-service-routecontrol
-            translates them into HTTPRoute + NetworkPolicy in the same namespace
-            (F-2 / F-4). Hosts are normalized: lowercase, no port (F-3).
+            app-gateway should expose. app-service writes SRRs and applies
+            HTTPRoute + NetworkPolicy in the same namespace ({app}-shared).
+            Hosts are normalized: lowercase, no port.
           type: object
           required:
             - spec
@@ -58,9 +58,9 @@ spec:
               properties:
                 routeMode:
                   description: |-
-                    gateway = traffic flows through Envoy Gateway data plane
-                    (Phase A target); direct = legacy L4 → backend Service.
-                    app-service-routecontrol only creates HTTPRoute/NP when routeMode=gateway.
+                    gateway = Envoy Gateway data plane (HTTPRoute + ext_authz);
+                    direct = legacy L4 → backend Service.
+                    app-service only creates HTTPRoute/NP when routeMode=gateway.
                   type: string
                   enum:
                     - gateway
@@ -71,10 +71,10 @@ spec:
                     Externally-visible hostnames Envoy Gateway must route to
                     the upstream. Must be lowercase and contain no port.
                     Two forms are accepted:
-                      - Phase-A exact host:    abc.shared.example.com
-                      - v2 logical pattern:    <hash8>.*.<platformDomain>
+                      - exact host:            abc.shared.example.com
+                      - logical pattern:       <hash8>.*.<platformDomain>
                         (the literal "*" segment is required to be the 2nd
-                        label; app-service-routecontrol translates it into a Host
+                        label; app-service translates it into a Host
                         RegularExpression header match).
                   type: array
                   minItems: 1
@@ -92,7 +92,7 @@ spec:
                     serviceNamespace:
                       description: |-
                         Optional. Defaults to the SRR's own namespace
-                        (F-2 / F-4 keep backend in {app}-shared).
+                        Defaults to the SRR namespace ({app}-shared).
                       type: string
                     port:
                       description: TCP port (1-65535). Either port or portName must be set.
@@ -104,8 +104,8 @@ spec:
                       type: string
                 authzRef:
                   description: |-
-                    Phase A only stamps defaultAction=allow. Phase B will reference
-                    a per-route policy object.
+                    defaultAction=allow for ext_authz; future releases may
+                    reference a per-route policy object.
                   type: object
                   properties:
                     defaultAction:
@@ -121,7 +121,7 @@ spec:
                   type: integer
                   format: int64
                 httpRouteName:
-                  description: Name of the HTTPRoute created by app-service-routecontrol.
+                  description: Name of the HTTPRoute created by app-service route control.
                   type: string
                 conditions:
                   type: array

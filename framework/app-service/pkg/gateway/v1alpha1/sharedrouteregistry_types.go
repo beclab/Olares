@@ -1,8 +1,6 @@
 // Package v1alpha1 contains the gateway.olares.io/v1alpha1 API types.
-// SharedRouteRegistry (SRR) is the hand-off contract between app-service
-// (writer) and app-service-routecontrol (reader). See:
-//   - archdoc/方案/shared应用/Shared外部访问Phase-A开发实现规格-2026-05-19.md §5
-//   - archdoc/方案/shared应用/Shared外部访问Phase-A评审决议-2026-05-19.md (F-1～F-6)
+// SharedRouteRegistry (SRR) declares how a v3 shared app is exposed: app-service
+// writes the spec and reconciles HTTPRoute + NetworkPolicy in the app namespace.
 package v1alpha1
 
 import (
@@ -34,7 +32,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 type RouteMode string
 
 const (
-	// RouteModeGateway routes via Envoy Gateway (Phase A target).
+	// RouteModeGateway routes via Envoy Gateway (HTTPRoute + ext_authz).
 	RouteModeGateway RouteMode = "gateway"
 	// RouteModeDirect keeps the legacy l4-bfl-proxy -> backend Service path.
 	RouteModeDirect RouteMode = "direct"
@@ -52,7 +50,7 @@ const (
 type UpstreamRef struct {
 	// ServiceName is the Kubernetes Service short name (no domain).
 	ServiceName string `json:"serviceName"`
-	// ServiceNamespace defaults to the SRR's metadata.namespace ({app}-shared, F-2/F-4).
+	// ServiceNamespace defaults to the SRR namespace ({app}-shared).
 	// +optional
 	ServiceNamespace string `json:"serviceNamespace,omitempty"`
 	// Port is the TCP target port (1-65535). Either Port or PortName must be set.
@@ -63,8 +61,8 @@ type UpstreamRef struct {
 	PortName string `json:"portName,omitempty"`
 }
 
-// AuthzRef carries Phase A defaults. Phase B will replace this with a
-// reference to a per-route policy object.
+// AuthzRef carries the default allow/deny baseline for ext_authz. Future
+// releases may reference a per-route policy object instead.
 type AuthzRef struct {
 	// +kubebuilder:validation:Enum=allow;deny
 	DefaultAction AuthzDefaultAction `json:"defaultAction,omitempty"`
@@ -72,25 +70,25 @@ type AuthzRef struct {
 
 // SharedRouteRegistrySpec is the declarative input for a single shared route.
 type SharedRouteRegistrySpec struct {
-	// RouteMode selects which data path serves this SRR. app-service-routecontrol only
+	// RouteMode selects which data path serves this SRR. app-service only
 	// reconciles HTTPRoute + NetworkPolicy when RouteMode=gateway.
 	// +kubebuilder:validation:Enum=gateway;direct
 	// +kubebuilder:default=gateway
 	RouteMode RouteMode `json:"routeMode,omitempty"`
 
-	// HostPatterns must be lowercase and contain no port (F-3).
+	// HostPatterns must be lowercase DNS names without a port.
 	// +kubebuilder:validation:MinItems=1
 	HostPatterns []string `json:"hostPatterns"`
 
 	// Upstream points at the backing Service in the same namespace.
 	Upstream UpstreamRef `json:"upstream"`
 
-	// AuthzRef is optional in Phase A; defaults to allow.
+	// AuthzRef is optional; when omitted app-service defaults to allow.
 	// +optional
 	AuthzRef *AuthzRef `json:"authzRef,omitempty"`
 }
 
-// SharedRouteRegistryStatus reports the app-service-routecontrol's outcome.
+// SharedRouteRegistryStatus reports the shared-route reconcile outcome.
 type SharedRouteRegistryStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
