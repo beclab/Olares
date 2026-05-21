@@ -32,6 +32,8 @@ func newFixture(t *testing.T, svc *corev1.Service, srr *srrv1alpha1.SharedRouteR
 	httpRouteListGVK := schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRouteList"}
 	scheme.AddKnownTypeWithName(httpRouteGVK, &unstructured.Unstructured{})
 	scheme.AddKnownTypeWithName(httpRouteListGVK, &unstructured.UnstructuredList{})
+	refGrantGVK := schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1beta1", Kind: "ReferenceGrant"}
+	scheme.AddKnownTypeWithName(refGrantGVK, &unstructured.Unstructured{})
 
 	objs := []client.Object{srr}
 	if svc != nil {
@@ -165,6 +167,41 @@ func TestReconcileSharedRoute_BackendMissing(t *testing.T) {
 	}
 	if res.Status != metav1.ConditionFalse || res.Reason != ReasonBackendMissing {
 		t.Fatalf("expected backend-missing result; got %+v", res)
+	}
+}
+
+func TestReconcileSharedRoute_CrossNamespaceNPInUpstreamNS(t *testing.T) {
+	srr := logicalSRR("ollamav2-brucedai", "shared-a5be2268-ollamav2")
+	srr.Spec.Upstream = srrv1alpha1.UpstreamRef{
+		ServiceName:      "sharedentrances-ollama",
+		ServiceNamespace: "ollamaserver-shared",
+		Port:             80,
+	}
+	svc := backendService("ollamaserver-shared")
+	svc.Name = "sharedentrances-ollama"
+	svc.Spec.Ports[0].Port = 80
+	c := newFixture(t, svc, srr)
+
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+
+	np := &networkingv1.NetworkPolicy{}
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "ollamaserver-shared", Name: NetworkPolicyName}, np); err != nil {
+		t.Fatalf("get NetworkPolicy in upstream NS: %v", err)
+	}
+	if np.Spec.PodSelector.MatchLabels["app"] != "ollama" {
+		t.Fatalf("podSelector: %+v", np.Spec.PodSelector.MatchLabels)
+	}
+	err := c.Get(context.Background(), types.NamespacedName{Namespace: "ollamav2-brucedai", Name: NetworkPolicyName}, &networkingv1.NetworkPolicy{})
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("NP should not be in SRR namespace: err=%v", err)
+	}
+
+	rg := &unstructured.Unstructured{}
+	rg.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1beta1", Kind: "ReferenceGrant"})
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "ollamaserver-shared", Name: referenceGrantName(srr)}, rg); err != nil {
+		t.Fatalf("get ReferenceGrant: %v", err)
 	}
 }
 

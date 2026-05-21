@@ -8,6 +8,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -368,6 +369,9 @@ func (r *SecurityReconciler) createOrUpdateNetworkPolicy(ctx context.Context,
 			}
 			found = true
 		} else {
+			if routecontrol.IsManagedNetworkPolicy(&np) {
+				continue
+			}
 			if namespaceNetworkPolicies != nil && !namespaceNetworkPolicies.Contains(&np) {
 				if err := r.Delete(ctx, &np); err != nil {
 					return err

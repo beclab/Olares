@@ -88,6 +88,9 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteNetworkPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete NetworkPolicy: %w", err)
 		}
+		if err := deleteReferenceGrant(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete ReferenceGrant: %w", err)
+		}
 		return ReconcileResult{
 			Status:  metav1.ConditionTrue,
 			Reason:  ReasonDirectMode,
@@ -142,6 +145,9 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	routeName, err := applyHTTPRoute(ctx, c, gw, srr, port)
 	if err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply HTTPRoute: %w", err)
+	}
+	if err := applyReferenceGrant(ctx, c, srr, upstreamNS, srr.Spec.Upstream.ServiceName); err != nil {
+		return ReconcileResult{}, fmt.Errorf("apply ReferenceGrant: %w", err)
 	}
 	if err := applyNetworkPolicy(ctx, c, gw, srr, svc, port); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply NetworkPolicy: %w", err)
@@ -281,13 +287,40 @@ func deleteHTTPRoute(ctx context.Context, c client.Client, srr *srrv1alpha1.Shar
 	return nil
 }
 
+// networkPolicyNamespace is the namespace where the ingress NetworkPolicy must
+// live. It follows the backend Service (upstream), which for v2 cluster-scoped
+// pilots may differ from the SRR/HTTPRoute namespace.
+func networkPolicyNamespace(srr *srrv1alpha1.SharedRouteRegistry, svc *corev1.Service) string {
+	if svc != nil && svc.Namespace != "" {
+		return svc.Namespace
+	}
+	if ns := srr.Spec.Upstream.ServiceNamespace; ns != "" {
+		return ns
+	}
+	return srr.Namespace
+}
+
+// networkPolicyNamespacesToClean returns namespaces that may hold a gateway NP
+// for this SRR (upstream plus legacy SRR namespace after cross-ns placement).
+func networkPolicyNamespacesToClean(srr *srrv1alpha1.SharedRouteRegistry) []string {
+	upstream := srr.Spec.Upstream.ServiceNamespace
+	if upstream == "" {
+		upstream = srr.Namespace
+	}
+	if upstream == srr.Namespace {
+		return []string{upstream}
+	}
+	return []string{upstream, srr.Namespace}
+}
+
 func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, svc *corev1.Service, port int32) error {
 	protocol := corev1.ProtocolTCP
 	intPort := intstr.FromInt32(port)
+	npNS := networkPolicyNamespace(srr, svc)
 	desired := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      NetworkPolicyName,
-			Namespace: srr.Namespace,
+			Namespace: npNS,
 			Labels: map[string]string{
 				ManagedByLabel: ManagedByValue,
 				InstanceLabel:  srr.Name,
@@ -317,7 +350,7 @@ func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr
 	setOwnerSRR(desired, srr)
 
 	current := &networkingv1.NetworkPolicy{}
-	err := c.Get(ctx, types.NamespacedName{Namespace: srr.Namespace, Name: NetworkPolicyName}, current)
+	err := c.Get(ctx, types.NamespacedName{Namespace: npNS, Name: NetworkPolicyName}, current)
 	switch {
 	case apierrors.IsNotFound(err):
 		return c.Create(ctx, desired)
@@ -335,14 +368,16 @@ func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr
 }
 
 func deleteNetworkPolicy(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
-	obj := &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      NetworkPolicyName,
-			Namespace: srr.Namespace,
-		},
-	}
-	if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
-		return err
+	for _, ns := range networkPolicyNamespacesToClean(srr) {
+		obj := &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      NetworkPolicyName,
+				Namespace: ns,
+			},
+		}
+		if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
 	}
 	return nil
 }

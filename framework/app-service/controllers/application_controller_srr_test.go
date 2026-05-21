@@ -11,6 +11,7 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -179,5 +180,17 @@ func TestReconcileSharedRouteRegistry_v2ClusterScopedSharedNS(t *testing.T) {
 	}
 	if srr.Spec.Upstream.ServiceNamespace != "ollamaserver-shared" {
 		t.Fatalf("upstream NS: got %q", srr.Spec.Upstream.ServiceNamespace)
+	}
+
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "ollamaserver-shared", Name: routecontrol.NetworkPolicyName,
+	}, &networkingv1.NetworkPolicy{}); err != nil {
+		t.Fatalf("get NetworkPolicy in upstream NS: %v", err)
+	}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "ollamav2-brucedai", Name: routecontrol.NetworkPolicyName,
+	}, &networkingv1.NetworkPolicy{})
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("NP should not be in SRR namespace: err=%v", err)
 	}
 }

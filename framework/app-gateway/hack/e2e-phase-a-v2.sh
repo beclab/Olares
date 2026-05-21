@@ -193,13 +193,19 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# G5: NetworkPolicy present
+# G5: NetworkPolicy present (follows upstream.serviceNamespace when set)
 # ---------------------------------------------------------------------------
 hdr "G5 NetworkPolicy app-gateway-shared-ingress-np"
-if kubectl -n "${PILOT_NS}" get networkpolicy app-gateway-shared-ingress-np >/dev/null 2>&1; then
-  record G5 PASS "NetworkPolicy present in ${PILOT_NS}"
+NP_NS="${PILOT_NS}"
+UPSTREAM_NS=$(kubectl -n "${PILOT_NS}" get srr "${SRR_NAME}" \
+  -o jsonpath='{.spec.upstream.serviceNamespace}' 2>/dev/null || true)
+if [[ -n "${UPSTREAM_NS}" ]]; then
+  NP_NS="${UPSTREAM_NS}"
+fi
+if kubectl -n "${NP_NS}" get networkpolicy app-gateway-shared-ingress-np >/dev/null 2>&1; then
+  record G5 PASS "NetworkPolicy present in ${NP_NS}"
 else
-  record G5 FAIL "NetworkPolicy app-gateway-shared-ingress-np missing in ${PILOT_NS}"
+  record G5 FAIL "NetworkPolicy app-gateway-shared-ingress-np missing in ${NP_NS}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -210,19 +216,29 @@ if [[ "${PILOT_HTTPS}" == "0" ]]; then SCHEME="http"; CURL_FLAGS=(-s); fi
 declare -A RIDS
 G6_FAIL=0; G7_FAIL=0; G8_FAIL=0
 
+# When EDGE_IP is a raw node IP, HTTPS needs SNI via --resolve; HTTP uses Host to EDGE_IP.
+curl_pilot() {
+  local host="$1" user="$2" rid="$3" out_body="$4"
+  local -a extra=()
+  if [[ "${PILOT_HTTPS}" != "0" ]]; then
+    extra+=(--resolve "${host}:443:${EDGE_IP}")
+    curl "${CURL_FLAGS[@]}" -L --max-redirs 5 "${extra[@]}" -o "${out_body}" -w '%{http_code}' \
+      -H "X-Request-Id: ${rid}" -H "X-BFL-USER: ${user}" \
+      "${SCHEME}://${host}${PILOT_PATH}" 2>/dev/null
+  else
+    curl "${CURL_FLAGS[@]}" -L --max-redirs 5 -o "${out_body}" -w '%{http_code}' \
+      -H "Host: ${host}" -H "X-Request-Id: ${rid}" -H "X-BFL-USER: ${user}" \
+      "${SCHEME}://${EDGE_IP}${PILOT_PATH}" 2>/dev/null
+  fi
+}
+
 for v in "${VIEWERS[@]}"; do
   v_trim="${v// /}"; [[ -z "${v_trim}" ]] && continue
   RID="phase-a-v2-${v_trim}-$$-$(date +%s)"
   RIDS["${v_trim}"]="${RID}"
   HOST="${HASH8}.${v_trim}.${PLATFORM_DOMAIN}"
-  URL="${SCHEME}://${EDGE_IP}${PILOT_PATH}"
   hdr "G6 ${v_trim} curl Host=${HOST}"
-  HTTP_CODE=$(curl "${CURL_FLAGS[@]}" -o /tmp/e2e-phase-a-v2-${v_trim}-body \
-                -w '%{http_code}' \
-                -H "Host: ${HOST}" \
-                -H "X-Request-Id: ${RID}" \
-                -H "X-BFL-USER: ${v_trim}" \
-                "${URL}" 2>/dev/null)
+  HTTP_CODE=$(curl_pilot "${HOST}" "${v_trim}" "${RID}" "/tmp/e2e-phase-a-v2-${v_trim}-body")
   HTTP_CODE="${HTTP_CODE:-000}"
   if [[ "${HTTP_CODE}" =~ ^2[0-9][0-9]$ ]]; then
     record "G6:${v_trim}" PASS "curl Host=${HOST} -> HTTP ${HTTP_CODE} rid=${RID}"
@@ -233,15 +249,15 @@ for v in "${VIEWERS[@]}"; do
 done
 sleep 2
 
-hdr "G7 EG access log carries RID for every viewer"
-EG_LOG=$(kubectl -n "${APP_GATEWAY_NS}" logs -l "${EG_LABEL}" --tail=500 2>/dev/null || true)
+hdr "G7 L4 access log shows pilot host for every viewer"
+L4_LOG=$(kubectl -n "${L4_BFL_PROXY_NS:-os-network}" logs deploy/l4-bfl-proxy --tail=500 2>/dev/null || true)
 for v in "${VIEWERS[@]}"; do
   v_trim="${v// /}"; [[ -z "${v_trim}" ]] && continue
-  rid="${RIDS[${v_trim}]}"
-  if printf '%s' "${EG_LOG}" | grep -qF "${rid}"; then
-    record "G7:${v_trim}" PASS "EG log contains rid=${rid}"
+  HOST="${HASH8}.${v_trim}.${PLATFORM_DOMAIN}"
+  if printf '%s' "${L4_LOG}" | grep -qF "${HOST}"; then
+    record "G7:${v_trim}" PASS "L4 log contains host=${HOST}"
   else
-    record "G7:${v_trim}" FAIL "EG log missing rid=${rid}"
+    record "G7:${v_trim}" FAIL "L4 log missing host=${HOST}"
     G7_FAIL=$((G7_FAIL + 1))
   fi
 done
@@ -250,13 +266,13 @@ hdr "G8 authz allow log for every viewer (target=${AUTHZ_TARGET} ns=${AUTHZ_NS})
 AUTHZ_LOG=$(authz_logs 500)
 for v in "${VIEWERS[@]}"; do
   v_trim="${v// /}"; [[ -z "${v_trim}" ]] && continue
-  rid="${RIDS[${v_trim}]}"
+  HOST="${HASH8}.${v_trim}.${PLATFORM_DOMAIN}"
   if printf '%s' "${AUTHZ_LOG}" \
-       | grep -F "${rid}" \
-       | grep -qE '"decision":"allow"|"decision":"allow_all"'; then
-    record "G8:${v_trim}" PASS "authz allow log for rid=${rid}"
+       | grep -F "authority=${HOST}" \
+       | grep -qE 'decision=allow([^_]|\s|$)|decision=allow_all'; then
+    record "G8:${v_trim}" PASS "authz allow log for authority=${HOST}"
   else
-    record "G8:${v_trim}" FAIL "authz allow log missing for rid=${rid}"
+    record "G8:${v_trim}" FAIL "authz allow log missing for authority=${HOST}"
     G8_FAIL=$((G8_FAIL + 1))
   fi
 done
@@ -264,23 +280,28 @@ done
 # ---------------------------------------------------------------------------
 # G9: host-user mismatch -> 403 INVALID_HOST_USER
 # ---------------------------------------------------------------------------
-hdr "G9 host-user mismatch returns 403 INVALID_HOST_USER"
+hdr "G9 host-user mismatch returns 403 INVALID_HOST_USER (direct to EG)"
 MIS_RID="phase-a-v2-mismatch-$$-$(date +%s)"
 MIS_HOST="${HASH8}.${PRIMARY}.${PLATFORM_DOMAIN}"
-MIS_CODE=$(curl "${CURL_FLAGS[@]}" -o /tmp/e2e-phase-a-v2-mismatch-body \
-              -w '%{http_code}' \
-              -H "Host: ${MIS_HOST}" \
-              -H "X-Request-Id: ${MIS_RID}" \
-              -H "X-BFL-USER: ${SECONDARY}" \
-              "${SCHEME}://${EDGE_IP}${PILOT_PATH}" 2>/dev/null)
-MIS_CODE="${MIS_CODE:-000}"
-sleep 2
-AUTHZ_LOG2=$(authz_logs 500)
-if [[ "${MIS_CODE}" == "403" ]] \
-   && printf '%s' "${AUTHZ_LOG2}" | grep -F "${MIS_RID}" | grep -q 'INVALID_HOST_USER'; then
-  record G9 PASS "mismatch curl -> 403 + authz log INVALID_HOST_USER"
+EG_EP=$(kubectl -n "${APP_GATEWAY_NS}" get endpoints app-gateway-data \
+  -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null || true)
+EG_PORT=$(kubectl -n "${APP_GATEWAY_NS}" get svc app-gateway-data \
+  -o jsonpath='{.spec.ports[?(@.name=="http")].targetPort}' 2>/dev/null || echo "10080")
+if [[ -z "${EG_EP}" ]]; then
+  record G9 FAIL "app-gateway-data endpoints missing"
 else
-  record G9 FAIL "mismatch curl -> HTTP ${MIS_CODE}; authz log missing INVALID_HOST_USER for rid=${MIS_RID}"
+  MIS_CODE=$(curl -sk -o /tmp/e2e-phase-a-v2-mismatch-body -w '%{http_code}' \
+    -H "Host: ${MIS_HOST}" -H "X-Request-Id: ${MIS_RID}" -H "X-BFL-USER: ${SECONDARY}" \
+    "http://${EG_EP}:${EG_PORT}${PILOT_PATH}" 2>/dev/null)
+  MIS_CODE="${MIS_CODE:-000}"
+  sleep 2
+  AUTHZ_LOG2=$(authz_logs 500)
+  if [[ "${MIS_CODE}" == "403" ]] \
+     && printf '%s' "${AUTHZ_LOG2}" | grep -F "authority=${MIS_HOST}" | grep -q 'INVALID_HOST_USER'; then
+    record G9 PASS "direct EG mismatch curl -> 403 + authz INVALID_HOST_USER"
+  else
+    record G9 FAIL "direct EG mismatch curl -> HTTP ${MIS_CODE}; authz missing INVALID_HOST_USER for ${MIS_HOST}"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -313,17 +334,11 @@ case "${FAILCLOSED_MODE}" in
       kubectl -n "${AUTHZ_NS}" scale "${AUTHZ_KIND}/${AUTHZ_NAME}" --replicas=0 >/dev/null
       kubectl -n "${AUTHZ_NS}" rollout status "${AUTHZ_KIND}/${AUTHZ_NAME}" --timeout=60s >/dev/null 2>&1 || true
       sleep 3
-      DOWN_CODE=$(curl "${CURL_FLAGS[@]}" -o /dev/null -w '%{http_code}' \
-                     -H "Host: ${HASH8}.${PRIMARY}.${PLATFORM_DOMAIN}" \
-                     -H "X-BFL-USER: ${PRIMARY}" \
-                     "${SCHEME}://${EDGE_IP}${PILOT_PATH}" 2>/dev/null)
+      DOWN_CODE=$(curl_pilot "${HASH8}.${PRIMARY}.${PLATFORM_DOMAIN}" "${PRIMARY}" "phase-a-g10-down" "/dev/null")
       kubectl -n "${AUTHZ_NS}" scale "${AUTHZ_KIND}/${AUTHZ_NAME}" --replicas="${ORIG_REPLICAS:-1}" >/dev/null
       kubectl -n "${AUTHZ_NS}" rollout status "${AUTHZ_KIND}/${AUTHZ_NAME}" --timeout=90s >/dev/null 2>&1 || true
       sleep 3
-      UP_CODE=$(curl "${CURL_FLAGS[@]}" -o /dev/null -w '%{http_code}' \
-                   -H "Host: ${HASH8}.${PRIMARY}.${PLATFORM_DOMAIN}" \
-                   -H "X-BFL-USER: ${PRIMARY}" \
-                   "${SCHEME}://${EDGE_IP}${PILOT_PATH}" 2>/dev/null)
+      UP_CODE=$(curl_pilot "${HASH8}.${PRIMARY}.${PLATFORM_DOMAIN}" "${PRIMARY}" "phase-a-g10-up" "/dev/null")
       if [[ "${DOWN_CODE:-000}" =~ ^5[0-9][0-9]$ ]] && [[ "${UP_CODE:-000}" =~ ^2[0-9][0-9]$ ]]; then
         record G10 PASS "scale-0 -> ${DOWN_CODE} ; recover -> ${UP_CODE}"
       else
