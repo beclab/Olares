@@ -547,3 +547,66 @@ func TestFrontendPathURLPath(t *testing.T) {
 		})
 	}
 }
+
+// TestValidateNoDotSegments locks in the pre-ParseFrontendPath check
+// the `mkdir` and `rename` (source-path) adapters call to enforce the
+// `.` / `..` blacklist at the CLI surface. The check has to run on
+// the RAW input — ParseFrontendPath's `path.Clean` step otherwise
+// collapses these segments silently — so this test exercises a
+// variety of segment positions and surrounding-slash shapes to make
+// sure none of them slip through.
+func TestValidateNoDotSegments(t *testing.T) {
+	t.Run("accepts clean paths", func(t *testing.T) {
+		ok := []string{
+			"",                              // empty: nothing to validate
+			"drive/Home/",                   // bare extend root
+			"drive/Home/Documents/Backups",  // normal nested path
+			"drive/Home/Documents/Backups/", // same, with trailing slash
+			"drive/Home/.hidden",            // leading dot is fine (filename, not a segment)
+			"drive/Home/foo.txt",            // dot inside the name is fine
+			"drive/Home/...",                // three dots is not a reserved name
+			"sync/abc-123/notes/2026",       // sync repo extend (UUID)
+			"  drive/Home/foo  ",            // surrounding whitespace tolerated
+		}
+		for _, in := range ok {
+			if err := ValidateNoDotSegments(in); err != nil {
+				t.Errorf("ValidateNoDotSegments(%q): unexpected error %v", in, err)
+			}
+		}
+	})
+
+	t.Run("rejects '.' / '..' segments anywhere", func(t *testing.T) {
+		cases := []struct {
+			in  string
+			seg string
+		}{
+			{"drive/Home/.", `"."`},
+			{"drive/Home/..", `".."`},
+			{"drive/Home/./", `"."`},
+			{"drive/Home/../", `".."`},
+			{"drive/Home/foo/./bar", `"."`},
+			{"drive/Home/foo/../bar", `".."`},
+			{"drive/Home/foo/./", `"."`},
+			{"drive/Home/foo/../", `".."`},
+			{"drive/Home/../../etc", `".."`},
+			{"drive/./Home/foo", `"."`},     // extend slot
+			{"./Home/foo", `"."`},           // fileType slot
+			{"/drive/Home/../bar/", `".."`}, // leading + trailing slashes
+		}
+		for _, c := range cases {
+			err := ValidateNoDotSegments(c.in)
+			if err == nil {
+				t.Errorf("ValidateNoDotSegments(%q): want error, got nil", c.in)
+				continue
+			}
+			// Error must name the offending segment so the user can
+			// locate the typo on a deep path.
+			if !strings.Contains(err.Error(), c.seg) {
+				t.Errorf("ValidateNoDotSegments(%q): err %q should mention %s", c.in, err.Error(), c.seg)
+			}
+			if !strings.Contains(err.Error(), "path-traversal blacklist") {
+				t.Errorf("ValidateNoDotSegments(%q): err %q should mention 'path-traversal blacklist'", c.in, err.Error())
+			}
+		}
+	})
+}

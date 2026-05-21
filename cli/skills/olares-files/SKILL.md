@@ -364,7 +364,7 @@ Refusals:
 
 - The volume root (`drive/Home/`, `sync/<repo>/`, etc.) is rejected — those always exist; trying to "create" them would just trigger the auto-rename on the extend folder, which is never what you want.
 - **`external/<node>/` is rejected with a customized message** pointing at `external/<node>/<volume>/<sub>/` — the volume-listing layer has no underlying filesystem (see Server-side quirks #3). The generic "pick a subdirectory name (e.g. external/<node>/NewFolder)" hint other namespaces emit would be misleading here, since `NewFolder` would still land at the volume-list level.
-- Bare `.` / `..` / empty segments are rejected as obvious typos / path-traversal grenades.
+- **`.` / `..` segments ANYWHERE in `<remote-path>` are rejected** — path-traversal blacklist. This is a pre-`path.Clean` check on the RAW user input, so `mkdir drive/Home/.`, `mkdir drive/Home/foo/./bar`, `mkdir drive/Home/foo/../bar`, and `mkdir drive/Home/../../etc` all surface a targeted `path segment "." (or "..") is a reserved name (...path-traversal blacklist)` error instead of silently collapsing to the parent volume root or rewriting under the user's feet. Empty segments (`drive/Home//foo`) collapse normally per POSIX (the cobra layer's `path.Clean` keeps that behavior); only the literal `.` / `..` segments trip the blacklist.
 - In `-p` mode, a prefix that exists as a NON-directory (e.g. you asked for `mkdir -p Foo/Bar` but `Foo` is a file) errors out instead of letting the auto-rename quirk silently create a `Foo (1)/` sibling.
 
 ### `files rm [-r] [-f] <remote-path>...`
@@ -521,6 +521,7 @@ Validation rules (rejected client-side, before any HTTP call):
 
 - `<new-name>` MUST NOT contain `/` or `\` — those are not basename characters; use `mv` for cross-directory moves.
 - `<new-name>` MUST NOT be empty, `.`, or `..`.
+- `<remote-path>` MUST NOT contain `.` or `..` segments anywhere (path-traversal blacklist, pre-`path.Clean` check on the RAW input). `rename drive/Home/foo/../bar new` would otherwise silently collapse to `rename drive/Home/bar new` — different entry than the user typed — so the CLI surfaces a targeted `path segment "." (or "..") is a reserved name (...path-traversal blacklist)` error instead.
 - The source MUST NOT be the volume root (`drive/Home/`, `sync/<repo>/`, ...).
 - `<new-name>` MUST differ from the source's current basename — same-name rename is a no-op the server would silently accept; we reject it client-side so a typo doesn't go unnoticed.
 - **System-managed Home children are rejected**: `files rename drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface} ...` errors with `refusing to rename drive/Home/<name>: this is a system-managed Home folder reserved by Files; ...`. These names mirror the LarePass app's `disableMenuItem` array exactly (case-sensitive — `Huggingface` is one word) and protect bootstrap dirs that user apps look up by name (Server-side quirks #4). Children INSIDE these dirs (e.g. `drive/Home/Pictures/Album1/`) are user content and remain freely renamable.
@@ -989,17 +990,22 @@ The mount endpoint has TWO valid success-shape replies:
 
 Any other code is surfaced as `server rejected (code N): <message>` — a 200/HTTP envelope-error, NOT a `*HTTPError`. This matches the LarePass GUI flow: code 300 pops up `ConnectServerPath.vue` (a chooser dialog) and the user re-runs; code-other shows a toast and bails.
 
-#### `files smb mount <smb-url> [-u <user>] [-p <password> | --password-stdin] [--node <node>] [--json]`
+#### `files smb mount <smb-url> [-u <user>] [-p <password> | --password-stdin] [--no-history] [--node <node>] [--json]`
 
-`<smb-url>` MUST start with `//` (the SMB convention). Three credential modes, in priority order:
+`<smb-url>` MUST start with `//` (the SMB convention). Four credential modes, in strict priority order — the first match wins, later modes only kick in when their predecessors are absent:
 
 | Mode | Trigger | Behavior |
 |------|---------|----------|
-| Explicit | `-p <password>` | Used as-is. Convenient for one-offs but **echoed in shell history** — never use this in scripts. |
+| Explicit literal | `-p <password>` | Used as-is. Convenient for one-offs but **echoed in shell history** — never use this in scripts. |
 | Stdin pipe | `--password-stdin` | Reads the first stdin line, strips trailing CR/LF. Mutually exclusive with `-p`. The script-friendly form: `printf '%s' "$SMB_PASSWORD" \| olares-cli files smb mount ... --password-stdin`. Empty stdin is rejected. |
-| Interactive | (none of the above) | Reads via `golang.org/x/term` so the password is **not** echoed. Requires a real TTY — failing the TTY check produces `stdin is not a terminal — pipe a password with --password-stdin or pass --password explicitly`. Anonymous SMB shares (empty password) are accepted at the wire layer; if the server rejects them, the error surfaces verbatim. |
+| Saved favorite | `<smb-url>` matches an entry from `files smb history list` | Autofills missing flags from the favorite — `username` fills `-u` when not passed, and `password` fills the prompt when `-p` / `--password-stdin` are both absent. **Cross-account safety:** if `-u <user>` is passed AND it disagrees with the favorite's username, the CLI emits a one-line `note: history has saved credentials for user "..." but -u "..." was passed; using flags as-is` and falls through — one account's saved password is never lent to a different account. Mirrors LarePass's "Connect to Server" autofill (`ConnectServerStep1.vue` populates the same fields when a row is clicked). Disable with `--no-history`. |
+| Interactive | none of the above | **Two-step prompt.** When `-u` is ALSO missing (and history didn't fill it in) the CLI first prints `SMB username (empty for anonymous): ` — echoed, since the username isn't sensitive — and reads one line; pressing Enter without typing is the explicit "anonymous mount" gesture. Then `SMB password: ` is read via `golang.org/x/term` (no echo). Requires a real TTY at the password step — failing the TTY check produces `stdin is not a terminal — pipe a password with --password-stdin or pass --password explicitly`. **Why the user prompt was added:** previously a flag-less `mount //host/share` against a URL not in history would silently default to `(user=(anonymous))` and prompt only for a password, then almost always reject with `server rejected (code 500): Incorrect username or password` because the share actually wanted a real account. The two-step prompt makes the account choice visible. Anonymous shares (empty user + empty password) are accepted at the wire layer; if the server rejects them, the error surfaces verbatim. |
 
-`-u` is OPTIONAL — anonymous shares (where the server allows un-authenticated `guest` access) work without it; the progress line then reads `(user=(anonymous))`. Most modern SMB targets need a real username, so the CLI does NOT auto-supply one.
+When autofill fires, mount prints a `· using saved credentials from SMB history (user=<name>)` line right before the `mount: <url> @ <node>` progress line, so the user can tell at a glance which path the credentials came from. A history endpoint failure (network blip / 401 on `/api/smb_history/`) is a **soft failure**: a single `note: SMB history unavailable (...); proceeding without autofill` is emitted and the command falls through to the flag- / prompt-driven path — the mount itself is never blocked by a flaky favorites lookup.
+
+`-u` is OPTIONAL — anonymous shares (where the server allows un-authenticated `guest` access) work without it; the progress line then reads `(user=(anonymous))`. Most modern SMB targets need a real username, so the CLI does NOT auto-supply one (unless a matching saved favorite provides it via the autofill flow above).
+
+`--no-history` opts out of the autofill flow entirely; the saved favorite is ignored even when it matches. Use this when the saved credentials are known stale (e.g. the user just rotated the password and wants to type the new one without first `smb history rm` + `smb history add`).
 
 `--node` is OPTIONAL — without it the CLI calls `/api/nodes/` and uses `nodes[0].Name` (same default cascade `files cp` and `files upload` use). Pass `--node <name>` only when the auto-detected first node isn't the one you want.
 
@@ -1011,9 +1017,33 @@ olares-cli files smb mount //host.local/Public -u alice -p s3cret
 printf '%s' "$SMB_PASSWORD" | \
     olares-cli files smb mount //host.local/Public -u alice --password-stdin
 
-# Interactive (TTY-only, no echo).
+# Interactive (TTY-only, no echo) with -u already supplied.
 olares-cli files smb mount //host.local/Public -u alice
 # → SMB password: ********
+
+# Interactive — no flags at all, URL not in history. Both the
+# username and the password are prompted, in that order.
+olares-cli files smb mount //host.local/Public
+# → SMB username (empty for anonymous): alice
+# → SMB password: ********
+
+# Interactive — anonymous share (just hit Enter at the username prompt).
+olares-cli files smb mount //host.local/Public
+# → SMB username (empty for anonymous):
+# → SMB password: ********  (or empty if the share allows it)
+
+# Saved-favorite autofill — no flags needed when the URL was
+# previously saved with credentials via `smb history add`.
+olares-cli files smb history add //host.local/Public -u alice -p s3cret
+olares-cli files smb mount //host.local/Public
+# →  · using saved credentials from SMB history (user=alice)
+# →  mount: //host.local/Public @ <node> (user=alice)
+# →  ✓ mounted ...
+
+# Force a fresh prompt even though a favorite is saved (e.g. after
+# rotating the password).
+olares-cli files smb mount //host.local/Public --no-history -u alice
+# → SMB password: ******** (typed new value)
 
 # Server-side share discovery — pass the host alone, get a list,
 # re-run with the chosen share path.
@@ -1184,6 +1214,8 @@ olares-cli files ls sync/$REPO_ID/
 
 > **Encryption is NOT exposed.** The per-user files-backend's `createLibrary` endpoint accepts no password / encryption flags, and the LarePass UI has no equivalent option either. If the user needs an encrypted library they must create it from the LarePass app or directly via Seahub; once it exists the CLI can list it (`ENC=yes`), but every `upload` / `download` / `cat` / `ls` against it will fail until the user unlocks the repo via the web app.
 
+> **Reserved names.** Empty / `.` / `..` are rejected client-side with `repos Create: repo name "..." is a path-traversal segment, not a real name` — same blacklist `files mkdir` and `files rename` enforce. Pick a non-reserved label; everything else (spaces, unicode, parens, etc.) is fair game.
+
 `--json` prints the full repo record (mirroring `repos list`'s row shape) so jq pipelines can extract any field, not just `repo_id`.
 
 #### `files repos rename <repo_id> <new_name>`
@@ -1195,6 +1227,8 @@ olares-cli files repos rename abc-123 "Project Alpha (archived)"
 ```
 
 The repo's UUID is stable across renames — already-cached `sync/<repo_id>/...` frontend paths keep working. The CLI does a best-effort `Get` first to fetch the old name for the audit line; if that lookup fails, the rename still proceeds and the output simplifies to `renamed repo <id> -> "<new>"`.
+
+> **Reserved names.** Same `.` / `..` blacklist `repos create` enforces — the rename path can't be used as an end-around to land a reserved name, error wording is `repos Rename: new name "..." is a path-traversal segment, not a real name`.
 
 #### `files repos rm <repo_id>... [--yes|-y] [--force|-f]`
 
@@ -1251,6 +1285,8 @@ Multiple ids are deleted in turn. Per-id failures are printed as `failed: <id> (
 | `queued N copy/move task(s): ...` but the file isn't visible yet | Task is queued; backend hasn't processed it | Wait briefly and `files ls` the destination; the CLI does not currently poll task completion |
 | `<new-name> contains '/'` / `... contains '\\'` | `rename` was given a path-like new name | `rename` only changes the basename; use `mv` for cross-directory moves |
 | `<new-name> is "."` / `is ".."` / `is empty` | `rename` was given a sentinel basename | Pick a real basename |
+| `mkdir: path segment "." (or "..") is a reserved name (... path-traversal blacklist)` | `files mkdir` was given a path containing a `.` / `..` segment (`drive/Home/.`, `drive/Home/foo/./bar`, `drive/Home/foo/../bar`, ...) | Pick a name that does not match `.` / `..` in any segment — the check runs on RAW input before `path.Clean`, so silently-collapsing forms like `foo/../bar` no longer rewrite to `bar` |
+| `rename: path segment "." (or "..") is a reserved name (... path-traversal blacklist)` | `files rename` was given a `<remote-path>` containing a `.` / `..` segment | Same fix as the mkdir case — type the literal source path; `path.Clean`-style traversals are not accepted on the rename source either |
 | `<new-name> equals the current basename` | `rename` was a no-op | If the user intended a cross-directory move, use `mv` |
 | `refusing to rename the root of <fileType>/<extend>` | `rename drive/Home/ ...` | Volume roots can't be renamed; pick a child path |
 | `refusing to rename drive/Home/<name>: this is a system-managed Home folder reserved by Files; ...` | Tried `files rename drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface}` (the LarePass app's `disableMenuItem` set) | These names are LarePass-bootstrapped Home folders that user apps look up by exact name (Server-side quirks #4) — the Files GUI also greys out rename for them. Rename a child instead (e.g. `drive/Home/Pictures/<album>`), or copy the contents into a new sibling (`cp -r drive/Home/Pictures/ drive/Home/PicturesArchive/`). |
@@ -1289,14 +1325,18 @@ Multiple ids are deleted in turn. Per-id failures are printed as `failed: <id> (
 | `--password-stdin: password is empty` | `printf '' \| olares-cli files smb mount ... --password-stdin` (or the pipe died before sending anything) | Make sure the upstream command actually emits the password. For anonymous shares, omit `--password-stdin` and `-p` altogether — interactive mode accepts empty input. |
 | `stdin is not a terminal — pipe a password with --password-stdin or pass --password explicitly` | `files smb mount` invoked from a script / CI / heredoc without `-p` or `--password-stdin` | The interactive password prompt requires a TTY. Either pipe the secret with `--password-stdin` or pass `-p` (acceptable when the surrounding tooling already redacts the command line). |
 | `mount returned a multi-share list (code 300); re-run with one of the paths above` | `files smb mount //host.local` (host-only address — server replied with the list of discovered shares) | Pick one of the printed paths and re-run mount. Use `--json` if you're scripting around this — it puts the path list under `paths` for jq pipelines. |
-| `server rejected (code N): <message>` (smb mount) | The server returned 200/HTTP but a non-200/300 envelope code (typically `code 401` for bad credentials, `code 500` for server-side mount failure) | The wire `<message>` is the server's diagnostic — surface it to the user verbatim. For `code 401` the most common cause is wrong username / password; for `code 500` the SMB target itself is unreachable or the server-side `cifs-utils` mount call failed (verify the share is reachable from the Olares node). |
+| `server rejected (code N): <message>` (smb mount) | The server returned 200/HTTP but a non-200/300 envelope code (typically `code 401` for bad credentials, `code 500` for server-side mount failure) | The wire `<message>` is the server's diagnostic — surface it to the user verbatim. For `code 401` the most common cause is wrong username / password; for `code 500` the SMB target itself is unreachable, the server-side `cifs-utils` mount call failed (verify the share is reachable from the Olares node), or the server is mapping a real auth failure into a 500 — the user-reported `Incorrect username or password` text under `code 500` is exactly this auth-rejection shape. **Triage:** check the progress line — `mount: //host/share @ <node> (user=...)`. If `user=(anonymous)` and the share wants a real account, the user dropped through the interactive flow without typing a username; re-run and type the account at the `SMB username (empty for anonymous):` prompt, or pass `-u <user>` explicitly. **If `smb history list` shows a saved password for the URL but the mount still rejects**, the favorite is stale — rotate it via `smb history rm <url>` + `smb history add <url> -u <user> -p <new-pw>`, or pass `--no-history -u <user> -p <new-pw>` once and re-save afterwards. |
+| `note: SMB history unavailable (...); proceeding without autofill` | `files smb mount` tried to fetch `/api/smb_history/<node>/` to autofill missing -u / -p but the call failed (network, 401, 5xx, ...) | **Soft failure — the mount itself is not blocked.** Falls through to the flag- / prompt-driven credential path. If autofill is critical (e.g. the user expected the saved password to be reused), verify the favorite exists via `files smb history list` and that the profile is still authenticated (`profile login`). |
+| `note: SMB history has saved credentials for user "<a>" but -u "<b>" was passed; using flags as-is` | The favorite stored credentials for one account but the user asked for a different account via `-u`. | Informational only — the CLI deliberately does not lend account A's password to account B. Either drop `-u <b>` (to use the saved account), pass the matching `-p` / `--password-stdin` for `<b>`, or run a fresh `smb history add //url -u <b> -p <pw>` to save the new pairing. |
 | `entry name "..." must not contain '/' or '\\'` | `files smb unmount external/main/smb-host-share` (passed a 3-segment frontend path instead of the bare entry name) | The wire URL shape is `/api/unmount/external/<node>/<name>/`; pass only the `<name>` segment. Discover it with `files ls external/<node>/` first, then re-run `files smb unmount <name> --node <node>`. |
 | `could not resolve a node for ... ; pass --node <name> explicitly` | `files smb mount` / `unmount` / `history` was called and the auto-detected `--node` came back empty | Pass `--node <name>` explicitly. Use `olares-cli files cp --help` (the same `--node` cascade lives there) or check the LarePass app's node picker for the right name. |
 | `files-backend returned no Drive nodes; cannot resolve default {node}` | The server's `/api/nodes/` returned an empty list AND `--node` was not passed | Pass `--node <name>` explicitly — every SMB verb needs a concrete `<node>` segment in its URL. |
 | `unknown repos type "..."` (`files repos list --type ...`) | Misspelled `--type` value | Use `mine`, `share-to-me`, `shared`, or `all` |
 | `repos Create: empty repo name` | `files repos create ""` (or whitespace-only) | Pass a non-empty `<name>` argument |
+| `repos Create: repo name "." (or "..") is a path-traversal segment, not a real name` | `files repos create .` / `files repos create ..` | Pick a non-reserved name — `.` and `..` are blocked uniformly across `files mkdir`, `files rename`, `files repos create`, and `files repos rename` |
 | `repos Create: server accepted the request but did not return a repo_id` | Rare Seahub path that 200s but elides the response payload | Run `files repos list` to discover the new repo; the create likely succeeded |
 | `repos Create: server rejected (code N): ...` | Server-side validation failed (duplicate name, encryption-only deployment, etc.) | Surface the message verbatim — it's the Seahub-side reason |
+| `repos Rename: new name "." (or "..") is a path-traversal segment, not a real name` | `files repos rename <id> .` / `files repos rename <id> ..` | Same `.`/`..` blacklist as `repos create`; sidestepping create with a benign-then-rename workflow is also blocked |
 | `repos Rename ...: server rejected (code N): ...` | Permission denied / target name conflict on rename | Read the embedded message; if it's a name conflict, pick a different `<new_name>` |
 | `repo <id>: not found in any of mine / share-to-me / shared` (`repos get`) | Wrong / removed repo id, or it's an encrypted repo the caller has no access to | Run `files repos list --type all` to confirm |
 | `repos rm: refusing to delete without -y / --yes` (no TTY) | Running in CI / pipe / heredoc without a confirmation opt-out | Add `-y`, `--yes`, `-f`, or `--force` (or run from a real TTY to get the y/N prompt) |

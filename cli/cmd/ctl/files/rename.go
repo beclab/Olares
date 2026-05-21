@@ -94,6 +94,13 @@ A trailing '/' on <remote-path> signals the source is a directory and
 is preserved on the wire (so the backend routes through its directory
 handler). Volume roots (e.g. ` + "`drive/Home/`" + `) are refused.
 
+` + "`.`" + ` and ` + "`..`" + ` segments ANYWHERE in <remote-path> are also
+rejected (path-traversal blacklist). The check runs on the raw input
+before any normalization, so a silently-collapsing form like
+` + "`drive/Home/foo/../bar`" + ` errors out instead of being rewritten
+to ` + "`drive/Home/bar`" + ` (which would rename a different entry than
+the user typed).
+
 Examples:
 
     # Rename a file.
@@ -184,7 +191,20 @@ func runRename(
 // rename.Plan — defense in depth: this layer can give a friendlier
 // error message naming the actual <fileType>/<extend>, while Plan
 // stays robust against a future caller that bypasses this helper.
+//
+// `.` / `..` segments in the RAW source path are rejected up front
+// via ValidateNoDotSegments — without this pre-check
+// ParseFrontendPath's `path.Clean` step would silently collapse them
+// (e.g. `drive/Home/foo/..` → `drive/Home/`, masquerading as a
+// "rename the root" attempt; `drive/Home/foo/./bar` → `drive/Home/foo/bar`,
+// renaming a different entry than the user typed). The NEW NAME side
+// is already guarded by rename.Plan (it's not path-cleaned because
+// it's a bare basename); this guard covers the source-path leg the
+// planner cannot see by the time it runs.
 func frontendPathToRenameTarget(raw string) (rename.Target, error) {
+	if err := ValidateNoDotSegments(raw); err != nil {
+		return rename.Target{}, fmt.Errorf("rename: %w", err)
+	}
 	fp, err := ParseFrontendPath(raw)
 	if err != nil {
 		return rename.Target{}, err

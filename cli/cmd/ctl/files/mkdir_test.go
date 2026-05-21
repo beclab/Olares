@@ -59,6 +59,48 @@ func TestFrontendPathToMkdirTarget(t *testing.T) {
 			t.Error("want error for empty path")
 		}
 	})
+
+	// Regression: `path.Clean` inside ParseFrontendPath silently
+	// collapses `.` / `..` segments, which would otherwise let
+	// `mkdir drive/Home/.` slip through as a "create the root"
+	// attempt (misleading error) and `mkdir drive/Home/foo/./bar`
+	// silently land at `drive/Home/foo/bar`. The pre-check in
+	// frontendPathToMkdirTarget must fire BEFORE that cleanup so the
+	// user sees a targeted blacklist error pointing at the offending
+	// segment.
+	t.Run("dot-segment blacklist fires before path.Clean", func(t *testing.T) {
+		cases := []struct {
+			name string
+			in   string
+			seg  string
+		}{
+			{"leaf is '.'", "drive/Home/.", `"."`},
+			{"leaf is '..'", "drive/Home/..", `".."`},
+			{"interior './'", "drive/Home/foo/./bar", `"."`},
+			{"interior '../'", "drive/Home/foo/../bar", `".."`},
+			{"leaf with trailing slash '.' ", "drive/Home/Documents/./", `"."`},
+			{"all-traversal subpath", "drive/Home/../../etc", `".."`},
+		}
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				_, err := frontendPathToMkdirTarget(c.in)
+				if err == nil {
+					t.Fatalf("want error for %q", c.in)
+				}
+				// Error must mention the offending segment AND the
+				// blacklist phrase so the user understands what's
+				// being rejected. Without the segment in the
+				// message a user with a deep path can't easily
+				// locate the typo.
+				if !strings.Contains(err.Error(), c.seg) {
+					t.Errorf("err %q should mention segment %s", err.Error(), c.seg)
+				}
+				if !strings.Contains(err.Error(), "path-traversal blacklist") {
+					t.Errorf("err %q should mention 'path-traversal blacklist'", err.Error())
+				}
+			})
+		}
+	})
 }
 
 // TestLastSegmentForHint locks in the basename derivation used by

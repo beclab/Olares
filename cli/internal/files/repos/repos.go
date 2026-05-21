@@ -428,6 +428,17 @@ type mutationEnvelope struct {
 // sync/<repo_id>/ paths). Empty `name` is rejected client-side so a
 // trivial typo doesn't round-trip to the server.
 //
+// Reserved names `.` and `..` are rejected as well — these are
+// path-traversal segments in POSIX filesystems and are blocked
+// uniformly across `files mkdir` (internal/files/mkdir.Plan) and
+// `files rename` (internal/files/rename.Plan); refusing them here
+// keeps the Sync repo catalog free of names that would confuse the
+// LarePass UI, scripted callers, and any code that joins a repo's
+// display name into a path-shaped log line. Same exact-match policy
+// as the other two verbs — surrounding whitespace is preserved
+// verbatim (matches the existing `name == ""` check) so we don't
+// silently change the on-the-wire repo name.
+//
 // Encryption is NOT supported here: the back-end's createLibrary call
 // has no password / encryption flags, and the LarePass UI doesn't
 // expose them either. Encrypted libraries must be created from the
@@ -435,6 +446,9 @@ type mutationEnvelope struct {
 func (c *Client) Create(ctx context.Context, name string) (*Repo, error) {
 	if name == "" {
 		return nil, errors.New("repos Create: empty repo name")
+	}
+	if name == "." || name == ".." {
+		return nil, fmt.Errorf("repos Create: repo name %q is a path-traversal segment, not a real name", name)
 	}
 	q := url.Values{}
 	q.Set("repoName", name)
@@ -470,12 +484,21 @@ func (c *Client) Create(ctx context.Context, name string) (*Repo, error) {
 // Both arguments are required and rejected client-side when empty so
 // we don't silently send `?destination=&repoId=...` and trip an
 // unhelpful server-side error.
+//
+// Reserved names `.` and `..` are rejected too — same policy
+// internal/files/rename.Plan applies to in-place file/folder renames,
+// extended here so the Sync repo catalog can't be steered into a
+// path-traversal-shaped display name via the `repos rename` path
+// (which would otherwise sidestep the create-time guard).
 func (c *Client) Rename(ctx context.Context, repoID, newName string) error {
 	if repoID == "" {
 		return errors.New("repos Rename: empty repoID")
 	}
 	if newName == "" {
 		return errors.New("repos Rename: empty new name")
+	}
+	if newName == "." || newName == ".." {
+		return fmt.Errorf("repos Rename: new name %q is a path-traversal segment, not a real name", newName)
 	}
 	q := url.Values{}
 	q.Set("destination", newName)
