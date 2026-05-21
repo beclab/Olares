@@ -79,13 +79,8 @@ func HostUser(authority string, headers map[string]string, cfg HostUserConfig) D
 		}
 	}
 	if !isHash8(labels[0]) {
-		return Decision{
-			Action:   ActionDeny,
-			Code:     "INVALID_HOST_PREFIX",
-			Message:  "host prefix is not an 8-char lowercase hex hash",
-			Viewer:   labels[1],
-			Username: lower(headers["x-bfl-user"]),
-		}
+		// Non–Shared-v2 hosts (e.g. demo.agw.local) defer to the allow-all baseline.
+		return Decision{Action: ActionPass}
 	}
 	viewer := labels[1]
 	user := lower(headers["x-bfl-user"])
