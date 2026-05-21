@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -181,4 +182,33 @@ func GetCPUName() string {
 	}
 
 	return brandName
+}
+
+func IsDarwin() bool {
+	return runtime.GOOS == "darwin"
+}
+
+func IsLinux() bool {
+	return runtime.GOOS == "linux"
+}
+
+func IsWindows() bool {
+	return runtime.GOOS == "windows"
+}
+
+func IsWSL() bool {
+	if !IsLinux() {
+		return false
+	}
+
+	// get kernal name from /proc/sys/kernel/osrelease
+	data, err := os.ReadFile("/proc/sys/kernel/osrelease")
+	if err != nil {
+		return false
+	}
+	kernelName := strings.TrimSpace(string(data))
+	if strings.Contains(kernelName, "-WSL") {
+		return true
+	}
+	return false
 }

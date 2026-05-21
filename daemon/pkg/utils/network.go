@@ -5,6 +5,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 
 	"k8s.io/klog/v2"
 )
@@ -40,4 +41,24 @@ func UpdateNetworkTraffic(ctx context.Context) {
 
 func GetInterfaceTraffic(iface string) (rxBytes, txBytes float64, err error) {
 	return 0, 0, nil
+}
+
+func GetEthernetConnection(ctx context.Context) (iface, ifUUID, connection string, err error) {
+	return "", "", "", errors.New("not implemented")
+}
+
+func FindBridgeConnection(ctx context.Context) (*BridgeConnection, error) {
+	return nil, errors.New("not implemented")
+}
+
+func CreateBridgeConnection(ctx context.Context) error {
+	return errors.New("not implemented")
+}
+
+func ResetBridgeConnection(ctx context.Context) error {
+	return errors.New("not implemented")
+}
+
+func CheckBridgeConnection(ctx context.Context) error {
+	return errors.New("not implemented")
 }
