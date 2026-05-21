@@ -81,7 +81,18 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	ctrl.Log.Info("reconcile request", "name", req.Name, "namespace", req.Namespace)
 
 	if req.Namespace == "" {
-		// ignore for-input object watch
+		// Cluster-scoped Application CR updates (e.g. kubectl annotate route-mode)
+		// enqueue with an empty namespace. Reconcile gateway routes directly.
+		if req.Name != "" {
+			app, err := r.AppClientset.AppV1alpha1().Applications().Get(ctx, req.Name, metav1.GetOptions{})
+			if err != nil {
+				if !apierrors.IsNotFound(err) {
+					return ctrl.Result{}, err
+				}
+			} else if err := r.reconcileSharedRouteRegistry(ctx, app); err != nil {
+				klog.Warningf("reconcile SharedRouteRegistry for Application %s err=%v", req.Name, err)
+			}
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -204,6 +215,15 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				return ctrl.Result{}, nil
 			}
 		}
+	}
+
+	// v2 shared pilots often run the workload in a *-shared namespace while the
+	// Application.spec.namespace points at the installer's user namespace. Local
+	// Deployments may also lack installer owner/name labels, so the loop above
+	// never calls updateApplication. Always reconcile gateway routes from the
+	// Application CR(s) tied to this workload namespace.
+	if err := r.reconcileGatewayRoutesForWorkloadNS(ctx, req.Namespace); err != nil {
+		klog.Warningf("reconcile gateway routes for workload namespace %s err=%v", req.Namespace, err)
 	}
 	return ctrl.Result{}, nil
 }
@@ -537,19 +557,48 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	return err
 }
 
+// reconcileGatewayRoutesForWorkloadNS runs reconcileSharedRouteRegistry for every
+// cluster Application whose spec.namespace matches the reconciled workload namespace.
+func (r *ApplicationReconciler) reconcileGatewayRoutesForWorkloadNS(ctx context.Context, workloadNS string) error {
+	if workloadNS == "" {
+		return nil
+	}
+	list, err := r.AppClientset.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for i := range list.Items {
+		app := &list.Items[i]
+		if app.Spec.Namespace != workloadNS {
+			continue
+		}
+		if err := r.reconcileSharedRouteRegistry(ctx, app); err != nil {
+			return fmt.Errorf("app %s: %w", app.Name, err)
+		}
+	}
+	return nil
+}
+
 // reconcileSharedRouteRegistry writes / deletes the SharedRouteRegistry that
-// declares this v3 app's exposure through the shared Envoy Gateway data plane.
+// declares this shared app's exposure through the shared Envoy Gateway data plane.
 // Only acts when the Application carries gateway.olares.io/route-mode=gateway.
-// For any other case (non-v3,
-// no annotation, direct mode) the SRR is removed so toggling routeMode is
-// truly declarative.
+// Qualifying apps are v3 installs or v2 cluster-scoped apps with
+// spec.sharedEntrances (see appcfg.IsGatewaySharedApp). For any other case
+// (no shared entrances, no annotation, direct mode) the SRR is removed so
+// toggling routeMode is truly declarative.
 func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context, app *appv1alpha1.Application) error {
 	if app == nil || app.Spec.Namespace == "" || app.Spec.Name == "" {
 		return nil
 	}
-	if !appcfg.IsV3(app) || !gateway.IsOptedIn(app) || len(app.Spec.SharedEntrances) == 0 {
+	if !appcfg.IsGatewaySharedApp(app) {
+		klog.V(2).Infof("SRR skip app=%s: not a gateway shared app (need v3 label or clusterScoped+sharedEntrances)", app.Spec.Name)
 		return gateway.DeleteAllForApp(ctx, r.Client, app)
 	}
+	if !gateway.IsOptedIn(app) {
+		klog.V(2).Infof("SRR skip app=%s: route-mode is not gateway", app.Spec.Name)
+		return gateway.DeleteAllForApp(ctx, r.Client, app)
+	}
+	klog.Infof("SRR reconcile start app=%s ns=%s entrances=%d", app.Spec.Name, app.Spec.Namespace, len(app.Spec.SharedEntrances))
 
 	// Remove legacy "shared-<appName>" SRR if present, then write one SRR per
 	// sharedEntrance with logical hostPattern <hash8>.*.<platformDomain>.
@@ -580,9 +629,9 @@ func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context
 		if entrance.Host == "" {
 			return fmt.Errorf("shared entrance %q on app %s has empty host", entrance.Name, app.Spec.Name)
 		}
-		svc := &corev1.Service{}
-		if err := r.Get(ctx, types.NamespacedName{Namespace: app.Spec.Namespace, Name: entrance.Host}, svc); err != nil {
-			return fmt.Errorf("get backing service %s/%s: %w", app.Spec.Namespace, entrance.Host, err)
+		svc, err := gateway.ResolveSharedEntranceService(ctx, r.Client, app, entrance.Host)
+		if err != nil {
+			return fmt.Errorf("resolve backing service for entrance %q: %w", entrance.Name, err)
 		}
 		spec, err := gateway.BuildSpecForEntrance(app, entrance, svc, platformDomain)
 		if err != nil {
