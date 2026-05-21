@@ -32,9 +32,17 @@ func finalizeAppGatewayMesh(ctx context.Context, c client.Client, ns string, def
 	if gwName == "" {
 		gwName = "app-gateway"
 	}
-	logger.InfoInstallationProgress("app-gateway mesh: rolling EG data-plane for linkerd-proxy injection ...")
-	if err := rolloutRestartEGDataPlane(ctx, c, ns, gwName); err != nil {
+	meshed, _, err := egDataPlaneMeshReady(ctx, c, ns, gwName)
+	if err != nil {
 		return err
+	}
+	if meshed {
+		logger.InfoInstallationProgress("app-gateway mesh: EG data-plane already has linkerd-proxy; skip rollout restart")
+	} else {
+		logger.InfoInstallationProgress("app-gateway mesh: rolling EG data-plane for linkerd-proxy injection ...")
+		if err := rolloutRestartEGDataPlane(ctx, c, ns, gwName); err != nil {
+			return err
+		}
 	}
 	// Mesh readiness is enforced by WaitAppGatewayDataPlaneMeshed (upgrade/install pipeline, Retry: 30).
 	return finalizeDemoMeshDebug(ctx, c, ns, def)
@@ -95,6 +103,7 @@ func waitEGDataPlaneMeshed(ctx context.Context, c client.Client, ns, gatewayName
 			return nil
 		}
 		lastReason = reason
+		logger.InfoInstallationProgress(fmt.Sprintf("app-gateway mesh: waiting for EG data-plane (%s)", reason))
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -114,7 +123,13 @@ func egDataPlaneMeshReady(ctx context.Context, c client.Client, ns, gatewayName 
 	if len(pods.Items) == 0 {
 		return false, "no data-plane pods", nil
 	}
+	var active int
+	var lastReason string
 	for _, pod := range pods.Items {
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
+		active++
 		if pod.Status.Phase == corev1.PodFailed {
 			return false, pod.Name + " failed", nil
 		}
@@ -136,16 +151,25 @@ func egDataPlaneMeshReady(ctx context.Context, c client.Client, ns, gatewayName 
 			}
 		}
 		if !hasEnvoy {
-			return false, pod.Name + " missing envoy container", nil
+			lastReason = pod.Name + " missing envoy container"
+			continue
 		}
 		if !hasProxy {
-			return false, pod.Name + " missing linkerd-proxy", nil
+			lastReason = pod.Name + " missing linkerd-proxy"
+			continue
 		}
-		if !allReady {
-			return false, pod.Name + " not ready", nil
+		if allReady {
+			return true, "", nil
 		}
+		lastReason = pod.Name + " not ready"
 	}
-	return true, "", nil
+	if active == 0 {
+		return false, "no active data-plane pods (rollout in progress)", nil
+	}
+	if lastReason == "" {
+		lastReason = "no ready meshed pod"
+	}
+	return false, lastReason, nil
 }
 
 // WaitAppGatewayDataPlaneMeshed waits until EG data-plane pods include a ready linkerd-proxy when mesh is enabled.
