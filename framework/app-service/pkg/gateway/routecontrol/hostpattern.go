@@ -1,7 +1,7 @@
 // Package routecontrol implements app-service shared ingress route control:
 // for each SharedRouteRegistry (SRR) it maintains the Gateway API HTTPRoute
 // and the companion NetworkPolicy that allow app-gateway to reach the
-// workload Service in the Application namespace.
+// upstream Service (in the SRR namespace or upstream.serviceNamespace).
 package routecontrol
 
 import (

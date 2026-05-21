@@ -430,6 +430,9 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 		}
 
 		effectiveEntrances := app.EffectiveEntrances(username)
+		if isSharedGatewayApp(app) && len(app.Spec.SharedEntrances) > 0 {
+			effectiveEntrances = append(append([]appv1alpha1.Entrance{}, effectiveEntrances...), app.Spec.SharedEntrances...)
+		}
 		entrances := make([]*message.EntranceInfo, 0, len(effectiveEntrances))
 		for _, e := range effectiveEntrances {
 			entrances = append(entrances, &message.EntranceInfo{
