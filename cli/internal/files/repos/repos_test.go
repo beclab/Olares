@@ -487,6 +487,27 @@ func TestCreate_EmptyName(t *testing.T) {
 	}
 }
 
+// TestCreate_RejectsDotNames mirrors the `.` / `..` guard the
+// internal/files/mkdir and internal/files/rename planners already
+// enforce — surface a typed error before any wire call so the
+// Sync repo catalog can't be steered into a path-traversal-shaped
+// display name. Server-side trip is best-effort at best (Seahub
+// stores arbitrary strings), so the CLI is the only line of defense.
+func TestCreate_RejectsDotNames(t *testing.T) {
+	c := &Client{}
+	for _, name := range []string{".", ".."} {
+		t.Run(name, func(t *testing.T) {
+			_, err := c.Create(context.Background(), name)
+			if err == nil {
+				t.Fatalf("expected error for repo name %q", name)
+			}
+			if !strings.Contains(err.Error(), "path-traversal") {
+				t.Errorf("error %q should mention 'path-traversal'", err)
+			}
+		})
+	}
+}
+
 func TestCreate_CodeNonZero(t *testing.T) {
 	c, _ := mutateServer(t, mutateServerOpts{
 		body: `{"code":-1,"message":"name already used"}`,
@@ -563,6 +584,27 @@ func TestRename_EmptyArgs(t *testing.T) {
 	}
 	if err := c.Rename(context.Background(), "abc", ""); err == nil {
 		t.Error("expected error for empty newName")
+	}
+}
+
+// TestRename_RejectsDotNames mirrors TestCreate_RejectsDotNames:
+// `.` / `..` as a new display name is rejected before any wire
+// call. Without this guard the `repos rename` path would otherwise
+// sidestep the create-time blacklist (a user could create a benign
+// name, then rename it to ".") — same defense-in-depth pattern the
+// in-place file rename already uses (cli/internal/files/rename).
+func TestRename_RejectsDotNames(t *testing.T) {
+	c := &Client{}
+	for _, name := range []string{".", ".."} {
+		t.Run(name, func(t *testing.T) {
+			err := c.Rename(context.Background(), "abc-123", name)
+			if err == nil {
+				t.Fatalf("expected error for new name %q", name)
+			}
+			if !strings.Contains(err.Error(), "path-traversal") {
+				t.Errorf("error %q should mention 'path-traversal'", err)
+			}
+		})
 	}
 }
 

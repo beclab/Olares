@@ -477,6 +477,16 @@ Wire shape:
 Output is the new repo id + name (or the full record with --json),
 ready to be piped into ` + "`files ls sync/<repo_id>/`" + ` etc.
 
+Restrictions:
+
+  - <name> may not be empty.
+  - <name> may not be ` + "`.`" + ` or ` + "`..`" + ` — these are POSIX
+    path-traversal segments and are blocked uniformly across
+    ` + "`files mkdir`" + ` / ` + "`files rename`" + ` / ` + "`files repos create`" + ` /
+    ` + "`files repos rename`" + ` so the Sync repo catalog can't be
+    steered into a name that confuses the LarePass UI or
+    path-shaped log lines.
+
 Examples:
 
     olares-cli files repos create "Project Alpha"
@@ -517,6 +527,14 @@ across the rename.
 Wire shape:
 
     PATCH /api/repos/?destination=<new-name>&repoId=<repo-id>
+
+Restrictions:
+
+  - <new_name> may not be empty.
+  - <new_name> may not be ` + "`.`" + ` or ` + "`..`" + ` — same
+    path-traversal-segment policy ` + "`files rename`" + ` and
+    ` + "`files repos create`" + ` enforce, so a benign-then-renamed
+    workaround can't sneak a reserved name into the catalog.
 
 Examples:
 
