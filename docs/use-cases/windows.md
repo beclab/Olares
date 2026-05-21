@@ -9,7 +9,8 @@ Olares lets you run a full Windows virtual machine directly on your device, givi
 
 :::info System capabilities
 - Olares supports running essential Windows applications. 
-- Workflows are limited to **CPU or integrated graphics performance**. GPU passthrough is not yet supported, meaning heavy GPU-accelerated applications may not perform optimally.
+- By default, the Windows VM uses CPU-based virtualization and virtual display output.
+- Intel integrated GPU support is available only on supported hardware and requires additional host configuration. See [Enable Intel integrated GPU passthrough for Windows VM](./windows-intel-gpu-passthrough.md).
 - Audio output is **only supported** when connected via Remote Desktop (RDP).
 :::
 
@@ -195,4 +196,5 @@ After Windows installation, you can change the display language using the standa
 
 ## Learn more
 
+- [Enable Intel integrated GPU passthrough for Windows VM](./windows-intel-gpu-passthrough.md)
 - [Run a macOS VM on your Olares device](./macos.md)
