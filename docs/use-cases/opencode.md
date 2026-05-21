@@ -88,11 +88,11 @@ To connect OpenCode to Ollama, get the shared entrance URL:
 
 To connect OpenCode to a single-model app, get its shared entrance URL. The example below uses Qwen3.5 9B Q4_K_M:
 
-1. Open Settings, then navigate to **Applications** > **Qwen3.5 9B Q4_K_M**.
-2. In **Shared entrances**, select **Ollama API** to view the shared endpoint URL.
-   ![Qwen3.5 9B Q4_K_M shared entrance in Settings](/images/manual/use-cases/ollama-shared.png#bordered){width=80%}
+1. Open Settings, go to **Applications** > **Qwen3.5 9B Q4_K_M (Ollama)** > **Entrances**, and then click the model name under **Shared entrances**. 
 
-3. Copy the shared endpoint. For example:
+   ![Qwen3.5 9B Q4_K_M shared entrance in Settings](/images/manual/use-cases/litellm-model-endpoint.png#bordered){width=80%}
+
+2. Copy the shared endpoint. For example:
    ```plain
    http://bd5355000.shared.olares.com
    ```
@@ -274,11 +274,46 @@ This option installs the OpenCode CLI on your local machine and connects it to O
 
 ### Install OpenCode CLI
 
-Install the CLI using the official installer:
+1. Install the CLI using the official installer:
 
-```bash
-curl -fsSL https://opencode.ai/install.sh | sh
-```
+   ```bash
+   curl -fsSL https://opencode.ai/install | bash
+   ```
+
+2. (Optional) If you encounter the `No config file found for zsh` error, add the export line to your `~/.zshrc` file by running:
+
+   ```bash
+   echo 'export PATH="$HOME/.opencode/bin:$PATH"' >> ~/.zshrc
+   ```
+
+   Error message example:
+
+   ```text
+   No config file found for zsh. You may need to manually add to PATH:
+   export PATH=/Users/{username}/.opencode/bin:$PATH
+   ```
+
+3. Reload your shell configuration:
+
+   ```bash
+   source ~/.zshrc
+   ```
+
+4. Verify the installation:
+
+   ```bash
+   opencode --version
+   ```
+
+   The version is displayed, such as `1.15.6`.
+
+5. Run the following command to initialize OpenCode and create the configuration file:
+
+   ```bash
+   opencode
+   ```
+
+   The config file is created at `~/.config/opencode/opencode.jsonc`.
 
 ### Get the Ollama endpoint
 
@@ -302,7 +337,7 @@ The local CLI requires the Ollama API endpoint. The shared entrance URL does not
    If your computer and Olares are on the same LAN, you can skip VPN and use the `.local` domain instead. Replace `https://a5be22681.{username}.olares.com` with `http://a5be22681.{username}.olares.local` in the config below. For details, see [Use `.local` domain](../manual/best-practices/local-access.md#method-2-use-local-domain).
    :::
 
-2. Open the OpenCode config file at `~/.config/opencode/config.json` in a text editor. Add a custom provider with your Ollama endpoint and model. The general format is:
+2. Open the OpenCode config file at `~/.config/opencode/opencode.jsonc` in a text editor. Add a custom provider with your Ollama endpoint and model. The general format is:
 
    ```json
    {
@@ -329,9 +364,6 @@ The local CLI requires the Ollama API endpoint. The shared entrance URL does not
    ```json
    {
      "$schema": "https://opencode.ai/config.json",
-     "disabled_providers": [
-       "ollama"
-     ],
      "provider": {
        "olares-ollama": {
          "name": "olares-ollama",
@@ -381,16 +413,14 @@ To work with your codebase directly, open a terminal in VS Code and run `opencod
 OpenCode stores its configuration in a JSON file. You can edit this file directly to manage providers, models, and tools.
 
 1. Open Files and navigate to `Application/Data/opencode/.config/opencode/`.
-2. Right-click `config.jsonc` and select **Rename**.
+2. Right-click `opencode.jsonc` and select **Rename**.
    ![Rename config file](/images/manual/use-cases/opencode-rename-config-file.png#bordered)
 
 3. Rename the file to `config.json` so you can edit it directly in Files. OpenCode recognizes both extensions.
-
 4. Open `config.json` and click <i class="material-symbols-outlined">edit_square</i> to edit it.
    ![Edit config file](/images/manual/use-cases/opencode-edit-config-file.png#bordered)
 
 5. Save the changes.
-
 6. Restart OpenCode from **Settings** > **Applications** to apply the changes.
 
 ## Learn more
