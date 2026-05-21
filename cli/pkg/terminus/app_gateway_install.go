@@ -258,6 +258,11 @@ func (t *InstallAppGatewayChart) Execute(runtime connector.Runtime) error {
 	if err := utils.UpgradeChartsInExistingNamespace(ctx, actionConfig, settings, helmReleaseAppGateway, chartPath, "", ns, vals, false); err != nil {
 		return err
 	}
+	if def.MeshLinkerdEnabled() {
+		if err := applyLinkerdMeshNetworkPolicies(ctx, k8sClient, settings, appGatewayVendorPath(installerDir)); err != nil {
+			return errors.Wrap(err, "apply linkerd mesh network policies")
+		}
+	}
 	return finalizeAppGatewayMesh(ctx, k8sClient, ns, def)
 }
 
