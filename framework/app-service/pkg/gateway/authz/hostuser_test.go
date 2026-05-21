@@ -67,12 +67,12 @@ func TestHostUser_DenyTooFewLabels(t *testing.T) {
 	}
 }
 
-func TestHostUser_DenyInvalidHashPrefix(t *testing.T) {
-	d := HostUser("ZZZZZZZZ.alice.olares.com",
-		map[string]string{"x-bfl-user": "alice"},
-		DefaultHostUserConfig())
-	if d.Action != ActionDeny || d.Code != "INVALID_HOST_PREFIX" {
-		t.Fatalf("expected Deny INVALID_HOST_PREFIX, got %+v", d)
+func TestHostUser_NonV2Host_Passes(t *testing.T) {
+	for _, host := range []string{"demo.agw.local", "ZZZZZZZZ.alice.olares.com"} {
+		d := HostUser(host, map[string]string{}, DefaultHostUserConfig())
+		if d.Action != ActionPass {
+			t.Fatalf("non-v2 host %q should Pass to allow-all baseline, got %+v", host, d)
+		}
 	}
 }
 
