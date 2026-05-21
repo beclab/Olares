@@ -13,7 +13,7 @@ description: 查找关于 Olares 平台的常见问题解答。
 
 Olares 是一款基于 Kubernetes 构建的开源个人云操作系统。它让你能够在本地拥有并管理自己的数字资产。
 
-Olares 提供原生资源编排、应用沙箱以及面向边缘计算的生产级基础设施。它作为一个一站式个人云解决方案，可以运行强大的本地替代品来取代公有云服务，例如大语言模型和自动化工作流。
+Olares 提供原生资源编排、应用沙箱以及面向边缘计算的生产级基础设施。它作为一站式个人云解决方案，可以运行强大的本地替代品来取代公有云服务，例如大语言模型和自动化工作流。
 
 无论是搭建个人媒体服务器、进行 AI 开发，还是管理去中心化身份，Olares 都能提供强有力的支持。
 
@@ -30,19 +30,19 @@ Olares 面向任何希望本地使用强大 AI 工具，而又不想处理复杂
 
 ### Olares 与 NAS 操作系统有何不同？
 
-Olares 本质上是一个个人 AI 云，而非存储服务器。传统的 NAS 系统（如 Synology DSM 或 CasaOS）主要针对文件存储和运行轻量级容器进行优化。
+Olares 本质上是一种个人 AI 云，而非存储服务器。传统的 NAS 系统（如 Synology DSM 或 CasaOS）主要针对文件存储和运行轻量级容器进行优化。
 
 Olares 聚焦于高性能计算：
-- **资源编排**：原生管理 GPU 等硬件资源，为本地 AI 工作负载提供动力。
-- **沙箱**：强制执行严格的应用隔离，提供超越标准文件服务器的安全模型。
+- **资源编排**：原生管理 GPU 等硬件资源，为本地 AI 工作负载提供算力支持。
+- **沙箱**：强制执行严格的应用隔离，安全防护能力远超标准文件服务器。
 
 详细对比参见 [Olares 与 NAS 的对比](../olares-vs-nas.md)。
 <!-- #region faq-why-olares-id -->
 ### 为什么需要 Olares ID？
 
-当前需要 Olares ID 来自动化为设备配置安全的远程访问。系统借此为你配置反向代理、注册子域名并管理 HTTPS 证书。没有它，从家庭网络外部访问设备就需要手动处理复杂的网络配置，例如端口转发和 DNS 管理。
+目前，Olares ID 用于自动完成远程访问的安全配置。系统会根据你的 Olares ID，自动设置反向代理、注册子域名并管理 HTTPS 证书。如果没有 Olares ID，你就需要手动完成端口转发、DNS 管理等复杂的网络配置，才能实现外网访问。
 
-你完全拥有自己的 Olares ID。Olares 不存储你的凭证，如果你丢失了助记词，也无法恢复你的数据。
+Olares ID 完全归你所有。Olares 不存储你的凭证。如果你丢失了助记词，我们也无法帮你恢复数据。
 
 我们计划引入新的激活选项，让偏好自己配置网络访问的用户可以不使用 Olares ID。
 <!-- #endregion faq-why-olares-id -->
@@ -67,7 +67,7 @@ LarePass 是 Olares 的官方客户端。它作为一个安全桥梁，实现无
 
 我们正在解耦各项功能，以支持不依赖 LarePass 应用的使用方式：
 
-* **CLI 激活**：使用 `olares-cli` 工具直接从终端激活 Olares，无需在激活步骤中使用 LarePass 应用。但注意，在运行 `olares-cli` 工具之前，仍需使用 LarePass 应用创建你的 Olares ID。详细操作请参考 [使用 Olares CLI 激活 Olares 设备](/zh/manual/best-practices/activate-olares-using-cli.md)。
+* **CLI 激活**：使用 `olares-cli` 工具直接从终端激活 Olares，无需在激活步骤中使用 LarePass 应用。但注意，在运行 `olares-cli` 工具之前，仍需使用 LarePass 应用创建你的 Olares ID。详细操作请参考[使用 Olares CLI 激活 Olares 设备](/zh/manual/best-practices/activate-olares-using-cli.md)。
 * **独立组件**：我们计划在未来的更新中，为反向代理、DID 服务、市场仓库等组件提供独立的部署选项。
 
 <!-- #region custom-domain -->
@@ -116,7 +116,7 @@ Olares 是一个庞大的项目，涵盖超过 90 个仓库。由于架构快速
 
 ### Olares 支持备份吗？
 
-支持。数据安全由用户控制且私有。Olares 包含 [内置备份功能](../olares/settings/backup.md)，允许你保存特定文件目录并设置自动备份计划。
+支持。数据安全由用户控制且私有。Olares 包含[内置备份功能](../olares/settings/backup.md)，允许你保存特定文件目录并设置自动备份计划。
 
 每个备份文件都经过端到端加密。你可以将备份文件存储在任何介质上（包括外部硬盘或第三方云存储），完全放心数据不会被他人访问。
 
