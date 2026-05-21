@@ -329,9 +329,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Plane",
               link: "/use-cases/plane",
             },
-            {  
+            {
               text: "Excalidraw",
               link: "/use-cases/excalidraw",
+            },
+            {
+              text: "Karakeep",
+              link: "/use-cases/karakeep",
             },
             {
               text: "RNA Sequencing",
