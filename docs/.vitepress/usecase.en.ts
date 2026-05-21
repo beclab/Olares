@@ -225,6 +225,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "Enable Intel integrated GPU passthrough",
+                  link: "/use-cases/windows-intel-gpu-passthrough",
+                },
+                {
                   text: "Known issues",
                   link: "/use-cases/windows-issues",
                 }
