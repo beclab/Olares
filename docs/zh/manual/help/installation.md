@@ -81,7 +81,7 @@ grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 
 如果无法通过 Wi-Fi 连接，可使用 LarePass 应用中的蓝牙配网功能，将 Olares 连接到与手机相同的网络中。
 
-详见[通过蓝牙激活 Olares](../larepass/activate-olares.md#通过蓝牙激活)。
+详细步骤参见[通过蓝牙激活 Olares](../larepass/activate-olares.md#通过蓝牙激活)。
 
 ### 创建账户时，收到错误提示 MFA 绑定失败，怎么解决？
 

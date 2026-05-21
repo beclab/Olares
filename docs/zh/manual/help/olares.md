@@ -67,7 +67,7 @@ LarePass 是 Olares 的官方客户端。它作为一个安全桥梁，实现无
 
 我们正在解耦各项功能，以支持不依赖 LarePass 应用的使用方式：
 
-* **CLI 激活**：使用 `olares-cli` 工具直接从终端激活 Olares，无需在激活步骤中使用 LarePass 应用。但注意，在运行 `olares-cli` 工具之前，仍需使用 LarePass 应用创建你的 Olares ID。详细操作请参考[使用 Olares CLI 激活 Olares 设备](/zh/manual/best-practices/activate-olares-using-cli.md)。
+* **CLI 激活**：使用 `olares-cli` 工具直接从终端激活 Olares，无需在激活步骤中使用 LarePass 应用。但注意，在运行 `olares-cli` 工具之前，仍需使用 LarePass 应用创建你的 Olares ID。详细步骤参见[使用 Olares CLI 激活 Olares 设备](/zh/manual/best-practices/activate-olares-using-cli.md)。
 * **独立组件**：我们计划在未来的更新中，为反向代理、DID 服务、市场仓库等组件提供独立的部署选项。
 
 <!-- #region custom-domain -->
@@ -76,7 +76,7 @@ LarePass 是 Olares 的官方客户端。它作为一个安全桥梁，实现无
 可以。你可以使用自己的自定义域名，替代默认的 `olares.com` 域名。当前设置此项需要 LarePass 应用。
 <!-- #endregion custom-domain -->
 
-详情参见[为 Olares 设置自定义域名](../best-practices/set-custom-domain.md)。
+详细步骤参见[为 Olares 设置自定义域名](../best-practices/set-custom-domain.md)。
 
 ### 使用 Olares 需要付费吗？
 
@@ -88,7 +88,7 @@ Olares 操作系统本身免费且开源，供自行托管使用。购买 Olares
 
 ### Olares 多久更新一次？
 
-Olares 大约每两个月发布一次主要更新。具体变动参见[变更日志](https://www.olares.com/changelog)。
+Olares 大约每两个月发布一次主要更新。详情参见[变更日志](https://www.olares.com/changelog)。
 
 ## 许可协议
 
@@ -96,7 +96,7 @@ Olares 大约每两个月发布一次主要更新。具体变动参见[变更日
 
 是的。Olares 操作系统软件是开源的，确保透明度和社区协作。该项目包含一系列仓库，采用不同的许可模式：
 
-* **Olares 和 LarePass**：采用 AGPL-3.0 许可。详情请查看 [GitHub 组织](https://github.com/beclab)。
+* **Olares 和 LarePass**：采用 AGPL-3.0 许可。详情参见 [GitHub 组织](https://github.com/beclab)。
 * **协议项目**：如 Olares ID 的智能合约系统，采用 Apache 2.0 许可。
 * **第三方应用**：开发者自行选择其许可证。
 
