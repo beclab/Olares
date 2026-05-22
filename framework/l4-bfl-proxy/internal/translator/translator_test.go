@@ -567,7 +567,10 @@ func makeSharedApp() *message.AppInfo {
 		Owner:     "admin",
 		IsShared:  true,
 		Entrances: []*message.EntranceInfo{
-			{Name: "web", Host: "shareme-svc", Port: 8080},
+			// IsShared=true on the EntranceInfo signals that this entrance
+			// participates in gateway-mode rewriting (mirrors what
+			// provider.buildAppInfos sets for Application.Spec.SharedEntrances).
+			{Name: "web", Host: "shareme-svc", Port: 8080, IsShared: true},
 		},
 	}
 }
@@ -787,7 +790,7 @@ func TestBuildAppVirtualHosts_SharedApp_GatewayMode_PerViewerHost(t *testing.T) 
 	tr := &Translator{cfg: &Config{}}
 	app := makeSharedApp()
 	app.Appid = "a5be2268"
-	app.Entrances = []*message.EntranceInfo{{Name: "ollamav2", Host: "shareme-svc", Port: 8080}}
+	app.Entrances = []*message.EntranceInfo{{Name: "ollamav2", Host: "shareme-svc", Port: 8080, IsShared: true}}
 	app.Annotations = map[string]string{"gateway.olares.io/route-mode": "gateway"}
 
 	expectedHash := sharedEntranceHostPrefix("a5be2268", "ollamav2")
@@ -811,7 +814,7 @@ func TestBuildAppVirtualHosts_SharedApp_GatewayMode_FallbackHostname(t *testing.
 	app := &message.AppInfo{
 		Name: "", Appid: "", IsShared: true, Namespace: "x-shared",
 		Annotations: map[string]string{"gateway.olares.io/route-mode": "gateway"},
-		Entrances:   []*message.EntranceInfo{{Name: "api", Host: "svc", Port: 8080}},
+		Entrances:   []*message.EntranceInfo{{Name: "api", Host: "svc", Port: 8080, IsShared: true}},
 	}
 	user := &message.UserInfo{Name: "alice", Language: "en"}
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.olares.com", false, map[string]*ir.ClusterIR{})
@@ -819,6 +822,93 @@ func TestBuildAppVirtualHosts_SharedApp_GatewayMode_FallbackHostname(t *testing.
 	// Must NOT begin with hash8 (since we cannot compute one); falls back to
 	// the legacy "<resolved-prefix>.<zone>" form.
 	require.NotContains(t, vhosts[0].Domains[0], ".*.")
+}
+
+// E6: v2 cluster-scoped gateway-mode apps that mix per-user entrances with
+// SharedEntrances must keep the per-user entrances on the legacy
+// <appid><idx>.<zone> direct path and only rewrite the SharedEntrances to
+// <hash8>.<viewer>.<domain> through the EG data plane. This guards against
+// the regression that broke ollamav2's management terminal URL when the
+// gateway pilot landed.
+func TestBuildAppVirtualHosts_GatewayMode_MixedEntrances_PerUserKeptLegacy(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	app := &message.AppInfo{
+		Name:      "ollamav2",
+		Appid:     "a5be2268",
+		Namespace: "ollamav2-alice",
+		Owner:     "alice",
+		IsShared:  true,
+		Annotations: map[string]string{
+			"gateway.olares.io/route-mode": "gateway",
+		},
+		Entrances: []*message.EntranceInfo{
+			// Per-user entrance, must keep legacy <appid><idx>.<zone>:
+			{Name: "terminal", Host: "terminalclient", Port: 8081, AuthLevel: "private"},
+			{Name: "ollamaclient", Host: "ollamaclient", Port: 8080, AuthLevel: "internal"},
+			// SharedEntrance, must use <hash8>.<viewer>.<domain> via EG:
+			{Name: "ollamav2", Host: "sharedentrances-ollama", Port: 80, AuthLevel: "internal", IsShared: true},
+		},
+	}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	zone := "alice.olares.com"
+	clusterSet := map[string]*ir.ClusterIR{}
+
+	vhosts := tr.buildAppVirtualHosts(user, app, zone, false, clusterSet)
+	require.Len(t, vhosts, 3)
+
+	byName := map[string]*ir.VirtualHostIR{}
+	for _, v := range vhosts {
+		byName[v.Name] = v
+	}
+
+	// 1. terminal: index 0 of 3 entrances → "a5be22680.alice.olares.com",
+	//    upstream is the per-user Service (not the EG data plane).
+	term := byName["app_alice_ollamav2_terminal"]
+	require.NotNil(t, term)
+	assert.Equal(t, "a5be22680.alice.olares.com", term.Domains[0])
+	require.NotNil(t, clusterSet["app_alice_ollamav2_terminal"])
+	assert.Equal(t, "terminalclient.ollamav2-alice.svc.cluster.local",
+		clusterSet["app_alice_ollamav2_terminal"].Host)
+	assert.Equal(t, uint32(8081), clusterSet["app_alice_ollamav2_terminal"].Port)
+
+	// 2. ollamaclient: index 1 → "a5be22681...", also direct upstream.
+	oc := byName["app_alice_ollamav2_ollamaclient"]
+	require.NotNil(t, oc)
+	assert.Equal(t, "a5be22681.alice.olares.com", oc.Domains[0])
+	assert.Equal(t, "ollamaclient.ollamav2-alice.svc.cluster.local",
+		clusterSet["app_alice_ollamav2_ollamaclient"].Host)
+
+	// 3. ollamav2 (sharedEntrance): hash8 host AND upstream pointing at the
+	//    shared EG data plane.
+	wantSharedHost := sharedEntranceHostPrefix("a5be2268", "ollamav2") + ".alice.olares.com"
+	shared := byName["app_alice_ollamav2_ollamav2"]
+	require.NotNil(t, shared)
+	assert.Equal(t, wantSharedHost, shared.Domains[0])
+	assert.Equal(t, gatewayDataPlaneHost, clusterSet["app_alice_ollamav2_ollamav2"].Host)
+	assert.Equal(t, uint32(gatewayDataPlanePort), clusterSet["app_alice_ollamav2_ollamav2"].Port)
+}
+
+// E7: when an app has only per-user entrances and no SharedEntrances, even
+// the route-mode=gateway annotation must be ignored — every entrance keeps
+// the legacy URL + direct upstream.
+func TestBuildAppVirtualHosts_GatewayMode_OnlyPerUser_NoRewrite(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	app := &message.AppInfo{
+		Name: "ollamav2", Appid: "a5be2268", Namespace: "ollamav2-alice",
+		Owner: "alice", IsShared: true,
+		Annotations: map[string]string{"gateway.olares.io/route-mode": "gateway"},
+		Entrances: []*message.EntranceInfo{
+			{Name: "terminal", Host: "terminalclient", Port: 8081, AuthLevel: "private"},
+		},
+	}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := map[string]*ir.ClusterIR{}
+
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.olares.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	assert.Equal(t, "a5be2268.alice.olares.com", vhosts[0].Domains[0])
+	assert.Equal(t, "terminalclient.ollamav2-alice.svc.cluster.local",
+		clusterSet["app_alice_ollamav2_terminal"].Host)
 }
 
 // E3: the helper isGatewayMode is the single source of truth for the

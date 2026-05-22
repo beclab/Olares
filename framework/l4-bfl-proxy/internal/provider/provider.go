@@ -429,11 +429,13 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			continue
 		}
 
+		// Per-user entrances always come first and carry IsShared=false so the
+		// translator keeps them on the legacy <appid><idx>.<zone> direct path.
+		// SharedEntrances (gateway-only) follow with IsShared=true so the
+		// translator can apply the multi-tenant <hash8>.<viewer>.<domain>
+		// rewrite without disturbing the per-user entrances of the same app.
 		effectiveEntrances := app.EffectiveEntrances(username)
-		if isSharedGatewayApp(app) && len(app.Spec.SharedEntrances) > 0 {
-			effectiveEntrances = append(append([]appv1alpha1.Entrance{}, effectiveEntrances...), app.Spec.SharedEntrances...)
-		}
-		entrances := make([]*message.EntranceInfo, 0, len(effectiveEntrances))
+		entrances := make([]*message.EntranceInfo, 0, len(effectiveEntrances)+len(app.Spec.SharedEntrances))
 		for _, e := range effectiveEntrances {
 			entrances = append(entrances, &message.EntranceInfo{
 				Name:            e.Name,
@@ -441,7 +443,20 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 				Port:            e.Port,
 				AuthLevel:       e.AuthLevel,
 				WindowPushState: e.WindowPushState,
+				IsShared:        false,
 			})
+		}
+		if isSharedGatewayApp(app) {
+			for _, e := range app.Spec.SharedEntrances {
+				entrances = append(entrances, &message.EntranceInfo{
+					Name:            e.Name,
+					Host:            e.Host,
+					Port:            e.Port,
+					AuthLevel:       e.AuthLevel,
+					WindowPushState: e.WindowPushState,
+					IsShared:        true,
+				})
+			}
 		}
 
 		ports := make([]*message.PortInfo, 0, len(app.Spec.Ports))
