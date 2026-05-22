@@ -34,6 +34,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// appLevelSettingKeys lists Spec.Settings keys whose values are scoped
+// to the Application as a whole — shared by every user — rather than
+// to an individual caller. When any settings handler is about to write
+// one of these keys, it lands in Spec.Settings even for v3 (shared)
+// apps, overriding the default v3 routing into Spec.UserSettings[caller].
+// App-level writes are still gated by gateSharedAppWrite, so on v3 only
+// admin/owner can mutate them; on v1/v2 the per-app owner check applies
+// as before.
+var appLevelSettingKeys = map[string]struct{}{
+	"enableOverlayGateway": {},
+	"enableLLMGateway":     {},
+}
+
+// isAppLevelSettingKey reports whether the given Spec.Settings key is
+// scoped to the Application as a whole and must always be persisted in
+// Spec.Settings rather than the per-user Spec.UserSettings overlay.
+func isAppLevelSettingKey(k string) bool {
+	_, ok := appLevelSettingKeys[k]
+	return ok
+}
+
 func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 	app, err := getAppByName(req, resp)
 	if err != nil {
@@ -59,6 +80,8 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 	}
 
 	appCopy := app.DeepCopy()
+	caller := req.Attribute(constants.UserContextAttribute).(string)
+	isV3 := appcfg.IsV3(appCopy)
 
 	// TODO: validate settings keys
 	for k, v := range settings {
@@ -73,6 +96,24 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 		default:
 			str = []byte(v.(string))
 		}
+		// App-level keys are global to the Application and always land
+		// in Spec.Settings; on v3 (shared) apps any other key overlays
+		// into Spec.UserSettings[caller] so per-user views stay
+		// isolated. v1/v2 apps have no UserSettings concept and keep
+		// the legacy behavior of writing everything to Spec.Settings.
+		if isV3 && !isAppLevelSettingKey(k) {
+			if appCopy.Spec.UserSettings == nil {
+				appCopy.Spec.UserSettings = map[string]map[string]string{}
+			}
+			if appCopy.Spec.UserSettings[caller] == nil {
+				appCopy.Spec.UserSettings[caller] = map[string]string{}
+			}
+			appCopy.Spec.UserSettings[caller][k] = string(str)
+			continue
+		}
+		if appCopy.Spec.Settings == nil {
+			appCopy.Spec.Settings = map[string]string{}
+		}
 		appCopy.Spec.Settings[k] = string(str)
 	}
 	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
@@ -82,7 +123,11 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
-	resp.WriteAsJson(appUpdated.Spec.Settings)
+	// Respond with the caller's effective view so the response reflects
+	// both the global Spec.Settings and any per-user overlay just
+	// written. For v1/v2 apps EffectiveSettings is just a copy of
+	// Spec.Settings, so v1/v2 callers see the same shape as before.
+	resp.WriteAsJson(appUpdated.EffectiveSettings(caller))
 }
 
 func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Response) {
