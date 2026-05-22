@@ -186,10 +186,28 @@ func looksBinary(buf []byte) bool {
 	return false
 }
 
+// isTTY is the TTY-detection hook the runEdit guard reads. Hoisted
+// into a package-level variable rather than calling term.IsTerminal
+// inline so the ordering-regression tests (which need to drive
+// runEdit past the interactive guard) can stub it without forking
+// /dev/tty. Production code never reassigns it; tests use a
+// t.Cleanup-protected swap.
+var isTTY = func() bool {
+	return term.IsTerminal(int(syscall.Stdin))
+}
+
 // NewEditCommand: `olares-cli files edit <remote-path>`
 //
 // Edit a file in place on the per-user files-backend. Wire flow:
 //
+//  0. preflight                       — TTY guard + path / plan /
+//                                       binary-ext / pickEditor.
+//                                       ALL local; fails fast
+//                                       BEFORE profile resolve,
+//                                       network, or temp-file
+//                                       allocation. A typo in
+//                                       --editor never reaches
+//                                       the server.
 //  1. download.Stat                   — list parent dir, find file,
 //                                       enforce pre-fetch size cap
 //  2. GET /api/raw/<encPath>          — pull current bytes via a
@@ -287,6 +305,11 @@ default backup behavior).
 Editor cascade (matches ` + "`git commit`" + ` / ` + "`crontab -e`" + `):
 
     --editor flag  →  $VISUAL  →  $EDITOR  →  vi (POSIX) / notepad (Windows)
+
+The editor binary is resolved up-front, BEFORE the CLI dials the
+server or allocates a temp file. A missing / mistyped editor fails
+fast with a clear error, without ever pulling the remote file or
+touching profile state.
 
 Wire shape:
 
@@ -435,34 +458,22 @@ func runEdit(
 	// instead of having the editor child process either hang
 	// forever waiting for input or write garbage to a non-TTY.
 	// Mirrors `rm`'s non-TTY refusal pattern (cli/cmd/ctl/files/rm.go).
-	if !term.IsTerminal(int(syscall.Stdin)) {
+	if !isTTY() {
 		return errors.New(
 			"refusing to spawn an editor without a TTY (no interactive stdin); " +
 				"`files edit` is interactive — use `files download` + `files upload` for scripted edits")
 	}
 
-	tgt, err := frontendPathToEditTarget(rawPath)
+	// Preflight ALL local validation (path / plan / binary-ext /
+	// editor cascade) BEFORE any factory / network / temp-file
+	// work. A typo in --editor or an unset $EDITOR fails fast,
+	// without dialing the server, resolving the profile, or
+	// allocating a temp directory. This is the documented
+	// contract — see preflightEdit's docstring for the bug-report
+	// rationale.
+	op, editorBin, err := preflightEdit(rawPath, o)
 	if err != nil {
 		return err
-	}
-
-	op, err := edit.Plan(tgt)
-	if err != nil {
-		return err
-	}
-
-	// Pre-Stat extension guard (layer 1 of the text-only policy).
-	// Stop here for the obvious "I tried to edit a JPEG / PDF /
-	// .zip" case BEFORE we round-trip to the server. The
-	// post-fetch NUL-byte sniff is the second, content-aware
-	// layer for files whose extension lies (or is missing).
-	if !o.allowBinary && hasBinaryExtension(op.DisplayPath) {
-		return fmt.Errorf(
-			"refusing to edit %s: extension looks like a non-text format "+
-				"(images, PDFs, video, audio, archives, executables — `edit` "+
-				"is for text). Use `files download` to copy it locally, or pass "+
-				"--allow-binary if you really meant to open it in $EDITOR",
-			op.DisplayPath)
 	}
 
 	rp, err := f.ResolveProfile(ctx)
@@ -542,11 +553,10 @@ func runEdit(
 		_ = os.RemoveAll(tmpDir)
 	}()
 
-	editorBin, err := pickEditor(o.editor)
-	if err != nil {
-		return err
-	}
-
+	// editorBin was resolved up-front by preflightEdit; we don't
+	// re-resolve here because a $PATH change mid-flight would be
+	// surprising and the early failure mode is the documented
+	// contract.
 	fmt.Fprintf(out, "edit: %s (editor: %s, %d byte%s)\n",
 		op.DisplayPath, editorBin, len(currentBytes), pluralS(len(currentBytes)))
 
@@ -620,6 +630,68 @@ func runEdit(
 	cleaned = true
 	_ = os.RemoveAll(tmpDir)
 	return nil
+}
+
+// preflightEdit runs every LOCAL check `files edit` needs BEFORE
+// any network call, profile resolve, or temp-file allocation.
+// Specifically, in this exact order:
+//
+//  1. frontendPathToEditTarget  — path shape + dot-segment ban
+//  2. edit.Plan                  — namespace allow-list + final
+//                                  URL composition
+//  3. hasBinaryExtension         — extension deny-list (text-only
+//                                  policy, layer 1)
+//  4. pickEditor                 — $VISUAL / $EDITOR cascade,
+//                                  PATH lookup of the resolved
+//                                  binary (or the platform fallback)
+//
+// The ordering is the public contract — pinned by
+// TestPreflightEdit_Order — because it directly determines the
+// user-visible failure mode for misconfigured invocations:
+//
+//   - Path shape is the FIRST thing we know about the user's
+//     intent, so path errors trump everything else (a bogus path
+//     with a bogus editor surfaces the path error, not the
+//     editor error).
+//   - Binary-extension refusal beats editor errors: the user
+//     should learn "this file isn't editable here" even if their
+//     $EDITOR is also broken — fixing the path is the realer
+//     blocker.
+//   - pickEditor LAST among the local checks but BEFORE any
+//     network work. A typo in --editor or an unset $EDITOR must
+//     NOT trigger profile resolution, a remote Stat / Fetch, or
+//     temp-file creation. (Bug from the verb's bug report:
+//     pickEditor used to run AFTER statAndFetch + writeTempFile,
+//     so a missing editor would still pull the file off the
+//     server before failing, defeating the documented "fail
+//     fast" contract.)
+//
+// The helper does NO factory / network / file-system work, so a
+// regression test can exercise it with no external dependencies
+// at all — the only failure modes are determined by `rawPath`
+// and `o`.
+func preflightEdit(rawPath string, o *editOptions) (edit.Op, string, error) {
+	tgt, err := frontendPathToEditTarget(rawPath)
+	if err != nil {
+		return edit.Op{}, "", err
+	}
+	op, err := edit.Plan(tgt)
+	if err != nil {
+		return edit.Op{}, "", err
+	}
+	if !o.allowBinary && hasBinaryExtension(op.DisplayPath) {
+		return edit.Op{}, "", fmt.Errorf(
+			"refusing to edit %s: extension looks like a non-text format "+
+				"(images, PDFs, video, audio, archives, executables — `edit` "+
+				"is for text). Use `files download` to copy it locally, or pass "+
+				"--allow-binary if you really meant to open it in $EDITOR",
+			op.DisplayPath)
+	}
+	editorBin, err := pickEditor(o.editor)
+	if err != nil {
+		return edit.Op{}, "", err
+	}
+	return op, editorBin, nil
 }
 
 // frontendPathToEditTarget converts the user-supplied path into
@@ -811,10 +883,14 @@ func writeTempFile(displayPath string, content []byte) (tmpDir, tmpFile string, 
 
 // pickEditor implements the editor cascade (--editor → $VISUAL →
 // $EDITOR → fallback). On POSIX the fallback is "vi" (universally
-// installed); on Windows it's "notepad". We resolve via PATH up
-// front so a typo / missing binary fails before we even create
-// the temp file — that's friendlier than seeing the editor command
-// fail with a confusing exec error AFTER the user already typed.
+// installed); on Windows it's "notepad". We resolve via PATH at
+// preflight time — so a typo / missing binary fails BEFORE
+// profile resolution, the remote Stat / Fetch round-trip, OR
+// temp-file allocation. Failing fast at this point is the
+// documented contract (see preflightEdit's docstring for the
+// bug-report rationale that pinned the ordering); a confusing
+// exec error AFTER the user already typed into a temp file is
+// the failure mode we explicitly engineered out.
 //
 // The editor string can carry arguments (`code --wait`, `emacs -nw`)
 // — we split on whitespace before the lookup, mirroring `git`'s

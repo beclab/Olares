@@ -884,6 +884,211 @@ func TestRunEdit_BinaryContentSniffRejected(t *testing.T) {
 	}
 }
 
+// TestPreflightEdit_Order pins the LOCAL-validation ordering
+// `files edit` advertises: path → plan → binary-extension →
+// editor cascade. The exact order matters because each step
+// names a different class of failure to the user, and shuffling
+// them surfaces the wrong error first.
+//
+// Background: an earlier revision of `runEdit` called pickEditor
+// AFTER the remote Stat / Fetch / writeTempFile. A typo in
+// --editor would still pull the remote file and allocate a temp
+// dir before failing — defeating the documented "fail fast"
+// contract and triggering an unnecessary network round-trip on
+// what was a purely local misconfiguration. preflightEdit pulls
+// the editor check up-front; this test pins each gate's
+// precedence so a future shuffle is caught at code-review time.
+func TestPreflightEdit_Order(t *testing.T) {
+	bogusEditor := "definitely-not-a-real-editor-xyz123"
+
+	t.Run("path-shape error wins over editor error", func(t *testing.T) {
+		// Bogus path AND bogus editor — the path error names
+		// what's wrong with the user's INPUT, which trumps a
+		// downstream environment misconfiguration.
+		o := &editOptions{editor: bogusEditor}
+		_, _, err := preflightEdit("not-a-real-frontend-path", o)
+		if err == nil {
+			t.Fatal("want error, got nil")
+		}
+		if strings.Contains(err.Error(), "not found in PATH") {
+			t.Errorf("got editor-not-found first; want path-shape error: %v", err)
+		}
+	})
+
+	t.Run("dot-segment error wins over editor error", func(t *testing.T) {
+		// Same logic for the path-traversal blacklist — the
+		// path-shape error class includes ./.. segments.
+		o := &editOptions{editor: bogusEditor}
+		_, _, err := preflightEdit("drive/Home/foo/../bar", o)
+		if err == nil {
+			t.Fatal("want error, got nil")
+		}
+		if !strings.Contains(err.Error(), "path-traversal blacklist") {
+			t.Errorf("got %q; want dot-segment error first", err.Error())
+		}
+	})
+
+	t.Run("namespace allow-list error wins over editor error", func(t *testing.T) {
+		// Cloud namespace + bogus editor — the namespace
+		// refusal points at the recovery `download → upload`
+		// path; the editor error is downstream environment.
+		o := &editOptions{editor: bogusEditor}
+		_, _, err := preflightEdit("awss3/myacct/file.txt", o)
+		if err == nil {
+			t.Fatal("want error, got nil")
+		}
+		if !strings.Contains(err.Error(), "cloud-drive") {
+			t.Errorf("got %q; want cloud-namespace error first", err.Error())
+		}
+	})
+
+	t.Run("binary-extension error wins over editor error", func(t *testing.T) {
+		// Valid path, JPEG extension, bogus editor — the
+		// binary-extension refusal teaches the user "this file
+		// isn't editable here" even if their $EDITOR is also
+		// broken; fixing the path is the realer blocker.
+		o := &editOptions{editor: bogusEditor}
+		_, _, err := preflightEdit("drive/Home/Photos/big.jpg", o)
+		if err == nil {
+			t.Fatal("want error, got nil")
+		}
+		if !strings.Contains(err.Error(), "non-text format") {
+			t.Errorf("got %q; want binary-extension error first", err.Error())
+		}
+	})
+
+	t.Run("editor error fires once path / extension are clean", func(t *testing.T) {
+		// Path is well-shaped, namespace is supported, extension
+		// is text — only the editor is busted. preflightEdit
+		// should surface that AND it should be the LAST
+		// failure mode in the chain.
+		o := &editOptions{editor: bogusEditor}
+		_, _, err := preflightEdit("drive/Home/notes.md", o)
+		if err == nil {
+			t.Fatal("want error, got nil")
+		}
+		if !strings.Contains(err.Error(), "not found in PATH") {
+			t.Errorf("err: got %q, want editor-not-found message", err.Error())
+		}
+	})
+
+	t.Run("happy path returns op + editor with no error", func(t *testing.T) {
+		bin := pickRealBinary(t)
+		o := &editOptions{editor: bin}
+		op, editor, err := preflightEdit("drive/Home/Documents/notes.md", o)
+		if err != nil {
+			t.Fatalf("preflightEdit: %v", err)
+		}
+		if op.DisplayPath != "drive/Home/Documents/notes.md" {
+			t.Errorf("op.DisplayPath: got %q", op.DisplayPath)
+		}
+		if op.Endpoint == "" {
+			t.Error("op.Endpoint: must be populated by edit.Plan")
+		}
+		if editor != bin {
+			t.Errorf("editor: got %q, want %q", editor, bin)
+		}
+	})
+
+	t.Run("--allow-binary lets binary extensions through to the editor cascade", func(t *testing.T) {
+		// With --allow-binary, the extension-deny step is
+		// skipped — so a bogus editor + .jpg path now surfaces
+		// the editor error (not the extension error).
+		// Documents the escape-hatch contract.
+		o := &editOptions{editor: bogusEditor, allowBinary: true}
+		_, _, err := preflightEdit("drive/Home/Photos/big.jpg", o)
+		if err == nil {
+			t.Fatal("want editor error, got nil")
+		}
+		if !strings.Contains(err.Error(), "not found in PATH") {
+			t.Errorf("err: got %q, want editor-not-found (--allow-binary should bypass ext-deny)", err.Error())
+		}
+	})
+}
+
+// TestRunEdit_PickEditorFailsBeforeFactory is the full-stack
+// regression guard for the "preflight before network" contract.
+// We pass a NIL Factory and a bogus editor: under the post-fix
+// ordering preflightEdit short-circuits with the editor error
+// before runEdit ever dereferences `f`; under the pre-fix
+// ordering pickEditor ran AFTER `f.ResolveProfile`, so a nil
+// Factory would panic before the editor check fired.
+//
+// `recover()` in the test catches that panic and fails with a
+// targeted message — so a future reordering regression surfaces
+// as a clear "preflight regressed past nil-Factory deref"
+// failure rather than a stack trace.
+func TestRunEdit_PickEditorFailsBeforeFactory(t *testing.T) {
+	// Stub the TTY guard so runEdit's interactive check passes.
+	// (`go test` runs with a piped stdin, so the production
+	// guard would short-circuit before ever reaching the
+	// preflight + factory work we want to test.)
+	saved := isTTY
+	isTTY = func() bool { return true }
+	t.Cleanup(func() { isTTY = saved })
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("runEdit panicked (preflight regressed past nil-Factory deref): %v", r)
+		}
+	}()
+
+	o := &editOptions{
+		editor:  "definitely-not-a-real-editor-xyz123",
+		maxSize: DefaultMaxSize,
+	}
+	err := runEdit(
+		context.Background(),
+		nil,           // *cmdutil.Factory — MUST NOT be touched in the post-fix order
+		io.Discard,
+		nil,           // editorStdin
+		io.Discard,    // editorStdout
+		io.Discard,    // editorStderr
+		"drive/Home/Documents/notes.md",
+		o,
+	)
+	if err == nil {
+		t.Fatal("want pickEditor error, got nil")
+	}
+	if !strings.Contains(err.Error(), "not found in PATH") {
+		t.Errorf("err: got %q, want pickEditor 'not found in PATH' (preflight should have short-circuited the nil Factory)", err.Error())
+	}
+}
+
+// TestRunEdit_PathErrorBeforeFactory is the companion guard for
+// path-shape failures: a bogus path with a working environment
+// must STILL short-circuit before runEdit dereferences the
+// (nil) Factory. Documents that the entire preflight runs
+// before any factory work, not just the editor check.
+func TestRunEdit_PathErrorBeforeFactory(t *testing.T) {
+	saved := isTTY
+	isTTY = func() bool { return true }
+	t.Cleanup(func() { isTTY = saved })
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("runEdit panicked on a bogus path (preflight order regressed): %v", r)
+		}
+	}()
+
+	bin := pickRealBinary(t)
+	o := &editOptions{editor: bin, maxSize: DefaultMaxSize}
+	err := runEdit(
+		context.Background(),
+		nil,
+		io.Discard,
+		nil, io.Discard, io.Discard,
+		"awss3/myacct/file.txt", // cloud namespace → planner refuses
+		o,
+	)
+	if err == nil {
+		t.Fatal("want planner error, got nil")
+	}
+	if !strings.Contains(err.Error(), "cloud-drive") {
+		t.Errorf("err: got %q, want planner cloud-drive refusal", err.Error())
+	}
+}
+
 // TestStatAndFetch_StatSizeZeroLargeBody pins Bug 5's fix at the
 // cobra layer: when Stat reports Size=0 (either really empty or
 // the backend forgot to populate the field) but the actual body
