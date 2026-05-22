@@ -218,7 +218,14 @@ var isTTY = func() bool {
 //  3. write to a temp file under $TMPDIR/olares-files-edit-*/
 //  4. spawn $EDITOR on the temp file (foreground, inherits the
 //     parent's stdin/stdout/stderr so vi / nano / hx all work)
-//  5. PUT /api/resources/<encPath>    — when the post-edit bytes
+//  5. (--create only) re-Stat the path right before the PUT to
+//     detect a concurrent create that landed during the editor
+//     session. Refuses to PUT if the path is now occupied —
+//     closing the symmetric race to Bug 2 (read-side concurrent
+//     delete). Without this check, a peer that creates the same
+//     path while the editor is open would have their content
+//     silently overwritten by the user's empty / typed buffer.
+//  6. PUT /api/resources/<encPath>    — when the post-edit bytes
 //                                       differ from the pre-edit
 //                                       bytes, OR when --create
 //                                       was set (Bug 4: --create
@@ -407,12 +414,28 @@ Notes:
     the no-change branch as a real no-op (no PUT) — the same
     cheap :q / :q! workflow the LarePass GUI offers.
   - Concurrent edits / deletes are detected on a best-effort
-    basis: if Stat says the file exists but the GET comes back
-    404 (someone else just deleted it), the verb refuses with a
-    "file disappeared between stat and fetch" error rather than
-    falling back to --create-empty-buffer. There is no ETag /
-    If-Match support on the wire so concurrent UPDATES still
-    follow last-writer-wins semantics — same as the LarePass GUI.
+    basis at BOTH the read window and the write window:
+
+      Read window  — Stat says the file exists but the GET
+                     comes back 404 (someone else just deleted
+                     it): refuse with "file disappeared between
+                     stat and fetch" rather than falling back
+                     to --create-empty-buffer.
+
+      Write window — --create kicked in because Stat returned
+                     404, but a peer creates the same path
+                     during the editor session: re-Stat right
+                     before the PUT and refuse if the path is
+                     now occupied, so we don't silently overwrite
+                     the peer's content with the user's empty /
+                     typed buffer.
+
+    There is no ETag / If-Match / If-None-Match support on the
+    wire so concurrent UPDATES (existing-file edits from two
+    clients at the same time) still follow last-writer-wins
+    semantics — same as the LarePass GUI. The two race-checks
+    above only cover the create / delete state-transitions where
+    the data-loss is otherwise totally silent.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -615,6 +638,30 @@ func runEdit(
 			tmpFile, op.DisplayPath)
 	}
 
+	// Create-mode race detection: between the initial Stat 404
+	// (where --create promised the user "this path is empty")
+	// and now, another client / device may have created the
+	// same path. Without this check, our PUT would silently
+	// overwrite their content with the buffer the user typed
+	// into a session they BELIEVED was creating a new file.
+	// (See precheckCreateRace's docstring for the wire-shape
+	// constraints — no If-None-Match support on PUT, so the
+	// best we can do is shrink the race window to one Stat
+	// round-trip immediately before the PUT.)
+	//
+	// We retain the temp file on race detection regardless of
+	// --keep-temp: the user's edits are NOT on the server, and
+	// pointing them at the temp file lets them recover via
+	// `files cat` + manual merge or `files upload` if they
+	// really do want last-writer-wins.
+	if isCreate {
+		if err := precheckCreateRace(ctx, statClient, op.DisplayPath, out); err != nil {
+			o.keepTemp = true
+			fmt.Fprintf(out, "  ! create-mode race detected; temp file retained at %s\n", tmpFile)
+			return err
+		}
+	}
+
 	fmt.Fprintf(out, "uploading %d byte%s → %s\n",
 		len(newBytes), pluralS(len(newBytes)), op.DisplayPath)
 	if err := editClient.PutBytes(ctx, op, newBytes, o.contentType); err != nil {
@@ -750,12 +797,20 @@ func frontendPathToEditTarget(raw string) (edit.Target, error) {
 //     materialises an empty file instead of "no changes".
 //   - err: any non-recoverable failure.
 //
-// Race semantics: a Fetch 404 AFTER a successful Stat is treated
-// as a CONFLICT (the file disappeared between calls — most
-// likely a concurrent delete by another client / device). It is
-// NOT routed through the --create empty-buffer path, because
-// silently recreating a file someone else just deleted is almost
-// never what the user wants. (Bug 2 in the verb's bug report.)
+// Race semantics (read window): a Fetch 404 AFTER a successful
+// Stat is treated as a CONFLICT (the file disappeared between
+// calls — most likely a concurrent delete by another client /
+// device). It is NOT routed through the --create empty-buffer
+// path, because silently recreating a file someone else just
+// deleted is almost never what the user wants. (Bug 2 in the
+// verb's bug report.)
+//
+// The SYMMETRIC write-window race — Stat 404 lands here, the
+// user opens the empty buffer, and a peer creates the same path
+// before our PUT — is closed by precheckCreateRace, called from
+// runEdit immediately before the PUT. Together the two helpers
+// cover both data-loss windows where `files edit` could
+// otherwise silently destroy a peer's content.
 //
 // `maxSize > 0` activates the pre-edit size cap. Two layers:
 //
@@ -852,6 +907,100 @@ func statAndFetch(
 		return nil, false, false, err
 	}
 	return body, false, false, nil
+}
+
+// precheckCreateRace closes the create-mode race window that sits
+// between the initial Stat 404 (where --create promised "this
+// path is empty, you're free to materialise it") and the post-
+// editor PUT (which would otherwise unconditionally land the
+// user's bytes on the server).
+//
+// The race: another client / device creates the same path during
+// the editor session. Without this check, our PUT silently
+// overwrites their file with the buffer the user typed into what
+// they BELIEVED was a fresh `--create` session — a data-loss foot-
+// gun whose only signal is the misleading "saved!" exit message.
+// The user never sees the other client's content, never gets a
+// chance to merge, and there's no audit trail of the overwrite.
+//
+// The wire has no atomic create-if-not-exists primitive (no
+// If-None-Match: * support on PUT /api/resources, no PATCH-with-
+// expected-state path) so we can't make this fully race-free.
+// What we CAN do is shrink the window from "the entire editing
+// session" (seconds to minutes) to "one Stat round-trip"
+// (milliseconds): re-Stat right before the PUT, refuse if the
+// path now exists. The remaining race window — Stat-to-PUT —
+// matches the LarePass GUI's last-writer-wins semantics for
+// concurrent UPDATES, so we're not making the create path
+// stricter than the rest of the verb.
+//
+// On race detection we return a typed-error-shaped fmt.Errorf
+// with the recovery path baked in:
+//
+//   - file conflict   → suggest `files cat <path>` to inspect,
+//                       then `files edit <path>` (without --create)
+//                       to merge OR `files upload <local> <path>`
+//                       for explicit last-writer-wins.
+//   - directory conflict → harder failure: a directory now occupies
+//                       the path, so the user has to `files rm -r`
+//                       before any edit can land.
+//
+// Failure modes for the Stat itself:
+//
+//   - 404               → still missing; safe to PUT (nil error).
+//   - non-404 (auth, timeout, 5xx) → fail-OPEN with a stderr
+//     warning. A flaky backend shouldn't block the user's
+//     create — and the PUT will surface its own error with more
+//     context if the backend is genuinely broken. The race
+//     window degrades to the original behaviour for that one
+//     invocation, which is no worse than not running the check.
+//
+// Symmetry with Bug 2 (Stat-success → Fetch-404 → concurrent
+// delete): both helpers detect the SAME race-class — a state
+// transition between two consecutive wire calls — and surface it
+// as a clear conflict rather than letting the verb commit
+// destructive bytes against an unexpected target. The two helpers
+// together pin the only two windows where `files edit` can lose
+// data to concurrent peers: the read window (Bug 2) and the
+// write window (this bug).
+func precheckCreateRace(
+	ctx context.Context,
+	statClient *download.Client,
+	plain string,
+	out io.Writer,
+) error {
+	st, err := statClient.Stat(ctx, plain)
+	switch {
+	case err == nil:
+		if st.IsDir {
+			return fmt.Errorf(
+				"create-mode race for %s: a DIRECTORY now exists at this path "+
+					"(Stat returned 404 at the start of the session, but a concurrent "+
+					"create has landed since); refusing to PUT — this path is no longer "+
+					"addressable as a file. Use `files ls %s` to inspect it, "+
+					"`files rm -r %s` if you intend to replace it, then re-run `files edit`.",
+				plain, plain, plain)
+		}
+		return fmt.Errorf(
+			"create-mode race for %s: file now exists on the server "+
+				"(Stat returned 404 at the start of the session, but a concurrent create "+
+				"has landed since); refusing to PUT to avoid silently overwriting another "+
+				"client's content. Inspect with `files cat %s`, then either "+
+				"re-run `files edit %s` (without --create) to merge, or "+
+				"`files upload <local> %s` for explicit last-writer-wins.",
+			plain, plain, plain, plain)
+	case download.IsNotFound(err):
+		return nil
+	default:
+		// Fail-open: a flaky pre-PUT Stat shouldn't refuse the
+		// user's create. The PUT will surface a clearer error
+		// with more context if the backend is genuinely broken.
+		// We narrate the inconclusive check on stderr so the
+		// "saved!" message that follows isn't taken as proof
+		// that the path was empty.
+		fmt.Fprintf(out, "  ! create-mode pre-PUT race check inconclusive (%v); proceeding\n", err)
+		return nil
+	}
 }
 
 // writeTempFile creates a fresh $TMPDIR/olares-files-edit-XXXX/

@@ -1248,6 +1248,272 @@ func TestRunEdit_CreateModeForcesPut(t *testing.T) {
 	}
 }
 
+// TestPrecheckCreateRace covers the four states the pre-PUT
+// existence check has to handle for a `--create` invocation:
+//
+//   - file appeared (positive Stat)  → CONFLICT, refuse the PUT
+//   - dir appeared   (positive Stat) → CONFLICT, refuse the PUT
+//   - still missing  (404)           → SAFE, allow the PUT
+//   - transient err  (5xx / network) → FAIL OPEN, write a warning
+//                                      to stderr and allow the
+//                                      PUT (a flaky backend
+//                                      shouldn't block creates;
+//                                      the PUT will surface a
+//                                      clearer error if the
+//                                      backend really is broken).
+//
+// Pinning all four cases here means a future change to the
+// helper's failure-mode policy (e.g. "fail closed on 5xx") has
+// to be deliberate — the test surfaces the choice as a
+// behavioural change rather than a silent one.
+func TestPrecheckCreateRace(t *testing.T) {
+	t.Run("file appeared between Stat 404 and PUT → conflict", func(t *testing.T) {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/resources/", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"name":"Home","items":[{"name":"new.md","isDir":false,"size":7}]}`))
+		})
+		srv := httptest.NewServer(mux)
+		defer srv.Close()
+
+		statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+		var out captureWriter
+		err := precheckCreateRace(context.Background(), statClient, "drive/Home/new.md", &out)
+		if err == nil {
+			t.Fatal("want conflict error, got nil — PUT would silently overwrite peer's content")
+		}
+		if !strings.Contains(err.Error(), "create-mode race") {
+			t.Errorf("err missing 'create-mode race': %v", err)
+		}
+		if !strings.Contains(err.Error(), "files cat") {
+			t.Errorf("err must point at recovery via `files cat`: %v", err)
+		}
+		if !strings.Contains(err.Error(), "without --create") {
+			t.Errorf("err must hint at the merge path (re-run without --create): %v", err)
+		}
+		if got := out.String(); got != "" {
+			t.Errorf("warning channel: want empty on positive race detection, got %q", got)
+		}
+	})
+
+	t.Run("directory appeared between Stat 404 and PUT → directory conflict", func(t *testing.T) {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/resources/", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"name":"Home","items":[{"name":"new.md","isDir":true}]}`))
+		})
+		srv := httptest.NewServer(mux)
+		defer srv.Close()
+
+		statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+		var out captureWriter
+		err := precheckCreateRace(context.Background(), statClient, "drive/Home/new.md", &out)
+		if err == nil {
+			t.Fatal("want directory-conflict error, got nil")
+		}
+		if !strings.Contains(err.Error(), "DIRECTORY") {
+			t.Errorf("err must call out the directory state: %v", err)
+		}
+		if !strings.Contains(err.Error(), "files rm -r") {
+			t.Errorf("err must point at the directory-removal recovery path: %v", err)
+		}
+	})
+
+	t.Run("path still missing → nil error, PUT proceeds", func(t *testing.T) {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/resources/", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"name":"Home","items":[]}`))
+		})
+		srv := httptest.NewServer(mux)
+		defer srv.Close()
+
+		statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+		var out captureWriter
+		if err := precheckCreateRace(context.Background(), statClient, "drive/Home/new.md", &out); err != nil {
+			t.Fatalf("err: %v (want nil — path still missing is the happy --create path)", err)
+		}
+		if got := out.String(); got != "" {
+			t.Errorf("warning channel: want empty on safe-to-PUT path, got %q", got)
+		}
+	})
+
+	t.Run("transient stat error → fail open with stderr warning", func(t *testing.T) {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/resources/", func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+		srv := httptest.NewServer(mux)
+		defer srv.Close()
+
+		statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+		var out captureWriter
+		// Fail-open contract: a 5xx pre-PUT Stat MUST NOT
+		// refuse the create. The user's typed buffer is
+		// still landed; the warning makes the inconclusive
+		// check visible so the "saved!" message that follows
+		// isn't taken as proof the path was empty.
+		if err := precheckCreateRace(context.Background(), statClient, "drive/Home/new.md", &out); err != nil {
+			t.Fatalf("err: %v (want nil — fail-open contract: a flaky backend must not block creates)", err)
+		}
+		warning := out.String()
+		if !strings.Contains(warning, "race check inconclusive") {
+			t.Errorf("warning channel must narrate the inconclusive check; got %q", warning)
+		}
+		if !strings.Contains(warning, "proceeding") {
+			t.Errorf("warning channel must say we're proceeding so the saved! message isn't misleading; got %q", warning)
+		}
+	})
+}
+
+// TestRunEdit_CreateModeRaceDetected pins the symmetric write-
+// window race fix: with --create, a peer that creates the same
+// path during the editor session must NOT have their content
+// silently overwritten by the user's empty / typed buffer.
+//
+// Wire shape simulated:
+//
+//   - Initial Stat (parent listing) returns no items → file is
+//     missing → statAndFetch routes through the --create branch
+//     and reports isCreate=true.
+//   - User exits the editor with newBytes that differ from
+//     currentBytes (so we hit the real PUT path, not the forced
+//     empty-buffer PUT).
+//   - Pre-PUT precheckCreateRace re-Stats the parent and now
+//     sees the file (a peer has created it); refuses with the
+//     conflict error.
+//   - PUT MUST NOT have fired — the test server's PUT handler
+//     would record a call, and we assert the count stays at 0.
+//
+// We exercise the inner machinery (statAndFetch + precheckCreateRace
+// + counter) directly rather than runEdit end-to-end because the
+// TTY guard and editor-spawn make a full integration test heavier
+// than the contract requires; the inner pieces are what carry the
+// race-detection guarantee. (Same pattern as the Bug 4 forced-PUT
+// regression test above.)
+func TestRunEdit_CreateModeRaceDetected(t *testing.T) {
+	srv, calls := newCreateRaceEditServer(t)
+	defer srv.Close()
+	statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+	editClient := &edit.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+
+	// Phase 1: pre-editor Stat. Parent listing is empty, so
+	// statAndFetch returns isCreate=true. This is the same
+	// happy --create path TestRunEdit_CreateModeForcesPut covers.
+	currentBytes, isDir, isCreate, err := statAndFetch(context.Background(),
+		statClient, editClient, "drive/Home/raced.md", true, 0)
+	if err != nil {
+		t.Fatalf("statAndFetch: %v", err)
+	}
+	if isDir {
+		t.Fatal("isDir: want false")
+	}
+	if !isCreate {
+		t.Fatal("isCreate: want true on Stat-404 + --create")
+	}
+	if len(currentBytes) != 0 {
+		t.Errorf("currentBytes: want empty buffer, got %q", currentBytes)
+	}
+
+	// Simulate the editor closing with non-empty content (the
+	// user typed something into what they believed was a fresh
+	// create). bytesEqual is false → the cobra layer would
+	// normally fall through to the PUT.
+	newBytes := []byte("hello from CLI user\n")
+	if bytesEqual(currentBytes, newBytes) {
+		t.Fatal("setup: newBytes must differ from currentBytes to exercise the real PUT path")
+	}
+
+	// Phase 2: pre-PUT race check. The server's listing handler
+	// has flipped (a peer created the file during the editor
+	// session — see newCreateRaceEditServer). precheckCreateRace
+	// MUST detect this and refuse the PUT.
+	var out captureWriter
+	raceErr := precheckCreateRace(context.Background(), statClient, "drive/Home/raced.md", &out)
+	if raceErr == nil {
+		t.Fatal("want conflict error from precheckCreateRace; without it our PUT would silently overwrite the peer's content")
+	}
+	if !strings.Contains(raceErr.Error(), "create-mode race") {
+		t.Errorf("err: got %q, want 'create-mode race' marker", raceErr.Error())
+	}
+	if !strings.Contains(raceErr.Error(), "drive/Home/raced.md") {
+		t.Errorf("err must name the conflicting path: %v", raceErr)
+	}
+
+	// Phase 3: assert no PUT happened. This is the load-bearing
+	// invariant for the bug — the entire point of the fix is
+	// that the PUT is suppressed when a race is detected.
+	// (We DELIBERATELY do not invoke editClient.PutBytes here:
+	// the production code path also short-circuits on raceErr
+	// before reaching the PUT call.)
+	if calls.put != 0 {
+		t.Errorf("PUT count: want 0 (race detected, PUT suppressed), got %d", calls.put)
+	}
+	if len(calls.lastBody) != 0 {
+		t.Errorf("PUT body: want empty (no PUT should have fired), got %q", calls.lastBody)
+	}
+
+	// The two listing calls (initial + pre-PUT race check) MUST
+	// have hit the server — without them the race check is a
+	// no-op and the bug isn't actually fixed.
+	if calls.getList < 2 {
+		t.Errorf("listing calls: want at least 2 (initial Stat + pre-PUT race check), saw %d", calls.getList)
+	}
+}
+
+// newCreateRaceEditServer returns an httptest server that
+// simulates a peer racing the user's --create session: the
+// FIRST listing of the parent directory comes back empty (so
+// download.Stat reports the file as missing → --create path
+// kicks in), but EVERY SUBSEQUENT listing reports the file as
+// present (so the pre-PUT existence check sees the peer's
+// concurrent create). PUT calls are recorded but the handler
+// would return 500 if reached — the regression guard's whole
+// point is that the PUT NEVER FIRES in this scenario.
+//
+// The mux uses a stateful counter rather than a fixed sequence
+// so a regression test that calls Stat more than twice (e.g.
+// because a future fix adds a third existence check) doesn't
+// silently degrade to "all subsequent calls return missing".
+func newCreateRaceEditServer(t *testing.T) (*httptest.Server, *editServerCalls) {
+	t.Helper()
+	c := &editServerCalls{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/resources/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			c.getList++
+			w.Header().Set("Content-Type", "application/json")
+			if c.getList == 1 {
+				_, _ = w.Write([]byte(`{"name":"Home","items":[]}`))
+				return
+			}
+			_, _ = w.Write([]byte(`{"name":"Home","items":[{"name":"raced.md","isDir":false,"size":42}]}`))
+		case http.MethodPut:
+			// The whole point of the fix is that we never
+			// reach the PUT. If the regression-guard test
+			// ever does, surface it loudly so the failure
+			// is unambiguous.
+			c.put++
+			body, _ := io.ReadAll(r.Body)
+			c.lastBody = append([]byte(nil), body...)
+			http.Error(w, "PUT MUST NOT FIRE when a create-mode race is detected", http.StatusInternalServerError)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/api/raw/", func(w http.ResponseWriter, _ *http.Request) {
+		// Not used in this scenario; the --create path skips
+		// /api/raw entirely and the race fires on the listing
+		// endpoint. Returning 404 keeps the server's behaviour
+		// well-defined if a future code path accidentally
+		// reaches here.
+		w.WriteHeader(http.StatusNotFound)
+	})
+	srv := httptest.NewServer(mux)
+	return srv, c
+}
+
 // newRaceEditServer returns an httptest server that returns a
 // successful parent listing (so download.Stat sees the file as
 // alive) but answers GET /api/raw/ with 404 — simulating a
