@@ -17,9 +17,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
 )
 
 func newFixture(t *testing.T, svc *corev1.Service, srr *srrv1alpha1.SharedRouteRegistry) client.Client {
+	t.Helper()
+	objs := []client.Object{srr}
+	if svc != nil {
+		objs = append(objs, svc, &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   svc.Namespace,
+				Labels: map[string]string{security.NamespaceSharedLabel: "true"},
+			},
+		})
+	}
+	return buildFakeClient(t, objs...)
+}
+
+// plainFixture builds a fake client preloaded with arbitrary objects (typically a
+// Namespace) for unit tests that exercise helpers below the full reconcile loop.
+func plainFixture(t *testing.T, objs ...client.Object) client.Client {
+	t.Helper()
+	return buildFakeClient(t, objs...)
+}
+
+func buildFakeClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
@@ -35,11 +57,11 @@ func newFixture(t *testing.T, svc *corev1.Service, srr *srrv1alpha1.SharedRouteR
 	refGrantGVK := schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1beta1", Kind: "ReferenceGrant"}
 	scheme.AddKnownTypeWithName(refGrantGVK, &unstructured.Unstructured{})
 
-	objs := []client.Object{srr}
-	if svc != nil {
-		objs = append(objs, svc)
-	}
-	return fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&srrv1alpha1.SharedRouteRegistry{}).WithObjects(objs...).Build()
+	return fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&srrv1alpha1.SharedRouteRegistry{}).
+		WithObjects(objs...).
+		Build()
 }
 
 func backendService(ns string) *corev1.Service {

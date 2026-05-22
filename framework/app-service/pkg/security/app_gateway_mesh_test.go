@@ -11,7 +11,9 @@ func TestNewAppGatewayMeshNetworkPolicy_linkerd_includesPolicyPort8090(t *testin
 	require.Equal(t, AppGatewayMeshNPName, np.Name)
 	require.Equal(t, "linkerd", np.Namespace)
 	require.Len(t, np.Spec.Ingress, 1)
-	require.Len(t, np.Spec.Ingress[0].From, len(LinkerdControlPlaneIngressPeerNamespaces))
+	require.Len(t, np.Spec.Ingress[0].From, len(LinkerdControlPlaneIngressPeerNamespaces)+1)
+	sharedPeer := np.Spec.Ingress[0].From[len(np.Spec.Ingress[0].From)-1]
+	require.Equal(t, "true", sharedPeer.NamespaceSelector.MatchLabels[NamespaceSharedLabel])
 	require.Len(t, np.Spec.Ingress[0].Ports, len(LinkerdMeshIngressPortsFromAppGateway))
 
 	got := make([]int32, 0, len(np.Spec.Ingress[0].Ports))
@@ -39,4 +41,21 @@ func TestNewLinkerdMeshPrometheusScrapeNetworkPolicy(t *testing.T) {
 func TestAppGatewayMeshNamespaces_includeLinkerdViz(t *testing.T) {
 	require.True(t, IsAppGatewayMeshNamespace("linkerd-viz"))
 	require.Equal(t, "linkerd", AppGatewayMeshPeerNamespace("linkerd-viz"))
+}
+
+func TestNewSharedLinkerdControlPlaneIngressNetworkPolicy(t *testing.T) {
+	np := NewSharedLinkerdControlPlaneIngressNetworkPolicy("ollamaserver-shared", map[string]string{"app": "ollama"})
+	require.Equal(t, SharedLinkerdMeshIngressNPName, np.Name)
+	require.Equal(t, "ollamaserver-shared", np.Namespace)
+	require.Equal(t, "ollama", np.Spec.PodSelector.MatchLabels["app"])
+
+	require.Len(t, np.Spec.Ingress, 1)
+	require.Len(t, np.Spec.Ingress[0].From, len(SharedLinkerdMeshIngressPeerNamespaces))
+	gotPeers := make([]string, 0, len(np.Spec.Ingress[0].From))
+	for _, peer := range np.Spec.Ingress[0].From {
+		require.NotNil(t, peer.NamespaceSelector)
+		gotPeers = append(gotPeers, peer.NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"])
+	}
+	require.Equal(t, SharedLinkerdMeshIngressPeerNamespaces, gotPeers,
+		"peers must include linkerd (control-plane) and linkerd-viz (tap/metrics)")
 }
