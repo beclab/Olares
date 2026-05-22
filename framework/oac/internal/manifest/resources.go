@@ -88,8 +88,9 @@ func ValidateResourceMode(r ResourceMode) error {
 //   - mutual exclusion (Rule 7): runs at every version. Legacy flat
 //     spec.required*/spec.limited* fields cannot coexist with
 //     spec.resources[] -- they are alternative expressions of the same
-//     envelope, not complementary fields, so emitting this rule on legacy
-//     manifests warns users who try to straddle both shapes.
+//     envelope, not complementary fields, so emitting this rule on
+//     legacy / v2 / modern manifests alike warns any user who tries to
+//     straddle both shapes.
 //   - per-entry validation (mode -> supportArch and empty-envelope
 //     completeness): only runs when olaresManifest.version >= 0.12.0 and
 //     apiVersion is not v2 (v2 forbids spec.resources[] entirely).
@@ -112,7 +113,7 @@ func specResourceCrossFieldRules(configVersion, apiVersion string, spec *AppSpec
 		supportArch[a] = struct{}{}
 	}
 
-	for i, rm := range spec.Resources {
+	for i, rm := range spec.AcceleratedResources {
 		path := fmt.Sprintf("spec.resources[%d]", i)
 
 		if required, ok := modeArchRequirement[rm.Mode]; ok {
@@ -188,10 +189,10 @@ var legacySpecResourceFields = [...]struct {
 // disk and spec.required*/limited*Gpu are not part of the must-fill set
 // at legacy versions and are intentionally excluded from the check.
 func isLegacyEnvelopeMissing(spec *AppSpec) bool {
-	return spec.RequiredCPU == "" &&
-		spec.LimitedCPU == "" &&
-		spec.RequiredMemory == "" &&
-		spec.LimitedMemory == "" &&
+	return spec.RequiredCPU == "" ||
+		spec.LimitedCPU == "" ||
+		spec.RequiredMemory == "" ||
+		spec.LimitedMemory == "" ||
 		spec.RequiredDisk == ""
 }
 
@@ -203,7 +204,7 @@ func isLegacyEnvelopeMissing(spec *AppSpec) bool {
 // fields are unconstrained here -- callers (validateAppSpec) decide
 // whether they are required or simply optional for the version in play.
 func ensureLegacyAndResourcesAreMutuallyExclusive(spec *AppSpec) error {
-	if len(spec.Resources) == 0 {
+	if len(spec.AcceleratedResources) == 0 {
 		return nil
 	}
 	var errs []error

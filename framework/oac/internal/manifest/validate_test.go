@@ -253,46 +253,30 @@ func TestAppSpec_QuantityFields(t *testing.T) {
 // < 0.12.0:
 //
 //   - requiredMemory, requiredDisk, requiredCpu, limitedMemory, limitedCpu
-//     are required (one error per missing field).
+//     are required. Because isLegacyEnvelopeMissing flips to true the
+//     moment any one of the five is empty, a partial fill produces the
+//     consolidated guidance message rather than a per-field cascade --
+//     the subtests assert on that consolidated message.
 //   - requiredGpu, limitedGpu are optional (the manifest still validates
 //     when both are absent).
 //
 // Each subtest blanks out exactly one legacy field on a fully-populated
-// fixture and expects the corresponding error message; the tail subtests
-// pin the optional GPU contract (omitted is fine, set must parse).
+// fixture and expects the consolidated guidance to fire; the tail
+// subtests pin the optional GPU contract (omitted is fine, set must
+// parse).
 func TestValidateAppSpec_LegacyRequiredFieldsBelowGate(t *testing.T) {
 	const legacyVersion = "0.11.0"
+	const consolidatedGuidance = "spec.requiredCpu / spec.limitedCpu / spec.requiredMemory / spec.limitedMemory / spec.requiredDisk are required for olaresManifest.version < 0.12.0; populate the legacy resource envelope"
 
 	required := []struct {
-		name      string
-		clear     func(*AppSpec)
-		errSuffix string
+		name  string
+		clear func(*AppSpec)
 	}{
-		{
-			name:      "requiredMemory",
-			clear:     func(s *AppSpec) { s.RequiredMemory = "" },
-			errSuffix: "spec.requiredMemory is required for olaresManifest.version < 0.12.0",
-		},
-		{
-			name:      "requiredDisk",
-			clear:     func(s *AppSpec) { s.RequiredDisk = "" },
-			errSuffix: "spec.requiredDisk is required for olaresManifest.version < 0.12.0",
-		},
-		{
-			name:      "requiredCpu",
-			clear:     func(s *AppSpec) { s.RequiredCPU = "" },
-			errSuffix: "spec.requiredCpu is required for olaresManifest.version < 0.12.0",
-		},
-		{
-			name:      "limitedMemory",
-			clear:     func(s *AppSpec) { s.LimitedMemory = "" },
-			errSuffix: "spec.limitedMemory is required for olaresManifest.version < 0.12.0",
-		},
-		{
-			name:      "limitedCpu",
-			clear:     func(s *AppSpec) { s.LimitedCPU = "" },
-			errSuffix: "spec.limitedCpu is required for olaresManifest.version < 0.12.0",
-		},
+		{name: "requiredMemory", clear: func(s *AppSpec) { s.RequiredMemory = "" }},
+		{name: "requiredDisk", clear: func(s *AppSpec) { s.RequiredDisk = "" }},
+		{name: "requiredCpu", clear: func(s *AppSpec) { s.RequiredCPU = "" }},
+		{name: "limitedMemory", clear: func(s *AppSpec) { s.LimitedMemory = "" }},
+		{name: "limitedCpu", clear: func(s *AppSpec) { s.LimitedCPU = "" }},
 	}
 	for _, tc := range required {
 		tc := tc
@@ -304,8 +288,8 @@ func TestValidateAppSpec_LegacyRequiredFieldsBelowGate(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected error: %s missing should fail at olaresManifest.version=%s", tc.name, legacyVersion)
 			}
-			if !strings.Contains(err.Error(), tc.errSuffix) {
-				t.Fatalf("error should mention %q, got: %v", tc.errSuffix, err)
+			if !strings.Contains(err.Error(), consolidatedGuidance) {
+				t.Fatalf("error should mention the consolidated guidance message, got: %v", err)
 			}
 		})
 	}
@@ -376,7 +360,7 @@ func TestValidateAppSpec_LegacyRequiredFieldsBelowGate(t *testing.T) {
 		c.Spec.LimitedDisk = ""
 		c.Spec.RequiredGPU = ""
 		c.Spec.LimitedGPU = ""
-		c.Spec.Resources = nil
+		c.Spec.AcceleratedResources = nil
 
 		err := ValidateAppConfiguration(c)
 		if err == nil {
@@ -402,24 +386,28 @@ func TestValidateAppSpec_LegacyRequiredFieldsBelowGate(t *testing.T) {
 
 // Modern manifests (olaresManifest.version >= 0.12.0):
 //
-//   - spec.resources is required (missing/empty rejected).
-//   - Each declared spec.resources[] entry must populate every standard
-//     field (cpu/memory/disk pair, plus the gpu pair on gpu-capable modes).
-//   - The legacy flat spec.required*/spec.limited* fields must be empty
-//     (Rule 7 -- already covered in resources_test.go but pinned here for
-//     completeness so a regression on the modern branch lights up locally).
+//   - EITHER spec.resources[] OR the legacy flat envelope is required.
+//     If neither is declared, the modern-branch closure emits a single
+//     consolidated guidance line listing both options.
+//   - When spec.resources[] is declared, each entry must populate every
+//     standard field (cpu/memory/disk pair, plus the gpu pair on
+//     gpu-capable modes).
+//   - The two shapes are mutually exclusive (Rule 7 -- already covered
+//     in resources_test.go but pinned here for completeness so a
+//     regression on the modern branch lights up locally).
 //   - spec.requiredGpu and spec.limitedGpu remain optional at the spec
-//     level (gpu fields belong inside spec.resources[] entries instead).
+//     level (with spec.resources[] declared, gpu fields belong inside an
+//     entry; with the flat envelope they live at the spec level).
 func TestValidateAppSpec_ModernResourcesRequiredAtOrAboveGate(t *testing.T) {
-	t.Run("missing_resources_rejected", func(t *testing.T) {
-		c := newResourcesConfig() // no modes -> Resources is empty
+	t.Run("missing_both_shapes_emits_dual_guidance", func(t *testing.T) {
+		c := newResourcesConfig() // no modes AND newResourcesConfig clears every flat field
 		err := ValidateAppConfiguration(c)
 		if err == nil {
-			t.Fatal("expected error: spec.resources is required for olaresManifest.version >= 0.12.0")
+			t.Fatal("expected error: at least one resource envelope shape must be declared on a modern manifest")
 		}
-		want := "spec.resources is required for olaresManifest.version >= 0.12.0; declare at least one entry"
+		want := "either spec.resources[] or the legacy envelope (spec.requiredCpu / spec.limitedCpu / spec.requiredMemory / spec.limitedMemory / spec.requiredDisk) is required for olaresManifest.version >= 0.12.0"
 		if !strings.Contains(err.Error(), want) {
-			t.Fatalf("error should mention modern consolidated guidance, got: %v", err)
+			t.Fatalf("error should mention modern dual-shape guidance, got: %v", err)
 		}
 	})
 
@@ -576,6 +564,261 @@ func TestValidateAppSpec_ModernResourcesRequiredAtOrAboveGate(t *testing.T) {
 		})
 		if err := ValidateAppConfiguration(c); err != nil {
 			t.Fatalf("modern manifest without spec-level gpu fields must validate: %v", err)
+		}
+	})
+}
+
+// validateAppSpec contract at the 0.12.0 boundary when the manifest opts
+// into the legacy flat envelope (spec.requiredCpu / spec.limitedCpu /
+// spec.requiredMemory / spec.limitedMemory / spec.requiredDisk + optional
+// limitedDisk / requiredGpu / limitedGpu) instead of spec.resources[].
+//
+// 0.12.0 is the boundary at which the modern code path activates
+// (resourcesCheckApplies is inclusive), so this is the case where the
+// modern-branch closure (validateResourceModeValueFor) must accept the
+// flat shape and route every populated field through
+// validateFlatResourceQuantities for K8s-quantity format checking.
+// Required-ness of individual flat fields is intentionally not enforced
+// here -- a partial envelope still passes format validation, mirroring
+// the loose modern semantics the closure documents.
+func TestValidateAppSpec_ModernAcceptsLegacyFlatEnvelope(t *testing.T) {
+	const modernBoundary = "0.12.0"
+
+	// populated builds a modern (0.12.0) manifest that declares the
+	// legacy flat envelope and leaves spec.resources[] empty.
+	// newResourcesConfig clears every flat field; we re-populate the
+	// five mandatory quantities here.
+	populated := func() *AppConfiguration {
+		c := newResourcesConfig() // no modes, ConfigVersion=0.13.0, every flat field cleared
+		c.ConfigVersion = modernBoundary
+		c.APIVersion = APIVersionV1
+		c.Spec.RequiredCPU = "100m"
+		c.Spec.LimitedCPU = "200m"
+		c.Spec.RequiredMemory = "128Mi"
+		c.Spec.LimitedMemory = "256Mi"
+		c.Spec.RequiredDisk = "1Gi"
+		return c
+	}
+
+	t.Run("complete_flat_envelope_valid_at_boundary", func(t *testing.T) {
+		c := populated()
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("modern manifest at %s using the legacy flat envelope must validate: %v", modernBoundary, err)
+		}
+	})
+
+	t.Run("complete_flat_envelope_valid_above_boundary", func(t *testing.T) {
+		// 0.13.0 sits well above the gate. The closure must take the
+		// same branch as the 0.12.0 boundary and accept the flat shape.
+		c := populated()
+		c.ConfigVersion = "0.13.0"
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("modern manifest at 0.13.0 using the legacy flat envelope must validate: %v", err)
+		}
+	})
+
+	t.Run("flat_envelope_with_optional_disk_and_gpu_valid", func(t *testing.T) {
+		c := populated()
+		c.Spec.LimitedDisk = "2Gi"
+		c.Spec.RequiredGPU = "1"
+		c.Spec.LimitedGPU = "2"
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("modern manifest with optional disk/gpu fields must validate: %v", err)
+		}
+	})
+
+	// Each populated flat field must parse as a Kubernetes quantity --
+	// the closure's validateFlatResourceQuantities walks every non-empty
+	// flat field and reports the first that fails the k8sQuantity regex.
+	t.Run("invalid_required_quantity_rejected", func(t *testing.T) {
+		c := populated()
+		c.Spec.RequiredMemory = "totally-not-a-quantity"
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: invalid quantity on the flat envelope must be rejected")
+		}
+		want := "spec.requiredMemory must be a valid Kubernetes quantity"
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error should mention %q, got: %v", want, err)
+		}
+	})
+
+	t.Run("invalid_limited_disk_quantity_rejected", func(t *testing.T) {
+		// limitedDisk is optional but still quantity-checked when set:
+		// confirm the optional fields go through validateFlatResourceQuantities
+		// rather than getting silently accepted.
+		c := populated()
+		c.Spec.LimitedDisk = "not-a-quantity"
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: invalid limitedDisk quantity must be rejected")
+		}
+		want := "spec.limitedDisk must be a valid Kubernetes quantity"
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error should mention %q, got: %v", want, err)
+		}
+	})
+
+	// Modern-with-flat must not accidentally trip the modern-with-resources
+	// guidance ("either spec.resources[] or the legacy envelope ...") --
+	// once any flat field is set, hasAnyFlatResourceQuantity flips to true
+	// and the dual-shape guard stays quiet.
+	t.Run("no_dual_shape_guidance_when_flat_envelope_set", func(t *testing.T) {
+		c := populated()
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("baseline must pass: %v", err)
+		}
+		// Even a single set flat field should be enough.
+		c = newResourcesConfig()
+		c.ConfigVersion = modernBoundary
+		c.Spec.RequiredCPU = "100m"
+		err := ValidateAppConfiguration(c)
+		if err != nil && strings.Contains(err.Error(), "either spec.resources[] or the legacy envelope") {
+			t.Fatalf("dual-shape guidance must not fire once any flat field is set, got: %v", err)
+		}
+	})
+
+	// Sanity-check the symmetric mutex contract: a modern manifest that
+	// declared the flat envelope but later also adds spec.resources[]
+	// must still be caught by Rule 7.
+	t.Run("flat_envelope_plus_resources_triggers_mutex", func(t *testing.T) {
+		c := populated()
+		c.Spec.AcceleratedResources = []ResourceMode{{
+			Mode: ResourceModeCPU,
+			ResourceRequirement: ResourceRequirement{
+				RequiredCPU:    "100m",
+				LimitedCPU:     "200m",
+				RequiredMemory: "128Mi",
+				LimitedMemory:  "256Mi",
+				RequiredDisk:   "1Gi",
+				LimitedDisk:    "2Gi",
+			},
+		}}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected Rule 7 mutex error when both shapes coexist")
+		}
+		if !strings.Contains(err.Error(), "spec.requiredCpu must be empty when spec.resources[] is set") {
+			t.Fatalf("error should mention mutex violation, got: %v", err)
+		}
+	})
+}
+
+// validateAppSpec contract under olaresManifest.version >= 0.12.0 (apiVersion
+// != v2) when both shapes coexist on the same manifest:
+//
+//   - Setting any one of the eight legacy flat fields alongside a populated
+//     spec.resources[] entry must trip Rule 7 and report
+//     "<field> must be empty when spec.resources[] is set" for exactly that
+//     field. The subtests cycle through cpu / memory / disk / gpu pairs so a
+//     regression that drops one column lights up locally rather than only
+//     showing up in the aggregated TestRule7_* tests over in
+//     resources_test.go.
+//   - Setting all eight at once must produce all eight errors in a single
+//     errors.Join'd return so callers see the full picture without having
+//     to fix-and-rerun.
+//   - The per-entry validation of spec.resources[] continues to fire
+//     alongside the mutex errors -- a malformed resources entry must not
+//     mask the mutex violation and vice versa.
+func TestValidateAppSpec_ModernRejectsBothShapesCoexisting(t *testing.T) {
+	completeFields := func() ResourceRequirement {
+		return ResourceRequirement{
+			RequiredCPU:    "100m",
+			LimitedCPU:     "200m",
+			RequiredMemory: "128Mi",
+			LimitedMemory:  "256Mi",
+			RequiredDisk:   "1Gi",
+			LimitedDisk:    "2Gi",
+		}
+	}
+
+	perFieldCases := []struct {
+		name  string
+		apply func(*AppSpec)
+		field string
+	}{
+		{"requiredCpu", func(s *AppSpec) { s.RequiredCPU = "100m" }, "spec.requiredCpu"},
+		{"limitedCpu", func(s *AppSpec) { s.LimitedCPU = "200m" }, "spec.limitedCpu"},
+		{"requiredMemory", func(s *AppSpec) { s.RequiredMemory = "256Mi" }, "spec.requiredMemory"},
+		{"limitedMemory", func(s *AppSpec) { s.LimitedMemory = "512Mi" }, "spec.limitedMemory"},
+		{"requiredDisk", func(s *AppSpec) { s.RequiredDisk = "1Gi" }, "spec.requiredDisk"},
+		{"limitedDisk", func(s *AppSpec) { s.LimitedDisk = "2Gi" }, "spec.limitedDisk"},
+		{"requiredGpu", func(s *AppSpec) { s.RequiredGPU = "1" }, "spec.requiredGpu"},
+		{"limitedGpu", func(s *AppSpec) { s.LimitedGPU = "2" }, "spec.limitedGpu"},
+	}
+	for _, tc := range perFieldCases {
+		tc := tc
+		t.Run("single_field_"+tc.name, func(t *testing.T) {
+			c := newResourcesConfig(ResourceMode{
+				Mode:                ResourceModeCPU,
+				ResourceRequirement: completeFields(),
+			})
+			tc.apply(&c.Spec)
+			err := ValidateAppConfiguration(c)
+			if err == nil {
+				t.Fatalf("expected Rule 7 violation: %s cannot coexist with spec.resources[]", tc.field)
+			}
+			want := tc.field + " must be empty when spec.resources[] is set"
+			if !strings.Contains(err.Error(), want) {
+				t.Fatalf("error should mention %q, got: %v", want, err)
+			}
+		})
+	}
+
+	t.Run("all_eight_flat_fields_aggregated", func(t *testing.T) {
+		c := newResourcesConfig(ResourceMode{
+			Mode:                ResourceModeCPU,
+			ResourceRequirement: completeFields(),
+		})
+		c.Spec.RequiredCPU = "100m"
+		c.Spec.LimitedCPU = "200m"
+		c.Spec.RequiredMemory = "256Mi"
+		c.Spec.LimitedMemory = "512Mi"
+		c.Spec.RequiredDisk = "1Gi"
+		c.Spec.LimitedDisk = "2Gi"
+		c.Spec.RequiredGPU = "1"
+		c.Spec.LimitedGPU = "2"
+
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected aggregated Rule 7 violations for every coexisting flat field")
+		}
+		msg := err.Error()
+		for _, field := range []string{
+			"spec.requiredCpu", "spec.limitedCpu",
+			"spec.requiredMemory", "spec.limitedMemory",
+			"spec.requiredDisk", "spec.limitedDisk",
+			"spec.requiredGpu", "spec.limitedGpu",
+		} {
+			want := field + " must be empty when spec.resources[] is set"
+			if !strings.Contains(msg, want) {
+				t.Fatalf("error should mention %s mutual-exclusion violation, got: %v", field, err)
+			}
+		}
+	})
+
+	// Per-entry validation must still surface even when Rule 7 has plenty
+	// to say. A malformed resources entry (missing limitedCpu) coexists
+	// with a populated spec.requiredCpu -- the user should see both the
+	// envelope-completeness error AND the mutex error in one shot.
+	t.Run("entry_validation_runs_alongside_mutex_errors", func(t *testing.T) {
+		rr := completeFields()
+		rr.LimitedCPU = "" // breaks the per-entry envelope
+		c := newResourcesConfig(ResourceMode{
+			Mode:                ResourceModeCPU,
+			ResourceRequirement: rr,
+		})
+		c.Spec.RequiredCPU = "100m" // trips Rule 7
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected aggregated error covering both mutex and entry validation")
+		}
+		msg := err.Error()
+		if !strings.Contains(msg, "spec.requiredCpu must be empty when spec.resources[] is set") {
+			t.Fatalf("error should report Rule 7 mutex violation, got: %v", err)
+		}
+		if !strings.Contains(msg, "limitedCpu is required to declare a complete resource envelope") {
+			t.Fatalf("error should also report per-entry completeness violation, got: %v", err)
 		}
 	})
 }

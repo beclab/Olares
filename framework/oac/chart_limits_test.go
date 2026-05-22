@@ -86,7 +86,7 @@ func TestCheckResourceLimits_V2_SkipsRegardlessOfManifestVersion(t *testing.T) {
 	}
 
 	cfg.ConfigVersion = "0.11.0"
-	cfg.Spec.Resources = nil
+	cfg.Spec.AcceleratedResources = nil
 	if err := c.checkResourceLimits(dir, m, sc, nil); err != nil {
 		t.Fatalf("v2 + legacy must skip the limit check, got: %v", err)
 	}

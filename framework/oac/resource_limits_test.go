@@ -18,7 +18,7 @@ func TestResourceLimitsForResourceMode(t *testing.T) {
 		Entrances:     []appv1.Entrance{{Name: "w", Host: "d", Port: 80}},
 		Spec: manifest.AppSpec{
 			SupportArch: []string{"amd64"},
-			Resources: []manifest.ResourceMode{{
+			AcceleratedResources: []manifest.ResourceMode{{
 				Mode: olm.ResourceModeNvidia,
 				ResourceRequirement: manifest.ResourceRequirement{
 					RequiredCPU: "150m", LimitedCPU: "300m",

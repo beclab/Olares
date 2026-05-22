@@ -84,7 +84,7 @@ spec:
         - cuda
       singleMemory: 8Gi
       totalMemory: 16Gi
-  resources:
+  acceleratedResources:
     - mode: cpu
       supportMultiCard: true
       supportMultiNodes: true
@@ -96,6 +96,14 @@ spec:
       limitedDisk: 2Gi
       requiredGPUMemory: 1Gi
       limitedGPUMemory: 2Gi
+  requiredCpu: 100m
+  limitedCpu: 200m
+  requiredMemory: 128Mi
+  limitedMemory: 256Mi
+  requiredDisk: 1Gi
+  limitedDisk: 2Gi
+  requiredGpu: 1Gi
+  limitedGpu: 2Gi
   supportArch:
     - amd64
   website: https://example.com
