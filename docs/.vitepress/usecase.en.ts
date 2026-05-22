@@ -342,6 +342,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/karakeep",
             },
             {
+              text: "Penpot",
+              link: "/use-cases/penpot",
+            },
+            {
               text: "RNA Sequencing",
               link: "/use-cases/rna-sequencing",
             },
