@@ -581,19 +581,23 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			continue
 		}
 
-		prefix := resolveEntrancePrefix(app.Entrances, index, app.Appid, appDomainConfigs)
+		// Per-user entrances keep the legacy index-prefix layout even on
+		// gateway-mode apps; only true SharedEntrances (entrance.IsShared)
+		// participate in the v2 <hash8>.<viewer>.<domain> rewrite.
+		useGatewayRewrite := isGatewayMode(app) && entrance.IsShared && !isEphemeral
 
-		hostname := fmt.Sprintf("%s.%s", prefix, zone)
-		if isEphemeral {
-			hostname = fmt.Sprintf("%s-%s.%s", prefix, user.Name, zone)
-		}
-
-		// In gateway mode use per-viewer host <hash8>.<viewer>.<platformDomain>
-		// so EG HTTPRoute Host regex can match the entrance. Falls back to the
-		// legacy hostname when prerequisites are missing (e.g. zone prefix).
-		if isGatewayMode(app) && !isEphemeral {
+		var prefix, hostname string
+		if useGatewayRewrite {
 			if v2 := gatewayV2EntranceHostname(app, entrance.Name, user.Name, zone); v2 != "" {
 				hostname = v2
+				prefix = sharedEntranceHostPrefix(app.Appid, entrance.Name)
+			}
+		}
+		if hostname == "" {
+			prefix = resolveEntrancePrefix(app.Entrances, index, app.Appid, appDomainConfigs)
+			hostname = fmt.Sprintf("%s.%s", prefix, zone)
+			if isEphemeral {
+				hostname = fmt.Sprintf("%s-%s.%s", prefix, user.Name, zone)
 			}
 		}
 
@@ -617,7 +621,11 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
 		upstreamPort := uint32(entrance.Port)
 		routeMode := "direct"
-		if isGatewayMode(app) {
+		// Only re-route to the shared EG data plane for SharedEntrances.
+		// Per-user entrances of the same gateway-mode app keep going directly
+		// to their per-user Service so private/internal UIs (e.g. an app's
+		// management terminal) remain reachable for their owner.
+		if useGatewayRewrite {
 			upstreamHost = gatewayDataPlaneHost
 			upstreamPort = gatewayDataPlanePort
 			routeMode = "gateway"

@@ -57,6 +57,12 @@ type EntranceInfo struct {
 	Port            int32
 	AuthLevel       string
 	WindowPushState bool
+	// IsShared marks entrances that came from Application.Spec.SharedEntrances
+	// (multi-tenant, gateway-only). False for per-user entrances from
+	// Application.Spec.Entrances / EffectiveEntrances. The translator uses this
+	// flag to decide which entrances participate in gateway-mode URL/host
+	// rewriting and which keep the legacy <appid><idx>.<zone> direct path.
+	IsShared bool
 }
 
 type PortInfo struct {
