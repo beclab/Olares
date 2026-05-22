@@ -190,14 +190,22 @@ func looksBinary(buf []byte) bool {
 //
 // Edit a file in place on the per-user files-backend. Wire flow:
 //
-//  1. GET /api/raw/<encPath>          — pull current bytes (or 404
-//                                       → empty buffer when --create)
-//  2. write to a temp file under $TMPDIR/olares-files-edit-*/
-//  3. spawn $EDITOR on the temp file (foreground, inherits the
+//  1. download.Stat                   — list parent dir, find file,
+//                                       enforce pre-fetch size cap
+//  2. GET /api/raw/<encPath>          — pull current bytes via a
+//                                       bounded LimitReader (cap+1)
+//                                       so a misreported Stat.Size
+//                                       can't trigger an unbounded
+//                                       download (Bug 5)
+//  3. write to a temp file under $TMPDIR/olares-files-edit-*/
+//  4. spawn $EDITOR on the temp file (foreground, inherits the
 //     parent's stdin/stdout/stderr so vi / nano / hx all work)
-//  4. PUT /api/resources/<encPath>    — only if the SHA-256 of the
-//                                       post-edit bytes differs
-//                                       from the pre-edit bytes
+//  5. PUT /api/resources/<encPath>    — when the post-edit bytes
+//                                       differ from the pre-edit
+//                                       bytes, OR when --create
+//                                       was set (Bug 4: --create
+//                                       must materialise the file
+//                                       even on an empty :q!)
 //
 // This mirrors the LarePass web app's "Edit" affordance for text
 // files — same endpoint pair (/api/raw to read, /api/resources to
@@ -206,23 +214,36 @@ func looksBinary(buf []byte) bool {
 // editor; we hand the bytes to whatever the user already trusts on
 // their machine.
 //
-// Supported namespaces: drive / sync / cache / external + cloud
-// drives awss3 / google / dropbox. Cloud drives are supported
-// even though the LarePass GUI's `onSaveFile` plumbing has known
-// wiring bugs there (see internal/files/edit's package docstring
-// for the gory detail) — the underlying wire endpoint
-// `PUT /api/resources/<fileType><subPath>` is uniform and the CLI
-// hits it directly. tencent is intentionally excluded (its
-// upload protocol diverges from the standard resources handler);
-// share / internal are also refused — they're cross-user / read-
-// only views in the LarePass UX with no documented write surface.
+// Supported namespaces: drive / sync / cache / external. Cloud
+// drives (awss3 / google / dropbox / tencent) are NOT supported —
+// the FETCH leg uses /api/raw which returns preview JSON instead
+// of raw bytes for cloud namespaces (so an "edit" would round-trip
+// the JSON envelope back as the new file content), AND the GUI's
+// per-driver `onSaveFile` is only wired for awss3 (google /
+// dropbox have no save plumbing at all). Until both legs are
+// wire-verified per cloud driver, the safe answer is the
+// download → edit-locally → upload round-trip. share / internal
+// are also refused — they're cross-user / read-only views in the
+// LarePass UX with no documented write surface.
+//
+// HTTP client: we use HTTPClientWithoutTimeout (the no-timeout
+// client `cat` and `download` use) instead of the 30s-capped
+// HTTPClient. With --max-size widened or a slow link, the Fetch
+// + PutBytes round-trip can legitimately exceed 30s; capping it
+// here would fail mid-edit while the equivalent `cat` /
+// `download` work just fine (Bug 3). Cancellation still flows
+// through ctx.
 //
 // Size cap: by default `edit` refuses to download or upload a
 // file larger than 1 MiB (DefaultMaxSize) so the verb stays
 // scoped to its real use case — text editing — and a typo like
 // `files edit drive/Home/Photos/big.jpg` doesn't stream a 5 MB
 // JPEG through the user's editor. Override via --max-size; pass
-// `--max-size 0` to disable the check entirely.
+// `--max-size 0` to disable the check entirely. The cap fires in
+// THREE places: pre-fetch (Stat.Size > cap), during fetch
+// (LimitReader-bounded read inside edit.Client.Fetch — defends
+// against Stat.Size==0 + large body), and post-edit (len(newBytes)
+// > cap, before the PUT).
 //
 // CLI semantics:
 //
@@ -259,8 +280,8 @@ func NewEditCommand(f *cmdutil.Factory) *cobra.Command {
 The CLI fetches the file's current contents into a fresh temp file,
 spawns ` + "`$EDITOR`" + ` on it, and PUTs the new contents back to the server
 when you save. If you exit the editor without changes, no upload
-happens — the no-change check is a SHA-256 comparison so it's
-robust against editors that always rewrite the file (e.g. vim's
+happens — the no-change check is a byte-for-byte comparison, so it
+is robust against editors that always rewrite the file (e.g. vim's
 default backup behavior).
 
 Editor cascade (matches ` + "`git commit`" + ` / ` + "`crontab -e`" + `):
@@ -269,7 +290,10 @@ Editor cascade (matches ` + "`git commit`" + ` / ` + "`crontab -e`" + `):
 
 Wire shape:
 
-    GET  /api/raw/<encPath>            → pull current bytes
+    GET  /api/raw/<encPath>            → pull current bytes (bounded
+                                         by --max-size + 1, so an
+                                         unreliable Stat.Size cannot
+                                         trigger an unbounded download)
     PUT  /api/resources/<encPath>      Content-Type: text/plain
                                        <body: full new contents>
 
@@ -280,21 +304,20 @@ Supported namespaces:
     sync/<repo_id>/<sub>/<file>
     cache/<node>/<sub>/<file>
     external/<node>/<volume>/<sub>/<file>
-    awss3/<account>/<bucket>/<sub>/<file>
-    google/<account>/<sub>/<file>
-    dropbox/<account>/<sub>/<file>
 
-Cloud drives (awss3 / google / dropbox) are supported on the wire
-even though the LarePass GUI's "Save" flow has a known wiring
-bug for them (it routes through drive's saveFile and misses the
-cloud bucket). The CLI bypasses the GUI plumbing and PUTs
-directly to ` + "`/api/resources/<fileType><subPath>`" + `, which is the
-uniform write endpoint across every namespace the backend's
-resources handler covers.
+Cloud drives (awss3 / google / dropbox / tencent) are NOT
+supported. The FETCH leg uses ` + "`/api/raw/`" + `, which returns preview
+metadata / JSON envelopes (not raw bytes) for cloud namespaces —
+editing would round-trip the JSON envelope back as the new file
+content, silently corrupting the file. Even fixing the read leg
+would leave google / dropbox without any save plumbing in the
+GUI to validate against. Until both legs are wire-verified
+per cloud driver, the safe alternative is:
 
-tencent is intentionally NOT supported — its upload-side protocol
-diverges from the standard resources handler and we don't have a
-wire-shape signoff that small-PUT edits are honored end-to-end.
+    olares-cli files download <cloud-path> <local>
+    $EDITOR <local>
+    olares-cli files upload <local> <cloud-path>
+
 share / internal are refused as cross-user / read-only views.
 
 Size cap (default 1 MiB):
@@ -343,10 +366,9 @@ Examples:
     olares-cli files edit drive/Home/Documents/notes.md
     olares-cli files edit drive/Home/.config/app.yaml --editor nano
     olares-cli files edit sync/<repo_id>/Notes/draft.md
+    olares-cli files edit cache/<node>/build/config.toml
+    olares-cli files edit external/<node>/usb1/config.json
     olares-cli files edit drive/Home/new.txt --create
-    olares-cli files edit awss3/<account>/<bucket>/config.json
-    olares-cli files edit dropbox/<account>/Notes/draft.md
-    olares-cli files edit google/<account>/Documents/.env
     olares-cli files edit drive/Home/Logs/today.log --max-size 5242880  # 5 MiB
 
 Notes:
@@ -354,14 +376,20 @@ Notes:
   - The temp file's basename matches the remote basename so
     editor-side syntax highlighting picks the right mode for
     .md / .json / .yaml / .ts / etc.
-  - Saving an empty file is allowed (the wire endpoint accepts a
-    zero-byte PUT). To bail out without saving anything, leave the
-    file untouched (or delete its contents and exit — that's a
-    real "make this an empty file" save).
-  - Concurrent edits aren't coordinated: if someone else updates
-    the same file between our GET and PUT, the PUT wins. There's
-    no ETag / If-Match support on the wire to do better client-
-    side, so this is consistent with the LarePass GUI's behavior.
+  - --create forces a PUT even when you exit the editor without
+    typing anything: the verb's contract is "materialise this file
+    on the server", and a silent no-op would defeat that. The
+    resulting file is empty (the wire endpoint accepts a zero-byte
+    PUT). Re-running edit on a file that already exists treats
+    the no-change branch as a real no-op (no PUT) — the same
+    cheap :q / :q! workflow the LarePass GUI offers.
+  - Concurrent edits / deletes are detected on a best-effort
+    basis: if Stat says the file exists but the GET comes back
+    404 (someone else just deleted it), the verb refuses with a
+    "file disappeared between stat and fetch" error rather than
+    falling back to --create-empty-buffer. There is no ETag /
+    If-Match support on the wire so concurrent UPDATES still
+    follow last-writer-wins semantics — same as the LarePass GUI.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -441,7 +469,14 @@ func runEdit(
 	if err != nil {
 		return err
 	}
-	httpClient, err := f.HTTPClient(ctx)
+	// Use the no-timeout client (the same one `cat` / `download`
+	// use) instead of the 30s-capped HTTPClient. With --max-size
+	// bumped above the default 1 MiB (or just a slow link), the
+	// Fetch + PutBytes round-trip can legitimately exceed 30s;
+	// capping it here would fail mid-edit while the equivalent
+	// `cat` / `download` work just fine. Cancellation still flows
+	// through ctx, so a Ctrl-C interrupts cleanly.
+	httpClient, err := f.HTTPClientWithoutTimeout(ctx)
 	if err != nil {
 		return err
 	}
@@ -460,16 +495,20 @@ func runEdit(
 	//   - file exists  → fetch current bytes (download.Stat
 	//                    rejects directories with a friendly
 	//                    message before we touch the temp dir).
-	//   - file missing → if --create, start with an empty buffer;
-	//                    otherwise hard error with a "did you mean
-	//                    --create?" hint.
+	//   - file missing → if --create, start with an empty buffer
+	//                    AND set isCreate=true so the post-edit
+	//                    PUT fires unconditionally (Bug 4: a
+	//                    --create + :q! must still materialise
+	//                    the file, otherwise the verb silently
+	//                    no-ops). Without --create, hard error
+	//                    with a "did you mean --create?" hint.
 	//
 	// statAndFetch ALSO short-circuits the size cap: when
 	// o.maxSize > 0 and Stat reports Size > maxSize we error out
 	// BEFORE pulling bytes, so a typo like
 	// `files edit drive/Home/Photos/big.jpg` doesn't waste a
 	// multi-MB download just to refuse at the client.
-	currentBytes, isDir, err := statAndFetch(ctx, statClient, editClient, op.DisplayPath, o.create, o.maxSize)
+	currentBytes, isDir, isCreate, err := statAndFetch(ctx, statClient, editClient, op.DisplayPath, o.create, o.maxSize)
 	if err != nil {
 		return reformatEditHTTPErr(err, rp.OlaresID, "fetch", op.DisplayPath)
 	}
@@ -526,10 +565,23 @@ func runEdit(
 	}
 
 	if bytesEqual(currentBytes, newBytes) {
-		fmt.Fprintf(out, "  · no changes; nothing to upload\n")
-		cleaned = true
-		_ = os.RemoveAll(tmpDir)
-		return nil
+		// Create-mode invariant: the user explicitly asked us to
+		// materialise a NEW file; bytes-equal here just means
+		// they exited without typing anything (`:q!` over an
+		// empty buffer). We MUST still PUT — otherwise the
+		// verb's `--create` flag becomes a silent no-op, and a
+		// successful-looking exit leaves the remote file un-
+		// created. (Bug 4 in the verb's bug report.) The PUT
+		// of an empty body is a real intent here ("create me
+		// an empty file"), so we treat it as success.
+		if isCreate {
+			fmt.Fprintf(out, "  · no edits; creating empty file (--create)\n")
+		} else {
+			fmt.Fprintf(out, "  · no changes; nothing to upload\n")
+			cleaned = true
+			_ = os.RemoveAll(tmpDir)
+			return nil
+		}
 	}
 
 	// Post-edit size cap: refuse to PUT a buffer that exceeds
@@ -607,21 +659,48 @@ func frontendPathToEditTarget(raw string) (edit.Target, error) {
 
 // statAndFetch resolves "(does this file exist? if yes, give me
 // its bytes; if no and --create, give me an empty buffer)" in a
-// single helper so the cobra-runner doesn't have to track three
-// failure modes (404 / dir / oversize).
+// single helper so the cobra-runner doesn't have to track four
+// distinct outcomes (exists / dir / missing-and-create / missing-
+// and-no-create). The returned `isCreate` flag is what the cobra
+// layer keys off of to FORCE the PUT even on bytes-equal — without
+// that signal a `--create` + `:q!` (no edits) would silently skip
+// the upload and leave the remote file un-materialised, defeating
+// the whole point of `--create`. (Bug 4 in the verb's bug report.)
 //
 // Returns:
 //   - currentBytes: file contents, or empty []byte when the file
 //     was missing and --create is set.
 //   - isDir: true if the remote target is a directory; the cobra
 //     layer surfaces a friendlier error than the wire 400.
+//   - isCreate: true ONLY when Stat returned 404 AND --create was
+//     set. The cobra layer uses this to force the post-edit PUT
+//     regardless of bytes-equal, so an empty `:q!` actually
+//     materialises an empty file instead of "no changes".
 //   - err: any non-recoverable failure.
 //
-// `maxSize > 0` activates the pre-edit size cap: when Stat reports
-// the file is larger than maxSize, we error out BEFORE pulling
-// bytes (one ListDir call wasted, but no multi-MB GET that we'd
-// just throw away). `maxSize == 0` disables the check entirely
-// (matches the --max-size 0 escape hatch on the cobra surface).
+// Race semantics: a Fetch 404 AFTER a successful Stat is treated
+// as a CONFLICT (the file disappeared between calls — most
+// likely a concurrent delete by another client / device). It is
+// NOT routed through the --create empty-buffer path, because
+// silently recreating a file someone else just deleted is almost
+// never what the user wants. (Bug 2 in the verb's bug report.)
+//
+// `maxSize > 0` activates the pre-edit size cap. Two layers:
+//
+//  1. Stat-driven (pre-fetch): when Stat reports Size > maxSize
+//     we error out BEFORE the GET — saves a multi-MB transfer
+//     for an obvious refusal. Listings that omit Size (Stat.Size
+//     == 0) bypass this layer; layer 2 below catches them.
+//  2. Fetch-driven (during read): the bounded read in
+//     edit.Client.Fetch wraps the body in io.LimitReader(_,
+//     maxSize+1) and returns *edit.TooLargeError if the response
+//     exceeds the cap. This is the safety net for Stat.Size == 0
+//     (Bug 5 in the verb's bug report) AND for concurrent
+//     appends between Stat and Fetch — both surface the same
+//     uniform cap error to the user.
+//
+// `maxSize == 0` disables both layers (matches the --max-size 0
+// escape hatch on the cobra surface).
 //
 // The Stat call uses the parent-listing strategy (see
 // internal/files/download/stat.go); this avoids the "GET on
@@ -634,22 +713,24 @@ func statAndFetch(
 	plain string,
 	allowCreate bool,
 	maxSize int64,
-) (currentBytes []byte, isDir bool, err error) {
+) (currentBytes []byte, isDir, isCreate bool, err error) {
+	statSucceeded := false
 	st, statErr := statClient.Stat(ctx, plain)
 	switch {
 	case statErr == nil:
 		if st.IsDir {
-			return nil, true, nil
+			return nil, true, false, nil
 		}
-		// Size cap: the cloud-drive listings populate Size via
-		// the FileSize→Size flex-decoder in download/list.go, so
-		// this check is uniform across drive / sync / cache /
-		// external / awss3 / google / dropbox. A reported size
-		// of 0 either means "really empty" or "the backend
-		// didn't fill it in" — either way, 0 ≤ maxSize so we
-		// safely fall through to the Fetch.
+		statSucceeded = true
+		// Pre-fetch size cap (layer 1). Skipped silently when
+		// Stat.Size == 0 — that either really IS an empty file
+		// (then the Fetch is trivially cheap) or means the
+		// backend didn't populate the field, in which case
+		// layer 2 (the bounded read in edit.Client.Fetch)
+		// catches an oversized body without burning unbounded
+		// memory.
 		if maxSize > 0 && st.Size > maxSize {
-			return nil, false, fmt.Errorf(
+			return nil, false, false, fmt.Errorf(
 				"edit %s: remote size %s exceeds --max-size %s; "+
 					"`files edit` is meant for text editing — re-run with --max-size 0 to disable "+
 					"the cap, or --max-size <bytes> to widen it (or use `files download` for binaries)",
@@ -657,43 +738,48 @@ func statAndFetch(
 		}
 	case download.IsNotFound(statErr):
 		if !allowCreate {
-			return nil, false, fmt.Errorf(
+			return nil, false, false, fmt.Errorf(
 				"edit %s: not found on the server (HTTP 404); pass --create to start with an empty buffer",
 				plain)
 		}
-		return []byte{}, false, nil
+		return []byte{}, false, true, nil
 	default:
-		return nil, false, statErr
+		return nil, false, false, statErr
 	}
 
-	body, err := editClient.Fetch(ctx, plain)
+	body, err := editClient.Fetch(ctx, plain, maxSize)
 	if err != nil {
-		// A 404 between Stat and Fetch is rare but possible — file
-		// was deleted by another client. Treat it like the no-stat
-		// 404 above so the user gets a uniform message.
-		if edit.IsNotFound(err) {
-			if !allowCreate {
-				return nil, false, fmt.Errorf(
-					"edit %s: not found on the server (HTTP 404); pass --create to start with an empty buffer",
-					plain)
-			}
-			return []byte{}, false, nil
+		// Race: file disappeared between Stat (which said it
+		// existed) and Fetch. Surface as a conflict, NOT as a
+		// route into --create empty-buffer mode. Recreating a
+		// file someone just concurrently deleted is almost
+		// certainly not what the user asked for — making them
+		// re-run with explicit intent (e.g. running the verb
+		// again, this time hitting the genuine 404 from Stat
+		// with --create) is the safe default.
+		if edit.IsNotFound(err) && statSucceeded {
+			return nil, false, false, fmt.Errorf(
+				"edit %s: file disappeared between stat and fetch (HTTP 404 on the GET); "+
+					"a concurrent delete is most likely — re-run to confirm, "+
+					"and pass --create explicitly if you really do want to recreate it",
+				plain)
 		}
-		return nil, false, err
+		// Other 404s (Stat itself returned 404) are handled in
+		// the switch above; reaching here with edit.IsNotFound
+		// implies a logic error, but fall through to the
+		// generic error for safety.
+		var tle *edit.TooLargeError
+		if errors.As(err, &tle) {
+			return nil, false, false, fmt.Errorf(
+				"edit %s: fetched body exceeds --max-size %s (Stat reported %s; "+
+					"either the listing's size field is unreliable or the file was "+
+					"concurrently appended between stat and fetch); "+
+					"re-run with --max-size 0 to disable the cap or --max-size <bytes> to widen it",
+				plain, formatBytes(maxSize), formatBytes(st.Size))
+		}
+		return nil, false, false, err
 	}
-	// Defense in depth: even when Stat said the size was OK,
-	// the Fetch may return a different (larger) body — e.g. the
-	// file was concurrently appended to between Stat and Fetch.
-	// Surface this as the same cap error so the user gets one
-	// consistent message instead of having to reason about the
-	// race window.
-	if maxSize > 0 && int64(len(body)) > maxSize {
-		return nil, false, fmt.Errorf(
-			"edit %s: fetched body %s exceeds --max-size %s (likely a concurrent write between stat and fetch); "+
-				"re-run with --max-size 0 to disable the cap or --max-size <bytes> to widen it",
-			plain, formatBytes(int64(len(body))), formatBytes(maxSize))
-	}
-	return body, false, nil
+	return body, false, false, nil
 }
 
 // writeTempFile creates a fresh $TMPDIR/olares-files-edit-XXXX/

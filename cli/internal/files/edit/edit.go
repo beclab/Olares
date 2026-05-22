@@ -13,30 +13,37 @@
 // file's contents wholesale; there is no patch/diff API on the
 // wire.
 //
-// Cloud drives awss3 / google / dropbox ARE supported here even
-// though the LarePass web app's GUI doesn't currently wire them
-// through to a working save. The per-driver API classes
-// (Awss3DataAPI / GoogleDataAPI / DropboxDataAPI) extend
-// DriveDataAPI without overriding `onSaveFile`, so a "save" in
-// the GUI mistakenly routes through `drive.saveFile()` and
-// targets `/api/resources/drive/Home<...>` instead of the cloud
-// bucket — that's a GUI wiring bug, not a wire-shape limitation.
-// On the wire, `PUT /api/resources/<fileType><subPath>` is the
-// uniform write endpoint for every namespace the backend's
-// resources handler covers, and awss3/utils.ts already exports a
-// `put()` helper that calls exactly that shape. The CLI uses
-// the same wire shape directly, so a `files edit awss3/<acc>/...`
-// hits the cloud bucket by going around the GUI's broken
-// `onSaveFile` plumbing.
+// Cloud drives (awss3 / google / dropbox / tencent) are NOT
+// supported on either the read or the write leg, despite an
+// earlier draft of this package claiming awss3/google/dropbox
+// worked uniformly. Two independent failures killed that claim
+// once we wire-traced both legs:
 //
-// Tencent is the lone cloud-drive holdout: its UPLOAD path uses
-// a separate `/drive/create_direct_upload_task` +
-// `/drive/direct_upload_file` octet protocol that the standard
-// resources handler doesn't share, and we don't yet have a
-// wire-shape signoff that the small-PUT path against
-// `/api/resources/tencent<...>` is honored end-to-end. We keep
-// it on the deny-list until that's verified — same conservative
-// stance `files upload` takes for tencent.
+//  1. FETCH leg breaks for ALL cloud namespaces. `files cat`'s
+//     own docs note that `GET /api/raw/<path>` returns preview
+//     metadata / JSON envelopes (NOT raw bytes) for cloud
+//     drives — cat dispatches to a different endpoint
+//     (`/drive/download_sync_stream`) for those. `files edit`'s
+//     Fetch reuses `/api/raw/`, so an `edit awss3/<acc>/...`
+//     would open the JSON envelope in $EDITOR and PUT the
+//     edited envelope back as the new file content (i.e. silent
+//     content corruption). Cat's wire-shape signoff doesn't
+//     transfer to edit because edit needs the same dispatch on
+//     the read side.
+//
+//  2. WRITE leg is unverified for google / dropbox. Only
+//     `awss3/utils.ts` exports a `put()` helper that calls
+//     `/api/resources/...` — `google/utils.ts` and
+//     `dropbox/utils.ts` have no save-related helper at all,
+//     so even fixing leg (1) would leave us PUT-ing against an
+//     endpoint the upstream GUI has never exercised end-to-end.
+//
+// Until both legs are wire-verified for each cloud driver
+// (fetch routed through the cloud-aware endpoint + a verified
+// PUT shape per driver), the safe answer is to refuse cloud
+// namespaces here and point users at the proven download +
+// edit-locally + upload round-trip. The flip is one allow-list
+// entry away when the wire shapes are signed off.
 //
 // `share` and `internal` namespaces are likewise refused: the
 // LarePass UX exposes them as cross-user / read-only views with no
@@ -127,39 +134,32 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("%s %s: HTTP %d: %s", e.Method, e.URL, e.Status, body)
 }
 
-// supportedFileTypes is the allow-list of namespaces whose
-// `/api/resources/<fileType><subPath>` PUT endpoint we trust as
-// the canonical write surface for editing a single file:
+// supportedFileTypes is the allow-list of namespaces whose BOTH
+// legs (fetch via /api/raw + writeback via PUT /api/resources)
+// are wire-verified end-to-end. We deliberately keep it tight:
+// the LarePass GUI itself wires `onSaveFile` to these four
+// (utils.ts `put` / `saveFile` / `updateFile` in
+// apps/.../api/files/v2/{drive,sync,cache,external}), so both
+// directions have been exercised in production.
 //
-//   - drive / sync / cache / external — the LarePass GUI itself
-//     wires `onSaveFile` here (utils.ts `put` / `saveFile` /
-//     `updateFile`), so the wire shape is well-trodden.
-//   - awss3 / google / dropbox — the GUI's `onSaveFile` mistakenly
-//     routes these through drive's saveFile (a per-driver class
-//     wiring bug, see the package docstring), but the underlying
-//     wire endpoint exists uniformly for every cloud driver
-//     that's wired into the resources handler. The CLI hits it
-//     directly so cloud-bucket text edits actually land in the
-//     bucket.
-//
-// Tencent is intentionally NOT in this list — see the package
-// docstring for the upload-protocol divergence that makes us
-// conservative there.
+// Cloud drives (awss3 / google / dropbox / tencent) are NOT in
+// the allow-list — see the package docstring for the two
+// independent wire-shape gaps (fetch returns JSON envelopes
+// instead of raw bytes; google/dropbox have no GUI put helper).
+// `share` and `internal` are likewise excluded — they're
+// cross-user / read-only views in the LarePass UX.
 var supportedFileTypes = map[string]struct{}{
 	"drive":    {},
 	"sync":     {},
 	"cache":    {},
 	"external": {},
-	"awss3":    {},
-	"google":   {},
-	"dropbox":  {},
 }
 
 // SupportedFileTypesList is the alphabetically-sorted comma-joined
 // rendering of supportedFileTypes for error messages. Computed
 // once so the (cold) refusal path doesn't allocate on every Plan
 // call.
-const SupportedFileTypesList = "awss3, cache, drive, dropbox, external, google, sync"
+const SupportedFileTypesList = "cache, drive, external, sync"
 
 // Plan validates the inputs and returns a single Op for one PUT
 // call. Validation rules:
@@ -186,10 +186,28 @@ func Plan(t Target) (Op, error) {
 		return Op{}, fmt.Errorf("edit: empty fileType or extend (got %q/%q)", t.FileType, t.Extend)
 	}
 	if _, ok := supportedFileTypes[t.FileType]; !ok {
+		// Cloud drives (awss3 / google / dropbox / tencent) get a
+		// targeted message — the surface looks like an arbitrary
+		// allow-list miss otherwise, but the actual reason is
+		// concrete (Bug 1 in the edit verb's bug report:
+		// /api/raw returns preview JSON instead of raw bytes for
+		// cloud namespaces, which would silently corrupt the
+		// file on writeback). The recovery path is the
+		// download → edit-locally → upload round-trip that the
+		// CLI already supports end-to-end.
+		switch t.FileType {
+		case "awss3", "google", "dropbox", "tencent":
+			return Op{}, fmt.Errorf(
+				"edit: cloud-drive namespace %q is not supported end-to-end "+
+					"(GET /api/raw/<path> returns preview metadata, not raw bytes, on cloud drives — "+
+					"editing would round-trip the JSON envelope back as the new file content); "+
+					"safe alternative: `files download %s/<path> <local>` → edit locally → "+
+					"`files upload <local> %s/<path>`",
+				t.FileType, t.FileType, t.FileType)
+		}
 		return Op{}, fmt.Errorf(
 			"edit: fileType %q is not supported (supported: %s); "+
-				"the LarePass web app's edit flow is wired only for these namespaces — "+
-				"cloud-drive / share / internal targets have no working PUT endpoint",
+				"the LarePass web app's edit flow is wired only for these namespaces",
 			t.FileType, SupportedFileTypesList)
 	}
 	clean := strings.Trim(t.SubPath, "/")
@@ -309,19 +327,49 @@ func (c *Client) rawURL(plainPath string) string {
 	return c.BaseURL + "/api/raw/" + encodepath.EncodeURL(plainPath)
 }
 
+// TooLargeError is returned by Fetch when the remote body's
+// length exceeds the caller-supplied maxBytes ceiling. It's a
+// distinct type (rather than a wrapped HTTPError) because the
+// over-the-wire response was healthy — it's the size policy that
+// rejected the body. The cobra layer formats this into a
+// `--max-size` CTA at the verb-level call site.
+//
+// Limit and Read are best-effort: Read may be Limit+1 in the
+// LimitReader-driven detection path (we read one byte past the
+// cap to detect overflow without burning unbounded memory), so
+// callers should treat Read as "at least this many bytes" rather
+// than an exact body size.
+type TooLargeError struct {
+	Read  int64
+	Limit int64
+}
+
+func (e *TooLargeError) Error() string {
+	return fmt.Sprintf("response body exceeds %d bytes (read at least %d)", e.Limit, e.Read)
+}
+
 // Fetch GETs the current contents of the remote file at `plainPath`
 // (an un-encoded `<fileType>/<extend>/<sub>` triple, no leading
 // '/') and returns them as a buffered byte slice. We buffer
 // rather than streaming because:
 //
 //   - The cobra layer needs the bytes whole to write the temp
-//     file AND to compute the post-edit "did the user actually
-//     change anything" hash; streaming twice would double the
-//     wire cost.
+//     file AND to compare them against the post-edit bytes;
+//     streaming twice would double the wire cost.
 //   - Edit's typical input is a config / note file (KB-MB range);
-//     the buffer cost is negligible. Users editing a multi-GB
-//     file via $EDITOR should expect to pay for whatever
-//     workflow that implies.
+//     the buffer cost is negligible.
+//
+// `maxBytes > 0` activates a hard ceiling: the read is wrapped
+// in `io.LimitReader(body, maxBytes+1)` so the buffer never
+// grows past maxBytes+1 bytes regardless of what the server
+// claims (or fails to claim) about Content-Length. If the read
+// returns more than maxBytes bytes, we error out with
+// *TooLargeError BEFORE the cobra layer sees the body — that
+// way a misreported Stat.Size (e.g. 0 from a backend that
+// didn't fill the field) can't surprise us with an unbounded
+// download. `maxBytes == 0` disables the ceiling for the rare
+// case where the caller really does want to slurp whatever the
+// server returns.
 //
 // Errors:
 //   - non-2xx response → *HTTPError, same as Put.
@@ -329,7 +377,8 @@ func (c *Client) rawURL(plainPath string) string {
 //     the cobra layer's `--create` flag can branch on
 //     IsNotFound() to decide whether to start with empty
 //     contents.
-func (c *Client) Fetch(ctx context.Context, plainPath string) ([]byte, error) {
+//   - body length > maxBytes (when maxBytes > 0) → *TooLargeError.
+func (c *Client) Fetch(ctx context.Context, plainPath string, maxBytes int64) ([]byte, error) {
 	endpoint := c.rawURL(plainPath)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -341,7 +390,16 @@ func (c *Client) Fetch(ctx context.Context, plainPath string) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+
+	var bodyReader io.Reader = resp.Body
+	if maxBytes > 0 {
+		// +1 so we can DETECT overflow: a read that returns
+		// exactly maxBytes is at the boundary (OK); a read
+		// that returns maxBytes+1 means the server had more
+		// for us and we want to refuse rather than truncate.
+		bodyReader = io.LimitReader(resp.Body, maxBytes+1)
+	}
+	body, _ := io.ReadAll(bodyReader)
 	if resp.StatusCode/100 != 2 {
 		return nil, &HTTPError{
 			Status: resp.StatusCode,
@@ -349,6 +407,9 @@ func (c *Client) Fetch(ctx context.Context, plainPath string) ([]byte, error) {
 			URL:    endpoint,
 			Method: http.MethodGet,
 		}
+	}
+	if maxBytes > 0 && int64(len(body)) > maxBytes {
+		return nil, &TooLargeError{Read: int64(len(body)), Limit: maxBytes}
 	}
 	return body, nil
 }

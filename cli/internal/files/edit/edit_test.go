@@ -1,6 +1,7 @@
 package edit
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -130,20 +131,24 @@ func TestPlan_RejectsBadInput(t *testing.T) {
 //   - drive / sync / cache / external are supported (the LarePass
 //     GUI's `onSaveFile` natively wires these to /api/resources
 //     PUT).
-//   - awss3 / google / dropbox are supported on the wire even
-//     though the GUI's `onSaveFile` plumbing has known wiring
-//     bugs there — the underlying PUT endpoint is uniform across
-//     every namespace the resources handler covers, and the CLI
-//     hits it directly.
-//   - tencent / share / internal stay rejected — see the package
-//     docstring for the upload-protocol divergence (tencent) and
-//     the read-only / cross-user nature of share / internal.
+//   - awss3 / google / dropbox / tencent are NOT supported. The
+//     read leg uses /api/raw which returns preview JSON envelopes
+//     (not raw bytes) on cloud drives — saving an edit would
+//     round-trip the JSON envelope as the new file content
+//     (Bug 1 in the verb's bug report). On top of that, only
+//     awss3/utils.ts has a put() helper at all in the GUI; google
+//     and dropbox have no save-related plumbing at all, so even
+//     fixing the read leg would leave us PUT-ing against an
+//     endpoint nobody has exercised end-to-end. Both gaps need
+//     to close before we re-enable cloud-drive editing.
+//   - share / internal stay rejected — read-only / cross-user
+//     views in the LarePass UX with no save affordance.
 //
 // Adding a namespace to either side should be an obvious code-
 // review signal — that's why this lives next to Plan and not as
 // a generic FrontendPath helper.
 func TestPlan_NamespaceAllowlist(t *testing.T) {
-	supported := []string{"drive", "sync", "cache", "external", "awss3", "google", "dropbox"}
+	supported := []string{"drive", "sync", "cache", "external"}
 	for _, ft := range supported {
 		t.Run("supported/"+ft, func(t *testing.T) {
 			tgt := Target{FileType: ft, Extend: "x", SubPath: "/y.txt"}
@@ -152,7 +157,7 @@ func TestPlan_NamespaceAllowlist(t *testing.T) {
 			}
 		})
 	}
-	rejected := []string{"tencent", "share", "internal", "unknown"}
+	rejected := []string{"awss3", "google", "dropbox", "tencent", "share", "internal", "unknown"}
 	for _, ft := range rejected {
 		t.Run("rejected/"+ft, func(t *testing.T) {
 			tgt := Target{FileType: ft, Extend: "x", SubPath: "/y.txt"}
@@ -167,31 +172,30 @@ func TestPlan_NamespaceAllowlist(t *testing.T) {
 	}
 }
 
-// TestPlan_CloudDriveWireShape pins the wire URL we build for
-// each cloud namespace. The LarePass web app's per-cloud
-// utils.ts builds `/api/resources/<fileType><path>`; we mirror
-// the same shape exactly so a future `files cat` / `files ls`
-// against the same path lands on the same wire bytes the edit
-// PUT sends.
-func TestPlan_CloudDriveWireShape(t *testing.T) {
-	cases := []struct {
-		fileType string
-		extend   string
-		sub      string
-		want     string
-	}{
-		{"awss3", "myacc", "/bucket/file.json", "/api/resources/awss3/myacc/bucket/file.json"},
-		{"google", "myacc", "/Documents/draft.md", "/api/resources/google/myacc/Documents/draft.md"},
-		{"dropbox", "myacc", "/Notes/idea.txt", "/api/resources/dropbox/myacc/Notes/idea.txt"},
-	}
-	for _, c := range cases {
-		t.Run(c.fileType, func(t *testing.T) {
-			op, err := Plan(Target{FileType: c.fileType, Extend: c.extend, SubPath: c.sub})
-			if err != nil {
-				t.Fatalf("Plan: %v", err)
+// TestPlan_CloudDriveDedicatedMessage pins the targeted error a
+// cloud-drive Plan returns. The GUI / docs both refer to these as
+// "supported" because the URL shape is uniform — the actual
+// failure is on the FETCH leg (/api/raw returns JSON metadata,
+// not raw bytes for cloud namespaces, see `files cat`'s docs).
+// A generic "not supported" message would leave users guessing;
+// the dedicated message names the wire-shape gap and points at
+// the proven download → edit-locally → upload alternative.
+func TestPlan_CloudDriveDedicatedMessage(t *testing.T) {
+	for _, ft := range []string{"awss3", "google", "dropbox", "tencent"} {
+		t.Run(ft, func(t *testing.T) {
+			_, err := Plan(Target{FileType: ft, Extend: "acct", SubPath: "/x.txt"})
+			if err == nil {
+				t.Fatalf("Plan(%s): want error, got nil", ft)
 			}
-			if op.Endpoint != c.want {
-				t.Errorf("Endpoint: got %q, want %q", op.Endpoint, c.want)
+			msg := err.Error()
+			if !strings.Contains(msg, "cloud-drive") {
+				t.Errorf("err should call out 'cloud-drive': %v", msg)
+			}
+			if !strings.Contains(msg, "/api/raw") {
+				t.Errorf("err should name the /api/raw wire-shape gap: %v", msg)
+			}
+			if !strings.Contains(msg, "files download") || !strings.Contains(msg, "files upload") {
+				t.Errorf("err should suggest the download → upload workaround: %v", msg)
 			}
 		})
 	}
@@ -296,7 +300,7 @@ func TestClient_Fetch_Success(t *testing.T) {
 		}
 		_, _ = w.Write(want)
 	}))
-	got, err := c.Fetch(context.Background(), "drive/Home/Documents/notes.md")
+	got, err := c.Fetch(context.Background(), "drive/Home/Documents/notes.md", 0)
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
@@ -312,13 +316,102 @@ func TestClient_Fetch_NotFound(t *testing.T) {
 	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
-	_, err := c.Fetch(context.Background(), "drive/Home/missing.md")
+	_, err := c.Fetch(context.Background(), "drive/Home/missing.md", 0)
 	if err == nil {
 		t.Fatalf("want error, got nil")
 	}
 	if !IsNotFound(err) {
 		t.Errorf("IsNotFound: got false; err=%v", err)
 	}
+}
+
+// TestClient_Fetch_MaxBytesGuard pins Bug 5's fix: when maxBytes
+// > 0, the bounded read in Fetch wraps the body in a
+// LimitReader(_, maxBytes+1) and returns *TooLargeError if the
+// server delivered more than maxBytes bytes. The test deliberately
+// drives a server that ignores any client-side hint (no
+// Content-Length quirks, no Range support) so the assertion
+// targets the LimitReader path itself rather than a server-side
+// optimisation.
+func TestClient_Fetch_MaxBytesGuard(t *testing.T) {
+	t.Run("body within cap passes through", func(t *testing.T) {
+		want := []byte("hello\n")
+		c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write(want)
+		}))
+		got, err := c.Fetch(context.Background(), "drive/Home/x.md", 1024)
+		if err != nil {
+			t.Fatalf("Fetch: %v", err)
+		}
+		if string(got) != string(want) {
+			t.Errorf("body: got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("body exactly at cap passes through", func(t *testing.T) {
+		// Boundary case: maxBytes bytes is OK; the LimitReader
+		// reads up to maxBytes+1 to detect overflow but a body
+		// of exactly maxBytes shouldn't trip the check.
+		const cap = 16
+		want := bytes.Repeat([]byte{'a'}, cap)
+		c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write(want)
+		}))
+		got, err := c.Fetch(context.Background(), "drive/Home/x.md", cap)
+		if err != nil {
+			t.Fatalf("Fetch: %v", err)
+		}
+		if len(got) != cap {
+			t.Errorf("len: got %d, want %d", len(got), cap)
+		}
+	})
+
+	t.Run("body over cap returns *TooLargeError without unbounded read", func(t *testing.T) {
+		// Server tries to deliver 64 KiB but the cap is 1 KiB:
+		// the LimitReader caps the buffer at 1024+1 bytes, and
+		// Fetch returns *TooLargeError. This is the exact path
+		// Bug 5 was about — a Stat.Size==0 listing followed by
+		// a real 64 KiB body must NOT pull the whole 64 KiB
+		// into memory.
+		const cap = 1024
+		const serverWants = 64 * 1024
+		c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write(bytes.Repeat([]byte{'x'}, serverWants))
+		}))
+		_, err := c.Fetch(context.Background(), "drive/Home/big.bin", cap)
+		if err == nil {
+			t.Fatal("want *TooLargeError, got nil")
+		}
+		var tle *TooLargeError
+		if !errors.As(err, &tle) {
+			t.Fatalf("err type: got %T (%v), want *TooLargeError", err, err)
+		}
+		if tle.Limit != cap {
+			t.Errorf("Limit: got %d, want %d", tle.Limit, cap)
+		}
+		// Read should be Limit+1 (LimitReader bounded the buffer
+		// at maxBytes+1 bytes regardless of what the server tried
+		// to send) — defending the "bounded memory" property.
+		if tle.Read > cap+1 {
+			t.Errorf("Read: got %d (Cap+1=%d); LimitReader-bounded read leaked", tle.Read, cap+1)
+		}
+	})
+
+	t.Run("maxBytes=0 disables the cap entirely", func(t *testing.T) {
+		// 32 KiB body, no cap → must return all bytes, no
+		// TooLargeError.
+		body := bytes.Repeat([]byte{'y'}, 32*1024)
+		c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write(body)
+		}))
+		got, err := c.Fetch(context.Background(), "drive/Home/big.bin", 0)
+		if err != nil {
+			t.Fatalf("Fetch: %v", err)
+		}
+		if len(got) != len(body) {
+			t.Errorf("len: got %d, want %d", len(got), len(body))
+		}
+	})
 }
 
 // TestClient_Put_EmptyEndpoint: defensive guard. Plan should never

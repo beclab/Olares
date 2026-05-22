@@ -100,52 +100,40 @@ func TestFrontendPathToEditTarget(t *testing.T) {
 		}
 	})
 
-	t.Run("cloud drive accepted by adapter and planner", func(t *testing.T) {
-		// awss3 / google / dropbox are now part of the
-		// supported allow-list (see edit.SupportedFileTypesList +
-		// TestPlan_NamespaceAllowlist for the wire-shape source
-		// of truth). The adapter's only job here is to surface
-		// the parsed target unchanged; the planner then builds
-		// the canonical /api/resources/<fileType><path> URL
-		// without complaint.
-		for _, raw := range []string{
-			"awss3/myacct/bucket/file.txt",
-			"google/myacct/Documents/draft.md",
-			"dropbox/myacct/Notes/idea.txt",
-		} {
-			t.Run(raw, func(t *testing.T) {
-				tgt, err := frontendPathToEditTarget(raw)
-				if err != nil {
-					t.Fatalf("adapter rejected: %v", err)
-				}
-				if _, err := edit.Plan(tgt); err != nil {
-					t.Errorf("planner err: %v", err)
-				}
-			})
+	t.Run("cloud / tencent / share / internal rejected at the planner", func(t *testing.T) {
+		// awss3 / google / dropbox are NOT on the allow-list —
+		// see TestPlan_NamespaceAllowlist for the rationale
+		// (Bug 1: /api/raw returns JSON envelopes for cloud
+		// namespaces, which would silently corrupt the file on
+		// writeback). The adapter still parses them as known
+		// fileTypes; the refusal lands at the planner with a
+		// targeted message that points at the safe
+		// download → edit-locally → upload alternative.
+		cases := []struct {
+			raw  string
+			want []string // substrings the planner err should contain
+		}{
+			{"awss3/myacct/bucket/file.txt", []string{"cloud-drive", "/api/raw", "files download", "files upload"}},
+			{"google/myacct/Documents/draft.md", []string{"cloud-drive", "/api/raw", "files download", "files upload"}},
+			{"dropbox/myacct/Notes/idea.txt", []string{"cloud-drive", "/api/raw", "files download", "files upload"}},
+			{"tencent/myacct/file.txt", []string{"cloud-drive", "/api/raw", "files download", "files upload"}},
+			{"share/someuser/notes.md", []string{"not supported"}},
+			{"internal/x/y.md", []string{"not supported"}},
 		}
-	})
-
-	t.Run("tencent / share / internal still rejected", func(t *testing.T) {
-		// These remain on the deny-list — see
-		// TestPlan_NamespaceAllowlist for the rationale. The
-		// adapter still parses them (they're known fileTypes);
-		// the refusal lands at the planner.
-		for _, raw := range []string{
-			"tencent/myacct/file.txt",
-			"share/someuser/notes.md",
-			"internal/x/y.md",
-		} {
-			t.Run(raw, func(t *testing.T) {
-				tgt, err := frontendPathToEditTarget(raw)
+		for _, c := range cases {
+			t.Run(c.raw, func(t *testing.T) {
+				tgt, err := frontendPathToEditTarget(c.raw)
 				if err != nil {
 					t.Fatalf("adapter rejected unexpectedly: %v", err)
 				}
 				_, planErr := edit.Plan(tgt)
 				if planErr == nil {
-					t.Fatalf("want planner error for %s, got nil", raw)
+					t.Fatalf("want planner error for %s, got nil", c.raw)
 				}
-				if !strings.Contains(planErr.Error(), "not supported") {
-					t.Errorf("planner err: %v", planErr)
+				for _, want := range c.want {
+					if !strings.Contains(planErr.Error(), want) {
+						t.Errorf("planner err for %s: missing %q in %q", c.raw, want, planErr.Error())
+					}
 				}
 			})
 		}
@@ -368,12 +356,15 @@ func TestRunEdit_NoChangeSkipsUpload(t *testing.T) {
 	// maxSize=0 disables the size cap so this test only exercises
 	// the no-change branch; the cap itself is covered by
 	// TestStatAndFetch_MaxSize / TestRunEdit_PostEditOversizeBlocked.
-	bytesGot, isDir, err := statAndFetch(context.Background(), statClient, editClient, op.DisplayPath, false, 0)
+	bytesGot, isDir, isCreate, err := statAndFetch(context.Background(), statClient, editClient, op.DisplayPath, false, 0)
 	if err != nil {
 		t.Fatalf("statAndFetch: %v", err)
 	}
 	if isDir {
 		t.Fatal("statAndFetch reported isDir=true for a file")
+	}
+	if isCreate {
+		t.Error("isCreate must be false when the file existed")
 	}
 
 	tmpDir, tmpFile, err := writeTempFile(op.DisplayPath, bytesGot)
@@ -428,7 +419,7 @@ func TestRunEdit_ChangedTriggersPut(t *testing.T) {
 	statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 	editClient := &edit.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 
-	bytesGot, _, err := statAndFetch(context.Background(), statClient, editClient, op.DisplayPath, false, 0)
+	bytesGot, _, _, err := statAndFetch(context.Background(), statClient, editClient, op.DisplayPath, false, 0)
 	if err != nil {
 		t.Fatalf("statAndFetch: %v", err)
 	}
@@ -472,7 +463,7 @@ func TestStatAndFetch_NotFoundCreate(t *testing.T) {
 	editClient := &edit.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 
 	t.Run("404 + allowCreate=false → error mentions --create", func(t *testing.T) {
-		_, _, err := statAndFetch(context.Background(), statClient, editClient,
+		_, _, _, err := statAndFetch(context.Background(), statClient, editClient,
 			"drive/Home/missing.md", false, 0)
 		if err == nil {
 			t.Fatal("want error, got nil")
@@ -482,14 +473,17 @@ func TestStatAndFetch_NotFoundCreate(t *testing.T) {
 		}
 	})
 
-	t.Run("404 + allowCreate=true → empty buffer", func(t *testing.T) {
-		got, isDir, err := statAndFetch(context.Background(), statClient, editClient,
+	t.Run("404 + allowCreate=true → empty buffer + isCreate=true", func(t *testing.T) {
+		got, isDir, isCreate, err := statAndFetch(context.Background(), statClient, editClient,
 			"drive/Home/missing.md", true, 0)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 		if isDir {
 			t.Error("isDir: want false")
+		}
+		if !isCreate {
+			t.Error("isCreate: want true on a Stat-404 + --create path (Bug 4 regression guard)")
 		}
 		if len(got) != 0 {
 			t.Errorf("want empty buffer, got %q", got)
@@ -521,7 +515,7 @@ func TestStatAndFetch_MaxSize(t *testing.T) {
 		editClient := &edit.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 
 		const cap1KiB = 1024
-		_, _, err := statAndFetch(context.Background(), statClient, editClient,
+		_, _, _, err := statAndFetch(context.Background(), statClient, editClient,
 			"drive/Home/notes.md", false, cap1KiB)
 		if err == nil {
 			t.Fatal("want size-cap error, got nil")
@@ -544,7 +538,7 @@ func TestStatAndFetch_MaxSize(t *testing.T) {
 		editClient := &edit.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 
 		const cap100KiB = 100 * 1024
-		got, _, err := statAndFetch(context.Background(), statClient, editClient,
+		got, _, _, err := statAndFetch(context.Background(), statClient, editClient,
 			"drive/Home/notes.md", false, cap100KiB)
 		if err != nil {
 			t.Fatalf("statAndFetch: %v", err)
@@ -563,7 +557,7 @@ func TestStatAndFetch_MaxSize(t *testing.T) {
 		statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 		editClient := &edit.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
 
-		got, _, err := statAndFetch(context.Background(), statClient, editClient,
+		got, _, _, err := statAndFetch(context.Background(), statClient, editClient,
 			"drive/Home/notes.md", false, 0)
 		if err != nil {
 			t.Fatalf("statAndFetch: %v", err)
@@ -877,7 +871,7 @@ func TestRunEdit_BinaryContentSniffRejected(t *testing.T) {
 	// Path uses an extension NOT on the deny-list so the
 	// content sniff is the only thing standing between the user
 	// and a corrupted PNG.
-	got, isDir, err := statAndFetch(context.Background(), statClient, editClient,
+	got, isDir, _, err := statAndFetch(context.Background(), statClient, editClient,
 		"drive/Home/notes.md", false, 0)
 	if err != nil {
 		t.Fatalf("statAndFetch: %v", err)
@@ -888,6 +882,222 @@ func TestRunEdit_BinaryContentSniffRejected(t *testing.T) {
 	if !looksBinary(got) {
 		t.Errorf("looksBinary(<png header>) = false, want true; buf head=%x", got[:min(8, len(got))])
 	}
+}
+
+// TestStatAndFetch_StatSizeZeroLargeBody pins Bug 5's fix at the
+// cobra layer: when Stat reports Size=0 (either really empty or
+// the backend forgot to populate the field) but the actual body
+// is many MB, the bounded read in edit.Client.Fetch (Bug 5's
+// fix) catches it and surfaces a *TooLargeError, which
+// statAndFetch wraps into a friendly --max-size CTA. The
+// previous behaviour skipped the pre-fetch cap (because
+// Stat.Size was 0) and slurped the whole body into memory
+// before the post-fetch length check fired.
+func TestStatAndFetch_StatSizeZeroLargeBody(t *testing.T) {
+	// 64 KiB body, but we tell Stat the size is 0. Cap is 1 KiB.
+	// The bounded LimitReader inside Fetch must fail before
+	// the full 64 KiB lands in memory.
+	body := strings.Repeat("z", 64*1024)
+	srv := httptest.NewServer(http.NewServeMux())
+	defer srv.Close()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/resources/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Stat-listing reports Size=0 to trigger the Bug 5 path.
+		_, _ = w.Write([]byte(`{"name":"Home","items":[{"name":"notes.md","isDir":false,"size":0}]}`))
+	})
+	mux.HandleFunc("/api/raw/", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(body))
+	})
+	srv2 := httptest.NewServer(mux)
+	defer srv2.Close()
+
+	statClient := &download.Client{HTTPClient: srv2.Client(), BaseURL: srv2.URL}
+	editClient := &edit.Client{HTTPClient: srv2.Client(), BaseURL: srv2.URL}
+
+	const cap1KiB = 1024
+	_, _, _, err := statAndFetch(context.Background(), statClient, editClient,
+		"drive/Home/notes.md", false, cap1KiB)
+	if err == nil {
+		t.Fatal("want bounded-read cap error, got nil")
+	}
+	if !strings.Contains(err.Error(), "--max-size") {
+		t.Errorf("err should hint --max-size: %v", err)
+	}
+	if !strings.Contains(err.Error(), "exceeds") {
+		t.Errorf("err should say 'exceeds': %v", err)
+	}
+}
+
+// TestStatAndFetch_RaceBetweenStatAndFetch pins Bug 2's fix: when
+// Stat reports the file exists but the subsequent Fetch comes
+// back 404, the helper MUST surface a conflict (concurrent
+// delete) error — NOT fall through to the --create empty-buffer
+// path. Recreating a file someone else just deleted is almost
+// never what the user asked for, and the previous behaviour
+// would silently rebuild it on a `--create` re-run with no
+// hint that anything raced.
+func TestStatAndFetch_RaceBetweenStatAndFetch(t *testing.T) {
+	t.Run("--create=false → conflict error names the race", func(t *testing.T) {
+		srv := newRaceEditServer(t)
+		defer srv.Close()
+		statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+		editClient := &edit.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+
+		_, _, _, err := statAndFetch(context.Background(), statClient, editClient,
+			"drive/Home/notes.md", false, 0)
+		if err == nil {
+			t.Fatal("want race-conflict error, got nil")
+		}
+		msg := err.Error()
+		if !strings.Contains(msg, "disappeared between stat and fetch") {
+			t.Errorf("err should name the race: %v", msg)
+		}
+		if !strings.Contains(msg, "concurrent delete") {
+			t.Errorf("err should hint at concurrent delete: %v", msg)
+		}
+	})
+
+	t.Run("--create=true STILL surfaces conflict (does NOT recreate silently)", func(t *testing.T) {
+		// This is the heart of Bug 2's regression guard:
+		// passing --create on a path Stat said was alive must
+		// not turn a concurrent-delete race into a silent
+		// recreate. The user asked to edit an existing file,
+		// not to materialise a new one.
+		srv := newRaceEditServer(t)
+		defer srv.Close()
+		statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+		editClient := &edit.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+
+		got, _, isCreate, err := statAndFetch(context.Background(), statClient, editClient,
+			"drive/Home/notes.md", true, 0)
+		if err == nil {
+			t.Fatalf("want race-conflict error even with --create, got got=%q isCreate=%v", got, isCreate)
+		}
+		if !strings.Contains(err.Error(), "disappeared between stat and fetch") {
+			t.Errorf("err should name the race: %v", err)
+		}
+	})
+}
+
+// TestRunEdit_CreateModeForcesPut pins Bug 4's fix: when the user
+// passed --create against a non-existent file and exits the
+// editor without typing anything (`:q!`), the cobra layer must
+// STILL PUT the empty buffer to the server. Otherwise --create
+// becomes a silent no-op and the file is never materialised.
+//
+// We exercise the post-statAndFetch contract directly (the
+// runEdit integration is too heavy because of the TTY guard):
+// statAndFetch returns isCreate=true on a 404 + --create, and
+// the cobra layer's no-change branch checks isCreate to bypass
+// the "no upload" early-return and fall through to the PUT.
+func TestRunEdit_CreateModeForcesPut(t *testing.T) {
+	srv, calls := newCreateAwareEditServer(t)
+	defer srv.Close()
+	statClient := &download.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+	editClient := &edit.Client{HTTPClient: srv.Client(), BaseURL: srv.URL}
+
+	// The file does not exist; with --create=true statAndFetch
+	// must return (empty buffer, isDir=false, isCreate=true,
+	// nil) so the cobra layer can force the PUT.
+	currentBytes, isDir, isCreate, err := statAndFetch(context.Background(),
+		statClient, editClient, "drive/Home/missing.md", true, 0)
+	if err != nil {
+		t.Fatalf("statAndFetch: %v", err)
+	}
+	if isDir {
+		t.Fatal("isDir: want false")
+	}
+	if !isCreate {
+		t.Fatal("isCreate: want true on a Stat-404 + --create path (Bug 4 regression guard)")
+	}
+	if len(currentBytes) != 0 {
+		t.Errorf("currentBytes: want empty, got %q", currentBytes)
+	}
+
+	// Simulate the editor exiting without changes — newBytes
+	// equals currentBytes (both empty). The cobra layer's
+	// bytesEqual check would normally early-return; with
+	// isCreate=true it MUST fall through to the PUT.
+	newBytes := []byte{}
+	if !bytesEqual(currentBytes, newBytes) {
+		t.Fatal("bytesEqual on two empty buffers should be true")
+	}
+
+	// The fix: when isCreate, force the PUT.
+	if !isCreate {
+		t.Fatal("isCreate gating the PUT is the regression guard — bail out if it ever flips")
+	}
+	op := edit.Op{
+		Endpoint:    "/api/resources/drive/Home/missing.md",
+		DisplayPath: "drive/Home/missing.md",
+	}
+	if err := editClient.PutBytes(context.Background(), op, newBytes, edit.DefaultContentType); err != nil {
+		t.Fatalf("PutBytes: %v", err)
+	}
+	if calls.put != 1 {
+		t.Errorf("want exactly one PUT (creating an empty file), saw %d", calls.put)
+	}
+	if len(calls.lastBody) != 0 {
+		t.Errorf("PUT body: want empty (created empty file), got %q", calls.lastBody)
+	}
+}
+
+// newRaceEditServer returns an httptest server that returns a
+// successful parent listing (so download.Stat sees the file as
+// alive) but answers GET /api/raw/ with 404 — simulating a
+// concurrent delete that landed between the Stat and the Fetch.
+// Bug 2's regression guard.
+func newRaceEditServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/resources/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"name":"Home","items":[{"name":"notes.md","isDir":false,"size":42}]}`))
+	})
+	mux.HandleFunc("/api/raw/", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+	return httptest.NewServer(mux)
+}
+
+// newCreateAwareEditServer returns an httptest server that 404s
+// on Stat (forcing the --create branch) AND records PUT bodies
+// so a test can assert the "force PUT in create mode" contract.
+// The PUT handler returns 200 regardless of body — including the
+// zero-byte body that proves --create + :q! actually creates an
+// empty file. Bug 4's regression guard.
+func newCreateAwareEditServer(t *testing.T) (*httptest.Server, *editServerCalls) {
+	t.Helper()
+	c := &editServerCalls{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/resources/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			// Listing the parent of a missing file: report
+			// the parent dir as empty so download.Stat
+			// concludes "not found" rather than seeing the
+			// file in the items array.
+			c.getList++
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"name":"Home","items":[]}`))
+		case http.MethodPut:
+			c.put++
+			body, _ := io.ReadAll(r.Body)
+			c.lastBody = append([]byte(nil), body...)
+			w.WriteHeader(http.StatusOK)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/api/raw/", func(w http.ResponseWriter, _ *http.Request) {
+		// The file doesn't exist on the wire either — but
+		// statAndFetch should have already short-circuited via
+		// Stat's not-found before reaching here.
+		w.WriteHeader(http.StatusNotFound)
+	})
+	srv := httptest.NewServer(mux)
+	return srv, c
 }
 
 // captureWriter is a tiny io.Writer that records what's written
