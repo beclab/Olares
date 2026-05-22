@@ -396,11 +396,11 @@ func (c *OAC) checkResourceLimits(oacPath string, m Manifest, sc ownerScenario, 
 			LimitedMemory:  cfg.Spec.LimitedMemory,
 		})
 	}
-	if len(cfg.Spec.Resources) == 0 {
+	if len(cfg.Spec.AcceleratedResources) == 0 {
 		return nil
 	}
 	var errs []error
-	for _, rm := range cfg.Spec.Resources {
+	for _, rm := range cfg.Spec.AcceleratedResources {
 		values := c.buildRenderValues(m, sc)
 		helmrender.SetGPUType(values, rm.Mode)
 		list, err := helmrender.Render(oacPath, values, m.AppName())

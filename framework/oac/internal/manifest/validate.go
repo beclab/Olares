@@ -243,7 +243,7 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 
 	api := normalizeAPIVersion(apiVersion)
 	var v2ResourcesErr error
-	if api == APIVersionV2 && len(s.Resources) > 0 {
+	if api == APIVersionV2 && len(s.AcceleratedResources) > 0 {
 		v2ResourcesErr = fmt.Errorf(
 			"spec.resources is not supported for apiVersion=v2 (including when olaresManifest.version >= 0.12.0); use spec.requiredCpu, spec.limitedCpu, spec.requiredMemory, spec.limitedMemory, and spec.requiredDisk instead",
 		)
@@ -262,11 +262,8 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 	switch {
 	case modern:
 		fields = append(fields,
-			validation.Field(&s.Resources,
-				validation.Required.Error(
-					"spec.resources is required for olaresManifest.version >= 0.12.0; declare at least one entry",
-				),
-				validation.Each(validation.By(validateResourceModeValue)),
+			validation.Field(&s.AcceleratedResources,
+				validation.By(validateResourceModeValueFor(&s)),
 			),
 		)
 	case isLegacyEnvelopeMissing(&s):
@@ -277,36 +274,144 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 			validation.Field(&s.LimitedDisk, optionalLimitedDiskQuantity),
 		)
 	default:
-		fields = append(fields,
-			validation.Field(&s.RequiredMemory,
-				validation.Required.Error("spec.requiredMemory is required for olaresManifest.version < 0.12.0"),
-				quantityRule),
-			validation.Field(&s.RequiredDisk,
-				validation.Required.Error("spec.requiredDisk is required for olaresManifest.version < 0.12.0"),
-				quantityRule),
-			validation.Field(&s.RequiredCPU,
-				validation.Required.Error("spec.requiredCpu is required for olaresManifest.version < 0.12.0"),
-				quantityRule),
-			validation.Field(&s.LimitedMemory,
-				validation.Required.Error("spec.limitedMemory is required for olaresManifest.version < 0.12.0"),
-				quantityRule),
-			validation.Field(&s.LimitedCPU,
-				validation.Required.Error("spec.limitedCpu is required for olaresManifest.version < 0.12.0"),
-				quantityRule),
-			validation.Field(&s.LimitedDisk, optionalLimitedDiskQuantity),
-		)
+		fields = append(fields, legacyEnvelopeFieldRules(&s, quantityRule, optionalLimitedDiskQuantity)...)
 	}
 
 	structErr := validation.ValidateStruct(&s, fields...)
 	return errors.Join(v2ResourcesErr, supportedGpuModernErr, structErr, versionGuidance, specResourceCrossFieldRules(configVersion, apiVersion, &s))
 }
 
-func validateResourceModeValue(v interface{}) error {
-	rm, ok := v.(ResourceMode)
-	if !ok {
-		return fmt.Errorf("resources: unexpected type %T", v)
+// legacyEnvelopeFieldRules builds the FieldRules for the legacy flat
+// resource envelope: requiredCpu / limitedCpu / requiredMemory /
+// limitedMemory / requiredDisk are all required (with quantity validation)
+// while limitedDisk stays optional but still quantity-checked when set.
+//
+// Factored out of validateAppSpec so the legacy branch can install it with
+// a single append, and so any future caller (or test) that wants the same
+// shape doesn't have to redeclare every Field rule.
+func legacyEnvelopeFieldRules(s *AppSpec, quantityRule, optionalLimitedDiskQuantity validation.Rule) []*validation.FieldRules {
+	return []*validation.FieldRules{
+		validation.Field(&s.RequiredMemory,
+			validation.Required.Error("spec.requiredMemory is required for olaresManifest.version < 0.12.0"),
+			quantityRule),
+		validation.Field(&s.RequiredDisk,
+			validation.Required.Error("spec.requiredDisk is required for olaresManifest.version < 0.12.0"),
+			quantityRule),
+		validation.Field(&s.RequiredCPU,
+			validation.Required.Error("spec.requiredCpu is required for olaresManifest.version < 0.12.0"),
+			quantityRule),
+		validation.Field(&s.LimitedMemory,
+			validation.Required.Error("spec.limitedMemory is required for olaresManifest.version < 0.12.0"),
+			quantityRule),
+		validation.Field(&s.LimitedCPU,
+			validation.Required.Error("spec.limitedCpu is required for olaresManifest.version < 0.12.0"),
+			quantityRule),
+		validation.Field(&s.LimitedDisk, optionalLimitedDiskQuantity),
 	}
-	return ValidateResourceMode(rm)
+}
+
+// validateResourceModeValueFor binds spec so the modern (>= 0.12.0,
+// apiVersion != v2) branch can dispatch validation onto whichever shape
+// the manifest actually uses, from a single validation.By rule wired onto
+// spec.Resources:
+//
+//  1. spec.resources[] is non-empty: iterate every entry and apply
+//     per-element validation (ValidateResourceMode -- mode enum, quantity
+//     validity, section completeness, gpu-section gate, limit >= required).
+//  2. spec.resources[] is empty AND at least one flat field is set: the
+//     manifest opted into the legacy envelope on a modern version, so
+//     format-validate every populated spec.required* / spec.limited*
+//     flat field via validateFlatResourceQuantities. Required-ness of
+//     individual flat fields is deliberately not enforced here -- users
+//     who fill out only part of the envelope still get format feedback
+//     plus the Rule 5 limit >= required pairing applied to whatever they
+//     wrote down.
+//  3. spec.resources[] is empty AND no flat field is set: emit a single
+//     consolidated guidance message listing both shapes; the manifest
+//     must declare at least one.
+//
+// Rule 7 mutex (spec.resources[] cannot coexist with the eight flat
+// fields) is still enforced by ensureLegacyAndResourcesAreMutuallyExclusive
+// from specResourceCrossFieldRules, which runs for every version, so this
+// closure does not need to repeat it.
+func validateResourceModeValueFor(spec *AppSpec) validation.RuleFunc {
+	return func(v interface{}) error {
+		var errs []error
+		for i, rm := range spec.AcceleratedResources {
+			if err := ValidateResourceMode(rm); err != nil {
+				errs = append(errs, fmt.Errorf("spec.resources[%d]: %w", i, err))
+			}
+		}
+		if len(spec.AcceleratedResources) == 0 {
+			if err := validateFlatResourceQuantities(spec); err != nil {
+				errs = append(errs, err)
+			}
+			if !hasAnyFlatResourceQuantity(spec) {
+				errs = append(errs, fmt.Errorf(
+					"either spec.resources[] or the legacy envelope (spec.requiredCpu / spec.limitedCpu / spec.requiredMemory / spec.limitedMemory / spec.requiredDisk) is required for olaresManifest.version >= 0.12.0",
+				))
+			}
+		}
+
+		return errors.Join(errs...)
+	}
+}
+
+// hasAnyFlatResourceQuantity reports whether any of the eight legacy
+// spec.required* / spec.limited* flat fields carries a value. Used by
+// the modern-branch closure to decide whether an empty spec.resources[]
+// means "the manifest opted into the flat envelope" (some flat field is
+// set) or "the manifest forgot to declare a resource envelope at all"
+// (nothing is set).
+func hasAnyFlatResourceQuantity(spec *AppSpec) bool {
+	return spec.RequiredCPU != "" ||
+		spec.LimitedCPU != "" ||
+		spec.RequiredMemory != "" ||
+		spec.LimitedMemory != "" ||
+		spec.RequiredDisk != "" ||
+		spec.LimitedDisk != ""
+}
+
+// validateFlatResourceQuantities reports each populated
+// spec.required* / spec.limited* flat field whose value does not parse
+// as a Kubernetes quantity. Empty fields are skipped: this helper only
+// answers "is the value I wrote down legal?", not "did I write down
+// enough fields?". Required-ness is a separate concern owned by the
+// caller (legacyEnvelopeFieldRules for the legacy branch; the modern
+// branch currently accepts any subset since the user can also opt into
+// spec.resources[] instead).
+//
+// The eight fields covered match the legacy envelope plus the two GPU
+// quantities, so a manifest that mixes any of them will get format
+// feedback before Rule 7 weighs in on whether they were allowed to be
+// set at all.
+func validateFlatResourceQuantities(spec *AppSpec) error {
+	pairs := []struct {
+		name  string
+		value string
+	}{
+		{"spec.requiredCpu", spec.RequiredCPU},
+		{"spec.limitedCpu", spec.LimitedCPU},
+		{"spec.requiredMemory", spec.RequiredMemory},
+		{"spec.limitedMemory", spec.LimitedMemory},
+		{"spec.requiredDisk", spec.RequiredDisk},
+		{"spec.limitedDisk", spec.LimitedDisk},
+		{"spec.requiredGpu", spec.RequiredGPU},
+		{"spec.limitedGpu", spec.LimitedGPU},
+	}
+	var errs []error
+	for _, p := range pairs {
+		if p.value == "" {
+			continue
+		}
+		if !k8sQuantity.MatchString(p.value) {
+			errs = append(errs, fmt.Errorf(
+				"%s must be a valid Kubernetes quantity (got %q)",
+				p.name, p.value,
+			))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func validateOptions(v interface{}) error {
