@@ -89,6 +89,8 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				if !apierrors.IsNotFound(err) {
 					return ctrl.Result{}, err
 				}
+			} else if err := r.ensureAppGatewayRouteMode(ctx, app); err != nil {
+				klog.Warningf("ensure gateway route-mode for Application %s err=%v", req.Name, err)
 			} else if err := r.reconcileSharedRouteRegistry(ctx, app); err != nil {
 				klog.Warningf("reconcile SharedRouteRegistry for Application %s err=%v", req.Name, err)
 			}
@@ -358,6 +360,9 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	if tailScale != nil {
 		newapp.Spec.TailScale = *tailScale
 	}
+	if err := gateway.ApplyRouteModeAnnotation(ctx, r.Client, newapp); err != nil {
+		klog.Warningf("apply gateway route-mode for new app %s err=%v", name, err)
+	}
 	app, err := r.AppClientset.AppV1alpha1().Applications().Create(ctx, newapp, metav1.CreateOptions{})
 	if err != nil {
 		ctrl.Log.Error(err, "create application error")
@@ -415,6 +420,9 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 			// Annotation changes (e.g. gateway.olares.io/route-mode opt-in/out)
 			// don't bump the deployment resource version. Run the SRR
 			// reconciler so toggling routeMode is declarative.
+			if err := r.ensureAppGatewayRouteMode(ctx, app); err != nil {
+				klog.Warningf("ensure gateway route-mode on app-only update for %s err=%v", app.Spec.Name, err)
+			}
 			if srrErr := r.reconcileSharedRouteRegistry(ctx, app); srrErr != nil {
 				klog.Warningf("reconcile SharedRouteRegistry on app-only update for %s err=%v", app.Spec.Name, srrErr)
 			}
@@ -476,6 +484,15 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		existingPolicy := appCopy.Spec.Settings[applicationSettingsPolicyKey]
 		appCopy.Spec.Settings[applicationSettingsPolicyKey] = mergePolicySettings(existingPolicy, incomingPolicy)
 	}
+	if settings["clusterScoped"] == "true" {
+		appCopy.Spec.Settings["clusterScoped"] = "true"
+		if settings["clusterAppRef"] != "" {
+			appCopy.Spec.Settings["clusterAppRef"] = settings["clusterAppRef"]
+		}
+	}
+	if settings[gateway.SettingGatewayRouteMode] != "" {
+		appCopy.Spec.Settings[gateway.SettingGatewayRouteMode] = settings[gateway.SettingGatewayRouteMode]
+	}
 
 	if tailScale != nil {
 		appCopy.Spec.TailScale = *tailScale
@@ -502,6 +519,10 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	}
 	klog.Infof("deploymentname: %s, version: %v", deployment.GetName(), deployment.GetResourceVersion())
 	appCopy.Annotations[deploymentResourceVersionAnnotation] = deployment.GetResourceVersion()
+
+	if err := gateway.ApplyRouteModeAnnotation(ctx, r.Client, appCopy); err != nil {
+		klog.Warningf("apply gateway route-mode for app %s err=%v", appCopy.Spec.Name, err)
+	}
 
 	// Propagate the v3 marker from the deployment so the
 	// Application CR carries it for downstream visibility / proxy fan-out.
@@ -572,10 +593,40 @@ func (r *ApplicationReconciler) reconcileGatewayRoutesForWorkloadNS(ctx context.
 		if app.Spec.Namespace != workloadNS {
 			continue
 		}
+		if err := r.ensureAppGatewayRouteMode(ctx, app); err != nil {
+			return fmt.Errorf("app %s route-mode: %w", app.Name, err)
+		}
 		if err := r.reconcileSharedRouteRegistry(ctx, app); err != nil {
 			return fmt.Errorf("app %s: %w", app.Name, err)
 		}
 	}
+	return nil
+}
+
+// ensureAppGatewayRouteMode persists gateway.olares.io/route-mode when the
+// automation policy (ClusterConfig + manifest settings) requires it. Explicit
+// operator annotations (gateway or direct) are never overwritten.
+func (r *ApplicationReconciler) ensureAppGatewayRouteMode(ctx context.Context, app *appv1alpha1.Application) error {
+	if app == nil {
+		return nil
+	}
+	need, mode, err := gateway.ComputeRouteModePatch(ctx, r.Client, app)
+	if err != nil || !need {
+		return err
+	}
+	appCopy := app.DeepCopy()
+	if appCopy.Annotations == nil {
+		appCopy.Annotations = map[string]string{}
+	}
+	appCopy.Annotations[gateway.AnnotationRouteMode] = mode
+	updated, err := r.AppClientset.AppV1alpha1().Applications().Update(ctx, appCopy, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	if app.Annotations == nil {
+		app.Annotations = map[string]string{}
+	}
+	app.Annotations[gateway.AnnotationRouteMode] = updated.Annotations[gateway.AnnotationRouteMode]
 	return nil
 }
 
@@ -809,6 +860,9 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 				}
 
 				sharedEntrances = appCfg.SharedEntrances
+			}
+			if mode := strings.TrimSpace(appCfg.GatewayRouteMode); mode != "" {
+				settings[gateway.SettingGatewayRouteMode] = strings.ToLower(mode)
 			}
 			if appCfg.MobileSupported {
 				settings["mobileSupported"] = "true"

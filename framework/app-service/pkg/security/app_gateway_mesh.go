@@ -25,6 +25,15 @@ var LinkerdMeshIngressPortsFromAppGateway = []int32{8080, 8086, 8090, 9443, 443}
 // the linkerd control plane (app-gateway data plane and linkerd-viz observability stack).
 var LinkerdControlPlaneIngressPeerNamespaces = []string{"app-gateway", "linkerd-viz"}
 
+// SharedLinkerdMeshIngressNPName allows the linkerd control plane and viz stack to reach
+// meshed proxies in shared workload namespaces (policy watches, identity callbacks, tap).
+const SharedLinkerdMeshIngressNPName = "shared-linkerd-mesh-ingress-np"
+
+// SharedLinkerdMeshIngressPeerNamespaces are platform namespaces whose pods must reach
+// linkerd-proxy / app containers in shared workload namespaces. Kept ordered: linkerd
+// first (required for sidecar startup); linkerd-viz second (optional observability).
+var SharedLinkerdMeshIngressPeerNamespaces = []string{"linkerd", "linkerd-viz"}
+
 // LinkerdMeshPrometheusScrapePorts are proxy/admin ports scraped by platform Prometheus.
 var LinkerdMeshPrometheusScrapePorts = []int32{4191, 8085, 9990, 9943, 9994, 9995}
 
@@ -112,7 +121,7 @@ func NewLinkerdMeshPrometheusScrapeNetworkPolicy(ns string) *netv1.NetworkPolicy
 }
 
 func linkerdControlPlaneIngressPeers() []netv1.NetworkPolicyPeer {
-	peers := make([]netv1.NetworkPolicyPeer, 0, len(LinkerdControlPlaneIngressPeerNamespaces))
+	peers := make([]netv1.NetworkPolicyPeer, 0, len(LinkerdControlPlaneIngressPeerNamespaces)+1)
 	for _, ns := range LinkerdControlPlaneIngressPeerNamespaces {
 		peers = append(peers, netv1.NetworkPolicyPeer{
 			NamespaceSelector: &metav1.LabelSelector{
@@ -122,5 +131,46 @@ func linkerdControlPlaneIngressPeers() []netv1.NetworkPolicyPeer {
 			},
 		})
 	}
+	// v2/v3 shared workload namespaces (bytetrade.io/ns-shared) run linkerd-proxy after
+	// gateway.olares.io/route-mode=gateway; proxies must reach linkerd-identity on startup.
+	peers = append(peers, netv1.NetworkPolicyPeer{
+		NamespaceSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				NamespaceSharedLabel: "true",
+			},
+		},
+	})
 	return peers
+}
+
+// NewSharedLinkerdControlPlaneIngressNetworkPolicy allows linkerd control-plane and viz
+// pods to reach meshed proxies in a shared workload namespace (policy API watches,
+// identity callbacks, admin ports, tap metrics).
+func NewSharedLinkerdControlPlaneIngressNetworkPolicy(namespace string, podSelector map[string]string) *netv1.NetworkPolicy {
+	from := make([]netv1.NetworkPolicyPeer, 0, len(SharedLinkerdMeshIngressPeerNamespaces))
+	for _, peer := range SharedLinkerdMeshIngressPeerNamespaces {
+		from = append(from, netv1.NetworkPolicyPeer{
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"kubernetes.io/metadata.name": peer,
+				},
+			},
+		})
+	}
+	return &netv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      SharedLinkerdMeshIngressNPName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name":       "app-gateway",
+				"app.kubernetes.io/component":  "linkerd-mesh",
+				"app.kubernetes.io/managed-by": "app-service",
+			},
+		},
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{MatchLabels: podSelector},
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
+			Ingress: []netv1.NetworkPolicyIngressRule{{From: from}},
+		},
+	}
 }

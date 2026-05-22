@@ -88,8 +88,18 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteNetworkPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete NetworkPolicy: %w", err)
 		}
+		if err := deleteSharedLinkerdMeshNetworkPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete shared linkerd mesh NetworkPolicy: %w", err)
+		}
 		if err := deleteReferenceGrant(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete ReferenceGrant: %w", err)
+		}
+		disableNS := srr.Spec.Upstream.ServiceNamespace
+		if disableNS == "" {
+			disableNS = srr.Namespace
+		}
+		if err := ensureSharedNamespaceLinkerdInject(ctx, c, disableNS, false); err != nil {
+			return ReconcileResult{}, fmt.Errorf("disable shared namespace linkerd inject: %w", err)
 		}
 		return ReconcileResult{
 			Status:  metav1.ConditionTrue,
@@ -151,6 +161,13 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	}
 	if err := applyNetworkPolicy(ctx, c, gw, srr, svc, port); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply NetworkPolicy: %w", err)
+	}
+	if err := applySharedLinkerdMeshNetworkPolicy(ctx, c, srr, svc); err != nil {
+		return ReconcileResult{}, fmt.Errorf("apply shared linkerd mesh NetworkPolicy: %w", err)
+	}
+	injectNS := networkPolicyNamespace(srr, svc)
+	if err := ensureSharedNamespaceLinkerdInject(ctx, c, injectNS, true); err != nil {
+		return ReconcileResult{}, fmt.Errorf("enable shared namespace linkerd inject: %w", err)
 	}
 	return ReconcileResult{
 		Status:        metav1.ConditionTrue,
@@ -313,9 +330,15 @@ func networkPolicyNamespacesToClean(srr *srrv1alpha1.SharedRouteRegistry) []stri
 	return []string{upstream, srr.Namespace}
 }
 
+// linkerdProxyInboundPort is the port that linkerd-proxy listens on for inbound mTLS
+// traffic. When a shared workload is mesh-injected, EG-side proxy connects to this port
+// (not the service port) and the proxy forwards locally to the application container.
+const linkerdProxyInboundPort int32 = 4143
+
 func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, svc *corev1.Service, port int32) error {
 	protocol := corev1.ProtocolTCP
-	intPort := intstr.FromInt32(port)
+	servicePort := intstr.FromInt32(port)
+	proxyPort := intstr.FromInt32(linkerdProxyInboundPort)
 	npNS := networkPolicyNamespace(srr, svc)
 	desired := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -341,7 +364,10 @@ func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr
 						},
 					},
 					Ports: []networkingv1.NetworkPolicyPort{
-						{Protocol: &protocol, Port: &intPort},
+						{Protocol: &protocol, Port: &servicePort},
+						// Mesh path: when the shared workload is linkerd-injected, EG-side
+						// proxy targets the proxy inbound port instead of the service port.
+						{Protocol: &protocol, Port: &proxyPort},
 					},
 				},
 			},

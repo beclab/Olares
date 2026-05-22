@@ -239,6 +239,12 @@ func validPlatformDomain(s string) bool {
 	return true
 }
 
+// PrimeSnapshotForTest replaces the cached ClusterConfig snapshot (tests only).
+func PrimeSnapshotForTest(s Snapshot) {
+	resetCacheForTest()
+	defaultCache.set(s)
+}
+
 // resetCacheForTest is exposed only to tests in the same package.
 func resetCacheForTest() {
 	defaultCache.mu.Lock()

@@ -102,6 +102,10 @@ type ApplicationConfig struct {
 	PodsSelectors        []metav1.LabelSelector
 	HardwareRequirement  Hardware
 	SharedEntrances      []Entrance
+	// GatewayRouteMode is an optional install-time override for
+	// gateway.olares.io/route-mode (gateway | direct). When empty the
+	// cluster sharedURLViewerScheme policy applies (see pkg/gateway/route_mode.go).
+	GatewayRouteMode     string `json:"gatewayRouteMode,omitempty" yaml:"gatewayRouteMode,omitempty"`
 	SelectedGpuType      string
 	Accelerator          []ResourceMode
 	// NeedsSharedAccess signals that the app needs cross-namespace access to a
