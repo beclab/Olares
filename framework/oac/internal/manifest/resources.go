@@ -110,7 +110,7 @@ func specResourceCrossFieldRules(configVersion, apiVersion string, spec *AppSpec
 		supportArch[a] = struct{}{}
 	}
 
-	for i, rm := range spec.AcceleratedResources {
+	for i, rm := range spec.Accelerator {
 		path := fmt.Sprintf("spec.resources[%d]", i)
 
 		if required, ok := modeArchRequirement[rm.Mode]; ok {
@@ -201,7 +201,7 @@ func isLegacyEnvelopeMissing(spec *AppSpec) bool {
 // fields are unconstrained here -- callers (validateAppSpec) decide
 // whether they are required or simply optional for the version in play.
 func ensureLegacyAndResourcesAreMutuallyExclusive(spec *AppSpec) error {
-	if len(spec.AcceleratedResources) == 0 {
+	if len(spec.Accelerator) == 0 {
 		return nil
 	}
 	var errs []error

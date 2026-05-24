@@ -19,8 +19,8 @@ func ResourceLimitsForResourceMode(cfg *AppConfiguration, mode string) (Manifest
 	if cfg == nil {
 		return ManifestResourceLimits{}, fmt.Errorf("oac: AppConfiguration is nil")
 	}
-	for i := range cfg.Spec.AcceleratedResources {
-		rm := &cfg.Spec.AcceleratedResources[i]
+	for i := range cfg.Spec.Accelerator {
+		rm := &cfg.Spec.Accelerator[i]
 		if strings.EqualFold(rm.Mode, mode) {
 			return manifest.ResourceRequirementToLimits(rm.ResourceRequirement), nil
 		}

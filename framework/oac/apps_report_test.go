@@ -741,7 +741,7 @@ func manifestLimitLines(cfg *manifest.AppConfiguration) []string {
 		))
 		return lines
 	}
-	for _, rm := range cfg.Spec.AcceleratedResources {
+	for _, rm := range cfg.Spec.Accelerator {
 		lines = append(lines, fmt.Sprintf(
 			"mode=%s: requiredCpu=%s, limitedCpu=%s, requiredMemory=%s, limitedMemory=%s",
 			rm.Mode,

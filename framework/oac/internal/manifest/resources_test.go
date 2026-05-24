@@ -16,7 +16,7 @@ func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c.ConfigVersion = "0.13.0" // >= 0.12.0 -> rules apply
 	c.APIVersion = APIVersionV1
 	c.Spec.SupportArch = []string{"amd64", "arm64"}
-	c.Spec.AcceleratedResources = modes
+	c.Spec.Accelerator = modes
 	c.Spec.RequiredCPU = ""
 	c.Spec.LimitedCPU = ""
 	c.Spec.RequiredMemory = ""
