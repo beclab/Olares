@@ -243,7 +243,7 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 
 	api := normalizeAPIVersion(apiVersion)
 	var v2ResourcesErr error
-	if api == APIVersionV2 && len(s.AcceleratedResources) > 0 {
+	if api == APIVersionV2 && len(s.Accelerator) > 0 {
 		v2ResourcesErr = fmt.Errorf(
 			"spec.resources is not supported for apiVersion=v2 (including when olaresManifest.version >= 0.12.0); use spec.requiredCpu, spec.limitedCpu, spec.requiredMemory, spec.limitedMemory, and spec.requiredDisk instead",
 		)
@@ -262,7 +262,7 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 	switch {
 	case modern:
 		fields = append(fields,
-			validation.Field(&s.AcceleratedResources,
+			validation.Field(&s.Accelerator,
 				validation.By(validateResourceModeValueFor(&s)),
 			),
 		)
@@ -337,12 +337,12 @@ func legacyEnvelopeFieldRules(s *AppSpec, quantityRule, optionalLimitedDiskQuant
 func validateResourceModeValueFor(spec *AppSpec) validation.RuleFunc {
 	return func(v interface{}) error {
 		var errs []error
-		for i, rm := range spec.AcceleratedResources {
+		for i, rm := range spec.Accelerator {
 			if err := ValidateResourceMode(rm); err != nil {
 				errs = append(errs, fmt.Errorf("spec.resources[%d]: %w", i, err))
 			}
 		}
-		if len(spec.AcceleratedResources) == 0 {
+		if len(spec.Accelerator) == 0 {
 			if err := validateFlatResourceQuantities(spec); err != nil {
 				errs = append(errs, err)
 			}

@@ -84,7 +84,7 @@ spec:
         - cuda
       singleMemory: 8Gi
       totalMemory: 16Gi
-  acceleratedResources:
+  accelerator:
     - mode: cpu
       supportMultiCard: true
       supportMultiNodes: true

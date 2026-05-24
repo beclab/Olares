@@ -46,7 +46,7 @@ func TestAppConfiguration_Constructible(t *testing.T) {
 			SubCharts: []manifest.Chart{
 				{Name: "extra", Shared: true},
 			},
-			AcceleratedResources: []manifest.ResourceMode{
+			Accelerator: []manifest.ResourceMode{
 				{
 					Mode: "cpu",
 					ResourceRequirement: manifest.ResourceRequirement{
@@ -69,8 +69,8 @@ func TestAppConfiguration_Constructible(t *testing.T) {
 	if cfg.Metadata.Name != "demo" {
 		t.Fatalf("metadata round-trip broken: %+v", cfg.Metadata)
 	}
-	if cfg.Spec.AcceleratedResources[0].LimitedCPU != "200m" {
-		t.Fatalf("inline ResourceRequirement round-trip broken: %+v", cfg.Spec.AcceleratedResources[0])
+	if cfg.Spec.Accelerator[0].LimitedCPU != "200m" {
+		t.Fatalf("inline ResourceRequirement round-trip broken: %+v", cfg.Spec.Accelerator[0])
 	}
 	if cfg.Options.Upload.Dest != "/tmp" {
 		t.Fatalf("options.upload round-trip broken: %+v", cfg.Options.Upload)

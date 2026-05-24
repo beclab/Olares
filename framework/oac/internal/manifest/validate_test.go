@@ -360,7 +360,7 @@ func TestValidateAppSpec_LegacyRequiredFieldsBelowGate(t *testing.T) {
 		c.Spec.LimitedDisk = ""
 		c.Spec.RequiredGPU = ""
 		c.Spec.LimitedGPU = ""
-		c.Spec.AcceleratedResources = nil
+		c.Spec.Accelerator = nil
 
 		err := ValidateAppConfiguration(c)
 		if err == nil {
@@ -683,7 +683,7 @@ func TestValidateAppSpec_ModernAcceptsLegacyFlatEnvelope(t *testing.T) {
 	// must still be caught by Rule 7.
 	t.Run("flat_envelope_plus_resources_triggers_mutex", func(t *testing.T) {
 		c := populated()
-		c.Spec.AcceleratedResources = []ResourceMode{{
+		c.Spec.Accelerator = []ResourceMode{{
 			Mode: ResourceModeCPU,
 			ResourceRequirement: ResourceRequirement{
 				RequiredCPU:    "100m",
