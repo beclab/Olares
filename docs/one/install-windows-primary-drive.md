@@ -90,7 +90,6 @@ The Windows setup wizard guides you through the installation.
 
 Install the tested Olares One driver package after Windows starts. The package includes audio, network, chipset, and NVIDIA graphics drivers.
 
-1. Connect Windows to the internet.
-2. Follow [Install drivers on Windows](install-nvidia-driver.md) to download and install the all-in-one driver package.
-3. Restart Windows if the driver installer prompts you to do so.
-4. After Windows restarts, check that network, audio, display, and GPU devices are working normally.
+1. Follow [Install drivers on Windows](install-nvidia-driver.md) to download and install the all-in-one driver package.
+2. Restart Windows if the driver installer prompts you to do so.
+3. After Windows restarts, check that network, audio, display, and GPU devices are working normally.
