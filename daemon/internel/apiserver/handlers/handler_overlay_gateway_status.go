@@ -40,6 +40,10 @@ func (h *Handlers) GetOverlayGatewayStatus(ctx *fiber.Ctx) error {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
 
+	if s == nil {
+		return h.ErrJSON(ctx, http.StatusInternalServerError, "failed to get overlay gateway status")
+	}
+
 	if s.Status == OverlayGatewayOn {
 		// get the supported apps
 		supportedApps, err := h.getOverlayGatewaySupportedApps(ctx.Context(), user)
@@ -85,6 +89,10 @@ func (h *Handlers) getOverlayGatewayStatus(ctx *fiber.Ctx) (*OverlayGatewayStatu
 		return nil, err
 	}
 
+	if c == nil {
+		return s, nil
+	}
+
 	if c.Active {
 		s.Status = OverlayGatewayOn
 	}
@@ -106,7 +114,7 @@ func (h *Handlers) isUnsupported(ctx context.Context) (unsupported bool, reason 
 		return true, "WSL is not supported"
 	case utils.IsDarwin():
 		return true, "MacOS is not supported"
-	case isEthernetConnected(ctx):
+	case !isEthernetConnected(ctx):
 		return true, "Ethernet connection is not active"
 	}
 

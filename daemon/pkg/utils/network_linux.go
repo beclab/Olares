@@ -713,8 +713,8 @@ func FindBridgeConnection(ctx context.Context) (*BridgeConnection, error) {
 	bridgeConnection := &BridgeConnection{}
 	bridgeConnectionActive := true
 	for _, line := range lines {
-		fields := bytes.SplitN(line, []byte(":"), 2)
-		if len(fields) < 2 {
+		fields := bytes.Split(line, []byte(":"))
+		if len(fields) < 3 {
 			continue
 		}
 		name := strings.TrimSpace(string(fields[0]))
