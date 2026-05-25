@@ -260,12 +260,62 @@ func runMkdirP(
 			fmt.Fprintf(out, "  · %s (already exists, skipped)\n", op.DisplayPath)
 			continue
 		}
+		// Defensive: refuse to auto-create a missing depth-1
+		// `external/<node>/<X>/` intermediate. Plan/PlanRecursive
+		// already rejects depth-1 as the FULL target up front, but
+		// `-p` mode with a deeper target (e.g.
+		// `mkdir -p external/<node>/MisnamedVolume/sub/`) materialises
+		// the depth-1 prefix as a separate Op. If the volume isn't
+		// mounted, Exists returns false; without this guard we'd POST
+		// and let the server silently create a phantom volume entry
+		// next to the real mounts. Same client-side gate spirit as
+		// FrontendPath.IsExternalNodeRoot and Plan's depth-1 check —
+		// see SKILL.md's "volume listing layer" note for the contract.
+		if isExternalDepthOneOp(op) {
+			return fmt.Errorf(
+				"mkdir -p %s: depth-1 entry under external/ refers to a mounted volume that does not exist; "+
+					"mount it via LarePass first, or target an existing volume (run `olares-cli files ls %s` to list available volumes)",
+				op.DisplayPath, externalNodeListingPath(op))
+		}
 		if err := client.Mkdir(ctx, op); err != nil {
 			return reformatMkdirHTTPErr(err, olaresID, op.DisplayPath)
 		}
 		fmt.Fprintf(out, "  ✓ %s\n", op.DisplayPath)
 	}
 	return nil
+}
+
+// isExternalDepthOneOp reports whether op points at the depth-1 layer
+// directly under an `external/<node>/` root — i.e. its DisplayPath has
+// shape `external/<node>/<single-segment>/`. Used by runMkdirP to
+// refuse auto-creating a missing volume-list entry (phantom volumes
+// have no underlying filesystem and confuse subsequent listings).
+//
+// Symmetric in spirit with FrontendPath.IsExternalNodeRoot (one level
+// shallower); both guard the same "external/<node>/ is the volume
+// listing layer" contract documented in SKILL.md.
+func isExternalDepthOneOp(op mkdir.Op) bool {
+	d := strings.TrimSuffix(op.DisplayPath, "/")
+	if !strings.HasPrefix(d, "external/") {
+		return false
+	}
+	// rest is "<node>/<seg>..."; depth-1 means exactly one slash
+	// after the node (i.e. two total slashes inside `external/<rest>`).
+	rest := strings.TrimPrefix(d, "external/")
+	return strings.Count(rest, "/") == 1
+}
+
+// externalNodeListingPath strips the depth-1 segment off an op's
+// DisplayPath to recover the `external/<node>/` listing root the
+// error message points users at. Defensive caller: only meaningful
+// when isExternalDepthOneOp(op) returns true.
+func externalNodeListingPath(op mkdir.Op) string {
+	d := strings.TrimSuffix(op.DisplayPath, "/")
+	// d == "external/<node>/<seg>"; lop the last segment + slash.
+	if i := strings.LastIndex(d, "/"); i >= 0 {
+		return d[:i] + "/"
+	}
+	return d + "/"
 }
 
 // frontendPathToMkdirTarget converts the user-supplied path into the

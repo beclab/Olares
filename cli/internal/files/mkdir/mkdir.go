@@ -147,6 +147,26 @@ func Plan(t Target) (Op, error) {
 			"refusing to mkdir the root of %s/%s; pick a subdirectory name (e.g. %s/%s/NewFolder)",
 			t.FileType, t.Extend, t.FileType, t.Extend)
 	}
+	// Depth-1 entries under external/<node>/ are mounted volumes
+	// (USB-0, SMB-..., per-disk mount-points managed by the
+	// LarePass GUI) — NOT regular directories. Creating one via
+	// POST /api/resources/external/<node>/<X>/ on the current
+	// backend either lands as a phantom sitting next to the real
+	// volumes (no underlying filesystem; subsequent reads return
+	// empty) or — if X collides with a real mount — triggers the
+	// auto-rename quirk and produces "X (1)" next to it. Both
+	// outcomes are wrong-by-default, so refuse client-side and
+	// point at the only correct shape (depth ≥ 2 under the node).
+	// Mirrors the bare-root rejection above; symmetric with
+	// upload.go / cp.go's IsExternalNodeRoot fast-fail (one level
+	// shallower) — see SKILL.md's "volume listing layer" note for
+	// the user-visible contract.
+	if t.FileType == "external" && !strings.Contains(clean, "/") {
+		return Op{}, fmt.Errorf(
+			"refusing to mkdir external/%s/%s/: depth-1 entries under external/%s/ are mounted volumes (managed via LarePass, not via files-backend mkdir); "+
+				"point at a sub-path inside a real volume, e.g. external/%s/<volume>/%s/",
+			t.Extend, clean, t.Extend, t.Extend, clean)
+	}
 	for _, seg := range strings.Split(clean, "/") {
 		if seg == "" || seg == "." || seg == ".." {
 			return Op{}, fmt.Errorf(

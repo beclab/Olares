@@ -101,22 +101,24 @@ func TestFrontendPathToEditTarget(t *testing.T) {
 	})
 
 	t.Run("cloud / tencent / share / internal rejected at the planner", func(t *testing.T) {
-		// awss3 / google / dropbox are NOT on the allow-list —
-		// see TestPlan_NamespaceAllowlist for the rationale
-		// (Bug 1: /api/raw returns JSON envelopes for cloud
-		// namespaces, which would silently corrupt the file on
-		// writeback). The adapter still parses them as known
-		// fileTypes; the refusal lands at the planner with a
+		// awss3 / google / dropbox / tencent are NOT on the
+		// allow-list — see TestPlan_NamespaceAllowlist for the
+		// rationale. The fetch leg is now uniform (the unified
+		// /api/raw/ endpoint serves cloud bytes too), but the
+		// writeback PUT against /api/resources/<cloud-path> has
+		// no wire-shape signoff per cloud driver — only awss3's
+		// v2 utils exports a save helper; google / dropbox /
+		// tencent have none, so the planner refuses with a
 		// targeted message that points at the safe
 		// download → edit-locally → upload alternative.
 		cases := []struct {
 			raw  string
 			want []string // substrings the planner err should contain
 		}{
-			{"awss3/myacct/bucket/file.txt", []string{"cloud-drive", "/api/raw", "files download", "files upload"}},
-			{"google/myacct/Documents/draft.md", []string{"cloud-drive", "/api/raw", "files download", "files upload"}},
-			{"dropbox/myacct/Notes/idea.txt", []string{"cloud-drive", "/api/raw", "files download", "files upload"}},
-			{"tencent/myacct/file.txt", []string{"cloud-drive", "/api/raw", "files download", "files upload"}},
+			{"awss3/myacct/bucket/file.txt", []string{"cloud-drive", "/api/resources", "files download", "files upload"}},
+			{"google/myacct/Documents/draft.md", []string{"cloud-drive", "/api/resources", "files download", "files upload"}},
+			{"dropbox/myacct/Notes/idea.txt", []string{"cloud-drive", "/api/resources", "files download", "files upload"}},
+			{"tencent/myacct/file.txt", []string{"cloud-drive", "/api/resources", "files download", "files upload"}},
 			{"share/someuser/notes.md", []string{"not supported"}},
 			{"internal/x/y.md", []string{"not supported"}},
 		}
