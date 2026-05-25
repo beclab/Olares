@@ -21,15 +21,7 @@ const (
 )
 
 const (
-	CodeSuccess                    int32 = 200
-	CodeComputeBindingRequired     int32 = 4601
-	CodeComputeBindingUnavailable  int32 = 4602
-	CodeComputeDeviceSwitchBlocked int32 = 4603
-	// CodeComputeAmbiguousMode is returned by the install endpoint when
-	// the caller did not pick a selectedGpuType and more than one mode in
-	// the manifest is runnable on this cluster. The body carries the
-	// install compute plan so the client can let the user pick.
-	CodeComputeAmbiguousMode int32 = 4604
+	CodeSuccess int32 = 200
 )
 
 // Response represents the code for response.
@@ -224,8 +216,12 @@ type ImageInfoV2 struct {
 }
 
 var (
-	CheckTypeAppEnv      = "appenv"
-	CheckTypeAppEntrance = "appEntrance"
+	CheckTypeAppEnv                     = "appenv"
+	CheckTypeAppEntrance                = "appEntrance"
+	CheckTypeComputeModeSelect          = "computeModeSelect"
+	CheckTypeComputeBindingRequired     = "computeBindingRequired"
+	CheckTypeComputeBindingUnavailable  = "computeBindingUnavailable"
+	CheckTypeComputeDeviceSwitchBlocked = "computeDeviceSwitchBlocked"
 )
 
 type FailedCheckResponse struct {

@@ -14,7 +14,7 @@ const gi = int64(1024 * 1024 * 1024)
 func TestCalculateInstallComputePlanUsesPureInputs(t *testing.T) {
 	app := &appcfg.ApplicationConfig{
 		AppName: "ollama",
-		Resources: []appcfg.ResourceMode{
+		Accelerator: []appcfg.ResourceMode{
 			resourceMode(utils.NvidiaCardType, "8Gi", "1Gi"),
 			resourceMode(utils.AppleMChipType, "", "1Gi"),
 			resourceMode(utils.StrixHaloChipType, "", "8Gi"),
@@ -34,7 +34,7 @@ func TestCalculateInstallComputePlanUsesPureInputs(t *testing.T) {
 func TestInstallComputePlanIgnoresCurrentBindings(t *testing.T) {
 	app := &appcfg.ApplicationConfig{
 		AppName: "llm",
-		Resources: []appcfg.ResourceMode{
+		Accelerator: []appcfg.ResourceMode{
 			resourceMode(utils.NvidiaCardType, "8Gi", "1Gi"),
 		},
 	}
