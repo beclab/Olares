@@ -26,7 +26,7 @@ In this guide, learn how to:
 
 **Hardware**
 - The primary NVMe M.2 SSD installed inside Olares One.
-- A USB flash drive, 8 GB or larger, for the installation media.
+- A USB flash drive (8 GB or larger) for the installation media.
 - A wired keyboard and mouse.
 - A monitor connected to Olares One.
 
@@ -37,7 +37,7 @@ In this guide, learn how to:
 3. Insert the USB flash drive into your computer.
 4. Open balenaEtcher and follow these steps:
 
-   a. Click **Flash from file** and select the downloaded Ubuntu Server ISO.
+   a. Click **Flash from file** and select the downloaded ISO.
 
    b. Click **Select target** and select your USB drive.
 
@@ -110,15 +110,16 @@ The text-based installation wizard guides you through replacing Olares OS on the
 13. On the **SSH Configuration** screen, select **Install OpenSSH server** to allow remote terminal management after connecting to the network later, and then press **Enter**.
 14. The system begins deployment. Wait for the top banner to display **Installation complete**.
 
-   ![Ubuntu installation complete](/images/one/ubuntu-install-complete.png#bordered)
+      ![Ubuntu installation complete](/images/one/ubuntu-install-complete.png#bordered)
 
 15. Select **Reboot Now** at the bottom, and then press **Enter**.
 16. Remove the installation USB drive and press **Enter** when prompted. The system restarts and reboots automatically into your fresh Ubuntu Server environment.
 
-   ![Ubuntu launch](/images/one/ubuntu-launch.png#bordered)
+      ![Ubuntu launch](/images/one/ubuntu-launch.png#bordered)
 
 17. Log in using the account credentials you set previously.
 
 ## Resources
 
+- [Install Ubuntu Desktop on Olares One](install-ubuntu-server.md)
 - [Ubuntu Server documentation](https://ubuntu.com/server/docs)
