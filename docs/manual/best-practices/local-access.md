@@ -16,7 +16,7 @@ By the end of this tutorial, you will learn how to:
 
 - Establish a secure, high-speed local connection using the LarePass VPN.
 - Access Olares services using `.local` domains.
-- Configure local DNS to allow standard URLs to resolve locally across your entire network.
+- Configure local DNS so standard `olares.com` URLs resolve locally across your entire network.
 - Manually map hosts files to ensure access on specific machines without internet.
 
 ## Choose a connection method
@@ -27,7 +27,7 @@ There are four ways to establish a local connection:
 * **[Method 2: Use `.local` domain](#method-2-use-local-domain)**<br/>
   Access the device via a specific local URL format. No installation required.
 * **[Method 3: Configure local DNS](#method-3-configure-local-dns)**<br/>
-  Updates your router or computer's DNS settings to map the standard Olares URL to the local IP address.
+  Updates your router or computer's DNS settings to map standard `olares.com` URLs to the local IP address.
 * **[Method 4: Modify hosts files](#method-4-modify-hosts-files)**<br/>
   Manually maps the standard Olares URL to the local IP on a single computer.
 
@@ -79,7 +79,11 @@ Therefore, no extra setup is needed. You can directly use local URL in your brow
 <!--@include: ../../reusables/local-domain.md#windows-local-domain-->
 
 ## Method 3: Configure local DNS
-For a seamless experience where standard URLs resolve to your local IP address automatically, you can configure your network DNS. This configuration ensures consistent access across all devices on the network without requiring individual client setup.
+Method 3 is for standard Olares URLs that use the `olares.com` domain. These are the same URLs you normally use from outside your local network. By making your DNS resolver answer these `olares.com` names with your Olares device's internal IP address, traffic stays on your LAN while the URL stays unchanged.
+
+:::info `.local` URLs do not need DNS configuration
+Skip this method if you use `.local` URLs from [Method 2](#method-2-use-local-domain). These local domains use local name resolution and do not depend on `olares.com` DNS records.
+:::
 
 ### Find the internal IP for Olares device
 To configure DNS, first you need to find the internal IP for your Olares device.
@@ -122,7 +126,7 @@ Control Hub provides a built-in terminal that allows you to run system commands 
 </tabs>
 
 ### Configure DNS
-With the internal IP address identified, you must now configure your DNS settings to route traffic correctly. You can apply this configuration to a single computer for individual access, or update your router to enable seamless local resolution for all devices on your network.
+With the internal IP address identified, configure DNS for your standard `olares.com` URLs. You can apply this configuration to a single computer for individual access, or update your router to enable seamless local resolution for all devices on your network.
 <tabs>
 <template #Configure-for-local-device>
 
@@ -151,12 +155,16 @@ Update the DNS on your router to apply changes to every device in your network.
 </template>
 </tabs>
 
-Once configured, you can access Olares using both your standard public address and your local address.
+Once configured, open your standard `olares.com` URLs as usual. They will resolve to the Olares device's internal IP when you are on the same network.
 :::tip
 You can install AdGuard Home from the Olares Market to monitor traffic and manage DNS mappings graphically.
 :::
 ## Method 4: Modify hosts files
-If you cannot change router settings and need immediate offline access on a specific computer, you can manually map the domains in your hosts file.
+:::info `.local` URLs do not need manual hosts changes
+If you use `.local` URLs from [Method 2](#method-2-use-local-domain), skip this method. These local domains use local name resolution and do not require manually editing the hosts file.
+:::
+
+Method 4 is for standard `olares.com` URLs only. If you cannot change router settings and need immediate offline access on a specific computer, you can manually map standard `olares.com` domains in your hosts file.
 
 1. Locate your hosts file:
    - **Windows**: `C:\Windows\System32\drivers\etc\hosts`

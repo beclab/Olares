@@ -16,7 +16,7 @@ Olares 的设计初衷是让你随时随地都能无缝访问自己的服务。
 
 - 使用 LarePass 专用网络建立安全、高速的本地连接。
 - 使用 `.local` 域名访问 Olares 服务。
-- 配置本地 DNS，使全网设备可通过标准 URL 进行本地访问。
+- 配置本地 DNS，让基于 `olares.com` 的标准地址在局域网内解析到 Olares。
 - 手动修改 Hosts 文件，确保特定计算机在无外网环境下也能访问。
 
 ## 选择连接方式
@@ -25,11 +25,11 @@ Olares 的设计初衷是让你随时随地都能无缝访问自己的服务。
 * **[方法 1：启用 LarePass 专用网络](#方法-1-启用-larepass-专用网络)**<br/>
   利用 LarePass 专用网络自动检测本地网络并优化连接速度，无需更改任何设置。
 * **[方法 2：使用 `.local` 域名](#方法-2-使用-local-域名)**<br/>
-  通过特定的本地 URL 格式访问设备。无需安装任何软件。
+  通过特定的本地地址格式访问设备。无需安装任何软件。
 * **[方法 3：配置本地 DNS](#方法-3-配置本地-dns)**<br/>
-  更新路由器或计算机的 DNS 设置，将标准 Olares URL 映射到本地 IP 地址。
+  更新路由器或计算机的 DNS 设置，将基于 `olares.com` 的标准 Olares 地址映射到本地 IP 地址。
 * **[方法 4：修改 Hosts 文件](#方法-4-修改-hosts-文件)**<br/>
-  在单台计算机上手动将标准 Olares URL 映射到本地 IP。
+  在单台计算机上手动将标准 Olares 地址映射到本地 IP。
 
 ## 方法 1：启用 LarePass 专用网络
 LarePass 专用网络旨在兼顾连接安全与性能优化。启用后，LarePass 会自动检测设备是否处于同一网络，并切换至**内网**模式。
@@ -48,22 +48,22 @@ LarePass 专用网络旨在兼顾连接安全与性能优化。启用后，LareP
 
 ### 单级域名（所有操作系统适用）
 :::warning 仅支持社区应用
-Desktop 和文件管理器等 Olares 系统应用不支持此 URL 格式，因此无法正确加载。
+Desktop 和文件管理器等 Olares 系统应用不支持此地址格式，因此无法正确加载。
 :::
 此格式通过连字符（`-`）连接入口 ID 和用户名来使用单级主机名。
 
-**标准 URL**
+**标准地址**
 ```plain
 https://<entrance_id>.<username>.olares.cn
 ```
-**本地访问 URL**
+**本地访问地址**
 ```plain
 http://<entrance_id>-<username>-olares.local
 ```
 
 ### 多级域名
 
-The multi-level format below matches the structure of your standard Olares URL. Use it as shown.
+下方的多级域名格式与标准 Olares 地址结构一致。按示例使用即可。
 
 <!--@include: ../../reusables/local-domain.md#local-domain-overview-->
 
@@ -72,14 +72,18 @@ The multi-level format below matches the structure of your standard Olares URL. 
 #### macOS and iOS
 Apple devices support local service discovery via [Bonjour](https://developer.apple.com/bonjour/) (zero‑configuration networking), which can resolve multi‑label domains under `.local` on macOS and iOS.
 
-Therefore, no extra setup is needed. You can directly use local URL in your browser.
+因此无需额外设置。你可以直接在浏览器中使用本地地址。
 
 #### Windows
 
 <!--@include: ../../reusables/local-domain.md#windows-local-domain-->
 
 ## 方法 3：配置本地 DNS
-为了获得无缝体验（即标准 URL 自动解析为你的本地 IP 地址），你可以配置网络 DNS。此配置确保网络上所有设备的访问一致，无需单独设置客户端。
+方法 3 适用于基于 `olares.com` 域名的标准 Olares 地址，即外网访问时使用的常规地址。通过配置 DNS 解析器，将此类 `olares.com` 域名解析为 Olares 设备的内网 IP，即可在不改变访问地址的前提下，使网络流量仅在局域网内传输。
+
+:::info `.local` 地址无需配置 DNS
+若使用[方法 2](#方法-2-使用-local-域名) 中的 `.local` 地址，可跳过此步骤。此类本地域名采用局域网内的名称解析机制，不依赖 `olares.com` 的 DNS 记录。
+:::
 
 ### 查找 Olares 设备的内网 IP
 要配置 DNS，首先需要找到 Olares 设备的内网 IP。
@@ -122,7 +126,7 @@ Therefore, no extra setup is needed. You can directly use local URL in your brow
 </tabs>
 
 ### 配置 DNS
-确定内网 IP 地址后，现在必须配置 DNS 设置以正确路由流量。你可以将此配置应用于单台电脑以供个人访问，或者更新路由器以实现网络上所有设备的无缝本地解析。
+确定内网 IP 地址后，为标准 `olares.com` 地址配置 DNS。你可以将此配置应用于单台电脑以供个人访问，或者更新路由器以实现网络上所有设备的无缝本地解析。
 <tabs>
 <template #设置单台设备>
 
@@ -151,12 +155,16 @@ Therefore, no extra setup is needed. You can directly use local URL in your brow
 </template>
 </tabs>
 
-配置完成后，可以使用标准公网地址和本地地址访问 Olares。
+配置完成后，像往常一样打开标准 `olares.com` 地址即可。在同一局域网内，它会解析到 Olares 设备的内网 IP。
 :::tip
 你可以从 Olares 应用市场安装 AdGuard Home，以图形化方式监控流量并管理 DNS 映射。
 :::
 ## 方法 4：修改 hosts 文件
-如果无法更改路由器设置且需要在特定电脑上立即离线访问，可以在 hosts 文件中手动映射域名。
+:::info `.local` 地址无需手动修改 hosts 文件
+若使用[方法 2](#方法-2-使用-local-域名) 中的 `.local` 地址，可跳过本方法。此类本地域名使用本地域名解析，无需手动编辑 hosts 文件。
+:::
+
+方法 4 仅适用于标准 `olares.com` 地址。如果无法更改路由器设置，且需要在特定电脑上立即离线访问，可以在 hosts 文件中手动映射标准 `olares.com` 域名。
 
 1. 找到 hosts 文件：
    - **Windows**：`C:\Windows\System32\drivers\etc\hosts`
@@ -180,7 +188,7 @@ Therefore, no extra setup is needed. You can directly use local URL in your brow
     ```
 4. 保存文件以应用更改。这能确保即使在断网情况下，你也能进行本地访问。
 
-你可以通过检查 URL 加载速度或使用终端来验证更改。例如：
+你可以通过检查地址加载速度或使用终端来验证更改。例如：
 ```bash
 ping desktop.<username>.olares.cn
 ```
