@@ -195,4 +195,5 @@ After Windows installation, you can change the display language using the standa
 
 ## Resources
 
+- [Enable Intel integrated GPU passthrough for Windows VM](/use-cases/windows-intel-gpu-passthrough.md): Install the Intel graphics driver and verify integrated GPU detection in Windows.
 - [Clone applications](/manual/olares/market/clone-apps.md): Learn how to run multiple Windows instances on Olares.

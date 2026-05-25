@@ -25,6 +25,10 @@ func (h *Handler) getGpuTypes(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
+	// Always surface "cpu" as a selectable option: every cluster can host
+	// CPU-only workloads, so the frontend should be able to offer that mode
+	// regardless of which (if any) GPU flavours the cluster declares.
+	gpuTypes[utils.CPUType] = struct{}{}
 
 	resp.WriteAsJson(&map[string]interface{}{
 		"gpu_types": maps.Keys(gpuTypes),

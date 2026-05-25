@@ -15,6 +15,8 @@ import (
 //	files upload   — resumable chunked upload          (cmd/ctl/files/upload.go)
 //	files download — single-file or recursive pull     (cmd/ctl/files/download.go)
 //	files cat      — stream a file to stdout           (cmd/ctl/files/cat.go)
+//	files edit     — edit a file in place via $EDITOR  (cmd/ctl/files/edit.go,
+//	                                                    internal/files/edit/edit.go)
 //	files mkdir    — create a directory (with -p)      (cmd/ctl/files/mkdir.go,
 //	                                                    internal/files/mkdir/mkdir.go)
 //	files rm       — batched DELETE                    (cmd/ctl/files/rm.go)
@@ -87,6 +89,7 @@ Examples:
 		NewUploadCommand(f),
 		NewDownloadCommand(f),
 		NewCatCommand(f),
+		NewEditCommand(f),
 		NewMkdirCommand(f),
 		NewRmCommand(f),
 		NewCpCommand(f),

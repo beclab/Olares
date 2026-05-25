@@ -51,20 +51,21 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 ### Step 1: Get model and endpoint details
 
-1. Check the installed models by running the following command:
+1. Open the Ollama app from the Launchpad.
+2. Check the installed models by running the following command:
 
     ```bash
     ollama list
     ```
-2. Copy and save your model name exactly as shown in the **NAME** column. For example, `qwen3.5:9b`.
-3. Check the context window of the model by running the following command:
+3. Copy and save your model name exactly as shown in the **NAME** column. For example, `qwen3.5:9b`.
+4. Check the context window of the model by running the following command:
 
     ```bash
     ollama ps
     ```
 
-4. Copy and save the value as shown in the **CONTEXT** column. For example, `32768`.
-5. Open Settings, go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint address. For example, `http://d54536a50.shared.olares.com`.
+5. Copy and save the value as shown in the **CONTEXT** column. For example, `32768`.
+6. Open Settings, go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint address. For example, `http://d54536a50.shared.olares.com`.
 
     ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint1.png#bordered){width=65%}
 

@@ -226,6 +226,59 @@ func GetNodeCpuResource(ctx context.Context) (map[string]apiserver_api.CPUInfo, 
 	return result, nil
 }
 
+type NodeResourceUsage struct {
+	CPUCapacity     int64
+	CPUUtilization  float64
+	MemoryCapacity  int64
+	MemoryAvailable int64
+	DiskCapacity    int64
+	DiskAvailable   int64
+}
+
+func GetNodeResourceUsage(ctx context.Context) (map[string]NodeResourceUsage, error) {
+	p, err := New(Endpoint)
+	if err != nil {
+		return nil, err
+	}
+	opts := QueryOptions{Level: LevelCluster}
+	metrics := p.GetNamedMetrics(ctx, []string{"node_cpu_capacity", "node_cpu_utilisation", "node_memory_capacity", "node_memory_available", "node_disk_capacity", "node_disk_available"}, time.Now(), opts)
+	result := make(map[string]NodeResourceUsage)
+	for _, m := range metrics {
+		if m.Error != "" {
+			return nil, fmt.Errorf("query %s: %s", m.MetricName, m.Error)
+		}
+		for _, mv := range m.MetricData.MetricValues {
+			if mv.Sample == nil {
+				continue
+			}
+			node := mv.Metadata["node"]
+			if node == "" {
+				node = mv.Metadata["instance"]
+			}
+			if node == "" {
+				continue
+			}
+			usage := result[node]
+			switch m.MetricName {
+			case "node_cpu_capacity":
+				usage.CPUCapacity = int64(mv.Sample[1] * 1000)
+			case "node_cpu_utilisation":
+				usage.CPUUtilization = mv.Sample[1]
+			case "node_memory_capacity":
+				usage.MemoryCapacity = int64(mv.Sample[1])
+			case "node_memory_available":
+				usage.MemoryAvailable = int64(mv.Sample[1])
+			case "node_disk_capacity":
+				usage.DiskCapacity = int64(mv.Sample[1])
+			case "node_disk_available":
+				usage.DiskAvailable = int64(mv.Sample[1])
+			}
+			result[node] = usage
+		}
+	}
+	return result, nil
+}
+
 func GetCurUserResource(ctx context.Context, username string) (*ClusterMetrics, error) {
 	p, err := New(Endpoint)
 	if err != nil {

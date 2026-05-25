@@ -11,6 +11,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -86,6 +87,11 @@ func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
 func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
+	request := &ResumeRequest{}
+	if err := readOptionalEntity(req, request); err != nil {
+		api.HandleBadRequest(resp, req, err)
+		return
+	}
 	token, err := h.GetUserServiceAccountToken(req.Request.Context(), owner)
 	if err != nil {
 		klog.Error("Failed to get user service account token: ", err)
@@ -133,18 +139,57 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	am.Spec.OpType = v1alpha1.ResumeOp
 	// if current user is admin, also resume server side
 	isAdmin, err := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
+	includeSharedServer, err := compute.ShouldIncludeSharedServerForResume(req.Request.Context(), h.ctrlClient, appCfg, isAdmin)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	bindingResult, err := compute.ApplyBindingSelection(req.Request.Context(), h.ctrlClient, appCfg, request.ComputeBinding, includeSharedServer)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	switch bindingResult.Status {
+	case compute.BindingApplyStatusRequired:
+		writeComputeAvailability(resp, api.CodeComputeBindingRequired, bindingResult.Availability, bindingResult.Validation)
+		return
+	case compute.BindingApplyStatusUnavailable:
+		writeComputeAvailability(resp, api.CodeComputeBindingUnavailable, bindingResult.Availability, bindingResult.Validation)
+		return
+	case compute.BindingApplyStatusApplied:
+	case compute.BindingApplyStatusNotRequired:
+	}
+
+	bindingAccepted := bindingResult.Status != compute.BindingApplyStatusApplied
+	defer func() {
+		if bindingAccepted {
+			return
+		}
+		targetApp, targetOwner := bindingResult.TargetApp, bindingResult.TargetOwner
+		if targetApp == "" {
+			targetApp = appCfg.AppName
+		}
+		if targetOwner == "" {
+			targetOwner = appCfg.OwnerName
+		}
+		if cleanupErr := compute.DeleteAllocationsForApp(req.Request.Context(), h.ctrlClient, targetApp, targetOwner); cleanupErr != nil {
+			klog.Warningf("cleanup compute allocation for failed resume %s failed: %v", appCfg.AppName, cleanupErr)
+		}
+	}()
+
+	am.Spec.OpType = v1alpha1.ResumeOp
 	if am.Annotations == nil {
-		am.Annotations = make(map[string]string)
+		am.Annotations = map[string]string{}
 	}
 	am.Annotations[api.AppResumeAllKey] = fmt.Sprintf("%t", false)
-	if isAdmin {
+	if includeSharedServer {
 		am.Annotations[api.AppResumeAllKey] = fmt.Sprintf("%t", true)
 	}
 	err = h.ctrlClient.Update(req.Request.Context(), &am)
@@ -169,8 +214,26 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resp.WriteEntity(api.InstallationResponse{
-		Response: api.Response{Code: 200},
+	bindingAccepted = true
+
+	resp.WriteAsJson(api.InstallationResponse{
+		Response: api.Response{Code: api.CodeSuccess},
 		Data:     api.InstallationResponseData{UID: app, OpID: opID},
+	})
+}
+
+type ResumeRequest struct {
+	ComputeBinding []compute.BindingSelection `json:"computeBinding,omitempty"`
+}
+
+func writeComputeAvailability(resp *restful.Response, code int32, availability *compute.AvailabilityResult, validation ...*compute.BindingValidationResult) {
+	var bindingValidation *compute.BindingValidationResult
+	if len(validation) > 0 {
+		bindingValidation = validation[0]
+	}
+	resp.WriteAsJson(ComputeAvailabilityResponse{
+		Response:   api.Response{Code: code},
+		Data:       availability,
+		Validation: bindingValidation,
 	})
 }

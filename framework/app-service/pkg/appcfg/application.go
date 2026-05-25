@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
-	"github.com/beclab/Olares/framework/oac"
 	manifestsysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -22,10 +21,14 @@ type AppCachePermission string
 type UserDataPermission string
 
 type AppRequirement struct {
-	Memory *resource.Quantity
-	Disk   *resource.Quantity
-	GPU    *resource.Quantity
-	CPU    *resource.Quantity
+	Memory        *resource.Quantity
+	Disk          *resource.Quantity
+	GPU           *resource.Quantity
+	CPU           *resource.Quantity
+	LimitedMemory *resource.Quantity
+	LimitedDisk   *resource.Quantity
+	LimitedGPU    *resource.Quantity
+	LimitedCPU    *resource.Quantity
 }
 
 type AppPolicy struct {
@@ -106,7 +109,9 @@ type ApplicationConfig struct {
 	// Force-set to true for v3 apps in toApplicationConfig regardless of
 	// manifest value because v3 apps are themselves the destination of shared
 	// traffic and naturally need the same treatment.
-	NeedsSharedAccess bool
+	NeedsSharedAccess       bool
+	OverlayGatewaySupported bool
+	LLMGatewaySupported     bool
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -171,36 +176,129 @@ func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]Entranc
 	return GenSharedEntranceURL(ctx, app)
 }
 
-func (c *ApplicationConfig) GetSelectedGpuTypeValue() string {
-	if c.SelectedGpuType == "" {
-		return "none"
+func (c *ApplicationConfig) SelectedResourceMode() (ResourceMode, bool) {
+	modes := c.ComputeResourceModes()
+	if len(modes) == 1 && len(c.Resources) == 0 {
+		return modes[0], true
 	}
-	return c.SelectedGpuType
+	mode := findResourceMode(modes, c.SelectedGpuType)
+	if mode == nil {
+		return ResourceMode{}, false
+	}
+	return *mode, true
 }
 
+// ComputeResourceModes returns the modes the app declares support for.
+// New-format manifests (>= 0.12.0) carry an explicit spec.resources matrix
+// and are returned verbatim. Legacy manifests (< 0.12.0) don't have a
+// per-mode matrix, so we synthesize a single ResourceMode whose Mode is
+// derived from c.SelectedGpuType / c.Requirement.GPU — see
+// legacyComputeMode for the exact rules.
+func (c *ApplicationConfig) ComputeResourceModes() []ResourceMode {
+	if len(c.Resources) > 0 {
+		return c.Resources
+	}
+	mode := legacyComputeMode(c)
+	return []ResourceMode{{
+		Mode:                mode,
+		ResourceRequirement: c.Requirement.ResourceRequirement(mode),
+	}}
+}
+
+// legacyComputeMode picks the synthesized mode for a legacy manifest:
+//
+//   - If SelectedGpuType is set, use it verbatim. This covers the path
+//     where the install caller explicitly picked a GPU type (or the
+//     auto-selector did so on their behalf and we re-loaded the appCfg
+//     with the chosen mode).
+//   - If SelectedGpuType is empty and the manifest has a non-zero
+//     Requirement.GPU, fall back to nvidia — the only legacy-supported
+//     GPU type. This is what the install pre-check and the first
+//     GetAppConfig call see before auto-selection runs.
+//   - Otherwise the app is cpu-only.
+func legacyComputeMode(c *ApplicationConfig) string {
+	if c.SelectedGpuType != "" {
+		return c.SelectedGpuType
+	}
+	if c.Requirement.GPU != nil && !c.Requirement.GPU.IsZero() {
+		return utils.NvidiaCardType
+	}
+	return utils.CPUType
+}
+
+func (r AppRequirement) ResourceRequirement(mode string) ResourceRequirement {
+	req := ResourceRequirement{
+		RequiredCPU:    quantityString(r.CPU),
+		LimitedCPU:     quantityString(r.LimitedCPU),
+		RequiredMemory: quantityString(r.Memory),
+		LimitedMemory:  quantityString(r.LimitedMemory),
+		RequiredDisk:   quantityString(r.Disk),
+		LimitedDisk:    quantityString(r.LimitedDisk),
+	}
+	if mode == utils.NvidiaCardType {
+		req.RequiredGPU = quantityString(r.GPU)
+		req.LimitedGPU = quantityString(r.LimitedGPU)
+	}
+	return req
+}
+
+func quantityString(q *resource.Quantity) string {
+	if q == nil {
+		return ""
+	}
+	return q.String()
+}
+
+// resolveResourceMode picks the ResourceMode the install pipeline should
+// load against. The fallback rules differ depending on whether the caller
+// is expressing "no preference" or "I picked this specific mode":
+//
+//   - selectedGpu == ""  →  caller hasn't decided yet (install pre-check or
+//     the first GetAppConfig before auto-select runs). Prefer the cpu mode
+//     so legacy-style chart values stay stable; if the manifest doesn't
+//     declare a cpu mode (e.g. a GPU-only new-format app), fall back to
+//     the first declared mode as a placeholder. Either way, the install
+//     handler's auto-select step reloads the chart with the real chosen
+//     mode immediately afterwards, so the placeholder Requirement never
+//     reaches AllocateForInstall / AppInstallable.
+//
+//   - selectedGpu != ""  →  caller explicitly picked this mode. Match
+//     exactly and surface a "not declared" error if the manifest doesn't
+//     have it; silently falling back to cpu / first-mode would leave
+//     SelectedGpuType and Requirement out of sync and produce a misleading
+//     "compute resource is not enough" message at the AppInstallable gate.
+//
+// Returns nil only when modes is empty (the caller turns that into an
+// "empty compute resources" error) or when an explicitly selected mode
+// is not declared in the manifest.
 func resolveResourceMode(modes []ResourceMode, selectedGpu string) *ResourceMode {
-	targetMode := selectedGpu
-	if targetMode == "" || targetMode == "none" {
-		targetMode = utils.CPUType
+	if selectedGpu == "" {
+		if cpu := findResourceMode(modes, utils.CPUType); cpu != nil {
+			return cpu
+		}
+		// GPU-only new-format manifest: no cpu mode to fall back to. Use
+		// the first declared mode as a load-time placeholder so the chart
+		// loader can succeed; the install handler's auto-select step will
+		// pick the real mode and reload before any downstream code sees
+		// this Requirement.
+		if len(modes) > 0 {
+			return &modes[0]
+		}
+		return nil
 	}
+	return findResourceMode(modes, selectedGpu)
+}
 
+func findResourceMode(modes []ResourceMode, mode string) *ResourceMode {
 	for i := range modes {
-		if modes[i].Mode == targetMode {
+		if modes[i].Mode == mode {
 			return &modes[i]
 		}
 	}
-
-	// no target mode found fallback to cpu mode
-	for i := range modes {
-		if modes[i].Mode == utils.CPUType {
-			return &modes[i]
-		}
-	}
-
 	return nil
 }
 
-// ParseResourceRequirement converts the scalar required* fields of a
+// ParseResourceRequirement converts the scalar required*/limited* fields of a
 // ResourceRequirement into an AppRequirement. Empty fields and values that
 // fail with resource.ErrFormatWrong are treated as "not set" and produce a
 // nil quantity; any other parse error is returned to the caller. This mirrors
@@ -237,12 +335,32 @@ func ParseResourceRequirement(req *ResourceRequirement) (AppRequirement, error) 
 	if err != nil {
 		return AppRequirement{}, fmt.Errorf("parse required gpu %q: %w", req.RequiredGPU, err)
 	}
+	limCPU, err := parseQty(req.LimitedCPU)
+	if err != nil {
+		return AppRequirement{}, fmt.Errorf("parse limited cpu %q: %w", req.LimitedCPU, err)
+	}
+	limMem, err := parseQty(req.LimitedMemory)
+	if err != nil {
+		return AppRequirement{}, fmt.Errorf("parse limited memory %q: %w", req.LimitedMemory, err)
+	}
+	limDisk, err := parseQty(req.LimitedDisk)
+	if err != nil {
+		return AppRequirement{}, fmt.Errorf("parse limited disk %q: %w", req.LimitedDisk, err)
+	}
+	limGPU, err := parseQty(req.LimitedGPU)
+	if err != nil {
+		return AppRequirement{}, fmt.Errorf("parse limited gpu %q: %w", req.LimitedGPU, err)
+	}
 
 	return AppRequirement{
-		CPU:    cpu,
-		Memory: mem,
-		Disk:   disk,
-		GPU:    gpu,
+		CPU:           cpu,
+		Memory:        mem,
+		Disk:          disk,
+		GPU:           gpu,
+		LimitedCPU:    limCPU,
+		LimitedMemory: limMem,
+		LimitedDisk:   limDisk,
+		LimitedGPU:    limGPU,
 	}, nil
 }
 
@@ -251,28 +369,42 @@ func ParseResourceRequirement(req *ResourceRequirement) (AppRequirement, error) 
 // single source of truth for picking between the new spec.resources matrix
 // and the legacy scalar spec.required* fields.
 //
-//   - New manifest format (>= 0.12.0): pick the ResourceMode that matches
-//     selectedGpu from c.Resources (which must be non-empty).
-//   - Legacy manifest format (< 0.12.0): return c.Requirement directly. The
-//     scalar fields are expected to already be populated (and any
-//     supportedGpu special-resource overrides applied) at conversion time.
+//   - New manifest format (>= 0.12.0): pick the ResourceMode whose Mode
+//     equals selectedGpu from c.Resources. If selectedGpu is empty
+//     (pre-check / first GetAppConfig before auto-select runs), prefer
+//     the cpu mode; if the manifest declares no cpu mode, fall back to
+//     the first declared mode as a placeholder so the chart loader has
+//     something to bind against. The install handler's auto-select step
+//     reloads with the real chosen mode immediately afterwards. If
+//     selectedGpu names a mode the manifest doesn't declare, return an
+//     error rather than silently using cpu / first-mode.
+//   - Legacy manifest format (< 0.12.0): synthesize a single ResourceMode
+//     from c.Requirement. Apps without requiredGpu become cpu mode; apps
+//     with requiredGpu become nvidia mode (or whatever SelectedGpuType
+//     is set to).
 func (c *ApplicationConfig) ResolveRequirement(selectedGpu string) (*AppRequirement, error) {
-	if oac.IsNewOlaresManifestVersion(c.CfgFileVersion) {
-		if len(c.Resources) == 0 {
-			return nil, fmt.Errorf("empty spec resources")
-		}
-		mode := resolveResourceMode(c.Resources, selectedGpu)
-		if mode == nil {
-			return nil, fmt.Errorf("mode %s not found in spec resources", selectedGpu)
-		}
-		req, err := ParseResourceRequirement(&mode.ResourceRequirement)
+	modes := c.ComputeResourceModes()
+	if len(modes) == 0 {
+		return nil, fmt.Errorf("empty compute resources")
+	}
+	if len(c.Resources) == 0 && len(modes) == 1 {
+		req, err := ParseResourceRequirement(&modes[0].ResourceRequirement)
 		if err != nil {
-			return nil, fmt.Errorf("resolve requirement for mode %s: %w", mode.Mode, err)
+			return nil, fmt.Errorf("resolve requirement for mode %s: %w", modes[0].Mode, err)
 		}
 		return &req, nil
 	}
-
-	req := c.Requirement
+	mode := resolveResourceMode(modes, selectedGpu)
+	if mode == nil {
+		// resolveResourceMode only returns nil when an *explicit* mode
+		// wasn't found in the manifest; the empty-selectedGpu case is
+		// handled by the placeholder fallback inside it.
+		return nil, fmt.Errorf("mode %q is not declared in spec.resources", selectedGpu)
+	}
+	req, err := ParseResourceRequirement(&mode.ResourceRequirement)
+	if err != nil {
+		return nil, fmt.Errorf("resolve requirement for mode %s: %w", mode.Mode, err)
+	}
 	return &req, nil
 }
 

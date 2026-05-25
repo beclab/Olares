@@ -766,29 +766,26 @@ func (h *Handler) oamValues(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	gpuType := "none"
+	gpuType := utils.CPUType
 	selectedGpuType := req.QueryParameter("gputype")
-	if len(gpuTypes) > 0 {
-		if selectedGpuType != "" {
-			if _, ok := gpuTypes[selectedGpuType]; ok {
-				gpuType = selectedGpuType
-			} else {
-				err := fmt.Errorf("selected gpu type %s not found in cluster", selectedGpuType)
-				klog.Error(err)
-				api.HandleError(resp, req, err)
-				return
-			}
-		} else {
-			if len(gpuTypes) == 1 {
-				gpuType = maps.Keys(gpuTypes)[0]
-			} else {
-				err := fmt.Errorf("multiple gpu types found in cluster, please specify one")
-				klog.Error(err)
-				api.HandleError(resp, req, err)
-				return
-			}
+	if selectedGpuType != "" {
+		if _, ok := gpuTypes[selectedGpuType]; !ok && selectedGpuType != utils.CPUType {
+			err := fmt.Errorf("selected gpu type %s not found in cluster", selectedGpuType)
+			klog.Error(err)
+			api.HandleError(resp, req, err)
+			return
 		}
+		gpuType = selectedGpuType
+	} else if len(gpuTypes) == 1 {
+		// Single-GPU-flavour cluster: auto-pick it so legacy charts that
+		// switch behaviour on .Values.GPU.Type render correctly without the
+		// caller having to plumb ?gputype= through.
+		gpuType = maps.Keys(gpuTypes)[0]
 	}
+	// Multi-flavour cluster with no explicit selection (e.g. the chart-repo
+	// "Rendered Chart Verification" path) falls through to CPU. Charts that
+	// declare spec.resources[] for multiple modes still validate fine because
+	// the matrix is consumed by app-service post-install, not by helm render.
 
 	values["GPU"] = map[string]interface{}{
 		"Type": gpuType,

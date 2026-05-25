@@ -123,7 +123,14 @@ Caveats:
     ` + "`sync/<repo_id>/`" + `) — those always exist, so the call would
     just be a no-op (or trigger the auto-rename quirk on the
     extend folder, which is never what you want).
-  - Bare ` + "`.`" + ` / ` + "`..`" + ` segments are rejected as obvious typos.
+  - ` + "`.`" + ` and ` + "`..`" + ` segments ANYWHERE in <remote-path> are
+    rejected (path-traversal blacklist). This includes leaf
+    (` + "`drive/Home/.`" + `, ` + "`drive/Home/..`" + `), interior segments
+    (` + "`drive/Home/foo/./bar`" + `, ` + "`drive/Home/foo/../bar`" + `), and
+    repeated traversals (` + "`drive/Home/../../etc`" + `). The check
+    runs on the raw input before any path normalization, so a
+    silently-collapsing form like ` + "`foo/../bar`" + ` errors out
+    instead of landing as ` + "`bar`" + ` under the volume.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -267,7 +274,19 @@ func runMkdirP(
 // layer can give a friendlier error message naming the actual
 // `<fileType>/<extend>`, while Plan stays robust against a future
 // caller that bypasses this helper.
+//
+// `.` / `..` segments in the RAW input are rejected up front via
+// ValidateNoDotSegments — without this pre-check ParseFrontendPath's
+// `path.Clean` step would silently collapse them away (e.g.
+// `drive/Home/foo/./bar` → `drive/Home/foo/bar`,
+// `drive/Home/foo/../bar` → `drive/Home/bar`), leaving the planner's
+// own `.` / `..` blacklist effectively dead code on the CLI surface.
+// See ValidateNoDotSegments's doc for the full rationale and the
+// scoped-to-mkdir/rename policy.
 func frontendPathToMkdirTarget(raw string) (mkdir.Target, error) {
+	if err := ValidateNoDotSegments(raw); err != nil {
+		return mkdir.Target{}, fmt.Errorf("mkdir: %w", err)
+	}
 	fp, err := ParseFrontendPath(raw)
 	if err != nil {
 		return mkdir.Target{}, err

@@ -185,3 +185,17 @@ func GetOwner(ctx context.Context, kubeConfig *rest.Config) (string, error) {
 	}
 	return "", errors.New("user with role owner not found")
 }
+
+// GetClusterOwner returns the cluster's primary owner user (the one
+// carrying bytetrade.io/owner-role=owner) using ambient controller
+// runtime kubeconfig. Convenience wrapper around GetOwner for callers
+// that do not already hold a *rest.Config — see
+// (*appcfg.ApplicationConfig).GetOwnerName, which delegates here for
+// v3 / cluster-shared apps.
+func GetClusterOwner(ctx context.Context) (string, error) {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return "", err
+	}
+	return GetOwner(ctx, config)
+}

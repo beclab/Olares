@@ -44,7 +44,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Hermes Agent",
               link: "/zh/use-cases/hermes", 
-            },            
+            },
+            {
+              text: "Claude Code",
+              link: "/zh/use-cases/claude-code",
+            },                        
             {
               text: "OpenCode",
               link: "/zh/use-cases/opencode",
@@ -251,6 +255,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items:[
                 {
+                  text: "Enable Intel integrated GPU passthrough",
+                  link: "/zh/use-cases/windows-intel-gpu-passthrough",
+                },
+                {
                   text: "Known issues",
                   link: "/zh/use-cases/windows-issues",
                 },
@@ -324,9 +332,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Plane",
               link: "/zh/use-cases/plane",
             },
-            {  
+            {
               text: "Excalidraw",
               link: "/zh/use-cases/excalidraw",
+            },
+            {
+              text: "Karakeep",
+              link: "/zh/use-cases/karakeep",
+            },
+            {
+              text: "Penpot",
+              link: "/zh/use-cases/penpot",
             },
             {
               text: "RNA Sequencing",
