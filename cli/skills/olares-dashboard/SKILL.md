@@ -281,7 +281,7 @@ HAMI's WebUI returns the payload **at the top level** for every endpoint we call
 |---|---|---|
 | `POST /hami/api/vgpu/v1/gpus` | `{"list":[ {graphics...} ]}` | `struct{ List []map[string]any }`, return `raw.List` |
 | `POST /hami/api/vgpu/v1/containers` | `{"items":[ {task...} ]}` | `struct{ Items []map[string]any }`, return `raw.Items` |
-| `GET /hami/api/vgpu/v1/gpu?uuid=…` | `{ ...graphics fields... }` | `map[string]any`, return verbatim |
+| `GET /hami/api/vgpu/v1/gpu?uid=…` | `{ ...graphics fields... }` | `map[string]any`, return verbatim |
 | `GET /hami/api/vgpu/v1/container?name=…&podUid=…` | `{ ...task fields... }` | `map[string]any`, return verbatim |
 
 The fetchers in [`pkg/dashboard/gpu.go`](cli/pkg/dashboard/gpu.go) are pinned to this shape; `TestFetchGraphicsList_ParsesTopLevelList` / `TestFetchTaskList_ParsesTopLevelItems` / `TestFetchGraphicsDetail_ReturnsBodyAsIs` / `TestFetchTaskDetail_ReturnsBodyAsIs` enforce the contract (in `cli/pkg/dashboard/dashboard_test.go`).

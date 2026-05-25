@@ -1347,6 +1347,30 @@ func TestFetchGraphicsDetail_ReturnsBodyAsIs(t *testing.T) {
 	}
 }
 
+// TestFetchGraphicsDetail_SendsUidQueryParam pins the wire-name
+// contract: HAMI accepts the GPU UUID under the `uid` query key
+// (see the SPA's `GraphicsDetailsParams { uid: string }` in
+// src/apps/dashboard/types/gpu.ts). An earlier revision sent
+// `?uuid=...` and HAMI silently returned a zero-filled placeholder
+// object — this test is the regression net for that bug.
+func TestFetchGraphicsDetail_SendsUidQueryParam(t *testing.T) {
+	const want = "GPU-e5d26177-beec-64c1-2681-56cc973d9910"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("uid"); got != want {
+			t.Errorf("query 'uid' = %q, want %q", got, want)
+		}
+		if got := r.URL.Query().Get("uuid"); got != "" {
+			t.Errorf("query 'uuid' = %q, want empty (HAMI expects 'uid')", got)
+		}
+		_, _ = w.Write([]byte(`{"uuid":"` + want + `","type":"NVIDIA","health":true}`))
+	}))
+	defer srv.Close()
+	c := newTestClient(srv)
+	if _, err := fetchGraphicsDetail(context.Background(), c, want); err != nil {
+		t.Fatalf("fetchGraphicsDetail: %v", err)
+	}
+}
+
 // TestFetchTaskDetail_ReturnsBodyAsIs: same wire-shape contract for
 // `/v1/container` (task detail).
 func TestFetchTaskDetail_ReturnsBodyAsIs(t *testing.T) {

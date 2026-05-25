@@ -110,8 +110,19 @@ func FetchTaskList(ctx context.Context, c *Client, filters map[string]string) ([
 
 // FetchGraphicsDetail returns HAMI's `/v1/gpu` payload directly — the
 // SPA's `GraphicsDetailsResponse` is a flat object, no `data` envelope.
+//
+// Wire-name gotcha: HAMI's WebUI accepts the GPU UUID under the
+// `uid` query key (see the SPA's `GraphicsDetailsParams { uid: string }`
+// in src/apps/dashboard/types/gpu.ts and the network helper in
+// src/apps/dashboard/network/gpu.ts). An earlier revision of this
+// fetcher sent `?uuid=...` — HAMI silently treated that as "no
+// match" and returned a placeholder object with every numeric
+// field set to 0 / every string set to "-", which is why
+// `olares-cli dashboard overview gpu get <uuid>` historically
+// rendered all-zeros while `gpu list` showed real values for the
+// same UUID (list is a POST with `filters` and isn't affected).
 func FetchGraphicsDetail(ctx context.Context, c *Client, uuid string) (map[string]any, error) {
-	q := url.Values{"uuid": []string{uuid}}
+	q := url.Values{"uid": []string{uuid}}
 	var raw map[string]any
 	if err := c.DoJSON(ctx, http.MethodGet, "/hami/api/vgpu/v1/gpu", q, nil, &raw); err != nil {
 		return nil, err
