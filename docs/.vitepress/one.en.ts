@@ -210,6 +210,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/egpu",
         },
         {
+          text: "Install Windows on Olares One",
+          link: "/one/install-windows-primary-drive",
+        },
+        {
           text: "Install Ubuntu on Olares One",
           collapsed: true,
           items:
