@@ -214,6 +214,21 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/install-windows-primary-drive",
         },
         {
+          text: "Install Ubuntu on Olares One",
+          collapsed: true,
+          items:
+            [
+              {
+                text: "Install Ubuntu Server on Olares One",
+                link: "/one/install-ubuntu-server",
+              },
+              {
+                text: "Install Ubuntu Desktop on Olares One",
+                link: "/one/install-ubuntu-desktop",
+              }
+            ]
+        },        
+        {
           text: "Dual-boot Olares OS with Windows",
           collapsed: true,
           items:
