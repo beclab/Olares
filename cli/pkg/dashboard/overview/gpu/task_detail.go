@@ -190,10 +190,14 @@ func BuildTaskDetailFullEnvelope(ctx context.Context, c *pkgdashboard.Client, cf
 	}
 	env.Meta.Window = &pkgdashboard.TimeWindow{
 		Since: humanizeSince(since),
-		Start: pkgdashboard.GPUTrendTimestampISO(start),
-		End:   pkgdashboard.GPUTrendTimestampISO(end),
+		Start: pkgdashboard.GPUTrendTimestampISO(start, cf.Timezone.Time()),
+		End:   pkgdashboard.GPUTrendTimestampISO(end, cf.Timezone.Time()),
 		Step:  pkgdashboard.GPUTrendStep(start, end),
 	}
+	// See BuildDetailFullEnvelope for the wire-vs-render TZ split
+	// rationale. Same contract here.
+	wireStart := pkgdashboard.GPUTrendTimestampWire(start)
+	wireEnd := pkgdashboard.GPUTrendTimestampWire(end)
 
 	detail, err := pkgdashboard.FetchTaskDetail(ctx, c, name, podUID, sharemode)
 	if err != nil {
@@ -240,7 +244,7 @@ func BuildTaskDetailFullEnvelope(ctx context.Context, c *pkgdashboard.Client, cf
 	gaugeItems, trendItems, _ := fanoutGaugeAndTrend(
 		ctx, c,
 		gaugeSpecs, trendSpecs,
-		repl, env.Meta.Window.Start, env.Meta.Window.End, env.Meta.Window.Step,
+		repl, wireStart, wireEnd, env.Meta.Window.Step,
 		cf.Timezone.Time(),
 		addWarning,
 		"", // task-detail page doesn't capture power_trend labels

@@ -314,6 +314,25 @@ Both fetchers (`fetchInstantVector` / `fetchRangeVector`) are pinned by `TestFet
 
 Range body shape: `{"query":"<promql>","range":{"start":"YYYY-MM-DD HH:mm:ss","end":"…","step":"30m"}}`. `start`/`end` are SPA's `timeParse(date)` (local clock, no offset suffix); the `step` is computed by `gpuTrendStep(start, end)` — a 1:1 port of [`timeRangeFormate(diff_s, 16)`](packages/app/src/apps/controlPanelCommon/containers/Monitoring/utils.js) which preserves the SPA's preset table (10m→1m, 60m→10m, 480m→30m, 1440m→60m, etc.) and falls back to `floor(minutes/16)m` capped at `[1m..60m]`.
 
+**Window timezone contract (paid in blood)** — the offset-less string is re-parsed by the HAMI WebUI backend with `time.ParseInLocation` against the backend pod's `TZ` (today: `Asia/Shanghai`, see [`infrastructure/gpu/.olares/config/gpu/hami/values.yaml`](infrastructure/gpu/.olares/config/gpu/hami/values.yaml) `webui.env.backend.TZ`; verified empirically that Unix-epoch payloads are rejected with `data: []`, only the human-readable form works). The SPA gets this right by accident: a browser running in CST emits CST wall-clock strings, which the backend re-stamps as CST → correct UTC. CLI does NOT have that coincidence — a UTC host (typical Linux server / container) was sending UTC wall clock that HAMI re-stamped as CST, shifting `[start,end]` 8h into the future where Prometheus has no samples → the user-visible symptom was "Gauges 正常 / Trends 全空，无 warnings".
+
+**The fix splits the TZ in two**, on purpose:
+
+| Purpose | TZ | Helper | Knob |
+|---|---|---|---|
+| Render `meta.window.start/end`, table-side trend timestamps, table headers | `cf.Timezone` (user's preference, default `time.Local`) | `GPUTrendTimestampISO(t, cf.Timezone.Time())` | `--timezone <IANA>` |
+| Build the wire body sent to `/monitor/query/{instant,range}-vector` | `HAMIBackendTimezone()` (the backend pod's TZ, default `Asia/Shanghai`) | `GPUTrendTimestampWire(t)` | `OLARES_HAMI_BACKEND_TZ=<IANA>` env (hidden from `--help` — only operators of non-default HAMI deployments need it) |
+
+Both helpers live in [`pkg/dashboard/gpu.go`](cli/pkg/dashboard/gpu.go); never reuse one for the other's job. The split lets a user in Los Angeles see PDT timestamps in their tables while the CLI still gets correct data from a Shanghai-deployed HAMI backend.
+
+Pinned by:
+- `TestGPUTrendTimestampISO_RespectsTimezone`, `TestGPUTrendTimestampISO_NilTimezoneFallsBackToLocal` (pkg root) — display helper.
+- `TestGPUTrendTimestampWire_FormatsInHAMIBackendTZ`, `TestGPUTrendTimestampWire_RespectsEnvOverride`, `TestHAMIBackendTimezone_DefaultIsAsiaShanghai` (pkg root) — wire helper + env override + the "default matches chart values.yaml" drift alarm.
+- `TestBuildDetailFullEnvelope_WireAndRenderTZsAreSeparate`, `TestBuildTaskDetailFullEnvelope_WireAndRenderTZsAreSeparate` (pkg area) — end-to-end with cf.Timezone ≠ HAMI backend TZ; assert `meta.window` and captured wire body are in DIFFERENT zones.
+- `TestBuildDetailFullEnvelope_UTCHostStillGetsData` (pkg area) — the explicit "original bug" regression: cf.Timezone=UTC, HAMI backend TZ default → meta.window in UTC, wire in CST.
+
+If you ever feel tempted to "simplify" by collapsing wire+render back into one TZ argument: don't. The two-table arrangement is the whole point.
+
 ### `dashboard overview gpu` — SPA-aligned command surface
 
 The cobra surface mirrors the SPA's `Overview2/GPU` route exactly — two parent commands matching the two tabs, each accepting an optional positional argument that drills into the per-row "View details" page:
@@ -684,6 +703,7 @@ the documented Kind enum + envelope shape.
 | `meta.empty_reason = no_vgpu_integration` (200 envelope, items:[]) | HAMI vGPU absent (HTTP 404) | Not an error — install HAMI or skip the GPU view. |
 | `meta.empty_reason = vgpu_unavailable` (200 envelope, items:[]) + `meta.http_status=5xx` + `meta.error="..."` + stderr `gpu data temporarily unavailable: HAMI returned HTTP 5xx ...` | HAMI installed but unhealthy (HTTP 5xx) | Transient — retry; investigate the HAMI controller. CLI exit code stays `0` so `--watch` keeps streaming. |
 | `meta.empty_reason = no_gpu_detected` (200 envelope, items:[]) | HAMI healthy but the device list / detail is empty | Not an error. |
+| `gpu graphics/tasks <ref>` — Gauges have values, **all Trends `points_count: 0`, no `meta.warnings`** | Wire/render TZ split regressed (see "Window timezone contract" above): the CLI is sending offset-less window strings in the CLI host's TZ instead of `HAMIBackendTimezone()`, so the HAMI backend re-stamps them with its own TZ and queries Prometheus 8h off → empty data. Verify via `jq '.meta.window.end'` and the captured wire body diverge by the offset. | Should be impossible on a current build (`GPUTrendTimestampWire` pins the wire side to `Asia/Shanghai` by default). If reproducing: check that `pkg/dashboard/overview/gpu/detail.go` and `task_detail.go` build `wireStart/wireEnd` via `GPUTrendTimestampWire(t)` and feed *those* into `fanoutGaugeAndTrend` (not `env.Meta.Window.Start/End`). If your HAMI deployment uses a non-default TZ, set `OLARES_HAMI_BACKEND_TZ=<chart-TZ>` (env, not a flag). |
 | `meta.empty_reason = no_fan_integration` (200 envelope, items:[]) | `/user-service/api/mdns/olares-one/cpu-gpu` returned 404 (Olares One only) | Not an error on non-Olares-One deployments. |
 | `meta.empty_reason = not_olares_one` (200 envelope, items:[]) + stderr `fan is only available on Olares One devices ...` | Active device's `device_name` is not `Olares One` — fan subtree is hard-gated off | Not an error. Skip fan on this hardware; verify with `curl /user-service/api/system/status`. |
 | `meta.note="GPU sidebar entry is hidden for non-admin profiles ..."` + stderr `(advisory) GPU sidebar entry ...` | Non-admin profile invoked a gpu verb. **Soft advisory only** — data still fetched. | Not an error. If HAMI still returned data, surface the note alongside the items. Switch to a platform-admin profile if the agent needs the SPA-equivalent UX. |

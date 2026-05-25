@@ -62,10 +62,19 @@ func BuildDetailFullEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pk
 	}
 	env.Meta.Window = &pkgdashboard.TimeWindow{
 		Since: humanizeSince(since),
-		Start: pkgdashboard.GPUTrendTimestampISO(start),
-		End:   pkgdashboard.GPUTrendTimestampISO(end),
+		Start: pkgdashboard.GPUTrendTimestampISO(start, cf.Timezone.Time()),
+		End:   pkgdashboard.GPUTrendTimestampISO(end, cf.Timezone.Time()),
 		Step:  pkgdashboard.GPUTrendStep(start, end),
 	}
+	// Wire window: ALWAYS rendered in the HAMI backend's TZ
+	// (default Asia/Shanghai, OLARES_HAMI_BACKEND_TZ override).
+	// Decoupled from meta.window above on purpose — meta.window
+	// is for the user's eyes (cf.Timezone), wireStart/wireEnd is
+	// for the backend's `time.ParseInLocation`. Conflating them
+	// silently zero-filled every range query when CLI host TZ ≠
+	// HAMI backend TZ; see pkg/dashboard/gpu.go::GPUTrendTimestampWire.
+	wireStart := pkgdashboard.GPUTrendTimestampWire(start)
+	wireEnd := pkgdashboard.GPUTrendTimestampWire(end)
 
 	// Step 1 — flat detail.
 	detail, err := pkgdashboard.FetchGraphicsDetail(ctx, c, uuid)
@@ -108,7 +117,7 @@ func BuildDetailFullEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pk
 	gaugeItems, trendItems, labelsFromPw := fanoutGaugeAndTrend(
 		ctx, c,
 		gaugeSpecs, trendSpecs,
-		deviceuuidReplacer, env.Meta.Window.Start, env.Meta.Window.End, env.Meta.Window.Step,
+		deviceuuidReplacer, wireStart, wireEnd, env.Meta.Window.Step,
 		cf.Timezone.Time(),
 		addWarning,
 		"power_trend",

@@ -39,7 +39,10 @@ func bindPersistentFlags(cf *pkgdashboard.CommonFlags, cmd *cobra.Command) {
 	pf.StringVar(&cf.EndRaw, "end", "",
 		"absolute window end (RFC3339); fixed across iterations when --watch")
 	pf.StringVar(&cf.TimezoneRaw, "timezone", "",
-		"timezone for table rendering (IANA name, default: $TZ / system local)")
+		"timezone for table rendering (IANA name, default: $TZ / system local). "+
+			"Affects DISPLAY only — the wire format sent to HAMI's monitor query endpoints "+
+			"is rendered in the backend's own TZ regardless of this flag, so trends resolve "+
+			"correctly even when --timezone differs from the HAMI pod TZ")
 	pf.StringVar(&cf.TempUnitRaw, "temp-unit", "C",
 		"temperature display unit: C, F, or K (JSON raw always Celsius)")
 	pf.StringVar(&cf.User, "user", "",
