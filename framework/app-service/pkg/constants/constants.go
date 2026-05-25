@@ -11,6 +11,7 @@ const (
 	KubeSphereAPIScheme                = "http"
 	ApplicationDefaultThirdLevelDomain = "applications.app.bytetrade.io/default-thirdlevel-domains"
 	ApplicationNameLabel               = "applications.app.bytetrade.io/name"
+	ApplicationMacvlanInitLabel        = "applications.app.bytetrade.io/macvlan-init"
 	ApplicationRawAppNameLabel         = "applications.app.bytetrade.io/raw-app-name"
 	ApplicationAppGroupLabel           = "applications.app.bytetrade.io/group"
 	ApplicationAuthorLabel             = "applications.app.bytetrade.io/author"
