@@ -831,6 +831,11 @@ func (wh *Webhook) ShouldInjectMacvlanInit(ctx context.Context, pod *corev1.Pod,
 // present) and returns the JSON merge patch to send back in the admission
 // response.
 func (wh *Webhook) CreateMacvlanInitPatch(req *admissionv1.AdmissionRequest, pod *corev1.Pod) ([]byte, error) {
+	if pod.Annotations == nil {
+		pod.Annotations = make(map[string]string)
+	}
+	pod.Annotations["k8s.v1.cni.cncf.io/networks"] = "kube-system/underlay-macvlan"
+
 	for _, c := range pod.Spec.InitContainers {
 		if c.Name == MacvlanInitContainerName {
 			klog.Infof("macvlan-init: container already present in pod=%s/%s, skip", pod.Namespace, pod.Name)
