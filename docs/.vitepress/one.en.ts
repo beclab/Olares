@@ -229,10 +229,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
             ]
         },
-        {
+        /*{
           text: "Dual-boot Olares OS with Ubuntu",
           link: "/one/dual-boot-ubuntu-dual-drive",
-        },
+        },*/
         {
           text: "Install Windows on Olares One",
           link: "/one/install-windows-primary-drive",
