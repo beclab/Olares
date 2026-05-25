@@ -36,8 +36,6 @@ func NewExcludesCommand(f *cmdutil.Factory) *cobra.Command {
 
 Subcommands:
   list
-  add <pattern>...
-  rm  <pattern>...
 `,
 	}
 	cmd.SilenceUsage = true

@@ -36,8 +36,6 @@ func NewSnapshotsCommand(f *cmdutil.Factory) *cobra.Command {
 
 Subcommands:
   list   <backup-id>
-  run    <backup-id>
-  cancel <backup-id> <snapshot-id> [--yes]
 `,
 	}
 	cmd.SilenceUsage = true

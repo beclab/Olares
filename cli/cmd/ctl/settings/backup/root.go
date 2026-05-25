@@ -23,11 +23,7 @@ and the repository password (user-service, /api/backup/password/:name).
 
 Subcommands:
   plans list
-  plans delete <id>  | pause <id> | resume <id>
   snapshots list   <backup-id>
-  snapshots run    <backup-id>
-  snapshots cancel <backup-id> <snapshot-id>
-  password set     <name>
 
 Out of scope until a richer flag/file UX exists:
   plans create / update    (full BackupPolicy + LocationConfig)

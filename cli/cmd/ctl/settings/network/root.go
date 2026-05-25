@@ -23,10 +23,8 @@ external-network switch (owner-only), SSL toggles, and the system hosts-file.
 
 Subcommands:
   reverse-proxy get
-  reverse-proxy set --mode <public-ip|frp|cloudflare-tunnel|off> [...]
   frp list
   external-network get
-  ssl status
   hosts-file get
 
 Out of scope until a JWS key sourcing path exists:
