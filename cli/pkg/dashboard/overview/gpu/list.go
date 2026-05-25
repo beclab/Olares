@@ -17,8 +17,41 @@ import (
 // doesn't need watch semantics; if a user wants polling they can
 // run `watch -n 5 olares-cli dashboard overview gpu list` from
 // outside.
+//
+// Implementation: BuildListEnvelope assembles the envelope (no
+// stdout writes); RunList wraps it with the legacy stdout side
+// effects (the "(no vGPUs detected …)" prose lines that earlier
+// revisions printed for the bare-leaf invocation). RunDefault
+// (sections envelope) reuses BuildListEnvelope directly so a
+// graphics-section transport error doesn't print prose ahead of
+// the tasks section.
 func RunList(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags) error {
 	now := time.Now()
+	env := BuildListEnvelope(ctx, c, cf, now)
+	if cf.Output == pkgdashboard.OutputJSON {
+		return pkgdashboard.WriteJSON(os.Stdout, env)
+	}
+	if env.Meta.Empty {
+		switch env.Meta.EmptyReason {
+		case "no_vgpu_integration":
+			fmt.Fprintln(os.Stdout, "(no vGPUs detected — HAMI integration absent)")
+		case "no_gpu_detected":
+			fmt.Fprintln(os.Stdout, "(no GPUs reported — HAMI integration up but no devices)")
+		case "vgpu_unavailable":
+			// stderr advisory already printed by VgpuUnavailableFromError.
+		}
+		return nil
+	}
+	return WriteListTable(os.Stdout, env)
+}
+
+// BuildListEnvelope assembles the gpu list envelope without any
+// stdout side effects. Honors the standard 3-state empty-data
+// taxonomy (no_vgpu_integration / vgpu_unavailable /
+// no_gpu_detected) and surfaces the GPUAdvisory soft-gate as
+// Meta.Note. Used by RunList (Shape A leaf) and by RunDefault as
+// the `graphics` section (Shape B parent).
+func BuildListEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags, now time.Time) pkgdashboard.Envelope {
 	advisoryNote, _ := pkgdashboard.GPUAdvisory(ctx, c, cf, os.Stderr)
 	list, err := pkgdashboard.FetchGraphicsList(ctx, c, nil)
 
@@ -34,11 +67,7 @@ func RunList(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Commo
 			env.Meta.Empty = true
 			env.Meta.EmptyReason = "no_vgpu_integration"
 			env.Meta.HTTPStatus = he.Status
-			if cf.Output == pkgdashboard.OutputJSON {
-				return pkgdashboard.WriteJSON(os.Stdout, env)
-			}
-			fmt.Fprintln(os.Stdout, "(no vGPUs detected — HAMI integration absent)")
-			return nil
+			return env
 		}
 		if unavail, ok := pkgdashboard.VgpuUnavailableFromError(c, cf, err, pkgdashboard.KindOverviewGPUList, now, os.Stderr); ok {
 			if advisoryNote != "" {
@@ -48,21 +77,20 @@ func RunList(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Commo
 				// `meta.note` string separated by " | ".
 				unavail.Meta.Note = advisoryNote + " | " + unavail.Meta.Note
 			}
-			if cf.Output == pkgdashboard.OutputJSON {
-				return pkgdashboard.WriteJSON(os.Stdout, unavail)
-			}
-			return nil
+			return unavail
 		}
-		return err
+		// Transport error not classifiable as a soft 4xx/5xx —
+		// surface it on the envelope so RunDefault keeps the tasks
+		// section. RunList's caller branch above maps Output==JSON
+		// to a clean payload too.
+		env.Meta.Error = err.Error()
+		env.Meta.ErrorKind = pkgdashboard.ClassifyTransportErr(err)
+		return env
 	}
 	if len(list) == 0 {
 		env.Meta.Empty = true
 		env.Meta.EmptyReason = "no_gpu_detected"
-		if cf.Output == pkgdashboard.OutputJSON {
-			return pkgdashboard.WriteJSON(os.Stdout, env)
-		}
-		fmt.Fprintln(os.Stdout, "(no GPUs reported — HAMI integration up but no devices)")
-		return nil
+		return env
 	}
 	// Field names below match HAMI's actual response shape (see
 	// SPA's `Graphics` interface in src/apps/dashboard/types/gpu.ts
@@ -73,6 +101,14 @@ func RunList(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Commo
 	// under `Raw` so agents can pull fields the table doesn't
 	// surface (vgpuUsed/vgpuTotal, nodeUid, memoryUtilizedPercent,
 	// etc.).
+	// Display fields mirror SPA's GPUsTable.vue column set verbatim:
+	// nodeUid is omitted in favour of the more useful uuid (CLI's
+	// `gpu graphics <uuid>` keys on uuid; SPA's column header is
+	// labelled "GPU ID" but the underlying field IS nodeUid in the
+	// SPA — the CLI departs here intentionally so the column value
+	// can be copy-pasted into `graphics <uuid>`). Otherwise: model /
+	// mode / host / health / core_util / vram_total / vram_usage /
+	// power / temperature, in that order.
 	for _, g := range list {
 		raw := map[string]any{}
 		for k, v := range g {
@@ -87,20 +123,20 @@ func RunList(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Commo
 			"core_util":   percentDirect(toFloat(g["coreUtilizedPercent"])),
 			"vram_total":  gpuVRAMHuman(g["memoryTotal"]),
 			"vram_used":   gpuVRAMHuman(g["memoryUsed"]),
+			"vram_usage":  percentDirect(toFloat(g["memoryUtilizedPercent"])),
 			"power":       fmt.Sprintf("%.2f W", toFloat(g["power"])),
 			"temperature": renderTemperature(toFloat(g["temperature"]), cf.TempUnit),
 		}
 		env.Items = append(env.Items, pkgdashboard.Item{Raw: raw, Display: disp})
 	}
-	if cf.Output == pkgdashboard.OutputJSON {
-		return pkgdashboard.WriteJSON(os.Stdout, env)
-	}
-	return WriteListTable(os.Stdout, env)
+	return env
 }
 
 // WriteListTable renders the per-GPU summary table. Column order
 // is pinned: agent scrapers depend on the index being stable across
-// releases.
+// releases. VRAM_USAGE is the SPA's `memoryUtilizedPercent` column
+// that earlier revisions of this table omitted; readded so the CLI
+// matches Graphics management tab cell-for-cell.
 func WriteListTable(w io.Writer, env pkgdashboard.Envelope) error {
 	cols := []pkgdashboard.TableColumn{
 		{Header: "GPU_ID", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "gpu_id") }},
@@ -110,6 +146,7 @@ func WriteListTable(w io.Writer, env pkgdashboard.Envelope) error {
 		{Header: "HEALTH", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "health") }},
 		{Header: "CORE_UTIL", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "core_util") }},
 		{Header: "VRAM", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "vram_total") }},
+		{Header: "VRAM_USAGE", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "vram_usage") }},
 		{Header: "POWER", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "power") }},
 		{Header: "TEMP", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "temperature") }},
 	}

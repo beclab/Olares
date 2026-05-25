@@ -12,13 +12,13 @@ import (
 // TestRunList_HappyPath pins the table-rendered GPU list shape
 // against an admin profile + CUDA node + 2-device HAMI fixture.
 // The Display columns must match the SPA's column order
-// (GPU_ID/MODEL/MODE/HOST/HEALTH/CORE_UTIL/VRAM/POWER/TEMP).
+// (GPU_ID/MODEL/MODE/HOST/HEALTH/CORE_UTIL/VRAM/VRAM_USAGE/POWER/TEMP).
 func TestRunList_HappyPath(t *testing.T) {
 	srv := gpuStubMux{
 		graphicsList: func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte(`{"list":[
-              {"uuid":"GPU-A","type":"NVIDIA-A","shareMode":"0","nodeName":"node-1","health":true,"coreUtilizedPercent":35,"memoryTotal":24576,"memoryUsed":12288,"power":120.5,"temperature":62},
-              {"uuid":"GPU-B","type":"NVIDIA-B","shareMode":"1","nodeName":"node-2","health":false,"coreUtilizedPercent":80,"memoryTotal":81920,"memoryUsed":4096,"power":250,"temperature":81}
+              {"uuid":"GPU-A","type":"NVIDIA-A","shareMode":"0","nodeName":"node-1","health":true,"coreUtilizedPercent":35,"memoryTotal":24576,"memoryUsed":12288,"memoryUtilizedPercent":50,"power":120.5,"temperature":62},
+              {"uuid":"GPU-B","type":"NVIDIA-B","shareMode":"1","nodeName":"node-2","health":false,"coreUtilizedPercent":80,"memoryTotal":81920,"memoryUsed":4096,"memoryUtilizedPercent":5,"power":250,"temperature":81}
             ]}`))
 		},
 	}.server(t)
@@ -33,6 +33,12 @@ func TestRunList_HappyPath(t *testing.T) {
 	}
 	if !strings.Contains(out, `"kind":"dashboard.overview.gpu.list"`) {
 		t.Errorf("missing kind=dashboard.overview.gpu.list in:\n%s", out)
+	}
+	// SPA "VRAM usage rate" column — the regression net for the
+	// GPUsTable.vue:159-166 column that earlier CLI revisions did
+	// not surface.
+	if !strings.Contains(out, `"vram_usage":"50%"`) || !strings.Contains(out, `"vram_usage":"5%"`) {
+		t.Errorf("expected vram_usage column for both GPUs (50%% / 5%%); got:\n%s", out)
 	}
 }
 

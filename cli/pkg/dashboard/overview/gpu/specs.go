@@ -164,9 +164,19 @@ func gpuDetailTrendSpecs() []trendSpec {
 			Key:   "alloc_trend",
 			Title: "Resource allocation trend",
 			Unit:  "%",
+			// Labels mirror the SPA's legend
+			// (`legend: [t('GPU_OP.VRAM'), t('GPU_OP.GPU_MEMORY')]`
+			// in GPUsDetails.vue:223). Note: despite the names, the
+			// FIRST line is fed by `hami_core_*` (compute-power
+			// allocation %) and the SECOND by `hami_memory_*` (VRAM
+			// allocation %) — that's the SPA's chosen wording, and
+			// the CLI must reproduce it 1:1 so agents/users see the
+			// same legend tokens across surfaces. Don't "fix" by
+			// reverting to `core`/`memory` without a coordinated SPA
+			// change.
 			Lines: []trendLine{
-				{Label: "core", Query: allocCorePct},
-				{Label: "memory", Query: allocMemPct},
+				{Label: "VRAM", Query: allocCorePct},
+				{Label: "GPU_MEMORY", Query: allocMemPct},
 			},
 		},
 		{
@@ -174,8 +184,8 @@ func gpuDetailTrendSpecs() []trendSpec {
 			Title: "Resource usage trend",
 			Unit:  "%",
 			Lines: []trendLine{
-				{Label: "core", Query: utilCorePct},
-				{Label: "memory", Query: utilMemPct},
+				{Label: "VRAM", Query: utilCorePct},
+				{Label: "GPU_MEMORY", Query: utilMemPct},
 			},
 		},
 		{
