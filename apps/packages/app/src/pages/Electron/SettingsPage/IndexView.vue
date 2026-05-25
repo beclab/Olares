@@ -31,7 +31,6 @@ export default defineComponent({
 <style lang="scss" scoped>
 .indexView {
 	width: 100%;
-	background: $white;
 	overflow: scroll;
 }
 </style>

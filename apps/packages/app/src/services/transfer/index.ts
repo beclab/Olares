@@ -155,10 +155,8 @@ class TransferClient implements TransferClientInterface {
 			return false;
 		}
 
+		await this.doAction(item, 'pause');
 		if (this.client.errorRetryNumber > retryCount) {
-			if (process.env.APPLICATION !== 'FILES') {
-				this.doAction(item, 'pause');
-			}
 			item.retryCount = retryCount + 1;
 			setTimeout(async () => {
 				const deviceStore = useDeviceStore();

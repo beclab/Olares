@@ -1,5 +1,5 @@
 <template>
-	<div class="wise-page-root bg-color-white column justify-start">
+	<div class="wise-page-root column justify-start">
 		<title-bar>
 			<template v-slot:before>
 				<bt-breadcrumbs

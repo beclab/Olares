@@ -30,7 +30,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "启用沙盒",
                   link: "/use-cases/openclaw-enable-sandbox",
-                },                                 
+                },
                 {
                   text: "升级 OpenClaw",
                   link: "/zh/use-cases/openclaw-upgrade",
@@ -38,9 +38,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "常见问题",
                   link: "/zh/use-cases/openclaw-common-issues",
-                }                
+                }
               ]
             },
+            {
+              text: "Hermes Agent",
+              link: "/zh/use-cases/hermes", 
+            },
+            {
+              text: "Claude Code",
+              link: "/zh/use-cases/claude-code",
+            },                        
             {
               text: "OpenCode",
               link: "/zh/use-cases/opencode",
@@ -66,7 +74,30 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Open WebUI",
+              collapsed: true,
               link: "/zh/use-cases/openwebui",
+              items: [
+                {
+                  text: "设置多用户访问",
+                  link: "/zh/use-cases/openwebui-multiuser",
+                },
+                {
+                  text: "配置语音交互",
+                  link: "/zh/use-cases/openwebui-audio",
+                },
+                {
+                  text: "启用网页搜索",
+                  link: "/zh/use-cases/openwebui-search",
+                },
+                {
+                  text: "在聊天中查询文档",
+                  link: "/zh/use-cases/openwebui-knowledge",
+                },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/openwebui-common-issues",
+                },
+              ]
             },
             {
               text: "ComfyUI",
@@ -88,6 +119,25 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "NemoClaw",
+              link: "/zh/use-cases/nemoclaw",
+              collapsed: true,
+              items: [
+                {
+                  text: "Integrate with Google Workspace",
+                  link: "/zh/use-cases/nemoclaw-google-workspace",
+                },
+                {
+                  text: "Manage Olares with Olares CLI",
+                  link: "/zh/use-cases/nemoclaw-olares-cli",
+                },
+                {
+                  text: "Common issues",
+                  link: "/zh/use-cases/nemoclaw-common-issues",
+                },
+              ]
+            },
+            {
               text: "Context7",
               link: "/zh/use-cases/context7",
             },
@@ -95,6 +145,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Ollama",
               link: "/zh/use-cases/ollama",
             },
+            {
+              text: "Open Notebook",
+              link: "/zh/use-cases/open-notebook",
+            },            
             // {
             //   text: "Dify",
             //   link: "/zh/use-cases/dify",
@@ -131,10 +185,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Bifrost",
               link: "/zh/use-cases/bifrost",
             },
-            {
+            /*{
               text: "Duix.Avatar",
               link: "/zh/use-cases/duix-avatar",
-            },
+            },*/
             {
               text: "Paperclip",
               link: "/zh/use-cases/paperclip",
@@ -142,6 +196,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "PDFMathTranslate",
               link: "/zh/use-cases/pdfmathtranslate",
+            },
+            {
+              text: "Whisper-WebUI",
+              link: "/zh/use-cases/whisper-webui",
             },
             {
               text: "Speaches",
@@ -159,10 +217,28 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "IndexTTS2",
               link: "/zh/use-cases/indextts2",
             },
+            {
+              text: "NOFX",
+              link: "/zh/use-cases/nofx",
+            },
+            {
+              text: "TensorZero",
+              link: "/zh/use-cases/tensorzero",
+            },           
             // {
             //   text: "DeerFlow",
             //   link: "/zh/use-cases/deerflow",
             // },
+          ]
+        },
+        {
+          text: "具身智能",
+          collapsed: false,
+          items: [
+            {
+              text: "Isaac Lab",
+              link: "/zh/use-cases/isaac-lab",
+            },
           ]
         },
         {
@@ -178,6 +254,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/windows",
               collapsed: true,
               items:[
+                {
+                  text: "Enable Intel integrated GPU passthrough",
+                  link: "/zh/use-cases/windows-intel-gpu-passthrough",
+                },
                 {
                   text: "Known issues",
                   link: "/zh/use-cases/windows-issues",
@@ -252,14 +332,36 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Plane",
               link: "/zh/use-cases/plane",
             },
-            {  
+            {
               text: "Excalidraw",
               link: "/zh/use-cases/excalidraw",
+            },
+            {
+              text: "Karakeep",
+              link: "/zh/use-cases/karakeep",
+            },
+            {
+              text: "Penpot",
+              link: "/zh/use-cases/penpot",
+            },
+            {
+              text: "RNA Sequencing",
+              link: "/zh/use-cases/rna-sequencing",
             },
             // {
             //   text: "Stirling PDF",
             //   link: "/zh/use-cases/stirling-pdf",
             // },
+          ],
+        },
+        {
+          text: "开发工具",
+          collapsed: false,
+          items: [
+            {
+              text: "JupyterHub",
+              link: "/zh/use-cases/jupyterhub",
+            },
           ],
         },
         {

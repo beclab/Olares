@@ -11,13 +11,23 @@ import {
 } from './interface';
 import { notifyRequestMessageError } from 'src/utils/notifyRedefinedUtil';
 import { throttle } from 'lodash';
+import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 
 export const APPLICATION_WS_ID = 'application_ws_id';
 
 export class SubApplication implements Application {
 	ssiRule?: (() => string) | undefined;
 	async copyToClipboard(text: string) {
-		return await quasarCopyToClipboard(text);
+		if (navigator.clipboard) {
+			return await quasarCopyToClipboard(text);
+		}
+		const el = document.createElement('textarea');
+		el.addEventListener('focusin', (e) => e.stopPropagation());
+		el.value = text;
+		document.body.appendChild(el);
+		el.select();
+		document.execCommand('copy');
+		document.body.removeChild(el);
 	}
 	applicationName = '';
 
@@ -135,15 +145,44 @@ export function getApplication() {
 }
 
 export class NormalApplication extends SubApplication {
+	private i18nInstance;
+
+	protected shouldEnsureSocketAlive(): boolean {
+		return true;
+	}
+
+	private _onVisibilityChange = () => {
+		const socketStore = useWebsocketManager2Store();
+		console.log(
+			`[ws] visibilitychange: app=${this.applicationName}, state=${
+				document.visibilityState
+			}, closed=${socketStore.isClosed()}, connected=${socketStore.isConnected()}`
+		);
+		if (document.visibilityState === 'visible') {
+			console.log(
+				`[ws] page visible (${this.applicationName}), start ensureAlive()`
+			);
+			if (this.shouldEnsureSocketAlive()) {
+				socketStore.ensureAlive().catch((err) => {
+					console.error('Error during websocket keepalive check:', err);
+				});
+			}
+			this.onPageVisible();
+		}
+	};
+
+	protected onPageVisible(): void {}
+
 	async appLoadPrepare(_data: any): Promise<void> {
+		this.i18nInstance = _data?.i18n || i18n;
 		this.initLanguage();
 		this.initAxiosIntercepts();
 	}
 	async appMounted(): Promise<void> {
-		// commonAppMounted(this);
+		document.addEventListener('visibilitychange', this._onVisibilityChange);
 	}
 	async appUnMounted(): Promise<void> {
-		// commonUnMounted(this);
+		document.removeEventListener('visibilitychange', this._onVisibilityChange);
 	}
 	async appRedirectUrl(
 		_redirect: any,
@@ -165,14 +204,23 @@ export class NormalApplication extends SubApplication {
 			terminusLanguage = navigator.language || (navigator as any).userLanguage;
 		}
 
-		if (terminusLanguage) {
-			if (languagesShort[terminusLanguage]) {
-				i18n.global.locale.value = languagesShort[terminusLanguage] as any;
-			} else if (supportLanguages.find((e) => e.value == terminusLanguage)) {
-				i18n.global.locale.value = terminusLanguage as any;
-			}
-		}
+		this.updateLanguage(terminusLanguage);
+
+		window &&
+			window.addEventListener('message', this.applicationMessageHandler);
 	}
+
+	applicationMessageHandler = (event: MessageEvent) => {
+		if (
+			event.data.message === 'language_apps_update' ||
+			event.data.message === 'language_update'
+		) {
+			this.updateLanguage(event.data.info.locale);
+			this.applicationLanguageUpdate(event.data.info.locale);
+		}
+	};
+
+	applicationLanguageUpdate(terminusLanguage: string) {}
 
 	commonTokenInvalidIntercept() {
 		this.tokenInvalidErrorIntercep = (error) => {
@@ -185,7 +233,9 @@ export class NormalApplication extends SubApplication {
 				return false;
 			}
 
-			notifyRequestMessageError('The token has expired, please log in again');
+			notifyRequestMessageError(
+				this.i18nInstance.global.t('The token has expired, please log in again')
+			);
 
 			this.tokenInvalidRequestError = error;
 			setTimeout(() => {
@@ -241,5 +291,17 @@ export class NormalApplication extends SubApplication {
 		const loginUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
 
 		window.location.replace(loginUrl);
+	}
+
+	private updateLanguage(terminusLanguage: string) {
+		if (terminusLanguage) {
+			if (languagesShort[terminusLanguage]) {
+				this.i18nInstance.global.locale.value = languagesShort[
+					terminusLanguage
+				] as any;
+			} else if (supportLanguages.find((e) => e.value == terminusLanguage)) {
+				this.i18nInstance.global.locale.value = terminusLanguage as any;
+			}
+		}
 	}
 }

@@ -117,7 +117,7 @@ const columns: any = [
 	{
 		name: 'mode',
 		align: 'left',
-		label: t('GPU Mode'),
+		label: t('GPU mode'),
 		field: 'deviceShareModes',
 		format: (val: any) => {
 			return t(VRAMModeLabel[val[0]]);

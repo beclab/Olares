@@ -40,6 +40,7 @@ import MylineChart from '@apps/control-panel-common/src/components/Charts/Myline
 import { getClusterMonitoring } from '@apps/dashboard/src/network';
 import DateRangeMonitoring from '@apps/control-panel-common/src/containers/Monitoring/DateRangeMonitoring.vue';
 import { ref } from 'vue';
+import { useLocaleWatch } from 'src/composables/common/useLocaleWatch';
 import {
 	getAreaChartOps,
 	getResult
@@ -66,7 +67,14 @@ const selectValue2 = ref<DateRangeItem>(
 );
 
 const loading = ref(false);
+const rawData = ref<Record<string, any>>({});
 const list = ref(defaultdata);
+
+useLocaleWatch(() => {
+	list.value = getMonitoringCfgs(rawData.value).map((item) =>
+		getAreaChartOps(item)
+	);
+});
 
 const selecteChange = (value: any) => {
 	selectValue.value = value;
@@ -86,6 +94,7 @@ const fetchData = () => {
 		.then((res) => {
 			const result = getResult(res.data.results);
 			const data = fillZero ? fillEmptyMetrics(params, result) : result;
+			rawData.value = data;
 			list.value = getMonitoringCfgs(data).map((item) => getAreaChartOps(item));
 		})
 		.finally(() => {

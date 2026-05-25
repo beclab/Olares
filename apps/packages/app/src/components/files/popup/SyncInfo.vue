@@ -199,7 +199,7 @@ const onCancel = () => {
 
 					.title {
 						text-align: left;
-						color: $prompt-message;
+						color: $ink-2;
 						width: 100px;
 
 						text-overflow: ellipsis;

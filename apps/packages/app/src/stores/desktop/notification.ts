@@ -4,7 +4,7 @@ import {
 	MemeryNotificationItem
 } from 'src/utils/desktop/notification';
 import { NotificationDatabase } from 'src/utils/desktop/notificationDB';
-import { useAppStore } from './app';
+import { useApplicationStore } from './app';
 
 export type DataState = {
 	data: MemeryNotificationItem[];
@@ -74,7 +74,7 @@ export const useNotificationStore = defineStore('notification', {
 				return;
 			}
 			if (item.appName) {
-				const appStore = useAppStore();
+				const appStore = useApplicationStore();
 				const app = appStore.myApps.find(
 					(e) => e.name == item.appName || e.fatherName == item.appName
 				);

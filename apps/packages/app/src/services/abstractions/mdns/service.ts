@@ -337,7 +337,7 @@ export const oneWorkerModeOptions = () => {
 		// 	value: OneWorkerMode.Gaming
 		// },
 		{
-			label: i18n.global.t('Performance Mode'),
+			label: i18n.global.t('Performance mode'),
 			value: OneWorkerMode.Insane
 		}
 	];
@@ -376,7 +376,7 @@ export enum MdnsApiEmum {
 	ONE_CPU_GPU = 'oneCpuGpu'
 }
 
-const mdnsApis: Record<MdnsApiEmum, string> = {
+export const mdnsApis: Record<MdnsApiEmum, string> = {
 	[MdnsApiEmum.UNINSTALL]: '/command/uninstall',
 	status: '/system/status',
 	install: '/command/install',

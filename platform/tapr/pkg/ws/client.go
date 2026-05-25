@@ -74,7 +74,7 @@ func (client *Client) onConnection() {
 				return
 			}
 
-			klog.Infof("read message, type: %d, accessPublic: %v, connId: %s, user: %s, data: %s", mt, accessPublic, connId, userName, string(msg))
+			klog.Infof("read message, type: %d, accessPublic: %v, connId: %s, user: %s", mt, accessPublic, connId, userName)
 
 			if client.checkPingMessage(msg) {
 				client.writeHandler(connId, websocket.TextMessage, map[string]interface{}{"event": "pong"})
@@ -84,7 +84,7 @@ func (client *Client) onConnection() {
 
 			var data = map[string]interface{}{}
 			if err = json.Unmarshal(msg, &data); err != nil {
-				klog.Errorf("unmarshal message error %+v, data: %s", err, string(msg))
+				klog.Errorf("unmarshal message error %+v", err)
 			}
 
 			client.readHandler(accessPublic, token, connId, userName, data, cookie, ACTION_MESSAGE)

@@ -33,7 +33,7 @@
 			<!-- <NotificationPopup /> -->
 		</div>
 
-		<div style="width: 100%; height: 100vh" ref="window_parent">
+		<div class="mobile-window-parent" ref="window_parent">
 			<div
 				:style="`position: relative;width: 100%;height: 100%; left: 0; top: 0;`"
 			>
@@ -74,8 +74,11 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
-import { useQuasar, Notify, Loading } from 'quasar';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { Loading } from 'quasar';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { notifyMessage } from 'src/utils/settings/btNotify';
 import {
 	IntentFilter,
 	Action,
@@ -85,7 +88,7 @@ import {
 } from '@bytetrade/core';
 import { WindowInfo, AppClickInfo, MessageData } from '../type/types';
 import { bus } from '../../../utils/bus';
-import { useAppStore } from '../../../stores/desktop/app';
+import { useApplicationStore } from '../../../stores/desktop/app';
 import { useTokenStore } from '../../../stores/desktop/token';
 import { useUpgradeStore } from '../../../stores/desktop/upgrade';
 import { expiresStorage } from '../../../utils/desktop/location';
@@ -98,13 +101,14 @@ import DockComponent from './DockComponent.vue';
 import LaunchPad from './LaunchPad.vue';
 import DailyDescription from './DailyDescription.vue';
 
-const $q = useQuasar();
-const appStore = useAppStore();
+const route = useRoute();
+const router = useRouter();
+const appStore = useApplicationStore();
 const tokenStore = useTokenStore();
 const upgradeStore = useUpgradeStore();
 const window_parent = ref<HTMLElement>();
 const dockRef = ref<any>();
-const isShowLauncchPad = ref(false);
+const isShowLauncchPad = computed(() => route.path === '/launchpad');
 const upgradeFlag = ref(false);
 const messageSavePath = ref<MessageData[]>([]);
 const window_infos = ref<WindowInfo[]>([]);
@@ -211,7 +215,11 @@ const listenerMessage = (e: any) => {
 	switch (data.type) {
 		case 'Files':
 			if (data.message) {
-				data.message = data.message.slice(6);
+				data.message = data.message.startsWith('https://')
+					? data.message.slice(6)
+					: data.message.startsWith('http://')
+					? data.message.slice(5)
+					: data.message;
 				let hasMessageIndex = messageSavePath.value.findIndex(
 					(item: { type: string }) => item.type === data.type
 				);
@@ -367,13 +375,11 @@ onMounted(async () => {
 	});
 
 	bus.on('notification', (notification: any) => {
-		$q.notify({
-			message: notification.body,
-			caption: notification.title,
-			type: 'info',
-			position: 'top',
-			timeout: 2000
-		});
+		const msg =
+			notification?.title && notification?.body
+				? `${notification.title}: ${notification.body}`
+				: notification?.body ?? notification?.title ?? '';
+		notifyMessage(msg);
 	});
 
 	window.onresize = () => {
@@ -402,9 +408,9 @@ const keydownEnter = (event: any) => {
 
 const launchPadclick = async () => {
 	if (isShowLauncchPad.value) {
-		isShowLauncchPad.value = false;
+		router.replace('/');
 	} else {
-		isShowLauncchPad.value = true;
+		router.push('/launchpad');
 	}
 };
 
@@ -422,7 +428,7 @@ const onAppClick = async (click: AppClickInfo) => {
 	}
 
 	if (isShowLauncchPad.value) {
-		isShowLauncchPad.value = false;
+		router.replace('/');
 	}
 
 	let app = appStore.myApps.find((app: any) => app.id == rid);
@@ -434,8 +440,8 @@ const onAppClick = async (click: AppClickInfo) => {
 		}
 		window.open('//' + url);
 	} else {
-		Notify.create({
-			type: 'negative',
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
 			message: rid
 		});
 	}
@@ -446,13 +452,15 @@ const onDockerClick = async (click: AppClickInfo) => {
 };
 
 const onLaunhPadAppClick = async (click: AppClickInfo) => {
-	isShowLauncchPad.value = false;
+	if (isShowLauncchPad.value) {
+		router.replace('/');
+	}
 	showSearchDialog.value = false;
 	onAppClick(click);
 };
 
 const onLaunchPadDismiss = async () => {
-	isShowLauncchPad.value = false;
+	router.replace('/');
 };
 
 const onDragLaunchApp = async (id: string) => {
@@ -497,8 +505,8 @@ const onLogout = async () => {
 		const auth_url = tokenStore.getAuthURL() + '?logout=1';
 		window.location.replace(auth_url);
 	} catch (err) {
-		Notify.create({
-			type: 'negative',
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
 			message: (err as Error).message
 		});
 	} finally {
@@ -565,12 +573,22 @@ const onLogout = async () => {
 	}
 }
 
+.mobile-window-parent {
+	width: 100%;
+	height: 100vh;
+	height: 100svh;
+	height: 100dvh;
+}
+
 .search_mask {
 	position: absolute;
 	top: 0;
 	left: 0;
-	width: 100vw;
+	width: 100%;
+	max-width: 100vw;
 	height: 100vh;
+	height: 100svh;
+	height: 100dvh;
 	z-index: 1000;
 	background-color: rgba($color: #000000, $alpha: 0.5);
 }

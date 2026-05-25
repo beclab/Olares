@@ -11,10 +11,10 @@ Olares 的设计初衷是让你随时随地都能无缝访问自己的服务。
 - **隐私保护**：将流量严格限制在家庭网络内以增加安全性。
 - **离线可用**：即使互联网服务不可用，也可以访问数据和应用。
 
-## 目标
+## 学习目标
 通过本教程，你将学会如何：
 
-- 使用 LarePass VPN 建立安全、高速的本地连接。
+- 使用 LarePass 专用网络建立安全、高速的本地连接。
 - 使用 `.local` 域名访问 Olares 服务。
 - 配置本地 DNS，使全网设备可通过标准 URL 进行本地访问。
 - 手动修改 Hosts 文件，确保特定计算机在无外网环境下也能访问。
@@ -22,8 +22,8 @@ Olares 的设计初衷是让你随时随地都能无缝访问自己的服务。
 ## 选择连接方式
 有四种建立本地连接的方法：
 
-* **[方法 1：启用 LarePass VPN](#方法-1-启用-larepass-vpn)**<br/>
-  利用 LarePass VPN 自动检测本地网络并优化连接速度，无需更改任何设置。
+* **[方法 1：启用 LarePass 专用网络](#方法-1-启用-larepass-专用网络)**<br/>
+  利用 LarePass 专用网络自动检测本地网络并优化连接速度，无需更改任何设置。
 * **[方法 2：使用 `.local` 域名](#方法-2-使用-local-域名)**<br/>
   通过特定的本地 URL 格式访问设备。无需安装任何软件。
 * **[方法 3：配置本地 DNS](#方法-3-配置本地-dns)**<br/>
@@ -31,14 +31,16 @@ Olares 的设计初衷是让你随时随地都能无缝访问自己的服务。
 * **[方法 4：修改 Hosts 文件](#方法-4-修改-hosts-文件)**<br/>
   在单台计算机上手动将标准 Olares URL 映射到本地 IP。
 
-## 方法 1：启用 LarePass VPN
-LarePass VPN 旨在兼顾连接安全与性能优化。启用后，LarePass 会自动检测设备是否处于同一网络，并切换至**内网**模式。
+## 方法 1：启用 LarePass 专用网络
+LarePass 专用网络旨在兼顾连接安全与性能优化。启用后，LarePass 会自动检测设备是否处于同一网络，并切换至**内网**模式。
 
-<!--@include: ../../reusables/larepass-vpn.md{19,24}-->
+<!--@include: ../../reusables/larepass-vpn.md#vpn-setup-notes-->
 
-在用来访问 Olares 的当前设备上直接启用 LarePass VPN。
+在用来访问 Olares 的当前设备上直接启用 LarePass 专用网络。
 
-<!--@include: ../../reusables/larepass-vpn.md{26,50}-->
+<!--@include: ../../reusables/larepass-vpn.md#enable-larepass-vpn-->
+
+<!--@include: ../../reusables/larepass-vpn.md#check-vpn-status-->
 
 ## 方法 2：使用 `.local` 域名
 
@@ -63,7 +65,7 @@ http://<entrance_id>-<username>-olares.local
 
 The multi-level format below matches the structure of your standard Olares URL. Use it as shown.
 
-<!--@include: ../../reusables/local-domain.md{7,23}-->
+<!--@include: ../../reusables/local-domain.md#local-domain-overview-->
 
 ![多级域名](/images/manual/get-started/multilevel-local-domain-mac.png#bordered)
 
@@ -74,7 +76,7 @@ Therefore, no extra setup is needed. You can directly use local URL in your brow
 
 #### Windows
 
-<!--@include: ../../reusables/local-domain.md{26,40}-->
+<!--@include: ../../reusables/local-domain.md#windows-local-domain-->
 
 ## 方法 3：配置本地 DNS
 为了获得无缝体验（即标准 URL 自动解析为你的本地 IP 地址），你可以配置网络 DNS。此配置确保网络上所有设备的访问一致，无需单独设置客户端。
@@ -187,6 +189,6 @@ ping desktop.<username>.olares.cn
 
 ## 常见问题
 
-<!--@include: ../../reusables/larepass-vpn.md{50,57}-->
+<!--@include: ../../reusables/larepass-vpn.md#larepass-vpn-faq-->
 
-<!--@include: ../../reusables/local-domain.md{42,75}-->
+<!--@include: ../../reusables/local-domain.md#local-domain-faq-->

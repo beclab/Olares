@@ -1,5 +1,5 @@
 const boot = ['i18n', 'settingsUI', 'baseAxios', 'application/settings'];
-const css = ['app.scss', 'adaptive.scss'];
+const css = ['settings/app.scss'];
 
 const getConfig = (ctx) => {
 	if (!ctx.dev) {
@@ -10,6 +10,9 @@ const getConfig = (ctx) => {
 		const chainWebpackMobile = require('./Settings/config');
 		chainWebpackMobile.build.chainWebpack(ctx, chain, { isClient });
 	};
+
+	const proxy = require('./Settings/proxy');
+
 	return {
 		boot,
 		css,
@@ -28,8 +31,14 @@ const getConfig = (ctx) => {
 			chainWebpack,
 			distDir: 'dist/apps/settings'
 		},
+		devServer: {
+			proxy: proxy,
+			host: process.env.DEV_DOMAIN,
+			https: process.env.PROTOCOL === 'https://'
+		},
 		sourceFiles: {
-			indexHtmlTemplate: 'src/index.template.settings.html'
+			indexHtmlTemplate: 'src/index.template.settings.html',
+			variables: 'settings/variables.scss'
 		},
 		htmlVariables: {
 			productName: 'Settings'

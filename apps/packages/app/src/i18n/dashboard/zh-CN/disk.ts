@@ -22,6 +22,12 @@ const options = {
 	AVAILABLE_SPACE: '可用空间',
 	USAGE_RATE: '使用率',
 	MOUNT_POINT: '挂载点',
+	LSBLK_NAME: '名称',
+	LSBLK_SIZE: '大小',
+	LSBLK_FSTYPE: '类型',
+	LSBLK_FSUSED: '已用',
+	LSBLK_FSUSE_PERCENT: '使用率',
+	LSBLK_UNIT_AUTO: '自动',
 	YES_4K: '是',
 	NO_4K: '否'
 };

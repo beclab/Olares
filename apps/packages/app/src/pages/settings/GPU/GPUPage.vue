@@ -11,7 +11,7 @@
 				<div v-if="currentGpu">
 					<bt-list first>
 						<bt-form-item
-							:title="t('GPU Type')"
+							:title="t('GPU model')"
 							:margin-top="false"
 							:chevron-right="false"
 							:widthSeparator="true"
@@ -25,7 +25,7 @@
 							:data="currentGpu.nodeName"
 						/>
 						<bt-form-item
-							:title="t('Video memory size')"
+							:title="t('VRAM')"
 							:margin-top="false"
 							:chevron-right="false"
 							:widthSeparator="true"
@@ -38,7 +38,7 @@
 						>
 							<template v-slot:title>
 								<div class="text-body1 q-mt-md">
-									{{ t('GPU Mode') }}
+									{{ t('GPU mode') }}
 								</div>
 								<div
 									class="text-ink-3 q-mt-sm q-mb-md text-body3"
@@ -49,7 +49,7 @@
 							</template>
 							<bt-select
 								v-model="memoryMode"
-								:options="VRAMModeOptions()"
+								:options="VRAMModeOptions(currentGpu.allowedShareModes as any)"
 								@update:modelValue="vramUpdate"
 							/>
 						</bt-form-item>
@@ -64,6 +64,19 @@
 								:description="memoryOptions?.subDesc"
 							/>
 						</div>
+						<q-btn
+							flat
+							dense
+							@click="refreshGpuList"
+							icon="sym_r_sync"
+							color="ink-2"
+						>
+							<q-tooltip>
+								<span class="text-body3 text-ink-tooltip">
+									{{ t('refresh') }}
+								</span>
+							</q-tooltip>
+						</q-btn>
 					</div>
 					<div>
 						<template v-if="lastMemoryMode == VRAMMode.Single">
@@ -198,7 +211,7 @@
 				<div v-if="currentGpu">
 					<bt-list>
 						<bt-form-item
-							:title="t('GPU Type')"
+							:title="t('GPU model')"
 							:margin-top="false"
 							:chevron-right="false"
 							:widthSeparator="true"
@@ -212,7 +225,7 @@
 							:data="currentGpu.nodeName"
 						/>
 						<bt-form-item
-							:title="t('Video memory size')"
+							:title="t('VRAM')"
 							:margin-top="false"
 							:chevron-right="false"
 							:widthSeparator="true"
@@ -225,7 +238,7 @@
 						>
 							<template v-slot:title>
 								<div class="text-subtitle3-m q-mt-md">
-									{{ t('GPU Mode') }}
+									{{ t('GPU mode') }}
 								</div>
 								<div
 									class="text-ink-3 q-mt-sm q-mb-md text-body3"
@@ -236,7 +249,7 @@
 							</template>
 							<bt-select
 								v-model="memoryMode"
-								:options="VRAMModeOptions()"
+								:options="VRAMModeOptions(currentGpu.allowedShareModes as any)"
 								@update:modelValue="vramUpdate"
 							/>
 						</bt-form-item>
@@ -350,12 +363,12 @@
 								:value="gpu.nodeName"
 							/>
 							<bt-grid-item
-								:label="t('Video memory size')"
+								:label="t('VRAM')"
 								mobileTitleClasses="text-body3-m"
 								:value="format.formatFileSize(gpu.devmem * 1024 * 1024, 0, ' ')"
 							/>
 							<bt-grid-item
-								:label="t('GPU Mode')"
+								:label="t('GPU mode')"
 								mobileTitleClasses="text-body3-m"
 								:value="
 									VRAMModeOptions().filter((e) => e.value == gpu.sharemode)[0]
@@ -378,9 +391,7 @@
 <script setup lang="ts">
 import ReminderDialogComponent from 'src/components/settings/ReminderDialogComponent.vue';
 import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
-import AppSelect from 'src/pages/settings/Developer/pages/dialog/AppSelect.vue';
 import AppMenuFeature from 'src/components/settings/AppMenuFeature.vue';
-import EmptyComponent from 'src/components/settings/EmptyComponent.vue';
 import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
 import BtFormItem from 'src/components/settings/base/BtFormItem.vue';
 import BtGridItem from 'src/components/settings/base/BtGridItem.vue';
@@ -388,10 +399,8 @@ import AppMenuEmpty from 'src/components/settings/AppMenuEmpty.vue';
 import BtSelect from 'src/components/settings/base/BtSelect.vue';
 import BtGrid from 'src/components/settings/base/BtGrid.vue';
 import EditAppGpuDialog from './EditAppGpuDialog.vue';
-import { useApplicationStore } from 'src/stores/settings/application';
 import { MENU_TYPE, VRAMMode, VRAMModeOptions } from 'src/constant';
-import { GPUInfo, useGPUStore } from 'src/stores/settings/gpu';
-import { useDeviceStore } from 'src/stores/settings/device';
+import { GPUInfo } from 'src/stores/settings/gpu';
 import { computed, onMounted, ref, watch } from 'vue';
 import { format } from 'src/utils/format';
 import { useRouter } from 'vue-router';
@@ -426,6 +435,12 @@ onMounted(() => {
 	gpuStore.getGpuList();
 });
 
+const refreshGpuList = async () => {
+	$q.loading.show();
+	await gpuStore.getGpuList();
+	$q.loading.hide();
+};
+
 const memoryOptions = computed(() => {
 	return VRAMModeOptions().find((e) => e.value == memoryMode.value);
 });
@@ -441,10 +456,10 @@ const vramUpdate = (mode: VRAMMode) => {
 	$q.dialog({
 		component: ReminderDialogComponent,
 		componentProps: {
-			title: t('Switch VRAM mode'),
-			message: t('Are you sure you need to switch the VRAM mode to {mode}?', {
-				mode: vramItem.label
-			}),
+			title: t('Change GPU mode to', { mode: vramItem.label }),
+			message: t(
+				'Changing the GPU mode will reallocate resources. Apps using this GPU may stop and need to be resumed manually before they can run again.'
+			),
 			useCancel: true,
 			confirmText: t('confirm'),
 			cancelText: t('cancel')
@@ -534,8 +549,12 @@ const cancelBind = async (app: string) => {
 		lastMemoryMode.value,
 		selectGpu.value!.id,
 		app
+		// () => {
+		//
+		// }
 	);
 	$q.loading.hide();
+	// $q.loading.hide();
 };
 
 const singleRemove = () => {
@@ -587,7 +606,8 @@ const editVRAM = (app: string) => {
 	$q.dialog({
 		component: EditAppGpuDialog,
 		componentProps: {
-			maxValue: currentGpu.value?.memoryAvailable,
+			maxValue:
+				(currentGpu.value?.memoryAvailable || 0) + (apps[0].memory || 0),
 			memoryInput: lastMemoryMode.value == VRAMMode.MemorySlicing,
 			memeryInit: Number(
 				format.formatFileSize(apps[0].size, undefined, undefined, false)
@@ -597,10 +617,11 @@ const editVRAM = (app: string) => {
 					label: e.app,
 					value: e.value,
 					icon: e.icon,
-					state: e.state
+					state: e.state,
+					minMemory: apps[0].minMemory
 				};
 			}),
-			title: t('Edit VRAM Allocatin')
+			title: t('Edit VRAM allocation')
 		}
 	}).onOk(async (data: { app: string; memoryLimit: number }) => {
 		await gpuStore.updateApplication(
@@ -683,7 +704,7 @@ const gupListColumns: any = [
 	{
 		name: 'type',
 		align: 'left',
-		label: t('GPU Type'),
+		label: t('GPU model'),
 		field: 'type',
 		format: (val: any) => {
 			return val;
@@ -703,7 +724,7 @@ const gupListColumns: any = [
 	{
 		name: 'size',
 		align: 'left',
-		label: t('Video memory size'),
+		label: t('VRAM'),
 		field: 'devmem',
 		format: (val: any) => {
 			return format.formatFileSize(val * 1024 * 1024, 0, ' ');
@@ -713,7 +734,7 @@ const gupListColumns: any = [
 	{
 		name: 'mode',
 		align: 'left',
-		label: t('GPU Mode'),
+		label: t('GPU mode'),
 		field: 'sharemode',
 		format: (val: any) => {
 			return VRAMModeOptions().filter((e) => e.value == val)[0].label;
@@ -723,7 +744,7 @@ const gupListColumns: any = [
 	{
 		name: 'actions',
 		align: 'right',
-		label: t('action'),
+		label: t('Details'),
 		sortable: false
 	}
 ];

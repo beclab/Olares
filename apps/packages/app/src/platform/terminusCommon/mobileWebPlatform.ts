@@ -4,7 +4,6 @@ import { useFilesStore, FilesIdType } from '../../stores/files';
 import { watch } from 'vue';
 import { useTransfer2Store } from 'src/stores/transfer2';
 import { useTermipassStore } from '../../stores/termipass';
-import { useDeviceStore } from 'src/stores/device';
 import { useDeviceStore as useDeviceStore2 } from 'src/stores/settings/device';
 import { tabbarItems } from 'src/platform/interface/bex/front/bexTabOptions';
 import { useMDNSStore } from 'src/stores/mdns';
@@ -111,10 +110,6 @@ export class MobileWebPlatform extends TerminusCommonPlatform {
 	isMobile = true;
 
 	isTabbarDisplay() {
-		const deviceStore = useDeviceStore();
-		if (deviceStore.isScaning) {
-			return false;
-		}
 		const fileStore = useFilesStore();
 		return !fileStore.isShard;
 	}

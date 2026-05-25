@@ -1,5 +1,6 @@
 <template>
 	<q-dialog
+		style="background: rgba(0, 0, 0, 1)"
 		v-model="dialog"
 		persistent
 		:maximized="maximizedToggle"
@@ -146,13 +147,11 @@ onBeforeMount(() => {
 onMounted(() => {
 	isDark.value = false;
 	if ($q.platform.is.nativeMobile) {
-		// ScreenOrientation.unlock({
-		// 	orientation:
-		// });
-		ScreenOrientation.lock({
-			orientation: 'landscape'
-		});
+		ScreenOrientation.lock({ orientation: 'landscape' });
 		StatusBar.hide();
+		// ScreenOrientation.addListener('screenOrientationChange', (orientation) => {
+		// 	console.log('orientation --->', orientation.type);
+		// });
 
 		if ($q.platform.is.android) {
 			AndroidPlugins.AndroidUniversal.hideNavigationBar();
@@ -193,7 +192,7 @@ onBeforeUnmount(() => {
 #video-previewer {
 	position: relative;
 	background-color: rgba(0, 0, 0, 1);
-	height: 100vh;
+	height: calc(100vh - env(safe-area-inset-top)) !important;
 	max-height: 100vh !important;
 }
 

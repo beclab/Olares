@@ -10,13 +10,27 @@
 			@drop="onDrop"
 		>
 			<div class="bg-container">
-				<img
-					v-if="tokenStore.config.bg"
-					fit="fill"
-					class="desktop-bg"
-					:src="bgSrc"
+				<!--				<img-->
+				<!--					v-if="tokenStore.config.bg"-->
+				<!--					fit="fill"-->
+				<!--					class="desktop-bg"-->
+				<!--					:src="bgSrc"-->
+				<!--				/>-->
+				<!--				<img v-else fit="fill" class="desktop-bg" src="/desktop/bg/0.jpg" />-->
+				<div
+					class="bg-container"
+					:class="{
+						'bg-mode-fill': tokenStore.config.style === IMG_CONTENT_MODE.Fill,
+						'bg-mode-cover':
+							tokenStore.config.style === IMG_CONTENT_MODE.Stretch,
+						'bg-mode-repeat': tokenStore.config.style === IMG_CONTENT_MODE.Tile
+					}"
+					:style="{
+						backgroundImage: `url(${
+							tokenStore.config.bg ? bgSrc : '/desktop/bg/0.jpg'
+						})`
+					}"
 				/>
-				<img v-else fit="fill" class="desktop-bg" src="/desktop/bg/0.jpg" />
 			</div>
 
 			<DailyDescription />
@@ -78,7 +92,7 @@
 					class="search"
 					v-if="showSearchDialog"
 					@hide="changeSearchDialog"
-					@appClick="onLaunchPadAppClick"
+					@appClick="onFileSearchClick"
 				/>
 			</div>
 		</transition>
@@ -89,7 +103,6 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue';
-import { useQuasar, Notify } from 'quasar';
 import {
 	IntentFilter,
 	Action,
@@ -100,7 +113,7 @@ import {
 } from '@bytetrade/core';
 import { WindowInfo, AppClickInfo, MessageData } from './type/types';
 import { bus } from '../../utils/bus';
-import { useAppStore } from '../../stores/desktop/app';
+import { useApplicationStore } from '../../stores/desktop/app';
 import { useTokenStore } from '../../stores/desktop/token';
 import { useUpgradeStore } from '../../stores/desktop/upgrade';
 import { expiresStorage } from '../../utils/desktop/location';
@@ -112,9 +125,17 @@ import DailyDescription from './DailyDescription.vue';
 import BasicWindow from './components/BasicWindow.vue';
 import UpgradeComponent from './components/UpgradeComponent.vue';
 import { useNotificationStore } from 'src/stores/desktop/notification';
+import { IMG_CONTENT_MODE } from 'src/constant';
+import { getApplication } from 'src/application/base';
+import {
+	createDesktopWindowTracer,
+	DESKTOP_WINDOW_TRACE_TAG,
+	DESKTOP_WINDOW_TRACE_SCOPE
+} from 'src/utils/trace/clients/desktopWindowTrace';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { notifyMessage } from 'src/utils/settings/btNotify';
 
-const $q = useQuasar();
-const appStore = useAppStore();
+const appStore = useApplicationStore();
 const tokenStore = useTokenStore();
 const upgradeStore = useUpgradeStore();
 const window_parent = ref<HTMLElement>();
@@ -130,6 +151,9 @@ const widthDiff = ref(0);
 const notificationStore = useNotificationStore();
 
 let need_save_window = false;
+const traceDesktop = createDesktopWindowTracer(
+	DESKTOP_WINDOW_TRACE_SCOPE.INDEX
+);
 
 const onWindowUpdate = (window_info: WindowInfo) => {
 	window_infos.value.forEach((info: WindowInfo) => {
@@ -236,7 +260,11 @@ const listenerMessage = (e: any) => {
 			break;
 		case 'Files':
 			if (data.message) {
-				data.message = data.message.slice(6);
+				data.message = data.message.startsWith('https://')
+					? data.message.slice(6)
+					: data.message.startsWith('http://')
+					? data.message.slice(5)
+					: data.message;
 				let hasMessageIndex = messageSavePath.value.findIndex(
 					(item: { type: string }) => item.type === data.type
 				);
@@ -411,13 +439,11 @@ onMounted(async () => {
 	});
 
 	bus.on('notification', (notification: any) => {
-		$q.notify({
-			message: notification.body,
-			caption: notification.title,
-			type: 'info',
-			position: 'top',
-			timeout: 2000
-		});
+		const msg =
+			notification?.title && notification?.body
+				? `${notification.title}: ${notification.body}`
+				: notification?.body ?? notification?.title ?? '';
+		notifyMessage(msg);
 	});
 
 	window.onresize = () => {
@@ -461,6 +487,11 @@ const onAppClick = async (click: AppClickInfo) => {
 	} else if (rid.startsWith('bdesk:')) {
 		rid = rid.substring(6);
 	}
+	traceDesktop(DESKTOP_WINDOW_TRACE_TAG.APP_CLICK_START, {
+		click,
+		rid,
+		windowCount: window_infos.value.length
+	});
 
 	if (rid == 'launchpad') {
 		launchPadClick();
@@ -501,11 +532,22 @@ const onAppClick = async (click: AppClickInfo) => {
 		if (tokenStore.islocal) {
 			url = tokenStore.getAppLocalUrl(app.id);
 		}
+		traceDesktop(DESKTOP_WINDOW_TRACE_TAG.APP_URL_RESOLVED, {
+			appid: app.id,
+			fatherName: app.fatherName,
+			openMethod: app.openMethod,
+			islocal: tokenStore.islocal,
+			url
+		});
 		if (
 			[DeviceType.MOBILE, DeviceType.TABLET].includes(
 				tokenStore.deviceInfo.device
 			)
 		) {
+			traceDesktop(DESKTOP_WINDOW_TRACE_TAG.OPEN_EXTERNAL_MOBILE, {
+				appid: app.id,
+				url: '//' + url
+			});
 			window.open('//' + url);
 			return false;
 		}
@@ -516,6 +558,10 @@ const onAppClick = async (click: AppClickInfo) => {
 		}
 
 		if (app.openMethod == 'window') {
+			traceDesktop(DESKTOP_WINDOW_TRACE_TAG.OPEN_EXTERNAL_WINDOW, {
+				appid: app.id,
+				url: '//' + url
+			});
 			window.open('//' + url);
 			return;
 		}
@@ -523,6 +569,12 @@ const onAppClick = async (click: AppClickInfo) => {
 		let w = window_infos.value.find((window) => window.id == rid);
 
 		if (w) {
+			traceDesktop(DESKTOP_WINDOW_TRACE_TAG.REUSE_WINDOW, {
+				appid: app.id,
+				title: app.title,
+				windowId: w.id,
+				url: w.url
+			});
 			w.is_show = true;
 			for (let i = 0; i < window_infos.value.length; ++i) {
 				if (window_infos.value[i].z > w.z) {
@@ -530,6 +582,16 @@ const onAppClick = async (click: AppClickInfo) => {
 					window_infos.value[i].active = false;
 				}
 			}
+			// if (w.url == '//' + url) {
+			// 	if (url?.includes('?')) {
+			// 		url = url + '&' + '_t=' + Date.now();
+			// 	} else {
+			// 		url = url + '?_t=' + Date.now();
+			// 	}
+			// }
+			// if (url) {
+			// 	w.url = '//' + url;
+			// }
 			w.z = window_infos.value.length;
 			w.active = true;
 		} else {
@@ -574,6 +636,14 @@ const onAppClick = async (click: AppClickInfo) => {
 				active: true,
 				isResizable: true
 			};
+			traceDesktop(DESKTOP_WINDOW_TRACE_TAG.CREATE_WINDOW, {
+				appid: app.id,
+				title: app.title,
+				windowId: obj.id,
+				url: obj.url,
+				size: { width: obj.width, height: obj.height },
+				position: { left: obj.left, top: obj.top }
+			});
 
 			if (app.id.startsWith('settings')) {
 				obj.isResizable = false;
@@ -598,9 +668,13 @@ const onAppClick = async (click: AppClickInfo) => {
 			}
 		}
 	} else {
-		Notify.create({
-			type: 'negative',
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
 			message: rid
+		});
+		traceDesktop(DESKTOP_WINDOW_TRACE_TAG.APP_NOT_FOUND, {
+			rid,
+			myAppsCount: appStore.myApps.length
 		});
 	}
 };
@@ -613,6 +687,24 @@ const onLaunchPadAppClick = async (click: AppClickInfo) => {
 	isShowLaunchPad.value = false;
 	showSearchDialog.value = false;
 	onAppClick(click);
+};
+
+const onFileSearchClick = async (click: AppClickInfo) => {
+	const path = click.data.path || '/';
+	let app = appStore.myApps.find((app: any) => app.id == click.appid);
+	if (!app) {
+		return;
+	}
+	let url = app.url + path;
+	if (tokenStore.islocal) {
+		url = tokenStore.getAppLocalUrl(app.id);
+	}
+	if (tokenStore.islocal) {
+		url = 'http://' + url;
+	} else {
+		url = 'https://' + url;
+	}
+	getApplication().openUrl(url);
 };
 
 const onLaunchPadDismiss = async () => {
@@ -675,7 +767,26 @@ const bgSrc = computed(() => {
 	justify-content: center;
 	align-items: center;
 	overflow: hidden;
+
+	.bg-mode-fill {
+		background-size: 100% 100%;
+		background-repeat: no-repeat;
+		background-position: center;
+	}
+
+	.bg-mode-cover {
+		background-size: cover;
+		background-repeat: no-repeat;
+		background-position: center;
+	}
+
+	.bg-mode-repeat {
+		background-size: auto;
+		background-repeat: repeat;
+		background-position: 0 0;
+	}
 }
+
 .desktop-box {
 	width: 100%;
 	height: 100%;

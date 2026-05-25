@@ -76,32 +76,9 @@
 					</div>
 				</bt-scroll-area>
 
-				<bt-scroll-area
-					class="full-width"
-					style="height: calc(100vh - 100px)"
-					v-if="pdfConfigStore.topicLoad && pdf"
-				>
-					<div class="pdf-scroll">
-						<pdfvuer
-							:src="pdfConfigStore.source"
-							v-for="i in pdfConfigStore.numPages"
-							:key="i"
-							:id="i"
-							:page="i"
-							class="cursor-pointer"
-							:class="
-								i === pdfConfigStore.pageNum ? 'selected-children' : 'children'
-							"
-							@click="pdfConfigStore.handleItemClick(i)"
-						>
-							<template v-slot:loading>
-								<div class="loading column justify-center items-center">
-									<bt-loading :loading="true" size="30px" />
-								</div>
-							</template>
-						</pdfvuer>
-					</div>
-				</bt-scroll-area>
+				<div class="pdf-nav-panel" v-if="pdfConfigStore.topicLoad && pdf">
+					<pdf-sidebar />
+				</div>
 			</div>
 		</transition>
 	</div>
@@ -109,17 +86,16 @@
 
 <script setup lang="ts">
 import BtTooltip from '../../../../components/base/BtTooltip.vue';
-import BtLoading from '../../../../components/base/BtLoading.vue';
 import { useConfigStore } from '../../../../stores/rss-config';
 import { useReaderStore } from '../../../../stores/rss-reader';
+import { usePdfLazyLoad, PDF_LAZY_LOAD_PRESETS, PdfSidebar } from '../pdf';
 import { ArticleTopic } from '../../../../utils/rss-types';
-import { usePDfStore } from '../../../../stores/pdf';
-import { useI18n } from 'vue-i18n';
-import pdfvuer from 'pdfvuer';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 
-const pdfConfigStore = usePDfStore();
+const { pdfConfigStore } = usePdfLazyLoad(PDF_LAZY_LOAD_PRESETS.thumbnail);
+
 const configStore = useConfigStore();
 const readerStore = useReaderStore();
 const { t } = useI18n();
@@ -225,31 +201,11 @@ console.log('topic ', readerStore.topicArray);
 		}
 	}
 
-	.pdf-scroll {
+	.pdf-nav-panel {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		justify-items: center;
-
-		.children {
-			width: 118px;
-			background: $background-3;
-			border-radius: 8px;
-			border: 2px solid $separator;
-			padding: 10px 20px;
-			margin-bottom: 58px;
-		}
-
-		.selected-children {
-			@extend .children;
-			background: $separator;
-			border: 2px solid $orange-default;
-		}
-
-		.loading {
-			width: 78px;
-			height: 100px;
-		}
+		min-height: 0;
+		height: calc(100vh - 100px);
 	}
 
 	.slide-enter-active,

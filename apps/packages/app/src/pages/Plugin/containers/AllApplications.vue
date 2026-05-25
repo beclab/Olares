@@ -28,7 +28,7 @@
 							:ratio="1"
 							width="32px"
 							spinner-size="0"
-							@click="openUrl(item.url)"
+							@click="openUrl(item)"
 						>
 							<template #loading>
 								<q-skeleton
@@ -74,6 +74,9 @@ import { computed, onMounted } from 'vue';
 import ShakeDom from 'src/pages/Plugin/components/ShakeDom.vue';
 import { vDraggable, VueDraggable } from 'vue-draggable-plus';
 import { difference } from 'lodash';
+import { useUserStore } from 'src/stores/user';
+import { AppListItem } from '@apps/control-panel-common/network/network';
+import { useLocalForModule } from 'src/utils/bex/moduleUseLocal';
 
 interface Props {
 	showAction?: boolean;
@@ -101,9 +104,12 @@ const actionHandler = (id: string) => {
 	}
 };
 
-const openUrl = (url: string) => {
+const openUrl = (item: AppListItem) => {
 	if (!props.showAction) {
-		appsStore.openUrl(url);
+		const userStore = useUserStore();
+		const useLocal = useLocalForModule(item.name);
+		const fullUrl = userStore.getModuleSever(item.id, 'https:', '', useLocal);
+		appsStore.openUrl(fullUrl);
 	}
 };
 

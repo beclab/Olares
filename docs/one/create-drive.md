@@ -9,19 +9,21 @@ head:
 
 # Reinstall Olares OS using bootable USB <Badge type="tip" text="15 min"/>
 
-Reinstalling Olares OS returns your Olares One to a clean initial state. You can do this using the bootable USB drive included with Olares One.
+Reinstalling Olares OS returns your Olares One to a clean initial state.
 
 :::warning Data loss
 This will permanently delete all accounts, settings, and data on the device. This action cannot be undone.
 :::
 
 ## Prerequisites
-**Hardware**<br>
-- The bootable USB drive that came with Olares One.
-   :::tip Don't have the USB drive?
-   Download the [Olares One ISO](https://cdn.olares.com/one/olares-latest-amd64.iso), which is device-specific and different from the standard Olares ISO, and flash it to a USB drive (8 GB or larger) using a tool such as [Balena Etcher](https://etcher.balena.io/).
-   :::
+
 - A monitor and keyboard connected to Olares One.
+- The bootable USB drive that came with Olares One.
+ 
+   :::info Installed OS version
+   The OS image on the included USB drive may be an earlier version, depending on when your device was shipped. You can still use it to reinstall the system, then update Olares OS after activation if needed.
+
+   If you need the latest OS image, create a new bootable USB drive from the [Olares One ISO](https://cdn.olares.com/one/olares-latest-amd64.iso). For detailed steps, see [Create an Olares One bootable USB drive](create-bootable-usb.md).
 
 ## Step 1: Boot from the USB drive
 
@@ -82,3 +84,7 @@ After the reboot, the system starts in a clean factory state and shows a text-ba
 ## Step 4: Complete activation via LarePass
 
 You can then activate Olares One again via LarePass. For detailed instructions, see [First boot](first-boot.md).
+
+## Step 5: Check for system updates (optional)
+
+The included USB drive may install an earlier OS version. After activation, you can update Olares OS in LarePass. For detailed steps, see [Update OS](update.md).

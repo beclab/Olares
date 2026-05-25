@@ -48,14 +48,13 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRssStore } from '../../../stores/rss';
 import { fireImpression } from '../../../api/wise';
 import { MenuType } from '../../../utils/rss-menu';
-import { useQuasar } from 'quasar';
+import { notifyFailed } from 'src/utils/settings/btNotify';
 
 let loadingMore = false;
 const selectIndex = ref(-1);
 const showBarShadow = ref(false);
 const loadMoreEnable = ref(true);
 const firstLoading = ref(true);
-const $q = useQuasar();
 const rssStore = useRssStore();
 const configStore = useConfigStore();
 const readerStore = useReaderStore();
@@ -116,7 +115,7 @@ const requestRecommend = async () => {
 		if (!message) {
 			loadMoreEnable.value = data.length == DefaultType.Limit;
 		} else {
-			$q.notify(message);
+			notifyFailed(String(message));
 		}
 		firstLoading.value = false;
 	} else {
@@ -128,7 +127,7 @@ const requestRecommend = async () => {
 		if (!message) {
 			loadMoreEnable.value = data.length == DefaultType.Limit;
 		} else {
-			$q.notify(message);
+			notifyFailed(String(message));
 		}
 		loadingMore = false;
 	}

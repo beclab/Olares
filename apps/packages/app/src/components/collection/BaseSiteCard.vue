@@ -6,7 +6,7 @@
 			class="row items-center no-wrap flex-gap-x-md ellipsis"
 			style="flex: 1"
 		>
-			<div class="img-wrapper row items-center">
+			<div class="img-wrapper row items-center relative-position">
 				<q-img
 					:src="data.icon || mask_group"
 					:error-src="mask_group"
@@ -26,6 +26,8 @@
 						/>
 					</template>
 				</q-img>
+
+				<slot name="status" v-if="$slots.status"></slot>
 			</div>
 			<div class="ellipsis" style="">
 				<div class="text-subtitle3 text-ink-1 ellipsis">
@@ -75,6 +77,9 @@ withDefaults(defineProps<BaseSiteCardProps>(), {
 		height: 40px;
 		border-radius: 6px;
 		overflow: hidden;
+	}
+	.avatar-status {
+		pointer-events: none;
 	}
 	.link-wrapper {
 		&:link {

@@ -466,8 +466,11 @@ func NewKubeRuntime(arg Argument) (*KubeRuntime, error) {
 		return nil, err
 	}
 
-	base := connector.NewBaseRuntime(cluster.Name, connector.NewDialer(),
+	base, err := connector.NewBaseRuntime(cluster.Name, connector.NewDialer(),
 		arg.BaseDir, arg.OlaresVersion, arg.ConsoleLogFileName, arg.ConsoleLogTruncate, arg.SystemInfo)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create base runtime")
+	}
 
 	clusterSpec := &cluster.Spec
 	defaultCluster, roleGroups := clusterSpec.SetDefaultClusterSpec(arg.InCluster, arg.SystemInfo.IsDarwin())

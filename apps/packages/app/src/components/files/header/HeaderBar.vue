@@ -25,8 +25,6 @@ import { defineComponent } from 'vue';
 import { useDataStore } from '../../../stores/data';
 import { logoURL } from '../../../utils/constants';
 
-// import Action from './Action.vue';
-
 export default defineComponent({
 	name: 'header-bar',
 	props: {

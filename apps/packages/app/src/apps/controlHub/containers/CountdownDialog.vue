@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, toRefs, watch } from 'vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 
 interface DialogData {
 	title: string;

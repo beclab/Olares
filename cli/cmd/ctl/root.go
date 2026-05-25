@@ -5,7 +5,8 @@ import (
 
 	"github.com/beclab/Olares/cli/cmd/config"
 	"github.com/beclab/Olares/cli/cmd/ctl/amdgpu"
-	"github.com/beclab/Olares/cli/cmd/ctl/app"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster"
+	"github.com/beclab/Olares/cli/cmd/ctl/dashboard"
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
@@ -14,6 +15,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
 	"github.com/beclab/Olares/cli/cmd/ctl/profile"
+	"github.com/beclab/Olares/cli/cmd/ctl/settings"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
@@ -25,9 +27,9 @@ import (
 func NewDefaultCommand() *cobra.Command {
 	var showVendor bool
 	// One Factory per process. Subcommands that need an authenticated HTTP
-	// client (today: files; future: user/app/settings) all reach into this
-	// same instance so credential resolution and HTTPClient construction are
-	// memoized across verbs in the same invocation.
+	// client (market, profile, files, dashboard, settings, cluster) all
+	// reach into this same instance so credential resolution and HTTPClient
+	// construction are memoized across verbs in the same invocation.
 	factory := cmdutil.NewFactory()
 	cobra.OnInitialize(func() {
 		config.Init()
@@ -37,6 +39,9 @@ func NewDefaultCommand() *cobra.Command {
 		Short:             "Olares Installer",
 		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 		Version:           version.VERSION,
+		// SilenceErrors: cmd/main.go prints the error once on non-zero exit; without
+		// this, Cobra also prints to stderr and users see duplicate "Error:" lines.
+		SilenceErrors: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			viper.BindPFlags(cmd.InheritedFlags())
 			viper.BindPFlags(cmd.PersistentFlags())
@@ -52,11 +57,12 @@ func NewDefaultCommand() *cobra.Command {
 		},
 	}
 	cmds.Flags().BoolVar(&showVendor, "vendor", false, "show the vendor type of olares-cli")
-	// Persistent --profile flag binds straight onto the shared Factory so
-	// that subcommands which use it (factory.ResolveProfile) automatically
-	// honor the override without each having to re-declare the flag.
-	cmds.PersistentFlags().StringVar(&factory.ProfileOverride, "profile", "",
-		"olaresId of the profile to use (overrides the currently-selected one)")
+	// Identity is single-source: whichever profile `olares-cli profile use`
+	// (or the most recent `profile login` / `profile import`) selected. There
+	// is intentionally no per-invocation `--profile` override — agents and
+	// scripts must commit to one role up-front rather than silently hopping
+	// identities mid-pipeline. To target a different profile, run
+	// `olares-cli profile use <name>` first.
 
 	cmds.AddCommand(osinfo.NewCmdInfo())
 	cmds.AddCommand(os.NewOSCommands()...)
@@ -67,9 +73,11 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(wizard.NewWizardCommand())
 	cmds.AddCommand(disk.NewDiskCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
-	cmds.AddCommand(app.NewAppCommand())
-	cmds.AddCommand(profile.NewProfileCommand())
+	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(files.NewFilesCommand(factory))
+	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
+	cmds.AddCommand(settings.NewSettingsCommand(factory))
+	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	return cmds
 }

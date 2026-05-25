@@ -173,13 +173,6 @@ export class UserItem extends Serializable {
 
     owner_ssh_is_default = SSHPassworResetType.RESETED;
 
-    // get olaresId() {
-    //     if (!!this.olares_id) {
-    //         return this.olares_id;
-    //     }
-    //     return this.terminus_id;
-    // }
-
     get olares_device_id() {
          if (!!this.olares_id) {
             return this.olares_id;
@@ -202,57 +195,39 @@ export class UserItem extends Serializable {
 	}
 
 	get terminus_url() {
-		const array: string[] = this.name.split('@');
-		if (array.length == 2) {
-			return 'https://' + this.local_url + array[0] + '.' + array[1] + '';
-		} else {
-			return (
-				'https://' + this.local_url + array[0] + '.' + TerminusDefaultDomain
-			);
-		}
+        return this.get_module_url('', 'https', '');
 	}
 
-	get vault_url() {
-        if (process.env.NODE_ENV === 'development') {
-	        return '/server';
-        }   
-		const array: string[] = this.name.split('@');
-		if (array.length == 2) {
-			return (
-				'https://vault.' +
-				this.local_url +
-				array[0] +
-				'.' +
-				array[1] +
-				'/server'
-			);
-		} else {
-			return (
-				'https://vault.' +
-				this.local_url +
-				array[0] +
-				'.' +
-				TerminusDefaultDomain +
-				'/server'
-			);
-		}
+    get local_terminus_url() {
+        const array: string[] = this.name.split('@');
+        if (this.isLargeVersion12_4) {
+            return 'http://' + array[0] + '.' + 'olares.local';
+        } else {
+            if (array.length == 1) {
+                return 'https://' + 'local.' + array[0] + '.' + TerminusDefaultDomain;
+            }
+            if (array.length == 2) {
+                return 'https://' + 'local.' + array[0] + '.' + array[1];
+            }
+        }
+        return this.terminus_url;
+    }
+
+	get vault_url() { 
+        return this.get_module_url('vault', 'https', '/server');
 	}
 
 	get auth_url() {
-		const array: string[] = this.name.split('@');
-		if (array.length == 2) {
-			return 'https://auth.' + this.local_url + array[0] + '.' + array[1] + '/';
-		} else {
-			return (
-				'https://auth.' +
-				this.local_url +
-				array[0] +
-				'.' +
-				TerminusDefaultDomain +
-				'/'
-			);
-		}
+        return this.get_module_url('auth', 'https', '/', this.terminus_activate_status != 'wait_reset_password');
 	}
+
+    get desktop_target_url() {
+        return this.get_module_url('desktop', 'https', '/', this.terminus_activate_status != 'wait_reset_password');
+    }
+
+    get vault_target_url() {
+        return this.get_module_url('vault', 'https', '/server', this.terminus_activate_status != 'wait_reset_password');
+    }
 
 	get isLargeVersion12() {
         if (this.os_version) {
@@ -275,9 +250,16 @@ export class UserItem extends Serializable {
 		return false;
 	}
 
-     get isLargeVersion12_3() {
+    get isLargeVersion12_3() {
         if (this.os_version) {
             return compareOlaresVersion(this.os_version, '1.12.3-0').compare >= 0;
+        }
+		return false;
+	}
+
+    get isLargeVersion12_4() {
+        if (this.os_version) {
+            return compareOlaresVersion(this.os_version, '1.12.4-0').compare >= 0;
         }
 		return false;
 	}
@@ -292,6 +274,30 @@ export class UserItem extends Serializable {
 		}
 		return '';
 	}
+
+    get_module_url(module: string, protocol = 'https', suffix = '/', use_local = true) {
+        const array: string[] = this.name.split('@');
+        const module_prefix = module ? (module + '.') : '';
+
+        if (protocol.endsWith(':')) {
+            protocol = protocol.slice(0, -1);
+        }
+        
+        if (use_local && this.isLargeVersion12_4 && this.isLocal) {
+            const target = protocol.startsWith('https') ? 'http' : protocol.startsWith('wss') ? 'ws': protocol;
+            return target + '://' + module_prefix + array[0] + '.olares.local' + suffix;
+        }
+     
+		if (array.length == 2) {
+			return protocol + '://' + module_prefix + (use_local ? this.local_url : '') + array[0] + '.' + array[1] + suffix;
+		} else {
+            return protocol + '://' + module_prefix + (use_local ? this.local_url : '') + array[0] + '.' + TerminusDefaultDomain + suffix;
+		}
+    }
+
+    get local_default_host() {
+        return this.local_name +  '.olares.local';
+    }
 }
 
 /**
@@ -461,6 +467,14 @@ export class LocalUserVault extends PBES2Container implements Storable {
 
 	/**
 	 * Commit changes to `items` by reencrypting the data.
+	 *
+	 * Note: an empty `mnemonics` collection is a legitimate state (e.g. right
+	 * after `create()` calls `setPassword()` on a brand-new vault, or after
+	 * `removeUser()` removes the last entry). The "wrong password leaves
+	 * mnemonics empty while encryptedData exists" failure mode that previously
+	 * motivated a guard here is already prevented upstream by
+	 * `PBES2Container.unlock()` clearing `_key` on decrypt failure and by
+	 * `userStore.save()` bailing out when the vault is not unlocked.
 	 */
 	async commit() {
 		await this.setData(this.mnemonics.toBytes());

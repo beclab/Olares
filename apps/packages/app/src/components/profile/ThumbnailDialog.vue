@@ -25,11 +25,11 @@
 					class="option-item"
 					type="avator"
 					:size="5"
+					:file-guard="imagesUploadFormatGuard"
 					fileName="image"
-					accept=".jpg, .jpeg, .png, .gif, image/*"
+					:accept="IMAGES_UPLOAD_V1_ACCEPT"
 					action="/images/upload/v1"
 					@ok="ok"
-					@fail="fail"
 				>
 					<div class="option-item flex items-center justify-center">
 						<img class="item-icon" src="/svg/up.svg" />
@@ -67,7 +67,12 @@
 </template>
 
 <script lang="ts" setup>
-import { defineProps, ref, watchEffect, computed, ComputedRef } from 'vue';
+import { ref, watchEffect, computed, type ComputedRef } from 'vue';
+import { useI18n } from 'vue-i18n';
+import {
+	createImagesUploadV1FormatGuard,
+	IMAGES_UPLOAD_V1_ACCEPT
+} from '../../utils/upload/imagesUploadV1Formats';
 import { updateThumbnail, PathObject } from '../utils/helper';
 
 const props = defineProps({
@@ -80,6 +85,9 @@ const props = defineProps({
 		required: true
 	}
 });
+
+const { t } = useI18n();
+const imagesUploadFormatGuard = createImagesUploadV1FormatGuard(t);
 
 const emits = defineEmits(['setShowDialog', 'setThumbnailUrl']);
 const newShowDialog = ref<boolean>(props.showDialog);
@@ -97,10 +105,6 @@ watchEffect(() => {
 
 const ok = (response: { success: string; path: string }) => {
 	emits('setThumbnailUrl', response.path);
-};
-
-const fail = (response: unknown) => {
-	console.log('fail', response);
 };
 
 const closeDialog = () => {

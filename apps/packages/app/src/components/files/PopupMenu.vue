@@ -22,7 +22,7 @@
 						{{ t(`files.file_${item.name}`) }}</q-item-section
 					>
 					<q-img
-						v-if="item.active"
+						v-if="item.type == activedSort"
 						class="q-mr-sm"
 						style="width: 16px; height: 16px"
 						src="./../../assets/images/active.svg"
@@ -35,73 +35,30 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-defineProps({
-	item: {
-		type: Object,
-		required: false
-	},
-	from: {
-		type: String,
-		require: false,
-		default: ''
-	},
-	isSide: {
-		type: Boolean,
-		require: false,
-		default: false
+import { FilesSortType } from './../../utils/contact';
+import { filesSortOptions } from 'src/utils/interface/files';
+
+withDefaults(
+	defineProps<{
+		activedSort?: FilesSortType;
+	}>(),
+	{
+		activedSort: FilesSortType.Modified
 	}
-});
+);
 
 const emits = defineEmits(['handleEvent', 'popupState']);
 
 const { t } = useI18n();
 
-const popupList = ref([
-	{
-		name: 'name',
-		icon: 'sym_r_grid_view',
-		active: true,
-		action: 'name',
-		type: 'sort'
-	},
-	{
-		name: 'type',
-		icon: 'sym_r_edit_calendar',
-		active: false,
-		action: 'type',
-		type: 'sort'
-	},
-	{
-		name: 'modified',
-		icon: 'sym_r_edit_document',
-		active: false,
-		action: 'modified',
-		type: 'sort'
-	},
-	{
-		name: 'size',
-		icon: 'sym_r_folder_copy',
-		active: false,
-		action: 'size',
-		type: 'sort'
-	}
-]);
+const popupList = ref(filesSortOptions);
 
 const showPopupProxy = (value: boolean) => {
 	emits('popupState', value);
 };
 
 const handleEvent = (item) => {
-	for (let i = 0; i < popupList.value.length; i++) {
-		const popupItem = popupList.value[i];
-		if (popupItem.type === item.type) {
-			popupItem.active = false;
-			if (popupItem.action === item.action) {
-				popupItem.active = true;
-				emits('handleEvent', item);
-			}
-		}
-	}
+	emits('handleEvent', item);
 };
 </script>
 <style lang="scss" scoped>

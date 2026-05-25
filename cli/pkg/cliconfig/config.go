@@ -52,6 +52,105 @@ type ProfileConfig struct {
 	// InsecureSkipVerify disables TLS verification for HTTP calls under this
 	// profile. Dev only.
 	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+
+	// OwnerRole is the role this user has on the target Olares, populated
+	// best-effort from /api/backend/v1/user-info on login / import / whoami.
+	// One of the BFL wire constants from
+	// framework/bfl/pkg/constants/constants.go:
+	//
+	//	"owner"   — the (single) instance owner; full privileges.
+	//	"admin"   — has all privileges except managing other admins and a
+	//	            handful of hardware/restart-class operations.
+	//	"normal"  — least-privileged user; the SPA labels this "User" in
+	//	            the UI. We keep the wire value verbatim and translate
+	//	            to the friendly label only in printed output.
+	//
+	// Empty when unknown — pre-existing profiles created before this field
+	// existed, or first-run before whoami has been called. Empty MUST be
+	// treated as "skip preflight, let the server decide" so older configs
+	// keep working without a forced re-login.
+	//
+	// Stored on ProfileConfig (rather than a separate identity.json or the
+	// keychain) because it's not a secret, it's stable across re-logins for
+	// the same olaresId, and it travels naturally with the rest of the
+	// profile when users back up / migrate ~/.olares-cli/.
+	OwnerRole string `json:"ownerRole,omitempty"`
+
+	// WhoamiRefreshedAt is the unix-second timestamp of the last successful
+	// /api/backend/v1/user-info call that wrote OwnerRole. Used by `profile
+	// whoami` (and the `settings users me` / `settings me whoami` aliases)
+	// to render "last refreshed" hints, and by Phase 1+ preflight code to
+	// decide whether the cache is stale enough to refetch silently.
+	WhoamiRefreshedAt int64 `json:"whoamiRefreshedAt,omitempty"`
+
+	// ClusterContext caches the most recent /capi/app/detail response from
+	// the per-user ControlHub BFF (see pkg/olares/id.go::ControlHubURL).
+	// The `cluster context` command (cmd/ctl/cluster/context.go) writes
+	// this on first run and on `--refresh`, and reads it for the no-network
+	// fast path.
+	//
+	// IMPORTANT: this cache MUST NOT be consulted to decide whether a
+	// `cluster ...` verb is allowed to run — the server is the only
+	// authoritative source for "can this user list these pods?". It exists
+	// purely so `cluster context` can render the user's identity / role /
+	// accessible workspaces without a round-trip every invocation, and so
+	// error-wrap helpers can include the cached role in their messages.
+	// See skills/olares-cluster/SKILL.md for the security rationale.
+	//
+	// nil for pre-existing profiles or profiles where `cluster context`
+	// has never been called.
+	ClusterContext *ClusterContextCache `json:"clusterContext,omitempty"`
+
+	// ClusterContextRefreshedAt is the unix-second timestamp of the last
+	// successful /capi/app/detail call that wrote ClusterContext. Mirrors
+	// WhoamiRefreshedAt; used by `cluster context` to render "last
+	// refreshed" hints.
+	ClusterContextRefreshedAt int64 `json:"clusterContextRefreshedAt,omitempty"`
+}
+
+// ClusterContextCache is the per-profile snapshot of /capi/app/detail
+// (apps/packages/app/src/apps/controlPanelCommon/network/network.ts:222 —
+// `AppDetailResponse`). Field names keep the wire JSON tags so callers can
+// dump the cached struct verbatim when --output json without an extra
+// mapping layer. Per-namespace ACL details (the SPA's ksConfig / config /
+// globalRules maps) are intentionally NOT mirrored here: they're megabytes
+// per profile and the CLI never needs to evaluate them locally.
+type ClusterContextCache struct {
+	// Username is the BFL username on the target Olares (usually equal to
+	// the local part of OlaresID, but not enforced).
+	Username string `json:"username,omitempty"`
+
+	// GlobalRole is the KubeSphere global role this user holds, e.g.
+	// "platform-admin" / "platform-self-provisioner" /
+	// "platform-regular". Used purely for display in `cluster context`
+	// output and in error-wrap hints — verb gating MUST defer to the
+	// server (see ProfileConfig.ClusterContext doc).
+	GlobalRole string `json:"globalrole,omitempty"`
+
+	// Email is surfaced from /capi/app/detail's user.email. Populated
+	// only when the BFL user record carries one; empty otherwise.
+	Email string `json:"email,omitempty"`
+
+	// Workspaces is the list of KubeSphere workspaces the user can see
+	// according to the server. Used by `cluster context` listing only;
+	// `cluster pod list -n <ns>` etc. still call the server directly.
+	Workspaces []string `json:"workspaces,omitempty"`
+
+	// SystemNamespaces is the list of system-owned namespaces the user
+	// has visibility into (kube-system, os-system, ...). Surfaced
+	// alongside Workspaces in `cluster context` output.
+	SystemNamespaces []string `json:"systemNamespaces,omitempty"`
+
+	// GrantedClusters is the list of multi-cluster identifiers the user
+	// has grants on. Single-cluster Olares installs typically return
+	// `["host"]`; we keep it here for forward-compat with multi-cluster
+	// Olares deployments.
+	GrantedClusters []string `json:"grantedClusters,omitempty"`
+
+	// ClusterRole is the ks-installer-derived overall cluster role
+	// (apps/packages/app/src/apps/controlPanelCommon/network/network.ts
+	// `AppDetailResponse.clusterRole`). Surfaced for display only.
+	ClusterRole string `json:"clusterRole,omitempty"`
 }
 
 // DisplayName returns Name if set, else OlaresID. Used in CLI output where we
@@ -135,6 +234,74 @@ func (m *MultiProfileConfig) Upsert(p ProfileConfig) *ProfileConfig {
 	}
 	m.Profiles = append(m.Profiles, p)
 	return &m.Profiles[len(m.Profiles)-1]
+}
+
+// SetOwnerRole atomically updates the OwnerRole + WhoamiRefreshedAt fields
+// for the profile keyed by olaresID, then persists config.json.
+//
+// Returns:
+//   - changed: true iff OwnerRole transitioned to a different non-empty
+//     value (used by callers to decide whether to print a "role changed"
+//     notice). A first-time write (empty → role) also reports changed=true
+//     because that's a new piece of information from the user's perspective.
+//   - err:     any I/O / serialization error from SaveMultiProfileConfig.
+//
+// If no profile matches olaresID we return (false, error) — callers should
+// surface this rather than silently writing nothing, because every code
+// path here only runs after a successful API call against that olaresID.
+//
+// refreshedAt is the wall-clock the caller observed the API success at;
+// passed in (rather than re-read here) so test code and replay-style
+// flows can pin it deterministically.
+func (m *MultiProfileConfig) SetOwnerRole(olaresID, role string, refreshedAt int64) (changed bool, err error) {
+	target := m.FindByOlaresID(olaresID)
+	if target == nil {
+		return false, fmt.Errorf("profile %q not found", olaresID)
+	}
+	prev := target.OwnerRole
+	target.OwnerRole = role
+	target.WhoamiRefreshedAt = refreshedAt
+	if err := SaveMultiProfileConfig(m); err != nil {
+		return false, fmt.Errorf("save config: %w", err)
+	}
+	return role != "" && prev != role, nil
+}
+
+// SetClusterContext atomically updates the ClusterContext +
+// ClusterContextRefreshedAt fields for the profile keyed by olaresID, then
+// persists config.json. Mirrors SetOwnerRole's contract.
+//
+// Returns:
+//   - changed: true iff GlobalRole transitioned to a different non-empty
+//     value (used by `cluster context` to print a "role changed" notice).
+//     A first-time write (cache was nil) also reports changed=true.
+//   - err:     any I/O / serialization error from SaveMultiProfileConfig.
+//
+// `ctx` is the freshly-decoded snapshot to persist; passing nil is treated
+// as an explicit "clear the cache" (used by tests / future eviction).
+//
+// IMPORTANT: this writes a snapshot of identity/role/visibility metadata
+// only — the cache MUST NOT be consulted to decide whether a verb is
+// allowed to run. See ProfileConfig.ClusterContext doc.
+func (m *MultiProfileConfig) SetClusterContext(olaresID string, ctx *ClusterContextCache, refreshedAt int64) (changed bool, err error) {
+	target := m.FindByOlaresID(olaresID)
+	if target == nil {
+		return false, fmt.Errorf("profile %q not found", olaresID)
+	}
+	prevRole := ""
+	if target.ClusterContext != nil {
+		prevRole = target.ClusterContext.GlobalRole
+	}
+	target.ClusterContext = ctx
+	target.ClusterContextRefreshedAt = refreshedAt
+	if err := SaveMultiProfileConfig(m); err != nil {
+		return false, fmt.Errorf("save config: %w", err)
+	}
+	newRole := ""
+	if ctx != nil {
+		newRole = ctx.GlobalRole
+	}
+	return newRole != "" && prevRole != newRole, nil
 }
 
 // Remove deletes a profile by Name or OlaresID. If the removed profile was

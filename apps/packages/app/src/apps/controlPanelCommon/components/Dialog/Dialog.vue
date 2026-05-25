@@ -8,9 +8,9 @@
 		v-bind="$attrs"
 		:full-height="fullHeight"
 		:full-width="fullWidth"
-		:ok="ok"
-		:cancel="cancel"
-		:okLoading="loading"
+		:ok="ok ? $t('confirm') : false"
+		:cancel="cancel ? $t('cancel') : false"
+		:okLoading="loading ? $t('LOADING') : false"
 	>
 		<slot></slot>
 		<q-inner-loading :showing="loading" style="z-index: 999999">
@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, withDefaults, watch } from 'vue';
+import { ref, watch } from 'vue';
 
 interface Props {
 	title?: string;

@@ -39,7 +39,7 @@ export default {
 		columnsCount() {
 			if (!this.containerWidth) return 1;
 			const maxColumns = Math.floor(this.containerWidth / this.minColumnWidth);
-			return Math.max(1, Math.min(maxColumns, 3)); // 最多3列
+			return Math.max(1, Math.min(maxColumns, 3)); // At most 3 columns
 		},
 		formattedRows() {
 			const result = [];

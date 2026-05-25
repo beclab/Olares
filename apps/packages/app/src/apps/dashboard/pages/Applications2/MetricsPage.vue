@@ -69,7 +69,7 @@
 							</div>
 						</div>
 						<q-skeleton v-if="loading" type="text" width="24px" />
-						<div v-else class="text-h6 text-ink-1">{{ podCounts }}</div>
+						<div v-else class="text-h6 text-ink-1">{{ pod_acount }}</div>
 					</div>
 				</q-card>
 			</div>
@@ -96,6 +96,7 @@ interface Props {
 	net_received: any;
 	loading: boolean;
 	ownerKind: string;
+	pod_acount: number;
 }
 const props = withDefaults(defineProps<Props>(), {
 	cpu_usage: {
@@ -105,8 +106,6 @@ const props = withDefaults(defineProps<Props>(), {
 		chartData: { legend: [], unit: [], data: [] }
 	}
 });
-
-const podCounts = ref(0);
 
 const monitoringData: any = computed(() => {
 	if (props.cpu_usage.chartData && props.memory_usage.chartData) {
@@ -125,19 +124,6 @@ const monitoringData: any = computed(() => {
 	};
 });
 
-const fetPods = () => {
-	const ownerKind = props.ownerKind;
-	const params = {
-		namespace: props.namespace,
-		name: props.name,
-		ownerKind
-	};
-
-	getNameSpacePodsList(params).then((res) => {
-		podCounts.value = res.data.totalItems;
-	});
-};
-
 const trafficData = computed(() => {
 	const outbound_value = get(props.net_transmitted, 'value');
 	const inbound_value = get(props.net_received, 'value');
@@ -153,18 +139,6 @@ const trafficData = computed(() => {
 		inbound: getValueByUnit(inbound_value, unit, 2)
 	};
 });
-
-watch(
-	() => props,
-	() => {
-		if (props.namespace) {
-			fetPods();
-		}
-	},
-	{
-		immediate: true
-	}
-);
 </script>
 <style lang="scss" scoped>
 .avatar-image {

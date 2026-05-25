@@ -9,7 +9,7 @@ After you set up your custom domain and create your organization and Olares ID, 
 
 ## Add a new user
 
-<!--@include: ../../reusables/custom-domain.md{109,123}-->
+<!--@include: ../../reusables/custom-domain.md#custom-domain-add-user-->
 
 ## Remove a user
 

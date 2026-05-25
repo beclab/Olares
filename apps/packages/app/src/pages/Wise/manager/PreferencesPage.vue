@@ -1,5 +1,5 @@
 <template>
-	<div class="wise-page-root bg-color-white column justify-start">
+	<div class="wise-page-root column justify-start">
 		<title-bar>
 			<template v-slot:before>
 				<bt-breadcrumbs
@@ -250,7 +250,7 @@ const onClear = () => {
 	clearLoading.value = true;
 	sendMessageToWorker('close')
 		.then(() => {
-			localStorage.removeItem(TERMINUS_ID);
+			localStorage.setItem(TERMINUS_ID, 'reset');
 			location.reload();
 		})
 		.catch((e: any) => {

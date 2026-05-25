@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview",
+  "description": "`dashboard overview` (default action) — sections envelope mirroring the SPA's overview page (physical / user / ranking).",
+  "type": "object",
+  "required": ["kind", "meta", "sections"],
+  "properties": {
+    "kind": {"const": "dashboard.overview"},
+    "meta": {"$ref": "#/definitions/meta"},
+    "sections": {
+      "type": "object",
+      "required": ["physical", "user", "ranking"],
+      "properties": {
+        "physical": {"$ref": "overview-physical.json"},
+        "user": {"$ref": "overview-user.json"},
+        "ranking": {"$ref": "overview-ranking.json"}
+      }
+    }
+  },
+  "definitions": {
+    "meta": {
+      "type": "object",
+      "required": ["fetched_at"],
+      "properties": {
+        "fetched_at": {"type": "string"},
+        "profile": {"type": "string"},
+        "user": {"type": "string"},
+        "recommended_poll_seconds": {"type": "integer"},
+        "iteration": {"type": "integer"},
+        "total_iterations": {"type": "integer"},
+        "error": {"type": "string"},
+        "error_kind": {"type": "string"},
+        "empty": {"type": "boolean"},
+        "empty_reason": {"type": "string"},
+        "http_status": {"type": "integer"}
+      }
+    }
+  }
+}

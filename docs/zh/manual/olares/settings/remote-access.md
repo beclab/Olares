@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: 了解如何使用设置在 Olares 上配置 VPN，包括强制 VPN 访问、SSH 远程连接与子网路由。
+description: 了解如何使用设置在 Olares 上配置专用网络，包括强制 VPN 访问、SSH 远程连接与子网路由。
 ---
 # 配置 Olares 的专用网络
 

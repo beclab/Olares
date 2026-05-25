@@ -104,20 +104,20 @@
 </template>
 
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
-import { onMounted, ref } from 'vue';
-import { date, useQuasar } from 'quasar';
-import { useDeviceStore } from 'src/stores/device';
-import { useBackupStore } from 'src/stores/settings/backup';
+import BtLoading from '../../../../components/base/BtLoading.vue';
+import EmptyView from '../../../../components/rss/EmptyView.vue';
+import AdaptiveLayout from '../../../../components/settings/AdaptiveLayout.vue';
 import { getSuitableValue } from 'src/utils/settings/monitoring';
+import { useBackupStore } from 'src/stores/settings/backup';
+import { useDeviceStore } from 'src/stores/device';
+import { date, useQuasar } from 'quasar';
+import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
 	BackupResourcesType,
 	SnapshotInfo,
 	RestoreSnapshotInfo
 } from 'src/constant';
-import BtLoading from '../../../../components/base/BtLoading.vue';
-import EmptyView from '../../../../components/rss/EmptyView.vue';
-import AdaptiveLayout from '../../../../components/settings/AdaptiveLayout.vue';
 
 const { t } = useI18n();
 const CustomRef = ref();
@@ -134,6 +134,15 @@ const pagination = ref({
 	rowsPerPage: 20,
 	rowsNumber: 0
 });
+
+let parseUrlRequestSeq = 0;
+
+function normalizeRowsPerPage(rowsPerPage: number) {
+	if (rowsPerPage && rowsPerPage > 0) return rowsPerPage;
+	return pagination.value.rowsNumber && pagination.value.rowsNumber > 0
+		? pagination.value.rowsNumber
+		: 9999;
+}
 
 const columns: any = [
 	{
@@ -165,14 +174,22 @@ const props = defineProps({
 
 function getData() {
 	loading.value = true;
+	const requestSeq = ++parseUrlRequestSeq;
+	const normalizedRowsPerPage = normalizeRowsPerPage(
+		pagination.value.rowsPerPage
+	);
+	if (!(pagination.value.rowsPerPage > 0)) {
+		pagination.value.page = 1;
+	}
 	backupStore
 		.parseUrl(
 			props.url,
 			props.pwd,
-			pagination.value.rowsPerPage * (pagination.value.page - 1),
-			pagination.value.rowsPerPage
+			normalizedRowsPerPage * (pagination.value.page - 1),
+			normalizedRowsPerPage
 		)
 		.then((data: any) => {
+			if (requestSeq !== parseUrlRequestSeq) return;
 			if (data) {
 				pagination.value.rowsNumber = data.totalCount;
 				rows.value = data.snapshots ? data.snapshots : [];
@@ -181,15 +198,17 @@ function getData() {
 			}
 		})
 		.finally(() => {
+			if (requestSeq !== parseUrlRequestSeq) return;
 			loading.value = false;
 		});
 }
 
 function onRequest(props) {
 	const { page, rowsPerPage } = props.pagination;
+	const normalizedPage = rowsPerPage && rowsPerPage > 0 ? page : 1;
 	pagination.value = {
 		...pagination.value,
-		page: page,
+		page: normalizedPage,
 		rowsPerPage: rowsPerPage
 	};
 	getData();

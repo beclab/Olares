@@ -11,31 +11,31 @@
 				@click="shareToTwitter"
 				v-close-popup="true"
 				:platform="SOCIAL_TYPE.TWITTER"
-				:label="t('share.share_on_x')"
+				:label="t('share_on_x')"
 			/>
 			<bio-share-item
 				@click="shareToFacebook"
 				v-close-popup="true"
 				:platform="SOCIAL_TYPE.FACEBOOK"
-				:label="t('share.share_on_facebook')"
+				:label="t('share_on_facebook')"
 			/>
 			<bio-share-item
 				@click="shareToLinkedin"
 				v-close-popup="true"
 				:platform="SOCIAL_TYPE.LINKEDIN"
-				:label="t('share.share_on_linkedin')"
+				:label="t('share_on_linkedin')"
 			/>
 			<bio-share-item
 				@click="index = 2"
 				v-close-popup="false"
 				icon="sym_r_qr_code"
-				:label="t('share.share_via_qr_code')"
+				:label="t('share_via_qr_code')"
 			/>
 			<bio-share-item
 				@click="index = 3"
 				v-close-popup="false"
 				icon="sym_r_imagesmode"
-				:label="t('share.share_profile_picture')"
+				:label="t('share_profile_picture')"
 			/>
 		</q-list>
 		<div
@@ -97,17 +97,17 @@ watch(
 		switch (newValue) {
 			case 1:
 				back.value = false;
-				title.value = t('share.share_your_profile');
-				label.value = t('share.share_your_profile_desc');
+				title.value = t('share_your_profile');
+				label.value = t('share_your_profile_desc');
 				break;
 			case 2:
 				back.value = true;
-				title.value = t('share.share_via_qr_code');
-				label.value = t('share.share_via_qr_code_desc');
+				title.value = t('share_via_qr_code');
+				label.value = t('share_via_qr_code_desc');
 				break;
 			case 3:
 				back.value = true;
-				title.value = t('share.share_profile_picture');
+				title.value = t('share_profile_picture');
 				label.value = '';
 				break;
 		}
@@ -123,11 +123,11 @@ const shareToFacebook = () => {
 	window.open(facebook, '_blank');
 };
 
-//只有twitter能带text
+// Only Twitter supports free text.
 const shareToTwitter = () => {
 	const content = 'Welcome to my profile to learn more about me';
 	const url = encodeURIComponent(props.url);
-	// 分享后会显示 “via @张三”
+	// Shows "via @<account>" in shared content.
 	const via = 'Terminus';
 	const text = `${content} ${url}&via=${via}`;
 	const twitter = `https://twitter.com/intent/tweet?text=${text}`;
@@ -136,7 +136,7 @@ const shareToTwitter = () => {
 
 const shareToLinkedin = () => {
 	const url = encodeURIComponent(props.url);
-	const linkedin = `https://www.linkedin.com/shareArticle?mini=true&url=${url}`;
+	const linkedin = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
 	window.open(linkedin, '_blank');
 };
 </script>

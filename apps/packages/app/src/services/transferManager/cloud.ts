@@ -56,17 +56,14 @@ class CloudTransferType implements TransferBaseType {
 		}
 
 		const store = useTransfer2Store();
-		await store.updateTaskStatus(item.id, TransferStatus.Resuming);
 
 		const result = await TransferClient.client.clouder.resume(item);
 
 		if (result) {
 			console.log('cloud download resume successs');
+			await store.pausedOrResumeTaskStatus(item.id, false);
+			await store.updateTaskStatus(item.id, TransferStatus.Pending);
 		}
-
-		await store.pausedOrResumeTaskStatus(item.id, false);
-
-		await store.updateTaskStatus(item.id, TransferStatus.Pending);
 	}
 
 	async bulkResume(ids: number[]) {}
@@ -78,7 +75,7 @@ class CloudTransferType implements TransferBaseType {
 		const store = useTransfer2Store();
 		await store.updateTaskStatus(item.id, TransferStatus.Canceling);
 		await TransferClient.doAction(item, 'cancel');
-		await this.removeById(item.id);
+		// await this.removeById(item.id);
 	}
 
 	async bulkCancel(ids: number[]) {
@@ -128,9 +125,9 @@ class CloudTransferType implements TransferBaseType {
 			item = store.transferMap[id];
 		}
 
-		if (item && (await TransferClient.autoRetry(item))) {
-			return false;
-		}
+		// if (item && (await TransferClient.autoRetry(item))) {
+		// 	return false;
+		// }
 
 		if (message) {
 			notifyFailed(message);

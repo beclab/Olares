@@ -6,11 +6,11 @@ export default {
 		add: 'Add',
 		web_page: 'Web page',
 		upload: 'Upload',
-		upload_cookie: 'Upload Cookie',
+		upload_cookie: 'Upload cookie',
 		add_link: 'Add Link',
 		batch_add_link: 'Batch Add Link',
 		'Add links': 'Add {number} links',
-		'Add cookies': 'Add {number} cookies',
+		'Add cookie': 'Add {number} cookie',
 		upload_file: 'Upload file',
 		more_import_options: 'More import options',
 		add_webpage: 'Add webpage',
@@ -152,5 +152,16 @@ export default {
 		'Enable batch link upload': 'Enable batch link upload',
 		'Enable batch cookie upload': 'Enable batch cookie upload',
 		'Upload settings': 'Upload settings'
-	}
+	},
+	Thumbnail: 'Thumbnail',
+	TOC: 'TOC',
+	'Checking cache...': 'Checking cache...',
+	'Reading from cache...': 'Reading from cache...',
+	'Downloading document...': 'Downloading document...',
+	'Parsing document...': 'Parsing document...',
+	'Preparing pages...': 'Preparing pages...',
+	'Loading...': 'Loading...',
+	'First time loading, will be cached for instant access':
+		'First time loading, will be cached for instant access',
+	'Recrawl content': 'Recrawl content'
 };

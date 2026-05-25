@@ -6,16 +6,16 @@
 	>
 		<div class="row justify-end items-center">
 			<q-img
+				v-if="modelValue"
 				class="checkbox-image"
-				:src="
-					modelValue
-						? 'market/circle_check_box.svg'
-						: 'market/circle_uncheck_box.svg'
-				"
+				src="market/circle_check_box.svg"
 			/>
+			<TerminusCircleNormalCheckbox v-else />
 			<div class="column justify-start q-ml-sm">
 				<div class="text-body2 text-ink-1">{{ source.name }}</div>
-				<div class="text-body3 text-ink-3">{{ source.base_url }}</div>
+				<div class="text-body3 text-ink-3 source-url">
+					{{ source.base_url }}
+				</div>
 			</div>
 		</div>
 		<div class="row justify-end items-center">
@@ -29,7 +29,7 @@
 					<div class="text-body1 text-ink-3 q-mt-lg">
 						{{ t('Description') }}
 					</div>
-					<div class="text-body1 text-ink-1 q-mt-xs">
+					<div class="text-body1 text-ink-1 q-mt-xs source-desc">
 						{{ source.description }}
 					</div>
 				</bt-popup>
@@ -45,12 +45,13 @@
 import BtLoading from '../base/BtLoading.vue';
 import BtPopup from '../base/BtPopup.vue';
 import { deleteMarketSource } from '../../api/market/private/source';
-import { setMarketSource } from '../../api/market/private/setting';
 import { notifyFailed } from '../../utils/notifyRedefinedUtil';
-import { useCenterStore } from '../../stores/market/center';
+import { useSettingStore } from '../../stores/market/setting';
+import { useAppStore } from '../../stores/market/appStore';
 import { BtDialog, useColor } from '@bytetrade/ui';
 import { ref, PropType, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import TerminusCircleNormalCheckbox from '../common/TerminusCircleNormalCheckbox.vue';
 import {
 	ALL_MARKET_OFFICIAL_SOURCES,
 	MarketSource
@@ -70,7 +71,8 @@ const props = defineProps({
 const { t } = useI18n();
 const isChanging = ref(false);
 const isDeleting = ref(false);
-const centerStore = useCenterStore();
+const appStore = useAppStore();
+const settingStore = useSettingStore();
 const { color: blue } = useColor('blue-default');
 const { color: textInk } = useColor('ink-2');
 const showDeleteIcon = computed(() => {
@@ -100,12 +102,10 @@ const onItemClick = () => {
 		.then((res) => {
 			if (res) {
 				isChanging.value = true;
-				setMarketSource(props.source?.id)
-					.then(() => {
-						location.reload();
-					})
+				settingStore
+					.setMarketSourceId(props.source?.id)
 					.catch((err) => {
-						notifyFailed(err.message || err.response?.data?.message || err);
+						notifyFailed(err.response?.data?.message || err.message || err);
 					})
 					.finally(() => {
 						isChanging.value = false;
@@ -120,7 +120,7 @@ const onItemClick = () => {
 };
 
 const onItemDelete = () => {
-	const app = centerStore.getSourceInstalledApp(props.source.id);
+	const app = appStore.getSourceInstalledApp(props.source.id);
 	if (app.length > 0) {
 		BtDialog.show({
 			title: t('Delete Source'),
@@ -159,8 +159,8 @@ const onItemDelete = () => {
 				deleteMarketSource(props.source?.id)
 					.then((data) => {
 						if (data) {
-							centerStore.sources = data.sources;
-							centerStore.removeSourceId(props.source.id);
+							appStore.sources = data.sources;
+							appStore.removeSourceId(props.source.id);
 						}
 					})
 					.catch((err) => {
@@ -189,5 +189,19 @@ const onItemDelete = () => {
 		width: 16px;
 		height: 16px;
 	}
+
+	.source-url {
+		max-width: 300px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+}
+
+.source-desc {
+	max-width: 200px;
+	overflow: hidden;
+	display: inline-block;
+	word-wrap: break-word;
+	white-space: normal;
 }
 </style>

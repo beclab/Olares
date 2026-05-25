@@ -5,15 +5,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 func (h *Handler) cancel(req *restful.Request, resp *restful.Response) {
@@ -25,18 +24,11 @@ func (h *Handler) cancel(req *restful.Request, resp *restful.Response) {
 		cancelType = "operate"
 	}
 
-	name, err := apputils.FmtAppMgrName(app, owner, "")
-	if err != nil {
-		api.HandleError(resp, req, err)
+	name, amPtr, ok := h.loadAuthorizedLifecycleAM(req.Request.Context(), req, resp, app, owner)
+	if !ok {
 		return
 	}
-
-	var am v1alpha1.ApplicationManager
-	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
+	am := *amPtr
 	state := am.Status.State
 	if !appstate.IsOperationAllowed(state, v1alpha1.CancelOp) {
 		api.HandleBadRequest(resp, req, fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.CancelOp, am.Status.State))
@@ -62,7 +54,7 @@ func (h *Handler) cancel(req *restful.Request, resp *restful.Response) {
 	}
 	opID := strconv.FormatInt(time.Now().Unix(), 10)
 	am.Spec.OpType = v1alpha1.CancelOp
-	err = h.ctrlClient.Update(req.Request.Context(), &am)
+	err := h.ctrlClient.Update(req.Request.Context(), &am)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -77,10 +69,6 @@ func (h *Handler) cancel(req *restful.Request, resp *restful.Response) {
 		Message:    cancelType,
 		StatusTime: &now,
 		UpdateTime: &now,
-	}
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
 	}
 	_, err = apputils.UpdateAppMgrStatus(name, status)
 	if err != nil {

@@ -174,7 +174,7 @@ import RouterViewTransition from '@apps/control-panel-common/src/components/Rout
 import MyCard3 from '@apps/control-panel-common/src/components/MyCard3.vue';
 import Refresh from '@apps/control-panel-common/src/components/Refresh.vue';
 import QInputStyle from '@apps/control-panel-common/src/components/QInputStyle.vue';
-import { t } from '@apps/dashboard/src/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import { useAppDetailStore } from '@apps/dashboard/src/stores/AppDetail';
 import UserSelect from '@apps/dashboard/src/containers/UserSelect/IndexPage.vue';
 import { selectValue } from '@apps/dashboard/src/containers/UserSelect/config';

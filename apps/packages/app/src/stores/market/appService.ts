@@ -1,14 +1,14 @@
 import SetEnvironmentDialog from 'src/pages/market/application/SetEnvironmentDialog.vue';
 import SetCloneInfoDialog from 'src/pages/market/application/SetCloneInfoDialog.vue';
 import DependencyDialog from 'src/components/appintro/DependencyDialog.vue';
-import UninstallAppDialog from 'src/components/appcard/UninstallAppDialog.vue';
-import ResumeDialog from 'src/components/appcard/ResumeDialog.vue';
-import StopDialog from 'src/components/appcard/StopDialog.vue';
+import { csAppStop, csAppUninstall } from 'src/stores/market/csAppOperation';
 import { Action, Category, TerminusEntrance } from '@bytetrade/core';
 import { openApplication } from 'src/api/market/private/server';
+import { usePreCheckStore } from 'src/stores/market/preCheck';
+import { useUserStore } from 'src/stores/settings/user';
 import { UpdateEnvBody, CloneEntrance } from 'src/constant';
-import { useCenterStore } from 'src/stores/market/center';
-import { useUserStore } from 'src/stores/market/user';
+import { useAppStore } from 'src/stores/market/appStore';
+import { suspendApp } from 'src/constant/config';
 import { bus, BUS_EVENT } from 'src/utils/bus';
 import { i18n } from 'src/boot/i18n';
 import { QVueGlobals } from 'quasar';
@@ -16,7 +16,8 @@ import {
 	APP_STATUS,
 	AppStatusInfo,
 	getI18nValue,
-	isCSV2
+	isCSV2,
+	STATUS_OPERATE_TYPE
 } from 'src/constant/constants';
 import {
 	installApp,
@@ -53,6 +54,7 @@ const operationConfig = {
 	},
 	[OPERATION_TYPE.CLONE]: {
 		action: (request: CloneRequest) => cloneApp({ ...request, sync: true }),
+		//old app running
 		getStatus: () => APP_STATUS.RUNNING,
 		logMessage: 'clone app start'
 	},
@@ -100,11 +102,21 @@ export async function processAppOperation(
 	console.log(config.logMessage);
 
 	const oldState = app.state;
-	const centerStore = useCenterStore();
-	centerStore.updateAppStatus(
+	let opType = '';
+	if (
+		operationType === OPERATION_TYPE.INSTALL ||
+		operationType === OPERATION_TYPE.CLONE
+	) {
+		opType = STATUS_OPERATE_TYPE.INSTALL;
+	} else if (operationType === OPERATION_TYPE.UPGRADE) {
+		opType = STATUS_OPERATE_TYPE.UPGRADE;
+	}
+	const appStore = useAppStore();
+	appStore.updateAppStatus(
 		args[0].app_name,
 		args[0].source,
-		config.getStatus()
+		config.getStatus(),
+		opType
 	);
 
 	return new Promise((resolve, reject) => {
@@ -116,7 +128,7 @@ export async function processAppOperation(
 				resolve(response);
 			})
 			.catch((e) => {
-				centerStore.updateAppStatus(args[0].app_name, args[0].source, oldState);
+				appStore.updateAppStatus(args[0].app_name, args[0].source, oldState);
 				console.error(e);
 
 				//handle install/clone app with env
@@ -218,13 +230,15 @@ export const AppService = {
 	) => {
 		return processAppOperation(app, OPERATION_TYPE.INSTALL, request)
 			.then(() => {
-				const fullLatest = useCenterStore().getAppFullInfo(
+				const fullLatest = useAppStore().getAppFullInfo(
 					request.app_name,
 					request.source
 				);
 				if (
 					fullLatest &&
-					useUserStore().hasUninstallDependencies(fullLatest.app_info.app_entry)
+					usePreCheckStore().hasUninstallDependencies(
+						fullLatest.app_info.app_entry
+					)
 				) {
 					q.dialog({
 						component: DependencyDialog,
@@ -238,10 +252,18 @@ export const AppService = {
 			.catch((error) => {
 				console.log(error);
 				if (error?.type === 'appenv') {
+					const simpleLatest = useAppStore().getAppSimpleInfo(
+						request.app_name,
+						request.source
+					);
 					q.dialog({
 						component: SetEnvironmentDialog,
 						componentProps: {
-							data: error.data
+							data: error.data,
+							appTitle: getI18nValue(
+								simpleLatest?.app_simple_info.app_title,
+								i18n.global.locale.value
+							)
 						}
 					}).onOk(async (data) => {
 						if (data && data.envs) {
@@ -266,13 +288,15 @@ export const AppService = {
 	) => {
 		return processAppOperation(app, OPERATION_TYPE.CLONE, request)
 			.then(() => {
-				const fullLatest = useCenterStore().getAppFullInfo(
+				const fullLatest = useAppStore().getAppFullInfo(
 					request.app_name,
 					request.source
 				);
 				if (
 					fullLatest &&
-					useUserStore().hasUninstallDependencies(fullLatest.app_info.app_entry)
+					usePreCheckStore().hasUninstallDependencies(
+						fullLatest.app_info.app_entry
+					)
 				) {
 					q.dialog({
 						component: DependencyDialog,
@@ -286,10 +310,20 @@ export const AppService = {
 			.catch((error) => {
 				console.log(error);
 				if (error?.type === 'appenv') {
+					const simpleLatest = useAppStore().getAppSimpleInfo(
+						request.app_name,
+						request.source
+					);
 					q.dialog({
 						component: SetEnvironmentDialog,
 						componentProps: {
-							data: error.data
+							data: error.data,
+							appTitle:
+								request.title ??
+								getI18nValue(
+									simpleLatest?.app_simple_info.app_title,
+									i18n.global.locale.value
+								)
 						}
 					}).onOk(async (data) => {
 						if (data && data.envs) {
@@ -331,53 +365,50 @@ export const AppService = {
 		request: OperationRequest,
 		q: QVueGlobals
 	) => {
-		const centerStore = useCenterStore();
+		const appStore = useAppStore();
+		const preCheckStore = usePreCheckStore();
 		const userStore = useUserStore();
-		const aggregation = centerStore.getAppAggregationInfo(
+		const aggregation = appStore.getAppAggregationInfo(
 			request.app_name,
 			request.source
 		);
 		const appName =
 			getI18nValue(
-				aggregation?.app_simple_latest?.app_title,
+				aggregation?.app_simple_latest?.app_simple_info.app_title,
 				i18n.global.locale.value
 			) ?? request.app_name;
 
-		const isCSV2App = !!aggregation && isCSV2(aggregation.app_full_info);
-		const isAdmin = userStore.hasAdminPermissions();
-
-		return new Promise((resolve, reject) => {
-			q.dialog({
-				component: UninstallAppDialog,
-				componentProps: {
-					modelValue: false,
-					appName,
-					showCheckbox: isCSV2App && isAdmin
-				}
-			})
-				.onOk(async (result) => {
-					try {
-						const response = await processAppOperation(
-							app,
-							OPERATION_TYPE.UNINSTALL,
-							{
-								...request,
-								all: result
-							}
-						);
-						resolve(response);
-					} catch (error) {
-						reject(error);
-					}
-				})
-				.onCancel(() => {
-					resolve(null);
-				});
+		return csAppUninstall(
+			q,
+			appName,
+			!!aggregation && isCSV2(aggregation.app_full_info),
+			preCheckStore.hasAdminPermissions(),
+			userStore.accounts.length
+		).then((result: { all: boolean; clearData: boolean }) => {
+			processAppOperation(app, OPERATION_TYPE.UNINSTALL, {
+				...request,
+				all: result.all,
+				deleteData: result.clearData
+			});
 		});
 	},
 
-	upgradeApp: (app: AppStatusInfo, request: OperationRequest) =>
-		processAppOperation(app, OPERATION_TYPE.UPGRADE, request),
+	upgradeApp: (app: AppStatusInfo, request: OperationRequest) => {
+		const appStore = useAppStore();
+		const simpleLatest = appStore.getAppSimpleInfo(
+			request.app_name,
+			request.source,
+			app
+		);
+		if (suspendApp(simpleLatest)) {
+			bus.emit(
+				BUS_EVENT.APP_BACKEND_ERROR,
+				i18n.global.t('This app has been removed, the operation is rejected.')
+			);
+			return;
+		}
+		return processAppOperation(app, OPERATION_TYPE.UPGRADE, request);
+	},
 
 	cancelInstallingApp: (app: AppStatusInfo, request: OperationRequest) =>
 		processAppOperation(app, OPERATION_TYPE.CANCEL, request),
@@ -385,108 +416,35 @@ export const AppService = {
 	removeApp: (app: AppStatusInfo, request: OperationRequest) =>
 		processAppOperation(app, OPERATION_TYPE.REMOVE, request),
 
-	resumeApp: async (
-		app: AppStatusInfo,
-		request: BaseOperationRequest,
-		q: QVueGlobals
-	) => {
-		const centerStore = useCenterStore();
-		const userStore = useUserStore();
-		const aggregation = centerStore.getAppAggregationInfo(
-			request.app_name,
-			request.source
-		);
-		const isCSV2App = !!aggregation && isCSV2(aggregation.app_full_info);
-		const isAdmin = userStore.hasAdminPermissions();
-
-		// Non-CSV2 applications or non-admin users call the API directly without popping up dialog boxes
-		if (!isCSV2App || !isAdmin) {
-			return processAppOperation(app, OPERATION_TYPE.RESUME, request, false);
-		}
-
-		// CSV2 applications pop up dialog boxes
-		const displayName =
-			getI18nValue(
-				aggregation?.app_simple_latest?.app_title,
-				i18n.global.locale.value
-			) ?? request.app_name;
-
-		return new Promise((resolve, reject) => {
-			q.dialog({
-				component: ResumeDialog,
-				componentProps: {
-					appName: displayName
-				}
-			})
-				.onOk(async () => {
-					try {
-						const response = await processAppOperation(
-							app,
-							OPERATION_TYPE.RESUME,
-							request
-						);
-						resolve(response);
-					} catch (error) {
-						reject(error);
-					}
-				})
-				.onCancel(() => {
-					resolve(null);
-				});
-		});
-	},
+	resumeApp: async (app: AppStatusInfo, request: BaseOperationRequest) =>
+		processAppOperation(app, OPERATION_TYPE.RESUME, request),
 
 	stopApp: async (
 		app: AppStatusInfo,
 		request: BaseOperationRequest,
 		q: QVueGlobals
 	) => {
-		const centerStore = useCenterStore();
+		const appStore = useAppStore();
 		const userStore = useUserStore();
-		const aggregation = centerStore.getAppAggregationInfo(
+		const preCheckStore = usePreCheckStore();
+		const aggregation = appStore.getAppAggregationInfo(
 			request.app_name,
 			request.source
 		);
-		const isCSV2App = !!aggregation && isCSV2(aggregation.app_full_info);
-		const isAdmin = userStore.hasAdminPermissions();
-
-		// Non-CSV2 applications or non-admin users call the API directly without popping up dialog boxes
-		if (!isCSV2App || !isAdmin) {
-			return processAppOperation(app, OPERATION_TYPE.STOP, request, false);
-		}
-
-		// CSV2 applications pop up dialog boxes
 		const displayName =
 			getI18nValue(
-				aggregation?.app_simple_latest?.app_title,
+				aggregation?.app_simple_latest?.app_simple_info?.app_title,
 				i18n.global.locale.value
 			) ?? request.app_name;
 
-		return new Promise((resolve, reject) => {
-			q.dialog({
-				component: StopDialog,
-				componentProps: {
-					modelValue: false,
-					appName: displayName,
-					showCheckbox: true
-				}
-			})
-				.onOk(async (result) => {
-					try {
-						const response = await processAppOperation(
-							app,
-							OPERATION_TYPE.STOP,
-							request,
-							result
-						);
-						resolve(response);
-					} catch (error) {
-						reject(error);
-					}
-				})
-				.onCancel(() => {
-					resolve(null);
-				});
+		return csAppStop(
+			q,
+			displayName,
+			!!aggregation && isCSV2(aggregation.app_full_info),
+			preCheckStore.hasAdminPermissions(),
+			userStore.accounts.length
+		).then((result: { all: boolean }) => {
+			processAppOperation(app, OPERATION_TYPE.STOP, request, result.all);
 		});
 	},
 

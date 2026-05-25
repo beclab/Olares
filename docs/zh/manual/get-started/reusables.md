@@ -2,14 +2,19 @@
 search: false
 ---
 
+<!-- #region install-script-command -->
 ```bash
 curl -fsSL https://cn.olares.sh |  bash -
 ```
+<!-- #endregion install-script-command -->
 
+<!-- #region root-password-tip -->
 :::tip root 用户密码
 安装过程中，可能需要输入 root 用户密码。
 :::
+<!-- #endregion root-password-tip -->
 
+<!-- #region installation-error-tip -->
 :::info 安装遇到报错？
 如果安装过程中出现错误，请先执行以下命令卸载：
 
@@ -19,14 +24,23 @@ olares-cli uninstall --all
 
 卸载完成后，重新运行安装命令进行安装。
 :::
+<!-- #endregion installation-error-tip -->
 
+<!-- #region prepare-wizard-heading -->
 ## 配置 Wizard
+<!-- #endregion prepare-wizard-heading -->
 
-在安装 Olares 的核心服务之前，需要输入在 LarePass 中注册的 Olares ID 前缀。如果你的 Olares ID 为 `alice123@olares.cn`，输入 `alice123` 即可。
+<!-- #region prepare-wizard-details -->
+安装过程结束时，你需要输入域名和 Olares ID。
 
 ![输入 Olares ID](/images/zh/manual/get-started/enter-olares-id.png)
 
-安装完成后，屏幕将显示初始系统信息，包括向导地址和初始一次性密码。这些信息在后续激活步骤中会用到。
+例如，如果你的完整 Olares ID 是 `alice123@olares.cn`：
+
+- **域名**：按 `Enter` 使用默认域名，或输入 `olares.cn`。
+- **Olares ID**：输入 Olares ID 的前缀。在此示例中，输入 `alice123`。
+
+安装完成后，屏幕将显示初始系统信息，包括向导 URL 和初始一次性密码。这些信息在后续激活步骤中会用到。
 
 
 
@@ -34,16 +48,21 @@ olares-cli uninstall --all
 
 
 ![Wizard URL](/images/manual/get-started/wizard-url-and-login-password.png)
+<!-- #endregion prepare-wizard-details -->
 
+<!-- #region protect-olares-id -->
 ## 下一步：安全保存 Olares ID
 
 你已经准备好开始使用 Olares！在此之前，请务必确保 Olares ID 已安全备份。如果不备份，你将无法在需要时恢复 Olares ID。
 
 - [备份助记词](../larepass/back-up-mnemonics.md)
+<!-- #endregion protect-olares-id -->
 
+<!-- #region installation-troubleshooting-tip -->
 :::info 安装遇到问题？
 如果你在安装或使用过程中遇到问题，可以[提交 GitHub Issue](https://github.com/beclab/Olares/issues/new)，并附上你的平台、安装方式和错误详情。
 :::
+<!-- #endregion installation-troubleshooting-tip -->
 
 
 
@@ -60,6 +79,8 @@ olares-cli uninstall --all
     - Ubuntu 22.04-25.04 LTS
     - Debian 12, 13
 
+<!-- #region version-compatibility -->
 :::info 版本兼容性
 虽然以上版本已经过验证，但其他版本也可能正常运行 Olares。根据你的环境可能需要进行调整。如果你在这些平台上安装时遇到任何问题，欢迎在 [GitHub](https://github.com/beclab/Olares/issues/new) 上提问。
 :::
+<!-- #endregion version-compatibility -->

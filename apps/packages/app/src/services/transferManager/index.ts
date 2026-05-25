@@ -62,7 +62,7 @@ class TransferManager {
 			}
 		}
 
-		if (runningTask.length > this.upload.maxConnections) {
+		if (runningTask.length >= this.upload.maxConnections) {
 			store.updateTransferItemsSpeed(runningTask, TransferFront.upload);
 			return;
 		}
@@ -110,7 +110,7 @@ class TransferManager {
 				runningTask.push(value);
 			}
 		}
-		if (runningTask.length > this.download.maxConnections) {
+		if (runningTask.length >= this.download.maxConnections) {
 			store.updateTransferItemsSpeed(runningTask, TransferFront.download);
 			return;
 		}

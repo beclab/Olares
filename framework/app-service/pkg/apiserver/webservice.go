@@ -3,9 +3,9 @@ package apiserver
 import (
 	"net/http"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
@@ -20,6 +20,8 @@ const (
 	ParamServiceName    = "service"
 	ParamEntranceName   = "entrance_name"
 	ParamModelID        = "model_id"
+	ParamNodeName       = "node"
+	ParamDeviceID       = "device"
 
 	ParamWorkflowName = "name"
 	UserName          = "name"
@@ -38,15 +40,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 	c.Filter(handler.authenticate)
 
 	ws := newWebService()
-
-	// handler_service
-	ws.Route(ws.GET("/applications/{"+ParamAppNamespace+"}/{"+ParamAppName+"}").
-		To(handler.get).
-		Doc("Get the application").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamAppName, "the namespace of a application")).
-		Param(ws.PathParameter(ParamAppName, "the name of a application")).
-		Returns(http.StatusOK, "Success to get a application", nil))
 
 	ws.Route(ws.GET("/applications").
 		To(handler.list).
@@ -260,6 +253,21 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get ", &ResultResponse{}))
 
+	ws.Route(ws.GET("/compute-resources").
+		To(handler.listComputeResources).
+		Doc("list compute resources in the cluster").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Success to list compute resources", &ComputeResourcesResponse{}))
+
+	ws.Route(ws.PUT("/compute-resources/nodes/{"+ParamNodeName+"}/devices/{"+ParamDeviceID+"}/support-type").
+		To(handler.updateDeviceSupportType).
+		Doc("switch compute device support type").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamNodeName, "the node name")).
+		Param(ws.PathParameter(ParamDeviceID, "the device id")).
+		Reads(UpdateDeviceSupportTypeRequest{}).
+		Returns(http.StatusOK, "Success to switch compute device support type", &DeviceSupportTypeSwitchResponse{}))
+
 	// handler_webhook
 	ws.Route(ws.POST("/sandbox/inject").
 		To(handler.sandboxInject).
@@ -345,6 +353,20 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to begin a installation of the application", &api.InstallationResponse{}))
 
+	ws.Route(ws.GET("/apps/{"+ParamAppName+"}/compute-resources/bindings").
+		To(handler.listComputeBindings).
+		Doc("List compute resource bindings for the application").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamAppName, "the name of a application")).
+		Returns(http.StatusOK, "Success to list compute resource bindings", &ComputeBindingResponse{}))
+
+	ws.Route(ws.DELETE("/apps/{"+ParamAppName+"}/compute-resources/bindings").
+		To(handler.queued(handler.suspend)).
+		Doc("Suspend the application to release compute resource bindings").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamAppName, "the name of a application")).
+		Returns(http.StatusOK, "Success to suspend the application", &api.InstallationResponse{}))
+
 	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/uninstall").
 		To(handler.queued(handler.uninstall)).
 		Doc("Uninstall the application").
@@ -421,20 +443,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get a apps status", nil))
 
-	ws.Route(ws.GET("/apps/{"+ParamAppName+"}/operate_history").
-		To(handler.operateHistory).
-		Doc("get specified app operate history").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamAppName, "the name of application")).
-		Returns(http.StatusOK, "Success to get a apps status", nil))
-
-	ws.Route(ws.GET("/apps/operate_history").
-		To(handler.allOperateHistory).
-		Doc("get specified all app operate history").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamAppName, "the name of application")).
-		Returns(http.StatusOK, "Success to get a apps operate history", nil))
-
 	ws.Route(ws.GET("/apps").
 		To(handler.apps).
 		Doc("get list of app").
@@ -452,13 +460,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("get list of application managers for all user, exclude system apps").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "success to get list of application managers", nil))
-
-	ws.Route(ws.GET("/apps/{"+ParamAppName+"}").
-		To(handler.getApp).
-		Doc("get an app").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamAppName, "the name of application")).
-		Returns(http.StatusOK, "success to get an app", nil))
 
 	ws.Route(ws.GET("/apps/{"+ParamAppName+"}/env").
 		To(handler.getAppEnv).
@@ -596,19 +597,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("get recommends operate list").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "get recommends operate list", nil))
-
-	ws.Route(ws.GET("/recommends/{"+ParamWorkflowName+"}/operate_history").
-		To(handler.operateRecommendHistory).
-		Doc("get specified recommend operate history").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of recommend")).
-		Returns(http.StatusOK, "Success to get a recommend status", nil))
-
-	ws.Route(ws.GET("/recommends/operate_history").
-		To(handler.allOperateRecommendHistory).
-		Doc("get specified all recommend operate history").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "get specified all recommend operate history", nil))
 
 	// middleware route
 	ws.Route(ws.POST("/middlewares/{"+ParamAppName+"}/install").
@@ -772,7 +760,7 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "Success to get admin username", nil))
 
 	ws.Route(ws.GET("/users/admins").
-		To(handler.adminUserList).
+		To(handler.ownerOrAdminList).
 		Doc("return admin list").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get admin username", nil))

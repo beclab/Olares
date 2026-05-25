@@ -25,6 +25,12 @@ export default {
 	open_in_wise: 'Open',
 	translate_page: 'Translate this page',
 	translate_page_always: 'Always translate this site',
+	from_lang: 'Source',
+	to_lang: 'Target',
+	source_lang_label: 'Source',
+	target_lang_label: 'Target',
+	trans_only: 'Show Translation only',
+	always_translate_english: 'Always Translate English',
 	wise_not_install: 'Wise is not installed.',
 	ytdlp_not_install: 'YT-DLP is not installed.',
 	install_from_market: 'Install from Market',
@@ -37,5 +43,44 @@ export default {
 	collecting_webpage: 'Collect webpages',
 	subscribe_personal_feed: 'Subscribe to a personal feed',
 	downloading_resources: 'Download resources',
-	cookie_upload_tooltip: 'Upload cookies'
+	cookie_upload_tooltip: 'Upload cookies',
+	translate_script_not_ready:
+		'Translation script not ready. Please refresh the page to enable translation.',
+	content_script_not_ready:
+		'Content script not ready. Please refresh the page.',
+	translate_failed: 'Translation failed. Please try again.',
+	required_plugin_not_available: 'Required plugin not available:',
+	unable_to_collect: 'Unable to collect.',
+	unable_to_get_downloadable_files: 'Unable to get downloadable files.',
+	unable_to_get_rss_feed: 'Unable to get RSS Feed.',
+	collect_error_403_desc:
+		"Wise can't save this page because of the website's restrictions",
+	collect_error_500_desc: 'Wise is unable to access this website. Please try',
+	collect_error_500_list_1: 'Check your Olares network',
+	collect_error_500_list_2: 'Login and upload Cookies',
+	collect_error_500_list_3: 'Contact website to Unblock',
+	collect_error_501: 'Cookie Required',
+	collect_error_501_desc: 'Please login, upload cookie and try again.',
+	enable_collect: 'Enable to Collect',
+	collect_error_503_desc:
+		'Failed to retrieve page information from the plugin.',
+	collect_error_504: 'No items available for collection',
+	collect_error_504_desc:
+		'Wise couldn’t find any collectible items on this page. The content may not be supported for now.',
+	collect_error_5xx: 'Unknown Error',
+	collect_error_5xx_desc:
+		'Wise couldn’t find any collectible items on this page. The content may not be supported for now.',
+	collect_error_505_desc: '[505] Network error when retrieve page information.',
+	collect_error_506_desc: '[506] Resource not found',
+	collect_error_507_desc:
+		'[507] Resource unavailable. This resource is private',
+	collect_error_508_desc:
+		'[508] Resource unavailable. This resource has been removed',
+	collect_error_509_desc: '[509] Resource unavailable due to copyright issue.',
+	collect_error_510_desc: '[510] Unsupported URL',
+	collect_error_511_desc: '[511] Authorization failed',
+	collect_error_512_desc:
+		'[512] Anti-Bot Error. Sign in to confirm you’re not a bot',
+	collect_error_513_desc:
+		'[513] Unknown error. Failed to retrieve page information from the plugin.'
 };

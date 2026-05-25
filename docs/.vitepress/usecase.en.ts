@@ -30,7 +30,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Enable sandbox",
                   link: "/use-cases/openclaw-enable-sandbox",
-                },                                 
+                },
                 {
                   text: "Upgrade OpenClaw",
                   link: "/use-cases/openclaw-upgrade",
@@ -38,9 +38,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Common issues",
                   link: "/use-cases/openclaw-common-issues",
-                },                
+                },
               ]
             },
+            {
+              text: "Hermes Agent",
+              link: "/use-cases/hermes",  
+            },
+            {
+              text: "Claude Code",
+              link: "/use-cases/claude-code",
+            },                         
             {
               text: "OpenCode",
               link: "/use-cases/opencode",
@@ -66,15 +74,28 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Open WebUI",
+              link: "/use-cases/openwebui",
               collapsed: true,
               items: [
                 {
-                  text: "Set up with model apps",
-                  link: "/use-cases/openwebui",
+                  text: "Set up multi-user access",
+                  link: "/use-cases/openwebui-multiuser",
                 },
                 {
-                  text: "Set up with Ollama",
-                  link: "/use-cases/openwebui-ollama",
+                  text: "Configure voice interactions",
+                  link: "/use-cases/openwebui-audio",
+                },
+                {
+                  text: "Enable web search",
+                  link: "/use-cases/openwebui-search",
+                },
+                {
+                  text: "Query documents in chat",
+                  link: "/use-cases/openwebui-knowledge",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/openwebui-common-issues",
                 },
               ]
             },
@@ -98,12 +119,35 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ]
             },
             {
+              text: "NemoClaw",
+              link: "/use-cases/nemoclaw",
+              collapsed: true,
+              items: [
+                {
+                  text: "Integrate with Google Workspace",
+                  link: "/use-cases/nemoclaw-google-workspace",
+                },
+                {
+                  text: "Manage Olares with Olares CLI",
+                  link: "/use-cases/nemoclaw-olares-cli",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/nemoclaw-common-issues",
+                },
+              ]
+            },
+            {
               text: "Context7",
               link: "/use-cases/context7",
             },
             {
               text: "Ollama",
               link: "/use-cases/ollama",
+            },
+            {
+              text: "Open Notebook",
+              link: "/use-cases/open-notebook",
             },
             // {
             //   text: "Dify",
@@ -141,10 +185,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Bifrost",
               link: "/use-cases/bifrost",
             },
-            {
+            /*{
               text: "Duix.Avatar",
               link: "/use-cases/duix-avatar",
-            },
+            },*/
             {
               text: "Paperclip",
               link: "/use-cases/paperclip",
@@ -152,6 +196,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "PDFMathTranslate",
               link: "/use-cases/pdfmathtranslate",
+            },
+            {
+              text: "Whisper-WebUI",
+              link: "/use-cases/whisper-webui",
             },
             {
               text: "Speaches",
@@ -169,11 +217,29 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "IndexTTS2",
               link: "/use-cases/indextts2",
             },
+            {
+              text: "NOFX",
+              link: "/use-cases/nofx",
+            },
+            {
+              text: "TensorZero",
+              link: "/use-cases/tensorzero",
+            },           
             // {
             //   text: "DeerFlow",
             //   link: "/use-cases/deerflow",
             // },
 
+          ]
+        },
+        {
+          text: "Embodied AI",
+          collapsed: false,
+          items: [
+            {
+              text: "Isaac Lab",
+              link: "/use-cases/isaac-lab",
+            },
           ]
         },
         {
@@ -189,6 +255,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/windows",
               collapsed: true,
               items: [
+                {
+                  text: "Enable Intel integrated GPU passthrough",
+                  link: "/use-cases/windows-intel-gpu-passthrough",
+                },
                 {
                   text: "Known issues",
                   link: "/use-cases/windows-issues",
@@ -263,14 +333,36 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Plane",
               link: "/use-cases/plane",
             },
-            {  
+            {
               text: "Excalidraw",
               link: "/use-cases/excalidraw",
+            },
+            {
+              text: "Karakeep",
+              link: "/use-cases/karakeep",
+            },
+            {
+              text: "Penpot",
+              link: "/use-cases/penpot",
+            },
+            {
+              text: "RNA Sequencing",
+              link: "/use-cases/rna-sequencing",
             },
             // {
             //   text: "Stirling PDF",
             //   link: "/use-cases/stirling-pdf",
             // },
+          ]
+        },
+        {
+          text: "Developer tools",
+          collapsed: false,
+          items: [
+            {
+              text: "JupyterHub",
+              link: "/use-cases/jupyterhub",
+            },
           ]
         },
         {

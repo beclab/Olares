@@ -1,4 +1,4 @@
-import { OlaresInfo, TerminusInfo } from '@bytetrade/core';
+import { OlaresInfo } from '@bytetrade/core';
 import { ErrorCode, UserItem } from '@didvault/sdk/src/core';
 // import axios from 'axios';
 import { app, getSenderUrl, setSenderUrl } from 'src/globals';
@@ -17,6 +17,7 @@ import { BuildTransition, StateMachine } from './stateMachine';
 import { axiosInstanceProxy } from 'src/platform/httpProxy';
 import { commonInterceptValue } from './response';
 import { getAppPlatform } from 'src/application/platform';
+import { useLarepassWebsocketManagerStore } from 'src/stores/larepassWebsocketManager';
 
 export enum TermiPassStatus {
 	INIT = 0,
@@ -114,6 +115,8 @@ export class TermiPassState {
 
 	private tokenRefreshIng = false;
 
+	private tokenForceRefresh = false;
+
 	private terminusInfoRefresh = false;
 
 	private terminusInfoRefreshIng = false;
@@ -196,11 +199,9 @@ export class TermiPassState {
 						termipassStore.ssoInvalid = false;
 						termipassStore.reactivation = true;
 					} else if (to == TermipassActionStatus.RefreshTokenInvalid) {
-						if (from !== TermipassActionStatus.SrpValid) {
-							termipassStore.srpInvalid = false;
-							termipassStore.ssoInvalid = true;
-							termipassStore.reactivation = false;
-						}
+						termipassStore.srpInvalid = false;
+						termipassStore.ssoInvalid = true;
+						termipassStore.reactivation = false;
 					} else if (to == TermipassActionStatus.TokenNoNeedRefresh) {
 						setTimeout(() => {
 							this.stateMachine
@@ -261,14 +262,14 @@ export class TermiPassState {
 			if (!this.needChecking()) {
 				return;
 			}
+
 			this.getVPNHostPeerInfoCount = 0;
 
 			this.actions.getVPNHostPeerInfo();
 			const userStore = useUserStore();
 			if (
 				mode == NetworkUpdateMode.update ||
-				(userStore.current_user?.isLocal &&
-					mode == NetworkUpdateMode.vpnStop) ||
+				mode == NetworkUpdateMode.vpnStop ||
 				(!userStore.current_user?.isLocal && mode == NetworkUpdateMode.vpnStart)
 			) {
 				await this.actions.init();
@@ -284,6 +285,7 @@ export class TermiPassState {
 
 		busOn('appStateChange', async (state: { isActive: boolean }) => {
 			this.appIsActive = state.isActive;
+
 			if (!this.needChecking()) {
 				return;
 			}
@@ -333,6 +335,20 @@ export class TermiPassState {
 			this.stateMachine
 				.transition()
 				.goto(TermipassActionStatus.SsoTokenInvalid);
+		},
+		updateIsLocal: (isLocal: boolean) => {
+			if (isLocal != this.currentUser!.isLocal) {
+				this.currentUser!.isLocal = isLocal;
+				const websocketStore = useLarepassWebsocketManagerStore();
+				websocketStore.dispose();
+				websocketStore.restart();
+				if (!isLocal) {
+					setTimeout(() => {
+						this.tokenForceRefresh = true;
+					}, 1000);
+				}
+				busEmit('userIsLocalUpdate', isLocal);
+			}
 		}
 	};
 
@@ -361,7 +377,10 @@ export class TermiPassState {
 
 			const userStore = useUserStore();
 
-			if (userStore.current_user?.isLargeVersion12) {
+			if (
+				userStore.current_user?.isLargeVersion12 &&
+				!userStore.current_user?.isLargeVersion12_4
+			) {
 				await this.actions.getTerminusInfo(false, false);
 			} else {
 				const isLocal =
@@ -370,11 +389,7 @@ export class TermiPassState {
 				if (!userStore.current_user?.os_version) {
 					this.terminusInfoRefresh = true;
 				}
-
-				if (isLocal != this.currentUser!.isLocal) {
-					this.currentUser!.isLocal = isLocal;
-					busEmit('userIsLocalUpdate', isLocal);
-				}
+				this.publicActions.updateIsLocal(isLocal);
 				this.actions.resetSenderUrl();
 			}
 
@@ -442,7 +457,6 @@ export class TermiPassState {
 			}
 
 			const result = await app.simpleSync();
-			console.log('result ===>', result);
 
 			if (result) {
 				checkResult.description = result;
@@ -477,8 +491,7 @@ export class TermiPassState {
 						} else if (result == ErrorCode.SERVER_ERROR) {
 							if (this.currentUser.isLocal) {
 								await this.actions.ping();
-							}
-							if (!this.currentUser.isLocal) {
+							} else {
 								await this.actions.getTerminusInfo(false);
 							}
 						}
@@ -503,7 +516,11 @@ export class TermiPassState {
 			this.srpTokenChecking = false;
 		},
 		// isPing on used in Olares 1.11
-		getTerminusInfo: async (addHistory = false, isPing = false) => {
+		getTerminusInfo: async (
+			addHistory = false,
+			isPing = false,
+			is_local = true
+		) => {
 			if (this.stateMachine.state() < TermipassActionStatus.UserSetupFinished) {
 				return;
 			}
@@ -533,7 +550,7 @@ export class TermiPassState {
 			try {
 				const baseUrl = isPing
 					? userStore.pingTerminusInfo
-					: this.currentUser.terminus_url;
+					: this.currentUser.get_module_url('', 'https', '', is_local);
 
 				const instance = axiosInstanceProxy({
 					baseURL: baseUrl,
@@ -555,7 +572,7 @@ export class TermiPassState {
 						return;
 					}
 
-					this.currentUser.isLocal = false;
+					this.publicActions.updateIsLocal(false);
 					this.actions.resetSenderUrl();
 
 					termipassStore.reactivation = true;
@@ -566,15 +583,16 @@ export class TermiPassState {
 
 					termipassStore.reactivation = false;
 					termipassStore.vpnErrorCount = 0;
+					if (is_local) {
+						await userStore.setUserTerminusInfo(
+							this.currentUser.id,
+							terminusInfo
+						);
+					}
 
-					await userStore.setUserTerminusInfo(
-						this.currentUser.id,
-						terminusInfo
-					);
 					this.currentUser.tailscale_activated = terminusInfo.tailScaleEnable;
 
 					if (terminusInfo.tailScaleEnable) {
-						this.currentUser.isLocal = true;
 						this.actions.resetSenderUrl();
 					}
 					checkResult.description = JSON.stringify(terminusInfo);
@@ -662,8 +680,12 @@ export class TermiPassState {
 			}
 			this.tokenRefreshIng = true;
 			const result = await userStore.currentUserRefreshToken(
-				this.stateMachine.state() == TermipassActionStatus.SsoTokenInvalid
+				this.stateMachine.state() == TermipassActionStatus.SsoTokenInvalid ||
+					this.tokenForceRefresh
 			);
+			console.log('result --->', result);
+			this.tokenForceRefresh = false;
+
 			if (result.status) {
 				this.stateMachine
 					.transition()
@@ -732,6 +754,7 @@ export class TermiPassState {
 	private needChecking() {
 		const userStore = useUserStore();
 		const deviceStore = useDeviceStore();
+
 		return (
 			userStore.current_user?.offline_mode == false &&
 			deviceStore.networkOnLine &&
@@ -807,11 +830,11 @@ export class TermiPassState {
 		const ms = 1000;
 		this.terminusCheckingRunLoopTimer = setInterval(() => {
 			this.actions.runloopTasks(ms);
+
 			if (!this.checkEnable || !this.needChecking()) {
 				return;
 			}
-
-			if (this.tokenRefresh) {
+			if (this.tokenRefresh || this.tokenForceRefresh) {
 				this.tokenRefresh = false;
 				this.actions.refreshCurrentToken();
 			}
@@ -820,7 +843,6 @@ export class TermiPassState {
 				this.actions.checkSRPValid();
 			} else {
 				const date = new Date();
-
 				if (!this.currentUser) {
 					return;
 				}
@@ -828,7 +850,7 @@ export class TermiPassState {
 					this.currentUser.id,
 					'termimusInfo'
 				);
-
+				const termipassStore = useTermipassStore();
 				if (
 					this.terminusInfoRefresh ||
 					cacheTerminusInfo == undefined ||
@@ -836,11 +858,22 @@ export class TermiPassState {
 						(cacheTerminusInfo.cacheDate == undefined ||
 							(cacheTerminusInfo.cacheDate &&
 								cacheTerminusInfo.cacheDate.getTime() / 1000 +
-									CheckTerminusInfoTimeInterval <
+									(termipassStore.isVPNOn
+										? CheckVPNStatusInfoTimeInterval
+										: CheckTerminusInfoTimeInterval) <
 									date.getTime() / 1000)))
 				) {
 					this.terminusInfoRefresh = false;
-					this.actions.getTerminusInfo(true);
+					this.actions
+						.getTerminusInfo(true, undefined, true)
+						.then((olaresInfo) => {
+							if (!olaresInfo) {
+								this.publicActions.updateIsLocal(false);
+							}
+							if (this.currentUser!.isLocal) {
+								this.actions.getTerminusInfo(true, undefined, false);
+							}
+						});
 					return;
 				}
 			}

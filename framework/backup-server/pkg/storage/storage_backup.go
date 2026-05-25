@@ -130,7 +130,7 @@ func (s *StorageBackup) RunBackup() error {
 		return s.sendAppBackupResult(err)
 	}
 
-	log.Infof("Backup %s,%s, locationConfig: %s, integrationChanged: %v ,ifAppStatus: %s", backupName, snapshotId, util.ToJSON(s.Params.Location), s.IntegrationChanged, util.ToJSON(s.BackupAppStatus))
+	log.Infof("Backup %s,%s, integrationChanged: %v, ifAppStatus: %s", backupName, snapshotId, s.IntegrationChanged, util.ToJSON(s.BackupAppStatus))
 
 	backupResult, backupStorageObj, backupTotalSize, backupErr := s.execute()
 	if backupErr != nil {

@@ -2,7 +2,7 @@
 	<div class="row items-center justify-center text-ink-3 empty-application">
 		<q-icon name="sym_r_block" size="24px" class="q-mr-xs" />
 		<div class="text-body1">
-			{{ t('No app binded') }}
+			{{ t('No apps assigned') }}
 		</div>
 	</div>
 </template>

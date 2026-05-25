@@ -6,7 +6,7 @@ import { DriveType } from 'src/utils/interface/files';
 import { FileItem, FileResType, useFilesStore } from 'src/stores/files';
 import * as files from './utils';
 import { formatDrive } from './filesFormat';
-import { createURL, getPurePath } from '../utils';
+import { createURL, decodeURIComponentSafe, getPurePath } from '../utils';
 import { encodeUrl } from 'src/utils/encode';
 import { checkSameName, getAppDataPath } from 'src/utils/file';
 import * as filesUtil from '../common/utils';
@@ -104,11 +104,7 @@ export default class ExternalDataAPI extends DriveDataAPI {
 		let file_path = files.externalRemovePrefix(file.path);
 
 		if (decodeUrl) {
-			try {
-				file_path = decodeURIComponent(file_path);
-			} catch (error) {
-				console.log(file_path);
-			}
+			file_path = decodeURIComponentSafe(file_path);
 		}
 
 		const url = createURL(files.externalCommonUrl('raw', file_path), params);
@@ -152,13 +148,10 @@ export default class ExternalDataAPI extends DriveDataAPI {
 			size: thumb
 		};
 
-		let file_path = files.externalRemovePrefix(file.path);
+		const file_path = decodeURIComponentSafe(
+			files.externalRemovePrefix(file.path)
+		);
 
-		try {
-			file_path = decodeURIComponent(file_path);
-		} catch (error) {
-			console.log(file_path);
-		}
 		const url = createURL(
 			files.externalCommonUrl('preview', file_path),
 			params
@@ -250,6 +243,14 @@ export default class ExternalDataAPI extends DriveDataAPI {
 		if (item.isFolder && !item.path.endsWith('/')) {
 			item.path = item.path + '/';
 		}
+		const path = files.externalRemovePrefix(item.path);
+
+		const oPath = path.split('/').slice(2).join('/');
+
+		const oParentPath = oPath.substring(
+			0,
+			oPath.length - item.name.length - (item.path.endsWith('/') ? 1 : 0)
+		);
 
 		const res: FileItem = {
 			extension,
@@ -267,7 +268,10 @@ export default class ExternalDataAPI extends DriveDataAPI {
 			url: item.url || '',
 			driveType: item.driveType!,
 			param: '',
-			fileExtend: item.node ? item.node : ''
+			fileExtend: item.node ? item.node : '',
+			fileType: 'external',
+			oParentPath: oParentPath,
+			oPath: oPath
 		};
 
 		return res;
@@ -287,7 +291,8 @@ export default class ExternalDataAPI extends DriveDataAPI {
 	}
 
 	pathToFrontendFile(path: string) {
-		const { path: newPath, node } = getAppDataPath(path);
+		const node = path.split('/')[2];
+		const newPath = path.split('/').slice(3).join('/');
 		return {
 			isDir: path.endsWith('/'),
 			fileExtend: node,

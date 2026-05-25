@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -255,13 +255,84 @@ func (p *Provider) buildResources(ctx context.Context) (*message.Resources, erro
 	if err != nil {
 		return nil, err
 	}
-	users, err := p.listUsers(ctx, rawAppsMap)
+	userList, err := p.getUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rawAppsMap = fanOutSharedApps(rawAppsMap, userList)
+	users, err := p.listUsers(ctx, userList, rawAppsMap)
 	if err != nil {
 		return nil, err
 	}
 	res.Users = users
 
 	return res, nil
+}
+
+// fanOutSharedApps mutates the per-owner apps map so v3 / shared apps
+// (labelled app.bytetrade.io/scope=shared) appear in EVERY user's slice
+// unconditionally. Shared apps are open to all users, so every user gets
+// the real upstream cluster routes — there is no per-user gate.
+//
+// v1 / v2 apps are left untouched — they remain only under their installer
+// (Spec.Owner). The original entries for shared apps under their install-user
+// owner are preserved (the admin who installed it still sees it via the
+// admin branch anyway, and other users are added on top).
+func fanOutSharedApps(rawAppsMap map[string][]*appv1alpha1.Application,
+	userList []iamv1alpha2.User,
+) map[string][]*appv1alpha1.Application {
+	if len(rawAppsMap) == 0 || len(userList) == 0 {
+		return rawAppsMap
+	}
+
+	// Collect v3 apps and de-dupe by name (the same v3 app should
+	// only appear once in the cluster — but be defensive).
+	v3Apps := make(map[string]*appv1alpha1.Application)
+	for _, apps := range rawAppsMap {
+		for _, app := range apps {
+			if isV3App(app) {
+				if _, ok := v3Apps[app.Spec.Name]; !ok {
+					v3Apps[app.Spec.Name] = app
+				}
+			}
+		}
+	}
+	if len(v3Apps) == 0 {
+		return rawAppsMap
+	}
+
+	// Iterate shared apps in a deterministic (sorted) order so the
+	// resulting per-user slice is stable across reconciles. Without this
+	// the map-range randomness would produce different append orders each
+	// pass and force unnecessary Envoy snapshot diffs downstream.
+	v3Names := make([]string, 0, len(v3Apps))
+	for name := range v3Apps {
+		v3Names = append(v3Names, name)
+	}
+	sort.Strings(v3Names)
+
+	for _, u := range userList {
+		existing := make(map[string]bool, len(rawAppsMap[u.Name]))
+		for _, app := range rawAppsMap[u.Name] {
+			existing[app.Spec.Name] = true
+		}
+
+		for _, name := range v3Names {
+			if existing[name] {
+				continue
+			}
+			rawAppsMap[u.Name] = append(rawAppsMap[u.Name], v3Apps[name])
+			existing[name] = true
+		}
+	}
+	return rawAppsMap
+}
+
+// isV3App reports whether the Application is a v3 app, based on
+// the AppApiVersionLabel that the v3 install handler / Application controller
+// stamp on it.
+func isV3App(app *appv1alpha1.Application) bool {
+	return appv1alpha1.IsV3(app)
 }
 
 // fileserverGlobalData holds pod/node data shared across all users within a
@@ -332,15 +403,25 @@ func (p *Provider) getFileserverNodesForUser(ctx context.Context, username strin
 	return nodes, nil
 }
 
-func (p *Provider) buildAppInfos(appList []*appv1alpha1.Application) []*message.AppInfo {
+// buildAppInfos translates Application CRs into the AppInfo shape the
+// translator consumes. For v3 apps the per-user overlay
+// (Spec.UserSettings[username]) is applied to both Settings and Entrances
+// so each user's xDS sees their own customDomain / authLevel choices.
+//
+// Owner on the resulting AppInfo is the viewer (username), matching the
+// per-user fan-out semantics already used by `fanOutSharedApps`. The
+// install-owner is still recoverable from app.Spec.Owner if a downstream
+// consumer needs it (none today).
+func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Application) []*message.AppInfo {
 	var result []*message.AppInfo
 	for _, app := range appList {
 		if app.Spec.Name == "" || app.Spec.Appid == "" {
 			continue
 		}
 
-		entrances := make([]*message.EntranceInfo, 0, len(app.Spec.Entrances))
-		for _, e := range app.Spec.Entrances {
+		effectiveEntrances := app.EffectiveEntrances(username)
+		entrances := make([]*message.EntranceInfo, 0, len(effectiveEntrances))
+		for _, e := range effectiveEntrances {
 			entrances = append(entrances, &message.EntranceInfo{
 				Name:            e.Name,
 				Host:            e.Host,
@@ -361,9 +442,14 @@ func (p *Provider) buildAppInfos(appList []*appv1alpha1.Application) []*message.
 			})
 		}
 
-		settings := make(map[string]string, len(app.Spec.Settings))
-		for k, v := range app.Spec.Settings {
-			settings[k] = v
+		settings := app.EffectiveSettings(username)
+
+		// For v3 fan-out, expose the viewer as Owner so downstream
+		// per-user grouping by AppInfo.Owner keeps working. Non-v3
+		// keeps the original install-owner.
+		owner := app.Spec.Owner
+		if isV3App(app) {
+			owner = username
 		}
 
 		result = append(result, &message.AppInfo{
@@ -371,22 +457,18 @@ func (p *Provider) buildAppInfos(appList []*appv1alpha1.Application) []*message.
 			Appid:     app.Spec.Appid,
 			IsSysApp:  app.Spec.IsSysApp,
 			Namespace: app.Spec.Namespace,
-			Owner:     app.Spec.Owner,
+			Owner:     owner,
 			Entrances: entrances,
 			Ports:     ports,
 			Settings:  settings,
+			IsShared:  isV3App(app),
 		})
 	}
 	return result
 }
 
-func (p *Provider) listUsers(ctx context.Context, rawAppsMap map[string][]*appv1alpha1.Application) ([]*message.UserInfo, error) {
+func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application) ([]*message.UserInfo, error) {
 	var result []*message.UserInfo
-
-	userList, err := p.getUsers(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	// Fetch cluster-wide data once; reused for every user below.
 	allCerts, err := p.getCustomDomainCerts(ctx)
@@ -423,7 +505,7 @@ func (p *Provider) listUsers(ctx context.Context, rawAppsMap map[string][]*appv1
 	}
 
 	for _, user := range userList {
-		publicAppIDs, publicCustomDomainApps, _, customDomainAppsWithUsers := p.listApplicationDetails(rawAppsMap[user.Name])
+		publicAppIDs, publicCustomDomainApps, _, customDomainAppsWithUsers := p.listApplicationDetails(user.Name, rawAppsMap[user.Name])
 
 		isEphemeralAnno := getAnnotation(&user, userAnnotationIsEphemeral)
 		if !isValidUser(&user) && isEphemeralAnno == "" {
@@ -515,7 +597,7 @@ func (p *Provider) listUsers(ctx context.Context, rawAppsMap map[string][]*appv1
 			LocalDomainIP:     localDomainIP,
 			CreateTimestamp:   user.CreationTimestamp.Unix(),
 			Language:          language,
-			Apps:              p.buildAppInfos(rawAppsMap[user.Name]),
+			Apps:              p.buildAppInfos(user.Name, rawAppsMap[user.Name]),
 			SSL:               sslConfig,
 			CustomDomainCerts: allCerts[user.Name],
 			FileserverNodes:   fileserverNodes,
@@ -594,7 +676,13 @@ func getUserLanguage(user *iamv1alpha2.User) string {
 	return ""
 }
 
-func (p *Provider) listApplicationDetails(appList []*appv1alpha1.Application) ([]string, []string, []string, map[string][]string) {
+// listApplicationDetails summarises the viewer's per-user view of a set
+// of Applications. For v3 apps the Settings/Entrances overlays are
+// applied so the customDomain / authLevel slots read from
+// UserSettings[username] instead of the global Settings. The viewer is
+// also recorded as the per-domain "owner" so the rest of the pipeline
+// associates this user's frontends with their own server_name list.
+func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha1.Application) ([]string, []string, []string, map[string][]string) {
 	publicApps := []string{"headscale"}
 	var publicCustomDomainApps []string
 	var customDomainApps []string
@@ -608,17 +696,24 @@ func (p *Provider) listApplicationDetails(appList []*appv1alpha1.Application) ([
 	}
 
 	for _, app := range appList {
-		if len(app.Spec.Entrances) == 0 {
+		effectiveEntrances := app.EffectiveEntrances(username)
+		if len(effectiveEntrances) == 0 {
 			continue
 		}
 
 		var customDomains []string
 		var customDomainsPrefix []string
-		entranceCount := len(app.Spec.Entrances)
+		entranceCount := len(effectiveEntrances)
+		// For v3 the install-owner is irrelevant — every user observing
+		// the app gets their own customDomain bucket. For v1/v2 keep
+		// the legacy behaviour: customDomain is keyed by install-owner.
 		owner := app.Spec.Owner
-		customDomainEntrancesMap := getSettingsKeyMap(app, settingsCustomDomain)
+		if isV3App(app) {
+			owner = username
+		}
+		customDomainEntrancesMap := getSettingsKeyMap(app, username, settingsCustomDomain)
 
-		for index, entrance := range app.Spec.Entrances {
+		for index, entrance := range effectiveEntrances {
 			prefix := getAppPrefix(entranceCount, index, app.Spec.Appid)
 			authLevel := entrance.AuthLevel
 
@@ -676,7 +771,13 @@ func (p *Provider) getUsers(ctx context.Context) ([]iamv1alpha2.User, error) {
 		klog.Errorf("provider: list users from cache failed: %v", err)
 		return nil, fmt.Errorf("list users from cache failed: %v", err)
 	}
-	users := userList.Items
+	users := make([]iamv1alpha2.User, 0)
+	for _, user := range userList.Items {
+		if user.Status.State != "Created" {
+			continue
+		}
+		users = append(users, user)
+	}
 	return users, nil
 }
 
@@ -713,17 +814,19 @@ func isValidUser(user *iamv1alpha2.User) bool {
 	return getAnnotation(user, userAnnotationDid) != "" && getAnnotation(user, userAnnotationZone) != ""
 }
 
-func getSettingsKeyMap(app *appv1alpha1.Application, key string) map[string]map[string]string {
+// getSettingsKeyMap unmarshals a Settings blob (e.g. "customDomain" or
+// "policy") into a map keyed by entrance name. For v3 apps it reads the
+// per-user overlay (Spec.UserSettings[username][key]) first; for v1/v2 it
+// falls back to Spec.Settings[key].
+func getSettingsKeyMap(app *appv1alpha1.Application, username, key string) map[string]map[string]string {
 	r := make(map[string]map[string]string)
-	if app.Spec.Settings == nil {
-		return r
-	}
-	data := app.Spec.Settings[key]
+	settings := app.EffectiveSettings(username)
+	data := settings[key]
 	if data == "" {
 		return r
 	}
 	if err := json.Unmarshal([]byte(data), &r); err != nil {
-		klog.Warningf("provider: unmarshal settings %q for app %s/%s failed: %v", key, app.Namespace, app.Name, err)
+		klog.Warningf("provider: unmarshal settings %q for app %s/%s (user %q) failed: %v", key, app.Namespace, app.Name, username, err)
 		return make(map[string]map[string]string)
 	}
 	return r

@@ -2,7 +2,7 @@
 	<div class="security column justify-center items-center">
 		<div
 			style="height: 48px; width: 48px; border-radius: 24px"
-			class="bg-white row items-center justify-center"
+			class="row items-center justify-center"
 		>
 			<div
 				style="height: 40px; width: 40px; border-radius: 20px"

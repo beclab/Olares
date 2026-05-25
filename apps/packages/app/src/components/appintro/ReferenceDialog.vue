@@ -33,7 +33,7 @@
 import BaseDialogBar from '../../components/base/BaseDialogBar.vue';
 import RecommendAppCard from '../appcard/RecommendAppCard.vue';
 import { useSettingStore } from '../../stores/market/setting';
-import { useCenterStore } from '../../stores/market/center';
+import { useAppStore } from '../../stores/market/appStore';
 import { useDialogPluginComponent } from 'quasar';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -47,12 +47,12 @@ const props = defineProps({
 
 const { onDialogOK, onDialogCancel, dialogRef } = useDialogPluginComponent();
 const references = ref<string[]>([]);
-const centerStore = useCenterStore();
+const appStore = useAppStore();
 const settingStore = useSettingStore();
 const { t } = useI18n();
 
 onMounted(() => {
-	const fullInfo = centerStore.getAppFullInfo(
+	const fullInfo = appStore.getAppFullInfo(
 		props.app,
 		settingStore.marketSourceId
 	);

@@ -63,7 +63,7 @@ func renderConfigFile(config *Config) ([]byte, error) {
 	funcMap := template.FuncMap{
 		"quoteOrNot": quoteOrNot,
 	}
-	klog.Infof("renderConfigFile: %##v\n", config)
+	// klog.Infof("renderConfigFile: %##v\n", config)
 	var buf bytes.Buffer
 	tpl := template.Must(template.New("config").Funcs(funcMap).Parse(tmpl))
 	err := tpl.Execute(&buf, config)

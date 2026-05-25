@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 	"path"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func UpgradeOlaresPipeline() error {
+func UpgradeOlaresPipeline(ctx context.Context) error {
 	currentVersionString, err := phase.GetOlaresVersion()
 	if err != nil {
 		return errors.Wrap(err, "failed to get current Olares version")
@@ -62,7 +63,7 @@ func UpgradeOlaresPipeline() error {
 	}
 
 	logger.Infof("Starting Olares upgrade from %s to %s...", currentVersion, targetVersion)
-	if err := p.Start(); err != nil {
+	if err := p.Start(ctx); err != nil {
 		return errors.Wrap(err, "upgrade failed")
 	}
 
@@ -70,7 +71,7 @@ func UpgradeOlaresPipeline() error {
 	return nil
 }
 
-func UpgradePreCheckPipeline() error {
+func UpgradePreCheckPipeline(ctx context.Context) error {
 	var arg = common.NewArgument()
 	arg.SetConsoleLog("upgrade-precheck.log", true)
 
@@ -86,6 +87,6 @@ func UpgradePreCheckPipeline() error {
 		},
 		Runtime: runtime,
 	}
-	return p.Start()
+	return p.Start(ctx)
 
 }

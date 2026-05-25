@@ -143,7 +143,6 @@ const onRestart = () => {
 		}
 
 		.status-bg {
-			background: $white;
 			height: 40px;
 			width: 40px;
 			position: absolute;

@@ -10,16 +10,16 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
 	"github.com/thoas/go-funk"
 	"helm.sh/helm/v3/pkg/action"
@@ -298,7 +298,7 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 		appid = name
 		isSysApp = true
 	} else {
-		appid = appv1alpha1.AppName(name).GetAppID()
+		appid = appcfg.AppName(name).GetAppID()
 	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
 
@@ -306,11 +306,16 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	if deployment.GetLabels()[constants.ApplicationRawAppNameLabel] != "" {
 		rawAppName = deployment.GetLabels()[constants.ApplicationRawAppNameLabel]
 	}
+	appLabels := map[string]string{}
+	if v, ok := deployment.GetLabels()[constants.AppApiVersionLabel]; ok && v != "" {
+		appLabels[constants.AppApiVersionLabel] = v
+	}
 	// create the application cr
 	newapp := &appv1alpha1.Application{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmtAppName(name, req.Namespace),
+			Name:   fmtAppName(name, req.Namespace),
+			Labels: appLabels,
 		},
 		Spec: appv1alpha1.ApplicationSpec{
 			Name:            name,
@@ -412,7 +417,7 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	if userspace.IsSysApp(name) {
 		appid = name
 	} else {
-		appid = appv1alpha1.AppName(name).GetAppID()
+		appid = appcfg.AppName(name).GetAppID()
 	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
 
@@ -464,6 +469,15 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	}
 	klog.Infof("deploymentname: %s, version: %v", deployment.GetName(), deployment.GetResourceVersion())
 	appCopy.Annotations[deploymentResourceVersionAnnotation] = deployment.GetResourceVersion()
+
+	// Propagate the v3 marker from the deployment so the
+	// Application CR carries it for downstream visibility / proxy fan-out.
+	if v, ok := deployment.GetLabels()[constants.AppApiVersionLabel]; ok && v != "" {
+		if appCopy.Labels == nil {
+			appCopy.Labels = make(map[string]string)
+		}
+		appCopy.Labels[constants.AppApiVersionLabel] = v
+	}
 
 	err = r.Patch(ctx, appCopy, client.MergeFrom(app))
 	if err != nil {

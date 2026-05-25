@@ -1,7 +1,7 @@
 import { DriveDataAPI } from './../index';
 import { getFileIcon } from '@bytetrade/core';
 import { formatGd } from './filesFormat';
-import { createURL, getPurePath } from '../utils';
+import { createURL, decodeURIComponentSafe, getPurePath } from '../utils';
 import url from 'src/utils/url';
 import {
 	FileItem,
@@ -117,13 +117,6 @@ export default class DropboxDataAPI extends DriveDataAPI {
 	}
 
 	async copy(el: FileItem, type: string): Promise<CopyStoragesType> {
-		// let path = el.path;
-		// try {
-		// 	path = decodeURIComponent(el.path);
-		// } catch (error) {
-		// 	/* empty */
-		// }
-		// const from = files.formatPathtoUrl(path);
 		const from = appendPath(
 			'/',
 			el.fileType || '',
@@ -131,7 +124,6 @@ export default class DropboxDataAPI extends DriveDataAPI {
 			el.oPath || '',
 			el.isDir ? '/' : ''
 		);
-		console.log('from ===>', from);
 
 		const copyItem: CopyStoragesType = {
 			from: from,
@@ -166,12 +158,8 @@ export default class DropboxDataAPI extends DriveDataAPI {
 				? lastPathIndex
 				: lastPathIndex + '/';
 
-			let name = element.name;
-			try {
-				name = decodeURIComponent(element.name);
-			} catch (error) {
-				/* empty */
-			}
+			const name = decodeURIComponentSafe(element.name);
+
 			const to = files.formatPathtoUrl(
 				appendPath(path, name, element.isDir ? '/' : '')
 			);
@@ -216,12 +204,7 @@ export default class DropboxDataAPI extends DriveDataAPI {
 			if (!element) {
 				continue;
 			}
-			let name = element.name;
-			try {
-				name = decodeURIComponent(element.name);
-			} catch (error) {
-				/* empty */
-			}
+			const name = decodeURIComponentSafe(element.name);
 			const to = appendPath(path, name);
 			items.push({
 				from: files.formatPathtoUrl(element.path),
@@ -249,12 +232,7 @@ export default class DropboxDataAPI extends DriveDataAPI {
 			return this.utilsFormatPathtoUrl(file.path);
 		}
 
-		let pathSplit = file.path.split('?')[0];
-		try {
-			pathSplit = decodeURIComponent(pathSplit);
-		} catch (error) {
-			/* empty */
-		}
+		const pathSplit = decodeURIComponentSafe(file.path.split('?')[0]);
 
 		const params = {
 			inline: 'true',
@@ -269,12 +247,7 @@ export default class DropboxDataAPI extends DriveDataAPI {
 		const params = {
 			...(inline && { inline: 'true' })
 		};
-		let path = files.dropboxRemovePrefix(file.path);
-		try {
-			path = decodeURIComponent(path);
-		} catch (error) {
-			/* empty */
-		}
+		const path = decodeURIComponentSafe(files.dropboxRemovePrefix(file.path));
 		const url = createURL(files.dropboxCommonUrl('raw', path), params);
 		return url;
 	}
@@ -319,12 +292,22 @@ export default class DropboxDataAPI extends DriveDataAPI {
 			...(inline && { inline: 'true' }),
 			src: DriveType.Dropbox
 		};
-		const url = createURL('api/raw/Drive' + file.path, params);
+		const url = createURL(
+			'api/raw/Drive' + decodeURIComponentSafe(file.path),
+			params
+		);
 		return url;
 	}
 
 	formatTransferToFileItem(item: TransferItem): FileItem {
 		const extension = getextension(item.name);
+		const account = item.path.split('/')[3];
+		const path = files.dropboxRemoveHomePrefix(item.path);
+		const oPath = path.split('/').slice(2).join('/');
+		const oParentPath = oPath.substring(
+			0,
+			oPath.length - item.name.length - (item.path.endsWith('/') ? 1 : 0)
+		);
 		const res: FileItem = {
 			extension,
 			isDir: item.isFolder,
@@ -341,7 +324,10 @@ export default class DropboxDataAPI extends DriveDataAPI {
 			url: item.url || '',
 			driveType: item.driveType!,
 			param: '',
-			fileExtend: 'dropbox'
+			fileExtend: account,
+			fileType: 'dropbox',
+			oPath,
+			oParentPath
 		};
 		return res;
 	}

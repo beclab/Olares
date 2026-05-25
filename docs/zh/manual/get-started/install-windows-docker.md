@@ -12,7 +12,7 @@ Windows 版 Olares 目前存在以下限制：
 
 建议仅用于开发或测试环境。
 :::
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## 系统要求
 
@@ -30,7 +30,7 @@ Windows 版 Olares 目前存在以下限制：
 
 ### 可选硬件
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 :::tip Windows 上的显卡确认方式
 你也可以在 **任务管理器 > 性能** 中确认显卡型号是否为 NVIDIA，并在 WSL 终端中运行 `nvidia-smi` 检查驱动是否在子系统中可用。
@@ -185,4 +185,4 @@ docker run --gpus all -d --privileged -v oic-data:/var \
 
 <!--@include: ./manage-olares-container.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

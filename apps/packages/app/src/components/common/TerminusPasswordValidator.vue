@@ -7,6 +7,14 @@
 			:show-password-img="true"
 			class="password-validator-root__edit"
 			@update:model-value="setButtonStatus"
+			:is-error="invalidCharacters.length > 0 || passwordRef.length > 32"
+			:error-message="
+				passwordRef.length > 32
+					? t('errors.password_length_too_long')
+					: t('errors.include_invalid_characters', {
+							invalidChars: invalidCharacters.join(' ')
+					  })
+			"
 		/>
 
 		<terminus-rule-checker
@@ -18,25 +26,25 @@
 		/>
 		<terminus-rule-checker
 			:value="passwordRef"
-			:pattern="PASSWORD_RULE.LOWERCASE_RULE"
-			:label="t('Contains lowercase letters')"
-			v-model:result="lowercaseResult"
+			:pattern="PASSWORD_RULE.LETTERS_RULE"
+			:label="t('Contains letters')"
+			v-model:result="lettersResult"
 			@update:result="setButtonStatus"
 		/>
-		<terminus-rule-checker
+		<!-- <terminus-rule-checker
 			:value="passwordRef"
 			:pattern="PASSWORD_RULE.UPPERCASE_RULE"
 			:label="t('Contains uppercase letters')"
 			v-model:result="uppercaseResult"
 			@update:result="setButtonStatus"
-		/>
-		<terminus-rule-checker
+		/> -->
+		<!-- <terminus-rule-checker
 			:value="passwordRef"
 			:pattern="PASSWORD_RULE.DIGIT_RULE"
 			:label="t('Contains numbers')"
 			v-model:result="digitsResult"
 			@update:result="setButtonStatus"
-		/>
+		/> -->
 		<terminus-rule-checker
 			:value="passwordRef"
 			:pattern="PASSWORD_RULE.SYMBOL_RULE"
@@ -62,7 +70,11 @@
 <script setup lang="ts">
 import TerminusEdit from './TerminusEdit.vue';
 import TerminusRuleChecker from './TerminusRuleChecker.vue';
-import { ConfirmButtonStatus, PASSWORD_RULE } from '../../utils/constants';
+import {
+	ConfirmButtonStatus,
+	PASSWORD_RULE,
+	passwordInavlidRule
+} from '../../utils/constants';
 import { PropType, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -90,18 +102,22 @@ const props = defineProps({
 const emit = defineEmits(['update:buttonStatus', 'update:buttonText']);
 
 const { t } = useI18n();
-const passwordRef = ref();
+const passwordRef = ref('');
 const rePwdRef = ref();
 const samePasswordRef = ref(true);
 
 const symbolResult = ref(false);
-const digitsResult = ref(false);
-const uppercaseResult = ref(false);
-const lowercaseResult = ref(false);
+// const digitsResult = ref(false);
+// const uppercaseResult = ref(false);
+// const lowercaseResult = ref(false);
+const lettersResult = ref(false);
 const lengthResult = ref(false);
 const allRule = new RegExp(PASSWORD_RULE.ALL_RULE);
+const invalidCharacters = ref<string[]>([]);
 
 function setButtonStatus() {
+	// passwordInavlidRule;
+	invalidCharacters.value = passwordRef.value.match(passwordInavlidRule) || [];
 	if (!passwordRef.value || (props.repeatEnable && !rePwdRef.value)) {
 		emit('update:buttonStatus', ConfirmButtonStatus.disable);
 		emit('update:buttonText', t('confirm'));
@@ -113,12 +129,12 @@ function setButtonStatus() {
 	}
 
 	if (
-		!digitsResult.value ||
+		// !digitsResult.value ||
 		!symbolResult.value ||
-		!lowercaseResult.value ||
-		!uppercaseResult.value ||
+		!lettersResult.value ||
 		!lengthResult.value ||
-		!samePasswordRef.value
+		!samePasswordRef.value ||
+		!allRule.test(passwordRef.value)
 	) {
 		emit('update:buttonStatus', ConfirmButtonStatus.disable);
 		emit('update:buttonText', t('reset'));
@@ -145,7 +161,6 @@ function getValidPassword(): string | null {
 	if (!allRule.test(passwordRef.value)) {
 		return null;
 	}
-
 	return passwordRef.value;
 }
 

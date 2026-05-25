@@ -45,7 +45,7 @@ export default defineComponent({
 		const bfl_token = ref<string>('');
 
 		if (process.env.PL_SERVER_URL) {
-			bfl_token.value = process.env.VAULT_MOCK_BFL_TOKEN;
+			bfl_token.value = process.env.VAULT_MOCK_BFL_TOKEN || '';
 		}
 
 		const url = ref<string>(

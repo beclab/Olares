@@ -51,5 +51,10 @@ export async function syncRemove(time: number): Promise<RemoveData[]> {
 }
 
 export async function fetchBlackList(baseUrl: string): Promise<any> {
-	return await axios.get(baseUrl + '/knowledge/page/blacklist');
+	return await axios.get(baseUrl + '/knowledge/page/domain_config');
+}
+
+export async function getKnowledgeDBInit() {
+	const configStore = useConfigStore();
+	return await axios.get(configStore.url + '/knowledge/config/db_init_time');
 }

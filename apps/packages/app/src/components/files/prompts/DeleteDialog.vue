@@ -30,7 +30,7 @@
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 
 import {
 	notifyWaitingShow,
@@ -42,6 +42,8 @@ import { useFilesStore, FilesIdType } from '../../../stores/files';
 import { useOperateinStore } from './../../../stores/operation';
 import { dataAPIs } from '../../../api';
 import { encodePath } from '../../../utils/url';
+import HotkeyManager from 'src/directives/hotkeyManager';
+import { FILES_HOTKEY } from 'src/api/files/hotKeys';
 
 const props = defineProps({
 	origin_id: {
@@ -49,6 +51,28 @@ const props = defineProps({
 		required: false,
 		default: FilesIdType.PAGEID
 	}
+});
+
+onMounted(() => {
+	HotkeyManager.registerHotkeys(
+		{
+			[FILES_HOTKEY.FILES.ENTER]: () => {
+				submit();
+			}
+		},
+		['files']
+	);
+});
+
+onUnmounted(() => {
+	HotkeyManager.unregisterHotkeys(
+		{
+			[FILES_HOTKEY.FILES.ENTER]: () => {
+				submit();
+			}
+		},
+		['files']
+	);
 });
 
 const store = useDataStore();
@@ -73,7 +97,7 @@ const submit = async () => {
 			const previewItem = JSON.parse(
 				JSON.stringify(filesStore.previewItem[props.origin_id])
 			);
-			if (previewItem.front) {
+			if (previewItem) {
 				previewItem.path = encodePath(
 					dataAPIs(previewItem.driveType).getPanelJumpPath(previewItem)
 				);

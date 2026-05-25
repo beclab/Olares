@@ -2,11 +2,13 @@ import { OlaresInfo, TerminusInfo, Token } from '@bytetrade/core';
 import { axiosInstanceProxy } from 'src/platform/httpProxy';
 import { i18n } from '../boot/i18n';
 import { saltedMD5 } from './salted-md5';
+import { getLoginResponseErrorMessage } from './interface/login';
+import { UserItem } from '@didvault/sdk/src/core';
 // import axios from 'axios';
 
 export const onFirstFactor = async (
 	baseURL: string,
-	terminus_name: string,
+	user: UserItem,
 	osUser: string,
 	osPwd: string,
 	acceptCookie = true,
@@ -22,11 +24,9 @@ export const onFirstFactor = async (
 		withCredentials: true
 	});
 
-	let targetURL =
-		'https://vault.' + terminus_name.replace('@', '.') + '/' + 'server';
-
+	let targetURL = user.vault_target_url;
 	if (needTwoFactor) {
-		targetURL = 'https://desktop.' + terminus_name.replace('@', '.') + '/';
+		targetURL = user.desktop_target_url;
 	}
 
 	try {
@@ -43,7 +43,8 @@ export const onFirstFactor = async (
 			{
 				params: {
 					hideCookie: true
-				}
+				},
+				timeout: 30000
 			}
 		);
 
@@ -62,7 +63,11 @@ export const onFirstFactor = async (
 	} catch (error) {
 		if (error.response) {
 			if (error.response.data && error.response.data.message) {
-				throw new Error(error.response.data.message);
+				throw new Error(
+					i18n.global.t(
+						getLoginResponseErrorMessage(error.response.data.message)
+					)
+				);
 			}
 			throw new Error(error.message);
 		}

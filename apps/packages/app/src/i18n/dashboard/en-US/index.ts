@@ -68,7 +68,7 @@ const options = {
 	NETWORK_DETAILS: 'Network details',
 	FAN_DETAILS: 'Fan details',
 	THREAD: 'Thread',
-	APP_STATUS: AppStatus.app,
+	APP_STATUS: { ...AppStatus.app, downloading: 'Downloading' },
 	start_autoplay_metrics_refresh: 'Start auto-refresh',
 	stop_autoplay_metrics_refresh: 'Stop auto-refresh'
 };

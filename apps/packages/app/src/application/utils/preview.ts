@@ -19,20 +19,18 @@ export const registerFilePreviewEvent = async ($q?: QVueGlobals) => {
 		}
 		if (isVideo) {
 			$q.dialog({
-				component:
-					process.env.PLATFORM === 'MOBILE'
-						? FileMobilePreVideoDialog
-						: FilePreVideoDialog,
+				component: $q.platform.is.mobile
+					? FileMobilePreVideoDialog
+					: FilePreVideoDialog,
 				componentProps: {
 					origin_id
 				}
 			});
 		} else {
 			$q.dialog({
-				component:
-					process.env.PLATFORM === 'MOBILE'
-						? FileMobilePreviewPage
-						: FilePreViewDialog,
+				component: $q.platform.is.mobile
+					? FileMobilePreviewPage
+					: FilePreViewDialog,
 				componentProps: {
 					origin_id
 				}

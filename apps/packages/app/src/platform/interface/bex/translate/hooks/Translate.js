@@ -35,7 +35,23 @@ export function useTranslate(q, ruleDetaul, setting) {
 				detectRemote === 'true',
 				langDetector
 			);
-			if (deLang && (toLang.includes(deLang) || skipLangs.includes(deLang))) {
+
+			const normalizeLang = (lang) => {
+				if (!lang) return '';
+				if (lang === 'zh' || lang === 'zh-Hans') return 'zh-CN';
+				if (lang === 'zh-Hant') return 'zh-TW';
+				return lang;
+			};
+
+			const normalizedDeLang = normalizeLang(deLang);
+			const normalizedToLang = normalizeLang(toLang);
+			const normalizedSkipLangs = skipLangs.map(normalizeLang);
+
+			if (
+				deLang &&
+				(normalizedDeLang === normalizedToLang ||
+					normalizedSkipLangs.includes(normalizedDeLang))
+			) {
 				sameLang.value = true;
 			} else {
 				const [trText, isSame] = await apiTranslate({

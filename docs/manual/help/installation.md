@@ -7,109 +7,116 @@ description: Find answers to common questions during the installation and activa
 This page lists the FAQs about installing, configuring, activating, and logging into Olares on your hardware.
 
 ## Installation
+
 ### What platforms does Olares support?
 
-You can install Olares on Linux (Ubuntu or Debian) for best performance.
+Install Olares on Linux (Ubuntu or Debian) for best performance.
 
-For product evaluation, you can also install Olares on the following platforms:
+You can also install Olares on the following platforms. However, use them only for testing, because they do not support all features:
 * Proxmox VE
 * Raspberry Pi
 * macOS
 * Windows
 
-### What is the minimum hardware requirements for installing Olares?
+### What are the minimum hardware requirements for installing Olares?
 
-The requirements vary by platform. Generally:
-* **CPU**: Minimum 4 cores with x86-64 architecture (Intel or AMD).
+Requirements vary by platform. Generally, you need:
+* **CPU**: Minimum 4 cores with x86-64 architecture, such as Intel or AMD.
 * **Memory**: At least 8 GB of available RAM.
 * **Storage**: Minimum 150 GB SSD.
 
 For detailed requirements, refer to the [installation docs](../get-started/install-olares.md).
 
-### Can I use a mechanical hard drive to install Olares?
+### Is it possible to use a mechanical hard drive to install Olares?
 
-No. You must use an SSD. The installation will likely fail if a mechanical hard drive is used due to slower read and write speeds, which can cause timeouts during the system initialization.
+No. You must use an SSD. Installations on mechanical hard drives likely fail due to slower read and write speeds, which cause timeouts during system initialization.
 
 ### Does the system support NVIDIA GPUs?
 
-Yes, but only NVIDIA Turing architecture or newer (GTX 16xx, RTX 20xx, 30xx, 40xx, 50xx series, and later). GPUs with older architectures are not recognized by Olares, and AI applications that require GPU access will not run. This requirement comes from both the NVIDIA open-source driver, which requires Turing's hardware GSP module, and CUDA 13.x, which no longer supports older GPU architectures.
+Yes, but only NVIDIA Turing architecture or newer, such as GTX 16xx, RTX 20xx, 30xx, 40xx, 50xx series, and later. GPUs with older architectures are not recognized by Olares, and AI applications that require GPU access will not run.
 
-For supported GPUs, Olares automatically handles driver installation. It also supports multiple GPUs on a single motherboard, allowing users to leverage all available compute power for AI workloads.
+This requirement stems from the NVIDIA open-source driver requiring the hardware GSP module of Turing, and CUDA 13.x dropping support for older GPU architectures.
 
-### How do I manually install NVIDIA drivers if the automatic setup fails?
+For supported GPUs, Olares automatically handles driver installation. It supports multiple GPUs on a single motherboard, allowing you to leverage all available compute power for AI workloads.
 
-The Olares installer usually detects and installs drivers automatically. However, if your system previously had NVIDIA drivers installed, the process might be skipped or fail due to conflicts.
+### How do I manually install NVIDIA drivers if automatic setup fails?
 
-In this case, you should:
-1. Reboot the machine after the Olares installation to ensure any old driver components are fully cleared.
+The Olares installer detects and installs drivers automatically. However, if your system previously had NVIDIA drivers installed, the process might skip or fail due to conflicts.
+
+To resolve this:
+1. Reboot the machine after the Olares installation to clear any old driver components.
 2. Manually trigger the driver installation using the command `olares-cli gpu install`.
-
-After installation, you can confirm that the drivers are installed and your GPU is recognized by running `nvidia-smi`.
+3. After installation, confirm the system recognizes your GPU by running `nvidia-smi`.
 
 ### Why does installation fail with `failed to build Kubernetes objects` or `Ensure CRDs are installed first`?
 
-While these error messages suggest a problem with Custom Resource Definitions (CRDs), they are often a symptom of poor disk performance.
+While these error messages suggest a problem with Custom Resource Definitions (CRDs), they often indicate poor disk performance.
 
-Olares relies on etcd, the backing database for Kubernetes. etcd is very sensitive to storage speed. If you are installing Olares on a slow disk, such as a traditional HDD, etcd cannot respond fast enough. This causes the API server to time out while attempting to apply CRDs.
+Olares relies on etcd, the backing database for Kubernetes. etcd is highly sensitive to storage speed. If you install Olares on a slow disk, such as a traditional HDD, etcd cannot respond fast enough. This causes the API server to time out while attempting to apply CRDs.
 
-Installing Olares on SSD storage should fix this issue.
+To fix the issue, install Olares on SSD storage.
 
-### My Olares installation timed out and didn't show a password, but the system seems to be running. How can I find the password?
+### How do I find the password if the Olares installation times out without showing it?
+
 This typically occurs when the installation times out due to insufficient system resources, especially in a virtual machine (VM). You can retrieve the password from the installation log file with the following command:
+
 ```bash
 # Replace v1.12.2 with your specific Olares version number.
 grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 ```
-An installation timeout often means some services failed to start correctly. After finding your password, run  `kubectl get pod -A` to check the status of all services.
+An installation timeout often indicates some services failed to start correctly. After you find your password, run `kubectl get pod -A` to check the status of all services.
 
 ## Activation
+
 ### Is it possible to activate Olares with a non-local network?
 
-Yes. Before activation, users typically access the activation wizard using the local IP address, which generally requires both parties to be on the same network. However, if Olares is assigned a public IP, such as on a public cloud, this local network limitation no longer applies.
+Yes. Standard activation requires the Olares device and your client device, such as your phone, to connect to the same local network. This requirement applies whether you access the activation wizard via a local IP address in a web browser, or use the **Discover nearby Olares** feature in the LarePass app after an ISO installation.
 
-Note that IP access is only used during activation. Once activated, devices can be accessed via domain names on both internal and external networks.
+However, if Olares uses a public IP address, such as on a public cloud, this local network limitation no longer applies.
+
+After activation, access devices via domain names on both internal and external networks, regardless of the initial setup method.
 
 ### My Olares is powered on and connected to LAN, but I can't find it in LarePass. What should I do?
 
-Ensure both your phone and Olares device are on the same network. If they are not, LarePass cannot discover Olares automatically.
+Ensure your phone and Olares device are on the same network. If they are not, LarePass cannot discover Olares automatically.
 
-In situations where you cannot connect via Wi-Fi, you can use the Bluetooth network setup in the LarePass app to connect Olares to the same network as your phone.
+If you cannot connect via Wi-Fi, use the Bluetooth network setup in the LarePass app to connect Olares to the same network as your phone.
 
-For details, see [Activate Olares using Bluetooth](../../manual/larepass/activate-olares.md#activate-olares-using-bluetooth).
+For detailed instructions, refer to [Activate Olares using Bluetooth](../../manual/larepass/activate-olares.md#activate-olares-using-bluetooth).
 
-### I received the MFA binding error. How can I resolve it?
+### I received the MFA binding error. How to resolve it?
 
 The request to bind Multi-Factor Authentication (MFA) failed due to a network timeout. Check your network connection and retry the setup process.
 
 ### I received a DID binding error. How to resolve it?
 
-The request to the binding-zone interface failed due to a network timeout. This usually happens during account activation. Ensure your network is stable and retry.
+The request to the binding-zone interface failed due to a network timeout. This typically happens during account activation. Ensure your network is stable and retry.
 
 ### What does this error message mean: "Invalid jws, timestamp is out of range"?
 
-This occurs when there is a significant time difference (greater than 20 minutes) between the device running LarePass and the Olares device. Check the system time on your computer or phone and ensure it is synced correctly with internet time.
+This occurs when the time difference between the device running LarePass and the Olares device exceeds 20 minutes. Check the system time on your computer or phone and ensure it syncs correctly with internet time.
 
 ### I see this error message during setup: "Resolve name error". How to fix it?
 
-This error means your Olares device cannot connect to the Olares identity service, which is usually caused by the network issue. Check your internet connection and ensure your Olares device has proper network access.
+This error indicates your Olares device cannot connect to the Olares identity service, which is usually caused by the network issue. Check your internet connection and ensure your Olares device has proper network access.
 
 ## Login and authentication
 
 ### What should I do when I see "Authentication failed, incorrect password"?
 
-This indicates the password entered is not accurate. Double-check your password for issues like typos or case sensitivity and try again.
+This indicates the password entered is not accurate. Check your password for typos or case sensitivity issues, and try again.
 
 ### What does this mean: "Authentication failed, user not found"?
 
-The system cannot find an account associated with the username entered. Verify that the username is correct and this username is already registered on Olares.
+The system cannot find an account associated with the entered username. Verify the username is correct and already registered on Olares.
 
 ### I received an error saying "Authentication failed, failed to query user from lldap service". How to resolve it?
 
-The system was unable to retrieve user details from the internal directory. This might happen if the user data is corrupted or if the service is momentarily busy. Try again or contact your administrator.
+The system was unable to retrieve user details from the internal directory. This happens if the user data corrupts or if the service is momentarily busy. Try again or contact your administrator.
 
 ### I am locked out with the message "too many failed login attempts, retry again later after 5 minutes". What should I do?
 
-For security reasons, the system temporarily locks logins after multiple incorrect attempts. Wait for 5 minutes and then try logging in again.
+For security reasons, the system temporarily locks logins after multiple incorrect attempts. Wait 5 minutes, and then try logging in again.
 
 ### Why am I getting "Authentication failed, disk space is full"?
 

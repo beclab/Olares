@@ -13,7 +13,7 @@ Windows 版 Olares 目前存在以下限制：
 建议仅用于开发或测试环境。
 :::
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## 系统要求
 
@@ -31,7 +31,7 @@ Windows 版 Olares 目前存在以下限制：
 
 ### 可选硬件
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 :::tip Windows 上的显卡确认方式
 你也可以在 **任务管理器 > 性能** 中确认显卡型号是否为 NVIDIA，并在 WSL 终端中运行 `nvidia-smi` 检查驱动是否在子系统中可用。
@@ -121,7 +121,7 @@ Windows 版 Olares 目前存在以下限制：
    你可以提前通过在 Windows 命令行里执行 `ipconfig` 获取 Windows 的 IPv4 地址。
    :::
 
-<!--@include: ./reusables.md{9,11}-->
+<!--@include: ./reusables.md#root-password-tip-->
 
 :::info 安装遇到报错？
 如果安装过程中出现错误，请先执行以下命令卸载：
@@ -131,13 +131,15 @@ wsl --unregister ubuntu
 卸载完成后，重新运行安装命令进行安装。
 :::
 
-<!--@include: ./reusables.md{23,37}-->
+<!--@include: ./reusables.md#prepare-wizard-heading-->
+
+<!--@include: ./reusables.md#prepare-wizard-details-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->
 
 ## 常见问题
 

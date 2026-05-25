@@ -17,6 +17,8 @@
 package module
 
 import (
+	"context"
+
 	"github.com/beclab/Olares/cli/pkg/core/cache"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/ending"
@@ -28,7 +30,7 @@ type Module interface {
 	Default(runtime connector.ModuleRuntime, pipelineCache *cache.Cache, moduleCache *cache.Cache)
 	Init()
 	Is() string
-	Run(result *ending.ModuleResult)
+	Run(ctx context.Context, result *ending.ModuleResult)
 	Until() (*bool, error)
 	Slogan()
 	AutoAssert()

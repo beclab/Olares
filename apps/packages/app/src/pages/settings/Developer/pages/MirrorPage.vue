@@ -1,18 +1,5 @@
 <template>
-	<page-title-component :show-back="true" :title="t('Repository management')">
-		<template v-slot:end>
-			<div
-				v-if="deviceStore.isMobile"
-				class="row justify-center items-center"
-				@click="addRegistry()"
-			>
-				<q-icon name="sym_r_add" color="ink-1" size="32px" />
-				<div class="text-body3 add-title" v-if="!deviceStore.isMobile">
-					{{ t('Add repo') }}
-				</div>
-			</div>
-		</template>
-	</page-title-component>
+	<page-title-component :show-back="true" :title="t('Repository management')" />
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<AdaptiveLayout>
 			<template v-slot:pc>
@@ -41,9 +28,15 @@
 									class="text-ink-1 text-body1 row items-center justify-end"
 									no-hover
 								>
-									<bt-action-icon
-										name="sym_r_box_edit"
-										:icon-size="20"
+									<!--									<bt-action-icon-->
+									<!--										name="sym_r_box_edit"-->
+									<!--										:icon-size="20"-->
+									<!--										@click.stop="enterEndpoint(props.row)"-->
+									<!--									/>-->
+									<q-btn
+										class="btn-size-xs btn-no-text text-grey-8"
+										icon="sym_r_keyboard_arrow_right"
+										text-color="ink-2"
 										@click.stop="enterEndpoint(props.row)"
 									/>
 									<!-- <bt-action-icon
@@ -66,10 +59,11 @@
 
 							<template v-slot:body-cell-count="props">
 								<q-td
-									class="text-ink-1 text-body1"
+									class="text-ink-1 text-body1 cursor-pointer"
 									style="height: 64px"
 									:props="props"
 									no-hover
+									@click="enterImages(props.row)"
 								>
 									{{ props.row.image_count }}
 								</q-td>
@@ -94,18 +88,6 @@
 						:empty-image-top="40"
 					/>
 				</q-list>
-
-				<div class="row justify-end items-center q-my-lg">
-					<div
-						class="add-btn row justify-end items-center"
-						@click="addRegistry()"
-					>
-						<q-icon name="sym_r_add" color="ink-1" size="20px" />
-						<div class="text-body3 add-title" v-if="!deviceStore.isMobile">
-							{{ t('Add repo') }}
-						</div>
-					</div>
-				</div>
 			</template>
 			<template v-slot:mobile>
 				<div>
@@ -125,7 +107,7 @@
 								</div>
 								<div class="row items-center justify-end">
 									<bt-action-icon
-										name="sym_r_box_edit"
+										name="sym_r_keyboard_arrow_right"
 										:icon-size="15"
 										@click.stop="enterEndpoint(port)"
 									/>
@@ -142,6 +124,7 @@
 								:label="t('Image count')"
 								mobileTitleClasses="text-body3-m"
 								:value="port.image_count"
+								@click="enterImages(port)"
 							/>
 							<bt-grid-item
 								:label="t('Image size')"
@@ -157,64 +140,26 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
 import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
-import { useI18n } from 'vue-i18n';
-import { useDeviceStore } from 'src/stores/settings/device';
-// import BtFormItem from 'src/components/settings/base/BtFormItem.vue';
+import BtActionIcon from '../../../../components/settings/base/BtActionIcon.vue';
+import EmptyComponent from 'src/components/settings/EmptyComponent.vue';
 import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
 import BtGridItem from 'src/components/settings/base/BtGridItem.vue';
 import BtGrid from 'src/components/settings/base/BtGrid.vue';
 
-import EmptyComponent from 'src/components/settings/EmptyComponent.vue';
-
 import { useMirrorStore, RegistryMirror } from 'src/stores/settings/mirror';
 import { format } from 'src/utils/format';
-import { useQuasar } from 'quasar';
-import EditMirrorDialog from './dialog/EditMirrorDialog.vue';
 import { useRouter } from 'vue-router';
-import BtActionIcon from '../../../../components/settings/base/BtActionIcon.vue';
-import { notifyFailed, notifySuccess } from 'src/utils/settings/btNotify';
+import { useI18n } from 'vue-i18n';
+import { onMounted } from 'vue';
 
 const { t } = useI18n();
-
-const deviceStore = useDeviceStore();
-
 const mirrorStore = useMirrorStore();
-
-const $q = useQuasar();
-
 const router = useRouter();
 
 onMounted(async () => {
-	mirrorStore.getRegistryMirrors();
+	mirrorStore.getRegistryMirrors().then((mirrors) => {});
 });
-
-const addRegistry = () => {
-	$q.dialog({
-		component: EditMirrorDialog,
-		componentProps: {}
-	}).onOk(async (data: { endpoint: string; repoName: string }) => {
-		const item = mirrorStore.registries.find((e) => e.name == data.repoName);
-		if (item && item.endpoints?.includes(data.endpoint)) {
-			notifySuccess(t('successful'));
-			return;
-		}
-		const endpoints = item && item.endpoints ? item.endpoints : [];
-		endpoints.push(data.endpoint);
-		try {
-			await mirrorStore.putRegistryEndpoint(data.repoName, endpoints);
-			notifySuccess(t('successful'));
-			if (!item) {
-				setTimeout(() => {
-					mirrorStore.getRegistryMirrors();
-				}, 1000);
-			}
-		} catch (error) {
-			notifyFailed(error);
-		}
-	});
-};
 
 const enterEndpoint = (item: RegistryMirror) => {
 	router.push({
@@ -225,14 +170,14 @@ const enterEndpoint = (item: RegistryMirror) => {
 	});
 };
 
-// const enterImages = (item: RegistryMirror) => {
-// 	router.push({
-// 		path: '/system/images',
-// 		query: {
-// 			registry: item.name
-// 		}
-// 	});
-// };
+const enterImages = (item: RegistryMirror) => {
+	router.push({
+		path: '/developer/images',
+		query: {
+			registry: item.name
+		}
+	});
+};
 
 const columns: any = [
 	{
@@ -272,21 +217,6 @@ const columns: any = [
 </script>
 
 <style scoped lang="scss">
-.add-btn {
-	border-radius: 8px;
-	padding: 6px 12px;
-	border: 1px solid $separator;
-	cursor: pointer;
-	text-decoration: none;
-
-	.add-title {
-		color: $ink-2;
-	}
-}
-.add-btn:hover {
-	background-color: $background-3;
-}
-
 ::v-deep(.q-table tbody td) {
 	font-size: 16px;
 }

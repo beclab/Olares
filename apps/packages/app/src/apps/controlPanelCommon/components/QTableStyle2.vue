@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<div
-			class="my-table-container"
+			class="my-table-container cp-q-table-dark-scrollbar"
 			:class="[
 				stickyFirst ? 'first-sticky' : '',
 				stickyLast ? 'last-sticky' : ''

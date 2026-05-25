@@ -20,11 +20,11 @@ export enum SOCIAL_TYPE {
 	GOODREADS = 'Goodreads',
 	MASTODON = 'Mastodon',
 	STEAM = 'Steam',
-	TUMBLR = 'Tumblr'
+	TUMBLR = 'Tumblr',
+	LINKEDIN = 'Linkedin'
 }
 
 // YOUTUBE = 'Youtube',
-// 	LINKEDIN = 'Linkedin',
 // 	PINTEREST = 'Pinterest',
 // 	SNAPCHAT = 'Snapchat',
 // 	SPOTIFY = 'Spotify',
@@ -136,16 +136,16 @@ export const SocialMap: Record<string, Social> = {
 		platform: SOCIAL_TYPE.TUMBLR,
 		username: '',
 		url: 'https://tumblr.com/${username}'
+	},
+	Linkedin: {
+		platform: SOCIAL_TYPE.LINKEDIN,
+		username: '',
+		url: 'https://www.linkedin.com/in/${username}'
 	}
 	// youtube: {
 	// 	platform: SOCIAL_TYPE.YOUTUBE,
 	// 	username: '',
 	// 	url: 'https://www.youtube.com/@${username}'
-	// },
-	// linkedin: {
-	// 	platform: SOCIAL_TYPE.LINKEDIN,
-	// 	username: '',
-	// 	url: 'https://www.linkedin.com/in/${username}'
 	// },
 	// pinterest: {
 	// 	platform: SOCIAL_TYPE.PINTEREST,

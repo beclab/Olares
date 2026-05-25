@@ -65,8 +65,8 @@ export const notifyRequestMessageError = (error: any) => {
 export const getRequestErrorMessage = (error: any) => {
 	if (error && error.response) {
 		const response = error.response;
-		if (response.data && response.data.message) {
-			return response.data.message;
+		if (response.data && (response.data.message || response.data.error)) {
+			return response.data.message || response.data.error;
 		}
 		// if (typeof response.data === 'string') {
 		// 	return response.data;

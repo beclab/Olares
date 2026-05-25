@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -82,14 +83,6 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 
 	opCtx, cancel := context.WithCancel(context.Background())
 
-	ops, err := versioned.NewHelmOps(opCtx, kubeConfig, appCfg, token,
-		appinstaller.Opt{Source: p.manager.Spec.Source, MarketSource: p.manager.GetMarketSource()})
-	if err != nil {
-		klog.Errorf("make helm ops failed %v", err)
-		cancel()
-		return nil, err
-	}
-
 	return appFactory.execAndWatch(opCtx, p,
 		func(c context.Context) (StatefulInProgressApp, error) {
 			in := installingInProgressApp{
@@ -102,9 +95,39 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 
 			go func() {
 				defer cancel()
+				var allocationErr error
+				allocationMessage := ""
+				if _, allocationErr = compute.AllocateForInstall(c, p.client, appCfg); allocationErr != nil {
+					klog.Errorf("allocate compute resource for app %s failed %v", p.manager.Spec.AppName, allocationErr)
+					allocationMessage = fmt.Sprintf("Insufficient compute resource for selected mode %s: %v", appCfg.SelectedGpuType, allocationErr)
+					compute.PublishComputeInsufficientNotification(appCfg, allocationErr)
+				}
+
+				ops, err := versioned.NewHelmOps(c, kubeConfig, appCfg, token,
+					appinstaller.Opt{
+						Source:             p.manager.Spec.Source,
+						MarketSource:       appcfg.GetMarketSource(p.manager),
+						SkipWaitForStartUp: allocationErr != nil,
+					})
+				if err != nil {
+					klog.Errorf("make helm ops failed %v", err)
+					p.finally = func() {
+						klog.Errorf("app %s install failed, update app state to installFailed", p.manager.Spec.AppName)
+						opRecord := makeRecord(p.manager, appsv1.InstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallFailed, opRecord, err.Error(), appsv1.InstallFailed.String())
+						if updateErr != nil {
+							klog.Errorf("update status failed %v", updateErr)
+						}
+					}
+					return
+				}
+
 				err = ops.Install()
 				if err != nil {
 					klog.Errorf("install app %s failed %v", p.manager.Spec.AppName, err)
+					if cleanupErr := compute.DeleteAllocationsForApp(context.TODO(), p.client, appCfg.AppName, appCfg.OwnerName); cleanupErr != nil {
+						klog.Warningf("cleanup compute allocation for failed install %s failed: %v", appCfg.AppName, cleanupErr)
+					}
 					if errors.Is(err, errcode.ErrServerSidePodPending) {
 						p.finally = func() {
 							klog.Infof("app %s server side pods is pending, set stop-all annotation and update app state to stopping", p.manager.Spec.AppName)
@@ -166,6 +189,39 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 
 					return
 				} // end of err != nil
+
+				if allocationErr != nil {
+					p.finally = func() {
+						manager := p.manager
+						var am appsv1.ApplicationManager
+						if err := p.client.Get(context.TODO(), types.NamespacedName{Name: p.manager.Name}, &am); err != nil {
+							klog.Errorf("failed to get application manager: %v", err)
+							return
+						}
+						managesSharedServer, targetErr := compute.ManagesSharedServer(context.TODO(), p.client, appCfg)
+						if targetErr != nil {
+							klog.Warningf("failed to resolve compute target for app %s: %v", appCfg.AppName, targetErr)
+						}
+						if managesSharedServer {
+							if am.Annotations == nil {
+								am.Annotations = make(map[string]string)
+							}
+							am.Annotations[api.AppStopAllKey] = "true"
+						}
+						am.Spec.OpType = appsv1.StopOp
+						am.Status.OpType = appsv1.StopOp
+						if err := p.client.Update(context.TODO(), &am); err != nil {
+							klog.Errorf("failed to update app manager stop metadata: %v", err)
+							return
+						}
+						manager = &am
+						updateErr := p.updateStatus(context.TODO(), manager, appsv1.Stopping, nil, allocationMessage, constants.AppUnschedulable)
+						if updateErr != nil {
+							klog.Errorf("update status failed %v", updateErr)
+						}
+					}
+					return
+				}
 
 				if p.manager.Spec.Type == appsv1.Middleware {
 					ok, err := ops.WaitForLaunch()

@@ -39,7 +39,7 @@ import FunctionAppCard from '../../../components/appcard/FunctionAppCard.vue';
 import AppStoreBody from '../../../components/base/AppStoreBody.vue';
 import EmptyView from '../../../components/base/EmptyView.vue';
 import { useDeviceStore } from '../../../stores/settings/device';
-import { useCenterStore } from '../../../stores/market/center';
+import { useAppStore } from '../../../stores/market/appStore';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import {
@@ -55,10 +55,10 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const centerStore = useCenterStore();
+const appStore = useAppStore();
 const deviceStore = useDeviceStore();
 const installApp = computed(() => {
-	return centerStore.getSourceInstalledApp(props.sourceId);
+	return appStore.getSourceInstalledApp(props.sourceId);
 });
 </script>
 

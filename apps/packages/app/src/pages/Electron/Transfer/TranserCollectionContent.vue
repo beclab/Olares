@@ -11,15 +11,12 @@
 			>
 				<div class="column no-wrap flex-gap-y-md">
 					<app-message
-						v-if="collectSiteStore.data.is_download_available"
-						:message="collectSiteStore.data.is_download_available"
+						v-if="collectSiteStore.data.is_entry_available"
+						:message="collectSiteStore.data.is_entry_available"
+						type="download"
 					/>
 					<template v-if="downloadList.length > 0">
-						<DownloadSiteCard
-							v-for="(item, index) in downloadList"
-							:key="index"
-							:data="item"
-						/>
+						<DownloadSiteCard :data-list="downloadList" />
 					</template>
 				</div>
 			</SiteCardContainer>
@@ -65,14 +62,12 @@ const uploadCookieButtonShow = computed(
 		collectSiteStore.cookie.cookieRequire === COOKIE_LEVEL.REQUIRED
 );
 
-const downloadList = computed(
-	() => []
-	// collectSiteStore.download.map((item) => ({
-	// 	...item,
-	// 	disabled: uploadCookieButtonShow.value
-	// }))
+const downloadList = computed(() =>
+	collectSiteStore.download.map((item) => ({
+		...item,
+		disabled: uploadCookieButtonShow.value
+	}))
 );
-
 onMounted(() => {
 	// const url =
 	// 	'https://www.bilibili.com/video/BV13WKUzXEPg/?spm_id_from=333.1007.tianma.1-1-1.click';

@@ -153,7 +153,9 @@ func (s *StorageRestore) checkRestoreExists() error {
 		return fmt.Errorf("restore %s type %v invalid", s.RestoreId, restore.Spec.RestoreType)
 	}
 
-	log.Infof("restore %s, backupType: %s, data: %s", s.RestoreId, backupType, util.ToJSON(restoreType))
+	log.Infof("restore %s, backupType: %s, name: %s, owner: %s, type: %s, path: %s, subPath: %s, backupId: %s, backupName: %s, backupPath: %s, location: %s, endpoint: %s, data: %s",
+		s.RestoreId, backupType, restoreType.Name, restoreType.Owner, restoreType.Type, restoreType.Path, restoreType.SubPath, restoreType.BackupId, restoreType.BackupName, restoreType.BackupPath, restoreType.Location, restoreType.Endpoint, util.ToJSON(restoreType.BackupUrl))
+
 	if restoreType.Type == constant.RestoreTypeSnapshot {
 		snapshot, err := s.Handlers.GetSnapshotHandler().GetById(s.Ctx, restoreType.SnapshotId)
 		if err != nil {
@@ -271,7 +273,7 @@ func (s *StorageRestore) prepareRestoreParams() error {
 		rootRestorePath = filepath.Join(s.UserspacePvcPath, "Home")
 	}
 
-	log.Infof("restore: %s, backupType: %s, rootRestoreTargetPath: %s, restoreTargetPath: %s, locationConfig: %v", s.RestoreId, s.BackupType, rootRestorePath, restorePath, util.ToJSON(locationConfig))
+	log.Infof("restore: %s, backupType: %s, rootRestoreTargetPath: %s, restoreTargetPath: %s", s.RestoreId, s.BackupType, rootRestorePath, restorePath)
 	s.Params = &RestoreParameters{
 		BackupId:   backupId,
 		BackupName: backupName,

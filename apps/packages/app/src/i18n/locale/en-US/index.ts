@@ -3,7 +3,7 @@ export default {
 	'Setup Canceled': 'Setup Canceled',
 	'{browser} on {platform}': '{browser} on {platform}',
 	'{platform} device': '{platform} device',
-	'The request was canceled.': 'The request was canceled.',
+	'The request was canceled': 'The request was canceled.',
 	'One-Time Password': 'One-Time Password',
 	Username: 'Username',
 	Password: 'Password',
@@ -65,15 +65,15 @@ export default {
 	Authenticator: 'Authenticator',
 	Document: 'Document',
 	Custom: 'Custom',
-	'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first. Once you have full access, this warning will disappear automatically.':
+	'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first, Once you have full access, this warning will disappear automatically':
 		'You have been granted access to this vault, but before you can see its contents somebody else with access to it has to log into their account first. Once you have full access, this warning will disappear automatically.',
-	'This vault could not be synchronized because you no longer have access to it.':
+	'This vault could not be synchronized because you no longer have access to it':
 		'This vault could not be synchronized because you no longer have access to it.',
-	"Local changes to this vault could not be synchronized because there was a problem retrieving information for this vault's organization. If this problem persists please contact customer support!":
+	"Local changes to this vault could not be synchronized because there was a problem retrieving information for this vault's organization, If this problem persists please contact customer support!":
 		"Local changes to this vault could not be synchronized because there was a problem retrieving information for this vault's organization. If this problem persists please contact customer support!",
-	'Syncing local changes failed because the organization this vault belongs to is frozen.':
+	'Syncing local changes failed because the organization this vault belongs to is frozen':
 		'Syncing local changes failed because the organization this vault belongs to is frozen.',
-	"Syncing local changes failed because you don't have write permissions for this vault.":
+	"Syncing local changes failed because you don't have write permissions for this vault":
 		"Syncing local changes failed because you don't have write permissions for this vault.",
 	'This group name is not available!': 'This group name is not available!',
 	'A group with this name already exists!':
@@ -103,5 +103,7 @@ export default {
 		"'minMemberUpdated' property may not decrease!",
 	None: 'None',
 	'Field Name': 'Field Name',
-	'Field type': 'Field type'
+	'Field type': 'Field type',
+	'You have to assign at least one member or group':
+		'You have to assign at least one member or group'
 };

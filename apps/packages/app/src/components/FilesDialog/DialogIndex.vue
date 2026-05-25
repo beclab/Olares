@@ -16,7 +16,6 @@ import { PickType, useFilesStore } from '../../stores/files';
 import { DriveType } from '../../utils/interface/files';
 import DialogForder from './DialogForder.vue';
 import DialogFolderMobile from './DialogFolderMobile.vue';
-import { filesIsV2 } from 'src/api';
 
 const props = defineProps({
 	selectType: {
@@ -34,21 +33,10 @@ const props = defineProps({
 		type: Array as PropType<DriveType[]>,
 		required: false,
 		default: () => {
-			if (filesIsV2()) {
-				return [
-					DriveType.Drive,
-					// 0730 hide sync
-					// DriveType.Sync,
-					DriveType.External,
-					DriveType.Cache,
-					DriveType.Data,
-					DriveType.GoogleDrive
-				];
-			}
 			return [
 				DriveType.Drive,
-				DriveType.External,
 				DriveType.Sync,
+				DriveType.External,
 				DriveType.Cache,
 				DriveType.Data,
 				DriveType.GoogleDrive

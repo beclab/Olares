@@ -19,9 +19,14 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
+
+// waitForPodsDeletedTimeout caps how long uninstall waits for pods owned by
+// the release to terminate before proceeding with host-path cleanup.
+const waitForPodsDeletedTimeout = 30 * time.Minute
 
 // UninstallAll do a uninstall operation for release.
 func (h *HelmOps) UninstallAll() error {
@@ -48,6 +53,15 @@ func (h *HelmOps) UninstallAll() error {
 	}
 
 	h.ClearMiddlewareRequests(fmt.Sprintf("%s-%s", "user-system", h.app.OwnerName))
+
+	// Host-path cache/data is shared with pod mounts; wait for the release's
+	// pods to fully terminate before deleting their backing directories.
+	if len(appCacheDirs) > 0 || (deleteData && len(appDataDirs) > 0) {
+		if err := h.WaitForPodsDeleted(client, h.app.Namespace); err != nil {
+			err = fmt.Errorf("wait for pods in namespace %s to be deleted failed, proceeding with cleanup: %v", h.app.Namespace, err)
+			return err
+		}
+	}
 
 	err = h.ClearCache(client, appCacheDirs)
 	if err != nil {
@@ -116,6 +130,38 @@ func (h *HelmOps) Uninstall_(client kubernetes.Interface, actionConfig *action.C
 	}
 
 	return nil
+}
+
+// WaitForPodsDeleted blocks until no pods remain in the given namespace, up to
+// waitForPodsDeletedTimeout. It is intended to be called after the helm
+// release has been uninstalled and before any destructive host-path cleanup
+// (e.g. ClearCache / ClearData), so that pods still holding host-path volumes
+// have a chance to terminate gracefully.
+//
+// Protected (system) namespaces are skipped because they are never torn down
+// during app uninstall. A missing namespace counts as success. Any other list
+// error aborts the wait immediately and is returned to the caller, since
+// further polling can't make progress; the caller decides how to handle it.
+func (h *HelmOps) WaitForPodsDeleted(client kubernetes.Interface, namespace string) error {
+	if apputils.IsProtectedNamespace(namespace) {
+		return nil
+	}
+
+	klog.Infof("waiting for all pods in namespace %s to be deleted before cleanup", namespace)
+	return utilwait.PollImmediate(2*time.Second, waitForPodsDeletedTimeout, func() (bool, error) {
+		pods, err := client.CoreV1().Pods(namespace).List(h.ctx, metav1.ListOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+			return false, err
+		}
+		if len(pods.Items) == 0 {
+			return true, nil
+		}
+		klog.V(2).Infof("%d pod(s) still terminating in namespace %s", len(pods.Items), namespace)
+		return false, nil
+	})
 }
 
 func (h *HelmOps) ClearCache(client kubernetes.Interface, appCacheDirs []string) error {
@@ -204,7 +250,7 @@ func (h *HelmOps) unregisterAppPerm(sa *string, ownerName string, perm []appcfg.
 	for _, p := range perm {
 		requires = append(requires, appcfg.PermissionRequire{
 			ProviderName:      p.ProviderName,
-			ProviderNamespace: p.GetNamespace(ownerName),
+			ProviderNamespace: appcfg.ProviderPermissionNamespace(p.ProviderPermission, ownerName),
 			ServiceAccount:    sa,
 			ProviderAppName:   p.AppName,
 			ProviderDomain:    p.Domain,

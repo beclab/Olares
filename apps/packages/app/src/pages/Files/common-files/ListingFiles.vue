@@ -26,17 +26,23 @@
 			v-else
 			id="listing"
 			ref="listing"
-			:class="
+			:class="[
 				isHovered
 					? `${store.user.viewMode} file-icons hovered`
-					: `${store.user.viewMode} file-icons`
-			"
+					: `${store.user.viewMode} file-icons`,
+				{ 'col-grid': !isSharePageRoot }
+			]"
+			:style="!isSharePageRoot ? colResize.cssVarsStyle() : undefined"
 			@mouseover="handleMouseOver"
 			@mouseleave="handleMouseLeave"
 		>
 			<!-- :by-me="currentDriveType === DriveType.ShareByMe" -->
 			<files-share-table-header :origin_id="origin_id" v-if="isSharePageRoot" />
-			<files-table-header :origin_id="origin_id" v-else />
+			<files-table-header
+				:origin_id="origin_id"
+				:col-grid="!isSharePageRoot"
+				v-else
+			/>
 
 			<div class="common-div" :style="isPad ? '' : 'padding: 0 20px 34px 20px'">
 				<ListingItem
@@ -100,7 +106,15 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import {
+	ref,
+	onMounted,
+	onUnmounted,
+	watch,
+	nextTick,
+	onBeforeUnmount,
+	provide
+} from 'vue';
 import { useRoute } from 'vue-router';
 import throttle from 'lodash.throttle';
 import { useI18n } from 'vue-i18n';
@@ -121,7 +135,7 @@ import { useFilesStore, FilesIdType, FilePath } from './../../../stores/files';
 import { DriveType } from '../../../utils/interface/files';
 import { useTransfer2Store } from '../../../stores/transfer2';
 
-import { common, commonV2 } from './../../../api';
+import { common } from './../../../api';
 import { stringToBase64 } from '@didvault/sdk/src/core';
 
 import FilesTableHeader from '../../../components/files/FilesTableHeader.vue';
@@ -129,6 +143,13 @@ import FilesShareTableHeader from '../../../components/files/header/FilesShareTa
 import { busEmit } from '../../../utils/bus';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { getApplication } from 'src/application/base';
+import HotkeyManager from 'src/directives/hotkeyManager';
+import { FILES_HOTKEY } from 'src/api/files/hotKeys';
+import { notifyWarning } from 'src/utils/notifyRedefinedUtil';
+import {
+	useColumnResize,
+	COL_RESIZE_KEY
+} from 'src/composables/useColumnResize';
 
 const props = defineProps({
 	origin_id: {
@@ -162,6 +183,8 @@ const transferStore = useTransfer2Store();
 const isPad = ref(getAppPlatform() && getAppPlatform().isPad);
 
 const application = getApplication();
+const colResize = useColumnResize();
+provide(COL_RESIZE_KEY, colResize);
 
 const pageRef = ref();
 
@@ -178,7 +201,7 @@ watch(
 			common().formatUrltoDriveType(newVal) || DriveType.Drive;
 
 		isExternal.value = common().displayConnectServer(route.fullPath);
-		isSharePageRoot.value = commonV2.isShareRootPage(newVal);
+		isSharePageRoot.value = common().isShareRootPage(newVal);
 		menuVisible.value = false;
 	},
 	{
@@ -230,10 +253,10 @@ onMounted(() => {
 
 	// Add the needed event listeners to the window and document.
 	if (pageRef.value) {
-		pageRef.value.addEventListener('keydown', keyEvent);
 		pageRef.value.addEventListener('scroll', scrollEvent);
 		pageRef.value.addEventListener('resize', windowsResize);
 		pageRef.value.addEventListener('click', handleClick);
+		registerHotkeys();
 
 		if (!store.user?.perm?.create) return;
 		pageRef.value.addEventListener('dragover', preventDefault);
@@ -245,17 +268,19 @@ onMounted(() => {
 
 onUnmounted(() => {
 	if (pageRef.value) {
-		pageRef.value.removeEventListener('keydown', keyEvent);
 		pageRef.value.removeEventListener('scroll', scrollEvent);
 		pageRef.value.removeEventListener('resize', windowsResize);
 		pageRef.value.removeEventListener('click', handleClick);
-
 		if (store.user && !store.user?.perm?.create) return;
 		pageRef.value.removeEventListener('dragover', preventDefault);
 		pageRef.value.removeEventListener('dragenter', dragEnter);
 		pageRef.value.removeEventListener('dragleave', dragLeave);
 		pageRef.value.removeEventListener('drop', drop);
 	}
+});
+
+onBeforeUnmount(() => {
+	HotkeyManager.deleteScope('files');
 });
 
 const handleClick = () => {
@@ -266,75 +291,95 @@ const base64 = (name: string) => {
 	return stringToBase64(name);
 };
 
-const keyEvent = (event: any) => {
-	// No prompts are shown
-	if (store.show !== null) {
-		return;
-	}
-
-	// Esc!
-	if (event.keyCode === 27) {
-		// Reset files selection.
-		filesStore.resetSelected(props.origin_id);
-	}
-
-	// Del!
-	if (event.keyCode === 46) {
-		if (
-			!store.user.perm.delete ||
-			filesStore.selectedCount(props.origin_id) == 0
-		)
-			return;
-
-		// Show delete prompt.
-		store.showHover('delete');
-	}
-
-	// F2!
-	if (event.keyCode === 113) {
-		if (
-			!store.user.perm.rename ||
-			filesStore.selectedCount(props.origin_id) !== 1
-		)
-			return;
-
-		// Show rename prompt.
-		store.showHover('rename');
-	}
-
-	// Ctrl is pressed
-	if (!event.ctrlKey && !event.metaKey) {
-		return;
-	}
-
-	let key = String.fromCharCode(event.which).toLowerCase();
-
-	switch (key) {
-		case 'f':
-			event.preventDefault();
-			store.showHover('search');
-			break;
-		case 'c':
-			optionAction(event, OPERATE_ACTION.COPY);
-			break;
-		case 'x':
-			optionAction(event, OPERATE_ACTION.CUT);
-			break;
-		case 'v':
-			optionAction(event, OPERATE_ACTION.PASTE);
-			break;
-		case 'a':
-			event.preventDefault();
-			if (filesStore.currentFileList[props.origin_id])
-				for (let file of filesStore.currentFileList[props.origin_id]!.items) {
-					filesStore.addSelected(file.index, props.origin_id);
+const registerHotkeys = () => {
+	HotkeyManager.setScope('files');
+	HotkeyManager.registerHotkeys(
+		{
+			[FILES_HOTKEY.FILES.RENAME]: () => {
+				if (
+					!store.user.perm.rename ||
+					filesStore.selectedCount(props.origin_id) !== 1
+				) {
+					return;
 				}
-			break;
-		case 's':
-			event.preventDefault();
-			document.getElementById('download-button')?.click();
-			break;
-	}
+				store.showHover('rename');
+			},
+			[FILES_HOTKEY.FILES.ESC]: () => {
+				filesStore.resetSelected(props.origin_id);
+			},
+			[FILES_HOTKEY.FILES.DELETE]: () => {
+				const hasSelected = filesStore.currentFileList[
+					props.origin_id
+				]?.items?.filter((item) => {
+					return filesStore.selected[props.origin_id].includes(item.index);
+				});
+
+				const hasSameValue = hasSelected?.find((item) =>
+					operateinStore.isDisableMenuItem(item.name, route.path)
+				);
+
+				if (
+					hasSameValue ||
+					!store.user.perm.delete ||
+					filesStore.selectedCount(props.origin_id) == 0
+				) {
+					return;
+				}
+				store.showHover('delete');
+			},
+			[FILES_HOTKEY.FILES.SELECT_ALL]: () => {
+				if (filesStore.currentFileList[props.origin_id]) {
+					for (let file of filesStore.currentFileList[props.origin_id]!.items) {
+						filesStore.addSelected(file.index, props.origin_id);
+					}
+				}
+			},
+			[FILES_HOTKEY.FILES.COPY]: () => {
+				if (
+					common().displayConnectServer(route.path) ||
+					common().isShareRootPage(route.path)
+				) {
+					return;
+				}
+				if (filesStore.selectedCount(props.origin_id) <= 0) {
+					return;
+				}
+				optionAction(undefined, OPERATE_ACTION.COPY);
+			},
+			[FILES_HOTKEY.FILES.PASTE]: () => {
+				if (
+					common().displayConnectServer(route.path) ||
+					common().isShareRootPage(route.path)
+				) {
+					return;
+				}
+				optionAction(undefined, OPERATE_ACTION.PASTE);
+			},
+			[FILES_HOTKEY.FILES.CUT]: () => {
+				if (
+					common().displayConnectServer(route.path) ||
+					common().isShareRootPage(route.path)
+				) {
+					return;
+				}
+				if (filesStore.selectedCount(props.origin_id) <= 0) {
+					return;
+				}
+				for (const item of filesStore.selected[props.origin_id]) {
+					const fileItem = filesStore.getTargetFileItem(item, props.origin_id);
+					if (!fileItem) {
+						continue;
+					}
+					if (operateinStore.isDisableMenuItem(fileItem.name, route.path)) {
+						notifyWarning(t('files.the_files_contains_unmovable_items'));
+						return;
+					}
+				}
+				optionAction(undefined, OPERATE_ACTION.CUT);
+			}
+		},
+		['files']
+	);
 };
 
 const preventDefault = (event: any) => {
@@ -554,16 +599,6 @@ const changeVisible = (e: any) => {
 };
 
 const filesUpdate = (event: any) => {
-	// const targetRef = filterFiles(event);
-	// const splitUrl = route.fullPath.split('?');
-	// const fileSavePath = new FilePath({
-	// 	path: splitUrl[0],
-	// 	param: splitUrl[1] ? `?${splitUrl[1]}` : '',
-	// 	isDir: true,
-	// 	driveType: DriveType.Sync
-	// });
-	// filesStore.uploadSelectFile(targetRef, fileSavePath);
-	// application.filesUploadConfig?.filesUpdate
 	if (!application.filesUploadConfig?.filesUpdate) {
 		return;
 	}
@@ -652,5 +687,9 @@ const filterFiles = (event) => {
 	100% {
 		transform: rotate(0deg);
 	}
+}
+
+::v-deep(.q-scrollarea__content) {
+	max-width: 100%;
 }
 </style>

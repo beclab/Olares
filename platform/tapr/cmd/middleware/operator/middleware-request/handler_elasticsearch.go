@@ -28,8 +28,7 @@ func (c *controller) createOrUpdateElasticsearchRequest(req *aprv1.MiddlewareReq
 	}
 
 	endpoint := c.getElasticsearchEndpoint()
-	klog.Infof("req.Spec.Elasticsearch %#v", req.Spec.Elasticsearch)
-	klog.Infof("req.Spec.Elasticsearch.Password %#v", req.Spec.Elasticsearch.Password)
+	klog.Infof("createOrUpdateElasticsearchRequest user=%s namespace=%s", req.Spec.Elasticsearch.User, req.Namespace)
 
 	userPassword, err := req.Spec.Elasticsearch.Password.GetVarValue(c.ctx, c.k8sClientSet, req.Namespace)
 	if err != nil {

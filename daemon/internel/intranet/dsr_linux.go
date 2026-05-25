@@ -34,6 +34,12 @@ type DSRProxy struct {
 	responseConn *raw.Conn
 	backendConn  *raw.Conn
 
+	// dnsSink holds VIP:53 open so the kernel does NOT reply with
+	// ICMP port-unreachable for DNS queries that pcap is intercepting.
+	// The socket is intentionally never read from; incoming datagrams are
+	// simply discarded by the kernel's UDP receive buffer.
+	dnsSink *net.UDPConn
+
 	mu     sync.Mutex
 	stopCh chan struct{}
 
@@ -118,6 +124,10 @@ func (d *DSRProxy) Close() {
 	if d.backendConn != nil {
 		d.backendConn.Close()
 		d.backendConn = nil
+	}
+	if d.dnsSink != nil {
+		d.dnsSink.Close()
+		d.dnsSink = nil
 	}
 
 }
@@ -288,17 +298,20 @@ func (d *DSRProxy) start() error {
 
 						log.Printf("New IP checksum: 0x%04x", csum)
 
-						// For UDP (protocol 17), recalculate UDP checksum
+						// For UDP (protocol 17), recompute UDP checksum with the new dst IP.
 						if protocol == 17 && len(data) >= ipStart+ipHeaderLen+8 {
 							udpStart := ipStart + ipHeaderLen
-							// UDP checksum is optional for IPv4, can be set to 0
-							// But if present, we need to update it
 							oldChecksum := binary.BigEndian.Uint16(data[udpStart+6 : udpStart+8])
-							if oldChecksum != 0 {
-								// For simplicity, set UDP checksum to 0 (valid for IPv4)
-								data[udpStart+6] = 0
-								data[udpStart+7] = 0
-								log.Printf("UDP checksum set to 0 (was 0x%04x)", oldChecksum)
+							// Zero before recompute
+							data[udpStart+6] = 0
+							data[udpStart+7] = 0
+							udpLen := binary.BigEndian.Uint16(data[udpStart+4 : udpStart+6])
+							if int(udpLen) >= 8 && len(data) >= udpStart+int(udpLen) {
+								newSrcIP := net.IP(data[ipStart+12 : ipStart+16])
+								newDstIP := net.IP(data[ipStart+16 : ipStart+20])
+								ucsum := udpChecksum(newSrcIP, newDstIP, data[udpStart:udpStart+int(udpLen)])
+								binary.BigEndian.PutUint16(data[udpStart+6:udpStart+8], ucsum)
+								log.Printf("UDP checksum recomputed: 0x%04x -> 0x%04x", oldChecksum, ucsum)
 							}
 						}
 					}
@@ -420,7 +433,7 @@ func (d *DSRProxy) handleResponse(data []byte, conn net.PacketConn) {
 		log.Printf("Response: Rewriting src_ip %s -> %s", srcIP, d.vip)
 	}
 
-	// Fix UDP source port if it's not 53
+	// Fix UDP source port if it's not 53, then recompute UDP checksum
 	if protocol == 17 && len(data) >= ipStart+ipHeaderLen+8 {
 		udpStart := ipStart + ipHeaderLen
 		srcPort := binary.BigEndian.Uint16(data[udpStart : udpStart+2])
@@ -430,9 +443,17 @@ func (d *DSRProxy) handleResponse(data []byte, conn net.PacketConn) {
 			binary.BigEndian.PutUint16(data[udpStart:udpStart+2], 53)
 		}
 
-		// Set UDP checksum to 0 (optional for IPv4)
+		// Recompute UDP checksum with the new src IP / src port.
+		// Must zero the checksum field before computing.
 		data[udpStart+6] = 0
 		data[udpStart+7] = 0
+		udpLen := binary.BigEndian.Uint16(data[udpStart+4 : udpStart+6])
+		if int(udpLen) >= 8 && len(data) >= udpStart+int(udpLen) {
+			newSrcIP := net.IP(data[ipStart+12 : ipStart+16])
+			newDstIP := net.IP(data[ipStart+16 : ipStart+20])
+			ucsum := udpChecksum(newSrcIP, newDstIP, data[udpStart:udpStart+int(udpLen)])
+			binary.BigEndian.PutUint16(data[udpStart+6:udpStart+8], ucsum)
+		}
 	}
 
 	log.Printf("Response AFTER: src_ip=%s, dst_ip=%s", d.vip, dstIP)
@@ -496,7 +517,44 @@ func (d *DSRProxy) regonfigure() error {
 		return err
 	}
 
+	// Bind a UDP socket on VIP:53 so the kernel does not emit
+	// ICMP port-unreachable for DNS queries directed at the VIP.
+	// pcap still captures the packet first (and we DSR it to the backend);
+	// the socket merely keeps the port "open" from the kernel's view and
+	// silently drops anything it receives.
+	if err := d.startDNSSink(); err != nil {
+		klog.Errorf("start dns sink on %s:53 failed: %v", d.vip.String(), err)
+		return err
+	}
+
 	d.configChanged = false
+
+	return nil
+}
+
+// startDNSSink binds a UDP socket on VIP:53 to absorb DNS queries at the
+// kernel level. This prevents the kernel from sending ICMP destination
+// unreachable (port unreachable) back to the client when pcap-based DSR
+// intercepts and forwards the actual packets.
+func (d *DSRProxy) startDNSSink() error {
+	addr := &net.UDPAddr{IP: d.vip, Port: 53}
+	conn, err := net.ListenUDP("udp4", addr)
+	if err != nil {
+		return err
+	}
+	d.dnsSink = conn
+	klog.Infof("DNS sink listening on %s:53 (suppresses ICMP unreachable)", d.vip.String())
+
+	go func(c *net.UDPConn) {
+		buf := make([]byte, 2048)
+		for {
+			if _, _, err := c.ReadFromUDP(buf); err != nil {
+				// Socket closed during reconfigure / shutdown.
+				return
+			}
+			// Drop silently: pcap path already handled this packet.
+		}
+	}(conn)
 
 	return nil
 }

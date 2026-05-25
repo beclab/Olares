@@ -43,6 +43,15 @@ const routes: RouteRecordRaw[] = [
 				component: () => import('src/pages/settings/Person/AuthorityPage.vue')
 			},
 			{
+				path: '/feedback',
+				component: () => import('src/pages/settings/Person/FeedbackPage.vue')
+			},
+			{
+				path: '/acknowledgment',
+				component: () =>
+					import('src/pages/settings/Person/AcknowledgmentPage.vue')
+			},
+			{
 				name: MENU_TYPE.Hardware,
 				path: '/hardware',
 				component: () => import('src/pages/settings/Person/HardwarePage.vue')
@@ -118,7 +127,13 @@ const routes: RouteRecordRaw[] = [
 						'src/pages/settings/Application/pages/ApplicationEntrancePage.vue'
 					)
 			},
-
+			{
+				path: '/application/domain/:name/:entrance/policies',
+				component: () =>
+					import(
+						'src/pages/settings/Application/pages/ApplicationEntrancePoliciesPage.vue'
+					)
+			},
 			{
 				path: '/application/domain/:name/:entrance/:shared?',
 				component: () =>
@@ -127,13 +142,12 @@ const routes: RouteRecordRaw[] = [
 					)
 			},
 			{
-				path: '/application/permission/detail',
+				path: '/application/:name/provider',
 				component: () =>
 					import(
-						'src/pages/settings/Application/pages/ApplicationPermissionPage.vue'
+						'src/pages/settings/Application/pages/ApplicationProviderPage.vue'
 					)
 			},
-
 			{
 				path: '/integration',
 				name: MENU_TYPE.Integration,
@@ -188,7 +202,11 @@ const routes: RouteRecordRaw[] = [
 						'src/pages/settings/Integration/pages/AwsAddIntegrationPage.vue'
 					)
 			},
-
+			{
+				path: '/integration/smbAccount',
+				component: () =>
+					import('src/pages/settings/Integration/pages/SMBAccountPage.vue')
+			},
 			{
 				path: '/vpn',
 				name: MENU_TYPE.VPN,
@@ -267,6 +285,11 @@ const routes: RouteRecordRaw[] = [
 				component: () => import('src/pages/settings/Search/FileSearch.vue')
 			},
 			{
+				path: '/search/failed-files',
+				component: () =>
+					import('src/pages/settings/Search/SearchFailureListPage.vue')
+			},
+			{
 				path: '/backup',
 				name: MENU_TYPE.Backup,
 				component: () => import('src/pages/settings/Backup2/BackupPage.vue')
@@ -275,6 +298,16 @@ const routes: RouteRecordRaw[] = [
 				path: '/restore',
 				name: MENU_TYPE.Restore,
 				component: () => import('src/pages/settings/Backup2/RestorePage.vue')
+			},
+			{
+				path: '/restore/restoreOptions/:type',
+				component: () =>
+					import('src/pages/settings/Backup2/pages/MultiRestoreOptions.vue')
+			},
+			{
+				path: '/restore/task/:restoreId',
+				component: () =>
+					import('src/pages/settings/Backup2/pages/RestoreDetail.vue')
 			},
 			{
 				path: '/backup/:backupId/:snapshotId',
@@ -331,16 +364,6 @@ const routes: RouteRecordRaw[] = [
 			// 	component: () =>
 			// 		import('src/pages/settings/Backup2/pages/RestoreCustomURL.vue')
 			// },
-			{
-				path: '/backup/restoreOptions/:type',
-				component: () =>
-					import('src/pages/settings/Backup2/pages/MultiRestoreOptions.vue')
-			},
-			{
-				path: '/backup/restore/:restoreId',
-				component: () =>
-					import('src/pages/settings/Backup2/pages/RestoreDetail.vue')
-			},
 			{
 				path: '/ns',
 				component: () => import('pages/settings/Notification/IndexPage.vue'),

@@ -15,7 +15,7 @@
 				@select="selectHandler"
 				style="width: 239px"
 				class="title-norla"
-				active-class="text-subtitle2 bg-yellow-soft text-ink-1"
+				active-class="text-subtitle2 bg-menu-active-color"
 			>
 				<template #extra-MyLibraries> </template>
 
@@ -121,7 +121,7 @@
 
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
-import { onMounted, defineProps } from 'vue';
+import { onMounted, defineProps, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useDataStore } from '../../stores/data';
 import { syncStatusInfo, useMenuStore } from '../../stores/files-menu';
@@ -131,6 +131,7 @@ import { OPERATE_ACTION, SYNC_STATE } from '../../utils/contact';
 import { useI18n } from 'vue-i18n';
 import { useFilesStore, FilesIdType } from './../../stores/files';
 import { DriveType } from '../../utils/interface/files';
+import { busOff, busOn } from 'src/utils/bus';
 
 const $q = useQuasar();
 const Route = useRoute();
@@ -152,6 +153,11 @@ const props = defineProps({
 
 onMounted(async () => {
 	await filesStore.getMenu();
+	busOn('reposUpdate', reposUpdate);
+});
+
+onUnmounted(() => {
+	busOff('reposUpdate', reposUpdate);
 });
 
 const selectHandler = async (value: any) => {
@@ -186,12 +192,24 @@ const getSyncStatus = (repo_id: string) => {
 	}
 	return status;
 };
+
+const reposUpdate = async (isRemove?: boolean) => {
+	await filesStore.getMenu();
+	if (isRemove == true) {
+		filesStore.setBrowserUrl(operateinStore.defaultPath, DriveType.Drive, true);
+	}
+};
 </script>
 
 <style lang="scss">
 .myDrawer {
 	overflow: hidden;
 	padding-top: 6px;
+}
+
+.myDrawer .bg-menu-active-color {
+	background: $theme-menu-bg-hover;
+	color: $theme-menu-color-hover;
 }
 
 .files-border {

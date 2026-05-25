@@ -147,7 +147,7 @@ export const useBrowserCookieStore = defineStore('browserCookie', {
 			console.log('mainDomain', mainDomain);
 			console.log('mainDomain-2', this.current_cookie);
 		},
-		async pushCookie() {
+		async pushCookie(url?: string) {
 			const collectSiteStore = useCollectSiteStore();
 
 			this.pushLoading = true;
@@ -158,6 +158,7 @@ export const useBrowserCookieStore = defineStore('browserCookie', {
 				.then(() => {
 					collectSiteStore.updateCookieStatus();
 					this.updateCookieStatus();
+					url && collectSiteStore.search(url);
 					notifySuccess('success');
 				})
 				.catch((err) => {

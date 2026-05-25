@@ -2,17 +2,20 @@ package appstate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -150,6 +153,15 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 			klog.Errorf("suspend middleware %s failed %v", p.manager.Spec.AppName, err)
 			return err
 		}
+	}
+	var appCfg appcfg.ApplicationConfig
+	if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
+		klog.Errorf("unmarshal app config for compute cleanup failed %v", err)
+		return err
+	}
+	if err := compute.DeleteAllocationsForComputeTarget(ctx, p.client, &appCfg, stopServer); err != nil {
+		klog.Errorf("delete compute allocation for suspended app %s failed %v", p.manager.Spec.AppName, err)
+		return err
 	}
 	return nil
 }

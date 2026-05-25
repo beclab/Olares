@@ -4,7 +4,7 @@
 			class="rest-account-root__img column justify-center items-center"
 			@click="onReturn"
 		>
-			<q-icon name="sym_r_chevron_left" size="20px" color="sub-title" />
+			<q-icon name="sym_r_chevron_left" size="20px" />
 		</div>
 		<div class="rest-account-page column justify-start items-center">
 			<span class="rest-account-page__title text-color-title text-h6">{{

@@ -64,7 +64,10 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { batchEntries } from 'src/api/wise';
 import { useRssStore } from 'src/stores/rss';
-import { useCookieStore } from 'src/stores/settings/cookie';
+import {
+	useCookieStore,
+	CookieValidationError
+} from 'src/stores/settings/cookie';
 import { notifyFailed, notifySuccess } from 'src/utils/settings/btNotify';
 
 const props = defineProps({
@@ -114,7 +117,8 @@ const onOK = async () => {
 				rssStore.sync();
 			})
 			.catch((err) => {
-				notifyFailed(err.message);
+				console.error(err);
+				// notifyFailed(err.message);
 			})
 			.finally(() => {
 				isLoading.value = false;
@@ -130,7 +134,9 @@ const onOK = async () => {
 						customRef.value.onDialogOK();
 					})
 					.catch((err) => {
-						notifyFailed(err.message);
+						if (err instanceof CookieValidationError) {
+							notifyFailed(err.message);
+						}
 					})
 					.finally(() => {
 						isLoading.value = false;
@@ -145,7 +151,9 @@ const onOK = async () => {
 						customRef.value.onDialogOK();
 					})
 					.catch((err) => {
-						notifyFailed(err.message);
+						if (err instanceof CookieValidationError) {
+							notifyFailed(err.message);
+						}
 					})
 					.finally(() => {
 						isLoading.value = false;
@@ -160,7 +168,9 @@ const onOK = async () => {
 						customRef.value.onDialogOK();
 					})
 					.catch((err) => {
-						notifyFailed(err.message);
+						if (err instanceof CookieValidationError) {
+							notifyFailed(err.message);
+						}
 					})
 					.finally(() => {
 						isLoading.value = false;

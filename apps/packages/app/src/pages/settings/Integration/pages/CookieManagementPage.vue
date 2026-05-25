@@ -1,5 +1,5 @@
 <template>
-	<page-title-component :show-back="true" :title="t('Cookie Management')">
+	<page-title-component :show-back="true" :title="t('Cookie management')">
 		<template v-slot:end v-if="searchCookie.length > 0">
 			<div
 				class="row justify-center items-center cursor-pointer"
@@ -55,7 +55,7 @@
 									"
 									class="text-negative bg-red-soft q-px-sm q-ml-sm q-py-xs text-caption"
 								>
-									{{ t('Cookie Expired') }}
+									{{ t('Cookie expired') }}
 								</div>
 							</div>
 							<div class="text-body3 text-ink-3 q-mt-xs">
@@ -93,8 +93,8 @@
 	</div>
 	<app-menu-empty
 		v-else
-		:title="t('No cookies found')"
-		:button-label="t('Import Cookie')"
+		:title="t('No cookie found')"
+		:button-label="t('Import cookie')"
 		image="settings/imgs/root/cookie.svg"
 		@on-button-click="addCookie"
 	>
@@ -135,12 +135,12 @@ const searchCookie = computed(() => {
 
 const formattedMessage = computed(() => {
 	const linkHtml = `<a
-    href="https://docs.olares.com/manual/larepass/manage-knowledge.html#collect-content-via-the-larepass-extension"
+    href="${cookieStore.openCollectionCookiesLink}"
     target="_blank"
     rel="noopener noreferrer"
     class="link text-blue-default"
     style="text-decoration: underline"
-  >${t('upload via LarePass Chrome Extension')}</a>`;
+  >${t('upload via LarePass Chrome extension')}</a>`;
 
 	return t('Please add manually or link', { link: linkHtml });
 });
@@ -150,7 +150,7 @@ const addCookie = () => {
 		component: MultiTextDialog,
 		componentProps: {
 			title: 'dialog.upload_cookie',
-			label: 'dialog.Add cookies',
+			label: 'dialog.Add cookie',
 			link: false
 		}
 	});

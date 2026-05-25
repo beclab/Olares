@@ -84,6 +84,7 @@ import { TextSearchItem } from 'src/utils/interface/search';
 import SearchItemsComponent from '../../../components/search/SearchItemsComponent.vue';
 
 import { useSearch } from '../search';
+import { getApplication } from 'src/application/base';
 
 const props = defineProps({
 	showSearchDialog: {
@@ -111,12 +112,16 @@ const open = (item: TextSearchItem) => {
 		const filesApp = commandList.find(
 			(el: { name: string }) => el.name && el.name === 'files'
 		);
-		filesApp.url = filesApp.url + item.path;
-
-		const openUrl = filesApp.url.startsWith('https')
-			? filesApp.url
-			: 'https://' + filesApp.url;
-		window.open(openUrl);
+		if (!filesApp) {
+			return;
+		}
+		emits(
+			'openApp',
+			{
+				id: filesApp.id
+			},
+			item.path
+		);
 	} else if (props.item?.title === 'Wise') {
 		const filesApp = commandList.find(
 			(el: { name: string; fatherName: string }) =>
@@ -124,21 +129,35 @@ const open = (item: TextSearchItem) => {
 				(el.fatherName && el.fatherName === 'wise')
 		);
 
-		filesApp.url =
-			filesApp.url + '/' + item.meta?.file_type + '/' + item.meta?.id;
+		if (!filesApp) {
+			return;
+		}
+		let url = filesApp.url;
 
-		const openUrl = filesApp.url.startsWith('https')
-			? filesApp.url
-			: 'https://' + filesApp.url;
+		if (url.startsWith('http://')) {
+			url = url.substring(7);
+		} else if (url.startsWith('https://')) {
+			url = url.substring(8);
+		}
 
-		let enterUrl = new URL(openUrl);
-		enterUrl.searchParams.append('preview_name', item.title);
-
-		window.open(enterUrl);
+		if (
+			item.meta &&
+			(!!item.meta.filter_id || !!item.meta.file_type) &&
+			(!!item.meta.entry_id || !!!item.meta.id)
+		) {
+			url =
+				url +
+				'/' +
+				(item.meta.filter_id || item.meta.file_type) +
+				'/' +
+				(item.meta.entry_id || item.meta.id);
+		}
+		const openUrl = 'https://' + url;
+		getApplication().openUrl(openUrl);
 	}
 };
 
-const emits = defineEmits(['goBack']);
+const emits = defineEmits(['goBack', 'openApp']);
 
 const {
 	fileData,

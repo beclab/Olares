@@ -1,111 +1,180 @@
 ---
-outline: deep
-description: Set up Open WebUI on Olares to chat with local Large Language Models using pre-configured model apps.
+outline: [2, 4]
+description: Install Open WebUI on Olares and connect it to a local model backend. Use Ollama to pull models from the Ollama Registry, or use a pre-configured model app.
 head:
   - - meta
     - name: keywords
-      content: Olares, Open WebUI, local LLM, AI chatbot
-app_version: "1.0.20"
+      content: Olares, Open WebUI, local LLM, AI chatbot, Ollama
+app_version: "1.0.29"
 doc_version: "2.0"
-doc_updated: "2026-03-11"
+doc_updated: "2026-05-13"
 ---
 
-# Chat with Local LLMs Using Open WebUI
+# Set up Open WebUI for local AI chat
 
-Open WebUI provides a user-friendly chat interface for local models on your Olares device. It does not include any models by default, so you need to install a dedicated model app that acts as the backend. This guide walks you through the setup process using the Qwen3.5 27B Q4_K_M model app as an example.
+Open WebUI provides a user-friendly chat interface for local models on your Olares device. It does not include any models by default, so you need to connect it to a model backend.
 
-:::tip Alternative method
-If you prefer to manage multiple models through the Ollama app, see [Set up Open WebUI with Ollama](openwebui-ollama.md).
-:::
+This guide covers two configuration options: using Ollama to pull models directly from the Ollama Registry, or using a dedicated pre-configured model app such as Qwen3.5 27B Q4_K_M (Ollama).
 
 ## Learning objectives
 
 In this guide, you will learn how to:
-- Run a model app from the Market with Open WebUI on Olares.
-- Use the shared endpoint URL to connect the model to Open WebUI.
-- Start a chat using the connected local model.
+
+- Install Open WebUI On Olares.
+- Create an admin account.
+- Configure a model backend using Ollama or a dedicated model app.
+- Connect the model to Open WebUI and start a chat session.
 
 ## Prerequisites
 
 - An Olares device with sufficient disk space and memory
 - Admin privileges to install shared apps from Market
 
-## Install the model app and Open WebUI
+## Install Open WebUI
 
-1. Open **Market** and search for your desired model.
-2. Click **Get**, then click **Install**.
-   ![Install model app](/images/one/qwen3.5-27b.png#bordered)
-3. Search for "Open WebUI" and install it as well.
-   ![Install Open WebUI](/images/one/open-webui.png#bordered)
-4. Wait for both installations to complete.
+1. Open Market and search for "Open WebUI".
 
-## Download the model
+   ![Open WebUI](/images/one/open-webui.png#bordered)
 
-1. Open the model app you just installed.
-2. View the model downloading progress.
-   ![Downloading model](/images/one/qwen3.5-27b-downloading.png#bordered)
-3. Once you see the completion screen, the model is ready.
-   ![Model downloaded](/images/one/qwen3.5-27b-downloaded.png#bordered)
-4. To let Open WebUI access this model, you need to get its shared endpoint URL.
-
-   a. Open Olares Settings, then navigate to **Application** > **Qwen3.5 27B Q4_K_M (Ollama)**.
-
-   b. In **Shared entrances**, select **Qwen3.5 27B Q4_K_M** to view the endpoint URL.
-      
-      ![Get shared endpoint](/images/manual/use-cases/deerflow2-shared-entrance.png#bordered){width=90%}
-
-   c. Copy the shared endpoint. For example:
-      ```plain
-      http://94a553e00.shared.olares.com
-      ```
-   You will need this URL in a later step.
-
-
-   :::tip Why not use the URL shown on the model page?
-   The URL shown on the model app page is user-specific and relies on browser-based frontend calls. If your device and Olares are not on the same local network, those calls may trigger Olares sign-in and you may encounter cross-origin restrictions (CORS). To avoid these issues, use the shared endpoint URL.
-   :::
+2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
 ## Create an admin account
 
-1. Open the Open WebUI app.
+The first time you launch Open WebUI, you need to create a local administrator account to manage your models and settings.
+
+1. Open Open WebUI from the Launchpad.
 2. On the welcome page, click **Get started**.
+3. Enter your name, email, and password to create the admin account.
+
    ![Create account](/images/one/open-webui-create-account.png#bordered)
-3. Enter your name, email, and password to create the account.
 
-   :::info First account is admin
-   The first account created has full administrator privileges for managing models and settings.
-   :::
+## Configure model backend
 
-   :::info Local account only
-   This account is stored locally on your Olares device and does not connect to external services.
-   :::
+Open WebUI requires a backend model to generate responses. Choose one of the following options to configure your model backend.
 
-## Configure the connection
+:::tip Recommendation for multiple models
+While Ollama (Option A) offers flexibility, hosting multiple models simultaneously within a single Ollama instance might lead to resource scheduling conflicts.
 
-1. Click your **profile icon** in the bottom-left corner and select **Admin Panel**.
-2. Navigate to **Settings** > **Connections**.
-3. Click <span class="material-symbols-outlined">add</span> to add a new connection.
-4. In the **URL** field, paste the shared endpoint URL you copied earlier.
-5. Click **Save**. Open WebUI verifies the connection automatically.
+For optimal performance and stability when using multiple models, install independent model apps (Option B) instead of using the general Ollama application.
+:::
+
+### Option A: Use Ollama
+
+Use Ollama to pull and switch between different models from the Ollama Registry for greater flexibility.
+
+#### Install Ollama
+
+1. Open Market and search for "Ollama".
+   ![Ollama](/images/manual/use-cases/ollama.png#bordered)
+
+2. Click **Get**, and then click **Install**. Wait for the installation to finish.
+
+#### Download a model
+
+With Ollama installed, you can pull models directly through the Open WebUI interface.
+
+:::tip Browse models first
+Visit [Ollama Library](https://ollama.com) to browse available models and get the exact model name before downloading. Model names must match exactly to pull successfully.
+:::
+
+<Tabs>
+<template #From-Open-WebUI-homepage>
+
+1. Open Open WebUI.
+2. Click the model dropdown at the top of the chat page, and then enter the model name in the search field. For example: `llama3.2`.
+3. Click **Pull "llama3.2" from Ollama.com**. The download starts automatically.
+
+   ![Download from homepage](/images/one/open-webui-download-from-homepage.png#bordered)
+
+</template>
+<template #From-Open-WebUI-Settings>
+
+1. Open Open WebUI.
+2. Click your profile icon and select **Admin Panel**.
+3. Go to **Settings** > **Models**.
+4. Click **Manage** in the top right to open the **Manage Models** window.
+5. Under **Pull a model from Ollama.com**, enter the model name. For example: `llama3.2`.
+
+   ![Download from settings](/images/one/open-webui-download-from-settings1.png#bordered)
+
+6. Click <i class="material-symbols-outlined">download</i>. The download starts automatically.
+
+</template>
+</Tabs>
+
+:::tip Download time
+Models range from 2 GB to 20+ GB. Download time depends on your network speed.
+:::
+
+#### Verify the connection
+
+Open WebUI automatically detects and connects to your local Ollama installation. The connection is successful when your downloaded model appears in the model drop-down list at the top of the chat page.
+
+### Option B: Use model apps
+
+A model app packages a specific model with pre-configured settings. This option is best if you want a ready-to-use model without managing the Ollama Registry.
+
+#### Install the model app
+
+1. Open Market and search for your desired model.
+2. Click **Get**, and then click **Install**. Wait for the installation to finish.
+
+   ![Install model app](/images/one/qwen3.5-27b.png#bordered)
+
+#### Download the model
+
+Open the model app you just installed. The model download starts automatically.
+
+![Downloading model](/images/one/qwen3.5-27b-downloading.png#bordered)
+
+When you see the completion screen, the model is ready.
+
+![Model downloaded](/images/one/qwen3.5-27b-downloaded.png#bordered)
+
+#### Obtain model app endpoint
+
+To allow Open WebUI to communicate with this specific model, you need to obtain its shared endpoint URL.
+
+1. Open Olares Settings, and then go to **Applications** > **[Model App Name]**.
+2. In **Shared entrances**, select the model to view its endpoint URL.
+
+   ![Get shared endpoint](/images/one/qwen3.5-27b-shared-entrance.png#bordered){width=70%}
+
+3. Copy the endpoint URL. For example, `http://94a553e00.shared.olares.com`.
+
+:::tip Why not use the URL shown on the model page?
+The URL shown on the model app page is user-specific and relies on browser-based frontend calls. If your device and Olares are not on the same local network, those calls might trigger Olares sign-in and you might encounter cross-origin restrictions (CORS). To avoid these issues, use the shared endpoint URL.
+:::
+
+#### Connect the model app to Open WebUI
+
+Now, return to Open WebUI to link the model using the endpoint URL you just copied.
+
+1. In Open WebUI, click your profile icon and select **Admin Panel**.
+2. Go to **Settings** > **Connections**.
+3. On the right of **Manage Ollama API Connections**, click <span class="material-symbols-outlined">add</span> to add a new connection.
+4. In the **URL** field, paste the model app's endpoint URL you copied earlier.
+5. Click **Save**. 
+
+   Open WebUI verifies the connection automatically. When you see the "Ollama API settings updated" message, the connection is established.
+
    ![Connection established](/images/one/open-webui-connection-established.png#bordered)
-
-When you see "Ollama API settings updated", the connection is established.
 
 ## Start chatting
 
-1. On the main chat page, confirm that your model is selected in the dropdown.
+Once you connect a model, you are ready to use the chat interface.
+
+1. In the model drop-down list, select your configured model.
+
    ![Select model](/images/one/open-webui-qwen3.5-27b.png#bordered)
-2. Enter your prompt in the text box and press **Enter** to start chatting.
+
+2. Enter your prompt in the text box, and then press **Enter** to start your conversation.
+
    ![Chat with LLM](/images/one/open-webui-chat1.png#bordered)
 
-## Troubleshooting
+## Learn more
 
-### Model app is stuck at "Waiting for Ollama" or "Needs attention"
-
-If the model app stays in these states for more than a few minutes:
-
-- Go to **Settings** > **GPU**.
-- If you are using **Memory slicing**, make sure the model app is bound to the GPU and has enough VRAM allocated.
-- If you are using **App exclusive**, make sure the exclusive app is set to your model app.
-
-Then restart the model app from Launchpad and check the status again.
+- [Set up multi-user access](openwebui-multiuser.md): Share Open WebUI with other users on your Olares device.
+- [Configure audio](openwebui-audio.md): Enable speech-to-text and text-to-speech.
+- [Enable web search](openwebui-search.md): Add web search capabilities to your chats.
+- [Use knowledge base](openwebui-knowledge.md): Upload documents and create a knowledge base for RAG.

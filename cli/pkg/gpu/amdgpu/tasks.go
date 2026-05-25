@@ -54,12 +54,12 @@ func (t *InstallAmdRocm) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
-	amdGPUExists, err := connector.HasAmdAPUOrGPU(runtime)
+	strixHaloExists, err := connector.HasStrixHalo(runtime)
 	if err != nil {
 		return err
 	}
 	// skip rocm install
-	if !amdGPUExists {
+	if !strixHaloExists {
 		return nil
 	}
 	rocmV, _ := connector.RocmVersion()
@@ -216,24 +216,24 @@ func (t *GenerateAndValidateAmdCDI) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-// UpdateNodeAmdGPUInfo updates Kubernetes node labels with AMD GPU information.
-type UpdateNodeAmdGPUInfo struct {
+// UpdateNodeStrixHaloInfo updates Kubernetes node labels with Strix-Halo information.
+type UpdateNodeStrixHaloInfo struct {
 	common.KubeAction
 }
 
-func (u *UpdateNodeAmdGPUInfo) Execute(runtime connector.Runtime) error {
+func (u *UpdateNodeStrixHaloInfo) Execute(runtime connector.Runtime) error {
 	client, err := clientset.NewKubeClient()
 	if err != nil {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	// Check if AMD GPU/APU exists
-	amdGPUExists, err := connector.HasAmdAPUOrGPU(runtime)
+	// Check if Strix-Halo exists
+	strixHaloExists, err := connector.HasStrixHalo(runtime)
 	if err != nil {
 		return err
 	}
-	if !amdGPUExists {
-		logger.Info("AMD GPU/APU is not detected")
+	if !strixHaloExists {
+		logger.Info("Strix-Halo is not detected")
 		return nil
 	}
 
@@ -246,11 +246,7 @@ func (u *UpdateNodeAmdGPUInfo) Execute(runtime connector.Runtime) error {
 
 	rocmVersion := rocmV.Original()
 
-	// Determine GPU type (APU vs discrete GPU)
-	gpuType := gpu.AmdGpuCardType
-	if runtime.GetSystemInfo().IsAmdApu() {
-		gpuType = gpu.AmdApuCardType
-	}
+	gpuType := gpu.StrixHaloChipType
 
 	// Use ROCm version as both driver and "cuda" version for AMD
 	return gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &rocmVersion, nil, nil, &gpuType)

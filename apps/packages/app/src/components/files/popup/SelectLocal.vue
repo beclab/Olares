@@ -28,6 +28,7 @@ import { useFilesStore } from '../../../stores/files';
 
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from '../../../stores/user';
+import { notifyFailed } from 'src/utils/notifyRedefinedUtil';
 
 const props = defineProps({
 	item: {
@@ -52,14 +53,19 @@ const appendPath = $q.platform.is.win ? '\\' : '/';
 
 const submit = async () => {
 	if ($q.platform.is.electron) {
-		window.electron.api.files.repoAddSync({
+		const result = await window.electron.api.files.repoAddSync({
 			worktree: savePath.value,
 			repo_id: props.item?.repo_id,
 			name: props.item?.repo_name,
 			password: '',
 			readonly: props.item?.permission == 'r'
 		});
+		if (typeof result === 'string' && result.length > 0) {
+			notifyFailed(result);
+			return;
+		}
 	}
+
 	CustomRef.value.onDialogOK();
 };
 
@@ -107,7 +113,7 @@ const formatPath = async (path: string) => {
 		border-radius: 5px;
 
 		&:focus {
-			border: 1px solid $yellow-disabled;
+			border: 1px solid $theme-input-focus-border;
 		}
 	}
 

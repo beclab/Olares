@@ -11,7 +11,7 @@
 // It's highly recommended to change the default colors
 // to match your app's branding.
 // Tip: Use the "Theme Builder" on Quasar's documentation website.
-@import '@bytetrade/ui/lib/styles/quasar.variables.sass';
+@import 'src/css/ui/quasar.variables.sass';
 
 $bg-content: #f5f7fa;
 $separator-color: $grey-2;

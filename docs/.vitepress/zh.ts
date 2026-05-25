@@ -33,6 +33,10 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "已知问题",
+              link: "/zh/manual/help/known-issues",
+            },
+            {
               text: "内存不足或没有释放",
               link: "/zh/manual/help/ts-free-memory",
             },
@@ -67,6 +71,10 @@ const side = {
             {
               text: "无法在应用独占模式移除已暂停应用",
               link: "/zh/manual/help/ts-cs-app-reappears",
+            },
+            {
+              text: "控制面板启停应用后状态不一致",
+              link: "/zh/manual/help/ts-inconsistent-app-status",
             },            
           ],
         },
@@ -521,6 +529,10 @@ const side = {
       link: "/zh/manual/best-practices/",
       collapsed: true,
       items: [
+        {
+          text: "使用 Olares CLI 激活 Olares 设备",
+          link: "/zh/manual/best-practices/activate-olares-using-cli",
+        },        
         {
           text: "设置自定义域名",
           link: "/zh/manual/best-practices/set-custom-domain",

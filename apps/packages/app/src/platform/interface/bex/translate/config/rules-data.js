@@ -12,3 +12,7 @@ export const RULES_DATA_OFF = olaresRulesOff;
 export const LOCAL_RULES_ID = 'local:olares-rules';
 export const LOCAL_RULES_ON_ID = 'local:olares-rules-on';
 export const LOCAL_RULES_OFF_ID = 'local:olares-rules-off';
+
+export const RULES_DATA_VERSION = '2.1.2';
+export const RULES_DATA_ON_VERSION = '2.1.2';
+export const RULES_DATA_OFF_VERSION = '2.1.2';

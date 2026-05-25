@@ -1,8 +1,5 @@
 <template>
-	<div
-		class="bg-grey-11-hover root column items-center justify-center"
-		@click="toggle"
-	>
+	<div class="root column items-center justify-center" @click="toggle">
 		<div class="walletCheck">
 			<img class="walletIcon" src="walletIcon/ETH.svg" alt="" />
 			<img

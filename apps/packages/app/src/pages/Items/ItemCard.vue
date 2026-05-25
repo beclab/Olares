@@ -139,10 +139,7 @@
 							v-if="filed.size"
 							class="text-grey-9 text-left item-unit-content"
 						>
-							<span v-if="filed.type === 'totp'">
-								<Totp :secret="filed.value" ref="myTotps" />
-							</span>
-							<span v-else>
+							<span>
 								{{ format.humanStorageSize(filed.size) }}
 							</span>
 						</div>
@@ -181,6 +178,8 @@ import { notifyFailed } from '../../utils/notifyRedefinedUtil';
 import { useI18n } from 'vue-i18n';
 import { translate } from '@didvault/sdk/src/util';
 import { format } from '../../utils/format';
+import { getApplication } from 'src/application/base';
+import { showTags } from './item';
 
 defineProps({
 	vaultItem: {
@@ -240,8 +239,8 @@ const copyItem = (value: any, e: any) => {
 	const fieldEl = e.target as HTMLElement;
 	fieldEl.classList.add('copied');
 	setTimeout(() => fieldEl.classList.remove('copied'), 1000);
-	getPlatform()
-		.setClipboard(copyTxt)
+	getApplication()
+		.copyToClipboard(copyTxt)
 		.catch((e) => {
 			notifyFailed(
 				t('copy_failure_message', {
@@ -276,54 +275,6 @@ const moveItem = (_e: any, direction: string) => {
 	} else {
 		vaultItemRef.value.setScrollPosition('horizontal', 10000000);
 	}
-};
-
-interface TagInter {
-	name: string;
-	icon: string;
-	class: string;
-}
-const showTags = (item: any) => {
-	const tags: TagInter[] = [];
-	let tagWidth = 0;
-	if (item.tags.length) {
-		tags.push({
-			icon: 'sym_r_style',
-			name: item.tags[0],
-			class: ''
-		});
-		tagWidth += 80;
-		if (item.tags.length > 1) {
-			tags.push({
-				icon: 'sym_r_style',
-				name: `+${item.tags.length - 1}`,
-				class: ''
-			});
-			tagWidth += 54;
-		}
-	}
-	const attCount = (item.attachments && item.attachments.length) || 0;
-	if (attCount) {
-		tags.push({
-			name: attCount.toString(),
-			icon: 'sym_r_attach_file',
-			class: ''
-		});
-		tagWidth += 42;
-	}
-	if (app.account!.favorites.has(item.id)) {
-		tags.push({
-			name: '',
-			icon: 'sym_r_grade',
-			class: 'text-red'
-		});
-		tagWidth += 32;
-	}
-
-	return {
-		tags,
-		tagWidth
-	};
 };
 
 const handleMouseEnter = (id: string) => {

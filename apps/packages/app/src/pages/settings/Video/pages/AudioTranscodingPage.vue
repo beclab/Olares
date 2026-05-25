@@ -1,5 +1,5 @@
 <template>
-	<page-title-component :title="t('Audio Transcoding')" :show-back="true" />
+	<page-title-component :title="t('Audio transcoding')" :show-back="true" />
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<bt-list first>
 			<error-message-tip
@@ -18,7 +18,7 @@
 
 					<bt-switch
 						size="sm"
-						truthy-track-color="light-blue-default"
+						truthy-track-color="blue-default"
 						v-model="videoStore.audioTranscoding.enableAudioVbr.value"
 						@update:model-value="updateEnableAudioVbr"
 					/>

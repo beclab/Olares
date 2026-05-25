@@ -12,22 +12,18 @@ import { DriveType } from '../utils/interface/files';
 import { timeToTimeStamp } from '../pages/settings/Backup2/pages/FormatBackupTime';
 import { computed, ref } from 'vue';
 import { APP_STATUS, ENTRANCE_STATUS } from 'src/constant/constants';
-import axios from 'axios';
+import { decodeURIComponentSafe } from 'src/api/files/v2/utils';
 
 export enum BackgroundMode {
 	desktop = 'Desktop',
 	login = 'Login'
 }
 
-export const imgContentModes: 'fill'[] =
-	// | 'contain' | 'cover' | 'none' | 'scale-down'
-	[
-		'fill'
-		// 'contain',
-		// 'cover',
-		// 'none',
-		// 'scale-down'
-	];
+export enum IMG_CONTENT_MODE {
+	Fill = 'fill',
+	Stretch = 'cover',
+	Tile = 'repeat'
+}
 
 export const firstToUpper = (str: string) => {
 	if (str.length === 0) {
@@ -100,15 +96,15 @@ const BaseMenuItems: Record<MENU_TYPE, MenuItem> = {
 		img: 'settings/imgs/root/appearance.svg'
 	},
 	[MENU_TYPE.Application]: {
-		label: 'home_menus.application',
+		label: 'home_menus.applications',
 		key: MENU_TYPE.Application,
 		img: 'settings/imgs/root/application.svg'
 	},
 	[MENU_TYPE.Integration]: {
-		label: 'home_menus.integration',
+		label: 'home_menus.integrations',
 		key: MENU_TYPE.Integration,
 		img: 'settings/imgs/root/integration.svg',
-		title: 'Link Your Accounts & Data',
+		title: 'Link your accounts & data',
 		description:
 			'Add your accounts to access all your personal data in one place'
 	},
@@ -148,7 +144,7 @@ const BaseMenuItems: Record<MENU_TYPE, MenuItem> = {
 		img: 'settings/imgs/root/restore.svg'
 	},
 	[MENU_TYPE.Developer]: {
-		label: 'home_menus.developer',
+		label: 'home_menus.advanced',
 		key: MENU_TYPE.Developer,
 		img: 'settings/imgs/root/developer.svg'
 	},
@@ -231,11 +227,11 @@ export const frequencyOptions = computed(() => {
 export const resourcesOptions = computed(() => {
 	return [
 		{
-			label: i18n.global.t('Backup Files'),
+			label: i18n.global.t('Back up file'),
 			value: BackupResourcesType.files
 		},
 		{
-			label: i18n.global.t('Backup App'),
+			label: i18n.global.t('Back up app'),
 			value: BackupResourcesType.app
 		}
 	];
@@ -293,7 +289,38 @@ export enum FACTOR_MODEL {
 	System = 'system'
 }
 
-export const factorModelOptions = () => {
+export const factorModelOptions = (level: AUTH_LEVEL) => {
+	switch (level) {
+		case AUTH_LEVEL.Public:
+			return [
+				{
+					label: i18n.global.t('factor.none'),
+					value: FACTOR_MODEL.Public,
+					enable: true
+				}
+			];
+		default:
+			return [
+				{
+					label: i18n.global.t('factor.system'),
+					value: FACTOR_MODEL.System,
+					enable: true
+				},
+				{
+					label: i18n.global.t('factor.one_factor'),
+					value: FACTOR_MODEL.One,
+					enable: true
+				},
+				{
+					label: i18n.global.t('factor.two_factor'),
+					value: FACTOR_MODEL.Two,
+					enable: true
+				}
+			];
+	}
+};
+
+export const subPolicyFactorModelOptions = () => {
 	return [
 		{
 			label: i18n.global.t('factor.system'),
@@ -606,46 +633,55 @@ export enum VRAMMode {
 }
 
 export enum VRAMModeLabel {
-	'App Exclusive',
-	'Memory Slicing',
-	'Time Slicing'
+	'App exclusive',
+	'Memory slicing',
+	'Time slicing'
 }
 
-export const VRAMModeOptions = () => {
-	return [
-		{
-			label: i18n.global.t(VRAMModeLabel[0]),
-			value: VRAMMode.Single,
+export const vramModelMaps: Record<
+	VRAMMode,
+	{
+		title: string;
+		desc: string;
+		subTitle: string;
+		subDesc: string;
+	}
+> = {
+	[VRAMMode.Single]: {
+		title: VRAMModeLabel[0],
+		desc: 'A single app has exclusive access to the GPU',
+		subTitle: 'Select exclusive app',
+		subDesc: 'Select an app to use this GPU exclusively'
+	},
+	[VRAMMode.MemorySlicing]: {
+		title: VRAMModeLabel[1],
+		desc: 'Multiple apps share a single GPU, with fixed VRAM allocated to each app',
+		subTitle: 'Allocate VRAM',
+		subDesc: 'Set how much VRAM each app can use'
+	},
+	[VRAMMode.TimeSlicing]: {
+		title: VRAMModeLabel[2],
+		desc: 'Multiple apps take turns using the same GPU',
+		subTitle: 'Manage assigned apps',
+		subDesc: 'Assign an app to this GPU'
+	}
+};
+
+export const VRAMModeOptions = (
+	supportList = [VRAMMode.Single, VRAMMode.MemorySlicing, VRAMMode.TimeSlicing]
+) => {
+	return supportList.map((e) => {
+		return {
+			label: i18n.global.t(vramModelMaps[e].title),
+			value: e,
 			enable: true,
-			description: i18n.global.t(
-				'Select one application to have dedicated access to this GPU.'
-			),
-			subTitle: i18n.global.t('Select exclusive app'),
-			subDesc: ''
-		},
-		{
-			label: i18n.global.t(VRAMModeLabel[1]),
-			value: VRAMMode.MemorySlicing,
-			enable: true,
-			description: i18n.global.t(
-				'Assign a dedicated amount of VRAM to specific applications'
-			),
-			subTitle: i18n.global.t('Allocate VRAM'),
-			subDesc: i18n.global.t(
-				'Select your target application and assign VRAM to it'
-			)
-		},
-		{
-			label: i18n.global.t(VRAMModeLabel[2]),
-			value: VRAMMode.TimeSlicing,
-			enable: true,
-			description: i18n.global.t(
-				"The GPU's  power is shared among multiple applications."
-			),
-			subTitle: i18n.global.t('Pin application'),
-			subDesc: i18n.global.t('Bind an application to this GPU')
-		}
-	];
+			description: i18n.global.t(vramModelMaps[e].desc),
+			subTitle: i18n.global.t(vramModelMaps[e].subTitle),
+			subDesc: vramModelMaps[e].subDesc
+				? i18n.global.t(vramModelMaps[e].subDesc)
+				: ''
+		};
+	});
 };
 
 // export const VRAMTimeSlicingOperations = (
@@ -953,6 +989,13 @@ export const BackupPathOrigins = [
 	DriveType.External
 ];
 
+export const SearchPathOrigins = [
+	DriveType.Drive,
+	DriveType.Data,
+	DriveType.Cache,
+	DriveType.External
+];
+
 export interface SnapshotInfo {
 	id: string;
 	createAt: number;
@@ -985,7 +1028,7 @@ export enum SnapshotType {
 
 export interface SelectorProps {
 	label: string;
-	value: string | number;
+	value: string | number | boolean;
 	disable?: boolean;
 	hideLabel?: boolean;
 	titleClass?: string;
@@ -1001,7 +1044,7 @@ export function formatFilePath(filePath: any) {
 		path: filePath.path,
 		driveType: filePath.driveType,
 		param: filePath.param,
-		decodePath: filePath.path ? decodeURIComponent(filePath.path) : ''
+		decodePath: filePath.path ? decodeURIComponentSafe(filePath.path) : ''
 	};
 }
 
@@ -1046,7 +1089,7 @@ export interface BaseEnv {
 	applyOnChange?: boolean;
 	valueFrom?: {
 		envName: string;
-		status: 'synced' | string;
+		status: 'synced' | 'notfound' | string;
 	};
 	//local
 	right?: boolean;
@@ -1061,7 +1104,10 @@ export interface EnvOption {
 export interface UpdateEnvItem {
 	envName: string;
 	value: string;
+	applyOnChange?: boolean;
+	valueFrom?: BaseEnv['valueFrom'];
 }
+
 export type UpdateEnvBody = UpdateEnvItem[];
 
 export interface CloneEntrance {
@@ -1069,6 +1115,12 @@ export interface CloneEntrance {
 	title: string;
 	message?: string;
 }
+
+export type ExcludePatternItem = {
+	pattern: string;
+	must: boolean;
+};
+
 export interface AppCloneInfoResponse {
 	missingValues: CloneEntrance[];
 	invalidValues: CloneEntrance[];

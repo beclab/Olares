@@ -33,7 +33,7 @@ import MyContentPage from '../../components/MyContentPage.vue';
 import MyPage from '@apps/control-panel-common/src/containers/MyPage.vue';
 import Yaml from './Yaml.vue';
 import MoreSelection from '@apps/control-panel-common/src/components/MoreSelection.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import FullPageWithBack from '@apps/control-panel-common/src/components/FullPageWithBack.vue';
 import RouterViewTransition from '@apps/control-panel-common/src/components/RouterViewTransition.vue';
 

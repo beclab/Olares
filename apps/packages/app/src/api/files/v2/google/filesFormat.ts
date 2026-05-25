@@ -1,4 +1,3 @@
-// import { getFileType } from '@bytetrade/core';
 import { FileResType, useFilesStore } from 'src/stores/files';
 import { GoogleDriveFileItem } from './type';
 import { extensionByMimeType } from './utils';
@@ -6,7 +5,7 @@ import { DriveType } from 'src/utils/interface/files';
 import { encodeUrl } from 'src/utils/encode';
 import { appendPath } from '../path';
 import { i18n } from 'src/boot/i18n';
-import { getFileType } from '@bytetrade/core';
+import { getFileTypeI18nKey } from '@bytetrade/core';
 
 export function format(
 	data: {
@@ -72,7 +71,9 @@ export function format(
 			mode: 0,
 			isDir: el.isDir,
 			isSymlink: false,
-			type: el.isDir ? i18n.global.t('files.folders') : getFileType(el.name),
+			type: el.isDir
+				? i18n.global.t('files.folders')
+				: i18n.global.t(getFileTypeI18nKey(el.name)),
 			sorting: {
 				by: 'size',
 				asc: false

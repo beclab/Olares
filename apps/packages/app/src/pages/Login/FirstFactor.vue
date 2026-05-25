@@ -60,7 +60,7 @@ import { useI18n } from 'vue-i18n';
 import { useTokenStore } from '../../stores/token';
 import { CurrentView } from '../../utils/constants';
 import { DeviceType } from '@bytetrade/core';
-import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+
 import LoginAction from './LoginAction.vue';
 
 const { t } = useI18n();
@@ -86,9 +86,6 @@ const onLogin = async () => {
 			tokenStore.olaresId.split('@')[0],
 			password.value
 		);
-
-		console.log('res ===>', res);
-
 		if (res.fa2) {
 			tokenStore.currentView = CurrentView.MOBILE_VERIFICATION;
 		} else {
@@ -96,24 +93,6 @@ const onLogin = async () => {
 		}
 	} catch (err) {
 		console.log('error--->', err);
-
-		if (err.response) {
-			BtNotify.show({
-				type: NotifyDefinedType.MESSAGE,
-				message:
-					typeof err.response.data == 'string'
-						? err.response.data
-						: err.response.data?.message
-						? err.response.data.message
-						: ''
-			});
-		} else {
-			BtNotify.show({
-				type: NotifyDefinedType.MESSAGE,
-				message: err.message
-			});
-		}
-
 		shakeInput();
 		handleClearInput();
 	} finally {

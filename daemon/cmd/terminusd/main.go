@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/internel/watcher/cert"
 	intranetwatcher "github.com/beclab/Olares/daemon/internel/watcher/intranet"
+	mountwatcher "github.com/beclab/Olares/daemon/internel/watcher/mount"
 	"github.com/beclab/Olares/daemon/internel/watcher/system"
 	"github.com/beclab/Olares/daemon/internel/watcher/systemenv"
 	"github.com/beclab/Olares/daemon/internel/watcher/upgrade"
@@ -106,6 +107,7 @@ func main() {
 		cert.NewCertWatcher(),
 		systemenv.NewSystemEnvWatcher(),
 		intranetwatcher.NewApplicationWatcher(),
+		mountwatcher.NewMountWatcher(),
 	}, func() {
 		if s != nil {
 			if err := s.Restart(); err != nil {

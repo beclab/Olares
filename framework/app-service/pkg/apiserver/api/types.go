@@ -1,8 +1,8 @@
 package api
 
 import (
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	imagetypes "github.com/containers/image/v5/types"
 )
 
@@ -18,6 +18,18 @@ const (
 	AppResumeAllKey                  = "bytetrade.io/resume-all"
 	AppStopByControllerDuePendingPod = "bytetrade.io/pending-pod"
 	AppImagesKey                     = "bytetrade.io/images"
+)
+
+const (
+	CodeSuccess                    int32 = 200
+	CodeComputeBindingRequired     int32 = 4601
+	CodeComputeBindingUnavailable  int32 = 4602
+	CodeComputeDeviceSwitchBlocked int32 = 4603
+	// CodeComputeAmbiguousMode is returned by the install endpoint when
+	// the caller did not pick a selectedGpuType and more than one mode in
+	// the manifest is runnable on this cluster. The body carries the
+	// install compute plan so the client can let the user pick.
+	CodeComputeAmbiguousMode int32 = 4604
 )
 
 // Response represents the code for response.

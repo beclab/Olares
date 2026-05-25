@@ -61,13 +61,13 @@ const percentageInput = computed({
 
 const onInputChange = (value: string) => {
 	console.log(value);
-	// 处理直接修改百分比输入
+	// Handle direct percentage input edits.
 	const valueWithoutPercentageSign = value.replace('%', '');
 	emit('onUpdate', valueWithoutPercentageSign);
 };
 
 const increasePercentage = () => {
-	// 处理上调
+	// Handle increment.
 	if (props.modelValue < 100) {
 		const value = (props.modelValue + 1).toFixed(0);
 		percentageInput.value = value;
@@ -76,7 +76,7 @@ const increasePercentage = () => {
 };
 
 const decreasePercentage = () => {
-	// 处理下调
+	// Handle decrement.
 	if (props.modelValue > 0) {
 		const value = (props.modelValue - 1).toFixed(0);
 		percentageInput.value = value;
@@ -85,7 +85,7 @@ const decreasePercentage = () => {
 };
 
 const validatePercentage = (value) => {
-	// 验证规则
+	// Validation rules.
 	let isValid;
 	if (percentageSign.value) {
 		isValid = /^(?:100|[1-9]?\d|0)%$/.test(value);
@@ -102,8 +102,8 @@ onMounted(() => {
 const setHexColor = (hexColor: string) => {
 	console.log(hexColor);
 	if (hexColor && (hexColor.length === 7 || hexColor.length === 9)) {
-		//#00000000 表示黑色完全透明， rgba为(0,0,0,0) rgba.a = 0  不透明度为 0%
-		//#ffffffff 表示白色完全不透明， rgba为(255,255,255,0) rgba.a = 100  不透明度为 100%
+		// #00000000 means fully transparent black, rgba(0,0,0,0), opacity 0%
+		// #ffffffff means fully opaque white, rgba(255,255,255,1), opacity 100%
 		const rgba: colorsRgba = hexToRgb(hexColor);
 		let a;
 		if (hexColor.length === 7) {

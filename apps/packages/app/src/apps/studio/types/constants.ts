@@ -6,24 +6,24 @@ export const memoryUnitOptions = ['Mi', 'Gi'];
 export const maxMemory = 8 * 1024; // in Mi
 export const envOptions = [
 	{
-		label: 'beclab/go-dev-1.21:1.0.0',
-		value: 'beclab/go-dev-1.21:1.0.0'
+		label: 'beclab/go-dev-1.21:1.0.1',
+		value: 'beclab/go-dev-1.21:1.0.1'
 	},
 	{
-		label: 'beclab/node20-ts-dev:1.0.0',
-		value: 'beclab/node20-ts-dev:1.0.0'
+		label: 'beclab/node20-ts-dev:1.0.1',
+		value: 'beclab/node20-ts-dev:1.0.1'
 	},
 	{
-		label: 'beclab/python-dev-3.14:1.0.0',
-		value: 'beclab/python-dev-3.14:1.0.0'
+		label: 'beclab/python-dev-3.14:1.0.1',
+		value: 'beclab/python-dev-3.14:1.0.1'
 	},
 	{
-		label: 'beclab/cuda12.8-python-3.14:1.0.0',
-		value: 'beclab/cuda12.8-python-3.14:1.0.0'
+		label: 'beclab/cuda13.1.0-python-3.14:1.0.1',
+		value: 'beclab/cuda13.1.0-python-3.14:1.0.1'
 	},
 	{
-		label: 'beclab/cuda12.8:1.0.0',
-		value: 'beclab/cuda12.8:1.0.0'
+		label: 'beclab/cuda13.1.0:1.0.1',
+		value: 'beclab/cuda13.1.0:1.0.1'
 	}
 ];
 

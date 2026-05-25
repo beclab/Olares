@@ -7,6 +7,7 @@
 		:okLoading="loading ? t('loading') : false"
 		:size="$q.platform.is.mobile ? 'small' : 'medium'"
 		:platform="$q.platform.is.mobile ? 'mobile' : 'web'"
+		:okDisabled="!name"
 		@onSubmit="submit"
 		@onHide="close"
 		@onCancel="close"
@@ -31,9 +32,9 @@ import { ref } from 'vue';
 import { syncUtil } from './../../../api';
 import { useDataStore } from '../../../stores/data';
 import { useFilesStore } from '../../../stores/files';
-import { notifyWarning } from '../../../utils/notifyRedefinedUtil';
 
 import { useI18n } from 'vue-i18n';
+import { busEmit } from 'src/utils/bus';
 
 const CustomRef = ref();
 
@@ -47,8 +48,10 @@ const { t } = useI18n();
 
 const submit = async () => {
 	if (!name.value) {
-		notifyWarning('The input content cannot be empty!');
 		return false;
+	}
+	if (loading.value) {
+		return;
 	}
 	loading.value = true;
 	try {
@@ -58,7 +61,8 @@ const submit = async () => {
 		loading.value = false;
 	}
 
-	filesStore.getMenu();
+	busEmit('reposUpdate');
+
 	store.closeHovers();
 };
 
@@ -75,7 +79,7 @@ const close = () => {
 		border: 1px solid $input-stroke;
 		background-color: transparent;
 		&:focus {
-			border: 1px solid $yellow-disabled;
+			border: 1px solid $theme-input-focus-border;
 		}
 	}
 }

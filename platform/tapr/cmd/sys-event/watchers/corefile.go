@@ -189,7 +189,12 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			return nil
 		}
 
-		zone := userList.Items[0].GetAnnotations()[UserAnnotationZoneKey]
+		var zone string
+		for _, u := range userList.Items {
+			if zone = u.GetAnnotations()[UserAnnotationZoneKey]; zone != "" {
+				break
+			}
+		}
 		if len(zone) == 0 {
 			klog.Info("no zone annotation found in user, skip adding shared entrance dns records")
 			return nil

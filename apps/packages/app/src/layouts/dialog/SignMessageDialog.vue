@@ -26,42 +26,47 @@
 			</div>
 
 			<div class="sign-content-container column items-center">
-				<div class="sign-content-container__content column items-center">
+				<bt-scroll-area class="sign-content-container__content">
 					<div
-						class="row items-center justify-center"
-						style="width: 124px; height: 124px; margin-top: 64px"
+						class="column items-center full-width"
+						style="padding-bottom: 60px"
 					>
-						<q-img
-							:src="defaultMessageInfo(body).imgPath"
-							width="90px"
-							height="90px"
-							noSpinner
-							style="border-radius: 50%"
-						/>
-					</div>
+						<div
+							class="row items-center justify-center"
+							style="width: 124px; height: 124px; margin-top: 64px"
+						>
+							<q-img
+								:src="defaultMessageInfo(body).imgPath"
+								width="90px"
+								height="90px"
+								noSpinner
+								style="border-radius: 50%"
+							/>
+						</div>
 
-					<div class="text-ink-1 text-h5 title">
-						{{ defaultMessageInfo(body).title }}
-					</div>
+						<div class="text-ink-1 text-h5 title">
+							{{ defaultMessageInfo(body).title }}
+						</div>
 
-					<div class="text-ink-2 text-body3 content">
-						{{ defaultMessageInfo(body).content }}
+						<div class="text-ink-2 text-body3 content">
+							{{ defaultMessageInfo(body).content }}
+						</div>
+						<div
+							class="full-width user-info q-mt-lg q-py-lg column items-center justify-center"
+							v-if="body.event == 'login_cloud'"
+						>
+							<div class="users">
+								<TerminusAvatar :info="userStore.terminusInfo()" :size="40" />
+							</div>
+							<div class="name text-h6 text-ink-1">
+								{{ userStore.current_user?.local_name }}
+							</div>
+							<div class="did text-ink-3 text-body3">
+								{{ userStore.current_user?.name }}
+							</div>
+						</div>
 					</div>
-					<div
-						class="full-width user-info q-mt-lg column items-center justify-center"
-						v-if="body.event == 'login_cloud'"
-					>
-						<div class="users">
-							<TerminusAvatar :info="userStore.terminusInfo()" :size="40" />
-						</div>
-						<div class="name text-h6 text-ink-1">
-							{{ userStore.current_user?.local_name }}
-						</div>
-						<div class="did text-ink-3 text-body3">
-							{{ userStore.current_user?.name }}
-						</div>
-					</div>
-				</div>
+				</bt-scroll-area>
 
 				<q-btn
 					class="confirm row items-center justify-center"
@@ -70,7 +75,7 @@
 					no-caps
 					:disable="!confirmEnable"
 				>
-					<q-spinner-dots color="sub-title" v-if="!confirmEnable" />
+					<q-spinner-dots color="text-ink-2" v-if="!confirmEnable" />
 					<div v-else class="text-grey-10">{{ t('confirm') }}</div>
 				</q-btn>
 				<q-btn class="cancel" flat no-caps @click="onCancelClick">
@@ -104,7 +109,7 @@ import {
 	mnemonicToKey,
 	defaultDriverPath
 } from './sign';
-import { PrivateJwk, Submission, CredentialManifest } from '@bytetrade/core';
+import { PrivateJwk, Submission } from '@bytetrade/core';
 import { submitPresentation } from '../../pages/Mobile/vc/vcutils';
 import { busOn, busOff } from '../../utils/bus';
 import { notifySuccess, notifyFailed } from '../../utils/notifyRedefinedUtil';
@@ -113,7 +118,7 @@ import { i18n } from '../../boot/i18n';
 import { generateStringEllipsis } from '../../utils/utils';
 import { getRequireImage } from '../../utils/imageUtils';
 import { axiosInstanceProxy } from 'src/platform/httpProxy';
-import { paymentRequestVC } from 'src/platform/capacitor/sign/payment';
+import { getNativeAppPlatform } from 'src/application/platform';
 
 const props = defineProps({
 	body: {
@@ -157,7 +162,7 @@ const onOKClick = async () => {
 		let user: UserItem = userStore.users!.items.get(userStore.current_id!)!;
 		let mneminicItem = userStore.current_mnemonic;
 		if (!mneminicItem) {
-			return;
+			throw new Error(t('errors.mnemonics_is_not_valid'));
 		}
 		let did = await getDID(mneminicItem.mnemonic);
 		let privateJWK: PrivateJwk | undefined = await getPrivateJWK(
@@ -171,86 +176,104 @@ const onOKClick = async () => {
 		if (!privateJWK) {
 			throw new Error(t('errors.get_privatejwk_failure'));
 		}
+		const callback_url = props.body.message?.sign?.callback_url;
+		let headers: any = {
+			'Content-Type': 'application/json'
+		};
+		let params: any = {};
+
+		if (callback_url && userStore.current_user?.name) {
+			const callbackUrlObj = new URL(callback_url);
+			if (
+				callbackUrlObj.host.includes(
+					userStore.current_user.name.replace('@', '.')
+				)
+			) {
+				headers['X-Authorization'] = userStore.current_user?.access_token || '';
+				params = {
+					hideCookie: true
+				};
+			}
+		}
+
 		const axoisProxy = axiosInstanceProxy(
 			{
-				headers: {
-					'Content-Type': 'application/json'
-				}
+				headers,
+				params
 			},
 			false
 		);
-		if (
-			props.body.event == 'market.payment' ||
-			props.body.event == 'market.payment.v1' ||
-			props.body.event == 'market.fetch.payment' ||
-			props.body.event == 'market.fetch.payment.v1'
-		) {
-			const payResult = await paymentRequestVC(
-				props.body.message?.sign?.sign_body.product_credential_manifest,
+
+		const appPlatform = getNativeAppPlatform();
+
+		const item = appPlatform.signProtocolList.find((item) => {
+			const result = item.precheck(props.body);
+			return result;
+		});
+
+		if (item && item.signAction) {
+			const result = await item.signAction(props.body, {
 				did,
-				privateJWK,
-				props.body.message?.sign?.sign_body
-					.application_verifiable_credential as any,
-				props.body.message?.sign?.sign_body
-					.application_verifiable_credential_schema as any,
-				props.body.event == 'market.fetch.payment.v1' ||
-					props.body.event == 'market.fetch.payment'
-			);
-			const url = props.body.message?.sign?.callback_url;
-			const postData = {
-				...payResult,
-				...props.body.message?.sign?.sign_body
-			};
-			await axoisProxy.post(url!, postData);
-		} else if (props.body.message?.sign?.sign_vc) {
-			await requestVCVP(
-				user,
-				did,
-				privateJWK,
-				owner,
-				props.body.message?.sign?.sign_vc.type,
-				props.body.message?.sign?.sign_vc.name,
-				props.body.message?.sign?.sign_vc.request_path,
-				props.body.message?.sign?.sign_vc.data
-			);
-			const url = props.body.message?.sign?.callback_url;
-			const postData = {
-				id: props.body.message?.id
-			};
-			await axoisProxy.post(url!, postData);
+				privateJWK
+			});
+			await axoisProxy.post(result.callback_url, result.postData);
 		} else {
-			let eth721Sign = '';
-			if (props.body.message?.sign?.sign_eth) {
-				const ownerKey = mnemonicToKey(
-					mneminicItem.mnemonic,
-					defaultDriverPath(0)
+			if (props.body.message?.sign?.sign_vc) {
+				await requestVCVP(
+					user,
+					did,
+					privateJWK,
+					owner,
+					props.body.message?.sign?.sign_vc.type,
+					props.body.message?.sign?.sign_vc.name,
+					props.body.message?.sign?.sign_vc.request_path,
+					props.body.message?.sign?.sign_vc.data
 				);
-				eth721Sign = await signStatement(
-					props.body.message?.sign?.sign_eth.domain,
-					props.body.message?.sign?.sign_eth.types,
-					props.body.message?.sign?.sign_eth.data,
-					props.body.message?.sign?.sign_eth.primaryType,
-					ownerKey
-				);
+				const url = props.body.message?.sign?.callback_url;
+				const postData = {
+					id: props.body.message?.id
+				};
+				await axoisProxy.post(url!, postData);
+			} else {
+				let eth721Sign = '';
+
+				if (props.body.message?.sign?.sign_eth) {
+					const ownerKey = mnemonicToKey(
+						mneminicItem.mnemonic,
+						defaultDriverPath(0)
+					);
+					eth721Sign = await signStatement(
+						props.body.message?.sign?.sign_eth.domain,
+						props.body.message?.sign?.sign_eth.types,
+						props.body.message?.sign?.sign_eth.data,
+						props.body.message?.sign?.sign_eth.primaryType,
+						ownerKey
+					);
+				}
+
+				let body = { ...props.body.message?.sign?.sign_body };
+				if (eth721Sign) {
+					body['eth721_sign'] = eth721Sign;
+				}
+
+				const jws = await signJWS(did, body, privateJWK);
+
+				const url = props.body.message?.sign?.callback_url;
+				const postData = {
+					id: props.body.message?.id,
+					jws,
+					did,
+					...body
+				};
+
+				await axoisProxy.post(url!, postData);
 			}
-
-			let body = { ...props.body.message?.sign?.sign_body };
-			if (eth721Sign) {
-				body['eth721_sign'] = eth721Sign;
-			}
-
-			const jws = await signJWS(did, body, privateJWK);
-
-			const url = props.body.message?.sign?.callback_url;
-			const postData = {
-				id: props.body.message?.id,
-				jws,
-				did,
-				...body
-			};
-
-			await axoisProxy.post(url!, postData);
 		}
+
+		if (item && item.afterSign) {
+			await item.afterSign(props.body);
+		}
+
 		notifySuccess(t('sign_success'));
 		emit('hide');
 	} catch (e) {
@@ -393,10 +416,14 @@ const defaultMessageInfo = (messageBody: MessageBody) => {
 			.content {
 				text-align: center;
 				width: calc(100% - 64px);
+				word-break: break-all;
+				overflow-wrap: break-word;
+				white-space: pre-wrap;
+				overflow: hidden;
 			}
 
 			.user-info {
-				height: 128px;
+				// height: 128px;
 				border-radius: 12px;
 				border: 1px solid $separator;
 
@@ -408,20 +435,28 @@ const defaultMessageInfo = (messageBody: MessageBody) => {
 					margin-left: 10px;
 				}
 
-				.info {
-					flex: 1;
+				// .info {
+				// 	flex: 1;
+				// 	overflow: hidden;
+				// }
+				.name {
+					color: $ink-1;
+					// height: 24px;
+					word-break: break-all;
+					overflow-wrap: break-word;
+					white-space: pre-wrap;
 					overflow: hidden;
+					max-width: 80%;
+				}
 
-					.name {
-						color: $ink-1;
-						height: 24px;
-					}
-
-					.did {
-						color: $ink-2;
-						height: 16px;
-						word-break: break-all;
-					}
+				.did {
+					color: $ink-2;
+					// height: 16px;
+					word-break: break-all;
+					overflow-wrap: break-word;
+					white-space: pre-wrap;
+					// overflow: hidden;
+					max-width: 80%;
 				}
 			}
 		}

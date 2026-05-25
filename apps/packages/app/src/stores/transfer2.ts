@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { i18n } from '../boot/i18n';
-import { common, filesIsV2 } from '../api';
+import { common } from '../api';
 import TransferClient from '../services/transfer';
 import Taskmanager from '../services/olaresTask';
 import transferManager from '../services/transferManager';
@@ -68,7 +68,8 @@ function getCurrentTransferingItems() {
 	for (const key in store.transferMap) {
 		const value = store.transferMap[key];
 		if (
-			value.front != TransferFront.cloud &&
+			(value.front == TransferFront.download ||
+				value.front == TransferFront.upload) &&
 			value.status == TransferStatus.Running &&
 			value.isPaused == false
 		) {
@@ -333,12 +334,12 @@ export const useTransfer2Store = defineStore('transfer2', {
 							icon: 'sym_r_browser_updated',
 							key: `${TransferFront.download}`,
 							count: 0
-						},
-						{
-							label: i18n.global.t('transmission.cloud.title'),
-							icon: 'sym_r_cloud_download',
-							key: `${TransferFront.cloud}`
 						}
+						// {
+						// 	label: i18n.global.t('transmission.cloud.title'),
+						// 	icon: 'sym_r_cloud_download',
+						// 	key: `${TransferFront.cloud}`
+						// }
 					]
 				}
 			] as {
@@ -352,14 +353,12 @@ export const useTransfer2Store = defineStore('transfer2', {
 					count: string | number | undefined;
 				}[];
 			}[];
-			if (filesIsV2()) {
-				items[0].children.push({
-					label: i18n.global.t('transmission.copy_paste'),
-					icon: 'sym_r_content_copy',
-					key: `${TransferFront.copy}`,
-					count: 0
-				});
-			}
+			items[0].children.push({
+				label: i18n.global.t('transmission.copy_paste'),
+				icon: 'sym_r_content_copy',
+				key: `${TransferFront.copy}`,
+				count: 0
+			});
 			return items;
 		},
 
@@ -641,7 +640,9 @@ export const useTransfer2Store = defineStore('transfer2', {
 				.equals(task)
 				.and(
 					(item) =>
-						item.status === TransferStatus.Pending &&
+						(item.status === TransferStatus.Pending ||
+							(item.status === TransferStatus.Canceled &&
+								item.front == TransferFront.upload)) &&
 						item.isPaused === false &&
 						!runningTasks
 							.filter(
@@ -652,6 +653,7 @@ export const useTransfer2Store = defineStore('transfer2', {
 				)
 				.limit(nextAddCount)
 				.toArray();
+
 			if (nextItems.length > 0) {
 				for (let index = 0; index < nextItems.length; index++) {
 					const t = nextItems[index];
@@ -932,7 +934,7 @@ export const useTransfer2Store = defineStore('transfer2', {
 
 				if (task.isFolder) {
 					const tasks: TransferItemInMemory[] =
-						this.taskCurrentSingleFiles[front][runningTask[0].id];
+						this.taskCurrentSingleFiles[front][task.id];
 					if (tasks) {
 						tasks.forEach((singleFile) => {
 							const lateUpdateTime =
@@ -947,12 +949,10 @@ export const useTransfer2Store = defineStore('transfer2', {
 					}
 				} else {
 					const lateUpdateTime =
-						runningTask[0].updateTime ||
-						runningTask[0].startTime ||
-						new Date().getTime();
+						task.updateTime || task.startTime || new Date().getTime();
 					const times = new Date().getTime() - lateUpdateTime;
-					if (runningTask[0].id && (times > 2000 || forceRefresh)) {
-						this.onFileProgress(runningTask[0].id, runningTask[0].bytes, front);
+					if (task.id && (times > 2000 || forceRefresh)) {
+						this.onFileProgress(task.id, task.bytes, front);
 					}
 				}
 			}

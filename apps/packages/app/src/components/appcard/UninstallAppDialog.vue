@@ -17,13 +17,26 @@
 			</div>
 
 			<bt-check-box
-				v-if="showCheckbox"
+				v-if="showCSAppCheckbox"
 				:label="t('Also uninstall the shared server (affects all users)')"
+				:link-label="t('Learn more')"
+				link="https://docs.olares.com/manual/olares/market/market.html#uninstall-shared-applications"
 				check-img="market/check_box.svg"
 				uncheck-img="market/uncheck_box.svg"
 				class="q-mt-md"
-				:model-value="selected"
-				@update:model-value="onUpdate"
+				:model-value="allRef"
+				@update:model-value="onUpdateAll"
+			/>
+
+			<bt-check-box
+				:label="t('Also remove all local data')"
+				:link-label="t('Learn more')"
+				link="https://docs.olares.com/manual/olares/market/market.html#uninstall-applications"
+				check-img="market/check_box.svg"
+				uncheck-img="market/uncheck_box.svg"
+				class="q-mt-md"
+				:model-value="clearDataRef"
+				@update:model-value="onUpdateClear"
 			/>
 		</div>
 
@@ -45,36 +58,51 @@ const customRef = ref();
 const step = ref(1);
 
 const props = defineProps({
-	modelValue: {
-		type: Boolean,
-		default: false,
-		required: true
-	},
 	appName: {
 		type: String,
 		required: true
 	},
-	showCheckbox: {
+	showCSAppCheckbox: {
 		type: Boolean,
-		default: false,
-		required: false
+		default: false
+	},
+	all: {
+		type: Boolean,
+		default: true,
+		required: true
+	},
+	clearData: {
+		type: Boolean,
+		default: true,
+		required: true
 	}
 });
 
-const selected = ref(props.modelValue);
+const allRef = ref(props.all);
+const clearDataRef = ref(props.clearData);
 
-const onUpdate = (status) => {
-	selected.value = status;
+const onUpdateAll = (status: boolean) => {
+	allRef.value = status;
+};
+
+const onUpdateClear = (status: boolean) => {
+	clearDataRef.value = status;
 };
 
 const onOK = () => {
-	if (!props.showCheckbox || step.value === 2) {
-		customRef.value.onDialogOK(selected.value);
-	} else if (props.showCheckbox && step.value === 1) {
-		if (selected.value) {
+	if (step.value === 2) {
+		customRef.value.onDialogOK({
+			all: allRef.value,
+			clearData: clearDataRef.value
+		});
+	} else if (step.value === 1) {
+		if (props.showCSAppCheckbox && allRef.value) {
 			step.value = 2;
 		} else {
-			customRef.value.onDialogOK(selected.value);
+			customRef.value.onDialogOK({
+				all: allRef.value,
+				clearData: clearDataRef.value
+			});
 		}
 	}
 };

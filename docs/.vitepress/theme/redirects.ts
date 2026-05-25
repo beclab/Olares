@@ -39,6 +39,10 @@ export const redirects = {
     '/use-cases/ace-step': '/use-cases/ace-step-1.5',
     '/zh/use-cases/ace-step': '/zh/use-cases/ace-step-1.5',
 
+    // Refactor: openwebui-ollama → openwebui (merged: Ollama is now Option A in the unified quick start)
+    '/use-cases/openwebui-ollama': '/use-cases/openwebui',
+    '/zh/use-cases/openwebui-ollama': '/zh/use-cases/openwebui',
+
     // Refactor: /manual/concepts/** → /developer/concepts/**
     '/manual/system-architecture': '/developer/concepts/system-architecture',
     '/manual/concepts/': '/developer/concepts/',
@@ -97,6 +101,12 @@ export const redirects = {
     '/zh/manual/concepts/system-architecture': '/zh/developer/concepts/system-architecture',
     '/zh/manual/concepts/vc': '/zh/developer/concepts/vc',
     '/zh/manual/concepts/wallet': '/zh/developer/concepts/wallet',
+
+    // Refactor: /manual/docs-home → /manual/overview
+    '/manual/docs-home': '/manual/overview',
+    
+    // Refactor: /zh/manual/docs-home → /zh/manual/overview
+    '/zh/manual/docs-home': '/zh/manual/overview',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.

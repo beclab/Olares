@@ -17,12 +17,13 @@
 			</div>
 
 			<bt-check-box
-				v-if="showCheckbox"
 				:label="t('Also stop the shared server （affects all users)')"
+				:link-label="t('Learn more')"
+				link="https://docs.olares.com/manual/olares/market/market.html#free-up-resources-from-unused-apps"
 				check-img="market/check_box.svg"
 				uncheck-img="market/uncheck_box.svg"
 				class="q-mt-md"
-				:model-value="selected"
+				:model-value="allRef"
 				@update:model-value="onUpdate"
 			/>
 		</div>
@@ -36,41 +37,29 @@ import { ref } from 'vue';
 
 const { t } = useI18n();
 const customRef = ref();
-const step = ref(1);
 
 const props = defineProps({
-	modelValue: {
-		type: Boolean,
-		default: false,
-		required: true
-	},
 	appName: {
 		type: String,
 		required: true
 	},
-	showCheckbox: {
+	all: {
 		type: Boolean,
-		default: false,
-		required: false
+		required: true,
+		default: true
 	}
 });
 
-const selected = ref(props.modelValue);
+const allRef = ref(props.all);
 
-const onUpdate = (status) => {
-	selected.value = status;
+const onUpdate = (status: boolean) => {
+	allRef.value = status;
 };
 
 const onOK = () => {
-	if (!props.showCheckbox || step.value === 2) {
-		customRef.value.onDialogOK(selected.value);
-	} else if (props.showCheckbox && step.value === 1) {
-		if (selected.value) {
-			step.value = 2;
-		} else {
-			customRef.value.onDialogOK(selected.value);
-		}
-	}
+	customRef.value.onDialogOK({
+		all: allRef.value
+	});
 };
 </script>
 

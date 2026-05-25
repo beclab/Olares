@@ -1,3 +1,4 @@
+import market from '../../market/en-US';
 export default {
 	launch_input_placeholder: 'Search',
 	launch_no_result: 'No results',
@@ -56,5 +57,7 @@ export default {
 	},
 	'Load more': 'Load more',
 	'There is currently no news': 'There is currently no news',
-	'Your changes may not be saved.': 'Your changes may not be saved.'
+	'Your changes may not be saved.': 'Your changes may not be saved.',
+	'Clear all': 'Clear all',
+	notifications: 'Notifications'
 };

@@ -17,7 +17,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Known issues",
           link: "/zh/one/known-issues",
-        },
+        },         
       ],
     },
     {
@@ -69,6 +69,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Manage files",
           link: "/zh/one/files",
         },
+        {
+          text: "Back up & restore data",
+          link: "/zh/one/backup-restore",
+        },        
         {
           text: "Install & update apps",
           link: "/zh/one/market",
@@ -223,6 +227,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               {
                 text: "Install drivers on Windows",
                 link: "/zh/one/install-nvidia-driver",
+              },
+              {
+                text: "Troubleshooting",
+                link: "/zh/one/dual-boot-windows-troubleshooting",
               }
             ]
         },
@@ -234,15 +242,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Update OS",
           link: "/zh/one/update",
-        },
-        {
-          text: "Update firmware",
-          link: "/zh/one/update-firmware",
-        },        
-        {
-          text: "Back up & restore data",
-          link: "/zh/one/backup-resotre",
-        },
+        },       
         {
           text: "Restore Olares One",
           items: [
@@ -258,8 +258,16 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               text: "Reinstall Olares OS",
               link: "/zh/one/create-drive",
             },
+            {
+              text: "Create bootable USB drive",
+              link: "/zh/one/create-bootable-usb",
+            },
           ],
         },
+        {
+          text: "Manage BIOS and EC",
+          link: "/zh/one/update-firmware",
+        },         
       ]
     },
   ],

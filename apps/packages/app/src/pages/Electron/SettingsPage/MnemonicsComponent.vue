@@ -43,6 +43,7 @@ import {
 	notifySuccess,
 	notifyFailed
 } from '../../../utils/notifyRedefinedUtil';
+import { getApplication } from '../../../application/base';
 
 const props = defineProps({
 	mnemonic: {
@@ -63,9 +64,8 @@ onMounted(() => {
 });
 
 const copyFunc = async () => {
-	const platform = getPlatform();
-	platform
-		.setClipboard(props.mnemonic)
+	getApplication()
+		.copyToClipboard(props.mnemonic)
 		.then(() => {
 			notifySuccess(t('copy_success'));
 		})

@@ -10,17 +10,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	v1alpha1client "github.com/beclab/Olares/framework/app-service/pkg/client/clientset/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/scheme"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned/scheme"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
@@ -235,34 +235,9 @@ func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig, op v
 		}
 	}
 
-	// only support nvidia gpu managment by HAMi for now
-	if appConfig.Requirement.GPU != nil &&
-		(appConfig.GetSelectedGpuTypeValue() == utils.NvidiaCardType || appConfig.GetSelectedGpuTypeValue() == utils.GB10ChipType) {
-		if !appConfig.Requirement.GPU.IsZero() && metrics.GPU.Total <= 0 {
-			return constants.GPU, constants.SystemGPUNotAvailable, fmt.Errorf(constants.SystemGPUNotAvailableMessage, op)
-
-		}
-		nodes, err := utils.GetNodeInfo(context.TODO())
-		if err != nil {
-			klog.Errorf("failed to get node info %v", err)
-			return "", "", err
-		}
-		klog.Infof("nodes info: %#v", nodes)
-		var maxNodeGPUMem int64
-		for _, n := range nodes {
-			var sum int64
-			for _, g := range n.GPUS {
-				sum += g.Memory
-			}
-			if sum > maxNodeGPUMem {
-				maxNodeGPUMem = sum
-			}
-		}
-
-		if appConfig.Requirement.GPU.CmpInt64(maxNodeGPUMem) > 0 {
-			return constants.GPU, constants.SystemGPUPressure, fmt.Errorf(constants.SystemGPUPressureMessage, op)
-		}
-	}
+	// GPU availability (per-mode, per-node) is now checked upfront by
+	// compute.BuildInstallComputePlan during install pre-check, so we no
+	// longer reject installs here based on aggregate cluster GPU memory.
 
 	return CheckAppK8sRequestResource(appConfig, op)
 }
@@ -992,8 +967,6 @@ func CheckAppK8sRequestResource(appConfig *appcfg.ApplicationConfig, op v1alpha1
 	if appConfig == nil {
 		return "", "", errors.New("nil appConfig")
 	}
-	klog.Infof("availableResources: cpu: %#v", availableResources.cpu.allocatable.String())
-	klog.Infof("availableResources: memory: %#v", availableResources.memory.allocatable.String())
 
 	sufficientCPU, sufficientMemory := false, false
 

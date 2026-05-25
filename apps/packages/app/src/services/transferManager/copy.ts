@@ -148,9 +148,9 @@ class CopyTransferType implements TransferBaseType {
 			item = store.transferMap[id];
 		}
 
-		if (item && (await TransferClient.autoRetry(item))) {
-			return false;
-		}
+		// if (item && (await TransferClient.autoRetry(item))) {
+		// 	return false;
+		// }
 
 		if (message) {
 			notifyFailed(message);

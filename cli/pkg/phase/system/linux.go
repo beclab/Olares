@@ -84,7 +84,7 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 			return []module.Module{
 				&amdgpu.InstallAmdRocmModule{},
 				&amdgpu.InstallAmdContainerToolkitModule{Skip: func() bool {
-					if l.runtime.GetSystemInfo().IsAmdGPUOrAPU() {
+					if l.runtime.GetSystemInfo().IsStrixHalo() {
 						return false
 					}
 					return true

@@ -18,8 +18,9 @@ var errReported = errors.New("(already reported)")
 
 // MarketOptions is the per-command shared option bag. Identity (--user) and
 // transport (--host, --kubeconfig) flags from the legacy `app` tree are gone:
-// they are replaced by the global `--profile` flag wired through
-// cmdutil.Factory, exactly the way `olares-cli files` resolves identity.
+// they are replaced by the currently-selected profile (switch with
+// `olares-cli profile use <name>`) wired through cmdutil.Factory, exactly
+// the way `olares-cli files` resolves identity.
 type MarketOptions struct {
 	factory *cmdutil.Factory
 
@@ -78,8 +79,8 @@ func (o *MarketOptions) addSourceFlag(cmd *cobra.Command, desc string) {
 }
 
 // addCommonFlags wires the flags shared by source-aware commands. After
-// dropping --user/--host/--kubeconfig (replaced by the global --profile),
-// "common" effectively means just the source selector.
+// dropping --user/--host/--kubeconfig (replaced by the currently-selected
+// profile), "common" effectively means just the source selector.
 func (o *MarketOptions) addCommonFlags(cmd *cobra.Command) {
 	o.addSourceFlag(cmd, "")
 }

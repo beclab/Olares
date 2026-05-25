@@ -29,6 +29,7 @@ var (
 	LOG_FILE               = "install.log"
 	TERMINUS_BASE_DIR      = ""
 	MOUNT_BASE_DIR         = path.Join(OS_ROOT_DIR, "share")
+	MOUNT_RECORDS_FILE     = "/etc/mounttab"
 	PREPARE_LOCK           = ".prepared"
 	REDIS_CONF             = OS_ROOT_DIR + "/data/redis/etc/redis.conf"
 	EXPORT_POD_LOGS_DIR    = "Home/pod_logs"

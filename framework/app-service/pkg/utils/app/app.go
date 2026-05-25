@@ -16,17 +16,18 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	"github.com/go-viper/mapstructure/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
+	"github.com/beclab/Olares/framework/oac"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-resty/resty/v2"
@@ -47,7 +48,6 @@ import (
 )
 
 const expectedTokenItems = 2
-const AppCfgFileName = "OlaresManifest.yaml"
 
 var (
 	ErrInvalidAction     = errors.New("invalid action")
@@ -374,6 +374,43 @@ func FmtAppMgrName(app, owner, ns string) (string, error) {
 	return fmt.Sprintf("%s-%s", namespace, app), nil
 }
 
+// V3AppNamespace returns the deterministic namespace used for a v3 /
+// shared app. Single source of truth so install handlers, lookups and the
+// proxy all agree on the same value.
+func V3AppNamespace(app string) string {
+	return fmt.Sprintf("%s-shared", app)
+}
+
+// V3AppMgrName returns the deterministic ApplicationManager name for a
+// v3  app: '{app}-shared-{app}', following the same '{ns}-{app}' rule
+// FmtAppMgrName uses for v1/v2.
+func V3AppMgrName(app string) string {
+	return fmt.Sprintf("%s-%s", V3AppNamespace(app), app)
+}
+
+// ResolveAppMgrName returns the ApplicationManager name for the given app:
+//   - if a v3 AM exists at SharedAppMgrName(app), return that name
+//     and isShared=true.
+//   - otherwise fall back to FmtAppMgrName(app, owner, "") and isV3=false.
+//
+// Lifecycle handlers should call this first so any admin can target a shared
+// app regardless of who originally installed it. Install does NOT need this
+// helper — install creates the AM, it doesn't look it up.
+func ResolveAppMgrName(ctx context.Context, app, owner string) (name string, isV3 bool, err error) {
+	versioned, err := utils.GetClient()
+	if err != nil {
+		return "", false, err
+	}
+	v3Name := V3AppMgrName(app)
+	if _, getErr := versioned.AppV1alpha1().ApplicationManagers().Get(ctx, v3Name, metav1.GetOptions{}); getErr == nil {
+		return v3Name, true, nil
+	} else if !apierrors.IsNotFound(getErr) {
+		return "", false, getErr
+	}
+	name, err = FmtAppMgrName(app, owner, "")
+	return name, false, err
+}
+
 // TryConnect try to connect to a service with specified host and port.
 func TryConnect(host string, port string) bool {
 	timeout := time.Second
@@ -421,8 +458,8 @@ func GetPendingOrRunningTask(ctx context.Context) (ams []v1alpha1.ApplicationMan
 }
 
 // UpdateStatus update application state and applicationmanager state.
-func UpdateStatus(appMgr *v1alpha1.ApplicationManager, state v1alpha1.ApplicationManagerState,
-	opRecord *v1alpha1.OpRecord, message string) error {
+func UpdateStatus(appMgr *appcfg.ApplicationManager, state appcfg.ApplicationManagerState,
+	opRecord *appcfg.OpRecord, message string) error {
 	client, _ := utils.GetClient()
 	var err error
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
@@ -479,7 +516,7 @@ func IsForbidNamespace(namespace string) bool {
 // ACLProto If the ACL proto field is empty, it allows ICMPv4, ICMPv6, TCP, and UDP as per Tailscale behaviour
 var ACLProto = sets.NewString("", "igmp", "ipv4", "ip-in-ip", "tcp", "egp", "igp", "udp", "gre", "esp", "ah", "sctp", "icmp")
 
-func CheckTailScaleACLs(acls []v1alpha1.ACL) error {
+func CheckTailScaleACLs(acls []appcfg.ACL) error {
 	if len(acls) == 0 {
 		return nil
 	}
@@ -714,6 +751,11 @@ type ConfigOptions struct {
 	IsAdmin      bool
 	RawAppName   string
 	SelectedGpu  string
+	// NeedDownloadChart controls whether GetIndexAndDownloadChart should be
+	// invoked to fetch the chart from the repo. When false (the default), the
+	// download step is skipped and the chart is assumed to be already present
+	// at the conventional local path (appcfg.ChartsPath + "/" + RawAppName).
+	NeedDownloadChart bool
 }
 
 // GetAppConfig get app installation configuration from app store
@@ -740,6 +782,8 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	var namespace string
 	if appcfg.Namespace != "" {
 		namespace, _ = utils.AppNamespace(options.App, options.Owner, appcfg.Namespace)
+	} else if appcfg.APIVersion == "v3" {
+		namespace = V3AppNamespace(options.App)
 	} else {
 		namespace = fmt.Sprintf("%s-%s", options.App, options.Owner)
 	}
@@ -751,16 +795,39 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	}
 
 	appcfg.Namespace = namespace
-	appcfg.OwnerName = options.Owner
+	// v3 apps are cluster-shared and admin-managed: any admin may
+	// install / upgrade / suspend / uninstall the single cluster-wide
+	// instance, so the install caller is not a stable identity. Persist
+	// the cluster owner here so allocation rows, HAMI binding labels,
+	// pod owner labels and every downstream user-scoped API call
+	// (kubesphere user CR, user-system / user-space namespaces,
+	// X-Bfl-User header, helm bfl.username) all key off the same real
+	// user regardless of which admin operates the app.
+	if appcfg.IsV3() {
+		clusterOwner, err := kubesphere.GetClusterOwner(ctx)
+		if err != nil {
+			return nil, chartPath, err
+		}
+		appcfg.OwnerName = clusterOwner
+	} else {
+		appcfg.OwnerName = options.Owner
+	}
 	appcfg.RepoURL = options.RepoURL
 	return appcfg, chartPath, nil
 }
 
 func getAppConfigFromRepo(ctx context.Context, options *ConfigOptions) (*appcfg.ApplicationConfig, string, error) {
-	chartPath, err := GetIndexAndDownloadChart(ctx, options)
-	if err != nil {
-		klog.Errorf("failed to get index and download chart app: %s, rawAppName: %s, %v", options.App, options.RawAppName, err)
-		return nil, chartPath, err
+	var chartPath string
+	if options.NeedDownloadChart {
+		var err error
+		chartPath, err = GetIndexAndDownloadChart(ctx, options)
+		if err != nil {
+			klog.Errorf("failed to get index and download chart app: %s, rawAppName: %s, %v", options.App, options.RawAppName, err)
+			return nil, chartPath, err
+		}
+	} else {
+		chartPath = appcfg.ChartsPath + "/" + options.RawAppName
+		klog.Infof("skip GetIndexAndDownloadChart for app=%s rawAppName=%s, using local chartPath=%s", options.App, options.RawAppName, chartPath)
 	}
 	return getAppConfigFromConfigurationFile(options, chartPath)
 }
@@ -770,16 +837,140 @@ func GetAppConfigVersion(ctx context.Context, options *ConfigOptions) (appcfg.AP
 	if err != nil {
 		return "", err
 	}
-	raw, err := os.ReadFile(filepath.Join(chartPath, AppCfgFileName))
+	raw, err := os.ReadFile(filepath.Join(chartPath, oac.ManifestFileName))
 	if err != nil {
 		return "", err
 	}
-
-	apiVersion := GetTopLevelValue(raw, "apiVersion")
-	if apiVersion == "" {
-		apiVersion = "v1"
+	versions, err := oac.PeekManifestVersions(raw)
+	if err != nil {
+		return "", err
 	}
-	return appcfg.APIVersion(apiVersion), nil
+	return appcfg.APIVersion(versions.APIVersion), nil
+}
+
+// parseLegacyAppRequirement parses the scalar spec.required* fields of a
+// manifest into an AppRequirement. For legacy manifests (< 0.12.0) it also
+// applies any supportedGpu special-resource overrides for the selected GPU
+// type so the returned AppRequirement reflects the effective scalar values.
+//
+// New-format manifests (>= 0.12.0) do not use spec.required* / supportedGpu;
+// for them the returned value is just a best-effort scalar fallback that
+// ResolveRequirement will replace with the resource-mode-based result.
+func parseLegacyAppRequirement(cfg *appcfg.AppConfiguration, selectedGpu string) (appcfg.AppRequirement, error) {
+	parseQty := func(s string) (*resource.Quantity, error) {
+		if s == "" {
+			return nil, nil
+		}
+		q, err := resource.ParseQuantity(s)
+		if err != nil {
+			if errors.Is(err, resource.ErrFormatWrong) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		return &q, nil
+	}
+
+	mem, err := parseQty(cfg.Spec.RequiredMemory)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	disk, err := parseQty(cfg.Spec.RequiredDisk)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	cpu, err := parseQty(cfg.Spec.RequiredCPU)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	gpu, err := parseQty(cfg.Spec.RequiredGPU)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	limMem, err := parseQty(cfg.Spec.LimitedMemory)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	limDisk, err := parseQty(cfg.Spec.LimitedDisk)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	limCPU, err := parseQty(cfg.Spec.LimitedCPU)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+	limGPU, err := parseQty(cfg.Spec.LimitedGPU)
+	if err != nil {
+		return appcfg.AppRequirement{}, err
+	}
+
+	if !oac.IsNewOlaresManifestVersion(cfg.ConfigVersion) {
+		// Default supportedGpu list when the manifest leaves it empty.
+		if len(cfg.Spec.SupportedGpu) == 0 {
+			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType, utils.StrixHaloChipType, utils.CPUType, utils.MthreadsM100ChipType, utils.AppleMChipType}
+		}
+
+		if selectedGpu != "" && gpu != nil && !gpu.IsZero() {
+			found := false
+			for _, supportedGpu := range cfg.Spec.SupportedGpu {
+				if str, ok := supportedGpu.(string); ok && str == selectedGpu {
+					found = true
+					break
+				}
+				supportedGpuMap, ok := supportedGpu.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				rr, ok := supportedGpuMap[selectedGpu].(map[string]interface{})
+				if !ok {
+					continue
+				}
+				found = true
+
+				var sr appcfg.SpecialResource
+				if err := mapstructure.Decode(rr, &sr); err != nil {
+					return appcfg.AppRequirement{}, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", selectedGpu, err)
+				}
+				for _, setter := range []struct {
+					dst **resource.Quantity
+					src *string
+				}{
+					{dst: &mem, src: sr.RequiredMemory},
+					{dst: &disk, src: sr.RequiredDisk},
+					{dst: &cpu, src: sr.RequiredCPU},
+					{dst: &gpu, src: sr.RequiredGPU},
+					{dst: &limMem, src: sr.LimitedMemory},
+					{dst: &limDisk, src: sr.LimitedDisk},
+					{dst: &limCPU, src: sr.LimitedCPU},
+					{dst: &limGPU, src: sr.LimitedGPU},
+				} {
+					if setter.src == nil || *setter.src == "" {
+						continue
+					}
+					q, err := parseQty(*setter.src)
+					if err != nil {
+						return appcfg.AppRequirement{}, fmt.Errorf("failed to parse special resource quantity %s: %v", *setter.src, err)
+					}
+					*setter.dst = q
+				}
+				break
+			}
+			if !found {
+				return appcfg.AppRequirement{}, fmt.Errorf("selected GPU type %s is not supported", selectedGpu)
+			}
+		}
+	}
+
+	return appcfg.AppRequirement{
+		Memory:        mem,
+		CPU:           cpu,
+		Disk:          disk,
+		GPU:           gpu,
+		LimitedMemory: limMem,
+		LimitedCPU:    limCPU,
+		LimitedDisk:   limDisk,
+		LimitedGPU:    limGPU,
+	}, nil
 }
 
 func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfiguration) (*appcfg.ApplicationConfig, string, error) {
@@ -802,85 +993,9 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		permission = append(permission, perm)
 	}
 
-	valuePtr := func(v resource.Quantity, err error) (*resource.Quantity, error) {
-		if errors.Is(err, resource.ErrFormatWrong) {
-			return nil, nil
-		}
-
-		return &v, nil
-	}
-
-	mem, err := valuePtr(resource.ParseQuantity(cfg.Spec.RequiredMemory))
+	legacyReq, err := parseLegacyAppRequirement(cfg, opt.SelectedGpu)
 	if err != nil {
 		return nil, chart, err
-	}
-
-	disk, err := valuePtr(resource.ParseQuantity(cfg.Spec.RequiredDisk))
-	if err != nil {
-		return nil, chart, err
-	}
-
-	cpu, err := valuePtr(resource.ParseQuantity(cfg.Spec.RequiredCPU))
-	if err != nil {
-		return nil, chart, err
-	}
-
-	gpu, err := valuePtr(resource.ParseQuantity(cfg.Spec.RequiredGPU))
-	if err != nil {
-		return nil, chart, err
-	}
-
-	if !config.IsNewManifestVersion(cfg.ConfigVersion) {
-		// set suppertedGpu to ["nvidia","nvidia-gb10"] by default
-		if len(cfg.Spec.SupportedGpu) == 0 {
-			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType}
-		}
-
-		// try to get selected GPU type special resource requirement
-		if opt.SelectedGpu != "" {
-			found := false
-			for _, supportedGpu := range cfg.Spec.SupportedGpu {
-				if str, ok := supportedGpu.(string); ok && str == opt.SelectedGpu {
-					found = true
-					break
-				}
-
-				if supportedGpuResourceMap, ok := supportedGpu.(map[string]interface{}); ok {
-					if resourceRequirement, ok := supportedGpuResourceMap[opt.SelectedGpu].(map[string]interface{}); ok {
-						found = true
-						var specialResource appcfg.SpecialResource
-						err := mapstructure.Decode(resourceRequirement, &specialResource)
-						if err != nil {
-							return nil, chart, fmt.Errorf("failed to decode special resource for selected GPU type %s: %v", opt.SelectedGpu, err)
-						}
-
-						for _, resSetter := range []struct {
-							v **resource.Quantity
-							s *string
-						}{
-							{v: &mem, s: specialResource.RequiredMemory},
-							{v: &disk, s: specialResource.RequiredDisk},
-							{v: &cpu, s: specialResource.RequiredCPU},
-							{v: &gpu, s: specialResource.RequiredGPU},
-						} {
-
-							if resSetter.s != nil && *resSetter.s != "" {
-								*resSetter.v, err = valuePtr(resource.ParseQuantity(*resSetter.s))
-								if err != nil {
-									return nil, chart, fmt.Errorf("failed to parse special resource quantity %s: %v", *resSetter.s, err)
-								}
-							}
-						}
-
-						break
-					} // end if selected gpu's resource requirement found
-				} // end if supportedGpu is map
-			} // end for supportedGpu
-
-			if !found {
-				return nil, chart, fmt.Errorf("selected GPU type %s is not supported", opt.SelectedGpu)
-			}
-		}
 	}
 
 	// transform from Policy to AppPolicy
@@ -923,97 +1038,88 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		podSelectors = append(podSelectors, p.PodSelectors...)
 	}
 
-	return &appcfg.ApplicationConfig{
-		AppID:          appid,
-		APIVersion:     appcfg.APIVersion(cfg.APIVersion),
-		CfgFileVersion: cfg.ConfigVersion,
-		AppName:        opt.App,
-		RawAppName:     opt.RawAppName,
-		Title:          cfg.Metadata.Title,
-		Version:        cfg.Metadata.Version,
-		Target:         cfg.Metadata.Target,
-		ChartsName:     chart,
-		Entrances:      cfg.Entrances,
-		Ports:          cfg.Ports,
-		TailScale:      cfg.TailScale,
-		Icon:           cfg.Metadata.Icon,
-		Permission:     permission,
-		Requirement: appcfg.AppRequirement{
-			Memory: mem,
-			CPU:    cpu,
-			Disk:   disk,
-			GPU:    gpu,
-		},
-		Policies:             policies,
-		Middleware:           cfg.Middleware,
-		ResetCookieEnabled:   cfg.Options.ResetCookie.Enabled,
-		Dependencies:         cfg.Options.Dependencies,
-		Conflicts:            cfg.Options.Conflicts,
-		AppScope:             cfg.Options.AppScope,
-		WsConfig:             cfg.Options.WsConfig,
-		Upload:               cfg.Options.Upload,
-		OnlyAdmin:            cfg.Spec.OnlyAdmin,
-		Namespace:            cfg.Spec.Namespace,
-		MobileSupported:      cfg.Options.MobileSupported,
-		OIDC:                 cfg.Options.OIDC,
-		ApiTimeout:           cfg.Options.ApiTimeout,
-		RunAsUser:            cfg.Spec.RunAsUser,
-		AllowedOutboundPorts: cfg.Options.AllowedOutboundPorts,
-		RequiredGPU:          cfg.Spec.RequiredGPU,
-		PodGPUConsumePolicy:  cfg.Spec.PodGPUConsumePolicy,
-		Internal:             cfg.Spec.RunAsInternal,
-		SubCharts:            cfg.Spec.SubCharts,
-		ServiceAccountName:   cfg.Permission.ServiceAccount,
-		Provider:             cfg.Provider,
-		Type:                 cfg.ConfigType,
-		Envs:                 cfg.Envs,
-		Images:               cfg.Options.Images,
-		AllowMultipleInstall: cfg.Options.AllowMultipleInstall,
-		PodsSelectors:        podSelectors,
-		HardwareRequirement:  cfg.Spec.Hardware,
-		SharedEntrances:      cfg.SharedEntrances,
-		SelectedGpuType:      opt.SelectedGpu,
-		Resources:            cfg.Spec.Resources,
-		Client:               cfg.Client,
-		ClientAndServer:      cfg.ClientAndServer,
-	}, chart, nil
-}
-
-func getAppConfigFromConfigurationFile(opt *ConfigOptions, chartPath string) (*appcfg.ApplicationConfig, string, error) {
-	raw, err := os.ReadFile(filepath.Join(chartPath, AppCfgFileName))
-	if err != nil {
-		return nil, chartPath, err
+	appConfig := &appcfg.ApplicationConfig{
+		AppID:                   appid,
+		APIVersion:              appcfg.APIVersion(cfg.APIVersion),
+		CfgFileVersion:          cfg.ConfigVersion,
+		AppName:                 opt.App,
+		RawAppName:              opt.RawAppName,
+		Title:                   cfg.Metadata.Title,
+		Version:                 cfg.Metadata.Version,
+		Target:                  cfg.Metadata.Target,
+		ChartsName:              chart,
+		Entrances:               cfg.Entrances,
+		Ports:                   cfg.Ports,
+		TailScale:               cfg.TailScale,
+		Icon:                    cfg.Metadata.Icon,
+		Permission:              permission,
+		Requirement:             legacyReq,
+		Policies:                policies,
+		Middleware:              cfg.Middleware,
+		ResetCookieEnabled:      cfg.Options.ResetCookie.Enabled,
+		Dependencies:            cfg.Options.Dependencies,
+		Conflicts:               cfg.Options.Conflicts,
+		AppScope:                cfg.Options.AppScope,
+		WsConfig:                cfg.Options.WsConfig,
+		Upload:                  cfg.Options.Upload,
+		OnlyAdmin:               cfg.Spec.OnlyAdmin,
+		Namespace:               cfg.Spec.Namespace,
+		MobileSupported:         cfg.Options.MobileSupported,
+		OIDC:                    cfg.Options.OIDC,
+		ApiTimeout:              cfg.Options.ApiTimeout,
+		RunAsUser:               cfg.Spec.RunAsUser,
+		AllowedOutboundPorts:    cfg.Options.AllowedOutboundPorts,
+		RequiredGPU:             cfg.Spec.RequiredGPU,
+		PodGPUConsumePolicy:     cfg.Spec.PodGPUConsumePolicy,
+		Internal:                cfg.Spec.RunAsInternal,
+		SubCharts:               cfg.Spec.SubCharts,
+		ServiceAccountName:      cfg.Permission.ServiceAccount,
+		Provider:                cfg.Provider,
+		Type:                    cfg.ConfigType,
+		Envs:                    cfg.Envs,
+		Images:                  cfg.Options.Images,
+		AllowMultipleInstall:    cfg.Options.AllowMultipleInstall,
+		PodsSelectors:           podSelectors,
+		HardwareRequirement:     cfg.Spec.Hardware,
+		SharedEntrances:         cfg.SharedEntrances,
+		SelectedGpuType:         opt.SelectedGpu,
+		Resources:               cfg.Spec.AcceleratedResources,
+		NeedsSharedAccess:       cfg.Options.NeedsSharedAccess,
+		OverlayGatewaySupported: cfg.Options.OverlayGatewaySupported,
+		LLMGatewaySupported:     cfg.Options.LLMGatewaySupported,
 	}
 
-	configVersion := GetTopLevelValue(raw, "olaresManifest.version")
-	if config.IsNewManifestVersion(configVersion) {
-		return parseNewManifest(opt, chartPath, raw)
+	// v3 / shared apps are themselves the destination of cross-namespace
+	// shared traffic and need the same downstream treatment (mesh sidecar,
+	// NetworkPolicy, etc.) as v1/v2 apps that opt in. Force the flag true
+	// for v3 regardless of manifest value so v3 authors don't have to
+	// remember to set it.
+	if appConfig.IsV3() {
+		appConfig.NeedsSharedAccess = true
 	}
 
-	data, err := utils.RenderManifest(filepath.Join(chartPath, AppCfgFileName), opt.Owner, opt.Admin, opt.IsAdmin)
-	if err != nil {
-		return nil, chartPath, err
-	}
-	var cfg appcfg.AppConfiguration
-	if err := yaml.Unmarshal([]byte(data), &cfg); err != nil {
-		return nil, chartPath, err
-	}
-
-	return toApplicationConfig(opt, chartPath, &cfg)
-}
-
-func parseNewManifest(opt *ConfigOptions, chartPath string, raw []byte) (*appcfg.ApplicationConfig, string, error) {
-	var cfg appcfg.AppConfiguration
-	if err := yaml.Unmarshal(raw, &cfg); err != nil {
-		return nil, chartPath, fmt.Errorf("failed to unmarshal new manifest: %w", err)
-	}
-
-	appConfig, chart, err := toApplicationConfig(opt, chartPath, &cfg)
+	// Resolve the effective requirement once based on manifest version +
+	// selected GPU, so all downstream consumers see a single resolved value
+	// in appConfig.Requirement regardless of the underlying manifest format.
+	resolved, err := appConfig.ResolveRequirement(opt.SelectedGpu)
 	if err != nil {
 		return nil, chart, err
 	}
+	appConfig.Requirement = *resolved
 
 	return appConfig, chart, nil
+}
+
+func getAppConfigFromConfigurationFile(opt *ConfigOptions, chartPath string) (*appcfg.ApplicationConfig, string, error) {
+	cfg, err := oac.LoadAppConfiguration(
+		chartPath,
+		oac.WithOwner(opt.Owner),
+		oac.WithAdmin(opt.Admin),
+	)
+	if err != nil {
+		return nil, chartPath, err
+	}
+	return toApplicationConfig(opt, chartPath, cfg)
 }
 
 func checkVersionFormat(constraint string) error {
@@ -1347,21 +1453,4 @@ func BuildPrevPortsMap(prevConfig *appcfg.ApplicationConfig) map[string]int32 {
 		}
 	}
 	return m
-}
-
-func GetTopLevelValue(content []byte, key string) string {
-	lines := strings.Split(string(content), "\n")
-	prefix := key + ":"
-
-	for _, line := range lines {
-		if len(line) == 0 || line[0] == ' ' || line[0] == '\t' || line[0] == '#' {
-			continue
-		}
-		if strings.HasPrefix(line, prefix) {
-			value := strings.TrimSpace(line[len(prefix):])
-			value = strings.Trim(value, `'"`)
-			return value
-		}
-	}
-	return ""
 }

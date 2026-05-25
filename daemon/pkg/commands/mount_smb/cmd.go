@@ -3,6 +3,8 @@ package mountsmb
 import (
 	"context"
 	"errors"
+	"path/filepath"
+	"strings"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -33,6 +35,22 @@ func (i *mountSmb) Execute(ctx context.Context, p any) (res any, err error) {
 	err = utils.MountSambaDriver(ctx, param.MountBaseDir, param.SmbPath, param.User, param.Password)
 	if err != nil {
 		klog.Error("mount samba driver error, ", err)
+		return
+	}
+
+	smbPath := strings.TrimRight(param.SmbPath, "/")
+	pathToken := strings.Split(strings.TrimLeft(smbPath, "//"), "/")
+	sharePath := pathToken[len(pathToken)-1]
+	mountPoint := filepath.Join(param.MountBaseDir, sharePath)
+
+	if saveErr := utils.AddMountRecord(commands.MOUNT_RECORDS_FILE, utils.MountRecord{
+		Type:       utils.SMB,
+		MountPoint: mountPoint,
+		SmbPath:    param.SmbPath,
+		User:       param.User,
+		Password:   param.Password,
+	}); saveErr != nil {
+		klog.Warning("save mount record error, ", saveErr)
 	}
 
 	return

@@ -17,7 +17,7 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
 If you want to set up a multi-node Olares cluster using two Olares One devices, see [Connect two Olares One](/one/connect-two-olares-one.md).
 :::
 
-## Objectives
+## Learning objectives
 
 In this tutorial, you will learn how to:
 
@@ -45,7 +45,7 @@ If you have already installed an Olares cluster using the default installation c
 To set up the master node with the JuiceFS support, run the following command:
 
 ```bash
-export JUICEFS = 1 \
+export JUICEFS=1 \
 && curl -sSfL https://olares.sh | bash -
 ```
 
@@ -56,6 +56,10 @@ If you already have your own MinIO cluster or an S3 (or S3-compatible) bucket, y
 :::
 
 ## Step 2: Add a worker node to the cluster
+
+::: tip Worker node prerequisites
+The worker node must be in a clean Linux state, with no Olares installed. If Olares was previously installed on the worker, run `olares-cli uninstall --all` first to wipe the device back to a clean Linux state.
+:::
 
 1. On the worker node, download `joincluster.sh` using:
 

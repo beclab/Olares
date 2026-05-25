@@ -27,7 +27,7 @@ import { useRoute } from 'vue-router';
 import { onMounted, ref, watch, computed } from 'vue';
 import MyLoading from '@apps/control-hub/src/components/MyLoading.vue';
 import { get, isEmpty, isNil } from 'lodash';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import Empty from '@apps/control-panel-common/src/components/Empty.vue';
 import MyChipList from '@apps/control-panel-common/src/containers/MyChipList.vue';
 import {

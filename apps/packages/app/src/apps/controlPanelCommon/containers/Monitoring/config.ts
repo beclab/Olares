@@ -84,7 +84,7 @@ interface MonitoringParams {
 	resources?: string[];
 	metrics?: string[];
 	last?: boolean;
-	[key: string]: any; // 用于支持 rest 参数
+	[key: string]: any; // Support additional rest parameters
 }
 
 interface ProcessedParams {

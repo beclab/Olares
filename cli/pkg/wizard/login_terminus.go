@@ -47,7 +47,7 @@ func LoginTerminus(bflUrl, terminusName, localName, password string, needTwoFact
 	req := auth.LoginRequest{
 		AuthURL:       bflUrl,
 		LocalName:     localName,
-		TerminusName:  terminusName,
+		OlaresID:      terminusName,
 		Password:      password,
 		NeedTwoFactor: needTwoFactor,
 		AcceptCookie:  true,

@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
@@ -22,6 +22,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/registry"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	wfv1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	appcfg_mod "github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -301,13 +302,24 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		return resp
 	}
 
-	gpuRequired := appcfg.Requirement.GPU
-	if gpuRequired == nil {
+	computeReq, ok := compute.SelectedRequirement(appcfg)
+	if !ok {
+		return resp
+	}
+	GPUType := computeReq.Mode
+
+	// no gpu found, no need to inject env, just return.
+	if GPUType == "" || GPUType == utils.CPUType {
 		return resp
 	}
 
 	var injectContainer []string
 	injectAll := false
+	// TODO: when a pod has only a single container, we can drop the
+	// applicationGpuInjectKey opt-in and derive injection purely from
+	// spec.resources. The annotation exists today to keep multi-container pods
+	// from getting GPU resource limits attached to every container (which would
+	// make the scheduler think each container needs its own GPU).
 	if injectValue, ok := annotations[applicationGpuInjectKey]; !ok || injectValue == "false" || injectValue == "" {
 		return resp
 	} else {
@@ -324,13 +336,6 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		}
 	}
 
-	GPUType := appcfg.GetSelectedGpuTypeValue()
-
-	// no gpu found, no need to inject env, just return.
-	if GPUType == "none" || GPUType == "" {
-		return resp
-	}
-
 	envs := []webhook.EnvKeyValue{
 		{
 			Key:   constants.EnvGPUType,
@@ -338,19 +343,42 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		},
 	}
 
-	gpuRequiredValue := gpuRequired.Value() / 1024 / 1024 // HAMi gpu memory format
-	hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
+	var hamiGpuMemory *string
+	if compute.IsHAMIMode(GPUType) && computeReq.RequiredGPU > 0 {
+		gpuRequiredValue := computeReq.RequiredGPU / 1024 / 1024 // HAMi gpu memory format
+		hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
+		hamiGpuMemory = ptr.To(hamiFormatGpuRequired.String())
+	}
 	patchBytes, err := webhook.CreatePatchForDeployment(
 		tpl,
 		injectAll,
 		injectContainer,
 		h.getGPUResourceTypeKey(GPUType),
-		ptr.To(hamiFormatGpuRequired.String()),
+		hamiGpuMemory,
 		envs,
 	)
 	if err != nil {
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	if !compute.IsHAMIMode(GPUType) && GPUType != utils.CPUType {
+		allocations, err := compute.FindAllocationsForApp(ctx, h.ctrlClient, appName, appcfg.OwnerName)
+		if err != nil {
+			klog.Errorf("find compute allocation for app %s failed %v", appName, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if len(allocations) == 0 || allocations[0].NodeName == "" {
+			klog.Warningf("compute allocation for app %s is not found", appName)
+			return resp
+			// err := fmt.Errorf("compute allocation for app %s is not found", appName)
+			// klog.Error(err)
+			// return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		patchBytes, err = appendNodeSelectorPatch(patchBytes, tpl, allocations[0].NodeName)
+		if err != nil {
+			klog.Errorf("append node selector patch error %v", err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
 	}
 	klog.Info("patchBytes:", string(patchBytes))
 	if len(patchBytes) > 0 {
@@ -366,20 +394,41 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 		return constants.NvidiaGPU
 	case utils.GB10ChipType:
 		return constants.NvidiaGPU
-	case utils.AmdApuCardType:
-		return constants.AMDGPU
-	case utils.AmdGpuCardType:
-		return constants.AMDGPU
-	case utils.StrixHaloChipType:
-		return constants.AMDGPU
-	case utils.MthreadsM100ChipType:
-		return ""
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")
 		return ""
 	default:
 		return ""
 	}
+}
+
+func appendNodeSelectorPatch(patchBytes []byte, tpl *corev1.PodTemplateSpec, nodeName string) ([]byte, error) {
+	var patches []map[string]any
+	if len(patchBytes) > 0 {
+		if err := json.Unmarshal(patchBytes, &patches); err != nil {
+			return nil, err
+		}
+	}
+	if len(tpl.Spec.NodeSelector) == 0 {
+		patches = append(patches, map[string]any{
+			"op":   constants.PatchOpAdd,
+			"path": "/spec/template/spec/nodeSelector",
+			"value": map[string]string{
+				"kubernetes.io/hostname": nodeName,
+			},
+		})
+	} else {
+		op := constants.PatchOpAdd
+		if _, ok := tpl.Spec.NodeSelector["kubernetes.io/hostname"]; ok {
+			op = constants.PatchOpReplace
+		}
+		patches = append(patches, map[string]any{
+			"op":    op,
+			"path":  "/spec/template/spec/nodeSelector/kubernetes.io~1hostname",
+			"value": nodeName,
+		})
+	}
+	return json.Marshal(patches)
 }
 
 func (h *Handler) providerRegistryValidate(req *restful.Request, resp *restful.Response) {
@@ -841,9 +890,19 @@ func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationCo
 	var patchBytes []byte
 	var tpl *corev1.PodTemplateSpec
 	var gpuPolicy string
-	if strings.TrimSpace(appCfg.RequiredGPU) != "" {
-		if p := strings.TrimSpace(appCfg.PodGPUConsumePolicy); p == "all" || p == "single" {
+	computeReq, ok := compute.SelectedRequirement(appCfg)
+	requiresGPU := ok && computeReq.Mode != utils.CPUType
+	if requiresGPU {
+		switch p := strings.TrimSpace(appCfg.PodGPUConsumePolicy); p {
+		case "all", "single":
 			gpuPolicy = p
+		case "":
+			if computeReq.SupportMultiNodes {
+				// Multi-node deployments should let each replica consume one binding.
+				gpuPolicy = "single"
+			} else if computeReq.SupportMultiCards {
+				gpuPolicy = "all"
+			}
 		}
 	}
 
@@ -978,7 +1037,7 @@ func (h *Handler) validateUser(ctx context.Context, req *admissionv1.AdmissionRe
 	if len(user.Spec.InitialPassword) < 8 {
 		resp.Allowed = false
 		resp.Result = &metav1.Status{
-			Message: fmt.Sprintf("invalid initial password lenth must greater than 8 char"),
+			Message: "invalid initial password lenth must greater than 8 char",
 		}
 		return resp
 	}

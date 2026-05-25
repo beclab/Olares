@@ -10,7 +10,7 @@
 				height: size
 			}"
 		>
-			<img :src="spinnerLoaders" class="full-width" alt="loading" />
+			<img :src="icon" class="full-width" alt="loading" />
 		</div>
 		<div v-if="desc" class="text-center">{{ desc }}</div>
 	</div>
@@ -18,16 +18,24 @@
 
 <script setup lang="ts">
 import spinnerLoaders from 'src/assets/common/spinner-loaders.svg';
+import spinnerLoaders2 from 'src/assets/plugin/spinner-loading.svg';
+import { computed } from 'vue';
 
 interface Props {
 	desc?: string;
 	size?: string;
 	showing?: boolean;
+	type?: 'default' | 'overlay';
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
 	size: '20px',
-	showing: true
+	showing: true,
+	type: 'default'
+});
+
+const icon = computed(() => {
+	return props.type === 'overlay' ? spinnerLoaders2 : spinnerLoaders;
 });
 </script>
 

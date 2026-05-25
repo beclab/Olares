@@ -80,9 +80,10 @@ import 'ace-builds/src-noconflict/ext-searchbox';
 import workerJsonUrl from 'file-loader?esModule=false!ace-builds/src-noconflict/worker-yaml.js';
 import { objectToYaml, yamlToObject } from './yaml';
 import { useRoute } from 'vue-router';
-import { Loading, Notify, useQuasar } from 'quasar';
+import { Loading } from 'quasar';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { ObjectMapper } from '@apps/control-hub/src/utils/object.mapper';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import { get, set } from 'lodash-es';
 import { saveAs } from 'file-saver';
 import Dialog from '@apps/control-panel-common/src/components/Dialog/Dialog.vue';
@@ -97,8 +98,6 @@ interface Props {
 }
 
 const emits = defineEmits(['change', 'show', 'hide']);
-
-const $q = useQuasar();
 
 const props = withDefaults(defineProps<Props>(), {
 	readonly: false
@@ -209,15 +208,15 @@ const update = async (
 			props.apiVersion,
 			newObject
 		);
-		$q.notify({
-			type: 'positive',
+		BtNotify.show({
+			type: NotifyDefinedType.SUCCESS,
 			message: t('CHANGED_SUCCESSFULLY')
 		});
 		yamlHide();
 		emits('change');
 	} catch (error) {
-		$q.notify({
-			type: 'negative',
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
 			message: JSON.stringify(error)
 		});
 	}

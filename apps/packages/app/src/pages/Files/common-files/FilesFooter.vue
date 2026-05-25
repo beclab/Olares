@@ -49,14 +49,16 @@ const totalFileCount = ref(0);
 watch(
 	() => filesStore.selected,
 	async (newVaule) => {
-		selectFileCount.value = newVaule.length;
+		// selectFileCount.value = newVaule[props.origin_id].length;
 		let totalSize = 0;
-		if (newVaule.length && newVaule.length > 0) {
-			for (let i = 0; i < newVaule.length; i++) {
-				const el = newVaule[i];
-
-				let filesSize: number =
-					filesStore.currentFileList[props.origin_id]?.items[el].size || 0;
+		if (newVaule[props.origin_id].length > 0) {
+			for (let i = 0; i < newVaule[props.origin_id].length; i++) {
+				const el = newVaule[props.origin_id][i];
+				const fileItem = filesStore.getTargetFileItem(el, props.origin_id);
+				if (!fileItem) {
+					continue;
+				}
+				let filesSize: number = fileItem.size || 0;
 				totalSize += filesSize;
 			}
 		}

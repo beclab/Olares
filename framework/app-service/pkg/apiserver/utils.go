@@ -4,23 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	v1alpha1client "github.com/beclab/Olares/framework/app-service/pkg/client/clientset/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/scheme"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
+	"github.com/beclab/Olares/framework/oac"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned/scheme"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -40,9 +39,16 @@ import (
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 )
 
+// getAppByName returns the Application matching {ParamAppName} for the
+// caller. Lookup order:
+//  1. legacy v1/v2 install owned by the caller (Spec.Owner == owner),
+//  2. cluster-wide v3 install of the same name.
+//
+// Callers performing write operations on a v3 / shared app MUST gate the
+// response themselves (admin-only) — getAppByName itself does NOT enforce
+// authorisation; it just returns the underlying Application.
 func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Application, error) {
 	appName := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute) // get owner from request token
@@ -61,14 +67,24 @@ func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Appli
 		return nil, err
 	}
 
-	for _, app := range applist.Items {
-		if app.Spec.Name == appName && app.Spec.Owner == owner {
-			return &app, nil
+	var v3App *v1alpha1.Application
+	for i := range applist.Items {
+		app := &applist.Items[i]
+		if app.Spec.Name != appName {
+			continue
+		}
+		if app.Spec.Owner == owner {
+			return app, nil
+		}
+		if appcfg.IsV3(app) {
+			v3App = app
 		}
 	}
-
+	if v3App != nil {
+		return v3App, nil
+	}
 	api.HandleNotFound(resp, req, fmt.Errorf("the application %s not found", appName))
-	return nil, err
+	return nil, fmt.Errorf("the application %s not found", appName)
 }
 
 // CheckDependencies check application dependencies, returns unsatisfied dependency.
@@ -413,19 +429,12 @@ func getWorkflowConfigFromRepo(ctx context.Context, options *apputils.ConfigOpti
 		return nil, err
 	}
 
-	f, err := os.Open(chartPath + "/" + apputils.AppCfgFileName)
+	cfg, err := oac.LoadAppConfiguration(
+		chartPath,
+		oac.WithOwner(options.Owner),
+		oac.WithAdmin(options.Admin),
+	)
 	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg appcfg.AppConfiguration
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 
@@ -437,7 +446,7 @@ func getWorkflowConfigFromRepo(ctx context.Context, options *apputils.ConfigOpti
 		RepoURL:      options.RepoURL,
 		Namespace:    namespace,
 		OwnerName:    options.Owner,
-		Cfg:          &cfg}, nil
+		Cfg:          cfg}, nil
 }
 
 func getMiddlewareConfigFromRepo(ctx context.Context, options *apputils.ConfigOptions) (*middlewareinstaller.MiddlewareConfig, error) {
@@ -446,19 +455,12 @@ func getMiddlewareConfigFromRepo(ctx context.Context, options *apputils.ConfigOp
 		return nil, err
 	}
 
-	f, err := os.Open(chartPath + "/OlaresManifest.yaml")
+	cfg, err := oac.LoadAppConfiguration(
+		chartPath,
+		oac.WithOwner(options.Owner),
+		oac.WithAdmin(options.Admin),
+	)
 	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg appcfg.AppConfiguration
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 
@@ -472,7 +474,7 @@ func getMiddlewareConfigFromRepo(ctx context.Context, options *apputils.ConfigOp
 		RepoURL:        options.RepoURL,
 		Namespace:      namespace,
 		OwnerName:      options.Owner,
-		Cfg:            &cfg}, nil
+		Cfg:            cfg}, nil
 }
 
 func CheckMiddlewareRequirement(ctx context.Context, kubeConfig *rest.Config, middleware *tapr.Middleware) (bool, error) {

@@ -13,6 +13,7 @@
 			fit
 			:offset="offset"
 			v-model="menuDisplay"
+			:max-height="maxHeight.length > 0 ? maxHeight : null"
 			v-if="!disable"
 		>
 			<q-list>
@@ -84,6 +85,11 @@ const props = defineProps({
 		type: Boolean,
 		required: false,
 		default: false
+	},
+	maxHeight: {
+		type: String,
+		default: '',
+		required: false
 	}
 });
 

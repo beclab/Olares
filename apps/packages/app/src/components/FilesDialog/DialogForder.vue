@@ -11,6 +11,9 @@
 		:cancel="t('cancel')"
 		:ok="t('confirm')"
 		size="large"
+		resizable
+		resizable-height="680px"
+		storage-key="folder-picker-dialog-size"
 		@onSubmit="submit"
 		@onSkip="createDir"
 	>
@@ -27,7 +30,7 @@
 				>
 				</bt-menu>
 			</div>
-			<div class="pick-content">
+			<div class="pick-content" :style="colResize.cssVarsStyle()">
 				<dialog-header :origin_id="origin_id" />
 				<dialog-listing
 					:origin_id="origin_id"
@@ -40,22 +43,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, PropType } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useQuasar } from 'quasar';
-import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
-
-import { DriveType } from '../../utils/interface/files';
-import { useFilesStore, PickType } from './../../stores/files';
-
 import DialogHeader from './DialogHeader.vue';
 import DialogListing from './DialogListing.vue';
-// import TerminusDialogFooter from './../../components/common/TerminusDialogFooter.vue';
 import NewDir from './../../components/files/prompts/NewDir.vue';
-import { formatFilePath } from '../../constant';
-import { filesIsV2 } from 'src/api';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { useFilesStore, PickType } from 'src/stores/files';
+import { ref, onMounted, provide, PropType } from 'vue';
+import { DriveType } from 'src/utils/interface/files';
+import { formatFilePath } from 'src/constant';
+import { useI18n } from 'vue-i18n';
+import { useQuasar } from 'quasar';
+import {
+	useColumnResize,
+	COL_RESIZE_KEY
+} from 'src/composables/useColumnResize';
 
-// const { dialogRef, onDialogCancel, onDialogOK } = useDialogPluginComponent();
+const colResize = useColumnResize();
+provide(COL_RESIZE_KEY, colResize);
 
 const props = defineProps({
 	origin_id: {
@@ -72,20 +76,10 @@ const props = defineProps({
 		type: Array as PropType<DriveType[]>,
 		required: false,
 		default: () => {
-			if (filesIsV2()) {
-				return [
-					DriveType.Drive,
-					// 0730 hide sync
-					// DriveType.Sync,
-					DriveType.External,
-					DriveType.Cache,
-					DriveType.Data
-				];
-			}
 			return [
 				DriveType.Drive,
-				DriveType.External,
 				DriveType.Sync,
+				DriveType.External,
 				DriveType.Cache,
 				DriveType.Data
 			];
@@ -198,11 +192,10 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .pick-folder {
 	width: 100%;
-	height: 376px;
-	max-width: 80vw;
+	height: 100%;
+	overflow: hidden;
 	border-radius: 8px;
 	padding: 0;
-	overflow: hidden;
 	border: 1px solid $separator;
 
 	.pick-menu {
@@ -215,17 +208,12 @@ onMounted(async () => {
 			width: 0px;
 		}
 	}
+
 	.pick-content {
 		height: 100%;
 		flex: 1;
-	}
-	.pick-content {
-		width: 100%;
-	}
-
-	.but-cancel {
-		border-radius: 8px;
-		border: 1px solid $btn-stroke;
+		min-width: 0;
+		overflow: hidden;
 	}
 }
 </style>

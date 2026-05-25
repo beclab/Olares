@@ -9,7 +9,7 @@ This guide explains how to install Olares on a Raspberry Pi.
 Currently, Olares on Raspberry Pi has certain limitations. We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 
@@ -37,10 +37,18 @@ Currently, Olares on Raspberry Pi has certain limitations. We recommend using it
 ## Install Olares
 Run the following command:
 
-<!--@include: ./reusables.md{4,37}-->
+<!--@include: ./reusables.md#install-script-command-->
+
+<!--@include: ./reusables.md#root-password-tip-->
+
+<!--@include: ./reusables.md#installation-error-tip-->
+
+<!--@include: ./reusables.md#prepare-wizard-heading-->
+
+<!--@include: ./reusables.md#prepare-wizard-details-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

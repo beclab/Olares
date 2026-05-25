@@ -62,4 +62,4 @@ If you prefer the terminal-based TUI:
 ## Learn more
 
 - [Download and run local AI models via Ollama](ollama.md)
-- [Set up Open WebUI with Ollama](openwebui-ollama.md)
+- [Set up Open WebUI](openwebui.md)

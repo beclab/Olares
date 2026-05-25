@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -43,7 +44,8 @@ func AmdGpuInstall() error {
 			&amdgpu.InstallAmdRocmModule{},
 		},
 	}
-	return p.Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return p.Start(context.Background())
 }
 
 func AmdGpuUninstall() error {
@@ -60,7 +62,8 @@ func AmdGpuUninstall() error {
 			&singleTaskModule{name: "AmdgpuUninstall", act: new(amdgpu.AmdgpuUninstallAction)},
 		},
 	}
-	return p.Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return p.Start(context.Background())
 }
 
 func AmdGpuStatus() error {

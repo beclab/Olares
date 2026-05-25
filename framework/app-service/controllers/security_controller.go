@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/go-logr/logr"
 	"github.com/thoas/go-funk"
@@ -246,6 +248,32 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 			ns.Labels[security.NamespaceOwnerLabel] = owner
 			updated = true
 		}
+	} else if v, ok := ns.Labels[constants.AppApiVersionLabel]; ok && v == constants.AppVersionV3 {
+		// V3 namespace fast path.
+		//
+		// The install handler explicitly stamps:
+		//   - applications.app.bytetrade.io/scope=shared
+		//   - bytetrade.io/ns-owner=<admin>
+		// so we MUST NOT fall through to the generic findOwnerOfNamespace
+		// branch below — that branch reverse-engineers ownership from
+		// deployment labels, and during the install boot-up window the
+		// deployment label patch may not have landed yet, which would
+		// then wipe the ns-owner label we just set and drop the namespace
+		// back into the "others-np" deny-all bucket on every reconcile.
+		//
+		// Belt-and-suspenders: if ns-owner is somehow missing (legacy
+		// installs, manual edits), reconstruct it from the
+		// ApplicationManager list using the deterministic
+		// SharedAppNamespace(app) ↔ AM mapping.
+		if _, exists := ns.Labels[security.NamespaceOwnerLabel]; !exists {
+			owner, err := kubesphere.GetClusterOwner(ctx)
+			if err != nil {
+				logger.Info("Failed to get cluster owner", "err", err)
+			} else {
+				ns.Labels[security.NamespaceOwnerLabel] = owner
+				updated = true
+			}
+		}
 	} else {
 		owner, internal, system, shared, isMiddleware, err := r.findOwnerOfNamespace(ctx, ns)
 		if err != nil {
@@ -439,6 +467,62 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 			npFix = func(np *netv1.NetworkPolicy) {
 				logger.Info("Update network policy", "name", networkPolicy.Name())
 			}
+		} else if scope, ok := ns.Labels[constants.AppApiVersionLabel]; ok && scope == constants.AppVersionV3 {
+			// V3 namespace.
+			//
+			// Emits exactly 4 NetworkPolicies into <app>-shared:
+			//   - app-np            (main, from NPAppSpace template; npFix
+			//                       below rewrites the owner placeholder for
+			//                       the user-internal peer AND drops the
+			//                       owner constraint on the user-space-bfl
+			//                       peer so ANY user's BFL can dial
+			//                       the shared app — shared apps are open to
+			//                       all users.)
+			//   - shared-np         (from NPSharedSpace; the template has no
+			//                       default Name, so we set it explicitly
+			//                       before handing it to Additional())
+			//   - system-provider-np (fixed name on the template)
+			//   - shared-entrance-np (fixed name on the template)
+			//
+			// Putting this branch ABOVE the generic ns-owner branch is
+			// intentional: V3 namespaces also carry ns-owner (so npFix has
+			// an admin to fill in), and without this priority they would
+			// otherwise be served by the v1/v2 app-np branch and miss the
+			// other three policies.
+			sharedSpace := security.NPSharedSpace.DeepCopy()
+			sharedSpace.Name = "shared-np"
+			networkPolicy = security.NetworkPolicies{
+				security.NPAppSpace.DeepCopy(),
+				sharedSpace,
+				security.NPSystemProvider.DeepCopy(),
+				security.NPSharedEntrance.DeepCopy(),
+			}
+			networkPolicy.SetName("app-np")
+			networkPolicy.SetNamespace(ns.Name)
+			npFix = func(np *netv1.NetworkPolicy) {
+				owner := ns.Labels[security.NamespaceOwnerLabel]
+				logger.Info("Update network policy", "name", networkPolicy.Name(), "owner", owner, "scope", scope)
+				for i := range np.Spec.Ingress[0].From {
+					sel := np.Spec.Ingress[0].From[i].NamespaceSelector
+					if sel == nil || sel.MatchLabels == nil {
+						continue
+					}
+					// The user-space-bfl peer would otherwise be pinned to
+					// the install-time admin via the NamespaceOwnerLabel
+					// placeholder. For v3 we want any user's BFL to reach
+					// the shared app, so drop the owner constraint here and
+					// keep only ns-type=user-space.
+					if t, ok := sel.MatchLabels[security.NamespaceTypeLabel]; ok && t == security.UserSpace {
+						delete(sel.MatchLabels, security.NamespaceOwnerLabel)
+						continue
+					}
+					// Other peers that still carry the owner placeholder
+					// (user-internal) get rewritten to the admin owner.
+					if _, ok := sel.MatchLabels[security.NamespaceOwnerLabel]; ok {
+						sel.MatchLabels[security.NamespaceOwnerLabel] = owner
+					}
+				}
+			}
 		} else if owner, ok := ns.Labels[security.NamespaceOwnerLabel]; ok && owner != "" {
 			// app namespace networkpolicy
 			networkPolicy = security.NetworkPolicies{security.NPAppSpace.DeepCopy()}
@@ -519,7 +603,7 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 					})
 
 					var appConfig appcfg.ApplicationConfig
-					if err := depAppMgr.GetAppConfig(&appConfig); err != nil {
+					if err := appcfg.GetAppConfig(depAppMgr, &appConfig); err != nil {
 						logger.Error(err, "Failed to get app config for shared app", "app", sharedRefAppName)
 						return
 					}
@@ -649,7 +733,7 @@ func (r *SecurityReconciler) findOwnerOfNamespace(ctx context.Context, ns *corev
 
 			if mgr != nil {
 				var cfg appcfg.ApplicationConfig
-				err = mgr.GetAppConfig(&cfg)
+				err = appcfg.GetAppConfig(mgr, &cfg)
 				if err != nil {
 					r.Logger.Error(err, "Failed to get app config for app", "app", appName)
 					return false, false, false, false, err
@@ -661,8 +745,7 @@ func (r *SecurityReconciler) findOwnerOfNamespace(ctx context.Context, ns *corev
 				system = cfg.AppScope.ClusterScoped && cfg.AppScope.SystemService
 				shared := false
 				for _, chart := range cfg.SubCharts {
-					chartName := utils.GetChartName(cfg.AppName, cfg.RawAppName, chart.Name)
-					if chart.Namespace(owner, chartName) == ns.Name {
+					if appcfg.ChartNamespace(&chart, owner) == ns.Name {
 						if cfg.APIVersion == appcfg.V2 {
 							if !chart.Shared {
 								// V2: if the namespace is not cluster scoped, it cannot be considered as system app
@@ -914,6 +997,32 @@ func (r *SecurityReconciler) getAppMgrByAppNameAndOwner(appName, owner string) (
 		}
 	}
 	return nil, nil
+}
+
+// findV3SharedAppOwner reconstructs the install-time admin owner of a v3 /
+// shared-app namespace from the cluster's ApplicationManager list. It is a
+// recovery path only — under normal flow the install handler stamps the
+// ns-owner label directly on the namespace and this helper is never called.
+//
+// Match rule: an AM is the owner of `nsName` iff it is itself flagged as a
+// shared app (AppScopeLabel=shared) AND its deterministic shared namespace
+// SharedAppNamespace(am.Spec.AppName) equals `nsName`. Returns "" (no error)
+// when no AM matches so the caller can treat it as a no-op.
+func (r *SecurityReconciler) findV3SharedAppOwner(ctx context.Context, nsName string) (string, error) {
+	var amList v1alpha1.ApplicationManagerList
+	if err := r.List(ctx, &amList); err != nil {
+		return "", err
+	}
+	for i := range amList.Items {
+		am := &amList.Items[i]
+		if !appcfg.IsV3(am) {
+			continue
+		}
+		if apputils.V3AppNamespace(am.Spec.AppName) == nsName {
+			return am.Spec.AppOwner, nil
+		}
+	}
+	return "", nil
 }
 
 func isNodeChanged(obj ...metav1.Object) bool {

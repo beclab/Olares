@@ -1,5 +1,5 @@
 <template>
-	<div v-show="!deviceStore.isScaning" class="itemView bg-background-1">
+	<div class="itemView larepass-content">
 		<div class="header">
 			<div
 				class="row items-center justify-between q-px-md"
@@ -44,7 +44,7 @@
 								{{ t('new_item') }}
 							</template>
 							<template v-else>
-								<span class="text-ink-3 text-overline">
+								<span class="text-ink-3 text-overline vault-name">
 									{{ vault?.label }}
 								</span>
 								<span class="vault-name text-ink-1 text-subtitle2">
@@ -101,7 +101,7 @@
 							class="btn-size-sm btn-no-text btn-no-border"
 							icon="sym_r_add"
 							text-color="ink-2"
-							:color="showAddField ? 'grey-1' : ''"
+							:color="showAddField ? 'background-3' : ''"
 						>
 							<q-tooltip>{{ t('vault_t.add_field') }}</q-tooltip>
 							<q-menu
@@ -173,10 +173,7 @@
 			</div>
 		</div>
 		<div class="container2">
-			<q-scroll-area
-				style="height: 100%"
-				:thumb-style="scrollBarStyle.thumbStyle"
-			>
+			<terminus-scroll-area style="height: 100%">
 				<div>
 					<div class="tags listRow">
 						<div
@@ -211,6 +208,7 @@
 							emit-value
 							map-options
 							@new-value="createTagValue"
+							:inputDebounce="0"
 							@filter="filterTagFn"
 							@focus="focusTagFn"
 						>
@@ -282,11 +280,17 @@
 						</div>
 					</div>
 
-					<div
-						class="listRow cursor-pointer text-ink-3 text-body3 q-py-md"
-						@click="openMenu"
-					>
-						<div v-if="isEditable" class="row items-center justify-center">
+					<div class="listRow cursor-pointer text-ink-3 text-body3 q-py-md">
+						<div
+							@click="openMenu"
+							v-if="
+								isEditable &&
+								item?.type != VaultType.TerminusTotp &&
+								(item?.icon != 'authenticator' ||
+									(item?.icon == 'authenticator' && item?.fields.length == 0))
+							"
+							class="row items-center justify-center"
+						>
 							<q-icon name="sym_r_add" size="20px" />
 							<span class="q-ml-xs">{{ t('vault_t.add_field') }}</span>
 						</div>
@@ -296,7 +300,7 @@
 						</div>
 					</div>
 
-					<template v-if="!isBex">
+					<template v-if="!isNew">
 						<div
 							class="listRow q-pa-md q-pl-lg row items-center text-ink-2 text-body3"
 						>
@@ -524,7 +528,7 @@
 						</template>
 					</div>
 				</div>
-			</q-scroll-area>
+			</terminus-scroll-area>
 		</div>
 		<div
 			v-if="editing_t1"
@@ -556,11 +560,6 @@
 			/>
 		</div>
 	</div>
-	<ScanComponent
-		v-if="deviceStore.isScaning"
-		@cancel="scanCancel"
-		@scan-result="scanResult"
-	/>
 </template>
 
 <script lang="ts" setup>
@@ -573,7 +572,13 @@ import {
 	nextTick
 } from 'vue';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
-import { VaultItem, FIELD_DEFS, FieldDef, Field } from '@didvault/sdk/src/core';
+import {
+	VaultItem,
+	FIELD_DEFS,
+	FieldDef,
+	Field,
+	VaultType
+} from '@didvault/sdk/src/core';
 import { formatDateTime, translate } from '@didvault/sdk/src/util';
 import { formatDateFromNow } from 'src/utils/format';
 import { app } from '../../globals';
@@ -593,19 +598,17 @@ import MoveItemsMobile from './dialog/MoveItemsMobile.vue';
 import DeleteItem from './dialog/DeleteItem.vue';
 
 import { showItemIcon } from './../../utils/utils';
-import { scrollBarStyle } from '../../utils/contact';
-import ScanComponent from '../../components/common/ScanComponent.vue';
 import { notifyFailed } from '../../utils/notifyRedefinedUtil';
 import { useI18n } from 'vue-i18n';
 import { bexVaultUpdate } from 'src/utils/bexFront';
 import { useVaultStore } from '../../stores/vault';
 import { BtDialog } from '@bytetrade/ui';
-import { useDeviceStore } from '../../stores/device';
-import { getAppPlatform } from 'src/application/platform';
+import { getAppPlatform, getNativeAppPlatform } from 'src/application/platform';
 import { useTermipassStore } from 'src/stores/termipass';
 import { UserStatusActive } from 'src/utils/checkTerminusState';
-// import { redirectToSecretInPLugin } from 'src/utils/common-safe';
 import TerminusSelectLocalFile from '../../components/common/TerminusSelectLocalFile.vue';
+import { addItem } from 'src/platform/addItem';
+import TerminusScrollArea from 'src/components/common/TerminusScrollArea2.vue';
 
 const props = defineProps({
 	itemID: {
@@ -645,7 +648,6 @@ const tags: any = ref([]);
 let stringOptions: any[] = [];
 const chipShowRemoveIcon = ref();
 const saveLoading = ref(false);
-const deviceStore = useDeviceStore();
 
 const { t } = useI18n();
 
@@ -695,22 +697,21 @@ function filterTagFn(val: string, update: any) {
 }
 
 function refreshItem(itemID: string, isField?: boolean) {
-	// 	if (vaultStore.editing_item && vaultStore.editing_item.item) {
-	// 	item.value = vaultStore.editing_item.item;
-	// 	if (isField && item.value) {
-	// 		fieldsForm.value = [...item.value.fields];
-	// 	}
+	if (vaultStore.editing_item && vaultStore.editing_item.item) {
+		item.value = vaultStore.editing_item.item;
+		if (isField && item.value) {
+			fieldsForm.value = [...item.value.fields];
+		}
 
-	// 	isFavorite.value = app.account!.favorites.has(props.itemID);
+		isFavorite.value = app.account!.favorites.has(props.itemID);
 
-	// 	name.value = item.value?.name;
-	// 	expiresAfter_t1.value = item.value?.expiresAfter || 0;
-	// 	tags.value = item.value ? item.value.tags : [];
-	// 	stringOptions = app.tags;
-	// 	filterTagOptions.value = app.tags;
-	// 	attachments.value = item.value?.attachments;
-	// } else
-	if (app.getItem(itemID)) {
+		name.value = item.value?.name;
+		expiresAfter_t1.value = item.value?.expiresAfter || 0;
+		tags.value = item.value ? item.value.tags : [];
+		stringOptions = app.tags;
+		filterTagOptions.value = app.tags;
+		attachments.value = item.value?.attachments;
+	} else if (app.getItem(itemID)) {
 		let item2 = app.getItem(itemID)!.item.clone();
 		app.updateLastUsed(item2);
 		item.value = item2;
@@ -769,6 +770,17 @@ onMounted(() => {
 			nameRef.value && nameRef.value.focus();
 		});
 	}
+	meunStore.$subscribe(() => {
+		if (vaultStore.editing_item) {
+			return;
+		}
+		if (!props.itemID) {
+			return;
+		}
+		if (!app.getItem(props.itemID)) {
+			goBack();
+		}
+	});
 });
 
 const vault = computed(() => {
@@ -834,11 +846,10 @@ function onCancel() {
 
 const clearChanges = async () => {
 	if (props.isNew) {
-		await app.deleteItems([item.value!]);
-		bexVaultUpdate();
-		// goBack();
 		if (isMobile.value) {
-			goBack();
+			Router.replace({
+				path: '/items/'
+			});
 		} else {
 			Router.push({
 				path: '/items/'
@@ -858,7 +869,7 @@ async function deleteItem() {
 		await app.deleteItems([item.value!]);
 		bexVaultUpdate();
 		editing_t1.value = false;
-		Router.push({
+		Router.replace({
 			path: '/items/'
 		});
 	});
@@ -879,34 +890,34 @@ async function onSave() {
 	meunStore.isEdit = false;
 	saveLoading.value = true;
 
-	// if (vaultStore.editing_item) {
-	// 	vaultStore.editing_item = await addItem(
-	// 		name.value,
-	// 		vaultStore.editing_item.item.icon,
-	// 		vaultStore.editing_item.item.fields,
-	// 		vaultStore.editing_item.item.tags,
-	// 		vaultStore.editing_item.vault,
-	// 		[],
-	// 		undefined,
-	// 		expiresAfter_t1.value as any,
-	// 		attachments.value,
-	// 		true,
-	// 		props.itemID
-	// 	);
-	// } else {
-	await app.updateItem(item.value!, {
-		name: name.value,
-		fields: fieldsForm.value,
-		tags: [...tags.value],
-		auditResults: [],
-		lastAudited: undefined,
-		expiresAfter: expiresAfter_t1.value,
-		attachments: attachments.value
-	});
-	auditVaults([vault.value!], {
-		updateOnlyItemWithId: item.value!.id
-	});
-	// }
+	if (vaultStore.editing_item) {
+		vaultStore.editing_item = await addItem(
+			name.value,
+			vaultStore.editing_item.item.icon,
+			vaultStore.editing_item.item.fields,
+			[...tags.value],
+			vaultStore.editing_item.vault,
+			[],
+			undefined,
+			expiresAfter_t1.value as any,
+			attachments.value,
+			true,
+			props.itemID
+		);
+	} else {
+		await app.updateItem(item.value!, {
+			name: name.value,
+			fields: fieldsForm.value,
+			tags: [...tags.value],
+			auditResults: [],
+			lastAudited: undefined,
+			expiresAfter: expiresAfter_t1.value,
+			attachments: attachments.value
+		});
+		auditVaults([vault.value!], {
+			updateOnlyItemWithId: item.value!.id
+		});
+	}
 
 	saveLoading.value = false;
 	refreshItem(props.itemID);
@@ -916,7 +927,9 @@ async function onSave() {
 	if (editing_t1.value) {
 		editing_t1.value = false;
 	}
-	// redirectToSecretInPLugin();
+	if (process.env.PLATFORM === 'BEX') {
+		Router.replace('/items');
+	}
 }
 
 async function _addField(fieldDef: FieldDef) {
@@ -933,6 +946,12 @@ const openMenu = () => {
 	if (!isEditable.value) {
 		return;
 	}
+
+	if (item.value?.icon === 'authenticator') {
+		addFieldClick(FIELD_DEFS.totp);
+		return;
+	}
+
 	showAddField.value = true;
 	editing_t1.value = true;
 };
@@ -1014,17 +1033,10 @@ async function _addFileAttachment(file: File) {
 		return;
 	}
 
-	if ($q.platform.is.nativeMobile && file.size > 5 * 1024 * 1024) {
+	if (file.size > 5 * 1024 * 1024) {
 		notifyFailed(
 			t(
 				'vault_t.the_selected_file_is_too_large_only_files_of_up_to_5m_are_supported'
-			)
-		);
-		return;
-	} else if (file.size > 1024 * 1024 * 1024) {
-		notifyFailed(
-			t(
-				'vault_t.the_selected_file_is_too_large_only_files_of_up_to_1t_are_supported'
 			)
 		);
 		return;
@@ -1135,8 +1147,6 @@ const showHistoryEntry = (historyIndex: number) => {
 			historyIndex
 		}
 	}).onOk(async () => {
-		console.log('sssres');
-
 		restoreHistoryEntry(item.value, historyIndex);
 	});
 };
@@ -1202,8 +1212,8 @@ const moveItem = async () => {
 };
 
 const showMoveItemsDialog = () => {
+	const vault = app.getItem(props.itemID)?.vault;
 	const hasCheckBox = [{ item: item.value, vault: vault }];
-
 	$q.dialog({
 		component: isMobile.value ? MoveItemsMobile : MoveItemsPC,
 		componentProps: {
@@ -1215,35 +1225,44 @@ const showMoveItemsDialog = () => {
 };
 
 const goBack = () => {
-	Router.go(-1);
+	if (isMobile.value) {
+		Router.replace({
+			path: '/items/'
+		});
+	} else {
+		Router.go(-1);
+	}
 };
 
-const scanCancel = () => {
-	deviceStore.isScaning = false;
-};
+const startScan = async (index: any) => {
+	scanIndex.value = index;
+	const nativalPlatform = getNativeAppPlatform();
+	const result = await nativalPlatform.scanQRCode();
+	if (!result) {
+		scanIndex.value = undefined;
+		return;
+	}
 
-const scanResult = (result: string) => {
-	let url = new URL(result);
-	let params = new URLSearchParams(url.search);
-	let secret = params.get('secret');
+	let secret: string | null = null;
+	try {
+		const url = new URL(result);
+		const params = new URLSearchParams(url.search);
+		secret = params.get('secret');
+	} catch {
+		// not a valid URL, fall through to error path
+	}
 
 	if (!result.startsWith('otpauth') || !secret || !item.value) {
 		notifyFailed(t('errors.invalid_code_please_try_again'));
-		return false;
+		scanIndex.value = undefined;
+		return;
 	}
 
 	fieldsForm.value[scanIndex.value].value = secret;
 	item.value.fields[scanIndex.value].value = secret;
-	deviceStore.isScaning = false;
 	scanIndex.value = undefined;
 };
 
-const startScan = (index: any) => {
-	scanIndex.value = index;
-	deviceStore.isScaning = true;
-};
-
-// const scanIng = ref(false);
 const scanIndex = ref();
 
 const onUpdateExpiresAfter = (expires: number) => {
@@ -1281,7 +1300,7 @@ const onUpdateExpiresAfter = (expires: number) => {
 		}
 
 		&:focus-within {
-			border: 1px solid $light-blue-default;
+			border: 1px solid $theme-input-focus-border;
 		}
 	}
 
@@ -1328,6 +1347,10 @@ const onUpdateExpiresAfter = (expires: number) => {
 				margin-right: 5px;
 				border: 1px solid $ink-2;
 				background-color: $background-1;
+				text-overflow: ellipsis;
+			}
+			::v-deep(.tagChip .q-chip__content) {
+				overflow: hidden;
 			}
 		}
 	}

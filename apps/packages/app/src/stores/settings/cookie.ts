@@ -12,6 +12,14 @@ import {
 } from 'src/constant/constants';
 import psl from 'psl';
 import { CookieParserFactory, CookieFormat } from './cookieParser';
+import { useBackgroundStore } from './background';
+
+export class CookieValidationError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'CookieValidationError';
+	}
+}
 
 export type CookieState = {
 	base_url: string;
@@ -33,6 +41,13 @@ export const useCookieStore = defineStore('cookie', {
 	getters: {
 		getAggregatedDomainList(state): AggregatedDomain[] {
 			return Array.from(state.aggregatedDomainMap.values());
+		},
+		openCollectionCookiesLink(): string {
+			const backgroundStore = useBackgroundStore();
+			if (backgroundStore.localeIsCN) {
+				return 'https://docs.olares.com/zh/manual/olares/wise/manage-cookies.html ';
+			}
+			return 'https://docs.olares.com/manual/olares/wise/manage-cookies.html';
 		}
 	},
 
@@ -79,7 +94,7 @@ export const useCookieStore = defineStore('cookie', {
 
 		async updateDomainCookie(domain: string, records: DomainCookieRecord[]) {
 			if (!domain) {
-				throw new Error('need domain');
+				throw new CookieValidationError('need domain');
 			}
 
 			const domainCookie = new DomainCookie({
@@ -188,8 +203,12 @@ export const useCookieStore = defineStore('cookie', {
 			try {
 				const parseResult = CookieParserFactory.parse(cookieText);
 				return await this._uploadParsedCookies(parseResult);
-			} catch (error) {
-				return Promise.reject(error);
+			} catch (error: any) {
+				return Promise.reject(
+					error instanceof CookieValidationError
+						? error
+						: new CookieValidationError(error?.message || String(error))
+				);
 			}
 		},
 
@@ -248,13 +267,15 @@ export const useCookieStore = defineStore('cookie', {
 			try {
 				const parser = CookieParserFactory.getParser('netscape');
 				if (!parser) {
-					throw new Error('Netscape parser not found');
+					throw new CookieValidationError('Netscape parser not found');
 				}
 				const parseResult = parser.parse(netscapeText);
 				console.log('addNetscapeCookies', parseResult);
 				return this._uploadParsedCookies(parseResult);
-			} catch (error) {
-				return Promise.reject(error);
+			} catch (error: any) {
+				return Promise.reject(
+					new CookieValidationError(error?.message || String(error))
+				);
 			}
 		},
 
@@ -265,20 +286,22 @@ export const useCookieStore = defineStore('cookie', {
 			try {
 				const valid = psl.isValid(domain);
 				if (!valid) {
-					throw new Error('The domain is invalid.');
+					throw new CookieValidationError('The domain is invalid.');
 				}
 				const parser = CookieParserFactory.getParser('header');
 				if (!parser) {
-					throw new Error('Header parser not found');
+					throw new CookieValidationError('Header parser not found');
 				}
 				if (!domain || !domain.trim()) {
-					throw new Error('domain cannot be empty');
+					throw new CookieValidationError('domain cannot be empty');
 				}
 				const parseResult = parser.parse(headerText, domain);
 				console.log('addHeaderCookies', parseResult);
 				return this._uploadParsedCookies(parseResult);
-			} catch (error) {
-				return Promise.reject(error);
+			} catch (error: any) {
+				return Promise.reject(
+					new CookieValidationError(error?.message || String(error))
+				);
 			}
 		},
 
@@ -286,13 +309,15 @@ export const useCookieStore = defineStore('cookie', {
 			try {
 				const parser = CookieParserFactory.getParser('json');
 				if (!parser) {
-					throw new Error('JSON parser not found');
+					throw new CookieValidationError('JSON parser not found');
 				}
 				const parseResult = parser.parse(jsonText);
 				console.log('addJsonCookies', parseResult);
 				return this._uploadParsedCookies(parseResult);
-			} catch (error) {
-				return Promise.reject(error);
+			} catch (error: any) {
+				return Promise.reject(
+					new CookieValidationError(error?.message || String(error))
+				);
 			}
 		},
 
@@ -303,10 +328,10 @@ export const useCookieStore = defineStore('cookie', {
 
 		async _uploadParsedCookies(parseResult: any): Promise<DomainCookie[]> {
 			if (!this.account) {
-				throw new Error('account not found');
+				throw new CookieValidationError('account not found');
 			}
 			if (parseResult.cookies.size === 0) {
-				throw new Error('No valid cookies found');
+				throw new CookieValidationError('No valid cookies found');
 			}
 
 			return await parseResult.cookies

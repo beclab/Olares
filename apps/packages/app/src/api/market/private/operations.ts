@@ -1,7 +1,7 @@
 import axios, { AxiosProgressEvent } from 'axios';
-import { useCenterStore } from 'src/stores/market/center';
 import { MARKET_SOURCE_OFFICIAL } from 'src/constant/constants';
 import { CloneEntrance, UpdateEnvBody } from 'src/constant';
+import { useAppStore } from 'src/stores/market/appStore';
 
 export interface BaseOperationRequest {
 	app_name: string;
@@ -29,13 +29,13 @@ export interface CloneRequest extends BaseOperationRequest {
 }
 
 export async function installApp(request: OperationRequest): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = store.appUrl + '/apps/' + request.app_name + '/install';
 	return await axios.post(url, request);
 }
 
 export async function cloneApp(request: CloneRequest): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = store.appUrl + '/apps/' + request.app_name + '/clone';
 	return await axios.post(url, request);
 }
@@ -43,7 +43,7 @@ export async function cloneApp(request: CloneRequest): Promise<any> {
 export async function cancelInstalling(
 	request: OperationRequest
 ): Promise<boolean> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = store.appUrl + '/apps/' + request.app_name + '/install';
 	return await axios.delete(url, {
 		data: request
@@ -51,7 +51,7 @@ export async function cancelInstalling(
 }
 
 export async function uninstallApp(request: CSV2Request): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = store.appUrl + '/apps/' + request.app_name;
 	return await axios.delete(url, {
 		data: request
@@ -59,13 +59,13 @@ export async function uninstallApp(request: CSV2Request): Promise<any> {
 }
 
 export async function upgradeApp(request: OperationRequest): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = store.appUrl + '/apps/' + request.app_name + '/upgrade';
 	return await axios.put(url, request);
 }
 
 export async function resumeApp(appName: string): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = store.appUrl + '/apps/resume';
 	return await axios.post(url, {
 		appName
@@ -73,7 +73,7 @@ export async function resumeApp(appName: string): Promise<any> {
 }
 
 export async function stopApp(appName: string, all: boolean): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = store.appUrl + '/apps/stop';
 	return await axios.post(url, {
 		appName,
@@ -82,7 +82,7 @@ export async function stopApp(appName: string, all: boolean): Promise<any> {
 }
 
 export async function marketLogs(size = 100): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = store.appUrl + '/logs?size=' + size;
 	const { data }: any = await axios.get(url);
 	console.log(data);
@@ -95,7 +95,7 @@ export async function uploadLocalPackage(
 	config: { signal?: AbortSignal } = {}
 ): Promise<{ data: any; message: string }> {
 	try {
-		const store = useCenterStore();
+		const store = useAppStore();
 		const formData = new FormData();
 		formData.append('chart', file);
 		formData.append('source', MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD);
@@ -126,7 +126,7 @@ export async function uploadLocalPackage(
 export async function removeLocalPackage(
 	request: OperationRequest
 ): Promise<any> {
-	const store = useCenterStore();
+	const store = useAppStore();
 	const url = store.appUrl + '/local-apps/delete';
 	const { data }: any = await axios.delete(url, {
 		data: {

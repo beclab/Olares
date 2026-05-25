@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/argo"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
@@ -12,6 +11,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	installerv1 "github.com/beclab/Olares/framework/app-service/pkg/workflowinstaller/v1"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

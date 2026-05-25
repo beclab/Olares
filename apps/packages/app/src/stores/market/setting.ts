@@ -1,14 +1,17 @@
-import { getSettingConfig, setNsfw } from 'src/api/market/private/setting';
 import { supportLanguages, SupportLanguageType } from 'src/i18n';
 import { CacheRequest } from 'src/stores/market/CacheRequest';
 import globalConfig from 'src/api/market/config';
 import { i18n } from 'src/boot/i18n';
 import { defineStore } from 'pinia';
+import {
+	getSettingConfig,
+	updateSettingConfig
+} from 'src/api/market/private/setting';
 
 export const useSettingStore = defineStore('setting', {
 	state: () => ({
 		initialized: false,
-		restore: false,
+		reload: false,
 		nsfw: false,
 		currentLanguage: '' as SupportLanguageType,
 		lastLanguage: '' as SupportLanguageType,
@@ -16,16 +19,6 @@ export const useSettingStore = defineStore('setting', {
 	}),
 	actions: {
 		init() {
-			const settingConfigRequest = new CacheRequest(
-				'cache_market_setting',
-				getSettingConfig,
-				{
-					onData: (data) => {
-						this.marketSourceId = data.selected_source;
-						this.initialized = true;
-					}
-				}
-			);
 			const storedLang = localStorage.getItem(
 				'language'
 			) as SupportLanguageType | null;
@@ -34,17 +27,34 @@ export const useSettingStore = defineStore('setting', {
 					? storedLang
 					: this.getLanguage();
 			this.languageUpdate(this.currentLanguage, false);
-			return settingConfigRequest;
+		},
+		initConfigRequest() {
+			return new CacheRequest('cache_market_setting', getSettingConfig, {
+				onData: (data) => {
+					this.marketSourceId = data.selected_source;
+					this.nsfw = data.nsfw;
+					this.initialized = true;
+				}
+			});
 		},
 		async setNsfw(status: boolean) {
-			const result = await setNsfw(status);
+			const result: any = await updateSettingConfig(
+				status,
+				this.marketSourceId
+			);
 			if (result) {
-				this.nsfw = status;
-				this.setRestore(true);
+				this.nsfw = result.nsfw;
+				this.reload = true;
 			}
+			return result;
 		},
-		setRestore(restore: boolean) {
-			this.restore = restore;
+		async setMarketSourceId(sourceId: string) {
+			const result: any = await updateSettingConfig(this.nsfw, sourceId);
+			if (result) {
+				this.marketSourceId = result.selected_source;
+				this.reload = true;
+			}
+			return result;
 		},
 		languageUpdate(language: SupportLanguageType, save = true) {
 			if (this.lastLanguage == language) {

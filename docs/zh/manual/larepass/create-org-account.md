@@ -13,7 +13,7 @@ description: 使用自定义域名创建 Olares ID。首次设置域名创建组
 
 ## 创建 DID
 
-<!--@include: ../../reusables/custom-domain.md{21,31}-->
+<!--@include: ../../reusables/custom-domain.md#custom-domain-create-did-->
 
 创建 DID 后：
 - 如果你是域名所有者，需要设置组织，请继续阅读[创建新组织](#创建新组织)。
@@ -25,7 +25,7 @@ description: 使用自定义域名创建 Olares ID。首次设置域名创建组
 
 作为域名所有者，创建组织并获取自定义域名下的 Olares ID。
 
-<!--@include: ../../reusables/custom-domain.md{76,103}-->
+<!--@include: ../../reusables/custom-domain.md#custom-domain-create-organization-->
 
 域名设置完成后，你可以在 Olares Space 中[添加成员](../space/manage-domain.md)。
 
@@ -33,6 +33,6 @@ description: 使用自定义域名创建 Olares ID。首次设置域名创建组
 
 如果域名管理员已创建组织并添加了你，使用管理员提供的用户名和密码加入。
 
-<!--@include: ../../reusables/custom-domain.md{130,145}-->
+<!--@include: ../../reusables/custom-domain.md#custom-domain-join-organization-->
 
 Olares ID 创建完成，可以继续[安装并激活 Olares](../get-started/install-olares.md)。

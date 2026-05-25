@@ -1,5 +1,6 @@
 export const TERMINUS_ID = 'terminusId';
 export const WISE_DATABASE = 'wise_database';
+export const KNOWLEDGE_DATABASE = 'knowledge_database';
 export const SYNC_FEED_TIME = 'sync_feed_time';
 export const SYNC_ENTRY_TIME = 'sync_entry_time';
 export const SYNC_LABEL_TIME = 'sync_label_time';
@@ -18,6 +19,8 @@ export const UPLOAD_COOKIES_OPEN = 'upload_cookies_open';
 
 export const THEME_SETTING = 'theme_setting';
 
+export const WISE_TRANSFER_TIME = 'cloud-transfer-wise';
+
 export const STORAGE_TRUE = '1';
 export const STORAGE_FALSE = '0';
-export const DATABASE_VERSION = '7';
+export const DATABASE_VERSION = '8';

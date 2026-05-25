@@ -6,97 +6,62 @@ import (
 	"strconv"
 	"strings"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 )
 
-// TODO: get owner's app with appname, instead to get by namespace and name
-func (h *Handler) get(req *restful.Request, resp *restful.Response) {
-	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-
-	appName := req.PathParameter(ParamAppName)
-	appNamespace := req.PathParameter(ParamAppNamespace)
-
-	name := utils.FmtAppName(appName, appNamespace)
-
-	// run with request context for incoming client
-	app, err := client.AppClient.AppV1alpha1().Applications().Get(req.Request.Context(), name, metav1.GetOptions{})
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	if apierrors.IsNotFound(err) {
-		am, err := client.AppClient.AppV1alpha1().ApplicationManagers().Get(req.Request.Context(), name, metav1.GetOptions{})
-		if err != nil {
-			api.HandleError(resp, req, err)
-			return
-		}
-		var appconfig appcfg.ApplicationConfig
-		err = json.Unmarshal([]byte(am.Spec.Config), &appconfig)
-		if err != nil {
-			api.HandleError(resp, req, err)
-			return
-		}
-		app = &appv1alpha1.Application{
-			TypeMeta: metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              name,
-				CreationTimestamp: metav1.Now(),
-			},
-			Spec: appv1alpha1.ApplicationSpec{
-				Name:            am.Spec.AppName,
-				RawAppName:      am.Spec.RawAppName,
-				Appid:           appv1alpha1.AppName(am.Spec.AppName).GetAppID(),
-				IsSysApp:        appv1alpha1.AppName(am.Spec.AppName).IsSysApp(),
-				Namespace:       am.Spec.AppNamespace,
-				Owner:           owner,
-				Entrances:       appconfig.Entrances,
-				SharedEntrances: appconfig.SharedEntrances,
-				Icon:            appconfig.Icon,
-			},
-		}
-	}
-
-	resp.WriteAsJson(app)
-}
-
 func (h *Handler) list(req *restful.Request, resp *restful.Response) {
 	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
-	// run with request context for incoming client
+	vis, err := h.newListVisibilityCtx(req.Request.Context(), owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
 	allApps, err := client.AppClient.AppV1alpha1().Applications().List(req.Request.Context(), metav1.ListOptions{})
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
 
-	// filter by application's owner
+	// Filter Applications using the unified visibility check: legacy
+	// owner-by-namespace for v1/v2, visible to all users for v3 / shared apps.
+	// For v3 apps, overlay Spec.UserSettings[owner] on Spec.Settings/Entrances
+	// so the caller sees their own customDomain/policy/authLevel choices.
 	var filteredApps []appv1alpha1.Application
-	for _, a := range allApps.Items {
-		if a.Spec.Owner == owner {
-			filteredApps = append(filteredApps, a)
+	for i := range allApps.Items {
+		a := allApps.Items[i]
+		if !vis.VisibleApp(&a) {
+			continue
 		}
+
+		a.Spec.Settings = a.EffectiveSettings(owner)
+		a.Spec.Entrances = a.EffectiveEntrances(owner)
+
+		filteredApps = append(filteredApps, a)
 	}
 
 	// get pending app's from app managers
 	//var pendingApplications []appv1alpha1.Application
 	appMgrs, err := client.AppClient.AppV1alpha1().ApplicationManagers().List(req.Request.Context(), metav1.ListOptions{})
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
 	for _, am := range appMgrs.Items {
 		var appconfig appcfg.ApplicationConfig
 		err = json.Unmarshal([]byte(am.Spec.Config), &appconfig)
@@ -104,7 +69,7 @@ func (h *Handler) list(req *restful.Request, resp *restful.Response) {
 			api.HandleError(resp, req, err)
 			return
 		}
-		if am.Spec.AppOwner == owner && am.Status.State == appv1alpha1.Pending {
+		if vis.VisibleAM(&am) && am.Status.State == appv1alpha1.Pending {
 			app := appv1alpha1.Application{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
@@ -114,8 +79,8 @@ func (h *Handler) list(req *restful.Request, resp *restful.Response) {
 				Spec: appv1alpha1.ApplicationSpec{
 					Name:            am.Spec.AppName,
 					RawAppName:      am.Spec.RawAppName,
-					Appid:           appv1alpha1.AppName(am.Spec.AppName).GetAppID(),
-					IsSysApp:        appv1alpha1.AppName(am.Spec.AppName).IsSysApp(),
+					Appid:           appcfg.AppName(am.Spec.AppName).GetAppID(),
+					IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 					Namespace:       am.Spec.AppNamespace,
 					Owner:           owner,
 					Entrances:       appconfig.Entrances,
@@ -166,6 +131,12 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	vis, err := h.newListVisibilityCtx(req.Request.Context(), owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
 	sharedEntranceApps := make(map[string]*appv1alpha1.Application)
 	for _, am := range ams {
 		if am.Spec.Type != appv1alpha1.App {
@@ -199,8 +170,17 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			return
 		}
 
-		if am.Spec.AppOwner != owner && len(appconfig.SharedEntrances) == 0 {
-			continue
+		// Visibility for non-owners:
+		//   • v3 apps: always visible (vis.VisibleSharedApp == true).
+		//   • v1/v2 apps: legacy SharedEntrances feature (untouched).
+		if am.Spec.AppOwner != owner {
+			if appcfg.IsV3(am) {
+				if !vis.VisibleSharedApp(am.Spec.AppName) {
+					continue
+				}
+			} else if len(appconfig.SharedEntrances) == 0 {
+				continue
+			}
 		}
 
 		now := metav1.Now()
@@ -214,8 +194,8 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			Spec: appv1alpha1.ApplicationSpec{
 				Name:            am.Spec.AppName,
 				RawAppName:      am.Spec.RawAppName,
-				Appid:           appv1alpha1.AppName(am.Spec.AppName).GetAppID(),
-				IsSysApp:        appv1alpha1.AppName(am.Spec.AppName).IsSysApp(),
+				Appid:           appcfg.AppName(am.Spec.AppName).GetAppID(),
+				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
@@ -234,21 +214,23 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			},
 		}
 
-		if am.Spec.AppOwner != owner {
-			// only show shared entrances
-			// mask other infos
+		switch {
+		case appcfg.IsV3(am):
+			// v3 apps expose the full entrance list to every
+			// viewer; lifecycle handlers enforce admin-only management.
+			appsMap[app.Name] = app
+		case am.Spec.AppOwner != owner:
+			// v1/v2 non-owner: legacy SharedEntrances behaviour — only
+			// expose the shared subset, mask everything else.
 			app.Spec.Entrances = []appv1alpha1.Entrance{}
-
 			if _, ok := sharedEntranceApps[app.Spec.Appid]; !ok {
 				sharedEntranceApps[app.Spec.Appid] = app
 			}
-		} else {
-
+		default:
 			if len(appconfig.SharedEntrances) > 0 {
 				// force to set the shared entrance app with my app
 				sharedEntranceApps[app.Spec.Appid] = app
 			}
-
 			appsMap[app.Name] = app
 		}
 	}
@@ -268,21 +250,25 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 	}
 
 	for _, a := range allApps {
-		if a.Spec.Owner == owner {
-			if len(isSysApp) > 0 && isSysApp == "true" && strconv.FormatBool(a.Spec.IsSysApp) != isSysApp {
-				continue
-			}
-			appsEntranceMap[a.Name] = a
+		// Visibility for the underlying Application:
+		//   • owner equals viewer → legacy v1/v2 path,
+		//   • shared app + admin / granted viewer → v3 fan-out.
+		if !(a.Spec.Owner == owner || vis.VisibleApp(a)) {
+			continue
+		}
+		if len(isSysApp) > 0 && isSysApp == "true" && strconv.FormatBool(a.Spec.IsSysApp) != isSysApp {
+			continue
+		}
+		appsEntranceMap[a.Name] = a
 
-			if a.Spec.IsSysApp {
-				appsMap[a.Name] = a
-				continue
-			}
-			if v, ok := appsMap[a.Name]; ok {
-				v.Spec.Settings = a.Spec.Settings
-				v.Spec.Entrances = a.Spec.Entrances
-				v.Spec.Ports = a.Spec.Ports
-			}
+		if a.Spec.IsSysApp {
+			appsMap[a.Name] = a
+			continue
+		}
+		if v, ok := appsMap[a.Name]; ok {
+			v.Spec.Settings = a.EffectiveSettings(owner)
+			v.Spec.Entrances = a.EffectiveEntrances(owner)
+			v.Spec.Ports = a.Spec.Ports
 		}
 	}
 	for _, app := range appsMap {

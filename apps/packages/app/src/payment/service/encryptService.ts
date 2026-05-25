@@ -46,20 +46,13 @@ export class EncryptService {
 		publicKeyString: string
 	): Promise<CryptoKey> {
 		// Complete the PEM headers and footers if missing
-		let pemString = publicKeyString.trim();
-		if (!pemString.includes('-----BEGIN PUBLIC KEY-----')) {
-			pemString = `-----BEGIN PUBLIC KEY-----\n${pemString}\n-----END PUBLIC KEY-----`;
-		}
+		const pemContents = publicKeyString
+			.trim()
+			.replace(/-----BEGIN (?:RSA )?PUBLIC KEY-----/g, '')
+			.replace(/-----END (?:RSA )?PUBLIC KEY-----/g, '')
+			.replace(/\s/g, '');
 
-		// PEM to DER format
-		const pemHeader = '-----BEGIN PUBLIC KEY-----';
-		const pemFooter = '-----END PUBLIC KEY-----';
-		const pemContents = pemString.substring(
-			pemHeader.length,
-			pemString.length - pemFooter.length
-		);
-		// Remove spaces and decode Base64
-		const binaryDerString = atob(pemContents.replace(/\s/g, ''));
+		const binaryDerString = atob(pemContents);
 		const binaryDer = new Uint8Array(binaryDerString.length);
 		for (let i = 0; i < binaryDerString.length; i++) {
 			binaryDer[i] = binaryDerString.charCodeAt(i);
@@ -180,7 +173,7 @@ export class EncryptService {
 				finalData = Array.from(encodedData)
 					.map((b) => b.toString(16).padStart(2, '0'))
 					.join('');
-				logger.log('✅ Order data encoded to hex (no encryption)');
+				logger.log('❌ Order data encoded to hex (no encryption)');
 			}
 
 			// 4. Generate Olares Pay header and merge with data

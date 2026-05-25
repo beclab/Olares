@@ -13,7 +13,7 @@ Olares on Mac has certain limitations including:
 We recommend using it only for development or testing purposes.
 :::
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 
@@ -41,10 +41,28 @@ Ensure you have the following installed:
 ## Install Olares
 In terminal, run the following command:
 
-<!--@include: ./reusables.md{4,37}-->
+<!--@include: ./reusables.md#install-script-command-->
+
+<!--@include: ./reusables.md#root-password-tip-->
+
+<!--@include: ./reusables.md#installation-error-tip-->
+
+<!--@include: ./reusables.md#prepare-wizard-heading-->
+
+During the Wizard setup, provide the following information:
+1. Check the IP address of your Mac, for example, `192.168.x.x`.
+
+   If the automatically detected IP address is correct, press `Y` to confirm. To change it, press `R` and enter the correct address.
+   ::: tip Find the IP address
+   You can find the IP address of your Mac in either of the following ways:
+   - GUI: Open **System Settings** (or **System Preferences**) > **Network**, then check the details of the active network connection.
+   - Command line: Open Terminal and run `ipconfig getifaddr en0` for Wi-Fi, or `ipconfig getifaddr en1` for Ethernet.
+   :::
+
+2. <!--@include: ./reusables.md#prepare-wizard-details-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

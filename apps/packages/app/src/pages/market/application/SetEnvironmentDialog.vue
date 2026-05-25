@@ -1,7 +1,11 @@
 <template>
 	<bt-custom-dialog
 		ref="CustomRef"
-		:title="t('Configure Environment Variables')"
+		:title="
+			t('Configure Environment Variables', {
+				title: appTitle
+			})
+		"
 		:skip="false"
 		:ok="t('confirm')"
 		size="medium"
@@ -28,6 +32,7 @@
 			v-for="item in missingRefs"
 			:key="item.envName"
 			:env="item"
+			:is-from-missing-refs="true"
 			@update:env="updateMissingRefs"
 		/>
 	</bt-custom-dialog>
@@ -42,6 +47,10 @@ import { useI18n } from 'vue-i18n';
 const props = defineProps({
 	data: {
 		type: Object as PropType<AppEnvResponse>,
+		required: true
+	},
+	appTitle: {
+		type: String,
 		required: true
 	}
 });
@@ -96,11 +105,19 @@ const isSetEnable = computed(() => {
 		.concat(invalidValues.value)
 		.concat(missingRefs.value);
 	for (let i = 0; i < list.length; i++) {
-		if (!list[i].value) {
+		const it = list[i];
+		const val = String(it.value ?? '').trim();
+		if (!val) {
 			return false;
 		}
-		if (list[i].regex && !new RegExp(list[i].regex).test(list[i].value)) {
-			return false;
+		if (it.regex) {
+			try {
+				if (!new RegExp(it.regex).test(val)) {
+					return false;
+				}
+			} catch {
+				return false;
+			}
 		}
 	}
 	return true;
@@ -111,10 +128,22 @@ const submitEnvironmentVariable = async () => {
 		.concat(invalidValues.value)
 		.concat(missingRefs.value);
 	const updateEnvs = list.map((item) => {
-		return {
+		const row: {
+			envName: string;
+			value: string;
+			applyOnChange?: boolean;
+			valueFrom?: BaseEnv['valueFrom'];
+		} = {
 			envName: item.envName,
-			value: item.value
+			value: item.value || ''
 		};
+		if (item.applyOnChange !== undefined) {
+			row.applyOnChange = item.applyOnChange;
+		}
+		if (item.valueFrom !== undefined) {
+			row.valueFrom = item.valueFrom;
+		}
+		return row;
 	});
 	console.log(updateEnvs);
 	CustomRef.value.onDialogOK({

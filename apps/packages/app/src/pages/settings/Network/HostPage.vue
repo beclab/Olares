@@ -16,7 +16,7 @@
 			<template v-slot:pc>
 				<app-menu-empty
 					v-if="rows.length === 0"
-					:title="t('Flexible Hosts Management')"
+					:title="t('Flexible hosts management')"
 					:button-label="t('Add hosts')"
 					:message="
 						t(
@@ -24,7 +24,7 @@
 						)
 					"
 					image="settings/imgs/root/host.svg"
-					@click="editHost(-1)"
+					@onButtonClick="editHost(-1)"
 				/>
 				<div v-else class="q-list-class q-pa-md column">
 					<q-table
@@ -85,7 +85,7 @@
 				<q-infinite-scroll @load="onLoad" :offset="250">
 					<app-menu-empty
 						v-if="rows.length === 0"
-						:title="t('Flexible Hosts Management')"
+						:title="t('Flexible hosts management')"
 						:button-label="t('Add hosts')"
 						:message="
 							t(
@@ -93,7 +93,7 @@
 							)
 						"
 						image="settings/imgs/root/host.svg"
-						@click="editHost(-1)"
+						@onButtonClick="editHost(-1)"
 					/>
 					<div
 						class="mobile-items-list row justify-between q-px-lg q-py-md"

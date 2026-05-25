@@ -12,7 +12,7 @@ import hard_drive_icon_dark from '../../assets/hard_drive-dark.svg';
 import package_2_active_icon from '../../assets/package_2_active.svg';
 import package_2_icon from '../../assets/package_2.svg';
 import package_2_icon_dark from '../../assets/package_2-dark.svg';
-import { t } from '@apps/dashboard/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import { ROUTE_NAME } from '@apps/dashboard/src/router/const';
 
 export const MetricTypesFormat = (type = 'cluster') => ({
