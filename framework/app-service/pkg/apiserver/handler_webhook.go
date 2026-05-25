@@ -1461,3 +1461,84 @@ func (h *Handler) upgradeOpValidate(ctx context.Context, appConfig *appcfg.Appli
 	}
 	return nil
 }
+
+// macvlanInitInject is the HTTP entrypoint for the macvlan-init mutating webhook.
+// It deserializes the AdmissionReview, runs macvlanInitMutate and writes the response.
+func (h *Handler) macvlanInitInject(req *restful.Request, resp *restful.Response) {
+	klog.Infof("Received mutating webhook[macvlan-init inject] request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
+	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	proxyUUID := uuid.New()
+	if _, _, err := webhook.Deserializer.Decode(admissionRequestBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.macvlanInitMutate(req.Request.Context(), admissionReq.Request, proxyUUID)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+
+	requestForNamespace := "unknown"
+	if admissionReq.Request != nil {
+		requestForNamespace = admissionReq.Request.Namespace
+	}
+	err := resp.WriteAsJson(&admissionResp)
+	if err != nil {
+		klog.Errorf("Failed to write response[macvlan-init inject] admin review in namespace=%s err=%v", requestForNamespace, err)
+		return
+	}
+	klog.Infof("Done[macvlan-init inject] with uuid=%s in namespace=%s", proxyUUID, requestForNamespace)
+}
+
+// macvlanInitMutate is the core mutation logic for the macvlan-init webhook.
+// It is a no-op for pods without the macvlan-init label or whose owning
+// Application does not opt into enableOverlayGateway.
+func (h *Handler) macvlanInitMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
+	if req == nil {
+		klog.Error("Failed to get admission request err=admission request is nil")
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	resp := &admissionv1.AdmissionResponse{
+		Allowed: true,
+		UID:     req.UID,
+	}
+
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal request object raw to pod with uuid=%s namespace=%s err=%v", proxyUUID, req.Namespace, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+
+	// Defense-in-depth: ObjectSelector already filters by this label, but
+	// re-check here in case the webhook is invoked from a misconfigured caller.
+	if pod.Labels[constants.ApplicationMacvlanInitLabel] != "true" {
+		return resp
+	}
+	ns := req.Namespace
+
+	shouldInject, err := h.sidecarWebhook.ShouldInjectMacvlanInit(ctx, &pod, ns)
+	if err != nil {
+		klog.Errorf("Failed to evaluate macvlan-init injection for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+		// FailurePolicy is Ignore at the webhook-config level; here we
+		// still report an error so the API server records it, but the
+		// pod will be allowed.
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	if !shouldInject {
+		return resp
+	}
+
+	patchBytes, err := h.sidecarWebhook.CreateMacvlanInitPatch(req, &pod)
+	if err != nil {
+		klog.Errorf("Failed to create macvlan-init patch for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	if len(patchBytes) > 0 {
+		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	}
+	klog.Infof("macvlan-init: injected init container for pod=%s/%s uuid=%s", req.Namespace, pod.Name, proxyUUID)
+	return resp
+}
