@@ -25,25 +25,20 @@ type ComputeResourcesResponse struct {
 	Data         []compute.Node `json:"data"`
 }
 
-type ComputeAvailabilityResponse struct {
-	api.Response `json:",inline"`
-	Data         *compute.AvailabilityResult      `json:"data"`
-	Validation   *compute.BindingValidationResult `json:"validation,omitempty"`
-}
-
 type ComputeBindingResponse struct {
 	api.Response `json:",inline"`
 	Data         []compute.Allocation `json:"data"`
 }
 
-// InstallComputePlanResponse is returned by the install endpoint
-// (POST /apps/{name}/install) when the caller did not pick a
-// selectedGpuType and more than one mode in the manifest is runnable on
-// this cluster. Code is api.CodeComputeAmbiguousMode and Data lists the
-// per-mode install plan so the client can let the user choose.
-type InstallComputePlanResponse struct {
-	api.Response `json:",inline"`
-	Data         []compute.ModePlanResult `json:"data"`
+// ComputeBindingFailedCheck is the payload returned by the resume endpoint
+// under FailedCheckResponse when the caller needs to (re)select a compute
+// binding before the resume can proceed. CheckTypeComputeBindingRequired
+// signals a binding is required and Validation is nil;
+// CheckTypeComputeBindingUnavailable signals the caller-supplied binding
+// could not be satisfied and Validation explains why.
+type ComputeBindingFailedCheck struct {
+	Availability *compute.AvailabilityResult      `json:"availability"`
+	Validation   *compute.BindingValidationResult `json:"validation,omitempty"`
 }
 
 type UpdateDeviceSupportTypeRequest struct {
@@ -133,13 +128,10 @@ func (h *Handler) updateDeviceSupportType(req *restful.Request, resp *restful.Re
 		return
 	}
 	if len(plan.blocked) > 0 {
-		resp.WriteAsJson(DeviceSupportTypeSwitchResponse{
-			Response: api.Response{Code: api.CodeComputeDeviceSwitchBlocked},
-			Data: DeviceSupportTypeSwitchResult{
-				Status:      "bound-apps-stop-blocked",
-				Device:      device,
-				BlockedApps: plan.blocked,
-			},
+		api.HandleFailedCheck(resp, api.CheckTypeComputeDeviceSwitchBlocked, DeviceSupportTypeSwitchResult{
+			Status:      "bound-apps-stop-blocked",
+			Device:      device,
+			BlockedApps: plan.blocked,
 		})
 		return
 	}

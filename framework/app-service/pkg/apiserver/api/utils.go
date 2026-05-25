@@ -48,8 +48,8 @@ func HandleConflict(response *restful.Response, req *restful.Request, err error)
 	handle(http.StatusConflict, response, req, err)
 }
 
-func HandleFailedCheck(response *restful.Response, checkType string, checkResult any, code int) {
-	response.WriteHeaderAndEntity(http.StatusUnprocessableEntity, FailedCheckResponse{Code: code, Data: FailedCheckResponseData{Type: checkType, Data: checkResult}})
+func HandleFailedCheck(response *restful.Response, checkType string, checkResult any) {
+	response.WriteHeaderAndEntity(http.StatusOK, FailedCheckResponse{Code: http.StatusUnprocessableEntity, Data: FailedCheckResponseData{Type: checkType, Data: checkResult}})
 }
 
 // HandleError handles the given error by determining the appropriate HTTP status code and performing error handling logic.
