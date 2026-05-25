@@ -11,7 +11,7 @@ head:
 
 For competitive gaming or Windows-exclusive software, configure a secondary NVMe SSD to create a dual-boot system.
 
-This dual-drive setup physically isolates the operating systems, ensuring Olares OS remains stable and secure while providing full native performance for your Windows applications.
+This dual-drive setup physically isolates the operating systems. This ensures Olares OS remains stable and secure while providing full native performance for your Windows applications.
 
 ## Learning objectives
 
@@ -36,7 +36,7 @@ By the end of this guide, you will learn how to:
 1. Download the Windows 11 ISO from the [official Microsoft website](https://www.microsoft.com/en-us/software-download/windows11).
 2. Download and install [**balenaEtcher**](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
-4. Open Balena Etcher and follow these steps:
+4. Open balenaEtcher and follow these steps:
 
    a. Click **Flash from file** and select the ISO you downloaded.
 
@@ -44,9 +44,9 @@ By the end of this guide, you will learn how to:
 
    c. Click **Flash!** to write the installer to the USB drive.
 
-   ![Balena Etcher flashing screen](/images/one/balenaEtcher.png#bordered)
+   ![balenaEtcher flashing screen](/images/one/balenaEtcher.png#bordered)
 
-5. Wait for the flashing and validation to finish, and then unplug the USB drive.
+5. Wait for the flashing and validation to finish, and then safely eject the USB drive.
 
 ## Step 2: Boot into BIOS and disable Olares OS
 
@@ -58,7 +58,7 @@ Disable the Olares OS drive in the BIOS before you install Windows to ensure the
 
    ![BIOS setup](/images/one/bios-setup-interface.png#bordered)
 
-4. Go to **Boot** tab, select the boot option for the Olares OS disk, and then press **Enter**.
+4. Go to the **Boot** tab, select the boot option for the Olares OS disk, and then press **Enter**.
 5. Select **Disabled** in the popup window, and then press **Enter**.
 6. Go to the **Save and Exit** tab, under **Boot Override**, select your Windows USB disk to boot directly from it, and then press **Enter**.
 7. Press **F10**, and then select **Yes** to save the changes and exit.
@@ -242,3 +242,4 @@ Use the GRUB boot menu to choose your preferred operating system every time you 
 ## Resources
 
 - [Install drivers on Windows](install-nvidia-driver.md)
+- [Dual-boot Ubuntu on a secondary SSD](dual-boot-ubuntu-dual-drive.md)

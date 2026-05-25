@@ -9,16 +9,15 @@ head:
 
 # Dual-boot Ubuntu on a secondary SSD <Badge type="tip" text="40 min" />
 
-Install Ubuntu on a secondary NVMe SSD to create a dedicated environment for development, testing, or a fallback system, while keeping Olares OS intact.
+Install Ubuntu on a secondary NVMe SSD to create a dedicated environment for development, testing, or a fallback system without affecting Olares OS.
 
 This dual-drive setup physically isolates the systems. This ensures Olares OS remains stable and secure while providing the flexibility to boot into either operating system natively.
 
 ## Learning objectives
 
 By the end of this guide, you will learn how to:
-
 - Create a bootable Ubuntu USB drive.
-- Install Ubuntu on a secondary SSD alongside Olares OS.
+- Install Ubuntu on a secondary SSD.
 - Configure GRUB to detect both Olares OS and Ubuntu.
 - Switch between the two systems at startup.
 
@@ -29,45 +28,41 @@ By the end of this guide, you will learn how to:
 - A USB flash drive (8 GB or larger) for Ubuntu installation media.
 - A wired keyboard and mouse.
 - A monitor connected to Olares One.
-- An Ethernet cable (recommended), or a Wi‑Fi connection.
 
 ## Step 1: Create a bootable Ubuntu USB drive
 
-1. Download the Ubuntu ISO (24.04 LTS or later) from the [official Ubuntu website](https://ubuntu.com/download/server). You can choose the Server or Desktop version. 
-2. Download and install Balena Etcher from [etcher.balena.io](https://etcher.balena.io/).
-3. Insert your USB flash drive into your computer.
-4. Open Balena Etcher and follow these steps:
+1. Download the Ubuntu ISO (26.04 LTS or later) from the [official Ubuntu website](https://ubuntu.com/download/server). You can choose the Server or Desktop version. 
+2. Download and install [balenaEtcher](https://etcher.balena.io/).
+3. Insert the USB flash drive into your computer.
+4. Open balenaEtcher and follow these steps:
 
-   a. Click **Flash from file** and select the Ubuntu ISO you downloaded.
+   a. Click **Flash from file** and select the ISO you downloaded.
 
    b. Click **Select target** and select your USB drive.
 
    c. Click **Flash!** to write the installer to the USB drive. 
 
-   ![Balena Etcher flashing screen](/images/one/balenaEtcher.png#bordered)
+   ![balenaEtcher flashing screen](/images/one/balenaEtcher.png#bordered)
 
-5. Wait until the flashing and validation finish, and then safely eject the USB drive.
+5. Wait for the flashing and validation to finish, and then safely eject the USB drive.
 
 ## Step 2: Boot from the Ubuntu USB drive
 
 1. Insert the Ubuntu USB drive into Olares One.
-2. Power on Olares One or restart it if it is already running.
-3. When the Olares logo appears, immediately press the **Delete** key repeatedly to enter the BIOS setup.  
+2. Power on Olares One, or restart it if it is already running.
+3. When the Olares logo appears, press the **Delete** key repeatedly to enter the BIOS setup.  
 
    ![BIOS setup menu](/images/one/bios-setup-interface.png#bordered)
 
-4. Navigate to the **Boot** tab using the arrow keys on your keyboard.
-5. Select your USB drive from the list and press **Enter**.
+4. Go to the **Save & Exit** tab, under **Boot Override**, select your USB drive from the list, and then press **Enter**.
 
-    ![Select Ubuntu USB on Boot menu in BIOS](/images/one/select-ubuntu-usb-in-bios.png#bordered)
-
-6. Press **F10**, and then select **Yes** to save and exit BIOS.
+    ![Select Ubuntu USB on Boot menu in BIOS](/images/one/select-ubuntu-usb-in-bios2.png#bordered)
 
     The system restarts and boots from the USB drive into the Ubuntu installation interface.
 
 ## Step 3: Install Ubuntu on the secondary SSD
 
-The following steps use Ubuntu Server 24.04 as an example. The process is similar for the Desktop version.
+The following steps use Ubuntu Server 26.04 as an example. The process is similar for the Desktop version.
 
 1. In GNU GRUB, select **Try or Install Ubuntu Server**. Wait for the initial loading sequence to finish and the language selection screen to appear.
 
@@ -82,12 +77,12 @@ The following steps use Ubuntu Server 24.04 as an example. The process is simila
 5. On the **Network configuration** screen, skip network configuration for now by selecting **Continue without network** at the bottom, and then press **Enter**.
 
     :::tip
-    Connecting to the network triggers automatic background downloads for patches and dependencies, which can significantly delay the installation and might cause the installer to hang due to network fluctuations. Skipping this ensures a rapid, completely local installation from the pure ISO image.
+    Connecting to the network triggers automatic background downloads for patches and dependencies. This can significantly delay the installation and might cause the installer to hang due to network fluctuations. Skipping this ensures a rapid, completely local installation from the pure ISO image.
     :::
 
    ![Ubuntu network config](/images/one/ubuntu-network.png#bordered)
 
-6. On the **Proxy configuration** screen, leave it blank, and then press **Enter**.
+6. On the **Proxy configuration** screen, leave it blank unless your environment requires one, and then press **Enter**.
 7. On the **Ubuntu archive mirror configuration** screen, keep the default Ubuntu archive mirror URL, ignore the "no network" warning, and then press **Enter**.
 8. On the **Guided storage configuration** screen:
 
@@ -101,7 +96,7 @@ The following steps use Ubuntu Server 24.04 as an example. The process is simila
     Disabling LVM forces the installer to automatically create stable, straightforward standard ext4 partitions. This  eliminates the risk of future GRUB bootloader conflicts or errors in a multi-OS environment.
     :::
 
-    d. Press **Enter**.
+    d. Navigate to the bottom of the page, ensure **Done** is selected, and then press **Enter**.
 
     ![Ubuntu guided storage configuration](/images/one/ubuntu-guided-storage.png)
 
@@ -129,8 +124,8 @@ After the reboot, the system boots into Olares OS by default. This happens becau
 
 Manually update **Boot Option #1** to the new drive to force the motherboard to load the newly generated GRUB menu. This menu successfully recognizes both Ubuntu and Olares OS.
 
-1. Restart Olares One and immediately press the **Delete** key repeatedly to enter the BIOS setup.
-2. Navigate to the **Boot** tab and locate the **Boot Option Priorities** section.
+1. Restart Olares One, and press the **Delete** key repeatedly to enter the BIOS setup.
+2. Go to the **Boot** tab and locate the **Boot Option Priorities** section.
 3. Change **Boot Option #1** to point to the newly installed drive:
 
     a. Navigate to **Boot Option #1**, and then press **Enter**.
@@ -154,7 +149,12 @@ After rebooting, the **GNU GRUB** dual-boot menu appears automatically.
 
 2. To switch to the other operating system while currently logged in, run `sudo reboot` in the terminal and enter your password when prompted. When the **GNU GRUB** menu appears, choose the system you want to boot.
 
+    :::info
+    When you type your password in the terminal, the characters remain invisible for security. Ensure you have entered the correct password and press **Enter**.
+    :::
+
 ## Resources
 
+- [Dual-boot Windows on a secondary SSD](dual-boot-dual-drive.md)
 - [Ubuntu Server documentation](https://ubuntu.com/server/docs)
 - [GRUB manual](https://www.gnu.org/software/grub/manual/grub/html_node/)
