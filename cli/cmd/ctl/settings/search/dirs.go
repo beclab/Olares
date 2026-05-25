@@ -30,8 +30,6 @@ full-content indexing.
 
 Subcommands:
   list
-  add <path>...
-  rm  <path>...
 `,
 	}
 	cmd.SilenceUsage = true
