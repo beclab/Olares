@@ -480,6 +480,13 @@ ready to be piped into ` + "`files ls sync/<repo_id>/`" + ` etc.
 Restrictions:
 
   - <name> may not be empty.
+  - <name> may not be whitespace-only (` + "`\" \"`" + `, ` + "`\"  \"`" + `, ` + "`\"\\t\"`" + `,
+    ` + "`\"\\n\"`" + `, ...). The server's repoName query param would
+    otherwise accept it and create a repo whose display label is
+    invisible in the LarePass library list — recoverable only by
+    repo_id. Leading/trailing whitespace AROUND non-whitespace
+    chars is still accepted (` + "`\"  Q3 Plans  \"`" + ` lands intact);
+    the rule is binary — at least one printable char required.
   - <name> may not be ` + "`.`" + ` or ` + "`..`" + ` — these are POSIX
     path-traversal segments and are blocked uniformly across
     ` + "`files mkdir`" + ` / ` + "`files rename`" + ` / ` + "`files repos create`" + ` /
@@ -531,6 +538,11 @@ Wire shape:
 Restrictions:
 
   - <new_name> may not be empty.
+  - <new_name> may not be whitespace-only — same rationale as
+    ` + "`files repos create`" + `: a single-space label is invisible in
+    the LarePass library list and can only be recovered by
+    repo_id. Names with mixed whitespace + printable chars
+    (` + "`\"  Q3 Plans  \"`" + `) stay intact.
   - <new_name> may not be ` + "`.`" + ` or ` + "`..`" + ` — same
     path-traversal-segment policy ` + "`files rename`" + ` and
     ` + "`files repos create`" + ` enforce, so a benign-then-renamed

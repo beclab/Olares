@@ -122,6 +122,70 @@ func TestPlan_RefusesExternalNodeRoot(t *testing.T) {
 	}
 }
 
+// TestPlan_RefusesExternalDepthOne pins the second gate on the
+// external namespace: depth-1 entries under `external/<node>/` ARE
+// the mounted volumes (USB-0, SMB-..., etc.) managed by the LarePass
+// GUI, not regular directories. Auto-creating one via mkdir lands
+// as a phantom volume (no backing filesystem; subsequent reads return
+// empty) or, on collision with a real mount, trips the auto-rename
+// quirk and produces "Foo (1)" next to it. Plan must reject this
+// case client-side and steer the user to the depth-≥-2 shape.
+//
+// This pairs with TestPlan_RefusesExternalNodeRoot — the bare-root
+// case (SubPath == "/") and the depth-1 case (SubPath == "/<seg>/")
+// together cover every shape where the requested mkdir would target
+// the volume-listing layer.
+func TestPlan_RefusesExternalDepthOne(t *testing.T) {
+	cases := []Target{
+		{FileType: "external", Extend: "node-1", SubPath: "/NewVolume"},
+		{FileType: "external", Extend: "node-1", SubPath: "/NewVolume/"},
+		// Edge: a single segment with embedded chars the user might
+		// type from the GUI's "Add disk" dialog. Same outcome.
+		{FileType: "external", Extend: "node-1", SubPath: "/USB Drive 2/"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.SubPath, func(t *testing.T) {
+			_, err := Plan(tc)
+			if err == nil {
+				t.Fatalf("expected error for mkdir external/%s%s", tc.Extend, tc.SubPath)
+			}
+			if !strings.Contains(err.Error(), "depth-1 entries") {
+				t.Errorf("error should mention 'depth-1 entries', got: %v", err)
+			}
+			if !strings.Contains(err.Error(), "mounted volumes") {
+				t.Errorf("error should explain that depth-1 entries are mounted volumes, got: %v", err)
+			}
+			if !strings.Contains(err.Error(), "external/node-1/<volume>/") {
+				t.Errorf("error should suggest the corrected shape, got: %v", err)
+			}
+		})
+	}
+}
+
+// TestPlan_AllowsExternalDepthTwoPlus is the positive counterpart to
+// TestPlan_RefusesExternalDepthOne — depth-≥-2 sub-paths under an
+// external node ARE the valid write surface (the first segment is
+// the mounted volume, segments below it are the writable filesystem
+// inside it). Plan must NOT reject these, otherwise legitimate
+// external writes would break.
+func TestPlan_AllowsExternalDepthTwoPlus(t *testing.T) {
+	cases := []Target{
+		{FileType: "external", Extend: "node-1", SubPath: "/USB-0/Backups"},
+		{FileType: "external", Extend: "node-1", SubPath: "/USB-0/Backups/2026/"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.SubPath, func(t *testing.T) {
+			op, err := Plan(tc)
+			if err != nil {
+				t.Fatalf("Plan(%v) returned error: %v", tc, err)
+			}
+			if op.DisplayPath == "" {
+				t.Errorf("Plan(%v) returned empty DisplayPath", tc)
+			}
+		})
+	}
+}
+
 // TestPlan_RejectsInvalidSegments: empty / '.' / '..' segments
 // anywhere in the path are obvious typos / path-traversal grenades;
 // surface a typed error instead of silently building a malformed

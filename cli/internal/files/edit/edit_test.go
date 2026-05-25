@@ -132,15 +132,14 @@ func TestPlan_RejectsBadInput(t *testing.T) {
 //     GUI's `onSaveFile` natively wires these to /api/resources
 //     PUT).
 //   - awss3 / google / dropbox / tencent are NOT supported. The
-//     read leg uses /api/raw which returns preview JSON envelopes
-//     (not raw bytes) on cloud drives — saving an edit would
-//     round-trip the JSON envelope as the new file content
-//     (Bug 1 in the verb's bug report). On top of that, only
-//     awss3/utils.ts has a put() helper at all in the GUI; google
-//     and dropbox have no save-related plumbing at all, so even
-//     fixing the read leg would leave us PUT-ing against an
-//     endpoint nobody has exercised end-to-end. Both gaps need
-//     to close before we re-enable cloud-drive editing.
+//     read leg is fine now — the unified /api/raw/ endpoint
+//     serves raw bytes on cloud drives too — but the write leg
+//     (PUT /api/resources/<cloud-path>) is still unverified per
+//     driver: only awss3/utils.ts has a put() helper at all in
+//     the GUI; google / dropbox / tencent have no save-related
+//     plumbing, so PUT-ing there would hit an endpoint nobody
+//     has exercised end-to-end. That gap needs to close before
+//     we re-enable cloud-drive editing.
 //   - share / internal stay rejected — read-only / cross-user
 //     views in the LarePass UX with no save affordance.
 //
@@ -175,10 +174,14 @@ func TestPlan_NamespaceAllowlist(t *testing.T) {
 // TestPlan_CloudDriveDedicatedMessage pins the targeted error a
 // cloud-drive Plan returns. The GUI / docs both refer to these as
 // "supported" because the URL shape is uniform — the actual
-// failure is on the FETCH leg (/api/raw returns JSON metadata,
-// not raw bytes for cloud namespaces, see `files cat`'s docs).
+// failure is now on the WRITE leg (PUT /api/resources/<cloud-path>
+// is only wired in awss3's v2 utils; google / dropbox / tencent
+// have no save helper at all, so the PUT shape is unverified
+// per cloud driver). The historical fetch-leg risk (preview JSON
+// envelopes from /api/raw) was retired with the cloud-bridge
+// consolidation — the unified raw endpoint now serves cloud bytes.
 // A generic "not supported" message would leave users guessing;
-// the dedicated message names the wire-shape gap and points at
+// the dedicated message names the writeback gap and points at
 // the proven download → edit-locally → upload alternative.
 func TestPlan_CloudDriveDedicatedMessage(t *testing.T) {
 	for _, ft := range []string{"awss3", "google", "dropbox", "tencent"} {
@@ -191,8 +194,8 @@ func TestPlan_CloudDriveDedicatedMessage(t *testing.T) {
 			if !strings.Contains(msg, "cloud-drive") {
 				t.Errorf("err should call out 'cloud-drive': %v", msg)
 			}
-			if !strings.Contains(msg, "/api/raw") {
-				t.Errorf("err should name the /api/raw wire-shape gap: %v", msg)
+			if !strings.Contains(msg, "/api/resources") {
+				t.Errorf("err should name the /api/resources writeback gap: %v", msg)
 			}
 			if !strings.Contains(msg, "files download") || !strings.Contains(msg, "files upload") {
 				t.Errorf("err should suggest the download → upload workaround: %v", msg)

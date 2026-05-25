@@ -241,12 +241,13 @@ var isTTY = func() bool {
 //
 // Supported namespaces: drive / sync / cache / external. Cloud
 // drives (awss3 / google / dropbox / tencent) are NOT supported —
-// the FETCH leg uses /api/raw which returns preview JSON instead
-// of raw bytes for cloud namespaces (so an "edit" would round-trip
-// the JSON envelope back as the new file content), AND the GUI's
-// per-driver `onSaveFile` is only wired for awss3 (google /
-// dropbox have no save plumbing at all). Until both legs are
-// wire-verified per cloud driver, the safe answer is the
+// the FETCH leg via the unified /api/raw/ endpoint is fine on
+// cloud namespaces now (the historical "preview JSON envelope"
+// problem was retired with the cloud-bridge consolidation), but
+// the GUI's per-driver writeback (PUT /api/resources/<cloud-path>)
+// is only wired for awss3 (google / dropbox / tencent have no
+// save plumbing at all). Until the PUT shape is wire-verified
+// per cloud driver, the safe answer is the
 // download → edit-locally → upload round-trip. share / internal
 // are also refused — they're cross-user / read-only views in the
 // LarePass UX with no documented write surface.
@@ -336,13 +337,12 @@ Supported namespaces:
     external/<node>/<volume>/<sub>/<file>
 
 Cloud drives (awss3 / google / dropbox / tencent) are NOT
-supported. The FETCH leg uses ` + "`/api/raw/`" + `, which returns preview
-metadata / JSON envelopes (not raw bytes) for cloud namespaces —
-editing would round-trip the JSON envelope back as the new file
-content, silently corrupting the file. Even fixing the read leg
-would leave google / dropbox without any save plumbing in the
-GUI to validate against. Until both legs are wire-verified
-per cloud driver, the safe alternative is:
+supported. The FETCH leg via the unified ` + "`/api/raw/`" + ` endpoint is
+fine on cloud namespaces now, but the WRITEBACK leg
+(` + "`PUT /api/resources/<cloud-path>`" + `) is only wired for awss3 in the
+LarePass GUI — google / dropbox / tencent have no save plumbing
+at all. Until the PUT shape is wire-verified per cloud driver,
+the safe alternative is:
 
     olares-cli files download <cloud-path> <local>
     $EDITOR <local>
