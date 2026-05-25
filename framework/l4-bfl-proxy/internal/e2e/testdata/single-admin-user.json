@@ -730,6 +730,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -786,6 +793,13 @@
               "header": {
                 "key": "access-control-allow-methods",
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
@@ -846,6 +860,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -904,6 +925,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -960,6 +988,13 @@
               "header": {
                 "key": "access-control-allow-methods",
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
@@ -1125,6 +1160,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1181,6 +1223,13 @@
               "header": {
                 "key": "access-control-allow-methods",
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
@@ -1241,6 +1290,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1299,6 +1355,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1355,6 +1418,13 @@
               "header": {
                 "key": "access-control-allow-methods",
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
