@@ -211,6 +211,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/egpu",
         },
         {
+          text: "Install Windows on Olares One",
+          link: "/zh/one/install-windows-primary-drive",
+        },
+        {
           text: "Dual-boot Olares OS with Windows",
           collapsed: true,
           items:
