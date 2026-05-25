@@ -732,3 +732,119 @@ func (wh *Webhook) isSelected(podSelectors []metav1.LabelSelector, pod *corev1.P
 	}
 	return false
 }
+
+// MacvlanInitContainerName is the name of the init container injected for pods
+// that need to reply via eth0 in macvlan setups.
+const MacvlanInitContainerName = "macvlan-reply-via-eth0"
+
+// macvlanInitScript is the shell script run inside the macvlan-init container.
+// It waits for an IPv4 address on eth0, then creates a dedicated routing table
+// and a `from <pod-ip>` rule so that reply traffic is sent out via eth0
+// instead of the default pod gateway.
+const macvlanInitScript = `set -eu
+TABLE=100
+PRI=100
+POD_IP=""
+i=0
+while [ "$i" -lt 30 ]; do
+  POD_IP=$(ip -4 addr show dev eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -1)
+  test -n "$POD_IP" && break
+  i=$((i + 1))
+  sleep 1
+done
+test -n "$POD_IP" || { echo "no eth0 address after wait"; exit 1; }
+GW=$(ip -4 route show dev eth0 | awk '/^default/{print $3; exit}')
+test -n "${GW:-}" || GW=169.254.1.1
+ip -4 route replace default via "$GW" dev eth0 table "$TABLE"
+if ip -4 rule list | grep -Fq "from $POD_IP lookup $TABLE"; then exit 0; fi
+ip -4 rule add from "$POD_IP/32" lookup "$TABLE" priority "$PRI"
+`
+
+// GetMacvlanInitContainer returns the init container spec used to set up
+// a dedicated routing table so that reply traffic flows back via eth0 for
+// pods participating in a macvlan / overlay-gateway setup.
+func GetMacvlanInitContainer() corev1.Container {
+	runAsNonRoot := false
+	allowPrivilegeEscalation := false
+	runAsUser := int64(0)
+	return corev1.Container{
+		Name:            MacvlanInitContainerName,
+		Image:           "docker.io/beclab/aboveos-busybox:1.37.0",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		SecurityContext: &corev1.SecurityContext{
+			RunAsUser:                &runAsUser,
+			RunAsNonRoot:             &runAsNonRoot,
+			AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+				Add:  []corev1.Capability{"NET_ADMIN"},
+			},
+		},
+		Command:                  []string{"sh", "-c", macvlanInitScript},
+		Resources:                corev1.ResourceRequirements{},
+		TerminationMessagePath:   "/dev/termination-log",
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+	}
+}
+
+// ShouldInjectMacvlanInit reports whether the macvlan init container should be
+// injected for the given pod. It returns true only when the owning Application
+// can be resolved from the pod's app name/owner labels and has
+// `spec.settings.enableOverlayGateway == "true"`.
+func (wh *Webhook) ShouldInjectMacvlanInit(ctx context.Context, pod *corev1.Pod, ns string) (bool, error) {
+	if pod == nil || pod.Labels == nil {
+		return false, nil
+	}
+	if pod.Labels[constants.ApplicationMacvlanInitLabel] != "true" {
+		return false, nil
+	}
+	appName := pod.Labels[constants.ApplicationNameLabel]
+	owner := pod.Labels[constants.ApplicationOwnerLabel]
+	if appName == "" {
+		klog.Infof("macvlan-init: skip pod=%s/%s missing app labels", ns, pod.Name)
+		return false, nil
+	}
+	klog.Infof("ShouldInjectMacvlanInit: pod.Namespace: %s", ns)
+	applicationName, err := apputils.FmtAppMgrName(appName, owner, ns)
+	if err != nil {
+		klog.Errorf("macvlan-init: failed to format application name app=%s owner=%s ns=%s err=%v", appName, owner, ns, err)
+		return false, err
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			klog.Infof("macvlan-init: application=%s not found for pod=%s/%s", applicationName, ns, pod.Name)
+			return false, nil
+		}
+		klog.Errorf("macvlan-init: failed to get application=%s err=%v", applicationName, err)
+		return false, err
+	}
+	enabled := app.Spec.Settings["enableOverlayGateway"] == "true"
+	if !enabled {
+		klog.Infof("macvlan-init: application=%s enableOverlayGateway is not true, skip pod=%s/%s", applicationName, ns, pod.Name)
+	}
+	return enabled, nil
+}
+
+// CreateMacvlanInitPatch appends the macvlan init container to the pod's
+// init containers (idempotent — does nothing if the container is already
+// present) and returns the JSON merge patch to send back in the admission
+// response.
+func (wh *Webhook) CreateMacvlanInitPatch(req *admissionv1.AdmissionRequest, pod *corev1.Pod) ([]byte, error) {
+	if pod.Annotations == nil {
+		pod.Annotations = make(map[string]string)
+	}
+	pod.Annotations["k8s.v1.cni.cncf.io/networks"] = "kube-system/underlay-macvlan"
+
+	for _, c := range pod.Spec.InitContainers {
+		if c.Name == MacvlanInitContainerName {
+			klog.Infof("macvlan-init: container already present in pod=%s/%s, skip", pod.Namespace, pod.Name)
+			return makePatches(req, pod)
+		}
+	}
+	// Append after any existing init containers (e.g. sidecar wait-for /
+	// render-envoy-config) so we run after them but still before the main
+	// app containers.
+	pod.Spec.InitContainers = append(pod.Spec.InitContainers, GetMacvlanInitContainer())
+	return makePatches(req, pod)
+}

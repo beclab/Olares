@@ -244,10 +244,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 				api.HandleError(resp, req, planErr)
 				return
 			}
-			resp.WriteAsJson(InstallComputePlanResponse{
-				Response: api.Response{Code: api.CodeComputeAmbiguousMode},
-				Data:     plan,
-			})
+			api.HandleFailedCheck(resp, api.CheckTypeComputeModeSelect, plan)
 			return
 		}
 		if err != nil {
@@ -361,7 +358,7 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 		return err
 	}
 	if result != nil {
-		api.HandleFailedCheck(h.resp, api.CheckTypeAppEntrance, result, 104222)
+		api.HandleFailedCheck(h.resp, api.CheckTypeAppEntrance, result)
 		return fmt.Errorf("invalid entrance config, check result: %#v", result)
 	}
 
@@ -477,7 +474,7 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 		return
 	}
 	if ret != nil {
-		api.HandleFailedCheck(h.resp, api.CheckTypeAppEnv, ret, http.StatusUnprocessableEntity)
+		api.HandleFailedCheck(h.resp, api.CheckTypeAppEnv, ret)
 		return fmt.Errorf("Invalid appenv config, check result: %#v", ret)
 	}
 
