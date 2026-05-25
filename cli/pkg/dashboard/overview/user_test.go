@@ -191,6 +191,98 @@ func TestBuildUserEnvelope_AdminWithoutQuotaFallsBackToCluster(t *testing.T) {
 	}
 }
 
+// TestBuildUserEnvelope_AdminTargetingPeerKeepsPeerQuota pins the
+// cross-user variant of the admin-total fallback. When an admin
+// (alice) targets a different user (`--user bob`),
+// `ResolveTargetUser` returns a synthetic record carrying bob's
+// name + `GlobalRole="<admin-target>"` — i.e. `user.IsAdmin()` is
+// false. The admin-total fallback MUST stay off in that case:
+// "alice is allowed to look at bob's stats" never implies "bob's
+// quota should be replaced by the cluster total". Otherwise the
+// CLI silently inflates bob's totals to whatever the cluster owns,
+// hiding the real ResourceQuota and making `--user bob` useless
+// for capacity planning.
+//
+// Regression net for the bug where the EnsureUser re-probe was
+// firing on the active profile (alice→admin) and bumping
+// `isAdmin=true` for bob; the fix gates the re-probe on
+// `active.Name == user.Name` so the bump only fires for the
+// self-target path (where ResolveTargetUser already returned the
+// real record with a real role anyway — the re-probe is now pure
+// defense-in-depth).
+func TestBuildUserEnvelope_AdminTargetingPeerKeepsPeerQuota(t *testing.T) {
+	// `bob` has an explicit ResourceQuota (8 CPU / 16 GiB). The
+	// cluster total is 24 CPU / 96 GiB — picking the bug would
+	// inflate bob's CPU to 24 and Memory to 96 GiB. The test pins
+	// the non-inflated values + `total_source=user_quota`.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/capi/app/detail":
+			_, _ = w.Write([]byte(`{"user":{"username":"alice","globalrole":"platform-admin"}}`))
+		case "/kapis/monitoring.kubesphere.io/v1alpha3/users/bob":
+			_, _ = w.Write([]byte(`{"results":[
+              {"metric_name":"user_cpu_total","data":{"result":[{"metric":{},"value":[1714600000,"8"]}]}},
+              {"metric_name":"user_cpu_usage","data":{"result":[{"metric":{},"value":[1714600000,"2"]}]}},
+              {"metric_name":"user_cpu_utilisation","data":{"result":[{"metric":{},"value":[1714600000,"0.25"]}]}},
+              {"metric_name":"user_memory_total","data":{"result":[{"metric":{},"value":[1714600000,"17179869184"]}]}},
+              {"metric_name":"user_memory_usage_wo_cache","data":{"result":[{"metric":{},"value":[1714600000,"4294967296"]}]}},
+              {"metric_name":"user_memory_utilisation","data":{"result":[{"metric":{},"value":[1714600000,"0.25"]}]}}
+            ]}`))
+		case "/kapis/monitoring.kubesphere.io/v1alpha3/cluster":
+			// If the bug fires this gets read and clobbers bob's totals.
+			_, _ = w.Write([]byte(`{"results":[
+              {"metric_name":"cluster_cpu_total","data":{"result":[{"metric":{},"value":[1714600000,"24"]}]}},
+              {"metric_name":"cluster_memory_total","data":{"result":[{"metric":{},"value":[1714600000,"103079215104"]}]}}
+            ]}`))
+		default:
+			noUnexpectedPath(t, w, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	c := newTestClient(srv)
+	cf := fixtureFlags(t)
+
+	env, err := BuildUserEnvelope(context.Background(), c, cf, "bob", time.Now())
+	if err != nil {
+		t.Fatalf("BuildUserEnvelope: %v", err)
+	}
+	if len(env.Items) != 2 {
+		t.Fatalf("Items len = %d, want 2", len(env.Items))
+	}
+
+	cpuRow := env.Items[0]
+	if cpuRow.Raw["user"] != "bob" {
+		t.Errorf("CPU Raw.user = %v, want bob (admin-target path)", cpuRow.Raw["user"])
+	}
+	if cpuRow.Raw["total_source"] != "user_quota" {
+		t.Errorf("CPU Raw.total_source = %v, want user_quota (admin targeting peer must NOT activate cluster fallback)", cpuRow.Raw["total_source"])
+	}
+	if cpuRow.Display["total"] != "8.00" {
+		t.Errorf("CPU total display = %v, want 8.00 (bob's quota, NOT cluster's 24)", cpuRow.Display["total"])
+	}
+	// 2/8 = 0.25 → percentString → "25%" (integer branch of
+	// formatNumberJSLike: trunc(v)==v so 0-decimal). If the bug
+	// fires the utilisation gets recomputed against cluster 24 →
+	// "8.33%".
+	if cpuRow.Display["utilisation"] != "25%" {
+		t.Errorf("CPU utilisation = %v, want 25%% (2/8, NOT recomputed against cluster 24)", cpuRow.Display["utilisation"])
+	}
+
+	memRow := env.Items[1]
+	if memRow.Raw["total_source"] != "user_quota" {
+		t.Errorf("Memory Raw.total_source = %v, want user_quota", memRow.Raw["total_source"])
+	}
+	memTotal, _ := memRow.Display["total"].(string)
+	// 16 GiB exact (17179869184 bytes / 2^30 = 16) — GetDiskSize
+	// renders integer values without decimals via formatNumberJSLike
+	// (`v == Trunc(v)` branch). Pin the exact rendered string so a
+	// loose substring check doesn't accidentally pass against the
+	// cluster's "96Gi" or "9.00Gi" partial overlap.
+	if memTotal != "16Gi" {
+		t.Errorf("Memory total display = %q, want %q (bob's quota, NOT cluster's 96 GiB)", memTotal, "16Gi")
+	}
+}
+
 // TestBuildUserEnvelope_NonAdminPrefersUserQuota pins the inverse
 // of the admin fallback: a non-admin (`workspaces-manager`)
 // querying themselves keeps `total_source = user_quota` even when

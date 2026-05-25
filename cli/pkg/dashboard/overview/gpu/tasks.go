@@ -2,6 +2,7 @@ package gpu
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,6 +37,14 @@ func RunTasks(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Comm
 			// stderr advisory already printed by VgpuUnavailableFromError.
 		}
 		return nil
+	}
+	// Mirror of RunList: surface an unclassifiable transport /
+	// 4xx error stashed on Meta.Error to cobra instead of falling
+	// through to an empty-table render. JSON mode is handled by
+	// the early return above (consumers see the envelope with
+	// meta.error populated). See RunList for the full rationale.
+	if env.Meta.Error != "" {
+		return errors.New(env.Meta.Error)
 	}
 	return WriteTasksTable(os.Stdout, env)
 }

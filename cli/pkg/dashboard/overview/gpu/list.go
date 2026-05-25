@@ -2,6 +2,7 @@ package gpu
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -41,6 +42,21 @@ func RunList(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Commo
 			// stderr advisory already printed by VgpuUnavailableFromError.
 		}
 		return nil
+	}
+	// Unclassifiable transport / 4xx error — BuildListEnvelope
+	// stashes it on Meta.Error (Meta.Empty stays false). JSON mode
+	// returned the envelope as-is above so agents can branch on
+	// `meta.error`; table mode used to fall through to
+	// WriteListTable and render a header + "-" row with no
+	// diagnostic, silently swallowing the failure. Returning the
+	// error here surfaces it to cobra (printed to stderr with a
+	// non-zero exit code), restoring the legacy pre-envelope-split
+	// behaviour. Checked AFTER the Empty switch so the soft empty
+	// states (no_vgpu_integration / vgpu_unavailable / no_gpu_detected)
+	// keep their non-fatal semantics — vgpu_unavailable in particular
+	// sets both Empty AND Error and is intentionally a clean exit.
+	if env.Meta.Error != "" {
+		return errors.New(env.Meta.Error)
 	}
 	return WriteListTable(os.Stdout, env)
 }

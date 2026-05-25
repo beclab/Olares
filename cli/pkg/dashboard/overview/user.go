@@ -80,10 +80,24 @@ func BuildUserEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashb
 	// Self-target path resolves the active profile (with role
 	// metadata); admin-target path returns a synthetic record
 	// without a role. Re-probe via EnsureUser so we can detect
-	// the latter.
+	// the latter — but ONLY accept the re-probe's "admin=true"
+	// signal when the re-probed identity is the same user we're
+	// rendering for. Otherwise an admin (alice) running
+	// `--user bob` would inherit alice's admin role for bob's
+	// envelope, silently overriding bob's real ResourceQuota
+	// with the cluster total: bob would appear to own every CPU
+	// / byte of memory the cluster has, hiding the actual quota
+	// and making `--user bob` useless for capacity planning.
+	//
+	// In practice the admin-target path's synthetic record never
+	// matches the active user's name (ResolveTargetUser returns
+	// the real cached record when requested == active), so this
+	// re-probe is effectively defense-in-depth — but the guard
+	// keeps the code correct under any future change to
+	// ResolveTargetUser's gating shape.
 	isAdmin := user.IsAdmin()
 	if !isAdmin {
-		if active, ferr := c.EnsureUser(ctx); ferr == nil && active != nil && active.IsAdmin() {
+		if active, ferr := c.EnsureUser(ctx); ferr == nil && active != nil && active.IsAdmin() && active.Name == user.Name {
 			isAdmin = true
 		}
 	}

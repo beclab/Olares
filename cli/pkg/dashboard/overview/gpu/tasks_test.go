@@ -53,6 +53,58 @@ func TestRunTasks_NoVgpuIntegration404(t *testing.T) {
 	}
 }
 
+// TestRunTasks_TableModeSurfacesTransportError pins Bug 2's
+// RunTasks half. Same contract as the RunList counterpart: an
+// unclassifiable 4xx (here 400) must surface to cobra in table
+// mode instead of being silently absorbed into an empty table.
+// The bug let the user see a header row + a "-" placeholder line
+// with no indication that the upstream call failed.
+func TestRunTasks_TableModeSurfacesTransportError(t *testing.T) {
+	srv := gpuStubMux{
+		taskList: func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"message":"bad filter"}`))
+		},
+	}.server(t)
+	defer srv.Close()
+	c := newTestClient(srv)
+	cf := fixtureFlags(t)
+	cf.Output = pkgdashboard.OutputTable
+
+	_, runErr := captureStdoutAndErr(t, func() error { return RunTasks(context.Background(), c, cf) })
+	if runErr == nil {
+		t.Fatal("RunTasks returned nil; want a non-nil error surfacing Meta.Error in table mode")
+	}
+	if !strings.Contains(runErr.Error(), "400") && !strings.Contains(runErr.Error(), "bad filter") {
+		t.Errorf("RunTasks err = %q, want it to mention HTTP 400 or 'bad filter' so the user has a diagnostic", runErr)
+	}
+}
+
+// TestRunTasks_JSONModeKeepsTransportErrorOnEnvelope — RunTasks
+// JSON path must keep emitting the envelope with meta.error
+// populated. See the RunList equivalent for the rationale (agents
+// shouldn't have to parse stderr to detect a failed iteration).
+func TestRunTasks_JSONModeKeepsTransportErrorOnEnvelope(t *testing.T) {
+	srv := gpuStubMux{
+		taskList: func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"message":"bad filter"}`))
+		},
+	}.server(t)
+	defer srv.Close()
+	c := newTestClient(srv)
+	cf := fixtureFlags(t)
+	cf.Output = pkgdashboard.OutputJSON
+
+	out := captureStdout(t, func() error { return RunTasks(context.Background(), c, cf) })
+	if !strings.Contains(out, `"error":`) {
+		t.Errorf("expected meta.error in envelope; got:\n%s", out)
+	}
+	if !strings.Contains(out, `"kind":"dashboard.overview.gpu.tasks"`) {
+		t.Errorf("expected envelope kind to still emit alongside meta.error; got:\n%s", out)
+	}
+}
+
 // TestRunTaskByRef_ResolvesPodUIDFromList — happy path for the
 // `gpu tasks <ref>` shorthand. With a single-name match in the
 // task list the resolver MUST forward to RunTaskDetail with the
