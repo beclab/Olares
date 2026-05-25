@@ -508,6 +508,44 @@ func TestCreate_RejectsDotNames(t *testing.T) {
 	}
 }
 
+// TestCreate_RejectsWhitespaceOnly pins the rule that whitespace-only
+// names ("  ", " ", "\t", "\n", mixed) are rejected client-side.
+// Without this guard the server happily accepts `repoName=+` (URL-
+// encoded single space) and creates a repo whose display label is a
+// literal space — invisible in the LarePass library list and only
+// recoverable by repo_id. The check uses strings.TrimSpace so EVERY
+// pure-whitespace shape is rejected, not just the literal " ".
+//
+// Pairs with TestCreate_AllowsWhitespacePadding (below) to lock in
+// the binary policy: 0 non-whitespace chars rejected, ≥ 1 accepted
+// (the surrounding whitespace is the user's stylistic choice).
+func TestCreate_RejectsWhitespaceOnly(t *testing.T) {
+	c := &Client{}
+	for _, name := range []string{" ", "  ", "\t", "\n", " \t \n "} {
+		t.Run(fmt.Sprintf("%q", name), func(t *testing.T) {
+			_, err := c.Create(context.Background(), name)
+			if err == nil {
+				t.Fatalf("expected error for whitespace-only name %q", name)
+			}
+			if !strings.Contains(err.Error(), "whitespace-only") {
+				t.Errorf("error %q should mention 'whitespace-only'", err)
+			}
+		})
+	}
+}
+
+// TestCreate_AllowsWhitespacePadding documents the deliberate
+// non-trim: a name with at least one printable char passes through
+// untouched even if it has leading/trailing whitespace. Some users
+// want " Q3 Plans " literally on Seafile's display label; the CLI
+// stays out of the way for that case.
+func TestCreate_AllowsWhitespacePadding(t *testing.T) {
+	c, _ := mutateServer(t, mutateServerOpts{})
+	if _, err := c.Create(context.Background(), "  Q3 Plans  "); err != nil {
+		t.Errorf("Create(%q) returned error: %v", "  Q3 Plans  ", err)
+	}
+}
+
 func TestCreate_CodeNonZero(t *testing.T) {
 	c, _ := mutateServer(t, mutateServerOpts{
 		body: `{"code":-1,"message":"name already used"}`,
@@ -603,6 +641,26 @@ func TestRename_RejectsDotNames(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), "path-traversal") {
 				t.Errorf("error %q should mention 'path-traversal'", err)
+			}
+		})
+	}
+}
+
+// TestRename_RejectsWhitespaceOnly is the Rename counterpart of
+// TestCreate_RejectsWhitespaceOnly — the rename path must enforce
+// the same name policy as create, otherwise a user could create a
+// benign repo and then rename it to " " and end up with an
+// invisible-labeled entry in the LarePass library list.
+func TestRename_RejectsWhitespaceOnly(t *testing.T) {
+	c := &Client{}
+	for _, name := range []string{" ", "  ", "\t", "\n", " \t \n "} {
+		t.Run(fmt.Sprintf("%q", name), func(t *testing.T) {
+			err := c.Rename(context.Background(), "abc-123", name)
+			if err == nil {
+				t.Fatalf("expected error for whitespace-only newName %q", name)
+			}
+			if !strings.Contains(err.Error(), "whitespace-only") {
+				t.Errorf("error %q should mention 'whitespace-only'", err)
 			}
 		})
 	}
