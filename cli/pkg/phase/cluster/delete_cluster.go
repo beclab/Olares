@@ -12,6 +12,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
 	"github.com/beclab/Olares/cli/pkg/kubesphere"
+	"github.com/beclab/Olares/cli/pkg/plugins/network"
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 )
@@ -107,6 +108,7 @@ func (p *phaseBuilder) phaseInstall() *phaseBuilder {
 			&terminus.DeleteWizardFilesModule{},
 			&terminus.DeleteUpgradeFilesModule{},
 			&storage.RemoveJuiceFSModule{},
+			&network.RemoveOverlayGateway{},
 			&storage.DeletePhaseFlagModule{
 				PhaseFile: common.TerminusStateFileInstalled,
 				BaseDir:   p.runtime.GetBaseDir(),

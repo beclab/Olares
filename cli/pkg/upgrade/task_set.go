@@ -16,12 +16,14 @@ import (
 	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/container"
+	"github.com/beclab/Olares/cli/pkg/core/action"
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	k3stemplates "github.com/beclab/Olares/cli/pkg/k3s/templates"
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
@@ -29,6 +31,8 @@ import (
 	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/phase"
+	"github.com/beclab/Olares/cli/pkg/plugins/network"
+	"github.com/beclab/Olares/cli/pkg/plugins/network/templates"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
@@ -637,4 +641,76 @@ func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 
 	logger.Infof("backfilled GPU config for %d applicationmanagers", patchedCount)
 	return nil
+}
+
+func upgradeMultus() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name: "GenerateMultus",
+			Desc: "Generate multus cni",
+			Action: &generateMultusConfigAction{
+				action.Template{
+					Name: "GenerateMultus",
+				},
+			},
+		},
+		&task.LocalTask{
+			Name:   "DeployMultus",
+			Desc:   "Deploy multus",
+			Action: new(network.DeployNetworkMultusPlugin),
+			Retry:  5,
+		},
+		&task.LocalTask{
+			Name: "GenerateMultusDhcpService",
+			Desc: "Generate multus DHCP service",
+			Action: &action.Template{
+				Name:     "GenerateMultusDhcpService",
+				Template: templates.CniDhcpService,
+				Dst:      path.Join("/etc/systemd/system", templates.CniDhcpService.Name()),
+			},
+			Retry: 5,
+		},
+		&task.LocalTask{
+			Name:   "EnableCniDhcpService",
+			Desc:   "Enable multus CNI DHCP service",
+			Action: new(network.EnableCniDhcpService),
+			Retry:  5,
+		},
+		&task.LocalTask{
+			Name: "GenerateMultusDefine",
+			Desc: "Generate multus define",
+			Action: &action.Template{
+				Name:     "GenerateMultusDefine",
+				Template: templates.MultusDefine,
+				Dst:      path.Join(common.KubeConfigDir, templates.MultusDefine.Name()),
+			},
+			Retry: 5,
+		},
+		&task.LocalTask{
+			Name:   "DeployMultusDefine",
+			Desc:   "Deploy multus define",
+			Action: new(network.DeployMultusDefine),
+			Retry:  5,
+		},
+	}
+}
+
+type generateMultusConfigAction struct {
+	action.Template
+}
+
+func (a *generateMultusConfigAction) Execute(runtime connector.Runtime) error {
+	kubeRuntime := runtime.(*common.KubeRuntime)
+	conf := &common.KubeConf{
+		Cluster: kubeRuntime.Cluster,
+		Arg:     kubeRuntime.Arg,
+	}
+
+	a.Template.Template = templates.Multus
+	a.Dst = filepath.Join(common.KubeConfigDir, templates.Multus.Name())
+	a.Data = util.Data{
+		"MultusImage": images.GetImage(runtime, conf, "multus").ImageName(),
+	}
+
+	return a.Template.Execute(runtime)
 }

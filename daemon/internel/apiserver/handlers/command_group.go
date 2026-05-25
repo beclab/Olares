@@ -5,6 +5,8 @@ import (
 	changehost "github.com/beclab/Olares/daemon/pkg/commands/change_host"
 	collectlogs "github.com/beclab/Olares/daemon/pkg/commands/collect_logs"
 	connectwifi "github.com/beclab/Olares/daemon/pkg/commands/connect_wifi"
+	disableoverlaygateway "github.com/beclab/Olares/daemon/pkg/commands/disable_overlay_gateway"
+	enableoverlaygateway "github.com/beclab/Olares/daemon/pkg/commands/enable_overlay_gateway"
 	"github.com/beclab/Olares/daemon/pkg/commands/install"
 	mountnfs "github.com/beclab/Olares/daemon/pkg/commands/mount_nfs"
 	mountsmb "github.com/beclab/Olares/daemon/pkg/commands/mount_smb"
@@ -112,6 +114,14 @@ func init() {
 
 	cmd.Post("/list-nfs", handlers.RequireLocal(
 		handlers.WaitServerRunning(handlers.PostListNfs)))
+
+	cmd.Post("/enable-overlay-gateway", handlers.RequireMaster(
+		handlers.RequireLocal(
+			handlers.WaitServerRunning(handlers.RunCommand(handlers.EnableOverlayGateway, enableoverlaygateway.New)))))
+
+	cmd.Post("/disable-overlay-gateway", handlers.RequireMaster(
+		handlers.RequireLocal(
+			handlers.WaitServerRunning(handlers.RunCommand(handlers.DisableOverlayGateway, disableoverlaygateway.New)))))
 
 	cmdv2 := cmd.Group("v2")
 	cmdv2.Post("/mount-samba", handlers.RequireMaster(

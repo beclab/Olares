@@ -25,6 +25,13 @@ type Device struct {
 	Method      string
 }
 
+type BridgeConnection struct {
+	BridgeName  string
+	SlaveName   string
+	Active      bool
+	Ipv4Address string
+}
+
 func findCommand(ctx context.Context, cmdName string) (cmdPath string, err error) {
 	cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf("command -v %s", cmdName))
 	cmd.Env = os.Environ()

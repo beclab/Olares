@@ -21,3 +21,12 @@ var (
 // uses a string anyway and the cli module avoids depending on
 // k8s.io/api/core/v1.
 type NodePressure = clistate.NodePressure
+
+type OverlayGatewaySupportedApp struct {
+	AppResourceName string `json:"app_resource_name"`
+	AppName         string `json:"app_name"`
+	Enabled         bool   `json:"enabled"`
+	Owner           string `json:"owner"`
+	SharedApp       bool   `json:"shared_app"`
+	Namespace       string `json:"namespace"`
+}

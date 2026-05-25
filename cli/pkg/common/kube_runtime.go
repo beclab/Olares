@@ -36,6 +36,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	kresource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 )
 
 type KubeRuntime struct {
@@ -492,6 +493,10 @@ func NewKubeRuntime(arg Argument) (*KubeRuntime, error) {
 
 	args, _ := json.Marshal(arg)
 	logger.Debugf("[runtime] arg: %s", string(args))
+
+	// enable multus cni
+	logger.Debugf("enabling multus cni in kube runtime")
+	defaultCluster.Network.MultusCNI.Enabled = ptr.To(true)
 
 	r := &KubeRuntime{
 		Cluster: defaultCluster,
