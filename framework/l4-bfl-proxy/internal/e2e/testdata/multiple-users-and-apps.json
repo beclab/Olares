@@ -1248,6 +1248,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1304,6 +1311,13 @@
               "header": {
                 "key": "access-control-allow-methods",
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
@@ -1364,6 +1378,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1420,6 +1441,13 @@
               "header": {
                 "key": "access-control-allow-methods",
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
@@ -1585,6 +1613,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1607,7 +1642,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -1673,6 +1708,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1695,7 +1737,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -1761,6 +1803,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1783,7 +1832,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -1849,6 +1898,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1871,7 +1927,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -1937,6 +1993,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1959,7 +2022,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -2025,6 +2088,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2047,7 +2117,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -2218,6 +2288,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2274,6 +2351,13 @@
               "header": {
                 "key": "access-control-allow-methods",
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
@@ -2334,6 +2418,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2390,6 +2481,13 @@
               "header": {
                 "key": "access-control-allow-methods",
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
@@ -2555,6 +2653,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2577,7 +2682,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -2643,6 +2748,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2665,7 +2777,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -2731,6 +2843,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2753,7 +2872,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -2819,6 +2938,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2841,7 +2967,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -2907,6 +3033,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2929,7 +3062,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
@@ -2995,6 +3128,13 @@
                 "value": "PUT, GET, DELETE, POST, OPTIONS"
               },
               "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+            },
+            {
+              "header": {
+                "key": "access-control-allow-origin",
+                "value": "*"
+              },
+              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -3017,7 +3157,7 @@
                         {
                           "remoteIp": {
                             "addressPrefix": "100.64.0.0",
-                            "prefixLen": 24
+                            "prefixLen": 16
                           }
                         },
                         {
