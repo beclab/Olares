@@ -160,9 +160,11 @@ Apple devices support local service discovery via [Bonjour](https://developer.ap
 你可以从 Olares 应用市场安装 AdGuard Home，以图形化方式监控流量并管理 DNS 映射。
 :::
 ## 方法 4：修改 hosts 文件
-方法 4 仅适用于标准 `olares.com` 地址。若使用[方法 2](#方法-2-使用-local-域名) 中的 `.local` 地址，无需手动修改 hosts 文件。
+:::info `.local` 地址无需手动修改 hosts 文件
+若使用[方法 2](#方法-2-使用-local-域名) 中的 `.local` 地址，可跳过本方法。此类本地域名使用本地域名解析，无需手动编辑 hosts 文件。
+:::
 
-如果无法更改路由器设置，且需要在特定电脑上立即离线访问，可以在 hosts 文件中手动映射标准 `olares.com` 域名。
+方法 4 仅适用于标准 `olares.com` 地址。如果无法更改路由器设置，且需要在特定电脑上立即离线访问，可以在 hosts 文件中手动映射标准 `olares.com` 域名。
 
 1. 找到 hosts 文件：
    - **Windows**：`C:\Windows\System32\drivers\etc\hosts`

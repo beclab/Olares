@@ -160,9 +160,11 @@ Once configured, open your standard `olares.com` URLs as usual. They will resolv
 You can install AdGuard Home from the Olares Market to monitor traffic and manage DNS mappings graphically.
 :::
 ## Method 4: Modify hosts files
-Method 4 is for standard `olares.com` URLs only. If you use `.local` URLs from [Method 2](#method-2-use-local-domain), you do not need to edit hosts files manually.
+:::info `.local` URLs do not need manual hosts changes
+If you use `.local` URLs from [Method 2](#method-2-use-local-domain), skip this method. These local domains use local name resolution and do not require manually editing the hosts file.
+:::
 
-If you cannot change router settings and need immediate offline access on a specific computer, you can manually map standard `olares.com` domains in your hosts file.
+Method 4 is for standard `olares.com` URLs only. If you cannot change router settings and need immediate offline access on a specific computer, you can manually map standard `olares.com` domains in your hosts file.
 
 1. Locate your hosts file:
    - **Windows**: `C:\Windows\System32\drivers\etc\hosts`
