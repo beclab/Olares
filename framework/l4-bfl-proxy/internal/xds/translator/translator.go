@@ -645,6 +645,13 @@ func translateVirtualHost(vhIR *ir.VirtualHostIR) *routev3.VirtualHost {
 		})
 	}
 
+	// CORS response headers are normalized at the vhost level using
+	// OVERWRITE_IF_EXISTS_OR_ADD so that any duplicates emitted by upstream
+	// services (e.g. BFL's filter that calls AddHeader instead of Set, or an
+	// intermediate Node.js proxy that reflects the request Origin) collapse
+	// into a single deterministic value. Without this, the browser would
+	// receive headers like "Access-Control-Allow-Origin: *,http://localhost"
+	// which is invalid per the Fetch spec.
 	vh.ResponseHeadersToAdd = append(vh.ResponseHeadersToAdd,
 		&corev3.HeaderValueOption{
 			Header:       &corev3.HeaderValue{Key: "access-control-allow-headers", Value: "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"},
@@ -652,6 +659,10 @@ func translateVirtualHost(vhIR *ir.VirtualHostIR) *routev3.VirtualHost {
 		},
 		&corev3.HeaderValueOption{
 			Header:       &corev3.HeaderValue{Key: "access-control-allow-methods", Value: "PUT, GET, DELETE, POST, OPTIONS"},
+			AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
+		},
+		&corev3.HeaderValueOption{
+			Header:       &corev3.HeaderValue{Key: "access-control-allow-origin", Value: "*"},
 			AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
 		},
 	)
