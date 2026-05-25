@@ -1083,7 +1083,7 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		HardwareRequirement:     cfg.Spec.Hardware,
 		SharedEntrances:         cfg.SharedEntrances,
 		SelectedGpuType:         opt.SelectedGpu,
-		Resources:               cfg.Spec.AcceleratedResources,
+		Accelerator:             cfg.Spec.Accelerator,
 		NeedsSharedAccess:       cfg.Options.NeedsSharedAccess,
 		OverlayGatewaySupported: cfg.Options.OverlayGatewaySupported,
 		LLMGatewaySupported:     cfg.Options.LLMGatewaySupported,

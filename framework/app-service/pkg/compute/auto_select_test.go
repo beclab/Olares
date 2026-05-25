@@ -24,7 +24,7 @@ func TestAppSupportedModes(t *testing.T) {
 		{
 			name: "new format returns spec.resources verbatim in declared order",
 			cfg: &appcfg.ApplicationConfig{
-				Resources: []appcfg.ResourceMode{
+				Accelerator: []appcfg.ResourceMode{
 					{Mode: utils.NvidiaCardType},
 					{Mode: utils.CPUType},
 				},
@@ -324,7 +324,7 @@ func TestAutoSelectModeOnNvidiaOnlyNewFormatApp(t *testing.T) {
 	cfg := &appcfg.ApplicationConfig{
 		AppName:   "nvidia-only-new-format",
 		OwnerName: "alice",
-		Resources: []appcfg.ResourceMode{
+		Accelerator: []appcfg.ResourceMode{
 			{
 				Mode: utils.NvidiaCardType,
 				ResourceRequirement: appcfg.ResourceRequirement{
