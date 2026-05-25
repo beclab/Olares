@@ -9,6 +9,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -631,3 +632,86 @@ func buildBlockLocalSearchServer() (*corefile.Server, error) {
 const UserAnnotationZoneKey = "bytetrade.io/zone"
 const UserAnnotationLocalDomainDNSRecord = "bytetrade.io/local-domain-dns-record"
 const UserIndexAna = "bytetrade.io/user-index"
+
+// SharedInclusterEntrance identifies one Shared entrance FQDN that may be rewritten
+// inside the cluster. Callers must expand SRR hostPatterns with per-viewer FQDNs
+// before invoking buildSharedInclusterHosts.
+type SharedInclusterEntrance struct {
+	AppID          string
+	EntranceName   string
+	Viewer         string
+	PlatformDomain string
+}
+
+// sharedEntranceHostPrefix returns the stable 8-hex label for a shared entrance
+// (md5(appid + ":shared:" + entranceName)[:8]), matching app-service appcfg.
+func sharedEntranceHostPrefix(appid, entranceName string) string {
+	appid = strings.ToLower(strings.TrimSpace(appid))
+	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
+	sum := md5.Sum([]byte(appid + ":shared:" + entranceName))
+	return hex.EncodeToString(sum[:])[:8]
+}
+
+// fqdn returns the exact host name for this shared entrance and viewer.
+func (e SharedInclusterEntrance) fqdn() string {
+	viewer := strings.ToLower(strings.TrimSpace(e.Viewer))
+	platformDomain := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
+	if viewer == "" || platformDomain == "" {
+		return ""
+	}
+	prefix := sharedEntranceHostPrefix(e.AppID, e.EntranceName)
+	if prefix == "" {
+		return ""
+	}
+	return prefix + "." + viewer + "." + platformDomain
+}
+
+// buildSharedInclusterHosts builds a CoreDNS hosts plugin that maps every
+// registered Shared entrance FQDN to the app-gateway data plane ClusterIP.
+//
+// requirement: only FQDNs derived from Shared entrances may be rewritten;
+// per-user single-entrance hostnames must never be matched by regex.
+// behavior: deterministic sorted hosts block; empty input returns nil.
+// test: table-driven unit tests in corefile_test.go.
+func buildSharedInclusterHosts(entrances []SharedInclusterEntrance, gatewayDataIP string) *corefile.Plugin {
+	ip := net.ParseIP(strings.TrimSpace(gatewayDataIP))
+	if ip == nil || ip.To4() == nil {
+		return nil
+	}
+	gatewayDataIP = ip.String()
+
+	seen := make(map[string]struct{})
+	var hosts []string
+	for _, ent := range entrances {
+		host := ent.fqdn()
+		if host == "" {
+			continue
+		}
+		if _, ok := seen[host]; ok {
+			continue
+		}
+		seen[host] = struct{}{}
+		hosts = append(hosts, host)
+	}
+	if len(hosts) == 0 {
+		return nil
+	}
+	sort.Strings(hosts)
+
+	return &corefile.Plugin{
+		Name: "hosts",
+		Options: []*corefile.Option{
+			{
+				Name: gatewayDataIP,
+				Args: hosts,
+			},
+			{
+				Name: "ttl",
+				Args: []string{"60"},
+			},
+			{
+				Name: "fallthrough",
+			},
+		},
+	}
+}
