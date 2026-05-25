@@ -209,26 +209,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Set up with eGPU",
           link: "/zh/one/egpu",
-        },
-        {
-          text: "Install Windows on Olares One",
-          link: "/zh/one/install-windows-primary-drive",
-        },
-        {
-          text: "Install Ubuntu on Olares One",
-          collapsed: true,
-          items:
-            [
-              {
-                text: "Install Ubuntu Server on Olares One",
-                link: "/zh/one/install-ubuntu-server",
-              },
-              {
-                text: "Install Ubuntu Desktop on Olares One",
-                link: "/zh/one/install-ubuntu-desktop",
-              }
-            ]
-        },         
+        },        
         {
           text: "Dual-boot Olares OS with Windows",
           collapsed: true,
@@ -252,7 +233,26 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Dual-boot Olares OS with Ubuntu",
           link: "/zh/one/dual-boot-ubuntu-dual-drive",
-        },         
+        },
+        {
+          text: "Install Windows on Olares One",
+          link: "/zh/one/install-windows-primary-drive",
+        },
+        {
+          text: "Install Ubuntu on Olares One",
+          collapsed: true,
+          items:
+            [
+              {
+                text: "Install Ubuntu Server on Olares One",
+                link: "/zh/one/install-ubuntu-server",
+              },
+              {
+                text: "Install Ubuntu Desktop on Olares One",
+                link: "/zh/one/install-ubuntu-desktop",
+              }
+            ]
+        },                 
       ]
     },
     {
