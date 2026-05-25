@@ -21,12 +21,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	sysv1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -565,7 +569,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	}
 
 	for _, app := range apps.Items {
-		entrances, err := app.GenEntranceURL(ctx)
+		entrances, err := appcfg.GenEntranceURL(ctx, &app)
 		if err != nil {
 			klog.Error("generate application entrance url error, ", err, ", ", app.Name)
 			continue
@@ -593,4 +597,120 @@ func GetApixClient() (apixclientset.Interface, error) {
 	}
 
 	return client, nil
+}
+
+func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]OverlayGatewaySupportedApp, error) {
+	clientset, err := GetAppClientSet()
+	if err != nil {
+		klog.Error("get app clientset error, ", err)
+		return nil, err
+	}
+
+	appMgrs, err := clientset.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Error("list applications error, ", err)
+		return nil, err
+	}
+
+	var supportedApps []OverlayGatewaySupportedApp
+	for _, appMgr := range appMgrs.Items {
+		// check if the app is supported by the overlay gateway
+		var appConfig appcfg.ApplicationConfig
+		err := appcfg.GetAppConfig(&appMgr, &appConfig)
+		if err != nil {
+			klog.Error("get app config error, ", err)
+			continue
+		}
+
+		// check if the app is supported by the overlay gateway
+		if appConfig.OverlayGatewaySupported {
+			// check if the app is enabled
+			app, err := clientset.AppV1alpha1().Applications().Get(ctx, appMgr.Spec.AppName, metav1.GetOptions{})
+			if err != nil {
+				klog.Error("get app error, ", err)
+				continue
+			}
+
+			sharedApp := appv1alpha1.IsV3(app)
+			if !sharedApp {
+				if user != "" && app.Spec.Owner != user {
+					continue
+				}
+			}
+
+			enabled := app.Spec.Settings["enableOverlayGateway"]
+			supportedApps = append(supportedApps, OverlayGatewaySupportedApp{
+				AppResourceName: app.Name,
+				AppName:         app.Spec.Name,
+				Enabled:         strings.ToLower(enabled) == "true",
+				Owner:           app.Spec.Owner,
+				SharedApp:       sharedApp,
+				Namespace:       app.Spec.Namespace,
+			})
+		}
+
+	}
+
+	return supportedApps, nil
+}
+
+func UpdateApplicationSettings(ctx context.Context, appName string, option string, value string) error {
+	clientset, err := GetAppClientSet()
+	if err != nil {
+		klog.Error("get app clientset error, ", err)
+		return err
+	}
+
+	retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		app, err := clientset.AppV1alpha1().Applications().Get(ctx, appName, metav1.GetOptions{})
+		if err != nil {
+			klog.Error("get application error, ", err)
+			return err
+		}
+
+		app.Spec.Settings[option] = value
+		_, err = clientset.AppV1alpha1().Applications().Update(ctx, app, metav1.UpdateOptions{})
+		if err != nil {
+			klog.Error("update application settings error, ", err)
+			return err
+		}
+
+		return nil
+	})
+
+	return nil
+}
+
+func RestartOverlayGatewaySupportedApps(ctx context.Context, apps []OverlayGatewaySupportedApp) error {
+	client, err := GetKubeClient()
+	if err != nil {
+		klog.Error("get dynamic client error, ", err)
+		return err
+	}
+
+	for _, app := range apps {
+		if app.Enabled {
+			// restart the app
+			pods, err := client.CoreV1().Pods(app.Namespace).List(ctx, metav1.ListOptions{})
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
+				klog.Error("list pods error, ", err)
+				return err
+			}
+
+			for _, pod := range pods.Items {
+				if pod.Labels["applications.app.bytetrade.io/macvlan-init"] == "true" {
+					err = client.CoreV1().Pods(app.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+					if err != nil {
+						klog.Error("delete pod error, ", err)
+					}
+				}
+			}
+
+		}
+	}
+
+	return nil
 }

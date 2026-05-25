@@ -215,7 +215,7 @@ func (r RunningValidator) ValidateOp(op commands.Interface) error {
 		commands.Uninstall, commands.ConnectWifi, commands.ChangeHost,
 		commands.UmountUsb, commands.CollectLogs, commands.MountSmb, commands.UmountSmb,
 		commands.CreateUpgradeTarget, commands.RemoveUpgradeTarget, commands.SetSSHPassword,
-		commands.MountNfs, commands.UmountNfs:
+		commands.MountNfs, commands.UmountNfs, commands.EnableOverlayGateway, commands.DisableOverlayGateway:
 		return nil
 	}
 

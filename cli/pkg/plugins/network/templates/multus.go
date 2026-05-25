@@ -34,7 +34,8 @@ spec:
     singular: network-attachment-definition
     kind: NetworkAttachmentDefinition
     shortNames:
-    - net-attach-def
+      - nad
+      - net-attach-def
   versions:
     - name: v1
       served: true
@@ -189,14 +190,17 @@ spec:
       tolerations:
       - operator: Exists
         effect: NoSchedule
+      - operator: Exists
+        effect: NoExecute
       serviceAccountName: multus
       containers:
       - name: kube-multus
         image: {{ .MultusImage }}
-        command: ["/entrypoint.sh"]
+        command: ["/thin_entrypoint"]
         args:
         - "--multus-conf-file=auto"
-        - "--cni-version=0.3.1"
+        - "--multus-autoconfig-dir=/host/etc/cni/net.d"
+        - "--cni-conf-dir=/host/etc/cni/net.d"
         resources:
           requests:
             cpu: "100m"
@@ -206,6 +210,7 @@ spec:
             memory: "50Mi"
         securityContext:
           privileged: true
+        terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
         - name: cni
           mountPath: /host/etc/cni/net.d
@@ -213,6 +218,24 @@ spec:
           mountPath: /host/opt/cni/bin
         - name: multus-cfg
           mountPath: /tmp/multus-conf
+      initContainers:
+        - name: install-multus-binary
+          image: {{ .MultusImage }}
+          command: ["/install_multus"]
+          args:
+            - "--type"
+            - "thin"
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "15Mi"
+          securityContext:
+            privileged: true
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - name: cnibin
+              mountPath: /host/opt/cni/bin
+              mountPropagation: Bidirectional
       terminationGracePeriodSeconds: 10
       volumes:
         - name: cni
@@ -227,4 +250,29 @@ spec:
             items:
             - key: cni-conf.json
               path: 70-multus.conf
+`)))
+
+var MultusDefine = template.Must(template.New("multus-define.yaml").Parse(
+	dedent.Dedent(`
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: underlay-macvlan
+  namespace: kube-system
+spec:
+  config: |-
+    {
+      "cniVersion": "0.3.1",
+      "name": "underlay",
+      "type": "macvlan",
+      "master": "br-olares",
+      "mode": "bridge",
+      "ipam": {
+        "type": "dhcp",
+        "omitDefaultGateway": true,
+        "request": [
+          { "skipDefault": true, "option": "subnet-mask" }
+        ]
+      }
+    }
 `)))

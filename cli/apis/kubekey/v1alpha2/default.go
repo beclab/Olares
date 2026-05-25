@@ -53,7 +53,7 @@ const (
 	DefaultCniVersion_v_1_1_1       = "v1.1.1"
 	DefaultCiliumVersion            = "v1.11.6"
 	DefaultKubeovnVersion           = "v1.10.6"
-	DefalutMultusVersion            = "v3.8"
+	DefalutMultusVersion            = "v4.2.4"
 	DefaultHelmVersion              = "v3.9.0"
 	DefaultDockerComposeVersion     = "v2.2.2"
 	DefaultRegistryVersion          = "2"
