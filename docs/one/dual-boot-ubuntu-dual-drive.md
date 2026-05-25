@@ -139,8 +139,6 @@ Manually update **Boot Option #1** to the new drive to force the motherboard to 
     
     ![Modify boot order in BIOS](/images/one/ubuntu-boot-order.png)
 
-    ![alt text](image.png)
-
 4. Press **F10**, then select **Yes** to save and exit BIOS. The system reboots automatically.
 
 ## Step 5: Switch between Olares OS and Ubuntu
