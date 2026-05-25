@@ -35,7 +35,7 @@ type Image struct {
 	Repo              string
 	Tag               string
 	Group             string
-	Enable            bool
+	Enable            bool // deprecated, useless
 }
 
 // Images contains a list of Image

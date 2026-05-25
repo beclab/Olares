@@ -25,8 +25,10 @@ import (
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	sysv1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 )
 
 const (
@@ -565,7 +567,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	}
 
 	for _, app := range apps.Items {
-		entrances, err := app.GenEntranceURL(ctx)
+		entrances, err := appcfg.GenEntranceURL(ctx, &app)
 		if err != nil {
 			klog.Error("generate application entrance url error, ", err, ", ", app.Name)
 			continue
@@ -593,4 +595,55 @@ func GetApixClient() (apixclientset.Interface, error) {
 	}
 
 	return client, nil
+}
+
+func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]OverlayGatewaySupportedApp, error) {
+	clientset, err := GetAppClientSet()
+	if err != nil {
+		klog.Error("get app clientset error, ", err)
+		return nil, err
+	}
+
+	appMgrs, err := clientset.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Error("list applications error, ", err)
+		return nil, err
+	}
+
+	var supportedApps []OverlayGatewaySupportedApp
+	for _, appMgr := range appMgrs.Items {
+		// check if the app is supported by the overlay gateway
+		var appConfig appcfg.ApplicationConfig
+		err := appcfg.GetAppConfig(&appMgr, &appConfig)
+		if err != nil {
+			klog.Error("get app config error, ", err)
+			continue
+		}
+
+		// check if the app is supported by the overlay gateway
+		if appConfig.OverlayGatewaySupported {
+			// check if the app is enabled
+			app, err := clientset.AppV1alpha1().Applications().Get(ctx, appMgr.Spec.AppName, metav1.GetOptions{})
+			if err != nil {
+				klog.Error("get app error, ", err)
+				continue
+			}
+
+			sharedApp := appv1alpha1.IsV3(app)
+			if !sharedApp && app.Spec.Owner != user {
+				continue
+			}
+
+			enabled := app.Spec.Settings["enableOverlayGateway"]
+			supportedApps = append(supportedApps, OverlayGatewaySupportedApp{
+				AppName:   appMgr.Name,
+				Enabled:   strings.ToLower(enabled) == "true",
+				Owner:     app.Spec.Owner,
+				SharedApp: sharedApp,
+			})
+		}
+
+	}
+
+	return supportedApps, nil
 }

@@ -39,6 +39,7 @@ func (u upgrader_1_12_6) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, upgradeKubernetesPrometheusRule()...)
 	tasks = append(tasks, upgradeNodeExporterServiceMonitor()...)
 	tasks = append(tasks, upgradeNodeExporter()...)
+	tasks = append(tasks, upgradeMultus()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks

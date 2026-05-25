@@ -478,6 +478,7 @@ func GetEthernetConnection(ctx context.Context) (iface, ifUUID, connection strin
 			continue
 		}
 
+		// active connection
 		switch ifType {
 		case "ethernet":
 			if masterIp != "" && masterIp == ipv4 {

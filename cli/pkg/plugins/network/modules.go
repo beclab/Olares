@@ -51,11 +51,11 @@ func (d *DeployNetworkPluginModule) Init() {
 		return
 	}
 	if d.KubeConf.Cluster.Network.EnableMultusCNI() {
-		d.Tasks = append(d.Tasks, deployMultus(d)...)
+		d.Tasks = append(d.Tasks, DeployMultus(d)...)
 	}
 }
 
-func deployMultus(d *DeployNetworkPluginModule) []task.Interface {
+func DeployMultus(d *DeployNetworkPluginModule) []task.Interface {
 	generateMultus := &task.RemoteTask{
 		Name:  "GenerateMultus",
 		Desc:  "Generate multus cni",
