@@ -660,6 +660,38 @@ func upgradeMultus() []task.Interface {
 			Action: new(network.DeployNetworkMultusPlugin),
 			Retry:  5,
 		},
+		&task.LocalTask{
+			Name: "GenerateMultusDhcpService",
+			Desc: "Generate multus DHCP service",
+			Action: &action.Template{
+				Name:     "GenerateMultusDhcpService",
+				Template: templates.CniDhcpService,
+				Dst:      path.Join("/etc/systemd/system", templates.CniDhcpService.Name()),
+			},
+			Retry: 5,
+		},
+		&task.LocalTask{
+			Name:   "EnableCniDhcpService",
+			Desc:   "Enable multus CNI DHCP service",
+			Action: new(network.EnableCniDhcpService),
+			Retry:  5,
+		},
+		&task.LocalTask{
+			Name: "GenerateMultusDefine",
+			Desc: "Generate multus define",
+			Action: &action.Template{
+				Name:     "GenerateMultusDefine",
+				Template: templates.MultusDefine,
+				Dst:      path.Join(common.KubeConfigDir, templates.MultusDefine.Name()),
+			},
+			Retry: 5,
+		},
+		&task.LocalTask{
+			Name:   "DeployMultusDefine",
+			Desc:   "Deploy multus define",
+			Action: new(network.DeployMultusDefine),
+			Retry:  5,
+		},
 	}
 }
 

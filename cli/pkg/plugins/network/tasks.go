@@ -145,6 +145,18 @@ func (d *DeployNetworkMultusPlugin) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
+type DeployMultusDefine struct {
+	common.KubeAction
+}
+
+func (d *DeployMultusDefine) Execute(runtime connector.Runtime) error {
+	if _, err := runtime.GetRunner().SudoCmd(
+		"/usr/local/bin/kubectl apply -f /etc/kubernetes/multus-define.yaml --force", true, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "deploy multus define failed")
+	}
+	return nil
+}
+
 type LabelNode struct {
 	common.KubeAction
 }

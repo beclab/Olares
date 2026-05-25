@@ -111,11 +111,39 @@ func DeployMultus(d *DeployNetworkPluginModule) []task.Interface {
 		Parallel: false,
 	}
 
+	generateMultusDefine := &task.RemoteTask{
+		Name:  "GenerateMultusDefine",
+		Desc:  "Generate multus define",
+		Hosts: d.Runtime.GetHostsByRole(common.Master),
+		Prepare: &prepare.PrepareCollection{
+			new(common.OnlyFirstMaster),
+		},
+		Action: &action.Template{
+			Name:     "GenerateMultusDefine",
+			Template: templates.MultusDefine,
+			Dst:      filepath.Join(common.KubeConfigDir, templates.MultusDefine.Name()),
+			Data:     util.Data{},
+		},
+		Parallel: true,
+	}
+
+	deployDefine := &task.RemoteTask{
+		Name:     "DeployMultusDefine",
+		Desc:     "Deploy multus define",
+		Hosts:    d.Runtime.GetHostsByRole(common.Master),
+		Prepare:  new(common.OnlyFirstMaster),
+		Action:   new(DeployMultusDefine),
+		Parallel: true,
+		Retry:    5,
+	}
+
 	return []task.Interface{
 		generateMultus,
 		deploy,
 		generateMultusDhcpService,
 		enableCniDhcpService,
+		generateMultusDefine,
+		deployDefine,
 	}
 }
 

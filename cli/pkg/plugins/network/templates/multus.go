@@ -251,3 +251,28 @@ spec:
             - key: cni-conf.json
               path: 70-multus.conf
 `)))
+
+var MultusDefine = template.Must(template.New("multus-define.yaml").Parse(
+	dedent.Dedent(`
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: underlay-macvlan
+  namespace: kube-system
+spec:
+  config: |-
+    {
+      "cniVersion": "0.3.1",
+      "name": "underlay",
+      "type": "macvlan",
+      "master": "br-olares",
+      "mode": "bridge",
+      "ipam": {
+        "type": "dhcp",
+        "omitDefaultGateway": true,
+        "request": [
+          { "skipDefault": true, "option": "subnet-mask" }
+        ]
+      }
+    }
+`)))
