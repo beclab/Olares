@@ -11,16 +11,16 @@ head:
 
 Replace the pre-installed Olares OS with a clean installation of Ubuntu Desktop on the primary NVMe SSD of Olares One.
 
-:::danger Permanent data loss
-This installation process completely erases the primary drive, including Olares OS and all locally stored digital assets. Back up all critical files before proceeding.
+:::danger This erases Olares OS
+Installing Ubuntu Desktop on the primary drive permanently deletes Olares OS, local accounts, installed apps, settings, and data stored on that drive. Back up anything you need before continuing.
 :::
 
 ## Learning objectives
 
-In this guide, you will learn how to:
+By the end of this guide, you will learn how to:
 - Create a bootable Ubuntu Desktop installation USB drive.
-- Boot Olares One from the installation media.
-- Overwrite the primary drive and configure the graphical Ubuntu Desktop installer.
+- Boot Olares One from the installation USB drive.
+- Overwrite the primary drive and install Ubuntu Desktop.
 
 ## Prerequisites
 
@@ -78,4 +78,4 @@ The graphical installation wizard guides you through replacing Olares OS on the 
 ## Resources
 
 - [Install Ubuntu Server on Olares One](install-ubuntu-server.md)
-- [Ubuntu Server documentation](https://ubuntu.com/server/docs)
+- [Ubuntu Desktop documentation](https://documentation.ubuntu.com/desktop/en/latest/)

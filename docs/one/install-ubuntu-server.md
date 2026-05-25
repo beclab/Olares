@@ -11,15 +11,15 @@ head:
 
 Replace the pre-installed Olares OS with a clean installation of Ubuntu Server on the primary NVMe SSD of Olares One. 
 
-:::danger Permanent data loss
-This installation process completely erases the primary drive, including Olares OS and all locally stored digital assets. Back up all critical files before proceeding.
+:::danger This erases Olares OS
+Installing Ubuntu Server on the primary drive permanently deletes Olares OS, local accounts, installed apps, settings, and data stored on that drive. Back up anything you need before continuing.
 :::
 
 ## Learning objectives
 
-In this guide, learn how to:
+By the end of this guide, you will learn how to:
 - Create a bootable Ubuntu Server installation USB drive.
-- Boot Olares One from the installation media.
+- Boot Olares One from the installation USB drive.
 - Overwrite the primary drive and install Ubuntu Server.
 
 ## Prerequisites
@@ -49,7 +49,7 @@ In this guide, learn how to:
 
 ## Step 2: Boot from the Ubuntu Server USB drive
 
-1. Insert the Ubuntu Server USB drive to the USB port on Olares One.
+1. Insert the Ubuntu Server USB drive into the USB port on Olares One.
 2. Power on Olares One, or restart it if it is currently running.
 3. When the Olares logo appears, press the **Delete** key repeatedly to enter the BIOS setup.  
 
@@ -75,7 +75,7 @@ The text-based installation wizard guides you through replacing Olares OS on the
    ![Ubuntu language selection](/images/one/ubuntu-language.png#bordered)
 
 3. Keep the default English US keyboard layout, and then press **Enter**.
-4. On the **Choose the type of installation** screen, select **Ubundu Server**, and then press **Enter**.
+4. On the **Choose the type of installation** screen, select **Ubuntu Server**, and then press **Enter**.
 5. On the **Network configuration** screen, skip network configuration for now by selecting **Continue without network** at the bottom, and then press **Enter**.
 
     :::tip
@@ -90,10 +90,10 @@ The text-based installation wizard guides you through replacing Olares OS on the
 
    a. Ensure **Use an entire disk** is selected, and the primary disk containing Olares OS is displayed in the dropdown list below.
 
-   b. Navigate down to **Set up this disk as an LVM group** and clear the selection using the **Space** key.
+   b. Go down to **Set up this disk as an LVM group** and clear the selection using the **Space** key.
 
       :::tip
-      Disabling LVM forces the installer to automatically create stable, straightforward standard ext4 partitions. This  eliminates the risk of future GRUB bootloader conflicts or errors in a multi-OS environment.
+      Disabling LVM forces the installer to automatically create stable, straightforward standard ext4 partitions. This eliminates unnecessary complexity and ensures a clean, traditional partition layout.
       :::
 
    c. Go to the bottom of the page, select **Done**, and then press **Enter**.
@@ -113,7 +113,7 @@ The text-based installation wizard guides you through replacing Olares OS on the
       ![Ubuntu installation complete](/images/one/ubuntu-install-complete.png#bordered)
 
 15. Select **Reboot Now** at the bottom, and then press **Enter**.
-16. Remove the installation USB drive and press **Enter** when prompted. The system restarts and reboots automatically into your fresh Ubuntu Server environment.
+16. Remove the installation USB drive and press **Enter** when prompted. The system restarts automatically into your fresh Ubuntu Server environment.
 
       ![Ubuntu launch](/images/one/ubuntu-launch.png#bordered)
 
@@ -121,5 +121,5 @@ The text-based installation wizard guides you through replacing Olares OS on the
 
 ## Resources
 
-- [Install Ubuntu Desktop on Olares One](install-ubuntu-server.md)
+- [Install Ubuntu Desktop on Olares One](install-ubuntu-desktop.md)
 - [Ubuntu Server documentation](https://ubuntu.com/server/docs)

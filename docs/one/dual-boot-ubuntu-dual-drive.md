@@ -102,8 +102,8 @@ The following steps use Ubuntu Server 26.04 as an example. The process is simila
 
 9. On the **Storage configuration** summary screen, verify the following details, and then press **Enter**:
 
-    - Target disk is ready: The system automatically allocates a `/boot/efi` (fat32) and a `/` (ext4) standard partition on your target disk under **FILE SYSTEM SUMMARY**.
-    - Existing data is safe: The disk housing your existing OS, such as `olares-vg`, appears as existing in the **AVAILABLE DEVICES** list and is not marked for formatting.
+    - Under **FILE SYSTEM SUMMARY**, ensure the system automatically allocates a `/boot/efi` (fat32) partition and a `/` (ext4) standard partition on your target disk.
+    - Under **USED DEVICES**, ensure only your target disk is in the "to be formatted" status.
 
     ![Ubuntu storage configuration summary](/images/one/ubuntu-storage-summary.png)    
 
