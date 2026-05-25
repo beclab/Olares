@@ -220,7 +220,7 @@ spec:
           mountPath: /tmp/multus-conf
       initContainers:
         - name: install-multus-binary
-          image: ghcr.io/k8snetworkplumbingwg/multus-cni:snapshot
+          image: {{ .MultusImage }}
           command: ["/install_multus"]
           args:
             - "--type"
