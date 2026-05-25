@@ -90,13 +90,13 @@ The following steps use Ubuntu Server 26.04 as an example. The process is simila
 
     b. In the dropdown list below, verify the target disk is selected. For example, the **FORESEE** disk in this scenario.
 
-    c. Navigate down to **Set up this disk as an LVM group** and clear the selection using the **Spacebar**.
+    c. Navigate down to **Set up this disk as an LVM group** and clear the selection using the **Space** key.
 
     :::tip
     Disabling LVM forces the installer to automatically create stable, straightforward standard ext4 partitions. This  eliminates the risk of future GRUB bootloader conflicts or errors in a multi-OS environment.
     :::
 
-    d. Navigate to the bottom of the page, ensure **Done** is selected, and then press **Enter**.
+    d. Navigate to the bottom of the page, select **Done**, and then press **Enter**.
 
     ![Ubuntu guided storage configuration](/images/one/ubuntu-guided-storage.png)
 
