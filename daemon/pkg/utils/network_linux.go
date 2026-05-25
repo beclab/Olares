@@ -465,8 +465,8 @@ func GetEthernetConnection(ctx context.Context) (iface, ifUUID, connection strin
 
 		lines := bytes.Split(output, []byte("\n"))
 		if len(lines) < 4 {
-			klog.Error("unexpected output from nmcli: %s", string(output))
-			return "", "", "", fmt.Errorf("unexpected output from nmcli: %s", string(output))
+			klog.Errorf("unexpected output from nmcli: %s", string(output))
+			return "", "", "", errors.New(fmt.Sprintf("unexpected output from nmcli: %s", string(output)))
 		}
 
 		ifType := strings.TrimSpace(string(lines[0]))
@@ -537,7 +537,7 @@ func ResetBridgeConnection(ctx context.Context) error {
 		}
 	}
 	if len(slaveConnections) > 1 {
-		klog.Warning("unexpected number of bridge slave connections: %d", len(slaveConnections))
+		klog.Warningf("unexpected number of bridge slave connections: %d", len(slaveConnections))
 	}
 
 	// shutdown the bridge connection
@@ -682,8 +682,8 @@ func CreateBridgeConnection(ctx context.Context) error {
 	return nil
 }
 
-func CheckBridgeConnection(ctx context.Context) error {
-	// TODO
+func CheckOverlayGatewayStatus(ctx context.Context) error {
+	// TODO: implement check  overlay gateway enabling status
 	/*
 		bridge link
 		ip -4 addr show dev br-olares
@@ -697,7 +697,7 @@ func FindBridgeConnection(ctx context.Context) (*BridgeConnection, error) {
 		return nil, err
 	}
 
-	cmd := exec.CommandContext(ctx, nmcli, "-g", "name,type,active", "connection", "show", bridgeConnectionName)
+	cmd := exec.CommandContext(ctx, nmcli, "-g", "name,type,active", "connection", "show")
 	cmd.Env = os.Environ()
 	output, err := cmd.Output()
 	if err != nil {

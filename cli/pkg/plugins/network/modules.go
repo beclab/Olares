@@ -21,12 +21,14 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/action"
+	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/prepare"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/plugins/network/templates"
+	"github.com/pkg/errors"
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
 
@@ -83,9 +85,37 @@ func DeployMultus(d *DeployNetworkPluginModule) []task.Interface {
 		Parallel: true,
 		Retry:    5,
 	}
+
+	generateMultusDhcpService := &task.RemoteTask{
+		Name:    "GenerateMultusDhcpService",
+		Desc:    "Generate multus cni dhcp service",
+		Hosts:   d.Runtime.GetHostsByRole(common.Master),
+		Prepare: new(common.OnlyFirstMaster),
+		Action: &action.Template{
+			Name:     "GenerateMultusDhcpService",
+			Template: templates.CniDhcpService,
+			Dst:      filepath.Join("/etc/systemd/system/", templates.CniDhcpService.Name()),
+			Data:     util.Data{},
+		},
+		Parallel: true,
+	}
+
+	enableCniDhcpService := &task.RemoteTask{
+		Name:  "EnableCniDhcpService",
+		Desc:  "Enable cni-dhcp service",
+		Hosts: d.Runtime.GetHostsByRole(common.Master),
+		Prepare: &prepare.PrepareCollection{
+			new(common.OnlyFirstMaster),
+		},
+		Action:   new(EnableCniDhcpService),
+		Parallel: false,
+	}
+
 	return []task.Interface{
 		generateMultus,
 		deploy,
+		generateMultusDhcpService,
+		enableCniDhcpService,
 	}
 }
 
@@ -321,4 +351,66 @@ func K8sVersionAtLeast(version string, compare string) bool {
 	}
 	// new version
 	return true
+}
+
+type EnableCniDhcpService struct {
+	common.KubeAction
+}
+
+func (e *EnableCniDhcpService) Execute(runtime connector.Runtime) error {
+	if _, err := runtime.GetRunner().SudoCmd("systemctl daemon-reload && systemctl enable --now cni-dhcp",
+		false, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "enable cni-dhcp failed")
+	}
+	return nil
+}
+
+type RemoveOverlayGateway struct {
+	common.KubeModule
+}
+
+func (m *RemoveOverlayGateway) Init() {
+	m.Name = "RemoveOverlayGateway"
+
+	stopCniDhcp := &task.RemoteTask{
+		Name:  "StopCniDhcp",
+		Desc:  "Stop cni-dhcp service",
+		Hosts: m.Runtime.GetHostsByRole(common.Master),
+		Prepare: &prepare.PrepareCollection{
+			new(common.OnlyFirstMaster),
+		},
+		Action:   new(StopCniDhcp),
+		Parallel: false,
+		Retry:    0,
+	}
+
+	removeCniDhcpService := &task.RemoteTask{
+		Name:  "RemoveCniDhcpService",
+		Desc:  "Remove cni-dhcp service",
+		Hosts: m.Runtime.GetHostsByRole(common.Master),
+		Prepare: &prepare.PrepareCollection{
+			new(common.OnlyFirstMaster),
+		},
+		Action:   new(RemoveCniDhcpService),
+		Parallel: false,
+		Retry:    0,
+	}
+
+	removeBridgeConnection := &task.RemoteTask{
+		Name:  "RemoveBridgeConnection",
+		Desc:  "Remove bridge connection",
+		Hosts: m.Runtime.GetHostsByRole(common.Master),
+		Prepare: &prepare.PrepareCollection{
+			new(common.OnlyFirstMaster),
+		},
+		Action:   new(RemoveBridgeConnection),
+		Parallel: false,
+		Retry:    0,
+	}
+
+	m.Tasks = []task.Interface{
+		stopCniDhcp,
+		removeCniDhcpService,
+		removeBridgeConnection,
+	}
 }

@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,6 +30,7 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -630,20 +632,85 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 			}
 
 			sharedApp := appv1alpha1.IsV3(app)
-			if !sharedApp && app.Spec.Owner != user {
-				continue
+			if !sharedApp {
+				if user != "" && app.Spec.Owner != user {
+					continue
+				}
 			}
 
 			enabled := app.Spec.Settings["enableOverlayGateway"]
 			supportedApps = append(supportedApps, OverlayGatewaySupportedApp{
-				AppName:   appMgr.Name,
-				Enabled:   strings.ToLower(enabled) == "true",
-				Owner:     app.Spec.Owner,
-				SharedApp: sharedApp,
+				AppResourceName: app.Name,
+				AppName:         app.Spec.Name,
+				Enabled:         strings.ToLower(enabled) == "true",
+				Owner:           app.Spec.Owner,
+				SharedApp:       sharedApp,
+				Namespace:       app.Spec.Namespace,
 			})
 		}
 
 	}
 
 	return supportedApps, nil
+}
+
+func UpdateApplicationSettings(ctx context.Context, appName string, option string, value string) error {
+	clientset, err := GetAppClientSet()
+	if err != nil {
+		klog.Error("get app clientset error, ", err)
+		return err
+	}
+
+	retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		app, err := clientset.AppV1alpha1().Applications().Get(ctx, appName, metav1.GetOptions{})
+		if err != nil {
+			klog.Error("get application error, ", err)
+			return err
+		}
+
+		app.Spec.Settings[option] = value
+		_, err = clientset.AppV1alpha1().Applications().Update(ctx, app, metav1.UpdateOptions{})
+		if err != nil {
+			klog.Error("update application settings error, ", err)
+			return err
+		}
+
+		return nil
+	})
+
+	return nil
+}
+
+func RestartOverlayGatewaySupportedApps(ctx context.Context, apps []OverlayGatewaySupportedApp) error {
+	client, err := GetKubeClient()
+	if err != nil {
+		klog.Error("get dynamic client error, ", err)
+		return err
+	}
+
+	for _, app := range apps {
+		if app.Enabled {
+			// restart the app
+			pods, err := client.CoreV1().Pods(app.Namespace).List(ctx, metav1.ListOptions{})
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
+				klog.Error("list pods error, ", err)
+				return err
+			}
+
+			for _, pod := range pods.Items {
+				if pod.Labels["applications.app.bytetrade.io/macvlan-init"] == "true" {
+					err = client.CoreV1().Pods(app.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+					if err != nil {
+						klog.Error("delete pod error, ", err)
+					}
+				}
+			}
+
+		}
+	}
+
+	return nil
 }

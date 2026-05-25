@@ -59,6 +59,6 @@ func ResetBridgeConnection(ctx context.Context) error {
 	return errors.New("not implemented")
 }
 
-func CheckBridgeConnection(ctx context.Context) error {
+func CheckOverlayGatewayStatus(ctx context.Context) error {
 	return errors.New("not implemented")
 }

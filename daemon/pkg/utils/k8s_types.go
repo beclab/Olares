@@ -23,8 +23,10 @@ var (
 type NodePressure = clistate.NodePressure
 
 type OverlayGatewaySupportedApp struct {
-	AppName   string `json:"app_name"`
-	Enabled   bool   `json:"enabled"`
-	Owner     string `json:"owner"`
-	SharedApp bool   `json:"shared_app"`
+	AppResourceName string `json:"app_resource_name"`
+	AppName         string `json:"app_name"`
+	Enabled         bool   `json:"enabled"`
+	Owner           string `json:"owner"`
+	SharedApp       bool   `json:"shared_app"`
+	Namespace       string `json:"namespace"`
 }

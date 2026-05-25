@@ -2,12 +2,12 @@ package disableoverlaygateway
 
 import (
 	"context"
-	"errors"
 	"os"
 	"os/exec"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
+	"k8s.io/klog/v2"
 )
 
 type disableOverlayGateway struct {
@@ -25,12 +25,6 @@ func New() commands.Interface {
 }
 
 func (d *disableOverlayGateway) Execute(ctx context.Context, p any) (res any, err error) {
-	param, ok := p.(*Param)
-	if !ok {
-		err = errors.New("invalid param")
-		return
-	}
-
 	// disable the bridge connection
 	err = utils.ResetBridgeConnection(ctx)
 	if err != nil {
@@ -45,8 +39,8 @@ func (d *disableOverlayGateway) Execute(ctx context.Context, p any) (res any, er
 		return nil, err
 	}
 
-	// disable the overlay gateway supported apps' option
-	apps, err := utils.GetOverlayGatewaySupportedApps(ctx, param.User)
+	// disable the overlay gateway supported apps' option for all users
+	apps, err := utils.GetOverlayGatewaySupportedApps(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +48,21 @@ func (d *disableOverlayGateway) Execute(ctx context.Context, p any) (res any, er
 	for _, app := range apps {
 		if app.Enabled {
 			// set the app's option to disable overlay gateway
+			err = utils.UpdateApplicationSettings(ctx, app.AppResourceName, "enableOverlayGateway", "false")
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
+
+	// restart the overlay gateway supported apps
+	// restart in a separate goroutine, cause the restarting process may take a while
+	go func() {
+		err = utils.RestartOverlayGatewaySupportedApps(ctx, apps)
+		if err != nil {
+			klog.Error("restart overlay gateway supported apps error, ", err)
+		}
+	}()
 
 	return nil, nil
 }

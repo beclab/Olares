@@ -24,6 +24,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
 	ktemplates "github.com/beclab/Olares/cli/pkg/kubernetes/templates"
 	"github.com/beclab/Olares/cli/pkg/manifest"
+	networktemplates "github.com/beclab/Olares/cli/pkg/plugins/network/templates"
 	"github.com/beclab/Olares/cli/pkg/storage"
 	storageemplates "github.com/beclab/Olares/cli/pkg/storage/templates"
 	"github.com/beclab/Olares/cli/pkg/utils"
@@ -253,6 +254,7 @@ var (
 	juiceFSServiceName    = storageemplates.JuicefsService.Name()
 	redisServiceName      = storageemplates.RedisService.Name()
 	minIOServiceName      = storageemplates.MinioService.Name()
+	cniDhcpServiceName    = networktemplates.CniDhcpService.Name()
 )
 
 func serviceExists(serviceName string) bool {
@@ -318,6 +320,7 @@ func (m *StopOlaresModule) Init() {
 		juiceFSServiceName,
 		redisServiceName,
 		minIOServiceName,
+		cniDhcpServiceName,
 	} {
 		if serviceExists(service) {
 			m.Tasks = append(m.Tasks, newStopServiceTask(service))
@@ -357,6 +360,7 @@ func (m *StartOlaresModule) Init() {
 		redisServiceName,
 		juiceFSServiceName,
 		etcdServiceName,
+		cniDhcpServiceName,
 
 		// backupETCDService is triggered by systemd.timer
 		// and does not need to be manually started, it will only do an unnecessary backup

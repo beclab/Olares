@@ -22,11 +22,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/action"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/plugins/network/templates"
@@ -305,5 +307,61 @@ func (c *ChmodKubectlKo) Execute(runtime connector.Runtime) error {
 		fmt.Sprintf("chmod +x %s", filepath.Join(common.BinDir, templates.KubectlKo.Name())), false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "chmod +x kubectl-ko failed")
 	}
+	return nil
+}
+
+type StopCniDhcp struct {
+	common.KubeAction
+}
+
+func (s *StopCniDhcp) Execute(runtime connector.Runtime) error {
+	var cmd = "systemctl disable --now cni-dhcp"
+	_, _ = runtime.GetRunner().SudoCmd(cmd, false, false)
+	return nil
+}
+
+type RemoveCniDhcpService struct {
+	common.KubeAction
+}
+
+func (r *RemoveCniDhcpService) Execute(runtime connector.Runtime) error {
+	var cmd = "rm -rf /etc/systemd/system/cni-dhcp.service"
+	_, _ = runtime.GetRunner().SudoCmd(cmd, false, false)
+	return nil
+}
+
+type RemoveBridgeConnection struct {
+	common.KubeAction
+}
+
+func (r *RemoveBridgeConnection) Execute(runtime connector.Runtime) error {
+	var cmd = "nmcli -g connection.type connection show br-olares"
+	output, err := runtime.GetRunner().Cmd(cmd, true, false)
+	if err != nil {
+		if strings.Contains(output, "no such connection profile") {
+			return nil
+		}
+
+		logger.Errorf("check bridge connection failed: %v", err)
+		return nil
+	}
+
+	if output == "bridge" {
+		cmd = "nmcli -g name c show | grep br-olares-slave-"
+		deleteSlaves := ""
+		output, err = runtime.GetRunner().Cmd(cmd, true, false)
+		if err == nil && output != "" {
+			slaves := strings.Split(output, "\n")
+			for _, slave := range slaves {
+				deleteSlaves += fmt.Sprintf("nmcli c delete %s && ", slave)
+			}
+		}
+		cmd = fmt.Sprintf("nmcli c down br-olares && nmcli c up phy-link && %s nmcli c delete br-olares", deleteSlaves)
+		if _, err := runtime.GetRunner().Cmd(cmd, true, false); err != nil {
+			logger.Errorf("delete bridge connection failed: %v", err)
+			return nil
+		}
+	}
+
 	return nil
 }
