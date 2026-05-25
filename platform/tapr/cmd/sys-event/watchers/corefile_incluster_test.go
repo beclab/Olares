@@ -2,10 +2,12 @@ package watchers
 
 import (
 	"net"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/coredns/corefile-migration/migration/corefile"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func TestBuildSharedInclusterHosts_empty(t *testing.T) {
@@ -120,6 +122,92 @@ func hostsPluginNames(plugin *corefile.Plugin) []string {
 		}
 	}
 	return out
+}
+
+func TestSharedInclusterEntrancesFromSRRItems(t *testing.T) {
+	prefix := sharedEntranceHostPrefix("a5be2268", "ollamav2")
+	srr := unstructuredSRR("ollama-shared", "shared-a5be2268-ollamav2", map[string]string{
+		labelSRRAppID:    "a5be2268",
+		labelSRREntrance: "ollamav2",
+	}, "gateway", []string{prefix + ".*.olares.com"})
+
+	got := sharedInclusterEntrancesFromSRRItems(
+		[]unstructured.Unstructured{*srr},
+		nil,
+		[]string{"alice", "alice"},
+	)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 entrances, got %d", len(got))
+	}
+	hosts := make([]string, 0, len(got))
+	for _, e := range got {
+		hosts = append(hosts, e.fqdn())
+	}
+	sort.Strings(hosts)
+	want0 := prefix + ".alice.olares.com"
+	want1 := prefix + ".alice.olares.com"
+	if hosts[0] != want0 || hosts[1] != want1 {
+		t.Fatalf("hosts=%v want %q and %q", hosts, want0, want1)
+	}
+
+	perUser := "a5be2268.bob.olares.com"
+	plugin := buildSharedInclusterHosts(got, "10.0.0.5")
+	if strings.Contains(plugin.ToString(), perUser) {
+		t.Fatalf("per-user host must not appear: %s", plugin.ToString())
+	}
+}
+
+func TestSharedInclusterEntrancesFromSRRItems_passthroughAndDirect(t *testing.T) {
+	prefix := sharedEntranceHostPrefix("a5be2268", "api")
+	srrGateway := unstructuredSRR("ollama-shared", "shared-a5be2268-api", map[string]string{
+		labelSRRAppID: "a5be2268", labelSRREntrance: "api",
+	}, "gateway", []string{prefix + ".*.olares.com"})
+	srrDirect := unstructuredSRR("other-shared", "shared-bc2bd381-litellm", map[string]string{
+		labelSRRAppID: "bc2bd381", labelSRREntrance: "litellm",
+	}, "direct", []string{sharedEntranceHostPrefix("bc2bd381", "litellm") + ".*.olares.com"})
+	passthrough := map[string]struct{}{"litellm-ns": {}}
+	got := sharedInclusterEntrancesFromSRRItems(
+		[]unstructured.Unstructured{*srrGateway, *srrDirect},
+		passthrough,
+		[]string{"alice"},
+	)
+	if len(got) != 1 {
+		t.Fatalf("expected 1 entrance, got %d (%+v)", len(got), got)
+	}
+	if got[0].EntranceName != "api" {
+		t.Fatalf("got %+v", got[0])
+	}
+}
+
+func TestSharedInclusterEntrancesFromSRRItems_empty(t *testing.T) {
+	if got := sharedInclusterEntrancesFromSRRItems(nil, nil, []string{"alice"}); got != nil {
+		t.Fatalf("expected nil, got %v", got)
+	}
+}
+
+func unstructuredSRR(ns, name string, labels map[string]string, routeMode string, hostPatterns []string) *unstructured.Unstructured {
+	labelObj := make(map[string]interface{}, len(labels))
+	for k, v := range labels {
+		labelObj[k] = v
+	}
+	patterns := make([]interface{}, len(hostPatterns))
+	for i, p := range hostPatterns {
+		patterns[i] = p
+	}
+	obj := map[string]interface{}{
+		"apiVersion": "gateway.olares.io/v1alpha1",
+		"kind":       "SharedRouteRegistry",
+		"metadata": map[string]interface{}{
+			"name":      name,
+			"namespace": ns,
+			"labels":    labelObj,
+		},
+		"spec": map[string]interface{}{
+			"routeMode":    routeMode,
+			"hostPatterns": patterns,
+		},
+	}
+	return &unstructured.Unstructured{Object: obj}
 }
 
 func gatewayIPFromHostsPlugin(plugin *corefile.Plugin) string {

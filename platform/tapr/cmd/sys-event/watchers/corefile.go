@@ -13,17 +13,30 @@ import (
 	"strconv"
 	"strings"
 
-	"bytetrade.io/web3os/tapr/pkg/app/application"
 	"github.com/coredns/corefile-migration/migration/corefile"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 )
+
+const (
+	labelDNSPassthrough     = "gateway.olares.io/dns-passthrough"
+	labelSRRAppID           = "gateway.olares.io/appid"
+	labelSRREntrance        = "gateway.olares.io/entrance"
+	appGatewayNamespace     = "app-gateway"
+	appGatewayDataService   = "app-gateway-data"
+	srrRouteModeGateway     = "gateway"
+)
+
+var sharedRouteRegistryGVR = schema.GroupVersionResource{
+	Group:    "gateway.olares.io",
+	Version:  "v1alpha1",
+	Resource: "sharedrouteregistries",
+}
 
 func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dynamicClient dynamic.Interface) error {
 	corefileConfigMap, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns", metav1.GetOptions{})
@@ -183,115 +196,21 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		localDomainTemplatesPlugins = addUserTemplates(userLocalZone, masterNodeIp, localDomainTemplatesPlugins)
 	}
 
-	// find shared entrance ip from applications, set the shared entrance domain to in cluster view
-	err = func() error {
-		if len(userList.Items) == 0 {
-			klog.Info("no users found, skip adding shared entrance dns records")
-			return nil
-		}
-
-		var zone string
-		for _, u := range userList.Items {
-			if zone = u.GetAnnotations()[UserAnnotationZoneKey]; zone != "" {
-				break
-			}
-		}
-		if len(zone) == 0 {
-			klog.Info("no zone annotation found in user, skip adding shared entrance dns records")
-			return nil
-		}
-		tokens := strings.Split(zone, ".")
-		if len(tokens) < 2 {
-			klog.Info("invalid zone annotation found in user, skip adding shared entrance dns records")
-			return nil
-		}
-		tokens[0] = "shared"
-		zone = strings.Join(tokens, ".")
-
-		applications, err := dynamicClient.Resource(application.GVR).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			klog.Error("get applications error, ", err)
-			return err
-		}
-
-		nsList, err := kubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-		if err != nil {
-			klog.Error("list namespaces error, ", err)
-			return err
-		}
-
-		for _, a := range applications.Items {
-			var app application.Application
-			err := runtime.DefaultUnstructuredConverter.FromUnstructured(a.Object, &app)
-			if err != nil {
-				klog.Error("convert obj error, ", err)
-				continue
-			}
-
-			if len(app.Spec.SharedEntrances) == 0 {
-				continue
-			}
-
-			// get shared namespace of the application
-			var sharedNs []*corev1.Namespace
-			for _, ns := range nsList.Items {
-				refAppName := ns.Labels["applications.app.bytetrade.io/name"]
-				sharedNamespace := ns.Labels["bytetrade.io/ns-shared"]
-				installedUser := ns.Labels["applications.app.bytetrade.io/install_user"]
-				if refAppName == app.Spec.Name && sharedNamespace == "true" && installedUser == app.Spec.Owner {
-					sharedNs = append(sharedNs, &ns)
-				}
-			}
-
-			// get the service of entrance
-			for i, entrance := range app.Spec.SharedEntrances {
-				for _, ns := range sharedNs {
-					svc, err := kubeClient.CoreV1().Services(ns.Name).Get(ctx, entrance.Host, metav1.GetOptions{})
-					if err != nil {
-						klog.Error("get shared entrance service error, ", err)
-						continue
-					}
-
-					entranceIp := svc.Spec.ClusterIP
-					if entranceIp == "" {
-						klog.Info("shared entrance has no ingress ip, skip corefile update")
-						continue
-					}
-
-					hash := md5.Sum([]byte(app.Spec.Appid + "shared"))
-					hashString := hex.EncodeToString(hash[:])
-					sharedEntranceIdPrefix := hashString[:8]
-					domain := fmt.Sprintf("%s%d.%s", sharedEntranceIdPrefix, i, zone)
-					domainPattern := fmt.Sprintf("\"%s%d.?(%s\\.)$\"", sharedEntranceIdPrefix, i, zone)
-					options := []*corefile.Option{
-						{
-							Name: "match",
-							Args: []string{domainPattern},
-						},
-						{
-							Name: "answer",
-							Args: []string{fmt.Sprintf("\"{{ .Name }} 60 IN A %s\"", entranceIp)},
-						},
-						{
-							Name: "fallthrough",
-							Args: []string{},
-						},
-					}
-
-					inclusterTemplatesPlugins = append(inclusterTemplatesPlugins, &corefile.Plugin{
-						Name:    "template",
-						Args:    []string{"IN", "A", domain},
-						Options: options,
-					})
-
-				} // end for sharedNs
-			} // end for entrances
-		} // end for applications
-
-		return nil
-	}()
+	gatewayDataIP, err := appGatewayDataClusterIP(ctx, kubeClient)
 	if err != nil {
+		klog.Error("get app-gateway-data ClusterIP error, ", err)
 		return err
+	}
+
+	srrEntrances, err := sharedInclusterEntrancesFromCluster(ctx, kubeClient, dynamicClient, userList)
+	if err != nil {
+		klog.Error("list shared incluster entrances from SRR error, ", err)
+		return err
+	}
+
+	var sharedInclusterHostsPlugin *corefile.Plugin
+	if gatewayDataIP != "" {
+		sharedInclusterHostsPlugin = buildSharedInclusterHosts(srrEntrances, gatewayDataIP)
 	}
 
 	var adguardIp string
@@ -333,9 +252,18 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		},
 	}
 
+	inclusterPlugins := append(append([]*corefile.Plugin{}, defaultPlugins...), inclusterTemplatesPlugins...)
+	if sharedInclusterHostsPlugin != nil {
+		merged := make([]*corefile.Plugin, 0, len(defaultPlugins)+1+len(inclusterTemplatesPlugins))
+		merged = append(merged, defaultPlugins...)
+		merged = append(merged, sharedInclusterHostsPlugin)
+		merged = append(merged, inclusterTemplatesPlugins...)
+		inclusterPlugins = merged
+	}
+
 	inclusterServer := &corefile.Server{
 		DomPorts: defaultsServer.DomPorts,
-		Plugins:  append([]*corefile.Plugin{inclusterView}, append(defaultPlugins, inclusterTemplatesPlugins...)...),
+		Plugins:  append([]*corefile.Plugin{inclusterView}, inclusterPlugins...),
 	}
 
 	vpnServer := &corefile.Server{
@@ -714,4 +642,173 @@ func buildSharedInclusterHosts(entrances []SharedInclusterEntrance, gatewayDataI
 			},
 		},
 	}
+}
+
+func appGatewayDataClusterIP(ctx context.Context, kubeClient kubernetes.Interface) (string, error) {
+	svc, err := kubeClient.CoreV1().Services(appGatewayNamespace).Get(ctx, appGatewayDataService, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	if svc.Spec.ClusterIP == "" || svc.Spec.ClusterIP == "None" {
+		return "", fmt.Errorf("service %s/%s has no ClusterIP", appGatewayNamespace, appGatewayDataService)
+	}
+	return svc.Spec.ClusterIP, nil
+}
+
+func namespacesWithDNSPassthrough(ctx context.Context, kubeClient kubernetes.Interface) (map[string]struct{}, error) {
+	nsList, err := kubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]struct{})
+	for i := range nsList.Items {
+		if nsList.Items[i].Labels[labelDNSPassthrough] == "true" {
+			out[nsList.Items[i].Name] = struct{}{}
+		}
+	}
+	return out, nil
+}
+
+func viewersFromUserList(userList *unstructured.UnstructuredList) []string {
+	if userList == nil {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	var viewers []string
+	for i := range userList.Items {
+		name := strings.ToLower(strings.TrimSpace(userList.Items[i].GetName()))
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		viewers = append(viewers, name)
+	}
+	sort.Strings(viewers)
+	return viewers
+}
+
+func parseLogicalHostPattern(pattern string) (hash8, platformDomain string, ok bool) {
+	pattern = strings.ToLower(strings.TrimSpace(pattern))
+	const marker = ".*."
+	idx := strings.Index(pattern, marker)
+	if idx != 8 || len(pattern) <= idx+len(marker) {
+		return "", "", false
+	}
+	hash8 = pattern[:8]
+	for _, c := range hash8 {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return "", "", false
+		}
+	}
+	platformDomain = strings.TrimSuffix(pattern[idx+len(marker):], ".")
+	if platformDomain == "" {
+		return "", "", false
+	}
+	return hash8, platformDomain, true
+}
+
+func sharedInclusterEntrancesFromSRRItems(
+	srrItems []unstructured.Unstructured,
+	passthrough map[string]struct{},
+	viewers []string,
+) []SharedInclusterEntrance {
+	if len(srrItems) == 0 || len(viewers) == 0 {
+		return nil
+	}
+	var entrances []SharedInclusterEntrance
+	for i := range srrItems {
+		srr := &srrItems[i]
+		if _, skip := passthrough[srr.GetNamespace()]; skip {
+			continue
+		}
+		routeMode, found, _ := unstructured.NestedString(srr.Object, "spec", "routeMode")
+		if found && routeMode != "" && routeMode != srrRouteModeGateway {
+			continue
+		}
+		labels := srr.GetLabels()
+		appid := strings.ToLower(strings.TrimSpace(labels[labelSRRAppID]))
+		entranceName := strings.ToLower(strings.TrimSpace(labels[labelSRREntrance]))
+		if appid == "" || entranceName == "" {
+			continue
+		}
+		patterns, found, err := unstructured.NestedStringSlice(srr.Object, "spec", "hostPatterns")
+		if err != nil || !found || len(patterns) == 0 {
+			continue
+		}
+		hash8, platformDomain, ok := parseLogicalHostPattern(patterns[0])
+		if !ok || sharedEntranceHostPrefix(appid, entranceName) != hash8 {
+			continue
+		}
+		for _, viewer := range viewers {
+			entrances = append(entrances, SharedInclusterEntrance{
+				AppID:          appid,
+				EntranceName:   entranceName,
+				Viewer:         viewer,
+				PlatformDomain: platformDomain,
+			})
+		}
+	}
+	return entrances
+}
+
+func sharedInclusterEntrancesFromCluster(
+	ctx context.Context,
+	kubeClient kubernetes.Interface,
+	dynamicClient dynamic.Interface,
+	userList *unstructured.UnstructuredList,
+) ([]SharedInclusterEntrance, error) {
+	passthrough, err := namespacesWithDNSPassthrough(ctx, kubeClient)
+	if err != nil {
+		return nil, err
+	}
+	viewers := viewersFromUserList(userList)
+	if len(viewers) == 0 {
+		return nil, nil
+	}
+	srrList, err := dynamicClient.Resource(sharedRouteRegistryGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return sharedInclusterEntrancesFromSRRItems(srrList.Items, passthrough, viewers), nil
+}
+
+// CorefileSRRSubscriber regenerates CoreDNS when SharedRouteRegistry changes.
+type CorefileSRRSubscriber struct {
+	*Subscriber
+	kubeClient    kubernetes.Interface
+	dynamicClient dynamic.Interface
+}
+
+func (s *CorefileSRRSubscriber) HandleEvent() cache.ResourceEventHandler {
+	enqueue := func(obj interface{}) {
+		s.Watchers.Enqueue(EnqueueObj{
+			Subscribe: s,
+			Obj:       obj,
+			Action:    UPDATE,
+		})
+	}
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc:    enqueue,
+		UpdateFunc: func(_, newObj interface{}) { enqueue(newObj) },
+		DeleteFunc: enqueue,
+	}
+}
+
+func (s *CorefileSRRSubscriber) Do(ctx context.Context, obj interface{}, action Action) error {
+	_ = obj
+	_ = action
+	return RegenerateCorefile(ctx, s.kubeClient, s.dynamicClient)
+}
+
+// RegisterCorefileSRRWatcher lists SharedRouteRegistry and triggers RegenerateCorefile on changes.
+func RegisterCorefileSRRWatcher(w *Watchers, kubeClient kubernetes.Interface, dynamicClient dynamic.Interface) error {
+	sub := &CorefileSRRSubscriber{
+		Subscriber:    NewSubscriber(w),
+		kubeClient:    kubeClient,
+		dynamicClient: dynamicClient,
+	}
+	return AddToWatchers[unstructured.Unstructured](w, sharedRouteRegistryGVR, sub.HandleEvent())
 }
