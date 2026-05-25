@@ -19,7 +19,7 @@ import (
 // marking the current profile. STATUS reflects only what the local token
 // store can prove without making a network call:
 //
-//	logged-in (23h59m)  — token present, JWT exp claim still in the future
+//	logged-in           — token present, JWT exp claim still in the future
 //	expired             — token present, exp claim in the past
 //	invalidated         — token present but explicitly marked unusable
 //	                      (Phase 2 sets this when /api/refresh returns 401/403);
@@ -99,7 +99,7 @@ func profileStatus(store auth.TokenStore, p *cliconfig.ProfileConfig, now time.T
 	if !now.Before(exp) {
 		return "expired"
 	}
-	return fmt.Sprintf("logged-in (%s)", humanizeDuration(exp.Sub(now)))
+	return "logged-in"
 }
 
 // humanizeDuration prints a coarse "23h59m" / "12m34s" / "5s" representation.
