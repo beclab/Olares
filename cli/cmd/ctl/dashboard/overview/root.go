@@ -37,7 +37,7 @@ import (
 //	overview fan curve            — hardcoded fanCurveTable (helpers.go)
 //	overview gpu list             — POST /hami/api/vgpu/v1/gpus
 //	overview gpu tasks            — POST /hami/api/vgpu/v1/containers
-//	overview gpu get <uuid>       — GET  /hami/api/vgpu/v1/gpu?uuid=...
+//	overview gpu get <uuid>       — GET  /hami/api/vgpu/v1/gpu?uid=...
 //	overview gpu task <name> <uid>— GET  /hami/api/vgpu/v1/container?name=&podUid=
 //
 // Every leaf consumes CommonFlags (--output / --watch / --since / etc.)

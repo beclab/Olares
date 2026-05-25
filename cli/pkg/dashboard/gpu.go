@@ -5,12 +5,84 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/dashboard/format"
 )
+
+// defaultHAMIBackendTZ mirrors the bundled HAMI WebUI chart's
+// `webui.env.backend.TZ` (see
+// infrastructure/gpu/.olares/config/gpu/hami/values.yaml:519-521).
+// The CLI sends offset-less `YYYY-MM-DD HH:mm:ss` window strings to
+// HAMI's monitor query endpoints; the backend re-parses them with
+// `time.ParseInLocation` against this TZ, so the wire string MUST be
+// rendered in this TZ for the absolute instant to round-trip.
+//
+// We deliberately keep "the timezone HAMI parses with" decoupled
+// from "the timezone the user wants their tables rendered in"
+// (cf.Timezone). SPA gets away with conflating them because the
+// browser's local clock typically matches the pod TZ; CLI runs
+// elsewhere (UTC servers, US/EU operator workstations) and must
+// not assume coincidence. Validated empirically against
+// `beclab/hami-webui-be-oss:v1.0.8`: Unix-seconds payloads are
+// rejected (`data: []` even for known-good queries), only the
+// human-readable form is accepted.
+const defaultHAMIBackendTZ = "Asia/Shanghai"
+
+// hamiBackendTZOverrideEnv lets operators of non-default HAMI
+// deployments (different `webui.env.backend.TZ`) tell the CLI which
+// TZ to use on the wire WITHOUT recompiling. Hidden from --help on
+// purpose: the bundled chart pins Asia/Shanghai, so 99% of users
+// never need to touch this. Surfacing it in --help would invite
+// "fix it by setting this" cargo-culting when the real issue is
+// elsewhere (e.g. Prometheus retention).
+const hamiBackendTZOverrideEnv = "OLARES_HAMI_BACKEND_TZ"
+
+// HAMIBackendTimezone returns the *time.Location the HAMI WebUI
+// backend uses to re-parse offset-less monitor query timestamps.
+// Reads the OLARES_HAMI_BACKEND_TZ env var first (escape hatch for
+// non-default deployments); falls back to defaultHAMIBackendTZ.
+// An unparseable env override is treated as "ignore" rather than
+// "error" so a typo doesn't break the data fetch — the default is
+// still correct for every Olares deployment we ship today.
+func HAMIBackendTimezone() *time.Location {
+	if name, ok := os.LookupEnv(hamiBackendTZOverrideEnv); ok && name != "" {
+		if loc, err := time.LoadLocation(name); err == nil {
+			return loc
+		}
+	}
+	if loc, err := time.LoadLocation(defaultHAMIBackendTZ); err == nil {
+		return loc
+	}
+	// Last-ditch fallback: the time package guarantees time.UTC is
+	// always available even when the tzdata DB is missing. Hitting
+	// this path means the host has neither Asia/Shanghai nor any
+	// IANA zone DB compiled in — extremely rare, but we'd rather
+	// emit a UTC-shaped string than crash.
+	return time.UTC
+}
+
+// GPUTrendTimestampWire formats `t` for the wire body sent to HAMI's
+// /monitor/query/{instant,range}-vector endpoints — always in
+// HAMIBackendTimezone(), regardless of the CLI host's TZ or the
+// user's --timezone. This is the function to call when building
+// the request payload; see GPUTrendTimestampISO for the display
+// counterpart that DOES follow cf.Timezone.
+//
+// The split exists because conflating the two broke `gpu graphics
+// <uuid>` for any user whose host TZ ≠ HAMI backend TZ (UTC server,
+// US operator workstation, etc): Gauges populated correctly via
+// instant-vector (5m lookback masked the shift), but every range
+// query returned `data: []` because the [start,end] window got
+// re-stamped by the backend into a window 8h in the future where
+// Prometheus had no samples. Pinned by
+// TestBuildDetailFullEnvelope_UTCHostStillGetsData et al.
+func GPUTrendTimestampWire(t time.Time) string {
+	return t.In(HAMIBackendTimezone()).Format("2006-01-02 15:04:05")
+}
 
 // ----------------------------------------------------------------------------
 // HAMI list / detail endpoints
@@ -110,8 +182,19 @@ func FetchTaskList(ctx context.Context, c *Client, filters map[string]string) ([
 
 // FetchGraphicsDetail returns HAMI's `/v1/gpu` payload directly — the
 // SPA's `GraphicsDetailsResponse` is a flat object, no `data` envelope.
+//
+// Wire-name gotcha: HAMI's WebUI accepts the GPU UUID under the
+// `uid` query key (see the SPA's `GraphicsDetailsParams { uid: string }`
+// in src/apps/dashboard/types/gpu.ts and the network helper in
+// src/apps/dashboard/network/gpu.ts). An earlier revision of this
+// fetcher sent `?uuid=...` — HAMI silently treated that as "no
+// match" and returned a placeholder object with every numeric
+// field set to 0 / every string set to "-", which is why
+// `olares-cli dashboard overview gpu get <uuid>` historically
+// rendered all-zeros while `gpu list` showed real values for the
+// same UUID (list is a POST with `filters` and isn't affected).
 func FetchGraphicsDetail(ctx context.Context, c *Client, uuid string) (map[string]any, error) {
-	q := url.Values{"uuid": []string{uuid}}
+	q := url.Values{"uid": []string{uuid}}
 	var raw map[string]any
 	if err := c.DoJSON(ctx, http.MethodGet, "/hami/api/vgpu/v1/gpu", q, nil, &raw); err != nil {
 		return nil, err
@@ -305,13 +388,22 @@ func GPUStepPreset(minutes int) (string, bool) {
 	}
 }
 
-// GPUTrendTimestampISO formats a time.Time the way the SPA's
-// `timeParse(date)` does for monitor queries: `YYYY-MM-DD HH:mm:ss` in
-// the caller's timezone (no offset suffix). HAMI's WebUI accepts
-// either Unix-seconds or this human-readable form; the SPA exclusively
-// sends the latter, so we match.
-func GPUTrendTimestampISO(t time.Time) string {
-	return t.Format("2006-01-02 15:04:05")
+// GPUTrendTimestampISO formats a time.Time in `tz` as
+// `YYYY-MM-DD HH:mm:ss` (no offset suffix). This is the DISPLAY
+// helper — used to render `meta.window.start/end` and table-side
+// trend point timestamps in the user's preferred timezone
+// (cf.Timezone, default time.Local). It MUST NOT be used to build
+// HAMI request payloads — use GPUTrendTimestampWire for that. The
+// two are decoupled on purpose; see GPUTrendTimestampWire's docs
+// for the wire-side rationale.
+//
+// `tz==nil` falls back to time.Local for back-compat with any
+// out-of-tree caller still on the old single-argument signature.
+func GPUTrendTimestampISO(t time.Time, tz *time.Location) string {
+	if tz == nil {
+		tz = time.Local
+	}
+	return t.In(tz).Format("2006-01-02 15:04:05")
 }
 
 // ----------------------------------------------------------------------------

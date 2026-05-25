@@ -7,10 +7,17 @@ import (
 	pkggpu "github.com/beclab/Olares/cli/pkg/dashboard/overview/gpu"
 )
 
+// newOverviewGPUDetailFullCommand exposes the legacy `gpu detail
+// <uuid>` cobra surface. Hidden + deprecated since the SPA-aligned
+// refactor — `gpu graphics <uuid>` is the new canonical command.
+// Kept functional for back-compat; emits the same
+// `dashboard.overview.gpu.detail.full` envelope.
 func newOverviewGPUDetailFullCommand(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:           "detail <uuid>",
 		Short:         "Per-GPU detail page (info + gauges + trends; SPA Overview2/GPU/GPUsDetails)",
+		Hidden:        true,
+		Deprecated:    "use 'olares-cli dashboard overview gpu graphics <uuid>' instead",
 		Args:          cobra.ExactArgs(1),
 		SilenceErrors: true,
 		SilenceUsage:  true,

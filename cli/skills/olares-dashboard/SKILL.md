@@ -81,7 +81,7 @@ mirror subpackage under `cli/pkg/dashboard/<area>/`. The pkg root
 | `cmd/ctl/dashboard/overview/{cpu,memory,pods,network}.go` | `pkg/dashboard/overview/{cpu,memory,pods,network}.go` → `RunCPU`/`RunMemory`/`RunPods`/`RunNetwork` (built on `nodes.go`'s `RunPerNodeMetric` scaffold) | `monitoring.go`, `system.go` (network → capi `/system/ifs`), `numbers.go` |
 | `cmd/ctl/dashboard/overview/disk/{root,main,partitions}.go` | `pkg/dashboard/overview/disk/{default,main,partitions}.go` → `RunDefault`/`RunMain`/`RunPartitions` | `monitoring.go` (node\_disk\_*), `lsblk.go`, `numbers.go`, `format/...` |
 | `cmd/ctl/dashboard/overview/fan/{root,live,curve}.go` | `pkg/dashboard/overview/fan/{default,live,curve}.go` → `RunDefault`/`RunLive`/`RunCurve` | `system.go` (`FetchSystemFan`), `gates.go` (`GateOlaresOne`), `gpu.go` (graphics list co-render), `fan_curve.go` |
-| `cmd/ctl/dashboard/overview/gpu/{root,list,tasks,get,task,detail,task_detail}.go` | `pkg/dashboard/overview/gpu/{list,tasks,get,task,detail,task_detail}.go` → `RunList`/`RunTasks`/`RunGet`/`RunTask`/`RunDetail`/`RunTaskDetail` (+ `specs.go` for the gauge/trend catalogue and concurrent fan-out) | `gpu.go`, `gpu_format.go`, `gpu_query.go`, `gates.go`, `client.go` |
+| `cmd/ctl/dashboard/overview/gpu/{root,graphics,tasks,list,get,task,detail,task_detail}.go` | `pkg/dashboard/overview/gpu/{list,tasks,get,task,detail,task_detail}.go` → `RunList`/`RunTasks`/`RunGet`/`RunTask`/`RunDetail`/`RunTaskDetail`/`RunTaskByRef` (+ `specs.go` for the gauge/trend catalogue and concurrent fan-out) | `gpu.go`, `gpu_format.go`, `gpu_query.go`, `gates.go`, `client.go` |
 | `cmd/ctl/dashboard/schema/root.go` | n/a — schema loader stays in pkg root | `schema.go` (loader + `go:embed` bundle) |
 
 - HTTP base = `ResolvedProfile.DashboardURL = https://dashboard.<localPrefix><terminusName>` (derived in [`cli/pkg/olares/id.go`](cli/pkg/olares/id.go) `DashboardURL`).
@@ -122,6 +122,7 @@ Used by **parent commands that aggregate multiple sub-views**:
 | `dashboard overview`     | `physical` / `user` / `ranking`     | `dashboard.overview.physical` / `.user` / `.ranking` |
 | `dashboard overview disk`| `main` / `partitions`               | `dashboard.overview.disk.main` / `.partitions` (the latter is itself a sections envelope, keyed by device) |
 | `dashboard overview fan` | `live` / `curve`                    | `dashboard.overview.fan.live` / `.curve` |
+| `dashboard overview gpu` | `graphics` / `tasks`                | `dashboard.overview.gpu.list` / `.tasks` (mirrors the SPA's GPU overview tabs preloaded together) |
 | `dashboard schema`       | n/a — emits Shape A index           | `dashboard.schema.index` |
 
 ```json
@@ -281,7 +282,7 @@ HAMI's WebUI returns the payload **at the top level** for every endpoint we call
 |---|---|---|
 | `POST /hami/api/vgpu/v1/gpus` | `{"list":[ {graphics...} ]}` | `struct{ List []map[string]any }`, return `raw.List` |
 | `POST /hami/api/vgpu/v1/containers` | `{"items":[ {task...} ]}` | `struct{ Items []map[string]any }`, return `raw.Items` |
-| `GET /hami/api/vgpu/v1/gpu?uuid=…` | `{ ...graphics fields... }` | `map[string]any`, return verbatim |
+| `GET /hami/api/vgpu/v1/gpu?uid=…` | `{ ...graphics fields... }` | `map[string]any`, return verbatim |
 | `GET /hami/api/vgpu/v1/container?name=…&podUid=…` | `{ ...task fields... }` | `map[string]any`, return verbatim |
 
 The fetchers in [`pkg/dashboard/gpu.go`](cli/pkg/dashboard/gpu.go) are pinned to this shape; `TestFetchGraphicsList_ParsesTopLevelList` / `TestFetchTaskList_ParsesTopLevelItems` / `TestFetchGraphicsDetail_ReturnsBodyAsIs` / `TestFetchTaskDetail_ReturnsBodyAsIs` enforce the contract (in `cli/pkg/dashboard/dashboard_test.go`).
@@ -313,22 +314,96 @@ Both fetchers (`fetchInstantVector` / `fetchRangeVector`) are pinned by `TestFet
 
 Range body shape: `{"query":"<promql>","range":{"start":"YYYY-MM-DD HH:mm:ss","end":"…","step":"30m"}}`. `start`/`end` are SPA's `timeParse(date)` (local clock, no offset suffix); the `step` is computed by `gpuTrendStep(start, end)` — a 1:1 port of [`timeRangeFormate(diff_s, 16)`](packages/app/src/apps/controlPanelCommon/containers/Monitoring/utils.js) which preserves the SPA's preset table (10m→1m, 60m→10m, 480m→30m, 1440m→60m, etc.) and falls back to `floor(minutes/16)m` capped at `[1m..60m]`.
 
-### `dashboard overview gpu detail <uuid>` / `task-detail <name> <pod-uid>` — full detail pages
+**Window timezone contract (paid in blood)** — the offset-less string is re-parsed by the HAMI WebUI backend with `time.ParseInLocation` against the backend pod's `TZ` (today: `Asia/Shanghai`, see [`infrastructure/gpu/.olares/config/gpu/hami/values.yaml`](infrastructure/gpu/.olares/config/gpu/hami/values.yaml) `webui.env.backend.TZ`; verified empirically that Unix-epoch payloads are rejected with `data: []`, only the human-readable form works). The SPA gets this right by accident: a browser running in CST emits CST wall-clock strings, which the backend re-stamps as CST → correct UTC. CLI does NOT have that coincidence — a UTC host (typical Linux server / container) was sending UTC wall clock that HAMI re-stamped as CST, shifting `[start,end]` 8h into the future where Prometheus has no samples → the user-visible symptom was "Gauges 正常 / Trends 全空，无 warnings".
 
-Two new commands mirror the SPA's `Overview2/GPU/GPUsDetails.vue` and `Overview2/GPU/TasksDetails.vue` pages: basic info (HAMI `/v1/gpu` or `/v1/container`) + top gauges (instant-vector) + trend charts (range-vector), all assembled into a single sections envelope.
+**The fix splits the TZ in two**, on purpose:
+
+| Purpose | TZ | Helper | Knob |
+|---|---|---|---|
+| Render `meta.window.start/end`, table-side trend timestamps, table headers | `cf.Timezone` (user's preference, default `time.Local`) | `GPUTrendTimestampISO(t, cf.Timezone.Time())` | `--timezone <IANA>` |
+| Build the wire body sent to `/monitor/query/{instant,range}-vector` | `HAMIBackendTimezone()` (the backend pod's TZ, default `Asia/Shanghai`) | `GPUTrendTimestampWire(t)` | `OLARES_HAMI_BACKEND_TZ=<IANA>` env (hidden from `--help` — only operators of non-default HAMI deployments need it) |
+
+Both helpers live in [`pkg/dashboard/gpu.go`](cli/pkg/dashboard/gpu.go); never reuse one for the other's job. The split lets a user in Los Angeles see PDT timestamps in their tables while the CLI still gets correct data from a Shanghai-deployed HAMI backend.
+
+Pinned by:
+- `TestGPUTrendTimestampISO_RespectsTimezone`, `TestGPUTrendTimestampISO_NilTimezoneFallsBackToLocal` (pkg root) — display helper.
+- `TestGPUTrendTimestampWire_FormatsInHAMIBackendTZ`, `TestGPUTrendTimestampWire_RespectsEnvOverride`, `TestHAMIBackendTimezone_DefaultIsAsiaShanghai` (pkg root) — wire helper + env override + the "default matches chart values.yaml" drift alarm.
+- `TestBuildDetailFullEnvelope_WireAndRenderTZsAreSeparate`, `TestBuildTaskDetailFullEnvelope_WireAndRenderTZsAreSeparate` (pkg area) — end-to-end with cf.Timezone ≠ HAMI backend TZ; assert `meta.window` and captured wire body are in DIFFERENT zones.
+- `TestBuildDetailFullEnvelope_UTCHostStillGetsData` (pkg area) — the explicit "original bug" regression: cf.Timezone=UTC, HAMI backend TZ default → meta.window in UTC, wire in CST.
+
+If you ever feel tempted to "simplify" by collapsing wire+render back into one TZ argument: don't. The two-table arrangement is the whole point.
+
+### `dashboard overview gpu` — SPA-aligned command surface
+
+The cobra surface mirrors the SPA's `Overview2/GPU` route exactly — two parent commands matching the two tabs, each accepting an optional positional argument that drills into the per-row "View details" page:
+
+| Public command | Behavior | Kind | SPA equivalent |
+|---|---|---|---|
+| `gpu` (no subverb) | Sections envelope: graphics + tasks loaded concurrently | `dashboard.overview.gpu` (Shape B) | Both tabs preloaded on GPU overview page mount |
+| `gpu graphics` | List every discovered vGPU | `dashboard.overview.gpu.list` | Graphics management tab |
+| `gpu graphics <uuid>` | Per-GPU detail page (info + 6 gauges + 4 trends) | `dashboard.overview.gpu.detail.full` | GPUsDetails.vue (route /:uuid) |
+| `gpu tasks` | List every running vGPU task | `dashboard.overview.gpu.tasks` | Task management tab |
+| `gpu tasks <ref>` | Per-task detail page; `<ref>` = TASK column (`name`) **or** POD_UID column (`podUid`); auto-resolves the missing half + sharemode | `dashboard.overview.gpu.task.detail.full` | TasksDetails.vue (route /:name/:pod_uid) |
+
+**Naming**: the `graphics` / `tasks` parents use the SPA's tab labels (`Graphics management` / `Task management`) verbatim; the optional positional arg dispatches to the matching detail-page builder. SKILL forbids "putting fan-out logic in cmd" — argument-count routing is NOT fan-out, it's the canonical cmd responsibility, so the dispatch lives in `cmd/.../graphics.go` + `cmd/.../tasks.go`.
+
+**Auto-resolution for `gpu tasks <ref>`**: the SPA passes `podUid` + `deviceShareModes[0]` through the route param when the user clicks a TasksTable row. The CLI mirrors that by calling `pkgdashboard.FetchTaskList`, looking up the row by EITHER `podUid` (first pass — globally unique, wins on tie) OR `name` (second pass), and forwarding the resolved triple to `RunTaskDetail`. Both columns are surfaced in the bare `gpu` and `gpu tasks` listings, so copy-paste from either column "just works" — accepting only `name` was the original UX bug (users naturally copy the rightmost POD_UID column).
+
+Ambiguity (two rows share a name) surfaces as a typed error listing the candidate pod-uids; users re-run with one of those pod-uids (still `gpu tasks <pod-uid>` — pod-uids ARE valid refs, no need to invoke the legacy two-arg form):
+
+```
+task name "trainer" matches 2 running pods (pod-A, pod-B); rerun with one of the
+pod-uids: olares-cli dashboard overview gpu tasks <pod-uid>
+```
+
+Not-found in table mode prints `(no task matches "<ref>" — neither a name nor a pod-uid in HAMI's container list)` followed by a `hint: try one of: <name> (<pod-uid>), …` line listing up to 5 real candidates pulled from the same task list (so the user doesn't need to re-list to recover). JSON mode emits the standard `no_gpu_detected` empty envelope.
+
+Pinned by `TestRunTaskByRef_ResolvesByPodUID` / `TestRunTaskByRef_NotFoundTableShowsHint` / `TestRunTaskByRef_AmbiguousErrorsWithCandidates`.
+
+#### Legacy (hidden + deprecated) cobra surface
+
+The pre-refactor `list` / `get` / `detail` / `task` / `task-detail` cobra commands remain functional for back-compat with existing agent scripts. They are marked `Hidden: true` (removed from `--help`) and `Deprecated: "use 'gpu graphics …' / 'gpu tasks …' instead"`; cobra prints a one-line deprecation hint when they run. The underlying `Run*` package functions still exist (some agents may call them via the Go API) and their tests are intact:
+
+| Legacy cobra | Status | Replacement |
+|---|---|---|
+| `gpu list` | Hidden + deprecated | `gpu graphics` |
+| `gpu get <uuid>` | Hidden + deprecated. Note: emits `dashboard.overview.gpu.detail` (HAMI raw, single-shot) — NOT the same envelope as `gpu graphics <uuid>` (which emits `.detail.full` with gauges + trends). Kept because the raw-passthrough verb has no SPA analogue and removing it would break callers that pin on the flat HAMI body. | `gpu graphics <uuid>` (different envelope; opt-in semantic upgrade) |
+| `gpu detail <uuid>` | Hidden + deprecated | `gpu graphics <uuid>` (same envelope) |
+| `gpu task <name> <pod-uid>` | Hidden + deprecated. Same caveat as `gpu get`: emits raw `dashboard.overview.gpu.task.detail`. | `gpu tasks <name>` (different envelope; opt-in semantic upgrade) |
+| `gpu task-detail <name> <pod-uid>` | Hidden + deprecated. Still the only path that takes a manual `--sharemode` override; the new `gpu tasks <name>` always auto-detects sharemode from HAMI's task list. | `gpu tasks <name>` |
+
+Schema introspection (`dashboard schema -o json`) lists both the new surface and the legacy entries (suffixed `(deprecated)`) so an agent can discover the migration mapping programmatically.
+
+### `gpu graphics <uuid>` / `gpu tasks <name>` — full detail pages
+
+Both parent-with-arg variants mirror the SPA's `Overview2/GPU/GPUsDetails.vue` and `Overview2/GPU/TasksDetails.vue` pages: basic info (HAMI `/v1/gpu` or `/v1/container`) + top gauges (instant-vector) + trend charts (range-vector), all assembled into a single sections envelope.
 
 | Command | Kind | Default window | Sections | PromQL count |
 |---|---|---|---|---|
-| `overview gpu detail <uuid>` | `dashboard.overview.gpu.detail.full` | 8h | `detail` / `gauges` / `trends` | 4 instant + 6 range |
-| `overview gpu task-detail <name> <pod-uid> [--sharemode]` | `dashboard.overview.gpu.task.detail.full` | 1h | `detail` / `gauges` / `trends` | 2 instant + 2 range |
+| `overview gpu graphics <uuid>` (legacy: `overview gpu detail <uuid>`) | `dashboard.overview.gpu.detail.full` | 8h | `detail` / `gauges` / `trends` | 4 instant + 6 range |
+| `overview gpu tasks <name>` (legacy: `overview gpu task-detail <name> <pod-uid> [--sharemode]`) | `dashboard.overview.gpu.task.detail.full` | 1h | `detail` / `gauges` / `trends` | 2 instant + 2 range |
 
 Section item ordering is fixed and stable across releases — agents can index by position OR by `raw.key`:
 
 GPU `detail.full` `gauges` keys (in order): `alloc_core` / `alloc_mem` / `util_core` / `util_mem` / `power` / `temperature`.
-GPU `detail.full` `trends` keys (in order): `alloc_trend` (lines: core+memory) / `usage_trend` (core+memory) / `power_trend` / `temp_trend`.
+GPU `detail.full` `trends` keys (in order): `alloc_trend` (lines: VRAM+GPU_MEMORY) / `usage_trend` (VRAM+GPU_MEMORY) / `power_trend` / `temp_trend`.
 
 Task `task-detail.full` `gauges` keys (in order): `compute_usage` / `vram_usage`.
 Task `task-detail.full` `trends` keys (in order): `compute_trend` / `vram_trend` (each one line, label `usage`).
+
+#### Display-vs-Raw formatting invariants (frozen)
+
+The `detail` / `gauges` / `trends` sections each split formatted user-facing values from the wire shape. **`Item.Display` MUST mirror the SPA's chart/text rendering 1:1**, while `Item.Raw` keeps the un-rounded / un-formatted upstream values for agents that need arbitrary precision. Pinned by `format_test.go`. The contracts:
+
+1. **Detail card field whitelist** — `gpuDetailDisplayCopy` emits ONLY the 6 fields SPA's `GPUsDetails.vue:112-137 columns` array displays: `health` / `uuid` / `nodeName` / `type` / `device_no` / `driver_version`. `gpuTaskDetailDisplayCopy` emits ONLY the 8 (6 unconditional + 2 conditional) fields from `TasksDetails.vue:134-174`: `status` / `deviceIds` / `nodeName` / `type` / [`allocatedCores`] / [`allocatedMem`] / `appName` / `createTime` (allocations are emitted only when present in the HAMI body — matches SPA's `displayAllocation = sharemode !== TimeSlicing` gate). HAMI fields that look detail-worthy but **are not in the SPA's `columns` array** (`memoryTotal/Used`, `power`, `powerLimit`, `temperature`, `coreTotal/Used`, `vgpuTotal/Used`, `mode`, `shareMode`, `nodeUid`, etc.) are **deliberately excluded from `Display`** because HAMI's flat `/v1/gpu` body returns placeholders (`memoryUsed: 0`, `power: 0`, `temperature: 0`) — the live values live in instant-vector queries (the `gauges` section) and re-surfacing them under "Detail" misleads users into thinking the GPU is reporting zero everything. `Raw` still carries the entire HAMI body so agents that prefer the wire shape are unaffected. Pinned by `TestGpuDetailDisplayCopy_SPAFieldWhitelist` / `TestGpuTaskDetailDisplayCopy_SPAFieldWhitelist`.
+
+2. **Gauge values are `<number> <unit>` with lodash.round(2)** — `formatGaugeValue` mirrors `<MyGaugeChart unit=…>`. Examples: `23.89 Gi`, `7.87 W`, `46 ℃`. Unit-less ratio gauges (the SPA passes `unit: ' '`) emit just the number. `used_total` is `"0.29/23.89"` — both halves go through `roundedNumberString` (lodash.round(2) + trailing-zero strip). Pinned by `TestFormatGaugeValue` / `TestRoundedNumberString_StripsTrailingZeros`.
+
+3. **Trend point timestamps are SPA-format `YYYY-MM-DD HH:mm:ss` in `cf.Timezone`** — NOT the wire-shape epoch milliseconds (HAMI returns `"1779636713000"`). `formatTrendTimestamp` parses three observed shapes (epoch-ms 13-digit, epoch-s 10-digit, float-s with sub-second decimals) and emits the SPA's `timeParse` shape; unparseable inputs fall through to the raw string so agents can debug HAMI quirks. The wire epoch-ms integer is preserved on `Raw.points[i].timestamp_ms` (`int64`) so chart libraries that re-derive from epoch can round-trip without re-parsing. Pinned by `TestFormatTrendTimestamp_AllShapes` / `TestFormatTrendTimestamp_RespectsTimezone`.
+
+4. **Trend point values use lodash.round(value, 2)** — same call SPA's `pages/Overview2/GPU/config.ts:84` makes before handing the array to ECharts. The full-precision float lives on `Raw.points[i].value_raw`. Use `roundDP(v, dp)` (half-away-from-zero — matches lodash, NOT banker's). Pinned by `TestRoundDP_HalfAwayFromZero` / `TestRunTrend_RoundsValueTo2dp` (via the integration tests in `detail_test.go`).
+
+The `formatTrendTimestamp` / `roundDP` / `roundedNumberString` / `formatGaugeValue` helpers are private to `pkg/dashboard/overview/gpu/specs.go` — they encode SPA-specific render conventions, NOT general-purpose formatters; resist promoting them to `pkgdashboard` until another area starts mirroring SPA chart axes.
 
 Time window flags reuse the existing `--since` / `--start` / `--end`. With neither set the SPA defaults apply (8h for GPU detail, 1h for task detail). `meta.window` carries `{since, start, end, step}` so an agent can replay the exact same query without recomputing.
 
@@ -473,7 +548,7 @@ reach `RunXxx`.
 | `pkg/dashboard/overview/` | `RunDefault` (sections envelope), `RunPhysical`, `RunUser(target)`, `RunRanking(sortDir)`, `RunCPU`, `RunMemory(mode)`, `RunPods`, `RunNetwork(testConn)` + the per-node scaffold `RunPerNodeMetric` (`PerNodeDisplayFn`) | `default.go`, `physical.go`, `user.go`, `ranking.go`, `cpu.go`, `memory.go`, `pods.go`, `network.go`, `nodes.go`, `helpers.go` (+ tests) |
 | `pkg/dashboard/overview/disk/` | `RunDefault`, `RunMain`, `RunPartitions(device)` | `default.go`, `main.go`, `partitions.go`, `helpers.go` (+ tests) |
 | `pkg/dashboard/overview/fan/` | `RunDefault`, `RunLive`, `RunCurve` | `default.go`, `live.go`, `curve.go`, `helpers.go` (+ tests) |
-| `pkg/dashboard/overview/gpu/` | `RunList`, `RunTasks`, `RunGet(uuid)`, `RunTask(name,podUID,sharemode)`, `RunDetail(uuid)`, `RunTaskDetail(name,podUID,sharemode)` + the `specs.go` query catalogue (`gaugeSpec` / `trendSpec` / `runGauge` / `runTrend` / `fanoutGaugeAndTrend`) | `list.go`, `tasks.go`, `get.go`, `task.go`, `detail.go`, `task_detail.go`, `specs.go`, `helpers.go` (+ tests) |
+| `pkg/dashboard/overview/gpu/` | `RunDefault` (sections envelope: graphics + tasks), `RunList`, `RunTasks`, `RunGet(uuid)`, `RunTask(name,podUID,sharemode)`, `RunDetail(uuid)`, `RunTaskDetail(name,podUID,sharemode)`, `RunTaskByRef(ref)` (auto-resolves whether `ref` is a task name or a pod-uid) + the `specs.go` query catalogue (`gaugeSpec` / `trendSpec` / `runGauge` / `runTrend` / `fanoutGaugeAndTrend`) | `default.go`, `list.go`, `tasks.go`, `get.go`, `task.go`, `detail.go`, `task_detail.go`, `specs.go`, `helpers.go` (+ tests) |
 
 Each subpackage's `helpers.go` may carry **package-private lowercase
 aliases** (e.g. `formatFloat = pkgdashboard.FormatFloat`,
@@ -572,7 +647,7 @@ Forbidden (regression / scope creep):
 - **Reverting to a flat cmd package** — every fix-it-quick attempt to "just dump it next to overview.go" is a regression. The directory tree IS the command tree; keep them aligned on both sides of the split.
 - Renaming, removing, or repurposing any `Kind*` constant.
 - Changing envelope shapes A / B (additive `omitempty` is fine; structural change is not).
-- Changing the parent-command default → sections envelope mapping. Specifically: `overview`, `overview disk`, `overview fan` default to Shape B; `overview gpu` defaults to `gpu list` (Shape A); `overview cpu` / `overview memory` / `overview pods` etc. are leaves and keep their Shape A defaults. New parent commands MUST pick one of these two shapes and pin it in the `Use` description (and in the area's pkg `default.go`).
+- Changing the parent-command default → sections envelope mapping. Specifically: `overview`, `overview disk`, `overview fan`, `overview gpu` default to Shape B; `overview cpu` / `overview memory` / `overview pods` etc. are leaves and keep their Shape A defaults. New parent commands MUST pick one of these two shapes and pin it in the `Use` description (and in the area's pkg `default.go`).
 - Performing unit / number formatting outside `pkg/dashboard/format/` (including ad-hoc `fmt.Sprintf("%.2f", ...)` for user-visible values).
 - Bypassing the factory-injected client (handwritten `http.Client`, manual `X-Authorization`).
 - Editing `--watch` exit semantics (3-fail cap, `ErrTokenInvalidated` short-circuit, SIGINT exit-0, NDJSON-per-iteration). Adding new exit conditions requires a separate plan.
@@ -628,6 +703,7 @@ the documented Kind enum + envelope shape.
 | `meta.empty_reason = no_vgpu_integration` (200 envelope, items:[]) | HAMI vGPU absent (HTTP 404) | Not an error — install HAMI or skip the GPU view. |
 | `meta.empty_reason = vgpu_unavailable` (200 envelope, items:[]) + `meta.http_status=5xx` + `meta.error="..."` + stderr `gpu data temporarily unavailable: HAMI returned HTTP 5xx ...` | HAMI installed but unhealthy (HTTP 5xx) | Transient — retry; investigate the HAMI controller. CLI exit code stays `0` so `--watch` keeps streaming. |
 | `meta.empty_reason = no_gpu_detected` (200 envelope, items:[]) | HAMI healthy but the device list / detail is empty | Not an error. |
+| `gpu graphics/tasks <ref>` — Gauges have values, **all Trends `points_count: 0`, no `meta.warnings`** | Wire/render TZ split regressed (see "Window timezone contract" above): the CLI is sending offset-less window strings in the CLI host's TZ instead of `HAMIBackendTimezone()`, so the HAMI backend re-stamps them with its own TZ and queries Prometheus 8h off → empty data. Verify via `jq '.meta.window.end'` and the captured wire body diverge by the offset. | Should be impossible on a current build (`GPUTrendTimestampWire` pins the wire side to `Asia/Shanghai` by default). If reproducing: check that `pkg/dashboard/overview/gpu/detail.go` and `task_detail.go` build `wireStart/wireEnd` via `GPUTrendTimestampWire(t)` and feed *those* into `fanoutGaugeAndTrend` (not `env.Meta.Window.Start/End`). If your HAMI deployment uses a non-default TZ, set `OLARES_HAMI_BACKEND_TZ=<chart-TZ>` (env, not a flag). |
 | `meta.empty_reason = no_fan_integration` (200 envelope, items:[]) | `/user-service/api/mdns/olares-one/cpu-gpu` returned 404 (Olares One only) | Not an error on non-Olares-One deployments. |
 | `meta.empty_reason = not_olares_one` (200 envelope, items:[]) + stderr `fan is only available on Olares One devices ...` | Active device's `device_name` is not `Olares One` — fan subtree is hard-gated off | Not an error. Skip fan on this hardware; verify with `curl /user-service/api/system/status`. |
 | `meta.note="GPU sidebar entry is hidden for non-admin profiles ..."` + stderr `(advisory) GPU sidebar entry ...` | Non-admin profile invoked a gpu verb. **Soft advisory only** — data still fetched. | Not an error. If HAMI still returned data, surface the note alongside the items. Switch to a platform-admin profile if the agent needs the SPA-equivalent UX. |
@@ -675,14 +751,23 @@ olares-cli dashboard overview fan -o json | jq '.sections.curve.items | length' 
 olares-cli dashboard overview fan live --watch --watch-iterations 5 -o json
 ```
 
-GPU + tasks (3-state):
+GPU + tasks (3-state, SPA-aligned surface):
 
 ```bash
-olares-cli dashboard overview gpu list -o json
+# Tabs (lists)
+olares-cli dashboard overview gpu graphics -o json
 olares-cli dashboard overview gpu tasks -o json
+
+# Detail pages (auto-resolves what the SPA passes through the route)
+olares-cli dashboard overview gpu graphics GPU-0123abcd -o json
+olares-cli dashboard overview gpu tasks my-task -o json
+
+# Legacy (hidden + deprecated; still functional for back-compat)
+olares-cli dashboard overview gpu list -o json
 olares-cli dashboard overview gpu get GPU-0123abcd -o json
 olares-cli dashboard overview gpu task my-task abcdef-0123-...
-
+olares-cli dashboard overview gpu detail GPU-0123abcd -o json
+olares-cli dashboard overview gpu task-detail my-task abcdef-0123-... -o json
 ```
 
 Cross-user query as admin:
@@ -697,5 +782,5 @@ Real-machine smoke (drive `-o json` and `jq -e` directly):
 olares-cli profile use olares-id
 olares-cli dashboard schema -o json | jq -e '.kind == "dashboard.schema.index"'
 olares-cli dashboard overview -o json | jq -e '.sections.physical.kind == "dashboard.overview.physical"'
-olares-cli dashboard overview gpu list -o json | jq -e '.kind == "dashboard.overview.gpu.list"'
+olares-cli dashboard overview gpu graphics -o json | jq -e '.kind == "dashboard.overview.gpu.list"'
 ```
