@@ -367,10 +367,24 @@ Both parent-with-arg variants mirror the SPA's `Overview2/GPU/GPUsDetails.vue` a
 Section item ordering is fixed and stable across releases — agents can index by position OR by `raw.key`:
 
 GPU `detail.full` `gauges` keys (in order): `alloc_core` / `alloc_mem` / `util_core` / `util_mem` / `power` / `temperature`.
-GPU `detail.full` `trends` keys (in order): `alloc_trend` (lines: core+memory) / `usage_trend` (core+memory) / `power_trend` / `temp_trend`.
+GPU `detail.full` `trends` keys (in order): `alloc_trend` (lines: VRAM+GPU_MEMORY) / `usage_trend` (VRAM+GPU_MEMORY) / `power_trend` / `temp_trend`.
 
 Task `task-detail.full` `gauges` keys (in order): `compute_usage` / `vram_usage`.
 Task `task-detail.full` `trends` keys (in order): `compute_trend` / `vram_trend` (each one line, label `usage`).
+
+#### Display-vs-Raw formatting invariants (frozen)
+
+The `detail` / `gauges` / `trends` sections each split formatted user-facing values from the wire shape. **`Item.Display` MUST mirror the SPA's chart/text rendering 1:1**, while `Item.Raw` keeps the un-rounded / un-formatted upstream values for agents that need arbitrary precision. Pinned by `format_test.go`. The contracts:
+
+1. **Detail card field whitelist** — `gpuDetailDisplayCopy` emits ONLY the 6 fields SPA's `GPUsDetails.vue:112-137 columns` array displays: `health` / `uuid` / `nodeName` / `type` / `device_no` / `driver_version`. `gpuTaskDetailDisplayCopy` emits ONLY the 8 (6 unconditional + 2 conditional) fields from `TasksDetails.vue:134-174`: `status` / `deviceIds` / `nodeName` / `type` / [`allocatedCores`] / [`allocatedMem`] / `appName` / `createTime` (allocations are emitted only when present in the HAMI body — matches SPA's `displayAllocation = sharemode !== TimeSlicing` gate). HAMI fields that look detail-worthy but **are not in the SPA's `columns` array** (`memoryTotal/Used`, `power`, `powerLimit`, `temperature`, `coreTotal/Used`, `vgpuTotal/Used`, `mode`, `shareMode`, `nodeUid`, etc.) are **deliberately excluded from `Display`** because HAMI's flat `/v1/gpu` body returns placeholders (`memoryUsed: 0`, `power: 0`, `temperature: 0`) — the live values live in instant-vector queries (the `gauges` section) and re-surfacing them under "Detail" misleads users into thinking the GPU is reporting zero everything. `Raw` still carries the entire HAMI body so agents that prefer the wire shape are unaffected. Pinned by `TestGpuDetailDisplayCopy_SPAFieldWhitelist` / `TestGpuTaskDetailDisplayCopy_SPAFieldWhitelist`.
+
+2. **Gauge values are `<number> <unit>` with lodash.round(2)** — `formatGaugeValue` mirrors `<MyGaugeChart unit=…>`. Examples: `23.89 Gi`, `7.87 W`, `46 ℃`. Unit-less ratio gauges (the SPA passes `unit: ' '`) emit just the number. `used_total` is `"0.29/23.89"` — both halves go through `roundedNumberString` (lodash.round(2) + trailing-zero strip). Pinned by `TestFormatGaugeValue` / `TestRoundedNumberString_StripsTrailingZeros`.
+
+3. **Trend point timestamps are SPA-format `YYYY-MM-DD HH:mm:ss` in `cf.Timezone`** — NOT the wire-shape epoch milliseconds (HAMI returns `"1779636713000"`). `formatTrendTimestamp` parses three observed shapes (epoch-ms 13-digit, epoch-s 10-digit, float-s with sub-second decimals) and emits the SPA's `timeParse` shape; unparseable inputs fall through to the raw string so agents can debug HAMI quirks. The wire epoch-ms integer is preserved on `Raw.points[i].timestamp_ms` (`int64`) so chart libraries that re-derive from epoch can round-trip without re-parsing. Pinned by `TestFormatTrendTimestamp_AllShapes` / `TestFormatTrendTimestamp_RespectsTimezone`.
+
+4. **Trend point values use lodash.round(value, 2)** — same call SPA's `pages/Overview2/GPU/config.ts:84` makes before handing the array to ECharts. The full-precision float lives on `Raw.points[i].value_raw`. Use `roundDP(v, dp)` (half-away-from-zero — matches lodash, NOT banker's). Pinned by `TestRoundDP_HalfAwayFromZero` / `TestRunTrend_RoundsValueTo2dp` (via the integration tests in `detail_test.go`).
+
+The `formatTrendTimestamp` / `roundDP` / `roundedNumberString` / `formatGaugeValue` helpers are private to `pkg/dashboard/overview/gpu/specs.go` — they encode SPA-specific render conventions, NOT general-purpose formatters; resist promoting them to `pkgdashboard` until another area starts mirroring SPA chart axes.
 
 Time window flags reuse the existing `--since` / `--start` / `--end`. With neither set the SPA defaults apply (8h for GPU detail, 1h for task detail). `meta.window` carries `{since, start, end, step}` so an agent can replay the exact same query without recomputing.
 

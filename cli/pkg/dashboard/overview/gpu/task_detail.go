@@ -241,6 +241,7 @@ func BuildTaskDetailFullEnvelope(ctx context.Context, c *pkgdashboard.Client, cf
 		ctx, c,
 		gaugeSpecs, trendSpecs,
 		repl, env.Meta.Window.Start, env.Meta.Window.End, env.Meta.Window.Step,
+		cf.Timezone.Time(),
 		addWarning,
 		"", // task-detail page doesn't capture power_trend labels
 	)

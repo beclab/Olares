@@ -109,6 +109,7 @@ func BuildDetailFullEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pk
 		ctx, c,
 		gaugeSpecs, trendSpecs,
 		deviceuuidReplacer, env.Meta.Window.Start, env.Meta.Window.End, env.Meta.Window.Step,
+		cf.Timezone.Time(),
 		addWarning,
 		"power_trend",
 	)
