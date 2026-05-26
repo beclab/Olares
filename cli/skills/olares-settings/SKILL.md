@@ -136,6 +136,7 @@ olares-cli settings users create bob --defaults                                 
 olares-cli settings users create alice --role admin --cpu 2 --memory-gb 8 --no-wait   # explicit quota; skip provisioning wait for automation
 olares-cli settings users delete bob              # after DELETE, polls /status until Deleted (like Termipass); type yes or use --yes
 olares-cli settings users delete bob --yes --no-wait   # automation: no prompt, exit right after DELETE (user may still be Deleting in list)
+# owner accounts cannot be deleted (CLI rejects before DELETE, same as `olares-cli user delete`)
 olares-cli settings users me                      # alias of `me whoami`
 ```
 
@@ -208,7 +209,7 @@ olares-cli settings restore plans list
 
 Every mutating verb in this section has been confirmed against a live Olares instance in the latest smoke run (see [`cli/cmd/ctl/settings/scripts/local_report_phase15a.md`](cli/cmd/ctl/settings/scripts/local_report_phase15a.md)). All of them hit the `<DesktopURL>` ingress over `X-Authorization` and none require a JWS-signed body. Verbs that ship in the binary but were not exercised (or did not pass) live in [`cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) — treat them as experimental until they show up here.
 
-**Also ships (awaiting smoke):** `users create` / `users delete` — **admin-floor** preflight; `create` uses `--defaults` (normal / 1 / 4G) or explicit `--role`, `--cpu`, `--memory-gb`; DID precheck; no `--password`; **`delete` by default waits** until removal is reported finished (optional `--delete-poll` / `--delete-timeout`, `--no-wait` for exit-after-accept); **`delete`** needs the whole word `yes` unless **`--yes`**. Smoke pairing: `INCLUDE_USERS_MUTATE=1`. Backend gap: user-service does not role-gate POST/DELETE beyond authentication.
+**Also ships (awaiting smoke):** `users create` / `users delete` — **admin-floor** preflight; `create` uses `--defaults` (normal / 1 / 4G) or explicit `--role`, `--cpu`, `--memory-gb`; DID precheck; no `--password`; **`delete` by default waits** until removal is reported finished (optional `--delete-poll` / `--delete-timeout`, `--no-wait` for exit-after-accept); **`delete`** needs the whole word `yes` unless **`--yes`**; **`delete` refuses owner** (pre-check via GET, before confirmation). Smoke pairing: `INCLUDE_USERS_MUTATE=1`. Backend gap: user-service does not role-gate POST/DELETE beyond authentication.
 
 ### `appearance` — language
 
@@ -331,7 +332,7 @@ olares-cli settings integration accounts get awss3 my-bucket -o json
 ## Security rules
 
 - **Never** echo `<access_token>` or any field returned by `me sso list` into the terminal beyond what the table view already shows. SSO tokens identify a TermiPass-bound device session and should never be logged or pasted into chat.
-- `settings users create` / `settings users delete` are destructive (`delete` needs the whole word `yes` unless **`--yes`**). **`delete` waits by default until status is Deleted** (`--no-wait` skips that). `create` always generates the initial password once to stdout; treat transcripts accordingly.
+- `settings users create` / `settings users delete` are destructive (`delete` needs the whole word `yes` unless **`--yes`**). **`delete` waits by default until status is Deleted** (`--no-wait` skips that). **`delete` cannot remove the owner account** (fails before DELETE). `create` always generates the initial password once to stdout; treat transcripts accordingly.
 - `settings users get <username>` returns the same record the SPA shows on the user detail page; treat its email / olaresId as PII and avoid forwarding it outside the requesting workflow.
 - For writes that take secrets (`integration accounts add awss3|tencent` is the verified one in this surface), **always** read the secret from an env var or stdin pipe — never paste it into the chat or expand it inline in an `olares-cli ...` command line you suggest. Bash history retention is the user's responsibility; the agent should default to env-var / pipe style invocations (`--access-key-secret "$AWS_SECRET_ACCESS_KEY"`, `printf '%s\n' "$VAR" | ... --password-stdin`) whenever the verb supports it.
 - Other secret-bearing verbs (e.g. `backup password set`, `restore plans check-url / create-from-url`) live in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) until they're smoke-greened; the same env-var / stdin-pipe rule applies whenever you exercise them by hand.

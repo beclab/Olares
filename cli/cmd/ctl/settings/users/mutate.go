@@ -486,10 +486,54 @@ type deleteParams struct {
 	poll, timeout time.Duration
 }
 
+func userIsOwner(info *userInfo) bool {
+	if info == nil {
+		return false
+	}
+	for _, r := range info.Roles {
+		if strings.TrimSpace(r) == "owner" {
+			return true
+		}
+	}
+	return false
+}
+
+func fetchUserForDelete(ctx context.Context, d Doer, username string) (*userInfo, error) {
+	path := "/api/users/" + url.PathEscape(username)
+	var info userInfo
+	if err := decodeObjectResult(ctx, d, path, &info); err != nil {
+		return nil, err
+	}
+	return &info, nil
+}
+
+func validateUserDeletable(username string, info *userInfo) error {
+	if userIsOwner(info) {
+		return fmt.Errorf("cannot delete user '%s' with role '%s' ", username, "owner")
+	}
+	if strings.TrimSpace(info.State) == "Deleting" {
+		return fmt.Errorf("user %q is already being deleted", username)
+	}
+	return nil
+}
+
 func runDelete(ctx context.Context, f *cmdutil.Factory, p deleteParams) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	info, err := fetchUserForDelete(ctx, pc.Doer, p.username)
+	if err != nil {
+		return err
+	}
+	if err := validateUserDeletable(p.username, info); err != nil {
+		return err
+	}
+
 	if !p.skipConfirm {
 		fmt.Fprintf(os.Stderr, "This will permanently delete Olares user %q.\n"+
 			"Type 'yes' to continue: ", p.username)
@@ -502,10 +546,6 @@ func runDelete(ctx context.Context, f *cmdutil.Factory, p deleteParams) error {
 		}
 	}
 
-	pc, err := prepare(ctx, f)
-	if err != nil {
-		return err
-	}
 	path := "/api/users/" + url.PathEscape(p.username)
 	var resp struct {
 		Name string `json:"name"`
