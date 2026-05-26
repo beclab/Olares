@@ -96,14 +96,27 @@ canonical "what's installed" listing. Differences vs catalog browse:
 - **Source scope defaults to every source** — pass `-s` to narrow to one,
   `-a` (or omitting `-s`) keeps the full cross-source view. This matches
   the agent's mental model of "show me my apps" without forcing `-a`.
-- **State filter** — rows in transitional pre-install states
-  (`pending` / `installing` / `installFailed` / `installingCanceling` /
-  `installingCanceled` / `installingCancelFailed`) and fully removed rows
-  (`uninstalled`) are hidden. Post-install transitional states
-  (`upgrading` / `stopping` / `resuming` / `uninstalling` / `*Failed`) all
-  surface so the listing matches "apps I have at all", not "apps that are
-  currently running". Use `market status` if you specifically want a
-  runtime-state view.
+- **State filter** — rows that never finished applying their chart are
+  hidden. The full denylist mirrors the upstream install path in
+  `framework/app-service/pkg/appstate/state_transition.go`
+  (`pending → downloading → installing → initializing → running`) plus
+  every `*Canceling` / `*Canceled` / `*CancelFailed` / `*Failed` variant
+  reachable before `initializing`, plus terminal `uninstalled`:
+  `uninstalled`, `pending`, `pendingCanceling`, `pendingCanceled`,
+  `pendingCancelFailed`, `downloading`, `downloadingCanceling`,
+  `downloadingCanceled`, `downloadingCancelFailed`, `downloadFailed`,
+  `installing`, `installingCanceling`, `installingCanceled`,
+  `installingCancelFailed`, `installFailed`. Post-install transitional
+  states (`upgrading` / `stopping` / `resuming` / `uninstalling` /
+  `applyingEnv` / `*Failed`) all surface so the listing matches "apps I
+  have at all", not "apps that are currently running".
+  - Note `initializing` and `initializingCanceling` are deliberately NOT
+    in the denylist: `initializing` is reused by Resuming / Upgrading /
+    ApplyingEnv transitions per `state_transition.go`, and
+    `initializingCanceling` always transitions to `stopping → stopped`
+    (still an installed-but-stopped row), so excluding either would
+    briefly drop rows that the user does have.
+  - Use `market status` if you specifically want a runtime-state view.
 - **Output adds a STATE column** and (for JSON) a `state` field.
 - **Version is the actually-installed version**, not the catalog latest.
   It comes from the `version` field at the `AppStateLatest` level of

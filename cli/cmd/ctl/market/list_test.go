@@ -9,36 +9,84 @@ import (
 )
 
 // TestIsInstalledState locks down the "what counts as installed" filter
-// used by runListInstalled. The state machine documented in the upstream
-// repo is the source of truth — if this test breaks because someone
-// added or renamed a state, update notInstalledStates so the listing
-// keeps matching the user's mental model.
+// used by runListInstalled. Cases mirror the upstream state machine in
+// framework/app-service/pkg/appstate/state_transition.go; if this test
+// breaks because a new state was added, extend notInstalledStates to
+// keep the filter accurate (or, for post-install paths, deliberately
+// leave the state out and add a case here pinning it as installed).
 func TestIsInstalledState(t *testing.T) {
 	cases := []struct {
 		state     string
 		installed bool
 	}{
+		// Removed-by-uninstall is conceptually the post-install end of
+		// the same "no chart on cluster" condition that pre-install
+		// states share, so it also falls into the not-installed bucket.
 		{"uninstalled", false},
+
+		// Pending: just queued, chart not yet downloaded. Cancel
+		// variants here are the canonical "I clicked install but
+		// changed my mind before anything happened" outcomes.
 		{"pending", false},
+		{"pendingCanceling", false},
+		{"pendingCanceled", false},
+		{"pendingCancelFailed", false},
+
+		// Downloading: chart is being fetched but has not been applied
+		// to the cluster. All cancel/fail variants stay pre-install.
+		{"downloading", false},
+		{"downloadingCanceling", false},
+		{"downloadingCanceled", false},
+		{"downloadingCancelFailed", false},
+		{"downloadFailed", false},
+
+		// Installing: helm install is in flight; cancel / fail here
+		// also leaves nothing on the cluster.
 		{"installing", false},
-		{"installFailed", false},
 		{"installingCanceling", false},
 		{"installingCanceled", false},
 		{"installingCancelFailed", false},
+		{"installFailed", false},
 
+		// `initializing` is reused by Resuming / Upgrading / ApplyingEnv
+		// transitions per state_transition.go, so it MUST stay
+		// installed. Even in the first-time-install context the helm
+		// chart has been applied by this point, so calling it
+		// not-installed would also be incorrect there.
+		{"initializing", true},
+		// `initializingCanceling` always transitions to stopping →
+		// stopped per the upstream graph; treating it as not-installed
+		// would briefly drop a row that is about to reappear as
+		// `stopped`, so it stays installed.
+		{"initializingCanceling", true},
+
+		// Terminal-success / post-install / lifecycle-transient states
+		// — all imply the chart was successfully applied at some point.
 		{"running", true},
 		{"stopped", true},
 		{"stopping", true},
 		{"stopFailed", true},
 		{"resuming", true},
 		{"resumeFailed", true},
+		{"resumingCanceling", true},
 		{"resumingCanceled", true},
+		{"resumingCancelFailed", true},
 		{"upgrading", true},
 		{"upgradeFailed", true},
+		{"upgradingCanceling", true},
 		{"upgradingCanceled", true},
+		{"upgradingCancelFailed", true},
+		{"applyingEnv", true},
+		{"applyEnvFailed", true},
+		{"applyingEnvCanceling", true},
+		{"applyingEnvCanceled", true},
+		{"applyingEnvCancelFailed", true},
 		{"uninstalling", true},
 		{"uninstallFailed", true},
 
+		// Defensive: empty string is treated as "row has no usable
+		// state info" and falls into the not-installed bucket so a
+		// malformed payload never silently pads the listing.
 		{"", false},
 	}
 
@@ -105,6 +153,67 @@ func TestFetchInstalledAppsParsesStateAndEnrichesCatalog(t *testing.T) {
 
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("fetchInstalledApps mismatch:\n got: %#v\nwant: %#v", got, want)
+	}
+}
+
+// TestFetchInstalledAppsFiltersPreInstallStates wires the full state
+// machine through fetchInstalledApps and checks that EVERY pre-install
+// state (pending/downloading/installing trees + their cancel/fail
+// variants) is dropped, while transitional post-install states stay.
+// This pins the bug the original denylist had: states like
+// `downloading`, `downloadFailed`, and `pendingCanceled` used to slip
+// through and pollute `market list --installed` output.
+func TestFetchInstalledAppsFiltersPreInstallStates(t *testing.T) {
+	srv := newFakeMarketDataServer(t, stateAndDataResponses{
+		state: `{
+            "user_data": {
+                "sources": {
+                    "market.olares": {"type": "market", "app_state_latest": [
+                        {"status": {"name": "p1", "state": "pending"}},
+                        {"status": {"name": "p2", "state": "pendingCanceling"}},
+                        {"status": {"name": "p3", "state": "pendingCanceled"}},
+                        {"status": {"name": "p4", "state": "pendingCancelFailed"}},
+
+                        {"status": {"name": "d1", "state": "downloading"}},
+                        {"status": {"name": "d2", "state": "downloadingCanceling"}},
+                        {"status": {"name": "d3", "state": "downloadingCanceled"}},
+                        {"status": {"name": "d4", "state": "downloadingCancelFailed"}},
+                        {"status": {"name": "d5", "state": "downloadFailed"}},
+
+                        {"status": {"name": "i1", "state": "installing"}},
+                        {"status": {"name": "i2", "state": "installingCanceling"}},
+                        {"status": {"name": "i3", "state": "installingCanceled"}},
+                        {"status": {"name": "i4", "state": "installingCancelFailed"}},
+                        {"status": {"name": "i5", "state": "installFailed"}},
+
+                        {"status": {"name": "u1", "state": "uninstalled"}},
+
+                        {"version": "1.0.0", "status": {"name": "init", "state": "initializing"}},
+                        {"version": "1.0.0", "status": {"name": "initcanc", "state": "initializingCanceling"}},
+                        {"version": "1.0.0", "status": {"name": "running", "state": "running"}}
+                    ]}
+                }
+            }
+        }`,
+		data: `{"user_data": {"sources": {}}}`,
+	})
+	mc := newTestMarketClient(t, srv.URL)
+
+	got, err := fetchInstalledApps(mc, "", true)
+	if err != nil {
+		t.Fatalf("fetchInstalledApps: %v", err)
+	}
+
+	// Only the three deliberately-allowed states should survive the
+	// filter. The names are unique per row so we can rely on the sort
+	// order in fetchInstalledApps (alphabetical within a source).
+	want := []AppDisplayInfo{
+		{Name: "init", Source: "market.olares", Version: "1.0.0", State: "initializing"},
+		{Name: "initcanc", Source: "market.olares", Version: "1.0.0", State: "initializingCanceling"},
+		{Name: "running", Source: "market.olares", Version: "1.0.0", State: "running"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("pre-install filter mismatch:\n got: %#v\nwant: %#v", got, want)
 	}
 }
 

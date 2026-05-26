@@ -139,29 +139,71 @@ type AppDisplayInfo struct {
 	State string `json:"state,omitempty"`
 }
 
-// notInstalledStates enumerates the per-row states that mean the app has
-// either never reached a fully-installed state, or has been removed.
-// `market list --installed` filters these out so the listing matches the
-// user's mental model of "what apps do I actually have right now".
+// notInstalledStates enumerates the per-row states that mean the app
+// has never reached a successfully-applied chart, or has been removed.
+// `market list --installed` filters these out so the listing matches
+// the user's mental model of "what apps do I actually have right now".
 //
 // The values are kept verbatim against the upstream state machine in
-// framework/app-service/api/app.bytetrade.io/v1alpha1/appmanager_states.go;
-// if a new "never made it" state is added upstream, extend this set so
-// the filter stays accurate.
+// framework/app-service/pkg/appstate/state_transition.go (which sits on
+// top of the appv1alpha1 ApplicationManagerState constants). The
+// authoritative install path the backend walks is:
+//
+//	pending → downloading → installing → initializing → running
+//
+// All states reachable BEFORE `installing` finishes — including their
+// `*Canceling` / `*Canceled` / `*CancelFailed` and `*Failed` variants —
+// belong here because the helm chart has not been (fully) applied to
+// the cluster yet, so from the user's perspective the app does not
+// exist. `uninstalled` is the post-lifecycle counterpart of the same
+// "no chart on the cluster" condition.
+//
+// Two state names look like they belong here but DO NOT:
+//
+//   - `initializing` is reused by post-install transitions
+//     (`Resuming → Initializing`, `Upgrading → Initializing`,
+//     `ApplyingEnv → Initializing`), so the app IS installed in those
+//     contexts. Even in the first-time-install context the helm
+//     chart has already been applied by the time we hit
+//     `initializing`, so calling it "not installed" would also be
+//     wrong there.
+//   - `initializingCanceling` always transitions to `stopping → stopped`
+//     per state_transition.go, i.e. it terminates as an installed-but-
+//     stopped row. Hiding it from the listing would briefly drop a row
+//     that is about to reappear as `stopped`.
+//
+// If the upstream state machine ever adds another pre-`initializing`
+// step or another cancel/fail variant, extend this set so the filter
+// keeps matching the install path.
 var notInstalledStates = map[string]struct{}{
-	"uninstalled":            {},
-	"pending":                {},
+	"uninstalled": {},
+
+	"pending":              {},
+	"pendingCanceling":     {},
+	"pendingCanceled":      {},
+	"pendingCancelFailed":  {},
+
+	"downloading":             {},
+	"downloadingCanceling":    {},
+	"downloadingCanceled":     {},
+	"downloadingCancelFailed": {},
+	"downloadFailed":          {},
+
 	"installing":             {},
-	"installFailed":          {},
 	"installingCanceling":    {},
 	"installingCanceled":     {},
 	"installingCancelFailed": {},
+	"installFailed":          {},
 }
 
 // isInstalledState reports whether a row's `state` value represents an
-// app that the user effectively has installed (including transitional
-// states like `upgrading` / `stopping` / `uninstalling` that all imply
-// the app was at one point fully provisioned).
+// app that the user effectively has installed. Transitional post-install
+// states (`upgrading`, `initializing` via resume/upgrade, `stopping`,
+// `uninstalling`, `applyingEnv`, …) and their failure / cancel variants
+// all return true because the chart has been applied to the cluster at
+// some point. Only pre-install lifecycle states and `uninstalled` are
+// excluded — see notInstalledStates for the full enumeration and the
+// reasoning behind `initializing` / `initializingCanceling`.
 func isInstalledState(state string) bool {
 	if state == "" {
 		return false
