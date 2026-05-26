@@ -23,19 +23,13 @@ and public-domain-policy.
 Subcommands:
   devices list
   devices routes <device-id>
-  devices rename <device-id> <new-name>
-  devices delete <device-id>
-  devices tags set <device-id> --tag <name>...
-  routes enable | disable <route-id>
   ssh status | enable | disable
-  subroutes status | enable | disable
+  subroutes status
+  acl all
   acl get <app>
-  acl set <app> [--tcp PORT...] [--udp PORT...]
   acl add <app> [--tcp PORT...] [--udp PORT...]
   acl remove <app> [--tcp PORT...] [--udp PORT...]
-  acl clear <app>
   public-domain-policy get
-  public-domain-policy set --deny-all | --allow-all
 `,
 	}
 	cmd.SilenceUsage = true

@@ -1,10 +1,13 @@
 package vpn
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -24,9 +27,20 @@ import (
 //	POST /api/acl/ssh/disable    body {}  -> success / failure
 //
 // All three sit on user-service's bfl/acl.controller.ts and forward to
-// the per-Olares ACL CRD. The status read returns the unwrapped inner
-// shape (`state`, `allow_ssh`) — user-service strips the BFL envelope
-// before returning, same pattern as public-domain-policy.
+// the per-Olares ACL CRD which BFL exposes at /bfl/settings/v1alpha1/
+// headscale/{ssh/acl,enable/ssh,disable/ssh}.
+//
+// Wire shape: user-service forwards BFL's response verbatim, so the
+// status read comes back wrapped in the BFL envelope
+// `{code, message, data: {state, allow_ssh}}`. The SPA hides that
+// because boot/axios.ts installs a global response interceptor that
+// strips `data.data` before handing the body to the store; CLI callers
+// don't get that for free, so decodeSSHStatus has to unwrap the
+// envelope before we can render `state` / `allow_ssh`. It also accepts
+// the already-unwrapped shape defensively in case a future user-service
+// version starts stripping the envelope for this path (the comment in
+// vpn/common.go used to assert that, but the live behavior is the
+// opposite — see KNOWN_ISSUES for the back-history).
 //
 // Role: SPA gates the switch on isAdmin (VPNPage.vue:20-32). We mirror
 // that here with a soft preflight; the server stays authoritative, so a
@@ -52,10 +66,13 @@ Subcommands:
 	return cmd
 }
 
-// sshStatus is the inner shape user-service returns after stripping the
-// BFL envelope. The `state` field is a free-form upstream label
-// (typically "ok" or an error string when the ACL CRD hasn't reconciled
-// yet); `allow_ssh` is the actual toggle value.
+// sshStatus is the inner shape BFL returns for the SSH ACL read
+// (handle_headscale.go's `SshAcl`). It is normally wrapped in the BFL
+// envelope by `response.Success` on the server side and forwarded
+// verbatim by user-service — see decodeSSHStatus for the unwrapping
+// logic. The `state` field is a free-form upstream label (typically
+// "applied" or an error string when the ACL CRD hasn't reconciled yet);
+// `allow_ssh` is the actual toggle value.
 type sshStatus struct {
 	State    string `json:"state"`
 	AllowSSH bool   `json:"allow_ssh"`
@@ -91,8 +108,12 @@ func runSSHStatus(ctx context.Context, f *cmdutil.Factory, outputRaw string) err
 	if err != nil {
 		return err
 	}
-	var resp sshStatus
-	if err := pc.doer.DoJSON(ctx, "GET", "/api/acl/ssh/status", nil, &resp); err != nil {
+	var raw json.RawMessage
+	if err := pc.doer.DoJSON(ctx, "GET", "/api/acl/ssh/status", nil, &raw); err != nil {
+		return err
+	}
+	resp, err := decodeSSHStatus(raw)
+	if err != nil {
 		return err
 	}
 	switch format {
@@ -101,6 +122,97 @@ func runSSHStatus(ctx context.Context, f *cmdutil.Factory, outputRaw string) err
 	default:
 		return renderSSHStatus(os.Stdout, resp)
 	}
+}
+
+// decodeSSHStatus is the wire-shape adapter for `GET /api/acl/ssh/status`.
+// The endpoint currently returns the BFL envelope
+// `{code, message, data: {state, allow_ssh}}` verbatim through
+// user-service; the SPA only sees the inner shape because its
+// boot/axios.ts response interceptor strips `data.data` globally
+// (apps/packages/app/src/boot/axios.ts:163). Without that interceptor
+// the CLI used to silently render `state: ""` / `allow_ssh: no` and
+// callers saw no change after `vpn ssh enable|disable`.
+//
+// We tolerate both the wrapped and unwrapped shapes so a future
+// user-service rewrite that does strip the envelope (the way it
+// already does for /api/launcher-public-domain-access-policy) doesn't
+// flip this command back into "always empty" mode.
+func decodeSSHStatus(raw json.RawMessage) (sshStatus, error) {
+	var out sshStatus
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		return out, nil
+	}
+	var env bflEnvelope
+	if err := json.Unmarshal(trimmed, &env); err == nil && envelopeLooksWrapped(trimmed, env) {
+		switch env.Code {
+		case 0, 200:
+		default:
+			msg := strings.TrimSpace(env.Message)
+			if msg == "" {
+				msg = fmt.Sprintf("server returned code=%d", env.Code)
+			}
+			return out, fmt.Errorf("GET /api/acl/ssh/status: %s", msg)
+		}
+		if len(env.Data) == 0 || string(bytes.TrimSpace(env.Data)) == "null" {
+			if status, ok, err := decodeFlatSSHStatus(trimmed); err != nil {
+				return out, err
+			} else if ok {
+				return status, nil
+			}
+			return out, nil
+		}
+		if err := json.Unmarshal(env.Data, &out); err != nil {
+			return out, fmt.Errorf("decode acl ssh status data: %w", err)
+		}
+		return out, nil
+	}
+	if err := json.Unmarshal(trimmed, &out); err != nil {
+		return out, fmt.Errorf("decode acl ssh status body: %w", err)
+	}
+	return out, nil
+}
+
+func decodeFlatSSHStatus(body []byte) (sshStatus, bool, error) {
+	var out sshStatus
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return out, false, fmt.Errorf("decode acl ssh status body: %w", err)
+	}
+	if _, hasState := probe["state"]; !hasState {
+		if _, hasAllow := probe["allow_ssh"]; !hasAllow {
+			return out, false, nil
+		}
+	}
+	if err := json.Unmarshal(body, &out); err != nil {
+		return out, false, fmt.Errorf("decode acl ssh status body: %w", err)
+	}
+	return out, true, nil
+}
+
+// envelopeLooksWrapped reports whether `body` matches the BFL envelope
+// shape `{code, message, data}` rather than the inner sshStatus shape
+// `{state, allow_ssh}`. Both targets json.Unmarshal cleanly into a
+// bflEnvelope (extra keys are ignored, missing keys default to zero),
+// so we look at the body itself: the envelope always carries a
+// top-level `code` key (response.Success / response.HandleError both
+// emit it unconditionally), while the inner shape never does. Treat
+// the presence of either `code` or `data` as proof of an envelope so
+// we still surface non-success codes on error responses where the
+// upstream omits `data`.
+func envelopeLooksWrapped(body []byte, env bflEnvelope) bool {
+	if len(env.Data) > 0 {
+		return true
+	}
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return false
+	}
+	if _, ok := probe["data"]; ok {
+		return true
+	}
+	_, ok := probe["code"]
+	return ok
 }
 
 func renderSSHStatus(w io.Writer, s sshStatus) error {
