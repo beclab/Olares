@@ -6,5 +6,5 @@ metadata:
     app.kubernetes.io/name: agw-demo
   annotations:
     linkerd.io/inject: enabled
-    # Olares 集群若要求 ns-type 才能访问 linkerd-identity，见 devops LINKERD-MESH-OPERATIONS.md
+    # When the cluster requires ns-type for linkerd-identity, see devops LINKERD-MESH-OPERATIONS.md
     bytetrade.io/ns-type: platform

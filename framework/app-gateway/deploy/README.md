@@ -1,15 +1,15 @@
-# 路由与网关配置说明
+# Gateway routing configuration
 
-## 概述
+## Overview
 
-本目录用于平台在部署阶段生成网关相关的 Kubernetes 配置。这些内容随 **Olares 平台安装或升级**自动应用，**终端用户与租户管理员无需直接编辑或维护**其中的配置项。
+This directory holds Kubernetes manifests generated during platform install or upgrade. They are applied automatically with **Olares platform install or upgrade**; end users and tenant admins do not edit these files directly.
 
-## 客户需要了解的内容
+## What customers need to know
 
-- **访问地址**（域名/Host）由平台在应用或入口开通时分配，与路由配置自动对应。  
-- **路径规则**保持与应用原有设计一致，平台不会在网关层统一增加额外路径前缀。  
-- 应用变更（安装、升级、下线）后，路由将随平台流程自动更新；若访问异常，请通过平台支持渠道排查应用状态与入口配置，而非手工修改网关底层配置。
+- **Access URLs** (domain/Host) are assigned when apps or entrances are provisioned and match the generated routes automatically.
+- **Path rules** stay aligned with each app's design; the platform does not add a global path prefix at the gateway layer.
+- After install, upgrade, or removal, routes update through the platform workflow. If access fails, use platform support with app name, URL, and timestamp rather than editing low-level gateway config by hand.
 
-## 技术支持
+## Support
 
-网关与路由相关问题，请结合 Olares 平台文档、发行说明或联系技术支持，并提供应用名称、访问地址与问题发生时间，以便快速定位。
+For gateway and routing issues, see Olares platform docs and release notes, or contact support with app name, access URL, and time of failure.

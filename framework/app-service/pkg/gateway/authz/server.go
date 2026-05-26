@@ -14,6 +14,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	authv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	envoytypev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -131,7 +132,7 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 	authv3.RegisterAuthorizationServer(grpcSrv, &authzHandler{
 		allow:        s.opts.AllowMode,
-		logger:       s.logger,
+		audit:        Auditor{Logger: s.logger},
 		hostUser:     s.opts.HostUser,
 		snapshotFunc: snapFn,
 	})
@@ -192,12 +193,13 @@ func (s *Server) Start(ctx context.Context) error {
 type authzHandler struct {
 	authv3.UnimplementedAuthorizationServer
 	allow        bool
-	logger       *slog.Logger
+	audit        Auditor
 	hostUser     HostUserConfig
 	snapshotFunc cluster.SnapshotFunc
 }
 
 func (h *authzHandler) Check(ctx context.Context, req *authv3.CheckRequest) (*authv3.CheckResponse, error) {
+	start := time.Now()
 	httpReq := req.GetAttributes().GetRequest().GetHttp()
 	host := httpReq.GetHost()
 	path := httpReq.GetPath()
@@ -206,17 +208,19 @@ func (h *authzHandler) Check(ctx context.Context, req *authv3.CheckRequest) (*au
 	rid := extractRequestID(headers)
 
 	snap, _ := h.snapshotFunc(ctx)
+	phase := "baseline"
 	if snap.InClusterGatewayEnabled && IsSharedInclusterHost(host) {
-		return h.checkInCluster(host, path, method, headers, rid)
+		phase = "incluster"
+		return h.checkInCluster(host, path, method, headers, rid, phase, start)
 	}
-	return h.checkHostUserBaseline(host, path, method, headers, rid)
+	return h.checkHostUserBaseline(host, path, method, headers, rid, phase, start)
 }
 
-func (h *authzHandler) checkInCluster(host, path, method string, headers map[string]string, rid string) (*authv3.CheckResponse, error) {
+func (h *authzHandler) checkInCluster(host, path, method string, headers map[string]string, rid, phase string, start time.Time) (*authv3.CheckResponse, error) {
 	id := InClusterIdentity(host, headers)
 	switch id.Action {
 	case ActionDeny:
-		return h.denyResponse(rid, host, method, path, id)
+		return h.denyResponse(rid, host, method, path, phase, start, headers, id, "")
 	case ActionAllow:
 		headers = HeadersWithDerivedUser(headers, id)
 	}
@@ -224,41 +228,34 @@ func (h *authzHandler) checkInCluster(host, path, method string, headers map[str
 	hu := HostUser(host, headers, h.hostUser)
 	switch hu.Action {
 	case ActionDeny:
-		return h.denyResponse(rid, host, method, path, hu)
+		return h.denyResponse(rid, host, method, path, phase, start, headers, hu, "")
 	}
 
 	sa := InClusterSharedAllow(host)
 	if sa.Action == ActionAllow {
-		h.logger.Info("authz allow",
-			"rid", rid, "authority", host, "method", method, "path", path,
-			"viewer_host", hu.Viewer, "viewer_authenticated", hu.Username,
-			"decision", "allow", "via", "incluster_shared_allow")
-		return h.allowResponse(headers)
+		return h.allowResponse(rid, host, method, path, phase, start, headers, &hu, "incluster_shared_allow")
 	}
-	return h.checkHostUserBaseline(host, path, method, headers, rid)
+	return h.checkHostUserBaseline(host, path, method, headers, rid, phase, start)
 }
 
-func (h *authzHandler) checkHostUserBaseline(host, path, method string, headers map[string]string, rid string) (*authv3.CheckResponse, error) {
+func (h *authzHandler) checkHostUserBaseline(host, path, method string, headers map[string]string, rid, phase string, start time.Time) (*authv3.CheckResponse, error) {
 	dec := HostUser(host, headers, h.hostUser)
 	switch dec.Action {
 	case ActionDeny:
-		return h.denyResponse(rid, host, method, path, dec)
+		return h.denyResponse(rid, host, method, path, phase, start, headers, dec, "")
 	case ActionAllow:
-		h.logger.Info("authz allow",
-			"rid", rid, "authority", host, "method", method, "path", path,
-			"viewer_host", dec.Viewer, "viewer_authenticated", dec.Username,
-			"decision", "allow")
-		return h.allowResponse(nil)
+		return h.allowResponse(rid, host, method, path, phase, start, headers, &dec, "host_user")
 	}
 	if h.allow {
-		h.logger.Info("authz allow",
-			"rid", rid, "authority", host, "method", method, "path", path,
-			"decision", "allow_all")
-		return h.allowResponse(nil)
+		return h.allowResponse(rid, host, method, path, phase, start, headers, nil, "allow_all")
 	}
-	h.logger.Warn("authz deny",
-		"rid", rid, "authority", host, "method", method, "path", path,
-		"decision", "deny")
+	elapsed := time.Since(start)
+	h.audit.Deny(Event{
+		RID: rid, Authority: host, Method: method, Path: path,
+		Decision: "deny", Code: "DENY_MODE", Phase: phase,
+		L5dPresent: l5dPresent(headers), LatencyMS: elapsed.Milliseconds(),
+	})
+	recordAuthzMetrics("deny", "DENY_MODE", elapsed)
 	return &authv3.CheckResponse{
 		Status: &rpcstatus.Status{Code: int32(codes.PermissionDenied), Message: "phase-a deny mode"},
 		HttpResponse: &authv3.CheckResponse_DeniedResponse{
@@ -270,11 +267,19 @@ func (h *authzHandler) checkHostUserBaseline(host, path, method string, headers 
 	}, nil
 }
 
-func (h *authzHandler) denyResponse(rid, host, method, path string, dec Decision) (*authv3.CheckResponse, error) {
-	h.logger.Warn("authz deny",
-		"rid", rid, "authority", host, "method", method, "path", path,
-		"viewer_host", dec.Viewer, "viewer_authenticated", dec.Username,
-		"code", dec.Code, "decision", "deny")
+func (h *authzHandler) denyResponse(rid, host, method, path, phase string, start time.Time, headers map[string]string, dec Decision, via string) (*authv3.CheckResponse, error) {
+	elapsed := time.Since(start)
+	code := dec.Code
+	if code == "" {
+		code = "-"
+	}
+	h.audit.Deny(Event{
+		RID: rid, Authority: host, Method: method, Path: path,
+		Decision: "deny", Code: code, Via: via, Phase: phase,
+		ViewerHost: dec.Viewer, ViewerAuthenticated: dec.Username,
+		L5dPresent: l5dPresent(headers), LatencyMS: elapsed.Milliseconds(),
+	})
+	recordAuthzMetrics("deny", code, elapsed)
 	body := "Forbidden by app-service authz: " + dec.Code
 	if dec.Message != "" {
 		body += " — " + dec.Message
@@ -290,7 +295,19 @@ func (h *authzHandler) denyResponse(rid, host, method, path string, dec Decision
 	}, nil
 }
 
-func (h *authzHandler) allowResponse(headers map[string]string) (*authv3.CheckResponse, error) {
+func (h *authzHandler) allowResponse(rid, host, method, path, phase string, start time.Time, headers map[string]string, dec *Decision, via string) (*authv3.CheckResponse, error) {
+	elapsed := time.Since(start)
+	ev := Event{
+		RID: rid, Authority: host, Method: method, Path: path,
+		Decision: "allow", Via: via, Phase: phase,
+		L5dPresent: l5dPresent(headers), LatencyMS: elapsed.Milliseconds(),
+	}
+	if dec != nil {
+		ev.ViewerHost = dec.Viewer
+		ev.ViewerAuthenticated = dec.Username
+	}
+	h.audit.Allow(ev)
+	recordAuthzMetrics("allow", "-", elapsed)
 	ok := &authv3.OkHttpResponse{}
 	if v := headerValue(headers, "x-bfl-user"); v != "" {
 		ok.Headers = []*corev3.HeaderValueOption{
@@ -330,12 +347,7 @@ func newProbeServer(addr string, ready *atomic.Bool) *http.Server {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_, _ = w.Write([]byte("draining"))
 	})
-	mux.HandleFunc("/metrics", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("# app-service in-process PEP metrics\n"))
-		_, _ = w.Write([]byte("app_service_ext_authz_phase 1\n"))
-	})
+	mux.Handle("/metrics", promhttp.Handler())
 	return &http.Server{
 		Addr:              addr,
 		Handler:           mux,

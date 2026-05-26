@@ -4,8 +4,8 @@ kind: Kustomization
 resources:
   - ../../base
 
-# PoC：为 Gateway 生成的 Service 打 NodePort 补丁需在 EG 创建 Service 后由脚本处理；
-# 此处仅标注演示 Host，供 smoke 使用。
+# PoC: NodePort patch for the Gateway Service is applied by script after EG creates the Service.
+# Demo host annotation for smoke tests only.
 configMapGenerator:
   - name: app-gateway-poc-config
     namespace: agw-demo

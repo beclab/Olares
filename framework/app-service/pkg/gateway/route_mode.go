@@ -38,7 +38,7 @@ var gatewayReadyCache struct {
 const gatewayReadyCacheTTL = 30 * time.Second
 
 // ComputeRouteModePatch decides whether the Application needs an annotation
-// patch and what value to set. See archdoc Shared应用route-mode自动化方案 §3.1.
+// patch and what value to set. See archdoc shared route-mode automation design (section 3.1).
 //
 // Returns needsPatch=false when the annotation already matches the desired
 // state, including when an operator pinned gateway or direct (P0).

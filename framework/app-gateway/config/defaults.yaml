@@ -1,5 +1,5 @@
-# app-gateway 统一配置（唯一真源）
-# 修改命名空间或网关名时只改本文件，并同步 .olares/config/user/helm-charts/app-gateway/values.yaml
+# app-gateway single source of truth for chart defaults.
+# Edit namespace/gateway names here, then run sync-app-gateway-config.sh to refresh Helm values.
 
 namespace: app-gateway
 
@@ -42,6 +42,6 @@ extAuthz:
     namespace: os-framework
     port: 9001
 
-# Linkerd 控制面独立命名空间；Envoy Gateway 控制面与 Gateway API 业务对象共用上方 namespace。
+# Linkerd control-plane namespace; Envoy Gateway and Gateway API objects use namespace above.
 vendor:
   linkerdNamespace: linkerd

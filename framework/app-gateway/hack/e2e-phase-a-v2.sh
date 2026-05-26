@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Shared 外部访问 v2 端到端门禁 (G1～G11).
+# Shared external access Phase-A v2 end-to-end gate (G1-G11).
 #
-# 验证 per-viewer Shared URL 全链路：
+# Verify the per-viewer Shared URL chain:
 #
 #   https://<HASH8>.<viewer>.<PLATFORM_DOMAIN>/<PILOT_PATH>
 #
-# 覆盖：ClusterConfig、SRR/HTTPRoute、ext_authz host-user、多 viewer、fail-closed。
+# Covers: ClusterConfig, SRR/HTTPRoute, ext_authz host-user, multi-viewer, fail-closed.
 #
 # Inputs (env vars; required unless marked optional):
 #   EDGE_IP            edge node IP exposing the L4 proxy (NodePort/LoadBalancer)

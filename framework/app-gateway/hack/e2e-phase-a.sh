@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared 外部访问端到端门禁 (G1～G8)：L4 → EG → ext_authz → HTTPRoute → 后端。
+# Shared external access Phase-A end-to-end gate (G1-G8): L4 -> EG -> ext_authz -> HTTPRoute -> backend.
 #
 # Inputs (env vars; required unless marked optional):
 #   EDGE_IP          edge node IP exposing the L4 proxy (NodePort/LoadBalancer)

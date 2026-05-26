@@ -58,15 +58,26 @@ func TestProbeServer_ReadyToggle(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("healthz: %d", rec.Code)
 	}
+	recordAuthzMetrics("allow", "-", time.Millisecond)
 	rec = httptest.NewRecorder()
 	srv.Handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("metrics: %d", rec.Code)
 	}
 	body, _ := io.ReadAll(rec.Body)
-	if !strings.Contains(string(body), "app_service_ext_authz_phase") {
-		t.Fatalf("metrics body missing gauge: %s", body)
+	out := string(body)
+	for _, want := range []string{
+		"app_service_ext_authz_decisions_total",
+		"app_service_ext_authz_latency_ms",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("metrics body missing %q: %s", want, out)
+		}
 	}
+}
+
+func discardAuditor() Auditor {
+	return Auditor{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 
 // startBufServer wires a bufconn-backed gRPC server for in-process Check tests.
@@ -115,7 +126,7 @@ func makeReq(host string, headers map[string]string) *authv3.CheckRequest {
 func TestAuthzHandler_Check_Allow(t *testing.T) {
 	h := &authzHandler{
 		allow:        true,
-		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		audit:        discardAuditor(),
 		hostUser:     DefaultHostUserConfig(),
 		snapshotFunc: snapshotInCluster(false),
 	}
@@ -137,7 +148,7 @@ func TestAuthzHandler_Check_Allow(t *testing.T) {
 func TestAuthzHandler_Check_DenyHostUser(t *testing.T) {
 	h := &authzHandler{
 		allow:        true,
-		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		audit:        discardAuditor(),
 		hostUser:     DefaultHostUserConfig(),
 		snapshotFunc: snapshotInCluster(false),
 	}
@@ -166,7 +177,7 @@ func TestAuthzHandler_Check_DenyHostUser(t *testing.T) {
 func TestAuthzHandler_Check_DenyMode_HostUserDisabled(t *testing.T) {
 	h := &authzHandler{
 		allow:        false,
-		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		audit:        discardAuditor(),
 		hostUser:     HostUserConfig{Enabled: false},
 		snapshotFunc: snapshotInCluster(false),
 	}
@@ -192,7 +203,7 @@ func TestAuthzHandler_InCluster_L5dAllow(t *testing.T) {
 	l5d := "default.user-space-alice.serviceaccount.identity.linkerd.cluster.local"
 	h := &authzHandler{
 		allow:        true,
-		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		audit:        discardAuditor(),
 		hostUser:     DefaultHostUserConfig(),
 		snapshotFunc: snapshotInCluster(true),
 	}
@@ -219,7 +230,7 @@ func TestAuthzHandler_InCluster_ViewerMismatchDeny(t *testing.T) {
 	l5d := "default.user-space-alice.serviceaccount.identity.linkerd.cluster.local"
 	h := &authzHandler{
 		allow:        true,
-		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		audit:        discardAuditor(),
 		hostUser:     DefaultHostUserConfig(),
 		snapshotFunc: snapshotInCluster(true),
 	}
