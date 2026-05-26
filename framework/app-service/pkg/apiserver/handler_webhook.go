@@ -121,7 +121,7 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectSharedPod, perms)
-	if !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0 {
+	if !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0 || (appCfg != nil && appCfg.IsV3()) {
 		klog.Infof("Skipping sidecar injection for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return resp
 	}
