@@ -81,7 +81,7 @@ func runGet(ctx context.Context, f *cmdutil.Factory, username, outputRaw string)
 	}
 
 	var u userInfo
-	path := "/api/users/" + username
+	path := userRecordPath(username)
 	if err := decodeObjectResult(ctx, pc.Doer, path, &u); err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func runGet(ctx context.Context, f *cmdutil.Factory, username, outputRaw string)
 	// polls during create.
 	wizardLookupErr := ""
 	if !u.WizardComplete && !strings.EqualFold(strings.TrimSpace(u.State), "Failed") {
-		statusPath := "/api/users/" + url.PathEscape(username) + "/status"
+		statusPath := userStatusPath(username)
 		var st accountModifyStatus
 		if err := decodeObjectResult(ctx, pc.Doer, statusPath, &st); err != nil {
 			// Non-fatal: keep printing the user record. Surface the reason
@@ -115,6 +115,14 @@ func runGet(ctx context.Context, f *cmdutil.Factory, username, outputRaw string)
 		}
 		return renderUserDetail(os.Stdout, u)
 	}
+}
+
+func userRecordPath(username string) string {
+	return "/api/users/" + url.PathEscape(username)
+}
+
+func userStatusPath(username string) string {
+	return userRecordPath(username) + "/status"
 }
 
 // renderUserDetail prints a 2-column "Field: Value" view rather than the
