@@ -15,6 +15,8 @@ import (
 
 	authv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	envoytypev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -89,6 +91,12 @@ func startBufServer(t *testing.T, h *authzHandler) (*grpc.ClientConn, func()) {
 	return conn, func() { _ = conn.Close(); gs.Stop() }
 }
 
+func snapshotInCluster(enabled bool) cluster.SnapshotFunc {
+	return func(context.Context) (cluster.Snapshot, error) {
+		return cluster.Snapshot{InClusterGatewayEnabled: enabled}, nil
+	}
+}
+
 func makeReq(host string, headers map[string]string) *authv3.CheckRequest {
 	return &authv3.CheckRequest{
 		Attributes: &authv3.AttributeContext{
@@ -106,9 +114,10 @@ func makeReq(host string, headers map[string]string) *authv3.CheckRequest {
 
 func TestAuthzHandler_Check_Allow(t *testing.T) {
 	h := &authzHandler{
-		allow:    true,
-		logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
-		hostUser: DefaultHostUserConfig(),
+		allow:        true,
+		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		hostUser:     DefaultHostUserConfig(),
+		snapshotFunc: snapshotInCluster(false),
 	}
 	conn, cleanup := startBufServer(t, h)
 	defer cleanup()
@@ -127,9 +136,10 @@ func TestAuthzHandler_Check_Allow(t *testing.T) {
 
 func TestAuthzHandler_Check_DenyHostUser(t *testing.T) {
 	h := &authzHandler{
-		allow:    true,
-		logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
-		hostUser: DefaultHostUserConfig(),
+		allow:        true,
+		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		hostUser:     DefaultHostUserConfig(),
+		snapshotFunc: snapshotInCluster(false),
 	}
 	conn, cleanup := startBufServer(t, h)
 	defer cleanup()
@@ -155,9 +165,10 @@ func TestAuthzHandler_Check_DenyHostUser(t *testing.T) {
 
 func TestAuthzHandler_Check_DenyMode_HostUserDisabled(t *testing.T) {
 	h := &authzHandler{
-		allow:    false,
-		logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
-		hostUser: HostUserConfig{Enabled: false},
+		allow:        false,
+		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		hostUser:     HostUserConfig{Enabled: false},
+		snapshotFunc: snapshotInCluster(false),
 	}
 	conn, cleanup := startBufServer(t, h)
 	defer cleanup()
@@ -174,6 +185,56 @@ func TestAuthzHandler_Check_DenyMode_HostUserDisabled(t *testing.T) {
 	}
 	if denied.DeniedResponse.Status.Code != envoytypev3.StatusCode_Forbidden {
 		t.Fatalf("unexpected denied status: %v", denied.DeniedResponse.Status)
+	}
+}
+
+func TestAuthzHandler_InCluster_L5dAllow(t *testing.T) {
+	l5d := "default.user-space-alice.serviceaccount.identity.linkerd.cluster.local"
+	h := &authzHandler{
+		allow:        true,
+		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		hostUser:     DefaultHostUserConfig(),
+		snapshotFunc: snapshotInCluster(true),
+	}
+	conn, cleanup := startBufServer(t, h)
+	defer cleanup()
+	client := authv3.NewAuthorizationClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	resp, err := client.Check(ctx, makeReq("a1b2c3d4.alice.olares.com",
+		map[string]string{"l5d-client-id": l5d}))
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	ok, isOK := resp.HttpResponse.(*authv3.CheckResponse_OkResponse)
+	if !isOK {
+		t.Fatalf("expected OkResponse, got %#v", resp.HttpResponse)
+	}
+	if len(ok.OkResponse.Headers) == 0 || ok.OkResponse.Headers[0].Header.Value != "alice" {
+		t.Fatalf("headers = %#v", ok.OkResponse.Headers)
+	}
+}
+
+func TestAuthzHandler_InCluster_ViewerMismatchDeny(t *testing.T) {
+	l5d := "default.user-space-alice.serviceaccount.identity.linkerd.cluster.local"
+	h := &authzHandler{
+		allow:        true,
+		logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		hostUser:     DefaultHostUserConfig(),
+		snapshotFunc: snapshotInCluster(true),
+	}
+	conn, cleanup := startBufServer(t, h)
+	defer cleanup()
+	client := authv3.NewAuthorizationClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	resp, err := client.Check(ctx, makeReq("a1b2c3d4.bob.olares.com",
+		map[string]string{"l5d-client-id": l5d}))
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if _, ok := resp.HttpResponse.(*authv3.CheckResponse_DeniedResponse); !ok {
+		t.Fatalf("expected deny, got %#v", resp.HttpResponse)
 	}
 }
 

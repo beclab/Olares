@@ -54,8 +54,9 @@ var Resource = schema.GroupVersionResource{Group: GroupVersion.Group, Version: G
 
 // Snapshot is a read-only projection of ClusterConfig.spec.
 type Snapshot struct {
-	PlatformDomain        string
-	SharedURLViewerScheme string
+	PlatformDomain            string
+	SharedURLViewerScheme     string
+	InClusterGatewayEnabled   bool
 }
 
 // SharedURLViewerEnabled reports whether the v2 per-viewer Shared URL scheme
@@ -175,8 +176,9 @@ func snapshotFromUnstructured(u *unstructured.Unstructured) (Snapshot, error) {
 		return Snapshot{}, fmt.Errorf("read spec: %w", err)
 	}
 	out := Snapshot{
-		PlatformDomain:        envOrDefaultPlatformDomain(),
-		SharedURLViewerScheme: SharedURLViewerSchemeDisabled,
+		PlatformDomain:          envOrDefaultPlatformDomain(),
+		SharedURLViewerScheme:   SharedURLViewerSchemeDisabled,
+		InClusterGatewayEnabled: true,
 	}
 	if !found {
 		return out, nil
@@ -187,6 +189,15 @@ func snapshotFromUnstructured(u *unstructured.Unstructured) (Snapshot, error) {
 	if v, ok := spec["sharedURLViewerScheme"].(string); ok && v != "" {
 		out.SharedURLViewerScheme = strings.ToLower(strings.TrimSpace(v))
 	}
+	if v, ok := spec["inClusterGatewayEnabled"]; ok {
+		switch t := v.(type) {
+		case bool:
+			out.InClusterGatewayEnabled = t
+		default:
+			klog.Warningf("ClusterConfig.spec.inClusterGatewayEnabled non-bool, default true")
+			out.InClusterGatewayEnabled = true
+		}
+	}
 	if !validPlatformDomain(out.PlatformDomain) {
 		return out, fmt.Errorf("invalid platformDomain %q", out.PlatformDomain)
 	}
@@ -196,9 +207,18 @@ func snapshotFromUnstructured(u *unstructured.Unstructured) (Snapshot, error) {
 // fallbackSnapshot is used whenever the CRD/API call cannot be served.
 func fallbackSnapshot() Snapshot {
 	return Snapshot{
-		PlatformDomain:        envOrDefaultPlatformDomain(),
-		SharedURLViewerScheme: SharedURLViewerSchemeDisabled,
+		PlatformDomain:          envOrDefaultPlatformDomain(),
+		SharedURLViewerScheme:   SharedURLViewerSchemeDisabled,
+		InClusterGatewayEnabled: true,
 	}
+}
+
+// SnapshotFunc loads a ClusterConfig projection (for ext_authz and tests).
+type SnapshotFunc func(context.Context) (Snapshot, error)
+
+// DefaultSnapshotFunc returns GetSnapshot.
+func DefaultSnapshotFunc() SnapshotFunc {
+	return GetSnapshot
 }
 
 func envOrDefaultPlatformDomain() string {

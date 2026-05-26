@@ -41,6 +41,29 @@ func newClusterConfig(platform, viewerScheme string) *unstructured.Unstructured 
 	return u
 }
 
+func TestSnapshot_InClusterGatewayEnabled(t *testing.T) {
+	resetCacheForTest()
+	u := newClusterConfig("olares.com", "")
+	_ = unstructured.SetNestedField(u.Object, false, "spec", "inClusterGatewayEnabled")
+	got, err := loadAndCacheWithReader(context.Background(), stubReader{obj: u})
+	if err != nil || got.InClusterGatewayEnabled {
+		t.Fatalf("false: got=%v err=%v", got.InClusterGatewayEnabled, err)
+	}
+	resetCacheForTest()
+	u2 := newClusterConfig("olares.com", "")
+	got2, _ := loadAndCacheWithReader(context.Background(), stubReader{obj: u2})
+	if !got2.InClusterGatewayEnabled {
+		t.Fatal("default must be true when field absent")
+	}
+	resetCacheForTest()
+	u3 := newClusterConfig("olares.com", "")
+	_ = unstructured.SetNestedField(u3.Object, "yes", "spec", "inClusterGatewayEnabled")
+	got3, _ := loadAndCacheWithReader(context.Background(), stubReader{obj: u3})
+	if !got3.InClusterGatewayEnabled {
+		t.Fatal("non-bool must default true")
+	}
+}
+
 func TestSnapshot_HappyPath(t *testing.T) {
 	resetCacheForTest()
 	r := stubReader{obj: newClusterConfig("olares.com", "enabled")}
