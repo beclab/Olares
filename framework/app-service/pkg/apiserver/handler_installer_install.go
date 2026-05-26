@@ -428,6 +428,11 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 		return
 	}
 
+	if err = appcfg.ValidateCallerInClusterManifest(h.appConfig); err != nil {
+		responseBadRequest(err)
+		return
+	}
+
 	//resourceType, err := CheckAppRequirement(h.h.kubeConfig, h.token, h.appConfig)
 	resourceType, resourceConditionType, err := apputils.CheckAppRequirement(h.token, h.appConfig, v1alpha1.InstallOp)
 	if err != nil {

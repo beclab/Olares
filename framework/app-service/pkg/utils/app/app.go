@@ -1107,6 +1107,11 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 	}
 	appConfig.Requirement = *resolved
 
+	appcfg.ApplyManifestGatewayOptionsFromChart(appConfig, chart)
+	if err := appcfg.ValidateCallerInClusterManifest(appConfig); err != nil {
+		return nil, chart, err
+	}
+
 	return appConfig, chart, nil
 }
 

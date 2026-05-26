@@ -8,4 +8,8 @@ const (
 	InClusterGateway = "gateway"
 	// InClusterDirect keeps legacy direct Service access.
 	InClusterDirect = "direct"
+
+	// SettingInClusterMode is copied from the install manifest into
+	// Application.spec.settings (P1 override), same as gatewayRouteMode.
+	SettingInClusterMode = "inCluster"
 )

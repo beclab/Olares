@@ -1447,6 +1447,9 @@ func (h *Handler) installOpValidate(ctx context.Context, appConfig *appcfg.Appli
 	if err != nil {
 		return err
 	}
+	if err := appcfg.ValidateCallerInClusterManifest(appConfig); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1459,7 +1462,7 @@ func (h *Handler) upgradeOpValidate(ctx context.Context, appConfig *appcfg.Appli
 	if err != nil {
 		return err
 	}
-	return nil
+	return appcfg.ValidateCallerInClusterManifest(appConfig)
 }
 
 // macvlanInitInject is the HTTP entrypoint for the macvlan-init mutating webhook.
