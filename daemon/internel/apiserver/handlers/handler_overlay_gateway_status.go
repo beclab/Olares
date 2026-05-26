@@ -110,6 +110,7 @@ func (h *Handlers) getOverlayGatewayStatus(ctx context.Context) (*OverlayGateway
 	}
 
 	if c == nil {
+		s.Disable, s.DisableReason = h.isUnsupported(ctx)
 		return s, nil
 	}
 
