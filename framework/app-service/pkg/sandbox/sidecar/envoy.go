@@ -343,10 +343,22 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig) string {
 -A PROXY_IN_REDIRECT -p tcp -j REDIRECT --to-port %d
 `, constants.EnvoyInboundListenerPort)
 
+	// PROXY_OUTBOUND exits:
+	//   1. envoy itself (uid 1555) is excluded so its own egress (e.g. health
+	//      probes, upstream calls) is not looped back into 15001.
+	//   2. linkerd-proxy (uid 2102) is excluded for the same reason: when the
+	//      pod is meshed by Linkerd, linkerd-proxy needs to reach the control
+	//      plane (identity:8080 / destination:8086 / policy:8090) and serve
+	//      mTLS to peer proxies; without this rule the 8080 control-plane
+	//      bootstrap traffic falls into the `multiport --dports 80,8080`
+	//      redirect, gets parsed as HTTP by envoy and breaks the TLS handshake
+	//      with `received corrupt message of type InvalidContentType`. See
+	//      constants.LinkerdProxyUID for the matching uid.
 	cmd += fmt.Sprintf(`-A PROXY_OUTBOUND -d ${POD_IP}/32 -j RETURN
--A PROXY_OUTBOUND -o lo ! -d 127.0.0.1/32 -m owner --uid-owner 1555 -j PROXY_IN_REDIRECT
--A PROXY_OUTBOUND -o lo -m owner ! --uid-owner 1555 -j RETURN
--A PROXY_OUTBOUND -m owner --uid-owner 1555 -j RETURN
+-A PROXY_OUTBOUND -o lo ! -d 127.0.0.1/32 -m owner --uid-owner %d -j PROXY_IN_REDIRECT
+-A PROXY_OUTBOUND -o lo -m owner ! --uid-owner %d -j RETURN
+-A PROXY_OUTBOUND -m owner --uid-owner %d -j RETURN
+-A PROXY_OUTBOUND -m owner --uid-owner %d -j RETURN
 -A PROXY_OUTBOUND -d 127.0.0.1/32 -j RETURN
 -A PROXY_OUTBOUND -p tcp -m multiport ! --dports 80,8080 -j RETURN
 -A PROXY_OUTBOUND -j PROXY_OUT_REDIRECT
@@ -355,6 +367,10 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig) string {
 COMMIT
 EOF
 `,
+		constants.EnvoyUID,
+		constants.EnvoyUID,
+		constants.EnvoyUID,
+		constants.LinkerdProxyUID,
 		constants.EnvoyOutboundListenerPort,
 	)
 

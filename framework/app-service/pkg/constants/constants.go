@@ -56,6 +56,14 @@ const (
 	UserChartsPath = "./userapps"
 
 	EnvoyUID                        int64 = 1555
+	// LinkerdProxyUID is the fixed uid Linkerd injects its `linkerd-proxy`
+	// sidecar with (see Linkerd Helm chart `proxyUID`). When a pod is
+	// simultaneously injected by Linkerd AND olares-envoy-sidecar, the envoy
+	// iptables ruleset MUST exclude this uid from PROXY_OUTBOUND redirection,
+	// otherwise linkerd-proxy's mTLS bootstrap traffic to identity:8080 is
+	// captured by envoy and parsed as HTTP, breaking the TLS handshake with
+	// "received corrupt message of type InvalidContentType".
+	LinkerdProxyUID                 int64 = 2102
 	DefaultEnvoyLogLevel                  = "debug"
 	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
 	EnvoyContainerName                    = "olares-envoy-sidecar"
