@@ -30,14 +30,25 @@ func newAccountsDeleteCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Delete an integration account.
 
 The first positional arg is the account type (e.g. awss3, tencent,
-google, dropbox, space). The second is the optional account name —
-required for object-storage flows where one user can have multiple
-accounts of the same type, omittable for OAuth flows that only ever
-have a single account per type per user.
+google, dropbox, space). The second is the account name. In practice
+every account type the SPA can create sets a name during the Add-Account
+flow, so name is effectively required to target the right row:
+
+  - object-storage flows (awss3, tencent): name is the access-key id
+    that was passed to "accounts add <type> --access-key-id …"
+  - OAuth / wallet flows (dropbox, google, space): name is the per-user
+    identity returned by the upstream provider during sign-in
+    (Dropbox uid, Google account email, Olares Space did or username)
+
+The bare "<type>" form (omit name) is only kept for backward compatibility
+with legacy rows that were written before the SPA started setting a name
+on every account; do not rely on it for accounts created through the
+current SPA or this CLI.
 
 Examples:
-  olares-cli settings integration accounts delete awss3 AKIAIOSFODNN7EXAMPLE
-  olares-cli settings integration accounts delete dropbox
+  olares-cli settings integration accounts delete awss3   AKIAIOSFODNN7EXAMPLE
+  olares-cli settings integration accounts delete dropbox 123456789
+  olares-cli settings integration accounts delete google  alice@example.com
 
 Use "olares-cli settings integration accounts list" first to see the
 exact (type, name) tuple of each account.

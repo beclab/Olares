@@ -25,11 +25,25 @@ import (
 //
 // The suspend body's `all` flag is plumbed end-to-end: app-service's
 // handler reads `StopRequest{All bool}` from the request body and
-// writes ApplicationManager annotations (AppStopAllKey) accordingly —
-// `true` requests a multi-tenant suspend on cluster-scoped apps,
-// `false` only stops this user's instance. The CLI exposes the flag as
-// `--all` and auto-picks a default by app scope when unset (CS app -> true,
-// user-scoped -> false; one extra /api/myapps round-trip to resolve).
+// writes ApplicationManager annotations (AppStopAllKey) accordingly.
+// Semantically `all` toggles which half of a V2 cluster-shared app gets
+// stopped — the shared server side (S-side / shared charts) or only the
+// caller's user-side slice — not "how many users are affected":
+//
+//	`true`  → also stop the V2 cluster-shared server charts. Other
+//	          users' client pods get stopped as a downstream consequence
+//	          (the suspending_app reconciler walks the ApplicationManager
+//	          list and stops every other owner's client because they
+//	          can't function without the shared server); that propagation
+//	          is a side effect of the server going down, not the primary
+//	          intent of the flag.
+//	`false` → only stop the caller's slice: a V1 app's user instance,
+//	          or a V2 client. The shared server (and other users'
+//	          clients) keep running.
+//
+// The CLI exposes the flag as `--all` and auto-picks a default by app
+// scope when unset (CS app -> true, user-scoped -> false; one extra
+// /api/myapps round-trip to resolve).
 //
 // Resume is read-only on the wire (GET, no body). app-service's resume
 // handler decides `AppResumeAllKey` from the caller's isAdmin bit
@@ -57,16 +71,29 @@ same action surfaced as "Suspend" on the SPA's per-app Settings page.
 The <name> argument is the app's machine-readable name (the same value
 shown in the NAME column of "olares-cli settings apps list").
 
-Scope of the suspension is controlled by --all, which maps to the body
-field "all" (forwarded by user-service to app-service's StopRequest.All
-and stored on the ApplicationManager as AppStopAllKey):
+The --all flag controls which half of a V2 cluster-shared app gets stopped.
+It maps to the body field "all" (forwarded by user-service to app-service's
+StopRequest.All and stored on the ApplicationManager as AppStopAllKey).
+Picture a V2 cluster-scoped app as two halves: the shared server side
+("S-side", the cluster-shared charts that every user talks to) and each
+user's own client side (the per-user pods that connect to that shared
+server). --all picks which half is suspended:
 
-  --all=true   suspend the app for every user that has it installed.
-               This is the meaningful choice for cluster-scoped (CS)
-               apps where one suspend should affect all tenants.
+  --all=true   also suspend the V2 cluster-shared server side (the
+               "S-side" / shared charts). Because every other user's
+               client of this app cannot function without the shared
+               server, suspending the server side stops their client
+               pods as a downstream side effect — that propagation is
+               NOT the primary intent of the flag, just its consequence.
+               Only meaningful for V2 cluster-scoped apps; for a V1 or
+               user-scoped app there is no shared server to stop, so the
+               server-side stop is a no-op and the call degrades to the
+               same behavior as --all=false.
 
-  --all=false  suspend only the active profile's instance, leaving
-               other users' instances running.
+  --all=false  suspend only the caller's own slice: a V1 app's user
+               instance or the V2 client (user-side) pods. The shared
+               server (and therefore every other user's client) keeps
+               running.
 
   (unset)      auto-pick: cluster-scoped apps default to --all=true,
                user-scoped apps default to --all=false. The auto path
@@ -83,7 +110,7 @@ and stored on the ApplicationManager as AppStopAllKey):
 			return runAppSuspend(c.Context(), f, args[0], allOpt)
 		},
 	}
-	cmd.Flags().BoolVar(&allFlag, "all", false, "suspend across all users (auto-picks true for cluster-scoped apps, false for user-scoped, when unset)")
+	cmd.Flags().BoolVar(&allFlag, "all", false, "also suspend the V2 cluster-shared server side (S-side); other users' clients then stop as a downstream side effect. Auto-picks true for cluster-scoped apps and false for user-scoped when unset")
 	return cmd
 }
 

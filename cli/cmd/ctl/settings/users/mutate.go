@@ -259,7 +259,7 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, p createParams) error {
 			out["wizard_url"] = wizardURL
 		} else if p.noWaitProvision {
 			out["status"] = "Accepted"
-			out["note"] = "provisioning was not waited on; use \"settings users get <name>\" or run without --no-wait to wait until the new user is fully ready"
+			out["note"] = "provisioning was not waited on; use \"olares-cli settings users get <name>\" or run without --no-wait to wait until the new user is fully ready"
 		}
 		return printJSON(os.Stdout, out)
 	default:
@@ -414,7 +414,7 @@ func printCreateSuccessTTY(w io.Writer, username, rawPassword, wizardURL string,
 	if wizardURL != "" {
 		fmt.Fprintf(&buf, "Wizard URL:         %s\n", wizardURL)
 	} else if noWait {
-		buf.WriteString("Wizard URL:         (not fetched; --no-wait — run \"settings users get <name>\" after provisioning finishes)\n")
+		buf.WriteString("Wizard URL:         (not fetched; --no-wait — run \"olares-cli settings users get <name>\" after provisioning finishes)\n")
 	} else {
 		buf.WriteString("Wizard URL:         (empty — check status later)\n")
 	}
