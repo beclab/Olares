@@ -13,10 +13,15 @@ envoyProxy:
   accessLog:
     enabled: true
 
+# Cluster-internal HTTPS on Gateway :443 (WI-05). Cert sync via app-service EntranceTLS;
+# when certs are not ready the https listener stays NotReady while :80 stays up.
+tls:
+  enabled: true
+
 mesh:
   linkerd:
     enabled: true
-    opaquePorts: "10080,19001,19002,19003"
+    opaquePorts: "10080,443,19001,19002,19003"
 
 demo:
   enabled: true

@@ -6,6 +6,9 @@ gateway:
   name: app-gateway
   gatewayClassName: olares-app-gateway
 
+tls:
+  enabled: true
+
 envoyProxy:
   enabled: true
   name: app-gateway-envoy-proxy
@@ -15,7 +18,7 @@ envoyProxy:
 mesh:
   linkerd:
     enabled: true
-    opaquePorts: "10080,19001,19002,19003"
+    opaquePorts: "10080,443,19001,19002,19003"
 
 demo:
   enabled: true
