@@ -41,6 +41,19 @@ type MarketOptions struct {
 	DeleteData     bool
 	Title          string
 
+	// Mine narrows the catalog list verb to the active profile's apps —
+	// the same set the Market UI's "My Terminus" tab shows. This is
+	// broader than "完成安装的应用 / completed installs": in-flight
+	// install / upgrade rows (`pending`, `downloading`, `installing`,
+	// `*Canceling`, `*CancelFailed`, `upgrading`, `resuming`, ...) and
+	// post-install failures (`installFailed` is hidden, but
+	// `upgradeFailed`, `stopFailed`, `resumeFailed`, `applyEnvFailed`,
+	// ... all surface) are also "the user's apps". The flag diverts
+	// `list` away from /market/data (catalog browse) toward
+	// /market/state (per-user state rows) and changes the default
+	// source-scope semantics — see runListInstalled.
+	Mine bool
+
 	// Watch-mode flags. Off by default so today's "fire and forget"
 	// scripts keep their current exit semantics; opt in per invocation.
 	// Defaults (15m / 2s) match the SPA's effective polling cadence and
@@ -85,10 +98,42 @@ func (o *MarketOptions) addCommonFlags(cmd *cobra.Command) {
 	o.addSourceFlag(cmd, "")
 }
 
+// addOutputFlags wires the universal output knobs every market verb
+// honors: -o/--output (table | json) and -q/--quiet. NoHeaders used to
+// live here too but is now wired separately via addNoHeadersFlag — only
+// the read / browse verbs that actually render row-oriented tables
+// (list / categories / get) expose it. Mutating verbs (install /
+// upgrade / stop / resume / uninstall / cancel / clone / upload /
+// delete) don't render tables, so --no-headers on them was a no-op
+// footgun in scripts (`market stop firefox --no-headers` silently
+// ignored the flag).
 func (o *MarketOptions) addOutputFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "table", "output format: table, json")
 	cmd.Flags().BoolVarP(&o.Quiet, "quiet", "q", false, "suppress output; exit code indicates success/failure")
-	cmd.Flags().BoolVar(&o.NoHeaders, "no-headers", false, "omit table headers (useful for scripting)")
+}
+
+// addNoHeadersFlag exposes --no-headers on verbs that print row-oriented
+// tables — currently list / categories. Kept off mutating verbs and off
+// `get` by design:
+//
+//   - Mutating verbs (install / upgrade / stop / resume / uninstall /
+//     cancel / clone / upload / delete) don't render tables, so
+//     --no-headers was a no-op footgun in scripts that passed it
+//     expecting it to apply.
+//   - `get` renders a key:value detail layout (one record, fields
+//     like "Name: …", "Title: …") — closer to `kubectl describe`
+//     than to a row-oriented table. There are no "headers" to drop
+//     separately from the values; for machine-readable output use
+//     `-o json`. Earlier we exposed --no-headers on `get` too, but
+//     printAppDetail never honored it — the flag silently did
+//     nothing. Removing the surface is the right fix.
+//
+// The bool field is still owned by the shared MarketOptions struct so
+// the verb's runner can branch on `opts.NoHeaders` without reaching
+// back through the cobra command.
+func (o *MarketOptions) addNoHeadersFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&o.NoHeaders, "no-headers", false,
+		"omit table headers and the trailing summary row (only on list / categories; useful for piping into awk / cut)")
 }
 
 func (o *MarketOptions) addVersionFlag(cmd *cobra.Command) {
@@ -100,7 +145,8 @@ func (o *MarketOptions) addAllSourcesFlag(cmd *cobra.Command) {
 }
 
 func (o *MarketOptions) addCascadeFlag(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&o.Cascade, "cascade", false, "apply to all sub-charts (for v2 multi-chart apps)")
+	cmd.Flags().BoolVar(&o.Cascade, "cascade", false,
+		"apply to shared sub-charts on v2 multi-chart apps (auto-enabled for single-user CS apps when omitted; pass --cascade=false to override)")
 }
 
 func (o *MarketOptions) addEnvFlag(cmd *cobra.Command) {
@@ -119,6 +165,20 @@ func (o *MarketOptions) addTitleFlag(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Title, "title", "", "display title for the cloned app instance")
 }
 
+// addMineFlag wires --mine/-m onto verbs that can pivot from catalog
+// browse to "the active profile's apps" — the same set the Market UI's
+// "My Terminus" tab shows. Critically this is NOT the same as "已安装
+// 应用 / completed installs": in-flight install rows and post-install
+// failure / transitional rows are part of "my apps" and are listed here
+// (only the SPA's 6 `uninstalledAppStates` are hidden — see
+// notInstalledStates in types.go). Today this only applies to
+// `market list`, but kept here for parity with the other flag helpers
+// so future verbs (e.g. `categories --mine`) can reuse it.
+func (o *MarketOptions) addMineFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolVarP(&o.Mine, "mine", "m", false,
+		"list the active profile's apps — mirrors the Market UI's My Terminus tab (includes in-flight installs/upgrades and failed rows; queries /market/state instead of the catalog)")
+}
+
 // addWatchFlags exposes --watch / --watch-timeout / --watch-interval on
 // every lifecycle-mutating verb. They are deliberately attached one-by-one
 // (rather than baked into addCommonFlags) because read-only verbs like
@@ -126,11 +186,11 @@ func (o *MarketOptions) addTitleFlag(cmd *cobra.Command) {
 // showing up in those help blurbs.
 func (o *MarketOptions) addWatchFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&o.Watch, "watch", "w", false,
-		"wait until the app reaches a terminal state (success or failure) before exiting")
+		"block until the app reaches a terminal state (success or failure) before exiting; exit code reflects the verdict")
 	cmd.Flags().DurationVar(&o.WatchTimeout, "watch-timeout", 15*time.Minute,
-		"maximum total time to wait when --watch is set (e.g. 15m, 1h)")
+		"maximum total wall-clock to wait when --watch is set (e.g. 15m, 1h); no-op without --watch. Bump for image-pull-heavy installs (Stable Diffusion / Ollama: 30m–1h)")
 	cmd.Flags().DurationVar(&o.WatchInterval, "watch-interval", 2*time.Second,
-		"polling interval when --watch is set (e.g. 2s, 5s)")
+		"polling interval against /market/state when --watch is set (e.g. 1s for tight CI feedback, 5s for slow networks); no-op without --watch")
 }
 
 // prepare resolves the active profile and returns a ready-to-use MarketClient

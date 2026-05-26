@@ -286,16 +286,20 @@ func (c *MarketClient) UninstallApp(ctx context.Context, appName string, all, de
 	})
 }
 
-func (c *MarketClient) UpgradeApp(ctx context.Context, appName, version, source string, envs []AppEnvVar) (*APIResponse, error) {
+// UpgradeApp issues PUT /apps/{name}/upgrade. The payload intentionally
+// omits env vars: the Market SPA's upgradeApp() never sends them either
+// (existing values are preserved server-side from the prior install).
+// Use `olares-cli market env` to update env values out-of-band when
+// upgrading isn't the right tool.
+func (c *MarketClient) UpgradeApp(ctx context.Context, appName, version, source string) (*APIResponse, error) {
 	if source == "" {
 		source = c.source
 	}
-	return c.doRequest(ctx, http.MethodPut, "/apps/"+appName+"/upgrade", InstallRequest{
+	return c.doRequest(ctx, http.MethodPut, "/apps/"+appName+"/upgrade", UpgradeRequest{
 		Source:  source,
 		AppName: appName,
 		Version: version,
 		Sync:    true,
-		Envs:    envs,
 	})
 }
 

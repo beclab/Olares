@@ -12,11 +12,29 @@ func NewCmdMarketCancel(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
 	cmd := &cobra.Command{
 		Use:   "cancel {app-name}",
-		Short: "Cancel the current in-progress app operation",
-		Long: `Cancel the current in-progress operation for an app.
+		Short: "Cancel the current in-progress app operation (install / upgrade / uninstall / ...)",
+		Long: `Cancel the current in-progress operation for an app
+(DELETE /apps/{name}/install). Source is implicit — cancel acts on
+whichever per-user state row matches the app name (no -s flag exposed).
+
+The cancel watcher is the widest in the market tree: any "row stopped
+moving" state counts as success, including *Canceled, *Failed (the
+underlying op died, cancel "won by default") and the stable resting
+states running / stopped / uninstalled (cancel raced and lost, OR
+rollback landed). Failure is ONLY surfaced for *CancelFailed (the
+cancel request itself was rejected). This avoids the common hang where
+a cancel races with downloadFailed / partial-rollback-to-stopped.
+
+The terminal row carries the *underlying* op (install / upgrade / ...)
+as its opType, not "cancel" — matchOpType is off, no race-tracking
+gate applies.
 
 Examples:
-  olares-cli market cancel myapp`,
+  olares-cli market cancel firefox                         # fire-and-forget; returns once backend accepts
+  olares-cli market cancel firefox --watch                 # block until row settles (any terminal state except *CancelFailed)
+  olares-cli market cancel firefox --watch -o json         # JSON; finalState surfaces where the row actually landed
+  olares-cli market cancel firefox --watch -q              # silent; exit 0 unless *CancelFailed
+  olares-cli market cancel firefox --watch --watch-interval 1s --watch-timeout 2m`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCancel(opts, args[0])
