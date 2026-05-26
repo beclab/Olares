@@ -319,6 +319,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "add limit success", nil)).
 		Consumes(restful.MIME_JSON)
 
+	ws.Route(ws.POST("/macvlan-init/inject").
+		To(handler.macvlanInitInject).
+		Doc("mutating webhook to inject macvlan reply-via-eth0 init container").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Success to inject", nil)).
+		Consumes(restful.MIME_JSON)
+
 	ws.Route(ws.POST("/provider-registry/validate").
 		To(handler.providerRegistryValidate).
 		Doc("validating webhook for validate app install namespace").

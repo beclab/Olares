@@ -3,6 +3,8 @@ package gpu
 import (
 	"context"
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -164,9 +166,19 @@ func gpuDetailTrendSpecs() []trendSpec {
 			Key:   "alloc_trend",
 			Title: "Resource allocation trend",
 			Unit:  "%",
+			// Labels mirror the SPA's legend
+			// (`legend: [t('GPU_OP.VRAM'), t('GPU_OP.GPU_MEMORY')]`
+			// in GPUsDetails.vue:223). Note: despite the names, the
+			// FIRST line is fed by `hami_core_*` (compute-power
+			// allocation %) and the SECOND by `hami_memory_*` (VRAM
+			// allocation %) — that's the SPA's chosen wording, and
+			// the CLI must reproduce it 1:1 so agents/users see the
+			// same legend tokens across surfaces. Don't "fix" by
+			// reverting to `core`/`memory` without a coordinated SPA
+			// change.
 			Lines: []trendLine{
-				{Label: "core", Query: allocCorePct},
-				{Label: "memory", Query: allocMemPct},
+				{Label: "VRAM", Query: allocCorePct},
+				{Label: "GPU_MEMORY", Query: allocMemPct},
 			},
 		},
 		{
@@ -174,8 +186,8 @@ func gpuDetailTrendSpecs() []trendSpec {
 			Title: "Resource usage trend",
 			Unit:  "%",
 			Lines: []trendLine{
-				{Label: "core", Query: utilCorePct},
-				{Label: "memory", Query: utilMemPct},
+				{Label: "VRAM", Query: utilCorePct},
+				{Label: "GPU_MEMORY", Query: utilMemPct},
 			},
 		},
 		{
@@ -313,14 +325,23 @@ func runGauge(ctx context.Context, c *pkgdashboard.Client, spec gaugeSpec, repl 
 		"title": spec.Title,
 		"unit":  spec.Unit,
 	}
+	// Display formatting mirrors GPUsDetails.vue / TasksDetails.vue:
+	//   • numbers go through lodash.round(value, 2) — `roundDP(2)` here
+	//   • the unit ("Gi" / "W" / "℃" / "%") is rendered next to the
+	//     number by the SPA's <MyGaugeChart unit=…> prop. We bake it
+	//     directly into `value` and `used_total` so the CLI's table
+	//     row reads "23.89 Gi" instead of two columns the agent has
+	//     to concat ("VALUE 23.889648 / UNIT Gi").
+	// `Raw` keeps the un-rounded float so JSON consumers needing
+	// arbitrary precision still get it.
 	if total > 0 && (spec.TotalQuery != "" || spec.TotalLiteral > 0) {
 		disp["percent"] = percentDirect(percent)
-		disp["used_total"] = fmt.Sprintf("%g/%g", used, total)
+		disp["used_total"] = fmt.Sprintf("%s/%s", roundedNumberString(used), roundedNumberString(total))
 	} else {
 		disp["percent"] = "—"
 		disp["used_total"] = "—"
 	}
-	disp["value"] = formatFloat(used)
+	disp["value"] = formatGaugeValue(used, spec.Unit)
 	if valErr != nil || totErr != nil {
 		err := valErr
 		if err == nil {
@@ -337,7 +358,20 @@ func runGauge(ctx context.Context, c *pkgdashboard.Client, spec gaugeSpec, repl 
 // Returns the assembled Item plus the metric labels of the FIRST
 // non-empty response (used to populate device_no / driver_version
 // on the GPU detail page).
-func runTrend(ctx context.Context, c *pkgdashboard.Client, spec trendSpec, repl *strings.Replacer, start, end, step string, addWarning func(string)) (pkgdashboard.Item, map[string]string) {
+//
+// Display formatting (per-point) mirrors the SPA chart axis:
+//   - timestamp is HAMI's epoch (seconds with optional sub-second
+//     decimals OR raw milliseconds — both shapes observed in the
+//     wild from /v1/monitor/query/range-vector). The CLI parses
+//     either via `formatTrendTimestamp` and emits the SPA's
+//     `YYYY-MM-DD HH:mm:ss` in the caller's --timezone. The raw
+//     epoch milliseconds is preserved on `Raw.points[i].timestamp_ms`
+//     so JSON consumers needing the wire shape still get it.
+//   - value goes through lodash.round(value, 2) — same call the
+//     SPA's config.ts:84 does before handing the array to ECharts.
+//     The full-precision float is preserved on
+//     `Raw.points[i].value_raw` for agents that need it.
+func runTrend(ctx context.Context, c *pkgdashboard.Client, spec trendSpec, repl *strings.Replacer, start, end, step string, tz *time.Location, addWarning func(string)) (pkgdashboard.Item, map[string]string) {
 	lineRaws := make([]map[string]any, 0, len(spec.Lines))
 	lineDisps := make([]map[string]any, 0, len(spec.Lines))
 	var firstLabels map[string]string
@@ -370,11 +404,16 @@ func runTrend(ctx context.Context, c *pkgdashboard.Client, spec trendSpec, repl 
 			labels = series[0].Metric
 			for _, p := range series[0].Values {
 				pf := toFloat(p.Value)
+				rounded := roundDP(pf, 2)
+				tsHuman := formatTrendTimestamp(p.Timestamp, tz)
+				tsMS := trendTimestampMillis(p.Timestamp)
 				pointsRaw = append(pointsRaw, map[string]any{
-					"timestamp": p.Timestamp,
-					"value":     pf,
+					"timestamp":    tsHuman,
+					"timestamp_ms": tsMS,
+					"value":        rounded,
+					"value_raw":    pf,
 				})
-				pointsDisp = append(pointsDisp, fmt.Sprintf("%s=%g", p.Timestamp, pf))
+				pointsDisp = append(pointsDisp, fmt.Sprintf("%s=%s", tsHuman, roundedNumberString(rounded)))
 			}
 		}
 		if firstLabels == nil && labels != nil {
@@ -423,9 +462,18 @@ func fanoutGaugeAndTrend(
 	ctx context.Context, c *pkgdashboard.Client,
 	gaugeSpecs []gaugeSpec, trendSpecs []trendSpec,
 	repl *strings.Replacer, start, end, step string,
+	tz *time.Location,
 	addWarning func(string),
 	captureLabelsForTrendKey string,
 ) ([]pkgdashboard.Item, []pkgdashboard.Item, map[string]string) {
+	if tz == nil {
+		// Defensive: callers (BuildDetailFullEnvelope /
+		// BuildTaskDetailFullEnvelope) always pass cf.Timezone, but a
+		// nil here would make formatTrendTimestamp return UTC strings
+		// silently — we'd rather use the local zone (matches
+		// CommonFlags.Validate's empty-flag default).
+		tz = time.Local
+	}
 	gaugeItems := make([]pkgdashboard.Item, len(gaugeSpecs))
 	trendItems := make([]pkgdashboard.Item, len(trendSpecs))
 	var (
@@ -443,7 +491,7 @@ func fanoutGaugeAndTrend(
 	for i, spec := range trendSpecs {
 		i, spec := i, spec
 		g.Go(func() error {
-			item, labels := runTrend(gctx, c, spec, repl, start, end, step, addWarning)
+			item, labels := runTrend(gctx, c, spec, repl, start, end, step, tz, addWarning)
 			trendItems[i] = item
 			if captureLabelsForTrendKey != "" && spec.Key == captureLabelsForTrendKey && len(labels) > 0 {
 				labelMu.Lock()
@@ -462,16 +510,35 @@ func fanoutGaugeAndTrend(
 // ----------------------------------------------------------------------------
 
 // gpuDetailDisplayCopy converts HAMI's flat /v1/gpu body into a
-// human-friendly key/value map. Only the SPA-rendered fields end up
-// here; the full HAMI document is preserved on `Raw` for agents.
+// human-friendly key/value map for the Detail card. The whitelist
+// is the SPA's `columns` array verbatim
+// (GPUsDetails.vue:112-137) — six fields, in this order:
+//
+//	health / uuid / nodeName / type / device_no / driver_version
+//
+// Other HAMI fields (memoryTotal/Used, power, powerLimit,
+// temperature, coreTotal/Used, vgpuTotal/Used, mode, shareMode,
+// nodeUid) are deliberately NOT in `Display` — the SPA covers
+// those numbers via the gauges + trend lineTools cards, and
+// duplicating them here led to:
+//
+//   - misleading zeros: HAMI's flat /v1/gpu returns
+//     `memoryUsed: 0 / power: 0 / temperature: 0` as placeholders
+//     because the LIVE values come from instant-vector queries.
+//     Surfacing those zeros under "Detail" made the user think the
+//     GPU was reporting zero everything.
+//   - unit clutter: `memoryTotal: 24463` (raw MiB) without a unit
+//     suffix; the SPA never shows this number in the detail card,
+//     it shows `23.89 Gi` inside a gauge, so adding a "MiB" suffix
+//     in CLI would still mismatch the SPA value.
+//
+// Agents that need the full HAMI body still get it via `Raw` (the
+// envelope's source-of-truth field). Pinned by
+// TestGpuDetailDisplayCopy_SPAFieldWhitelist.
 func gpuDetailDisplayCopy(d map[string]any) map[string]any {
 	out := map[string]any{}
 	for _, k := range []string{
-		"uuid", "type", "nodeName", "nodeUid", "shareMode",
-		"vgpuUsed", "vgpuTotal", "coreUsed", "coreTotal",
-		"memoryUsed", "memoryTotal",
-		"power", "powerLimit", "temperature",
-		"device_no", "driver_version",
+		"uuid", "nodeName", "type", "device_no", "driver_version",
 	} {
 		if v, ok := d[k]; ok {
 			out[k] = fmt.Sprintf("%v", v)
@@ -480,20 +547,26 @@ func gpuDetailDisplayCopy(d map[string]any) map[string]any {
 	if v, ok := d["health"]; ok {
 		out["health"] = gpuHealthLabel(v)
 	}
-	if v, ok := d["shareMode"]; ok {
-		out["mode"] = gpuModeLabel(v)
-	}
 	return out
 }
 
+// gpuTaskDetailDisplayCopy mirrors `TasksDetails.vue:134-174` —
+// eight fields (six unconditional + two `displayAllocation`-gated)
+// in this order:
+//
+//	status / deviceIds / nodeName / type /
+//	(allocatedCores) / (allocatedMem) / appName / createTime
+//
+// The two allocation rows are emitted only when present in the
+// HAMI body (HAMI omits them for time-slicing tasks); the SPA
+// hides the same rows via `displayAllocation = sharemode !==
+// TimeSlicing`. Other HAMI fields (podUid, namespace, nodeUid,
+// startTime/endTime, flavor, priority, …) live on `Raw` for
+// agents but are NOT in `Display`. Pinned by
+// TestGpuTaskDetailDisplayCopy_SPAFieldWhitelist.
 func gpuTaskDetailDisplayCopy(d map[string]any) map[string]any {
 	out := map[string]any{}
-	for _, k := range []string{
-		"name", "status", "podUid", "nodeName", "nodeUid",
-		"type", "appName", "namespace", "createTime", "startTime", "endTime",
-		"allocatedDevices", "allocatedCores", "allocatedMem",
-		"resourcePool", "flavor", "priority",
-	} {
+	for _, k := range []string{"status", "nodeName", "type", "appName", "createTime"} {
 		if v, ok := d[k]; ok {
 			out[k] = fmt.Sprintf("%v", v)
 		}
@@ -508,13 +581,123 @@ func gpuTaskDetailDisplayCopy(d map[string]any) map[string]any {
 			out["deviceIds"] = strings.Join(parts, ",")
 		case []string:
 			out["deviceIds"] = strings.Join(arr, ",")
+		default:
+			out["deviceIds"] = fmt.Sprintf("%v", v)
 		}
 	}
-	if v, ok := d["deviceShareModes"]; ok {
-		first := firstAnyInArray(v)
-		out["mode"] = gpuModeLabel(first)
+	for _, k := range []string{"allocatedCores", "allocatedMem"} {
+		if v, ok := d[k]; ok {
+			out[k] = fmt.Sprintf("%v", v)
+		}
 	}
 	return out
+}
+
+// roundDP applies the same lodash.round(value, dp) the SPA uses
+// before handing trend points to ECharts (config.ts:84) and gauge
+// values to MyGaugeChart (GPUsDetails.vue:33-49). Banker's rounding
+// is intentionally NOT used — the SPA's lodash.round is half-away-
+// from-zero, and matching that is the whole point of this helper.
+func roundDP(v float64, dp int) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return v
+	}
+	scale := math.Pow(10, float64(dp))
+	return math.Round(v*scale) / scale
+}
+
+// roundedNumberString renders a float at 2dp the way SPA's
+// `String(round(x, 2))` would: trailing zeros stripped, decimal
+// point dropped when integer-valued. "23.89" / "100" / "0.29" — not
+// "23.890000000000004" / "100.00" / "0.290000".
+func roundedNumberString(v float64) string {
+	r := roundDP(v, 2)
+	if math.IsNaN(r) {
+		return "NaN"
+	}
+	if math.IsInf(r, 0) {
+		return "Inf"
+	}
+	// %g with 6-digit precision after rounding gives the SPA-shaped
+	// output for everything in HAMI's observed range. strconv with
+	// 'f' / -1 also works but emits "23.89" → "23.89" while %g
+	// keeps small / large values readable; we pick %g for parity
+	// with the pre-refactor printf path.
+	return strconv.FormatFloat(r, 'f', -1, 64)
+}
+
+// formatGaugeValue renders a gauge's display VALUE column. Mirrors
+// the SPA's `<MyGaugeChart unit=…>` prop: for unit-bearing gauges
+// (Gi, W, ℃) the unit is appended to the number; unit-less gauges
+// (the four "%" / ratio gauges that pass `unit: ' '`) emit just the
+// number. The rounded number always uses roundedNumberString so
+// trailing zeros / float noise are stripped.
+func formatGaugeValue(v float64, unit string) string {
+	num := roundedNumberString(v)
+	switch strings.TrimSpace(unit) {
+	case "", "-":
+		return num
+	default:
+		return num + " " + strings.TrimSpace(unit)
+	}
+}
+
+// formatTrendTimestamp converts HAMI's per-point timestamp into the
+// SPA's `YYYY-MM-DD HH:mm:ss` shape (utils/gpu.ts::timeParse). HAMI
+// is observed to return either:
+//   - a 13-character integer string ("1779636713000") = epoch ms
+//   - a 10-character integer string ("1779636713")    = epoch s
+//   - a float string                ("1779636713.5") = epoch s
+//     with sub-second decimals (Prometheus's wire shape)
+//
+// The detection runs in float64 — a 13-digit integer fits exactly,
+// and any value > 1e12 gets demoted from "seconds" to "milliseconds"
+// because epoch-seconds in 2026 sit at ~1.78e9. Empty / unparsable
+// inputs fall through to the raw string so the user can debug what
+// HAMI actually sent (better than silently rendering "1970-01-01").
+func formatTrendTimestamp(raw string, tz *time.Location) string {
+	if raw == "" {
+		return "-"
+	}
+	if tz == nil {
+		tz = time.Local
+	}
+	f, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return raw
+	}
+	var sec int64
+	var nsec int64
+	if f >= 1e12 {
+		// epoch milliseconds.
+		ms := int64(math.Round(f))
+		sec = ms / 1000
+		nsec = (ms % 1000) * int64(time.Millisecond)
+	} else {
+		sec = int64(f)
+		nsec = int64((f - float64(sec)) * float64(time.Second))
+	}
+	return time.Unix(sec, nsec).In(tz).Format("2006-01-02 15:04:05")
+}
+
+// trendTimestampMillis preserves the wire-shape epoch-ms integer on
+// the Raw point so JSON consumers needing arbitrary-precision time
+// math (or chart libraries that re-derive from epoch) can still
+// round-trip without re-parsing the human ISO string. Returns 0 on
+// unparsable input — matches HAMI's "no value" sentinel for ints
+// and avoids surfacing a fake epoch.
+func trendTimestampMillis(raw string) int64 {
+	if raw == "" {
+		return 0
+	}
+	f, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return 0
+	}
+	if f >= 1e12 {
+		return int64(math.Round(f))
+	}
+	return int64(math.Round(f * 1000))
 }
 
 // humanizeSince renders a duration the way the SPA's window picker

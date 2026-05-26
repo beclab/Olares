@@ -40,7 +40,6 @@ public internet.
 
 Subcommands:
   get   show the current configuration
-  set   change reverse-proxy mode + fields
 `,
 	}
 	cmd.SilenceUsage = true

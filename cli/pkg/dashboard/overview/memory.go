@@ -71,10 +71,30 @@ func memoryPhysicalDisplay(node string, last map[string]format.LastMonitoringSam
 	return raw, disp
 }
 
+// memorySwapMetricSet — the SPA's "memory exchange" view doesn't
+// have swap-specific total/used metrics: KubeSphere's prometheus
+// PromQL registry only exposes physical-memory totals and the two
+// `node_vmstat_pswp{in,out}_bytes` rate series (see
+// infrastructure/kubesphere/.../promql.go). So the SPA renders swap
+// page header with the physical memory totals + the swap-in / -out
+// throughput rates (Overview2/Memory/config.ts:getMemoryExchange*).
+//
+// History: an earlier revision listed `node_memory_swap_total /
+// _swap_used / _pgpgin_rate / _pgpgout_rate` — none of which the
+// kapis monitoring service knows about, so every column rendered
+// "-" in production. This test fixture (memory_test.go) used to
+// hard-code those non-existent names which is why the bug went
+// uncaught for so long. Keep this list in sync with what
+// `promql.go` actually maps; if you add a metric here that isn't
+// in `named_metrics.go` the upstream filters it out and you get
+// silent dashes.
 func memorySwapMetricSet() []string {
 	return []string{
-		"node_memory_swap_total", "node_memory_swap_used",
-		"node_memory_pgpgin_rate", "node_memory_pgpgout_rate",
+		"node_memory_total",
+		"node_memory_usage_wo_cache",
+		"node_memory_utilisation",
+		"node_vmstat_pswpin_bytes",
+		"node_vmstat_pswpout_bytes",
 	}
 }
 
@@ -83,29 +103,30 @@ func memorySwapColumns() []pkgdashboard.TableColumn {
 		{Header: "NODE", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "node") }},
 		{Header: "TOTAL", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "total") }},
 		{Header: "USED", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "used") }},
-		{Header: "PG_IN", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "pg_in") }},
-		{Header: "PG_OUT", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "pg_out") }},
+		{Header: "SWAP_IN", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "swap_in") }},
+		{Header: "SWAP_OUT", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "swap_out") }},
 		{Header: "UTIL", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "util") }},
 	}
 }
 
 func memorySwapDisplay(node string, last map[string]format.LastMonitoringSample) (map[string]any, map[string]any) {
-	total := sampleFloat(last["node_memory_swap_total"])
-	used := sampleFloat(last["node_memory_swap_used"])
-	pgIn := sampleFloat(last["node_memory_pgpgin_rate"])
-	pgOut := sampleFloat(last["node_memory_pgpgout_rate"])
-	util := safeRatio(used, total)
+	total := sampleFloat(last["node_memory_total"])
+	used := sampleFloat(last["node_memory_usage_wo_cache"])
+	util := sampleFloat(last["node_memory_utilisation"])
+	swapIn := sampleFloat(last["node_vmstat_pswpin_bytes"])
+	swapOut := sampleFloat(last["node_vmstat_pswpout_bytes"])
 	raw := map[string]any{
-		"node": node, "total": total, "used": used, "pg_in": pgIn, "pg_out": pgOut,
+		"node": node, "total": total, "used": used,
+		"swap_in_bps": swapIn, "swap_out_bps": swapOut,
 		"util": util, "mode": "swap",
 	}
 	disp := map[string]any{
-		"node":   node,
-		"total":  format.GetDiskSize(formatFloat(total)),
-		"used":   format.GetDiskSize(formatFloat(used)),
-		"pg_in":  format.WorthValue(formatFloat(pgIn)),
-		"pg_out": format.WorthValue(formatFloat(pgOut)),
-		"util":   percentString(util),
+		"node":     node,
+		"total":    format.GetDiskSize(formatFloat(total)),
+		"used":     format.GetDiskSize(formatFloat(used)),
+		"swap_in":  format.GetThroughput(formatFloat(swapIn)),
+		"swap_out": format.GetThroughput(formatFloat(swapOut)),
+		"util":     percentString(util),
 	}
 	return raw, disp
 }

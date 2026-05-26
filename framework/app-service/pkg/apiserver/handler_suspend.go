@@ -158,10 +158,16 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 	}
 	switch bindingResult.Status {
 	case compute.BindingApplyStatusRequired:
-		writeComputeAvailability(resp, api.CodeComputeBindingRequired, bindingResult.Availability, bindingResult.Validation)
+		api.HandleFailedCheck(resp, api.CheckTypeComputeBindingRequired, ComputeBindingFailedCheck{
+			Availability: bindingResult.Availability,
+			Validation:   bindingResult.Validation,
+		})
 		return
 	case compute.BindingApplyStatusUnavailable:
-		writeComputeAvailability(resp, api.CodeComputeBindingUnavailable, bindingResult.Availability, bindingResult.Validation)
+		api.HandleFailedCheck(resp, api.CheckTypeComputeBindingUnavailable, ComputeBindingFailedCheck{
+			Availability: bindingResult.Availability,
+			Validation:   bindingResult.Validation,
+		})
 		return
 	case compute.BindingApplyStatusApplied:
 	case compute.BindingApplyStatusNotRequired:
@@ -224,16 +230,4 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 
 type ResumeRequest struct {
 	ComputeBinding []compute.BindingSelection `json:"computeBinding,omitempty"`
-}
-
-func writeComputeAvailability(resp *restful.Response, code int32, availability *compute.AvailabilityResult, validation ...*compute.BindingValidationResult) {
-	var bindingValidation *compute.BindingValidationResult
-	if len(validation) > 0 {
-		bindingValidation = validation[0]
-	}
-	resp.WriteAsJson(ComputeAvailabilityResponse{
-		Response:   api.Response{Code: code},
-		Data:       availability,
-		Validation: bindingValidation,
-	})
 }

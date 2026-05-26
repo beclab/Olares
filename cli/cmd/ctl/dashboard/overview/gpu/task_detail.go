@@ -7,11 +7,22 @@ import (
 	pkggpu "github.com/beclab/Olares/cli/pkg/dashboard/overview/gpu"
 )
 
+// newOverviewGPUTaskDetailFullCommand exposes the legacy
+// `gpu task-detail <name> <pod-uid>` cobra surface. Hidden +
+// deprecated since the SPA-aligned refactor — `gpu tasks <name>`
+// is the new canonical command (it auto-resolves pod-uid +
+// sharemode, no kubectl call needed). Kept functional for
+// back-compat scripts that already cached pod-uid; the explicit
+// two-arg form remains the only path that takes a manual
+// `--sharemode` override (the new `gpu tasks <name>` always
+// auto-detects sharemode from HAMI's task list).
 func newOverviewGPUTaskDetailFullCommand(f *cmdutil.Factory) *cobra.Command {
 	var sharemode string
 	cmd := &cobra.Command{
 		Use:           "task-detail <name> <pod-uid>",
 		Short:         "Per-task detail page (info + gauges + trends; SPA Overview2/GPU/TasksDetails)",
+		Hidden:        true,
+		Deprecated:    "use 'olares-cli dashboard overview gpu tasks <name>' instead (auto-resolves pod-uid; no kubectl needed)",
 		Args:          cobra.ExactArgs(2),
 		SilenceErrors: true,
 		SilenceUsage:  true,

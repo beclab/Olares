@@ -38,6 +38,11 @@ const (
 	KindOverviewFan            = "dashboard.overview.fan"     // sections (live + curve)
 	KindOverviewFanLive        = "dashboard.overview.fan.live"
 	KindOverviewFanCurve       = "dashboard.overview.fan.curve"
+	// `dashboard overview gpu` (default action) — sections
+	// envelope: graphics + tasks. Mirrors the SPA's GPU overview
+	// page (which renders both tabs in one DOM, switching between
+	// Graphics management / Task management without re-fetching).
+	KindOverviewGPU            = "dashboard.overview.gpu"
 	KindOverviewGPUList        = "dashboard.overview.gpu.list"
 	KindOverviewGPUTasks       = "dashboard.overview.gpu.tasks"
 	KindOverviewGPUDetail      = "dashboard.overview.gpu.detail"
@@ -72,6 +77,7 @@ func AllKinds() []string {
 		KindOverviewFan,
 		KindOverviewFanLive,
 		KindOverviewFanCurve,
+		KindOverviewGPU,
 		KindOverviewGPUList,
 		KindOverviewGPUTasks,
 		KindOverviewGPUDetail,
@@ -114,12 +120,25 @@ func LoadSchemaIndex() []SchemaEntry {
 		{"dashboard overview fan", KindOverviewFan, "overview-fan.json"},
 		{"dashboard overview fan live", KindOverviewFanLive, "overview-fan-live.json"},
 		{"dashboard overview fan curve", KindOverviewFanCurve, "overview-fan-curve.json"},
-		{"dashboard overview gpu list", KindOverviewGPUList, "overview-gpu-list.json"},
+		// `gpu` (no subverb) — sections envelope mirroring the SPA's
+		// GPU overview page with both tabs preloaded.
+		{"dashboard overview gpu", KindOverviewGPU, "overview-gpu.json"},
+		// SPA-aligned `gpu graphics` / `gpu tasks` parent commands (the
+		// public surface). Each parent dispatches by arg count; both
+		// kinds are listed so `dashboard schema` documents the
+		// envelope shape per arg variant.
+		{"dashboard overview gpu graphics", KindOverviewGPUList, "overview-gpu-list.json"},
+		{"dashboard overview gpu graphics <uuid>", KindOverviewGPUDetailFull, "overview-gpu-detail-full.json"},
 		{"dashboard overview gpu tasks", KindOverviewGPUTasks, "overview-gpu-tasks.json"},
-		{"dashboard overview gpu get", KindOverviewGPUDetail, "overview-gpu-detail.json"},
-		{"dashboard overview gpu task", KindOverviewGPUTaskDet, "overview-gpu-task-detail.json"},
-		{"dashboard overview gpu detail", KindOverviewGPUDetailFull, "overview-gpu-detail-full.json"},
-		{"dashboard overview gpu task-detail", KindOverviewGPUTaskDetFull, "overview-gpu-task-detail-full.json"},
+		{"dashboard overview gpu tasks <name>", KindOverviewGPUTaskDetFull, "overview-gpu-task-detail-full.json"},
+		// Legacy / hidden / deprecated cobra paths (still functional
+		// for back-compat agent scripts; cobra emits a deprecation
+		// hint when invoked).
+		{"dashboard overview gpu list (deprecated)", KindOverviewGPUList, "overview-gpu-list.json"},
+		{"dashboard overview gpu get (deprecated)", KindOverviewGPUDetail, "overview-gpu-detail.json"},
+		{"dashboard overview gpu detail (deprecated)", KindOverviewGPUDetailFull, "overview-gpu-detail-full.json"},
+		{"dashboard overview gpu task (deprecated)", KindOverviewGPUTaskDet, "overview-gpu-task-detail.json"},
+		{"dashboard overview gpu task-detail (deprecated)", KindOverviewGPUTaskDetFull, "overview-gpu-task-detail-full.json"},
 		{"dashboard applications", KindApplicationsList, "applications.json"},
 	}
 	have := embeddedSchemaFiles()

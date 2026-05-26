@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.gpu",
+  "description": "`dashboard overview gpu` (default action) — sections envelope: graphics + tasks. Mirrors the SPA's GPU overview page (both Graphics management and Task management tabs preloaded). Per-section transport errors land on the section's `meta.error` rather than aborting the parent envelope; agents branch on `sections.<key>.meta.error` to detect partial failure.",
+  "type": "object",
+  "required": ["kind", "meta", "sections"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.gpu"},
+    "meta": {"$ref": "#/definitions/meta"},
+    "sections": {
+      "type": "object",
+      "required": ["graphics", "tasks"],
+      "properties": {
+        "graphics": {"$ref": "overview-gpu-list.json"},
+        "tasks": {"$ref": "overview-gpu-tasks.json"}
+      }
+    }
+  },
+  "definitions": {
+    "meta": {
+      "type": "object",
+      "required": ["fetched_at"],
+      "properties": {
+        "fetched_at": {"type": "string"},
+        "profile": {"type": "string"},
+        "user": {"type": "string"},
+        "note": {"type": "string"},
+        "recommended_poll_seconds": {"type": "integer"},
+        "iteration": {"type": "integer"},
+        "error": {"type": "string"},
+        "error_kind": {"type": "string"}
+      }
+    }
+  }
+}

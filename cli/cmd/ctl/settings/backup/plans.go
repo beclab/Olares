@@ -36,9 +36,6 @@ func NewPlansCommand(f *cmdutil.Factory) *cobra.Command {
 
 Subcommands:
   list                          list backup plans
-  delete <id> [--yes]           delete a backup plan
-  pause  <id>                   pause a backup plan
-  resume <id>                   resume a paused plan
 
 Out of scope for now (need a richer flag/file UX before shipping):
   create / update    (full BackupPolicy + LocationConfig vector)

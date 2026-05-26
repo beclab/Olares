@@ -40,6 +40,21 @@ func RunUser(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Commo
 // envelope (one row per resource type). Surfaces a typed admin-
 // required error from ResolveTargetUser without modifying it so the
 // agent-facing diagnostic stays 1:1.
+//
+// Admin total fallback: KubeSphere's `user_cpu_total` /
+// `user_memory_total` map to `kube_user_{cpu,memory}_total` which
+// only emit a value when the user has an explicit ResourceQuota.
+// Platform admins typically have no quota → both series return 0
+// and the SPA shows "0/-" which is misleading. The SPA's overview
+// page sidesteps this by falling back to cluster totals for admin
+// users (Overview2/IndexPage.vue passes
+// `cluster_cpu_total`/`cluster_memory_total` as props that win
+// over the user-grain values inside UserResource.vue). We mirror
+// that 1:1 — when the resolved user is admin we additionally
+// fetch `cluster_cpu_total` / `cluster_memory_total` and prefer
+// those; the chosen source is recorded under
+// `Raw["total_source"]` ("user_quota" vs "cluster_total") so
+// agents can demux without re-running the heuristic.
 func BuildUserEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags, target string, now time.Time) (pkgdashboard.Envelope, error) {
 	user, err := pkgdashboard.ResolveTargetUser(ctx, c, target)
 	if err != nil {
@@ -61,33 +76,84 @@ func BuildUserEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashb
 	memUsage := sampleFloat(last["user_memory_usage_wo_cache"])
 	memUtil := sampleFloat(last["user_memory_utilisation"])
 
+	cpuTotalSource, memTotalSource := "user_quota", "user_quota"
+	// Self-target path resolves the active profile (with role
+	// metadata); admin-target path returns a synthetic record
+	// without a role. Re-probe via EnsureUser so we can detect
+	// the latter — but ONLY accept the re-probe's "admin=true"
+	// signal when the re-probed identity is the same user we're
+	// rendering for. Otherwise an admin (alice) running
+	// `--user bob` would inherit alice's admin role for bob's
+	// envelope, silently overriding bob's real ResourceQuota
+	// with the cluster total: bob would appear to own every CPU
+	// / byte of memory the cluster has, hiding the actual quota
+	// and making `--user bob` useless for capacity planning.
+	//
+	// In practice the admin-target path's synthetic record never
+	// matches the active user's name (ResolveTargetUser returns
+	// the real cached record when requested == active), so this
+	// re-probe is effectively defense-in-depth — but the guard
+	// keeps the code correct under any future change to
+	// ResolveTargetUser's gating shape.
+	isAdmin := user.IsAdmin()
+	if !isAdmin {
+		if active, ferr := c.EnsureUser(ctx); ferr == nil && active != nil && active.IsAdmin() && active.Name == user.Name {
+			isAdmin = true
+		}
+	}
+	if isAdmin {
+		clusterRes, cerr := pkgdashboard.FetchClusterMetrics(ctx, c, cf,
+			[]string{"cluster_cpu_total", "cluster_memory_total"},
+			pkgdashboard.DefaultClusterWindow(), now, false)
+		if cerr == nil {
+			clusterLast := format.GetLastMonitoringData(clusterRes, 0)
+			if v := sampleFloat(clusterLast["cluster_cpu_total"]); v > 0 {
+				cpuTotal = v
+				cpuTotalSource = "cluster_total"
+				if cpuTotal > 0 {
+					cpuUtil = cpuUsage / cpuTotal
+				}
+			}
+			if v := sampleFloat(clusterLast["cluster_memory_total"]); v > 0 {
+				memTotal = v
+				memTotalSource = "cluster_total"
+				if memTotal > 0 {
+					memUtil = memUsage / memTotal
+				}
+			}
+		}
+	}
+
 	rows := []map[string]any{
 		{
-			"metric":      "CPU",
-			"used_raw":    cpuUsage,
-			"total_raw":   cpuTotal,
-			"utilisation": cpuUtil,
-			"used":        fmt.Sprintf("%.2f", cpuUsage),
-			"total":       fmt.Sprintf("%.2f", cpuTotal),
+			"metric":       "CPU",
+			"used_raw":     cpuUsage,
+			"total_raw":    cpuTotal,
+			"utilisation":  cpuUtil,
+			"total_source": cpuTotalSource,
+			"used":         fmt.Sprintf("%.2f", cpuUsage),
+			"total":        fmt.Sprintf("%.2f", cpuTotal),
 		},
 		{
-			"metric":      "Memory",
-			"used_raw":    memUsage,
-			"total_raw":   memTotal,
-			"utilisation": memUtil,
-			"used":        format.GetDiskSize(formatFloat(memUsage)),
-			"total":       format.GetDiskSize(formatFloat(memTotal)),
+			"metric":       "Memory",
+			"used_raw":     memUsage,
+			"total_raw":    memTotal,
+			"utilisation":  memUtil,
+			"total_source": memTotalSource,
+			"used":         format.GetDiskSize(formatFloat(memUsage)),
+			"total":        format.GetDiskSize(formatFloat(memTotal)),
 		},
 	}
 	items := make([]pkgdashboard.Item, 0, len(rows))
 	for _, r := range rows {
 		items = append(items, pkgdashboard.Item{
 			Raw: map[string]any{
-				"metric":      r["metric"],
-				"used":        r["used_raw"],
-				"total":       r["total_raw"],
-				"utilisation": r["utilisation"],
-				"user":        user.Name,
+				"metric":       r["metric"],
+				"used":         r["used_raw"],
+				"total":        r["total_raw"],
+				"utilisation":  r["utilisation"],
+				"total_source": r["total_source"],
+				"user":         user.Name,
 			},
 			Display: map[string]any{
 				"metric":      r["metric"],
