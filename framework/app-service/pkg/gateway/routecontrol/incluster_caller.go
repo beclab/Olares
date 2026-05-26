@@ -1,0 +1,179 @@
+package routecontrol
+
+import (
+	"context"
+	"strings"
+
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
+)
+
+// CallerReconciler materialises caller-side egress NetworkPolicies and Linkerd
+// namespace injection for workloads that opt into cluster-internal Shared access.
+type CallerReconciler struct {
+	Client    client.Client
+	GatewayNS string
+}
+
+func (r *CallerReconciler) gatewayNS() string {
+	if r != nil && r.GatewayNS != "" {
+		return r.GatewayNS
+	}
+	return defaultGatewayNS
+}
+
+// Reconcile applies or removes caller NP / inject state for namespace ns.
+func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
+	if r == nil || r.Client == nil || ns == "" {
+		return nil
+	}
+	if !isMeshMandatoryCallerNamespace(ns) {
+		return nil
+	}
+	var nsObj corev1.Namespace
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: ns}, &nsObj); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if nsObj.Annotations[AnnotationLinkerdInject] == LinkerdInjectDisabled {
+		return r.cleanupCallerResources(ctx, ns)
+	}
+	optedIn, err := r.namespaceOptedIntoGateway(ctx, ns)
+	if err != nil {
+		return err
+	}
+	if !optedIn {
+		return r.cleanupCallerResources(ctx, ns)
+	}
+	if err := r.applyNetworkPolicy(ctx, security.NewCallerMeshEgressNP(ns)); err != nil {
+		return err
+	}
+	if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, true); err != nil {
+		return err
+	}
+	return r.applyNetworkPolicy(ctx, security.NewCallerToAppGatewayEgressNP(ns, r.gatewayNS()))
+}
+
+func (r *CallerReconciler) namespaceOptedIntoGateway(ctx context.Context, ns string) (bool, error) {
+	var list appv1alpha1.ApplicationList
+	if err := r.Client.List(ctx, &list); err != nil {
+		return false, err
+	}
+	for i := range list.Items {
+		app := &list.Items[i]
+		if app.Spec.Namespace != ns {
+			continue
+		}
+		if !strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
+			continue
+		}
+		if strings.TrimSpace(app.Spec.Settings["clusterAppRef"]) != "" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (r *CallerReconciler) applyNetworkPolicy(ctx context.Context, desired *networkingv1.NetworkPolicy) error {
+	if desired == nil {
+		return nil
+	}
+	current := &networkingv1.NetworkPolicy{}
+	err := r.Client.Get(ctx, types.NamespacedName{
+		Namespace: desired.Namespace,
+		Name:      desired.Name,
+	}, current)
+	switch {
+	case apierrors.IsNotFound(err):
+		return r.Client.Create(ctx, desired)
+	case err != nil:
+		return err
+	}
+	current.Spec = desired.Spec
+	if current.Labels == nil {
+		current.Labels = map[string]string{}
+	}
+	for k, v := range desired.Labels {
+		current.Labels[k] = v
+	}
+	return r.Client.Update(ctx, current)
+}
+
+func (r *CallerReconciler) cleanupCallerResources(ctx context.Context, ns string) error {
+	for _, name := range []string{security.CallerMeshEgressNPName, security.CallerToAppGatewayEgressNPName} {
+		obj := &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+		}
+		if err := r.Client.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, false)
+}
+
+// isMeshMandatoryCallerNamespace reports whether ns is a user/third-party workload
+// namespace eligible for caller mesh (excludes platform / L4 / mesh system NS).
+func isMeshMandatoryCallerNamespace(name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return false
+	}
+	excluded := []string{
+		"kube-",
+		"linkerd",
+		"app-gateway",
+		"os-framework",
+		"os-platform",
+		"os-network",
+	}
+	for _, p := range excluded {
+		if name == p || strings.HasPrefix(name, p) {
+			return false
+		}
+	}
+	if strings.HasPrefix(name, "user-space-") || strings.HasPrefix(name, "user-system-") {
+		return true
+	}
+	return strings.Contains(name, "-")
+}
+
+// ensureCallerNamespaceLinkerdInject toggles linkerd.io/inject on caller namespaces only.
+func ensureCallerNamespaceLinkerdInject(ctx context.Context, c client.Client, namespace string, enable bool) error {
+	if namespace == "" || !isMeshMandatoryCallerNamespace(namespace) {
+		return nil
+	}
+	var ns corev1.Namespace
+	if err := c.Get(ctx, types.NamespacedName{Name: namespace}, &ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			klog.V(2).Infof("skip caller linkerd inject on ns %q: not found", namespace)
+			return nil
+		}
+		return err
+	}
+	if ns.Annotations[AnnotationLinkerdInject] == LinkerdInjectDisabled {
+		return nil
+	}
+	desired := LinkerdInjectEnabled
+	if !enable {
+		desired = LinkerdInjectDisabled
+	}
+	if ns.Annotations[LinkerdInjectAnnotation] == desired {
+		return nil
+	}
+	if ns.Annotations == nil {
+		ns.Annotations = map[string]string{}
+	}
+	ns.Annotations[LinkerdInjectAnnotation] = desired
+	return c.Update(ctx, &ns)
+}
