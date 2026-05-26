@@ -102,6 +102,9 @@ func TestCallerReconciler_optInInjectsAndWritesGatewayIngress(t *testing.T) {
 	if nsObj.Annotations[LinkerdInjectAnnotation] != LinkerdInjectEnabled {
 		t.Fatalf("inject = %q", nsObj.Annotations[LinkerdInjectAnnotation])
 	}
+	if nsObj.Labels[security.NamespaceInClusterCallerLabel] != "true" {
+		t.Fatalf("caller label = %q", nsObj.Labels[security.NamespaceInClusterCallerLabel])
+	}
 }
 
 func TestCallerReconciler_osNetworkNoOp(t *testing.T) {

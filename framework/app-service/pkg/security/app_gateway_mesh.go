@@ -140,6 +140,15 @@ func linkerdControlPlaneIngressPeers() []netv1.NetworkPolicyPeer {
 			},
 		},
 	})
+	// NP-minimal v1.0 callers: CallerReconciler enables linkerd.io/inject on the
+	// application namespace; without this peer, linkerd-proxy PostStart cannot certify.
+	peers = append(peers, netv1.NetworkPolicyPeer{
+		NamespaceSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				NamespaceInClusterCallerLabel: "true",
+			},
+		},
+	})
 	return peers
 }
 

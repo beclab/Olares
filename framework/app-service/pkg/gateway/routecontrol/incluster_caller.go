@@ -79,6 +79,9 @@ func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
 	if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, true); err != nil {
 		return err
 	}
+	if err := ensureCallerNamespaceInClusterLabel(ctx, r.Client, ns, true); err != nil {
+		return err
+	}
 	return r.applyNetworkPolicy(ctx, security.NewAppGatewayInClusterCallerIngressNP(r.gatewayNS()))
 }
 
@@ -163,7 +166,10 @@ func (r *CallerReconciler) cleanupCallerResources(ctx context.Context, ns string
 			return err
 		}
 	}
-	return ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, false)
+	if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, false); err != nil {
+		return err
+	}
+	return ensureCallerNamespaceInClusterLabel(ctx, r.Client, ns, false)
 }
 
 // isMeshMandatoryCallerNamespace reports whether ns is a user/third-party workload
@@ -219,5 +225,33 @@ func ensureCallerNamespaceLinkerdInject(ctx context.Context, c client.Client, na
 		ns.Annotations = map[string]string{}
 	}
 	ns.Annotations[LinkerdInjectAnnotation] = desired
+	return c.Update(ctx, &ns)
+}
+
+// ensureCallerNamespaceInClusterLabel toggles gateway.olares.io/in-cluster-caller on
+// the namespace so app-gateway-mesh-np admits meshed caller proxies to linkerd-identity.
+func ensureCallerNamespaceInClusterLabel(ctx context.Context, c client.Client, namespace string, enable bool) error {
+	if namespace == "" || !isMeshMandatoryCallerNamespace(namespace) {
+		return nil
+	}
+	var ns corev1.Namespace
+	if err := c.Get(ctx, types.NamespacedName{Name: namespace}, &ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if ns.Labels == nil {
+		ns.Labels = map[string]string{}
+	}
+	desired := "true"
+	if !enable {
+		delete(ns.Labels, security.NamespaceInClusterCallerLabel)
+		return c.Update(ctx, &ns)
+	}
+	if ns.Labels[security.NamespaceInClusterCallerLabel] == desired {
+		return nil
+	}
+	ns.Labels[security.NamespaceInClusterCallerLabel] = desired
 	return c.Update(ctx, &ns)
 }

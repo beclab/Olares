@@ -11,9 +11,11 @@ func TestNewAppGatewayMeshNetworkPolicy_linkerd_includesPolicyPort8090(t *testin
 	require.Equal(t, AppGatewayMeshNPName, np.Name)
 	require.Equal(t, "linkerd", np.Namespace)
 	require.Len(t, np.Spec.Ingress, 1)
-	require.Len(t, np.Spec.Ingress[0].From, len(LinkerdControlPlaneIngressPeerNamespaces)+1)
-	sharedPeer := np.Spec.Ingress[0].From[len(np.Spec.Ingress[0].From)-1]
+	require.Len(t, np.Spec.Ingress[0].From, len(LinkerdControlPlaneIngressPeerNamespaces)+2)
+	sharedPeer := np.Spec.Ingress[0].From[len(np.Spec.Ingress[0].From)-2]
 	require.Equal(t, "true", sharedPeer.NamespaceSelector.MatchLabels[NamespaceSharedLabel])
+	callerPeer := np.Spec.Ingress[0].From[len(np.Spec.Ingress[0].From)-1]
+	require.Equal(t, "true", callerPeer.NamespaceSelector.MatchLabels[NamespaceInClusterCallerLabel])
 	require.Len(t, np.Spec.Ingress[0].Ports, len(LinkerdMeshIngressPortsFromAppGateway))
 
 	got := make([]int32, 0, len(np.Spec.Ingress[0].Ports))
