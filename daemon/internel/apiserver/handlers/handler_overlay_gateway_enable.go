@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -12,11 +11,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var enableOverlayGatewayMutex sync.Mutex
-
 func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) error {
-	enableOverlayGatewayMutex.Lock()
-	defer enableOverlayGatewayMutex.Unlock()
+	operateOverlayGatewayMutex.Lock()
+	defer operateOverlayGatewayMutex.Unlock()
 
 	s, err := h.getOverlayGatewayStatus(ctx.Context())
 	if err != nil {

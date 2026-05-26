@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/gofiber/fiber/v2"
@@ -21,6 +22,7 @@ const (
 
 var disableOverlayGatewayError string = ""
 var enableOverlayGatewayError string = ""
+var operateOverlayGatewayMutex sync.Mutex
 
 type OverlayGatewaySupportedApp struct {
 	AppName   string `json:"app_name"`
