@@ -308,6 +308,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/komga",
             },
             {
+              text: "Navidrome",
+              link: "/zh/use-cases/navidrome",
+            },
+            {
               text: "TREK (NOMAD)",
               link: "/zh/use-cases/trek",
               collapsed: true,
