@@ -368,7 +368,7 @@ func (r *RemoveBridgeConnection) Execute(runtime connector.Runtime) error {
 				deleteSlaves += fmt.Sprintf("nmcli c delete %s && ", slave)
 			}
 		}
-		cmd = fmt.Sprintf("nmcli c down br-olares && nmcli c up phy-link && %s nmcli c delete br-olares", deleteSlaves)
+		cmd = fmt.Sprintf("nmcli c down br-olares && nmcli connection modify original-connection connection.autoconnect yes && nmcli c up original-connection && %s nmcli c delete br-olares", deleteSlaves)
 		if _, err := runtime.GetRunner().Cmd(cmd, true, false); err != nil {
 			logger.Errorf("delete bridge connection failed: %v", err)
 			return nil

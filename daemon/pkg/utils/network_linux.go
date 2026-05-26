@@ -478,6 +478,12 @@ func GetEthernetConnection(ctx context.Context) (iface, ifUUID, connection strin
 			continue
 		}
 
+		if connection == bridgeConnectionName ||
+			strings.HasPrefix(connection, bridgeSlavePrefix) {
+			// bridge connection
+			continue
+		}
+
 		// active connection
 		switch ifType {
 		case "ethernet":
@@ -549,6 +555,13 @@ func ResetBridgeConnection(ctx context.Context) error {
 	}
 
 	// turn on the original connection
+	cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", originalConnectionName, "connection.autoconnect", "yes")
+	cmd.Env = os.Environ()
+	_, err = cmd.Output()
+	if err != nil {
+		klog.Error("failed to execute nmcli: %w", err)
+	}
+
 	cmd = exec.CommandContext(ctx, nmcli, "connection", "up", originalConnectionName)
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
@@ -595,6 +608,7 @@ func CreateBridgeConnection(ctx context.Context) error {
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
 	if err != nil {
+		klog.Error("failed to execute nmcli: %w", err)
 		return fmt.Errorf("failed to execute nmcli: %w", err)
 	}
 
@@ -628,6 +642,7 @@ func CreateBridgeConnection(ctx context.Context) error {
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
 	if err != nil {
+		klog.Error("failed to execute nmcli: %w", err)
 		return fmt.Errorf("failed to execute nmcli: %w", err)
 	}
 
@@ -666,7 +681,8 @@ func CreateBridgeConnection(ctx context.Context) error {
 
 	// turn on the bridge connection
 	cmd = exec.CommandContext(ctx, "sh", "-c",
-		fmt.Sprintf("%s connection down %s && %s connection up %s", nmcli, originalConnectionName, nmcli, bridgeConnectionName))
+		fmt.Sprintf("%s connection modify %s connection.autoconnect no && %s connection down %s && %s connection up %s",
+			nmcli, originalConnectionName, nmcli, originalConnectionName, nmcli, bridgeConnectionName))
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
 	if err != nil {
