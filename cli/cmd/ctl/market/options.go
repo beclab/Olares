@@ -41,6 +41,12 @@ type MarketOptions struct {
 	DeleteData     bool
 	Title          string
 
+	// Installed narrows the catalog list verb to apps the user currently
+	// has installed. It diverts `list` away from /market/data (catalog
+	// browse) toward /market/state (per-user installed rows) and changes
+	// the default source-scope semantics — see runListInstalled.
+	Installed bool
+
 	// Watch-mode flags. Off by default so today's "fire and forget"
 	// scripts keep their current exit semantics; opt in per invocation.
 	// Defaults (15m / 2s) match the SPA's effective polling cadence and
@@ -117,6 +123,15 @@ func (o *MarketOptions) addDeleteDataFlag(cmd *cobra.Command) {
 
 func (o *MarketOptions) addTitleFlag(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Title, "title", "", "display title for the cloned app instance")
+}
+
+// addInstalledFlag wires --installed/-i onto verbs that can pivot from
+// catalog browse to "what's currently installed". Today this is only
+// `market list`, but kept here for parity with the other flag helpers
+// so future verbs (e.g. categories --installed) can reuse it.
+func (o *MarketOptions) addInstalledFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolVarP(&o.Installed, "installed", "i", false,
+		"list apps currently installed by the active profile's user (queries /market/state instead of the catalog)")
 }
 
 // addWatchFlags exposes --watch / --watch-timeout / --watch-interval on

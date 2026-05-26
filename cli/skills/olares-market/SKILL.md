@@ -1,7 +1,7 @@
 ---
 name: olares-market
-version: 1.1.0
-description: "olares-cli market command tree against the per-user Market app-store v2 API: list / get / categories for catalog browsing; install / uninstall / upgrade / clone / cancel / stop / resume for lifecycle; status for runtime state; upload / delete for local chart sources (cli / upload / studio); --watch / --watch-timeout / --watch-interval to block until terminal state. Covers source resolution (market.olares catalog vs local sources), the install/upgrade/uninstall/stop/resume/cancel state machine, OpType gating for race-safe watching, the op-agnostic status --watch recovery path, and JSON shape additions (finalState/finalOpType). Use whenever the user mentions market / app store / install / upgrade / uninstall / clone / stop / resume / cancel / status / upload chart / app state / running / installFailed / --watch, asks 'is firefox installed yet', or sees errors like 'app X is not installed', 'watch timed out', 'watch canceled by user', '--watch requires an app name'."
+version: 1.2.0
+description: "olares-cli market command tree against the per-user Market app-store v2 API: list (catalog browse + `--installed` view of the user's installed apps) / get / categories for catalog browsing; install / uninstall / upgrade / clone / cancel / stop / resume for lifecycle; status for runtime state; upload / delete for local chart sources (cli / upload / studio); --watch / --watch-timeout / --watch-interval to block until terminal state. Covers source resolution (market.olares catalog vs local sources), the install/upgrade/uninstall/stop/resume/cancel state machine, OpType gating for race-safe watching, the op-agnostic status --watch recovery path, the `list --installed` filter that surfaces 'what apps do I have right now' across every source, and JSON shape additions (finalState/finalOpType/state). Use whenever the user mentions market / app store / install / upgrade / uninstall / clone / stop / resume / cancel / status / installed apps / 'what's installed' / upload chart / app state / running / installFailed / --watch, asks 'is firefox installed yet' or 'show me my apps', or sees errors like 'app X is not installed', 'watch timed out', 'watch canceled by user', '--watch requires an app name'."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -84,6 +84,49 @@ olares-cli market list -o json
 ```
 
 ```bash
+olares-cli market list --installed              # what apps does this user have right now (all sources by default)
+olares-cli market list -i -s cli                # narrow to a single source
+olares-cli market list -i -c AI -o json         # category filter still works in installed mode
+```
+
+`list --installed` (alias `-i`) diverts the verb from `/market/data`
+(catalog browse) to `/market/state` (per-user installed rows) and is the
+canonical "what's installed" listing. Differences vs catalog browse:
+
+- **Source scope defaults to every source** — pass `-s` to narrow to one,
+  `-a` (or omitting `-s`) keeps the full cross-source view. This matches
+  the agent's mental model of "show me my apps" without forcing `-a`.
+- **State filter** — rows in transitional pre-install states
+  (`pending` / `installing` / `installFailed` / `installingCanceling` /
+  `installingCanceled` / `installingCancelFailed`) and fully removed rows
+  (`uninstalled`) are hidden. Post-install transitional states
+  (`upgrading` / `stopping` / `resuming` / `uninstalling` / `*Failed`) all
+  surface so the listing matches "apps I have at all", not "apps that are
+  currently running". Use `market status` if you specifically want a
+  runtime-state view.
+- **Output adds a STATE column** and (for JSON) a `state` field.
+- **Version is the actually-installed version**, not the catalog latest.
+  It comes from the `version` field at the `AppStateLatest` level of
+  `/market/state` (the same field the SPA's `AppStatusLatest` interface
+  reads). If the user installed 1.0.10 and the marketplace catalog has
+  since moved to 1.2.3, this listing will surface 1.0.10 — that is the
+  intended behavior; do not "correct" it to the catalog version. Title
+  and categories ARE best-effort enriched from `/market/data`;
+  locally-uploaded charts that have since been deleted from their source
+  still surface but may render with blank title / categories. Version
+  is left blank only when the state row genuinely lacks it (older
+  backends, in-flight rows that haven't been bound yet).
+- **Clones look up the catalog by `rawAppName`, not their unique
+  `name`.** A cloned multi-instance app gets its own per-instance
+  identifier (e.g. `windowsefe992`) but the catalog only knows the
+  source app (`windows`). The state row carries the source name as
+  `rawAppName`; the parser uses it as the catalog lookup key whenever
+  non-empty (and falls back to `name` for normal non-clone installs)
+  so clones still pick up the source app's title and categories. Source
+  of truth for the rule: `framework/app-service/pkg/utils/app/app.go`
+  `GetRawAppName`.
+
+```bash
 olares-cli market categories                    # category counts
 olares-cli market categories -a -o json
 ```
@@ -109,6 +152,15 @@ olares-cli market status firefox --watch        # see the --watch section
 - If the row is missing in the resolved source **and** in every other source the user has, the CLI prints `app 'X' is not installed (run 'olares-cli market install X' to install it)`.
 - If the row exists but under a different source than the one the user passed, the CLI prints an info hint `App is installed under source 'Y' (not 'X')` and continues to render the row, so the agent does not need to retry blindly.
 - `runStatusAll` (no app argument) explicitly rejects `--watch`. Use `status <app> --watch` instead.
+
+> `market status` (no app) and `market list --installed` overlap but are
+> not interchangeable: `status` is the runtime-state-focused view
+> (`STATE / OPERATION / PROGRESS`, filters by source by default), while
+> `list --installed` is the installation-inventory view
+> (`NAME / TITLE / VERSION / STATE / SOURCE / CATEGORIES`, defaults to
+> every source and hides rows that never reached a fully-installed
+> state). Prefer `list --installed` when the user asks "what apps do I
+> have"; prefer `status` when they want runtime / progress detail.
 
 ### Lifecycle (mutating, support `--watch`)
 
@@ -311,6 +363,13 @@ Push a local chart, then install it from `cli` source:
 ```bash
 olares-cli market upload ./myapp-1.0.0.tgz               # defaults to -s cli
 olares-cli market install myapp -s cli --watch
+```
+
+Inventory check — "what apps does this user have?":
+
+```bash
+olares-cli market list --installed                       # all sources by default
+olares-cli market list --installed -s cli -o json | jq '.[].name'
 ```
 
 ## Security rules

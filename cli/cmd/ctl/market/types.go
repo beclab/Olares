@@ -67,7 +67,17 @@ type SourceStateData struct {
 }
 
 type AppStateLatest struct {
-	Status AppStatus `json:"status"`
+	// Version is the version that is actually deployed for this row —
+	// i.e. the chart version the user installed (or, after an upgrade,
+	// the new version the upgrade flipped to). The marketplace backend
+	// exposes it as a sibling of `status`, NOT inside it, so we have
+	// to surface it at this level. The legacy `app` tree never needed
+	// it; the per-user `market list --installed` view does because the
+	// "installed version" otherwise has to be derived from the catalog,
+	// which is wrong as soon as the catalog's latest moves ahead of the
+	// installed row (the most common case).
+	Version string    `json:"version,omitempty"`
+	Status  AppStatus `json:"status"`
 }
 
 type AppStatus struct {
@@ -122,6 +132,42 @@ type AppDisplayInfo struct {
 	Version    string   `json:"version"`
 	Source     string   `json:"source"`
 	Categories []string `json:"categories,omitempty"`
+	// State is populated only by the installed-apps listing path
+	// (`market list --installed`). Catalog browsing leaves it empty
+	// and `omitempty` keeps the JSON shape byte-identical with the
+	// pre-flag release.
+	State string `json:"state,omitempty"`
+}
+
+// notInstalledStates enumerates the per-row states that mean the app has
+// either never reached a fully-installed state, or has been removed.
+// `market list --installed` filters these out so the listing matches the
+// user's mental model of "what apps do I actually have right now".
+//
+// The values are kept verbatim against the upstream state machine in
+// framework/app-service/api/app.bytetrade.io/v1alpha1/appmanager_states.go;
+// if a new "never made it" state is added upstream, extend this set so
+// the filter stays accurate.
+var notInstalledStates = map[string]struct{}{
+	"uninstalled":            {},
+	"pending":                {},
+	"installing":             {},
+	"installFailed":          {},
+	"installingCanceling":    {},
+	"installingCanceled":     {},
+	"installingCancelFailed": {},
+}
+
+// isInstalledState reports whether a row's `state` value represents an
+// app that the user effectively has installed (including transitional
+// states like `upgrading` / `stopping` / `uninstalling` that all imply
+// the app was at one point fully provisioned).
+func isInstalledState(state string) bool {
+	if state == "" {
+		return false
+	}
+	_, missed := notInstalledStates[state]
+	return !missed
 }
 
 // extractLocalizedString resolves a value that may be a plain string
