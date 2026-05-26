@@ -313,8 +313,10 @@ func TestClient_Fetch_Success(t *testing.T) {
 }
 
 // TestClient_Fetch_NotFound: a 404 surfaces as *HTTPError and
-// IsNotFound returns true, so the cobra layer can branch on
-// `--create` to start with an empty buffer instead of failing.
+// IsNotFound returns true, so the cobra layer can distinguish a
+// genuinely missing file from a concurrent-delete race (Stat OK
+// then Fetch 404). `edit` is update-only — the cobra layer maps
+// the missing case to a friendly "use files upload first" CTA.
 func TestClient_Fetch_NotFound(t *testing.T) {
 	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)

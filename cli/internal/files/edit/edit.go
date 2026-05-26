@@ -368,9 +368,10 @@ func (e *TooLargeError) Error() string {
 // Errors:
 //   - non-2xx response → *HTTPError, same as Put.
 //   - 404 in particular is preserved with its original Status so
-//     the cobra layer's `--create` flag can branch on
-//     IsNotFound() to decide whether to start with empty
-//     contents.
+//     the cobra layer can distinguish "file genuinely missing"
+//     (route to the upload CTA — `edit` is update-only) from a
+//     concurrent-delete race (Stat OK then Fetch 404) via
+//     IsNotFound().
 //   - body length > maxBytes (when maxBytes > 0) → *TooLargeError.
 func (c *Client) Fetch(ctx context.Context, plainPath string, maxBytes int64) ([]byte, error) {
 	endpoint := c.rawURL(plainPath)
@@ -409,9 +410,11 @@ func (c *Client) Fetch(ctx context.Context, plainPath string, maxBytes int64) ([
 }
 
 // IsNotFound reports whether `err` is a 404 from any of this
-// package's wire calls. Used by the cobra layer's `--create` flag
-// to decide whether to proceed with an empty starting buffer
-// instead of failing.
+// package's wire calls. Used by the cobra layer to distinguish a
+// genuinely missing file (route to the upload CTA — `edit` is
+// strictly UPDATE-only) from a concurrent-delete race window
+// (Stat said the file existed but Fetch came back 404, surfaced
+// as a friendly conflict error rather than a silent recreate).
 func IsNotFound(err error) bool {
 	var hErr *HTTPError
 	if errors.As(err, &hErr) {
