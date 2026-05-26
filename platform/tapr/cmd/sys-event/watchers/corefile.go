@@ -282,6 +282,12 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 					sharedNs = append(sharedNs, &ns)
 				}
 			}
+			klog.Infof("appName: %s", app.Spec.Name)
+			nss := make([]string, 0)
+			for _, n := range sharedNs {
+				nss = append(nss, n.Name)
+			}
+			klog.Infof("sharedNs: %#v", nss)
 
 			// get the service of entrance
 			for i, entrance := range app.Spec.SharedEntrances {
