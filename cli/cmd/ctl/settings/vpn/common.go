@@ -1,15 +1,30 @@
 // Package vpn hosts `olares-cli settings vpn`. Mirrors the SPA's
-// Settings -> VPN page. Three flavors of endpoints ride here:
+// Settings -> VPN page. Four flavors of endpoints ride here:
 //
 //  1. Headscale proxy at /headscale/...                  (raw upstream JSON;
 //                                                        no BFL envelope)
-//  2. Network ACL / public-domain-policy at /api/...     (user-service
-//                                                        forwards data.data
-//                                                        from BFL — body
-//                                                        already unwrapped)
-//  3. Subroutes / SSH toggles at /api/acl/...            (no envelope on
-//                                                        the read; opaque
-//                                                        body on POST)
+//  2. public-domain-policy at /api/launcher-public-...   (the one path
+//                                                        user-service
+//                                                        actually unwraps
+//                                                        — body is the
+//                                                        inner data)
+//  3. Subroutes / SSH toggles at /api/acl/{ssh,subroutes}
+//                                                        (BFL envelope on
+//                                                        the read; the
+//                                                        SPA only "sees"
+//                                                        the inner shape
+//                                                        because of its
+//                                                        global axios
+//                                                        response
+//                                                        interceptor.
+//                                                        CLI callers must
+//                                                        unwrap manually
+//                                                        — see ssh.go's
+//                                                        decodeSSHStatus.
+//                                                        POST returns an
+//                                                        opaque success
+//                                                        body we don't
+//                                                        consume.)
 //  4. Per-app ACL at /api/acl/app/status                 (BFL envelope on
 //                                                        both ends; GET
 //                                                        treats code!=0
