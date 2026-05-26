@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -11,7 +12,12 @@ import (
 	"k8s.io/klog/v2"
 )
 
+var disableOverlayGatewayMutex sync.Mutex
+
 func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) error {
+	disableOverlayGatewayMutex.Lock()
+	defer disableOverlayGatewayMutex.Unlock()
+
 	s, err := h.getOverlayGatewayStatus(ctx.Context())
 	if err != nil {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
