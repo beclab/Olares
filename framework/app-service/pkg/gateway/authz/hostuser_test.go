@@ -48,19 +48,19 @@ func TestHostUser_DenyMissingXBflUser(t *testing.T) {
 
 func TestHostUser_DenyMismatch(t *testing.T) {
 	d := HostUser("01234567.alice.olares.com",
-		map[string]string{"x-bfl-user": "alice"},
+		map[string]string{"x-bfl-user": "bob"},
 		DefaultHostUserConfig())
 	if d.Action != ActionDeny || d.Code != "INVALID_HOST_USER" {
 		t.Fatalf("expected Deny INVALID_HOST_USER, got %+v", d)
 	}
-	if d.Viewer != "alice" || d.Username != "alice" {
+	if d.Viewer != "alice" || d.Username != "bob" {
 		t.Fatalf("decision must carry both sides: %+v", d)
 	}
 }
 
 func TestHostUser_DenyTooFewLabels(t *testing.T) {
 	d := HostUser("olares.com",
-		map[string]string{"x-bfl-user": "alice"},
+		map[string]string{"x-bfl-user": "bob"},
 		DefaultHostUserConfig())
 	if d.Action != ActionDeny || d.Code != "INVALID_HOST_USER" {
 		t.Fatalf("expected Deny INVALID_HOST_USER for 2-label host, got %+v", d)

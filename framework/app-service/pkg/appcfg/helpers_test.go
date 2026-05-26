@@ -89,11 +89,11 @@ func TestGenSharedEntranceURLForUser(t *testing.T) {
 
 func TestGenSharedEntranceURLForUser_DiffersByViewer(t *testing.T) {
 	a := GenSharedEntranceURLForUser("a5be2268", "ollamav2", "alice", "olares.com")
-	b := GenSharedEntranceURLForUser("a5be2268", "ollamav2", "alice", "olares.com")
+	b := GenSharedEntranceURLForUser("a5be2268", "ollamav2", "bob", "olares.com")
 	if a == b {
 		t.Fatalf("viewer change must change URL (got %q == %q)", a, b)
 	}
-	if !strings.Contains(a, ".alice.") || !strings.Contains(b, ".alice.") {
+	if !strings.Contains(a, ".alice.") || !strings.Contains(b, ".bob.") {
 		t.Fatalf("URL must contain viewer label: %q / %q", a, b)
 	}
 }

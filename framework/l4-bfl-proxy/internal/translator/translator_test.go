@@ -777,8 +777,8 @@ func TestGatewayV2EntranceHostname(t *testing.T) {
 	if got := gatewayV2EntranceHostname(app2, "ollamav2", "alice", "alice.olares.com"); got == "" {
 		t.Fatalf("expected non-empty fallback hostname, got %q", got)
 	}
-	// Missing zone returns "".
-	if got := gatewayV2EntranceHostname(app, "ollamav2", "alice", "alice.olares.com"); got != "" {
+	// Zone/viewer mismatch returns "".
+	if got := gatewayV2EntranceHostname(app, "ollamav2", "bob", "alice.olares.com"); got != "" {
 		t.Fatalf("zone/viewer mismatch must return empty: %q", got)
 	}
 }
@@ -795,7 +795,7 @@ func TestBuildAppVirtualHosts_SharedApp_GatewayMode_PerViewerHost(t *testing.T) 
 
 	expectedHash := sharedEntranceHostPrefix("a5be2268", "ollamav2")
 
-	for _, viewer := range []string{"alice", "alice", "bob"} {
+	for _, viewer := range []string{"alice", "bob"} {
 		t.Run(viewer, func(t *testing.T) {
 			user := &message.UserInfo{Name: viewer, Language: "en"}
 			zone := viewer + ".olares.com"

@@ -58,7 +58,7 @@ spec:
                 platformDomain:
                   description: |-
                     Apex DNS domain shared by every user zone, e.g. olares.com
-                    (with users at alice.olares.com, alice.olares.com, ...).
+                    (with users at alice.olares.com, bob.olares.com, ...).
                     Lower-case. Used by app-service to compute SRR logical
                     hostPatterns and per-viewer Shared URLs.
                   type: string

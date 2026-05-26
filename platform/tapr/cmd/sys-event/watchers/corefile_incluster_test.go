@@ -1,6 +1,7 @@
 package watchers
 
 import (
+	"context"
 	"net"
 	"sort"
 	"strings"
@@ -63,6 +64,12 @@ func TestBuildSharedInclusterHosts_perUserEntranceExcluded(t *testing.T) {
 	}
 	if strings.Contains(body, perUserHost) {
 		t.Fatalf("per-user host %q must not appear in allowlist output: %q", perUserHost, body)
+	}
+}
+
+func TestInClusterGatewayEnabled_defaultsTrue(t *testing.T) {
+	if !inClusterGatewayEnabled(context.Background(), nil) {
+		t.Fatal("nil client should default to enabled")
 	}
 }
 
@@ -134,7 +141,7 @@ func TestSharedInclusterEntrancesFromSRRItems(t *testing.T) {
 	got := sharedInclusterEntrancesFromSRRItems(
 		[]unstructured.Unstructured{*srr},
 		nil,
-		[]string{"alice", "alice"},
+		[]string{"alice", "bob"},
 	)
 	if len(got) != 2 {
 		t.Fatalf("expected 2 entrances, got %d", len(got))
@@ -145,7 +152,7 @@ func TestSharedInclusterEntrancesFromSRRItems(t *testing.T) {
 	}
 	sort.Strings(hosts)
 	want0 := prefix + ".alice.olares.com"
-	want1 := prefix + ".alice.olares.com"
+	want1 := prefix + ".bob.olares.com"
 	if hosts[0] != want0 || hosts[1] != want1 {
 		t.Fatalf("hosts=%v want %q and %q", hosts, want0, want1)
 	}

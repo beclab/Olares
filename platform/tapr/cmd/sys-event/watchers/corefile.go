@@ -202,15 +202,18 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		return err
 	}
 
-	srrEntrances, err := sharedInclusterEntrancesFromCluster(ctx, kubeClient, dynamicClient, userList)
-	if err != nil {
-		klog.Error("list shared incluster entrances from SRR error, ", err)
-		return err
-	}
-
 	var sharedInclusterHostsPlugin *corefile.Plugin
-	if gatewayDataIP != "" {
-		sharedInclusterHostsPlugin = buildSharedInclusterHosts(srrEntrances, gatewayDataIP)
+	if inClusterGatewayEnabled(ctx, dynamicClient) {
+		srrEntrances, err := sharedInclusterEntrancesFromCluster(ctx, kubeClient, dynamicClient, userList)
+		if err != nil {
+			klog.Error("list shared incluster entrances from SRR error, ", err)
+			return err
+		}
+		if gatewayDataIP != "" {
+			sharedInclusterHostsPlugin = buildSharedInclusterHosts(srrEntrances, gatewayDataIP)
+		}
+	} else {
+		klog.V(2).Info("skip shared incluster CoreDNS hosts: inClusterGatewayEnabled=false")
 	}
 
 	var adguardIp string
