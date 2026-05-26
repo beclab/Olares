@@ -44,7 +44,6 @@ been individually whitelisted.
 
 Subcommands:
   get   show the current policy
-  set   change the policy (--deny-all / --allow-all)
 `,
 	}
 	cmd.SilenceUsage = true
@@ -143,8 +142,9 @@ func newPublicDomainPolicySetCommand(f *cmdutil.Factory) *cobra.Command {
 		allowAll bool
 	)
 	cmd := &cobra.Command{
-		Use:   "set",
-		Short: "set the public-domain access policy",
+		Use:    "set",
+		Short:  "set the public-domain access policy",
+		Hidden: true,
 		Long: `Set the public-domain access policy. Pass exactly one of:
 
   --deny-all     block public-domain access for non-whitelisted entrances

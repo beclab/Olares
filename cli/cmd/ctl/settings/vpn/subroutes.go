@@ -38,8 +38,6 @@ VPN page.
 
 Subcommands:
   status     dump the current sub-route ACL state (raw JSON)
-  enable     permit sub-domain access across the mesh
-  disable    block sub-domain access across the mesh
 `,
 	}
 	cmd.SilenceUsage = true
@@ -94,9 +92,10 @@ func runSubroutesStatus(ctx context.Context, f *cmdutil.Factory, outputRaw strin
 
 func newSubroutesEnableCommand(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "enable",
-		Short: "permit sub-domain access across the Headscale mesh",
-		Args:  cobra.NoArgs,
+		Use:    "enable",
+		Short:  "permit sub-domain access across the Headscale mesh",
+		Hidden: true,
+		Args:   cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := c.Context()
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "enable sub-routes"); err != nil {
@@ -109,9 +108,10 @@ func newSubroutesEnableCommand(f *cmdutil.Factory) *cobra.Command {
 
 func newSubroutesDisableCommand(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "disable",
-		Short: "block sub-domain access across the Headscale mesh",
-		Args:  cobra.NoArgs,
+		Use:    "disable",
+		Short:  "block sub-domain access across the Headscale mesh",
+		Hidden: true,
+		Args:   cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := c.Context()
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "disable sub-routes"); err != nil {

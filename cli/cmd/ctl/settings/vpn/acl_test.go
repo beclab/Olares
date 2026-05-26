@@ -302,6 +302,120 @@ func TestGetAppACLViaDoer_QueryEscaping(t *testing.T) {
 	}
 }
 
+// TestGetAllACLViaDoer covers all three wire shapes getAllACLViaDoer
+// recognizes plus the two "empty" envelope responses. The flat BFL
+// shape is the only one currently emitted on the wire (see
+// framework/bfl/.../handle_headscale.go:handleHeadscaleACLList); the
+// map and {name, acls} cases are kept as forward/back compat fallbacks
+// and the tests here pin both so a future refactor can't silently
+// regress them.
+func TestGetAllACLViaDoer_FlatBFLShape(t *testing.T) {
+	body := `{"code":0,"data":[
+		{"appName":"halo","appOwner":"u1","proto":"tcp","dst":["x.x.x.x:123"]},
+		{"appName":"halo","appOwner":"u1","proto":"udp","dst":["53"]},
+		{"appName":"files","appOwner":"u1","proto":"tcp","dst":["80","443"]}
+	]}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.method != "GET" || d.path != "/api/acl/all" {
+		t.Errorf("call = %s %s, want GET /api/acl/all", d.method, d.path)
+	}
+	want := map[string][]AclInfo{
+		"halo": {
+			{Proto: "tcp", Dst: []string{"x.x.x.x:123"}},
+			{Proto: "udp", Dst: []string{"53"}},
+		},
+		"files": {
+			{Proto: "tcp", Dst: []string{"80", "443"}},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+func TestGetAllACLViaDoer_SameProtoMultiRowUnion(t *testing.T) {
+	// BFL today emits one row per (app, proto), but a legacy
+	// spec.TailScaleACLs vector can splice in a second row. The CLI
+	// merges them rather than stacking duplicate proto rows so the
+	// table view stays one-row-per-proto.
+	body := `{"code":0,"data":[
+		{"appName":"halo","proto":"tcp","dst":["80","443"]},
+		{"appName":"halo","proto":"tcp","dst":["443","8080"]}
+	]}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]AclInfo{
+		"halo": {{Proto: "tcp", Dst: []string{"80", "443", "8080"}}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+func TestGetAllACLViaDoer_MapShapeFallback(t *testing.T) {
+	// Forward-compat: if BFL ever pivots to a map keyed by appName we
+	// still decode it.
+	body := `{"code":0,"data":{"halo":[{"proto":"tcp","dst":["80"]}]}}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]AclInfo{
+		"halo": {{Proto: "tcp", Dst: []string{"80"}}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+func TestGetAllACLViaDoer_NameAclsFallback(t *testing.T) {
+	// Historical shape: []{name, acls}. The flat-shape decode would
+	// succeed structurally but every row has an empty appName, so we
+	// fall through to this branch.
+	body := `{"code":0,"data":[{"name":"halo","acls":[{"proto":"tcp","dst":["80"]}]}]}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]AclInfo{
+		"halo": {{Proto: "tcp", Dst: []string{"80"}}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+func TestGetAllACLViaDoer_NonZeroCodeMeansEmpty(t *testing.T) {
+	d := &envelopeFakeDoer{respondWith: []byte(`{"code":-1,"message":"not found"}`)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got = %#v, want empty map", got)
+	}
+}
+
+func TestGetAllACLViaDoer_NullData(t *testing.T) {
+	d := &envelopeFakeDoer{respondWith: []byte(`{"code":0,"data":null}`)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got = %#v, want empty map", got)
+	}
+}
+
 func TestSummarizeACL(t *testing.T) {
 	got := summarizeACL([]AclInfo{
 		{Proto: "TCP", Dst: []string{"443", "80"}},

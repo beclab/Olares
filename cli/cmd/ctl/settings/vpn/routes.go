@@ -30,8 +30,9 @@ import (
 
 func NewRoutesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "routes",
-		Short: "enable or disable advertised Headscale routes",
+		Use:    "routes",
+		Short:  "enable or disable advertised Headscale routes",
+		Hidden: true,
 		Long: `Enable or disable a route a Headscale device is advertising.
 
 To find route IDs, list a device's routes first:
@@ -50,9 +51,10 @@ Subcommands:
 
 func newRoutesEnableCommand(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "enable <route-id>",
-		Short: "enable a Headscale route",
-		Args:  cobra.ExactArgs(1),
+		Use:    "enable <route-id>",
+		Short:  "enable a Headscale route",
+		Hidden: true,
+		Args:   cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			ctx := c.Context()
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "enable Headscale route"); err != nil {
@@ -65,9 +67,10 @@ func newRoutesEnableCommand(f *cmdutil.Factory) *cobra.Command {
 
 func newRoutesDisableCommand(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "disable <route-id>",
-		Short: "disable a Headscale route (route stays advertised)",
-		Args:  cobra.ExactArgs(1),
+		Use:    "disable <route-id>",
+		Short:  "disable a Headscale route (route stays advertised)",
+		Hidden: true,
+		Args:   cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			ctx := c.Context()
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "disable Headscale route"); err != nil {

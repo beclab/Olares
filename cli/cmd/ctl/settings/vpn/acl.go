@@ -78,10 +78,8 @@ traffic to an app's pods.
 Subcommands:
   all                                          dump every ACL the active user owns
   get    <app>                                 show the per-app ACL vector
-  set    <app> [--tcp PORT...] [--udp PORT...] replace the whole vector
   add    <app> [--tcp PORT...] [--udp PORT...] merge new dsts in (read-modify-write)
   remove <app> [--tcp PORT...] [--udp PORT...] drop dsts (read-modify-write)
-  clear  <app>                                 remove every ACL entry
 
 If you don't know the app name yet, run "vpn acl all" first to see
 every ACL configured for the active user.
@@ -109,16 +107,26 @@ unrelated entries survive untouched.
 
 // newACLAllCommand registers `vpn acl all`.
 //
-// Wraps GET /api/acl/all (user-service/src/bfl/acl.controller.ts:157
-// getAclsAll). The SPA does not currently surface this endpoint via a
-// page action, but the controller exists upstream; the verb gives the
-// caller a single command that lists every per-app ACL configured
-// under their account, complementing the per-app `vpn acl get <app>`.
+// Wraps GET /api/acl/all. user-service forwards this verbatim to BFL's
+// handleHeadscaleACLList (framework/bfl/pkg/apis/settings/v1alpha1/
+// handle_headscale.go), which iterates every Application owned by the
+// caller and flattens its spec.tailscale.acls into one wire row per
+// (app, proto) tuple. The SPA's VPN page consumes exactly this shape —
+// apps/.../stores/settings/acl.ts:getAllApplicationAcls iterates the
+// returned rows and pivots them to a per-app table, same as this verb
+// does for the CLI table view.
 //
-// Wire shape: BFL envelope wrapping a map keyed by app name (the
-// upstream's headscale acls vector). We stay structurally agnostic by
-// surfacing the raw envelope's data field as JSON when --output json,
-// and unmarshaling into a map[string][]AclInfo for the table view.
+// Wire shape (current): BFL envelope wrapping a flat
+//
+//	[]{appName, appOwner, proto, dst[]}
+//
+// list. We also accept two historical / theoretical shapes as
+// fallbacks (map[appName][]AclInfo and []{name, acls}) so the CLI
+// stays decodable if an older or newer BFL release flips the layout.
+// The table view always renders the same map[appName][]AclInfo
+// internal form after folding; --output json prints that same folded
+// map so scripts get a stable key-per-app structure regardless of
+// which upstream shape was on the wire.
 func newACLAllCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
@@ -178,16 +186,39 @@ func runACLAll(ctx context.Context, f *cmdutil.Factory, outputRaw string) error 
 	}
 }
 
+// aclAllRow mirrors BFL's wrapACL on the wire — one row per (app, proto)
+// tuple, emitted by handleHeadscaleACLList in framework/bfl/pkg/apis/
+// settings/v1alpha1/handle_headscale.go. We keep AppOwner around (with
+// omitempty so re-marshalled output doesn't sprout an empty field) for
+// debug logs and future filtering, but the CLI does not surface it in
+// either output mode today.
+type aclAllRow struct {
+	AppName  string   `json:"appName"`
+	AppOwner string   `json:"appOwner,omitempty"`
+	Proto    string   `json:"proto"`
+	Dst      []string `json:"dst"`
+}
+
 // getAllACLViaDoer wraps the GET /api/acl/all envelope. Same envelope
 // quirk as `getAppACLViaDoer`: a non-zero `code` is treated as "no ACL
 // configured" rather than a hard error, matching the SPA's defensive
 // pattern of falling back to an empty list.
 //
-// We try two payload shapes the upstream has emitted historically:
+// Decoding order, most-specific first so a real upstream shape never
+// gets misread as a historical one:
 //
-//  1. map[string][]AclInfo  — keyed by app name, the natural shape.
-//  2. []struct{name, acls}  — older flat list; we coerce to the map
-//                             so the renderer has one code path.
+//  1. []aclAllRow — BFL's current flat shape (one row per (app, proto)).
+//     Counted as a match only if at least one row has a non-empty
+//     AppName, so an empty `data: []` doesn't shadow the fallbacks.
+//  2. map[string][]AclInfo — theoretical "natural" shape; never seen
+//     on the wire today, but cheap to keep as forward-compat in case
+//     BFL ever pivots its response.
+//  3. []{name, acls} — older flat list a prior BFL revision is rumored
+//     to have emitted; coerced into the same map[appName][]AclInfo
+//     return type so the renderer has one code path.
+//
+// All three resolve to the same map[string][]AclInfo so callers and
+// tests can stay shape-agnostic.
 func getAllACLViaDoer(ctx context.Context, d Doer) (map[string][]AclInfo, error) {
 	var env bflEnvelope
 	if err := d.DoJSON(ctx, "GET", "/api/acl/all", nil, &env); err != nil {
@@ -199,12 +230,22 @@ func getAllACLViaDoer(ctx context.Context, d Doer) (map[string][]AclInfo, error)
 	if len(env.Data) == 0 || string(env.Data) == "null" {
 		return map[string][]AclInfo{}, nil
 	}
-	// Try map shape first.
+	// 1. BFL real shape: flat []{appName, appOwner, proto, dst[]}.
+	//    Only treat as "matched" when at least one row carries an
+	//    AppName — Go's JSON decoder is happy to coerce a [] of any
+	//    object into []aclAllRow with all fields zero, and we don't
+	//    want that empty-decode to shadow the map / {name,acls}
+	//    fallbacks below.
+	var flat []aclAllRow
+	if err := json.Unmarshal(env.Data, &flat); err == nil && anyAppName(flat) {
+		return foldACLRows(flat), nil
+	}
+	// 2. map[appName][]AclInfo.
 	asMap := map[string][]AclInfo{}
 	if err := json.Unmarshal(env.Data, &asMap); err == nil {
 		return asMap, nil
 	}
-	// Fallback: array of {name, acls}.
+	// 3. []{name, acls}.
 	var asArr []struct {
 		Name string    `json:"name"`
 		Acls []AclInfo `json:"acls"`
@@ -220,6 +261,56 @@ func getAllACLViaDoer(ctx context.Context, d Doer) (map[string][]AclInfo, error)
 		out[e.Name] = e.Acls
 	}
 	return out, nil
+}
+
+func anyAppName(rows []aclAllRow) bool {
+	for _, r := range rows {
+		if strings.TrimSpace(r.AppName) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// foldACLRows pivots BFL's flat []aclAllRow into the per-app map the
+// renderers expect. Within a single app:
+//   - distinct protos become distinct AclInfo entries, in first-seen
+//     order on the wire (so the table output mirrors what the SPA's
+//     VPN page renders);
+//   - duplicate (app, proto) rows have their dst lists unioned via
+//     unionPreservingOrder. BFL today emits exactly one row per (app,
+//     proto), but the upstream's loop also splices in a legacy
+//     spec.TailScaleACLs vector — if a future release ever doubles up
+//     the same (app, proto) we silently dedupe rather than show two
+//     stacked rows for the same protocol.
+//
+// Rows whose AppName trims to empty are dropped (defensive — the
+// upstream filters by owner before iterating, so this should not
+// happen in practice, but we'd rather skip a stray row than emit a
+// blank-keyed map entry the renderer can't label).
+func foldACLRows(rows []aclAllRow) map[string][]AclInfo {
+	out := map[string][]AclInfo{}
+	protoIdx := map[string]map[string]int{} // app → lower(proto) → idx in out[app]
+	for _, r := range rows {
+		app := strings.TrimSpace(r.AppName)
+		if app == "" {
+			continue
+		}
+		if _, ok := protoIdx[app]; !ok {
+			protoIdx[app] = map[string]int{}
+		}
+		key := strings.ToLower(strings.TrimSpace(r.Proto))
+		if idx, ok := protoIdx[app][key]; ok {
+			out[app][idx].Dst = unionPreservingOrder(out[app][idx].Dst, r.Dst)
+			continue
+		}
+		out[app] = append(out[app], AclInfo{
+			Proto: r.Proto,
+			Dst:   append([]string(nil), r.Dst...),
+		})
+		protoIdx[app][key] = len(out[app]) - 1
+	}
+	return out
 }
 
 func renderACLAll(w io.Writer, all map[string][]AclInfo) error {
@@ -360,8 +451,9 @@ func newACLSetCommand(f *cmdutil.Factory) *cobra.Command {
 		udp []string
 	)
 	cmd := &cobra.Command{
-		Use:   "set <app>",
-		Short: "replace the per-app ACL vector",
+		Use:    "set <app>",
+		Short:  "replace the per-app ACL vector",
+		Hidden: true,
 		Long: `Replace the entire per-app ACL vector with the supplied protocol
 allow-lists. Pass --tcp / --udp (repeatable, comma-separated also OK)
 for each protocol. Omitting a protocol drops it from the upstream
@@ -534,8 +626,9 @@ func runACLRemove(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp 
 func newACLClearCommand(f *cmdutil.Factory) *cobra.Command {
 	var assumeYes bool
 	cmd := &cobra.Command{
-		Use:   "clear <app>",
-		Short: "remove every per-app ACL entry",
+		Use:    "clear <app>",
+		Short:  "remove every per-app ACL entry",
+		Hidden: true,
 		Long: `Remove every ACL entry for the app. Equivalent to "set" with no flags.
 The app loses every previously-allowed dst on every protocol; existing
 mesh sessions stay open until renegotiation, but new connections are
