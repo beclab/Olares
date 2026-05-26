@@ -483,6 +483,186 @@ func TestProtectedDriveHomeChildrenList(t *testing.T) {
 	}
 }
 
+// TestFrontendPathIsProtectedExternalChild pins the LarePass-aligned
+// policy that the system-managed AI mountpoint folders directly
+// under `external/<node>/` (depth-1: ai) and `external/<node>/ai/`
+// (depth-2: output / model / comfyui / ollama) refuse rename /
+// delete from the CLI.
+//
+// Path-shape ground truth: the GUI URL `/Files/External/<X>/` and
+// the CLI path `external/<X>/...` share `<X>` as the LarePass
+// `masterNode` (apps/.../external/data.ts:77 +
+// pages/Mobile/file/FileRootPage.vue:256), so `<X>` maps to
+// FrontendPath.Extend and the GUI's `ai/` row at
+// `/Files/External/<node>/` lands at CLI SubPath="/ai/" — depth-1
+// in SubPath, NOT under any nested `<volume>` segment.
+//
+// The match scope is EXACT — depth-1 outside the depth-1 whitelist,
+// depth-2 whose first SubPath segment isn't `ai`, and any depth-3+
+// path all stay user-content and remain writable so existing
+// workflows on arbitrary user data are unaffected.
+//
+// `<node>` is opaque to the policy (the GUI regex
+// `^/Files/External/[^/]+/...` matches any node name).
+func TestFrontendPathIsProtectedExternalChild(t *testing.T) {
+	cases := []struct {
+		name string
+		path string
+		want bool
+	}{
+		// ----- depth-1 layer: external/<node>/<name> -----
+		{
+			name: "depth-1 ai under olares node — protected",
+			path: "external/olares/ai/",
+			want: true,
+		},
+		{
+			name: "depth-1 ai, no trailing slash — protected",
+			path: "external/olares/ai",
+			want: true,
+		},
+		{
+			name: "depth-1 ai under arbitrary node name — protected (node is opaque)",
+			path: "external/node-1/ai/",
+			want: true,
+		},
+		{
+			name: "depth-1 non-whitelisted name — NOT protected (user / volume content)",
+			path: "external/olares/USB-0/",
+			want: false,
+		},
+		{
+			name: "depth-1 case-sensitive mismatch — NOT protected",
+			path: "external/olares/AI/", // GUI name is lowercase
+			want: false,
+		},
+
+		// ----- depth-2 layer: external/<node>/ai/<name> -----
+		{
+			name: "depth-2 ai/output — protected",
+			path: "external/olares/ai/output/",
+			want: true,
+		},
+		{
+			name: "depth-2 ai/model — protected",
+			path: "external/olares/ai/model",
+			want: true,
+		},
+		{
+			name: "depth-2 ai/comfyui — protected",
+			path: "external/olares/ai/comfyui/",
+			want: true,
+		},
+		{
+			name: "depth-2 ai/ollama — protected",
+			path: "external/olares/ai/ollama",
+			want: true,
+		},
+		{
+			name: "depth-2 ai/<other> — NOT protected (user content under ai/)",
+			path: "external/olares/ai/my-experiments/",
+			want: false,
+		},
+		{
+			name: "depth-2 case-sensitive mismatch on whitelist name — NOT protected",
+			path: "external/olares/ai/Output/",
+			want: false,
+		},
+		{
+			name: "depth-2 first segment is NOT 'ai' — NOT protected (e.g. inside a real volume)",
+			path: "external/olares/USB-0/output/",
+			want: false,
+		},
+
+		// ----- deeper paths under protected names — NOT protected -----
+		{
+			name: "depth-3 under ai/output — NOT protected (user content)",
+			path: "external/olares/ai/output/run-2026/",
+			want: false,
+		},
+		{
+			name: "depth-4 under ai/model — NOT protected",
+			path: "external/olares/ai/model/llama3/weights/q4.gguf",
+			want: false,
+		},
+		{
+			name: "depth-3 under USB-0/ai/output — NOT protected (not even ai's depth-2 layer)",
+			path: "external/olares/USB-0/ai/output/",
+			want: false,
+		},
+
+		// ----- wrong namespace — NOT protected -----
+		{
+			name: "drive/Home/ai — NOT protected (policy is external-only)",
+			path: "drive/Home/ai/",
+			want: false,
+		},
+		{
+			name: "sync/<repo>/ai — NOT protected",
+			path: "sync/abc-123/ai/",
+			want: false,
+		},
+		{
+			name: "cache/<node>/ai — NOT protected",
+			path: "cache/olares/ai/",
+			want: false,
+		},
+		{
+			name: "awss3 cloud path with /ai/ — NOT protected (external-only policy)",
+			path: "awss3/AKIA.../bucket/ai/",
+			want: false,
+		},
+
+		// ----- shallow / root paths — NOT protected -----
+		{
+			name: "external node root — NOT protected (handled by IsExternalNodeRoot)",
+			path: "external/olares/",
+			want: false,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			fp, err := ParseFrontendPath(c.path)
+			if err != nil {
+				t.Fatalf("ParseFrontendPath(%q): %v", c.path, err)
+			}
+			if got := fp.IsProtectedExternalChild(); got != c.want {
+				t.Errorf("IsProtectedExternalChild() = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+// TestProtectedExternalChildrenLists pins the alphabetical, stable
+// rendering used in error messages. The depth-2 list is currently
+// just "ai" (single entry; the test still exercises the
+// comma-joined helper so a future second entry doesn't silently
+// change the format). The depth-3 list is the four AI feature
+// directories.
+func TestProtectedExternalChildrenLists(t *testing.T) {
+	t.Run("depth-2 list", func(t *testing.T) {
+		got := ProtectedExternalChildrenList()
+		want := "ai"
+		if got != want {
+			t.Errorf("ProtectedExternalChildrenList() = %q, want %q", got, want)
+		}
+	})
+	t.Run("depth-3 list (alphabetical, comma-joined)", func(t *testing.T) {
+		got := ProtectedExternalAiChildrenList()
+		want := "comfyui, model, ollama, output"
+		// Sanity: the four core names must all be present —
+		// catches an accidental delete in the underlying map.
+		for _, name := range []string{"comfyui", "model", "ollama", "output"} {
+			if !strings.Contains(got, name) {
+				t.Fatalf("ProtectedExternalAiChildrenList() missing core entry %q: %q", name, got)
+			}
+		}
+		if got != want {
+			t.Errorf("ProtectedExternalAiChildrenList() = %q, want %q", got, want)
+		}
+	})
+}
+
 func TestFrontendPathURLPath(t *testing.T) {
 	cases := []struct {
 		name  string

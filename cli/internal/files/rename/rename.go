@@ -163,6 +163,38 @@ func Plan(t Target, newName string) (Op, error) {
 				"Rename a child instead (e.g. drive/Home/%s/<your-folder>) or move your data into a sibling folder.",
 			base, protectedDriveHomeChildrenList, base)
 	}
+	// LarePass-aligned policy for external mountpoints: the
+	// AI-mountpoint surface Olares surfaces at the external node
+	// root holds a backend-owned layout (depth-1 `ai/` plus the
+	// four depth-2 feature dirs output / model / comfyui / ollama)
+	// that the LarePass GUI greys out via
+	// `externalFolderWhiteList` + `externalAiFolderWhiteList` in
+	// apps/packages/app/src/stores/operation.ts (gated by
+	// `ieExternalRootPath` and `isExternalAiPath`). These dirs are
+	// the contract Ollama / ComfyUI / Huggingface readers look up
+	// by name; a scripted rename here would silently break those
+	// apps without any GUI affordance to undo. Scope is EXACT
+	// (same as the drive/Home guard above): user content nested
+	// deeper — e.g. external/<node>/ai/output/run-2026/ — stays
+	// freely renameable. Authoritative names live in
+	// cli/cmd/ctl/files/path.go's ProtectedExternalChildren +
+	// ProtectedExternalAiChildren.
+	if isProtectedExternalChild(t.FileType, t.Extend, t.SubPath) {
+		// `display` is the human-readable form of the source
+		// path (e.g. external/olares/ai/) so the error echoes
+		// exactly what the user typed without forcing them to
+		// mentally reconstruct the 3-segment form.
+		display := t.FileType + "/" + t.Extend + t.SubPath
+		if t.IsDirIntent && !strings.HasSuffix(display, "/") {
+			display += "/"
+		}
+		return Op{}, fmt.Errorf(
+			"refusing to rename %s: this is a system-managed AI mountpoint folder reserved by Files; "+
+				"the LarePass GUI also disables rename on this entry. "+
+				"Names refused at external/<node>/: {%s}; at external/<node>/ai/: {%s}. "+
+				"Rename a child instead, or copy your data into a sibling folder.",
+			display, protectedExternalChildrenList, protectedExternalAiChildrenList)
+	}
 
 	clean := strings.TrimSpace(newName)
 	if clean == "" {
@@ -315,6 +347,101 @@ func isProtectedDriveHomeChild(fileType, extend, subPath string) bool {
 	}
 	_, ok := protectedDriveHomeChildren[seg]
 	return ok
+}
+
+// protectedExternalChildren mirrors the LarePass web app's
+// externalFolderWhiteList (apps/packages/app/src/stores/operation.ts):
+// the entry names directly under `external/<node>/` whose rename /
+// delete affordance is greyed out by `isDisableMenuItem` when
+// gated by `ieExternalRootPath` (regex
+// `^/Files/External/[^/]+/?$`). Currently just `ai` — the AI
+// mountpoint surface Olares surfaces at the node root.
+//
+// Path-shape note: the GUI's `<X>` in `/Files/External/<X>/` is
+// the LarePass `masterNode` (apps/.../external/data.ts:77), which
+// maps to FrontendPath.Extend on the CLI. So the GUI's `ai/` row
+// at `/Files/External/<node>/` is the CLI path
+// `external/<node>/ai/` — SubPath="/ai/" (one trimmed segment).
+//
+// Authoritative source on the CLI is
+// cli/cmd/ctl/files/path.go's ProtectedExternalChildren — keep
+// the two in sync if the web app's array ever changes.
+var protectedExternalChildren = map[string]struct{}{
+	"ai": {},
+}
+
+// protectedExternalAiChildren mirrors externalAiFolderWhiteList
+// from the same operation.ts store: entries directly under
+// `external/<node>/ai/` (depth-2 in SubPath) that the GUI refuses
+// to rename / delete when gated by `isExternalAiPath` (regex
+// `^/Files/External/[^/]+/ai/?$`). These are the per-feature
+// directories shared by the apps that use the AI mountpoint
+// (output / model / comfyui / ollama). Authoritative source:
+// cli/cmd/ctl/files/path.go's ProtectedExternalAiChildren.
+var protectedExternalAiChildren = map[string]struct{}{
+	"output":  {},
+	"model":   {},
+	"comfyui": {},
+	"ollama":  {},
+}
+
+const (
+	protectedExternalChildrenList   = "ai"
+	protectedExternalAiChildrenList = "comfyui, model, ollama, output"
+)
+
+// isProtectedExternalChild reports whether (fileType, extend,
+// subPath) points exactly at one of the LarePass-managed AI
+// mountpoint folders the GUI refuses rename / delete on. Mirrors
+// FrontendPath.IsProtectedExternalChild from
+// cli/cmd/ctl/files/path.go — see the policy docstrings there
+// for full rationale.
+//
+// Two layers, both anchored at the external NODE root (Extend),
+// NOT inside any nested `<volume>` segment:
+//
+//   - depth-1: SubPath trims to one segment (`/<name>/?`) and
+//     <name> is in protectedExternalChildren (currently just "ai").
+//     The wire shape `external/<node>/ai/` lands here.
+//   - depth-2: SubPath trims to two segments (`/ai/<name>/?`) with
+//     the first == "ai" and <name> is in
+//     protectedExternalAiChildren (output / model / comfyui /
+//     ollama).
+//
+// Extend (the `<node>` segment) is opaque to the policy — the GUI
+// regex `^/Files/External/[^/]+/...` ignores its content.
+//
+// Scope is EXACT: deeper paths (e.g. /ai/output/run-2026/) are
+// user content and stay freely renameable.
+func isProtectedExternalChild(fileType, extend, subPath string) bool {
+	if fileType != "external" {
+		return false
+	}
+	_ = extend
+	seg := strings.Trim(subPath, "/")
+	if seg == "" {
+		return false
+	}
+	parts := strings.Split(seg, "/")
+	switch len(parts) {
+	case 1:
+		// external/<node>/<name> — depth-1 layer (immediate
+		// child of the node root).
+		_, ok := protectedExternalChildren[parts[0]]
+		return ok
+	case 2:
+		// external/<node>/ai/<name> — depth-2 layer. The first
+		// segment MUST be "ai" — depth-2 paths under any other
+		// directory are user content (the GUI's
+		// `isExternalAiPath` regex anchors specifically on
+		// `/ai/`).
+		if parts[0] != "ai" {
+			return false
+		}
+		_, ok := protectedExternalAiChildren[parts[1]]
+		return ok
+	}
+	return false
 }
 
 // lastSegment returns the basename of a slash-separated subpath,
