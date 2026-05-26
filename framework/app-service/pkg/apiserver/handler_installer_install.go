@@ -454,6 +454,11 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 		return
 	}
 
+	if err = appcfg.ValidateCallerInClusterManifest(h.appConfig); err != nil {
+		responseBadRequest(err)
+		return
+	}
+
 	satisfied, err := apputils.CheckMiddlewareRequirement(h.req.Request.Context(), h.h.ctrlClient, h.appConfig.Middleware)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
