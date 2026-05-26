@@ -8,60 +8,58 @@ import (
 	"testing"
 )
 
-// TestIsInstalledState locks down the "what counts as installed" filter
-// used by runListInstalled. Cases mirror the upstream state machine in
-// framework/app-service/pkg/appstate/state_transition.go; if this test
-// breaks because a new state was added, extend notInstalledStates to
-// keep the filter accurate (or, for post-install paths, deliberately
-// leave the state out and add a case here pinning it as installed).
+// TestIsInstalledState locks down the "is this row one of the user's
+// apps?" filter used by runListInstalled (the implementation of
+// `market list --mine`), aligned VERBATIM to the SPA's "My Terminus"
+// filter (`uninstalledApp` / `uninstalledAppStates` in
+// apps/packages/app/src/constant/config.ts ~L170). The six states
+// asserted as `installed: false` below are exactly the SPA's set —
+// the only rows hidden from My Terminus; everything else — including
+// transitional in-flight states like `pending`, `downloading`,
+// `installing` and their `*Canceling` / `*CancelFailed` variants —
+// must stay in the listing so the CLI and the Market UI show the same
+// apps. (The `installed` column name is the internal shorthand the
+// helper uses; the user-facing semantic is "shown on My Terminus".)
+// If the SPA changes that set, update notInstalledStates and this
+// table together.
 func TestIsInstalledState(t *testing.T) {
 	cases := []struct {
 		state     string
 		installed bool
 	}{
-		// Removed-by-uninstall is conceptually the post-install end of
-		// the same "no chart on cluster" condition that pre-install
-		// states share, so it also falls into the not-installed bucket.
+		// SPA `uninstalledAppStates` — the six terminal failure /
+		// cancel / uninstall states that hide a row from My Terminus.
+		{"pendingCanceled", false},
+		{"downloadingCanceled", false},
+		{"downloadFailed", false},
+		{"installFailed", false},
+		{"installingCanceled", false},
 		{"uninstalled", false},
 
-		// Pending: just queued, chart not yet downloaded. Cancel
-		// variants here are the canonical "I clicked install but
-		// changed my mind before anything happened" outcomes.
-		{"pending", false},
-		{"pendingCanceling", false},
-		{"pendingCanceled", false},
-		{"pendingCancelFailed", false},
+		// In-flight install path. The SPA keeps these visible on My
+		// Terminus because the user clicked install and wants to
+		// see / monitor / cancel the row, so `--mine` must show them
+		// too — they're part of "my apps" even though they aren't
+		// "完成安装" yet.
+		{"pending", true},
+		{"pendingCanceling", true},
+		{"pendingCancelFailed", true},
+		{"downloading", true},
+		{"downloadingCanceling", true},
+		{"downloadingCancelFailed", true},
+		{"installing", true},
+		{"installingCanceling", true},
+		{"installingCancelFailed", true},
 
-		// Downloading: chart is being fetched but has not been applied
-		// to the cluster. All cancel/fail variants stay pre-install.
-		{"downloading", false},
-		{"downloadingCanceling", false},
-		{"downloadingCanceled", false},
-		{"downloadingCancelFailed", false},
-		{"downloadFailed", false},
-
-		// Installing: helm install is in flight; cancel / fail here
-		// also leaves nothing on the cluster.
-		{"installing", false},
-		{"installingCanceling", false},
-		{"installingCanceled", false},
-		{"installingCancelFailed", false},
-		{"installFailed", false},
-
-		// `initializing` is reused by Resuming / Upgrading / ApplyingEnv
-		// transitions per state_transition.go, so it MUST stay
-		// installed. Even in the first-time-install context the helm
-		// chart has been applied by this point, so calling it
-		// not-installed would also be incorrect there.
+		// `initializing` is reused by Resuming / Upgrading /
+		// ApplyingEnv transitions, and `initializingCanceling` always
+		// transitions to `stopping → stopped`; both stay installed
+		// (the SPA never lists them as `uninstalledAppStates`).
 		{"initializing", true},
-		// `initializingCanceling` always transitions to stopping →
-		// stopped per the upstream graph; treating it as not-installed
-		// would briefly drop a row that is about to reappear as
-		// `stopped`, so it stays installed.
 		{"initializingCanceling", true},
 
-		// Terminal-success / post-install / lifecycle-transient states
-		// — all imply the chart was successfully applied at some point.
+		// Terminal-success / post-install / lifecycle-transient
+		// states — the SPA always shows these on My Terminus.
 		{"running", true},
 		{"stopped", true},
 		{"stopping", true},
@@ -102,12 +100,14 @@ func TestIsInstalledState(t *testing.T) {
 // TestFetchInstalledAppsParsesStateAndEnrichesCatalog exercises the full
 // parsing path: it feeds a fixture matching the wire shape of
 // /market/state + /market/data into an httptest server backing a real
-// *MarketClient and checks that (a) only installed states survive the
-// filter, (b) the installed Version comes from AppStateLatest.Version
-// (NOT the catalog's latest version — see the firefox case below
-// where the two disagree), (c) catalog enrichment fills in title /
-// categories when the row exists in /market/data, and (d) rows missing
-// from the catalog still render with whatever the state knows.
+// *MarketClient and checks that (a) only the SPA's "My Terminus" rows
+// survive the filter (others get dropped — see obsidian / ghost),
+// (b) the per-row Version comes from AppStateLatest.Version (the
+// version the user picked for this row, NOT the catalog's latest —
+// see the firefox case below where the two disagree), (c) catalog
+// enrichment fills in title / categories when the row exists in
+// /market/data, and (d) rows missing from the catalog still render
+// with whatever the state knows.
 func TestFetchInstalledAppsParsesStateAndEnrichesCatalog(t *testing.T) {
 	srv := newFakeMarketDataServer(t, stateAndDataResponses{
 		state: marketStateFixture(),
@@ -126,11 +126,11 @@ func TestFetchInstalledAppsParsesStateAndEnrichesCatalog(t *testing.T) {
 		// version, so the renderer surfaces an empty version rather
 		// than guessing.
 		{Name: "myapp", Source: "cli", State: "running"},
-		// `firefox` is the canonical "installed version != catalog
-		// latest" case: the state says 1.1.0 is what's deployed, but
-		// /market/data claims the latest is 1.2.3. The CLI MUST
-		// surface 1.1.0 — anything else lies to the user about what
-		// they actually have running.
+		// `firefox` is the canonical "row version != catalog latest"
+		// case: the user's state row carries 1.1.0, but /market/data
+		// claims the latest is 1.2.3. The CLI MUST surface 1.1.0 —
+		// anything else lies to the user about which version their
+		// row is on.
 		{
 			Name:       "firefox",
 			Title:      "Firefox",
@@ -156,34 +156,40 @@ func TestFetchInstalledAppsParsesStateAndEnrichesCatalog(t *testing.T) {
 	}
 }
 
-// TestFetchInstalledAppsFiltersPreInstallStates wires the full state
-// machine through fetchInstalledApps and checks that EVERY pre-install
-// state (pending/downloading/installing trees + their cancel/fail
-// variants) is dropped, while transitional post-install states stay.
-// This pins the bug the original denylist had: states like
-// `downloading`, `downloadFailed`, and `pendingCanceled` used to slip
-// through and pollute `market list --installed` output.
-func TestFetchInstalledAppsFiltersPreInstallStates(t *testing.T) {
+// TestFetchInstalledAppsMirrorsSpaUninstalledFilter wires the full
+// install-path state space through fetchInstalledApps and asserts the
+// listing matches the SPA's "My Terminus" filter exactly: only the six
+// `uninstalledAppStates` (apps/packages/app/src/constant/config.ts
+// ~L170) drop out; every in-flight install row (`pending`,
+// `downloading`, `installing`, plus the `*Canceling` / `*CancelFailed`
+// variants) survives because the SPA shows them on My Terminus too.
+//
+// This pins the alignment: if a future change starts dropping
+// `pending` / `downloading` / `installing` (or stops dropping
+// `installFailed` / `downloadFailed` etc.), the CLI listing diverges
+// from the SPA's "what apps do I have" view and the user's mental
+// model breaks.
+func TestFetchInstalledAppsMirrorsSpaUninstalledFilter(t *testing.T) {
 	srv := newFakeMarketDataServer(t, stateAndDataResponses{
 		state: `{
             "user_data": {
                 "sources": {
                     "market.olares": {"type": "market", "app_state_latest": [
-                        {"status": {"name": "p1", "state": "pending"}},
-                        {"status": {"name": "p2", "state": "pendingCanceling"}},
+                        {"version": "1.0.0", "status": {"name": "p1", "state": "pending"}},
+                        {"version": "1.0.0", "status": {"name": "p2", "state": "pendingCanceling"}},
                         {"status": {"name": "p3", "state": "pendingCanceled"}},
-                        {"status": {"name": "p4", "state": "pendingCancelFailed"}},
+                        {"version": "1.0.0", "status": {"name": "p4", "state": "pendingCancelFailed"}},
 
-                        {"status": {"name": "d1", "state": "downloading"}},
-                        {"status": {"name": "d2", "state": "downloadingCanceling"}},
+                        {"version": "1.0.0", "status": {"name": "d1", "state": "downloading"}},
+                        {"version": "1.0.0", "status": {"name": "d2", "state": "downloadingCanceling"}},
                         {"status": {"name": "d3", "state": "downloadingCanceled"}},
-                        {"status": {"name": "d4", "state": "downloadingCancelFailed"}},
+                        {"version": "1.0.0", "status": {"name": "d4", "state": "downloadingCancelFailed"}},
                         {"status": {"name": "d5", "state": "downloadFailed"}},
 
-                        {"status": {"name": "i1", "state": "installing"}},
-                        {"status": {"name": "i2", "state": "installingCanceling"}},
+                        {"version": "1.0.0", "status": {"name": "i1", "state": "installing"}},
+                        {"version": "1.0.0", "status": {"name": "i2", "state": "installingCanceling"}},
                         {"status": {"name": "i3", "state": "installingCanceled"}},
-                        {"status": {"name": "i4", "state": "installingCancelFailed"}},
+                        {"version": "1.0.0", "status": {"name": "i4", "state": "installingCancelFailed"}},
                         {"status": {"name": "i5", "state": "installFailed"}},
 
                         {"status": {"name": "u1", "state": "uninstalled"}},
@@ -204,16 +210,26 @@ func TestFetchInstalledAppsFiltersPreInstallStates(t *testing.T) {
 		t.Fatalf("fetchInstalledApps: %v", err)
 	}
 
-	// Only the three deliberately-allowed states should survive the
-	// filter. The names are unique per row so we can rely on the sort
-	// order in fetchInstalledApps (alphabetical within a source).
+	// Every row whose state is NOT in the SPA's `uninstalledAppStates`
+	// must survive. The 6 SPA-filtered rows above (`p3`, `d3`, `d5`,
+	// `i3`, `i5`, `u1`) drop out; the remaining 12 stay. Sort order is
+	// alphabetical-by-name within a single source.
 	want := []AppDisplayInfo{
+		{Name: "d1", Source: "market.olares", Version: "1.0.0", State: "downloading"},
+		{Name: "d2", Source: "market.olares", Version: "1.0.0", State: "downloadingCanceling"},
+		{Name: "d4", Source: "market.olares", Version: "1.0.0", State: "downloadingCancelFailed"},
+		{Name: "i1", Source: "market.olares", Version: "1.0.0", State: "installing"},
+		{Name: "i2", Source: "market.olares", Version: "1.0.0", State: "installingCanceling"},
+		{Name: "i4", Source: "market.olares", Version: "1.0.0", State: "installingCancelFailed"},
 		{Name: "init", Source: "market.olares", Version: "1.0.0", State: "initializing"},
 		{Name: "initcanc", Source: "market.olares", Version: "1.0.0", State: "initializingCanceling"},
+		{Name: "p1", Source: "market.olares", Version: "1.0.0", State: "pending"},
+		{Name: "p2", Source: "market.olares", Version: "1.0.0", State: "pendingCanceling"},
+		{Name: "p4", Source: "market.olares", Version: "1.0.0", State: "pendingCancelFailed"},
 		{Name: "running", Source: "market.olares", Version: "1.0.0", State: "running"},
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("pre-install filter mismatch:\n got: %#v\nwant: %#v", got, want)
+		t.Fatalf("SPA-aligned filter mismatch:\n got: %#v\nwant: %#v", got, want)
 	}
 }
 
@@ -292,8 +308,10 @@ func TestFetchInstalledAppsClonesEnrichViaRawAppName(t *testing.T) {
 
 // TestFetchInstalledAppsScopedToSource confirms that passing showAll=false
 // + a source name only returns rows belonging to that source. The studio
-// row is deliberately in `installing` state to also re-prove the state
-// filter is honored on the scoped path.
+// row is deliberately in `installFailed` state (one of the six SPA
+// `uninstalledAppStates`) so the test also re-proves the state filter
+// is honored on the scoped path — `ghost` is dropped both by source
+// scope and by the state filter, leaving only the `cli` row.
 func TestFetchInstalledAppsScopedToSource(t *testing.T) {
 	srv := newFakeMarketDataServer(t, stateAndDataResponses{
 		state: `{
@@ -306,7 +324,7 @@ func TestFetchInstalledAppsScopedToSource(t *testing.T) {
                         {"version": "0.9.0", "status": {"name": "myapp", "state": "running"}}
                     ]},
                     "studio": {"type": "local", "app_state_latest": [
-                        {"version": "0.0.1", "status": {"name": "ghost", "state": "installing"}}
+                        {"status": {"name": "ghost", "state": "installFailed"}}
                     ]}
                 }
             }
@@ -329,7 +347,7 @@ func TestFetchInstalledAppsScopedToSource(t *testing.T) {
 }
 
 // TestFetchInstalledAppsCatalogFailureFallback proves that a broken
-// /market/data does not blank out the installed listing: enrichment
+// /market/data does not blank out the "my apps" listing: enrichment
 // just degrades to "name + state + source + whatever title the state
 // row already carries" for every row.
 func TestFetchInstalledAppsCatalogFailureFallback(t *testing.T) {
@@ -352,8 +370,8 @@ func TestFetchInstalledAppsCatalogFailureFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fetchInstalledApps: %v", err)
 	}
-	// Even with the catalog broken, the installed version still
-	// surfaces because it comes from /market/state, not /market/data.
+	// Even with the catalog broken, the row's version still surfaces
+	// because it comes from /market/state, not /market/data.
 	want := []AppDisplayInfo{
 		{Name: "firefox", Title: "Firefox", Version: "1.1.0", Source: "market.olares", State: "running"},
 	}
@@ -367,9 +385,10 @@ func TestFetchInstalledAppsCatalogFailureFallback(t *testing.T) {
 // without copy/pasting JSON literals.
 func marketStateFixture() string {
 	// firefox carries version 1.1.0 at the AppStateLatest level (the
-	// version actually deployed). The catalog fixture intentionally
-	// advertises 1.2.3 as the latest available — the test asserts the
-	// CLI surfaces the state's 1.1.0, not the catalog's 1.2.3.
+	// version on the user's state row). The catalog fixture
+	// intentionally advertises 1.2.3 as the latest available — the
+	// test asserts the CLI surfaces the state's 1.1.0, not the
+	// catalog's 1.2.3.
 	return `{
         "user_data": {
             "sources": {
@@ -390,7 +409,7 @@ func marketStateFixture() string {
                 "studio": {
                     "type": "local",
                     "app_state_latest": [
-                        {"type": "app", "version": "0.0.1", "status": {"name": "ghost", "state": "installing"}}
+                        {"type": "app", "status": {"name": "ghost", "state": "installFailed"}}
                     ]
                 }
             },
@@ -402,8 +421,8 @@ func marketStateFixture() string {
 func marketDataFixture() string {
 	// /market/data is the CATALOG: it reflects the latest version
 	// available upstream. firefox is at 1.2.3 here even though the
-	// state fixture says the user has 1.1.0 installed — that gap is
-	// the exact scenario the parser must surface as the installed
+	// state fixture says the user's row is on 1.1.0 — that gap is
+	// the exact scenario the parser must surface as the row's
 	// version, not the catalog one.
 	return `{
         "user_data": {

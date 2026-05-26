@@ -19,20 +19,27 @@ func NewCmdMarketList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls", "l"},
-		Short:   "List apps from market sources (catalog by default; --installed for installed apps)",
+		Short:   "List apps from market sources (catalog by default; --mine for the user's apps)",
 		Long: `List apps from market sources.
 
 By default this browses the catalog: the CLI auto-selects a source from market
 settings (use -s to override, -a to include every source).
 
-Pass --installed (-i) to instead list the apps the active profile's user has
-currently installed. Installed-mode differences:
+Pass --mine (-m) to instead list the active profile's apps — the same set
+the Market UI's "My Terminus" tab shows. "My apps" is broader than
+"completed installs": in-flight rows (pending / downloading / installing /
+*Canceling / *CancelFailed), post-install transitional rows (upgrading /
+resuming / stopping / applyingEnv / uninstalling) and post-install
+failures (upgradeFailed / stopFailed / resumeFailed / applyEnvFailed /
+uninstallFailed) all surface. Only the SPA's six "uninstalled" states
+(uninstalled / installFailed / installingCanceled / downloadFailed /
+downloadingCanceled / pendingCanceled) are filtered out, matching the
+Market UI exactly.
+
+"Mine" mode differences vs catalog browse:
 
   - Source scope defaults to "all sources" (no -a needed); pass -s to narrow.
-  - Output adds a STATE column showing the live row state from /market/state
-    (e.g. running / stopped / upgrading / *Failed). Transitional pre-install
-    states (pending / installing / installFailed / installingCanceled / ...)
-    are filtered out so the list matches "what I actually have right now".
+  - Output adds a STATE column showing the live row state from /market/state.
   - Title / version / categories are best-effort enriched from /market/data;
     locally-uploaded charts that no longer appear in the catalog still show
     up but may render with blank title / version.
@@ -43,9 +50,9 @@ Examples:
   olares-cli market list -a
   olares-cli market list -c AI
   olares-cli market list -o json
-  olares-cli market list --installed
-  olares-cli market list --installed -s cli
-  olares-cli market list --installed -c AI -o json`,
+  olares-cli market list --mine
+  olares-cli market list --mine -s cli
+  olares-cli market list --mine -c AI -o json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runList(opts)
@@ -54,7 +61,7 @@ Examples:
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
 	opts.addAllSourcesFlag(cmd)
-	opts.addInstalledFlag(cmd)
+	opts.addMineFlag(cmd)
 	cmd.Flags().StringVarP(&opts.Category, "category", "c", "", "filter by category")
 	return cmd
 }
@@ -133,7 +140,7 @@ func runList(opts *MarketOptions) error {
 		return opts.failOp("list", "", err)
 	}
 
-	if opts.Installed {
+	if opts.Mine {
 		return runListInstalled(opts, mc)
 	}
 
@@ -190,12 +197,20 @@ func runList(opts *MarketOptions) error {
 	return nil
 }
 
-// fetchInstalledApps queries /market/state for the user's installed rows
-// and best-effort enriches each row with title / version / categories
-// from /market/data. The catalog fetch is best-effort because a locally
+// fetchInstalledApps queries /market/state for the active profile's "My
+// Terminus" rows (i.e. every per-user state row except the 6 SPA
+// `uninstalledAppStates` — see notInstalledStates in types.go) and
+// best-effort enriches each row with title / version / categories from
+// /market/data. The catalog fetch is best-effort because a locally
 // uploaded chart that has since been deleted from its source can still
-// appear in the user's state but no longer in the catalog; we don't want
-// that to drop it from the listing.
+// appear in the user's state but no longer in the catalog; we don't
+// want that to drop it from the listing.
+//
+// The function is still named "fetchInstalledApps" rather than
+// "fetchMyApps" because internally we use "installed" as shorthand for
+// "present in the per-user state map and not in the SPA's
+// uninstalledAppStates denylist" — which intentionally includes
+// in-flight install rows. `--mine` is just the UX-friendly spelling.
 //
 // `source` and `showAll` follow the same semantics as fetchApps: when
 // showAll is true every source is included; otherwise only the row's
@@ -205,12 +220,12 @@ func fetchInstalledApps(mc *MarketClient, source string, showAll bool) ([]AppDis
 
 	stateResp, err := mc.GetMarketState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get installed apps: %w", err)
+		return nil, fmt.Errorf("failed to get user's market state: %w", err)
 	}
 
 	var stateData MarketStateResponse
 	if err := json.Unmarshal(stateResp.Data, &stateData); err != nil {
-		return nil, fmt.Errorf("failed to parse installed app state: %w", err)
+		return nil, fmt.Errorf("failed to parse user's market state: %w", err)
 	}
 
 	if stateData.UserData == nil {
@@ -243,11 +258,14 @@ func fetchInstalledApps(mc *MarketClient, source string, showAll bool) ([]AppDis
 			entry := AppDisplayInfo{
 				Name: name,
 				// Version comes from AppStateLatest.Version, which is
-				// the version actually deployed for this row. Falling
-				// back to the catalog's "latest available" would
-				// silently lie whenever the user is behind upstream,
-				// so we deliberately leave Version empty if the state
-				// row didn't carry one (older backends, edge cases).
+				// the version recorded on this per-user state row —
+				// the chart the user picked to install / upgrade
+				// to (regardless of whether the operation has
+				// completed). Falling back to the catalog's "latest
+				// available" would silently lie whenever the user is
+				// behind upstream, so we deliberately leave Version
+				// empty if the state row didn't carry one (older
+				// backends, mid-pending rows, edge cases).
 				Version: strings.TrimSpace(appState.Version),
 				Title:   appState.Status.Title,
 				Source:  sourceName,
@@ -255,8 +273,8 @@ func fetchInstalledApps(mc *MarketClient, source string, showAll bool) ([]AppDis
 			}
 			// Catalog enrichment is restricted to title / categories —
 			// fields the state row does not carry. Version stays the
-			// real installed version above, even if it disagrees with
-			// the catalog's latest.
+			// version on the user's state row above, even if it
+			// disagrees with the catalog's latest.
 			//
 			// Clones get their own per-instance `name` (e.g.
 			// `windowsefe992`) but the catalog only knows the source
@@ -292,10 +310,11 @@ func fetchInstalledApps(mc *MarketClient, source string, showAll bool) ([]AppDis
 }
 
 // buildCatalogLookup pre-aggregates /market/data into a (source/name) →
-// AppDisplayInfo map so fetchInstalledApps can enrich each installed row
-// in O(1). Returns an empty map (never nil) on any failure: enrichment
-// is best-effort and we'd rather render rows with blank title/version
-// than fail the whole listing because the catalog call hiccupped.
+// AppDisplayInfo map so fetchInstalledApps can enrich each per-user
+// state row in O(1). Returns an empty map (never nil) on any failure:
+// enrichment is best-effort and we'd rather render rows with blank
+// title/version than fail the whole listing because the catalog call
+// hiccupped.
 func buildCatalogLookup(mc *MarketClient, ctx context.Context) map[string]AppDisplayInfo {
 	lookup := map[string]AppDisplayInfo{}
 	dataResp, err := mc.GetMarketData(ctx)
@@ -324,16 +343,21 @@ func buildCatalogLookup(mc *MarketClient, ctx context.Context) map[string]AppDis
 	return lookup
 }
 
-// runListInstalled implements `market list --installed`. Source scope
-// defaults to "all sources" (so the user sees every installed app
+// runListInstalled implements `market list --mine`. Source scope
+// defaults to "all sources" (so the user sees every one of their apps
 // without remembering -a); passing -s narrows to that source. -a stays
-// a no-op when nothing else pins the scope.
+// a no-op when nothing else pins the scope. The function name is kept
+// as runListInstalled (rather than runListMine) because internally
+// "installed" is shorthand for "present in the per-user state map and
+// not hidden by the SPA's `uninstalledAppStates`" — which is the same
+// set the Market UI's "My Terminus" tab shows. `--mine` is just the
+// UX-friendly spelling of that set.
 func runListInstalled(opts *MarketOptions, mc *MarketClient) error {
 	source := strings.TrimSpace(opts.Source)
 	showAll := opts.AllSources || source == ""
 
 	if !showAll {
-		opts.info("Filtering installed apps by source '%s' (use -a or omit -s for all sources)", source)
+		opts.info("Filtering my apps by source '%s' (use -a or omit -s for all sources)", source)
 	}
 
 	apps, err := fetchInstalledApps(mc, source, showAll)
@@ -360,11 +384,11 @@ func runListInstalled(opts *MarketOptions, mc *MarketClient) error {
 	if len(apps) == 0 {
 		switch {
 		case category != "":
-			fmt.Fprintf(os.Stderr, "No installed apps found in category '%s'\n", category)
+			fmt.Fprintf(os.Stderr, "No apps in your Market in category '%s'\n", category)
 		case !showAll:
-			fmt.Fprintf(os.Stderr, "No installed apps found in source '%s'\n", source)
+			fmt.Fprintf(os.Stderr, "No apps in your Market in source '%s'\n", source)
 		default:
-			fmt.Fprintln(os.Stderr, "No installed apps found")
+			fmt.Fprintln(os.Stderr, "No apps in your Market")
 		}
 		return nil
 	}
@@ -380,7 +404,7 @@ func runListInstalled(opts *MarketOptions, mc *MarketClient) error {
 	w.Flush()
 
 	if !opts.NoHeaders {
-		fmt.Fprintf(os.Stderr, "\nTotal: %d installed app(s)\n", len(apps))
+		fmt.Fprintf(os.Stderr, "\nTotal: %d app(s) in your Market\n", len(apps))
 	}
 	return nil
 }

@@ -41,11 +41,18 @@ type MarketOptions struct {
 	DeleteData     bool
 	Title          string
 
-	// Installed narrows the catalog list verb to apps the user currently
-	// has installed. It diverts `list` away from /market/data (catalog
-	// browse) toward /market/state (per-user installed rows) and changes
-	// the default source-scope semantics — see runListInstalled.
-	Installed bool
+	// Mine narrows the catalog list verb to the active profile's apps —
+	// the same set the Market UI's "My Terminus" tab shows. This is
+	// broader than "完成安装的应用 / completed installs": in-flight
+	// install / upgrade rows (`pending`, `downloading`, `installing`,
+	// `*Canceling`, `*CancelFailed`, `upgrading`, `resuming`, ...) and
+	// post-install failures (`installFailed` is hidden, but
+	// `upgradeFailed`, `stopFailed`, `resumeFailed`, `applyEnvFailed`,
+	// ... all surface) are also "the user's apps". The flag diverts
+	// `list` away from /market/data (catalog browse) toward
+	// /market/state (per-user state rows) and changes the default
+	// source-scope semantics — see runListInstalled.
+	Mine bool
 
 	// Watch-mode flags. Off by default so today's "fire and forget"
 	// scripts keep their current exit semantics; opt in per invocation.
@@ -125,13 +132,18 @@ func (o *MarketOptions) addTitleFlag(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Title, "title", "", "display title for the cloned app instance")
 }
 
-// addInstalledFlag wires --installed/-i onto verbs that can pivot from
-// catalog browse to "what's currently installed". Today this is only
+// addMineFlag wires --mine/-m onto verbs that can pivot from catalog
+// browse to "the active profile's apps" — the same set the Market UI's
+// "My Terminus" tab shows. Critically this is NOT the same as "已安装
+// 应用 / completed installs": in-flight install rows and post-install
+// failure / transitional rows are part of "my apps" and are listed here
+// (only the SPA's 6 `uninstalledAppStates` are hidden — see
+// notInstalledStates in types.go). Today this only applies to
 // `market list`, but kept here for parity with the other flag helpers
-// so future verbs (e.g. categories --installed) can reuse it.
-func (o *MarketOptions) addInstalledFlag(cmd *cobra.Command) {
-	cmd.Flags().BoolVarP(&o.Installed, "installed", "i", false,
-		"list apps currently installed by the active profile's user (queries /market/state instead of the catalog)")
+// so future verbs (e.g. `categories --mine`) can reuse it.
+func (o *MarketOptions) addMineFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolVarP(&o.Mine, "mine", "m", false,
+		"list the active profile's apps — mirrors the Market UI's My Terminus tab (includes in-flight installs/upgrades and failed rows; queries /market/state instead of the catalog)")
 }
 
 // addWatchFlags exposes --watch / --watch-timeout / --watch-interval on

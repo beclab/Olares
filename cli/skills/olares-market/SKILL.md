@@ -1,7 +1,7 @@
 ---
 name: olares-market
 version: 1.2.0
-description: "olares-cli market command tree against the per-user Market app-store v2 API: list (catalog browse + `--installed` view of the user's installed apps) / get / categories for catalog browsing; install / uninstall / upgrade / clone / cancel / stop / resume for lifecycle; status for runtime state; upload / delete for local chart sources (cli / upload / studio); --watch / --watch-timeout / --watch-interval to block until terminal state. Covers source resolution (market.olares catalog vs local sources), the install/upgrade/uninstall/stop/resume/cancel state machine, OpType gating for race-safe watching, the op-agnostic status --watch recovery path, the `list --installed` filter that surfaces 'what apps do I have right now' across every source, and JSON shape additions (finalState/finalOpType/state). Use whenever the user mentions market / app store / install / upgrade / uninstall / clone / stop / resume / cancel / status / installed apps / 'what's installed' / upload chart / app state / running / installFailed / --watch, asks 'is firefox installed yet' or 'show me my apps', or sees errors like 'app X is not installed', 'watch timed out', 'watch canceled by user', '--watch requires an app name'."
+description: "olares-cli market command tree against the per-user Market app-store v2 API: list (catalog browse + `--mine` view of the active profile's apps — same set the Market UI's My Terminus tab shows; INCLUDES in-flight installs / upgrades / failures, not just completed installs) / get / categories for catalog browsing; install / uninstall / upgrade / clone / cancel / stop / resume for lifecycle; status for runtime state; upload / delete for local chart sources (cli / upload / studio); --watch / --watch-timeout / --watch-interval to block until terminal state. Covers source resolution (market.olares catalog vs local sources), the install/upgrade/uninstall/stop/resume/cancel state machine, OpType gating for race-safe watching, the op-agnostic status --watch recovery path, the `list --mine` filter that surfaces 'what apps do I have right now' across every source, and JSON shape additions (finalState/finalOpType/state). Use whenever the user mentions market / app store / install / upgrade / uninstall / clone / stop / resume / cancel / status / installed apps / 'my apps' / 'show me my apps' / '我的应用' / upload chart / app state / running / installFailed / --watch, asks 'is firefox installed yet' or 'show me my apps', or sees errors like 'app X is not installed', 'watch timed out', 'watch canceled by user', '--watch requires an app name'."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -84,51 +84,76 @@ olares-cli market list -o json
 ```
 
 ```bash
-olares-cli market list --installed              # what apps does this user have right now (all sources by default)
-olares-cli market list -i -s cli                # narrow to a single source
-olares-cli market list -i -c AI -o json         # category filter still works in installed mode
+olares-cli market list --mine                   # what apps does this user have right now (all sources by default)
+olares-cli market list -m -s cli                # narrow to a single source
+olares-cli market list -m -c AI -o json         # category filter still works in mine mode
 ```
 
-`list --installed` (alias `-i`) diverts the verb from `/market/data`
-(catalog browse) to `/market/state` (per-user installed rows) and is the
-canonical "what's installed" listing. Differences vs catalog browse:
+`list --mine` (alias `-m`) diverts the verb from `/market/data`
+(catalog browse) to `/market/state` (per-user state rows) and is the
+canonical "show me my apps" listing — the exact same set the Market UI's
+"My Terminus" tab shows.
+
+> **"My apps" ≠ "已安装应用 / completed installs only."** The Market UI
+> shows in-flight install rows (`pending` / `downloading` / `installing`
+> + their `*Canceling` / `*CancelFailed` variants), every post-install
+> transitional state (`upgrading` / `resuming` / `stopping` /
+> `applyingEnv` / `uninstalling`) and every post-install failure
+> (`upgradeFailed` / `stopFailed` / `resumeFailed` / `applyEnvFailed` /
+> `uninstallFailed`) on My Terminus as well, because they're all "the
+> user's apps" — the user clicked something and expects to monitor /
+> retry / cancel the row. `--mine` matches that mental model. Only the
+> 6 SPA-hidden states (see below) drop out.
+
+Differences vs catalog browse:
 
 - **Source scope defaults to every source** — pass `-s` to narrow to one,
   `-a` (or omitting `-s`) keeps the full cross-source view. This matches
   the agent's mental model of "show me my apps" without forcing `-a`.
-- **State filter** — rows that never finished applying their chart are
-  hidden. The full denylist mirrors the upstream install path in
-  `framework/app-service/pkg/appstate/state_transition.go`
-  (`pending → downloading → installing → initializing → running`) plus
-  every `*Canceling` / `*Canceled` / `*CancelFailed` / `*Failed` variant
-  reachable before `initializing`, plus terminal `uninstalled`:
-  `uninstalled`, `pending`, `pendingCanceling`, `pendingCanceled`,
-  `pendingCancelFailed`, `downloading`, `downloadingCanceling`,
-  `downloadingCanceled`, `downloadingCancelFailed`, `downloadFailed`,
-  `installing`, `installingCanceling`, `installingCanceled`,
-  `installingCancelFailed`, `installFailed`. Post-install transitional
-  states (`upgrading` / `stopping` / `resuming` / `uninstalling` /
-  `applyingEnv` / `*Failed`) all surface so the listing matches "apps I
-  have at all", not "apps that are currently running".
-  - Note `initializing` and `initializingCanceling` are deliberately NOT
-    in the denylist: `initializing` is reused by Resuming / Upgrading /
-    ApplyingEnv transitions per `state_transition.go`, and
-    `initializingCanceling` always transitions to `stopping → stopped`
-    (still an installed-but-stopped row), so excluding either would
-    briefly drop rows that the user does have.
+- **State filter mirrors the SPA's "My Terminus" filter exactly.** The
+  denylist is the SPA's `uninstalledAppStates` set in
+  [`apps/packages/app/src/constant/config.ts`](apps/packages/app/src/constant/config.ts)
+  (around line 170), which `MarketRemotePage.vue` →
+  `appStore.getSourceInstalledApp(sourceId)` calls through
+  `uninstalledApp(status)` to decide what shows up under the Market's
+  "My Terminus" tab. The 6 hidden states are: `pendingCanceled`,
+  `downloadingCanceled`, `downloadFailed`, `installFailed`,
+  `installingCanceled`, `uninstalled`. Everything else stays — including
+  in-flight install rows (`pending`, `downloading`, `installing` plus
+  their `*Canceling` / `*CancelFailed` variants), `initializing` /
+  `initializingCanceling`, and every post-install transitional /
+  failure state (`running`, `stopped`, `stopping`, `stopFailed`,
+  `resuming`, `resumeFailed`, `upgrading`, `upgradeFailed`,
+  `uninstalling`, `uninstallFailed`, `applyingEnv`, `applyEnvFailed`,
+  `*Canceling` / `*Canceled` / `*CancelFailed` siblings).
+  - This deliberately does NOT mirror the backend state machine in
+    `framework/app-service/pkg/appstate/state_transition.go`: the SPA
+    keeps `pending` / `downloading` / `installing` rows visible on My
+    Terminus because the user just clicked install and wants to
+    see / monitor / cancel the in-progress row, so the CLI must show
+    them too for the two views to agree.
   - Use `market status` if you specifically want a runtime-state view.
+  - If the SPA changes its `uninstalledAppStates` set, update the
+    `notInstalledStates` map in `cli/cmd/ctl/market/types.go` and the
+    `TestIsInstalledState` / `TestFetchInstalledAppsMirrorsSpaUninstalledFilter`
+    tables in `cli/cmd/ctl/market/list_test.go` together so the two
+    listings stay in sync.
 - **Output adds a STATE column** and (for JSON) a `state` field.
-- **Version is the actually-installed version**, not the catalog latest.
-  It comes from the `version` field at the `AppStateLatest` level of
-  `/market/state` (the same field the SPA's `AppStatusLatest` interface
-  reads). If the user installed 1.0.10 and the marketplace catalog has
-  since moved to 1.2.3, this listing will surface 1.0.10 — that is the
-  intended behavior; do not "correct" it to the catalog version. Title
-  and categories ARE best-effort enriched from `/market/data`;
-  locally-uploaded charts that have since been deleted from their source
-  still surface but may render with blank title / categories. Version
-  is left blank only when the state row genuinely lacks it (older
-  backends, in-flight rows that haven't been bound yet).
+- **Version is the version on the user's state row**, not the catalog
+  latest. It comes from the `version` field at the `AppStateLatest`
+  level of `/market/state` (the same field the SPA's `AppStatusLatest`
+  interface reads) — the chart the user picked for this row, regardless
+  of whether the install / upgrade has completed. If the user installed
+  1.0.10 and the marketplace catalog has since moved to 1.2.3, this
+  listing will surface 1.0.10 — that is the intended behavior; do not
+  "correct" it to the catalog version. During an upgrade in flight,
+  the row may show the target version while STATE is still `upgrading`,
+  which is also intentional. Title and categories ARE best-effort
+  enriched from `/market/data`; locally-uploaded charts that have since
+  been deleted from their source still surface but may render with
+  blank title / categories. Version is left blank only when the state
+  row genuinely lacks it (older backends, in-flight rows that haven't
+  been bound yet).
 - **Clones look up the catalog by `rawAppName`, not their unique
   `name`.** A cloned multi-instance app gets its own per-instance
   identifier (e.g. `windowsefe992`) but the catalog only knows the
@@ -166,14 +191,18 @@ olares-cli market status firefox --watch        # see the --watch section
 - If the row exists but under a different source than the one the user passed, the CLI prints an info hint `App is installed under source 'Y' (not 'X')` and continues to render the row, so the agent does not need to retry blindly.
 - `runStatusAll` (no app argument) explicitly rejects `--watch`. Use `status <app> --watch` instead.
 
-> `market status` (no app) and `market list --installed` overlap but are
+> `market status` (no app) and `market list --mine` overlap but are
 > not interchangeable: `status` is the runtime-state-focused view
 > (`STATE / OPERATION / PROGRESS`, filters by source by default), while
-> `list --installed` is the installation-inventory view
+> `list --mine` is the "my apps" inventory view
 > (`NAME / TITLE / VERSION / STATE / SOURCE / CATEGORIES`, defaults to
-> every source and hides rows that never reached a fully-installed
-> state). Prefer `list --installed` when the user asks "what apps do I
-> have"; prefer `status` when they want runtime / progress detail.
+> every source and hides exactly the same rows the Market SPA hides
+> from its "My Terminus" tab — the 6 `uninstalledAppStates` listed in
+> the State filter bullet above). Prefer `list --mine` when the
+> user asks "what apps do I have" / "show me my apps" / "我的应用";
+> prefer `status` when they want runtime / progress detail. Note that
+> "my apps" deliberately INCLUDES in-flight installs and failed rows
+> (not just `running` ones), since that is what the SPA shows.
 
 ### Lifecycle (mutating, support `--watch`)
 
@@ -381,8 +410,8 @@ olares-cli market install myapp -s cli --watch
 Inventory check — "what apps does this user have?":
 
 ```bash
-olares-cli market list --installed                       # all sources by default
-olares-cli market list --installed -s cli -o json | jq '.[].name'
+olares-cli market list --mine                            # all sources by default
+olares-cli market list --mine -s cli -o json | jq '.[].name'
 ```
 
 ## Security rules

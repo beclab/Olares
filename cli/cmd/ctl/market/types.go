@@ -67,15 +67,16 @@ type SourceStateData struct {
 }
 
 type AppStateLatest struct {
-	// Version is the version that is actually deployed for this row —
-	// i.e. the chart version the user installed (or, after an upgrade,
-	// the new version the upgrade flipped to). The marketplace backend
+	// Version is the version recorded on this per-user state row —
+	// the chart the user picked to install or upgrade to, regardless
+	// of whether that operation has completed. The marketplace backend
 	// exposes it as a sibling of `status`, NOT inside it, so we have
 	// to surface it at this level. The legacy `app` tree never needed
-	// it; the per-user `market list --installed` view does because the
-	// "installed version" otherwise has to be derived from the catalog,
-	// which is wrong as soon as the catalog's latest moves ahead of the
-	// installed row (the most common case).
+	// it; the per-user `market list --mine` view does because the
+	// row's version otherwise has to be derived from the catalog,
+	// which is wrong as soon as the catalog's latest moves ahead of
+	// the user's row (the most common case) or when an upgrade is
+	// mid-flight (the user picked vN+1 but vN is still running).
 	Version string    `json:"version,omitempty"`
 	Status  AppStatus `json:"status"`
 }
@@ -132,78 +133,62 @@ type AppDisplayInfo struct {
 	Version    string   `json:"version"`
 	Source     string   `json:"source"`
 	Categories []string `json:"categories,omitempty"`
-	// State is populated only by the installed-apps listing path
-	// (`market list --installed`). Catalog browsing leaves it empty
-	// and `omitempty` keeps the JSON shape byte-identical with the
+	// State is populated only by the "my apps" listing path
+	// (`market list --mine`). Catalog browsing leaves it empty and
+	// `omitempty` keeps the JSON shape byte-identical with the
 	// pre-flag release.
 	State string `json:"state,omitempty"`
 }
 
-// notInstalledStates enumerates the per-row states that mean the app
-// has never reached a successfully-applied chart, or has been removed.
-// `market list --installed` filters these out so the listing matches
-// the user's mental model of "what apps do I actually have right now".
+// notInstalledStates is the verbatim mirror of the SPA's
+// `uninstalledAppStates` set in apps/packages/app/src/constant/config.ts
+// (around line 170). That set is what `MarketRemotePage.vue` →
+// `appStore.getSourceInstalledApp(sourceId)` consults via
+// `uninstalledApp(status)` to decide which rows are HIDDEN from the
+// Market UI's "My Terminus" tab.
 //
-// The values are kept verbatim against the upstream state machine in
-// framework/app-service/pkg/appstate/state_transition.go (which sits on
-// top of the appv1alpha1 ApplicationManagerState constants). The
-// authoritative install path the backend walks is:
+// `market list --mine` is the CLI counterpart of "My Terminus", so we
+// deliberately mirror this SPA filter — NOT the broader upstream state
+// machine in framework/app-service/pkg/appstate/state_transition.go —
+// so the two listings show the exact same set of apps. Note this
+// means `--mine` is NOT "已安装应用 / completed installs only": the
+// SPA keeps in-flight install rows (`pending`, `downloading`,
+// `installing`, plus their `*Canceling` / `*CancelFailed` variants),
+// post-install transitional rows (`upgrading`, `resuming`, `stopping`,
+// `applyingEnv`, `uninstalling`), and post-install failures
+// (`upgradeFailed`, `stopFailed`, `resumeFailed`, `applyEnvFailed`,
+// `uninstallFailed`, ...) all visible on My Terminus because they're
+// still "the user's apps" — the user clicked something and expects
+// to see / monitor / cancel / retry the row. Only the 6 SPA-hidden
+// states below — terminal-cancel of the install path and terminal
+// `uninstalled` — are NOT part of "my apps".
 //
-//	pending → downloading → installing → initializing → running
+// (The variable name uses "notInstalled" as an internal shorthand for
+// "not part of the user's apps per the SPA filter"; `--mine` is the
+// UX-facing name. Both refer to the same denylist defined here.)
 //
-// All states reachable BEFORE `installing` finishes — including their
-// `*Canceling` / `*Canceled` / `*CancelFailed` and `*Failed` variants —
-// belong here because the helm chart has not been (fully) applied to
-// the cluster yet, so from the user's perspective the app does not
-// exist. `uninstalled` is the post-lifecycle counterpart of the same
-// "no chart on the cluster" condition.
-//
-// Two state names look like they belong here but DO NOT:
-//
-//   - `initializing` is reused by post-install transitions
-//     (`Resuming → Initializing`, `Upgrading → Initializing`,
-//     `ApplyingEnv → Initializing`), so the app IS installed in those
-//     contexts. Even in the first-time-install context the helm
-//     chart has already been applied by the time we hit
-//     `initializing`, so calling it "not installed" would also be
-//     wrong there.
-//   - `initializingCanceling` always transitions to `stopping → stopped`
-//     per state_transition.go, i.e. it terminates as an installed-but-
-//     stopped row. Hiding it from the listing would briefly drop a row
-//     that is about to reappear as `stopped`.
-//
-// If the upstream state machine ever adds another pre-`initializing`
-// step or another cancel/fail variant, extend this set so the filter
-// keeps matching the install path.
+// If the SPA adds or renames an entry in `uninstalledAppStates`, update
+// this set to match so the two listings stay in sync.
 var notInstalledStates = map[string]struct{}{
-	"uninstalled": {},
-
-	"pending":              {},
-	"pendingCanceling":     {},
-	"pendingCanceled":      {},
-	"pendingCancelFailed":  {},
-
-	"downloading":             {},
-	"downloadingCanceling":    {},
-	"downloadingCanceled":     {},
-	"downloadingCancelFailed": {},
-	"downloadFailed":          {},
-
-	"installing":             {},
-	"installingCanceling":    {},
-	"installingCanceled":     {},
-	"installingCancelFailed": {},
-	"installFailed":          {},
+	"pendingCanceled":     {}, // APP_STATUS.PENDING.CANCELED
+	"downloadingCanceled": {}, // APP_STATUS.DOWNLOAD.CANCELED
+	"downloadFailed":      {}, // APP_STATUS.DOWNLOAD.FAILED
+	"installFailed":       {}, // APP_STATUS.INSTALL.FAILED
+	"installingCanceled":  {}, // APP_STATUS.INSTALL.CANCELED
+	"uninstalled":         {}, // APP_STATUS.UNINSTALL.COMPLETED
 }
 
-// isInstalledState reports whether a row's `state` value represents an
-// app that the user effectively has installed. Transitional post-install
-// states (`upgrading`, `initializing` via resume/upgrade, `stopping`,
-// `uninstalling`, `applyingEnv`, …) and their failure / cancel variants
-// all return true because the chart has been applied to the cluster at
-// some point. Only pre-install lifecycle states and `uninstalled` are
-// excluded — see notInstalledStates for the full enumeration and the
-// reasoning behind `initializing` / `initializingCanceling`.
+// isInstalledState reports whether a row's `state` value would render
+// on the SPA's "My Terminus" tab — i.e. whether it counts as one of
+// the user's apps under `market list --mine`. Returns false only for
+// the SPA's six `uninstalledAppStates`; every other state — including
+// in-flight install rows (`pending` / `downloading` / `installing`
+// and their `*Canceling` / `*CancelFailed` variants) plus all
+// post-install transitional / failure states (`upgrading`, `stopping`,
+// `resuming`, `applyingEnv`, `upgradeFailed`, `stopFailed`,
+// `uninstallFailed`, ...) — returns true. The helper name reflects
+// the internal "installed" shorthand; the user-facing semantic is
+// "is this row part of the user's apps?" (== "show on My Terminus").
 func isInstalledState(state string) bool {
 	if state == "" {
 		return false
