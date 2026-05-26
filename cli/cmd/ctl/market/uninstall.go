@@ -3,6 +3,7 @@ package market
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -103,20 +104,63 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 }
 
 // shouldAutoCascade decides the default value of --cascade when the user
-// did not pass the flag, mirroring the SPA's csAppUninstall() default:
-// turn cascade ON when the cluster is single-user AND the app is a v2
-// multi-chart bundle (isCSV2). Both lookups failing is non-fatal: we
-// return false (the existing default) without surfacing the error, so
-// uninstall still proceeds and the backend's own validation has the
-// final say. The why string is only meaningful on the true path —
-// callers should ignore it when auto is false.
+// did not pass the flag, mirroring the SPA's csAppUninstall() / csAppStop()
+// default: turn cascade ON when the cluster is single-user AND the app
+// is a v2 multi-chart bundle (isCSV2). All probes failing is non-fatal:
+// we return false (the existing default) without surfacing the error,
+// so uninstall / stop still proceeds and the backend's own validation
+// has the final say. The why string is only meaningful on the true
+// path — callers should ignore it when auto is false.
 //
 // Order matters for cost: user-count probe is one HTTP call against
 // /api/users/v2, the CS probe is two (/market/state to discover the
 // app's source + /apps to read its catalog metadata). Skipping the CS
 // probe when the cluster is multi-user is the cheap fast path.
 func shouldAutoCascade(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName string) (bool, string) {
-	totals, err := fetchUserTotals(ctx, opts)
+	return shouldAutoCascadeWith(ctx, newCascadeProbe(opts, mc), appName)
+}
+
+// cascadeProbe is the unit-testable seam for shouldAutoCascade. The
+// three closures map 1:1 to the production calls (fetchUserTotals
+// against /api/users/v2 on DesktopURL, lookupInstalledApp against
+// /market/state, fetchAppInfo against /apps). Tests construct a
+// cascadeProbe directly to drive shouldAutoCascadeWith without having
+// to stand up a full cmdutil.Factory + http stack.
+type cascadeProbe struct {
+	fetchTotals  func(ctx context.Context) (int, error)
+	lookupRow    func(ctx context.Context, appName string) (*installedAppRow, error)
+	fetchAppMeta func(ctx context.Context, name, source string) (map[string]interface{}, error)
+}
+
+func newCascadeProbe(opts *MarketOptions, mc *MarketClient) cascadeProbe {
+	return cascadeProbe{
+		fetchTotals: func(ctx context.Context) (int, error) { return fetchUserTotals(ctx, opts) },
+		lookupRow: func(ctx context.Context, name string) (*installedAppRow, error) {
+			return lookupInstalledApp(ctx, mc, name)
+		},
+		fetchAppMeta: func(ctx context.Context, name, source string) (map[string]interface{}, error) {
+			return fetchAppInfo(ctx, mc, name, source)
+		},
+	}
+}
+
+// shouldAutoCascadeWith is the testable core of shouldAutoCascade.
+//
+// Critical clone parity bit: the catalog (/apps) is indexed by the
+// source app name (e.g. `windows`), NOT by the per-instance clone name
+// the user typed (`windowsefe992`). The state row carries both — the
+// canonical row.Name and a row.RawName that, for clones, is the
+// source app. We MUST use RawName for the isCSV2 catalog lookup
+// whenever it differs from Name, otherwise the /apps response comes
+// back empty, isCSV2 returns false, and the auto-cascade default
+// silently diverges from the SPA's csAppUninstall() / csAppStop()
+// (which read app_info.app_entry.{apiVersion,subCharts} from the
+// SOURCE app's `AppFullInfo` — that's also keyed by RawName under the
+// hood). The same RawName-preferred catalog-key trick is used by
+// `preflightUpgrade` (preflight.go) and `fetchInstalledApps`
+// (list.go) — keep all three in lockstep.
+func shouldAutoCascadeWith(ctx context.Context, p cascadeProbe, appName string) (bool, string) {
+	totals, err := p.fetchTotals(ctx)
 	if err != nil || totals == 0 {
 		return false, ""
 	}
@@ -124,40 +168,32 @@ func shouldAutoCascade(ctx context.Context, opts *MarketOptions, mc *MarketClien
 		return false, ""
 	}
 
-	source, err := lookupAppSource(ctx, mc, appName)
-	if err != nil || source == "" {
+	row, err := p.lookupRow(ctx, appName)
+	if err != nil || row == nil || row.Source == "" {
 		return false, ""
 	}
 
-	appInfo, err := fetchAppInfo(ctx, mc, appName, source)
+	lookupName := strings.TrimSpace(row.RawName)
+	if lookupName == "" {
+		lookupName = row.Name
+	}
+	if lookupName == "" {
+		lookupName = appName
+	}
+
+	appInfo, err := p.fetchAppMeta(ctx, lookupName, row.Source)
 	if err != nil {
 		return false, ""
 	}
 	if !isCSV2(appInfo) {
 		return false, ""
 	}
-	return true, fmt.Sprintf("single-user instance + v2 multi-chart app (source %q)", source)
-}
-
-// lookupAppSource finds which Market source currently carries appName's
-// per-user state row, so the auto-cascade probe knows where to read its
-// catalog metadata from for the isCSV2 check. Empty string + nil error
-// means "not currently installed" — that is a valid signal (the backend
-// will surface a clean not-found error from the DELETE itself), so we
-// don't pretend it's a CS app.
-func lookupAppSource(ctx context.Context, mc *MarketClient, appName string) (string, error) {
-	resp, err := mc.GetMarketState(ctx)
-	if err != nil {
-		return "", err
+	// Surface the catalog name (RawName for clones) in the reason
+	// string so the stderr hint matches what the user would see in the
+	// SPA's dialog — a clone like windowsefe992 reads "via source app
+	// 'windows'" which makes the cascade decision auditable.
+	if lookupName != "" && lookupName != appName {
+		return true, fmt.Sprintf("single-user instance + v2 multi-chart app (via source app %q in source %q)", lookupName, row.Source)
 	}
-	rows, err := parseStatusRows(resp, "", true)
-	if err != nil {
-		return "", err
-	}
-	for _, r := range rows {
-		if r.Name == appName {
-			return r.Source, nil
-		}
-	}
-	return "", nil
+	return true, fmt.Sprintf("single-user instance + v2 multi-chart app (source %q)", row.Source)
 }
