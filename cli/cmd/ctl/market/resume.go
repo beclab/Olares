@@ -13,11 +13,24 @@ func NewCmdMarketResume(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "resume {app-name}",
 		Aliases: []string{"start"},
-		Short:   "Resume a stopped app",
+		Short:   "Resume a stopped app (sends POST /apps/resume)",
 		Long: `Resume a stopped (suspended) application.
 
+Source is implicit: resume acts on whichever per-user state row matches
+the app name, regardless of source (no -s flag exposed).
+
+--watch blocks until the row settles at 'running' (or one of the
+resumeFailed / resumingCanceled / resumingCancelFailed failure states).
+The watcher is idempotent: 'resume' against an already-running row
+returns immediately with success ({state=running, opType=""}), rather
+than hanging until --watch-timeout fires.
+
 Examples:
-  olares-cli market resume myapp`,
+  olares-cli market resume firefox                         # fire-and-forget; returns once backend accepts
+  olares-cli market resume firefox --watch                 # block until row reports running
+  olares-cli market resume firefox --watch -o json         # JSON OperationResult with finalState/finalOpType
+  olares-cli market resume firefox --watch -q              # silent; exit code only
+  olares-cli market resume firefox --watch --watch-interval 1s --watch-timeout 2m`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runResume(opts, args[0])

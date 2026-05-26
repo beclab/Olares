@@ -20,17 +20,42 @@ func NewCmdMarketStatus(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "status [app-name]",
 		Aliases: []string{"stat", "st"},
-		Short:   "Show runtime status of installed apps",
-		Long: `Show runtime status of installed apps.
+		Short:   "Show runtime state / progress for installed apps (read /market/state)",
+		Long: `Show runtime status of installed apps. Output is the live
+state row (STATE / OPERATION / PROGRESS / SOURCE), not the catalog.
 
-If an app name is provided, shows detailed status for that app only.
-Without an app name, lists status of all installed apps.
+Two forms:
+
+  status                — list all installed-app rows in the resolved
+                          source (or every source with -a).
+  status <app>          — single-app row, with a source-fallback hint:
+                          if the row is missing in the resolved source
+                          but exists elsewhere, the CLI prints
+                          "App is installed under source 'Y' (not 'X')"
+                          on stderr and still renders the row.
+
+If the row is missing in the resolved source AND in every other source
+the user has, the single-app form prints
+"app 'X' is not installed (run 'olares-cli market install X' to install it)".
+
+--watch is supported only on the single-app form (status <app>); it's
+the "I forgot to pass --watch on install" recovery path. The all-apps
+form rejects --watch with an actionable error.
+
+To list "my apps" with title / categories enrichment, prefer
+'olares-cli market list --mine' (queries the same /market/state
+endpoint but joins against /market/data and filters out the SPA's
+6 hidden "uninstalled" states).
 
 Examples:
-  olares-cli market status
-  olares-cli market status myapp
-  olares-cli market status -a
-  olares-cli market status -o json`,
+  olares-cli market status                        # all rows in the resolved source
+  olares-cli market status -s market.olares       # pin to a specific source
+  olares-cli market status -a                     # every source the user has
+  olares-cli market status firefox                # one app, with source-fallback hint
+  olares-cli market status firefox -a             # search across every source
+  olares-cli market status firefox --watch        # block until terminal state (recovery path)
+  olares-cli market status firefox --watch -o json -q            # silent watch; exit code = verdict
+  olares-cli market status firefox --watch --watch-interval 1s --watch-timeout 10m`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
@@ -222,10 +247,13 @@ func runStatusAll(opts *MarketOptions) error {
 		return opts.printJSON(rows)
 	}
 
+	// `status` doesn't expose --no-headers (only list / categories / get
+	// do), so the header is always printed in table mode. -q still
+	// suppresses everything for scripts that only care about the exit
+	// code, and -o json still emits a structured payload with no
+	// columns at all.
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	if !opts.NoHeaders {
-		fmt.Fprintln(w, "NAME\tSTATE\tOPERATION\tPROGRESS\tSOURCE")
-	}
+	fmt.Fprintln(w, "NAME\tSTATE\tOPERATION\tPROGRESS\tSOURCE")
 	for _, r := range rows {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", r.Name, r.State, r.OpType, r.Progress, r.Source)
 	}

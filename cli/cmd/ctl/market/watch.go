@@ -91,12 +91,50 @@ type watchTarget struct {
 	failureSet map[string]bool
 
 	// absentMeansSuccess flips the "row vanished from /market/state"
-	// signal from "still pending" to "we're done". Only true for
-	// uninstall, where the backend may stop reporting the app once it's
-	// fully uninstalled. We additionally require that we have seen the
-	// row at least once during this watch so a totally-unknown app name
-	// doesn't get reported as "successfully uninstalled".
+	// signal from "still pending" to "we're done". True for uninstall
+	// (the backend may stop reporting the app once it's fully
+	// uninstalled) and for status --watch (an in-flight uninstall the
+	// user is observing). The seen-first guard (see waitForTerminal)
+	// prevents a totally-unknown app name from being misreported as
+	// "successfully uninstalled" — except when acceptInitialAbsent is
+	// also set, which is the only safe path for uninstall (see below).
 	absentMeansSuccess bool
+
+	// acceptInitialAbsent further relaxes absentMeansSuccess: when both
+	// are set, the row being absent on tick zero (before we've ever seen
+	// it) is itself terminal success. This is required for uninstall
+	// when the per-user row was already cleaned up before the DELETE we
+	// just issued — the most common case is a multi-user CS app where
+	// the user previously ran `uninstall <app>` (which cleared their
+	// row) and now re-runs `uninstall <app> --cascade` to tear down the
+	// shared sub-charts. The backend accepts the cascade DELETE without
+	// re-creating the user's row, so the watcher otherwise hangs until
+	// --watch-timeout. Status --watch deliberately does NOT enable this
+	// because its caller (runStatusSingle) fetches the initial row
+	// before invoking waitForTerminal — a "first-poll absent" there
+	// would only mean "row just disappeared between the prefetch and
+	// our first poll", which `absentMeansSuccess && seen` already
+	// handles. Install / upgrade / clone / cancel never enable this
+	// (their absent-at-start state is "not yet provisioned", not "done").
+	acceptInitialAbsent bool
+
+	// idempotentSuccess relaxes the OpType gate for verbs whose
+	// "target state" is unambiguous about being done: `stop` on
+	// already-`stopped` and `resume` on already-`running` are no-ops
+	// for the backend, which means it never bumps OpType to `stop` /
+	// `resume` and instead leaves the row at `state=target, OpType=""`.
+	// With the strict gate that situation looks identical to a still-
+	// pending op and we'd hang until --watch-timeout fires. When this
+	// flag is set, "state ∈ successSet ∧ OpType == ''" is treated as
+	// success: the backend is quiescent at our target state.
+	//
+	// install / upgrade DELIBERATELY don't get this shortcut because
+	// `state=running, OpType=""` could just as well be a stale row
+	// from a previous successful install of a different version with
+	// the new op not yet picked up by the backend — there's no way to
+	// distinguish "no-op success" from "pre-tick-zero" from the row
+	// alone, so we keep the strict gate for those.
+	idempotentSuccess bool
 }
 
 func newWatchTarget(op watchOp, appName, source string) watchTarget {
@@ -121,9 +159,22 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 		t.successSet = map[string]bool{"uninstalled": true}
 		t.failureSet = map[string]bool{"uninstallFailed": true}
 		t.absentMeansSuccess = true
+		// `uninstall <app>` (and especially `uninstall <app> --cascade`
+		// re-run after a previous per-user uninstall) can target a row
+		// that the backend has already removed before we get the first
+		// poll back. The DELETE we just issued was accepted (we wouldn't
+		// be in the watch otherwise — `mc.UninstallApp` returned 200)
+		// and absence from /market/state with op=uninstall semantics is
+		// itself the terminal state we're looking for. See
+		// TestWaitForTerminalUninstallAbsentFromStart.
+		t.acceptInitialAbsent = true
 	case watchStop:
 		t.successSet = map[string]bool{"stopped": true}
 		t.failureSet = map[string]bool{"stopFailed": true}
+		// `stop` on an already-stopped row is a backend no-op: the row
+		// sits at `state=stopped, OpType=""` and the strict gate would
+		// otherwise hang waiting for OpType to bounce to "stop".
+		t.idempotentSuccess = true
 	case watchResume:
 		t.successSet = map[string]bool{"running": true}
 		t.failureSet = map[string]bool{
@@ -131,10 +182,56 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 			"resumingCanceled":     true,
 			"resumingCancelFailed": true,
 		}
+		// Symmetric to stop: `resume` on an already-running row is a
+		// backend no-op and would otherwise hang the watcher.
+		t.idempotentSuccess = true
 	case watchCancel:
-		t.successSet = canceledStates
+		// `cancel` is op-agnostic on settling: once the row leaves its
+		// in-flight phase the cancel has done all it can, regardless of
+		// which terminal bucket the underlying op landed in. The user
+		// only cares whether the request itself was rejected (→
+		// *CancelFailed) or whether the row eventually stopped moving.
+		//
+		// Why this set is wider than canceledStates:
+		//   - `downloadFailed` / `installFailed` / `upgradeFailed` /
+		//     `stopFailed` / `resumeFailed` / `applyEnvFailed` /
+		//     `uninstallFailed`: the underlying op died terminally
+		//     during / before cancel landed. From the user's POV the
+		//     in-flight op is over (and didn't complete), so cancel
+		//     "won". Reporting these as cancel-failures would hang
+		//     `--watch` indefinitely on a row that will never move
+		//     again — the original regression behind this expansion.
+		//   - `running` / `stopped` / `uninstalled`: cancel raced and
+		//     lost (op completed before the DELETE landed), OR cancel
+		//     of a stop/resume reverted to the prior stable state. The
+		//     row is settled either way; the OperationResult's State
+		//     field tells the caller what actually happened so they
+		//     can decide whether to redo the op.
+		//   - canceledStates: original semantics — the dedicated
+		//     *Canceled terminal states the SPA emits on cancel-wins.
+		//
+		// Failure stays narrow on purpose: only *CancelFailed means
+		// the cancel request itself was rejected by the backend.
+		// Everything else is "the row eventually settled" and is more
+		// useful as a non-erroring terminal than as a fatal exit code.
+		t.successSet = unionStateSets(
+			map[string]bool{
+				"running":     true,
+				"stopped":     true,
+				"uninstalled": true,
+			},
+			canceledStates,
+			operationFailedStates,
+		)
 		t.failureSet = cancelFailedStates
 		t.matchOpType = false
+		// Mirror the uninstall watcher's "row vanished mid-watch =
+		// terminal" shortcut: a cancel during install of a CS app can
+		// trigger backend rollback that prunes the per-user row before
+		// the row ever reports a *Canceled state. seen-first guard
+		// (acceptInitialAbsent stays false) prevents a wrong app name
+		// from being mis-classified as cancel-success.
+		t.absentMeansSuccess = true
 	case watchStatus:
 		// Op-agnostic: any stable resting state counts as success
 		// (running for install/upgrade/resume; stopped for stop;
@@ -259,11 +356,22 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 		row, present := lookupWatchRow(resp, t.appName, t.source)
 		switch {
 		case !present:
-			if t.absentMeansSuccess && seen {
-				// We previously saw the row in a progressing state and
-				// the backend has now stopped reporting it: treat as
-				// a successful uninstall. Synthesize a row so the
-				// caller still has source/state context for output.
+			if t.absentMeansSuccess && (seen || t.acceptInitialAbsent) {
+				// Two flavors of "absent → success":
+				//   • seen-then-absent: we previously observed the row
+				//     in a progressing state and the backend has now
+				//     stopped reporting it (the canonical uninstall
+				//     completion signal; also fires under
+				//     status --watch).
+				//   • acceptInitialAbsent (uninstall only): the row was
+				//     already gone before our DELETE — typically a
+				//     re-run with `--cascade` after the per-user row
+				//     was cleared by a prior uninstall. The backend
+				//     still processes the cascade payload but never
+				//     re-creates the user's row, so without this
+				//     branch the watcher hangs until --watch-timeout.
+				// Synthesize a row so the caller still has
+				// source/state context for output.
 				return statusRow{
 					Name:   t.appName,
 					State:  "uninstalled",
@@ -289,8 +397,18 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 			rowCopy := row
 			last = &rowCopy
 
-			if t.matchesOpType(row) && t.successSet[row.State] {
-				return row, nil
+			if t.successSet[row.State] {
+				switch {
+				case t.matchesOpType(row):
+					return row, nil
+				case t.idempotentSuccess && row.OpType == "":
+					// No-op success: the backend treated our request
+					// as already-satisfied (stop on stopped / resume
+					// on running) and left the row at the target
+					// state with no op in flight. Without this branch
+					// the watcher would hang until --watch-timeout.
+					return row, nil
+				}
 			}
 			if t.matchesOpType(row) && t.failureSet[row.State] {
 				return row, &watchFailureError{target: t, row: row}

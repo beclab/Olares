@@ -98,10 +98,28 @@ func (o *MarketOptions) addCommonFlags(cmd *cobra.Command) {
 	o.addSourceFlag(cmd, "")
 }
 
+// addOutputFlags wires the universal output knobs every market verb
+// honors: -o/--output (table | json) and -q/--quiet. NoHeaders used to
+// live here too but is now wired separately via addNoHeadersFlag — only
+// the read / browse verbs that actually render row-oriented tables
+// (list / categories / get) expose it. Mutating verbs (install /
+// upgrade / stop / resume / uninstall / cancel / clone / upload /
+// delete) don't render tables, so --no-headers on them was a no-op
+// footgun in scripts (`market stop firefox --no-headers` silently
+// ignored the flag).
 func (o *MarketOptions) addOutputFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "table", "output format: table, json")
 	cmd.Flags().BoolVarP(&o.Quiet, "quiet", "q", false, "suppress output; exit code indicates success/failure")
-	cmd.Flags().BoolVar(&o.NoHeaders, "no-headers", false, "omit table headers (useful for scripting)")
+}
+
+// addNoHeadersFlag exposes --no-headers on verbs that print row-oriented
+// tables — currently list / categories / get. Kept off mutating verbs by
+// design (see addOutputFlags). The bool field is still owned by the
+// shared MarketOptions struct so the verb's runner can branch on
+// `opts.NoHeaders` without reaching back through the cobra command.
+func (o *MarketOptions) addNoHeadersFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&o.NoHeaders, "no-headers", false,
+		"omit table headers and the trailing summary row (only on list / categories / get; useful for piping into awk / cut)")
 }
 
 func (o *MarketOptions) addVersionFlag(cmd *cobra.Command) {
@@ -113,7 +131,8 @@ func (o *MarketOptions) addAllSourcesFlag(cmd *cobra.Command) {
 }
 
 func (o *MarketOptions) addCascadeFlag(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&o.Cascade, "cascade", false, "apply to all sub-charts (for v2 multi-chart apps)")
+	cmd.Flags().BoolVar(&o.Cascade, "cascade", false,
+		"apply to shared sub-charts on v2 multi-chart apps (auto-enabled for single-user CS apps when omitted; pass --cascade=false to override)")
 }
 
 func (o *MarketOptions) addEnvFlag(cmd *cobra.Command) {
@@ -153,11 +172,11 @@ func (o *MarketOptions) addMineFlag(cmd *cobra.Command) {
 // showing up in those help blurbs.
 func (o *MarketOptions) addWatchFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&o.Watch, "watch", "w", false,
-		"wait until the app reaches a terminal state (success or failure) before exiting")
+		"block until the app reaches a terminal state (success or failure) before exiting; exit code reflects the verdict")
 	cmd.Flags().DurationVar(&o.WatchTimeout, "watch-timeout", 15*time.Minute,
-		"maximum total time to wait when --watch is set (e.g. 15m, 1h)")
+		"maximum total wall-clock to wait when --watch is set (e.g. 15m, 1h); no-op without --watch. Bump for image-pull-heavy installs (Stable Diffusion / Ollama: 30m–1h)")
 	cmd.Flags().DurationVar(&o.WatchInterval, "watch-interval", 2*time.Second,
-		"polling interval when --watch is set (e.g. 2s, 5s)")
+		"polling interval against /market/state when --watch is set (e.g. 1s for tight CI feedback, 5s for slow networks); no-op without --watch")
 }
 
 // prepare resolves the active profile and returns a ready-to-use MarketClient

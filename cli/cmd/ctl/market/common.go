@@ -13,34 +13,25 @@ import (
 
 const (
 	defaultCatalogSource = "market.olares"
-	defaultLocalSource   = "cli"
+	// chartUploadSource is the hard-coded local source for `market
+	// upload` and `market delete`. The CLI used to accept
+	// `-s {upload|studio|cli}` here, but in practice every user-driven
+	// chart push belongs in the SPA's "Local Sources → Upload" bucket
+	// (`upload`), and offering the other two surfaced an avoidable
+	// foot-gun: a chart uploaded to `cli` was invisible to the SPA
+	// despite using the same backend. We collapse to `upload` so
+	// `upload` / `delete` and the SPA's Local Sources tab refer to the
+	// exact same bucket; `studio` / `cli` are still valid source ids
+	// for read-only verbs (`market list -s cli`) but no longer
+	// reachable as a write target through the CLI.
+	chartUploadSource = "upload"
 )
-
-var localSources = map[string]bool{
-	"upload": true,
-	"studio": true,
-	"cli":    true,
-}
 
 func resolveCatalogSource(opts *MarketOptions) string {
 	if s := strings.TrimSpace(opts.Source); s != "" {
 		return s
 	}
 	return defaultCatalogSource
-}
-
-func resolveLocalSource(opts *MarketOptions) string {
-	if s := strings.TrimSpace(opts.Source); s != "" {
-		return s
-	}
-	return defaultLocalSource
-}
-
-func validateLocalSource(source string) error {
-	if !localSources[source] {
-		return fmt.Errorf("invalid local source '%s': must be one of upload, studio, cli", source)
-	}
-	return nil
 }
 
 func validateVersion(version string) error {
@@ -101,6 +92,40 @@ func fetchAppInfo(ctx context.Context, mc *MarketClient, appName, source string)
 func appSupportsClone(appInfo map[string]interface{}) bool {
 	supported, ok := deepFindBoolValue(appInfo, "allowMultipleInstall")
 	return ok && supported
+}
+
+// isCSV2 mirrors apps/packages/app/src/constant/constants.ts `isCSV2(fullInfo)`:
+//
+//	fullInfo.app_info.app_entry.apiVersion === 'v2'
+//	&& fullInfo.app_info.app_entry.subCharts?.length > 0
+//
+// This is the SAME predicate the Market SPA uses in csAppUninstall()
+// (apps/.../stores/market/appService.ts) to gate the "also uninstall the
+// shared server" cascade — i.e. whether to default `all: true` on the
+// DELETE payload. "C/S" in this codebase means a v2 multi-chart bundle
+// where the user's own chart shares server-side sub-charts with other
+// users; it is NOT the same thing as "cluster-scoped" (which is gated by
+// `options.appScope.clusterScoped` and used elsewhere). Keep the
+// predicate in lockstep with the SPA: if the SPA tweaks isCSV2 or
+// renames the apiVersion / subCharts JSON keys, update this function and
+// the TestIsCSV2 table together.
+func isCSV2(appInfo map[string]interface{}) bool {
+	if appInfo == nil {
+		return false
+	}
+	entry, ok := getNestedValue(appInfo, "app_info", "app_entry").(map[string]interface{})
+	if !ok {
+		return false
+	}
+	apiVersion, _ := entry["apiVersion"].(string)
+	if apiVersion != "v2" {
+		return false
+	}
+	subCharts, ok := entry["subCharts"].([]interface{})
+	if !ok {
+		return false
+	}
+	return len(subCharts) > 0
 }
 
 func getNestedValue(m map[string]interface{}, keys ...string) interface{} {

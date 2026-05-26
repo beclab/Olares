@@ -17,19 +17,34 @@ func NewCmdMarketClone(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
 	cmd := &cobra.Command{
 		Use:   "clone {app-name}",
-		Short: "Clone an app as a new instance",
-		Long: `Clone an installed application to create a new instance with a different title.
-Only apps that support multiple instances can be cloned.
+		Short: "Clone a multi-instance app under a new desktop title",
+		Long: `Clone an installed application to create a new instance with a
+different title (POST /apps/{name}/clone). Only apps that advertise
+'cloneable: true' in 'olares-cli market get <app> -o json' support this
+flow — pre-flight check the source app first if you're unsure.
 
-Use --entrance-title NAME=TITLE to override cloned desktop shortcut titles.
-For apps with a single visible entrance, the entrance title defaults to --title.
+--title is REQUIRED and feeds the cloned app's desktop shortcut title.
+For apps that expose multiple entrances, use --entrance-title NAME=TITLE
+(repeatable) to override per-entrance titles. For apps with a single
+visible entrance, the entrance title defaults to --title.
 
-The --title flag is required.
+The backend mints a per-instance app name (e.g. 'firefoxe992') —
+the CLI surfaces it as 'cloneTarget' in the operation result so
+scripted callers can chain follow-up commands. Use --watch to block
+until the cloned row reaches a terminal state ('running' on success);
+the watcher tracks the new clone name, not the source app name.
+
+Cloned rows look up their catalog metadata via RawName (the source
+app's name), so a clone like 'windowsefe992' renders the source app
+'windows' title / categories in 'list --mine'.
 
 Examples:
-  olares-cli market clone firefox --title "Firefox Cloned"
-  olares-cli market clone myapp --title "MyApp Cloned" --env API_URL=http://dev.example.com
-  olares-cli market clone myapp --title "MyApp Cloned" --entrance-title ui="New UI" --entrance-title api="New API"`,
+  olares-cli market clone firefox --title "Firefox Dev"
+  olares-cli market clone firefox --title "Firefox Dev" --watch                   # block until clone reaches running
+  olares-cli market clone firefox --title "Firefox Dev" --watch -o json | jq '.cloneTarget'   # capture new app name
+  olares-cli market clone myapp --title "MyApp Dev" --env API_URL=http://dev.example.com
+  olares-cli market clone myapp --title "MyApp Dev" --entrance-title ui="New UI" --entrance-title api="New API"
+  olares-cli market clone myapp --title "MyApp Dev" --watch --watch-timeout 20m   # heavyweight clones`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runClone(opts, args[0])

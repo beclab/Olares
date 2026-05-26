@@ -22,37 +22,48 @@ func NewCmdMarketList(f *cmdutil.Factory) *cobra.Command {
 		Short:   "List apps from market sources (catalog by default; --mine for the user's apps)",
 		Long: `List apps from market sources.
 
-By default this browses the catalog: the CLI auto-selects a source from market
-settings (use -s to override, -a to include every source).
+Without --mine this browses the catalog (/market/data): the CLI
+auto-selects a source from market settings (use -s to override, -a to
+span every source the user has). Valid source ids are 'market.olares'
+(the remote catalog) and 'cli' / 'upload' / 'studio' (the three local
+chart sources). Unknown ids silently produce an empty result with a
+"no apps in source 'X'" stderr hint.
 
-Pass --mine (-m) to instead list the active profile's apps — the same set
-the Market UI's "My Terminus" tab shows. "My apps" is broader than
-"completed installs": in-flight rows (pending / downloading / installing /
-*Canceling / *CancelFailed), post-install transitional rows (upgrading /
-resuming / stopping / applyingEnv / uninstalling) and post-install
-failures (upgradeFailed / stopFailed / resumeFailed / applyEnvFailed /
-uninstallFailed) all surface. Only the SPA's six "uninstalled" states
-(uninstalled / installFailed / installingCanceled / downloadFailed /
+Pass --mine (-m) to instead list the active profile's apps from
+/market/state — the same set the Market UI's "My Terminus" tab shows.
+"My apps" is broader than "completed installs": in-flight rows
+(pending / downloading / installing / *Canceling / *CancelFailed),
+post-install transitional rows (upgrading / resuming / stopping /
+applyingEnv / uninstalling) and post-install failures (upgradeFailed /
+stopFailed / resumeFailed / applyEnvFailed / uninstallFailed) all
+surface. Only the SPA's six "uninstalled" states (uninstalled /
+installFailed / installingCanceled / downloadFailed /
 downloadingCanceled / pendingCanceled) are filtered out, matching the
 Market UI exactly.
 
 "Mine" mode differences vs catalog browse:
 
   - Source scope defaults to "all sources" (no -a needed); pass -s to narrow.
-  - Output adds a STATE column showing the live row state from /market/state.
+  - Output gains a STATE column from the live /market/state row, and the
+    VERSION column reflects the row's installed version (not catalog latest).
   - Title / version / categories are best-effort enriched from /market/data;
     locally-uploaded charts that no longer appear in the catalog still show
-    up but may render with blank title / version.
+    up but may render with blank title / categories.
+  - Clones (rows whose RawName != Name, e.g. 'windowsefe992') look up the
+    catalog by RawName so the source app's title / categories surface.
 
 Examples:
-  olares-cli market list
-  olares-cli market list -s market.olares
-  olares-cli market list -a
-  olares-cli market list -c AI
+  olares-cli market list                          # auto-selected source
+  olares-cli market list -s market.olares         # pin to a specific source
+  olares-cli market list -s cli                   # browse a local source
+  olares-cli market list -c AI                    # filter by category
+  olares-cli market list -a                       # span every source
   olares-cli market list -o json
-  olares-cli market list --mine
-  olares-cli market list --mine -s cli
-  olares-cli market list --mine -c AI -o json`,
+  olares-cli market list --no-headers             # table without column headers (scripting)
+  olares-cli market list -q                       # no output; exit code only
+  olares-cli market list --mine                   # the user's apps (all sources by default)
+  olares-cli market list -m -s cli                # narrow --mine to one source
+  olares-cli market list -m -c AI -o json         # category filter still works in mine mode`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runList(opts)
@@ -60,6 +71,7 @@ Examples:
 	}
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
+	opts.addNoHeadersFlag(cmd)
 	opts.addAllSourcesFlag(cmd)
 	opts.addMineFlag(cmd)
 	cmd.Flags().StringVarP(&opts.Category, "category", "c", "", "filter by category")
@@ -71,13 +83,21 @@ func NewCmdMarketCategories(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "categories",
 		Aliases: []string{"cats"},
-		Short:   "List available app categories",
-		Long: `List app categories with counts from market sources.
+		Short:   "List app categories with per-source counts (read /market/data)",
+		Long: `List app categories with counts across market sources.
+
+By default queries the auto-selected source. Use -s to pin to a specific
+source ('market.olares' for the remote catalog, 'cli' / 'upload' /
+'studio' for local helm-chart sources); use -a to span every source
+the user has configured.
 
 Examples:
-  olares-cli market categories
-  olares-cli market categories -a
-  olares-cli market categories -o json`,
+  olares-cli market categories                    # auto-selected source
+  olares-cli market categories -s market.olares   # pin to a specific source
+  olares-cli market categories -a                 # every source the user has
+  olares-cli market categories -a -o json         # JSON across all sources
+  olares-cli market categories --no-headers       # table without the CATEGORY/APPS header row
+  olares-cli market categories -q                 # no output; exit code only`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runListCategories(opts)
@@ -85,6 +105,7 @@ Examples:
 	}
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
+	opts.addNoHeadersFlag(cmd)
 	opts.addAllSourcesFlag(cmd)
 	return cmd
 }

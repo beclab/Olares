@@ -24,14 +24,44 @@ func NewMarketCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "Manage Olares applications via the per-user Market API",
 		Long: `Manage applications through the Olares Market app-store API.
 
-This command tree is the profile-based parallel of "olares-cli app": same
-verbs (install / upgrade / uninstall / list / status / clone / upload / ...),
-but identity and the API endpoint are resolved from the currently-selected
-profile (switch with "olares-cli profile use <name>") instead of from
-kubeconfig + --user.
+This command tree is the profile-based parallel of "olares-cli app":
+identity (which Olares user) and transport (which cluster) are
+resolved from the currently-selected profile (switch with
+"olares-cli profile use <name>") instead of from kubeconfig + --user.
+Authentication uses the access token from "olares-cli profile login"
+and the same edge auth chain the Olares web app uses
+(Authelia + l4-bfl-proxy).
 
-Authentication uses the access token from "olares-cli profile login" and the
-same edge auth chain the Olares web app uses (Authelia + l4-bfl-proxy).`,
+Verb families:
+
+  catalog (read-only)   list, categories, get         browse /market/data
+  runtime (read-only)   status                        read /market/state
+  lifecycle (mutating)  install, upgrade, uninstall,  POST/PUT/DELETE on
+                        clone, stop, resume, cancel    /apps/{name}/*
+  charts (mutating)     upload, delete                 SPA Local Sources
+
+Universal flags:
+
+  -o, --output {table,json}   every verb. JSON output is parseable.
+  -q, --quiet                 every verb. Suppress output; exit code wins.
+  -s, --source <id>           source-aware verbs (catalog + install /
+                              upgrade / clone / upload / delete).
+                              Valid ids: market.olares, cli, upload, studio.
+  -a, --all-sources           list, categories, status.
+      --no-headers            list, categories, get (table-rendering verbs).
+  -w, --watch [+ --watch-timeout, --watch-interval]
+                              lifecycle verbs. Block until terminal state.
+
+The "my apps" inventory lives under "list --mine" (-m): same set the
+Market UI's "My Terminus" tab shows (broader than "completed installs"
+— includes in-flight rows and post-install failures, hides only the
+6 SPA uninstalledAppStates). Use it instead of "status" when answering
+"what apps do I have".
+
+Run "olares-cli market <verb> --help" for verb-specific details
+(source resolution, --watch idempotency, auto-cascade behavior,
+pre-flight gates, etc.). For deep-dive documentation, see
+cli/skills/olares-market/SKILL.md.`,
 	}
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true

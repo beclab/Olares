@@ -16,14 +16,25 @@ func NewCmdMarketGet(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "get {app-name}",
 		Aliases: []string{"info", "show"},
-		Short:   "Get detailed information about an app",
-		Long: `Get detailed information about an app from the market.
+		Short:   "Show detailed catalog info for an app (read /apps/{name})",
+		Long: `Get detailed catalog information about an app from a market source.
 
-Table output shows a curated summary. JSON output includes the full API response.
+Table output shows a curated summary. JSON output (-o json) emits the
+full upstream payload — that's where to look for fields the table view
+doesn't surface, e.g. 'cloneable: true' (whether the app supports
+'olares-cli market clone'), 'app_simple_info.app_labels' (the same
+suspend/remove labels 'market upgrade' pre-flight checks) and the
+declared env-var spec.
+
+Source resolution: -s pins the source; omitting it falls back to the
+auto-selected source (typically 'market.olares').
 
 Examples:
   olares-cli market get firefox
-  olares-cli market get firefox -o json`,
+  olares-cli market get firefox -o json
+  olares-cli market get firefox -s market.olares
+  olares-cli market get firefox -o json | jq '.cloneable'    # is this app cloneable?
+  olares-cli market get firefox --no-headers                 # omit field labels in the table view`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runGet(opts, args[0])
@@ -31,6 +42,7 @@ Examples:
 	}
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
+	opts.addNoHeadersFlag(cmd)
 	return cmd
 }
 

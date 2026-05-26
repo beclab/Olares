@@ -38,6 +38,18 @@ type UninstallRequest struct {
 	DeleteData bool `json:"deleteData"`
 }
 
+// UpgradeRequest is the payload for /apps/{name}/upgrade. Deliberately
+// does NOT carry env vars: the Market SPA's upgradeApp() sends only
+// {app_name, source, version} (see InstallButton.vue / useAppAction.ts).
+// Existing env values are preserved server-side from the previous
+// install. Use `olares-cli market env` to update them out-of-band.
+type UpgradeRequest struct {
+	Source  string `json:"source"`
+	AppName string `json:"app_name"`
+	Version string `json:"version"`
+	Sync    bool   `json:"sync"`
+}
+
 // OperationResult is the structured output for mutating commands.
 //
 // FinalState / FinalOpType are populated only by --watch flows once a
