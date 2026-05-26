@@ -69,12 +69,38 @@ type installedAppRow struct {
 
 // lookupInstalledApp finds the active profile's per-user state row
 // for appName via /market/state. Returns nil when the row genuinely
-// doesn't exist (vs an HTTP / parse error, which is surfaced). When
-// a row matches by either Name or RawName we return the canonical
-// row.Name (so clones map to their per-instance identifier, not the
-// source app), but ALSO surface RawName so callers needing catalog
-// metadata can look up the source app for clones — same trick
-// fetchInstalledApps uses for `list --mine` enrichment.
+// doesn't exist (vs an HTTP / parse error, which is surfaced).
+//
+// MATCHING RULE — strict on Name, NOT RawName:
+//
+// We match only `row.Name == appName`. We deliberately do NOT match
+// `row.RawName == appName`, because RawName aliases every clone back
+// to its source app (a clone like `windowsefe992` carries
+// `RawName=windows`). If the user types `windows` AND both the
+// primary `windows` row and one or more clones of `windows` are
+// installed, a RawName-match would also catch each clone — and the
+// function would return whichever the slice / map iteration happened
+// to surface first. That's non-deterministic across slice order
+// inside one source and across the `Sources` map iteration (Go map
+// iteration is randomized). The consequence is that callers like
+// `preflightUpgrade` (gate 2 / gate 3 read State + Version) and
+// `shouldAutoCascade` (reads Source for the catalog probe) silently
+// see the WRONG row's data — upgrades fail with a misleading state
+// message, auto-cascade looks up isCSV2 in the wrong source's
+// catalog, etc.
+//
+// The SPA never sends source-app names from clone cards either:
+// clicking "Upgrade" / "Uninstall" / "Stop" on a clone card invokes
+// the corresponding endpoint with the per-instance name
+// (`windowsefe992`). The CLI's contract is the same: type
+// `windowsefe992` to operate on the clone, `windows` to operate on
+// the primary. Anything else is the wrong row.
+//
+// The returned struct still surfaces `RawName` (we read it from the
+// matched row's status) so callers needing catalog metadata can look
+// up the source app for clones — same trick fetchInstalledApps and
+// preflightUpgrade use for the /apps lookup key. RawName is data on
+// the return path, never a match key on the lookup path.
 func lookupInstalledApp(ctx context.Context, mc *MarketClient, appName string) (*installedAppRow, error) {
 	resp, err := mc.GetMarketState(ctx)
 	if err != nil {
@@ -97,11 +123,19 @@ func lookupInstalledApp(ctx context.Context, mc *MarketClient, appName string) (
 		for _, appState := range sourceData.AppStateLatest {
 			rowName := strings.TrimSpace(appState.Status.Name)
 			rawName := strings.TrimSpace(appState.Status.RawName)
-			if rowName == "" && rawName == "" {
-				continue
-			}
-			if rowName != appName && rawName != appName {
-				continue
+			if rowName != appName {
+				// Defensive: legacy / malformed rows that omit Name
+				// but populate RawName can still be identified IF
+				// no other row in the same source is going to claim
+				// this name first. We only accept that fallback
+				// when Name is empty — never when Name is populated
+				// with something else (which would mean this is a
+				// clone whose source app happens to match the
+				// user's input, the exact ambiguity documented in
+				// the lookupInstalledApp doc above).
+				if rowName != "" || rawName != appName {
+					continue
+				}
 			}
 			canonical := rowName
 			if canonical == "" {

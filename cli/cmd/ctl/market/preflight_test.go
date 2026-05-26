@@ -448,6 +448,148 @@ func TestPreflightUpgrade(t *testing.T) {
 	}
 }
 
+// TestLookupInstalledAppDisambiguatesPrimaryFromClones is the
+// regression test for the clone-vs-primary ambiguity bug in
+// lookupInstalledApp. Before the fix, the matching predicate was
+// `rowName != appName && rawName != appName` — i.e. either rowName
+// OR rawName equal to appName counted as a match. That made the
+// lookup non-deterministic whenever the source app AND one or more
+// clones of it were both installed: a query for the source-app name
+// (`windows`) would also match every clone (each carries
+// `RawName=windows`), and the function returned whichever row
+// happened to come first in slice / map iteration.
+//
+// The state fixture below puts the clone (windowsefe992,
+// RawName=windows, state=stopFailed, version=1.0.5) FIRST in the
+// app_state_latest slice and the primary (windows, state=running,
+// version=1.2.0) second. Slice iteration is deterministic in Go, so
+// the old buggy code reliably returned the clone for
+// `lookupInstalledApp("windows")` — exactly the failure mode the
+// bug report describes for `market upgrade windows` (gate 2/3 would
+// see the clone's state/version instead of the primary's) and
+// `shouldAutoCascade("windows")` (would probe the catalog with the
+// clone's source).
+//
+// The new code matches strictly on `row.Name == appName`. The clone
+// is skipped because its Name is `windowsefe992`, the primary is
+// returned, and the same fixture also confirms a direct lookup for
+// `windowsefe992` still returns the clone row.
+func TestLookupInstalledAppDisambiguatesPrimaryFromClones(t *testing.T) {
+	state := `{
+        "user_data": {
+            "sources": {
+                "market.olares": {
+                    "type": "market",
+                    "app_state_latest": [
+                        {"version": "1.0.5", "status": {"name": "windowsefe992", "rawAppName": "windows", "state": "stopFailed"}},
+                        {"version": "1.2.0", "status": {"name": "windows", "rawAppName": "windows", "state": "running"}}
+                    ]
+                }
+            }
+        }
+    }`
+
+	srv := newFakeMarketDataServer(t, stateAndDataResponses{state: state})
+	mc := newTestMarketClient(t, srv.URL)
+
+	t.Run("source-app name returns the primary, never the clone", func(t *testing.T) {
+		row, err := lookupInstalledApp(context.Background(), mc, "windows")
+		if err != nil {
+			t.Fatalf("lookupInstalledApp: %v", err)
+		}
+		if row == nil {
+			t.Fatalf("lookupInstalledApp returned nil for an installed app")
+		}
+		if row.Name != "windows" {
+			t.Fatalf("lookup(\"windows\") returned the wrong row: name=%q (probably the clone — the bug); want %q (the primary)", row.Name, "windows")
+		}
+		if row.State != "running" || row.Version != "1.2.0" {
+			t.Fatalf("primary row data wrong: state=%q version=%q (want state=running version=1.2.0)", row.State, row.Version)
+		}
+	})
+
+	t.Run("clone instance name returns the clone (unchanged)", func(t *testing.T) {
+		row, err := lookupInstalledApp(context.Background(), mc, "windowsefe992")
+		if err != nil {
+			t.Fatalf("lookupInstalledApp: %v", err)
+		}
+		if row == nil {
+			t.Fatalf("lookupInstalledApp returned nil for the clone")
+		}
+		if row.Name != "windowsefe992" {
+			t.Fatalf("clone lookup returned wrong row: name=%q want %q", row.Name, "windowsefe992")
+		}
+		if row.RawName != "windows" {
+			t.Fatalf("clone row must carry rawAppName=windows; got %q", row.RawName)
+		}
+		if row.State != "stopFailed" || row.Version != "1.0.5" {
+			t.Fatalf("clone row data wrong: state=%q version=%q (want state=stopFailed version=1.0.5)", row.State, row.Version)
+		}
+	})
+
+	t.Run("source-name only matches a primary, even when only clones exist for that source", func(t *testing.T) {
+		// Edge case: user types the source-app name but ONLY a clone
+		// of that source is installed (no primary `windows` row). The
+		// strict-Name rule must return nil — the user typed a name
+		// that doesn't identify any installed row, and we'd rather
+		// surface "not installed" than silently operate on a clone
+		// the user didn't ask for.
+		stateCloneOnly := `{
+            "user_data": {
+                "sources": {
+                    "market.olares": {
+                        "type": "market",
+                        "app_state_latest": [
+                            {"version": "1.0.5", "status": {"name": "windowsefe992", "rawAppName": "windows", "state": "running"}}
+                        ]
+                    }
+                }
+            }
+        }`
+		srvC := newFakeMarketDataServer(t, stateAndDataResponses{state: stateCloneOnly})
+		mcC := newTestMarketClient(t, srvC.URL)
+		row, err := lookupInstalledApp(context.Background(), mcC, "windows")
+		if err != nil {
+			t.Fatalf("lookupInstalledApp: %v", err)
+		}
+		if row != nil {
+			t.Fatalf("source-name lookup must return nil when only a clone exists; got %+v", row)
+		}
+	})
+
+	t.Run("legacy edge case: row with Name=\"\" but RawName populated still matches", func(t *testing.T) {
+		// Conservative fallback for older backends that may surface
+		// rows with empty Name. Match only when row.Name is empty
+		// AND row.RawName == appName — never when row.Name is
+		// populated with a different value (the clone disambiguation
+		// rule above).
+		stateLegacy := `{
+            "user_data": {
+                "sources": {
+                    "market.olares": {
+                        "type": "market",
+                        "app_state_latest": [
+                            {"version": "0.9.0", "status": {"name": "", "rawAppName": "vault", "state": "running"}}
+                        ]
+                    }
+                }
+            }
+        }`
+		srvL := newFakeMarketDataServer(t, stateAndDataResponses{state: stateLegacy})
+		mcL := newTestMarketClient(t, srvL.URL)
+		row, err := lookupInstalledApp(context.Background(), mcL, "vault")
+		if err != nil {
+			t.Fatalf("lookupInstalledApp: %v", err)
+		}
+		if row == nil {
+			t.Fatalf("legacy Name-empty row must still match by RawName fallback")
+		}
+		if row.Name != "vault" || row.Version != "0.9.0" {
+			t.Fatalf("legacy fallback row: name=%q version=%q (want vault / 0.9.0)", row.Name, row.Version)
+		}
+	})
+}
+
 // TestPreflightUpgrade_SourceMismatchWarns confirms that preflight does
 // NOT fail when the user passes -s pointing at a different source from
 // the one the app is currently installed from — it should only emit a
