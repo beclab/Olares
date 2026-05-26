@@ -19,11 +19,12 @@ const (
 	ResourceModeNvidia        = "nvidia"
 	ResourceModeNvidiaGB10    = "nvidia-gb10"
 	ResourceModeMThreadsM1000 = "mthreads-m1000"
+	ResourceModeStrixHalo     = "strix-halo"
 )
 
 var validResourceModes = []any{
 	ResourceModeCPU,
-	ResourceModeAMDAPU,
+	ResourceModeStrixHalo,
 	ResourceModeAMDGPU,
 	ResourceModeAppleM,
 	ResourceModeNvidia,

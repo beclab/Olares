@@ -247,7 +247,7 @@ func TestRule2_InlineMissingFieldRejected(t *testing.T) {
 // relaxation of the old "cpu+memory only" constraint.
 func TestRule3_NonGPUFamilyModesForbidGPU(t *testing.T) {
 	for _, mode := range []string{
-		ResourceModeCPU, ResourceModeAMDAPU, ResourceModeAppleM, ResourceModeNvidiaGB10, ResourceModeMThreadsM1000,
+		ResourceModeCPU, ResourceModeStrixHalo, ResourceModeAppleM, ResourceModeNvidiaGB10, ResourceModeMThreadsM1000,
 	} {
 		mode := mode
 		t.Run(mode+"_disk_allowed", func(t *testing.T) {
