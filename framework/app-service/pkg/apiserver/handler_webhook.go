@@ -1007,10 +1007,24 @@ func (h *Handler) validateUser(ctx context.Context, req *admissionv1.AdmissionRe
 	// Decode the User spec from the request.
 	var user iamv1alpha2.User
 	raw := req.Object.Raw
+	if req.Operation == admissionv1.Delete {
+		raw = req.OldObject.Raw
+	}
 	err := json.Unmarshal(raw, &user)
 	if err != nil {
 		klog.Errorf("Failed to unmarshal request object raw to user with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+
+	if req.Operation == admissionv1.Delete {
+		if user.Annotations[users.UserAnnotationOwnerRole] == "owner" {
+			resp.Allowed = false
+			resp.Result = &metav1.Status{
+				Message: fmt.Sprintf("user %s with role[owner] can not be deleted", user.Name),
+			}
+			return resp
+		}
+		return resp
 	}
 
 	// Check if user already exists

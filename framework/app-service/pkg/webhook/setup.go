@@ -796,7 +796,10 @@ func (wh *Webhook) CreateOrUpdateUserValidatingWebhook() error {
 				MatchPolicy:   &matchPolicy,
 				Rules: []admissionregv1.RuleWithOperations{
 					{
-						Operations: []admissionregv1.OperationType{admissionregv1.Create},
+						Operations: []admissionregv1.OperationType{
+							admissionregv1.Create,
+							admissionregv1.Delete,
+						},
 						Rule: admissionregv1.Rule{
 							APIGroups:   []string{"iam.kubesphere.io"},
 							APIVersions: []string{"v1alpha2"},
