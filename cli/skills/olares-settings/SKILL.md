@@ -132,15 +132,41 @@ olares-cli settings me sso list                   # SSO tokens currently bound t
 ```bash
 olares-cli settings users list                    # roster, server-side role-filtered
 olares-cli settings users get alice               # single user record
-olares-cli settings users create bob --defaults                                  # SPA preset: normal, 1 CPU, 4G memory; auto password; DID precheck; waits for provisioning
-olares-cli settings users create alice --role admin --cpu 2 --memory-gb 8 --no-wait   # explicit quota; skip provisioning wait for automation
-olares-cli settings users delete bob              # after DELETE, polls /status until Deleted (like Termipass); type yes or use --yes
-olares-cli settings users delete bob --yes --no-wait   # automation: no prompt, exit right after DELETE (user may still be Deleting in list)
+olares-cli settings users create bob --defaults                                  # SPA preset: normal, 1 CPU, 4G memory; auto password; DID precheck; accepted-then-exit
+olares-cli settings users create bob --defaults --watch                          # synchronous: block until provisioning reaches Created and the Wizard URL is materialized
+olares-cli settings users create alice --role admin --cpu 2 --memory-gb 8        # explicit quota; default accepted-then-exit (use --watch to wait)
+olares-cli settings users delete bob              # accepted-then-exit (the row may still appear briefly in `users list`); type yes or use --yes
+olares-cli settings users delete bob --yes --watch   # synchronous: block until status is Deleted (same opt-in shape as `olares-cli market <verb> --watch`)
 # owner accounts cannot be deleted (CLI rejects before DELETE, same as `olares-cli user delete`)
 olares-cli settings users me                      # alias of `me whoami`
 ```
 
+`create`/`delete` are accepted-then-exit by default; pass `-w/--watch` (with `--watch-timeout` / `--watch-interval`) to block until terminal state — the flag triple mirrors [`olares-cli market --watch`](../olares-market/SKILL.md#watch-flag) so both surfaces feel identical to operators. **Note**: this flips the prior default from "wait by default + `--no-wait`" — scripts that relied on blocking semantics must add `--watch` explicitly.
+
 `create`/`delete` hit the Termipass user-service routes, not `olares-cli user create` (kube CR).
+
+<a id="users-watch-flag"></a>
+#### `users --watch` (block until terminal state)
+
+Same shape as the market verb's [`--watch`](../olares-market/SKILL.md#watch-flag) — opt-in `-w/--watch`, with companion `--watch-timeout` (15m) and `--watch-interval` (2s). Implementation lives in [`cli/cmd/ctl/settings/users/watch.go`](cli/cmd/ctl/settings/users/watch.go) (`waitForUserState`, `newUserWatchTarget`, `userWatchTimeoutError`, `userWatchFailureError`); the loop wraps `signal.NotifyContext` for Ctrl-C and gives up after 5 consecutive transport errors.
+
+Per-op terminal sets (from [`cli/cmd/ctl/settings/users/watch.go`](cli/cmd/ctl/settings/users/watch.go)):
+
+| Op       | Success    | Failure                  | absentMeansSuccess        |
+|----------|------------|--------------------------|---------------------------|
+| `create` | `Created`  | `Failed` / `Deleted`*    | false                     |
+| `delete` | `Deleted`  | (timeout only)           | true (defensive HTTP 404) |
+
+\* `Deleted` during a create watch means the row vanished mid-watch (controller cleanup raced), reported back as a failure so JSON consumers get a non-zero exit.
+
+JSON output adds `final_status` when `--watch` is set:
+
+```json
+{"name":"alice","original_password":"...","status":"Created","final_status":"Created","wizard_url":"https://wizard-alice.example.com"}
+{"name":"bob","status":"Deleted","final_status":"Deleted"}
+```
+
+Without `--watch`, JSON is `{"name":"…","status":"Accepted"}` (create additionally echoes `original_password`).
 
 
 ### `apps` — installed app inventory (mirror of Settings -> Apps)
@@ -209,7 +235,7 @@ olares-cli settings restore plans list
 
 Every mutating verb in this section has been confirmed against a live Olares instance in the latest smoke run (see [`cli/cmd/ctl/settings/scripts/local_report_phase15a.md`](cli/cmd/ctl/settings/scripts/local_report_phase15a.md)). All of them hit the `<DesktopURL>` ingress over `X-Authorization` and none require a JWS-signed body. Verbs that ship in the binary but were not exercised (or did not pass) live in [`cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) — treat them as experimental until they show up here.
 
-**Also ships (awaiting smoke):** `users create` / `users delete` — **admin-floor** preflight; `create` uses `--defaults` (normal / 1 / 4G) or explicit `--role`, `--cpu`, `--memory-gb`; DID precheck; no `--password`; **`delete` by default waits** until removal is reported finished (optional `--delete-poll` / `--delete-timeout`, `--no-wait` for exit-after-accept); **`delete`** needs the whole word `yes` unless **`--yes`**; **`delete` refuses owner** (pre-check via GET, before confirmation). Smoke pairing: `INCLUDE_USERS_MUTATE=1`. Backend gap: user-service does not role-gate POST/DELETE beyond authentication.
+**Also ships (awaiting smoke):** `users create` / `users delete` — **admin-floor** preflight; `create` uses `--defaults` (normal / 1 / 4G) or explicit `--role`, `--cpu`, `--memory-gb`; DID precheck; no `--password`; **both verbs default to accepted-then-exit**; pass **`-w/--watch`** (with `--watch-timeout` 15m, `--watch-interval` 2s — same triple as [`olares-cli market --watch`](../olares-market/SKILL.md#watch-flag)) to block until `Created` / `Deleted`; **`delete`** needs the whole word `yes` unless **`--yes`**; **`delete` refuses owner** (pre-check via GET, before confirmation). Smoke pairing: `INCLUDE_USERS_MUTATE=1`. Backend gap: user-service does not role-gate POST/DELETE beyond authentication.
 
 ### `appearance` — language
 
@@ -332,7 +358,7 @@ olares-cli settings integration accounts get awss3 my-bucket -o json
 ## Security rules
 
 - **Never** echo `<access_token>` or any field returned by `me sso list` into the terminal beyond what the table view already shows. SSO tokens identify a TermiPass-bound device session and should never be logged or pasted into chat.
-- `settings users create` / `settings users delete` are destructive (`delete` needs the whole word `yes` unless **`--yes`**). **`delete` waits by default until status is Deleted** (`--no-wait` skips that). **`delete` cannot remove the owner account** (fails before DELETE). `create` always generates the initial password once to stdout; treat transcripts accordingly.
+- `settings users create` / `settings users delete` are destructive (`delete` needs the whole word `yes` unless **`--yes`**). **Both default to accepted-then-exit**; pass **`--watch`** to block until `Created` / `Deleted` (with `--watch-timeout` / `--watch-interval`, same as [`olares-cli market --watch`](../olares-market/SKILL.md#watch-flag)). **`delete` cannot remove the owner account** (fails before DELETE). `create` always generates the initial password once to stdout; treat transcripts accordingly.
 - `settings users get <username>` returns the same record the SPA shows on the user detail page; treat its email / olaresId as PII and avoid forwarding it outside the requesting workflow.
 - For writes that take secrets (`integration accounts add awss3|tencent` is the verified one in this surface), **always** read the secret from an env var or stdin pipe — never paste it into the chat or expand it inline in an `olares-cli ...` command line you suggest. Bash history retention is the user's responsibility; the agent should default to env-var / pipe style invocations (`--access-key-secret "$AWS_SECRET_ACCESS_KEY"`, `printf '%s\n' "$VAR" | ... --password-stdin`) whenever the verb supports it.
 - Other secret-bearing verbs (e.g. `backup password set`, `restore plans check-url / create-from-url`) live in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) until they're smoke-greened; the same env-var / stdin-pipe rule applies whenever you exercise them by hand.

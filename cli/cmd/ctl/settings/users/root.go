@@ -33,8 +33,8 @@ user-service's /api/users surface.
 Subcommands:
   list                         list users
   get <name>                   inspect a single user
-  create <username>           create user (set --role, --cpu, --memory-gb or use --defaults)
-  delete <username>           delete user (default: wait for Deleted on /status; --no-wait to exit after DELETE)
+  create <username>            create user (set --role, --cpu, --memory-gb or use --defaults; --watch to wait for Created)
+  delete <username>            delete user (returns once DELETE is accepted; pass --watch to block until Deleted)
   me                           alias for "olares-cli profile whoami"
 
 Not implemented here yet: set-password / set-limits (use SPA or REST).
