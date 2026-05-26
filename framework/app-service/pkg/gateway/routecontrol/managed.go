@@ -16,6 +16,11 @@ func IsManagedNetworkPolicy(np *networkingv1.NetworkPolicy) bool {
 	}
 	switch np.Name {
 	case NetworkPolicyName, security.SharedLinkerdMeshIngressNPName,
+		security.AppGatewayInClusterCallerIngressNPName,
+		// Legacy caller egress NP names retained in the whitelist so existing
+		// clusters do not bounce-create-delete during the upgrade window before
+		// CallerReconciler.cleanupCallerResources GCs them. Safe to remove in a
+		// future release once all clusters have rolled past v1.0.
 		security.CallerToAppGatewayEgressNPName, security.CallerMeshEgressNPName,
 		security.CallerDNSEgressNPName, security.CallerMiddlewareEgressNPName:
 		return true

@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
@@ -330,15 +329,27 @@ func networkPolicyNamespacesToClean(srr *srrv1alpha1.SharedRouteRegistry) []stri
 	return []string{upstream, srr.Namespace}
 }
 
-// linkerdProxyInboundPort is the port that linkerd-proxy listens on for inbound mTLS
-// traffic. When a shared workload is mesh-injected, EG-side proxy connects to this port
-// (not the service port) and the proxy forwards locally to the application container.
+// linkerdProxyInboundPort is the port that linkerd-proxy listens on for inbound
+// mTLS traffic. Retained for documentation only; NP-minimal v1.0 omits Ports so
+// 4143 is implicitly allowed alongside service ports.
 const linkerdProxyInboundPort int32 = 4143
 
+// applyNetworkPolicy reconciles the gateway-side ingress NetworkPolicy that
+// admits app-gateway traffic into the upstream shared workload namespace.
+//
+// requirement (archdoc Shared集群内访问v1 §3.4, NP-minimal v1.0):
+//   - Single NP per upstream namespace (NOT per-SRR): multiple SRRs sharing the
+//     same upstream NS collapse into one NetworkPolicy. The InstanceLabel is
+//     therefore intentionally not set, and ownerRef is NOT bound to a specific
+//     SRR (binding would auto-GC the NP when a single SRR is deleted while
+//     other SRRs still need it).
+//   - PodSelector empty: any pod in the upstream NS is reachable from the
+//     gateway. This covers business workloads regardless of their label scheme
+//     and avoids per-Service label drift breaking mesh inbound (4143).
+//   - Ports omitted: any TCP port is allowed (business targetPort + 4143 mesh
+//     inbound + future ports). Eliminates Service.port vs targetPort mismatches
+//     (e.g. Ollama Service:80 → Pod:11434) that caused 503 in pilot.
 func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, svc *corev1.Service, port int32) error {
-	protocol := corev1.ProtocolTCP
-	servicePort := intstr.FromInt32(port)
-	proxyPort := intstr.FromInt32(linkerdProxyInboundPort)
 	npNS := networkPolicyNamespace(srr, svc)
 	desired := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -346,12 +357,11 @@ func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr
 			Namespace: npNS,
 			Labels: map[string]string{
 				ManagedByLabel: ManagedByValue,
-				InstanceLabel:  srr.Name,
 			},
 		},
 		Spec: networkingv1.NetworkPolicySpec{
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
-			PodSelector: metav1.LabelSelector{MatchLabels: svc.Spec.Selector},
+			PodSelector: metav1.LabelSelector{},
 			Ingress: []networkingv1.NetworkPolicyIngressRule{
 				{
 					From: []networkingv1.NetworkPolicyPeer{
@@ -363,17 +373,10 @@ func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr
 							},
 						},
 					},
-					Ports: []networkingv1.NetworkPolicyPort{
-						{Protocol: &protocol, Port: &servicePort},
-						// Mesh path: when the shared workload is linkerd-injected, EG-side
-						// proxy targets the proxy inbound port instead of the service port.
-						{Protocol: &protocol, Port: &proxyPort},
-					},
 				},
 			},
 		},
 	}
-	setOwnerSRR(desired, srr)
 
 	current := &networkingv1.NetworkPolicy{}
 	err := c.Get(ctx, types.NamespacedName{Namespace: npNS, Name: NetworkPolicyName}, current)
@@ -388,13 +391,25 @@ func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr
 		current.Labels = map[string]string{}
 	}
 	current.Labels[ManagedByLabel] = ManagedByValue
-	current.Labels[InstanceLabel] = srr.Name
-	setOwnerSRR(current, srr)
+	delete(current.Labels, InstanceLabel)
+	current.SetOwnerReferences(nil)
 	return c.Update(ctx, current)
 }
 
+// deleteNetworkPolicy removes the per-NS shared ingress NP only when no other
+// gateway-mode SRR still targets the same upstream namespace.
+//
+// requirement: NP-minimal v1.0 collapses per-SRR NPs into one per upstream NS,
+// so deletion must consider all SRRs in the cluster before unlinking the NP.
 func deleteNetworkPolicy(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
 	for _, ns := range networkPolicyNamespacesToClean(srr) {
+		stillNeeded, err := hasOtherGatewayModeSRRForUpstream(ctx, c, srr, ns)
+		if err != nil {
+			return err
+		}
+		if stillNeeded {
+			continue
+		}
 		obj := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      NetworkPolicyName,
@@ -406,6 +421,35 @@ func deleteNetworkPolicy(ctx context.Context, c client.Client, srr *srrv1alpha1.
 		}
 	}
 	return nil
+}
+
+// hasOtherGatewayModeSRRForUpstream reports whether any SRR other than self is
+// still in gateway mode and targeting upstreamNS. Used to keep the per-NS
+// shared ingress NP alive while other SRRs need it.
+func hasOtherGatewayModeSRRForUpstream(ctx context.Context, c client.Client, self *srrv1alpha1.SharedRouteRegistry, upstreamNS string) (bool, error) {
+	var list srrv1alpha1.SharedRouteRegistryList
+	if err := c.List(ctx, &list); err != nil {
+		return false, err
+	}
+	for i := range list.Items {
+		other := &list.Items[i]
+		if other.UID == self.UID {
+			continue
+		}
+		switch other.Spec.RouteMode {
+		case "", srrv1alpha1.RouteModeGateway:
+		default:
+			continue
+		}
+		otherNS := other.Spec.Upstream.ServiceNamespace
+		if otherNS == "" {
+			otherNS = other.Namespace
+		}
+		if otherNS == upstreamNS {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // UpdateSRRStatus writes ReconcileResult onto srr.status (Ready condition,

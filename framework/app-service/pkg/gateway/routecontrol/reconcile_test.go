@@ -135,8 +135,8 @@ func TestReconcileSharedRoute_GatewayMode_HappyPath(t *testing.T) {
 	if got := np.Labels[ManagedByLabel]; got != ManagedByValue {
 		t.Fatalf("NP managed-by=%q", got)
 	}
-	if len(np.OwnerReferences) != 1 || np.OwnerReferences[0].UID != srr.UID {
-		t.Fatalf("NP ownerRefs: %+v", np.OwnerReferences)
+	if len(np.OwnerReferences) != 0 {
+		t.Fatalf("NP-minimal v1.0: per-NS NP must not bind ownerRef to a single SRR, got %+v", np.OwnerReferences)
 	}
 }
 
@@ -212,8 +212,8 @@ func TestReconcileSharedRoute_CrossNamespaceNPInUpstreamNS(t *testing.T) {
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "ollamaserver-shared", Name: NetworkPolicyName}, np); err != nil {
 		t.Fatalf("get NetworkPolicy in upstream NS: %v", err)
 	}
-	if np.Spec.PodSelector.MatchLabels["app"] != "ollama" {
-		t.Fatalf("podSelector: %+v", np.Spec.PodSelector.MatchLabels)
+	if len(np.Spec.PodSelector.MatchLabels) != 0 || len(np.Spec.PodSelector.MatchExpressions) != 0 {
+		t.Fatalf("NP-minimal v1.0: per-NS NP must use empty PodSelector, got %+v", np.Spec.PodSelector)
 	}
 	err := c.Get(context.Background(), types.NamespacedName{Namespace: "ollamav2-alice", Name: NetworkPolicyName}, &networkingv1.NetworkPolicy{})
 	if !apierrors.IsNotFound(err) {

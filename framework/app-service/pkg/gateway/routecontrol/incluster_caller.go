@@ -17,8 +17,19 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 )
 
-// CallerReconciler materialises caller-side egress NetworkPolicies and Linkerd
-// namespace injection for workloads that opt into cluster-internal Shared access.
+// CallerReconciler materialises caller-side Linkerd namespace injection for
+// workloads that opt into cluster-internal Shared access, plus the singleton
+// gateway-side ingress NetworkPolicy that admits caller traffic.
+//
+// requirement (archdoc Shared集群内访问v1 §3, NP-minimal v1.0):
+//   - Caller namespaces MUST NOT receive managed egress NetworkPolicies; user
+//     application NS template (NPAppSpace) is Ingress-only, so the default
+//     egress allow-all is preserved.
+//   - Gateway namespace receives ONE ingress NP (#1) admitting all opted-in
+//     caller namespaces on any port. This is reconciled idempotently here.
+//   - Legacy managed caller egress NPs (caller-dns / caller-middleware /
+//     caller-mesh / caller-to-app-gateway) are retained in the cleanup name
+//     list so existing clusters GC them on first reconcile after upgrade.
 type CallerReconciler struct {
 	Client    client.Client
 	GatewayNS string
@@ -31,7 +42,9 @@ func (r *CallerReconciler) gatewayNS() string {
 	return defaultGatewayNS
 }
 
-// Reconcile applies or removes caller NP / inject state for namespace ns.
+// Reconcile applies or removes caller-side mesh injection and ensures the
+// gateway-side singleton ingress NP. NP-minimal v1.0: no managed egress is
+// written into caller namespaces (default Allow on app-np Ingress-only).
 func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
 	if r == nil || r.Client == nil || ns == "" {
 		return nil
@@ -56,19 +69,10 @@ func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
 	if !optedIn {
 		return r.cleanupCallerResources(ctx, ns)
 	}
-	if err := r.applyNetworkPolicy(ctx, security.NewCallerDNSEgressNP(ns)); err != nil {
-		return err
-	}
-	if err := r.applyNetworkPolicy(ctx, security.NewCallerMiddlewareEgressNP(ns, callerUserSystemNamespace(ctx, r.Client, ns))); err != nil {
-		return err
-	}
-	if err := r.applyNetworkPolicy(ctx, security.NewCallerMeshEgressNP(ns)); err != nil {
-		return err
-	}
 	if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, true); err != nil {
 		return err
 	}
-	return r.applyNetworkPolicy(ctx, security.NewCallerToAppGatewayEgressNP(ns, r.gatewayNS()))
+	return r.applyNetworkPolicy(ctx, security.NewAppGatewayInClusterCallerIngressNP(r.gatewayNS()))
 }
 
 func (r *CallerReconciler) namespaceOptedIntoGateway(ctx context.Context, ns string) (bool, error) {
@@ -116,6 +120,9 @@ func (r *CallerReconciler) applyNetworkPolicy(ctx context.Context, desired *netw
 	return r.Client.Update(ctx, current)
 }
 
+// cleanupCallerResources GCs legacy managed caller egress NPs (NP-minimal v1.0
+// drops them) and disables linkerd inject on opt-out. The cleanup name list is
+// retained so existing clusters upgrade cleanly without manual kubectl delete.
 func (r *CallerReconciler) cleanupCallerResources(ctx context.Context, ns string) error {
 	for _, name := range []string{
 		security.CallerDNSEgressNPName,

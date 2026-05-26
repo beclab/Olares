@@ -311,6 +311,14 @@ var (
 	} // end NPUserSpace
 
 	// NPAppSpace is a network policy template for application.
+	//
+	// invariant (Shared集群内访问v1 NP-minimal §3.2):
+	//   NPAppSpace is Ingress-only. The cluster-internal Shared access scheme
+	//   v1.0 relies on this so that caller workload pods have default-allow
+	//   egress (no managed caller egress NP needed). If a future zero-trust
+	//   policy adds PolicyTypes: Egress here, the in-cluster path MUST also
+	//   ship at least one allow-list egress NP in caller namespaces, or the
+	//   gateway URL flow will break silently.
 	NPAppSpace = netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{},
 		Spec: netv1.NetworkPolicySpec{

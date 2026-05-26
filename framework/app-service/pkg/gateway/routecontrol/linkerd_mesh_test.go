@@ -55,13 +55,12 @@ func TestReconcileSharedRoute_GatewayMode_AddsMeshNPAndInject(t *testing.T) {
 	}
 }
 
-// TestReconcileSharedRoute_GatewayMode_IngressNPContainsServiceAndProxyPorts asserts
-// that the app-gateway -> shared NP allows both the service port and the linkerd-proxy
-// inbound port so meshed and non-meshed pods both work.
-func TestReconcileSharedRoute_GatewayMode_IngressNPContainsServiceAndProxyPorts(t *testing.T) {
+// TestReconcileSharedRoute_GatewayMode_IngressNPHasNoPortsAndEmptyPodSelector asserts
+// NP-minimal v1.0: the app-gateway -> shared ingress NP omits Ports (any TCP
+// port is allowed, covering service port, targetPort and linkerd-proxy 4143)
+// and uses an empty PodSelector so any pod in the upstream NS is admitted.
+func TestReconcileSharedRoute_GatewayMode_IngressNPHasNoPortsAndEmptyPodSelector(t *testing.T) {
 	srr := gatewaySRR(t)
-	// Service port and SRR upstream port must agree; resolveServicePort otherwise
-	// returns InvalidSpec and never reaches applyNetworkPolicy.
 	srr.Spec.Upstream.Port = 80
 	svc := gatewaySvc()
 	svc.Spec.Ports[0].Port = 80
@@ -72,16 +71,20 @@ func TestReconcileSharedRoute_GatewayMode_IngressNPContainsServiceAndProxyPorts(
 	}
 
 	np := getNetworkPolicy(t, c, sharedNS, NetworkPolicyName)
-	gotPorts := make([]int32, 0, len(np.Spec.Ingress[0].Ports))
-	for _, p := range np.Spec.Ingress[0].Ports {
-		if p.Port == nil {
-			continue
-		}
-		gotPorts = append(gotPorts, p.Port.IntVal)
+	if len(np.Spec.Ingress) != 1 {
+		t.Fatalf("expected 1 ingress rule, got %d", len(np.Spec.Ingress))
 	}
-	wantPorts := []int32{80, linkerdProxyInboundPort}
-	if !equalInt32Slice(gotPorts, wantPorts) {
-		t.Fatalf("ingress ports = %v, want %v", gotPorts, wantPorts)
+	if len(np.Spec.Ingress[0].Ports) != 0 {
+		t.Fatalf("NP-minimal v1.0: Ports must be empty (allow all TCP), got %#v", np.Spec.Ingress[0].Ports)
+	}
+	if len(np.Spec.PodSelector.MatchLabels) != 0 || len(np.Spec.PodSelector.MatchExpressions) != 0 {
+		t.Fatalf("NP-minimal v1.0: PodSelector must be empty (any pod in upstream NS), got %#v", np.Spec.PodSelector)
+	}
+	if len(np.OwnerReferences) != 0 {
+		t.Fatalf("NP-minimal v1.0: per-NS shared NP must NOT bind ownerRef to a single SRR, got %#v", np.OwnerReferences)
+	}
+	if _, ok := np.Labels[InstanceLabel]; ok {
+		t.Fatalf("NP-minimal v1.0: per-NS shared NP must NOT carry instance label (SRR-scoped), got %#v", np.Labels)
 	}
 }
 
@@ -211,14 +214,3 @@ func getNamespace(t *testing.T, c client.Client, name string) *corev1.Namespace 
 	return ns
 }
 
-func equalInt32Slice(a, b []int32) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}

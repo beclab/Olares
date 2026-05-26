@@ -7,23 +7,24 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+// Legacy caller-side egress NetworkPolicy constants.
+//
+// NP-minimal v1.0 (archdoc Shared集群内访问v1 §3.2) drops these managed egress
+// policies entirely; CallerReconciler.cleanupCallerResources still references
+// the names to GC them from clusters upgrading from earlier versions. The
+// builder helpers below are retained only for unit-test / migration paths and
+// MUST NOT be invoked by production reconcile.
 const (
-	// CallerToAppGatewayEgressNPName is the egress NetworkPolicy in caller namespaces
-	// that allows workloads to reach the Envoy Gateway data plane.
 	CallerToAppGatewayEgressNPName = "caller-to-app-gateway-egress-np"
-	// CallerMeshEgressNPName allows caller pods to reach the Linkerd control plane
-	// before sidecar injection completes.
-	CallerMeshEgressNPName = "caller-mesh-egress-np"
-	// CallerDNSEgressNPName allows caller pods to resolve cluster DNS (CoreDNS).
-	CallerDNSEgressNPName = "caller-dns-egress-np"
-	// CallerMiddlewareEgressNPName allows DB/auth dependencies (Citus, Authelia) in user-system.
-	CallerMiddlewareEgressNPName = "caller-middleware-egress-np"
+	CallerMeshEgressNPName         = "caller-mesh-egress-np"
+	CallerDNSEgressNPName          = "caller-dns-egress-np"
+	CallerMiddlewareEgressNPName   = "caller-middleware-egress-np"
 
 	callerNPComponentLabel = "route-control"
 	callerNPManagedBy      = "app-service"
 
-	egOwningGatewayLabel      = "gateway.envoyproxy.io/owning-gateway-name"
-	defaultOwningGatewayName  = "app-gateway"
+	egOwningGatewayLabel     = "gateway.envoyproxy.io/owning-gateway-name"
+	defaultOwningGatewayName = "app-gateway"
 )
 
 // NewCallerToAppGatewayEgressNP builds egress from every pod in ns to app-gateway

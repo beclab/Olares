@@ -38,7 +38,10 @@ func TestIsMeshMandatoryCallerNamespace(t *testing.T) {
 	}
 }
 
-func TestCallerReconciler_optInWritesNPAndInject(t *testing.T) {
+// TestCallerReconciler_optInInjectsAndWritesGatewayIngress is the NP-minimal
+// v1.0 happy path: opt-in caller NS gets linkerd.io/inject=enabled and the
+// gateway-side singleton ingress NP appears (NO managed caller egress).
+func TestCallerReconciler_optInInjectsAndWritesGatewayIngress(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = appv1alpha1.AddToScheme(scheme)
@@ -49,6 +52,7 @@ func TestCallerReconciler_optInWritesNPAndInject(t *testing.T) {
 	c := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(
 			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}},
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "app-gateway"}},
 			&appv1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "litellm",
@@ -68,12 +72,29 @@ func TestCallerReconciler_optInWritesNPAndInject(t *testing.T) {
 	if err := r.Reconcile(context.Background(), ns); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
-	for _, name := range []string{security.CallerMeshEgressNPName, security.CallerToAppGatewayEgressNPName} {
-		var np networkingv1.NetworkPolicy
-		if err := c.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: name}, &np); err != nil {
-			t.Fatalf("get %s: %v", name, err)
+
+	for _, name := range []string{
+		security.CallerMeshEgressNPName,
+		security.CallerToAppGatewayEgressNPName,
+		security.CallerDNSEgressNPName,
+		security.CallerMiddlewareEgressNPName,
+	} {
+		if err := c.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: name}, &networkingv1.NetworkPolicy{}); err == nil {
+			t.Fatalf("NP-minimal v1.0: caller egress %q must not be created", name)
 		}
 	}
+
+	var gwNP networkingv1.NetworkPolicy
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "app-gateway", Name: security.AppGatewayInClusterCallerIngressNPName}, &gwNP); err != nil {
+		t.Fatalf("gateway caller ingress NP missing: %v", err)
+	}
+	if len(gwNP.Spec.PodSelector.MatchLabels) != 0 || len(gwNP.Spec.PodSelector.MatchExpressions) != 0 {
+		t.Fatalf("gateway caller ingress podSelector must be empty, got %#v", gwNP.Spec.PodSelector)
+	}
+	if len(gwNP.Spec.Ingress) != 1 || len(gwNP.Spec.Ingress[0].Ports) != 0 {
+		t.Fatalf("gateway caller ingress must omit Ports, got %#v", gwNP.Spec.Ingress)
+	}
+
 	var nsObj corev1.Namespace
 	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, &nsObj); err != nil {
 		t.Fatalf("get ns: %v", err)
@@ -95,13 +116,15 @@ func TestCallerReconciler_osNetworkNoOp(t *testing.T) {
 		t.Fatalf("Reconcile: %v", err)
 	}
 	var np networkingv1.NetworkPolicy
-	err := c.Get(context.Background(), types.NamespacedName{Namespace: "os-network", Name: security.CallerMeshEgressNPName}, &np)
-	if err == nil {
-		t.Fatal("os-network must not get caller NP")
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "app-gateway", Name: security.AppGatewayInClusterCallerIngressNPName}, &np); err == nil {
+		t.Fatal("os-network reconcile must not create gateway caller ingress NP")
 	}
 }
 
-func TestCallerReconciler_optOutCleansUp(t *testing.T) {
+// TestCallerReconciler_optOutGCsLegacyEgress validates the upgrade-path cleanup:
+// any pre-v1.0 caller egress NPs still in the namespace are GCed when the app
+// opts out (or is deleted).
+func TestCallerReconciler_optOutGCsLegacyEgress(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = appv1alpha1.AddToScheme(scheme)
@@ -111,26 +134,26 @@ func TestCallerReconciler_optOutCleansUp(t *testing.T) {
 	c := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(
 			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
-				Name: ns,
+				Name:        ns,
 				Annotations: map[string]string{LinkerdInjectAnnotation: LinkerdInjectEnabled},
 			}},
 			security.NewCallerMeshEgressNP(ns),
 			security.NewCallerToAppGatewayEgressNP(ns, "app-gateway"),
-			&appv1alpha1.Application{
-				ObjectMeta: metav1.ObjectMeta{Name: "litellm"},
-				Spec: appv1alpha1.ApplicationSpec{
-					Name:      "litellm",
-					Namespace: ns,
-					Settings:  map[string]string{"clusterAppRef": "ollamav2"},
-				},
-			},
+			security.NewCallerDNSEgressNP(ns),
+			security.NewCallerMiddlewareEgressNP(ns, "user-system-alice"),
 		).Build()
 	r := &CallerReconciler{Client: c}
 	if err := r.Reconcile(context.Background(), ns); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
-	err := c.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: security.CallerMeshEgressNPName}, &networkingv1.NetworkPolicy{})
-	if err == nil {
-		t.Fatal("mesh NP should be deleted on opt-out")
+	for _, name := range []string{
+		security.CallerMeshEgressNPName,
+		security.CallerToAppGatewayEgressNPName,
+		security.CallerDNSEgressNPName,
+		security.CallerMiddlewareEgressNPName,
+	} {
+		if err := c.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: name}, &networkingv1.NetworkPolicy{}); err == nil {
+			t.Fatalf("legacy NP %q should be GCed on opt-out", name)
+		}
 	}
 }
