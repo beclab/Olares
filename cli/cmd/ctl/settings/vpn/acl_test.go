@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -155,6 +156,16 @@ func TestValidateACLPayload(t *testing.T) {
 	}
 	if !contains(err.Error(), "8080") || !contains(err.Error(), "*:8080") {
 		t.Errorf("error should cite offending value and a suggestion; got %q", err.Error())
+	}
+}
+
+func TestRunACLRemoveRejectsInvalidDstBeforePrepare(t *testing.T) {
+	err := runACLRemove(context.Background(), nil, "my-app", []string{"8080"}, nil, nil)
+	if err == nil {
+		t.Fatal("expected invalid destination error")
+	}
+	if !strings.Contains(err.Error(), "invalid destination") || !strings.Contains(err.Error(), "*:8080") {
+		t.Fatalf("err = %q, want ACL destination validation before prepare", err.Error())
 	}
 }
 

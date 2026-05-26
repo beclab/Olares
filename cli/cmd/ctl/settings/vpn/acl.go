@@ -648,6 +648,9 @@ func runACLRemove(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp,
 	if len(removals) == 0 {
 		return fmt.Errorf("nothing to remove — pass --tcp, --udp and/or --any-proto")
 	}
+	if err := validateACLPayload(removals); err != nil {
+		return err
+	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err

@@ -1,6 +1,9 @@
 package users
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestUserIsOwner(t *testing.T) {
 	tests := []struct {
@@ -25,6 +28,11 @@ func TestUserIsOwner(t *testing.T) {
 }
 
 func TestValidateUserDeletable(t *testing.T) {
+	if err := validateUserDeletable("missing", nil); err == nil {
+		t.Fatal("expected error for nil user info")
+	} else if !strings.Contains(err.Error(), "missing") {
+		t.Fatalf("err = %q, want username context", err.Error())
+	}
 	if err := validateUserDeletable("alice", &userInfo{Roles: []string{"owner"}}); err == nil {
 		t.Fatal("expected error for owner")
 	}

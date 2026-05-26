@@ -155,6 +155,11 @@ func decodeSSHStatus(raw json.RawMessage) (sshStatus, error) {
 			return out, fmt.Errorf("GET /api/acl/ssh/status: %s", msg)
 		}
 		if len(env.Data) == 0 || string(bytes.TrimSpace(env.Data)) == "null" {
+			if status, ok, err := decodeFlatSSHStatus(trimmed); err != nil {
+				return out, err
+			} else if ok {
+				return status, nil
+			}
 			return out, nil
 		}
 		if err := json.Unmarshal(env.Data, &out); err != nil {
@@ -166,6 +171,23 @@ func decodeSSHStatus(raw json.RawMessage) (sshStatus, error) {
 		return out, fmt.Errorf("decode acl ssh status body: %w", err)
 	}
 	return out, nil
+}
+
+func decodeFlatSSHStatus(body []byte) (sshStatus, bool, error) {
+	var out sshStatus
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return out, false, fmt.Errorf("decode acl ssh status body: %w", err)
+	}
+	if _, hasState := probe["state"]; !hasState {
+		if _, hasAllow := probe["allow_ssh"]; !hasAllow {
+			return out, false, nil
+		}
+	}
+	if err := json.Unmarshal(body, &out); err != nil {
+		return out, false, fmt.Errorf("decode acl ssh status body: %w", err)
+	}
+	return out, true, nil
 }
 
 // envelopeLooksWrapped reports whether `body` matches the BFL envelope

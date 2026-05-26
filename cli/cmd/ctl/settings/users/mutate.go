@@ -428,6 +428,9 @@ func fetchUserForDelete(ctx context.Context, d Doer, username string) (*userInfo
 }
 
 func validateUserDeletable(username string, info *userInfo) error {
+	if info == nil {
+		return fmt.Errorf("user %q was not found", username)
+	}
 	if userIsOwner(info) {
 		return fmt.Errorf("cannot delete user '%s' with role '%s' ", username, "owner")
 	}

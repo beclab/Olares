@@ -44,6 +44,12 @@ func TestDecodeSSHStatus(t *testing.T) {
 			wantAllow: true,
 		},
 		{
+			name:      "success code with flat status fields",
+			body:      `{"code":0,"message":"success","state":"applied","allow_ssh":true}`,
+			wantState: "applied",
+			wantAllow: true,
+		},
+		{
 			name:        "empty body",
 			body:        ``,
 			assertEmpty: true,

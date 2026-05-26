@@ -67,6 +67,7 @@ func runGet(ctx context.Context, f *cmdutil.Factory, username, outputRaw string)
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	username = strings.TrimSpace(username)
 	if username == "" {
 		return fmt.Errorf("username is required")
 	}
