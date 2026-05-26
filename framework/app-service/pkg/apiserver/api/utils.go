@@ -69,5 +69,8 @@ func HandleError(response *restful.Response, req *restful.Request, err error) {
 func handle(statusCode int, response *restful.Response, req *restful.Request, err error) {
 	_, fn, line, _ := runtime.Caller(2)
 	ctrl.Log.Error(err, "response error", "func", fn, "line", line)
-	http.Error(response, sanitizer.Replace(err.Error()), statusCode)
+	response.WriteHeaderAndJson(statusCode, ResponseWithMsg{
+		Response: Response{Code: int32(statusCode)},
+		Message:  sanitizer.Replace(err.Error()),
+	}, restful.MIME_JSON)
 }
