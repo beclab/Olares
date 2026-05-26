@@ -1,29 +1,29 @@
 ---
 outline: [2, 3]
-description: Deploy KoboldCpp on Olares to run local GGUF models with text generation, multimodal reasoning, image generation, and voice capabilities.
+description: Run KoboldCpp on Olares to use local GGUF models for AI chat, image understanding, text-to-image generation, voice features, and optional API access.
 head:
   - - meta
     - name: keywords
       content: Olares, KoboldCpp, local LLM, GGUF, AI inference, text generation, multimodal
-app_version: "1.0.0"
+app_version: "1.0.2"
 doc_version: "1.0"
-doc_updated: "2026-05-15"
+doc_updated: "2026-05-25"
 ---
 
-# Deploy KoboldCpp for local AI inference
+# Run local AI models with KoboldCpp
 
-KoboldCpp is a lightweight AI inference server built on llama.cpp. It runs GGUF-format models locally and provides a web interface alongside OpenAI-compatible APIs.
+KoboldCpp is a lightweight AI inference server built on llama.cpp for running GGUF models locally. On Olares, it provides a web interface for local chat, image understanding, text-to-image generation, and voice features, with optional OpenAI-compatible API access.
 
-On Olares, KoboldCpp comes pre-configured with text generation, image understanding, text-to-image, speech recognition, and text-to-speech capabilities.
+This guide uses the default Qwen3.5-4B model for the main workflow. Switch models only when you need another GGUF model or a feature that requires a speech-capable model preset.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 - Install KoboldCpp and configure the Hugging Face token.
 - Use the KoboldCpp web interface for text generation, multimodal prompts, and voice features.
-- Call the KoboldCpp API from other applications.
-- Switch to a different GGUF model through the admin panel.
-- Configure multiuser mode for shared access.
+- Switch to a different GGUF model when needed.
+- Optionally call the KoboldCpp API from other applications.
+<!-- - Configure multiuser mode for shared access. -->
 
 ## Prerequisites
 
@@ -33,8 +33,10 @@ In this guide, you will learn how to:
 ## Install KoboldCpp
 
 1. Open Market and search for "KoboldCpp".
+
+   ![KoboldCpp](/images/manual/use-cases/koboldcpp.png#bordered)
+
 2. Click **Get**, then **Install**, and wait for installation to complete.
-   <!-- ![KoboldCpp](/images/manual/use-cases/koboldcpp.png#bordered) -->
 
 ## Configure the Hugging Face token
 
@@ -45,12 +47,18 @@ If you do not have a token, create one in your Hugging Face account settings. Fo
 :::
 
 1. Open Olares Settings, then navigate to **Advanced** > **System environment variables**.
-2. Click **Edit**, enter `OLARES_USER_HUGGINGFACE_TOKEN` with your Hugging Face token value, then click **Confirm**.
-3. Return to the System environment variables page and click **Apply** to make the change take effect.
+2. Find `OLARES_USER_HUGGINGFACE_TOKEN`, click <i class="material-symbols-outlined">edit_square</i> to edit the environment variable. 
+3. Enter your Hugging Face token value, then click **Confirm**.
 
-## Complete initial setup
+   ![Edit environment variable](/images/manual/use-cases/koboldcpp-edit-env.png#bordered)
 
-After installation, open KoboldCpp from Launchpad. The app shows a download progress screen while it fetches the default model files in the background. The main service starts only after all required files finish downloading.
+4. Return to the System environment variables page and click **Apply** to make the change take effect.
+
+## Start KoboldCpp for the first time
+
+After installation, open KoboldCpp from Launchpad. 
+
+During the first startup, KoboldCpp downloads the required model files in the background. The main service starts only after all required files finish downloading.
 
 :::info First startup duration
 The initial download might take some time depending on your network speed and disk performance. The progress screen might persist for several minutes. This is normal.
@@ -58,35 +66,60 @@ The initial download might take some time depending on your network speed and di
 
 Once downloads complete, the KoboldCpp web interface loads automatically. You can also verify downloaded files in **Files** at `Home/Huggingface/koboldcpp`.
 
-## Generate text
+
+## Use KoboldCpp
+
+When KoboldCpp is ready, it opens the Lite chat interface. Use this interface to chat with the default model, attach images or files, adjust generation settings, and access optional media features. The following table summarizes the main interface areas.
+
+| Area | Purpose |
+|---|---|
+| **Top navigation bar** | Access global actions, model management, session<br> management, and settings. |
+| **Main conversation area**| Check the current runtime status and view the conversation. |
+| **Conversation toolbar** | Manage the current conversation and attach files or images. |
+| **Input area** | Enter prompts and control editing or grouping behavior. |
+
+![KoboldCpp interface](/images/manual/use-cases/koboldcpp-interface.png#bordered)
+
+### Chat with the default model
 
 The main interface loads with the default Qwen3.5-4B model ready for conversation.
+1. Type your prompt in the input box at the bottom of the screen.
+2. Click **Submit** to send the message, or press **Enter**.
 
-1. Type your prompt into the input box at the bottom of the screen, then press **Enter** to send.
-2. To regenerate the last response, click **Retry**. To explore alternative replies, click **Branch**.
-3. To review or edit earlier messages, click **Context**. To undo a recent edit, click **Undo**.
-4. To change generation parameters such as temperature or context size, click **Settings** in the top navigation bar.
-5. To start a new conversation, click **New Session**. This clears the current context.
+Use the top navigation bar for session-level actions:
 
-:::tip Save and load conversations
-Click **Save / Load** in the top navigation bar to export your chat history or import a previous session.
-:::
+| Control | What it does |
+|:--------|:-------------|
+| **New Session** | Start a new conversation. |
+| **Scenarios** | Load a preset scenario, such as role-play or Q&A. |
+| **Save / Load** | Export the current session or import a previous one. |
+| **Settings** | Adjust generation options, such as temperature, context size, <br>and other model parameters. |
 
-:::tip Load a scenario template
-Click **Scenarios** in the top navigation bar to load a preset template, such as role-play or Q&A.
-:::
+Use the toolbar above the input box to manage the current conversation:
 
-## Analyze images with multimodal prompts
+| Control | What it does |
+|:--------|:-------------|
+| **Context** | View or edit the conversation context. |
+| **Undo** / **Redo** | Revert or restore recent changes. |
+| **Retry** | Regenerate the latest response. |
+| **Branch** | Create an alternative conversation path from the current point. |
+| **Add File** | Attach a file to the conversation. |
 
-KoboldCpp supports image understanding when the required multimodal projection model (mmproj) is loaded.
+![KoboldCpp lite chat](/images/manual/use-cases/koboldcpp-lite-chat.png#bordered)
+
+### Analyze images with multimodal prompts
+
+KoboldCpp supports image understanding when the required multimodal projection model, or mmproj, is loaded.
 
 1. Click **Add File** in the toolbar above the input box.
-2. Select or upload an image.
+2. Select **Upload a File**.
 3. Enter a text prompt about the image, then send.
 
 The model processes both the image and your text to generate a combined response.
 
-## Generate images from text
+ ![Analyze image](/images/manual/use-cases/koboldcpp-analyze-image.png#bordered)
+
+### Generate images from text
 
 KoboldCpp includes a text-to-image interface powered by Stable Diffusion.
 
@@ -94,66 +127,61 @@ KoboldCpp includes a text-to-image interface powered by Stable Diffusion.
 2. Enter a prompt and adjust generation parameters.
 3. Click the generate button to create the image.
 
+   ![Generate image](/images/manual/use-cases/koboldcpp-generate-image.png#bordered)
+
 The image generation model (`picX_real`) and its runtime parameters inherit from the global KoboldCpp startup configuration. No additional setup is required.
 
-## Use voice input and output
+### Use voice input and output
 
-KoboldCpp supports three voice-related features:
+KoboldCpp supports voice input, text-to-speech output, and audio transcription.
 
-- **Speech recognition (STT)**: Click the microphone icon in the input area and select **Toggle-To-Talk** to convert speech to text during conversations.
-- **Speech-to-text (Whisper)**: Upload an audio file or record directly in supported interfaces to transcribe speech.
-- **Text-to-speech (TTS)**: Enable TTS in supported interfaces to have model responses read aloud. This feature uses the Qwen3-TTS model and continues to occupy the GPU until audio generation completes.
+| Feature | Use it to | Requirement |
+|:--------|:----------|:------------|
+| Voice input with STT | Dictate a message during a chat | Default setup |
+| Text-to-speech output | Read model responses aloud | Default setup |
+| Speech recognition | Transcribe uploaded or recorded audio | Speech-capable model preset |
 
-## Call the API
+**To use voice input with STT:**
 
-KoboldCpp exposes OpenAI-compatible endpoints on the same port as the web interface. You can find the endpoint URL in Olares Settings under **Applications** > **KoboldCpp** > **Shared entrances** or **Entrances**.
+1. Click **Settings** > **Media**.
+2. In **Audio Input**, select **Toggle-To-Talk**, then click **OK**.
 
-Example API calls:
+   ![Input audio](/images/manual/use-cases/koboldcpp-audio-input.png#bordered){width=90%}
 
-```bash
-BASE_URL="http://your-shared-endpoint.shared.olares.com"
+3. Back in the input area, click the microphone button to start recording. Click it again to send the voice input.
 
-# List available models
-curl -sS "$BASE_URL/v1/models"
+**To use text-to-speech output:**
 
-# Chat completion
-curl -sS "$BASE_URL/v1/chat/completions" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "Hello, please introduce yourself in one sentence."}
-    ],
-    "temperature": 0.7,
-    "max_tokens": 128
-  }'
+1. Click **Settings** > **Media**.
+2. In **Audio Output**, select **KoboldCPP TTS API**, then click **OK**.
 
-# Streaming response
-curl -N "$BASE_URL/v1/chat/completions" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "stream": true,
-    "messages": [{"role":"user","content":"Give me three study suggestions."}]
-  }'
-```
+   ![Output audio](/images/manual/use-cases/koboldcpp-audio-output.png#bordered){width=90%}
 
-:::tip Internal vs external access
-Use the shared entrance URL for requests from other apps within Olares. Use the regular entrance URL for requests from outside your Olares network.
-:::
+This feature uses the Qwen3-TTS model and continues to occupy the GPU until audio generation completes.
 
-## Switch models via admin mode
+**To transcribe audio with speech recognition:**
 
-KoboldCpp runs in `--admin` mode. When enabled, KoboldCpp reads preset configuration files from `/models/admindir` inside the container. Each preset is a `.kcpps` file in JSON format that defines a set of startup parameters, such as model path, context size, and GPU layer count. You can switch between presets from the web interface without manually restarting the server.
+Speech recognition for uploaded or recorded audio requires a speech-capable model preset. To use it, first [switch to another GGUF model](#switch-to-another-gguf-model), then return to this section.
+
+1. Click **Add File** in the toolbar above the input box.
+2. Select **Microphone** to record audio, or select **Upload a File** to upload an audio file.
+3. Enter a text prompt for the transcription task, then send.
+
+   ![Add audio file](/images/manual/use-cases/koboldcpp-add-audio.png#bordered){width=60%}
+
+## Switch to another GGUF model
+
+Use admin mode when you want to load a GGUF model that is not included by default. KoboldCpp reads model presets from `/models/admindir` inside the container. Each preset is a `.kcpps` file that tells KoboldCpp which model file to load and which runtime settings to use.
 
 :::warning Admin mode security
 The admin panel exposes configuration controls. Only enable this mode in trusted network environments, and protect access with authentication or a reverse proxy.
 :::
 
-By default, only one preset is auto-generated: `qwen3.5-4b.kcpps`, which points to the built-in Qwen3.5-4B model. To use any other GGUF model, you must prepare the model file and create a matching `.kcpps` preset, then load it through the admin panel.
+By default, only one preset is auto-generated: `qwen3.5-4b.kcpps`, which points to the built-in Qwen3.5-4B model. To use another GGUF model, prepare the model file, create a matching `.kcpps` preset, and load it from the Admin panel.
 
-The following example uses the `gemma-3-4b-it` model. Adapt the steps for any GGUF model you want to use.
+The following example switches KoboldCpp to the `gemma-3-4b-it` model. When you use a different model, keep the workflow the same and update the model filename in the preset.
 
-### Step 1: Prepare the GGUF file
+### Prepare a GGUF model file
 
 Get the model file into the KoboldCpp container. Choose one of the following methods.
 
@@ -170,7 +198,7 @@ Get the model file into the KoboldCpp container. Choose one of the following met
 </template>
 <template #Download-directly-inside-the-container>
 
-1. Open Control Hub and navigate to **Browse** > **Shared** > `koboldcppserver-shared` > **Deployments** > `koboldcpp-engine`.
+1. Open Control Hub and navigate to **Browse** > **System** > `koboldcppserver-shared` > **Deployments** > `koboldcpp-engine`.
 2. In the container terminal, run:
    ```bash
    wget -O /models/gemma-3-4b-it-qat-Q4_K_M.gguf \
@@ -185,9 +213,11 @@ Get the model file into the KoboldCpp container. Choose one of the following met
 </template>
 </tabs>
 
-### Step 2: Create and upload the preset file
+### Create and upload a model preset
 
-Create a `.kcpps` preset file on your local computer. The file contains the startup parameters for the new model.
+A model preset tells KoboldCpp which GGUF file to load. In most cases, you only need to update the `model_param` value so it points to your GGUF file in `/models`.
+
+Create a `.kcpps` preset file on your local computer:
 
 ::: code-group
 
@@ -231,7 +261,7 @@ EOF
 
 Then upload the `.kcpps` file through LarePass to **Files** > `Home/Huggingface/koboldcpp/admindir`.
 
-### Step 3: Load the preset in KoboldCpp
+### Load the new model preset
 
 1. Open KoboldCpp and click **Admin** in the top navigation bar.
 2. In the **Select New Model or Config** field, choose the `.kcpps` file you uploaded.
@@ -241,6 +271,63 @@ Then upload the `.kcpps` file through LarePass to **Files** > `Home/Huggingface/
 The **Select Base Config** field is optional. If you choose a base config, KoboldCpp merges it with the new preset. Parameters defined in the new preset override matching fields in the base config. Unspecified parameters inherit from the base config.
 :::
 
+## Optional: Call KoboldCpp through the API
+
+KoboldCpp provides OpenAI-compatible API endpoints under its app entrance URL. Use this optional section when you want to connect KoboldCpp to scripts, automation tools, or OpenAI-compatible clients.
+
+To find the API base URL, open Olares Settings and go to **Applications** > **KoboldCpp**. Copy the URL that matches where the request comes from:
+
+| Scenario | Use this URL |
+|:--|:--|
+| Call from another app inside Olares. | **Shared entrances** |
+| Call from your local computer or another external client. | **Entrances** |
+
+The examples below use macOS/Linux shell syntax. On Windows, run them in WSL or Git Bash, or adapt the environment variable syntax for PowerShell.
+
+1. Set `BASE_URL` to the KoboldCpp entrance URL you copied.
+
+   ```bash
+   BASE_URL="https://your-koboldcpp-entrance-url"
+   ```
+
+2. Check which model ID the API exposes.
+
+   ```bash
+   curl -sS "$BASE_URL/v1/models"
+   ```
+
+   If the command returns a model list, the API is ready to use. Use the returned model ID in chat requests. The examples below use `koboldcpp`.
+
+3. Send a chat request.
+
+   ```bash
+   curl -sS "$BASE_URL/v1/chat/completions" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "model": "koboldcpp",
+       "messages": [
+         {"role": "user", "content": "Hello, please introduce yourself in one sentence."}
+       ],
+       "temperature": 0.7,
+       "max_tokens": 128
+     }'
+   ```
+
+To receive the response token by token, send a streaming request:
+
+```bash
+curl -N "$BASE_URL/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "koboldcpp",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "Give me three study suggestions."}
+    ]
+  }'
+```
+
+<!--
 ## Manage multiuser mode
 
 KoboldCpp enables multiuser mode by default. When multiple users send requests simultaneously, the server queues them instead of running them in parallel. This prevents resource exhaustion and keeps the service stable.
@@ -295,6 +382,7 @@ When starting KoboldCpp manually, pass the `--multiuser` flag:
 :::tip Adjust the queue size for your hardware
 If your GPU is powerful, you can allow a larger queue (for example, `--multiuser 10`). If you run on modest hardware, keep the queue small (for example, `--multiuser 5`) to avoid delays.
 :::
+-->
 
 ## Learn more
 
