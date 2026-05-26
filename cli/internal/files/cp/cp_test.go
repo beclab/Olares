@@ -120,7 +120,12 @@ func TestPlan_RenameMode(t *testing.T) {
 
 // TestPlan_MultiSourceRequiresDirDst guards the "cp a b c" → "c must
 // be a directory" Unix invariant. Without it, multi-source rename has
-// no defined semantics.
+// no defined semantics. The error message has evolved to omit the
+// literal word "directory" and instead phrases the rule as
+// "must end with '/' when more than one source is given (got N
+// sources)", so the assertion below pins those two substrings (the
+// trailing-slash requirement marker and the source-count fragment)
+// which together uniquely identify this guard.
 func TestPlan_MultiSourceRequiresDirDst(t *testing.T) {
 	srcs := []Source{
 		{FileType: "drive", Extend: "Home", SubPath: "/a.pdf"},
@@ -132,8 +137,12 @@ func TestPlan_MultiSourceRequiresDirDst(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for multi-source + non-dir target")
 	}
-	if !strings.Contains(err.Error(), "directory") || !strings.Contains(err.Error(), "'/'") {
+	msg := err.Error()
+	if !strings.Contains(msg, "must end with '/'") {
 		t.Errorf("error should mention the trailing-slash requirement, got: %v", err)
+	}
+	if !strings.Contains(msg, "more than one source") {
+		t.Errorf("error should mention the multi-source condition, got: %v", err)
 	}
 }
 
@@ -305,6 +314,196 @@ func TestPlan_RefusesProtectedDriveHomeChildOnMove(t *testing.T) {
 			src: Source{
 				FileType: "drive", Extend: "Home",
 				SubPath: "/MyProjects", IsDirIntent: true,
+			},
+		},
+	}
+	for _, c := range allowMoveCases {
+		t.Run("allow mv "+c.name, func(t *testing.T) {
+			if _, err := Plan([]Source{c.src}, dst, ActionMove, true, "node-a", ""); err != nil {
+				t.Errorf("Plan: unexpected mv refusal for %s/%s%s: %v",
+					c.src.FileType, c.src.Extend, c.src.SubPath, err)
+			}
+		})
+	}
+}
+
+// TestPlan_RefusesProtectedExternalChildOnMove pins the LarePass-
+// aligned policy that the system-managed AI mountpoint folders
+// under `external/<node>/...` refuse `mv` as the source: the GUI
+// greys out cut / move via `externalFolderWhiteList` (depth-1: ai)
+// and `externalAiFolderWhiteList` (depth-2: output / model /
+// comfyui / ollama) in apps/packages/app/src/stores/operation.ts.
+// Moving the source would unlink the directory from the mountpoint
+// and silently break the Ollama / ComfyUI / Huggingface readers
+// that look it up by name.
+//
+// Path-shape ground truth: the GUI's `<X>` in
+// `/Files/External/<X>/` is the LarePass `masterNode`
+// (apps/.../external/data.ts:77), so `<X>` maps to
+// FrontendPath.Extend on the CLI — the depth-1 `ai/` entry lives
+// at `external/<node>/ai/` (SubPath="/ai/"), NOT under any nested
+// volume segment.
+//
+// Symmetric with TestPlan_RefusesProtectedDriveHomeChildOnMove:
+// the SAME sources stay valid for `cp` (copy preserves the source,
+// so the data-loss risk that justifies the move guard does not
+// apply). The cp branch is anchored here so the cp-vs-mv asymmetry
+// stays visible at the test site.
+func TestPlan_RefusesProtectedExternalChildOnMove(t *testing.T) {
+	rejectCases := []struct {
+		name string
+		src  Source
+	}{
+		// ----- depth-1: external/<node>/ai -----
+		{
+			name: "depth-1 ai under olares node",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-1 ai with trailing slash",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-1 ai on arbitrary node name (node is opaque)",
+			src: Source{
+				FileType: "external", Extend: "node-1",
+				SubPath: "/ai/", IsDirIntent: true,
+			},
+		},
+		// ----- depth-2: external/<node>/ai/<name> -----
+		{
+			name: "depth-2 ai/output",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/output", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-2 ai/model",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/model/", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-2 ai/comfyui",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/comfyui", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-2 ai/ollama",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/ollama/", IsDirIntent: true,
+			},
+		},
+	}
+	// Destination is a regular drive/Home subdir so it doesn't
+	// preempt the source-side guard with its own validation.
+	dst := Destination{FileType: "drive", Extend: "Home", SubPath: "/Backups/", IsDirIntent: true}
+
+	for _, c := range rejectCases {
+		t.Run("reject mv "+c.name, func(t *testing.T) {
+			srcs := []Source{c.src}
+			_, err := Plan(srcs, dst, ActionMove, true, "node-a", "")
+			if err == nil {
+				t.Fatalf("Plan: expected mv refusal for %s/%s%s",
+					c.src.FileType, c.src.Extend, c.src.SubPath)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, "system-managed AI mountpoint folder") {
+				t.Errorf("error should mention 'system-managed AI mountpoint folder'; got: %v", err)
+			}
+			if !strings.Contains(msg, "LarePass") {
+				t.Errorf("error should reference LarePass for context; got: %v", err)
+			}
+			// Error must echo the offending path so the user
+			// can match it against their command line.
+			displayHint := c.src.FileType + "/" + c.src.Extend
+			if !strings.Contains(msg, displayHint) {
+				t.Errorf("error should echo path prefix %q; got: %v", displayHint, err)
+			}
+			// Sanity-check that both whitelists are enumerated.
+			if !strings.Contains(msg, "comfyui") || !strings.Contains(msg, "output") {
+				t.Errorf("error should enumerate depth-2 whitelist (comfyui / output); got: %v", err)
+			}
+
+			// Mirror operation: cp (copy) MUST go through, same
+			// as the drive/Home test above. Anchors the cp-vs-mv
+			// asymmetry at the test site so it stays observable.
+			if _, err := Plan(srcs, dst, ActionCopy, true, "node-a", ""); err != nil {
+				t.Errorf("Plan: cp must NOT be gated by the external-protected-children policy, got: %v", err)
+			}
+		})
+	}
+
+	// User-content paths and other namespaces MUST stay movable —
+	// the policy must not over-extend.
+	allowMoveCases := []struct {
+		name string
+		src  Source
+	}{
+		{
+			// Depth-2 under a non-ai depth-1 parent — name
+			// happens to match the ai-whitelist but the parent
+			// isn't "ai", so this is just a regular dir inside
+			// some volume.
+			name: "depth-2 under non-ai parent",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/USB-0/output", IsDirIntent: true,
+			},
+		},
+		{
+			// Depth-2 ai/<other> not in the whitelist — user
+			// content under ai/.
+			name: "depth-2 ai/<other> not whitelisted",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/my-experiments", IsDirIntent: true,
+			},
+		},
+		{
+			// Depth-3 under ai/output — per-run cleanups
+			// remain movable (only the dirs themselves are
+			// pinned).
+			name: "depth-3 under ai/output",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/output/run-2026-05", IsDirIntent: true,
+			},
+		},
+		{
+			// Case-sensitive mismatch — the GUI compares the
+			// lowercase string values; CLI must too.
+			name: "case mismatch on depth-1 name",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/AI", IsDirIntent: true,
+			},
+		},
+		{
+			name: "case mismatch on depth-2 name",
+			src: Source{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/Output", IsDirIntent: true,
+			},
+		},
+		{
+			// drive/Home/ai is NOT external — different
+			// namespace.
+			name: "drive/Home/ai is not external",
+			src: Source{
+				FileType: "drive", Extend: "Home",
+				SubPath: "/ai", IsDirIntent: true,
 			},
 		},
 	}

@@ -155,6 +155,72 @@ func Plan(targets []Target, recursive bool) ([]*Group, error) {
 			return nil, fmt.Errorf("refusing to delete the root of %s/%s",
 				t.FileType, t.Extend)
 		}
+		// LarePass-aligned policy for external mountpoints: the
+		// AI-mountpoint surface Olares creates at the external
+		// node root holds a backend-owned layout (depth-1 `ai/`
+		// plus the four depth-2 feature dirs output / model /
+		// comfyui / ollama) that the LarePass GUI greys out via
+		// `externalFolderWhiteList` + `externalAiFolderWhiteList`
+		// in apps/packages/app/src/stores/operation.ts (gated by
+		// `ieExternalRootPath` and `isExternalAiPath`). These
+		// directories are the contract Ollama / ComfyUI /
+		// Huggingface readers look up by name; a scripted
+		// `files rm -r external/<node>/ai/` would silently break
+		// those apps without any GUI affordance to recover.
+		//
+		// IMPORTANT — order: this guard runs BEFORE
+		// isExternalVolumeRoot below because the depth-1 entry
+		// `external/<node>/ai/` is ALSO depth-1 under the node
+		// (so the generic volume-root rejection would otherwise
+		// fire first with a wrong, "this is a mounted disk"
+		// message). The AI-mountpoint message is more accurate:
+		// `ai` is a system-managed entry surfaced alongside the
+		// real disk mounts, not itself a removable disk.
+		//
+		// Scope is EXACT: user content nested deeper —
+		// e.g. external/<node>/ai/output/run-2026/ — stays
+		// freely deletable so per-run cleanups keep working.
+		// Authoritative names live in cli/cmd/ctl/files/path.go's
+		// ProtectedExternalChildren + ProtectedExternalAiChildren.
+		if isProtectedExternalChild(t.FileType, t.Extend, t.ParentSubPath, t.Name) {
+			return nil, fmt.Errorf(
+				"refusing to delete external/%s%s%s/: this is a system-managed AI mountpoint folder reserved by Files; "+
+					"the LarePass GUI also disables delete on this entry. "+
+					"Names refused at external/<node>/: {%s}; at external/<node>/ai/: {%s}. "+
+					"Delete its contents instead (e.g. files rm -r external/%s%s%s/<entry>) and the folder itself will stay.",
+				t.Extend, t.ParentSubPath, t.Name,
+				protectedExternalChildrenList, protectedExternalAiChildrenList,
+				t.Extend, t.ParentSubPath, t.Name)
+		}
+		// external/<node>/<volume>/ refusal — symmetric with
+		// mkdir.Plan's depth-1 guard (cli/internal/files/mkdir/
+		// mkdir.go). The volume itself is a LarePass-managed
+		// mount point (USB-0, SMB-..., per-disk entries surfaced
+		// at the external/<node>/ volume-listing layer), not a
+		// regular directory; the files-backend's DELETE handler
+		// on /api/resources/external/<node>/<volume>/ doesn't
+		// know how to unmount the volume — it just iterates the
+		// volume's contents and removes them, which presents as
+		// a successful 2xx but actually wipes everything the
+		// user had stored on that disk. That's a "blast radius
+		// of an entire mount point" hazard, same flavor as
+		// `rm -rf drive/Home/`, so we refuse client-side and
+		// point at the only meaningful shape (depth ≥ 2 under
+		// the node). The match condition mirrors
+		// frontendPathToRmTarget's split: parent reduces to
+		// "" / "/" exactly when the user typed
+		// `external/<node>/<single-segment>/`.
+		//
+		// The depth-1 `ai` whitelist (isProtectedExternalChild
+		// above) preempts this branch with a more specific
+		// message; everything else at depth-1 lands here.
+		if isExternalVolumeRoot(t.FileType, t.ParentSubPath, t.Name) {
+			return nil, fmt.Errorf(
+				"refusing to delete external/%s/%s/: this is a mounted volume root (managed via LarePass, not via files-backend rm); "+
+					"the DELETE handler would iterate the volume and wipe everything on the underlying disk. "+
+					"Point at a sub-path inside the volume instead, e.g. external/%s/%s/<sub>/.",
+				t.Extend, t.Name, t.Extend, t.Name)
+		}
 		// LarePass-aligned policy: the system-managed first-level
 		// children directly under drive/Home/ (Pictures / Music /
 		// Movies / Downloads / Documents / Code / Ollama /
@@ -270,6 +336,30 @@ const protectedDriveHomeChildrenList = "Cache, Code, Data, Documents, Downloads,
 // cli/cmd/ctl/files/path.go: only EXACT first-level entries match
 // (parent must be the drive/Home/ root), and the comparison is
 // case-sensitive against protectedDriveHomeChildren.
+// isExternalVolumeRoot reports whether (fileType, parent, name)
+// addresses the bare volume root under external/<node>/. The
+// frontendPathToRmTarget split lands `external/<node>/<volume>/`
+// as ParentSubPath="/" + Name="<volume>" + IsDirIntent=true, so
+// the canonical "this is a depth-1 entry under external/<node>"
+// shape is exactly the parent-is-root + non-empty-name pair on
+// the external fileType. Symmetric with mkdir.Plan's depth-1
+// guard which uses `!strings.Contains(clean, "/")` on the
+// pre-split clean path — both end up rejecting the same wire
+// surface. See SKILL.md's "volume listing layer" note for the
+// user-visible contract.
+func isExternalVolumeRoot(fileType, parent, name string) bool {
+	if fileType != "external" {
+		return false
+	}
+	if name == "" {
+		return false
+	}
+	if strings.Trim(parent, "/") != "" {
+		return false
+	}
+	return true
+}
+
 func isProtectedDriveHomeChild(fileType, extend, parent, name string) bool {
 	if fileType != "drive" || extend != "Home" {
 		return false
@@ -282,6 +372,102 @@ func isProtectedDriveHomeChild(fileType, extend, parent, name string) bool {
 	}
 	_, ok := protectedDriveHomeChildren[name]
 	return ok
+}
+
+// protectedExternalChildren mirrors the LarePass web app's
+// externalFolderWhiteList (apps/packages/app/src/stores/operation.ts):
+// the entry names directly under `external/<node>/` whose rename /
+// delete affordance is greyed out by `isDisableMenuItem` when gated
+// by `ieExternalRootPath` (regex `^/Files/External/[^/]+/?$`).
+// Currently just `ai` — the AI mountpoint surface Olares surfaces
+// at the node root alongside the real disk mounts.
+//
+// Path-shape note: the GUI URL `/Files/External/<X>/` and the CLI
+// path `external/<X>/` share `<X>` as the LarePass `masterNode`
+// (see apps/.../external/data.ts:77), which is FrontendPath.Extend
+// on the CLI. The GUI's `ai/` row at `/Files/External/<node>/`
+// therefore maps to CLI `external/<node>/ai/` — ParentSubPath="/"
+// + Name="ai" in this package's (parent, name) split.
+//
+// Authoritative source on the CLI is
+// cli/cmd/ctl/files/path.go's ProtectedExternalChildren — keep the
+// two in sync if the web app's array ever changes (the
+// duplicate-in-internal pattern matches protectedDriveHomeChildren
+// above; same reason — internal/files/rm should not depend on
+// cmd/ctl/files for policy data).
+var protectedExternalChildren = map[string]struct{}{
+	"ai": {},
+}
+
+// protectedExternalAiChildren mirrors externalAiFolderWhiteList from
+// the same operation.ts store: entries directly under
+// `external/<node>/ai/` (depth-2 in SubPath) that the GUI refuses
+// to rename / delete when gated by `isExternalAiPath` (regex
+// `^/Files/External/[^/]+/ai/?$`). These are the per-feature
+// directories shared by the apps that use the AI mountpoint
+// (output / model / comfyui / ollama). Authoritative source:
+// cli/cmd/ctl/files/path.go's ProtectedExternalAiChildren.
+var protectedExternalAiChildren = map[string]struct{}{
+	"output":  {},
+	"model":   {},
+	"comfyui": {},
+	"ollama":  {},
+}
+
+const (
+	protectedExternalChildrenList   = "ai"
+	protectedExternalAiChildrenList = "comfyui, model, ollama, output"
+)
+
+// isProtectedExternalChild reports whether (fileType, extend,
+// parent, name) addresses one of the LarePass-managed AI mountpoint
+// folders the GUI refuses rename / delete on. Mirrors
+// FrontendPath.IsProtectedExternalChild from
+// cli/cmd/ctl/files/path.go but uses the rm package's (parent, name)
+// split shape (frontendPathToRmTarget peels off the trailing
+// segment).
+//
+// Two layers, both anchored at the external NODE root (Extend),
+// NOT inside any nested `<volume>` segment:
+//
+//   - depth-1: parent reduces to "" (empty/root), name is in
+//     protectedExternalChildren (currently just "ai"). The wire
+//     shape `external/<node>/ai/` lands as ParentSubPath="/" +
+//     Name="ai".
+//   - depth-2: parent reduces to "ai" (one trimmed segment), name
+//     is in protectedExternalAiChildren (output / model / comfyui
+//     / ollama). The wire shape `external/<node>/ai/<entry>/` lands
+//     as ParentSubPath="/ai/" + Name="<entry>".
+//
+// Extend (the `<node>` segment) is opaque to the policy — the GUI
+// regex `^/Files/External/[^/]+/...` ignores the node entirely.
+//
+// Scope is EXACT: any deeper parent ("/ai/output/..." or deeper)
+// is user content and stays freely deletable so per-run /
+// per-experiment cleanups keep working.
+func isProtectedExternalChild(fileType, extend, parent, name string) bool {
+	if fileType != "external" {
+		return false
+	}
+	_ = extend
+	if name == "" {
+		return false
+	}
+	trimmed := strings.Trim(parent, "/")
+	if trimmed == "" {
+		// parent is root → external/<node>/<name>/ shape (depth-1).
+		_, ok := protectedExternalChildren[name]
+		return ok
+	}
+	if trimmed == "ai" {
+		// parent is /ai/, name = <entry> (depth-2). Anchor on
+		// the exact "ai" parent — any other depth-1 dir is user
+		// or volume content (the GUI's `isExternalAiPath` regex
+		// only matches `/ai/`).
+		_, ok := protectedExternalAiChildren[name]
+		return ok
+	}
+	return false
 }
 
 // deleteRequestBody is the JSON body shape the files-backend's DELETE
