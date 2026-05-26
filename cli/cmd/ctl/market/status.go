@@ -247,7 +247,7 @@ func runStatusAll(opts *MarketOptions) error {
 		return opts.printJSON(rows)
 	}
 
-	// `status` doesn't expose --no-headers (only list / categories / get
+	// `status` doesn't expose --no-headers (only list / categories
 	// do), so the header is always printed in table mode. -q still
 	// suppresses everything for scripts that only care about the exit
 	// code, and -o json still emits a structured payload with no

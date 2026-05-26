@@ -48,7 +48,9 @@ Universal flags:
                               upgrade / clone / upload / delete).
                               Valid ids: market.olares, cli, upload, studio.
   -a, --all-sources           list, categories, status.
-      --no-headers            list, categories, get (table-rendering verbs).
+      --no-headers            list, categories (row-oriented browse only;
+                              "get" prints a key:value detail view that
+                              has no separable headers — use -o json).
   -w, --watch [+ --watch-timeout, --watch-interval]
                               lifecycle verbs. Block until terminal state.
 

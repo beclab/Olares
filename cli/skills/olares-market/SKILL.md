@@ -84,15 +84,23 @@ All verbs live under `olares-cli market <verb>`. Common flags:
   still propagates the operation result. Use in scripts that only need
   the success/failure signal (e.g. `olares-cli market list -q && ...`).
 - `--no-headers` — omit table column headers (and the trailing
-  "Total: N …" summary). **Exposed only on `list`, `categories`, and
-  `get`** — the row-oriented browse verbs. Deliberately NOT on
-  `status` (which always prints headers in table mode) or on any
-  mutating verb (`install` / `upgrade` / `stop` / `resume` /
-  `uninstall` / `cancel` / `clone` / `upload` / `delete`), where it
-  would be a no-op footgun in scripts that pass it expecting it to
-  apply. Useful for piping a stable table format into `awk` / `cut`
-  / `column` etc. without needing JSON. Has no effect in JSON
-  output. (No short flag.) Wiring lives in `addNoHeadersFlag` in
+  "Total: N …" summary). **Exposed only on `list` and `categories`**
+  — the row-oriented browse verbs. Deliberately NOT on:
+  - `get` — renders a key:value detail layout (one record, fields
+    like `Name: …`, `Title: …`), closer to `kubectl describe` than
+    to a row-oriented table. There are no "headers" separable from
+    values; for machine-readable output of `get` use `-o json`.
+  - `status` — always prints headers in table mode (its rows are a
+    runtime probe, not a stable scrape target; pipe through `awk`
+    on column index, or use `-o json`).
+  - Mutating verbs (`install` / `upgrade` / `stop` / `resume` /
+    `uninstall` / `cancel` / `clone` / `upload` / `delete`) — they
+    don't render tables, so `--no-headers` on them is a no-op
+    footgun in scripts that pass it expecting it to apply.
+
+  Useful for piping a stable table format into `awk` / `cut` /
+  `column` etc. without needing JSON. Has no effect in JSON output.
+  (No short flag.) Wiring lives in `addNoHeadersFlag` in
   [`cli/cmd/ctl/market/options.go`](cli/cmd/ctl/market/options.go)
   — separate from `addOutputFlags` (which only carries `-o` / `-q`),
   so adding a new browse verb means explicitly opting in.
@@ -128,8 +136,10 @@ source. `-a` is read-only only — the inventory verbs use it to span
 sources; mutating an app implicitly targets the source the user is
 already running it from.
 
-`--no-headers` is the narrowest — only `list`, `categories`, and
-`get` (the row-oriented browse verbs).
+`--no-headers` is the narrowest — only `list` and `categories` (the
+row-oriented browse verbs). `get` deliberately does NOT accept it
+because its output is a key:value detail layout, not a table — use
+`-o json` for scripted access to its fields.
 
 Combine freely — e.g. `olares-cli market list --mine --no-headers
 -o table` for a header-less table you can pipe into shell tools, or

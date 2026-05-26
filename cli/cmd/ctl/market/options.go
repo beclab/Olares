@@ -113,13 +113,27 @@ func (o *MarketOptions) addOutputFlags(cmd *cobra.Command) {
 }
 
 // addNoHeadersFlag exposes --no-headers on verbs that print row-oriented
-// tables — currently list / categories / get. Kept off mutating verbs by
-// design (see addOutputFlags). The bool field is still owned by the
-// shared MarketOptions struct so the verb's runner can branch on
-// `opts.NoHeaders` without reaching back through the cobra command.
+// tables — currently list / categories. Kept off mutating verbs and off
+// `get` by design:
+//
+//   - Mutating verbs (install / upgrade / stop / resume / uninstall /
+//     cancel / clone / upload / delete) don't render tables, so
+//     --no-headers was a no-op footgun in scripts that passed it
+//     expecting it to apply.
+//   - `get` renders a key:value detail layout (one record, fields
+//     like "Name: …", "Title: …") — closer to `kubectl describe`
+//     than to a row-oriented table. There are no "headers" to drop
+//     separately from the values; for machine-readable output use
+//     `-o json`. Earlier we exposed --no-headers on `get` too, but
+//     printAppDetail never honored it — the flag silently did
+//     nothing. Removing the surface is the right fix.
+//
+// The bool field is still owned by the shared MarketOptions struct so
+// the verb's runner can branch on `opts.NoHeaders` without reaching
+// back through the cobra command.
 func (o *MarketOptions) addNoHeadersFlag(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.NoHeaders, "no-headers", false,
-		"omit table headers and the trailing summary row (only on list / categories / get; useful for piping into awk / cut)")
+		"omit table headers and the trailing summary row (only on list / categories; useful for piping into awk / cut)")
 }
 
 func (o *MarketOptions) addVersionFlag(cmd *cobra.Command) {

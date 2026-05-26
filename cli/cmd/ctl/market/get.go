@@ -34,7 +34,12 @@ Examples:
   olares-cli market get firefox -o json
   olares-cli market get firefox -s market.olares
   olares-cli market get firefox -o json | jq '.cloneable'    # is this app cloneable?
-  olares-cli market get firefox --no-headers                 # omit field labels in the table view`,
+
+Note: --no-headers is intentionally NOT exposed on this verb. The
+table view here is a key:value detail layout (similar to
+'kubectl describe'), NOT a row-oriented table — there are no
+"headers" to drop separately from the values. For machine-readable
+output use -o json.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runGet(opts, args[0])
@@ -42,7 +47,6 @@ Examples:
 	}
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
-	opts.addNoHeadersFlag(cmd)
 	return cmd
 }
 
