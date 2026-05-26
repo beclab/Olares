@@ -30,7 +30,7 @@ build-linux-in-docker:
 		-w /olaresd \
 		-e DEBIAN_FRONTEND=noninteractive \
 		golang:1.25.0 \
-		sh -c "apt-get -y update; apt-get -y install libudev-dev libpcap-dev; make build-linux"
+		sh -c "apt-get -y update &&	 apt-get -y install libudev-dev libpcap-dev && make build-linux"
 
 build-arm-in-docker:
 	docker run -it --platform linux/arm64 --rm \
@@ -39,4 +39,4 @@ build-arm-in-docker:
 		-w /olaresd \
 		-e DEBIAN_FRONTEND=noninteractive \
 		golang:1.25.0 \
-		sh -c "apt-get -y update; apt-get -y install libudev-dev libpcap-dev; make build-arm"
+		sh -c "apt-get -y update && apt-get -y install libudev-dev libpcap-dev && make build-arm"
