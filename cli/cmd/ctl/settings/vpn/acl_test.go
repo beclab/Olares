@@ -387,6 +387,89 @@ func TestGetAppACLViaDoer_QueryEscaping(t *testing.T) {
 	}
 }
 
+// Pins the fold-on-decode behavior: the per-app endpoint can return
+// multiple rows for the same proto (BFL splices in the legacy
+// spec.TailScaleACLs vector after the per-app slice, and `--any-proto`
+// / Web "Add ACL" entries all share the empty-proto key). The per-app
+// helper used to surface those rows verbatim, but the read-modify-
+// write callers (acl add / acl remove) collapse on proto via indexACL,
+// which silently dropped all but the last entry and shrank the POSTed
+// destination set on the next mutation. We fold on decode so the
+// per-app view matches `vpn acl all` and the RMW loop sees the union.
+func TestGetAppACLViaDoer_FoldsDuplicateProtoRows(t *testing.T) {
+	body := `{"code":0,"data":[
+		{"proto":"tcp","dst":["a:80","b:443"]},
+		{"proto":"tcp","dst":["b:443","c:8080"]},
+		{"proto":"","dst":["d:9000"]},
+		{"proto":"","dst":["d:9000","e:9001"]}
+	]}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAppACLViaDoer(context.Background(), d, "halo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []AclInfo{
+		{Proto: "tcp", Dst: []string{"a:80", "b:443", "c:8080"}},
+		{Proto: "", Dst: []string{"d:9000", "e:9001"}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+// End-to-end pin for the original bug: with duplicate (proto) rows on
+// the wire, `acl add` would previously POST a shrunk vector because
+// indexACL kept only the last row per proto. After folding on decode,
+// the POST body unions the upstream's existing dsts with the
+// additions instead of dropping the earlier rows.
+func TestRunACLAdd_PreservesDuplicateProtoRowsOnTheWire(t *testing.T) {
+	// GET returns two tcp rows + two empty-proto rows. POST must see
+	// the unioned vector plus the new tcp destination.
+	d := &envelopeFakeDoer{respondWith: []byte(`{"code":0,"data":[
+		{"proto":"tcp","dst":["a:80"]},
+		{"proto":"tcp","dst":["b:443"]},
+		{"proto":"","dst":["x:9000"]},
+		{"proto":"","dst":["y:9001"]}
+	]}`)}
+	ctx := context.Background()
+	current, err := getAppACLViaDoer(ctx, d, "halo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	additions := []AclInfo{{Proto: "tcp", Dst: []string{"c:8080"}}}
+	merged := mergeACL(current, additions)
+	want := []AclInfo{
+		{Proto: "tcp", Dst: []string{"a:80", "b:443", "c:8080"}},
+		{Proto: "", Dst: []string{"x:9000", "y:9001"}},
+	}
+	if !reflect.DeepEqual(merged, want) {
+		t.Errorf("merged = %#v, want %#v", merged, want)
+	}
+}
+
+// Same pin for `acl remove`: removing one dst from the second tcp row
+// must keep the first row's dsts intact instead of letting indexACL
+// erase them silently.
+func TestRunACLRemove_PreservesDuplicateProtoRowsOnTheWire(t *testing.T) {
+	d := &envelopeFakeDoer{respondWith: []byte(`{"code":0,"data":[
+		{"proto":"tcp","dst":["a:80"]},
+		{"proto":"tcp","dst":["b:443","c:8080"]}
+	]}`)}
+	ctx := context.Background()
+	current, err := getAppACLViaDoer(ctx, d, "halo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	removals := []AclInfo{{Proto: "tcp", Dst: []string{"c:8080"}}}
+	pruned := subtractACL(current, removals)
+	want := []AclInfo{
+		{Proto: "tcp", Dst: []string{"a:80", "b:443"}},
+	}
+	if !reflect.DeepEqual(pruned, want) {
+		t.Errorf("pruned = %#v, want %#v", pruned, want)
+	}
+}
+
 // TestGetAllACLViaDoer covers all three wire shapes getAllACLViaDoer
 // recognizes plus the two "empty" envelope responses. The flat BFL
 // shape is the only one currently emitted on the wire (see

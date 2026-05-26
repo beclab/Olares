@@ -435,7 +435,45 @@ func getAppACLViaDoer(ctx context.Context, d Doer, app string) ([]AclInfo, error
 	if err := json.Unmarshal(env.Data, &out); err != nil {
 		return nil, fmt.Errorf("decode acl data: %w", err)
 	}
-	return out, nil
+	// Upstream occasionally returns multiple rows for the same proto
+	// (BFL splices in the legacy spec.TailScaleACLs vector after the
+	// per-app slice, and empty-proto entries from `--any-proto` /
+	// the Web UI's "Add ACL" dialog all share the "" key). The
+	// read-modify-write callers (acl add / acl remove) feed this slice
+	// straight through indexACL which collapses on proto, so any
+	// duplicate would silently disappear from the POST and shrink the
+	// destination set even though `vpn acl all` (which folds via
+	// foldACLRows) still shows the full set. Fold here so the per-app
+	// view stays consistent with the all-apps view and the
+	// read-modify-write loop sees the union.
+	return foldAppACLEntries(out), nil
+}
+
+// foldAppACLEntries unions same-proto entries in a per-app ACL slice,
+// preserving first-seen order. Whitespace-only protos collapse to the
+// same empty key (matching the rest of the package, see indexACL).
+// Trim+lower is only used for keying; the surviving entry keeps the
+// Proto string as it first appeared on the wire so downstream
+// renderers don't normalize unrelated casing.
+func foldAppACLEntries(in []AclInfo) []AclInfo {
+	if len(in) == 0 {
+		return in
+	}
+	out := make([]AclInfo, 0, len(in))
+	protoIdx := map[string]int{}
+	for _, a := range in {
+		key := strings.ToLower(strings.TrimSpace(a.Proto))
+		if idx, ok := protoIdx[key]; ok {
+			out[idx].Dst = unionPreservingOrder(out[idx].Dst, a.Dst)
+			continue
+		}
+		out = append(out, AclInfo{
+			Proto: a.Proto,
+			Dst:   append([]string(nil), a.Dst...),
+		})
+		protoIdx[key] = len(out) - 1
+	}
+	return out
 }
 
 func renderACL(w io.Writer, app string, acls []AclInfo) error {
