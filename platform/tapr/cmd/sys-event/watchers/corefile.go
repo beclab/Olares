@@ -237,7 +237,9 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 				refAppName := ns.Labels["applications.app.bytetrade.io/name"]
 				sharedNamespace := ns.Labels["bytetrade.io/ns-shared"]
 				installedUser := ns.Labels["applications.app.bytetrade.io/install_user"]
-				if refAppName == app.Spec.Name && sharedNamespace == "true" && installedUser == app.Spec.Owner {
+				isV3 := ns.Labels["app.bytetrade.io/api-version"] == "v3"
+				namespaceV3 := ns.Labels["bytetrade.io/namespace"]
+				if refAppName == app.Spec.Name && sharedNamespace == "true" && installedUser == app.Spec.Owner || (isV3 && app.Spec.Namespace == namespaceV3) {
 					sharedNs = append(sharedNs, &ns)
 				}
 			}
