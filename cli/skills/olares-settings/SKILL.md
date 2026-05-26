@@ -105,7 +105,7 @@ Different upstreams return JSON in different envelopes. Each area has its own `c
 | `integration` | `/api/account/all`, `/api/account/:type/:name` | BFL envelope | `accounts list` returns `accountMini`; `accounts get` returns `accountFull` (includes `raw_data`) |
 | `gpu` | `/api/gpu/list` | BFL envelope (HAMI behind it) | distinct from the top-level `olares-cli gpu` (kubeconfig-driven, cluster-wide) |
 | `video` | `/api/files/video/config` | BFL envelope, but inner data is decoded as `json.RawMessage` (`doGetEnvelopeRaw`) | Schema is provider-versioned; `--output table` collapses to a one-line summary |
-| `search` | `/api/search/task/stats/merged`, `/api/search/monitorsetting/exclude-pattern`, `/api/search/monitorsetting/include-directory/full_content` | BFL envelope | `status` returns a string, `dirs list` returns `[]string`. The `/exclude-pattern` endpoint stays in the table because `excludes rm` still reads it (must=true guard); the `excludes list` read verb itself is intentionally NOT registered on the command tree — see `excludes.go`'s NewExcludesCommand doc comment for the restore recipe |
+| `search` | `/api/search/task/stats/merged`, `/api/search/monitorsetting/include-directory/full_content` | BFL envelope | `status` returns a string, `dirs list` returns `[]string` |
 | `advanced` | `/api/system/status`, `/api/containerd/registries`, `/api/containerd/images?registry=<n>`, `POST /api/command/collectLogs` | BFL envelope (terminusd → olaresd `returnSucceed`) | `status` table view is a summary; `--output json` for the full struct. `POST /api/command/collectLogs` is for the **Terminus SPA Developer UI** (polls `/api/system/status`); it is **not** a `settings advanced` CLI verb — use top-level **`olares-cli logs`** for CLI log collection |
 | `backup` | `/apis/backup/v1/plans/backup`, `/apis/backup/v1/plans/backup/:id/snapshots` | BFL envelope; **different ingress prefix** (`/apis/backup/v1`, not `/api`) | The SPA's axios global interceptor unwraps `data.data`, which is why upstream code reads `{backups: [...]}` directly |
 | `restore` | `/apis/backup/v1/plans/restore` | BFL envelope; same `/apis/backup/v1` prefix | mirrors `settings backup plans list` shape |
@@ -251,7 +251,7 @@ The CLI mirrors the SPA's `supportLanguages` whitelist client-side ([`apps/packa
 olares-cli settings search rebuild                          # POST /api/search/task/rebuild
 ```
 
-`rebuild` is async + heavy: the call returns as soon as search3 accepts the task; verify completion with `olares-cli settings search status` rather than waiting on the POST itself. Excludes / dirs writes ship in the binary but are tracked in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) until a smoke report greens them.
+`rebuild` is async + heavy: the call returns as soon as search3 accepts the task; verify completion with `olares-cli settings search status` rather than waiting on the POST itself. `dirs` writes ship in the binary but are tracked in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) until a smoke report greens them.
 
 ### `vpn ssh` — boolean ACL toggle
 

@@ -29,13 +29,16 @@ import (
 // Both endpoints expect *additions / removals*, not the full new list,
 // so the CLI verbs accept one or more patterns as positional args.
 //
-// The `list` sub-verb (newExcludesListCommand / runExcludesList /
-// renderExcludePatternsTable) has been intentionally unregistered on
-// the command tree: the implementation is preserved below and is still
-// reachable from `rm` via fetchExcludePatterns (which honors the
-// must=true built-in guard), but `excludes list` is no longer surfaced
-// on `--help` or in the SKILL.md "read-only surface". Re-add
-// `cmd.AddCommand(newExcludesListCommand(f))` below to restore it.
+// COMMAND-TREE STATUS: the whole `excludes` subtree (add / rm and the
+// already-unregistered list) is intentionally NOT wired into
+// `settings search` anymore — see search/root.go where the
+// `cmd.AddCommand(NewExcludesCommand(f))` line has been dropped.
+// The Go implementation below (and its `dedupTrim` / `renderStringList`
+// helpers, still used by dirs.go) is preserved verbatim so the verb
+// can be restored in one line by re-adding that AddCommand call. The
+// `list` sub-verb (newExcludesListCommand / runExcludesList /
+// renderExcludePatternsTable) was already unregistered before this
+// change; both restore recipes ship together.
 func NewExcludesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "excludes",
