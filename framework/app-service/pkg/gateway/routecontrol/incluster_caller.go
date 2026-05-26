@@ -56,6 +56,12 @@ func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
 	if !optedIn {
 		return r.cleanupCallerResources(ctx, ns)
 	}
+	if err := r.applyNetworkPolicy(ctx, security.NewCallerDNSEgressNP(ns)); err != nil {
+		return err
+	}
+	if err := r.applyNetworkPolicy(ctx, security.NewCallerMiddlewareEgressNP(ns, callerUserSystemNamespace(ctx, r.Client, ns))); err != nil {
+		return err
+	}
 	if err := r.applyNetworkPolicy(ctx, security.NewCallerMeshEgressNP(ns)); err != nil {
 		return err
 	}
@@ -111,7 +117,12 @@ func (r *CallerReconciler) applyNetworkPolicy(ctx context.Context, desired *netw
 }
 
 func (r *CallerReconciler) cleanupCallerResources(ctx context.Context, ns string) error {
-	for _, name := range []string{security.CallerMeshEgressNPName, security.CallerToAppGatewayEgressNPName} {
+	for _, name := range []string{
+		security.CallerDNSEgressNPName,
+		security.CallerMiddlewareEgressNPName,
+		security.CallerMeshEgressNPName,
+		security.CallerToAppGatewayEgressNPName,
+	} {
 		obj := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 		}

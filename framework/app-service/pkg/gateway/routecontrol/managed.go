@@ -16,7 +16,8 @@ func IsManagedNetworkPolicy(np *networkingv1.NetworkPolicy) bool {
 	}
 	switch np.Name {
 	case NetworkPolicyName, security.SharedLinkerdMeshIngressNPName,
-		security.CallerToAppGatewayEgressNPName, security.CallerMeshEgressNPName:
+		security.CallerToAppGatewayEgressNPName, security.CallerMeshEgressNPName,
+		security.CallerDNSEgressNPName, security.CallerMiddlewareEgressNPName:
 		return true
 	default:
 		return false

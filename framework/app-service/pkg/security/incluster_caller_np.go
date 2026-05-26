@@ -14,6 +14,10 @@ const (
 	// CallerMeshEgressNPName allows caller pods to reach the Linkerd control plane
 	// before sidecar injection completes.
 	CallerMeshEgressNPName = "caller-mesh-egress-np"
+	// CallerDNSEgressNPName allows caller pods to resolve cluster DNS (CoreDNS).
+	CallerDNSEgressNPName = "caller-dns-egress-np"
+	// CallerMiddlewareEgressNPName allows DB/auth dependencies (Citus, Authelia) in user-system.
+	CallerMiddlewareEgressNPName = "caller-middleware-egress-np"
 
 	callerNPComponentLabel = "route-control"
 	callerNPManagedBy      = "app-service"
@@ -59,6 +63,93 @@ func NewCallerToAppGatewayEgressNP(ns, gatewayNS string) *netv1.NetworkPolicy {
 						},
 					},
 					Ports: ports,
+				},
+			},
+		},
+	}
+}
+
+// NewCallerDNSEgressNP builds egress from caller pods to kube-system DNS (CoreDNS).
+func NewCallerDNSEgressNP(ns string) *netv1.NetworkPolicy {
+	tcp := (*corev1.Protocol)(pointer.String(string(corev1.ProtocolTCP)))
+	udp := (*corev1.Protocol)(pointer.String(string(corev1.ProtocolUDP)))
+	ports := []netv1.NetworkPolicyPort{
+		{Protocol: udp, Port: intstrPtr(53)},
+		{Protocol: tcp, Port: intstrPtr(53)},
+	}
+	return &netv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      CallerDNSEgressNPName,
+			Namespace: ns,
+			Labels:    callerNPLabels(),
+		},
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{},
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
+			Egress: []netv1.NetworkPolicyEgressRule{
+				{
+					To: []netv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"kubernetes.io/metadata.name": "kube-system",
+								},
+							},
+						},
+					},
+					Ports: ports,
+				},
+			},
+		},
+	}
+}
+
+// NewCallerMiddlewareEgressNP allows caller workloads to reach user-system middleware
+// (Postgres/Citus, Authelia) required for app startup before in-cluster HTTP probes.
+func NewCallerMiddlewareEgressNP(ns, userSystemNS string) *netv1.NetworkPolicy {
+	if userSystemNS == "" {
+		userSystemNS = "user-system"
+	}
+	tcp := (*corev1.Protocol)(pointer.String(string(corev1.ProtocolTCP)))
+	// Match user-space-<viewer> and user-system-<viewer> via prefix on metadata.name.
+	return &netv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      CallerMiddlewareEgressNPName,
+			Namespace: ns,
+			Labels:    callerNPLabels(),
+		},
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{},
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
+			Egress: []netv1.NetworkPolicyEgressRule{
+				{
+					To: []netv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"kubernetes.io/metadata.name": userSystemNS,
+								},
+							},
+						},
+					},
+					Ports: []netv1.NetworkPolicyPort{
+						{Protocol: tcp, Port: intstrPtr(5432)},
+						{Protocol: tcp, Port: intstrPtr(9091)},
+					},
+				},
+				{
+					To: []netv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"kubernetes.io/metadata.name": "os-platform",
+								},
+							},
+						},
+					},
+					Ports: []netv1.NetworkPolicyPort{
+						{Protocol: tcp, Port: intstrPtr(5432)},
+					},
 				},
 			},
 		},

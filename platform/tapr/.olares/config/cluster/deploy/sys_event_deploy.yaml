@@ -24,6 +24,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - gateway.olares.io
+  resources:
+  - sharedrouteregistries
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - '*'
   resources:
   - backups
