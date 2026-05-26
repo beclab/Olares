@@ -28,18 +28,26 @@ import (
 //
 // Both endpoints expect *additions / removals*, not the full new list,
 // so the CLI verbs accept one or more patterns as positional args.
+//
+// The `list` sub-verb (newExcludesListCommand / runExcludesList /
+// renderExcludePatternsTable) has been intentionally unregistered on
+// the command tree: the implementation is preserved below and is still
+// reachable from `rm` via fetchExcludePatterns (which honors the
+// must=true built-in guard), but `excludes list` is no longer surfaced
+// on `--help` or in the SKILL.md "read-only surface". Re-add
+// `cmd.AddCommand(newExcludesListCommand(f))` below to restore it.
 func NewExcludesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "excludes",
-		Short: "exclude-pattern list (Settings -> Search > File Search)",
-		Long: `Inspect and edit the search index's exclude-pattern list.
+		Short: "exclude-pattern editor (Settings -> Search > File Search)",
+		Long: `Edit the search index's exclude-pattern list.
 
 Subcommands:
-  list
+  add     append one or more patterns
+  rm      drop one or more patterns (built-in must=true rows are refused)
 `,
 	}
 	cmd.SilenceUsage = true
-	cmd.AddCommand(newExcludesListCommand(f))
 	cmd.AddCommand(newExcludesAddCommand(f))
 	cmd.AddCommand(newExcludesRmCommand(f))
 	return cmd

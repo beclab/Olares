@@ -21,7 +21,7 @@ func NewSearchCommand(f *cmdutil.Factory) *cobra.Command {
 Subcommands:
   status
   rebuild
-  excludes list (patterns with a MUST column; built-in rows cannot be removed)
+  excludes add | rm (built-in must=true rows cannot be removed)
   dirs list
 
 Streaming search proxies stay out of scope — they are interactive,
