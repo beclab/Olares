@@ -24,7 +24,7 @@ const (
 
 var validResourceModes = []any{
 	ResourceModeCPU,
-	ResourceModeAMDAPU,
+	ResourceModeStrixHalo,
 	ResourceModeAMDGPU,
 	ResourceModeAppleM,
 	ResourceModeNvidia,
