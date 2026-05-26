@@ -55,7 +55,15 @@ const (
 
 	UserChartsPath = "./userapps"
 
-	EnvoyUID                        int64 = 1555
+	EnvoyUID int64 = 1555
+	// LinkerdProxyUID is the fixed uid Linkerd injects its `linkerd-proxy`
+	// sidecar with (see Linkerd Helm chart `proxyUID`). When a pod is
+	// simultaneously injected by Linkerd AND olares-envoy-sidecar, the envoy
+	// iptables ruleset MUST exclude this uid from PROXY_OUTBOUND redirection,
+	// otherwise linkerd-proxy's mTLS bootstrap traffic to identity:8080 is
+	// captured by envoy and parsed as HTTP, breaking the TLS handshake with
+	// "received corrupt message of type InvalidContentType".
+	LinkerdProxyUID                 int64 = 2102
 	DefaultEnvoyLogLevel                  = "debug"
 	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
 	EnvoyContainerName                    = "olares-envoy-sidecar"
@@ -74,6 +82,60 @@ const (
 
 	UploadContainerName  = "olares-upload-sidecar"
 	UploadContainerImage = "UPLOAD_CONTAINER_IMAGE"
+
+	D2SidecarUID               int64 = 1556
+	D2SidecarContainerName           = "olares-d2-sidecar"
+	D2SidecarInitContainerName       = "olares-d2-init"
+	D2SidecarImageDigest             = "beclab/nginx:1.30.2-alpine-njs-olares-rev1"
+	// D2SidecarImageEnv is the deployment env var that supplies the d2 sidecar
+	// image, mirroring WsContainerImage/UploadContainerImage. An empty or
+	// placeholder value fails open with reason=image_unconfigured.
+	D2SidecarImageEnv = "D2_SIDECAR_IMAGE"
+	// D2SidecarImagePlaceholder marks an unconfigured d2 sidecar image. Injection
+	// fails open with reason=image_unconfigured until a real digest lands.
+	D2SidecarImagePlaceholder = "sha256:d2-placeholder"
+	// D2DrainGracePeriodSeconds is the default terminationGracePeriodSeconds the
+	// caller-mode injection adds only when the pod does not set one, so the d2
+	// nginx worker_shutdown_timeout (30s) can drain in-flight requests.
+	D2DrainGracePeriodSeconds int64 = 40
+
+	D2StreamListenPort     int32 = 15443
+	D2StreamListenPortName       = "d2-s"
+	// D2HTTPLoopbackPort is the loopback port (127.0.0.1) where the d2 sidecar
+	// nginx http server terminates TLS and re-emits HTTP after stream
+	// ssl_preread + njs decideOffload.
+	// requirement: stay orthogonal to all listeners in the same Pod netns.
+	// behavior: must NOT collide with olares-envoy-sidecar's listener_image
+	// (currently bound to 127.0.0.1:15080 in pkg/sandbox/sidecar/envoy.go);
+	// otherwise nginx fails with "bind() failed (98: Address in use)" and
+	// CrashLoopBackOff, blocking every caller-mode d2 injection (WI-T1-3).
+	// test: pkg/sandbox/sidecar/offloader_test.go TestRenderSharedDecideJS_Contract
+	// asserts the rendered njs uses this constant.
+	D2HTTPLoopbackPort     int32 = 15090
+
+	D2CertsVolumeName            = "olares-d2-certs"
+	D2ConfVolumeNamePrefix       = "olares-d2-conf-"
+	D2ConfNginxFileName          = "nginx.conf"
+	D2ConfSharedDecideJSFileName = "shared_decide.js"
+	D2SharedHostsVolumeName       = "olares-d2-shared-hosts"
+	D2SharedHostsFileName         = "shared-hosts.txt"
+	D2SharedHostsManagedByLabel   = "gateway.olares.io/d2-shared-hosts-managed-by"
+	D2SidecarHostsFilePath        = "/etc/d2/shared-hosts.txt"
+	D2SharedTLSSecretNamePrefix  = "shared-entrance-tls-"
+	D2NginxConfigMountPath       = "/etc/nginx/nginx.conf"
+	D2NginxNJSMountPath          = "/etc/nginx/njs/shared_decide.js"
+	D2NginxNJSDir                = "/etc/nginx/njs/"
+	D2NginxCertsDir              = "/etc/nginx/certs"
+	D2NginxCacheVolumeName       = "olares-d2-nginx-cache"
+	D2NginxCacheDir              = "/var/cache/nginx"
+	D2NginxRunVolumeName         = "olares-d2-nginx-run"
+	D2NginxRunDir                = "/var/run/nginx"
+	D2SharedHostsDir             = "/etc/d2"
+	D2IptablesChainName          = "D2_OUTBOUND"
+	D2WorkerShutdownTimeout      = "30s"
+	D2CertCacheMax               = 16
+	D2CertCacheInactive          = "10m"
+	D2CertCacheValid             = "1m"
 
 	SidecarConfigMapVolumeName = "olares-sidecar-config"
 	SidecarInitContainerName   = "olares-sidecar-init"
