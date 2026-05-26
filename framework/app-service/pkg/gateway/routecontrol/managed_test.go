@@ -50,6 +50,20 @@ func TestIsManagedNetworkPolicy(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "caller mesh egress NP",
+			np: &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: security.CallerMeshEgressNPName, Labels: managedLabels},
+			},
+			want: true,
+		},
+		{
+			name: "caller gateway egress NP",
+			np: &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: security.CallerToAppGatewayEgressNPName, Labels: managedLabels},
+			},
+			want: true,
+		},
 	}
 	for _, tc := range cases {
 		tc := tc
