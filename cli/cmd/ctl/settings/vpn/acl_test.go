@@ -31,12 +31,13 @@ func (e *envelopeFakeDoer) DoJSON(ctx context.Context, method, path string, body
 
 func TestBuildACLPayload(t *testing.T) {
 	cases := []struct {
-		name string
-		tcp  []string
-		udp  []string
-		want []AclInfo
+		name     string
+		tcp      []string
+		udp      []string
+		anyProto []string
+		want     []AclInfo
 	}{
-		{name: "empty inputs produce empty payload", tcp: nil, udp: nil, want: []AclInfo{}},
+		{name: "empty inputs produce empty payload", tcp: nil, udp: nil, anyProto: nil, want: []AclInfo{}},
 		{
 			name: "tcp only",
 			tcp:  []string{"80", "443"},
@@ -70,17 +71,90 @@ func TestBuildACLPayload(t *testing.T) {
 			udp:  []string{"53"},
 			want: []AclInfo{{Proto: "udp", Dst: []string{"53"}}},
 		},
+		{
+			name:     "any-proto only — empty proto entry preserved (Web 'Add ACL' parity)",
+			anyProto: []string{"*:8080"},
+			want:     []AclInfo{{Proto: "", Dst: []string{"*:8080"}}},
+		},
+		{
+			name:     "any-proto sorted after tcp and udp",
+			tcp:      []string{"*:80"},
+			udp:      []string{"*:53"},
+			anyProto: []string{"*:22"},
+			want: []AclInfo{
+				{Proto: "tcp", Dst: []string{"*:80"}},
+				{Proto: "udp", Dst: []string{"*:53"}},
+				{Proto: "", Dst: []string{"*:22"}},
+			},
+		},
+		{
+			name:     "any-proto trims and dedupes like tcp/udp",
+			anyProto: []string{"  *:80 ", "*:80", "", "*:443"},
+			want:     []AclInfo{{Proto: "", Dst: []string{"*:80", "*:443"}}},
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := buildACLPayload(c.tcp, c.udp)
+			got := buildACLPayload(c.tcp, c.udp, c.anyProto)
 			if len(got) == 0 && len(c.want) == 0 {
 				return
 			}
 			if !reflect.DeepEqual(got, c.want) {
-				t.Errorf("buildACLPayload(tcp=%v, udp=%v) = %#v, want %#v", c.tcp, c.udp, got, c.want)
+				t.Errorf("buildACLPayload(tcp=%v, udp=%v, anyProto=%v) = %#v, want %#v",
+					c.tcp, c.udp, c.anyProto, got, c.want)
 			}
 		})
+	}
+}
+
+func TestValidateACLDst(t *testing.T) {
+	cases := []struct {
+		name    string
+		in      string
+		wantErr bool
+	}{
+		{name: "wildcard host port", in: "*:8080", wantErr: false},
+		{name: "cidr host port", in: "192.168.1.0/24:22", wantErr: false},
+		{name: "tagged host port", in: "tag:api:443", wantErr: false},
+		{name: "host wildcard port", in: "example-host:*", wantErr: false},
+		{name: "trims surrounding space", in: "  *:8080 ", wantErr: false},
+		{name: "bare port rejected", in: "8080", wantErr: true},
+		{name: "missing port rejected", in: "*:", wantErr: true},
+		{name: "missing host rejected", in: ":8080", wantErr: true},
+		{name: "empty string rejected", in: "", wantErr: true},
+		{name: "whitespace-only rejected", in: "   ", wantErr: true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := validateACLDst(c.in)
+			if (err != nil) != c.wantErr {
+				t.Errorf("validateACLDst(%q) err=%v, wantErr=%v", c.in, err, c.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateACLPayload(t *testing.T) {
+	if err := validateACLPayload(nil); err != nil {
+		t.Errorf("nil payload should be valid, got %v", err)
+	}
+	good := []AclInfo{
+		{Proto: "tcp", Dst: []string{"*:80", "*:443"}},
+		{Proto: "udp", Dst: []string{"*:53"}},
+		{Proto: "", Dst: []string{"*:22"}},
+	}
+	if err := validateACLPayload(good); err != nil {
+		t.Errorf("good payload should be valid, got %v", err)
+	}
+	bad := []AclInfo{
+		{Proto: "tcp", Dst: []string{"*:80", "8080"}}, // bare port slips through
+	}
+	err := validateACLPayload(bad)
+	if err == nil {
+		t.Fatal("expected error for bare-port dst, got nil")
+	}
+	if !contains(err.Error(), "8080") || !contains(err.Error(), "*:8080") {
+		t.Errorf("error should cite offending value and a suggestion; got %q", err.Error())
 	}
 }
 
@@ -427,6 +501,23 @@ func TestSummarizeACL(t *testing.T) {
 	}
 	if got := summarizeACL(nil); got != "(empty)" {
 		t.Errorf("summarizeACL(nil) = %q, want (empty)", got)
+	}
+	// Empty/any-proto entries (what --any-proto and the Web UI's
+	// "Add ACL" dialog emit) should render the proto column as
+	// "any", not the empty string, so the success message stays
+	// human-readable.
+	got = summarizeACL([]AclInfo{
+		{Proto: "", Dst: []string{"*:65001", "*:20"}},
+	})
+	if got != "any=*:20,*:65001" {
+		t.Errorf("summarizeACL empty proto = %q, want any=*:20,*:65001", got)
+	}
+	got = summarizeACL([]AclInfo{
+		{Proto: "tcp", Dst: []string{"*:80"}},
+		{Proto: "", Dst: []string{"*:20"}},
+	})
+	if got != "tcp=*:80 any=*:20" {
+		t.Errorf("summarizeACL tcp+empty = %q, want tcp=*:80 any=*:20", got)
 	}
 }
 
