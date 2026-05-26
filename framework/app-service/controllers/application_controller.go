@@ -93,6 +93,8 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				klog.Warningf("ensure gateway route-mode for Application %s err=%v", req.Name, err)
 			} else if err := r.reconcileSharedRouteRegistry(ctx, app); err != nil {
 				klog.Warningf("reconcile SharedRouteRegistry for Application %s err=%v", req.Name, err)
+			} else {
+				r.reconcileCallerNamespace(ctx, app)
 			}
 		}
 		return ctrl.Result{}, nil
@@ -253,6 +255,37 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}),
 	))
 
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(source.Kind(
+		mgr.GetCache(),
+		&appv1alpha1.Application{},
+		handler.TypedEnqueueRequestsFromMapFunc(
+			func(ctx context.Context, app *appv1alpha1.Application) []reconcile.Request {
+				if app == nil || app.Spec.Namespace == "" {
+					return nil
+				}
+				return []reconcile.Request{{NamespacedName: types.NamespacedName{
+					Name:      app.Spec.Name,
+					Namespace: app.Spec.Namespace,
+				}}}
+			}),
+		predicate.TypedFuncs[*appv1alpha1.Application]{
+			CreateFunc: func(e event.TypedCreateEvent[*appv1alpha1.Application]) bool {
+				app := e.Object
+				return app != nil && strings.EqualFold(app.Annotations[gateway.AnnotationInCluster], gateway.InClusterGateway)
+			},
+			UpdateFunc: func(e event.TypedUpdateEvent[*appv1alpha1.Application]) bool {
+				return inClusterAnnotationChanged(e.ObjectOld, e.ObjectNew)
+			},
+			DeleteFunc: func(e event.TypedDeleteEvent[*appv1alpha1.Application]) bool {
+				app := e.Object
+				return app != nil && app.Annotations[gateway.AnnotationInCluster] != ""
+			},
+		},
+	))
 	if err != nil {
 		return err
 	}
@@ -574,8 +607,19 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	if srrErr := r.reconcileSharedRouteRegistry(ctx, appCopy); srrErr != nil {
 		klog.Warningf("reconcile SharedRouteRegistry for app=%s err=%v", appCopy.Spec.Name, srrErr)
 	}
+	r.reconcileCallerNamespace(ctx, appCopy)
 
 	return err
+}
+
+func (r *ApplicationReconciler) reconcileCallerNamespace(ctx context.Context, app *appv1alpha1.Application) {
+	if app == nil || app.Spec.Namespace == "" {
+		return
+	}
+	cr := &routecontrol.CallerReconciler{Client: r.Client}
+	if err := cr.Reconcile(ctx, app.Spec.Namespace); err != nil {
+		klog.Warningf("caller reconciler for ns=%s app=%s err=%v", app.Spec.Namespace, app.Spec.Name, err)
+	}
 }
 
 // reconcileGatewayRoutesForWorkloadNS runs reconcileSharedRouteRegistry for every
@@ -599,8 +643,24 @@ func (r *ApplicationReconciler) reconcileGatewayRoutesForWorkloadNS(ctx context.
 		if err := r.reconcileSharedRouteRegistry(ctx, app); err != nil {
 			return fmt.Errorf("app %s: %w", app.Name, err)
 		}
+		r.reconcileCallerNamespace(ctx, app)
 	}
 	return nil
+}
+
+func inClusterAnnotationChanged(oldApp, newApp *appv1alpha1.Application) bool {
+	if oldApp == nil || newApp == nil {
+		return false
+	}
+	oldV := ""
+	if oldApp.Annotations != nil {
+		oldV = oldApp.Annotations[gateway.AnnotationInCluster]
+	}
+	newV := ""
+	if newApp.Annotations != nil {
+		newV = newApp.Annotations[gateway.AnnotationInCluster]
+	}
+	return oldV != newV
 }
 
 // ensureAppGatewayRouteMode persists gateway.olares.io/route-mode when the

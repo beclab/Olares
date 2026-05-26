@@ -15,7 +15,9 @@ import (
 	"github.com/beclab/Olares/framework/app-service/controllers"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/authz"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -288,6 +290,7 @@ func main() {
 				Enabled:      strings.EqualFold(authzHostUserCheck, "enabled"),
 				SkipPrefixes: authz.ParseSkipViewers(authzSkipViewers),
 			},
+			SnapshotFunc: cluster.DefaultSnapshotFunc(),
 		})
 		if err := mgr.Add(authzSrv); err != nil {
 			setupLog.Error(err, "Unable to register in-process gateway authz server")
@@ -298,6 +301,11 @@ func main() {
 			"mode", authzMode, "host_user_check", authzHostUserCheck)
 	} else {
 		setupLog.Info("in-process gateway authz server disabled by flag")
+	}
+
+	if err = (&routecontrol.EntranceTLSReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "EntranceTLS")
+		os.Exit(1)
 	}
 
 	//+kubebuilder:scaffold:builder
