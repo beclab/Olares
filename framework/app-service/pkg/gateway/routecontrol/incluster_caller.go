@@ -69,10 +69,36 @@ func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
 	if !optedIn {
 		return r.cleanupCallerResources(ctx, ns)
 	}
+	// Upgrade-time GC: clusters that ran pre-v1.0 still carry the 4 legacy
+	// caller egress NPs in opted-in namespaces; cleanupCallerResources only
+	// fires on opt-out, so we must GC them on every opt-in reconcile until
+	// the cleanup names are removed from the codebase entirely.
+	if err := r.gcLegacyCallerEgress(ctx, ns); err != nil {
+		return err
+	}
 	if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, true); err != nil {
 		return err
 	}
 	return r.applyNetworkPolicy(ctx, security.NewAppGatewayInClusterCallerIngressNP(r.gatewayNS()))
+}
+
+// gcLegacyCallerEgress deletes the 4 pre-v1.0 managed caller egress NPs from
+// an opted-in caller namespace. Idempotent (NotFound is success).
+func (r *CallerReconciler) gcLegacyCallerEgress(ctx context.Context, ns string) error {
+	for _, name := range []string{
+		security.CallerDNSEgressNPName,
+		security.CallerMiddlewareEgressNPName,
+		security.CallerMeshEgressNPName,
+		security.CallerToAppGatewayEgressNPName,
+	} {
+		obj := &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+		}
+		if err := r.Client.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *CallerReconciler) namespaceOptedIntoGateway(ctx context.Context, ns string) (bool, error) {

@@ -121,6 +121,62 @@ func TestCallerReconciler_osNetworkNoOp(t *testing.T) {
 	}
 }
 
+// TestCallerReconciler_optInAlsoGCsLegacyEgress is the upgrade-path safety net:
+// clusters that ran pre-v1.0 still carry caller egress NPs in opted-in caller
+// namespaces. opt-out cleanup never fires while the caller remains opted-in,
+// so the opt-in reconcile branch must GC the legacy NPs every loop.
+func TestCallerReconciler_optInAlsoGCsLegacyEgress(t *testing.T) {
+	scheme := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = appv1alpha1.AddToScheme(scheme)
+	_ = networkingv1.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+
+	ns := "user-space-alice"
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}},
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "app-gateway"}},
+			security.NewCallerMeshEgressNP(ns),
+			security.NewCallerToAppGatewayEgressNP(ns, "app-gateway"),
+			security.NewCallerDNSEgressNP(ns),
+			security.NewCallerMiddlewareEgressNP(ns, "user-system-alice"),
+			&appv1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "litellm",
+					Annotations: map[string]string{
+						gateway.AnnotationInCluster: gateway.InClusterGateway,
+					},
+				},
+				Spec: appv1alpha1.ApplicationSpec{
+					Name:      "litellm",
+					Namespace: ns,
+					Settings:  map[string]string{"clusterAppRef": "ollamav2"},
+				},
+			},
+		).Build()
+
+	r := &CallerReconciler{Client: c, GatewayNS: "app-gateway"}
+	if err := r.Reconcile(context.Background(), ns); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	for _, name := range []string{
+		security.CallerMeshEgressNPName,
+		security.CallerToAppGatewayEgressNPName,
+		security.CallerDNSEgressNPName,
+		security.CallerMiddlewareEgressNPName,
+	} {
+		if err := c.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: name}, &networkingv1.NetworkPolicy{}); err == nil {
+			t.Fatalf("legacy caller egress %q must be GCed on opt-in reconcile", name)
+		}
+	}
+
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "app-gateway", Name: security.AppGatewayInClusterCallerIngressNPName}, &networkingv1.NetworkPolicy{}); err != nil {
+		t.Fatalf("gateway ingress NP must still be present: %v", err)
+	}
+}
+
 // TestCallerReconciler_optOutGCsLegacyEgress validates the upgrade-path cleanup:
 // any pre-v1.0 caller egress NPs still in the namespace are GCed when the app
 // opts out (or is deleted).
