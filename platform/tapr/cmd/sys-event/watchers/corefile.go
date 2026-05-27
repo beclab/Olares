@@ -741,8 +741,17 @@ func sharedInclusterEntrancesFromSRRItems(
 		if err != nil || !found || len(patterns) == 0 {
 			continue
 		}
-		hash8, platformDomain, ok := parseLogicalHostPattern(patterns[0])
-		if !ok || sharedEntranceHostPrefix(appid, entranceName) != hash8 {
+		expectedHash := sharedEntranceHostPrefix(appid, entranceName)
+		platformDomain := ""
+		for _, pattern := range patterns {
+			hash8, domain, ok := parseLogicalHostPattern(pattern)
+			if !ok || hash8 != expectedHash {
+				continue
+			}
+			platformDomain = domain
+			break
+		}
+		if platformDomain == "" {
 			continue
 		}
 		for _, viewer := range viewers {

@@ -186,6 +186,27 @@ func TestSharedInclusterEntrancesFromSRRItems_passthroughAndDirect(t *testing.T)
 	}
 }
 
+func TestSharedInclusterEntrancesFromSRRItems_logicalPatternNotFirst(t *testing.T) {
+	prefix := sharedEntranceHostPrefix("a5be2268", "api")
+	srr := unstructuredSRR("ollama-shared", "shared-a5be2268-api", map[string]string{
+		labelSRRAppID: "a5be2268", labelSRREntrance: "api",
+	}, "gateway", []string{
+		"api.shared.olares.com",
+		prefix + ".*.olares.com",
+	})
+	got := sharedInclusterEntrancesFromSRRItems(
+		[]unstructured.Unstructured{*srr},
+		nil,
+		[]string{"alice"},
+	)
+	if len(got) != 1 {
+		t.Fatalf("expected 1 entrance, got %d (%+v)", len(got), got)
+	}
+	if got[0].fqdn() != prefix+".alice.olares.com" {
+		t.Fatalf("unexpected fqdn %q", got[0].fqdn())
+	}
+}
+
 func TestSharedInclusterEntrancesFromSRRItems_empty(t *testing.T) {
 	if got := sharedInclusterEntrancesFromSRRItems(nil, nil, []string{"alice"}); got != nil {
 		t.Fatalf("expected nil, got %v", got)
