@@ -133,13 +133,11 @@ func runShareInternal(
 	// CLI now stays in lockstep. See preflightShareCreate for the
 	// full set of refusal arms and the rationale (the previous
 	// "file shares are legitimate Internal use case" comment in
-	// share.go is no longer accurate and has been updated).
-	httpClient, err := f.HTTPClient(ctx)
-	if err != nil {
-		return err
-	}
-	statClient := &download.Client{HTTPClient: httpClient, BaseURL: rp.FilesURL}
-	if err := preflightShareCreate(ctx, statClient, tgt, share.TypeInternal); err != nil {
+	// share.go is no longer accurate and has been updated). The
+	// stat client borrows the share client's HTTPClient + BaseURL
+	// directly — see newShareStatClient for why we don't ask the
+	// factory for a second http.Client here.
+	if err := preflightShareCreate(ctx, newShareStatClient(client), tgt, share.TypeInternal); err != nil {
 		return reformatShareHTTPErr(err, rp.OlaresID, "create internal share preflight for "+pathArg)
 	}
 
@@ -371,13 +369,10 @@ func runSharePublic(
 	// Preflight: same dir-only policy as `share internal` /
 	// `share smb`. Refuses early when target is a file (or doesn't
 	// exist on the server). See preflightShareCreate for the
-	// rationale.
-	httpClient, err := f.HTTPClient(ctx)
-	if err != nil {
-		return err
-	}
-	statClient := &download.Client{HTTPClient: httpClient, BaseURL: rp.FilesURL}
-	if err := preflightShareCreate(ctx, statClient, tgt, share.TypePublic); err != nil {
+	// rationale and newShareStatClient for why the stat client
+	// borrows from the share client instead of asking the factory
+	// for a second HTTP client.
+	if err := preflightShareCreate(ctx, newShareStatClient(client), tgt, share.TypePublic); err != nil {
 		return reformatShareHTTPErr(err, rp.OlaresID, "create public share preflight for "+pathArg)
 	}
 
@@ -572,13 +567,9 @@ func runShareSMB(
 	// on the wire (a Samba export points at a directory tree, not
 	// a single file), so this check is doubly motivated for the
 	// SMB flavor — the GUI also gates on event.isDir here. See
-	// preflightShareCreate for the full refusal table.
-	httpClient, err := f.HTTPClient(ctx)
-	if err != nil {
-		return err
-	}
-	statClient := &download.Client{HTTPClient: httpClient, BaseURL: rp.FilesURL}
-	if err := preflightShareCreate(ctx, statClient, tgt, share.TypeSMB); err != nil {
+	// preflightShareCreate for the full refusal table and
+	// newShareStatClient for the stat-client wiring.
+	if err := preflightShareCreate(ctx, newShareStatClient(client), tgt, share.TypeSMB); err != nil {
 		return reformatShareHTTPErr(err, rp.OlaresID, "create SMB share preflight for "+pathArg)
 	}
 
@@ -608,6 +599,42 @@ func runShareSMB(
 		}
 	}
 	return nil
+}
+
+// newShareStatClient builds the download.Client the share-create
+// preflight Stats its target with, reusing the already-built
+// share.Client's HTTPClient + BaseURL verbatim.
+//
+// Why a helper (and why we don't call f.HTTPClient(ctx) here):
+// setupShareClient — called by every share-create runner a few
+// lines BEFORE the preflight — has already executed
+// f.ResolveProfile(ctx) and f.HTTPClient(ctx), and stashed the
+// resulting *http.Client in share.Client.HTTPClient. f.HTTPClient
+// has a sync.Once around the *http.Client construction, but it
+// STILL calls f.ResolveProfile(ctx) on every entry (factory.go
+// L177-189) — and ResolveProfile in turn has its own resolveOnce
+// guard that, while fast, isn't free. More importantly:
+//
+//   - the second call returns the same *http.Client the share
+//     client already holds, so the extra hop just makes the
+//     wiring look like it's deriving something independent — a
+//     reader has to follow the trail back through the Factory
+//     to see that it's the same object;
+//   - cobra runners that already have the share.Client would
+//     otherwise repeat a "get the HTTP client" stanza per call
+//     site (three sites here), and a tweak to one would silently
+//     miss the others. preflightCpMv has the same concern called
+//     out verbatim in its "collapsed display/plain vars" comment.
+//
+// Keeping a single-line helper here means the preflight stat path
+// is unambiguously "the same wire transport the share-create call
+// uses", and adding a new share-create flavor only needs one line
+// to wire its preflight.
+func newShareStatClient(client *share.Client) *download.Client {
+	return &download.Client{
+		HTTPClient: client.HTTPClient,
+		BaseURL:    client.BaseURL,
+	}
 }
 
 // preflightShareCreate Stats the share target BEFORE any state-
