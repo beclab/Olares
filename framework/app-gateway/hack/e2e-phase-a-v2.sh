@@ -88,7 +88,20 @@ require_env EDGE_IP PLATFORM_DOMAIN PILOT_NS PILOT_APPID PILOT_ENTRANCE PILOT_VI
 authz_logs() {
   local tail="${1:-500}"
   if [[ "${AUTHZ_KIND}" == "sts" || "${AUTHZ_KIND}" == "statefulset" ]]; then
-    kubectl -n "${AUTHZ_NS}" logs "statefulset/${AUTHZ_NAME}" -c "${AUTHZ_CONTAINER}" --tail="${tail}" 2>/dev/null || true
+    # Prefer workload logs, then fall back to per-pod logs to avoid missing
+    # lines when requests are served by a different replica.
+    local wl
+    wl="$(kubectl -n "${AUTHZ_NS}" logs "statefulset/${AUTHZ_NAME}" -c "${AUTHZ_CONTAINER}" --tail="${tail}" 2>/dev/null || true)"
+    if [[ -n "${wl}" ]]; then
+      printf '%s\n' "${wl}"
+      return 0
+    fi
+    local pods pod
+    pods="$(kubectl -n "${AUTHZ_NS}" get pods -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)"
+    for pod in ${pods}; do
+      [[ "${pod}" == "${AUTHZ_NAME}-"* ]] || continue
+      kubectl -n "${AUTHZ_NS}" logs "pod/${pod}" -c "${AUTHZ_CONTAINER}" --tail="${tail}" 2>/dev/null || true
+    done
   else
     kubectl -n "${AUTHZ_NS}" logs "${AUTHZ_KIND}/${AUTHZ_NAME}" --tail="${tail}" 2>/dev/null || true
   fi

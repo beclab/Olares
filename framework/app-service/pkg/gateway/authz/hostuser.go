@@ -83,7 +83,7 @@ func HostUser(authority string, headers map[string]string, cfg HostUserConfig) D
 		return Decision{Action: ActionPass}
 	}
 	viewer := labels[1]
-	user := lower(headers["x-bfl-user"])
+	user := lower(headerValue(headers, "x-bfl-user"))
 	if user == "" {
 		return Decision{
 			Action:  ActionDeny,

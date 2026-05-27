@@ -60,7 +60,16 @@ func headerValue(headers map[string]string, key string) string {
 	if v, ok := headers[key]; ok && v != "" {
 		return v
 	}
-	return headers[strings.ToLower(key)]
+	lk := strings.ToLower(key)
+	if v, ok := headers[lk]; ok && v != "" {
+		return v
+	}
+	for hk, hv := range headers {
+		if hv != "" && strings.EqualFold(hk, key) {
+			return hv
+		}
+	}
+	return ""
 }
 
 // HeadersWithDerivedUser injects X-BFL-USER from the identity decider when absent.

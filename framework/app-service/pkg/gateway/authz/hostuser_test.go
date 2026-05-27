@@ -30,6 +30,15 @@ func TestHostUser_CaseInsensitiveCompare(t *testing.T) {
 	}
 }
 
+func TestHostUser_HeaderKeyCaseInsensitive(t *testing.T) {
+	d := HostUser("01234567.alice.olares.com",
+		map[string]string{"X-BFL-USER": "alice"},
+		DefaultHostUserConfig())
+	if d.Action != ActionAllow {
+		t.Fatalf("expected Allow for canonical header key, got %+v", d)
+	}
+}
+
 func TestHostUser_HostWithPort_Allow(t *testing.T) {
 	d := HostUser("01234567.alice.olares.com:443",
 		map[string]string{"x-bfl-user": "alice"},
