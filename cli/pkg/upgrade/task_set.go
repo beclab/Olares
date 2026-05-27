@@ -33,6 +33,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/plugins/network"
 	"github.com/beclab/Olares/cli/pkg/plugins/network/templates"
+	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
@@ -713,4 +714,13 @@ func (a *generateMultusConfigAction) Execute(runtime connector.Runtime) error {
 	}
 
 	return a.Template.Execute(runtime)
+}
+
+func createAppCommonDir() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "CreateAppCommonDir",
+			Action: &storage.CreateAppCommonDir{},
+		},
+	}
 }
