@@ -1,6 +1,6 @@
 ---
 name: olares-cluster
-version: 0.5.1
+version: 0.5.3
 description: "olares-cli cluster: per-user Kubernetes view of an Olares cluster via the ControlHub backend. Read pods / containers / workloads (Deployment/StatefulSet/DaemonSet) / application spaces (KubeSphere-grouped namespaces) / namespaces / nodes / jobs / cronjobs / Olares-managed middleware (databases, queues, object stores). Mutate via scale / restart / stop / start / delete on workloads, delete / restart on pods, suspend / resume on cronjobs, rerun on jobs, and password set on middleware — every mutating verb is wrapped in a confirmation prompt that --yes opts out of. Watch verbs (pod get -w, workload rollout-status -w, application status -w, pod/container logs -f) poll on --interval, never stream. Use whenever the user asks `what's running on my cluster?`, `tail logs of <pod>`, `restart / scale / delete this workload`, `who am I on this cluster?`, `suspend this cronjob`, `rerun this job`, or `rotate the password on this database`. Do NOT use for app-store lifecycle (use olares-cli market) or host-side install / node-join / OS upgrade (use olares-cli node / os / gpu — those go through kubeconfig, not a profile)."
 metadata:
   requires:
@@ -48,7 +48,7 @@ Use `olares-cli cluster ...` when the user asks, against the cluster the active 
 | **Namespace** | `<name>` | The same K8s namespace, but with kubectl-style framing (no workspace grouping). |
 | **Node** | `<name>` | A K8s node visible to the active profile. **Different** from `olares-cli node` (host maintenance). |
 | **Job** | `<ns>/<name>` | A one-shot batch run (`apis/batch/v1`). |
-| **CronJob** | `<ns>/<name>` | A scheduled Job template (`apis/batch/v1beta1`). |
+| **CronJob** | `<ns>/<name>` | A scheduled Job template (`apis/batch/v1`). |
 | **Middleware** | `--type T --name N --namespace NS` | An Olares-managed database / queue / object store. NOT a K8s native resource — uses a separate `/middleware/v1/*` aggregator. |
 
 ## Resource relationships
@@ -163,19 +163,19 @@ K8s Jobs (`apis/batch/v1`).
 | `cluster job yaml <ns/name>` | same | JSON-to-YAML round-trip. |
 | `cluster job pods <ns/name> [-l ADDITIONAL] [...]` | (1) `job.Get` for `metadata.uid`; (2) `pod list` with `controller-uid=<uid>` | Two-step. `--label` is ANDed onto the controller-uid clause server-side. |
 | `cluster job events <ns/name> [--limit N]` | `GET /api/v1/namespaces/<ns>/events` | Same shape as `pod events`, filtered to `involvedObject.kind=Job`. Shares `clusteropts.Event` + render/sort/URL helpers with `pod events` and `application status`. |
-| `cluster job rerun <ns/name> [--yes]` | (1) `job.Get` for `resourceVersion`; (2) `POST /kapis/operations.kubesphere.io/v1alpha2/namespaces/<ns>/jobs/<name>?action=rerun&resourceVersion=<rv>` | KubeSphere operations action; server spawns a new pod attempt. `ConfirmDestructive`-wrapped. |
+| `cluster job rerun <ns/name> [--yes] [--concurrency N]` | (1) `job.Get` for UID + terminal-state check; (2) `GET /api/v1/namespaces/<ns>/pods?labelSelector=controller-uid=<uid>`; (3) parallel `DELETE /api/v1/namespaces/<ns>/pods/<name>` bounded by `--concurrency` (default 5) | Client-side equivalent of KubeSphere's `action=rerun` — the operations endpoint isn't exposed by Olares, so the verb lists the Job's child Pods and deletes them; the Job controller then reschedules new attempts to satisfy `spec.parallelism` / `spec.completions`. Refuses Jobs already at `Complete=True` / `Failed=True` (they're terminal — delete and recreate instead). `ConfirmDestructive`-wrapped. |
 
 ## CronJobs (`cluster cronjob ...`, aliases `cronjobs` / `cj`)
 
-K8s CronJobs (`apis/batch/v1beta1` — different from Jobs).
+K8s CronJobs (`apis/batch/v1`).
 
 | Command | Endpoint | What it does |
 |---|---|---|
 | `cluster cronjob list [-n NS] [-l SEL] [--page N\|--all]` | `GET /kapis/resources.kubesphere.io/v1alpha3/[namespaces/<ns>/]cronjobs` | NAMESPACE / NAME / SCHEDULE / SUSPEND / ACTIVE / LAST-SCHEDULE / AGE. |
-| `cluster cronjob get <ns/name>` | `GET /apis/batch/v1beta1/namespaces/<ns>/cronjobs/<name>` | Vertical summary + ConcurrencyPolicy + Active Jobs + Job Template Selector. |
+| `cluster cronjob get <ns/name>` | `GET /apis/batch/v1/namespaces/<ns>/cronjobs/<name>` | Vertical summary + TimeZone + ConcurrencyPolicy + Starting Deadline + History limits + Active Jobs + Last Successful + Job Template Selector. |
 | `cluster cronjob yaml <ns/name>` | same | JSON-to-YAML round-trip. |
-| `cluster cronjob jobs <ns/name> [--limit N]` | (1) `cronjob.Get` for `spec.jobTemplate.metadata.labels`; (2) `GET /apis/batch/v1/.../jobs?labelSelector=<derived>` | Two-step. Errors clearly if the jobTemplate carries no labels (rather than fanning to "every job in the namespace"). |
-| `cluster cronjob suspend <ns/name> [--yes]` | `PATCH /apis/batch/v1beta1/.../cronjobs/<name>` body `{"spec":{"suspend":true}}` Content-Type `application/merge-patch+json` | `ConfirmDestructive`. No-op short-circuit when already suspended. |
+| `cluster cronjob jobs <ns/name> [--limit N]` | (1) `cronjob.Get` for `metadata.uid` (+ `spec.jobTemplate.metadata.labels` as an optimization key); (2) `GET /apis/batch/v1/.../jobs` — adds `?labelSelector=<derived>` when the jobTemplate carries labels (apiserver pre-narrow), unfiltered otherwise; (3) client-side filter by `ownerReferences[uid==cronjob.uid, controller=true, kind=CronJob]` (K8s-native parent/child binding — works for both KubeSphere/SPA- and kubectl/yaml-authored CronJobs). | `--limit N` caps items displayed AFTER filtering (default 100). Earlier revisions used labels as the binding mechanism and errored out on kubectl-authored CronJobs (which usually don't set jobTemplate labels); the new flow uses UID as the source of truth so it works for both. |
+| `cluster cronjob suspend <ns/name> [--yes]` | `PATCH /apis/batch/v1/.../cronjobs/<name>` body `{"spec":{"suspend":true}}` Content-Type `application/merge-patch+json` | `ConfirmDestructive`. No-op short-circuit when already suspended. |
 | `cluster cronjob resume <ns/name>` | same path body `{"spec":{"suspend":false}}` | NO `--yes` (re-enabling is non-destructive). No-op short-circuit when already active. |
 
 ## Middleware (`cluster middleware ...`, alias `mw`)
@@ -229,6 +229,8 @@ Every mutating verb (`pod delete` / `pod restart`, all of `workload scale|restar
 | `--field-selector: field "..." is not supported (supported: ...)` | The cluster pod list `--field-selector` accepts only a translatable subset of kubectl selectors (the upstream KubeSphere endpoint doesn't speak the raw `fieldSelector=` wire syntax). | Use one of the listed fields, or drop `--field-selector` and filter client-side. |
 | `--field-selector: "..." uses the '!=' operator which the upstream KubeSphere pods endpoint does not support` | KubeSphere only matches equality. | Rephrase as a positive match, or filter the output through `jq`. |
 | `aborted by user` / `stdin is not a terminal — pass --yes to confirm: ...` | Destructive prompt rejected, or non-TTY context without `--yes`. | Interactive: answer `y`. Scripted: add `--yes`. |
+| `job <ns/name> has already terminated (Complete/Failed: ...) — rerun cannot resurrect a terminal Job; delete and recreate the Job instead` (from `cluster job rerun`) | The Job has hit `Complete=True` or `Failed=True`; the controller stops scheduling, so deleting Pods would be a no-op. | Delete the Job (`kubectl delete job`) and recreate it from the same spec, or — if it was spawned by a CronJob — let the CronJob fire again. |
+| `job <ns/name> has no child pods (controller-uid=... matched nothing) — nothing to rerun` (from `cluster job rerun`) | The Job hasn't scheduled any Pod yet (typically a freshly-created Job that's still in the queue, or one with `spec.suspend=true`). | Wait a few seconds and retry; or `cluster job get` to inspect the Job's status. |
 | `passwords do not match` (from `middleware password set`) | The two no-echo prompts disagreed. | Re-run. |
 | `--interval requires --follow` / `--interval requires --watch` / `--timeout requires --watch` | Polling cadence flags set without their gate flag. | Add `-f` / `-w`, or drop the offending flag. |
 | `decode ... response: ...` | Endpoint returned something we couldn't parse. | Re-run with `-o json` to see the raw shape. May indicate a server-side schema change. |
