@@ -46,6 +46,7 @@ type (
 	ApplicationManager      = appv1alpha1.ApplicationManager
 	ApplicationManagerState = appv1alpha1.ApplicationManagerState
 	OpRecord                = appv1alpha1.OpRecord
+	OverlayGateway          = manifest.OverlayGateway
 )
 
 func ChartNamespace(c *Chart, owner string) string {

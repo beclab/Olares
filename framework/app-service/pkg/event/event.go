@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/users/activeusers"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/nats-io/nats.go"
@@ -140,37 +141,76 @@ func SetAppEventQueue(q *QueuedEventController) {
 }
 
 func PublishAppEventToQueue(p utils.EventParams) {
-	subject := fmt.Sprintf("os.application.%s", p.Owner)
-
 	now := time.Now()
-	data := utils.Event{
-		EventID:    fmt.Sprintf("%s-%s-%d", p.Owner, p.Name, now.UnixMilli()),
-		CreateTime: now,
-		Name:       p.Name,
-		Type:       p.Type,
-		OpType:     p.OpType,
-		OpID:       p.OpID,
-		State:      p.State,
-		Progress:   p.Progress,
-		User:       p.Owner,
-		RawAppName: func() string {
-			if p.RawAppName == "" {
-				return p.Name
-			}
-			return p.RawAppName
-		}(),
-		Title:           p.Title,
-		Icon:            p.Icon,
-		Reason:          p.Reason,
-		Message:         p.Message,
-		SharedEntrances: p.SharedEntrances,
-		MarketSource:    p.MarketSource,
-	}
-	if len(p.EntranceStatuses) > 0 {
-		data.EntranceStatuses = p.EntranceStatuses
+	rawAppName := p.RawAppName
+	if rawAppName == "" {
+		rawAppName = p.Name
 	}
 
-	AppEventQueue.enqueue(&QueueEvent{Subject: subject, Data: data})
+	// buildEvent constructs the per-recipient event payload. The
+	// `recipient` is the user the event is being routed to; it becomes
+	// both the User field and the NATS subject suffix. For v1/v2 this
+	// is always the nominal Owner; for v3 fan-out it is each activated
+	// user in turn.
+	buildEvent := func(recipient string) utils.Event {
+		ev := utils.Event{
+			EventID:         fmt.Sprintf("%s-%s-%d", recipient, p.Name, now.UnixMilli()),
+			CreateTime:      now,
+			Name:            p.Name,
+			Type:            p.Type,
+			OpType:          p.OpType,
+			OpID:            p.OpID,
+			State:           p.State,
+			Progress:        p.Progress,
+			User:            recipient,
+			RawAppName:      rawAppName,
+			Title:           p.Title,
+			Icon:            p.Icon,
+			Reason:          p.Reason,
+			Message:         p.Message,
+			SharedEntrances: p.SharedEntrances,
+			MarketSource:    p.MarketSource,
+		}
+		if len(p.EntranceStatuses) > 0 {
+			ev.EntranceStatuses = p.EntranceStatuses
+		}
+		return ev
+	}
+
+	// v3 / shared apps are cluster-wide singletons; their lifecycle is
+	// relevant to every user that can open the app, not just the
+	// nominal owner. Fan the event out to every activated user so each
+	// per-user NATS subscriber sees the state change. Unactivated users
+	// (mid-wizard) are intentionally skipped — they have no UI to
+	// surface the message yet.
+	//
+	// The activated-user set comes from the in-memory activeusers cache
+	// (kept current by the UserController informer handler) so this
+	// path performs no kube API I/O. If the cache happens to be empty
+	// (e.g. an event was somehow published before the User informer
+	// finished its initial sync), we deliberately drop the v3 event
+	// rather than fall back to a single-owner publish: a v1/v2-style
+	// publish to a v3 app's nominal Owner would be silently misrouted
+	// for everyone else.
+	if p.IsV3 {
+		recipients := activeusers.List()
+		if len(recipients) == 0 {
+			klog.Infof("v3 fan-out: no activated users (cache empty), dropping event for app %s", p.Name)
+			return
+		}
+		for _, u := range recipients {
+			AppEventQueue.enqueue(&QueueEvent{
+				Subject: fmt.Sprintf("os.application.%s", u),
+				Data:    buildEvent(u),
+			})
+		}
+		return
+	}
+
+	AppEventQueue.enqueue(&QueueEvent{
+		Subject: fmt.Sprintf("os.application.%s", p.Owner),
+		Data:    buildEvent(p.Owner),
+	})
 }
 
 func PublishUserEventToQueue(topic, user, operator string) {
