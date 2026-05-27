@@ -6,8 +6,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/apecloud/kubeblocks v1.0.0
 	github.com/argoproj/argo-workflows/v3 v3.7.10
-	github.com/beclab/Olares/framework/oac v0.0.0-20260524144521-bca08c6cf3e3
-	github.com/beclab/api v0.0.8-0.20260524143612-0ae07f657000
+	github.com/beclab/Olares/framework/oac v0.0.0-20260527130026-7c3643a772ae
+	github.com/beclab/api v0.0.8
 	github.com/beclab/lldap-client v0.0.11
 	github.com/containerd/containerd v1.7.29
 	github.com/containers/image/v5 v5.36.1
