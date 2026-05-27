@@ -280,15 +280,23 @@ wait_authz_allow() {
 }
 
 wait_authz_invalid_host_user() {
-  local host="$1" rid="$2"
+  local host="$1" rid="${2:-}"
   local tries="${3:-8}" sleep_sec="${4:-2}"
   local n=0 log
   while (( n < tries )); do
     log="$(authz_logs 1200)"
+    if [[ -n "${rid}" ]] \
+       && printf '%s' "${log}" \
+         | grep -F "rid=${rid}" \
+         | grep -F "authority=${host}" \
+         | grep -qE 'code=INVALID_HOST_USER|INVALID_HOST_USER'; then
+      return 0
+    fi
+    # Direct-to-EG curls often do not preserve X-Request-Id through Envoy; match
+    # structured audit fields (authority + code) on the deny line instead.
     if printf '%s' "${log}" \
-       | grep -F "rid=${rid}" \
        | grep -F "authority=${host}" \
-       | grep -q 'INVALID_HOST_USER'; then
+       | grep -qE 'decision=deny.*code=INVALID_HOST_USER|code=INVALID_HOST_USER.*decision=deny'; then
       return 0
     fi
     sleep "${sleep_sec}"
