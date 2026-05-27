@@ -17,6 +17,14 @@ OpenClaw can be extended using skills and plugins:
 To protect your device, OpenClaw runs in a restricted, non-root environment without administrative privileges. This prevents the agent from modifying your system or self-installing software.
 :::
 
+## Learning objectives
+
+In this guide, you will learn how to:
+- Understand where skills are loaded from and why some are blocked in Olares.
+- Install skills using the configuration wizard, ClawHub, or manual upload.
+- Identify and install missing dependencies for a skill.
+- Install and enable plugins to extend OpenClaw with new channels or features.
+
 ## Understanding skills
 
 Understanding where skills come from and how they are loaded helps you manage them effectively.
