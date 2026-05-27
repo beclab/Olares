@@ -1,6 +1,7 @@
 package authz
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log/slog"
@@ -246,6 +247,114 @@ func TestAuthzHandler_InCluster_ViewerMismatchDeny(t *testing.T) {
 	}
 	if _, ok := resp.HttpResponse.(*authv3.CheckResponse_DeniedResponse); !ok {
 		t.Fatalf("expected deny, got %#v", resp.HttpResponse)
+	}
+}
+
+// requirement: in-cluster ext_authz must remain reachable for callers that send
+// HTTPS to the gateway :443 listener; Linkerd transparently tunnels TLS so no
+// l5d-client-id reaches ext_authz; the matrix labels this the L1' compat path.
+// behavior: cluster-internal Shared host + no l5d-client-id + X-BFL-USER equal
+// to the host viewer label resolves to Allow (Phase A in-cluster shared allow)
+// with the host-user decision attached.
+// test: TC-005 (https compat) — covers the same logical path EG :443 takes
+// when chart tls.enabled=true is in effect. No production behaviour changes.
+func TestAuthzHandler_Check_InCluster_HttpsCompatPath_TC005_Allow(t *testing.T) {
+	h := &authzHandler{
+		allow:        true,
+		audit:        discardAuditor(),
+		hostUser:     DefaultHostUserConfig(),
+		snapshotFunc: snapshotInCluster(true),
+	}
+	conn, cleanup := startBufServer(t, h)
+	defer cleanup()
+	client := authv3.NewAuthorizationClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	resp, err := client.Check(ctx, makeReq("a1b2c3d4.alice.olares.com",
+		map[string]string{"x-bfl-user": "alice"}))
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	ok, isOK := resp.HttpResponse.(*authv3.CheckResponse_OkResponse)
+	if !isOK {
+		t.Fatalf("expected Allow on weak compat path, got %#v", resp.HttpResponse)
+	}
+	if len(ok.OkResponse.Headers) == 0 || ok.OkResponse.Headers[0].Header.Value != "alice" {
+		t.Fatalf("x-bfl-user header not echoed: %#v", ok.OkResponse.Headers)
+	}
+}
+
+// requirement: weak path must not let a caller-supplied X-BFL-USER overrule the
+// host viewer; mismatch denies with the stable INVALID_HOST_USER code.
+// behavior: HostUser decider runs even when l5d is absent, so the host viewer
+// label still wins; mismatched X-BFL-USER yields 403 INVALID_HOST_USER.
+// test: TC-005 negative — keeps the §2.7.1 layering conclusion intact (the
+// compat path is "usable", not "trusted").
+func TestAuthzHandler_Check_InCluster_HttpsCompat_DenyMismatch_TC005(t *testing.T) {
+	h := &authzHandler{
+		allow:        true,
+		audit:        discardAuditor(),
+		hostUser:     DefaultHostUserConfig(),
+		snapshotFunc: snapshotInCluster(true),
+	}
+	conn, cleanup := startBufServer(t, h)
+	defer cleanup()
+	client := authv3.NewAuthorizationClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	resp, err := client.Check(ctx, makeReq("a1b2c3d4.alice.olares.com",
+		map[string]string{"x-bfl-user": "bob"}))
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	denied, ok := resp.HttpResponse.(*authv3.CheckResponse_DeniedResponse)
+	if !ok {
+		t.Fatalf("expected Deny on viewer mismatch, got %#v", resp.HttpResponse)
+	}
+	if denied.DeniedResponse.Status.Code != envoytypev3.StatusCode_Forbidden {
+		t.Fatalf("status: %v", denied.DeniedResponse.Status)
+	}
+	if !strings.Contains(denied.DeniedResponse.Body, CodeInvalidHostUser) {
+		t.Fatalf("body lacks %s: %q", CodeInvalidHostUser, denied.DeniedResponse.Body)
+	}
+}
+
+// requirement: weak compat path must be observable so operators can confirm a
+// request did NOT carry mesh identity; the e2e harness greps the audit line
+// for l5d_present=false + decision=allow on the compat scenario.
+// behavior: when Check accepts a request with no l5d-client-id, the audit
+// emits decision=allow, l5d_present=false, via=incluster_shared_allow.
+// test: TC-005 observability — pins the audit contract the P4-https e2e
+// step relies on. Changing the field name without updating the e2e harness
+// would surface here first.
+func TestAuthzHandler_Audit_TC005_HttpsCompat_L5dPresentFalse(t *testing.T) {
+	var buf bytes.Buffer
+	h := &authzHandler{
+		allow:        true,
+		audit:        Auditor{Logger: slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))},
+		hostUser:     DefaultHostUserConfig(),
+		snapshotFunc: snapshotInCluster(true),
+	}
+	conn, cleanup := startBufServer(t, h)
+	defer cleanup()
+	client := authv3.NewAuthorizationClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := client.Check(ctx, makeReq("a1b2c3d4.alice.olares.com",
+		map[string]string{"x-bfl-user": "alice"})); err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{
+		"decision=allow",
+		"l5d_present=false",
+		"via=incluster_shared_allow",
+		"authority=a1b2c3d4.alice.olares.com",
+		"viewer_host=alice",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("audit missing %q; full line: %s", want, out)
+		}
 	}
 }
 
