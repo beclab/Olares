@@ -18,13 +18,13 @@ It acts as an "always-on" operator that can execute real tasks, such as searchin
 
 ## Learning objectives
 
-By the end of this guide, you will learn how to:
+In this guide, you will learn how to:
 - Install and initialize the OpenClaw environment.
 - Integrate OpenClaw with Discord.
-- Enable the web search capability.
+- Optional: Enable the web search capability.
 - Manage skills and plug-ins.
-- Grant OpenClaw access to local files.
-- Enable the sandbox for secure code execution.
+- Optional: Grant OpenClaw access to local files.
+- Optional: Enable the sandbox for secure code execution.
 
 ## Prerequisites
 

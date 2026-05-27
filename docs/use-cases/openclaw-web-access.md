@@ -10,7 +10,7 @@ doc_version: "2.0"
 doc_updated: "2026-05-27"
 ---
 
-# Enable web search in OpenClaw
+# Optional: Enable web search in OpenClaw
 
 By default, OpenClaw answers questions using only its training data. It cannot access current events, real-time news, or live web content. To give your agent internet access, connect it to a web search provider.
 
@@ -18,7 +18,7 @@ This guide uses SearXNG, a privacy-focused meta-search engine that aggregates re
 
 ## Learning objectives
 
-By the end of this guide, you will learn how to:
+In this guide, you will learn how to:
 - Install SearXNG from the Olares Market.
 - Obtain the shared endpoint URL for SearXNG.
 - Configure OpenClaw to use SearXNG for web search and fetching.
