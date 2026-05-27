@@ -16,7 +16,7 @@ func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c.ConfigVersion = "0.13.0" // >= 0.12.0 -> rules apply
 	c.APIVersion = APIVersionV1
 	c.Spec.SupportArch = []string{"amd64", "arm64"}
-	c.Spec.Resources = modes
+	c.Spec.Accelerator = modes
 	c.Spec.RequiredCPU = ""
 	c.Spec.LimitedCPU = ""
 	c.Spec.RequiredMemory = ""
@@ -247,7 +247,7 @@ func TestRule2_InlineMissingFieldRejected(t *testing.T) {
 // relaxation of the old "cpu+memory only" constraint.
 func TestRule3_NonGPUFamilyModesForbidGPU(t *testing.T) {
 	for _, mode := range []string{
-		ResourceModeCPU, ResourceModeAMDAPU, ResourceModeAppleM, ResourceModeNvidiaGB10, ResourceModeMThreadsM1000,
+		ResourceModeCPU, ResourceModeStrixHalo, ResourceModeAppleM, ResourceModeNvidiaGB10, ResourceModeMThreadsM1000,
 	} {
 		mode := mode
 		t.Run(mode+"_disk_allowed", func(t *testing.T) {
