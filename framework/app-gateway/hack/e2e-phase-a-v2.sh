@@ -245,6 +245,58 @@ curl_pilot() {
   fi
 }
 
+wait_l4_host() {
+  local host="$1"
+  local tries="${2:-8}"
+  local sleep_sec="${3:-2}"
+  local n=0 log
+  while (( n < tries )); do
+    log="$(kubectl -n "${L4_BFL_PROXY_NS:-os-network}" logs deploy/l4-bfl-proxy --tail=1200 2>/dev/null || true)"
+    if printf '%s' "${log}" | grep -qF "${host}"; then
+      return 0
+    fi
+    sleep "${sleep_sec}"
+    n=$((n + 1))
+  done
+  return 1
+}
+
+wait_authz_allow() {
+  local host="$1" rid="$2"
+  local tries="${3:-8}" sleep_sec="${4:-2}"
+  local n=0 log
+  while (( n < tries )); do
+    log="$(authz_logs 1200)"
+    if printf '%s' "${log}" \
+       | grep -F "rid=${rid}" \
+       | grep -F "authority=${host}" \
+       | grep -qE 'decision=allow([^_]|\s|$)|decision=allow_all'; then
+      return 0
+    fi
+    sleep "${sleep_sec}"
+    n=$((n + 1))
+  done
+  return 1
+}
+
+wait_authz_invalid_host_user() {
+  local host="$1" rid="$2"
+  local tries="${3:-8}" sleep_sec="${4:-2}"
+  local n=0 log
+  while (( n < tries )); do
+    log="$(authz_logs 1200)"
+    if printf '%s' "${log}" \
+       | grep -F "rid=${rid}" \
+       | grep -F "authority=${host}" \
+       | grep -q 'INVALID_HOST_USER'; then
+      return 0
+    fi
+    sleep "${sleep_sec}"
+    n=$((n + 1))
+  done
+  return 1
+}
+
 for v in "${VIEWERS[@]}"; do
   v_trim="${v// /}"; [[ -z "${v_trim}" ]] && continue
   RID="phase-a-v2-${v_trim}-$$-$(date +%s)"
@@ -263,11 +315,10 @@ done
 sleep 2
 
 hdr "G7 L4 access log shows pilot host for every viewer"
-L4_LOG=$(kubectl -n "${L4_BFL_PROXY_NS:-os-network}" logs deploy/l4-bfl-proxy --tail=500 2>/dev/null || true)
 for v in "${VIEWERS[@]}"; do
   v_trim="${v// /}"; [[ -z "${v_trim}" ]] && continue
   HOST="${HASH8}.${v_trim}.${PLATFORM_DOMAIN}"
-  if printf '%s' "${L4_LOG}" | grep -qF "${HOST}"; then
+  if wait_l4_host "${HOST}" 8 2; then
     record "G7:${v_trim}" PASS "L4 log contains host=${HOST}"
   else
     record "G7:${v_trim}" FAIL "L4 log missing host=${HOST}"
@@ -276,11 +327,13 @@ for v in "${VIEWERS[@]}"; do
 done
 
 hdr "G8 authz allow log for every viewer (target=${AUTHZ_TARGET} ns=${AUTHZ_NS})"
-AUTHZ_LOG=$(authz_logs 500)
 for v in "${VIEWERS[@]}"; do
   v_trim="${v// /}"; [[ -z "${v_trim}" ]] && continue
+  RID="${RIDS[${v_trim}]:-}"
   HOST="${HASH8}.${v_trim}.${PLATFORM_DOMAIN}"
-  if printf '%s' "${AUTHZ_LOG}" \
+  if [[ -n "${RID}" ]] && wait_authz_allow "${HOST}" "${RID}" 8 2; then
+    record "G8:${v_trim}" PASS "authz allow log for authority=${HOST} rid=${RID}"
+  elif printf '%s' "$(authz_logs 1200)" \
        | grep -F "authority=${HOST}" \
        | grep -qE 'decision=allow([^_]|\s|$)|decision=allow_all'; then
     record "G8:${v_trim}" PASS "authz allow log for authority=${HOST}"
@@ -307,10 +360,7 @@ else
     -H "Host: ${MIS_HOST}" -H "X-Request-Id: ${MIS_RID}" -H "X-BFL-USER: ${SECONDARY}" \
     "http://${EG_EP}:${EG_PORT}${PILOT_PATH}" 2>/dev/null)
   MIS_CODE="${MIS_CODE:-000}"
-  sleep 2
-  AUTHZ_LOG2=$(authz_logs 500)
-  if [[ "${MIS_CODE}" == "403" ]] \
-     && printf '%s' "${AUTHZ_LOG2}" | grep -F "authority=${MIS_HOST}" | grep -q 'INVALID_HOST_USER'; then
+  if [[ "${MIS_CODE}" == "403" ]] && wait_authz_invalid_host_user "${MIS_HOST}" "${MIS_RID}" 8 2; then
     record G9 PASS "direct EG mismatch curl -> 403 + authz INVALID_HOST_USER"
   else
     record G9 FAIL "direct EG mismatch curl -> HTTP ${MIS_CODE}; authz missing INVALID_HOST_USER for ${MIS_HOST}"

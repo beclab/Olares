@@ -241,6 +241,60 @@ func TestReconcileSharedRoute_InvalidSpec(t *testing.T) {
 	}
 }
 
+func TestBackfillSharedIngressNetworkPolicies_RecreatesOnlyManagedNP(t *testing.T) {
+	srr := logicalSRR("ollamav2-alice", "shared-a5be2268-ollamav2")
+	srr.Spec.Upstream = srrv1alpha1.UpstreamRef{
+		ServiceName:      "sharedentrances-ollama",
+		ServiceNamespace: "ollamaserver-shared",
+		Port:             80,
+	}
+	svc := backendService("ollamaserver-shared")
+	svc.Name = "sharedentrances-ollama"
+	svc.Spec.Ports[0].Port = 80
+	c := newFixture(t, svc, srr)
+
+	if err := BackfillSharedIngressNetworkPolicies(context.Background(), c, GatewayRef{}); err != nil {
+		t.Fatalf("BackfillSharedIngressNetworkPolicies: %v", err)
+	}
+
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "ollamaserver-shared",
+		Name:      NetworkPolicyName,
+	}, &networkingv1.NetworkPolicy{}); err != nil {
+		t.Fatalf("shared ingress NP must be recreated in upstream namespace: %v", err)
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "ollamav2-alice",
+		Name:      NetworkPolicyName,
+	}, &networkingv1.NetworkPolicy{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("backfill must not create NP in SRR namespace: err=%v", err)
+	}
+}
+
+func TestBackfillSharedIngressNetworkPolicies_SkipsDirectMode(t *testing.T) {
+	srr := logicalSRR("ollamav2-alice", "shared-a5be2268-ollamav2")
+	srr.Spec.RouteMode = srrv1alpha1.RouteModeDirect
+	srr.Spec.Upstream = srrv1alpha1.UpstreamRef{
+		ServiceName:      "sharedentrances-ollama",
+		ServiceNamespace: "ollamaserver-shared",
+		Port:             80,
+	}
+	svc := backendService("ollamaserver-shared")
+	svc.Name = "sharedentrances-ollama"
+	svc.Spec.Ports[0].Port = 80
+	c := newFixture(t, svc, srr)
+
+	if err := BackfillSharedIngressNetworkPolicies(context.Background(), c, GatewayRef{}); err != nil {
+		t.Fatalf("BackfillSharedIngressNetworkPolicies: %v", err)
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "ollamaserver-shared",
+		Name:      NetworkPolicyName,
+	}, &networkingv1.NetworkPolicy{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("direct-mode SRR must not create shared ingress NP: err=%v", err)
+	}
+}
+
 func TestUpdateSRRStatus_Idempotent(t *testing.T) {
 	srr := logicalSRR("ollama-shared", "shared-ollama-api")
 	c := newFixture(t, backendService("ollama-shared"), srr)

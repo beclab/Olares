@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 )
 
@@ -45,6 +46,7 @@ func TestCallerReconciler_optInInjectsAndWritesGatewayIngress(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = appv1alpha1.AddToScheme(scheme)
+	_ = srrv1alpha1.AddToScheme(scheme)
 	_ = networkingv1.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
 
@@ -132,6 +134,7 @@ func TestCallerReconciler_optInAlsoGCsLegacyEgress(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = appv1alpha1.AddToScheme(scheme)
+	_ = srrv1alpha1.AddToScheme(scheme)
 	_ = networkingv1.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
 
@@ -187,6 +190,7 @@ func TestCallerReconciler_optOutGCsLegacyEgress(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = appv1alpha1.AddToScheme(scheme)
+	_ = srrv1alpha1.AddToScheme(scheme)
 	_ = networkingv1.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
 	ns := "user-space-alice"

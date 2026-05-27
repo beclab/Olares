@@ -18,19 +18,19 @@ import (
 )
 
 const (
-	ManagedByLabel       = "app.kubernetes.io/managed-by"
-	ManagedByValue       = "app-service"
-	InstanceLabel        = "app.kubernetes.io/instance"
-	NetworkPolicyName    = "app-gateway-shared-ingress-np"
-	defaultGatewayNS     = "app-gateway"
-	defaultGatewayName   = "app-gateway"
-	defaultGatewaySectN  = "http"
-	ConditionReady       = "Ready"
-	ReasonGatewayMode    = "GatewayMode"
-	ReasonDirectMode     = "DirectMode"
-	ReasonReconciled     = "Reconciled"
-	ReasonBackendMissing = "BackendServiceMissing"
-	ReasonInvalidSpec    = "InvalidSpec"
+	ManagedByLabel         = "app.kubernetes.io/managed-by"
+	ManagedByValue         = "app-service"
+	InstanceLabel          = "app.kubernetes.io/instance"
+	NetworkPolicyName      = "app-gateway-shared-ingress-np"
+	defaultGatewayNS       = "app-gateway"
+	defaultGatewayName     = "app-gateway"
+	defaultGatewaySectN    = "http"
+	ConditionReady         = "Ready"
+	ReasonGatewayMode      = "GatewayMode"
+	ReasonDirectMode       = "DirectMode"
+	ReasonReconciled       = "Reconciled"
+	ReasonBackendMissing   = "BackendServiceMissing"
+	ReasonInvalidSpec      = "InvalidSpec"
 	ReasonRouteApplyFailed = "RouteApplyFailed"
 )
 
@@ -450,6 +450,54 @@ func hasOtherGatewayModeSRRForUpstream(ctx context.Context, c client.Client, sel
 		}
 	}
 	return false, nil
+}
+
+// BackfillSharedIngressNetworkPolicies reconciles only the dedicated shared
+// ingress NP (app-gateway-shared-ingress-np) for every gateway-mode SRR.
+//
+// requirement:
+//   - zero spillover: touch only routecontrol-managed shared ingress NP objects;
+//     do not mutate template-managed namespace policies from other components.
+//   - self-heal drift: if a managed shared ingress NP is deleted after an SRR was
+//     previously reconciled, re-create it without requiring manual kubectl.
+func BackfillSharedIngressNetworkPolicies(ctx context.Context, c client.Client, gw GatewayRef) error {
+	var srrList srrv1alpha1.SharedRouteRegistryList
+	if err := c.List(ctx, &srrList); err != nil {
+		return err
+	}
+	for i := range srrList.Items {
+		srr := &srrList.Items[i]
+		switch srr.Spec.RouteMode {
+		case "", srrv1alpha1.RouteModeGateway:
+		default:
+			continue
+		}
+		if len(srr.Spec.HostPatterns) == 0 || srr.Spec.Upstream.ServiceName == "" {
+			continue
+		}
+		upstreamNS := srr.Spec.Upstream.ServiceNamespace
+		if upstreamNS == "" {
+			upstreamNS = srr.Namespace
+		}
+		svc := &corev1.Service{}
+		if err := c.Get(ctx, types.NamespacedName{
+			Namespace: upstreamNS,
+			Name:      srr.Spec.Upstream.ServiceName,
+		}, svc); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		port, err := resolveServicePort(svc, srr.Spec.Upstream)
+		if err != nil {
+			continue
+		}
+		if err := applyNetworkPolicy(ctx, c, gw, srr, svc, port); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // UpdateSRRStatus writes ReconcileResult onto srr.status (Ready condition,

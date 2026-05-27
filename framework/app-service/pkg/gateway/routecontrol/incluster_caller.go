@@ -82,7 +82,15 @@ func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
 	if err := ensureCallerNamespaceInClusterLabel(ctx, r.Client, ns, true); err != nil {
 		return err
 	}
-	return r.applyNetworkPolicy(ctx, security.NewAppGatewayInClusterCallerIngressNP(r.gatewayNS()))
+	if err := r.applyNetworkPolicy(ctx, security.NewAppGatewayInClusterCallerIngressNP(r.gatewayNS())); err != nil {
+		return err
+	}
+	// Self-heal routecontrol-managed shared ingress NPs in upstream namespaces.
+	// This backfills only app-gateway-shared-ingress-np objects and does not
+	// touch template-managed namespace policies.
+	return BackfillSharedIngressNetworkPolicies(ctx, r.Client, GatewayRef{
+		GatewayNamespace: r.gatewayNS(),
+	})
 }
 
 // gcLegacyCallerEgress deletes the 4 pre-v1.0 managed caller egress NPs from
