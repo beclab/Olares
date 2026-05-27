@@ -2,7 +2,6 @@ package watchers
 
 import (
 	"context"
-	"net"
 	"sort"
 	"strings"
 	"testing"
@@ -11,59 +10,61 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func TestBuildSharedInclusterHosts_empty(t *testing.T) {
-	if got := buildSharedInclusterHosts(nil, "10.0.0.5"); got != nil {
+func TestBuildSharedInclusterTemplates_empty(t *testing.T) {
+	if got := buildSharedInclusterTemplates(nil, "10.0.0.5"); got != nil {
 		t.Fatalf("expected nil, got %#v", got)
 	}
-	if got := buildSharedInclusterHosts([]SharedInclusterEntrance{}, "10.0.0.5"); got != nil {
+	if got := buildSharedInclusterTemplates([]SharedInclusterEntrance{}, "10.0.0.5"); got != nil {
 		t.Fatalf("expected nil, got %#v", got)
 	}
-	if got := buildSharedInclusterHosts([]SharedInclusterEntrance{
+	if got := buildSharedInclusterTemplates([]SharedInclusterEntrance{
 		{AppID: "a5be2268", EntranceName: "ollama", Viewer: "alice", PlatformDomain: "olares.com"},
 	}, "not-an-ip"); got != nil {
 		t.Fatalf("expected nil for invalid gateway IP, got %#v", got)
 	}
 }
 
-func TestBuildSharedInclusterHosts_orderingAndDedup(t *testing.T) {
+func TestBuildSharedInclusterTemplates_orderingAndDedup(t *testing.T) {
 	entrances := []SharedInclusterEntrance{
 		{AppID: "a5be2268", EntranceName: "shared", Viewer: "bob", PlatformDomain: "olares.com"},
 		{AppID: "a5be2268", EntranceName: "shared", Viewer: "alice", PlatformDomain: "olares.com"},
 		{AppID: "a5be2268", EntranceName: "shared", Viewer: "bob", PlatformDomain: "olares.com"},
 	}
-	plugin := buildSharedInclusterHosts(entrances, "10.0.0.8")
-	if plugin == nil {
-		t.Fatal("expected hosts plugin")
+	plugins := buildSharedInclusterTemplates(entrances, "10.0.0.8")
+	if len(plugins) != 2 {
+		t.Fatalf("expected 2 template plugins, got %d", len(plugins))
 	}
-	hosts := hostsPluginNames(plugin)
-	if len(hosts) != 2 {
-		t.Fatalf("expected 2 hosts, got %v", hosts)
+	wantAlice := sharedEntranceHostPrefix("a5be2268", "shared") + ".alice.olares.com"
+	wantBob := sharedEntranceHostPrefix("a5be2268", "shared") + ".bob.olares.com"
+	if !templateMatchesFQDN(plugins[0], wantAlice, "10.0.0.8") {
+		t.Fatalf("first template does not target %s: %s", wantAlice, plugins[0].ToString())
 	}
-	if hosts[0] != sharedEntranceHostPrefix("a5be2268", "shared")+".alice.olares.com" {
-		t.Fatalf("unexpected first host: %s", hosts[0])
-	}
-	if hosts[1] != sharedEntranceHostPrefix("a5be2268", "shared")+".bob.olares.com" {
-		t.Fatalf("unexpected second host: %s", hosts[1])
+	if !templateMatchesFQDN(plugins[1], wantBob, "10.0.0.8") {
+		t.Fatalf("second template does not target %s: %s", wantBob, plugins[1].ToString())
 	}
 }
 
-func TestBuildSharedInclusterHosts_perUserEntranceExcluded(t *testing.T) {
-	// Per-user single-entrance host uses appid.owner.zone — not in SRR-expanded list.
-	perUserHost := "a5be2268.bob.olares.com"
+func TestBuildSharedInclusterTemplates_perUserEntranceExcluded(t *testing.T) {
+	// Per-user single-entrance host uses appid.owner.zone — must never be
+	// matched by the shared-template regex (which is anchored on the exact
+	// hash8-prefixed FQDN derived from SRR entries). The match regex escapes
+	// '.' so the literal per-user host can be searched verbatim.
+	perUserHost := `a5be2268\.bob\.olares\.com`
 	entrances := []SharedInclusterEntrance{
 		{AppID: "a5be2268", EntranceName: "ollama", Viewer: "alice", PlatformDomain: "olares.com"},
 	}
-	plugin := buildSharedInclusterHosts(entrances, "172.16.0.4")
-	if plugin == nil {
-		t.Fatal("expected hosts plugin")
+	plugins := buildSharedInclusterTemplates(entrances, "172.16.0.4")
+	if len(plugins) != 1 {
+		t.Fatalf("expected 1 plugin, got %d", len(plugins))
 	}
-	sharedHost := sharedEntranceHostPrefix("a5be2268", "ollama") + ".alice.olares.com"
-	body := plugin.ToString()
-	if !strings.Contains(body, sharedHost) {
-		t.Fatalf("expected shared host %q in %q", sharedHost, body)
+	host := sharedEntranceHostPrefix("a5be2268", "ollama") + ".alice.olares.com"
+	wantMatch := `"^` + strings.ReplaceAll(host, ".", `\.`) + `\.$"`
+	body := plugins[0].ToString()
+	if !strings.Contains(body, wantMatch) {
+		t.Fatalf("expected anchored match %q in %q", wantMatch, body)
 	}
 	if strings.Contains(body, perUserHost) {
-		t.Fatalf("per-user host %q must not appear in allowlist output: %q", perUserHost, body)
+		t.Fatalf("per-user host %q must not appear in match regex: %q", perUserHost, body)
 	}
 }
 
@@ -73,33 +74,41 @@ func TestInClusterGatewayEnabled_defaultsTrue(t *testing.T) {
 	}
 }
 
-func TestBuildSharedInclusterHosts_clusterIPRotation(t *testing.T) {
+func TestBuildSharedInclusterTemplates_clusterIPRotation(t *testing.T) {
 	ent := SharedInclusterEntrance{
 		AppID: "a5be2268", EntranceName: "api", Viewer: "alice", PlatformDomain: "olares.com",
 	}
-	p1 := buildSharedInclusterHosts([]SharedInclusterEntrance{ent}, "10.0.0.1")
-	p2 := buildSharedInclusterHosts([]SharedInclusterEntrance{ent}, "10.0.0.2")
-	if p1 == nil || p2 == nil {
-		t.Fatal("expected plugins")
+	p1 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.1")
+	p2 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.2")
+	if len(p1) != 1 || len(p2) != 1 {
+		t.Fatalf("expected single plugin per call, got %d / %d", len(p1), len(p2))
 	}
-	if gatewayIPFromHostsPlugin(p1) != "10.0.0.1" {
-		t.Fatalf("ip1=%s", gatewayIPFromHostsPlugin(p1))
+	if !strings.Contains(p1[0].ToString(), "10.0.0.1") {
+		t.Fatalf("p1 missing IP: %s", p1[0].ToString())
 	}
-	if gatewayIPFromHostsPlugin(p2) != "10.0.0.2" {
-		t.Fatalf("ip2=%s", gatewayIPFromHostsPlugin(p2))
+	if !strings.Contains(p2[0].ToString(), "10.0.0.2") {
+		t.Fatalf("p2 missing IP: %s", p2[0].ToString())
 	}
 }
 
-func TestBuildSharedInclusterHosts_roundTripCorefile(t *testing.T) {
-	plugin := buildSharedInclusterHosts([]SharedInclusterEntrance{
+func TestBuildSharedInclusterTemplates_roundTripCorefile(t *testing.T) {
+	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
 		{AppID: "bc2bd381", EntranceName: "litellm", Viewer: "alice", PlatformDomain: "olares.com"},
 	}, "192.168.1.10")
-	if plugin == nil {
-		t.Fatal("expected plugin")
+	if len(plugins) != 1 {
+		t.Fatalf("expected 1 plugin, got %d", len(plugins))
 	}
+	// Pre-parse rendering must contain the quoted, anchored match string —
+	// CoreDNS expects the match arg to be a quoted regex literal.
+	host := sharedEntranceHostPrefix("bc2bd381", "litellm") + ".alice.olares.com"
+	wantMatch := `"^` + strings.ReplaceAll(host, ".", `\.`) + `\.$"`
+	if pre := plugins[0].ToString(); !strings.Contains(pre, wantMatch) {
+		t.Fatalf("pre-parse body missing %q in %q", wantMatch, pre)
+	}
+
 	server := &corefile.Server{
 		DomPorts: []string{".:53"},
-		Plugins:  []*corefile.Plugin{plugin},
+		Plugins:  plugins,
 	}
 	parsed, err := corefile.New(server.ToString())
 	if err != nil {
@@ -109,26 +118,35 @@ func TestBuildSharedInclusterHosts_roundTripCorefile(t *testing.T) {
 		t.Fatalf("unexpected parsed structure: %+v", parsed)
 	}
 	got := parsed.Servers[0].Plugins[0]
-	if got.Name != "hosts" {
+	if got.Name != "template" {
 		t.Fatalf("plugin name=%s", got.Name)
 	}
-	host := sharedEntranceHostPrefix("bc2bd381", "litellm") + ".alice.olares.com"
-	if !strings.Contains(got.ToString(), host) {
-		t.Fatalf("missing host %q in %q", host, got.ToString())
+	// After parsing the parser strips wrapping quotes from quoted args, so
+	// the anchored regex appears unquoted in the round-tripped body. The
+	// escaped FQDN itself must still be present, along with the gateway IP
+	// and fallthrough directive.
+	escapedFQDN := strings.ReplaceAll(host, ".", `\.`)
+	body := got.ToString()
+	if !strings.Contains(body, escapedFQDN) {
+		t.Fatalf("missing escaped FQDN %q in %q", escapedFQDN, body)
+	}
+	if !strings.Contains(body, "192.168.1.10") {
+		t.Fatalf("missing gateway IP in %q", body)
+	}
+	if !strings.Contains(body, "fallthrough") {
+		t.Fatalf("shared template must fall through to wildcard: %q", body)
 	}
 }
 
-func hostsPluginNames(plugin *corefile.Plugin) []string {
-	if plugin == nil || plugin.Name != "hosts" {
-		return nil
+func templateMatchesFQDN(plugin *corefile.Plugin, fqdn, ip string) bool {
+	if plugin == nil || plugin.Name != "template" {
+		return false
 	}
-	var out []string
-	for _, opt := range plugin.Options {
-		if net.ParseIP(opt.Name) != nil {
-			out = append(out, opt.Args...)
-		}
-	}
-	return out
+	body := plugin.ToString()
+	// Pre-parse render keeps the quoted, anchored match regex; CoreDNS
+	// requires the surrounding double quotes for the regex literal.
+	wantMatch := `"^` + strings.ReplaceAll(fqdn, ".", `\.`) + `\.$"`
+	return strings.Contains(body, wantMatch) && strings.Contains(body, ip)
 }
 
 func TestSharedInclusterEntrancesFromSRRItems(t *testing.T) {
@@ -158,9 +176,11 @@ func TestSharedInclusterEntrancesFromSRRItems(t *testing.T) {
 	}
 
 	perUser := "a5be2268.bob.olares.com"
-	plugin := buildSharedInclusterHosts(got, "10.0.0.5")
-	if strings.Contains(plugin.ToString(), perUser) {
-		t.Fatalf("per-user host must not appear: %s", plugin.ToString())
+	plugins := buildSharedInclusterTemplates(got, "10.0.0.5")
+	for _, p := range plugins {
+		if strings.Contains(p.ToString(), perUser) {
+			t.Fatalf("per-user host must not appear: %s", p.ToString())
+		}
 	}
 }
 
@@ -213,70 +233,54 @@ func TestSharedInclusterEntrancesFromSRRItems_empty(t *testing.T) {
 	}
 }
 
-func TestMergeInclusterHosts_singleHostsBlock(t *testing.T) {
-	base := &corefile.Plugin{
-		Name: "hosts",
-		Args: []string{"/node-etc/hosts"},
+func TestBuildSharedInclusterTemplates_overridesUserWildcard(t *testing.T) {
+	// Render incluster server block that mirrors the production layout:
+	// shared-FQDN templates appear BEFORE the user-zone wildcard templates.
+	// CoreDNS evaluates template handlers in declaration order; an exact-FQDN
+	// match must therefore win over the wildcard and the wildcard must still
+	// handle other names in the zone via fallthrough on the shared template.
+	shared := buildSharedInclusterTemplates([]SharedInclusterEntrance{
+		{AppID: "bc2bd381", EntranceName: "litellm", Viewer: "alice", PlatformDomain: "olares.com"},
+	}, "10.233.38.210")
+	if len(shared) != 1 {
+		t.Fatalf("expected 1 shared template, got %d", len(shared))
+	}
+	wildcard := &corefile.Plugin{
+		Name: "template",
+		Args: []string{"IN", "A", "alice.olares.com"},
 		Options: []*corefile.Option{
-			{Name: "ttl", Args: []string{"30"}},
+			{Name: "match", Args: []string{`"\w*\.?(alice.olares.com\.)$"`}},
+			{Name: "answer", Args: []string{`"{{ .Name }} 60 IN A 192.168.128.102"`}},
 			{Name: "fallthrough"},
 		},
 	}
-	shared := buildSharedInclusterHosts([]SharedInclusterEntrance{
-		{AppID: "bc2bd381", EntranceName: "litellm", Viewer: "alice", PlatformDomain: "olares.com"},
-	}, "10.233.38.210")
-	if shared == nil {
-		t.Fatal("expected shared plugin")
-	}
-
-	merged := mergeInclusterHosts(base, shared)
-	if merged == nil {
-		t.Fatal("expected merged plugin")
-	}
-	if merged.Name != "hosts" || len(merged.Args) != 1 || merged.Args[0] != "/node-etc/hosts" {
-		t.Fatalf("merged plugin lost file arg: name=%s args=%v", merged.Name, merged.Args)
-	}
-
 	server := &corefile.Server{
 		DomPorts: []string{".:53"},
-		Plugins:  []*corefile.Plugin{merged},
+		Plugins:  append(shared, wildcard),
 	}
 	rendered := server.ToString()
 	parsed, err := corefile.New(rendered)
 	if err != nil {
-		t.Fatalf("CoreDNS rejected merged Corefile: %v\n%s", err, rendered)
+		t.Fatalf("CoreDNS rejected generated Corefile: %v\n%s", err, rendered)
 	}
-	if len(parsed.Servers) != 1 {
-		t.Fatalf("expected 1 server, got %d", len(parsed.Servers))
+	plugins := parsed.Servers[0].Plugins
+	if len(plugins) != 2 {
+		t.Fatalf("expected 2 plugins, got %d", len(plugins))
 	}
-
-	hostsCount := 0
-	for _, p := range parsed.Servers[0].Plugins {
-		if p.Name == "hosts" {
-			hostsCount++
-		}
+	if plugins[0].Name != "template" {
+		t.Fatalf("first plugin must be the shared template, got %s", plugins[0].Name)
 	}
-	if hostsCount != 1 {
-		t.Fatalf("expected exactly 1 hosts plugin per Server Block (CoreDNS constraint), got %d in: %s", hostsCount, rendered)
+	wantSharedFQDN := sharedEntranceHostPrefix("bc2bd381", "litellm") + ".alice.olares.com"
+	escapedFQDN := strings.ReplaceAll(wantSharedFQDN, ".", `\.`)
+	body := plugins[0].ToString()
+	if !strings.Contains(body, escapedFQDN) {
+		t.Fatalf("first template missing escaped shared FQDN: %s", body)
 	}
-
-	wantHost := sharedEntranceHostPrefix("bc2bd381", "litellm") + ".alice.olares.com"
-	if !strings.Contains(rendered, wantHost) || !strings.Contains(rendered, "10.233.38.210") {
-		t.Fatalf("merged hosts missing shared mapping: %s", rendered)
+	if !strings.Contains(body, "10.233.38.210") {
+		t.Fatalf("first template missing gateway IP: %s", body)
 	}
-	if !strings.Contains(rendered, "/node-etc/hosts") {
-		t.Fatalf("merged hosts lost file path: %s", rendered)
-	}
-}
-
-func TestMergeInclusterHosts_nilGuards(t *testing.T) {
-	shared := &corefile.Plugin{Name: "hosts"}
-	if got := mergeInclusterHosts(nil, shared); got != shared {
-		t.Fatalf("nil base should return shared, got %#v", got)
-	}
-	base := &corefile.Plugin{Name: "hosts", Args: []string{"/node-etc/hosts"}}
-	if got := mergeInclusterHosts(base, nil); got != base {
-		t.Fatalf("nil shared should return base, got %#v", got)
+	if !strings.Contains(body, "fallthrough") {
+		t.Fatalf("first template must fall through to wildcard: %s", body)
 	}
 }
 
@@ -305,14 +309,3 @@ func unstructuredSRR(ns, name string, labels map[string]string, routeMode string
 	return &unstructured.Unstructured{Object: obj}
 }
 
-func gatewayIPFromHostsPlugin(plugin *corefile.Plugin) string {
-	if plugin == nil {
-		return ""
-	}
-	for _, opt := range plugin.Options {
-		if ip := net.ParseIP(opt.Name); ip != nil {
-			return ip.String()
-		}
-	}
-	return ""
-}

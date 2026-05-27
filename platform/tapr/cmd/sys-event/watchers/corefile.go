@@ -202,7 +202,7 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		return err
 	}
 
-	var sharedInclusterHostsPlugin *corefile.Plugin
+	var sharedInclusterTemplatePlugins []*corefile.Plugin
 	if inClusterGatewayEnabled(ctx, dynamicClient) {
 		srrEntrances, err := sharedInclusterEntrancesFromCluster(ctx, kubeClient, dynamicClient, userList)
 		if err != nil {
@@ -210,10 +210,10 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			return err
 		}
 		if gatewayDataIP != "" {
-			sharedInclusterHostsPlugin = buildSharedInclusterHosts(srrEntrances, gatewayDataIP)
+			sharedInclusterTemplatePlugins = buildSharedInclusterTemplates(srrEntrances, gatewayDataIP)
 		}
 	} else {
-		klog.V(2).Info("skip shared incluster CoreDNS hosts: inClusterGatewayEnabled=false")
+		klog.V(2).Info("skip shared incluster CoreDNS templates: inClusterGatewayEnabled=false")
 	}
 
 	var adguardIp string
@@ -255,28 +255,20 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		},
 	}
 
-	inclusterPlugins := append(append([]*corefile.Plugin{}, defaultPlugins...), inclusterTemplatesPlugins...)
-	if sharedInclusterHostsPlugin != nil {
-		// CoreDNS rejects a Server Block with more than one `hosts` plugin
-		// (plugin/hosts: this plugin can only be used once per Server Block),
-		// so the shared incluster mappings must be merged into the existing
-		// `hosts /node-etc/hosts` plugin instead of emitted as a sibling.
-		merged := make([]*corefile.Plugin, 0, len(defaultPlugins)+len(inclusterTemplatesPlugins))
-		mergedHostsApplied := false
-		for _, p := range defaultPlugins {
-			if !mergedHostsApplied && p != nil && p.Name == "hosts" {
-				merged = append(merged, mergeInclusterHosts(p, sharedInclusterHostsPlugin))
-				mergedHostsApplied = true
-				continue
-			}
-			merged = append(merged, p)
-		}
-		if !mergedHostsApplied {
-			merged = append([]*corefile.Plugin{sharedInclusterHostsPlugin}, merged...)
-		}
-		merged = append(merged, inclusterTemplatesPlugins...)
-		inclusterPlugins = merged
+	// CoreDNS plugin chain orders `template` before `hosts`, and the user-zone
+	// wildcard template (e.g. \w*\.?brucedai\.olares\.com\.$) would shadow any
+	// `hosts` entry for shared FQDNs. Shared mappings are therefore emitted as
+	// exact-match `template` instances inserted BEFORE the user wildcards in
+	// the incluster server block, with fallthrough so other names still hit
+	// the wildcards.
+	inclusterPluginsWithSharedTemplates := inclusterTemplatesPlugins
+	if len(sharedInclusterTemplatePlugins) > 0 {
+		inclusterPluginsWithSharedTemplates = append(
+			append([]*corefile.Plugin{}, sharedInclusterTemplatePlugins...),
+			inclusterTemplatesPlugins...,
+		)
 	}
+	inclusterPlugins := append(append([]*corefile.Plugin{}, defaultPlugins...), inclusterPluginsWithSharedTemplates...)
 
 	inclusterServer := &corefile.Server{
 		DomPorts: defaultsServer.DomPorts,
@@ -611,46 +603,23 @@ func (e SharedInclusterEntrance) fqdn() string {
 	return prefix + "." + viewer + "." + platformDomain
 }
 
-// buildSharedInclusterHosts builds a CoreDNS hosts plugin that maps every
-// registered Shared entrance FQDN to the app-gateway data plane ClusterIP.
+// buildSharedInclusterTemplates builds CoreDNS `template` plugin instances
+// that map every registered Shared entrance FQDN to the app-gateway data
+// plane ClusterIP.
+//
+// rationale: CoreDNS's plugin.cfg orders `template` before `hosts`, so the
+// per-user wildcard `template IN A <userzone> { match "\w*\.?(<userzone>\.)$" }`
+// would shadow any matching `hosts` entry for `<hash>.<viewer>.<platformDomain>`.
+// We therefore emit exact-FQDN `template` instances anchored at the root zone
+// (`IN A .`) that match the literal FQDN with a `^…\.$` anchored regex and
+// answer with the gateway ClusterIP. `fallthrough` is set so unrelated names
+// continue down the chain to the wildcard templates / forward.
 //
 // requirement: only FQDNs derived from Shared entrances may be rewritten;
 // per-user single-entrance hostnames must never be matched by regex.
-// behavior: deterministic sorted hosts block; empty input returns nil.
-// test: table-driven unit tests in corefile_test.go.
-// mergeInclusterHosts folds the shared incluster IP→FQDN entries into the
-// existing `hosts /node-etc/hosts` plugin so the resulting Server Block has a
-// single `hosts` plugin (required by CoreDNS).
-//
-// behavior: returns a cloned plugin; inline IP→FQDN options are inserted
-// before the base block-level options (ttl/fallthrough) so the parser keeps
-// ttl/fallthrough as block options. The shared plugin's own ttl/fallthrough
-// are dropped — the base plugin already provides those.
-func mergeInclusterHosts(base, shared *corefile.Plugin) *corefile.Plugin {
-	if base == nil {
-		return shared
-	}
-	if shared == nil {
-		return base
-	}
-	merged := &corefile.Plugin{
-		Name: base.Name,
-		Args: append([]string{}, base.Args...),
-	}
-	for _, opt := range shared.Options {
-		if opt == nil {
-			continue
-		}
-		if opt.Name == "ttl" || opt.Name == "fallthrough" {
-			continue
-		}
-		merged.Options = append(merged.Options, opt)
-	}
-	merged.Options = append(merged.Options, base.Options...)
-	return merged
-}
-
-func buildSharedInclusterHosts(entrances []SharedInclusterEntrance, gatewayDataIP string) *corefile.Plugin {
+// behavior: deterministic sorted ordering by FQDN; empty input returns nil.
+// test: table-driven unit tests in corefile_incluster_test.go.
+func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayDataIP string) []*corefile.Plugin {
 	ip := net.ParseIP(strings.TrimSpace(gatewayDataIP))
 	if ip == nil || ip.To4() == nil {
 		return nil
@@ -675,22 +644,21 @@ func buildSharedInclusterHosts(entrances []SharedInclusterEntrance, gatewayDataI
 	}
 	sort.Strings(hosts)
 
-	return &corefile.Plugin{
-		Name: "hosts",
-		Options: []*corefile.Option{
-			{
-				Name: gatewayDataIP,
-				Args: hosts,
+	plugins := make([]*corefile.Plugin, 0, len(hosts))
+	for _, h := range hosts {
+		matchArg := `"^` + strings.ReplaceAll(h, ".", `\.`) + `\.$"`
+		answerArg := `"{{ .Name }} 60 IN A ` + gatewayDataIP + `"`
+		plugins = append(plugins, &corefile.Plugin{
+			Name: "template",
+			Args: []string{"IN", "A", "."},
+			Options: []*corefile.Option{
+				{Name: "match", Args: []string{matchArg}},
+				{Name: "answer", Args: []string{answerArg}},
+				{Name: "fallthrough"},
 			},
-			{
-				Name: "ttl",
-				Args: []string{"60"},
-			},
-			{
-				Name: "fallthrough",
-			},
-		},
+		})
 	}
+	return plugins
 }
 
 func appGatewayDataClusterIP(ctx context.Context, kubeClient kubernetes.Interface) (string, error) {
