@@ -342,6 +342,11 @@ func (m *InstallOsSystemModule) Init() {
 		Action: &storage.CreateSharedLibDir{},
 	}
 
+	createAppCommonDir := &task.LocalTask{
+		Name:   "CreateAppCommonDir",
+		Action: &storage.CreateAppCommonDir{},
+	}
+
 	installOsSystem := &task.LocalTask{
 		Name:   "InstallOsSystem",
 		Action: &InstallOsSystem{},
@@ -375,6 +380,7 @@ func (m *InstallOsSystemModule) Init() {
 		applySystemEnv,
 		createUserEnvConfigMap,
 		createSharedLibDir,
+		createAppCommonDir,
 		installOsSystem,
 		createBackupConfigMap,
 		checkSystemService,
