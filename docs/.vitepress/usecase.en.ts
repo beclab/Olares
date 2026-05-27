@@ -7,233 +7,262 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
-              text: "OpenClaw",
-              link: "/use-cases/openclaw",
+              text: "AI Agent",
+              collapsed: false,
+              items: [
+                {
+                  text: "OpenClaw",
+                  link: "/use-cases/openclaw",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Integrate with Discord",
+                      link: "/use-cases/openclaw-integration",
+                    },
+                    {
+                      text: "Enable web search",
+                      link: "/use-cases/openclaw-web-access",
+                    },
+                    {
+                      text: "Manage skills and plugins",
+                      link: "/use-cases/openclaw-skills",
+                    },
+                    {
+                      text: "Enable local file access",
+                      link: "/use-cases/openclaw-local-access",
+                    },
+                    {
+                      text: "Enable sandbox",
+                      link: "/use-cases/openclaw-enable-sandbox",
+                    },
+                    {
+                      text: "Upgrade OpenClaw",
+                      link: "/use-cases/openclaw-upgrade",
+                    },
+                    {
+                      text: "Common issues",
+                      link: "/use-cases/openclaw-common-issues",
+                    },
+                  ]
+                },
+                {
+                  text: "NemoClaw",
+                  link: "/use-cases/nemoclaw",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Integrate with Google Workspace",
+                      link: "/use-cases/nemoclaw-google-workspace",
+                    },
+                    {
+                      text: "Manage Olares with Olares CLI",
+                      link: "/use-cases/nemoclaw-olares-cli",
+                    },
+                    {
+                      text: "Common issues",
+                      link: "/use-cases/nemoclaw-common-issues",
+                    },
+                  ]
+                },
+                {
+                  text: "Hermes Agent",
+                  link: "/use-cases/hermes",
+                },
+                {
+                  text: "OpenCode",
+                  link: "/use-cases/opencode",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Orchestrate with oh-my-openagent",
+                      link: "/use-cases/opencode-omo",
+                    },
+                    {
+                      text: "Manage packages",
+                      link: "/use-cases/opencode-packages",
+                    },
+                    {
+                      text: "Skills and plugins",
+                      link: "/use-cases/opencode-extensions",
+                    },
+                    {
+                      text: "Common issues",
+                      link: "/use-cases/opencode-issues",
+                    },
+                  ]
+                },
+                {
+                  text: "Claude Code",
+                  link: "/use-cases/claude-code",
+                },
+                {
+                  text: "Context7",
+                  link: "/use-cases/context7",
+                },
+                {
+                  text: "Paperclip",
+                  link: "/use-cases/paperclip",
+                },
+                {
+                  text: "DeerFlow 2.0",
+                  link: "/use-cases/deerflow2",
+                },
+                // {
+                //   text: "DeerFlow",
+                //   link: "/use-cases/deerflow",
+                // },
+                {
+                  text: "TradingAgents",
+                  link: "/use-cases/tradingagents",
+                },
+                {
+                  text: "NOFX",
+                  link: "/use-cases/nofx",
+                },
+              ],
+            },
+            {
+              text: "Chat",
               collapsed: true,
               items: [
                 {
-                  text: "Integrate with Discord",
-                  link: "/use-cases/openclaw-integration",
+                  text: "Open WebUI",
+                  link: "/use-cases/openwebui",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Set up multi-user access",
+                      link: "/use-cases/openwebui-multiuser",
+                    },
+                    {
+                      text: "Configure voice interactions",
+                      link: "/use-cases/openwebui-audio",
+                    },
+                    {
+                      text: "Enable web search",
+                      link: "/use-cases/openwebui-search",
+                    },
+                    {
+                      text: "Query documents in chat",
+                      link: "/use-cases/openwebui-knowledge",
+                    },
+                    {
+                      text: "Common issues",
+                      link: "/use-cases/openwebui-common-issues",
+                    },
+                  ]
                 },
                 {
-                  text: "Enable web search",
-                  link: "/use-cases/openclaw-web-access",
+                  text: "LobeHub (LobeChat)",
+                  link: "/use-cases/lobechat",
                 },
-                {
-                  text: "Manage skills and plugins",
-                  link: "/use-cases/openclaw-skills",
-                },
-                {
-                  text: "Enable local file access",
-                  link: "/use-cases/openclaw-local-access",
-                },
-                {
-                  text: "Enable sandbox",
-                  link: "/use-cases/openclaw-enable-sandbox",
-                },
-                {
-                  text: "Upgrade OpenClaw",
-                  link: "/use-cases/openclaw-upgrade",
-                },
-                {
-                  text: "Common issues",
-                  link: "/use-cases/openclaw-common-issues",
-                },
-              ]
+              ],
             },
             {
-              text: "Hermes Agent",
-              link: "/use-cases/hermes",  
-            },
-            {
-              text: "Claude Code",
-              link: "/use-cases/claude-code",
-            },                         
-            {
-              text: "OpenCode",
-              link: "/use-cases/opencode",
+              text: "Search and research",
               collapsed: true,
               items: [
                 {
-                  text: "Orchestrate with oh-my-openagent",
-                  link: "/use-cases/opencode-omo",
+                  text: "AnythingLLM",
+                  link: "/use-cases/anythingllm",
                 },
                 {
-                  text: "Manage packages",
-                  link: "/use-cases/opencode-packages",
+                  text: "Open Notebook",
+                  link: "/use-cases/open-notebook",
                 },
                 {
-                  text: "Skills and plugins",
-                  link: "/use-cases/opencode-extensions",
+                  text: "Vane (Perplexica)",
+                  link: "/use-cases/perplexica",
                 },
                 {
-                  text: "Common issues",
-                  link: "/use-cases/opencode-issues",
+                  text: "PDFMathTranslate",
+                  link: "/use-cases/pdfmathtranslate",
                 },
-              ]
+              ],
             },
             {
-              text: "Open WebUI",
-              link: "/use-cases/openwebui",
+              text: "Model services",
               collapsed: true,
               items: [
                 {
-                  text: "Set up multi-user access",
-                  link: "/use-cases/openwebui-multiuser",
+                  text: "Ollama",
+                  link: "/use-cases/ollama",
                 },
                 {
-                  text: "Configure voice interactions",
-                  link: "/use-cases/openwebui-audio",
+                  text: "Bifrost",
+                  link: "/use-cases/bifrost",
                 },
                 {
-                  text: "Enable web search",
-                  link: "/use-cases/openwebui-search",
+                  text: "LiteLLM",
+                  link: "/use-cases/litellm",
                 },
                 {
-                  text: "Query documents in chat",
-                  link: "/use-cases/openwebui-knowledge",
+                  text: "TensorZero",
+                  link: "/use-cases/tensorzero",
                 },
                 {
-                  text: "Common issues",
-                  link: "/use-cases/openwebui-common-issues",
+                  text: "LLMFit",
+                  link: "/use-cases/llmfit",
                 },
-              ]
+                // {
+                //   text: "Dify",
+                //   link: "/use-cases/dify",
+                // },
+              ],
             },
             {
-              text: "ComfyUI",
-              link: "/use-cases/comfyui",
+              text: "Media",
               collapsed: true,
               items: [
                 {
-                  text: "Manage ComfyUI",
-                  link: "/use-cases/comfyui-launcher",
+                  text: "ComfyUI",
+                  link: "/use-cases/comfyui",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Manage ComfyUI",
+                      link: "/use-cases/comfyui-launcher",
+                    },
+                    {
+                      text: "Use ComfyUI in Krita",
+                      link: "/use-cases/comfyui-for-krita",
+                    },
+                    {
+                      text: "Common issues",
+                      link: "/use-cases/comfyui-common-issues",
+                    },
+                  ]
                 },
                 {
-                  text: "Use ComfyUI in Krita",
-                  link: "/use-cases/comfyui-for-krita",
+                  text: "ACE-Step 1.5",
+                  link: "/use-cases/ace-step-1.5",
+                },
+                /*{
+                  text: "ACE-Step",
+                  link: "/use-cases/ace-step",
+                },*/
+                /*{
+                  text: "Duix.Avatar",
+                  link: "/use-cases/duix-avatar",
+                },*/
+                // {
+                //   text: "Stable Diffusion",
+                //   link: "/use-cases/stable-diffusion",
+                // },
+                {
+                  text: "Whisper-WebUI",
+                  link: "/use-cases/whisper-webui",
                 },
                 {
-                  text: "Common issues",
-                  link: "/use-cases/comfyui-common-issues",
-                },
-              ]
-            },
-            {
-              text: "NemoClaw",
-              link: "/use-cases/nemoclaw",
-              collapsed: true,
-              items: [
-                {
-                  text: "Integrate with Google Workspace",
-                  link: "/use-cases/nemoclaw-google-workspace",
+                  text: "Speaches",
+                  link: "/use-cases/speaches",
                 },
                 {
-                  text: "Manage Olares with Olares CLI",
-                  link: "/use-cases/nemoclaw-olares-cli",
+                  text: "IndexTTS2",
+                  link: "/use-cases/indextts2",
                 },
-                {
-                  text: "Common issues",
-                  link: "/use-cases/nemoclaw-common-issues",
-                },
-              ]
+              ],
             },
-            {
-              text: "Context7",
-              link: "/use-cases/context7",
-            },
-            {
-              text: "Ollama",
-              link: "/use-cases/ollama",
-            },
-            {
-              text: "Open Notebook",
-              link: "/use-cases/open-notebook",
-            },
-            // {
-            //   text: "Dify",
-            //   link: "/use-cases/dify",
-            // },
-            {
-              text: "LiteLLM",
-              link: "/use-cases/litellm",
-            },
-            {
-              text: "LLMFit",
-              link: "/use-cases/llmfit",
-            },
-            {
-              text: "LobeHub (LobeChat)",
-              link: "/use-cases/lobechat",
-            },
-            {
-              text: "Vane (Perplexica)",
-              link: "/use-cases/perplexica",
-            },
-            {
-              text: "ACE-Step 1.5",
-              link: "/use-cases/ace-step-1.5",
-            },            
-            /*{
-              text: "ACE-Step",
-              link: "/use-cases/ace-step",
-            },*/
-            {
-              text: "AnythingLLM",
-              link: "/use-cases/anythingllm",
-            },
-            {
-              text: "Bifrost",
-              link: "/use-cases/bifrost",
-            },
-            /*{
-              text: "Duix.Avatar",
-              link: "/use-cases/duix-avatar",
-            },*/
-            {
-              text: "Paperclip",
-              link: "/use-cases/paperclip",
-            },
-            {
-              text: "PDFMathTranslate",
-              link: "/use-cases/pdfmathtranslate",
-            },
-            {
-              text: "Whisper-WebUI",
-              link: "/use-cases/whisper-webui",
-            },
-            {
-              text: "Speaches",
-              link: "/use-cases/speaches",
-            },
-            // {
-            //   text: "Stable Diffusion",
-            //   link: "/use-cases/stable-diffusion",
-            // },
-            {
-              text: "DeerFlow 2.0",
-              link: "/use-cases/deerflow2",
-            },
-            {
-              text: "IndexTTS2",
-              link: "/use-cases/indextts2",
-            },
-            {
-              text: "NOFX",
-              link: "/use-cases/nofx",
-            },
-            {
-              text: "TradingAgents",
-              link: "/use-cases/tradingagents",
-            },            
-            {
-              text: "TensorZero",
-              link: "/use-cases/tensorzero",
-            },           
-            // {
-            //   text: "DeerFlow",
-            //   link: "/use-cases/deerflow",
-            // },
-
           ]
         },
         {
@@ -281,7 +310,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           items: [
             {
               text: "Immich",
-              link: "/use-cases/immich",              
+              link: "/use-cases/immich",
               collapsed: true,
               items: [
                 {
@@ -330,7 +359,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "*Arrs",
               link: "/use-cases/arrs",
-            },                        
+            },
           ]
         },
         {
