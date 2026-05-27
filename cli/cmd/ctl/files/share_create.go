@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/internal/files/download"
 	"github.com/beclab/Olares/cli/internal/files/share"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
@@ -39,9 +40,9 @@ func newShareInternalCommand(f *cmdutil.Factory) *cobra.Command {
 	o := &shareInternalOptions{}
 	cmd := &cobra.Command{
 		Use:   "internal <remote-path>",
-		Short: "create an Internal (cross-user) share for a folder or file",
+		Short: "create an Internal (cross-user) share for a directory",
 		Long: `Create an Internal share — visible to other Olares users on the same
-node — for a folder or file under the per-user files-backend.
+node — for a directory under the per-user files-backend.
 
 Wire shape (two calls, both required when --users is given):
 
@@ -56,6 +57,15 @@ passed, only the share record is created — useful when you want to
 hand the id off to a workflow that adds members separately, or
 when the share is private to its owner for now.
 
+Dir-only policy:
+
+    Only directories can be shared. The CLI Stats the target BEFORE
+    sending the create POST and refuses up front if the path is a
+    file (or doesn't exist on the server) — matches the LarePass
+    GUI's per-driver share-menu gating on ` + "`event.isDir`" + `. To share
+    a single file, place it in a dedicated directory and share that
+    directory instead.
+
 --users uses the format "name:perm" with multiple users joined by
 ",", e.g. "alice:edit,bob:view,charlie:admin". perm is one of
 view / upload / edit / admin (or 0..4). Default per-user perm is
@@ -67,7 +77,7 @@ sensible default (matching the web app) is admin (full control).
 Examples:
 
     olares-cli files share internal drive/Home/Backups/
-    olares-cli files share internal drive/Home/Reports/Q1.pdf \
+    olares-cli files share internal drive/Home/Reports/ \
         --users alice:edit,bob:view
 `,
 		Args: cobra.ExactArgs(1),
@@ -115,6 +125,22 @@ func runShareInternal(
 	client, rp, err := setupShareClient(ctx, f)
 	if err != nil {
 		return err
+	}
+
+	// Preflight: refuse to create a share against a file. Mirrors
+	// the LarePass GUI's per-driver share-menu gating on event.isDir
+	// — sharing a single file is rejected by the web app and the
+	// CLI now stays in lockstep. See preflightShareCreate for the
+	// full set of refusal arms and the rationale (the previous
+	// "file shares are legitimate Internal use case" comment in
+	// share.go is no longer accurate and has been updated).
+	httpClient, err := f.HTTPClient(ctx)
+	if err != nil {
+		return err
+	}
+	statClient := &download.Client{HTTPClient: httpClient, BaseURL: rp.FilesURL}
+	if err := preflightShareCreate(ctx, statClient, tgt, share.TypeInternal); err != nil {
+		return reformatShareHTTPErr(err, rp.OlaresID, "create internal share preflight for "+pathArg)
 	}
 
 	// For sync paths, swap the bare repo_id in for the human
@@ -182,7 +208,7 @@ func newSharePublicCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "public <remote-path>",
 		Aliases: []string{"link"},
-		Short:   "create a Public-link share for a folder or file",
+		Short:   "create a Public-link share for a directory",
 		Long: `Create a Public-link share. The link is opaque and can be sent to
 anyone who has the password; recipients open it through the
 LarePass app at the share host's /sharable-link/<id>/ path.
@@ -196,6 +222,15 @@ Wire shape:
 Required: --password OR auto-generated; AND one of --expire-days /
 --expire-time. Public links without an expiration are not supported
 by the backend.
+
+Dir-only policy:
+
+    Only directories can be shared. The CLI Stats the target BEFORE
+    sending the create POST and refuses up front if the path is a
+    file (or doesn't exist on the server) — matches the LarePass
+    GUI's per-driver share-menu gating on ` + "`event.isDir`" + `. For
+    one-off file distribution, use ` + "`files download`" + ` and re-share
+    the bytes out-of-band.
 
 Permission defaults to "edit" (recipients can read AND upload). Pass
 --upload-only to lock recipients into "upload-only" mode (they can
@@ -332,6 +367,20 @@ func runSharePublic(
 	if err != nil {
 		return err
 	}
+
+	// Preflight: same dir-only policy as `share internal` /
+	// `share smb`. Refuses early when target is a file (or doesn't
+	// exist on the server). See preflightShareCreate for the
+	// rationale.
+	httpClient, err := f.HTTPClient(ctx)
+	if err != nil {
+		return err
+	}
+	statClient := &download.Client{HTTPClient: httpClient, BaseURL: rp.FilesURL}
+	if err := preflightShareCreate(ctx, statClient, tgt, share.TypePublic); err != nil {
+		return reformatShareHTTPErr(err, rp.OlaresID, "create public share preflight for "+pathArg)
+	}
+
 	res, err := client.Create(ctx, tgt, opts)
 	if err != nil {
 		return reformatShareHTTPErr(err, rp.OlaresID, "create public share for "+pathArg)
@@ -416,6 +465,15 @@ SMB shares don't take a password (the password lives on the
 returned record per share, not in the request body) and don't take
 an expiration — they're mounted-resource-style and live until you
 ` + "`share rm`" + ` them.
+
+Dir-only policy:
+
+    SMB exports a directory tree mount, so a single-file target
+    has no working server-side representation. The CLI Stats the
+    target BEFORE sending the create POST and refuses up front if
+    the path is a file (or doesn't exist on the server) — same
+    dir-only policy as ` + "`share internal`" + ` and ` + "`share public`" + ` and
+    matches the LarePass GUI's gating on ` + "`event.isDir`" + `.
 
 Examples:
 
@@ -508,6 +566,22 @@ func runShareSMB(
 	if err != nil {
 		return err
 	}
+
+	// Preflight: same dir-only policy as `share internal` /
+	// `share public`. SMB shares are intrinsically directory-scoped
+	// on the wire (a Samba export points at a directory tree, not
+	// a single file), so this check is doubly motivated for the
+	// SMB flavor — the GUI also gates on event.isDir here. See
+	// preflightShareCreate for the full refusal table.
+	httpClient, err := f.HTTPClient(ctx)
+	if err != nil {
+		return err
+	}
+	statClient := &download.Client{HTTPClient: httpClient, BaseURL: rp.FilesURL}
+	if err := preflightShareCreate(ctx, statClient, tgt, share.TypeSMB); err != nil {
+		return reformatShareHTTPErr(err, rp.OlaresID, "create SMB share preflight for "+pathArg)
+	}
+
 	res, err := client.Create(ctx, tgt, opts)
 	if err != nil {
 		return reformatShareHTTPErr(err, rp.OlaresID, "create SMB share for "+pathArg)
@@ -532,6 +606,86 @@ func runShareSMB(
 		for _, u := range users {
 			fmt.Fprintf(out, "    - %s  (%s)\n", u.ID, u.Permission)
 		}
+	}
+	return nil
+}
+
+// preflightShareCreate Stats the share target BEFORE any state-
+// changing POST /api/share/share_path/<...>/ goes out, and refuses
+// the create when:
+//
+//   - the target path doesn't exist on the server (typo / stale path
+//     — the create would otherwise either 404 server-side or, worse,
+//     create a share record pointing at nothing);
+//
+//   - the target IS a file on the server. `files share` (all three
+//     flavors — internal / public / smb) is locked to directories
+//     only. Rationale per flavor:
+//
+//   - **SMB**: a Samba export is intrinsically a directory tree
+//     mount; pointing it at a single file has no working server-
+//     side representation. The LarePass GUI's Share-to-SMB menu
+//     also gates on `event.isDir`.
+//
+//   - **Public link**: the LarePass GUI surfaces "Generate
+//     Public Link" only on directories — a public link UX
+//     centred on a single file (download / preview only) is
+//     handled by other flows in the web app, not the share
+//     endpoint.
+//
+//   - **Internal**: aligned with the GUI for consistency. The
+//     server would technically accept a single-file Internal
+//     share record, but the resulting share has no working
+//     LarePass-app UI to open it because the recipient-side
+//     listing assumes a folder; the create would succeed but the
+//     share would be effectively invisible to its members. The
+//     CLI fast-fails up front rather than letting the user
+//     create a guaranteed-broken share record. To "share a single
+//     file", place it in a dedicated directory and share that
+//     directory instead.
+//
+// Volume roots (`drive/Home/`, `drive/Data/`, `sync/<repo>/`,
+// `external/<node>/<volume>/`, `cache/<node>/<sub>/`) Stat as
+// synthetic directories — `download.Stat` short-circuits when the
+// path is ≤2 segments, and deeper volume / node roots resolve
+// through their parent listing — so sharing a volume root works
+// without an extra round-trip relative to sharing a subdirectory.
+//
+// Stat reuses the parent-listing strategy `files cat` /
+// `files download` / `files cp` / `files rm` use (see
+// internal/files/download/stat.go); the check works uniformly
+// across drive / sync / cache / external namespaces. Cloud /
+// `external/<node>/` / `cache/<node>/` are already rejected upstream
+// by `frontendPathToShareTarget` so they never reach this helper.
+//
+// HTTP errors (auth / network) are returned verbatim so
+// reformatShareHTTPErr can attach the standard `profile login` CTA
+// regardless of which leg (preflight vs. the create POST) failed.
+func preflightShareCreate(
+	ctx context.Context,
+	statClient *download.Client,
+	tgt share.Target,
+	flavor share.Type,
+) error {
+	plain := tgt.FileType + "/" + tgt.Extend + tgt.SubPath
+	display := plain
+	info, err := statClient.Stat(ctx, plain)
+	if err != nil {
+		if download.IsNotFound(err) {
+			return fmt.Errorf(
+				"refusing to create a %s share for %s: target does not exist on the server",
+				shareFlavorFriendlyName(flavor), display)
+		}
+		return err
+	}
+	if !info.IsDir {
+		return fmt.Errorf(
+			"refusing to create a %s share for %s: target is a file on the server; "+
+				"`files share` only supports directories (matches the LarePass GUI's "+
+				"per-driver share-menu gating on event.isDir). To share a single file, "+
+				"place it in a dedicated directory and share that directory instead, "+
+				"or use `files download` + redistribute the file out-of-band.",
+			shareFlavorFriendlyName(flavor), display)
 	}
 	return nil
 }
