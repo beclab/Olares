@@ -7,7 +7,7 @@ head:
       content: Olares, TradingAgents, AI trading, multi-agent, local LLM, Ollama, market analysis, financial research
 app_version: "1.0.4"
 doc_version: "1.0"
-doc_updated: "2026-05-26"
+doc_updated: "2026-05-27"
 ---
 
 # Analyze financial markets with TradingAgents
@@ -17,7 +17,7 @@ TradingAgents is a multi-agent financial trading framework that simulates a real
 :::warning Disclaimer
 TradingAgents is an open-source AI trading and market analysis aid. It does not provide certified financial investment advice or any guarantee of returns.
 
-Olares provides the platform to run TradingAgents but does not operate, endorse, or control the TradingAgents software or any trading activities conducted through it. Olares assumes no responsibility for the software's functionality, security, or analysis outcomes.
+Olares provides the platform to run TradingAgents but does not operate, endorse, or control the TradingAgents software or any trading activities conducted through it. Olares assumes no responsibility for the software's analysis outcomes.
 
 Financial markets carry high risk, and market volatility can lead to partial or total loss of funds. The strategies, parameters, and examples in this guide are for technical demonstration only and do not represent trading advice. Ensure you fully understand the risks before trading, and bear the full consequences of your trading decisions based on these AI-generated reports.
 
@@ -48,7 +48,7 @@ Ensure you have a local AI model running on Olares using one of the following me
 
 ## Connect a local model
 
-Before running an analysis, connect TradingAgents to a local model.
+To power your AI agents, connect TradingAgents to a local model.
 
 ### Get model name and endpoint
 
@@ -100,10 +100,14 @@ The URL shown on the model app page is user-specific and relies on browser-based
 
    ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars.png#bordered){width=70%}
 
-3. Enter the shared endpoint URL you noted down earlier, and then append `/v1` to the end. For example, `http://d54536a50.shared.olares.com/v1`.
-4. Click **Confirm**. 
-5. Click **Apply**.
-6. (Optional) To set advanced environment variables that are not listed in the UI, open Olares Files, go to **Data** > **tradingagents**, open the `.env` file to add your custom configurations directly.
+3. Enter the shared endpoint URL you noted down earlier, then append `/v1` to the end. For example, `http://d54536a50.shared.olares.com/v1`.
+4. Click **Confirm**, and then click **Apply**.
+
+   :::tip Connect a cloud model
+   To use a cloud model instead of a local model, edit the corresponding API key variable, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. Enter your key, click **Confirm**, and then click **Apply**.
+   :::
+
+5. (Optional) To set advanced environment variables that are not listed in the UI, open **Files**, go to **Data** > **tradingagents**, and then open the `.env` file to add your custom configurations directly.
 
    ![Edit environment file](/images/manual/use-cases/tradingagents-env-file.png#bordered)
 
@@ -128,8 +132,16 @@ With your local model configured, start a market analysis session using the app'
    
    d. **Analysts Team**: Select the specific AI analysts to include in the research, such as market, sentiment, news, and fundamental analysts.
    
+      :::tip Start with core analysts
+      News and sentiment analysts rely on live external data streams, which might fail or return inaccurate results if the sources are temporarily unavailable. For your first test run, select the market and fundamental analysts to familiarize yourself with the workflow.
+      :::
+   
    e. **Research Depth**: Choose how thoroughly the agents should research and debate the strategy.
    
+      :::tip Start with the shallow depth
+      Deeper research requires significantly more time to process. Select the lowest depth for your initial run to understand the workflow before starting a comprehensive analysis.
+      :::
+      
    f. **LLM Provider**: Select **Ollama**.
    
    g. **Thinking Agents**: Assign specific models for **Quick-Thinking LLM Engine** and **Deep-Thinking LLM Engine**. If your local model name is not listed, select **Custom model ID**, and then enter the exact model name.
