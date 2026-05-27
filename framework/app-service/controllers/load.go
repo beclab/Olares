@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
@@ -68,6 +69,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 										return fmt.Sprintf("force delete application %s successfully", app.Name)
 									}(),
 									MarketSource: am.Annotations[constants.AppMarketSourceKey],
+									IsV3:         appcfg.IsV3(&app),
 								})
 
 								ticker := time.NewTicker(2 * time.Second)
@@ -93,6 +95,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 												Reason:       constants.AppForceUninstalled,
 												Message:      fmt.Sprintf("app %s was force uninstalled", app.Spec.Name),
 												MarketSource: am.Annotations[constants.AppMarketSourceKey],
+												IsV3:         appcfg.IsV3(&app),
 											})
 											return
 										}
