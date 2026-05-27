@@ -16,7 +16,7 @@ By default, OpenClaw executes commands and code directly within its primary cont
 
 To maximize security and isolate potentially dangerous operations, you can enable the OpenClaw sandbox. The sandbox provides an isolated, disposable environment specifically for code execution, ensuring your core system remains protected at all times.
 
-:::tip Prerequisites
+:::tip Version requirements
 To use this feature, your system must meet the following requirements:
 - **Olares OS**: Upgraded to V1.12.5 or later.
 - **OpenClaw**: Upgraded to V0.1.31 or later.
