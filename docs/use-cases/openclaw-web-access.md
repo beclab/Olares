@@ -1,109 +1,80 @@
 ---
 outline: [2, 3]
-description: Learn how to enable web search in OpenClaw using Brave Search to give your AI agent access to real-time internet information.
+description: Learn how to enable web search in OpenClaw using SearXNG to give your AI agent access to real-time internet information.
 head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw web search
-app_version: "1.0.0"
-doc_version: "1.1"
-doc_updated: "2026-04-24"
+app_version: "1.0.1"
+doc_version: "2.0"
+doc_updated: "2026-05-27"
 ---
 
-# Optional: Enable web search
+# Enable web search in OpenClaw
 
-By default, OpenClaw answers questions only based on its training data, which means it doesn't know about current events or real-time news. To give your agent access to the live internet, you can enable the web search tool.
+By default, OpenClaw answers questions using only its training data. It cannot access current events, real-time news, or live web content. To give your agent internet access, connect it to a web search provider.
 
-OpenClaw officially recommends Brave Search. It uses an independent web index optimized for AI retrieval, ensuring your agent finds accurate information.
+This guide uses SearXNG, a privacy-focused meta-search engine that aggregates results from multiple sources without tracking users. You can install SearXNG as a self-hosted instance from the Olares Market.
 
-## Prerequisites
+## Learning objectives
 
-A Brave Search API key is required to complete this setup. You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search" plan is usually sufficient for personal use.
+By the end of this guide, you will learn how to:
+- Install SearXNG from the Olares Market.
+- Obtain the shared endpoint URL for SearXNG.
+- Configure OpenClaw to use SearXNG for web search and fetching.
+- Verify that the web search tool is working.
 
-## Enable Brave Search
+## Step 1: Install SearXNG
+
+Install SearXNG and obtain its shared endpoint URL.
+
+1. Open Market, and search for "SearXNG".
+
+   ![SearXNG](/images/manual/use-cases/perplexica-searxng.png#bordered)
+
+2. Click **Get**, and then click **Install**. Wait for the installation to finish.
+3. Open Settings, and then go to **Applications** > **SearXNG**.
+4. In **Shared entrances**, click **SearXNG**.
+
+   ![Get SearXNG shared endpoint](/images/manual/use-cases/searxng-shared-laresprime.png#bordered){width=90%}
+
+5. Copy the shared endpoint URL. For example:
+
+   ```text
+   http://d1236e020.shared.olares.com
+   ```
+
+## Step 2: Configure OpenClaw
+
+Connect OpenClaw to SearXNG.
 
 1. Open the OpenClaw CLI.
-2. Run the following command to start the web configuration wizard:
+2. Run the following command to start the configuration wizard:
 
     ```bash
     openclaw configure --section web
     ```
-3. Configure the basic settings as follows:
 
-    | Settings | Option |
-    |:-------|:-----|
-    | Where will the Gateway run | Local (this machine) |
-    | Enable web_search | Yes |
-    | Search provider | Brave Search |
-    | Brave Search API key | Your `BraveSearchAPIkey` |
-    | Enable web_fetch (keyless HTTP fetch) | Yes |
+3. Configure the settings as follows:
 
-4. Finalize the settings in the configuration file.
+   | Settings | Option |
+   |:---------|:-------|
+   | Where will the Gateway run | Local (this machine) |
+   | Enable web_search | Yes |
+   | Search provider | SearXNG Search |
+   | SearXNG Base URL | Paste the shared SearXNG endpoint URL you copied earlier. |
+   | Enable web_fetch (keyless HTTP fetch) | Yes |
 
-    :::tip
-    While the CLI wizard sets up the API key, the configuration file allows you to customize specific parameters, such as timeouts and limits.
-    :::
+## Step 3: Verify web search
 
-    a. Open the Files app, and then go to **Data** > **clawdbot** > **config**.
+Test that your agent can retrieve real-time information from the internet.
 
-    b. Double-click the `openclaw.json` file to open it.
+1. Open the Control UI and start a chat with your agent.
+2. Ask a question that requires current information.
+3. Check the response. If the agent returns up-to-date information, the web search integration is working.
 
-    c. Click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner to enter the edit mode.
+   :::tip Check tool calls
+   Look for **Tool call** blocks in the chat to confirm the agent is using the `web_search` or `web_fetch` tools.
+   :::
 
-    d. Find the `tools` section and update as follows. Replace `{Your-Brave-Search-API-Key}` with your actual key.
-
-    ```json
-    "tools": {
-        "web": {
-        "search": {
-            "enabled": true,
-            "provider": "brave",
-            "apiKey": "{Your-Brave-Search-API-Key}",
-            "maxResults": 10,
-            "timeoutSeconds": 30
-        },
-        "fetch": {
-            "enabled": true,
-            "timeoutSeconds": 30
-        }
-        }
-    },
-    ```
-
-    e. Click <i class="material-symbols-outlined">save</i> in the upper-right corner to save the changes.
-
-<!--
-4. Finalize the configuration in Control UI.
-
-    :::tip
-    While the CLI wizard sets up the API key, the Control UI allows you to customize specific parameters such as timeouts and limits.
-    :::
-
-    a. Return to the **Control UI** > **Config** > **Raw** tab.
-
-    b. Click <i class="material-symbols-outlined">visibility_off</i> to reveal the configuration fields.
-
-    ![Reveal configuration blocks](/images/manual/use-cases/click-hide-icon.png#bordered) 
-
-    c. Find the `tools` section and update as follows. Replace `{Your-Brave-Search-API-Key}` with your actual key.
-
-    ```json
-    "tools": {
-        "web": {
-        "search": {
-            "enabled": true,
-            "provider": "brave",
-            "apiKey": "{Your-Brave-Search-API-Key}",
-            "maxResults": 10,
-            "timeoutSeconds": 30
-        },
-        "fetch": {
-            "enabled": true,
-            "timeoutSeconds": 30
-        }
-        }
-    },
-    ```
-
-5. Click **Save** in the upper-right corner. The system validates the configuration and restarts automatically to apply the changes.-->
-5. To verify the search tool is working, open Discord and ask your agent a question that requires real-time internet data.
+   ![Web search results using SearXNG](/images/manual/use-cases/openclaw-web-search-results.png#bordered)
