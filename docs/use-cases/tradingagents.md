@@ -107,7 +107,7 @@ The URL shown on the model app page is user-specific and relies on browser-based
    To use a cloud model instead of a local model, edit the corresponding API key variable, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. Enter your key, click **Confirm**, and then click **Apply**.
    :::
 
-5. (Optional) To set advanced environment variables that are not listed in the UI, open **Files**, go to **Data** > **tradingagents**, and then open the `.env` file to add your custom configurations directly.
+5. (Optional) To set advanced environment variables that are not listed in the UI, open **Files**, go to **Data** > **tradingagents**, and then open the `.env` file to add your custom configuration directly.
 
    ![Edit environment file](/images/manual/use-cases/tradingagents-env-file.png#bordered)
 
