@@ -3,6 +3,7 @@ package password
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -11,8 +12,23 @@ import (
 	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
+	"github.com/beclab/Olares/cli/pkg/clusterclient"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
+
+// serverImplementedTypes is the subset of supportedTypes that the
+// ControlHub middleware aggregator currently rotates passwords for
+// (platform/tapr/cmd/middleware/app/handler.go::
+// handleUpdateMiddlewareAdminPassword — every non-postgres case falls
+// through to `fiber.ErrNotImplemented`, i.e. HTTP 501).
+//
+// We deliberately do NOT remove the other entries from supportedTypes:
+// the SPA's MiddlewareType enum is the authoritative client-side list
+// and shrinking ours would mask a stale-CLI / new-server scenario
+// (server adds support, CLI still rejects). Instead, when the server
+// returns 501 we trade the raw "HTTP 501: Not Implemented" dump for
+// the friendlier wording in formatSetError below.
+var serverImplementedTypes = []string{"postgres"}
 
 // supportedTypes mirrors MiddlewareType in
 // apps/.../controlPanelCommon/network/middleware.ts. We validate
@@ -99,6 +115,37 @@ skip the prompt.
 	return cmd
 }
 
+// formatSetError translates the raw clusterclient error from the
+// password POST into something a human can act on.
+//
+// The only non-trivial branch is HTTP 501: the server's
+// handleUpdateMiddlewareAdminPassword only implements postgres today
+// and falls every other middleware type into `fiber.ErrNotImplemented`.
+// The default formatHTTPErr rendering of that — `POST <url>: HTTP 501:
+// Not Implemented` — is correct but useless: the operator can't tell
+// whether they hit a transient outage, a routing bug, or a known
+// server gap. We replace it with a sentence that names the actionable
+// answer ("only postgres is rotated today; track upstream for the
+// type you need").
+//
+// For every other error shape we preserve the original
+// "set <type> password for <ns>/<name> user=<u>: <wrapped>" envelope
+// via %w so existing diagnostics — including the typed *HTTPError
+// chain that callers downstream may errors.As on — keep working.
+func formatSetError(err error, mwType, namespace, name, user string) error {
+	if err == nil {
+		return nil
+	}
+	if clusterclient.IsHTTPStatus(err, http.StatusNotImplemented) {
+		return fmt.Errorf(
+			"the ControlHub server does not yet support password rotation for %q middleware "+
+				"(HTTP 501 Not Implemented); the server currently only rotates passwords for: %s. "+
+				"If you need %s, this is a server-side gap — the CLI cannot work around it",
+			mwType, strings.Join(serverImplementedTypes, ", "), mwType)
+	}
+	return fmt.Errorf("set %s password for %s/%s user=%s: %w", mwType, namespace, name, user, err)
+}
+
 // normalizeType rejects unknown types so a typo doesn't reach the
 // server (which would respond with a generic 404). The list is
 // hardcoded against the SPA's MiddlewareType enum — if upstream
@@ -127,7 +174,12 @@ func resolvePassword(explicit string) (string, error) {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		return "", fmt.Errorf("stdin is not a terminal — pass --password explicitly when running non-interactively")
 	}
-	fmt.Fprint(os.Stderr, "New password: ")
+	// Leading newline guards against the prompt landing on the same
+	// visual row as a wrapped command line — without it, terminals
+	// that don't repaint after a long argv print "New password:"
+	// flush against the leftover characters and the operator can't
+	// tell where their input starts.
+	fmt.Fprint(os.Stderr, "\nNew password: ")
 	first, err := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
@@ -203,7 +255,7 @@ func runSet(ctx context.Context, o *clusteropts.ClusterOptions, mwType, name, na
 	path := fmt.Sprintf("/middleware/v1/%s/password", url.PathEscape(mwType))
 	var resp passwordResponse
 	if err := client.DoJSON(ctx, "POST", path, body, &resp); err != nil {
-		return fmt.Errorf("set %s password for %s/%s user=%s: %w", mwType, namespace, name, user, err)
+		return formatSetError(err, mwType, namespace, name, user)
 	}
 	if resp.Code != 0 && resp.Code != 200 {
 		// Server returned a structured failure inside a 2xx HTTP
