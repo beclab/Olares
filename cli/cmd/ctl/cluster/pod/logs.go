@@ -279,6 +279,12 @@ func RunLogs(ctx context.Context, o *clusteropts.ClusterOptions, namespace, podN
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return nil
 			}
+			// 4xx is terminal — pod gone / forbidden / unauthorized.
+			// Retrying won't bring it back; exit cleanly so scripts
+			// see the real failure on the first error message.
+			if clusterclient.IsClientError(err) {
+				return err
+			}
 			// Mirror waitForTerminal in market/watch.go: tolerate up
 			// to 5 consecutive errors so a transient 5xx / network
 			// blip doesn't kill an otherwise-healthy --follow.

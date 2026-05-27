@@ -1,6 +1,6 @@
 ---
 name: olares-cluster
-version: 0.5.0
+version: 0.5.1
 description: "olares-cli cluster: per-user Kubernetes view of an Olares cluster via the ControlHub backend. Read pods / containers / workloads (Deployment/StatefulSet/DaemonSet) / application spaces (KubeSphere-grouped namespaces) / namespaces / nodes / jobs / cronjobs / Olares-managed middleware (databases, queues, object stores). Mutate via scale / restart / stop / start / delete on workloads, delete / restart on pods, suspend / resume on cronjobs, rerun on jobs, and password set on middleware — every mutating verb is wrapped in a confirmation prompt that --yes opts out of. Watch verbs (pod get -w, workload rollout-status -w, application status -w, pod/container logs -f) poll on --interval, never stream. Use whenever the user asks `what's running on my cluster?`, `tail logs of <pod>`, `restart / scale / delete this workload`, `who am I on this cluster?`, `suspend this cronjob`, `rerun this job`, or `rotate the password on this database`. Do NOT use for app-store lifecycle (use olares-cli market) or host-side install / node-join / OS upgrade (use olares-cli node / os / gpu — those go through kubeconfig, not a profile)."
 metadata:
   requires:
@@ -92,7 +92,7 @@ cluster context             (identity / role / accessible workspaces)
 
 | Command | Endpoint | What it does |
 |---|---|---|
-| `cluster pod list [-n NS] [-l SEL] [--field-selector S] [--page N\|--all]` | `GET /kapis/resources.kubesphere.io/v1alpha3/[namespaces/<ns>/]pods` | Lists pods. Cross-namespace by default; `NAMESPACE` column appears when scope is wider than one namespace. |
+| `cluster pod list [-n NS] [-l SEL] [--field-selector S] [--page N\|--all]` | `GET /kapis/resources.kubesphere.io/v1alpha3/[namespaces/<ns>/]pods` | Lists pods. Cross-namespace by default; `NAMESPACE` column appears when scope is wider than one namespace. `--field-selector` accepts a kubectl-style subset (`status.phase`, `spec.nodeName`, `metadata.name`, `metadata.namespace`; only `=` / `==`) and is translated to the matching KubeSphere filter params — passing an unsupported field or `!=` errors out instead of returning an empty list. |
 | `cluster pod get <ns/name> [-w] [--interval D]` | `GET /api/v1/namespaces/<ns>/pods/<name>` | Vertical summary + per-container table. With `-w`: clear-screen-redraw on TTY (table) / JSONL (json). |
 | `cluster pod yaml <ns/name>` | same | JSON-to-YAML round-trip via `sigs.k8s.io/yaml`; faithful to every server field. |
 | `cluster pod events <ns/name> [--limit N]` | `GET /api/v1/namespaces/<ns>/events` | Server returns every event in the namespace; CLI filters client-side to `involvedObject.kind=Pod, name=<pod>`. Sorted oldest-first. |
@@ -207,7 +207,7 @@ Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `work
 
 - **Polling, never streaming.** Avoids chunked transfer encoding and matches `olares-cli market --watch`.
 - `signal.NotifyContext(os.Interrupt, SIGTERM)` for graceful Ctrl-C; exits nil so scripts don't get a non-zero from a voluntary stop.
-- Tolerates up to 5 consecutive transient errors before aborting; auth failures propagate immediately.
+- Tolerates up to 5 consecutive transient errors (network blips, 5xx) before aborting. **Terminal 4xx responses short-circuit immediately** — a NotFound / Forbidden / Unauthorized won't fix itself on the next poll, so the loop exits with the first real error instead of spamming the same message four extra times. `408 Request Timeout` and `429 Too Many Requests` are still treated as retryable.
 - TTY detection (`golang.org/x/term.IsTerminal`): clear-screen-redraw for table, raw stream for piped output, JSONL for `-o json`.
 - `--interval D` / `--timeout D` are **rejected with an error** when their gate flag (`-w` or `-f`) isn't also set. Don't silently waste a flag.
 
@@ -226,6 +226,8 @@ Every mutating verb (`pod delete` / `pod restart`, all of `workload scale|restar
 | `server rejected the request (HTTP 401: ...); please run: olares-cli profile login --olares-id <id>` | Auto-refresh failed, OR refreshed token still rejected. | Run the suggested `profile login`. |
 | `server rejected the request (HTTP 403: ...)` | The active profile's role can't perform this. | Try `cluster context --refresh` to confirm the cached role matches the server. If still 403, the user genuinely lacks permission. |
 | `... HTTP 404 (NotFound): ...` on a list verb | Namespace doesn't exist OR the user can't see it (KubeSphere often returns 404 instead of 403 for "no access"). | `cluster application list` to see what the server thinks is visible. |
+| `--field-selector: field "..." is not supported (supported: ...)` | The cluster pod list `--field-selector` accepts only a translatable subset of kubectl selectors (the upstream KubeSphere endpoint doesn't speak the raw `fieldSelector=` wire syntax). | Use one of the listed fields, or drop `--field-selector` and filter client-side. |
+| `--field-selector: "..." uses the '!=' operator which the upstream KubeSphere pods endpoint does not support` | KubeSphere only matches equality. | Rephrase as a positive match, or filter the output through `jq`. |
 | `aborted by user` / `stdin is not a terminal — pass --yes to confirm: ...` | Destructive prompt rejected, or non-TTY context without `--yes`. | Interactive: answer `y`. Scripted: add `--yes`. |
 | `passwords do not match` (from `middleware password set`) | The two no-echo prompts disagreed. | Re-run. |
 | `--interval requires --follow` / `--interval requires --watch` / `--timeout requires --watch` | Polling cadence flags set without their gate flag. | Add `-f` / `-w`, or drop the offending flag. |

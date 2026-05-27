@@ -164,6 +164,12 @@ func runGetWatch(ctx context.Context, o *clusteropts.ClusterOptions, namespace, 
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return nil
 			}
+			// 4xx is terminal — the next tick will get the same
+			// answer. Don't burn the 5-error budget on a NotFound /
+			// Forbidden / Unauthorized response.
+			if clusterclient.IsClientError(err) {
+				return err
+			}
 			consecErr++
 			o.Info("watch: failed to fetch pod (retry %d): %v", consecErr, err)
 			if consecErr >= 5 {

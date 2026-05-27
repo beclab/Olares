@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"sort"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -57,8 +59,17 @@ server still decides whether you have access (a 403 means the namespace
 exists but isn't visible to your token).
 
 --label uses K8s label-selector syntax (e.g. "app=foo,tier=frontend").
---field-selector forwards K8s field selectors verbatim
-(e.g. "spec.nodeName=node-1").
+--field-selector accepts kubectl-style field selectors and translates
+them to the equivalent KubeSphere /kapis/resources.kubesphere.io/v1alpha3
+filter params (the upstream endpoint does NOT understand the raw
+"status.phase=Running" wire syntax). Supported fields:
+  status.phase        -> filters by pod phase (Running / Pending / ...)
+  spec.nodeName       -> filters by the scheduled node
+  metadata.name       -> exact pod name (comma-separated for multi-name)
+  metadata.namespace  -> namespace (rarely needed: prefer -n)
+Only the '=' and '==' operators are recognized; '!=' and set-based
+selectors are rejected with an error so users don't get a silently
+empty result.
 
 Pagination: --limit sets the page size (default 100). --page picks one
 1-indexed page (default 1). --all drains every page until exhausted
@@ -71,7 +82,7 @@ and is mutually exclusive with --page > 1.
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "scope to a single namespace (default: all namespaces visible to your profile)")
 	cmd.Flags().StringVarP(&labelSelector, "label", "l", "", "label selector to filter pods (K8s syntax)")
-	cmd.Flags().StringVar(&fieldSelector, "field-selector", "", "field selector to filter pods (K8s syntax)")
+	cmd.Flags().StringVar(&fieldSelector, "field-selector", "", "K8s-style field selector (supported: status.phase, spec.nodeName, metadata.name, metadata.namespace; only '=' / '==' operators)")
 	p.AddPaginationFlags(cmd)
 	o.AddOutputFlags(cmd)
 	return cmd
@@ -100,8 +111,18 @@ func RunList(
 		return err
 	}
 
+	// Translate the kubectl-style --field-selector into KubeSphere's
+	// per-field query params up front so we surface a clear error
+	// (rather than a silently empty list) when the user passes an
+	// unsupported field or operator. See translatePodFieldSelector
+	// for the full mapping table.
+	fieldQ, err := translatePodFieldSelector(fieldSelector)
+	if err != nil {
+		return err
+	}
+
 	items, total, err := clusteropts.FetchAllKubeSphere[Pod](ctx, client, p, func(page int) string {
-		return buildListPath(namespace, labelSelector, fieldSelector, p, page)
+		return buildListPath(namespace, labelSelector, fieldQ, p, page)
 	})
 	if err != nil {
 		return fmt.Errorf("list pods: %w", err)
@@ -130,7 +151,11 @@ func RunList(
 // page is the 1-indexed page number for THIS request — driven by
 // FetchAllKubeSphere's drain loop in --all mode, or p.Page in
 // single-page mode.
-func buildListPath(namespace, label, field string, p *clusteropts.PaginationOptions, page int) string {
+//
+// fieldQ carries the already-translated KubeSphere filter params
+// (status, nodeName, names, namespace) derived from the user's
+// kubectl-style --field-selector input. See translatePodFieldSelector.
+func buildListPath(namespace, label string, fieldQ url.Values, p *clusteropts.PaginationOptions, page int) string {
 	base := "/kapis/resources.kubesphere.io/v1alpha3/pods"
 	if namespace != "" {
 		// PathEscape is the right tool here: namespace is a path
@@ -142,14 +167,90 @@ func buildListPath(namespace, label, field string, p *clusteropts.PaginationOpti
 	if label != "" {
 		q.Set("labelSelector", label)
 	}
-	if field != "" {
-		q.Set("fieldSelector", field)
+	for k, vs := range fieldQ {
+		for _, v := range vs {
+			q.Set(k, v)
+		}
 	}
 	p.AppendQueryForPage(q, page)
 	if encoded := q.Encode(); encoded != "" {
 		return base + "?" + encoded
 	}
 	return base
+}
+
+// translatePodFieldSelector maps kubectl-style field selector terms
+// (e.g. "status.phase=Running,spec.nodeName=node-1") to the per-field
+// query parameters the KubeSphere /kapis/resources.kubesphere.io
+// /v1alpha3/[namespaces/<ns>/]pods endpoint actually recognizes.
+//
+// Why the translation exists: the KubeSphere v1alpha3 handler does
+// NOT honor the raw K8s `fieldSelector=status.phase=Running` wire
+// syntax — its pod-filter implementation only switches on the bespoke
+// filter keys `nodeName`, `pvcName`, `serviceName`, `status` (and the
+// shared `name` / `names` / `namespace`). Passing through the raw
+// kubectl syntax silently returns an empty list because the unknown
+// `fieldSelector` filter key falls into the default-false branch of
+// every per-resource filter func upstream.
+//
+// We expose the small subset that has a direct equivalent. Unsupported
+// fields and the `!=` operator return an explicit error so users see a
+// clear failure instead of an empty-but-successful response.
+//
+// Mapping (left = kubectl input, right = KubeSphere query param):
+//
+//	status.phase        -> status     (matches pod.Status.Phase exactly)
+//	spec.nodeName       -> nodeName   (exact node-name match)
+//	metadata.name       -> names      (KubeSphere: comma-separated exact)
+//	metadata.namespace  -> namespace  (exact ns match — rarely useful; -n is cleaner)
+//
+// Operators: only `=` and `==` (treated as synonyms). Set-based
+// selectors (`in`, `notin`) are not supported by the upstream filter
+// and are rejected here.
+func translatePodFieldSelector(sel string) (url.Values, error) {
+	out := url.Values{}
+	if strings.TrimSpace(sel) == "" {
+		return out, nil
+	}
+	for _, raw := range strings.Split(sel, ",") {
+		term := strings.TrimSpace(raw)
+		if term == "" {
+			continue
+		}
+		if strings.Contains(term, "!=") {
+			return nil, fmt.Errorf("--field-selector: %q uses the '!=' operator which the upstream KubeSphere pods endpoint does not support", term)
+		}
+		var lhs, rhs string
+		switch {
+		case strings.Contains(term, "=="):
+			parts := strings.SplitN(term, "==", 2)
+			lhs, rhs = strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		case strings.Contains(term, "="):
+			parts := strings.SplitN(term, "=", 2)
+			lhs, rhs = strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		default:
+			return nil, fmt.Errorf("--field-selector: %q is not a valid term (expected key=value)", term)
+		}
+		if lhs == "" || rhs == "" {
+			return nil, fmt.Errorf("--field-selector: %q has empty key or value", term)
+		}
+		switch lhs {
+		case "status.phase":
+			out.Set("status", rhs)
+		case "spec.nodeName":
+			out.Set("nodeName", rhs)
+		case "metadata.name":
+			out.Set("names", rhs)
+		case "metadata.namespace":
+			out.Set("namespace", rhs)
+		default:
+			supported := []string{"status.phase", "spec.nodeName", "metadata.name", "metadata.namespace"}
+			sort.Strings(supported)
+			return nil, fmt.Errorf("--field-selector: field %q is not supported (supported: %s)",
+				lhs, strings.Join(supported, ", "))
+		}
+	}
+	return out, nil
 }
 
 func renderListTable(items []Pod, showNamespace, noHeaders bool, p *clusteropts.PaginationOptions, total int) error {
