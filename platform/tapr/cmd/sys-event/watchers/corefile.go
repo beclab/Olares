@@ -257,9 +257,23 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 
 	inclusterPlugins := append(append([]*corefile.Plugin{}, defaultPlugins...), inclusterTemplatesPlugins...)
 	if sharedInclusterHostsPlugin != nil {
-		merged := make([]*corefile.Plugin, 0, len(defaultPlugins)+1+len(inclusterTemplatesPlugins))
-		merged = append(merged, defaultPlugins...)
-		merged = append(merged, sharedInclusterHostsPlugin)
+		// CoreDNS rejects a Server Block with more than one `hosts` plugin
+		// (plugin/hosts: this plugin can only be used once per Server Block),
+		// so the shared incluster mappings must be merged into the existing
+		// `hosts /node-etc/hosts` plugin instead of emitted as a sibling.
+		merged := make([]*corefile.Plugin, 0, len(defaultPlugins)+len(inclusterTemplatesPlugins))
+		mergedHostsApplied := false
+		for _, p := range defaultPlugins {
+			if !mergedHostsApplied && p != nil && p.Name == "hosts" {
+				merged = append(merged, mergeInclusterHosts(p, sharedInclusterHostsPlugin))
+				mergedHostsApplied = true
+				continue
+			}
+			merged = append(merged, p)
+		}
+		if !mergedHostsApplied {
+			merged = append([]*corefile.Plugin{sharedInclusterHostsPlugin}, merged...)
+		}
 		merged = append(merged, inclusterTemplatesPlugins...)
 		inclusterPlugins = merged
 	}
@@ -604,6 +618,38 @@ func (e SharedInclusterEntrance) fqdn() string {
 // per-user single-entrance hostnames must never be matched by regex.
 // behavior: deterministic sorted hosts block; empty input returns nil.
 // test: table-driven unit tests in corefile_test.go.
+// mergeInclusterHosts folds the shared incluster IP→FQDN entries into the
+// existing `hosts /node-etc/hosts` plugin so the resulting Server Block has a
+// single `hosts` plugin (required by CoreDNS).
+//
+// behavior: returns a cloned plugin; inline IP→FQDN options are inserted
+// before the base block-level options (ttl/fallthrough) so the parser keeps
+// ttl/fallthrough as block options. The shared plugin's own ttl/fallthrough
+// are dropped — the base plugin already provides those.
+func mergeInclusterHosts(base, shared *corefile.Plugin) *corefile.Plugin {
+	if base == nil {
+		return shared
+	}
+	if shared == nil {
+		return base
+	}
+	merged := &corefile.Plugin{
+		Name: base.Name,
+		Args: append([]string{}, base.Args...),
+	}
+	for _, opt := range shared.Options {
+		if opt == nil {
+			continue
+		}
+		if opt.Name == "ttl" || opt.Name == "fallthrough" {
+			continue
+		}
+		merged.Options = append(merged.Options, opt)
+	}
+	merged.Options = append(merged.Options, base.Options...)
+	return merged
+}
+
 func buildSharedInclusterHosts(entrances []SharedInclusterEntrance, gatewayDataIP string) *corefile.Plugin {
 	ip := net.ParseIP(strings.TrimSpace(gatewayDataIP))
 	if ip == nil || ip.To4() == nil {

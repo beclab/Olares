@@ -213,6 +213,73 @@ func TestSharedInclusterEntrancesFromSRRItems_empty(t *testing.T) {
 	}
 }
 
+func TestMergeInclusterHosts_singleHostsBlock(t *testing.T) {
+	base := &corefile.Plugin{
+		Name: "hosts",
+		Args: []string{"/node-etc/hosts"},
+		Options: []*corefile.Option{
+			{Name: "ttl", Args: []string{"30"}},
+			{Name: "fallthrough"},
+		},
+	}
+	shared := buildSharedInclusterHosts([]SharedInclusterEntrance{
+		{AppID: "bc2bd381", EntranceName: "litellm", Viewer: "alice", PlatformDomain: "olares.com"},
+	}, "10.233.38.210")
+	if shared == nil {
+		t.Fatal("expected shared plugin")
+	}
+
+	merged := mergeInclusterHosts(base, shared)
+	if merged == nil {
+		t.Fatal("expected merged plugin")
+	}
+	if merged.Name != "hosts" || len(merged.Args) != 1 || merged.Args[0] != "/node-etc/hosts" {
+		t.Fatalf("merged plugin lost file arg: name=%s args=%v", merged.Name, merged.Args)
+	}
+
+	server := &corefile.Server{
+		DomPorts: []string{".:53"},
+		Plugins:  []*corefile.Plugin{merged},
+	}
+	rendered := server.ToString()
+	parsed, err := corefile.New(rendered)
+	if err != nil {
+		t.Fatalf("CoreDNS rejected merged Corefile: %v\n%s", err, rendered)
+	}
+	if len(parsed.Servers) != 1 {
+		t.Fatalf("expected 1 server, got %d", len(parsed.Servers))
+	}
+
+	hostsCount := 0
+	for _, p := range parsed.Servers[0].Plugins {
+		if p.Name == "hosts" {
+			hostsCount++
+		}
+	}
+	if hostsCount != 1 {
+		t.Fatalf("expected exactly 1 hosts plugin per Server Block (CoreDNS constraint), got %d in: %s", hostsCount, rendered)
+	}
+
+	wantHost := sharedEntranceHostPrefix("bc2bd381", "litellm") + ".alice.olares.com"
+	if !strings.Contains(rendered, wantHost) || !strings.Contains(rendered, "10.233.38.210") {
+		t.Fatalf("merged hosts missing shared mapping: %s", rendered)
+	}
+	if !strings.Contains(rendered, "/node-etc/hosts") {
+		t.Fatalf("merged hosts lost file path: %s", rendered)
+	}
+}
+
+func TestMergeInclusterHosts_nilGuards(t *testing.T) {
+	shared := &corefile.Plugin{Name: "hosts"}
+	if got := mergeInclusterHosts(nil, shared); got != shared {
+		t.Fatalf("nil base should return shared, got %#v", got)
+	}
+	base := &corefile.Plugin{Name: "hosts", Args: []string{"/node-etc/hosts"}}
+	if got := mergeInclusterHosts(base, nil); got != base {
+		t.Fatalf("nil shared should return base, got %#v", got)
+	}
+}
+
 func unstructuredSRR(ns, name string, labels map[string]string, routeMode string, hostPatterns []string) *unstructured.Unstructured {
 	labelObj := make(map[string]interface{}, len(labels))
 	for k, v := range labels {
