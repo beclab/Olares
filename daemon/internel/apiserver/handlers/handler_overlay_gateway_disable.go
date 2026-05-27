@@ -11,7 +11,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-
 func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) error {
 	operateOverlayGatewayMutex.Lock()
 	defer operateOverlayGatewayMutex.Unlock()
