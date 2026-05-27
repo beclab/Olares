@@ -222,6 +222,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/nofx",
             },
             {
+              text: "TradingAgents",
+              link: "/zh/use-cases/tradingagents",
+            },             
+            {
               text: "TensorZero",
               link: "/zh/use-cases/tensorzero",
             },           
