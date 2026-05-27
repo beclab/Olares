@@ -455,13 +455,21 @@ func preflightCpMv(
 	action cp.Action,
 ) error {
 	for _, s := range srcs {
-		srcDisplay := s.FileType + "/" + s.Extend + s.SubPath
-		srcPlain := s.FileType + "/" + s.Extend + s.SubPath
-		info, err := statClient.Stat(ctx, srcPlain)
+		// One canonical string is used for BOTH the wire path
+		// (passed to download.Stat) and the human-facing error
+		// display. An earlier revision had separate
+		// srcPlain / srcDisplay variables assigned to the same
+		// expression — they were left split "for future divergence",
+		// but the divergence never materialised and the parallel
+		// assignments became a maintenance trap (a tweak to one
+		// would silently miss its twin). Same pattern on the dst
+		// and parent legs below.
+		src := s.FileType + "/" + s.Extend + s.SubPath
+		info, err := statClient.Stat(ctx, src)
 		if err != nil {
 			if download.IsNotFound(err) {
 				return fmt.Errorf("%s: source %s does not exist on the server",
-					action, srcDisplay)
+					action, src)
 			}
 			return err
 		}
@@ -472,12 +480,12 @@ func preflightCpMv(
 		if s.IsDirIntent && !info.IsDir {
 			return fmt.Errorf(
 				"%s: source %s is a file on the server, not a directory; drop the trailing '/'",
-				action, srcDisplay)
+				action, src)
 		}
 		if !s.IsDirIntent && info.IsDir {
 			return fmt.Errorf(
 				"%s: source %s is a directory on the server; add a trailing '/' and pass -r/-R to %s it recursively",
-				action, srcDisplay, action)
+				action, src, action)
 		}
 	}
 
@@ -494,21 +502,20 @@ func preflightCpMv(
 	//     handling takes over, which is server-side behavior we
 	//     don't preflight here).
 	if dst.IsDirIntent {
-		dstDisplay := dst.FileType + "/" + dst.Extend + dst.SubPath
-		dstPlain := dst.FileType + "/" + dst.Extend + dst.SubPath
-		info, err := statClient.Stat(ctx, dstPlain)
+		dstPath := dst.FileType + "/" + dst.Extend + dst.SubPath
+		info, err := statClient.Stat(ctx, dstPath)
 		if err != nil {
 			if download.IsNotFound(err) {
 				return fmt.Errorf(
 					"%s: destination directory %s does not exist on the server; create it first with `olares-cli files mkdir`",
-					action, dstDisplay)
+					action, dstPath)
 			}
 			return err
 		}
 		if !info.IsDir {
 			return fmt.Errorf(
 				"%s: destination %s is a file on the server, not a directory; drop the trailing '/' or pick a different target",
-				action, dstDisplay)
+				action, dstPath)
 		}
 		return nil
 	}
@@ -517,22 +524,20 @@ func preflightCpMv(
 	// planner has already rejected SubPath=="/" via the dir-intent
 	// requirement on root targets, so dst.SubPath here is at least
 	// "/<leaf>".
-	parentSub := parentSubPath(dst.SubPath)
-	parentDisplay := dst.FileType + "/" + dst.Extend + parentSub
-	parentPlain := dst.FileType + "/" + dst.Extend + parentSub
-	info, err := statClient.Stat(ctx, parentPlain)
+	parentPath := dst.FileType + "/" + dst.Extend + parentSubPath(dst.SubPath)
+	info, err := statClient.Stat(ctx, parentPath)
 	if err != nil {
 		if download.IsNotFound(err) {
 			return fmt.Errorf(
 				"%s: destination's parent directory %s does not exist on the server",
-				action, parentDisplay)
+				action, parentPath)
 		}
 		return err
 	}
 	if !info.IsDir {
 		return fmt.Errorf(
 			"%s: destination's parent %s is a file on the server, not a directory",
-			action, parentDisplay)
+			action, parentPath)
 	}
 	return nil
 }

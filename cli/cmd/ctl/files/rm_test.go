@@ -154,6 +154,16 @@ func TestPreflightRm_FileWithRecursive(t *testing.T) {
 		!strings.Contains(err.Error(), "is a file") {
 		t.Errorf("error should name the file and reject the recursive intent, got: %v", err)
 	}
+	// The user did NOT type a trailing slash here — only -r promoted
+	// dir intent. Telling them to "drop the trailing '/'" would send
+	// them hunting for one in their command line that isn't there.
+	// Lock the CTA down to the -r/-R-only branch.
+	if !strings.Contains(err.Error(), "drop the -r/-R flag") {
+		t.Errorf("CTA must say 'drop the -r/-R flag' when only -r promoted dir intent; got: %v", err)
+	}
+	if strings.Contains(err.Error(), "trailing '/'") {
+		t.Errorf("CTA must NOT mention 'trailing /' when the user didn't type one; got: %v", err)
+	}
 }
 
 // TestPreflightRm_FileWithTrailingSlash: user typed `rm
@@ -181,6 +191,12 @@ func TestPreflightRm_DirIntentButActuallyFile(t *testing.T) {
 	if !strings.Contains(err.Error(), "notes.md/") ||
 		!strings.Contains(err.Error(), "is a file") {
 		t.Errorf("error should preserve trailing slash on display and call it a file, got: %v", err)
+	}
+	// Both IsDirIntent AND recursive triggered the effective dir
+	// promotion, so the CTA must mention BOTH corrective actions —
+	// the user has two flags to undo (or two inputs to reconsider).
+	if !strings.Contains(err.Error(), "drop the trailing '/' and the -r/-R flag") {
+		t.Errorf("CTA must mention both trailing slash and -r/-R flag when both triggered dir intent; got: %v", err)
 	}
 }
 

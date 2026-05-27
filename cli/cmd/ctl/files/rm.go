@@ -396,9 +396,39 @@ func preflightRm(
 		// directory delete".
 		effectiveDir := t.IsDirIntent || recursive
 		if effectiveDir && !info.IsDir {
+			// The corrective CTA must name ONLY the inputs the user
+			// actually typed. Three combinations reach this branch:
+			//
+			//   IsDirIntent  recursive   user-input → CTA
+			//   ------------ ----------- ------------------------------
+			//   true         true        `rm -r foo/`  → drop trailing
+			//                                            '/' AND -r/-R
+			//   true         false       `rm foo/`     → drop trailing
+			//                                            '/'  (unreach-
+			//                                            able in practice
+			//                                            — the planner
+			//                                            rejects trailing
+			//                                            slash without -r
+			//                                            upstream, but we
+			//                                            keep the arm
+			//                                            sound for defence
+			//                                            in depth)
+			//   false        true        `rm -r foo`   → drop -r/-R
+			//
+			// Telling a user who never typed a trailing slash to
+			// "drop the trailing '/'" sends them on a confused
+			// hunt for one in their command line — the previous
+			// unconditional message did exactly that.
+			cta := "drop the -r/-R flag"
+			switch {
+			case t.IsDirIntent && recursive:
+				cta = "drop the trailing '/' and the -r/-R flag"
+			case t.IsDirIntent:
+				cta = "drop the trailing '/'"
+			}
 			return fmt.Errorf(
-				"rm: target %s is a file on the server, not a directory; drop the trailing '/' and the -r/-R flag",
-				display)
+				"rm: target %s is a file on the server, not a directory; %s",
+				display, cta)
 		}
 		if !effectiveDir && info.IsDir {
 			return fmt.Errorf(
