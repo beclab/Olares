@@ -38,7 +38,7 @@ func NewGetCommand(f *cmdutil.Factory) *cobra.Command {
 			return runGet(c.Context(), o, name)
 		},
 	}
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }
 

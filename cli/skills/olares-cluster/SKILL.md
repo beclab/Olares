@@ -1,6 +1,6 @@
 ---
 name: olares-cluster
-version: 0.6.0
+version: 0.6.1
 description: "olares-cli cluster: per-user Kubernetes view of an Olares cluster via the ControlHub backend. Read pods / containers / workloads (Deployment/StatefulSet/DaemonSet) / application spaces (KubeSphere-grouped namespaces) / namespaces / nodes / jobs / cronjobs / Olares-managed middleware (databases, queues, object stores). Mutate via scale / restart / stop / start / delete on workloads, delete / restart on pods, suspend / resume on cronjobs, rerun on jobs — every mutating verb is wrapped in a confirmation prompt that --yes opts out of. Watch verbs (pod get -w, workload rollout-status -w, application status -w, pod/container logs -f) poll on --interval, never stream. Use whenever the user asks `what's running on my cluster?`, `tail logs of <pod>`, `restart / scale / delete this workload`, `who am I on this cluster?`, `suspend this cronjob`, or `rerun this job`. Do NOT use for app-store lifecycle (use olares-cli market) or host-side install / node-join / OS upgrade (use olares-cli node / os / gpu — those go through kubeconfig, not a profile)."
 metadata:
   requires:
@@ -192,7 +192,7 @@ Same `-o table | json` flag set as `settings` and `market`.
 - `-o table` (default): tabwriter columns. List verbs add a `NAMESPACE` column when scope is cross-namespace; `get` verbs use a vertical key/value layout plus secondary tables; paginated lists print `(showing X of Y total — pass --limit Y to see more)` to stderr when truncated.
 - `-o json`: pretty-printed JSON. List/get verbs decode through minimal typed structs and re-emit only the fields the CLI knows about. The four `* yaml` verbs are the exception — they forward server bytes verbatim through JSON→YAML.
 - `-q` / `--quiet`: suppress all stdout; exit code carries success/failure. Useful for `cluster pod get foo/bar -q && echo ok`.
-- `--no-headers`: omit table headers (handy for shell pipelines).
+- `--no-headers`: omit table headers on list-style verbs (`<noun> list`, `pod events` / `job events`, `cronjob jobs`, `container env`). Intentionally NOT registered on `<noun> get` — those use a vertical key/value layout that has no column-header row to suppress, so the flag would be a no-op. Per the "don't silently waste a flag" rule (see `--interval requires --watch`), passing `--no-headers` to a get verb errors out with `unknown flag: --no-headers` rather than being silently accepted.
 - **Mutating verbs synthesize a stable JSON summary** (e.g. `{operation, kind, namespace, name, replicas}`) rather than forwarding the apiserver's post-write response — JSON consumers care about whether the change took, not about every field of the object.
 
 ### Pagination (`--page N` / `--all`)

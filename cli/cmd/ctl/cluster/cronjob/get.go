@@ -55,7 +55,7 @@ In JSON mode the typed view is forwarded; for byte-perfect output use
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }
 

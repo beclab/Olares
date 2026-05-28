@@ -118,6 +118,24 @@ func (o *ClusterOptions) AddQuietFlag(cmd *cobra.Command) {
 		"suppress output; exit code indicates success/failure")
 }
 
+// AddDetailOutputFlags wires `--output` and `--quiet` (but NOT
+// `--no-headers`) for "detail" verbs — currently every `cluster <noun>
+// get` — whose table-mode rendering is a vertical key/value layout.
+// Those verbs have no column-header row to suppress, so exposing
+// `--no-headers` would silently waste the flag — same anti-pattern we
+// reject for `--interval` without `--watch` (see runGet / runScale
+// guards). Keeping the registration here means cobra surfaces a clear
+// `unknown flag: --no-headers` instead of pretending to honor it.
+//
+// Secondary tables that some detail verbs do render (e.g. the per-
+// container row block at the bottom of `cluster pod get`) are
+// intentionally not gateable from the CLI either — they are a stable
+// part of the detail view, not a separate scriptable list.
+func (o *ClusterOptions) AddDetailOutputFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&o.Output, "output", "o", "table", "output format: table, json")
+	cmd.Flags().BoolVarP(&o.Quiet, "quiet", "q", false, "suppress output; exit code indicates success/failure")
+}
+
 // Prepare resolves the active profile and returns a ready-to-use
 // clusterclient.Client pointed at the per-user ControlHub BFF
 // (https://control-hub.<terminus>). Auth is handled transparently by

@@ -77,7 +77,7 @@ line (JSONL stream). Ctrl-C exits cleanly.
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-fetch and re-render until interrupted (Ctrl-C to stop)")
 	cmd.Flags().DurationVar(&interval, "interval", 2*time.Second, "polling interval when --watch is set")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }
 
