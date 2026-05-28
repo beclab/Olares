@@ -21,7 +21,7 @@ tls:
 mesh:
   linkerd:
     enabled: true
-    opaquePorts: "10080,443,19001,19002,19003"
+    opaquePorts: "443,19001,19002,19003"
 
 demo:
   enabled: true
