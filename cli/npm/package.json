@@ -28,6 +28,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@clack/prompts": "^1.2.0",
     "tar": "^7.4.3"
   },
   "license": "AGPL-3.0-or-later",
