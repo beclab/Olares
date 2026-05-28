@@ -7,7 +7,12 @@ import (
 	"testing"
 
 	"github.com/coredns/corefile-migration/migration/corefile"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	kubefake "k8s.io/client-go/kubernetes/fake"
 )
 
 func TestBuildSharedInclusterTemplates_empty(t *testing.T) {
@@ -281,6 +286,216 @@ func TestBuildSharedInclusterTemplates_overridesUserWildcard(t *testing.T) {
 	}
 	if !strings.Contains(body, "fallthrough") {
 		t.Fatalf("first template must fall through to wildcard: %s", body)
+	}
+}
+
+func TestRegenerateCorefileInclusterGatewayToggle(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("TC-061 ON state keeps exact shared template", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile failed: %v", err)
+		}
+		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		assertContainsSharedExactTemplate(t, corefileBody)
+	})
+
+	t.Run("TC-062 OFF state removes shared templates but keeps user wildcard", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, false)
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile failed: %v", err)
+		}
+		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		assertNotContainsSharedExactTemplate(t, corefileBody)
+		assertContainsUserWildcard(t, corefileBody)
+	})
+
+	t.Run("TC-063 OFF->ON switch restores exact shared template", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, false)
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile OFF failed: %v", err)
+		}
+		if err := setClusterConfigInclusterGateway(ctx, dynamicClient, true); err != nil {
+			t.Fatalf("set ClusterConfig ON failed: %v", err)
+		}
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile ON failed: %v", err)
+		}
+		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		assertContainsSharedExactTemplate(t, corefileBody)
+	})
+
+	t.Run("TC-064 ON->OFF switch removes exact shared template", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile ON failed: %v", err)
+		}
+		if err := setClusterConfigInclusterGateway(ctx, dynamicClient, false); err != nil {
+			t.Fatalf("set ClusterConfig OFF failed: %v", err)
+		}
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile OFF failed: %v", err)
+		}
+		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		assertNotContainsSharedExactTemplate(t, corefileBody)
+		assertContainsUserWildcard(t, corefileBody)
+	})
+}
+
+func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubefake.Clientset, *dynamicfake.FakeDynamicClient) {
+	t.Helper()
+
+	const (
+		sharedAppID      = "a5be2268"
+		sharedEntrance   = "ollamav2"
+		sharedViewer     = "brucedai"
+		sharedZone       = "brucedai.olares.com"
+		gatewayClusterIP = "10.233.38.210"
+	)
+	sharedHash := sharedEntranceHostPrefix(sharedAppID, sharedEntrance)
+	if sharedHash != "bc2bd381" {
+		t.Fatalf("unexpected shared hash %q, expected bc2bd381", sharedHash)
+	}
+
+	kubeClient := kubefake.NewSimpleClientset(
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "coredns", Namespace: "kube-system"},
+			Data: map[string]string{
+				"Corefile": `.:53 {
+    errors
+    health
+    ready
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+      pods insecure
+      fallthrough in-addr.arpa ip6.arpa
+    }
+    prometheus :9153
+    forward . /etc/resolv.conf
+    cache 30
+    loop
+    reload
+    loadbalance
+}`,
+			},
+		},
+		&corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "node-control-plane",
+				Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
+			},
+			Status: corev1.NodeStatus{
+				Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "192.168.128.10"}},
+			},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "l4-bfl-proxy-0",
+				Namespace: "os-network",
+				Labels:    map[string]string{"app": "l4-bfl-proxy"},
+			},
+			Status: corev1.PodStatus{PodIP: "10.233.3.99"},
+		},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{Name: "app-gateway-data", Namespace: "app-gateway"},
+			Spec:       corev1.ServiceSpec{ClusterIP: gatewayClusterIP},
+		},
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: "litellm-ns"},
+		},
+	)
+
+	clusterConfig := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "cluster.olares.io/v1alpha1",
+			"kind":       "ClusterConfig",
+			"metadata": map[string]interface{}{
+				"name": "cluster",
+			},
+			"spec": map[string]interface{}{
+				"inClusterGatewayEnabled": inClusterEnabled,
+			},
+		},
+	}
+	user := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "iam.kubesphere.io/v1alpha2",
+			"kind":       "User",
+			"metadata": map[string]interface{}{
+				"name": sharedViewer,
+				"annotations": map[string]interface{}{
+					UserAnnotationZoneKey: sharedZone,
+					UserIndexAna:          "0",
+				},
+			},
+		},
+	}
+	srr := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "gateway.olares.io/v1alpha1",
+			"kind":       "SharedRouteRegistry",
+			"metadata": map[string]interface{}{
+				"name":      "shared-a5be2268-ollamav2",
+				"namespace": "litellm-ns",
+				"labels": map[string]interface{}{
+					labelSRRAppID:    sharedAppID,
+					labelSRREntrance: sharedEntrance,
+				},
+			},
+			"spec": map[string]interface{}{
+				"routeMode":    "gateway",
+				"hostPatterns": []interface{}{sharedHash + ".*.olares.com"},
+			},
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	dynamicClient := dynamicfake.NewSimpleDynamicClient(scheme, clusterConfig, user, srr)
+	return kubeClient, dynamicClient
+}
+
+func setClusterConfigInclusterGateway(ctx context.Context, dynamicClient *dynamicfake.FakeDynamicClient, enabled bool) error {
+	obj, err := dynamicClient.Resource(clusterConfigGVR).Get(ctx, "cluster", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	if err := unstructured.SetNestedField(obj.Object, enabled, "spec", "inClusterGatewayEnabled"); err != nil {
+		return err
+	}
+	_, err = dynamicClient.Resource(clusterConfigGVR).Update(ctx, obj, metav1.UpdateOptions{})
+	return err
+}
+
+func mustReadCorefileConfigMap(t *testing.T, ctx context.Context, kubeClient *kubefake.Clientset) string {
+	t.Helper()
+	cm, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get coredns ConfigMap failed: %v", err)
+	}
+	return cm.Data["Corefile"]
+}
+
+func assertContainsSharedExactTemplate(t *testing.T, corefileBody string) {
+	t.Helper()
+	const sharedEscaped = "bc2bd381\\.brucedai\\.olares\\.com"
+	if !strings.Contains(corefileBody, sharedEscaped) {
+		t.Fatalf("expected shared exact template match for bc2bd381.brucedai.olares.com, got:\n%s", corefileBody)
+	}
+}
+
+func assertNotContainsSharedExactTemplate(t *testing.T, corefileBody string) {
+	t.Helper()
+	const sharedEscaped = "bc2bd381\\.brucedai\\.olares\\.com"
+	if strings.Contains(corefileBody, sharedEscaped) {
+		t.Fatalf("shared exact template must be removed when disabled, got:\n%s", corefileBody)
+	}
+}
+
+func assertContainsUserWildcard(t *testing.T, corefileBody string) {
+	t.Helper()
+	const userTemplate = "template IN A brucedai.olares.com"
+	if !strings.Contains(corefileBody, userTemplate) {
+		t.Fatalf("expected user wildcard template to remain, got:\n%s", corefileBody)
 	}
 }
 

@@ -38,6 +38,14 @@ var sharedRouteRegistryGVR = schema.GroupVersionResource{
 	Resource: "sharedrouteregistries",
 }
 
+// RegenerateCorefile rebuilds the CoreDNS Corefile from current cluster state.
+//
+// behavior: every invocation re-reads ClusterConfig.spec.inClusterGatewayEnabled
+// and applies or removes Shared in-cluster templates accordingly.
+//
+// requirement: this function is intentionally event-driven by existing SRR/User/DNS
+// watcher paths. ClusterConfig changes take effect on the next regeneration event
+// (delayed linkage), because sys-event does not register a dedicated ClusterConfig watcher.
 func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dynamicClient dynamic.Interface) error {
 	corefileConfigMap, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns", metav1.GetOptions{})
 	if err != nil {
