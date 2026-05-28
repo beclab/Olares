@@ -1,7 +1,7 @@
 ---
 name: olares-cluster
-version: 0.5.4
-description: "olares-cli cluster: per-user Kubernetes view of an Olares cluster via the ControlHub backend. Read pods / containers / workloads (Deployment/StatefulSet/DaemonSet) / application spaces (KubeSphere-grouped namespaces) / namespaces / nodes / jobs / cronjobs / Olares-managed middleware (databases, queues, object stores). Mutate via scale / restart / stop / start / delete on workloads, delete / restart on pods, suspend / resume on cronjobs, rerun on jobs, and password set on middleware — every mutating verb is wrapped in a confirmation prompt that --yes opts out of. Watch verbs (pod get -w, workload rollout-status -w, application status -w, pod/container logs -f) poll on --interval, never stream. Use whenever the user asks `what's running on my cluster?`, `tail logs of <pod>`, `restart / scale / delete this workload`, `who am I on this cluster?`, `suspend this cronjob`, `rerun this job`, or `rotate the password on this database`. Do NOT use for app-store lifecycle (use olares-cli market) or host-side install / node-join / OS upgrade (use olares-cli node / os / gpu — those go through kubeconfig, not a profile)."
+version: 0.6.0
+description: "olares-cli cluster: per-user Kubernetes view of an Olares cluster via the ControlHub backend. Read pods / containers / workloads (Deployment/StatefulSet/DaemonSet) / application spaces (KubeSphere-grouped namespaces) / namespaces / nodes / jobs / cronjobs / Olares-managed middleware (databases, queues, object stores). Mutate via scale / restart / stop / start / delete on workloads, delete / restart on pods, suspend / resume on cronjobs, rerun on jobs — every mutating verb is wrapped in a confirmation prompt that --yes opts out of. Watch verbs (pod get -w, workload rollout-status -w, application status -w, pod/container logs -f) poll on --interval, never stream. Use whenever the user asks `what's running on my cluster?`, `tail logs of <pod>`, `restart / scale / delete this workload`, `who am I on this cluster?`, `suspend this cronjob`, or `rerun this job`. Do NOT use for app-store lifecycle (use olares-cli market) or host-side install / node-join / OS upgrade (use olares-cli node / os / gpu — those go through kubeconfig, not a profile)."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -22,7 +22,6 @@ Use `olares-cli cluster ...` when the user asks, against the cluster the active 
 - "Suspend / resume `<cronjob>`" or "rerun `<job>`"
 - "What workspaces / application spaces can I see?"
 - "Who am I on this cluster, what's my role?" (`cluster context`)
-- "Rotate the admin password on this `<middleware>`"
 - "What does this object's YAML look like?" (`cluster <noun> yaml`)
 
 ## When NOT to use — route to a sibling skill
@@ -185,7 +184,6 @@ Olares-managed databases / queues / object stores via the `/middleware/v1/*` agg
 | Command | Endpoint | What it does |
 |---|---|---|
 | `cluster middleware list [-t TYPE] [--show-passwords]` | `GET /middleware/v1/list` | Custom envelope `{code, data:[...]}` — NOT K8s. TYPE / NAME / NAMESPACE / NODES / ADMIN-USER. **Admin password is never printed in table mode**; in `-o json` it's `<redacted>` unless `--show-passwords` is explicitly set. |
-| `cluster middleware password set --type X --name N --namespace NS --user U [--password P] [--yes]` | `POST /middleware/v1/<type>/password` | Sub-noun `password` (future-proof for `password rotate` / `reveal`). **`--password` is OPTIONAL and SHOULD usually be omitted** — when not provided, the verb prompts twice (no echo, must match). Passing it on the command line leaks the secret into shell history. `ConfirmDestructive`-wrapped. JSON output never echoes the password. **Server-side support is currently postgres-only** — every other `--type` (`mongodb`, `redis`, `mysql`, `mariadb`, `rabbitmq`, `minio`, `nats`, `elasticsearch`) lands on the server's `default: return fiber.ErrNotImplemented` branch ([`platform/tapr/cmd/middleware/app/handler.go::handleUpdateMiddlewareAdminPassword`](platform/tapr/cmd/middleware/app/handler.go)); the CLI accepts those types so the validator stays aligned with `MiddlewareType` but turns the 501 into a friendly "server doesn't support this yet" error. Don't promise rotation will work for non-postgres types until upstream fills in the switch. |
 
 ## Output conventions
 
@@ -213,7 +211,7 @@ Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `work
 
 ## Mutating verb safety contract
 
-Every mutating verb (`pod delete` / `pod restart`, all of `workload scale|restart|stop|start|delete`, `cronjob suspend`, `job rerun`, `middleware password set`) follows the same contract:
+Every mutating verb (`pod delete` / `pod restart`, all of `workload scale|restart|stop|start|delete`, `cronjob suspend`, `job rerun`) follows the same contract:
 
 1. **Wrapped in `ConfirmDestructive`.** Even for "reversible" changes — the prompt is the safety net, not the apiserver's typed error. `--yes` / `-y` opts out so scripts work non-interactively. `cronjob resume`, `workload start`, and `pod logs` are NOT wrapped (non-destructive).
 2. **No client-side authorization.** Server is the only authority. A 403 from the server is the answer; surface it. Never preflight against the cached cluster context.
@@ -233,8 +231,6 @@ Every mutating verb (`pod delete` / `pod restart`, all of `workload scale|restar
 | `job <ns/name> has no child pods (selector "..." matched nothing) — nothing to rerun` (from `cluster job rerun`) | The Job hasn't scheduled any Pod yet (typically a freshly-created Job that's still in the queue, or one with `spec.suspend=true`), OR a completed Job whose pods were already GC'd. | Wait a few seconds and retry; or `cluster job get` / `cluster job yaml` to inspect status + spec.selector. |
 | `No pods found for job <ns/name> (selector "..." via spec.selector.matchLabels)` (stderr hint from `cluster job pods`) | The selector resolved correctly but no Pods currently match — almost always a Completed Job whose Pods were garbage-collected by `ttlSecondsAfterFinished` or pruned by the parent CronJob's `successfulJobsHistoryLimit`. Exit code is 0 — this is informational, not an error. | Confirm with `olares-cli cluster job yaml <ns/name>` (look for `spec.ttlSecondsAfterFinished` and the parent CronJob's `successfulJobsHistoryLimit`). If you expected Pods to still exist, the parent CronJob may have rotated them out. |
 | `No pods found.` / `No pods found in <ns> namespace.` (stderr hint from `cluster pod list`, `cluster application pods`) | The query returned an empty page — same kubectl convention; exit code is 0. | Re-run with broader scope (drop `-n`, or `--all` to drain all pages) if you expected results. |
-| `passwords do not match` (from `middleware password set`) | The two no-echo prompts disagreed. | Re-run. |
-| `the ControlHub server does not yet support password rotation for "<type>" middleware (HTTP 501 Not Implemented); the server currently only rotates passwords for: postgres ...` (from `middleware password set`) | Server's middleware aggregator only implements password rotation for postgres today; every other type falls into the `default: return fiber.ErrNotImplemented` branch. | Wait for upstream to add the type, or rotate the password via the underlying operator CR (e.g. `kubectl edit ...`) — the CLI cannot work around a server gap. |
 | `--interval requires --follow` / `--interval requires --watch` / `--timeout requires --watch` | Polling cadence flags set without their gate flag. | Add `-f` / `-w`, or drop the offending flag. |
 | `decode ... response: ...` | Endpoint returned something we couldn't parse. | Re-run with `-o json` to see the raw shape. May indicate a server-side schema change. |
 | `refresh token for ... became invalid at ...` (typed `*credential.ErrTokenInvalidated`) | The refresh_token itself is dead — auto-refresh can't recover. | `olares-cli profile login`. See [`olares-shared`](../olares-shared/SKILL.md). |

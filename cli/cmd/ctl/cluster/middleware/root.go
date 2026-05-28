@@ -5,15 +5,11 @@
 // /middleware/v1/* on the ControlHub origin. Today's verbs:
 //
 //   - list             read-side inventory (Phase 1).
-//   - password set     password rotation under the password sub-noun
-//                      (Phase 6) — POST /middleware/v1/<type>/password,
-//                      ConfirmDestructive-wrapped.
 package middleware
 
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/beclab/Olares/cli/cmd/ctl/cluster/middleware/password"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -43,7 +39,6 @@ shows passwords).
 	}
 
 	cmd.AddCommand(NewListCommand(f))
-	cmd.AddCommand(password.NewPasswordCommand(f))
 
 	return cmd
 }
