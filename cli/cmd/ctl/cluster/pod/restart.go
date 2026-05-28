@@ -53,6 +53,6 @@ scripted use.
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
 	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "skip the confirmation prompt")
 	cmd.Flags().IntVar(&gracePeriod, "grace-period", -1, "graceful termination period in seconds (-1 = pod default; 0 = immediate)")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }

@@ -115,7 +115,7 @@ ticks are silent so the output matches real progress 1:1.
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "poll until converged or interrupted (Ctrl-C to stop)")
 	cmd.Flags().DurationVar(&interval, "interval", 2*time.Second, "polling interval when --watch is set")
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "give up after this duration when --watch is set; 0 = no timeout")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }
 

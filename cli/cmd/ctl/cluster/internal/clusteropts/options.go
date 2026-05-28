@@ -119,13 +119,26 @@ func (o *ClusterOptions) AddQuietFlag(cmd *cobra.Command) {
 }
 
 // AddDetailOutputFlags wires `--output` and `--quiet` (but NOT
-// `--no-headers`) for "detail" verbs — currently every `cluster <noun>
-// get` — whose table-mode rendering is a vertical key/value layout.
-// Those verbs have no column-header row to suppress, so exposing
-// `--no-headers` would silently waste the flag — same anti-pattern we
-// reject for `--interval` without `--watch` (see runGet / runScale
-// guards). Keeping the registration here means cobra surfaces a clear
-// `unknown flag: --no-headers` instead of pretending to honor it.
+// `--no-headers`) for verbs whose table-mode rendering has no column-
+// header row to suppress. Two families qualify:
+//
+//   - "Detail" verbs — every `cluster <noun> get` — render a vertical
+//     key/value layout instead of a row table.
+//   - Mutating verbs — `pod {delete,restart}`, `workload
+//     {scale,restart,stop,start,delete,rollout-status}`, `cronjob
+//     {suspend,resume}`, `job rerun` — emit a synthesized JSON summary
+//     in `-o json` (see "Output conventions" / "Mutating verb safety
+//     contract" in `cli/skills/olares-cluster/SKILL.md`) and a single
+//     confirmation / status line in `-o table`. Neither shape has
+//     headers. (`workload rollout-status` is a status check rather
+//     than a mutation, but its single-line / JSONL shape lands in the
+//     same bucket.)
+//
+// Exposing `--no-headers` here would silently waste the flag — same
+// anti-pattern we reject for `--interval` without `--watch` (see
+// runGet / runScale guards). Keeping the registration here means cobra
+// surfaces a clear `unknown flag: --no-headers` instead of pretending
+// to honor it.
 //
 // Secondary tables that some detail verbs do render (e.g. the per-
 // container row block at the bottom of `cluster pod get`) are
