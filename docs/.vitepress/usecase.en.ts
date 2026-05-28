@@ -12,8 +12,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Integrate with Discord",
-                  link: "/use-cases/openclaw-integration",
+                  text: "Integrate with channels",
+                  items: [
+                    {
+                      text: "Integrate with Discord",
+                      link: "/use-cases/openclaw-integration",
+                    },
+                    {
+                      text: "Integrate with WhatsApp",
+                      link: "/use-cases/openclaw-channel-whatsapp",
+                    }
+                ],
                 },
                 {
                   text: "Enable web search",
@@ -26,7 +35,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Manage Olares through natural language",
                   link: "/use-cases/openclaw-olares-skills",
-                },                
+                },
                 {
                   text: "Enable local file access",
                   link: "/use-cases/openclaw-local-access",
@@ -34,7 +43,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Enable sandbox",
                   link: "/use-cases/openclaw-enable-sandbox",
-                },               
+                },
                 {
                   text: "Upgrade OpenClaw",
                   link: "/use-cases/openclaw-upgrade",
@@ -43,8 +52,8 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Common issues",
                   link: "/use-cases/openclaw-common-issues",
                 },
-              ]
-            },
+              ],
+            }, 
             {
               text: "Hermes Agent",
               link: "/use-cases/hermes",  

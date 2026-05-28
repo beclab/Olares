@@ -12,8 +12,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "集成 Discord",
-                  link: "/zh/use-cases/openclaw-integration",
+                  text: "集成聊天应用",
+                  items: [
+                    {
+                      text: "集成 Discord",
+                      link: "/zh/use-cases/openclaw-integration",
+                    },
+                    {
+                      text: "集成 WhatsApp",
+                      link: "/zh/use-cases/openclaw-channel-whatsapp"
+                    }
+                  ],
                 },
                 {
                   text: "启用网页搜索",
