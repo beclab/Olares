@@ -241,19 +241,8 @@ Set up OpenClaw using the step-by-step interactive wizard, or bypass the prompts
 
     The **Status** column in the **Auth probes** table shows `ok`, indicating the model is successfully connected and ready to use.
     
-4. Enter the following command to obtain the gateway dashboard access token:
-    ```bash
-    openclaw dashboard --no-open
-    ```
-
-    The dashboard information is displayed. For example,
-    ```
-    Dashboard URL: http://127.0.0.1:18789/#token=489bad6c7dbe1f49ace62bf647ca66d6f7d78c76d1ba5d0b
-    Copy to clipboard unavailable.
-    Browser launch disabled (--no-open). Use the URL above.
-    ```
-
-5. Open Olares Files, go to **Application** > **Data** > **clawdbot** > **config**, open the `openclaw.json` file, locate the `gateway` section, and then note down the token in `auth`. For example, `YrzY5wk1WYWIfcTHFodyO43Ge6n1JY4T`.
+4. Open Olares Files, go to **Application** > **Data** > **clawdbot** > **config**, and then open the `openclaw.json` file.
+5. Locate the `gateway` section, and then note down the token in `auth`. For example, `YrzY5wk1WYWIfcTHFodyO43Ge6n1JY4T`.
 
     ![Obtain gateway token in config file](/images/manual/use-cases/obtain-gateway-token-in-config.png#bordered)
 
