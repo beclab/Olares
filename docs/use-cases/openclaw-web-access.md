@@ -78,3 +78,7 @@ Test that your agent can retrieve real-time information from the internet.
    :::
 
    ![Web search results using SearXNG](/images/manual/use-cases/openclaw-web-search-results.png#bordered)
+
+:::tip Full-text retrieval
+SearXNG returns only titles, URLs, and snippets, not full page content. Fetching the full text might be blocked by anti‑scraping measures. If you need the agent to read the full contents of web pages, use an online web service. We recommend Firecrawl and Tavily. They return full text or answer snippets and offer free quotas for web search.
+:::
