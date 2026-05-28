@@ -74,10 +74,6 @@ Note: `clawhub sync` defaults to bumping the patch version on updates. For deter
 
 Versions come from each skill's frontmatter `version:` field — bump the field before publishing a new release. Slugs and display names are baked into [`publish.sh`](publish.sh).
 
-### Publish from CI
-
-Use the [`Publish olares-cli skills to ClawHub`](../../.github/workflows/publish_clawhub_skills.yaml) workflow. Dispatch it manually from the Actions tab; it accepts a `dry-run` toggle, an optional space-separated `slugs` list, a `changelog` string, and a `tags` list (default `latest`). It expects a repository secret named `CLAWHUB_TOKEN`.
-
 ## Slug policy
 
 The 6 skills publish under their canonical short names:
