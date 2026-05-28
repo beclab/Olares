@@ -32,6 +32,7 @@ jobs:
       version: ${{ github.event.inputs.tags }}
       release-id: ${{ needs.release-id.outputs.id }}
       ref: ${{ github.event.inputs.tags }}
+      publish-npm: false
 
   release-daemon:
     needs: [release-id]

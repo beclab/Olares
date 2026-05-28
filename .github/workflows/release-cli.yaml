@@ -12,6 +12,9 @@ on:
         type: string
       release-id:
         type: string
+      publish-npm:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       version:
@@ -23,6 +26,9 @@ on:
         type: string
       release-id:
         type: string
+      publish-npm:
+        type: boolean
+        default: true
 jobs:
   goreleaser:
     runs-on: ubuntu-22.04
@@ -109,6 +115,7 @@ jobs:
 
   publish-npm:
     needs: [goreleaser]
+    if: ${{ inputs.publish-npm }}
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
