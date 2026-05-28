@@ -4,9 +4,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, troubleshoot, FAQ, common issues, errors
-app_version: "1.0.8"
-doc_version: "1.0"
-doc_updated: "2026-04-10"
+app_version: "1.0.2"
+doc_version: "1.1"
+doc_updated: "2026-05-28"
 ---
 
 # Common issues
