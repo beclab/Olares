@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -29,7 +30,9 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/manifest"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
+	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -606,6 +609,12 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 		return nil, err
 	}
 
+	kubeClient, err := GetKubeClient()
+	if err != nil {
+		klog.Error("get kube client error, ", err)
+		return nil, err
+	}
+
 	appMgrs, err := clientset.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.Error("list applications error, ", err)
@@ -627,7 +636,7 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 		}
 
 		// check if the app is supported by the overlay gateway
-		if appConfig.OverlayGatewaySupported {
+		if appConfig.OverlayGateway.Enable {
 			// check if the app is enabled
 			app, err := clientset.AppV1alpha1().Applications().Get(ctx, appMgr.Name, metav1.GetOptions{})
 			if err != nil {
@@ -642,16 +651,56 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 				}
 			}
 
-			enabled := app.Spec.Settings["enableOverlayGateway"]
-			supportedApps = append(supportedApps, OverlayGatewaySupportedApp{
+			enabled := strings.ToLower(app.Spec.Settings["enableOverlayGateway"]) == "true"
+			sa := OverlayGatewaySupportedApp{
 				AppResourceName: app.Name,
 				AppName:         app.Spec.Name,
-				Enabled:         strings.ToLower(enabled) == "true",
+				Enabled:         enabled,
 				Owner:           app.Spec.Owner,
 				SharedApp:       sharedApp,
 				Namespace:       app.Spec.Namespace,
 				AppID:           app.Spec.Appid,
-			})
+			}
+			if enabled {
+				pods, err := kubeClient.CoreV1().Pods(app.Spec.Namespace).List(ctx, metav1.ListOptions{})
+				if err != nil {
+					klog.Error("list pods error, ", err)
+				} else {
+					for _, pod := range pods.Items {
+						if pod.Labels["applications.app.bytetrade.io/macvlan-init"] == "true" {
+							statuses, err := nadutils.GetNetworkStatus(&pod)
+							if err != nil {
+								klog.Error("get network status error, ", err)
+								continue
+							}
+
+							for _, status := range statuses {
+								if status.Interface == "net1" {
+									if len(status.IPs) == 0 {
+										klog.Warningf("pod %s has no ip in net1, skip", pod.Name)
+										continue
+									}
+									un := UnderlayNetwork{
+										IP: status.IPs[0],
+									}
+
+									var entrances []manifest.OverlayEntrance
+									for _, e := range appConfig.OverlayGateway.Entrances {
+										if e.Workload == GetWorkloadNameFromPod(&pod) {
+											entrances = append(entrances, e)
+										}
+									}
+									un.Ports = entrances
+									sa.UnderlayNetworks = append(sa.UnderlayNetworks, un)
+									break
+								}
+							}
+
+						}
+					}
+				}
+			}
+			supportedApps = append(supportedApps, sa)
 		}
 
 	}
@@ -716,4 +765,10 @@ func RestartOverlayGatewaySupportedApps(ctx context.Context, apps []OverlayGatew
 	}
 
 	return nil
+}
+
+func GetWorkloadNameFromPod(pod *corev1.Pod) string {
+	podTemplateHash := pod.Labels["pod-template-hash"]
+	podNameTokens := strings.Split(pod.Name, fmt.Sprintf("-%s-", podTemplateHash))
+	return podNameTokens[0]
 }
