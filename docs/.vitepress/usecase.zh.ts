@@ -96,10 +96,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/claude-code",
                 },
                 {
-                  text: "Context7",
-                  link: "/zh/use-cases/context7",
-                },
-                {
                   text: "Paperclip",
                   link: "/zh/use-cases/paperclip",
                 },
@@ -122,7 +118,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ],
             },
             {
-              text: "对话",
+              text: "AI 工作台",
               collapsed: true,
               items: [
                 {
@@ -156,12 +152,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "LobeHub (LobeChat)",
                   link: "/zh/use-cases/lobechat",
                 },
-              ],
-            },
-            {
-              text: "搜索与研究",
-              collapsed: true,
-              items: [
                 {
                   text: "AnythingLLM",
                   link: "/zh/use-cases/anythingllm",
@@ -175,8 +165,8 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/perplexica",
                 },
                 {
-                  text: "PDFMathTranslate",
-                  link: "/zh/use-cases/pdfmathtranslate",
+                  text: "Context7",
+                  link: "/zh/use-cases/context7",
                 },
               ],
             },
@@ -211,7 +201,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ],
             },
             {
-              text: "多媒体",
+              text: "创意媒体",
               collapsed: true,
               items: [
                 {
@@ -406,6 +396,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "工具",
           collapsed: false,
           items: [
+            {
+              text: "PDFMathTranslate",
+              link: "/zh/use-cases/pdfmathtranslate",
+            },
             {
               text: "Falco",
               link: "/zh/use-cases/falco",

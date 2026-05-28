@@ -96,10 +96,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/claude-code",
                 },
                 {
-                  text: "Context7",
-                  link: "/use-cases/context7",
-                },
-                {
                   text: "Paperclip",
                   link: "/use-cases/paperclip",
                 },
@@ -122,7 +118,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ],
             },
             {
-              text: "Chat",
+              text: "AI workbench",
               collapsed: true,
               items: [
                 {
@@ -156,12 +152,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "LobeHub (LobeChat)",
                   link: "/use-cases/lobechat",
                 },
-              ],
-            },
-            {
-              text: "Search and research",
-              collapsed: true,
-              items: [
                 {
                   text: "AnythingLLM",
                   link: "/use-cases/anythingllm",
@@ -175,8 +165,8 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/perplexica",
                 },
                 {
-                  text: "PDFMathTranslate",
-                  link: "/use-cases/pdfmathtranslate",
+                  text: "Context7",
+                  link: "/use-cases/context7",
                 },
               ],
             },
@@ -211,7 +201,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ],
             },
             {
-              text: "Media",
+              text: "Creative media",
               collapsed: true,
               items: [
                 {
@@ -406,6 +396,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "Utilities",
           collapsed: false,
           items: [
+            {
+              text: "PDFMathTranslate",
+              link: "/use-cases/pdfmathtranslate",
+            },
             {
               text: "Falco",
               link: "/use-cases/falco",
