@@ -49,7 +49,7 @@ olares-cli profile current
 > **What this command does NOT do:** install Olares OS. The Linux host bootstrap stays `curl -fsSL https://olares.sh | bash` (see [docs/manual/get-started](https://docs.olares.com/manual/get-started/install-olares/linux.html)). It also does not configure any app credentials — Olares uses the Olares ID directly, so no `config init` step is needed.
 >
 > **On a Linux host with an existing `olares-cli` in `/usr/local/bin` or `/usr/bin`:** the wizard reads its `--version` and decides keep-vs-replace.
-> - **Release-grade** (stable `1.12.7`, or pre-releases `-rc1` / `-beta.1` / `-alpha2`) → kept; npm hits `EEXIST` and prints the [`--prefix` / `npx`](#on-a-linux-olares-host-install-side-by-side-with-the-os-bundle) workarounds rather than clobbering it. The OS bundle is canonical for system-layer verbs and only `olares-cli upgrade` is supposed to replace it.
+> - **Release-grade** (stable `1.12.7`, or pre-releases `-rc1` / `-beta.1` / `-alpha2`) → kept; npm hits `EEXIST`, the wizard exits with both workaround paths spelled out — each one already includes the matching `npx skills add beclab/Olares -y -g` follow-up, so you can copy the block verbatim. The OS bundle is canonical for system-layer verbs and only `olares-cli upgrade` is supposed to replace it. See [`--prefix` / `npx` reference](#on-a-linux-olares-host-install-side-by-side-with-the-os-bundle).
 > - **Dev / test / dirty** (the Makefile placeholder `0.0.0-development`, `git describe` outputs like `1.12.7-3-gabc1234-dirty`, check.yaml's `1.12.7-12345678` PR builds, unparseable output) → removed so npm can install over the same path. If removal needs root, the wizard exits with a one-line sudo hint instead of silently failing.
 
 ### Or build from source
