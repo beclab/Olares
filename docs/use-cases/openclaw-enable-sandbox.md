@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, sandbox, security, code execution
-app_version: "1.0.8"
-doc_version: "1.0"
-doc_updated: "2026-04-08"
+app_version: "1.0.2"
+doc_version: "1.1"
+doc_updated: "2026-05-28"
 ---
 
 # Optional: Enable sandbox
@@ -70,9 +70,10 @@ The OpenClaw sandbox is disabled by default. You can enable it by modifying the 
 </template>
 <template #Enable-via-Control-UI>
 
-1. Open the Control UI, and then select **AI & Agent** from the left sidebar.
-2. Scroll down to locate the **Sandbox** section, and then expand it.
-3. Configure the settings as follows:
+1. Open the Control UI, and then select **Settings** from the left sidebar.
+2. Click **AI & Agents**.
+3. Scroll down to locate the **Sandbox** section, and then expand it.
+4. Configure the settings as follows:
     - **Backend**: Enter `docker`.
     - Expand **Docker**:
       - **Image**: Enter `beclab/harveyff-openclaw-sandbox-common:2026.4.7`.
@@ -87,8 +88,8 @@ The OpenClaw sandbox is disabled by default. You can enable it by modifying the 
 
     ![Enable sandbox in Control UI](/images/manual/use-cases/openclaw-sandbox-enable-ui.png#bordered)
     
-4. Click **Save** in the upper-right corner.
-5. Restart OpenClaw for the changes to take effect.
+5. Click **Save** in the upper-right corner.
+6. Restart OpenClaw for the changes to take effect.
 
 </template>
 </Tabs>
