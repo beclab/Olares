@@ -208,7 +208,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.173
+          image: beclab/files-server:v0.2.175
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -223,6 +223,8 @@ spec:
               mountPath: /data
             - name: upload-appdata
               mountPath: /appcache/
+            - name: common-data
+              mountPath: /appcommon/
             - name: seafile-data
               mountPath: /root/dev/seafile-data
 {{ if .Values.sharedlib }}        
@@ -399,11 +401,14 @@ spec:
           hostPath:
             path: '{{ .Values.rootPath }}/userdata/Cache'
             type: Directory
-
         - name: seafile-data
           hostPath:
             path: '{{ .Values.rootPath }}/rootfs/Application/seafile/data'
             type: DirectoryOrCreate
+        - name: common-data
+          hostPath:
+            type: Directory
+            path: '{{ .Values.rootPath }}/rootfs/Common'
         
 {{ if .Values.sharedlib }}        
         - name: shared-lib

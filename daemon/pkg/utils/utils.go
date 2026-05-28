@@ -3,6 +3,8 @@ package utils
 import (
 	"net"
 	"regexp"
+
+	_ "github.com/prometheus/node_exporter/collector"
 )
 
 func FilterArray[T any](items []T, fn func(T) bool) []T {

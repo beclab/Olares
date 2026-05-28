@@ -10,6 +10,7 @@ import (
 
 	natsevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
+	"github.com/beclab/Olares/framework/app-service/pkg/users/activeusers"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -34,6 +35,7 @@ import (
 	applyMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
@@ -114,7 +116,68 @@ func (r *UserController) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("add watch failed %w", err)
 	}
 
+	// Register a side-channel informer event handler that maintains the
+	// process-local activated-users cache (pkg/users/activeusers). The
+	// cache is consumed by the NATS event fan-out for v3 / shared apps
+	// to avoid a kube API call on every published event.
+	//
+	// This handler is independent of the reconcile predicate above:
+	//   • The reconcile predicate filters which events should enqueue
+	//     a reconcile request (heavy work: LLDAP sync, app creation).
+	//   • This handler fires for *every* informer event (Add / Update /
+	//     Delete, including pure annotation changes such as
+	//     wizard-status flipping to "completed") and only does a cheap
+	//     in-memory map mutation. Decoupling them keeps annotation
+	//     updates from triggering unnecessary user reconciles.
+	//
+	// controller-runtime guarantees "Events to a single handler are
+	// delivered sequentially", so Add/Update/Delete on the same user
+	// cannot race with each other for this handler. See the cache
+	// package's locking notes for the cross-handler concurrency story.
+	if err := r.registerActiveUsersHandler(mgr); err != nil {
+		klog.Errorf("user-controller register active-users handler failed %v", err)
+		return fmt.Errorf("register active-users handler failed %w", err)
+	}
+
 	return nil
+}
+
+func (r *UserController) registerActiveUsersHandler(mgr ctrl.Manager) error {
+	informer, err := mgr.GetCache().GetInformer(context.Background(), &iamv1alpha2.User{})
+	if err != nil {
+		return fmt.Errorf("get user informer failed: %w", err)
+	}
+	_, err = informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			u, ok := obj.(*iamv1alpha2.User)
+			if !ok {
+				return
+			}
+			activeusers.Upsert(u)
+		},
+		UpdateFunc: func(_, newObj interface{}) {
+			u, ok := newObj.(*iamv1alpha2.User)
+			if !ok {
+				return
+			}
+			activeusers.Upsert(u)
+		},
+		DeleteFunc: func(obj interface{}) {
+			// Informers may deliver the deletion as the User itself or
+			// as DeletedFinalStateUnknown (if the informer's watch was
+			// reset and the actual delete event was missed). Handle
+			// both shapes so a missed delete still evicts the cache.
+			switch u := obj.(type) {
+			case *iamv1alpha2.User:
+				activeusers.Delete(u.GetName())
+			case toolscache.DeletedFinalStateUnknown:
+				if uu, ok := u.Obj.(*iamv1alpha2.User); ok {
+					activeusers.Delete(uu.GetName())
+				}
+			}
+		},
+	})
+	return err
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop

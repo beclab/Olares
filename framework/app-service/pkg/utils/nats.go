@@ -49,6 +49,12 @@ type EventParams struct {
 	SharedEntrances  []v1alpha1.Entrance
 	Icon             string
 	MarketSource     string
+	// IsV3 marks the event as originating from a v3 / shared application.
+	// When true, PublishAppEventToQueue fans out the event to every
+	// activated user (annotation bytetrade.io/wizard-status == "completed"
+	// AND User.Status.State == "Created") instead of routing only to the
+	// app's nominal Owner. v1/v2 events keep the single-owner behavior.
+	IsV3 bool
 }
 
 func PublishEvent(nc *nats.Conn, subject string, data interface{}) error {
