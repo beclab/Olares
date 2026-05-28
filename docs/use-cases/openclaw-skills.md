@@ -123,28 +123,6 @@ Ensure that the [clawhub skill is installed](#install-via-openclaw-config). This
 
     ![Newly installed skill is enabled](/images/manual/use-cases/skill-enabled.png#bordered)
 
-#### Official Olares skills on ClawHub
-
-The Olares team publishes a set of skills that teach OpenClaw how to drive `olares-cli` on your behalf — listing files, installing apps from Market, querying the dashboard, and more. They are all available on ClawHub under their canonical names:
-
-| Skill ID | Purpose |
-|:---------|:--------|
-| `olares-shared` | Foundation skill: profile model, login, token refresh. **Required by all five skills below.** |
-| `olares-files` | `olares-cli files` — list, upload, download, share, manage Sync libraries. |
-| `olares-market` | `olares-cli market` — install, upgrade, uninstall, watch app lifecycle. |
-| `olares-settings` | `olares-cli settings` — read and mutate Settings UI surfaces. |
-| `olares-dashboard` | `olares-cli dashboard` — overview, applications, GPU, fan, ranking. |
-| `olares-cluster` | `olares-cli cluster` — per-user Kubernetes view: pods, workloads, namespaces, jobs, cronjobs, nodes, middleware. |
-
-Install them in one go:
-
-```bash
-openclaw skills install olares-shared
-openclaw skills install olares-files olares-market olares-settings olares-dashboard olares-cluster
-```
-
-After installation, run `openclaw skills list` to confirm each one is **ready**. They all declare `olares-cli` as a binary requirement, which is automatically present on every Olares system.
-
 <!--2. Enter the following command:
 
     ```bash
