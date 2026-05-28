@@ -1,7 +1,7 @@
 ---
 name: olares-market
-version: 1.2.0
-description: "olares-cli market command tree against the per-user Market app-store v2 API: list (catalog browse + `--mine` view of the active profile's apps — same set the Market UI's My Terminus tab shows; INCLUDES in-flight installs / upgrades / failures, not just completed installs) / get / categories for catalog browsing; install / uninstall / upgrade / clone / cancel / stop / resume for lifecycle; status for runtime state; upload / delete for local chart packages (always targeting the SPA's `upload` bucket — `-s` is not accepted on these two verbs, the source is pinned); --watch / --watch-timeout / --watch-interval to block until terminal state. Covers source resolution (market.olares catalog vs local sources), the install/upgrade/uninstall/stop/resume/cancel state machine, OpType gating for race-safe watching, the op-agnostic status --watch recovery path, the `list --mine` filter that surfaces 'what apps do I have right now' across every source, and JSON shape additions (finalState/finalOpType/state). Use whenever the user mentions market / app store / install / upgrade / uninstall / clone / stop / resume / cancel / status / installed apps / 'my apps' / 'show me my apps' / '我的应用' / upload chart / app state / running / installFailed / --watch, asks 'is firefox installed yet' or 'show me my apps', or sees errors like 'app X is not installed', 'watch timed out', 'watch canceled by user', '--watch requires an app name'."
+version: 1.3.0
+description: "Install, upgrade, and manage Olares apps via olares-cli market — the per-user Market app-store v2 mirror of the Olares Market UI. Covers catalog browsing (list, get, categories), the full app lifecycle (install, uninstall, upgrade, clone, cancel, stop, resume), runtime status, --mine view of the active profile's apps (same set the Market UI's My Terminus tab shows, including in-flight installs / upgrades / failures), upload / delete for local Helm chart packages, and --watch flags that block until the app reaches a terminal state. Use when the user mentions Olares Market, olares-cli market, app store, installing / upgrading / uninstalling / cloning / stopping / resuming / cancelling an Olares app, 'my apps', '我的应用', upload chart, --watch, or asks 'is <app> installed yet' / 'show me my Olares apps'."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -815,3 +815,11 @@ olares-cli market install ollama-webui --watch \
 - Never echo `<access_token>` into the terminal or into a script. The CLI already injects it via `X-Authorization`; if the agent thinks it needs to print the token, it is doing the wrong thing — read [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) instead.
 - Treat `cancel` as a **request**, not a guarantee. The backend may have already finished the mutation by the time the cancel lands. Always re-confirm the actual landed state with `market status <app> --watch` before reporting "canceled" to the user.
 - `--watch` on Ctrl-C / timeout exits the CLI but does **not** stop the cluster-side mutation. Communicate this clearly when surfacing a watch error.
+
+## See also
+
+- [`olares-shared`](../olares-shared/SKILL.md) — profile model, login, automatic token refresh, full auth-error recovery table. **Read this one first.**
+- [`olares-files`](../olares-files/SKILL.md) — drive / sync / cache file browser, upload / download / share / chown.
+- [`olares-settings`](../olares-settings/SKILL.md) — Olares Settings UI mirror (users, appearance, vpn, network, gpu, video, search, backup, restore, advanced, integration, apps).
+- [`olares-dashboard`](../olares-dashboard/SKILL.md) — Olares Dashboard SPA proxy (overview, applications, GPU, fan, ranking).
+- [`olares-cluster`](../olares-cluster/SKILL.md) — per-user Kubernetes view (pods / workloads / namespaces / jobs / cronjobs / nodes / middleware).
