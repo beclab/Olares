@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "pluginRoot": "./cli"
+  },
+  "plugins": [
+    {
+      "name": "olares-cli",
+      "description": "Olares agent skills for the olares-cli command tree (profile, files, market, settings, dashboard, cluster).",
+      "skills": [
+        "./skills/olares-shared",
+        "./skills/olares-files",
+        "./skills/olares-market",
+        "./skills/olares-settings",
+        "./skills/olares-dashboard",
+        "./skills/olares-cluster"
+      ]
+    }
+  ]
+}
