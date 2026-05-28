@@ -164,40 +164,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Vane (Perplexica)",
                   link: "/zh/use-cases/perplexica",
                 },
-                {
-                  text: "Context7",
-                  link: "/zh/use-cases/context7",
-                },
-              ],
-            },
-            {
-              text: "模型服务",
-              collapsed: true,
-              items: [
-                {
-                  text: "Ollama",
-                  link: "/zh/use-cases/ollama",
-                },
-                {
-                  text: "Bifrost",
-                  link: "/zh/use-cases/bifrost",
-                },
-                {
-                  text: "LiteLLM",
-                  link: "/zh/use-cases/litellm",
-                },
-                {
-                  text: "TensorZero",
-                  link: "/zh/use-cases/tensorzero",
-                },
-                {
-                  text: "LLMFit",
-                  link: "/zh/use-cases/llmfit",
-                },
-                // {
-                //   text: "Dify",
-                //   link: "/zh/use-cases/dify",
-                // },
               ],
             },
             {
@@ -253,7 +219,37 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 },
               ],
             },
-          ]
+            {
+              text: "模型服务",
+              collapsed: true,
+              items: [
+                {
+                  text: "Ollama",
+                  link: "/zh/use-cases/ollama",
+                },
+                {
+                  text: "Bifrost",
+                  link: "/zh/use-cases/bifrost",
+                },
+                {
+                  text: "LiteLLM",
+                  link: "/zh/use-cases/litellm",
+                },
+                {
+                  text: "TensorZero",
+                  link: "/zh/use-cases/tensorzero",
+                },
+                {
+                  text: "LLMFit",
+                  link: "/zh/use-cases/llmfit",
+                },
+                // {
+                //   text: "Dify",
+                //   link: "/zh/use-cases/dify",
+                // },
+              ],
+            },
+          ],
         },
         {
           text: "具身智能",
@@ -399,6 +395,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "PDFMathTranslate",
               link: "/zh/use-cases/pdfmathtranslate",
+            },
+            {
+              text: "Context7",
+              link: "/zh/use-cases/context7",
             },
             {
               text: "Falco",

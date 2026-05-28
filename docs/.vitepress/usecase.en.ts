@@ -118,7 +118,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ],
             },
             {
-              text: "AI workbench",
+              text: "AI Workbench",
               collapsed: true,
               items: [
                 {
@@ -164,40 +164,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Vane (Perplexica)",
                   link: "/use-cases/perplexica",
                 },
-                {
-                  text: "Context7",
-                  link: "/use-cases/context7",
-                },
-              ],
-            },
-            {
-              text: "Model services",
-              collapsed: true,
-              items: [
-                {
-                  text: "Ollama",
-                  link: "/use-cases/ollama",
-                },
-                {
-                  text: "Bifrost",
-                  link: "/use-cases/bifrost",
-                },
-                {
-                  text: "LiteLLM",
-                  link: "/use-cases/litellm",
-                },
-                {
-                  text: "TensorZero",
-                  link: "/use-cases/tensorzero",
-                },
-                {
-                  text: "LLMFit",
-                  link: "/use-cases/llmfit",
-                },
-                // {
-                //   text: "Dify",
-                //   link: "/use-cases/dify",
-                // },
               ],
             },
             {
@@ -253,7 +219,37 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 },
               ],
             },
-          ]
+            {
+              text: "Model services",
+              collapsed: true,
+              items: [
+                {
+                  text: "Ollama",
+                  link: "/use-cases/ollama",
+                },
+                {
+                  text: "Bifrost",
+                  link: "/use-cases/bifrost",
+                },
+                {
+                  text: "LiteLLM",
+                  link: "/use-cases/litellm",
+                },
+                {
+                  text: "TensorZero",
+                  link: "/use-cases/tensorzero",
+                },
+                {
+                  text: "LLMFit",
+                  link: "/use-cases/llmfit",
+                },
+                // {
+                //   text: "Dify",
+                //   link: "/use-cases/dify",
+                // },
+              ],
+            },
+          ],
         },
         {
           text: "Embodied AI",
@@ -399,6 +395,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "PDFMathTranslate",
               link: "/use-cases/pdfmathtranslate",
+            },
+            {
+              text: "Context7",
+              link: "/use-cases/context7",
             },
             {
               text: "Falco",
