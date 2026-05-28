@@ -17,9 +17,17 @@ if (!fs.existsSync(bin)) {
   process.exit(1);
 }
 
+// OLARES_CLI_REMOTE_ONLY=1 tells the Go binary's root command tree to skip
+// registering host-side verbs (install, upgrade, node, os, gpu, disk, wizard,
+// user, osinfo, amdgpu) that require an Olares host filesystem laid down by
+// the install wizard. See cli/cmd/ctl/root.go. npx users never run the
+// wizard, so exposing those verbs would just produce confusing manifest-
+// not-found errors. The host-bundled binary at /usr/local/bin/olares-cli is
+// invoked by install.sh without this env var and keeps the full verb set.
 const res = spawnSync(bin, process.argv.slice(2), {
   stdio: 'inherit',
   windowsHide: true,
+  env: { ...process.env, OLARES_CLI_REMOTE_ONLY: '1' },
 });
 
 if (res.error) {
