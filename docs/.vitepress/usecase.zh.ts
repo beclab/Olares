@@ -42,7 +42,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 },
                 {
                   text: "启用沙盒",
-                  link: "/use-cases/openclaw-enable-sandbox",
+                  link: "/zh/use-cases/openclaw-enable-sandbox",
                 },
                 {
                   text: "升级 OpenClaw",
