@@ -74,13 +74,13 @@ You can use the built-in configuration wizard to install default or officially s
     | Settings | Option |
     |:---------|:-------|
     | Where will the Gateway run | Local (this machine) |
-    | Select settings to configure | Skills |
+    | What do you want to configure | Skills |
     | Configure skills now | Yes |
     | Install missing skill dependencies | Navigate to the skill **clawhub**, press the **Space** key <br>to select it, and then press **Enter**. |
     | Preferred node manager for skill installs | npm<br>Wait for the message `Installed clawhub` to appear<br> before proceeding. |
     | Set [API_KEY] for [skill] | Select **No** for all these settings.| 
 
-4. Finally, select **Continue** for **Select sections to configure**. The message `Configure complete` appears, indicating the setup is finished. 
+4. Finally, select **Done** for **What do you want to configure**. The message `Configure complete` appears, indicating the setup is finished. 
 
 ### Install from ClawHub
 

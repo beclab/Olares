@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw installation
-app_version: "1.0.1"
+app_version: "1.0.2"
 doc_version: "2.0"
-doc_updated: "2026-05-27"
+doc_updated: "2026-05-28"
 ---
 
 # OpenClaw
@@ -186,15 +186,15 @@ Set up OpenClaw using the step-by-step interactive wizard, or bypass the prompts
     | I understand this is<br>personal-by-default and shared/multi-user use<br>requires lock-down. <br>Continue? | Select **Yes**.  |
     | Setup mode   | Select **QuickStart**.   |
     | Config handling  | Select **Use existing values**.    |
-    | Model/auth provider  | Select **Ollama**.    |
+    | Model/auth provider  | Select **More**, and then select **Ollama**.    |
     | Ollama mode | Select **Local only**. |
     | Ollama base URL  | Remove the default placeholder text, and then enter<br>the shared endpoint URL from [Step 1](#step-1-install-your-model).<br>For example, `http://026076110.shared.olares.com`. |
     | Default model | Select your installed model.<br>For example, **ollama/qwen3.5:35b-a3b-ud-q4_K_L**. |
     | Select channel  | Select **Skip for now**.<br>(You can configure channels later)  |
-    | Search provider | Select **Skip for now**.<br>(You can configure search provider later) |
+    | Search provider | Select **Skip for now**.<br>(You can configure the search provider later) |
     | Configure skills now   | Select **No**. <br>(You can install skills later)       |
     | Enable hooks | Select **Skip for now**. <br>(Press **Space** to select and then press **Enter** to continue) |
-    | How do you want to<br>hatch your bot   | Select **Do this later**.   |
+    | How do you want to<br>hatch your bot   | Select **Hatch later**.   |
 
 4. After you complete the onboarding wizard, scroll up to the **Control UI** section.
 5. Find the **Web UI (with token)**, and then copy the token at the end of the URL (the text immediately following `#token=`). This is your Gateway Token. 
