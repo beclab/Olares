@@ -48,8 +48,8 @@ github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3d
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/beclab/Olares/framework/app-service v0.0.0-20260522162612-61734f52ff96 h1:1KFEq7tsGYMk6Z9Kn9f0QNF0v+LoCtAkvA7Kd6+WhFU=
 github.com/beclab/Olares/framework/app-service v0.0.0-20260522162612-61734f52ff96/go.mod h1:f745c4hwUjRRmQfRKWEqahSTQrZ44NTa5KJry28Hn4Q=
-github.com/beclab/api v0.0.8-0.20260522125754-f2fb68d230ca h1:dXFvtsmf8uounNwUnE8Cyto08+HUwNHsQYllFR0ViCo=
-github.com/beclab/api v0.0.8-0.20260522125754-f2fb68d230ca/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
+github.com/beclab/api v0.0.8 h1:7d15aTwZh+Bgv6EgoUT0WmPUKE5tANtBT9oAlq4x6/w=
+github.com/beclab/api v0.0.8/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
 github.com/beclab/bfl v0.3.36 h1:PgeSPGc+XoONiwFsKq9xX8rqcL4kVM1G/ut0lYYj/js=
 github.com/beclab/bfl v0.3.36/go.mod h1:A82u38MxYk1C3Lqnm4iUUK4hBeY9HHIs+xU4V93OnJk=
 github.com/beevik/ntp v1.5.0 h1:y+uj/JjNwlY2JahivxYvtmv4ehfi3h74fAuABB9ZSM4=
