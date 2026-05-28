@@ -118,7 +118,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ],
             },
             {
-              text: "AI Workbench",
+              text: "AI workbench",
               collapsed: true,
               items: [
                 {
