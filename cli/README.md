@@ -50,6 +50,24 @@ olares-cli profile current
 >
 > **On a Linux Olares host (`/usr/local/bin/olares-cli` already present):** the wizard detects the resulting `EEXIST` and prints two safe workarounds (`--prefix` side-by-side install, or stay on `npx`). It will not overwrite the OS bundle. See ["On a Linux Olares host"](#on-a-linux-olares-host-install-side-by-side-with-the-os-bundle).
 
+### Or build from source
+
+For local development or pinning to a specific commit. Requires Go 1.24+ and the full Olares repo — the CLI's [`cli/go.mod`](go.mod) has a relative `replace` directive into `../framework/oac`, so a `cli/`-only clone won't build.
+
+```bash
+git clone https://github.com/beclab/Olares.git
+cd Olares/cli
+
+sudo make install                                    # → /usr/local/bin/olares-cli
+sudo make install PREFIX=$HOME/.local                # or pick your own prefix
+make uninstall                                       # remove the same binary
+
+# Install the agent skills (Scenario A does this for you; from-source doesn't):
+npx skills add beclab/Olares -y -g
+```
+
+The resulting binary reports `git describe --tags --always --dirty` as its version (e.g. `1.12.7-3-gabc1234-dirty`), distinguishable from official releases (stable / `rc` / `beta` / `alpha` semver) and from `npm install -g` copies.
+
 ### Client on a non-Olares machine (Scenario B)
 
 ```bash
