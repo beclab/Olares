@@ -73,10 +73,6 @@ Test that your agent can retrieve real-time information from the internet.
 2. Ask a question that requires current information.
 3. Check the response. If the agent returns up-to-date information, the web search integration is working.
 
-   :::tip Check tool calls
-   Look for **Tool call** blocks in the chat to confirm the agent is using the `web_search` or `web_fetch` tools.
-   :::
-
    ![Web search results using SearXNG](/images/manual/use-cases/openclaw-web-search-results1.png#bordered)
 
 :::tip Full-text retrieval

@@ -86,7 +86,7 @@ The OpenClaw sandbox is disabled by default. You can enable it by modifying the 
     - **Scope**: Select **agent**.
     - **Workspace Access**: Select **rw**.
 
-    ![Enable sandbox in Control UI](/images/manual/use-cases/openclaw-sandbox-enable-ui.png#bordered)
+    ![Enable sandbox in Control UI](/images/manual/use-cases/openclaw-sandbox-enable-ui1.png#bordered)
     
 5. Click **Save** in the upper-right corner.
 6. Restart OpenClaw for the changes to take effect.

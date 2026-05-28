@@ -127,7 +127,7 @@ Ensure that the [clawhub skill is installed](#install-via-openclaw-config). This
 
     The status of **caldav-calendar** is **ready**, indicating the installation is successful.
 
-6. Open the **Control UI**, go to the **Skills** page, and then click the **Ready** tab. You will see the newly installed skill is enabled.
+6. Open the **Control UI**, select **Skills** from the left sidebar, and then click the **Ready** tab. You will see the newly installed skill is enabled.
 
     ![Newly installed skill is enabled](/images/manual/use-cases/skill-enabled.png#bordered)
 
