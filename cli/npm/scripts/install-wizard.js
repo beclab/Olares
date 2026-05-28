@@ -305,7 +305,7 @@ async function stepInstallGlobally(interactive) {
   if (s) s.start(startLine); else console.log(startLine);
 
   try {
-    await runSilentAsync('npm', ['install', '-g', PKG], { timeout: 120000 });
+    await runSilentAsync('npm', ['install', '-g', PKG], { timeout: 600000 });
     if (s) s.stop(doneLine); else console.log(doneLine);
   } catch (err) {
     if (looksLikeEexistConflict(err)) {
@@ -321,7 +321,7 @@ async function stepInstallGlobally(interactive) {
 
 async function skillsAlreadyInstalled() {
   try {
-    const out = await runSilentAsync('npx', ['-y', 'skills', 'ls', '-g'], { timeout: 120000 });
+    const out = await runSilentAsync('npx', ['-y', 'skills', 'ls', '-g'], { timeout: 600000 });
     return /^olares-/m.test(out.toString());
   } catch (_) {
     return false;
@@ -337,11 +337,33 @@ async function stepInstallSkills(interactive) {
       if (s) s.stop(msg.step2Skip); else console.log(msg.step2Skip);
       return;
     }
-    await runSilentAsync('npx', ['-y', 'skills', 'add', SKILLS_REPO, '-y', '-g'], { timeout: 120000 });
+    await runSilentAsync('npx', ['-y', 'skills', 'add', SKILLS_REPO, '-y', '-g'], { timeout: 600000 });
     if (s) s.stop(msg.step2Done); else console.log(msg.step2Done);
-  } catch (_) {
+  } catch (err) {
     const line = fmt(msg.step2Fail, SKILLS_REPO);
     if (s) s.stop(line); else console.error(line);
+
+    const isTimeout = !!(err && (err.code === 'ETIMEDOUT' || err.killed));
+    const details = [];
+    if (err && err.code) {
+      details.push(`  code: ${err.code}`);
+    } else if (err && err.signal) {
+      details.push(`  signal: ${err.signal}${err.killed ? ' (killed)' : ''}`);
+    }
+    const stderrTail = err && err.stderr ? err.stderr.toString().trim().slice(-2048) : '';
+    const stdoutTail = err && err.stdout ? err.stdout.toString().trim().slice(-2048) : '';
+    if (stderrTail) details.push(`  stderr (tail):\n${stderrTail}`);
+    if (stdoutTail) details.push(`  stdout (tail):\n${stdoutTail}`);
+    if (details.length) {
+      const blob = details.join('\n');
+      if (interactive) p.log.error(blob); else console.error(blob);
+    }
+
+    if (isTimeout) {
+      const hint = `Timed out after 10 min. Likely cause: slow / proxied connection to github.com during git clone.\nRetry outside the wizard: npx skills add ${SKILLS_REPO} -y -g`;
+      if (interactive) p.log.warn(hint); else console.error(hint);
+    }
+
     process.exit(1);
   }
 }
