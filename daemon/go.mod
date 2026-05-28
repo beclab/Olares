@@ -19,8 +19,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/beclab/Olares/cli v0.0.0-20251230161135-5264df60cc33
-	github.com/beclab/Olares/framework/app-service v0.0.0-20260522162612-61734f52ff96
-	github.com/beclab/api v0.0.8
+	github.com/beclab/Olares/framework/app-service v0.0.0-20260528090802-b69f2bf96b82
+	github.com/beclab/api v0.0.10
 	github.com/containerd/containerd v1.7.29
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
@@ -33,6 +33,7 @@ require (
 	github.com/jaypipes/ghw v0.13.0
 	github.com/jochenvg/go-udev v0.0.0-20171110120927-d6b62d56d37b
 	github.com/joho/godotenv v1.5.1
+	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/labstack/echo/v4 v4.0.0-00010101000000-000000000000
 	github.com/libp2p/go-netroute v0.2.2
@@ -103,6 +104,7 @@ require (
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/containerd/ttrpc v1.2.7 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
+	github.com/containernetworking/cni v1.2.0-rc1 // indirect
 	github.com/containers/image/v5 v5.36.1 // indirect
 	github.com/containers/storage v1.59.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
