@@ -6,6 +6,7 @@ NS="${NS:-app-gateway}"
 GW_NAME="${GW_NAME:-app-gateway}"
 ENVOY_PROXY_NAME="${ENVOY_PROXY_NAME:-app-gateway-envoy-proxy}"
 MESH_LINKERD_ENABLED="${MESH_LINKERD_ENABLED:-true}"
+TLS_ENABLED="${TLS_ENABLED:-true}"
 LINKERD_NS="${LINKERD_NS:-linkerd}"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -83,6 +84,10 @@ if ! kubectl -n "${NS}" get svc "${DATA_SVC}" >/dev/null 2>&1; then
 fi
 data_target_port="$(kubectl -n "${NS}" get svc "${DATA_SVC}" -o jsonpath='{.spec.ports[?(@.port==80)].targetPort}')"
 [[ "${data_target_port}" == "10080" ]] || fail "Service ${DATA_SVC} port 80 targetPort=${data_target_port:-<unset>} (want 10080)"
+if [[ "${TLS_ENABLED}" == "true" ]]; then
+  data_tls_target_port="$(kubectl -n "${NS}" get svc "${DATA_SVC}" -o jsonpath='{.spec.ports[?(@.port==443)].targetPort}')"
+  [[ "${data_tls_target_port}" == "10443" ]] || fail "Service ${DATA_SVC} port 443 targetPort=${data_tls_target_port:-<unset>} (want 10443)"
+fi
 mapfile -t data_eps < <(kubectl -n "${NS}" get endpoints "${DATA_SVC}" -o jsonpath='{range .subsets[*].addresses[*]}{.ip}{"\n"}{end}' | sort -u)
 [[ ${#data_eps[@]} -gt 0 ]] || fail "Endpoints ${DATA_SVC} has no addresses (selector mismatch or EG data-plane not Ready)"
 mapfile -t envoy_eps < <(kubectl -n "${NS}" get endpoints -l gateway.envoyproxy.io/owning-gateway-name="${GW_NAME}" -o jsonpath='{range .items[*].subsets[*].addresses[*]}{.ip}{"\n"}{end}' | sort -u)

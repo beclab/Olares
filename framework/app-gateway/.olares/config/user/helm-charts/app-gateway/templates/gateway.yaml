@@ -30,5 +30,10 @@ spec:
           from: All
       tls:
         mode: Terminate
-        certificateRefs: []
+        # Keep a syntactically valid cert ref so Gateway updates are accepted
+        # before the actual entrance TLS Secret is synced.
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: app-gateway-tls
     {{- end }}
