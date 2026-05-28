@@ -24,6 +24,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/openclaw-skills",
                 },
                 {
+                  text: "通过自然语言管理 Olares",
+                  link: "/zh/use-cases/openclaw-olares-skills",
+                },                
+                {
                   text: "启用本地文件访问",
                   link: "/zh/use-cases/openclaw-local-access",
                 },
