@@ -248,11 +248,16 @@ jobs:
           REPO_PATH: ${{ secrets.REPO_PATH }}
         run: |
           mkdir -p cli-output
-          for target in linux_amd64 linux_arm linux_arm64 darwin_arm64 windows_amd64; do
+          for target in linux_amd64 linux_arm linux_arm64 darwin_amd64 darwin_arm64 windows_amd64 windows_arm64; do
+            # with-release-id (existing — base-package install.sh consumes this)
             file="olares-cli-v${VERSION}_${target}.${RELEASE_ID}.tar.gz"
             curl -sSfL -o "cli-output/${file}" "https://cdn.olares.com${REPO_PATH}${file}"
+            # without-release-id (NEW — @olares/cli npm postinstall consumes this stable name)
+            file_npm="olares-cli-v${VERSION}_${target}.tar.gz"
+            curl -sSfL -o "cli-output/${file_npm}" "https://cdn.olares.com${REPO_PATH}${file_npm}"
           done
-          
+
+
       - name: 'Archives'
         run: |
           cp .dist/install-wizard/install.sh build/base-package
@@ -282,3 +287,31 @@ jobs:
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-npm:
+    needs: [push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout source code'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.tags }}
+
+      - name: 'Set up Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 'Set npm version to release tag'
+        working-directory: cli/npm
+        run: |
+          npm version "${{ github.event.inputs.tags }}" \
+            --no-git-tag-version \
+            --allow-same-version
+
+      - name: 'Publish @olares/cli to npm (latest dist-tag)'
+        working-directory: cli/npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_OLARES_PUBLISH_TOKEN }}
+        run: npm publish --access public
