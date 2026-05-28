@@ -5,11 +5,37 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw upgrade, upgrade troubleshooting
+app_version: "1.0.2"
+doc_version: "1.1"
+doc_updated: "2026-05-28"
 ---
 
 # Upgrade OpenClaw
 
 Before upgrading an existing OpenClaw installation, review the version-specific changes and troubleshooting steps on this page to ensure a smooth transition.
+
+## Upgrade to 2026.05.26
+
+The OpenClaw 2026.05.26 update introduces significant architectural changes. After upgrading to this version, your agent might temporarily lose some functionality until you update your installed plugins and skills to their latest compatible versions.
+
+To restore your agent's functionality, open the OpenClaw CLI and use one of the following methods:
+
+- **Run the automated diagnostic tool (Recommended)**: Run the following command to let the system automatically detect and repair compatibility issues:
+
+    ```bash
+    openclaw doctor --fix
+    ```
+- **Update all plugins**: Run the following command to batch update all your installed plugins at once:
+
+    ```bash
+    openclaw plugins update --all
+    ```
+
+    Alternatively, you can update plugins individually if you prefer.
+
+- **Manually update custom plugins**: If you installed plugins manually (for example, using `npx` or by directly uploading files), the automated CLI commands cannot update them. You must refer to the original plugin developer's official documentation for specific upgrade instructions.
+
+For more information, see the [OpenClaw release notes](https://github.com/openclaw/openclaw/releases/tag/v2026.5.26)
 
 ## Upgrade to 2026.03.22
 
