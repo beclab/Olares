@@ -194,6 +194,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/paperclip",
             },
             {
+              text: "KoboldCpp",
+              link: "/zh/use-cases/koboldcpp",
+            },
+            {
               text: "PDFMathTranslate",
               link: "/zh/use-cases/pdfmathtranslate",
             },
