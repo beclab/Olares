@@ -33,14 +33,10 @@ const msg = {
   step1EexistStop: 'Skipped global install: existing olares-cli left in place at /usr/local/bin/olares-cli',
   step1Eexist:
     'On a Linux Olares host the OS bundle owns /usr/local/bin/olares-cli; npm will not overwrite it.\n' +
-    'The wizard exited before installing skills -- pick one workaround below and run the skills step yourself:\n' +
-    '  1) Side-by-side install (recommended; keeps OS bundle for system-layer verbs):\n' +
-    '       npm install -g %s --prefix=$HOME/.olares-cli-npm\n' +
-    '       export PATH="$HOME/.olares-cli-npm/bin:$PATH"   # before /usr/local/bin\n' +
-    '       npx skills add %s -y -g\n' +
-    '  2) One-off ops via npx (no PATH changes):\n' +
-    '       npx %s@latest <verb>\n' +
-    '       npx skills add %s -y -g\n' +
+    'The wizard exited before installing skills -- finish the side-by-side install yourself (keeps the OS bundle for system-layer verbs):\n' +
+    '  npm install -g %s --prefix=$HOME/.olares-cli-npm\n' +
+    '  export PATH="$HOME/.olares-cli-npm/bin:$PATH"   # before /usr/local/bin\n' +
+    '  npx skills add %s -y -g\n' +
     'See cli/README.md "On a Linux Olares host" for details.',
   preflightKeepRelease:
     'Detected release olares-cli at %s (%s); keeping it.',
@@ -314,7 +310,7 @@ async function stepInstallGlobally(interactive) {
   } catch (err) {
     if (looksLikeEexistConflict(err)) {
       if (s) s.stop(msg.step1EexistStop); else console.error(msg.step1EexistStop);
-      const hint = fmt(msg.step1Eexist, PKG, SKILLS_REPO, PKG, SKILLS_REPO);
+      const hint = fmt(msg.step1Eexist, PKG, SKILLS_REPO);
       if (interactive) p.log.warn(hint); else console.error(hint);
     } else {
       if (s) s.stop(fmt(msg.step1Fail, PKG)); else console.error(fmt(msg.step1Fail, PKG));
