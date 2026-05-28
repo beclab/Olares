@@ -1,5 +1,4 @@
 ---
-outline: [2, 3]
 description: Troubleshoot common issues and find answers to frequently asked questions about OpenClaw on Olares.
 head:
   - - meta
@@ -16,17 +15,17 @@ This page provides solutions to common issues and answers to frequently asked qu
 
 If you encounter a problem not listed here, check the [Upgrade OpenClaw](openclaw-upgrade.md) page for version-specific changes or refer to the [official OpenClaw documentation](https://docs.openclaw.ai).
 
-### Cannot restart OpenClaw in CLI
+## Cannot restart OpenClaw in CLI
 
 If you attempt to manually start, stop, or restart OpenClaw using commands like `openclaw gateway` or `openclaw gateway stop` in the OpenClaw CLI, you receive the following error messages:
 - `Gateway failed to start: gateway already running (pid 1); lock timeout after 5000ms`
 - `Gateway service check failed: Error: systemctl --user unavailable: spawn systemctl ENOENT`
 
-#### Cause
+### Cause
 
 OpenClaw is deployed as a containerized app in Olares, where the gateway runs as the primary container process `pid 1` and is always active. This environment does not use standard Linux system and service management tools such as `systemd` and `systemctl`, so these commands do not work. 
 
-#### Solution
+### Solution
 
 Do not use the OpenClaw CLI to manage the gateway service. Instead, restart OpenClaw using one of the following methods.
 
@@ -39,15 +38,15 @@ Do not use the OpenClaw CLI to manage the gateway service. Instead, restart Open
 
 Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
 
-### OpenClaw automatically stops during long tasks
+## OpenClaw automatically stops during long tasks
 
 When you ask the OpenClaw agent to perform tasks that take a long time to process like massive web scrapes or deep analysis, the task is abruptly terminated before returning the result.
 
-#### Cause
+### Cause
 
 By default, OpenClaw sets a maximum runtime limit of 10 minutes per task. If a task exceeds this limit, the system forcefully terminates it to save resources.
 
-#### Solution
+### Solution
 
 Extend this timeout limit by modifying the configuration file as follows:
 1. Open the Control UI, go to **Config** > **Raw**, and then find the `agents` section.
@@ -64,7 +63,7 @@ Extend this timeout limit by modifying the configuration file as follows:
     ```
 3. Click **Save** to restart the gateway and apply the changes.
 
-### "Rate limit exceeded" error when installing skills
+## "Rate limit exceeded" error when installing skills
 
 Installing a skill fails with a `429` error:
 
@@ -73,11 +72,11 @@ Downloading xurl@1.0.0 from ClawHub...
 ClawHub /api/v1/download failed (429): Rate limit exceeded
 ```
 
-#### Cause
+### Cause
 
 The ClawHub registry temporarily limits downloads due to high traffic to maintain server stability.
 
-#### Solution
+### Solution
 
 Wait a few hours and run the installation command again.
 
@@ -85,13 +84,13 @@ Wait a few hours and run the installation command again.
 
 There is a noticeable delay before the agent begins typing its first response.
 
-#### Cause
+### Cause
 
 This usually happens due to the way Ollama manages system resources and application settings:
 - **Automatic offloading**: To save resources, Ollama unloads models from memory by default when they are idle. The next time you interact with the model, it takes time to reload it, causing a noticeable delay in the first response.
 - **Context setting clashes**: If you have multiple applications using the same model but with different context settings, Ollama is forced to constantly unload and reload the model to switch between those different configurations.
 
-#### Solution
+### Solution
 
 To fix the issue, try one of the following methods.
 
@@ -155,3 +154,38 @@ To completely remove OpenClaw and all of its data before reinstalling, follow th
 </template>
 </Tabs>
 
+## "Gateway service disabled" error during restart
+
+If you attempt to restart the gateway using the `openclaw gateway restart` command in the OpenClaw CLI, you might receive errors similar to the following:
+
+```text
+Gateway service disabled.
+Start with: openclaw gateway install
+Start with: openclaw gateway
+Start with: systemctl --user start openclaw-gateway.service
+Start with: systemd user services are unavailable; install/enable systemd or run the gateway under your supervisor.
+Start with: If you're in a container, run the gateway in the foreground instead of openclaw gateway.
+```
+
+### Cause
+
+The standard `openclaw gateway restart` command is designed for traditional Linux environments and does not work in Olares' containerized deployments.
+
+### Solution
+
+Use the `restart-gateway` command. This command tears down the running gateway, picks up your latest configurations, and brings the agent back online quickly.
+
+1. Open the OpenClaw CLI.
+2. Run the following command:
+
+    ```bash
+    restart-gateway
+    ```
+
+    The terminal will display the restart progress and confirm when the gateway is back online:
+
+    ```text
+    gateway: restart requested
+    gateway: old process gone, waiting for new one
+    gateway: ready
+    ```
