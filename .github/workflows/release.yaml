@@ -287,31 +287,3 @@ jobs:
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  publish-npm:
-    needs: [push]
-    runs-on: ubuntu-latest
-    steps:
-      - name: 'Checkout source code'
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.tags }}
-
-      - name: 'Set up Node.js'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: 'Set npm version to release tag'
-        working-directory: cli/npm
-        run: |
-          npm version "${{ github.event.inputs.tags }}" \
-            --no-git-tag-version \
-            --allow-same-version
-
-      - name: 'Publish @olares/cli to npm (latest dist-tag)'
-        working-directory: cli/npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_OLARES_PUBLISH_TOKEN }}
-        run: npm publish --access public

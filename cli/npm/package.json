@@ -6,7 +6,8 @@
     "olares-cli": "./bin/olares-cli.js"
   },
   "scripts": {
-    "postinstall": "node scripts/install.js"
+    "postinstall": "node scripts/install.js",
+    "prepublishOnly": "node scripts/check-version.js"
   },
   "os": [
     "darwin",
