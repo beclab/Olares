@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+	corev1 "k8s.io/api/core/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
@@ -146,6 +147,7 @@ func (s *Server) Start(ctx context.Context) error {
 		audit:        Auditor{Logger: s.logger},
 		hostUser:     s.opts.HostUser,
 		snapshotFunc: snapFn,
+		k8sClient:    s.k8sClient,
 	})
 	healthSvc := health.NewServer()
 	healthSvc.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
@@ -207,6 +209,7 @@ type authzHandler struct {
 	audit        Auditor
 	hostUser     HostUserConfig
 	snapshotFunc cluster.SnapshotFunc
+	k8sClient    ctrlclient.Client
 }
 
 func (h *authzHandler) Check(ctx context.Context, req *authv3.CheckRequest) (*authv3.CheckResponse, error) {
@@ -222,13 +225,14 @@ func (h *authzHandler) Check(ctx context.Context, req *authv3.CheckRequest) (*au
 	phase := "baseline"
 	if snap.InClusterGatewayEnabled && IsSharedInclusterHost(host) {
 		phase = "incluster"
-		return h.checkInCluster(host, path, method, headers, rid, phase, start)
+		return h.checkInCluster(ctx, host, path, method, headers, rid, phase, start)
 	}
 	return h.checkHostUserBaseline(host, path, method, headers, rid, phase, start)
 }
 
-func (h *authzHandler) checkInCluster(host, path, method string, headers map[string]string, rid, phase string, start time.Time) (*authv3.CheckResponse, error) {
-	id := InClusterIdentity(host, headers)
+func (h *authzHandler) checkInCluster(ctx context.Context, host, path, method string, headers map[string]string, rid, phase string, start time.Time) (*authv3.CheckResponse, error) {
+	known := h.loadKnownUsers(ctx)
+	id := InClusterIdentity(host, headers, known)
 	switch id.Action {
 	case ActionDeny:
 		return h.denyResponse(rid, host, method, path, phase, start, headers, id, "")
@@ -276,6 +280,39 @@ func (h *authzHandler) checkHostUserBaseline(host, path, method string, headers 
 			},
 		},
 	}, nil
+}
+
+// loadKnownUsers lists Namespaces and derives the Olares user set from two
+// merged signals: (1) namespace names with the "user-space-" prefix, and (2)
+// non-empty values of the bytetrade.io/ns-owner label. Returns nil when the
+// handler has no k8sClient (e.g. legacy server_test wiring) or when the List
+// call fails; nil keeps InClusterIdentity behavior equivalent to the legacy
+// DeriveViewer-only path (the WI-27 app_user_fallback simply does not fire).
+// Caller scope: invoked once per ext_authz Check on the in-cluster path; no
+// process-wide cache (intentionally simple — NS count is O(users + system NS),
+// in the tens to low hundreds for the LiteLLM pilot scale).
+func (h *authzHandler) loadKnownUsers(ctx context.Context) map[string]struct{} {
+	if h.k8sClient == nil {
+		return nil
+	}
+	var nsList corev1.NamespaceList
+	if err := h.k8sClient.List(ctx, &nsList); err != nil {
+		h.audit.logger().Warn("authz_load_known_users_failed", "err", err.Error())
+		return nil
+	}
+	out := make(map[string]struct{}, len(nsList.Items))
+	for i := range nsList.Items {
+		ns := &nsList.Items[i]
+		if strings.HasPrefix(ns.Name, "user-space-") {
+			if u := strings.TrimPrefix(ns.Name, "user-space-"); u != "" {
+				out[strings.ToLower(u)] = struct{}{}
+			}
+		}
+		if owner := strings.TrimSpace(ns.Labels[nsOwnerLabel]); owner != "" {
+			out[strings.ToLower(owner)] = struct{}{}
+		}
+	}
+	return out
 }
 
 func (h *authzHandler) denyResponse(rid, host, method, path, phase string, start time.Time, headers map[string]string, dec Decision, via string) (*authv3.CheckResponse, error) {

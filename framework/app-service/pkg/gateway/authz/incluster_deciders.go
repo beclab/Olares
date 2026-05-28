@@ -8,7 +8,10 @@ import "strings"
 // falls through to HostUser (weak path). Malformed identity is denied.
 // behavior: Pass for non-Shared hosts; Pass when l5d absent; Deny on parse error;
 // Deny when derived viewer disagrees with host viewer label; Allow with Viewer set.
-func InClusterIdentity(authority string, headers map[string]string) Decision {
+// knownUsers (optional, may be nil) enables the WI-27 <app>-<user>
+// app_user_fallback derivation; nil keeps the legacy DeriveViewer-equivalent
+// behavior so existing callers need not change.
+func InClusterIdentity(authority string, headers map[string]string, knownUsers map[string]struct{}) Decision {
 	if !IsSharedInclusterHost(authority) {
 		return Decision{Action: ActionPass}
 	}
@@ -24,7 +27,7 @@ func InClusterIdentity(authority string, headers map[string]string) Decision {
 			Message: err.Error(),
 		}
 	}
-	derived, ok := DeriveViewer(callerNS)
+	derived, _, ok := DeriveViewerWithMeta(callerNS, nil, knownUsers)
 	if !ok {
 		return Decision{
 			Action:  ActionDeny,

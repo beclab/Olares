@@ -7,11 +7,21 @@ import (
 
 const (
 	headerL5dClientID = "l5d-client-id"
+
+	nsOwnerLabel = "bytetrade.io/ns-owner"
+)
+
+const (
+	SourceNone             = "none"
+	SourceNsLabel          = "ns_label"
+	SourcePrefixUserSpace  = "prefix_user_space"
+	SourcePrefixUserSystem = "prefix_user_system"
+	SourceAppUserFallback  = "app_user_fallback"
 )
 
 var (
-	errEmptyL5d       = errors.New("empty l5d-client-id")
-	errMalformedL5d   = errors.New("malformed l5d-client-id")
+	errEmptyL5d     = errors.New("empty l5d-client-id")
+	errMalformedL5d = errors.New("malformed l5d-client-id")
 )
 
 // ParseL5dClientID parses Linkerd source identity:
@@ -49,6 +59,44 @@ func DeriveViewer(callerNS string) (viewer string, ok bool) {
 	default:
 		return "", false
 	}
+}
+
+// DeriveViewerWithMeta resolves the Olares viewer from a caller namespace,
+// optional caller-namespace labels and an optional known-users set.
+//
+// requirement: WI-27 closes the LiteLLM G-B gap by accepting <app>-<user>
+// caller namespaces (e.g. litellm-brucedai) when <user> is a known Olares
+// user; the legacy DeriveViewer only handled user-space-/user-system- prefixes.
+// behavior: priority paths (first match wins) —
+//
+//	1) nsLabels["bytetrade.io/ns-owner"] non-empty -> ns_label
+//	2) HasPrefix "user-space-"                      -> prefix_user_space
+//	3) HasPrefix "user-system-"                     -> prefix_user_system
+//	4) <app>-<user> where <user> in knownUsers      -> app_user_fallback
+//
+// Returns ("", "none", false) when no path matches. Pure function.
+// test: TC-031~036 in incluster_test.go.
+func DeriveViewerWithMeta(callerNS string, nsLabels map[string]string, knownUsers map[string]struct{}) (viewer string, source string, ok bool) {
+	if owner := strings.ToLower(strings.TrimSpace(nsLabels[nsOwnerLabel])); owner != "" {
+		return owner, SourceNsLabel, true
+	}
+	ns := strings.ToLower(strings.TrimSpace(callerNS))
+	if ns == "" {
+		return "", SourceNone, false
+	}
+	switch {
+	case strings.HasPrefix(ns, "user-space-"):
+		return strings.TrimPrefix(ns, "user-space-"), SourcePrefixUserSpace, true
+	case strings.HasPrefix(ns, "user-system-"):
+		return strings.TrimPrefix(ns, "user-system-"), SourcePrefixUserSystem, true
+	}
+	if i := strings.LastIndex(ns, "-"); i > 0 && i < len(ns)-1 {
+		candidate := ns[i+1:]
+		if _, hit := knownUsers[candidate]; hit {
+			return candidate, SourceAppUserFallback, true
+		}
+	}
+	return "", SourceNone, false
 }
 
 // IsSharedInclusterHost reports whether authority looks like a v2 Shared entrance host.
