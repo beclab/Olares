@@ -112,6 +112,7 @@ type ApplicationConfig struct {
 	NeedsSharedAccess   bool
 	LLMGatewaySupported bool
 	OverlayGateway      OverlayGateway
+	WorkloadReplicas    *WorkloadReplicas
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
