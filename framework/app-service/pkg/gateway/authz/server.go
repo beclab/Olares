@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 )
@@ -53,6 +54,11 @@ type ServerOptions struct {
 
 	// SnapshotFunc reads ClusterConfig (default: cluster.GetSnapshot).
 	SnapshotFunc cluster.SnapshotFunc
+
+	// K8sClient is a controller-runtime client used by WI-27 request-path
+	// wiring to list Namespaces and derive known users. Nil keeps the current
+	// DeriveViewer fallback behavior.
+	K8sClient ctrlclient.Client
 }
 
 // DefaultServerOptions returns the defaults for the in-process PEP.
@@ -86,8 +92,9 @@ func ParseSkipViewers(s string) []string {
 // to be added to a controller-runtime manager via mgr.Add(srv), which
 // invokes Start(ctx) and triggers graceful drain on ctx cancellation.
 type Server struct {
-	opts   ServerOptions
-	logger *slog.Logger
+	opts      ServerOptions
+	logger    *slog.Logger
+	k8sClient ctrlclient.Client
 }
 
 // NewServer constructs a Server with the provided options. The struct is
@@ -103,7 +110,11 @@ func NewServer(opts ServerOptions) *Server {
 	if opts.HTTPAddr == "" {
 		opts.HTTPAddr = ":9002"
 	}
-	return &Server{opts: opts, logger: l}
+	return &Server{
+		opts:      opts,
+		logger:    l,
+		k8sClient: opts.K8sClient,
+	}
 }
 
 // NeedLeaderElection implements manager.LeaderElectionRunnable. Each
@@ -315,7 +326,7 @@ func (h *authzHandler) allowResponse(rid, host, method, path, phase string, star
 		}
 	}
 	return &authv3.CheckResponse{
-		Status: &rpcstatus.Status{Code: int32(codes.OK)},
+		Status:       &rpcstatus.Status{Code: int32(codes.OK)},
 		HttpResponse: &authv3.CheckResponse_OkResponse{OkResponse: ok},
 	}, nil
 }

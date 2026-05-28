@@ -21,14 +21,15 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestParseSkipViewers(t *testing.T) {
 	cases := map[string][]string{
-		"":                  nil,
-		"   ":               nil,
-		"alice":             {"alice"},
-		"Alice, Bob,,c-d ":  {"alice", "bob", "c-d"},
+		"":                 nil,
+		"   ":              nil,
+		"alice":            {"alice"},
+		"Alice, Bob,,c-d ": {"alice", "bob", "c-d"},
 	}
 	for in, want := range cases {
 		got := ParseSkipViewers(in)
@@ -381,4 +382,23 @@ func TestServer_StartStop_GraceShutdown(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Start did not exit after context cancel")
 	}
+}
+
+func TestNewServer_K8sClientPassthrough(t *testing.T) {
+	t.Run("non-nil client passes through", func(t *testing.T) {
+		k8sClient := fake.NewClientBuilder().Build()
+		srv := NewServer(ServerOptions{
+			K8sClient: k8sClient,
+		})
+		if srv.k8sClient != k8sClient {
+			t.Fatalf("k8sClient passthrough mismatch: got %v want %v", srv.k8sClient, k8sClient)
+		}
+	})
+
+	t.Run("nil client stays nil", func(t *testing.T) {
+		srv := NewServer(ServerOptions{})
+		if srv.k8sClient != nil {
+			t.Fatalf("expected nil k8sClient, got %v", srv.k8sClient)
+		}
+	})
 }

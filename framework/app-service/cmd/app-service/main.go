@@ -14,8 +14,8 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/controllers"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver"
-	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
+	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/authz"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
@@ -291,6 +291,7 @@ func main() {
 				SkipPrefixes: authz.ParseSkipViewers(authzSkipViewers),
 			},
 			SnapshotFunc: cluster.DefaultSnapshotFunc(),
+			K8sClient:    mgr.GetClient(),
 		})
 		if err := mgr.Add(authzSrv); err != nil {
 			setupLog.Error(err, "Unable to register in-process gateway authz server")
