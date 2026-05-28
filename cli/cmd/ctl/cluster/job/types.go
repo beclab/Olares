@@ -66,6 +66,24 @@ type JobSpec struct {
 	Parallelism  *int  `json:"parallelism,omitempty"`
 	BackoffLimit *int  `json:"backoffLimit,omitempty"`
 	Suspend      *bool `json:"suspend,omitempty"`
+
+	// Selector is the K8s-native pod selector the Job controller uses
+	// to find its child pods. In K8s 1.27+ the auto-generated
+	// matchLabels switched from the legacy `controller-uid=<uid>` to
+	// `batch.kubernetes.io/controller-uid=<uid>`; using the
+	// server-returned selector keeps `cluster job pods` and
+	// `cluster job rerun` working regardless of which label the cluster
+	// is currently stamping onto pods (manualSelector=true Jobs included).
+	Selector *JobSelector `json:"selector,omitempty"`
+}
+
+// JobSelector mirrors the small subset of metav1.LabelSelector we
+// actually consume. matchExpressions is intentionally omitted —
+// auto-generated Job selectors are matchLabels-only, and the few
+// manualSelector Jobs that use expressions can fall back to the
+// legacy `controller-uid=<uid>` path (see pods.go::jobPodSelector).
+type JobSelector struct {
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }
 
 type JobStatus struct {

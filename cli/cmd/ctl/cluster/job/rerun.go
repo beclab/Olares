@@ -158,11 +158,18 @@ func runRerun(ctx context.Context, o *clusteropts.ClusterOptions, namespace, nam
 		return err
 	}
 
-	// 2. List Pods owned by this Job. The Job controller stamps each
-	// child Pod with `controller-uid=<job-uid>` regardless of any
-	// user-supplied labels, so this selector is the canonical way to
-	// find them (same trick `cluster job pods` uses).
-	selector := "controller-uid=" + j.Metadata.UID
+	// 2. List Pods owned by this Job using the K8s-native selector
+	// the Job controller itself wrote into spec.selector (see
+	// pods.go::jobPodSelector for why we don't hardcode
+	// controller-uid=<uid> anymore — K8s 1.27+ switched the auto-
+	// generated label key, and manualSelector=true Jobs pick their
+	// own). If spec.selector is empty we fall back to the legacy
+	// UID-based clause so this still works on ancient clusters.
+	selector, _ := jobPodSelector(*j)
+	if selector == "" {
+		return fmt.Errorf("job %s/%s: cannot derive a pod selector (spec.selector empty and metadata.uid blank)",
+			namespace, name)
+	}
 	q := url.Values{}
 	q.Set("labelSelector", selector)
 	listPath := fmt.Sprintf("/api/v1/namespaces/%s/pods?%s", url.PathEscape(namespace), q.Encode())
@@ -172,8 +179,8 @@ func runRerun(ctx context.Context, o *clusteropts.ClusterOptions, namespace, nam
 	}
 	pods := resp.Items
 	if len(pods) == 0 {
-		return fmt.Errorf("job %s/%s has no child pods (controller-uid=%s matched nothing) — nothing to rerun. If the Job has not yet scheduled any pod, wait and try again",
-			namespace, name, j.Metadata.UID)
+		return fmt.Errorf("job %s/%s has no child pods (selector %q matched nothing) — nothing to rerun. If the Job has not yet scheduled any pod, wait and try again",
+			namespace, name, selector)
 	}
 
 	// Stable order so the prompt + JSON output diff cleanly across

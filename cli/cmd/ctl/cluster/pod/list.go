@@ -77,7 +77,22 @@ and is mutually exclusive with --page > 1.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return RunList(c.Context(), o, p, namespace, labelSelector, fieldSelector)
+			// kubectl-style "No resources found" on empty list. We
+			// only print it in human-readable modes; JSON consumers
+			// already see {items: [], totalItems: 0} and don't need
+			// the courtesy line cluttering their parsed output.
+			n, err := RunList(c.Context(), o, p, namespace, labelSelector, fieldSelector)
+			if err != nil {
+				return err
+			}
+			if n == 0 && !o.IsJSON() && !o.Quiet {
+				if namespace == "" {
+					fmt.Fprintln(os.Stderr, "No pods found.")
+				} else {
+					fmt.Fprintf(os.Stderr, "No pods found in %s namespace.\n", namespace)
+				}
+			}
+			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "scope to a single namespace (default: all namespaces visible to your profile)")
@@ -89,26 +104,34 @@ and is mutually exclusive with --page > 1.
 }
 
 // RunList is the exported entry point so sibling packages (e.g.
-// cluster/application) can share the same fetch + render path
-// without duplicating the table layout. opts and pagination are both
-// required; pass a fresh clusteropts.NewClusterOptions(f) +
+// cluster/application, cluster/job) can share the same fetch + render
+// path without duplicating the table layout. opts and pagination are
+// both required; pass a fresh clusteropts.NewClusterOptions(f) +
 // clusteropts.NewPaginationOptions() when calling from outside cobra.
 // namespace="" means cross-namespace.
+//
+// Returns the number of items rendered (post-filter, post-pagination)
+// so callers can layer their own empty-result UX on top — e.g.
+// `cluster job pods` prints a Job-specific hint about garbage-collected
+// pods instead of the generic "No pods found." that `cluster pod list`
+// uses. The count is the length of the items slice that actually went
+// out the door (not the server-side totalItems), so JSON-mode callers
+// can also distinguish "page returned no rows" from "no items match".
 func RunList(
 	ctx context.Context,
 	o *clusteropts.ClusterOptions,
 	p *clusteropts.PaginationOptions,
 	namespace, labelSelector, fieldSelector string,
-) error {
+) (int, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if err := p.Validate(); err != nil {
-		return err
+		return 0, err
 	}
 	client, err := o.Prepare()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Translate the kubectl-style --field-selector into KubeSphere's
@@ -118,18 +141,18 @@ func RunList(
 	// for the full mapping table.
 	fieldQ, err := translatePodFieldSelector(fieldSelector)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	items, total, err := clusteropts.FetchAllKubeSphere[Pod](ctx, client, p, func(page int) string {
 		return buildListPath(namespace, labelSelector, fieldQ, p, page)
 	})
 	if err != nil {
-		return fmt.Errorf("list pods: %w", err)
+		return 0, fmt.Errorf("list pods: %w", err)
 	}
 
 	if o.IsJSON() {
-		return o.PrintJSON(struct {
+		return len(items), o.PrintJSON(struct {
 			Items      []Pod `json:"items"`
 			TotalItems int   `json:"totalItems"`
 			Page       int   `json:"page"`
@@ -138,9 +161,9 @@ func RunList(
 		}{Items: items, TotalItems: total, Page: p.Page, Limit: p.Limit, All: p.All})
 	}
 	if o.Quiet {
-		return nil
+		return len(items), nil
 	}
-	return renderListTable(items, namespace == "", o.NoHeaders, p, total)
+	return len(items), renderListTable(items, namespace == "", o.NoHeaders, p, total)
 }
 
 // buildListPath assembles the KubeSphere pods endpoint plus query
