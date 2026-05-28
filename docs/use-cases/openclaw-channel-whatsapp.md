@@ -25,7 +25,7 @@ In this guide, you will learn how to:
 - Pair your personal WhatsApp number with a standalone bot account.
 - Disconnect and fully remove the WhatsApp integration.
 
-### Configure WhatsApp channel
+## Configure WhatsApp channel
 
 Choose your preferred configuration method.
 
