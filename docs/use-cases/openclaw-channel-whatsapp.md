@@ -33,7 +33,7 @@ Choose your preferred configuration method.
 <template #Standalone-account>
 
 :::info Prerequisite
-Before you begin, ensure you have registered a separate WhatsApp account for your bot and are logged into it on a mobile device.
+Before you begin, ensure you have registered a separate WhatsApp account for your bot, and you have logged into that account on a mobile device.
 :::
 
 1. Open the OpenClaw CLI from the Launchpad.
@@ -61,7 +61,7 @@ Before you begin, ensure you have registered a separate WhatsApp account for you
     - **WhatsApp allowFrom (optional pre-allowlist)**: Select **Unset allowFrom (default)**.
     - Select **Finished** to exit.
 
-    OpenClaw will automatically restart to apply the configurations. Wait about 5 to 10 minutes.
+    OpenClaw will automatically restart to apply the configurations. Wait for about 5 to 10 minutes.
 
 7. Once restarted, use your personal WhatsApp account to send a message to the bot's number. The bot will reply with a pairing command and code.
 8. Return to the OpenClaw CLI, paste the exact command provided in the chat (for example, `openclaw pairing approve whatsapp VUTNHSXS`), and then press **Enter**. 
@@ -88,7 +88,7 @@ Before you begin, ensure you have registered a separate WhatsApp account for you
 
     A QR code is displayed in the terminal.
 
-4. Open the bot's WhatsApp mobile app, go to **Linked Devices**, and then tap **Link a device** to scan the QR code.
+4. Open your WhatsApp mobile app, go to **Linked Devices**, and then tap **Link a device** to scan the QR code.
 5. Check in the OpenClaw CLI for the message `Linked after restart; web session ready`. It indicates the binding is successful.
 6. Continue to configure the following settings in OpenClaw CLI:
 
@@ -96,12 +96,8 @@ Before you begin, ensure you have registered a separate WhatsApp account for you
     - Enter your personal WhatsApp phone number when prompted.
     - Select **Finished** to exit.
 
-7. OpenClaw will automatically restart to apply the configuration. Wait about 5 to 10 minutes.
+7. OpenClaw will automatically restart to apply the configuration. Wait for about 5 to 10 minutes.
 8. Once restarted, open WhatsApp and send a message to yourself. The bot will reply to you within that same chat thread.
-
-    :::tip Note on personal mode
-    In this mode, the messages you send to the bot and the bot's replies will be mixed together in your self-chat.
-    :::
 </template>
 </Tabs>
 
