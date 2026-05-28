@@ -26,7 +26,7 @@ A single machine can store many profiles, but only one is current at a time. Eve
 1. Start the login process. Replace `alice123@olares.com` with your own Olares ID.
 
    ```bash
-   olares-cli profile login --olares-id alice123@olares.com
+   ./olares-cli profile login --olares-id alice123@olares.com
    ```
 
 2. When the CLI prompts `password for <id>:`, type your Olares password and press Enter. The input is hidden.
@@ -36,16 +36,15 @@ A single machine can store many profiles, but only one is current at a time. Eve
 4. Verify the profile is created and logged in.
 
    ```bash
-   olares-cli profile list
+   ./olares-cli profile list
    ```
-
-   Look for your Olares ID and a status of `logged-in (Xh Ym)`.
 
    Example output:
 
    ```text
-   NAME                   OLARES-ID              STATUS
-   *  laresprime@olares.com  laresprime@olares.com   logged-in (23h59m)
+    NAME                   OLARES-ID              STATUS
+    laresprime@olares.com  laresprime@olares.com  logged-in
+*   alexmiles@olares.com  alexmiles@olares.com  logged-in
    ```
    The leading `*` marks the current profile.
 

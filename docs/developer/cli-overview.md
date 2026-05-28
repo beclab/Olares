@@ -1,13 +1,20 @@
 ---
 outline: [2, 3]
-description: Overview of olares-cli, the official command-line tool for installing and operating Olares and for driving Olares from AI agents. Explains the three modes and which docs to read for which task.
+description: How to use olares-cli for cluster management, system diagnostics, and AI agent integration. Covers host, user, and in-cluster modes of operation.
 ---
 
 # Olares CLI
 
-`olares-cli` is the official command-line tool for Olares. It has three modes: host mode for cluster operations, user mode for acting on behalf of a logged-in user, and in-cluster mode for running inside an Olares app's container.
+`olares-cli` is the command-line tool for Olares. You can use it for the following tasks:
 
-## Three modes
+- **Manage the cluster**: install Olares on a new machine, upgrade between releases, add or remove nodes, and uninstall completely.
+- **Diagnose and repair the system**: run pre-installation checks, collect logs, query node status, and troubleshoot issues.
+- **Drive Olares from an AI agent**: let a Personal Agent manage files, apps, and settings on your behalf through natural language.
+
+Internally, `olares-cli` is also used to integrate Olares operations into CI pipelines, run automated tests, and script repetitive maintenance tasks.
+
+## Modes of Olares CLI
+Olares CLI is available through three modes that differ in where they run and how they authenticate.
 
 | Mode | Where it runs | How it authenticates |
 |------|---------------|----------------------|

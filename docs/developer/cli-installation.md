@@ -7,10 +7,10 @@ description: How to get olares-cli on the right machine. Covers the built-in CLI
 
 By default, the Olares installer ships `olares-cli` to `/usr/bin/olares-cli`.
 
-If you need to drive Olares from an AI agent on the same host, download the standalone CLI.
+If you need to drive Olares from an AI agent on the same host, follow this guide to download the standalone CLI.
 
 :::info
-Apps that run inside Olares such as Openclaw and NemoClaw ship with `olares-cli` preinstalled in their container image. You don't need to install Olares CLI manually.
+Apps that run inside Olares such as Hermes Agent ship with `olares-cli` preinstalled in their container image. You don't need to install Olares CLI manually.
 :::
 
 ## Download Olares CLI
@@ -48,12 +48,20 @@ The built-in CLI, the `olaresd` daemon, and the cluster components are version-l
 
    ::: code-group
 
-   ```bash [Linux and macOS]
+   ```bash [Linux x86_64]
    tar xzf olares-cli-v1.12.5-cli.1_linux_amd64.tar.gz
+   ```
+
+   ```bash [Linux ARM64]
+   tar xzf olares-cli-v1.12.5-cli.1_linux_arm64.tar.gz
    ```
 
    ```powershell [Windows]
    tar xzf olares-cli-v1.12.5-cli.1_windows_amd64.tar.gz
+   ```
+
+   ```bash [macOS Apple Silicon]
+   tar xzf olares-cli-v1.12.5-cli.1_darwin_arm64.tar.gz
    ```
 
    :::
@@ -77,5 +85,3 @@ The built-in CLI, the `olaresd` daemon, and the cluster components are version-l
    ```
 
    :::
-
-

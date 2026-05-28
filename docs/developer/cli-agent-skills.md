@@ -1,17 +1,17 @@
 ---
 outline: [2, 3]
-description: Install and use the Olares CLI Agent skill bundles from AI runtimes such as Cursor and Claude Code, or from Olares apps such as NemoClaw and Openclaw. Covers the bundles, the shared-first install order, and end-to-end usage.
+description: Install and use the Olares CLI agent skill bundles from AI runtimes such as Cursor and Claude Code, or from Olares apps such as NemoClaw and Openclaw. Covers the bundles, the shared-first install order, and end-to-end usage.
 ---
 
-# Install and use Agent skills
+# Install and use agent skills
 
-User mode and in-cluster mode of `olares-cli` are designed for AI agents, not for interactive use. To support this, `olares-cli` includes a set of Agent skill bundles, one per group of commands. Each bundle teaches an agent what each command does, which flags matter, how authentication works, and how to recover from common errors.
+The user and in-cluster modes of `olares-cli` are built for AI agents rather than interactive use. To support this, `olares-cli` includes a set of agent skill bundles, one per group of commands. Each bundle teaches an agent what each command does, which flags matter, how authentication works, and how to recover from common errors.
 
-## Understand Agent skills
+## Understand agent skills
 
-An Agent skill is a `SKILL.md` bundle that an AI runtime loads as a tool definition. When the agent receives a natural-language request such as "list the files in my Olares Home folder", it consults the loaded skill to know the corresponding command is `olares-cli files ls drive/Home/`, and runs it on your behalf.
+An agent skill is a `SKILL.md` bundle that an AI runtime loads as a tool definition. When the agent receives a natural-language request like "list the files in my Olares Home folder", it consults the loaded skill to find the corresponding command (`olares-cli files ls drive/Home/`), and runs it on your behalf.
 
-The bundles are authored alongside the CLI itself and are located in [`cli/skills/`](https://github.com/beclab/Olares/tree/main/cli/skills) in the Olares repository. They are the authoritative reference for what each group of commands does.
+The bundles are located in [`cli/skills/`](https://github.com/beclab/Olares/tree/main/cli/skills) in the Olares repository. They are the authoritative reference for what each group of commands does.
 
 ## Agent skill bundles
 
@@ -25,27 +25,42 @@ The bundles are authored alongside the CLI itself and are located in [`cli/skill
 | `olares-cluster` | Read and modify pods, workloads, nodes, jobs, cronjobs, and<br>  middleware passwords. |
 
 :::warning Always install `olares-shared` first
-Every other bundle assumes `olares-shared` is already loaded. It owns the profile model, the token refresh logic, and the auth-error recovery hints that the business skills rely on. An agent that loads only `olares-files`, for example, encounters auth errors with no recovery path.
+All other bundles assume `olares-shared` is already loaded. It owns the profile model, the token refresh logic, and the auth-error recovery hints that the other skills rely on. An agent that loads only `olares-files`, for example, encounters auth errors with no recovery path.
 :::
 
-## Install Agent skills
+## Install Olares skills
 
-The following uses NemoClaw as an example. The exact steps depend on your AI runtime such as Claude Code.
+The following steps use Claude Code as an example. Exact steps differ depending on your AI runtime.
 
-1. Open the OpenClaw Web UI and go to **Skills**.
-2. In the ClawHub search box, enter `olares` to find Olares skills.
-3. Install **Olares Shared** first because it's the foundation of the other Olares skills.
-4. Install the remaining Olares skills, such as **Olares Files** and **Olares Market**.
-5. Open the chat page and run `/reset` to start a new session so the agent picks up the newly installed skills.
+1. Open a terminal on your computer, and run the following command to install the ClawHub CLI.
+    ```bash
+    npm i -g clawhub
+    ```
+2. Install the agent skills to `~/.claude/skills/`.
 
-## Use Agent skills
+    a. Install `olares-shared` first.
 
-Once the bundles are loaded, drive Olares in natural language. The agent determines which CLI command to run. For example:
+    ```bash
+    clawhub install --workdir ~/.claude/skills --dir . olares-shared
+    ```
 
+    b. Install the remaining skills, such as `olares-files`.
+
+    ```bash
+    clawhub install --workdir ~/.claude/skills --dir . olares-files
+    ```
+3. Launch a Claude Code session and type `/` to see a list of available skills, or run `/skills` to confirm they have loaded.
+
+
+To use Olares CLI with AI agents on Olares, such as NemoClaw or OpenClaw, refer to [Manage Olares with Olares CLI](../use-cases/nemoclaw-olares-cli.md).
+
+## Use Olares CLI as agent skills
+
+Once the bundles are loaded, control Olares with natural language. The agent determines which CLI command to run. For example:
 
 ```plain
 # List files using the olares-files skill
-List the files in my Olares Home folder
+List the files in the Home folder on my Olares device
 
 # Install an app using the olares-market skill
 Install Firefox from Market and tell me when it's ready
@@ -54,4 +69,6 @@ Install Firefox from Market and tell me when it's ready
 Show me which apps are using more than 1 GB of memory
 ```
 
-For the full surface of any command group, run `olares-cli <command> --help`.
+:::tip
+If the agent doesn't load the Olares skills, explicitly invoke them with a slash command.
+:::
