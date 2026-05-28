@@ -11,6 +11,13 @@ const SKILLS_REPO = 'beclab/Olares';
 const isWindows = process.platform === 'win32';
 const isLinux = process.platform === 'linux';
 
+// Canonical system paths an Olares OS bundle or `make install` build ends up
+// at -- outside any npm prefix, so npm can't see/manage them.
+const SYSTEM_OLARES_CLI_PATHS = [
+  '/usr/local/bin/olares-cli',
+  '/usr/bin/olares-cli',
+];
+
 // ---------------------------------------------------------------------------
 // Messages (English only for now; --lang/zh planned as a follow-up)
 // ---------------------------------------------------------------------------
@@ -30,6 +37,17 @@ const msg = {
     '                            then add $HOME/.olares-cli-npm/bin to your PATH (before /usr/local/bin).\n' +
     '  2) One-off ops via npx:   npx %s@latest <verb>\n' +
     'See cli/README.md "On a Linux Olares host" for details.',
+  preflightKeepRelease:
+    'Detected release olares-cli at %s (%s); keeping it (npm copy will install side-by-side if paths differ).',
+  preflightReplaceDev:
+    'Detected non-release olares-cli at %s (%s); replacing.',
+  preflightNoPermission:
+    'Cannot remove %s (%s).\n' +
+    'Re-run the wizard with sudo so it can replace the dev build:\n' +
+    '  sudo $(command -v npx) -y %s@latest install\n' +
+    'Or remove it yourself:\n' +
+    '  sudo rm %s\n' +
+    'then re-run `npx %s@latest install`.',
   step2Spinner:    'Installing AI skills...',
   step2Skip:       'Skills already installed. Skipped',
   step2Done:       'Skills installed',
@@ -131,11 +149,99 @@ function looksLikeEexistConflict(err) {
   }
 }
 
+// Locate an OS-bundle or make-install copy at the canonical system paths.
+// These live outside any npm prefix; npm can neither see nor manage them.
+function detectSystemOlaresCli() {
+  for (const candidate of SYSTEM_OLARES_CLI_PATHS) {
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch (_) { /* fall through */ }
+  }
+  return null;
+}
+
+function readOlaresCliVersion(binPath) {
+  try {
+    const out = execFileSync(binPath, ['--version'], {
+      encoding: 'utf8',
+      timeout: 5000,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return out.trim();
+  } catch (_) {
+    return null;
+  }
+}
+
+// Classify the version string from `olares-cli --version` (Cobra default
+// emits "olares-cli version X.Y.Z[-PRE]"). Returns true ONLY for what the
+// release pipeline can produce:
+//   - stable:     1.12.7
+//   - prerelease: 1.12.8-rc1, 1.13.0-beta.1, 1.14.0-alpha2
+// Returns false for everything else (treat as dev/test, safe to replace):
+//   - 0.0.0-development (placeholder default in cli/version/version.go)
+//   - 1.12.5-cli.2-3-gddae4ca9c, 1.12.7-rc1-3-gabc-dirty (git describe output)
+//   - 1.12.7-12345678 (check.yaml PR-test build; numeric suffix isn't a tag)
+//   - `dev` (Makefile no-git fallback) or any unparseable output
+function isReleaseGradeVersion(verStr) {
+  if (!verStr) return false;
+  // Capture core MAJOR.MINOR.PATCH plus an optional pre-release suffix
+  // (everything up to the next whitespace). Anchoring on whitespace/EOL
+  // ensures we keep `-3-gabc-dirty` inside `pre` instead of silently dropping
+  // it and mis-classifying the version as stable.
+  const m = verStr.match(/version\s+v?(\d+\.\d+\.\d+)(?:-(\S+))?(?:\s|$)/);
+  if (!m) return false;
+  const [, mmp, pre] = m;
+  if (mmp === '0.0.0') return false;
+  if (!pre) return true;
+  // Strictly `rc[N]`, `beta[.N]`, `alpha[.N]`, etc. Anything trailing -- a
+  // git-describe `-N-gHASH`, a `-dirty` marker, or check.yaml's bare
+  // `-12345678` -- makes this a dev/test build.
+  return /^(rc|beta|alpha)(?:\.?\d+)?$/i.test(pre);
+}
+
+function tryUnlink(filePath) {
+  try {
+    fs.unlinkSync(filePath);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, err };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Steps
 // ---------------------------------------------------------------------------
 
 async function stepInstallGlobally(interactive) {
+  // Preflight: if a system-path olares-cli is present (OS bundle or
+  // `make install` artifact), decide keep-vs-replace based on its version.
+  // Release-grade versions (stable/rc/beta/alpha) are left alone -- the
+  // npm copy will install side-by-side and `looksLikeEexistConflict` below
+  // gives the user the workaround if npm would otherwise clobber it.
+  // Dev / test / unparseable versions are removed so npm can install over
+  // them. If we can't remove (typical: not running as root), bail with a
+  // sudo hint so the user knows what to do next.
+  const sysCli = detectSystemOlaresCli();
+  if (sysCli) {
+    const verStr = readOlaresCliVersion(sysCli);
+    const verDisplay = verStr || 'unknown';
+    if (isReleaseGradeVersion(verStr)) {
+      const line = fmt(msg.preflightKeepRelease, sysCli, verDisplay);
+      if (interactive) p.log.info(line); else console.log(line);
+    } else {
+      const line = fmt(msg.preflightReplaceDev, sysCli, verDisplay);
+      if (interactive) p.log.warn(line); else console.warn(line);
+      const rm = tryUnlink(sysCli);
+      if (!rm.ok) {
+        const reason = rm.err.code || rm.err.message || 'unknown error';
+        const hint = fmt(msg.preflightNoPermission, sysCli, reason, PKG, sysCli, PKG);
+        if (interactive) p.log.error(hint); else console.error(hint);
+        process.exit(1);
+      }
+    }
+  }
+
   const installedVer = getGloballyInstalledVersion();
   const latestVer = getLatestVersion();
   const needsUpgrade = installedVer && latestVer && semverLessThan(installedVer, latestVer);
