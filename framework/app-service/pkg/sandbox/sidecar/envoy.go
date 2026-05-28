@@ -316,6 +316,41 @@ func GetInitContainerSpec(appCfg *appcfg.ApplicationConfig) corev1.Container {
 	}
 }
 
+// inboundBypassPorts lists TCP destination ports that must reach the app
+// container directly (PROXY_INBOUND RETURN) rather than olares-envoy-sidecar.
+// Manifest ServicePort entries are often empty while per-entrance listeners
+// (e.g. terminal on 8081) still bind inside the pod; omitting those ports
+// breaks WebSocket terminals with 401 / connection_termination at L4.
+func inboundBypassPorts(appCfg *appcfg.ApplicationConfig) []int {
+	if appCfg == nil {
+		return nil
+	}
+	seen := make(map[int]struct{})
+	var ports []int
+	add := func(p int) {
+		if p <= 0 {
+			return
+		}
+		if _, ok := seen[p]; ok {
+			return
+		}
+		seen[p] = struct{}{}
+		ports = append(ports, p)
+	}
+	for _, sp := range appCfg.Ports {
+		if sp.Protocol == "tcp" || sp.Protocol == "" {
+			add(int(sp.Port))
+		}
+	}
+	for _, e := range appCfg.Entrances {
+		add(int(e.Port))
+	}
+	for _, e := range appCfg.SharedEntrances {
+		add(int(e.Port))
+	}
+	return ports
+}
+
 func generateIptablesCommands(appCfg *appcfg.ApplicationConfig) string {
 	cmd := fmt.Sprintf(`iptables-restore --noflush <<EOF
 # sidecar interception rules
@@ -332,10 +367,8 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig) string {
 -A PROXY_INBOUND -s 172.30.0.0/16 -j RETURN
 `, constants.EnvoyAdminPort)
 	if appCfg != nil {
-		for _, port := range appCfg.Ports {
-			if port.Protocol == "tcp" || port.Protocol == "" {
-				cmd += fmt.Sprintf("-A PROXY_INBOUND -p tcp --dport %d -j RETURN\n", port.Port)
-			}
+		for _, port := range inboundBypassPorts(appCfg) {
+			cmd += fmt.Sprintf("-A PROXY_INBOUND -p tcp --dport %d -j RETURN\n", port)
 		}
 	}
 

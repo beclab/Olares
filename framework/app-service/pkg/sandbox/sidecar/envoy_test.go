@@ -5,7 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/stretchr/testify/require"
 )
 
 // TestGenerateIptablesCommands_LinkerdProxyUidExempt asserts that the
@@ -43,6 +45,21 @@ func TestGenerateIptablesCommands_LinkerdProxyUidExempt(t *testing.T) {
 // TestGenerateIptablesCommands_EnvoyUidExempt is a sanity check to ensure
 // the pre-existing envoy self-exemption keeps working alongside the new
 // linkerd-proxy uid rule.
+func TestInboundBypassPorts_includesEntrancePorts(t *testing.T) {
+	cfg := &appcfg.ApplicationConfig{
+		Entrances: []appcfg.Entrance{
+			{Name: "terminal", Port: 8081},
+			{Name: "api", Port: 8080},
+		},
+	}
+	got := inboundBypassPorts(cfg)
+	require.ElementsMatch(t, []int{8081, 8080}, got)
+
+	cmd := generateIptablesCommands(cfg)
+	require.Contains(t, cmd, "-A PROXY_INBOUND -p tcp --dport 8081 -j RETURN")
+	require.Contains(t, cmd, "-A PROXY_INBOUND -p tcp --dport 8080 -j RETURN")
+}
+
 func TestGenerateIptablesCommands_EnvoyUidExempt(t *testing.T) {
 	cmd := generateIptablesCommands(nil)
 
