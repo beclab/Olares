@@ -17,28 +17,38 @@ The product surface this CLI mirrors:
 - **Agent-native** — every command tree ships a maintained `SKILL.md` so any agent (Cursor, Claude Code, Codex, OpenClaw, ...) can discover verbs, flags, and recovery flows
 - **Wide coverage** — Olares OS install/upgrade plus the full identity, files, market, dashboard, settings, and ControlHub surface from one binary
 - **Olares-native auth** — refresh tokens live in the OS keychain; access tokens auto-refresh on 401/403; profile model maps cleanly to multi-instance / multi-ID setups
-- **Distributed three ways** — one-line `npx ... install` bootstrap; persistent `npm install -g`; or zero-install `npx <verb>` for one-offs
+- **Distributed two ways** — persistent `npm install -g @olares/cli` client on macOS / Windows / Linux; or zero-install `npx @olares/cli <verb>` for one-offs. A first-run wizard, `npx @olares/cli install`, does both `npm install -g` and skill installation in one shot.
 
 ## Install — which path fits you?
 
 | Your situation | Use this | Why |
 | --- | --- | --- |
-| I want to turn a fresh Linux server into an Olares instance | `npx @olares/cli@latest install` <br>([Scenario A](#bootstrap-an-olares-host-scenario-a)) | One-line bootstrap; after `install` completes, `olares-cli` lives at `/usr/local/bin/` and is managed by Olares OS upgrades |
-| I'm already on an Olares host and want to use its CLI | Use `/usr/local/bin/olares-cli` directly | It's the OS-bundled copy, kept in sync via `olares-cli upgrade`. No need to install via npm. |
-| I want to control a remote Olares from my dev box, CI, macOS, or Windows | `npm install -g @olares/cli@latest` <br>([Scenario B](#client-on-a-non-olares-machine-scenario-b)) | Persistent install; `olares-cli` on PATH. Safe even if you already have an OS bundle — postinstall auto-skips the alias on conflict. |
+| I'm already on an Olares host and want to use its CLI | Use `/usr/local/bin/olares-cli` directly (and see ["On a Linux Olares host"](#on-a-linux-olares-host-install-side-by-side-with-the-os-bundle) if you need the agent verbs the OS bundle doesn't ship) | It's the OS-bundled copy, kept in sync via `olares-cli upgrade`. |
+| I'm a first-time user and want one command to set up the CLI + skills | `npx @olares/cli@latest install` <br>([Scenario A](#first-run-wizard-scenario-a-recommended)) | Runs `npm install -g` and `skills add beclab/Olares` for you. Does not install Olares OS. |
+| I want to control a remote Olares from my dev box, CI, macOS, or Windows | `npm install -g @olares/cli@latest` <br>([Scenario B](#client-on-a-non-olares-machine-scenario-b)) | Persistent install; `olares-cli` on PATH. |
 | I just want to run one command quickly without installing | `npx @olares/cli@latest <verb>` <br>([Scenario C](#one-off-ops-scenario-c)) | No persistent files; ~1-2 s cold-start per invocation. Keychain/token caches persist per-user. |
 
-### Bootstrap an Olares host (Scenario A)
+### First-run wizard (Scenario A, recommended)
 
 ```bash
-# On a fresh Linux server you want to turn into an Olares instance:
 npx @olares/cli@latest install
-
-# After install completes, olares-cli is at /usr/local/bin/olares-cli (on PATH).
-# The npm-cached copy is no longer needed.
-olares-cli profile login <your-olares-id>
-olares-cli dashboard overview
 ```
+
+The `install` verb is handled entirely by the Node shim, never by the Go binary. It runs two steps for you:
+
+1. `npm install -g @olares/cli` (or upgrade if you already have it).
+2. `npx skills add beclab/Olares -y -g` to install the six `olares-*` agent skills.
+
+After it prints `You are all set!`, do the auth step yourself — it's interactive and ties to your Olares ID:
+
+```bash
+olares-cli profile login --olares-id <your-olares-id>
+olares-cli profile current
+```
+
+> **What this command does NOT do:** install Olares OS. The Linux host bootstrap stays `curl -fsSL https://olares.sh | bash` (see [docs/manual/get-started](https://docs.olares.com/manual/get-started/install-olares/linux.html)). It also does not configure any app credentials — Olares uses the Olares ID directly, so no `config init` step is needed.
+>
+> **On a Linux Olares host (`/usr/local/bin/olares-cli` already present):** the wizard detects the resulting `EEXIST` and prints two safe workarounds (`--prefix` side-by-side install, or stay on `npx`). It will not overwrite the OS bundle. See ["On a Linux Olares host"](#on-a-linux-olares-host-install-side-by-side-with-the-os-bundle).
 
 ### Client on a non-Olares machine (Scenario B)
 
@@ -48,9 +58,9 @@ npm install -g @olares/cli@latest
 
 # The package's only PATH-exposed bin is `olares-cli`, managed by npm itself.
 # If an existing `olares-cli` is already at npm's target path (i.e. you're on
-# an Olares host where the OS bundle owns /usr/local/bin/olares-cli), npm
+# a Linux Olares host where the OS bundle owns /usr/local/bin/olares-cli), npm
 # refuses the install with EEXIST — your existing binary is never overwritten.
-# See "On an Olares host" below for the --prefix workaround in that case.
+# See "On a Linux Olares host" below for the side-by-side workaround.
 
 olares-cli profile login <your-olares-id>
 olares-cli files ls /drive/Home
@@ -59,20 +69,24 @@ olares-cli files ls /drive/Home
 ### One-off ops (Scenario C)
 
 ```bash
-# No persistent install; each invocation re-uses the npm cache:
+# No persistent install; each invocation re-uses the npm cache. The OS keychain
+# persists across invocations, so log in once — subsequent commands re-use it.
+npx @olares/cli@latest profile login <your-olares-id>
 npx @olares/cli@latest profile current
 npx @olares/cli@latest files ls /drive/Home
 ```
 
 ### Capabilities & limits of each install method
 
-| Method | What it gives you | What it can't / won't do |
-| --- | --- | --- |
-| **A — `npx @olares/cli@latest install`** | Turns a Linux host into an Olares instance (downloads payload, installs k8s, lays `olares-cli` at `/usr/local/bin/`). Subsequent invocations are direct `olares-cli <verb>` on that host. | Requires Linux + root (or sudo) + ~50 GB free + 30-60 min runtime. Not usable on macOS / Windows / non-Linux. Doesn't help "I just want to control a remote Olares". |
-| **B — `npm install -g @olares/cli@latest`** | Persistent `olares-cli` CLI on PATH (macOS / Windows / Linux). Use to talk to a *remote* Olares (login, files, market, dashboard, cluster, settings). | Doesn't install Olares OS itself — `olares-cli install` from this client targets `localhost` and will fail on a non-Linux machine. If `olares-cli` already exists at npm's target path (e.g. on an Olares host where the OS bundle owns `/usr/local/bin/olares-cli`), npm aborts with `EEXIST` — see ["On an Olares host"](#on-an-olares-host-install-into-a-separate-prefix) for the workaround. |
-| **C — `npx @olares/cli@latest <verb>`** | Zero-install, runs any verb without touching PATH. Great for CI one-shots, ephemeral containers, "just try it". | Each invocation pays a ~1-2 s npx cold-start. Long watches (`olares-cli market list --watch`, `olares-cli cluster pod logs -f`) work but pay the cost up front. Keychain/token caches persist across npx invocations. |
+| Method | What it gives you | Binary path | What it can't / won't do |
+| --- | --- | --- | --- |
+| **A — `npx @olares/cli@latest install`** | Superset of B: runs `npm install -g @olares/cli` (or upgrade) and `npx skills add beclab/Olares -y -g` in one shot. End state is the same as B, plus the six `olares-*` skills pre-installed. | Same as B once the wizard finishes. The wizard itself is the Node shim from the npx cache. | Does not install Olares OS (still `curl -fsSL https://olares.sh \| bash`). Does not run `profile login` for you (interactive + needs your Olares ID). On a Linux Olares host with `/usr/local/bin/olares-cli` present, npm hits `EEXIST` — the wizard detects this and prints the [`--prefix` / `npx`](#on-a-linux-olares-host-install-side-by-side-with-the-os-bundle) workarounds instead of failing silently. |
+| **B — `npm install -g @olares/cli@latest`** | Persistent `olares-cli` CLI on PATH (macOS / Windows / Linux). Use to talk to a *remote* Olares (login, files, market, dashboard, cluster, settings). | `<npm prefix>/bin/olares-cli` (symlink managed by npm itself). On a Linux Olares host where `/usr/local/bin/olares-cli` already exists, npm aborts with `EEXIST` — see ["On a Linux Olares host"](#on-a-linux-olares-host-install-side-by-side-with-the-os-bundle) for the side-by-side workaround. | The npm wrapper auto-sets `OLARES_CLI_REMOTE_ONLY=1`, so host-side verbs (`uninstall`, `upgrade`, `node`, `os`, `gpu`, `disk`, `wizard`, `user`, `osinfo`, `amdgpu`) are hidden from `--help` and return `unknown command`. The `install` verb is intercepted by the Node shim and runs the Scenario A wizard. All of these are reachable only on an Olares host through the OS-bundled `/usr/local/bin/olares-cli`. |
+| **C — `npx @olares/cli@latest <verb>`** | Zero-install, runs any *remote/identity* verb without touching PATH. Great for CI one-shots, ephemeral containers, "just try it". | `~/.npm/_npx/<hash>/.../vendor/olares-cli` (only during the npx subprocess; cleared after) | Same host-side-verbs restriction as B (same Node shim). Each invocation pays a ~1-2 s npx cold-start. Long watches (`olares-cli market list --watch`, `olares-cli cluster pod logs -f`) work but pay the cost up front. Keychain/token caches persist across npx invocations. |
 
 ### Install AI agent skills
+
+The Scenario A wizard runs this for you. If you went the Scenario B / C route, run it manually:
 
 ```bash
 npx skills add beclab/Olares -y -g
@@ -82,27 +96,7 @@ Installs the 6 `olares-*` skill bundles via [vercel-labs/skills](https://github.
 
 > Note: the `@olares` npm scope and the `beclab` GitHub org are independent naming spaces. The canonical source repo is `github.com/beclab/Olares`, so the `skills add` command (which fetches via GitHub) uses `beclab/Olares`, while the npm package is published as `@olares/cli`.
 
-## Quick start (AI agent)
-
-If you are an AI coding agent reading this README to bootstrap an environment:
-
-```bash
-# 1. Install the CLI (pick one based on the target machine):
-npx @olares/cli@latest install            # fresh Linux host → full Olares install
-npm install -g @olares/cli@latest         # dev box / CI / macOS / Win → client only
-
-# 2. Install the agent skills into your own runtime:
-npx skills add beclab/Olares -y -g
-
-# 3. Ask the human to log in (interactive — browser + OS keychain):
-#    olares-cli profile login <their-olares-id>
-
-# 4. Verify identity + reach:
-olares-cli profile current
-olares-cli dashboard overview
-```
-
-Then load the appropriate skill (`olares-shared` is the foundation; load it first before any of the others) and follow its instructions.
+> **For AI agents:** the human must run `olares-cli profile login <their-olares-id>` themselves — auth opens a browser. Verify with `olares-cli profile current` + `olares-cli dashboard overview`. Load `olares-shared` first; it documents the auth model for the other skills.
 
 ## Agent skills
 
@@ -125,8 +119,8 @@ Skills are also published on [ClawHub](https://clawhub.io) (search "olares"); bo
 olares-cli <area> [<noun>] <verb> [flags]
 ```
 
-- **System layer** (root-level, no `<area>` prefix): `install`, `uninstall`, `upgrade`, `start`, `stop`, `status`, `backup`, `precheck`, `prepare`, `download`, `change-ip`, `release`, `printinfo`, `logs`, `node`, `gpu`, `amdgpu`, `disk`, `osinfo`, `wizard`. These manage the host running Olares OS itself and require root / kubeconfig access — they are not driven by an Olares ID.
-- **Identity-bound layer** (`<area>` = `profile` / `files` / `market` / `settings` / `dashboard` / `cluster`): act on behalf of the currently-selected Olares ID against a running Olares HTTP API. Pick the identity once with `olares-cli profile use <name>`, then every verb in this layer uses it.
+- **System layer** (root-level, no `<area>` prefix): `install`, `uninstall`, `upgrade`, `start`, `stop`, `status`, `backup`, `precheck`, `prepare`, `download`, `change-ip`, `release`, `printinfo`, `logs`, `node`, `gpu`, `amdgpu`, `disk`, `osinfo`, `wizard`. These manage the host running Olares OS itself and require root / kubeconfig access — they are not driven by an Olares ID. *Channel availability*: the Go binary only registers them when `OLARES_CLI_REMOTE_ONLY` is unset, i.e. only when invoked from an Olares host's OS-bundled `/usr/local/bin/olares-cli`. Through `npm install -g @olares/cli` or `npx @olares/cli`, the Node shim sets `OLARES_CLI_REMOTE_ONLY=1` and they are hidden. The lone exception is `install`, which the Node shim itself intercepts and routes to the [first-run wizard](#first-run-wizard-scenario-a-recommended) — it never reaches the Go binary on the npm channel.
+- **Identity-bound layer** (`<area>` = `profile` / `files` / `market` / `settings` / `dashboard` / `cluster`): act on behalf of the currently-selected Olares ID against a running Olares HTTP API. Pick the identity once with `olares-cli profile use <name>`, then every verb in this layer uses it. Reachable through both `npm install -g` and `npx`.
 
 For every command, `--help` is the source of truth for flags and wire shapes:
 
@@ -145,20 +139,11 @@ olares-cli files ls /drive/Home --output json
 olares-cli market list --output json | jq '.items[] | {name, version, status}'
 ```
 
-## Where is olares-cli after install?
-
-| Scenario | `olares-cli` resolves to |
-| --- | --- |
-| **A** — `npx ... install` on a fresh host | `/usr/local/bin/olares-cli` (OS bundle, on PATH after install completes) |
-| **B** — `npm install -g` on a host without an existing `olares-cli` | `<npm prefix>/bin/olares-cli` (symlink managed by npm itself) |
-| **B-conflict** — `npm install -g` on a host that already has `olares-cli` at npm's target path | npm aborts with `EEXIST`; nothing is installed. The pre-existing binary stays put. Use the [`--prefix` workaround](#on-an-olares-host-install-into-a-separate-prefix) to coexist. |
-| **C** — `npx @olares/cli@latest <verb>` | `~/.npm/_npx/<hash>/.../vendor/olares-cli` (only during the npx subprocess) |
-
 ## Uninstall
 
 Pick the reverse operation that matches how you installed.
 
-### Remove the CLI client (Scenario B)
+### Remove the CLI client
 
 ```bash
 npm uninstall -g @olares/cli
@@ -166,7 +151,7 @@ npm uninstall -g @olares/cli
 # there is no extra cleanup step.
 ```
 
-### Clear the npx cache (Scenario C)
+### Clear the npx cache
 
 ```bash
 # npx auto-evicts the cache after a few days. To force-clear sooner:
@@ -176,22 +161,13 @@ ls ~/.npm/_npx/                            # find the hash dir for @olares/cli
 rm -rf ~/.npm/_npx/<hash>/
 ```
 
-### Remove Olares OS from a host (Scenario A — destructive!)
-
-```bash
-olares-cli uninstall                       # revert the most recent install phase
-olares-cli uninstall --all                 # complete removal (Olares + k8s + data)
-```
-
-> **Warning**: `olares-cli uninstall --all` deletes **all** Olares data (user files, installed apps, profiles, k8s state). Back up first via `olares-cli backup` or the Olares dashboard. The `/usr/local/bin/olares-cli` binary itself stays (you may still want it for re-install); to drop it too: `sudo rm /usr/local/bin/olares-cli`.
-
 ### Remove agent skills
 
 ```bash
 npx skills remove beclab/Olares -y -g     # mirror of `skills add`
 ```
 
-### Wipe stored credentials (any scenario)
+### Wipe stored credentials
 
 ```bash
 olares-cli profile list                    # see what's stored
@@ -200,18 +176,40 @@ olares-cli profile remove <name>           # delete one profile + its keychain t
 
 Credentials live in the OS-native keychain (macOS Keychain / Windows DPAPI / Linux secret-service or filesystem fallback at `~/.olares/credentials/`). `profile remove` is always the right cleaning verb — don't hand-edit those files.
 
-## On an Olares host: install into a separate prefix
+## On a Linux Olares host: install side-by-side with the OS bundle
 
-If you are on an Olares host (where `/usr/local/bin/olares-cli` already exists from `olares-cli install`), a plain `npm install -g @olares/cli` aborts with `EEXIST`. To install the npm copy side-by-side without touching the OS bundle, use a separate prefix:
+This section applies **only to Linux hosts that have Olares OS installed** (where `/usr/local/bin/olares-cli` already exists). macOS / Windows / non-Olares Linux dev boxes never hit this scenario.
+
+### Why you might want this
+
+The OS-bundled `olares-cli` is pinned to the version that shipped with your Olares OS release (e.g. **1.12.5**). Older bundles do **not** include the agent / identity verbs (`profile`, `files`, `market`, `dashboard`, `settings`, `cluster`) — those land in newer npm releases first. If you want to drive a remote (or your own) Olares from the same Linux host, install the latest npm copy alongside the OS bundle. Two ways:
+
+### Option 1 — Install under a separate prefix
+
+A plain `npm install -g @olares/cli` aborts with `EEXIST` because `/usr/local/bin/olares-cli` already exists. Use a separate prefix to coexist:
 
 ```bash
 npm install -g @olares/cli@latest --prefix ~/.olares-cli-npm
 export PATH="$HOME/.olares-cli-npm/bin:$PATH"   # PATH order decides which copy wins
-olares-cli --version                            # resolves to the npm copy
+olares-cli --version                            # now resolves to the npm copy
 # Revert: reorder PATH or `rm -rf ~/.olares-cli-npm/`
 ```
 
-> Do **not** use `npm install -g --force` to bypass `EEXIST` on an Olares host — that would clobber the OS-managed binary. The OS bundle is the canonical CLI on an Olares host and is upgraded via `olares-cli upgrade`.
+Both binaries are then on disk:
+
+- `/usr/local/bin/olares-cli` — OS bundle. System layer (`install`, `uninstall`, `upgrade`, `start`, `stop`, ...).
+- `~/.olares-cli-npm/bin/olares-cli` — npm copy. Identity layer (`profile`, `files`, `market`, `dashboard`, `settings`, `cluster`); system layer is hidden by `OLARES_CLI_REMOTE_ONLY=1`.
+
+### Option 2 — Use `npx` for one-offs
+
+No persistent install, no PATH gymnastics:
+
+```bash
+npx @olares/cli@latest profile current
+npx @olares/cli@latest files ls /drive/Home
+```
+
+> Do **not** `npm install -g @olares/cli --force` on an Olares host — that would clobber the OS-managed `/usr/local/bin/olares-cli`. The OS bundle is canonical for system-layer verbs on that host and is upgraded via `olares-cli upgrade`. Without `--force`, npm already aborts safely with `EEXIST`.
 
 ## Build from source
 
