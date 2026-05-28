@@ -20,9 +20,10 @@ It acts as an "always-on" operator that can execute real tasks, such as searchin
 
 In this guide, you will learn how to:
 - Install and initialize the OpenClaw environment.
-- Integrate OpenClaw with Discord.
+- Integrate OpenClaw with channels like Discord.
 - Optional: Enable the web search capability.
 - Manage skills and plug-ins.
+- Manage Olares through natural language. 
 - Optional: Grant OpenClaw access to local files.
 - Optional: Enable the sandbox for secure code execution.
 
@@ -35,11 +36,6 @@ In this guide, you will learn how to:
     :::
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
-- (Optional) Brave search API key: Required for the agent to search the web for real-time information. 
-
-    :::tip
-    You can obtain a free API key from the [Brave Search API](https://brave.com/search/api/). The free tier of the "Data for Search" plan is usually sufficient for personal use.
-    :::
 
 ## Upgrade notes
 
