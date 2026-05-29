@@ -209,7 +209,7 @@ The file structure and configuration options match the official defaults. For de
 
 ## Install Olares skills
 
-Hermes Agent supports installing Olares skills to extend its capabilities. These skills provide integration with Olares applications such as Files, Settings, and Dashboard.
+Hermes Agent supports installing Olares skills to extend its capabilities. These skills provide integration with Olares applications, such as Files, Settings, and Dashboard.
 
 To install Olares skills:
 
