@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 )
@@ -154,6 +155,42 @@ type AddedResources struct {
 	CPU    int64
 	Memory int64
 	Disk   int64
+}
+
+// AddedResourcesFromAppConfig translates the app's selected
+// ResourceMode (or its legacy scalar Requirement) into a per-node
+// AddedResources budget suitable for PressureSnapshot.WouldPressure.
+//
+// When the app declares an explicit resource mode (>= 0.12.0 manifest
+// format), the values come from that mode. For legacy manifests the
+// values come from appConfig.Requirement after ResolveRequirement has
+// applied any supportedGpu overrides.
+//
+// Returns the zero value when appConfig is nil so callers can pass it
+// straight into WouldPressure even when the app has no declared
+// requirement at all.
+func AddedResourcesFromAppConfig(appConfig *appcfg.ApplicationConfig) AddedResources {
+	if appConfig == nil {
+		return AddedResources{}
+	}
+	if req, ok := SelectedRequirement(appConfig); ok {
+		return AddedResources{
+			CPU:    req.RequiredCPU,
+			Memory: req.RequiredMemory,
+			Disk:   req.RequiredDisk,
+		}
+	}
+	var cpu, mem, disk int64
+	if r := appConfig.Requirement.CPU; r != nil {
+		cpu = r.MilliValue()
+	}
+	if r := appConfig.Requirement.Memory; r != nil {
+		mem = r.Value()
+	}
+	if r := appConfig.Requirement.Disk; r != nil {
+		disk = r.Value()
+	}
+	return AddedResources{CPU: cpu, Memory: mem, Disk: disk}
 }
 
 func IsHAMIMode(mode string) bool {

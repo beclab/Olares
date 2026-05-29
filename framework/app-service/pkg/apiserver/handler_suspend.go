@@ -12,6 +12,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -116,25 +117,25 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	resourceType, resourceConditionType, err := apputils.CheckAppRequirement(token, appCfg, v1alpha1.ResumeOp)
+	// Unified resume-time resource gate: cluster pressure + k8s request
+	// capacity + user quota. Compute mode and per-node pressure are
+	// skipped (resume reuses the binding chosen at install time).
+	decision, err := validation.Run(req.Request.Context(), validation.Input{
+		Client:    h.ctrlClient,
+		AppConfig: appCfg,
+		Op:        v1alpha1.ResumeOp,
+		Token:     token,
+	}, validation.ResumePressureValidators()...)
 	if err != nil {
-		klog.Errorf("Failed to check app requirement err=%v", err)
-		resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
-			Response: api.Response{Code: 400},
-			Resource: resourceType.String(),
-			Message:  err.Error(),
-			Reason:   resourceConditionType.String(),
-		})
+		api.HandleError(resp, req, err)
 		return
 	}
-
-	resourceType, resourceConditionType, err = apputils.CheckUserResRequirement(req.Request.Context(), appCfg, v1alpha1.ResumeOp)
-	if err != nil {
+	if !decision.OK {
 		resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
 			Response: api.Response{Code: 400},
-			Resource: resourceType.String(),
-			Message:  err.Error(),
-			Reason:   resourceConditionType.String(),
+			Resource: decision.Resource.String(),
+			Message:  decision.Message,
+			Reason:   decision.Reason.String(),
 		})
 		return
 	}

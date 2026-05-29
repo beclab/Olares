@@ -42,7 +42,6 @@ const (
 	applicationManagerMutatingWebhookName   = "applicationmanager-mutating-webhook"
 	applicationManagerValidatingWebhookName = "applicationmanager-validating-webhook"
 	argoResourceValidatingWebhookName       = "argo-resource-validating-webhook"
-	mutatingWebhookApplicationManagerName   = "applicationmanager-inject-webhook.bytetrade.io"
 	validatingWebhookApplicationManagerName = "applicationmanager-validating-webhook.bytetrade.io"
 	validatingWebhookArgoResourceName       = "argo-resource-validating-webhook.bytetrade.io"
 )
@@ -470,6 +469,15 @@ func (wh *Webhook) DeleteKubeletEvictionValidatingWebhook() error {
 	return nil
 }
 
+func (wh *Webhook) DeleteAppManagerMutatingWebhook() error {
+	err := wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.TODO(), applicationManagerMutatingWebhookName, metav1.DeleteOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		klog.Errorf("Failed to delete MutatingWebhookConfiguration name=%s", applicationManagerMutatingWebhookName)
+		return err
+	}
+	return nil
+}
+
 func (wh *Webhook) CreateOrUpdateCronWorkflowMutatingWebhook() error {
 	webhookPath := "/app-service/v1/workflow/inject"
 	port, err := strconv.Atoi(strings.Split(constants.WebhookServerListenAddress, ":")[1])
@@ -839,91 +847,6 @@ func (wh *Webhook) CreateOrUpdateUserValidatingWebhook() error {
 	}
 	klog.Infof("Finished creating ValidatingWebhookConfiguration name=%s", vwc.Name)
 
-	return nil
-}
-
-// CreateOrUpdateApplicationManagerMutatingWebhook creates or updates the ApplicationManager mutating webhook.
-func (wh *Webhook) CreateOrUpdateApplicationManagerMutatingWebhook() error {
-	webhookPath := "/app-service/v1/applicationmanager/inject"
-	port, err := strconv.Atoi(strings.Split(constants.WebhookServerListenAddress, ":")[1])
-	if err != nil {
-		return err
-	}
-	webhookPort := int32(port)
-	failurePolicy := admissionregv1.Fail
-	matchPolicy := admissionregv1.Exact
-	webhookTimeout := int32(30)
-
-	mwhcLabels := map[string]string{"velero.io/exclude-from-backup": "true"}
-
-	caBundle, err := ioutil.ReadFile(defaultCaPath)
-	if err != nil {
-		return err
-	}
-
-	mwhc := admissionregv1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   applicationManagerMutatingWebhookName,
-			Labels: mwhcLabels,
-		},
-		Webhooks: []admissionregv1.MutatingWebhook{
-			{
-				Name: mutatingWebhookApplicationManagerName,
-				ClientConfig: admissionregv1.WebhookClientConfig{
-					CABundle: caBundle,
-					Service: &admissionregv1.ServiceReference{
-						Namespace: webhookServiceNamespace,
-						Name:      webhookServiceName,
-						Path:      &webhookPath,
-						Port:      &webhookPort,
-					},
-				},
-				FailurePolicy: &failurePolicy,
-				MatchPolicy:   &matchPolicy,
-				Rules: []admissionregv1.RuleWithOperations{
-					{
-						Operations: []admissionregv1.OperationType{admissionregv1.Create, admissionregv1.Update},
-						Rule: admissionregv1.Rule{
-							APIGroups:   []string{"app.bytetrade.io"},
-							APIVersions: []string{"v1alpha1"},
-							Resources:   []string{"applicationmanagers"},
-						},
-					},
-				},
-				SideEffects: func() *admissionregv1.SideEffectClass {
-					sideEffect := admissionregv1.SideEffectClassNoneOnDryRun
-					return &sideEffect
-				}(),
-				TimeoutSeconds:          &webhookTimeout,
-				AdmissionReviewVersions: []string{"v1"},
-			},
-		},
-	}
-
-	if _, err := wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(context.Background(), &mwhc, metav1.CreateOptions{}); err != nil {
-		// Webhook already exists, update the webhook in this scenario
-		if apierrors.IsAlreadyExists(err) {
-			existing, err := wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(context.Background(), mwhc.Name, metav1.GetOptions{})
-			if err != nil {
-				klog.Errorf("Failed to get MutatingWebhookConfiguration name=%s err=%v", mwhc.Name, err)
-				return err
-			}
-
-			mwhc.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
-			if _, err = wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Update(context.Background(), &mwhc, metav1.UpdateOptions{}); err != nil {
-				if !apierrors.IsConflict(err) {
-					klog.Errorf("Failed to update MutatingWebhookConfiguration name=%s err=%v", mwhc.Name, err)
-					return err
-				}
-			}
-		} else {
-			// Webhook doesn't exist and could not be created, an error is logged and returned
-			klog.Errorf("Failed to create MutatingWebhookConfiguration name=%s err=%v", mwhc.Name, err)
-			return err
-		}
-	}
-
-	klog.Infof("Finished creating ApplicationManager MutatingWebhookConfiguration")
 	return nil
 }
 

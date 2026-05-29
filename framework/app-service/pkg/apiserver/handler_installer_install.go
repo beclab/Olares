@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -269,14 +270,23 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		}
 	}
 
-	computeEnough, err := compute.AppInstallable(req.Request.Context(), h.ctrlClient, appCfg)
+	decision, err := validation.Run(req.Request.Context(), validation.Input{
+		Client:    h.ctrlClient,
+		AppConfig: appCfg,
+		Op:        v1alpha1.InstallOp,
+		Token:     token,
+	}, validation.InstallabilityValidators()...)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-
-	if !computeEnough {
-		api.HandleBadRequest(resp, req, fmt.Errorf("compute resource is not enough for app %s with mode %s", app, appCfg.SelectedGpuType))
+	if !decision.OK {
+		resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
+			Response: api.Response{Code: 400},
+			Resource: decision.Resource.String(),
+			Message:  decision.Message,
+			Reason:   decision.Reason.String(),
+		})
 		return
 	}
 
@@ -362,23 +372,6 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 		return fmt.Errorf("invalid entrance config, check result: %#v", result)
 	}
 
-	reasons, err := apputils.CheckHardwareRequirement(h.req.Request.Context(), h.appConfig)
-
-	if err != nil {
-		api.HandleError(h.resp, h.req, err)
-		return
-	}
-	if len(reasons) > 0 {
-		err = h.resp.WriteHeaderAndEntity(http.StatusBadRequest, map[string]any{
-			"code":   http.StatusBadRequest,
-			"result": reasons,
-		})
-		if err != nil {
-			klog.Infof("failed to write hardware reason: %v", err)
-		}
-		return errors.New("invalid spec.hardware config or no node satisfied hardware requirement")
-	}
-
 	err = apputils.CheckDependencies2(h.req.Request.Context(), h.h.ctrlClient, h.appConfig.Dependencies, h.owner, true)
 	if err != nil {
 		klog.Errorf("Failed to check dependencies err=%v", err)
@@ -425,30 +418,6 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 	if err = h.validateClusterScope(isAdmin, installedApps); err != nil {
 		klog.Errorf("Failed to validate cluster scope err=%v", err)
 		api.HandleBadRequest(h.resp, h.req, err)
-		return
-	}
-
-	//resourceType, err := CheckAppRequirement(h.h.kubeConfig, h.token, h.appConfig)
-	resourceType, resourceConditionType, err := apputils.CheckAppRequirement(h.token, h.appConfig, v1alpha1.InstallOp)
-	if err != nil {
-		klog.Errorf("Failed to check app requirement err=%v", err)
-		h.resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
-			Response: api.Response{Code: 400},
-			Resource: resourceType.String(),
-			Message:  err.Error(),
-			Reason:   resourceConditionType.String(),
-		})
-		return
-	}
-
-	resourceType, resourceConditionType, err = apputils.CheckUserResRequirement(h.req.Request.Context(), h.appConfig, v1alpha1.InstallOp)
-	if err != nil {
-		h.resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
-			Response: api.Response{Code: 400},
-			Resource: resourceType.String(),
-			Message:  err.Error(),
-			Reason:   resourceConditionType.String(),
-		})
 		return
 	}
 
