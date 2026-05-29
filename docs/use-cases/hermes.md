@@ -24,7 +24,7 @@ In this guide, you will learn how to:
 - Interact with your agent directly via the terminal.
 - Integrate with Discord for remote chat.
 - Install Olares skills to manage files and applications via the agent.
-- Enable the Gateway API to connect Hermes Agent with other applications like OpenWebUI.
+- Enable the Gateway API to connect Hermes Agent with other applications like Open WebUI.
 
 ## Prerequisites
 
@@ -227,7 +227,7 @@ Install the Olares CLI skills in Hermes Agent so your agent can manage files and
 
 ## Integrate Hermes Agent with other applications
 
-Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it with other applications like OpenWebUI or Hermes Workspace.
+Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it with other applications like Open WebUI or Hermes Workspace.
 
 ### Step 1: Enable the Gateway API
 
