@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
-app_version: "1.3.2"
-doc_version: "1.0"
-doc_updated: "2026-05-15"
+app_version: "1.3.8"
+doc_version: "2.0"
+doc_updated: "2026-05-29"
 ---
 
 # Set up a self-directed AI agent with Hermes
@@ -230,6 +230,7 @@ To install Olares skills:
 
    ```bash
    olares-cli profile login --olares-id <your-olares-id>
+   ```
 
 ## Call Hermes Agent via OpenAI-compatible API
 
@@ -238,9 +239,9 @@ Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it wit
 ### Step 1: Enable the Gateway API
 
 1. Open Olares Settings, and then go to **Applications** > **Hermes Agent** > **Manage environment variables**.
-2. Find **API_SERVER_ENABLED**, click the edit icon, and then set its value to `true`.
+2. Find **API_SERVER_ENABLED**, click click <i class="material-symbols-outlined">edit_square</i>, and then set its value to `true`.
 3. Click **Confirm**.
-4. Find **HERMES_API_SERVER_KEY**, click the edit icon, and then enter the value. Ensure the key meets the following requirements:
+4. Find **HERMES_API_SERVER_KEY**, click click <i class="material-symbols-outlined">edit_square</i>, and then enter the value. Ensure the key meets the following requirements:
 
     - It must be at least 8 characters long.
     - It can only contain letters, numbers, and these symbols (`-`, `_`, `.`).
@@ -277,9 +278,8 @@ The following steps demonstrate how to connect with Open WebUI.
 4. Configure the settings as follows:
     - **API Base URL**: Enter your Hermes Gateway API URL and append `/v1`. For example, `https://baf3d7172.olaresdemo.olares.com/v1`.
     - **Auth**: Select **Bearer**, and then enter the `HERMES_API_SERVER_KEY` you set previously.
-5. Click the refresh button to check the connection, and then click **Save**.
+5. Click <i class="material-symbols-outlined">refresh</i> to check the connection, and then click **Save**.
 6. Go to the **New chat** page and verify that **hermes-agent** appears in the model drop-down list. You can start chatting with it now.
-
 
 ## FAQs
 
@@ -309,7 +309,7 @@ Your gateway will fail to start if the configured API key does not meet Hermes s
 - The system logs show the message `[Api_Server] Refusing to start: API_SERVER_KEY is set to a placeholder value`.
 
 To resolve this issue, reset your `HERMES_API_SERVER_KEY`:
-1. Open Olares Settings, and then go to **Applications** > **Hermes Agent** > ****.
+1. Open Olares Settings, and then go to **Applications** > **Hermes Agent** > **Manage environment variables**.
 2. Set a new key for `HERMES_API_SERVER_KEY` that meets the following requirements:
 
     - It must be at least 8 characters long.
