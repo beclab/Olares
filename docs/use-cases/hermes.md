@@ -251,7 +251,7 @@ Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it wit
 ### Step 2: Get the Gateway API URL
 
 1. Go to **Applications** > **Hermes Agent** > **Hermes Gateway API**.
-2. Find the **Hermes Gateway API** URL and copy it. For example:
+2. Copy the endpoint URL. For example:
    ```
    https://baf3d7172.olaresdemo.olares.com
    ```
