@@ -126,7 +126,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               ],
             },
             {
-              text: "搭配 AI 智能体使用",
+              text: "搭配 AI Agent 使用",
               collapsed: false,
               items: [
                 { text: "安装 olares-cli", link: "/zh/developer/cli-install" },

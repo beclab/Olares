@@ -61,4 +61,4 @@ description: 通过 olares-cli 登录 Olares 并管理 profile。涵盖交互式
 
 ## 下一步
 
-把 [Agent Skills](./cli-agent-skills.md) 安装到你的智能体中，即可用自然语言操作 Olares。
+把 [Agent Skills](./cli-agent-skills.md) 安装到你的 Agent 中，即可用自然语言操作 Olares。

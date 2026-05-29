@@ -9,7 +9,7 @@ description: How to use olares-cli for cluster management, system diagnostics, a
 
 - **Manage the cluster**: install Olares on a new machine, upgrade between releases, add or remove nodes, and uninstall completely.
 - **Diagnose and repair the system**: run pre-installation checks, collect logs, query node status, and troubleshoot issues.
-- **Drive Olares from an AI agent**: let a Personal Agent manage files, apps, and settings on your behalf through natural language.
+- **Drive Olares from an AI agent**: let a personal agent manage files, apps, and settings on your behalf through natural language.
 
 ## Modes of Olares CLI
 Olares CLI is available through three modes that differ in where they run and how they authenticate.
@@ -28,7 +28,7 @@ To use Olares CLI in user mode, install the CLI with npm. If the `olares-cli` al
 
 To let an AI agent run Olares CLI on your behalf:
 
-1. Install the CLI and the agent skills. The recommended `npx @olares/cli install` sets up both at once. See [Install olares-cli](./cli-install.md).
+1. Install the CLI and the Agent Skills. The recommended `npx @olares/cli install` sets up both at once. See [Install olares-cli](./cli-install.md).
 2. Log in with your Olares ID. See [Log in to Olares](./cli-log-in.md).
 3. Drive Olares in natural language through your agent.
 

@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 了解如何用 olares-cli 管理集群、诊断系统，以及让 AI 智能体代你操作 Olares。涵盖主机、用户和集群内三种模式。
+description: 了解如何用 olares-cli 管理集群、诊断系统，以及让 AI Agent 代你操作 Olares。涵盖主机、用户和集群内三种模式。
 ---
 
 # Olares CLI
@@ -9,7 +9,7 @@ description: 了解如何用 olares-cli 管理集群、诊断系统，以及让 
 
 - **管理集群**：在新机器上安装 Olares、在版本之间升级、添加或移除节点，以及彻底卸载。
 - **诊断和修复系统**：运行安装前检查、收集日志、查询节点状态、排查问题。
-- **让 AI 智能体操作 Olares**：让智能体通过自然语言代你管理文件、应用和设置。
+- **让 AI Agent 操作 Olares**：让 Agent 通过自然语言代你管理文件、应用和设置。
 
 ## Olares CLI 的三种模式
 olares-cli 提供三种模式，区别在于运行位置和鉴权方式。
@@ -24,17 +24,17 @@ olares-cli 提供三种模式，区别在于运行位置和鉴权方式。
 要使用用户模式，请通过 npm 安装 CLI。如果主机上已有的 `olares-cli` 版本早于表中所示版本，相关命令可能不可用。参见[安装 olares-cli](./cli-install.md)。
 :::
 
-## 让 AI 智能体操作 Olares
+## 让 AI Agent 操作 Olares
 
-要让 AI 智能体代你运行 Olares CLI：
+要让 AI Agent 代你运行 Olares CLI：
 
 1. 安装 CLI 和 Agent Skills。推荐用 `npx @olares/cli install`，一步装好两者。参见[安装 olares-cli](./cli-install.md)。
 2. 用 Olares ID 登录。参见[登录 Olares](./cli-log-in.md)。
-3. 通过智能体用自然语言操作 Olares。
+3. 通过 Agent 用自然语言操作 Olares。
 
 ## 了解更多
 
 - [集群管理](./install/index.md)：在新机器上安装 Olares、在版本之间升级、管理磁盘和 GPU、收集日志等。
 - [安装 olares-cli](./cli-install.md)：在你的机器上安装独立版 CLI。
 - [登录 Olares](./cli-log-in.md)：创建 profile，让 CLI 以你的 Olares 用户身份操作。
-- [安装与使用 Agent Skills](./cli-agent-skills.md)：为智能体添加操作 Olares 所需的 skills。
+- [安装与使用 Agent Skills](./cli-agent-skills.md)：为 Agent 添加操作 Olares 所需的技能。

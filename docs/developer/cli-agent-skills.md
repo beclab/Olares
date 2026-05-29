@@ -1,11 +1,11 @@
 ---
 outline: [2, 3]
-description: Install and use the Olares CLI agent skill bundles from AI runtimes such as Cursor and Claude Code, or from Olares apps such as Hermes Agent and OpenClaw. Covers the bundles, the shared-first install order, and end-to-end usage.
+description: Install and use the Olares CLI Agent Skill bundles from AI runtimes such as Cursor and Claude Code, or from Olares apps such as Hermes Agent and OpenClaw. Covers the bundles, the shared-first install order, and end-to-end usage.
 ---
 
 # Install and use Agent Skills
 
-The user and in-cluster modes of `olares-cli` are built for AI agents rather than interactive use. To support this, `olares-cli` includes a set of agent skill bundles, one per group of commands. Each bundle teaches an agent what each command does, which flags matter, how authentication works, and how to recover from common errors.
+The user and in-cluster modes of `olares-cli` are built for AI agents rather than interactive use. To support this, `olares-cli` includes a set of Agent Skill bundles, one per group of commands. Each bundle teaches an agent what each command does, which flags matter, how authentication works, and how to recover from common errors.
 
 ## Understand Agent Skills
 
@@ -44,7 +44,7 @@ This installs the skills into the agent you are using, such as Cursor or Claude 
 The skills are also published on ClawHub. Both channels read the same `SKILL.md` files, so you only need to install from one. If your agent integrates with ClawHub, you can add them from there instead.
 :::
 
-Some AI Agent apps on Olares bundle these skills, so the agent can manage Olares out of the box. To use the skills from such an app, see [Manage Olares with your Hermes Agent](../use-cases/hermes.md#manage-olares-with-your-hermes-agent) or [Manage Olares with your OpenClaw agent](../use-cases/openclaw-olares-skills.md).
+Some AI agent apps on Olares bundle these skills, so the agent can manage Olares out of the box. To use the skills from such an app, see [Manage Olares with your Hermes Agent](../use-cases/hermes.md#manage-olares-with-your-hermes-agent) or [Manage Olares with your OpenClaw agent](../use-cases/openclaw-olares-skills.md).
 
 ## Use the skills
 
