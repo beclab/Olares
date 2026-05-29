@@ -274,7 +274,7 @@ The following steps demonstrate how to connect with Open WebUI.
 
 1. Open WebUI, click your profile icon and select **Admin Panel**.
 2. Go to **Settings** > **Connections**.
-3. On the right of **Manage OpenAI API Connections**, click <span class="material-symbols-outlined">add</span> to add a new connection.
+3. On the right of **Manage OpenAI API Connections**, click <i class="material-symbols-outlined">add</i> to add a new connection.
 4. Configure the settings as follows:
     - **API Base URL**: Enter your Hermes Gateway API URL and append `/v1`. For example, `https://baf3d7172.olaresdemo.olares.com/v1`.
     - **Auth**: Select **Bearer**, and then enter the `HERMES_API_SERVER_KEY` you set previously.
