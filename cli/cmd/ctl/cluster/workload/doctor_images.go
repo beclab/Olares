@@ -52,11 +52,19 @@ Pause / sandbox images (repo tag contains "pause") are excluded — they
 are runtime-pinned, never user-prunable. Digest-pinned references
 (repo@sha256:...) match by digest as well as by tag.
 
-Caveat: the local image list reflects the node that serves the request
-(the control node), while workload references are cluster-wide. An
-image present only on a worker node won't appear here, so treat the
-"unused" set as "images on the control node that no workload
-references".`,
+Two caveats before you prune:
+  - Completeness: the local image list reflects the node that serves the
+    request (the control node). Images living only on a worker node won't
+    appear here — it's not a full-cluster image census, but every image it
+    DOES list is checked against cluster-wide references, so the "unused"
+    verdict for a listed image is safe.
+  - Coverage: references are counted only from Deployment / StatefulSet /
+    DaemonSet / Job / CronJob specs. Images used only by a bare Pod, a
+    static pod, or a Pod owned by some other controller / operator are not
+    seen and may be mislabeled unused. The count also reflects the workload
+    SPEC, not the digest a running container is currently pinned to (a tag
+    bumped to a new digest leaves the old, still-running image looking
+    unused). Cross-check running Pods before reclaiming.`,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runDoctorImages(c.Context(), f, o, namespace, labelSelector, registry, unusedOnly)

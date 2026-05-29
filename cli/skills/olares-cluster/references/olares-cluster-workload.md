@@ -84,6 +84,7 @@ This combines the PATCH and the rollout-status poll into one invocation. The age
 - **`--kind` errors are the most common gotcha.** Always include it in `get` / `yaml` / mutating verbs. For `list`, omit it (or use `all`) when the user doesn't specify a type.
 - **`start <name> --replicas N` requires the user to know N.** If the user says "start this back up", ask what replica count they want before invoking. There is intentionally no "remember previous replicas" cache.
 - For "restart this app" requests, **prefer `pod delete` on a specific pod** when the user just wants a single pod to bounce; reach for `workload restart` only when they actually want every replica to recycle.
+- **`doctor images --unused` is a prune *hint*, not a green light.** Two limits: (1) it only lists images on the control node, so it's not a full-cluster census (but a listed image's verdict is checked cluster-wide and therefore safe); (2) references come only from Deployment/StatefulSet/DaemonSet/Job/CronJob specs, so an image used solely by a bare Pod / static pod / other-controller-owned Pod, or one a running container still pins by an old digest, can show as unused. Before telling a user to delete, cross-check running Pods.
 
 ## Common errors
 
