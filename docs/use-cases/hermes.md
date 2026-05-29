@@ -197,16 +197,6 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 
 3. Once approved, you can start chatting with your agent in Discord. If you are talking to it in a channel, mention it first.
 
-## Advanced configuration
-
-To manually adjust parameters, edit the configuration files directly, and then restart the Hermes CLI to apply the changes. 
-
-1. Open the Files app from the Launchpad.
-2. Go to **Data** > **hermesagent** > **home**, and locate the configuration files, such as `config.yaml` and `.env`. 
-
-The file structure and configuration options match the official defaults. For detailed parameter descriptions, see the [Hermes configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
-
-
 ## Manage Olares with your Hermes Agent
 
 Install the Olares CLI skills in Hermes Agent so your agent can manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
@@ -263,7 +253,6 @@ https://{your-gateway-url}/health
 
 If the API is enabled successfully, the page displays a response confirming the service is active. For example, `{"status": "ok", "platform": "hermes-agent"}`.
 
-
 ### Step 4: Connect your application
 
 The following steps demonstrate how to connect with Open WebUI.
@@ -276,6 +265,15 @@ The following steps demonstrate how to connect with Open WebUI.
     - **Auth**: Select **Bearer**, and then enter the `HERMES_API_SERVER_KEY` you set previously.
 5. Click <i class="material-symbols-outlined">refresh</i> to check the connection, and then click **Save**.
 6. Go to the **New chat** page and verify that **hermes-agent** appears in the model drop-down list. You can start chatting with it now.
+
+## Advanced configuration
+
+To manually adjust parameters, edit the configuration files directly, and then restart the Hermes CLI to apply the changes. 
+
+1. Open the Files app from the Launchpad.
+2. Go to **Data** > **hermesagent** > **home**, and locate the configuration files, such as `config.yaml` and `.env`. 
+
+The file structure and configuration options match the official defaults. For detailed parameter descriptions, see the [Hermes configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
 ## FAQs
 
