@@ -60,7 +60,7 @@ After installation, open Freqtrade from Launchpad. You need to add at least one 
    For example:
 
    ```text
-   https://71e1dd45.hzfysttq.olares.com
+   https://71e1dd45.alexmiles.olares.com
    ```
 
 If you use a cloned Freqtrade app, repeat these steps for the cloned app and use its own endpoint.
@@ -75,7 +75,7 @@ When adding a bot to FreqUI, append the bot's API path to the endpoint you copie
 | spot | `<Freqtrade endpoint>/api-spot` |
 | future | `<Freqtrade endpoint>/api-future` |
 
-For example, if your endpoint is `https://71e1dd45.hzfysttq.olares.com`, the backtest bot API URL is `https://71e1dd45.hzfysttq.olares.com/api-backtest`.
+For example, if your endpoint is `https://71e1dd45.alexmiles.olares.com`, the backtest bot API URL is `https://71e1dd45.alexmiles.olares.com/api-backtest`.
 
 By default, all three bots use `admin` / `admin` as the FreqUI login username and password.
 
