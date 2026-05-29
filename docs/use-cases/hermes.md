@@ -263,7 +263,7 @@ If the API is enabled successfully, the page displays a response confirming the 
 
 The following steps demonstrate how to connect with Open WebUI.
 
-1. Open WebUI, click your profile icon and select **Admin Panel**.
+1. In Open WebUI, click your profile icon and select **Admin Panel**.
 2. Go to **Settings** > **Connections**.
 3. On the right of **Manage OpenAI API Connections**, click <i class="material-symbols-outlined">add</i> to add a new connection.
 
