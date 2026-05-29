@@ -199,20 +199,17 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 
 ## Manage Olares with your Hermes Agent
 
-Install the Olares CLI skills in Hermes Agent so your agent can manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
+Use the Olares CLI skills in Hermes Agent so your agent can manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
 
 1. Open the Hermes CLI from the Launchpad.
-2. Run the following commands one by one to install the required skills:
+2. Run the following commands to confirm that both olares-cli and its skills are properly installed:
 
    ```bash
-   hermes skills install clawhub/olares-shared --yes
-   hermes skills install clawhub/olares-market --yes --force
-   hermes skills install clawhub/olares-dashboard --yes --force
-   hermes skills install clawhub/olares-settings --yes --force
-   hermes skills install clawhub/olares-files --yes --force
+   olares-cli -v
+   hermes skills list
    ```
    
-3. After the installation finishes, run the following command to log in to your Olares account. Replace {your-olares-id} with your Olares ID:
+3. Befor using the skills, run the following command to log in to your Olares account. Replace {your-olares-id} with your Olares ID (e.g. olaresdemo@olares.com):
 
    ```bash
    olares-cli profile login --olares-id {your-olares-id}
