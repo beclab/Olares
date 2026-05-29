@@ -233,7 +233,7 @@ To install Olares skills:
 
 ## Call Hermes Agent via OpenAI-compatible API
 
-Hermes Agent supports being called by other applications through an OpenAI-compatible API, allowing you to integrate it with tools like OpenWebUI and Hermes Workspace.
+Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it with other applications like OpenWebUI or Hermes Workspace.
 
 ### Step 1: Enable the Gateway API
 
