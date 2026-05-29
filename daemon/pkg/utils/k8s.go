@@ -574,7 +574,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	for _, app := range apps.Items {
 		var entrances []appcfg.Entrance
 		var err error
-		if isV3(&app) {
+		if !isV3(&app) {
 			entrances, err = appcfg.GenEntranceURL(ctx, &app)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
@@ -807,6 +807,10 @@ func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Applicat
 	users, err := ListUsers(ctx, client, func(u *unstructured.Unstructured) bool {
 		return true
 	})
+	if err != nil {
+		klog.Error("list user error, ", err)
+		return nil, err
+	}
 
 	var entrances []appcfg.Entrance
 	for _, u := range users {
