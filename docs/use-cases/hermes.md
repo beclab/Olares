@@ -14,7 +14,7 @@ doc_updated: "2026-05-29"
 
 Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions.
 
-In Olares, you can install specialized skills that allow your agent to manage your device's files and applications. You can also interact with your agent remotely via messaging platforms like Discord, or integrate it with other applications like OpenWebUI.
+In Olares, you can install specialized skills that allow your agent to manage your device's files and applications. You can also interact with your agent remotely via messaging platforms like Discord, or integrate it with other applications like Open WebUI.
 
 ## Learning objectives
 
