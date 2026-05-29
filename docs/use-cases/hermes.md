@@ -207,25 +207,21 @@ To manually adjust parameters, edit the configuration files directly, and then r
 The file structure and configuration options match the official defaults. For detailed parameter descriptions, see the [Hermes configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
 
-## Install Olares skills
+## Manage Olares with your Hermes Agent
 
-Hermes Agent supports installing Olares skills to extend its capabilities. These skills provide integration with Olares applications, such as Files, Settings, and Dashboard.
-
-To install Olares skills:
+Install the Olares CLI skills in Hermes Agent so your agent can manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
 
 1. Open the Hermes CLI from the Launchpad.
-2. Run the following command to install each skill:
+2. Run the following commands one by one to install the required skills:
 
    ```bash
    hermes skills install clawhub/olares-shared --yes
+   hermes skills install clawhub/olares-market --yes --force
+   hermes skills install clawhub/olares-dashboard --yes --force
+   hermes skills install clawhub/olares-settings --yes --force
+   hermes skills install clawhub/olares-files --yes --force
    ```
-
-3. Repeat the command for each of the following skills:
-   - `clawhub/olares-market`
-   - `clawhub/olares-dashboard`
-   - `clawhub/olares-settings`
-   - `clawhub/olares-files`
-
+   
 3. After the installation finishes, run the following command to log in to your Olares account. Replace {your-olares-id} with your Olares ID:
 
    ```bash
