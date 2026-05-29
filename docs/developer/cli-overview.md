@@ -21,20 +21,20 @@ Olares CLI is available through three modes that differ in where they run and ho
 | In-cluster mode <Badge type="tip" text="^1.12.6" /> | Inside an Olares app's container such as Openclaw or NemoClaw | Credentials injected as environment variables, with scope set by the app's `OlaresManifest` |
 
 :::tip
-To use Olares CLI in user mode, install the CLI with npm. If the `olares-cli` already on your host predates the version shown in the table, the agent commands may not be available. See [Install olares-cli](./cli-installation.md).
+To use Olares CLI in user mode, install the CLI with npm. If the `olares-cli` already on your host predates the version shown in the table, the agent commands may not be available. See [Install olares-cli](./cli-install.md).
 :::
 
 ## Drive Olares from an AI agent
 
 To let an AI agent run Olares CLI on your behalf:
 
-1. Install the CLI and the agent skills. The recommended `npx @olares/cli install` sets up both at once. See [Install olares-cli](./cli-installation.md).
+1. Install the CLI and the agent skills. The recommended `npx @olares/cli install` sets up both at once. See [Install olares-cli](./cli-install.md).
 2. Log in with your Olares ID. See [Log in to Olares](./cli-log-in.md).
 3. Drive Olares in natural language through your agent.
 
 ## Learn more
 
 - [Cluster management](./install/index.md): install Olares on a fresh machine, upgrade between releases, manage disks and GPUs, collect logs, etc.
-- [Install olares-cli](./cli-installation.md): install the standalone CLI on your machine.
+- [Install olares-cli](./cli-install.md): install the standalone CLI on your machine.
 - [Log in to Olares](./cli-log-in.md): create a profile so the CLI can act as your Olares user.
 - [Install and use Agent Skills](./cli-agent-skills.md): add the skills your agent needs to drive Olares.

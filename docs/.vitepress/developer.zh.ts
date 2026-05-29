@@ -46,9 +46,14 @@ export const developerSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
-          text: "Olares 安装详解",
-          link: "/zh/developer/install/",
+          text: "Olares CLI",
+          link: "/zh/developer/cli-overview",
           items: [
+            {
+              text: "集群管理",
+              link: "/zh/developer/install/",
+              collapsed: true,
+              items: [
             {
               text: "安装概述",
               link: "/zh/developer/install/installation-overview",
@@ -65,8 +70,8 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               text: "环境变量",
               link: "/zh/developer/install/environment-variables",
             },
-            {
-              text: "Olares CLI",
+            /*{
+              text: "命令参考",
               link: "/zh/developer/install/cli/olares-cli",
               collapsed: true,
               items: [
@@ -113,10 +118,21 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                   ],
                 },
               ],
-            },
+            },*/
             {
               text: "版本说明",
               link: "/zh/developer/install/versioning",
+            },
+              ],
+            },
+            {
+              text: "搭配 AI 智能体使用",
+              collapsed: false,
+              items: [
+                { text: "安装 olares-cli", link: "/zh/developer/cli-install" },
+                { text: "登录 Olares", link: "/zh/developer/cli-log-in" },
+                { text: "安装与使用 Agent Skills", link: "/zh/developer/cli-agent-skills" },
+              ],
             },
           ],
         },
