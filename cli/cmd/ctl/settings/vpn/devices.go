@@ -61,11 +61,8 @@ func NewDevicesCommand(f *cmdutil.Factory) *cobra.Command {
 mesh.
 
 Subcommands:
-  list                                   list all devices
-  routes <device-id>                     list routes advertised by one device
-  rename <device-id> <new-name>          rename a device
-  delete <device-id>                     remove a device
-  tags set <device-id> --tag <name>...   replace the device's forcedTags
+  list                           list all devices
+  routes <device-id>             list routes advertised by one device
 `,
 	}
 	cmd.SilenceUsage = true

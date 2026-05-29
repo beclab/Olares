@@ -1,0 +1,9 @@
+vendor/
+*.tgz
+*.tar.gz
+node_modules/
+.DS_Store
+test/
+tests/
+.cache/
+*.log

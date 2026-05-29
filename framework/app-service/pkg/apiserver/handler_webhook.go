@@ -121,7 +121,28 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectSharedPod, perms)
-	if !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0 {
+
+	v3 := appCfg != nil && appCfg.IsV3()
+	nothingToInject := !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0
+
+	if v3 {
+		if injectSharedPod != nil {
+			patchBytes, err := patchSharedEntranceLabel(req, &pod, *injectSharedPod)
+			if err != nil {
+				klog.Errorf("Failed to patch shared-entrance label for v3 pod uuid=%s name=%s namespace=%s err=%v",
+					proxyUUID, pod.Name, req.Namespace, err)
+				return h.sidecarWebhook.AdmissionError(req.UID, err)
+			}
+			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+			klog.Infof("Patched shared-entrance label for v3 pod uuid=%s namespace=%s injectSharedPod=%v",
+				proxyUUID, req.Namespace, *injectSharedPod)
+		} else {
+			klog.Infof("Skipping sidecar injection for v3 pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+		}
+		return resp
+	}
+
+	if nothingToInject {
 		klog.Infof("Skipping sidecar injection for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return resp
 	}
@@ -136,6 +157,26 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	klog.Infof("Success to create patch admission response for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 
 	return resp
+}
+
+// patchSharedEntranceLabel applies only the shared-entrance pod label, without
+// sidecar injection. Used for v3 apps where CreatePatch would also inject envoy.
+func patchSharedEntranceLabel(req *admissionv1.AdmissionRequest, pod *corev1.Pod, inject bool) ([]byte, error) {
+	if inject {
+		if pod.Labels == nil {
+			pod.Labels = make(map[string]string)
+		}
+		pod.Labels[constants.AppSharedEntrancesLabel] = "true"
+	} else if pod.Labels != nil {
+		delete(pod.Labels, constants.AppSharedEntrancesLabel)
+	}
+
+	current, err := json.Marshal(pod)
+	if err != nil {
+		return nil, err
+	}
+	patchResp := admission.PatchResponseFromRaw(req.Object.Raw, current)
+	return json.Marshal(patchResp.Patches)
 }
 
 func (h *Handler) appNamespaceValidate(req *restful.Request, resp *restful.Response) {
@@ -1007,10 +1048,24 @@ func (h *Handler) validateUser(ctx context.Context, req *admissionv1.AdmissionRe
 	// Decode the User spec from the request.
 	var user iamv1alpha2.User
 	raw := req.Object.Raw
+	if req.Operation == admissionv1.Delete {
+		raw = req.OldObject.Raw
+	}
 	err := json.Unmarshal(raw, &user)
 	if err != nil {
 		klog.Errorf("Failed to unmarshal request object raw to user with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+
+	if req.Operation == admissionv1.Delete {
+		if user.Annotations[users.UserAnnotationOwnerRole] == "owner" {
+			resp.Allowed = false
+			resp.Result = &metav1.Status{
+				Message: fmt.Sprintf("user %s with role[owner] can not be deleted", user.Name),
+			}
+			return resp
+		}
+		return resp
 	}
 
 	// Check if user already exists

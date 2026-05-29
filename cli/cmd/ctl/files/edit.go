@@ -38,12 +38,6 @@ type editOptions struct {
 	// content-aware caching layer between us and the storage
 	// driver.
 	contentType string
-	// create allows editing a file that doesn't exist on the
-	// server yet — start with an empty buffer instead of
-	// erroring out. Without this flag, a 404 from /api/raw is a
-	// hard error so a typo in the path doesn't silently land
-	// content somewhere unexpected.
-	create bool
 	// keepTemp retains the temp file on no-change / error so the
 	// user can recover whatever they typed. Without it we always
 	// clean up — the no-change path is silent and the error
@@ -171,8 +165,9 @@ func hasBinaryExtension(name string) bool {
 // git, diff(1), and grep(1) use: real text never carries a NUL,
 // and every binary container format we care about (PNG / JPEG /
 // PDF / ELF / Mach-O / ZIP / Office .docx) hits one within its
-// first kilobyte. Empty buffers (--create with no remote file)
-// return false — there's nothing binary about an empty file.
+// first kilobyte. Empty buffers (e.g. a zero-byte file the user
+// just uploaded as a seed before opening it in $EDITOR) return
+// false — there's nothing binary about an empty file.
 func looksBinary(buf []byte) bool {
 	n := len(buf)
 	if n > binarySniffLen {
@@ -218,19 +213,33 @@ var isTTY = func() bool {
 //  3. write to a temp file under $TMPDIR/olares-files-edit-*/
 //  4. spawn $EDITOR on the temp file (foreground, inherits the
 //     parent's stdin/stdout/stderr so vi / nano / hx all work)
-//  5. (--create only) re-Stat the path right before the PUT to
-//     detect a concurrent create that landed during the editor
-//     session. Refuses to PUT if the path is now occupied —
-//     closing the symmetric race to Bug 2 (read-side concurrent
-//     delete). Without this check, a peer that creates the same
-//     path while the editor is open would have their content
-//     silently overwritten by the user's empty / typed buffer.
-//  6. PUT /api/resources/<encPath>    — when the post-edit bytes
+//  5. PUT /api/resources/<encPath>    — when the post-edit bytes
 //                                       differ from the pre-edit
-//                                       bytes, OR when --create
-//                                       was set (Bug 4: --create
-//                                       must materialise the file
-//                                       even on an empty :q!)
+//                                       bytes (no PUT on a
+//                                       bytes-equal `:q!`)
+//
+// `edit` is strictly UPDATE-ONLY — there is no `--create` knob.
+// The backend's `PUT /api/resources/<path>` handler is wired as
+// "replace the bytes of an existing file" and returns
+// `HTTP 500: file ... not exists` for any path Stat doesn't
+// already see. A previous draft of this verb shipped a
+// `--create` flag that tried to PUT against the missing path
+// directly; it never worked end-to-end and silently produced
+// "saved!" → 500 round-trips that confused users. The CLI
+// matches the LarePass GUI here: in the web app the Edit
+// affordance only lights up on existing files; creating a new
+// file is the upload flow (chunked POST → bucket-fetch leg),
+// not the per-resource PUT.
+//
+// If you genuinely want to create-then-edit, do it in two
+// verbs:
+//
+//	echo "" | olares-cli files upload - drive/Home/scratch/new.md
+//	olares-cli files edit drive/Home/scratch/new.md
+//
+// (The first command lands an empty / templated file via the
+// chunked-upload pipeline the upload verb knows how to drive;
+// the second one's PUT now has an existing target.)
 //
 // This mirrors the LarePass web app's "Edit" affordance for text
 // files — same endpoint pair (/api/raw to read, /api/resources to
@@ -350,6 +359,21 @@ the safe alternative is:
 
 share / internal are refused as cross-user / read-only views.
 
+UPDATE-only verb (no --create knob):
+
+    ` + "`edit`" + ` only operates on files that already exist on the
+    server. The backend's PUT /api/resources/<path> handler is
+    wired as "replace the bytes of an existing file" — it
+    returns ` + "`HTTP 500: file ... not exists`" + ` for any path Stat
+    doesn't already see. The CLI matches the LarePass GUI here:
+    in the web app the Edit affordance only lights up on
+    existing files; creating a new file is the upload flow.
+
+    To create-then-edit, use two verbs:
+
+        echo "" | olares-cli files upload - drive/Home/scratch/new.md
+        olares-cli files edit drive/Home/scratch/new.md
+
 Size cap (default 1 MiB):
 
     By default ` + "`edit`" + ` refuses files larger than 1 MiB on either
@@ -383,7 +407,6 @@ Flags:
 
     --editor string         override the editor program (default $EDITOR cascade)
     --content-type string   PUT Content-Type header (default "text/plain")
-    --create                start with an empty buffer if the file does not exist
     --keep-temp             retain the temp file on no-change / error for recovery
     --max-size int          max bytes for both the remote (pre-edit) and local
                             (post-edit) sizes; 0 disables the check (default 1 MiB)
@@ -398,7 +421,6 @@ Examples:
     olares-cli files edit sync/<repo_id>/Notes/draft.md
     olares-cli files edit cache/<node>/build/config.toml
     olares-cli files edit external/<node>/usb1/config.json
-    olares-cli files edit drive/Home/new.txt --create
     olares-cli files edit drive/Home/Logs/today.log --max-size 5242880  # 5 MiB
 
 Notes:
@@ -406,36 +428,15 @@ Notes:
   - The temp file's basename matches the remote basename so
     editor-side syntax highlighting picks the right mode for
     .md / .json / .yaml / .ts / etc.
-  - --create forces a PUT even when you exit the editor without
-    typing anything: the verb's contract is "materialise this file
-    on the server", and a silent no-op would defeat that. The
-    resulting file is empty (the wire endpoint accepts a zero-byte
-    PUT). Re-running edit on a file that already exists treats
-    the no-change branch as a real no-op (no PUT) — the same
-    cheap :q / :q! workflow the LarePass GUI offers.
-  - Concurrent edits / deletes are detected on a best-effort
-    basis at BOTH the read window and the write window:
-
-      Read window  — Stat says the file exists but the GET
-                     comes back 404 (someone else just deleted
-                     it): refuse with "file disappeared between
-                     stat and fetch" rather than falling back
-                     to --create-empty-buffer.
-
-      Write window — --create kicked in because Stat returned
-                     404, but a peer creates the same path
-                     during the editor session: re-Stat right
-                     before the PUT and refuse if the path is
-                     now occupied, so we don't silently overwrite
-                     the peer's content with the user's empty /
-                     typed buffer.
-
-    There is no ETag / If-Match / If-None-Match support on the
+  - Concurrent-delete detection: if Stat says the file exists
+    but the subsequent GET comes back 404 (someone else just
+    deleted it), the verb refuses with "file disappeared
+    between stat and fetch" rather than silently treating it as
+    a create.
+  - There is no ETag / If-Match / If-None-Match support on the
     wire so concurrent UPDATES (existing-file edits from two
     clients at the same time) still follow last-writer-wins
-    semantics — same as the LarePass GUI. The two race-checks
-    above only cover the create / delete state-transitions where
-    the data-loss is otherwise totally silent.
+    semantics — same as the LarePass GUI.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -446,8 +447,6 @@ Notes:
 		"editor program to spawn (default: $VISUAL / $EDITOR / vi)")
 	cmd.Flags().StringVar(&o.contentType, "content-type", edit.DefaultContentType,
 		"Content-Type header for the PUT body (default text/plain)")
-	cmd.Flags().BoolVar(&o.create, "create", false,
-		"start with an empty buffer when the remote file does not exist (404)")
 	cmd.Flags().BoolVar(&o.keepTemp, "keep-temp", false,
 		"retain the temp file on no-change / error for recovery")
 	cmd.Flags().Int64Var(&o.maxSize, "max-size", DefaultMaxSize,
@@ -529,20 +528,18 @@ func runEdit(
 	//   - file exists  → fetch current bytes (download.Stat
 	//                    rejects directories with a friendly
 	//                    message before we touch the temp dir).
-	//   - file missing → if --create, start with an empty buffer
-	//                    AND set isCreate=true so the post-edit
-	//                    PUT fires unconditionally (Bug 4: a
-	//                    --create + :q! must still materialise
-	//                    the file, otherwise the verb silently
-	//                    no-ops). Without --create, hard error
-	//                    with a "did you mean --create?" hint.
+	//   - file missing → hard error pointing at the upload
+	//                    verb. `edit` is UPDATE-only by design
+	//                    (the backend's PUT /api/resources is
+	//                    update-only; see runEdit's top docstring
+	//                    for the wire constraint).
 	//
 	// statAndFetch ALSO short-circuits the size cap: when
 	// o.maxSize > 0 and Stat reports Size > maxSize we error out
 	// BEFORE pulling bytes, so a typo like
 	// `files edit drive/Home/Photos/big.jpg` doesn't waste a
 	// multi-MB download just to refuse at the client.
-	currentBytes, isDir, isCreate, err := statAndFetch(ctx, statClient, editClient, op.DisplayPath, o.create, o.maxSize)
+	currentBytes, isDir, err := statAndFetch(ctx, statClient, editClient, op.DisplayPath, o.maxSize)
 	if err != nil {
 		return reformatEditHTTPErr(err, rp.OlaresID, "fetch", op.DisplayPath)
 	}
@@ -554,8 +551,9 @@ func runEdit(
 	// Post-fetch content sniff (layer 2 of the text-only policy).
 	// Catches files whose extension lies — `myfile` (no extension)
 	// that's actually a JPEG, `.log` files that are really ELF
-	// core dumps, `.dat` blobs, etc. Empty buffers (--create with
-	// a 404) trivially pass. Skipped under --allow-binary.
+	// core dumps, `.dat` blobs, etc. Empty buffers (e.g. a
+	// zero-byte file freshly seeded via `files upload`) trivially
+	// pass. Skipped under --allow-binary.
 	if !o.allowBinary && looksBinary(currentBytes) {
 		return fmt.Errorf(
 			"refusing to edit %s: content looks binary (NUL byte in the first %d bytes); "+
@@ -598,23 +596,10 @@ func runEdit(
 	}
 
 	if bytesEqual(currentBytes, newBytes) {
-		// Create-mode invariant: the user explicitly asked us to
-		// materialise a NEW file; bytes-equal here just means
-		// they exited without typing anything (`:q!` over an
-		// empty buffer). We MUST still PUT — otherwise the
-		// verb's `--create` flag becomes a silent no-op, and a
-		// successful-looking exit leaves the remote file un-
-		// created. (Bug 4 in the verb's bug report.) The PUT
-		// of an empty body is a real intent here ("create me
-		// an empty file"), so we treat it as success.
-		if isCreate {
-			fmt.Fprintf(out, "  · no edits; creating empty file (--create)\n")
-		} else {
-			fmt.Fprintf(out, "  · no changes; nothing to upload\n")
-			cleaned = true
-			_ = os.RemoveAll(tmpDir)
-			return nil
-		}
+		fmt.Fprintf(out, "  · no changes; nothing to upload\n")
+		cleaned = true
+		_ = os.RemoveAll(tmpDir)
+		return nil
 	}
 
 	// Post-edit size cap: refuse to PUT a buffer that exceeds
@@ -636,30 +621,6 @@ func runEdit(
 			formatBytes(o.maxSize),
 			tmpFile,
 			tmpFile, op.DisplayPath)
-	}
-
-	// Create-mode race detection: between the initial Stat 404
-	// (where --create promised the user "this path is empty")
-	// and now, another client / device may have created the
-	// same path. Without this check, our PUT would silently
-	// overwrite their content with the buffer the user typed
-	// into a session they BELIEVED was creating a new file.
-	// (See precheckCreateRace's docstring for the wire-shape
-	// constraints — no If-None-Match support on PUT, so the
-	// best we can do is shrink the race window to one Stat
-	// round-trip immediately before the PUT.)
-	//
-	// We retain the temp file on race detection regardless of
-	// --keep-temp: the user's edits are NOT on the server, and
-	// pointing them at the temp file lets them recover via
-	// `files cat` + manual merge or `files upload` if they
-	// really do want last-writer-wins.
-	if isCreate {
-		if err := precheckCreateRace(ctx, statClient, op.DisplayPath, out); err != nil {
-			o.keepTemp = true
-			fmt.Fprintf(out, "  ! create-mode race detected; temp file retained at %s\n", tmpFile)
-			return err
-		}
 	}
 
 	fmt.Fprintf(out, "uploading %d byte%s → %s\n",
@@ -777,40 +738,34 @@ func frontendPathToEditTarget(raw string) (edit.Target, error) {
 }
 
 // statAndFetch resolves "(does this file exist? if yes, give me
-// its bytes; if no and --create, give me an empty buffer)" in a
-// single helper so the cobra-runner doesn't have to track four
-// distinct outcomes (exists / dir / missing-and-create / missing-
-// and-no-create). The returned `isCreate` flag is what the cobra
-// layer keys off of to FORCE the PUT even on bytes-equal — without
-// that signal a `--create` + `:q!` (no edits) would silently skip
-// the upload and leave the remote file un-materialised, defeating
-// the whole point of `--create`. (Bug 4 in the verb's bug report.)
+// its bytes; if no, error out)" in a single helper so the cobra-
+// runner doesn't have to track three distinct outcomes (exists /
+// dir / missing).
+//
+// `edit` is strictly UPDATE-only: missing files are a hard error
+// pointing at the upload verb. The backend's PUT /api/resources/
+// handler is wired as "replace the bytes of an existing file" —
+// it returns `HTTP 500: file ... not exists` for any path Stat
+// doesn't already see, so a CLI flag that tried to "create-then-
+// edit" against a single PUT would silently produce a misleading
+// "saved!" → 500 round-trip. A previous draft of this verb
+// shipped exactly that flag; we've since removed it and surface
+// the create-then-edit recovery as a two-verb shape (upload an
+// empty file, then edit) in runEdit's top docstring.
 //
 // Returns:
-//   - currentBytes: file contents, or empty []byte when the file
-//     was missing and --create is set.
+//   - currentBytes: file contents.
 //   - isDir: true if the remote target is a directory; the cobra
 //     layer surfaces a friendlier error than the wire 400.
-//   - isCreate: true ONLY when Stat returned 404 AND --create was
-//     set. The cobra layer uses this to force the post-edit PUT
-//     regardless of bytes-equal, so an empty `:q!` actually
-//     materialises an empty file instead of "no changes".
-//   - err: any non-recoverable failure.
+//   - err: any non-recoverable failure (including Stat 404 — the
+//     missing-file message points the user at `files upload`).
 //
 // Race semantics (read window): a Fetch 404 AFTER a successful
 // Stat is treated as a CONFLICT (the file disappeared between
 // calls — most likely a concurrent delete by another client /
-// device). It is NOT routed through the --create empty-buffer
-// path, because silently recreating a file someone else just
-// deleted is almost never what the user wants. (Bug 2 in the
-// verb's bug report.)
-//
-// The SYMMETRIC write-window race — Stat 404 lands here, the
-// user opens the empty buffer, and a peer creates the same path
-// before our PUT — is closed by precheckCreateRace, called from
-// runEdit immediately before the PUT. Together the two helpers
-// cover both data-loss windows where `files edit` could
-// otherwise silently destroy a peer's content.
+// device). Surfacing this as a conflict rather than a generic
+// 404 lets the user re-run with explicit intent if they really
+// do want to recreate the file (via the upload verb).
 //
 // `maxSize > 0` activates the pre-edit size cap. Two layers:
 //
@@ -822,9 +777,8 @@ func frontendPathToEditTarget(raw string) (edit.Target, error) {
 //     edit.Client.Fetch wraps the body in io.LimitReader(_,
 //     maxSize+1) and returns *edit.TooLargeError if the response
 //     exceeds the cap. This is the safety net for Stat.Size == 0
-//     (Bug 5 in the verb's bug report) AND for concurrent
-//     appends between Stat and Fetch — both surface the same
-//     uniform cap error to the user.
+//     AND for concurrent appends between Stat and Fetch — both
+//     surface the same uniform cap error to the user.
 //
 // `maxSize == 0` disables both layers (matches the --max-size 0
 // escape hatch on the cobra surface).
@@ -838,15 +792,14 @@ func statAndFetch(
 	statClient *download.Client,
 	editClient *edit.Client,
 	plain string,
-	allowCreate bool,
 	maxSize int64,
-) (currentBytes []byte, isDir, isCreate bool, err error) {
+) (currentBytes []byte, isDir bool, err error) {
 	statSucceeded := false
 	st, statErr := statClient.Stat(ctx, plain)
 	switch {
 	case statErr == nil:
 		if st.IsDir {
-			return nil, true, false, nil
+			return nil, true, nil
 		}
 		statSucceeded = true
 		// Pre-fetch size cap (layer 1). Skipped silently when
@@ -857,39 +810,42 @@ func statAndFetch(
 		// catches an oversized body without burning unbounded
 		// memory.
 		if maxSize > 0 && st.Size > maxSize {
-			return nil, false, false, fmt.Errorf(
+			return nil, false, fmt.Errorf(
 				"edit %s: remote size %s exceeds --max-size %s; "+
 					"`files edit` is meant for text editing — re-run with --max-size 0 to disable "+
 					"the cap, or --max-size <bytes> to widen it (or use `files download` for binaries)",
 				plain, formatBytes(st.Size), formatBytes(maxSize))
 		}
 	case download.IsNotFound(statErr):
-		if !allowCreate {
-			return nil, false, false, fmt.Errorf(
-				"edit %s: not found on the server (HTTP 404); pass --create to start with an empty buffer",
-				plain)
-		}
-		return []byte{}, false, true, nil
+		// `edit` is UPDATE-only by design (see the helper's
+		// docstring + runEdit's top comment for the wire-
+		// shape rationale). The CTA points at the upload
+		// verb, which is the documented create path; the
+		// user can then re-run `files edit` against the now-
+		// existing target.
+		return nil, false, fmt.Errorf(
+			"edit %s: not found on the server (HTTP 404); `files edit` only updates "+
+				"existing files. To create a new file, use `files upload <local> %s` first "+
+				"(an empty stdin works: `echo \"\" | olares-cli files upload - %s`), "+
+				"then re-run `files edit %s`.",
+			plain, plain, plain, plain)
 	default:
-		return nil, false, false, statErr
+		return nil, false, statErr
 	}
 
 	body, err := editClient.Fetch(ctx, plain, maxSize)
 	if err != nil {
 		// Race: file disappeared between Stat (which said it
-		// existed) and Fetch. Surface as a conflict, NOT as a
-		// route into --create empty-buffer mode. Recreating a
-		// file someone just concurrently deleted is almost
-		// certainly not what the user asked for — making them
-		// re-run with explicit intent (e.g. running the verb
-		// again, this time hitting the genuine 404 from Stat
-		// with --create) is the safe default.
+		// existed) and Fetch. Surface as a conflict so the
+		// user has explicit intent (re-run the verb / use
+		// upload) rather than silently routing through a
+		// recreate path that no longer exists.
 		if edit.IsNotFound(err) && statSucceeded {
-			return nil, false, false, fmt.Errorf(
+			return nil, false, fmt.Errorf(
 				"edit %s: file disappeared between stat and fetch (HTTP 404 on the GET); "+
 					"a concurrent delete is most likely — re-run to confirm, "+
-					"and pass --create explicitly if you really do want to recreate it",
-				plain)
+					"and use `files upload <local> %s` if you want to recreate the file.",
+				plain, plain)
 		}
 		// Other 404s (Stat itself returned 404) are handled in
 		// the switch above; reaching here with edit.IsNotFound
@@ -897,110 +853,16 @@ func statAndFetch(
 		// generic error for safety.
 		var tle *edit.TooLargeError
 		if errors.As(err, &tle) {
-			return nil, false, false, fmt.Errorf(
+			return nil, false, fmt.Errorf(
 				"edit %s: fetched body exceeds --max-size %s (Stat reported %s; "+
 					"either the listing's size field is unreliable or the file was "+
 					"concurrently appended between stat and fetch); "+
 					"re-run with --max-size 0 to disable the cap or --max-size <bytes> to widen it",
 				plain, formatBytes(maxSize), formatBytes(st.Size))
 		}
-		return nil, false, false, err
+		return nil, false, err
 	}
-	return body, false, false, nil
-}
-
-// precheckCreateRace closes the create-mode race window that sits
-// between the initial Stat 404 (where --create promised "this
-// path is empty, you're free to materialise it") and the post-
-// editor PUT (which would otherwise unconditionally land the
-// user's bytes on the server).
-//
-// The race: another client / device creates the same path during
-// the editor session. Without this check, our PUT silently
-// overwrites their file with the buffer the user typed into what
-// they BELIEVED was a fresh `--create` session — a data-loss foot-
-// gun whose only signal is the misleading "saved!" exit message.
-// The user never sees the other client's content, never gets a
-// chance to merge, and there's no audit trail of the overwrite.
-//
-// The wire has no atomic create-if-not-exists primitive (no
-// If-None-Match: * support on PUT /api/resources, no PATCH-with-
-// expected-state path) so we can't make this fully race-free.
-// What we CAN do is shrink the window from "the entire editing
-// session" (seconds to minutes) to "one Stat round-trip"
-// (milliseconds): re-Stat right before the PUT, refuse if the
-// path now exists. The remaining race window — Stat-to-PUT —
-// matches the LarePass GUI's last-writer-wins semantics for
-// concurrent UPDATES, so we're not making the create path
-// stricter than the rest of the verb.
-//
-// On race detection we return a typed-error-shaped fmt.Errorf
-// with the recovery path baked in:
-//
-//   - file conflict   → suggest `files cat <path>` to inspect,
-//                       then `files edit <path>` (without --create)
-//                       to merge OR `files upload <local> <path>`
-//                       for explicit last-writer-wins.
-//   - directory conflict → harder failure: a directory now occupies
-//                       the path, so the user has to `files rm -r`
-//                       before any edit can land.
-//
-// Failure modes for the Stat itself:
-//
-//   - 404               → still missing; safe to PUT (nil error).
-//   - non-404 (auth, timeout, 5xx) → fail-OPEN with a stderr
-//     warning. A flaky backend shouldn't block the user's
-//     create — and the PUT will surface its own error with more
-//     context if the backend is genuinely broken. The race
-//     window degrades to the original behaviour for that one
-//     invocation, which is no worse than not running the check.
-//
-// Symmetry with Bug 2 (Stat-success → Fetch-404 → concurrent
-// delete): both helpers detect the SAME race-class — a state
-// transition between two consecutive wire calls — and surface it
-// as a clear conflict rather than letting the verb commit
-// destructive bytes against an unexpected target. The two helpers
-// together pin the only two windows where `files edit` can lose
-// data to concurrent peers: the read window (Bug 2) and the
-// write window (this bug).
-func precheckCreateRace(
-	ctx context.Context,
-	statClient *download.Client,
-	plain string,
-	out io.Writer,
-) error {
-	st, err := statClient.Stat(ctx, plain)
-	switch {
-	case err == nil:
-		if st.IsDir {
-			return fmt.Errorf(
-				"create-mode race for %s: a DIRECTORY now exists at this path "+
-					"(Stat returned 404 at the start of the session, but a concurrent "+
-					"create has landed since); refusing to PUT — this path is no longer "+
-					"addressable as a file. Use `files ls %s` to inspect it, "+
-					"`files rm -r %s` if you intend to replace it, then re-run `files edit`.",
-				plain, plain, plain)
-		}
-		return fmt.Errorf(
-			"create-mode race for %s: file now exists on the server "+
-				"(Stat returned 404 at the start of the session, but a concurrent create "+
-				"has landed since); refusing to PUT to avoid silently overwriting another "+
-				"client's content. Inspect with `files cat %s`, then either "+
-				"re-run `files edit %s` (without --create) to merge, or "+
-				"`files upload <local> %s` for explicit last-writer-wins.",
-			plain, plain, plain, plain)
-	case download.IsNotFound(err):
-		return nil
-	default:
-		// Fail-open: a flaky pre-PUT Stat shouldn't refuse the
-		// user's create. The PUT will surface a clearer error
-		// with more context if the backend is genuinely broken.
-		// We narrate the inconclusive check on stderr so the
-		// "saved!" message that follows isn't taken as proof
-		// that the path was empty.
-		fmt.Fprintf(out, "  ! create-mode pre-PUT race check inconclusive (%v); proceeding\n", err)
-		return nil
-	}
+	return body, false, nil
 }
 
 // writeTempFile creates a fresh $TMPDIR/olares-files-edit-XXXX/

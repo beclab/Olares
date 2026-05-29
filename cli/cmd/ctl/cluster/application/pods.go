@@ -2,6 +2,7 @@ package application
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -40,7 +41,19 @@ makes the application-side pivot from ` + "`application list`" + ` explicit.
 			if ns == "" {
 				return fmt.Errorf("namespace must be non-empty")
 			}
-			return pod.RunList(c.Context(), o, p, ns, labelSelector, fieldSelector)
+			// Mirror `cluster pod list -n <ns>`'s empty-result UX so
+			// the application-side pivot doesn't silently show an
+			// empty header table — see pod.RunList for why count is
+			// returned instead of folding the message into RunList
+			// itself.
+			n, err := pod.RunList(c.Context(), o, p, ns, labelSelector, fieldSelector)
+			if err != nil {
+				return err
+			}
+			if n == 0 && !o.IsJSON() && !o.Quiet {
+				fmt.Fprintf(os.Stderr, "No pods found in %s namespace.\n", ns)
+			}
+			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&labelSelector, "label", "l", "", "label selector to filter pods (K8s syntax)")

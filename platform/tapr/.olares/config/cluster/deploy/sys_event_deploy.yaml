@@ -87,7 +87,7 @@ spec:
         runAsUser: 0
       containers:
       - name: tapr-sysevent
-        image: beclab/sys-event:0.2.20
+        image: beclab/sys-event:0.2.21
         imagePullPolicy: IfNotPresent
 
 ---

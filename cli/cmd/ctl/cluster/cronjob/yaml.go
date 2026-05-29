@@ -27,7 +27,7 @@ func NewYAMLCommand(f *cmdutil.Factory) *cobra.Command {
 
 Identity follows the same "<namespace>/<name>" or "-n <ns> <name>"
 convention as ` + "`cluster cronjob get`" + `. Output is the JSON response
-from ` + "`/apis/batch/v1beta1/namespaces/<ns>/cronjobs/<name>`" + `
+from ` + "`/apis/batch/v1/namespaces/<ns>/cronjobs/<name>`" + `
 converted to YAML — every field the server returned is preserved.
 
 This verb deliberately does NOT honor --output (yaml is the whole

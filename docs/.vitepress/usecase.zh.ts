@@ -12,8 +12,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "集成 Discord",
-                  link: "/zh/use-cases/openclaw-integration",
+                  text: "集成聊天应用",
+                  items: [
+                    {
+                      text: "集成 Discord",
+                      link: "/zh/use-cases/openclaw-integration",
+                    },
+                    {
+                      text: "集成 WhatsApp",
+                      link: "/zh/use-cases/openclaw-channel-whatsapp"
+                    }
+                  ],
                 },
                 {
                   text: "启用网页搜索",
@@ -24,12 +33,16 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/openclaw-skills",
                 },
                 {
-                  text: "启用本地文件访问",
-                  link: "/zh/use-cases/openclaw-local-access",
-                },
+                  text: "使用 OpenClaw 管理 Olares",
+                  link: "/zh/use-cases/openclaw-olares-skills",
+                },                
+                //{
+                //  text: "启用本地文件访问",
+                //  link: "/zh/use-cases/openclaw-local-access",
+                //},
                 {
                   text: "启用沙盒",
-                  link: "/use-cases/openclaw-enable-sandbox",
+                  link: "/zh/use-cases/openclaw-enable-sandbox",
                 },
                 {
                   text: "升级 OpenClaw",
@@ -222,6 +235,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/nofx",
             },
             {
+              text: "TradingAgents",
+              link: "/zh/use-cases/tradingagents",
+            },             
+            {
               text: "TensorZero",
               link: "/zh/use-cases/tensorzero",
             },           
@@ -306,6 +323,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Komga",
               link: "/zh/use-cases/komga",
+            },
+            {
+              text: "Navidrome",
+              link: "/zh/use-cases/navidrome",
             },
             {
               text: "TREK (NOMAD)",

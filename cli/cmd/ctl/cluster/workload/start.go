@@ -88,6 +88,6 @@ needed.
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "after starting, wait for the rollout to converge")
 	cmd.Flags().DurationVar(&interval, "interval", 2*time.Second, "polling interval for --watch")
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "give up after this duration when --watch is set; 0 = no timeout")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }

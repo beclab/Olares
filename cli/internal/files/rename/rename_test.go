@@ -299,6 +299,203 @@ func TestPlan_RejectsProtectedDriveHomeChild(t *testing.T) {
 	}
 }
 
+// TestPlan_RejectsProtectedExternalChild pins the LarePass-aligned
+// policy that the system-managed AI mountpoint folders under
+// `external/<node>/...` refuse rename: the GUI greys out rename
+// via `externalFolderWhiteList` (depth-1: ai) and
+// `externalAiFolderWhiteList` (depth-2: output / model / comfyui /
+// ollama) in apps/packages/app/src/stores/operation.ts. The CLI
+// mirrors that so a scripted `files rename` can't silently break
+// the contract Ollama / ComfyUI / Huggingface readers look up by
+// name.
+//
+// Path-shape ground truth: the GUI's `<X>` in
+// `/Files/External/<X>/` is the LarePass `masterNode`
+// (apps/.../external/data.ts:77), so `<X>` maps to
+// FrontendPath.Extend on the CLI — the GUI's `ai/` row lives at
+// `external/<node>/ai/` (SubPath="/ai/"), NOT under any nested
+// volume segment.
+//
+// The matrix covers both layers (depth-1 + depth-2) plus negative
+// cases that LOOK adjacent (case mismatches, depth-2 under a
+// non-ai parent, deeper user-content paths, other namespaces
+// with same-named entries).
+func TestPlan_RejectsProtectedExternalChild(t *testing.T) {
+	rejectCases := []struct {
+		name string
+		t    Target
+	}{
+		// ----- depth-1: external/<node>/ai -----
+		{
+			name: "depth-1 ai under olares node",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-1 ai with trailing slash",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-1 ai on arbitrary node name (node is opaque)",
+			t: Target{
+				FileType: "external", Extend: "node-1",
+				SubPath: "/ai/", IsDirIntent: true,
+			},
+		},
+		// ----- depth-2: external/<node>/ai/<name> -----
+		{
+			name: "depth-2 ai/output",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/output", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-2 ai/model",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/model/", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-2 ai/comfyui",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/comfyui", IsDirIntent: true,
+			},
+		},
+		{
+			name: "depth-2 ai/ollama",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/ollama/", IsDirIntent: true,
+			},
+		},
+	}
+	for _, c := range rejectCases {
+		t.Run("reject "+c.name, func(t *testing.T) {
+			_, err := Plan(c.t, "Renamed")
+			if err == nil {
+				t.Fatalf("Plan: expected refusal for %s/%s%s",
+					c.t.FileType, c.t.Extend, c.t.SubPath)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, "system-managed AI mountpoint folder") {
+				t.Errorf("error should mention 'system-managed AI mountpoint folder'; got: %v", err)
+			}
+			if !strings.Contains(msg, "LarePass") {
+				t.Errorf("error should reference LarePass for context; got: %v", err)
+			}
+			// The error should echo the offending path so the
+			// user can match it against their command line.
+			displayHint := c.t.FileType + "/" + c.t.Extend
+			if !strings.Contains(msg, displayHint) {
+				t.Errorf("error should echo path prefix %q; got: %v", displayHint, err)
+			}
+			// Sanity-check that both whitelists are enumerated so
+			// the user sees the full policy without consulting
+			// docs.
+			if !strings.Contains(msg, "comfyui") || !strings.Contains(msg, "output") {
+				t.Errorf("error should enumerate depth-2 whitelist (comfyui / output); got: %v", err)
+			}
+		})
+	}
+
+	// Negative cases: paths that LOOK adjacent must remain
+	// renameable so the policy does not over-extend.
+	allowCases := []struct {
+		name string
+		t    Target
+		dst  string
+	}{
+		{
+			// Depth-2 under a non-ai depth-1 parent — name
+			// happens to match the ai-whitelist but the parent
+			// isn't "ai", so this is just a regular dir inside
+			// some volume.
+			name: "depth-2 under non-ai parent",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/USB-0/output", IsDirIntent: true,
+			},
+			dst: "outputs-archive",
+		},
+		{
+			// Depth-2 ai/<other> not in the whitelist — user
+			// content under ai/, freely renameable.
+			name: "depth-2 ai/<other> not whitelisted",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/my-experiments", IsDirIntent: true,
+			},
+			dst: "my-archive",
+		},
+		{
+			// Depth-3 under ai/output — user runs, freely
+			// renameable (only the dir itself is pinned).
+			name: "depth-3 under ai/output",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/output/run-2026-05", IsDirIntent: true,
+			},
+			dst: "run-2026-06",
+		},
+		{
+			// Case-sensitive mismatch — "AI" must NOT trip the
+			// policy (the GUI compares lowercase string values).
+			name: "case mismatch on depth-1 name",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/AI", IsDirIntent: true,
+			},
+			dst: "AI-archive",
+		},
+		{
+			name: "case mismatch on depth-2 name",
+			t: Target{
+				FileType: "external", Extend: "olares",
+				SubPath: "/ai/Output", IsDirIntent: true,
+			},
+			dst: "Output-archive",
+		},
+		{
+			// Different fileType that looks similar — drive/Home
+			// has its own policy (ProtectedDriveHomeChildren).
+			// drive/Home/ai is NOT a system folder, so it must
+			// stay renameable.
+			name: "drive/Home/ai is not external",
+			t: Target{
+				FileType: "drive", Extend: "Home",
+				SubPath: "/ai", IsDirIntent: true,
+			},
+			dst: "ai-archive",
+		},
+		{
+			// sync/<repo>/ai is also not external — same name
+			// happens to exist but in a different namespace.
+			name: "sync/<repo>/ai is not external",
+			t: Target{
+				FileType: "sync", Extend: "abc-repo",
+				SubPath: "/ai", IsDirIntent: true,
+			},
+			dst: "ai-archive",
+		},
+	}
+	for _, c := range allowCases {
+		t.Run("allow "+c.name, func(t *testing.T) {
+			if _, err := Plan(c.t, c.dst); err != nil {
+				t.Errorf("Plan: unexpected refusal for %s/%s%s: %v",
+					c.t.FileType, c.t.Extend, c.t.SubPath, err)
+			}
+		})
+	}
+}
+
 // TestRename_WireShape inspects the actual PATCH that lands on the
 // server — this is the test that breaks loudly if the wire protocol
 // drifts (verb, URL path, query encoding, no body).

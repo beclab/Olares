@@ -1,10 +1,13 @@
 package vpn
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -16,17 +19,28 @@ import (
 // `olares-cli settings vpn subroutes ...`
 //
 // Per-app sub-route enablement. Mirrors the SPA's Settings -> VPN ->
-// "Allow access from sub-domains" toggle (apps/.../stores/settings/acl.ts:243-280).
+// "Allow access from sub-domains" toggle (apps/.../stores/settings/acl.ts:248-258).
 // Three endpoints behind one cobra parent:
 //
-//	GET  /api/acl/subroutes/status                        -> opaque upstream JSON
+//	GET  /api/acl/subroutes/status                        -> BFL envelope wrapping []string
 //	POST /api/acl/subroutes/enable     body {}            -> success / failure
 //	POST /api/acl/subroutes/disable    body {}            -> success / failure
 //
-// The status response shape isn't strongly typed in the SPA (it stuffs
-// the raw object into `subroutes`), so we render the opaque JSON
-// verbatim. --output table just prints "<JSON body>" — no point
-// hand-rolling a key/value table for a shape that shifts under us.
+// Wire shape: BFL's handleGetTailScaleSubnet (framework/bfl/pkg/apis/
+// settings/v1alpha1/handle_headscale.go:286-288) returns the per-app
+// sub-route list via `response.Success(resp, subRoutes)`, i.e. a BFL
+// envelope `{code, message, data: []string}`. user-service forwards the
+// envelope verbatim; the SPA only "sees" the inner `[]string` because
+// boot/axios.ts:163 strips `data.data` globally. CLI callers don't get
+// that for free, so decodeSubroutesStatus has to unwrap defensively
+// (same back-history as decodeSSHStatus).
+//
+// Render contract: the SPA's only visible artifact for this endpoint is
+// a single toggle bound to `allow_subroutes = data && data.length > 0`
+// (apps/.../stores/settings/acl.ts:257 + Vpn/VPNPage.vue:44). Mirror
+// that in --output table: print the derived state + the route list. The
+// raw inner data goes out under -o json so downstream tools see the
+// same body the SPA's axios interceptor exposes to acl.ts.
 
 func NewSubroutesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -37,9 +51,7 @@ the Headscale mesh. Mirrors the "Allow sub-domains" switch on the SPA's
 VPN page.
 
 Subcommands:
-  status     dump the current sub-route ACL state (raw JSON)
-  enable     permit sub-domain access across the mesh
-  disable    block sub-domain access across the mesh
+  status     show current sub-route ACL state (allow_subroutes + route list)
 `,
 	}
 	cmd.SilenceUsage = true
@@ -49,11 +61,21 @@ Subcommands:
 	return cmd
 }
 
+// subroutesStatus is the rendered shape for `vpn subroutes status` table
+// view: the derived `allow_subroutes` flag (true iff the upstream
+// returned a non-empty list, matching the SPA's `data && data.length > 0`
+// rule) plus the route list itself. Never serialized — `-o json`
+// round-trips the upstream's unwrapped data ([]string) verbatim.
+type subroutesStatus struct {
+	AllowSubRoutes bool
+	Routes         []string
+}
+
 func newSubroutesStatusCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "dump current sub-route ACL state (raw upstream JSON)",
+		Short: "show current sub-route ACL state (allow_subroutes + route list)",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := c.Context()
@@ -71,32 +93,113 @@ func runSubroutesStatus(ctx context.Context, f *cmdutil.Factory, outputRaw strin
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if _, err := parseFormat(outputRaw); err != nil {
+	format, err := parseFormat(outputRaw)
+	if err != nil {
 		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err
 	}
-	var resp json.RawMessage
-	if err := pc.doer.DoJSON(ctx, "GET", "/api/acl/subroutes/status", nil, &resp); err != nil {
+	var raw json.RawMessage
+	if err := pc.doer.DoJSON(ctx, "GET", "/api/acl/subroutes/status", nil, &raw); err != nil {
 		return err
 	}
-	if len(resp) == 0 {
-		resp = json.RawMessage("null")
+	routes, err := decodeSubroutesStatus(raw)
+	if err != nil {
+		return err
 	}
-	var v interface{}
-	if err := json.Unmarshal(resp, &v); err != nil {
-		return fmt.Errorf("decode subroutes status: %w", err)
+	switch format {
+	case FormatJSON:
+		// Hand back exactly the inner []string the SPA's interceptor
+		// exposes to acl.ts; nil collapses to `[]` for a stable shape
+		// downstream jq pipelines can rely on.
+		if routes == nil {
+			routes = []string{}
+		}
+		return printJSON(os.Stdout, routes)
+	default:
+		return renderSubroutesStatus(os.Stdout, subroutesStatus{
+			AllowSubRoutes: len(routes) > 0,
+			Routes:         routes,
+		})
 	}
-	return printJSON(os.Stdout, v)
+}
+
+// decodeSubroutesStatus is the wire-shape adapter for
+// `GET /api/acl/subroutes/status`. Same envelope back-history as
+// decodeSSHStatus: BFL emits `{code, message, data: []string}` and
+// user-service forwards it verbatim. The SPA "sees" the inner []string
+// only because its global axios interceptor strips `data.data`
+// (apps/packages/app/src/boot/axios.ts:163).
+//
+// We tolerate both wrapped and unwrapped shapes defensively so a future
+// user-service rewrite that DOES strip the envelope here (the way it
+// already does for /api/launcher-public-domain-access-policy) won't
+// flip this command into "always empty" mode. `null` and `[]` both
+// round-trip cleanly as an empty list — which is what acl.ts treats as
+// `allow_subroutes=false`.
+func decodeSubroutesStatus(raw json.RawMessage) ([]string, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		return nil, nil
+	}
+	var env bflEnvelope
+	if err := json.Unmarshal(trimmed, &env); err == nil && envelopeLooksWrapped(trimmed, env) {
+		switch env.Code {
+		case 0, 200:
+		default:
+			msg := strings.TrimSpace(env.Message)
+			if msg == "" {
+				msg = fmt.Sprintf("server returned code=%d", env.Code)
+			}
+			return nil, fmt.Errorf("GET /api/acl/subroutes/status: %s", msg)
+		}
+		if len(env.Data) == 0 || string(bytes.TrimSpace(env.Data)) == "null" {
+			return nil, nil
+		}
+		var routes []string
+		if err := json.Unmarshal(env.Data, &routes); err != nil {
+			return nil, fmt.Errorf("decode acl subroutes status data: %w", err)
+		}
+		return routes, nil
+	}
+	var routes []string
+	if err := json.Unmarshal(trimmed, &routes); err != nil {
+		return nil, fmt.Errorf("decode acl subroutes status body: %w", err)
+	}
+	return routes, nil
+}
+
+func renderSubroutesStatus(w io.Writer, s subroutesStatus) error {
+	state := "disabled"
+	if s.AllowSubRoutes {
+		state = "enabled"
+	}
+	if _, err := fmt.Fprintf(w, "%-18s %s\n", "Allow sub-routes:", state); err != nil {
+		return err
+	}
+	if len(s.Routes) == 0 {
+		_, err := fmt.Fprintf(w, "%-18s %s\n", "Routes:", "(none)")
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "%-18s (%d)\n", "Routes:", len(s.Routes)); err != nil {
+		return err
+	}
+	for _, r := range s.Routes {
+		if _, err := fmt.Fprintf(w, "  - %s\n", r); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func newSubroutesEnableCommand(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "enable",
-		Short: "permit sub-domain access across the Headscale mesh",
-		Args:  cobra.NoArgs,
+		Use:    "enable",
+		Short:  "permit sub-domain access across the Headscale mesh",
+		Hidden: true,
+		Args:   cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := c.Context()
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "enable sub-routes"); err != nil {
@@ -109,9 +212,10 @@ func newSubroutesEnableCommand(f *cmdutil.Factory) *cobra.Command {
 
 func newSubroutesDisableCommand(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "disable",
-		Short: "block sub-domain access across the Headscale mesh",
-		Args:  cobra.NoArgs,
+		Use:    "disable",
+		Short:  "block sub-domain access across the Headscale mesh",
+		Hidden: true,
+		Args:   cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := c.Context()
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "disable sub-routes"); err != nil {

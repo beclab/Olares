@@ -2,9 +2,11 @@ package ctl
 
 import (
 	"fmt"
+	goOS "os"
 
 	"github.com/beclab/Olares/cli/cmd/config"
 	"github.com/beclab/Olares/cli/cmd/ctl/amdgpu"
+	"github.com/beclab/Olares/cli/cmd/ctl/chart"
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster"
 	"github.com/beclab/Olares/cli/cmd/ctl/dashboard"
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
@@ -64,14 +66,29 @@ func NewDefaultCommand() *cobra.Command {
 	// identities mid-pipeline. To target a different profile, run
 	// `olares-cli profile use <name>` first.
 
-	cmds.AddCommand(osinfo.NewCmdInfo())
-	cmds.AddCommand(os.NewOSCommands()...)
-	cmds.AddCommand(node.NewNodeCommand())
-	cmds.AddCommand(gpu.NewCmdGpu())
-	cmds.AddCommand(amdgpu.NewCmdAmdGpu())
-	cmds.AddCommand(user.NewUserCommand())
-	cmds.AddCommand(wizard.NewWizardCommand())
-	cmds.AddCommand(disk.NewDiskCommand())
+	// OLARES_CLI_REMOTE_ONLY=1 hides host-side verbs (install, upgrade, node,
+	// os, gpu, disk, wizard, user, osinfo, amdgpu) that require an Olares host
+	// filesystem (~/.olares/versions/<v>/...) laid down by the install wizard.
+	// The npm distribution sets this from its Node shim (cli/npm/bin/olares-cli.js)
+	// so `npx @olares/cli` never exposes those verbs to remote/agent users.
+	// The host-bundled binary at /usr/local/bin/olares-cli leaves the env unset
+	// and behaves as before — all verbs registered.
+	remoteOnly := goOS.Getenv("OLARES_CLI_REMOTE_ONLY") == "1"
+
+	if !remoteOnly {
+		cmds.AddCommand(osinfo.NewCmdInfo())
+		cmds.AddCommand(os.NewOSCommands()...)
+		cmds.AddCommand(node.NewNodeCommand())
+		cmds.AddCommand(gpu.NewCmdGpu())
+		cmds.AddCommand(amdgpu.NewCmdAmdGpu())
+		cmds.AddCommand(user.NewUserCommand())
+		cmds.AddCommand(wizard.NewWizardCommand())
+		cmds.AddCommand(disk.NewDiskCommand())
+	}
+
+	// Always-on: developer utilities (chart) + remote/agent verbs that go
+	// through control-hub.<terminus> via the active profile's token.
+	cmds.AddCommand(chart.NewChartCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(files.NewFilesCommand(factory))

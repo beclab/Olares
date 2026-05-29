@@ -205,6 +205,116 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 	}
 
 	gatewayDataIP, err := appGatewayDataClusterIP(ctx, kubeClient)
+	// fix entranceid {md5(appname)[:8]}{i}
+	// find shared entrance ip from applications, set the shared entrance domain to in cluster view
+	err = func() error {
+		if len(userList.Items) == 0 {
+			klog.Info("no users found, skip adding shared entrance dns records")
+			return nil
+		}
+
+		var zone string
+		for _, u := range userList.Items {
+			if zone = u.GetAnnotations()[UserAnnotationZoneKey]; zone != "" {
+				break
+			}
+		}
+		if len(zone) == 0 {
+			klog.Info("no zone annotation found in user, skip adding shared entrance dns records")
+			return nil
+		}
+		tokens := strings.Split(zone, ".")
+		if len(tokens) < 2 {
+			klog.Info("invalid zone annotation found in user, skip adding shared entrance dns records")
+			return nil
+		}
+		tokens[0] = "shared"
+		zone = strings.Join(tokens, ".")
+
+		applications, err := dynamicClient.Resource(application.GVR).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			klog.Error("get applications error, ", err)
+			return err
+		}
+
+		nsList, err := kubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			klog.Error("list namespaces error, ", err)
+			return err
+		}
+
+		for _, a := range applications.Items {
+			var app application.Application
+			err := runtime.DefaultUnstructuredConverter.FromUnstructured(a.Object, &app)
+			if err != nil {
+				klog.Error("convert obj error, ", err)
+				continue
+			}
+
+			if len(app.Spec.SharedEntrances) == 0 {
+				continue
+			}
+
+			// get shared namespace of the application
+			var sharedNs []*corev1.Namespace
+			for _, ns := range nsList.Items {
+				refAppName := ns.Labels["applications.app.bytetrade.io/name"]
+				sharedNamespace := ns.Labels["bytetrade.io/ns-shared"]
+				installedUser := ns.Labels["applications.app.bytetrade.io/install_user"]
+				isV3 := ns.Labels["app.bytetrade.io/api-version"] == "v3"
+				namespaceV3 := ns.Labels["bytetrade.io/namespace"]
+				if refAppName == app.Spec.Name && sharedNamespace == "true" && installedUser == app.Spec.Owner || (isV3 && app.Spec.Namespace == namespaceV3) {
+					sharedNs = append(sharedNs, &ns)
+				}
+			}
+
+			// get the service of entrance
+			for i, entrance := range app.Spec.SharedEntrances {
+				for _, ns := range sharedNs {
+					svc, err := kubeClient.CoreV1().Services(ns.Name).Get(ctx, entrance.Host, metav1.GetOptions{})
+					if err != nil {
+						klog.Error("get shared entrance service error, ", err)
+						continue
+					}
+
+					entranceIp := svc.Spec.ClusterIP
+					if entranceIp == "" {
+						klog.Info("shared entrance has no ingress ip, skip corefile update")
+						continue
+					}
+
+					hash := md5.Sum([]byte(app.Spec.Appid + "shared"))
+					hashString := hex.EncodeToString(hash[:])
+					sharedEntranceIdPrefix := hashString[:8]
+					domain := fmt.Sprintf("%s%d.%s", sharedEntranceIdPrefix, i, zone)
+					domainPattern := fmt.Sprintf("\"%s%d.?(%s\\.)$\"", sharedEntranceIdPrefix, i, zone)
+					options := []*corefile.Option{
+						{
+							Name: "match",
+							Args: []string{domainPattern},
+						},
+						{
+							Name: "answer",
+							Args: []string{fmt.Sprintf("\"{{ .Name }} 60 IN A %s\"", entranceIp)},
+						},
+						{
+							Name: "fallthrough",
+							Args: []string{},
+						},
+					}
+
+					inclusterTemplatesPlugins = append(inclusterTemplatesPlugins, &corefile.Plugin{
+						Name:    "template",
+						Args:    []string{"IN", "A", domain},
+						Options: options,
+					})
+
+				} // end for sharedNs
+			} // end for entrances
+		} // end for applications
+
+		return nil
+	}()
 	if err != nil {
 		klog.Error("get app-gateway-data ClusterIP error, ", err)
 		return err

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
@@ -198,6 +199,7 @@ func (r *ApplicationManagerController) publishStateChangeEvent(am *appv1alpha1.A
 		Reason:       am.Status.Reason,
 		Message:      am.Status.Message,
 		MarketSource: am.Annotations[constants.AppMarketSourceKey],
+		IsV3:         appcfg.IsV3(am),
 	})
 }
 

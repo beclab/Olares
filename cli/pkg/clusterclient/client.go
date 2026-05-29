@@ -42,6 +42,81 @@ import (
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
 
+// HTTPError is the typed error returned by every Client request that
+// gets a non-2xx response from ControlHub. It carries the raw status
+// code and the formatted human message so callers can both render the
+// existing wording AND branch on HTTP semantics via errors.As + the
+// IsHTTPStatus / IsClientError helpers.
+//
+// Why a typed error and not just `fmt.Errorf("HTTP %d: ...")`:
+//
+//   - Watch-loop verbs (rollout-status -w, pod get -w, logs -f) need
+//     to distinguish "transient blip — retry" from "object is gone /
+//     forbidden — exit now". Without a typed status the loop has to
+//     string-match the error message, which is fragile.
+//   - Auth helpers (reformatClusterAuthErr) compose a friendlier CTA
+//     than the raw `formatHTTPErr` dump; that wording is preserved via
+//     Message, while Status still carries the underlying HTTP code so
+//     401/403 returned from anywhere look the same to retry logic.
+type HTTPError struct {
+	Status  int
+	Method  string
+	URL     string
+	// Body is the truncated response body (matches the truncate helper's
+	// cap). Useful for diagnostics; rendering is the Message responsibility.
+	Body string
+	// Message is the pre-formatted user-visible string. When non-empty
+	// it is returned verbatim from Error() so we don't re-paraphrase
+	// the friendly wording formatHTTPErr / reformatClusterAuthErr
+	// already produced. When empty, Error() falls back to a generic
+	// "<method> <url>: HTTP <status>: <body>" dump.
+	Message string
+}
+
+func (e *HTTPError) Error() string {
+	if e == nil {
+		return ""
+	}
+	if e.Message != "" {
+		return e.Message
+	}
+	return fmt.Sprintf("%s %s: HTTP %d: %s", e.Method, e.URL, e.Status, truncate(e.Body, 500))
+}
+
+// IsHTTPStatus reports whether err (or any error in its Unwrap chain)
+// is a *HTTPError carrying the given status code. Used by watch loops
+// to short-circuit on terminal results without parsing message text.
+func IsHTTPStatus(err error, code int) bool {
+	var he *HTTPError
+	if errors.As(err, &he) {
+		return he != nil && he.Status == code
+	}
+	return false
+}
+
+// IsNotFound is the canonical 404 check for ControlHub-bound requests.
+// Watch loops should bail immediately on this — the object isn't going
+// to materialize between polls.
+func IsNotFound(err error) bool { return IsHTTPStatus(err, http.StatusNotFound) }
+
+// IsClientError reports whether err wraps a *HTTPError with a 4xx
+// status. Watch loops treat these as terminal (the next poll will get
+// the same answer) and exit instead of burning the retry budget.
+//
+// We intentionally count 408 (Request Timeout) and 429 (Too Many
+// Requests) as retryable since both can legitimately resolve on a
+// subsequent attempt; everything else 4xx is wired to "stop now".
+func IsClientError(err error) bool {
+	var he *HTTPError
+	if !errors.As(err, &he) || he == nil {
+		return false
+	}
+	if he.Status == http.StatusRequestTimeout || he.Status == http.StatusTooManyRequests {
+		return false
+	}
+	return he.Status >= 400 && he.Status < 500
+}
+
 // Client is the per-process handle the `cluster` tree uses for ControlHub
 // HTTP. Construct it once per command via NewClient(hc, rp); the http.Client
 // must be the Factory-provided one whose RoundTripper is
@@ -198,7 +273,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return nil, reformatClusterAuthErr(resp.StatusCode, respBody, c.olaresID)
+		return nil, reformatClusterAuthErr(method, url, resp.StatusCode, respBody, c.olaresID)
 	}
 	if resp.StatusCode/100 != 2 {
 		return nil, formatHTTPErr(method, url, resp.StatusCode, respBody)
@@ -217,20 +292,23 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 // the body is included verbatim so the user can read it, and the action
 // (`profile login` then `cluster context --refresh`) is appropriate for
 // both modes.
-func reformatClusterAuthErr(status int, respBody []byte, olaresID string) error {
+func reformatClusterAuthErr(method, url string, status int, respBody []byte, olaresID string) error {
 	body := strings.TrimSpace(string(respBody))
 	if len(body) > 200 {
 		body = body[:200]
 	}
-	if olaresID != "" {
-		if body != "" {
-			return fmt.Errorf("server rejected the request (HTTP %d: %s); please run: olares-cli profile login --olares-id %s",
-				status, body, olaresID)
-		}
-		return fmt.Errorf("server rejected the request (HTTP %d); please run: olares-cli profile login --olares-id %s",
+	var msg string
+	switch {
+	case olaresID != "" && body != "":
+		msg = fmt.Sprintf("server rejected the request (HTTP %d: %s); please run: olares-cli profile login --olares-id %s",
+			status, body, olaresID)
+	case olaresID != "":
+		msg = fmt.Sprintf("server rejected the request (HTTP %d); please run: olares-cli profile login --olares-id %s",
 			status, olaresID)
+	default:
+		msg = fmt.Sprintf("server rejected the request (HTTP %d); please re-run `olares-cli profile login`", status)
 	}
-	return fmt.Errorf("server rejected the request (HTTP %d); please re-run `olares-cli profile login`", status)
+	return &HTTPError{Status: status, Method: method, URL: url, Body: body, Message: msg}
 }
 
 // formatHTTPErr handles non-401/403 non-2xx responses. ControlHub forwards
@@ -239,6 +317,10 @@ func reformatClusterAuthErr(status int, respBody []byte, olaresID string) error 
 // message, reason, code}`, /capi/* returns plain text on some failures.
 // Try the structured shapes first and fall back to a body-truncated dump.
 func formatHTTPErr(method, url string, status int, body []byte) error {
+	bodyStr := truncate(string(body), 500)
+	makeErr := func(msg string) *HTTPError {
+		return &HTTPError{Status: status, Method: method, URL: url, Body: bodyStr, Message: msg}
+	}
 	var k8sStatus struct {
 		Status  string `json:"status"`
 		Message string `json:"message"`
@@ -249,9 +331,9 @@ func formatHTTPErr(method, url string, status int, body []byte) error {
 		// metav1.Status path: prefer Reason+Message which together
 		// describe both "what kind of failure" and "why".
 		if k8sStatus.Reason != "" {
-			return fmt.Errorf("%s %s: HTTP %d (%s): %s", method, url, status, k8sStatus.Reason, k8sStatus.Message)
+			return makeErr(fmt.Sprintf("%s %s: HTTP %d (%s): %s", method, url, status, k8sStatus.Reason, k8sStatus.Message))
 		}
-		return fmt.Errorf("%s %s: HTTP %d: %s", method, url, status, k8sStatus.Message)
+		return makeErr(fmt.Sprintf("%s %s: HTTP %d: %s", method, url, status, k8sStatus.Message))
 	}
 	var generic struct {
 		Error   string `json:"error"`
@@ -261,12 +343,12 @@ func formatHTTPErr(method, url string, status int, body []byte) error {
 	if err := json.Unmarshal(body, &generic); err == nil {
 		switch {
 		case generic.Error != "":
-			return fmt.Errorf("%s %s: HTTP %d: %s", method, url, status, generic.Error)
+			return makeErr(fmt.Sprintf("%s %s: HTTP %d: %s", method, url, status, generic.Error))
 		case generic.Message != "":
-			return fmt.Errorf("%s %s: HTTP %d (code=%d): %s", method, url, status, generic.Code, generic.Message)
+			return makeErr(fmt.Sprintf("%s %s: HTTP %d (code=%d): %s", method, url, status, generic.Code, generic.Message))
 		}
 	}
-	return fmt.Errorf("%s %s: HTTP %d: %s", method, url, status, truncate(string(body), 500))
+	return makeErr(fmt.Sprintf("%s %s: HTTP %d: %s", method, url, status, bodyStr))
 }
 
 func truncate(s string, n int) string {

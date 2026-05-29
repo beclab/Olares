@@ -31,14 +31,26 @@ type CronJobMetadata struct {
 	Annotations       map[string]string `json:"annotations,omitempty"`
 }
 
+// CronJobSpec models batchv1.CronJobSpec. Pointer types distinguish
+// "field omitted by the server" from "explicit zero" — for
+// startingDeadlineSeconds in particular, 0 means "must start
+// immediately or skip", which differs from "unset".
+//
+// `timeZone` is a v1 addition (alpha in 1.24, beta in 1.25, GA in
+// 1.27). We model it so `cronjob get` and `cronjob yaml` surface it
+// when the server populates it.
 type CronJobSpec struct {
-	Schedule          string          `json:"schedule"`
-	Suspend           *bool           `json:"suspend,omitempty"`
-	ConcurrencyPolicy string          `json:"concurrencyPolicy,omitempty"`
-	JobTemplate       JobTemplateSpec `json:"jobTemplate"`
+	Schedule                   string          `json:"schedule"`
+	TimeZone                   *string         `json:"timeZone,omitempty"`
+	StartingDeadlineSeconds    *int64          `json:"startingDeadlineSeconds,omitempty"`
+	ConcurrencyPolicy          string          `json:"concurrencyPolicy,omitempty"`
+	Suspend                    *bool           `json:"suspend,omitempty"`
+	SuccessfulJobsHistoryLimit *int32          `json:"successfulJobsHistoryLimit,omitempty"`
+	FailedJobsHistoryLimit     *int32          `json:"failedJobsHistoryLimit,omitempty"`
+	JobTemplate                JobTemplateSpec `json:"jobTemplate"`
 }
 
-// JobTemplateSpec mirrors batchv1beta1.JobTemplateSpec — only the
+// JobTemplateSpec mirrors batchv1.JobTemplateSpec — only the
 // metadata.labels block is exercised today (used by `cronjob jobs` to
 // derive a labelSelector that matches the spawned Jobs).
 type JobTemplateSpec struct {
@@ -47,9 +59,13 @@ type JobTemplateSpec struct {
 	} `json:"metadata,omitempty"`
 }
 
+// CronJobStatus mirrors batchv1.CronJobStatus. `lastSuccessfulTime`
+// is a v1 addition over v1beta1 — kept here so JSON and YAML output
+// surface it when the server populates it.
 type CronJobStatus struct {
-	Active           []ObjectRef `json:"active,omitempty"`
-	LastScheduleTime string      `json:"lastScheduleTime,omitempty"`
+	Active             []ObjectRef `json:"active,omitempty"`
+	LastScheduleTime   string      `json:"lastScheduleTime,omitempty"`
+	LastSuccessfulTime string      `json:"lastSuccessfulTime,omitempty"`
 }
 
 // ObjectRef is the minimal ObjectReference subset — name + uid are

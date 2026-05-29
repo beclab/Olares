@@ -76,21 +76,28 @@ destinations (typically port strings) Headscale uses to gate mesh
 traffic to an app's pods.
 
 Subcommands:
-  all                                          dump every ACL the active user owns
-  get    <app>                                 show the per-app ACL vector
-  set    <app> [--tcp PORT...] [--udp PORT...] replace the whole vector
-  add    <app> [--tcp PORT...] [--udp PORT...] merge new dsts in (read-modify-write)
-  remove <app> [--tcp PORT...] [--udp PORT...] drop dsts (read-modify-write)
-  clear  <app>                                 remove every ACL entry
+  all                                                              dump every ACL the active user owns
+  get    <app>                                                     show the per-app ACL vector
+  add    <app> [--tcp DST...] [--udp DST...] [--any-proto DST...]  merge new dsts in (read-modify-write)
+  remove <app> [--tcp DST...] [--udp DST...] [--any-proto DST...]  drop dsts (read-modify-write)
 
 If you don't know the app name yet, run "vpn acl all" first to see
 every ACL configured for the active user.
 
---tcp / --udp accept either repeated flags (--tcp 80 --tcp 443) or a
-single comma-separated value (--tcp 80,443) — both forms work and the
-CLI dedupes either way. Port strings are passed to the upstream
-verbatim so any value Headscale accepts (single port, range like
-"8000-8100", "*", etc.) round-trips unchanged.
+Destination format: each --tcp / --udp / --any-proto value is a
+Headscale destination spec '<host>:<port>', NOT a bare port number.
+Headscale's policy parser rejects a single-token "8080" with
+"invalid port format" — pass '*:8080' (any source, port 8080)
+instead. Other valid hosts: '192.168.1.0/24:22', 'tag:api:443',
+'example-host:*'.
+
+--tcp / --udp / --any-proto accept either repeated flags
+(--tcp '*:80' --tcp '*:443') or a single comma-separated value
+(--tcp '*:80,*:443') — both forms work and the CLI dedupes either
+way. --any-proto sends a wire entry with proto="" which Tailscale
+expands to ICMPv4/ICMPv6/TCP/UDP; this matches what the Settings
+page's "Add ACL" dialog posts (system app olares-app, '*:<port>',
+empty proto).
 
 The upstream replaces the whole ACL vector on every POST; the
 add/remove convenience verbs read first and merge before posting so
@@ -109,16 +116,26 @@ unrelated entries survive untouched.
 
 // newACLAllCommand registers `vpn acl all`.
 //
-// Wraps GET /api/acl/all (user-service/src/bfl/acl.controller.ts:157
-// getAclsAll). The SPA does not currently surface this endpoint via a
-// page action, but the controller exists upstream; the verb gives the
-// caller a single command that lists every per-app ACL configured
-// under their account, complementing the per-app `vpn acl get <app>`.
+// Wraps GET /api/acl/all. user-service forwards this verbatim to BFL's
+// handleHeadscaleACLList (framework/bfl/pkg/apis/settings/v1alpha1/
+// handle_headscale.go), which iterates every Application owned by the
+// caller and flattens its spec.tailscale.acls into one wire row per
+// (app, proto) tuple. The SPA's VPN page consumes exactly this shape —
+// apps/.../stores/settings/acl.ts:getAllApplicationAcls iterates the
+// returned rows and pivots them to a per-app table, same as this verb
+// does for the CLI table view.
 //
-// Wire shape: BFL envelope wrapping a map keyed by app name (the
-// upstream's headscale acls vector). We stay structurally agnostic by
-// surfacing the raw envelope's data field as JSON when --output json,
-// and unmarshaling into a map[string][]AclInfo for the table view.
+// Wire shape (current): BFL envelope wrapping a flat
+//
+//	[]{appName, appOwner, proto, dst[]}
+//
+// list. We also accept two historical / theoretical shapes as
+// fallbacks (map[appName][]AclInfo and []{name, acls}) so the CLI
+// stays decodable if an older or newer BFL release flips the layout.
+// The table view always renders the same map[appName][]AclInfo
+// internal form after folding; --output json prints that same folded
+// map so scripts get a stable key-per-app structure regardless of
+// which upstream shape was on the wire.
 func newACLAllCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
@@ -178,16 +195,39 @@ func runACLAll(ctx context.Context, f *cmdutil.Factory, outputRaw string) error 
 	}
 }
 
+// aclAllRow mirrors BFL's wrapACL on the wire — one row per (app, proto)
+// tuple, emitted by handleHeadscaleACLList in framework/bfl/pkg/apis/
+// settings/v1alpha1/handle_headscale.go. We keep AppOwner around (with
+// omitempty so re-marshalled output doesn't sprout an empty field) for
+// debug logs and future filtering, but the CLI does not surface it in
+// either output mode today.
+type aclAllRow struct {
+	AppName  string   `json:"appName"`
+	AppOwner string   `json:"appOwner,omitempty"`
+	Proto    string   `json:"proto"`
+	Dst      []string `json:"dst"`
+}
+
 // getAllACLViaDoer wraps the GET /api/acl/all envelope. Same envelope
 // quirk as `getAppACLViaDoer`: a non-zero `code` is treated as "no ACL
 // configured" rather than a hard error, matching the SPA's defensive
 // pattern of falling back to an empty list.
 //
-// We try two payload shapes the upstream has emitted historically:
+// Decoding order, most-specific first so a real upstream shape never
+// gets misread as a historical one:
 //
-//  1. map[string][]AclInfo  — keyed by app name, the natural shape.
-//  2. []struct{name, acls}  — older flat list; we coerce to the map
-//                             so the renderer has one code path.
+//  1. []aclAllRow — BFL's current flat shape (one row per (app, proto)).
+//     Counted as a match only if at least one row has a non-empty
+//     AppName, so an empty `data: []` doesn't shadow the fallbacks.
+//  2. map[string][]AclInfo — theoretical "natural" shape; never seen
+//     on the wire today, but cheap to keep as forward-compat in case
+//     BFL ever pivots its response.
+//  3. []{name, acls} — older flat list a prior BFL revision is rumored
+//     to have emitted; coerced into the same map[appName][]AclInfo
+//     return type so the renderer has one code path.
+//
+// All three resolve to the same map[string][]AclInfo so callers and
+// tests can stay shape-agnostic.
 func getAllACLViaDoer(ctx context.Context, d Doer) (map[string][]AclInfo, error) {
 	var env bflEnvelope
 	if err := d.DoJSON(ctx, "GET", "/api/acl/all", nil, &env); err != nil {
@@ -199,12 +239,22 @@ func getAllACLViaDoer(ctx context.Context, d Doer) (map[string][]AclInfo, error)
 	if len(env.Data) == 0 || string(env.Data) == "null" {
 		return map[string][]AclInfo{}, nil
 	}
-	// Try map shape first.
+	// 1. BFL real shape: flat []{appName, appOwner, proto, dst[]}.
+	//    Only treat as "matched" when at least one row carries an
+	//    AppName — Go's JSON decoder is happy to coerce a [] of any
+	//    object into []aclAllRow with all fields zero, and we don't
+	//    want that empty-decode to shadow the map / {name,acls}
+	//    fallbacks below.
+	var flat []aclAllRow
+	if err := json.Unmarshal(env.Data, &flat); err == nil && anyAppName(flat) {
+		return foldACLRows(flat), nil
+	}
+	// 2. map[appName][]AclInfo.
 	asMap := map[string][]AclInfo{}
 	if err := json.Unmarshal(env.Data, &asMap); err == nil {
 		return asMap, nil
 	}
-	// Fallback: array of {name, acls}.
+	// 3. []{name, acls}.
 	var asArr []struct {
 		Name string    `json:"name"`
 		Acls []AclInfo `json:"acls"`
@@ -220,6 +270,56 @@ func getAllACLViaDoer(ctx context.Context, d Doer) (map[string][]AclInfo, error)
 		out[e.Name] = e.Acls
 	}
 	return out, nil
+}
+
+func anyAppName(rows []aclAllRow) bool {
+	for _, r := range rows {
+		if strings.TrimSpace(r.AppName) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// foldACLRows pivots BFL's flat []aclAllRow into the per-app map the
+// renderers expect. Within a single app:
+//   - distinct protos become distinct AclInfo entries, in first-seen
+//     order on the wire (so the table output mirrors what the SPA's
+//     VPN page renders);
+//   - duplicate (app, proto) rows have their dst lists unioned via
+//     unionPreservingOrder. BFL today emits exactly one row per (app,
+//     proto), but the upstream's loop also splices in a legacy
+//     spec.TailScaleACLs vector — if a future release ever doubles up
+//     the same (app, proto) we silently dedupe rather than show two
+//     stacked rows for the same protocol.
+//
+// Rows whose AppName trims to empty are dropped (defensive — the
+// upstream filters by owner before iterating, so this should not
+// happen in practice, but we'd rather skip a stray row than emit a
+// blank-keyed map entry the renderer can't label).
+func foldACLRows(rows []aclAllRow) map[string][]AclInfo {
+	out := map[string][]AclInfo{}
+	protoIdx := map[string]map[string]int{} // app → lower(proto) → idx in out[app]
+	for _, r := range rows {
+		app := strings.TrimSpace(r.AppName)
+		if app == "" {
+			continue
+		}
+		if _, ok := protoIdx[app]; !ok {
+			protoIdx[app] = map[string]int{}
+		}
+		key := strings.ToLower(strings.TrimSpace(r.Proto))
+		if idx, ok := protoIdx[app][key]; ok {
+			out[app][idx].Dst = unionPreservingOrder(out[app][idx].Dst, r.Dst)
+			continue
+		}
+		out[app] = append(out[app], AclInfo{
+			Proto: r.Proto,
+			Dst:   append([]string(nil), r.Dst...),
+		})
+		protoIdx[app][key] = len(out[app]) - 1
+	}
+	return out
 }
 
 func renderACLAll(w io.Writer, all map[string][]AclInfo) error {
@@ -335,7 +435,45 @@ func getAppACLViaDoer(ctx context.Context, d Doer, app string) ([]AclInfo, error
 	if err := json.Unmarshal(env.Data, &out); err != nil {
 		return nil, fmt.Errorf("decode acl data: %w", err)
 	}
-	return out, nil
+	// Upstream occasionally returns multiple rows for the same proto
+	// (BFL splices in the legacy spec.TailScaleACLs vector after the
+	// per-app slice, and empty-proto entries from `--any-proto` /
+	// the Web UI's "Add ACL" dialog all share the "" key). The
+	// read-modify-write callers (acl add / acl remove) feed this slice
+	// straight through indexACL which collapses on proto, so any
+	// duplicate would silently disappear from the POST and shrink the
+	// destination set even though `vpn acl all` (which folds via
+	// foldACLRows) still shows the full set. Fold here so the per-app
+	// view stays consistent with the all-apps view and the
+	// read-modify-write loop sees the union.
+	return foldAppACLEntries(out), nil
+}
+
+// foldAppACLEntries unions same-proto entries in a per-app ACL slice,
+// preserving first-seen order. Whitespace-only protos collapse to the
+// same empty key (matching the rest of the package, see indexACL).
+// Trim+lower is only used for keying; the surviving entry keeps the
+// Proto string as it first appeared on the wire so downstream
+// renderers don't normalize unrelated casing.
+func foldAppACLEntries(in []AclInfo) []AclInfo {
+	if len(in) == 0 {
+		return in
+	}
+	out := make([]AclInfo, 0, len(in))
+	protoIdx := map[string]int{}
+	for _, a := range in {
+		key := strings.ToLower(strings.TrimSpace(a.Proto))
+		if idx, ok := protoIdx[key]; ok {
+			out[idx].Dst = unionPreservingOrder(out[idx].Dst, a.Dst)
+			continue
+		}
+		out = append(out, AclInfo{
+			Proto: a.Proto,
+			Dst:   append([]string(nil), a.Dst...),
+		})
+		protoIdx[key] = len(out) - 1
+	}
+	return out
 }
 
 func renderACL(w io.Writer, app string, acls []AclInfo) error {
@@ -356,21 +494,31 @@ func renderACL(w io.Writer, app string, acls []AclInfo) error {
 
 func newACLSetCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		tcp []string
-		udp []string
+		tcp      []string
+		udp      []string
+		anyProto []string
 	)
 	cmd := &cobra.Command{
-		Use:   "set <app>",
-		Short: "replace the per-app ACL vector",
+		Use:    "set <app>",
+		Short:  "replace the per-app ACL vector",
+		Hidden: true,
 		Long: `Replace the entire per-app ACL vector with the supplied protocol
-allow-lists. Pass --tcp / --udp (repeatable, comma-separated also OK)
-for each protocol. Omitting a protocol drops it from the upstream
-config.
+allow-lists. Pass --tcp / --udp / --any-proto (repeatable,
+comma-separated also OK) for each protocol. Omitting a protocol drops
+it from the upstream config.
+
+Destination format: every flag value must be '<host>:<port>'. The
+Headscale policy parser rejects bare port numbers — pass '*:8080'
+(any source, port 8080), '192.168.1.0/24:22', 'tag:api:443', or
+'example-host:*' instead. --any-proto sends proto="" which Tailscale
+expands to ICMPv4/ICMPv6/TCP/UDP (same shape the Web UI's "Add ACL"
+dialog posts).
 
 Example:
-  olares-cli settings vpn acl set my-app --tcp 80,443 --udp 53
-  olares-cli settings vpn acl set my-app --tcp 8080
-  olares-cli settings vpn acl set my-app                          # equivalent to clear
+  olares-cli settings vpn acl set my-app --tcp '*:80,*:443' --udp '*:53'
+  olares-cli settings vpn acl set my-app --tcp '*:8080'
+  olares-cli settings vpn acl set olares-app --any-proto '*:22'  # Web parity
+  olares-cli settings vpn acl set my-app                         # equivalent to clear
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -378,15 +526,17 @@ Example:
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "set per-app ACL"); err != nil {
 				return err
 			}
-			return preflight.Wrap(ctx, f, runACLSet(ctx, f, args[0], tcp, udp), "set per-app ACL")
+			return preflight.Wrap(ctx, f, runACLSet(ctx, f, args[0], tcp, udp, anyProto), "set per-app ACL")
 		},
 	}
-	cmd.Flags().StringSliceVar(&tcp, "tcp", nil, "TCP destinations (repeat or comma-separate)")
-	cmd.Flags().StringSliceVar(&udp, "udp", nil, "UDP destinations (repeat or comma-separate)")
+	cmd.Flags().StringSliceVar(&tcp, "tcp", nil, "TCP destinations '<host>:<port>' (repeat or comma-separate)")
+	cmd.Flags().StringSliceVar(&udp, "udp", nil, "UDP destinations '<host>:<port>' (repeat or comma-separate)")
+	cmd.Flags().StringSliceVar(&anyProto, "any-proto", nil,
+		"destinations with empty proto = all protocols (Web 'Add ACL' equivalent); '<host>:<port>' (repeat or comma-separate)")
 	return cmd
 }
 
-func runACLSet(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp []string) error {
+func runACLSet(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp, anyProto []string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -398,7 +548,10 @@ func runACLSet(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp []s
 	if err != nil {
 		return err
 	}
-	acls := buildACLPayload(tcp, udp)
+	acls := buildACLPayload(tcp, udp, anyProto)
+	if err := validateACLPayload(acls); err != nil {
+		return err
+	}
 	if err := postAppACLViaDoer(ctx, pc.doer, app, acls); err != nil {
 		return err
 	}
@@ -412,8 +565,9 @@ func runACLSet(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp []s
 
 func newACLAddCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		tcp []string
-		udp []string
+		tcp      []string
+		udp      []string
+		anyProto []string
 	)
 	cmd := &cobra.Command{
 		Use:   "add <app>",
@@ -422,9 +576,17 @@ func newACLAddCommand(f *cmdutil.Factory) *cobra.Command {
 don't pass survive untouched; entries on protocols you do pass are
 unioned with the existing dst list (de-duped).
 
+Destination format: every flag value must be '<host>:<port>'. The
+Headscale policy parser rejects bare port numbers — pass '*:8080'
+(any source, port 8080), '192.168.1.0/24:22', 'tag:api:443', or
+'example-host:*' instead. --any-proto sends proto="" which Tailscale
+expands to ICMPv4/ICMPv6/TCP/UDP (same shape the Web UI's "Add ACL"
+dialog posts).
+
 Example:
-  olares-cli settings vpn acl add my-app --tcp 8080
-  olares-cli settings vpn acl add my-app --tcp 80,443 --udp 53
+  olares-cli settings vpn acl add my-app --tcp '*:8080'
+  olares-cli settings vpn acl add my-app --tcp '*:80,*:443' --udp '*:53'
+  olares-cli settings vpn acl add olares-app --any-proto '*:8080'  # Web 'Add ACL' equivalent
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -432,15 +594,17 @@ Example:
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "add per-app ACL entries"); err != nil {
 				return err
 			}
-			return preflight.Wrap(ctx, f, runACLAdd(ctx, f, args[0], tcp, udp), "add per-app ACL entries")
+			return preflight.Wrap(ctx, f, runACLAdd(ctx, f, args[0], tcp, udp, anyProto), "add per-app ACL entries")
 		},
 	}
-	cmd.Flags().StringSliceVar(&tcp, "tcp", nil, "TCP destinations to add (repeat or comma-separate)")
-	cmd.Flags().StringSliceVar(&udp, "udp", nil, "UDP destinations to add (repeat or comma-separate)")
+	cmd.Flags().StringSliceVar(&tcp, "tcp", nil, "TCP destinations '<host>:<port>' to add (repeat or comma-separate)")
+	cmd.Flags().StringSliceVar(&udp, "udp", nil, "UDP destinations '<host>:<port>' to add (repeat or comma-separate)")
+	cmd.Flags().StringSliceVar(&anyProto, "any-proto", nil,
+		"destinations with empty proto = all protocols (Web 'Add ACL' equivalent); '<host>:<port>' (repeat or comma-separate)")
 	return cmd
 }
 
-func runACLAdd(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp []string) error {
+func runACLAdd(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp, anyProto []string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -448,9 +612,12 @@ func runACLAdd(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp []s
 	if app == "" {
 		return fmt.Errorf("app name is required")
 	}
-	additions := buildACLPayload(tcp, udp)
+	additions := buildACLPayload(tcp, udp, anyProto)
 	if len(additions) == 0 {
-		return fmt.Errorf("nothing to add — pass --tcp and/or --udp")
+		return fmt.Errorf("nothing to add — pass --tcp, --udp and/or --any-proto")
+	}
+	if err := validateACLPayload(additions); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -470,8 +637,9 @@ func runACLAdd(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp []s
 
 func newACLRemoveCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		tcp []string
-		udp []string
+		tcp      []string
+		udp      []string
+		anyProto []string
 	)
 	cmd := &cobra.Command{
 		Use:     "remove <app>",
@@ -481,9 +649,14 @@ func newACLRemoveCommand(f *cmdutil.Factory) *cobra.Command {
 empties out is dropped entirely from the upstream config (matching the
 SPA's behavior of filtering acls with an empty dst[]).
 
+Destination format: every flag value must be '<host>:<port>' and
+match the upstream entry verbatim. Use --any-proto to target the
+empty-proto entries the Web UI's "Add ACL" dialog creates.
+
 Example:
-  olares-cli settings vpn acl remove my-app --tcp 80
-  olares-cli settings vpn acl rm my-app --udp 53
+  olares-cli settings vpn acl remove my-app --tcp '*:80'
+  olares-cli settings vpn acl rm my-app --udp '*:53'
+  olares-cli settings vpn acl rm olares-app --any-proto '*:8080'
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -491,15 +664,17 @@ Example:
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "remove per-app ACL entries"); err != nil {
 				return err
 			}
-			return preflight.Wrap(ctx, f, runACLRemove(ctx, f, args[0], tcp, udp), "remove per-app ACL entries")
+			return preflight.Wrap(ctx, f, runACLRemove(ctx, f, args[0], tcp, udp, anyProto), "remove per-app ACL entries")
 		},
 	}
-	cmd.Flags().StringSliceVar(&tcp, "tcp", nil, "TCP destinations to remove (repeat or comma-separate)")
-	cmd.Flags().StringSliceVar(&udp, "udp", nil, "UDP destinations to remove (repeat or comma-separate)")
+	cmd.Flags().StringSliceVar(&tcp, "tcp", nil, "TCP destinations '<host>:<port>' to remove (repeat or comma-separate)")
+	cmd.Flags().StringSliceVar(&udp, "udp", nil, "UDP destinations '<host>:<port>' to remove (repeat or comma-separate)")
+	cmd.Flags().StringSliceVar(&anyProto, "any-proto", nil,
+		"empty-proto destinations to remove (Web 'Add ACL' equivalent); '<host>:<port>' (repeat or comma-separate)")
 	return cmd
 }
 
-func runACLRemove(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp []string) error {
+func runACLRemove(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp, anyProto []string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -507,9 +682,12 @@ func runACLRemove(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp 
 	if app == "" {
 		return fmt.Errorf("app name is required")
 	}
-	removals := buildACLPayload(tcp, udp)
+	removals := buildACLPayload(tcp, udp, anyProto)
 	if len(removals) == 0 {
-		return fmt.Errorf("nothing to remove — pass --tcp and/or --udp")
+		return fmt.Errorf("nothing to remove — pass --tcp, --udp and/or --any-proto")
+	}
+	if err := validateACLPayload(removals); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -534,8 +712,9 @@ func runACLRemove(ctx context.Context, f *cmdutil.Factory, app string, tcp, udp 
 func newACLClearCommand(f *cmdutil.Factory) *cobra.Command {
 	var assumeYes bool
 	cmd := &cobra.Command{
-		Use:   "clear <app>",
-		Short: "remove every per-app ACL entry",
+		Use:    "clear <app>",
+		Short:  "remove every per-app ACL entry",
+		Hidden: true,
 		Long: `Remove every ACL entry for the app. Equivalent to "set" with no flags.
 The app loses every previously-allowed dst on every protocol; existing
 mesh sessions stay open until renegotiation, but new connections are
@@ -598,20 +777,69 @@ func postAppACLViaDoer(ctx context.Context, d Doer, app string, acls []AclInfo) 
 	return doMutateEnvelope(ctx, d, "POST", "/api/acl/app/status", body, nil)
 }
 
-// buildACLPayload normalizes user-supplied --tcp / --udp slices into the
-// upstream wire shape: one AclInfo per protocol that actually has at
-// least one non-empty dst, in a stable proto order ("tcp" before "udp"
-// before others) so the success message + JSON output round-trip
-// deterministically.
-func buildACLPayload(tcp, udp []string) []AclInfo {
-	out := make([]AclInfo, 0, 2)
+// buildACLPayload normalizes user-supplied --tcp / --udp / --any-proto
+// slices into the upstream wire shape: one AclInfo per protocol that
+// actually has at least one non-empty dst, in a stable proto order
+// ("tcp" before "udp" before the empty/any-proto bucket) so the
+// success message + JSON output round-trip deterministically. The
+// empty-proto entry mirrors the Web "Add ACL" dialog, which posts
+// proto="" so Tailscale expands it to ICMPv4/ICMPv6/TCP/UDP.
+func buildACLPayload(tcp, udp, anyProto []string) []AclInfo {
+	out := make([]AclInfo, 0, 3)
 	if dsts := dedupeNonEmpty(tcp); len(dsts) > 0 {
 		out = append(out, AclInfo{Proto: "tcp", Dst: dsts})
 	}
 	if dsts := dedupeNonEmpty(udp); len(dsts) > 0 {
 		out = append(out, AclInfo{Proto: "udp", Dst: dsts})
 	}
+	if dsts := dedupeNonEmpty(anyProto); len(dsts) > 0 {
+		out = append(out, AclInfo{Proto: "", Dst: dsts})
+	}
 	return out
+}
+
+// validateACLPayload mirrors the upstream Headscale destination parser
+// (framework/bfl/pkg/client/dynamic_client/apps/application.go's
+// parseDestination) so we can reject obviously bogus dst values before
+// burning a round-trip on the BFL. The upstream splits on the LAST ':'
+// to yield <host>:<port>; a single-token "8080" arrives there as host
+// "8080" with no port and fails policy validation with
+// "invalid port format". Catching it locally also lets us produce a
+// concrete copy-pasteable suggestion.
+func validateACLPayload(acls []AclInfo) error {
+	for _, a := range acls {
+		for _, dst := range a.Dst {
+			if err := validateACLDst(dst); err != nil {
+				return fmt.Errorf("invalid destination %q: %w (e.g. '*:8080', '192.168.1.0/24:22', 'tag:api:443')", dst, err)
+			}
+		}
+	}
+	return nil
+}
+
+// validateACLDst checks that a single dst token is shaped as
+// '<host>:<port>'. It deliberately stays as permissive as Headscale's
+// policy parser: anything that contains a ':' and has both sides
+// non-empty round-trips; we leave deeper port-range / CIDR validation
+// to the upstream.
+func validateACLDst(dst string) error {
+	s := strings.TrimSpace(dst)
+	if s == "" {
+		return fmt.Errorf("empty destination")
+	}
+	idx := strings.LastIndex(s, ":")
+	if idx < 0 {
+		return fmt.Errorf("missing ':<port>' separator")
+	}
+	host := strings.TrimSpace(s[:idx])
+	port := strings.TrimSpace(s[idx+1:])
+	if host == "" {
+		return fmt.Errorf("empty host before ':'")
+	}
+	if port == "" {
+		return fmt.Errorf("empty port after ':'")
+	}
+	return nil
 }
 
 // mergeACL unions `additions` into `current`, returning a new slice.
@@ -790,7 +1018,15 @@ func summarizeACL(in []AclInfo) string {
 	for _, a := range in {
 		dsts := append([]string(nil), a.Dst...)
 		sort.Strings(dsts)
-		parts = append(parts, fmt.Sprintf("%s=%s", strings.ToLower(a.Proto), strings.Join(dsts, ",")))
+		proto := strings.ToLower(strings.TrimSpace(a.Proto))
+		if proto == "" {
+			// Empty wire proto = ICMPv4/ICMPv6/TCP/UDP — render as
+			// "any" so the success line reads "any=*:20,*:65001"
+			// instead of "=*:20,*:65001" (matches the Web UI's
+			// "Add ACL" dialog which posts proto="").
+			proto = "any"
+		}
+		parts = append(parts, fmt.Sprintf("%s=%s", proto, strings.Join(dsts, ",")))
 	}
 	return strings.Join(parts, " ")
 }

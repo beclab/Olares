@@ -5,7 +5,9 @@ import (
 	changehost "github.com/beclab/Olares/daemon/pkg/commands/change_host"
 	collectlogs "github.com/beclab/Olares/daemon/pkg/commands/collect_logs"
 	connectwifi "github.com/beclab/Olares/daemon/pkg/commands/connect_wifi"
+	disableappoverlaygateway "github.com/beclab/Olares/daemon/pkg/commands/disable_app_overlay_gateway"
 	disableoverlaygateway "github.com/beclab/Olares/daemon/pkg/commands/disable_overlay_gateway"
+	enableappoverlaygateway "github.com/beclab/Olares/daemon/pkg/commands/enable_app_overlay_gateway"
 	enableoverlaygateway "github.com/beclab/Olares/daemon/pkg/commands/enable_overlay_gateway"
 	"github.com/beclab/Olares/daemon/pkg/commands/install"
 	mountnfs "github.com/beclab/Olares/daemon/pkg/commands/mount_nfs"
@@ -122,6 +124,10 @@ func init() {
 	cmd.Post("/disable-overlay-gateway", handlers.RequireMaster(
 		handlers.RequireLocal(
 			handlers.WaitServerRunning(handlers.RunCommand(handlers.DisableOverlayGateway, disableoverlaygateway.New)))))
+
+	cmd.Post("/enable-app-overlay-gateway", handlers.WaitServerRunning(handlers.RunCommand(handlers.EnableAppOverlayGateway, enableappoverlaygateway.New)))
+
+	cmd.Post("/disable-app-overlay-gateway", handlers.WaitServerRunning(handlers.RunCommand(handlers.DisableAppOverlayGateway, disableappoverlaygateway.New)))
 
 	cmdv2 := cmd.Group("v2")
 	cmdv2.Post("/mount-samba", handlers.RequireMaster(

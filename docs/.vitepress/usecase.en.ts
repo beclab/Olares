@@ -12,8 +12,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Integrate with Discord",
-                  link: "/use-cases/openclaw-integration",
+                  text: "Integrate with channels",
+                  items: [
+                    {
+                      text: "Integrate with Discord",
+                      link: "/use-cases/openclaw-integration",
+                    },
+                    {
+                      text: "Integrate with WhatsApp",
+                      link: "/use-cases/openclaw-channel-whatsapp",
+                    }
+                ],
                 },
                 {
                   text: "Enable web search",
@@ -24,9 +33,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/openclaw-skills",
                 },
                 {
-                  text: "Enable local file access",
-                  link: "/use-cases/openclaw-local-access",
+                  text: "Manage Olares with OpenClaw",
+                  link: "/use-cases/openclaw-olares-skills",
                 },
+                //{
+                //  text: "Enable local file access",
+                //  link: "/use-cases/openclaw-local-access",
+                //},
                 {
                   text: "Enable sandbox",
                   link: "/use-cases/openclaw-enable-sandbox",
@@ -39,8 +52,8 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Common issues",
                   link: "/use-cases/openclaw-common-issues",
                 },
-              ]
-            },
+              ],
+            }, 
             {
               text: "Hermes Agent",
               link: "/use-cases/hermes",  
@@ -222,6 +235,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/nofx",
             },
             {
+              text: "TradingAgents",
+              link: "/use-cases/tradingagents",
+            },            
+            {
               text: "TensorZero",
               link: "/use-cases/tensorzero",
             },           
@@ -307,6 +324,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Komga",
               link: "/use-cases/komga",
+            },
+            {
+              text: "Navidrome",
+              link: "/use-cases/navidrome",
             },
             {
               text: "TREK (NOMAD)",

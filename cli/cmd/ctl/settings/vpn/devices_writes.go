@@ -55,8 +55,9 @@ func addDevicesWriteCommands(parent *cobra.Command, f *cmdutil.Factory) {
 // `vpn devices rename <id> <new-name>`
 func newDevicesRenameCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "rename <device-id> <new-name>",
-		Short: "rename a Headscale device",
+		Use:    "rename <device-id> <new-name>",
+		Short:  "rename a Headscale device",
+		Hidden: true,
 		Long: `Rename a Headscale device on this Olares user's mesh.
 
 The new name is sent verbatim to Headscale, which uses it as both the
@@ -118,8 +119,9 @@ func doRenameViaDoer(ctx context.Context, d Doer, deviceID, newName string) erro
 func newDevicesDeleteCommand(f *cmdutil.Factory) *cobra.Command {
 	var assumeYes bool
 	cmd := &cobra.Command{
-		Use:   "delete <device-id>",
-		Short: "remove a Headscale device from this Olares user's mesh",
+		Use:    "delete <device-id>",
+		Short:  "remove a Headscale device from this Olares user's mesh",
+		Hidden: true,
 		Long: `Remove a Headscale device. The device immediately loses access to the
 mesh; any TermiPass session bound to that device is invalidated and
 must re-enroll.
@@ -183,8 +185,9 @@ func doDeleteViaDoer(ctx context.Context, d Doer, deviceID string) error {
 // the natural shape because Headscale's "ForcedTags" is a set, not a log.
 func newDevicesTagsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "tags",
-		Short: "manage forcedTags on a Headscale device",
+		Use:    "tags",
+		Short:  "manage forcedTags on a Headscale device",
+		Hidden: true,
 		Long: `Manage the forcedTags Headscale stores against a device.
 
 Subcommands:
@@ -200,8 +203,9 @@ Subcommands:
 func newDevicesTagsSetCommand(f *cmdutil.Factory) *cobra.Command {
 	var tags []string
 	cmd := &cobra.Command{
-		Use:   "set <device-id>",
-		Short: "replace the device's forcedTags list",
+		Use:    "set <device-id>",
+		Short:  "replace the device's forcedTags list",
+		Hidden: true,
 		Long: `Replace the forcedTags list on a Headscale device.
 
 Use --tag <name> for each tag (repeatable). Tags are sent as the SPA
