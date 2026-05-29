@@ -1,60 +1,79 @@
 ---
 outline: [2, 3]
-description: Use OnlyOffice on Olares to create and edit documents, spreadsheets, presentations, and PDF forms in a self-hosted office suite.
+description: Use OnlyOffice on Olares to create, edit, upload, and export office files in a private browser-based workspace.
 head:
   - - meta
     - name: keywords
-      content: Olares, OnlyOffice, office suite, documents, spreadsheets, presentations, PDF forms, self-hosted, collaborative editing
-app_version: "1.0.8"
+      content: Olares, OnlyOffice, office suite, documents, spreadsheets, presentations, PDF editor, forms, export formats, self-hosted, collaborative editing
+app_version: "1.0.10"
 doc_version: "1.0"
-doc_updated: "2026-04-13"
+doc_updated: "2026-05-29"
 ---
 
-# Create and manage office documents with OnlyOffice
+# Create and edit office files with OnlyOffice
 
-OnlyOffice is an open-source online office suite that provides editors for documents, spreadsheets, presentations, and PDF forms. It is fully compatible with Microsoft Office formats (.docx, .xlsx, .pptx) and supports real-time collaborative editing. Running OnlyOffice on Olares gives you a private, self-hosted office environment with full control over your data.
+OnlyOffice is a browser-based office suite for working with text documents, spreadsheets, presentations, PDFs, and forms. It supports common Microsoft Office formats such as `.docx`, `.xlsx`, and `.pptx`, and provides a familiar editor experience directly from your Olares device.
+
+Running OnlyOffice on Olares gives you a private workspace for everyday office files. You can create new files, upload existing documents, export them in multiple formats, and keep your work inside your own Olares environment.
 
 ## Install OnlyOffice
 
 1. Open Market and search for "OnlyOffice".
-   <!-- ![OnlyOffice](/images/manual/use-cases/onlyoffice.png#bordered) -->
+   
+   ![OnlyOffice](/images/manual/use-cases/onlyoffice.png#bordered)
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
 ## Use OnlyOffice
 
-Open OnlyOffice from Launchpad. The main interface shows your documents and provides options to create new files or upload existing ones.
+Open OnlyOffice from Launchpad. The main page shows your existing files and provides controls for creating or uploading office documents.
 
-<!-- ![OnlyOffice main interface](/images/manual/use-cases/onlyoffice-main.png#bordered) -->
+![OnlyOffice main page](/images/manual/use-cases/onlyoffice-main.png#bordered)
 
-### Create documents
+### Create files
 
-1. On the main page, click **New** to open the creation menu.
+1. On the main page, under **Create new**, select the file type you want to create:
 
-   <!-- ![Create new document](/images/manual/use-cases/onlyoffice-create-menu.png#bordered) -->
+   - **Document**: Create a `.docx` text document.
+   - **Spreadsheet**: Create a `.xlsx` spreadsheet.
+   - **Presentation**: Create a `.pptx` slide deck.
+   - **PDF form**: Create a `.pdf` file.
 
-2. Select the type of file you want to create:
-   - **Document**: Text documents (.docx)
-   - **Spreadsheet**: Data tables and charts (.xlsx)
-   - **Presentation**: Slide decks (.pptx)
-   - **PDF form**: Fillable PDF forms
+2. Start editing in the OnlyOffice editor. Your file is saved in the document list, where you can reopen it later for viewing or editing.
 
-3. The editor opens with a blank file. Enter a name for your file and start editing.
+### Export files
 
-   <!-- ![OnlyOffice editor](/images/manual/use-cases/onlyoffice-editor.png#bordered) -->
+After editing a file, go to **File** > **Download As** to download a copy in a desired format.
+
+| File type | Download formats |
+|:--|:--|
+| Document | `DOCX`, `PDF`, `ODT`, `DOTX`, `PDF/A`, `OTT`, `RTF`, `TXT`, `FB2`, `EPUB`,<br> `HTML`, `JPG`, `PNG` |
+| Spreadsheet | `XLSX`, `ODS`, `CSV`, `PDF`, `XLTX`, `OTS`, `XLSB`, `PDF/A`, `JPG`, `PNG` |
+| Presentation | `PPTX`, `PPSX`, `PDF`, `ODP`, `POTX`, `PDF/A`, `OTP`, `JPG`, `PNG` |
+| PDF | `DOCX`, `PDF`, `ODT`, `DOTX`, `OTT`, `RTF`, `TXT`, `FB2`, `EPUB`, `HTML`, <br>`JPG`, `PNG` |
+
 
 ### Upload files
 
-1. On the main page, click the upload button in the top-left corner.
+1. On the main page, click **Upload file**.
 
-   <!-- ![Upload button](/images/manual/use-cases/onlyoffice-upload.png#bordered) -->
+2. Select the target file from your computer.
 
-2. Select files from your computer. OnlyOffice supports common office formats including `.docx`, `.xlsx`, `.pptx`, `.pdf`, `.odt`, `.ods`, and `.odp`.
+   OnlyOffice supports common office formats including `.docx`, `.xlsx`, `.pptx`, `.pdf`, `.odt`, `.ods`, and `.odp`.
 
-3. Uploaded files appear in your document list and can be opened for viewing or editing.
+3. In the **File upload** dialog, wait for the file to load, convert, and finish loading editor scripts. Then choose how to open it:
+   - Click **Edit** to open the file for editing.
+   - Click **View** to open it in view-only mode.
+   - Click **Embedded View** to open the embedded viewer.
 
-   <!-- ![Uploaded files](/images/manual/use-cases/onlyoffice-uploaded.png#bordered) -->
+   ![File upload dialog in OnlyOffice](/images/manual/use-cases/onlyoffice-file-upload-dialog.png#bordered)
+
+4. After the upload is complete, the file appears in the document list and can be opened again later.
+
+:::info
+ONLYOFFICE uses Office Open XML formats for editing. When you upload or open another format for editing, OnlyOffice might convert it first. Some formatting can change during conversion, especially for formats that do not support the same document features.
+:::
 
 ## Learn more
 
-- [OnlyOffice documentation](https://helpcenter.onlyoffice.com/index.aspx): Official OnlyOffice help center.
+- [ONLYOFFICE documentation](https://helpcenter.onlyoffice.com/docs): Official ONLYOFFICE help center.
