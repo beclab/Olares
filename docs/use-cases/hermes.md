@@ -300,20 +300,19 @@ You can restart the gateway manually using one of the following methods:
 
 ### Why does the gateway fail to start after configuring the API?
 
-**Symptom**
-- Gateway API access shows "upstream connect error".
-- Logs display: `[Api_Server] Refusing to start: API_SERVER_KEY is set to a placeholder value`
+Your gateway will fail to start if the configured API key does not meet Hermes security requirements. When this happens:
+- The Gateway API displays an `upstream connect error`.
+- The system logs show the message `[Api_Server] Refusing to start: API_SERVER_KEY is set to a placeholder value`.
 
-**Cause**
+To resolve this issue, reset your `HERMES_API_SERVER_KEY`:
+1. Open Olares Settings, and then go to **Applications** > **Hermes Agent** > ****.
+2. Set a new key for `HERMES_API_SERVER_KEY` that meets the following requirements:
 
-The API key does not meet Hermes security requirements.
-
-**Solution**
-
-Reset the API key in **Settings** > **Applications** > **Hermes Agent** with a value that:
-- Is at least 8 characters long.
-- Contains only letters, numbers, and common symbols
-- Is not a common placeholder value like `your_api_key`.
+    - It must be at least 8 characters long.
+    - It can only contain letters, numbers, and these symbols (`-`, `_`, `.`).
+    - It cannot be a predictable placeholder value, such as `your_api_key`.
+    
+ 3. Click **Save**, and then click **Apply**.
 
 ## Next steps
 
