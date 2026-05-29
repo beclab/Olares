@@ -221,20 +221,20 @@ Install the Olares CLI skills in Hermes Agent so your agent can manage files and
 4. Follow the prompt to enter your Olares login password. For security, the password is hidden.
 5. You can now enter the TUI, and ask the agent to interact with your Olares environment. For example, ask it to install an app from Olares Market.
 
-## Call Hermes Agent via OpenAI-compatible API
+## Integrate Hermes Agent with other applications
 
 Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it with other applications like OpenWebUI or Hermes Workspace.
 
 ### Step 1: Enable the Gateway API
 
 1. Open Olares Settings, and then go to **Applications** > **Hermes Agent** > **Manage environment variables**.
-2. Find **API_SERVER_ENABLED**, click click <i class="material-symbols-outlined">edit_square</i>, and then set its value to `true`.
+2. Find **API_SERVER_ENABLED**, click <i class="material-symbols-outlined">edit_square</i>, and then set its value to `true`.
 3. Click **Confirm**.
-4. Find **HERMES_API_SERVER_KEY**, click click <i class="material-symbols-outlined">edit_square</i>, and then enter the value. Ensure the key meets the following requirements:
+4. Find **HERMES_API_SERVER_KEY**, click <i class="material-symbols-outlined">edit_square</i>, and then enter the value. Ensure the key meets the following requirements:
 
     - It must be at least 8 characters long.
     - It can only contain letters, numbers, and these symbols (`-`, `_`, `.`).
-    - It cannot be a predictable placeholder value, such as `your_api_key`.
+    - It cannot be a predictable placeholder value, such as your API key.
   
 5. Click **Confirm**, and then click **Apply**.
 
@@ -311,7 +311,7 @@ To resolve this issue, reset your `HERMES_API_SERVER_KEY`:
 
     - It must be at least 8 characters long.
     - It can only contain letters, numbers, and these symbols (`-`, `_`, `.`).
-    - It cannot be a predictable placeholder value, such as `your_api_key`.
+    - It cannot be a predictable placeholder value, such as your API key.
     
  3. Click **Save**, and then click **Apply**.
 
