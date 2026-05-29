@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 从 Cursor、Claude Code 等 AI 运行时，或 NemoClaw、Openclaw 等 Olares 应用中安装和使用 Olares CLI 的 Agent Skills。涵盖各个 skill、先装 shared 的顺序，以及完整用法。
+description: 从 Cursor、Claude Code 等 AI 运行时，或 Hermes Agent、OpenClaw 等 Olares 应用中安装和使用 Olares CLI 的 Agent Skills。涵盖各个 skill、先装 shared 的顺序，以及完整用法。
 ---
 
 # 安装与使用 Agent Skills
@@ -17,12 +17,12 @@ description: 从 Cursor、Claude Code 等 AI 运行时，或 NemoClaw、Openclaw
 
 | Skill | 说明 |
 |-------|------|
-| `olares-shared` | profile 模型、登录流程、令牌存储、自动刷新和<br>鉴权错误恢复。其他所有 skill 的基础。 |
+| `olares-shared` | profile 模型、登录流程、令牌存储、自动刷新和鉴权错误恢复。其他所有 skill 的基础。 |
 | `olares-files` | 列出、上传、下载、编辑、分享、挂载 SMB，以及管理 Sync 仓库。 |
 | `olares-market` | 浏览、安装、升级、卸载，以及上传本地 chart。 |
 | `olares-settings` | 读取和修改网页端开放的设置。 |
 | `olares-dashboard` | 总览和应用指标，JSON 结构稳定。 |
-| `olares-cluster` | 读取和修改 Pod、工作负载、节点、Job、CronJob，以及<br>中间件密码。 |
+| `olares-cluster` | 读取和修改 Pod、工作负载、节点、Job、CronJob，以及中间件密码。 |
 
 :::warning 务必先安装 `olares-shared`
 其他所有 skill 都默认 `olares-shared` 已经加载。它定义了 profile 模型、令牌刷新逻辑，以及其他 skill 依赖的鉴权错误恢复提示。比如只加载了 `olares-files` 的智能体，遇到鉴权错误时就无从恢复。
@@ -42,7 +42,7 @@ npx skills add beclab/Olares -y -g
 这些 skills 也发布在 ClawHub 上。两个渠道读取的是同一份 `SKILL.md`，所以装其中一个即可。如果你的智能体接入了 ClawHub，也可以从那里添加。
 :::
 
-要在 NemoClaw、OpenClaw 等 Olares 应用中使用 Olares CLI，请参考[用 Olares CLI 管理 Olares](../use-cases/nemoclaw-olares-cli.md)。
+Olares 上的一些 AI 智能体应用已经内置了这些 skill，开箱即可让智能体管理 Olares。要在这类应用中使用这些 skill，请参考[用 Hermes Agent 管理 Olares](../use-cases/hermes.md#manage-olares-with-your-hermes-agent)或[用 OpenClaw 管理 Olares](../use-cases/openclaw-olares-skills.md)。
 
 ## 把 Olares CLI 当作 Agent Skills 使用
 
