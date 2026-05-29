@@ -38,6 +38,19 @@ const msg = {
     '  export PATH="$HOME/.olares-cli-npm/bin:$PATH"   # before /usr/local/bin\n' +
     '  npx skills add %s -y -g\n' +
     'See cli/README.md "On a Linux Olares host" for details.',
+  step1EaccesHint:
+    'npm install -g hit EACCES while writing to its global prefix.\n' +
+    'On distro-packaged Node (apt/dnf, e.g. Ubuntu / Debian) the prefix is typically /usr or /usr/local and needs root.\n' +
+    'Recommended one-time fix: switch npm to a user-owned prefix so global installs do not need sudo,\n' +
+    'and `npx skills add -g` ends up writing under your user (not /root):\n' +
+    '  mkdir -p ~/.npm-global\n' +
+    '  npm config set prefix ~/.npm-global\n' +
+    '  echo \'export PATH="$HOME/.npm-global/bin:$PATH"\' >> ~/.bashrc\n' +
+    '  export PATH="$HOME/.npm-global/bin:$PATH"\n' +
+    'then re-run:  npx -y @olares/cli@latest install',
+  step1TimeoutHint:
+    'Timed out after 10 min. Likely cause: slow / proxied connection while downloading the Go binary from github.com.\n' +
+    'Retry outside the wizard so you can watch progress: npm install -g %s',
   preflightKeepRelease:
     'Detected release olares-cli at %s (%s); keeping it.',
   preflightReplaceDev:
@@ -349,7 +362,38 @@ async function stepInstallGlobally(interactive) {
       const hint = fmt(msg.step1Eexist, PKG, SKILLS_REPO);
       if (interactive) p.log.warn(hint); else console.error(hint);
     } else {
-      if (s) s.stop(fmt(msg.step1Fail, PKG)); else console.error(fmt(msg.step1Fail, PKG));
+      const line = fmt(msg.step1Fail, PKG);
+      if (s) s.stop(line); else console.error(line);
+
+      // npm exits non-zero with a numeric `err.code`; the syscall-level
+      // 'EACCES' surfaces only in stderr text (e.g. "npm error code EACCES
+      // ... permission denied, mkdir '/usr/lib/node_modules/@olares'").
+      const stderrStr = err && err.stderr ? err.stderr.toString() : '';
+      const isEacces  = /EACCES|permission denied/i.test(stderrStr);
+      const isTimeout = !!(err && (err.code === 'ETIMEDOUT' || err.killed));
+
+      const details = [];
+      if (err && err.code) {
+        details.push(`  code: ${err.code}`);
+      } else if (err && err.signal) {
+        details.push(`  signal: ${err.signal}${err.killed ? ' (killed)' : ''}`);
+      }
+      const stderrTail = stderrStr ? stderrStr.trim().slice(-2048) : '';
+      const stdoutTail = err && err.stdout ? err.stdout.toString().trim().slice(-2048) : '';
+      if (stderrTail) details.push(`  stderr (tail):\n${stderrTail}`);
+      if (stdoutTail) details.push(`  stdout (tail):\n${stdoutTail}`);
+      if (details.length) {
+        const blob = details.join('\n');
+        if (interactive) p.log.error(blob); else console.error(blob);
+      }
+
+      if (isEacces) {
+        const hint = msg.step1EaccesHint;
+        if (interactive) p.log.warn(hint); else console.error(hint);
+      } else if (isTimeout) {
+        const hint = fmt(msg.step1TimeoutHint, PKG);
+        if (interactive) p.log.warn(hint); else console.error(hint);
+      }
     }
     process.exit(1);
   }
