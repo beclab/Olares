@@ -262,7 +262,7 @@ Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it wit
 Open your browser and go to your gateway URL appended with `/health`:
 
 ```
-https://<your-gateway-url>/health
+https://{your-gateway-url}/health
 ```
 
 If the API is enabled successfully, the page displays a response confirming the service is active. For example, `{"status": "ok", "platform": "hermes-agent"}`.
