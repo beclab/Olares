@@ -51,7 +51,7 @@ Pass --yes to skip the confirmation prompt for scripted use.
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
 	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "skip the confirmation prompt")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }
 

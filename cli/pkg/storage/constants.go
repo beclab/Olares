@@ -41,4 +41,6 @@ var (
 	MinioConfigFile  = path.Join(Root, "etc", "default", "minio")
 
 	MinioOperatorFile = path.Join(Root, "usr", "local", "bin", "minio-operator")
+
+	AppCommonDir = path.Join(OlaresJuiceFSRootDir, "Common")
 )

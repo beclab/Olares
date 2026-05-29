@@ -12,10 +12,15 @@
 //
 // Mutations:
 //
-//   - `job rerun` calls KubeSphere's operations API
-//     (`/kapis/operations.kubesphere.io/v1alpha2/.../jobs/<name>?
-//     action=rerun&resourceVersion=<rv>`) — NOT a client-side spec
-//     clone. Same flow the SPA's JobsDetails.vue toolbar uses.
+//   - `job rerun` is a client-side equivalent of KubeSphere's
+//     `action=rerun` operations action: it lists the Job's child
+//     Pods (labelSelector=controller-uid=<job-uid>) and deletes them
+//     in parallel, letting the Job controller recreate new attempts
+//     to satisfy spec.parallelism / spec.completions. The SPA's
+//     toolbar historically POSTed to
+//     `/kapis/operations.kubesphere.io/v1alpha2/.../jobs/<name>?
+//     action=rerun` but that route is not exposed by Olares's
+//     control-hub, so the CLI replicates the effect locally.
 package job
 
 import (
@@ -27,8 +32,8 @@ import (
 // NewJobCommand assembles `olares-cli cluster job`. Today's set is
 // the Phase 5 slice (list / get / yaml / pods / events / rerun).
 // CronJobs are a separate noun (`cluster cronjob`) since the SPA
-// models them that way and the API versions differ
-// (`apis/batch/v1` for jobs, `apis/batch/v1beta1` for cronjobs).
+// models them that way and the verb sets differ (suspend/resume on
+// cronjobs, rerun on jobs). Both live under `apis/batch/v1`.
 func NewJobCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "job",
@@ -45,10 +50,12 @@ Endpoints (all under https://control-hub.<terminus>):
                    (filtered to involvedObject.kind=Job, name=<job>)
   pods           /kapis/.../namespaces/<ns>/pods?labelSelector=controller-uid=<uid>
                    (two-step: GET job → reuse "cluster pod list")
-  rerun          POST /kapis/operations.kubesphere.io/v1alpha2/
-                       namespaces/<ns>/jobs/<name>
-                       ?action=rerun&resourceVersion=<rv>
-                   (KubeSphere operations API, no body)
+  rerun          (1) GET job for UID + terminal-state check;
+                 (2) GET /api/v1/namespaces/<ns>/pods?labelSelector=controller-uid=<uid>;
+                 (3) parallel DELETE /api/v1/namespaces/<ns>/pods/<name>
+                 — client-side equivalent of KubeSphere's
+                 "action=rerun" (the operations endpoint isn't
+                 exposed by Olares). Terminal Jobs are refused.
 
 For scheduled jobs see "cluster cronjob".
 `,

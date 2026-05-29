@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -256,6 +257,7 @@ func (r *EntranceStatusManagerController) updateEntranceStatus(ctx context.Conte
 				Icon:             app.AppIcon(am.Spec.Config),
 				SharedEntrances:  appCopy.Spec.SharedEntrances,
 				MarketSource:     am.Annotations[constants.AppMarketSourceKey],
+				IsV3:             appcfg.IsV3(&am),
 			})
 		}
 	}

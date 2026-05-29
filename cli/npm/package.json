@@ -1,0 +1,56 @@
+{
+  "name": "@olares/cli",
+  "version": "0.0.0-placeholder",
+  "description": "Olares CLI (olares-cli) Node wrapper. Run via `npx @olares/cli@latest <verb>` or install globally with `npm install -g @olares/cli`.",
+  "bin": {
+    "olares-cli": "./bin/olares-cli.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js",
+    "prepublishOnly": "node scripts/check-version.js"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64",
+    "arm"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "README.md"
+  ],
+  "dependencies": {
+    "@clack/prompts": "^1.2.0",
+    "tar": "^7.4.3"
+  },
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beclab/Olares.git",
+    "directory": "cli/npm"
+  },
+  "homepage": "https://github.com/beclab/Olares/tree/main/cli",
+  "bugs": {
+    "url": "https://github.com/beclab/Olares/issues"
+  },
+  "keywords": [
+    "olares",
+    "olares-cli",
+    "olares-id",
+    "olares-one",
+    "cli",
+    "kubernetes",
+    "selfhost",
+    "personal-cloud",
+    "self-hosted",
+    "ai-agent"
+  ]
+}

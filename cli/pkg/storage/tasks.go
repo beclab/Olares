@@ -410,3 +410,17 @@ func (t *CreateSharedLibDir) Execute(runtime connector.Runtime) error {
 	}
 	return nil
 }
+
+type CreateAppCommonDir struct {
+	common.KubeAction
+}
+
+func (t *CreateAppCommonDir) Execute(runtime connector.Runtime) error {
+	if runtime.GetSystemInfo().IsDarwin() {
+		return nil
+	}
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s && chown 1000:1000 %s", AppCommonDir, AppCommonDir), false, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create app common dir")
+	}
+	return nil
+}
