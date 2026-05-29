@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 	"github.com/mdlayher/raw"
@@ -44,12 +45,15 @@ type DSRProxy struct {
 	stopCh chan struct{}
 
 	requestPortMap *sync.Map // map[uint16]uint16
+
+	isNetworkChanged func() bool
 }
 
 func NewDSRProxy() *DSRProxy {
 	return &DSRProxy{
-		stopCh:         make(chan struct{}),
-		requestPortMap: new(sync.Map),
+		stopCh:           make(chan struct{}),
+		requestPortMap:   new(sync.Map),
+		isNetworkChanged: utils.RegisterNetworkChangedNotify(),
 	}
 }
 
@@ -480,7 +484,7 @@ func (d *DSRProxy) handleResponse(data []byte, conn net.PacketConn) {
 func (d *DSRProxy) regonfigure() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if !d.configChanged {
+	if !d.configChanged && !d.isNetworkChanged() {
 		return nil
 	}
 
