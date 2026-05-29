@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install and use the Olares CLI agent skill bundles from AI runtimes such as Cursor and Claude Code, or from Olares apps such as NemoClaw and Openclaw. Covers the bundles, the shared-first install order, and end-to-end usage.
+description: Install and use the Olares CLI agent skill bundles from AI runtimes such as Cursor and Claude Code, or from Olares apps such as Hermes Agent and OpenClaw. Covers the bundles, the shared-first install order, and end-to-end usage.
 ---
 
 # Install and use Agent Skills
@@ -38,15 +38,15 @@ Otherwise, install all six bundles into your active agent with the following com
 npx skills add beclab/Olares -y -g
 ```
 
-This installs the skills into the agent you are using, such as Cursor and Claude Code. The agent then loads the matching skill when you mention an Olares task. Because `olares-shared` is part of the same bundle, the shared-first requirement is satisfied automatically.
+This installs the skills into the agent you are using, such as Cursor or Claude Code. The agent then loads the matching skill when you mention an Olares task. Because `olares-shared` is part of the same bundle, the shared-first requirement is satisfied automatically.
 
 :::tip
 The skills are also published on ClawHub. Both channels read the same `SKILL.md` files, so you only need to install from one. If your agent integrates with ClawHub, you can add them from there instead.
 :::
 
-To use Olares CLI with AI agents on Olares, such as NemoClaw or OpenClaw, refer to [Manage Olares with Olares CLI](../use-cases/nemoclaw-olares-cli.md).
+Some AI Agent apps on Olares bundle these skills, so the agent can manage Olares out of the box. To use the skills from such an app, see [Manage Olares with your Hermes Agent](../use-cases/hermes.md#manage-olares-with-your-hermes-agent) or [Manage Olares with your OpenClaw agent](../use-cases/openclaw-olares-skills.md).
 
-## Use Olares CLI as Agent Skills
+## Use the skills
 
 Once the bundles are loaded, control Olares with natural language. The agent determines which CLI command to run. For example:
 
