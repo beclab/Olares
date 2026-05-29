@@ -16,6 +16,12 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
+type workloadKindResult struct {
+	Kind  string     `json:"kind"`
+	Items []Workload `json:"items"`
+	Total int        `json:"totalItems"`
+}
+
 // NewListCommand: `olares-cli cluster workload list [-n NS]
 // [--kind all|deployment|statefulset|daemonset] [-l SEL] [--limit N]
 // [--page N] [--all] [-o table|json] [--no-headers] [--quiet]`.
@@ -94,40 +100,12 @@ func RunList(
 	if err != nil {
 		return err
 	}
-	client, err := o.Prepare()
+	// list never surfaces pod-template image fields — use the
+	// dedicated `workload images` verb for that. Pass full=false so
+	// fetchWorkloads strips templates before render/JSON.
+	collected, multi, err := fetchWorkloads(ctx, o, p, namespace, plural, labelSelector, false)
 	if err != nil {
 		return err
-	}
-
-	kindsToFetch := []string{plural}
-	multi := false
-	if plural == KindAll {
-		kindsToFetch = []string{"deployments", "statefulsets", "daemonsets"}
-		multi = true
-	}
-
-	type kindResult struct {
-		Kind  string     `json:"kind"`
-		Items []Workload `json:"items"`
-		Total int        `json:"totalItems"`
-	}
-	var collected []kindResult
-	for _, k := range kindsToFetch {
-		items, total, err := clusteropts.FetchAllKubeSphere[Workload](ctx, client, p, func(page int) string {
-			return buildListPath(k, namespace, labelSelector, p, page)
-		})
-		if err != nil {
-			return fmt.Errorf("list %s: %w", k, err)
-		}
-		// Some KubeSphere versions strip Kind from list items —
-		// stamp it from the per-call context so the KIND column is
-		// always populated downstream.
-		for i := range items {
-			if items[i].Kind == "" {
-				items[i].Kind = SingularKind(k)
-			}
-		}
-		collected = append(collected, kindResult{Kind: k, Items: items, Total: total})
 	}
 
 	if o.IsJSON() {
@@ -136,12 +114,12 @@ func RunList(
 		// any list verb with the same parser. For multi-kind, items
 		// and totalItems are wrapped per-kind under `kinds`.
 		type jsonOut struct {
-			Kinds []kindResult `json:"kinds,omitempty"`
-			Items []Workload   `json:"items,omitempty"`
-			Total int          `json:"totalItems,omitempty"`
-			Page  int          `json:"page"`
-			Limit int          `json:"limit"`
-			All   bool         `json:"all,omitempty"`
+			Kinds []workloadKindResult `json:"kinds,omitempty"`
+			Items []Workload           `json:"items,omitempty"`
+			Total int                  `json:"totalItems,omitempty"`
+			Page  int                  `json:"page"`
+			Limit int                  `json:"limit"`
+			All   bool                 `json:"all,omitempty"`
 		}
 		out := jsonOut{Page: p.Page, Limit: p.Limit, All: p.All}
 		if multi {
@@ -239,6 +217,56 @@ func RunList(
 		fmt.Fprintln(os.Stderr, "no workloads visible to this profile")
 	}
 	return nil
+}
+
+func fetchWorkloads(
+	ctx context.Context,
+	o *clusteropts.ClusterOptions,
+	p *clusteropts.PaginationOptions,
+	namespace, plural, labelSelector string,
+	full bool,
+) ([]workloadKindResult, bool, error) {
+	client, err := o.Prepare()
+	if err != nil {
+		return nil, false, err
+	}
+
+	kindsToFetch := []string{plural}
+	multi := false
+	if plural == KindAll {
+		kindsToFetch = []string{"deployments", "statefulsets", "daemonsets"}
+		multi = true
+	}
+
+	var collected []workloadKindResult
+	for _, k := range kindsToFetch {
+		items, total, err := clusteropts.FetchAllKubeSphere[Workload](ctx, client, p, func(page int) string {
+			return buildListPath(k, namespace, labelSelector, p, page)
+		})
+		if err != nil {
+			return nil, false, fmt.Errorf("list %s: %w", k, err)
+		}
+		// Some KubeSphere versions strip Kind from list items —
+		// stamp it from the per-call context so the KIND column is
+		// always populated downstream.
+		for i := range items {
+			if items[i].Kind == "" {
+				items[i].Kind = SingularKind(k)
+			}
+		}
+		maybeStripWorkloadTemplates(items, full)
+		collected = append(collected, workloadKindResult{Kind: k, Items: items, Total: total})
+	}
+	return collected, multi, nil
+}
+
+func maybeStripWorkloadTemplates(items []Workload, full bool) {
+	if full {
+		return
+	}
+	for i := range items {
+		items[i].Spec.Template = nil
+	}
 }
 
 // buildListPath assembles the KubeSphere workload endpoint plus
