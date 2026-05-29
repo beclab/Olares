@@ -218,6 +218,9 @@ Install the Olares CLI skills in Hermes Agent so your agent can manage files and
    olares-cli profile login --olares-id {your-olares-id}
    ```
 
+4. Follow the prompt to enter your Olares login password. For security, the password is hidden.
+5. You can now enter the TUI, and ask the agent to interact with your Olares environment. For example, ask it to install an app from Olares Market.
+
 ## Call Hermes Agent via OpenAI-compatible API
 
 Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it with other applications like OpenWebUI or Hermes Workspace.
