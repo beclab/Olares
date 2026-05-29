@@ -7,7 +7,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
-              text: "AI agent",
+              text: "AI Agent",
               collapsed: false,
               items: [
                 {
