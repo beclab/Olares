@@ -289,7 +289,7 @@
                           "headersToAdd": [
                             {
                               "key": "X-Forwarded-Proto",
-                              "value": "https"
+                              "value": "%REQ(x-forwarded-proto?:SCHEME)%"
                             },
                             {
                               "key": "X-BFL-USER",
@@ -396,6 +396,7 @@
                   }
                 ],
                 "useRemoteAddress": true,
+                "xffNumTrustedHops": 1,
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -487,7 +488,7 @@
                           "headersToAdd": [
                             {
                               "key": "X-Forwarded-Proto",
-                              "value": "https"
+                              "value": "%REQ(x-forwarded-proto?:SCHEME)%"
                             },
                             {
                               "key": "X-BFL-USER",
@@ -594,6 +595,7 @@
                   }
                 ],
                 "useRemoteAddress": true,
+                "xffNumTrustedHops": 1,
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -1079,7 +1081,7 @@
         {
           "header": {
             "key": "X-Forwarded-Proto",
-            "value": "https"
+            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         },
@@ -1509,7 +1511,7 @@
         {
           "header": {
             "key": "X-Forwarded-Proto",
-            "value": "https"
+            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         },

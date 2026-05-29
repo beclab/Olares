@@ -117,6 +117,14 @@ function envoy_on_response(response_handle)
 end
 `
 
+// xForwardedProtoValue mirrors nginx:
+//
+//	map $http_x_forwarded_proto $x_forwarded_proto {
+//	    ""      $scheme;
+//	    default $http_x_forwarded_proto;
+//	}
+const xForwardedProtoValue = "%REQ(x-forwarded-proto?:SCHEME)%"
+
 var (
 	tcpIdleTimeout        = time.Hour
 	httpStreamIdleTimeout = 30 * time.Minute
@@ -426,7 +434,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 			VirtualHosts: virtualHosts,
 			RequestHeadersToAdd: []*corev3.HeaderValueOption{
 				{Header: &corev3.HeaderValue{Key: "X-Forwarded-Host", Value: "%REQ(:AUTHORITY)%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
-				{Header: &corev3.HeaderValue{Key: "X-Forwarded-Proto", Value: "https"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
+				{Header: &corev3.HeaderValue{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 				{Header: &corev3.HeaderValue{Key: "X-Real-IP", Value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 				{Header: &corev3.HeaderValue{Key: "X-Original-Forwarded-For", Value: "%REQ(X-FORWARDED-FOR)%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 			},
@@ -492,8 +500,14 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 				{UpgradeType: "websocket"},
 				{UpgradeType: "tailscale-control-protocol"},
 			},
-			AccessLog:         []*accesslogv3.AccessLog{buildHTTPAccessLog()},
-			UseRemoteAddress:  wrapperspb.Bool(true),
+			AccessLog:        []*accesslogv3.AccessLog{buildHTTPAccessLog()},
+			UseRemoteAddress: wrapperspb.Bool(true),
+			// Trust one hop of downstream-supplied forwarding headers so that a
+			// client/proxy-set X-Forwarded-Proto is honored (mirrors nginx's
+			// `map $http_x_forwarded_proto`). With the default value of 0 Envoy
+			// would unconditionally overwrite x-forwarded-proto based on the
+			// downstream connection's TLS status.
+			XffNumTrustedHops: 1,
 			StreamIdleTimeout: durationpb.New(httpStreamIdleTimeout),
 			StripPortMode: &hcmv3.HttpConnectionManager_StripAnyHostPort{
 				StripAnyHostPort: true,
@@ -796,7 +810,7 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 				PathPrefix: "/api/authz/ext-authz/",
 				AuthorizationRequest: &extauthzv3.AuthorizationRequest{
 					HeadersToAdd: []*corev3.HeaderValue{
-						{Key: "X-Forwarded-Proto", Value: "https"},
+						{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
 						{Key: "X-BFL-USER", Value: userName},
 					},
 				},
