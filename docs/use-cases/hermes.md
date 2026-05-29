@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
-app_version: "1.3.8"
+app_version: "1.3.9"
 doc_version: "2.0"
 doc_updated: "2026-05-29"
 ---
@@ -213,7 +213,7 @@ Use the Olares CLI skills in Hermes Agent so your agent can manage files and app
    hermes skills list
    ```
    
-3. Befor using the skills, run the following command to log in to your Olares account. Replace {your-olares-id} with your Olares ID (e.g. olaresdemo@olares.com):
+3. Before using the skills, run the following command to log in to your Olares account. Replace {your-olares-id} with your Olares ID (e.g. olaresdemo@olares.com):
 
    ```bash
    olares-cli profile login --olares-id {your-olares-id}
