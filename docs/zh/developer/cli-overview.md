@@ -17,8 +17,8 @@ olares-cli 提供三种模式，区别在于运行位置和鉴权方式。
 | 模式 | 运行位置 | 鉴权方式 |
 |------|---------|---------|
 | 主机模式 | 与 Olares OS 同一台机器 | 主机 root 和 kubeconfig，无需登录。|
-| 用户模式 <Badge type="tip" text="^1.12.5" /> | 任意安装了 `olares-cli` 的机器，以登录用户的身份运行 | 通过与网页端、LarePass 相同的 HTTP API，使用 profile 和访问令牌 |
-| 集群内模式 <Badge type="tip" text="^1.12.6" /> | Olares 应用容器内部，如 Openclaw 或 NemoClaw | 凭证以环境变量注入，权限范围由应用的 `OlaresManifest` 决定 |
+| 用户模式 <Badge type="tip" text="^1.12.5" /> | 任意安装了 `olares-cli` 的机器，以登录<br>用户的身份运行 | 通过与网页端、LarePass 相同的 HTTP API，使用 profile 和访问令牌 |
+| 集群内模式 <Badge type="tip" text="^1.12.6" /> | Olares 应用容器内部 | 凭证以环境变量注入，权限范围由应用的 `OlaresManifest` 决定 |
 
 :::tip
 要使用用户模式，请通过 npm 安装 CLI。如果主机上已有的 `olares-cli` 版本早于表中所示版本，相关命令可能不可用。参见[安装 olares-cli](./cli-install.md)。

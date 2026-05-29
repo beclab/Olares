@@ -17,7 +17,7 @@ description: 从 Cursor、Claude Code 等 AI 运行时，或 Hermes Agent、Open
 
 | Skill | 说明 |
 |-------|------|
-| `olares-shared` | profile 模型、登录流程、令牌存储、自动刷新和鉴权错误恢复。其他所有技能的基础。 |
+| `olares-shared` | profile 模型、登录流程、令牌存储、自动刷新和鉴权错误恢复。<br>其他所有技能的基础。 |
 | `olares-files` | 列出、上传、下载、编辑、分享、挂载 SMB，以及管理 Sync 仓库。 |
 | `olares-market` | 浏览、安装、升级、卸载，以及上传本地 chart。 |
 | `olares-settings` | 读取和修改网页端开放的设置。 |

@@ -17,8 +17,8 @@ Olares CLI is available through three modes that differ in where they run and ho
 | Mode | Where it runs | How it authenticates |
 |------|---------------|----------------------|
 | Host mode | On the same machine as the Olares OS | Host root and kubeconfig. No login required.|
-| User mode <Badge type="tip" text="^1.12.5" /> | On any machine with `olares-cli` installed, on behalf of a logged-in user | Profile and access token via the same HTTP API as the web UI and LarePass |
-| In-cluster mode <Badge type="tip" text="^1.12.6" /> | Inside an Olares app's container such as Openclaw or NemoClaw | Credentials injected as environment variables, with scope set by the app's `OlaresManifest` |
+| User mode <Badge type="tip" text="^1.12.5" /> | On any machine with `olares-cli` installed,<br> on behalf of a logged-in user | Profile and access token via the same HTTP API as the web UI and LarePass |
+| In-cluster mode <Badge type="tip" text="^1.12.6" /> | Inside an Olares app's container | Credentials injected as environment variables, with scope set by the app's `OlaresManifest` |
 
 :::tip
 To use Olares CLI in user mode, install the CLI with npm. If the `olares-cli` already on your host predates the version shown in the table, the agent commands may not be available. See [Install olares-cli](./cli-install.md).
