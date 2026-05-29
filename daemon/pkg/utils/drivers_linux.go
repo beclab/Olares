@@ -457,10 +457,11 @@ func UmountOrRecordBrokenMounts(ctx context.Context, baseDir string) error {
 
 	updatedBrokenMounts := slices.Clone(currentBrokenMounts)
 	brokenMountsMu.Lock()
+	brokenMountsChanged := !slices.Equal(brokenMounts, updatedBrokenMounts)
 	brokenMounts = updatedBrokenMounts
 	brokenMountsMu.Unlock()
 
-	if len(updatedBrokenMounts) > 0 {
+	if len(updatedBrokenMounts) > 0 || brokenMountsChanged {
 		klog.Infof("current broken mounts: %v", updatedBrokenMounts)
 		// notify broken mounts
 		NotifyBrokenMounts(ctx)
@@ -805,7 +806,8 @@ func MountNfsDriver(ctx context.Context, mountBaseDir, mountPath string, nfsServ
 	}
 
 	nfsMountPath := fmt.Sprintf("%s:%s", nfsServer, nfsPath)
-	opts = append(opts, "uid=1000", "gid=1000")
+	// unsuppoted nfs v4
+	// opts = append(opts, "uid=1000", "gid=1000")
 	err = mounter.Mount(nfsMountPath, mntPath, "nfs", opts)
 	if err != nil {
 		klog.Error("mount path as rw error, ", err)

@@ -109,9 +109,10 @@ type ApplicationConfig struct {
 	// Force-set to true for v3 apps in toApplicationConfig regardless of
 	// manifest value because v3 apps are themselves the destination of shared
 	// traffic and naturally need the same treatment.
-	NeedsSharedAccess       bool
-	OverlayGatewaySupported bool
-	LLMGatewaySupported     bool
+	NeedsSharedAccess   bool
+	LLMGatewaySupported bool
+	OverlayGateway      OverlayGateway
+	WorkloadReplicas    *WorkloadReplicas
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {

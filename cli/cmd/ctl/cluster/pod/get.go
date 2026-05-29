@@ -77,7 +77,7 @@ line (JSONL stream). Ctrl-C exits cleanly.
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-fetch and re-render until interrupted (Ctrl-C to stop)")
 	cmd.Flags().DurationVar(&interval, "interval", 2*time.Second, "polling interval when --watch is set")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }
 
@@ -163,6 +163,12 @@ func runGetWatch(ctx context.Context, o *clusteropts.ClusterOptions, namespace, 
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return nil
+			}
+			// 4xx is terminal — the next tick will get the same
+			// answer. Don't burn the 5-error budget on a NotFound /
+			// Forbidden / Unauthorized response.
+			if clusterclient.IsClientError(err) {
+				return err
 			}
 			consecErr++
 			o.Info("watch: failed to fetch pod (retry %d): %v", consecErr, err)

@@ -25,10 +25,11 @@ var enableOverlayGatewayError string = ""
 var operateOverlayGatewayMutex sync.Mutex
 
 type OverlayGatewaySupportedApp struct {
-	AppName   string `json:"app_name"`
-	Enabled   bool   `json:"enabled"`
-	SharedApp bool   `json:"shared_app"`
-	AppID     string `json:"app_id"`
+	AppName          string                  `json:"app_name"`
+	Enabled          bool                    `json:"enabled"`
+	SharedApp        bool                    `json:"shared_app"`
+	AppID            string                  `json:"app_id"`
+	UnderlayNetworks []utils.UnderlayNetwork `json:"underlay_networks"`
 }
 
 type OverlayGatewayStatus struct {
@@ -91,10 +92,11 @@ func (h *Handlers) getOverlayGatewaySupportedApps(ctx context.Context, user stri
 	var apps []OverlayGatewaySupportedApp
 	for _, app := range supportedApps {
 		apps = append(apps, OverlayGatewaySupportedApp{
-			AppName:   app.AppName,
-			Enabled:   app.Enabled,
-			SharedApp: app.SharedApp,
-			AppID:     app.AppID,
+			AppName:          app.AppName,
+			Enabled:          app.Enabled,
+			SharedApp:        app.SharedApp,
+			AppID:            app.AppID,
+			UnderlayNetworks: app.UnderlayNetworks,
 		})
 	}
 

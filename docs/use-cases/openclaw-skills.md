@@ -5,6 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, install skills, install plug-ins
+app_version: "1.0.3"
+doc_version: "1.1"
+doc_updated: "2026-05-29"      
 ---
 
 # Manage skills and plugins
@@ -16,6 +19,14 @@ OpenClaw can be extended using skills and plugins:
 :::info Why manual installation required
 To protect your device, OpenClaw runs in a restricted, non-root environment without administrative privileges. This prevents the agent from modifying your system or self-installing software.
 :::
+
+## Learning objectives
+
+In this guide, you will learn how to:
+- Understand where skills are loaded from and why some are blocked in Olares.
+- Install skills using the configuration wizard, ClawHub, or manual upload.
+- Identify and install missing dependencies for a skill.
+- Install and enable plugins to extend OpenClaw with new channels or features.
 
 ## Understanding skills
 
@@ -66,13 +77,13 @@ You can use the built-in configuration wizard to install default or officially s
     | Settings | Option |
     |:---------|:-------|
     | Where will the Gateway run | Local (this machine) |
-    | Select settings to configure | Skills |
+    | What do you want to configure | Skills |
     | Configure skills now | Yes |
     | Install missing skill dependencies | Navigate to the skill **clawhub**, press the **Space** key <br>to select it, and then press **Enter**. |
     | Preferred node manager for skill installs | npm<br>Wait for the message `Installed clawhub` to appear<br> before proceeding. |
     | Set [API_KEY] for [skill] | Select **No** for all these settings.| 
 
-4. Finally, select **Continue** for **Select sections to configure**. The message `Configure complete` appears, indicating the setup is finished. 
+4. Finally, select **Done** for **What do you want to configure**. The message `Configure complete` appears, indicating the setup is finished. 
 
 ### Install from ClawHub
 
@@ -119,7 +130,7 @@ Ensure that the [clawhub skill is installed](#install-via-openclaw-config). This
 
     The status of **caldav-calendar** is **ready**, indicating the installation is successful.
 
-6. Open the **Control UI**, go to the **Skills** page, and then click the **Ready** tab. You will see the newly installed skill is enabled.
+6. Open the **Control UI**, select **Skills** from the left sidebar, and then click the **Ready** tab. You will see the newly installed skill is enabled.
 
     ![Newly installed skill is enabled](/images/manual/use-cases/skill-enabled.png#bordered)
 
@@ -267,15 +278,15 @@ If a skill is blocked or unusable, you need to identify and install its missing 
     openclaw plugins list
     ```
 
-    Now the status of the plug-in is **loaded**.
+    Now the status of the plug-in is **enabled**.
 
-5. Open the Control UI, go to **Automation** > **Plugins**.
+5. Open the Control UI, select **Settings** from the left sidebar, and then go to **Automation** > **Plugins**.
 6. Find **@openclaw/bluebubbles** and click it to expand its panel:
 
     - If it is enabled, turn off the toggle switch, and then turn it on again to force the system to explicitly save the configuration.
     - If it is disabled, turn on the toggle switch.
 
-    ![Toggle on plugin](/images/manual/use-cases/toggle-plugin1.png#bordered)
+    ![Toggle on plugin](/images/manual/use-cases/toggle-plugin2.png#bordered)
 
 7. Click **Save** in the upper-right corner. The system validates the config and applies the change automatically.
 
@@ -286,3 +297,4 @@ If a skill is blocked or unusable, you need to identify and install its missing 
         - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
     - **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
     :::
+    

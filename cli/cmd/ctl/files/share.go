@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/internal/files/download"
 	"github.com/beclab/Olares/cli/internal/files/share"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
@@ -40,8 +41,16 @@ import (
 func NewShareCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "share",
-		Short: "create and manage internal / public / SMB shares for files-backend resources",
-		Long: `Create and manage shares for files / folders on the per-user files-backend.
+		Short: "create and manage internal / public / SMB shares for files-backend directories",
+		Long: `Create and manage shares for directories on the per-user files-backend.
+
+All three create flavors are DIRECTORY-ONLY: each ` + "`share <flavor>"+ "`" + `
+verb Stats the target before posting the create record and refuses
+up front when the path is a file (or doesn't exist on the server).
+This matches the LarePass GUI's per-driver share-menu gating on
+` + "`event.isDir`" + ` — sharing a single file is rejected by the web app
+and by the CLI. To "share a single file", place it in a dedicated
+directory and share that directory instead.
 
 Three share flavors:
 
@@ -505,11 +514,15 @@ func setupShareClient(ctx context.Context, f *cmdutil.Factory) (*share.Client, *
 //     layer rules for `external/<node>/` and `cache/<node>/`; those
 //     are namespace-orthogonal and applied separately via
 //     IsExternalNodeRoot / IsCacheNodeRoot below.
-//   - It does not replicate the GUI's `event.isDir` constraint for
-//     SMB / Internal share menus — sharing a single file IS a
-//     legitimate Internal-share use case, and the CLI accepts it
-//     (the server is the authoritative gate for "is this resource
-//     shareable").
+//   - It does not encode the GUI's `event.isDir` constraint here.
+//     That dir-only gate IS enforced (matching the LarePass GUI's
+//     per-driver share-menu condition list), but it lives in a
+//     separate cobra-layer preflight — [preflightShareCreate] in
+//     [share_create.go] — because it needs a wire round-trip
+//     (download.Client.Stat) to know whether the target is a file
+//     or a directory. Keeping the namespace allow-list pure
+//     (string in → error out) keeps it independently testable
+//     without standing up an HTTP server.
 var shareFlavorAllowedNamespaces = map[share.Type]map[string]struct{}{
 	share.TypeInternal: {
 		"drive":    {},
@@ -854,13 +867,39 @@ func resolveShareDisplayPath(ctx context.Context, f *cmdutil.Factory, r *share.R
 	return formatSharePathLine(r, name)
 }
 
-// reformatShareHTTPErr maps share.HTTPError onto user-friendly
-// messages — same pattern as cp / rm / download. The op string
-// describes which verb hit the error so multiple verbs in one
-// session can be told apart in error logs.
+// reformatShareHTTPErr maps share.HTTPError / download.HTTPError
+// onto user-friendly messages — same pattern as cp / rm / download.
+// The op string describes which verb hit the error so multiple
+// verbs in one session can be told apart in error logs.
 //
 // Typed credential errors from the refreshing transport are surfaced
 // verbatim; see reformatHTTPErr in download.go for the rationale.
+//
+// Two error types because the share-create cobra flow now goes
+// through TWO packages:
+//   - share.Client.{Create,...} for the share record CRUD
+//     (share.HTTPError);
+//   - download.Client.Stat for the preflight existence / dir-only
+//     check that runs before Create (download.HTTPError).
+//
+// Status code handling is identical for both — we want the user to
+// see the same `profile login` CTA on 401/403 regardless of which
+// leg of the operation failed — so we collapse the two into one
+// status integer and run a single switch.
+//
+// The 459 status is a back-compat artifact of the LarePass auth
+// proxy (legacy "token invalidated" indicator that pre-dates the
+// refreshing transport's typed errors). It only ever comes from
+// share.HTTPError; download.HTTPError doesn't model it explicitly,
+// but the switch arm handles either source uniformly because
+// preflight 401/403 already gets the same treatment.
+//
+// The 409 arm is share.HTTPError-only by design — it describes a
+// share-record state conflict (existing share id, double-create),
+// which can only originate from Create/Add/Update calls. The
+// preflight's Stat path never produces 409, so the arm is
+// effectively `share.HTTPError`-scoped without needing an extra
+// type guard.
 func reformatShareHTTPErr(err error, olaresID, op string) error {
 	if err == nil {
 		return nil
@@ -873,21 +912,27 @@ func reformatShareHTTPErr(err error, olaresID, op string) error {
 	if errors.As(err, &nli) {
 		return nli
 	}
-	var hErr *share.HTTPError
-	if errors.As(err, &hErr) {
-		switch hErr.Status {
-		case 401, 403, 459:
-			if olaresID != "" {
-				return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please run: olares-cli profile login --olares-id %s",
-					hErr.Status, op, olaresID)
-			}
-			return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please re-run `olares-cli profile login`",
-				hErr.Status, op)
-		case 404:
-			return fmt.Errorf("%s: not found on the server (HTTP 404)", op)
-		case 409:
-			return fmt.Errorf("%s: server reported a conflict (HTTP 409); the resource may already be shared, or the share id is in use", op)
+	var status int
+	var shareErr *share.HTTPError
+	if errors.As(err, &shareErr) {
+		status = shareErr.Status
+	}
+	var dlErr *download.HTTPError
+	if status == 0 && errors.As(err, &dlErr) {
+		status = dlErr.Status
+	}
+	switch status {
+	case 401, 403, 459:
+		if olaresID != "" {
+			return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please run: olares-cli profile login --olares-id %s",
+				status, op, olaresID)
 		}
+		return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please re-run `olares-cli profile login`",
+			status, op)
+	case 404:
+		return fmt.Errorf("%s: not found on the server (HTTP 404)", op)
+	case 409:
+		return fmt.Errorf("%s: server reported a conflict (HTTP 409); the resource may already be shared, or the share id is in use", op)
 	}
 	return err
 }

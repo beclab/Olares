@@ -49,7 +49,7 @@ return HTTP 404 (the standard kube-apiserver "not found" path).
 			return runGet(c.Context(), o, ns)
 		},
 	}
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }
 

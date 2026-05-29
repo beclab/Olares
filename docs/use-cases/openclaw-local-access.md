@@ -11,9 +11,16 @@ head:
 
 By default, OpenClaw runs in a secure sandbox environment and can only access its own workspace. To make your AI assistant truly personal, you can grant it permission to access your Olares file system. This allows OpenClaw to read, organize, and process your documents, media, and connected external storage like NAS or USB drives.
 
-:::tip Prerequisite
+:::tip OS version requirement
 You must upgrade your Olares OS to V1.12.5 or later to use this feature.
 :::
+
+## Learning objectives
+
+In this guide, you will learn how to:
+- Enable file access permissions for the Home and External directories.
+- Teach your agent where your files are stored by updating its core instructions.
+- Verify that OpenClaw can read from and write to your Olares file system.
 
 ## Step 1: Enable file access settings
 
