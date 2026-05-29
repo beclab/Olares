@@ -5,14 +5,14 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw installation
-app_version: "1.0.2"
+app_version: "1.0.3"
 doc_version: "2.0"
-doc_updated: "2026-05-28"
+doc_updated: "2026-05-29"
 ---
 
 # OpenClaw
 
-OpenClaw is a personal AI assistant that is designed to run on your local device. It connects directly to the messaging apps like Discord and Slack, and allows you to interact with it right in the app. 
+OpenClaw is a personal AI assistant that is designed to run on your local device. It connects directly to messaging apps like Discord and Slack, and allows you to interact with it right in the app. 
 
 It acts as an "always-on" operator that can execute real tasks, such as searching and sending documents, managing calendars, or browsing webpages.
 
@@ -23,8 +23,7 @@ In this guide, you will learn how to:
 - Integrate OpenClaw with channels like Discord.
 - Optional: Enable the web search capability.
 - Manage skills and plug-ins.
-- Manage Olares through natural language. 
-- Optional: Grant OpenClaw access to local files.
+- Manage Olares with your OpenClaw agent. 
 - Optional: Enable the sandbox for secure code execution.
 
 ## Prerequisites
@@ -181,11 +180,11 @@ Set up OpenClaw using the step-by-step interactive wizard, or bypass the prompts
     |:-----------|:---------|
     | I understand this is<br>personal-by-default and shared/multi-user use<br>requires lock-down. <br>Continue? | Select **Yes**.  |
     | Setup mode   | Select **QuickStart**.   |
-    | Config handling  | Select **Use existing values**.    |
+    | Config handling  | Select **Keep current values**.    |
     | Model/auth provider  | Select **More**, and then select **Ollama**.    |
     | Ollama mode | Select **Local only**. |
     | Ollama base URL  | Remove the default placeholder text, and then enter<br>the shared endpoint URL from [Step 1](#step-1-install-your-model).<br>For example, `http://026076110.shared.olares.com`. |
-    | Default model | Select your installed model.<br>For example, **ollama/qwen3.5:35b-a3b-ud-q4_K_L**. |
+    | Default model | Select **Browse all models**, and then select your installed model.<br>For example, **ollama/qwen3.5:35b-a3b-ud-q4_K_L**. |
     | Select channel  | Select **Skip for now**.<br>(You can configure channels later)  |
     | Search provider | Select **Skip for now**.<br>(You can configure the search provider later) |
     | Configure skills now   | Select **No**. <br>(You can install skills later)       |
@@ -348,66 +347,57 @@ Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
 
 1. Open the Control UI app from the Launchpad. The **OpenClaw Gateway Dashboard** opens.
 
-    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard2.png#bordered)
+    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard3.png#bordered)
 
-    The `unauthorized: device token mismatch` error appears. This is expected and means you have not provided your access token yet.
+    The `Auth did not match` error appears. This is expected and means you have not provided your access token yet.
 
 2. In the **Gateway Token** field, enter the token you copied in the previous step, and then click **Connect**.
 
-    The `device pairing required` error appears. This is expected and means the device connection is waiting for approval.
+    The `Device pairing required` error appears. This is expected and means the device connection is waiting for approval.
 
-3. Return to the OpenClaw CLI window and run the following command to view the pending connection request:
+    ![Device pairing required](/images/manual/use-cases/gateway-device-pairing-required.png#bordered)
 
-    ```bash
-    openclaw devices approve --latest
-    ```
+3. In the `Device pairing required` error message, locate the `Approve this request:` line, and then copy the command shown immediately after it. Do not copy the period at the end.
 
-    The terminal displays a `Selected pending device request` message similar to the following:
+    In this case, copy `openclaw devices approve 673b3923-cb85-4a82-a8c2-f9f8327d0761`.
 
-    ```text
-    Selected pending device request 301f6c63-b5ce-4465-952f-76363d0cb116
-      Device: 005748253152b66dc0f5f6a801f35617db043f107972f259630a6bd098d5f790
-      Requested: roles: operator; scopes: operator.admin, operator.approvals, operator.pairing, operator.read, operator.write
-      Note:   First-time device pairing request.
-    Approve this exact request with: openclaw devices approve 301f6c63-b5ce-4465-952f-76363d0cb116
-    ```   
+4. Return to the OpenClaw CLI window, and then run the copied command to authorize the Control UI.
 
-4. Locate the `Approve this exact request with` line at the very bottom of the message.
-5. Copy and run the entire command shown after `Approve this exact request with:` to authorize the Control UI.
-
-    In this example, run the following command as indicated in the message line:
-
-    ```bash
-    openclaw devices approve 301f6c63-b5ce-4465-952f-76363d0cb116
-    ```
-
-6. When the terminal displays the approval message, return to the Control UI.
+    :::tip Note on timeout errors
+    The approval command has a short time limit. If you receive an `unknown requestId` error, the request has expired. Refresh the Control UI, copy the newly generated command, and then run it in OpenClaw CLI again.
 
     ```text
-    Approved 005748253152b66dc0f5f6a801f35617db043f107972f259630a6bd098d5f790 (301f6c63-b5ce-4465-952f-76363d0cb116)
+    [openclaw] The CLI command failed.
+    [openclaw] Reason: unknown requestId
+    ```
+    :::
+
+5. When the terminal displays the approval message, return to the Control UI.
+
+    ```text
+    Approved 005748253152b66dc0f5f6a801f35617db043f107972f259630a6bd098d5f790 (967e3732-b3df-43e3-851a-d99b43198d8e)
     ```
 
-    ![Pair success](/images/manual/use-cases/new-pair-success3.png#bordered)
+6. Click **Connect** again. You will be logged in and directed to the **Chat** page by default.
+7. From the left sidebar, click **Overview** to check the connection status. The **STATUS** in the **Snapshot** panel should now be **OK**.
 
-7. Click **Connect** again. You will be logged in and directed to the **Chat** page by default.
-8. From the left sidebar, click **Overview** to check the connection status. The **STATUS** in the **Snapshot** panel should now be **OK**.
     ![Health OK](/images/manual/use-cases/openclaw-connected3.png#bordered)
 </template>
 <template #(Optional)-Pair-device-manually>
 
 :::tip When to use manual pairing
-The quick setup in the previous section uses the `openclaw devices approve --latest` command to automatically approve the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
+The quick setup in the automatic device pairing section approves the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
 :::
 
 1. Open the Control UI app from the Launchpad. The **OpenClaw Gateway Dashboard** opens.
 
-    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard2.png#bordered)
+    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard3.png#bordered)
 
-    The `unauthorized: device token mismatch` error appears. This is expected and means you have not provided your access token yet.
+    The `Auth did not match` error appears. This is expected and means you have not provided your access token yet.
 
 2. In the **Gateway Token** field, enter the token you copied in the previous step, and then click **Connect**.
 
-    The `device pairing required` error appears. This is expected and means the device connection is waiting for approval.
+    The `Device pairing required` error appears. This is expected and means the device connection is waiting for approval.
 
 3. Return to the OpenClaw CLI window and enter the following command:
     ```bash
@@ -461,27 +451,18 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 
 ### Step 6: Personalize OpenClaw
 
-To make your OpenClaw bot truly yours, you must complete the initial Bootstrap workflow.
+To make your OpenClaw bot more personalized, it is highly recommended to complete the persona setup process.
 
-This guided process establishes the agent's identity, behavioral boundaries, and long-term memory by writing them into core persona files, including `IDENTITY.md`, `USER.md`, and `SOUL.md`. This ensures your agent's behavior remains consistent across all chats and platforms.
+This process establishes the agent's identity, behavioral boundaries, and long-term memory through persona files. These files keep your agent's behavior consistent across all platforms and channels.
 
 1. In the Control UI, select **Chat** from the left sidebar.
 2. Ensure that <i class="material-symbols-outlined">neurology</i> at the upper-right corner is enabled. This allows you to watch the agent use tools and edit persona files in real time.
-3. Type and send the following message to start the initialization:
+3. Type and send the following message to start:
 
     ```text
     Wake up please!
     ```
-
-    The agent will reply with a `Bootstrap pending` warning, stating that it cannot reply normally until it handles the `BOOTSTRAP.md` workflow.
-
-4. Instruct the agent to read the file and begin the setup by sending:
-
-    ```text
-    Please read BOOTSTRAP.md and follow the instructions to proceed.
-    ```
-
-5. The agent will read the file and ask you for basic preferences. Reply with your rules. For example:
+4. The agent responds and starts interviewing you. You can establish rules, personality traits, and preferences. For example:
 
     ```text
     - Call me Bella. I like simple language without technical jargon and 
@@ -491,24 +472,15 @@ This guided process establishes the agent's identity, behavioral boundaries, and
     financial operations.
     ```
 
-    The agent will generate a **Tool call** to write these details into the `IDENTITY.md` and `USER.md` files.
+5. As you chat with the agent, you can see the agent is writing your preferences to its core persona files, such as `IDENTITY.md`, `USER.md`, and `SOUL.md`.
 
-    ![Persona files editing by OpenClaw](/images/manual/use-cases/openclaw-persona-recording2.png#bordered)
+    ![Persona files editing by OpenClaw](/images/manual/use-cases/openclaw-persona-recording3.png#bordered)
 
-    :::tip Monitor the tool calls
-    As you chat, look for the **Tool call** blocks. You can expand them to see exactly what the agent is writing to your core files. If you do not see the intermediate persona file operations, click <i class="material-symbols-outlined">refresh</i> at the upper-right corner or press **F5** to refresh the page.
+    :::tip
+    If you do not see the intermediate persona file operations, click <i class="material-symbols-outlined">refresh</i> at the upper-right corner or press **F5** to refresh the page.
     :::
 
-6. When the agent asks what to include in `SOUL.md`, which contains its core directives and day-to-day behaviors, reply to finalize its personality. For example:
-
-    ```text
-    Just be witty, keep things concise, always ask before taking major
-    actions outside this chat, and never use corporate jargon.
-    ```
-
-    The agent will generate a **Tool call** to create the `SOUL.md` file.
-
-7. (Optional) If the agent fails to update the persona files, explicitly instruct it to do so in the chat. 
+6. (Optional) If the agent fails to update the persona files, explicitly instruct it to do so in the chat. 
 
     If the issue persists, resolve it using one of the following methods:
     - **Increase the context window**: Select **Config** from the left sidebar, switch to the **Raw** tab, find the `models` section, and then increase the `contextWindow` value to at least 64K (200K is recommended). 
@@ -519,21 +491,8 @@ This guided process establishes the agent's identity, behavioral boundaries, and
 
     - **Change the model**: Switch to a model with better tool-calling and instruction-following capabilities.
 
-8. When the agent asks if you want to set up external connections like WhatsApp, choose to skip for now by sending:
-
-    ```text
-    Skip for now.
-    ```
-
-9. Continue the conversation until the agent gathers enough information and asks to delete the `BOOTSTRAP.md` file. Agree to finish the bootstrap workflow by sending:
-
-    ```text
-    Yes please go ahead and delete BOOTSTRAP.md.
-    ```
-
-    The agent will delete the temporary bootstrap file and officially come online, ready to assist you.
-
-10. Verify that the persona files were successfully updated:
+7. Continue the conversation until the agent gathers enough information.
+8. Verify that the persona files were successfully updated:
 
     a. Open the Files app from the Launchpad.
     
@@ -543,8 +502,10 @@ This guided process establishes the agent's identity, behavioral boundaries, and
 
     ![Persona files generated by OpenClaw](/images/manual/use-cases/openclaw-persona-files.png#bordered){width=90%}
 
-    d. (Optional) Download a file to view it in a supported text editor and verify that it contains your newly established rules, such as your name, language style, and restrictions.
-      
+    d. (Optional) Download a file to view it in a supported text editor, and verify that it contains your newly established rules, such as your name, language style, and restrictions.
+
+    e. If the temporary `BOOTSTRAP.md` file exist, delete it.
+
     :::tip Modify persona settings
     To change these settings in the future, use one of the following methods:
     - Ask the agent in the chat to update its rules.

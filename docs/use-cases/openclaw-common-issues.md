@@ -4,9 +4,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, troubleshoot, FAQ, common issues, errors
-app_version: "1.0.2"
+app_version: "1.0.3"
 doc_version: "1.1"
-doc_updated: "2026-05-28"
+doc_updated: "2026-05-29"
 ---
 
 # Common issues
@@ -17,24 +17,45 @@ If you encounter a problem not listed here, check the [Upgrade OpenClaw](opencla
 
 ## Cannot restart OpenClaw in CLI
 
-If you attempt to manually start, stop, or restart OpenClaw using commands like `openclaw gateway` or `openclaw gateway stop` in the OpenClaw CLI, you receive the following error messages:
+If you attempt to manually start, stop, or restart OpenClaw using standard commands like `openclaw gateway restart` or `openclaw gateway stop` in the OpenClaw CLI, you might receive errors similar to the following:
+
+- `Gateway service disabled`
 - `Gateway failed to start: gateway already running (pid 1); lock timeout after 5000ms`
 - `Gateway service check failed: Error: systemctl --user unavailable: spawn systemctl ENOENT`
 
 ### Cause
 
-OpenClaw is deployed as a containerized app in Olares, where the gateway runs as the primary container process `pid 1` and is always active. This environment does not use standard Linux system and service management tools such as `systemd` and `systemctl`, so these commands do not work. 
+OpenClaw is deployed as a containerized app in Olares, where the gateway runs as the primary container process `pid 1` and is always active. This environment does not use standard Linux system and service management tools such as `systemd` and `systemctl`, so the default `openclaw gateway` commands do not work. 
 
 ### Solution
 
-Do not use the OpenClaw CLI to manage the gateway service. Instead, restart OpenClaw using one of the following methods.
+Do not use the standard `openclaw gateway` commands. Restart OpenClaw using one of the following methods.
 
-**Method 1: Restart OpenClaw from Settings or Market**
+**Method 1: Fast restart via OpenClaw CLI (Recommended)**
+
+Use the built-in `restart-gateway` script. This command safely shuts down the running gateway, applies your latest configurations, and brings the agent back online quickly (usually within 5 seconds).
+
+1. Open the OpenClaw CLI.
+2. Run the following command:
+
+    ```bash
+    restart-gateway
+    ```
+
+    The terminal will display the restart progress and confirm when the gateway is back online:
+
+    ```text
+    gateway: restart requested
+    gateway: old process gone, waiting for new one
+    gateway: ready
+    ```
+
+**Method 2: Restart OpenClaw from Settings or Market**
     
 - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click **Resume**.
 - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
 
-**Method 2: Restart the container**
+**Method 3: Restart the container**
 
 Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
 
@@ -153,39 +174,3 @@ To completely remove OpenClaw and all of its data before reinstalling, follow th
 5. Return to Market and reinstall OpenClaw. It will now install from a completely clean state.
 </template>
 </Tabs>
-
-## "Gateway service disabled" error during restart
-
-If you attempt to restart the gateway using the `openclaw gateway restart` command in the OpenClaw CLI, you might receive errors similar to the following:
-
-```text
-Gateway service disabled.
-Start with: openclaw gateway install
-Start with: openclaw gateway
-Start with: systemctl --user start openclaw-gateway.service
-Start with: systemd user services are unavailable; install/enable systemd or run the gateway under your supervisor.
-Start with: If you're in a container, run the gateway in the foreground instead of openclaw gateway.
-```
-
-### Cause
-
-The standard `openclaw gateway restart` command is designed for traditional Linux environments and does not work in Olares' containerized deployments.
-
-### Solution
-
-Use the `restart-gateway` command. This command tears down the running gateway, picks up your latest configurations, and brings the agent back online quickly.
-
-1. Open the OpenClaw CLI.
-2. Run the following command:
-
-    ```bash
-    restart-gateway
-    ```
-
-    The terminal will display the restart progress and confirm when the gateway is back online:
-
-    ```text
-    gateway: restart requested
-    gateway: old process gone, waiting for new one
-    gateway: ready
-    ```

@@ -5,6 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, install skills, install plug-ins
+app_version: "1.0.3"
+doc_version: "1.1"
+doc_updated: "2026-05-29"      
 ---
 
 # Manage skills and plugins
@@ -275,7 +278,7 @@ If a skill is blocked or unusable, you need to identify and install its missing 
     openclaw plugins list
     ```
 
-    Now the status of the plug-in is **loaded**.
+    Now the status of the plug-in is **enabled**.
 
 5. Open the Control UI, select **Settings** from the left sidebar, and then go to **Automation** > **Plugins**.
 6. Find **@openclaw/bluebubbles** and click it to expand its panel:
@@ -294,3 +297,4 @@ If a skill is blocked or unusable, you need to identify and install its missing 
         - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
     - **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
     :::
+    

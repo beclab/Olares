@@ -1,25 +1,25 @@
 ---
 outline: [2, 3]
-description: Use the Olares CLI skills in OpenClaw to manage files and apps on your Olares device through natural language.
+description: Use the Olares CLI skills in OpenClaw so your agent can manage files and apps on your Olares device.
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenClaw, Olares CLI skills, ClawHub, natural language
-app_version: "1.0.2"
+      content: Olares, OpenClaw, Olares CLI skills, ClawHub, agent
+app_version: "1.0.3"
 doc_version: "1.0"
-doc_updated: "2026-05-28"
+doc_updated: "2026-05-29"
 ---
 
-# Manage Olares through natural language
+# Manage Olares with your OpenClaw agent
 
-Install the Olares CLI skills in OpenClaw to manage files and applications on your Olares device through natural language. For example, ask your agent to list files, read logs, or install apps from Olares Market.
+Install the Olares CLI skills in OpenClaw so your agent can manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 - Authenticate with the Olares CLI in the OpenClaw CLI.
 - Install Olares skills from ClawHub.
-- Use natural language to manage files and apps on your Olares device.
+- Chat with your agent in natural language to perform actions on your Olares device, such as installing apps from Market.
 
 ## Prerequisites
 
@@ -74,7 +74,7 @@ Give your agent the ability to manage your device by installing Olares skills fr
 If you see a 429 error when downloading a skill, wait a moment and try again.
 :::
 
-## Step 3: Chat with the agent in natural language
+## Step 3: Direct your agent to execute tasks
 
 Open the Control UI and send your request to the agent in natural language.
 
