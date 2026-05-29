@@ -266,15 +266,16 @@ If the API is enabled successfully, the page displays a response confirming the 
 
 ### Step 4: Connect from another application
 
-1. Open the application you want to connect (for example, OpenWebUI).
-2. Navigate to the admin panel and select **Connection** or **Models**.
-3. Add a new OpenAI-compatible model entry with the following settings:
-   - **Base URL**: Your Hermes Gateway API URL + `/v1`
-     - For example: `https://baf3d7172.olaresdemo.olares.com/v1`
-   - **Auth**: Select **Bearer** and enter the `API_SERVER_KEY` you set in Step 1.
-4. Click the refresh button next to the toggle to check the connection.
+The following steps demonstrate how to connect with Open WebUI.
 
-5. Once connected, the Hermes Agent model will appear in your application, and you can start chatting with it.
+1. Open WebUI, click your profile icon and select **Admin Panel**.
+2. Go to **Settings** > **Connections**.
+3. On the right of **Manage OpenAI API Connections**, click <span class="material-symbols-outlined">add</span> to add a new connection.
+4. Configure the settings as follows:
+    - **API Base URL**: Enter your Hermes Gateway API URL and append `/v1`. For example, `https://baf3d7172.olaresdemo.olares.com/v1`.
+    - **Auth**: Select **Bearer**, and then enter the `HERMES_API_SERVER_KEY` you set previously.
+5. Click the refresh button to check the connection, and then click **Save**.
+6. Go to the **New chat** page and verify that **hermes-agent** appears in the model drop-down list. You can start chatting with it now.
 
 
 ## FAQs
