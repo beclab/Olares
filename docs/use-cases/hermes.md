@@ -264,7 +264,7 @@ https://<your-gateway-url>/health
 If the API is enabled successfully, the page displays a response confirming the service is active. For example, `{"status": "ok", "platform": "hermes-agent"}`.
 
 
-### Step 4: Connect from another application
+### Step 4: Connect your application
 
 The following steps demonstrate how to connect with Open WebUI.
 
