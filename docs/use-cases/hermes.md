@@ -255,7 +255,7 @@ Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it wit
 
 ### Step 3: Verify the API is running
 
-Open your browser and navigate to:
+Open your browser and go to your gateway URL appended with `/health`:
 
 ```
 https://<your-gateway-url>/health
