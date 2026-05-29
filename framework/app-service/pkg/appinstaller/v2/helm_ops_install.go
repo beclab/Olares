@@ -8,7 +8,6 @@ import (
 
 	v1 "github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"helm.sh/helm/v3/pkg/action"
@@ -53,7 +52,7 @@ func (h *HelmOpsV2) Install() error {
 	}
 
 	var err error
-	values, err := h.SetValues()
+	values, err := h.SetValues(true)
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err
@@ -113,21 +112,10 @@ func (h *HelmOpsV2) Install() error {
 	if h.App().Type == appv1alpha1.Middleware.String() {
 		return nil
 	}
-	if h.Options().SkipWaitForStartUp {
-		klog.Infof("skip waiting for app %s startup", h.App().AppName)
-		return nil
-	}
-	ok, err := h.WaitForStartUp()
-	if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
-		klog.Errorf("App %s is pending, err=%v", h.App().AppName, err)
-		return err
-	}
-	if !ok {
-		klog.Errorf("App %s is not started, err=%v", h.App().AppName, err)
-		clear()
-		return err
-	}
 
+	// Startup readiness is awaited by the state machine
+	// (pkg/appstate/installing_app.go) after Scale(-1), mirroring v1/v3.
+	// Waiting here as well would make v2 apps poll for startup twice.
 	return nil
 }
 
