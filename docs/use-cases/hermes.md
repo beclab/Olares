@@ -228,6 +228,9 @@ Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it wit
 ### Step 1: Enable the Gateway API
 
 1. Open Olares Settings, and then go to **Applications** > **Hermes Agent** > **Manage environment variables**.
+
+    ![Hermes Agent environment variables](/images/manual/use-cases/hermes-env-var.png#bordered)
+
 2. Find **API_SERVER_ENABLED**, click <i class="material-symbols-outlined">edit_square</i>, and then set its value to `true`.
 3. Click **Confirm**.
 4. Find **HERMES_API_SERVER_KEY**, click <i class="material-symbols-outlined">edit_square</i>, and then enter the value. Ensure the key meets the following requirements:
@@ -263,6 +266,8 @@ The following steps demonstrate how to connect with Open WebUI.
 1. Open WebUI, click your profile icon and select **Admin Panel**.
 2. Go to **Settings** > **Connections**.
 3. On the right of **Manage OpenAI API Connections**, click <i class="material-symbols-outlined">add</i> to add a new connection.
+
+    ![Hermes Agent config in Open WebUI](/images/manual/use-cases/hermes-integrate-openwebui.png#bordered)
 4. Configure the settings as follows:
     - **API Base URL**: Enter your Hermes Gateway API URL and append `/v1`. For example, `https://baf3d7172.olaresdemo.olares.com/v1`.
     - **Auth**: Select **Bearer**, and then enter the `HERMES_API_SERVER_KEY` you set previously.
