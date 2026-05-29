@@ -237,8 +237,8 @@ Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it wit
 4. Find **HERMES_API_SERVER_KEY**, click <i class="material-symbols-outlined">edit_square</i>, and then enter the value. Ensure the key meets the following requirements:
 
     - It must be at least 8 characters long.
-    - It can only contain letters, numbers, and these symbols (`-`, `_`, `.`).
-    - It cannot be a predictable placeholder value, such as your API key.
+    - It can only contain letters, numbers, and common symbols.
+    - It cannot be a predictable placeholder value, such as "your_API_key".
   
 5. Click **Confirm**, and then click **Apply**.
 
@@ -316,8 +316,8 @@ To resolve this issue, reset your `HERMES_API_SERVER_KEY`:
 2. Set a new key for `HERMES_API_SERVER_KEY` that meets the following requirements:
 
     - It must be at least 8 characters long.
-    - It can only contain letters, numbers, and these symbols (`-`, `_`, `.`).
-    - It cannot be a predictable placeholder value, such as your API key.
+    - It can only contain letters, numbers, and common symbols.
+    - It cannot be a predictable placeholder value, such as "your_API_key".
     
  3. Click **Save**, and then click **Apply**.
 
