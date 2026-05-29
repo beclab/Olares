@@ -187,7 +187,7 @@ metadata:
     applications.app.bytetrade.io/author: bytetrade.io
   annotations:
     applications.app.bytetrade.io/version: '0.0.1'
-spec:
+spec
   replicas: 1
   selector:
     matchLabels:
@@ -220,6 +220,10 @@ spec:
           hostPath:
             path: /olares/share
             type: Directory
+        - name: common-data
+          hostPath:
+            path: /olares/rootfs/Common
+            type: DirectoryOrCreate
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
@@ -241,7 +245,7 @@ spec:
             value: os_framework_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.3.2
+        image: beclab/search3:v0.3.3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -302,7 +306,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: search3monitor
-        image: beclab/search3monitor:v0.3.2
+        image: beclab/search3monitor:v0.3.3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8081
@@ -356,6 +360,8 @@ spec:
           - name: shared-lib
             mountPath: /data/External
             mountPropagation: Bidirectional
+          - name: common-data
+            mountPath: /appcommon/
         securityContext:
           privileged: true
           runAsUser: 0
@@ -377,6 +383,10 @@ spec:
           hostPath:
             path: /olares/share
             type: Directory
+        - name: common-data
+          hostPath:
+            path: /olares/rootfs/Common
+            type: DirectoryOrCreate
 
 ---
 apiVersion: v1
