@@ -117,7 +117,7 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = wh.CreateOrUpdateApplicationManagerMutatingWebhook()
+	err = wh.DeleteAppManagerMutatingWebhook()
 	if err != nil {
 		return nil, err
 	}
