@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: Learn how to install and configure Hermes Agent on Olares and connect it to Discord.
+description: Learn how to install Hermes Agent on Olares, connect it to Discord, install Olares skills, and integrate it with other applications via the Gateway API.
 head:
   - - meta
     - name: keywords
@@ -12,7 +12,9 @@ doc_updated: "2026-05-29"
 
 # Set up a self-directed AI agent with Hermes
 
-Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions. By integrating it with messaging platforms like Discord, you can interact with your local AI agent remotely.
+Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions.
+
+In Olares, you can install specialized skills that allow your agent to manage your device's files and applications. You can also interact with your agent remotely via messaging platforms like Discord, or integrate it with other applications like Open WebUI.
 
 ## Learning objectives
 
@@ -21,6 +23,8 @@ In this guide, you will learn how to:
 - Configure Hermes Agent to connect to a local model.
 - Interact with your agent directly via the terminal.
 - Integrate with Discord for remote chat.
+- Install Olares skills to manage files and applications via the agent.
+- Enable the Gateway API to connect Hermes Agent with other applications like Open WebUI.
 
 ## Prerequisites
 
@@ -220,7 +224,7 @@ Use the Olares CLI skills in Hermes Agent so your agent can manage files and app
 
 ## Integrate Hermes Agent with other applications
 
-Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it with other applications like OpenWebUI or Hermes Workspace.
+Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it with other applications like Open WebUI or Hermes Workspace.
 
 ### Step 1: Enable the Gateway API
 
@@ -260,7 +264,7 @@ If the API is enabled successfully, the page displays a response confirming the 
 
 The following steps demonstrate how to connect with Open WebUI.
 
-1. Open WebUI, click your profile icon and select **Admin Panel**.
+1. In Open WebUI, click your profile icon and select **Admin Panel**.
 2. Go to **Settings** > **Connections**.
 3. On the right of **Manage OpenAI API Connections**, click <i class="material-symbols-outlined">add</i> to add a new connection.
 
