@@ -207,7 +207,7 @@ To manually adjust parameters, edit the configuration files directly, and then r
 The file structure and configuration options match the official defaults. For detailed parameter descriptions, see the [Hermes configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
 
-## Install Olares Skills
+## Install Olares skills
 
 Hermes Agent supports installing Olares skills to extend its capabilities. These skills provide integration with Olares applications such as Files, Settings, and Dashboard.
 
@@ -294,7 +294,7 @@ You can restart the gateway manually using one of the following methods:
 
     Open Control Hub, and then go to **Browse** > **{username}** > **hermesagent-{username}** > **Deployments** > **hermesagent**, and then click **Restart** in the upper-right corner. This method completely restarts the entire service, which takes slightly longer.
 
-### Gateway API fails to start
+### Why does the gateway fail to start after configuring the API?
 
 **Symptom**
 - Gateway API access shows "upstream connect error".
