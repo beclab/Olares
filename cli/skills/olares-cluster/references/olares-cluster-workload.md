@@ -16,7 +16,8 @@
 
 | Verb | Purpose |
 |---|---|
-| `list` | Multi-kind union by default; `--kind X` to scope |
+| `list` | Multi-kind union by default; `--kind X` to scope. Compact view (NAME/READY/AGE); for container images use the `images` verb |
+| `images [IMAGE]` | Paginated list of image references from pod templates across Deployment/StatefulSet/DaemonSet/Job/CronJob (`--kind` also accepts `job` / `cronjob`). Pass an IMAGE arg to filter to "where is this image referenced?" (tag/digest-normalized; always full-scans so it can't miss later-page refs) |
 | `get <ns/name> --kind X` | Vertical summary with kind-aware READY counts (`readyReplicas/replicas` or `numberReady/desiredNumberScheduled` for DaemonSet) |
 | `yaml <ns/name> --kind X` | Full K8s-native YAML |
 | `rollout-status <ns/name> --kind X` | Reports whether the rollout has converged (kind-aware). Without `-w`: one GET, exit 0 if converged or 2 if not. With `-w`: poll on `--interval` until converged, `--timeout` (default 10m), or Ctrl-C. Emits only on state change |
@@ -41,6 +42,17 @@ olares-cli cluster workload list
 
 # Just StatefulSets in a namespace.
 olares-cli cluster workload list -n user-system-alice --kind sts
+
+# List workload image references (all kinds incl. Job/CronJob), paginated.
+olares-cli cluster workload images --limit 50 --page 1
+
+# Where is a given image referenced? (tag/digest-normalized; full scan)
+olares-cli cluster workload images docker.io/library/nginx:latest
+
+# Local images + workload reference counts (full scan; pause excluded).
+olares-cli doctor images -o json
+# Only the orphans (zero refs), biggest first, with reclaimable-size footer.
+olares-cli doctor images --unused
 
 # Get + watch rollout to convergence.
 olares-cli cluster workload get user-system-alice/api --kind deploy
