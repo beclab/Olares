@@ -261,7 +261,8 @@ Open your browser and go to your gateway URL appended with `/health`:
 https://<your-gateway-url>/health
 ```
 
-If enabled successfully, you will see a response confirming the API is running.
+If the API is enabled successfully, the page displays a response confirming the service is active. For example, `{"status": "ok", "platform": "hermes-agent"}`.
+
 
 ### Step 4: Connect from another application
 
