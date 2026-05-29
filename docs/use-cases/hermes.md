@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: Learn how to install and configure Hermes Agent on Olares and connect it to Discord.
+description: Learn how to install Hermes Agent on Olares, connect it to Discord, install Olares skills, and integrate it with other applications via the Gateway API.
 head:
   - - meta
     - name: keywords
@@ -12,7 +12,9 @@ doc_updated: "2026-05-29"
 
 # Set up a self-directed AI agent with Hermes
 
-Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions. By integrating it with messaging platforms like Discord, you can interact with your local AI agent remotely.
+Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions.
+
+In Olares, you can install specialized skills that allow your agent to manage your device's files and applications. You can also interact with your agent remotely via messaging platforms like Discord, or integrate it with other applications like OpenWebUI.
 
 ## Learning objectives
 
@@ -21,6 +23,8 @@ In this guide, you will learn how to:
 - Configure Hermes Agent to connect to a local model.
 - Interact with your agent directly via the terminal.
 - Integrate with Discord for remote chat.
+- Install Olares skills to manage files and applications via the agent.
+- Enable the Gateway API to connect Hermes Agent with other applications like OpenWebUI.
 
 ## Prerequisites
 
