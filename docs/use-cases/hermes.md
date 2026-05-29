@@ -237,13 +237,16 @@ Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it wit
 
 ### Step 1: Enable the Gateway API
 
-1. Open **Settings** > **Applications** > **Hermes Agent**.
-2. In the environment variables section, set **API_SERVER_ENABLED** to `true`.
-3. Set an **API_SERVER_KEY** value:
-   - The key must be at least 8 characters long.
-   - Allowed characters: letters, numbers, and common symbols.
-   - Avoid placeholder values like `your_api_key`.
-4. Wait for the application to restart.
+1. Open Olares Settings, and then go to **Applications** > **Hermes Agent** > **Manage environment variables**.
+2. Find **API_SERVER_ENABLED**, click the edit icon, and then set its value to `true`.
+3. Click **Confirm**.
+4. Find **HERMES_API_SERVER_KEY**, click the edit icon, and then enter the value. Ensure the key meets the following requirements:
+
+    - It must be at least 8 characters long.
+    - It can only contain letters, numbers, and these symbols (`-`, `_`, `.`).
+    - It cannot be a predictable placeholder value, such as `your_api_key`.
+  
+5. Click **Confirm**, and then click **Apply**.
 
 ### Step 2: Find the Gateway API URL
 
