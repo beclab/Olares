@@ -206,7 +206,7 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 Use the Olares CLI skills in Hermes Agent so your agent can manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
 
 1. Open the Hermes CLI from the Launchpad.
-2. Run the following commands to confirm that both olares-cli and its skills are properly installed:
+2. Run the following commands one by one to confirm that both olares-cli and its skills are properly installed and enabled:
 
    ```bash
    olares-cli -v
