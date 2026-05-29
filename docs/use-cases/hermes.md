@@ -217,7 +217,7 @@ You can restart the gateway manually using one of the following methods:
     This is the fastest method. Open the Hermes CLI from the Launchpad, and then run the following command:
 
     ```bash
-    touch /opt/data/.gateway-restart-requested
+    hermes restart-gateway
     ```
 - **Use the Hermes Dashboard**
 
@@ -239,6 +239,94 @@ After you complete the basic setup, explore the official resources to expand you
 :::info Note on sudo commands
 The Hermes CLI in the Olares environment does not support `sudo` commands. Ignore any steps in the official documentation that require `sudo` privileges.
 :::
+
+## Install Olares Skills
+
+Hermes Agent supports installing Olares skills to extend its capabilities. These skills provide integration with Olares applications such as Files, Settings, and Dashboard.
+
+To install Olares skills:
+
+1. Open the Hermes CLI from the Launchpad.
+2. Run the following command to install each skill:
+
+   ```bash
+   hermes skills install clawhub/olares-shared --yes
+   ```
+
+3. Repeat the command for each of the following skills:
+   - `clawhub/olares-market`
+   - `clawhub/olares-dashboard`
+   - `clawhub/olares-settings`
+   - `clawhub/olares-files`
+
+4. After installation, the skills can be used just like OpenClaw skills.
+
+## Call Hermes Agent via OpenAI-compatible API
+
+Hermes Agent supports being called by other applications through an OpenAI-compatible API, allowing you to integrate it with tools like OpenWebUI.
+
+### Step 1: Enable the Gateway API
+
+1. Open **Settings** > **Applications** > **Hermes Agent**.
+2. In the environment variables section, set **API_SERVER_ENABLED** to `true`.
+3. Set an **API_SERVER_KEY** value:
+   - The key must be at least 8 characters long.
+   - Allowed characters: letters, numbers, and `-_.`
+   - Avoid placeholder values like `your_api_key`.
+
+   ![Enable Gateway API](/images/manual/use-cases/hermes-api-settings.png#bordered)
+
+4. Wait for the application to restart.
+
+### Step 2: Find the Gateway API URL
+
+1. Go back to **Settings** > **Applications** > **Hermes Agent**.
+2. Find the **Hermes Gateway API** URL and copy it. For example:
+
+   ```
+   https://baf3d7172.olarestest003.olares.com
+   ```
+
+### Step 3: Verify the API is running
+
+Open your browser and navigate to:
+
+```
+https://<your-gateway-url>/health
+```
+
+If enabled successfully, you will see a response confirming the API is running.
+
+### Step 4: Connect from another application
+
+1. Open the application you want to connect (for example, OpenWebUI).
+2. Navigate to the admin panel and select **Connection** or **Models**.
+3. Add a new OpenAI-compatible model entry with the following settings:
+   - **Base URL**: Your Hermes Gateway API URL + `/v1`
+     - For example: `https://baf3d7172.olarestest003.olares.com/v1`
+   - **Auth**: Select **Bearer** and enter the `API_SERVER_KEY` you set in Step 1.
+4. Click the refresh button next to the toggle to check the connection.
+
+5. Once connected, the Hermes Agent model will appear in your application, and you can start chatting with it.
+
+![Connect OpenWebUI](/images/manual/use-cases/hermes-openwebui-connection.png#bordered)
+
+## FAQ: Gateway API fails to start
+
+**Symptom**
+- Gateway API access shows "Unable to connect".
+- Logs display: `[Api_Server] Refusing to start: API_SERVER_KEY is set to a placeholder value`
+
+**Cause**
+
+The API key does not meet Hermes security requirements.
+
+**Solution**
+
+Reset the API key in **Settings** > **Applications** > **Hermes Agent** with a value that:
+- Is at least 8 characters long.
+- Contains only letters, numbers, and `-_.`
+- Is not a common placeholder value like `your_api_key`.
 
 ## Learn more
 
