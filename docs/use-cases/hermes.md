@@ -226,10 +226,10 @@ To install Olares skills:
    - `clawhub/olares-settings`
    - `clawhub/olares-files`
 
-3. After the installation finishes, run the following command to log in to your Olares account. Replace <your-olares-id> with your Olares ID:
+3. After the installation finishes, run the following command to log in to your Olares account. Replace {your-olares-id} with your Olares ID:
 
    ```bash
-   olares-cli profile login --olares-id <your-olares-id>
+   olares-cli profile login --olares-id {your-olares-id}
    ```
 
 ## Call Hermes Agent via OpenAI-compatible API
