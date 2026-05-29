@@ -1,53 +1,64 @@
 ---
 outline: [2, 3]
-description: Log in to Olares from olares-cli and manage profiles. Covers profile login, importing a refresh token, switching profiles, and where tokens are stored.
+description: Log in to Olares from olares-cli and manage profiles. Covers the interactive login, listing and switching profiles, removing a profile, and where tokens are stored.
 ---
 
-# Log in to Olares <Badge type="tip" text="^1.12.5" />
+# Log in to Olares
 
-Before `olares-cli` can act on behalf of an Olares user, log in once to create a profile. After that, the CLI handles token refresh for you, and you only log in again when the refresh token itself becomes invalid.
+Before `olares-cli` can act on behalf of an Olares user, log in once to create a profile. A profile is one Olares instance plus one user identity. After you log in, the CLI refreshes your tokens automatically, so you only log in again when the refresh token becomes invalid.
 
-## Understand profile
-
-A profile is one Olares instance plus one user identity. Your identity is your Olares ID, such as `alice123@olares.com`. Each profile stores its own access and refresh tokens in the operating system's secure keychain.
-
-| OS | Backend | Location |
-|------|---------|----------|
-| macOS | Keychain | service `olares-cli`, account = olaresId |
-| Linux | AES-256-GCM file | under `~/.local/share/olares-cli/` |
-| Windows | DPAPI | `HKCU\Software\OlaresCli\keychain` |
-
-After a successful login, the CLI prints a line like `token stored via <backend> (service "olares-cli", account "<id>")`. That message tells you where your token actually landed.
-
-A single machine can store many profiles, but only one is current at a time. Every command runs against the current profile.
+This page covers the user-mode login. It does not apply to host mode, which uses root and kubeconfig and needs no login.
 
 ## Log in for the first time
 
-1. Start the login process. Replace `alice123@olares.com` with your own Olares ID.
+1. Run the following command to start the login. Replace `alice123@olares.com` with your own Olares ID.
 
    ```bash
-   ./olares-cli profile login --olares-id alice123@olares.com
+   olares-cli profile login --olares-id alice123@olares.com
    ```
 
 2. When the CLI prompts `password for <id>:`, type your Olares password and press Enter. The input is hidden.
 
-3. If two-factor auth is enabled on your account, the CLI prompts again with `two-factor code for <id>:`. Enter the 6-digit code from LarePass and press Enter.
+3. If two-factor authentication is enabled on your Olares, the CLI prompts again with `two-factor code for <id>:`. Enter the 6-digit code from LarePass and press Enter.
 
-4. Verify the profile is created and logged in.
+4. Verify that the profile is created and logged in.
 
    ```bash
-   ./olares-cli profile list
+   olares-cli profile list
    ```
 
    Example output:
 
    ```text
-    NAME                   OLARES-ID              STATUS
-    laresprime@olares.com  laresprime@olares.com  logged-in
-*   alexmiles@olares.com  alexmiles@olares.com  logged-in
+      NAME                   OLARES-ID              STATUS
+      laresprime@olares.com  laresprime@olares.com  logged-in
+   *  alexmiles@olares.com   alexmiles@olares.com   logged-in
    ```
+
    The leading `*` marks the current profile.
+
+## Manage profiles
+
+If you work with more than one Olares instance or identity, each login adds a profile. Use these commands to move between them.
+
+| Task | Command |
+|------|---------|
+| List all profiles | `olares-cli profile list` |
+| Show the current identity | `olares-cli profile whoami` |
+| Switch to another profile | `olares-cli profile use <name>` |
+| Switch back to the previous profile | `olares-cli profile use -` |
+| Remove a profile and its stored token | `olares-cli profile remove <name>` |
+
+## Where tokens are stored
+
+Tokens are stored automatically after a successful login. You don't need to manage them by hand. To clear them, use `olares-cli profile remove` rather than editing files directly.
+
+| OS | Storage |
+|------|---------|
+| macOS | Keychain |
+| Linux | AES-encrypted file under `~/.local/share/olares-cli/` |
+| Windows | DPAPI |
 
 ## Next step
 
-Now that you have a profile, install the [Agent skills](./cli-agent-skills.md) into your agent to drive Olares from natural language.
+Install the [Agent Skills](./cli-agent-skills.md) into your agent to drive Olares from natural language.

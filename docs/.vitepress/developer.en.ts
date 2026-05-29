@@ -115,9 +115,9 @@ export const developerSidebar: DefaultTheme.Sidebar = {
           text: "Use with AI agents",
           collapsed: false,
           items: [
-            { text: "Install olares-cli",              link: "/developer/cli-installation" },
-            { text: "Log in to Olares",               link: "/developer/cli-log-in" },
-            { text: "Install and use Agent skills",    link: "/developer/cli-agent-skills" },
+            { text: "Install olares-cli",            link: "/developer/cli-installation" },
+            { text: "Log in to Olares",             link: "/developer/cli-log-in" },
+            { text: "Install and use Agent skills",  link: "/developer/cli-agent-skills" },
           ],
         },
       ],

@@ -1,87 +1,91 @@
 ---
 outline: [2, 3]
-description: How to get olares-cli on the right machine. Covers the built-in CLI on the Olares host, the standalone CLI for installation and AI-agent use, and the in-cluster CLI that ships with Olares apps.
+description: Install olares-cli with npm or npx. Covers the first-run wizard, a persistent install, one-off runs, and the special case of a machine that already runs Olares OS.
 ---
 
 # Install olares-cli
 
-By default, the Olares installer ships `olares-cli` to `/usr/bin/olares-cli`.
-
-If you need to drive Olares from an AI agent on the same host, follow this guide to download the standalone CLI.
+Olares ships `olares-cli` at `/usr/local/bin/olares-cli` on the host. To use the CLI on another machine, or to use the user-mode agent commands that the host bundle may not include yet, install the standalone CLI with npm.
 
 :::info
-Apps that run inside Olares such as Hermes Agent ship with `olares-cli` preinstalled in their container image. You don't need to install Olares CLI manually.
+Apps that run inside Olares, such as OpenClaw, ship with `olares-cli` preinstalled in their container image. You don't need to install the CLI manually for in-cluster use.
 :::
 
-## Download Olares CLI
-Download the `olares-cli` package for your platform:
+## Choose an install method
 
-::: code-group
+Pick the path that fits how you work.
 
-```bash [Linux x86_64]
-curl -sSOL https://cdn.olares.com/olares-cli-v1.12.5-cli.1_linux_amd64.tar.gz
+### Set up the CLI and Agent Skills
+
+This is the recommended path for driving Olares from an AI agent. 
+
+Open your terminal and run the following command to install the CLI and the Agent Skills with an interactive wizard:
+
+```bash
+npx @olares/cli@latest install
 ```
 
-```bash [Linux ARM64]
-curl -sSOL https://cdn.olares.com/olares-cli-v1.12.5-cli.1_linux_arm64.tar.gz
+Example output:
+
+```bash
+┌  Setting up Olares CLI...
+│
+◇  Installed globally
+│
+◇  Skills installed
+│
+└  You are all set!
+
+Next:
+  olares-cli profile login --olares-id <your-olares-id>   # authenticate (browser/password + optional TOTP)
+  olares-cli profile current                              # verify
+
+Then tell your AI agent: "Load the olares-shared skill, then use olares-cli to ..."
 ```
 
-```bash [Windows x86_64]
-curl -sSOL https://cdn.olares.com/olares-cli-v1.12.5-cli.1_windows_amd64.tar.gz
-```
-
-```bash [macOS Apple Silicon]
-curl -sSOL https://cdn.olares.com/olares-cli-v1.12.5-cli.1_darwin_arm64.tar.gz
-```
-
+:::info
+The wizard runs `npm install -g @olares/cli` and then installs the six Agent Skills. It does not install Olares OS, and it does not log you in.
 :::
 
-## Extract and run
-:::danger Do not overwrite the built-in CLI
-Never move or copy the standalone binary over `/usr/bin/olares-cli`.
+### Install the CLI only
 
-The built-in CLI, the `olaresd` daemon, and the cluster components are version-locked to each other. Swapping in a different binary breaks that chain and can leave future upgrades stuck. Always invoke the standalone CLI by its full path, such as `./olares-cli`, and keep `/usr/bin/olares-cli` untouched.
+Use this path for a persistent CLI when you plan to install the Agent Skills later.
+
+Open your terminal and run the following command:
+
+```bash
+npm install -g @olares/cli
+```
+
+To add the Agent Skills using `npx skills`, see [Install and use Agent Skills](./cli-agent-skills.md).
+
+### Run without installing
+
+Use this path to run a single command without a persistent install.
+
+```bash
+npx @olares/cli files ls /drive/Home
+```
+
+:::info The npm CLI acts as an Olares user
+The CLI you install with npm or run with npx works on behalf of an Olares user. It can manage files, apps, settings, and the cluster on a running Olares, but it can't install or maintain Olares OS itself. Host commands such as `upgrade`, `node`, `gpu`, and `disk` run only from the CLI bundled with Olares OS at `/usr/local/bin/olares-cli`.
 :::
 
+## Special case: a Linux host running Olares OS
 
-1. Unpack the download.
+This applies only when you install the CLI directly on a Linux machine that already runs Olares OS, where `/usr/local/bin/olares-cli` already exists. macOS and Windows don't run into this, even when Olares OS is running, because the bundled binary lives in a Linux environment. On those machines, use the methods above.
 
-   ::: code-group
+On a Linux Olares host, `npm install -g @olares/cli` stops with an `EEXIST` message. This is expected: it's npm's safeguard against overwriting a binary it doesn't manage, so your system `olares-cli` stays intact. To install the npm copy alongside it, use a separate prefix:
 
-   ```bash [Linux x86_64]
-   tar xzf olares-cli-v1.12.5-cli.1_linux_amd64.tar.gz
-   ```
+```bash
+npm install -g @olares/cli --prefix ~/.olares-cli-npm
+export PATH="$HOME/.olares-cli-npm/bin:$PATH"
+```
 
-   ```bash [Linux ARM64]
-   tar xzf olares-cli-v1.12.5-cli.1_linux_arm64.tar.gz
-   ```
+:::warning
+Don't run `npm install -g @olares/cli --force` on an Olares host. That overwrites the OS-managed `/usr/local/bin/olares-cli`, which breaks the version chain with `olaresd` and the cluster. The OS bundle is upgraded only through `olares-cli upgrade`.
+:::
 
-   ```powershell [Windows]
-   tar xzf olares-cli-v1.12.5-cli.1_windows_amd64.tar.gz
-   ```
+## Next step
 
-   ```bash [macOS Apple Silicon]
-   tar xzf olares-cli-v1.12.5-cli.1_darwin_arm64.tar.gz
-   ```
-
-   :::
-
-2. Make the binary executable. Skip this step on Windows.
-
-   ```bash
-   chmod +x olares-cli
-   ```
-
-3. Confirm the binary runs.
-
-   ::: code-group
-
-   ```bash [Linux and macOS]
-   ./olares-cli --help
-   ```
-
-   ```powershell [Windows]
-   .\olares-cli.exe --help
-   ```
-
-   :::
+[Log in to Olares](./cli-log-in.md) to create a profile, then drive Olares from your agent.
