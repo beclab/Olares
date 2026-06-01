@@ -12,7 +12,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -30,11 +29,11 @@ type SuspendingApp struct {
 	*baseOperationApp
 }
 
-func NewSuspendingApp(c client.Client,
+func NewSuspendingApp(deps Deps,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 	// TODO: check app state
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &SuspendingApp{
 				&baseOperationApp{
@@ -185,13 +184,13 @@ func (p *SuspendingApp) scaleOrPatchSuspend(ctx context.Context, stopServer bool
 		return p.suspendViaPatch(ctx, stopServer)
 	}
 
-	kubeConfig, err := getKubeConfig()
+	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
 	}
 	token := p.manager.Annotations[api.AppTokenKey]
-	ops, err := newHelmOps(ctx, kubeConfig, &appCfg, token,
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, &appCfg, token,
 		appinstaller.Opt{
 			Source:       p.manager.Spec.Source,
 			MarketSource: appcfg.GetMarketSource(p.manager),
@@ -226,7 +225,7 @@ func (p *SuspendingApp) suspendViaPatch(ctx context.Context, stopServer bool) er
 }
 
 func (p *SuspendingApp) execMiddleware(ctx context.Context) error {
-	op := kubeblocks.NewOperation(ctx, kbopv1alpha1.StopType, p.manager, p.client)
+	op := p.deps.NewMiddlewareOp(ctx, kbopv1alpha1.StopType, p.manager, p.client)
 	err := op.Stop()
 	if err != nil {
 		klog.Errorf("failed to stop middleware %s,err=%v", p.manager.Spec.AppName, err)
