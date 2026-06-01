@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -61,7 +60,6 @@ func (r *TailScaleACLConfigMapController) SetUpWithManager(mgr ctrl.Manager) err
 }
 
 func (r *TailScaleACLConfigMapController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 	klog.Infof("reconcile tailscale acls configmap request name=%v, owner=%v", req.Name, req.Namespace)
 
 	headScaleNamespace := req.Namespace
