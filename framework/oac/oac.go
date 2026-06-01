@@ -52,8 +52,9 @@ type OAC struct {
 //   - all built-in checks enabled EXCEPT ServiceAccount rule inspection
 //     (RBAC is off by default; the Chart.yaml <-> manifest same-version
 //     check runs by default — turn it off with SkipSameVersionCheck;
-//     the .Values.userspace.appdata template-vs-manifest cross-check runs
-//     by default — turn it off with SkipAppDataCheck;
+//     the permission-vs-template cross-checks (appdata, appCommon,
+//     sharedlib on >= 0.12.0) run by default — turn them off with
+//     SkipAppDataCheck;
 //     the hostPath + rolling-update incompatibility check runs by default
 //     — turn it off with SkipHostPathCheck;
 //     the rendered-resource namespace check runs by default — turn it

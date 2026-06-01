@@ -177,9 +177,11 @@ func WithCustomValidator(fn CustomValidator) Option {
 	}
 }
 
-// SkipAppDataCheck disables the built-in template-vs-manifest cross-check
-// that scans chart templates for .Values.userspace.appdata references and
-// requires permission.appData in OlaresManifest.yaml when any are found.
+// SkipAppDataCheck disables the built-in template-vs-manifest permission
+// cross-checks: .Values.userspace.appdata (requires permission.appData),
+// .Values.userspace.appCommon (requires permission.appCommon), and
+// .Values.sharedlib on olaresManifest.version >= 0.12.0 (requires
+// permission.externalData).
 // The check is enabled by default; only opt out when a caller knowingly
 // renders appdata via a non-standard path.
 func SkipAppDataCheck() Option {
