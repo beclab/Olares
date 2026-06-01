@@ -25,5 +25,7 @@ and do not require a profile login.`,
 		c.SilenceUsage = true
 	}
 	cmd.AddCommand(NewCmdChartLint())
+	cmd.AddCommand(NewCmdChartFromCompose())
+	cmd.AddCommand(NewCmdChartPackage())
 	return cmd
 }
