@@ -25,18 +25,19 @@ func New() commands.Interface {
 }
 
 func (e *enableOverlayGateway) Execute(ctx context.Context, p any) (res any, err error) {
-	// create the bridge connection
-	err = utils.CreateBridgeConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	// turn on the CNI-DHCP service
 	cmd := exec.CommandContext(ctx, "systemctl", "enable", "--now", "cni-dhcp.service")
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
 	if err != nil {
 		klog.Error("failed to enable and start the CNI-DHCP service: %w", err)
+		return nil, err
+	}
+
+	// create the bridge connection
+	err = utils.CreateBridgeConnection(ctx)
+	utils.NotifyNetworkChanged()
+	if err != nil {
 		return nil, err
 	}
 

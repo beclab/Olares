@@ -7,7 +7,6 @@ import (
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
-	"k8s.io/klog/v2"
 )
 
 type disableOverlayGateway struct {
@@ -30,6 +29,8 @@ func (d *disableOverlayGateway) Execute(ctx context.Context, p any) (res any, er
 	if err != nil {
 		return nil, err
 	}
+
+	utils.NotifyNetworkChanged()
 
 	// turn off the CNI-DHCP service
 	cmd := exec.CommandContext(ctx, "systemctl", "disable", "--now", "cni-dhcp.service")
@@ -56,13 +57,13 @@ func (d *disableOverlayGateway) Execute(ctx context.Context, p any) (res any, er
 	}
 
 	// restart the overlay gateway supported apps
-	// restart in a separate goroutine, cause the restarting process may take a while
-	go func() {
-		err = utils.RestartOverlayGatewaySupportedApps(ctx, apps)
-		if err != nil {
-			klog.Error("restart overlay gateway supported apps error, ", err)
-		}
-	}()
+	// call restarting from the frontend
+	// go func() {
+	// 	err = utils.RestartOverlayGatewaySupportedApps(ctx, apps)
+	// 	if err != nil {
+	// 		klog.Error("restart overlay gateway supported apps error, ", err)
+	// 	}
+	// }()
 
 	return nil, nil
 }

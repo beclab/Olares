@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/containerdimages"
 	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
@@ -136,20 +137,9 @@ func boolStr(b bool) string {
 	return "no"
 }
 
-// humanBytes renders byte counts as KiB/MiB/GiB using base-2.
+// humanBytes renders byte counts as KiB/MiB/GiB using base-2. Thin
+// wrapper over the shared implementation so registries / images render
+// identically.
 func humanBytes(b int64) string {
-	if b <= 0 {
-		return "0 B"
-	}
-	const unit = 1024
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
-	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	suffix := []string{"KiB", "MiB", "GiB", "TiB", "PiB"}[exp]
-	return fmt.Sprintf("%.2f %s", float64(b)/float64(div), suffix)
+	return containerdimages.HumanBytes(b)
 }

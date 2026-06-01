@@ -133,6 +133,11 @@ func (h *upgradeHandlerHelper) validate() error {
 		return err
 	}
 
+	if err := appcfg.ValidateCallerInClusterManifest(h.appConfig); err != nil {
+		api.HandleBadRequest(h.resp, h.req, err)
+		return err
+	}
+
 	return nil
 }
 
@@ -440,6 +445,11 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	appCopy.Annotations[api.AppVersionKey] = request.Version
 	appCopy.Annotations[api.AppTokenKey] = token
 	appCopy.Annotations[api.AppMarketSourceKey] = marketSource
+	// Snapshot the pre-upgrade state so upgrading_app can decide whether
+	// to scale workloads back up after the helm upgrade. When the app was
+	// already Stopped, the upgrade should land back in Stopped with the
+	// new chart version installed at replicas=0.
+	appCopy.Annotations[api.AppPreUpgradeStateKey] = string(appMgr.Status.State)
 
 	err = h.ctrlClient.Patch(req.Request.Context(), appCopy, client.MergeFrom(&appMgr))
 	if err != nil {

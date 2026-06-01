@@ -182,16 +182,44 @@ const (
 	K8sRequestMemoryPressure ResourceConditionType = "K8sRequestMemoryPressure"
 	UserCPUPressure          ResourceConditionType = "UserCPUPressure"
 	UserMemoryPressure       ResourceConditionType = "UserMemoryPressure"
+	// Cluster*Insufficient are emitted by clusterCapacityValidator and
+	// indicate the app's declared requirement exceeds the cluster's
+	// total (schedulable) capacity, irrespective of current usage. This
+	// is the "the cluster physically cannot host this app" case and
+	// should be distinguished from K8sRequest*Pressure (which means
+	// "current allocatable - already-scheduled requests is too small").
+	ClusterCPUInsufficient    ResourceConditionType = "ClusterCPUInsufficient"
+	ClusterMemoryInsufficient ResourceConditionType = "ClusterMemoryInsufficient"
+	ClusterDiskInsufficient   ResourceConditionType = "ClusterDiskInsufficient"
 
-	DiskPressureMessage             string = "Insufficient disk space. Unable to %s the application. Please stop other running applications to free up storage."
-	SystemCPUPressureMessage        string = "Insufficient system CPU. Unable to %s the application. Please stop other running applications to free up resources."
-	SystemMemoryPressureMessage     string = "Insufficient system memory. Unable to %s the application. Please stop other running applications to free up memory."
-	SystemGPUNotAvailableMessage    string = "No available GPU found. Unable to %s the application."
-	SystemGPUPressureMessage        string = "Available GPU is insufficient to %s this application. The requested GPU memory cannot exceed the maximum GPU memory of the node."
-	K8sRequestCPUPressureMessage    string = "Available CPU is insufficient to %s this application. Please stop other applications to free up resources."
-	K8sRequestMemoryPressureMessage string = "Available memory is insufficient to %s this application. Please stop other applications to free up resources."
-	UserCPUPressureMessage          string = "Insufficient user CPU. Unable to %s the application. Please stop other running applications to free up resources."
-	UserMemoryPressureMessage       string = "Insufficient user memory. Unable to %s the application. Please stop other running applications to free up memory."
+	// ComputeAllocationFailed is emitted by computeAllocationValidator
+	// when compute.AllocateForInstall cannot place the app's
+	// workloads on any node under the selected GPU mode (or the
+	// underlying scheduler returns an error). The downstream install
+	// path uses this to land the app in `stopped` with
+	// AppUnschedulable as the user-facing reason.
+	ComputeAllocationFailed ResourceConditionType = "ComputeAllocationFailed"
+	// ComputeModeUnavailable is emitted by computeModeValidator when the
+	// app's selected GPU/compute mode has no runnable placement on the
+	// cluster (compute.AppInstallable returned false).
+	ComputeModeUnavailable ResourceConditionType = "ComputeModeUnavailable"
+	// NodePressure is emitted by nodePressureValidator when no single
+	// node can take the app's CPU/memory request while staying under the
+	// pressure threshold.
+	NodePressure ResourceConditionType = "NodePressure"
+
+	DiskPressureMessage              string = "Insufficient disk space. Unable to %s the application. Please stop other running applications to free up storage."
+	SystemCPUPressureMessage         string = "Insufficient system CPU. Unable to %s the application. Please stop other running applications to free up resources."
+	SystemMemoryPressureMessage      string = "Insufficient system memory. Unable to %s the application. Please stop other running applications to free up memory."
+	SystemGPUNotAvailableMessage     string = "No available GPU found. Unable to %s the application."
+	SystemGPUPressureMessage         string = "Available GPU is insufficient to %s this application. The requested GPU memory cannot exceed the maximum GPU memory of the node."
+	K8sRequestCPUPressureMessage     string = "Available CPU is insufficient to %s this application. Please stop other applications to free up resources."
+	K8sRequestMemoryPressureMessage  string = "Available memory is insufficient to %s this application. Please stop other applications to free up resources."
+	UserCPUPressureMessage           string = "Insufficient user CPU. Unable to %s the application. Please stop other running applications to free up resources."
+	UserMemoryPressureMessage        string = "Insufficient user memory. Unable to %s the application. Please stop other running applications to free up memory."
+	ClusterCPUInsufficientMessage    string = "Cluster total schedulable CPU is smaller than the app's request. Unable to %s this application."
+	ClusterMemoryInsufficientMessage string = "Cluster total schedulable memory is smaller than the app's request. Unable to %s this application."
+	ClusterDiskInsufficientMessage   string = "Cluster total schedulable ephemeral storage is smaller than the app's request. Unable to %s this application."
 )
 
 func (rct ResourceConditionType) String() string {
@@ -201,10 +229,13 @@ func (rct ResourceConditionType) String() string {
 type ResourceType string
 
 const (
-	Disk   ResourceType = "disk"
-	CPU    ResourceType = "cpu"
-	Memory ResourceType = "memory"
-	GPU    ResourceType = "gpu"
+	Disk     ResourceType = "disk"
+	CPU      ResourceType = "cpu"
+	Memory   ResourceType = "memory"
+	GPU      ResourceType = "gpu"
+	Hardware ResourceType = "hardware"
+	Compute  ResourceType = "compute"
+	Node     ResourceType = "node"
 )
 
 func (rt ResourceType) String() string {

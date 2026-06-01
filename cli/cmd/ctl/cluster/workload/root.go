@@ -12,6 +12,8 @@
 package workload
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
@@ -47,6 +49,12 @@ By default list-style verbs do NOT pass a namespace to the server
 (cross-ns mode), so the response is the union of every namespace the
 active profile can see. Pass -n / --namespace to scope explicitly.
 `,
+		RunE: func(c *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("unknown command %q for %q", args[0], c.CommandPath())
+			}
+			return c.Help()
+		},
 	}
 	cmd.SilenceUsage = true
 	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
@@ -54,6 +62,7 @@ active profile can see. Pass -n / --namespace to scope explicitly.
 	}
 
 	cmd.AddCommand(NewListCommand(f))
+	cmd.AddCommand(NewImagesCommand(f))
 	cmd.AddCommand(NewGetCommand(f))
 	cmd.AddCommand(NewYAMLCommand(f))
 	cmd.AddCommand(NewRolloutStatusCommand(f))

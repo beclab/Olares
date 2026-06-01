@@ -59,6 +59,10 @@ func SingularKind(plural string) string {
 		return "StatefulSet"
 	case "daemonsets":
 		return "DaemonSet"
+	case "jobs":
+		return "Job"
+	case "cronjobs":
+		return "CronJob"
 	default:
 		return plural
 	}
@@ -109,11 +113,26 @@ type WorkloadSpec struct {
 	UpdateStrategy struct {
 		Type string `json:"type,omitempty"`
 	} `json:"updateStrategy,omitempty"`
-	ServiceName string `json:"serviceName,omitempty"` // StatefulSet only
+	ServiceName string            `json:"serviceName,omitempty"` // StatefulSet only
+	Template    *WorkloadTemplate `json:"template,omitempty"`
 }
 
 type WorkloadSelector struct {
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+}
+
+type WorkloadTemplate struct {
+	Spec WorkloadPodSpec `json:"spec,omitempty"`
+}
+
+type WorkloadPodSpec struct {
+	InitContainers []WorkloadContainer `json:"initContainers,omitempty"`
+	Containers     []WorkloadContainer `json:"containers,omitempty"`
+}
+
+type WorkloadContainer struct {
+	Name  string `json:"name,omitempty"`
+	Image string `json:"image,omitempty"`
 }
 
 type WorkloadStatus struct {
@@ -221,4 +240,3 @@ func (w Workload) UpdateStrategyLabel(plural string) string {
 func (w Workload) Age(now time.Time) string {
 	return clusteropts.Age(w.Metadata.CreationTimestamp, now)
 }
-
