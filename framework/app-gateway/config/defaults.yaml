@@ -45,3 +45,6 @@ extAuthz:
 # Linkerd control-plane namespace; Envoy Gateway and Gateway API objects use namespace above.
 vendor:
   linkerdNamespace: linkerd
+
+inCluster:
+  strongIdentityServicePort: 8081

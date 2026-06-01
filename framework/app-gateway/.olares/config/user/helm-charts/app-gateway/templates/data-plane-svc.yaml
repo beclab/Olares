@@ -28,3 +28,8 @@ spec:
       targetPort: 10443
       protocol: TCP
     {{- end }}
+    {{- $inCluster := (index .Values "inCluster" | default dict) }}
+    - name: incluster-strong
+      port: {{ default 8081 (index $inCluster "strongIdentityServicePort") }}
+      targetPort: 10080
+      protocol: TCP

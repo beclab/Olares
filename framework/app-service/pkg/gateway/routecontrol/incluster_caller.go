@@ -2,20 +2,35 @@ package routecontrol
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"time"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 )
+
+var callerSRRListRetryExhaustedTotal = prometheus.NewCounter(prometheus.CounterOpts{
+	Name: "caller_srr_list_retry_exhausted_total",
+	Help: "CallerReconciler SRR list retries exhausted; fail-safe callee branch taken.",
+})
+
+func init() {
+	metrics.Registry.MustRegister(callerSRRListRetryExhaustedTotal)
+}
 
 // CallerReconciler materialises caller-side Linkerd namespace injection for
 // workloads that opt into cluster-internal Shared access, plus the singleton
@@ -77,6 +92,9 @@ func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
 		return err
 	}
 	if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, true); err != nil {
+		return err
+	}
+	if err := ensureCallerNamespaceLinkerdSkipPorts(ctx, r.Client, ns); err != nil {
 		return err
 	}
 	if err := ensureCallerNamespaceInClusterLabel(ctx, r.Client, ns, true); err != nil {
@@ -177,6 +195,9 @@ func (r *CallerReconciler) cleanupCallerResources(ctx context.Context, ns string
 	if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, false); err != nil {
 		return err
 	}
+	if err := removeCallerNamespaceLinkerdSkipPorts(ctx, r.Client, ns); err != nil {
+		return err
+	}
 	return ensureCallerNamespaceInClusterLabel(ctx, r.Client, ns, false)
 }
 
@@ -261,5 +282,134 @@ func ensureCallerNamespaceInClusterLabel(ctx context.Context, c client.Client, n
 		return nil
 	}
 	ns.Labels[security.NamespaceInClusterCallerLabel] = desired
+	return c.Update(ctx, &ns)
+}
+
+func ensureCallerNamespaceLinkerdSkipPorts(ctx context.Context, c client.Client, namespace string) error {
+	if namespace == "" || !isMeshMandatoryCallerNamespace(namespace) {
+		return nil
+	}
+
+	skipOutbound, err := ComputeSkipOutboundPorts(
+		MeshHijackServicePorts(DefaultInClusterStrongIdentityServicePort),
+	)
+	if err != nil {
+		return fmt.Errorf("compute skip-outbound for namespace %q: %w", namespace, err)
+	}
+
+	isCallee, err := isCalleeNamespace(ctx, c, namespace)
+	if err != nil {
+		return err
+	}
+	skipInbound := PureCallerInboundSkipPorts
+	if isCallee {
+		skipInbound = OlaresEnvoyInboundSkipPorts
+	}
+
+	return patchNSAnnotations(ctx, c, namespace, map[string]string{
+		LinkerdSkipInboundPortsAnnotation:  skipInbound,
+		LinkerdSkipOutboundPortsAnnotation: skipOutbound,
+	})
+}
+
+func removeCallerNamespaceLinkerdSkipPorts(ctx context.Context, c client.Client, namespace string) error {
+	if namespace == "" || !isMeshMandatoryCallerNamespace(namespace) {
+		return nil
+	}
+
+	var ns corev1.Namespace
+	if err := c.Get(ctx, types.NamespacedName{Name: namespace}, &ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	if len(ns.Annotations) == 0 {
+		return nil
+	}
+
+	_, hasInbound := ns.Annotations[LinkerdSkipInboundPortsAnnotation]
+	_, hasOutbound := ns.Annotations[LinkerdSkipOutboundPortsAnnotation]
+	if !hasInbound && !hasOutbound {
+		return nil
+	}
+
+	delete(ns.Annotations, LinkerdSkipInboundPortsAnnotation)
+	delete(ns.Annotations, LinkerdSkipOutboundPortsAnnotation)
+	return c.Update(ctx, &ns)
+}
+
+func isCalleeNamespace(ctx context.Context, c client.Client, namespace string) (bool, error) {
+	var (
+		lastErr error
+		list    srrv1alpha1.SharedRouteRegistryList
+	)
+	backoff := wait.Backoff{
+		Steps:    3,
+		Duration: 50 * time.Millisecond,
+		Factor:   2.0,
+	}
+	err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		if listErr := c.List(ctx, &list, client.InNamespace(namespace)); listErr != nil {
+			lastErr = listErr
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		klog.Warningf("CALLER_SRR_LIST_FAILED namespace=%q retry_exhausted err=%v", namespace, lastErr)
+		callerSRRListRetryExhaustedTotal.Inc()
+		return true, nil
+	}
+
+	for i := range list.Items {
+		if srrHasReadyTrueCondition(&list.Items[i]) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func srrHasReadyTrueCondition(srr *srrv1alpha1.SharedRouteRegistry) bool {
+	if srr == nil {
+		return false
+	}
+	for i := range srr.Status.Conditions {
+		cond := &srr.Status.Conditions[i]
+		if cond.Type == ConditionReady && cond.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+func patchNSAnnotations(ctx context.Context, c client.Client, namespace string, desired map[string]string) error {
+	if namespace == "" || len(desired) == 0 {
+		return nil
+	}
+
+	var ns corev1.Namespace
+	if err := c.Get(ctx, types.NamespacedName{Name: namespace}, &ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	if ns.Annotations == nil {
+		ns.Annotations = map[string]string{}
+	}
+
+	changed := false
+	for k, want := range desired {
+		if got := ns.Annotations[k]; got != want {
+			ns.Annotations[k] = want
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
+	}
 	return c.Update(ctx, &ns)
 }
