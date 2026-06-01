@@ -2,6 +2,12 @@ package routecontrol
 
 import (
 	"context"
+	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -11,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
@@ -106,6 +113,12 @@ func TestCallerReconciler_optInInjectsAndWritesGatewayIngress(t *testing.T) {
 	}
 	if nsObj.Labels[security.NamespaceInClusterCallerLabel] != "true" {
 		t.Fatalf("caller label = %q", nsObj.Labels[security.NamespaceInClusterCallerLabel])
+	}
+	if nsObj.Annotations[LinkerdSkipInboundPortsAnnotation] != PureCallerInboundSkipPorts {
+		t.Fatalf("skip-inbound-ports = %q", nsObj.Annotations[LinkerdSkipInboundPortsAnnotation])
+	}
+	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-79,81-8080,8082-65535" {
+		t.Fatalf("skip-outbound-ports = %q", nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation])
 	}
 }
 
@@ -219,4 +232,396 @@ func TestCallerReconciler_optOutGCsLegacyEgress(t *testing.T) {
 			t.Fatalf("legacy NP %q should be GCed on opt-out", name)
 		}
 	}
+}
+
+func TestComputeSkipOutboundPorts_TC201(t *testing.T) {
+	got, err := ComputeSkipOutboundPorts([]int32{80, 8081})
+	if err != nil {
+		t.Fatalf("ComputeSkipOutboundPorts: %v", err)
+	}
+	if got != "1-79,81-8080,8082-65535" {
+		t.Fatalf("ComputeSkipOutboundPorts([80,8081]) = %q", got)
+	}
+}
+
+func TestComputeSkipOutboundPorts_TC201b(t *testing.T) {
+	cases := [][]int32{nil, {}}
+	for _, in := range cases {
+		got, err := ComputeSkipOutboundPorts(in)
+		if err == nil {
+			t.Fatalf("ComputeSkipOutboundPorts(%v) expected error", in)
+		}
+		if got != "" {
+			t.Fatalf("ComputeSkipOutboundPorts(%v) = %q, want empty", in, got)
+		}
+	}
+}
+
+func TestComputeSkipOutboundPorts_TC202(t *testing.T) {
+	got, err := ComputeSkipOutboundPorts([]int32{80, 8081})
+	if err != nil {
+		t.Fatalf("ComputeSkipOutboundPorts: %v", err)
+	}
+	tokens := strings.Split(got, ",")
+	if containsExact(tokens, "80") {
+		t.Fatalf("skip-outbound tokens must not contain standalone 80: %v", tokens)
+	}
+	if containsExact(tokens, "8081") {
+		t.Fatalf("skip-outbound tokens must not contain standalone 8081: %v", tokens)
+	}
+}
+
+func TestEnsureCallerNamespaceLinkerdSkipPorts_TC203(t *testing.T) {
+	scheme := buildCallerScheme(t)
+	ns := "user-space-tc203"
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}).
+		Build()
+	if err := ensureCallerNamespaceLinkerdSkipPorts(context.Background(), c, ns); err != nil {
+		t.Fatalf("ensureCallerNamespaceLinkerdSkipPorts: %v", err)
+	}
+	nsObj := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, nsObj); err != nil {
+		t.Fatalf("get ns: %v", err)
+	}
+	if nsObj.Annotations[LinkerdSkipInboundPortsAnnotation] != PureCallerInboundSkipPorts {
+		t.Fatalf("skip-inbound-ports = %q", nsObj.Annotations[LinkerdSkipInboundPortsAnnotation])
+	}
+	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-79,81-8080,8082-65535" {
+		t.Fatalf("skip-outbound-ports = %q", nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation])
+	}
+}
+
+func TestEnsureCallerNamespaceLinkerdSkipPorts_TC204(t *testing.T) {
+	scheme := buildCallerScheme(t)
+	ns := "user-space-tc204"
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "srr-ready", Namespace: ns},
+		Status: srrv1alpha1.SharedRouteRegistryStatus{
+			Conditions: []metav1.Condition{{
+				Type:   ConditionReady,
+				Status: metav1.ConditionTrue,
+				Reason: ReasonReconciled,
+			}},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&srrv1alpha1.SharedRouteRegistry{}).
+		WithObjects(
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}},
+			srr,
+		).Build()
+	if err := ensureCallerNamespaceLinkerdSkipPorts(context.Background(), c, ns); err != nil {
+		t.Fatalf("ensureCallerNamespaceLinkerdSkipPorts: %v", err)
+	}
+	nsObj := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, nsObj); err != nil {
+		t.Fatalf("get ns: %v", err)
+	}
+	if nsObj.Annotations[LinkerdSkipInboundPortsAnnotation] != OlaresEnvoyInboundSkipPorts {
+		t.Fatalf("skip-inbound-ports = %q", nsObj.Annotations[LinkerdSkipInboundPortsAnnotation])
+	}
+	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-79,81-8080,8082-65535" {
+		t.Fatalf("skip-outbound-ports = %q", nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation])
+	}
+}
+
+func TestEnsureCallerNamespaceLinkerdSkipPorts_TC204b(t *testing.T) {
+	scheme := buildCallerScheme(t)
+	ns := "user-space-tc204b"
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "srr-not-ready", Namespace: ns},
+		Status: srrv1alpha1.SharedRouteRegistryStatus{
+			Conditions: []metav1.Condition{{
+				Type:   ConditionReady,
+				Status: metav1.ConditionFalse,
+				Reason: ReasonBackendMissing,
+			}},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&srrv1alpha1.SharedRouteRegistry{}).
+		WithObjects(
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}},
+			srr,
+		).Build()
+	if err := ensureCallerNamespaceLinkerdSkipPorts(context.Background(), c, ns); err != nil {
+		t.Fatalf("ensureCallerNamespaceLinkerdSkipPorts: %v", err)
+	}
+	nsObj := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, nsObj); err != nil {
+		t.Fatalf("get ns: %v", err)
+	}
+	if nsObj.Annotations[LinkerdSkipInboundPortsAnnotation] != PureCallerInboundSkipPorts {
+		t.Fatalf("skip-inbound-ports = %q", nsObj.Annotations[LinkerdSkipInboundPortsAnnotation])
+	}
+}
+
+func TestIsCalleeNamespace_TC204c(t *testing.T) {
+	scheme := buildCallerScheme(t)
+	baseClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	failingClient := &alwaysFailListClient{
+		Client: baseClient,
+		err:    errors.New("api unavailable"),
+	}
+	got, err := isCalleeNamespace(context.Background(), failingClient, "user-space-tc204c")
+	if err != nil {
+		t.Fatalf("isCalleeNamespace: %v", err)
+	}
+	if !got {
+		t.Fatalf("isCalleeNamespace fail-safe expected true")
+	}
+}
+
+func TestCallerReconciler_TC205OptOutRemovesSkipAnnotations(t *testing.T) {
+	scheme := buildCallerScheme(t)
+	ns := "user-space-tc205"
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: ns,
+				Annotations: map[string]string{
+					AnnotationLinkerdInject:                LinkerdInjectDisabled,
+					LinkerdSkipInboundPortsAnnotation:      PureCallerInboundSkipPorts,
+					LinkerdSkipOutboundPortsAnnotation:     "1-79,81-8080,8082-65535",
+					LinkerdInjectAnnotation:                LinkerdInjectEnabled,
+					gateway.AnnotationInCluster:            gateway.InClusterGateway,
+					security.NamespaceInClusterCallerLabel: "true",
+				},
+				Labels: map[string]string{
+					security.NamespaceInClusterCallerLabel: "true",
+				},
+			},
+		},
+	).Build()
+	r := &CallerReconciler{Client: c}
+	if err := r.Reconcile(context.Background(), ns); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	nsObj := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, nsObj); err != nil {
+		t.Fatalf("get ns: %v", err)
+	}
+	if _, ok := nsObj.Annotations[LinkerdSkipInboundPortsAnnotation]; ok {
+		t.Fatalf("skip-inbound-ports annotation must be removed")
+	}
+	if _, ok := nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation]; ok {
+		t.Fatalf("skip-outbound-ports annotation must be removed")
+	}
+}
+
+func TestCallerReconciler_TC206NoOptInNoSkipWrites(t *testing.T) {
+	scheme := buildCallerScheme(t)
+	ns := "user-space-tc206"
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}).
+		Build()
+	r := &CallerReconciler{Client: c}
+	if err := r.Reconcile(context.Background(), ns); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	nsObj := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, nsObj); err != nil {
+		t.Fatalf("get ns: %v", err)
+	}
+	if _, ok := nsObj.Annotations[LinkerdSkipInboundPortsAnnotation]; ok {
+		t.Fatalf("skip-inbound-ports must not be written")
+	}
+	if _, ok := nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation]; ok {
+		t.Fatalf("skip-outbound-ports must not be written")
+	}
+}
+
+func TestCallerReconciler_TC207OperatorOptOutNoSkipWrites(t *testing.T) {
+	scheme := buildCallerScheme(t)
+	ns := "user-space-tc207"
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name:        ns,
+			Annotations: map[string]string{AnnotationLinkerdInject: LinkerdInjectDisabled},
+		}}).Build()
+	r := &CallerReconciler{Client: c}
+	if err := r.Reconcile(context.Background(), ns); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	nsObj := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, nsObj); err != nil {
+		t.Fatalf("get ns: %v", err)
+	}
+	if _, ok := nsObj.Annotations[LinkerdSkipInboundPortsAnnotation]; ok {
+		t.Fatalf("skip-inbound-ports must not be present")
+	}
+	if _, ok := nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation]; ok {
+		t.Fatalf("skip-outbound-ports must not be present")
+	}
+}
+
+func TestCallerReconciler_TC208IdempotentSkipAnnotations(t *testing.T) {
+	scheme := buildCallerScheme(t)
+	ns := "user-space-tc208"
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "app-gateway"}},
+		&appv1alpha1.Application{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "litellm-idempotent",
+				Annotations: map[string]string{
+					gateway.AnnotationInCluster: gateway.InClusterGateway,
+				},
+			},
+			Spec: appv1alpha1.ApplicationSpec{
+				Name:      "litellm-idempotent",
+				Namespace: ns,
+				Settings:  map[string]string{"clusterAppRef": "ollamav2"},
+			},
+		},
+	).Build()
+	r := &CallerReconciler{Client: c, GatewayNS: "app-gateway"}
+	if err := r.Reconcile(context.Background(), ns); err != nil {
+		t.Fatalf("first Reconcile: %v", err)
+	}
+	first := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, first); err != nil {
+		t.Fatalf("get first ns: %v", err)
+	}
+	firstRV := first.ResourceVersion
+	if err := r.Reconcile(context.Background(), ns); err != nil {
+		t.Fatalf("second Reconcile: %v", err)
+	}
+	second := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, second); err != nil {
+		t.Fatalf("get second ns: %v", err)
+	}
+	if second.ResourceVersion != firstRV {
+		t.Fatalf("resourceVersion changed on idempotent reconcile: %q -> %q", firstRV, second.ResourceVersion)
+	}
+}
+
+func TestChartRender_TC209(t *testing.T) {
+	if os.Getenv("RUN_HELM_TEMPLATE_TESTS") != "1" {
+		return
+	}
+	if _, err := exec.LookPath("helm"); err != nil {
+		t.Fatalf("RUN_HELM_TEMPLATE_TESTS=1 but helm CLI absent: %v", err)
+	}
+	chartPath := filepath.Clean(filepath.Join("..", "..", "..", "..", "app-gateway", ".olares", "config", "user", "helm-charts", "app-gateway"))
+
+	defaultOut := runHelmTemplateDataPlane(t, chartPath)
+	mustContain(t, defaultOut, "name: incluster-strong")
+	mustContain(t, defaultOut, "port: 8081")
+	mustContain(t, defaultOut, "targetPort: 10080")
+	mustContain(t, defaultOut, "protocol: TCP")
+
+	overrideOut := runHelmTemplateDataPlane(t, chartPath, "--set", "inCluster.strongIdentityServicePort=8082")
+	mustContain(t, overrideOut, "name: incluster-strong")
+	mustContain(t, overrideOut, "port: 8082")
+}
+
+func TestDefaultsOpaquePorts_TC210(t *testing.T) {
+	defaultsPath := filepath.Clean(filepath.Join("..", "..", "..", "..", "app-gateway", "config", "defaults.yaml"))
+	content, err := os.ReadFile(defaultsPath)
+	if err != nil {
+		t.Fatalf("read defaults.yaml: %v", err)
+	}
+	var opaque string
+	for _, line := range strings.Split(string(content), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "opaquePorts:") {
+			opaque = strings.TrimSpace(strings.TrimPrefix(trimmed, "opaquePorts:"))
+			opaque = strings.Trim(opaque, "\"")
+			break
+		}
+	}
+	if opaque == "" {
+		t.Fatalf("opaquePorts not found in defaults.yaml")
+	}
+	expanded, err := expandPortSet(opaque)
+	if err != nil {
+		t.Fatalf("expand opaquePorts: %v", err)
+	}
+	if expanded[8081] {
+		t.Fatalf("opaquePorts must not include 8081, got %q", opaque)
+	}
+}
+
+type alwaysFailListClient struct {
+	client.Client
+	err error
+}
+
+func (c *alwaysFailListClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	return c.err
+}
+
+func buildCallerScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = appv1alpha1.AddToScheme(scheme)
+	_ = srrv1alpha1.AddToScheme(scheme)
+	_ = networkingv1.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+	return scheme
+}
+
+func containsExact(tokens []string, target string) bool {
+	for _, token := range tokens {
+		if strings.TrimSpace(token) == target {
+			return true
+		}
+	}
+	return false
+}
+
+func runHelmTemplateDataPlane(t *testing.T, chartPath string, extraArgs ...string) string {
+	t.Helper()
+	args := []string{
+		"template", "app-gateway", chartPath,
+		"--show-only", "templates/data-plane-svc.yaml",
+	}
+	args = append(args, extraArgs...)
+	cmd := exec.Command("helm", args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("helm template failed: %v\n%s", err, string(out))
+	}
+	return string(out)
+}
+
+func mustContain(t *testing.T, output, needle string) {
+	t.Helper()
+	if !strings.Contains(output, needle) {
+		t.Fatalf("helm output missing %q\n%s", needle, output)
+	}
+}
+
+func expandPortSet(raw string) (map[int]bool, error) {
+	result := make(map[int]bool)
+	for _, token := range strings.Split(raw, ",") {
+		token = strings.TrimSpace(token)
+		if token == "" {
+			continue
+		}
+		if strings.Contains(token, "-") {
+			parts := strings.SplitN(token, "-", 2)
+			start, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+			if err != nil {
+				return nil, err
+			}
+			end, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+			if err != nil {
+				return nil, err
+			}
+			for p := start; p <= end; p++ {
+				result[p] = true
+			}
+			continue
+		}
+		port, err := strconv.Atoi(token)
+		if err != nil {
+			return nil, err
+		}
+		result[port] = true
+	}
+	return result, nil
 }
