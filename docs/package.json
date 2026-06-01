@@ -1,13 +1,16 @@
 {
   "scripts": {
+    "sync-redirects": "node .vitepress/scripts/sync-redirects.mjs",
+    "predev": "npm run sync-redirects",
+    "prebuild": "npm run sync-redirects",
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "mermaid": "11.10.1",
+    "mermaid": "11.14.0",
     "terser": "^5.14.2",
-    "vitepress": "1.6.3",
+    "vitepress": "1.6.4",
     "vitepress-plugin-mermaid": "2.0.17"
   },
   "dependencies": {

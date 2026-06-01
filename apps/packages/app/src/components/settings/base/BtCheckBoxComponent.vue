@@ -49,12 +49,14 @@ const emit = defineEmits(['update:modelValue']);
 	&__img {
 		width: var(--icon-width);
 		height: var(--icon-height);
+		flex: 0 0 var(--icon-width);
 	}
 
 	&__label {
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		flex: 1;
 	}
 }
 </style>

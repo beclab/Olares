@@ -7,7 +7,7 @@ If you cannot resolve an issue using the troubleshooting guides, you can export 
 
 ## Step 1: Export system logs
 
-<!--@include: ../../reusables/export-system-logs.md{8,14}-->
+<!--@include: ../../reusables/export-system-logs.md#export-system-logs-steps-->
 
 ## Step 2: Contact Olares team
 

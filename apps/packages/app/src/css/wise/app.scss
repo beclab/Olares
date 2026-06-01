@@ -1,0 +1,14 @@
+@import '../app.scss';
+
+.text-underline {
+	text-decoration-line: underline;
+}
+
+.text-line-through {
+	text-decoration: line-through;
+}
+
+.wise-global-ok-button {
+	background: $orange-default;
+	color: white;
+}

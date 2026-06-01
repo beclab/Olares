@@ -14,7 +14,7 @@ description: Olares 多节点集群部署教程，包括主节点配置、工作
 如需使用两台 Olares One 设备组建多节点 Olares 集群，可参阅[连接两台 Olares One](/zh/one/connect-two-olares-one.md)。
 :::
 
-## 目标
+## 学习目标
 
 通过本教程，你将学习：
 
@@ -53,6 +53,11 @@ export JUICEFS=1 \
 :::
 
 ## 第二步：向集群添加子节点
+
+::: tip 子节点前置条件
+子节点必须处于干净的 Linux 状态，未安装 Olares。如果子节点上之前安装过 Olares，请先运行 `olares-cli uninstall --all` 将设备清理为干净的 Linux 状态。
+:::
+
 1. 在子节点上，使用以下方式下载 `joincluster.sh`：
 ::: code-group
 

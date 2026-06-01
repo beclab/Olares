@@ -46,7 +46,7 @@ The **Image management** page provides a comprehensive view of all downloaded an
 System logs record the operational status of various system components and provide crucial diagnostic information for troubleshooting. 
 
 To export system logs:
-<!--@include: ../../../reusables/export-system-logs.md{8,14}-->
+<!--@include: ../../../reusables/export-system-logs.md#export-system-logs-steps-->
 
 :::tip
 You can attach this log file to a GitHub issue to help the Olares team locate and resolve your problem faster.

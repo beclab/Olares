@@ -7,7 +7,7 @@ description: Install Olares on NVIDIA DGX Spark using the command-line installat
 
 This guide explains how to install Olares on NVIDIA DGX Spark using the command-line installation script.
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 
@@ -44,7 +44,15 @@ sudo nft flush ruleset
 
 1. In the same terminal, run the following command:
 
-<!--@include: ./reusables.md{4,36}-->
+<!--@include: ./reusables.md#install-script-command-->
+
+<!--@include: ./reusables.md#root-password-tip-->
+
+<!--@include: ./reusables.md#installation-error-tip-->
+
+<!--@include: ./reusables.md#prepare-wizard-heading-->
+
+<!--@include: ./reusables.md#prepare-wizard-details-->
 
 ## Activate Olares
 
@@ -55,7 +63,7 @@ Use the Wizard URL and initial one-time password to activate. This process conne
    ![Open wizard](/images/manual/get-started/open-wizard.png#bordered)
 2. Enter the one-time password and click **Continue**.
 
-   ![Enter password](/images/manual/get-started/wizard-enter-password.png#bordered)
+   ![Enter password](/images/manual/get-started/wizard-enter-password1.png#bordered)
 3. Select the system language.
 
    ![Select language](/images/manual/get-started/select-language.png#bordered)
@@ -70,7 +78,7 @@ Use the Wizard URL and initial one-time password to activate. This process conne
    :::
    a. Open LarePass app, and tap **Scan QR code** to scan the QR code on the Wizard page and complete the activation.
 
-   ![Activate Olares](/images/manual/get-started/activate-olares.png#bordered)
+   ![Activate Olares](/images/manual/get-started/activate-olares1.png#bordered)
 
    b. Reset the login password for Olares by following the on-screen instructions on LarePass.
 
@@ -94,4 +102,4 @@ If needed, you can manually adjust the memory allocation for each AI application
 3. Click <i class="material-symbols-outlined">edit_square</i> next to the VRAM value.
 4. In the **Edit VRAM allocation** dialog, enter the desired VRAM amount in GB and click **Confirm**.
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

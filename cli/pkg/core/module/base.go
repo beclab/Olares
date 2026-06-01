@@ -17,6 +17,8 @@
 package module
 
 import (
+	"context"
+
 	"github.com/beclab/Olares/cli/pkg/core/cache"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/ending"
@@ -58,7 +60,7 @@ func (b *BaseModule) Is() string {
 	return BaseModuleType
 }
 
-func (b *BaseModule) Run(result *ending.ModuleResult) {
+func (b *BaseModule) Run(ctx context.Context, result *ending.ModuleResult) {
 	panic("implement me")
 }
 

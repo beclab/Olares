@@ -3,7 +3,7 @@ import { CommonFetch } from '../../fetch';
 import { CopyStoragesType } from 'src/stores/operation';
 import { OPERATE_ACTION } from 'src/utils/contact';
 import { uuid } from '@didvault/sdk/src/core';
-import { getNotifyMsg } from '../utils';
+import { decodeURIComponentSafe, getNotifyMsg } from '../utils';
 import { notifyHide, notifyWaitingShow } from 'src/utils/notifyRedefinedUtil';
 import { i18n } from 'src/boot/i18n';
 import { TransferFront } from 'src/utils/interface/transfer';
@@ -17,7 +17,6 @@ import { DriveType } from 'src/utils/interface/files';
 import { appendPath } from '../path';
 import { encodeUrl } from 'src/utils/encode';
 import { useDataStore } from 'src/stores/data';
-import { files } from 'jszip';
 
 export type CommonUrlApiType =
 	| 'resources'
@@ -70,14 +69,8 @@ export async function pasteAction(
 		item.src_node ||
 		(filesStore.nodes.length > 0 ? filesStore.nodes[0].name : '');
 
-	let destination = item.to;
-	let source = item.from;
-	try {
-		destination = decodeURIComponent(destination);
-		source = decodeURIComponent(source);
-	} catch (error) {
-		/* empty */
-	}
+	const destination = decodeURIComponentSafe(item.to);
+	const source = decodeURIComponentSafe(item.from);
 
 	const res = await CommonFetch.patch(
 		commonUrlPrefix('paste') + node + '/',
@@ -177,8 +170,6 @@ export async function rename2(path: string, destination: string) {
 }
 
 export async function renameFileItem(item: FileItem, newName: string) {
-	console.log('item ===>', item);
-
 	const url = appendPath(
 		commonUrlPrefix('resources'),
 		item.fileType || '',
@@ -239,7 +230,7 @@ export async function batchDeleteFileItems(items: FileItem[]) {
 			'/',
 			items[0].fileType || '',
 			items[0].fileExtend,
-			items[0].oParentPath || '/'
+			encodeUrl(items[0].oParentPath || '/')
 		);
 
 		const dirents = items.map((e) => {

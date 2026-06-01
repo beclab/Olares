@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: provider-proxy
-          image: beclab/provider-proxy:0.1.0
+          image: beclab/provider-proxy:0.1.2
           imagePullPolicy: IfNotPresent
           args:
             - --logtostderr
@@ -42,12 +42,9 @@ spec:
             limits:
               cpu: "500m"
               memory: 350Mi
-        - image: beclab/integration-server:0.0.3
+        - image: beclab/integration-server:0.0.4
           imagePullPolicy: IfNotPresent
           name: integration
-          env:
-            - name: DEBUG
-              value: "true"
           ports:
             - containerPort: 8090
               protocol: TCP

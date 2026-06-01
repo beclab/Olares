@@ -212,6 +212,11 @@ func (h *Handler) deleteUser(req *restful.Request, resp *restful.Response) {
 		api.HandleBadRequest(resp, req, fmt.Errorf("user %s not found", username))
 		return
 	}
+	if user.Annotations[users.UserAnnotationOwnerRole] == "owner" {
+		api.HandleForbidden(resp, req, fmt.Errorf("user %s with role[owner] can not be deleted", user.Name))
+		return
+	}
+
 	user.Annotations[users.AnnotationUserDeleter] = owner
 	err = h.ctrlClient.Update(req.Request.Context(), &user)
 	if err != nil {

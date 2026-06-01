@@ -1,4 +1,4 @@
-import { getFileType } from '@bytetrade/core';
+import { getFileTypeI18nKey } from '@bytetrade/core';
 import { FileItem, FileResType, useFilesStore } from 'src/stores/files';
 import { i18n } from 'src/boot/i18n';
 import { DriveType } from 'src/utils/interface/files';
@@ -71,7 +71,9 @@ export function formatGd(
 			mode: 0,
 			isDir: el.isDir,
 			isSymlink: false,
-			type: el.isDir ? i18n.global.t('files.folders') : getFileType(el.name),
+			type: el.isDir
+				? i18n.global.t('files.folders')
+				: i18n.global.t(getFileTypeI18nKey(el.name)),
 			sorting: {
 				by: 'size',
 				asc: false

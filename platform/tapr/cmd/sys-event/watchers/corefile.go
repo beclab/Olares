@@ -189,7 +189,12 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			return nil
 		}
 
-		zone := userList.Items[0].GetAnnotations()[UserAnnotationZoneKey]
+		var zone string
+		for _, u := range userList.Items {
+			if zone = u.GetAnnotations()[UserAnnotationZoneKey]; zone != "" {
+				break
+			}
+		}
 		if len(zone) == 0 {
 			klog.Info("no zone annotation found in user, skip adding shared entrance dns records")
 			return nil
@@ -232,7 +237,9 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 				refAppName := ns.Labels["applications.app.bytetrade.io/name"]
 				sharedNamespace := ns.Labels["bytetrade.io/ns-shared"]
 				installedUser := ns.Labels["applications.app.bytetrade.io/install_user"]
-				if refAppName == app.Spec.Name && sharedNamespace == "true" && installedUser == app.Spec.Owner {
+				isV3 := ns.Labels["app.bytetrade.io/api-version"] == "v3"
+				namespaceV3 := ns.Labels["bytetrade.io/namespace"]
+				if refAppName == app.Spec.Name && sharedNamespace == "true" && installedUser == app.Spec.Owner || (isV3 && app.Spec.Namespace == namespaceV3) {
 					sharedNs = append(sharedNs, &ns)
 				}
 			}
@@ -583,7 +590,7 @@ func getNonClusterLocalSearchDomains() ([]string, error) {
 			continue
 		}
 		for _, d := range strings.Fields(line)[1:] {
-			if !strings.HasSuffix(d, "cluster.local") {
+			if !strings.HasSuffix(d, "cluster.local") && d != "local" {
 				domains = append(domains, d)
 			}
 		}

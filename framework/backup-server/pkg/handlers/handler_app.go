@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"olares.com/backup-server/pkg/constant"
+	"olares.com/backup-server/pkg/util"
 	"olares.com/backup-server/pkg/util/log"
 )
 
@@ -52,14 +52,12 @@ func (app *AppHandler) StartAppBackup(parentCtx context.Context, backupId, snaps
 
 	var result *BackupAppResponse
 
-	client := resty.New().SetTimeout(15 * time.Second).SetDebug(true)
-
 	data := map[string]string{
 		"backup_id":   backupId,
 		"snapshot_id": snapshotId,
 	}
 
-	resp, err := client.R().
+	resp, err := util.RestClient.R().
 		SetContext(ctx).
 		SetHeaders(headers).
 		SetFormData(data).
@@ -92,9 +90,7 @@ func (app *AppHandler) GetAppBackupStatus(parentCtx context.Context, backupId, s
 		"X-BFL-USER": app.owner,
 	}
 
-	client := resty.New().SetTimeout(15 * time.Second).SetDebug(true)
-
-	resp, err := client.R().
+	resp, err := util.RestClient.R().
 		SetContext(parentCtx).
 		SetHeaders(headers).
 		SetResult(&result).
@@ -142,8 +138,7 @@ func (app *AppHandler) SendBackupResult(parentCtx context.Context, backupId, sna
 		"message":     msg,
 	}
 
-	client := resty.New().SetTimeout(15 * time.Second).SetDebug(true)
-	resp, err := client.R().
+	resp, err := util.RestClient.R().
 		SetContext(ctx).
 		SetHeaders(headers).
 		SetFormData(data).
@@ -176,15 +171,13 @@ func (app *AppHandler) StartAppRestore(parentCtx context.Context, restoreId stri
 		return fmt.Errorf("start restore, json convert error: %v, metadata: %s", err, metadata)
 	}
 
-	client := resty.New().SetTimeout(15 * time.Second).SetDebug(true)
-
 	data := map[string]interface{}{
 		"restore_id":         restoreId,
 		"restic_snapshot_id": resticSnapshotId,
 		"data":               md,
 	}
 
-	resp, err := client.R().
+	resp, err := util.RestClient.R().
 		SetContext(ctx).
 		SetHeaders(headers).
 		SetBody(data).
@@ -219,9 +212,7 @@ func (app *AppHandler) GetAppRestoreStatus(parentCtx context.Context, restoreId 
 		"X-BFL-USER": app.owner,
 	}
 
-	client := resty.New().SetTimeout(15 * time.Second).SetDebug(true)
-
-	resp, err := client.R().
+	resp, err := util.RestClient.R().
 		SetContext(ctx).
 		SetHeaders(headers).
 		SetResult(&result).

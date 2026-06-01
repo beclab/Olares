@@ -76,24 +76,20 @@ To see all currently running models, use:
 ollama ps
 ```
 ## Configure Ollama API Access
-To use Ollama as the backend for other applications (such as DeerFlow inside Olares, or Obsidian on your laptop), you must configure the API to allow access from the local network.
 
-### Verify authentication level
-By default, the API's authentication level is set to **Internal**, allowing applications on the same local network to access the API without a login check.
-1. Open Settings, then navigate to **Applications** > **Ollama** > **Ollama API**.
-2. Confirm that **Authentication level** is set to **Internal**.
-3. Click **Submit** if you made changes.
-   ![Verify authentication level](/images/manual/use-cases/ollama-authentication-level.png#bordered)
+To use Ollama as the backend for other applications on the same local network, make sure the API uses the correct access setting and copy the endpoint from the Ollama API page.
 
-### Get the endpoint
-1. On the same settings page, click **Set up endpoint**.
-2. Copy the frontend address displayed in the dialog. Use this address as the Base URL or Host in your application's settings.
-   ![Get Ollama endpoint](/images/manual/use-cases/ollama-endpoint.png#bordered)
+1. On Olares, open Settings, then go to **Application** > **Ollama**.
+2. Under **Entrances**, click **Ollama API**.
+3. Make sure that **Authentication level** is set to **Internal**. If you change the setting, click **Submit**.
+4. Under **Endpoint settings**, copy the URL displayed in **Endpoint**. Use this address as the Base URL or Host in your application's settings.
+
+   ![Ollama endpoint](/images/manual/use-cases/lp-endpoint-entrances-ollama-api.png#bordered){width=90%}
 
 :::tip For OpenAI-compatible endpoint
 Some apps expect an OpenAI-compatible API. If the standard endpoint fails, try appending `/v1` to your address. For example:
 ```
-https://39975b9a1.{YOURUSERNAME}.olares.com/v1
+https://a5be22681.{YOURUSERNAME}.olares.com/v1
 ```
 :::
 If the application forces you to enter an API Key, you can usually enter any string (e.g., `ollama`).

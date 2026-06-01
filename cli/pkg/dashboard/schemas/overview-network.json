@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.network",
+  "description": "Per-physical-NIC table from capi /system-ifs (NOT monitoring) — port / iface / status / tx / rx / mtu / method / host / ipv4* / ipv6*.",
+  "type": "object",
+  "required": ["kind", "meta", "items"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.network"},
+    "meta": {"type": "object"},
+    "items": {"type": "array", "items": {"type": "object"}}
+  }
+}

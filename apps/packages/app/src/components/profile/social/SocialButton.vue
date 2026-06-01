@@ -41,25 +41,30 @@ const props = defineProps({
 });
 
 const selected = computed(() => {
-	if (!userStore.user || userStore.user?.social.data.length < 0) {
+	const data = userStore.user?.social?.data;
+	if (!userStore.user || !Array.isArray(data)) {
 		return false;
 	}
-	const index = userStore.user?.social.data.findIndex(
-		(social) => social.platform === props.platform
-	);
-	return index >= 0;
+	return data.some((s) => s && s.platform === props.platform);
 });
 
 const onButtonClick = () => {
-	if (userStore.user) {
-		if (selected.value) {
-			userStore.user.social.data = userStore.user.social.data.filter(
-				(item) => item.platform !== props.platform
-			);
-		} else {
-			userStore.user.social.data.push(SocialMap[props.platform]);
-		}
+	const user = userStore.user;
+	if (!user?.social?.data) {
+		return;
 	}
+	const data = user.social.data;
+	if (data.some((s) => s && s.platform === props.platform)) {
+		user.social.data = data.filter(
+			(item) => item && item.platform !== props.platform
+		);
+		return;
+	}
+	const config = SocialMap[props.platform];
+	if (!config) {
+		return;
+	}
+	user.social.data.push({ ...config });
 };
 </script>
 

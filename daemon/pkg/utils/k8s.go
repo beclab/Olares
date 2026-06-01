@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -21,12 +22,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	sysv1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/manifest"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
+	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -475,12 +482,6 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 		return
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		klog.Error("get hostname error, ", err)
-		return
-	}
-
 	ips, err := nets.LookupHostIps()
 	if err != nil {
 		klog.Error("get host ip error, ", err)
@@ -488,11 +489,9 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 	}
 
 	for _, node := range nodes.Items {
-		var foundIp, foundHost bool
+		var foundIp bool
 		for _, address := range node.Status.Addresses {
 			switch address.Type {
-			case corev1.NodeHostName:
-				foundHost = address.Address == hostname
 			case corev1.NodeInternalIP:
 				for _, ip := range ips {
 					foundIp = address.Address == ip
@@ -503,7 +502,7 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 				}
 			}
 
-			if foundHost && foundIp {
+			if foundIp {
 				nodeName = node.Name
 
 				if cp, ok := node.Labels["node-role.kubernetes.io/control-plane"]; ok && cp != "false" {
@@ -549,7 +548,7 @@ func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[str
 	for _, node := range nodes.Items {
 		for _, condition := range node.Status.Conditions {
 			if condition.Type != corev1.NodeReady && condition.Status == corev1.ConditionTrue {
-				status[node.Name] = append(status[node.Name], NodePressure{Type: condition.Type, Message: condition.Message})
+				status[node.Name] = append(status[node.Name], NodePressure{Type: string(condition.Type), Message: condition.Message})
 			}
 		}
 	}
@@ -573,10 +572,21 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	}
 
 	for _, app := range apps.Items {
-		entrances, err := app.GenEntranceURL(ctx)
-		if err != nil {
-			klog.Error("generate application entrance url error, ", err, ", ", app.Name)
-			continue
+		var entrances []appcfg.Entrance
+		var err error
+		if !isV3(&app) {
+			entrances, err = appcfg.GenEntranceURL(ctx, &app)
+			if err != nil {
+				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
+				continue
+			}
+		} else {
+
+			entrances, err = BatchGenSharedAppEntranceURL(ctx, &app)
+			if err != nil {
+				klog.Error("generate shared application entrance url error, ", err, ", ", app.Name)
+				continue
+			}
 		}
 
 		for _, entrance := range entrances {
@@ -601,4 +611,219 @@ func GetApixClient() (apixclientset.Interface, error) {
 	}
 
 	return client, nil
+}
+
+func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]OverlayGatewaySupportedApp, error) {
+	clientset, err := GetAppClientSet()
+	if err != nil {
+		klog.Error("get app clientset error, ", err)
+		return nil, err
+	}
+
+	kubeClient, err := GetKubeClient()
+	if err != nil {
+		klog.Error("get kube client error, ", err)
+		return nil, err
+	}
+
+	appMgrs, err := clientset.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Error("list applications error, ", err)
+		return nil, err
+	}
+
+	var supportedApps []OverlayGatewaySupportedApp
+	for _, appMgr := range appMgrs.Items {
+		if appMgr.Spec.Config == "" {
+			continue
+		}
+
+		// check if the app is supported by the overlay gateway
+		var appConfig appcfg.ApplicationConfig
+		err := appcfg.GetAppConfig(&appMgr, &appConfig)
+		if err != nil {
+			klog.Error("get app config error, ", err)
+			continue
+		}
+
+		// check if the app is supported by the overlay gateway
+		if appConfig.OverlayGateway.Enable {
+			// check if the app is enabled
+			app, err := clientset.AppV1alpha1().Applications().Get(ctx, appMgr.Name, metav1.GetOptions{})
+			if err != nil {
+				klog.Error("get app error, ", err)
+				continue
+			}
+
+			sharedApp := appv1alpha1.IsV3(app)
+			if !sharedApp {
+				if user != "" && app.Spec.Owner != user {
+					continue
+				}
+			}
+
+			enabled := strings.ToLower(app.Spec.Settings["enableOverlayGateway"]) == "true"
+			sa := OverlayGatewaySupportedApp{
+				AppResourceName: app.Name,
+				AppName:         app.Spec.Name,
+				Enabled:         enabled,
+				Owner:           app.Spec.Owner,
+				SharedApp:       sharedApp,
+				Namespace:       app.Spec.Namespace,
+				AppID:           app.Spec.Appid,
+			}
+			if enabled {
+				pods, err := kubeClient.CoreV1().Pods(app.Spec.Namespace).List(ctx, metav1.ListOptions{})
+				if err != nil {
+					klog.Error("list pods error, ", err)
+				} else {
+					for _, pod := range pods.Items {
+						if pod.Labels["applications.app.bytetrade.io/macvlan-init"] == "true" {
+							statuses, err := nadutils.GetNetworkStatus(&pod)
+							if err != nil {
+								klog.Error("get network status error, ", err)
+								continue
+							}
+
+							for _, status := range statuses {
+								if status.Interface == "net1" {
+									if len(status.IPs) == 0 {
+										klog.Warningf("pod %s has no ip in net1, skip", pod.Name)
+										continue
+									}
+									un := UnderlayNetwork{
+										IP: status.IPs[0],
+									}
+
+									var entrances []manifest.OverlayEntrance
+									for _, e := range appConfig.OverlayGateway.Entrances {
+										if e.Workload == GetWorkloadNameFromPod(&pod) {
+											entrances = append(entrances, e)
+										}
+									}
+									un.Ports = entrances
+									sa.UnderlayNetworks = append(sa.UnderlayNetworks, un)
+									break
+								}
+							}
+
+						}
+					}
+				}
+			}
+			supportedApps = append(supportedApps, sa)
+		}
+
+	}
+
+	return supportedApps, nil
+}
+
+func UpdateApplicationSettings(ctx context.Context, appName string, option string, value string) error {
+	clientset, err := GetAppClientSet()
+	if err != nil {
+		klog.Error("get app clientset error, ", err)
+		return err
+	}
+
+	retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		app, err := clientset.AppV1alpha1().Applications().Get(ctx, appName, metav1.GetOptions{})
+		if err != nil {
+			klog.Error("get application error, ", err)
+			return err
+		}
+
+		app.Spec.Settings[option] = value
+		_, err = clientset.AppV1alpha1().Applications().Update(ctx, app, metav1.UpdateOptions{})
+		if err != nil {
+			klog.Error("update application settings error, ", err)
+			return err
+		}
+
+		return nil
+	})
+
+	return nil
+}
+
+func RestartOverlayGatewaySupportedApps(ctx context.Context, apps []OverlayGatewaySupportedApp) error {
+	client, err := GetKubeClient()
+	if err != nil {
+		klog.Error("get dynamic client error, ", err)
+		return err
+	}
+
+	for _, app := range apps {
+		// restart the app
+		pods, err := client.CoreV1().Pods(app.Namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			klog.Error("list pods error, ", err)
+			return err
+		}
+
+		for _, pod := range pods.Items {
+			if pod.Labels["applications.app.bytetrade.io/macvlan-init"] == "true" {
+				err = client.CoreV1().Pods(app.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+				if err != nil {
+					klog.Error("delete pod error, ", err)
+				}
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func GetWorkloadNameFromPod(pod *corev1.Pod) string {
+	podTemplateHash := pod.Labels["pod-template-hash"]
+	podNameTokens := strings.Split(pod.Name, fmt.Sprintf("-%s-", podTemplateHash))
+	return podNameTokens[0]
+}
+
+const (
+	AppApiVersionLabel = "app.bytetrade.io/api-version"
+	AppVersionV3       = "v3"
+)
+
+func isV3(a *appv1alpha1.Application) bool {
+	return a.Labels != nil && a.Labels[AppApiVersionLabel] == AppVersionV3
+}
+
+func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Application) ([]appcfg.Entrance, error) {
+	if !isV3(app) {
+		return nil, nil
+	}
+
+	client, err := GetDynamicClient()
+	if err != nil {
+		klog.Error("get dynamic client error, ", err)
+		return nil, err
+	}
+
+	users, err := ListUsers(ctx, client, func(u *unstructured.Unstructured) bool {
+		return true
+	})
+	if err != nil {
+		klog.Error("list user error, ", err)
+		return nil, err
+	}
+
+	var entrances []appcfg.Entrance
+	for _, u := range users {
+		a := app.DeepCopy()
+		a.Spec.Owner = u.GetName()
+		_, err := appcfg.GenEntranceURL(ctx, a)
+		if err != nil {
+			klog.Error("generate entrance url error, ", err)
+			continue
+		}
+
+		entrances = append(entrances, a.Spec.Entrances...)
+	}
+
+	return entrances, nil
 }

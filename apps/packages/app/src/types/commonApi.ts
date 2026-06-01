@@ -3,7 +3,12 @@ import { Entry } from 'src/utils/rss-types';
 export enum DownloadStatusEnum {
 	NOT_DOWNLOADED = 'notDownloaded',
 	DOWNLOADING = 'downloading',
-	COMPLETE = 'complete'
+	COMPLETE = 'complete',
+	ERROR = 'error',
+	WAITING = 'waiting',
+	REMOVE = 'remove',
+	PAUSED = 'paused',
+	CANCEL = 'cancel'
 }
 export interface FeedItem {
 	id: string;
@@ -31,6 +36,7 @@ export interface DownloadItem {
 	task_id?: number;
 	loading?: boolean;
 	percent?: number;
+	created_time?: string;
 }
 
 export interface CollectEntry {
@@ -43,16 +49,22 @@ export interface CollectEntry {
 	exist_entry_id?: string;
 }
 
+export interface DownloadInfoItem {
+	title: string;
+	thumbnail: string;
+	list: DownloadItem[];
+}
 export interface CollectInfo {
 	is_download_available: string;
 	is_entry_available: string;
 	is_feed_available: string;
+	entry_plugin_dependency?: string[];
+	download_plugin_dependency?: string[];
+	feed_plugin_dependency?: string[];
 	feed: FeedItem[];
 	download: {
-		list: DownloadItem[];
 		source: string;
-		thumbnail: string;
-		title: string;
+		info: DownloadInfoItem[];
 	};
 	entry: CollectEntry;
 	cookie: {

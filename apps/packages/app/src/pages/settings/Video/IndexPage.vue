@@ -31,23 +31,23 @@ const router = useRouter();
 
 const pages = ref([
 	{
-		name: t('Hardware Acceleration'),
+		name: t('Hardware acceleration'),
 		path: '/video/hardwareAcceleration'
 	},
 	{
-		name: t('Encoding Scheme'),
+		name: t('Video formats'),
 		path: '/video/encodingScheme'
 	},
 	{
-		name: t('Transcoding Settings'),
+		name: t('Transcoding settings'),
 		path: '/video/transcodingSettings'
 	},
 	{
-		name: t('Audio Transcoding'),
+		name: t('Audio transcoding'),
 		path: '/video/audioTranscoding'
 	},
 	{
-		name: t('Encoding Quality'),
+		name: t('Encoding quality'),
 		path: '/video/encodingQuality'
 	},
 	{

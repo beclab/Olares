@@ -1,7 +1,11 @@
 $opacity-primary-20: rgba(255, 0, 0, 0.2);
 
 body.body--dark {
-	background: $background-1;
+	background: $theme-background-dark !important;
+}
+
+body.body--light {
+	background: $theme-background-light !important;
 }
 
 .q-separator--dark {

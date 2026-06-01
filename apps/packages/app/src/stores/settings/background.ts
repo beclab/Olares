@@ -4,13 +4,15 @@ import { i18n } from 'src/boot/i18n';
 import { useTokenStore } from './token';
 import { Cookies, Dark } from 'quasar';
 import { useDeviceStore } from './device';
-import { getSecondLevelDomain } from '../../constant';
+import { getSecondLevelDomain, IMG_CONTENT_MODE } from 'src/constant';
 import { ThemeDefinedMode, themeModeName } from '@bytetrade/ui';
 import { defaultLanguage, SupportLanguageType } from 'src/i18n';
 
 export interface Wallpaper {
 	desktop: string;
 	login: string;
+	loginStyle: IMG_CONTENT_MODE;
+	desktopStyle: IMG_CONTENT_MODE;
 	upload_desktop_backgrounds: string[];
 	upload_login_backgrounds: string[];
 }
@@ -101,6 +103,22 @@ export const useBackgroundStore = defineStore('background', {
 			);
 			return data;
 		},
+		async set_desktop_style_mode(style: string) {
+			const tokenStore = useTokenStore();
+			const data: any = await axios.post(
+				`${tokenStore.url}/api/wallpaper/desktopStyle`,
+				{ style }
+			);
+			return data;
+		},
+		async set_login_style_mode(style: string) {
+			const tokenStore = useTokenStore();
+			const data: any = await axios.post(
+				`${tokenStore.url}/api/wallpaper/loginStyle`,
+				{ style }
+			);
+			return data;
+		},
 		async upload_login_background(bg: string) {
 			const tokenStore = useTokenStore();
 			this.wallpaper.upload_login_backgrounds.push(bg);
@@ -134,12 +152,24 @@ export const useBackgroundStore = defineStore('background', {
 		async themeUpdate(theme: ThemeDefinedMode) {
 			this.theme = theme;
 			this.updateQuasarDark();
-			Cookies.set(themeModeName, `${theme}`, {
-				path: '/',
-				domain: getSecondLevelDomain(),
-				sameSite: 'None',
-				secure: true
-			});
+			const isHttps = window.location.protocol === 'https:';
+			Cookies.set(
+				themeModeName,
+				`${theme}`,
+				isHttps
+					? {
+							path: '/',
+							domain: getSecondLevelDomain(),
+							sameSite: 'None',
+							secure: true,
+							expires: 365
+					  }
+					: {
+							path: '/',
+							domain: getSecondLevelDomain(),
+							expires: 365
+					  }
+			);
 			window.parent.postMessage(
 				{
 					message: 'theme_update',
@@ -184,6 +214,16 @@ export const useBackgroundStore = defineStore('background', {
 					language: locale
 				});
 				this.updateLanguageLocale(locale);
+
+				window.parent.postMessage(
+					{
+						message: 'language_update',
+						info: {
+							locale
+						}
+					},
+					'*'
+				);
 			} catch (error) {
 				console.log(error);
 			}

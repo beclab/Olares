@@ -17,6 +17,8 @@
 package module
 
 import (
+	"context"
+
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/ending"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
@@ -44,13 +46,21 @@ func (b *BaseTaskModule) GetTasks() []task.Interface {
 	return b.Tasks
 }
 
-func (b *BaseTaskModule) Run(result *ending.ModuleResult) {
+func (b *BaseTaskModule) Run(ctx context.Context, result *ending.ModuleResult) {
 	for i := range b.Tasks {
+		// Bail out as early as possible if the caller has cancelled the
+		// pipeline (SIGINT / SIGTERM, parent timeout, ...).
+		if err := ctx.Err(); err != nil {
+			result.ErrResult(errors.Wrapf(err, "Module[%s] cancelled before task[%s]",
+				b.Name, b.Tasks[i].GetName()))
+			return
+		}
+
 		t := b.Tasks[i]
 		t.Init(b.Runtime.(connector.Runtime), b.ModuleCache, b.PipelineCache)
 
 		// logger.Infof("[A] %s: %s", b.Name, t.GetDesc())
-		res := t.Execute()
+		res := t.Execute(ctx)
 		for j := range res.ActionResults {
 			ac := res.ActionResults[j]
 			// logger.Infof("[Module] %s: %s %s", ac.Host.GetName(), b.Name, ac.Status.String())

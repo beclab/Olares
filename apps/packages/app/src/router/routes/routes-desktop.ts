@@ -1,5 +1,14 @@
 import { RouteRecordRaw } from 'vue-router';
 
+function redirectLaunchpadIfColdStart(
+	to: { path: string },
+	from: { matched: unknown[] }
+) {
+	if (to.path === '/launchpad' && from.matched.length === 0) {
+		return '/';
+	}
+}
+
 const routes: RouteRecordRaw[] = [
 	{
 		path: '/',
@@ -9,6 +18,12 @@ const routes: RouteRecordRaw[] = [
 				path: '',
 				component: () => import('@apps/desktop/IndexRouter.vue'),
 				meta: { requiresAuth: true }
+			},
+			{
+				path: 'launchpad',
+				component: () => import('@apps/desktop/IndexRouter.vue'),
+				meta: { requiresAuth: true },
+				beforeEnter: redirectLaunchpadIfColdStart
 			}
 		]
 	},

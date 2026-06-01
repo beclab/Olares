@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
 import {
-	DockerAppInfo,
 	DesktopAppInfo,
-	DesktopPosition
+	DesktopPosition,
+	DockerAppInfo
 } from '@apps/desktop/type/types';
-import { TerminusApp, TerminusEntrance } from '@bytetrade/core';
+import { TerminusApp } from '@bytetrade/core';
+import { AppStatusChange } from 'src/constant/constants';
 import { useTokenStore } from './token';
 import { AppInfo } from 'src/utils/interface/applications';
 import { SearchCategory } from 'src/utils/interface/search';
@@ -55,22 +56,29 @@ export type AppState = {
 	dockerApps: DockerAppInfo[];
 	launchPadApps: number[][];
 
+	launchpadGridOverride: { x: number; y: number } | null;
+
+	launchpadSearchQuery: string;
+
 	myApps: AppInfo[];
 	desktopApps: DesktopAppInfo[];
 
 	axiosAppInfo: TerminusApp[];
 
 	appMessageQueue: MessageQueue<{
-		state: string;
 		name: string;
-		entrances?: TerminusEntrance[];
+		payload: AppStatusChange;
 		isdequeued: boolean;
 	}>;
 };
 
 const socketMessageTimer: NodeJS.Timeout | null = null;
 
-export const useAppStore = defineStore('app', {
+export const localStoreKeys = {
+	LAUNCH_PAD: 'lanuchPad'
+};
+
+export const useApplicationStore = defineStore('desktopApp', {
 	state: () => {
 		return {
 			DOCKER_APP_SIZE: 36,
@@ -92,6 +100,8 @@ export const useAppStore = defineStore('app', {
 
 			dockerApps: [],
 			launchPadApps: [[]],
+			launchpadGridOverride: null,
+			launchpadSearchQuery: '',
 			desktopApps: [],
 			myApps: [],
 			axiosAppInfo: [],
@@ -192,6 +202,7 @@ export const useAppStore = defineStore('app', {
 		},
 
 		async update_search_result(searchTxt?: string) {
+			this.launchpadSearchQuery = String(searchTxt ?? '');
 			const data: any = this.myApps;
 			const apps: any[] = [];
 			for (let i = 0; i < data.length; ++i) {
@@ -212,6 +223,7 @@ export const useAppStore = defineStore('app', {
 		},
 
 		async dismiss_search_result() {
+			this.launchpadSearchQuery = '';
 			this.relocate_application_place(this.myApps);
 		},
 
@@ -311,19 +323,48 @@ export const useAppStore = defineStore('app', {
 			this.desktopApps = [];
 
 			const t: any = {};
+
+			const savedLaunchPad = localStorage.getItem(localStoreKeys.LAUNCH_PAD);
+			let re_relocate_apps: AppInfo[] = [];
+			if (savedLaunchPad) {
+				const copy_relocate_apps: AppInfo[] = JSON.parse(
+					JSON.stringify(relocate_apps)
+				);
+				const apps = JSON.parse(savedLaunchPad);
+
+				for (let i = 0; i < apps.length; ++i) {
+					const app = apps[i];
+					const index = copy_relocate_apps.findIndex(
+						(a) => 'bdesk:' + a.id == app.id
+					);
+					if (index >= 0) {
+						re_relocate_apps.push(copy_relocate_apps[index]);
+						copy_relocate_apps.splice(index, 1);
+					}
+				}
+				re_relocate_apps = re_relocate_apps.concat(copy_relocate_apps);
+			} else {
+				re_relocate_apps = relocate_apps;
+			}
+			relocate_apps = re_relocate_apps;
+
+			const gridX = this.launchpadGridOverride?.x ?? this.DESKTOP_APP_X_NUM;
+			const gridY = this.launchpadGridOverride?.y ?? this.DESKTOP_APP_Y_NUM;
+			const perPage = gridX * gridY;
+
 			for (let i = 0; i < relocate_apps.length; ++i) {
 				if (relocate_apps[i].id == 'launchpad') {
 					continue;
 				}
 				t[relocate_apps[i].id] = '1';
 
-				if (i % (this.DESKTOP_APP_X_NUM * this.DESKTOP_APP_Y_NUM) == 0) {
+				if (i % perPage == 0) {
 					this.launchPadApps.push([]);
 				}
 
-				const page_num = i % (this.DESKTOP_APP_X_NUM * this.DESKTOP_APP_Y_NUM);
-				const y = Math.floor(page_num / this.DESKTOP_APP_X_NUM);
-				const x = page_num - y * this.DESKTOP_APP_X_NUM;
+				const page_num = i % perPage;
+				const y = Math.floor(page_num / gridX);
+				const x = page_num - y * gridX;
 
 				const d: DesktopAppInfo = {
 					id: 'bdesk:' + relocate_apps[i].id,
@@ -353,7 +394,8 @@ export const useAppStore = defineStore('app', {
 					url: '',
 					fatherName: relocate_apps[i].fatherName,
 					isSysApp: relocate_apps[i].isSysApp,
-					fatherState: relocate_apps[i].fatherState
+					fatherState: relocate_apps[i].fatherState,
+					isClusterScoped: relocate_apps[i].isClusterScoped
 				};
 
 				this.launchPadApps[this.launchPadApps.length - 1].push(i);
@@ -551,7 +593,7 @@ export const useAppStore = defineStore('app', {
 			localStorage.setItem('dockerApps', JSON.stringify(this.dockerApps));
 		},
 
-		async uninstall_application(app_name: string | null) {
+		async uninstall_application(app_name: string | null, data: any = {}) {
 			if (!app_name) {
 				return;
 			}
@@ -559,18 +601,13 @@ export const useAppStore = defineStore('app', {
 
 			this.myApps = this.myApps.filter((item) => item.fatherName !== app_name);
 			this.relocate_application_place(this.myApps);
-			await axios.post(tokenStore.url + '/api/app/uninstall/' + app_name, {});
+			await axios.post(tokenStore.url + '/api/app/uninstall/' + app_name, data);
 		},
 
-		updateOneApplicationState(
-			name: string,
-			state: string,
-			entrances?: TerminusEntrance[]
-		) {
+		updateOneApplicationState(payload: AppStatusChange) {
 			this.appMessageQueue.enqueue({
-				name,
-				state,
-				entrances,
+				name: payload.app_name,
+				payload,
 				isdequeued: false
 			});
 			this.startDealMessageTimer();
@@ -595,57 +632,67 @@ export const useAppStore = defineStore('app', {
 
 		async dealApplicationEntrancesMessages(message: {
 			name: string;
-			state: string;
-			entrances?: TerminusEntrance[];
+			payload: AppStatusChange;
 		}) {
-			if (uninstalledAppState(message.state)) {
-				this.myApps = this.myApps.filter((e) => e.fatherName != message.name);
+			const appName = message.name;
+			const appStatus = message.payload.app_state_latest?.status;
+			if (!appName || !appStatus) {
+				return;
+			}
+			const state = appStatus.state;
+
+			if (uninstalledAppState(state)) {
+				this.myApps = this.myApps.filter((e) => e.fatherName != appName);
 			} else {
-				const apps = this.myApps.filter((e) => e.fatherName == message.name);
+				const apps = this.myApps.filter((e) => e.fatherName == appName);
 				if (apps.length == 0) {
 					await this.update_my_apps_info();
 					return;
 				}
 
-				if (
-					!message.entrances ||
-					message.entrances.length == 0 ||
-					message.entrances.filter(
-						(e) => e.invisible == false && e.id.length > 0
-					).length == 0
-				) {
+				const sourceEntrances = appStatus.entranceStatuses ?? [];
+
+				if (sourceEntrances.length == 0) {
+					this.myApps = this.myApps.filter((e) => e.fatherName != appName);
 					return;
 				}
 
-				const filterEntances = message.entrances.filter(
-					(e) => e.invisible == false && e.id.length > 0
+				const visibleEntrances = sourceEntrances.filter(
+					(e) => e.invisible == false && !!e.name
 				);
-
-				for (let index = 0; index < filterEntances.length; index++) {
-					const entrance = filterEntances[index];
-					const appIndex = this.myApps.findIndex((a) => a.id == entrance.id);
-
-					if (appIndex < 0) {
-						continue;
-					}
-
-					const app = this.myApps[appIndex];
-
-					const appInfo = {
-						...app,
-						state: entrance.state || message.state,
-						type: SearchCategory.Application,
-						id: entrance.id,
-						name: entrance.name,
-						title: entrance?.title || app?.title,
-						url: entrance?.url || app?.url,
-						icon: entrance?.icon || app?.icon,
-						openMethod: entrance?.openMethod || app.openMethod || 'default',
-						fatherState: message.state
-					};
-
-					this.myApps[appIndex] = appInfo;
+				if (visibleEntrances.length === 0) {
+					this.myApps = this.myApps.filter((e) => e.fatherName != appName);
+					return;
 				}
+
+				const getScopedEntranceKey = (entranceName: string) =>
+					`${appName}::${entranceName}`;
+				const entranceMap = new Map(
+					visibleEntrances.map((entrance) => [
+						getScopedEntranceKey(entrance.name),
+						entrance
+					])
+				);
+				this.myApps = this.myApps
+					.filter(
+						(app) =>
+							app.fatherName !== appName ||
+							entranceMap.has(getScopedEntranceKey(app.name))
+					)
+					.map((app) => {
+						if (app.fatherName !== appName) {
+							return app;
+						}
+						const entrance = entranceMap.get(getScopedEntranceKey(app.name));
+						if (!entrance) {
+							return app;
+						}
+						return {
+							...app,
+							state: entrance.state || state,
+							fatherState: state
+						};
+					});
 			}
 			this.relocate_application_place(this.myApps);
 			this.remove_not_exist_apps_on_dock();

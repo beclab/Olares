@@ -5,7 +5,7 @@ import {
 	getValueByUnit
 } from '@apps/dashboard/src/utils/monitoring';
 import { get, round } from 'lodash';
-import { t } from '@apps/dashboard/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 import { formatFrequency } from '@apps/dashboard/src/utils/cpu';
 import { timeRangeFormate } from '@apps/control-panel-common/src/containers/Monitoring/utils';
 

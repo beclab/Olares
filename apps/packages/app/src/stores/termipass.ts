@@ -140,7 +140,11 @@ export const useTermipassStore = defineStore('termipass', {
 
 			const scaleStore = useScaleStore();
 
-			if (userStore.current_user.tailscale_activated && !scaleStore.isOn) {
+			if (
+				!userStore.current_user.isLocal &&
+				userStore.current_user.tailscale_activated &&
+				!scaleStore.isOn
+			) {
 				return {
 					status: TermiPassStatus.RequiresVpn,
 					isError: UserStatusActive.error,
@@ -208,7 +212,7 @@ export const useTermipassStore = defineStore('termipass', {
 						? 'user_current_status.intranet.title'
 						: 'user_current_status.internet.title'
 				),
-				icon: userStore.current_user.isLocal ? 'signal_wifi_0_bar' : 'public'
+				icon: userStore.current_user.isLocal ? 'devices' : 'public'
 			};
 		}
 	},

@@ -80,12 +80,8 @@ export const storage = {
 	trySetObj,
 	getObj,
 	putObj
-	// onChanged,
 };
 
-/**
- * Setting information
- */
 export const getSetting = () => getObj(STOKEY_SETTING);
 export const getSettingWithDefault = async () => ({
 	...DEFAULT_SETTING,
@@ -94,60 +90,41 @@ export const getSettingWithDefault = async () => ({
 export const setSetting = (val) => setObj(STOKEY_SETTING, val);
 export const updateSetting = (obj) => putObj(STOKEY_SETTING, obj);
 
-/**
- * Rules list
- */
 export const getRules = () => getObj(STOKEY_RULES);
 export const getRulesWithDefault = async () =>
 	(await getRules()) || DEFAULT_RULES;
 export const setRules = (val) => setObj(STOKEY_RULES, val);
 
-/**
- * Words list
- */
 export const getWords = () => getObj(STOKEY_WORDS);
 export const getWordsWithDefault = async () => (await getWords()) || {};
 export const setWords = (val) => setObj(STOKEY_WORDS, val);
 
-/**
- * Subscription rules
- */
 export const getSubRules = (url) => getObj(STOKEY_RULESCACHE_PREFIX + url);
 export const getSubRulesWithDefault = async () => (await getSubRules()) || [];
 export const delSubRules = (url) => del(STOKEY_RULESCACHE_PREFIX + url);
 export const setSubRules = (url, val) =>
 	setObj(STOKEY_RULESCACHE_PREFIX + url, val);
 
-/**
- * Fab position
- */
+export const getSubRulesVersion = (url) =>
+	getObj(`${STOKEY_RULESCACHE_PREFIX}${url}_version`);
+export const setSubRulesVersion = (url, version) =>
+	setObj(`${STOKEY_RULESCACHE_PREFIX}${url}_version`, version);
+
 export const getFab = () => getObj(STOKEY_FAB);
 export const getFabWithDefault = async () => (await getFab()) || {};
 export const setFab = (obj) => setObj(STOKEY_FAB, obj);
 export const updateFab = (obj) => putObj(STOKEY_FAB, obj);
 
-/**
- * Data synchronization
- */
 export const getSync = () => getObj(STOKEY_SYNC);
 export const getSyncWithDefault = async () => (await getSync()) || DEFAULT_SYNC;
 export const updateSync = (obj) => putObj(STOKEY_SYNC, obj);
 
-/**
- * ms auth
- */
 export const getMsauth = () => getObj(STOKEY_MSAUTH);
 export const setMsauth = (val) => setObj(STOKEY_MSAUTH, val);
 
-/**
- * baidu auth
- */
 export const getBdauth = () => getObj(STOKEY_BDAUTH);
 export const setBdauth = (val) => setObj(STOKEY_BDAUTH, val);
 
-/**
- * Store default data
- */
 export const tryInitDefaultData = async () => {
 	try {
 		await trySetObj(STOKEY_SETTING, DEFAULT_SETTING);

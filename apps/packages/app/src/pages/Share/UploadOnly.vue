@@ -24,7 +24,7 @@
 		/>
 		<div class="operations row items-center justify-center">
 			<div class="action-btn text-body3 row items-center">
-				<q-icon name="sym_r_upload" class="text-ink-1 q-mr-xs" size="24px" />
+				<q-icon name="sym_r_upload" class="text-grey-10 q-mr-xs" size="24px" />
 				<span>
 					{{ t('buttons.upload') }}
 				</span>
@@ -48,6 +48,7 @@
 						</q-item>
 
 						<q-item
+							v-if="!deviceStore.isMobile"
 							class="text-ink-2"
 							style="height: 40px; padding: 0 6px; border-radius: 4px"
 							clickable
@@ -231,6 +232,7 @@ import { format } from '../../utils/format';
 import { TransferItem, TransferStatus } from '../../utils/interface/transfer';
 import { scanFiles } from '../../utils/upload';
 import { getApplication } from 'src/application/base';
+import { useDeviceStore } from 'src/stores/settings/device';
 
 const { t } = useI18n();
 
@@ -238,6 +240,7 @@ const fileInput = ref<any>(null);
 
 const fileStore = useFilesStore();
 const shareStore = useShareStore();
+const deviceStore = useDeviceStore();
 
 const isDragOver = ref(false);
 
@@ -487,8 +490,7 @@ const clearAction = async () => {
 	.operations {
 		height: 80px;
 		.action-btn {
-			border: 1px solid $yellow;
-			background-color: $yellow;
+			background-color: $primary;
 			display: inline-block;
 			color: $grey-10;
 			padding: 7px 12px;
@@ -496,7 +498,7 @@ const clearAction = async () => {
 			cursor: pointer;
 
 			&:hover {
-				background-color: $yellow-3;
+				background-color: $theme-primary-hover;
 			}
 		}
 

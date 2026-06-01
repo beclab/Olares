@@ -3,12 +3,13 @@ import { AppPlatform } from '../platform';
 import { BiometricKeyStore } from '@didvault/sdk/src/core';
 import { AvailableResult } from '@capgo/capacitor-native-biometric';
 import { ConnectionStatus } from '@capacitor/network';
-import { NativeScanQRProtocol } from './protocols';
+import { NativeScanQRProtocol, NativeSignProtocol } from './protocols';
 import { OrientationLockType } from '@capacitor/screen-orientation';
 import { DriveType } from 'src/utils/interface/files';
 import { BluetoothWifiInfo } from 'src/utils/interface/bluetooth';
 import { QVueGlobals } from 'quasar';
 import { Router } from 'vue-router';
+import { ScanQRCodeOptions } from './types';
 
 export interface NativeAppBiometricKeyStore extends BiometricKeyStore {
 	deleteKey(id: string): Promise<void>;
@@ -33,15 +34,13 @@ export interface NativeAppPlatform extends AppPlatform {
 
 	unlockByBiometric(): Promise<string>;
 
-	scanQRDidUserGrantPermission(): Promise<boolean>;
-
-	scanQrCheckPermission(): Promise<void>;
-
 	getQRCodeImageFromPhotoAlbum(): Promise<string>;
 
 	hookBackAction(): void;
 
 	scanQRProtocolList: NativeScanQRProtocol[];
+
+	signProtocolList: NativeSignProtocol[];
 
 	defaultOrientationLockType: OrientationLockType;
 
@@ -108,5 +107,16 @@ export interface NativeAppPlatform extends AppPlatform {
 
 	getRouter(): Router | undefined;
 
-	
+	getCaptchaToken(): Promise<string>;
+
+	getCaptchaInfo(): Promise<{
+		channel: string;
+		platform: string;
+	}>;
+
+	scanQRCode(options?: ScanQRCodeOptions): Promise<string | undefined>;
+
+	scanQRCodeForActivate(): Promise<void>;
+
+	scanQRCodeAndDispatch(): Promise<void>;
 }

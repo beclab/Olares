@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path"
@@ -22,7 +23,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func PrepareSystemPipeline(components []string) error {
+func PrepareSystemPipeline(ctx context.Context, components []string) error {
 	var terminusVersion, _ = phase.GetOlaresVersion()
 	if terminusVersion != "" && len(components) == 0 {
 		return errors.New("Olares is already installed, please uninstall it first.")
@@ -51,7 +52,7 @@ func PrepareSystemPipeline(components []string) error {
 	// if no components specified, run all
 	if len(components) == 0 {
 		var p = system.PrepareSystemPhase(runtime)
-		if err := p.Start(); err != nil {
+		if err := p.Start(ctx); err != nil {
 			return err
 		}
 		return nil
@@ -72,7 +73,7 @@ func PrepareSystemPipeline(components []string) error {
 				},
 				Runtime: runtime,
 			}
-			if err := p.Start(); err != nil {
+			if err := p.Start(ctx); err != nil {
 				return fmt.Errorf("error preparing images: %w", err)
 			}
 		case "olaresd":
@@ -88,7 +89,7 @@ func PrepareSystemPipeline(components []string) error {
 				},
 				Runtime: runtime,
 			}
-			if err := p.Start(); err != nil {
+			if err := p.Start(ctx); err != nil {
 				return fmt.Errorf("error preparing os environment: %w", err)
 			}
 		case "os":
@@ -106,7 +107,7 @@ func PrepareSystemPipeline(components []string) error {
 				},
 				Runtime: runtime,
 			}
-			if err := p.Start(); err != nil {
+			if err := p.Start(ctx); err != nil {
 				return fmt.Errorf("error preparing os environment: %w", err)
 			}
 		case "container":
@@ -122,7 +123,7 @@ func PrepareSystemPipeline(components []string) error {
 				},
 				Runtime: runtime,
 			}
-			if err := p.Start(); err != nil {
+			if err := p.Start(ctx); err != nil {
 				return fmt.Errorf("error setting up container runtime: %w", err)
 			}
 		default:

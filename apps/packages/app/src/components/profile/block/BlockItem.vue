@@ -20,9 +20,16 @@
 			<bt-switch
 				size="xs"
 				truthy-track-color="light-green-default"
-				:model-value="block.enabled"
+				:model-value="
+					block.type === BLOCK_TYPE.LINK && (!block.url || !block.title)
+						? false
+						: block.enabled
+				"
 				@update:model-value="updateEnabled"
 				color="light-green-default"
+				:disable="
+					block.type === BLOCK_TYPE.LINK && (!block.url || !block.title)
+				"
 			/>
 			<q-icon color="ink-2" size="20px" name="sym_r_more_horiz" @click.stop>
 				<base-popup self="top right">
@@ -58,7 +65,11 @@
 
 <script setup lang="ts">
 import { PropType } from 'vue';
-import { Block, generateUniqueId } from '@apps/profile/src/types/User';
+import {
+	Block,
+	BLOCK_TYPE,
+	generateUniqueId
+} from '@apps/profile/src/types/User';
 import { useUserStore } from '@apps/profile/src/stores/profileUser';
 import BasePopup from '@apps/profile/src/components/profile/base/BasePopup.vue';
 import BlockOptItem from '@apps/profile/src/components/profile/block/BlockOptItem.vue';

@@ -8,7 +8,7 @@
 import Event from '@apps/control-panel-common/src/containers/Event.vue';
 import { UsePod } from '@apps/control-panel-common/src/stores/PodData';
 import MyCard2 from '@apps/control-panel-common/src/components/MyCard2.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 
 const usePod = UsePod();
 </script>

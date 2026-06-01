@@ -7,135 +7,272 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
-              text: "OpenClaw",
-              link: "/zh/use-cases/openclaw",
+              text: "AI Agent",
+              collapsed: false,
+              items: [
+                {
+                  text: "OpenClaw",
+                  link: "/zh/use-cases/openclaw",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "集成聊天应用",
+                      items: [
+                        {
+                          text: "集成 Discord",
+                          link: "/zh/use-cases/openclaw-integration",
+                        },
+                        {
+                          text: "集成 WhatsApp",
+                          link: "/zh/use-cases/openclaw-channel-whatsapp",
+                        },
+                      ],
+                    },
+                    {
+                      text: "启用网页搜索",
+                      link: "/zh/use-cases/openclaw-web-access",
+                    },
+                    {
+                      text: "管理技能和插件",
+                      link: "/zh/use-cases/openclaw-skills",
+                    },
+                    {
+                      text: "使用 OpenClaw 管理 Olares",
+                      link: "/zh/use-cases/openclaw-olares-skills",
+                    },
+                    //{
+                    //  text: "启用本地文件访问",
+                    //  link: "/zh/use-cases/openclaw-local-access",
+                    //},
+                    {
+                      text: "启用沙盒",
+                      link: "/zh/use-cases/openclaw-enable-sandbox",
+                    },
+                    {
+                      text: "升级 OpenClaw",
+                      link: "/zh/use-cases/openclaw-upgrade",
+                    },
+                    {
+                      text: "常见问题",
+                      link: "/zh/use-cases/openclaw-common-issues",
+                    }
+                  ]
+                },
+                {
+                  text: "NemoClaw",
+                  link: "/zh/use-cases/nemoclaw",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Integrate with Google Workspace",
+                      link: "/zh/use-cases/nemoclaw-google-workspace",
+                    },
+                    {
+                      text: "Manage Olares with Olares CLI",
+                      link: "/zh/use-cases/nemoclaw-olares-cli",
+                    },
+                    {
+                      text: "Common issues",
+                      link: "/zh/use-cases/nemoclaw-common-issues",
+                    },
+                  ]
+                },
+                {
+                  text: "Hermes Agent",
+                  link: "/zh/use-cases/hermes",
+                },
+                {
+                  text: "OpenCode",
+                  link: "/zh/use-cases/opencode",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "使用 oh-my-openagent 编排多 Agent",
+                      link: "/zh/use-cases/opencode-omo",
+                    },
+                    {
+                      text: "包管理",
+                      link: "/zh/use-cases/opencode-packages",
+                    },
+                    {
+                      text: "技能与插件",
+                      link: "/zh/use-cases/opencode-extensions",
+                    },
+                    {
+                      text: "常见问题",
+                      link: "/zh/use-cases/opencode-issues",
+                    },
+                  ]
+                },
+                {
+                  text: "Claude Code",
+                  link: "/zh/use-cases/claude-code",
+                },
+                {
+                  text: "Paperclip",
+                  link: "/zh/use-cases/paperclip",
+                },
+                {
+                  text: "DeerFlow 2.0",
+                  link: "/zh/use-cases/deerflow2",
+                },
+                // {
+                //   text: "DeerFlow",
+                //   link: "/zh/use-cases/deerflow",
+                // },
+                {
+                  text: "TradingAgents",
+                  link: "/zh/use-cases/tradingagents",
+                },
+                {
+                  text: "NOFX",
+                  link: "/zh/use-cases/nofx",
+                },
+              ],
+            },
+            {
+              text: "AI 工作台",
               collapsed: true,
               items: [
                 {
-                  text: "集成 Discord",
-                  link: "/zh/use-cases/openclaw-integration",
+                  text: "Open WebUI",
+                  collapsed: true,
+                  link: "/zh/use-cases/openwebui",
+                  items: [
+                    {
+                      text: "设置多用户访问",
+                      link: "/zh/use-cases/openwebui-multiuser",
+                    },
+                    {
+                      text: "配置语音交互",
+                      link: "/zh/use-cases/openwebui-audio",
+                    },
+                    {
+                      text: "启用网页搜索",
+                      link: "/zh/use-cases/openwebui-search",
+                    },
+                    {
+                      text: "在聊天中查询文档",
+                      link: "/zh/use-cases/openwebui-knowledge",
+                    },
+                    {
+                      text: "常见问题",
+                      link: "/zh/use-cases/openwebui-common-issues",
+                    },
+                  ]
                 },
                 {
-                  text: "启用网页搜索",
-                  link: "/zh/use-cases/openclaw-web-access",
+                  text: "LobeHub (LobeChat)",
+                  link: "/zh/use-cases/lobechat",
                 },
                 {
-                  text: "管理技能和插件",
-                  link: "/zh/use-cases/openclaw-skills",
+                  text: "AnythingLLM",
+                  link: "/zh/use-cases/anythingllm",
                 },
                 {
-                  text: "启用本地文件访问",
-                  link: "/zh/use-cases/openclaw-local-access",
+                  text: "Open Notebook",
+                  link: "/zh/use-cases/open-notebook",
                 },
                 {
-                  text: "启用沙盒",
-                  link: "/use-cases/openclaw-enable-sandbox",
-                },                                 
-                {
-                  text: "升级 OpenClaw",
-                  link: "/zh/use-cases/openclaw-upgrade",
+                  text: "Vane (Perplexica)",
+                  link: "/zh/use-cases/perplexica",
                 },
-                {
-                  text: "常见问题",
-                  link: "/zh/use-cases/openclaw-common-issues",
-                }                
-              ]
+              ],
             },
             {
-              text: "Open WebUI",
-              link: "/zh/use-cases/openwebui",
-            },
-            {
-              text: "ComfyUI",
-              link: "/zh/use-cases/comfyui",
+              text: "创意媒体",
               collapsed: true,
               items: [
                 {
-                  text: "管理 ComfyUI",
-                  link: "/zh/use-cases/comfyui-launcher",
+                  text: "ComfyUI",
+                  link: "/zh/use-cases/comfyui",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "管理 ComfyUI",
+                      link: "/zh/use-cases/comfyui-launcher",
+                    },
+                    {
+                      text: "在 Krita 中使用 ComfyUI",
+                      link: "/zh/use-cases/comfyui-for-krita",
+                    },
+                    {
+                      text: "常见问题",
+                      link: "/zh/use-cases/comfyui-common-issues",
+                    },
+                  ]
                 },
                 {
-                  text: "在 Krita 中使用 ComfyUI",
-                  link: "/zh/use-cases/comfyui-for-krita",
+                  text: "ACE-Step 1.5",
+                  link: "/zh/use-cases/ace-step-1.5",
                 },
-              ]
+                /*{
+                  text: "ACE-Step",
+                  link: "/zh/use-cases/ace-step",
+                },*/
+                /*{
+                  text: "Duix.Avatar",
+                  link: "/zh/use-cases/duix-avatar",
+                },*/
+                // {
+                //   text: "Stable Diffusion",
+                //   link: "/zh/use-cases/stable-diffusion",
+                // },
+                {
+                  text: "Whisper-WebUI",
+                  link: "/zh/use-cases/whisper-webui",
+                },
+                {
+                  text: "Speaches",
+                  link: "/zh/use-cases/speaches",
+                },
+                {
+                  text: "IndexTTS2",
+                  link: "/zh/use-cases/indextts2",
+                },
+              ],
             },
             {
-              text: "Context7",
-              link: "/zh/use-cases/context7",
-            },
-            {
-              text: "Ollama",
-              link: "/zh/use-cases/ollama",
-            },
-            // {
-            //   text: "Dify",
-            //   link: "/zh/use-cases/dify",
-            // },
-            {
-              text: "LiteLLM",
-              link: "/zh/use-cases/litellm",
-            },
-            {
-              text: "LLMFit",
-              link: "/zh/use-cases/llmfit",
-            },
-            {  
-              text: "OpenCode",
-              link: "/zh/use-cases/opencode",
+              text: "模型服务",
               collapsed: true,
               items: [
                 {
-                  text: "包管理",
-                  link: "/zh/use-cases/opencode-packages",
+                  text: "Ollama",
+                  link: "/zh/use-cases/ollama",
                 },
                 {
-                  text: "技能与插件",
-                  link: "/zh/use-cases/opencode-extensions",
+                  text: "Bifrost",
+                  link: "/zh/use-cases/bifrost",
                 },
                 {
-                  text: "常见问题",
-                  link: "/zh/use-cases/opencode-issues",
+                  text: "LiteLLM",
+                  link: "/zh/use-cases/litellm",
                 },
-              ]
+                {
+                  text: "TensorZero",
+                  link: "/zh/use-cases/tensorzero",
+                },
+                {
+                  text: "LLMFit",
+                  link: "/zh/use-cases/llmfit",
+                },
+                // {
+                //   text: "Dify",
+                //   link: "/zh/use-cases/dify",
+                // },
+              ],
             },
             {
-              text: "LobeHub (LobeChat)",
-              link: "/zh/use-cases/lobechat",
+              text: "具身智能",
+              collapsed: true,
+              items: [
+                {
+                  text: "Isaac Lab",
+                  link: "/zh/use-cases/isaac-lab",
+                },
+              ],
             },
-            {
-              text: "Vane (Perplexica)",
-              link: "/zh/use-cases/perplexica",
-            },
-            {
-              text: "ACE-Step 1.5",
-              link: "/zh/use-cases/ace-step-1.5",
-            },            
-            /*{
-              text: "ACE-Step",
-              link: "/zh/use-cases/ace-step",
-            },*/
-            {
-              text: "Duix.Avatar",
-              link: "/zh/use-cases/duix-avatar",
-            },
-            {
-              text: "PDFMathTranslate",
-              link: "/zh/use-cases/pdfmathtranslate",
-            },
-            // {
-            //   text: "Stable Diffusion",
-            //   link: "/zh/use-cases/stable-diffusion",
-            // },
-            {
-              text: "DeerFlow 2.0",
-              link: "/zh/use-cases/deerflow2",
-            },
-            {
-              text: "DeerFlow",
-              link: "/zh/use-cases/deerflow",
-            },
-          ]
+          ],
         },
         {
           text: "虚拟机",
@@ -150,6 +287,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/windows",
               collapsed: true,
               items:[
+                {
+                  text: "Enable Intel integrated GPU passthrough",
+                  link: "/zh/use-cases/windows-intel-gpu-passthrough",
+                },
                 {
                   text: "Known issues",
                   link: "/zh/use-cases/windows-issues",
@@ -168,7 +309,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           items: [
             {
               text: "Immich",
-              link: "/zh/use-cases/immich",              
+              link: "/zh/use-cases/immich",
               collapsed: true,
               items: [
                 {
@@ -199,6 +340,25 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Komga",
               link: "/zh/use-cases/komga",
             },
+            {
+              text: "Navidrome",
+              link: "/zh/use-cases/navidrome",
+            },
+            {
+              text: "TREK (NOMAD)",
+              link: "/zh/use-cases/trek",
+              collapsed: true,
+              items: [
+                {
+                  text: "Advanced settings",
+                  link: "/zh/use-cases/trek-advanced-settings",
+                }
+              ]
+            },
+            {
+              text: "*Arrs",
+              link: "/zh/use-cases/arrs",
+            },
           ]
         },
         {
@@ -206,16 +366,42 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Plane",
+              link: "/zh/use-cases/plane",
+            },
+            {
               text: "Excalidraw",
               link: "/zh/use-cases/excalidraw",
+            },
+            {
+              text: "Karakeep",
+              link: "/zh/use-cases/karakeep",
             },
             {
               text: "OnlyOffice",
               link: "/zh/use-cases/onlyoffice",
             },
             {
-              text: "Stirling PDF",
-              link: "/zh/use-cases/stirling-pdf",
+              text: "Penpot",
+              link: "/zh/use-cases/penpot",
+            },
+            {
+              text: "RNA Sequencing",
+              link: "/zh/use-cases/rna-sequencing",
+            },
+            // {
+            //   text: "Stirling PDF",
+            //   link: "/zh/use-cases/stirling-pdf",
+            // },
+          ],
+        },
+        {
+          text: "开发工具",
+          collapsed: false,
+          items: [
+            {
+              text: "JupyterHub",
+              link: "/zh/use-cases/jupyterhub",
             },
           ],
         },
@@ -223,6 +409,18 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "工具",
           collapsed: false,
           items: [
+            {
+              text: "PDFMathTranslate",
+              link: "/zh/use-cases/pdfmathtranslate",
+            },
+            {
+              text: "Context7",
+              link: "/zh/use-cases/context7",
+            },
+            {
+              text: "Falco",
+              link: "/zh/use-cases/falco",
+            },
             {
               text: "FlareSolverr",
               link: "/zh/use-cases/flaresolverr",

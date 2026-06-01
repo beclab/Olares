@@ -62,3 +62,20 @@ If WebFetch fails repeatedly:
 1. Retry the request after a short wait.
 2. Check whether the target URL is accessible from your browser.
 3. Try a different URL if the target site is temporarily unavailable.
+
+## Cannot edit `opencode.jsonc` when `opencode.json` already exists
+
+Under `~/.config/opencode/`, you might see two configuration files:
+
+- `opencode.jsonc`: Automatically created by OpenCode the first time you add a custom provider from the UI.
+- `opencode.json`: Added by the Olares build for plugin-heavy setups that require frequent manual edits.
+
+OpenCode merges both files at runtime, so having both is expected.
+
+To edit `opencode.jsonc` from Olares Files, you normally rename it to `opencode.json` so Files opens it in the JSON editor. But when `opencode.json` already exists, the rename fails because a file with that name already exists.
+
+**Workaround**:
+
+1. Rename `opencode.jsonc` to a temporary `.json` name, for example `opencode1.json`.
+2. Open `opencode1.json` in Files, make your edits, and save.
+3. Rename `opencode1.json` back to `opencode.jsonc`.

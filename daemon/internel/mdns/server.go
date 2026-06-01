@@ -1,13 +1,16 @@
 package mdns
 
 import (
+	"context"
 	"errors"
 	"net"
 	"os"
 	"strings"
 
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/beclab/Olares/daemon/pkg/tools"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/eball/zeroconf"
 	"k8s.io/klog/v2"
 )
@@ -17,25 +20,45 @@ const (
 	INSTANCE_NAME = "olaresd"
 )
 
-type server struct {
-	server       *zeroconf.Server
-	port         int
-	name         string
-	registeredIP string
-	serviceName  string
+type serverIntf interface {
+	Restart() error
+	Close()
 }
 
-func NewServer(apiPort int) (*server, error) {
+type server struct {
+	server           *zeroconf.Server
+	port             int
+	name             string
+	registeredIP     string
+	serviceName      string
+	isNetworkChanged func() bool
+}
+
+type sunshineServer struct {
+	server
+	ctx context.Context
+}
+
+func NewServer(apiPort int) (serverIntf, error) {
 	s := &server{
-		port:        apiPort,
-		serviceName: SERVICE_NAME,
-		name:        INSTANCE_NAME + "-" + tools.RandomString(6),
+		port:             apiPort,
+		serviceName:      SERVICE_NAME,
+		name:             INSTANCE_NAME + "-" + tools.RandomString(6),
+		isNetworkChanged: utils.RegisterNetworkChangedNotify(),
 	}
 	return s, s.Restart()
 }
 
-func NewSunShineProxyWithoutStart() *server {
-	s := &server{port: 47989, name: "", serviceName: "_nvstream._tcp"}
+func NewSunShineProxyWithoutStart(ctx context.Context) serverIntf {
+	s := &sunshineServer{
+		server: server{
+			port:             47989,
+			name:             "",
+			serviceName:      "_nvstream._tcp",
+			isNetworkChanged: utils.RegisterNetworkChangedNotify(),
+		},
+		ctx: ctx,
+	}
 	return s
 }
 
@@ -44,6 +67,7 @@ func (s *server) Close() {
 		klog.Info("mDNS server shutdown ")
 		s.server.Shutdown()
 		s.registeredIP = "" // clear the registered IP
+		s.server = nil
 	}
 }
 
@@ -88,7 +112,7 @@ func (s *server) Restart() error {
 		hostname = strings.Join([]string{hostname, iptoken[len(iptoken)-1]}, "-")
 	}
 
-	if s.registeredIP != ip {
+	if s.registeredIP != ip || s.isNetworkChanged() {
 		if s.server != nil {
 			s.Close()
 		}
@@ -109,4 +133,33 @@ func (s *server) Restart() error {
 	}
 
 	return nil
+}
+
+func (s *sunshineServer) Restart() error {
+	switch state.CurrentState.TerminusState {
+	case state.NotInstalled, state.Uninitialized, state.InitializeFailed, state.IPChanging:
+		// Stop the sunshine mdns if it's running
+		s.server.Close()
+		return nil
+	default:
+		client, err := utils.GetKubeClient()
+		if err != nil {
+			klog.Error("failed to get kube client: ", err)
+			return nil
+		}
+
+		_, _, role, err := utils.GetThisNodeName(s.ctx, client)
+		if err != nil {
+			klog.Error("failed to get this node role: ", err)
+			return nil
+		}
+
+		if role != "master" {
+			// Only master nodes run the sunshine mdns proxy
+			s.server.Close()
+			return nil
+		}
+
+		return s.server.Restart()
+	}
 }

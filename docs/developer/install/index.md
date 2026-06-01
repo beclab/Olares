@@ -1,13 +1,15 @@
 ---
-description: Technical overview of Olares deployment including system architecture, setup processes, environment configuration, CLI capabilities and version management. Key concepts for developers working with Olares.
+description: Cluster management with olares-cli. How Olares is installed, where its files are stored, which environment variables tune the install, how Olares is versioned, and the alphabetical command reference.
 ---
-# Olares installation deep-dive
+# Cluster management
 
-This section provides in-depth information, command references, and instructions to help you explore, learn, and customize your Olares installation.
+This section covers everything you do with `olares-cli` on the Olares host itself: install Olares on a fresh machine, understand its file layout and environment variables, follow versioning rules, and look up any host-mode command.
 
-- [Olares installation overview](installation-process.md): Learn how Olares is installed from the perspectives of overall architecture and core components.
-- [Olares installation breakdown](installation-process.md): Explore the Olares installation process in detail, broken down into four key phases.
-- [Olares Home introduction](olares-home.md): Understand the structure of the base installation directory.
-- [Olares environment variables reference](environment-variables.md): Find the right environment variables for you to customize the installation.
-- [Olares CLI reference](cli/olares-cli.md): Uses the Olares CLI for advanced customization and troubleshooting during installation.
-- [Olares versioning](versioning.md): Learn versioning rules, release types, branch management practices, and upgrade guidelines of Olares.
+- [Installation architecture](installation-overview.md): how Olares is installed from the perspective of overall architecture and core components.
+- [Installation process](installation-process.md): the install pipeline in detail, broken down into four key phases.
+- [Olares Home](olares-home.md): the structure of the base installation directory.
+- [Environment variables](environment-variables.md): the variables you can set to customize the install.
+- [Olares versioning](versioning.md): versioning rules, release types, branch management practices, and upgrade guidelines.
+- [Command reference](cli/olares-cli.md): alphabetical reference for every host-mode command, with syntax, options, and examples.
+
+For the user-mode and in-cluster surface of `olares-cli`, including how to drive Olares from an AI agent on your laptop or inside an Olares app, see [Use with AI agents](../cli-install.md).

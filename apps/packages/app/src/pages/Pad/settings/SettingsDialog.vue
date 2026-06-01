@@ -42,7 +42,7 @@
 							<q-item-label class="text-body1 text-weight-bold">{{
 								t('account')
 							}}</q-item-label>
-							<q-item-label class="q-pt-md text-color-sub-title">
+							<q-item-label class="q-pt-md text-ink-2">
 								{{ t('settings.account_root_message') }}
 							</q-item-label>
 
@@ -64,7 +64,7 @@
 							<q-item-label class="text-body1 text-weight-bold">{{
 								t('safety')
 							}}</q-item-label>
-							<q-item-label class="q-pt-md text-color-sub-title">
+							<q-item-label class="q-pt-md text-ink-2">
 								{{
 									userStore.passwordReseted
 										? t('change_local_password')
@@ -136,7 +136,7 @@
 								</q-item-label>
 							</q-slide-transition>
 
-							<q-item-label class="q-pt-md text-color-sub-title">
+							<q-item-label class="q-pt-md text-ink-2">
 								{{ t('autolock.reminderTitle') }}
 							</q-item-label>
 						</q-item-section>
@@ -296,7 +296,6 @@ configVersion();
 					}
 
 					.did {
-						color: $sub-title;
 						word-break: break-all;
 					}
 				}
@@ -338,16 +337,15 @@ configVersion();
 				}
 			}
 			.adminBtn {
-				border: 1px solid $yellow;
+				border: 1px solid $primary;
 				background-color: $yellow-1;
 				display: inline-block;
-				color: $sub-title;
 				padding: 6px 12px;
 				border-radius: 8px;
 				cursor: pointer;
 
 				&:hover {
-					background-color: $yellow-3;
+					background-color: $theme-primary-hover;
 				}
 			}
 

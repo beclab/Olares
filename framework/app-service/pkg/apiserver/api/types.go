@@ -1,8 +1,8 @@
 package api
 
 import (
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	imagetypes "github.com/containers/image/v5/types"
 )
 
@@ -18,6 +18,15 @@ const (
 	AppResumeAllKey                  = "bytetrade.io/resume-all"
 	AppStopByControllerDuePendingPod = "bytetrade.io/pending-pod"
 	AppImagesKey                     = "bytetrade.io/images"
+	// AppPreUpgradeStateKey records the ApplicationManager state right
+	// before an UpgradeOp begins. upgrading_app reads it to decide
+	// whether to scale the workloads back up after the helm upgrade or
+	// to land in Stopped (when the pre-upgrade state was Stopped).
+	AppPreUpgradeStateKey = "bytetrade.io/pre-upgrade-state"
+)
+
+const (
+	CodeSuccess int32 = 200
 )
 
 // Response represents the code for response.
@@ -212,8 +221,12 @@ type ImageInfoV2 struct {
 }
 
 var (
-	CheckTypeAppEnv      = "appenv"
-	CheckTypeAppEntrance = "appEntrance"
+	CheckTypeAppEnv                     = "appenv"
+	CheckTypeAppEntrance                = "appEntrance"
+	CheckTypeComputeModeSelect          = "computeModeSelect"
+	CheckTypeComputeBindingRequired     = "computeBindingRequired"
+	CheckTypeComputeBindingUnavailable  = "computeBindingUnavailable"
+	CheckTypeComputeDeviceSwitchBlocked = "computeDeviceSwitchBlocked"
 )
 
 type FailedCheckResponse struct {

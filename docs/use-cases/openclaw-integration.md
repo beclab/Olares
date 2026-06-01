@@ -5,11 +5,22 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, channel integration, Discord integration
+app_version: "1.0.1"
+doc_version: "2.0"
+doc_updated: "2026-05-27"
 ---
 
 # Integrate with Discord
 
-To chat with your agent remotely, connect it to a Discord bot.
+Connect your agent to a Discord bot to chat with it remotely.
+
+## Learning objectives
+
+In this guide, you will learn how to:
+- Create a Discord bot and generate an API token.
+- Invite the bot to your Discord server with the required permissions.
+- Connect the bot to OpenClaw and configure channel access policies.
+- Pair your Discord account with the bot so you can chat with your agent.
 
 ## Prerequisites
 
@@ -20,6 +31,7 @@ To chat with your agent remotely, connect it to a Discord bot.
 
 1. Log in to the [Discord Developer Portal](https://discord.com/developers/applications) with your Discord account.
 2. Click **New Application**.
+
     ![New application in Discord developer portal](/images/manual/use-cases/new-app.png#bordered){width=90%}
 
 3. Enter a name for the new app, agree to terms, and then click **Create**.
@@ -32,6 +44,7 @@ To chat with your agent remotely, connect it to a Discord bot.
     - Presence Intent
     - Server Members Intent
     - Message Content Intent
+
 6. Click **Save Changes**.
 7. Scroll up to the **Token** section, click **Reset Token**, and then copy the generated token for your Discord bot. You need the token for channel configuration later in Control UI.
 
@@ -56,8 +69,59 @@ To chat with your agent remotely, connect it to a Discord bot.
 
     ![Bot added to server](/images/manual/use-cases/bot-added.png#bordered)
 
-## Step 3: Configure channel
+## Step 3: Configure the channel
 
+Run the OpenClaw configuration wizard to connect your Discord bot.
+
+1. Open the OpenClaw CLI.
+2. Run the following command to start the configuration wizard:
+
+    ```bash
+    openclaw configure --section channels
+    ```
+
+3. Configure the settings as follows:
+
+   | Settings | Option |
+   |:---------|:-------|
+   | Where will the Gateway run | Local (this machine) |
+   | Channels | Configure/link |
+   | Select a channel | Discord (Bot API) |
+   | How do you want to provide this Discord bot token | Enter Discord bot token |
+   | Enter Discord bot token | Paste the bot token from [Step 1](#step-1-create-a-discord-bot) |
+   | Configure Discord channels access | Yes |
+   | Discord channels access | Open (allow all channels) |
+   | Select a channel | Finished |
+   | Configure DM access policies now?<br>(default: pairing) | Yes |
+   | Discord DM policy | Pairing (recommended) |
+
+<!--0527
+1. Open the Files app, and then go to **Data** > **clawdbot** > **config**.
+2. Double-click the `openclaw.json` file to open it.
+3. Click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner to enter the edit mode.
+4. Add the following `channels` section to the configuration file. 
+
+    This configuration enables Discord Direct Messages (DMs) and sets the DM policy to `pairing` for security.
+
+    ```json
+    "channels": {
+        "discord": {
+        "enabled": true,
+        "token": "{YOUR_BOT_TOKEN}",
+        "allowBots": true,
+        "dm": {
+            "enabled": true,
+            "policy": "pairing"
+        }
+        }
+    },
+    ```
+5. Replace `{YOUR_BOT_TOKEN}` with your Discord bot token.
+6. Click <i class="material-symbols-outlined">save</i> in the upper-right corner to save the changes.
+7. Return to the Control UI, and then select **Channels** from the left sidebar. On the Discord card, a **Probe ok** status indicates the connection is successful.
+-->   
+
+<!--
 Connect OpenClaw to your Discord bot by adding its configuration in the Control UI.
 
 :::info About channel configuration
@@ -91,12 +155,13 @@ This tutorial provides the basic setup to get your bot running in Discord quickl
 3. Replace `{YOUR_BOT_TOKEN}` with your Discord bot token.
 4. Click **Save**.
 5. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
+-->
 
 ## Step 4: Authorize your account
 
 For security, the bot does not talk to unauthorized users. You must pair your Discord account with the bot.
 
-1. Open Discord and send a Direct Message to your new bot. The bot will reply with an error message containing a Pairing Code.
+1. Open Discord and send a Direct Message (DM) to your new bot. The bot will reply with an error message containing a Pairing Code.
 2. Open the OpenClaw CLI and enter the following command:
 
     ```bash

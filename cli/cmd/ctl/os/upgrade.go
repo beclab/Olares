@@ -20,7 +20,7 @@ func NewCmdUpgradeOs() *cobra.Command {
 		Use:   "upgrade",
 		Short: "Upgrade Olares to a newer version",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := pipelines.UpgradeOlaresPipeline(); err != nil {
+			if err := pipelines.UpgradeOlaresPipeline(cmd.Context()); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},
@@ -93,7 +93,7 @@ func NewCmdUpgradePrecheck() *cobra.Command {
 		Use:   "precheck",
 		Short: "Precheck Olares for Upgrade",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := pipelines.UpgradePreCheckPipeline(); err != nil {
+			if err := pipelines.UpgradePreCheckPipeline(cmd.Context()); err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},

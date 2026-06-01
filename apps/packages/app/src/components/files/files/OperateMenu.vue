@@ -105,8 +105,8 @@ watch(
 		eventType.isShareRoot = false;
 
 		const fileId = newVal[1][0];
-		const selectFiles =
-			filesStore.currentFileList[props.origin_id]?.items?.[fileId];
+
+		const selectFiles = filesStore.getTargetFileItem(fileId, props.origin_id);
 
 		const permission = filesStore.currentFileList[props.origin_id]?.permission;
 		eventType.rw = true;
@@ -207,8 +207,8 @@ const filterItem = (item: any) => {
 
 	const hasSelected = filesStore.currentFileList[
 		props.origin_id
-	]?.items?.filter((_, index) => {
-		return filesStore.selected[props.origin_id].includes(index);
+	]?.items?.filter((item) => {
+		return filesStore.selected[props.origin_id].includes(item.index);
 	});
 
 	const hasSameValue = hasSelected?.find((item) =>

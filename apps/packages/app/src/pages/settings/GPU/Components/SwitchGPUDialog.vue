@@ -1,7 +1,11 @@
 <template>
 	<bt-custom-dialog
 		ref="CustomRef"
-		:title="t('Switch GPU')"
+		:title="
+			t('Switch {app} to another GPU', {
+				app: appTitle
+			})
+		"
 		:skip="false"
 		:ok="t('confirm')"
 		size="medium"
@@ -11,7 +15,7 @@
 		:ok-disabled="!enableCreate"
 	>
 		<div class="text-body3 q-mb-sm">
-			{{ t('base.app') }}
+			{{ t('Select GPU') }}
 		</div>
 		<GPUSelect
 			v-model="gpuId"
@@ -26,7 +30,7 @@
 		<terminus-edit
 			v-if="memeryInput"
 			v-model="memoryLimit"
-			:label="t('Memroy')"
+			:label="t('Memory')"
 			:show-password-img="false"
 			class="q-mt-md"
 			:is-error="
@@ -92,30 +96,28 @@ const gpuList = gpuStore.gpuList.map((e) => {
 });
 
 const submitGPU = () => {
-	const needUnbindNodes: GPUInfo[] = gpuStore.gpuList.filter(
-		(e) =>
-			e.nodeName != pCurrentGPU.value.nodeName &&
-			e.apps?.find((app) => app.appName == props.appName) != undefined
-	);
+	let needUnbindNodes: GPUInfo[] = [];
+	const currentGpu = gpuStore.gpuList.find((e) => e.id == props.currentGPU.id);
+	if (currentGpu && currentGpu.nodeName == pCurrentGPU.value.nodeName) {
+		needUnbindNodes = [currentGpu];
+	} else {
+		needUnbindNodes = gpuStore.gpuList.filter(
+			(e) =>
+				e.nodeName != pCurrentGPU.value.nodeName &&
+				e.apps?.find((app) => app.appName == props.appName) != undefined
+		);
+	}
 
 	$q.dialog({
 		component: ReminderDialogComponent,
 		componentProps: {
-			message: t(
-				'Are you sure to unbind “{app}” from the “{cgpus}” and bind to {tgpu}?',
-				{
-					app: props.appTitle,
-					cgpus: needUnbindNodes
-						.map(
-							(e) => `${e.type}${e.index ? '-' + e.index : ''}(${e.nodeName})`
-						)
-						.join(','),
-					tgpu: `${pCurrentGPU.value.type}${
-						pCurrentGPU.value.index ? '-' + pCurrentGPU.value.index : ''
-					}(${pCurrentGPU.value.nodeName})`
-				}
-			),
-			title: t('Unbind App'),
+			message: t('This will switch “{app}” from the current GPU to {tgpu}', {
+				app: props.appTitle,
+				tgpu: `${pCurrentGPU.value.type}${
+					pCurrentGPU.value.index ? '-' + pCurrentGPU.value.index : ''
+				}(${pCurrentGPU.value.nodeName})`
+			}),
+			title: t('Switch this app to another GPU'),
 			useCancel: true,
 			confirmText: t('confirm'),
 			cancelText: t('cancel')

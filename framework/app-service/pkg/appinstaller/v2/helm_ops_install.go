@@ -3,13 +3,11 @@ package v2
 import (
 	"context"
 	"errors"
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	v1 "github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"helm.sh/helm/v3/pkg/action"
@@ -54,14 +52,10 @@ func (h *HelmOpsV2) Install() error {
 	}
 
 	var err error
-	values, err := h.SetValues()
+	values, err := h.SetValues(true)
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err
-	}
-	if values["isAdmin"].(bool) {
-		// force set the admin is owner
-		values["admin"] = h.App().OwnerName
 	}
 
 	// in v2, if app is multi-charts and has a cluster shared chart,
@@ -118,17 +112,10 @@ func (h *HelmOpsV2) Install() error {
 	if h.App().Type == appv1alpha1.Middleware.String() {
 		return nil
 	}
-	ok, err := h.WaitForStartUp()
-	if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
-		klog.Errorf("App %s is pending, err=%v", h.App().AppName, err)
-		return err
-	}
-	if !ok {
-		klog.Errorf("App %s is not started, err=%v", h.App().AppName, err)
-		clear()
-		return err
-	}
 
+	// Startup readiness is awaited by the state machine
+	// (pkg/appstate/installing_app.go) after Scale(-1), mirroring v1/v3.
+	// Waiting here as well would make v2 apps poll for startup twice.
 	return nil
 }
 
@@ -142,33 +129,32 @@ func (h *HelmOpsV2) hasClusterSharedCharts() bool {
 
 func (h *HelmOpsV2) install(values map[string]interface{}) (err error, sharedInstalled bool) {
 	for _, chart := range h.App().SubCharts {
-		chartName := utils.GetChartName(h.App().AppName, h.App().RawAppName, chart.Name)
 		if chart.Shared {
 			isAdmin, err := kubesphere.IsAdmin(h.Context(), h.KubeConfig(), h.App().OwnerName)
 			if err != nil {
-				klog.Errorf("Failed to check if user is admin for chart %s: %v", chartName, err)
+				klog.Errorf("Failed to check if user is admin for chart %s: %v", chart.Name, err)
 				return err, sharedInstalled
 			}
 
 			if !isAdmin {
-				klog.Infof("Skipping installation of shared chart %s for non-admin user %s", chartName, h.App().OwnerName)
+				klog.Infof("Skipping installation of shared chart %s for non-admin user %s", chart.Name, h.App().OwnerName)
 				continue
 			}
 		}
 
-		_, err := h.status(chartName)
+		_, err := h.status(chart.Name)
 		if err == nil {
 			if chart.Shared {
-				klog.Infof("chart %s already installed, skipping", chartName)
+				klog.Infof("chart %s already installed, skipping", chart.Name)
 				continue
 			} else {
-				klog.Errorf("chart %s already exists, cannot install again", chartName)
+				klog.Errorf("chart %s already exists, cannot install again", chart.Name)
 				return driver.ErrReleaseExists, sharedInstalled
 			}
 		}
 
 		if !errors.Is(err, driver.ErrReleaseNotFound) {
-			klog.Errorf("Failed to get status for chart %s: %v", chartName, err)
+			klog.Errorf("Failed to get status for chart %s: %v", chart.Name, err)
 			return err, sharedInstalled
 		}
 
@@ -176,7 +162,9 @@ func (h *HelmOpsV2) install(values map[string]interface{}) (err error, sharedIns
 		settings := h.Settings()
 		if chart.Shared {
 			// re-create action config for shared chart
-			actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName, chartName))
+			//actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
+			actionConfig, settings, err = helm.InitConfig(h.KubeConfig(), appcfg.ChartNamespace(&chart, h.App().OwnerName))
+
 			if err != nil {
 				klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 				return err, sharedInstalled
@@ -188,10 +176,10 @@ func (h *HelmOpsV2) install(values map[string]interface{}) (err error, sharedIns
 			h.Context(),
 			actionConfig,
 			settings,
-			chartName,
-			chart.ChartPath(h.App().RawAppName, chart.Name),
+			chart.Name,
+			appcfg.ChartPath(h.App().AppName, chart.Name),
 			h.App().RepoURL,
-			chart.Namespace(h.App().OwnerName, chartName),
+			appcfg.ChartNamespace(&chart, h.App().OwnerName),
 			values,
 		)
 
@@ -212,7 +200,9 @@ func (h *HelmOpsV2) status(releaseName string) (*helmrelease.Release, error) {
 	for _, chart := range h.App().SubCharts {
 		if chart.Shared && chart.Name == releaseName {
 			// re-create action config for shared chart
-			actionConfig, _, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName, chart.Name))
+			//actionConfig, _, err = helm.InitConfig(h.KubeConfig(), chart.Namespace(h.App().OwnerName))
+			actionConfig, _, err = helm.InitConfig(h.KubeConfig(), appcfg.ChartNamespace(&chart, h.App().OwnerName))
+
 			if err != nil {
 				klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
 				return nil, err
@@ -235,9 +225,8 @@ func (h *HelmOpsV2) prepareNamespaces() error {
 	}
 
 	for _, chart := range h.App().SubCharts {
-		chartName := utils.GetChartName(h.App().AppName, h.App().RawAppName, chart.Name)
+		nsName := appcfg.ChartNamespace(&chart, h.App().OwnerName)
 
-		nsName := chart.Namespace(h.App().OwnerName, chartName)
 		ns, err := k8s.CoreV1().Namespaces().Get(h.Context(), nsName, metav1.GetOptions{})
 		create := false
 		if err != nil {

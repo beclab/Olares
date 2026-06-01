@@ -1,0 +1,91 @@
+package resources
+
+import (
+	"sort"
+
+	"helm.sh/helm/v3/pkg/kube"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+)
+
+// ExtractWorkloadImages walks Deployment and StatefulSet resources in list
+// and returns the distinct set of container images declared on the primary
+// Pod template -- including init containers, since they are pulled by every
+// node that schedules the workload exactly like the main containers.
+//
+// DaemonSet is intentionally skipped: the resource-limits and upload-mount
+// checks in walkPodContainers only inspect Deployment / StatefulSet, and the
+// image listing must stay aligned with the set of workloads that actually
+// go through lint — otherwise a DaemonSet could contribute images to the
+// pull list while silently bypassing every other resource-level check.
+//
+// The returned slice is deterministic: sorted alphabetically with duplicates
+// collapsed.
+func ExtractWorkloadImages(list kube.ResourceList) []string {
+	set := make(map[string]struct{})
+	collect := func(spec corev1.PodSpec) {
+		for _, c := range spec.InitContainers {
+			if c.Image != "" {
+				set[c.Image] = struct{}{}
+			}
+		}
+		for _, c := range spec.Containers {
+			if c.Image != "" {
+				set[c.Image] = struct{}{}
+			}
+		}
+	}
+	for _, r := range list {
+		kind := r.Object.GetObjectKind().GroupVersionKind().Kind
+		switch kind {
+		case KindDeployment:
+			var dep appsv1.Deployment
+			if err := scheme.Scheme.Convert(r.Object, &dep, nil); err != nil {
+				continue
+			}
+			collect(dep.Spec.Template.Spec)
+		case KindStatefulSet:
+			var sts appsv1.StatefulSet
+			if err := scheme.Scheme.Convert(r.Object, &sts, nil); err != nil {
+				continue
+			}
+			collect(sts.Spec.Template.Spec)
+		case KindDaemonSet:
+			var ds appsv1.DaemonSet
+			if err := scheme.Scheme.Convert(r.Object, &ds, nil); err != nil {
+				continue
+			}
+			collect(ds.Spec.Template.Spec)
+		}
+	}
+	out := make([]string, 0, len(set))
+	for img := range set {
+		out = append(out, img)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// MergeImages merges additional image entries into an existing, sorted list
+// and returns the sorted, deduped result. Existing order of base is preserved
+// for stability when no new entries change the set.
+func MergeImages(base, extra []string) []string {
+	set := make(map[string]struct{}, len(base)+len(extra))
+	for _, img := range base {
+		if img != "" {
+			set[img] = struct{}{}
+		}
+	}
+	for _, img := range extra {
+		if img != "" {
+			set[img] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(set))
+	for img := range set {
+		out = append(out, img)
+	}
+	sort.Strings(out)
+	return out
+}

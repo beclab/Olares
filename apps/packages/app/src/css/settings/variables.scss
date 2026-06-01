@@ -1,0 +1,24 @@
+@import '../ui/quasar.variables.sass';
+@import '../ui/quasar.popup.scss';
+@import '../ui/quasar.btn.scss';
+@import '../common/files/styles.scss';
+@import './adaptive.scss';
+@import './common.scss';
+
+$primary: $blue-default;
+
+$theme-primary-hover: $blue-3;
+
+$theme-menu-bg-hover: $blue-alpha;
+
+$theme-menu-color-hover: $blue-default;
+
+$theme-input-focus-border: $blue-disabled;
+
+$theme-background-light: $background-1;
+
+$theme-background-dark: $background-1;
+
+$theme-background-light-mobile: $background-3;
+
+$theme-background-dark-mobile: $background-3;

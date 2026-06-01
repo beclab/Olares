@@ -121,6 +121,7 @@ import { OlaresInfo, TerminusInfo } from '@bytetrade/core';
 import TerminusExportMnemonicRoot from '../../../../components/common/TerminusExportMnemonicRoot.vue';
 import TerminusChangeUserHeader from '../../../../components/common/TerminusChangeUserHeader.vue';
 import UserStatusCommonDialog from '../../../../components/userStatusDialog/UserStatusCommonDialog.vue';
+import { getNativeAppPlatform } from 'src/application/platform';
 
 import { useI18n } from 'vue-i18n';
 import { busEmit } from '../../../../utils/bus';
@@ -170,12 +171,13 @@ async function goToScanPage() {
 	}
 	if (process.env.IS_PC_TEST) {
 		router.push({ path: '/scan_local' });
+		return;
+	}
+	if ($q.platform.is.nativeMobile) {
+		const platform = getNativeAppPlatform();
+		await platform.scanQRCodeForActivate();
 	} else {
-		if ($q.platform.is.nativeMobile) {
-			router.push({ path: '/scan' });
-		} else {
-			router.push({ path: '/scan_local' });
-		}
+		router.push({ path: '/scan_local' });
 	}
 }
 

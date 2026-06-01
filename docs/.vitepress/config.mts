@@ -5,6 +5,10 @@ import { zh } from "./zh";
 import _ from "lodash";
 //import defaultConfig from 'vitepress-versioning-plugin';
 
+// Paths collected during transformPageData so sitemap.transformItems can
+// filter them out without re-reading frontmatter from disk.
+const noindexPaths = new Set<string>();
+
  
 
 function defineVersionedConfig2(
@@ -113,8 +117,31 @@ export default defineVersionedConfig2(withMermaid({
     },
   },
 
+  transformPageData(pageData) {
+    // Opt a page out of Google/Bing/Algolia indexing by adding `noindex: true`
+    // to its frontmatter. Implemented here (rather than per-file `head`) so
+    // we don't shift source line numbers, which would break `@include` ranges
+    // in files that embed this one as a snippet.
+    if (pageData.frontmatter?.noindex) {
+      pageData.frontmatter.head ??= [];
+      pageData.frontmatter.head.push([
+        'meta',
+        { name: 'robots', content: 'noindex, nofollow' },
+      ]);
+      noindexPaths.add(pageData.relativePath.replace(/\.md$/, '.html'));
+    }
+  },
+
   sitemap: {
     hostname: "https://docs.olares.com/",
+    transformItems: (items) =>
+      // Drop noindex pages from sitemap.xml so crawlers don't even discover
+      // them via the sitemap. The meta tag above is what ultimately removes
+      // them from search engine indexes; this just avoids the extra hit.
+      items.filter((item) => {
+        const p = item.url.replace(/^\/+/, '');
+        return !noindexPaths.has(p);
+      }),
   },
   lastUpdated: true,
   base: process.env.BASE_URL || "/",

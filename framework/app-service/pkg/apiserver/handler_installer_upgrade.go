@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
@@ -17,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +27,7 @@ import (
 
 type upgradeHelperIntf interface {
 	getAdminUsers() (admin []string, isAdmin bool, err error)
-	getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (err error)
+	getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (appConfig *appcfg.ApplicationConfig, err error)
 	validate() error
 	applyAppEnv(ctx context.Context) error
 	setAndEncodingAppCofnig(prevCfg *appcfg.ApplicationConfig) (string, error)
@@ -52,8 +52,17 @@ type upgradeHandlerHelperV2 struct {
 	*upgradeHandlerHelper
 }
 
+// upgradeHandlerHelperV3 reuses the v1 upgrade flow but treats the caller as
+// admin (v3 apps are admin-managed; the gate above
+// already verified that). Concretely it overrides getAppConfig to always
+// pass IsAdmin=true and Admin=h.owner so GetAppConfig doesn't try to install
+// the upgrade as a different user.
+type upgradeHandlerHelperV3 struct {
+	*upgradeHandlerHelper
+}
+
 func (h *upgradeHandlerHelper) getAdminUsers() (admins []string, isAdmin bool, err error) {
-	adminList, err := kubesphere.GetAdminUserList(h.req.Request.Context(), h.h.kubeConfig)
+	adminList, err := kubesphere.GetOwnerOrAdminList(h.req.Request.Context(), h.h.kubeConfig)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
 		return
@@ -70,7 +79,7 @@ func (h *upgradeHandlerHelper) getAdminUsers() (admins []string, isAdmin bool, e
 	return
 }
 
-func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (err error) {
+func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (*appcfg.ApplicationConfig, error) {
 	var admin string
 	if !prevCfg.AppScope.ClusterScoped {
 		// installed as non-admin
@@ -101,11 +110,11 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
-		return
+		return nil, err
 	}
 
 	h.appConfig = appConfig
-	return nil
+	return appConfig, nil
 }
 
 func (h *upgradeHandlerHelper) validate() error {
@@ -174,13 +183,35 @@ func (h *upgradeHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	return
 }
 
-func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (err error) {
+func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (*appcfg.ApplicationConfig, error) {
+	klog.Info("Getting app config for V3")
+	appConfig, _, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+		App:          h.app,
+		Owner:        h.owner,
+		RepoURL:      h.request.RepoURL,
+		Version:      h.request.Version,
+		Token:        h.token,
+		Admin:        h.owner,
+		MarketSource: marketSource,
+		IsAdmin:      true,
+		RawAppName:   h.rawAppName,
+		SelectedGpu:  prevCfg.SelectedGpuType,
+	})
+	if err != nil {
+		api.HandleError(h.resp, h.req, err)
+		return nil, err
+	}
+	h.appConfig = appConfig
+	return appConfig, nil
+}
+
+func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (*appcfg.ApplicationConfig, error) {
 	klog.Info("Getting app config for V2")
 	if len(adminUsers) == 0 {
 		err := fmt.Errorf("no admin users found")
 		klog.Error(err)
 		api.HandleError(h.resp, h.req, err)
-		return err
+		return nil, err
 	}
 
 	var admin string
@@ -204,12 +235,12 @@ func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
-		return
+		return nil, err
 	}
 
 	h.appConfig = appConfig
 
-	return nil
+	return appConfig, nil
 }
 
 func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
@@ -235,7 +266,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	}
 
 	var appMgr appv1alpha1.ApplicationManager
-	appMgrName, err := apputils.FmtAppMgrName(app, owner, "")
+	appMgrName, isV3, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -244,6 +275,18 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
+	}
+
+	if isV3 || appcfg.IsV3(&appMgr) {
+		isAdmin, ierr := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
+		if ierr != nil {
+			api.HandleError(resp, req, ierr)
+			return
+		}
+		if !isAdmin {
+			api.HandleForbidden(resp, req, fmt.Errorf("only admin users can upgrade v3 app %q", app))
+			return
+		}
 	}
 
 	if appMgr.Spec.Source != request.Source.String() {
@@ -267,7 +310,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	if appMgr.Spec.RawAppName != "" {
 		rawAppName = appMgr.Spec.RawAppName
 	}
-	apiVersion, _, err := apputils.GetApiVersionFromAppConfig(req.Request.Context(), &apputils.ConfigOptions{
+	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        owner,
@@ -283,7 +326,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	var helper upgradeHelperIntf
 	switch apiVersion {
 	case appcfg.V1:
-		klog.Info("Using install handler helper for V1")
+		klog.Info("Using upgrade handler helper for V1")
 		h := &upgradeHandlerHelper{
 			h:          h,
 			req:        req,
@@ -297,8 +340,24 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 
 		helper = h
 	case appcfg.V2:
-		klog.Info("Using install handler helper for V2")
+		klog.Info("Using upgrade handler helper for V2")
 		h := &upgradeHandlerHelperV2{
+			upgradeHandlerHelper: &upgradeHandlerHelper{
+				h:          h,
+				req:        req,
+				resp:       resp,
+				request:    request,
+				app:        app,
+				rawAppName: rawAppName,
+				owner:      owner,
+				token:      token,
+			},
+		}
+
+		helper = h
+	case appcfg.V3:
+		klog.Info("Using upgrade handler helper for V3")
+		h := &upgradeHandlerHelperV3{
 			upgradeHandlerHelper: &upgradeHandlerHelper{
 				h:          h,
 				req:        req,
@@ -325,14 +384,14 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	}
 
 	var prevCfg appcfg.ApplicationConfig
-	err = appMgr.GetAppConfig(&prevCfg)
+	err = appcfg.GetAppConfig(&appMgr, &prevCfg)
 	if err != nil {
 		klog.Errorf("Failed to get previous app config err=%v", err)
 		api.HandleError(resp, req, err)
 		return
 	}
 
-	err = helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
+	_, err = helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
@@ -381,6 +440,11 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	appCopy.Annotations[api.AppVersionKey] = request.Version
 	appCopy.Annotations[api.AppTokenKey] = token
 	appCopy.Annotations[api.AppMarketSourceKey] = marketSource
+	// Snapshot the pre-upgrade state so upgrading_app can decide whether
+	// to scale workloads back up after the helm upgrade. When the app was
+	// already Stopped, the upgrade should land back in Stopped with the
+	// new chart version installed at replicas=0.
+	appCopy.Annotations[api.AppPreUpgradeStateKey] = string(appMgr.Status.State)
 
 	err = h.ctrlClient.Patch(req.Request.Context(), appCopy, client.MergeFrom(&appMgr))
 	if err != nil {

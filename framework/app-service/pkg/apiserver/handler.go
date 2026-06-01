@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/informers/externalversions"
-	lister_v1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/generated/listers/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
+	"github.com/beclab/api/pkg/generated/informers/externalversions"
+	lister_v1alpha1 "github.com/beclab/api/pkg/generated/listers/app.bytetrade.io/v1alpha1"
 
 	// upgrade removed from direct usage in handlers
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
@@ -117,7 +117,7 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = wh.CreateOrUpdateApplicationManagerMutatingWebhook()
+	err = wh.DeleteAppManagerMutatingWebhook()
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +126,10 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 		return nil, err
 	}
 	err = wh.CreateOrUpdateArgoResourceValidatingWebhook()
+	if err != nil {
+		return nil, err
+	}
+	err = wh.CreateOrUpdateMacvlanInitMutatingWebhook()
 	if err != nil {
 		return nil, err
 	}

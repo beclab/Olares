@@ -1,48 +1,63 @@
 ---
-description: Explore Vane for advanced AI-driven search and Q&A with Olares. Learn how to set up Vane with ease.
+outline: [2, 3]
+description: Set up Vane (previously Perplexica) on Olares for private, AI-powered search and Q&A. Use local LLMs with Ollama and SearXNG as the search backend.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Vane, Perplexica, AI search, privacy, Ollama, SearXNG, self-hosted
+app_version: "1.12.0"
+doc_version: "1.2"
+doc_updated: "2026-04-17"
 ---
 # Set up a privacy-focused AI search engine with Vane
 
-Vane is an open-source AI-powered search engine that delivers intelligent, privacy-focused search. It was previously known as Perplexica. As an alternative to Perplexity AI, Vane combines advanced machine learning with comprehensive web search to provide accurate, source-cited answers.
+Vane (previously Perplexica) is an open-source AI-powered answering engine. It combines web search with local or cloud LLMs to deliver cited, conversational answers while keeping your queries private.
 
-This guide will use Ollama as the model provider and SearXNG as the search provider.
+This guide uses Ollama as the model provider and SearXNG as the search backend.
 
 ## Prerequisites
+
 Before you begin, make sure:
-- Ollama installed and running in your Olares environment.
-- At least one model installed using Ollama.
+- [Ollama is installed](ollama.md) and running in your Olares environment.
+- At least one chat model is installed in Ollama. An embedding model is optional, since Vane ships with built-in ones.
 
 ## Install SearXNG
-SearXNG serves as the privacy-focused meta-search engine backend for Vane. It:
-* Aggregates results from multiple search engines
-* Removes tracking and preserves your privacy
-* Provides clean, unbiased search results for the AI model to process
 
-This integration enables Vane to function as a complete search solution while maintaining the security of your sensitive information.
+SearXNG is a privacy-focused meta-search engine that aggregates results from multiple search engines without tracking users. Vane uses it to fetch clean, unbiased results for the AI model to process.
 
-1. In **Market**, search for "SearXNG".
+1. Open Market and search for "SearXNG".
    ![SearXNG](/images/manual/use-cases/perplexica-searxng.png#bordered)
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
 ## Install Vane
-With the search backend now running, you can install the main Vane app.
-1. Open **Market**, and search for "Vane".
+
+1. Open Market and search for "Vane".
    ![Vane](/images/manual/use-cases/vane.png#bordered)
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
 ## Configure Vane
-1. Launch Vane, and click <i class="material-symbols-outlined">settings</i> in the bottom left corner to open the **Settings** page.
-2. Under **Model Settings**, set **Ollama** as the **Chat Model Provider** and the **Embedding Model Provider**.
-3. Select your preferred model for the **Chat Model** and **Embedding Model**.
-   ![Vane configurations](/images/manual/use-cases/perplexica-configurations1.png#bordered)
 
-4. Adjust any other settings as needed.
+1. Launch Vane. A setup wizard opens on first launch, with Ollama and its installed models detected automatically.
+   ![Manage connections](/images/manual/use-cases/vane-manage-connections.png#bordered)
 
-The changes will be automatically applied.
+2. Click **Next**.
+3. Select a chat model and an embedding model, then click **Finish**.
+   ![Configure models](/images/manual/use-cases/vane-configure-models.png#bordered)
+
+   :::tip Embedding model options
+   If you don't have an embedding model in Ollama, you can pick one of Vane's built-in embedding models instead.
+   :::
+
+You're taken to the main chat page. To change models or connections later, click <i class="material-symbols-outlined">settings</i> in the bottom-left corner to open the **Settings** page.
 
 ## Start asking questions
-Once the setup is complete, go back to the main page. Try searching for a topic you're interested in to test your new, private search environment.
-![Vane example](/images/manual/use-cases/perplexica-example-question1.png#bordered)
 
+Try a search to test your new private search environment.
+![Vane example](/images/manual/use-cases/vane-example-question.png#bordered)
+
+## Learn more
+
+- [Ollama](ollama.md): Run local LLMs on Olares as Vane's model backend.
+- [Vane on GitHub](https://github.com/ItzCrazyKns/Vane): Upstream project README, architecture notes, and community Discord.

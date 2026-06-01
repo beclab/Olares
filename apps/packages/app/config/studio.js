@@ -4,9 +4,10 @@ const boot = [
 	'baseAxios',
 	'studioUI',
 	'studio-i18n',
-	'application/studio'
+	'application/studio',
+	'adaptive-body-class'
 ];
-const css = ['studio/app.scss'];
+const css = ['studio/app.scss', 'quasar-layout.scss'];
 
 const proxyTarget = `${process.env.STUDIO_SUB_DOMAIN}.${process.env.ACCOUNT_DOMAIN}`;
 

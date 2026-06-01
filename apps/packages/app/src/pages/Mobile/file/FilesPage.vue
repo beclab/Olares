@@ -92,7 +92,7 @@ import ListingFilesFooter from './ListingFilesFooter.vue';
 import { useQuasar } from 'quasar';
 import { useFilesStore, FilesIdType, PickType } from '../../../stores/files';
 import { useDataStore } from '../../../stores/data';
-import { commonV2 } from '../../../api';
+import { common } from '../../../api';
 import { FilesSortType, OPERATE_ACTION } from '../../../utils/contact';
 import { hideHeaderOpt } from '../../../utils/file';
 import { useOperateinStore } from '../../../stores/operation';
@@ -100,6 +100,7 @@ import PopupMenu from './PopupMenu.vue';
 import AddFiles from './AddFiles.vue';
 import { useI18n } from 'vue-i18n';
 import FilterMobileView from '../../../components/files/share/FilterMobileView.vue';
+import { DriveType } from 'src/utils/interface/files';
 
 const props = defineProps({
 	origin_id: {
@@ -128,7 +129,8 @@ const isDark = ref(false);
 
 const selectIds = ref(null);
 const FilesListRef = ref();
-const { t } = useI18n();
+
+const isLarePass = process.env.APPLICATION === 'LAREPASS';
 
 const closeDialog = () => {
 	emits('close');
@@ -169,7 +171,7 @@ const showFloatingButton = computed(() => {
 });
 
 const isShareRoot = computed(() => {
-	return commonV2.isShareRootPage(route.path);
+	return common().isShareRootPage(route.path);
 });
 
 const showSelectMode = (value) => {
@@ -205,15 +207,38 @@ const showFilter = () => {
 };
 
 const onReturnAction = () => {
-	console.log('onReturnAction', filesStore.backStack);
 	if (props.origin_id) {
 		if (filesStore.backStack[props.origin_id].length === 1) {
 			emits('back');
 		}
+		filesStore.back(props.origin_id);
 	} else {
-		router.go(-1);
+		if (isLarePass) {
+			router.go(-1);
+			filesStore.back(props.origin_id);
+		} else {
+			if (filesStore.backStack[0].length > 1) {
+				router.back();
+				filesStore.back(props.origin_id);
+			} else {
+				if (
+					filesStore.activeMenu(origin_id.value).driveType == DriveType.Sync
+				) {
+					if (
+						window.history &&
+						window.history.state &&
+						!window.history.state.back
+					) {
+						router.replace('/Files/');
+						return;
+					}
+					router.back();
+				} else {
+					router.replace('/Files/');
+				}
+			}
+		}
 	}
-	filesStore.back(props.origin_id);
 };
 
 const addFile = () => {
@@ -310,10 +335,11 @@ const fileSort = (sort: FilesSortType) => {
 	if (filesStore.activeSort[origin_id.value].by == sort) {
 		filesStore.updateActiveSort(
 			sort,
-			!filesStore.activeSort[origin_id.value].asc
+			!filesStore.activeSort[origin_id.value].asc,
+			origin_id.value
 		);
 	} else {
-		filesStore.updateActiveSort(sort, true);
+		filesStore.updateActiveSort(sort, true, origin_id.value);
 	}
 };
 
@@ -340,7 +366,7 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .files-list-root {
-	width: 100vw;
+	width: 100%;
 	height: 100%;
 
 	.content {

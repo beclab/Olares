@@ -1,24 +1,21 @@
 ---
 outline: [2, 3]
+description: 在 Olares 主机上运行的所有 olares-cli 命令的字母顺序参考。包含语法、结构，以及指向各命令详情页（含选项和示例）的链接。
 ---
-# Olares 命令行工具
+# 命令参考
 
-:::warning 版本兼容信息
-此 Olares CLI 版本适用于 Olares 1.12.X。
+本页是在 Olares 主机上运行的所有 `olares-cli` 命令的字母顺序参考。你可以在这里查找某条命令的语法、选项和示例。对于以登录用户身份、或在 Olares 应用内部运行的命令，参见[搭配 AI Agent 使用](../../cli-overview.md#了解更多)。
+
+:::warning 适用于 Olares 1.12.X
+如果你的 Olares 版本是 1.12.X，请使用此版本的参考。
 :::
-
-Olares 命令行工具（Olares CLI）面向开发者和系统管理员，用于管理和排查 Olares 系统，提供从安装配置到资源管理和诊断等多种功能。
-
-使用 Olares 命令行工具，你可以简化系统兼容性验证、资源下载、节点管理、日志收集等任务。本文档将介绍命令行工具的语法，并详细说明各类操作的可用命令。
 
 :::info 需要 root 权限
 大多数 `olares-cli` 命令都需要 root 权限。请使用 root 用户执行命令，或在命令前加上 `sudo`。
 :::
 
-:::info 在 WSL 中使用 Olares CLI
-如果通过 WSL（Windows Subsystem for Linux）方式安装了 Olares，需要在 WSL 环境中使用 `olares-cli`。
-
-在 PowerShell 中执行以下命令进入 WSL：
+:::info 在 WSL 中使用 olares-cli
+如果通过 WSL（Windows Subsystem for Linux）方式安装了 Olares，请在 WSL 环境中运行 `olares-cli`。在 PowerShell 中：
 
 ```powershell
 wsl -d Ubuntu
@@ -60,6 +57,7 @@ Olares 命令行工具使用如下语法：
 | `prepare` | `olares-cli prepare [选项]` | 为安装过程准备环境，包括设置 Olares 的基础服务和配置。 |
 | `release` | `olares-cli release [选项]` | 打包 Olares 安装资源以供分发或部署。|
 | `start` | `olares-cli start [选项]` | 启动 Olares 服务和组件。 |
+| `status` | `olares-cli status [选项]` | 查询本机 olaresd 守护进程，输出当前 Olares 系统状态。 |
 | `stop` | `olares-cli stop [选项]` | 停止 Olares 服务和组件。 |
 | `uninstall` | `olares-cli uninstall [选项]` | 完全卸载 Olares，或将安装回滚到特定阶段。 |
 | `upgrade` | `olares-cli upgrade <子命令> [选项]` | 升级 Olares，检查升级准备情况与兼容性。 |

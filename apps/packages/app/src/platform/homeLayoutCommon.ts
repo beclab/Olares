@@ -1,3 +1,4 @@
+import { getAppPlatform } from 'src/application/platform';
 import { app } from 'src/globals';
 import { useUserStore } from 'src/stores/user';
 import { sendLock } from 'src/utils/bexFront';
@@ -63,7 +64,7 @@ async function _doSync() {
 	_syncTimeout = setTimeout(async () => {
 		if (app.state.loggedIn && !app.state.locked) {
 			try {
-				await app.synchronize();
+				await getAppPlatform().vaultSync();
 			} catch (e) {
 				console.error(e);
 			}

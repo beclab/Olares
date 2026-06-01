@@ -32,6 +32,7 @@ jobs:
       version: ${{ github.event.inputs.tags }}
       release-id: ${{ needs.release-id.outputs.id }}
       ref: ${{ github.event.inputs.tags }}
+      publish-npm: false
 
   release-daemon:
     needs: [release-id]
@@ -240,7 +241,24 @@ jobs:
       - name: Package installer
         run: |
           bash build/build.sh ${{ github.event.inputs.tags }} ${{ needs.release-id.outputs.id }}
-          
+
+      - name: Download CLI release assets
+        env:
+          VERSION: ${{ github.event.inputs.tags }}
+          RELEASE_ID: ${{ needs.release-id.outputs.id }}
+          REPO_PATH: ${{ secrets.REPO_PATH }}
+        run: |
+          mkdir -p cli-output
+          for target in linux_amd64 linux_arm linux_arm64 darwin_amd64 darwin_arm64 windows_amd64 windows_arm64; do
+            # with-release-id (existing — base-package install.sh consumes this)
+            file="olares-cli-v${VERSION}_${target}.${RELEASE_ID}.tar.gz"
+            curl -sSfL -o "cli-output/${file}" "https://cdn.olares.com${REPO_PATH}${file}"
+            # without-release-id (NEW — @olares/cli npm postinstall consumes this stable name)
+            file_npm="olares-cli-v${VERSION}_${target}.tar.gz"
+            curl -sSfL -o "cli-output/${file_npm}" "https://cdn.olares.com${REPO_PATH}${file_npm}"
+          done
+
+
       - name: 'Archives'
         run: |
           cp .dist/install-wizard/install.sh build/base-package
@@ -266,6 +284,7 @@ jobs:
             build/base-package/joincluster.sh
             build/base-package/version.hint
             build/base-package/publicRestoreInstaller.sh
+            cli-output/*.tar.gz
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

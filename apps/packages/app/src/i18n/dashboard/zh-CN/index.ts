@@ -68,7 +68,7 @@ const options = {
 	FAN_DETAILS: '风扇详情',
 	NETWORK_DETAILS: '网络详情',
 	THREAD: '线程',
-	APP_STATUS: AppStatus.app,
+	APP_STATUS: { ...AppStatus.app, downloading: '下载中' },
 	start_autoplay_metrics_refresh: '开始自动刷新',
 	stop_autoplay_metrics_refresh: '停止自动刷新'
 };

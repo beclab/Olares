@@ -47,18 +47,18 @@ const props = defineProps({
 
 const deviceStore = useDeviceStore();
 
+const numTotal = computed(() => Number(props.total) || 0);
+const numUsage = computed(() => Number(props.usage) || 0);
+
 const totalFormat = computed(() => {
 	if (props.unitKey == 'cpu') {
-		if (!props.total) {
-			return 'NaN';
+		if (!numTotal.value) {
+			return 0;
 		}
-		if (typeof props.total == 'string') {
-			return Number(parseFloat(props.total as any).toFixed(2));
-		}
-		return Number(props.total.toFixed(2));
+		return Number(numTotal.value.toFixed(2));
 	}
 	const _unit = getSuitableUnit(
-		props.total || props.usage,
+		numTotal.value || numUsage.value,
 		props.unitKey as any
 	);
 	return getValueByUnit(`${props.total}`, _unit);
@@ -66,26 +66,23 @@ const totalFormat = computed(() => {
 
 const usageFormat = computed(() => {
 	if (props.unitKey == 'cpu') {
-		if (!props.usage) {
-			return 'NaN';
+		if (!numUsage.value) {
+			return 0;
 		}
-		if (typeof props.usage == 'string') {
-			return Number(parseFloat(props.usage as any).toFixed(2));
-		}
-		return Number(props.usage.toFixed(2));
+		return Number(numUsage.value.toFixed(2));
 	}
 	const _unit = getSuitableUnit(
-		props.total || props.usage,
+		numTotal.value || numUsage.value,
 		props.unitKey as any
 	);
 	return getValueByUnit(`${props.usage}`, _unit);
 });
 
 const percent = computed(() => {
-	if (!props.total || !props.usage) {
+	if (!numTotal.value || !numUsage.value) {
 		return 0;
 	}
-	return Number(((props.usage / props.total) * 100).toFixed(0));
+	return Number(((numUsage.value / numTotal.value) * 100).toFixed(0));
 });
 
 const progressColor = computed(() => {

@@ -13,7 +13,7 @@ func NewCmdAddNode() *cobra.Command {
 		Use:   "add",
 		Short: "add worker node to the cluster",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := pipelines.AddNodePipeline(); err != nil {
+			if err := pipelines.AddNodePipeline(cmd.Context()); err != nil {
 				log.Fatal(err)
 			}
 		},

@@ -68,6 +68,15 @@ export const useUserStore = defineStore('userStore', {
 
 	actions: {
 		setUser(user: User) {
+			if (user?.social?.data && Array.isArray(user.social.data)) {
+				const seen = new Set<string>();
+				user.social.data = user.social.data.filter((item) => {
+					if (!item || typeof item !== 'object' || !item.platform) return false;
+					if (seen.has(item.platform)) return false;
+					seen.add(item.platform);
+					return true;
+				});
+			}
 			this.user = user;
 		},
 

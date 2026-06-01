@@ -1,24 +1,21 @@
 ---
 outline: [2, 3]
+description: Alphabetical reference for every olares-cli command that runs on the Olares host. Syntax, structure, and links to per-command pages with options and examples.
 ---
-# Olares CLI
+# Command reference
 
-:::warning Note
-Use this version of Olares CLI if your Olares version is 1.12.X.
+This page is the alphabetical reference for every `olares-cli` command that runs on the Olares host. Use it to look up syntax, options, and examples for a specific command. For commands that run on behalf of a logged-in user or inside an Olares app, see [Use with AI agents](../../cli-overview.md#where-to-go-next).
+
+:::warning Applies to Olares 1.12.X
+Use this version of the reference if your Olares version is 1.12.X.
 :::
-
-The Olares CLI is a versatile command-line tool designed to help developers and system administrators manage and troubleshoot Olares systems. It offers a wide range of features, from installation and configuration to resource management and diagnostics.
-
-With the Olares CLI, you can streamline tasks such as verifying system compatibility, downloading resources, managing nodes, collecting logs, and more. This guide provides an overview of the CLI's syntax and details the commands available for different operations.
 
 :::info Root privileges required
-Most `olares-cli` commands require root privileges. Use the root user or prepend commands with `sudo`.
+Most `olares-cli` commands require root. Use the root user or prepend commands with `sudo`.
 :::
 
-:::info Using Olares CLI with WSL
-If you installed Olares using the WSL (Windows Subsystem for Linux) method, you need to use `olares-cli` inside the WSL environment.
-
-To enter the WSL environment, run the following command in PowerShell:
+:::info Using olares-cli with WSL
+If you installed Olares using the WSL (Windows Subsystem for Linux) method, run `olares-cli` inside the WSL environment. From PowerShell:
 
 ```powershell
 wsl -d Ubuntu
@@ -60,6 +57,7 @@ To get detailed help for any command, run `olares-cli help`.
 | `prepare`  | `olares-cli prepare [options]` | Prepares the environment for the installation process, including setting up essential services and configurations of Olares. |
 | `release`   | `olares-cli release [options]` | Packages Olares installation resources for distribution or deployment.  |
 | `start`  | `olares-cli start [options]` | Starts Olares services and components. |
+| `status`  | `olares-cli status [options]` | Queries the local olaresd daemon and prints the current Olares system status. |
 | `stop` | `olares-cli stop [options]` | Stops Olares services and components.  |
 | `uninstall` | `olares-cli uninstall [options]` | Uninstalls Olares completely, or roll back the installation to a specific phase. |
 | `upgrade` | `olares-cli upgrade <subcommand> [options]` | Upgrades Olares and checks upgrade readiness and compatibility.|

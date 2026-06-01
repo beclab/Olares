@@ -8,7 +8,9 @@ import {
 import { TransferDatabase } from 'src/utils/interface/transferDB';
 
 export enum WiseWSType {
-	DOWNLOAD_PROCESS = 'download_process'
+	DOWNLOAD_PROCESS = 'download_process',
+	ENCLOSURE = 'enclosure',
+	SYNC = 'sync'
 }
 
 const getCloudTaskById = async (task_id: string, db: TransferDatabase) => {
@@ -77,12 +79,14 @@ export const wiseInsertTransferItem = (
 						: new Date().getTime(),
 					from: downloadItem.url,
 					to: downloadPath,
+					message: downloadItem.err_msg,
 					isPaused: false,
 					size: downloadItem.size || 0,
 					uniqueIdentifier: taskId,
 					userId: terminusId,
 					currentPhase: 1,
-					totalPhase: 1
+					totalPhase: 1,
+					retry: downloadItem.retry
 				};
 				db.transferData.add(transferItem).then((id: number) => {
 					transferItem.id = id;

@@ -1,9 +1,9 @@
 package pipelines
 
 import (
+	"context"
 	"strings"
 
-	"github.com/beclab/Olares/cli/pkg/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/action"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -11,6 +11,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
 )
 
 type singleTaskModule struct {
@@ -43,7 +44,8 @@ func AmdGpuInstall() error {
 			&amdgpu.InstallAmdRocmModule{},
 		},
 	}
-	return p.Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return p.Start(context.Background())
 }
 
 func AmdGpuUninstall() error {
@@ -60,7 +62,8 @@ func AmdGpuUninstall() error {
 			&singleTaskModule{name: "AmdgpuUninstall", act: new(amdgpu.AmdgpuUninstallAction)},
 		},
 	}
-	return p.Start()
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	return p.Start(context.Background())
 }
 
 func AmdGpuStatus() error {

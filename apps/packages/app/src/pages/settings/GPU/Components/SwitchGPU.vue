@@ -5,7 +5,11 @@
 	>
 		<q-icon size="18px" name="sym_r_repeat">
 			<q-tooltip>
-				{{ t('Switch GPU') }}
+				{{
+					t('Switch {app} to another GPU', {
+						app
+					})
+				}}
 			</q-tooltip>
 		</q-icon>
 	</div>
@@ -44,7 +48,7 @@ const unBindApp = () => {
 			// message: t('Are you sure to unbind “{app}” from this GPU?', {
 			// 	app: props.app
 			// }),
-			// title: t('Unbind App'),
+			// title: t('Unbind app'),
 			// useCancel: true,
 			// confirmText: t('confirm'),
 			// cancelText: t('cancel')

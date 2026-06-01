@@ -42,18 +42,18 @@ const onCancel = () => {
 
 <style scoped lang="scss">
 .mobile-title {
-	color: #322f2d;
+	color: $ink-1;
 	font-size: 16px;
 	text-align: center;
 	font-weight: 500;
 	margin: 20px 0;
 }
 .bar {
-	background-color: #f8f8f8;
+	background-color: $background-2;
 	.title {
 		height: 18px;
 		line-height: 18px;
-		color: #322f2d;
+		color: $ink-1;
 		font-size: 14px;
 	}
 }

@@ -6,7 +6,6 @@
     "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "outDir": "dist",
-    // "sourceMap": true,
     "module": "esnext",
     "strict": true,
 
@@ -15,7 +14,6 @@
     "noUnusedParameters": false,
     "noImplicitThis": true,
     "strictNullChecks": true,
-    //"strictPropertyInitialization": true,
     "removeComments": false,
     "preserveConstEnums": true,
     "sourceMap": false,
@@ -28,6 +26,8 @@
     "allowJs": true,
     "useUnknownInCatchVariables": false,
     "paths": {
+      "@bytetrade/core": ["../core/src/index.ts"],
+      "@bytetrade/ui": ["src/components/ui/index.ts"],
       "@apps/dashboard/stores/*": ["src/apps/dashboard/stores/*"],
       "@apps/dashboard/components/*": ["src/apps/dashboard/components/*"],
       "@apps/dashboard/layouts/*": ["src/apps/dashboard/layouts/*"],
@@ -79,6 +79,6 @@
     "src/i18n/zh-CN/index.ts",
     "src/pages/Plugin"
   ],
-	"typeRoots": ["./node_modules/@types", "./src/types"],
+  "typeRoots": ["./node_modules/@types", "./src/types"],
   "exclude": ["node_modules/**/*.ts", "src/apps/studio/stores/**/*.ts"]
 }

@@ -1,4 +1,4 @@
-import { t } from '@apps/dashboard/src/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 
 export const columns: any = [
 	{

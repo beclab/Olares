@@ -13,7 +13,7 @@
 			@mouseenter="handleMouseEnter(vaultItem.item.id)"
 			@mouseleave="handleMouseLeave"
 		>
-			<q-scroll-area
+			<terminus-scroll-area
 				ref="vaultItemRef"
 				:thumb-style="{ height: '0px' }"
 				:visible="true"
@@ -32,6 +32,11 @@
 							<span v-if="filed.type === 'totp'">
 								<Totp2 :secret="filed.value" ref="myTotps" />
 							</span>
+							<span
+								v-else-if="vaultItem.item.type == VaultType.OlaresSSHPassword"
+							>
+								<SSH :password="filed.value" :dispaly="vaultItem.dispaly" />
+							</span>
 							<span v-else>
 								{{ filed.format(true) }}
 							</span>
@@ -39,10 +44,38 @@
 						<div v-else class="text-body3">[{{ t('empty') }}]</div>
 					</div>
 				</q-card-section>
-				<div class="ink-1 text-body-3 q-ml-lg q-pl-sm">
-					{{ vaultItem.item.name }}
-				</div>
-			</q-scroll-area>
+				<q-card-section class="row items-center justify-between q-pa-none">
+					<div
+						class="field-name"
+						:style="{
+							width: `calc(100% - ${showTags(vaultItem.item).tagWidth}px)`
+						}"
+					>
+						<div class="item-name q-ml-sm">
+							<div class="name text-subtitle2 text-ink-1">
+								{{ vaultItem.item.name ? vaultItem.item.name : t('new_item') }}
+							</div>
+						</div>
+					</div>
+					<div
+						class="tag-wrap text-ink-2"
+						:style="{
+							width: `${showTags(vaultItem.item).tagWidth}px`
+						}"
+					>
+						<div
+							class="tag q-mr-sm"
+							v-for="(tag, index) in showTags(vaultItem.item).tags"
+							:key="index"
+						>
+							<q-icon :name="tag.icon" />
+							<span class="q-ml-xs tag-name text-overline" v-if="tag.name">{{
+								tag.name
+							}}</span>
+						</div>
+					</div>
+				</q-card-section>
+			</terminus-scroll-area>
 		</q-card>
 	</div>
 </template>
@@ -53,9 +86,13 @@ import { useRoute } from 'vue-router';
 import { VaultType } from '@didvault/sdk/src/core';
 import { ListItem } from '@didvault/sdk/src/types';
 import Totp2 from './totp2.vue';
-import { notifyWarning } from '../../utils/notifyRedefinedUtil';
+import SSH from './SSH.vue';
+import { notifySuccess, notifyWarning } from '../../utils/notifyRedefinedUtil';
 
 import { useI18n } from 'vue-i18n';
+import { getApplication } from 'src/application/base';
+import { showTags } from './item';
+import TerminusScrollArea from 'src/components/common/TerminusScrollArea2.vue';
 
 defineProps({
 	vaultItem: {
@@ -79,6 +116,15 @@ const { t } = useI18n();
 async function selectItem(item: ListItem) {
 	if (item.item.type === VaultType.TerminusTotp) {
 		notifyWarning(t('vault_t.verification_message'));
+		return false;
+	}
+	if (item.item.type == VaultType.OlaresSSHPassword) {
+		if (!item.dispaly) {
+			item.dispaly = true;
+			return false;
+		}
+		await getApplication().copyToClipboard(item.item.fields[0].value);
+		notifySuccess(t('copied'));
 		return false;
 	}
 	emits('selectItem', item);
@@ -109,8 +155,9 @@ const handleMouseLeave = () => {
 	margin-right: 4px;
 	white-space: nowrap;
 	position: relative;
-	max-width: 180px;
-	min-width: 70px;
+	min-width: 140px;
+	width: 100%;
+	// background-color: red;
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -126,6 +173,7 @@ const handleMouseLeave = () => {
 	.item-unit-content {
 		line-height: 1 !important;
 		white-space: nowrap;
+		// background-color: red;
 		span {
 			display: inline-block;
 			width: 100%;

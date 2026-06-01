@@ -22,7 +22,7 @@
 				/>
 
 				<div
-					class="text-ink-2 column items-center justify-center full-height noData bg-background-1"
+					class="text-ink-2 column items-center justify-center full-height noData larepass-content"
 					v-if="!itemID"
 				>
 					<img class="q-mt-sm" src="../../assets/layout/nodata.svg" />

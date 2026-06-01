@@ -1,102 +1,34 @@
 ---
-outline: [2, 4]
-description: 了解如何在 LarePass 应用中创建、导入和管理 Olares ID。
+outline: [2, 3]
+description: 在 LarePass 移动端创建 Olares ID，几步即可完成。
 ---
 
-# 创建、管理账户
+# 创建 Olares ID
 
-管理 Olares 账户是 LarePass 的核心功能。如果你是新用户，需要先创建一个 Olares ID。本指南将介绍创建流程及常用的账户操作。
+Olares ID 是你在 Olares 上的身份标识，会作为你的个人域名（例如 `yourname.olares.com`），也是你的登录账户。
 
-::: tip 提示
-Olares ID 仅可在 **LarePass** 移动端创建。
+Olares ID 只能在 LarePass 移动端创建。
+
+:::tip 使用自定义域名？
+如果你想在自定义域名下创建 Olares ID，请参阅[使用自定义域名创建 Olares ID](create-org-account.md)。
 :::
+
+## 前提条件
+
+- 已安装 LarePass 移动端。参考[安装 LarePass](index.md#下载-larepass)。
 
 ## 创建 Olares ID
 
-开始之前，请先在手机上安装 [LarePass](https://olares.cn/larepass)。根据个人需求，可选择以下两种方式之一：
+1. 在 LarePass 应用中，点击**创建账户**。
+2. 输入你想要的用户名，至少 8 个字符，仅支持小写字母和数字。
+3. 点击**继续**完成创建。
 
-- **快速创建**：输入符合要求且可用的名称即可创建 Olares ID（默认方式）。  
-- **高级创建**：使用可验证凭证（VC）将现有可信身份（如社交账号）与 Olares ID 绑定，适用于需要更高安全性或专属域名的个人或组织用户。
+   ![创建 Olares ID](/images/manual/larepass/create-olares-id1.png#bordered)
 
-### 快速创建
+创建完成后，等待 [Olares 安装](../get-started/install-olares.md)完成，然后进行[激活](../larepass/activate-olares.md)。
 
-快速创建个人 Olares ID：
+## 了解更多
 
-1. 在 LarePass 中点击**创建账户**。  
-2. 输入想要的 Olares ID（至少 8 个字符，仅限小写字母和数字）。  
-3. 点击**继续**完成创建。  
-
-   ![快速创建](/images/manual/larepass/create-olares-id.png)
-
-获得 Olares ID 后，等待 [安装 Olares](../get-started/install-olares.md) 完成，然后执行 [激活](../get-started/activate-olares.md)。
-
-### 高级创建
-
-::: tip VC 支持
-Olares 目前通过 Gmail 提供 VC 支持，详情参见 [Gmail Issuer Service](/developer/contribute/olares-id/verifiable-credential/olares.md#gmail-issuer-service)。
-:::
-
-<Tabs>
-<template #个人-Olares-ID>
-
-1. 在 LarePass 中点击**创建账户**。  
-2. 在创建页面右上角点击 <i class="material-symbols-outlined">display_settings</i>。  
-3. 在**高级账户创建**页面选择 **个人 Olares ID**。  
-   ![高级创建](/images/manual/larepass/advanced_creation.png)  
-4. 选择 Gmail VC 选项，按提示完成 Gmail 身份验证后点击**继续**。  
-5. 绑定完成后点击**继续**，即可查看你的 Olares ID 信息。  
-   ![绑定 VC 后的 Olares ID](/images/manual/larepass/individual_olares_id_vc.png)
-</template>
-<template #组织-Olares-ID>
-
-::: tip 提示
-需先在 Olares Space 中 [配置自定义域名](/zh/space/host-domain.md#add-your-domain) 并在 LarePass 创建对应组织。
-:::
-
-1. 在 LarePass 中点击 **创建账户**。  
-2. 在创建页面右上角点击 <i class="material-symbols-outlined">display_settings</i>。  
-3. 在**高级账户创建**页面选择**组织 Olares ID** > **加入现有组织**。  
-   ![高级创建（组织）](/images/manual/larepass/advanced_creation_org.png)  
-4. 输入组织的域名并点击**继续**。  
-5. 通过邮箱绑定 VC，目前仅支持 Gmail 与 Google Workspace 邮箱。  
-   ![组织 ID VC](/images/manual/larepass/organization_olares_id.png)  
-
-完成后，你将获得组织 Olares ID。
-</template>
-</Tabs>
-
-## 导入账户
-
-你可以使用 12 个单词的助记词，将已有的 Olares ID 导入到 LarePass，从而在新设备或其他 LarePass 客户端上访问你的 Olares 服务。
-
-::: tip 备份助记词
-确保已 [备份助记词](back-up-mnemonics.md)，否则无法完成账户导入。
-:::
-
-
-<Tabs>
-<template #iOS-&-Android>
-
-1. 打开 LarePass 应用。
-2. 点击你的头像。
-3. 在**切换账户**页面底部，点击**添加新账户**。
-4. 点击**导入账户**。
-5. 输入 Olares ID 对应的 12 个助记词。
-
-</template>
-<template #macOS-&-Windows>
-
-1. 打开 LarePass 桌面客户端。
-2. 点击你的头像。
-3. 点击**切换账户**。
-4. 点击底部的**添加新账户**。
-5. 输入 Olares ID 对应的 12 个助记词。
-
-</template>
-<!--<template #Chrome-extension>
-1. 打开 Chrome 浏览器中的 LarePass 扩展程序。
-2. 点击头像上方的选项图标。
-3. 点击**添加新账户**。
-4. 输入 Olares ID 对应的 12 个助记词。
-</template>-->
-</Tabs>
+- [使用自定义域名创建 Olares ID](create-org-account.md)
+- [导入已有账户](import-account.md)
+- [备份助记词](back-up-mnemonics.md)

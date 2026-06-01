@@ -13,7 +13,7 @@ Currently, Olares on Windows has certain limitations including:
 We recommend using it only for development or testing purposes.
 
 :::
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## System requirements
 
@@ -30,7 +30,7 @@ We recommend using it only for development or testing purposes.
   - Linux (on WSL 2): Ubuntu 22.04 LTS or later; Debian 12 or later
 ### Optional hardware
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 :::tip Windows verification
 You can also confirm your GPU in **Task Manager > Performance**. To verify the driver is accessible in WSL, run `nvidia-smi` in your WSL terminal.
@@ -168,4 +168,4 @@ The `--rm` flag automatically deletes the container after it stops. If this happ
 
 <!--@include: ./manage-olares-container.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

@@ -118,6 +118,7 @@ export const useReadingProgressStore = defineStore('readingProgress', {
 			this._startAutoSave();
 		},
 		stopReading() {
+			console.log('readingProgress: stopReading...');
 			this._stopAutoSave();
 			this._requestReadingProgress();
 		},
@@ -139,44 +140,55 @@ export const useReadingProgressStore = defineStore('readingProgress', {
 				return;
 			}
 
-			const entry = await getEntryById(this.entryId);
+			// Capture entryId before any async to avoid saving for wrong entry when switching
+			const capturedEntryId = this.entryId;
+
+			const entry = await getEntryById(capturedEntryId);
 
 			if (!entry) {
 				console.log('_requestReadingProgress entry null return');
 				return;
 			}
 
-			if (entry.progress == this.progressPercentage) {
+			// Re-read progress AFTER await: PDF child may call updateProgress() in its
+			// onBeforeUnmount after our stopReading(), so store can have newer value here
+			if (this.entryId !== capturedEntryId) {
+				return;
+			}
+			const progress = this.progressPercentage;
+			const current = this.current;
+			const total = this.total;
+			const totalWords = this.totalWords;
+
+			if (entry.progress == progress) {
 				console.log('_requestReadingProgress not need update');
 				return;
 			}
 
-			entry.progress = this.progressPercentage;
-
-			entry.played_time = this.current;
+			entry.progress = progress;
+			entry.played_time = current;
 
 			switch (entry.file_type) {
 				case FILE_TYPE.ARTICLE:
-					// eslint-disable-next-line no-case-declarations
-					entry.remaining_time = (this.totalWords * (1 - this.current)) / 200;
+					entry.remaining_time = (totalWords * (1 - current)) / 200;
 					break;
 				case FILE_TYPE.EBOOK:
-					console.log(this.totalWords);
-					console.log(this.totalWords * (1 - this.current));
-					entry.remaining_time = (this.totalWords * (1 - this.current)) / 3;
+				case FILE_TYPE.PDF:
+					// PDF/EBOOK: remaining pages (assuming 1 min per page)
+					entry.remaining_time = total - current;
 					break;
 				case FILE_TYPE.VIDEO:
 				case FILE_TYPE.AUDIO:
-					entry.remaining_time = (this.total - this.current) / 60;
+					entry.remaining_time = (total - current) / 60;
 					break;
 			}
 
 			updateEntryById(entry.id, entry);
 
 			updateReadProgress(
-				this.entryId,
-				this.progressPercentage.toString(),
-				this.current.toString(),
+				capturedEntryId,
+				progress.toString(),
+				current.toString(),
 				entry.remaining_time.toFixed(0).toString()
 			)
 				.then((data) => {

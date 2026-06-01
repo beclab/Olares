@@ -8,7 +8,7 @@
 		<bt-list :label="t('Advanced network services')">
 			<bt-form-item
 				@click="gotoPage('/network/reverse_proxy')"
-				:title="t('Reverse Proxy')"
+				:title="t('Reverse proxy')"
 				:description="
 					t('Manage how external traffic is routed to your internal services.')
 				"

@@ -8,8 +8,13 @@
 	>
 		<q-card class="q-dialog-plugin column items-center justify-start">
 			<q-card-section class="row items-center justify-between full-width">
-				<div class="text-h6">{{ info.name }}</div>
-				<div class="row items-center justify-center">
+				<div
+					class="text-h6"
+					style="flex: 1 1 0%; overflow: hidden; white-space: nowrap"
+				>
+					{{ info.name }}
+				</div>
+				<div class="row items-center justify-center" style="flex: 0 0 120px">
 					<span class="operate q-mr-sm">
 						<BtIcon src="trash3" style="padding: 6px" @click="onDelete" />
 					</span>
@@ -23,9 +28,12 @@
 				class="q-pt-xs row items-center justify-center"
 				style="height: calc(100% - 64px); width: 100vw; overflow: scroll"
 			>
-				<template v-if="_preview && mType == 'pdf'">
+				<template
+					v-if="_preview && mType == 'pdf' && !$q.platform.is.nativeMobile"
+				>
 					<object
 						class="content preview pdf stretch"
+						style="height: 100%; width: 100%"
 						type="application/pdf"
 						:data="objectContent"
 					></object>
@@ -39,9 +47,9 @@
 					</div>
 				</template>
 				<template v-else-if="_preview && (mType == 'text' || mType == 'code')">
-					<pre
-						class="content preview ${mType} stretch"
-					><code>{{ objectContent }}</code></pre>
+					<div class="content preview stretch q-py-lg">
+						{{ objectContent }}
+					</div>
 				</template>
 				<template v-else>
 					<div

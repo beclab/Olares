@@ -2,7 +2,7 @@
 	<q-layout
 		view="lHh LpR lFr"
 		:container="application == 'FILES' ? false : true"
-		:class="application == 'FILES' ? 'bg-background-1' : ''"
+		:class="application == 'FILES' ? '' : ''"
 	>
 		<FilesDrawer :origin_id="origin_id" />
 
@@ -10,7 +10,8 @@
 			<q-page
 				class="files-content"
 				:class="
-					$q.platform.is.win && $q.platform.is.electron
+					($q.platform.is.win || $q.platform.is.linux) &&
+					$q.platform.is.electron
 						? 'files-content-win'
 						: $q.platform.is.ipad
 						? 'files-content-pad'

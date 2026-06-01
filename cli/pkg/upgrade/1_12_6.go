@@ -39,7 +39,8 @@ func (u upgrader_1_12_6) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, upgradeKubernetesPrometheusRule()...)
 	tasks = append(tasks, upgradeNodeExporterServiceMonitor()...)
 	tasks = append(tasks, upgradeNodeExporter()...)
-	tasks = append(tasks, upgradeKSCore()...)
+	tasks = append(tasks, upgradeMultus()...)
+	tasks = append(tasks, createAppCommonDir()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
@@ -50,6 +51,23 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 		&task.LocalTask{
 			Name:   "UpdateL4DeploymentSpec",
 			Action: new(updateL4DeploymentSpec),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "PatchNodeAffinityToRequired",
+			Action: new(patchNodeAffinityToRequired),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		// Apply the GPUBinding CRD schema bump BEFORE the HAMi helm upgrade
+		// runs in upgraderBase.UpgradeSystemComponents(); Helm 3 does not
+		// update objects under chart `crds/` on upgrade, so the new spec
+		// fields (namespace, owner) would otherwise stay unknown to the
+		// apiserver and get pruned out of any binding we write.
+		&task.LocalTask{
+			Name:   "ApplyGPUBindingCRD",
+			Action: new(applyGPUBindingCRD),
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
@@ -69,6 +87,12 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 		&task.LocalTask{
 			Name:   "BackfillAppGPUConfig",
 			Action: new(backfillAppGPUConfig),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "MigrateLegacyGPUBindings",
+			Action: new(migrateLegacyGPUBindings),
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},

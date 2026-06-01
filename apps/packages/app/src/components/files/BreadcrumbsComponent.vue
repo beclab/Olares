@@ -87,6 +87,7 @@ import { dataAPIs, common } from './../../api';
 import { MenuItem } from './../../utils/contact';
 import { useI18n } from 'vue-i18n';
 import { DriveType } from '../../utils/interface/files';
+import { decodeURIComponentSafe } from 'src/api/files/v2/utils';
 
 const props = defineProps({
 	origin_id: {
@@ -138,12 +139,12 @@ const items = computed(function () {
 	for (let i = 0; i < parts.length; i++) {
 		if (i === 0) {
 			breadcrumbs.push({
-				name: translateFolderName(decodeURIComponent(parts[i])),
+				name: translateFolderName(decodeURIComponentSafe(parts[i])),
 				url: dataAPI.breadcrumbsBase + '/' + parts[i] + '/',
 				query: currentPath.param
 			});
 		} else {
-			let name = decodeURIComponent(parts[i]);
+			let name = decodeURIComponentSafe(parts[i]);
 			if (currentPath.path.startsWith('/Files/Home')) {
 				if (i === 1) {
 					name = translateFolderName(name);

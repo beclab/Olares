@@ -1,0 +1,136 @@
+---
+name: olares-market
+version: 4.0.0
+description: "Olares Market (olares-cli market) — install, upgrade, and manage Olares apps on Olares from the command line. Per-Olares-ID Market app-store v2 mirror of the Olares Market UI, scoped to the active Olares ID. Covers catalog browsing (list, get, categories), the full Olares app lifecycle (install, uninstall, upgrade, clone, cancel, stop, resume), runtime status, --mine view of the active Olares ID's apps (same set the Market UI's My Terminus tab shows, including in-flight installs / upgrades / failures), upload / delete for local Helm chart packages, and --watch flags that block until the app reaches a terminal state. Use when the user mentions Olares, Olares ID, Olares Market, olares-cli market, Olares app store, installing / upgrading / uninstalling / cloning / stopping / resuming / cancelling an Olares app, 'my Olares apps', '我的应用', upload chart, --watch, or asks 'is <app> installed yet on my Olares' / 'show me my Olares apps'."
+metadata:
+  requires:
+    bins: ["olares-cli"]
+  cliHelp: "olares-cli market --help"
+---
+
+# market (App-store v2)
+
+**CRITICAL — before doing anything, MUST use the Read tool to read [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for profile selection, login, automatic token refresh, and the auth-error recovery table.**
+
+> **Source of truth for flags is always `olares-cli market <verb> --help`.** This file only carries what `--help` cannot give: source resolution, the lifecycle state machine, OpType-vs-State race safety, the verb index, the `-s`/`-a` matrix, and the "what apps do I have" routing.
+
+## Routing
+
+| User intent | Use this skill? |
+|---|---|
+| "Install / upgrade / uninstall an Olares app" | ✅ yes |
+| "What apps do I have?" / "我的应用" | ✅ yes — `market list --mine` |
+| "Is `<app>` installed yet?" / "Wait for `<app>` to be running" | ✅ yes — `market status <app> --watch` |
+| "Upload my custom helm chart" | ✅ yes — `market upload` |
+| "What pods is `<app>` running?" | use [`olares-cluster`](../olares-cluster/SKILL.md) (`cluster application status <ns>`) |
+| "Edit my app's entrance / domain / env / ACL" | use [`olares-settings`](../olares-settings/SKILL.md) (`settings apps`) |
+| "What's eating CPU on my cluster?" | use [`olares-dashboard`](../olares-dashboard/SKILL.md) (`dashboard overview ranking`) |
+
+> **Mental model:** `market` is **lifecycle and inventory** at the app-store level (install / upgrade / chart push). For runtime K8s objects, settings, or metrics, route to a sibling.
+
+## Verb families
+
+| Family | Verbs | Mutating? |
+|---|---|---|
+| **catalog** | `list`, `get`, `categories` | no |
+| **runtime** | `status` | no |
+| **lifecycle** | `install`, `upgrade`, `uninstall`, `clone`, `stop`, `resume`, `cancel` | yes |
+| **charts** | `upload`, `delete` | yes |
+
+For verb-specific behavior, **always start with `olares-cli market <verb> --help`**. Then drill into a reference if listed:
+
+| Family | Reference |
+|---|---|
+| catalog + runtime | [references/olares-market-list.md](references/olares-market-list.md) (`list` / `--mine` / `categories` / `get` / `status`) |
+| lifecycle | [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md) (`install` / `upgrade` / `uninstall` / `clone` / `stop` / `resume` / `cancel`) |
+| charts | [references/olares-market-charts.md](references/olares-market-charts.md) (`upload` / `delete`) |
+
+## Source resolution (cross-cutting)
+
+The market backend serves multiple "sources" of charts. The CLI resolves which one to talk to from `-s / --source`, falling back to a default that depends on the verb:
+
+| Source id | What it is | Used by |
+|---|---|---|
+| `market.olares` | Public catalog (read-only browse) | default for `list`, `get`, `categories`, `install`, `upgrade`, `clone`, `status` |
+| `upload` | SPA "Local Sources → Upload" bucket | **hard-coded for `upload` / `delete`** — `-s` is intentionally NOT exposed on those two verbs |
+| `cli` | Legacy CLI-upload bucket | read-only (`list`, `status`) |
+| `studio` | Devbox / Studio bucket | read-only (`list`, `status`) |
+
+- When `-s` is omitted, every verb that accepts it prints `Using source: <id>` to stderr so the agent can confirm which backend was hit.
+- `-a / --all-sources` bypasses single-source resolution and spans every source the user has — read-only verbs only.
+- **Unknown source ids silently produce an empty result** with a `no apps in source 'X'` stderr hint. Run `market list -a` to enumerate the configured sources.
+
+### `-s` / `-a` matrix
+
+| Flag | Read-only browse | Lifecycle (mutating) | Chart management |
+|---|---|---|---|
+| `-s / --source` | `list`, `categories`, `status`, `get` | `install`, `upgrade`, `clone` | — (hard-coded `upload`) |
+| `-a / --all-sources` | `list`, `categories`, `status` | — | — |
+
+> **`-s` is NOT on `uninstall` / `stop` / `resume` / `cancel`:** they act on whichever per-user state row matches the app name, regardless of source.
+
+## App lifecycle / state machine
+
+The backend tracks two orthogonal axes per app: **`State`** (where the row currently is) and **`OpType`** (which mutation is in flight). The CLI groups the full enum into four buckets:
+
+| Bucket | Examples | Meaning |
+|---|---|---|
+| **Progressing** | `pending`, `installing`, `upgrading`, `uninstalling`, `stopping`, `resuming`, `*Canceling` | Backend is actively working — keep polling |
+| **Terminal success** | `running`, `stopped`, `uninstalled` | Mutation finished cleanly |
+| **Terminal failure** | `installFailed`, `upgradeFailed`, `uninstallFailed`, `stopFailed`, `resumeFailed` | Mutation finished with a hard error |
+| **Canceled / cancel-failed** | `*Canceled`, `*CancelFailed` | A `cancel` request landed (or itself failed) |
+
+Each lifecycle verb maps to its own subset of terminal-success buckets — see the lifecycle reference.
+
+## OpType vs State (race-safety)
+
+The same `State` can mean different things depending on which mutation is in flight. Concrete example: an `upgrade` issued against an app already in `running` will return `state=running, opType=running` for one or two ticks before the backend flips to `state=upgrading, opType=upgrade`. A naive watcher would declare success at tick zero.
+
+**The CLI's mutating-verb watchers refuse to accept any "success" classification until either:**
+
+1. the row's `OpType` matches the op the CLI just issued, **or**
+2. the row disappears entirely (only legal for `uninstall` / `status`).
+
+`cancel` and `status` deliberately set `matchOpType=false` because they are op-agnostic by design — `cancel` declares success on any "row stopped moving" state.
+
+## `--watch` semantics (lifecycle verbs)
+
+- **Polling, not streaming.** Tick on `--watch-interval` (default tuned to the backend's progress cadence).
+- `--watch-timeout D` caps total wall-clock time.
+- One-shot (no `--watch`) returns as soon as the backend ACKs the mutation request — the row may still be `progressing` for minutes.
+- With `--watch`, the CLI blocks until the row reaches a terminal bucket (success OR failure) matching the OpType safety rules above.
+- **Idempotent**: `resume` against an already-`running` row returns immediately with success; `install` against an already-installed row returns immediately with `state=running`. Watcher never hangs on "no-op" mutations.
+- `--watch-iterations` / `--watch-interval` / `--watch-timeout` are **rejected without `--watch`**.
+
+## "What apps do I have?" routing
+
+| Question | Right verb | Why |
+|---|---|---|
+| "Show me my apps" / "我的应用" | `market list --mine` (alias `-m`) | Matches the Market UI's "My Terminus" tab exactly — includes in-flight installs, failed rows, transitional states. Wider than "completed installs only" |
+| "Runtime status of `<app>`" / "is it installed yet" | `market status <app>` or `market status <app> --watch` | Focused view: `STATE / OPERATION / PROGRESS / SOURCE`. The single-app form does cross-source fallback if `-s` doesn't find the row |
+| "Which apps are running right now" | `market status` (no app) | All installed-app rows in the resolved source. Add `-a` for every source. **Cannot `--watch`** — use `status <app> --watch` instead |
+| "Browse the catalog" | `market list` (no `--mine`) | Hits `/market/data`, not `/market/state`. Browse-and-discover, not inventory |
+
+> **`list --mine` is NOT the same as "completed installs only".** It hides only the 6 SPA-hidden `uninstalledAppStates` (`pendingCanceled`, `downloadingCanceled`, `downloadFailed`, `installFailed`, `installingCanceled`, `uninstalled`). In-flight installs and post-install failures stay visible because the user clicked something and expects to monitor / retry / cancel them.
+
+## Output conventions
+
+- `-o table` (default) or `-o json` — present on EVERY market verb.
+- `-q / --quiet` suppresses all stdout / stderr; exit code carries the signal.
+- `--no-headers` — only `list` and `categories` (row-oriented browse). NOT on `get` (key:value detail, no headers separable) or `status` (runtime probe, always headered). No-op silently on mutating verbs.
+- Mutating verbs emit a stable `OperationResult` JSON shape with `finalState` / `finalOpType` for scripted parsing.
+
+## Common errors
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `no apps in source 'X'` (stderr) | Unknown source id, or empty result | Run `market list -a` to enumerate configured sources |
+| `app 'X' is not installed (run 'olares-cli market install X' to install it)` | `status <app>` could not find the row anywhere | Install first, or verify the app name spelling |
+| `App is installed under source 'Y' (not 'X')` (stderr) | `-s X` but the row is actually in source Y | Drop `-s`, or pass the correct source. The CLI still renders the row |
+| `missing required env var(s): KEY1, KEY2 ...` | `install` for an app that declares required envs | Re-run with `--env KEY=VALUE` (repeatable) for each missing var |
+| Lifecycle watcher hangs near `*Failed` state | Backend failed but kept the failure row visible | Inspect `market status <app>` for the failure detail; cancel with `market cancel <app>` if applicable |
+| `cannot --watch 'status' (no app argument)` | `market status` without an app + `--watch` | Use `status <app> --watch` |
+| 401 / 403 from any verb after refresh | Token rotation / consistent server-side rejection | See [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) |
+| `--cascade NOT passed: auto-decided ...` (stderr) | C/S v2 multi-chart app on single-user cluster | Informational — the CLI picked `--cascade=true`; pass `--cascade=false` explicitly to override |
+
+For the full auth-error matrix see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).

@@ -1,0 +1,38 @@
+@import '../app.scss';
+
+.backup-status-img {
+	height: 16px;
+	width: 16px;
+}
+
+.text-color-knob-red {
+	color: $red;
+}
+
+.bg-color-knob-red {
+	background-color: $red;
+}
+
+.text-color-knob-blue {
+	color: $blue;
+}
+
+.bg-color-knob-blue {
+	background-color: $blue;
+}
+
+.text-color-knob-green {
+	color: $green;
+}
+
+.bg-color-knob-green {
+	background-color: $green;
+}
+
+.text-color-knob-yellow {
+	color: $warning;
+}
+
+.bg-color-knob-yellow {
+	background-color: $warning;
+}

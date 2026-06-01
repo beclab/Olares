@@ -1,3 +1,5 @@
+import { DownloadStatusEnum } from 'src/types/commonApi';
+
 export interface DownloadRecord {
 	created_time: string;
 	download_app: string;
@@ -16,10 +18,13 @@ export interface DownloadRecord {
 	downloaded_bytes: number;
 	provider_task_id: string;
 	size: number;
-	status: string;
+	status: `${DownloadStatusEnum}`;
 	task_user: string;
 	update_time: string;
 	url: string;
 	mimeType?: string;
 	startTime?: number;
+	err_msg?: string;
+	err_category: string;
+	retry?: number;
 }

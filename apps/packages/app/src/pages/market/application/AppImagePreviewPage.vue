@@ -7,16 +7,7 @@
 				:app-icon="appIcon"
 				:show-icon="showIcon(appEntry?.cfgType)"
 				:show-header-bar="true"
-			>
-				<install-button
-					v-if="appAggregation"
-					:item="appAggregation?.app_status_latest"
-					:app-name="appName"
-					:source-id="sourceId"
-					:version="appVersion"
-					:larger="true"
-				/>
-			</app-title-bar>
+			/>
 		</template>
 		<template v-slot:page>
 			<div
@@ -54,10 +45,9 @@
 import PageContainer from '../../../components/base/PageContainer.vue';
 import AppStoreSwiper from '../../../components/base/AppStoreSwiper.vue';
 import AppTitleBar from '../../../components/appintro/AppTitleBar.vue';
-import InstallButton from '../../../components/appcard/InstallButton.vue';
 import SimpleWaiter from '../../../utils/simpleWaiter';
 import { useDeviceStore } from '../../../stores/settings/device';
-import { useCenterStore } from '../../../stores/market/center';
+import { useAppStore } from '../../../stores/market/appStore';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { getI18nValue } from '../../../constant/constants';
 import { showIcon } from '../../../constant/config';
@@ -72,14 +62,14 @@ const { locale } = useI18n();
 const imageHeight = ref(0);
 const initialSlide = ref(0);
 const deviceStore = useDeviceStore();
-const centerStore = useCenterStore();
+const appStore = useAppStore();
 let resizeTimer: NodeJS.Timeout | null = null;
 const simpleWaiter = new SimpleWaiter();
 const sourceId = route.params.sourceId as string;
 const appName = route.params.appName as string;
 
 const appAggregation = computed(() => {
-	return centerStore.getAppAggregationInfo(appName, sourceId);
+	return appStore.getAppAggregationInfo(appName, sourceId);
 });
 
 onMounted(() => {

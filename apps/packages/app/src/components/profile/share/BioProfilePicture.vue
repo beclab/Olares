@@ -133,8 +133,8 @@ const backgroundStyle = computed(() => {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	backdrop-filter: blur(10px); /* 模糊效果的强度，可以根据需要调整 */
+	backdrop-filter: blur(10px); /* Blur intensity; tune as needed */
 	border-radius: inherit;
-	z-index: -1; /* 将伪元素置于底部，避免遮挡内容 */
+	z-index: -1; /* Keep pseudo-element behind content */
 }
 </style>

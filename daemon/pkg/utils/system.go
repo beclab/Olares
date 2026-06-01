@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -157,5 +158,57 @@ func GetCPUName() string {
 		}
 		brandName = strings.TrimSpace(string(output))
 	}
+
+	// try to get AIBOOK M1000 model name
+	if brandName == "" {
+		cmd := exec.Command("sh", "-c", "command -v dmidecode 1>/dev/null && dmidecode -s processor-version")
+		output, err := cmd.Output()
+		if err != nil {
+			klog.Error("get CPU name error, ", err)
+			return ""
+		}
+		brandName = strings.TrimSpace(string(output))
+	}
+
+	// try to get rockchip model name for rockchip devices which cannot get cpu info from /proc/cpuinfo
+	if brandName == "" {
+		cmd := exec.Command("sh", "-c", "test -f /proc/device-tree/model && cat /proc/device-tree/model || true")
+		output, err := cmd.Output()
+		if err != nil {
+			klog.Error("get CPU name error, ", err)
+			return ""
+		}
+		brandName = strings.TrimSpace(string(output))
+	}
+
 	return brandName
+}
+
+func IsDarwin() bool {
+	return runtime.GOOS == "darwin"
+}
+
+func IsLinux() bool {
+	return runtime.GOOS == "linux"
+}
+
+func IsWindows() bool {
+	return runtime.GOOS == "windows"
+}
+
+func IsWSL() bool {
+	if !IsLinux() {
+		return false
+	}
+
+	// get kernal name from /proc/sys/kernel/osrelease
+	data, err := os.ReadFile("/proc/sys/kernel/osrelease")
+	if err != nil {
+		return false
+	}
+	kernelName := strings.TrimSpace(string(data))
+	if strings.Contains(kernelName, "-WSL") {
+		return true
+	}
+	return false
 }

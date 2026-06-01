@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, ComfyUI, Stable Diffusion, AI image generation, self-hosted, ComfyUI Launcher
-app_version: "1.0.21"
+app_version: "1.0.34"
 doc_version: "1.0"
-doc_updated: "2026-03-20"
+doc_updated: "2026-05-13"
 ---
 # ComfyUI
 
@@ -48,6 +48,7 @@ Before generating images, you need to prepare models. This guide uses Stable Dif
 3. Find **Stable Diffusion base package** and click **VIEW**.
 
    ![Stable Diffusion base package](/images/manual/use-cases/comfyui-base-package2.png#bordered){width=90%}
+   
 4. On the package details page, click **GET ALL** to start downloading. You can track the progress in the status bar.
 
    ![Download progress](/images/manual/use-cases/comfyui-download-progress1.png#bordered){width=90%}
@@ -85,19 +86,7 @@ To understand each node and what it does, see [ComfyUI text-to-image workflow no
 
    ![Check generated image in Files](/images/manual/use-cases/comfyui-check-generated-image-in-files.png#bordered)
 
-
-## Troubleshooting
-
-### Cannot access ComfyUI Launcher
-
-If you open ComfyUI Launcher and see an error message saying the connection cannot be established:
-
-1. Go to **Settings** > **GPU** and check your GPU mode:
-   - If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
-   - If you are using **App exclusive**, make sure the exclusive app is set to ComfyUI.
-2. Wait a moment, then open ComfyUI Launcher from Launchpad again.
-
 ## Learn more
 
-- [Manage ComfyUI using ComfyUI Launcher](comfyui-launcher.md): Control the ComfyUI service, manage models, plugins, and Python dependencies.
+- [Manage ComfyUI on Olares](comfyui-launcher.md): Control the ComfyUI service, manage models, plugins, Python dependencies, and troubleshooting tasks.
 - [AI art creation with ComfyUI and Krita](comfyui-for-krita.md): Integrate ComfyUI with Krita for AI-powered digital art workflows.

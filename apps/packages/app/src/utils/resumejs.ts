@@ -25,6 +25,11 @@ import {
 	TransferStatus
 } from 'src/utils/interface/transfer';
 import mime from 'mime';
+import { getApplication } from 'src/application/base';
+import { fileNameMaxLength, utf8BytesLength } from './format';
+import { notifyFailed } from './notifyRedefinedUtil';
+import { i18n } from 'src/boot/i18n';
+import { decodeURIComponentSafe } from './encode';
 
 export interface UploaderFileItem extends FileItem {
 	speed: number;
@@ -84,7 +89,7 @@ class ResumableFile {
 	path: string;
 	isPaused: () => boolean;
 	progress: (relative?: boolean) => number;
-	pause: () => void;
+	pause: (value: boolean) => void;
 	upload: () => void;
 	cancel: () => void;
 	retry: () => void;
@@ -332,7 +337,7 @@ class Resumable {
 		if (!resumableIdentifier) {
 			return '';
 		}
-		const target = targetMap[decodeURIComponent(resumableIdentifier)] || '';
+		const target = targetMap[decodeURIComponentSafe(resumableIdentifier)] || '';
 
 		const google_upload_interface = '/drive/direct_upload_file';
 		const google_upload_interface_index = target.indexOf(
@@ -394,29 +399,7 @@ class Resumable {
 			isDir = true;
 		}
 
-		if (
-			[DriveType.GoogleDrive, DriveType.Dropbox, DriveType.Awss3].includes(
-				path.driveType
-			) &&
-			!isDir
-		) {
-			this.getGoogleUploadLink(resumable, files, path);
-		} else {
-			this.getUploadLink(resumable, files, path, isDir);
-		}
-	}
-
-	private async getGoogleUploadLink(resumable, files, path) {
-		const dataAPI = dataAPIs(path.driveType, this.origin_id);
-		for (let index = 0; index < files.length; index++) {
-			const file = files[index];
-			const uploadLink = await dataAPI.getFileServerUploadLink(
-				path.pathname,
-				path.repoId
-			);
-
-			this.useUploadLink(resumable, [file], path, uploadLink);
-		}
+		this.getUploadLink(resumable, files, path, isDir);
 	}
 
 	private async getUploadLink(resumable, files: ResumableFile[], path, isDir) {
@@ -432,10 +415,15 @@ class Resumable {
 			}
 		}
 
+		const total_size = files.reduce((acc, current) => acc + current.size, 0);
+
 		const uploadLink = await dataAPI.getFileServerUploadLink(
 			path.pathname,
 			path.repoId,
-			dirName
+			dirName,
+			{
+				total_size: `${total_size}`
+			}
 		);
 
 		this.useUploadLink(resumable, files, path, uploadLink);
@@ -494,7 +482,7 @@ class Resumable {
 				files[index].relativePath
 			);
 			file.path = relative_path;
-			file.pause();
+			file.pause(true);
 			const task = await this.resumableToTransferItem(file);
 			tasks.push(task);
 
@@ -724,7 +712,10 @@ class Resumable {
 			'Content-Range': 'bytes ' + startByte + '-' + endByte + '/' + fileSize
 		};
 
-		if (Platform.is.nativeMobile) {
+		if (
+			Platform.is.nativeMobile ||
+			getApplication().applicationName == 'larepass'
+		) {
 			const userStore = useUserStore();
 			headers['X-Authorization'] = userStore.current_user?.access_token;
 		}
@@ -742,6 +733,20 @@ class Resumable {
 	}
 
 	private isIgnoreFile(file) {
+		const fileName = file.name.includes('.')
+			? file.name.split('.')[0]
+			: file.name;
+		if (utf8BytesLength(fileName) > fileNameMaxLength) {
+			notifyFailed(
+				i18n.global.t(
+					'files.The file name is too long, rename it and try again: {file}',
+					{
+						file: file.name
+					}
+				)
+			);
+			return true;
+		}
 		const item = ignores.findIndex((e) => e == file.name);
 		return item >= 0;
 	}
@@ -781,10 +786,6 @@ class Resumable {
 		resumableFile: any
 	): Promise<TransferItem> {
 		const path = resumableFile.formData;
-
-		[DriveType.GoogleDrive, DriveType.Dropbox, DriveType.Awss3].includes(
-			path.driveType
-		);
 
 		const driveType = common().formatUrltoDriveType(resumableFile.path);
 		let totalPhase = 1;
@@ -915,7 +916,7 @@ class Resumable {
 		const node = dataAPI.getUploadNode();
 		const res = {
 			fullPath,
-			pathname: decodeURIComponent(pathname),
+			pathname: decodeURIComponentSafe(pathname),
 			repoId,
 			driveType: driveType,
 			node

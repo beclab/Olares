@@ -458,12 +458,15 @@ export const useMDNSStore = defineStore('mdnsStore', {
 				);
 
 				if (result && result.status == 200 && result.data.code == 200) {
+					await this.initTerminusInfo(machine);
+
 					const body = {
 						host: machine.host,
 						password: password,
 						port: machine.port,
 						serviceName: machine.serviceName
 					};
+
 					const localMechainInfo = JSON.stringify(body);
 					const new_user = userstore.users!.items.get(userstore.current_id!)!;
 					new_user.localMachine = localMechainInfo;
@@ -1201,15 +1204,15 @@ export const useMDNSStore = defineStore('mdnsStore', {
 			}
 			const userStore = useUserStore();
 			if (userStore.defaultDomain == 'cn') {
-				return 'https://api.olares.cn/upgrade';
+				return GolbalHost.OLARES_UPGRADE['cn'];
 			}
-			return 'https://api.olares.com/upgrade';
+			return GolbalHost.OLARES_UPGRADE['en'];
 		},
 
-		async getOlaresInfo() {
+		async getOlaresInfo(forbiddenLocal = false) {
 			try {
 				const res = await (
-					await this.getOlaresStatusInfoInstance()
+					await this.getOlaresStatusInfoInstance(undefined, forbiddenLocal)
 				).get('/api/system/status');
 
 				if (res && res.data && res.data.data) {
@@ -1237,17 +1240,24 @@ export const useMDNSStore = defineStore('mdnsStore', {
 						this.apiMachine = undefined;
 					}
 				}
+				return true;
 			} catch (error) {
 				/* empty */
 				console.log('error ===>', error);
 				this.apiMachine = undefined;
+				return false;
 			}
 		},
-		async getOlaresStatusInfoInstance(body?: any) {
+		async getOlaresStatusInfoInstance(body?: any, forbiddenLocal = false) {
 			let baseURL = '';
 			const userStore = useUserStore();
 			if (process.env.NODE_ENV !== 'development') {
-				baseURL = userStore.getModuleSever('settings');
+				baseURL = userStore.getModuleSever(
+					'settings',
+					undefined,
+					undefined,
+					forbiddenLocal ? false : true
+				);
 			}
 			let jws: string | undefined = userStore.current_user?.isLargeVersion12
 				? undefined
@@ -1261,7 +1271,8 @@ export const useMDNSStore = defineStore('mdnsStore', {
 				timeout: 1000 * 30,
 				headers: {
 					'Content-Type': 'application/json',
-					'X-Signature': jws as any
+					'X-Signature': jws as any,
+					'X-Authorization': userStore.current_user?.access_token
 				}
 			});
 			return instance;
@@ -1292,7 +1303,7 @@ export const useMDNSStore = defineStore('mdnsStore', {
 			}
 			return jws;
 		},
-		async getFrpList(username: string) {
+		async getFrpList(username: string, device_name?: string) {
 			try {
 				if (this.frpMap[username]) {
 					return this.frpMap[username];
@@ -1307,7 +1318,8 @@ export const useMDNSStore = defineStore('mdnsStore', {
 					headers: {}
 				});
 				const response = await instance.post('/v2/servers', {
-					name: username
+					name: username,
+					device_name
 				});
 				if (response.status == 200) {
 					if (response.data.length > 0) {
@@ -1322,6 +1334,17 @@ export const useMDNSStore = defineStore('mdnsStore', {
 		},
 		isNewActivedMineVersion(version: string) {
 			return compareOlaresVersion(version, newActivedMineVersion).compare >= 0;
+		},
+		async getOlaresInfos() {
+			const userStore = useUserStore();
+			if (!userStore.current_user?.isLocal) {
+				return await this.getOlaresInfo();
+			}
+			const result = await this.getOlaresInfo(false);
+			if (result) {
+				return;
+			}
+			await this.getOlaresInfo(true);
 		}
 	}
 });

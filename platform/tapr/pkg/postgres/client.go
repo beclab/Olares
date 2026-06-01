@@ -104,7 +104,7 @@ func newClient(dsn string, builder *clientBuilder) (*client, error) {
 
 	dbProxy := DBLogger{DB: db}
 
-	dbProxy.Debug()
+	// dbProxy.Debug()
 
 	return &client{DB: &dbProxy, builder: builder}, nil
 }

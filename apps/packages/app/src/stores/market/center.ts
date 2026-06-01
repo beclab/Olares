@@ -4,114 +4,68 @@ import {
 	getMarketState
 } from 'src/api/market/centerApi';
 import {
-	getErrorTextByState,
-	isCloneApp,
-	isFailed,
 	isUpgradable,
+	nsfwApp,
+	suspendApp,
 	uninstalledApp
 } from 'src/constant/config';
 import { useMenuStore } from 'src/stores/market/menu';
-import { useUserStore } from 'src/stores/market/user';
+import { usePreCheckStore } from 'src/stores/market/preCheck';
 import globalConfig from 'src/api/market/config';
 import { Version } from 'src/utils/version';
 import { defineStore } from 'pinia';
 import {
-	APP_STATUS,
-	AppFullInfoLatest,
-	AppInfoAggregation,
-	AppLocalInfo,
 	AppSimpleInfo,
-	AppSimpleInfoLatest,
-	AppStatusChange,
 	AppStatusLatest,
 	CONTENT_TYPE,
 	getAppCombinedId,
-	ImageInfoUpdate,
 	MARKET_SOURCE_OFFICIAL,
-	MARKET_SOURCE_TYPE,
 	MarketData,
-	MarketSource,
-	MarketSystemChange,
 	Page,
-	PAYMENT_STATUS,
 	Recommend,
-	STATUS_OPERATE_TYPE,
 	Topic,
 	TOPIC_TYPE
 } from 'src/constant/constants';
 import {
 	clearAppFullInfoMap,
-	loadAppFullInfoMap,
 	updateAppFullInfoMapKey
 } from 'src/stores/market/marketDB';
-import {
-	AppHandler,
-	FullInfoProcessor
-} from 'src/stores/market/fullInfoProcessor';
-import { bus, BUS_EVENT, busEmit } from 'src/utils/bus';
-import { i18n } from 'src/boot/i18n';
-import { getMarketSource } from 'src/api/market/private/source';
+import { useAppStore } from 'src/stores/market/appStore';
 import { useSettingStore } from 'src/stores/market/setting';
 import { intersection } from 'src/utils/utils';
 import { ImageUpdater } from 'src/stores/market/ImageUpdater';
 import cloneDeep from 'lodash/cloneDeep';
-import { CacheRequest } from 'src/stores/market/CacheRequest';
 
 export type CenterState = {
-	appUrl: string;
 	dataHash: string;
-	sources: MarketSource[];
 	marketData: MarketData;
 	pagesMap: Map<string, any>;
-	localStatusMap: Map<string, AppLocalInfo>;
-	appSimpleInfoMap: Map<string, AppSimpleInfoLatest>;
-	appStatusMap: Map<string, AppStatusLatest>;
-	appFullInfoMap: Map<string, AppFullInfoLatest>;
-	appInfoProcessor: FullInfoProcessor | null;
-	imageUpdater: ImageUpdater | null;
 	pollInterval: NodeJS.Timeout | null;
 	pollingInterval: number;
+	allSourcesApps: Set<string>;
 };
 
 export const useCenterStore = defineStore('marketCenter', {
 	state: () => {
 		return {
-			appUrl: `${globalConfig.url}/app-store/api/v2`,
 			dataHash: '',
-			sources: [] as MarketSource[],
 			marketData: {},
 			pagesMap: new Map<string, any>(),
-			localStatusMap: new Map<string, AppLocalInfo>(),
-			appSimpleInfoMap: new Map<string, AppSimpleInfoLatest>(),
-			appStatusMap: new Map<string, AppStatusLatest>(),
-			appFullInfoMap: new Map<string, AppFullInfoLatest>(),
-			appInfoProcessor: null,
-			imageUpdater: null,
 			pollInterval: null,
-			pollingInterval: 180000
+			pollingInterval: 180000,
+			allSourcesApps: new Set<string>()
 		} as CenterState;
 	},
 	getters: {
-		remoteSource() {
-			const centerStore = useCenterStore();
-			return centerStore.sources.filter(
-				(item) => item.type === MARKET_SOURCE_TYPE.REMOTE
-			);
-		},
-		localSource() {
-			const centerStore = useCenterStore();
-			return centerStore.sources.filter(
-				(item) => item.type === MARKET_SOURCE_TYPE.LOCAL
-			);
-		},
 		marketSource(state) {
 			const settingStore = useSettingStore();
 			return state.marketData?.user_data?.sources[settingStore.marketSourceId];
 		},
-		marketInstalledApps(state) {
+		marketInstalledApps() {
 			const apps: string[] = [];
 			const settingStore = useSettingStore();
-			state.appStatusMap.forEach((statusLatest, combinedId) => {
+			const appStore = useAppStore();
+			appStore.appStatusMap.forEach((statusLatest, combinedId) => {
 				if (!uninstalledApp(statusLatest.status)) {
 					const list = combinedId.split('_');
 					const sourceId = list[0];
@@ -121,32 +75,21 @@ export const useCenterStore = defineStore('marketCenter', {
 					}
 				}
 			});
-
 			return apps;
 		},
-		installStatusList(state) {
-			return Array.from(state.appStatusMap.values()).filter(
-				(item) => !uninstalledApp(item.status)
-			);
-		},
-		upgradingList(state) {
+		updateList() {
 			const result: string[] = [];
-			state.appStatusMap.forEach((statusLatest, combinedId) => {
-				if (
-					(statusLatest.status.state === APP_STATUS.UPGRADE.DEFAULT ||
-						statusLatest.status.state === APP_STATUS.INITIALIZE.DEFAULT) &&
-					statusLatest.status.opType === STATUS_OPERATE_TYPE.UPGRADE
-				) {
-					result.push(combinedId);
-				}
-			});
-			return result;
-		},
-		updateList(state) {
-			const result: string[] = [];
-			state.appStatusMap.forEach((statusLatest, combinedId) => {
+			const settingsStore = useSettingStore();
+			const appStore = useAppStore();
+			appStore.appStatusMap.forEach((statusLatest, combinedId) => {
 				if (isUpgradable(statusLatest.status)) {
-					const simpleLatest = state.appSimpleInfoMap.get(combinedId);
+					const list = combinedId.split('_');
+					const sourceId = list[0];
+					const simpleLatest = appStore.getAppSimpleInfo(
+						statusLatest.status.rawAppName,
+						sourceId,
+						statusLatest.status
+					);
 					if (
 						simpleLatest &&
 						statusLatest.version &&
@@ -162,6 +105,15 @@ export const useCenterStore = defineStore('marketCenter', {
 								console.log(
 									`${combinedId} app ${statusLatest.status.name} ${myVersion} need update to ${latestVersion}`
 								);
+
+								//suspend app return
+								if (suspendApp(simpleLatest)) {
+									return;
+								}
+								//open nsfw and nsfw app return
+								if (settingsStore.nsfw && nsfwApp(simpleLatest)) {
+									return;
+								}
 								result.push(combinedId);
 							}
 						} catch (e) {
@@ -174,354 +126,13 @@ export const useCenterStore = defineStore('marketCenter', {
 		}
 	},
 	actions: {
-		splitCombinedId(combinedId: string): {
-			sourceId: string;
-			appName: string;
-		} {
-			const list = combinedId.split('_');
-			return { sourceId: list[0], appName: list[1] };
-		},
-		getAppAggregationInfo(
-			appId: string,
-			sourceId: string
-		): AppInfoAggregation | null {
-			if (!appId || !sourceId) {
-				console.error(
-					`appId:${appId} and sourceId:${sourceId} must be a string in getAppAggregationInfo`
-				);
-				return null;
-			}
+		init() {
+			const appStore = useAppStore();
 
-			const combinedId = getAppCombinedId(sourceId, appId);
-			let simpleLatest = this.appSimpleInfoMap.get(combinedId);
-			const statusLatest = this.appStatusMap.get(combinedId);
-			let fullLatest = this.appFullInfoMap.get(combinedId);
-
-			if (simpleLatest) {
-				this.addFullInfoQueue(appId, sourceId, true);
-				return {
-					app_simple_latest: simpleLatest,
-					app_status_latest: statusLatest
-						? statusLatest
-						: this._getDefaultStatus(simpleLatest.app_simple_info.app_name),
-					app_full_info: fullLatest
-				} as AppInfoAggregation;
-			} else if (statusLatest && isCloneApp(statusLatest.status)) {
-				//clone app
-				this.addFullInfoQueue(appId, sourceId, true);
-				const combinedId2 = getAppCombinedId(
-					sourceId,
-					statusLatest?.status?.rawAppName
-				);
-				simpleLatest = this.appSimpleInfoMap.get(combinedId2);
-				fullLatest = this.appFullInfoMap.get(combinedId2);
-				return {
-					app_simple_latest: simpleLatest,
-					app_status_latest: statusLatest
-						? statusLatest
-						: simpleLatest
-						? this._getDefaultStatus(simpleLatest.app_simple_info.app_name)
-						: this._getDefaultStatus(appId),
-					app_full_info: fullLatest
-				} as AppInfoAggregation;
-			}
-			return null;
-		},
-		updateLocalStatus(
-			appId: string,
-			sourceId: string,
-			statusInfo: AppLocalInfo
-		) {
-			if (!statusInfo || !statusInfo.status) {
-				return;
-			}
-			if (statusInfo.status === PAYMENT_STATUS.SYNCING) {
-				return;
-			}
-			const combinedId = getAppCombinedId(sourceId, appId);
-			this.localStatusMap.set(combinedId, statusInfo);
-			busEmit('local_state_update', {
-				appId,
-				sourceId,
-				status: statusInfo.status
-			});
-		},
-		getLocalStatus(appId: string, sourceId: string) {
-			const combinedId = getAppCombinedId(sourceId, appId);
-			return this.localStatusMap.get(combinedId);
-		},
-		getAppStatus(appId: string, sourceId: string): AppStatusLatest {
-			const combinedId = getAppCombinedId(sourceId, appId);
-			if (this.appStatusMap.has(combinedId)) {
-				return this.appStatusMap.get(combinedId)!;
-			}
-			return this._getDefaultStatus(appId);
-		},
-		getAppSimpleInfo(appId: string, sourceId: string) {
-			const combinedId = getAppCombinedId(sourceId, appId);
-			return this.appSimpleInfoMap.get(combinedId);
-		},
-		getAppFullInfo(appId: string, sourceId: string) {
-			const combinedId = getAppCombinedId(sourceId, appId);
-			return this.appFullInfoMap.get(combinedId);
-		},
-		getCloneApp(appId: string, sourceId: string) {
-			const apps: string[] = [];
-			this.appStatusMap.forEach((statusLatest, combinedId) => {
-				if (!uninstalledApp(statusLatest.status)) {
-					const list = combinedId.split('_');
-					const appSourceId = list[0];
-					const appName = list[1];
-					if (
-						sourceId === appSourceId &&
-						appId === statusLatest.status.rawAppName &&
-						appName !== statusLatest.status.rawAppName
-					) {
-						apps.push(appName);
-					}
-				}
-			});
-			return apps;
-		},
-		getSourceInstalledApp(sourceId: string) {
-			const apps: string[] = [];
-			if (sourceId === MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD) {
-				this.appStatusMap.forEach((statusLatest, combinedId) => {
-					if (statusLatest) {
-						const list = combinedId.split('_');
-						const appSourceId = list[0];
-						const appName = list[1];
-						if (
-							isCloneApp(statusLatest.status) &&
-							uninstalledApp(statusLatest.status)
-						) {
-							return;
-						}
-						if (sourceId === appSourceId) {
-							apps.push(appName);
-						}
-					}
-				});
-			} else {
-				this.appStatusMap.forEach((statusLatest, combinedId) => {
-					if (!uninstalledApp(statusLatest.status)) {
-						const list = combinedId.split('_');
-						const appSourceId = list[0];
-						const appName = list[1];
-						if (sourceId === appSourceId) {
-							apps.push(appName);
-						}
-					}
-				});
-			}
-			return apps;
-		},
-		removeSourceId(sourceId: string): void {
-			const filterMapBySourceId = (map: Map<string, any>) => {
-				const keysToRemove: string[] = [];
-				map.forEach((_, key) => {
-					if (key.startsWith(`${sourceId}_`)) {
-						keysToRemove.push(key);
-					}
-				});
-				keysToRemove.forEach((key) => map.delete(key));
-			};
-
-			filterMapBySourceId(this.appSimpleInfoMap);
-			filterMapBySourceId(this.appStatusMap);
-			filterMapBySourceId(this.appFullInfoMap);
-		},
-		addFullInfoQueue(
-			appId: string,
-			sourceId: string,
-			priority: boolean,
-			forceRefresh = false,
-			forceRequest = false
-		) {
-			if (!appId || !sourceId) {
-				console.error(
-					`appId:${appId} and sourceId:${sourceId} must be a string in addFullInfoQueue`
-				);
-				return;
-			}
-
-			if (!this.sources.find((item) => item.id === sourceId)) {
-				console.error(`sourceId ${sourceId} must be in`, this.sources);
-				return;
-			}
-
-			const key = getAppCombinedId(sourceId, appId);
-			if (!forceRefresh) {
-				const simpleLatest = this.appSimpleInfoMap.get(key);
-				if (!simpleLatest) {
-					console.error(`app ${key} simple info error`);
-					return;
-				}
-				const fullLatest = this.appFullInfoMap.get(key);
-				if (fullLatest) {
-					try {
-						//version update
-						const fullVersion = new Version(
-							fullLatest?.app_info?.app_entry?.version
-						);
-						const simpleVersion = new Version(
-							simpleLatest?.app_simple_info?.app_version
-						);
-						if (
-							simpleVersion.isEqual(fullVersion) ||
-							simpleVersion.isLess(fullVersion)
-						) {
-							return;
-						} else {
-							console.log(
-								`app ${simpleLatest?.app_simple_info?.app_name} the new version ${simpleLatest?.app_simple_info?.app_version}!`
-							);
-						}
-
-						//image size update
-						if (simpleLatest?.timestamp === fullLatest.timestamp) {
-							return;
-						} else {
-							console.log(
-								`app ${simpleLatest?.app_simple_info?.app_name} the new timestamp ${simpleLatest?.timestamp}!`
-							);
-						}
-					} catch (error) {
-						console.error(simpleLatest);
-						console.error(fullLatest);
-						console.error(error);
-						return;
-					}
-				}
-			}
-
-			if (!this.appInfoProcessor) {
-				console.error(`appInfoProcessor must be exist`);
-				return;
-			}
-
-			if (priority) {
-				this.appInfoProcessor?.addToPriorityQueue(key, forceRequest);
-			} else {
-				this.appInfoProcessor?.addToNormalQueue(key, forceRequest);
-			}
-		},
-		updateAppStatus(appId: string, sourceId: string, newState: string) {
-			const statusLatest = this.getAppStatus(appId, sourceId);
-			if (statusLatest) {
-				statusLatest.status.state = newState;
-				const combinedId = getAppCombinedId(sourceId, appId);
-				this.appStatusMap.set(combinedId, statusLatest);
-			}
-		},
-		updateAppStatusBySocket(data: AppStatusChange) {
-			// console.log('market status update => ', data);
-			if (!data) {
-				console.error('update status null');
-				return;
-			}
-			if (!data.app_name || !data.source) {
-				console.error('update status failure: app_name or source empty');
-				return;
-			}
-
-			const combinedId = getAppCombinedId(data.source, data.app_name);
-			if (data.app_state_latest && data.app_state_latest) {
-				const oldState = this.appStatusMap.get(combinedId);
-				if (
-					isFailed(data.app_state_latest.status) &&
-					data.app_state_latest.status?.state !== oldState?.status?.state
-				) {
-					bus.emit(
-						BUS_EVENT.APP_BACKEND_ERROR,
-						data.app_name +
-							' ' +
-							i18n.global.t(
-								getErrorTextByState(data.app_state_latest.status.state)
-							)
-					);
-				}
-				this.appStatusMap.set(combinedId, data.app_state_latest);
-			}
-
-			if (
-				data.app_state_latest.status.state === APP_STATUS.UNINSTALL.COMPLETED ||
-				data.app_state_latest.status.state === APP_STATUS.RUNNING
-			) {
-				const settingStore = useUserStore();
-				settingStore.init().forceRefresh();
-			}
-		},
-		updateMarketSystemBySocket(data: MarketSystemChange) {
-			console.log(data);
-			if (data.point === 'new_app_ready' && data.extensions) {
-				if (data.extensions.source && data.extensions.app_name) {
-					this.addFullInfoQueue(
-						data.extensions.app_name,
-						data.extensions.source,
-						true,
-						true,
-						true
-					);
-				}
-			} else if (data.point === 'local_app_delete' && data.extensions) {
-				if (data.extensions.source && data.extensions.app_name) {
-					const combinedId = getAppCombinedId(
-						data.extensions.source,
-						data.extensions.app_name
-					);
-					this.appSimpleInfoMap.delete(combinedId);
-					this.appFullInfoMap.delete(combinedId);
-					this.appStatusMap.delete(combinedId);
-				}
-			}
-		},
-		updateDownloadedImageSizeBySocket(data: ImageInfoUpdate) {
-			this.imageUpdater?.handleSocketUpdate(data);
-		},
-		async init() {
-			const marketSourceRequest = new CacheRequest(
-				'cache_market_source',
-				getMarketSource,
-				{
-					onData: (data) => {
-						this.sources = data;
-						console.log('sources ===>', this.sources);
-					}
-				}
-			);
-			const map = await loadAppFullInfoMap();
-			if (map) {
-				this.appFullInfoMap = map;
-			}
-			const store = this;
-			this.appInfoProcessor = new FullInfoProcessor({
-				handleAppInfo(combinedId: string, appInfo: any) {
-					store.appFullInfoMap.set(combinedId, appInfo);
-					store.appSimpleInfoMap.set(combinedId, {
-						app_simple_info: appInfo.app_simple_info,
-						type: appInfo.type,
-						timestamp: appInfo.timestamp,
-						version: appInfo.version
-					} as AppSimpleInfoLatest);
-					updateAppFullInfoMapKey(combinedId, appInfo);
-
-					//local insert
-					const { appName, sourceId } = store.splitCombinedId(combinedId);
-					if (sourceId === MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD) {
-						if (!store.appStatusMap.get(combinedId)) {
-							store.appStatusMap.set(
-								combinedId,
-								store._getDefaultStatus(appName)
-							);
-						}
-					}
-				}
-			} as AppHandler);
-			this.imageUpdater = new ImageUpdater((imageDetails) => {
+			appStore.imageUpdater = new ImageUpdater((imageDetails) => {
 				console.log('imageDetails update ==> ', imageDetails);
 
-				this.appFullInfoMap.forEach((value, key) => {
+				appStore.appFullInfoMap.forEach((value, key) => {
 					const images = value.app_info.image_analysis?.images;
 					if (!images) return;
 
@@ -534,7 +145,7 @@ export const useCenterStore = defineStore('marketCenter', {
 					updateAppFullInfoMapKey(key, cloneDeep(value));
 				});
 			});
-			this.appInfoProcessor?.processTempAppQueue();
+
 			if (this.pollInterval) {
 				clearInterval(this.pollInterval);
 				this.pollInterval = null;
@@ -543,7 +154,6 @@ export const useCenterStore = defineStore('marketCenter', {
 				console.log('pollInterval refresh');
 				this.fetchNewData();
 			}, this.pollingInterval);
-			return marketSourceRequest;
 		},
 		async loadFirstData() {
 			const hasLocalData = this.loadMarketData() && this.loadMarketHash();
@@ -568,24 +178,26 @@ export const useCenterStore = defineStore('marketCenter', {
 					}
 				}
 				if (!globalConfig.isOfficial) {
+					const appStore = useAppStore();
 					const data = await getMarketState();
 					if (data) {
-						this.calcLocationSourceAppStateInfo();
-						this.calcRemoteSourceAppStateInfo();
+						appStore.calcLocationSourceAppStateInfo(this.marketData);
+						appStore.calcRemoteSourceAppStateInfo(this.marketData);
 					}
 
-					console.log('appStatusMap ===>', this.appStatusMap);
+					console.log('appStatusMap ===>', appStore.appStatusMap);
 
 					const settingStore = useSettingStore();
-					const otherSources = this.sources.filter(
+					const otherSources = appStore.sources.filter(
 						(item) => item.id !== settingStore.marketSourceId
 					);
-					this.processSources(
+					appStore.processSources(
 						otherSources,
 						'app_info_latest',
+						this.marketData,
 						(currentSource, item) => {
 							if (item.app_simple_info) {
-								this.addFullInfoQueue(
+								appStore.addFullInfoQueue(
 									item.app_simple_info.app_name,
 									currentSource.id,
 									false
@@ -594,7 +206,7 @@ export const useCenterStore = defineStore('marketCenter', {
 						}
 					);
 
-					console.log('appSimpleInfoMap ===>', this.appSimpleInfoMap);
+					console.log('appSimpleInfoMap ===>', appStore.appSimpleInfoMap);
 				}
 			} catch (error) {
 				console.error('Failed to update market data:', error);
@@ -654,25 +266,55 @@ export const useCenterStore = defineStore('marketCenter', {
 		},
 		calcMarketData() {
 			const settingStore = useSettingStore();
+			const appStore = useAppStore();
 			this.pagesMap.clear();
-			this.appSimpleInfoMap.clear();
-			this.appStatusMap.clear();
+			appStore.appSimpleInfoMap.clear();
 			console.log('marketData ===>', this.marketData);
-			if (this.appInfoProcessor) {
-				this.appInfoProcessor.clearNotFoundQueue();
+			if (appStore.appInfoProcessor) {
+				appStore.appInfoProcessor.clearNotFoundQueue();
 			}
 
-			this.calcRemoteSourceSimpleAppInfo();
+			appStore.calcRemoteSourceSimpleAppInfo(this.marketData);
+			appStore.calcLocationSourceSimpleAppInfo(this.marketData);
 
-			this.calcLocationSourceSimpleAppInfo();
+			console.log('appSimpleInfoMap ===>', appStore.appSimpleInfoMap);
 
-			console.log('appSimpleInfoMap ===>', this.appSimpleInfoMap);
+			const serverAppIds = new Set<string>();
+			appStore.sources.forEach((source) => {
+				const sourceData = this.marketData?.user_data?.sources[source.id];
+				if (sourceData?.app_state_latest) {
+					sourceData.app_state_latest.forEach((item: AppStatusLatest) => {
+						if (item.status?.name) {
+							const combinedId = getAppCombinedId(source.id, item.status.name);
+							serverAppIds.add(combinedId);
+						}
+					});
+				}
+			});
 
-			this.calcRemoteSourceAppStateInfo();
+			const keysToRemove: string[] = [];
+			appStore.appStatusMap.forEach((statusLatest, combinedId) => {
+				if (!serverAppIds.has(combinedId)) {
+					const { sourceId } = appStore.splitCombinedId(combinedId);
+					if (
+						sourceId === MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD &&
+						uninstalledApp(statusLatest.status) &&
+						appStore.appSimpleInfoMap.has(combinedId)
+					) {
+						return;
+					}
+					keysToRemove.push(combinedId);
+				}
+			});
+			keysToRemove.forEach((key) => {
+				console.log(`[calcMarketData] Removing stale app status: ${key}`);
+				appStore.appStatusMap.delete(key);
+			});
 
-			this.calcLocationSourceAppStateInfo();
+			appStore.calcRemoteSourceAppStateInfo(this.marketData);
+			appStore.calcLocationSourceAppStateInfo(this.marketData);
 
-			console.log('appStatusMap ===>', this.appStatusMap);
+			console.log('appStatusMap ===>', appStore.appStatusMap);
 
 			if (this.marketSource?.others) {
 				if (this.marketSource?.others.tags) {
@@ -722,7 +364,6 @@ export const useCenterStore = defineStore('marketCenter', {
 										(topic.type === TOPIC_TYPE.TOPIC ||
 											topic.type === TOPIC_TYPE.CATEGORY)
 									) {
-										// console.log(topic);
 										const res: any = {
 											type:
 												topic.type === TOPIC_TYPE.TOPIC
@@ -732,7 +373,7 @@ export const useCenterStore = defineStore('marketCenter', {
 											name: topic.name,
 											description: topic.description,
 											content: [],
-											ids: topic.content ? topic.content.split(',') : []
+											ids: []
 										};
 										const topicIds = topic.content
 											? topic.content.split(',')
@@ -745,6 +386,7 @@ export const useCenterStore = defineStore('marketCenter', {
 											if (topicData && topicData.data) {
 												const topicRes = {};
 												let hasValidApps = false;
+												let validKey = '';
 												for (const key in topicData.data) {
 													if (
 														Object.prototype.hasOwnProperty.call(
@@ -766,12 +408,14 @@ export const useCenterStore = defineStore('marketCenter', {
 																	apps: processedApps
 																};
 																hasValidApps = true;
+																validKey = key;
 															}
 														}
 													}
 												}
 												if (hasValidApps) {
 													res.content.push(topicRes);
+													res.ids.push(topicRes[validKey].topicId);
 												}
 											}
 										}
@@ -811,98 +455,29 @@ export const useCenterStore = defineStore('marketCenter', {
 			}
 
 			console.log('all ===>', this.pagesMap);
-		},
-		processSources(sources, latestKey, processor) {
-			for (let i = 0; i < sources.length; i++) {
-				const currentSource = sources[i];
-				const sourceData =
-					this.marketData?.user_data?.sources[currentSource.id];
 
-				if (sourceData && sourceData[latestKey]) {
-					console.log(`${currentSource.id} latestKey execute`);
-					sourceData[latestKey].forEach((item) => {
-						processor(currentSource, item);
-					});
+			this._collectAllSourcesLatestApps();
+		},
+
+		_collectAllSourcesLatestApps() {
+			this.allSourcesApps.clear();
+
+			if (this.marketData?.user_data?.sources) {
+				for (const sourceId of Object.keys(this.marketData.user_data.sources)) {
+					const sourceData = this.marketData.user_data.sources[sourceId];
+
+					if (
+						sourceData?.others?.latest &&
+						Array.isArray(sourceData.others.latest)
+					) {
+						sourceData.others.latest.forEach((appName: string) => {
+							this.allSourcesApps.add(appName);
+						});
+					}
 				}
 			}
-		},
 
-		calcRemoteSourceSimpleAppInfo() {
-			this.processSources(
-				this.remoteSource,
-				'app_info_latest',
-				(currentSource, item) => {
-					if (item.app_simple_info) {
-						const combinedId = getAppCombinedId(
-							currentSource.id,
-							item.app_simple_info.app_name
-						);
-						this.appSimpleInfoMap.set(combinedId, item);
-					}
-				}
-			);
-		},
-
-		calcLocationSourceSimpleAppInfo() {
-			this.processSources(
-				this.localSource,
-				'app_info_latest',
-				(currentSource, item) => {
-					if (item.app_simple_info) {
-						const combinedId = getAppCombinedId(
-							currentSource.id,
-							item.app_simple_info.app_name
-						);
-						this.appSimpleInfoMap.set(combinedId, item);
-						this.appStatusMap.set(
-							combinedId,
-							this._getDefaultStatus(item.app_simple_info.app_name)
-						);
-					}
-				}
-			);
-		},
-
-		calcLocationSourceAppStateInfo() {
-			this.processSources(
-				this.localSource,
-				'app_state_latest',
-				(currentSource, item) => {
-					if (item.status) {
-						if (
-							this._getAppInfo(item.status.name, currentSource.id) ||
-							isCloneApp(item?.status)
-						) {
-							const combinedId = getAppCombinedId(
-								currentSource.id,
-								item.status.name
-							);
-							this.appStatusMap.set(combinedId, item);
-						}
-					}
-				}
-			);
-		},
-
-		calcRemoteSourceAppStateInfo() {
-			this.processSources(
-				this.remoteSource,
-				'app_state_latest',
-				(currentSource, item) => {
-					if (item.status) {
-						if (
-							this._getAppInfo(item.status.name, currentSource.id) ||
-							isCloneApp(item?.status)
-						) {
-							const combinedId = getAppCombinedId(
-								currentSource.id,
-								item.status.name
-							);
-							this.appStatusMap.set(combinedId, item);
-						}
-					}
-				}
-			);
+			console.log('allSourcesLatestApps ===>', this.allSourcesApps);
 		},
 		_getTopList(category: string): string[] {
 			if (!this.marketSource?.others?.tops) {
@@ -957,6 +532,7 @@ export const useCenterStore = defineStore('marketCenter', {
 		_getAppInfo(
 			id: string,
 			sourceId: string,
+			filterNsfw = true,
 			key = 'app_name'
 		): AppSimpleInfo | null {
 			const app = this.marketData.user_data.sources[
@@ -967,50 +543,40 @@ export const useCenterStore = defineStore('marketCenter', {
 				return null;
 			}
 
+			const settingsStore = useSettingStore();
+			if (filterNsfw && settingsStore.nsfw && nsfwApp(app)) {
+				return null;
+			}
+
 			if (!globalConfig.isOfficial) {
-				const userStore = useUserStore();
-				if (!userStore.initialized || !userStore.systemResource) {
+				const preCheckStore = usePreCheckStore();
+				if (!preCheckStore.initialized || !preCheckStore.systemResource) {
 					return null;
 				}
 
 				const intersectedArray = intersection(
-					userStore.systemResource.nodes,
+					preCheckStore.systemResource.nodes,
 					app.app_simple_info.support_arch
 						? app.app_simple_info.support_arch
 						: []
 				);
 
 				if (
-					userStore.systemResource.nodes.length <= 0 ||
+					preCheckStore.systemResource.nodes.length <= 0 ||
 					intersectedArray.length === 0
 				) {
 					console.error(
-						` ${id} supportArch ->  ${app.app_simple_info.support_arch} intersectedArray length 0 and device nodes ${userStore.systemResource.nodes}`
+						` ${sourceId} ${id} supportArch ->  ${app.app_simple_info.support_arch} intersectedArray length 0 and device nodes ${preCheckStore.systemResource.nodes}`
 					);
 					return null;
 				}
 			}
 
 			if (app) {
-				this.addFullInfoQueue(id, sourceId, false);
+				const appStore = useAppStore();
+				appStore.addFullInfoQueue(id, sourceId, false);
 			}
 			return app ? app.app_simple_info : null;
-		},
-		_getDefaultStatus(appName: string): AppStatusLatest {
-			return {
-				type: 'app-status-default',
-				status: {
-					entranceStatuses: [],
-					lastTransitionTime: '',
-					progress: '',
-					name: appName,
-					rawAppName: appName,
-					state: APP_STATUS.UNINSTALL.COMPLETED,
-					statusTime: '',
-					updateTime: ''
-				},
-				version: ''
-			};
 		}
 	}
 });

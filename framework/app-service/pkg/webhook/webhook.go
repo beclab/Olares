@@ -12,16 +12,15 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	appcfg_mod "github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/emicklei/go-restful/v3"
@@ -82,7 +81,7 @@ func New(config *rest.Config) (*Webhook, error) {
 }
 
 // GetAppConfig get app config by namespace.
-func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationManager, appCfg *appcfg_mod.ApplicationConfig, isShared bool, err error) {
+func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared bool, err error) {
 	list, err := wh.dynamicClient.AppV1alpha1().ApplicationManagers().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, nil, false, err
@@ -153,7 +152,7 @@ func (wh *Webhook) CreatePatch(
 	proxyUUID uuid.UUID, injectPolicy, injectWs, injectUpload bool,
 	injectSharedPod *bool,
 	appmgr *v1alpha1.ApplicationManager,
-	appcfg *appcfg_mod.ApplicationConfig,
+	appConfig *appcfg.ApplicationConfig,
 	perms []appcfg.ProviderPermission,
 ) ([]byte, error) {
 	isInjected, prevUUID := isInjectedPod(pod)
@@ -166,7 +165,7 @@ func (wh *Webhook) CreatePatch(
 
 	// inject sidecar only for the app's namespace
 	if req.Namespace == appmgr.Spec.AppNamespace {
-		configMapName, err := wh.createSidecarConfigMap(ctx, pod, proxyUUID.String(), req.Namespace, injectPolicy, injectWs, injectUpload, appmgr, appcfg, perms)
+		configMapName, err := wh.createSidecarConfigMap(ctx, pod, proxyUUID.String(), req.Namespace, injectPolicy, injectWs, injectUpload, appmgr, appConfig, perms)
 		if err != nil {
 			return nil, err
 		}
@@ -187,26 +186,26 @@ func (wh *Webhook) CreatePatch(
 		}
 		appKey, appSecret, _ := wh.getAppKeySecret(req.Namespace)
 
-		if injectPolicy || len(appcfg.PodsSelectors) == 0 || wh.isSelected(appcfg.PodsSelectors, pod) {
-			initContainer := sidecar.GetInitContainerSpec(appcfg)
+		if injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod) {
+			initContainer := sidecar.GetInitContainerSpec(appConfig)
 			pod.Spec.InitContainers = append(pod.Spec.InitContainers, initContainer)
 			policySidecar := sidecar.GetEnvoySidecarContainerSpec(clusterID, envoyFilename, appKey, appSecret)
 			pod.Spec.Containers = append(pod.Spec.Containers, policySidecar)
 
 			pod.Spec.InitContainers = append(
 				[]corev1.Container{
-					sidecar.GetInitContainerSpecForWaitFor(appcfg.OwnerName),
+					sidecar.GetInitContainerSpecForWaitFor(appConfig.OwnerName),
 					sidecar.GetInitContainerSpecForRenderEnvoyConfig(),
 				},
 				pod.Spec.InitContainers...)
 		}
 
 		if injectWs {
-			wsSidecar := sidecar.GetWebSocketSideCarContainerSpec(&appcfg.WsConfig)
+			wsSidecar := sidecar.GetWebSocketSideCarContainerSpec(&appConfig.WsConfig)
 			pod.Spec.Containers = append(pod.Spec.Containers, wsSidecar)
 		}
 		if injectUpload {
-			uploadSidecar := sidecar.GetUploadSideCarContainerSpec(pod, &appcfg.Upload)
+			uploadSidecar := sidecar.GetUploadSideCarContainerSpec(pod, &appConfig.Upload)
 			if uploadSidecar != nil {
 				pod.Spec.Containers = append(pod.Spec.Containers, *uploadSidecar)
 			}
@@ -319,7 +318,7 @@ func (wh *Webhook) AdmissionError(uid types.UID, err error) *admissionv1.Admissi
 // MustInject checks which inject operation should do for a pod.
 func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace string) (
 	injectPolicy, injectWs, injectUpload bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
-	appCfg *appcfg_mod.ApplicationConfig, appMgr *v1alpha1.ApplicationManager, err error) {
+	appConfig *appcfg.ApplicationConfig, appMgr *v1alpha1.ApplicationManager, err error) {
 	var isShared bool
 
 	perms = make([]appcfg.ProviderPermission, 0)
@@ -336,7 +335,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		return
 	}
 
-	appMgr, appCfg, isShared, err = wh.GetAppConfig(namespace)
+	appMgr, appConfig, isShared, err = wh.GetAppConfig(namespace)
 	if err != nil {
 		if errors.Is(err, api.ErrApplicationManagerNotFound) {
 			err = nil
@@ -346,22 +345,22 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		}
 	}
 
-	if appCfg == nil {
+	if appConfig == nil {
 		klog.Infof("Unknown namespace=%s, do not inject", namespace)
 		return
 	}
-	if appCfg.IsMiddleware() {
+	if appConfig.IsMiddleware() {
 		return
 	}
 
 	if !isShared {
-		if appCfg.WsConfig.URL != "" && appCfg.WsConfig.Port > 0 {
+		if appConfig.WsConfig.URL != "" && appConfig.WsConfig.Port > 0 {
 			injectWs = true
 		}
-		if appCfg.Upload.Dest != "" {
+		if appConfig.Upload.Dest != "" {
 			injectUpload = true
 		}
-		for _, p := range appCfg.Permission {
+		for _, p := range appConfig.Permission {
 			klog.Info("found permission: ", p)
 			if providerP, ok := p.([]interface{}); ok {
 				for _, v := range providerP {
@@ -372,7 +371,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 					}
 					providerAppName := provider["appName"].(string)
 					providerName := provider["providerName"].(string)
-					perms = append(perms, appcfg_mod.ProviderPermission{
+					perms = append(perms, appcfg.ProviderPermission{
 						AppName:      providerAppName,
 						Namespace:    ns,
 						ProviderName: providerName,
@@ -384,9 +383,9 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		}
 
 		injectPolicy = false
-		for _, e := range appCfg.Entrances {
+		for _, e := range appConfig.Entrances {
 			var isEntrancePod bool
-			isEntrancePod, err = wh.isAppEntrancePod(ctx, appCfg.AppName, e.Host, pod, namespace)
+			isEntrancePod, err = wh.isAppEntrancePod(ctx, appConfig.AppName, e.Host, pod, namespace)
 			klog.Infof("entranceName=%s isEntrancePod=%v", e.Name, isEntrancePod)
 			if err != nil {
 				return false, false, false, nil, perms, nil, nil, err
@@ -399,9 +398,9 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		}
 	} // end of non-shared namespace's pod
 
-	for _, e := range appCfg.SharedEntrances {
+	for _, e := range appConfig.SharedEntrances {
 		var isEntrancePod bool
-		isEntrancePod, err = wh.isAppEntrancePod(ctx, appCfg.AppName, e.Host, pod, namespace)
+		isEntrancePod, err = wh.isAppEntrancePod(ctx, appConfig.AppName, e.Host, pod, namespace)
 		klog.Infof("entranceName=%s isEntrancePod=%v", e.Name, isEntrancePod)
 		if err != nil {
 			return false, false, false, nil, perms, nil, nil, err
@@ -445,8 +444,8 @@ func (wh *Webhook) isAppEntrancePod(ctx context.Context, appname, host string, p
 func (wh *Webhook) createSidecarConfigMap(
 	ctx context.Context, pod *corev1.Pod,
 	proxyUUID, namespace string, injectPolicy, injectWs, injectUpload bool,
-	appmgr *v1alpha1.ApplicationManager, appcfg *appcfg_mod.ApplicationConfig,
-	perms []appcfg_mod.ProviderPermission,
+	appmgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig,
+	perms []appcfg.ProviderPermission,
 ) (string, error) {
 	configMapName := fmt.Sprintf("%s-%s", constants.SidecarConfigMapVolumeName, proxyUUID)
 	if deployName := utils.GetDeploymentName(pod); deployName != "" {
@@ -457,13 +456,13 @@ func (wh *Webhook) createSidecarConfigMap(
 		return "", e
 	}
 
-	permCfg, err := apputils.ProviderPermissionsConvertor(perms).ToPermissionCfg(ctx, appcfg.OwnerName, appmgr.GetMarketSource())
+	permCfg, err := apputils.ProviderPermissionsConvertor(perms).ToPermissionCfg(ctx, appConfig.OwnerName, appcfg.GetMarketSource(appmgr))
 	if err != nil {
-		klog.Errorf("Failed to convert permissions for app %s: %v", appcfg.AppName, err)
+		klog.Errorf("Failed to convert permissions for app %s: %v", appConfig.AppName, err)
 		return "", err
 	}
 
-	newConfigMap := sidecar.GetSidecarConfigMap(configMapName, namespace, appcfg, injectPolicy, injectWs, injectUpload, pod, permCfg)
+	newConfigMap := sidecar.GetSidecarConfigMap(configMapName, namespace, appConfig, injectPolicy, injectWs, injectUpload, pod, permCfg)
 	if e == nil {
 		// configmap found
 		cm.Data = newConfigMap.Data
@@ -695,7 +694,7 @@ func (wh *Webhook) getAppKeySecret(namespace string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	_, appcfg, isShared, err := wh.GetAppConfig(namespace)
+	_, appConfig, isShared, err := wh.GetAppConfig(namespace)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return "", "", err
@@ -707,7 +706,7 @@ func (wh *Webhook) getAppKeySecret(namespace string) (string, string, error) {
 	}
 
 	apClient := provider.NewApplicationPermissionRequest(client)
-	ap, err := apClient.Get(context.TODO(), "user-system-"+appcfg.OwnerName, appcfg.AppName, metav1.GetOptions{})
+	ap, err := apClient.Get(context.TODO(), "user-system-"+appConfig.OwnerName, appConfig.AppName, metav1.GetOptions{})
 	if err != nil {
 		return "", "", err
 	}
@@ -732,4 +731,120 @@ func (wh *Webhook) isSelected(podSelectors []metav1.LabelSelector, pod *corev1.P
 		}
 	}
 	return false
+}
+
+// MacvlanInitContainerName is the name of the init container injected for pods
+// that need to reply via eth0 in macvlan setups.
+const MacvlanInitContainerName = "macvlan-reply-via-eth0"
+
+// macvlanInitScript is the shell script run inside the macvlan-init container.
+// It waits for an IPv4 address on eth0, then creates a dedicated routing table
+// and a `from <pod-ip>` rule so that reply traffic is sent out via eth0
+// instead of the default pod gateway.
+const macvlanInitScript = `set -eu
+TABLE=100
+PRI=100
+POD_IP=""
+i=0
+while [ "$i" -lt 30 ]; do
+  POD_IP=$(ip -4 addr show dev eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -1)
+  test -n "$POD_IP" && break
+  i=$((i + 1))
+  sleep 1
+done
+test -n "$POD_IP" || { echo "no eth0 address after wait"; exit 1; }
+GW=$(ip -4 route show dev eth0 | awk '/^default/{print $3; exit}')
+test -n "${GW:-}" || GW=169.254.1.1
+ip -4 route replace default via "$GW" dev eth0 table "$TABLE"
+if ip -4 rule list | grep -Fq "from $POD_IP lookup $TABLE"; then exit 0; fi
+ip -4 rule add from "$POD_IP/32" lookup "$TABLE" priority "$PRI"
+`
+
+// GetMacvlanInitContainer returns the init container spec used to set up
+// a dedicated routing table so that reply traffic flows back via eth0 for
+// pods participating in a macvlan / overlay-gateway setup.
+func GetMacvlanInitContainer() corev1.Container {
+	runAsNonRoot := false
+	allowPrivilegeEscalation := false
+	runAsUser := int64(0)
+	return corev1.Container{
+		Name:            MacvlanInitContainerName,
+		Image:           "docker.io/beclab/aboveos-busybox:1.37.0",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		SecurityContext: &corev1.SecurityContext{
+			RunAsUser:                &runAsUser,
+			RunAsNonRoot:             &runAsNonRoot,
+			AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+				Add:  []corev1.Capability{"NET_ADMIN"},
+			},
+		},
+		Command:                  []string{"sh", "-c", macvlanInitScript},
+		Resources:                corev1.ResourceRequirements{},
+		TerminationMessagePath:   "/dev/termination-log",
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+	}
+}
+
+// ShouldInjectMacvlanInit reports whether the macvlan init container should be
+// injected for the given pod. It returns true only when the owning Application
+// can be resolved from the pod's app name/owner labels and has
+// `spec.settings.enableOverlayGateway == "true"`.
+func (wh *Webhook) ShouldInjectMacvlanInit(ctx context.Context, pod *corev1.Pod, ns string) (bool, error) {
+	if pod == nil || pod.Labels == nil {
+		return false, nil
+	}
+	if pod.Labels[constants.ApplicationMacvlanInitLabel] != "true" {
+		return false, nil
+	}
+	appName := pod.Labels[constants.ApplicationNameLabel]
+	owner := pod.Labels[constants.ApplicationOwnerLabel]
+	if appName == "" {
+		klog.Infof("macvlan-init: skip pod=%s/%s missing app labels", ns, pod.Name)
+		return false, nil
+	}
+	klog.Infof("ShouldInjectMacvlanInit: pod.Namespace: %s", ns)
+	applicationName, err := apputils.FmtAppMgrName(appName, owner, ns)
+	if err != nil {
+		klog.Errorf("macvlan-init: failed to format application name app=%s owner=%s ns=%s err=%v", appName, owner, ns, err)
+		return false, err
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			klog.Infof("macvlan-init: application=%s not found for pod=%s/%s", applicationName, ns, pod.Name)
+			return false, nil
+		}
+		klog.Errorf("macvlan-init: failed to get application=%s err=%v", applicationName, err)
+		return false, err
+	}
+	enabled := app.Spec.Settings["enableOverlayGateway"] == "true"
+	if !enabled {
+		klog.Infof("macvlan-init: application=%s enableOverlayGateway is not true, skip pod=%s/%s", applicationName, ns, pod.Name)
+	}
+	return enabled, nil
+}
+
+// CreateMacvlanInitPatch appends the macvlan init container to the pod's
+// init containers (idempotent — does nothing if the container is already
+// present) and returns the JSON merge patch to send back in the admission
+// response.
+func (wh *Webhook) CreateMacvlanInitPatch(req *admissionv1.AdmissionRequest, pod *corev1.Pod) ([]byte, error) {
+	if pod.Annotations == nil {
+		pod.Annotations = make(map[string]string)
+	}
+	pod.Annotations["k8s.v1.cni.cncf.io/networks"] = "kube-system/underlay-macvlan"
+
+	for _, c := range pod.Spec.InitContainers {
+		if c.Name == MacvlanInitContainerName {
+			klog.Infof("macvlan-init: container already present in pod=%s/%s, skip", pod.Namespace, pod.Name)
+			return makePatches(req, pod)
+		}
+	}
+	// Append after any existing init containers (e.g. sidecar wait-for /
+	// render-envoy-config) so we run after them but still before the main
+	// app containers.
+	pod.Spec.InitContainers = append(pod.Spec.InitContainers, GetMacvlanInitContainer())
+	return makePatches(req, pod)
 }

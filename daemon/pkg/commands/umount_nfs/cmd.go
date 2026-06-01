@@ -33,6 +33,11 @@ func (i *umountNfs) Execute(ctx context.Context, p any) (res any, err error) {
 	err = utils.UmountNfsDriver(ctx, param.MountPath)
 	if err != nil {
 		klog.Error("umount nfs driver error, ", err)
+		return
+	}
+
+	if removeErr := utils.RemoveMountRecord(commands.MOUNT_RECORDS_FILE, param.MountPath); removeErr != nil {
+		klog.Warning("remove mount record error, ", removeErr)
 	}
 
 	return

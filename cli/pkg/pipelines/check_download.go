@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"path"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -24,7 +25,8 @@ func CheckDownloadInstallationPackage() error {
 	}
 
 	p := download.NewCheckDownload(manifest, runtime)
-	if err := p.Start(); err != nil {
+	// TODO(ctx): plumb ctx in a follow-up; this entry point is not yet ctx-aware.
+	if err := p.Start(context.Background()); err != nil {
 		logger.Errorf("check download package failed %v", err)
 		return err
 	}

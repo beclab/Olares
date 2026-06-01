@@ -5,6 +5,7 @@ import { convertIntegerPropertiesToBoolean } from '../utils';
 const defaultEntryKeyOrder = [
 	'id',
 	'algorithms',
+	'task_ids',
 	'feed_id',
 	'sources',
 	'url',
@@ -96,6 +97,8 @@ export function createEntryTable(db: any): string {
 			PRIMARY
 			KEY,
 			algorithms
+			TEXT,
+			task_ids,
 			TEXT,
 			feed_id
 			TEXT,
@@ -193,15 +196,16 @@ export async function addOrUpdateEntries(entries: Entry[]) {
 			params.map((param) => typeof param)
 		);
 		await sendMessageToWorker('transaction', {
-			sql: `INSERT INTO entries (id, algorithms, feed_id, sources, url, title, author, full_content, summary, raw_content,
+			sql: `INSERT INTO entries (id, algorithms, task_ids, feed_id, sources, url, title, author, full_content, summary, raw_content,
 																 image_url, last_opened, attachment, readlater, crawler,status, starred, disabled, saved,
                                  progress, remaining_time, played_time, unread, published_at, createdAt, updatedAt,
 																 source, ranked, score, impression, impression_id, keywords, batch_id, local_file_path,
 																 file_type, extract, language, download_faiure, extra, __v, debug_recommend_info)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
 						        ?, ?, ?, ?,?, ?) ON CONFLICT(id) DO
 			UPDATE SET
 				algorithms = excluded.algorithms,
+				task_ids = excluded.task_ids,
 				feed_id = excluded.feed_id,
 				sources = excluded.sources,
 				url = excluded.url,
@@ -282,6 +286,7 @@ export async function updateEntryById(id: string, entry: Entry) {
 		await sendMessageToWorker('execute', {
 			sql: `UPDATE entries
 						SET algorithms           = ?,
+								task_ids             = ?,
 								feed_id              = ?,
 								sources              = ?,
 								url                  = ?,

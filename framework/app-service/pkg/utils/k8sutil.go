@@ -16,12 +16,12 @@ import (
 
 	"github.com/go-resty/resty/v2"
 
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 
 	srvconfig "github.com/containerd/containerd/services/server/config"
@@ -125,15 +125,25 @@ func GetAllNodesTunnelIPCIDRs() (cidrs []string) {
 // 	return gpuType, nil
 // }
 
+// GetAllGpuTypesFromNodes returns the set of explicit GPU types declared by
+// node labels (gpu.bytetrade.io/type). Nodes without the label, or with the
+// label set to an empty string / "none", contribute nothing to the result,
+// so a pure-CPU cluster returns an empty map. Callers that need to surface
+// "CPU" as a user-selectable option should add it on top of this set
+// themselves; mixing it in here would break the chart-render auto-detect
+// path which expects len(gpuTypes)==1 to mean "this cluster has exactly
+// one GPU flavour".
 func GetAllGpuTypesFromNodes(nodes *corev1.NodeList) (map[string]struct{}, error) {
 	gpuTypes := make(map[string]struct{})
 	if nodes == nil {
 		return gpuTypes, errors.New("empty node list")
 	}
 	for _, n := range nodes.Items {
-		if typeLabel, ok := n.Labels[NodeGPUTypeLabel]; ok {
-			gpuTypes[typeLabel] = struct{}{} // TODO: add driver version info
+		typeLabel, ok := n.Labels[NodeGPUTypeLabel]
+		if IsCPUOnlyNodeLabel(typeLabel, ok) {
+			continue
 		}
+		gpuTypes[typeLabel] = struct{}{} // TODO: add driver version info
 	}
 	return gpuTypes, nil
 }

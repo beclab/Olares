@@ -36,6 +36,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	kresource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 )
 
 type KubeRuntime struct {
@@ -293,6 +294,9 @@ func (a *Argument) SetGPU(enable bool) {
 }
 
 func (a *Argument) SetOlaresVersion(version string) {
+	if viper.GetString(ENV_LOCAL_RELEASE_VERSION_OVERRIDE) != "" {
+		version = viper.GetString(ENV_LOCAL_RELEASE_VERSION_OVERRIDE)
+	}
 	if version == "" || len(version) <= 2 {
 		return
 	}
@@ -463,8 +467,11 @@ func NewKubeRuntime(arg Argument) (*KubeRuntime, error) {
 		return nil, err
 	}
 
-	base := connector.NewBaseRuntime(cluster.Name, connector.NewDialer(),
+	base, err := connector.NewBaseRuntime(cluster.Name, connector.NewDialer(),
 		arg.BaseDir, arg.OlaresVersion, arg.ConsoleLogFileName, arg.ConsoleLogTruncate, arg.SystemInfo)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create base runtime")
+	}
 
 	clusterSpec := &cluster.Spec
 	defaultCluster, roleGroups := clusterSpec.SetDefaultClusterSpec(arg.InCluster, arg.SystemInfo.IsDarwin())
@@ -486,6 +493,10 @@ func NewKubeRuntime(arg Argument) (*KubeRuntime, error) {
 
 	args, _ := json.Marshal(arg)
 	logger.Debugf("[runtime] arg: %s", string(args))
+
+	// enable multus cni
+	logger.Debugf("enabling multus cni in kube runtime")
+	defaultCluster.Network.MultusCNI.Enabled = ptr.To(true)
 
 	r := &KubeRuntime{
 		Cluster: defaultCluster,

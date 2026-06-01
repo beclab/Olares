@@ -5,27 +5,27 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
+	"net/http"
+	"slices"
+	"strconv"
+
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
-	"golang.org/x/exp/maps"
-	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"slices"
-	"strconv"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
 	"github.com/emicklei/go-restful/v3"
 	"helm.sh/helm/v3/pkg/time"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,7 +39,7 @@ type depRequest struct {
 type installHelperIntf interface {
 	getAdminUsers() (admin []string, isAdmin bool, err error)
 	getInstalledApps() (installed bool, app []*v1alpha1.Application, err error)
-	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error)
+	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error)
 	setAppConfig(req *api.InstallRequest, appName string)
 	validate(bool, []*v1alpha1.Application) error
 	setAppEnv(overrides []sysv1alpha1.AppEnvVar) error
@@ -49,6 +49,7 @@ type installHelperIntf interface {
 
 var _ installHelperIntf = (*installHandlerHelper)(nil)
 var _ installHelperIntf = (*installHandlerHelperV2)(nil)
+var _ installHelperIntf = (*installHandlerHelperV3)(nil)
 
 type installHandlerHelper struct {
 	h                    *Handler
@@ -65,6 +66,10 @@ type installHandlerHelper struct {
 }
 
 type installHandlerHelperV2 struct {
+	installHandlerHelper
+}
+
+type installHandlerHelperV3 struct {
 	installHandlerHelper
 }
 
@@ -107,37 +112,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		}
 	}
 
-	// check selected gpu type can be supported
-	// if selectedGpuType != "" , then check if the gpu type exists in cluster
-	// if selectedGpuType == "" , and only one gpu type exists in cluster, then use it
-	var nodes corev1.NodeList
-	err = h.ctrlClient.List(req.Request.Context(), &nodes, &client.ListOptions{})
-	if err != nil {
-		klog.Errorf("list node failed %v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-	gpuTypes, err := utils.GetAllGpuTypesFromNodes(&nodes)
-	if err != nil {
-		klog.Errorf("get gpu type failed %v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
-	if insReq.SelectedGpuType != "" {
-		if _, ok := gpuTypes[insReq.SelectedGpuType]; !ok {
-			klog.Errorf("selected gpu type %s not found in cluster", insReq.SelectedGpuType)
-			api.HandleBadRequest(resp, req, fmt.Errorf("selected gpu type %s not found in cluster", insReq.SelectedGpuType))
-			return
-		}
-	} else {
-		if len(gpuTypes) == 1 {
-			insReq.SelectedGpuType = maps.Keys(gpuTypes)[0]
-			klog.Infof("only one gpu type %s found in cluster, use it as selected gpu type", insReq.SelectedGpuType)
-		}
-	}
-
-	apiVersion, appCfg, err := apputils.GetApiVersionFromAppConfig(req.Request.Context(), &apputils.ConfigOptions{
+	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        owner,
@@ -147,16 +122,13 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		SelectedGpu:  insReq.SelectedGpuType,
 	})
 	klog.Infof("chartVersion: %s", chartVersion)
+
 	if err != nil {
 		klog.Errorf("Failed to get api version err=%v", err)
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
-	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" {
-		klog.Errorf("app %s can not be clone", app)
-		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
-		return
-	}
+	klog.Infof("apiVersion: %s", apiVersion)
 
 	client, err := utils.GetClient()
 	if err != nil {
@@ -202,6 +174,26 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 
 		h.validateClusterScope = h._validateClusterScope
 		helper = h
+	case appcfg.V3:
+		klog.Info("Using install handler helper for V3")
+		h := &installHandlerHelperV3{
+			installHandlerHelper: installHandlerHelper{
+				h:          h,
+				req:        req,
+				resp:       resp,
+				app:        app,
+				rawAppName: rawAppName,
+				owner:      owner,
+				token:      token,
+				insReq:     insReq,
+				client:     client,
+			},
+		}
+
+		// v3 reuses the v1 cluster-scope validation; admin gating + shared-namespace
+		// forcing is handled by the helper's own overrides.
+		h.validateClusterScope = h._validateClusterScope
+		helper = h
 	default:
 		klog.Errorf("Unsupported app config api version: %s", apiVersion)
 		api.HandleBadRequest(resp, req, fmt.Errorf("unsupported app config api version: %s", apiVersion))
@@ -221,11 +213,83 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType)
+	appCfg, err := helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
 	}
+	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" ||
+		(appCfg.AllowMultipleInstall && apiVersion == appcfg.V2) {
+		klog.Errorf("app %s can not be clone", app)
+		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
+		return
+	}
+
+	// When the caller didn't explicitly pick a compute mode, try to derive
+	// one from the cluster + manifest. An empty SelectedGpuType is treated
+	// as "no selection" (NOT as "cpu") — callers who genuinely want cpu
+	// must pass "cpu" explicitly. See compute.AutoSelectMode for the rules.
+	//
+	// If the caller did pass something explicitly we leave it alone here;
+	// the subsequent compute.AppInstallable check is what surfaces the
+	// "you picked a mode the cluster doesn't have" error.
+	if insReq.SelectedGpuType == "" {
+		var chosen string
+		chosen, err = compute.AutoSelectMode(req.Request.Context(), h.ctrlClient, appCfg)
+		// More than one declared mode is runnable on this cluster — let the
+		// caller pick by surfacing the full per-mode install plan with a
+		// dedicated code, instead of failing the install outright.
+		if errors.Is(err, compute.ErrAmbiguousComputeMode) {
+			plan, planErr := compute.BuildInstallComputePlan(req.Request.Context(), h.ctrlClient, appCfg)
+			if planErr != nil {
+				api.HandleError(resp, req, planErr)
+				return
+			}
+			api.HandleFailedCheck(resp, api.CheckTypeComputeModeSelect, plan)
+			return
+		}
+		if err != nil {
+			klog.Errorf("Failed to auto-select compute mode for app %s: %v", app, err)
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+		// Reload appCfg with the chosen mode so its Requirement reflects
+		// the GPU-mode resource needs we'll actually schedule against.
+		// Just patching SelectedGpuType in place isn't enough: for legacy
+		// apps the first GetAppConfig call (with empty selectedGpu) ran
+		// ResolveRequirement under cpu mode and dropped the GPU values
+		// from appCfg.Requirement, so we need to re-parse from the
+		// manifest with the chosen mode to recover them.
+		if chosen != appCfg.SelectedGpuType {
+			appCfg, err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, chosen)
+			if err != nil {
+				klog.Errorf("Failed to reload appConfig with auto-selected gpu type %s: %v", chosen, err)
+				api.HandleError(resp, req, err)
+				return
+			}
+		}
+	}
+
+	decision, err := validation.Run(req.Request.Context(), validation.Input{
+		Client:    h.ctrlClient,
+		AppConfig: appCfg,
+		Op:        v1alpha1.InstallOp,
+		Token:     token,
+	}, validation.InstallabilityValidators()...)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	if !decision.OK {
+		resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
+			Response: api.Response{Code: 400},
+			Resource: decision.Resource.String(),
+			Message:  decision.Message,
+			Reason:   decision.Reason.String(),
+		})
+		return
+	}
+
 	err = helper.setAppEnv(insReq.Envs)
 	if err != nil {
 		klog.Errorf("Failed to set app env err=%v", err)
@@ -275,7 +339,7 @@ func (h *Handler) getOriginChartVersion(rawAppName, owner string) (string, error
 }
 
 func (h *installHandlerHelper) getAdminUsers() (admin []string, isAdmin bool, err error) {
-	adminList, err := kubesphere.GetAdminUserList(h.req.Request.Context(), h.h.kubeConfig)
+	adminList, err := kubesphere.GetOwnerOrAdminList(h.req.Request.Context(), h.h.kubeConfig)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
 		return
@@ -304,25 +368,8 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 		return err
 	}
 	if result != nil {
-		api.HandleFailedCheck(h.resp, api.CheckTypeAppEntrance, result, 104222)
+		api.HandleFailedCheck(h.resp, api.CheckTypeAppEntrance, result)
 		return fmt.Errorf("invalid entrance config, check result: %#v", result)
-	}
-
-	reasons, err := apputils.CheckHardwareRequirement(h.req.Request.Context(), h.appConfig)
-
-	if err != nil {
-		api.HandleError(h.resp, h.req, err)
-		return
-	}
-	if len(reasons) > 0 {
-		err = h.resp.WriteHeaderAndEntity(http.StatusBadRequest, map[string]any{
-			"code":   http.StatusBadRequest,
-			"result": reasons,
-		})
-		if err != nil {
-			klog.Infof("failed to write hardware reason: %v", err)
-		}
-		return errors.New("invalid spec.hardware config or no node satisfied hardware requirement")
 	}
 
 	err = apputils.CheckDependencies2(h.req.Request.Context(), h.h.ctrlClient, h.appConfig.Dependencies, h.owner, true)
@@ -374,30 +421,6 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 		return
 	}
 
-	//resourceType, err := CheckAppRequirement(h.h.kubeConfig, h.token, h.appConfig)
-	resourceType, resourceConditionType, err := apputils.CheckAppRequirement(h.token, h.appConfig, v1alpha1.InstallOp)
-	if err != nil {
-		klog.Errorf("Failed to check app requirement err=%v", err)
-		h.resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
-			Response: api.Response{Code: 400},
-			Resource: resourceType.String(),
-			Message:  err.Error(),
-			Reason:   resourceConditionType.String(),
-		})
-		return
-	}
-
-	resourceType, resourceConditionType, err = apputils.CheckUserResRequirement(h.req.Request.Context(), h.appConfig, v1alpha1.InstallOp)
-	if err != nil {
-		h.resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
-			Response: api.Response{Code: 400},
-			Resource: resourceType.String(),
-			Message:  err.Error(),
-			Reason:   resourceConditionType.String(),
-		})
-		return
-	}
-
 	satisfied, err := apputils.CheckMiddlewareRequirement(h.req.Request.Context(), h.h.ctrlClient, h.appConfig.Middleware)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -420,7 +443,7 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 		return
 	}
 	if ret != nil {
-		api.HandleFailedCheck(h.resp, api.CheckTypeAppEnv, ret, http.StatusUnprocessableEntity)
+		api.HandleFailedCheck(h.resp, api.CheckTypeAppEnv, ret)
 		return fmt.Errorf("Invalid appenv config, check result: %#v", ret)
 	}
 
@@ -429,7 +452,7 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 
 func (h *installHandlerHelper) _validateClusterScope(isAdmin bool, installedApp []*v1alpha1.Application) (err error) {
 	for _, installedApp := range installedApp {
-		if h.appConfig.AppScope.ClusterScoped && installedApp.IsClusterScoped() {
+		if h.appConfig.AppScope.ClusterScoped && appcfg.IsClusterScoped(installedApp) {
 			return errors.New("only one cluster scoped app can install in on cluster")
 		}
 	}
@@ -456,7 +479,7 @@ func (h *installHandlerHelper) getInstalledApps() (installed bool, app []*v1alph
 	return
 }
 
-func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error) {
+func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error) {
 	var (
 		admin                   string
 		installAsAdmin          bool
@@ -471,7 +494,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 			appOwner := installedApp.Spec.Owner
 			if slices.Contains(adminUsers, appOwner) {
 				// check the app is installed as cluster scope
-				if installedApp.IsClusterScoped() {
+				if appcfg.IsClusterScoped(installedApp) {
 					cluserAppInstalled = true
 					installedCluserAppOwner = appOwner
 				}
@@ -486,7 +509,8 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 	case !isAdmin:
 		if len(adminUsers) == 0 {
 			klog.Errorf("No admin user found")
-			api.HandleBadRequest(h.resp, h.req, fmt.Errorf("no admin user found"))
+			err = fmt.Errorf("no admin user found")
+			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
 		admin = adminUsers[0]
@@ -496,7 +520,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 		installAsAdmin = true
 	}
 
-	appConfig, _, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	appConfig, _, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		RawAppName:   h.rawAppName,
 		Owner:        h.owner,
@@ -545,18 +569,37 @@ func (h *installHandlerHelper) setAppConfig(req *api.InstallRequest, appName str
 }
 
 func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opID string, err error) {
+	name, _ := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
+	return h.applyAppMgr(name, nil, marketSource)
+}
+
+// applyAppMgr is the shared create-or-patch implementation used by V1 / V2
+// (via installHandlerHelper.applyApplicationManager) and V3
+// (via installHandlerHelperV3.applyApplicationManager).
+//
+// `name` is the deterministic AM object name; `extraLabels` is merged into
+// metadata.labels on both Create and Patch — V1/V2 pass nil; V3 passes
+// {AppScopeLabel: AppScopeShared} to mark the AM as a shared app. Passing
+// an empty / nil map intentionally omits the "labels" key from the merge
+// patch so existing labels are NOT cleared (a JSON merge patch with
+// `"labels": null` would delete the field entirely).
+func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]string, marketSource string) (opID string, err error) {
 	config, err := json.Marshal(h.appConfig)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
 		return
 	}
-	var a *v1alpha1.ApplicationManager
-	name, _ := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
 	images := make([]api.Image, 0)
 	if len(h.insReq.Images) != 0 {
 		images = h.insReq.Images
 	}
 	imagesStr, _ := json.Marshal(images)
+	// For v1/v2 appConfig.OwnerName == h.owner (the install caller). For
+	// v3 it is the cluster owner that GetAppConfig resolved at chart
+	// load time — independent of which admin is currently operating, so
+	// the AM stays addressed to a stable user across multi-admin
+	// install / upgrade cycles.
+	appOwner := h.appConfig.OwnerName
 	appMgr := &v1alpha1.ApplicationManager{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -574,14 +617,21 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 			AppName:      h.app,
 			RawAppName:   h.rawAppName,
 			AppNamespace: h.appConfig.Namespace,
-			AppOwner:     h.owner,
+			AppOwner:     appOwner,
 			Config:       string(config),
 			Source:       h.insReq.Source.String(),
 			Type:         v1alpha1.Type(h.appConfig.Type),
 			OpType:       v1alpha1.InstallOp,
 		},
 	}
-	a, err = h.client.AppV1alpha1().ApplicationManagers().Get(h.req.Request.Context(), name, metav1.GetOptions{})
+	if len(extraLabels) > 0 {
+		appMgr.Labels = make(map[string]string, len(extraLabels))
+		for k, v := range extraLabels {
+			appMgr.Labels[k] = v
+		}
+	}
+
+	a, err := h.client.AppV1alpha1().ApplicationManagers().Get(h.req.Request.Context(), name, metav1.GetOptions{})
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			api.HandleError(h.resp, h.req, err)
@@ -598,22 +648,30 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
-		// update Spec.Config
-		patchData := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					api.AppTokenKey:                 h.token,
-					api.AppRepoURLKey:               h.insReq.RepoURL,
-					api.AppVersionKey:               h.appConfig.Version,
-					api.AppMarketSourceKey:          marketSource,
-					api.AppInstallSourceKey:         "app-service",
-					constants.ApplicationTitleLabel: h.appConfig.Title,
-				},
+		metadataPatch := map[string]interface{}{
+			"annotations": map[string]interface{}{
+				api.AppTokenKey:                 h.token,
+				api.AppRepoURLKey:               h.insReq.RepoURL,
+				api.AppVersionKey:               h.appConfig.Version,
+				api.AppMarketSourceKey:          marketSource,
+				api.AppInstallSourceKey:         "app-service",
+				constants.ApplicationTitleLabel: h.appConfig.Title,
 			},
+		}
+		if len(extraLabels) > 0 {
+			labelsPatch := make(map[string]interface{}, len(extraLabels))
+			for k, v := range extraLabels {
+				labelsPatch[k] = v
+			}
+			metadataPatch["labels"] = labelsPatch
+		}
+		patchData := map[string]interface{}{
+			"metadata": metadataPatch,
 			"spec": map[string]interface{}{
 				"opType":     v1alpha1.InstallOp,
 				"config":     string(config),
 				"source":     h.insReq.Source.String(),
+				"appOwner":   appOwner,
 				"rawAppName": h.rawAppName,
 			},
 		}
@@ -704,8 +762,7 @@ func (h *installHandlerHelperV2) _validateClusterScope(isAdmin bool, installedAp
 	// check if subcharts has a client chart
 	for _, subChart := range h.appConfig.SubCharts {
 		if !subChart.Shared {
-			subChartName := utils.GetChartName(h.appConfig.AppName, h.appConfig.RawAppName, subChart.Name)
-			if subChartName != h.app {
+			if subChart.Name != h.app {
 				err := fmt.Errorf("non-shared subchart must has the same name with the app, subchart name is %s but the main app is %s", subChart.Name, h.app)
 				klog.Error(err)
 				api.HandleBadRequest(h.resp, h.req, err)
@@ -720,7 +777,7 @@ func (h *installHandlerHelperV2) _validateClusterScope(isAdmin bool, installedAp
 	return nil
 }
 
-func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (err error) {
+func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error) {
 	klog.Info("get app config for install handler v2")
 
 	var (
@@ -732,13 +789,13 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 	} else {
 		if len(adminUsers) == 0 {
 			klog.Errorf("No admin user found")
-			api.HandleBadRequest(h.resp, h.req, fmt.Errorf("no admin user found"))
+			err = fmt.Errorf("no admin user found")
+			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
 		admin = adminUsers[0]
 	}
-
-	appConfig, _, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	appConfig, _, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		RawAppName:   h.rawAppName,
 		Owner:        h.owner,
@@ -759,6 +816,69 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 	h.appConfig = appConfig
 
 	return
+}
+
+// ----- v3 helper overrides -----
+
+// getAdminUsers returns the admin user list and rejects non-admin callers
+// with a 403 — v3 / shared apps are admin-managed.
+func (h *installHandlerHelperV3) getAdminUsers() (admin []string, isAdmin bool, err error) {
+	admin, isAdmin, err = h.installHandlerHelper.getAdminUsers()
+	if err != nil {
+		return
+	}
+	if !isAdmin {
+		err = errors.New("only admin users can install v3 / shared apps")
+		api.HandleForbidden(h.resp, h.req, err)
+		return
+	}
+	return
+}
+
+func (h *installHandlerHelperV3) getInstalledApps() (installed bool, apps []*v1alpha1.Application, err error) {
+	return
+}
+
+// getAppConfig loads the chart with admin context (the caller is admin —
+// gated above) and forces the namespace to the deterministic shared one so
+// every code path agrees on it regardless of what the manifest specified.
+func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error) {
+	appConfig, _, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+		App:          h.app,
+		RawAppName:   h.rawAppName,
+		Owner:        h.owner,
+		RepoURL:      h.insReq.RepoURL,
+		Version:      chartVersion,
+		Admin:        h.owner,
+		IsAdmin:      true,
+		MarketSource: marketSource,
+		SelectedGpu:  selectedGpuType,
+	})
+	if err != nil {
+		klog.Errorf("Failed to get appconfig err=%v", err)
+		api.HandleBadRequest(h.resp, h.req, err)
+		return
+	}
+	h.appConfig = appConfig
+	return
+}
+
+// applyApplicationManager creates / updates the cluster-wide v3 AM at the
+// deterministic name SharedAppMgrName(app) and stamps the
+// AppScopeLabel=shared marker on it so listers / proxy can identify the AM
+// as a shared app without re-reading the embedded config.
+//
+// The actual create-or-patch flow is shared with V1/V2 via applyAppMgr —
+// V3 only needs to override the AM name (to the cluster-wide deterministic
+// one) and supply the scope label. The shared namespace itself comes
+// through h.appConfig.Namespace, which V3.getAppConfig already rewrote to
+// SharedAppNamespace(app).
+func (h *installHandlerHelperV3) applyApplicationManager(marketSource string) (opID string, err error) {
+	name := apputils.V3AppMgrName(h.app)
+	labels := map[string]string{
+		constants.AppApiVersionLabel: constants.AppVersionV3,
+	}
+	return h.applyAppMgr(name, labels, marketSource)
 }
 
 func (h *Handler) isDeployAllowed(req *restful.Request, resp *restful.Response) {

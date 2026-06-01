@@ -12,6 +12,9 @@ on:
         type: string
       release-id:
         type: string
+      publish-npm:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       version:
@@ -23,6 +26,9 @@ on:
         type: string
       release-id:
         type: string
+      publish-npm:
+        type: boolean
+        default: true
 jobs:
   goreleaser:
     runs-on: ubuntu-22.04
@@ -60,6 +66,31 @@ jobs:
           OLARES_RELEASE_ID: ${{ inputs.release-id }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Assert binary version was injected
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          binary=$(find ./output -type f -name 'olares-cli' -path '*linux_amd64*' | head -n1)
+          if [ -z "$binary" ]; then
+            echo "::error::could not locate built linux_amd64 olares-cli binary under cli/output"
+            find ./output -maxdepth 2 -type f | sed 's/^/  /'
+            exit 1
+          fi
+          actual=$("$binary" --version 2>&1)
+          expected="${{ inputs.version }}"
+          expected_stripped="${expected#v}"
+          if echo "$actual" | grep -qE '0\.0\.0-development'; then
+            echo "::error::binary still reports placeholder version; ldflags did not take effect"
+            echo "binary: $binary"
+            echo "output: $actual"
+            exit 1
+          fi
+          if ! echo "$actual" | grep -qF "$expected_stripped"; then
+            echo "::error::binary version output '$actual' does not contain expected '$expected_stripped'"
+            exit 1
+          fi
+          echo "binary version OK: $actual"
+
       - name: Install coscmd
         run: pip install coscmd        
 
@@ -81,3 +112,34 @@ jobs:
           cd cli/output && for file in $(ls *.tar.gz | grep -v no-release-id); do
             coscmd upload "$file" ${{ secrets.REPO_PATH }}${file}
           done
+
+  publish-npm:
+    needs: [goreleaser]
+    if: ${{ inputs.publish-npm }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repository }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Sync npm package.json version to release input
+        working-directory: cli/npm
+        run: |
+          npm version "${{ inputs.version }}" \
+            --no-git-tag-version \
+            --allow-same-version
+
+      - name: Publish @olares/cli (dist-tag latest)
+        working-directory: cli/npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_OLARES_PUBLISH_TOKEN }}
+        run: npm publish --access public

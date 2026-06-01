@@ -38,13 +38,13 @@
 			<!--			todo 没有 -->
 			<!-- <bt-form-item :title="t('Status')" data="" /> -->
 			<!--			todo 没有 -->
-			<!-- <bt-form-item :title="t('Connection Type')" data="" /> -->
+			<!-- <bt-form-item :title="t('Connection type')" data="" /> -->
 			<bt-form-item
-				:title="t('Created At')"
+				:title="t('created_at')"
 				:data="date.formatDate(device?.createTime, 'YYYY-MM-DD HH:mm:ss')"
 			/>
 			<bt-form-item
-				:title="t('Last Seen')"
+				:title="t('Last seen')"
 				:data="date.formatDate(device?.lastSeenTime, 'YYYY-MM-DD HH:mm:ss')"
 			/>
 			<!--			todo 接口没有值 但是core中有字段 -->
@@ -53,10 +53,10 @@
 				:title="t('Tailscale')"
 				:data="device?.tailScale_id ? t('Enabled') : t('Deactivated')"
 			/>
-			<bt-form-item v-if="sso" :title="t('Token Expires')" :data="sso.exp" />
+			<bt-form-item v-if="sso" :title="t('Token expires')" :data="sso.exp" />
 			<bt-form-item
 				v-if="sso"
-				:title="t('Token Second Factor')"
+				:title="t('Token second factor')"
 				:data="sso?.isMfa"
 				:width-separator="false"
 			/>

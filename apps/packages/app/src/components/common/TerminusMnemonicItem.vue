@@ -203,6 +203,7 @@ onBeforeUnmount(() => {
 		border-radius: 8px;
 		height: 36px;
 		border: 1px solid $separator;
+		position: relative;
 
 		&__input {
 			width: calc(100% - 25px);

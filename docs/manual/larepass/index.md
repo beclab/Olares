@@ -27,6 +27,15 @@ Visit the [Google Play product page](https://play.google.com/store/apps/details?
 ### macOS & Windows
 Download the latest desktop client from the [LarePass website](https://www.olares.com/larepass).
 
+### Linux <Badge type="tip" text="Beta" />
+
+:::info System requirements
+- **Architecture**: The Linux package is available for x86_64 (amd64) systems only.
+- **Environment**: A graphical desktop environment is required.
+:::
+
+Download the latest Linux desktop client from the [LarePass website](https://www.olares.com/larepass).
+
 <!--### Chrome extension
 
 The LarePass extension allows you to collect content and manage passwords directly from your browser. It currently supports Google Chrome only and must be installed manually.
@@ -47,8 +56,8 @@ After installation, click the puzzle icon in your browser toolbar and pin the La
 :::
 -->
 ## Set up account 
-- On mobile devices, you can [create an Olares ID](/manual/larepass/create-account.md#create-an-olares-id) directly in the app.
-- On the desktop client<!-- or Chrome extension-->, you must [import an Olares account](/manual/larepass/create-account.md#import-an-account).
+- On mobile devices, you can [create an Olares ID](create-account.md) directly in the app. To use a custom domain, see [Create an Olares ID with a custom domain](create-org-account.md).
+- On the desktop client<!-- or Chrome extension-->, you must [import an existing account](import-account.md).
 
 ## Feature comparison
 

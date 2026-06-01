@@ -45,7 +45,7 @@ import { UsePod } from '@apps/control-panel-common/src/stores/PodData';
 import { computed, ref, watch } from 'vue';
 import MyContentPage from '../../components/MyContentPage.vue';
 import Yaml from './Yaml.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import FullPageWithBack from '@apps/control-panel-common/src/components/FullPageWithBack.vue';
 import QButtonStyle from '@apps/control-panel-common/src/components/QButtonStyle.vue';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';

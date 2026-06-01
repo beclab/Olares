@@ -1,0 +1,24 @@
+$h1-m:        (size: 3.75rem,     line-height: 4.25rem,     letter-spacing: normal, weight: 700) !default
+$h2-m:        (size: 3rem,  line-height: 3.5rem,  letter-spacing: normal, weight: 700) !default
+$h3-m:        (size: 2rem,     line-height: 2.5rem, letter-spacing: normal,    weight: 700) !default
+$h4-m:        (size: 1.5rem, line-height: 2rem,   letter-spacing: normal,  weight: 700) !default
+$h5-m:        (size: 1.25rem,   line-height: 1.75rem,     letter-spacing: normal,    weight: 700) !default
+$h6-m:        (size: 1.125rem,  line-height: 1.625rem,     letter-spacing: normal,   weight: 700) !default
+$subtitle1-m: (size: 1.125rem,  line-height: 1.625rem, letter-spacing: normal,  weight: 500) !default
+$subtitle2-m: (size: 1rem,  line-height: 1.5rem, letter-spacing: normal,  weight: 500) !default
+$subtitle3-m: (size: .875rem,     line-height: 1.25rem,  letter-spacing: normal,  weight: 500) !default
+$body1-m:     (size: 1.125rem,  line-height: 1.625rem, letter-spacing: normal,  weight: 400) !default
+$body2-m:     (size: 1rem,     line-height: 1.5rem,   letter-spacing: normal,  weight: 400) !default
+$body3-m:     (size: .875rem,     line-height: 1.25rem,   letter-spacing: normal,  weight: 400) !default
+$overline-m:  (size: .75rem,   line-height: 1rem,     letter-spacing: normal,  weight: 400) !default
+$caption-m:   (size: .75rem,   line-height: 1rem,  letter-spacing: normal,  weight: 500) !default
+
+$headings-m: ('h1-m': $h1-m, 'h2-m': $h2-m, 'h3-m': $h3-m, 'h4-m': $h4-m, 'h5-m': $h5-m, 'h6-m': $h6-m, 'subtitle1-m': $subtitle1-m, 'subtitle2-m': $subtitle2-m, 'subtitle3-m': $subtitle3-m, 'body1-m': $body1-m, 'body2-m': $body2-m, 'body3-m': $body3-m, 'overline-m': $overline-m, 'caption-m': $caption-m) !default
+
+.text-
+  @each $heading, $value in $headings-m 
+    &#{$heading}
+      font-size: map-get($value, "size")
+      font-weight: map-get($value, "weight")
+      line-height: map-get($value, "line-height")
+      letter-spacing: map-get($value, "letter-spacing")

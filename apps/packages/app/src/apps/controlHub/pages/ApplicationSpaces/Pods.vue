@@ -44,7 +44,7 @@ import MyLoading from '@apps/control-hub/src/components/MyLoading.vue';
 import ContainersList from '../Containers/IndexPage.vue';
 import MyQTabs from '@apps/control-hub/src/components/MyQTabs.vue';
 import { get, isEmpty } from 'lodash';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import DetailPage from '@apps/control-hub/src/containers/DetailPage.vue';
 import { getLocalTime } from '@apps/control-hub/src/utils/index.js';
 import Metadata from '@apps/control-hub/src/containers/Metadata.vue';

@@ -17,8 +17,8 @@ export class ShareApplication extends NormalApplication {
 	applicationName = 'share';
 	async appLoadPrepare(data: any): Promise<void> {
 		//@ts-ignore
-		(() => import('../css/styles.css'))();
-		importFilesStyle(false);
+		// (() => import('../css/styles.css'))();
+		// importFilesStyle(false);
 		await super.appLoadPrepare(data);
 		const quasar = data.quasar as QVueGlobals;
 		registerFilePreviewEvent(quasar);

@@ -5,23 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/registry"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	wfv1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	appcfg_mod "github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -120,7 +117,28 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectSharedPod, perms)
-	if !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0 {
+
+	v3 := appCfg != nil && appCfg.IsV3()
+	nothingToInject := !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0
+
+	if v3 {
+		if injectSharedPod != nil {
+			patchBytes, err := patchSharedEntranceLabel(req, &pod, *injectSharedPod)
+			if err != nil {
+				klog.Errorf("Failed to patch shared-entrance label for v3 pod uuid=%s name=%s namespace=%s err=%v",
+					proxyUUID, pod.Name, req.Namespace, err)
+				return h.sidecarWebhook.AdmissionError(req.UID, err)
+			}
+			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+			klog.Infof("Patched shared-entrance label for v3 pod uuid=%s namespace=%s injectSharedPod=%v",
+				proxyUUID, req.Namespace, *injectSharedPod)
+		} else {
+			klog.Infof("Skipping sidecar injection for v3 pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+		}
+		return resp
+	}
+
+	if nothingToInject {
 		klog.Infof("Skipping sidecar injection for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return resp
 	}
@@ -135,6 +153,26 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	klog.Infof("Success to create patch admission response for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 
 	return resp
+}
+
+// patchSharedEntranceLabel applies only the shared-entrance pod label, without
+// sidecar injection. Used for v3 apps where CreatePatch would also inject envoy.
+func patchSharedEntranceLabel(req *admissionv1.AdmissionRequest, pod *corev1.Pod, inject bool) ([]byte, error) {
+	if inject {
+		if pod.Labels == nil {
+			pod.Labels = make(map[string]string)
+		}
+		pod.Labels[constants.AppSharedEntrancesLabel] = "true"
+	} else if pod.Labels != nil {
+		delete(pod.Labels, constants.AppSharedEntrancesLabel)
+	}
+
+	current, err := json.Marshal(pod)
+	if err != nil {
+		return nil, err
+	}
+	patchResp := admission.PatchResponseFromRaw(req.Object.Raw, current)
+	return json.Marshal(patchResp.Patches)
 }
 
 func (h *Handler) appNamespaceValidate(req *restful.Request, resp *restful.Response) {
@@ -301,13 +339,24 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		return resp
 	}
 
-	gpuRequired := appcfg.Requirement.GPU
-	if gpuRequired == nil {
+	computeReq, ok := compute.SelectedRequirement(appcfg)
+	if !ok {
+		return resp
+	}
+	GPUType := computeReq.Mode
+
+	// no gpu found, no need to inject env, just return.
+	if GPUType == "" || GPUType == utils.CPUType {
 		return resp
 	}
 
 	var injectContainer []string
 	injectAll := false
+	// TODO: when a pod has only a single container, we can drop the
+	// applicationGpuInjectKey opt-in and derive injection purely from
+	// spec.resources. The annotation exists today to keep multi-container pods
+	// from getting GPU resource limits attached to every container (which would
+	// make the scheduler think each container needs its own GPU).
 	if injectValue, ok := annotations[applicationGpuInjectKey]; !ok || injectValue == "false" || injectValue == "" {
 		return resp
 	} else {
@@ -324,13 +373,6 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		}
 	}
 
-	GPUType := appcfg.GetSelectedGpuTypeValue()
-
-	// no gpu found, no need to inject env, just return.
-	if GPUType == "none" || GPUType == "" {
-		return resp
-	}
-
 	envs := []webhook.EnvKeyValue{
 		{
 			Key:   constants.EnvGPUType,
@@ -338,19 +380,42 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		},
 	}
 
-	gpuRequiredValue := gpuRequired.Value() / 1024 / 1024 // HAMi gpu memory format
-	hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
+	var hamiGpuMemory *string
+	if compute.IsHAMIMode(GPUType) && computeReq.RequiredGPU > 0 {
+		gpuRequiredValue := computeReq.RequiredGPU / 1024 / 1024 // HAMi gpu memory format
+		hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
+		hamiGpuMemory = ptr.To(hamiFormatGpuRequired.String())
+	}
 	patchBytes, err := webhook.CreatePatchForDeployment(
 		tpl,
 		injectAll,
 		injectContainer,
 		h.getGPUResourceTypeKey(GPUType),
-		ptr.To(hamiFormatGpuRequired.String()),
+		hamiGpuMemory,
 		envs,
 	)
 	if err != nil {
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	if !compute.IsHAMIMode(GPUType) && GPUType != utils.CPUType {
+		allocations, err := compute.FindAllocationsForApp(ctx, h.ctrlClient, appName, appcfg.OwnerName)
+		if err != nil {
+			klog.Errorf("find compute allocation for app %s failed %v", appName, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if len(allocations) == 0 || allocations[0].NodeName == "" {
+			klog.Warningf("compute allocation for app %s is not found", appName)
+			return resp
+			// err := fmt.Errorf("compute allocation for app %s is not found", appName)
+			// klog.Error(err)
+			// return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		patchBytes, err = appendNodeSelectorPatch(patchBytes, tpl, allocations[0].NodeName)
+		if err != nil {
+			klog.Errorf("append node selector patch error %v", err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
 	}
 	klog.Info("patchBytes:", string(patchBytes))
 	if len(patchBytes) > 0 {
@@ -366,18 +431,41 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 		return constants.NvidiaGPU
 	case utils.GB10ChipType:
 		return constants.NvidiaGPU
-	case utils.AmdApuCardType:
-		return constants.AMDGPU
-	case utils.AmdGpuCardType:
-		return constants.AMDGPU
-	case utils.StrixHaloChipType:
-		return constants.AMDGPU
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")
 		return ""
 	default:
 		return ""
 	}
+}
+
+func appendNodeSelectorPatch(patchBytes []byte, tpl *corev1.PodTemplateSpec, nodeName string) ([]byte, error) {
+	var patches []map[string]any
+	if len(patchBytes) > 0 {
+		if err := json.Unmarshal(patchBytes, &patches); err != nil {
+			return nil, err
+		}
+	}
+	if len(tpl.Spec.NodeSelector) == 0 {
+		patches = append(patches, map[string]any{
+			"op":   constants.PatchOpAdd,
+			"path": "/spec/template/spec/nodeSelector",
+			"value": map[string]string{
+				"kubernetes.io/hostname": nodeName,
+			},
+		})
+	} else {
+		op := constants.PatchOpAdd
+		if _, ok := tpl.Spec.NodeSelector["kubernetes.io/hostname"]; ok {
+			op = constants.PatchOpReplace
+		}
+		patches = append(patches, map[string]any{
+			"op":    op,
+			"path":  "/spec/template/spec/nodeSelector/kubernetes.io~1hostname",
+			"value": nodeName,
+		})
+	}
+	return json.Marshal(patches)
 }
 
 func (h *Handler) providerRegistryValidate(req *restful.Request, resp *restful.Response) {
@@ -839,9 +927,19 @@ func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationCo
 	var patchBytes []byte
 	var tpl *corev1.PodTemplateSpec
 	var gpuPolicy string
-	if strings.TrimSpace(appCfg.RequiredGPU) != "" {
-		if p := strings.TrimSpace(appCfg.PodGPUConsumePolicy); p == "all" || p == "single" {
+	computeReq, ok := compute.SelectedRequirement(appCfg)
+	requiresGPU := ok && computeReq.Mode != utils.CPUType
+	if requiresGPU {
+		switch p := strings.TrimSpace(appCfg.PodGPUConsumePolicy); p {
+		case "all", "single":
 			gpuPolicy = p
+		case "":
+			if computeReq.SupportMultiNodes {
+				// Multi-node deployments should let each replica consume one binding.
+				gpuPolicy = "single"
+			} else if computeReq.SupportMultiCards {
+				gpuPolicy = "all"
+			}
 		}
 	}
 
@@ -946,10 +1044,24 @@ func (h *Handler) validateUser(ctx context.Context, req *admissionv1.AdmissionRe
 	// Decode the User spec from the request.
 	var user iamv1alpha2.User
 	raw := req.Object.Raw
+	if req.Operation == admissionv1.Delete {
+		raw = req.OldObject.Raw
+	}
 	err := json.Unmarshal(raw, &user)
 	if err != nil {
 		klog.Errorf("Failed to unmarshal request object raw to user with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+
+	if req.Operation == admissionv1.Delete {
+		if user.Annotations[users.UserAnnotationOwnerRole] == "owner" {
+			resp.Allowed = false
+			resp.Result = &metav1.Status{
+				Message: fmt.Sprintf("user %s with role[owner] can not be deleted", user.Name),
+			}
+			return resp
+		}
+		return resp
 	}
 
 	// Check if user already exists
@@ -976,7 +1088,7 @@ func (h *Handler) validateUser(ctx context.Context, req *admissionv1.AdmissionRe
 	if len(user.Spec.InitialPassword) < 8 {
 		resp.Allowed = false
 		resp.Result = &metav1.Status{
-			Message: fmt.Sprintf("invalid initial password lenth must greater than 8 char"),
+			Message: "invalid initial password lenth must greater than 8 char",
 		}
 		return resp
 	}
@@ -1085,8 +1197,10 @@ func (h *Handler) validateApplicationManager(ctx context.Context, req *admission
 	return resp
 }
 
-func (h *Handler) applicationManagerMutate(req *restful.Request, resp *restful.Response) {
-	klog.Infof("Received mutating webhook[application-manager inject] request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
+// macvlanInitInject is the HTTP entrypoint for the macvlan-init mutating webhook.
+// It deserializes the AdmissionReview, runs macvlanInitMutate and writes the response.
+func (h *Handler) macvlanInitInject(req *restful.Request, resp *restful.Response) {
+	klog.Infof("Received mutating webhook[macvlan-init inject] request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
 	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
 	if !ok {
 		return
@@ -1097,7 +1211,7 @@ func (h *Handler) applicationManagerMutate(req *restful.Request, resp *restful.R
 		klog.Errorf("Failed to decode admission request body err=%v", err)
 		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
 	} else {
-		admissionResp.Response, _ = h.applicationManagerInject(req.Request.Context(), admissionReq.Request, proxyUUID)
+		admissionResp.Response = h.macvlanInitMutate(req.Request.Context(), admissionReq.Request, proxyUUID)
 	}
 	admissionResp.TypeMeta = admissionReq.TypeMeta
 	admissionResp.Kind = admissionReq.Kind
@@ -1108,295 +1222,58 @@ func (h *Handler) applicationManagerMutate(req *restful.Request, resp *restful.R
 	}
 	err := resp.WriteAsJson(&admissionResp)
 	if err != nil {
-		klog.Errorf("Failed to write response[application-manager inject] admin review in namespace=%s err=%v", requestForNamespace, err)
+		klog.Errorf("Failed to write response[macvlan-init inject] admin review in namespace=%s err=%v", requestForNamespace, err)
 		return
 	}
-
-	klog.Infof("Done[application-manager inject] with uuid=%s in namespace=%s", proxyUUID, requestForNamespace)
+	klog.Infof("Done[macvlan-init inject] with uuid=%s in namespace=%s", proxyUUID, requestForNamespace)
 }
 
-func (h *Handler) applicationManagerInject(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) (*admissionv1.AdmissionResponse, *v1alpha1.ApplicationManager) {
+// macvlanInitMutate is the core mutation logic for the macvlan-init webhook.
+// It is a no-op for pods without the macvlan-init label or whose owning
+// Application does not opt into enableOverlayGateway.
+func (h *Handler) macvlanInitMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
 	if req == nil {
-		klog.Error("failed to get admission Request, err=admission request is nil")
-		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest), nil
-	}
-	klog.Infof("enter application-manager namespace=%s name=%s kind=%s", req.Namespace, req.Name, req.Kind.Kind)
-
-	var oldAm v1alpha1.ApplicationManager
-	var newAm v1alpha1.ApplicationManager
-
-	err := json.Unmarshal(req.Object.Raw, &newAm)
-	if err != nil {
-		klog.Errorf("failed to unmarshal request with UUID %s in namespace %s, error %v ", proxyUUID, req.Namespace, err)
-		return h.sidecarWebhook.AdmissionError(req.UID, err), nil
-	}
-	// only monitor update/create operation
-	if req.Operation == admissionv1.Update {
-		err = json.Unmarshal(req.OldObject.Raw, &oldAm)
-		if err != nil {
-			return h.sidecarWebhook.AdmissionError(req.UID, err), nil
-		}
-	}
-	if req.Operation == admissionv1.Create {
-		oldAm = newAm
+		klog.Error("Failed to get admission request err=admission request is nil")
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
 	}
 	resp := &admissionv1.AdmissionResponse{
 		Allowed: true,
 		UID:     req.UID,
 	}
-	if newAm.Spec.Type != v1alpha1.App {
-		return resp, nil
-	}
-	if userspace.IsSysApp(newAm.Spec.AppName) {
-		return resp, nil
-	}
-	if newAm.Annotations[api.AppInstallSourceKey] == "app-service" {
-		return resp, nil
-	}
-	if oldAm.Spec.OpType == newAm.Spec.OpType && req.Operation != admissionv1.Create {
-		return resp, nil
+
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal request object raw to pod with uuid=%s namespace=%s err=%v", proxyUUID, req.Namespace, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 
-	if !appstate.IsOperationAllowed(oldAm.Status.State, newAm.Spec.OpType) {
-		return h.sidecarWebhook.AdmissionError(req.UID, fmt.Errorf("operation %s is not allowed for state: %s", newAm.Spec.OpType, newAm.Status.State)), nil
+	// Defense-in-depth: ObjectSelector already filters by this label, but
+	// re-check here in case the webhook is invoked from a misconfigured caller.
+	if pod.Labels[constants.ApplicationMacvlanInitLabel] != "true" {
+		return resp
 	}
+	ns := req.Namespace
 
-	appConfig, err := h.validateApplicationManagerOperation(ctx, &newAm, &oldAm)
+	shouldInject, err := h.sidecarWebhook.ShouldInjectMacvlanInit(ctx, &pod, ns)
 	if err != nil {
-		return h.sidecarWebhook.AdmissionError(req.UID, err), nil
+		klog.Errorf("Failed to evaluate macvlan-init injection for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+		// FailurePolicy is Ignore at the webhook-config level; here we
+		// still report an error so the API server records it, but the
+		// pod will be allowed.
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	if !shouldInject {
+		return resp
 	}
 
-	pam, patchBytes, err := h.makePatchesForApplicationManager(ctx, req, &oldAm, &newAm, appConfig)
+	patchBytes, err := h.sidecarWebhook.CreateMacvlanInitPatch(req, &pod)
 	if err != nil {
-		klog.Errorf("make patches err=%v", patchBytes)
-		return h.sidecarWebhook.AdmissionError(req.UID, err), nil
+		klog.Errorf("Failed to create macvlan-init patch for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-
-	klog.Info("patchBytes:", string(patchBytes))
-	h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
-	return resp, pam
-}
-
-func (h *Handler) makePatchesForApplicationManager(ctx context.Context, req *admissionv1.AdmissionRequest, oldAm *v1alpha1.ApplicationManager, newAm *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig) (*v1alpha1.ApplicationManager, []byte, error) {
-	original := req.Object.Raw
-	var patchBytes []byte
-
-	if newAm.Spec.OpType == v1alpha1.InstallOp || newAm.Spec.OpType == v1alpha1.UpgradeOp {
-		config, err := json.Marshal(appConfig)
-		if err != nil {
-			return newAm, patchBytes, err
-		}
-		newAm.Spec.Config = string(config)
+	if len(patchBytes) > 0 {
+		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
 	}
-
-	now := metav1.Now()
-	newAm.Status.OpID = strconv.FormatInt(now.Unix(), 10)
-	newAm.Status.StatusTime = &now
-	newAm.Status.UpdateTime = &now
-	newAm.Status.OpGeneration += 1
-	opType := newAm.Spec.OpType
-	newAm.Status.OpType = opType
-
-	switch opType {
-	case v1alpha1.InstallOp:
-		newAm.Status.State = v1alpha1.Pending
-	case v1alpha1.UpgradeOp:
-		newAm.Status.State = v1alpha1.Upgrading
-	case v1alpha1.UninstallOp:
-		newAm.Status.State = v1alpha1.Uninstalling
-	case v1alpha1.StopOp:
-		newAm.Status.State = v1alpha1.Stopping
-	case v1alpha1.ResumeOp:
-		newAm.Status.State = v1alpha1.Resuming
-	case v1alpha1.CancelOp:
-		newAm.Status.State = getCancelState(oldAm.Status.State)
-	}
-
-	current, err := json.Marshal(newAm)
-	if err != nil {
-		return newAm, patchBytes, err
-	}
-	admissionResponse := admission.PatchResponseFromRaw(original, current)
-	patchBytes, err = json.Marshal(admissionResponse.Patches)
-	if err != nil {
-		return newAm, patchBytes, err
-	}
-
-	return newAm, patchBytes, nil
-}
-
-func getCancelState(state v1alpha1.ApplicationManagerState) v1alpha1.ApplicationManagerState {
-	var cancelState v1alpha1.ApplicationManagerState
-	switch state {
-	case v1alpha1.Pending, v1alpha1.PendingCancelFailed:
-		cancelState = v1alpha1.PendingCanceling
-	case v1alpha1.Downloading, v1alpha1.DownloadingCancelFailed:
-		cancelState = v1alpha1.DownloadingCanceling
-	case v1alpha1.Installing, v1alpha1.InstallingCancelFailed:
-		cancelState = v1alpha1.InstallingCanceling
-	case v1alpha1.Initializing:
-		cancelState = v1alpha1.InitializingCanceling
-	case v1alpha1.Resuming:
-		cancelState = v1alpha1.ResumingCanceling
-	case v1alpha1.Upgrading:
-		cancelState = v1alpha1.UpgradingCanceling
-	case v1alpha1.ApplyingEnv:
-		cancelState = v1alpha1.ApplyingEnvCanceling
-	}
-	return cancelState
-}
-
-func (h *Handler) validateApplicationManagerOperation(ctx context.Context, newAm *v1alpha1.ApplicationManager, oldAm *v1alpha1.ApplicationManager) (*appcfg.ApplicationConfig, error) {
-	if newAm.Spec.AppName == "" {
-		return nil, fmt.Errorf("appName is required")
-	}
-	if newAm.Spec.Source == "" {
-		return nil, fmt.Errorf("source is required")
-	}
-	if newAm.Spec.OpType == "" {
-		return nil, fmt.Errorf("opType is required")
-	}
-	if newAm.Spec.Type == "" {
-		return nil, fmt.Errorf("type is required")
-	}
-	if newAm.Spec.Type != "app" {
-		return nil, fmt.Errorf("invalid type: %s", newAm.Spec.Type)
-	}
-	if err := apputils.CheckChartSource(api.AppSource(newAm.Spec.Source)); err != nil {
-		return nil, err
-	}
-	if newAm.Annotations == nil {
-		newAm.Annotations = make(map[string]string)
-	}
-	if newAm.Spec.Source == "market" {
-		newAm.Annotations[api.AppMarketSourceKey] = "Official-Market-Sources"
-	} else {
-		newAm.Annotations[api.AppMarketSourceKey] = "local"
-	}
-
-	// make spec.AppOwner default is owner user
-	owner, err := kubesphere.GetOwner(ctx, h.kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-	if newAm.Spec.AppOwner == "" {
-		newAm.Spec.AppOwner = owner
-	}
-	if newAm.Spec.AppNamespace == "" {
-		newAm.Spec.AppNamespace = fmt.Sprintf("%s-%s", newAm.Spec.AppName, newAm.Spec.AppOwner)
-	}
-
-	if newAm.Name != fmt.Sprintf("%s-%s", newAm.Spec.AppNamespace, newAm.Spec.AppName) {
-		return nil, errors.New("invalid application manager name")
-	}
-
-	admin, err := kubesphere.GetAdminUsername(ctx, h.kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-	isAdmin, err := kubesphere.IsAdmin(ctx, h.kubeConfig, newAm.Spec.AppOwner)
-	if err != nil {
-		return nil, err
-	}
-
-	annotations := newAm.Annotations
-	var version string
-	if newAm.Spec.OpType == v1alpha1.UpgradeOp {
-		version = newAm.Annotations[api.AppVersionKey]
-		if version == "" {
-			return nil, errors.New("annotation bytetrade.io/app-version can not be empty")
-		}
-	}
-	var opt *apputils.ConfigOptions
-	var appConfig *appcfg.ApplicationConfig
-	if newAm.Spec.OpType == v1alpha1.InstallOp || newAm.Spec.OpType == v1alpha1.UpgradeOp {
-		opt = &apputils.ConfigOptions{
-			App:          newAm.Spec.AppName,
-			RepoURL:      annotations[api.AppRepoURLKey],
-			Owner:        newAm.Spec.AppOwner,
-			Version:      version,
-			Token:        annotations[api.AppTokenKey],
-			MarketSource: annotations[api.AppMarketSourceKey],
-			Admin:        admin,
-			IsAdmin:      isAdmin,
-			RawAppName:   apputils.GetRawAppName(newAm.Spec.AppName, newAm.Spec.RawAppName),
-		}
-		appConfig, _, err = apputils.GetAppConfig(ctx, opt)
-		if err != nil {
-			klog.Errorf("failed to get appConfig %v", err)
-			return nil, err
-		}
-	}
-
-	switch newAm.Spec.OpType {
-	case v1alpha1.InstallOp:
-		err = h.installOpValidate(ctx, appConfig)
-		if err != nil {
-			klog.Errorf("install operation validate failed %v", err)
-			return nil, err
-		}
-
-	case v1alpha1.UpgradeOp:
-		err = h.upgradeOpValidate(ctx, appConfig)
-		if err != nil {
-			klog.Errorf("upgrade operation validate failed %v", err)
-			return nil, err
-		}
-
-	}
-	return appConfig, nil
-
-}
-func (h *Handler) installOpValidate(ctx context.Context, appConfig *appcfg.ApplicationConfig) error {
-	err := apputils.CheckDependencies2(ctx, h.ctrlClient, appConfig.Dependencies, appConfig.OwnerName, true)
-	if err != nil {
-		return err
-	}
-	err = apputils.CheckConflicts(ctx, appConfig.Conflicts, appConfig.OwnerName)
-	if err != nil {
-		return err
-	}
-	err = apputils.CheckTailScaleACLs(appConfig.TailScale.ACLs)
-	if err != nil {
-		return err
-	}
-	err = apputils.CheckCfgFileVersion(appConfig.CfgFileVersion, config.MinCfgFileVersion)
-	if err != nil {
-		return err
-	}
-	err = apputils.CheckNamespace(appConfig.Namespace)
-	if err != nil {
-		return err
-	}
-	err = apputils.CheckUserRole(appConfig, appConfig.OwnerName)
-	if err != nil {
-		return err
-	}
-	_, _, err = apputils.CheckAppRequirement("", appConfig, v1alpha1.InstallOp)
-	if err != nil {
-		return err
-	}
-
-	_, _, err = apputils.CheckUserResRequirement(ctx, appConfig, v1alpha1.InstallOp)
-	if err != nil {
-		return err
-	}
-
-	_, err = apputils.CheckMiddlewareRequirement(ctx, h.ctrlClient, appConfig.Middleware)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (h *Handler) upgradeOpValidate(ctx context.Context, appConfig *appcfg.ApplicationConfig) error {
-	err := apputils.CheckTailScaleACLs(appConfig.TailScale.ACLs)
-	if err != nil {
-		return err
-	}
-	err = apputils.CheckCfgFileVersion(appConfig.CfgFileVersion, config.MinCfgFileVersion)
-	if err != nil {
-		return err
-	}
-	return nil
+	klog.Infof("macvlan-init: injected init container for pod=%s/%s uuid=%s", req.Namespace, pod.Name, proxyUUID)
+	return resp
 }

@@ -20,6 +20,9 @@
 {{ $corednsIP = (index $corednsService "spec" "clusterIP") }}
 {{- end -}}
 
+{{- $tls_ns := printf "user-space-%s" .Values.bfl.username -}}
+{{- $tls_lookup := lookup "v1" "Secret" $tls_ns "headscale-tls" -}}
+
 ---
 apiVersion: v1
 kind: Secret
@@ -48,7 +51,7 @@ spec:
           key: pg_password
           name: headscale-secrets
     databases:
-    - name: headscale
+    - name: headscale_v2
 
 ---
 apiVersion: v1
@@ -94,6 +97,30 @@ roleRef:
   kind: ClusterRole
   name: {{ .Values.bfl.username }}:sysenv-reader
   apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: headscale-tls
+  namespace: user-space-{{ .Values.bfl.username }}
+  labels:
+    app: headscale
+type: Opaque
+data:
+{{- if $tls_lookup }}
+  tls.crt: {{ index $tls_lookup.data "tls.crt" | quote }}
+  tls.key: {{ index $tls_lookup.data "tls.key" | quote }}
+  ca.crt: {{ index $tls_lookup.data "ca.crt" | quote }}
+{{- else }}
+  {{- $ca := genCA "headscale-local-ca" 36500 }}
+  {{- $u := .Values.bfl.username }}
+  {{- $dns := list "headscale-server-svc" (printf "headscale-server-svc.user-space-%s" $u) (printf "headscale-server-svc.user-space-%s.svc" $u) (printf "headscale-server-svc.user-space-%s.svc.cluster.local" $u) }}
+  {{- $cert := genSignedCert "headscale-server-svc" nil $dns 36500 $ca }}
+  tls.crt: {{ $cert.Cert | b64enc | quote }}
+  tls.key: {{ $cert.Key | b64enc | quote }}
+  ca.crt: {{ $ca.Cert | b64enc | quote }}
+{{- end }}
 
 ---
 apiVersion: apps/v1
@@ -150,40 +177,8 @@ spec:
         - -c
         - |
           chown -R 1000:1000 /headscale 
-      - args:
-        - |
-          set -euo pipefail
-
-          if [ ! -f /certs/tls.crt ]; then
-            echo "→ Generating self-signed cert for ${DOMAIN}"
-            openssl req -x509 -newkey rsa:4096 -nodes \
-              -keyout /certs/tls.key \
-              -out /certs/tls.crt \
-              -days 36500 \
-              -subj "/CN=${DOMAIN}" \
-              -addext "subjectAltName=DNS:${DOMAIN},DNS:${DOMAIN}.user-space-{{ .Values.bfl.username }},DNS:${DOMAIN}.user-space-{{ .Values.bfl.username }}.svc,DNS:${DOMAIN}.user-space-{{ .Values.bfl.username }}.svc.cluster.local"
-            cp -v /certs/tls.crt /certs/ca.crt
-          else
-            echo "→ Certificate already exists, skipping generation"
-          fi
-
-          echo "→ Fixing permissions..."
-          chmod 644 /certs/tls.crt /certs/ca.crt
-          chmod 600 /certs/tls.key
-        command:
-        - sh
-        - -c
-        env:
-        - name: DOMAIN
-          value: headscale-server-svc
-        image: alpine/openssl:3.5.5
-        imagePullPolicy: IfNotPresent
-        name: init-cert
-        volumeMounts:
-        - mountPath: /certs
-          name: tls-cert
       - name: init
-        image: beclab/headscale-init:v0.1.13
+        image: beclab/headscale-init:v0.1.15
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
@@ -201,7 +196,7 @@ spec:
         - name: PG_PASS
           value: "{{ $pg_password | b64dec }}"
         - name: PG_DB
-          value: user_space_{{ .Values.bfl.username }}_headscale
+          value: user_space_{{ .Values.bfl.username }}_headscale_v2
         - name: USER_SUBNET
           value: {{ .Values.tailscaleUserSubnet | default "100.64.0.0/20" }}
         volumeMounts:
@@ -225,11 +220,11 @@ spec:
         - name: PGPASSWORD
           value: "{{ $pg_password | b64dec }}"
         - name: PGDB
-          value: user_space_{{ .Values.bfl.username }}_headscale
+          value: user_space_{{ .Values.bfl.username }}_headscale_v2
         imagePullPolicy: IfNotPresent
       containers:
       - name: headscale
-        image: headscale/headscale:0.22.3
+        image: headscale/headscale:0.28.0-debug
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: false
@@ -243,7 +238,27 @@ spec:
               command:
                 - "sh"
                 - "-xc"
-                - "(date; for i in `seq 1 600`; do if ! test -S /var/run/headscale.sock; then echo wait-headscale.sock-1s; sleep 1; else break; fi; done; headscale apikeys create -e 3650d > /etc/headscale/apikey; headscale users create default; headscale preauthkeys create -e 3650d --reusable -u default > /etc/headscale/preauthkey; if ! test -s /etc/headscale/apikey; then echo apikey-empty; exit 1; fi; if ! test -s /etc/headscale/preauthkey; then echo preauthkey-empty; exit 1; fi) >> /tmp/headscale.log 2>&1"
+                - |
+                  (
+                      export NO_COLOR=1
+                      date
+                      for i in $(seq 1 300); do
+                          if ! test -S /var/run/headscale/headscale.sock; then
+                              echo wait-headscale.sock-1s
+                              sleep 1
+                          else
+                              break
+                          fi
+                      done
+                      headscale apikeys create -e 3650d > /etc/headscale/apikey
+                      headscale users create default
+                      USER_ID=$(headscale users list | awk '/default/ {print $1; exit}')
+                      [ -n "$USER_ID" ] || { echo "user default not found"; exit 1; }
+                      headscale preauthkeys create -e 3650d --reusable -u "$USER_ID" \
+                          > /etc/headscale/preauthkey
+                      if ! test -s /etc/headscale/apikey; then echo apikey-empty; exit 1; fi
+                      if ! test -s /etc/headscale/preauthkey; then echo preauthkey-empty; exit 1; fi
+                  ) > /etc/headscale/.headscale.log 2>&1
         volumeMounts:
         - name: config
           mountPath: /etc/headscale
@@ -276,7 +291,7 @@ spec:
         command:
         - /bin/sh
         - -c
-        image: beclab/headscale-api-wrapper:v0.1.7
+        image: beclab/headscale-api-wrapper:v0.1.8
         imagePullPolicy: IfNotPresent
         name: headscale-api-wrapper
         securityContext:
@@ -290,9 +305,14 @@ spec:
         - containerPort: 8000
       volumes:
       - name: tls-cert
-        hostPath:
-          path: '{{ .Values.userspace.appCache  }}/headscale/config/certs'
-          type: DirectoryOrCreate
+        secret:
+          secretName: headscale-tls
+          defaultMode: 420
+          items:
+            - key: tls.crt
+              path: tls.crt
+            - key: tls.key
+              path: tls.key
       - name: config
         hostPath:
           type: DirectoryOrCreate
@@ -403,10 +423,15 @@ spec:
             --tun=tailscale0{{ if and .Values.tailscaleUserIndex (ne .Values.tailscaleUserIndex  "0") }}$(USER_INDEX){{ end }}
         - name: TS_ROUTES
           value: $(COREDNS_SVC)/32
+        {{- if eq $role "owner" }}
+        - name: ADVERTISE_EXIT_NODE
+          value: "false"
+        {{- end }}
         - name: TS_EXTRA_ARGS
           value: >-
             --login-server https://headscale-server-svc
-            --netfilter-mode {{ if eq $role "owner" }}on{{ else }}off{{ end }}
+            --netfilter-mode {{ if eq $role "owner" }}on{{ else }}off{{ end }}{{ if eq $role "owner" }}
+            --advertise-exit-node=$(ADVERTISE_EXIT_NODE) --reset{{ end }}
         - name: TS_USERSPACE
           value: "false"
 
@@ -421,9 +446,12 @@ spec:
           type: DirectoryOrCreate
           path: '{{ .Values.userspace.appCache }}/tailscale/data'
       - name: tls-cert
-        hostPath:
-          path: '{{ .Values.userspace.appCache }}/headscale/config/certs'
-          type: DirectoryOrCreate
+        secret:
+          secretName: headscale-tls
+          defaultMode: 420
+          items:
+            - key: ca.crt
+              path: ca.crt
 
 ---
 apiVersion: v1
@@ -476,15 +504,16 @@ data:
         { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:80"] },
         { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:443"] },
         { "action": "accept", "src": ["*"], "proto": "tcp", "dst": ["*:18088"] },
-        { "action": "accept", "src": ["*"], "proto": "udp", "dst": ["*:53"] }
+        { "action": "accept", "src": ["*"], "proto": "udp", "dst": ["*:53"] },
+        { "action": "accept", "src": ["*"], "dst": ["autogroup:internet:*"] }
       ],
       "autoApprovers": {
         "routes": {
-          "10.0.0.0/8": ["default"],
-          "172.16.0.0/12": ["default"],
-          "192.168.0.0/16": ["default"]
+          "10.0.0.0/8": ["default@"],
+          "172.16.0.0/12": ["default@"],
+          "192.168.0.0/16": ["default@"]
         },
-        "exitNode": []
+        "exitNode": ["default@"]
       }
     }
 kind: ConfigMap

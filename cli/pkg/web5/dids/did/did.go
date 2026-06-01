@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -49,8 +50,15 @@ type DID struct {
 func (d DID) URL() string {
 	url := d.URI
 	if len(d.Params) > 0 {
-		var pairs []string
-		for key, value := range d.Params {
+		keys := make([]string, 0, len(d.Params))
+		for key := range d.Params {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		pairs := make([]string, 0, len(d.Params))
+		for _, key := range keys {
+			value := d.Params[key]
 			pairs = append(pairs, fmt.Sprintf("%s=%s", key, value))
 		}
 		url += ";" + strings.Join(pairs, ";")
@@ -141,7 +149,7 @@ func Parse(input string) (DID, error) {
 		params := strings.Split(match[4][1:], ";")
 		parsedParams := make(map[string]string)
 		for _, p := range params {
-			kv := strings.Split(p, "=")
+			kv := strings.SplitN(p, "=", 2)
 			parsedParams[kv[0]] = kv[1]
 		}
 		did.Params = parsedParams

@@ -1,17 +1,13 @@
 <template>
 	<div class="member-list bg-background-1" :class="{ borderRight: isWeb }">
-		<div
-			class="row justify-between items-center"
-			style="width: 100%; height: 60px"
-		>
-			<div class="row items-center justify-between">
-				<div class="row items-center q-pl-md">
+		<div class="row justify-between items-center header">
+			<div class="row items-center full-width">
+				<div class="row items-center q-pl-md" @click="goBack">
 					<q-icon
 						v-if="isMobile"
 						name="sym_r_chevron_left"
 						color="ink-1"
 						size="24px"
-						@click="goBack"
 					/>
 					<q-icon
 						:name="heading.icon"
@@ -19,33 +15,32 @@
 						size="20px"
 						class="q-pa-xs q-mr-xs"
 					/>
-
-					<div class="column q-pl-md" v-if="!isMobile">
-						<div class="text-ink-3 text-overline">
-							{{ org?.name }}
-						</div>
-						<div class="text-subtitle2 text-ink-1 text-weight-bold">
-							{{ heading.title }}
-						</div>
-					</div>
 				</div>
 
-				<div class="column" v-if="isMobile">
-					<div class="text-ink-3 text-overline">
+				<div class="column q-ml-sm mobile-content" v-if="!isMobile">
+					<div class="text-ink-3 text-overline ellipsis full-width">
 						{{ org?.name }}
 					</div>
-					<div class="text-subtitle2 text-ink-1 text-weight-bold">
+					<div
+						class="text-subtitle2 text-ink-1 text-weight-bold ellipsis full-width"
+					>
+						{{ heading.title }}
+					</div>
+				</div>
+				<div class="column q-pl-md mobile-content" v-else>
+					<div class="text-ink-3 text-overline ellipsis full-width">
+						{{ org?.name }}
+					</div>
+					<div
+						class="text-subtitle2 text-ink-1 text-weight-bold ellipsis full-width"
+					>
 						{{ heading.title }}
 					</div>
 				</div>
 			</div>
 		</div>
 		<q-list style="width: 100%; height: calc(100% - 60px); overflow: hidden">
-			<q-scroll-area
-				v-if="itemList.length > 0"
-				style="height: 100%"
-				:thumb-style="scrollBarStyle.thumbStyle"
-			>
+			<terminus-scroll-area v-if="itemList.length > 0" style="height: 100%">
 				<template v-for="(item, index) in itemList" :key="index">
 					<div class="card-wrap full-width">
 						<q-card
@@ -73,7 +68,7 @@
 						</q-card>
 					</div>
 				</template>
-			</q-scroll-area>
+			</terminus-scroll-area>
 
 			<div
 				class="column text-ink-2 items-center justify-center full-height"
@@ -99,6 +94,7 @@ import { scrollBarStyle } from '../../../../utils/contact';
 import OrgMemberItem from './OrgMemberItem.vue';
 import { busOn, busOff } from '../../../../utils/bus';
 import { useI18n } from 'vue-i18n';
+import TerminusScrollArea from 'src/components/common/TerminusScrollArea2.vue';
 
 const $q = useQuasar();
 const meunStore = useMenuStore();
@@ -148,7 +144,9 @@ async function search() {
 }
 
 const goBack = () => {
-	router.go(-1);
+	if (isMobile.value) {
+		router.go(-1);
+	}
 };
 
 onMounted(() => {
@@ -197,6 +195,18 @@ const { t } = useI18n();
 		&.memberActive {
 			background: $background-hover;
 		}
+	}
+}
+
+.header {
+	flex: 0 0 auto;
+	height: 60px;
+	width: 100%;
+
+	.mobile-content {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		width: calc(100% - 70px);
 	}
 }
 </style>

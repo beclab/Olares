@@ -6,21 +6,22 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"k8s.io/klog/v2"
 	"net/http/httputil"
 	"strconv"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"
@@ -37,7 +38,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 )
 
 var (
@@ -76,13 +76,33 @@ type HelmOpsInterface interface {
 
 	WaitForLaunch() (bool, error)
 
+	// WaitForStartUp blocks until every pod owned by the app's workloads
+	// reaches Ready, the context is cancelled, or a wait-step error
+	// (e.g. ErrPodPending) is returned. Used by the two-phase install
+	// flow after Scale(-1) to decide between Initializing and Stopped.
+	WaitForStartUp() (bool, error)
+
 	UninstallAll() error
+
+	// Scale issues a helm upgrade that only overrides
+	// .Values.workloads.<name>.replicaCount.
+	//
+	//   replicas >= 0: set every workload to this exact value (used for
+	//                  scale-to-zero on stop and scale-to-zero by SetValues).
+	//   replicas <  0: restore each workload to its manifest-declared count
+	//                  (used when bringing the app back up after install,
+	//                  resume, or post-upgrade pressure check).
+	//
+	// Not supported on v2 apps; HelmOpsV2.Scale returns an error so callers
+	// must dispatch on appcfg.IsV2() before invoking.
+	Scale(replicas int32) error
 }
 
 // Opt options for helm ops.
 type Opt struct {
-	Source       string
-	MarketSource string
+	Source             string
+	MarketSource       string
+	SkipWaitForStartUp bool
 }
 
 var _ HelmOpsInterface = &HelmOps{}
@@ -112,6 +132,13 @@ func (h *HelmOps) install(values map[string]interface{}) error {
 	return err
 }
 
+// InstallChart exposes the helm chart-install step so version-specific
+// HelmOps wrappers (v3, ...) can reuse the v1 install pipeline while
+// substituting other steps. Thin wrapper over the package-private install.
+func (h *HelmOps) InstallChart(values map[string]interface{}) error {
+	return h.install(values)
+}
+
 // NewHelmOps constructs a new helmOps.
 func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options Opt) (HelmOpsInterface, error) {
 	actionConfig, settings, err := helm.InitConfig(kubeConfig, app.Namespace)
@@ -136,35 +163,37 @@ func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.Applic
 	return ops, nil
 }
 
-// AddApplicationLabelsToDeployment add application label to deployment or statefulset
+// AddApplicationLabelsToDeployment add application label to deployment or statefulset.
+//
+// The body is split into two reusable steps:
+//   - BuildDeploymentLabelPatchData prepares the in-memory patch payloads
+//     (namespace labels and main-workload metadata).
+//   - ApplyDeploymentLabelPatch issues the actual k8s patches.
+//
+// Version-specific wrappers (v3, ...) can call Build first, layer their own
+// labels onto the returned maps, then call Apply so each resource is patched
+// exactly once with the combined payload.
 func (h *HelmOps) AddApplicationLabelsToDeployment() error {
-	k8s, err := kubernetes.NewForConfig(h.kubeConfig)
-	if err != nil {
-		klog.Error("create kubernetes client error, ", err)
-		return err
-	}
+	nsLabels, workloadPatchData := h.BuildDeploymentLabelPatchData()
+	return h.ApplyDeploymentLabelPatch(nsLabels, workloadPatchData)
+}
 
-	// add namespace to workspace
-	patch := "{\"metadata\": {\"labels\":{\"kubesphere.io/workspace\":\"system-workspace\"}}}"
-	_, err = k8s.CoreV1().Namespaces().Patch(h.ctx, h.app.Namespace,
-		types.MergePatchType, []byte(patch), metav1.PatchOptions{})
-	if err != nil {
-		klog.Errorf("patch namespace %s error %v", h.app.Namespace, err)
-		return err
-	}
-	if h.app.Type == appv1alpha1.Middleware.String() {
-		err = h.tryToAddApplicationLabelsToCluster()
-		if err != nil {
-			return err
-		}
+// BuildDeploymentLabelPatchData prepares the patch payloads for the
+// namespace and the app's main workload (deployment, fallback statefulset).
+//
+// Both returned maps are mutable: callers (typically version-specific
+// HelmOps wrappers) may add extra entries before handing them to
+// ApplyDeploymentLabelPatch.
+func (h *HelmOps) BuildDeploymentLabelPatchData() (nsLabels map[string]string, workloadPatchData map[string]interface{}) {
+	nsLabels = map[string]string{
+		"kubesphere.io/workspace": "system-workspace",
 	}
 
 	services := ToEntrancesLabel(h.app.Entrances)
 	ports := ToAppTCPUDPPorts(h.app.Ports)
-
 	tailScale := ToTailScale(h.app.TailScale)
 
-	patchData := map[string]interface{}{
+	workloadPatchData = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
 				constants.ApplicationNameLabel:       h.app.AppName,
@@ -192,14 +221,46 @@ func (h *HelmOps) AddApplicationLabelsToDeployment() error {
 			},
 		},
 	}
+	return
+}
 
-	patchByte, err := json.Marshal(patchData)
+// ApplyDeploymentLabelPatch sends the namespace and workload patches to the
+// cluster. For middleware apps the KubeBlocks Cluster CR is also patched
+// (existing behaviour). See BuildDeploymentLabelPatchData for the payload
+// builder side.
+func (h *HelmOps) ApplyDeploymentLabelPatch(nsLabels map[string]string, workloadPatchData map[string]interface{}) error {
+	k8s, err := kubernetes.NewForConfig(h.kubeConfig)
+	if err != nil {
+		klog.Error("create kubernetes client error, ", err)
+		return err
+	}
+
+	nsPatchBytes, err := json.Marshal(map[string]interface{}{
+		"metadata": map[string]interface{}{"labels": nsLabels},
+	})
+	if err != nil {
+		klog.Errorf("marshal namespace label patch for %s err=%v", h.app.Namespace, err)
+		return err
+	}
+	_, err = k8s.CoreV1().Namespaces().Patch(h.ctx, h.app.Namespace,
+		types.MergePatchType, nsPatchBytes, metav1.PatchOptions{})
+	if err != nil {
+		klog.Errorf("patch namespace %s error %v", h.app.Namespace, err)
+		return err
+	}
+
+	if h.app.Type == appv1alpha1.Middleware.String() {
+		if err := h.tryToAddApplicationLabelsToCluster(); err != nil {
+			return err
+		}
+	}
+
+	patchByte, err := json.Marshal(workloadPatchData)
 	if err != nil {
 		klog.Errorf("Failed to marshal patch data %v", err)
 		return err
 	}
-
-	patch = string(patchByte)
+	patch := string(patchByte)
 
 	// TODO: add ownerReferences of user
 	deployment, err := k8s.AppsV1().Deployments(h.app.Namespace).Get(h.ctx, h.app.AppName, metav1.GetOptions{})
@@ -344,7 +405,7 @@ func (h *HelmOps) registerAppPerm(sa *string, ownerName string, perm []appcfg.Pe
 	for _, p := range perm {
 		requires = append(requires, appcfg.PermissionRequire{
 			ProviderAppName:   p.AppName,
-			ProviderNamespace: p.GetNamespace(ownerName),
+			ProviderNamespace: appcfg.ProviderPermissionNamespace(p.ProviderPermission, ownerName),
 			ServiceAccount:    sa,
 			ProviderName:      p.ProviderName,
 			ProviderDomain:    p.Domain,
@@ -659,10 +720,7 @@ func (h *HelmOps) findServerPods() ([]corev1.Pod, error) {
 		if !c.Shared {
 			continue
 		}
-
-		chartName := utils.GetChartName(h.app.AppName, h.app.RawAppName, c.Name)
-
-		ns := c.Namespace(h.app.OwnerName, chartName)
+		ns := appcfg.ChartNamespace(&c, h.app.OwnerName)
 		podList, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(ns).List(h.ctx, metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("app %s get pods err %v", h.app.AppName, err)
@@ -705,6 +763,11 @@ func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, er
 		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
 			container := pod.Status.ContainerStatuses[i]
 			if *container.Started {
+				startedContainers++
+				continue
+			}
+			// job-created pods with completed status are also treated as started
+			if container.State.Terminated != nil && container.State.Terminated.Reason == "Completed" {
 				startedContainers++
 			}
 		}
@@ -832,7 +895,7 @@ func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 
 func (h *HelmOps) Install() error {
 	var err error
-	values, err := h.SetValues()
+	values, err := h.SetValues(true)
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err
@@ -895,14 +958,6 @@ func (h *HelmOps) Install() error {
 	if h.app.Type == appv1alpha1.Middleware.String() {
 		return nil
 	}
-	ok, err := h.WaitForStartUp()
-	if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
-		return err
-	}
-	if !ok {
-		h.Uninstall()
-		return err
-	}
 
 	return nil
 }
@@ -947,13 +1002,6 @@ func (h *HelmOps) WaitForLaunch() (bool, error) {
 
 func (h *HelmOps) App() *appcfg.ApplicationConfig {
 	return h.app
-}
-
-func (h *HelmOps) IsCloneApp() bool {
-	if h.app.AppName != h.app.RawAppName {
-		return true
-	}
-	return false
 }
 
 func (h *HelmOps) KubeConfig() *rest.Config {
@@ -1036,6 +1084,5 @@ func (h *HelmOps) RegisterOrUnregisterAppProvider(operation ProviderOperation) e
 			return errors.New(string(resp.Body()))
 		}
 	}
-
 	return nil
 }

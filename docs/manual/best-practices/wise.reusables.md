@@ -1,6 +1,7 @@
 ---
 search: false
 ---
+<!-- #region wise-aggregated-search -->
 Once you've collected your content in Wise, you can search for particular content themes or entries using aggregated search in Olares.
 
 ![Search in Wise](/images/manual/tutorials/wise-search.png#bordered)
@@ -11,6 +12,7 @@ Currently, only document-type content (PDF, web articles, and ePUB) is searchabl
 
 1. Click <i class="material-symbols-outlined">search</i>in the Dock to open the search window.
 2. Specifies the search scope to Wise, and enter the keywords to search.
+<!-- #endregion wise-aggregated-search -->
 
 :::info
 The exact steps may vary depending on your operating system and browser. The following uses Safari as an example.

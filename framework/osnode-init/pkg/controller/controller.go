@@ -97,7 +97,7 @@ func NewNodeInitController(c client.Client, schema *runtime.Scheme, config *rest
 					account.Token,
 				}
 
-				klog.Info("refresh juicefs config with ", args)
+				// klog.Info("refresh juicefs config with ", args)
 				out, err := exec.Command("/usr/local/bin/juicefs", args...).CombinedOutput()
 				if err != nil {
 					klog.Errorf("%s, %v", string(out), err)
@@ -236,7 +236,7 @@ func (r *NodeInitController) isMasterNode(config *rest.Config) (bool, string, er
 	}
 
 	var nodeLists *corev1.NodeList
-	labels := client.HasLabels{"node-role.kubernetes.io/master"}
+	labels := client.HasLabels{"node-role.kubernetes.io/control-plane"}
 	var opts client.ListOptions
 	labels.ApplyToList(&opts)
 

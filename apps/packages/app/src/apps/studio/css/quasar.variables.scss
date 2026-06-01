@@ -12,8 +12,8 @@
 // to match your app's branding.
 // Tip: Use the "Theme Builder" on Quasar's documentation website.
 
-@import '@bytetrade/ui/lib/styles/quasar.variables.sass';
-@import '@bytetrade/ui/lib/styles/quasar.btn.scss';
+@import 'src/css/ui/quasar.variables.sass';
+@import 'src/css/ui/quasar.btn.scss';
 
 $primary: #1976d2;
 $secondary: #26a69a;

@@ -195,7 +195,7 @@ In addition to regular RSS subscriptions, Wise offers a fully local, privacy-pro
 :::
 
 ## Search through collected content
-<!--@include: ./wise.reusables.md{4,13}-->
+<!--@include: ./wise.reusables.md#wise-aggregated-search-->
 ## Learn more
 
 - [Wise basics](../olares/wise/basics.md)

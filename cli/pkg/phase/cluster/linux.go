@@ -1,10 +1,11 @@
 package cluster
 
 import (
-	"github.com/beclab/Olares/cli/pkg/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/mtgpu"
 	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/storage"
@@ -60,7 +61,13 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 		&gpu.RestartK3sServiceModule{Skip: !(l.runtime.Arg.Kubetype == common.K3s)},
 		&gpu.InstallPluginModule{Skip: skipGpuPlugin},
 		&amdgpu.InstallAmdPluginModule{Skip: func() bool {
-			if l.runtime.GetSystemInfo().IsAmdGPUOrAPU() {
+			if l.runtime.GetSystemInfo().IsStrixHalo() {
+				return false
+			}
+			return true
+		}()},
+		&mtgpu.InstallMThreadsPluginModule{Skip: func() bool {
+			if l.runtime.GetSystemInfo().IsMThreadsM1000() {
 				return false
 			}
 			return true

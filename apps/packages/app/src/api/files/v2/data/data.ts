@@ -4,7 +4,7 @@ import { formatData } from './filesFormat';
 import { FileResType, FileItem } from 'src/stores/files';
 import { DriveType } from 'src/utils/interface/files';
 import { DriveMenuType } from './type';
-import { createURL, getPurePath } from '../utils';
+import { createURL, decodeURIComponentSafe, getPurePath } from '../utils';
 import { createDir } from './utils';
 import { encodeUrl } from 'src/utils/encode';
 import { i18n } from 'src/boot/i18n';
@@ -13,6 +13,8 @@ import { getFileIcon } from '@bytetrade/core';
 import { filterPcvPath } from '../common/common';
 import { CommonUrlApiType } from '../common/utils';
 import { appendPath } from '../path';
+import { TransferItem } from 'src/utils/interface/transfer';
+import { Router } from 'vue-router';
 
 export default class DataDataAPI extends DriveDataAPI {
 	breadcrumbsBase = '';
@@ -77,12 +79,7 @@ export default class DataDataAPI extends DriveDataAPI {
 			return files.formatPathtoUrl(file.path);
 		}
 
-		let curPath = files.dataRemovePrefix(file.path);
-		try {
-			curPath = decodeURIComponent(curPath);
-		} catch (error) {
-			console.log(curPath);
-		}
+		const curPath = decodeURIComponentSafe(files.dataRemovePrefix(file.path));
 
 		const params = {
 			inline: 'true',
@@ -100,13 +97,8 @@ export default class DataDataAPI extends DriveDataAPI {
 			...(inline && { inline: 'true' })
 		};
 
-		let curPath = files.dataRemovePrefix(file.path);
+		const curPath = decodeURIComponentSafe(files.dataRemovePrefix(file.path));
 
-		try {
-			curPath = decodeURIComponent(curPath);
-		} catch (error) {
-			console.log(curPath);
-		}
 		const url = createURL(files.dataCommonUrl('raw', curPath), params);
 
 		return url;
@@ -173,5 +165,12 @@ export default class DataDataAPI extends DriveDataAPI {
 			fileExtend: 'Data',
 			path: files.dataRemovePrefix(path)
 		};
+	}
+
+	async transferItemBackToFiles(item: TransferItem, router: Router) {
+		const path = files.dataRemovePrefix(item.path);
+		await router.push({
+			path: appendPath('/Data', path)
+		});
 	}
 }

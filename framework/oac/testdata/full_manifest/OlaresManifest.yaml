@@ -1,0 +1,279 @@
+olaresManifest.version: "0.12.0"
+olaresManifest.type: app
+apiVersion: v1
+metadata:
+  name: fullmanifest
+  icon: https://example.com/icon.png
+  description: comprehensive OlaresManifest fixture
+  appid: full-app-id
+  title: Full Manifest
+  version: "1.0.0"
+  categories:
+    - Utilities
+  rating: 4.5
+  target: user
+  type: app
+entrances:
+  - name: web
+    host: web
+    port: 8080
+    icon: https://example.com/entrance.png
+    title: Web
+    authLevel: public
+    invisible: true
+    url: https://example.com/web
+    openMethod: default
+    windowPushState: true
+    skip: true
+ports:
+  - name: api
+    host: api
+    port: 9090
+    exposePort: 9091
+    protocol: tcp
+    addToTailscaleAcl: true
+tailscale:
+  acls:
+    - action: accept
+      src:
+        - tag:client
+      proto: tcp
+      dst:
+        - 10.0.0.0/8:443
+  subRoutes:
+    - route-a
+sharedEntrances:
+  - name: shared
+    host: shared
+    port: 8081
+    title: Shared
+spec:
+  namespace: userspace-fullmanifest
+  onlyAdmin: true
+  versionName: v1.0.0
+  fullDescription: |
+    Full description line one.
+    Full description line two.
+  upgradeDescription: upgrade notes
+  promoteImage:
+    - https://example.com/promo1.png
+  promoteVideo: https://example.com/promo.mp4
+  subCategory: browser
+  developer: Example Dev
+  supportClient:
+    edge: supported
+    android: supported
+    ios: supported
+    windows: supported
+    mac: supported
+    linux: supported
+    chrome: supported
+  runAsUser: true
+  runAsInternal: true
+  podGpuConsumePolicy: single
+  subCharts:
+    - name: extra
+      shared: true
+  hardware:
+    cpu:
+      vendor: intel
+      arch: amd64
+    gpu:
+      vendor: nvidia
+      arch:
+        - cuda
+      singleMemory: 8Gi
+      totalMemory: 16Gi
+  accelerator:
+    - mode: cpu
+      supportMultiCard: true
+      supportMultiNodes: true
+      requiredCpu: 100m
+      limitedCpu: 200m
+      requiredMemory: 128Mi
+      limitedMemory: 256Mi
+      requiredDisk: 1Gi
+      limitedDisk: 2Gi
+      requiredGPUMemory: 1Gi
+      limitedGPUMemory: 2Gi
+  requiredCpu: 100m
+  limitedCpu: 200m
+  requiredMemory: 128Mi
+  limitedMemory: 256Mi
+  requiredDisk: 1Gi
+  limitedDisk: 2Gi
+  requiredGpu: 1Gi
+  limitedGpu: 2Gi
+  supportArch:
+    - amd64
+  website: https://example.com
+  sourceCode: https://github.com/example/app
+  submitter: Olares
+  locale:
+    - en-US
+    - zh-CN
+  doc: https://example.com/doc
+  license:
+    - text: MIT
+      url: https://opensource.org/licenses/MIT
+permission:
+  appData: true
+  appCache: true
+  userData:
+    - Home
+  serviceAccount: full-sa
+  provider:
+    - appName: provider-app
+      namespace: userspace-provider
+      providerName: data-provider
+      podSelectors:
+        - matchLabels:
+            app: provider
+middleware:
+  postgres:
+    username: pguser
+    password: pgpass
+    databases:
+      - name: appdb
+        extensions:
+          - pg_trgm
+        scripts:
+          - init.sql
+        distributed: true
+  redis:
+    password: redispass
+    namespace: app-redis
+  mongodb:
+    username: mgouser
+    password: mgopass
+    databases:
+      - name: appmongo
+  nats:
+    username: natsuser
+    password: natspass
+    subjects:
+      - name: events
+        permission:
+          pub: allow
+          sub: allow
+        export:
+          - pub: allow
+            sub: allow
+    refs:
+      - appName: ref-app
+        appNamespace: userspace-ref
+        subjects:
+          - name: events
+            perm:
+              - pub
+              - sub
+  minio:
+    username: miniou
+    password: miniop
+    allowNamespaceBuckets: true
+    buckets:
+      - name: uploads
+  rabbitmq:
+    username: rmquser
+    password: rmqpass
+    vhosts:
+      - name: app-vhost
+  elasticsearch:
+    username: esuser
+    password: espass
+    allowNamespaceIndexes: true
+    indexes:
+      - name: logs
+  mariadb:
+    username: mariauser
+    password: mariapass
+    databases:
+      - name: mariadbapp
+  mysql:
+    username: mysqluser
+    password: mysqlpass
+    databases:
+      - name: mysqlapp
+  argo:
+    required: true
+  clickHouse:
+    username: chuser
+    password: chpass
+    databases:
+      - name: analytics
+options:
+  mobileSupported: true
+  policies:
+    - entranceName: web
+      description: sample policy
+      uriRegex: ^/api/.*
+      level: admin
+      oneTime: true
+      validDuration: 1h
+  resetCookie:
+    enabled: true
+  dependencies:
+    - name: olares
+      version: ">=1.10.0"
+      type: system
+      mandatory: true
+      selfRely: true
+  conflicts:
+    - name: rival-app
+      type: application
+  appScope:
+    clusterScoped: true
+    appRef:
+      - ref-app
+    systemService: true
+  websocket:
+    port: 8765
+    url: /ws
+  upload:
+    fileType:
+      - image/png
+    dest: /tmp/upload
+    limitedSize: 1024
+  syncProvider:
+    - name: sync
+      endpoint: https://sync.example.com
+  oidc:
+    enabled: true
+    redirectUri: https://example.com/callback
+    entranceName: web
+  apiTimeout: 30
+  allowedOutboundPorts:
+    - 443
+    - 8080
+  images:
+    - ghcr.io/example/app:1.0.0
+  allowMultipleInstall: true
+  needsSharedAccess: true
+provider:
+  - name: api-provider
+    entrance: web
+    paths:
+      - /api/v1
+    verbs:
+      - get
+      - post
+envs:
+  - envName: LOG_LEVEL
+    value: debug
+    default: info
+    editable: true
+    type: string
+    required: true
+    title: Log Level
+    description: application log level
+    options:
+      - title: Debug
+        value: debug
+      - title: Info
+        value: info
+    remoteOptions: https://example.com/options.json
+    regex: ^(debug|info|warn)$
+    applyOnChange: true
+    valueFrom:
+      envName: SYSTEM_LOG
+      status: active

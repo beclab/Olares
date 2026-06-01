@@ -4,9 +4,13 @@ import { Cookies } from 'quasar';
 import { OlaresInfo, DefaultOlaresInfo } from '@bytetrade/core';
 import { v4 as uuidv4 } from 'uuid';
 import { Encoder, DeviceType } from '@bytetrade/core';
+import { AccountInfo } from 'src/constant/global';
+import { OLARES_ROLE } from 'src/constant';
+import { useWidgetPreferencesStore } from 'src/stores/settings/widgetPreferences';
 
 export interface DesktopConfig {
 	bg: string;
+	style: string;
 }
 
 export const TERMINUS_ID = 'terminusId';
@@ -20,6 +24,7 @@ export type RootState = {
 		device: DeviceType;
 		isVerticalScreen: boolean;
 	};
+	users: AccountInfo[];
 };
 
 export const useTokenStore = defineStore('token', {
@@ -32,7 +37,8 @@ export const useTokenStore = defineStore('token', {
 			deviceInfo: {
 				device: DeviceType.DESKTOP,
 				isVerticalScreen: false
-			}
+			},
+			users: [] as AccountInfo[]
 		} as RootState;
 	},
 	getters: {
@@ -44,6 +50,21 @@ export const useTokenStore = defineStore('token', {
 		},
 		islocal(): boolean {
 			return window.location.hostname.endsWith('olares.local');
+		},
+		isAdmin(): boolean {
+			if (this.users.length == 0) {
+				return false;
+			}
+			const user = this.users.find((e) => e.terminusName == this.olaresId);
+			if (!user || user.roles.length == 0) {
+				return false;
+			}
+			return (
+				user.roles[0] == OLARES_ROLE.ADMIN || user.roles[0] == OLARES_ROLE.OWNER
+			);
+		},
+		activeUsers(): AccountInfo[] {
+			return this.users.filter((account) => account.wizard_complete);
 		}
 	},
 	actions: {
@@ -56,6 +77,15 @@ export const useTokenStore = defineStore('token', {
 			const data: any = await axios.get(this.url + '/server/init', {});
 			this.terminus = data.terminus;
 			this.config = data.config;
+			this.users = data.users || [];
+			const widgetStore = useWidgetPreferencesStore();
+			widgetStore.save(data.config.widget);
+			// this.loadUsers();
+		},
+
+		async loadUsers() {
+			const data: any = await axios.get(this.url + '/api/users', {});
+			this.users = data;
 		},
 
 		async updateDesktopConfig(config: any) {
@@ -81,9 +111,13 @@ export const useTokenStore = defineStore('token', {
 		},
 
 		getAuthURL() {
-			const name = this.olaresId.replace('@', '.');
-
-			const url = 'https://auth.' + name;
+			let url = window.location.protocol + '//' + 'auth.';
+			if (this.islocal) {
+				url = url + this.olaresId.split('@')[0] + '.olares.local';
+			} else {
+				const name = this.olaresId.replace('@', '.');
+				url = url + name;
+			}
 			return url;
 		},
 

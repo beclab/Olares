@@ -5,7 +5,7 @@ description: 在 Linux 系统 Ubuntu 和 Debian 上安装配置 Olares 的完整
 # 使用命令行安装 Olares
 本文介绍如何在 Linux 上使用一行命令行脚本安装 Olares。
 
-<!--@include: ./reusables.md{44,51}-->
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
 
 ## 系统要求
 
@@ -20,21 +20,29 @@ description: 在 Linux 系统 Ubuntu 和 Debian 上安装配置 Olares 的完整
   - Ubuntu 22.04-25.04 LTS
   - Debian 12 或 13
 
-<!--@include: ./reusables.md{63,65}-->
+<!--@include: ./reusables.md#version-compatibility-->
 
 
 ### 可选硬件
 
-<!--@include: ./gpu-requirements.md{5,}-->
+<!--@include: ./gpu-requirements.md#gpu-requirements-->
 
 ## 安装 Olares
 
 在 Linux 命令行中，执行以下命令：
 
-<!--@include: ./reusables.md{4,36}-->
+<!--@include: ./reusables.md#install-script-command-->
+
+<!--@include: ./reusables.md#root-password-tip-->
+
+<!--@include: ./reusables.md#installation-error-tip-->
+
+<!--@include: ./reusables.md#prepare-wizard-heading-->
+
+<!--@include: ./reusables.md#prepare-wizard-details-->
 
 <!--@include: ./activate-olares.md-->
 
 <!--@include: ./log-in-to-olares.md-->
 
-<!--@include: ./reusables.md{38,42}-->
+<!--@include: ./reusables.md#protect-olares-id-->

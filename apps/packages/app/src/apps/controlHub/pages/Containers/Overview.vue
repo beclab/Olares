@@ -48,7 +48,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';
-import { t } from '@apps/control-hub/src/boot/i18n';
+import { t } from 'src/boot/control-hub-i18n';
 import DetailPage from '@apps/control-panel-common/src/containers/DetailPage.vue';
 import MyPage from '@apps/control-panel-common/src/containers/MyPage.vue';
 import { getPodDetail } from '@apps/control-hub/src/network';
@@ -90,10 +90,7 @@ const getResourceInfo = (type: string, detail: any) => {
 		Object.keys(resourceType)
 			.map((key) => {
 				const isCpu = key === 'cpu';
-				const value =
-					isCpu && resourceType[key].endsWith('m')
-						? parseInt(resourceType[key], 10) / 1000
-						: resourceType[key];
+				const value = resourceType[key];
 
 				return t(`${key.toUpperCase().replace(/[^A-Z]/g, '_')}_VALUE`, {
 					value

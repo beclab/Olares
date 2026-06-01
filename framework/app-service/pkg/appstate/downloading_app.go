@@ -4,16 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
-	appsv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
-	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2"
@@ -47,35 +44,14 @@ func (r *downloadingInProgressApp) WaitAsync(ctx context.Context) {
 			return
 		}
 
-		// Check Kubernetes request resources before transitioning to Installing
-		var appConfig *appcfg.ApplicationConfig
-		if err := json.Unmarshal([]byte(r.manager.Spec.Config), &appConfig); err != nil {
-			klog.Errorf("failed to unmarshal app config for %s: %v", r.manager.Spec.AppName, err)
-			updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.InstallFailed, nil, fmt.Sprintf("invalid app config: %v", err), "")
-			if updateErr != nil {
-				klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.InstallFailed.String(), updateErr)
-			}
-			return
-		}
-
-		_, conditionType, checkErr := apputils.CheckAppK8sRequestResource(appConfig, r.manager.Spec.OpType)
-		if checkErr != nil {
-			klog.Errorf("k8s request resource check failed for app %s: %v", r.manager.Spec.AppName, checkErr)
-			opRecord := makeRecord(r.manager, appsv1.InstallFailed, checkErr.Error())
-			updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.InstallFailed, opRecord, checkErr.Error(), string(conditionType))
-			if updateErr != nil {
-				klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.InstallFailed.String(), updateErr)
-			}
-
-			return
-		}
-
+		// No resource gate here. For workloadReplicas apps the pressure
+		// and allocation chain runs in installing_app.go after helm
+		// install (release at replicas=0) and before Scale(-1).
 		updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.Installing, nil, appsv1.Installing.String(), "")
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.Installing.String(), updateErr)
 			return
 		}
-
 	})
 }
 
@@ -155,53 +131,14 @@ func (p *DownloadingApp) exec(ctx context.Context) error {
 		klog.Errorf("unmarshal to appConfig failed %v", err)
 		return err
 	}
-	admin, err := kubesphere.GetAdminUsername(ctx, kubeConfig)
-	if err != nil {
-		klog.Errorf("get admin username failed %v", admin)
-		return err
-	}
-	isAdmin, err := kubesphere.IsAdmin(ctx, kubeConfig, p.manager.Spec.AppOwner)
-	if err != nil {
-		klog.Errorf("failed to check owner is admin %v", err)
-		return err
-	}
-	if isAdmin {
-		admin = p.manager.Spec.AppOwner
-	}
-	values := map[string]interface{}{
-		"admin": admin,
-		"bfl": map[string]string{
-			"username": p.manager.Spec.AppOwner,
-		},
-	}
 
-	values["GPU"] = map[string]interface{}{
-		"Type": appConfig.GetSelectedGpuTypeValue(),
-		"Cuda": os.Getenv("OLARES_SYSTEM_CUDA_VERSION"),
-	}
-
-	terminus, err := utils.GetTerminusVersion(ctx, kubeConfig)
+	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true)
 	if err != nil {
-		klog.Infof("get terminus error %v", err)
-		return err
-	}
-	values["sysVersion"] = terminus.Spec.Version
-	nodeInfo, err := utils.GetNodeInfo(ctx)
-	if err != nil {
-		klog.Errorf("failed to get node info %v", err)
-		return err
-	}
-	values["nodes"] = nodeInfo
-
-	deviceName, err := utils.GetDeviceName()
-	if err != nil {
-		klog.Errorf("failed to get deviceName %v", err)
+		klog.Errorf("build base helm values failed %v", err)
 		return err
 	}
 
-	values["deviceName"] = deviceName
-
-	refs, err := p.getRefsForImageManager(appConfig, values)
+	refs, err := GetRefsForImageManager(appConfig, values)
 	if err != nil {
 		klog.Errorf("get image refs from resources failed %v", err)
 		return err
@@ -215,24 +152,4 @@ func (p *DownloadingApp) exec(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (p *DownloadingApp) getRefsForImageManager(appConfig *appcfg.ApplicationConfig, values map[string]interface{}) (refs []appsv1.Ref, err error) {
-	switch {
-	case appConfig.APIVersion == appcfg.V2 && appConfig.IsMultiCharts():
-		// For V2 multi-charts, we need to get refs from each chart
-		var chartRefs []appsv1.Ref
-		for _, chart := range appConfig.SubCharts {
-			chartRefs, err = utils.GetRefFromResourceList(chart.ChartPath(appConfig.RawAppName, chart.Name), values, appConfig.Images)
-			if err != nil {
-				klog.Errorf("get refs from chart %s failed %v", chart.Name, err)
-				return
-			}
-
-			refs = append(refs, chartRefs...)
-		}
-	default:
-		refs, err = utils.GetRefFromResourceList(appConfig.ChartsName, values, appConfig.Images)
-	}
-	return
 }

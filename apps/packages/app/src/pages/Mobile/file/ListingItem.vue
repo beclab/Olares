@@ -23,7 +23,7 @@
 		/>
 
 		<q-icon
-			v-if="viewMode === 'mosaic'"
+			v-if="viewMode === 'mosaic' && showMoreHoriz"
 			name="sym_r_more_horiz"
 			size="20px"
 			@click.stop="fileOperation"
@@ -41,7 +41,7 @@
 			<span class="name text-ink-1">{{
 				translateFolderName(route.path, item.name)
 			}}</span>
-			<div class="modified text-ink-3">
+			<div class="modified text-ink-3" v-if="item.modified && item.size > 0">
 				{{
 					formatFileModified(item.modified, 'YYYY-MM-DD') + ' · ' + humanSize()
 				}}
@@ -169,10 +169,11 @@ const canDrop = computed(function () {
 	if (!props.item.isDir) return false;
 
 	for (let i of filesStore.selected[props.origin_id]) {
-		if (
-			filesStore.currentFileList[props.origin_id]?.items[i].url ===
-			props.item.url
-		) {
+		const item = filesStore.getTargetFileItem(i, props.origin_id);
+		if (!item) {
+			continue;
+		}
+		if (item.url === props.item.url) {
 			return false;
 		}
 	}
@@ -183,7 +184,9 @@ const canDrop = computed(function () {
 const humanSize = () => {
 	return props.item.type == 'invalid_link'
 		? 'invalid link'
-		: humanStorageSize(props.item.size);
+		: props.item.size
+		? humanStorageSize(props.item.size)
+		: '--';
 };
 
 const dragStart = () => {
@@ -216,12 +219,8 @@ const dragOver = (event: any) => {
 const drop = async (event: any) => {
 	let canMove = true;
 	for (const item of filesStore.selected[props.origin_id]) {
-		if (
-			operateinStore.isDisableMenuItem(
-				filesStore.currentFileList[props.origin_id]?.items[item].name || '',
-				route.path
-			)
-		) {
+		const fileItem = filesStore.getTargetFileItem(item, props.origin_id);
+		if (operateinStore.isDisableMenuItem(fileItem?.name || '', route.path)) {
 			canMove = false;
 			break;
 		}

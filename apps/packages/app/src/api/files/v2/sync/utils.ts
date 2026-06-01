@@ -172,7 +172,7 @@ export const displayPath = (
 		'/Seahub/',
 		repoName,
 		encodeUrl(file.parent_dir),
-		file.isDir ? file.name : '',
+		file.isDir ? encodeUrl(file.name) : '',
 		'/'
 	);
 };

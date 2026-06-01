@@ -1,8 +1,8 @@
 export default {
 	home_menus: {
 		notification: 'Notification',
-		application: 'Application',
-		integration: 'Integration',
+		applications: 'Applications',
+		integrations: 'Integrations',
 		services: 'Services',
 		authority: 'Authority',
 		upgrade: 'Upgrade',
@@ -14,7 +14,7 @@ export default {
 		vpn: 'VPN',
 		gpu: 'GPU',
 		restore: 'Restore',
-		developer: 'Developer',
+		advanced: 'Advanced',
 		video: 'Video',
 		search: 'Search'
 	},
@@ -42,8 +42,8 @@ export default {
 	},
 	success: 'Success',
 	pictures: 'Pictures',
-	login_background: 'Login Background',
-	desktop_background: 'Desktop Background',
+	login_background: 'Login background',
+	desktop_background: 'Desktop background',
 	create_account: 'Create account',
 	delete_item: 'Delete {item}',
 	modify_limits: 'Modify limits',
@@ -62,7 +62,7 @@ export default {
 	roles: 'Role',
 	reset_password: 'Reset password',
 	wizard_url: 'Wizard URL',
-	change_password: 'Change Password',
+	change_password: 'Change password',
 	cpu: 'CPU',
 	core: 'core',
 	memory: 'Memory',
@@ -93,9 +93,8 @@ export default {
 	you_need_at_least_2_devices_online_to_activate_headScale:
 		'You need at least 2 devices online to activate HeadScale',
 	olares_cloud: 'Olares Cloud',
-	device: 'Device',
-	forcing_vpn_access_to_private_network:
-		'Enforce VPN access to private entrance',
+	devices: 'Devices',
+	forcing_vpn_access_to_private_network: 'Enforce VPN access',
 	view_the_active_session_of_the_vault: 'View active sessions of Vault',
 	view_the_headScale_connection_status: 'View VPN connection status',
 	view_the_list_of_sso_authorization_tokens: 'View SSO authorization tokens',
@@ -120,14 +119,14 @@ export default {
 	device_name: 'Device name',
 	device_routes: 'Device routes',
 	enable: 'Enable',
-	worldwide: 'World Wide',
+	worldwide: 'World wide',
 	public: 'Public',
 	protected: 'Protected',
 	private: 'Private',
 	network_authority_policy: 'Network Authority Policy',
 	select_authority: 'Select authority',
 	ip_input_popup_message: 'Use commas (,) to separate multiple IP addresses',
-	select_factor_model: 'Select Factor Model',
+	select_factor_model: 'Select factor model',
 	save: 'Save',
 	job: 'Job',
 	sender: 'Sender',
@@ -204,6 +203,7 @@ export default {
 	please_enter_a_password: 'Enter password',
 	confirm_password: 'Confirm password',
 	please_confirm_a_password: 'Confirm the password',
+	'errors.password_cannot_contain_spaces': 'Password cannot contain spaces',
 	'Manage backup task': 'Manage backup task',
 	backup_size: 'Backup size',
 	snapshots: 'Snapshots',
@@ -372,7 +372,7 @@ export default {
 	light: 'Light',
 	dark: 'Dark',
 	auto: 'Auto',
-	profile_avatar: 'Profile Avatar',
+	profile_avatar: 'Profile avatar',
 	effected_urls: 'Affected URLs',
 	default_route_id: 'Default route ID',
 	setup_custom_route_id: 'Set custom route ID',
@@ -420,7 +420,7 @@ export default {
 	backup_location: 'Backup location',
 	backup_region: 'Backup region',
 	backup_path: 'Backup path',
-	schedule_and_security: 'Schedule & Security',
+	schedule_and_security: 'Schedule & security',
 	select_a_backup_location: 'Select a backup location',
 	backup_to_local_directory: 'Backup to local directory',
 	backup_to_online_storage: 'Backup to cloud storage',
@@ -433,13 +433,13 @@ export default {
 	'Switch reverse proxy': 'Switch reverse proxy',
 	'Are you sure you need to switch the reverse proxy to {proxy}?':
 		'Are you sure you need to switch the reverse proxy to {proxy}?',
-	'Reverse Proxy': 'Reverse Proxy',
+	'Reverse proxy': 'Reverse proxy',
 	'Set up a reverse proxy for external access':
 		'Set up a reverse proxy for external access',
 	'Select an Olares tunnel': 'Select an Olares Tunnel',
 	'Server Address': 'Server address',
 	Port: 'Port',
-	'Auth Method': 'Auth method',
+	'Authentication method': 'Authentication method',
 	Token: 'Token',
 	'Please input server address': 'Please input server address',
 	'Please input port': 'Please input port',
@@ -447,9 +447,9 @@ export default {
 	None: 'None',
 	Internal: 'Internal',
 	'VRAM mode': 'VRAM mode',
-	'Switch VRAM mode': 'Switch VRAM mode',
-	'Are you sure you need to switch the VRAM mode to {mode}?':
-		'Are you sure you need to switch the VRAM mode to {mode}?',
+	'Change GPU mode to': 'Change GPU mode to {mode}?',
+	'Changing the GPU mode will reallocate resources. Apps using this GPU may stop and need to be resumed manually before they can run again.':
+		'Changing the GPU mode will reallocate resources. Apps using this GPU may stop and need to be resumed manually before they can run again.',
 	'Standalone Mode': 'Standalone mode',
 	'Shared Mode': 'Shared mode',
 	'During the reverse proxy switch, Olares may be inaccessible for 10 minutes.':
@@ -539,7 +539,7 @@ export default {
 	'Image count': 'Image count',
 	'Image size': 'Image size',
 	'Starting endpoint': 'Starting endpoint',
-	'Endpoint management': 'Endpoint management',
+	'Mirror management': 'Mirror management',
 	Sorting: 'Sorting',
 	'Confirm deletion?': 'Confirm deletion?',
 	'Are you sure you want to delete image source {source}?':
@@ -564,17 +564,17 @@ export default {
 		'Bind Olares Space in LarePass to view remaining backup space.',
 	'Cancel Upgrade': 'Cancel Upgrade',
 	'Upgrade Failed': 'Upgrade Failed',
-	'Backup Files': 'Backup Files',
-	'Backup App': 'Backup App',
+	'Back up file': 'Back up file',
+	'Back up app': 'Back up app',
 	'Resource Type': 'Resource Type',
 	'GPU Detail': 'GPU Detail',
-	'GPU Type': 'GPU Model',
+	'GPU model': 'GPU model',
 	Node: 'Node',
-	'Video memory size': 'Video memory size',
-	'GPU Mode': 'GPU Mode',
-	'App Exclusive': 'App Exclusive',
-	'Memory Slicing': 'Memory Slicing',
-	'Time Slicing': 'Time Slicing',
+	VRAM: 'VRAM',
+	'GPU mode': 'GPU mode',
+	'App exclusive': 'App exclusive',
+	'Memory slicing': 'Memory slicing',
+	'Time slicing': 'Time slicing',
 	'The maximum available space is {space}':
 		'The maximum available space is {space}',
 	'No apps added': 'No apps added',
@@ -611,7 +611,7 @@ export default {
 	'Backup task terminated due to service restart.':
 		'Backup task terminated due to service restart.',
 	'Task canceled.': 'Task canceled.',
-	'Communication and Feedback': 'Communication and Feedback',
+	'Communication and feedback': 'Communication and feedback',
 	'Change plan': 'Change plan',
 	'Go to Olares Space': 'Go to Olares Space',
 	PlanLevel: {
@@ -631,13 +631,12 @@ export default {
 	'Last active time': 'Last active time',
 	Location: 'Location',
 	Status: 'Status',
-	'Connection Type': 'Connection Type',
-	'Created At': 'Created At',
-	'Last Seen': 'Last Seen',
+	'Connection type': 'Connection type',
+	'Last seen': 'Last seen',
 	'Last IP': 'Last IP',
 	Tailscale: 'Tailscale',
-	'Token Expires': 'Token Expires',
-	'Token Second Factor': 'Token Second Factor',
+	'Token expires': 'Token expires',
+	'Token second factor': 'Token second factor',
 	Enabled: 'Enabled',
 	Deactivated: 'Deactivated',
 	'Manage users within the Olares cluster.':
@@ -651,7 +650,7 @@ export default {
 	'No accounts connected': 'No accounts connected',
 	'Add an account to easily back up, restore, and sync your important data across platforms.':
 		'Add an account to easily back up, restore, and sync your important data across platforms.',
-	'Add Backup Task': 'Add Backup Task',
+	'Add backup task': 'Add backup task',
 	'Create a backup task to regularly save your important data and keep it secure.':
 		'Create a backup task to regularly save your important data and keep it secure.',
 	'Add restore task': 'Add restore task',
@@ -669,7 +668,7 @@ export default {
 		'Check and update your Olares version.',
 	'Enable remote SSH connections to the cluster through a VPN':
 		'Enable remote SSH connections to the cluster through a VPN',
-	'Subnet Routes': 'Subnet Routes',
+	'Subnet routes': 'Subnet routes',
 	'Allow VPN users to access other devices on the local network (e.g., printers, file servers)':
 		'Allow VPN users to access other devices on the local network (e.g., printers, file servers)',
 	'When enabled, Olares only accepts connections made through the LarePass VPN. All other access methods will be blocked.':
@@ -683,28 +682,27 @@ export default {
 		'Manage how external traffic is routed to your internal services.',
 	'Customize domain name resolution for your Olares network.':
 		'Customize domain name resolution for your Olares network.',
-	"The GPU's  power is shared among multiple applications.":
-		"The GPU's  power is shared among multiple applications.",
-	'Pin application': 'Pin application',
-	'Bind an application to this GPU': 'Bind an application to this GPU',
-	'Assign a dedicated amount of VRAM to specific applications':
-		'Assign a dedicated amount of VRAM to specific applications',
+	'Multiple apps take turns using the same GPU':
+		'Multiple apps take turns using the same GPU',
+	'Manage assigned apps': 'Manage assigned apps',
+	'Assign an app to this GPU': 'Assign an app to this GPU',
+	'Multiple apps share a single GPU, with fixed VRAM allocated to each app':
+		'Multiple apps share a single GPU, with fixed VRAM allocated to each app',
 	'Allocate VRAM': 'Allocate VRAM',
-	'Select your target application and assign VRAM to it':
-		'Select your target application and assign VRAM to it',
-	'Select one application to have dedicated access to this GPU.':
-		'Select one application to have dedicated access to this GPU.',
+	'Set how much VRAM each app can use': 'Set how much VRAM each app can use',
+	'A single app has exclusive access to the GPU':
+		'A single app has exclusive access to the GPU',
 	'Select exclusive app': 'Select exclusive app',
 	'Update available for Olares. To upgrade, open LarePass on your phone and go to  Settings > Olares management. ':
 		'Update available for Olares. To upgrade, open LarePass on your phone and go to  Settings > Olares management. ',
 	'An error occurred while creating the user.':
 		'An error occurred while creating the user.',
 	video: 'Video',
-	'Hardware Acceleration': 'Hardware Acceleration',
-	'Encoding Scheme': 'Encoding Scheme',
-	'Transcoding Settings': 'Transcoding Settings',
-	'Audio Transcoding': 'Audio Transcoding',
-	'Encoding Quality': 'Encoding Quality',
+	'Hardware acceleration': 'Hardware acceleration',
+	'Video formats': 'Video formats',
+	'Transcoding settings': 'Transcoding settings',
+	'Audio transcoding': 'Audio transcoding',
+	'Encoding quality': 'Encoding quality',
 	Others: 'Others',
 	'Hardware acceleration requires additional configuration.':
 		'Hardware acceleration requires additional configuration.',
@@ -738,7 +736,7 @@ export default {
 		'Pick a faster value to improve performance, or a slower value to improve quality.',
 	"The 'Constant Rate Factor' (CRF) is the default quality setting for the x264 and x265 software encoders. You can set the values between 0 and 51, where lower values would result in better quality (at the expense of higher file sizes). Sane values are between 18 and 28. The default for x264 is 23, and for x265 is 28, so you can use this as a starting point. Hardware encoders do not use these settings.":
 		"The 'Constant Rate Factor' (CRF) is the default quality setting for the x264 and x265 software encoders. You can set the values between 0 and 51, where lower values would result in better quality (at the expense of higher file sizes). Sane values are between 18 and 28. The default for x264 is 23, and for x265 is 28, so you can use this as a starting point. Hardware encoders do not use these settings.",
-	'Throttle Transcodes': 'Throttle Transcodes',
+	'Throttle transcodes': 'Throttle transcodes',
 	'When a transcode or remux gets far enough ahead from the current playback position, pause the process so it will consume fewer resources. This is most useful when watching without seeking often. Turn this off if you experience playback issues.':
 		'When a transcode or remux gets far enough ahead from the current playback position, pause the process so it will consume fewer resources. This is most useful when watching without seeking often. Turn this off if you experience playback issues.',
 	'Delete segments': 'Delete segments',
@@ -768,10 +766,10 @@ export default {
 	'My hardware': 'My hardware',
 	'View and manage your Olares hardware':
 		'View and manage your Olares hardware',
-	'Device Identifier': 'Device Identifier',
+	'Device identifier': 'Device identifier',
 	Model: 'Model',
 	'Power mode': 'Power mode',
-	'Performance Mode': 'Performance Mode',
+	'Performance mode': 'Performance mode',
 	'Silent mode': 'Silent mode',
 	'Gaming mode': 'Gaming mode',
 	'Balance mode': 'Balance mode',
@@ -788,33 +786,32 @@ export default {
 	'Are you sure you want to reset your SSH login password?':
 		'Are you sure you want to reset your SSH login password?',
 	'SSH password reset to {password}': 'SSH password reset to {password}',
-	'Environment Variables': 'Environment Variables',
-	'Manage Environment Variables': 'Manage Environment Variables',
-	'System Environment Variables': 'System Environment Variables',
-	'Edit Environment Variable': 'Edit Environment Variable',
+	'Manage environment variables': 'Manage environment variables',
+	'System environment variables': 'System environment variables',
+	'Edit environment variable': 'Edit environment variable',
 	Key: 'Key',
 	Value: 'Value',
 	'No available environment variable configurations':
 		'No available environment variable configurations',
-	'Link Your Accounts & Data': 'Link Your Accounts & Data',
+	'Link your accounts & data': 'Link your accounts & data',
 	'Add your accounts to access all your personal data in one place':
 		'Add your accounts to access all your personal data in one place',
-	'Cookie Management': 'Cookie Management',
-	'Manage Your Cookies': 'Manage Your Cookies',
+	'Cookie management': 'Cookie management',
+	'Manage your cookies': 'Manage your cookies',
 	'View and modify cookies to manage your site data in one place':
 		'View and modify cookies to manage your site data in one place',
-	'Import Cookie': 'Import Cookie',
-	'No cookies found': 'No cookies found',
+	'Import cookie': 'Import cookie',
+	'No cookie found': 'No cookie found',
 	'Please add manually or link': 'Please add manually or {link}',
-	'upload via LarePass Chrome Extension':
-		'upload via LarePass Chrome Extension',
+	'upload via LarePass Chrome extension':
+		'upload via LarePass Chrome extension',
 	btn_unbind: 'Unbind',
 	'No apps available yet': 'No apps available yet',
-	'Delete All': 'Delete All',
+	'Delete all': 'Delete all',
 	'Delete a single domain': 'Delete a single domain',
 	'Are you sure you want to delete all cookies for the domain':
 		'Are you sure you want to delete all cookies for the domain {domain}?',
-	'Cookie Expired': 'Cookie Expired',
+	'Cookie expired': 'Cookie expired',
 	'last update time': 'last update time',
 	'not installed. Unable to get download file for this link.':
 		'"{app}" not installed. Unable to get download file for this link.',
@@ -828,36 +825,40 @@ export default {
 	'Rss Subscribe not installed':
 		'"RSS Subscribe" plugin not available. Unable to get feeds.',
 	'Shared entrances': 'Shared entrances',
-	'File Search': 'File Search',
-	'Search Index': 'Search Index',
+	'File Search': 'File search',
+	'Search Index': 'Search index',
 	'In Progress': 'In Progress',
 	Completed: 'Completed',
 	'Rebuilds search index using the latest settings.':
 		'Rebuilds search index using the latest settings.',
-	'Excluded Files': 'Excluded Files',
+	'Excluded Files': 'Excluded files',
 	'The search index excludes any file with a filename or path matching the patterns below. Each line is a separate regular expression.':
 		'The search index excludes any file with a filename or path matching the patterns below. Each line is a separate regular expression.',
 	Rebuild: 'Rebuild',
 	'Add pattern': 'Add pattern',
-	'Excluded File Patterns': 'Excluded File Patterns',
+	'Excluded file patterns': 'Excluded file patterns',
+	'Excluded pattern cannot be empty or only spaces':
+		'Enter an exclusion pattern. It cannot be empty or only spaces.',
+	'Excluded pattern is too long (max {max} characters)':
+		'This exclusion pattern is too long (maximum {max} characters).',
 	'Delete pattern': 'Delete pattern',
 	'Are you sure you want to delete this pattern? The change will take effect after the search index updates.':
 		'Are you sure you want to delete this pattern? The change will take effect after the search index updates.',
 	'Delete directory': 'Delete directory',
 	'Are you sure you want to delete this directory from full-text search? The change will take effect after the search index updates.':
 		'Are you sure you want to delete this directory from full-text search? The change will take effect after the search index updates.',
-	'Full-Text Search Directories': 'Full-Text Search Directories',
+	'Full-Text Search Directories': 'Full-text search directories',
 	'Performs full-text search within all files in the listed directories. Supported formats: pdf, doc/docx, csv, rtf, txt/md/json/xml.':
 		'Performs full-text search within all files in the listed directories. Supported formats: pdf, doc/docx, csv, rtf, txt/md/json/xml.',
-	'Flexible Hosts Management': 'Flexible Hosts Management',
+	'Flexible hosts management': 'Flexible hosts management',
 	'Add and manage custom hosts rules to easily optimize your network access and DNS resolution.':
 		'Add and manage custom hosts rules to easily optimize your network access and DNS resolution.',
 	'Add hosts': 'Add hosts',
-	'No app binded': 'No app binded',
-	'Bind App': 'Bind App',
-	'Switch App': 'Switch App',
+	'No apps assigned': 'No apps assigned',
+	'Assign app': 'Assign app',
+	'Switch app': 'Switch app',
 	Operation: 'Operation',
-	'Edit VRAM Allocatin': 'Edit VRAM Allocatin',
+	'Edit VRAM allocation': 'Edit VRAM allocation',
 	'View Processing Workflow': 'View Processing Workflow',
 	'View Dashboard': 'View Dashboard',
 	'Source Size': 'Source Size',
@@ -866,14 +867,85 @@ export default {
 	'The total space your files currently occupy on your device.':
 		'The total space your files currently occupy on your device.',
 	'Unbind from this GPU': 'Unbind from this GPU',
-	'Are you sure to unbind “{app}” from this GPU?':
-		'Are you sure to unbind “{app}” from this GPU?',
-	'Unbind App': 'Unbind App',
-	'Switch GPU': 'Switch GPU',
-	'Are you sure to unbind “{app}” from the “{cgpus}” and bind to {tgpu}?':
-		'Are you sure to unbind “{app}” from the “{cgpus}” and bind to {tgpu}?',
+	"This will remove the app's access to this GPU and release its allocated resources":
+		"This will remove the app's access to this GPU and release its allocated resources.",
+	'Remove app from this GPU?': 'Remove {app} from this GPU?',
+	'Switch this app to another GPU': 'Switch this app to another GPU',
+	'Switch {app} to another GPU': 'Switch {app} to another GPU',
+	'This will switch “{app}” from the current GPU to {tgpu}':
+		'This will switch “{app}” from the current GPU to {tgpu}',
 	'No custom directories added. Search will only look in default locations.':
 		'No custom directories added. Search will only look in default locations.',
 	'No excluded patterns yet. All files are currently being indexed.':
-		'No excluded patterns yet. All files are currently being indexed.'
+		'No excluded patterns yet. All files are currently being indexed.',
+	'Only accounts belonging to the domain {domain} can be created.':
+		'Only accounts belonging to the domain {domain} can be created.',
+	'No failed file': 'No failed file',
+	'Failed File List': 'Failed File List',
+	'Failed to create full-text index for some files.':
+		'Failed to create full-text index for some files.',
+	'Click to view the list': 'Click to view the list',
+	Gallery: 'Gallery',
+	'No applications found': 'No applications found',
+	'Uploaded images': 'Uploaded images',
+	'Upload image': 'Upload image',
+	Fill: 'Fill',
+	Stretch: 'Stretch',
+	Tile: 'Tile',
+	'Environment variables': 'Environment variables',
+	'Manage shared settings for your apps.':
+		'Manage shared settings for your apps.',
+	'Add environment variables': 'Add environment variables',
+	'System config': 'System config',
+	'User information': 'User information',
+	View: 'View',
+	Hide: 'Hide',
+	Mirror: 'Mirror',
+	'Are you sure to reset password for':
+		'Are you sure to reset password for "{olaresName}"?',
+	'Add environment variable': 'Add environment variable',
+	Type: 'Type',
+	'Access policies': 'Access policies',
+	'Manage sub policies': 'Manage sub policies',
+	'Endpoint settings': 'Endpoint settings',
+	'Sub policies': 'Sub policies',
+	'Fine grained access control': 'Fine grained access control',
+	'Set access policies for specific URLs':
+		'Set access policies for specific URLs',
+	'Add sub policy': 'Add sub policy',
+	'SMB account management': 'SMB account management',
+	'Manage your SMB network storage connections':
+		'Manage your SMB network storage connections',
+	Protocol: 'Protocol',
+	Destination: 'Destination',
+	'No SMB accounts': 'No SMB accounts',
+	'Add an account to easily back up, restore, and sync your important data.':
+		'Add an account to easily back up, restore, and sync your important data.',
+	'Add account': 'Add account',
+	'Delete environment variable': 'Delete environment variable',
+	'Are you sure to delete the environment variable? It cannot be recovered after deletion.':
+		'Are you sure to delete the environment variable "{envName}"? It cannot be recovered after deletion.',
+	Save: 'Save',
+	'Sign out': 'Sign out',
+	'Type an app name': 'Type an app name',
+	'Low resources allocation': 'Low resources allocation',
+	'The resources allocation is low. We recommend at least 1 CPU core and 3 GB of RAM. Lower settings may lead to poor experience. Are you sure you want to proceed?':
+		'The resources allocation is low. We recommend at least 1 CPU core and 3 GB of RAM. Lower settings may lead to poor experience. Are you sure you want to proceed?',
+	Acknowledgements: 'Acknowledgements',
+	'Sincere thanks to our backer': 'Sincere thanks to our {number} backer',
+	'Search backer ID or name...': 'Search backer ID or name...',
+	backer_name_not_found: "Oops! Didn't spot your name? Let us know at {email}!",
+	'Stop the app before removing it from this GPU':
+		'Stop the app before removing it from this GPU.<br/>You can stop it in Market > My Olares or in Settings > Applications.',
+	'Minimum video memory required to allocate {min}':
+		'Minimum video memory required to allocate {min}',
+	'Reset SSH Password': 'Reset SSH Password',
+	Widget: 'Widget',
+	'Date & Time': 'Date & Time',
+	'24-hour format': '24-hour format',
+	'Date format': 'Date Format',
+	'Show Dashboard': 'Show Dashboard',
+	'Select an app to use this GPU exclusively':
+		'Select an app to use this GPU exclusively',
+	'Select GPU': 'Select GPU'
 };

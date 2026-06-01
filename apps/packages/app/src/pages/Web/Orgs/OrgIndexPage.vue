@@ -36,7 +36,7 @@ export default defineComponent({
 
 		const orgHeight = computed(() => {
 			if (process.env.PLATFORM === 'DESKTOP') {
-				if ($q.platform.is.win) {
+				if ($q.platform.is.win || $q.platform.is.linux) {
 					return 'calc(100vh - 40px) !important';
 				}
 				return 'calc(100vh - 16px) !important';
@@ -61,7 +61,7 @@ export default defineComponent({
 
 		const myTweak = () => {
 			if (process.env.PLATFORM === 'DESKTOP') {
-				if ($q.platform.is.win) {
+				if ($q.platform.is.win || $q.platform.is.linux) {
 					return { height: 'calc(100vh - 40px) !important' };
 				}
 				return { height: 'calc(100vh - 16px) !important' };

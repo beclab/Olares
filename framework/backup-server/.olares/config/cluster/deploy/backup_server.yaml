@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.62" }}
+{{ $backupVersion := "0.3.64" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 {{- $backup_nats_secret := (lookup "v1" "Secret" .Release.Namespace "backup-nats-secret") -}}
@@ -157,6 +157,8 @@ spec:
         command:
         - /backup-server
         - apiserver
+        - --log-level
+        - info
         resources:
           requests:
             cpu: 20m
@@ -206,6 +208,8 @@ spec:
         command:
         - /backup-server
         - controller
+        - --log-level
+        - info
         resources:
           requests:
             cpu: 20m

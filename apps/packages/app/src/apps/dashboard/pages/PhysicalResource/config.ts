@@ -1,6 +1,6 @@
 import { _capitalize } from '../../utils/index';
 import { get } from 'lodash';
-import { t } from '@apps/dashboard/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 
 export const MetricTypes = {
 	cpu_utilisation: 'cluster_cpu_utilisation',

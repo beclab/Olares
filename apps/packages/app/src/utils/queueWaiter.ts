@@ -22,11 +22,11 @@ class Waiter<T = void> {
 	private checkInterval = 300;
 
 	/**
-	 * 设置检查条件（不执行）
-	 * @param id 条件唯一标识
-	 * @param condition 检查条件函数
-	 * @param callback 条件满足时的回调
-	 * @param args 传递给回调的参数
+	 * Set a check condition (without executing).
+	 * @param id unique condition id
+	 * @param condition condition check function
+	 * @param callback callback when condition is met
+	 * @param args args passed to callback
 	 */
 	public setCondition(
 		id: string,
@@ -38,21 +38,21 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 获取已设置的条件
-	 * @param id 条件唯一标识
-	 * @returns 条件对象或 undefined
+	 * Get an existing condition.
+	 * @param id unique condition id
+	 * @returns condition object or undefined
 	 */
 	public getCondition(id: string): Condition<T> | undefined {
 		return this.conditions.get(id);
 	}
 
 	/**
-	 * 从已设置的条件创建任务并添加到队列执行
-	 * @param id 条件唯一标识
-	 * @param interval 检查间隔（毫秒）
-	 * @param timeout 超时时间（毫秒）
-	 * @param maxAttempts 最大尝试次数
-	 * @returns 是否成功添加任务
+	 * Create task from existing condition and enqueue it.
+	 * @param id unique condition id
+	 * @param interval check interval in milliseconds
+	 * @param timeout timeout in milliseconds
+	 * @param maxAttempts max number of attempts
+	 * @returns whether task was enqueued successfully
 	 */
 	public enqueueTask(
 		id: string,
@@ -66,12 +66,12 @@ class Waiter<T = void> {
 			return false;
 		}
 
-		// 如果任务已存在，先移除
+		// If task already exists, remove it first.
 		if (this.taskQueue.has(id)) {
 			this.removeTask(id);
 		}
 
-		// 创建任务
+		// Create task.
 		const task: WaitTask<T> = {
 			...condition,
 			attempts: 0,
@@ -81,12 +81,12 @@ class Waiter<T = void> {
 
 		this.taskQueue.set(id, task);
 
-		// 如果队列未运行，启动队列处理
+		// Start processing if queue is not running.
 		if (!this.running) {
 			this.startProcessing(interval);
 		}
 
-		// 设置超时
+		// Set timeout.
 		if (timeout > 0) {
 			task.timeoutId = setTimeout(() => {
 				if (this.taskQueue.has(id)) {
@@ -100,14 +100,14 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 直接添加任务（兼容旧用法）
-	 * @param id 任务唯一标识
-	 * @param condition 检查条件函数
-	 * @param callback 条件满足时的回调
-	 * @param interval 检查间隔（毫秒）
-	 * @param args 传递给回调的参数
-	 * @param timeout 超时时间（毫秒）
-	 * @param maxAttempts 最大尝试次数
+	 * Add task directly (legacy-compatible).
+	 * @param id unique task id
+	 * @param condition condition check function
+	 * @param callback callback when condition is met
+	 * @param interval check interval in milliseconds
+	 * @param args args passed to callback
+	 * @param timeout timeout in milliseconds
+	 * @param maxAttempts max number of attempts
 	 */
 	public addTask(
 		id: string,
@@ -118,15 +118,15 @@ class Waiter<T = void> {
 		timeout = 10000,
 		maxAttempts = Infinity
 	): void {
-		// 先设置条件
+		// Set condition first.
 		this.setCondition(id, condition, callback, args);
 
-		// 再添加到队列
+		// Then enqueue it.
 		this.enqueueTask(id, interval, timeout, maxAttempts);
 	}
 
 	/**
-	 * 启动队列处理
+	 * Start queue processing.
 	 */
 	private startProcessing(interval: number): void {
 		if (this.running) return;
@@ -139,7 +139,7 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 停止队列处理
+	 * Stop queue processing.
 	 */
 	private stopProcessing(): void {
 		if (!this.running) return;
@@ -152,7 +152,7 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 处理队列中的所有任务
+	 * Process all tasks in queue.
 	 */
 	private processQueue(): void {
 		if (this.taskQueue.size === 0) return;
@@ -161,14 +161,14 @@ class Waiter<T = void> {
 			try {
 				task.attempts++;
 
-				// 检查条件是否满足
+				// Check whether condition is met.
 				if (task.condition()) {
 					task.callback(task.args);
 					this.removeTask(task.id);
 					return;
 				}
 
-				// 检查是否超过最大尝试次数
+				// Check whether max attempts has been reached.
 				if (task.attempts >= task.maxAttempts) {
 					console.warn(`任务 ${task.id} 已达到最大尝试次数`);
 					this.removeTask(task.id);
@@ -181,8 +181,8 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 移除任务
-	 * @param id 任务唯一标识
+	 * Remove task.
+	 * @param id unique task id
 	 */
 	public removeTask(id: string): void {
 		const task = this.taskQueue.get(id);
@@ -191,16 +191,16 @@ class Waiter<T = void> {
 		}
 		this.taskQueue.delete(id);
 
-		// 如果队列空了，停止处理
+		// Stop processing when queue is empty.
 		if (this.taskQueue.size === 0) {
 			this.stopProcessing();
 		}
 	}
 
 	/**
-	 * 移除已设置的条件（如果未入队）
-	 * @param id 条件唯一标识
-	 * @returns 是否成功移除
+	 * Remove existing condition (if not enqueued).
+	 * @param id unique condition id
+	 * @returns whether removal succeeded
 	 */
 	public removeCondition(id: string): boolean {
 		if (this.taskQueue.has(id)) {
@@ -212,10 +212,10 @@ class Waiter<T = void> {
 	}
 
 	/**
-	 * 清空所有条件和任务
+	 * Clear all conditions and tasks.
 	 */
 	public clearAll(): void {
-		// 清理任务队列
+		// Clear task queue.
 		this.taskQueue.forEach((task) => {
 			if (task.timeoutId) {
 				clearTimeout(task.timeoutId);
@@ -223,52 +223,52 @@ class Waiter<T = void> {
 		});
 		this.taskQueue.clear();
 
-		// 清理条件
+		// Clear conditions.
 		this.conditions.clear();
 
-		// 停止处理
+		// Stop processing.
 		this.stopProcessing();
 	}
 
 	/**
-	 * 获取队列中任务数量
+	 * Get queue size.
 	 */
 	public getQueueSize(): number {
 		return this.taskQueue.size;
 	}
 
 	/**
-	 * 获取已设置的条件数量
+	 * Get number of conditions.
 	 */
 	public getConditionCount(): number {
 		return this.conditions.size;
 	}
 
 	/**
-	 * 获取所有条件的ID
+	 * Get all condition IDs.
 	 */
 	public getAllConditionIds(): string[] {
 		return [...this.conditions.keys()];
 	}
 
 	/**
-	 * 获取队列中所有任务的ID
+	 * Get all task IDs in queue.
 	 */
 	public getQueueTaskIds(): string[] {
 		return [...this.taskQueue.keys()];
 	}
 
 	/**
-	 * 检查条件是否存在
-	 * @param id 条件唯一标识
+	 * Check if condition exists.
+	 * @param id unique condition id
 	 */
 	public hasCondition(id: string): boolean {
 		return this.conditions.has(id);
 	}
 
 	/**
-	 * 检查任务是否在队列中
-	 * @param id 任务唯一标识
+	 * Check if task is in queue.
+	 * @param id unique task id
 	 */
 	public hasTask(id: string): boolean {
 		return this.taskQueue.has(id);

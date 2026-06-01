@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/workflowinstaller"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"
@@ -21,6 +23,117 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// loadAuthorizedLifecycleAM is the shared prelude for mutating lifecycle
+// handlers (uninstall, suspend, resume, applyenv, cancel). It:
+//  1. Resolves the ApplicationManager name via apputils.ResolveAppMgrName so
+//     admins can target a v3 AM regardless of who installed it.
+//  2. Loads that ApplicationManager from the API.
+//  3. If the AM is v3, requires cluster admin; otherwise non-v3
+//     AMs remain scoped by ResolveAppMgrName/FmtAppMgrName to the caller.
+//
+// On any error or rejection it writes the response and returns ok=false; the
+// caller should simply `return`.
+func (h *Handler) loadAuthorizedLifecycleAM(ctx context.Context, req *restful.Request, resp *restful.Response, app, owner string) (name string, am *v1alpha1.ApplicationManager, ok bool) {
+	resolved, isV3, err := apputils.ResolveAppMgrName(ctx, app, owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return "", nil, false
+	}
+	var got v1alpha1.ApplicationManager
+	if err := h.ctrlClient.Get(ctx, types.NamespacedName{Name: resolved}, &got); err != nil {
+		api.HandleError(resp, req, err)
+		return "", nil, false
+	}
+	// Treat the AM as shared if either the resolver picked the v3 name OR
+	// the AM carries the scope label (defense in depth in case of weird
+	// install state).
+	if isV3 || appcfg.IsV3(&got) {
+		isAdmin, ierr := kubesphere.IsAdmin(ctx, h.kubeConfig, owner)
+		if ierr != nil {
+			api.HandleError(resp, req, ierr)
+			return "", nil, false
+		}
+		if !isAdmin {
+			api.HandleForbidden(resp, req, fmt.Errorf("only admin users can manage v3 / shared app %q", app))
+			return "", nil, false
+		}
+	}
+	return resolved, &got, true
+}
+
+// listVisibilityCtx is the per-request context used by list/get endpoints to
+// decide whether an Application / ApplicationManager is visible to `viewer`.
+//
+// Visibility model:
+//   - v3 / shared apps: visible to ALL authenticated users (admin or not);
+//     any user may open the app. Lifecycle handlers
+//     (install/uninstall/upgrade/...) enforce admin-only management.
+//   - v1 / v2 apps: legacy owner-by-namespace check is preserved unchanged
+//     (only the installer sees them in their own list).
+type listVisibilityCtx struct {
+	Viewer string
+}
+
+// newListVisibilityCtx is kept for symmetry and future per-request caching
+// (e.g. admin role memoisation if we ever need it elsewhere). It currently
+// makes no API calls.
+func (h *Handler) newListVisibilityCtx(_ context.Context, viewer string) (*listVisibilityCtx, error) {
+	return &listVisibilityCtx{Viewer: viewer}, nil
+}
+
+// VisibleSharedApp always returns true — see the visibility model above.
+// Kept as a method so all visibility decisions funnel through this file.
+func (v *listVisibilityCtx) VisibleSharedApp(_ string) bool { return true }
+
+// VisibleAM returns true if the AM is visible to the cached viewer.
+func (v *listVisibilityCtx) VisibleAM(am *v1alpha1.ApplicationManager) bool {
+	if am == nil {
+		return false
+	}
+	if appcfg.IsV3(am) {
+		return true
+	}
+	return am.Spec.AppOwner == v.Viewer
+}
+
+// VisibleApp mirrors VisibleAM for *v1alpha1.Application objects.
+func (v *listVisibilityCtx) VisibleApp(a *v1alpha1.Application) bool {
+	if a == nil {
+		return false
+	}
+	if appcfg.IsV3(a) {
+		return true
+	}
+	return a.Spec.Owner == v.Viewer
+}
+
+// requireAdmin returns true iff `caller` is owner/admin. On rejection it
+// writes the 403/5xx response and returns false so the caller can simply
+// `return`.
+func (h *Handler) requireAdmin(req *restful.Request, resp *restful.Response, caller string) bool {
+	isAdmin, err := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, caller)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return false
+	}
+	if !isAdmin {
+		api.HandleForbidden(resp, req, fmt.Errorf("only admin users can perform this operation"))
+		return false
+	}
+	return true
+}
+
+// gateSharedAppWrite enforces admin-only mutation on v3 Applications.
+// v1/v2 apps pass through unchanged. On rejection it writes
+// the 403 response and returns ok=false so the caller can simply `return`.
+func (h *Handler) gateSharedAppWrite(req *restful.Request, resp *restful.Response, app *v1alpha1.Application) (ok bool) {
+	if !appcfg.IsV3(app) {
+		return true
+	}
+	caller, _ := req.Attribute(constants.UserContextAttribute).(string)
+	return h.requireAdmin(req, resp, caller)
+}
 
 // UpdateAppState update applicationmanager state, message
 func (h *Handler) UpdateAppState(ctx context.Context, name string, state v1alpha1.ApplicationManagerState, message string) error {

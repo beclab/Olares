@@ -20,14 +20,14 @@
 						v-close-popup
 						active-soft="background-hover"
 						active-text="text-ink-2"
-						:title="t('Backup Files')"
+						:title="t('Back up file')"
 						@on-item-click="newBackup(BackupResourcesType.files)"
 					/>
 					<bt-popup-item
 						v-close-popup
 						active-soft="background-hover"
 						active-text="text-ink-2"
-						:title="t('Backup App')"
+						:title="t('Back up app')"
 						@on-item-click="newBackup(BackupResourcesType.app)"
 					/>
 				</bt-popup>
@@ -36,7 +36,7 @@
 	</page-title-component>
 	<app-menu-empty
 		v-if="backupStore.backupList.length === 0"
-		:title="t('Add Backup Task')"
+		:title="t('Add backup task')"
 		:button-label="t('add_backup')"
 		:message="
 			t(
@@ -55,14 +55,14 @@
 				v-close-popup
 				active-soft="background-hover"
 				active-text="text-ink-2"
-				:title="t('Backup Files')"
+				:title="t('Back up file')"
 				@on-item-click="newBackup(BackupResourcesType.files)"
 			/>
 			<bt-popup-item
 				v-close-popup
 				active-soft="background-hover"
 				active-text="text-ink-2"
-				:title="t('Backup App')"
+				:title="t('Back up app')"
 				@on-item-click="newBackup(BackupResourcesType.app)"
 			/>
 		</bt-popup>

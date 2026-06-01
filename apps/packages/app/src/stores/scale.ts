@@ -27,6 +27,7 @@ export type DataState = {
 	instance?: AxiosInstance;
 	vpnStatus: TermiPassVpnStatus;
 	hostPeerInfo?: HostPeerInfo;
+	vpnAbility: boolean;
 };
 
 export const useScaleStore = defineStore('scale', {
@@ -34,7 +35,8 @@ export const useScaleStore = defineStore('scale', {
 		return {
 			authKey: undefined,
 			scaleServer: '',
-			vpnStatus: TermiPassVpnStatus.off
+			vpnStatus: TermiPassVpnStatus.off,
+			vpnAbility: true
 		} as DataState;
 	},
 
@@ -52,18 +54,18 @@ export const useScaleStore = defineStore('scale', {
 			if (!this.isOn || !this.hostPeerInfo) {
 				return false;
 			}
-			if (this.hostPeerInfo.Relay && !this.hostPeerInfo.CurAddr) {
+
+			if (!this.hostPeerInfo.CurAddr) {
 				return false;
-			} else if (this.hostPeerInfo.CurAddr) {
-				return true;
 			}
-			return false;
+
+			return true;
 		},
 		isLocal(): boolean {
 			if (!this.isOn || !this.hostPeerInfo) {
 				return false;
 			}
-			if (!this.hostPeerInfo.Relay || !this.hostPeerInfo.CurAddr) {
+			if (!this.hostPeerInfo.CurAddr) {
 				return false;
 			}
 			let curaddr = this.hostPeerInfo.CurAddr;
@@ -96,6 +98,22 @@ export const useScaleStore = defineStore('scale', {
 				return true;
 			}
 			return false;
+		},
+		localAddress(): string {
+			if (!this.isOn || !this.hostPeerInfo) {
+				return '';
+			}
+			if (!this.hostPeerInfo.CurAddr) {
+				return '';
+			}
+			let curaddr = this.hostPeerInfo.CurAddr;
+
+			if (curaddr.includes(']')) {
+				curaddr = curaddr.split(']')[0].substring(1);
+			} else if (curaddr.includes(':')) {
+				curaddr = curaddr.split(':')[0];
+			}
+			return curaddr;
 		}
 	},
 
@@ -113,7 +131,8 @@ export const useScaleStore = defineStore('scale', {
 				baseURL: this.scaleServer,
 				timeout: 10000,
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
+					'X-Authorization': userStore.current_user?.access_token || ''
 				}
 			});
 			if (data) {
@@ -194,8 +213,13 @@ export const useScaleStore = defineStore('scale', {
 						undefined,
 						false
 					),
-					acceptDns: userStore.current_user?.isLargeVersion12 || false
+					acceptDns: userStore.current_user?.isLargeVersion12 || false,
+					authToken: userStore.current_user?.access_token || ''
 				};
+
+				if (userStore.currentUserTokenExpired) {
+					await userStore.currentUserRefreshToken(true);
+				}
 
 				if (instanceOfConfigVPNInterface(platform)) {
 					(platform as any as ConfigVPNInterface).vpnOpen(info);
@@ -206,7 +230,7 @@ export const useScaleStore = defineStore('scale', {
 							this.reset();
 							this.vpnStatus = TermiPassVpnStatus.Invalid;
 						}
-					}, 60000);
+					}, 180000);
 				} else {
 					this.vpnStatus = TermiPassVpnStatus.off;
 				}
@@ -275,7 +299,8 @@ export const useScaleStore = defineStore('scale', {
 						undefined,
 						undefined,
 						false
-					)
+					),
+					authToken: userStore.current_user?.access_token || ''
 				});
 			}
 		}
@@ -318,11 +343,11 @@ const ipv6IsLocal = (addr1: string, addr2: string) => {
 	return result;
 };
 
-// 更准确的方式：显式检查私有范围
+// More accurate approach: explicitly check private ranges.
 function isPrivateIP(ip: string) {
 	try {
 		const addr = ipaddr.parse(ip);
-		return addr.range() !== 'unicast'; // unicast = 公网，其他（private, loopback, etc）= 私有
+		return addr.range() !== 'unicast'; // unicast = public; others (private, loopback, etc) = private
 	} catch (e) {
 		return false;
 	}

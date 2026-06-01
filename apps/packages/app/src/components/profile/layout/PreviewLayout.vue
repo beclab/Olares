@@ -53,7 +53,7 @@
 										: '',
 									border: item.outline ? `2px solid ${ink1.color.value}` : '',
 									borderRadius: blockRadius,
-									background: blockBackground,
+									background: user.appearance.theme.link.background,
 									color: user.appearance.theme.link.textColor
 								}"
 							>

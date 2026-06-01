@@ -4,13 +4,14 @@
 		:title="title"
 		:skip="false"
 		:ok="confirmText"
+		size="medium"
 		:platform="deviceStore.platform"
 		:cancel="useCancel ? cancelText : false"
 		@onSubmit="sureAction"
 	>
 		<div class="row items-center justify-between" v-if="message.length > 0">
 			<div
-				class="text-ink-2"
+				class="text-ink-2 text"
 				:class="{
 					'message-content': hasBorder,
 					'text-body3': !deviceStore.isMobile,
@@ -90,5 +91,10 @@ const deviceStore = useDeviceStore();
 	border: 1px solid $separator;
 	padding: 8px 12px;
 	border-radius: 8px;
+}
+
+.text {
+	word-wrap: break-word;
+	white-space: normal;
 }
 </style>

@@ -27,14 +27,13 @@ import { injectInlineJs, injectInternalCss } from './injector';
 import { kissLog } from './log';
 import interpreter from './interpreter';
 
-/**
- * Translator class
- */
 export class Translator {
 	_rule = {};
 	_setting = {};
 	_rootNodes = new Set();
 	_tranNodes = new Map();
+	_translationNodes = new Map();
+	_renderedNodes = new Set();
 	_skipNodeNames = [
 		APP_LCNAME,
 		'style',
@@ -57,13 +56,14 @@ export class Translator {
 	_terms = [];
 	_docTitle = '';
 
-	// Display
 	_interseObserver = new IntersectionObserver(
 		(entries, observer) => {
 			entries.forEach((entry) => {
 				if (entry.isIntersecting) {
 					observer.unobserve(entry.target);
-					this._render(entry.target);
+					if (!this._renderedNodes.has(entry.target)) {
+						this._render(entry.target);
+					}
 				}
 			});
 		},
@@ -72,7 +72,6 @@ export class Translator {
 		}
 	);
 
-	// Changes
 	_mutaObserver = new MutationObserver((mutations) => {
 		mutations.forEach((mutation) => {
 			if (
@@ -89,15 +88,12 @@ export class Translator {
 					return true;
 				});
 				if (nodes.length > 0) {
-					// const rootNode = mutation.target.getRootNode();
-					// todo
 					this._reTranslate();
 				}
 			}
 		});
 	});
 
-	// Insert shadowroot
 	_overrideAttachShadow = () => {
 		const _this = this;
 		const _attachShadow = HTMLElement.prototype.attachShadow;
@@ -149,15 +145,12 @@ export class Translator {
 	}
 
 	get rule() {
-		// console.log("get rule", this._rule);
 		return this._rule;
 	}
 
 	set rule(rule) {
-		// console.log("set rule", rule);
 		this._rule = rule;
 
-		// Broadcast message
 		const eventName = this._eventName;
 		window.dispatchEvent(
 			new CustomEvent(eventName, {
@@ -170,9 +163,15 @@ export class Translator {
 	}
 
 	updateRule = (obj) => {
-		console.log('updateRule', obj);
+		const oldTransOnly = this.rule.transOnly;
 		this.rule = { ...this.rule, ...obj };
 		this._updatePool(obj.translator);
+
+		if (obj.transOnly !== undefined && oldTransOnly !== obj.transOnly) {
+			this._tranNodes.forEach((_, node) => {
+				this._toggleTranslationOnly(node, obj.transOnly);
+			});
+		}
 	};
 
 	toggle = () => {
@@ -217,9 +216,20 @@ export class Translator {
 	};
 
 	_queryFilter = (selector, rootNode) => {
-		return this._querySelectorAll(selector, rootNode).filter(
-			(node) => this._queryFilter(selector, node).length === 0
-		);
+		const allMatches = this._querySelectorAll(selector, rootNode);
+		console.log('allMatches', allMatches, selector);
+		const filtered = allMatches.filter((node) => {
+			if (this._querySelectorAll(selector, node).length > 0) {
+				return false;
+			}
+			const text = node.innerText?.trim();
+			if (!text || text.length === 0) {
+				return false;
+			}
+			return true;
+		});
+		console.log('allMatches-2', filtered);
+		return filtered;
 	};
 
 	_queryShadowNodes = (selector, rootNode) => {
@@ -239,13 +249,6 @@ export class Translator {
 	};
 
 	_queryNodes = (rootNode = document) => {
-		// const childRoots = Array.from(rootNode.querySelectorAll("*"))
-		//   .map((item) => item.shadowRoot)
-		//   .filter(Boolean);
-		// const childNodes = childRoots.map((item) => this._queryNodes(item));
-		// const nodes = Array.from(rootNode.querySelectorAll(this.rule.selector));
-		// return nodes.concat(childNodes).flat();
-
 		this._rootNodes.add(rootNode);
 		this._rule.selector
 			.split(';')
@@ -260,20 +263,13 @@ export class Translator {
 						const outNodes = this._querySelectorAll(outSelector, rootNode);
 						outNodes.forEach((outNode) => {
 							if (outNode.shadowRoot) {
-								// this._rootNodes.add(outNode.shadowRoot);
-								// this._queryFilter(inSelector, outNode.shadowRoot).forEach(
-								//   (item) => {
-								//     if (!this._tranNodes.has(item)) {
-								//       this._tranNodes.set(item, "");
-								//     }
-								//   }
-								// );
 								this._queryShadowNodes(inSelector, outNode.shadowRoot);
 							}
 						});
 					}
 				} else {
-					this._queryFilter(selector, rootNode).forEach((item) => {
+					const matchedNodes = this._queryFilter(selector, rootNode);
+					matchedNodes.forEach((item) => {
 						if (!this._tranNodes.has(item)) {
 							this._tranNodes.set(item, '');
 						}
@@ -289,12 +285,9 @@ export class Translator {
 			return;
 		}
 
-		// webfix
 		if (fixerSelector && fixerFunc !== '-') {
 			runFixer(fixerSelector, fixerFunc);
 		}
-
-		// Inject user JS/CSS
 		if (isExt) {
 			injectJs && sendBgMsg(MSG_INJECT_JS, injectJs);
 			injectCss && sendBgMsg(MSG_INJECT_CSS, injectCss);
@@ -303,15 +296,12 @@ export class Translator {
 			injectCss && injectInternalCss(injectCss);
 		}
 
-		// Search nodes
 		this._queryNodes();
 
 		this._rootNodes.forEach((node) => {
-			// Listen to node changes
 			this._mutaObserver.observe(node, {
 				childList: true,
 				subtree: true
-				// characterData: true,
 			});
 		});
 
@@ -319,25 +309,20 @@ export class Translator {
 			!this._rule.transTiming ||
 			this._rule.transTiming === OPT_TIMING_PAGESCROLL
 		) {
-			// Listen to node display
 			this._tranNodes.forEach((_, node) => {
 				this._interseObserver.observe(node);
 			});
 		} else if (this._rule.transTiming === OPT_TIMING_PAGEOPEN) {
-			// Direct full-text translation
 			this._tranNodes.forEach((_, node) => {
 				this._render(node);
 			});
 		} else {
-			// Listen to mouse hover
 			window.addEventListener('keydown', this._handleKeydown);
 			this._tranNodes.forEach((_, node) => {
 				node.addEventListener('mouseenter', this._handleMouseover);
 				node.addEventListener('mouseleave', this._handleMouseout);
 			});
 		}
-
-		// Translate page title
 		if (this._rule.transTitle === 'true' && !this._docTitle) {
 			const title = document.title;
 			this._docTitle = title;
@@ -348,7 +333,6 @@ export class Translator {
 	};
 
 	_handleMouseover = (e) => {
-		// console.log("mouseenter", e);
 		if (!this._tranNodes.has(e.target)) {
 			return;
 		}
@@ -364,7 +348,6 @@ export class Translator {
 	};
 
 	_handleMouseout = (e) => {
-		// console.log("mouseleave", e);
 		if (!this._tranNodes.has(e.target)) {
 			return;
 		}
@@ -373,7 +356,6 @@ export class Translator {
 	};
 
 	_handleKeydown = (e) => {
-		// console.log("keydown", e);
 		const key = this._rule.transTiming.slice(3);
 		if (e[key] && this._mouseoverNode) {
 			this._mouseoverNode.removeEventListener(
@@ -392,59 +374,53 @@ export class Translator {
 	};
 
 	_unRegister = () => {
-		// Restore page title
 		if (this._docTitle) {
 			document.title = this._docTitle;
 			this._docTitle = '';
 		}
 
-		// Remove node change listener
 		this._mutaObserver.disconnect();
-
-		// Remove node display listener
-		// this._interseObserver.disconnect();
-
-		// Remove keyboard listener
 		window.removeEventListener('keydown', this._handleKeydown);
-
 		const { transRemoveHook } = this._rule;
 		this._tranNodes.forEach((innerHTML, node) => {
 			if (
 				!this._rule.transTiming ||
 				this._rule.transTiming === OPT_TIMING_PAGESCROLL
 			) {
-				// Remove node display listener
 				this._interseObserver.unobserve(node);
 			} else if (this._rule.transTiming !== OPT_TIMING_PAGEOPEN) {
-				// Remove mouse hover listener
-				// node.style.pointerEvents = "none";
 				node.removeEventListener('mouseenter', this._handleMouseover);
 				node.removeEventListener('mouseleave', this._handleMouseout);
 			}
 
-			// Remove/restore elements
-			if (innerHTML) {
+			const traEl = node.querySelector(APP_LCNAME);
+			if (traEl) {
+				const stored = this._translationNodes.get(traEl);
+				if (stored && stored.isHide) {
+					this._restoreOriginal(traEl, stored.nodes);
+				}
+				traEl.remove();
+			} else if (innerHTML) {
 				if (this._rule.transOnly === 'true') {
 					node.innerHTML = innerHTML;
 				} else {
 					node.querySelector(APP_LCNAME)?.remove();
 				}
-				// Hook function
-				if (transRemoveHook?.trim()) {
-					interpreter.run(`exports.transRemoveHook = ${transRemoveHook}`);
-					interpreter.exports.transRemoveHook(node);
-				}
+			}
+
+			if (transRemoveHook?.trim()) {
+				interpreter.run(`exports.transRemoveHook = ${transRemoveHook}`);
+				interpreter.exports.transRemoveHook(node);
 			}
 		});
 
-		// Remove user JS/CSS
 		this._removeInjector();
 
-		// Clear node set
 		this._rootNodes.clear();
 		this._tranNodes.clear();
+		this._translationNodes.clear();
+		this._renderedNodes.clear();
 
-		// Clear task pool
 		clearFetchPool();
 	};
 
@@ -454,13 +430,78 @@ export class Translator {
 			?.forEach((el) => el.remove());
 	};
 
+	_removeNodes = (nodes) => {
+		if (nodes && nodes.length > 0) {
+			const frag = document.createDocumentFragment();
+			nodes.forEach((n) => frag.appendChild(n));
+		}
+	};
+
+	_restoreOriginal = (traEl, nodes) => {
+		if (nodes && nodes.length > 0) {
+			const frag = document.createDocumentFragment();
+			nodes.forEach((n) => frag.appendChild(n));
+			const parent = traEl.parentElement;
+			if (parent) {
+				parent.insertBefore(frag, traEl);
+			}
+		}
+	};
+
+	_toggleTranslationOnly = (el, transOnly) => {
+		const traEl = el.querySelector(APP_LCNAME);
+		if (!traEl) return;
+
+		const stored = this._translationNodes.get(traEl);
+		if (!stored) return;
+
+		if (transOnly === 'true') {
+			if (!stored.isHide) {
+				this._removeNodes(stored.nodes);
+				this._translationNodes.set(traEl, {
+					nodes: stored.nodes,
+					isHide: true
+				});
+			}
+		} else {
+			if (stored.isHide) {
+				this._restoreOriginal(traEl, stored.nodes);
+				this._translationNodes.set(traEl, {
+					nodes: stored.nodes,
+					isHide: false
+				});
+			}
+		}
+	};
+
 	_reTranslate = debounce(() => {
 		if (this._rule.transOpen === 'true') {
-			window.removeEventListener('keydown', this._handleKeydown);
-			this._mutaObserver.disconnect();
-			this._interseObserver.disconnect();
-			this._removeInjector();
-			this._register();
+			const oldTranNodes = new Set(this._tranNodes.keys());
+
+			this._queryNodes();
+
+			const newNodes = [];
+			this._tranNodes.forEach((_, node) => {
+				if (!oldTranNodes.has(node)) {
+					newNodes.push(node);
+				}
+			});
+
+			if (newNodes.length > 0) {
+				newNodes.forEach((node) => {
+					if (
+						!this._rule.transTiming ||
+						this._rule.transTiming === OPT_TIMING_PAGESCROLL
+					) {
+						this._interseObserver.observe(node);
+					} else if (this._rule.transTiming === OPT_TIMING_PAGEOPEN) {
+						this._render(node);
+					} else {
+						node.addEventListener('mouseenter', this._handleMouseover);
+						node.addEventListener('mouseleave', this._handleMouseout);
+					}
+				});
+			}
 		}
 	}, this._setting.transInterval);
 
@@ -470,30 +511,35 @@ export class Translator {
 		q.length > (this._setting.maxLength ?? TRANS_MAX_LENGTH);
 
 	_render = (el) => {
+		const curText = el.innerText?.trim();
+		if (!curText) {
+			return;
+		}
 		let traEl = el.querySelector(APP_LCNAME);
+		const storedText = this._tranNodes.get(el);
 
-		// Already translated
-		if (traEl) {
+		if (traEl && this._renderedNodes.has(el)) {
 			if (this._rule.transOnly === 'true') {
 				return;
 			}
 
-			const preText = this._tranNodes.get(el);
-			const curText = el.innerText.trim();
-			// const traText = traEl.innerText.trim();
-
-			// todo
-			// 1. traText when loading
-			// 2. replace startsWith
-
-			if (curText.startsWith(preText)) {
+			if (storedText && curText.startsWith(storedText)) {
 				return;
 			}
 
 			traEl.remove();
+			traEl = null;
 		}
 
 		let q = el.innerText.trim();
+
+		const originalNodes = Array.from(el.childNodes).filter((node) => {
+			return (
+				node !== traEl &&
+				node.nodeName?.toLowerCase() !== APP_LCNAME.toLowerCase()
+			);
+		});
+
 		if (this._rule.transOnly === 'true') {
 			this._tranNodes.set(el, el.innerHTML);
 		} else {
@@ -501,14 +547,12 @@ export class Translator {
 		}
 		const keeps = [];
 
-		// Translation start hook function
 		const { transStartHook } = this._rule;
 		if (transStartHook?.trim()) {
 			interpreter.run(`exports.transStartHook = ${transStartHook}`);
 			interpreter.exports.transStartHook(el, q);
 		}
 
-		// Keep elements
 		const [matchSelector, subSelector] = this._keepSelector;
 		if (matchSelector || subSelector) {
 			let text = '';
@@ -530,7 +574,6 @@ export class Translator {
 			});
 
 			if (keeps.length > 0) {
-				// textContent will keep some useless newline characters, seriously affecting translation quality
 				if (q.includes('\n')) {
 					q = text;
 				} else {
@@ -539,12 +582,10 @@ export class Translator {
 			}
 		}
 
-		// Too long or too short
 		if (this._invalidLength(q.replace(/\[(\d+)\]/g, '').trim())) {
 			return;
 		}
 
-		// Professional terms
 		if (this._terms.length > 0) {
 			for (const term of this._terms) {
 				const re = new RegExp(term[0], 'g');
@@ -556,29 +597,34 @@ export class Translator {
 			}
 		}
 
-		// Additional styles
 		const { selectStyle, parentStyle } = this._rule;
 		el.style.cssText += selectStyle;
 		if (el.parentElement) {
 			el.parentElement.style.cssText += parentStyle;
 		}
 
-		// Insert translation node
 		traEl = document.createElement(APP_LCNAME);
 		traEl.style.visibility = 'visible';
-		// if (this._rule.transOnly === "true") {
-		//   el.innerHTML = "";
-		// }
 		el.appendChild(traEl);
 
-		// Render translation node
 		const app = createApp(Content, {
 			q,
 			keeps,
 			translator: this,
 			element: el
 		});
-		console.log('app', app);
 		app.mount(traEl);
+
+		const hideOrigin = this._rule.transOnly === 'true';
+		this._translationNodes.set(traEl, {
+			nodes: originalNodes,
+			isHide: hideOrigin
+		});
+
+		if (hideOrigin) {
+			this._removeNodes(originalNodes);
+		}
+
+		this._renderedNodes.add(el);
 	};
 }

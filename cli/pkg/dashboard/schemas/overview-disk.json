@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dashboard.overview.disk",
+  "description": "Sections envelope: main = per-disk table; partitions = nested per-disk partitions tables keyed by device.",
+  "type": "object",
+  "required": ["kind", "meta", "sections"],
+  "properties": {
+    "kind": {"const": "dashboard.overview.disk"},
+    "meta": {"type": "object"},
+    "sections": {
+      "type": "object",
+      "properties": {
+        "main": {"$ref": "overview-disk-main.json"},
+        "partitions": {
+          "type": "object",
+          "additionalProperties": {"$ref": "overview-disk-partitions.json"}
+        }
+      }
+    }
+  }
+}

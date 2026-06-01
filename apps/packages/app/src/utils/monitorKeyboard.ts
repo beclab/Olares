@@ -28,12 +28,12 @@ class MonitorKeyboard {
 		}
 	};
 
-	// iOS获取焦点
+	// iOS input focus.
 	onFocusin = () => {
 		this.show('iOS system show keyboard');
 	};
 
-	// iOS失去焦点
+	// iOS input blur.
 	onFocusout = () => {
 		this.hidden('iOS system hidden keyboard');
 	};

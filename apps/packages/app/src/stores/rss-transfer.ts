@@ -14,7 +14,7 @@ import { fetchNodeList } from 'src/api/files/v2/common/utils';
 import { FileNode } from 'src/stores/files';
 import { DriveAPI } from 'src/api/files/v2';
 import { DriveType } from 'src/utils/interface/files';
-import { encodeUrl } from 'src/utils/encode';
+import { decodeUrl, encodeUrl } from 'src/utils/encode';
 
 export type DataState = {
 	enclosureMaps: Record<string, number>;
@@ -64,7 +64,7 @@ export const useTransferStore = defineStore('rssTransfer', {
 			if (wisePath.startsWith(DRIVER_FILE_PREFIX)) {
 				wisePath = path.substring(DRIVER_FILE_PREFIX.length);
 			}
-			return await uploadCreateEntry(wisePath, name, fileType);
+			return await uploadCreateEntry(decodeUrl(wisePath), name, fileType);
 		},
 		async addEnclosureTasks(array: Enclosure[]) {
 			for (let i = 0; i < array.length; i++) {

@@ -15,6 +15,7 @@ import {
 	BUILTIN_RULES
 } from './rules';
 import { APP_NAME, APP_LCNAME } from './app';
+import { getBrowserPreferredLang } from '../libs/utils';
 export {
 	GLOBAL_KEY,
 	REMAIN_KEY,
@@ -76,20 +77,41 @@ export const THEME_DARK = 'dark';
 
 export const URL_CACHE_TRAN = `https://${APP_LCNAME}/translate`;
 
-// api.cognitive.microsofttranslator.com
 export const URL_MICROSOFT_TRAN =
 	'https://api-edge.cognitive.microsofttranslator.com/translate';
-export let URL_OLARES_TRAN = '';
 
-await browser.storage.local.get(['userId', 'users']).then((result) => {
-	const currentUser = result.users?.items?.items?.find(
-		(item) => item.id === result.userId
-	);
-	if (currentUser) {
-		const domain = currentUser.name.replace('@', '.');
-		URL_OLARES_TRAN = `https://e95da2ac.${domain}/imme`;
+let _olaresTransUrl = '';
+let _olaresUrlPromise = null;
+
+async function initOlaresUrl() {
+	try {
+		const result = await browser.storage.local.get(['userId', 'users']);
+		const currentUser = result.users?.items?.items?.find(
+			(item) => item.id === result.userId
+		);
+		if (currentUser) {
+			const domain = currentUser.name.replace('@', '.');
+			_olaresTransUrl = `https://e95da2ac.${domain}/imme`;
+		}
+	} catch (err) {
+		console.error('[Translate Config] Failed to initialize Olares URL:', err);
 	}
-});
+	return _olaresTransUrl;
+}
+
+export async function getOlaresTransUrl() {
+	if (!_olaresUrlPromise) {
+		_olaresUrlPromise = initOlaresUrl();
+	}
+	return _olaresUrlPromise;
+}
+
+export function getOlaresTransUrlSync() {
+	return _olaresTransUrl;
+}
+
+_olaresUrlPromise = initOlaresUrl();
+
 export const URL_MICROSOFT_AUTH = 'https://edge.microsoft.com/translate/auth';
 export const URL_MICROSOFT_LANGDETECT =
 	'https://api-edge.cognitive.microsofttranslator.com/detect?api-version=3.0';
@@ -420,50 +442,65 @@ export const OPT_TIMING_ALL = [
 	OPT_TIMING_ALT
 ];
 
-export const DEFAULT_FETCH_LIMIT = 10; // Default maximum number of tasks
-export const DEFAULT_FETCH_INTERVAL = 100; // Default task interval time
+export const DEFAULT_FETCH_LIMIT = 10;
+export const DEFAULT_FETCH_INTERVAL = 100;
+export const DEFAULT_CACHE_TIMEOUT = 7 * 24 * 60 * 60;
+export const DEFAULT_HTTP_TIMEOUT = 10000;
 
-export const INPUT_PLACE_URL = '{{url}}'; // Placeholder
-export const INPUT_PLACE_FROM = '{{from}}'; // Placeholder
-export const INPUT_PLACE_TO = '{{to}}'; // Placeholder
-export const INPUT_PLACE_TEXT = '{{text}}'; // Placeholder
-export const INPUT_PLACE_KEY = '{{key}}'; // Placeholder
-export const INPUT_PLACE_MODEL = '{{model}}'; // Placeholder
+export const PORT_STREAM_FETCH = 'stream-fetch-port';
 
-export const DEFAULT_COLOR = '#209CEE'; // Default highlight background/line color
+export const MSG_PUT_HTTPCACHE = 'put_httpcache';
+export const MSG_CLEAR_CACHES = 'clear_caches';
+
+export const MSG_UPDATE_ICON = 'update_icon';
+export const MSG_TRANSLATE_READY = 'translate_ready';
+
+export const INPUT_PLACE_URL = '{{url}}';
+export const INPUT_PLACE_FROM = '{{from}}';
+export const INPUT_PLACE_TO = '{{to}}';
+export const INPUT_PLACE_TEXT = '{{text}}';
+export const INPUT_PLACE_KEY = '{{key}}';
+export const INPUT_PLACE_MODEL = '{{model}}';
+
+export const DEFAULT_COLOR = '#209CEE';
 
 export const DEFAULT_TRANS_TAG = 'span';
 export const DEFAULT_SELECT_STYLE =
 	'-webkit-line-clamp: unset; max-height: none; height: auto;';
 
-// Global rules
+const SUPPORTED_TO_LANGS = OPT_LANGS_TO.map(([code]) => code);
+
+const getDefaultToLang = () => {
+	return getBrowserPreferredLang(SUPPORTED_TO_LANGS, 'en');
+};
+
 export const GLOBLA_RULE = {
-	pattern: '*', // Match URL
-	selector: DEFAULT_SELECTOR, // Selector
-	keepSelector: DEFAULT_KEEP_SELECTOR, // Keep element selector
-	terms: '', // Professional terms
-	translator: OPT_TRANS_MICROSOFT, // Translation service
-	fromLang: 'auto', // Source language
-	toLang: 'zh-CN', // Target language
-	textStyle: OPT_STYLE_DASHLINE, // Translation style
-	transOpen: 'false', // Enable translation
-	bgColor: '', // Translation color
-	textDiyStyle: '', // Custom translation style
-	selectStyle: DEFAULT_SELECT_STYLE, // Selector node style
-	parentStyle: DEFAULT_SELECT_STYLE, // Selector parent node style
-	injectJs: '', // Inject JS
-	injectCss: '', // Inject CSS
-	transOnly: 'false', // Show translation only
-	transTiming: OPT_TIMING_PAGESCROLL, // Translation timing/Mouse hover translation
-	transTag: DEFAULT_TRANS_TAG, // Translation element tag
-	transTitle: 'false', // Translate page title
-	detectRemote: 'false', // Use remote language detection
-	skipLangs: [], // Languages not to translate
-	fixerSelector: '', // Fixer selector
-	fixerFunc: '-', // Fixer function
-	transStartHook: '', // Hook function
-	transEndHook: '', // Hook function
-	transRemoveHook: '' // Hook function
+	pattern: '*',
+	selector: DEFAULT_SELECTOR,
+	keepSelector: DEFAULT_KEEP_SELECTOR,
+	terms: '',
+	translator: OPT_TRANS_MICROSOFT,
+	fromLang: 'auto',
+	toLang: getDefaultToLang(),
+	textStyle: OPT_STYLE_DASHLINE,
+	transOpen: 'false',
+	bgColor: '',
+	textDiyStyle: '',
+	selectStyle: DEFAULT_SELECT_STYLE,
+	parentStyle: DEFAULT_SELECT_STYLE,
+	injectJs: '',
+	injectCss: '',
+	transOnly: 'false',
+	transTiming: OPT_TIMING_PAGESCROLL,
+	transTag: DEFAULT_TRANS_TAG,
+	transTitle: 'false',
+	detectRemote: 'false',
+	skipLangs: [],
+	fixerSelector: '',
+	fixerFunc: '-',
+	transStartHook: '',
+	transEndHook: '',
+	transRemoveHook: ''
 };
 
 // Input box translation
@@ -505,13 +542,13 @@ export const DEFAULT_TRANBOX_SETTING = {
 	btnOffsetY: 10,
 	boxOffsetX: 0,
 	boxOffsetY: 10,
-	hideTranBtn: false, // Hide translation button
-	hideClickAway: false, // Close popup when clicking outside
-	simpleStyle: false, // Simple interface
-	followSelection: false, // Translation box follows selected text
-	triggerMode: OPT_TRANBOX_TRIGGER_CLICK, // Trigger translation mode
-	extStyles: '', // Additional styles
-	enDict: OPT_DICT_BAIDU // English dictionary
+	hideTranBtn: false,
+	hideClickAway: false,
+	simpleStyle: false,
+	followSelection: false,
+	triggerMode: OPT_TRANBOX_TRIGGER_CLICK,
+	extStyles: '',
+	enDict: OPT_DICT_BAIDU
 };
 
 // Subscription list
@@ -530,13 +567,12 @@ export const DEFAULT_SUBRULES_LIST = [
 	}
 ];
 
-// Translation API
 const defaultCustomApi = {
 	url: '',
 	key: '',
-	customOption: '', // (deprecated)
-	reqHook: '', // request hook function
-	resHook: '', // response hook function
+	customOption: '',
+	reqHook: '',
+	resHook: '',
 	fetchLimit: DEFAULT_FETCH_LIMIT,
 	fetchInterval: DEFAULT_FETCH_INTERVAL
 };
@@ -562,8 +598,8 @@ export const DEFAULT_TRANS_APIS = {
 	[OPT_TRANS_GOOGLE]: {
 		url: URL_GOOGLE_TRAN,
 		key: '',
-		fetchLimit: DEFAULT_FETCH_LIMIT, // Maximum number of tasks
-		fetchInterval: DEFAULT_FETCH_INTERVAL // Task interval time
+		fetchLimit: DEFAULT_FETCH_LIMIT,
+		fetchInterval: DEFAULT_FETCH_INTERVAL
 	},
 	[OPT_TRANS_MICROSOFT]: {
 		fetchLimit: DEFAULT_FETCH_LIMIT,
@@ -640,48 +676,38 @@ export const DEFAULT_SHORTCUTS = {
 	[OPT_SHORTCUT_SETTING]: ['AltLeft', 'KeyO']
 };
 
-export const TRANS_MIN_LENGTH = 5; // Minimum translation length
-export const TRANS_MAX_LENGTH = 5000; // Maximum translation length
-export const TRANS_NEWLINE_LENGTH = 20; // Newline character count
+export const TRANS_MIN_LENGTH = 2;
+export const TRANS_MAX_LENGTH = 5000;
+export const TRANS_NEWLINE_LENGTH = 20;
 export const DEFAULT_BLACKLIST = [
 	'https://fishjar.github.io/kiss-translator/options.html',
 	'https://translate.google.com',
 	'https://www.deepl.com/translator',
 	'oapi.dingtalk.com',
 	'login.dingtalk.com'
-]; // Disable translation list
-export const DEFAULT_CSPLIST = ['https://github.com']; // Disable CSP list
+];
+export const DEFAULT_CSPLIST = ['https://github.com'];
 
 export const DEFAULT_SETTING = {
-	darkMode: false, // Dark mode
-	uiLang: 'en', // UI language
-	// fetchLimit: DEFAULT_FETCH_LIMIT, // Maximum number of tasks (moved to transApis, deprecated)
-	// fetchInterval: DEFAULT_FETCH_INTERVAL, // Task interval time (moved to transApis, deprecated)
+	darkMode: false,
+	uiLang: 'en',
 	minLength: TRANS_MIN_LENGTH,
 	maxLength: TRANS_MAX_LENGTH,
 	newlineLength: TRANS_NEWLINE_LENGTH,
-	clearCache: false, // Clear cache on next browser startup
-	injectRules: true, // Inject subscription rules
-	// injectWebfix: true, // Inject fix patches (deprecated)
-	// detectRemote: false, // Use remote language detection (moved to rule, deprecated)
-	// contextMenus: true, // Add context menu (deprecated)
-	contextMenuType: 1, // Context menu type (0: not show, 1: simple menu, 2: multi-level menu)
-	// transTag: DEFAULT_TRANS_TAG, // Translation element tag (moved to rule, deprecated)
-	// transOnly: false, // Show translation only (moved to rule, deprecated)
-	// transTitle: false, // Translate page title (moved to rule, deprecated)
-	subrulesList: DEFAULT_SUBRULES_LIST, // Subscription list
-	owSubrule: DEFAULT_OW_RULE, // Overwrite subscription rules
-	transApis: DEFAULT_TRANS_APIS, // Translation API
-	// mouseKey: OPT_TIMING_PAGESCROLL, // Translation timing/Mouse hover translation (moved to rule, deprecated)
-	shortcuts: DEFAULT_SHORTCUTS, // Shortcuts
-	inputRule: DEFAULT_INPUT_RULE, // Input box settings
-	tranboxSetting: DEFAULT_TRANBOX_SETTING, // Word selection translation settings
-	touchTranslate: 2, // Touch translation
-	blacklist: DEFAULT_BLACKLIST.join(',\n'), // Disable translation list
-	csplist: DEFAULT_CSPLIST.join(',\n'), // Disable CSP list
-	// disableLangs: [], // Languages not to translate (moved to rule, deprecated)
-	transInterval: 500, // Translation interval time
-	langDetector: OPT_TRANS_MICROSOFT // Remote language detection service
+	clearCache: false,
+	injectRules: true,
+	contextMenuType: 1,
+	subrulesList: DEFAULT_SUBRULES_LIST,
+	owSubrule: DEFAULT_OW_RULE,
+	transApis: DEFAULT_TRANS_APIS,
+	shortcuts: DEFAULT_SHORTCUTS,
+	inputRule: DEFAULT_INPUT_RULE,
+	tranboxSetting: DEFAULT_TRANBOX_SETTING,
+	touchTranslate: 2,
+	blacklist: DEFAULT_BLACKLIST.join(',\n'),
+	csplist: DEFAULT_CSPLIST.join(',\n'),
+	transInterval: 500,
+	langDetector: OPT_TRANS_MICROSOFT
 };
 
 export const DEFAULT_RULES = [GLOBLA_RULE];
@@ -691,11 +717,11 @@ export const OPT_SYNCTYPE_WEBDAV = 'WebDAV';
 export const OPT_SYNCTYPE_ALL = [OPT_SYNCTYPE_WORKER, OPT_SYNCTYPE_WEBDAV];
 
 export const DEFAULT_SYNC = {
-	syncType: OPT_SYNCTYPE_WORKER, // Sync method
-	syncUrl: '', // Data sync API
-	syncUser: '', // Data sync username
-	syncKey: '', // Data sync key
-	syncMeta: {}, // Data update and sync info
-	subRulesSyncAt: 0, // Subscription rules sync time
-	dataCaches: {} // Cache sync time
+	syncType: OPT_SYNCTYPE_WORKER,
+	syncUrl: '',
+	syncUser: '',
+	syncKey: '',
+	syncMeta: {},
+	subRulesSyncAt: 0,
+	dataCaches: {}
 };

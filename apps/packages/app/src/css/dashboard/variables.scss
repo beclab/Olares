@@ -11,7 +11,7 @@
 // It's highly recommended to change the default colors
 // to match your app's branding.
 // Tip: Use the "Theme Builder" on Quasar's documentation website.
-@import '@bytetrade/ui/lib/styles/quasar.variables.sass';
+@import 'src/css/ui/quasar.variables.sass';
 
 $bg-content: #f5f7fa;
 $separator-color: $grey-2;
@@ -39,3 +39,12 @@ $tooltip-background: $tooltip-bg;
 $tooltip-padding: 4px 8px;
 $tooltip-border-radius: 4px;
 $tooltip-fontsize: 12px;
+
+
+$theme-menu-bg-hover: $light-blue-soft;
+
+$theme-menu-color-hover: $light-blue;
+
+$theme-background-light: $background-1;
+
+$theme-background-dark: $background-1;

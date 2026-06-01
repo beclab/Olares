@@ -17,7 +17,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Known issues",
           link: "/zh/one/known-issues",
-        },
+        },         
       ],
     },
     {
@@ -69,6 +69,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Manage files",
           link: "/zh/one/files",
         },
+        {
+          text: "Back up & restore data",
+          link: "/zh/one/backup-restore",
+        },        
         {
           text: "Install & update apps",
           link: "/zh/one/market",
@@ -139,19 +143,35 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/ace-step",
         },*/
 
-        {
-          text: "Deep research with DeerFlow",
-          link: "/zh/one/deerflow",
-        },
+        // {
+        //   text: "Deep research with DeerFlow",
+        //   link: "/zh/one/deerflow",
+        // },
       ]
     },
     {
       text: "Advanced",
       items: [
         {
-          text: "SSH into Olares One",
-          link: "/zh/one/access-terminal-ssh",
-        },
+          text: "Access Olares One terminal",
+          collapsed: true,
+          link: "/zh/one/access-overview",
+          items:
+            [
+              {
+                text: "Access via Control Hub",
+                link: "/zh/one/access-terminal-control-hub",
+              },
+              {
+                text: "Access via SSH",
+                link: "/zh/one/access-terminal-ssh",
+              },
+              {
+                text: "Access directly on the device",
+                link: "/zh/one/access-physical-console",
+              },
+            ]
+        },        
         {
           text: "Expand storage",
           collapsed: true,
@@ -189,7 +209,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Set up with eGPU",
           link: "/zh/one/egpu",
-        },
+        },        
         {
           text: "Dual-boot Olares OS with Windows",
           collapsed: true,
@@ -207,9 +227,36 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               {
                 text: "Install drivers on Windows",
                 link: "/zh/one/install-nvidia-driver",
+              },
+              {
+                text: "Troubleshooting",
+                link: "/zh/one/dual-boot-windows-troubleshooting",
               }
             ]
         },
+        /*{
+          text: "Dual-boot Olares OS with Ubuntu",
+          link: "/zh/one/dual-boot-ubuntu-dual-drive",
+        },*/
+        {
+          text: "Install Windows on Olares One",
+          link: "/zh/one/install-windows-primary-drive",
+        },
+        {
+          text: "Install Ubuntu on Olares One",
+          collapsed: true,
+          items:
+            [
+              {
+                text: "Install Ubuntu Server on Olares One",
+                link: "/zh/one/install-ubuntu-server",
+              },
+              {
+                text: "Install Ubuntu Desktop on Olares One",
+                link: "/zh/one/install-ubuntu-desktop",
+              }
+            ]
+        },                 
       ]
     },
     {
@@ -218,11 +265,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Update OS",
           link: "/zh/one/update",
-        },
-        {
-          text: "Back up & restore data",
-          link: "/zh/one/backup-resotre",
-        },
+        },       
         {
           text: "Restore Olares One",
           items: [
@@ -238,8 +281,16 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               text: "Reinstall Olares OS",
               link: "/zh/one/create-drive",
             },
+            {
+              text: "Create bootable USB drive",
+              link: "/zh/one/create-bootable-usb",
+            },
           ],
         },
+        {
+          text: "Manage BIOS and EC",
+          link: "/zh/one/update-firmware",
+        },         
       ]
     },
   ],

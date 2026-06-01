@@ -33,7 +33,8 @@ import {
 	getCurrentInstance,
 	ComponentInternalInstance
 } from 'vue';
-import { Notify, Loading } from 'quasar';
+import { Loading } from 'quasar';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { useTokenStore } from '../../../stores/token';
 import OneTimePasswordMethod from './OneTimePasswordMethod.vue';
 import { Token } from '@bytetrade/core';
@@ -77,8 +78,8 @@ export default defineComponent({
 				setTimeout(() => {
 					passwordErr.value = false;
 				}, 2000);
-				Notify.create({
-					type: 'negative',
+				BtNotify.show({
+					type: NotifyDefinedType.FAILED,
 					message: (err as Error).message
 				});
 			} finally {
@@ -99,11 +100,11 @@ export default defineComponent({
 				!oneTimePasswordMethod.value ||
 				(oneTimePasswordMethod.value && oneTimePasswordMethod.value.length < 6)
 			) {
-				return Notify.create({
-					type: 'warning',
-					message: 'Please enter the Verification Code.',
-					timeout: 800
+				BtNotify.show({
+					type: NotifyDefinedType.WARNING,
+					message: 'Please enter the Verification Code.'
 				});
+				return;
 			}
 			onLogin();
 		};

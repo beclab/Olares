@@ -34,6 +34,10 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "Known issues",
+              link: "/manual/help/known-issues",
+            },
+            {
               text: "Insufficient memory or memory not freed",
               link: "/manual/help/ts-free-memory",
             },
@@ -68,6 +72,10 @@ const side = {
             {
               text: "Cannot remove a stopped app in App exclusive mode",
               link: "/manual/help/ts-cs-app-reappears",
+            },
+            {
+              text: "App status differs after Control Hub start or stop",
+              link: "/manual/help/ts-inconsistent-app-status",
             },
           ],
         },
@@ -439,16 +447,23 @@ const side = {
       collapsed: true,
       items: [
         {
+          text: "Set up accounts",
+          collapsed: true,
+          items: [
+            { text: "Create an account", link: "/manual/larepass/create-account" },
+            { text: "Create with a custom domain", link: "/manual/larepass/create-org-account" },
+            { text: "Import an account", link: "/manual/larepass/import-account" },
+          ],
+        },
+        {
           text: "Manage accounts",
           collapsed: true,
           items: [
-            { text: "Create accounts", link: "/manual/larepass/create-account" },
+           { text: "Switch accounts", link: "/manual/larepass/switch-account" },       
             { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
-            { text: "Manage integrations", link: "/manual/larepass/integrations" },
           ],
         },
-        { text: "Use VPN", link: "/manual/larepass/private-network" },
-        {
+        { text: "Manage integrations", link: "/manual/larepass/integrations" },        {
           text: "Manage device",
           collapsed: true,
           items: [
@@ -456,6 +471,7 @@ const side = {
             { text: "Manage Olares", link: "/manual/larepass/manage-olares" },
           ],
         },
+        { text: "Use VPN", link: "/manual/larepass/private-network" },
         { text: "Manage files", link: "/manual/larepass/manage-files" },
         // collapsed: true,
         //items: [
@@ -483,25 +499,15 @@ const side = {
       collapsed: true,
       items: [
         {
-          text: "Manage accounts",
+          text: "Log in and manage accounts",
           link: "/manual/space/manage-accounts",
         },
         {
-          text: "Host Olares",
-          collapsed: true,
-          items: [
-            {
-              text: "Create Olares",
-              link: "/manual/space/create-olares",
-            },
-            {
-              text: "Manage Olares",
-              link: "/manual/space/manage-olares",
-            },
-          ],
+          text: "Manage Olares",
+          link: "/manual/space/manage-olares",
         },
         {
-          text: "Host domains",
+          text: "Add custom domain",
           collapsed: true,
           items: [
             {
@@ -509,7 +515,7 @@ const side = {
               link: "/manual/space/host-domain",
             },
             {
-              text: "Manage a domain",
+              text: "Manage domain members",
               link: "/manual/space/manage-domain",
             },
           ],
@@ -526,6 +532,10 @@ const side = {
       link: "/manual/best-practices/",
       collapsed: true,
       items: [
+        {
+          text: "Activate Olares device using Olares CLI",
+          link: "/manual/best-practices/activate-olares-using-cli",
+        },        
         {
           text: "Set up custom domain",
           link: "/manual/best-practices/set-custom-domain",

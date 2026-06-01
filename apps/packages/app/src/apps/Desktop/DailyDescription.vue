@@ -1,5 +1,5 @@
 <template>
-	<div class="description_box">
+	<div v-if="widgetPrefsStore.showWeight" class="description_box">
 		<div class="description_weather">
 			<div class="description_time">{{ state.time }}</div>
 			<div class="description_daily">
@@ -11,7 +11,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="description_thickness">
+		<div v-if="widgetPrefsStore.showDashboard" class="description_thickness">
 			<div
 				class="description_track"
 				v-for="(item, index) in monitorStore.usages"
@@ -35,11 +35,12 @@
 	</div>
 </template>
 <script lang="ts" setup>
+import { useWidgetPreferencesStore } from 'src/stores/settings/widgetPreferences';
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue';
-
-import { useMonitorStore } from '../../stores/desktop/monitor';
+import { useMonitorStore } from 'src/stores/desktop/monitor';
 
 const monitorStore = useMonitorStore();
+const widgetPrefsStore = useWidgetPreferencesStore();
 const watchTimeTask = ref();
 const state = reactive({
 	date: '',
@@ -50,44 +51,23 @@ const state = reactive({
 	show: true
 });
 
-const getTime = async () => {
-	var myDate = new Date();
-	let hour = myDate.getHours().toString().padStart(2, '0');
-	let minutes = myDate.getMinutes().toString().padStart(2, '0');
-	let year = myDate.getFullYear().toString();
-	let month = (myDate.getMonth() + 1).toString().padStart(2, '0');
-	let day = myDate.getDate().toString().padStart(2, '0');
+const updateDateTime = async () => {
+	const { date, time, week, isAM } = widgetPrefsStore.formatNow();
 
-	state.date = `${year}/${month}/${day}`;
-	state.time = hour + ':' + minutes;
-	state.isAM = myDate.getHours() <= 12;
+	state.date = date;
+	state.time = time;
+	state.week = week;
+	state.isAM = isAM;
 	state.show = false;
 	await nextTick();
 	state.show = true;
 };
 
-const getWeekDate = () => {
-	var now = new Date();
-	var day = now.getDay();
-	var weeks = [
-		'Sunday',
-		'Monday',
-		'Tuesday',
-		'Wednesday',
-		'Thursday',
-		'Friday',
-		'Saturday'
-	];
-	state.week = weeks[day];
-};
-
 const watchTime = () => {
 	watchTimeTask.value = setInterval(() => {
-		getWeekDate();
-		getTime();
+		updateDateTime();
 	}, 1000 * 1);
-	getWeekDate();
-	getTime();
+	updateDateTime();
 };
 
 onMounted(() => {

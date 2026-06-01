@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import MetricsTable from './MetricsTable.vue';
-import { t } from '@apps/dashboard/src/boot/i18n';
+import { t } from 'src/boot/dashboard-i18n';
 
 interface Props {
 	websiteId: string;

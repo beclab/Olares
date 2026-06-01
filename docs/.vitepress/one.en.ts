@@ -17,7 +17,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Known issues",
           link: "/one/known-issues",
-        },        
+        },               
       ],
     },
     {
@@ -70,6 +70,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/files",
         },
         {
+          text: "Back up & restore data",
+          link: "/one/backup-restore",
+        },
+        {
           text: "Install & update apps",
           link: "/one/market",
         },
@@ -85,7 +89,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Deploy an app",
           link: "/one/deploy",
         },
-
       ]
     },
     {
@@ -139,19 +142,35 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/ace-step",
         },*/
 
-        {
-          text: "Deep research with DeerFlow",
-          link: "/one/deerflow",
-        },
+        // {
+        //   text: "Deep research with DeerFlow",
+        //   link: "/one/deerflow",
+        // },
       ]
     },
     {
       text: "Advanced",
       items: [
         {
-          text: "SSH into Olares One",
-          link: "/one/access-terminal-ssh",
-        },
+          text: "Access Olares One terminal",
+          collapsed: true,
+          link: "/one/access-overview",
+          items:
+            [
+              {
+                text: "Access via Control Hub",
+                link: "/one/access-terminal-control-hub",
+              },
+              {
+                text: "Access via SSH",
+                link: "/one/access-terminal-ssh",
+              },
+              {
+                text: "Access directly on the device",
+                link: "/one/access-physical-console",
+              },
+            ]
+        },        
         {
           text: "Expand storage",
           collapsed: true,
@@ -189,7 +208,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Set up with eGPU",
           link: "/one/egpu",
-        },
+        },        
         {
           text: "Dual-boot Olares OS with Windows",
           collapsed: true,
@@ -207,9 +226,36 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               {
                 text: "Install drivers on Windows",
                 link: "/one/install-nvidia-driver",
+              },
+              {
+                text: "Troubleshooting",
+                link: "/one/dual-boot-windows-troubleshooting",
               }
             ]
         },
+        /*{
+          text: "Dual-boot Olares OS with Ubuntu",
+          link: "/one/dual-boot-ubuntu-dual-drive",
+        },*/
+        {
+          text: "Install Windows on Olares One",
+          link: "/one/install-windows-primary-drive",
+        },
+        {
+          text: "Install Ubuntu on Olares One",
+          collapsed: true,
+          items:
+            [
+              {
+                text: "Install Ubuntu Server on Olares One",
+                link: "/one/install-ubuntu-server",
+              },
+              {
+                text: "Install Ubuntu Desktop on Olares One",
+                link: "/one/install-ubuntu-desktop",
+              }
+            ]
+        },                
       ]
     },
     {
@@ -218,11 +264,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Update OS",
           link: "/one/update",
-        },
-        {
-          text: "Back up & restore data",
-          link: "/one/backup-resotre",
-        },
+        },        
         {
           text: "Restore Olares One",
           items: [
@@ -238,8 +280,16 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               text: "Reinstall Olares OS",
               link: "/one/create-drive",
             },
+            {
+              text: "Create bootable USB drive",
+              link: "/one/create-bootable-usb",
+            },
           ],
         },
+        {
+          text: "Manage BIOS and EC",
+          link: "/one/update-firmware",
+        },        
       ]
     },
   ],

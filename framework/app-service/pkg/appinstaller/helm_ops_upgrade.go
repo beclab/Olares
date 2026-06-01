@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"time"
 
-	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,7 +25,7 @@ func (h *HelmOps) Upgrade() error {
 }
 
 func (h *HelmOps) upgrade() error {
-	values, err := h.SetValues()
+	values, err := h.SetValues(false)
 	if err != nil {
 		return err
 	}
@@ -89,14 +89,6 @@ func (h *HelmOps) upgrade() error {
 
 	if err = h.RegisterOrUnregisterAppProvider(Register); err != nil {
 		klog.Errorf("Failed to register app provider err=%v", err)
-		return err
-	}
-
-	ok, err := h.WaitForStartUp()
-	if !ok {
-		// canceled
-		//h.rollBack()
-		klog.Error("App upgrade start up failed, ", err)
 		return err
 	}
 

@@ -2,7 +2,8 @@ package v2
 
 import (
 	"context"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"fmt"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
@@ -29,8 +30,8 @@ func (h *HelmOpsV2) UninstallAll() error {
 	// uninstall shared charts in priority
 	for _, chart := range h.App().SubCharts {
 		if chart.Shared {
-			chartName := utils.GetChartName(h.App().AppName, h.App().RawAppName, chart.Name)
-			namespace := chart.Namespace(h.App().OwnerName, chartName)
+			//namespace := chart.Namespace(h.App().OwnerName)
+			namespace := appcfg.ChartNamespace(&chart, h.App().OwnerName)
 			appCacheDirs, err := h.tryToGetSharedAppCache(h.Context(), client, namespace)
 			if err != nil {
 				klog.Warningf("get app %s cache dir failed %v", namespace, err)
@@ -48,6 +49,15 @@ func (h *HelmOpsV2) UninstallAll() error {
 			}
 
 			h.ClearMiddlewareRequests("os-platform")
+
+			// Host-path cache is shared with pod mounts; wait for the release's
+			// pods to fully terminate before deleting their backing directories.
+			if len(appCacheDirs) > 0 {
+				if err := h.WaitForPodsDeleted(client, namespace); err != nil {
+					err = fmt.Errorf("wait for pods in namespace %s to be deleted failed, proceeding with cleanup: %v", namespace, err)
+					return err
+				}
+			}
 
 			err = h.ClearCache(client, appCacheDirs)
 			if err != nil {

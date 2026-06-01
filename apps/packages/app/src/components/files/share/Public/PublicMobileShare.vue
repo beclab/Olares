@@ -67,7 +67,7 @@
 					:error-message="datesLimitRule(days)"
 				></terminus-edit>
 
-				<el-config-provider :locale="lang">
+				<DatePickerStyle>
 					<el-date-picker
 						class="q-mt-sm"
 						style="width: 100%; height: 40px"
@@ -82,7 +82,7 @@
 						:editable="false"
 					>
 					</el-date-picker>
-				</el-config-provider>
+				</DatePickerStyle>
 
 				<div
 					class="row items-center justify-between full-width q-mt-lg"
@@ -151,14 +151,14 @@
 			<template v-else>
 				<div class="share-link row items-center q-pa-md">
 					<div class="share-info">
-						<div class="text-ink-2 text-body2">{{ getShareLink }}</div>
+						<div class="text-ink-2 text-body2 content">{{ getShareLink }}</div>
 					</div>
 				</div>
 
 				<div
 					class="row items-center justify-between full-width q-mt-md"
 					style="height: 48px"
-					@click="copyLinkAndPassword"
+					@click="copyLinkAndPassword()"
 				>
 					<div class="text-ink-2">
 						<q-icon name="sym_r_content_copy" size="24px" />
@@ -196,9 +196,7 @@ import TerminusEdit from 'src/components/common/TerminusEdit.vue';
 import BtCheckBoxComponent from '../../../settings/base/BtCheckBoxComponent.vue';
 import { ElDatePicker, ElConfigProvider } from 'element-plus';
 
-import 'element-plus/dist/index.css';
-import 'element-plus/theme-chalk/dark/css-vars.css';
-import { formatFileModified } from '../../../../utils/file';
+import DatePickerStyle from 'src/components/style/DatePickerStyle.vue';
 
 import GeneratePassword from '../GeneratePassword.vue';
 
@@ -225,7 +223,6 @@ const $q = useQuasar();
 
 const {
 	copyLinkAndPassword,
-	lang,
 	shareResult,
 	publicPassword,
 	setExpirationInDays,
@@ -309,6 +306,14 @@ const editFileLimitUnit = () => {
 
 		.share-info {
 			flex: 1;
+			width: 100%;
+
+			.content {
+				word-break: break-all;
+				overflow-wrap: break-word;
+				white-space: pre-wrap;
+				overflow: hidden;
+			}
 		}
 
 		.action-btn {

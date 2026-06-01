@@ -82,18 +82,26 @@ import FunctionAppCard from '../../../components/appcard/FunctionAppCard.vue';
 import PageContainer from '../../../components/base/PageContainer.vue';
 import AppStoreBody from '../../../components/base/AppStoreBody.vue';
 import EmptyView from '../../../components/base/EmptyView.vue';
+import SimpleWaiter from '../../../utils/simpleWaiter';
+import { usePreCheckStore } from '../../../stores/market/preCheck';
 import { VERSION_DISPLAY_MODE } from '../../../constant/constants';
+import { useSettingStore } from '../../../stores/market/setting';
 import { useDeviceStore } from '../../../stores/settings/device';
 import { useCenterStore } from '../../../stores/market/center';
+import { useAppStore } from '../../../stores/market/appStore';
 import { useMenuStore } from '../../../stores/market/menu';
-import SimpleWaiter from '../../../utils/simpleWaiter';
-import { computed, onMounted, ref, watch } from 'vue';
+import { intersection } from '../../../utils/utils';
+import { nsfwApp } from '../../../constant/config';
+import { onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { debounce } from 'lodash';
-import { useRoute } from 'vue-router';
 
 const applications = ref<{ application: string; sourceName: string }[]>([]);
 const centerStore = useCenterStore();
+const appStore = useAppStore();
+const settingsStore = useSettingStore();
+const preCheckStore = usePreCheckStore();
 const deviceStore = useDeviceStore();
 const searchContent = ref('');
 const menuStore = useMenuStore();
@@ -167,7 +175,29 @@ const search = debounce(() => {
 		applications.value = [];
 		return;
 	}
-	applications.value = Array.from(centerStore.appSimpleInfoMap.entries())
+	if (
+		!preCheckStore.initialized ||
+		!preCheckStore.systemResource ||
+		preCheckStore.systemResource.nodes.length <= 0
+	) {
+		return;
+	}
+	applications.value = Array.from(appStore.appSimpleInfoMap.entries())
+		.filter(([key, appInfo]) => {
+			return !(settingsStore.nsfw && nsfwApp(appInfo));
+		})
+		.filter(([key, appInfo]) => {
+			return centerStore.allSourcesApps.has(appInfo.app_simple_info.app_name);
+		})
+		.filter(([key, appInfo]) => {
+			const intersectedArray = intersection(
+				preCheckStore.systemResource.nodes,
+				appInfo.app_simple_info.support_arch
+					? appInfo.app_simple_info.support_arch
+					: []
+			);
+			return intersectedArray.length > 0;
+		})
 		.map(([key, appInfo]) => {
 			const weight = calculateWeight(
 				appInfo.app_simple_info,
@@ -189,7 +219,7 @@ onMounted(() => {
 		searchContent.value = initialKeyword;
 		waiter.waitForCondition(
 			() => {
-				return Array.from(centerStore.appSimpleInfoMap.keys()).length > 0;
+				return Array.from(appStore.appSimpleInfoMap.keys()).length > 0;
 			},
 			() => {
 				search();
@@ -199,7 +229,7 @@ onMounted(() => {
 });
 
 watch(
-	() => centerStore.appSimpleInfoMap,
+	() => appStore.appSimpleInfoMap,
 	() => {
 		search();
 	},

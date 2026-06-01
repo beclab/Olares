@@ -22,10 +22,8 @@ export async function googleLogin(
 
 	await LarePassSocialLogin.initialize({
 		google: {
-			webClientId:
-				getAppPlatform().socialKeys.google.webClientId,
-			iOSClientId:
-				getAppPlatform().socialKeys.google.iOSClientId,
+			webClientId: getAppPlatform().socialKeys.google.webClientId,
+			iOSClientId: getAppPlatform().socialKeys.google.iOSClientId,
 			mode: 'online'
 		}
 	});

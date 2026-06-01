@@ -27,7 +27,7 @@
 							:disable="!!link"
 						>
 							<template #loading>
-								<SpinnerLoading></SpinnerLoading>
+								<SpinnerLoading size="16px"></SpinnerLoading>
 							</template>
 						</q-input>
 					</div>

@@ -22,10 +22,14 @@
 								locationData &&
 								locationData.type === BackupLocationType.fileSystem
 							"
-							style="width: calc(100% - 40px)"
 							class="text-body1 text-ink-1"
 						>
-							{{ locationData.data.decodePath }}
+							{{ generateStringEllipsis(locationData.data.decodePath, 30) }}
+
+							<bt-tooltip
+								max-width="240px"
+								:label="locationData.data.decodePath"
+							/>
 						</div>
 						<div
 							class="row justify-end items-center"
@@ -155,7 +159,9 @@
 									style="width: calc(100% - 40px)"
 									v-if="backupPathRef"
 								>
-									{{ backupPathRef }}
+									{{ generateStringEllipsis(backupPathRef, 30) }}
+
+									<bt-tooltip max-width="240px" :label="backupPathRef" />
 								</div>
 								<q-btn
 									class="text-ink-2 btn-size-sm btn-no-text btn-no-border"
@@ -217,31 +223,15 @@
 						/>
 					</div>
 				</bt-form-item>
-				<error-message-tip :is-error="password.length < 4">
-					<bt-form-item :width-separator="false">
-						<template v-slot:title>
-							<div class="column">
-								<div>{{ t('backup_password') }}</div>
-								<div class="row" v-if="!deviceStore.isMobile">
-									<div
-										style="width: 16px; height: 16px"
-										class="row items-center justify-center"
-									>
-										<q-icon
-											:name="
-												password.length >= 4 ? 'sym_r_check' : 'sym_r_clear'
-											"
-											class="text-ink-3"
-											size="16px"
-										/>
-									</div>
-									<div class="text-body3 text-ink-3">
-										{{ t('must_have_at_least_4_characters') }}
-									</div>
-								</div>
-							</div>
-						</template>
-
+				<error-message-tip
+					:is-error="password.length < 4 || /\s/.test(password)"
+					:error-message="
+						/\s/.test(password)
+							? t('errors.password_cannot_contain_spaces')
+							: t('must_have_at_least_4_characters')
+					"
+				>
+					<bt-form-item :title="t('backup_password')" :width-separator="false">
 						<bt-edit-view
 							v-model="password"
 							:is-password="true"
@@ -315,10 +305,12 @@ import BtSelect from 'src/components/settings/base/BtSelect.vue';
 import BackupLocationDialog from './BackupLocationDialog.vue';
 import BtForm from 'src/components/settings/base/BtForm.vue';
 import BtList from 'src/components/settings/base/BtList.vue';
+import BtTooltip from 'src/components/base/BtTooltip.vue';
 import { getOlaresSpaceRegion } from 'src/api/settings/backup';
 import { notifyFailed } from 'src/utils/settings/btNotify';
 import { useBackupStore } from 'src/stores/settings/backup';
 import { useDeviceStore } from 'src/stores/settings/device';
+import { generateStringEllipsis } from 'src/utils/utils';
 import { computed, onMounted, ref } from 'vue';
 import { BtDialog, useColor } from '@bytetrade/ui';
 import { BackupFrequency } from '@bytetrade/core';
@@ -393,6 +385,10 @@ const name = ref('');
 
 const canSubmit = computed(() => {
 	if (!formAble.value) {
+		return false;
+	}
+
+	if (/\s/.test(password.value)) {
 		return false;
 	}
 

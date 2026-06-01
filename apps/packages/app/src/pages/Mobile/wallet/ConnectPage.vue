@@ -15,7 +15,6 @@
 			<confirm-button
 				style="width: 45%"
 				text-classes="text-color-title"
-				bg-classes="bg-color-white"
 				:btn-title="t('cancel')"
 				@onConfirm="rejectAction"
 			/>

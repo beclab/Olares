@@ -3,7 +3,7 @@
 	<div class="Launch_pad_page in-center-page">
 		<div class="launch_pad_box in-center" ref="launchpadPage">
 			<div class="q-mt-xl notification-title text-white q-mb-lg">
-				{{ $t('permission.notifications') }}
+				{{ $t('notifications') }}
 			</div>
 			<NotificationPopup
 				v-if="notificationStore.data && notificationStore.data.length > 0"
@@ -37,18 +37,26 @@ const notificationStore = useNotificationStore();
 .Launch_pad_page {
 	width: 100%;
 	height: 100%;
+	min-height: 100vh;
+	min-height: 100svh;
+	min-height: 100dvh;
 	background: rgba(0, 0, 0, 0.5);
 	backdrop-filter: blur(10px);
 	z-index: 6;
 	position: absolute;
 	top: 0px;
 	left: 0px;
+	right: 0px;
+	bottom: 0px;
 	touch-action: none;
 }
 
 .launch_pad_box {
 	width: 100%;
 	height: 100%;
+	min-height: 100vh;
+	min-height: 100svh;
+	min-height: 100dvh;
 
 	.notification-title {
 		font-family: Inter;

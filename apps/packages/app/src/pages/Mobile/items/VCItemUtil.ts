@@ -17,7 +17,7 @@ export function getVCCardItemList(): VCCardItem[] {
 }
 
 export function getTerminusName(card: VCCardItem) {
-	let name = '';
+	let name;
 
 	const vc = JSON.parse(
 		base64ToString(card.verifiable_credential.split('.')[1])

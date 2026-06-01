@@ -10,12 +10,20 @@
 				size="24px"
 				color="ink-2"
 			></q-icon>
-			{{ t(`files.file_${sortedActive}`) }}
-			<popup-menu @handleEvent="handleEvent" @popupState="updatePopupState" />
+			{{ t(`files.file_${activeSortName}`) }}
+			<popup-menu
+				:activedSort="sortedActive"
+				@handleEvent="handleEvent"
+				@popupState="updatePopupState"
+			/>
 		</div>
 		<q-icon
 			arrow_upward
-			:name="sortAsc ? 'sym_r_arrow_upward' : 'sym_r_arrow_downward_alt'"
+			:name="
+				filesStore.activeSort[props.origin_id].asc
+					? 'sym_r_arrow_upward_alt'
+					: 'sym_r_arrow_downward_alt'
+			"
 			size="24px"
 			color="ink-2 cursor-pointer"
 			@click="sort(sortedActive)"
@@ -80,22 +88,32 @@
 						></q-icon>
 					</span>
 					<span
-						@click="sort('name')"
+						@click="sort(FilesSortType.NAME)"
 						:title="$t('files.sortByName')"
 						:aria-label="$t('files.sortByName')"
 						>{{ $t('files.name') }}</span
 					>
 					<i
 						class="material-icons"
-						@click="sort('name')"
+						@click="sort(FilesSortType.NAME)"
 						:title="$t('files.sortByName')"
 						:aria-label="$t('files.sortByName')"
 						>{{ nameIcon }}</i
 					>
+					<span
+						v-if="colResize"
+						class="col-resize-handle"
+						@mousedown.stop.prevent="colResize.startResize('name', $event)"
+						@click.stop
+					/>
 				</p>
 
 				<p
-					v-if="isPad && (selectFileCount == 0 || store.showPadPopup)"
+					v-if="
+						isPad &&
+						!props.colGrid &&
+						(selectFileCount == 0 || store.showPadPopup)
+					"
 					:class="{ active: modifiedSorted }"
 					class="action1"
 					role="button"
@@ -105,16 +123,22 @@
 				</p>
 
 				<p
-					:class="{ active: modifiedSorted }"
-					class="modified"
+					:class="{ active: sizeSorted }"
+					class="size"
 					role="button"
 					tabindex="0"
-					@click="sort('modified')"
-					:title="$t('files.sortByLastModified')"
-					:aria-label="$t('files.sortByLastModified')"
+					@click="sort(FilesSortType.SIZE)"
+					:title="$t('files.sortBySize')"
+					:aria-label="$t('files.sortBySize')"
 				>
-					<i class="material-icons">{{ modifiedIcon }}</i>
-					<span>{{ $t('files.lastModified') }}</span>
+					<span>{{ $t('files.size') }}</span>
+					<i class="material-icons">{{ sizeIcon }}</i>
+					<span
+						v-if="colResize"
+						class="col-resize-handle"
+						@mousedown.stop.prevent="colResize.startResize('size', $event)"
+						@click.stop
+					/>
 				</p>
 
 				<p
@@ -122,25 +146,31 @@
 					class="type"
 					role="button"
 					tabindex="0"
-					@click="sort('type')"
+					@click="sort(FilesSortType.TYPE)"
 					:title="$t('files.typeBySize')"
 					:aria-label="$t('files.typeBySize')"
 				>
 					<span>{{ $t('files.type') }}</span>
 					<i class="material-icons">{{ typeIcon }}</i>
+					<span
+						v-if="colResize"
+						class="col-resize-handle"
+						@mousedown.stop.prevent="colResize.startResize('type', $event)"
+						@click.stop
+					/>
 				</p>
 
 				<p
-					:class="{ active: sizeSorted }"
-					class="size"
+					:class="{ active: modifiedSorted }"
+					class="modified"
 					role="button"
 					tabindex="0"
-					@click="sort('size')"
-					:title="$t('files.sortBySize')"
-					:aria-label="$t('files.sortBySize')"
+					@click="sort(FilesSortType.Modified)"
+					:title="$t('files.sortByLastModified')"
+					:aria-label="$t('files.sortByLastModified')"
 				>
-					<span>{{ $t('files.size') }}</span>
-					<i class="material-icons">{{ sizeIcon }}</i>
+					<i class="material-icons">{{ modifiedIcon }}</i>
+					<span>{{ $t('files.lastModified') }}</span>
 				</p>
 			</div>
 		</div>
@@ -148,17 +178,29 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useDataStore } from '../../stores/data';
-import { getAppPlatform } from '../../application/platform';
-import { useFilesStore, FilesIdType } from './../../stores/files';
-import { FilesSortType } from './../../utils/contact';
 import PopupMenu from './PopupMenu.vue';
+import { FilesIdType, useFilesStore } from 'src/stores/files';
+import { filesSortOptions } from 'src/utils/interface/files';
+import { getAppPlatform } from 'src/application/platform';
+import { computed, inject, ref, watch } from 'vue';
+import { FilesSortType } from 'src/utils/contact';
+import { useDataStore } from 'src/stores/data';
+import { useI18n } from 'vue-i18n';
+import {
+	COL_RESIZE_KEY,
+	ColResizeContext
+} from 'src/composables/useColumnResize';
+
+const colResize = inject<ColResizeContext | null>(COL_RESIZE_KEY, null);
 const props = defineProps({
 	origin_id: {
 		type: Number,
 		required: true
+	},
+	colGrid: {
+		type: Boolean,
+		required: false,
+		default: false
 	}
 });
 const { t } = useI18n();
@@ -232,81 +274,48 @@ const typeIcon = computed(function () {
 	}
 	return 'arrow_downward';
 });
-const sort = async (by: string) => {
-	let asc = true;
-	let selfBy = 0;
-	if (by === 'name') {
-		selfBy = 1;
-		if (nameIcon.value === 'arrow_upward') {
-			asc = false;
-		}
-	} else if (by === 'size') {
-		selfBy = 2;
-		if (sizeIcon.value === 'arrow_upward') {
-			asc = false;
-		}
-	} else if (by === 'type') {
-		selfBy = 3;
-		if (typeIcon.value === 'arrow_upward') {
-			asc = false;
-		}
-	} else if (by === 'modified') {
-		selfBy = 4;
-		if (modifiedIcon.value === 'arrow_upward') {
-			asc = false;
-		}
-	}
-	filesStore.updateActiveSort(selfBy, asc, props.origin_id);
-};
 const selectAll = () => {
 	if (
 		selectFileCount.value !=
 		filesStore.currentFileList[props.origin_id]?.items.length
 	) {
-		const items =
+		filesStore.selected[props.origin_id] =
 			filesStore.currentFileList[props.origin_id]?.items.map((e) => e.index) ||
 			[];
-		filesStore.selected[props.origin_id] = items;
 	} else {
 		filesStore.resetSelected(props.origin_id);
 	}
 };
-const sortAsc = ref(false);
-const sortedActive = ref('modified');
+const sortedActive = ref(filesStore.activeSort[props.origin_id].by);
 const showPopMenu = ref(false);
 const updatePopupState = (value: boolean) => {
 	showPopMenu.value = value;
 };
-const handleEvent = (value) => {
-	sortedActive.value = value.name;
-	sortAsc.value = false;
-	switch (value.action) {
-		case 'name':
-			fileSort(FilesSortType.NAME);
-			break;
-		case 'type':
-			fileSort(FilesSortType.TYPE);
-			break;
-		case 'modified':
-			fileSort(FilesSortType.Modified);
-			break;
-		case 'size':
-			fileSort(FilesSortType.SIZE);
-			break;
-		default:
-			break;
-	}
+const handleEvent = (value: { type: FilesSortType }) => {
+	fileSort(value.type);
 };
-const fileSort = (sort: FilesSortType) => {
-	if (filesStore.activeSort[props.origin_id].by == sort) {
-		filesStore.updateActiveSort(
-			sort,
-			!filesStore.activeSort[props.origin_id].asc
-		);
+
+const fileSort = (sortType: FilesSortType) => {
+	sortedActive.value = sortType;
+	const current = filesStore.activeSort[props.origin_id];
+	if (current.by == sortType) {
+		filesStore.updateActiveSort(sortType, !current.asc, props.origin_id);
 	} else {
-		filesStore.updateActiveSort(sort, true);
+		filesStore.updateActiveSort(sortType, true, props.origin_id);
 	}
 };
+
+const sort = async (sortType: FilesSortType) => {
+	fileSort(sortType);
+};
+
+const activeSortName = computed(() => {
+	return (
+		filesSortOptions.find(
+			(e: any) => e.type == filesStore.activeSort[props.origin_id].by
+		)?.name || 'modified'
+	);
+});
 </script>
 
 <style scoped lang="scss">

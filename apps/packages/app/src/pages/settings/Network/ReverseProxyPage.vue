@@ -1,5 +1,5 @@
 <template>
-	<page-title-component :show-back="true" :title="t('Reverse Proxy')" />
+	<page-title-component :show-back="true" :title="t('Reverse proxy')" />
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<bt-list first v-if="networkStore.reverseProxy">
 			<bt-form-item
@@ -64,7 +64,10 @@
 				:with-popup="true"
 				:width-separator="authMethod == 'token'"
 			>
-				<bt-form-item :title="t('Auth Method')" :width-separator="false">
+				<bt-form-item
+					:title="t('Authentication method')"
+					:width-separator="false"
+				>
 					<bt-select v-model="authMethod" :options="frpAuthMethod()" />
 				</bt-form-item>
 			</error-message-tip>

@@ -105,8 +105,6 @@ spec:
           - --rc-addr
           - :5572
           - --rc-no-auth
-          - --log-level
-          - DEBUG
           - --no-check-certificate
           - --s3-directory-markers
           - --fs-cache-expire-duration
@@ -144,7 +142,7 @@ spec:
 {{ end }}
 
         - name: samba-server
-          image: beclab/samba-server:0.0.8
+          image: beclab/samba-server:0.0.13
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -210,7 +208,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.155
+          image: beclab/files-server:v0.2.176
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -225,6 +223,8 @@ spec:
               mountPath: /data
             - name: upload-appdata
               mountPath: /appcache/
+            - name: common-data
+              mountPath: /appcommon/
             - name: seafile-data
               mountPath: /root/dev/seafile-data
 {{ if .Values.sharedlib }}        
@@ -248,6 +248,8 @@ spec:
             - name: TERMINUSD_HOST
               value: $(NODE_IP):18088  
 {{ end }}
+            - name: UPLOAD_WEBHOOK_ENABLED
+              value: "True"
             - name: EXTERNAL_PREFIX
               value: '/External/'
             - name: ES_ENABLED
@@ -399,11 +401,14 @@ spec:
           hostPath:
             path: '{{ .Values.rootPath }}/userdata/Cache'
             type: Directory
-
         - name: seafile-data
           hostPath:
             path: '{{ .Values.rootPath }}/rootfs/Application/seafile/data'
             type: DirectoryOrCreate
+        - name: common-data
+          hostPath:
+            type: Directory
+            path: '{{ .Values.rootPath }}/rootfs/Common'
         
 {{ if .Values.sharedlib }}        
         - name: shared-lib
@@ -808,9 +813,11 @@ data:
           proxy_buffering off;
 
           proxy_connect_timeout 15s;
-          proxy_send_timeout 90s;
-          proxy_read_timeout 90s;
-          send_timeout 90s;
+          proxy_send_timeout    300s;
+          proxy_read_timeout    300s;
+          send_timeout          300s;
+          client_body_timeout   300s;
+          keepalive_timeout     305s;
           proxy_max_temp_file_size 0;
 
           client_body_buffer_size 64m;

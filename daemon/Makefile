@@ -26,15 +26,17 @@ build-arm: fmt vet ;$(info $(M)...Begin to build terminusd (linux version).) @
 build-linux-in-docker:
 	docker run -it --platform linux/amd64 --rm \
 		-v $(current_dir):/olaresd \
+		-v $(current_dir)/../cli:/cli \
 		-w /olaresd \
 		-e DEBIAN_FRONTEND=noninteractive \
-		golang:1.24.11 \
-		sh -c "apt-get -y update; apt-get -y install libudev-dev libpcap-dev; make build-linux"
+		golang:1.25.0 \
+		sh -c "apt-get -y update &&	 apt-get -y install libudev-dev libpcap-dev && make build-linux"
 
 build-arm-in-docker:
 	docker run -it --platform linux/arm64 --rm \
 		-v $(current_dir):/olaresd \
+		-v $(current_dir)/../cli:/cli \
 		-w /olaresd \
 		-e DEBIAN_FRONTEND=noninteractive \
-		golang:1.24.11 \
-		sh -c "apt-get -y update; apt-get -y install libudev-dev libpcap-dev; make build-arm"
+		golang:1.25.0 \
+		sh -c "apt-get -y update && apt-get -y install libudev-dev libpcap-dev && make build-arm"

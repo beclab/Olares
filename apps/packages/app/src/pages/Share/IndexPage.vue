@@ -56,21 +56,6 @@
 						<span class="text-light-blue-default q-ml-xs text-h6">
 							{{ shareStore.share?.name }}
 						</span>
-						<!-- <q-img src="/img/folder-default.svg" width="40px" />
-						<div class="text-body2 text-ink-2">
-							<div class="justify-between q-ml-md">
-								<div class="text-subtitle1 text-ink-1">
-									{{ shareStore.share?.name }}
-								</div>
-								<div class="text-body3 text-ink-2">
-									{{
-										t('files.Expiration date') +
-										':' +
-										formatFileModified(shareStore.share?.expire_time || '')
-									}}
-								</div>
-							</div>
-						</div> -->
 					</div>
 					<div
 						class="text-body3 text-ink-3 q-mt-xs"

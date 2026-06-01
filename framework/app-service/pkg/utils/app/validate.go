@@ -10,17 +10,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
-	sysv1alpha1 "github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	v1alpha1client "github.com/beclab/Olares/framework/app-service/pkg/client/clientset/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/generated/clientset/versioned/scheme"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned/scheme"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
@@ -235,34 +235,9 @@ func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig, op v
 		}
 	}
 
-	// only support nvidia gpu managment by HAMi for now
-	if appConfig.Requirement.GPU != nil &&
-		(appConfig.GetSelectedGpuTypeValue() == utils.NvidiaCardType || appConfig.GetSelectedGpuTypeValue() == utils.GB10ChipType) {
-		if !appConfig.Requirement.GPU.IsZero() && metrics.GPU.Total <= 0 {
-			return constants.GPU, constants.SystemGPUNotAvailable, fmt.Errorf(constants.SystemGPUNotAvailableMessage, op)
-
-		}
-		nodes, err := utils.GetNodeInfo(context.TODO())
-		if err != nil {
-			klog.Errorf("failed to get node info %v", err)
-			return "", "", err
-		}
-		klog.Infof("nodes info: %#v", nodes)
-		var maxNodeGPUMem int64
-		for _, n := range nodes {
-			var sum int64
-			for _, g := range n.GPUS {
-				sum += g.Memory
-			}
-			if sum > maxNodeGPUMem {
-				maxNodeGPUMem = sum
-			}
-		}
-
-		if appConfig.Requirement.GPU.CmpInt64(maxNodeGPUMem) > 0 {
-			return constants.GPU, constants.SystemGPUPressure, fmt.Errorf(constants.SystemGPUPressureMessage, op)
-		}
-	}
+	// GPU availability (per-mode, per-node) is now checked upfront by
+	// compute.BuildInstallComputePlan during install pre-check, so we no
+	// longer reject installs here based on aggregate cluster GPU memory.
 
 	return CheckAppK8sRequestResource(appConfig, op)
 }
@@ -537,233 +512,6 @@ type HardwareUnmetReason struct {
 	Reason string `json:"reason"`
 }
 
-// CheckHardwareRequirement validates whether there exists at least one node
-// in the cluster that satisfies the hardware constraints specified by appConfig.Spec.Hardware.
-// Returns nil, nil if satisfied (or no constraints specified). Otherwise returns a slice of reasons and an error.
-func CheckHardwareRequirement(ctx context.Context, appConfig *appcfg.ApplicationConfig) ([]HardwareUnmetReason, error) {
-	hw := appConfig.HardwareRequirement
-	// If no hardware constraints are specified, treat as satisfied
-	if hw.Cpu.Vendor == "" && hw.Cpu.Arch == "" &&
-		hw.Gpu.Vendor == "" && len(hw.Gpu.Arch) == 0 &&
-		hw.Gpu.SingleMemory == "" && hw.Gpu.TotalMemory == "" {
-		return nil, nil
-	}
-	var reasons []HardwareUnmetReason
-
-	nodes, err := getNodeInfo(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get node info: %v", err)
-	}
-	if hw.Gpu.SingleMemory != "" && hw.Gpu.TotalMemory != "" {
-		reasons = append(reasons, HardwareUnmetReason{
-			Type:   "gpuMemory",
-			Reason: fmt.Sprintf("gpu.singleMemory and gpu.totalMemory are mutually exclusive"),
-		})
-	}
-
-	requiredSingleMemBytes := int64(0)
-	if hw.Gpu.SingleMemory != "" {
-		if q, err := resource.ParseQuantity(hw.Gpu.SingleMemory); err == nil {
-			requiredSingleMemBytes = int64(q.AsApproximateFloat64())
-		} else {
-			reasons = append(reasons, HardwareUnmetReason{
-				Type:   "gpu.singleMemory",
-				Reason: fmt.Sprintf("invalid gpu.singleMemory: %s", hw.Gpu.SingleMemory),
-			})
-			return reasons, nil
-		}
-	}
-	requiredTotalMemBytes := int64(0)
-	if hw.Gpu.TotalMemory != "" {
-		if q, err := resource.ParseQuantity(hw.Gpu.TotalMemory); err == nil {
-			requiredTotalMemBytes = int64(q.AsApproximateFloat64())
-		} else {
-			reasons = append(reasons, HardwareUnmetReason{
-				Type:   "gpu.totalMemory",
-				Reason: fmt.Sprintf("invalid gpu.totalMemory: %s", hw.Gpu.TotalMemory),
-			})
-			return reasons, nil
-		}
-	}
-
-	strEq := func(a, b string) bool {
-		return strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(b))
-	}
-
-	// Build sets for each constraint, defaulting to all nodes when unspecified
-	universe := sets.NewString()
-	indexToName := make([]string, 0, len(nodes))
-	for i := range nodes {
-		name := fmt.Sprintf("idx%d", i)
-		indexToName = append(indexToName, name)
-		universe.Insert(name)
-	}
-	newAll := func() sets.String { return universe.Clone() }
-
-	// CPU vendor
-	cpuVendorSet := newAll()
-	if hw.Cpu.Vendor != "" {
-		cpuVendorSet = sets.NewString()
-		for i, n := range nodes {
-			match := false
-			for _, c := range n.CPU {
-				if strEq(c.Vendor, hw.Cpu.Vendor) {
-					match = true
-					break
-				}
-			}
-			if match {
-				cpuVendorSet.Insert(indexToName[i])
-			}
-		}
-	}
-	// CPU arch
-	cpuArchSet := newAll()
-	if hw.Cpu.Arch != "" {
-		cpuArchSet = sets.NewString()
-		for i, n := range nodes {
-			match := false
-			for _, c := range n.CPU {
-				if strEq(c.Arch, hw.Cpu.Arch) {
-					match = true
-					break
-				}
-			}
-			if match {
-				cpuArchSet.Insert(indexToName[i])
-			}
-		}
-	}
-	// GPU vendor
-	gpuVendorSet := newAll()
-	if hw.Gpu.Vendor != "" {
-		gpuVendorSet = sets.NewString()
-		for i, n := range nodes {
-			ok := false
-			for _, g := range n.GPUS {
-				if strEq(g.Vendor, hw.Gpu.Vendor) {
-					ok = true
-					break
-				}
-			}
-			if ok {
-				gpuVendorSet.Insert(indexToName[i])
-			}
-		}
-	}
-	// GPU arch
-	gpuArchSet := newAll()
-	if len(hw.Gpu.Arch) > 0 {
-		gpuArchSet = sets.NewString()
-		for i, n := range nodes {
-			ok := false
-			for _, g := range n.GPUS {
-				for _, want := range hw.Gpu.Arch {
-					if strEq(g.Architecture, want) {
-						ok = true
-						break
-					}
-				}
-				if ok {
-					break
-				}
-			}
-			if ok {
-				gpuArchSet.Insert(indexToName[i])
-			}
-		}
-	}
-	// GPU single memory
-	gpuSingleMemSet := newAll()
-	if requiredSingleMemBytes > 0 {
-		gpuSingleMemSet = sets.NewString()
-		for i, n := range nodes {
-			ok := false
-			for _, g := range n.GPUS {
-				if g.Memory >= requiredSingleMemBytes {
-					ok = true
-					break
-				}
-			}
-			if ok {
-				gpuSingleMemSet.Insert(indexToName[i])
-			}
-		}
-	}
-	// GPU total memory
-	gpuTotalMemSet := newAll()
-	if requiredTotalMemBytes > 0 {
-		gpuTotalMemSet = sets.NewString()
-		for i, n := range nodes {
-			var total int64
-			for _, g := range n.GPUS {
-				total += g.Memory
-			}
-			if total >= requiredTotalMemBytes {
-				gpuTotalMemSet.Insert(indexToName[i])
-			}
-		}
-	}
-
-	// Intersect all sets
-	res := cpuVendorSet.Intersection(cpuArchSet).
-		Intersection(gpuVendorSet).
-		Intersection(gpuArchSet).
-		Intersection(gpuSingleMemSet).
-		Intersection(gpuTotalMemSet)
-
-	if res.Len() > 0 {
-		return nil, nil
-	}
-
-	// build detailed diagnostics about which conditions failed
-	if hw.Cpu.Vendor != "" && cpuVendorSet.Len() == 0 {
-		reasons = append(reasons, HardwareUnmetReason{
-			Type:   "cpu.vendor",
-			Reason: fmt.Sprintf("cpu.vendor=%s has no matching nodes", hw.Cpu.Vendor),
-		})
-	}
-	if hw.Cpu.Arch != "" && cpuArchSet.Len() == 0 {
-		reasons = append(reasons, HardwareUnmetReason{
-			Type:   "cpu.arch",
-			Reason: fmt.Sprintf("cpu.arch=%s has no matching nodes", hw.Cpu.Arch),
-		})
-	}
-	if hw.Gpu.Vendor != "" && gpuVendorSet.Len() == 0 {
-		reasons = append(reasons, HardwareUnmetReason{
-			Type:   "gpu.vendor",
-			Reason: fmt.Sprintf("gpu.vendor=%s has no matching nodes", hw.Gpu.Vendor),
-		})
-	}
-	if len(hw.Gpu.Arch) > 0 && gpuArchSet.Len() == 0 {
-		reasons = append(reasons, HardwareUnmetReason{
-			Type:   "gpu.architecture",
-			Reason: fmt.Sprintf("gpu.arch in %v has no matching nodes", hw.Gpu.Arch),
-		})
-	}
-	if requiredSingleMemBytes > 0 && gpuSingleMemSet.Len() == 0 {
-		reasons = append(reasons, HardwareUnmetReason{
-			Type:   "gpu.singleMemory",
-			Reason: fmt.Sprintf("gpu.singleMemory>=%s has no matching nodes", hw.Gpu.SingleMemory),
-		})
-	}
-	if requiredTotalMemBytes > 0 && gpuTotalMemSet.Len() == 0 {
-		reasons = append(reasons, HardwareUnmetReason{
-			Type:   "gpu.totalMemory",
-			Reason: fmt.Sprintf("gpu.totalMemory>=%s has no matching nodes", hw.Gpu.TotalMemory),
-		})
-	}
-	if len(reasons) > 0 {
-		return reasons, nil
-	}
-
-	// all individual conditions have candidates, but no single node satisfies all combined
-	return []HardwareUnmetReason{{
-		Type:   "intersection",
-		Reason: fmt.Sprintf("no single node satisfies the combined constraints"),
-	}}, nil
-}
-
 func CheckAppEnvs(ctx context.Context, ctrlClient client.Client, envs []sysv1alpha1.AppEnvVar, owner string) (*api.AppEnvCheckResult, error) {
 	if len(envs) == 0 {
 		return nil, nil
@@ -992,8 +740,6 @@ func CheckAppK8sRequestResource(appConfig *appcfg.ApplicationConfig, op v1alpha1
 	if appConfig == nil {
 		return "", "", errors.New("nil appConfig")
 	}
-	klog.Infof("availableResources: cpu: %#v", availableResources.cpu.allocatable.String())
-	klog.Infof("availableResources: memory: %#v", availableResources.memory.allocatable.String())
 
 	sufficientCPU, sufficientMemory := false, false
 

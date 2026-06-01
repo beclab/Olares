@@ -21,7 +21,10 @@
 				<q-item>
 					<q-item-section class="header">
 						<div class="users">
-							<TerminusAvatar :info="userStore.terminusInfo()" :size="40" />
+							<TerminusAvatar
+								:info="userStore.currentUserOlaresInfo"
+								:size="40"
+							/>
 						</div>
 
 						<div class="info">

@@ -32,7 +32,7 @@
 			</bt-form-item>
 			<bt-form-item
 				v-if="adminStore.isAdmin"
-				:title="t('Subnet Routes')"
+				:title="t('Subnet routes')"
 				:description="
 					t(
 						'Allow VPN users to access other devices on the local network (e.g., printers, file servers)'

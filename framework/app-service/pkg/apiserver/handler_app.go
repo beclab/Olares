@@ -11,14 +11,13 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
-	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -61,7 +60,7 @@ func (h *Handler) status(req *restful.Request, resp *restful.Response) {
 	now := metav1.Now()
 	sts := appinstaller.Status{
 		Name:              am.Spec.AppName,
-		AppID:             v1alpha1.AppName(am.Spec.AppName).GetAppID(),
+		AppID:             appcfg.AppName(am.Spec.AppName).GetAppID(),
 		Namespace:         am.Spec.AppNamespace,
 		CreationTimestamp: now,
 		Source:            am.Spec.Source,
@@ -105,30 +104,33 @@ func (h *Handler) appsStatus(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	for _, am := range appAms {
-		if am.Spec.AppOwner == owner {
-			if !stateSet.Has(am.Status.State.String()) {
-				continue
-			}
-			if len(isSysApp) > 0 && isSysApp == "true" && !userspace.IsSysApp(am.Spec.AppName) {
-				continue
-			}
-			now := metav1.Now()
-			status := appinstaller.Status{
-				Name:              am.Spec.AppName,
-				AppID:             v1alpha1.AppName(am.Spec.AppName).GetAppID(),
-				Namespace:         am.Spec.AppNamespace,
-				CreationTimestamp: now,
-				Source:            am.Spec.Source,
-				AppStatus: v1alpha1.ApplicationStatus{
-					State:      am.Status.State.String(),
-					Progress:   am.Status.Progress,
-					StatusTime: &now,
-					UpdateTime: &now,
-				},
-			}
-
-			filteredApps = append(filteredApps, status)
+		// v3 apps are visible to every authenticated user
+		// (admin operations are still admin-gated elsewhere).
+		if !(am.Spec.AppOwner == owner || appcfg.IsV3(am)) {
+			continue
 		}
+		if !stateSet.Has(am.Status.State.String()) {
+			continue
+		}
+		if len(isSysApp) > 0 && isSysApp == "true" && !userspace.IsSysApp(am.Spec.AppName) {
+			continue
+		}
+		now := metav1.Now()
+		status := appinstaller.Status{
+			Name:              am.Spec.AppName,
+			AppID:             appcfg.AppName(am.Spec.AppName).GetAppID(),
+			Namespace:         am.Spec.AppNamespace,
+			CreationTimestamp: now,
+			Source:            am.Spec.Source,
+			AppStatus: v1alpha1.ApplicationStatus{
+				State:      am.Status.State.String(),
+				Progress:   am.Status.Progress,
+				StatusTime: &now,
+				UpdateTime: &now,
+			},
+		}
+
+		filteredApps = append(filteredApps, status)
 	}
 
 	// sort by create time desc
@@ -184,29 +186,30 @@ func (h *Handler) appsOperate(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	// filter by application's owner
+	// filter by application's owner; v3 / shared apps are visible to all.
 	filteredOperates := make([]appinstaller.Operate, 0)
 	for _, am := range ams {
 		if am.Spec.Type != v1alpha1.App {
 			continue
 		}
 
-		if am.Spec.AppOwner == owner {
-			operate := appinstaller.Operate{
-				AppName:           am.Spec.AppName,
-				AppNamespace:      am.Spec.AppNamespace,
-				AppOwner:          am.Spec.AppOwner,
-				State:             am.Status.State,
-				OpType:            am.Status.OpType,
-				OpID:              am.Status.OpID,
-				ResourceType:      am.Spec.Type.String(),
-				Message:           am.Status.Message,
-				CreationTimestamp: am.CreationTimestamp,
-				Source:            am.Spec.Source,
-				Progress:          am.Status.Progress,
-			}
-			filteredOperates = append(filteredOperates, operate)
+		if !(am.Spec.AppOwner == owner || appcfg.IsV3(am)) {
+			continue
 		}
+		operate := appinstaller.Operate{
+			AppName:           am.Spec.AppName,
+			AppNamespace:      am.Spec.AppNamespace,
+			AppOwner:          am.Spec.AppOwner,
+			State:             am.Status.State,
+			OpType:            am.Status.OpType,
+			OpID:              am.Status.OpID,
+			ResourceType:      am.Spec.Type.String(),
+			Message:           am.Status.Message,
+			CreationTimestamp: am.CreationTimestamp,
+			Source:            am.Spec.Source,
+			Progress:          am.Status.Progress,
+		}
+		filteredOperates = append(filteredOperates, operate)
 	}
 
 	// sort by create time desc
@@ -215,50 +218,6 @@ func (h *Handler) appsOperate(req *restful.Request, resp *restful.Response) {
 	})
 
 	resp.WriteAsJson(map[string]interface{}{"result": filteredOperates})
-}
-
-func (h *Handler) operateHistory(req *restful.Request, resp *restful.Response) {
-	app := req.PathParameter(ParamAppName)
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-
-	var am v1alpha1.ApplicationManager
-	name, err := apputils.FmtAppMgrName(app, owner, "")
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	key := types.NamespacedName{Name: name}
-	err = h.ctrlClient.Get(req.Request.Context(), key, &am)
-
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			api.HandleNotFound(resp, req, err)
-			return
-		}
-		api.HandleError(resp, req, err)
-		return
-	}
-	ops := make([]appinstaller.OperateHistory, 0, len(am.Status.OpRecords))
-	for _, r := range am.Status.OpRecords {
-		op := appinstaller.OperateHistory{
-			AppName:      am.Spec.AppName,
-			AppNamespace: am.Spec.AppNamespace,
-			AppOwner:     am.Spec.AppOwner,
-			ResourceType: am.Spec.Type.String(),
-			OpRecord: v1alpha1.OpRecord{
-				OpType:    r.OpType,
-				OpID:      r.OpID,
-				Message:   r.Message,
-				Source:    r.Source,
-				Version:   r.Version,
-				Status:    r.Status,
-				StateTime: r.StateTime,
-			},
-		}
-		ops = append(ops, op)
-	}
-
-	resp.WriteAsJson(map[string]interface{}{"result": ops})
 }
 
 func (h *Handler) allAppManagers(req *restful.Request, resp *restful.Response) {
@@ -284,95 +243,6 @@ func (h *Handler) allAppManagers(req *restful.Request, resp *restful.Response) {
 		ret = append(ret, *am.DeepCopy())
 	}
 	resp.WriteAsJson(ret)
-}
-
-func (h *Handler) allOperateHistory(req *restful.Request, resp *restful.Response) {
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-	source := req.QueryParameter("source")
-	resourceType := req.QueryParameter("resourceType")
-
-	filteredSources := constants.Sources
-	filteredResourceTypes := constants.ResourceTypes
-	if len(source) > 0 {
-		filteredSources = sets.String{}
-		for _, s := range strings.Split(source, "|") {
-			filteredSources.Insert(s)
-		}
-	}
-	if len(resourceType) > 0 {
-		filteredResourceTypes = sets.String{}
-		for _, s := range strings.Split(resourceType, "|") {
-			filteredResourceTypes.Insert(s)
-		}
-	}
-
-	ams, err := h.appmgrLister.List(labels.Everything())
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	ops := make([]appinstaller.OperateHistory, 0)
-
-	for _, am := range ams {
-		if !filteredResourceTypes.Has(am.Spec.Type.String()) {
-			continue
-		}
-		if am.Spec.AppOwner != owner || userspace.IsSysApp(am.Spec.AppName) {
-			continue
-		}
-		for _, r := range am.Status.OpRecords {
-			if !filteredSources.Has(r.Source) {
-				continue
-			}
-			op := appinstaller.OperateHistory{
-				AppName:      am.Spec.AppName,
-				AppNamespace: am.Spec.AppNamespace,
-				AppOwner:     am.Spec.AppOwner,
-				ResourceType: am.Spec.Type.String(),
-				OpRecord: v1alpha1.OpRecord{
-					OpType:    r.OpType,
-					Message:   r.Message,
-					Source:    r.Source,
-					Version:   r.Version,
-					Status:    r.Status,
-					StateTime: r.StateTime,
-				},
-			}
-			ops = append(ops, op)
-		}
-	}
-	sort.Slice(ops, func(i, j int) bool {
-		return ops[j].StateTime.Before(ops[i].StateTime)
-	})
-
-	resp.WriteAsJson(map[string]interface{}{"result": ops})
-}
-
-func (h *Handler) getApp(req *restful.Request, resp *restful.Response) {
-	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-
-	appName := req.PathParameter(ParamAppName)
-	name, err := apputils.FmtAppMgrName(appName, owner, "")
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	var app *v1alpha1.Application
-
-	app, err = client.AppClient.AppV1alpha1().Applications().Get(req.Request.Context(), name, metav1.GetOptions{})
-	if err != nil && !apierrors.IsNotFound(err) {
-		api.HandleError(resp, req, err)
-		return
-	}
-	am, err := client.AppClient.AppV1alpha1().ApplicationManagers().Get(req.Request.Context(), name, metav1.GetOptions{})
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	app.Status.State = am.Status.State.String()
-
-	resp.WriteAsJson(app)
 }
 
 func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
@@ -406,11 +276,17 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
+	vis, err := h.newListVisibilityCtx(req.Request.Context(), owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
 	for _, am := range ams {
 		if am.Spec.Type != v1alpha1.App {
 			continue
 		}
-		if am.Spec.AppOwner != owner {
+		if !vis.VisibleAM(am) {
 			continue
 		}
 		if len(isSysApp) > 0 && isSysApp == "true" {
@@ -445,8 +321,8 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			Spec: v1alpha1.ApplicationSpec{
 				Name:            am.Spec.AppName,
 				RawAppName:      am.Spec.RawAppName,
-				Appid:           v1alpha1.AppName(am.Spec.AppName).GetAppID(),
-				IsSysApp:        v1alpha1.AppName(am.Spec.AppName).IsSysApp(),
+				Appid:           appcfg.AppName(am.Spec.AppName).GetAppID(),
+				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           owner,
 				Entrances:       appconfig.Entrances,
@@ -475,21 +351,25 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 	}
 
 	for _, a := range allApps {
-		if a.Spec.Owner == owner {
-			if len(isSysApp) > 0 && isSysApp == "true" && strconv.FormatBool(a.Spec.IsSysApp) != isSysApp {
-				continue
-			}
-			appsEntranceMap[a.Name] = a
+		// Visibility for the underlying Application:
+		//   • owner equals viewer → legacy v1/v2 path,
+		//   • shared app + admin / granted viewer → v3 fan-out.
+		if !(a.Spec.Owner == owner || vis.VisibleApp(a)) {
+			continue
+		}
+		if len(isSysApp) > 0 && isSysApp == "true" && strconv.FormatBool(a.Spec.IsSysApp) != isSysApp {
+			continue
+		}
+		appsEntranceMap[a.Name] = a
 
-			if a.Spec.IsSysApp {
-				appsMap[a.Name] = a
-				continue
-			}
-			if v, ok := appsMap[a.Name]; ok {
-				v.Spec.Settings = a.Spec.Settings
-				v.Spec.Entrances = a.Spec.Entrances
-				v.Spec.Ports = a.Spec.Ports
-			}
+		if a.Spec.IsSysApp {
+			appsMap[a.Name] = a
+			continue
+		}
+		if v, ok := appsMap[a.Name]; ok {
+			v.Spec.Settings = a.Spec.Settings
+			v.Spec.Entrances = a.Spec.Entrances
+			v.Spec.Ports = a.Spec.Ports
 		}
 	}
 	for _, app := range appsMap {
@@ -609,90 +489,6 @@ func (h *Handler) operateRecommendList(req *restful.Request, resp *restful.Respo
 	resp.WriteAsJson(map[string]interface{}{"result": filteredOperates})
 }
 
-func (h *Handler) operateRecommendHistory(req *restful.Request, resp *restful.Response) {
-	app := req.PathParameter(ParamWorkflowName)
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-
-	var am v1alpha1.ApplicationManager
-	name, err := apputils.FmtAppMgrName(app, owner, "")
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	key := types.NamespacedName{Name: name}
-	err = h.ctrlClient.Get(req.Request.Context(), key, &am)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			api.HandleNotFound(resp, req, err)
-			return
-		}
-		api.HandleError(resp, req, err)
-		return
-	}
-
-	ops := make([]appinstaller.OperateHistory, 0, len(am.Status.OpRecords))
-	for _, r := range am.Status.OpRecords {
-		op := appinstaller.OperateHistory{
-			AppName:      am.Spec.AppName,
-			AppNamespace: am.Spec.AppNamespace,
-			AppOwner:     am.Spec.AppOwner,
-			ResourceType: am.Spec.Type.String(),
-
-			OpRecord: v1alpha1.OpRecord{
-				OpType:    r.OpType,
-				Message:   r.Message,
-				Source:    r.Source,
-				Version:   r.Version,
-				Status:    r.Status,
-				StateTime: r.StateTime,
-			},
-		}
-		ops = append(ops, op)
-	}
-	resp.WriteAsJson(map[string]interface{}{"result": ops})
-}
-
-func (h *Handler) allOperateRecommendHistory(req *restful.Request, resp *restful.Response) {
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-
-	ams, err := h.appmgrLister.List(labels.Everything())
-
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	ops := make([]appinstaller.OperateHistory, 0)
-
-	for _, am := range ams {
-		if am.Spec.AppOwner != owner || userspace.IsSysApp(am.Spec.AppName) || am.Spec.Type != v1alpha1.Recommend {
-			continue
-		}
-		for _, r := range am.Status.OpRecords {
-			op := appinstaller.OperateHistory{
-				AppName:      am.Spec.AppName,
-				AppNamespace: am.Spec.AppNamespace,
-				AppOwner:     am.Spec.AppOwner,
-				ResourceType: am.Spec.Type.String(),
-
-				OpRecord: v1alpha1.OpRecord{
-					OpType:    r.OpType,
-					Message:   r.Message,
-					Source:    r.Source,
-					Version:   r.Version,
-					Status:    r.Status,
-					StateTime: r.StateTime,
-				},
-			}
-			ops = append(ops, op)
-		}
-	}
-	sort.Slice(ops, func(i, j int) bool {
-		return ops[j].StateTime.Before(ops[i].StateTime)
-	})
-
-	resp.WriteAsJson(map[string]interface{}{"result": ops})
-}
-
 func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 	//owner := req.Attribute(constants.UserContextAttribute).(string)
 	isSysApp := req.QueryParameter("issysapp")
@@ -757,17 +553,25 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		}
 
 		now := metav1.Now()
+		// Stamp the AppScopeLabel on the synthesized Application for v3
+		// shared AMs so the per-user fan-out below can identify them
+		// without re-checking the AM.
+		appLabels := map[string]string{}
+		if appcfg.IsV3(am) {
+			appLabels[constants.AppApiVersionLabel] = constants.AppVersionV3
+		}
 		app := v1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              am.Name,
+				Labels:            appLabels,
 				CreationTimestamp: am.CreationTimestamp,
 			},
 			Spec: v1alpha1.ApplicationSpec{
 				Name:            am.Spec.AppName,
 				RawAppName:      am.Spec.RawAppName,
-				Appid:           v1alpha1.AppName(am.Spec.AppName).GetAppID(),
-				IsSysApp:        v1alpha1.AppName(am.Spec.AppName).IsSysApp(),
+				Appid:           appcfg.AppName(am.Spec.AppName).GetAppID(),
+				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
@@ -812,15 +616,27 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		}
 	}
 
+	// allUsers is needed only when at least one v3 / shared app is present;
+	// computed lazily so the common (no-shared) path stays free.
+	var allUsers []string
+	var allUsersErr error
+	loadAllUsers := func() ([]string, error) {
+		if allUsers != nil || allUsersErr != nil {
+			return allUsers, allUsersErr
+		}
+		allUsers, allUsersErr = h.getAllUser()
+		return allUsers, allUsersErr
+	}
+
 	for _, app := range appsMap {
-		entrances, err := app.GenEntranceURL(req.Request.Context())
+		entrances, err := appcfg.GenEntranceURL(req.Request.Context(), app)
 		if err != nil {
 			api.HandleError(resp, req, err)
 			return
 		}
 		app.Spec.Entrances = entrances
 
-		sharedEntrances, err := app.GenSharedEntranceURL(req.Request.Context())
+		sharedEntrances, err := appcfg.GenSharedEntranceURL(req.Request.Context(), app)
 		if err != nil {
 			api.HandleError(resp, req, err)
 			return
@@ -829,6 +645,29 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 
 		if v, ok := appsEntranceMap[app.Name]; ok {
 			app.Status.EntranceStatuses = v.Status.EntranceStatuses
+		}
+		// v3 apps are cluster-wide singletons. Fan out one entry per
+		// iam user so consumers grouping by Owner see them under every
+		// account (matching the v1/v2 per-user-AM shape). Every user may
+		// open the app; lifecycle is admin-only.
+		//
+		// For each fanned-out copy, overlay Spec.UserSettings[u] on top
+		// of Spec.Settings / Spec.Entrances so consumers see that user's
+		// effective customDomain / policy / authLevel.
+		if appcfg.IsV3(app) {
+			users, uErr := loadAllUsers()
+			if uErr != nil {
+				api.HandleError(resp, req, uErr)
+				return
+			}
+			for _, u := range users {
+				cp := *app
+				cp.Spec.Owner = u
+				cp.Spec.Settings = app.EffectiveSettings(u)
+				cp.Spec.Entrances = app.EffectiveEntrances(u)
+				filteredApps = append(filteredApps, cp)
+			}
+			continue
 		}
 		filteredApps = append(filteredApps, *app)
 	}
@@ -865,37 +704,6 @@ func (h *Handler) getAllUser() ([]string, error) {
 	return users, nil
 }
 
-func (h *Handler) renderManifest(req *restful.Request, resp *restful.Response) {
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-
-	request := api.ManifestRenderRequest{}
-	err := req.ReadEntity(&request)
-	if err != nil {
-		api.HandleBadRequest(resp, req, err)
-		return
-	}
-	admin, err := kubesphere.GetAdminUsername(req.Request.Context(), h.kubeConfig)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	isAdmin, err := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
-	if err != nil {
-		klog.Error(err)
-		api.HandleError(resp, req, err)
-		return
-	}
-	renderedYAML, err := utils.RenderManifestFromContent([]byte(request.Content), owner, admin, isAdmin)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	resp.WriteEntity(api.ManifestRenderResponse{
-		Response: api.Response{Code: 200},
-		Data:     api.ManifestRenderRespData{Content: renderedYAML},
-	})
-}
-
 func (h *Handler) adminUsername(req *restful.Request, resp *restful.Response) {
 	config, err := ctrl.GetConfig()
 	if err != nil {
@@ -914,14 +722,14 @@ func (h *Handler) adminUsername(req *restful.Request, resp *restful.Response) {
 	})
 }
 
-func (h *Handler) adminUserList(req *restful.Request, resp *restful.Response) {
+func (h *Handler) ownerOrAdminList(req *restful.Request, resp *restful.Response) {
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
 
-	adminList, err := kubesphere.GetAdminUserList(req.Request.Context(), config)
+	adminList, err := kubesphere.GetOwnerOrAdminList(req.Request.Context(), config)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -958,29 +766,26 @@ func (h *Handler) oamValues(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	gpuType := "none"
+	gpuType := utils.CPUType
 	selectedGpuType := req.QueryParameter("gputype")
-	if len(gpuTypes) > 0 {
-		if selectedGpuType != "" {
-			if _, ok := gpuTypes[selectedGpuType]; ok {
-				gpuType = selectedGpuType
-			} else {
-				err := fmt.Errorf("selected gpu type %s not found in cluster", selectedGpuType)
-				klog.Error(err)
-				api.HandleError(resp, req, err)
-				return
-			}
-		} else {
-			if len(gpuTypes) == 1 {
-				gpuType = maps.Keys(gpuTypes)[0]
-			} else {
-				err := fmt.Errorf("multiple gpu types found in cluster, please specify one")
-				klog.Error(err)
-				api.HandleError(resp, req, err)
-				return
-			}
+	if selectedGpuType != "" {
+		if _, ok := gpuTypes[selectedGpuType]; !ok && selectedGpuType != utils.CPUType {
+			err := fmt.Errorf("selected gpu type %s not found in cluster", selectedGpuType)
+			klog.Error(err)
+			api.HandleError(resp, req, err)
+			return
 		}
+		gpuType = selectedGpuType
+	} else if len(gpuTypes) == 1 {
+		// Single-GPU-flavour cluster: auto-pick it so legacy charts that
+		// switch behaviour on .Values.GPU.Type render correctly without the
+		// caller having to plumb ?gputype= through.
+		gpuType = maps.Keys(gpuTypes)[0]
 	}
+	// Multi-flavour cluster with no explicit selection (e.g. the chart-repo
+	// "Rendered Chart Verification" path) falls through to CPU. Charts that
+	// declare spec.resources[] for multiple modes still validate fine because
+	// the matrix is consumed by app-service post-install, not by helm render.
 
 	values["GPU"] = map[string]interface{}{
 		"Type": gpuType,

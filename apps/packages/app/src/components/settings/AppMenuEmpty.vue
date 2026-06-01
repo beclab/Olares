@@ -19,7 +19,8 @@
 					<q-btn
 						v-if="buttonLabel"
 						dense
-						class="q-px-md q-py-sm q-mt-lg text-body3 text-capitalize"
+						no-caps
+						class="q-px-md q-py-sm q-mt-lg text-body3"
 						text-color="white"
 						color="blue-default"
 						:label="buttonLabel"
@@ -58,7 +59,8 @@
 				>
 					<q-btn
 						dense
-						class="full-width q-pa-md text-subtitle2 text-capitalize"
+						no-caps
+						class="full-width q-pa-md text-subtitle2"
 						text-color="white"
 						color="blue-default"
 						:label="buttonLabel"
