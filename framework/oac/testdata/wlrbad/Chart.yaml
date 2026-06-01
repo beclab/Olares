@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wlrbad
+description: fixture whose overlayGateway references a missing workload
+type: application
+version: 1.0.0
+appVersion: "1"

@@ -32,6 +32,8 @@ type Manifest interface {
 	Entrances() []EntranceInfo
 	OptionsImages() []string
 	PermissionAppData() bool
+	PermissionAppCommon() bool
+	PermissionExternalData() bool
 	Raw() any
 }
 

@@ -35,6 +35,14 @@ github.com/beclab/api v0.0.8-0.20260524143612-0ae07f657000 h1:KoS6+k9h+LQfkhex0U
 github.com/beclab/api v0.0.8-0.20260524143612-0ae07f657000/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
 github.com/beclab/api v0.0.8 h1:7d15aTwZh+Bgv6EgoUT0WmPUKE5tANtBT9oAlq4x6/w=
 github.com/beclab/api v0.0.8/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
+github.com/beclab/api v0.0.9 h1:ucdek4nn0l5G9s2XDvYl3xNud+6Uem0T8hymJ2tNMCc=
+github.com/beclab/api v0.0.9/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
+github.com/beclab/api v0.0.10 h1:+r+XRuW3fkQdt2elqpOK6Kt7g/s9RFpSELkV/XajJ7o=
+github.com/beclab/api v0.0.10/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
+github.com/beclab/api v0.0.11-0.20260601073425-c976df15b1be h1:LvJaKwa5IhGvTCDe7x7cI2xMqmWg5m6Ll4eDAreyXmk=
+github.com/beclab/api v0.0.11-0.20260601073425-c976df15b1be/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
+github.com/beclab/api v0.0.11 h1:jNVX+hnZ4UJoF0S2wUEjepEULrhQcAs5Oh97IPbnBtA=
+github.com/beclab/api v0.0.11/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
