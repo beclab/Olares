@@ -114,6 +114,8 @@ github.com/beclab/Olares/framework/oac v0.0.0-20260527130026-7c3643a772ae h1:A3L
 github.com/beclab/Olares/framework/oac v0.0.0-20260527130026-7c3643a772ae/go.mod h1:iaBf3RdcyrL5TMG9aBj8o1Alp0VGXPRt4M2chksZM6A=
 github.com/beclab/Olares/framework/oac v0.0.0-20260528064621-6972be3069ba h1:WJFVLR7jh8TnujuPNqYVDC2FrPufL7QZRU8gnTDw9Xg=
 github.com/beclab/Olares/framework/oac v0.0.0-20260528064621-6972be3069ba/go.mod h1:secYnd6xRFZgzCSoL90kjEGr9eoL2HjLqwnh8g5gSTs=
+github.com/beclab/Olares/framework/oac v0.0.0-20260601121600-b2b5bb20726e h1:J4P4b519QAF+halWQJoSfJIWcezhG/g74PW5DbFYgI8=
+github.com/beclab/Olares/framework/oac v0.0.0-20260601121600-b2b5bb20726e/go.mod h1:DiZ0SUoJ5iG5aimSjdboB/tEBol14gIyLYOzoxTBkQg=
 github.com/beclab/api v0.0.8 h1:7d15aTwZh+Bgv6EgoUT0WmPUKE5tANtBT9oAlq4x6/w=
 github.com/beclab/api v0.0.8/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
 github.com/beclab/api v0.0.10 h1:+r+XRuW3fkQdt2elqpOK6Kt7g/s9RFpSELkV/XajJ7o=

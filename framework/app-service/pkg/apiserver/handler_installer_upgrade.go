@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
+	"github.com/beclab/Olares/framework/oac"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
@@ -29,6 +30,7 @@ type upgradeHelperIntf interface {
 	getAdminUsers() (admin []string, isAdmin bool, err error)
 	getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (appConfig *appcfg.ApplicationConfig, err error)
 	validate() error
+	lintChart() error
 	applyAppEnv(ctx context.Context) error
 	setAndEncodingAppCofnig(prevCfg *appcfg.ApplicationConfig) (string, error)
 }
@@ -46,6 +48,7 @@ type upgradeHandlerHelper struct {
 	request    *api.UpgradeRequest
 	token      string
 	appConfig  *appcfg.ApplicationConfig
+	chartPath  string
 }
 
 type upgradeHandlerHelperV2 struct {
@@ -96,7 +99,7 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 		admin = h.owner
 	}
 
-	appConfig, _, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	appConfig, chartPath, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		RawAppName:   h.rawAppName,
 		Owner:        h.owner,
@@ -114,6 +117,7 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 	}
 
 	h.appConfig = appConfig
+	h.chartPath = chartPath
 	return appConfig, nil
 }
 
@@ -133,6 +137,29 @@ func (h *upgradeHandlerHelper) validate() error {
 		return err
 	}
 
+	return nil
+}
+
+// lintChart runs oac.Lint against the freshly-downloaded target chart so
+// chart-level authoring issues (folder layout, manifest cross-fields, helm
+// render + workload integrity, hostPath rolling-update, resource namespace,
+// container resource limits, Chart.yaml <-> manifest version match) are
+// caught before the upgrade is kicked off on the ApplicationManager.
+//
+// Owner / admin reflect the actual scenario this upgrade will run under, so
+// helm-render-dependent checks exercise the same template branches the real
+// upgrade will take.
+func (h *upgradeHandlerHelper) lintChart() error {
+	if h.chartPath == "" {
+		return nil
+	}
+	// ignore v2
+	err := oac.Lint(h.chartPath)
+	if err != nil {
+		klog.Errorf("Failed to lint chart at %s err=%v", h.chartPath, err)
+		api.HandleBadRequest(h.resp, h.req, err)
+		return err
+	}
 	return nil
 }
 
@@ -185,7 +212,7 @@ func (h *upgradeHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 
 func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (*appcfg.ApplicationConfig, error) {
 	klog.Info("Getting app config for V3")
-	appConfig, _, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	appConfig, chartPath, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		Owner:        h.owner,
 		RepoURL:      h.request.RepoURL,
@@ -202,6 +229,7 @@ func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		return nil, err
 	}
 	h.appConfig = appConfig
+	h.chartPath = chartPath
 	return appConfig, nil
 }
 
@@ -221,7 +249,7 @@ func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		admin = adminUsers[0]
 	}
 
-	appConfig, _, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	appConfig, chartPath, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		Owner:        h.owner,
 		RepoURL:      h.request.RepoURL,
@@ -239,6 +267,7 @@ func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 	}
 
 	h.appConfig = appConfig
+	h.chartPath = chartPath
 
 	return appConfig, nil
 }
@@ -400,6 +429,12 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	err = helper.validate()
 	if err != nil {
 		klog.Errorf("Failed to validate app config err=%v", err)
+		return
+	}
+
+	err = helper.lintChart()
+	if err != nil {
+		klog.Errorf("Failed to lint chart err=%v", err)
 		return
 	}
 
