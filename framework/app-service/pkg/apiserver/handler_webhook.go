@@ -9,6 +9,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
@@ -132,6 +133,26 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
 			klog.Infof("Patched shared-entrance label for v3 pod uuid=%s namespace=%s injectSharedPod=%v",
 				proxyUUID, req.Namespace, *injectSharedPod)
+
+			if *injectSharedPod {
+				snapshot, err := cluster.GetSnapshot(ctx)
+				if err != nil {
+					klog.Errorf("Failed to get cluster snapshot for v3 pod uuid=%s namespace=%s err=%v",
+						proxyUUID, req.Namespace, err)
+					return h.sidecarWebhook.AdmissionError(req.UID, err)
+				}
+				if snapshot.InClusterGatewayEnabled {
+					d2Patch, err := h.sidecarWebhook.CreateD2OffloaderPatch(ctx, &pod, req, appCfg, proxyUUID)
+					if err != nil {
+						klog.Errorf("Failed to create d2 offloader patch for v3 pod uuid=%s namespace=%s err=%v",
+							proxyUUID, req.Namespace, err)
+						return h.sidecarWebhook.AdmissionError(req.UID, err)
+					}
+					h.sidecarWebhook.PatchAdmissionResponse(resp, d2Patch)
+					klog.Infof("Injected d2 offloader for v3 shared-entrance pod uuid=%s namespace=%s",
+						proxyUUID, req.Namespace)
+				}
+			}
 		} else {
 			klog.Infof("Skipping sidecar injection for v3 pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		}

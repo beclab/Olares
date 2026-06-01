@@ -11,10 +11,13 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
@@ -236,6 +239,175 @@ func (wh *Webhook) CreatePatch(
 		return nil, err
 	}
 	return makePatches(req, pod)
+}
+
+// CreateD2OffloaderPatch mutates pod with d2 offloader and returns JSON patch bytes.
+func (wh *Webhook) CreateD2OffloaderPatch(
+	ctx context.Context,
+	pod *corev1.Pod,
+	req *admissionv1.AdmissionRequest,
+	appCfg *appcfg.ApplicationConfig,
+	proxyUUID uuid.UUID,
+) ([]byte, error) {
+	_ = appCfg
+
+	if hasD2Container(pod) {
+		return makePatches(req, pod)
+	}
+
+	viewer, err := deriveViewerFromPodNS(pod.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	allowset, err := wh.resolveViewerAllowset(ctx, pod)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshot, err := cluster.GetSnapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	configMapName, volumeName, err := wh.ensureD2NginxConfConfigMap(
+		ctx, pod, proxyUUID.String(), viewer, allowset, snapshot.PlatformDomain,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := wh.ensureD2SharedHostsPlaceholder(ctx, pod.Namespace); err != nil {
+		return nil, err
+	}
+
+	containerSpec := sidecar.GetTLSOffloaderContainerSpec(volumeName)
+	initSpec := sidecar.GetTLSOffloaderInitContainerSpec()
+	vols := sidecar.GetTLSOffloaderVolumes(viewer, configMapName, volumeName)
+	pod.Spec.Containers = append(pod.Spec.Containers, containerSpec)
+	pod.Spec.InitContainers = append(pod.Spec.InitContainers, initSpec)
+	pod.Spec.Volumes = append(pod.Spec.Volumes, vols...)
+
+	return makePatches(req, pod)
+}
+
+func (wh *Webhook) ensureD2NginxConfConfigMap(
+	ctx context.Context,
+	pod *corev1.Pod,
+	proxyUUID, viewer string,
+	allowset []string,
+	platformDomain string,
+) (string, string, error) {
+	configMapName := fmt.Sprintf("%s%s", constants.D2ConfVolumeNamePrefix, proxyUUID)
+	volumeName := configMapName
+
+	nginxConf := sidecar.RenderNginxConf(
+		viewer,
+		allowset,
+		platformDomain,
+		pod.Namespace,
+		routecontrol.DefaultInClusterStrongIdentityServicePort,
+	)
+	sharedDecideJS := sidecar.RenderSharedDecideJS(platformDomain, constants.D2SidecarHostsFilePath)
+
+	newConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configMapName,
+			Namespace: pod.Namespace,
+		},
+		Data: map[string]string{
+			constants.D2ConfNginxFileName:          nginxConf,
+			constants.D2ConfSharedDecideJSFileName: sharedDecideJS,
+		},
+	}
+
+	existing, err := wh.kubeClient.CoreV1().ConfigMaps(pod.Namespace).Get(ctx, configMapName, metav1.GetOptions{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return "", "", err
+		}
+		if _, err := wh.kubeClient.CoreV1().ConfigMaps(pod.Namespace).Create(ctx, newConfigMap, metav1.CreateOptions{}); err != nil {
+			return "", "", err
+		}
+		return configMapName, volumeName, nil
+	}
+
+	existing.Data = newConfigMap.Data
+	if _, err := wh.kubeClient.CoreV1().ConfigMaps(pod.Namespace).Update(ctx, existing, metav1.UpdateOptions{}); err != nil {
+		return "", "", err
+	}
+	return configMapName, volumeName, nil
+}
+
+func (wh *Webhook) ensureD2SharedHostsPlaceholder(ctx context.Context, namespace string) error {
+	placeholder := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.D2SharedHostsVolumeName,
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			constants.D2SharedHostsFileName: "",
+		},
+	}
+
+	if _, err := wh.kubeClient.CoreV1().ConfigMaps(namespace).Create(ctx, placeholder, metav1.CreateOptions{}); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (wh *Webhook) resolveViewerAllowset(ctx context.Context, pod *corev1.Pod) ([]string, error) {
+	secretList, err := wh.kubeClient.CoreV1().Secrets(pod.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	allowsetMap := make(map[string]struct{})
+	for _, secret := range secretList.Items {
+		if !strings.HasPrefix(secret.Name, constants.D2SharedTLSSecretNamePrefix) {
+			continue
+		}
+		viewer := strings.TrimSpace(strings.TrimPrefix(secret.Name, constants.D2SharedTLSSecretNamePrefix))
+		if viewer == "" {
+			continue
+		}
+		allowsetMap[strings.ToLower(viewer)] = struct{}{}
+	}
+
+	if len(allowsetMap) == 0 {
+		return nil, fmt.Errorf("no viewer tls secret found in namespace=%s with prefix=%s", pod.Namespace, constants.D2SharedTLSSecretNamePrefix)
+	}
+
+	allowset := make([]string, 0, len(allowsetMap))
+	for viewer := range allowsetMap {
+		allowset = append(allowset, viewer)
+	}
+	sort.Strings(allowset)
+	return allowset, nil
+}
+
+func deriveViewerFromPodNS(namespace string) (string, error) {
+	ns := strings.TrimSpace(namespace)
+	nsPrefix := constants.OwnerNamespacePrefix + "-"
+	if !strings.HasPrefix(ns, nsPrefix) {
+		return "", fmt.Errorf("namespace %q is not under %q", namespace, constants.OwnerNamespacePrefix)
+	}
+	viewer := strings.TrimSpace(strings.TrimPrefix(ns, nsPrefix))
+	if viewer == "" {
+		return "", fmt.Errorf("namespace %q has empty viewer segment", namespace)
+	}
+	return strings.ToLower(viewer), nil
+}
+
+func hasD2Container(pod *corev1.Pod) bool {
+	for _, container := range pod.Spec.Containers {
+		if container.Name == constants.D2SidecarContainerName {
+			return true
+		}
+	}
+	return false
 }
 
 func (wh *Webhook) getProbeUA(ctx context.Context, pod *corev1.Pod) (string, error) {

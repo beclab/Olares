@@ -55,7 +55,7 @@ const (
 
 	UserChartsPath = "./userapps"
 
-	EnvoyUID                        int64 = 1555
+	EnvoyUID int64 = 1555
 	// LinkerdProxyUID is the fixed uid Linkerd injects its `linkerd-proxy`
 	// sidecar with (see Linkerd Helm chart `proxyUID`). When a pod is
 	// simultaneously injected by Linkerd AND olares-envoy-sidecar, the envoy
@@ -82,6 +82,34 @@ const (
 
 	UploadContainerName  = "olares-upload-sidecar"
 	UploadContainerImage = "UPLOAD_CONTAINER_IMAGE"
+
+	D2SidecarUID               int64 = 1556
+	D2SidecarContainerName           = "olares-d2-sidecar"
+	D2SidecarInitContainerName       = "olares-d2-init"
+	D2SidecarImageDigest             = "sha256:d2-placeholder"
+
+	D2StreamListenPort     int32 = 15443
+	D2StreamListenPortName       = "d2-s"
+	D2HTTPLoopbackPort     int32 = 15080
+
+	D2CertsVolumeName            = "olares-d2-certs"
+	D2ConfVolumeNamePrefix       = "olares-d2-conf-"
+	D2ConfNginxFileName          = "nginx.conf"
+	D2ConfSharedDecideJSFileName = "shared_decide.js"
+	D2SharedHostsVolumeName      = "olares-d2-shared-hosts"
+	D2SharedHostsFileName        = "shared-hosts.txt"
+	D2SidecarHostsFilePath       = "/etc/d2/shared-hosts.txt"
+	D2SharedTLSSecretNamePrefix  = "shared-entrance-tls-"
+	D2NginxConfigMountPath       = "/etc/nginx/nginx.conf"
+	D2NginxNJSMountPath          = "/etc/nginx/njs/shared_decide.js"
+	D2NginxNJSDir                = "/etc/nginx/njs/"
+	D2NginxCertsDir              = "/etc/nginx/certs"
+	D2SharedHostsDir             = "/etc/d2"
+	D2IptablesChainName          = "D2_OUTBOUND"
+	D2WorkerShutdownTimeout      = "30s"
+	D2CertCacheMax               = 16
+	D2CertCacheInactive          = "10m"
+	D2CertCacheValid             = "1m"
 
 	SidecarConfigMapVolumeName = "olares-sidecar-config"
 	SidecarInitContainerName   = "olares-sidecar-init"
