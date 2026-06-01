@@ -2,14 +2,14 @@ olaresManifest.version: "0.12.0"
 olaresManifest.type: app
 apiVersion: v1
 metadata:
-  name: rcv1big
+  name: wlreplicas
   icon: https://example.com/icon.png
   description: fixture
   title: Fixture
   version: 1.0.0
 entrances:
   - name: main
-    host: myfixture
+    host: wlreplicas
     port: 8080
     title: Main
     icon: https://example.com/e.png
@@ -17,23 +17,26 @@ entrances:
     openMethod: default
 spec:
   versionName: v1
-  fullDescription: x
-  upgradeDescription: x
-  promoteImage: []
-  promoteVideo: ""
-  subCategory: s
-  developer: dev
+  requiredCpu: 100m
+  limitedCpu: 200m
+  requiredMemory: 128Mi
+  limitedMemory: 256Mi
+  requiredDisk: 1Gi
   supportArch: [amd64, arm64]
-  accelerator:
-    - mode: cpu
-      requiredCpu: 100m
-      limitedCpu: 200m
-      requiredMemory: 128Mi
-      limitedMemory: 256Mi
-      requiredDisk: 1Gi
-      limitedDisk: 2Gi
 permission:
   appData: false
+  appCommon: true
+  externalData: true
+workloadReplicas:
+  wlreplicas: 1
+overlayGateway:
+  enable: true
+  entrances:
+    - port: 8096
+      title: WL Overlay
+      workload: wlreplicas
+      description: "Access in LAN"
+      protocol: tcp
 options:
   policies: []
   resetCookie: { enabled: false }
