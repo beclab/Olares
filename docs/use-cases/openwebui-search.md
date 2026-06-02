@@ -6,13 +6,15 @@ head:
     - name: keywords
       content: Olares, Open WebUI, web search, SearXNG, embedding, RAG
 app_version: "1.0.20"
-doc_version: "1.0"
-doc_updated: "2026-05-14"
+doc_version: "1.1"
+doc_updated: "2026-06-02"
 ---
 
 # Enable web search
 
-Add web search capabilities to Open WebUI to allow your local AI models to retrieve up-to-date information from the internet. This integration requires an active embedding model to process the documents and the SearXNG search engine to fetch the web results.
+Add web search capabilities to Open WebUI to allow your local AI models to retrieve up-to-date information from the internet. This integration requires an active embedding model to process documents and SearXNG to fetch web results.
+
+If you want Open WebUI to read full web page content instead of using search result summaries only, configure a web loader such as Firecrawl.
 
 ## Learning objectives
 
@@ -75,13 +77,13 @@ Apply the details you retrieved to the Open WebUI configuration panel.
 
    - **Web Search**: Enable this setting.
    - **Web Search Engine**: Select **SearXNG**.
-   - **Searxng Query URL**: Enter your SearXNG endpoint URL and append `/search?q=<query>` to the end. 
-   
+   - **Searxng Query URL**: Enter your SearXNG endpoint URL and append `/search?q=<query>` to the end.
+
       For example, `http://d1236e020.shared.olares.com/search?q=<query>`.
-   - **Bypass Web Loader**: Enable this setting to use search engine summaries and avoid search failures caused by website anti-scraping protections.
+   - **Bypass Web Loader**: Enable this setting if you only need search result summaries. Leave it disabled if you want Open WebUI to fetch full page content through a web loader.
 
       :::tip Full-text retrieval
-      If you need the AI to read the full contents of web pages instead of search summaries, leave **Bypass Web Loader** disabled and configure a dedicated online extraction service such as Tavily in the **Loader** section on the same page.
+      For full-page retrieval, install Firecrawl and configure it as the web loader. See [Use Firecrawl as a web page loader](firecrawl.md#configure-open-webui).
       :::
 
    ![SearXNG configurations in Open WebUI](/images/manual/use-cases/openwebui-searxng-config.png#bordered)
@@ -104,6 +106,6 @@ Test the feature to ensure the AI successfully retrieves up-to-date information 
    ```plain
    What’s the latest news about Olares One
    ```
-5. Submit the prompt. The AI generates a response that includes the retrieved search results and their source links. 
+5. Submit the prompt. The AI generates a response that includes the retrieved search results and their source links.
 
    ![Web search results in Open WebUI](/images/manual/use-cases/openwebui-web-search-results.png#bordered)
