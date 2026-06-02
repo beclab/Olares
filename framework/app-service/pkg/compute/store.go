@@ -104,7 +104,16 @@ func FindAllocationsForApp(ctx context.Context, c client.Client, appName, owner 
 
 func mutateAllocations(ctx context.Context, c client.Client, mutation allocationMutation) (*Allocation, error) {
 	var selected *Allocation
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	// Retry on AlreadyExists in addition to Conflict: the first allocation on a
+	// fresh cluster creates the config map, and two concurrent first-time
+	// allocations both observe NotFound and both Create. The loser gets
+	// AlreadyExists; retrying re-reads the now-existing config map and falls
+	// through to the optimistic-locked Update path, so its allocation is merged
+	// instead of being silently dropped.
+	retriable := func(err error) bool {
+		return apierrors.IsConflict(err) || apierrors.IsAlreadyExists(err)
+	}
+	err := retry.OnError(retry.DefaultRetry, retriable, func() error {
 		nodes, err := loadNodeResources(ctx, c)
 		if err != nil {
 			return err
