@@ -1,6 +1,7 @@
 package sidecar
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -92,6 +93,7 @@ func TestGetTLSOffloaderVolumes_Contract(t *testing.T) {
 
 func TestRenderNginxConf_Contract(t *testing.T) {
 	got := RenderNginxConf("alice", []string{"bob"}, "example.com", "user-space-alice", 8081)
+	require.Contains(t, got, "load_module /etc/nginx/modules/ngx_stream_js_module.so;")
 	require.Contains(t, got, "worker_processes 1;")
 	require.Contains(t, got, "worker_shutdown_timeout 30s;")
 	require.Contains(t, got, "js_path /etc/nginx/njs/;")
@@ -109,6 +111,10 @@ func TestRenderNginxConf_Contract(t *testing.T) {
 	require.Contains(t, got, "proxy_set_header X-Original-URI $request_uri;")
 	require.NotContains(t, got, ":8080;")
 	require.NotContains(t, got, ":80;")
+	require.Less(t,
+		strings.Index(got, "load_module /etc/nginx/modules/ngx_stream_js_module.so;"),
+		strings.Index(got, "js_import shared_decide.js;"),
+	)
 }
 
 func TestRenderSharedDecideJS_Contract(t *testing.T) {

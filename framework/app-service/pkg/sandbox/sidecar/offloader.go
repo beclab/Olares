@@ -156,7 +156,8 @@ func RenderNginxConf(viewer string, allowset []string, platformDomain, gatewayNa
 	viewerHostPattern := buildViewerHostPattern(normalizedViewerSet, platformDomain)
 	v2HostPattern := buildV2SharedHostPattern(platformDomain)
 
-	return fmt.Sprintf(`worker_processes 1;
+	return fmt.Sprintf(`load_module /etc/nginx/modules/ngx_stream_js_module.so;
+worker_processes 1;
 worker_shutdown_timeout %s;
 
 events {
