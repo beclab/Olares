@@ -9,7 +9,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
-	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -19,7 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -95,12 +93,12 @@ func (p *ResumingApp) scaleOrPatchResume(ctx context.Context, resumeServer bool)
 
 	token := p.manager.Annotations[api.AppTokenKey]
 
-	kubeConfig, err := ctrl.GetConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
 	}
-	ops, err := versioned.NewHelmOps(ctx, kubeConfig, &appCfg, token,
+	ops, err := newHelmOps(ctx, kubeConfig, &appCfg, token,
 		appinstaller.Opt{
 			Source:       p.manager.Spec.Source,
 			MarketSource: appcfg.GetMarketSource(p.manager),

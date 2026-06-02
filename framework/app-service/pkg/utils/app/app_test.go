@@ -15,12 +15,12 @@ func TestGetFirstSubDir(t *testing.T) {
 		{
 			fullPath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify/volumes/nginx/claim8",
 			basePath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo",
-			expected: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify",
+			expected: "dify",
 		},
 		{
 			fullPath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify/volumes/nginx/claim8",
 			basePath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/",
-			expected: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify",
+			expected: "dify",
 		},
 		{
 			fullPath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/",
@@ -60,17 +60,17 @@ func TestGetFirstSubDir(t *testing.T) {
 		{
 			fullPath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify",
 			basePath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo",
-			expected: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify",
+			expected: "dify",
 		},
 		{
 			fullPath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify",
 			basePath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo",
-			expected: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify",
+			expected: "dify",
 		},
 		{
 			fullPath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify/volumes/nginx/c6",
 			basePath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo",
-			expected: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify",
+			expected: "dify",
 		},
 		{
 			fullPath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify/volumes/nginx/c6",
@@ -80,12 +80,12 @@ func TestGetFirstSubDir(t *testing.T) {
 		{
 			fullPath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify/volumes/nginx/c6",
 			basePath: "/",
-			expected: "",
+			expected: "olares",
 		},
 		{
 			fullPath: "/olares/userdata/Cache/pvc-appcache-olares-yeaoioao6ib76mgo/dify/volumes/nginx/c6",
 			basePath: "/olares",
-			expected: "",
+			expected: "userdata",
 		},
 	}
 	for _, tt := range tests {
