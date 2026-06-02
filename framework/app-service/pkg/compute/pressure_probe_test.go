@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"math"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
@@ -29,5 +30,26 @@ func TestProbe_WouldPressure_DegenerateNodeTreatedAsHeadroom(t *testing.T) {
 
 	if !snap.WouldPressure(node, AddedResources{CPU: 1_000_000, Memory: 1 << 40, Disk: 1 << 40}) {
 		t.Errorf("a zero-capacity node was treated as having headroom for a huge request; nodePressureValidator would schedule onto it")
+	}
+}
+
+// TestProbe_WouldPressure_NonFiniteUtilizationTreatedAsFull is a regression for
+// fixed bug S4-2. A non-finite CPU utilisation (NaN from a 0/0 monitoring
+// ratio, or Inf) used to flow into int64(float64(cap)*util), whose result is
+// implementation-defined in Go, making the pressure decision undefined. The
+// utilisation is now sanitised to "fully used", so such a node is never
+// reported as free headroom for a CPU request.
+func TestProbe_WouldPressure_NonFiniteUtilizationTreatedAsFull(t *testing.T) {
+	for _, util := range []float64{math.NaN(), math.Inf(1)} {
+		snap := PressureSnapshot{
+			Threshold: 0.9,
+			UsageByNode: map[string]prometheus.NodeResourceUsage{
+				"bad": {CPUCapacity: 1000, CPUUtilization: util},
+			},
+		}
+		node := Node{NodeName: "bad"}
+		if !snap.WouldPressure(node, AddedResources{CPU: 100}) {
+			t.Errorf("util=%v: node with non-finite utilisation reported as having headroom", util)
+		}
 	}
 }
