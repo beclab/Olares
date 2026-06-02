@@ -76,9 +76,21 @@ func AccessTokenValidate(token string) (valid bool, tokenData *ValidToken, err e
 		return false, nil, err
 	}
 
+	// get user groups from cluster
+	client, err := GetDynamicClient()
+	if err != nil {
+		klog.Errorf("failed to get dynamic client: %v", err)
+		return false, nil, err
+	}
+	role, err := GetUserRole(context.Background(), claims.Username, client)
+	if err != nil {
+		klog.Errorf("failed to get user role: %v", err)
+		return false, nil, err
+	}
+
 	return true, &ValidToken{
 		Username: claims.Username,
-		Groups:   claims.Groups,
+		Groups:   []string{role},
 	}, nil
 }
 

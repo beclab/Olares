@@ -54,9 +54,11 @@ func (h *Handlers) RequireLocal(next func(ctx *fiber.Ctx) error) func(ctx *fiber
 func (h *Handlers) RequireOwner(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
 	return func(ctx *fiber.Ctx) error {
 		userData, ok := ctx.Context().UserValue(client.USER_CONTEXT).(*utils.ValidToken)
-		if ok && userData == nil {
+		if ok && userData != nil {
 			if userData.IsOwner() {
 				return next(ctx)
+			} else {
+				return h.ErrJSON(ctx, http.StatusForbidden, "not the owner of this Olares")
 			}
 		}
 
