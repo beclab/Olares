@@ -7,14 +7,34 @@ outline: [2, 3]
 Every **Olares Application Chart** should include an `OlaresManifest.yaml` file in the root directory. `OlaresManifest.yaml` provides all the essential information about an Olares App. Both the **Olares Market protocol** and the Olares depend on this information to distribute and install applications.
 
 :::info NOTE
-Latest Olares Manifest version: `0.11.0`
-- Removed deprecated fields of sysData
-- Updated the example of shared app
-- Added the apiVersion
-- Added the sharedEntrance section
+Latest Olares Manifest version: `0.12.0`
+- Added `apiVersion` field (`v1` for regular apps, `v3` for shared apps)
+- Added `spec.accelerator` field for GPU resource declaration
+- Added `workloadReplicas` field to declare all workload replica counts
+- Added `overlayGateway` field for L2 overlay LAN discovery support
+- Added `LLMGatewaySupported` in options for LLM Gateway support
+- Added `appCommon` and `externalData` permissions
+- Marked `spec.subCharts` and `options.appScope` as deprecated for `apiVersion: 'v3'`
+- `apiVersion: 'v2'` for CSV2 apps is deprecated and will be removed after 1.12.6
 
 :::
 :::details Changelog
+`0.12.0`
+- Added `apiVersion` field: `v1` for regular apps, `v3` for shared apps (`v3` apps installed in xxx-shared namespace)
+- Added `spec.accelerator` field for GPU resource declaration (modes: `nvidia`, `nvidia-gb10`, `apple-m`, `strix-halo`, `mthreads-m1000`, `cpu`)
+- Added `workloadReplicas` field to declare all workload replica counts
+- Added `overlayGateway` field for L2 overlay LAN discovery support
+- Added `LLMGatewaySupported` in options
+- Added `appCommon` and `externalData` permissions
+- Marked `spec.subCharts` and `options.appScope` as deprecated for `apiVersion: 'v3'`
+- `apiVersion: 'v2'` for CSV2 apps is deprecated, will be removed after 1.12.6
+
+`0.11.0`
+- Removed deprecated `sysData` field
+- Updated shared app example
+- Added `apiVersion` field
+- Added `sharedEntrance` section
+
 `0.10.0`
 - Modified the `categories` field
 - Added the `provider` field in the Permission section
@@ -140,10 +160,14 @@ olaresManifest.version: "3.0.122"
 ## apiVersion
 - Type: `string`
 - Optional
-- Accepted Value: `v1`,`v2`
+- Accepted Value: `v1`, `v3`
 - Default: `v1`
 
-For shared applications, use version `v2`, which supports multiple subcharts in a single OAC. For other applications, use `v1`.
+For shared applications, use version `v3`, which will be installed in the `xxx-shared` namespace. For other applications, use `v1`.
+
+:::info NOTE
+`apiVersion: 'v2'` is for CSV2 apps and is deprecated. It will be removed after Olares OS 1.12.6. Migrate to `v3` for shared applications.
+:::
 
 ## Metadata
 
@@ -438,6 +462,22 @@ Whether the app requires read and write permission to the `Cache` folder. If `.V
 
 Whether the app requires read and write permission to the `Data` folder. If `.Values.userspace.appData` is used in the deployment YAML, then `appData` must be set to `true`.
 
+### appCommon
+
+- Type: `boolean`
+- Optional
+
+Whether the app requires read and write permission to the `App Common` folder (cross-node, cross-app shared models). Use `{{ .Values.userspace.appCommon }}` in the deployment YAML to get the App Common directory path.
+
+
+### externalData
+
+- Type: `boolean`
+- Optional
+
+Whether the app requires read and write permission to the `External` folder (mounted NAS or other external disk data). This does not affect the access permissions of already-deployed apps on version 0.11.0.
+
+
 ### userData
 
 - Type: `list<string>`
@@ -603,6 +643,47 @@ When set to `true`, only the admin can install this app.
 - Optional
 
 When set to `true`, Olares forces the application to run under user ID `1000` (as a non-root user).
+
+### accelerator
+- Type: `map`
+- Optional
+
+Declares GPU resources required by the application. For apps that need GPU, use `spec.accelerator` to declare resources instead of `spec.requiredMemory` or similar fields.
+
+:::info Example
+```yaml
+spec:
+  accelerator:
+    mode: nvidia  # Supported modes: nvidia, nvidia-gb10, apple-m, strix-halo, mthreads-m1000, cpu
+    limitedCpu: 7000m
+    requiredCpu: 150m
+    requiredDisk: 50Mi
+    limitedDisk: 500Gi
+    limitedMemory: 40Gi
+    requiredMemory: 5Gi
+    requiredGPUMemory: 1Gi
+    limitedGPUMemory: 24Gi
+```
+:::
+
+### workloadReplicas
+- Type: `map`
+- Optional
+
+Declares the replica count for each workload in the chart. Starting from 0.12.0, apps must add this variable in `OlaresManifest.yaml` to declare replica counts for all workloads.
+
+:::info Example
+```yaml
+workloadReplicas:
+  affine: 1
+```
+:::
+The corresponding `values.yaml` must also include this value for backward compatibility:
+```yaml
+workloads:
+  affine:
+    replicaCount: 1
+```
 
 ## Middleware
 - Type: `map`
@@ -963,6 +1044,31 @@ allowedOutboundPorts:
 - Optional
 
 This application supports deploying multiple independent instances within the same Olares cluster. This setting does not apply to paid applications or clients of shared applications.
+
+### LLMGatewaySupported
+- Type: `boolean`
+- Default: `false`
+- Optional
+
+When set to `true`, the application supports LLM Gateway calls.
+
+### overlayGateway
+- Type: `map`
+- Optional
+
+Declares the app's support for L2 overlay LAN discovery. When enabled, other apps can access this app via IP address in the LAN.
+:::info Example
+```yaml
+overlayGateway:
+  enable: true  # Enable L2 overlay LAN discovery, default false
+  entrances:
+  - port: 8096  # Overlay listening port
+    title: Jellyfin  # Overlay entrance name
+    workload: jellyfin  # Workload name for OAC validation
+    description: "Access Jellyfin using IP address in LAN"
+    protocol: tcp  # Supported protocols: tcp/udp; defaults to both tcp and udp if omitted
+```
+:::
 
 ## Envs
 
