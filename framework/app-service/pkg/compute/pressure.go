@@ -24,7 +24,19 @@ func (p PressureSnapshot) WouldPressure(node Node, added AddedResources) bool {
 	if threshold == 0 {
 		threshold = defaultPressureThreshold
 	}
-	usage := p.UsageByNode[node.NodeName]
+	usage, known := p.UsageByNode[node.NodeName]
+	// A node we have metrics for but that reports non-positive capacity on a
+	// dimension the app actually needs (e.g. a NotReady node or a stale/zeroed
+	// metric) cannot host the app. Without this, exceedsPressure's `total <= 0`
+	// short-circuit would report "no pressure" and nodePressureValidator would
+	// treat the node as infinite headroom and schedule onto it.
+	if known {
+		if (added.CPU > 0 && usage.CPUCapacity <= 0) ||
+			(added.Memory > 0 && usage.MemoryCapacity <= 0) ||
+			(added.Disk > 0 && usage.DiskCapacity <= 0) {
+			return true
+		}
+	}
 	usedCPU := int64(float64(usage.CPUCapacity) * usage.CPUUtilization)
 	usedMemory := usage.MemoryCapacity - usage.MemoryAvailable
 	if usedMemory < 0 {
