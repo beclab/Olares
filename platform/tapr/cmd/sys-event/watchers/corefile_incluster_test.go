@@ -2,6 +2,7 @@ package watchers
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
+	clienttesting "k8s.io/client-go/testing"
 )
 
 func TestBuildSharedInclusterTemplates_empty(t *testing.T) {
@@ -342,6 +344,47 @@ func TestRegenerateCorefileInclusterGatewayToggle(t *testing.T) {
 		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
 		assertNotContainsSharedExactTemplate(t, corefileBody)
 		assertContainsUserWildcard(t, corefileBody)
+	})
+}
+
+func TestRegenerateCorefileSRRListDegrade(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("TC-A5-1 SRR list error degrades to skip shared templates", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
+		dynamicClient.PrependReactor("list", "sharedrouteregistries",
+			func(clienttesting.Action) (bool, runtime.Object, error) {
+				return true, nil, errors.New("forbidden: SRR list denied")
+			})
+
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("expected degrade to nil, got error: %v", err)
+		}
+
+		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		assertContainsUserWildcard(t, corefileBody)
+		assertNotContainsSharedExactTemplate(t, corefileBody)
+	})
+
+	t.Run("TC-A5-2 SRR list ok keeps exact shared template", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile failed: %v", err)
+		}
+		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		assertContainsSharedExactTemplate(t, corefileBody)
+	})
+
+	t.Run("TC-A5-3 core input list error still fails closed", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
+		dynamicClient.PrependReactor("list", "users",
+			func(clienttesting.Action) (bool, runtime.Object, error) {
+				return true, nil, errors.New("forbidden: users list denied")
+			})
+
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err == nil {
+			t.Fatal("expected error for core input (users) list failure, got nil")
+		}
 	})
 }
 
