@@ -985,6 +985,14 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		permission = append(permission, appcfg.UserDataRW)
 	}
 
+	if cfg.Permission.AppCommon {
+		permission = append(permission, appcfg.AppCommonRW)
+	}
+
+	if cfg.Permission.ExternalData {
+		permission = append(permission, appcfg.ExternalDataRW)
+	}
+
 	if len(cfg.Permission.Provider) > 0 {
 		var perm []appcfg.ProviderPermission
 		for _, s := range cfg.Permission.Provider {
