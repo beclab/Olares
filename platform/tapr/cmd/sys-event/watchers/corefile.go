@@ -327,10 +327,13 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 	if inClusterGatewayEnabled(ctx, dynamicClient) {
 		srrEntrances, err := sharedInclusterEntrancesFromCluster(ctx, kubeClient, dynamicClient, userList)
 		if err != nil {
-			klog.Error("list shared incluster entrances from SRR error, ", err)
-			return err
-		}
-		if gatewayDataIP != "" {
+			// degrade: skip shared templates, keep regenerating the rest.
+			// A transient SRR list failure (e.g. RBAC lag, informer thrash)
+			// must not freeze the whole Corefile. Leave the shared template
+			// plugins nil so user wildcard and other zones still update this
+			// round; the shared enhancement converges on the next reconcile.
+			klog.Errorf("degrade: skip shared incluster templates, list SRR error: %v", err)
+		} else if gatewayDataIP != "" {
 			sharedInclusterTemplatePlugins = buildSharedInclusterTemplates(srrEntrances, gatewayDataIP)
 		}
 	} else {
