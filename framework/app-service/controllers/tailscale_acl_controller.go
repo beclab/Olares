@@ -48,16 +48,23 @@ var defaultACLs = []v1alpha1.ACL{
 	{
 		Action: "accept",
 		Src:    []string{"*"},
-		Proto:  "",
+		Proto:  "udp",
 		Dst:    []string{"*:53"},
 	},
 	{
 		Action: "accept",
 		Src:    []string{"*"},
-		Proto:  "",
+		Proto:  "tcp",
 		Dst:    []string{"*:80"},
 	},
+	{
+		Action: "accept",
+		Src:    []string{"*"},
+		Proto:  "",
+		Dst:    []string{"autogroup:internet:*"},
+	},
 }
+
 var defaultSubRoutes = []string{"$(COREDNS_SVC)/32"}
 
 type ACLPolicy struct {
@@ -276,11 +283,11 @@ func makeACLPolicy(acls []v1alpha1.ACL) ([]byte, error) {
 		ACLs: acls,
 		AutoApprovers: AutoApprovers{
 			Routes: map[string][]string{
-				"10.0.0.0/8":     {"default"},
-				"172.16.0.0/12":  {"default"},
-				"192.168.0.0/16": {"default"},
+				"10.0.0.0/8":     {"default@"},
+				"172.16.0.0/12":  {"default@"},
+				"192.168.0.0/16": {"default@"},
 			},
-			ExitNode: []string{},
+			ExitNode: []string{"default@"},
 		},
 	}
 	aclPolicyByte, err := json.Marshal(aclPolicy)
