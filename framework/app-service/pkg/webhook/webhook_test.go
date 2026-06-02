@@ -43,13 +43,68 @@ func TestCreateD2OffloaderPatch_IdempotentWhenD2ContainerExists(t *testing.T) {
 	require.Len(t, ops, 0)
 }
 
-func TestDeriveViewerFromPodNS(t *testing.T) {
-	viewer, err := deriveViewerFromPodNS("user-space-Alice")
-	require.NoError(t, err)
-	require.Equal(t, "alice", viewer)
+func nsWithLabels(name string, labels map[string]string) *corev1.Namespace {
+	return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels}}
+}
 
-	_, err = deriveViewerFromPodNS("kube-system")
-	require.Error(t, err)
+func podWithLabels(namespace string, labels map[string]string) *corev1.Pod {
+	return &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "demo", Labels: labels}}
+}
+
+// TC-A2-1..A2-4 and TC-A2-6: viewer is the namespace ns-owner when present,
+// otherwise the user-space-/user-system- prefix segment, otherwise the pod
+// owner label (lowercased); all-absent (and <app>-<user> without an owner)
+// yields an error. The pilot value "brucedai" equals that cluster's owner; the
+// assertion is on the derived viewer matching the source, not the literal.
+func TestDeriveViewerFromPodNS(t *testing.T) {
+	cases := []struct {
+		name       string
+		ns         *corev1.Namespace
+		podLabels  map[string]string
+		wantViewer string
+		wantErr    bool
+	}{
+		{
+			name:       "ns_owner_label",
+			ns:         nsWithLabels("ollamav3-shared", map[string]string{"bytetrade.io/ns-owner": "brucedai"}),
+			wantViewer: "brucedai",
+		},
+		{
+			name:       "user_space_prefix",
+			ns:         nsWithLabels("user-space-alice", nil),
+			wantViewer: "alice",
+		},
+		{
+			name:       "pod_owner_label_fallback",
+			ns:         nsWithLabels("litellm-team", nil),
+			podLabels:  map[string]string{constants.ApplicationOwnerLabel: "Bob"},
+			wantViewer: "bob",
+		},
+		{
+			name:    "all_absent",
+			ns:      nsWithLabels("kube-system", nil),
+			wantErr: true,
+		},
+		{
+			name:    "app_user_namespace_without_owner",
+			ns:      nsWithLabels("litellm-brucedai", nil),
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			wh := &Webhook{kubeClient: fake.NewSimpleClientset(c.ns)}
+			pod := podWithLabels(c.ns.Name, c.podLabels)
+			viewer, err := wh.deriveViewerFromPodNS(context.Background(), pod)
+			if c.wantErr {
+				require.Error(t, err)
+				require.True(t, errors.Is(err, ErrD2ViewerUnderive))
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, c.wantViewer, viewer)
+		})
+	}
 }
 
 func TestHasD2Container(t *testing.T) {
@@ -106,12 +161,17 @@ func TestRecordD2InjectSkipped(t *testing.T) {
 	require.Equal(t, emptyBefore+1, emptyAfter)
 }
 
+// TC-A2-5: after method-ization the all-absent branch still returns an error
+// matched by errors.Is(err, ErrD2ViewerUnderive), so WI-AIA-1 keeps classifying
+// reason=viewer_underive instead of degrading to other.
 func TestDeriveViewerFromPodNS_UnderiveSentinel(t *testing.T) {
-	_, err := deriveViewerFromPodNS("kube-system")
+	wh := &Webhook{kubeClient: fake.NewSimpleClientset(nsWithLabels("kube-system", nil))}
+	_, err := wh.deriveViewerFromPodNS(context.Background(), podWithLabels("kube-system", nil))
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrD2ViewerUnderive))
 
-	_, err = deriveViewerFromPodNS("user-space-")
+	wh = &Webhook{kubeClient: fake.NewSimpleClientset(nsWithLabels("user-space-", nil))}
+	_, err = wh.deriveViewerFromPodNS(context.Background(), podWithLabels("user-space-", nil))
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrD2ViewerUnderive))
 }
@@ -127,7 +187,7 @@ func TestCreateD2OffloaderPatch_ViewerUnderiveSentinel(t *testing.T) {
 	require.NoError(t, err)
 	req := &admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: raw}}
 
-	wh := &Webhook{}
+	wh := &Webhook{kubeClient: fake.NewSimpleClientset(nsWithLabels("kube-system", nil))}
 	_, err = wh.CreateD2OffloaderPatch(context.Background(), &pod, req, nil, uuid.New())
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrD2ViewerUnderive))
