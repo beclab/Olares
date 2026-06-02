@@ -63,6 +63,10 @@ type EntranceInfo struct {
 	// flag to decide which entrances participate in gateway-mode URL/host
 	// rewriting and which keep the legacy <appid><idx>.<zone> direct path.
 	IsShared bool
+	// SharedEntranceID stores the v3 shared first-label literal consumed by
+	// gateway rewrite ("<entranceid>.<viewer>.<platformDomain>"). Empty means
+	// no shared rewrite should be applied for this entrance.
+	SharedEntranceID string
 }
 
 type PortInfo struct {

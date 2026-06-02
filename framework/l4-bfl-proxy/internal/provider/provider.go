@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -447,14 +449,24 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			})
 		}
 		if isSharedGatewayApp(app) {
-			for _, e := range app.Spec.SharedEntrances {
+			baseAppID := ownerAppID(app.Spec.Name, app.Spec.IsSysApp)
+			sharedCount := len(app.Spec.SharedEntrances)
+			for i, e := range app.Spec.SharedEntrances {
+				sharedEntranceID := ""
+				if baseAppID != "" {
+					sharedEntranceID = baseAppID
+					if sharedCount > 1 {
+						sharedEntranceID = fmt.Sprintf("%s%d", baseAppID, i)
+					}
+				}
 				entrances = append(entrances, &message.EntranceInfo{
-					Name:            e.Name,
-					Host:            e.Host,
-					Port:            e.Port,
-					AuthLevel:       e.AuthLevel,
-					WindowPushState: e.WindowPushState,
-					IsShared:        true,
+					Name:             e.Name,
+					Host:             e.Host,
+					Port:             e.Port,
+					AuthLevel:        e.AuthLevel,
+					WindowPushState:  e.WindowPushState,
+					IsShared:         true,
+					SharedEntranceID: sharedEntranceID,
 				})
 			}
 		}
@@ -498,6 +510,18 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 		})
 	}
 	return result
+}
+
+func ownerAppID(appName string, isSysApp bool) string {
+	appName = strings.TrimSpace(appName)
+	if appName == "" {
+		return ""
+	}
+	if isSysApp {
+		return appName
+	}
+	sum := md5.Sum([]byte(appName))
+	return hex.EncodeToString(sum[:])[:8]
 }
 
 func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application) ([]*message.UserInfo, error) {

@@ -2,8 +2,6 @@ package translator
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -46,20 +44,6 @@ func isGatewayMode(app *message.AppInfo) bool {
 	return app.Annotations[annotationRouteMode] == annotationRouteModeGateway
 }
 
-// sharedEntranceHostPrefix returns the v2 8-char lowercase md5 prefix that
-// identifies a shared entrance in the per-viewer URL scheme:
-//
-//	hash8 = md5(<appid> + ":shared:" + <entranceName>)[:8]
-//
-// Mirrors framework/app-service/pkg/appcfg.SharedEntranceHostPrefix. We
-// re-implement here to keep l4-bfl-proxy independent of app-service.
-func sharedEntranceHostPrefix(appid, entranceName string) string {
-	appid = strings.ToLower(strings.TrimSpace(appid))
-	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
-	sum := md5.Sum([]byte(appid + ":shared:" + entranceName))
-	return hex.EncodeToString(sum[:])[:8]
-}
-
 // platformDomainFromZone strips the leading viewer label from a user zone:
 //
 //	"alice.olares.com", viewer="alice"  -> "olares.com"
@@ -86,22 +70,15 @@ func platformDomainFromZone(zone, viewer string) string {
 // gatewayV2EntranceHostname returns <hash8>.<viewer>.<platformDomain> when
 // every input is well-formed, "" otherwise. The empty return signals the
 // caller to keep the legacy hostname.
-func gatewayV2EntranceHostname(app *message.AppInfo, entranceName, viewer, zone string) string {
-	if app == nil || entranceName == "" || viewer == "" {
+func gatewayV2EntranceHostname(entrance *message.EntranceInfo, viewer, zone string) string {
+	if entrance == nil || !entrance.IsShared || strings.TrimSpace(entrance.SharedEntranceID) == "" || viewer == "" {
 		return ""
 	}
 	dom := platformDomainFromZone(zone, viewer)
 	if dom == "" {
 		return ""
 	}
-	appid := strings.TrimSpace(app.Appid)
-	if appid == "" {
-		appid = strings.TrimSpace(app.Name)
-	}
-	if appid == "" {
-		return ""
-	}
-	return sharedEntranceHostPrefix(appid, entranceName) + "." + viewer + "." + dom
+	return strings.TrimSpace(entrance.SharedEntranceID) + "." + viewer + "." + dom
 }
 
 var nodeLocationPrefixes = []string{
@@ -588,9 +565,9 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 
 		var prefix, hostname string
 		if useGatewayRewrite {
-			if v2 := gatewayV2EntranceHostname(app, entrance.Name, user.Name, zone); v2 != "" {
+			if v2 := gatewayV2EntranceHostname(entrance, user.Name, zone); v2 != "" {
 				hostname = v2
-				prefix = sharedEntranceHostPrefix(app.Appid, entrance.Name)
+				prefix = strings.TrimSpace(entrance.SharedEntranceID)
 			}
 		}
 		if hostname == "" {

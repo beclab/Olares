@@ -726,18 +726,7 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_GatewayMode(t *testing.T) {
 	assert.Equal(t, []string{"shareme.example.io"}, vhosts[0].Domains, "custom domain stays so EG HTTPRoute matches")
 }
 
-// per-viewer hostname helpers (<hash8>.<viewer>.<platformDomain>).
-
-func TestSharedEntranceHostPrefix_StableAndCaseInsensitive(t *testing.T) {
-	a := sharedEntranceHostPrefix("a5be2268", "ollamav2")
-	b := sharedEntranceHostPrefix("A5BE2268", " OllamaV2 ")
-	if a != b {
-		t.Fatalf("hash8 not normalized: %q vs %q", a, b)
-	}
-	if len(a) != 8 {
-		t.Fatalf("hash8 wrong length: %q", a)
-	}
-}
+// per-viewer hostname helpers (<entranceid>.<viewer>.<platformDomain>).
 
 func TestPlatformDomainFromZone(t *testing.T) {
 	cases := []struct {
@@ -759,26 +748,25 @@ func TestPlatformDomainFromZone(t *testing.T) {
 }
 
 func TestGatewayV2EntranceHostname(t *testing.T) {
-	app := &message.AppInfo{Name: "ollamaserver", Appid: "a5be2268", IsShared: true,
-		Annotations: map[string]string{"gateway.olares.io/route-mode": "gateway"}}
-	got := gatewayV2EntranceHostname(app, "ollamav2", "alice", "alice.olares.com")
-	want := sharedEntranceHostPrefix("a5be2268", "ollamav2") + ".alice.olares.com"
+	entrance := &message.EntranceInfo{Name: "ollamav2", IsShared: true, SharedEntranceID: "a5be2268"}
+	got := gatewayV2EntranceHostname(entrance, "alice", "alice.olares.com")
+	want := "a5be2268.alice.olares.com"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}
 	// Different viewer changes only the middle label.
-	got2 := gatewayV2EntranceHostname(app, "ollamav2", "alice", "alice.olares.com")
-	want2 := sharedEntranceHostPrefix("a5be2268", "ollamav2") + ".alice.olares.com"
+	got2 := gatewayV2EntranceHostname(entrance, "alice", "alice.olares.com")
+	want2 := "a5be2268.alice.olares.com"
 	if got2 != want2 {
 		t.Fatalf("alice host: got %q want %q", got2, want2)
 	}
-	// Missing appid falls back to app.Name.
-	app2 := &message.AppInfo{Name: "ollamaserver"}
-	if got := gatewayV2EntranceHostname(app2, "ollamav2", "alice", "alice.olares.com"); got == "" {
-		t.Fatalf("expected non-empty fallback hostname, got %q", got)
+	// Empty shared entrance id returns "".
+	entrance2 := &message.EntranceInfo{Name: "ollamav2", IsShared: true}
+	if got := gatewayV2EntranceHostname(entrance2, "alice", "alice.olares.com"); got != "" {
+		t.Fatalf("expected empty hostname, got %q", got)
 	}
 	// Zone/viewer mismatch returns "".
-	if got := gatewayV2EntranceHostname(app, "ollamav2", "bob", "alice.olares.com"); got != "" {
+	if got := gatewayV2EntranceHostname(entrance, "bob", "alice.olares.com"); got != "" {
 		t.Fatalf("zone/viewer mismatch must return empty: %q", got)
 	}
 }
@@ -790,10 +778,10 @@ func TestBuildAppVirtualHosts_SharedApp_GatewayMode_PerViewerHost(t *testing.T) 
 	tr := &Translator{cfg: &Config{}}
 	app := makeSharedApp()
 	app.Appid = "a5be2268"
-	app.Entrances = []*message.EntranceInfo{{Name: "ollamav2", Host: "shareme-svc", Port: 8080, IsShared: true}}
+	app.Entrances = []*message.EntranceInfo{{
+		Name: "ollamav2", Host: "shareme-svc", Port: 8080, IsShared: true, SharedEntranceID: "a5be2268",
+	}}
 	app.Annotations = map[string]string{"gateway.olares.io/route-mode": "gateway"}
-
-	expectedHash := sharedEntranceHostPrefix("a5be2268", "ollamav2")
 
 	for _, viewer := range []string{"alice", "bob"} {
 		t.Run(viewer, func(t *testing.T) {
@@ -801,7 +789,7 @@ func TestBuildAppVirtualHosts_SharedApp_GatewayMode_PerViewerHost(t *testing.T) 
 			zone := viewer + ".olares.com"
 			vhosts := tr.buildAppVirtualHosts(user, app, zone, false, map[string]*ir.ClusterIR{})
 			require.Len(t, vhosts, 1)
-			want := expectedHash + "." + viewer + ".olares.com"
+			want := "a5be2268." + viewer + ".olares.com"
 			require.Equal(t, want, vhosts[0].Domains[0])
 		})
 	}
@@ -846,7 +834,7 @@ func TestBuildAppVirtualHosts_GatewayMode_MixedEntrances_PerUserKeptLegacy(t *te
 			{Name: "terminal", Host: "terminalclient", Port: 8081, AuthLevel: "private"},
 			{Name: "ollamaclient", Host: "ollamaclient", Port: 8080, AuthLevel: "internal"},
 			// SharedEntrance, must use <hash8>.<viewer>.<domain> via EG:
-			{Name: "ollamav2", Host: "sharedentrances-ollama", Port: 80, AuthLevel: "internal", IsShared: true},
+			{Name: "ollamav2", Host: "sharedentrances-ollama", Port: 80, AuthLevel: "internal", IsShared: true, SharedEntranceID: "a5be2268"},
 		},
 	}
 	user := &message.UserInfo{Name: "alice", Language: "en"}
@@ -878,9 +866,9 @@ func TestBuildAppVirtualHosts_GatewayMode_MixedEntrances_PerUserKeptLegacy(t *te
 	assert.Equal(t, "ollamaclient.ollamav2-alice.svc.cluster.local",
 		clusterSet["app_alice_ollamav2_ollamaclient"].Host)
 
-	// 3. ollamav2 (sharedEntrance): hash8 host AND upstream pointing at the
+	// 3. ollamav2 (sharedEntrance): entranceid host AND upstream pointing at the
 	//    shared EG data plane.
-	wantSharedHost := sharedEntranceHostPrefix("a5be2268", "ollamav2") + ".alice.olares.com"
+	wantSharedHost := "a5be2268.alice.olares.com"
 	shared := byName["app_alice_ollamav2_ollamav2"]
 	require.NotNil(t, shared)
 	assert.Equal(t, wantSharedHost, shared.Domains[0])
