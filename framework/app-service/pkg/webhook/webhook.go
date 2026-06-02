@@ -187,7 +187,16 @@ func (wh *Webhook) CreatePatch(
 		appKey, appSecret, _ := wh.getAppKeySecret(req.Namespace)
 
 		if injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod) {
-			initContainer := sidecar.GetInitContainerSpec(appConfig)
+			// If the owning Application enables overlay-gateway, multus will
+			// attach a macvlan NIC (net1) to the pod. Tell the iptables init
+			// container to install bypass RETURN rules for that interface so
+			// north/south traffic on net1 doesn't get redirected to envoy.
+			injectMacvlan, err := wh.ShouldInjectMacvlanInit(ctx, pod, req.Namespace)
+			if err != nil {
+				klog.Errorf("Failed to evaluate macvlan-init for sidecar pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+				return nil, err
+			}
+			initContainer := sidecar.GetInitContainerSpec(appConfig, injectMacvlan)
 			pod.Spec.InitContainers = append(pod.Spec.InitContainers, initContainer)
 			policySidecar := sidecar.GetEnvoySidecarContainerSpec(clusterID, envoyFilename, appKey, appSecret)
 			pod.Spec.Containers = append(pod.Spec.Containers, policySidecar)

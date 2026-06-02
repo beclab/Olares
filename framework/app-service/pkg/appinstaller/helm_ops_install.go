@@ -862,12 +862,23 @@ func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 			if perm == "userdata-perm" {
 				permissions = append(permissions, appcfg.UserDataRW)
 			}
+			if perm == "appCommon-perm" {
+				permissions = append(permissions, appcfg.AppCommonRW)
+			}
+			if perm == "external-perm" {
+				permissions = append(permissions, appcfg.ExternalDataRW)
+			}
+
 		case appcfg.AppDataPermission:
 			permissions = append(permissions, appcfg.AppDataRW)
 		case appcfg.AppCachePermission:
 			permissions = append(permissions, appcfg.AppCacheRW)
 		case appcfg.UserDataPermission:
 			permissions = append(permissions, appcfg.UserDataRW)
+		case appcfg.AppCommonPermission:
+			permissions = append(permissions, appcfg.AppCommonRW)
+		case appcfg.ExternalDataPermission:
+			permissions = append(permissions, appcfg.ExternalDataRW)
 		case []appcfg.ProviderPermission:
 			permissions = append(permissions, p)
 		case []interface{}:
