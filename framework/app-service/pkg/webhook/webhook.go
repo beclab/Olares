@@ -17,6 +17,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/authz"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
@@ -261,7 +262,7 @@ func (wh *Webhook) CreateD2OffloaderPatch(
 		return makePatches(req, pod)
 	}
 
-	viewer, err := deriveViewerFromPodNS(pod.Namespace)
+	viewer, err := wh.deriveViewerFromPodNS(ctx, pod)
 	if err != nil {
 		return nil, err
 	}
@@ -394,17 +395,38 @@ func (wh *Webhook) resolveViewerAllowset(ctx context.Context, pod *corev1.Pod) (
 	return allowset, nil
 }
 
-func deriveViewerFromPodNS(namespace string) (string, error) {
-	ns := strings.TrimSpace(namespace)
-	nsPrefix := constants.OwnerNamespacePrefix + "-"
-	if !strings.HasPrefix(ns, nsPrefix) {
-		return "", fmt.Errorf("namespace %q is not under %q: %w", namespace, constants.OwnerNamespacePrefix, ErrD2ViewerUnderive)
+// deriveViewerFromPodNS resolves the d2 offloader viewer for a server pod.
+// behavior: paths 1) and 2) share the same source as request-time authz
+// DeriveViewerWithMeta (ns-owner label, then user-space-/user-system- prefix);
+// path 3) is a pod owner-label fallback that does not pull in the knownUsers
+// app_user_fallback path. All-absent returns ErrD2ViewerUnderive so the
+// admission handler can fail open and classify reason=viewer_underive.
+func (wh *Webhook) deriveViewerFromPodNS(ctx context.Context, pod *corev1.Pod) (string, error) {
+	var nsLabels map[string]string
+	ns, err := wh.kubeClient.CoreV1().Namespaces().Get(ctx, pod.Namespace, metav1.GetOptions{})
+	if err != nil {
+		// A transient namespace read failure must not be stricter than the
+		// surrounding fail-open posture: fall through with empty labels so the
+		// prefix/pod-label paths can still derive a viewer.
+		klog.Warningf("d2 offloader: failed to get namespace=%s labels, falling back to prefix/pod-label err=%v", pod.Namespace, err)
+	} else {
+		nsLabels = ns.Labels
 	}
-	viewer := strings.TrimSpace(strings.TrimPrefix(ns, nsPrefix))
-	if viewer == "" {
-		return "", fmt.Errorf("namespace %q has empty viewer segment: %w", namespace, ErrD2ViewerUnderive)
+
+	// Guard the empty viewer segment (e.g. a bare "user-space-" namespace):
+	// DeriveViewerWithMeta reports ok=true with an empty viewer there, so fall
+	// through to the pod-label path / sentinel instead of returning "".
+	if viewer, _, ok := authz.DeriveViewerWithMeta(pod.Namespace, nsLabels, nil); ok && strings.TrimSpace(viewer) != "" {
+		return viewer, nil
 	}
-	return strings.ToLower(viewer), nil
+
+	if pod.Labels != nil {
+		if owner := strings.ToLower(strings.TrimSpace(pod.Labels[constants.ApplicationOwnerLabel])); owner != "" {
+			return owner, nil
+		}
+	}
+
+	return "", fmt.Errorf("namespace %q has no ns-owner, user-space-/user-system- prefix, or pod owner label: %w", pod.Namespace, ErrD2ViewerUnderive)
 }
 
 func hasD2Container(pod *corev1.Pod) bool {
