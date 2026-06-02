@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -307,8 +307,15 @@ func SyncReplicasForViewer(ctx context.Context, c client.Client, certViewer stri
 			continue
 		}
 		desiredNamespaces[target.CallerNamespace] = struct{}{}
-		_, err := ReconcileReplica(ctx, c, target)
+		changed, err := ReconcileReplica(ctx, c, target)
 		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if !changed {
+			continue
+		}
+		if err := bumpSharedEntranceWorkloadForReplica(ctx, c, target); err != nil {
 			errs = append(errs, err)
 		}
 	}
