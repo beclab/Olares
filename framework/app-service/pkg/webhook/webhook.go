@@ -50,6 +50,12 @@ import (
 var (
 	errEmptyAdmissionRequestBody = fmt.Errorf("empty request admission request body")
 
+	// Sentinel errors for v3 d2 offloader injection prerequisites. They let the
+	// admission handler fail open and classify the skip reason via errors.Is.
+	ErrD2SnapshotUnavailable = errors.New("d2 offloader: cluster snapshot unavailable")
+	ErrD2ViewerUnderive      = errors.New("d2 offloader: viewer cannot be derived from pod namespace")
+	ErrD2TLSSecretMissing    = errors.New("d2 offloader: no per-viewer tls replica secret in namespace")
+
 	// codecs is the codec factory used by the deserializer.
 	codecs = serializer.NewCodecFactory(runtime.NewScheme())
 
@@ -62,7 +68,7 @@ var (
 
 // Webhook used to implement a webhook.
 type Webhook struct {
-	kubeClient    *kubernetes.Clientset
+	kubeClient    kubernetes.Interface
 	dynamicClient *versioned.Clientset
 }
 
@@ -267,7 +273,7 @@ func (wh *Webhook) CreateD2OffloaderPatch(
 
 	snapshot, err := cluster.GetSnapshot(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("d2 offloader get cluster snapshot: %w", errors.Join(err, ErrD2SnapshotUnavailable))
 	}
 
 	configMapName, volumeName, err := wh.ensureD2NginxConfConfigMap(
@@ -377,7 +383,7 @@ func (wh *Webhook) resolveViewerAllowset(ctx context.Context, pod *corev1.Pod) (
 	}
 
 	if len(allowsetMap) == 0 {
-		return nil, fmt.Errorf("no viewer tls secret found in namespace=%s with prefix=%s", pod.Namespace, constants.D2SharedTLSSecretNamePrefix)
+		return nil, fmt.Errorf("no viewer tls secret found in namespace=%s with prefix=%s: %w", pod.Namespace, constants.D2SharedTLSSecretNamePrefix, ErrD2TLSSecretMissing)
 	}
 
 	allowset := make([]string, 0, len(allowsetMap))
@@ -392,11 +398,11 @@ func deriveViewerFromPodNS(namespace string) (string, error) {
 	ns := strings.TrimSpace(namespace)
 	nsPrefix := constants.OwnerNamespacePrefix + "-"
 	if !strings.HasPrefix(ns, nsPrefix) {
-		return "", fmt.Errorf("namespace %q is not under %q", namespace, constants.OwnerNamespacePrefix)
+		return "", fmt.Errorf("namespace %q is not under %q: %w", namespace, constants.OwnerNamespacePrefix, ErrD2ViewerUnderive)
 	}
 	viewer := strings.TrimSpace(strings.TrimPrefix(ns, nsPrefix))
 	if viewer == "" {
-		return "", fmt.Errorf("namespace %q has empty viewer segment", namespace)
+		return "", fmt.Errorf("namespace %q has empty viewer segment: %w", namespace, ErrD2ViewerUnderive)
 	}
 	return strings.ToLower(viewer), nil
 }
