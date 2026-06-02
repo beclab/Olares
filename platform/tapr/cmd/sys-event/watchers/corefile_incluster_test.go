@@ -6,11 +6,13 @@ import (
 	"strings"
 	"testing"
 
+	"bytetrade.io/web3os/tapr/pkg/app/application"
 	"github.com/coredns/corefile-migration/migration/corefile"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 )
@@ -23,7 +25,7 @@ func TestBuildSharedInclusterTemplates_empty(t *testing.T) {
 		t.Fatalf("expected nil, got %#v", got)
 	}
 	if got := buildSharedInclusterTemplates([]SharedInclusterEntrance{
-		{AppID: "a5be2268", EntranceName: "ollama", Viewer: "alice", PlatformDomain: "olares.com"},
+		{AppID: "a5be2268", EntranceName: "ollama", EntranceID: "a5be2268", Viewer: "alice", PlatformDomain: "olares.com"},
 	}, "not-an-ip"); got != nil {
 		t.Fatalf("expected nil for invalid gateway IP, got %#v", got)
 	}
@@ -31,16 +33,16 @@ func TestBuildSharedInclusterTemplates_empty(t *testing.T) {
 
 func TestBuildSharedInclusterTemplates_orderingAndDedup(t *testing.T) {
 	entrances := []SharedInclusterEntrance{
-		{AppID: "a5be2268", EntranceName: "shared", Viewer: "bob", PlatformDomain: "olares.com"},
-		{AppID: "a5be2268", EntranceName: "shared", Viewer: "alice", PlatformDomain: "olares.com"},
-		{AppID: "a5be2268", EntranceName: "shared", Viewer: "bob", PlatformDomain: "olares.com"},
+		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", Viewer: "bob", PlatformDomain: "olares.com"},
+		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", Viewer: "alice", PlatformDomain: "olares.com"},
+		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", Viewer: "bob", PlatformDomain: "olares.com"},
 	}
 	plugins := buildSharedInclusterTemplates(entrances, "10.0.0.8")
 	if len(plugins) != 2 {
 		t.Fatalf("expected 2 template plugins, got %d", len(plugins))
 	}
-	wantAlice := sharedEntranceHostPrefix("a5be2268", "shared") + ".alice.olares.com"
-	wantBob := sharedEntranceHostPrefix("a5be2268", "shared") + ".bob.olares.com"
+	wantAlice := "a5be2268.alice.olares.com"
+	wantBob := "a5be2268.bob.olares.com"
 	if !templateMatchesFQDN(plugins[0], wantAlice, "10.0.0.8") {
 		t.Fatalf("first template does not target %s: %s", wantAlice, plugins[0].ToString())
 	}
@@ -56,13 +58,13 @@ func TestBuildSharedInclusterTemplates_perUserEntranceExcluded(t *testing.T) {
 	// '.' so the literal per-user host can be searched verbatim.
 	perUserHost := `a5be2268\.bob\.olares\.com`
 	entrances := []SharedInclusterEntrance{
-		{AppID: "a5be2268", EntranceName: "ollama", Viewer: "alice", PlatformDomain: "olares.com"},
+		{AppID: "a5be2268", EntranceName: "ollama", EntranceID: "a5be2268", Viewer: "alice", PlatformDomain: "olares.com"},
 	}
 	plugins := buildSharedInclusterTemplates(entrances, "172.16.0.4")
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 plugin, got %d", len(plugins))
 	}
-	host := sharedEntranceHostPrefix("a5be2268", "ollama") + ".alice.olares.com"
+	host := "a5be2268.alice.olares.com"
 	wantMatch := `"^` + strings.ReplaceAll(host, ".", `\.`) + `\.$"`
 	body := plugins[0].ToString()
 	if !strings.Contains(body, wantMatch) {
@@ -81,7 +83,7 @@ func TestInClusterGatewayEnabled_defaultsTrue(t *testing.T) {
 
 func TestBuildSharedInclusterTemplates_clusterIPRotation(t *testing.T) {
 	ent := SharedInclusterEntrance{
-		AppID: "a5be2268", EntranceName: "api", Viewer: "alice", PlatformDomain: "olares.com",
+		AppID: "a5be2268", EntranceName: "api", EntranceID: "a5be2268", Viewer: "alice", PlatformDomain: "olares.com",
 	}
 	p1 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.1")
 	p2 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.2")
@@ -98,14 +100,14 @@ func TestBuildSharedInclusterTemplates_clusterIPRotation(t *testing.T) {
 
 func TestBuildSharedInclusterTemplates_roundTripCorefile(t *testing.T) {
 	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
-		{AppID: "bc2bd381", EntranceName: "litellm", Viewer: "alice", PlatformDomain: "olares.com"},
+		{AppID: "bc2bd381", EntranceName: "litellm", EntranceID: "bc2bd381", Viewer: "alice", PlatformDomain: "olares.com"},
 	}, "192.168.1.10")
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 plugin, got %d", len(plugins))
 	}
 	// Pre-parse rendering must contain the quoted, anchored match string —
 	// CoreDNS expects the match arg to be a quoted regex literal.
-	host := sharedEntranceHostPrefix("bc2bd381", "litellm") + ".alice.olares.com"
+	host := "bc2bd381.alice.olares.com"
 	wantMatch := `"^` + strings.ReplaceAll(host, ".", `\.`) + `\.$"`
 	if pre := plugins[0].ToString(); !strings.Contains(pre, wantMatch) {
 		t.Fatalf("pre-parse body missing %q in %q", wantMatch, pre)
@@ -155,7 +157,7 @@ func templateMatchesFQDN(plugin *corefile.Plugin, fqdn, ip string) bool {
 }
 
 func TestSharedInclusterEntrancesFromSRRItems(t *testing.T) {
-	prefix := sharedEntranceHostPrefix("a5be2268", "ollamav2")
+	prefix := "a5be2268"
 	srr := unstructuredSRR("ollama-shared", "shared-a5be2268-ollamav2", map[string]string{
 		labelSRRAppID:    "a5be2268",
 		labelSRREntrance: "ollamav2",
@@ -190,13 +192,13 @@ func TestSharedInclusterEntrancesFromSRRItems(t *testing.T) {
 }
 
 func TestSharedInclusterEntrancesFromSRRItems_passthroughAndDirect(t *testing.T) {
-	prefix := sharedEntranceHostPrefix("a5be2268", "api")
+	prefix := "a5be2268"
 	srrGateway := unstructuredSRR("ollama-shared", "shared-a5be2268-api", map[string]string{
 		labelSRRAppID: "a5be2268", labelSRREntrance: "api",
 	}, "gateway", []string{prefix + ".*.olares.com"})
 	srrDirect := unstructuredSRR("other-shared", "shared-bc2bd381-litellm", map[string]string{
 		labelSRRAppID: "bc2bd381", labelSRREntrance: "litellm",
-	}, "direct", []string{sharedEntranceHostPrefix("bc2bd381", "litellm") + ".*.olares.com"})
+	}, "direct", []string{"bc2bd381.*.olares.com"})
 	passthrough := map[string]struct{}{"litellm-ns": {}}
 	got := sharedInclusterEntrancesFromSRRItems(
 		[]unstructured.Unstructured{*srrGateway, *srrDirect},
@@ -212,7 +214,7 @@ func TestSharedInclusterEntrancesFromSRRItems_passthroughAndDirect(t *testing.T)
 }
 
 func TestSharedInclusterEntrancesFromSRRItems_logicalPatternNotFirst(t *testing.T) {
-	prefix := sharedEntranceHostPrefix("a5be2268", "api")
+	prefix := "a5be2268"
 	srr := unstructuredSRR("ollama-shared", "shared-a5be2268-api", map[string]string{
 		labelSRRAppID: "a5be2268", labelSRREntrance: "api",
 	}, "gateway", []string{
@@ -245,7 +247,7 @@ func TestBuildSharedInclusterTemplates_overridesUserWildcard(t *testing.T) {
 	// match must therefore win over the wildcard and the wildcard must still
 	// handle other names in the zone via fallthrough on the shared template.
 	shared := buildSharedInclusterTemplates([]SharedInclusterEntrance{
-		{AppID: "bc2bd381", EntranceName: "litellm", Viewer: "alice", PlatformDomain: "olares.com"},
+		{AppID: "bc2bd381", EntranceName: "litellm", EntranceID: "bc2bd381", Viewer: "alice", PlatformDomain: "olares.com"},
 	}, "10.233.38.210")
 	if len(shared) != 1 {
 		t.Fatalf("expected 1 shared template, got %d", len(shared))
@@ -275,7 +277,7 @@ func TestBuildSharedInclusterTemplates_overridesUserWildcard(t *testing.T) {
 	if plugins[0].Name != "template" {
 		t.Fatalf("first plugin must be the shared template, got %s", plugins[0].Name)
 	}
-	wantSharedFQDN := sharedEntranceHostPrefix("bc2bd381", "litellm") + ".alice.olares.com"
+	wantSharedFQDN := "bc2bd381.alice.olares.com"
 	escapedFQDN := strings.ReplaceAll(wantSharedFQDN, ".", `\.`)
 	body := plugins[0].ToString()
 	if !strings.Contains(body, escapedFQDN) {
@@ -353,10 +355,7 @@ func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubef
 		sharedZone       = "brucedai.olares.com"
 		gatewayClusterIP = "10.233.38.210"
 	)
-	sharedHash := sharedEntranceHostPrefix(sharedAppID, sharedEntrance)
-	if sharedHash != "bc2bd381" {
-		t.Fatalf("unexpected shared hash %q, expected bc2bd381", sharedHash)
-	}
+	sharedHash := "bc2bd381"
 
 	kubeClient := kubefake.NewSimpleClientset(
 		&corev1.ConfigMap{
@@ -448,9 +447,39 @@ func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubef
 			},
 		},
 	}
+	app := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "app.bytetrade.io/v1alpha1",
+			"kind":       "Application",
+			"metadata": map[string]interface{}{
+				"name":      "shared-app",
+				"namespace": "litellm-ns",
+			},
+			"spec": map[string]interface{}{
+				"name":  "shared-app",
+				"owner": sharedViewer,
+				"sharedEntrances": []interface{}{
+					map[string]interface{}{
+						"name": "litellm",
+						"host": "litellm-svc",
+						"port": int64(80),
+					},
+				},
+			},
+		},
+	}
 
 	scheme := runtime.NewScheme()
-	dynamicClient := dynamicfake.NewSimpleDynamicClient(scheme, clusterConfig, user, srr)
+	dynamicClient := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
+		scheme,
+		map[schema.GroupVersionResource]string{
+			clusterConfigGVR:       "ClusterConfigList",
+			sharedRouteRegistryGVR: "SharedRouteRegistryList",
+			application.GVR:        "ApplicationList",
+			{Group: "iam.kubesphere.io", Version: "v1alpha2", Resource: "users"}: "UserList",
+		},
+		clusterConfig, user, srr, app,
+	)
 	return kubeClient, dynamicClient
 }
 
@@ -523,4 +552,3 @@ func unstructuredSRR(ns, name string, labels map[string]string, routeMode string
 	}
 	return &unstructured.Unstructured{Object: obj}
 }
-

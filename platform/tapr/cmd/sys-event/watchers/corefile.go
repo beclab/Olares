@@ -13,9 +13,12 @@ import (
 	"strconv"
 	"strings"
 
+	"bytetrade.io/web3os/tapr/pkg/app/application"
 	"github.com/coredns/corefile-migration/migration/corefile"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -24,12 +27,12 @@ import (
 )
 
 const (
-	labelDNSPassthrough     = "gateway.olares.io/dns-passthrough"
-	labelSRRAppID           = "gateway.olares.io/appid"
-	labelSRREntrance        = "gateway.olares.io/entrance"
-	appGatewayNamespace     = "app-gateway"
-	appGatewayDataService   = "app-gateway-data"
-	srrRouteModeGateway     = "gateway"
+	labelDNSPassthrough   = "gateway.olares.io/dns-passthrough"
+	labelSRRAppID         = "gateway.olares.io/appid"
+	labelSRREntrance      = "gateway.olares.io/entrance"
+	appGatewayNamespace   = "app-gateway"
+	appGatewayDataService = "app-gateway-data"
+	srrRouteModeGateway   = "gateway"
 )
 
 var sharedRouteRegistryGVR = schema.GroupVersionResource{
@@ -694,31 +697,20 @@ const UserIndexAna = "bytetrade.io/user-index"
 type SharedInclusterEntrance struct {
 	AppID          string
 	EntranceName   string
+	EntranceID     string
 	Viewer         string
 	PlatformDomain string
-}
-
-// sharedEntranceHostPrefix returns the stable 8-hex label for a shared entrance
-// (md5(appid + ":shared:" + entranceName)[:8]), matching app-service appcfg.
-func sharedEntranceHostPrefix(appid, entranceName string) string {
-	appid = strings.ToLower(strings.TrimSpace(appid))
-	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
-	sum := md5.Sum([]byte(appid + ":shared:" + entranceName))
-	return hex.EncodeToString(sum[:])[:8]
 }
 
 // fqdn returns the exact host name for this shared entrance and viewer.
 func (e SharedInclusterEntrance) fqdn() string {
 	viewer := strings.ToLower(strings.TrimSpace(e.Viewer))
 	platformDomain := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
-	if viewer == "" || platformDomain == "" {
+	entranceID := strings.ToLower(strings.TrimSpace(e.EntranceID))
+	if viewer == "" || platformDomain == "" || entranceID == "" {
 		return ""
 	}
-	prefix := sharedEntranceHostPrefix(e.AppID, e.EntranceName)
-	if prefix == "" {
-		return ""
-	}
-	return prefix + "." + viewer + "." + platformDomain
+	return entranceID + "." + viewer + "." + platformDomain
 }
 
 // buildSharedInclusterTemplates builds CoreDNS `template` plugin instances
@@ -825,24 +817,22 @@ func viewersFromUserList(userList *unstructured.UnstructuredList) []string {
 	return viewers
 }
 
-func parseLogicalHostPattern(pattern string) (hash8, platformDomain string, ok bool) {
+func parseLogicalHostPattern(pattern string) (entranceID, platformDomain string, ok bool) {
 	pattern = strings.ToLower(strings.TrimSpace(pattern))
 	const marker = ".*."
 	idx := strings.Index(pattern, marker)
-	if idx != 8 || len(pattern) <= idx+len(marker) {
+	if idx <= 0 || len(pattern) <= idx+len(marker) {
 		return "", "", false
 	}
-	hash8 = pattern[:8]
-	for _, c := range hash8 {
-		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return "", "", false
-		}
+	entranceID = strings.TrimSpace(pattern[:idx])
+	if strings.Contains(entranceID, ".") || entranceID == "" {
+		return "", "", false
 	}
 	platformDomain = strings.TrimSuffix(pattern[idx+len(marker):], ".")
 	if platformDomain == "" {
 		return "", "", false
 	}
-	return hash8, platformDomain, true
+	return entranceID, platformDomain, true
 }
 
 func sharedInclusterEntrancesFromSRRItems(
@@ -873,23 +863,25 @@ func sharedInclusterEntrancesFromSRRItems(
 		if err != nil || !found || len(patterns) == 0 {
 			continue
 		}
-		expectedHash := sharedEntranceHostPrefix(appid, entranceName)
+		entranceID := ""
 		platformDomain := ""
 		for _, pattern := range patterns {
-			hash8, domain, ok := parseLogicalHostPattern(pattern)
-			if !ok || hash8 != expectedHash {
+			id, domain, ok := parseLogicalHostPattern(pattern)
+			if !ok {
 				continue
 			}
+			entranceID = id
 			platformDomain = domain
 			break
 		}
-		if platformDomain == "" {
+		if platformDomain == "" || entranceID == "" {
 			continue
 		}
 		for _, viewer := range viewers {
 			entrances = append(entrances, SharedInclusterEntrance{
 				AppID:          appid,
 				EntranceName:   entranceName,
+				EntranceID:     entranceID,
 				Viewer:         viewer,
 				PlatformDomain: platformDomain,
 			})
