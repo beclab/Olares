@@ -102,6 +102,8 @@ TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
 <!-- #region custom-domain-install-and-activate-olares -->
 现在可以使用你的 Olares ID 安装并激活 Olares 了。
 
+这一步需要使用全新、已恢复出厂设置或尚未激活过的 Olares 设备。已使用其他 Olares ID 激活过的设备，无法直接切换到自定义域名 Olares ID。
+
 安装步骤与标准流程类似。以下以 Linux 为例，其他系统请参阅[安装指南](/zh/manual/get-started/install-olares)。
 
 :::warning 检查网络连接

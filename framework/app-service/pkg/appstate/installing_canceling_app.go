@@ -10,7 +10,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
-	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
@@ -24,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -86,7 +84,7 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 	}
 
 	token := p.manager.Annotations[api.AppTokenKey]
-	kubeConfig, err := ctrl.GetConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
@@ -100,7 +98,7 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 		return err
 	}
 
-	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{})
+	ops, err := newHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err

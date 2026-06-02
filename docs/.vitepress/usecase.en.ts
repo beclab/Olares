@@ -418,6 +418,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/falco",
             },
             {
+              text: "Firecrawl",
+              link: "/use-cases/firecrawl",
+            },
+            {
               text: "FlareSolverr",
               link: "/use-cases/flaresolverr",
             },
