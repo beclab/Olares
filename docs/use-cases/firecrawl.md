@@ -1,18 +1,20 @@
 ---
 outline: [2, 3]
-description: Set up Firecrawl on Olares to scrape pages, crawl websites, return clean Markdown or structured JSON, and load web pages for Open WebUI.
+description: Set up Firecrawl on Olares as a web page loader for apps such as Open WebUI, or use its API to scrape and crawl websites.
 head:
   - - meta
     - name: keywords
       content: Olares, Firecrawl, web crawler, web scraping, Firecrawl v2, scrape API, crawl API, Open WebUI, web loader, self-hosted
 app_version: "1.0.21"
 doc_version: "1.0"
-doc_updated: "2026-06-01"
+doc_updated: "2026-06-02"
 ---
 
-# Crawl and scrape websites with Firecrawl
+# Use Firecrawl as a web page loader
 
-Firecrawl turns web pages into clean Markdown, structured JSON, summaries, and metadata. On Olares, you can test Firecrawl from your browser console, then connect it to apps such as Open WebUI to give AI chats access to web page content.
+Firecrawl is a headless web data service that turns web pages into clean Markdown, structured JSON, summaries, and metadata. On Olares, apps such as Open WebUI can use Firecrawl to load full web page content after search results are found.
+
+You can also call the Firecrawl API directly to test scraping and crawling.
 
 ## Install Firecrawl
 
@@ -22,15 +24,11 @@ Firecrawl turns web pages into clean Markdown, structured JSON, summaries, and m
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
-## Understand the Bull Dashboard
+## Use Firecrawl in other apps
 
-Open Firecrawl from Launchpad. You will see a Bull Dashboard page with internal queue cards, such as `generateLlmsTxtQueue`, `deepResearchQueue`, `billingQueue`, and `precrawlQueue`. Queue names can differ between Firecrawl builds.
+Firecrawl usually runs in the background. Other apps call it through its endpoint URL when they need to fetch and clean web page content.
 
-![Firecrawl worker status](/images/manual/use-cases/firecrawl-worker-status.png#bordered)
-
-This dashboard is for internal queue debugging. A normal scrape or crawl request might not appear here, or it might finish too quickly to notice. If all cards stay at `0 Jobs`, check the API response or crawl status URL instead.
-
-## Get the Firecrawl endpoint
+### Get the Firecrawl endpoint
 
 The endpoint is the base address of your Firecrawl service on Olares. You will add API paths such as `/v2/scrape` or `/v2/crawl` to this address.
 
@@ -46,7 +44,38 @@ In the examples below, replace the sample endpoint with your own:
 https://717172b4.alexmiles.olares.com
 ```
 
-## Use the Firecrawl API
+### Configure Open WebUI
+
+To use Firecrawl in Open WebUI, first [connect Open WebUI to a model](openwebui.md#configure-model-backend) and configure web search. The [Open WebUI web search guide](openwebui-search.md#enable-web-search-1) uses SearXNG as one example. Then manually configure Firecrawl as the web page loader below.
+
+:::tip GPU resources
+If Open WebUI is slow or cannot return a result, your model might not have enough GPU resources. Stop apps that are not in use but still occupy GPU resources, then try again.
+:::
+
+1. Open the Open WebUI app.
+2. Click your **profile icon** in the bottom-left corner and select **Admin Panel**.
+3. Go to **Settings** > **Web Search**.
+4. In the loader settings, set **Web Loader Engine** to `firecrawl`.
+5. In **Firecrawl API URL**, enter the Firecrawl endpoint you copied from Settings.
+6. For **Firecrawl API Key**, enter any non-empty value, such as `fc-test`.
+
+   ![Firecrawl loader](/images/manual/use-cases/firecrawl-openwebui-loader-settings.png#bordered)
+
+7. Click **Save** to save the settings.
+
+Make sure **Bypass Web Loader** is disabled.
+
+## Test Firecrawl with the API
+
+This section is optional. Use it when you want to confirm that Firecrawl can scrape or crawl pages directly.
+
+### Understand the Bull Dashboard
+
+Open Firecrawl from Launchpad. You will see a Bull Dashboard page with internal queue cards, such as `generateLlmsTxtQueue`, `deepResearchQueue`, `billingQueue`, and `precrawlQueue`. Queue names can differ between Firecrawl builds.
+
+![Firecrawl worker status](/images/manual/use-cases/firecrawl-worker-status.png#bordered)
+
+This dashboard is for internal queue debugging. A normal scrape or crawl request might not appear here, or it might finish too quickly to notice. If all cards stay at `0 Jobs`, check the API response or crawl status URL instead.
 
 For a first test, you only need two API actions:
 
@@ -223,29 +252,6 @@ const data = await response.json();
 console.log(data.data.summary);
 console.log("markdown length:", data.data.markdown?.length);
 ```
-
-## Use Firecrawl with Open WebUI
-
-Open WebUI uses SearXNG as the search engine and Firecrawl as the web page loader. Firecrawl does not replace SearXNG.
-
-Before starting, make sure Open WebUI is installed and connected to a model. See [Set up Open WebUI for local AI chat](openwebui.md). To enable web search with SearXNG, see [Enable web search in Open WebUI](openwebui-search.md).
-
-:::tip GPU resources
-If Open WebUI is slow or cannot return a result, your model might not have enough GPU resources. Stop apps that are not in use but still occupy GPU resources, then try again.
-:::
-
-1. Open the Open WebUI app.
-2. Click your **profile icon** in the bottom-left corner and select **Admin Panel**.
-3. Go to **Settings** > **Web Search**.
-4. In the loader settings, set **Web Loader Engine** to `firecrawl`.
-5. In **Firecrawl API URL**, enter the Firecrawl endpoint you copied from Settings.
-6. For **Firecrawl API Key**, enter any non-empty value, such as `fc-test`.
-
-   ![Firecrawl loader](/images/manual/use-cases/firecrawl-openwebui-loader-settings.png#bordered)
-
-7. Click **Save** to save the settings.
-
-Make sure **Bypass Web Loader** is disabled.
 
 ## FAQs
 
