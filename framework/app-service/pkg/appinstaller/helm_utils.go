@@ -257,7 +257,7 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 	h.app.Permission = ParseAppPermission(h.app.Permission)
 	for _, p := range h.app.Permission {
 		switch perm := p.(type) {
-		case appcfg.AppDataPermission, appcfg.AppCachePermission, appcfg.UserDataPermission:
+		case appcfg.AppDataPermission, appcfg.AppCachePermission, appcfg.UserDataPermission, appcfg.AppCommonPermission:
 
 			// app requests app data permission
 			// set .Values.schedule.nodeName and .Values.userspace.appCache to app
@@ -283,6 +283,13 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 			if perm == appcfg.AppDataRW {
 				appData := fmt.Sprintf("%s/Data", userspacePath)
 				userspace["appData"] = filepath.Join(appData, h.app.AppName)
+			}
+			if perm == appcfg.AppCommonRW {
+				rootPath := userspacev1.DefaultRootPath
+				if os.Getenv(userspacev1.OlaresRootPath) != "" {
+					rootPath = os.Getenv(userspacev1.OlaresRootPath)
+				}
+				userspace["appCommon"] = fmt.Sprintf("%s/rootfs/Common", rootPath)
 			}
 
 		case []appcfg.ProviderPermission:
