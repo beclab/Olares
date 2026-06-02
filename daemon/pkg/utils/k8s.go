@@ -37,8 +37,39 @@ import (
 )
 
 const (
-	RoleOwner = "owner"
+	RoleOwner  = "owner"
+	RoleAdmin  = "admin"
+	RoleNormal = "normal"
 )
+
+// GetUserRoleByOlaresID maps a verified Olares ID to its username and role. The
+// user CR name is the local part of the Olares ID; a missing role annotation is
+// treated as the least-privileged "normal".
+func GetUserRoleByOlaresID(ctx context.Context, dynamicClient dynamic.Interface, olaresID string) (username, role string, err error) {
+	if olaresID == "" {
+		return "", "", errors.New("empty caller identity")
+	}
+	username = olaresID
+	if at := strings.Index(olaresID, "@"); at > 0 {
+		username = olaresID[:at]
+	}
+
+	users, err := ListUsers(ctx, dynamicClient)
+	if err != nil {
+		return "", "", err
+	}
+	for _, u := range users {
+		if u.GetName() != username {
+			continue
+		}
+		role = u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
+		if role == "" {
+			role = RoleNormal
+		}
+		return username, role, nil
+	}
+	return "", "", fmt.Errorf("caller %q not found among Olares users", olaresID)
+}
 
 func GetKubeClient() (kubernetes.Interface, error) {
 	config, err := ctrl.GetConfig()

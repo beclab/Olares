@@ -82,6 +82,33 @@ func (h *Handlers) RequireOwner(next func(ctx *fiber.Ctx) error) func(ctx *fiber
 	}
 }
 
+// RequireOwnerOrAdmin admits only callers whose Olares role is owner or admin.
+// It must run after RequireSignature, which puts the verified client in the
+// request context.
+func (h *Handlers) RequireOwnerOrAdmin(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+	return func(ctx *fiber.Ctx) error {
+		c, ok := ctx.Context().UserValue(client.ClIENT_CONTEXT).(client.Client)
+		if !ok {
+			return h.ErrJSON(ctx, http.StatusForbidden, "client not found")
+		}
+
+		dynamicClient, err := utils.GetDynamicClient()
+		if err != nil {
+			return h.ErrJSON(ctx, http.StatusInternalServerError, fmt.Sprintf("failed to get dynamic client: %v", err))
+		}
+
+		_, role, err := utils.GetUserRoleByOlaresID(ctx.Context(), dynamicClient, c.OlaresID())
+		if err != nil {
+			return h.ErrJSON(ctx, http.StatusForbidden, err.Error())
+		}
+		if role != utils.RoleOwner && role != utils.RoleAdmin {
+			return h.ErrJSON(ctx, http.StatusForbidden, "operation requires owner or admin role")
+		}
+
+		return next(ctx)
+	}
+}
+
 func (h *Handlers) RunCommand(next func(ctx *fiber.Ctx, cmd commands.Interface) error,
 	cmdNew func() commands.Interface) func(ctx *fiber.Ctx) error {
 
