@@ -4,6 +4,7 @@ import "context"
 
 const (
 	ClIENT_CONTEXT = "binding-client"
+	USER_CONTEXT   = "auth-user"
 )
 
 type Client interface {
