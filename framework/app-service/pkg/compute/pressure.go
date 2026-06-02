@@ -2,6 +2,7 @@ package compute
 
 import (
 	"context"
+	"math"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 )
@@ -37,7 +38,20 @@ func (p PressureSnapshot) WouldPressure(node Node, added AddedResources) bool {
 			return true
 		}
 	}
-	usedCPU := int64(float64(usage.CPUCapacity) * usage.CPUUtilization)
+	// Sanitise the CPU utilisation before converting to a used-core count. A
+	// 0/0 monitoring ratio yields NaN (and a misbehaving exporter can produce
+	// Inf or a negative value); int64(NaN) is implementation-defined in Go, so
+	// an unsanitised value makes the whole pressure decision undefined. Assume
+	// the node is fully used when the metric is non-finite, so a broken metric
+	// never looks like free headroom.
+	util := usage.CPUUtilization
+	if math.IsNaN(util) || math.IsInf(util, 0) {
+		util = 1.0
+	}
+	if util < 0 {
+		util = 0
+	}
+	usedCPU := int64(float64(usage.CPUCapacity) * util)
 	usedMemory := usage.MemoryCapacity - usage.MemoryAvailable
 	if usedMemory < 0 {
 		usedMemory = 0
