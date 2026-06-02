@@ -10,9 +10,10 @@ import (
 	"testing"
 	"time"
 
-	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	dto "github.com/prometheus/client_model/go"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -323,6 +324,123 @@ func TestReconcileReplica_TC405_HashUpdate(t *testing.T) {
 	}
 }
 
+func TestSyncReplicasForViewer_TCA61_BumpSharedWorkloadWhenReplicaChanged(t *testing.T) {
+	c := newReplicaFixture(t,
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ollamav3-shared", UID: types.UID("ns-shared")}},
+		newSourceSecretWithRV("brucedai", "cert-a", "key-a", "rv-1"),
+		newDeployment("ollamav3-shared", "app-deploy", nil),
+		newReplicaSet("ollamav3-shared", "app-rs", "app-deploy"),
+		newSharedEntrancePod("ollamav3-shared", "entrance-0", "app-rs", false),
+	)
+
+	err := SyncReplicasForViewer(context.Background(), c, "brucedai", []ReplicaTarget{
+		{CallerNamespace: "ollamav3-shared", CertViewer: "brucedai"},
+	})
+	if err != nil {
+		t.Fatalf("SyncReplicasForViewer: %v", err)
+	}
+
+	deploy := &appsv1.Deployment{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "ollamav3-shared",
+		Name:      "app-deploy",
+	}, deploy); err != nil {
+		t.Fatalf("get deployment: %v", err)
+	}
+	if got := deploy.Spec.Template.Annotations[annotationD2ReplicaRevision]; got != "rv-1" {
+		t.Fatalf("annotation %s=%q want rv-1", annotationD2ReplicaRevision, got)
+	}
+}
+
+func TestSyncReplicasForViewer_TCA62_NoBumpWhenD2AlreadyPresent(t *testing.T) {
+	c := newReplicaFixture(t,
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ollamav3-shared", UID: types.UID("ns-shared")}},
+		newSourceSecretWithRV("brucedai", "cert-a", "key-a", "rv-2"),
+		newDeployment("ollamav3-shared", "app-deploy", nil),
+		newReplicaSet("ollamav3-shared", "app-rs", "app-deploy"),
+		newSharedEntrancePod("ollamav3-shared", "entrance-0", "app-rs", true),
+	)
+
+	err := SyncReplicasForViewer(context.Background(), c, "brucedai", []ReplicaTarget{
+		{CallerNamespace: "ollamav3-shared", CertViewer: "brucedai"},
+	})
+	if err != nil {
+		t.Fatalf("SyncReplicasForViewer: %v", err)
+	}
+
+	deploy := &appsv1.Deployment{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "ollamav3-shared",
+		Name:      "app-deploy",
+	}, deploy); err != nil {
+		t.Fatalf("get deployment: %v", err)
+	}
+	if got := deploy.Spec.Template.Annotations[annotationD2ReplicaRevision]; got != "" {
+		t.Fatalf("annotation should stay empty, got=%q", got)
+	}
+}
+
+func TestSyncReplicasForViewer_TCA63_NoBumpWhenRevisionAlreadyCurrent(t *testing.T) {
+	c := newReplicaFixture(t,
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ollamav3-shared", UID: types.UID("ns-shared")}},
+		newSourceSecretWithRV("brucedai", "cert-a", "key-a", "rv-3"),
+		newDeployment("ollamav3-shared", "app-deploy", map[string]string{annotationD2ReplicaRevision: "rv-3"}),
+		newReplicaSet("ollamav3-shared", "app-rs", "app-deploy"),
+		newSharedEntrancePod("ollamav3-shared", "entrance-0", "app-rs", false),
+	)
+
+	err := SyncReplicasForViewer(context.Background(), c, "brucedai", []ReplicaTarget{
+		{CallerNamespace: "ollamav3-shared", CertViewer: "brucedai"},
+	})
+	if err != nil {
+		t.Fatalf("SyncReplicasForViewer: %v", err)
+	}
+
+	deploy := &appsv1.Deployment{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "ollamav3-shared",
+		Name:      "app-deploy",
+	}, deploy); err != nil {
+		t.Fatalf("get deployment: %v", err)
+	}
+	if got := deploy.Spec.Template.Annotations[annotationD2ReplicaRevision]; got != "rv-3" {
+		t.Fatalf("annotation should stay rv-3, got=%q", got)
+	}
+}
+
+func TestSyncReplicasForViewer_TCA64_UserSpaceReplicaDoesNotBump(t *testing.T) {
+	c := newReplicaFixture(t,
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "user-space-brucedai", UID: types.UID("ns-user")}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ollamav3-shared", UID: types.UID("ns-shared")}},
+		newSourceSecretWithRV("brucedai", "cert-a", "key-a", "rv-4"),
+		newDeployment("ollamav3-shared", "app-deploy", nil),
+		newReplicaSet("ollamav3-shared", "app-rs", "app-deploy"),
+		newSharedEntrancePod("ollamav3-shared", "entrance-0", "app-rs", false),
+	)
+
+	err := SyncReplicasForViewer(context.Background(), c, "brucedai", []ReplicaTarget{
+		{CallerNamespace: "user-space-brucedai", CertViewer: "brucedai"},
+	})
+	if err != nil {
+		t.Fatalf("SyncReplicasForViewer: %v", err)
+	}
+
+	deploy := &appsv1.Deployment{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "ollamav3-shared",
+		Name:      "app-deploy",
+	}, deploy); err != nil {
+		t.Fatalf("get deployment: %v", err)
+	}
+	if got := deploy.Spec.Template.Annotations[annotationD2ReplicaRevision]; got != "" {
+		t.Fatalf("annotation should stay empty, got=%q", got)
+	}
+}
+
 func TestSyncReplicasForViewer_TC406_DemandGoneDeletesReplica(t *testing.T) {
 	c := newReplicaFixture(t,
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
@@ -446,8 +564,8 @@ func TestFanOutReplica_TC415_IndexFailureKeepsLastDemand(t *testing.T) {
 		failKinds: map[string]bool{"PodList": true, "ApplicationList": true},
 	}
 	r := &EntranceTLSReconciler{
-		Client:      c,
-		lastDemand:  []ReplicaTarget{{CallerNamespace: "user-space-alice", CertViewer: "alice"}},
+		Client:     c,
+		lastDemand: []ReplicaTarget{{CallerNamespace: "user-space-alice", CertViewer: "alice"}},
 	}
 	if err := r.fanOutReplica(context.Background(), "alice"); err == nil {
 		t.Fatal("fanOutReplica should return index rebuild error")
@@ -664,6 +782,74 @@ func newReplicaSecret(ns, viewer, cert, key string) *corev1.Secret {
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       []byte(cert),
 			corev1.TLSPrivateKeyKey: []byte(key),
+		},
+	}
+}
+
+func newSourceSecretWithRV(viewer, cert, key, rv string) *corev1.Secret {
+	sec := newSourceSecret(viewer, cert, key)
+	sec.ResourceVersion = rv
+	return sec
+}
+
+func newDeployment(namespace, name string, annotations map[string]string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: annotations,
+				},
+			},
+		},
+	}
+}
+
+func newReplicaSet(namespace, name, deployment string) *appsv1.ReplicaSet {
+	controller := true
+	return &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       deployment,
+					Controller: &controller,
+				},
+			},
+		},
+	}
+}
+
+func newSharedEntrancePod(namespace, name, ownerReplicaSet string, withD2 bool) *corev1.Pod {
+	controller := true
+	containers := []corev1.Container{{Name: "main"}}
+	if withD2 {
+		containers = append(containers, corev1.Container{Name: constants.D2SidecarContainerName})
+	}
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels: map[string]string{
+				constants.AppSharedEntrancesLabel: "true",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "apps/v1",
+					Kind:       "ReplicaSet",
+					Name:       ownerReplicaSet,
+					Controller: &controller,
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: containers,
 		},
 	}
 }
