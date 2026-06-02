@@ -64,6 +64,12 @@ spec:
             type: string
           metadata:
             type: object
+          multiSelect:
+            description: |-
+              MultiSelect indicates the value may hold multiple items joined by Splitter.
+              When true, the value is split on Splitter and each item is validated
+              independently against Type/Options/RemoteOptions/Regex.
+            type: boolean
           options:
             description: Options defines a finite set of allowed values for this env
               var
@@ -87,6 +93,11 @@ spec:
             type: string
           required:
             type: boolean
+          splitter:
+            description: |-
+              Splitter is the delimiter used to join/split multiple values when
+              MultiSelect is true. Defaults to "," (DefaultEnvSplitter) when empty.
+            type: string
           title:
             type: string
           type:

@@ -1042,3 +1042,113 @@ func TestPolicy_DurationPattern(t *testing.T) {
 		t.Fatalf("3600s should be a valid duration: %v", err)
 	}
 }
+
+// TestPermission_ExternalDataVersionGate documents that permission.externalData
+// is only accepted on modern manifests (olaresManifest.version >= 0.12.0).
+// permission.appCommon carries no such gate and must validate at any version.
+func TestPermission_ExternalDataVersionGate(t *testing.T) {
+	// externalData on a legacy (< 0.12.0) manifest is rejected.
+	c := newValidConfig() // ConfigVersion "0.11.0"
+	c.Permission.ExternalData = true
+	err := ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("expected error for permission.externalData on olaresManifest.version < 0.12.0")
+	}
+	if !strings.Contains(err.Error(), "permission.externalData") {
+		t.Fatalf("error should mention permission.externalData, got: %v", err)
+	}
+
+	// externalData on a modern (>= 0.12.0) manifest is accepted.
+	c = newValidConfig()
+	c.ConfigVersion = "0.12.0"
+	c.Permission.ExternalData = true
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("permission.externalData should be accepted at >= 0.12.0: %v", err)
+	}
+
+	// appCommon is unconstrained: it must validate on a legacy manifest.
+	c = newValidConfig()
+	c.Permission.AppCommon = true
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("permission.appCommon should be accepted at any version: %v", err)
+	}
+}
+
+func newValidOverlayEntrance() OverlayEntrance {
+	return OverlayEntrance{
+		Title:       "Jellyfin",
+		Port:        8096,
+		Workload:    "jellyfin",
+		Description: "Access in LAN",
+		Protocol:    "tcp",
+	}
+}
+
+func TestOverlayGateway_ValidEntrance(t *testing.T) {
+	c := newValidConfig()
+	c.OverlayGateway = OverlayGateway{
+		Enable:    true,
+		Entrances: []OverlayEntrance{newValidOverlayEntrance()},
+	}
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("valid overlayGateway entrance must pass: %v", err)
+	}
+}
+
+func TestOverlayGateway_ProtocolEnum(t *testing.T) {
+	cases := []struct {
+		value   string
+		wantErr bool
+	}{
+		{"", false}, // empty means both tcp and udp
+		{"tcp", false},
+		{"udp", false},
+		{"sctp", true},
+		{"TCP", true},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.value, func(t *testing.T) {
+			c := newValidConfig()
+			e := newValidOverlayEntrance()
+			e.Protocol = tc.value
+			c.OverlayGateway = OverlayGateway{Enable: true, Entrances: []OverlayEntrance{e}}
+			err := ValidateAppConfiguration(c)
+			if tc.wantErr && err == nil {
+				t.Fatalf("expected error for protocol %q", tc.value)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error for protocol %q: %v", tc.value, err)
+			}
+		})
+	}
+}
+
+func TestOverlayGateway_RequiredAndPortRules(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(*OverlayEntrance)
+		field  string
+	}{
+		{"missing title", func(e *OverlayEntrance) { e.Title = "" }, "title"},
+		{"missing workload", func(e *OverlayEntrance) { e.Workload = "" }, "workload"},
+		{"zero port", func(e *OverlayEntrance) { e.Port = 0 }, "port"},
+		{"negative port", func(e *OverlayEntrance) { e.Port = -1 }, "port"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c := newValidConfig()
+			e := newValidOverlayEntrance()
+			tc.mutate(&e)
+			c.OverlayGateway = OverlayGateway{Enable: true, Entrances: []OverlayEntrance{e}}
+			err := ValidateAppConfiguration(c)
+			if err == nil {
+				t.Fatalf("expected error for %s", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.field) {
+				t.Fatalf("error should mention %q, got: %v", tc.field, err)
+			}
+		})
+	}
+}

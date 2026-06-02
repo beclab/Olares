@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -82,7 +81,6 @@ var imageManager map[string]context.CancelFunc
 
 // Reconcile implements the reconciliation loop for the ImageManagerController
 func (r *ImageManagerController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 	ctrl.Log.Info("reconcile image manager request", "name", req.Name)
 
 	var im appv1alpha1.ImageManager

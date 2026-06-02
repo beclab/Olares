@@ -20,6 +20,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
+	"github.com/beclab/Olares/framework/oac"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
@@ -42,6 +43,7 @@ type installHelperIntf interface {
 	getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error)
 	setAppConfig(req *api.InstallRequest, appName string)
 	validate(bool, []*v1alpha1.Application) error
+	lintChart() error
 	setAppEnv(overrides []sysv1alpha1.AppEnvVar) error
 	applyAppEnv(ctx context.Context) error
 	applyApplicationManager(marketSource string) (opID string, err error)
@@ -61,6 +63,7 @@ type installHandlerHelper struct {
 	token                string
 	insReq               *api.InstallRequest
 	appConfig            *appcfg.ApplicationConfig
+	chartPath            string
 	client               *versioned.Clientset
 	validateClusterScope func(isAdmin bool, installedApps []*v1alpha1.Application) (err error)
 }
@@ -218,6 +221,12 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
 	}
+	err = helper.lintChart()
+	if err != nil {
+		klog.Errorf("Failed to lint chart err=%v", err)
+		return
+	}
+
 	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" ||
 		(appCfg.AllowMultipleInstall && apiVersion == appcfg.V2) {
 		klog.Errorf("app %s can not be clone", app)
@@ -455,6 +464,28 @@ func (h *installHandlerHelper) validate(isAdmin bool, installedApps []*v1alpha1.
 	return
 }
 
+// lintChart runs oac.Lint against the freshly-downloaded chart so chart-level
+// authoring issues (folder layout, manifest cross-fields, helm render +
+// workload integrity, hostPath rolling-update, resource namespace, container
+// resource limits, Chart.yaml <-> manifest version match) are caught before
+// the ApplicationManager object is created.
+//
+// Owner / admin reflect the actual scenario this install will run under, so
+// helm-render-dependent checks exercise the same template branches the real
+// install will take.
+func (h *installHandlerHelper) lintChart() (err error) {
+	if h.chartPath == "" {
+		return nil
+	}
+	// ignore v2
+	err = oac.Lint(h.chartPath)
+	if err != nil {
+		klog.Errorf("Failed to lint chart at %s err=%v", h.chartPath, err)
+		api.HandleBadRequest(h.resp, h.req, err)
+	}
+	return
+}
+
 func (h *installHandlerHelper) _validateClusterScope(isAdmin bool, installedApp []*v1alpha1.Application) (err error) {
 	for _, installedApp := range installedApp {
 		if h.appConfig.AppScope.ClusterScoped && appcfg.IsClusterScoped(installedApp) {
@@ -525,7 +556,8 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 		installAsAdmin = true
 	}
 
-	appConfig, _, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	var chartPath string
+	appConfig, chartPath, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		RawAppName:   h.rawAppName,
 		Owner:        h.owner,
@@ -543,6 +575,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 	}
 
 	h.appConfig = appConfig
+	h.chartPath = chartPath
 
 	return
 }
@@ -800,7 +833,8 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 		}
 		admin = adminUsers[0]
 	}
-	appConfig, _, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	var chartPath string
+	appConfig, chartPath, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		RawAppName:   h.rawAppName,
 		Owner:        h.owner,
@@ -819,6 +853,7 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 	}
 
 	h.appConfig = appConfig
+	h.chartPath = chartPath
 
 	return
 }
@@ -848,7 +883,8 @@ func (h *installHandlerHelperV3) getInstalledApps() (installed bool, apps []*v1a
 // gated above) and forces the namespace to the deterministic shared one so
 // every code path agrees on it regardless of what the manifest specified.
 func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType string) (appConfig *appcfg.ApplicationConfig, err error) {
-	appConfig, _, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
+	var chartPath string
+	appConfig, chartPath, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		RawAppName:   h.rawAppName,
 		Owner:        h.owner,
@@ -865,6 +901,7 @@ func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource 
 		return
 	}
 	h.appConfig = appConfig
+	h.chartPath = chartPath
 	return
 }
 

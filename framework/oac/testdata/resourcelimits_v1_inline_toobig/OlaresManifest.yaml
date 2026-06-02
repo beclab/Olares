@@ -24,7 +24,7 @@ spec:
   subCategory: s
   developer: dev
   supportArch: [amd64, arm64]
-  resources:
+  accelerator:
     - mode: cpu
       requiredCpu: 100m
       limitedCpu: 200m

@@ -218,6 +218,37 @@ options:
 	}
 }
 
+// TestLint_WorkloadReplicas_OK exercises the full rendered-check wiring for a
+// chart that declares workloadReplicas and an overlayGateway entrance. The
+// chart names its Deployment `{{ .Release.Name }}`, so this also proves that
+// the manifest's workload references (which use the app name) line up with the
+// rendered workload set after the release-name == app-name substitution.
+func TestLint_WorkloadReplicas_OK(t *testing.T) {
+	err := oac.Lint("testdata/wlreplicas",
+		oac.WithOwnerAdmin("alice"),
+		oac.SkipResourceCheck(),
+	)
+	if err != nil {
+		t.Fatalf("Lint(wlreplicas): %v", err)
+	}
+}
+
+// TestLint_OverlayGatewayWorkloadMissing confirms the rendered check fires
+// through Lint when an overlayGateway entrance references a workload that no
+// rendered Deployment/StatefulSet provides.
+func TestLint_OverlayGatewayWorkloadMissing(t *testing.T) {
+	err := oac.Lint("testdata/wlrbad",
+		oac.WithOwnerAdmin("alice"),
+		oac.SkipResourceCheck(),
+	)
+	if err == nil {
+		t.Fatal("expected Lint to fail: overlayGateway references workload 'ghost'")
+	}
+	if !strings.Contains(err.Error(), "ghost") {
+		t.Fatalf("error should mention the missing workload 'ghost', got: %v", err)
+	}
+}
+
 func TestListImagesFromOAC(t *testing.T) {
 	imgs, err := oac.ListImagesFromOAC(testdataFirefox, oac.WithOwnerAdmin("alice"))
 	if err != nil {

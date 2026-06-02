@@ -5,7 +5,6 @@ metadata:
   labels: 
     app.bytetrade.io/name: bfl
 spec:
-  # TODO(user): Add fields here
   name: bfl
   namespace: default
   owner: admin
