@@ -8,12 +8,18 @@ import (
 )
 
 // NewFakeClient builds a fake controller-runtime client with the app-service
-// scheme and the status subresource enabled for ApplicationManager and
-// Application, which the appstate code patches via client.Status-style merges.
+// scheme.
+//
+// Only Application is registered as a status subresource: its CRD declares
+// subresources.status, so its status must be written via Status().Update/Patch.
+// ApplicationManager's CRD declares an empty subresources block (no /status),
+// so appstate.updateStatus persists status through a plain Patch; registering
+// it as a status subresource here would make the fake client silently drop
+// those status writes.
 func NewFakeClient(objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().
 		WithScheme(NewScheme()).
-		WithStatusSubresource(&appv1alpha1.ApplicationManager{}, &appv1alpha1.Application{}).
+		WithStatusSubresource(&appv1alpha1.Application{}).
 		WithObjects(objs...).
 		Build()
 }
