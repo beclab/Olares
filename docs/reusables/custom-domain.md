@@ -102,6 +102,8 @@ Once TXT and NS records are verified, you can proceed to create an organization 
 <!-- #region custom-domain-install-and-activate-olares -->
 Now you can install and activate Olares with your Olares ID.
 
+Use a new or factory-reset Olares device for this step. An Olares device that has already been activated with another Olares ID cannot be switched to the custom-domain Olares ID in place.
+
 The installation steps are similar to the standard process. The following example uses Linux. For other systems, refer to the [installation guide](/manual/get-started/install-olares).
 
 :::warning Same network required
