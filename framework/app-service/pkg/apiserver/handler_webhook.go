@@ -137,20 +137,14 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 			if *injectSharedPod {
 				snapshot, err := cluster.GetSnapshot(ctx)
 				if err != nil {
-					klog.Errorf("Failed to get cluster snapshot for v3 pod uuid=%s namespace=%s err=%v",
+					// fail-open: the snapshot only decides whether to add the
+					// d2 enhancement. On error, skip d2 and admit the pod,
+					// which already carries the shared-entrance label.
+					klog.Warningf("Skipping d2 offloader injection (fail-open): cluster snapshot unavailable for v3 pod uuid=%s namespace=%s err=%v",
 						proxyUUID, req.Namespace, err)
-					return h.sidecarWebhook.AdmissionError(req.UID, err)
-				}
-				if snapshot.InClusterGatewayEnabled {
-					d2Patch, err := h.sidecarWebhook.CreateD2OffloaderPatch(ctx, &pod, req, appCfg, proxyUUID)
-					if err != nil {
-						klog.Errorf("Failed to create d2 offloader patch for v3 pod uuid=%s namespace=%s err=%v",
-							proxyUUID, req.Namespace, err)
-						return h.sidecarWebhook.AdmissionError(req.UID, err)
-					}
-					h.sidecarWebhook.PatchAdmissionResponse(resp, d2Patch)
-					klog.Infof("Injected d2 offloader for v3 shared-entrance pod uuid=%s namespace=%s",
-						proxyUUID, req.Namespace)
+					webhook.RecordD2InjectSkipped("snapshot_error")
+				} else if snapshot.InClusterGatewayEnabled {
+					h.injectD2OffloaderFailOpen(ctx, resp, &pod, req, appCfg, proxyUUID)
 				}
 			}
 		} else {
@@ -174,6 +168,27 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	klog.Infof("Success to create patch admission response for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 
 	return resp
+}
+
+// injectD2OffloaderFailOpen applies the v3 d2 offloader patch, failing open.
+// When a prerequisite (viewer derivation, per-viewer tls replica, cluster
+// snapshot, sidecar image) is not yet ready, it records
+// app_service_d2_inject_skipped_total{reason} and admits the pod with the
+// shared-entrance label already patched, instead of rejecting it. Illegal-input
+// errors are handled before this point and remain fail-closed.
+func (h *Handler) injectD2OffloaderFailOpen(ctx context.Context, resp *admissionv1.AdmissionResponse,
+	pod *corev1.Pod, req *admissionv1.AdmissionRequest, appCfg *appcfg_mod.ApplicationConfig, proxyUUID uuid.UUID) {
+	d2Patch, err := h.sidecarWebhook.CreateD2OffloaderPatch(ctx, pod, req, appCfg, proxyUUID)
+	if err != nil {
+		reason := webhook.ClassifyD2SkipReason(err)
+		klog.Warningf("Skipping d2 offloader injection (fail-open) for v3 pod uuid=%s namespace=%s reason=%s err=%v",
+			proxyUUID, req.Namespace, reason, err)
+		webhook.RecordD2InjectSkipped(reason)
+		return
+	}
+	h.sidecarWebhook.PatchAdmissionResponse(resp, d2Patch)
+	klog.Infof("Injected d2 offloader for v3 shared-entrance pod uuid=%s namespace=%s",
+		proxyUUID, req.Namespace)
 }
 
 // patchSharedEntranceLabel applies only the shared-entrance pod label, without
