@@ -875,6 +875,10 @@ func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 			permissions = append(permissions, appcfg.AppCacheRW)
 		case appcfg.UserDataPermission:
 			permissions = append(permissions, appcfg.UserDataRW)
+		case appcfg.AppCommonPermission:
+			permissions = append(permissions, appcfg.AppCommonRW)
+		case appcfg.ExternalDataPermission:
+			permissions = append(permissions, appcfg.ExternalDataRW)
 		case []appcfg.ProviderPermission:
 			permissions = append(permissions, p)
 		case []interface{}:

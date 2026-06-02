@@ -257,7 +257,7 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 	h.app.Permission = ParseAppPermission(h.app.Permission)
 	for _, p := range h.app.Permission {
 		switch perm := p.(type) {
-		case appcfg.AppDataPermission, appcfg.AppCachePermission, appcfg.UserDataPermission:
+		case appcfg.AppDataPermission, appcfg.AppCachePermission, appcfg.UserDataPermission, appcfg.AppCommonPermission:
 
 			// app requests app data permission
 			// set .Values.schedule.nodeName and .Values.userspace.appCache to app
