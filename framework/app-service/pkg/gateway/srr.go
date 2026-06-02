@@ -119,7 +119,7 @@ func BuildSpec(app *appv1alpha1.Application, svc *corev1.Service) (srrv1alpha1.S
 //   - empty backing service or no usable TCP port
 //   - normalized logical pattern fails NormalizeHostOrLogicalPattern
 func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Entrance,
-	svc *corev1.Service, platformDomain string) (srrv1alpha1.SharedRouteRegistrySpec, error) {
+	entranceIndex int, svc *corev1.Service, platformDomain string) (srrv1alpha1.SharedRouteRegistrySpec, error) {
 	if app == nil {
 		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("application is nil")
 	}
@@ -129,15 +129,11 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 	if svc == nil {
 		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("upstream service is nil")
 	}
-	appid := strings.TrimSpace(app.Spec.Appid)
-	if appid == "" {
-		// Application.spec.appid is only populated for v3 apps; fall back
-		// to the deterministic appName-derived appid when spec.appid is unset.
-		appid = appcfg.AppName(app.Spec.Name).GetAppID()
-	}
-	pattern := appcfg.LogicalHostPattern(appid, entrance.Name, platformDomain)
-	if pattern == "" {
-		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("compute logical hostPattern: appid=%q entrance=%q platformDomain=%q", appid, entrance.Name, platformDomain)
+	appid := appcfg.AppName(app.Spec.Name).GetAppID()
+	pattern, err := appcfg.LogicalHostPattern(appid, entranceIndex, len(app.Spec.SharedEntrances), platformDomain)
+	if err != nil {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("compute logical hostPattern: appid=%q index=%d count=%d platformDomain=%q: %w",
+			appid, entranceIndex, len(app.Spec.SharedEntrances), platformDomain, err)
 	}
 	norm, err := NormalizeHostOrLogicalPattern(pattern)
 	if err != nil {
@@ -275,10 +271,7 @@ func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1
 	if ns == "" {
 		return nil, errors.New("application has empty spec.namespace")
 	}
-	appid := strings.TrimSpace(app.Spec.Appid)
-	if appid == "" {
-		appid = appcfg.AppName(app.Spec.Name).GetAppID()
-	}
+	appid := appcfg.AppName(app.Spec.Name).GetAppID()
 	name := ResourceNameForEntrance(appid, entrance.Name)
 	if name == "" {
 		return nil, fmt.Errorf("compute SRR name for entrance %q on app %s", entrance.Name, app.Spec.Name)

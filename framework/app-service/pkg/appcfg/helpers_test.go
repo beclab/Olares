@@ -1,95 +1,139 @@
-// Package appcfg helpers test: per-viewer Shared URL and logical hostPattern.
-//
-// Covers SharedEntranceHostPrefix / GenSharedEntranceURLForUser /
-// LogicalHostPattern. These three are the only public surfaces v2 adds to
-// appcfg and are consumed by:
-//   - pkg/gateway   (SRR writer)
-//   - controllers   (reconcile loop)
-//   - cmd l4-bfl-proxy  (informally — viewers obtain the same URL via
-//                        SharedEntranceHostPrefix re-implementation; we keep
-//                        the canonical computation here as the test oracle).
 package appcfg
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
 
-func TestSharedEntranceHostPrefix_Stable(t *testing.T) {
-	got := SharedEntranceHostPrefix("a5be2268", "ollamav2")
-	if len(got) != 8 {
-		t.Fatalf("len(hash8) = %d, want 8", len(got))
+func TestSharedEntranceID_SingleAndMulti(t *testing.T) {
+	got, err := SharedEntranceID("a5be2268", 0, 1)
+	if err != nil {
+		t.Fatalf("single entrance: %v", err)
 	}
-	for _, r := range got {
-		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f')) {
-			t.Fatalf("hash8 %q has non-lowercase-hex rune %q", got, r)
-		}
+	if got != "a5be2268" {
+		t.Fatalf("single entrance id = %q, want %q", got, "a5be2268")
 	}
-	// md5("a5be2268:shared:ollamav2") prefix is a stable contract; the
-	// digest is also computed by l4-bfl-proxy and e2e scripts (Python).
-	again := SharedEntranceHostPrefix("a5be2268", "ollamav2")
-	if got != again {
-		t.Fatalf("hash8 not stable: %q vs %q", got, again)
+
+	got0, err := SharedEntranceID("A5BE2268", 0, 2)
+	if err != nil {
+		t.Fatalf("multi[0]: %v", err)
 	}
-	if SharedEntranceHostPrefix("A5BE2268", " OllamaV2 ") != got {
-		t.Fatalf("hash8 must be case/whitespace insensitive: %q vs %q",
-			SharedEntranceHostPrefix("A5BE2268", " OllamaV2 "), got)
+	got1, err := SharedEntranceID("a5be2268", 1, 2)
+	if err != nil {
+		t.Fatalf("multi[1]: %v", err)
+	}
+	if got0 != "a5be22680" || got1 != "a5be22681" {
+		t.Fatalf("multi entrance ids = %q/%q, want %q/%q", got0, got1, "a5be22680", "a5be22681")
 	}
 }
 
-func TestSharedEntranceHostPrefix_DiffersByEntrance(t *testing.T) {
-	a := SharedEntranceHostPrefix("a5be2268", "ollamav2")
-	b := SharedEntranceHostPrefix("a5be2268", "ollamav3")
-	if a == b {
-		t.Fatalf("entrance change must change hash8: got %q for both", a)
+func TestSharedEntranceID_IndexOutOfRange(t *testing.T) {
+	cases := []int{-1, 2, 3}
+	for _, idx := range cases {
+		_, err := SharedEntranceID("a5be2268", idx, 2)
+		var eidErr *EIDError
+		if !errors.As(err, &eidErr) {
+			t.Fatalf("index=%d: expected EIDError, got %v", idx, err)
+		}
+		if eidErr.Code != "EID_INDEX_OUT_OF_RANGE" {
+			t.Fatalf("index=%d: code=%q, want EID_INDEX_OUT_OF_RANGE", idx, eidErr.Code)
+		}
+	}
+}
+
+func TestSharedEntranceID_CountOutOfRange(t *testing.T) {
+	cases := []int{0, 11, -1}
+	for _, count := range cases {
+		_, err := SharedEntranceID("a5be2268", 0, count)
+		var eidErr *EIDError
+		if !errors.As(err, &eidErr) {
+			t.Fatalf("count=%d: expected EIDError, got %v", count, err)
+		}
+		if eidErr.Code != "EID_TOO_MANY_ENTRANCES" {
+			t.Fatalf("count=%d: code=%q, want EID_TOO_MANY_ENTRANCES", count, eidErr.Code)
+		}
+	}
+}
+
+func TestSharedEntranceID_EmptyAppID(t *testing.T) {
+	for _, appid := range []string{"", "   "} {
+		_, err := SharedEntranceID(appid, 0, 1)
+		var eidErr *EIDError
+		if !errors.As(err, &eidErr) {
+			t.Fatalf("appid=%q: expected EIDError, got %v", appid, err)
+		}
+		if eidErr.Code != "EID_EMPTY_APPID" {
+			t.Fatalf("appid=%q: code=%q, want EID_EMPTY_APPID", appid, eidErr.Code)
+		}
 	}
 }
 
 func TestGenSharedEntranceURLForUser(t *testing.T) {
 	cases := []struct {
-		name     string
-		appid    string
-		entrance string
-		viewer   string
-		domain   string
-		want     string
+		name    string
+		appid   string
+		idx     int
+		count   int
+		viewer  string
+		domain  string
+		want    string
+		errCode string
 	}{
 		{
-			name: "happy path",
-			appid: "a5be2268", entrance: "ollamav2",
+			name:  "happy path",
+			appid: "a5be2268", idx: 0, count: 1,
 			viewer: "alice", domain: "olares.com",
-			want: "https://" + SharedEntranceHostPrefix("a5be2268", "ollamav2") + ".alice.olares.com",
+			want: "https://a5be2268.alice.olares.com",
 		},
 		{
-			name: "uppercase normalized",
-			appid: "A5BE2268", entrance: "OLLAMAv2",
+			name:  "uppercase normalized",
+			appid: "A5BE2268", idx: 1, count: 2,
 			viewer: "Alice", domain: "OLARES.COM",
-			want: "https://" + SharedEntranceHostPrefix("a5be2268", "ollamav2") + ".alice.olares.com",
+			want: "https://a5be22681.alice.olares.com",
 		},
 		{
-			name: "trailing dot in domain stripped",
-			appid: "a5be2268", entrance: "ollamav2",
+			name:  "trailing dot in domain stripped",
+			appid: "a5be2268", idx: 0, count: 1,
 			viewer: "alice", domain: "olares.com.",
-			want: "https://" + SharedEntranceHostPrefix("a5be2268", "ollamav2") + ".alice.olares.com",
+			want: "https://a5be2268.alice.olares.com",
 		},
-		{name: "empty viewer", appid: "x", entrance: "y", viewer: "", domain: "olares.com", want: ""},
-		{name: "empty domain", appid: "x", entrance: "y", viewer: "v", domain: "", want: ""},
-		{name: "empty appid", appid: "", entrance: "y", viewer: "v", domain: "olares.com", want: ""},
-		{name: "empty entrance", appid: "x", entrance: "", viewer: "v", domain: "olares.com", want: ""},
+		{name: "empty viewer", appid: "x", idx: 0, count: 1, viewer: "", domain: "olares.com", errCode: "EID_INCOMPLETE_URL_INPUT"},
+		{name: "empty domain", appid: "x", idx: 0, count: 1, viewer: "v", domain: "", errCode: "EID_INCOMPLETE_URL_INPUT"},
+		{name: "empty appid", appid: "", idx: 0, count: 1, viewer: "v", domain: "olares.com", errCode: "EID_EMPTY_APPID"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := GenSharedEntranceURLForUser(tc.appid, tc.entrance, tc.viewer, tc.domain)
-			if got != tc.want {
-				t.Fatalf("GenSharedEntranceURLForUser: got %q, want %q", got, tc.want)
+			got, err := GenSharedEntranceURLForUser(tc.appid, tc.idx, tc.count, tc.viewer, tc.domain)
+			if tc.errCode == "" {
+				if err != nil {
+					t.Fatalf("GenSharedEntranceURLForUser error: %v", err)
+				}
+				if got != tc.want {
+					t.Fatalf("GenSharedEntranceURLForUser: got %q, want %q", got, tc.want)
+				}
+				return
+			}
+			var eidErr *EIDError
+			if !errors.As(err, &eidErr) {
+				t.Fatalf("expected EIDError, got %v", err)
+			}
+			if eidErr.Code != tc.errCode {
+				t.Fatalf("error code=%q, want %q", eidErr.Code, tc.errCode)
 			}
 		})
 	}
 }
 
 func TestGenSharedEntranceURLForUser_DiffersByViewer(t *testing.T) {
-	a := GenSharedEntranceURLForUser("a5be2268", "ollamav2", "alice", "olares.com")
-	b := GenSharedEntranceURLForUser("a5be2268", "ollamav2", "bob", "olares.com")
+	a, err := GenSharedEntranceURLForUser("a5be2268", 0, 1, "alice", "olares.com")
+	if err != nil {
+		t.Fatalf("alice: %v", err)
+	}
+	b, err := GenSharedEntranceURLForUser("a5be2268", 0, 1, "bob", "olares.com")
+	if err != nil {
+		t.Fatalf("bob: %v", err)
+	}
 	if a == b {
 		t.Fatalf("viewer change must change URL (got %q == %q)", a, b)
 	}
@@ -99,24 +143,40 @@ func TestGenSharedEntranceURLForUser_DiffersByViewer(t *testing.T) {
 }
 
 func TestLogicalHostPattern(t *testing.T) {
-	got := LogicalHostPattern("a5be2268", "ollamav2", "olares.com")
-	want := SharedEntranceHostPrefix("a5be2268", "ollamav2") + ".*.olares.com"
+	got, err := LogicalHostPattern("a5be2268", 0, 1, "olares.com")
+	if err != nil {
+		t.Fatalf("LogicalHostPattern error: %v", err)
+	}
+	want := "a5be2268.*.olares.com"
 	if got != want {
 		t.Fatalf("LogicalHostPattern: got %q, want %q", got, want)
 	}
-	if g := LogicalHostPattern("A5BE2268", "OllamaV2", "OLARES.COM."); g != want {
+	g, err := LogicalHostPattern("A5BE2268", 0, 1, "OLARES.COM.")
+	if err != nil {
+		t.Fatalf("LogicalHostPattern normalize error: %v", err)
+	}
+	if g != want {
 		t.Fatalf("LogicalHostPattern not normalized: got %q, want %q", g, want)
 	}
-	if LogicalHostPattern("", "x", "y") != "" || LogicalHostPattern("x", "", "y") != "" || LogicalHostPattern("x", "y", "") != "" {
-		t.Fatal("LogicalHostPattern: empty inputs must return empty string")
+	if _, err := LogicalHostPattern("", 0, 1, "y"); err == nil {
+		t.Fatal("empty appid must return error")
+	}
+	if _, err := LogicalHostPattern("x", 0, 1, ""); err == nil {
+		t.Fatal("empty domain must return error")
 	}
 }
 
 // Cross-helper invariant: URL host part for viewer "x" is exactly
 // "<LogicalHostPattern> with * replaced by x".
 func TestURL_LogicalPattern_Consistency(t *testing.T) {
-	pat := LogicalHostPattern("a5be2268", "ollamav2", "olares.com")
-	url := GenSharedEntranceURLForUser("a5be2268", "ollamav2", "alice", "olares.com")
+	pat, err := LogicalHostPattern("a5be2268", 0, 1, "olares.com")
+	if err != nil {
+		t.Fatalf("LogicalHostPattern: %v", err)
+	}
+	url, err := GenSharedEntranceURLForUser("a5be2268", 0, 1, "alice", "olares.com")
+	if err != nil {
+		t.Fatalf("GenSharedEntranceURLForUser: %v", err)
+	}
 	wantHost := strings.Replace(pat, "*", "alice", 1)
 	if url != "https://"+wantHost {
 		t.Fatalf("URL %q is inconsistent with logical pattern %q", url, pat)

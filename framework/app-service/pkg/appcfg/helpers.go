@@ -116,57 +116,65 @@ func (s AppName) SharedEntranceIdPrefix() string {
 	return hashString[:8]
 }
 
-// SharedEntranceHostPrefix returns the 8-char lowercase md5 prefix that
-// identifies one sharedEntrance in the per-viewer URL scheme:
-//
-//	hash8 = md5(<appid> + ":shared:" + <entranceName>)[:8]
-//
-// It is intentionally independent of the user / viewer because the prefix
-// must be stable across viewers and across SRR reconciles. Callers that need
-// the full URL use GenSharedEntranceURLForUser; callers that need the SRR
-// hostPattern use LogicalHostPattern.
-func SharedEntranceHostPrefix(appid, entranceName string) string {
-	appid = strings.ToLower(strings.TrimSpace(appid))
-	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
-	sum := md5.Sum([]byte(appid + ":shared:" + entranceName))
-	return hex.EncodeToString(sum[:])[:8]
+// EIDError carries structured error codes from SharedEntranceID-family helpers.
+type EIDError struct {
+	Code string
+	Msg  string
 }
 
-// GenSharedEntranceURLForUser composes the per-viewer Shared entrance URL:
-//
-//	https://<hash8>.<viewer>.<platformDomain>
-//
-// All inputs are lowercased and trimmed. An empty viewer / platformDomain /
-// appid / entranceName returns "" so the caller can decide what to do (the
-// helper deliberately avoids panicking inside the controller hot path).
-func GenSharedEntranceURLForUser(appid, entranceName, viewer, platformDomain string) string {
+func (e *EIDError) Error() string { return e.Code + ": " + e.Msg }
+
+// SharedEntranceID returns the first DNS label for v3 shared entrances:
+// appid when count==1, appid+index when count>1.
+func SharedEntranceID(appid string, entranceIndex, entranceCount int) (string, error) {
 	appid = strings.ToLower(strings.TrimSpace(appid))
-	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
+	if appid == "" {
+		return "", &EIDError{Code: "EID_EMPTY_APPID", Msg: "appid is empty"}
+	}
+	if entranceCount < 1 || entranceCount > 10 {
+		return "", &EIDError{Code: "EID_TOO_MANY_ENTRANCES", Msg: "entrance count must be in [1,10]"}
+	}
+	if entranceIndex < 0 || entranceIndex >= entranceCount {
+		return "", &EIDError{Code: "EID_INDEX_OUT_OF_RANGE", Msg: "entrance index is out of range"}
+	}
+	if entranceCount == 1 {
+		return appid, nil
+	}
+	return fmt.Sprintf("%s%d", appid, entranceIndex), nil
+}
+
+// GenSharedEntranceURLForUser composes the per-viewer Shared entrance URL.
+func GenSharedEntranceURLForUser(appid string, entranceIndex, entranceCount int,
+	viewer, platformDomain string) (string, error) {
 	viewer = strings.ToLower(strings.TrimSpace(viewer))
 	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
-	if appid == "" || entranceName == "" || viewer == "" || platformDomain == "" {
-		return ""
+	if viewer == "" || platformDomain == "" {
+		return "", &EIDError{Code: "EID_INCOMPLETE_URL_INPUT", Msg: "viewer or platformDomain is empty"}
 	}
-	host := SharedEntranceHostPrefix(appid, entranceName) + "." + viewer + "." + platformDomain
-	return "https://" + host
+	entranceID, err := SharedEntranceID(appid, entranceIndex, entranceCount)
+	if err != nil {
+		return "", err
+	}
+	return "https://" + entranceID + "." + viewer + "." + platformDomain, nil
 }
 
 // LogicalHostPattern returns the SRR hostPattern for a shared entrance
 // One logical pattern covers all viewers of an entrance:
 //
-//	<hash8>.*.<platformDomain>
+//	<entranceid>.*.<platformDomain>
 //
 // The literal "*" segment is the marker app-service route control uses when
 // building HTTPRoute hostnames + Host RegularExpression header match.
-// Empty inputs return "" so the caller can detect misuse.
-func LogicalHostPattern(appid, entranceName, platformDomain string) string {
-	appid = strings.ToLower(strings.TrimSpace(appid))
-	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
+func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platformDomain string) (string, error) {
 	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
-	if appid == "" || entranceName == "" || platformDomain == "" {
-		return ""
+	if platformDomain == "" {
+		return "", &EIDError{Code: "EID_INCOMPLETE_URL_INPUT", Msg: "platformDomain is empty"}
 	}
-	return SharedEntranceHostPrefix(appid, entranceName) + ".*." + platformDomain
+	entranceID, err := SharedEntranceID(appid, entranceIndex, entranceCount)
+	if err != nil {
+		return "", err
+	}
+	return entranceID + ".*." + platformDomain, nil
 }
 
 // GenEntranceURL fills in entrance URLs on app.Spec.Entrances based on the

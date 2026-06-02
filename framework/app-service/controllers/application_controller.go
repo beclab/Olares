@@ -784,7 +784,7 @@ func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context
 		if err != nil {
 			return fmt.Errorf("resolve backing service for entrance %q: %w", entrance.Name, err)
 		}
-		spec, err := gateway.BuildSpecForEntrance(app, entrance, svc, platformDomain)
+		spec, err := gateway.BuildSpecForEntrance(app, entrance, i, svc, platformDomain)
 		if err != nil {
 			return fmt.Errorf("build SRR spec for entrance %q: %w", entrance.Name, err)
 		}

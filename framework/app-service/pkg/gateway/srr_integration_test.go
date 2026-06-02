@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -123,7 +124,7 @@ func TestReconcileForEntrance_CreateAndUpdate(t *testing.T) {
 	ent.Name = "ollamav2"
 	app.Spec.SharedEntrances[0] = ent
 
-	spec, err := BuildSpecForEntrance(app, ent, svc, "olares.com")
+	spec, err := BuildSpecForEntrance(app, ent, 0, svc, "olares.com")
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance: %v", err)
 	}
@@ -131,11 +132,12 @@ func TestReconcileForEntrance_CreateAndUpdate(t *testing.T) {
 		t.Fatalf("ReconcileForEntrance create: %v", err)
 	}
 	got := &srrv1alpha1.SharedRouteRegistry{}
-	name := ResourceNameForEntrance("a5be2268", "ollamav2")
+	appid := appcfg.AppName(app.Spec.Name).GetAppID()
+	name := ResourceNameForEntrance(appid, "ollamav2")
 	if err := c.Get(ctx, types.NamespacedName{Namespace: "ollama-shared", Name: name}, got); err != nil {
 		t.Fatalf("get %s: %v", name, err)
 	}
-	if got.Labels["gateway.olares.io/appid"] != "a5be2268" {
+	if got.Labels["gateway.olares.io/appid"] != appid {
 		t.Fatalf("missing appid label: %v", got.Labels)
 	}
 	if got.Labels["gateway.olares.io/entrance"] != "ollamav2" {
@@ -156,7 +158,7 @@ func TestCheckLogicalPatternUniqueness(t *testing.T) {
 	ctx := context.Background()
 	ent := app.Spec.SharedEntrances[0]
 	ent.Name = "ollamav2"
-	spec, err := BuildSpecForEntrance(app, ent, svc, "olares.com")
+	spec, err := BuildSpecForEntrance(app, ent, 0, svc, "olares.com")
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance: %v", err)
 	}
@@ -166,7 +168,8 @@ func TestCheckLogicalPatternUniqueness(t *testing.T) {
 	pat := spec.HostPatterns[0]
 
 	// Self-namespaced lookup should not flag collision.
-	if err := CheckLogicalPatternUniqueness(ctx, c, pat, "ollama-shared", ResourceNameForEntrance("a5be2268", "ollamav2")); err != nil {
+	appid := appcfg.AppName(app.Spec.Name).GetAppID()
+	if err := CheckLogicalPatternUniqueness(ctx, c, pat, "ollama-shared", ResourceNameForEntrance(appid, "ollamav2")); err != nil {
 		t.Fatalf("self-uniqueness false positive: %v", err)
 	}
 	// A different SRR carrying the same pattern in another namespace must fail.
@@ -181,7 +184,7 @@ func TestCheckLogicalPatternUniqueness(t *testing.T) {
 	if err := c.Create(ctx, other); err != nil {
 		t.Fatalf("seed other: %v", err)
 	}
-	err = CheckLogicalPatternUniqueness(ctx, c, pat, "ollama-shared", ResourceNameForEntrance("a5be2268", "ollamav2"))
+	err = CheckLogicalPatternUniqueness(ctx, c, pat, "ollama-shared", ResourceNameForEntrance(appid, "ollamav2"))
 	if err == nil {
 		t.Fatal("expected HASH8_COLLISION error")
 	}
@@ -196,26 +199,27 @@ func TestPruneEntranceSRRs(t *testing.T) {
 	for _, name := range []string{"ollamav2", "ollamav3"} {
 		ent := app.Spec.SharedEntrances[0]
 		ent.Name = name
-		spec, _ := BuildSpecForEntrance(app, ent, svc, "olares.com")
+		spec, _ := BuildSpecForEntrance(app, ent, 0, svc, "olares.com")
 		if _, err := ReconcileForEntrance(ctx, c, app, ent, spec); err != nil {
 			t.Fatalf("seed %s: %v", name, err)
 		}
 	}
 	keep := map[string]struct{}{
-		ResourceNameForEntrance("a5be2268", "ollamav2"): {},
+		ResourceNameForEntrance(appcfg.AppName(app.Spec.Name).GetAppID(), "ollamav2"): {},
 	}
 	if err := PruneEntranceSRRs(ctx, c, app, keep); err != nil {
 		t.Fatalf("PruneEntranceSRRs: %v", err)
 	}
 	got := &srrv1alpha1.SharedRouteRegistry{}
-	err := c.Get(ctx, types.NamespacedName{Namespace: "ollama-shared", Name: ResourceNameForEntrance("a5be2268", "ollamav3")}, got)
+	appid := appcfg.AppName(app.Spec.Name).GetAppID()
+	err := c.Get(ctx, types.NamespacedName{Namespace: "ollama-shared", Name: ResourceNameForEntrance(appid, "ollamav3")}, got)
 	if err == nil {
 		t.Fatal("stale SRR not pruned")
 	}
 	if !apierrors.IsNotFound(err) {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if err := c.Get(ctx, types.NamespacedName{Namespace: "ollama-shared", Name: ResourceNameForEntrance("a5be2268", "ollamav2")}, got); err != nil {
+	if err := c.Get(ctx, types.NamespacedName{Namespace: "ollama-shared", Name: ResourceNameForEntrance(appid, "ollamav2")}, got); err != nil {
 		t.Fatalf("kept SRR missing: %v", err)
 	}
 }
