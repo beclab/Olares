@@ -23,6 +23,10 @@ func (h *Handlers) DisableAppOverlayGateway(ctx *fiber.Ctx, cmd commands.Interfa
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
 	}
 
+	if err := h.itsMe(ctx, req.User); err != nil {
+		return h.ErrJSON(ctx, http.StatusForbidden, err.Error())
+	}
+
 	s, err := h.getOverlayGatewayStatus(ctx.Context())
 	if err != nil {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())

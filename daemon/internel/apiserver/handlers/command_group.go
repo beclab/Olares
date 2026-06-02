@@ -117,17 +117,23 @@ func init() {
 	cmd.Post("/list-nfs", handlers.RequireLocal(
 		handlers.WaitServerRunning(handlers.PostListNfs)))
 
-	cmd.Post("/enable-overlay-gateway", handlers.RequireMaster(
-		handlers.RequireLocal(
-			handlers.WaitServerRunning(handlers.RunCommand(handlers.EnableOverlayGateway, enableoverlaygateway.New)))))
+	cmd.Post("/enable-overlay-gateway", handlers.RequireAuthorization(
+		handlers.RequireOwner(
+			handlers.RequireMaster(
+				handlers.RequireLocal(
+					handlers.WaitServerRunning(handlers.RunCommand(handlers.EnableOverlayGateway, enableoverlaygateway.New)))))))
 
-	cmd.Post("/disable-overlay-gateway", handlers.RequireMaster(
-		handlers.RequireLocal(
-			handlers.WaitServerRunning(handlers.RunCommand(handlers.DisableOverlayGateway, disableoverlaygateway.New)))))
+	cmd.Post("/disable-overlay-gateway", handlers.RequireAuthorization(
+		handlers.RequireOwner(
+			handlers.RequireMaster(
+				handlers.RequireLocal(
+					handlers.WaitServerRunning(handlers.RunCommand(handlers.DisableOverlayGateway, disableoverlaygateway.New)))))))
 
-	cmd.Post("/enable-app-overlay-gateway", handlers.WaitServerRunning(handlers.RunCommand(handlers.EnableAppOverlayGateway, enableappoverlaygateway.New)))
+	cmd.Post("/enable-app-overlay-gateway", handlers.RequireAuthorization(
+		handlers.WaitServerRunning(handlers.RunCommand(handlers.EnableAppOverlayGateway, enableappoverlaygateway.New))))
 
-	cmd.Post("/disable-app-overlay-gateway", handlers.WaitServerRunning(handlers.RunCommand(handlers.DisableAppOverlayGateway, disableappoverlaygateway.New)))
+	cmd.Post("/disable-app-overlay-gateway", handlers.RequireAuthorization(
+		handlers.WaitServerRunning(handlers.RunCommand(handlers.DisableAppOverlayGateway, disableappoverlaygateway.New))))
 
 	cmdv2 := cmd.Group("v2")
 	cmdv2.Post("/mount-samba", handlers.RequireMaster(

@@ -13,6 +13,7 @@ import (
 
 const (
 	SIGNATURE_HEADER = "X-Signature"
+	AUTH_HEADER      = "X-Authorization"
 )
 
 func (h *Handlers) WaitServerRunning(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
@@ -52,6 +53,13 @@ func (h *Handlers) RequireLocal(next func(ctx *fiber.Ctx) error) func(ctx *fiber
 
 func (h *Handlers) RequireOwner(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
 	return func(ctx *fiber.Ctx) error {
+		userData, ok := ctx.Context().UserValue(client.USER_CONTEXT).(*utils.ValidToken)
+		if ok && userData == nil {
+			if userData.IsOwner() {
+				return next(ctx)
+			}
+		}
+
 		c, ok := ctx.Context().UserValue(client.ClIENT_CONTEXT).(client.Client)
 		if !ok {
 			return h.ErrJSON(ctx, http.StatusForbidden, "client not found")
@@ -100,7 +108,7 @@ func (h *Handlers) RequireMaster(next func(ctx *fiber.Ctx) error) func(ctx *fibe
 	return func(ctx *fiber.Ctx) error {
 		switch state.CurrentState.TerminusState {
 		case state.NotInstalled, state.Uninitialized, state.InitializeFailed, state.IPChanging:
-			return h.ErrJSON(ctx, http.StatusForbidden, "operation is not allowed in current state")
+			return h.ErrJSON(ctx, http.StatusForbidden, fmt.Sprintf("operation is not allowed in current state: %v", state.CurrentState.TerminusState))
 		default:
 			client, err := utils.GetKubeClient()
 			if err != nil {
@@ -116,6 +124,41 @@ func (h *Handlers) RequireMaster(next func(ctx *fiber.Ctx) error) func(ctx *fibe
 				return h.ErrJSON(ctx, http.StatusForbidden, "operation is only allowed on master node")
 			}
 		}
+		return next(ctx)
+	}
+}
+
+func (h *Handlers) RequireAuthorization(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+	return func(ctx *fiber.Ctx) error {
+		authHeader := ctx.Get(AUTH_HEADER)
+		if authHeader == "" {
+			return h.ErrJSON(ctx, http.StatusForbidden, "authorization header is missing")
+		}
+
+		valid, tokenData, err := utils.AccessTokenValidate(authHeader)
+		if err != nil {
+			return h.ErrJSON(ctx, http.StatusForbidden, fmt.Sprintf("invalid token: %v", err))
+		}
+		if !valid {
+			return h.ErrJSON(ctx, http.StatusForbidden, "unauthorized token")
+		}
+
+		ctx.Context().SetUserValue(client.USER_CONTEXT, tokenData)
+		return next(ctx)
+	}
+}
+
+func (h *Handlers) RequireAdmin(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+	return func(ctx *fiber.Ctx) error {
+		userData, ok := ctx.Context().UserValue(client.USER_CONTEXT).(*utils.ValidToken)
+		if !ok || userData == nil {
+			return h.ErrJSON(ctx, http.StatusForbidden, "user data not found in context")
+		}
+
+		if !userData.IsAdmin() {
+			return h.ErrJSON(ctx, http.StatusForbidden, "operation is only allowed for admin users")
+		}
+
 		return next(ctx)
 	}
 }

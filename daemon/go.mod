@@ -28,6 +28,7 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/gofiber/fiber/v2 v2.52.12
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/gopacket v1.1.19
 	github.com/google/uuid v1.6.0
 	github.com/hirochachacha/go-smb2 v1.1.0
