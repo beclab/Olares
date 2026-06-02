@@ -171,6 +171,83 @@ func TestBuildDemandIndex_TC402d_PerfAndCallCounts(t *testing.T) {
 	}
 }
 
+func TestBuildDemandIndex_TC403_SharedNamespaceOwnerDemand(t *testing.T) {
+	c := newReplicaFixture(t,
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "ollamav3-shared",
+				Labels: map[string]string{nsOwnerLabel: "brucedai"},
+			},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "p1",
+				Namespace: "ollamav3-shared",
+				Labels:    map[string]string{constants.AppSharedEntrancesLabel: "true"},
+			},
+		},
+	)
+
+	index, err := BuildDemandIndex(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatalf("BuildDemandIndex: %v", err)
+	}
+	assertTargets(t, index, []ReplicaTarget{
+		{CallerNamespace: "ollamav3-shared", CertViewer: "brucedai"},
+	})
+}
+
+func TestBuildDemandIndex_TC404_SharedNamespaceWithoutOwnerSkipped(t *testing.T) {
+	c := newReplicaFixture(t,
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ollamav3-shared",
+			},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "p1",
+				Namespace: "ollamav3-shared",
+				Labels:    map[string]string{constants.AppSharedEntrancesLabel: "true"},
+			},
+		},
+	)
+
+	index, err := BuildDemandIndex(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatalf("BuildDemandIndex: %v", err)
+	}
+	assertTargets(t, index, nil)
+}
+
+func TestBuildDemandIndex_TC405_SharedNamespaceSkipsCrossViewerBranch(t *testing.T) {
+	c := newReplicaFixture(t,
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "ollamav3-shared",
+				Labels: map[string]string{nsOwnerLabel: "brucedai"},
+			},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "p1",
+				Namespace: "ollamav3-shared",
+				Labels:    map[string]string{constants.AppSharedEntrancesLabel: "true"},
+			},
+		},
+		newCallerApp("caller-a", "ollamav3-shared", "wise"),
+		newClusterApp("wise", "alice"),
+	)
+
+	index, err := BuildDemandIndex(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatalf("BuildDemandIndex: %v", err)
+	}
+	assertTargets(t, index, []ReplicaTarget{
+		{CallerNamespace: "ollamav3-shared", CertViewer: "brucedai"},
+	})
+}
+
 func TestSyncReplicasForViewer_TC403_NoDemandNoCreate(t *testing.T) {
 	c := newReplicaFixture(t,
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},

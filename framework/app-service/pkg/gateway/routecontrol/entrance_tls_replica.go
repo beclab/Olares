@@ -21,6 +21,7 @@ import (
 
 const (
 	labelTLSReplica = "gateway.olares.io/tls-replica"
+	nsOwnerLabel    = "bytetrade.io/ns-owner"
 )
 
 var (
@@ -91,8 +92,22 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 		recordReplicaError("index_failed")
 		return nil, err
 	}
+	var nsList corev1.NamespaceList
+	if err := c.List(ctx, &nsList); err != nil {
+		recordReplicaError("index_failed")
+		return nil, err
+	}
 
 	ownerIdx := buildClusterAppOwnerIndex(appList.Items)
+	nsOwnerIdx := make(map[string]string, len(nsList.Items))
+	for i := range nsList.Items {
+		ns := nsList.Items[i]
+		owner := strings.ToLower(strings.TrimSpace(ns.Labels[nsOwnerLabel]))
+		if owner == "" {
+			continue
+		}
+		nsOwnerIdx[strings.TrimSpace(ns.Name)] = owner
+	}
 	appsByNS := make(map[string][]appv1alpha1.Application)
 	for i := range appList.Items {
 		app := appList.Items[i]
@@ -112,6 +127,13 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 		callerNS := strings.TrimSpace(pod.Namespace)
 		viewer, ok := viewerFromUserSpaceNamespace(callerNS)
 		if !ok {
+			owner, hasOwner := nsOwnerIdx[callerNS]
+			if hasOwner {
+				addReplicaTarget(demandSet, ReplicaTarget{
+					CallerNamespace: callerNS,
+					CertViewer:      owner,
+				})
+			}
 			continue
 		}
 
