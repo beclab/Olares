@@ -5,10 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"strings"
+	"sync"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +30,11 @@ const (
 // the app-gateway namespace for in-cluster HTTPS termination.
 type EntranceTLSReconciler struct {
 	Client client.Client
+
+	platformDomain string
+
+	demandMu   sync.RWMutex
+	lastDemand []ReplicaTarget
 }
 
 // ReconcileConfigMap applies one user-space zone-ssl-config to the gateway Secret.
@@ -35,7 +42,64 @@ func (r *EntranceTLSReconciler) ReconcileConfigMap(ctx context.Context, cm *core
 	if r == nil || r.Client == nil {
 		return nil
 	}
-	_, err := reconcileEntranceTLS(ctx, r.Client, cm)
+	wrote, err := reconcileEntranceTLS(ctx, r.Client, cm)
+	if err != nil || !wrote || cm == nil {
+		return err
+	}
+	viewer, ok := viewerFromUserSpaceNamespace(cm.Namespace)
+	if !ok {
+		return nil
+	}
+	return r.fanOutReplica(ctx, viewer)
+}
+
+func (r *EntranceTLSReconciler) fanOutReplica(ctx context.Context, viewer string) error {
+	index, err := BuildDemandIndex(ctx, r.Client, r.platformDomain)
+	if err != nil {
+		index = r.demandSnapshot()
+	} else {
+		r.updateDemandSnapshot(index)
+	}
+	if len(index) == 0 {
+		if runtime.IsNotRegisteredError(err) {
+			return nil
+		}
+		return err
+	}
+	syncErr := SyncReplicasForViewer(ctx, r.Client, viewer, index)
+	if syncErr != nil {
+		return syncErr
+	}
+	return err
+}
+
+func (r *EntranceTLSReconciler) demandSnapshot() []ReplicaTarget {
+	r.demandMu.RLock()
+	defer r.demandMu.RUnlock()
+	out := make([]ReplicaTarget, len(r.lastDemand))
+	copy(out, r.lastDemand)
+	return out
+}
+
+func (r *EntranceTLSReconciler) demandSnapshotFn() func() []ReplicaTarget {
+	return func() []ReplicaTarget {
+		return r.demandSnapshot()
+	}
+}
+
+func (r *EntranceTLSReconciler) updateDemandSnapshot(demand []ReplicaTarget) {
+	r.demandMu.Lock()
+	defer r.demandMu.Unlock()
+	r.lastDemand = make([]ReplicaTarget, len(demand))
+	copy(r.lastDemand, demand)
+}
+
+func (r *EntranceTLSReconciler) refreshDemandSnapshot(ctx context.Context) error {
+	index, err := BuildDemandIndex(ctx, r.Client, r.platformDomain)
+	if err != nil {
+		return err
+	}
+	r.updateDemandSnapshot(index)
 	return err
 }
 
@@ -113,7 +177,10 @@ func deleteEntranceTLSSecret(ctx context.Context, c client.Client, viewer string
 	if err != nil {
 		return err
 	}
-	return client.IgnoreNotFound(c.Delete(ctx, secret))
+	if err := client.IgnoreNotFound(c.Delete(ctx, secret)); err != nil {
+		return err
+	}
+	return deleteReplicasForViewer(ctx, c, viewer)
 }
 
 func viewerFromUserSpaceNamespace(namespace string) (string, bool) {
@@ -155,4 +222,27 @@ func desiredEntranceTLSSecret(viewer, cert, key string) *corev1.Secret {
 			corev1.TLSPrivateKeyKey: key,
 		},
 	}
+}
+
+func deleteReplicasForViewer(ctx context.Context, c client.Client, viewer string) error {
+	if c == nil || strings.TrimSpace(viewer) == "" {
+		return nil
+	}
+	var list corev1.SecretList
+	if err := c.List(ctx, &list, client.MatchingLabels{
+		labelTLSReplica: "true",
+		labelTLSViewer:  viewer,
+	}); err != nil {
+		recordReplicaError("replica_list_failed")
+		return err
+	}
+	for i := range list.Items {
+		sec := &list.Items[i]
+		if err := c.Delete(ctx, sec); err != nil && !apierrors.IsNotFound(err) {
+			recordReplicaError("replica_delete_failed")
+			return err
+		}
+		replicaSyncTotal.WithLabelValues("deleted").Inc()
+	}
+	return nil
 }
