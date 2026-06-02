@@ -284,6 +284,13 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 				appData := fmt.Sprintf("%s/Data", userspacePath)
 				userspace["appData"] = filepath.Join(appData, h.app.AppName)
 			}
+			if perm == appcfg.AppCommonRW {
+				rootPath := userspacev1.DefaultRootPath
+				if os.Getenv(userspacev1.OlaresRootPath) != "" {
+					rootPath = os.Getenv(userspacev1.OlaresRootPath)
+				}
+				userspace["appCommon"] = fmt.Sprintf("%s/rootfs/Common", rootPath)
+			}
 
 		case []appcfg.ProviderPermission:
 			permCfgs, err := apputils.ProviderPermissionsConvertor(perm).ToPermissionCfg(h.ctx, h.app.OwnerName, h.options.MarketSource)
