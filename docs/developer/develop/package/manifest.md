@@ -8,27 +8,16 @@ Every **Olares Application Chart** should include an `OlaresManifest.yaml` file 
 
 :::info NOTE
 Latest Olares Manifest version: `0.12.0`
-- Added `apiVersion` field (`v1` for regular apps, `v3` for shared apps)
+- Modified the `apiVersion` field: added support for `v3` shared applications; the previous `v2` version of shared applications will be deprecated.
 - Added `spec.accelerator` field for GPU resource declaration
 - Added `workloadReplicas` field to declare all workload replica counts
 - Added `overlayGateway` field for L2 overlay LAN discovery support
 - Added `LLMGatewaySupported` in options for LLM Gateway support
 - Added `appCommon` and `externalData` permissions
-- Marked `spec.subCharts` and `options.appScope` as deprecated for `apiVersion: 'v3'`
-- `apiVersion: 'v2'` for CSV2 apps is deprecated and will be removed after 1.12.6
+- Added `templateOnly` field to mark template-type applications
 
 :::
 :::details Changelog
-`0.12.0`
-- Added `apiVersion` field: `v1` for regular apps, `v3` for shared apps (`v3` apps installed in xxx-shared namespace)
-- Added `spec.accelerator` field for GPU resource declaration (modes: `nvidia`, `nvidia-gb10`, `apple-m`, `strix-halo`, `mthreads-m1000`, `cpu`)
-- Added `workloadReplicas` field to declare all workload replica counts
-- Added `overlayGateway` field for L2 overlay LAN discovery support
-- Added `LLMGatewaySupported` in options
-- Added `appCommon` and `externalData` permissions
-- Marked `spec.subCharts` and `options.appScope` as deprecated for `apiVersion: 'v3'`
-- `apiVersion: 'v2'` for CSV2 apps is deprecated, will be removed after 1.12.6
-
 `0.11.0`
 - Removed deprecated `sysData` field
 - Updated shared app example
