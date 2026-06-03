@@ -421,6 +421,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "FlareSolverr",
               link: "/zh/use-cases/flaresolverr",
             },
+            {
+              text: "Home Assistant",
+              link: "/zh/use-cases/home-assistant",
+            },
           ],
         },
       ],
