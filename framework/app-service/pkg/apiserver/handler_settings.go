@@ -1050,7 +1050,9 @@ func (h *Handler) getApplicationSubject(req *restful.Request, resp *restful.Resp
 					refSubject := tapr.RefSubject{}
 					rsMap := rs.(map[string]interface{})
 					refSubject.Name, _, _ = unstructured.NestedString(rsMap, "name")
-					refSubject.Perm, _, _ = unstructured.NestedStringSlice(rsMap, "perm")
+					refSubject.Pub, _, _ = unstructured.NestedString(rsMap, "pub")
+					refSubject.Sub, _, _ = unstructured.NestedString(rsMap, "sub")
+
 					ref.Subjects = append(ref.Subjects, refSubject)
 				}
 
