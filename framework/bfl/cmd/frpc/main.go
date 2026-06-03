@@ -10,7 +10,7 @@ import (
 
 	"bytetrade.io/web3os/bfl/internal/frpc/controllers"
 	v1alpha2 "bytetrade.io/web3os/bfl/pkg/apis/settings/v1alpha1"
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"

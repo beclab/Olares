@@ -20,7 +20,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/utils"
 	"bytetrade.io/web3os/bfl/pkg/watchers"
 	"bytetrade.io/web3os/bfl/pkg/watchers/apps"
-	"github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/util/wait"
