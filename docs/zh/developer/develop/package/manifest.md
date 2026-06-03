@@ -635,7 +635,7 @@ Olares 目前不支持混合架构的集群。
 ```yaml
 spec:
   accelerator:
-    mode: nvidia  # 支持的 mode：nvidia、nvidia-gb10、apple-m、strix-halo、mthreads-m1000、cpu
+    mode: nvidia  # 支持的 mode：nvidia、nvidia-gb10、apple-m、strix-halo、cpu
     limitedCpu: 7000m
     requiredCpu: 150m
     requiredDisk: 50Mi

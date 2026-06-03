@@ -637,7 +637,7 @@ Declares GPU resources required by the application. For apps that need GPU, use 
 ```yaml
 spec:
   accelerator:
-    mode: nvidia  # Supported modes: nvidia, nvidia-gb10, apple-m, strix-halo, mthreads-m1000, cpu
+    mode: nvidia  # Supported modes: nvidia, nvidia-gb10, apple-m, strix-halo, cpu
     limitedCpu: 7000m
     requiredCpu: 150m
     requiredDisk: 50Mi
