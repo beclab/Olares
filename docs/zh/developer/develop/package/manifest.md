@@ -1,5 +1,5 @@
 ---
-outline: [2， 3]
+outline: [2, 3]
 ---
 
 # OlaresManifest 规范
@@ -34,7 +34,7 @@ outline: [2， 3]
 - 增加 Envs 部分，支持应用声明需要的环境变量
 
 `0.9.0`
-- 在 `options` 中增加 `conflict` 字段， 用于声明不兼容的应用
+- 在 `options` 中增加 `conflict` 字段，用于声明不兼容的应用
 - 移除 `options` 中 `analytics` 配置项
 - 修改 `tailscale` 字段的配置格式
 - 增加 `allowedOutboundPorts` 配置，允许通过指定端口进行非 HTTP 协议的对外访问
@@ -179,7 +179,7 @@ metadata:
 ### name
 
 - 类型：`string`
-- 有效值：`^[a-z][a-z0-9]{0，29}$`
+- 有效值：`^[a-z][a-z0-9]{0,29}$`
 
 Olares 中的应用的命名空间，仅限小写字母数字字符。最多 30 个字符，需要与 `Chart.yaml` 中的 `FolderName` 和 `name` 字段保持一致。
 
@@ -219,13 +219,13 @@ OS 1.11 有效值：
 - `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
 
 OS 1.12 有效值：
-- `Creativity`:设计创作
-- `Productivity_v112`:工作效率
-- `Developer Tools`:开发工具
-- `Fun`:休闲娱乐
-- `Lifestyle`:生活方式
-- `Utilities_v112`:实用工具
-- `AI`:AI
+- `Creativity`：设计创作
+- `Productivity_v112`：工作效率
+- `Developer Tools`：开发工具
+- `Fun`：休闲娱乐
+- `Lifestyle`：生活方式
+- `Utilities_v112`：实用工具
+- `AI`：AI
 
 :::info 提示
 Olares OS 1.12.0 版本对应用商店的应用分类进行了调整，因此如果应用需要同时兼容 1.11 和 1.12 版本，请同时填写两个版本所需的分类。
@@ -291,9 +291,9 @@ entrances:
 - 可选
 
 指定入口的认证级别。
-- **Public**:互联网上的任何人都可以不受限制地访问。
-- **Private**:需要从内部和外部网络访问的授权。
-- **Internal**:需要授权才能从外部网络访问。从内部网络(通过 LAN/专用网络)访问时不需要身份验证。
+- **Public**：互联网上的任何人都可以不受限制地访问。
+- **Private**：需要从内部和外部网络访问的授权。
+- **Internal**：需要授权才能从外部网络访问。从内部网络(通过 LAN/专用网络)访问时不需要身份验证。
 
 ### invisible
 
@@ -679,7 +679,7 @@ workloads:
 使用 `scripts` 字段指定创建数据库后应执行的脚本。此外，使用 `extension` 字段在数据库中添加相应的扩展名。
 
 :::info 提示
-MongoDB,MySQL,MariaDB,MinIO,RabbitMQ 需要管理员从 Market 安装后才能被其他应用使用
+MongoDB、MySQL、MariaDB、MinIO、RabbitMQ 需要管理员从 Market 安装后才能被其他应用使用
 :::
 
 ### PostgreSQL
