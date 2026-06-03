@@ -233,6 +233,8 @@ spec:
                       - proto
                       type: object
                     type: array
+                  advertiseExitNode:
+                    type: string
                   subRoutes:
                     items:
                       type: string
