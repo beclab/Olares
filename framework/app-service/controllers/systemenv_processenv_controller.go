@@ -144,6 +144,11 @@ func InitializeSystemEnvProcessEnv(ctx context.Context, c client.Client) error {
 					if isCNDomain {
 						newDefaultVal = "https://cdn.olares.cn"
 					}
+				case "OLARES_SYSTEM_HUGGINGFACE_SERVICE":
+					newDefaultVal = "https://huggingface.co/"
+					if isCNDomain {
+						newDefaultVal = "https://hf-mirror.com"
+					}
 
 				}
 				if newDefaultVal != "" && se.Default != newDefaultVal {
