@@ -193,13 +193,12 @@ spec:
     refs: 
       {{- range $k, $v := .Middleware.Refs }}
       - appName: {{ $v.AppName }}
+        appNamespace: {{ $v.AppNamespace }}
         subjects:
           {{- range $sk, $sv := $v.Subjects }}
           - name: {{ $sv.Name }}
-            perm:
-            {{- range $pk, $pv := $sv.Perm }}
-            - {{ $pv }}
-            {{- end }}
+            pub: {{ $sv.Pub }}
+            sub: {{ $sv.Sub }}
           {{- end }}
       {{- end }}
     {{- else }}

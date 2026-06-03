@@ -117,6 +117,7 @@ type ApplicationConfig struct {
 	LLMGatewaySupported bool
 	OverlayGateway      OverlayGateway
 	WorkloadReplicas    *WorkloadReplicas
+	TemplateOnly        bool
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
