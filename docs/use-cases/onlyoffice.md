@@ -4,17 +4,17 @@ description: Use OnlyOffice on Olares to create, edit, upload, and export office
 head:
   - - meta
     - name: keywords
-      content: Olares, OnlyOffice, office suite, documents, spreadsheets, presentations, PDF editor, forms, export formats, self-hosted, collaborative editing
+      content: Olares, OnlyOffice, office suite, documents, spreadsheets, presentations, PDF editor, forms, export formats, self-hosted
 app_version: "1.0.10"
 doc_version: "1.0"
-doc_updated: "2026-05-29"
+doc_updated: "2026-06-03"
 ---
 
 # Create and edit office files with OnlyOffice
 
 OnlyOffice is a browser-based office suite for working with text documents, spreadsheets, presentations, PDFs, and forms. It supports common Microsoft Office formats such as `.docx`, `.xlsx`, and `.pptx`, and provides a familiar editor experience directly from your Olares device.
 
-Running OnlyOffice on Olares gives you a private workspace for everyday office files. You can create new files, upload existing documents, export them in multiple formats, and keep your work inside your own Olares environment.
+This guide covers the basic file workflow in the Olares app: creating new files, uploading existing documents, exporting them in multiple formats, and keeping your work inside your own Olares environment.
 
 ## Install OnlyOffice
 
