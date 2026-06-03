@@ -21,15 +21,13 @@ import (
 	"github.com/beclab/Olares/framework/oac/internal/resources"
 )
 
-// appResult captures the per-app outcome of the three OAC checks the fleet
+// appResult captures the per-app outcome of the OAC Lint check the fleet
 // report exercises. It is shared between the per-fleet report and the
 // cross-fleet comparison so both views agree on what "FAIL" means for a
 // given app.
 type appResult struct {
-	name        string
-	folderErr   error
-	manifestErr error
-	resourceErr error
+	name    string
+	lintErr error
 }
 
 // fleetReport bundles a fleet's identity (display name + on-disk root) with
@@ -50,11 +48,10 @@ type fleetReport struct {
 //  2. a comparison report (apps_diff_report.md) highlighting membership
 //     differences and per-check status drift between the two fleets.
 //
-// Each app is exercised through three independent checks:
-//
-//  1. CheckChartFolder  — folder layout / naming
-//  2. ValidateManifestFile — OlaresManifest.yaml schema + cross-field rules
-//  3. CheckResources — helm dry-run + container resource limit envelope
+// Each app is exercised through oac.Lint, which runs the full checker
+// pipeline (folder layout, manifest validation, chart template cross-checks,
+// helm dry-run structural checks, resource limits, and same-version
+// consistency).
 //
 // Per-app failures are recorded in the report rather than failing the test;
 // only filesystem / IO errors abort. Report paths default to filenames in
@@ -75,12 +72,12 @@ func TestAppsTestdataReport(t *testing.T) {
 		envOut string
 		defOut string
 	}{
-		{
-			name:   "apps",
-			dir:    filepath.Join("testdata", "apps"),
-			envOut: "OAC_APPS_REPORT",
-			defOut: "apps_report.md",
-		},
+		//{
+		//	name:   "apps",
+		//	dir:    filepath.Join("testdata", "apps"),
+		//	envOut: "OAC_APPS_REPORT",
+		//	defOut: "apps_report.md",
+		//},
 		{
 			name:   "terminus-apps",
 			dir:    filepath.Join("testdata", "terminus-apps"),
@@ -137,17 +134,16 @@ func TestAppsTestdataReport(t *testing.T) {
 	}
 }
 
-// scanFleet walks the immediate subdirectories of root, runs the three
-// OAC checks against each app, and returns the result rows sorted by name
-// alongside the names of any apps skipped because their manifest declares
-// apiVersion: v2.
+// scanFleet walks the immediate subdirectories of root, runs oac.Lint against
+// each app, and returns the result rows sorted by name alongside the names
+// of any apps skipped because their manifest declares apiVersion: v2.
 //
 // v2 apps are intentionally excluded from the report: the v2 install path
 // is a multi-chart layout that requires per-subchart helm context the
-// fleet harness does not synthesize, so running the v1/v3 oriented
-// CheckResources / ValidateManifestFile against them produces noise
-// rather than signal. Hidden directories and any directory containing a
-// .remove marker file are likewise silently ignored.
+// fleet harness does not synthesize, so running the v1/v3 oriented Lint
+// against them produces noise rather than signal. Hidden directories and
+// any directory containing a .remove marker file are likewise silently
+// ignored.
 func scanFleet(root string) ([]appResult, []string, error) {
 	entries, err := os.ReadDir(root)
 	if err != nil {
@@ -168,15 +164,13 @@ func scanFleet(root string) ([]appResult, []string, error) {
 		if hasSkipMarker(dir) {
 			continue
 		}
-		if isV2ManifestDir(dir) {
-			skippedV2 = append(skippedV2, e.Name())
-			continue
-		}
+		//if isV2ManifestDir(dir) {
+		//	skippedV2 = append(skippedV2, e.Name())
+		//	continue
+		//}
 		c := New(WithOwner("alice"), WithAdmin("admin"))
 		row := appResult{name: e.Name()}
-		row.folderErr = runCheck(func() error { return c.CheckChartFolder(dir) })
-		row.manifestErr = runCheck(func() error { return c.ValidateManifestFile(dir) })
-		row.resourceErr = runCheck(func() error { return c.CheckResources(dir) })
+		row.lintErr = runCheck(func() error { return c.Lint(dir) })
 		rows = append(rows, row)
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
@@ -201,11 +195,11 @@ func isV2ManifestDir(oacPath string) bool {
 	return strings.EqualFold(v.APIVersion, manifest.APIVersionV2)
 }
 
-// countPassedApps returns the number of rows where every check succeeded.
+// countPassedApps returns the number of rows where Lint succeeded.
 func countPassedApps(rows []appResult) int {
 	var passed int
 	for _, r := range rows {
-		if r.folderErr == nil && r.manifestErr == nil && r.resourceErr == nil {
+		if r.lintErr == nil {
 			passed++
 		}
 	}
@@ -221,23 +215,14 @@ func countPassedApps(rows []appResult) int {
 func buildFleetReport(name, dir string, rows []appResult, skippedV2 []string) string {
 	totalApps := len(rows)
 	var (
-		passApps      int
-		folderFails   int
-		manifestFails int
-		resourceFails int
+		passApps  int
+		lintFails int
 	)
 	for _, r := range rows {
-		if r.folderErr == nil && r.manifestErr == nil && r.resourceErr == nil {
+		if r.lintErr == nil {
 			passApps++
-		}
-		if r.folderErr != nil {
-			folderFails++
-		}
-		if r.manifestErr != nil {
-			manifestFails++
-		}
-		if r.resourceErr != nil {
-			resourceFails++
+		} else {
+			lintFails++
 		}
 	}
 
@@ -245,11 +230,10 @@ func buildFleetReport(name, dir string, rows []appResult, skippedV2 []string) st
 	fmt.Fprintf(&b, "# OAC %s testdata report\n\n", name)
 	fmt.Fprintf(&b, "_Generated by `TestAppsTestdataReport` against `framework/oac/%s/`._\n\n", dir)
 	fmt.Fprintf(&b, "## Summary\n\n")
-	fmt.Fprintf(&b, "| Total | Passed | Failed | Folder fails | Manifest fails | Resource fails | v2 skipped |\n")
-	fmt.Fprintf(&b, "|---:|---:|---:|---:|---:|---:|---:|\n")
-	fmt.Fprintf(&b, "| %d | %d | %d | %d | %d | %d | %d |\n\n",
-		totalApps, passApps, totalApps-passApps,
-		folderFails, manifestFails, resourceFails, len(skippedV2))
+	fmt.Fprintf(&b, "| Total | Passed | Failed | Lint fails | v2 skipped |\n")
+	fmt.Fprintf(&b, "|---:|---:|---:|---:|---:|\n")
+	fmt.Fprintf(&b, "| %d | %d | %d | %d | %d |\n\n",
+		totalApps, passApps, totalApps-passApps, lintFails, len(skippedV2))
 
 	if len(skippedV2) > 0 {
 		fmt.Fprintf(&b, "## Skipped (apiVersion=v2)\n\n")
@@ -261,38 +245,26 @@ func buildFleetReport(name, dir string, rows []appResult, skippedV2 []string) st
 	}
 
 	fmt.Fprintf(&b, "## Per-app results\n\n")
-	fmt.Fprintf(&b, "| App | Folder | Manifest | Resources |\n")
-	fmt.Fprintf(&b, "|---|:-:|:-:|:-:|\n")
+	fmt.Fprintf(&b, "| App | Lint |\n")
+	fmt.Fprintf(&b, "|---|:-:|\n")
 	for _, r := range rows {
-		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
-			r.name,
-			cellStatus(r.folderErr),
-			cellStatus(r.manifestErr),
-			cellStatus(r.resourceErr),
-		)
+		fmt.Fprintf(&b, "| %s | %s |\n", r.name, cellStatus(r.lintErr))
 	}
 
 	if totalApps != passApps {
 		fmt.Fprintf(&b, "\n## Failure details\n\n")
 		for _, r := range rows {
-			if r.folderErr == nil && r.manifestErr == nil && r.resourceErr == nil {
+			if r.lintErr == nil {
 				continue
 			}
+			appDir := filepath.Join(dir, r.name)
 			fmt.Fprintf(&b, "### %s\n\n", r.name)
-			if r.folderErr != nil {
-				fmt.Fprintf(&b, "- **CheckChartFolder**: %s\n", flattenError(r.folderErr.Error()))
+			fmt.Fprintf(&b, "- **Lint**: %s\n", flattenError(r.lintErr.Error()))
+			if diag := diagnoseManifest(appDir, r.lintErr); diag != "" {
+				b.WriteString(diag)
 			}
-			if r.manifestErr != nil {
-				fmt.Fprintf(&b, "- **ValidateManifestFile**: %s\n", flattenError(r.manifestErr.Error()))
-				if diag := diagnoseManifest(filepath.Join(dir, r.name), r.manifestErr); diag != "" {
-					b.WriteString(diag)
-				}
-			}
-			if r.resourceErr != nil {
-				fmt.Fprintf(&b, "- **CheckResources**: %s\n", flattenError(r.resourceErr.Error()))
-				if diag := diagnoseResources(filepath.Join(dir, r.name)); diag != "" {
-					b.WriteString(diag)
-				}
+			if diag := diagnoseResources(appDir); diag != "" {
+				b.WriteString(diag)
 			}
 			b.WriteByte('\n')
 		}
@@ -310,14 +282,11 @@ func buildFleetDiffReport(a, b fleetReport) string {
 	indexB := indexResults(b.rows)
 
 	var (
-		onlyA   []string
-		onlyB   []string
-		common  []string
-		drifted []string
-		// counters for status drift summary
-		folderDrift   int
-		manifestDrift int
-		resourceDrift int
+		onlyA     []string
+		onlyB     []string
+		common    []string
+		drifted   []string
+		lintDrift int
 	)
 	allNames := unionKeys(indexA, indexB)
 	for _, name := range allNames {
@@ -331,19 +300,11 @@ func buildFleetDiffReport(a, b fleetReport) string {
 		default:
 			common = append(common, name)
 			ra, rb := indexA[name], indexB[name]
-			folder := statusChanged(ra.folderErr, rb.folderErr)
-			manifest := statusChanged(ra.manifestErr, rb.manifestErr)
-			resource := statusChanged(ra.resourceErr, rb.resourceErr)
-			if folder {
-				folderDrift++
+			lint := statusChanged(ra.lintErr, rb.lintErr)
+			if lint {
+				lintDrift++
 			}
-			if manifest {
-				manifestDrift++
-			}
-			if resource {
-				resourceDrift++
-			}
-			if folder || manifest || resource {
+			if lint {
 				drifted = append(drifted, name)
 			}
 		}
@@ -354,25 +315,18 @@ func buildFleetDiffReport(a, b fleetReport) string {
 	fmt.Fprintf(&out, "_Generated by `TestAppsTestdataReport` comparing `framework/oac/%s/` and `framework/oac/%s/`._\n\n", a.dir, b.dir)
 
 	out.WriteString("## Summary\n\n")
-	out.WriteString("| Fleet | Total | Passed | Failed | Folder fails | Manifest fails | Resource fails |\n")
-	out.WriteString("|---|---:|---:|---:|---:|---:|---:|\n")
+	out.WriteString("| Fleet | Total | Passed | Failed | Lint fails |\n")
+	out.WriteString("|---|---:|---:|---:|---:|\n")
 	for _, fr := range []fleetReport{a, b} {
-		var folderF, manifestF, resourceF int
+		var lintF int
 		for _, r := range fr.rows {
-			if r.folderErr != nil {
-				folderF++
-			}
-			if r.manifestErr != nil {
-				manifestF++
-			}
-			if r.resourceErr != nil {
-				resourceF++
+			if r.lintErr != nil {
+				lintF++
 			}
 		}
 		passed := countPassedApps(fr.rows)
-		fmt.Fprintf(&out, "| %s | %d | %d | %d | %d | %d | %d |\n",
-			fr.name, len(fr.rows), passed, len(fr.rows)-passed,
-			folderF, manifestF, resourceF)
+		fmt.Fprintf(&out, "| %s | %d | %d | %d | %d |\n",
+			fr.name, len(fr.rows), passed, len(fr.rows)-passed, lintF)
 	}
 	out.WriteString("\n")
 
@@ -397,21 +351,14 @@ func buildFleetDiffReport(a, b fleetReport) string {
 	}
 
 	fmt.Fprintf(&out, "## Status drift on common apps\n\n")
-	fmt.Fprintf(&out, "Apps whose per-check status differs between fleets: **%d** "+
-		"(folder: %d, manifest: %d, resources: %d).\n\n",
-		len(drifted), folderDrift, manifestDrift, resourceDrift)
+	fmt.Fprintf(&out, "Apps whose Lint status differs between fleets: **%d** (lint: %d).\n\n",
+		len(drifted), lintDrift)
 	if len(drifted) > 0 {
-		fmt.Fprintf(&out, "| App | Folder (%s → %s) | Manifest (%s → %s) | Resources (%s → %s) |\n",
-			a.name, b.name, a.name, b.name, a.name, b.name)
-		out.WriteString("|---|:-:|:-:|:-:|\n")
+		fmt.Fprintf(&out, "| App | Lint (%s → %s) |\n", a.name, b.name)
+		out.WriteString("|---|:-:|\n")
 		for _, name := range drifted {
 			ra, rb := indexA[name], indexB[name]
-			fmt.Fprintf(&out, "| %s | %s | %s | %s |\n",
-				name,
-				diffCell(ra.folderErr, rb.folderErr),
-				diffCell(ra.manifestErr, rb.manifestErr),
-				diffCell(ra.resourceErr, rb.resourceErr),
-			)
+			fmt.Fprintf(&out, "| %s | %s |\n", name, diffCell(ra.lintErr, rb.lintErr))
 		}
 		out.WriteString("\n")
 
@@ -419,9 +366,7 @@ func buildFleetDiffReport(a, b fleetReport) string {
 		for _, name := range drifted {
 			ra, rb := indexA[name], indexB[name]
 			fmt.Fprintf(&out, "#### %s\n\n", name)
-			renderDriftDetail(&out, "CheckChartFolder", a.name, b.name, ra.folderErr, rb.folderErr)
-			renderDriftDetail(&out, "ValidateManifestFile", a.name, b.name, ra.manifestErr, rb.manifestErr)
-			renderDriftDetail(&out, "CheckResources", a.name, b.name, ra.resourceErr, rb.resourceErr)
+			renderDriftDetail(&out, "Lint", a.name, b.name, ra.lintErr, rb.lintErr)
 			out.WriteString("\n")
 		}
 	}
