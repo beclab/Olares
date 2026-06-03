@@ -451,7 +451,7 @@ Whether the app requires read and write permission to the `Data` folder. If `.Va
 - Type: `boolean`
 - Optional
 
-Whether the app requires read and write permission to the `App Common` folder (cross-node, cross-app shared models). Use `{{ .Values.userspace.appCommon }}` in the deployment YAML to get the App Common directory path.
+Whether the app requires read and write permission to the `App Common` folder (cross-node, cross-app shared files, such as models). Use `{{ .Values.userspace.appCommon }}` in the deployment YAML to get the App Common directory path.
 
 
 ### externalData
@@ -459,8 +459,7 @@ Whether the app requires read and write permission to the `App Common` folder (c
 - Type: `boolean`
 - Optional
 
-Whether the app requires read and write permission to the `External` folder (mounted NAS or other external disk data). This does not affect the access permissions of already-deployed apps on version 0.11.0.
-
+Whether the app requires read and write permission to the `External` directory, typically used for accessing mounted NAS or other external disk data. In version 0.11.0, applications have External access enabled by default. Starting from version 0.12.0, you need to explicitly declare this field.
 
 ### userData
 
@@ -650,7 +649,7 @@ spec:
 ```
 :::
 
-### workloadReplicas
+## workloadReplicas
 - Type: `map`
 - Optional
 
@@ -1029,12 +1028,19 @@ allowedOutboundPorts:
 
 This application supports deploying multiple independent instances within the same Olares cluster. This setting does not apply to paid applications or clients of shared applications.
 
+### templateOnly
+- Type: `boolean`
+- Default: `false`
+- Optional
+
+When set to `true`, this application is marked as a template app. The app cannot be installed directly. An instance must be created before installation. If this option is enabled, `allowMultipleInstall` must also be set to `true`.
+
 ### LLMGatewaySupported
 - Type: `boolean`
 - Default: `false`
 - Optional
 
-When set to `true`, the application supports LLM Gateway calls.
+When set to `true`, the application supports LLM Gateway calls. Mainly used for LLM services.
 
 ### overlayGateway
 - Type: `map`

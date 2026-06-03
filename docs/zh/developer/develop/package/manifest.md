@@ -449,14 +449,14 @@ permission:
 - 类型： `boolean`
 - 可选
 
-是否需要对 `App Common` 目录(跨节点跨应用共享模型)进行读写权限。在部署 yaml 文件中使用 `{{ .Values.userspace.appCommon }}` 获取 App Common 目录地址。
+是否需要对 `App Common` 目录(跨节点跨应用共享的文件，例如模型文件)进行读写权限。在部署 yaml 文件中使用 `{{ .Values.userspace.appCommon }}` 获取 App Common 目录地址。
 
 ### externalData
 
 - 类型： `boolean`
 - 可选
 
-是否需要对 `External` 目录(挂载 NAS 或其他外部磁盘数据)进行读写权限。不影响已部署的 0.11.0 版本的应用的访问权限。
+是否需要 `External` 目录的读写权限，通常用于访问挂载的 NAS 或其他外部磁盘数据。0.11.0 版本的应用默认开启External权限，升级到0.12.0后，需要添加此字段显性声明。
 
 ### userData
 
@@ -647,7 +647,7 @@ spec:
 ```
 :::
 
-### workloadReplicas
+## workloadReplicas
 - 类型： `map`
 - 可选
 
@@ -1022,12 +1022,19 @@ allowedOutboundPorts:
 
 该应用支持在同一 Olares 集群中部署多个独立实例。此设置对付费应用和共享应用客户端无效。
 
+### templateOnly
+- 类型： `boolean`
+- 默认值： `false`
+- 可选
+
+设置为 `true` 时，表示应用为模板应用，不存在可安装本体，只能创建一个实例后再安装该实例。启用此项时，allowMultipleInstall 必须为`true`。
+
 ### LLMGatewaySupported
 - 类型： `boolean`
 - 默认值： `false`
 - 可选
 
-设置为 `true` 时，表示应用支持 LLM Gateway 调用。
+设置为 `true` 时，表示应用支持 LLM Gateway 调用。主要用于 LLM 服务。
 
 
 ### overlayGateway
