@@ -12,11 +12,8 @@ import (
 
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"bytetrade.io/web3os/tapr/pkg/constants"
-	aprclientset "bytetrade.io/web3os/tapr/pkg/generated/clientset/versioned"
-
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/thoas/go-funk"
 	"golang.org/x/crypto/bcrypt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -114,88 +111,19 @@ func getAllowPubSubSubjectFromMR(request *aprv1.MiddlewareRequest, namespace str
 			allowSubSubject = append(allowSubSubject, subject.Name)
 		}
 	}
-
-	config, err := ctrl.GetConfig()
-	if err != nil {
-		return allowPubSubject, allowSubSubject, err
-	}
-	aprClient, err := aprclientset.NewForConfig(config)
-	if err != nil {
-		return allowPubSubject, allowSubSubject, err
-	}
-	mrs, err := aprClient.AprV1alpha1().MiddlewareRequests("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return allowPubSubject, allowSubSubject, err
-	}
-	type export struct {
-		subjectName string
-		appName     string
-		pub         string
-		sub         string
-	}
-
-	appExportMap := make(map[string][]export)
-	for _, mr := range mrs.Items {
-		if mr.Spec.Middleware != aprv1.TypeNats {
-			continue
-		}
-		for _, s := range mr.Spec.Nats.Subjects {
-			for _, e := range s.Export {
-				appExportMap[e.AppName] = append(appExportMap[e.AppName],
-					export{
-						subjectName: MakeRealSubjectName(s.Name, mr.Spec.AppNamespace),
-						appName:     e.AppName,
-						pub:         e.Pub,
-						sub:         e.Sub,
-					},
-				)
+	for _, subject := range req.Refs {
+		for _, s := range subject.Subjects {
+			if s.Pub == Allow {
+				allowPubSubject = append(allowPubSubject, s.Name)
 			}
-
+			if s.Sub == Allow {
+				allowSubSubject = append(allowSubSubject, s.Name)
+			}
 		}
 	}
-	klog.Infof("appExportMap: %#v", appExportMap)
+
 	klog.Infof("req.Nats: %#v", req)
 
-	for _, ref := range req.Refs {
-		for _, subject := range ref.Subjects {
-			if _, ok := appExportMap[request.Spec.App]; !ok {
-				return allowPubSubject, allowPubSubject, errors.New("not found export permission")
-			}
-			klog.Infof("request.spec.App: %v", request.Spec.App)
-			ep := appExportMap[request.Spec.App]
-			klog.Infof("ep: %#v\n", ep)
-
-			if funk.Contains(subject.Perm, "pub") {
-				getPerm := false
-				for _, e := range ep {
-					klog.Infof("subject.Name: %v, e.subjectName: %v\n", subject.Name, e.subjectName)
-					if subject.Name == e.subjectName && e.pub == Allow {
-						allowPubSubject = append(allowPubSubject, subject.Name)
-						getPerm = true
-					}
-				}
-				if !getPerm {
-					return allowPubSubject, allowPubSubject, fmt.Errorf("not found export permission for subject %s", subject.Name)
-				}
-
-			}
-			if funk.Contains(subject.Perm, "sub") {
-				getPerm := false
-				for _, e := range ep {
-					klog.Infof("subject.Name: %v, e.subjectName: %v\n", subject.Name, e.subjectName)
-
-					if subject.Name == e.subjectName && e.sub == Allow {
-						allowSubSubject = append(allowSubSubject, subject.Name)
-						getPerm = true
-					}
-				}
-				if !getPerm {
-					return allowPubSubject, allowPubSubject, fmt.Errorf("not found export permission for subject %s", subject.Name)
-				}
-
-			}
-		}
-	}
 	if len(allowPubSubject) > 0 {
 		allowPubSubject = append(allowPubSubject, defaultPubPerm...)
 	}

@@ -407,18 +407,16 @@ spec:
                             properties:
                               name:
                                 type: string
-                              perm:
-                                items:
-                                  type: string
-                                type: array
+                              pub:
+                                type: string
+                              sub:
+                                type: string
                             required:
                             - name
-                            - perm
                             type: object
                           type: array
                       required:
                       - appName
-                      - subjects
                       type: object
                     type: array
                   subjects:
