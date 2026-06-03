@@ -40,3 +40,14 @@ systemEnvs:
   - envName: OLARES_SYSTEM_CUDA_VERSION
     editable: false
     required: false
+  # system-level Hugging Face service endpoint, shared across users
+  - envName: OLARES_SYSTEM_HUGGINGFACE_SERVICE
+    default: "https://huggingface.co/"
+    type: url
+    editable: true
+    required: false
+  # system-level Hugging Face access token, shared across users
+  - envName: OLARES_SYSTEM_HUGGINGFACE_TOKEN
+    type: password
+    editable: true
+    required: false
