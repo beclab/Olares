@@ -1,0 +1,3 @@
+workloads:
+  wlrbad:
+    replicaCount: 1

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"text/tabwriter"
 
@@ -12,6 +11,7 @@ import (
 
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/containerdimages"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
@@ -62,12 +62,6 @@ func newImagesListCommand(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-type registryImage struct {
-	ID       string   `json:"id"`
-	Size     int64    `json:"size"`
-	RepoTags []string `json:"repo_tags"`
-}
-
 func runImagesList(ctx context.Context, f *cmdutil.Factory, registry, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -77,18 +71,8 @@ func runImagesList(ctx context.Context, f *cmdutil.Factory, registry, outputRaw 
 		return err
 	}
 
-	pc, err := prepare(ctx, f)
+	rows, err := containerdimages.List(ctx, f, registry)
 	if err != nil {
-		return err
-	}
-
-	path := "/api/containerd/images"
-	if registry != "" {
-		path += "?registry=" + url.QueryEscape(registry)
-	}
-
-	var rows []registryImage
-	if err := doGetEnvelope(ctx, pc.doer, path, &rows); err != nil {
 		return err
 	}
 
@@ -100,7 +84,7 @@ func runImagesList(ctx context.Context, f *cmdutil.Factory, registry, outputRaw 
 	}
 }
 
-func renderImagesTable(w io.Writer, rows []registryImage) error {
+func renderImagesTable(w io.Writer, rows []containerdimages.Image) error {
 	if len(rows) == 0 {
 		_, err := fmt.Fprintln(w, "no images")
 		return err
@@ -121,28 +105,12 @@ func renderImagesTable(w io.Writer, rows []registryImage) error {
 			}
 		}
 		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\n",
-			nonEmpty(shortID(r.ID)),
-			humanBytes(r.Size),
+			nonEmpty(containerdimages.ShortID(r.ID)),
+			containerdimages.HumanBytes(r.Size),
 			tags,
 		); err != nil {
 			return err
 		}
 	}
 	return tw.Flush()
-}
-
-// shortID trims the sha256 prefix and keeps the first 12 chars, like the
-// SPA's image table does.
-func shortID(id string) string {
-	if id == "" {
-		return ""
-	}
-	const prefix = "sha256:"
-	if len(id) > len(prefix) && id[:len(prefix)] == prefix {
-		id = id[len(prefix):]
-	}
-	if len(id) > 12 {
-		return id[:12]
-	}
-	return id
 }

@@ -42,6 +42,7 @@ type handlerBuilder struct {
 	kubeConfig *rest.Config
 	ctrlClient client.Client
 	informer   externalversions.SharedInformerFactory
+	err        error
 }
 
 func (b *handlerBuilder) WithKubesphereConfig(ksHost string) *handlerBuilder {
@@ -65,17 +66,23 @@ func (b *handlerBuilder) WithCtrlClient(client client.Client) *handlerBuilder {
 }
 
 func (b *handlerBuilder) WithAppInformer() *handlerBuilder {
+	if b.err != nil {
+		return b
+	}
 	appClient, err := versioned.NewForConfig(b.kubeConfig)
 	if err != nil {
-		return nil
+		b.err = fmt.Errorf("create app clientset for informer: %w", err)
+		return b
 	}
 
-	informer := externalversions.NewSharedInformerFactory(appClient, 10*time.Minute)
-	b.informer = informer
+	b.informer = externalversions.NewSharedInformerFactory(appClient, 10*time.Minute)
 	return b
 }
 
 func (b *handlerBuilder) Build() (*Handler, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
 	wh, err := webhook.New(b.kubeConfig)
 	if err != nil {
 		return nil, err
@@ -117,7 +124,7 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = wh.CreateOrUpdateApplicationManagerMutatingWebhook()
+	err = wh.DeleteAppManagerMutatingWebhook()
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +154,7 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 		appSynced:        b.informer.App().V1alpha1().Applications().Informer().HasSynced,
 		appmgrSynced:     b.informer.App().V1alpha1().ApplicationManagers().Informer().HasSynced,
 		opController:     NewQueue(b.ctx),
-	}, err
+	}, nil
 
 }
 

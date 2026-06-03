@@ -37,6 +37,9 @@ type (
 	Upload              = apimanifest.Upload
 	OIDC                = apimanifest.OIDC
 	Chart               = apimanifest.Chart
+	OverlayGateway      = apimanifest.OverlayGateway
+	OverlayEntrance     = apimanifest.OverlayEntrance
+	WorkloadReplicas    = apimanifest.WorkloadReplicas
 	Provider            = apimanifest.Provider
 	SpecialResource     = apimanifest.SpecialResource
 	ResourceRequirement = apimanifest.ResourceRequirement

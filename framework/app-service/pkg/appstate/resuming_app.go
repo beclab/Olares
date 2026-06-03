@@ -2,10 +2,13 @@ package appstate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -63,18 +66,9 @@ func (p *ResumingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 func (p *ResumingApp) exec(ctx context.Context) error {
 	// Check if resume-all is requested for V2 apps to also resume server-side shared charts
 	resumeServer := p.manager.Annotations[api.AppResumeAllKey] == "true"
-	if resumeServer {
-		err := resumeV2AppAll(ctx, p.client, p.manager)
-		if err != nil {
-			klog.Errorf("resume v2 app %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
-			return fmt.Errorf("resume v2 app %s failed %w", p.manager.Spec.AppName, err)
-		}
-	} else {
-		err := resumeV1AppOrV2AppClient(ctx, p.client, p.manager)
-		if err != nil {
-			klog.Errorf("resume v2 app %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
-			return fmt.Errorf("resume v2 app %s failed %w", p.manager.Spec.AppName, err)
-		}
+
+	if err := p.scaleOrPatchResume(ctx, resumeServer); err != nil {
+		return err
 	}
 
 	if p.manager.Spec.Type == "middleware" && userspace.IsKbMiddlewares(p.manager.Spec.AppName) {
@@ -83,6 +77,54 @@ func (p *ResumingApp) exec(ctx context.Context) error {
 			klog.Errorf("failed to resume middleware %s,err=%v", p.manager.Spec.AppName, err)
 			return err
 		}
+	}
+	return nil
+}
+
+func (p *ResumingApp) scaleOrPatchResume(ctx context.Context, resumeServer bool) error {
+	var appCfg appcfg.ApplicationConfig
+	if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
+		klog.Warningf("unmarshal app config for resume routing failed %v", err)
+		return p.resumeViaPatch(ctx, resumeServer)
+	}
+	if !appCfg.HasWorkloadReplicas() {
+		return p.resumeViaPatch(ctx, resumeServer)
+	}
+
+	token := p.manager.Annotations[api.AppTokenKey]
+
+	kubeConfig, err := getKubeConfig()
+	if err != nil {
+		klog.Errorf("get kube config failed %v", err)
+		return err
+	}
+	ops, err := newHelmOps(ctx, kubeConfig, &appCfg, token,
+		appinstaller.Opt{
+			Source:       p.manager.Spec.Source,
+			MarketSource: appcfg.GetMarketSource(p.manager),
+		})
+	if err != nil {
+		klog.Errorf("make helm ops for resume failed %v", err)
+		return err
+	}
+	if err := ops.Scale(-1); err != nil {
+		klog.Errorf("scale-up for app %s failed %v", p.manager.Spec.AppName, err)
+		return fmt.Errorf("resume app %s failed %w", p.manager.Spec.AppName, err)
+	}
+	return nil
+}
+
+func (p *ResumingApp) resumeViaPatch(ctx context.Context, resumeServer bool) error {
+	if resumeServer {
+		if err := resumeV2AppAll(ctx, p.client, p.manager); err != nil {
+			klog.Errorf("resume v2 app %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
+			return fmt.Errorf("resume v2 app %s failed %w", p.manager.Spec.AppName, err)
+		}
+		return nil
+	}
+	if err := resumeV1AppOrV2AppClient(ctx, p.client, p.manager); err != nil {
+		klog.Errorf("resume v2 app %s %s failed %v", p.manager.Spec.Type, p.manager.Spec.AppName, err)
+		return fmt.Errorf("resume v2 app %s failed %w", p.manager.Spec.AppName, err)
 	}
 	return nil
 }

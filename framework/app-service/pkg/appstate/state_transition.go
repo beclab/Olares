@@ -37,6 +37,7 @@ var All = []appv1alpha1.ApplicationManagerState{
 	appv1alpha1.InstallingCanceled,
 
 	appv1alpha1.Stopped,
+	appv1alpha1.Uninstalled,
 
 	appv1alpha1.DownloadFailed,
 	appv1alpha1.InstallFailed,
@@ -119,9 +120,11 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 	},
 	appv1alpha1.UpgradingCanceling: {
 		appv1alpha1.Stopping,
+		appv1alpha1.UpgradingCancelFailed,
 	},
 	appv1alpha1.ApplyingEnvCanceling: {
 		appv1alpha1.Stopping,
+		appv1alpha1.ApplyingEnvCancelFailed,
 	},
 	appv1alpha1.Stopped: {
 		appv1alpha1.Resuming,

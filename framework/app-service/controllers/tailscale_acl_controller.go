@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -49,16 +48,23 @@ var defaultACLs = []v1alpha1.ACL{
 	{
 		Action: "accept",
 		Src:    []string{"*"},
-		Proto:  "",
+		Proto:  "udp",
 		Dst:    []string{"*:53"},
 	},
 	{
 		Action: "accept",
 		Src:    []string{"*"},
-		Proto:  "",
+		Proto:  "tcp",
 		Dst:    []string{"*:80"},
 	},
+	{
+		Action: "accept",
+		Src:    []string{"*"},
+		Proto:  "",
+		Dst:    []string{"autogroup:internet:*"},
+	},
 }
+
 var defaultSubRoutes = []string{"$(COREDNS_SVC)/32"}
 
 type ACLPolicy struct {
@@ -137,7 +143,6 @@ func (r *TailScaleACLController) SetUpWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 	klog.Infof("reconcile tailscale acls subroutes request name=%v, owner=%v", req.Name, req.Namespace)
 	owner := req.Namespace
 
@@ -278,11 +283,11 @@ func makeACLPolicy(acls []v1alpha1.ACL) ([]byte, error) {
 		ACLs: acls,
 		AutoApprovers: AutoApprovers{
 			Routes: map[string][]string{
-				"10.0.0.0/8":     {"default"},
-				"172.16.0.0/12":  {"default"},
-				"192.168.0.0/16": {"default"},
+				"10.0.0.0/8":     {"default@"},
+				"172.16.0.0/12":  {"default@"},
+				"192.168.0.0/16": {"default@"},
 			},
-			ExitNode: []string{},
+			ExitNode: []string{"default@"},
 		},
 	}
 	aclPolicyByte, err := json.Marshal(aclPolicy)

@@ -9,8 +9,8 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
-	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
@@ -24,7 +24,6 @@ import (
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
 	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -39,6 +38,12 @@ type UpgradingApp struct {
 	downloadTTL          time.Duration
 	downloadedTime       *metav1.Time
 	downloadingStartTime *metav1.Time
+	// landedState overrides the default success transition (Initializing)
+	// when upgrade-from-Stopped completes; the app lands back in Stopped
+	// with the new chart version at replicas=0. WaitForStartUp failures
+	// return an error and defer transitions to UpgradeFailed instead.
+	landedState  appsv1.ApplicationManagerState
+	landedReason string
 }
 
 func (p *UpgradingApp) Finally() {
@@ -98,13 +103,34 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 						execErr = fmt.Errorf("panic: %v", r)
 					}
 					if execErr != nil {
+						reason := appsv1.UpgradeFailed.String()
+						if errors.Is(execErr, errcode.ErrPodPending) || errors.Is(execErr, errcode.ErrServerSidePodPending) {
+							reason = constants.AppUnschedulable
+							if errors.Is(execErr, errcode.ErrHamiUnschedulable) {
+								reason = constants.AppHamiSchedulable
+							}
+						}
+						failReason := reason
 						p.finallyCh <- func() {
 							klog.Info("upgrade app failed, update app status to upgradeFailed, ", p.manager.Name)
 							opRecord := makeRecord(p.manager, appsv1.UpgradeFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, execErr.Error()))
 
-							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UpgradeFailed, opRecord, execErr.Error(), appsv1.UpgradeFailed.String())
+							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.UpgradeFailed, opRecord, execErr.Error(), failReason)
 							if updateErr != nil {
 								klog.Errorf("update appmgr state to upgradeFailed state failed %v", updateErr)
+							}
+						}
+					} else if p.landedState != "" {
+						landed := p.landedState
+						reason := p.landedReason
+						if reason == "" {
+							reason = landed.String()
+						}
+						p.finallyCh <- func() {
+							klog.Infof("upgrade app %s landed in state %s (reason=%s)", p.manager.Name, landed, reason)
+							updateErr := p.updateStatus(context.TODO(), p.manager, landed, nil, landed.String(), reason)
+							if updateErr != nil {
+								klog.Errorf("update appmgr state to %s failed %v", landed, updateErr)
 							}
 						}
 					} else {
@@ -129,7 +155,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	var err error
 	var version string
 	var actionConfig *action.Configuration
-	kubeConfig, err := ctrl.GetConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
@@ -227,12 +253,6 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 			return err
 		}
 	}
-	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appConfig, token,
-		appinstaller.Opt{Source: p.manager.Spec.Source, MarketSource: appcfg.GetMarketSource(p.manager)})
-	if err != nil {
-		klog.Errorf("make helmop failed %v", err)
-		return err
-	}
 
 	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true)
 	if err != nil {
@@ -263,11 +283,45 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	p.downloadedTime = ptr.To(metav1.Now())
 	p.isDownloaded = true
 
+	preState := p.manager.Annotations[api.AppPreUpgradeStateKey]
+
+	skipWaitForStartUp := preState == appsv1.Stopped.String()
+	ops, err := newHelmOps(ctx, kubeConfig, appConfig, token,
+		appinstaller.Opt{
+			Source:             p.manager.Spec.Source,
+			MarketSource:       appcfg.GetMarketSource(p.manager),
+			SkipWaitForStartUp: skipWaitForStartUp,
+		})
+	if err != nil {
+		klog.Errorf("make helmop failed %v", err)
+		return err
+	}
+
 	err = ops.Upgrade()
 	if err != nil {
 		klog.Errorf("upgrade app %s failed %v", p.manager.Spec.AppName, err)
 		return err
 	}
+	if skipWaitForStartUp {
+		// Upgrade-from-Stopped: SetValues already rendered the helm
+		// upgrade at replicas=0, so there are no pods to wait for. Land
+		// straight back in Stopped with the new chart version installed.
+		klog.Infof("app %s upgraded from Stopped state, landing back in Stopped", p.manager.Spec.AppName)
+		p.landedState = appsv1.Stopped
+		p.landedReason = constants.AppStopByUser
+		return nil
+	}
+
+	// Upgrade-from-running: pods were rendered at their manifest-declared
+	// replica counts, wait for readiness before landing in Initializing.
+	if ok, waitErr := ops.WaitForStartUp(); !ok {
+		klog.Errorf("wait for app %s startup after upgrade failed %v", p.manager.Spec.AppName, waitErr)
+		if waitErr != nil {
+			return errors.Wrapf(waitErr, "wait for app %s startup after upgrade failed", p.manager.Spec.AppName)
+		}
+		return fmt.Errorf("wait for app %s startup after upgrade failed", p.manager.Spec.AppName)
+	}
+
 	return nil
 }
 

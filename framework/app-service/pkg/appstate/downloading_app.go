@@ -10,12 +10,10 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
-	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -45,35 +43,14 @@ func (r *downloadingInProgressApp) WaitAsync(ctx context.Context) {
 			return
 		}
 
-		// Check Kubernetes request resources before transitioning to Installing
-		var appConfig *appcfg.ApplicationConfig
-		if err := json.Unmarshal([]byte(r.manager.Spec.Config), &appConfig); err != nil {
-			klog.Errorf("failed to unmarshal app config for %s: %v", r.manager.Spec.AppName, err)
-			updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.InstallFailed, nil, fmt.Sprintf("invalid app config: %v", err), "")
-			if updateErr != nil {
-				klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.InstallFailed.String(), updateErr)
-			}
-			return
-		}
-
-		_, conditionType, checkErr := apputils.CheckAppK8sRequestResource(appConfig, r.manager.Spec.OpType)
-		if checkErr != nil {
-			klog.Errorf("k8s request resource check failed for app %s: %v", r.manager.Spec.AppName, checkErr)
-			opRecord := makeRecord(r.manager, appsv1.InstallFailed, checkErr.Error())
-			updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.InstallFailed, opRecord, checkErr.Error(), string(conditionType))
-			if updateErr != nil {
-				klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.InstallFailed.String(), updateErr)
-			}
-
-			return
-		}
-
+		// No resource gate here. For workloadReplicas apps the pressure
+		// and allocation chain runs in installing_app.go after helm
+		// install (release at replicas=0) and before Scale(-1).
 		updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.Installing, nil, appsv1.Installing.String(), "")
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.Installing.String(), updateErr)
 			return
 		}
-
 	})
 }
 
@@ -143,7 +120,7 @@ func (p *DownloadingApp) Exec(ctx context.Context) (StatefulInProgressApp, error
 func (p *DownloadingApp) exec(ctx context.Context) error {
 	var err error
 	var appConfig *appcfg.ApplicationConfig
-	kubeConfig, err := ctrl.GetConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err

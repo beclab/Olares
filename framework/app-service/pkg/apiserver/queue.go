@@ -2,7 +2,11 @@ package apiserver
 
 import (
 	"context"
+	"fmt"
+	"runtime/debug"
 	"time"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 
 	"github.com/emicklei/go-restful/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -27,8 +31,16 @@ func (h *Handler) queued(next func(req *restful.Request, resp *restful.Response)
 		done := make(chan struct{})
 		t := &Task{
 			exec: func() {
+				// always release the waiting HTTP goroutine, and never let a
+				// handler panic propagate up to crash the single queue worker.
+				defer close(done)
+				defer func() {
+					if r := recover(); r != nil {
+						klog.Errorf("recovered from panic in queued task for app %s: %v\n%s", app, r, debug.Stack())
+						api.HandleError(resp, req, fmt.Errorf("internal error processing %s: %v", app, r))
+					}
+				}()
 				next(req, resp)
-				close(done)
 			},
 		}
 		h.opController.enqueue(t)

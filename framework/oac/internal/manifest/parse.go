@@ -61,6 +61,8 @@ func (m *parsedManifest) OptionsImages() []string {
 	return out
 }
 
-func (m *parsedManifest) PermissionAppData() bool { return m.cfg.Permission.AppData }
+func (m *parsedManifest) PermissionAppData() bool       { return m.cfg.Permission.AppData }
+func (m *parsedManifest) PermissionAppCommon() bool     { return m.cfg.Permission.AppCommon }
+func (m *parsedManifest) PermissionExternalData() bool  { return m.cfg.Permission.ExternalData }
 
 func (m *parsedManifest) Raw() any { return m.cfg }

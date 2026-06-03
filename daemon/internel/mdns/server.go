@@ -26,11 +26,12 @@ type serverIntf interface {
 }
 
 type server struct {
-	server       *zeroconf.Server
-	port         int
-	name         string
-	registeredIP string
-	serviceName  string
+	server           *zeroconf.Server
+	port             int
+	name             string
+	registeredIP     string
+	serviceName      string
+	isNetworkChanged func() bool
 }
 
 type sunshineServer struct {
@@ -40,15 +41,24 @@ type sunshineServer struct {
 
 func NewServer(apiPort int) (serverIntf, error) {
 	s := &server{
-		port:        apiPort,
-		serviceName: SERVICE_NAME,
-		name:        INSTANCE_NAME + "-" + tools.RandomString(6),
+		port:             apiPort,
+		serviceName:      SERVICE_NAME,
+		name:             INSTANCE_NAME + "-" + tools.RandomString(6),
+		isNetworkChanged: utils.RegisterNetworkChangedNotify(),
 	}
 	return s, s.Restart()
 }
 
 func NewSunShineProxyWithoutStart(ctx context.Context) serverIntf {
-	s := &sunshineServer{server: server{port: 47989, name: "", serviceName: "_nvstream._tcp"}, ctx: ctx}
+	s := &sunshineServer{
+		server: server{
+			port:             47989,
+			name:             "",
+			serviceName:      "_nvstream._tcp",
+			isNetworkChanged: utils.RegisterNetworkChangedNotify(),
+		},
+		ctx: ctx,
+	}
 	return s
 }
 
@@ -102,7 +112,7 @@ func (s *server) Restart() error {
 		hostname = strings.Join([]string{hostname, iptoken[len(iptoken)-1]}, "-")
 	}
 
-	if s.registeredIP != ip {
+	if s.registeredIP != ip || s.isNetworkChanged() {
 		if s.server != nil {
 			s.Close()
 		}

@@ -18,6 +18,11 @@ const (
 	AppResumeAllKey                  = "bytetrade.io/resume-all"
 	AppStopByControllerDuePendingPod = "bytetrade.io/pending-pod"
 	AppImagesKey                     = "bytetrade.io/images"
+	// AppPreUpgradeStateKey records the ApplicationManager state right
+	// before an UpgradeOp begins. upgrading_app reads it to decide
+	// whether to scale the workloads back up after the helm upgrade or
+	// to land in Stopped (when the pre-upgrade state was Stopped).
+	AppPreUpgradeStateKey = "bytetrade.io/pre-upgrade-state"
 )
 
 const (

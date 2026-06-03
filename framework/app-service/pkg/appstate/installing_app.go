@@ -9,8 +9,8 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
-	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -19,7 +19,6 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,7 +56,7 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 		klog.Errorf("unmarshal to appConfig failed %v", err)
 		return nil, err
 	}
-	kubeConfig, err := ctrl.GetConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return nil, err
@@ -97,17 +96,64 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 				defer cancel()
 				var allocationErr error
 				allocationMessage := ""
-				if _, allocationErr = compute.AllocateForInstall(c, p.client, appCfg); allocationErr != nil {
-					klog.Errorf("allocate compute resource for app %s failed %v", p.manager.Spec.AppName, allocationErr)
-					allocationMessage = fmt.Sprintf("Insufficient compute resource for selected mode %s: %v", appCfg.SelectedGpuType, allocationErr)
-					compute.PublishComputeInsufficientNotification(appCfg, allocationErr)
+				rejectionReason := constants.AppUnschedulable
+				twoPhase := appCfg.HasWorkloadReplicas()
+				valIn := validation.Input{
+					Client:    p.client,
+					AppConfig: appCfg,
+					Op:        p.manager.Spec.OpType,
+					Token:     token,
 				}
 
-				ops, err := versioned.NewHelmOps(c, kubeConfig, appCfg, token,
+				toInstallFailed := func(msg string) {
+					p.finally = func() {
+						klog.Errorf("app %s install failed, update app state to installFailed", p.manager.Spec.AppName)
+						opRecord := makeRecord(p.manager, appsv1.InstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, msg))
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallFailed, opRecord, msg, appsv1.InstallFailed.String())
+						if updateErr != nil {
+							klog.Errorf("update status failed %v", updateErr)
+						}
+					}
+				}
+
+				recordRejection := func(decision validation.Decision) {
+					if decision.Reason != "" {
+						rejectionReason = decision.Reason.String()
+					}
+					if decision.Validator == validation.NameComputeAllocation {
+						allocationErr = errors.New(decision.Message)
+						klog.Errorf("allocate compute resource for app %s failed %v", p.manager.Spec.AppName, allocationErr)
+						allocationMessage = fmt.Sprintf("Insufficient compute resource for selected mode %s: %v", appCfg.SelectedGpuType, allocationErr)
+						compute.PublishComputeInsufficientNotification(appCfg, allocationErr)
+						return
+					}
+					klog.Errorf("app %s install validation rejected by %s: %s", p.manager.Spec.AppName, decision.Validator, decision.Message)
+					allocationErr = errors.New(decision.Message)
+					allocationMessage = decision.Message
+				}
+
+				runValidation := func() (validation.Decision, error) {
+					return validation.Run(c, valIn, validation.InstallRuntimePressureValidators()...)
+				}
+
+				if !twoPhase {
+					decision, runErr := runValidation()
+					if runErr != nil {
+						toInstallFailed(runErr.Error())
+						return
+					}
+					if !decision.OK {
+						recordRejection(decision)
+						toInstallFailed(allocationMessage)
+						return
+					}
+				}
+
+				var ops appinstaller.HelmOpsInterface
+				ops, err = newHelmOps(c, kubeConfig, appCfg, token,
 					appinstaller.Opt{
-						Source:             p.manager.Spec.Source,
-						MarketSource:       appcfg.GetMarketSource(p.manager),
-						SkipWaitForStartUp: allocationErr != nil,
+						Source:       p.manager.Spec.Source,
+						MarketSource: appcfg.GetMarketSource(p.manager),
 					})
 				if err != nil {
 					klog.Errorf("make helm ops failed %v", err)
@@ -190,7 +236,24 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 					return
 				} // end of err != nil
 
+				if twoPhase {
+					decision, runErr := runValidation()
+					if runErr != nil {
+						if cleanupErr := compute.DeleteAllocationsForApp(context.TODO(), p.client, appCfg.AppName, appCfg.OwnerName); cleanupErr != nil {
+							klog.Warningf("cleanup compute allocation after post-helm validation error for %s failed: %v", appCfg.AppName, cleanupErr)
+						}
+						toInstallFailed(runErr.Error())
+						return
+					}
+					if !decision.OK {
+						recordRejection(decision)
+					}
+				}
+
 				if allocationErr != nil {
+					// Post-helm resource rejection (workloadReplicas apps only).
+					// Switch to Stop op and Stopping; the helm release stays at
+					// replicas=0 until the user retries.
 					p.finally = func() {
 						manager := p.manager
 						var am appsv1.ApplicationManager
@@ -215,12 +278,68 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 							return
 						}
 						manager = &am
-						updateErr := p.updateStatus(context.TODO(), manager, appsv1.Stopping, nil, allocationMessage, constants.AppUnschedulable)
+						updateErr := p.updateStatus(context.TODO(), manager, appsv1.Stopping, nil, allocationMessage, rejectionReason)
 						if updateErr != nil {
 							klog.Errorf("update status failed %v", updateErr)
 						}
 					}
 					return
+				}
+
+				// Scale up to the manifest-declared replica counts via a
+				// second helm upgrade. Any failure here is treated as a
+				// generic install failure to mirror the v1 behavior.
+				if scaleErr := ops.Scale(-1); scaleErr != nil {
+					klog.Errorf("scale-up after install failed for app %s: %v", p.manager.Spec.AppName, scaleErr)
+					if cleanupErr := compute.DeleteAllocationsForApp(context.TODO(), p.client, appCfg.AppName, appCfg.OwnerName); cleanupErr != nil {
+						klog.Warningf("cleanup compute allocation after scale-up failure for %s failed: %v", appCfg.AppName, cleanupErr)
+					}
+					p.finally = func() {
+						opRecord := makeRecord(p.manager, appsv1.InstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, scaleErr.Error()))
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallFailed, opRecord, scaleErr.Error(), appsv1.InstallFailed.String())
+						if updateErr != nil {
+							klog.Errorf("update status failed %v", updateErr)
+						}
+					}
+					return
+				}
+
+				// Pods exist now; wait for readiness. Middleware apps use
+				// WaitForLaunch instead — HelmOps.Install already skips
+				// startup polling for them.
+				if p.manager.Spec.Type != appsv1.Middleware {
+					if ok, waitErr := ops.WaitForStartUp(); !ok {
+						// A cancel (DELETE /apps/{name}/install) cancels opCtx,
+						// the only path on which WaitForStartUp returns (false, nil).
+						// That is NOT a startup failure: the InstallingCanceling
+						// state machine has already taken over this ApplicationManager
+						// and owns the terminal transition. Writing Stopping/InitFailed
+						// here would both mislabel a user cancel as an init failure and
+						// race the cancel path into a spurious installingCancelFailed.
+						// Bail out quietly and let the cancel handler drive the state.
+						if waitErr == nil || c.Err() != nil {
+							klog.Infof("install of app %s canceled while waiting for startup; leaving terminal state to the cancel handler", p.manager.Spec.AppName)
+							return
+						}
+
+						klog.Errorf("wait for app %s startup after scale-up failed %v", p.manager.Spec.AppName, waitErr)
+						reason := constants.AppStopDueToInitFailed
+						wrappedWaitErr := errors.Wrapf(waitErr, "wait for app %s startup after scale-up failed", p.manager.Spec.AppName)
+						if errors.Is(waitErr, errcode.ErrPodPending) || errors.Is(waitErr, errcode.ErrServerSidePodPending) {
+							reason = constants.AppUnschedulable
+							if errors.Is(waitErr, errcode.ErrHamiUnschedulable) {
+								reason = constants.AppHamiSchedulable
+							}
+						}
+						msg := wrappedWaitErr.Error()
+						p.finally = func() {
+							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Stopping, nil, msg, reason)
+							if updateErr != nil {
+								klog.Errorf("update status failed %v", updateErr)
+							}
+						}
+						return
+					}
 				}
 
 				if p.manager.Spec.Type == appsv1.Middleware {

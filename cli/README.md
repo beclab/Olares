@@ -142,7 +142,7 @@ olares-cli <area> [<noun>] <verb> [flags]
 ```
 
 - **System layer** (root-level, no `<area>` prefix): `install`, `uninstall`, `upgrade`, `start`, `stop`, `status`, `backup`, `precheck`, `prepare`, `download`, `change-ip`, `release`, `printinfo`, `logs`, `node`, `gpu`, `amdgpu`, `disk`, `osinfo`, `wizard`. These manage the host running Olares OS itself and require root / kubeconfig access — they are not driven by an Olares ID. *Channel availability*: the Go binary only registers them when `OLARES_CLI_REMOTE_ONLY` is unset, i.e. only when invoked from an Olares host's OS-bundled `/usr/local/bin/olares-cli`. Through `npm install -g @olares/cli` or `npx @olares/cli`, the Node shim sets `OLARES_CLI_REMOTE_ONLY=1` and they are hidden. The lone exception is `install`, which the Node shim itself intercepts and routes to the [first-run wizard](#first-run-wizard-scenario-a-recommended) — it never reaches the Go binary on the npm channel.
-- **Identity-bound layer** (`<area>` = `profile` / `files` / `market` / `settings` / `dashboard` / `cluster`): act on behalf of the currently-selected Olares ID against a running Olares HTTP API. Pick the identity once with `olares-cli profile use <name>`, then every verb in this layer uses it. Reachable through both `npm install -g` and `npx`.
+- **Identity-bound layer** (`<area>` = `profile` / `files` / `market` / `settings` / `dashboard` / `cluster` / `doctor`): act on behalf of the currently-selected Olares ID against a running Olares HTTP API. Pick the identity once with `olares-cli profile use <name>`, then every verb in this layer uses it. Reachable through both `npm install -g` and `npx`.
 
 For every command, `--help` is the source of truth for flags and wire shapes:
 
@@ -150,6 +150,17 @@ For every command, `--help` is the source of truth for flags and wire shapes:
 olares-cli --help
 olares-cli files --help
 olares-cli files ls --help
+```
+
+Examples for workload image inspection:
+
+```bash
+olares-cli cluster workload list --limit 20 --page 1 -o json
+olares-cli cluster workload images --limit 50 --page 1
+olares-cli cluster workload images docker.io/library/nginx:latest
+olares-cli doctor images -o json
+# Orphans only, biggest first, with reclaimable-size footer.
+olares-cli doctor images --unused
 ```
 
 ## Output formats

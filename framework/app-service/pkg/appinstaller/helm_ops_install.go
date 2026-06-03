@@ -76,7 +76,26 @@ type HelmOpsInterface interface {
 
 	WaitForLaunch() (bool, error)
 
+	// WaitForStartUp blocks until every pod owned by the app's workloads
+	// reaches Ready, the context is cancelled, or a wait-step error
+	// (e.g. ErrPodPending) is returned. Used by the two-phase install
+	// flow after Scale(-1) to decide between Initializing and Stopped.
+	WaitForStartUp() (bool, error)
+
 	UninstallAll() error
+
+	// Scale issues a helm upgrade that only overrides
+	// .Values.workloads.<name>.replicaCount.
+	//
+	//   replicas >= 0: set every workload to this exact value (used for
+	//                  scale-to-zero on stop and scale-to-zero by SetValues).
+	//   replicas <  0: restore each workload to its manifest-declared count
+	//                  (used when bringing the app back up after install,
+	//                  resume, or post-upgrade pressure check).
+	//
+	// Not supported on v2 apps; HelmOpsV2.Scale returns an error so callers
+	// must dispatch on appcfg.IsV2() before invoking.
+	Scale(replicas int32) error
 }
 
 // Opt options for helm ops.
@@ -843,12 +862,23 @@ func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 			if perm == "userdata-perm" {
 				permissions = append(permissions, appcfg.UserDataRW)
 			}
+			if perm == "appCommon-perm" {
+				permissions = append(permissions, appcfg.AppCommonRW)
+			}
+			if perm == "external-perm" {
+				permissions = append(permissions, appcfg.ExternalDataRW)
+			}
+
 		case appcfg.AppDataPermission:
 			permissions = append(permissions, appcfg.AppDataRW)
 		case appcfg.AppCachePermission:
 			permissions = append(permissions, appcfg.AppCacheRW)
 		case appcfg.UserDataPermission:
 			permissions = append(permissions, appcfg.UserDataRW)
+		case appcfg.AppCommonPermission:
+			permissions = append(permissions, appcfg.AppCommonRW)
+		case appcfg.ExternalDataPermission:
+			permissions = append(permissions, appcfg.ExternalDataRW)
 		case []appcfg.ProviderPermission:
 			permissions = append(permissions, p)
 		case []interface{}:
@@ -876,7 +906,7 @@ func ParseAppPermission(data []appcfg.AppPermission) []appcfg.AppPermission {
 
 func (h *HelmOps) Install() error {
 	var err error
-	values, err := h.SetValues()
+	values, err := h.SetValues(true)
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err
@@ -938,18 +968,6 @@ func (h *HelmOps) Install() error {
 
 	if h.app.Type == appv1alpha1.Middleware.String() {
 		return nil
-	}
-	if h.options.SkipWaitForStartUp {
-		klog.Infof("skip waiting for app %s startup", h.app.AppName)
-		return nil
-	}
-	ok, err := h.WaitForStartUp()
-	if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
-		return err
-	}
-	if !ok {
-		h.Uninstall()
-		return err
 	}
 
 	return nil

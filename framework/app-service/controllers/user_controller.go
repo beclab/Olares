@@ -180,7 +180,6 @@ func (r *UserController) registerActiveUsersHandler(mgr ctrl.Manager) error {
 	return err
 }
 
-// Reconcile is part of the main kubernetes reconciliation loop
 func (r *UserController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	klog.Infof("start reconcile user %s", req.Name)
 

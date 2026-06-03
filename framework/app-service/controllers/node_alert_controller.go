@@ -100,7 +100,6 @@ func (r *NodeAlertController) SetupWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-// Reconcile is part of the main kubernetes reconciliation loop
 func (r *NodeAlertController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	klog.Infof("start reconcile node %s", req.Name)
 
