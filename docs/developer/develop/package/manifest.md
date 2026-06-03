@@ -120,14 +120,9 @@ options:
 ## olaresManifest.type
 
 - Type: `string`
-- Accepted Value: `app`, `recommend`, `middleware`
+- Accepted Value: `app`, `middleware`
 
-Olares currently supports 3 types of applications, each requiring different fields. This document uses `app` as an example to explain each field. For information on other types, please refer to the corresponding configuration guide.
-- [Recommend Configuration Guide](recommend.md)
-
-:::info NOTE
-`recommend` apps will not be listed in the Olares Market, but you can install recommendation algorithms for Wise by uploading a custom Chart.
-:::
+Olares currently supports 2 types of applications, each requiring different fields. This document uses `app` as an example to explain each field.
 
 ## olaresManifest.version
 
@@ -152,10 +147,10 @@ olaresManifest.version: "3.0.122"
 - Accepted Value: `v1`, `v3`
 - Default: `v1`
 
-For shared applications, use version `v3`, which will be installed in the `xxx-shared` namespace. For other applications, use `v1`.
+For shared applications, use version `v3`, which will be installed in the `<appname>-shared` namespace. For other applications, use `v1`.
 
 :::info NOTE
-`apiVersion: 'v2'` is for CSV2 apps and is deprecated. It will be removed after Olares OS 1.12.6. Migrate to `v3` for shared applications.
+`apiVersion: 'v2'` is used for shared applications on Olares OS version 1.12.5 and earlier. Support for this version will be gradually discontinued after the release of 1.12.6. Please migrate your shared applications to `v3` as soon as possible.
 :::
 
 ## Metadata

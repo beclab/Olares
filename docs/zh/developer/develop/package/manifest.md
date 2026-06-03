@@ -120,14 +120,9 @@ options:
 ## olaresManifest.type
 
 - 类型：`string`
-- 有效值： `app`、`recommend`、`middleware`
+- 有效值： `app`、`middleware`
 
-Olares 市场目前支持 3 种类型的应用，各自对应不同场景。本文档以 "app" 为例来解释各个字段。其他类型请参考相应的配置指南。
-- [推荐算法配置指南](recommend.md)
-
-:::info 提示
-Olares Market 目前不展示 `recommend` 类型的应用，但你可以上传自定义 Chart 来给 Wise 安装推荐算法
-:::
+Olares 市场目前支持 2 种类型的应用，各自对应不同场景。本文档以 "app" 为例来解释各个字段。
 
 ## olaresManifest.version
 
@@ -153,9 +148,9 @@ olaresManifest.version: "3.0.122"
 - 有效值：`v1`、`v3`
 - 默认值：`v1`
 
-共享应用需使用 `v3`，将被安装在 `xxx-shared` namespace 中。其他应用请使用 `v1`。
+共享应用需使用 `v3`，将被安装在 `<appname>-shared` namespace 中。其他应用请使用 `v1`。
 :::info 提示
-`apiVersion: 'v2'` 用于 CSV2 应用，将于 Olares OS 1.12.6 发布后逐步停止支持。共享应用请迁移到 `v3`。
+`apiVersion: 'v2'` 用于Olares OS 1.12.5及以前版本的共享应用，并将在 1.12.6 发布后逐步停止支持。请尽快迁移共享应用至 `v3`
 :::
 
 ## Metadata
