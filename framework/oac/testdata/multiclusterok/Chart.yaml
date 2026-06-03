@@ -1,0 +1,6 @@
+apiVersion: v2
+name: multiclusterok
+description: fixture for allowMultipleInstall + release-scoped cluster role
+type: application
+version: 1.0.0
+appVersion: "1"
