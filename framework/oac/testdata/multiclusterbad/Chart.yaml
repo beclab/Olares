@@ -1,0 +1,6 @@
+apiVersion: v2
+name: multiclusterbad
+description: fixture for allowMultipleInstall + fixed cluster-scoped name
+type: application
+version: 1.0.0
+appVersion: "1"
