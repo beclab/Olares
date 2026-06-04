@@ -84,7 +84,7 @@ If you only know the target CUDA version, look up the matching driver version in
     ```
     :::
 
-5. Make the runfile executable:
+5. Make the runfile executable. Replace `580.95.05` with the driver version you installed.
 
     ```bash
     chmod +x NVIDIA-Linux-x86_64-580.95.05.run

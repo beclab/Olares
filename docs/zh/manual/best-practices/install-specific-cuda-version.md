@@ -23,7 +23,7 @@ description: 了解如何在 Olares 宿主机上安装特定版本的 NVIDIA CUD
 
 开始前，请确保你的环境满足以下要求：
 
-- 已安装并启用了 GPU 支持的 Olares
+- 一台已启用 GPU 支持的 Olares 设备
 - 兼容的 NVIDIA GPU
 - 对 Olares 宿主机的 root 或 sudo 权限
 
@@ -71,7 +71,7 @@ nvidia-smi
 
 1. 访问 [NVIDIA 驱动下载页面](https://www.nvidia.com/en-us/drivers/)。
 2. 选择你的 GPU 产品类型、系列和型号，并将操作系统选为 **Linux 64-bit**。
-3. 点击 **搜索**，记录结果中显示的驱动版本号。例如，`580.95.05`，对应的 CUDA 版本为 13.0。
+3. 点击 **Find**，记录结果中显示的驱动版本号。例如，`580.95.05`，对应的 CUDA 版本为 13.0。
 4. 在 Olares 宿主机上，运行以下命令下载 runfile。将 `580.95.05` 替换为你查到的驱动版本号：
 
     ::: code-group
