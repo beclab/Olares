@@ -7,11 +7,17 @@ import (
 )
 
 // d2 offloader fail-open skip reason labels.
+//
+// requirement: 详设 §4.1 / §6.1 reason 全集. WI-T1-5 adds
+// caller_viewer_unresolved + multi_ref_unsupported; clusterappref_empty and
+// image_unconfigured (the remaining caller-mode reasons) belong to WI-T1-3.
 const (
-	d2SkipReasonSnapshotError    = "snapshot_error"
-	d2SkipReasonViewerUnderive   = "viewer_underive"
-	d2SkipReasonTLSSecretMissing = "tls_secret_missing"
-	d2SkipReasonOther            = "other"
+	d2SkipReasonSnapshotError          = "snapshot_error"
+	d2SkipReasonViewerUnderive         = "viewer_underive"
+	d2SkipReasonTLSSecretMissing       = "tls_secret_missing"
+	d2SkipReasonCallerViewerUnresolved = "caller_viewer_unresolved"
+	d2SkipReasonMultiRefUnsupported    = "multi_ref_unsupported"
+	d2SkipReasonOther                  = "other"
 )
 
 var d2InjectSkippedTotal = prometheus.NewCounterVec(
@@ -47,6 +53,8 @@ func ClassifyD2SkipReason(err error) string {
 		return d2SkipReasonViewerUnderive
 	case errors.Is(err, ErrD2TLSSecretMissing):
 		return d2SkipReasonTLSSecretMissing
+	case errors.Is(err, ErrD2CallerViewerUnresolved):
+		return d2SkipReasonCallerViewerUnresolved
 	default:
 		return d2SkipReasonOther
 	}

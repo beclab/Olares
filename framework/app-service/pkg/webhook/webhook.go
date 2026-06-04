@@ -17,6 +17,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/authz"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
@@ -53,9 +54,17 @@ var (
 
 	// Sentinel errors for v3 d2 offloader injection prerequisites. They let the
 	// admission handler fail open and classify the skip reason via errors.Is.
-	ErrD2SnapshotUnavailable = errors.New("d2 offloader: cluster snapshot unavailable")
-	ErrD2ViewerUnderive      = errors.New("d2 offloader: viewer cannot be derived from pod namespace")
-	ErrD2TLSSecretMissing    = errors.New("d2 offloader: no per-viewer tls replica secret in namespace")
+	ErrD2SnapshotUnavailable    = errors.New("d2 offloader: cluster snapshot unavailable")
+	ErrD2ViewerUnderive         = errors.New("d2 offloader: viewer cannot be derived from pod namespace")
+	ErrD2TLSSecretMissing       = errors.New("d2 offloader: no per-viewer tls replica secret in namespace")
+	ErrD2CallerViewerUnresolved = errors.New("d2 offloader: caller-mode clusterAppRef resolved no owner viewer")
+
+	// testDeriveViewerFromPodNSHook is a test seam for WI-T1-5 TC-T1-5-04:
+	// the caller-mode resolver must never invoke the server-mode
+	// deriveViewerFromPodNS path. When non-nil, deriveViewerFromPodNS calls
+	// it once per invocation so tests can assert zero calls during
+	// resolveCallerViewers* paths.
+	testDeriveViewerFromPodNSHook func()
 
 	// codecs is the codec factory used by the deserializer.
 	codecs = serializer.NewCodecFactory(runtime.NewScheme())
@@ -411,6 +420,9 @@ func (wh *Webhook) resolveViewerAllowset(ctx context.Context, pod *corev1.Pod) (
 // app_user_fallback path. All-absent returns ErrD2ViewerUnderive so the
 // admission handler can fail open and classify reason=viewer_underive.
 func (wh *Webhook) deriveViewerFromPodNS(ctx context.Context, pod *corev1.Pod) (string, error) {
+	if testDeriveViewerFromPodNSHook != nil {
+		testDeriveViewerFromPodNSHook()
+	}
 	var nsLabels map[string]string
 	ns, err := wh.kubeClient.CoreV1().Namespaces().Get(ctx, pod.Namespace, metav1.GetOptions{})
 	if err != nil {
@@ -436,6 +448,148 @@ func (wh *Webhook) deriveViewerFromPodNS(ctx context.Context, pod *corev1.Pod) (
 	}
 
 	return "", fmt.Errorf("namespace %q has no ns-owner, user-space-/user-system- prefix, or pod owner label: %w", pod.Namespace, ErrD2ViewerUnderive)
+}
+
+// callerViewerResolution captures the outcome of caller-mode viewer/allowset
+// resolution for a pod whose owning Application opts into the cluster-internal
+// gateway (Annotations[gateway.AnnotationInCluster]=gateway.InClusterGateway)
+// with a non-empty clusterAppRef.
+//
+// requirement: 详设 §2.3.2 caller 模式 viewer/allowset 解析 (WI-T1-5).
+// behavior: ViewerSet is deduped + lowercased + sorted; PrimaryRef is the
+// sorted-first ref from the merged refs (deterministic across admission
+// replays); PrimaryViewer is the owner viewer for PrimaryRef (may be
+// comma-joined when a single cluster app has multiple owners, per
+// BuildClusterAppOwnerIndex semantics). Distinct from deriveViewerFromPodNS
+// (server-mode viewer for v3 shared-entrance pods).
+type callerViewerResolution struct {
+	ViewerSet     []string
+	PrimaryRef    string
+	PrimaryViewer string
+}
+
+// resolveCallerViewersFromSnapshot is the pure-logic caller-mode resolver:
+// given a pod namespace and a cluster-wide Application snapshot, derive the
+// viewer set + sorted-first "primary ref"/"primary viewer". It takes no kube
+// client so unit tests can construct inputs deterministically.
+//
+// requirement: 详设 §2.3.2 (WI-T1-5).
+// behavior:
+//  1. filter apps to those with Spec.Namespace==podNS opted into the cluster
+//     gateway via Annotations[gateway.AnnotationInCluster]=gateway.InClusterGateway
+//  2. merge every matching app's clusterAppRef via gateway.SplitClusterAppRefs,
+//     then dedupe + sort (the "primary ref determinism" contract that
+//     WI-T1-2 leaves to T1-5 alongside its actual use site)
+//  3. build a cluster-app owner index over the full snapshot
+//  4. PrimaryRef = sorted-first ref; PrimaryViewer = ResolveClusterAppOwner(idx, PrimaryRef)
+//  5. for each ref resolve owners (single value possibly comma-joined for
+//     multi-owner cluster apps), split, normalise, collect into a lowercased
+//     + sorted ViewerSet
+//  6. len(refs)>1 -> warn-log + RecordD2InjectSkipped(multi_ref_unsupported)
+//     (v1 MVP, DP-T1-7 multi-vol expansion follow-up)
+//  7. empty ViewerSet (no refs, or refs that resolve no owners) returns
+//     ErrD2CallerViewerUnresolved -- ClassifyD2SkipReason maps it to the
+//     caller_viewer_unresolved metric reason on the fail-open path.
+func resolveCallerViewersFromSnapshot(podNS string, apps []v1alpha1.Application) (callerViewerResolution, error) {
+	var out callerViewerResolution
+	ns := strings.TrimSpace(podNS)
+	if ns == "" {
+		return out, fmt.Errorf("empty pod namespace: %w", ErrD2CallerViewerUnresolved)
+	}
+
+	refSet := make(map[string]struct{})
+	for i := range apps {
+		app := &apps[i]
+		if strings.TrimSpace(app.Spec.Namespace) != ns {
+			continue
+		}
+		if !strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
+			continue
+		}
+		for _, ref := range gateway.SplitClusterAppRefs(app.Spec.Settings["clusterAppRef"]) {
+			refSet[ref] = struct{}{}
+		}
+	}
+	if len(refSet) == 0 {
+		return out, fmt.Errorf("no clusterAppRef opted into gateway in ns=%s: %w", ns, ErrD2CallerViewerUnresolved)
+	}
+
+	refs := make([]string, 0, len(refSet))
+	for r := range refSet {
+		refs = append(refs, r)
+	}
+	sort.Strings(refs)
+
+	if len(refs) > 1 {
+		klog.Warningf("d2 offloader: multi-ref clusterAppRef truncated to primary primary=%s others=%v ns=%s", refs[0], refs[1:], ns)
+		RecordD2InjectSkipped(d2SkipReasonMultiRefUnsupported)
+	}
+
+	ownerIdx := gateway.BuildClusterAppOwnerIndex(apps)
+
+	viewerSet := make(map[string]struct{})
+	for _, ref := range refs {
+		for _, owner := range gateway.SplitClusterAppRefs(gateway.ResolveClusterAppOwner(ownerIdx, ref)) {
+			normalised := strings.ToLower(strings.TrimSpace(owner))
+			if normalised == "" {
+				continue
+			}
+			viewerSet[normalised] = struct{}{}
+		}
+	}
+	if len(viewerSet) == 0 {
+		return out, fmt.Errorf("clusterAppRef refs=%v resolved no owners in ns=%s: %w", refs, ns, ErrD2CallerViewerUnresolved)
+	}
+
+	viewers := make([]string, 0, len(viewerSet))
+	for v := range viewerSet {
+		viewers = append(viewers, v)
+	}
+	sort.Strings(viewers)
+
+	out.ViewerSet = viewers
+	out.PrimaryRef = refs[0]
+	out.PrimaryViewer = strings.TrimSpace(gateway.ResolveClusterAppOwner(ownerIdx, refs[0]))
+	return out, nil
+}
+
+// resolveCallerViewers is the kube-aware wrapper around
+// resolveCallerViewersFromSnapshot used by the admission patch path. It lists
+// all Applications cluster-wide and delegates the actual logic. T1-5 does not
+// wire this into CreateD2OffloaderPatch -- patch 装配 belongs to WI-T1-3.
+func (wh *Webhook) resolveCallerViewers(ctx context.Context, pod *corev1.Pod) (callerViewerResolution, error) {
+	list, err := wh.dynamicClient.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return callerViewerResolution{}, err
+	}
+	return resolveCallerViewersFromSnapshot(pod.Namespace, list.Items)
+}
+
+// renderCallerAllowset turns a caller-mode viewer set into nginx
+// <viewer-allowset-escaped> map values (lowercased literals, no wildcards;
+// WI-N1 §2.3 hit-test compares ssl_server_name against literal viewers).
+// Defensive sanity pass over resolveCallerViewers output: caller-side
+// re-normalisation keeps nginx-template consumers free of ordering and
+// case assumptions.
+func renderCallerAllowset(viewerSet []string) []string {
+	if len(viewerSet) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(viewerSet))
+	out := make([]string, 0, len(viewerSet))
+	for _, v := range viewerSet {
+		n := strings.ToLower(strings.TrimSpace(v))
+		if n == "" {
+			continue
+		}
+		if _, dup := seen[n]; dup {
+			continue
+		}
+		seen[n] = struct{}{}
+		out = append(out, n)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func hasD2Container(pod *corev1.Pod) bool {
