@@ -98,6 +98,15 @@ systemctl disable firewalld 1>/dev/null 2>/dev/null
 systemctl stop ufw 1>/dev/null 2>/dev/null
 systemctl disable ufw 1>/dev/null 2>/dev/null
 
+cat > /etc/NetworkManager/conf.d/20-bridge-ignore-carrier.conf  << EOF
+[device-with-carrier]
+match-device=type:bridge
+ignore-carrier=no
+EOF
+
+systemctl restart NetworkManager 1>/dev/null 2>/dev/null
+
+
 modinfo br_netfilter > /dev/null 2>&1
 if [ $? -eq 0 ]; then
    modprobe br_netfilter

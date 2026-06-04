@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -13,8 +14,9 @@ type ListNfsReq struct {
 }
 
 type nfsInfo struct {
-	Path string `json:"path"`
-	Acl  string `json:"acl"`
+	Path    string `json:"path"`
+	Acl     string `json:"acl"`
+	Mounted bool   `json:"mounted"`
 }
 
 func (h *Handlers) PostListNfs(ctx *fiber.Ctx) error {
@@ -38,11 +40,27 @@ func (h *Handlers) PostListNfs(ctx *fiber.Ctx) error {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
 
+	mountedNfsList, err := utils.MountedPath(ctx.Context())
+	if err != nil {
+		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
+	}
+
+	isMounted := func(nfsPath string) bool {
+		devicePath := fmt.Sprintf("%s:%s", req.Server, nfsPath)
+		for _, m := range mountedNfsList {
+			if m.Device == devicePath {
+				return true
+			}
+		}
+		return false
+	}
+
 	infoRes := make([]*nfsInfo, 0, len(nfsList))
 	for _, n := range nfsList {
 		infoRes = append(infoRes, &nfsInfo{
-			Path: n.Path,
-			Acl:  n.Acl,
+			Path:    n.Path,
+			Acl:     n.Acl,
+			Mounted: isMounted(n.Path),
 		})
 	}
 
