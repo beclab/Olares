@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
 // NewListCommand: `olares-cli profile list`
@@ -31,18 +33,36 @@ import (
 // Per §7.5 of the design doc, we deliberately do NOT print any other JWT
 // claims (username / groups / mfa / jid). The OlaresID column is the local
 // authoritative identity.
-func NewListCommand() *cobra.Command {
+func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "list all profiles with login status and current marker",
+		Short: "list all profiles with login status, current marker, and cached backend version",
 		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return runList(os.Stdout)
+		RunE: func(c *cobra.Command, _ []string) error {
+			// --refresh-version is inherited from the `profile` parent's
+			// persistent flags; treat a read error as "no refresh".
+			refresh, _ := c.Flags().GetBool(cmdutil.FlagRefreshVersion)
+			return runList(c.Context(), f, refresh, os.Stdout)
 		},
 	}
 }
 
-func runList(out *os.File) error {
+func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	// With --refresh-version, re-read /api/olares-info for the ACTIVE profile
+	// and update its cache before we render. This only touches the current
+	// profile (the only one we have a resolved http.Client for); the rest
+	// still show their last-cached version. Best-effort: a fetch failure
+	// degrades to a stderr warning so the listing itself never breaks.
+	if refresh && f != nil {
+		if _, _, err := f.RefreshOlaresBackendVersion(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not refresh backend version for the current profile: %v\n", err)
+		}
+	}
+
 	cfg, err := cliconfig.LoadMultiProfileConfig()
 	if err != nil {
 		return err
@@ -59,7 +79,7 @@ func runList(out *os.File) error {
 	now := time.Now()
 
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "  \tNAME\tOLARES-ID\tSTATUS")
+	fmt.Fprintln(w, "  \tNAME\tOLARES-ID\tSTATUS\tVERSION")
 	for i := range cfg.Profiles {
 		p := &cfg.Profiles[i]
 		marker := " "
@@ -67,9 +87,19 @@ func runList(out *os.File) error {
 			marker = "*"
 		}
 		status := profileStatus(store, p, now)
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", marker, p.DisplayName(), p.OlaresID, status)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", marker, p.DisplayName(), p.OlaresID, status, backendVersionCell(p))
 	}
 	return w.Flush()
+}
+
+// backendVersionCell renders the VERSION column for a profile: the cached
+// Olares backend version, or "-" when it hasn't been detected yet (no login
+// eager-fetch landed and no version-aware command has run / refreshed it).
+func backendVersionCell(p *cliconfig.ProfileConfig) string {
+	if v := p.BackendVersion; v != "" {
+		return v
+	}
+	return "-"
 }
 
 // profileStatus inspects the token store for `p` and returns a short status
