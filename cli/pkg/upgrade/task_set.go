@@ -724,3 +724,37 @@ func createAppCommonDir() []task.Interface {
 		},
 	}
 }
+
+type generateNetworkManagerConfigAction struct {
+	common.KubeAction
+}
+
+func (a *generateNetworkManagerConfigAction) Execute(runtime connector.Runtime) error {
+	cmd := `cat > /etc/NetworkManager/conf.d/20-bridge-ignore-carrier.conf  << EOF
+[device-with-carrier]
+match-device=type:bridge
+ignore-carrier=no
+EOF
+`
+	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to generate NetworkManager config")
+	}
+
+	if _, err := runtime.GetRunner().SudoCmd("systemctl restart NetworkManager", false, false); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func upgradeNetworkManagerConfig() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "GenerateNetworkManagerConfig",
+			Action: new(generateNetworkManagerConfigAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
