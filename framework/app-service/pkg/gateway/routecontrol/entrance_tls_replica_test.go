@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	dto "github.com/prometheus/client_model/go"
 	appsv1 "k8s.io/api/apps/v1"
@@ -148,11 +149,11 @@ func TestBuildDemandIndex_TC402d_PerfAndCallCounts(t *testing.T) {
 
 	buildCalls := 0
 	resolveCalls := 0
-	testBuildClusterAppOwnerIndexHook = func() { buildCalls++ }
-	testResolveClusterAppOwnerHook = func() { resolveCalls++ }
+	gateway.TestBuildClusterAppOwnerIndexHook = func() { buildCalls++ }
+	gateway.TestResolveClusterAppOwnerHook = func() { resolveCalls++ }
 	defer func() {
-		testBuildClusterAppOwnerIndexHook = nil
-		testResolveClusterAppOwnerHook = nil
+		gateway.TestBuildClusterAppOwnerIndexHook = nil
+		gateway.TestResolveClusterAppOwnerHook = nil
 	}()
 
 	start := time.Now()
