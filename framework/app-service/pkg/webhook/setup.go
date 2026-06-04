@@ -44,6 +44,9 @@ const (
 	argoResourceValidatingWebhookName       = "argo-resource-validating-webhook"
 	validatingWebhookApplicationManagerName = "applicationmanager-validating-webhook.bytetrade.io"
 	validatingWebhookArgoResourceName       = "argo-resource-validating-webhook.bytetrade.io"
+
+	tlsReplicaMountWebhookName           = "tls-replica-mount-guard"
+	tlsReplicaMountValidatingWebhookName = "tls-replica-mount-guard.gateway.olares.io"
 )
 
 // CreateOrUpdateSandboxMutatingWebhook creates or updates the sandbox mutating webhook.
@@ -259,6 +262,96 @@ func (wh *Webhook) CreateOrUpdateAppNamespaceValidatingWebhook() error {
 		}
 	}
 	klog.Info("Finished creating ValidatingWebhookConfiguration")
+
+	return nil
+}
+
+// CreateOrUpdateTLSReplicaMountValidatingWebhook creates or updates the WI-T1-8
+// validating webhook that blocks cross-tenant tls-replica private-key bypass
+// mounts. It is scoped to opted-in caller namespaces via namespaceSelector and
+// uses failurePolicy=Fail so a webhook outage fail-closes admission (private-key
+// red line over availability) without affecting non-caller namespaces.
+func (wh *Webhook) CreateOrUpdateTLSReplicaMountValidatingWebhook() error {
+	webhookPath := "/app-service/v1/tls-replica-mount/validate"
+	port, err := strconv.Atoi(strings.Split(constants.WebhookServerListenAddress, ":")[1])
+	if err != nil {
+		return err
+	}
+	webhookPort := int32(port)
+	failurePolicy := admissionregv1.Fail
+	matchPolicy := admissionregv1.Equivalent
+	webhookTimeout := int32(10)
+
+	caBundle, err := ioutil.ReadFile(defaultCaPath)
+	if err != nil {
+		return err
+	}
+	sideEffect := admissionregv1.SideEffectClassNone
+	vwc := admissionregv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: tlsReplicaMountWebhookName,
+		},
+		Webhooks: []admissionregv1.ValidatingWebhook{
+			{
+				Name: tlsReplicaMountValidatingWebhookName,
+				ClientConfig: admissionregv1.WebhookClientConfig{
+					CABundle: caBundle,
+					Service: &admissionregv1.ServiceReference{
+						Namespace: webhookServiceNamespace,
+						Name:      webhookServiceName,
+						Path:      &webhookPath,
+						Port:      &webhookPort,
+					},
+				},
+				FailurePolicy: &failurePolicy,
+				MatchPolicy:   &matchPolicy,
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						security.NamespaceInClusterCallerLabel: "true",
+					},
+				},
+				Rules: []admissionregv1.RuleWithOperations{
+					{
+						Operations: []admissionregv1.OperationType{
+							admissionregv1.Create,
+							admissionregv1.Update,
+						},
+						Rule: admissionregv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+						},
+					},
+				},
+				SideEffects:             &sideEffect,
+				TimeoutSeconds:          &webhookTimeout,
+				AdmissionReviewVersions: []string{"v1"},
+			},
+		},
+	}
+	if _, err = wh.kubeClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().
+		Create(context.Background(), &vwc, metav1.CreateOptions{}); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			existing, err := wh.kubeClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().
+				Get(context.Background(), vwc.Name, metav1.GetOptions{})
+			if err != nil {
+				klog.Errorf("Failed to get ValidatingWebhookConfiguration name=%s err=%v", vwc.Name, err)
+				return err
+			}
+			vwc.ObjectMeta = existing.ObjectMeta
+			if _, err := wh.kubeClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().
+				Update(context.Background(), &vwc, metav1.UpdateOptions{}); err != nil {
+				if !apierrors.IsConflict(err) {
+					klog.Errorf("Failed to update ValidatingWebhookConfiguration name=%s err=%v", vwc.Name, err)
+					return err
+				}
+			}
+		} else {
+			klog.Errorf("Failed to create ValidatingWebhookConfiguration name=%s err=%v", vwc.Name, err)
+			return err
+		}
+	}
+	klog.Info("Finished creating tls-replica-mount ValidatingWebhookConfiguration")
 
 	return nil
 }
