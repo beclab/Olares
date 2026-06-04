@@ -320,7 +320,7 @@ func (wh *Webhook) ensureD2NginxConfConfigMap(
 		viewer,
 		allowset,
 		platformDomain,
-		pod.Namespace,
+		routecontrol.AppGatewayDataNamespace,
 		routecontrol.DefaultInClusterStrongIdentityServicePort,
 	)
 	sharedDecideJS := sidecar.RenderSharedDecideJS(platformDomain, constants.D2SidecarHostsFilePath)

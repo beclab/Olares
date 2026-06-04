@@ -7,6 +7,9 @@ import (
 )
 
 const (
+	// AppGatewayDataNamespace is the namespace hosting app-gateway-data Service.
+	AppGatewayDataNamespace = "app-gateway"
+
 	// DefaultInClusterStrongIdentityServicePort is the strong-identity
 	// app-gateway-data Service port consumed by in-cluster callers.
 	DefaultInClusterStrongIdentityServicePort int32 = 8081

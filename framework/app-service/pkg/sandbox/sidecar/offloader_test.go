@@ -30,7 +30,7 @@ func TestGetTLSOffloaderContainerSpec_Contract(t *testing.T) {
 	require.Equal(t, constants.D2StreamListenPortName, got.Ports[0].Name)
 	require.Equal(t, constants.D2StreamListenPort, got.Ports[0].ContainerPort)
 
-	require.Len(t, got.VolumeMounts, 4)
+	require.Len(t, got.VolumeMounts, 6)
 	require.Equal(t, constants.D2CertsVolumeName, got.VolumeMounts[0].Name)
 	require.Equal(t, constants.D2NginxCertsDir, got.VolumeMounts[0].MountPath)
 	require.True(t, got.VolumeMounts[0].ReadOnly)
@@ -45,6 +45,12 @@ func TestGetTLSOffloaderContainerSpec_Contract(t *testing.T) {
 	require.Equal(t, constants.D2SharedHostsVolumeName, got.VolumeMounts[3].Name)
 	require.Equal(t, constants.D2SharedHostsDir, got.VolumeMounts[3].MountPath)
 	require.True(t, got.VolumeMounts[3].ReadOnly)
+	require.Equal(t, constants.D2NginxCacheVolumeName, got.VolumeMounts[4].Name)
+	require.Equal(t, constants.D2NginxCacheDir, got.VolumeMounts[4].MountPath)
+	require.False(t, got.VolumeMounts[4].ReadOnly)
+	require.Equal(t, constants.D2NginxRunVolumeName, got.VolumeMounts[5].Name)
+	require.Equal(t, constants.D2NginxRunDir, got.VolumeMounts[5].MountPath)
+	require.False(t, got.VolumeMounts[5].ReadOnly)
 
 	require.Equal(t, "10m", got.Resources.Requests.Cpu().String())
 	require.Equal(t, "48Mi", got.Resources.Requests.Memory().String())
@@ -69,7 +75,7 @@ func TestGetTLSOffloaderInitContainerSpec_Contract(t *testing.T) {
 
 func TestGetTLSOffloaderVolumes_Contract(t *testing.T) {
 	got := GetTLSOffloaderVolumes("alice", "olares-d2-conf-abc123", "olares-d2-conf-abc123")
-	require.Len(t, got, 3)
+	require.Len(t, got, 5)
 
 	require.Equal(t, constants.D2CertsVolumeName, got[0].Name)
 	require.NotNil(t, got[0].Secret)
@@ -89,12 +95,18 @@ func TestGetTLSOffloaderVolumes_Contract(t *testing.T) {
 	require.Equal(t, constants.D2SharedHostsVolumeName, got[2].ConfigMap.Name)
 	require.Len(t, got[2].ConfigMap.Items, 1)
 	require.Equal(t, constants.D2SharedHostsFileName, got[2].ConfigMap.Items[0].Key)
+
+	require.Equal(t, constants.D2NginxCacheVolumeName, got[3].Name)
+	require.NotNil(t, got[3].EmptyDir)
+	require.Equal(t, constants.D2NginxRunVolumeName, got[4].Name)
+	require.NotNil(t, got[4].EmptyDir)
 }
 
 func TestRenderNginxConf_Contract(t *testing.T) {
 	got := RenderNginxConf("alice", []string{"bob"}, "example.com", "user-space-alice", 8081)
 	require.Contains(t, got, "load_module /etc/nginx/modules/ngx_stream_js_module.so;")
-	require.Contains(t, got, "worker_processes 1;")
+	require.Contains(t, got, "pid /var/run/nginx/nginx.pid;")
+	require.Contains(t, got, "client_body_temp_path /var/cache/nginx/client_temp;")
 	require.Contains(t, got, "worker_shutdown_timeout 30s;")
 	require.Contains(t, got, "js_path /etc/nginx/njs/;")
 	require.Contains(t, got, "js_import shared_decide.js;")

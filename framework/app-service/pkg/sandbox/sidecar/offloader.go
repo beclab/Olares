@@ -57,6 +57,14 @@ func GetTLSOffloaderContainerSpec(configVolumeName string) corev1.Container {
 				MountPath: constants.D2SharedHostsDir,
 				ReadOnly:  true,
 			},
+			{
+				Name:      constants.D2NginxCacheVolumeName,
+				MountPath: constants.D2NginxCacheDir,
+			},
+			{
+				Name:      constants.D2NginxRunVolumeName,
+				MountPath: constants.D2NginxRunDir,
+			},
 		},
 		Command: []string{"nginx"},
 		Args: []string{
@@ -147,6 +155,18 @@ func GetTLSOffloaderVolumes(viewer, nginxConfConfigMapName, nginxConfVolumeName 
 				},
 			},
 		},
+		{
+			Name: constants.D2NginxCacheVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
+		{
+			Name: constants.D2NginxRunVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
 	}
 }
 
@@ -157,6 +177,8 @@ func RenderNginxConf(viewer string, allowset []string, platformDomain, gatewayNa
 	v2HostPattern := buildV2SharedHostPattern(platformDomain)
 
 	return fmt.Sprintf(`load_module /etc/nginx/modules/ngx_stream_js_module.so;
+pid %s/nginx.pid;
+error_log /dev/stderr warn;
 worker_processes 1;
 worker_shutdown_timeout %s;
 
@@ -180,6 +202,12 @@ stream {
 }
 
 http {
+  client_body_temp_path %s/client_temp;
+  proxy_temp_path %s/proxy_temp;
+  fastcgi_temp_path %s/fastcgi_temp;
+  uwsgi_temp_path %s/uwsgi_temp;
+  scgi_temp_path %s/scgi_temp;
+
   map $ssl_server_name $tls_cert_path {
     default %s/tls.crt;
   }
@@ -220,9 +248,15 @@ http {
   }
 }
 `,
+		constants.D2NginxRunDir,
 		constants.D2WorkerShutdownTimeout,
 		constants.D2NginxNJSDir,
 		constants.D2StreamListenPort,
+		constants.D2NginxCacheDir,
+		constants.D2NginxCacheDir,
+		constants.D2NginxCacheDir,
+		constants.D2NginxCacheDir,
+		constants.D2NginxCacheDir,
 		constants.D2NginxCertsDir,
 		constants.D2NginxCertsDir,
 		gatewayNamespace,
