@@ -363,6 +363,10 @@ func (wh *Webhook) ensureD2NginxConfConfigMap(
 	return configMapName, volumeName, nil
 }
 
+// ensureD2SharedHostsPlaceholder creates an empty olares-d2-shared-hosts
+// ConfigMap so the d2 sidecar can mount it on first injection. The actual
+// host allow-list is populated by routecontrol.SharedHostsReconciler (WI-N6),
+// which adopts this placeholder via the managed-by label on first Update.
 func (wh *Webhook) ensureD2SharedHostsPlaceholder(ctx context.Context, namespace string) error {
 	placeholder := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
