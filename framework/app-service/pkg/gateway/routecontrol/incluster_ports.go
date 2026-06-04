@@ -11,8 +11,13 @@ const (
 	// app-gateway-data Service port consumed by in-cluster callers.
 	DefaultInClusterStrongIdentityServicePort int32 = 8081
 
-	// DefaultInClusterHTTPServicePort is the app-gateway-data HTTP service port.
+	// DefaultInClusterHTTPServicePort is the legacy app-gateway-data HTTP service
+	// port kept for backward compatibility with callers that still target :80.
+	// Deprecated: caller strong HTTP path should use DefaultInClusterHTTPStrongServicePort.
 	DefaultInClusterHTTPServicePort int32 = 80
+
+	// DefaultInClusterHTTPStrongServicePort is the caller strong-HTTP service port.
+	DefaultInClusterHTTPStrongServicePort int32 = 8082
 
 	// Linkerd skip-port namespace annotation keys.
 	LinkerdSkipInboundPortsAnnotation  = "config.linkerd.io/skip-inbound-ports"
@@ -25,7 +30,7 @@ const (
 
 // MeshHijackServicePorts returns service ports that must stay mesh-hijacked.
 func MeshHijackServicePorts(strongIdentityPort int32) []int32 {
-	return []int32{DefaultInClusterHTTPServicePort, strongIdentityPort}
+	return []int32{strongIdentityPort, DefaultInClusterHTTPStrongServicePort}
 }
 
 // ComputeSkipOutboundPorts builds skip-outbound range string from hijack ports.
