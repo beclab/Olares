@@ -19,6 +19,8 @@ type AppPermission interface{}
 type AppDataPermission string
 type AppCachePermission string
 type UserDataPermission string
+type AppCommonPermission string
+type ExternalDataPermission string
 
 type AppRequirement struct {
 	Memory        *resource.Quantity
@@ -40,9 +42,11 @@ type AppPolicy struct {
 }
 
 const (
-	AppDataRW  AppDataPermission  = "appdata-perm"
-	AppCacheRW AppCachePermission = "appcache-perm"
-	UserDataRW UserDataPermission = "userdata-perm"
+	AppDataRW      AppDataPermission      = "appdata-perm"
+	AppCacheRW     AppCachePermission     = "appcache-perm"
+	UserDataRW     UserDataPermission     = "userdata-perm"
+	AppCommonRW    AppCommonPermission    = "appCommon-perm"
+	ExternalDataRW ExternalDataPermission = "external-perm"
 )
 
 type APIVersion string
@@ -121,6 +125,7 @@ type ApplicationConfig struct {
 	LLMGatewaySupported bool
 	OverlayGateway      OverlayGateway
 	WorkloadReplicas    *WorkloadReplicas
+	TemplateOnly        bool
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {

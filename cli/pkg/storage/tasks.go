@@ -425,8 +425,8 @@ func (t *CreateAppCommonDir) Execute(runtime connector.Runtime) error {
 	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s && chown 1000:1000 %s", HuggingFaceCacheDir, HuggingFaceCacheDir), false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to create huggingface cache dir")
 	}
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s && chown 1000:1000 %s", LLampCPPCacheDir, LLampCPPCacheDir), false, false); err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to create llama.cpp cache dir")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s && chown 1000:1000 %s", ComfyUICacheDir, ComfyUICacheDir), false, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create comfyui cache dir")
 	}
 	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s && chown 1000:1000 %s", OllamaCacheDir, OllamaCacheDir), false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to create ollama cache dir")

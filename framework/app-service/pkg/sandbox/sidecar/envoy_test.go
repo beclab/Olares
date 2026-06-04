@@ -24,7 +24,7 @@ import (
 //
 // See: archdoc Shared 集群内访问 v1.0.3 §16.
 func TestGenerateIptablesCommands_LinkerdProxyUidExempt(t *testing.T) {
-	cmd := generateIptablesCommands(nil)
+	cmd := generateIptablesCommands(nil, false)
 
 	wantLine := fmt.Sprintf("-A PROXY_OUTBOUND -m owner --uid-owner %d -j RETURN", constants.LinkerdProxyUID)
 	if !strings.Contains(cmd, wantLine) {
@@ -55,17 +55,68 @@ func TestInboundBypassPorts_includesEntrancePorts(t *testing.T) {
 	got := inboundBypassPorts(cfg)
 	require.ElementsMatch(t, []int{8081, 8080}, got)
 
-	cmd := generateIptablesCommands(cfg)
+	cmd := generateIptablesCommands(cfg, false)
 	require.Contains(t, cmd, "-A PROXY_INBOUND -p tcp --dport 8081 -j RETURN")
 	require.Contains(t, cmd, "-A PROXY_INBOUND -p tcp --dport 8080 -j RETURN")
 }
 
 func TestGenerateIptablesCommands_EnvoyUidExempt(t *testing.T) {
-	cmd := generateIptablesCommands(nil)
+	cmd := generateIptablesCommands(nil, false)
 
 	wantLine := fmt.Sprintf("-A PROXY_OUTBOUND -m owner --uid-owner %d -j RETURN", constants.EnvoyUID)
 	if !strings.Contains(cmd, wantLine) {
 		t.Fatalf("generateIptablesCommands missing envoy uid (%d) exemption.\nWant line:\n  %s\nGot:\n%s",
 			constants.EnvoyUID, wantLine, cmd)
 	}
+}
+
+// TestGenerateIptablesCommands_ServicePortsBypass locks main's pre-merge
+// PROXY_INBOUND RETURN rules for ApplicationConfig.Ports (tcp only).
+func TestGenerateIptablesCommands_ServicePortsBypass(t *testing.T) {
+	cfg := &appcfg.ApplicationConfig{
+		Ports: []appcfg.ServicePort{
+			{Port: 9000, Protocol: "tcp"},
+			{Port: 53, Protocol: "udp"},
+			{Port: 9001, Protocol: ""},
+		},
+	}
+	cmd := generateIptablesCommands(cfg, false)
+	require.Contains(t, cmd, "-A PROXY_INBOUND -p tcp --dport 9000 -j RETURN")
+	require.Contains(t, cmd, "-A PROXY_INBOUND -p tcp --dport 9001 -j RETURN")
+	require.NotContains(t, cmd, "--dport 53 ")
+}
+
+// TestGenerateIptablesCommands_MacvlanBypass locks overlay-gateway macvlan
+// bypass rules from main (#3239): net1 traffic must not hit envoy redirect.
+func TestGenerateIptablesCommands_MacvlanBypass(t *testing.T) {
+	cmd := generateIptablesCommands(nil, true)
+	require.Contains(t, cmd, "-A PROXY_INBOUND -i ${MACVLAN_IFACE} -j RETURN")
+	require.Contains(t, cmd, "-A PROXY_OUTBOUND -o ${MACVLAN_IFACE} -j RETURN")
+
+	inboundIdx := strings.Index(cmd, "-A PROXY_INBOUND -i ${MACVLAN_IFACE} -j RETURN")
+	inRedirectIdx := strings.Index(cmd, "-A PROXY_INBOUND -p tcp -j PROXY_IN_REDIRECT")
+	require.NotEqual(t, -1, inboundIdx)
+	require.NotEqual(t, -1, inRedirectIdx)
+	require.Less(t, inboundIdx, inRedirectIdx)
+
+	outboundIdx := strings.Index(cmd, "-A PROXY_OUTBOUND -o ${MACVLAN_IFACE} -j RETURN")
+	multiportIdx := strings.Index(cmd, "-A PROXY_OUTBOUND -p tcp -m multiport")
+	require.NotEqual(t, -1, outboundIdx)
+	require.NotEqual(t, -1, multiportIdx)
+	require.Less(t, outboundIdx, multiportIdx)
+
+	noMacvlan := generateIptablesCommands(nil, false)
+	require.NotContains(t, noMacvlan, "${MACVLAN_IFACE}")
+}
+
+func TestGetInitContainerSpec_MacvlanEnv(t *testing.T) {
+	spec := GetInitContainerSpec(nil, true)
+	require.Len(t, spec.Env, 2)
+	require.Equal(t, "POD_IP", spec.Env[0].Name)
+	require.Equal(t, "MACVLAN_IFACE", spec.Env[1].Name)
+	require.Equal(t, defaultMacvlanIface, spec.Env[1].Value)
+
+	specNoMacvlan := GetInitContainerSpec(nil, false)
+	require.Len(t, specNoMacvlan.Env, 1)
+	require.Equal(t, "POD_IP", specNoMacvlan.Env[0].Name)
 }

@@ -178,9 +178,9 @@ func TestEnvoyGoldenDiff(t *testing.T) {
 COMMIT
 EOF
 `
-	require.Equal(t, expectedCmd, generateIptablesCommands(nil))
+	require.Equal(t, expectedCmd, generateIptablesCommands(nil, false))
 
-	initSpec := GetInitContainerSpec(nil)
+	initSpec := GetInitContainerSpec(nil, false)
 	require.Equal(t, constants.SidecarInitContainerName, initSpec.Name)
 	require.Equal(t, "beclab/init:v1.2.3", initSpec.Image)
 	require.Len(t, initSpec.Args, 2)

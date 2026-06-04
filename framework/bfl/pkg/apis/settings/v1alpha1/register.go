@@ -289,6 +289,24 @@ func AddContainer(c *restful.Container) error {
 		Doc("get tailscale subroutes").
 		Returns(http.StatusOK, "", &response.Response{}))
 
+	ws.Route(ws.GET("/tailscale/advertise-exit-node").
+		To(handler.handleGetTailScaleAdvertiseExitNode).
+		Doc("get tailscale advertise exit node setting").
+		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
+		Returns(http.StatusOK, "", &response.Response{Data: TailScaleAdvertiseExitNode{}}))
+
+	ws.Route(ws.POST("/tailscale/enable/advertise-exit-node").
+		To(handler.handleEnableTailScaleAdvertiseExitNode).
+		Doc("enable tailscale advertise exit node").
+		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
+		Returns(http.StatusOK, "", &response.Response{}))
+
+	ws.Route(ws.POST("/tailscale/disable/advertise-exit-node").
+		To(handler.handleDisableTailScaleAdvertiseExitNode).
+		Doc("disable tailscale advertise exit node").
+		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
+		Returns(http.StatusOK, "", &response.Response{}))
+
 	c.Add(ws)
 	return nil
 }
