@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
@@ -49,9 +50,6 @@ var (
 
 	replicaHashStateMu sync.Mutex
 	replicaHashState   = map[string]hashSnapshot{}
-
-	testBuildClusterAppOwnerIndexHook func()
-	testResolveClusterAppOwnerHook    func()
 )
 
 type hashSnapshot struct {
@@ -68,9 +66,6 @@ type ReplicaTarget struct {
 	CallerNamespace string // user-space-<C>
 	CertViewer      string // TLS secret suffix <viewer>
 }
-
-// ClusterAppOwnerIndex maps cluster-scoped Application Spec.Name to owner viewer.
-type ClusterAppOwnerIndex map[string]string
 
 // BuildDemandIndex builds the desired caller-namespace replica demand set.
 func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain string) ([]ReplicaTarget, error) {
@@ -98,7 +93,7 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 		return nil, err
 	}
 
-	ownerIdx := buildClusterAppOwnerIndex(appList.Items)
+	ownerIdx := gateway.BuildClusterAppOwnerIndex(appList.Items)
 	nsOwnerIdx := make(map[string]string, len(nsList.Items))
 	for i := range nsList.Items {
 		ns := nsList.Items[i]
@@ -143,9 +138,9 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 		})
 
 		for _, app := range appsByNS[callerNS] {
-			refs := splitClusterAppRefs(app.Spec.Settings["clusterAppRef"])
+			refs := gateway.SplitClusterAppRefs(app.Spec.Settings["clusterAppRef"])
 			for _, ref := range refs {
-				owners := splitClusterAppRefs(resolveClusterAppOwner(ownerIdx, ref))
+				owners := gateway.SplitClusterAppRefs(gateway.ResolveClusterAppOwner(ownerIdx, ref))
 				if len(owners) == 0 {
 					recordReplicaError("app_ref_unresolved")
 					continue
@@ -171,52 +166,6 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 		return out[i].CallerNamespace < out[j].CallerNamespace
 	})
 	return out, nil
-}
-
-func buildClusterAppOwnerIndex(apps []appv1alpha1.Application) ClusterAppOwnerIndex {
-	if testBuildClusterAppOwnerIndexHook != nil {
-		testBuildClusterAppOwnerIndexHook()
-	}
-	idx := make(ClusterAppOwnerIndex, len(apps))
-	for i := range apps {
-		app := apps[i]
-		if strings.TrimSpace(app.Spec.Settings["clusterScoped"]) != "true" {
-			continue
-		}
-		name := strings.TrimSpace(app.Spec.Name)
-		owner := strings.TrimSpace(app.Spec.Owner)
-		if name == "" || owner == "" {
-			continue
-		}
-		if prev, ok := idx[name]; ok && prev != owner {
-			klog.Warningf("replica.app_ref_multi_owner app=%s owner_old=%s owner_new=%s", name, prev, owner)
-			owners := splitClusterAppRefs(prev)
-			already := false
-			for _, o := range owners {
-				if o == owner {
-					already = true
-					break
-				}
-			}
-			if !already {
-				owners = append(owners, owner)
-				idx[name] = strings.Join(owners, ",")
-			}
-			continue
-		}
-		idx[name] = owner
-	}
-	return idx
-}
-
-func resolveClusterAppOwner(idx ClusterAppOwnerIndex, appRef string) string {
-	if testResolveClusterAppOwnerHook != nil {
-		testResolveClusterAppOwnerHook()
-	}
-	if len(idx) == 0 {
-		return ""
-	}
-	return strings.TrimSpace(idx[strings.TrimSpace(appRef)])
 }
 
 // ReconcileReplica reconciles one replica target from app-gateway source Secret.
@@ -458,22 +407,6 @@ func sweepOrphanReplicas(ctx context.Context, c client.Client, currentDemand []R
 		replicaSyncTotal.WithLabelValues("gc_periodic").Add(float64(deleted))
 	}
 	return nil
-}
-
-func splitClusterAppRefs(raw string) []string {
-	if strings.TrimSpace(raw) == "" {
-		return nil
-	}
-	parts := strings.Split(raw, ",")
-	refs := make([]string, 0, len(parts))
-	for _, part := range parts {
-		ref := strings.TrimSpace(part)
-		if ref == "" {
-			continue
-		}
-		refs = append(refs, ref)
-	}
-	return refs
 }
 
 func addReplicaTarget(set map[string]ReplicaTarget, target ReplicaTarget) {
