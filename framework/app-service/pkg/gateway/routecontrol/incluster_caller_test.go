@@ -117,7 +117,7 @@ func TestCallerReconciler_optInInjectsAndWritesGatewayIngress(t *testing.T) {
 	if nsObj.Annotations[LinkerdSkipInboundPortsAnnotation] != PureCallerInboundSkipPorts {
 		t.Fatalf("skip-inbound-ports = %q", nsObj.Annotations[LinkerdSkipInboundPortsAnnotation])
 	}
-	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-79,81-8080,8082-65535" {
+	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-8080,8083-65535" {
 		t.Fatalf("skip-outbound-ports = %q", nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation])
 	}
 }
@@ -235,12 +235,12 @@ func TestCallerReconciler_optOutGCsLegacyEgress(t *testing.T) {
 }
 
 func TestComputeSkipOutboundPorts_TC201(t *testing.T) {
-	got, err := ComputeSkipOutboundPorts([]int32{80, 8081})
+	got, err := ComputeSkipOutboundPorts([]int32{8081, 8082})
 	if err != nil {
 		t.Fatalf("ComputeSkipOutboundPorts: %v", err)
 	}
-	if got != "1-79,81-8080,8082-65535" {
-		t.Fatalf("ComputeSkipOutboundPorts([80,8081]) = %q", got)
+	if got != "1-8080,8083-65535" {
+		t.Fatalf("ComputeSkipOutboundPorts([8081,8082]) = %q", got)
 	}
 }
 
@@ -258,7 +258,7 @@ func TestComputeSkipOutboundPorts_TC201b(t *testing.T) {
 }
 
 func TestComputeSkipOutboundPorts_TC202(t *testing.T) {
-	got, err := ComputeSkipOutboundPorts([]int32{80, 8081})
+	got, err := ComputeSkipOutboundPorts([]int32{8081, 8082})
 	if err != nil {
 		t.Fatalf("ComputeSkipOutboundPorts: %v", err)
 	}
@@ -268,6 +268,19 @@ func TestComputeSkipOutboundPorts_TC202(t *testing.T) {
 	}
 	if containsExact(tokens, "8081") {
 		t.Fatalf("skip-outbound tokens must not contain standalone 8081: %v", tokens)
+	}
+	if containsExact(tokens, "8082") {
+		t.Fatalf("skip-outbound tokens must not contain standalone 8082: %v", tokens)
+	}
+}
+
+func TestComputeSkipOutboundPorts_TCT1701(t *testing.T) {
+	got, err := ComputeSkipOutboundPorts([]int32{8081, 8082})
+	if err != nil {
+		t.Fatalf("ComputeSkipOutboundPorts: %v", err)
+	}
+	if !portInSkipRange(80, got) {
+		t.Fatalf("port 80 must stay in skip-outbound range, got %q", got)
 	}
 }
 
@@ -287,7 +300,7 @@ func TestEnsureCallerNamespaceLinkerdSkipPorts_TC203(t *testing.T) {
 	if nsObj.Annotations[LinkerdSkipInboundPortsAnnotation] != PureCallerInboundSkipPorts {
 		t.Fatalf("skip-inbound-ports = %q", nsObj.Annotations[LinkerdSkipInboundPortsAnnotation])
 	}
-	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-79,81-8080,8082-65535" {
+	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-8080,8083-65535" {
 		t.Fatalf("skip-outbound-ports = %q", nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation])
 	}
 }
@@ -321,7 +334,7 @@ func TestEnsureCallerNamespaceLinkerdSkipPorts_TC204(t *testing.T) {
 	if nsObj.Annotations[LinkerdSkipInboundPortsAnnotation] != OlaresEnvoyInboundSkipPorts {
 		t.Fatalf("skip-inbound-ports = %q", nsObj.Annotations[LinkerdSkipInboundPortsAnnotation])
 	}
-	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-79,81-8080,8082-65535" {
+	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-8080,8083-65535" {
 		t.Fatalf("skip-outbound-ports = %q", nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation])
 	}
 }
@@ -383,7 +396,7 @@ func TestCallerReconciler_TC205OptOutRemovesSkipAnnotations(t *testing.T) {
 				Annotations: map[string]string{
 					AnnotationLinkerdInject:                LinkerdInjectDisabled,
 					LinkerdSkipInboundPortsAnnotation:      PureCallerInboundSkipPorts,
-					LinkerdSkipOutboundPortsAnnotation:     "1-79,81-8080,8082-65535",
+					LinkerdSkipOutboundPortsAnnotation:     "1-8080,8083-65535",
 					LinkerdInjectAnnotation:                LinkerdInjectEnabled,
 					gateway.AnnotationInCluster:            gateway.InClusterGateway,
 					security.NamespaceInClusterCallerLabel: "true",
@@ -511,10 +524,16 @@ func TestChartRender_TC209(t *testing.T) {
 	mustContain(t, defaultOut, "port: 8081")
 	mustContain(t, defaultOut, "targetPort: 10080")
 	mustContain(t, defaultOut, "protocol: TCP")
+	mustContain(t, defaultOut, "name: incluster-http-strong")
+	mustContain(t, defaultOut, "port: 8082")
+	mustContain(t, defaultOut, "targetPort: 10080")
 
 	overrideOut := runHelmTemplateDataPlane(t, chartPath, "--set", "inCluster.strongIdentityServicePort=8082")
 	mustContain(t, overrideOut, "name: incluster-strong")
 	mustContain(t, overrideOut, "port: 8082")
+	overrideHTTPStrongOut := runHelmTemplateDataPlane(t, chartPath, "--set", "inCluster.httpStrongServicePort=18082")
+	mustContain(t, overrideHTTPStrongOut, "name: incluster-http-strong")
+	mustContain(t, overrideHTTPStrongOut, "port: 18082")
 }
 
 func TestDefaultsOpaquePorts_TC210(t *testing.T) {
@@ -542,6 +561,17 @@ func TestDefaultsOpaquePorts_TC210(t *testing.T) {
 	if expanded[8081] {
 		t.Fatalf("opaquePorts must not include 8081, got %q", opaque)
 	}
+	if expanded[8082] {
+		t.Fatalf("opaquePorts must not include 8082, got %q", opaque)
+	}
+}
+
+func portInSkipRange(port int, skip string) bool {
+	expanded, err := expandPortSet(skip)
+	if err != nil {
+		return false
+	}
+	return expanded[port]
 }
 
 type alwaysFailListClient struct {
