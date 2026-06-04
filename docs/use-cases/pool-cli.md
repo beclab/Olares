@@ -121,7 +121,7 @@ Use this method to run Pool CLI entirely offline with a local model. This exampl
 8. Open the Pool CLI from the Launchpad, and then enter the following command to start a session.
 
    ```bash
-   pool
+   pool-local
    ```
 
 ## Code with natural language
