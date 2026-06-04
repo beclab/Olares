@@ -59,6 +59,12 @@ func NewDefaultCommand() *cobra.Command {
 		},
 	}
 	cmds.Flags().BoolVar(&showVendor, "vendor", false, "show the vendor type of olares-cli")
+
+	// Version-compat controls for remote/API commands. These are persistent
+	// so any subcommand that dispatches through cmdutil.Factory.WithOlaresClient
+	// can honor them; PersistentPreRun binds them into viper above.
+	cmds.PersistentFlags().String(cmdutil.FlagOlaresVersion, "", "override the detected Olares backend version (e.g. 1.12.6, 1.12.6-20260603); skips /api/olares-info detection")
+	cmds.PersistentFlags().Bool(cmdutil.FlagRefreshVersion, false, "force a fresh backend-version read from /api/olares-info, ignoring the cached value")
 	// Identity is single-source: whichever profile `olares-cli profile use`
 	// (or the most recent `profile login` / `profile import`) selected. There
 	// is intentionally no per-invocation `--profile` override — agents and

@@ -106,6 +106,26 @@ type ProfileConfig struct {
 	// WhoamiRefreshedAt; used by `cluster context` to render "last
 	// refreshed" hints.
 	ClusterContextRefreshedAt int64 `json:"clusterContextRefreshedAt,omitempty"`
+
+	// BackendVersion caches the Olares OS version of the target instance,
+	// read from /api/olares-info's osVersion. The version-compat layer
+	// (pkg/olaresclient) uses it to dispatch a command to the right
+	// version-specific implementation without a network round-trip on
+	// every invocation. Unlike the access token (which self-heals via
+	// /api/refresh on a 401), the backend version has no implicit refresh
+	// signal, so it is paired with a refresh timestamp + TTL below.
+	//
+	// Empty for pre-existing profiles or before the first
+	// version-dispatched command runs. Treated as "unknown — detect on
+	// next use".
+	BackendVersion string `json:"backendVersion,omitempty"`
+
+	// BackendVersionRefreshedAt is the unix-second timestamp of the last
+	// successful /api/olares-info read that wrote BackendVersion. Used to
+	// apply a TTL: once the cache is older than the TTL it is re-fetched
+	// on the next version-dispatched command. `--refresh-version` forces a
+	// re-fetch regardless of this timestamp.
+	BackendVersionRefreshedAt int64 `json:"backendVersionRefreshedAt,omitempty"`
 }
 
 // ClusterContextCache is the per-profile snapshot of /capi/app/detail
@@ -302,6 +322,33 @@ func (m *MultiProfileConfig) SetClusterContext(olaresID string, ctx *ClusterCont
 		newRole = ctx.GlobalRole
 	}
 	return newRole != "" && prevRole != newRole, nil
+}
+
+// SetBackendVersion atomically updates the BackendVersion +
+// BackendVersionRefreshedAt fields for the profile keyed by olaresID, then
+// persists config.json. Mirrors SetOwnerRole's contract.
+//
+// Returns:
+//   - changed: true iff BackendVersion transitioned to a different non-empty
+//     value (callers can use this to notice "the backend was upgraded"). A
+//     first-time write (empty → version) also reports changed=true.
+//   - err:     any I/O / serialization error from SaveMultiProfileConfig.
+//
+// refreshedAt is the wall-clock the caller observed the /api/olares-info
+// success at; passed in (rather than re-read here) so test code can pin it
+// deterministically.
+func (m *MultiProfileConfig) SetBackendVersion(olaresID, version string, refreshedAt int64) (changed bool, err error) {
+	target := m.FindByOlaresID(olaresID)
+	if target == nil {
+		return false, fmt.Errorf("profile %q not found", olaresID)
+	}
+	prev := target.BackendVersion
+	target.BackendVersion = version
+	target.BackendVersionRefreshedAt = refreshedAt
+	if err := SaveMultiProfileConfig(m); err != nil {
+		return false, fmt.Errorf("save config: %w", err)
+	}
+	return version != "" && prev != version, nil
 }
 
 // Remove deletes a profile by Name or OlaresID. If the removed profile was
