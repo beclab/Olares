@@ -278,12 +278,20 @@ func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title stri
 	})
 }
 
-func (c *MarketClient) UninstallApp(ctx context.Context, appName string, all, deleteData bool) (*APIResponse, error) {
-	return c.doRequest(ctx, http.MethodDelete, "/apps/"+appName, UninstallRequest{
-		Sync:       true,
-		All:        all,
-		DeleteData: deleteData,
-	})
+// Do implements olaresclient.Doer: it executes a single JSON request and
+// returns the unwrapped `data` payload of the API envelope. The version-compat
+// layer (pkg/olaresclient) shapes the request line (method/path/body) per
+// backend version; transport (auth injection, refresh-on-401, envelope
+// validation, error reformatting) stays here so it is never re-implemented.
+func (c *MarketClient) Do(ctx context.Context, method, path string, body any) (json.RawMessage, error) {
+	resp, err := c.doRequest(ctx, method, path, body)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
+	}
+	return resp.Data, nil
 }
 
 // UpgradeApp issues PUT /apps/{name}/upgrade. The payload intentionally
@@ -309,15 +317,11 @@ func (c *MarketClient) CancelOperation(ctx context.Context, appName string) (*AP
 	})
 }
 
-func (c *MarketClient) ResumeApp(ctx context.Context, appName string) (*APIResponse, error) {
-	return c.doRequest(ctx, http.MethodPost, "/apps/resume", map[string]string{
-		"appName": appName,
-	})
-}
-
-func (c *MarketClient) StopApp(ctx context.Context, appName string, all bool) (*APIResponse, error) {
-	return c.doRequest(ctx, http.MethodPost, "/apps/stop", map[string]interface{}{
-		"appName": appName,
-		"all":     all,
-	})
-}
+// StopApp / ResumeApp / UninstallApp used to build their request bodies here.
+// Their wire format diverges across Olares versions (TermiPass PR #1162:
+// stop/resume/uninstall all moved to {app_name, source, ...}), so the body
+// shaping moved to pkg/olaresclient (clientV1_12_5 / clientV1_12_6) and the
+// runners dispatch through cmdutil.Factory.WithOlaresClient, with this
+// MarketClient acting as the version-agnostic olaresclient.Doer (see Do
+// above). UninstallRequest is retained in types.go as the 1.12.5 body shape
+// reference.

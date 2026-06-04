@@ -2,12 +2,14 @@ package market
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/olaresclient"
 )
 
 func NewCmdMarketUninstall(f *cmdutil.Factory) *cobra.Command {
@@ -91,12 +93,28 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 		opts.info("  --delete-data: will delete persistent data")
 	}
 
-	resp, err := mc.UninstallApp(ctx, appName, cascade, opts.DeleteData)
+	// 1.12.6 requires app_name + source in the uninstall body (this is the
+	// change that broke `market uninstall` against the new backend);
+	// resolve source from the installed app's state row (uninstall exposes
+	// no -s).
+	source, err := resolveInstalledSource(ctx, opts, mc, appName)
 	if err != nil {
 		return opts.failOp("uninstall", appName, err)
 	}
 
-	result := newOperationResult(mc, "uninstall", appName, "", "", "uninstall requested", resp)
+	// Dispatch through the version-compat aspect. opts.Version is empty
+	// unless a future --version flag supplies one; the 1.12.6 client
+	// includes it when set and the 1.12.5 client ignores it.
+	var data json.RawMessage
+	if err := opts.factory.WithOlaresClient(ctx, func(c olaresclient.OlaresClient) error {
+		d, e := c.UninstallApp(ctx, mc, appName, source, opts.Version, cascade, opts.DeleteData)
+		data = d
+		return e
+	}); err != nil {
+		return opts.failOp("uninstall", appName, err)
+	}
+
+	result := newOperationResult(mc, "uninstall", appName, "", "", "uninstall requested", &APIResponse{Success: true, Data: data})
 	// Uninstall is unique: the row may simply disappear from /market/state
 	// once the backend cleans it up, so the watch target opts in to the
 	// "absent means success (provided we saw it earlier)" shortcut.

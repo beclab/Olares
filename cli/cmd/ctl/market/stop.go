@@ -2,10 +2,12 @@ package market
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/olaresclient"
 )
 
 func NewCmdMarketStop(f *cmdutil.Factory) *cobra.Command {
@@ -84,11 +86,25 @@ func runStop(opts *MarketOptions, cmd *cobra.Command, appName string) error {
 		opts.info("  --cascade: will stop all sub-charts")
 	}
 
-	resp, err := mc.StopApp(ctx, appName, cascade)
+	// 1.12.6 requires source in the stop body; resolve it from the
+	// installed app's state row (stop exposes no -s).
+	source, err := resolveInstalledSource(ctx, opts, mc, appName)
 	if err != nil {
 		return opts.failOp("stop", appName, err)
 	}
 
-	result := newOperationResult(mc, "stop", appName, "", "", "stop requested", resp)
+	// Dispatch through the version-compat aspect: the request body shape
+	// (appName vs {app_name, source}) is chosen from the detected backend
+	// version.
+	var data json.RawMessage
+	if err := opts.factory.WithOlaresClient(ctx, func(c olaresclient.OlaresClient) error {
+		d, e := c.StopApp(ctx, mc, appName, source, cascade)
+		data = d
+		return e
+	}); err != nil {
+		return opts.failOp("stop", appName, err)
+	}
+
+	result := newOperationResult(mc, "stop", appName, "", "", "stop requested", &APIResponse{Success: true, Data: data})
 	return runWithWatch(opts, mc, result, newWatchTarget(watchStop, appName, opts.Source))
 }

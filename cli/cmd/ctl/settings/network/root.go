@@ -46,5 +46,15 @@ Note: reverse-proxy set is owner-only; non-owner callers will hit a
 	cmd.AddCommand(NewFRPCommand(f))
 	cmd.AddCommand(NewSSLCommand(f))
 	cmd.AddCommand(NewHostsFileCommand(f))
+
+	// Overlay gateway is a 1.12.6+ feature. Hide the whole subtree on older
+	// backends (advisory, driven by the locally cached version so --help stays
+	// offline); the runtime capability gate still returns a precise
+	// "requires Olares >= 1.12.6" error if it's invoked anyway.
+	overlay := NewOverlayCommand(f)
+	if v, ok := f.CachedOlaresBackendVersion(); ok && !supportsOverlay(v) {
+		overlay.Hidden = true
+	}
+	cmd.AddCommand(overlay)
 	return cmd
 }

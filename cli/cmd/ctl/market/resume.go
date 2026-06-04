@@ -2,10 +2,12 @@ package market
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/olaresclient"
 )
 
 func NewCmdMarketResume(f *cmdutil.Factory) *cobra.Command {
@@ -50,11 +52,23 @@ func runResume(opts *MarketOptions, appName string) error {
 	opts.info("Resuming '%s' for user '%s'...", appName, mc.olaresID)
 
 	ctx := context.Background()
-	resp, err := mc.ResumeApp(ctx, appName)
+
+	// 1.12.6 requires source in the resume body; resolve it from the
+	// installed app's state row (resume exposes no -s).
+	source, err := resolveInstalledSource(ctx, opts, mc, appName)
 	if err != nil {
 		return opts.failOp("resume", appName, err)
 	}
 
-	result := newOperationResult(mc, "resume", appName, "", "", "resume requested", resp)
+	var data json.RawMessage
+	if err := opts.factory.WithOlaresClient(ctx, func(c olaresclient.OlaresClient) error {
+		d, e := c.ResumeApp(ctx, mc, appName, source)
+		data = d
+		return e
+	}); err != nil {
+		return opts.failOp("resume", appName, err)
+	}
+
+	result := newOperationResult(mc, "resume", appName, "", "", "resume requested", &APIResponse{Success: true, Data: data})
 	return runWithWatch(opts, mc, result, newWatchTarget(watchResume, appName, opts.Source))
 }
