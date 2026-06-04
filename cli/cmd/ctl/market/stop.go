@@ -5,8 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	v1_12_5 "github.com/beclab/Olares/cli/cmd/ctl/market/stop/v1_12_5"
-	v1_12_6 "github.com/beclab/Olares/cli/cmd/ctl/market/stop/v1_12_6"
+	"github.com/beclab/Olares/cli/cmd/ctl/market/stop"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -103,10 +102,7 @@ func runStop(opts *MarketOptions, cmd *cobra.Command, appName string) error {
 
 	// 1.12.6 moved the body to {app_name, source, all}; 1.12.5 keeps
 	// {appName, all} and ignores source.
-	method, path, body := v1_12_5.Stop(appName, source, cascade)
-	if atLeast126 {
-		method, path, body = v1_12_6.Stop(appName, source, cascade)
-	}
+	method, path, body := stop.Build(atLeast126, appName, source, cascade)
 	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
 		return opts.failOp("stop", appName, err)

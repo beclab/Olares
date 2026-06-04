@@ -5,12 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	resumev5 "github.com/beclab/Olares/cli/cmd/ctl/market/resume/v1_12_5"
-	resumev6 "github.com/beclab/Olares/cli/cmd/ctl/market/resume/v1_12_6"
-	stopv5 "github.com/beclab/Olares/cli/cmd/ctl/market/stop/v1_12_5"
-	stopv6 "github.com/beclab/Olares/cli/cmd/ctl/market/stop/v1_12_6"
-	uninstallv5 "github.com/beclab/Olares/cli/cmd/ctl/market/uninstall/v1_12_5"
-	uninstallv6 "github.com/beclab/Olares/cli/cmd/ctl/market/uninstall/v1_12_6"
+	"github.com/beclab/Olares/cli/cmd/ctl/market/resume"
+	"github.com/beclab/Olares/cli/cmd/ctl/market/stop"
+	"github.com/beclab/Olares/cli/cmd/ctl/market/uninstall"
 )
 
 // These tests pin the per-version wire format of the stop/resume/uninstall
@@ -32,44 +29,44 @@ func assertReq(t *testing.T, gotMethod, gotPath string, gotBody any, wantMethod,
 }
 
 func TestStopWireFormat(t *testing.T) {
-	m, p, b := stopv5.Stop("firefox", "market.olares", true)
+	m, p, b := stop.Build(false, "firefox", "market.olares", true)
 	assertReq(t, m, p, b, http.MethodPost, "/apps/stop", map[string]any{
 		"appName": "firefox", "all": true,
 	})
 
-	m, p, b = stopv6.Stop("firefox", "market.olares", true)
+	m, p, b = stop.Build(true, "firefox", "market.olares", true)
 	assertReq(t, m, p, b, http.MethodPost, "/apps/stop", map[string]any{
 		"app_name": "firefox", "source": "market.olares", "all": true,
 	})
 }
 
 func TestResumeWireFormat(t *testing.T) {
-	m, p, b := resumev5.Resume("firefox", "market.olares")
+	m, p, b := resume.Build(false, "firefox", "market.olares")
 	assertReq(t, m, p, b, http.MethodPost, "/apps/resume", map[string]any{
 		"appName": "firefox",
 	})
 
-	m, p, b = resumev6.Resume("firefox", "market.olares")
+	m, p, b = resume.Build(true, "firefox", "market.olares")
 	assertReq(t, m, p, b, http.MethodPost, "/apps/resume", map[string]any{
 		"app_name": "firefox", "source": "market.olares",
 	})
 }
 
 func TestUninstallWireFormat(t *testing.T) {
-	m, p, b := uninstallv5.Uninstall("firefox", "market.olares", "1.2.3", true, true)
+	m, p, b := uninstall.Build(false, "firefox", "market.olares", "1.2.3", true, true)
 	assertReq(t, m, p, b, http.MethodDelete, "/apps/firefox", map[string]any{
 		"sync": true, "all": true, "deleteData": true,
 	})
 
 	// 1.12.6 with no version supplied: body omits "version".
-	m, p, b = uninstallv6.Uninstall("firefox", "market.olares", "", false, false)
+	m, p, b = uninstall.Build(true, "firefox", "market.olares", "", false, false)
 	assertReq(t, m, p, b, http.MethodDelete, "/apps/firefox", map[string]any{
 		"app_name": "firefox", "source": "market.olares",
 		"sync": true, "all": false, "deleteData": false,
 	})
 
 	// 1.12.6 with a version: body includes "version".
-	m, p, b = uninstallv6.Uninstall("firefox", "market.olares", "1.2.3", true, true)
+	m, p, b = uninstall.Build(true, "firefox", "market.olares", "1.2.3", true, true)
 	assertReq(t, m, p, b, http.MethodDelete, "/apps/firefox", map[string]any{
 		"app_name": "firefox", "source": "market.olares",
 		"sync": true, "all": true, "deleteData": true, "version": "1.2.3",

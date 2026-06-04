@@ -5,8 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	v1_12_5 "github.com/beclab/Olares/cli/cmd/ctl/market/resume/v1_12_5"
-	v1_12_6 "github.com/beclab/Olares/cli/cmd/ctl/market/resume/v1_12_6"
+	"github.com/beclab/Olares/cli/cmd/ctl/market/resume"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -69,10 +68,7 @@ func runResume(opts *MarketOptions, appName string) error {
 
 	// 1.12.6 moved the body to {app_name, source}; 1.12.5 keeps {appName}
 	// and ignores source.
-	method, path, body := v1_12_5.Resume(appName, source)
-	if atLeast126 {
-		method, path, body = v1_12_6.Resume(appName, source)
-	}
+	method, path, body := resume.Build(atLeast126, appName, source)
 	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
 		return opts.failOp("resume", appName, err)

@@ -7,8 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	v1_12_5 "github.com/beclab/Olares/cli/cmd/ctl/market/uninstall/v1_12_5"
-	v1_12_6 "github.com/beclab/Olares/cli/cmd/ctl/market/uninstall/v1_12_6"
+	"github.com/beclab/Olares/cli/cmd/ctl/market/uninstall"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -112,10 +111,7 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// opts.Version is empty unless a future --version flag supplies one
 	// (the 1.12.6 builder includes it when set, the 1.12.5 builder ignores
 	// it).
-	method, path, body := v1_12_5.Uninstall(appName, source, opts.Version, cascade, opts.DeleteData)
-	if atLeast126 {
-		method, path, body = v1_12_6.Uninstall(appName, source, opts.Version, cascade, opts.DeleteData)
-	}
+	method, path, body := uninstall.Build(atLeast126, appName, source, opts.Version, cascade, opts.DeleteData)
 	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
 		return opts.failOp("uninstall", appName, err)
