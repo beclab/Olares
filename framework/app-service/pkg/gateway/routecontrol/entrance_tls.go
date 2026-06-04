@@ -21,9 +21,12 @@ const (
 	labelGatewayRouteControl  = "gateway.olares.io/managed-by"
 	gatewayRouteControlValue  = "routecontrol"
 	labelTLSViewer            = "gateway.olares.io/tls-viewer"
+	labelReplicaDemandSource  = "gateway.olares.io/demand-source"
 	annotationTLSContentHash  = "gateway.olares.io/tls-content-hash"
 	entranceTLSSecretPrefix   = "shared-entrance-tls-"
 	userSpaceNamespacePrefix  = "user-space-"
+	replicaDemandSourceServer = "server"
+	replicaDemandSourceCaller = "caller"
 )
 
 // EntranceTLSReconciler syncs per-viewer TLS material from zone-ssl-config into
@@ -210,9 +213,9 @@ func desiredEntranceTLSSecret(viewer, cert, key string) *corev1.Secret {
 			Name:      entranceTLSSecretName(viewer),
 			Namespace: defaultGatewayNS,
 			Labels: map[string]string{
-				ManagedByLabel:        ManagedByValue,
+				ManagedByLabel:           ManagedByValue,
 				labelGatewayRouteControl: gatewayRouteControlValue,
-				labelTLSViewer:        viewer,
+				labelTLSViewer:           viewer,
 			},
 			Annotations: map[string]string{},
 		},
@@ -233,16 +236,16 @@ func deleteReplicasForViewer(ctx context.Context, c client.Client, viewer string
 		labelTLSReplica: "true",
 		labelTLSViewer:  viewer,
 	}); err != nil {
-		recordReplicaError("replica_list_failed")
+		recordReplicaError("replica_list_failed", replicaDemandSourceServer)
 		return err
 	}
 	for i := range list.Items {
 		sec := &list.Items[i]
 		if err := c.Delete(ctx, sec); err != nil && !apierrors.IsNotFound(err) {
-			recordReplicaError("replica_delete_failed")
+			recordReplicaError("replica_delete_failed", metricDemandSource(sec.Labels[labelReplicaDemandSource]))
 			return err
 		}
-		replicaSyncTotal.WithLabelValues("deleted").Inc()
+		replicaSyncTotal.WithLabelValues("deleted", metricDemandSource(sec.Labels[labelReplicaDemandSource])).Inc()
 	}
 	return nil
 }

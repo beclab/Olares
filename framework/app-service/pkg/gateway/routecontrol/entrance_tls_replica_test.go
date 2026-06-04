@@ -71,7 +71,7 @@ func TestBuildDemandIndex_TC402_CrossViewerDemand(t *testing.T) {
 }
 
 func TestBuildDemandIndex_TC402b_UnresolvedAppRef(t *testing.T) {
-	before := counterValue(t, replicaErrorsTotal.WithLabelValues("app_ref_unresolved"))
+	before := counterValue(t, replicaErrorsTotal.WithLabelValues("app_ref_unresolved", replicaDemandSourceServer))
 	c := newReplicaFixture(t,
 		&corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
@@ -92,7 +92,7 @@ func TestBuildDemandIndex_TC402b_UnresolvedAppRef(t *testing.T) {
 		{CallerNamespace: "user-space-alice", CertViewer: "alice"},
 		{CallerNamespace: "user-space-alice", CertViewer: "bob"},
 	})
-	after := counterValue(t, replicaErrorsTotal.WithLabelValues("app_ref_unresolved"))
+	after := counterValue(t, replicaErrorsTotal.WithLabelValues("app_ref_unresolved", replicaDemandSourceServer))
 	if after-before != 1 {
 		t.Fatalf("app_ref_unresolved delta=%v want=1", after-before)
 	}
@@ -112,7 +112,7 @@ func TestBuildDemandIndex_TC402c_MultiOwnerWarnOnly(t *testing.T) {
 		newClusterApp("dup", "charlie"),
 	)
 
-	before := counterValue(t, replicaErrorsTotal.WithLabelValues("app_ref_multi_owner"))
+	before := counterValue(t, replicaErrorsTotal.WithLabelValues("app_ref_multi_owner", replicaDemandSourceServer))
 	index, err := BuildDemandIndex(context.Background(), c, "olares.com")
 	if err != nil {
 		t.Fatalf("BuildDemandIndex: %v", err)
@@ -122,7 +122,7 @@ func TestBuildDemandIndex_TC402c_MultiOwnerWarnOnly(t *testing.T) {
 		{CallerNamespace: "user-space-alice", CertViewer: "bob"},
 		{CallerNamespace: "user-space-alice", CertViewer: "charlie"},
 	})
-	after := counterValue(t, replicaErrorsTotal.WithLabelValues("app_ref_multi_owner"))
+	after := counterValue(t, replicaErrorsTotal.WithLabelValues("app_ref_multi_owner", replicaDemandSourceServer))
 	if after != before {
 		t.Fatalf("multi owner must not increment error counter: before=%v after=%v", before, after)
 	}
@@ -250,6 +250,99 @@ func TestBuildDemandIndex_TC405_SharedNamespaceSkipsCrossViewerBranch(t *testing
 	})
 }
 
+func TestBuildDemandIndex_TCT14_01_CallerDemandExtended(t *testing.T) {
+	c := newReplicaFixture(t,
+		newGatewayCallerApp("caller-a", "litellm-usera", "ollama"),
+		newClusterApp("ollama", "usera"),
+	)
+
+	index, err := BuildDemandIndex(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatalf("BuildDemandIndex: %v", err)
+	}
+	assertTargetsWithSource(t, index, []ReplicaTarget{
+		{
+			CallerNamespace: "litellm-usera",
+			CertViewer:      "usera",
+			DemandSource:    replicaDemandSourceCaller,
+		},
+	})
+}
+
+func TestBuildDemandIndex_TCT14_02_CallerOptOutRemoved(t *testing.T) {
+	c := newReplicaFixture(t,
+		newCallerApp("caller-a", "litellm-usera", "ollama"),
+		newClusterApp("ollama", "usera"),
+	)
+	index, err := BuildDemandIndex(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatalf("BuildDemandIndex: %v", err)
+	}
+	assertTargetsWithSource(t, index, nil)
+}
+
+func TestBuildDemandIndex_TCT14_03_ServerBranchStable(t *testing.T) {
+	c := newReplicaFixture(t,
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "ollamav3-shared",
+				Labels: map[string]string{nsOwnerLabel: "brucedai"},
+			},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "p1",
+				Namespace: "ollamav3-shared",
+				Labels:    map[string]string{constants.AppSharedEntrancesLabel: "true"},
+			},
+		},
+		newGatewayCallerApp("caller-a", "litellm-usera", "ollama"),
+		newClusterApp("ollama", "usera"),
+	)
+	index, err := BuildDemandIndex(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatalf("BuildDemandIndex: %v", err)
+	}
+	assertTargetsWithSource(t, index, []ReplicaTarget{
+		{
+			CallerNamespace: "ollamav3-shared",
+			CertViewer:      "brucedai",
+			DemandSource:    replicaDemandSourceServer,
+		},
+		{
+			CallerNamespace: "litellm-usera",
+			CertViewer:      "usera",
+			DemandSource:    replicaDemandSourceCaller,
+		},
+	})
+}
+
+func TestReconcileReplica_TCT14_04_ReplicaLabelDemandSourceCaller(t *testing.T) {
+	c := newReplicaFixture(t,
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "litellm-usera", UID: types.UID("ns-usera")}},
+		newSourceSecret("usera", "cert-a", "key-a"),
+	)
+	_, err := ReconcileReplica(context.Background(), c, ReplicaTarget{
+		CallerNamespace: "litellm-usera",
+		CertViewer:      "usera",
+		DemandSource:    replicaDemandSourceCaller,
+	})
+	if err != nil {
+		t.Fatalf("ReconcileReplica: %v", err)
+	}
+	replica := &corev1.Secret{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "litellm-usera",
+		Name:      entranceTLSSecretName("usera"),
+	}, replica); err != nil {
+		t.Fatalf("get replica: %v", err)
+	}
+	if got := replica.Labels[labelReplicaDemandSource]; got != replicaDemandSourceCaller {
+		t.Fatalf("demand_source=%q want=%q", got, replicaDemandSourceCaller)
+	}
+}
+
 func TestSyncReplicasForViewer_TC403_NoDemandNoCreate(t *testing.T) {
 	c := newReplicaFixture(t,
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
@@ -269,7 +362,7 @@ func TestSyncReplicasForViewer_TC403_NoDemandNoCreate(t *testing.T) {
 }
 
 func TestReconcileReplica_TC404_HashNoop(t *testing.T) {
-	before := counterValue(t, replicaSyncTotal.WithLabelValues("noop"))
+	before := counterValue(t, replicaSyncTotal.WithLabelValues("noop", replicaDemandSourceServer))
 	c := newReplicaFixture(t,
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "user-space-alice", UID: types.UID("ns-alice")}},
@@ -286,14 +379,14 @@ func TestReconcileReplica_TC404_HashNoop(t *testing.T) {
 	if wrote {
 		t.Fatal("expected noop")
 	}
-	after := counterValue(t, replicaSyncTotal.WithLabelValues("noop"))
+	after := counterValue(t, replicaSyncTotal.WithLabelValues("noop", replicaDemandSourceServer))
 	if after-before != 1 {
 		t.Fatalf("noop delta=%v want=1", after-before)
 	}
 }
 
 func TestReconcileReplica_TC405_HashUpdate(t *testing.T) {
-	before := counterValue(t, replicaSyncTotal.WithLabelValues("updated"))
+	before := counterValue(t, replicaSyncTotal.WithLabelValues("updated", replicaDemandSourceServer))
 	c := newReplicaFixture(t,
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "user-space-alice", UID: types.UID("ns-alice")}},
@@ -319,7 +412,7 @@ func TestReconcileReplica_TC405_HashUpdate(t *testing.T) {
 	if replica.Annotations[annotationTLSContentHash] != tlsMaterialHash("cert-b", "key-b") {
 		t.Fatalf("hash=%q", replica.Annotations[annotationTLSContentHash])
 	}
-	after := counterValue(t, replicaSyncTotal.WithLabelValues("updated"))
+	after := counterValue(t, replicaSyncTotal.WithLabelValues("updated", replicaDemandSourceServer))
 	if after-before != 1 {
 		t.Fatalf("updated delta=%v want=1", after-before)
 	}
@@ -523,7 +616,7 @@ func TestApplyReplicaPatch_TC412_SchemaAndLabels(t *testing.T) {
 	if err := c.Get(context.Background(), types.NamespacedName{Name: "user-space-alice"}, ns); err != nil {
 		t.Fatalf("get namespace: %v", err)
 	}
-	wrote, err := applyReplicaPatch(context.Background(), c, src, dst, ns)
+	wrote, err := applyReplicaPatch(context.Background(), c, src, dst, ns, replicaDemandSourceServer)
 	if err != nil {
 		t.Fatalf("applyReplicaPatch: %v", err)
 	}
@@ -554,7 +647,7 @@ func TestApplyReplicaPatch_TC412_SchemaAndLabels(t *testing.T) {
 }
 
 func TestFanOutReplica_TC415_IndexFailureKeepsLastDemand(t *testing.T) {
-	before := counterValue(t, replicaErrorsTotal.WithLabelValues("index_failed"))
+	before := counterValue(t, replicaErrorsTotal.WithLabelValues("index_failed", replicaDemandSourceServer))
 	base := newReplicaFixture(t,
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: defaultGatewayNS}},
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "user-space-alice", UID: types.UID("ns-alice")}},
@@ -577,7 +670,7 @@ func TestFanOutReplica_TC415_IndexFailureKeepsLastDemand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("replica should still be created from last demand: %v", err)
 	}
-	after := counterValue(t, replicaErrorsTotal.WithLabelValues("index_failed"))
+	after := counterValue(t, replicaErrorsTotal.WithLabelValues("index_failed", replicaDemandSourceServer))
 	if after-before != 1 {
 		t.Fatalf("index_failed delta=%v want=1", after-before)
 	}
@@ -594,26 +687,26 @@ func TestReplicaHashGauge_TC416_AgeAndReset(t *testing.T) {
 	}}
 	src1 := newSourceSecret("alice", "cert-a", "key-a")
 
-	_, err := applyReplicaPatch(context.Background(), c, src1, dst, ns)
+	_, err := applyReplicaPatch(context.Background(), c, src1, dst, ns, replicaDemandSourceServer)
 	if err != nil {
 		t.Fatalf("apply 1: %v", err)
 	}
-	v0 := gaugeValue(t, replicaContentHashAgeSeconds.WithLabelValues("alice", "user-space-alice"))
+	v0 := gaugeValue(t, replicaContentHashAgeSeconds.WithLabelValues("alice", "user-space-alice", replicaDemandSourceServer))
 	time.Sleep(20 * time.Millisecond)
-	_, err = applyReplicaPatch(context.Background(), c, src1, dst, ns)
+	_, err = applyReplicaPatch(context.Background(), c, src1, dst, ns, replicaDemandSourceServer)
 	if err != nil {
 		t.Fatalf("apply 2: %v", err)
 	}
-	v1 := gaugeValue(t, replicaContentHashAgeSeconds.WithLabelValues("alice", "user-space-alice"))
+	v1 := gaugeValue(t, replicaContentHashAgeSeconds.WithLabelValues("alice", "user-space-alice", replicaDemandSourceServer))
 	if v1 <= v0 {
 		t.Fatalf("hash age should increase: before=%v after=%v", v0, v1)
 	}
 	src2 := newSourceSecret("alice", "cert-b", "key-b")
-	_, err = applyReplicaPatch(context.Background(), c, src2, dst, ns)
+	_, err = applyReplicaPatch(context.Background(), c, src2, dst, ns, replicaDemandSourceServer)
 	if err != nil {
 		t.Fatalf("apply 3: %v", err)
 	}
-	v2 := gaugeValue(t, replicaContentHashAgeSeconds.WithLabelValues("alice", "user-space-alice"))
+	v2 := gaugeValue(t, replicaContentHashAgeSeconds.WithLabelValues("alice", "user-space-alice", replicaDemandSourceServer))
 	if v2 > 1 {
 		t.Fatalf("hash age should reset close to zero, got=%v", v2)
 	}
@@ -629,7 +722,7 @@ func TestApplyReplicaPatch_TC417_OwnerReferenceFields(t *testing.T) {
 	}}
 	ns := &corev1.Namespace{}
 	_ = c.Get(context.Background(), types.NamespacedName{Name: "user-space-alice"}, ns)
-	if _, err := applyReplicaPatch(context.Background(), c, src, dst, ns); err != nil {
+	if _, err := applyReplicaPatch(context.Background(), c, src, dst, ns, replicaDemandSourceServer); err != nil {
 		t.Fatalf("applyReplicaPatch: %v", err)
 	}
 	got := &corev1.Secret{}
@@ -652,7 +745,7 @@ func TestApplyReplicaPatch_TC417_OwnerReferenceFields(t *testing.T) {
 }
 
 func TestSweepOrphanReplicas_TC418_SingleThresholdGC(t *testing.T) {
-	before := counterValue(t, replicaSyncTotal.WithLabelValues("gc_periodic"))
+	before := counterValue(t, replicaSyncTotal.WithLabelValues("gc_periodic", replicaDemandSourceServer))
 	c := newReplicaFixture(t,
 		newReplicaSecret("user-space-a", "alice", "cert-a", "key-a"),
 		newReplicaSecret("user-space-b", "alice", "cert-a", "key-a"),
@@ -674,7 +767,7 @@ func TestSweepOrphanReplicas_TC418_SingleThresholdGC(t *testing.T) {
 	if !apierrors.IsNotFound(err) {
 		t.Fatalf("replica B should be deleted: %v", err)
 	}
-	after := counterValue(t, replicaSyncTotal.WithLabelValues("gc_periodic"))
+	after := counterValue(t, replicaSyncTotal.WithLabelValues("gc_periodic", replicaDemandSourceServer))
 	if after-before != 1 {
 		t.Fatalf("gc_periodic delta=%v want=1", after-before)
 	}
@@ -727,6 +820,14 @@ func newCallerApp(name, ns, refs string) *appv1alpha1.Application {
 	}
 }
 
+func newGatewayCallerApp(name, ns, refs string) *appv1alpha1.Application {
+	app := newCallerApp(name, ns, refs)
+	app.Annotations = map[string]string{
+		gateway.AnnotationInCluster: gateway.InClusterGateway,
+	}
+	return app
+}
+
 func newClusterApp(name, owner string) *appv1alpha1.Application {
 	return &appv1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{Name: name + "-" + owner},
@@ -774,6 +875,7 @@ func newReplicaSecret(ns, viewer, cert, key string) *corev1.Secret {
 				labelGatewayRouteControl: gatewayRouteControlValue,
 				labelTLSViewer:           viewer,
 				labelTLSReplica:          "true",
+				labelReplicaDemandSource: replicaDemandSourceServer,
 			},
 			Annotations: map[string]string{
 				annotationTLSContentHash: hash,
@@ -861,6 +963,28 @@ func assertTargets(t *testing.T, got, want []ReplicaTarget) {
 		out := make(map[string]struct{}, len(in))
 		for _, item := range in {
 			out[item.CallerNamespace+"|"+item.CertViewer] = struct{}{}
+		}
+		return out
+	}
+	gotSet := toSet(got)
+	wantSet := toSet(want)
+	if len(gotSet) != len(wantSet) {
+		t.Fatalf("target size got=%d want=%d got=%v", len(gotSet), len(wantSet), got)
+	}
+	for key := range wantSet {
+		if _, ok := gotSet[key]; !ok {
+			t.Fatalf("missing target %q in %v", key, got)
+		}
+	}
+}
+
+func assertTargetsWithSource(t *testing.T, got, want []ReplicaTarget) {
+	t.Helper()
+	toSet := func(in []ReplicaTarget) map[string]struct{} {
+		out := make(map[string]struct{}, len(in))
+		for _, item := range in {
+			source := metricDemandSource(item.DemandSource)
+			out[item.CallerNamespace+"|"+item.CertViewer+"|"+source] = struct{}{}
 		}
 		return out
 	}

@@ -31,21 +31,21 @@ var (
 			Name: "olares_d2_replica_sync_total",
 			Help: "Count of entrance TLS replica sync operations by result.",
 		},
-		[]string{"result"},
+		[]string{"result", "demand_source"},
 	)
 	replicaErrorsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "olares_d2_replica_errors_total",
 			Help: "Count of entrance TLS replica errors by reason.",
 		},
-		[]string{"reason"},
+		[]string{"reason", "demand_source"},
 	)
 	replicaContentHashAgeSeconds = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "olares_d2_replica_content_hash_age_seconds",
 			Help: "Age in seconds since the replica content hash last changed.",
 		},
-		[]string{"viewer", "caller_ns"},
+		[]string{"viewer", "caller_ns", "demand_source"},
 	)
 
 	replicaHashStateMu sync.Mutex
@@ -65,6 +65,7 @@ func init() {
 type ReplicaTarget struct {
 	CallerNamespace string // user-space-<C>
 	CertViewer      string // TLS secret suffix <viewer>
+	DemandSource    string // server | caller
 }
 
 // BuildDemandIndex builds the desired caller-namespace replica demand set.
@@ -78,18 +79,18 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 	if err := c.List(ctx, &podList, client.MatchingLabels{
 		constants.AppSharedEntrancesLabel: "true",
 	}); err != nil {
-		recordReplicaError("index_failed")
+		recordReplicaError("index_failed", replicaDemandSourceServer)
 		return nil, err
 	}
 
 	var appList appv1alpha1.ApplicationList
 	if err := c.List(ctx, &appList); err != nil {
-		recordReplicaError("index_failed")
+		recordReplicaError("index_failed", replicaDemandSourceServer)
 		return nil, err
 	}
 	var nsList corev1.NamespaceList
 	if err := c.List(ctx, &nsList); err != nil {
-		recordReplicaError("index_failed")
+		recordReplicaError("index_failed", replicaDemandSourceServer)
 		return nil, err
 	}
 
@@ -127,6 +128,7 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 				addReplicaTarget(demandSet, ReplicaTarget{
 					CallerNamespace: callerNS,
 					CertViewer:      owner,
+					DemandSource:    replicaDemandSourceServer,
 				})
 			}
 			continue
@@ -135,6 +137,7 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 		addReplicaTarget(demandSet, ReplicaTarget{
 			CallerNamespace: callerNS,
 			CertViewer:      viewer,
+			DemandSource:    replicaDemandSourceServer,
 		})
 
 		for _, app := range appsByNS[callerNS] {
@@ -142,15 +145,48 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 			for _, ref := range refs {
 				owners := gateway.SplitClusterAppRefs(gateway.ResolveClusterAppOwner(ownerIdx, ref))
 				if len(owners) == 0 {
-					recordReplicaError("app_ref_unresolved")
+					recordReplicaError("app_ref_unresolved", replicaDemandSourceServer)
 					continue
 				}
 				for _, owner := range owners {
 					addReplicaTarget(demandSet, ReplicaTarget{
 						CallerNamespace: callerNS,
 						CertViewer:      owner,
+						DemandSource:    replicaDemandSourceServer,
 					})
 				}
+			}
+		}
+	}
+
+	for i := range appList.Items {
+		app := appList.Items[i]
+		callerNS := strings.TrimSpace(app.Spec.Namespace)
+		if callerNS == "" {
+			callerNS = strings.TrimSpace(app.Namespace)
+		}
+		if callerNS == "" {
+			continue
+		}
+		if !strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
+			continue
+		}
+		refs := gateway.SplitClusterAppRefs(app.Spec.Settings["clusterAppRef"])
+		if len(refs) == 0 {
+			continue
+		}
+		for _, ref := range refs {
+			owners := gateway.SplitClusterAppRefs(gateway.ResolveClusterAppOwner(ownerIdx, ref))
+			if len(owners) == 0 {
+				recordReplicaError("app_ref_unresolved", replicaDemandSourceCaller)
+				continue
+			}
+			for _, owner := range owners {
+				addReplicaTarget(demandSet, ReplicaTarget{
+					CallerNamespace: callerNS,
+					CertViewer:      owner,
+					DemandSource:    replicaDemandSourceCaller,
+				})
 			}
 		}
 	}
@@ -181,7 +217,7 @@ func ReconcileReplica(ctx context.Context, c client.Client, target ReplicaTarget
 	}, src)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			recordReplicaError("source_get_failed")
+			recordReplicaError("source_get_failed", target.DemandSource)
 			return false, err
 		}
 
@@ -191,24 +227,24 @@ func ReconcileReplica(ctx context.Context, c client.Client, target ReplicaTarget
 			Name:      entranceTLSSecretName(target.CertViewer),
 		}, dst)
 		if apierrors.IsNotFound(err) {
-			replicaSyncTotal.WithLabelValues("noop").Inc()
+			replicaSyncTotal.WithLabelValues("noop", metricDemandSource(target.DemandSource)).Inc()
 			return false, nil
 		}
 		if err != nil {
-			recordReplicaError("replica_get_failed")
+			recordReplicaError("replica_get_failed", target.DemandSource)
 			return false, err
 		}
 		if err := c.Delete(ctx, dst); err != nil && !apierrors.IsNotFound(err) {
-			recordReplicaError("replica_delete_failed")
+			recordReplicaError("replica_delete_failed", target.DemandSource)
 			return false, err
 		}
-		replicaSyncTotal.WithLabelValues("deleted").Inc()
+		replicaSyncTotal.WithLabelValues("deleted", metricDemandSource(target.DemandSource)).Inc()
 		return true, nil
 	}
 
 	callerNS := &corev1.Namespace{}
 	if err := c.Get(ctx, types.NamespacedName{Name: target.CallerNamespace}, callerNS); err != nil {
-		recordReplicaError("namespace_get_failed")
+		recordReplicaError("namespace_get_failed", target.DemandSource)
 		return false, err
 	}
 
@@ -219,7 +255,7 @@ func ReconcileReplica(ctx context.Context, c client.Client, target ReplicaTarget
 	}, dst)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			recordReplicaError("replica_get_failed")
+			recordReplicaError("replica_get_failed", target.DemandSource)
 			return false, err
 		}
 		dst = &corev1.Secret{
@@ -230,20 +266,20 @@ func ReconcileReplica(ctx context.Context, c client.Client, target ReplicaTarget
 		}
 	}
 
-	wrote, err := applyReplicaPatch(ctx, c, src, dst, callerNS)
+	wrote, err := applyReplicaPatch(ctx, c, src, dst, callerNS, target.DemandSource)
 	if err != nil {
-		recordReplicaError("replica_apply_failed")
+		recordReplicaError("replica_apply_failed", target.DemandSource)
 		return false, err
 	}
 	if wrote {
 		if dst.ResourceVersion == "" {
-			replicaSyncTotal.WithLabelValues("created").Inc()
+			replicaSyncTotal.WithLabelValues("created", metricDemandSource(target.DemandSource)).Inc()
 		} else {
-			replicaSyncTotal.WithLabelValues("updated").Inc()
+			replicaSyncTotal.WithLabelValues("updated", metricDemandSource(target.DemandSource)).Inc()
 		}
 		return true, nil
 	}
-	replicaSyncTotal.WithLabelValues("noop").Inc()
+	replicaSyncTotal.WithLabelValues("noop", metricDemandSource(target.DemandSource)).Inc()
 	return false, nil
 }
 
@@ -284,7 +320,7 @@ func SyncReplicasForViewer(ctx context.Context, c client.Client, certViewer stri
 				errs = append(errs, err)
 				continue
 			}
-			replicaSyncTotal.WithLabelValues("deleted").Inc()
+			replicaSyncTotal.WithLabelValues("deleted", metricDemandSource(sec.Labels[labelReplicaDemandSource])).Inc()
 		}
 	}
 	if len(errs) == 0 {
@@ -294,7 +330,7 @@ func SyncReplicasForViewer(ctx context.Context, c client.Client, certViewer stri
 }
 
 // applyReplicaPatch is the shared replica writer for reconcile and fan-out paths.
-func applyReplicaPatch(ctx context.Context, c client.Client, src, dst *corev1.Secret, callerNS *corev1.Namespace) (bool, error) {
+func applyReplicaPatch(ctx context.Context, c client.Client, src, dst *corev1.Secret, callerNS *corev1.Namespace, demandSource string) (bool, error) {
 	if c == nil || src == nil || dst == nil || callerNS == nil {
 		return false, nil
 	}
@@ -313,12 +349,13 @@ func applyReplicaPatch(ctx context.Context, c client.Client, src, dst *corev1.Se
 
 	sameHash := dst.Annotations != nil && dst.Annotations[annotationTLSContentHash] == hash
 	if sameHash {
-		updateReplicaHashAge(dst.Labels[labelTLSViewer], dst.Namespace, hash, false)
+		updateReplicaHashAge(dst.Labels[labelTLSViewer], dst.Namespace, hash, demandSource, false)
 		return false, nil
 	}
 
 	desiredLabels := copyStringMap(src.Labels)
 	desiredLabels[labelTLSReplica] = "true"
+	desiredLabels[labelReplicaDemandSource] = metricDemandSource(demandSource)
 	desiredAnnotations := map[string]string{
 		annotationTLSContentHash: hash,
 	}
@@ -354,13 +391,13 @@ func applyReplicaPatch(ctx context.Context, c client.Client, src, dst *corev1.Se
 		if err := c.Create(ctx, dst); err != nil {
 			return false, err
 		}
-		updateReplicaHashAge(dst.Labels[labelTLSViewer], dst.Namespace, hash, true)
+		updateReplicaHashAge(dst.Labels[labelTLSViewer], dst.Namespace, hash, demandSource, true)
 		return true, nil
 	}
 	if err := c.Update(ctx, dst); err != nil {
 		return false, err
 	}
-	updateReplicaHashAge(dst.Labels[labelTLSViewer], dst.Namespace, hash, true)
+	updateReplicaHashAge(dst.Labels[labelTLSViewer], dst.Namespace, hash, demandSource, true)
 	return true, nil
 }
 
@@ -379,7 +416,7 @@ func sweepOrphanReplicas(ctx context.Context, c client.Client, currentDemand []R
 
 	var list corev1.SecretList
 	if err := c.List(ctx, &list, client.MatchingLabels{labelTLSReplica: "true"}); err != nil {
-		recordReplicaError("gc_list_failed")
+		recordReplicaError("gc_list_failed", replicaDemandSourceServer)
 		return err
 	}
 
@@ -398,13 +435,13 @@ func sweepOrphanReplicas(ctx context.Context, c client.Client, currentDemand []R
 			continue
 		}
 		if err := c.Delete(ctx, sec); err != nil && !apierrors.IsNotFound(err) {
-			recordReplicaError("gc_delete_failed")
+			recordReplicaError("gc_delete_failed", metricDemandSource(sec.Labels[labelReplicaDemandSource]))
 			return err
 		}
 		deleted++
 	}
 	if deleted > 0 {
-		replicaSyncTotal.WithLabelValues("gc_periodic").Add(float64(deleted))
+		replicaSyncTotal.WithLabelValues("gc_periodic", replicaDemandSourceServer).Add(float64(deleted))
 	}
 	return nil
 }
@@ -416,7 +453,14 @@ func addReplicaTarget(set map[string]ReplicaTarget, target ReplicaTarget) {
 	if target.CallerNamespace == "" || target.CertViewer == "" {
 		return
 	}
-	set[replicaTargetKey(target.CallerNamespace, target.CertViewer)] = target
+	target.DemandSource = metricDemandSource(target.DemandSource)
+	key := replicaTargetKey(target.CallerNamespace, target.CertViewer)
+	if existing, ok := set[key]; ok {
+		if existing.DemandSource == replicaDemandSourceServer {
+			return
+		}
+	}
+	set[key] = target
 }
 
 func replicaTargetKey(callerNS, viewer string) string {
@@ -461,14 +505,14 @@ func copyStringMap(in map[string]string) map[string]string {
 	return out
 }
 
-func recordReplicaError(reason string) {
+func recordReplicaError(reason, demandSource string) {
 	if strings.TrimSpace(reason) == "" {
 		reason = "unknown"
 	}
-	replicaErrorsTotal.WithLabelValues(reason).Inc()
+	replicaErrorsTotal.WithLabelValues(reason, metricDemandSource(demandSource)).Inc()
 }
 
-func updateReplicaHashAge(viewer, callerNS, hash string, changed bool) {
+func updateReplicaHashAge(viewer, callerNS, hash, demandSource string, changed bool) {
 	viewer = strings.TrimSpace(viewer)
 	callerNS = strings.TrimSpace(callerNS)
 	if viewer == "" || callerNS == "" {
@@ -489,5 +533,16 @@ func updateReplicaHashAge(viewer, callerNS, hash string, changed bool) {
 	if age < 0 {
 		age = 0
 	}
-	replicaContentHashAgeSeconds.WithLabelValues(viewer, callerNS).Set(age)
+	replicaContentHashAgeSeconds.WithLabelValues(viewer, callerNS, metricDemandSource(demandSource)).Set(age)
+}
+
+func metricDemandSource(source string) string {
+	switch strings.ToLower(strings.TrimSpace(source)) {
+	case replicaDemandSourceCaller:
+		return replicaDemandSourceCaller
+	case replicaDemandSourceServer:
+		return replicaDemandSourceServer
+	default:
+		return replicaDemandSourceServer
+	}
 }
