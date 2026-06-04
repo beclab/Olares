@@ -62,9 +62,12 @@ func (f *Factory) OlaresBackendVersion(ctx context.Context) (*semver.Version, er
 //	atLeast126, err := f.OlaresBackendAtLeast(ctx, "1.12.6")
 //	if atLeast126 { /* v1_12_6 path */ } else { /* v1_12_5 path */ }
 //
-// Comparison goes through utils.CompareOlaresVersion — the single source of
-// truth shared with the password-salt threshold — so prerelease / build
-// qualifiers are handled exactly as the SPA and backend do.
+// Comparison is done on the core (major.minor.patch) level — prerelease /
+// build qualifiers are stripped before comparing — so a daily build like
+// 1.12.6-20260327 counts as >= 1.12.6 (it IS the 1.12.6 line). This mirrors
+// how pkg/upgrade/version.go normalizes versions with
+// semver.New(major,minor,patch,"",""). `min` is expected to be a plain
+// x.y.z patch (its own prerelease, if any, is likewise ignored).
 func (f *Factory) OlaresBackendAtLeast(ctx context.Context, min string) (bool, error) {
 	v, err := f.OlaresBackendVersion(ctx)
 	if err != nil {
@@ -73,7 +76,13 @@ func (f *Factory) OlaresBackendAtLeast(ctx context.Context, min string) (bool, e
 	if v == nil {
 		return false, fmt.Errorf("Olares backend version is unknown (pass --%s <version> to set it manually)", FlagOlaresVersion)
 	}
-	return utils.CompareOlaresVersion(v.Original(), min) >= 0, nil
+	minV, err := semver.NewVersion(min)
+	if err != nil {
+		return false, fmt.Errorf("invalid minimum version %q: %w", min, err)
+	}
+	coreV := semver.New(v.Major(), v.Minor(), v.Patch(), "", "")
+	coreMin := semver.New(minV.Major(), minV.Minor(), minV.Patch(), "", "")
+	return coreV.Compare(coreMin) >= 0, nil
 }
 
 // CachedOlaresBackendVersion returns the active profile's persisted backend
