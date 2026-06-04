@@ -218,7 +218,11 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 		if sysApp == nil {
 			return false
 		}
-		if sysApp.Spec.TailScale.AdvertiseExitNode == advertiseExitNodeEnv {
+		exitNode := sysApp.Spec.TailScale.AdvertiseExitNode
+		if exitNode == advertiseExitNodeEnv {
+			return false
+		}
+		if exitNode != "false" && exitNode != "true" {
 			return false
 		}
 		return true
