@@ -411,12 +411,6 @@ spec:
         {{- if eq $role "owner" }}
         - name: TS_DEBUG_FIREWALL_MODE
           value: nftables
-        {{- else }}
-        - name: TS_DEST_IP
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: status.hostIP
         {{- end }}
         - name: TS_SOCKET
           value: "/var/run/tailscale/tailscaled.sock"
