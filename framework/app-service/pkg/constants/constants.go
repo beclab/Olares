@@ -86,7 +86,7 @@ const (
 	D2SidecarUID               int64 = 1556
 	D2SidecarContainerName           = "olares-d2-sidecar"
 	D2SidecarInitContainerName       = "olares-d2-init"
-	D2SidecarImageDigest             = "sha256:d2-placeholder"
+	D2SidecarImageDigest             = "beclab/nginx:1.30.2-alpine-njs-olares-rev1"
 
 	D2StreamListenPort     int32 = 15443
 	D2StreamListenPortName       = "d2-s"
