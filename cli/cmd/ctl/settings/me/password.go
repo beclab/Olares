@@ -13,6 +13,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings me password ...`
@@ -116,9 +117,12 @@ func runPasswordSet(ctx context.Context, f *cmdutil.Factory, stdinPasswords bool
 	// made *before* we ask for the password. If the probe fails we keep
 	// going with an empty version string, which falls through to the
 	// "no salt" branch — the upstream BFL will reject mismatched hashes
-	// equally cleanly.
-	var info olaresInfoResp
-	_ = doGetEnvelope(ctx, pc.doer, "/api/olares-info", &info)
+	// equally cleanly. Shares whoami.FetchOlaresInfo with the rest of the
+	// CLI rather than re-decoding the envelope here.
+	osVersion := ""
+	if info, ierr := whoami.FetchOlaresInfo(ctx, pc.doer); ierr == nil && info != nil {
+		osVersion = info.OsVersion
+	}
 
 	current, next, err := readPasswords(stdinPasswords, os.Stdin, os.Stderr)
 	if err != nil {
@@ -127,8 +131,8 @@ func runPasswordSet(ctx context.Context, f *cmdutil.Factory, stdinPasswords bool
 
 	body := map[string]string{
 		"username":         username,
-		"current_password": saltedPassword(current, info.OsVersion),
-		"password":         saltedPassword(next, info.OsVersion),
+		"current_password": saltedPassword(current, osVersion),
+		"password":         saltedPassword(next, osVersion),
 	}
 	path := "/api/users/" + url.PathEscape(username) + "/password"
 

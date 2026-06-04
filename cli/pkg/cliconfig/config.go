@@ -108,23 +108,25 @@ type ProfileConfig struct {
 	ClusterContextRefreshedAt int64 `json:"clusterContextRefreshedAt,omitempty"`
 
 	// BackendVersion caches the Olares OS version of the target instance,
-	// read from /api/olares-info's osVersion. The version-compat layer
-	// (pkg/olaresclient) uses it to dispatch a command to the right
-	// version-specific implementation without a network round-trip on
-	// every invocation. Unlike the access token (which self-heals via
-	// /api/refresh on a 401), the backend version has no implicit refresh
-	// signal, so it is paired with a refresh timestamp + TTL below.
+	// read from /api/olares-info's osVersion. Command-side version
+	// branching (cmdutil.Factory.OlaresBackendAtLeast) reads it to pick the
+	// right version-specific implementation without a network round-trip on
+	// every invocation.
 	//
-	// Empty for pre-existing profiles or before the first
-	// version-dispatched command runs. Treated as "unknown — detect on
-	// next use".
+	// The cache is populated eagerly on `profile login` / `profile import`
+	// and refreshed on demand (`--refresh-version`, or auto-fetched the
+	// first time a command needs the version and the cache is empty). There
+	// is deliberately no TTL: a backend upgrade is a rare, explicit event,
+	// so a stale value is corrected by the user re-running with
+	// --refresh-version rather than by silently re-fetching on a timer.
+	//
+	// Empty for pre-existing profiles or before the first version-aware
+	// command runs. Treated as "unknown — detect on next use".
 	BackendVersion string `json:"backendVersion,omitempty"`
 
 	// BackendVersionRefreshedAt is the unix-second timestamp of the last
-	// successful /api/olares-info read that wrote BackendVersion. Used to
-	// apply a TTL: once the cache is older than the TTL it is re-fetched
-	// on the next version-dispatched command. `--refresh-version` forces a
-	// re-fetch regardless of this timestamp.
+	// successful /api/olares-info read that wrote BackendVersion. Surfaced
+	// for diagnostics ("last refreshed" hints); it does NOT drive any TTL.
 	BackendVersionRefreshedAt int64 `json:"backendVersionRefreshedAt,omitempty"`
 }
 

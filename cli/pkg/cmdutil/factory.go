@@ -110,9 +110,9 @@ type Factory struct {
 	uploadClient     *http.Client
 
 	// backendVersion memoizes the detected Olares backend version (see
-	// olares_version.go). backendVersionMu guards the cell for the
-	// self-heal path (RefreshOlaresBackendVersion) that may overwrite it
-	// after the initial sync.Once resolution.
+	// olares_version.go). backendVersionMu guards the cell because
+	// RefreshOlaresBackendVersion may overwrite it after the initial
+	// sync.Once resolution.
 	backendVersionOnce sync.Once
 	backendVersionMu   sync.Mutex
 	backendVersion     *semver.Version
