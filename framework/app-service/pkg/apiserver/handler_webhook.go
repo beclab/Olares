@@ -341,6 +341,48 @@ func (h *Handler) validate(ctx context.Context, req *admissionv1.AdmissionReques
 	return resp
 }
 
+// tlsReplicaMountValidate is the WI-T1-8 validating webhook entry. It decodes the
+// admitted Pod and delegates to the mount guard, denying any cross-tenant
+// tls-replica private-key bypass mount. Decode/unmarshal failures fail closed.
+func (h *Handler) tlsReplicaMountValidate(req *restful.Request, resp *restful.Response) {
+	admissionReqBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	if _, _, err := webhook.Deserializer.Decode(admissionReqBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode tls-replica-mount admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.validateTLSReplicaMount(req.Request.Context(), admissionReq.Request)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+	if err := resp.WriteAsJson(&admissionResp); err != nil {
+		klog.Errorf("Failed to write tls-replica-mount admission response err=%v", err)
+	}
+}
+
+func (h *Handler) validateTLSReplicaMount(ctx context.Context, req *admissionv1.AdmissionRequest) *admissionv1.AdmissionResponse {
+	if req == nil {
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal pod for tls-replica-mount validate namespace=%s err=%v", req.Namespace, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	allowed, code := h.sidecarWebhook.ValidateTLSReplicaMount(ctx, &pod, req.Namespace)
+	respObj := &admissionv1.AdmissionResponse{
+		Allowed: allowed,
+		UID:     req.UID,
+	}
+	if !allowed {
+		respObj.Result = &metav1.Status{Message: code}
+	}
+	return respObj
+}
+
 func (h *Handler) gpuLimitInject(req *restful.Request, resp *restful.Response) {
 	klog.Infof("Received mutating webhook[gpu-limit inject] request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
 	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
