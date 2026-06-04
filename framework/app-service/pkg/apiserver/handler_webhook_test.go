@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -41,4 +42,32 @@ func TestInjectD2OffloaderFailOpen_ViewerUnderive(t *testing.T) {
 	require.True(t, resp.Allowed)
 	require.Nil(t, resp.Patch)
 	require.Nil(t, resp.Result)
+}
+
+// TC-T1-3-IDM (handler): injectD2OffloaderCallerFailOpen admits and applies the
+// (empty) patch on the M8 idempotent short-circuit without panicking on a bare
+// Webhook, and records a caller-mode success. The deeper happy path (live
+// snapshot + per-viewer secrets) is integration-level (N5-T1 e2e) because the
+// Webhook dynamicClient is a concrete clientset with no assignable fake.
+func TestInjectD2OffloaderCallerFailOpen_IdempotentSuccess(t *testing.T) {
+	pod := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "litellm-alice", Name: "demo"},
+		Spec: corev1.PodSpec{Containers: []corev1.Container{
+			{Name: "app"},
+			{Name: constants.D2SidecarContainerName},
+		}},
+	}
+	raw, err := json.Marshal(pod)
+	require.NoError(t, err)
+	req := &admissionv1.AdmissionRequest{UID: "uid-1", Namespace: pod.Namespace, Object: runtime.RawExtension{Raw: raw}}
+	resp := &admissionv1.AdmissionResponse{Allowed: true, UID: req.UID}
+
+	h := &Handler{sidecarWebhook: &webhook.Webhook{}}
+	require.NotPanics(t, func() {
+		h.injectD2OffloaderCallerFailOpen(context.Background(), resp, &pod, req, nil, uuid.New(), webhook.D2InjectScenarioA)
+	})
+
+	require.True(t, resp.Allowed)
+	require.Nil(t, resp.Result)
+	require.NotNil(t, resp.PatchType)
 }
