@@ -5,9 +5,7 @@ description: Learn how to install a specific NVIDIA CUDA driver version on the O
 
 # Install a specific CUDA version
 
-To run NVIDIA GPU-based applications on Olares, the host and application containers both need CUDA drivers installed. While the two versions generally need to match, applications can usually run even when the container's CUDA version is higher than the host's.
-
-Olares officially maintains only the latest CUDA version to support cutting-edge AI applications. However, you may need a different version in the following cases:
+To run GPU-based applications on Olares, the host needs the NVIDIA driver and application containers need the CUDA runtime. Olares officially maintains the latest driver version to support cutting-edge AI applications. However, you may need a different version in the following cases:
 
 - A specific application or AI model requires a particular CUDA or driver version.
 - You prefer to lock the version for stability and avoid automatic upgrades.
