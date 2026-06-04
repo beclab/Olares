@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	v1_12_5 "github.com/beclab/Olares/cli/cmd/ctl/market/uninstall/v1_12_5"
+	v1_12_6 "github.com/beclab/Olares/cli/cmd/ctl/market/uninstall/v1_12_6"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -91,7 +93,30 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 		opts.info("  --delete-data: will delete persistent data")
 	}
 
-	resp, err := mc.UninstallApp(ctx, appName, cascade, opts.DeleteData)
+	// Resolve the installed app's source: enforces the "only operate on an
+	// installed app" guard (a bugfix applying to 1.12.5 and 1.12.6 alike)
+	// and yields the source the 1.12.6 body needs (uninstall exposes no -s).
+	// The resolved source also sharpens the --watch state-row match.
+	source, err := resolveInstalledSource(ctx, opts, mc, appName)
+	if err != nil {
+		return opts.failOp("uninstall", appName, err)
+	}
+
+	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if err != nil {
+		return opts.failOp("uninstall", appName, err)
+	}
+
+	// 1.12.6 added app_name + source to the uninstall body (this is the
+	// change that broke `market uninstall` against the new backend);
+	// opts.Version is empty unless a future --version flag supplies one
+	// (the 1.12.6 builder includes it when set, the 1.12.5 builder ignores
+	// it).
+	method, path, body := v1_12_5.Uninstall(appName, source, opts.Version, cascade, opts.DeleteData)
+	if atLeast126 {
+		method, path, body = v1_12_6.Uninstall(appName, source, opts.Version, cascade, opts.DeleteData)
+	}
+	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
 		return opts.failOp("uninstall", appName, err)
 	}
@@ -100,7 +125,7 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// Uninstall is unique: the row may simply disappear from /market/state
 	// once the backend cleans it up, so the watch target opts in to the
 	// "absent means success (provided we saw it earlier)" shortcut.
-	return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, opts.Source))
+	return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, source))
 }
 
 // shouldAutoCascade decides the default value of --cascade when the user

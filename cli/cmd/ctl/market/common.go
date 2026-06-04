@@ -34,6 +34,40 @@ func resolveCatalogSource(opts *MarketOptions) string {
 	return defaultCatalogSource
 }
 
+// resolveInstalledSource determines which market source an installed app
+// belongs to. The 1.12.6 stop/resume/uninstall wire format requires `source`
+// in the request body (TermiPass PR #1162), but those verbs don't expose
+// `-s` (source is implicit). An explicit --source wins when present;
+// otherwise it is read from the per-user state row via /market/state. Returns
+// a clear error when the app has no installed row, so the caller can fail
+// fast instead of sending a request the backend will reject for a missing
+// source.
+//
+// "Installed" mirrors the SPA's appStore.findAppByName(): it skips rows whose
+// state is in `uninstalledAppStates` (`!uninstalledApp(status)`), so a row
+// that lingers in /market/state in a terminal not-installed state
+// (installFailed, uninstalled, downloadFailed, the *Canceled variants — see
+// notInstalledStates / isInstalledState in types.go) is treated as "not
+// installed" rather than yielding a source for a request the backend will
+// reject. An explicit --source bypasses this guard (the user is asserting the
+// source themselves).
+func resolveInstalledSource(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName string) (string, error) {
+	if s := strings.TrimSpace(opts.Source); s != "" {
+		return s, nil
+	}
+	row, err := lookupInstalledApp(ctx, mc, appName)
+	if err != nil {
+		return "", err
+	}
+	if row == nil || strings.TrimSpace(row.Source) == "" {
+		return "", fmt.Errorf("could not determine the source for %q: no installed app row found for this user (run `olares-cli market list --mine` to see installed apps)", appName)
+	}
+	if !isInstalledState(row.State) {
+		return "", fmt.Errorf("%q is not an installed app (state %q); nothing to operate on (run `olares-cli market list --mine` to see installed apps)", appName, row.State)
+	}
+	return row.Source, nil
+}
+
 func validateVersion(version string) error {
 	if _, err := semver.StrictNewVersion(strings.TrimPrefix(version, "v")); err != nil {
 		return fmt.Errorf("invalid version '%s': must be a valid semver (e.g. 1.0.0, 1.2.3)", version)
