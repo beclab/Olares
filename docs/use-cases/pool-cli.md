@@ -4,34 +4,35 @@ description: Set up Pool CLI on Olares to read code, run terminal commands, and 
 head:
   - - meta
     - name: keywords
-      content: Olares, Pool CLI, Poolside, AI coding, terminal, TUI, self-hosted, MCP
+      content: Olares, Pool CLI, AI coding, terminal, TUI, self-hosted, MCP
 app_version: "0.1.0"
 doc_version: "1.0"
-doc_updated: "2026-06-03"
+doc_updated: "2026-06-04"
 ---
 
 # Code with Pool CLI
 
-Pool CLI is Poolside's terminal-based coding agent that helps you read code, run terminal commands, and edit files using natural language. On Olares, this command-line interface runs inside a browser-based terminal equipped with a pre-configured Ubuntu development environment.
+Pool CLI is a terminal-based coding agent that helps you read code, run terminal commands, and edit files using natural language. On Olares, this command-line interface runs inside a browser-based terminal equipped with a pre-configured Ubuntu development environment.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 
-- Install the Pool CLI app from the Olares Market.
+- Install Pool CLI from the Olares Market.
 - Connect Pool CLI to a model using Poolside's cloud API or a local model.
-- Execute basic and advanced natural language coding workflows.
+- Execute a basic natural language coding workflow.
+- Configure directory access for your development workspace.
 - Manage software dependencies securely.
 
 ## Prerequisites
 
 - An Olares device with sufficient disk space and memory.
 - A Poolside account, if you plan to use the cloud API service.
-- A local model optimized for coding running on your Olares device, if you plan to use local execution.
+- A local model optimized for coding running on your Olares device, if you plan to run tasks locally.
 
    You can install local models using one of the following methods:
+   - **Single-model application**: One app that runs one specific model. This guide uses **Qwen3-Coder 30B (Ollama)**.
    - **Ollama application**: One app that hosts multiple models. Ensure [Ollama](ollama.md) is installed with at least one model downloaded, such as `qwen3-coder:30b`.
-   - **Single-model application**: Runs one specific model as a standalone application. This guide uses **Qwen3-Coder 30B (Ollama)**.
 
 ## Install Pool CLI
 
@@ -50,22 +51,47 @@ Start the Pool CLI and connect it to a language model. Choose one of the followi
 Use this method to leverage Poolside's cloud-based inference API.
 
 1. Open the Pool CLI from the Launchpad.
-2. Enter the following command to enter interactive mode:
+2. Enter the following command to trigger the login authentication:
 
    ```bash
-   pool
+   pool setup
    ```
 
-3. On first launch, the CLI triggers a login prompt. You can also run `pool setup` to initiate login manually.
+3. Select **Log in with Poolside**, and then enter your Poolside API key to authenticate.
+4. Choose one of the following modes to run your tasks:
 
-4. Enter your Poolside api-key to authenticate.
-5. Use `/quit` to exit interactive mode.
+   <Tabs>
+   <template #Interactive-mode>
 
-You can also execute one-shot tasks directly from the terminal. For example:
+   Use this method when you want a continuous, chat-like conversation with the agent. This is ideal for multi-step tasks where the agent needs to read context and ask you for follow-up clarifications.
 
-```bash
-pool exec -p "say OK" --unsafe-auto-allow
-```
+   1. Enter the following command to start an interactive session:
+
+      ```bash
+      pool
+      ```
+   2. Interact with the agent using natural language.
+   3. Enter the following command to exit the session:
+
+      ```bash
+      /quit
+      ```
+   </template>
+   <template #Automated-mode>
+   
+   Use this method to run a single task and immediately return to your normal terminal. This is ideal for quick requests that do not require a back-and-forth conversation.
+
+   Enter the `pool exec` command to send a single prompt and exit. For example:
+
+      ```bash
+      pool exec -p "Create a folder named Test"
+      ```
+
+   :::tip
+   By default, the agent pauses and asks you to manually approve any system actions, such as writing files. To bypass this manual check and allow the agent to execute actions instantly, append the `--unsafe-auto-allow` flag. For example, `pool exec -p "Create a folder named Test" --unsafe-auto-allow`.
+   :::
+   </template>
+   </Tabs>
 
 ### Connect using a local model
 
@@ -85,27 +111,71 @@ Use this method to run Pool CLI entirely offline with a local model. This exampl
    ![Model app endpoint in Settings](/images/manual/use-cases/qwen3-coder-30b-endpoint.png#bordered){width=70%}
 
 5. Click **Qwen3-Coder 30B**, and then note down the endpoint URL. For example, `http://609c5d0c0.shared.olares.com`.
-6. Go to **Applications** > **Pool CLI** > **Manage environment variables**, and then specify the following environment variables:
+6. Go to **Applications** > **Pool CLI** > **Manage environment variables**, and then click <i class="material-symbols-outlined">edit</i> to configure the following variables:
 
-   - **USE_LOCAL_LLM**: Set to `true` to enable local model mode.
+   - **USE_LOCAL_LLM**: Set it to `true` to enable local model mode.
    - **POOLSIDE_STANDALONE_BASE_URL**: Enter the model app's endpoint URL with `/v1` appended. For example, `http://609c5d0c0.shared.olares.com/v1`.
    - **POOL_MODEL**: Enter the model name you noted down earlier. For example, `qwen3-coder:30b`.
 
 7. Click **Apply**. Wait for the Pool CLI container to restart.
-8. Open the Pool CLI from the Launchpad, and then enter `pool` to start a session (no login required in local mode).
+8. Open the Pool CLI from the Launchpad, and then enter the following command to start a session.
 
-## Manage the development environments
+   ```bash
+   pool
+   ```
 
-### Default workspace
-All project work happens in the `/opt/data` directory, which serves as the working directory in the container. This directory persists your files across app restarts and is located at **Data** > **pool** > **home** > **work**.
+## Code with natural language
 
+After connecting to a model, you interact with Pool CLI using conversational prompts. The agent interprets your requests to write code, modify files, and execute terminal commands.
 
-### Access Home and External directories
+The following scenario demonstrates how to use the Pool CLI to generate and run a simple Python script.
 
-By default, Pool CLI operates within `/opt/data`. If you want Pool CLI to access files in the **Home** or **External** directories on Olares, configure the following environment variables in **Applications** > **Pool CLI** > **Manage environment variables**:
+1. Open the Pool CLI from the Launchpad.
+2. Enter the following command to start an interactive session:
 
-- **ALLOW_HOME_DIR_ACCESS**: Set to `true` to allow access to the Home directory in the Files app. This mounts the Home directory at `/home/userdata/home/`.
-- **ALLOW_EXTERNAL_DIR_ACCESS**: Set to `true` to allow access to the External directory (mounted NAS or other external disk data). This mounts the External directory at `/home/userdata/external/`.
+   ```bash
+   pool
+   ```
+
+3. Enter a natural language request. For example:
+
+   ```text
+   Create a Python script named greeting.py that outputs the 
+   current date and time
+   ```
+
+4. Review the agent's proposed code and actions. Pool CLI generates the script and asks for permissions to proceed.
+5. Select to allow the operations. The terminal displays the output of your script.
+
+   ![Pool CLI code result](/images/manual/use-cases/pool-cli-results.png#bordered)
+
+6. To exit the interactive session, enter the following command:
+
+   ```bash
+   /quit
+   ```
+
+7. To verify the output, open Files, and then go to **Data** > **pool** > **home** > **work**.
+
+   ![Pool CLI result verify](/images/manual/use-cases/pool-cli-results-verify.png#bordered)
+
+## Manage the development environment
+
+Pool CLI operates within a pre-configured Ubuntu 24.04 environment. Customize your directory access and install additional tools based on your project requirements.
+
+### Manage directory access
+
+By default, all project work happens in the `/opt/data` directory. This directory persists your files across app restarts and is located at **Files** > **Data** > **pool** > **home** > **work** on Olares.
+
+If you want Pool CLI to access files in your **Home** or **External** directories, configure the environment variables:
+
+1. Open Settings, and then go to **Applications** > **Pool CLI** > **Manage environment variables**.
+2. Specify the following variables as needed:
+
+   - **ALLOW_HOME_DIR_ACCESS**: Set to `true` to allow access to the **Home** directory in Files. This mounts the **Home** directory at `/home/userdata/home/`.
+   - **ALLOW_EXTERNAL_DIR_ACCESS**: Set to `true` to allow access to the **External** directory, such as mounted NAS or USB drives. This mounts the **External** directory at `/home/userdata/external/`.
+
+3. Click **Apply**.
 
 ### Review pre-installed development tools
 
@@ -155,11 +225,10 @@ Inside your writable directories (primarily `/opt/data`), you can install projec
 
 ## FAQs
 
-### How do I switch between cloud and local models?
+### How to switch between cloud and local models?
 
-To switch from cloud mode to local mode, set `USE_LOCAL_LLM` to `true` and configure `POOLSIDE_STANDALONE_BASE_URL` and `POOL_MODEL` in the environment variables, then restart the app.
-
-To switch back to cloud mode, set `USE_LOCAL_LLM` to `false` and restart the app. You may need to run `pool setup` again to re-authenticate.
+- To switch from cloud mode to local mode, set `USE_LOCAL_LLM` to `true` and configure `POOLSIDE_STANDALONE_BASE_URL` and `POOL_MODEL` in the environment variables, then restart the app.
+- To switch from local mode to cloud mode, set `USE_LOCAL_LLM` to `false` and restart the app. You might need to run `pool setup` again to re-authenticate.
 
 ### Missing language or library
 
@@ -167,3 +236,8 @@ Determine if the missing tool is a system-level dependency:
 
 - System-level dependencies: You cannot install these yourself. The app maintainers must add them to the base image. If you need a system-level library that is not currently available, [submit a GitHub Issue](https://github.com/beclab/apps/issues) to request it.
 - User-level dependencies: Use `venv`, `npm install`, or similar local tools to install them.
+
+## Learn more
+
+- [Poolside documentation](https://docs.poolside.ai/get-started/overview)
+- [Write code using Claude Code](claude-code.md)
