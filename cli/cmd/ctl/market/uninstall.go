@@ -116,19 +116,16 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 		return opts.failOp("uninstall", appName, err)
 	}
 
-	// 1.12.6 requires source in the uninstall body. If we could not
-	// determine one — the per-user row is already gone and --source wasn't
-	// given — there is nothing left to delete for this user: report an
-	// idempotent success and let --watch's acceptInitialAbsent confirm it,
-	// rather than sending an invalid (sourceless) request or erroring out.
-	// A cascade teardown of shared sub-charts can't be expressed without a
-	// source, so hint the user to pass --source if that's what they wanted.
+	// 1.12.6 requires source in the uninstall body, and the only place we
+	// can learn it is the user's own install state. If the app isn't
+	// installed for this user we can't know its source (or even whether it
+	// was a multi-chart CS app), so there is nothing actionable to delete:
+	// report an idempotent success and let --watch's acceptInitialAbsent
+	// confirm it, rather than sending an invalid (sourceless) request or
+	// erroring out.
 	if atLeast126 && source == "" {
-		opts.info("'%s' has no installed row for this user; treating as already uninstalled", appName)
-		if cascade {
-			opts.info("  note: pass --source <id> to also tear down shared sub-charts of a CS app")
-		}
-		result := newOperationResult(mc, "uninstall", appName, "", "", "already uninstalled", nil)
+		opts.info("'%s' is not installed for this user; nothing to uninstall", appName)
+		result := newOperationResult(mc, "uninstall", appName, "", "", "not installed; nothing to uninstall", nil)
 		return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, source))
 	}
 

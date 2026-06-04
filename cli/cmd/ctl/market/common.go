@@ -60,7 +60,7 @@ func resolveInstalledSource(ctx context.Context, opts *MarketOptions, mc *Market
 		return "", err
 	}
 	if row == nil || strings.TrimSpace(row.Source) == "" {
-		return "", fmt.Errorf("could not determine the source for %q: no installed app row found for this user (run `olares-cli market list --mine` to see installed apps)", appName)
+		return "", fmt.Errorf("%q is not installed for this user (run `olares-cli market list --mine` to see installed apps)", appName)
 	}
 	if !isInstalledState(row.State) {
 		return "", fmt.Errorf("%q is not an installed app (state %q); nothing to operate on (run `olares-cli market list --mine` to see installed apps)", appName, row.State)
