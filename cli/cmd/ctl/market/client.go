@@ -278,14 +278,6 @@ func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title stri
 	})
 }
 
-func (c *MarketClient) UninstallApp(ctx context.Context, appName string, all, deleteData bool) (*APIResponse, error) {
-	return c.doRequest(ctx, http.MethodDelete, "/apps/"+appName, UninstallRequest{
-		Sync:       true,
-		All:        all,
-		DeleteData: deleteData,
-	})
-}
-
 // UpgradeApp issues PUT /apps/{name}/upgrade. The payload intentionally
 // omits env vars: the Market SPA's upgradeApp() never sends them either
 // (existing values are preserved server-side from the prior install).
@@ -309,15 +301,12 @@ func (c *MarketClient) CancelOperation(ctx context.Context, appName string) (*AP
 	})
 }
 
-func (c *MarketClient) ResumeApp(ctx context.Context, appName string) (*APIResponse, error) {
-	return c.doRequest(ctx, http.MethodPost, "/apps/resume", map[string]string{
-		"appName": appName,
-	})
-}
-
-func (c *MarketClient) StopApp(ctx context.Context, appName string, all bool) (*APIResponse, error) {
-	return c.doRequest(ctx, http.MethodPost, "/apps/stop", map[string]interface{}{
-		"appName": appName,
-		"all":     all,
-	})
-}
+// StopApp / ResumeApp / UninstallApp used to build their request bodies here.
+// Their wire format diverges across Olares versions (TermiPass PR #1162:
+// stop/resume/uninstall all moved to {app_name, source, ...}), so body shaping
+// now lives in per-command, per-version builder sub-packages
+// (market/{stop,resume,uninstall}/{v1_12_5,v1_12_6}). Those builders return
+// (method, path, body); the runners pick the version with
+// cmdutil.Factory.OlaresBackendAtLeast and send through doRequest, so transport
+// (auth injection, refresh-on-401, envelope validation) is never re-implemented.
+// UninstallRequest is retained in types.go as the 1.12.5 body shape reference.
