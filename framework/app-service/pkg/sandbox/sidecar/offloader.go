@@ -18,7 +18,10 @@ func GetTLSOffloaderContainerSpec(configVolumeName string) corev1.Container {
 	return corev1.Container{
 		Name:            constants.D2SidecarContainerName,
 		Image:           constants.D2SidecarImageDigest,
-		ImagePullPolicy: corev1.PullIfNotPresent,
+		// behavior: local-test image is imported into containerd by tag only (no
+		// registry repoDigests), so PullNever forces the kubelet to use the
+		// preloaded image and never reach out to a remote registry.
+		ImagePullPolicy: corev1.PullNever,
 		SecurityContext: &corev1.SecurityContext{
 			AllowPrivilegeEscalation: pointer.BoolPtr(false),
 			ReadOnlyRootFilesystem:   pointer.BoolPtr(true),
