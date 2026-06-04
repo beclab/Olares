@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -77,7 +76,7 @@ func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
 	if nsObj.Annotations[AnnotationLinkerdInject] == LinkerdInjectDisabled {
 		return r.cleanupCallerResources(ctx, ns)
 	}
-	optedIn, err := r.namespaceOptedIntoGateway(ctx, ns)
+	optedIn, err := gateway.NamespaceOptedIntoGateway(ctx, r.Client, ns)
 	if err != nil {
 		return err
 	}
@@ -128,26 +127,6 @@ func (r *CallerReconciler) gcLegacyCallerEgress(ctx context.Context, ns string) 
 		}
 	}
 	return nil
-}
-
-func (r *CallerReconciler) namespaceOptedIntoGateway(ctx context.Context, ns string) (bool, error) {
-	var list appv1alpha1.ApplicationList
-	if err := r.Client.List(ctx, &list); err != nil {
-		return false, err
-	}
-	for i := range list.Items {
-		app := &list.Items[i]
-		if app.Spec.Namespace != ns {
-			continue
-		}
-		if !strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
-			continue
-		}
-		if strings.TrimSpace(app.Spec.Settings["clusterAppRef"]) != "" {
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 func (r *CallerReconciler) applyNetworkPolicy(ctx context.Context, desired *networkingv1.NetworkPolicy) error {
