@@ -8,16 +8,28 @@ import (
 
 // d2 offloader fail-open skip reason labels.
 //
-// requirement: 详设 §4.1 / §6.1 reason 全集. WI-T1-5 adds
-// caller_viewer_unresolved + multi_ref_unsupported; clusterappref_empty and
-// image_unconfigured (the remaining caller-mode reasons) belong to WI-T1-3.
+// requirement: 详设 §4.1 / §6.1 reason 全集 (8 reasons, exhaustive). WI-T1-5
+// added caller_viewer_unresolved + multi_ref_unsupported; WI-T1-3 adds the
+// remaining caller-mode reasons clusterappref_empty + image_unconfigured.
 const (
 	d2SkipReasonSnapshotError          = "snapshot_error"
 	d2SkipReasonViewerUnderive         = "viewer_underive"
 	d2SkipReasonTLSSecretMissing       = "tls_secret_missing"
 	d2SkipReasonCallerViewerUnresolved = "caller_viewer_unresolved"
 	d2SkipReasonMultiRefUnsupported    = "multi_ref_unsupported"
+	d2SkipReasonClusterAppRefEmpty     = "clusterappref_empty"
+	d2SkipReasonImageUnconfigured      = "image_unconfigured"
 	d2SkipReasonOther                  = "other"
+)
+
+// d2 offloader inject mode/scenario labels for the succeeded counter
+// (详设 §6.1): mode distinguishes server vs caller injection; scenario A =
+// Type-1 (v1/v2, bypass a), scenario B = Type-2b (v3 non-shared, bypass b).
+const (
+	D2InjectModeServer = "server"
+	D2InjectModeCaller = "caller"
+	D2InjectScenarioA  = "A"
+	D2InjectScenarioB  = "B"
 )
 
 var d2InjectSkippedTotal = prometheus.NewCounterVec(
@@ -28,8 +40,23 @@ var d2InjectSkippedTotal = prometheus.NewCounterVec(
 	[]string{"reason"},
 )
 
+var d2InjectSucceededTotal = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "app_service_d2_inject_succeeded_total",
+		Help: "d2 offloader injections succeeded by mode (server/caller) and scenario (A/B)",
+	},
+	[]string{"mode", "scenario"},
+)
+
 func init() {
 	prometheus.MustRegister(d2InjectSkippedTotal)
+	prometheus.MustRegister(d2InjectSucceededTotal)
+}
+
+// RecordD2InjectSucceeded increments the success counter for the given inject
+// mode and scenario.
+func RecordD2InjectSucceeded(mode, scenario string) {
+	d2InjectSucceededTotal.WithLabelValues(mode, scenario).Inc()
 }
 
 // RecordD2InjectSkipped increments the fail-open skip counter for the given
@@ -55,6 +82,10 @@ func ClassifyD2SkipReason(err error) string {
 		return d2SkipReasonTLSSecretMissing
 	case errors.Is(err, ErrD2CallerViewerUnresolved):
 		return d2SkipReasonCallerViewerUnresolved
+	case errors.Is(err, ErrD2ClusterAppRefEmpty):
+		return d2SkipReasonClusterAppRefEmpty
+	case errors.Is(err, ErrD2ImageUnconfigured):
+		return d2SkipReasonImageUnconfigured
 	default:
 		return d2SkipReasonOther
 	}

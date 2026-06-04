@@ -58,6 +58,8 @@ var (
 	ErrD2ViewerUnderive         = errors.New("d2 offloader: viewer cannot be derived from pod namespace")
 	ErrD2TLSSecretMissing       = errors.New("d2 offloader: no per-viewer tls replica secret in namespace")
 	ErrD2CallerViewerUnresolved = errors.New("d2 offloader: caller-mode clusterAppRef resolved no owner viewer")
+	ErrD2ClusterAppRefEmpty     = errors.New("d2 offloader: caller opted into gateway but clusterAppRef empty")
+	ErrD2ImageUnconfigured      = errors.New("d2 offloader: sidecar image digest unconfigured")
 
 	// testDeriveViewerFromPodNSHook is a test seam for WI-T1-5 TC-T1-5-04:
 	// the caller-mode resolver must never invoke the server-mode
@@ -65,6 +67,11 @@ var (
 	// it once per invocation so tests can assert zero calls during
 	// resolveCallerViewers* paths.
 	testDeriveViewerFromPodNSHook func()
+
+	// d2SidecarImageDigest is a seam over constants.D2SidecarImageDigest so
+	// WI-T1-3 unit tests can exercise the image_unconfigured fail-open
+	// (WI-N1-IMG pending) without mutating the compile-time constant.
+	d2SidecarImageDigest = func() string { return constants.D2SidecarImageDigest }
 
 	// codecs is the codec factory used by the deserializer.
 	codecs = serializer.NewCodecFactory(runtime.NewScheme())
@@ -559,14 +566,150 @@ func resolveCallerViewersFromSnapshot(podNS string, apps []v1alpha1.Application)
 
 // resolveCallerViewers is the kube-aware wrapper around
 // resolveCallerViewersFromSnapshot used by the admission patch path. It lists
-// all Applications cluster-wide and delegates the actual logic. T1-5 does not
-// wire this into CreateD2OffloaderPatch -- patch 装配 belongs to WI-T1-3.
+// all Applications cluster-wide and delegates the actual logic. WI-T1-3 wires
+// this into CreateD2OffloaderCallerPatch and distinguishes the
+// clusterappref_empty fail-open reason (caller opted in but every clusterAppRef
+// is empty) from caller_viewer_unresolved (refs present, resolve to no owner).
 func (wh *Webhook) resolveCallerViewers(ctx context.Context, pod *corev1.Pod) (callerViewerResolution, error) {
 	list, err := wh.dynamicClient.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return callerViewerResolution{}, err
 	}
+	if callerOptInRefsEmpty(pod.Namespace, list.Items) {
+		return callerViewerResolution{}, fmt.Errorf("clusterAppRef empty though caller opt-in ns=%s: %w", pod.Namespace, ErrD2ClusterAppRefEmpty)
+	}
 	return resolveCallerViewersFromSnapshot(pod.Namespace, list.Items)
+}
+
+// callerOptInRefsEmpty reports whether the pod namespace has an in-cluster
+// caller opt-in app (Annotations[in-cluster]=gateway) whose clusterAppRef is
+// empty -- i.e. the caller contract is hit but no ref was written yet
+// (admission raced the Application write). It returns false once any opted-in
+// app in the namespace carries a non-empty ref, so the resolver can proceed.
+func callerOptInRefsEmpty(podNS string, apps []v1alpha1.Application) bool {
+	ns := strings.TrimSpace(podNS)
+	if ns == "" {
+		return false
+	}
+	optedIn := false
+	for i := range apps {
+		app := &apps[i]
+		if strings.TrimSpace(app.Spec.Namespace) != ns {
+			continue
+		}
+		if !strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
+			continue
+		}
+		optedIn = true
+		if len(gateway.SplitClusterAppRefs(app.Spec.Settings["clusterAppRef"])) > 0 {
+			return false
+		}
+	}
+	return optedIn
+}
+
+// InClusterCallerOptIn reports whether any Application owning a workload in ns
+// opts into the cluster-internal gateway as a caller (Annotations[in-cluster]=
+// gateway). It gates the caller-mode d2 bypasses so non-caller pods never reach
+// the fail-open skip path.
+func (wh *Webhook) InClusterCallerOptIn(ctx context.Context, ns string) bool {
+	n := strings.TrimSpace(ns)
+	if n == "" {
+		return false
+	}
+	list, err := wh.dynamicClient.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Warningf("d2 caller opt-in check: list applications failed ns=%s err=%v", ns, err)
+		return false
+	}
+	for i := range list.Items {
+		app := &list.Items[i]
+		if strings.TrimSpace(app.Spec.Namespace) != n {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
+			return true
+		}
+	}
+	return false
+}
+
+// d2ImageUnconfigured reports whether the d2 sidecar image is still the
+// WI-N1-IMG placeholder (or empty). Injecting an unconfigured image would wedge
+// the caller pod in ImagePullBackOff, so caller-mode injection fails open with
+// reason=image_unconfigured until a real digest lands.
+func d2ImageUnconfigured(digest string) bool {
+	d := strings.TrimSpace(digest)
+	return d == "" || d == constants.D2SidecarImagePlaceholder
+}
+
+// ensureD2DrainGracePeriod sets the default drain grace period only when the
+// caller pod does not already specify one, so the d2 sidecar nginx
+// worker_shutdown_timeout can drain in-flight requests on SIGTERM. An explicit
+// caller value is respected (does not override business semantics).
+func ensureD2DrainGracePeriod(pod *corev1.Pod) {
+	if pod.Spec.TerminationGracePeriodSeconds == nil {
+		pod.Spec.TerminationGracePeriodSeconds = ptr.To(constants.D2DrainGracePeriodSeconds)
+	}
+}
+
+// CreateD2OffloaderCallerPatch mutates a caller pod with the caller-mode d2
+// offloader and returns JSON patch bytes. requirement: 详设 §2.3 (WI-T1-3).
+// behavior: fail-open prerequisites surface as sentinel errors classified by
+// ClassifyD2SkipReason; injectD2OffloaderCallerFailOpen records the reason and
+// admits the pod. The entry self-guards hasD2Container (M8) because bypass (a)
+// runs after CreatePatch without its short-circuit. The image digest is checked
+// first so an unconfigured placeholder skips before any API reads.
+func (wh *Webhook) CreateD2OffloaderCallerPatch(
+	ctx context.Context,
+	pod *corev1.Pod,
+	req *admissionv1.AdmissionRequest,
+	appCfg *appcfg.ApplicationConfig,
+	proxyUUID uuid.UUID,
+) ([]byte, error) {
+	_ = appCfg
+
+	if hasD2Container(pod) {
+		return makePatches(req, pod)
+	}
+
+	if d2ImageUnconfigured(d2SidecarImageDigest()) {
+		return nil, fmt.Errorf("d2 sidecar image digest unconfigured ns=%s: %w", pod.Namespace, ErrD2ImageUnconfigured)
+	}
+
+	res, err := wh.resolveCallerViewers(ctx, pod)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshot, err := cluster.GetSnapshot(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("d2 offloader get cluster snapshot: %w", errors.Join(err, ErrD2SnapshotUnavailable))
+	}
+
+	viewer := res.PrimaryViewer
+	allowset := renderCallerAllowset(res.ViewerSet)
+
+	configMapName, volumeName, err := wh.ensureD2NginxConfConfigMap(
+		ctx, pod, proxyUUID.String(), viewer, allowset, snapshot.PlatformDomain,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := wh.ensureD2SharedHostsPlaceholder(ctx, pod.Namespace); err != nil {
+		return nil, err
+	}
+
+	containerSpec := sidecar.GetTLSOffloaderContainerSpec(volumeName)
+	initSpec := sidecar.GetTLSOffloaderInitContainerSpec()
+	vols := sidecar.GetTLSOffloaderVolumes(viewer, configMapName, volumeName)
+	pod.Spec.Containers = append(pod.Spec.Containers, containerSpec)
+	pod.Spec.InitContainers = append(pod.Spec.InitContainers, initSpec)
+	pod.Spec.Volumes = append(pod.Spec.Volumes, vols...)
+
+	ensureD2DrainGracePeriod(pod)
+
+	return makePatches(req, pod)
 }
 
 // renderCallerAllowset turns a caller-mode viewer set into nginx
