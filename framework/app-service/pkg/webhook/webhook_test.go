@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
@@ -202,6 +203,134 @@ func TestResolveViewerAllowset_TLSSecretMissingSentinel(t *testing.T) {
 	_, err := wh.resolveViewerAllowset(context.Background(), pod)
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrD2TLSSecretMissing))
+}
+
+// TC-T1-3-IDM: CreateD2OffloaderCallerPatch is idempotent -- a pod that already
+// carries the d2 sidecar short-circuits to an empty patch. Bypass (a) runs after
+// CreatePatch without its short-circuit, so this entry guard (M8) is mandatory.
+func TestCreateD2OffloaderCallerPatch_IdempotentWhenD2ContainerExists(t *testing.T) {
+	pod := corev1.Pod{
+		ObjectMeta: metav1ObjectMeta("litellm-alice", "demo"),
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{Name: "app"},
+				{Name: constants.D2SidecarContainerName},
+			},
+		},
+	}
+	raw, err := json.Marshal(pod)
+	require.NoError(t, err)
+	req := &admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: raw}}
+
+	wh := &Webhook{}
+	patch, err := wh.CreateD2OffloaderCallerPatch(context.Background(), &pod, req, nil, uuid.New())
+	require.NoError(t, err)
+
+	var ops []map[string]any
+	require.NoError(t, json.Unmarshal(patch, &ops))
+	require.Len(t, ops, 0)
+}
+
+// TC-T1-3-R5: an unconfigured d2 image digest (WI-N1-IMG pending) fails open
+// with ErrD2ImageUnconfigured before any API read, so the pod is admitted and
+// no placeholder d2 (which would ImagePullBackOff) is injected.
+func TestCreateD2OffloaderCallerPatch_ImageUnconfigured(t *testing.T) {
+	orig := d2SidecarImageDigest
+	d2SidecarImageDigest = func() string { return constants.D2SidecarImagePlaceholder }
+	t.Cleanup(func() { d2SidecarImageDigest = orig })
+
+	pod := corev1.Pod{
+		ObjectMeta: metav1ObjectMeta("litellm-alice", "demo"),
+		Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}},
+	}
+	raw, err := json.Marshal(pod)
+	require.NoError(t, err)
+	req := &admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: raw}}
+
+	wh := &Webhook{}
+	_, err = wh.CreateD2OffloaderCallerPatch(context.Background(), &pod, req, nil, uuid.New())
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrD2ImageUnconfigured))
+	require.Equal(t, d2SkipReasonImageUnconfigured, ClassifyD2SkipReason(err))
+}
+
+func TestD2ImageUnconfigured(t *testing.T) {
+	require.True(t, d2ImageUnconfigured(constants.D2SidecarImagePlaceholder))
+	require.True(t, d2ImageUnconfigured(""))
+	require.True(t, d2ImageUnconfigured("  "))
+	require.False(t, d2ImageUnconfigured(constants.D2SidecarImageDigest))
+}
+
+// TC-T1-3-R2: clusterappref_empty is the caller-opt-in-but-empty-ref case,
+// distinct from caller_viewer_unresolved (refs present, resolve to no owner).
+// Any opted-in app with a non-empty ref makes the resolver proceed (false).
+func TestCallerOptInRefsEmpty(t *testing.T) {
+	cases := []struct {
+		name string
+		ns   string
+		apps []v1alpha1.Application
+		want bool
+	}{
+		{"opted_in_empty_ref", "litellm-userA", []v1alpha1.Application{callerApp("litellm", "litellm-userA", "")}, true},
+		{"opted_in_with_ref", "litellm-userA", []v1alpha1.Application{callerApp("litellm", "litellm-userA", "ollama")}, false},
+		{"mixed_one_ref_wins", "litellm-userA", []v1alpha1.Application{
+			callerApp("a", "litellm-userA", ""),
+			callerApp("b", "litellm-userA", "ollama"),
+		}, false},
+		{"no_opt_in_app", "litellm-userA", []v1alpha1.Application{clusterApp("ollama", "userA")}, false},
+		{"empty_ns", "", []v1alpha1.Application{callerApp("a", "litellm-userA", "")}, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			require.Equal(t, c.want, callerOptInRefsEmpty(c.ns, c.apps))
+		})
+	}
+}
+
+// TC-T1-3-R1..R5 / R4: ClassifyD2SkipReason exhaustively maps every caller-mode
+// fail-open sentinel to its frozen reason label; no real sentinel degrades to
+// "other" (only nil / uncategorized errors do). multi_ref_unsupported is a
+// resolver warning (not an error) -- asserted in TC-T1-5-02.
+func TestClassifyD2SkipReason_CallerSentinelsExhaustive(t *testing.T) {
+	cases := []struct {
+		err  error
+		want string
+	}{
+		{fmt.Errorf("ctx: %w", ErrD2SnapshotUnavailable), d2SkipReasonSnapshotError},
+		{fmt.Errorf("ctx: %w", ErrD2ViewerUnderive), d2SkipReasonViewerUnderive},
+		{fmt.Errorf("ctx: %w", ErrD2TLSSecretMissing), d2SkipReasonTLSSecretMissing},
+		{fmt.Errorf("ctx: %w", ErrD2CallerViewerUnresolved), d2SkipReasonCallerViewerUnresolved},
+		{fmt.Errorf("ctx: %w", ErrD2ClusterAppRefEmpty), d2SkipReasonClusterAppRefEmpty},
+		{fmt.Errorf("ctx: %w", ErrD2ImageUnconfigured), d2SkipReasonImageUnconfigured},
+	}
+	for _, c := range cases {
+		require.Equal(t, c.want, ClassifyD2SkipReason(c.err))
+		require.NotEqual(t, d2SkipReasonOther, ClassifyD2SkipReason(c.err))
+	}
+}
+
+func TestRecordD2InjectSucceeded(t *testing.T) {
+	beforeA := testutil.ToFloat64(d2InjectSucceededTotal.WithLabelValues(D2InjectModeCaller, D2InjectScenarioA))
+	RecordD2InjectSucceeded(D2InjectModeCaller, D2InjectScenarioA)
+	require.Equal(t, beforeA+1, testutil.ToFloat64(d2InjectSucceededTotal.WithLabelValues(D2InjectModeCaller, D2InjectScenarioA)))
+
+	beforeB := testutil.ToFloat64(d2InjectSucceededTotal.WithLabelValues(D2InjectModeCaller, D2InjectScenarioB))
+	RecordD2InjectSucceeded(D2InjectModeCaller, D2InjectScenarioB)
+	require.Equal(t, beforeB+1, testutil.ToFloat64(d2InjectSucceededTotal.WithLabelValues(D2InjectModeCaller, D2InjectScenarioB)))
+}
+
+// 详设 §4.2 m6: the default drain grace is added only when unset; an explicit
+// caller value is respected (do not override business semantics).
+func TestEnsureD2DrainGracePeriod(t *testing.T) {
+	pod := &corev1.Pod{}
+	ensureD2DrainGracePeriod(pod)
+	require.NotNil(t, pod.Spec.TerminationGracePeriodSeconds)
+	require.Equal(t, constants.D2DrainGracePeriodSeconds, *pod.Spec.TerminationGracePeriodSeconds)
+
+	explicit := int64(10)
+	pod2 := &corev1.Pod{Spec: corev1.PodSpec{TerminationGracePeriodSeconds: &explicit}}
+	ensureD2DrainGracePeriod(pod2)
+	require.Equal(t, int64(10), *pod2.Spec.TerminationGracePeriodSeconds)
 }
 
 func TestResolveViewerAllowset_FromReplicaSecret(t *testing.T) {

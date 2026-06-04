@@ -87,6 +87,13 @@ const (
 	D2SidecarContainerName           = "olares-d2-sidecar"
 	D2SidecarInitContainerName       = "olares-d2-init"
 	D2SidecarImageDigest             = "beclab/nginx:1.30.2-alpine-njs-olares-rev1"
+	// D2SidecarImagePlaceholder marks an unconfigured d2 sidecar image. Caller-mode
+	// injection fails open with reason=image_unconfigured until a real digest lands.
+	D2SidecarImagePlaceholder = "sha256:d2-placeholder"
+	// D2DrainGracePeriodSeconds is the default terminationGracePeriodSeconds the
+	// caller-mode injection adds only when the pod does not set one, so the d2
+	// nginx worker_shutdown_timeout (30s) can drain in-flight requests.
+	D2DrainGracePeriodSeconds int64 = 40
 
 	D2StreamListenPort     int32 = 15443
 	D2StreamListenPortName       = "d2-s"
