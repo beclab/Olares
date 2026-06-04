@@ -290,6 +290,9 @@ func ensureCallerNamespaceLinkerdSkipPorts(ctx context.Context, c client.Client,
 		return nil
 	}
 
+	// Keep caller strong paths mesh-hijacked:
+	// - HTTPS strong identity on :8081
+	// - HTTP strong path on :8082
 	skipOutbound, err := ComputeSkipOutboundPorts(
 		MeshHijackServicePorts(DefaultInClusterStrongIdentityServicePort),
 	)

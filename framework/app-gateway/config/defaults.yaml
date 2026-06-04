@@ -48,3 +48,4 @@ vendor:
 
 inCluster:
   strongIdentityServicePort: 8081
+  httpStrongServicePort: 8082

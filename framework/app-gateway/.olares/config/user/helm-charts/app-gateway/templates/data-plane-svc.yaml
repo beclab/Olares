@@ -33,3 +33,7 @@ spec:
       port: {{ default 8081 (index $inCluster "strongIdentityServicePort") }}
       targetPort: 10080
       protocol: TCP
+    - name: incluster-http-strong
+      port: {{ default 8082 (index $inCluster "httpStrongServicePort") }}
+      targetPort: 10080
+      protocol: TCP
