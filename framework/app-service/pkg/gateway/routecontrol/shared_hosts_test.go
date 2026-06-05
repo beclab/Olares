@@ -565,6 +565,10 @@ func TestSharedHosts_ExtrasMappersAndPredicates(t *testing.T) {
 	if reqs := r.fanOutOnApplication(context.Background(), nil); reqs != nil {
 		t.Fatalf("fanOutOnApplication nil obj must return nil; got %v", reqs)
 	}
+	v3App := newV3SharedClusterApp("ollamav3", "userA")
+	if reqs := r.fanOutOnApplication(context.Background(), v3App); len(reqs) != 2 {
+		t.Fatalf("fanOutOnApplication v3 shared (no clusterScoped) want 2 reqs; got %d", len(reqs))
+	}
 	if !isSharedHostsConfigMap(&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: constants.D2SharedHostsVolumeName}}) {
 		t.Fatal("isSharedHostsConfigMap should match by name")
 	}
@@ -588,6 +592,9 @@ func TestSharedHosts_ExtrasMappersAndPredicates(t *testing.T) {
 	noRef := newCallerApp("noref", testCallerNS, "")
 	if isClusterScopedOrCallerApp(noRef) {
 		t.Fatal("isClusterScopedOrCallerApp no-ref non-cluster must fail")
+	}
+	if !isClusterScopedOrCallerApp(v3App) {
+		t.Fatal("isClusterScopedOrCallerApp v3 shared (no clusterScoped) must pass")
 	}
 	if hasInClusterCallerLabel(nil) {
 		t.Fatal("hasInClusterCallerLabel nil must be false")

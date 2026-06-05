@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,7 +61,7 @@ func BuildClusterAppOwnerIndex(apps []appv1alpha1.Application) ClusterAppOwnerIn
 	idx := make(ClusterAppOwnerIndex, len(apps))
 	for i := range apps {
 		app := apps[i]
-		if strings.TrimSpace(app.Spec.Settings["clusterScoped"]) != "true" {
+		if !appcfg.IsSharedServerApp(&app) {
 			continue
 		}
 		name := strings.TrimSpace(app.Spec.Name)

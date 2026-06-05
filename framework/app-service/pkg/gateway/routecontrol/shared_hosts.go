@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
@@ -292,7 +293,7 @@ func (r *SharedHostsReconciler) fanOutOnApplication(ctx context.Context, obj cli
 	if !ok || app == nil {
 		return nil
 	}
-	if strings.TrimSpace(app.Spec.Settings["clusterScoped"]) == "true" {
+	if appcfg.IsSharedServerApp(app) {
 		return r.fanOutOptInNamespaces(ctx)
 	}
 	ns := strings.TrimSpace(app.Spec.Namespace)

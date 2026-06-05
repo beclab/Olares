@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 )
 
@@ -155,6 +156,22 @@ func newClusterApp(name, owner string, clusterScoped string) appv1alpha1.Applica
 	}
 }
 
+// newV3SharedApp builds a v3 shared app (v3 marker label + shared entrances),
+// which qualifies as a shared server without settings.clusterScoped.
+func newV3SharedApp(name, owner string) appv1alpha1.Application {
+	return appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name + "-" + owner,
+			Labels: map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:            name,
+			Owner:           owner,
+			SharedEntrances: []appv1alpha1.Entrance{{Name: "api", Host: "svc"}},
+		},
+	}
+}
+
 func TestBuildClusterAppOwnerIndex_TCT12_02(t *testing.T) {
 	tests := []struct {
 		name string
@@ -177,6 +194,26 @@ func TestBuildClusterAppOwnerIndex_TCT12_02(t *testing.T) {
 			name: "non-clusterScoped app skipped",
 			apps: []appv1alpha1.Application{
 				newClusterApp("ollama", "alice", ""),
+			},
+			want: gateway.ClusterAppOwnerIndex{},
+		},
+		{
+			name: "v3 shared app indexed without clusterScoped",
+			apps: []appv1alpha1.Application{
+				newV3SharedApp("ollamav3", "alice"),
+			},
+			want: gateway.ClusterAppOwnerIndex{"ollamav3": "alice"},
+		},
+		{
+			name: "v3 app without shared entrances skipped",
+			apps: []appv1alpha1.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "novel-bob",
+						Labels: map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3},
+					},
+					Spec: appv1alpha1.ApplicationSpec{Name: "novel", Owner: "bob"},
+				},
 			},
 			want: gateway.ClusterAppOwnerIndex{},
 		},
