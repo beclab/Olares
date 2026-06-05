@@ -140,6 +140,9 @@ func runExtract(
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if err := requireArchiveBackendVersion(ctx, f); err != nil {
+		return err
+	}
 
 	src, srcWire, err := parseArchiveSource(archiveArg, "extract")
 	if err != nil {

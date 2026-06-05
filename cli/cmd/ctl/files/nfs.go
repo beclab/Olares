@@ -98,6 +98,9 @@ Examples:
     olares-cli files nfs history list
     olares-cli files nfs history rm 192.168.1.10:/data
 `,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			return requireNFSBackendVersion(cmd.Context(), f)
+		},
 	}
 	cmd.AddCommand(
 		newNFSMountCommand(f),

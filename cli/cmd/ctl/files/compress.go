@@ -217,6 +217,9 @@ func runCompress(
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if err := requireArchiveBackendVersion(ctx, f); err != nil {
+		return err
+	}
 	if len(args) < 2 {
 		// cobra's MinimumNArgs catches this earlier; guard the
 		// runner so a future programmatic call can't slip through.

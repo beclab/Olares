@@ -191,6 +191,9 @@ func runArchiveEntries(
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if err := requireArchiveBackendVersion(ctx, f); err != nil {
+		return err
+	}
 
 	src, srcWire, err := parseArchiveSource(archiveArg, "archive entries")
 	if err != nil {
@@ -465,6 +468,9 @@ func runArchiveCat(
 ) error {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if err := requireArchiveBackendVersion(ctx, f); err != nil {
+		return err
 	}
 	innerPath = strings.TrimSpace(innerPath)
 	if innerPath == "" {

@@ -24,6 +24,17 @@ import (
 //	}
 const commonNamespaceMinOlaresVersion = "1.12.6"
 
+// archiveMinOlaresVersion is the first Olares line that exposes the
+// files archive wire surface (`/api/archive/<node>/{compress,extract,entries,entry}`).
+// On 1.12.5 those routes do not exist (HTTP 404), so we fail fast with
+// a version error before issuing the wire call.
+const archiveMinOlaresVersion = "1.12.6"
+
+// nfsMinOlaresVersion is the first Olares line that exposes the NFS
+// mount flow (`external_type=nfs` on /api/mount + /api/unmount).
+// Pre-1.12.6 backends don't support these semantics.
+const nfsMinOlaresVersion = "1.12.6"
+
 // isCommonFrontendPath reports whether a parsed (fileType, extend)
 // pair targets the drive/Common namespace. Centralised so the version
 // gate and any future Common-specific branching agree on the shape.
@@ -76,6 +87,57 @@ func requireCommonBackendVersion(ctx context.Context, f *cmdutil.Factory, touche
 			"drive/Common (the app common data area) requires Olares >= %s, but this backend is %s; "+
 				"upgrade the Olares system, or operate on drive/Home or drive/Data instead",
 			commonNamespaceMinOlaresVersion, got)
+	}
+	return nil
+}
+
+// requireArchiveBackendVersion is the feature gate for the files archive
+// surface (compress / extract / archive entries / archive cat). The backend
+// routes were introduced in 1.12.6, so on 1.12.5 we fail early with an
+// actionable upgrade message instead of surfacing a confusing HTTP 404 from
+// `/api/archive/...`.
+func requireArchiveBackendVersion(ctx context.Context, f *cmdutil.Factory) error {
+	ok, err := f.OlaresBackendAtLeast(ctx, archiveMinOlaresVersion)
+	if err != nil {
+		return fmt.Errorf(
+			"`files compress` / `files extract` / `files archive` require Olares >= %s (archive APIs), but the backend "+
+				"version could not be determined: %v; pass --%s <version> to set it manually "+
+				"(e.g. --%s %s)",
+			archiveMinOlaresVersion, err,
+			cmdutil.FlagOlaresVersion, cmdutil.FlagOlaresVersion, archiveMinOlaresVersion)
+	}
+	if !ok {
+		got := "unknown"
+		if v, verr := f.OlaresBackendVersion(ctx); verr == nil && v != nil {
+			got = v.Original()
+		}
+		return fmt.Errorf(
+			"`files compress` / `files extract` / `files archive` require Olares >= %s (archive APIs), but this backend is %s; "+
+				"upgrade the Olares system before using archive commands",
+			archiveMinOlaresVersion, got)
+	}
+	return nil
+}
+
+// requireNFSBackendVersion is the feature gate for `files nfs`.
+// NFS mount/history semantics were introduced in 1.12.6.
+func requireNFSBackendVersion(ctx context.Context, f *cmdutil.Factory) error {
+	ok, err := f.OlaresBackendAtLeast(ctx, nfsMinOlaresVersion)
+	if err != nil {
+		return fmt.Errorf(
+			"`files nfs` requires Olares >= %s, but the backend version could not be determined: %v; "+
+				"pass --%s <version> to set it manually (e.g. --%s %s)",
+			nfsMinOlaresVersion, err,
+			cmdutil.FlagOlaresVersion, cmdutil.FlagOlaresVersion, nfsMinOlaresVersion)
+	}
+	if !ok {
+		got := "unknown"
+		if v, verr := f.OlaresBackendVersion(ctx); verr == nil && v != nil {
+			got = v.Original()
+		}
+		return fmt.Errorf(
+			"`files nfs` requires Olares >= %s, but this backend is %s; upgrade the Olares system to use NFS mount commands",
+			nfsMinOlaresVersion, got)
 	}
 	return nil
 }
