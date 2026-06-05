@@ -350,7 +350,11 @@ function reloadHostsIfNeeded() {
 }
 
 function decideOffload(s) {
-  const host = normalizeHost(s);
+  // njs stream js_set handler receives the session object; the SNI parsed by
+  // "ssl_preread on" is exposed as s.variables.ssl_preread_server_name.
+  // Stringifying the session object itself yields "[object stream session]",
+  // which nginx then rejects as an invalid upstream address.
+  const host = normalizeHost(s.variables.ssl_preread_server_name);
   if (!host) {
     return passthrough(host);
   }

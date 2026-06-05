@@ -138,6 +138,8 @@ func TestRenderSharedDecideJS_Contract(t *testing.T) {
 	require.Contains(t, got, "shared")
 	require.Contains(t, got, "ESCAPED_PLATFORM_DOMAIN + '$', 'i');")
 	require.Contains(t, got, "function decideOffload(s)")
+	require.Contains(t, got, "normalizeHost(s.variables.ssl_preread_server_name)")
+	require.NotContains(t, got, "const host = normalizeHost(s);")
 	require.Contains(t, got, fmt.Sprintf("return '127.0.0.1:%d';", constants.D2HTTPLoopbackPort))
 	require.Contains(t, got, "return passthrough(host);")
 }
