@@ -87,8 +87,12 @@ const (
 	D2SidecarContainerName           = "olares-d2-sidecar"
 	D2SidecarInitContainerName       = "olares-d2-init"
 	D2SidecarImageDigest             = "beclab/nginx:1.30.2-alpine-njs-olares-rev1"
-	// D2SidecarImagePlaceholder marks an unconfigured d2 sidecar image. Caller-mode
-	// injection fails open with reason=image_unconfigured until a real digest lands.
+	// D2SidecarImageEnv is the deployment env var that supplies the d2 sidecar
+	// image, mirroring WsContainerImage/UploadContainerImage. An empty or
+	// placeholder value fails open with reason=image_unconfigured.
+	D2SidecarImageEnv = "D2_SIDECAR_IMAGE"
+	// D2SidecarImagePlaceholder marks an unconfigured d2 sidecar image. Injection
+	// fails open with reason=image_unconfigured until a real digest lands.
 	D2SidecarImagePlaceholder = "sha256:d2-placeholder"
 	// D2DrainGracePeriodSeconds is the default terminationGracePeriodSeconds the
 	// caller-mode injection adds only when the pod does not set one, so the d2

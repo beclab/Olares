@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -68,10 +69,11 @@ var (
 	// resolveCallerViewers* paths.
 	testDeriveViewerFromPodNSHook func()
 
-	// d2SidecarImageDigest is a seam over constants.D2SidecarImageDigest so
-	// WI-T1-3 unit tests can exercise the image_unconfigured fail-open
-	// (WI-N1-IMG pending) without mutating the compile-time constant.
-	d2SidecarImageDigest = func() string { return constants.D2SidecarImageDigest }
+	// d2SidecarImageDigest is a seam over the D2_SIDECAR_IMAGE env var (set in
+	// appservice_deploy.yaml), mirroring the ws-gateway/upload env injection.
+	// An empty or placeholder value triggers the image_unconfigured fail-open.
+	// It stays a var so unit tests can override the resolved image.
+	d2SidecarImageDigest = func() string { return os.Getenv(constants.D2SidecarImageEnv) }
 
 	// codecs is the codec factory used by the deserializer.
 	codecs = serializer.NewCodecFactory(runtime.NewScheme())
@@ -316,7 +318,7 @@ func (wh *Webhook) CreateD2OffloaderPatch(
 		return nil, err
 	}
 
-	containerSpec := sidecar.GetTLSOffloaderContainerSpec(volumeName)
+	containerSpec := sidecar.GetTLSOffloaderContainerSpec(volumeName, d2SidecarImageDigest())
 	initSpec := sidecar.GetTLSOffloaderInitContainerSpec()
 	vols := sidecar.GetTLSOffloaderVolumes(viewer, configMapName, volumeName)
 	pod.Spec.Containers = append(pod.Spec.Containers, containerSpec)
@@ -704,7 +706,7 @@ func (wh *Webhook) CreateD2OffloaderCallerPatch(
 		return nil, err
 	}
 
-	containerSpec := sidecar.GetTLSOffloaderContainerSpec(volumeName)
+	containerSpec := sidecar.GetTLSOffloaderContainerSpec(volumeName, d2SidecarImageDigest())
 	initSpec := sidecar.GetTLSOffloaderInitContainerSpec()
 	vols := sidecar.GetTLSOffloaderVolumes(viewer, configMapName, volumeName)
 	pod.Spec.Containers = append(pod.Spec.Containers, containerSpec)

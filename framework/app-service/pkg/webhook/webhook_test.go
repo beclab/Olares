@@ -178,8 +178,13 @@ func TestDeriveViewerFromPodNS_UnderiveSentinel(t *testing.T) {
 }
 
 // TC-A1-1: viewer derivation failure surfaces ErrD2ViewerUnderive from
-// CreateD2OffloaderPatch (no client touched: derivation fails first).
+// CreateD2OffloaderPatch. The image is configured here so the image_unconfigured
+// guard passes and derivation is what fails (no further client read needed).
 func TestCreateD2OffloaderPatch_ViewerUnderiveSentinel(t *testing.T) {
+	orig := d2SidecarImageDigest
+	d2SidecarImageDigest = func() string { return "beclab/nginx@sha256:configured" }
+	t.Cleanup(func() { d2SidecarImageDigest = orig })
+
 	pod := corev1.Pod{
 		ObjectMeta: metav1ObjectMeta("kube-system", "demo"),
 		Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}},

@@ -13,11 +13,14 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-// GetTLSOffloaderContainerSpec returns the olares-d2-sidecar specification.
-func GetTLSOffloaderContainerSpec(configVolumeName string) corev1.Container {
+// GetTLSOffloaderContainerSpec returns the olares-d2-sidecar specification. The
+// image is supplied by the caller (sourced from the D2_SIDECAR_IMAGE env via the
+// webhook seam) so the injected image and the image-unconfigured guard share a
+// single source of truth.
+func GetTLSOffloaderContainerSpec(configVolumeName, image string) corev1.Container {
 	return corev1.Container{
 		Name:            constants.D2SidecarContainerName,
-		Image:           constants.D2SidecarImageDigest,
+		Image:           image,
 		// behavior: local-test image is imported into containerd by tag only (no
 		// registry repoDigests), so PullNever forces the kubelet to use the
 		// preloaded image and never reach out to a remote registry.

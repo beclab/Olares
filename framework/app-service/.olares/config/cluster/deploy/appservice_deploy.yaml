@@ -214,6 +214,10 @@ spec:
           value: "beclab/upload:v1.0.3"
         - name: JOB_IMAGE
           value: "beclab/upgrade-job:0.1.7"
+        # placeholder until a real immutable @sha256: digest is pinned by the
+        # release pipeline; an unconfigured value fails open (image_unconfigured).
+        - name: D2_SIDECAR_IMAGE
+          value: "sha256:d2-placeholder"
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
         - name: CLUSTER_CPU_THRESHOLD

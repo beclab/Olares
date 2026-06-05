@@ -11,10 +11,13 @@ import (
 
 func TestGetTLSOffloaderContainerSpec_Contract(t *testing.T) {
 	configVolumeName := constants.D2ConfVolumeNamePrefix + "abc123"
-	got := GetTLSOffloaderContainerSpec(configVolumeName)
+	image := "beclab/nginx@sha256:deadbeef"
+	got := GetTLSOffloaderContainerSpec(configVolumeName, image)
 
 	require.Equal(t, constants.D2SidecarContainerName, got.Name)
-	require.Equal(t, constants.D2SidecarImageDigest, got.Image)
+	// WI-NAT-1: the image is supplied by the caller (D2_SIDECAR_IMAGE env via the
+	// webhook seam), not read from a compile-time constant.
+	require.Equal(t, image, got.Image)
 	require.NotNil(t, got.SecurityContext)
 	require.NotNil(t, got.SecurityContext.RunAsUser)
 	require.EqualValues(t, constants.D2SidecarUID, *got.SecurityContext.RunAsUser)
@@ -58,6 +61,19 @@ func TestGetTLSOffloaderContainerSpec_Contract(t *testing.T) {
 	require.Equal(t, "192Mi", got.Resources.Limits.Memory().String())
 	_, hasCPULimit := got.Resources.Limits["cpu"]
 	require.False(t, hasCPULimit)
+}
+
+// WI-NAT-1: GetTLSOffloaderContainerSpec is a pure pass-through for the image;
+// the image_unconfigured fail-open is enforced upstream in the webhook guard, so
+// the spec faithfully reflects whatever image (including empty/placeholder) it is
+// given without substituting a default.
+func TestGetTLSOffloaderContainerSpec_ImagePassThrough(t *testing.T) {
+	configVolumeName := constants.D2ConfVolumeNamePrefix + "abc123"
+	require.Equal(t, "", GetTLSOffloaderContainerSpec(configVolumeName, "").Image)
+	require.Equal(t,
+		constants.D2SidecarImagePlaceholder,
+		GetTLSOffloaderContainerSpec(configVolumeName, constants.D2SidecarImagePlaceholder).Image,
+	)
 }
 
 func TestGetTLSOffloaderInitContainerSpec_Contract(t *testing.T) {
