@@ -740,7 +740,7 @@ EOF
 		return errors.Wrap(errors.WithStack(err), "failed to generate NetworkManager config")
 	}
 
-	if _, err := runtime.GetRunner().SudoCmd("systemctl restart NetworkManager", false, false); err != nil {
+	if _, err := runtime.GetRunner().SudoCmd("nmcli general reload", false, false); err != nil {
 		return err
 	}
 

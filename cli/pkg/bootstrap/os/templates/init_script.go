@@ -104,7 +104,7 @@ match-device=type:bridge
 ignore-carrier=no
 EOF
 
-systemctl restart NetworkManager 1>/dev/null 2>/dev/null
+nmcli general reload 1>/dev/null 2>/dev/null
 
 
 modinfo br_netfilter > /dev/null 2>&1
