@@ -1,18 +1,25 @@
 ---
 name: olares-shared
-version: 4.0.0
-description: "Olares profile and authentication foundation for olares-cli — required prerequisite for every other olares-cli skill on Olares (files, market, settings, dashboard, cluster). Covers the Olares profile model (one profile = one Olares instance + one Olares ID, e.g. alice@olares.com), first-time Olares login with password and optional TOTP, importing an existing refresh_token, switching / listing / removing Olares profiles, OS-keychain token storage keyed by Olares ID, automatic access_token refresh on 401/403, and the full Olares auth-error recovery table. Use when the user mentions Olares, Olares ID, olares-cli, OpenClaw on Olares, profile, login, logout, two-factor / 2FA / TOTP, refresh token, keychain, or sees errors like 'server rejected the access token', 'refresh token for X became invalid', 'no access token for X', 'already authenticated', or 'two-factor authentication required'."
+version: 4.1.0
+description: "Olares profile and auth foundation for olares-cli — prerequisite for all olares-* skills. Profile login, import, list, use, remove, keychain tokens, 401/403 recovery. Use for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, auth errors."
+compatibility: Requires olares-cli on PATH
 metadata:
-  requires:
-    bins: ["olares-cli"]
-  cliHelp: "olares-cli profile --help"
+  openclaw:
+    requires:
+      bins:
+        - olares-cli
 ---
 
 # olares-cli shared rules
 
 Foundation for every other `olares-cli` skill. Every business verb under `cluster` / `files` / `market` / `settings` / `dashboard` rides the active profile's token. **Read this first.**
 
-> **Source of truth for flags & syntax is always `olares-cli <command> --help`.** This file only carries what `--help` cannot give: the profile mental model, agent-driven login flow, token-storage backends, refresh semantics, and the error → fix matrix.
+> **Source of truth for flags & syntax is always `olares-cli profile --help`.** This file only carries what `--help` cannot give: the profile mental model, agent-driven login flow, token-storage backends, refresh semantics, and the error → fix matrix.
+
+## When to use
+
+- Olares, Olares ID, olares-cli, OpenClaw on Olares, profile, login, logout, two-factor / 2FA / TOTP, refresh token, keychain
+- Auth errors: `server rejected the access token`, `refresh token for X became invalid`, `no access token for X`, `already authenticated`, `two-factor authentication required`
 
 ## Profile model
 

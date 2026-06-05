@@ -1,18 +1,26 @@
 ---
 name: olares-files
-version: 4.0.0
-description: "Olares Files (olares-cli files) — manage files on an Olares system from the command line, scoped to the active Olares ID. Covers list (ls), upload, download, cat, edit (open in $EDITOR), mkdir, rm, cp, mv, rename, chown (POSIX owner uid get/set), folder share (internal cross-Olares-ID, public link with password + expiration, SMB Samba), mount / unmount / favorite external SMB servers, and Sync (Seafile) repo CRUD — all against the per-Olares-ID files-backend on Olares (drive/Home, drive/Data, sync, cache, external, awss3, dropbox, google, tencent, share). Use when the user mentions Olares, Olares ID, Olares Files, olares-cli files, LarePass Files on Olares, drive, Home, Data, sync, cache, uploading / downloading / listing / editing remote files on Olares, in-place rename, POSIX file ownership, sharing a folder with another Olares user (by Olares ID), public link with password / expiration, SMB / Samba network shares, the LarePass 'Connect to Server' dialog, or Sync (Seafile) libraries."
+version: 4.1.0
+description: "Olares Files via olares-cli files — ls, upload, download, edit, share, SMB mount, Seafile sync on drive/Home, drive/Data, cache, external, cloud. Use for Olares Files, drive, upload, download, share, SMB, LarePass Files."
+compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
-  requires:
-    bins: ["olares-cli"]
-  cliHelp: "olares-cli files --help"
+  openclaw:
+    requires:
+      bins:
+        - olares-cli
 ---
 
 # files (per-user files-backend)
 
-**CRITICAL — before running any verb here, MUST use the Read tool to read [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for profile selection, login, and 401/403 recovery rules.**
+**CRITICAL — before running any verb here, load the `olares-shared` skill first (profile selection, login, 401/403 recovery). Flag reference: `olares-cli files --help`.**
 
 > **Source of truth for flags & wire shapes is always `olares-cli files <verb> --help`.** This file only carries what `--help` cannot give: the cross-cutting frontend-path concept, the trailing-slash convention, the five client-side hard constraints, and the verb index.
+
+## When to use
+
+- Olares Files, olares-cli files, LarePass Files, drive, Home, Data, sync, cache, upload, download, list, edit, rename, chown
+- Share: internal cross-Olares-ID, public link (password / expiration), SMB / Samba, Connect to Server, Seafile sync repos
+- Namespaces: `drive`, `cache`, `sync`, `external`, `awss3`, `dropbox`, `google`, `tencent`, `share`
 
 ## Core concept: the 3-segment frontend path
 

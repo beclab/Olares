@@ -1,18 +1,26 @@
 ---
 name: olares-market
-version: 4.0.0
-description: "Olares Market (olares-cli market) — install, upgrade, and manage Olares apps on Olares from the command line. Per-Olares-ID Market app-store v2 mirror of the Olares Market UI, scoped to the active Olares ID. Covers catalog browsing (list, get, categories), the full Olares app lifecycle (install, uninstall, upgrade, clone, cancel, stop, resume), runtime status, --mine view of the active Olares ID's apps (same set the Market UI's My Terminus tab shows, including in-flight installs / upgrades / failures), upload / delete for local Helm chart packages, and --watch flags that block until the app reaches a terminal state. Use when the user mentions Olares, Olares ID, Olares Market, olares-cli market, Olares app store, installing / upgrading / uninstalling / cloning / stopping / resuming / cancelling an Olares app, 'my Olares apps', '我的应用', upload chart, --watch, or asks 'is <app> installed yet on my Olares' / 'show me my Olares apps'."
+version: 4.1.0
+description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, upload chart."
+compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
-  requires:
-    bins: ["olares-cli"]
-  cliHelp: "olares-cli market --help"
+  openclaw:
+    requires:
+      bins:
+        - olares-cli
 ---
 
 # market (App-store v2)
 
-**CRITICAL — before doing anything, MUST use the Read tool to read [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for profile selection, login, automatic token refresh, and the auth-error recovery table.**
+**CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli market --help`.**
 
 > **Source of truth for flags is always `olares-cli market <verb> --help`.** This file only carries what `--help` cannot give: source resolution, the lifecycle state machine, OpType-vs-State race safety, the verb index, the `-s`/`-a` matrix, and the "what apps do I have" routing.
+
+## When to use
+
+- Olares Market, olares-cli market, Olares app store, install / upgrade / uninstall / clone / stop / resume / cancel an app
+- `my Olares apps`, `我的应用`, `market list --mine`, `is <app> installed yet`, chart upload / delete, `--watch` until terminal state
+- Catalog: `list`, `get`, `categories`; runtime: `status`
 
 ## Routing
 
