@@ -257,12 +257,13 @@ type Permission struct {
 type Ref struct {
 	AppName      string       `json:"appName"`
 	AppNamespace string       `json:"appNamespace,omitempty"`
-	Subjects     []RefSubject `json:"subjects"`
+	Subjects     []RefSubject `json:"subjects,omitempty"`
 }
 
 type RefSubject struct {
-	Name string   `yaml:"name" json:"name"`
-	Perm []string `yaml:"perm" json:"perm"`
+	Name string `yaml:"name" json:"name"`
+	Pub  string `yaml:"pub,omitempty" json:"pub,omitempty"`
+	Sub  string `yaml:"sub,omitempty" json:"sub,omitempty"`
 }
 
 type CitusDatabase struct {

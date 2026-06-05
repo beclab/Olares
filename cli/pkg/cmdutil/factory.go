@@ -27,6 +27,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
+
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
@@ -106,6 +108,15 @@ type Factory struct {
 
 	uploadClientOnce sync.Once
 	uploadClient     *http.Client
+
+	// backendVersion memoizes the detected Olares backend version (see
+	// olares_version.go). backendVersionMu guards the cell because
+	// RefreshOlaresBackendVersion may overwrite it after the initial
+	// sync.Once resolution.
+	backendVersionOnce sync.Once
+	backendVersionMu   sync.Mutex
+	backendVersion     *semver.Version
+	backendVersionErr  error
 }
 
 // NewFactory builds a fresh Factory. Cheap; intended to be called once per

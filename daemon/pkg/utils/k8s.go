@@ -572,10 +572,21 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	}
 
 	for _, app := range apps.Items {
-		entrances, err := appcfg.GenEntranceURL(ctx, &app)
-		if err != nil {
-			klog.Error("generate application entrance url error, ", err, ", ", app.Name)
-			continue
+		var entrances []appcfg.Entrance
+		var err error
+		if !isV3(&app) {
+			entrances, err = appcfg.GenEntranceURL(ctx, &app)
+			if err != nil {
+				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
+				continue
+			}
+		} else {
+
+			entrances, err = BatchGenSharedAppEntranceURL(ctx, &app)
+			if err != nil {
+				klog.Error("generate shared application entrance url error, ", err, ", ", app.Name)
+				continue
+			}
 		}
 
 		for _, entrance := range entrances {
@@ -771,4 +782,63 @@ func GetWorkloadNameFromPod(pod *corev1.Pod) string {
 	podTemplateHash := pod.Labels["pod-template-hash"]
 	podNameTokens := strings.Split(pod.Name, fmt.Sprintf("-%s-", podTemplateHash))
 	return podNameTokens[0]
+}
+
+const (
+	AppApiVersionLabel = "app.bytetrade.io/api-version"
+	AppVersionV3       = "v3"
+)
+
+func isV3(a *appv1alpha1.Application) bool {
+	return a.Labels != nil && a.Labels[AppApiVersionLabel] == AppVersionV3
+}
+
+func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Application) ([]appcfg.Entrance, error) {
+	if !isV3(app) {
+		return nil, nil
+	}
+
+	client, err := GetDynamicClient()
+	if err != nil {
+		klog.Error("get dynamic client error, ", err)
+		return nil, err
+	}
+
+	users, err := ListUsers(ctx, client, func(u *unstructured.Unstructured) bool {
+		return true
+	})
+	if err != nil {
+		klog.Error("list user error, ", err)
+		return nil, err
+	}
+
+	var entrances []appcfg.Entrance
+	for _, u := range users {
+		a := app.DeepCopy()
+		a.Spec.Owner = u.GetName()
+		_, err := appcfg.GenEntranceURL(ctx, a)
+		if err != nil {
+			klog.Error("generate entrance url error, ", err)
+			continue
+		}
+
+		entrances = append(entrances, a.Spec.Entrances...)
+	}
+
+	return entrances, nil
+}
+
+func GetUserRole(ctx context.Context, username string, client dynamic.Interface) (string, error) {
+	user, err := client.Resource(UserGVR).Get(ctx, username, metav1.GetOptions{})
+	if err != nil {
+		klog.Error("get user error, ", err)
+		return "", err
+	}
+
+	role, ok := user.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
+	if !ok {
+		return "", errors.New("user role not found")
+	}
+
+	return role, nil
 }

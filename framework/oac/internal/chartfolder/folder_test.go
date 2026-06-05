@@ -21,8 +21,10 @@ func (s stubManifest) AppName() string               { return s.name }
 func (s stubManifest) AppVersion() string            { return s.version }
 func (s stubManifest) Entrances() []olm.EntranceInfo { return nil }
 func (s stubManifest) OptionsImages() []string       { return nil }
-func (s stubManifest) PermissionAppData() bool       { return false }
-func (s stubManifest) Raw() any                      { return nil }
+func (s stubManifest) PermissionAppData() bool      { return false }
+func (s stubManifest) PermissionAppCommon() bool    { return false }
+func (s stubManifest) PermissionExternalData() bool { return false }
+func (s stubManifest) Raw() any                     { return nil }
 
 // writeFile creates a file at p with contents.
 func writeFile(t *testing.T, p, contents string) {

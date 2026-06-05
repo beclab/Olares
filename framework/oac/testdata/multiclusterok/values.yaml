@@ -1,0 +1,3 @@
+workloads:
+  multiclusterok:
+    replicaCount: 1

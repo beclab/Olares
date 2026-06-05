@@ -53,3 +53,7 @@ build-sysevent: fmt vet controller-gen manifests
 
 run-sysevent: fmt vet
 	go run cmd/sys-event/main.go
+
+.PHONY: generate
+generate: controller-gen ## Generate DeepCopy methods (zz_generated.deepcopy.go)
+	$(CONTROLLER_GEN) object paths="./pkg/apis/..."

@@ -53,6 +53,10 @@ var (
 	validDependencyTypes = []any{"system", "application", "middleware"}
 	validAuthLevels      = []any{"", "public", "private", "internal"}
 	validOpenMethods     = []any{"", "default", "iframe", "window"}
+	// validOverlayProtocols enumerates the protocols an overlayGateway
+	// entrance may declare. An empty value is allowed and means the
+	// entrance is reachable over both tcp and udp.
+	validOverlayProtocols = []any{"", "tcp", "udp"}
 )
 
 // validSupportArchSet enumerates the architectures spec.supportArch may
@@ -101,8 +105,9 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 			validation.By(validateAppSpecFor(c)),
 		),
 		validation.Field(&c.Options, validation.By(validateOptions)),
+		validation.Field(&c.OverlayGateway, validation.By(validateOverlayGateway)),
 	)
-	return errors.Join(structErr, checkSubCharts(c))
+	return errors.Join(structErr, checkSubCharts(c), validatePermission(c.ConfigVersion, c.Permission), validateV3Configuration(c))
 }
 
 func validateAppMetaData(v interface{}) error {
@@ -409,6 +414,55 @@ func validateFlatResourceQuantities(spec *AppSpec) error {
 				"%s must be a valid Kubernetes quantity (got %q)",
 				p.name, p.value,
 			))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// validatePermission gates the manifest-level permission flags. Only
+// permission.externalData carries a version constraint: it grants access to
+// the External directory, a capability introduced with olaresManifest.version
+// 0.12.0, so declaring it on an older manifest is rejected. permission.appCommon
+// (access to the Common directory) is accepted at every version and needs no
+// extra validation here.
+func validatePermission(configVersion string, p Permission) error {
+	if p.ExternalData && !resourcesCheckApplies(configVersion) {
+		return fmt.Errorf("permission.externalData is only supported for olaresManifest.version >= %s", minResourcesManifestVersion)
+	}
+	return nil
+}
+
+// validateOverlayGateway runs structural checks on every overlayGateway
+// entrance. The workload reference is required here but its existence against
+// the rendered Deployment/StatefulSet set is verified separately during the
+// chart-render lint phase (the manifest validator has no rendered workloads
+// to compare against). Entrances are validated whenever they are declared,
+// regardless of overlayGateway.enable, so a disabled-but-declared gateway is
+// still well-formed.
+func validateOverlayGateway(v interface{}) error {
+	og, ok := v.(OverlayGateway)
+	if !ok {
+		return fmt.Errorf("overlayGateway: unexpected type %T", v)
+	}
+	var errs []error
+	for i, e := range og.Entrances {
+		if err := validation.ValidateStruct(&e,
+			validation.Field(&e.Title,
+				validation.Required.Error("overlayGateway.entrances.title is required"),
+				validation.Length(1, 30).Error("overlayGateway.entrances.title must be 1-30 characters"),
+			),
+			validation.Field(&e.Port,
+				validation.Required.Error("overlayGateway.entrances.port is required"),
+				validation.Min(int32(1)).Error("overlayGateway.entrances.port must be > 0"),
+			),
+			validation.Field(&e.Workload,
+				validation.Required.Error("overlayGateway.entrances.workload is required"),
+			),
+			validation.Field(&e.Protocol,
+				validation.In(validOverlayProtocols...).Error(`overlayGateway.entrances.protocol must be one of "", "tcp", "udp"`),
+			),
+		); err != nil {
+			errs = append(errs, fmt.Errorf("overlayGateway.entrances[%d]: %w", i, err))
 		}
 	}
 	return errors.Join(errs...)

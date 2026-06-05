@@ -42,5 +42,9 @@ var (
 
 	MinioOperatorFile = path.Join(Root, "usr", "local", "bin", "minio-operator")
 
-	AppCommonDir = path.Join(OlaresJuiceFSRootDir, "Common")
+	AppCommonDir        = path.Join(OlaresJuiceFSRootDir, "Common")
+	HuggingFaceCacheDir = path.Join(AppCommonDir, "huggingface")
+	LLampCPPCacheDir    = path.Join(AppCommonDir, "llama.cpp")
+	OllamaCacheDir      = path.Join(AppCommonDir, "ollama")
+	ComfyUICacheDir     = path.Join(AppCommonDir, "comfyui")
 )

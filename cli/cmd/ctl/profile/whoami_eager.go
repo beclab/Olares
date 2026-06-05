@@ -65,3 +65,48 @@ func eagerWhoami(
 		fmt.Printf("role: %s\n", whoami.FriendlyLabel(res.Info.OwnerRole))
 	}
 }
+
+// eagerBackendVersion runs a best-effort GET /api/olares-info right after
+// `profile login` / `profile import` has persisted the new credentials, and
+// caches the backend osVersion into ProfileConfig.BackendVersion. This is the
+// version-cache analogue of eagerWhoami's role pre-fetch: it makes command-side
+// version branching (e.g. `settings gpu`, `settings network overlay`) accurate
+// from the very first command after login, rather than only after some
+// version-touching command happens to run.
+//
+// Best-effort means: any failure downgrades to a one-line stderr warning and
+// returns. Login/import already succeeded — a transient backend hiccup must
+// not shadow it; the cache will populate on the next version-aware command.
+//
+// We can't piggyback on eagerWhoami: /api/backend/v1/user-info returns only
+// {name, owner_role}, not osVersion — the version lives on the separate
+// /api/olares-info endpoint. Like eagerWhoami we use NewHTTPClientWithToken
+// (the just-minted token) rather than cmdutil.Factory.HTTPClient, which
+// memoizes the token from the first ResolveProfile and may be tied to a
+// different active profile under --no-switch. The actual fetch + parse + cache
+// goes through the shared whoami.FetchAndCacheVersion so there is one
+// olares-info implementation.
+func eagerBackendVersion(
+	ctx context.Context,
+	cfg *cliconfig.MultiProfileConfig,
+	profile cliconfig.ProfileConfig,
+	accessToken string,
+) {
+	if accessToken == "" || cfg == nil {
+		return
+	}
+	id, err := olares.ParseID(profile.OlaresID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: skipped post-login version fetch: %v\n", err)
+		return
+	}
+	desktopURL := id.DesktopURL(profile.LocalURLPrefix)
+	client := whoami.NewHTTPClientWithToken(desktopURL, profile.OlaresID, accessToken, profile.InsecureSkipVerify)
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	if _, err := whoami.FetchAndCacheVersion(ctx, client, cfg, profile.OlaresID, time.Now); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: post-login version fetch failed: %v\n", err)
+	}
+}

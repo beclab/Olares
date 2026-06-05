@@ -139,6 +139,10 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	// warning so a transient backend blip doesn't shadow a successful
 	// login (see eagerWhoami doc comment).
 	eagerWhoami(ctx, cfg, profile, tok.AccessToken)
+	// Best-effort: pre-fill the backend-version cache so version-aware help
+	// / subcommand visibility (settings gpu, settings network overlay) is
+	// accurate from the first command. Same downgrade-to-warning contract.
+	eagerBackendVersion(ctx, cfg, profile, tok.AccessToken)
 	return nil
 }
 

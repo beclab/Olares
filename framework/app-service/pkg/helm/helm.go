@@ -34,6 +34,7 @@ func debug(format string, v ...interface{}) {
 func InitConfig(kubeConfig *rest.Config, namespace string) (*action.Configuration, *cli.EnvSettings, error) {
 	actionConfig := new(action.Configuration)
 	var settings = cli.New()
+	settings.SetNamespace(namespace)
 	helmDriver := os.Getenv("HELM_DRIVER")
 	settings.KubeAPIServer = kubeConfig.Host
 	settings.KubeToken = kubeConfig.BearerToken

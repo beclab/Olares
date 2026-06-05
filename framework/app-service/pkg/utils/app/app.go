@@ -756,6 +756,8 @@ type ConfigOptions struct {
 	// download step is skipped and the chart is assumed to be already present
 	// at the conventional local path (appcfg.ChartsPath + "/" + RawAppName).
 	NeedDownloadChart bool
+	// for v3 app, upload source need to find origin chart
+	OriginOwner string
 }
 
 // GetAppConfig get app installation configuration from app store
@@ -985,6 +987,14 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		permission = append(permission, appcfg.UserDataRW)
 	}
 
+	if cfg.Permission.AppCommon {
+		permission = append(permission, appcfg.AppCommonRW)
+	}
+
+	if cfg.Permission.ExternalData {
+		permission = append(permission, appcfg.ExternalDataRW)
+	}
+
 	if len(cfg.Permission.Provider) > 0 {
 		var perm []appcfg.ProviderPermission
 		for _, s := range cfg.Permission.Provider {
@@ -1088,6 +1098,7 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		LLMGatewaySupported:  cfg.Options.LLMGatewaySupported,
 		OverlayGateway:       cfg.OverlayGateway,
 		WorkloadReplicas:     cfg.WorkloadReplicas,
+		TemplateOnly:         cfg.Options.TemplateOnly,
 	}
 
 	// v3 / shared apps are themselves the destination of cross-namespace
@@ -1137,11 +1148,14 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 		SetAuthToken(options.Token).
 		SetHeader(constants.MarketUser, options.Owner).
 		SetHeader(constants.MarketSource, options.MarketSource)
+	if options.OriginOwner != "" {
+		client.SetHeader(constants.MarketUser, options.OriginOwner)
+	}
 	indexFileURL := options.RepoURL
 	if options.RepoURL[len(options.RepoURL)-1] != '/' {
 		indexFileURL += "/"
 	}
-	klog.Infof("GetIndexAndDownloadChart: user: %v, source: %v", options.Owner, options.MarketSource)
+	klog.Infof("GetIndexAndDownloadChart: user: %v, source: %v, originOwner: %v", options.Owner, options.MarketSource, options.OriginOwner)
 
 	indexFileURL += "static-index.yaml"
 	resp, err := client.R().Get(indexFileURL)
@@ -1189,20 +1203,23 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 			return "", err
 		}
 	}
-	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource)
+	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource, options.OriginOwner)
 	if err != nil {
 		return "", err
 	}
 	return chartPath, nil
 }
 
-func downloadAndUnpack(ctx context.Context, tgz *url.URL, token, owner, marketSource string) (string, error) {
+func downloadAndUnpack(ctx context.Context, tgz *url.URL, token, owner, marketSource, originOwner string) (string, error) {
 	dst := appcfg.ChartsPath
 	g := new(getter.HttpGetter)
 	g.Header = make(http.Header)
 	g.Header.Set("Authorization", "Bearer "+token)
 	g.Header.Set(constants.MarketUser, owner)
 	g.Header.Set(constants.MarketSource, marketSource)
+	if originOwner != "" {
+		g.Header.Set(constants.MarketUser, originOwner)
+	}
 
 	downloader := &getter.Client{
 		Ctx:       ctx,

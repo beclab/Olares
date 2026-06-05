@@ -33,6 +33,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const defaultMacvlanIface = "net1"
+
 // GetEnvoySidecarContainerSpec returns the container specification for the envoy sidecar.
 func GetEnvoySidecarContainerSpec(clusterID string, envoyFilename string, appKey string, appSecret string) corev1.Container {
 	return corev1.Container{
@@ -278,9 +280,32 @@ func getEnvoyConfigOnlyForOutBound(appcfg *appcfg.ApplicationConfig, perms []app
 }
 
 // GetInitContainerSpec returns init container spec.
-func GetInitContainerSpec(appCfg *appcfg.ApplicationConfig) corev1.Container {
-	iptablesInitCommand := generateIptablesCommands(appCfg)
+//
+// When injectMacvlan is true the pod is expected to have a secondary macvlan
+// interface (net1) attached by multus because its owning Application has
+// `enableOverlayGateway=true`. In that case we install extra RETURN rules so
+// traffic entering/leaving via the macvlan NIC bypasses envoy interception.
+func GetInitContainerSpec(appCfg *appcfg.ApplicationConfig, injectMacvlan bool) corev1.Container {
+	iptablesInitCommand := generateIptablesCommands(appCfg, injectMacvlan)
 	enablePrivilegedInitContainer := true
+
+	env := []corev1.EnvVar{
+		{
+			Name: "POD_IP",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  "status.podIP",
+				},
+			},
+		},
+	}
+	if injectMacvlan {
+		env = append(env, corev1.EnvVar{
+			Name:  "MACVLAN_IFACE",
+			Value: defaultMacvlanIface,
+		})
+	}
 
 	return corev1.Container{
 		Name:            constants.SidecarInitContainerName,
@@ -302,21 +327,11 @@ func GetInitContainerSpec(appCfg *appcfg.ApplicationConfig) corev1.Container {
 			"-c",
 			iptablesInitCommand,
 		},
-		Env: []corev1.EnvVar{
-			{
-				Name: "POD_IP",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						APIVersion: "v1",
-						FieldPath:  "status.podIP",
-					},
-				},
-			},
-		},
+		Env: env,
 	}
 }
 
-func generateIptablesCommands(appCfg *appcfg.ApplicationConfig) string {
+func generateIptablesCommands(appCfg *appcfg.ApplicationConfig, injectMacvlan bool) string {
 	cmd := fmt.Sprintf(`iptables-restore --noflush <<EOF
 # sidecar interception rules
 *nat
@@ -339,12 +354,25 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig) string {
 		}
 	}
 
+	// Bypass envoy for traffic arriving on the macvlan NIC; must come before
+	// the catch-all redirect to PROXY_IN_REDIRECT.
+	if injectMacvlan {
+		cmd += "-A PROXY_INBOUND -i ${MACVLAN_IFACE} -j RETURN\n"
+	}
+
 	cmd += fmt.Sprintf(`-A PROXY_INBOUND -p tcp -j PROXY_IN_REDIRECT
 -A PROXY_IN_REDIRECT -p tcp -j REDIRECT --to-port %d
 `, constants.EnvoyInboundListenerPort)
 
-	cmd += fmt.Sprintf(`-A PROXY_OUTBOUND -d ${POD_IP}/32 -j RETURN
--A PROXY_OUTBOUND -o lo ! -d 127.0.0.1/32 -m owner --uid-owner 1555 -j PROXY_IN_REDIRECT
+	cmd += `-A PROXY_OUTBOUND -d ${POD_IP}/32 -j RETURN
+`
+	// Bypass envoy for traffic leaving via the macvlan NIC; must come before
+	// the multiport / PROXY_OUT_REDIRECT rules.
+	if injectMacvlan {
+		cmd += "-A PROXY_OUTBOUND -o ${MACVLAN_IFACE} -j RETURN\n"
+	}
+
+	cmd += fmt.Sprintf(`-A PROXY_OUTBOUND -o lo ! -d 127.0.0.1/32 -m owner --uid-owner 1555 -j PROXY_IN_REDIRECT
 -A PROXY_OUTBOUND -o lo -m owner ! --uid-owner 1555 -j RETURN
 -A PROXY_OUTBOUND -m owner --uid-owner 1555 -j RETURN
 -A PROXY_OUTBOUND -d 127.0.0.1/32 -j RETURN

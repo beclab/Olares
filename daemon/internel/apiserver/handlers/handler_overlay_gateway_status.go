@@ -46,6 +46,10 @@ func (h *Handlers) GetOverlayGatewayStatus(ctx *fiber.Ctx) error {
 		return h.ErrJSON(ctx, http.StatusBadRequest, "user is required")
 	}
 
+	if err := h.itsMe(ctx, user); err != nil {
+		return h.ErrJSON(ctx, http.StatusForbidden, err.Error())
+	}
+
 	s, err := h.getOverlayGatewayStatus(ctx.Context())
 	if err != nil {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())

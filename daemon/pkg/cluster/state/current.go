@@ -153,6 +153,10 @@ func CheckCurrentStatus(ctx context.Context) error {
 					CurrentState.WifiSSID = &d.Connection
 				case "ethernet":
 					CurrentState.WiredConnected = true
+				case "bridge":
+					if d.Name == "br-olares" {
+						CurrentState.WiredConnected = true
+					}
 				}
 				continue
 			}

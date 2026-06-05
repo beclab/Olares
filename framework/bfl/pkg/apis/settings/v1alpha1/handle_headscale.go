@@ -10,10 +10,12 @@ import (
 
 	"bytetrade.io/web3os/bfl/pkg/api/response"
 	v1alpha1client "bytetrade.io/web3os/bfl/pkg/client/clientset/v1alpha1"
-	"bytetrade.io/web3os/bfl/pkg/client/dynamic_client"
-	"bytetrade.io/web3os/bfl/pkg/client/dynamic_client/apps"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/utils"
+
+	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	appclientset "github.com/beclab/api/pkg/generated/clientset/versioned"
+	appv1typed "github.com/beclab/api/pkg/generated/clientset/versioned/typed/app.bytetrade.io/v1alpha1"
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -38,6 +40,29 @@ type SshAcl struct {
 type Acl struct {
 	Proto string   `json:"proto"`
 	Dst   []string `json:"dst"`
+}
+
+// AdvertiseExitNode is stored on Spec.TailScale.AdvertiseExitNode as a
+// string ("true"/"false") so it can be propagated verbatim into the
+// tailscale container's ADVERTISE_EXIT_NODE env var by app-service.
+const (
+	advertiseExitNodeEnabled  = "true"
+	advertiseExitNodeDisabled = "false"
+)
+
+type TailScaleAdvertiseExitNode struct {
+	AdvertiseExitNode bool     `json:"advertise_exit_node"`
+	State             AclState `json:"state"`
+}
+
+// appsClient returns the typed Applications client backed by beclab/api's
+// generated clientset.
+func appsClient() (appv1typed.ApplicationInterface, error) {
+	cs, err := appclientset.NewForConfig(v1alpha1client.KubeClient.Config())
+	if err != nil {
+		return nil, err
+	}
+	return cs.AppV1alpha1().Applications(), nil
 }
 
 // settings' acl
@@ -74,7 +99,7 @@ func (h *Handler) handleDisableHeadscaleSshAcl(req *restful.Request, resp *restf
 		response.HandleError(resp, err)
 		return
 	}
-	acls := make([]apps.ACL, 0)
+	acls := make([]appv1.ACL, 0)
 	for _, acl := range app.Spec.TailScale.ACLs {
 		if acl.Dst[0] == "*:22" {
 			continue
@@ -92,7 +117,7 @@ func (h *Handler) handleEnableHeadscaleSshAcl(req *restful.Request, resp *restfu
 		return
 	}
 	acls := app.Spec.TailScale.ACLs
-	acls = append(acls, apps.ACL{Proto: "tcp", Dst: []string{"*:22"}})
+	acls = append(acls, appv1.ACL{Proto: "tcp", Dst: []string{"*:22"}})
 	h.setHeadscaleAcl(req, resp, systemAppName, acls)
 }
 
@@ -180,7 +205,7 @@ func (h *Handler) handleHeadscaleACLList(req *restful.Request, resp *restful.Res
 	response.Success(resp, acls)
 }
 
-func (h *Handler) setHeadscaleAcl(req *restful.Request, resp *restful.Response, appName string, acls []apps.ACL) {
+func (h *Handler) setHeadscaleAcl(req *restful.Request, resp *restful.Response, appName string, acls []appv1.ACL) {
 
 	app, err := h.findApp(req.Request.Context(), appName)
 	if err != nil {
@@ -189,8 +214,7 @@ func (h *Handler) setHeadscaleAcl(req *restful.Request, resp *restful.Response, 
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-
-		client, err := dynamic_client.NewResourceClient[apps.Application](apps.ApplicationGvr)
+		client, err := appsClient()
 		if err != nil {
 			klog.Error("failed to get client: ", err)
 			return err
@@ -203,7 +227,7 @@ func (h *Handler) setHeadscaleAcl(req *restful.Request, resp *restful.Response, 
 		}
 
 		updateApp.Spec.TailScale.ACLs = acls
-		updateApp.Spec.TailScaleACLs = []apps.ACL{}
+		updateApp.Spec.TailScaleACLs = []appv1.ACL{}
 		_, err = client.Update(req.Request.Context(), updateApp, metav1.UpdateOptions{})
 
 		return err
@@ -218,20 +242,21 @@ func (h *Handler) setHeadscaleAcl(req *restful.Request, resp *restful.Response, 
 	response.SuccessNoData(resp)
 }
 
-func (h *Handler) findApp(ctx context.Context, appName string) (*apps.Application, error) {
-	client, err := dynamic_client.NewResourceClient[apps.Application](apps.ApplicationGvr)
+func (h *Handler) findApp(ctx context.Context, appName string) (*appv1.Application, error) {
+	client, err := appsClient()
 	if err != nil {
 		klog.Error("failed to get client: ", err)
 		return nil, err
 	}
 
-	apps, err := client.List(ctx, metav1.ListOptions{})
+	appList, err := client.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.Error("list app error: ", err)
 		return nil, err
 	}
 
-	for _, a := range apps {
+	for i := range appList.Items {
+		a := &appList.Items[i]
 		if a.Spec.Name == appName && a.Spec.Owner == constants.Username {
 			return a, nil
 		}
@@ -240,15 +265,15 @@ func (h *Handler) findApp(ctx context.Context, appName string) (*apps.Applicatio
 	return nil, errors.New("app not found")
 }
 
-func (h *Handler) parseAcl(req *restful.Request) ([]apps.ACL, error) {
-	var acls []apps.ACL
+func (h *Handler) parseAcl(req *restful.Request) ([]appv1.ACL, error) {
+	var acls []appv1.ACL
 	err := req.ReadEntity(&acls)
 	if err != nil {
 		klog.Error("parse request acl body error, ", err)
 		return nil, err
 	}
 
-	err = apps.CheckTailScaleACLs(acls)
+	err = CheckTailScaleACLs(acls)
 	if err != nil {
 		klog.Error("check acl error, ", err)
 		return nil, err
@@ -302,6 +327,57 @@ func (h *Handler) handleDisableTailScaleSubnet(req *restful.Request, resp *restf
 	h.setTailScaleSubRoutes(req, resp, systemAppName, tailScaleSubRoutes)
 }
 
+func (h *Handler) handleGetTailScaleAdvertiseExitNode(req *restful.Request, resp *restful.Response) {
+	app, err := h.findApp(req.Request.Context(), systemAppName)
+	if err != nil {
+		response.HandleError(resp, err)
+		return
+	}
+
+	advertise := strings.EqualFold(app.Spec.TailScale.AdvertiseExitNode, advertiseExitNodeEnabled)
+	response.Success(resp, TailScaleAdvertiseExitNode{
+		AdvertiseExitNode: advertise,
+		State:             AclStateApplied,
+	})
+}
+
+func (h *Handler) handleEnableTailScaleAdvertiseExitNode(req *restful.Request, resp *restful.Response) {
+	h.setTailScaleAdvertiseExitNode(req, resp, systemAppName, advertiseExitNodeEnabled)
+}
+
+func (h *Handler) handleDisableTailScaleAdvertiseExitNode(req *restful.Request, resp *restful.Response) {
+	h.setTailScaleAdvertiseExitNode(req, resp, systemAppName, advertiseExitNodeDisabled)
+}
+
+func (h *Handler) setTailScaleAdvertiseExitNode(req *restful.Request, resp *restful.Response, appName, value string) {
+	app, err := h.findApp(req.Request.Context(), appName)
+	if err != nil {
+		response.HandleError(resp, err)
+		return
+	}
+	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		client, err := appsClient()
+		if err != nil {
+			klog.Error("failed to get client: ", err)
+			return err
+		}
+		updateApp, err := client.Get(req.Request.Context(), app.Name, metav1.GetOptions{})
+		if err != nil {
+			klog.Error("failed to get app: ", err, ", ", app.Name)
+			return err
+		}
+		updateApp.Spec.TailScale.AdvertiseExitNode = value
+		_, err = client.Update(req.Request.Context(), updateApp, metav1.UpdateOptions{})
+		return err
+	})
+	if err != nil {
+		klog.Errorf("Failed to update tailScale advertiseExitNode: %v", err)
+		response.HandleError(resp, err)
+		return
+	}
+	response.SuccessNoData(resp)
+}
+
 func (h *Handler) setTailScaleSubRoutes(req *restful.Request, resp *restful.Response, appName string, subRoutes []string) {
 	app, err := h.findApp(req.Request.Context(), appName)
 	if err != nil {
@@ -309,7 +385,7 @@ func (h *Handler) setTailScaleSubRoutes(req *restful.Request, resp *restful.Resp
 		return
 	}
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		client, err := dynamic_client.NewResourceClient[apps.Application](apps.ApplicationGvr)
+		client, err := appsClient()
 		if err != nil {
 			klog.Error("failed to get client: ", err)
 			return err
@@ -331,8 +407,8 @@ func (h *Handler) setTailScaleSubRoutes(req *restful.Request, resp *restful.Resp
 	response.SuccessNoData(resp)
 }
 
-func (h *Handler) appList(ctx context.Context) ([]*apps.Application, error) {
-	client, err := dynamic_client.NewResourceClient[apps.Application](apps.ApplicationGvr)
+func (h *Handler) appList(ctx context.Context) ([]*appv1.Application, error) {
+	client, err := appsClient()
 	if err != nil {
 		klog.Error("failed to get client: ", err)
 		return nil, err
@@ -343,8 +419,9 @@ func (h *Handler) appList(ctx context.Context) ([]*apps.Application, error) {
 		klog.Error("list app error: ", err)
 		return nil, err
 	}
-	filteredApps := make([]*apps.Application, 0)
-	for _, a := range appList {
+	filteredApps := make([]*appv1.Application, 0)
+	for i := range appList.Items {
+		a := &appList.Items[i]
 		if a.Spec.Owner != constants.Username {
 			continue
 		}
@@ -354,7 +431,7 @@ func (h *Handler) appList(ctx context.Context) ([]*apps.Application, error) {
 	return filteredApps, nil
 }
 
-func isPortDuplicate(acls []apps.ACL) bool {
+func isPortDuplicate(acls []appv1.ACL) bool {
 	portMap := make(map[string]struct{})
 
 	for _, acl := range acls {

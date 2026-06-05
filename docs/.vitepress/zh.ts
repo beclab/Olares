@@ -554,6 +554,10 @@ const side = {
           link: "/zh/manual/best-practices/install-olares-gpu-passthrough",
         },
         {
+          text: "安装特定版本的 CUDA",
+          link: "/zh/manual/best-practices/install-specific-cuda-version",
+        },
+        {
           text: "在 Olares 中扩展存储空间",
           link: "/zh/manual/best-practices/expand-storage-in-olares",
         },

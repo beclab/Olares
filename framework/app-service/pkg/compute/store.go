@@ -34,6 +34,38 @@ func FetchNodeComputeAllocations(ctx context.Context, c client.Client) ([]Node, 
 	return nodes, nil
 }
 
+// FetchNodeComputeAllocationsExcludingApp returns the node view with the given
+// app's own allocation rows excluded, so a re-allocation / re-binding of that
+// app does not count its current claim against availability (an exclusive card
+// the app already holds would otherwise report zero free memory). Callers that
+// persist via replaceAppAllocations drop those rows anyway, so excluding them
+// here keeps the availability view consistent with the post-write state.
+func FetchNodeComputeAllocationsExcludingApp(ctx context.Context, c client.Client, appName, owner string) ([]Node, error) {
+	nodes, err := loadNodeResources(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	allocations, err := loadAllocations(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	attachBindings(nodes, withoutAppAllocations(allocations, appName, owner))
+	return nodes, nil
+}
+
+// withoutAppAllocations returns allocations excluding the rows owned by the
+// given (appName, owner) pair.
+func withoutAppAllocations(allocations []Allocation, appName, owner string) []Allocation {
+	out := make([]Allocation, 0, len(allocations))
+	for _, allocation := range allocations {
+		if allocation.AppName == appName && allocation.Owner == owner {
+			continue
+		}
+		out = append(out, allocation)
+	}
+	return out
+}
+
 func loadAllocations(ctx context.Context, c client.Client) ([]Allocation, error) {
 	_, allocations, err := loadAllocationConfigMap(ctx, c)
 	return allocations, err
@@ -72,7 +104,16 @@ func FindAllocationsForApp(ctx context.Context, c client.Client, appName, owner 
 
 func mutateAllocations(ctx context.Context, c client.Client, mutation allocationMutation) (*Allocation, error) {
 	var selected *Allocation
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	// Retry on AlreadyExists in addition to Conflict: the first allocation on a
+	// fresh cluster creates the config map, and two concurrent first-time
+	// allocations both observe NotFound and both Create. The loser gets
+	// AlreadyExists; retrying re-reads the now-existing config map and falls
+	// through to the optimistic-locked Update path, so its allocation is merged
+	// instead of being silently dropped.
+	retriable := func(err error) bool {
+		return apierrors.IsConflict(err) || apierrors.IsAlreadyExists(err)
+	}
+	err := retry.OnError(retry.DefaultRetry, retriable, func() error {
 		nodes, err := loadNodeResources(ctx, c)
 		if err != nil {
 			return err
@@ -81,7 +122,10 @@ func mutateAllocations(ctx context.Context, c client.Client, mutation allocation
 		if err != nil {
 			return err
 		}
-		attachBindings(nodes, allocations)
+		// Bindings are intentionally not attached here: app-specific mutations
+		// must decide whether to count an app's own existing allocation against
+		// availability (re-allocation excludes it), so they attach the node view
+		// themselves. Mutations that ignore nodes (e.g. delete) are unaffected.
 
 		next, allocation, err := mutation(nodes, allocations)
 		if err != nil {

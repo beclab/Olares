@@ -111,6 +111,15 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 		return values, err
 	}
 
+	// Inject .Values.workloads.<name>.replicaCount when the app opts into
+	// per-workload replica control. SetValues will override this with the
+	// scale=0 map during real install/upgrade; the dry-run path keeps the
+	// manifest-declared values so Helm template rendering matches what the
+	// final cluster will see.
+	if appConfig.HasWorkloadReplicas() {
+		values["workloads"] = buildWorkloadsValues(appConfig.WorkloadReplicas, -1)
+	}
+
 	if dryRun {
 		// Placeholder values for keys that require HelmOps context, have side
 		// effects, or are otherwise hard to obtain during the image-download
@@ -152,12 +161,56 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 	return values, nil
 }
 
-func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
+// buildWorkloadsValues renders the .Values.workloads sub-tree from the
+// per-workload replica map declared in OlaresManifest.yaml.
+//
+//	{
+//	  "<workload-name>": {"replicaCount": <N>},
+//	  ...
+//	}
+//
+// It emits exactly the workloads listed in the manifest. Per the
+// HasWorkloadReplicas convention the manifest is expected to list every
+// chart workload, so this set is authoritative and matches the lookup
+// in ApplicationConfig.DesiredReplicas.
+//
+// When override >= 0 every listed workload receives the override value
+// regardless of the declaration (used to force replicas=0 during the
+// initial helm install/upgrade and to scale to 0 on stop). When
+// override < 0 each workload uses its manifest-declared value.
+func buildWorkloadsValues(wr *appcfg.WorkloadReplicas, override int32) map[string]interface{} {
+	out := make(map[string]interface{})
+	if wr == nil {
+		return out
+	}
+	for name, declared := range *wr {
+		rc := declared
+		if override >= 0 {
+			rc = override
+		}
+		out[name] = map[string]interface{}{"replicaCount": rc}
+	}
+	return out
+}
+
+func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, err error) {
 	ctx := context.TODO()
 
 	values, err = BuildBaseHelmValues(ctx, h.kubeConfig, h.app, h.app.OwnerName, false)
 	if err != nil {
 		return values, err
+	}
+	// Force every workload to replicas=0 on the initial helm install/upgrade.
+	// The state machine performs a second helm upgrade via HelmOps.Scale once
+	// pressure checks pass to bring the workloads up to their declared sizes.
+	// Apps without WorkloadReplicas leave this key unset and follow the
+	// legacy single-phase flow.
+	if h.app.HasWorkloadReplicas() {
+		if isInstallOp || h.options.SkipWaitForStartUp {
+			values["workloads"] = buildWorkloadsValues(h.app.WorkloadReplicas, 0)
+		} else {
+			values["workloads"] = buildWorkloadsValues(h.app.WorkloadReplicas, -1)
+		}
 	}
 	err = h.AddEnvironmentVariables(values, false)
 	if err != nil {
@@ -204,7 +257,7 @@ func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 	h.app.Permission = ParseAppPermission(h.app.Permission)
 	for _, p := range h.app.Permission {
 		switch perm := p.(type) {
-		case appcfg.AppDataPermission, appcfg.AppCachePermission, appcfg.UserDataPermission:
+		case appcfg.AppDataPermission, appcfg.AppCachePermission, appcfg.UserDataPermission, appcfg.AppCommonPermission:
 
 			// app requests app data permission
 			// set .Values.schedule.nodeName and .Values.userspace.appCache to app
@@ -230,6 +283,13 @@ func (h *HelmOps) SetValues() (values map[string]interface{}, err error) {
 			if perm == appcfg.AppDataRW {
 				appData := fmt.Sprintf("%s/Data", userspacePath)
 				userspace["appData"] = filepath.Join(appData, h.app.AppName)
+			}
+			if perm == appcfg.AppCommonRW {
+				rootPath := userspacev1.DefaultRootPath
+				if os.Getenv(userspacev1.OlaresRootPath) != "" {
+					rootPath = os.Getenv(userspacev1.OlaresRootPath)
+				}
+				userspace["appCommon"] = fmt.Sprintf("%s/rootfs/Common", rootPath)
 			}
 
 		case []appcfg.ProviderPermission:

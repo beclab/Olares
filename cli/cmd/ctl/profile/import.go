@@ -90,5 +90,6 @@ func runImport(ctx context.Context, o *importOptions) error {
 	printSwitchNotice(res, profile.DisplayName())
 	printStorageNotice(profile.OlaresID)
 	eagerWhoami(ctx, cfg, profile, tok.AccessToken)
+	eagerBackendVersion(ctx, cfg, profile, tok.AccessToken)
 	return nil
 }

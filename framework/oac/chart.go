@@ -3,10 +3,13 @@ package oac
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"helm.sh/helm/v3/pkg/kube"
+	"sigs.k8s.io/yaml"
 
 	"github.com/beclab/Olares/framework/oac/internal/chartfolder"
 	"github.com/beclab/Olares/framework/oac/internal/helmrender"
@@ -19,17 +22,22 @@ import (
 //
 //  1. Folder layout (chartfolder.CheckLayout) - skipped by SkipFolderCheck
 //  2. Manifest parse + ozzo validation - skipped by SkipManifestCheck
-//  3. Built-in .Values.userspace.appdata cross-check - skipped by
-//     SkipAppDataCheck (on by default)
+//  3. Built-in chart template cross-checks (permission vs appdata/appCommon/
+//     sharedlib; apiVersion=v3 ban on OLARES_USER_* in templates/values.yaml)
+//     - permission checks skipped by SkipAppDataCheck (on by default)
 //  4. Custom validators registered via WithCustomValidator (none by default)
 //  5. Helm dry-run and mandatory workload-integrity checks (upload mount
-//     path, `type=app` workload naming) - ALWAYS run; not governed by any
-//     Skip* option
+//     path, `type=app` workload naming, workloadReplicas <-> rendered
+//     workload exact match plus values.yaml replicaCount coverage, and
+//     overlayGateway entrance workload existence) - ALWAYS run; not
+//     governed by any Skip* option
 //  6. HostPath + rolling-update incompatibility check - ON by default,
 //     turn off with SkipHostPathCheck()
 //  7. Rendered-resource namespace check (workloads in app-namespace;
 //     other resources in app-namespace or user-system-*) - ON by default,
 //     turn off with SkipResourceNamespaceCheck()
+//     7b. allowMultipleInstall cluster-scoped fixed-name check (v1/v3 only;
+//     skipped for v2) - ALWAYS run when options.allowMultipleInstall is true
 //  8. Container-level resource limits check - skipped by SkipResourceCheck
 //  9. Chart.yaml <-> manifest same-version check - ON by default, turn off
 //     with SkipSameVersionCheck()
@@ -67,10 +75,8 @@ func (c *OAC) Lint(oacPath string) error {
 		}
 	}
 
-	if !c.skipAppData {
-		if err := checkAppDataUsage(oacPath, m); err != nil {
-			return err
-		}
+	if err := c.checkChartTemplateRules(oacPath, m); err != nil {
+		return err
 	}
 
 	for _, v := range c.customValidators {
@@ -139,6 +145,14 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 		return err
 	}
 	if err := resources.CheckDeploymentName(list, m.ConfigType(), m.AppName()); err != nil {
+		return err
+	}
+
+	if err := c.checkManifestWorkloadRefs(oacPath, m, list); err != nil {
+		return err
+	}
+
+	if err := c.checkAllowMultipleInstallClusterScoped(oacPath, m, sc); err != nil {
 		return err
 	}
 
@@ -451,6 +465,141 @@ func (c *OAC) renderAllSubCharts(
 		combined = append(combined, list...)
 	}
 	return combined, nil
+}
+
+// checkChartTemplateRules runs owner-independent chart file scans that do not
+// require helm rendering: permission-vs-template cross-checks and, for
+// apiVersion=v3, the ban on OLARES_USER_* names in templates/values.yaml.
+func (c *OAC) checkChartTemplateRules(oacPath string, m Manifest) error {
+	var errs []error
+	if !c.skipAppData {
+		if err := checkPermissionTemplateUsage(oacPath, m); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if isV3Manifest(m) {
+		if err := checkV3OLARESUserInChart(oacPath); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func isV3Manifest(m Manifest) bool {
+	return strings.EqualFold(m.APIVersion(), manifest.APIVersionV3)
+}
+
+// checkManifestWorkloadRefs runs the manifest checks that depend on the
+// rendered workload set and therefore cannot live in the manifest validator:
+//
+//   - workloadReplicas (when declared) must name exactly the rendered
+//     Deployment/StatefulSet set, and values.yaml must carry a matching
+//     workloads.<name>.replicaCount for every entry.
+//   - every overlayGateway entrance workload must reference a rendered
+//     Deployment/StatefulSet.
+//
+// Charts whose Raw() is not *AppConfiguration are skipped silently -- the
+// limit check already surfaces that drift with a hard error.
+func (c *OAC) checkManifestWorkloadRefs(oacPath string, m Manifest, list kube.ResourceList) error {
+	cfg, ok := m.Raw().(*manifest.AppConfiguration)
+	if !ok {
+		return nil
+	}
+	var errs []error
+	if cfg.WorkloadReplicas != nil {
+		replicas := map[string]int32(*cfg.WorkloadReplicas)
+		if err := resources.CheckWorkloadReplicas(list, replicas); err != nil {
+			errs = append(errs, err)
+		}
+		if err := checkWorkloadReplicaValues(oacPath, replicas); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(cfg.OverlayGateway.Entrances) > 0 {
+		workloads := make([]string, len(cfg.OverlayGateway.Entrances))
+		for i, e := range cfg.OverlayGateway.Entrances {
+			workloads[i] = e.Workload
+		}
+		if err := resources.CheckOverlayGatewayWorkloads(list, workloads); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// allowClusterScopedCheckApplies reports whether the rendered
+// chart must not declare cluster-scoped resources with release-independent
+// metadata.name values. v2 is excluded (multi-chart layout); v1 and v3 run
+// when options.allowMultipleInstall is true.
+func allowClusterScopedCheckApplies(cfg *manifest.AppConfiguration) bool {
+	api := strings.ToLower(strings.TrimSpace(cfg.APIVersion))
+	if api == "" || api == manifest.APIVersionV1 {
+		return true
+	}
+	if api == manifest.APIVersionV2 {
+		return false
+	}
+	if api == manifest.APIVersionV3 && cfg.Options.AllowMultipleInstall == true {
+		return true
+	}
+	return false
+}
+
+// checkAllowMultipleInstallClusterScoped helm-renders the chart twice with
+// synthetic release names and flags any cluster-scoped resource whose name is
+// identical across both renders.
+func (c *OAC) checkAllowMultipleInstallClusterScoped(oacPath string, m Manifest, sc ownerScenario) error {
+	cfg, ok := m.Raw().(*manifest.AppConfiguration)
+	if !ok || !allowClusterScopedCheckApplies(cfg) {
+		return nil
+	}
+	values := c.buildRenderValues(m, sc)
+	probeA, probeB := resources.ClusterScopedProbeNames()
+	listA, err := helmrender.Render(oacPath, values, probeA)
+	if err != nil {
+		return fmt.Errorf("helm render (allowMultipleInstall cluster-scoped probe %q): %w", probeA, err)
+	}
+	listB, err := helmrender.Render(oacPath, values, probeB)
+	if err != nil {
+		return fmt.Errorf("helm render (allowMultipleInstall cluster-scoped probe %q): %w", probeB, err)
+	}
+	return resources.CheckClusterScopedFixedNames(listA, listB)
+}
+
+// checkWorkloadReplicaValues verifies that values.yaml declares a
+// workloads.<name>.replicaCount entry for every workload named in
+// workloadReplicas. This mirrors the install-time convention that each
+// workload's replica count is driven from .Values.workloads.<name>.replicaCount,
+// so a missing entry would render the manifest's workloadReplicas value
+// unusable.
+func checkWorkloadReplicaValues(oacPath string, replicas map[string]int32) error {
+	data, err := os.ReadFile(filepath.Join(oacPath, "values.yaml"))
+	if err != nil {
+		return fmt.Errorf("read values.yaml: %w", err)
+	}
+	var values struct {
+		Workloads map[string]map[string]interface{} `yaml:"workloads"`
+	}
+	if err := yaml.Unmarshal(data, &values); err != nil {
+		return fmt.Errorf("parse values.yaml: %w", err)
+	}
+	names := make([]string, 0, len(replicas))
+	for name := range replicas {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var errs []error
+	for _, name := range names {
+		wl, ok := values.Workloads[name]
+		if !ok {
+			errs = append(errs, fmt.Errorf("values.yaml must define workloads.%s.replicaCount", name))
+			continue
+		}
+		if _, ok := wl["replicaCount"]; !ok {
+			errs = append(errs, fmt.Errorf("values.yaml must define workloads.%s.replicaCount", name))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // extractUploadDest pulls the options.upload.dest field out of the active

@@ -22,7 +22,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	v1 "github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,7 +54,7 @@ func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.Applic
 // AddApplicationLabelsToDeployment resolves to *HelmOpsV3 (Go embedding does
 // not redispatch to the outer type). All other steps reuse v1 directly.
 func (h *HelmOpsV3) Install() error {
-	values, err := h.SetValues()
+	values, err := h.SetValues(true)
 	if err != nil {
 		klog.Errorf("set values err %v", err)
 		return err
@@ -110,14 +109,6 @@ func (h *HelmOpsV3) Install() error {
 		return err
 	}
 
-	ok, err := h.WaitForStartUp()
-	if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
-		return err
-	}
-	if !ok {
-		h.Uninstall()
-		return err
-	}
 	return nil
 }
 

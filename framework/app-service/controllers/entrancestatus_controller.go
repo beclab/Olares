@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -82,7 +81,6 @@ func (r *EntranceStatusManagerController) SetUpWithManager(mgr ctrl.Manager) err
 }
 
 func (r *EntranceStatusManagerController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 	klog.Infof("reconcile entrance-status-manager request name=%v", req.Name)
 	var pod corev1.Pod
 	err := r.Get(ctx, req.NamespacedName, &pod)

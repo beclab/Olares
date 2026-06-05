@@ -19,6 +19,8 @@ type AppPermission interface{}
 type AppDataPermission string
 type AppCachePermission string
 type UserDataPermission string
+type AppCommonPermission string
+type ExternalDataPermission string
 
 type AppRequirement struct {
 	Memory        *resource.Quantity
@@ -40,9 +42,11 @@ type AppPolicy struct {
 }
 
 const (
-	AppDataRW  AppDataPermission  = "appdata-perm"
-	AppCacheRW AppCachePermission = "appcache-perm"
-	UserDataRW UserDataPermission = "userdata-perm"
+	AppDataRW      AppDataPermission      = "appdata-perm"
+	AppCacheRW     AppCachePermission     = "appcache-perm"
+	UserDataRW     UserDataPermission     = "userdata-perm"
+	AppCommonRW    AppCommonPermission    = "appCommon-perm"
+	ExternalDataRW ExternalDataPermission = "external-perm"
 )
 
 type APIVersion string
@@ -113,6 +117,7 @@ type ApplicationConfig struct {
 	LLMGatewaySupported bool
 	OverlayGateway      OverlayGateway
 	WorkloadReplicas    *WorkloadReplicas
+	TemplateOnly        bool
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -139,6 +144,39 @@ func (c *ApplicationConfig) HasClusterSharedCharts() bool {
 		}
 	}
 	return false
+}
+
+// HasWorkloadReplicas reports whether the app declares per-workload
+// replica counts in its OlaresManifest. Apps without this declaration
+// retain the legacy single-phase install/upgrade and direct-patch
+// stop/resume behavior (see pkg/appstate/utils.go suspendOrResumeApp).
+//
+// Convention: an app that opts into workloadReplicas MUST list every
+// one of its chart workloads. The two-phase install/scale flow only
+// controls the workloads named here, so a workload that exists in the
+// chart but is omitted would escape the scale-to-zero gate. This is
+// enforced by convention (the manifest is the source of truth), and
+// the helpers below are kept consistent with that assumption.
+func (c *ApplicationConfig) HasWorkloadReplicas() bool {
+	return c.WorkloadReplicas != nil && len(*c.WorkloadReplicas) > 0
+}
+
+// DesiredReplicas returns the declared replica count for the given
+// workload name. Per the HasWorkloadReplicas convention the manifest is
+// expected to list every workload, so a hit on the map is the normal
+// path. The fallback to 1 for a missing name (or nil map) is purely
+// defensive against a malformed manifest and mirrors the declared-value
+// lookup in appinstaller.buildWorkloadsValues. Callers should gate on
+// HasWorkloadReplicas before treating the result as a definitive
+// scale-up target.
+func (c *ApplicationConfig) DesiredReplicas(name string) int32 {
+	if c.WorkloadReplicas == nil {
+		return 1
+	}
+	if v, ok := (*c.WorkloadReplicas)[name]; ok {
+		return v
+	}
+	return 1
 }
 
 func (c *ApplicationConfig) GenEntranceURL(ctx context.Context) ([]Entrance, error) {
