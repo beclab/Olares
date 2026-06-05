@@ -234,15 +234,25 @@ func runCpMv(
 	dstArg := args[len(args)-1]
 
 	srcs := make([]cp.Source, 0, len(srcArgs))
+	touchesCommon := false
 	for _, a := range srcArgs {
 		s, err := frontendPathToCpSource(a)
 		if err != nil {
 			return err
 		}
+		if isCommonFrontendPath(s.FileType, s.Extend) {
+			touchesCommon = true
+		}
 		srcs = append(srcs, s)
 	}
 	dst, err := frontendPathToCpDestination(dstArg)
 	if err != nil {
+		return err
+	}
+	if isCommonFrontendPath(dst.FileType, dst.Extend) {
+		touchesCommon = true
+	}
+	if err := requireCommonBackendVersion(ctx, f, touchesCommon); err != nil {
 		return err
 	}
 

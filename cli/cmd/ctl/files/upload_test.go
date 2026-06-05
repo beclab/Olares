@@ -68,6 +68,14 @@ func TestUploadRootAndDriveType(t *testing.T) {
 			wantPathNode:  "",
 		},
 		{
+			name:          "drive Common",
+			path:          "drive/Common/ollama/",
+			wantAPIRoot:   "/drive/Common",
+			wantChunkRoot: "/drive/Common",
+			wantDriveType: "Common",
+			wantPathNode:  "",
+		},
+		{
 			name: "sync repo (chunkRoot empty: Seafile reads parent_dir " +
 				"as inside-repo path because the upload token already pins " +
 				"the repo)",
@@ -217,7 +225,7 @@ func TestUploadRootAndDriveType_DirectConstruction(t *testing.T) {
 		{
 			name:    "drive unknown extend",
 			fp:      FrontendPath{FileType: "drive", Extend: "Other", SubPath: "/"},
-			wantSub: "drive extend must be Home or Data",
+			wantSub: "drive extend must be Home, Data, or Common",
 		},
 		{
 			name:    "sync empty extend",

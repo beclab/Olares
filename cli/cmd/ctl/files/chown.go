@@ -204,6 +204,9 @@ func runChown(
 	if err != nil {
 		return err
 	}
+	if err := requireCommonBackendVersion(ctx, f, isCommonFrontendPath(tgt.FileType, tgt.Extend)); err != nil {
+		return err
+	}
 
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {

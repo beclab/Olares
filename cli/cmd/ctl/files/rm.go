@@ -151,12 +151,19 @@ func runRm(
 	}
 
 	targets := make([]rm.Target, 0, len(args))
+	touchesCommon := false
 	for _, a := range args {
 		t, err := frontendPathToRmTarget(a)
 		if err != nil {
 			return err
 		}
+		if isCommonFrontendPath(t.FileType, t.Extend) {
+			touchesCommon = true
+		}
 		targets = append(targets, t)
+	}
+	if err := requireCommonBackendVersion(ctx, f, touchesCommon); err != nil {
+		return err
 	}
 
 	groups, err := rm.Plan(targets, o.recursive)

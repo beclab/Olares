@@ -305,6 +305,9 @@ func runLs(ctx context.Context, f *cmdutil.Factory, out io.Writer, rawPath strin
 	if err != nil {
 		return err
 	}
+	if err := requireCommonBackendVersion(ctx, f, isCommonFrontendPath(fp.FileType, fp.Extend)); err != nil {
+		return err
+	}
 
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {

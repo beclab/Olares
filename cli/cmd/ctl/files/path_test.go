@@ -65,6 +65,23 @@ func TestParseFrontendPath(t *testing.T) {
 			wantString:   "drive/Data/",
 		},
 		{
+			name:         "drive Common root",
+			input:        "drive/Common/",
+			wantFileType: "drive",
+			wantExtend:   "Common",
+			wantSubPath:  "/",
+			wantTrailing: true,
+			wantString:   "drive/Common/",
+		},
+		{
+			name:         "drive Common subdir",
+			input:        "drive/Common/ollama/models",
+			wantFileType: "drive",
+			wantExtend:   "Common",
+			wantSubPath:  "/ollama/models",
+			wantString:   "drive/Common/ollama/models",
+		},
+		{
 			name:         "sync repo",
 			input:        "sync/abc-123-repo/sub/dir",
 			wantFileType: "sync",
@@ -125,7 +142,7 @@ func TestParseFrontendPath(t *testing.T) {
 		{
 			name:          "drive bad extend",
 			input:         "drive/Other/",
-			wantErrSubstr: "drive extend must be Home or Data",
+			wantErrSubstr: "drive extend must be Home, Data, or Common",
 		},
 		{
 			name:          "uppercase fileType rejected",

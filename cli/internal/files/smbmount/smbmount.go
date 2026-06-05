@@ -1,7 +1,12 @@
-// Package smbmount implements the wire side of `olares-cli files smb`,
-// the CLI counterpart of the LarePass web app's "Connect to Server"
-// flow for mounting an external SMB share into the per-user
-// files-backend's `external/<node>/...` namespace.
+// Package smbmount implements the wire side of `olares-cli files smb`
+// AND `olares-cli files nfs` — the CLI counterpart of the LarePass web
+// app's "Connect to Server" flow for mounting an external SMB share or
+// NFS export into the per-user files-backend's `external/<node>/...`
+// namespace. SMB and NFS share the mount / unmount / favorites wire
+// surface (`/api/mount`, `/api/unmount`, `/api/smb_history`) and differ
+// only in the `?external_type=` switch and the request body shape
+// (SMB: {smbPath,user,password}; NFS: {url[,operate:"list"]}, no
+// credentials) — see Mount vs. MountNFS below.
 //
 // Source of truth on the wire (and the rationale behind every
 // quirk this package handles):
@@ -225,7 +230,7 @@ func (c *Client) Mount(ctx context.Context, node string, opts MountOptions) (*Mo
 	if opts.SMBPath == "" {
 		return nil, errors.New("Mount: empty SMB path")
 	}
-	endpoint := c.BaseURL + buildMountURL(node)
+	endpoint := c.BaseURL + buildMountURL(node, "smb")
 	body, err := json.Marshal(opts)
 	if err != nil {
 		return nil, fmt.Errorf("Mount: marshal body: %w", err)
@@ -266,6 +271,143 @@ func (c *Client) Mount(ctx context.Context, node string, opts MountOptions) (*Mo
 		}
 		return nil, fmt.Errorf("server rejected (code %d): %s", env.Code, msg)
 	}
+}
+
+// NFSMountOptions captures the body of POST
+// /api/mount/<node>/?external_type=nfs.
+//
+// NFS mounts need no credentials (unlike SMB), so the wire body is
+// just the target URL — either a full `host:/export` path (mount
+// it directly) or a bare host/IP plus `operate:"list"` to ask the
+// server to enumerate the host's exports. This mirrors LarePass's
+// buildNfsMountPayload (stores/files.ts):
+//
+//	list request : {"url":"<host>", "operate":"list"}
+//	mount request: {"url":"<host>:/<export>"}
+type NFSMountOptions struct {
+	// URL is the NFS target: `host` / `host:/export`.
+	URL string
+	// List, when true, sends `operate:"list"` so the server
+	// enumerates the host's exports instead of mounting. The cobra
+	// layer sets this when the user passed a bare host (no export
+	// path) — the discovery half of the "Connect to Server" flow.
+	List bool
+}
+
+// NFSExport is one row of an NFS list response. The server reports
+// each export's path and whether it is already mounted (so the GUI
+// can grey out mounted entries in its chooser; the CLI annotates
+// them the same way). The daemon's underlying `showmount -e` also
+// carries an ACL string, but the files-backend list surface the GUI
+// consumes only needs path + mounted, so that's all we decode.
+type NFSExport struct {
+	Path    string `json:"path"`
+	Mounted bool   `json:"mounted,omitempty"`
+}
+
+// NFSMountResult is the parsed body of an NFS mount/list POST.
+//
+// Unlike SMB (which signals "host-only, here are the shares" with a
+// distinct code 300), the NFS surface returns the export list under
+// the SAME code 200 it uses for a successful mount — the caller
+// disambiguates via the request it sent (a list request vs. a real
+// mount). We therefore carry an explicit `Listed` flag rather than
+// overloading the code, matching LarePass's `isListRequest` switch.
+type NFSMountResult struct {
+	Code    int         // server envelope code (200 on the happy path)
+	Message string      // server-supplied diagnostic, surfaced verbatim
+	Listed  bool        // true ⇒ this was a list response; Exports is populated
+	Exports []NFSExport // populated only when Listed
+}
+
+// MountNFS sends one POST /api/mount/<node>/?external_type=nfs.
+//
+// Two shapes, selected by opts.List:
+//
+//   - list request (opts.List == true): body {url, operate:"list"};
+//     the server replies with the host's export list. The result
+//     has Listed == true and Exports populated.
+//   - mount request (opts.List == false): body {url}; the server
+//     mounts `host:/export` into external/<node>/<entry>/. The
+//     result has Listed == false and Code 200 on success.
+//
+// `node` may be empty — the same conditional `<node>` segment SMB
+// uses applies here.
+func (c *Client) MountNFS(ctx context.Context, node string, opts NFSMountOptions) (*NFSMountResult, error) {
+	if opts.URL == "" {
+		return nil, errors.New("MountNFS: empty url")
+	}
+	payload := map[string]string{"url": opts.URL}
+	if opts.List {
+		payload["operate"] = "list"
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("MountNFS: marshal body: %w", err)
+	}
+	endpoint := c.BaseURL + buildMountURL(node, "nfs")
+	raw, err := c.do(ctx, http.MethodPost, endpoint, body)
+	if err != nil {
+		return nil, err
+	}
+	var env mountEnvelope
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return nil, fmt.Errorf("MountNFS: decode response: %w (body=%s)", err, truncateBody(raw))
+	}
+
+	// A list request always yields an export list (code 200 in the
+	// common case; we also tolerate 300 in case a future backend
+	// aligns NFS discovery with the SMB code). Decode the array and
+	// hand it back annotated as Listed.
+	if opts.List {
+		if env.Code != 0 && env.Code != 200 && env.Code != 300 {
+			return nil, fmt.Errorf("server rejected (code %d): %s", env.Code, msgOrDefault(env.Message))
+		}
+		exports, derr := decodeNFSExports(env.Data, raw)
+		if derr != nil {
+			return nil, derr
+		}
+		return &NFSMountResult{Code: env.Code, Message: env.Message, Listed: true, Exports: exports}, nil
+	}
+
+	switch env.Code {
+	case 0, 200:
+		return &NFSMountResult{Code: 200, Message: env.Message}, nil
+	case 300:
+		// The user passed what we classified as a full path but the
+		// server still wants a pick — surface the list rather than
+		// failing opaquely. Mirrors the SMB code-300 fallback.
+		exports, derr := decodeNFSExports(env.Data, raw)
+		if derr != nil {
+			return nil, derr
+		}
+		return &NFSMountResult{Code: 300, Message: env.Message, Listed: true, Exports: exports}, nil
+	default:
+		return nil, fmt.Errorf("server rejected (code %d): %s", env.Code, msgOrDefault(env.Message))
+	}
+}
+
+// decodeNFSExports parses the `data` array of an NFS list response
+// into []NFSExport, tolerating an absent / empty payload (returns an
+// empty slice). `raw` is only used to enrich the decode error.
+func decodeNFSExports(data json.RawMessage, raw []byte) ([]NFSExport, error) {
+	if len(data) == 0 {
+		return []NFSExport{}, nil
+	}
+	var rows []NFSExport
+	if err := json.Unmarshal(data, &rows); err != nil {
+		return nil, fmt.Errorf("MountNFS: decode export-list payload: %w (body=%s)", err, truncateBody(raw))
+	}
+	return rows, nil
+}
+
+// msgOrDefault folds an empty server message into a stable
+// placeholder so error strings never read "... : ".
+func msgOrDefault(msg string) string {
+	if msg == "" {
+		return "no message"
+	}
+	return msg
 }
 
 // unmountEnvelope is the body of POST /api/unmount/<...>/. Just a
@@ -529,7 +671,12 @@ func (c *Client) do(ctx context.Context, method, endpoint string, body []byte) (
 	return raw, nil
 }
 
-// buildMountURL renders /api/mount[/<node>]/?external_type=smb.
+// buildMountURL renders /api/mount[/<node>]/?external_type=<type>.
+//
+// `externalType` is "smb" for SMB mounts and "nfs" for NFS mounts —
+// the shared per-user files-backend mount surface dispatches on the
+// query parameter (LarePass's mountServerInExternal sends the same
+// `?external_type=` switch; see stores/files.ts).
 //
 // The `<node>` segment is conditionally present — when the
 // per-user files-backend has no clustered nodes configured, the
@@ -537,9 +684,9 @@ func (c *Client) do(ctx context.Context, method, endpoint string, body []byte) (
 // We replicate the same conditional shape rather than always
 // inserting `<node>` so a single-node-less deployment doesn't get
 // a 404 from a stricter route matcher.
-func buildMountURL(node string) string {
+func buildMountURL(node, externalType string) string {
 	q := url.Values{}
-	q.Set("external_type", "smb")
+	q.Set("external_type", externalType)
 	if node == "" {
 		return "/api/mount/?" + q.Encode()
 	}

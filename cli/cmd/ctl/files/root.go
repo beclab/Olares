@@ -25,6 +25,18 @@ import (
 //	files rename   — synchronous in-place rename       (cmd/ctl/files/rename.go)
 //	files chown    — get / set POSIX owner uid         (cmd/ctl/files/chown.go,
 //	                  (LarePass "Permission" tab)      internal/files/permission/permission.go)
+//	files compress — pack N sources into one archive   (cmd/ctl/files/compress.go,
+//	                  (POST /api/archive/<node>/        internal/files/archive/compress.go)
+//	                  compress; returns task_id)
+//	files extract  — unpack an archive into a dir      (cmd/ctl/files/extract.go,
+//	                  (POST /api/archive/<node>/        internal/files/archive/extract.go)
+//	                  extract; returns task_id)
+//	files archive  — inspect an archive without        (cmd/ctl/files/archive.go,
+//	                  unpacking (entries / cat single   internal/files/archive/{entries,entry}.go)
+//	                  member; streaming endpoints)
+//	files task     — control the per-node task queue    (cmd/ctl/files/task.go,
+//	                  (cancel / pause / resume the       internal/files/archive/task.go)
+//	                  compress / extract task_ids)
 //	files share    — create / list / remove shares     (cmd/ctl/files/share.go,
 //	                  internal: cross-user             cmd/ctl/files/share_create.go)
 //	                  public:   external link
@@ -32,6 +44,10 @@ import (
 //	files smb      — mount / unmount external SMB      (cmd/ctl/files/smb.go,
 //	                  shares + per-node history book   internal/files/smbmount/smbmount.go)
 //	                  (LarePass "Connect to Server")
+//	files nfs      — mount / unmount external NFS      (cmd/ctl/files/nfs.go,
+//	                  exports + shared history book    internal/files/smbmount/smbmount.go)
+//	                  (LarePass "Connect to Server";   MountNFS)
+//	                  no credentials; host:/export)
 //	files repos    — list / inspect Sync (Seafile)     (cmd/ctl/files/repos.go,
 //	                  libraries (repo_id catalog)      internal/files/repos/repos.go)
 //
@@ -96,8 +112,13 @@ Examples:
 		NewMvCommand(f),
 		NewRenameCommand(f),
 		NewChownCommand(f),
+		NewCompressCommand(f),
+		NewExtractCommand(f),
+		NewArchiveCommand(f),
+		NewTaskCommand(f),
 		NewShareCommand(f),
 		NewSMBCommand(f),
+		NewNFSCommand(f),
 		NewReposCommand(f),
 	} {
 		// Same rationale as cmd/ctl/profile/root.go: bad creds / network /

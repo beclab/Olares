@@ -497,6 +497,14 @@ func runEdit(
 	if err != nil {
 		return err
 	}
+	// Re-parse the (already-validated) path purely to drive the
+	// drive/Common >= 1.12.6 version gate — edit.Op only carries the
+	// display path, not the parsed (fileType, extend) tuple.
+	if fp, perr := ParseFrontendPath(rawPath); perr == nil {
+		if err := requireCommonBackendVersion(ctx, f, isCommonFrontendPath(fp.FileType, fp.Extend)); err != nil {
+			return err
+		}
+	}
 
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {
