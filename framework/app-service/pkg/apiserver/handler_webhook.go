@@ -206,8 +206,10 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 // When a prerequisite (viewer derivation, per-viewer tls replica, cluster
 // snapshot, sidecar image) is not yet ready, it records
 // app_service_d2_inject_skipped_total{reason} and admits the pod with the
-// shared-entrance label already patched, instead of rejecting it. Illegal-input
-// errors are handled before this point and remain fail-closed.
+// shared-entrance label already patched, instead of rejecting it. On success it
+// records app_service_d2_inject_succeeded_total{mode=server,scenario=server_main},
+// symmetric to the caller-mode path. Illegal-input errors are handled before
+// this point and remain fail-closed.
 func (h *Handler) injectD2OffloaderFailOpen(ctx context.Context, resp *admissionv1.AdmissionResponse,
 	pod *corev1.Pod, req *admissionv1.AdmissionRequest, appCfg *appcfg_mod.ApplicationConfig, proxyUUID uuid.UUID) {
 	d2Patch, err := h.sidecarWebhook.CreateD2OffloaderPatch(ctx, pod, req, appCfg, proxyUUID)
@@ -219,6 +221,7 @@ func (h *Handler) injectD2OffloaderFailOpen(ctx context.Context, resp *admission
 		return
 	}
 	h.sidecarWebhook.PatchAdmissionResponse(resp, d2Patch)
+	webhook.RecordD2InjectSucceeded(webhook.D2InjectModeServer, webhook.D2InjectScenarioServerMain)
 	klog.Infof("Injected d2 offloader for v3 shared-entrance pod uuid=%s namespace=%s",
 		proxyUUID, req.Namespace)
 }

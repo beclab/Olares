@@ -287,6 +287,10 @@ func (wh *Webhook) CreateD2OffloaderPatch(
 		return makePatches(req, pod)
 	}
 
+	if d2ImageUnconfigured(d2SidecarImageDigest()) {
+		return nil, fmt.Errorf("d2 sidecar image digest unconfigured ns=%s: %w", pod.Namespace, ErrD2ImageUnconfigured)
+	}
+
 	viewer, err := wh.deriveViewerFromPodNS(ctx, pod)
 	if err != nil {
 		return nil, err

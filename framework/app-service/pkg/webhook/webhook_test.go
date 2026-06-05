@@ -254,6 +254,30 @@ func TestCreateD2OffloaderCallerPatch_ImageUnconfigured(t *testing.T) {
 	require.Equal(t, d2SkipReasonImageUnconfigured, ClassifyD2SkipReason(err))
 }
 
+// WI-NAT-4: server-mode CreateD2OffloaderPatch is symmetric to caller-mode -- an
+// unconfigured d2 image digest fails open with ErrD2ImageUnconfigured after the
+// hasD2Container short-circuit but before any API read, so the v3 shared-entrance
+// pod is admitted and no placeholder d2 (which would ImagePullBackOff) is injected.
+func TestCreateD2OffloaderPatch_ImageUnconfigured(t *testing.T) {
+	orig := d2SidecarImageDigest
+	d2SidecarImageDigest = func() string { return constants.D2SidecarImagePlaceholder }
+	t.Cleanup(func() { d2SidecarImageDigest = orig })
+
+	pod := corev1.Pod{
+		ObjectMeta: metav1ObjectMeta("user-space-alice", "demo"),
+		Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}},
+	}
+	raw, err := json.Marshal(pod)
+	require.NoError(t, err)
+	req := &admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: raw}}
+
+	wh := &Webhook{}
+	_, err = wh.CreateD2OffloaderPatch(context.Background(), &pod, req, nil, uuid.New())
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrD2ImageUnconfigured))
+	require.Equal(t, d2SkipReasonImageUnconfigured, ClassifyD2SkipReason(err))
+}
+
 func TestD2ImageUnconfigured(t *testing.T) {
 	require.True(t, d2ImageUnconfigured(constants.D2SidecarImagePlaceholder))
 	require.True(t, d2ImageUnconfigured(""))
@@ -317,6 +341,12 @@ func TestRecordD2InjectSucceeded(t *testing.T) {
 	beforeB := testutil.ToFloat64(d2InjectSucceededTotal.WithLabelValues(D2InjectModeCaller, D2InjectScenarioB))
 	RecordD2InjectSucceeded(D2InjectModeCaller, D2InjectScenarioB)
 	require.Equal(t, beforeB+1, testutil.ToFloat64(d2InjectSucceededTotal.WithLabelValues(D2InjectModeCaller, D2InjectScenarioB)))
+
+	// WI-NAT-4: server-mode success is recorded under its own scenario label,
+	// distinct from the caller-mode bypass A/B scenarios.
+	beforeServer := testutil.ToFloat64(d2InjectSucceededTotal.WithLabelValues(D2InjectModeServer, D2InjectScenarioServerMain))
+	RecordD2InjectSucceeded(D2InjectModeServer, D2InjectScenarioServerMain)
+	require.Equal(t, beforeServer+1, testutil.ToFloat64(d2InjectSucceededTotal.WithLabelValues(D2InjectModeServer, D2InjectScenarioServerMain)))
 }
 
 // 详设 §4.2 m6: the default drain grace is added only when unset; an explicit

@@ -23,13 +23,17 @@ const (
 )
 
 // d2 offloader inject mode/scenario labels for the succeeded counter
-// (详设 §6.1): mode distinguishes server vs caller injection; scenario A =
-// Type-1 (v1/v2, bypass a), scenario B = Type-2b (v3 non-shared, bypass b).
+// (详设 §6.1): mode distinguishes server vs caller injection. Caller-mode
+// scenarios are bypass-specific: scenario A = Type-1 (v1/v2, bypass a),
+// scenario B = Type-2b (v3 non-shared, bypass b). Server-mode has a single
+// scenario, the v3 shared-entrance main path (ServerMain), which is not a
+// bypass and must not reuse the caller A/B labels.
 const (
-	D2InjectModeServer = "server"
-	D2InjectModeCaller = "caller"
-	D2InjectScenarioA  = "A"
-	D2InjectScenarioB  = "B"
+	D2InjectModeServer         = "server"
+	D2InjectModeCaller         = "caller"
+	D2InjectScenarioA          = "A"
+	D2InjectScenarioB          = "B"
+	D2InjectScenarioServerMain = "server_main"
 )
 
 var d2InjectSkippedTotal = prometheus.NewCounterVec(
