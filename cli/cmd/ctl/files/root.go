@@ -25,6 +25,15 @@ import (
 //	files rename   — synchronous in-place rename       (cmd/ctl/files/rename.go)
 //	files chown    — get / set POSIX owner uid         (cmd/ctl/files/chown.go,
 //	                  (LarePass "Permission" tab)      internal/files/permission/permission.go)
+//	files compress — pack N sources into one archive   (cmd/ctl/files/compress.go,
+//	                  (POST /api/archive/<node>/        internal/files/archive/compress.go)
+//	                  compress; returns task_id)
+//	files extract  — unpack an archive into a dir      (cmd/ctl/files/extract.go,
+//	                  (POST /api/archive/<node>/        internal/files/archive/extract.go)
+//	                  extract; returns task_id)
+//	files archive  — inspect an archive without        (cmd/ctl/files/archive.go,
+//	                  unpacking (entries / cat single   internal/files/archive/{entries,entry}.go)
+//	                  member; streaming endpoints)
 //	files share    — create / list / remove shares     (cmd/ctl/files/share.go,
 //	                  internal: cross-user             cmd/ctl/files/share_create.go)
 //	                  public:   external link
@@ -96,6 +105,9 @@ Examples:
 		NewMvCommand(f),
 		NewRenameCommand(f),
 		NewChownCommand(f),
+		NewCompressCommand(f),
+		NewExtractCommand(f),
+		NewArchiveCommand(f),
 		NewShareCommand(f),
 		NewSMBCommand(f),
 		NewReposCommand(f),
