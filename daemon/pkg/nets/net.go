@@ -61,6 +61,7 @@ func GetInternalIpv4Addr(opts ...any) (internalAddrs []*NetInterface, err error)
 		case strings.HasPrefix(ief.Name, "eth"):
 		case strings.HasPrefix(ief.Name, "en"):
 		case strings.HasPrefix(ief.Name, "wl"):
+		case ief.Name == "br-olares":
 		case ief.Name == gatewayInf.Name:
 		default:
 			continue

@@ -553,6 +553,10 @@ const side = {
           link: "/manual/best-practices/install-olares-gpu-passthrough",
         },
         {
+          text: "Install a specific CUDA version",
+          link: "/manual/best-practices/install-specific-cuda-version",
+        },
+        {
           text: "Expand storage in Olares",
           link: "/manual/best-practices/expand-storage-in-olares",
         },

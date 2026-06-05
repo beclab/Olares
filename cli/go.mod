@@ -16,7 +16,7 @@ require (
 	github.com/beclab/Olares/framework/app-gateway v0.0.0
 	github.com/beclab/Olares/framework/app-service v0.0.0-20260311124303-23a6533bc2ad
 	github.com/beclab/Olares/framework/oac v0.0.0-00010101000000-000000000000
-	github.com/beclab/api v0.0.11
+	github.com/beclab/api v0.0.13
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/containerd/containerd v1.7.29
 	github.com/decentralized-identity/web5-go v0.25.0

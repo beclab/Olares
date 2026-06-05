@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/market/stop"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -84,11 +85,29 @@ func runStop(opts *MarketOptions, cmd *cobra.Command, appName string) error {
 		opts.info("  --cascade: will stop all sub-charts")
 	}
 
-	resp, err := mc.StopApp(ctx, appName, cascade)
+	// Resolve the installed app's source: this both enforces the
+	// "only operate on an installed app" guard (a bugfix that applies to
+	// 1.12.5 and 1.12.6 alike) and yields the source the 1.12.6 body needs
+	// (stop exposes no -s). The resolved source also sharpens the --watch
+	// state-row match on both versions.
+	source, err := resolveInstalledSource(ctx, opts, mc, appName)
+	if err != nil {
+		return opts.failOp("stop", appName, err)
+	}
+
+	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if err != nil {
+		return opts.failOp("stop", appName, err)
+	}
+
+	// 1.12.6 moved the body to {app_name, source, all}; 1.12.5 keeps
+	// {appName, all} and ignores source.
+	method, path, body := stop.Build(atLeast126, appName, source, cascade)
+	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
 		return opts.failOp("stop", appName, err)
 	}
 
 	result := newOperationResult(mc, "stop", appName, "", "", "stop requested", resp)
-	return runWithWatch(opts, mc, result, newWatchTarget(watchStop, appName, opts.Source))
+	return runWithWatch(opts, mc, result, newWatchTarget(watchStop, appName, source))
 }

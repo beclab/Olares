@@ -36,6 +36,8 @@ import (
 //  7. Rendered-resource namespace check (workloads in app-namespace;
 //     other resources in app-namespace or user-system-*) - ON by default,
 //     turn off with SkipResourceNamespaceCheck()
+//     7b. allowMultipleInstall cluster-scoped fixed-name check (v1/v3 only;
+//     skipped for v2) - ALWAYS run when options.allowMultipleInstall is true
 //  8. Container-level resource limits check - skipped by SkipResourceCheck
 //  9. Chart.yaml <-> manifest same-version check - ON by default, turn off
 //     with SkipSameVersionCheck()
@@ -147,6 +149,10 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 	}
 
 	if err := c.checkManifestWorkloadRefs(oacPath, m, list); err != nil {
+		return err
+	}
+
+	if err := c.checkAllowMultipleInstallClusterScoped(oacPath, m, sc); err != nil {
 		return err
 	}
 
@@ -519,6 +525,45 @@ func (c *OAC) checkManifestWorkloadRefs(oacPath string, m Manifest, list kube.Re
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// allowClusterScopedCheckApplies reports whether the rendered
+// chart must not declare cluster-scoped resources with release-independent
+// metadata.name values. v2 is excluded (multi-chart layout); v1 and v3 run
+// when options.allowMultipleInstall is true.
+func allowClusterScopedCheckApplies(cfg *manifest.AppConfiguration) bool {
+	api := strings.ToLower(strings.TrimSpace(cfg.APIVersion))
+	if api == "" || api == manifest.APIVersionV1 {
+		return true
+	}
+	if api == manifest.APIVersionV2 {
+		return false
+	}
+	if api == manifest.APIVersionV3 && cfg.Options.AllowMultipleInstall == true {
+		return true
+	}
+	return false
+}
+
+// checkAllowMultipleInstallClusterScoped helm-renders the chart twice with
+// synthetic release names and flags any cluster-scoped resource whose name is
+// identical across both renders.
+func (c *OAC) checkAllowMultipleInstallClusterScoped(oacPath string, m Manifest, sc ownerScenario) error {
+	cfg, ok := m.Raw().(*manifest.AppConfiguration)
+	if !ok || !allowClusterScopedCheckApplies(cfg) {
+		return nil
+	}
+	values := c.buildRenderValues(m, sc)
+	probeA, probeB := resources.ClusterScopedProbeNames()
+	listA, err := helmrender.Render(oacPath, values, probeA)
+	if err != nil {
+		return fmt.Errorf("helm render (allowMultipleInstall cluster-scoped probe %q): %w", probeA, err)
+	}
+	listB, err := helmrender.Render(oacPath, values, probeB)
+	if err != nil {
+		return fmt.Errorf("helm render (allowMultipleInstall cluster-scoped probe %q): %w", probeB, err)
+	}
+	return resources.CheckClusterScopedFixedNames(listA, listB)
 }
 
 // checkWorkloadReplicaValues verifies that values.yaml declares a
