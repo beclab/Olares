@@ -7,6 +7,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestGetTLSOffloaderContainerSpec_Contract(t *testing.T) {
@@ -18,6 +19,7 @@ func TestGetTLSOffloaderContainerSpec_Contract(t *testing.T) {
 	// WI-NAT-1: the image is supplied by the caller (D2_SIDECAR_IMAGE env via the
 	// webhook seam), not read from a compile-time constant.
 	require.Equal(t, image, got.Image)
+	require.Equal(t, corev1.PullIfNotPresent, got.ImagePullPolicy)
 	require.NotNil(t, got.SecurityContext)
 	require.NotNil(t, got.SecurityContext.RunAsUser)
 	require.EqualValues(t, constants.D2SidecarUID, *got.SecurityContext.RunAsUser)
