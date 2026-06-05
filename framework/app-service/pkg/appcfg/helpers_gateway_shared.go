@@ -18,3 +18,28 @@ func IsGatewaySharedApp(app *appv1alpha1.Application) bool {
 	}
 	return IsV3(app) || IsClusterScoped(app)
 }
+
+// IsSharedServerApp reports whether the Application is a shared server that
+// must participate in the shared in-cluster routing infrastructure: the
+// shared-hosts ConfigMap fan-out, the entrance TLS caller-NS replica
+// reconciler, and the callee->owner / namespace->owner indexes.
+//
+// Qualifying apps:
+//   - v3 installs (app.bytetrade.io/api-version=v3) that expose shared
+//     entrances — v3 is inherently shared, so the v3 marker alone qualifies
+//     and these apps no longer need settings.clusterScoped=true; or
+//   - legacy v2 cluster-scoped apps (settings.clusterScoped=true), kept for
+//     backward compatibility with multi-chart shared pilots (e.g. ollamav2).
+//
+// This is intentionally additive over the historical clusterScoped-only
+// predicate: every app that qualified before (clusterScoped=true) still
+// qualifies, and v3 shared servers are newly included.
+func IsSharedServerApp(app *appv1alpha1.Application) bool {
+	if app == nil {
+		return false
+	}
+	if IsClusterScoped(app) {
+		return true
+	}
+	return IsV3(app) && len(app.Spec.SharedEntrances) > 0
+}

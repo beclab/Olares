@@ -57,3 +57,55 @@ func TestIsGatewaySharedApp(t *testing.T) {
 		})
 	}
 }
+
+func TestIsSharedServerApp(t *testing.T) {
+	shared := []appv1alpha1.Entrance{{Name: "api", Host: "svc"}}
+	v3Labels := map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3}
+	cases := []struct {
+		name string
+		app  *appv1alpha1.Application
+		want bool
+	}{
+		{
+			name: "v3 with shared entrances qualifies without clusterScoped",
+			app: &appv1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{Labels: v3Labels},
+				Spec:       appv1alpha1.ApplicationSpec{SharedEntrances: shared},
+			},
+			want: true,
+		},
+		{
+			name: "v3 without shared entrances does not qualify",
+			app: &appv1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{Labels: v3Labels},
+			},
+			want: false,
+		},
+		{
+			name: "legacy v2 cluster scoped still qualifies",
+			app: &appv1alpha1.Application{
+				Spec: appv1alpha1.ApplicationSpec{Settings: map[string]string{"clusterScoped": "true"}},
+			},
+			want: true,
+		},
+		{
+			name: "v2 plain app does not qualify",
+			app: &appv1alpha1.Application{
+				Spec: appv1alpha1.ApplicationSpec{SharedEntrances: shared},
+			},
+			want: false,
+		},
+		{
+			name: "nil app",
+			app:  nil,
+			want: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := IsSharedServerApp(tc.app); got != tc.want {
+				t.Fatalf("IsSharedServerApp() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

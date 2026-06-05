@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
@@ -108,7 +109,7 @@ func isClusterScopedOrCallerApp(obj client.Object) bool {
 	if !ok || app == nil {
 		return false
 	}
-	if strings.TrimSpace(app.Spec.Settings["clusterScoped"]) == "true" {
+	if appcfg.IsSharedServerApp(app) {
 		return true
 	}
 	return strings.TrimSpace(app.Spec.Settings["clusterAppRef"]) != ""
@@ -302,7 +303,7 @@ func buildNamespaceOwnerIndex(apps []appv1alpha1.Application) map[string]string 
 	idx := map[string]string{}
 	for i := range apps {
 		app := apps[i]
-		if strings.TrimSpace(app.Spec.Settings["clusterScoped"]) != "true" {
+		if !appcfg.IsSharedServerApp(&app) {
 			continue
 		}
 		ns := strings.TrimSpace(app.Spec.Namespace)

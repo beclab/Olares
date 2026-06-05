@@ -6,6 +6,7 @@ import (
 	"time"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
@@ -97,7 +98,7 @@ func isClusterScopedApplication(obj client.Object) bool {
 	if !ok || app == nil {
 		return false
 	}
-	return strings.TrimSpace(app.Spec.Settings["clusterScoped"]) == "true"
+	return appcfg.IsSharedServerApp(app)
 }
 
 func (r *EntranceTLSReconciler) mapPodToReplica(ctx context.Context, obj client.Object) []reconcile.Request {

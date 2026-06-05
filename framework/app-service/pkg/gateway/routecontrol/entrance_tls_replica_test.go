@@ -841,6 +841,38 @@ func newClusterApp(name, owner string) *appv1alpha1.Application {
 	}
 }
 
+// newV3SharedClusterApp builds a v3 shared server app (v3 marker + shared
+// entrances, no settings.clusterScoped), which must qualify for the shared
+// routing infrastructure via the v3 marker alone.
+func newV3SharedClusterApp(name, owner string) *appv1alpha1.Application {
+	return &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name + "-" + owner,
+			Labels: map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:            name,
+			Owner:           owner,
+			SharedEntrances: []appv1alpha1.Entrance{{Name: "api", Host: "svc"}},
+		},
+	}
+}
+
+func TestIsClusterScopedApplication_V3AndLegacy(t *testing.T) {
+	if !isClusterScopedApplication(newClusterApp("ollama", "userA")) {
+		t.Fatal("legacy clusterScoped app must qualify for entrance TLS replica watch")
+	}
+	if !isClusterScopedApplication(newV3SharedClusterApp("ollamav3", "userA")) {
+		t.Fatal("v3 shared app (no clusterScoped) must qualify for entrance TLS replica watch")
+	}
+	if isClusterScopedApplication(newCallerApp("litellm", testCallerNS, "ollama")) {
+		t.Fatal("plain caller app must not qualify as shared server")
+	}
+	if isClusterScopedApplication(nil) {
+		t.Fatal("nil obj must not qualify")
+	}
+}
+
 func newSourceSecret(viewer, cert, key string) *corev1.Secret {
 	hash := tlsMaterialHash(cert, key)
 	return &corev1.Secret{

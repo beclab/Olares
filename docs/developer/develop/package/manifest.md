@@ -830,6 +830,10 @@ options:
 
 Specifies whether the app should be installed for all users in the Olares cluster. For shared apps, set `clusterScoped` to `true` and provide the current app's name in the `appRef` field.
 
+:::tip v3 apps
+A v3 app (`apiVersion: v3`) is inherently shared. It qualifies for the full shared routing path — shared-hosts indexing, entrance TLS caller-namespace replicas, and owner indexes — from its `apiVersion: v3` marker together with its declared `sharedEntrances`, so it does **not** need to set `clusterScoped: true`. The `clusterScoped` field is only required for legacy v2 cluster-scoped apps (such as the `ollamav2` example below).
+:::
+
 :::info Example of ollamav2
 ```yaml
 metadata:
