@@ -538,7 +538,11 @@ func runArchiveCat(
 	if err != nil {
 		return err
 	}
-	defer finalize(false) // rolled back on error; explicit commit below on success
+	// Rollback on any early return / stream failure. finalize is
+	// single-shot, so once we commit below this deferred call is a
+	// no-op and won't clobber the committed (or failed-but-preserved)
+	// tmp.
+	defer func() { _ = finalize(false) }()
 
 	// The entry endpoint reports a missing / wrong password with an
 	// HTTP 4xx BEFORE any bytes are copied into `w` (the status is
@@ -561,9 +565,13 @@ func runArchiveCat(
 		return reformatArchiveHTTPErr(err, rp.OlaresID, "cat", innerPath)
 	}
 
-	// Commit the tmp → final rename on success. The finalize helper
-	// is idempotent: a second call after the rollback would no-op.
-	finalize(true)
+	// Commit the tmp → final rename on success. A rename / close
+	// failure here is a local-filesystem error (not an HTTP one) and
+	// MUST surface — otherwise we'd print a "wrote ..." line for
+	// bytes that never landed at the destination.
+	if cerr := finalize(true); cerr != nil {
+		return cerr
+	}
 
 	if o.output != "" {
 		// Only print a status line in -o mode so stdout passthrough
@@ -581,46 +589,69 @@ func runArchiveCat(
 // and atomically rename it on success.
 //
 // Returns (writer, finalize, err). `finalize(true)` commits the
-// tmp → final rename; `finalize(false)` deletes the tmp (so a
-// failed extract doesn't leave a half-written file behind). The
-// defer pattern at the call site uses (false) so a return path
-// without an explicit commit cleans up — we then call (true) on
-// the success branch.
+// tmp → final rename and RETURNS the rename / close error so the
+// caller never reports a write that didn't land on disk;
+// `finalize(false)` rolls back by deleting the tmp (so a failed
+// stream doesn't leave a half-written file behind).
+//
+// The finalize is single-shot: the first call (commit or rollback)
+// wins and subsequent calls are no-ops. That lets the caller wire
+// `defer finalize(false)` for the early-return / stream-failure
+// paths AND call `finalize(true)` explicitly on success without the
+// deferred rollback clobbering a committed (or a failed-but-
+// preserved) tmp. Crucially, on a commit whose rename FAILS we
+// leave the tmp in place — the streamed bytes are intact, only the
+// rename didn't happen — and surface that path in the error so the
+// user can recover instead of silently losing the download.
 //
 // We don't refuse to overwrite an existing file here: the
 // caller's pattern is "I just told you where to put it", same
 // shape as `cat > file` in the shell. If a guard is needed, add
 // an --overwrite flag later (mirroring download's policy).
-func openArchiveCatDestination(output string, stdout io.Writer) (io.Writer, func(commit bool), error) {
+func openArchiveCatDestination(output string, stdout io.Writer) (io.Writer, func(commit bool) error, error) {
 	if output == "" || output == "-" {
 		// Default (no -o) and the explicit "-" alias both stream to
 		// the command's stdout — binary-safe passthrough, same
 		// behavior as `cat` / `kubectl ... -f -`. No temp file, so
 		// finalize is a no-op.
-		return stdout, func(bool) {}, nil
+		return stdout, func(bool) error { return nil }, nil
 	}
 	tmp := output + ".tmp"
 	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open %s: %w", tmp, err)
 	}
-	committed := false
-	finalize := func(commit bool) {
-		if commit && !committed {
-			_ = f.Close()
-			if err := os.Rename(tmp, output); err != nil {
-				// Best-effort cleanup; the user sees the err on
-				// the StreamEntry path.
-				_ = os.Remove(tmp)
-				return
+	// done guards single-shot semantics: once a commit or rollback
+	// has run, later calls (e.g. the deferred rollback after a
+	// successful or failed commit) are no-ops so they can't delete a
+	// committed file or a failed-but-preserved tmp.
+	done := false
+	finalize := func(commit bool) error {
+		if done {
+			return nil
+		}
+		done = true
+		if commit {
+			if cerr := f.Close(); cerr != nil {
+				// Couldn't flush/close the tmp — the bytes may be
+				// incomplete, so don't rename over the destination.
+				// Keep the tmp for inspection and report the failure.
+				return fmt.Errorf("finalize %s: closing temp %s failed: %w", output, tmp, cerr)
 			}
-			committed = true
-			return
+			if rerr := os.Rename(tmp, output); rerr != nil {
+				// The stream fully landed in tmp; only the rename
+				// failed (cross-device, perms, destination dir gone,
+				// …). Preserve tmp so the download isn't lost and
+				// surface where it is.
+				return fmt.Errorf("finalize %s: rename from temp failed: %w (the downloaded bytes are preserved at %s)",
+					output, rerr, tmp)
+			}
+			return nil
 		}
+		// Rollback: stream failed before commit — drop the partial tmp.
 		_ = f.Close()
-		if !committed {
-			_ = os.Remove(tmp)
-		}
+		_ = os.Remove(tmp)
+		return nil
 	}
 	return f, finalize, nil
 }
