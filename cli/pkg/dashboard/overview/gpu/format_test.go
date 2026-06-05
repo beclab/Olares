@@ -167,7 +167,7 @@ func TestGpuDetailDisplayCopy_SPAFieldWhitelist(t *testing.T) {
 		"powerLimit":     0,
 		"temperature":    0,
 		"device_no":      "nvidia0",
-		"driver_version": "595.71.05",
+		"driver_version": "595.80",
 		"health":         true,
 	}
 	got := gpuDetailDisplayCopy(src)
@@ -246,6 +246,7 @@ func TestGpuTaskDetailDisplayCopy_SPAFieldWhitelist(t *testing.T) {
 //   - a range-vector point whose timestamp is epoch ms
 //     ("1779636713000") and value is a noisy 7-digit float
 //     (`23.889648`).
+//
 // The envelope's `trends.points[0].timestamp` MUST be
 // `2026-05-24 …` (SPA `YYYY-MM-DD HH:mm:ss`), `value` MUST be
 // `23.89` (lodash.round(2)), and the wire-shape epoch MUST be
