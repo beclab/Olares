@@ -55,6 +55,12 @@ jobs:
       - name: Install coscmd
         run: pip install coscmd        
 
+      - name: Verify release image pins
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.tags }}
+        run: |
+          python3 build/verify_release_image_pins.py "$RELEASE_VERSION"
+
       - name: Configure coscmd
         env:
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
@@ -84,6 +90,12 @@ jobs:
 
       - name: Install coscmd
         run: pip install coscmd        
+
+      - name: Verify release image pins
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.tags }}
+        run: |
+          python3 build/verify_release_image_pins.py "$RELEASE_VERSION"
 
       - name: Configure coscmd
         env:
