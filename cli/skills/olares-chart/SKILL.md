@@ -1,16 +1,28 @@
 ---
 name: olares-chart
-version: 1.5.1
-description: "Olares Chart authoring (olares-cli chart) — turn a docker-compose project, a generic Helm chart, or a bare source repo into a publishable, deployable Olares app chart. Start by establishing state on two orthogonal-but-coupled axes: PACKAGING (Dockerfile/image — how the app is built into a runnable artifact) and DEPLOYMENT (docker-compose/chart — how it is orchestrated). The core verbs are local-only (NO Olares login needed): `chart from-compose` runs the same kompose conversion Olares Studio/devbox uses to scaffold an Olares chart layout (Chart.yaml + OlaresManifest.yaml + values.yaml + templates/), `chart lint` validates a chart directory or .tgz with the exact pipeline the Olares Market uses to ingest it, and `chart package` archives the chart into an uploadable .tgz. The conversion is a starting point: this skill drives the four judgment calls kompose cannot make — app metadata (title/icon/developer/categories), storage (compose volumes → Olares appData/appCache/userData + permission), middleware (replace bundled postgres/redis/mongo/... with Olares system middleware), and entrances/ports (which services to expose). On the packaging axis it guides (with the developer, never on their behalf) checking/installing docker, logging in to Docker Hub or ghcr, and building+pushing a target-arch (multi-arch) image when the repo has no Dockerfile, a Dockerfile but no official/target-arch image, or only a wrong-architecture community image — Olares pulls images from a registry and never builds from source, so the image arch must match the node. The axes are coupled: an image's baked paths / run-user constrain manifest permissions and mounts, and Olares deployment constraints can force an image rebuild. It also covers the optional live-validation loop (requires login): package + market upload, market install to actually run the app, and fetching market / app-service / chartrepo logs to diagnose an install or runtime failure, then looping back to fix the chart or the image. Use when the user mentions Olares chart, OlaresManifest, OlaresManifest.yaml, packaging an app for Olares, publishing to the Olares Market/app store, converting docker-compose to Olares, turning a Helm chart or a source repo into an Olares app, building/pushing a docker image for an Olares app, no official image / build from source / wrong arch (amd64 vs arm64), olares-cli chart, chart from-compose, chart lint, chart package, uploading a chart to validate it, why an app failed to install or start, ImagePullBackOff, or reading market / app-service logs for a chart problem, or 'how do I turn my compose file / Docker app / repo into an Olares app', or porting a headless / CLI app, an MCP server, or any tool with no web UI (terminal entrance + invisible entrance)."
+version: 1.6.0
+description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into publishable Olares app chart (local-only, no login). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
+compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
-  requires:
-    bins: ["olares-cli"]
-  cliHelp: "olares-cli chart --help"
+  openclaw:
+    requires:
+      bins:
+        - olares-cli
 ---
 
 # chart (compose → Olares app chart)
 
 > **Source of truth for flags is always `olares-cli chart <verb> --help`.** This file only carries what `--help` cannot: when to use this skill, the convert→refine→lint loop, and the four judgment calls that turn a raw conversion into a publishable chart.
+
+## When to use
+
+- Olares chart, OlaresManifest / OlaresManifest.yaml, olares-cli chart, chart from-compose, chart lint, chart package
+- Turn docker-compose, a generic Helm chart, or a bare source repo into a publishable Olares app chart
+- Packaging for Olares Market / app store, building/pushing docker image (amd64 vs arm64), no official image, wrong arch
+- Install/runtime failures: ImagePullBackOff, app failed to install or start, market / app-service / chartrepo logs
+- Headless / CLI app, MCP server, or tool with no web UI (terminal entrance + invisible entrance)
+- Two axes: **packaging** (Dockerfile/image) and **deployment** (compose/chart); four post-kompose judgment calls (metadata, storage, middleware, entrances)
+- Optional live validation (requires login): package + market upload/install — see [`olares-shared`](../olares-shared/SKILL.md), [`olares-market`](../olares-market/SKILL.md), [`olares-cluster`](../olares-cluster/SKILL.md)
 
 ## Start here: establish your state
 

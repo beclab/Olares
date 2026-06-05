@@ -1,18 +1,26 @@
 ---
 name: olares-settings
-version: 4.0.0
-description: "Olares Settings (olares-cli settings) — read and mutate Olares Settings UI surfaces from the command line, scoped to the active Olares ID. Per-Olares-ID mirror of every section the Olares Settings SPA exposes (https://docs.olares.com/manual/olares/settings/). Read-only coverage: users, appearance, apps (list, get, entrances, env, domain, policy), integration accounts, VPN (devices, ACL, SSH, subroutes, public-domain policy), network (reverse proxy, frp, hosts file), GPU, video, search status + dirs, backup plans + snapshots, restore plans, advanced (containerd registries, images, env system / user), plus a `me` self-service tree (whoami on Olares, version, check-update, SSO list). Verified mutating verbs: appearance language set, search rebuild, integration accounts add awss3|tencent / delete, VPN SSH enable/disable, VPN ACL add/remove, users create/delete (new Olares ID). Use when the user mentions Olares, Olares ID, Olares Settings, olares-cli settings, the Olares Settings UI, role (owner / admin / normal) on Olares, integration accounts, SSO tokens, GPU mode, search index, backup / restore plans, containerd registries, VPN ACLs, language preference, or 'who am I on this Olares instance'."
+version: 4.1.0
+description: "Olares Settings via olares-cli settings — mirror of Settings SPA: users, apps, VPN, backup, integration, GPU, search, me/whoami. Use for Olares Settings, role, VPN ACL, backup, integration accounts, language."
+compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
-  requires:
-    bins: ["olares-cli"]
-  cliHelp: "olares-cli settings --help"
+  openclaw:
+    requires:
+      bins:
+        - olares-cli
 ---
 
 # settings (Olares Settings UI mirror)
 
-**CRITICAL — before doing anything, MUST use the Read tool to read [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for profile selection, login, automatic token refresh, and the auth-error recovery table.**
+**CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli settings --help`.**
 
 > **Source of truth for flags is always `olares-cli settings <area> <verb> --help`.** This file only carries what `--help` cannot give: routing, the 13-section index, the role-caching / admin-vs-normal floor, the wire-format cheat sheet, and the common-errors table.
+
+## When to use
+
+- Olares Settings UI (https://docs.olares.com/manual/olares/settings/), olares-cli settings, role (owner / admin / normal), who am I on this Olares instance
+- Areas: users, appearance, apps (entrances / env / domain / policy), integration (awss3 / tencent), VPN (devices / ACL / SSH), network, GPU, video, search, backup / restore, advanced (containerd registries, env)
+- Mutating: language set, search rebuild, integration add/delete, VPN SSH / ACL, users create/delete
 
 ## Routing
 
