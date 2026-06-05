@@ -24,7 +24,7 @@ mesh:
     opaquePorts: "443,19001,19002,19003"
 
 demo:
-  enabled: true
+  enabled: false
   host: demo.agw.local
   # Debug-only: CLI rollout/wait for curl-client & http-echo mesh. Release builds keep false.
   meshDebug: false
