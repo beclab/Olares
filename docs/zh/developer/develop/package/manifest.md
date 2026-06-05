@@ -826,6 +826,9 @@ options:
 
 是否为 Olares 集群中的所有用户安装此应用程序。对用共享应用，需要设置 `clusterScoped` 为 `true`, 同时在 `appRef` 字段填入应用名称
 
+:::tip v3 应用
+v3 应用（`apiVersion: v3`）本身即为共享应用。它凭 `apiVersion: v3` 标志与所声明的 `sharedEntrances` 即可获得完整的共享路由能力——shared-hosts 索引、入口 TLS 的 caller 命名空间副本、owner 索引等，因此**无需**再设置 `clusterScoped: true`。`clusterScoped` 字段仅用于历史 v2 集群级应用（如下方 `ollamav2` 示例）。
+:::
 
 :::info 应用ollamav2示例
 ```yaml
