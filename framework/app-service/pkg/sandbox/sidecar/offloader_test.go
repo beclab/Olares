@@ -82,7 +82,9 @@ func TestGetTLSOffloaderVolumes_Contract(t *testing.T) {
 	require.NotNil(t, got[0].Secret)
 	require.Equal(t, "shared-entrance-tls-alice", got[0].Secret.SecretName)
 	require.NotNil(t, got[0].Secret.DefaultMode)
-	require.EqualValues(t, 0400, *got[0].Secret.DefaultMode)
+	// WI-T1-11: cert files must be readable by the non-root D2SidecarUID nginx
+	// worker; 0400 (owner-only) caused fopen "Permission denied" at handshake.
+	require.EqualValues(t, 0444, *got[0].Secret.DefaultMode)
 
 	require.Equal(t, "olares-d2-conf-abc123", got[1].Name)
 	require.NotNil(t, got[1].ConfigMap)
