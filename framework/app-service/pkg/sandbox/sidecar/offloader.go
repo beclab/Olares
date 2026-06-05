@@ -111,7 +111,17 @@ func GetTLSOffloaderInitContainerSpec() corev1.Container {
 
 // GetTLSOffloaderVolumes returns cert/config/shared-host volume specs for d2.
 func GetTLSOffloaderVolumes(viewer, nginxConfConfigMapName, nginxConfVolumeName string) []corev1.Volume {
-	defaultMode := int32(0400)
+	// requirement: the secret-mounted tls.crt/tls.key must be readable by the
+	// nginx worker, which runs as the non-root D2SidecarUID (RunAsNonRoot).
+	// behavior: secret volume files are owned by root and no fsGroup is set on
+	// this injected sidecar, so mode 0400 (owner-only) makes the worker hit
+	// "Permission denied" on fopen at SSL handshake time (ssl_certificate is
+	// loaded lazily per-handshake in the worker), leaving the Pod Running but
+	// every TLS handshake failing with TLSV1_ALERT_INTERNAL_ERROR.
+	// 0444 grants the read bit to the worker uid; the key stays inside a single
+	// non-root sidecar with ReadOnlyRootFilesystem + dropped capabilities.
+	// test: pkg/sandbox/sidecar/offloader_test.go asserts this mode.
+	defaultMode := int32(0444)
 	return []corev1.Volume{
 		{
 			Name: constants.D2CertsVolumeName,
