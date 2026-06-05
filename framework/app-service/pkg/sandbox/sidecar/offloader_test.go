@@ -1,6 +1,7 @@
 package sidecar
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -137,7 +138,7 @@ func TestRenderSharedDecideJS_Contract(t *testing.T) {
 	require.Contains(t, got, "shared")
 	require.Contains(t, got, "ESCAPED_PLATFORM_DOMAIN + '$', 'i');")
 	require.Contains(t, got, "function decideOffload(s)")
-	require.Contains(t, got, "return '127.0.0.1:15080';")
+	require.Contains(t, got, fmt.Sprintf("return '127.0.0.1:%d';", constants.D2HTTPLoopbackPort))
 	require.Contains(t, got, "return passthrough(host);")
 }
 

@@ -97,7 +97,17 @@ const (
 
 	D2StreamListenPort     int32 = 15443
 	D2StreamListenPortName       = "d2-s"
-	D2HTTPLoopbackPort     int32 = 15080
+	// D2HTTPLoopbackPort is the loopback port (127.0.0.1) where the d2 sidecar
+	// nginx http server terminates TLS and re-emits HTTP after stream
+	// ssl_preread + njs decideOffload.
+	// requirement: stay orthogonal to all listeners in the same Pod netns.
+	// behavior: must NOT collide with olares-envoy-sidecar's listener_image
+	// (currently bound to 127.0.0.1:15080 in pkg/sandbox/sidecar/envoy.go);
+	// otherwise nginx fails with "bind() failed (98: Address in use)" and
+	// CrashLoopBackOff, blocking every caller-mode d2 injection (WI-T1-3).
+	// test: pkg/sandbox/sidecar/offloader_test.go TestRenderSharedDecideJS_Contract
+	// asserts the rendered njs uses this constant.
+	D2HTTPLoopbackPort     int32 = 15090
 
 	D2CertsVolumeName            = "olares-d2-certs"
 	D2ConfVolumeNamePrefix       = "olares-d2-conf-"
