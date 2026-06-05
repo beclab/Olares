@@ -104,7 +104,83 @@ type taskQueryEnvelope struct {
 		TotalPhase    int     `json:"total_phase"`
 		TotalFileSize int64   `json:"total_file_size"`
 		FailedReason  string  `json:"failed_reason,omitempty"`
+		// PauseAble is the server's "this task can be
+		// paused / resumed (and the cancel control is live)"
+		// capability flag. The web app keys its pause / resume /
+		// cancel buttons off `!pause_able` (pauseDisable /
+		// cancellable in olaresTask/archive.ts), so the cobra
+		// layer mirrors it to refuse a pause / resume / cancel
+		// the server would reject anyway.
+		PauseAble bool `json:"pause_able"`
 	} `json:"task"`
+}
+
+// TaskInfo is a one-shot snapshot of a single task's controllable
+// state, returned by GetTask. It carries just enough for the cobra
+// layer to decide whether pause / resume / cancel are allowed —
+// mirroring TermiPass's `pauseDisable = !pause_able` gating — and
+// to render a friendly "already <status>" message for terminal
+// tasks instead of the server's raw 4xx.
+type TaskInfo struct {
+	ID           string
+	Status       string  // pending / running / paused / completed / failed / canceled
+	PauseAble    bool    // server-reported: pause / resume / cancel allowed
+	Progress     float64 // 0..100
+	FailedReason string
+}
+
+// IsTerminal reports whether the task has reached a terminal
+// status (completed / failed / canceled / cancelled) — i.e. there
+// is nothing left to pause, resume, or cancel.
+func (t TaskInfo) IsTerminal() bool {
+	switch t.Status {
+	case TaskStatusCompleted, TaskStatusFailed, TaskStatusCanceled, TaskStatusCancelled:
+		return true
+	}
+	return false
+}
+
+// GetTask fetches a single task's current state via
+// GET /api/task/<node>/?task_id=<id> — the same endpoint WaitTask
+// polls, but as a one-shot read that surfaces the `pause_able`
+// capability flag the cobra layer gates pause / resume / cancel
+// on. `node` MUST match the node the task was queued on (the
+// queue is per-node); querying the wrong node surfaces as the
+// server's "not found", which the cobra reformatter explains.
+func (c *Client) GetTask(ctx context.Context, node, taskID string) (TaskInfo, error) {
+	if taskID == "" {
+		return TaskInfo{}, errors.New("GetTask: empty taskID")
+	}
+	if node == "" {
+		return TaskInfo{}, errors.New("GetTask: empty node")
+	}
+	q := url.Values{}
+	q.Set("task_id", taskID)
+	endpoint := c.BaseURL + "/api/task/" + url.PathEscape(node) + "/?" + q.Encode()
+
+	body, err := c.do(ctx, http.MethodGet, endpoint, nil, "", "")
+	if err != nil {
+		return TaskInfo{}, fmt.Errorf("query task %s on node %s: %w", taskID, node, err)
+	}
+	var env taskQueryEnvelope
+	if len(body) > 0 {
+		if err := json.Unmarshal(body, &env); err != nil {
+			return TaskInfo{}, fmt.Errorf("decode task query response for %s: %w (body=%s)",
+				taskID, err, truncateBody(body))
+		}
+	}
+	if env.Task.ID == "" && env.Task.Status == "" {
+		// The server answered 2xx but with no task body — the
+		// usual shape for "task_id not found on this node".
+		return TaskInfo{}, fmt.Errorf("task %s not found on node %s", taskID, node)
+	}
+	return TaskInfo{
+		ID:           env.Task.ID,
+		Status:       env.Task.Status,
+		PauseAble:    env.Task.PauseAble,
+		Progress:     env.Task.Progress,
+		FailedReason: env.Task.FailedReason,
+	}, nil
 }
 
 // WaitTask polls /api/task/<node>/?task_id=<taskID> at
@@ -195,10 +271,11 @@ func (c *Client) WaitTask(
 
 // CancelTask sends DELETE /api/task/<node>/?task_id=<id> to
 // cancel a running task. The server's `OlaresTaskManager.cancelTask`
-// is the same wire path. Used by the cobra layer's --wait Ctrl-C
-// handler to drop a queued compress / extract task on user
-// abort (so the user doesn't end up with a half-built archive
-// on disk).
+// is the same wire path (see the web app's olaresTask/index.ts
+// `cancelTask`). Used by the cobra layer's `files task cancel`
+// verb to drop a queued / running compress / extract task on
+// user request (so the user doesn't end up with a half-built
+// archive on disk).
 func (c *Client) CancelTask(ctx context.Context, node, taskID string) error {
 	if taskID == "" {
 		return errors.New("CancelTask: empty taskID")
@@ -214,4 +291,66 @@ func (c *Client) CancelTask(ctx context.Context, node, taskID string) error {
 		return fmt.Errorf("cancel task %s on node %s: %w", taskID, node, err)
 	}
 	return nil
+}
+
+// CancelAllTasks sends DELETE /api/task/<node>/?all=1 to cancel
+// EVERY task on a node. Mirrors the web app's
+// olaresTask/index.ts `cancelAllTask` (which fans the same call
+// out across every node). The cobra layer's `files task cancel
+// --all` drives this; it is deliberately node-scoped (one call
+// per node) so the caller decides the blast radius rather than
+// the SDK silently nuking the whole cluster's queue.
+func (c *Client) CancelAllTasks(ctx context.Context, node string) error {
+	if node == "" {
+		return errors.New("CancelAllTasks: empty node")
+	}
+	q := url.Values{}
+	q.Set("all", "1")
+	endpoint := c.BaseURL + "/api/task/" + url.PathEscape(node) + "/?" + q.Encode()
+	_, err := c.do(ctx, http.MethodDelete, endpoint, nil, "", "")
+	if err != nil {
+		return fmt.Errorf("cancel all tasks on node %s: %w", node, err)
+	}
+	return nil
+}
+
+// pauseResumeTask is the shared body of PauseTask / ResumeTask.
+// The wire shape mirrors the web app's olaresTask/index.ts
+// `pauseOrResumeTask`:
+//
+//	POST /api/task/<node>/?task_id=<id>&op=<pause|resume>
+//
+// `op` MUST be "pause" or "resume"; the exported wrappers are the
+// only callers so we keep the guard minimal (a bad op surfaces as
+// the server's 4xx).
+func (c *Client) pauseResumeTask(ctx context.Context, node, taskID, op string) error {
+	if taskID == "" {
+		return fmt.Errorf("%sTask: empty taskID", op)
+	}
+	if node == "" {
+		return fmt.Errorf("%sTask: empty node", op)
+	}
+	q := url.Values{}
+	q.Set("task_id", taskID)
+	q.Set("op", op)
+	endpoint := c.BaseURL + "/api/task/" + url.PathEscape(node) + "/?" + q.Encode()
+	if _, err := c.do(ctx, http.MethodPost, endpoint, nil, "", ""); err != nil {
+		return fmt.Errorf("%s task %s on node %s: %w", op, taskID, node, err)
+	}
+	return nil
+}
+
+// PauseTask suspends an in-flight compress / extract task via
+// POST /api/task/<node>/?task_id=<id>&op=pause. The task can be
+// resumed later with ResumeTask. Only tasks the server reports as
+// pause-able (pause_able=true) honour this; the server returns a
+// 4xx otherwise, which the cobra layer surfaces verbatim.
+func (c *Client) PauseTask(ctx context.Context, node, taskID string) error {
+	return c.pauseResumeTask(ctx, node, taskID, "pause")
+}
+
+// ResumeTask resumes a previously paused task via
+// POST /api/task/<node>/?task_id=<id>&op=resume.
+func (c *Client) ResumeTask(ctx context.Context, node, taskID string) error {
+	return c.pauseResumeTask(ctx, node, taskID, "resume")
 }

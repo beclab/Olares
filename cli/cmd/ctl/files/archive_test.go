@@ -30,6 +30,9 @@ func TestValidateArchiveNamespace(t *testing.T) {
 		}{
 			{"drive", "Home"},
 			{"drive", "Data"},
+			// Common is the app common data area (Olares >= 1.12.6);
+			// TermiPass's archiveSupportedDriveTypes includes it.
+			{"drive", "Common"},
 			// cache: any extend (=any node) is allowed.
 			{"cache", "node-a"},
 			{"cache", "olares"},
@@ -267,5 +270,38 @@ func TestParseExtractDestination_NamespaceGate(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "extract") || !strings.Contains(err.Error(), "dropbox") {
 		t.Errorf("missing verb/ns in: %q", err.Error())
+	}
+}
+
+// TestResolveVolumeSizeMB pins the two-flag reconciliation:
+// --volume-size (unit-aware) wins, --volume-size-mb is the
+// back-compat alias, and passing both is a usage error.
+func TestResolveVolumeSizeMB(t *testing.T) {
+	cases := []struct {
+		name       string
+		volumeSize string
+		volumeMB   int
+		want       int
+		err        bool
+	}{
+		{"neither", "", 0, 0, false},
+		{"mb-only", "", 100, 100, false},
+		{"size-only-bare", "100", 0, 100, false},
+		{"size-only-unit", "1.5GB", 0, 1536, false},
+		{"size-sub-mib-floors", "500KB", 0, 1, false},
+		{"both-set", "100MB", 50, 0, true},
+		{"negative-mb", "", -1, 0, true},
+		{"bad-size", "abc", 0, 0, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := resolveVolumeSizeMB(c.volumeSize, c.volumeMB)
+			if (err != nil) != c.err {
+				t.Fatalf("resolveVolumeSizeMB(%q, %d): err=%v want err=%v", c.volumeSize, c.volumeMB, err, c.err)
+			}
+			if !c.err && got != c.want {
+				t.Errorf("resolveVolumeSizeMB(%q, %d): got %d want %d", c.volumeSize, c.volumeMB, got, c.want)
+			}
+		})
 	}
 }

@@ -501,8 +501,13 @@ func setupShareClient(ctx context.Context, f *cmdutil.Factory) (*share.Client, *
 //
 //   - Public: Drive only. This is the strictest flavor — the GUI's
 //     per-driver Share-to-Public condition allows ONLY
-//     `event.type === DriveType.Drive || DriveType.Data`, both of
-//     which live under the wire-level `drive` fileType.
+//     `event.type === DriveType.Drive || DriveType.Data ||
+//     DriveType.Common`, all of which live under the wire-level
+//     `drive` fileType. drive/Common is admitted by this fileType
+//     allow-list AND is the only flavor that accepts it — the
+//     extend-level "Common is public-only" rule is enforced
+//     separately by [validateShareCommonRestriction] (the fileType
+//     allow-list can't express an extend constraint).
 //
 // Three things this map intentionally does NOT do:
 //
@@ -654,6 +659,39 @@ func validateShareNamespace(flavor share.Type, fileType, displayPath string) err
 		sortedNamespaceList(allowed), hint)
 }
 
+// validateShareCommonRestriction enforces the extend-level policy
+// that the flavor allow-list (which keys on fileType only) can't
+// express: drive/Common may be shared ONLY as an outbound public
+// link.
+//
+// drive/Common is the Olares app common data area (JuiceFS
+// /rootfs/Common — ollama / huggingface / comfyui caches). It lives
+// under the wire-level `drive` fileType, so it passes the per-flavor
+// fileType allow-list for internal / SMB just like Home / Data —
+// but TermiPass's per-driver share gating
+// (FileOperationItem.vue `canShowShareOption`) lists DriveType.Common
+// ONLY under SHARE_IN_PUBLIC, never under SHARE_IN_INTERNAL or
+// SHARE_IN_SMB. We mirror that here so the CLI can't create an
+// internal / SMB share the GUI would never offer.
+//
+// Returns nil for every non-Common path (the helper is a no-op
+// outside the Common case) and for Common + Public; rejects Common +
+// internal / SMB with a self-describing error.
+func validateShareCommonRestriction(flavor share.Type, fileType, extend, displayPath string) error {
+	if fileType != "drive" || extend != "Common" {
+		return nil
+	}
+	if flavor == share.TypePublic {
+		return nil
+	}
+	return fmt.Errorf(
+		"refusing to create a %s share for %s: drive/Common (the app common data area) "+
+			"only supports outbound public links — use `files share public`. "+
+			"Matching the LarePass GUI, the common data area cannot be shared internally "+
+			"to other Olares users or exported over SMB.",
+		shareFlavorFriendlyName(flavor), displayPath)
+}
+
 // sortedNamespaceList renders an allowed-namespace set as a
 // stable, alphabetical, comma-joined string — used in error
 // messages so the list is deterministic across runs and easy to
@@ -710,6 +748,9 @@ func frontendPathToShareTarget(raw string, flavor share.Type) (share.Target, err
 		return share.Target{}, err
 	}
 	if err := validateShareNamespace(flavor, fp.FileType, raw); err != nil {
+		return share.Target{}, err
+	}
+	if err := validateShareCommonRestriction(flavor, fp.FileType, fp.Extend, raw); err != nil {
 		return share.Target{}, err
 	}
 	if fp.IsExternalNodeRoot() {

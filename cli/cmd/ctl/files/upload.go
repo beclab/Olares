@@ -73,6 +73,7 @@ type uploadOptions struct {
 //
 //   - drive/Home/<sub>
 //   - drive/Data/<sub>
+//   - drive/Common/<sub>
 //   - sync/<repo_id>/<sub>
 //   - cache/<node>/<sub>
 //   - external/<node>/<volume>/<sub>
@@ -104,6 +105,7 @@ files-backend namespaces:
 
     drive/Home/<sub>                 (your Olares Home volume)
     drive/Data/<sub>                 (your Olares Data volume)
+    drive/Common/<sub>               (the app common data area; Olares >= 1.12.6)
     sync/<repo_id>/<sub>             (a Seafile sync library)
     cache/<node>/<sub>               (node-local cache)
     external/<node>/<volume>/<sub>   (an attached external volume)
@@ -203,6 +205,9 @@ func runUpload(
 	// the path itself supplies the upload <node>).
 	fp, err := ParseFrontendPath(remotePath)
 	if err != nil {
+		return err
+	}
+	if err := requireCommonBackendVersion(ctx, f, isCommonFrontendPath(fp.FileType, fp.Extend)); err != nil {
 		return err
 	}
 	apiRoot, chunkRoot, driveType, pathNode, err := uploadRootAndDriveType(fp)
@@ -466,7 +471,7 @@ func runUploads(
 // failure mode is self-describing without the caller having to read
 // the long help text. Keep in sync with uploadRootAndDriveType
 // switch arms below.
-const supportedUploadNamespaces = "drive/Home, drive/Data, sync/<repo_id>, cache/<node>, external/<node>/<volume>, awss3/<account>, google/<account>, or dropbox/<account>"
+const supportedUploadNamespaces = "drive/Home, drive/Data, drive/Common, sync/<repo_id>, cache/<node>, external/<node>/<volume>, awss3/<account>, google/<account>, or dropbox/<account>"
 
 // uploadRootAndDriveType inspects a parsed FrontendPath and returns
 // the four values runUpload + BuildPlan + the chunk pipeline need:
@@ -514,8 +519,16 @@ func uploadRootAndDriveType(fp FrontendPath) (apiRoot, chunkRoot, driveType, pat
 			// / getFileUploadedBytes / formatUploaderPath from
 			// DriveDataAPI without overrides; only `driveType` differs.
 			return "/drive/Data", "/drive/Data", "Data", "", nil
+		case "Common":
+			// drive/Common (the app common data area, Olares >= 1.12.6)
+			// uses the same multipart-POST pipeline — the web app's
+			// CommonDataAPI extends DriveDataAPI WITHOUT overriding
+			// getFileServerUploadLink / getFileUploadedBytes (see
+			// apps/.../v2/commonDrive/data.ts); only the `/drive/Common`
+			// prefix and the `driveType` form-field literal differ.
+			return "/drive/Common", "/drive/Common", "Common", "", nil
 		default:
-			return "", "", "", "", fmt.Errorf("upload destination must be under %s (drive extend must be Home or Data, got %q)",
+			return "", "", "", "", fmt.Errorf("upload destination must be under %s (drive extend must be Home, Data, or Common, got %q)",
 				supportedUploadNamespaces, fp.String())
 		}
 	case "sync":

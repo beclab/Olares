@@ -23,7 +23,8 @@ import (
 type compressOptions struct {
 	format           string
 	level            int
-	volumeSizeMB     int
+	volumeSizeMB     int    // explicit MiB (legacy/precise knob)
+	volumeSize       string // unit-aware: "100MB" / "1.5GB" / "500KB" / bare MiB
 	preserveSymlinks bool
 	conflict         string
 	passwordStdin    bool
@@ -100,14 +101,31 @@ is omitted (.zip / .7z / .tar.gz / .tgz / .tar.bz2 / .tar.xz /
 .tar / .gz / .bz2 / .xz). Pass --format when the destination has
 no canonical suffix.
 
+Format constraints (mirrors the LarePass web app):
+
+    - Passwords / split volumes: zip and 7z only.
+    - Single-file compressors (gzip / bzip2 / xz) wrap exactly ONE
+      file's bytes — they cannot pack a directory or multiple
+      sources. To compress a directory or several files, use a
+      container format (zip, 7z, tar, tar.gz, tar.bz2, tar.xz, tgz).
+      The tar.* compounds tar first, then compress, so they carry
+      directories and multiple members just fine.
+
 Knobs (most apply only to specific formats):
 
     --level N           Compression level 0..9 (codec-defined; 0 =
                         store, 9 = max). Omit to use the backend's
                         default.
 
-    --volume-size-mb M  Split-archive volume size in MiB. zip / 7z
-                        only.
+    --volume-size SIZE  Split-archive volume size with a unit
+                        suffix: KB / MB / GB (e.g. 100MB, 1.5GB,
+                        500KB). A bare number is MiB. Rounded up,
+                        floored at 1 MiB. zip / 7z only. Preferred
+                        over --volume-size-mb.
+
+    --volume-size-mb M  Split-archive volume size in raw MiB (zip /
+                        7z only). Back-compat alias for --volume-size;
+                        pass at most one of the two.
 
     --preserve-symlinks Archive symlinks as symlinks instead of
                         dereferencing them at compress time.
@@ -149,9 +167,13 @@ Examples:
     echo "s3cret" | olares-cli files compress \
         drive/Home/Secrets/ drive/Home/secrets.7z --password-stdin
 
-    # Split-volume zip (100 MiB volumes).
+    # Split-volume zip (100 MiB volumes; unit-aware flag).
     olares-cli files compress drive/Home/Backups/ \
-        drive/Home/backup.zip --volume-size-mb 100
+        drive/Home/backup.zip --volume-size 100MB
+
+    # Same, with a fractional GiB.
+    olares-cli files compress drive/Home/Backups/ \
+        drive/Home/backup.zip --volume-size 1.5GB
 
     # Block until the task completes.
     olares-cli files compress drive/Home/Reports/ \
@@ -167,7 +189,9 @@ Examples:
 	cmd.Flags().IntVar(&o.level, "level", -1,
 		"compression level 0..9 (0=store, 9=max); leave unset to use the backend's codec default")
 	cmd.Flags().IntVar(&o.volumeSizeMB, "volume-size-mb", 0,
-		"split-archive volume size in MiB (zip / 7z only; 0 = single volume)")
+		"split-archive volume size in MiB (zip / 7z only; 0 = single volume). Prefer --volume-size for unit suffixes")
+	cmd.Flags().StringVar(&o.volumeSize, "volume-size", "",
+		"split-archive volume size with a unit suffix: KB / MB / GB (e.g. 100MB, 1.5GB, 500KB; bare number = MiB). zip / 7z only")
 	cmd.Flags().BoolVar(&o.preserveSymlinks, "preserve-symlinks", false,
 		"archive symlinks as symlinks (default: dereference at compress time)")
 	cmd.Flags().StringVar(&o.conflict, "conflict", string(archive.ConflictDefault),
@@ -210,6 +234,15 @@ func runCompress(
 	if err != nil {
 		return err
 	}
+	touchesCommon := isCommonFrontendPath(dst.FileType, dst.Extend)
+	for _, s := range srcs {
+		if isCommonFrontendPath(s.FileType, s.Extend) {
+			touchesCommon = true
+		}
+	}
+	if err := requireCommonBackendVersion(ctx, f, touchesCommon); err != nil {
+		return err
+	}
 
 	conflict, err := archive.ParseConflict(o.conflict)
 	if err != nil {
@@ -232,6 +265,15 @@ func runCompress(
 		return err
 	}
 
+	// Single-file compressors (gzip / bzip2 / xz) wrap exactly one
+	// file's bytes — they cannot pack multiple sources. Reject the
+	// multi-source case up front (the directory case needs a Stat,
+	// so it is enforced in the preflight below). Mirrors LarePass's
+	// canCompressItemsWithFormat gate.
+	if err := archive.ValidateSingleFileCompression(format, len(srcWires), false); err != nil {
+		return fmt.Errorf("compress: %w", err)
+	}
+
 	password, err := readArchivePasswordStdin(o.passwordStdin)
 	if err != nil {
 		return err
@@ -241,10 +283,18 @@ func runCompress(
 			"compress: --password-stdin is only supported on passwordable formats (zip, 7z); got format %q",
 			format)
 	}
-	if o.volumeSizeMB > 0 && !archive.SupportsMultiVolume(format) {
+	// Resolve the split-volume size from the two mutually-exclusive
+	// flags. --volume-size (unit-aware) is the preferred knob;
+	// --volume-size-mb (raw MiB) stays for back-compat. Passing both
+	// is a usage error — refuse rather than silently pick one.
+	volumeMB, err := resolveVolumeSizeMB(o.volumeSize, o.volumeSizeMB)
+	if err != nil {
+		return fmt.Errorf("compress: %w", err)
+	}
+	if volumeMB > 0 && !archive.SupportsMultiVolume(format) {
 		return fmt.Errorf(
-			"compress: --volume-size-mb (%d) is only supported on multi-volume formats (zip, 7z); got format %q",
-			o.volumeSizeMB, format)
+			"compress: split volumes are only supported on multi-volume formats (zip, 7z); got format %q",
+			format)
 	}
 
 	rp, err := f.ResolveProfile(ctx)
@@ -283,7 +333,7 @@ func runCompress(
 		HTTPClient: httpClient,
 		BaseURL:    rp.FilesURL,
 	}
-	if err := preflightCompress(ctx, statClient, srcs, srcWires, dst, dstWire); err != nil {
+	if err := preflightCompress(ctx, statClient, format, srcs, srcWires, dst, dstWire); err != nil {
 		return reformatArchiveHTTPErr(err, rp.OlaresID, "compress preflight", "")
 	}
 
@@ -298,7 +348,7 @@ func runCompress(
 		Destination:      dstWire,
 		Format:           format,
 		Level:            o.level,
-		VolumeSizeMB:     o.volumeSizeMB,
+		VolumeSizeMB:     volumeMB,
 		PreserveSymlinks: o.preserveSymlinks,
 		Conflict:         conflict,
 		Node:             node,
@@ -309,12 +359,41 @@ func runCompress(
 
 	fmt.Fprintf(out, "queued compress task: %s\n", taskID)
 	if !o.wait {
-		fmt.Fprintf(out, "(pass --wait to block until completion, or poll /api/task/%s/?task_id=%s yourself)\n",
-			node, taskID)
+		fmt.Fprintf(out, "(pass --wait to block until completion; "+
+			"manage it with `olares-cli files task {cancel,pause,resume} %s --node %s`)\n",
+			taskID, node)
 		return nil
 	}
 
 	return waitArchiveTask(ctx, cli, node, taskID, o.pollInterval, out, "compress")
+}
+
+// resolveVolumeSizeMB reconciles the two split-volume flags into a
+// single MiB value for the wire `volumeSizeMB` field:
+//
+//   - --volume-size (unit-aware string) takes precedence and is the
+//     documented knob (parsed via archive.ParseVolumeSize so
+//     100MB / 1.5GB / 500KB all work, rounding up, floored at 1).
+//   - --volume-size-mb (raw int MiB) stays for back-compat.
+//   - Supplying BOTH is rejected — there is no sensible merge and a
+//     silent winner would surprise the user.
+//   - Neither set → 0 (single volume).
+func resolveVolumeSizeMB(volumeSize string, volumeSizeMB int) (int, error) {
+	trimmed := strings.TrimSpace(volumeSize)
+	if trimmed != "" && volumeSizeMB > 0 {
+		return 0, errors.New("pass either --volume-size or --volume-size-mb, not both")
+	}
+	if trimmed != "" {
+		mib, err := archive.ParseVolumeSize(trimmed)
+		if err != nil {
+			return 0, err
+		}
+		return mib, nil
+	}
+	if volumeSizeMB < 0 {
+		return 0, fmt.Errorf("--volume-size-mb must not be negative (got %d)", volumeSizeMB)
+	}
+	return volumeSizeMB, nil
 }
 
 // parseCompressSources converts the N-1 leading args of the
@@ -409,6 +488,7 @@ func parseCompressDestination(raw string) (archivePath, string, error) {
 func preflightCompress(
 	ctx context.Context,
 	statClient *download.Client,
+	format string,
 	srcs []archivePath,
 	srcWires []string,
 	dst archivePath,
@@ -426,6 +506,16 @@ func preflightCompress(
 				return fmt.Errorf("compress: source %s does not exist on the server", plain)
 			}
 			return err
+		}
+		// Single-file compressors (gzip / bzip2 / xz) cannot pack a
+		// directory. Now that the Stat told us the real kind, reject
+		// a directory source with the format-specific message (it
+		// takes priority over the generic trailing-slash hint
+		// below). Mirrors LarePass's canCompressItemsWithFormat.
+		if info.IsDir {
+			if err := archive.ValidateSingleFileCompression(format, len(srcs), true); err != nil {
+				return fmt.Errorf("compress: source %s: %w", plain, err)
+			}
 		}
 		srcHasTrailingSlash := strings.HasSuffix(s.SubPath, "/")
 		if srcHasTrailingSlash && !info.IsDir {
@@ -513,6 +603,19 @@ func waitArchiveTask(
 			verb, taskID, phase, u.Status, u.Progress)
 	})
 	if err != nil {
+		// A cancelled context means the user hit Ctrl-C (or the
+		// parent context was cancelled). The local poll stops here,
+		// but the SERVER-SIDE task keeps running — detaching the
+		// poll does not cancel the queue entry. Point the user at
+		// the explicit cancel verb so the half-built archive doesn't
+		// linger. (Mirrors the behavior the SKILL doc warns about.)
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			fmt.Fprintf(out,
+				"\nstopped waiting on %s task %s — the task is STILL RUNNING on the server.\n"+
+					"  resume waiting : olares-cli files task ... (re-run with --wait)\n"+
+					"  cancel it      : olares-cli files task cancel %s --node %s\n",
+				verb, taskID, taskID, node)
+		}
 		return err
 	}
 	fmt.Fprintf(out, "%s task %s completed\n", verb, taskID)

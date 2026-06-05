@@ -47,9 +47,19 @@ var knownFileTypes = map[string]struct{}{
 
 // driveExtends enumerates the only valid `extend` values when fileType=="drive".
 // Backend enforcement: files/pkg/models/file_param.go convert() L59-61.
+//
+// `Common` is the Olares app common data area (Olares >= 1.12.6): a
+// shared volume backed by JuiceFS /rootfs/Common that holds
+// cross-application caches (ollama / huggingface / comfyui / ...). On
+// the wire it is a regular `drive` extend — the per-user files-backend
+// addresses it as /api/<verb>/drive/Common/<sub>, exactly like Home /
+// Data. Mirrors TermiPass's `driveTypeByFileTypeAndFileExtend`
+// (fileExtend == 'Common' → DriveType.Common) and the LarePass sidebar
+// entry labelled "公共" / Common.
 var driveExtends = map[string]struct{}{
-	"Home": {},
-	"Data": {},
+	"Home":   {},
+	"Data":   {},
+	"Common": {},
 }
 
 // ProtectedDriveHomeChildren is the set of first-level child names
@@ -273,7 +283,8 @@ type FrontendPath struct {
 //     other than "the root directory".
 //   - FileType must be a known value (case-sensitive lowercase). Unknown
 //     values fail fast on the client to avoid an opaque 500 from the server.
-//   - When FileType=="drive", Extend must be "Home" or "Data" (case-sensitive).
+//   - When FileType=="drive", Extend must be "Home", "Data", or "Common"
+//     (case-sensitive). "Common" is the app common data area (Olares >= 1.12.6).
 //   - Other FileTypes' Extend values (node names, repo ids, account keys) are
 //     not pre-validated locally; the backend is the source of truth for those.
 //   - Path traversal segments like ".." are NOT stripped here — the backend
@@ -310,7 +321,7 @@ func ParseFrontendPath(raw string) (FrontendPath, error) {
 	}
 	if fileType == "drive" {
 		if _, ok := driveExtends[extend]; !ok {
-			return FrontendPath{}, fmt.Errorf("drive extend must be Home or Data (got %q)", extend)
+			return FrontendPath{}, fmt.Errorf("drive extend must be Home, Data, or Common (got %q)", extend)
 		}
 	}
 

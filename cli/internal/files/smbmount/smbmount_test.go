@@ -29,19 +29,22 @@ func newTestClient(t *testing.T, h http.Handler) (*Client, *httptest.Server) {
 // branch (stores/files.ts L1266-L1272).
 func TestBuildMountURL(t *testing.T) {
 	cases := []struct {
-		name   string
-		node   string
-		expect string
+		name         string
+		node         string
+		externalType string
+		expect       string
 	}{
-		{"with node", "node-a", "/api/mount/node-a/?external_type=smb"},
-		{"empty node drops segment", "", "/api/mount/?external_type=smb"},
-		{"node with space", "node a", "/api/mount/node%20a/?external_type=smb"},
+		{"with node", "node-a", "smb", "/api/mount/node-a/?external_type=smb"},
+		{"empty node drops segment", "", "smb", "/api/mount/?external_type=smb"},
+		{"node with space", "node a", "smb", "/api/mount/node%20a/?external_type=smb"},
+		{"nfs external type", "node-a", "nfs", "/api/mount/node-a/?external_type=nfs"},
+		{"nfs empty node", "", "nfs", "/api/mount/?external_type=nfs"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := buildMountURL(c.node)
+			got := buildMountURL(c.node, c.externalType)
 			if got != c.expect {
-				t.Errorf("buildMountURL(%q) = %q, want %q", c.node, got, c.expect)
+				t.Errorf("buildMountURL(%q, %q) = %q, want %q", c.node, c.externalType, got, c.expect)
 			}
 		})
 	}
@@ -513,6 +516,101 @@ func TestHistoryRemove(t *testing.T) {
 			t.Errorf("expected nil for plaintext 2xx body, got %v", err)
 		}
 	})
+}
+
+// TestMountNFS_FullPath covers the direct-mount happy path: a
+// host:/export target sends body {url} (no operate) and the server
+// returns code 200 → MountNFS yields Listed==false, Code==200.
+func TestMountNFS_FullPath(t *testing.T) {
+	var gotPath, gotRawQ string
+	var gotBody []byte
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotRawQ = r.URL.Path, r.URL.RawQuery
+		gotBody, _ = io.ReadAll(r.Body)
+		_, _ = io.WriteString(w, `{"code":200,"message":"ok"}`)
+	}))
+	res, err := c.MountNFS(context.Background(), "node-a", NFSMountOptions{URL: "192.168.1.10:/data"})
+	if err != nil {
+		t.Fatalf("MountNFS: %v", err)
+	}
+	if res.Listed || res.Code != 200 {
+		t.Errorf("res = %+v, want Code 200 / Listed false", res)
+	}
+	if gotPath != "/api/mount/node-a/" {
+		t.Errorf("path = %q", gotPath)
+	}
+	if gotRawQ != "external_type=nfs" {
+		t.Errorf("query = %q, want external_type=nfs", gotRawQ)
+	}
+	var sent map[string]string
+	if err := json.Unmarshal(gotBody, &sent); err != nil {
+		t.Fatalf("decode body %q: %v", string(gotBody), err)
+	}
+	if sent["url"] != "192.168.1.10:/data" {
+		t.Errorf("body url = %q", sent["url"])
+	}
+	if _, ok := sent["operate"]; ok {
+		t.Errorf("full-path mount must not send operate; body = %+v", sent)
+	}
+}
+
+// TestMountNFS_ListRequest covers discovery: a bare host sends body
+// {url, operate:"list"} and the server returns code 200 + an export
+// array → MountNFS yields Listed==true with parsed exports.
+func TestMountNFS_ListRequest(t *testing.T) {
+	var gotBody []byte
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotBody, _ = io.ReadAll(r.Body)
+		_, _ = io.WriteString(w, `{"code":200,"message":"ok","data":[{"path":"/data","mounted":false},{"path":"192.168.1.10:/backups","mounted":true}]}`)
+	}))
+	res, err := c.MountNFS(context.Background(), "node-a", NFSMountOptions{URL: "192.168.1.10", List: true})
+	if err != nil {
+		t.Fatalf("MountNFS list: %v", err)
+	}
+	if !res.Listed {
+		t.Fatalf("res.Listed = false, want true; res=%+v", res)
+	}
+	if len(res.Exports) != 2 {
+		t.Fatalf("Exports = %+v, want 2", res.Exports)
+	}
+	if res.Exports[0].Path != "/data" || res.Exports[0].Mounted {
+		t.Errorf("Exports[0] = %+v", res.Exports[0])
+	}
+	if res.Exports[1].Path != "192.168.1.10:/backups" || !res.Exports[1].Mounted {
+		t.Errorf("Exports[1] = %+v", res.Exports[1])
+	}
+	var sent map[string]string
+	if err := json.Unmarshal(gotBody, &sent); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if sent["url"] != "192.168.1.10" || sent["operate"] != "list" {
+		t.Errorf("list body = %+v", sent)
+	}
+}
+
+// TestMountNFS_ServerError surfaces a non-200/300 envelope code as a
+// descriptive error rather than a silent success.
+func TestMountNFS_ServerError(t *testing.T) {
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"code":500,"message":"mount.nfs: access denied"}`)
+	}))
+	_, err := c.MountNFS(context.Background(), "node-a", NFSMountOptions{URL: "192.168.1.10:/data"})
+	if err == nil {
+		t.Fatal("expected error on code 500")
+	}
+	if !strings.Contains(err.Error(), "access denied") {
+		t.Errorf("err = %v, want it to carry the server message", err)
+	}
+}
+
+// TestMountNFS_EmptyURL is a client-side guard.
+func TestMountNFS_EmptyURL(t *testing.T) {
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unexpected wire call: %s %s", r.Method, r.URL)
+	}))
+	if _, err := c.MountNFS(context.Background(), "node-a", NFSMountOptions{}); err == nil {
+		t.Fatal("expected error for empty url")
+	}
 }
 
 // TestHTTPError_Truncation makes sure the error message stays

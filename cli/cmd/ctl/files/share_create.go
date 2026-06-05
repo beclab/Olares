@@ -291,6 +291,9 @@ func runSharePublic(
 	if err != nil {
 		return err
 	}
+	if err := requireCommonBackendVersion(ctx, f, isCommonFrontendPath(tgt.FileType, tgt.Extend)); err != nil {
+		return err
+	}
 	if o.expireDays > 0 && o.expireTime != "" {
 		return errors.New("--expire-days and --expire-time are mutually exclusive; pass exactly one")
 	}

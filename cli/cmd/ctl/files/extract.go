@@ -149,6 +149,10 @@ func runExtract(
 	if err != nil {
 		return err
 	}
+	if err := requireCommonBackendVersion(ctx, f,
+		isCommonFrontendPath(src.FileType, src.Extend) || isCommonFrontendPath(dst.FileType, dst.Extend)); err != nil {
+		return err
+	}
 
 	conflict, err := archive.ParseConflict(o.conflict)
 	if err != nil {
@@ -211,22 +215,33 @@ func runExtract(
 	fmt.Fprintf(out, "extract %s → %s (format=%s, node=%s)\n",
 		srcWire, dstWire, format, node)
 
-	taskID, err := cli.Extract(ctx, archive.ExtractOptions{
-		Source:           srcWire,
-		Destination:      dstWire,
-		Format:           format,
-		PreserveSymlinks: o.preserveSymlinks,
-		Conflict:         conflict,
-		Node:             node,
-	}, password)
+	// Wrap the queue call in the password-retry loop: an encrypted
+	// archive surfaces as HTTP 400 code 30001 (required) / 30002
+	// (incorrect) BEFORE the task is queued, so we can prompt for a
+	// password on a TTY and retry — mirroring TermiPass's
+	// isArchivePasswordError flow.
+	var taskID string
+	err = withArchivePasswordRetry(password, func(pw string) error {
+		var e error
+		taskID, e = cli.Extract(ctx, archive.ExtractOptions{
+			Source:           srcWire,
+			Destination:      dstWire,
+			Format:           format,
+			PreserveSymlinks: o.preserveSymlinks,
+			Conflict:         conflict,
+			Node:             node,
+		}, pw)
+		return e
+	})
 	if err != nil {
 		return reformatArchiveHTTPErr(err, rp.OlaresID, "extract", srcWire)
 	}
 
 	fmt.Fprintf(out, "queued extract task: %s\n", taskID)
 	if !o.wait {
-		fmt.Fprintf(out, "(pass --wait to block until completion, or poll /api/task/%s/?task_id=%s yourself)\n",
-			node, taskID)
+		fmt.Fprintf(out, "(pass --wait to block until completion; "+
+			"manage it with `olares-cli files task {cancel,pause,resume} %s --node %s`)\n",
+			taskID, node)
 		return nil
 	}
 

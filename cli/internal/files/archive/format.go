@@ -22,7 +22,9 @@ package archive
 
 import (
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -70,6 +72,54 @@ var passwordableFormats = map[string]struct{}{
 var multiVolumeFormats = map[string]struct{}{
 	"zip": {},
 	"7z":  {},
+}
+
+// singleFileCompressionFormats is the subset of SupportedFormats
+// that are raw single-stream compressors: they wrap exactly ONE
+// file's bytes with no container/index, so they cannot carry a
+// directory tree or multiple members.
+//
+// This mirrors the LarePass web app's `singleFileCompressionFormats`
+// (TermiPass utils/interface/archive.ts) and its
+// `canCompressItemsWithFormat` gate: gzip / bzip2 / xz may only
+// compress a SINGLE, non-directory source. Feeding them a directory
+// or multiple sources is a user error the CLI rejects up front
+// instead of letting the backend produce a surprising single-file
+// archive (or fail opaquely).
+//
+// tar.gz / tar.bz2 / tar.xz / tgz are NOT here: those tar FIRST
+// (a real multi-member container) and THEN compress the tarball,
+// so they happily carry directories and multiple sources.
+var singleFileCompressionFormats = map[string]struct{}{
+	"gzip":  {},
+	"bzip2": {},
+	"xz":    {},
+}
+
+// previewUnsupportedFormats is the subset that the archive
+// preview endpoints (`/entries`, `/entry`) cannot walk. They are
+// the bare single-stream compressors whose payload is an opaque
+// byte run with no listable entry table — there is literally
+// nothing to enumerate, so `files archive entries` / `cat` would
+// only ever surface an empty or misleading listing.
+//
+// This mirrors the LarePass web app's
+// `unsupportedArchivePreviewExtensions` (= bz2 / bzip2 / xz):
+//
+//   - bzip2 (.bz2 / .bzip2) and xz (.xz) → no entry table → no preview.
+//   - gzip (.gz / .gzip) is INTENTIONALLY absent: the web app lists
+//     gzip as previewable, so we mirror that and allow it.
+//   - The tar.* compound formats (tar.gz / tar.bz2 / tar.xz / tgz)
+//     are real tar containers and remain fully previewable; only
+//     the BARE bzip2 / xz formats are gated.
+//
+// Extract (`files extract`) is NOT gated by this set — unpacking a
+// bare bzip2 / xz stream into its single decompressed file is a
+// legitimate, supported operation; only the entry-listing preview
+// is meaningless for them.
+var previewUnsupportedFormats = map[string]struct{}{
+	"bzip2": {},
+	"xz":    {},
 }
 
 // MinLevel / MaxLevel bound the `level` parameter on compress.
@@ -146,6 +196,57 @@ func SupportsMultiVolume(format string) bool {
 	return ok
 }
 
+// IsSingleFileCompressionFormat reports whether `format` is a raw
+// single-stream compressor (gzip / bzip2 / xz) that can only wrap
+// ONE non-directory file. See singleFileCompressionFormats for the
+// LarePass parity rationale.
+func IsSingleFileCompressionFormat(format string) bool {
+	_, ok := singleFileCompressionFormats[strings.ToLower(format)]
+	return ok
+}
+
+// SupportsPreview reports whether `format` can be walked by the
+// archive preview endpoints (`files archive entries` / `cat`).
+// Returns false for the bare bzip2 / xz single-stream compressors,
+// which have no listable entry table. Mirrors the LarePass web
+// app's unsupportedArchivePreviewExtensions gate.
+func SupportsPreview(format string) bool {
+	_, ok := previewUnsupportedFormats[strings.ToLower(format)]
+	return !ok
+}
+
+// ValidateSingleFileCompression enforces the gzip / bzip2 / xz
+// "single non-directory source" rule for `compress`. It mirrors
+// the LarePass web app's canCompressItemsWithFormat gate so the
+// CLI and the web UI reject the exact same inputs.
+//
+// `sourceCount` is the number of compress sources; `anyDir`
+// reports whether ANY of them is (or is declared as) a directory.
+// For non-single-file formats this is always nil — they happily
+// carry directories and multiple members.
+//
+// Returns a typed, actionable error naming the format and pointing
+// the user at a container format (zip / 7z / tar.gz) when they tried
+// to pack a directory or multiple files into a single-stream codec.
+func ValidateSingleFileCompression(format string, sourceCount int, anyDir bool) error {
+	if !IsSingleFileCompressionFormat(format) {
+		return nil
+	}
+	if sourceCount > 1 {
+		return fmt.Errorf(
+			"format %q compresses a single file only; got %d sources. "+
+				"Use a container format (zip, 7z, tar, tar.gz, tar.bz2, tar.xz, tgz) to pack multiple entries",
+			format, sourceCount)
+	}
+	if anyDir {
+		return fmt.Errorf(
+			"format %q compresses a single file only and cannot pack a directory. "+
+				"Use a container format (zip, 7z, tar, tar.gz, tar.bz2, tar.xz, tgz) to pack a directory",
+			format)
+	}
+	return nil
+}
+
 // ParseConflict coerces a user-supplied --conflict flag into a
 // Conflict value. Empty → ConflictDefault (rename) — that's the
 // backend's documented default and matches the LarePass web
@@ -204,6 +305,80 @@ func ValidateFormat(format, usage string) error {
 			usage, format, JoinFormats())
 	}
 	return nil
+}
+
+// ParseVolumeSize parses a split-volume size string with an
+// optional unit suffix into whole MiB — the unit the compress
+// endpoint's `volumeSizeMB` field expects. It mirrors the
+// LarePass web app's KB / MB / GB selector (see
+// ArchiveCompressDialog's splitVolumeMB() and
+// olaresTask/archive.ts's normalizeSplitVolume):
+//
+//	"100"     → 100   (bare number = MiB)
+//	"100MB"   → 100
+//	"1.5GB"   → 1536  (1.5 * 1024, rounded up)
+//	"500KB"   → 1     (500/1024 = 0.49 MiB, floored at 1)
+//	"2G"      → 2048
+//
+// Accepted suffixes (case-insensitive): K / KB, M / MB, G / GB.
+// A bare number is treated as MiB. The result is rounded UP to the
+// nearest MiB and floored at 1, matching the web app's
+// Math.max(1, ceil(mbValue)) — the backend rejects a 0-size
+// volume, and rounding up keeps "500KB" from silently becoming
+// "no split".
+//
+// Returns an error for empty input, a non-numeric value, an
+// unknown suffix, or a non-positive size, so a typo surfaces as a
+// clean client-side message instead of an opaque backend 400.
+func ParseVolumeSize(raw string) (int, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return 0, fmt.Errorf("empty volume size")
+	}
+	// Split the numeric head from the (optional) unit tail. We
+	// scan from the end so "1.5gb" / "100 mb" / "100" all work.
+	lower := strings.ToLower(s)
+	lower = strings.TrimSpace(lower)
+	var numPart, unit string
+	switch {
+	case strings.HasSuffix(lower, "gb"):
+		numPart, unit = lower[:len(lower)-2], "g"
+	case strings.HasSuffix(lower, "mb"):
+		numPart, unit = lower[:len(lower)-2], "m"
+	case strings.HasSuffix(lower, "kb"):
+		numPart, unit = lower[:len(lower)-2], "k"
+	case strings.HasSuffix(lower, "g"):
+		numPart, unit = lower[:len(lower)-1], "g"
+	case strings.HasSuffix(lower, "m"):
+		numPart, unit = lower[:len(lower)-1], "m"
+	case strings.HasSuffix(lower, "k"):
+		numPart, unit = lower[:len(lower)-1], "k"
+	default:
+		numPart, unit = lower, "m" // bare number = MiB
+	}
+	numPart = strings.TrimSpace(numPart)
+	value, err := strconv.ParseFloat(numPart, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid volume size %q: %q is not a number (use forms like 100MB, 1.5GB, 500KB, or a bare MiB count)", raw, numPart)
+	}
+	if value <= 0 || math.IsNaN(value) || math.IsInf(value, 0) {
+		return 0, fmt.Errorf("invalid volume size %q: must be a positive number", raw)
+	}
+	var mb float64
+	switch unit {
+	case "g":
+		mb = value * 1024
+	case "k":
+		mb = value / 1024
+	default: // "m"
+		mb = value
+	}
+	// Round up, floor at 1 — mirrors normalizeSplitVolume.
+	mib := int(math.Ceil(mb))
+	if mib < 1 {
+		mib = 1
+	}
+	return mib, nil
 }
 
 // JoinFormats renders the canonical alphabetised comma-joined

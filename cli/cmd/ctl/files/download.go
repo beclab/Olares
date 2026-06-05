@@ -131,6 +131,9 @@ func runDownload(
 	if err != nil {
 		return err
 	}
+	if err := requireCommonBackendVersion(ctx, f, isCommonFrontendPath(fp.FileType, fp.Extend)); err != nil {
+		return err
+	}
 
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {

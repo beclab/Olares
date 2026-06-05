@@ -135,6 +135,15 @@ Format detection:
     7z); pass it when the file has no canonical extension and you need
     those checks to fire.
 
+Preview constraints (mirrors the LarePass web app):
+
+    Bare single-stream compressors — bzip2 (.bz2 / .bzip2) and xz (.xz)
+    — have no listable entry table, so previewing them is rejected up
+    front. To get their single decompressed payload, unpack the archive
+    with ` + "`olares-cli files extract`" + ` instead. The tar.* compounds
+    (tar.gz / tar.bz2 / tar.xz / tgz) are real tar containers and remain
+    fully previewable.
+
 Passwords (zip / 7z only):
 
     Use --password-stdin to read the password from STDIN (echo or here-
@@ -187,6 +196,9 @@ func runArchiveEntries(
 	if err != nil {
 		return err
 	}
+	if err := requireCommonBackendVersion(ctx, f, isCommonFrontendPath(src.FileType, src.Extend)); err != nil {
+		return err
+	}
 
 	format := o.format
 	if format == "" {
@@ -200,6 +212,17 @@ func runArchiveEntries(
 	if !archive.IsSupportedFormat(format) {
 		return fmt.Errorf("entries: unsupported --format %q; valid formats: %s",
 			format, archive.JoinFormats())
+	}
+	// Bare single-stream compressors (bzip2 / xz) have no listable
+	// entry table — there is nothing to enumerate. Refuse the
+	// preview up front instead of streaming an empty/misleading
+	// listing. Mirrors LarePass's unsupportedArchivePreviewExtensions
+	// gate. (The tar.* compound formats remain previewable.)
+	if !archive.SupportsPreview(format) {
+		return fmt.Errorf(
+			"entries: previewing %q archives is not supported — bzip2 / xz are raw single-stream "+
+				"compressors with no listable entries; unpack it with `olares-cli files extract` instead",
+			format)
 	}
 
 	password, err := readArchivePasswordStdin(o.passwordStdin)
@@ -237,62 +260,91 @@ func runArchiveEntries(
 		return reformatArchiveHTTPErr(err, rp.OlaresID, "entries preflight", srcWire)
 	}
 
-	// Print a header row in tabular mode so the user can tell which
-	// columns are which without a `--json` round-trip.
-	if !o.jsonOutput {
-		fmt.Fprintf(out, "%-6s %12s %20s %-3s %s\n", "KIND", "SIZE", "MODIFIED", "ENC", "PATH")
-	}
-
+	// The column header in tabular mode is printed LAZILY — on the
+	// first streamed entry, inside the cb — rather than up front.
+	// That keeps the password-retry loop below clean: an encrypted
+	// archive fails to open BEFORE the walk starts (count stays 0,
+	// nothing printed), so a re-attempt with a freshly prompted
+	// password starts from a blank slate instead of duplicating a
+	// header row. Mirrors TermiPass's preview password re-prompt.
 	count := 0
-	total, err := cli.StreamEntries(ctx, archive.EntriesOptions{
-		Source: srcWire,
-		Format: format,
-		Node:   node,
-	}, password, func(e archive.Entry) error {
-		count++
-		if o.maxEntries > 0 && count > o.maxEntries {
-			// Sentinel error to abort the stream — see
-			// archive.StreamEntries' cb contract. We pick a
-			// distinctive value so the caller doesn't mistake
-			// it for a real error.
-			return errArchiveEntriesMaxReached
-		}
-		if o.jsonOutput {
-			b, jerr := json.Marshal(e)
-			if jerr != nil {
-				return fmt.Errorf("marshal entry %s: %w", e.Path, jerr)
+	headerPrinted := false
+	var total int
+	pw := password
+	for attempt := 0; ; attempt++ {
+		count = 0
+		t, serr := cli.StreamEntries(ctx, archive.EntriesOptions{
+			Source: srcWire,
+			Format: format,
+			Node:   node,
+		}, pw, func(e archive.Entry) error {
+			count++
+			if o.maxEntries > 0 && count > o.maxEntries {
+				// Sentinel error to abort the stream — see
+				// archive.StreamEntries' cb contract. We pick a
+				// distinctive value so the caller doesn't mistake
+				// it for a real error.
+				return errArchiveEntriesMaxReached
 			}
-			fmt.Fprintf(out, "%s\n", b)
+			if o.jsonOutput {
+				b, jerr := json.Marshal(e)
+				if jerr != nil {
+					return fmt.Errorf("marshal entry %s: %w", e.Path, jerr)
+				}
+				fmt.Fprintf(out, "%s\n", b)
+				return nil
+			}
+			if !headerPrinted {
+				fmt.Fprintf(out, "%-6s %12s %20s %-3s %s\n", "KIND", "SIZE", "MODIFIED", "ENC", "PATH")
+				headerPrinted = true
+			}
+			kind := "FILE"
+			if e.IsDir {
+				kind = "DIR"
+			}
+			enc := "no"
+			if e.Encrypted {
+				enc = "yes"
+			}
+			modStr := "-"
+			if e.Modified > 0 {
+				modStr = time.Unix(e.Modified, 0).UTC().Format(time.RFC3339)
+			}
+			sizeStr := "-"
+			if !e.IsDir {
+				sizeStr = formatBytes(e.Size)
+			}
+			fmt.Fprintf(out, "%-6s %12s %20s %-3s %s\n", kind, sizeStr, modStr, enc, e.Path)
 			return nil
-		}
-		kind := "FILE"
-		if e.IsDir {
-			kind = "DIR"
-		}
-		enc := "no"
-		if e.Encrypted {
-			enc = "yes"
-		}
-		modStr := "-"
-		if e.Modified > 0 {
-			modStr = time.Unix(e.Modified, 0).UTC().Format(time.RFC3339)
-		}
-		sizeStr := "-"
-		if !e.IsDir {
-			sizeStr = formatBytes(e.Size)
-		}
-		fmt.Fprintf(out, "%-6s %12s %20s %-3s %s\n", kind, sizeStr, modStr, enc, e.Path)
-		return nil
-	})
+		})
+		total = t
 
-	if err != nil {
-		if errors.Is(err, errArchiveEntriesMaxReached) {
+		if serr == nil {
+			break
+		}
+		if errors.Is(serr, errArchiveEntriesMaxReached) {
 			// Soft abort — the user asked for a head-style preview.
 			fmt.Fprintf(out, "\n(stopped after %d entries; pass --max-entries 0 for the full list)\n",
 				o.maxEntries)
 			return nil
 		}
-		return reformatArchiveHTTPErr(err, rp.OlaresID, "entries", srcWire)
+		// Only a pre-walk password failure (count == 0, nothing
+		// printed yet) is safely retryable; retrying after rows have
+		// been emitted would duplicate output. On a TTY we prompt
+		// for the password and loop; otherwise we fall through to
+		// the reformatter (which points at --password-stdin).
+		kind := archive.ClassifyPasswordError(serr)
+		if kind != archive.PasswordErrorNone && count == 0 && attempt < maxArchivePasswordPrompts {
+			newPw, ok, perr := promptArchivePasswordInteractive(kind, attempt)
+			if perr != nil {
+				return perr
+			}
+			if ok {
+				pw = newPw
+				continue
+			}
+		}
+		return reformatArchiveHTTPErr(serr, rp.OlaresID, "entries", srcWire)
 	}
 
 	if !o.jsonOutput {
@@ -349,6 +401,14 @@ Format detection:
     travels on the wire. We still accept --format locally so the CLI can
     pre-validate flag combinations (e.g. --password-stdin only on zip /
     7z); pass it when the file has no canonical extension.
+
+Read constraints (mirrors the LarePass web app):
+
+    Bare single-stream compressors — bzip2 (.bz2 / .bzip2) and xz (.xz)
+    — carry no entry table, so there is no inner member to address by
+    path; ` + "`cat`" + ` is rejected up front. Unpack such an archive with
+    ` + "`olares-cli files extract`" + ` to get its single decompressed file.
+    The tar.* compounds remain fully readable.
 
 Passwords (zip / 7z only):
 
@@ -409,6 +469,9 @@ func runArchiveCat(
 	if err != nil {
 		return err
 	}
+	if err := requireCommonBackendVersion(ctx, f, isCommonFrontendPath(src.FileType, src.Extend)); err != nil {
+		return err
+	}
 
 	format := o.format
 	if format == "" {
@@ -422,6 +485,18 @@ func runArchiveCat(
 	if !archive.IsSupportedFormat(format) {
 		return fmt.Errorf("cat: unsupported --format %q; valid formats: %s",
 			format, archive.JoinFormats())
+	}
+	// Bare single-stream compressors (bzip2 / xz) carry no entry
+	// table, so there is no inner member to address by path. Refuse
+	// the read up front. Mirrors LarePass's
+	// unsupportedArchivePreviewExtensions gate. To get the single
+	// decompressed payload, extract the archive with
+	// `olares-cli files extract` instead.
+	if !archive.SupportsPreview(format) {
+		return fmt.Errorf(
+			"cat: reading members of %q archives is not supported — bzip2 / xz are raw single-stream "+
+				"compressors with no addressable entries; unpack it with `olares-cli files extract` instead",
+			format)
 	}
 
 	password, err := readArchivePasswordStdin(o.passwordStdin)
@@ -459,18 +534,29 @@ func runArchiveCat(
 	// Pick the destination writer. -o opens a local file (tmp +
 	// rename, mirroring download's atomicity guarantee); without it
 	// we write straight to `out` (stdout in the common case).
-	w, finalize, err := openArchiveCatDestination(o.output)
+	w, finalize, err := openArchiveCatDestination(o.output, out)
 	if err != nil {
 		return err
 	}
 	defer finalize(false) // rolled back on error; explicit commit below on success
 
-	dl, err := cli.StreamEntry(ctx, archive.EntryOptions{
-		Source: srcWire,
-		Path:   innerPath,
-		Format: format,
-		Node:   node,
-	}, password, w)
+	// The entry endpoint reports a missing / wrong password with an
+	// HTTP 4xx BEFORE any bytes are copied into `w` (the status is
+	// checked ahead of io.Copy), so the destination writer is still
+	// at offset 0 on a password failure and is safe to reuse across
+	// the prompt-and-retry loop — mirroring TermiPass's preview
+	// password re-prompt.
+	var dl archive.EntryDownload
+	err = withArchivePasswordRetry(password, func(pw string) error {
+		var e error
+		dl, e = cli.StreamEntry(ctx, archive.EntryOptions{
+			Source: srcWire,
+			Path:   innerPath,
+			Format: format,
+			Node:   node,
+		}, pw, w)
+		return e
+	})
 	if err != nil {
 		return reformatArchiveHTTPErr(err, rp.OlaresID, "cat", innerPath)
 	}
@@ -489,9 +575,10 @@ func runArchiveCat(
 }
 
 // openArchiveCatDestination picks the writer for `archive cat`.
-// When `output` is empty we write to the cobra cmd's stdout
-// (caller-supplied). Otherwise we open `output.tmp` and atomically
-// rename it on success.
+// When `output` is empty (no -o) OR the explicit Unix stdout alias
+// "-", we write straight to `stdout` (the cobra command's output
+// writer) with a no-op finalize. Otherwise we open `output.tmp`
+// and atomically rename it on success.
 //
 // Returns (writer, finalize, err). `finalize(true)` commits the
 // tmp → final rename; `finalize(false)` deletes the tmp (so a
@@ -504,15 +591,13 @@ func runArchiveCat(
 // caller's pattern is "I just told you where to put it", same
 // shape as `cat > file` in the shell. If a guard is needed, add
 // an --overwrite flag later (mirroring download's policy).
-func openArchiveCatDestination(output string) (io.Writer, func(commit bool), error) {
-	if output == "" {
-		return nil, nil, errors.New("openArchiveCatDestination: empty output (cobra should pass stdout here)")
-	}
-	if output == "-" {
-		// Allow `-` as an explicit stdout alias mirroring the Unix
-		// convention; same behavior as `cat -` / `kubectl ... -f -`.
-		w := io.Writer(os.Stdout)
-		return w, func(bool) {}, nil
+func openArchiveCatDestination(output string, stdout io.Writer) (io.Writer, func(commit bool), error) {
+	if output == "" || output == "-" {
+		// Default (no -o) and the explicit "-" alias both stream to
+		// the command's stdout — binary-safe passthrough, same
+		// behavior as `cat` / `kubectl ... -f -`. No temp file, so
+		// finalize is a no-op.
+		return stdout, func(bool) {}, nil
 	}
 	tmp := output + ".tmp"
 	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
@@ -578,6 +663,101 @@ func readArchivePasswordStdin(enabled bool) (string, error) {
 	return strings.TrimRight(line, "\r\n"), nil
 }
 
+// maxArchivePasswordPrompts caps the interactive retry loop so a
+// misbehaving server that always answers "password incorrect"
+// can't trap the user in an endless prompt. TermiPass's GUI loops
+// until the user clicks Cancel; on the CLI an empty entry (or
+// Ctrl-D) is the cancel gesture, and this cap is the backstop.
+const maxArchivePasswordPrompts = 5
+
+// promptArchivePasswordInteractive asks the terminal for an
+// archive password during a retry — the server reported the
+// archive is encrypted (PasswordErrorRequired) or that the
+// supplied password was wrong (PasswordErrorInvalid). This mirrors
+// TermiPass's requestArchivePassword dialog, which re-opens
+// whenever isArchivePasswordError fires.
+//
+// Returns ok=false (and a nil error) when:
+//
+//   - STDIN is not a TTY — a scripted / piped invocation can't be
+//     prompted, so the caller surfaces the original error with a
+//     --password-stdin hint instead; or
+//   - the user cancels by entering an empty password or hitting
+//     Ctrl-D (EOF).
+//
+// `attempt` is the zero-based retry index, used only to vary the
+// lead-in line (first ask vs. subsequent re-asks).
+func promptArchivePasswordInteractive(kind archive.PasswordErrorKind, attempt int) (string, bool, error) {
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return "", false, nil
+	}
+	switch {
+	case kind == archive.PasswordErrorInvalid:
+		fmt.Fprintln(os.Stderr, "archive password is incorrect.")
+	case attempt == 0:
+		fmt.Fprintln(os.Stderr, "this archive is password-protected.")
+	}
+	fmt.Fprint(os.Stderr, "enter archive password (empty to cancel): ")
+	pw, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Fprintln(os.Stderr) // newline after the silent input
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return "", false, nil // Ctrl-D = cancel
+		}
+		return "", false, fmt.Errorf("read password from terminal: %w", err)
+	}
+	s := string(pw)
+	if s == "" {
+		return "", false, nil // empty entry = cancel
+	}
+	return s, true, nil
+}
+
+// withArchivePasswordRetry runs `attempt(password)` and, when it
+// fails with a password-required / password-incorrect error AND
+// STDIN is a TTY, re-prompts for a password and retries — the CLI
+// analogue of TermiPass's isArchivePasswordError loop.
+//
+// `initial` is the password parsed from --password-stdin (often
+// "" — the user runs extract without one and discovers the archive
+// is encrypted only when the server says so).
+//
+// The loop returns:
+//
+//   - nil once `attempt` succeeds;
+//   - the LAST underlying error when the failure isn't a password
+//     problem, when STDIN isn't a TTY, when the user cancels, or
+//     when the retry cap is hit. The caller is responsible for
+//     reformatting that error (reformatArchiveHTTPErr), which also
+//     maps the numeric password codes to a --password-stdin hint
+//     for the non-TTY path.
+//
+// `attempt` MUST be side-effect-free up to the point a password
+// error can occur — archive password failures happen before any
+// bytes are written / streamed, so the retried call starts from a
+// clean slate.
+func withArchivePasswordRetry(initial string, attempt func(password string) error) error {
+	password := initial
+	for i := 0; ; i++ {
+		err := attempt(password)
+		if err == nil {
+			return nil
+		}
+		kind := archive.ClassifyPasswordError(err)
+		if kind == archive.PasswordErrorNone || i >= maxArchivePasswordPrompts {
+			return err
+		}
+		newPw, ok, perr := promptArchivePasswordInteractive(kind, i)
+		if perr != nil {
+			return perr
+		}
+		if !ok {
+			return err
+		}
+		password = newPw
+	}
+}
+
 // frontendPathLike is the small interface needed by
 // resolveArchiveNode — the cobra layer's source/destination structs
 // expose FileType / Extend, and we don't need anything more.
@@ -617,8 +797,15 @@ func (p archivePath) GetExtend() string   { return p.Extend }
 //
 //   - drive/Home/<...>       — the Home volume on the user's PVC
 //   - drive/Data/<...>       — the Data volume on the user's PVC
+//   - drive/Common/<...>     — the app common data area (JuiceFS
+//                              /rootfs/Common); Olares >= 1.12.6
 //   - cache/<node>/<...>     — the per-node Cache volume
 //   - external/<node>/<...>  — external mounts (USB, SMB, …)
+//
+// drive/Common joins the allow-list because TermiPass's
+// `archiveSupportedDriveTypes` (utils/interface/archive.ts) includes
+// DriveType.Common — the LarePass GUI offers compress / extract on the
+// common data area just like Home / Data.
 //
 // Rejected: sync (Seafile libraries — backend doesn't support
 // streaming compress / extract today), and every cloud-account
@@ -632,6 +819,7 @@ var archiveAllowedNamespaces = []struct {
 }{
 	{FileType: "drive", Extend: "Home", Label: "drive/Home/<sub>"},
 	{FileType: "drive", Extend: "Data", Label: "drive/Data/<sub>"},
+	{FileType: "drive", Extend: "Common", Label: "drive/Common/<sub>"},
 	{FileType: "cache", Extend: "", Label: "cache/<node>/<sub>"},
 	{FileType: "external", Extend: "", Label: "external/<node>/<volume>/<sub>"},
 }
@@ -668,7 +856,7 @@ func validateArchiveNamespace(verb, fileType, extend string) error {
 //                don't expose the local-FS path semantics archive
 //                needs; the LarePass app handles compress/extract
 //                in-browser for these.
-//   - drive with a non-Home/Data extend (e.g. `drive/Shared`,
+//   - drive with a non-Home/Data/Common extend (e.g. `drive/Shared`,
 //                `drive/Trash`) → out of allow-list explicitly.
 //
 // The error always lists the full allow-list at the tail so the
@@ -690,7 +878,7 @@ func archiveNamespaceError(verb, fileType, extend string) error {
 			verb, fileType, allowed)
 	case "drive":
 		return fmt.Errorf(
-			"`files %s` only supports the %q drive volumes Home / Data; got %q/%q. "+
+			"`files %s` only supports the %q drive volumes Home / Data / Common; got %q/%q. "+
 				"Allowed: %s",
 			verb, fileType, fileType, extend, allowed)
 	}
@@ -929,6 +1117,18 @@ func reformatArchiveHTTPErr(err error, olaresID, op, target string) error {
 	var entryErr *archive.EntryError
 	if errors.As(err, &entryErr) {
 		return formatArchiveEntryError(entryErr, op, target)
+	}
+
+	// Numeric-coded password errors from the POST compress /
+	// extract endpoints (and entries' pre-walk JSON 4xx). We reach
+	// this point only after the interactive retry loop declined to
+	// run (STDIN isn't a TTY) or the user cancelled, so point them
+	// at --password-stdin — the scriptable way to supply it.
+	switch archive.ClassifyPasswordError(err) {
+	case archive.PasswordErrorRequired:
+		return fmt.Errorf("%s %s: archive requires a password; pass it via --password-stdin", op, target)
+	case archive.PasswordErrorInvalid:
+		return fmt.Errorf("%s %s: archive password is incorrect; supply the right one via --password-stdin", op, target)
 	}
 
 	// Generic HTTPError mapping mirrors reformatCpHTTPErr.

@@ -70,6 +70,68 @@ func TestSupportsMultiVolume(t *testing.T) {
 	}
 }
 
+// TestIsSingleFileCompressionFormat pins the gzip / bzip2 / xz
+// single-stream set (LarePass parity). The tar.* compounds must
+// NOT be in the set — they tar first, then compress.
+func TestIsSingleFileCompressionFormat(t *testing.T) {
+	for _, yes := range []string{"gzip", "bzip2", "xz", "GZIP", "XZ"} {
+		if !IsSingleFileCompressionFormat(yes) {
+			t.Errorf("IsSingleFileCompressionFormat(%q) = false; want true", yes)
+		}
+	}
+	for _, no := range []string{"zip", "7z", "tar", "tar.gz", "tar.bz2", "tar.xz", "tgz"} {
+		if IsSingleFileCompressionFormat(no) {
+			t.Errorf("IsSingleFileCompressionFormat(%q) = true; want false", no)
+		}
+	}
+}
+
+// TestSupportsPreview pins the preview gate: only bare bzip2 / xz
+// are refused. gzip is intentionally previewable (LarePass parity),
+// and every container/tar.* format is previewable.
+func TestSupportsPreview(t *testing.T) {
+	for _, no := range []string{"bzip2", "xz", "BZIP2", "XZ"} {
+		if SupportsPreview(no) {
+			t.Errorf("SupportsPreview(%q) = true; want false", no)
+		}
+	}
+	for _, yes := range []string{"zip", "7z", "tar", "tar.gz", "tar.bz2", "tar.xz", "tgz", "gzip"} {
+		if !SupportsPreview(yes) {
+			t.Errorf("SupportsPreview(%q) = false; want true", yes)
+		}
+	}
+}
+
+// TestValidateSingleFileCompression covers the three branches of
+// the gzip / bzip2 / xz "single non-directory source" gate, plus
+// the no-op pass-through for container formats.
+func TestValidateSingleFileCompression(t *testing.T) {
+	// Container formats: always nil regardless of count / dir.
+	for _, f := range []string{"zip", "7z", "tar", "tar.gz", "tgz"} {
+		if err := ValidateSingleFileCompression(f, 5, true); err != nil {
+			t.Errorf("ValidateSingleFileCompression(%q, 5, true) = %v; want nil", f, err)
+		}
+	}
+	// Single-file format, one non-dir source: allowed.
+	for _, f := range []string{"gzip", "bzip2", "xz"} {
+		if err := ValidateSingleFileCompression(f, 1, false); err != nil {
+			t.Errorf("ValidateSingleFileCompression(%q, 1, false) = %v; want nil", f, err)
+		}
+	}
+	// Single-file format, multiple sources: refused (count branch).
+	if err := ValidateSingleFileCompression("gzip", 2, false); err == nil {
+		t.Error("ValidateSingleFileCompression(gzip, 2, false): want error, got nil")
+	} else if !strings.Contains(err.Error(), "single file only") {
+		t.Errorf("multi-source error = %q; want it to mention 'single file only'", err.Error())
+	}
+	// Single-file format, one directory source: refused (dir branch).
+	if err := ValidateSingleFileCompression("xz", 1, true); err == nil {
+		t.Error("ValidateSingleFileCompression(xz, 1, true): want error, got nil")
+	} else if !strings.Contains(err.Error(), "directory") {
+		t.Errorf("dir error = %q; want it to mention 'directory'", err.Error())
+	}
+}
+
 func TestParseConflict(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -785,5 +847,119 @@ func TestCancelTask(t *testing.T) {
 	}
 	if !hit {
 		t.Error("server not hit")
+	}
+}
+
+func TestCancelAllTasks(t *testing.T) {
+	hit := false
+	cli, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Errorf("method: %s", r.Method)
+		}
+		if r.URL.Query().Get("all") != "1" {
+			t.Errorf("all: %q; want 1", r.URL.Query().Get("all"))
+		}
+		if r.URL.Query().Get("task_id") != "" {
+			t.Errorf("task_id should be absent for cancel-all; got %q", r.URL.Query().Get("task_id"))
+		}
+		hit = true
+		_, _ = w.Write([]byte(`{"code":0,"msg":"ok"}`))
+	}))
+	if err := cli.CancelAllTasks(context.Background(), "node-a"); err != nil {
+		t.Fatalf("CancelAllTasks: %v", err)
+	}
+	if !hit {
+		t.Error("server not hit")
+	}
+	if err := cli.CancelAllTasks(context.Background(), ""); err == nil {
+		t.Error("CancelAllTasks(empty node): want error, got nil")
+	}
+}
+
+func TestPauseResumeTask(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		op     string
+		invoke func(cli *Client) error
+	}{
+		{"pause", "pause", func(cli *Client) error {
+			return cli.PauseTask(context.Background(), "node-a", "task-9")
+		}},
+		{"resume", "resume", func(cli *Client) error {
+			return cli.ResumeTask(context.Background(), "node-a", "task-9")
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			hit := false
+			cli, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Errorf("method: %s; want POST", r.Method)
+				}
+				if got := r.URL.Query().Get("task_id"); got != "task-9" {
+					t.Errorf("task_id: %q", got)
+				}
+				if got := r.URL.Query().Get("op"); got != tc.op {
+					t.Errorf("op: %q; want %q", got, tc.op)
+				}
+				hit = true
+				_, _ = w.Write([]byte(`{"code":0,"msg":"ok"}`))
+			}))
+			if err := tc.invoke(cli); err != nil {
+				t.Fatalf("%s: %v", tc.name, err)
+			}
+			if !hit {
+				t.Error("server not hit")
+			}
+		})
+	}
+}
+
+func TestPauseResumeTask_EmptyArgs(t *testing.T) {
+	cli, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("server should not be hit on a client-side guard")
+	}))
+	if err := cli.PauseTask(context.Background(), "", "task-1"); err == nil {
+		t.Error("PauseTask(empty node): want error")
+	}
+	if err := cli.PauseTask(context.Background(), "node-a", ""); err == nil {
+		t.Error("PauseTask(empty taskID): want error")
+	}
+	if err := cli.ResumeTask(context.Background(), "node-a", ""); err == nil {
+		t.Error("ResumeTask(empty taskID): want error")
+	}
+}
+
+func TestParseVolumeSize(t *testing.T) {
+	cases := []struct {
+		in   string
+		want int
+		err  bool
+	}{
+		{"100", 100, false},     // bare = MiB
+		{"100MB", 100, false},   // explicit MB
+		{"100mb", 100, false},   // case-insensitive
+		{"100 MB", 100, false},  // embedded space
+		{"1GB", 1024, false},    // GiB
+		{"1.5GB", 1536, false},  // fractional GiB
+		{"2G", 2048, false},     // short suffix
+		{"500KB", 1, false},     // sub-MiB floors at 1
+		{"1024KB", 1, false},    // exactly 1 MiB
+		{"1536KB", 2, false},    // 1.5 MiB rounds up to 2
+		{"3M", 3, false},        // short M
+		{"", 0, true},           // empty
+		{"abc", 0, true},        // non-numeric
+		{"-5MB", 0, true},       // negative
+		{"0", 0, true},          // non-positive
+		{"10TB", 0, true},       // unknown suffix (parses "10t" -> not a number)
+	}
+	for _, c := range cases {
+		got, err := ParseVolumeSize(c.in)
+		if (err != nil) != c.err {
+			t.Errorf("ParseVolumeSize(%q): err=%v want err=%v", c.in, err, c.err)
+			continue
+		}
+		if !c.err && got != c.want {
+			t.Errorf("ParseVolumeSize(%q): got %d want %d", c.in, got, c.want)
+		}
 	}
 }
