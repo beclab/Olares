@@ -324,7 +324,17 @@ func runArchiveEntries(
 		}
 		if errors.Is(serr, errArchiveEntriesMaxReached) {
 			// Soft abort — the user asked for a head-style preview.
-			fmt.Fprintf(out, "\n(stopped after %d entries; pass --max-entries 0 for the full list)\n",
+			// In --json mode this notice must NOT go to `out`: it
+			// would interleave a non-JSON line into the NDJSON stream
+			// and break line-oriented consumers (jq et al.). Mirror
+			// the completion-footer policy below — divert it to
+			// stderr so the user still sees it while stdout stays a
+			// clean record stream. Tabular mode keeps it on `out`.
+			notice := out
+			if o.jsonOutput {
+				notice = os.Stderr
+			}
+			fmt.Fprintf(notice, "\n(stopped after %d entries; pass --max-entries 0 for the full list)\n",
 				o.maxEntries)
 			return nil
 		}
