@@ -25,15 +25,15 @@ type OAC struct {
 	// WithAutoOwnerScenarios().
 	autoOwner bool
 
-	skipManifest          bool
-	skipResource          bool
-	skipFolder            bool
-	skipSameVersion       bool
-	skipAppData           bool
-	skipHostPath          bool
-	skipResourceNamespace bool
-	runRBAC               bool
-	runSecurityContext    bool
+	skipManifest           bool
+	skipResource           bool
+	skipFolder             bool
+	skipSameVersion        bool
+	skipAppData            bool
+	skipHostPath           bool
+	skipResourceNamespace  bool
+	skipRunRBAC            bool
+	skipRunSecurityContext bool
 
 	customValidators []CustomValidator
 

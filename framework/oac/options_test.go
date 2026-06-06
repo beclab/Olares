@@ -16,17 +16,17 @@ func (stubManifest) AppName() string               { return "stub" }
 func (stubManifest) AppVersion() string            { return "0.0.0" }
 func (stubManifest) Entrances() []olm.EntranceInfo { return nil }
 func (stubManifest) OptionsImages() []string       { return nil }
-func (stubManifest) PermissionAppData() bool      { return false }
-func (stubManifest) PermissionAppCommon() bool    { return false }
-func (stubManifest) PermissionExternalData() bool { return false }
-func (stubManifest) Raw() any                     { return nil }
+func (stubManifest) PermissionAppData() bool       { return false }
+func (stubManifest) PermissionAppCommon() bool     { return false }
+func (stubManifest) PermissionExternalData() bool  { return false }
+func (stubManifest) Raw() any                      { return nil }
 
 func TestNew_Defaults(t *testing.T) {
 	c := New()
 	if c.owner != "" || c.admin != "" {
 		t.Fatalf("expected empty owner/admin, got %q/%q", c.owner, c.admin)
 	}
-	if c.runRBAC {
+	if c.skipRunRBAC {
 		t.Fatal("RBAC inspection must be off by default")
 	}
 	if c.skipManifest || c.skipResource || c.skipFolder {
@@ -94,7 +94,7 @@ func TestOptions_SameVersionToggle(t *testing.T) {
 
 func TestOptions_WithServiceAccountRulesCheck(t *testing.T) {
 	c := New(WithServiceAccountRulesCheck())
-	if !c.runRBAC {
+	if c.skipRunRBAC {
 		t.Fatal("WithServiceAccountRulesCheck must enable runRBAC")
 	}
 }

@@ -106,7 +106,7 @@ func WithSameVersionCheck() Option {
 // disabled by default to match historical Lint behaviour; callers that need
 // it can opt in explicitly.
 func WithServiceAccountRulesCheck() Option {
-	return func(c *OAC) { c.runRBAC = true }
+	return func(c *OAC) { c.skipRunRBAC = false }
 }
 
 // WithSecurityContextCheck enables the non-beclab image privileged
@@ -119,7 +119,7 @@ func WithServiceAccountRulesCheck() Option {
 // that need a manual review before this rule applies; turn it on
 // explicitly when publishing to the app store.
 func WithSecurityContextCheck() Option {
-	return func(c *OAC) { c.runSecurityContext = true }
+	return func(c *OAC) { c.skipRunSecurityContext = false }
 }
 
 // SkipSecurityContextCheck clears the non-beclab image securityContext
@@ -127,7 +127,7 @@ func WithSecurityContextCheck() Option {
 // is a no-op; it exists for option-set composition where a previously
 // applied set may have turned the check on.
 func SkipSecurityContextCheck() Option {
-	return func(c *OAC) { c.runSecurityContext = false }
+	return func(c *OAC) { c.skipRunSecurityContext = true }
 }
 
 // WithAutoOwnerScenarios makes Lint / ValidateManifestFile /

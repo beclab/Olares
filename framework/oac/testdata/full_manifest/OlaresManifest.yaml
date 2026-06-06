@@ -164,9 +164,8 @@ middleware:
         appNamespace: userspace-ref
         subjects:
           - name: events
-            perm:
-              - pub
-              - sub
+            pub: allow
+            sub: allow
   minio:
     username: miniou
     password: miniop

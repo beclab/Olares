@@ -174,7 +174,7 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 		}
 	}
 
-	if c.runRBAC {
+	if !c.skipRunRBAC {
 		rules, err := resources.LoadForbiddenRules("")
 		if err != nil {
 			return err
@@ -184,7 +184,7 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 		}
 	}
 
-	if c.runSecurityContext {
+	if !c.skipRunSecurityContext {
 		if err := resources.CheckSecurityContextForNonBeclabImage(list); err != nil {
 			return err
 		}
