@@ -95,6 +95,15 @@ olares-cli chart from-compose --name <app> -f docker-compose.yml
 
 Then continue with the four refinement areas ([olares-chart-manifest.md](olares-chart-manifest.md)) and `chart lint`.
 
+## Run identity (UID/GID 1000)
+
+Olares userspace volumes expect the app process as **uid/gid 1000**. When **authoring** a Dockerfile:
+
+- Create a user with uid/gid 1000 and `USER 1000`
+- `chown -R 1000:1000` every path the app writes before switching user
+
+When using a **third-party** image, inspect `docker inspect <ref> --format '{{.Config.User}}'` before wiring it in. Root or non-1000 uids that create directories on userspace mounts need chart-side fixes (`spec.runAsUser`, `securityContext`, or an initContainer) — full decision tree in [olares-chart-run-as-user.md](olares-chart-run-as-user.md).
+
 ## Hard rules
 
 - **Every service must reference a publicly pullable image** for the node arch — no `build:`, no local-only tags, no private registry (until Olares-local registry support lands).

@@ -24,6 +24,7 @@ metadata:
   - Utilities                 # stub OK for local-run; lint does not enum-check
 spec:
   versionName: "1.2.3"        # upstream app version; tracks Chart.yaml `appVersion`
+  runAsUser: true             # optional but recommended — Olares injects pod runAsUser 1000; see run-as-user.md
 ```
 
 ### local-run: optional (keep stub unless user cares)
@@ -100,7 +101,7 @@ In the deployment template, replace the PVC mount with the injected path:
 
 > Anything declared in a template (`.Values.userspace.appData/appCache/userData`) MUST have the matching `permission` field, or `lint`'s app-data cross-check fails. Drop leftover kompose PVCs.
 
-> **Coupling with packaging:** storage and permission are constrained by how the **image** was built. If the image hardcodes a write path Olares won't grant, or runs as root where Olares expects non-root, the fix may be to **rebuild the image** (back to the Image capability in [olares-chart-image.md](olares-chart-image.md)) so it writes under an injected userspace path and runs as a normal user — not just to edit this manifest.
+> **Coupling with packaging — run identity:** userspace mounts require the process to run as **uid 1000**. Set `spec.runAsUser: true`; for third-party or root-default images also check [olares-chart-run-as-user.md](olares-chart-run-as-user.md) (initContainer `chown` with `beclab/aboveos-busybox:1.37.0`, `securityContext`, or Dockerfile rebuild). If the image hardcodes a write path Olares won't grant, loop back to [olares-chart-image.md](olares-chart-image.md).
 
 ## 3. Middleware (use the system service, don't bundle one)
 

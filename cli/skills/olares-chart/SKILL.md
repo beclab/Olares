@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 1.7.0
+version: 1.8.0
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -21,6 +21,7 @@ metadata:
 - **Local run** on your own Olares (upload + install); **market distribute** (full metadata, multi-arch, PR to `beclab/apps`)
 - Building/pushing docker image (amd64 vs arm64), no official image, wrong arch
 - Install/runtime failures: ImagePullBackOff, app failed to install or start, market / app-service / chartrepo logs
+- **Permission denied / EACCES** on userspace volumes, third-party image runs as root or non-1000 uid, `spec.runAsUser`, initContainer volume `chown`
 - Headless / CLI app, MCP server, or tool with no web UI (terminal entrance + invisible entrance)
 - Three axes: **packaging** (Dockerfile/image), **deployment** (compose/chart), **publishing** (release target); four post-kompose refinement areas (metadata depth gated by target, storage, middleware, entrances)
 - Optional live validation (requires login): package + market upload/install — see [`olares-shared`](../olares-shared/SKILL.md), [`olares-market`](../olares-market/SKILL.md), [`olares-cluster`](../olares-cluster/SKILL.md)
@@ -76,6 +77,7 @@ The image-building work is **guided** — you check/install docker and drive `do
 | **Compose** | deployment | obtain or author a docker-compose from the code | no | — | [compose.md](references/olares-chart-compose.md) |
 | **Convert** | deployment | `chart from-compose` scaffolds an Olares chart | no | — | [from-compose.md](references/olares-chart-from-compose.md) |
 | **Refine** | deployment | the four refinement areas / hand-author `OlaresManifest.yaml` | no | `lint` fails, or install fails on env/wiring | [manifest.md](references/olares-chart-manifest.md) |
+| **Run-as-user** | packaging + deployment | align image uid with Olares userspace (1000): Dockerfile `USER`, `spec.runAsUser`, initContainer `chown` | no | EACCES on appData/appCache/userData, OPA root deny on third-party image | [run-as-user.md](references/olares-chart-run-as-user.md) |
 | **Validate-local** | deployment | `chart lint` + `chart package` | no | — | [lint.md](references/olares-chart-lint.md) |
 | **Publish-local** | publishing | `market upload` + `market install` + diagnose from logs | yes | — | [publish-verify.md](references/olares-chart-publish-verify.md) |
 | **Publish-market** | publishing | market-ready checklist + `beclab/apps` PR guidance | no (GitHub) | local validation passed, user wants public Market listing | [market-submit.md](references/olares-chart-market-submit.md) |
@@ -142,7 +144,7 @@ One way to compose the capabilities; not a fixed pipeline — start wherever you
  V3. upload     olares-cli market upload ./<app>-<ver>.tgz
  V4. run        olares-cli market install <app> -s upload --version <ver> --watch -o json
  V5. on failure fetch market / chartrepo / app-service / app-pod logs and diagnose
- V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; else report & ask
+ V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; uid/EACCES -> run-as-user.md ; else report & ask
  V7. cleanup    olares-cli market uninstall <app> --watch ; olares-cli market delete <app>
 
  Publish-market (market-distribute only; requires V pass first):
@@ -182,7 +184,7 @@ Step D1 produces a chart that **already passes `lint`** but is NOT yet a good ap
 kompose cannot decide these — you must. Full field-by-field mapping and edit recipes are in [references/olares-chart-manifest.md](references/olares-chart-manifest.md).
 
 1. **Metadata** — kompose leaves a stub (`title=name`, default icon, `Utilities` category, no developer info). **Depth depends on release target:** local-run can keep the stub if `lint` passes; market-distribute requires full `metadata.{title,icon,description,categories}` and `spec.{developer,website,sourceCode,submitter,fullDescription}` plus listing images.
-2. **Storage** — compose `volumes:` become raw PVCs. Decide each one: app-private state → `.Values.userspace.appData` / `.Values.userspace.appCache` (set `permission.appData/appCache: true`); user-visible files → `.Values.userspace.userData` + list the path under `permission.userData`. Delete the kompose PVCs you replaced and rewrite the `volumeMounts`. **Same for both release targets.**
+2. **Storage** — compose `volumes:` become raw PVCs. Decide each one: app-private state → `.Values.userspace.appData` / `.Values.userspace.appCache` (set `permission.appData/appCache: true`); user-visible files → `.Values.userspace.userData` + list the path under `permission.userData`. Delete the kompose PVCs you replaced and rewrite the `volumeMounts`. Align run identity (uid 1000) with [run-as-user.md](references/olares-chart-run-as-user.md). **Same for both release targets.**
 3. **Middleware** — a compose `postgres`/`redis`/`mongo`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` service should usually be dropped and replaced by Olares system middleware: add a `middleware:` block + an `options.dependencies` entry (type `middleware`), delete that workload + its PVC, and repoint the app's env vars at `.Values.<mw>.*`. **Same for both release targets.**
 4. **Entrances & ports** — keep/add one `entrances[]` per user-facing HTTP service (tune `host`/`port`/`title`/`authLevel`); expose non-HTTP services via `ports[]` (`exposePort`). Mark internal-only services `invisible: true` or drop their entrance. **Same for both release targets.**
 
@@ -203,3 +205,5 @@ kompose cannot decide these — you must. Full field-by-field mapping and edit r
 | version mismatch | `Chart.yaml` `version` ≠ `metadata.version` | make them equal |
 | hostPath + rolling update | a template mounts a `hostPath` | switch to a userspace volume |
 | manifest structural error | a required manifest field is missing/invalid after editing | re-check against [references/olares-chart-manifest.md](references/olares-chart-manifest.md) |
+| install OK but Permission denied / data not persisted | image uid ≠ 1000 or root-owned dirs on userspace mount | [references/olares-chart-run-as-user.md](references/olares-chart-run-as-user.md) — `spec.runAsUser: true`, securityContext, or initContainer with `beclab/aboveos-busybox:1.37.0` |
+| admission denied: untrusted image + root | third-party container runs as root | force uid 1000 or initContainer chown per [run-as-user.md](references/olares-chart-run-as-user.md) |
