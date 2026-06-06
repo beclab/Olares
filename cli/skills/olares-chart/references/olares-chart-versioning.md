@@ -12,11 +12,11 @@ Olares releases follow [semver](https://docs.olares.com/developer/install/versio
 | Release candidate | `1.12.0-rc.0` |
 | Daily build | `1.12.0-20241201` |
 
-The running version lives in the `Terminus` CR `spec.version` and is injected into every chart as `.Values.sysVersion` ([helm_utils.go](../../../../framework/app-service/pkg/appinstaller/helm_utils.go)). "At least" comparisons strip the prerelease/build segment, so a daily build like `1.12.6-20260327` still counts as `>= 1.12.6`.
+The running version lives in the `Terminus` CR `spec.version` and is injected into every chart as `.Values.sysVersion`. "At least" comparisons strip the prerelease/build segment, so a daily build like `1.12.6-20260327` still counts as `>= 1.12.6`.
 
 ## Porting baseline: Olares >= 1.12.6
 
-**This skill (porting apps) targets Olares >= 1.12.6.** This baseline applies only to porting — other `olares-cli` features have no such floor. The reason: the userspace backends a ported app commonly relies on — `drive/Common` (`appCommon`), archive, and NFS — are gated at `1.12.6` ([cli/cmd/ctl/files/common_gate.go](../../../../cli/cmd/ctl/files/common_gate.go), `commonNamespaceMinOlaresVersion = "1.12.6"`).
+**This skill (porting apps) targets Olares >= 1.12.6.** This baseline applies only to porting — other `olares-cli` features have no such floor. The reason: the userspace backends a ported app commonly relies on — `drive/Common` (`appCommon`), archive, and NFS — are gated at `1.12.6`.
 
 Check the target Olares version before porting:
 
@@ -45,9 +45,9 @@ olares-cli settings me version               # live fetch of the running version
 
 What `v3` turns on (enforced by the toolchain only when `apiVersion: v3`):
 
-- **Declarative env rules** — an app-local `envName` must not start with `OLARES_USER`; user/system variables are mapped via `valueFrom` ([oac/internal/manifest/envs.go](../../../../framework/oac/internal/manifest/envs.go)). Full env model: [olares-chart-env.md](olares-chart-env.md).
+- **Declarative env rules** — an app-local `envName` must not start with `OLARES_USER`; user/system variables are mapped via `valueFrom`. Full env model: [olares-chart-env.md](olares-chart-env.md).
 - **Chart scan** — `lint` rejects templates that inline `OLARES_USER...` env names.
-- **Admin-installed, cluster-wide shared install** — on Olares >= 1.12.6 the install handler routes `case V3` to an admin-only install into the deterministic `<app>-shared` namespace, with `NeedsSharedAccess` forced true ([handler_installer_install.go](../../../../framework/app-service/pkg/apiserver/handler_installer_install.go), [pkg/utils/app/app.go](../../../../framework/app-service/pkg/utils/app/app.go)). So a v3 app is effectively a **shared app**: a normal-user install is rejected. For a deliberate multi-user shared backend (accelerator/heavy, own accounts, shared data), follow [olares-chart-shared.md](olares-chart-shared.md).
+- **Admin-installed, cluster-wide shared install** — on Olares >= 1.12.6 the install handler routes `apiVersion: v3` to an admin-only install into the deterministic `<app>-shared` namespace, with cross-namespace shared access enabled. So a v3 app is effectively a **shared app**: a normal-user install is rejected. For a deliberate multi-user shared backend (accelerator/heavy, own accounts, shared data), follow [olares-chart-shared.md](olares-chart-shared.md).
 
 `apiVersion` is independent of `olaresManifest.version` — `v3` works with both `0.8.0` and `0.12.0`.
 
@@ -58,14 +58,24 @@ A chart carries several "version" fields with different jobs and different rules
 | Field | Where | What it is | Rule |
 |---|---|---|---|
 | `apiVersion` | `OlaresManifest.yaml` (top level) | manifest API generation | skill sets `v3` (toolchain allows `v1`/`v2`/`v3`, default `v1`) |
-| `olaresManifest.version` | `OlaresManifest.yaml` | manifest **schema** version | `0.8.0` (legacy) vs `0.12.0` (`--new-schema`); install minimum `>= 0.7.2` ([config/app.go](../../../../framework/app-service/pkg/utils/config/app.go) `MinCfgFileVersion`) |
-| `metadata.version` | `OlaresManifest.yaml` | **Chart version** (Market package) | must be semver and **equal `Chart.yaml` `version`** ([chartfolder/folder.go](../../../../framework/oac/internal/chartfolder/folder.go)) |
+| `olaresManifest.version` | `OlaresManifest.yaml` | manifest **schema** version | `0.8.0` (legacy) vs `0.12.0` (`--new-schema`); install minimum `>= 0.7.2` |
+| `metadata.version` | `OlaresManifest.yaml` | **Chart version** (Market package) | must be semver and **equal `Chart.yaml` `version`** |
 | `version` | `Chart.yaml` | Helm chart version | `== metadata.version` |
 | `spec.versionName` | `OlaresManifest.yaml` | **upstream app** version (display) | tracks `Chart.yaml` `appVersion` — convention, not enforced |
 
 > **Name clash:** `Chart.yaml` also has its own `apiVersion` (`v2`) — that is the **Helm** chart API and is unrelated to the OlaresManifest `apiVersion`. Don't copy one into the other.
 
-Schema `0.8.0` vs `0.12.0` details (when each is required, e.g. GPU/accelerator and `externalData`) are in [olares-chart-manifest.md](olares-chart-manifest.md).
+### Schema version: 0.8.0 (legacy) vs 0.12.0 (`--new-schema`)
+
+`olaresManifest.version` declares which manifest schema the chart uses. `from-compose` emits **0.8.0** by default and **0.12.0** with `--new-schema`. The difference is not cosmetic — some fields only exist on 0.12.0:
+
+| | 0.8.0 (legacy, default) | 0.12.0 (`--new-schema`) |
+|---|---|---|
+| Resource envelope | flat `spec.requiredCpu` / `requiredMemory` / `requiredDisk` / `limitedCpu` / ... | `spec.resources[]` / `spec.accelerator[]` (mode-keyed: `cpu`, `nvidia`, ...) |
+| GPU / accelerator | not expressible cleanly | `spec.accelerator` with mode → arch cross-check at `lint` |
+| `permission.externalData` (`.Values.sharedlib`) | rejected | supported |
+
+**Use 0.12.0 when** the app declares GPU/accelerator resources, needs `permission.externalData`, or you want the modern resource envelope (recommended for new Market apps). Otherwise 0.8.0 is fine. To switch an existing stub, re-scaffold with `from-compose --new-schema` (or edit `olaresManifest.version` and migrate the resource fields). Accelerator mode declaration and sizing are in [olares-chart-accelerator.md](olares-chart-accelerator.md).
 
 ## Declaring system-version compatibility
 
@@ -79,7 +89,7 @@ options:
     type: system
 ```
 
-At install, app-service matches the constraint against the Terminus version with `MatchVersion` (Masterminds semver, [app_utils.go](../../../../framework/app-service/pkg/utils/app_utils.go)); a mismatch blocks install. `lint` only checks the dependency's structure, not the semver constraint. Given the porting baseline above, declare `>=1.12.6-0` (bump it higher if you use a feature from a later release).
+At install, app-service matches the constraint against the running Terminus version (semver); a mismatch blocks install. `lint` only checks the dependency's structure, not the semver constraint. Given the porting baseline above, declare `>=1.12.6-0` (bump it higher if you use a feature from a later release).
 
 ## Caveats
 

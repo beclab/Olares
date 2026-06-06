@@ -40,7 +40,6 @@ initContainers:
   {{- if eq (toString .Values.olaresEnv.ENABLE_DIND) "true" }}
   - name: init-docker-cli
     image: "docker.io/beclab/docker:29.3.0-dind"   # trusted beclab/* image (see Hard rules)
-    imagePullPolicy: IfNotPresent
     command: ["cp", "/usr/local/bin/docker", "/docker-cli/docker"]
     volumeMounts:
       - mountPath: /docker-cli
@@ -87,25 +86,14 @@ containers:
     securityContext:
       privileged: true
     env:
-      - name: DOCKER_TLS_CERTDIR     # disable TLS -> plain TCP on 2375
-        value: ""
-    command:
-      - dockerd
-      - --host
-      - tcp://0.0.0.0:2375
-      - --host
-      - unix:///var/run/docker.sock
-      - --mtu=1450                   # match Olares overlay MTU
+      - { name: DOCKER_TLS_CERTDIR, value: "" }    # disable TLS -> plain TCP on 2375
+    command: ["dockerd", "--host", "tcp://0.0.0.0:2375", "--host", "unix:///var/run/docker.sock", "--mtu=1450"]
     ports:
       - containerPort: 2375
-    startupProbe:
+    startupProbe:                    # readinessProbe is analogous (periodSeconds 20, failureThreshold 5)
       exec: { command: ["docker", "info"] }
       periodSeconds: 5
       failureThreshold: 60
-    readinessProbe:
-      exec: { command: ["docker", "info"] }
-      periodSeconds: 20
-      failureThreshold: 5
     resources:
       requests: { cpu: 200m, memory: 256Mi }
       limits: { cpu: "4", memory: 8Gi }
@@ -154,10 +142,9 @@ envs:
 - **Only the daemon sidecar is `privileged: true`.** Keep the main container UID 1000, `allowPrivilegeEscalation: false`, `drop: ["ALL"]` — it never needs privilege; it just talks TCP to the daemon.
 - **Use `strategy: type: Recreate`.** The pattern relies on `hostPath` volumes (`appData/home`, `appData/docker`); `lint` rejects `hostPath` + rolling update, and the docker storage dir must not be opened by two pods at once.
 - **Mount the workspace at the same path** in main + daemon (e.g. `/opt/data`). `docker run -v /opt/data/work:/work` is resolved by `dockerd`, so the path must mean the same thing in the daemon's mount namespace.
-- **Declare headroom.** Image layers under `appData/docker` grow fast — set a generous `spec.limitedDisk`, and size the sidecar's `requests`/`limits` for real builds. The sidecar's resources are **in addition** to the main container's (the lint resource check sums all containers — see [gpu.md](olares-chart-gpu.md) §D).
+- **Declare headroom.** Image layers under `appData/docker` grow fast — set a generous `spec.limitedDisk`, and size the sidecar's `requests`/`limits` for real builds. The sidecar's resources are **in addition** to the main container's (the lint resource check sums all containers — see [olares-chart-accelerator.md](olares-chart-accelerator.md) §C).
 - **Security:** a privileged DinD sidecar has effectively host-level kernel access. Only ship it on single-user dev/agent apps where the user already drives arbitrary shell commands, and keep it behind `ENABLE_DIND` so it can be turned off.
 
 ## Variants
 
-- **pool** — exactly the template above (CLI-injection + TCP daemon), toggled by `ENABLE_DIND`.
-- **clawdbot / nemoclaw** — same privileged daemon, but with a small startup script that launches `dockerd` and **pre-pulls a sandbox image** before the agent starts, so the first sandboxed task does not wait on a pull.
+**pool** is exactly the template above (CLI-injection + TCP daemon, toggled by `ENABLE_DIND`). **clawdbot / nemoclaw** use the same privileged daemon but add a startup script that launches `dockerd` and **pre-pulls a sandbox image** before the agent starts, so the first sandboxed task does not wait on a pull.

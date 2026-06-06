@@ -11,12 +11,12 @@ Typical shape: a local model / inference backend (ollama, vLLM, an LLM gateway).
 
 ## What `apiVersion: v3` means
 
-In Olares >= 1.12.6 the install handler routes purely on `apiVersion` ([handler_installer_install.go](../../../../framework/app-service/pkg/apiserver/handler_installer_install.go) `switch apiVersion`). `case V3` ⇒:
+In Olares >= 1.12.6 the install handler routes purely on `apiVersion`. `apiVersion: v3` ⇒:
 
 - **Admin-only install** — non-admin callers are rejected ("only admin users can install v3 / shared apps").
-- **Deterministic shared namespace** `<app>-shared` (not the per-user `<app>-<owner>`); single source of truth is `V3AppNamespace` in [pkg/utils/app/app.go](../../../../framework/app-service/pkg/utils/app/app.go).
+- **Deterministic shared namespace** `<app>-shared` (not the per-user `<app>-<owner>`).
 - **Cluster-wide ApplicationManager** named `<app>-shared-<app>`.
-- **`NeedsSharedAccess` is force-set true** so the app is a first-class destination for cross-namespace traffic (service-mesh sidecar + NetworkPolicy).
+- **Cross-namespace shared access is force-enabled** so the app is a first-class destination for cross-namespace traffic (service-mesh sidecar + NetworkPolicy).
 
 So for ported apps targeting 1.12.6+, **`apiVersion: v3` is itself the "shared app" declaration** — there is no separate `subCharts shared:true` / `appScope.clusterScoped` wiring to add (that was the legacy v2 form, below).
 
@@ -33,7 +33,7 @@ metadata:
   # ...
 spec:
   onlyAdmin: true                      # explicit admin-only (v3 is already admin-gated; set it anyway)
-  accelerator:                         # heavy/GPU resource envelope — see gpu.md §C-D
+  accelerator:                         # heavy/GPU resource envelope — see accelerator.md
     - mode: nvidia
       requiredMemory: 5Gi
       limitedMemory: 40Gi
@@ -74,17 +74,17 @@ Required / expected fields:
 | `olaresManifest.version: '0.12.0'` | needed for `spec.accelerator` / `permission.externalData` (see [manifest.md](olares-chart-manifest.md)) |
 | `options.dependencies` `olares` `>=1.12.6-0` (`type: system`) | **mandatory** — the shared/v3 model only exists on Olares >= 1.12.6 ([versioning.md](olares-chart-versioning.md)) |
 | `spec.onlyAdmin: true` | explicit admin-only install (generally set on shared apps) |
-| `spec.accelerator` | GPU/accelerator envelope for the heavy backend — sizing in [gpu.md](olares-chart-gpu.md) §C-D |
+| `spec.accelerator` | GPU/accelerator envelope for the heavy backend — sizing in [olares-chart-accelerator.md](olares-chart-accelerator.md) |
 | `options.conflicts` | avoid co-installing the per-user / older variant of the same backend |
-| `middleware` | shared backends can use system middleware normally (e.g. `llmgatewayv3` uses postgres) — see [manifest.md §3](olares-chart-manifest.md) |
+| `middleware` | shared backends can use system middleware normally (e.g. `llmgatewayv3` uses postgres) — see [olares-chart-middleware.md](olares-chart-middleware.md) |
 
 ## How consumers (reference apps) reach it
 
 A shared app is consumed by **separate reference/client apps**, not by per-user copies of itself:
 
 1. The client declares the dependency: `options.dependencies` with `type: application` on the shared app.
-2. At render time app-service injects the shared namespace's Services into the client's Helm values as `.Values.svcs.<svcName>_host` (= `<svcName>.<app>-shared`) and `.Values.svcs.<svcName>_ports` ([helm_utils.go](../../../../framework/app-service/pkg/appinstaller/helm_utils.go)). The client points its config at that host — a plain in-cluster Service DNS, **no entrance/URL involved**.
-3. Cross-namespace reachability is automatic: the shared app's `NeedsSharedAccess` (force-true for v3) gets it the mesh sidecar + NetworkPolicy that allow other namespaces to call it.
+2. At render time app-service injects the shared namespace's Services into the client's Helm values as `.Values.svcs.<svcName>_host` (= `<svcName>.<app>-shared`) and `.Values.svcs.<svcName>_ports`. The client points its config at that host — a plain in-cluster Service DNS, **no entrance/URL involved**.
+3. Cross-namespace reachability is automatic: a v3 shared app gets the mesh sidecar + NetworkPolicy that allow other namespaces to call it.
 
 ## Legacy v2 shared form (context only)
 
@@ -109,4 +109,4 @@ For new ports targeting 1.12.6+ use the `apiVersion: v3` form above instead; thi
 - **Only an admin can install a v3 app** — surface this to the user; a normal user install will 403.
 - The namespace is **always** `<app>-shared` regardless of what the manifest says; app-service rewrites it.
 - Do not add `sharedEntrances` (removed in 1.12.6+).
-- A shared app is still subject to the rest of the skill: run-as-user 1000 ([run-as-user.md](olares-chart-run-as-user.md)), pinned image tags, accelerator sizing ([gpu.md](olares-chart-gpu.md)), env rules ([env.md](olares-chart-env.md)).
+- A shared app is still subject to the rest of the skill: run-as-user 1000 ([run-as-user.md](olares-chart-run-as-user.md)), pinned image tags, accelerator sizing ([accelerator.md](olares-chart-accelerator.md)), env rules ([env.md](olares-chart-env.md)).
