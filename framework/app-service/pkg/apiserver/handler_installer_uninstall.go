@@ -49,9 +49,12 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 	}
 	am := *amPtr
 
-	if !appstate.IsOperationAllowed(am.Status.State, v1alpha1.UninstallOp) {
+	if !request.Force && !appstate.IsOperationAllowed(am.Status.State, v1alpha1.UninstallOp) {
 		api.HandleBadRequest(resp, req, appstate.ExplainOperationNotAllowed(am.Status.State, v1alpha1.UninstallOp))
 		return
+	}
+	if request.Force {
+		klog.Warningf("force uninstalling app %s from %s state", app, am.Status.State)
 	}
 	am.Spec.OpType = v1alpha1.UninstallOp
 	if am.Annotations == nil {

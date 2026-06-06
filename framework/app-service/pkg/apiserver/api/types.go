@@ -158,6 +158,10 @@ type Image struct {
 type UninstallRequest struct {
 	All        bool `json:"all"`
 	DeleteData bool `json:"deleteData"`
+	// Force bypasses the operation-state gate so an app stuck in a
+	// transitional state (e.g. initializing) can still be uninstalled. The
+	// controller cleans up any in-progress operation before uninstalling.
+	Force bool `json:"force"`
 }
 
 // StopRequest represents a request to stop an application.
