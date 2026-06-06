@@ -113,4 +113,4 @@ When using a **third-party** image, inspect `docker inspect <ref> --format '{{.C
 - **Every service must reference a publicly pullable image** for the node arch — no `build:`, no local-only tags, no private registry (until Olares-local registry support lands).
 - **local-run:** arch must match the node. **market-distribute:** prefer multi-arch; declare `spec.supportArch`. Verify with `docker manifest inspect`.
 - **Never bake registry credentials into the chart** (no `imagePullSecrets` with inline tokens, no secrets in `values.yaml`). Public images only.
-- **Pin a tag** (avoid bare `latest` for reproducible installs); bump it when you rebuild.
+- **Pin every image to a specific version tag** — **never `:latest`** or an untagged image (implicit `latest`). `latest` drifts, so installs become non-reproducible and rollbacks/caching unreliable. Bump the tag when you rebuild. (`lint` does not enforce this — it's on you.)

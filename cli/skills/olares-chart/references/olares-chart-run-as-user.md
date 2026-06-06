@@ -94,7 +94,7 @@ spec:
           mountPath: /data
       containers:
       - name: app
-        image: third-party/app:latest
+        image: third-party/app:1.2.3
         volumeMounts:
         - name: app-data
           mountPath: /data

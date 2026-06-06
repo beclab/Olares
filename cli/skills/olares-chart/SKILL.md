@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 1.12.0
+version: 1.12.1
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -138,6 +138,7 @@ This is the canonical source for cross-app wiring (how a dependency app is reach
 
 ## Hard constraints that bite
 
+- **Pin every `image:` to a specific version tag** (e.g. `nginx:1.27`, `<user>/<repo>:1.2.3`). **Never use `:latest`** or an untagged image (implicit `latest`): it drifts, making installs non-reproducible and rollbacks/caching unreliable — and Olares pulls images, it never rebuilds. `lint` does **not** catch this; it is the author's responsibility.
 - **`metadata.name` must match the chart folder name and `Chart.yaml` `name`**, and be `^[a-z][a-z0-9]{0,29}$`. `from-compose --name` keeps them consistent; if you rename the folder, fix all three.
 - **At least one entrance is required.** Never delete the last `entrances[]` entry.
 - **If a template uses `.Values.userspace.appData`/`appCache`/`userData`, the matching `permission` field MUST be declared**, or `lint` fails the app-data cross-check.
