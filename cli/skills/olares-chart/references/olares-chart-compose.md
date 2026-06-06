@@ -1,7 +1,7 @@
 # Compose: obtain or author a docker-compose (deployment-input axis)
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
-> `chart from-compose` needs a docker-compose as input. This is the **deployment-input** capability: get a compose, then hand it to [olares-chart-from-compose.md](olares-chart-from-compose.md). It is orthogonal to packaging — see [olares-chart-image.md](olares-chart-image.md) for making each service's image pullable.
+> `chart from-compose` needs a docker-compose as input. This is the **deployment-input** capability: get a compose, then hand it to [olares-chart-from-compose.md](olares-chart-from-compose.md). It is orthogonal to packaging — see [olares-chart-image.md](olares-chart-image.md) for making each service's image pullable. Metadata polish depth depends on release target — [olares-chart-publish-targets.md](olares-chart-publish-targets.md).
 
 You either already have a compose, are handed several, or have only source:
 
@@ -15,7 +15,7 @@ Projects often ship several composes (dev, full, minimal, ha, ...). Prefer the o
 - **single-host** (no Swarm `deploy.replicas` clusters, no multi-node assumptions);
 - built on **published images**, not `build:` (or minimally so — you only have to build the few that are build-only, via [olares-chart-image.md](olares-chart-image.md));
 - **without** `privileged`, `network_mode: host`, `cap_add`, or host-device mounts (Olares won't allow these);
-- explicit about **ports, volumes, env** so the four judgment calls are tractable.
+- explicit about **ports, volumes, env** so the four refinement areas are tractable.
 
 A "self-host" / "production" compose is usually closer to Olares than a "dev" compose (dev composes tend to be all-`build:` from source — exactly what you can't deploy as-is).
 

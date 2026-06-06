@@ -1,9 +1,22 @@
-# chart lint (validate a chart before publishing)
+# chart lint (validate a chart)
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) and [olares-chart-publish-targets.md](olares-chart-publish-targets.md) first.
 > **Flags & examples:** `olares-cli chart lint --help`. This file adds the meaning of each check and a failure→fix table.
 
-`lint` runs the **same pipeline the Olares Market uses to ingest a chart**, against a directory or a `.tgz` / `.tar.gz`. Local-only; no Olares login.
+`lint` runs the **same ingest pipeline the Olares Market uses to validate chart structure**, against a directory or a `.tgz` / `.tar.gz`. Local-only; no Olares login.
+
+## lint OK ≠ market-ready
+
+| Check | `chart lint` | GitBot PR (`CheckWithTitle`) |
+|---|---|---|
+| Folder layout, manifest structure, helm dry-run | ✅ | ✅ |
+| `metadata.categories` enum | ❌ (stub `Utilities` passes) | ✅ |
+| `featuredImage`, `promoteImage`, `fullDescription` | ❌ | recommended for listing |
+| Multi-arch / `spec.supportArch` alignment | partial (cross-field if accelerator set) | expected for public Market |
+
+**local-run:** `lint OK` + live install → sufficient. Stub metadata is fine.
+
+**market-distribute:** `lint OK` is necessary but not sufficient — complete the [market-ready checklist](olares-chart-publish-targets.md#market-distribute-market-ready-checklist) before opening a PR.
 
 ```bash
 olares-cli chart lint ./myapp
@@ -39,10 +52,15 @@ By default lint renders the chart under **both** `owner==admin` (admin install) 
 | app-data / permission mismatch | template mounts `.Values.userspace.*` not declared in `permission` (or reverse) | align `permission.appData/appCache/userData` with template mounts |
 | `Chart.yaml` vs manifest version mismatch | the two `version` fields differ | set them equal |
 | hostPath + rolling update | a template mounts a `hostPath` with a rolling-update workload | switch to a userspace volume, or set the workload strategy to `Recreate` if a host mount is truly required |
-| resource limit missing | a container has no CPU/memory limit | add `resources.limits` (or `--skip-resource` only for a quick check, not for publish) |
+| resource limit missing | a container has no CPU/memory limit | add `resources.limits` (or `--skip-resource` only for a quick check, not for market submit) |
 | manifest structural error | required field missing/invalid | fix per [olares-chart-manifest.md](olares-chart-manifest.md) |
 | namespace check failed | a resource has a hardcoded namespace | use `namespace: '{{ .Release.Namespace }}'` |
 
 ## In the loop
 
-`lint` exit code is the signal: `0` = OK (prints `<path>: OK`), non-zero = a domain error printed without a usage dump. Keep editing the manifest/templates and re-running until it prints OK, then optionally live-validate on a real Olares — see [olares-chart-publish-verify.md](olares-chart-publish-verify.md).
+`lint` exit code is the signal: `0` = OK (prints `<path>: OK`), non-zero = a domain error printed without a usage dump. Keep editing the manifest/templates and re-running until it prints OK.
+
+Then by release target:
+
+- **local-run:** [olares-chart-publish-verify.md](olares-chart-publish-verify.md) (upload + install)
+- **market-distribute:** market-ready checklist → re-lint → [olares-chart-market-submit.md](olares-chart-market-submit.md)

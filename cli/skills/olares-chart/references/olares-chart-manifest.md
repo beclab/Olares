@@ -1,35 +1,73 @@
-# Refining OlaresManifest.yaml — the four judgment calls
+# Refining OlaresManifest.yaml — the four refinement areas
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
-> This is the field-by-field map from a raw `from-compose` stub to a publishable chart. After every change, re-run `olares-cli chart lint ./<app>` (see [olares-chart-lint.md](olares-chart-lint.md)).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) and [olares-chart-publish-targets.md](olares-chart-publish-targets.md) first.
+> This is the field-by-field map from a raw `from-compose` stub to a working chart. After every change, re-run `olares-cli chart lint ./<app>` (see [olares-chart-lint.md](olares-chart-lint.md)).
 
-The scaffolded manifest is a stub. The four areas below are what kompose cannot decide.
+The scaffolded manifest is a stub. The four areas below are what kompose cannot decide. **§1 Metadata depth depends on release target; §2–§4 are functional and required for both targets.**
 
 ## 1. Metadata
 
-The stub sets `title=name`, the default icon, `categories: [Utilities]`, and no developer info. Fill from the upstream project (or ask the user):
+Depth is gated by release target — see [olares-chart-publish-targets.md](olares-chart-publish-targets.md).
+
+### Always required (`lint` structural check)
+
+These must be present and valid for `chart lint` to pass:
 
 ```yaml
 metadata:
   name: myapp                 # must match folder + Chart.yaml name; do not change casually
-  title: My App               # ≤30 chars
-  description: One-line summary shown under the title
-  icon: https://.../icon.png  # PNG/WEBP, 256x256, ≤512KB
+  title: My App               # stub title=name is OK for local-run
+  description: One-line summary
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp  # default OK for local-run
   version: 0.0.1              # Chart Version — MUST equal Chart.yaml `version`
-  categories:                 # see manifest docs; include both 1.11 + 1.12 values for compatibility
-  - Utilities
-  - Utilities_v112
+  categories:
+  - Utilities                 # stub OK for local-run; lint does not enum-check
 spec:
   versionName: "1.2.3"        # upstream app version; tracks Chart.yaml `appVersion`
+```
+
+### local-run: optional (keep stub unless user cares)
+
+- `categories` — `Utilities` alone is fine
+- Default icon URL
+- `spec.developer`, `submitter`, `website`, `sourceCode`, `fullDescription` — omit or leave empty
+- `spec.featuredImage`, `promoteImage`, `locale`, `supportArch` — skip unless using accelerator modes
+
+### market-distribute: required (Market listing + GitBot)
+
+Fill from the upstream project (or ask the user):
+
+```yaml
+metadata:
+  title: My App               # ≤30 chars, human-readable
+  description: One-line summary shown under the title
+  icon: https://.../icon.png  # PNG/WEBP, 256x256, ≤512KB
+  categories:                 # BOTH 1.11 + 1.12 values — GitBot enum-checks these
+  - Productivity
+  - Productivity_v112
+spec:
   developer: Upstream Author
   submitter: Your Name
   website: https://project.example
   sourceCode: https://github.com/org/project
   fullDescription: |
     Longer Market description.
+  locale:
+  - en
+  supportArch:                # must match image platforms
+  - amd64
+  - arm64
+  featuredImage: https://.../hero.webp
+  promoteImage:
+  - https://.../screenshot1.webp
+  - https://.../screenshot2.webp
 ```
 
+Category values: [manifest docs — categories](https://docs.olares.com/developer/develop/package/manifest.html#categories). Listing images: [promote-apps](https://docs.olares.com/developer/develop/promote-apps.html).
+
 ## 2. Storage (compose volumes → Olares userspace)
+
+> **Same for both release targets** — functional requirement, not cosmetic.
 
 Each compose volume became a raw `persistentvolumeclaim-*.yaml`. Decide per volume, then **delete the PVC template you replace** and rewrite the container's `volumeMounts` to an `emptyDir`/`hostPath` pointing at the injected userspace path.
 
@@ -65,6 +103,8 @@ In the deployment template, replace the PVC mount with the injected path:
 > **Coupling with packaging:** storage and permission are constrained by how the **image** was built. If the image hardcodes a write path Olares won't grant, or runs as root where Olares expects non-root, the fix may be to **rebuild the image** (back to the Image capability in [olares-chart-image.md](olares-chart-image.md)) so it writes under an injected userspace path and runs as a normal user — not just to edit this manifest.
 
 ## 3. Middleware (use the system service, don't bundle one)
+
+> **Same for both release targets** — functional requirement, not cosmetic.
 
 A compose `postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` service should usually be removed and replaced by Olares-managed middleware. For each:
 
@@ -108,6 +148,8 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
 
 ## 4. Entrances & ports
 
+> **Same for both release targets** — functional requirement, not cosmetic.
+
 The stub has one auto-detected entrance. Adjust:
 
 ```yaml
@@ -138,3 +180,5 @@ entrances:
 ```bash
 olares-cli chart lint ./myapp        # loop back here on any failure
 ```
+
+For **local-run**, proceed to [olares-chart-publish-verify.md](olares-chart-publish-verify.md). For **market-distribute**, complete the market-ready checklist in [olares-chart-publish-targets.md](olares-chart-publish-targets.md), then [olares-chart-market-submit.md](olares-chart-market-submit.md).

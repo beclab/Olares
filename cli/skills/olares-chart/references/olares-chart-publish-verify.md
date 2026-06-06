@@ -1,9 +1,18 @@
-# Live validation: upload, run, and diagnose on a real Olares
+# Local validation: upload, run, and diagnose on a real Olares
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first, and pass `chart lint` before starting any of this.
-> Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) and [olares-chart-publish-targets.md](olares-chart-publish-targets.md) first; pass `chart lint` before starting any of this.
+> This is the **Publish-local** capability. Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
 
-`lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This optional loop does — by pushing the chart to a real Olares and watching it install.
+## Role by release target
+
+| Target | Role of this step |
+|---|---|
+| **local-run** | **Done validation** — upload + install reaching `running` completes the workflow |
+| **market-distribute** | **Prerequisite** — must pass before market polish and PR to `beclab/apps`; not the final done step |
+
+For market-distribute after local validation succeeds, continue to [olares-chart-market-submit.md](olares-chart-market-submit.md).
+
+`lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This loop does — by pushing the chart to the developer's Olares and watching it install.
 
 ```mermaid
 flowchart TD
@@ -15,6 +24,9 @@ flowchart TD
   pkg --> up["market upload"]
   up --> inst["market install -s upload --watch -o json"]
   inst -->|running| done["validated -> cleanup"]
+  done --> market{"market-distribute?"}
+  market -->|yes| submit["market-ready polish -> market-submit.md"]
+  market -->|no| localdone["local-run done"]
   inst -->|failed/stuck| diag["fetch logs"]
   diag --> isChart{"chart problem?"}
   isChart -->|yes| fix["fix chart -> back to refine + lint"]
@@ -89,3 +101,8 @@ olares-cli market delete <app>                   # remove the chart from the upl
 ```
 
 (See the market charts reference: `uninstall` and `delete` are separate — uninstall stops the app, delete removes the uploaded chart.)
+
+## Next step
+
+- **local-run:** workflow complete after successful validation + cleanup (or leave installed if the developer wants to keep using it — ask first).
+- **market-distribute:** proceed to market-ready checklist → [olares-chart-publish-targets.md](olares-chart-publish-targets.md) → [olares-chart-market-submit.md](olares-chart-market-submit.md).
