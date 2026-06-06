@@ -244,6 +244,8 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
 
 > **Reaching the dependency:** it runs as its own app in its own namespace; your app talks to it over the endpoint that app exposes, not an in-chart Service. The exact env/URL wiring is app-specific — copy it from that app's official chart in [beclab/apps](https://github.com/beclab/apps) rather than guessing a cluster DNS name.
 
+> **If the dependency is a v3 shared backend** (a cluster-wide ollama / vLLM / LLM gateway), app-service injects its Services into your chart as `.Values.svcs.<svc>_host` / `.Values.svcs.<svc>_ports`, so you reach it by cross-namespace Service DNS — no entrance/URL. Authoring the shared backend itself (admin-only, `<app>-shared` namespace) is covered in [olares-chart-shared.md](olares-chart-shared.md).
+
 > **middleware vs application:** `type: middleware` = an Olares-managed datastore wired via `.Values.<mw>.*` (§3 above); `type: application` = a separate, full Olares app you depend on. Use middleware for databases/queues, application for companion apps.
 
 ## 4. Entrances & ports

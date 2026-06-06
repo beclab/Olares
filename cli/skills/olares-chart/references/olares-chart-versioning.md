@@ -47,6 +47,7 @@ What `v3` turns on (enforced by the toolchain only when `apiVersion: v3`):
 
 - **Declarative env rules** — an app-local `envName` must not start with `OLARES_USER`; user/system variables are mapped via `valueFrom` ([oac/internal/manifest/envs.go](../../../../framework/oac/internal/manifest/envs.go)). Full env model: [olares-chart-env.md](olares-chart-env.md).
 - **Chart scan** — `lint` rejects templates that inline `OLARES_USER...` env names.
+- **Admin-installed, cluster-wide shared install** — on Olares >= 1.12.6 the install handler routes `case V3` to an admin-only install into the deterministic `<app>-shared` namespace, with `NeedsSharedAccess` forced true ([handler_installer_install.go](../../../../framework/app-service/pkg/apiserver/handler_installer_install.go), [pkg/utils/app/app.go](../../../../framework/app-service/pkg/utils/app/app.go)). So a v3 app is effectively a **shared app**: a normal-user install is rejected. For a deliberate multi-user shared backend (accelerator/heavy, own accounts, shared data), follow [olares-chart-shared.md](olares-chart-shared.md).
 
 `apiVersion` is independent of `olaresManifest.version` — `v3` works with both `0.8.0` and `0.12.0`.
 

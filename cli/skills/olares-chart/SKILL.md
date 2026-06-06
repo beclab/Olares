@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 1.16.0
+version: 1.17.0
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -29,6 +29,7 @@ metadata:
 - Headless / CLI app, MCP server, or tool with no web UI (terminal entrance + invisible entrance)
 - Run `docker` / `docker compose` from inside a terminal/agent app: privileged Docker-in-Docker sidecar gated by `ENABLE_DIND`, `DOCKER_HOST=tcp://localhost:2375`, trusted `beclab/docker` daemon image
 - Depend on another already-ported app instead of bundling it (`options.dependencies` `type: application`, e.g. searxng companion service)
+- Shared app: a heavy/accelerator backend with its own accounts, used by many people, sharing one data set — installed **once by an admin** cluster-wide via `apiVersion: v3` (admin-only, `<app>-shared` namespace), consumed by reference apps over cross-namespace Service DNS (e.g. ollama / vLLM / LLM gateway)
 - Environment variables: declare app config in `envs[]`, prompt the user at install (e.g. init admin username/password via `required`), map system/user vars (`OLARES_SYSTEM_*` / `OLARES_USER_*`) through `valueFrom`, `.Values.olaresEnv`, env `type`/`regex`/`options` validation
 - Version rules: Olares system version (semver), `apiVersion: v3`, `olaresManifest.version` 0.8.0 vs 0.12.0, `metadata.version` vs `spec.versionName`, `type: system` dependency, checking the target with `profile list`
 - Three axes: **packaging** (Dockerfile/image), **deployment** (compose/chart), **publishing** (release target); four post-kompose refinement areas (metadata depth gated by target, storage, middleware, entrances)
@@ -81,6 +82,7 @@ The image-building work is **guided** — you check/install docker and drive `do
 | **Run-as-user** | packaging + deployment | align image uid with Olares userspace (1000): Dockerfile `USER`, `spec.runAsUser`, initContainer `chown` | no | EACCES on appData/appCache/userData, OPA root deny on third-party image | [run-as-user.md](references/olares-chart-run-as-user.md) |
 | **GPU / models** | packaging + deployment | build a CUDA image without a local GPU; download model weights via initContainer into the shared `appCommon` Hugging Face cache | no | AI app needs CUDA build or model provisioning, custom-kernel arch flags, shared model cache | [gpu.md](references/olares-chart-gpu.md) |
 | **DinD** | packaging + deployment | give a terminal/agent app a `docker` CLI via a privileged `beclab/docker` daemon sidecar (`ENABLE_DIND`, `DOCKER_HOST`) while keeping the main container non-privileged | no | app must run `docker` / `docker compose` / containerized dev stacks from the terminal | [dind.md](references/olares-chart-dind.md) |
+| **Shared** | deployment | make the app an admin-installed, cluster-wide shared backend (`apiVersion: v3` ⇒ `<app>-shared` namespace, admin-only, cross-namespace Service DNS for consumers) | no | heavy/accelerator backend with its own accounts, multi-user, shared data; consumed by separate reference apps | [shared.md](references/olares-chart-shared.md) |
 | **Validate-local** | deployment | `chart lint` + `chart package` | no | — | [lint.md](references/olares-chart-lint.md) |
 | **Publish-local** | publishing | `market upload` + `market install` + diagnose from logs | yes | — | [publish-verify.md](references/olares-chart-publish-verify.md) |
 | **Publish-market** | publishing | market-ready checklist + `beclab/apps` PR guidance | no (GitHub) | local validation passed, user wants public Market listing | [market-submit.md](references/olares-chart-market-submit.md) |
@@ -149,7 +151,7 @@ This is the canonical source for cross-app wiring (how a dependency app is reach
 ## Hard constraints that bite
 
 - **Pin every `image:` to a specific version tag** (e.g. `nginx:1.27`, `<user>/<repo>:1.2.3`). **Never use `:latest`** or an untagged image (implicit `latest`): it drifts, making installs non-reproducible and rollbacks/caching unreliable — and Olares pulls images, it never rebuilds. `lint` does **not** catch this; it is the author's responsibility.
-- **Set `apiVersion: v3` in `OlaresManifest.yaml`** (skill rule). `from-compose` omits it (implicit `v1`), so hand-add it after scaffolding. v3 enables the declarative env rules (`valueFrom`, no inline `OLARES_USER`); `lint` allows `v1`/`v2`/`v3` and does **not** force it. Details: [versioning.md](references/olares-chart-versioning.md).
+- **Set `apiVersion: v3` in `OlaresManifest.yaml`** (skill rule for 1.12.6+ ports). `from-compose` omits it (implicit `v1`), so hand-add it after scaffolding. v3 enables the declarative env rules (`valueFrom`, no inline `OLARES_USER`); `lint` allows `v1`/`v2`/`v3` and does **not** force it. On Olares >= 1.12.6 the install handler treats **v3 as an admin-installed, cluster-wide shared app** (`<app>-shared` namespace, admin-only) — so flag the admin-install requirement to the user, and for a multi-user shared backend follow [shared.md](references/olares-chart-shared.md). Details: [versioning.md](references/olares-chart-versioning.md).
 - **`metadata.name` must match the chart folder name and `Chart.yaml` `name`**, and be `^[a-z][a-z0-9]{0,29}$`. `from-compose --name` keeps them consistent; if you rename the folder, fix all three.
 - **At least one entrance is required.** Never delete the last `entrances[]` entry.
 - **If a template uses `.Values.userspace.appData`/`appCache`/`userData`, the matching `permission` field MUST be declared**, or `lint` fails the app-data cross-check.
