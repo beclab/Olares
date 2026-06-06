@@ -14,6 +14,8 @@ metadata:
 
 > **Source of truth for flags is always `olares-cli chart <verb> --help`.** This file only carries what `--help` cannot: when to use this skill, the convert→refine→lint loop, release-target routing, and the four refinement areas that turn a raw conversion into a working chart.
 
+> **Porting baseline: Olares >= 1.12.6.** This skill targets Olares >= 1.12.6 (other `olares-cli` features have no such floor). Check the target with `olares-cli profile list` (VERSION column). Full version rules — `apiVersion: v3`, the several chart version fields, `type: system` dependency — are in [references/olares-chart-versioning.md](references/olares-chart-versioning.md).
+
 ## When to use
 
 - Olares chart, OlaresManifest / OlaresManifest.yaml, olares-cli chart, chart from-compose, chart lint, chart package
@@ -26,6 +28,7 @@ metadata:
 - Headless / CLI app, MCP server, or tool with no web UI (terminal entrance + invisible entrance)
 - Depend on another already-ported app instead of bundling it (`options.dependencies` `type: application`, e.g. searxng companion service)
 - Environment variables: declare app config in `envs[]`, prompt the user at install (e.g. init admin username/password via `required`), map system/user vars (`OLARES_SYSTEM_*` / `OLARES_USER_*`) through `valueFrom`, `.Values.olaresEnv`, env `type`/`regex`/`options` validation
+- Version rules: Olares system version (semver), `apiVersion: v3`, `olaresManifest.version` 0.8.0 vs 0.12.0, `metadata.version` vs `spec.versionName`, `type: system` dependency, checking the target with `profile list`
 - Three axes: **packaging** (Dockerfile/image), **deployment** (compose/chart), **publishing** (release target); four post-kompose refinement areas (metadata depth gated by target, storage, middleware, entrances)
 - Optional live validation (requires login): package + market upload/install — see [`olares-shared`](../olares-shared/SKILL.md), [`olares-market`](../olares-market/SKILL.md), [`olares-cluster`](../olares-cluster/SKILL.md)
 
@@ -143,6 +146,7 @@ This is the canonical source for cross-app wiring (how a dependency app is reach
 ## Hard constraints that bite
 
 - **Pin every `image:` to a specific version tag** (e.g. `nginx:1.27`, `<user>/<repo>:1.2.3`). **Never use `:latest`** or an untagged image (implicit `latest`): it drifts, making installs non-reproducible and rollbacks/caching unreliable — and Olares pulls images, it never rebuilds. `lint` does **not** catch this; it is the author's responsibility.
+- **Set `apiVersion: v3` in `OlaresManifest.yaml`** (skill rule). `from-compose` omits it (implicit `v1`), so hand-add it after scaffolding. v3 enables the declarative env rules (`valueFrom`, no inline `OLARES_USER`); `lint` allows `v1`/`v2`/`v3` and does **not** force it. Details: [versioning.md](references/olares-chart-versioning.md).
 - **`metadata.name` must match the chart folder name and `Chart.yaml` `name`**, and be `^[a-z][a-z0-9]{0,29}$`. `from-compose --name` keeps them consistent; if you rename the folder, fix all three.
 - **At least one entrance is required.** Never delete the last `entrances[]` entry.
 - **If a template uses `.Values.userspace.appData`/`appCache`/`userData`, the matching `permission` field MUST be declared**, or `lint` fails the app-data cross-check.
