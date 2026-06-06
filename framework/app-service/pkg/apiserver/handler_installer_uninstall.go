@@ -50,7 +50,7 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 	am := *amPtr
 
 	if !appstate.IsOperationAllowed(am.Status.State, v1alpha1.UninstallOp) {
-		api.HandleBadRequest(resp, req, fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.UninstallOp, am.Status.State))
+		api.HandleBadRequest(resp, req, appstate.ExplainOperationNotAllowed(am.Status.State, v1alpha1.UninstallOp))
 		return
 	}
 	am.Spec.OpType = v1alpha1.UninstallOp

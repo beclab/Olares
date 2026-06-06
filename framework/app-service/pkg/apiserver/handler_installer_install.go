@@ -685,7 +685,7 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 		}
 	} else {
 		if !appstate.IsOperationAllowed(a.Status.State, v1alpha1.InstallOp) {
-			err = fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.InstallOp, a.Status.State)
+			err = appstate.ExplainOperationNotAllowed(a.Status.State, v1alpha1.InstallOp)
 			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
