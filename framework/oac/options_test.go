@@ -27,7 +27,7 @@ func TestNew_Defaults(t *testing.T) {
 		t.Fatalf("expected empty owner/admin, got %q/%q", c.owner, c.admin)
 	}
 	if c.skipRunRBAC {
-		t.Fatal("RBAC inspection must be off by default")
+		t.Fatal("RBAC inspection must be set by default")
 	}
 	if c.skipManifest || c.skipResource || c.skipFolder {
 		t.Fatal("manifest/resource/folder checks must be on by default")
