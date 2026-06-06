@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 1.11.0
+version: 1.12.0
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -37,15 +37,7 @@ Before the packaging/deployment state tables, decide **who consumes the chart** 
 | **local-run** (default for most users) | "run on my Olares", "upload and install", "just for myself" | `lint` OK → package → upload + install reaches `running` on the developer's Olares |
 | **market-distribute** | "publish to Market", "submit to beclab/apps", "上架" | local validation passes **plus** market-ready metadata/images/arch → PR merged into `beclab/apps:main` |
 
-**Requirements matrix** (summary — detail in [publish-targets.md](references/olares-chart-publish-targets.md)):
-
-| Concern | local-run | market-distribute |
-|---|---|---|
-| Image arch | single-arch matching **this node's** arch (`cluster node list`) | multi-arch (`linux/amd64,linux/arm64`); declare `spec.supportArch` |
-| Metadata §1 | stub OK if `lint` passes (`Utilities`, default icon) | full metadata, dual-version categories, `fullDescription`, developer links |
-| Listing assets | skip | `featuredImage`, `promoteImage` |
-| Refine §2–4 | **same for both** — storage / middleware / entrances are functional, not cosmetic |
-| Validate | D3 lint → D4 package → V upload/install | same V steps first, then M market submit |
+**What differs by target** (full matrix in [publish-targets.md](references/olares-chart-publish-targets.md)): **image arch** (local-run = single-arch for this node via `cluster node list`; market = multi-arch + `spec.supportArch`); **metadata depth** (local = stub OK if `lint` passes; market = full metadata, dual-version categories, listing images, developer links); and the **publish path** (local = upload + install; market = the same validation first, then a `beclab/apps` PR). **Refine §2–4 (storage / middleware / entrances) is functional and identical for both.**
 
 ## Start here: establish your state
 
@@ -118,69 +110,11 @@ The only `olares-cli chart` subcommands (source of truth: `--help`). Everything 
 |---|---|---|
 | `from-compose` (alias `init`) | kompose-convert compose file(s) into an Olares chart skeleton | [references/olares-chart-from-compose.md](references/olares-chart-from-compose.md) |
 | `lint` | validate a chart dir / `.tgz` with the Market ingest pipeline | [references/olares-chart-lint.md](references/olares-chart-lint.md) |
-| `package` | package a chart dir into a `<name>-<version>.tgz` for upload (mirrors `helm package`, no helm binary needed) | [references/olares-chart-publish-verify.md](references/olares-chart-publish-verify.md) |
+| `package` | package a chart dir into a `<name>-<version>.tgz` for upload (mirrors `helm package`, no helm binary needed) | [references/olares-chart-workflow.md](references/olares-chart-workflow.md) (D4 / M3) |
 
-## A typical assembly (compose with a build-only image)
+## Typical assembly & conversion output
 
-One way to compose the capabilities; not a fixed pipeline — start wherever your state tables put you, and loop across the coupling edges as failures surface.
-
-```
- 0. target       local-run | market-distribute   # gates P3 arch flags + D2 metadata depth
-
- Packaging (guided, with the developer; only if an image is missing / wrong-arch):
- P1. docker?    docker version && docker buildx version   # else guide install
- P2. registry   docker login  (Docker Hub)  |  docker login ghcr.io  (ghcr, PAT write:packages)
- P3. build+push local-run:     docker buildx build --platform linux/<node-arch> -t <ref>:<tag> --push <ctx>
-                market:        docker buildx build --platform linux/amd64,linux/arm64 -t <ref>:<tag> --push <ctx>
-                -> wire <ref>:<tag> into every build-only `image:` in the compose
-
- Deployment authoring (no login):
- D1. scaffold   olares-cli chart from-compose --name <app> -f docker-compose.yml
- D2. refine     edit OlaresManifest.yaml + templates/ for the 4 refinement areas
-                (metadata depth per release target — see manifest.md)
- D3. lint       olares-cli chart lint ./<app>        # loop D2<->D3 until OK
- D4. package    olares-cli chart package ./<app>
-
- Publish-local (requires login + developer consent; local-run done here):
- V1. logged-in? olares-cli profile list              # if not: tell developer, stop
- V2. ask        confirm with the developer before uploading to a real Olares
- V3. upload     olares-cli market upload ./<app>-<ver>.tgz
- V4. run        olares-cli market install <app> -s upload --version <ver> --watch -o json
- V5. on failure fetch market / chartrepo / app-service / app-pod logs and diagnose
- V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; uid/EACCES -> run-as-user.md ; else report & ask
- V7. cleanup    olares-cli market uninstall <app> --watch ; olares-cli market delete <app>
-
- Publish-market (market-distribute only; requires V pass first):
- M1. polish     full metadata, categories, listing images, spec.supportArch — publish-targets checklist
- M2. lint       olares-cli chart lint ./<app>        # re-check after polish
- M3. package    olares-cli chart package ./<app>
- M4. fork       developer forks beclab/apps, adds OAC + owners file
- M5. PR         [NEW][<app>][<ver>] Summary — see market-submit.md
- M6. wait        GitBot validates → auto-merge → app appears in Market
-```
-
-Step D1 produces a chart that **already passes `lint`** but is NOT yet a good app: kompose translates containers literally and cannot make product decisions. The value you add is D2. Treat the generated `OlaresManifest.yaml` as a stub — how much you polish §1 Metadata depends on the release target. The V steps cross into sibling skills — full procedure in [references/olares-chart-publish-verify.md](references/olares-chart-publish-verify.md). M steps are for market-distribute only — [references/olares-chart-market-submit.md](references/olares-chart-market-submit.md). Only proceed past D3 upload with the developer's consent.
-
-## What the conversion produces
-
-```
-<output>/
-├── Chart.yaml              # helm chart metadata (name/version pinned to 0.0.1)
-├── OlaresManifest.yaml     # Olares app manifest — the file you refine
-├── values.yaml             # empty; fill if you template values
-└── templates/
-    ├── deployment-<app>.yaml          # the primary workload, renamed to <app>
-    ├── deployment-<svc>.yaml          # one per extra compose service
-    ├── service-<svc>.yaml             # one per exposed compose service
-    └── persistentvolumeclaim-*.yaml   # one per named/anonymous compose volume
-```
-
-- Every resource is namespaced with `namespace: '{{ .Release.Namespace }}'`.
-- Default CPU/memory requests+limits are stamped onto every container.
-- One **entrance** is auto-detected (the `olares.service.type: Entrance`-labeled service, else the first service with a port, else a `port: 80` placeholder).
-- `olaresManifest.version` is `0.8.0` (legacy) unless you pass `--new-schema` (`0.12.0`, resources under `spec.accelerator`).
-
-> **Tip:** label the service you want exposed in the compose file with `labels: { olares.service.type: Entrance }` so the right workload becomes the entrance and gets renamed to the app name.
+One way to compose the capabilities (packaging → deployment authoring → publish-local → publish-market), plus the file tree `from-compose` emits, lives in [references/olares-chart-workflow.md](references/olares-chart-workflow.md). It is **not** a fixed pipeline — start wherever your state tables put you, and loop across the coupling edges as failures surface. Step D1 scaffolds a chart that **already passes `lint`** but is not yet a good app; the value you add is the refinement below.
 
 ## The four refinement areas (the actual work)
 
@@ -188,7 +122,7 @@ kompose cannot decide these — you must. Full field-by-field mapping and edit r
 
 1. **Metadata** — kompose leaves a stub (`title=name`, default icon, `Utilities` category, no developer info). **Depth depends on release target:** local-run can keep the stub if `lint` passes; market-distribute requires full `metadata.{title,icon,description,categories}` and `spec.{developer,website,sourceCode,submitter,fullDescription}` plus listing images.
 2. **Storage** — compose `volumes:` become raw PVCs. Decide each one: app-private state → `.Values.userspace.appData` / `.Values.userspace.appCache` (set `permission.appData/appCache: true`); user-visible files → `.Values.userspace.userData` + list the path under `permission.userData`. Delete the kompose PVCs you replaced and rewrite the `volumeMounts`. Align run identity (uid 1000) with [run-as-user.md](references/olares-chart-run-as-user.md). **Same for both release targets.**
-3. **Middleware** — a compose `postgres`/`redis`/`mongo`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` service MUST be dropped and replaced by Olares system middleware (a bundled db is the exception, not the default — and `lint` won't flag it): add a `middleware:` block + an `options.dependencies` entry (type `middleware`, set `mandatory: true` to gate install), delete that workload + its PVC, and repoint the app's env vars at `.Values.<mw>.*`. PostgreSQL/Redis are always available (no admin pre-install); postgres is single-instance and supports `extensions:` (`vector`/`vectors`/`vchord`/`postgis`/`zhparser`/`hll`/`topn` + standard contrib) and post-create `scripts:`. If the upstream defaults to **SQLite**, check whether it can be configured for Postgres and switch (SQLite on userspace storage risks corruption). If the upstream bundles a **companion application** (e.g. searxng) that Olares already ships in the Market, depend on it via an `options.dependencies` entry of `type: application` instead of bundling its workload. **Same for both release targets.**
+3. **Middleware & dependencies** — drop any bundled `postgres`/`redis`/`mongo`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` workload + its PVC and wire to Olares **system middleware** (`middleware:` block + an `options.dependencies` `type: middleware` entry, env repointed at `.Values.<mw>.*`); `lint` won't flag a bundled db, so it's on you. If the upstream defaults to **SQLite**, switch to Postgres where supported. If it bundles a **companion app** already in the Market (e.g. searxng), depend on it via `options.dependencies` `type: application` instead. Full rules, Postgres extension catalog, and the escape hatch: [manifest.md §3](references/olares-chart-manifest.md). **Same for both release targets.**
 4. **Entrances & ports** — keep/add one `entrances[]` per user-facing HTTP service (tune `host`/`port`/`title`/`authLevel`); expose non-HTTP services via `ports[]` (`exposePort`). Mark internal-only services `invisible: true` or drop their entrance. **Same for both release targets.**
 
 ## Reference official ports (beclab/apps)
@@ -210,14 +144,9 @@ This is the canonical source for cross-app wiring (how a dependency app is reach
 - **`hostPath` volumes + rolling updates are incompatible** — `lint` rejects them. Replace host mounts with the userspace volumes above.
 - **`metadata.version` (Chart Version) and `Chart.yaml` `version` must match**, and `spec.versionName` should track the upstream app version (`Chart.yaml` `appVersion`).
 
-## Common errors → fix
+## Common errors → where to fix
 
-| `lint` says | Cause | Fix |
-|---|---|---|
-| `must have a Deployment or StatefulSet named "<app>"` | no workload named after the app | one workload must be `metadata.name: <app>` — `from-compose` renames the entrance workload automatically; preserve that |
-| app-data permission mismatch | template uses `.Values.userspace.*` but `permission` doesn't declare it (or vice versa) | align `permission.appData/appCache/userData` with what the templates mount |
-| version mismatch | `Chart.yaml` `version` ≠ `metadata.version` | make them equal |
-| hostPath + rolling update | a template mounts a `hostPath` | switch to a userspace volume |
-| manifest structural error | a required manifest field is missing/invalid after editing | re-check against [references/olares-chart-manifest.md](references/olares-chart-manifest.md) |
-| install OK but Permission denied / data not persisted | image uid ≠ 1000 or root-owned dirs on userspace mount | [references/olares-chart-run-as-user.md](references/olares-chart-run-as-user.md) — `spec.runAsUser: true`, securityContext, or initContainer with `beclab/aboveos-busybox:1.37.0` |
-| admission denied: untrusted image + root | third-party container runs as root | force uid 1000 or initContainer chown per [run-as-user.md](references/olares-chart-run-as-user.md) |
+- **`lint` failures** (workload not named after the app, app-data/permission mismatch, version mismatch, hostPath + rolling update, namespace, missing resource limits): full failure→fix table in [lint.md](references/olares-chart-lint.md).
+- **Install OK but Permission denied / data not persisted**, or **admission denied (untrusted image + root)**: image uid ≠ 1000 — [run-as-user.md](references/olares-chart-run-as-user.md).
+- **`ImagePullBackOff` / wrong arch**: [image.md](references/olares-chart-image.md).
+- **Install/start failure needing logs**: diagnosis step in [publish-verify.md](references/olares-chart-publish-verify.md).

@@ -45,7 +45,7 @@ When uncertain, ask one question: *"Do you want to run this only on your own Ola
 |---|---|---|
 | **Image arch** | Single-arch matching the target node (`olares-cli cluster node list` → `amd64` or `arm64`) | Multi-arch build (`--platform linux/amd64,linux/arm64`); declare matching `spec.supportArch` |
 | **Image registry** | Public Docker Hub or ghcr (same for both) | Same |
-| **`metadata.name`** | Valid app id (`^[a-z][a-z0-9]{0,29}$`); matches folder + `Chart.yaml` | Same; folder name also used in PR title |
+| **`metadata.name`** | Valid app id, matches folder + `Chart.yaml` (naming rule in [from-compose.md](olares-chart-from-compose.md)) | Same; folder name also used in PR title |
 | **`metadata.title`** | Stub (`title=name`) OK | Human-readable, ≤30 chars |
 | **`metadata.description`** | One-line stub OK if non-empty | Accurate summary for Market listing |
 | **`metadata.icon`** | Default CDN icon OK | Custom PNG/WEBP 256×256, ≤512 KB |
@@ -86,12 +86,7 @@ After `from-compose`, the scaffold **already passes `lint`**. For local-run, foc
 - Single-arch image (matching the node)
 - No `spec.supportArch`, no listing images
 
-**Must still refine (same as market):**
-
-1. **Storage** — replace kompose PVCs with userspace volumes; align `permission`
-2. **Middleware** — drop bundled db/cache services; wire Olares system middleware
-3. **Entrances & ports** — correct host/port/authLevel; headless archetype if no web UI
-4. **Image** — every service must reference a pullable, **node-arch-correct** image (not `build:`)
+**Must still refine (functional — same for both targets):** the four refinement areas (storage, middleware, entrances & ports, plus a pullable node-arch image for every service). These are not cosmetic — see [the four refinement areas in `../SKILL.md`](../SKILL.md#the-four-refinement-areas-the-actual-work) and [olares-chart-manifest.md](olares-chart-manifest.md).
 
 **Optional polish (user preference):**
 

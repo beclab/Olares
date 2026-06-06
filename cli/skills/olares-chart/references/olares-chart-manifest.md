@@ -5,6 +5,18 @@
 
 The scaffolded manifest is a stub. The four areas below are what kompose cannot decide. **§1 Metadata depth depends on release target; §2–§4 are functional and required for both targets.**
 
+## Schema version: 0.8.0 (legacy) vs 0.12.0 (`--new-schema`)
+
+`olaresManifest.version` declares which manifest schema the chart uses. `from-compose` emits **0.8.0** by default and **0.12.0** with `--new-schema`. The difference is not cosmetic — some fields only exist on 0.12.0:
+
+| | 0.8.0 (legacy, default) | 0.12.0 (`--new-schema`) |
+|---|---|---|
+| Resource envelope | flat `spec.requiredCpu` / `requiredMemory` / `requiredDisk` / `limitedCpu` / ... | `spec.resources[]` / `spec.accelerator[]` (mode-keyed: `cpu`, `nvidia`, ...) |
+| GPU / accelerator | not expressible cleanly | `spec.accelerator` with mode → arch cross-check at `lint` |
+| `permission.externalData` (`.Values.sharedlib`) | rejected | supported |
+
+**Use 0.12.0 when** the app declares GPU/accelerator resources, needs `permission.externalData`, or you want the modern resource envelope (recommended for new Market apps). Otherwise 0.8.0 is fine. To switch an existing stub, re-scaffold with `from-compose --new-schema` (or edit `olaresManifest.version` and migrate the resource fields). GPU specifics are in [olares-chart-gpu.md](olares-chart-gpu.md); the per-target view is in [olares-chart-publish-targets.md](olares-chart-publish-targets.md).
+
 ## 1. Metadata
 
 Depth is gated by release target — see [olares-chart-publish-targets.md](olares-chart-publish-targets.md).
@@ -70,15 +82,15 @@ Category values: [manifest docs — categories](https://docs.olares.com/develope
 
 > **Same for both release targets** — functional requirement, not cosmetic.
 
-Each compose volume became a raw `persistentvolumeclaim-*.yaml`. Decide per volume, then **delete the PVC template you replace** and rewrite the container's `volumeMounts` to an `emptyDir`/`hostPath` pointing at the injected userspace path.
+Each compose volume became a raw `persistentvolumeclaim-*.yaml`. Decide which userspace area each one maps to (table below), then **delete the PVC template you replace** and rewrite the container's `volumeMounts` to an `emptyDir`/`hostPath` pointing at the injected userspace path. Olares exposes five mountable areas:
 
-| Volume holds | Mount it on | Declare in `permission` |
-|---|---|---|
-| App-private state (config, db files you keep self-hosted) | `.Values.userspace.appData` | `appData: true` |
-| Regenerable cache | `.Values.userspace.appCache` | `appCache: true` |
-| Files the user should see in Files app | `.Values.userspace.userData` + subpath | add the path under `userData:` |
-| Cross-app shared cache (e.g. model weights / HF cache) | `.Values.userspace.appCommon` | `appCommon: true` (Olares ≥ 1.12.6) |
-| User's externally-mounted storage (SMB/NFS/USB) | `.Values.sharedlib` | `externalData: true` (schema ≥ 0.12.0) |
+| Dir | Mount value | Permission | Files entry | Scope | Backend / traits |
+|---|---|---|---|---|---|
+| **Home** | `.Values.userspace.userData` | `userData` (list paths) | `drive/Home` | user-level (shared by the user's apps that get the perm) | JuiceFS — cross-node, backed up; for **user-visible** files |
+| **Cache** | `.Values.userspace.appCache` | `appCache: true` | `cache/<node>` | per-app (auto `/<appName>`) | **node-local PV** (`/olares/userdata/Cache/`) — pins the pod to that node via `schedule.nodeName`; fast, regenerable, not guaranteed durable/backed-up |
+| **Data** | `.Values.userspace.appData` | `appData: true` | `drive/Data` | per-app (auto `/<appName>`) | JuiceFS — cross-node, backed up; for **app-private persistent state** (db files, config) |
+| **Common** | `.Values.userspace.appCommon` | `appCommon: true` | `drive/Common` | **cross-app shared** (no `appName` suffix) | JuiceFS; reserved `huggingface`/`ollama`/`llama.cpp`/`comfyui` shared caches; needs Olares ≥ 1.12.6 |
+| **External** | `.Values.sharedlib` | `externalData: true` | `external/<node>/<volume>` | user's external storage | SMB/NFS/USB volumes the user attaches via LarePass; needs schema ≥ 0.12.0 |
 
 ```yaml
 permission:
@@ -88,18 +100,6 @@ permission:
   userData:
   - Home/Documents/MyApp/
 ```
-
-### Userspace directories at a glance
-
-Olares exposes five mountable userspace areas. Pick by scope (per-app / shared / user) and durability:
-
-| Dir | Mount value | Permission | Files entry | Scope | Backend / traits |
-|---|---|---|---|---|---|
-| **Home** | `.Values.userspace.userData` | `userData` (list paths) | `drive/Home` | user-level (shared by the user's apps that get the perm) | JuiceFS — cross-node, backed up; for **user-visible** files |
-| **Cache** | `.Values.userspace.appCache` | `appCache: true` | `cache/<node>` | per-app (auto `/<appName>`) | **node-local PV** (`/olares/userdata/Cache/`) — pins the pod to that node via `schedule.nodeName`; fast, regenerable, not guaranteed durable/backed-up |
-| **Data** | `.Values.userspace.appData` | `appData: true` | `drive/Data` | per-app (auto `/<appName>`) | JuiceFS — cross-node, backed up; for **app-private persistent state** (db files, config) |
-| **Common** | `.Values.userspace.appCommon` | `appCommon: true` | `drive/Common` | **cross-app shared** (no `appName` suffix) | JuiceFS; reserved `huggingface`/`ollama`/`llama.cpp`/`comfyui` shared caches; needs Olares ≥ 1.12.6 |
-| **External** | `.Values.sharedlib` | `externalData: true` | `external/<node>/<volume>` | user's external storage | SMB/NFS/USB volumes the user attaches via LarePass; needs schema ≥ 0.12.0 |
 
 Key differences to remember when authoring:
 
