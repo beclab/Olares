@@ -219,6 +219,29 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
 >
 > **Escape hatch (rare):** keep a self-hosted db ONLY when the app needs a specific version or extension that the system middleware genuinely cannot provide — and only after checking the extension catalog above. State the exact missing version/extension when you do; "it's simpler" is not a valid reason.
 
+### Depend on an already-ported app (don't bundle it)
+
+`middleware` covers Olares-managed databases/queues. The other case is a **companion application** the upstream bundles — a meta-search backend like **searxng**, an embeddings/inference service, an auth provider — that Olares **already ships as a Market app**. Don't copy that app's workload into your chart; declare a dependency on the existing one.
+
+1. **Find the exact name + a usable version.** Search the Market with the [`olares-market`](../olares-market/SKILL.md) skill (`market list` to browse, `market get <app>` for detail), or read the app's `OlaresManifest.yaml` in [beclab/apps](https://github.com/beclab/apps) and take `metadata.name` / `metadata.version`.
+2. **Declare it** under `options.dependencies` with `type: application`:
+   ```yaml
+   options:
+     dependencies:
+     - name: olares
+       version: ">=1.0.0-0"
+       type: system
+     - name: searxng           # exact Market app name
+       version: ">=1.0.0-0"    # semver constraint matched against the installed app
+       type: application
+       mandatory: true         # install is blocked until this app is present
+   ```
+3. **`mandatory` semantics.** When `mandatory: true` and the app is not installed, app-service refuses install with `dependency application <name> not existed`; an installed-but-version-mismatched app errors too. Leave it `false` (or omit) for a soft/optional dependency. `selfRely: true` makes the chart satisfy the dependency itself (skip the check) — rarely needed for ported apps.
+
+> **Reaching the dependency:** it runs as its own app in its own namespace; your app talks to it over the endpoint that app exposes, not an in-chart Service. The exact env/URL wiring is app-specific — copy it from that app's official chart in [beclab/apps](https://github.com/beclab/apps) rather than guessing a cluster DNS name.
+
+> **middleware vs application:** `type: middleware` = an Olares-managed datastore wired via `.Values.<mw>.*` (§3 above); `type: application` = a separate, full Olares app you depend on. Use middleware for databases/queues, application for companion apps.
+
 ## 4. Entrances & ports
 
 > **Same for both release targets** — functional requirement, not cosmetic.

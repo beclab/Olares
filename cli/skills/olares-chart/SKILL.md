@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 1.10.0
+version: 1.11.0
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -24,6 +24,7 @@ metadata:
 - Install/runtime failures: ImagePullBackOff, app failed to install or start, market / app-service / chartrepo logs
 - **Permission denied / EACCES** on userspace volumes, third-party image runs as root or non-1000 uid, `spec.runAsUser`, initContainer volume `chown`
 - Headless / CLI app, MCP server, or tool with no web UI (terminal entrance + invisible entrance)
+- Depend on another already-ported app instead of bundling it (`options.dependencies` `type: application`, e.g. searxng companion service)
 - Three axes: **packaging** (Dockerfile/image), **deployment** (compose/chart), **publishing** (release target); four post-kompose refinement areas (metadata depth gated by target, storage, middleware, entrances)
 - Optional live validation (requires login): package + market upload/install — see [`olares-shared`](../olares-shared/SKILL.md), [`olares-market`](../olares-market/SKILL.md), [`olares-cluster`](../olares-cluster/SKILL.md)
 
@@ -187,8 +188,19 @@ kompose cannot decide these — you must. Full field-by-field mapping and edit r
 
 1. **Metadata** — kompose leaves a stub (`title=name`, default icon, `Utilities` category, no developer info). **Depth depends on release target:** local-run can keep the stub if `lint` passes; market-distribute requires full `metadata.{title,icon,description,categories}` and `spec.{developer,website,sourceCode,submitter,fullDescription}` plus listing images.
 2. **Storage** — compose `volumes:` become raw PVCs. Decide each one: app-private state → `.Values.userspace.appData` / `.Values.userspace.appCache` (set `permission.appData/appCache: true`); user-visible files → `.Values.userspace.userData` + list the path under `permission.userData`. Delete the kompose PVCs you replaced and rewrite the `volumeMounts`. Align run identity (uid 1000) with [run-as-user.md](references/olares-chart-run-as-user.md). **Same for both release targets.**
-3. **Middleware** — a compose `postgres`/`redis`/`mongo`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` service MUST be dropped and replaced by Olares system middleware (a bundled db is the exception, not the default — and `lint` won't flag it): add a `middleware:` block + an `options.dependencies` entry (type `middleware`, set `mandatory: true` to gate install), delete that workload + its PVC, and repoint the app's env vars at `.Values.<mw>.*`. PostgreSQL/Redis are always available (no admin pre-install); postgres is single-instance and supports `extensions:` (`vector`/`vectors`/`vchord`/`postgis`/`zhparser`/`hll`/`topn` + standard contrib) and post-create `scripts:`. If the upstream defaults to **SQLite**, check whether it can be configured for Postgres and switch (SQLite on userspace storage risks corruption). **Same for both release targets.**
+3. **Middleware** — a compose `postgres`/`redis`/`mongo`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` service MUST be dropped and replaced by Olares system middleware (a bundled db is the exception, not the default — and `lint` won't flag it): add a `middleware:` block + an `options.dependencies` entry (type `middleware`, set `mandatory: true` to gate install), delete that workload + its PVC, and repoint the app's env vars at `.Values.<mw>.*`. PostgreSQL/Redis are always available (no admin pre-install); postgres is single-instance and supports `extensions:` (`vector`/`vectors`/`vchord`/`postgis`/`zhparser`/`hll`/`topn` + standard contrib) and post-create `scripts:`. If the upstream defaults to **SQLite**, check whether it can be configured for Postgres and switch (SQLite on userspace storage risks corruption). If the upstream bundles a **companion application** (e.g. searxng) that Olares already ships in the Market, depend on it via an `options.dependencies` entry of `type: application` instead of bundling its workload. **Same for both release targets.**
 4. **Entrances & ports** — keep/add one `entrances[]` per user-facing HTTP service (tune `host`/`port`/`title`/`authLevel`); expose non-HTTP services via `ports[]` (`exposePort`). Mark internal-only services `invisible: true` or drop their entrance. **Same for both release targets.**
+
+## Reference official ports (beclab/apps)
+
+When you need inspiration or are unsure how Olares expects something wired (manifest fields, entrance shapes, middleware/app dependencies, GPU specs), look at how the official ports do it in [beclab/apps](https://github.com/beclab/apps) before guessing:
+
+```bash
+gh search code --repo beclab/apps <keyword>      # find charts using a pattern (e.g. type: application, accelerator, appCommon)
+# then browse https://github.com/beclab/apps/tree/main/<app> — its OlaresManifest.yaml + templates/
+```
+
+This is the canonical source for cross-app wiring (how a dependency app is reached, real `entrances`/`ports`, accelerator modes) that this skill intentionally does not hardcode.
 
 ## Hard constraints that bite
 
