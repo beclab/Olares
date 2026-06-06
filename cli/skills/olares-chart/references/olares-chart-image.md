@@ -51,24 +51,7 @@ A wrong-architecture image installs but never runs (`ImagePullBackOff` with `no 
 
 ## GPU / CUDA images
 
-Many AI apps depend on NVIDIA CUDA. **You do NOT need a GPU on the build machine** — build and runtime are separate:
-
-- The CUDA toolkit is baked into the image (a `nvidia/cuda:*-devel` base, or pip CUDA wheels). The compile links against those libs in the image, not a physical device.
-- A real GPU + driver is only needed at **runtime**, on the Olares GPU node (NVIDIA Container Toolkit + device plugin). A CPU-only laptop builds a CUDA image fine.
-
-Watch out for:
-
-1. **Compiling custom CUDA kernels** (PyTorch C++ extensions, flash-attn, deformable-attn, ...) — these probe the local GPU during build and will skip CUDA or fail when none is present. Force the arch list explicitly in the Dockerfile:
-   ```dockerfile
-   ENV FORCE_CUDA=1
-   ENV TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0"
-   ```
-2. **Arch is amd64.** Olares' `nvidia` GPU mode requires `amd64`, so GPU apps are single-arch: build `--platform linux/amd64` and declare `supportArch: [amd64]` — do NOT multi-arch. (arm64 NVIDIA is the niche `nvidia-gb10` mode.)
-3. **No local smoke test** — a CPU build box can't run the container. Validate on a GPU Olares node (Publish-local on a GPU host).
-
-> CUDA driver/toolkit version compatibility is not a concern here — Olares GPU nodes keep the driver current, so the image's CUDA version generally does not need to be pinned down to match the host.
-
-Declaring GPU resources in the manifest (quantities, `nvidia` mode) is covered in [olares-chart-manifest.md](olares-chart-manifest.md) and [olares-chart-publish-targets.md](olares-chart-publish-targets.md).
+Building a CUDA image (no GPU needed on the build box, custom-kernel arch flags, the amd64 / `nvidia`-mode constraint) and provisioning model weights (initContainer + shared Hugging Face cache) are covered in their own reference: [olares-chart-gpu.md](olares-chart-gpu.md).
 
 ## Guided environment + registry setup
 

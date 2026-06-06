@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 1.9.0
+version: 1.10.0
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -20,7 +20,7 @@ metadata:
 - Turn docker-compose, a generic Helm chart, or a bare source repo into a **lint-passing** Olares app chart — or a **market-ready** one when distributing publicly
 - **Local run** on your own Olares (upload + install); **market distribute** (full metadata, multi-arch, PR to `beclab/apps`)
 - Building/pushing docker image (amd64 vs arm64), no official image, wrong arch
-- GPU / CUDA app: building a CUDA image without a GPU on the build machine, `TORCH_CUDA_ARCH_LIST`, nvidia mode = amd64
+- GPU / CUDA app: building a CUDA image without a GPU on the build machine, `TORCH_CUDA_ARCH_LIST`, nvidia mode = amd64; model download / Hugging Face weights / shared model cache via `appCommon` (`drive/Common`)
 - Install/runtime failures: ImagePullBackOff, app failed to install or start, market / app-service / chartrepo logs
 - **Permission denied / EACCES** on userspace volumes, third-party image runs as root or non-1000 uid, `spec.runAsUser`, initContainer volume `chown`
 - Headless / CLI app, MCP server, or tool with no web UI (terminal entrance + invisible entrance)
@@ -79,6 +79,7 @@ The image-building work is **guided** — you check/install docker and drive `do
 | **Convert** | deployment | `chart from-compose` scaffolds an Olares chart | no | — | [from-compose.md](references/olares-chart-from-compose.md) |
 | **Refine** | deployment | the four refinement areas / hand-author `OlaresManifest.yaml` | no | `lint` fails, or install fails on env/wiring | [manifest.md](references/olares-chart-manifest.md) |
 | **Run-as-user** | packaging + deployment | align image uid with Olares userspace (1000): Dockerfile `USER`, `spec.runAsUser`, initContainer `chown` | no | EACCES on appData/appCache/userData, OPA root deny on third-party image | [run-as-user.md](references/olares-chart-run-as-user.md) |
+| **GPU / models** | packaging + deployment | build a CUDA image without a local GPU; download model weights via initContainer into the shared `appCommon` Hugging Face cache | no | AI app needs CUDA build or model provisioning, custom-kernel arch flags, shared model cache | [gpu.md](references/olares-chart-gpu.md) |
 | **Validate-local** | deployment | `chart lint` + `chart package` | no | — | [lint.md](references/olares-chart-lint.md) |
 | **Publish-local** | publishing | `market upload` + `market install` + diagnose from logs | yes | — | [publish-verify.md](references/olares-chart-publish-verify.md) |
 | **Publish-market** | publishing | market-ready checklist + `beclab/apps` PR guidance | no (GitHub) | local validation passed, user wants public Market listing | [market-submit.md](references/olares-chart-market-submit.md) |
