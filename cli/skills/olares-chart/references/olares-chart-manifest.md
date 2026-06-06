@@ -107,7 +107,11 @@ In the deployment template, replace the PVC mount with the injected path:
 
 > **Same for both release targets** — functional requirement, not cosmetic.
 
-A compose `postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` service should usually be removed and replaced by Olares-managed middleware. For each:
+**Default rule: replace bundled databases with system middleware.** A compose `postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` service MUST be removed and wired to Olares-managed middleware. A self-hosted db is the **exception**, not the default — it needs an explicit, named reason (see the escape hatch below).
+
+> **Anti-pattern:** do NOT keep the `postgres`/`redis` workload that `from-compose` scaffolded just because it renders and passes `lint`. `lint` does not check for this — a bundled db lints fine but wastes resources, skips backups/HA, and is the most common porting mistake. Removing it is part of the job, not optional.
+
+For each db/queue service:
 
 1. Delete that service's `deployment-*.yaml` (or statefulset) and its PVC.
 2. Add a `middleware:` block.
@@ -176,7 +180,9 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
           value: "{{ .Values.postgres.databases.myapp }}"
 ```
 
-> MongoDB, MySQL, MariaDB, MinIO, RabbitMQ must be installed by an admin from the Market before client apps can use them; PostgreSQL/Redis are always available. Keep a self-hosted db only if the app needs a version/extension the system middleware can't provide.
+> **PostgreSQL and Redis are always available — no admin pre-install, no extra steps.** Given the extension catalog above (vector/vectors/vchord/postgis/zhparser/... + standard contrib), the system postgres covers nearly every app, so reach for it by default. MongoDB, MySQL, MariaDB, MinIO, RabbitMQ require an admin to install them from the Market first.
+>
+> **Escape hatch (rare):** keep a self-hosted db ONLY when the app needs a specific version or extension that the system middleware genuinely cannot provide — and only after checking the extension catalog above. State the exact missing version/extension when you do; "it's simpler" is not a valid reason.
 
 ## 4. Entrances & ports
 

@@ -40,6 +40,8 @@ olares-cli chart lint ./myapp --auto-owner=false --owner alice --admin root
 
 Off by default (opt in): `--with-rbac` (ServiceAccount forbidden-rule check), `--with-security-context` (non-beclab privileged securityContext check).
 
+> **lint does not check middleware usage.** A chart that bundles its own `postgres`/`redis` instead of using system middleware passes `lint` cleanly — removing the bundled db is the author's responsibility (see [manifest.md §3](olares-chart-manifest.md)).
+
 ## Owner scenarios
 
 By default lint renders the chart under **both** `owner==admin` (admin install) and `owner!=admin` (regular-user install); both must pass. Pin one scenario with `--auto-owner=false --owner <u> --admin <a>` — useful when a chart templates differently for admins (e.g. shared apps using `.Values.bfl.username == .Values.admin`).
