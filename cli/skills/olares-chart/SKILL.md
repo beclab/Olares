@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 1.8.2
+version: 1.8.3
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -185,7 +185,7 @@ kompose cannot decide these — you must. Full field-by-field mapping and edit r
 
 1. **Metadata** — kompose leaves a stub (`title=name`, default icon, `Utilities` category, no developer info). **Depth depends on release target:** local-run can keep the stub if `lint` passes; market-distribute requires full `metadata.{title,icon,description,categories}` and `spec.{developer,website,sourceCode,submitter,fullDescription}` plus listing images.
 2. **Storage** — compose `volumes:` become raw PVCs. Decide each one: app-private state → `.Values.userspace.appData` / `.Values.userspace.appCache` (set `permission.appData/appCache: true`); user-visible files → `.Values.userspace.userData` + list the path under `permission.userData`. Delete the kompose PVCs you replaced and rewrite the `volumeMounts`. Align run identity (uid 1000) with [run-as-user.md](references/olares-chart-run-as-user.md). **Same for both release targets.**
-3. **Middleware** — a compose `postgres`/`redis`/`mongo`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` service MUST be dropped and replaced by Olares system middleware (a bundled db is the exception, not the default — and `lint` won't flag it): add a `middleware:` block + an `options.dependencies` entry (type `middleware`, set `mandatory: true` to gate install), delete that workload + its PVC, and repoint the app's env vars at `.Values.<mw>.*`. PostgreSQL/Redis are always available (no admin pre-install); postgres is single-instance and supports `extensions:` (`vector`/`vectors`/`vchord`/`postgis`/`zhparser`/`hll`/`topn` + standard contrib) and post-create `scripts:`. **Same for both release targets.**
+3. **Middleware** — a compose `postgres`/`redis`/`mongo`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` service MUST be dropped and replaced by Olares system middleware (a bundled db is the exception, not the default — and `lint` won't flag it): add a `middleware:` block + an `options.dependencies` entry (type `middleware`, set `mandatory: true` to gate install), delete that workload + its PVC, and repoint the app's env vars at `.Values.<mw>.*`. PostgreSQL/Redis are always available (no admin pre-install); postgres is single-instance and supports `extensions:` (`vector`/`vectors`/`vchord`/`postgis`/`zhparser`/`hll`/`topn` + standard contrib) and post-create `scripts:`. If the upstream defaults to **SQLite**, check whether it can be configured for Postgres and switch (SQLite on userspace storage risks corruption). **Same for both release targets.**
 4. **Entrances & ports** — keep/add one `entrances[]` per user-facing HTTP service (tune `host`/`port`/`title`/`authLevel`); expose non-HTTP services via `ports[]` (`exposePort`). Mark internal-only services `invisible: true` or drop their entrance. **Same for both release targets.**
 
 ## Hard constraints that bite

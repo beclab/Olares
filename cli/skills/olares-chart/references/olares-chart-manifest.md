@@ -111,6 +111,18 @@ In the deployment template, replace the PVC mount with the injected path:
 
 > **Anti-pattern:** do NOT keep the `postgres`/`redis` workload that `from-compose` scaffolded just because it renders and passes `lint`. `lint` does not check for this — a bundled db lints fine but wastes resources, skips backups/HA, and is the most common porting mistake. Removing it is part of the job, not optional.
 
+### SQLite default → prefer PostgreSQL
+
+Many upstream demos / compose files default to **SQLite** for zero-config convenience. On Olares the data file lands on a userspace `hostPath` (potentially networked/shared storage), where SQLite's file locking and concurrent writes are **prone to corruption**. A demo defaulting to SQLite does not mean production should.
+
+**When porting, check whether the upstream supports an external database and switch to system PostgreSQL if it does:**
+
+1. Inspect DB config knobs: compose / `.env` vars like `DATABASE_URL`, `DB_TYPE` / `DB_CONNECTION` / `DB_ENGINE`, `*_DB_HOST`; the upstream docs / sample config for a postgres section; whether the ORM is multi-driver (Django, Rails, Prisma, Sequelize, SQLAlchemy commonly are).
+2. **Supports Postgres → wire it to system middleware** (§3 above). Typically just set the connection env, e.g. `DATABASE_URL=postgres://{{ .Values.postgres.username }}:{{ .Values.postgres.password }}@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.databases.myapp }}`, and drop the SQLite volume.
+3. **Only supports SQLite (cannot switch) → fallback:** keep SQLite but put the db file under `.Values.userspace.appData` (never `userData`), run a single replica with `strategy: Recreate` (no concurrent writers), and note the corruption risk to the user. Record this as an exception ("upstream has no external-db support").
+
+> Rule of thumb: **if it can be configured for Postgres, configure it for Postgres.** Keep SQLite only when the upstream genuinely has no external-database option.
+
 For each db/queue service:
 
 1. Delete that service's `deployment-*.yaml` (or statefulset) and its PVC.
