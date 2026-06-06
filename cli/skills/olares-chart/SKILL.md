@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 1.15.0
+version: 1.16.0
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -27,6 +27,7 @@ metadata:
 - Install/runtime failures: ImagePullBackOff, app failed to install or start, market / app-service / chartrepo logs
 - **Permission denied / EACCES** on userspace volumes, third-party image runs as root or non-1000 uid, `spec.runAsUser`, initContainer volume `chown`
 - Headless / CLI app, MCP server, or tool with no web UI (terminal entrance + invisible entrance)
+- Run `docker` / `docker compose` from inside a terminal/agent app: privileged Docker-in-Docker sidecar gated by `ENABLE_DIND`, `DOCKER_HOST=tcp://localhost:2375`, trusted `beclab/docker` daemon image
 - Depend on another already-ported app instead of bundling it (`options.dependencies` `type: application`, e.g. searxng companion service)
 - Environment variables: declare app config in `envs[]`, prompt the user at install (e.g. init admin username/password via `required`), map system/user vars (`OLARES_SYSTEM_*` / `OLARES_USER_*`) through `valueFrom`, `.Values.olaresEnv`, env `type`/`regex`/`options` validation
 - Version rules: Olares system version (semver), `apiVersion: v3`, `olaresManifest.version` 0.8.0 vs 0.12.0, `metadata.version` vs `spec.versionName`, `type: system` dependency, checking the target with `profile list`
@@ -79,6 +80,7 @@ The image-building work is **guided** — you check/install docker and drive `do
 | **Env** | deployment | declare app config (`envs[]`), prompt the user at install, map system/user vars via `valueFrom`, `type`/`regex` validation | no | install fails on `appenv` 422 (missing/invalid env), or config must be user-supplied | [env.md](references/olares-chart-env.md) |
 | **Run-as-user** | packaging + deployment | align image uid with Olares userspace (1000): Dockerfile `USER`, `spec.runAsUser`, initContainer `chown` | no | EACCES on appData/appCache/userData, OPA root deny on third-party image | [run-as-user.md](references/olares-chart-run-as-user.md) |
 | **GPU / models** | packaging + deployment | build a CUDA image without a local GPU; download model weights via initContainer into the shared `appCommon` Hugging Face cache | no | AI app needs CUDA build or model provisioning, custom-kernel arch flags, shared model cache | [gpu.md](references/olares-chart-gpu.md) |
+| **DinD** | packaging + deployment | give a terminal/agent app a `docker` CLI via a privileged `beclab/docker` daemon sidecar (`ENABLE_DIND`, `DOCKER_HOST`) while keeping the main container non-privileged | no | app must run `docker` / `docker compose` / containerized dev stacks from the terminal | [dind.md](references/olares-chart-dind.md) |
 | **Validate-local** | deployment | `chart lint` + `chart package` | no | — | [lint.md](references/olares-chart-lint.md) |
 | **Publish-local** | publishing | `market upload` + `market install` + diagnose from logs | yes | — | [publish-verify.md](references/olares-chart-publish-verify.md) |
 | **Publish-market** | publishing | market-ready checklist + `beclab/apps` PR guidance | no (GitHub) | local validation passed, user wants public Market listing | [market-submit.md](references/olares-chart-market-submit.md) |
@@ -152,6 +154,7 @@ This is the canonical source for cross-app wiring (how a dependency app is reach
 - **At least one entrance is required.** Never delete the last `entrances[]` entry.
 - **If a template uses `.Values.userspace.appData`/`appCache`/`userData`, the matching `permission` field MUST be declared**, or `lint` fails the app-data cross-check.
 - **`hostPath` volumes + rolling updates are incompatible** — `lint` rejects them. Replace host mounts with the userspace volumes above.
+- **A Docker-in-Docker daemon sidecar must use a trusted `beclab/docker` image and be the only `privileged: true` container**, paired with `strategy: Recreate` (it relies on `hostPath`); the main container stays non-privileged. Non-trusted privileged images are denied by OPA. Details: [dind.md](references/olares-chart-dind.md).
 - **`metadata.version` (Chart Version) and `Chart.yaml` `version` must match**, and `spec.versionName` should track the upstream app version (`Chart.yaml` `appVersion`).
 
 ## Common errors → where to fix

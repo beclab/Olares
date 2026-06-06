@@ -171,6 +171,10 @@ entrances:
 - The `bytetrade.io/terminal: <app>` pod label and the app **container name** must match the `apiserver` `--pod` / `--container` args, or the terminal opens onto nothing.
 - Keep the API entrance `invisible: true` + `authLevel: internal` unless it is genuinely meant for direct browser/user access.
 
+### Optional: Docker-in-Docker sidecar
+
+When the terminal app is a coding agent or dev sandbox that needs to run `docker` / `docker compose`, add a privileged Docker-in-Docker daemon sidecar (gated by `ENABLE_DIND`) alongside the workspace container. It is an add-on to this archetype, not a separate one. Full template and Olares constraints (trusted `beclab/docker` daemon image, single privileged container, `strategy: Recreate`, same-path workspace mount): [olares-chart-dind.md](olares-chart-dind.md).
+
 ## Adding an archetype
 
 Append a new `## Archetype: ...` section using the same shape — **Signals -> Olares mapping -> Templates -> Canonical example (link a real chart in [beclab/apps](https://github.com/beclab/apps)) -> Hard rules** — and add a row to the archetype table in [`../SKILL.md`](../SKILL.md). Candidates not yet written:
