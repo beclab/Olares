@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 1.12.1
+version: 1.15.0
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -23,6 +23,7 @@ metadata:
 - **Local run** on your own Olares (upload + install); **market distribute** (full metadata, multi-arch, PR to `beclab/apps`)
 - Building/pushing docker image (amd64 vs arm64), no official image, wrong arch
 - GPU / CUDA app: building a CUDA image without a GPU on the build machine, `TORCH_CUDA_ARCH_LIST`, nvidia mode = amd64; model download / Hugging Face weights / shared model cache via `appCommon` (`drive/Common`)
+- Accelerator compute resources: declare `spec.accelerator` modes (nvidia/amd-gpu/amd-apu/strix-halo/nvidia-gb10/apple-m/cpu, per what the repo supports), GPU memory via `requiredGPUMemory`, and how much CPU/memory/GPU to request for a ported project
 - Install/runtime failures: ImagePullBackOff, app failed to install or start, market / app-service / chartrepo logs
 - **Permission denied / EACCES** on userspace volumes, third-party image runs as root or non-1000 uid, `spec.runAsUser`, initContainer volume `chown`
 - Headless / CLI app, MCP server, or tool with no web UI (terminal entrance + invisible entrance)
