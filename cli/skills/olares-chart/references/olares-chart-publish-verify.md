@@ -1,9 +1,18 @@
-# Live validation: upload, run, and diagnose on a real Olares
+# Local validation: upload, run, and diagnose on a real Olares
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first, and pass `chart lint` before starting any of this.
-> Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) and [olares-chart-publish-targets.md](olares-chart-publish-targets.md) first; pass `chart lint` before starting any of this.
+> This is the **Publish-local** capability. Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
 
-`lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This optional loop does — by pushing the chart to a real Olares and watching it install.
+## Role by release target
+
+| Target | Role of this step |
+|---|---|
+| **local-run** | **Done validation** — upload + install reaching `running` completes the workflow |
+| **market-distribute** | **Prerequisite** — must pass before market polish and PR to `beclab/apps`; not the final done step |
+
+For market-distribute after local validation succeeds, continue to [olares-chart-market-submit.md](olares-chart-market-submit.md).
+
+`lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This loop does — by pushing the chart to the developer's Olares and watching it install.
 
 ```mermaid
 flowchart TD
@@ -15,6 +24,9 @@ flowchart TD
   pkg --> up["market upload"]
   up --> inst["market install -s upload --watch -o json"]
   inst -->|running| done["validated -> cleanup"]
+  done --> market{"market-distribute?"}
+  market -->|yes| submit["market-ready polish -> market-submit.md"]
+  market -->|no| localdone["local-run done"]
   inst -->|failed/stuck| diag["fetch logs"]
   diag --> isChart{"chart problem?"}
   isChart -->|yes| fix["fix chart -> back to refine + lint"]
@@ -70,13 +82,15 @@ Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster p
 | Install can't fetch the chart | Deployment `chartrepo-deployment`, container `chartrepo` | `olares-cli cluster container logs os-framework/<chartrepo-deployment-pod>/chartrepo` |
 | Install / orchestration failed | StatefulSet pod `app-service-0`, container `app-service` | `olares-cli cluster container logs os-framework/app-service-0/app-service` |
 | The app's own container crash-loops | the app's pods (usually `user-space-<id>` or the app namespace) | `olares-cli cluster application status <ns>` then `olares-cli cluster pod logs <ns>/<pod>` |
+| `Permission denied` / EACCES writing data, or data not persisting | uid ≠ 1000, root-owned dirs on userspace mount, missing `spec.runAsUser` | [olares-chart-run-as-user.md](olares-chart-run-as-user.md) — then back to refine + lint |
+| Admission denied: untrusted image + root | third-party main container runs as root | [olares-chart-run-as-user.md](olares-chart-run-as-user.md) — force uid 1000 or initContainer chown |
 
 - Pod names for the Deployments are dynamic (`market-deployment-*`, `chartrepo-deployment-*`); resolve the exact name first with `olares-cli cluster pod list -n os-framework` (filter the output for `market` / `chartrepo`).
 - **Admin caveat:** `os-framework` system pods are typically visible only to an **admin** profile. If you get `HTTP 403` / `HTTP 404`, the active developer profile isn't admin — don't fight it; report that the platform logs need an admin and fall back to the app's own pod logs.
 
 ## 5. Decide: fix the chart, or report back
 
-- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md), re-run `chart lint`, and re-upload. Bump `metadata.version` + `Chart.yaml` `version` together so the new bytes install cleanly.
+- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md) and [`olares-chart-run-as-user.md`](olares-chart-run-as-user.md), re-run `chart lint`, and re-upload. Bump `metadata.version` + `Chart.yaml` `version` together so the new bytes install cleanly.
 - **Problem is not in the chart, or unclear:** summarize the failing state and the relevant log excerpts in plain language, suggest likely causes, and **ask the developer how to proceed.** Do not silently retry install in a loop — install/auth failures are deterministic (see olares-market / olares-shared error tables). The lone exception is the post-upload hydration `404` in section 3, which is transient and meant to be retried once hydration completes.
 
 ## 6. Clean up the test install
@@ -89,3 +103,8 @@ olares-cli market delete <app>                   # remove the chart from the upl
 ```
 
 (See the market charts reference: `uninstall` and `delete` are separate — uninstall stops the app, delete removes the uploaded chart.)
+
+## Next step
+
+- **local-run:** workflow complete after successful validation + cleanup (or leave installed if the developer wants to keep using it — ask first).
+- **market-distribute:** proceed to market-ready checklist → [olares-chart-publish-targets.md](olares-chart-publish-targets.md) → [olares-chart-market-submit.md](olares-chart-market-submit.md).

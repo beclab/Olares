@@ -23,6 +23,8 @@ cli/skills/
 ├── olares-dashboard/  # olares-cli dashboard
 ├── olares-cluster/    # olares-cli cluster (per-user K8s view)
 └── olares-chart/      # olares-cli chart (local-only chart authoring)
+    ├── SKILL.md
+    └── references/    # one file per refinement area / capability
 ```
 
 `olares-shared` is the foundation — every runtime skill cross-references it for the profile selection, login, and HTTP 401/403 recovery rules. Always install it first. The exception is `olares-chart`: its `chart` verbs are local-only (no profile / login / cluster), so it does not depend on `olares-shared`.
@@ -49,6 +51,8 @@ What to leave out of SKILL.md (and references):
 - "What's NOT here yet" / future-work sections — keep skills focused on current capability
 
 Target sizes: SKILL.md ≤ 250 lines (≤ 300 for the most complex command tree). Each reference: ≤ 150 lines.
+
+These rules apply to **every** skill, including `olares-chart` — even though it is a local-only chart-authoring skill (no live profile / login) rather than a CLI-driving one, it still avoids Go source-path citations and keeps each reference ≤ 150 lines.
 
 ## Runtime requirement
 
