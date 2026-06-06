@@ -25,6 +25,7 @@ metadata:
 - **Permission denied / EACCES** on userspace volumes, third-party image runs as root or non-1000 uid, `spec.runAsUser`, initContainer volume `chown`
 - Headless / CLI app, MCP server, or tool with no web UI (terminal entrance + invisible entrance)
 - Depend on another already-ported app instead of bundling it (`options.dependencies` `type: application`, e.g. searxng companion service)
+- Environment variables: declare app config in `envs[]`, prompt the user at install (e.g. init admin username/password via `required`), map system/user vars (`OLARES_SYSTEM_*` / `OLARES_USER_*`) through `valueFrom`, `.Values.olaresEnv`, env `type`/`regex`/`options` validation
 - Three axes: **packaging** (Dockerfile/image), **deployment** (compose/chart), **publishing** (release target); four post-kompose refinement areas (metadata depth gated by target, storage, middleware, entrances)
 - Optional live validation (requires login): package + market upload/install — see [`olares-shared`](../olares-shared/SKILL.md), [`olares-market`](../olares-market/SKILL.md), [`olares-cluster`](../olares-cluster/SKILL.md)
 
@@ -71,6 +72,7 @@ The image-building work is **guided** — you check/install docker and drive `do
 | **Compose** | deployment | obtain or author a docker-compose from the code | no | — | [compose.md](references/olares-chart-compose.md) |
 | **Convert** | deployment | `chart from-compose` scaffolds an Olares chart | no | — | [from-compose.md](references/olares-chart-from-compose.md) |
 | **Refine** | deployment | the four refinement areas / hand-author `OlaresManifest.yaml` | no | `lint` fails, or install fails on env/wiring | [manifest.md](references/olares-chart-manifest.md) |
+| **Env** | deployment | declare app config (`envs[]`), prompt the user at install, map system/user vars via `valueFrom`, `type`/`regex` validation | no | install fails on `appenv` 422 (missing/invalid env), or config must be user-supplied | [env.md](references/olares-chart-env.md) |
 | **Run-as-user** | packaging + deployment | align image uid with Olares userspace (1000): Dockerfile `USER`, `spec.runAsUser`, initContainer `chown` | no | EACCES on appData/appCache/userData, OPA root deny on third-party image | [run-as-user.md](references/olares-chart-run-as-user.md) |
 | **GPU / models** | packaging + deployment | build a CUDA image without a local GPU; download model weights via initContainer into the shared `appCommon` Hugging Face cache | no | AI app needs CUDA build or model provisioning, custom-kernel arch flags, shared model cache | [gpu.md](references/olares-chart-gpu.md) |
 | **Validate-local** | deployment | `chart lint` + `chart package` | no | — | [lint.md](references/olares-chart-lint.md) |
@@ -124,6 +126,8 @@ kompose cannot decide these — you must. Full field-by-field mapping and edit r
 2. **Storage** — compose `volumes:` become raw PVCs. Decide each one: app-private state → `.Values.userspace.appData` / `.Values.userspace.appCache` (set `permission.appData/appCache: true`); user-visible files → `.Values.userspace.userData` + list the path under `permission.userData`. Delete the kompose PVCs you replaced and rewrite the `volumeMounts`. Align run identity (uid 1000) with [run-as-user.md](references/olares-chart-run-as-user.md). **Same for both release targets.**
 3. **Middleware & dependencies** — drop any bundled `postgres`/`redis`/`mongo`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` workload + its PVC and wire to Olares **system middleware** (`middleware:` block + an `options.dependencies` `type: middleware` entry, env repointed at `.Values.<mw>.*`); `lint` won't flag a bundled db, so it's on you. If the upstream defaults to **SQLite**, switch to Postgres where supported. If it bundles a **companion app** already in the Market (e.g. searxng), depend on it via `options.dependencies` `type: application` instead. Full rules, Postgres extension catalog, and the escape hatch: [manifest.md §3](references/olares-chart-manifest.md). **Same for both release targets.**
 4. **Entrances & ports** — keep/add one `entrances[]` per user-facing HTTP service (tune `host`/`port`/`title`/`authLevel`); expose non-HTTP services via `ports[]` (`exposePort`). Mark internal-only services `invisible: true` or drop their entrance. **Same for both release targets.**
+
+> **Env wiring (cross-cutting):** any config the app needs — user-supplied at install (admin credentials via `required`), reused Olares system/user vars (`valueFrom`), middleware connection strings — is declared in `envs[]` and surfaced as `.Values.olaresEnv.<name>`, then mapped into the workload's `env:`. Full rules (system/user/app levels, `required` vs optional, `type`/`regex` validation, default variable lists): [references/olares-chart-env.md](references/olares-chart-env.md).
 
 ## Reference official ports (beclab/apps)
 
