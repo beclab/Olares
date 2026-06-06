@@ -118,16 +118,47 @@ A compose `postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nat
 middleware:
   postgres:
     username: myapp
+    password: myapp
     databases:
     - name: myapp            # → reference as .Values.postgres.databases.myapp
+      extensions:            # optional — only what the upstream app needs (see catalog below)
+      - vector
+      scripts:               # optional — run after the db is created, in order
+      - BEGIN;
+      - ALTER EXTENSION vector OWNER TO $dbusername;
+      - COMMIT;
   redis:
-    namespace: db0
+    namespace: db0           # logical Redis db namespace for this app
 options:
   dependencies:
   - name: olares
     version: ">=1.0.0-0"
     type: system
+  - name: mysql              # middleware deps: set mandatory when install must wait for it
+    version: ">=8.0.0-0"
+    type: middleware
+    mandatory: true
 ```
+
+> Use a **single-instance** postgres database — do not declare `distributed`. (Distributed citus exists but is out of scope for ported apps.)
+> `scripts` run after the database is created; `$dbusername` and `$databasename` are substituted with the real values. `extensions` are created with `CREATE EXTENSION IF NOT EXISTS <name> CASCADE`.
+
+### PostgreSQL extension catalog
+
+The system postgres (PostgreSQL 17, Citus image) ships these extra extensions — declare the name in `extensions:`. **Only add what the upstream app requires.**
+
+| Declare as | Created extension | Purpose |
+|---|---|---|
+| `vector` / `pgvector` | `vector` | pgvector vector search (HNSW/IVFFlat) |
+| `vectors` / `pgvecto.rs` | `vectors` | pgvecto.rs vector search (preloaded `vectors.so`) |
+| `vchord` | `vchord` | VectorChord vector search (preloaded `vchord.so`) |
+| `hll` | `hll` | HyperLogLog cardinality estimation |
+| `topn` | `topn` | Top-N approximation |
+| `postgis` | `postgis` (+ `postgis_topology`, ...) | Geospatial |
+| `zhparser` | `zhparser` | Chinese full-text search parser |
+
+- Standard PostgreSQL 17 **contrib** extensions also work (e.g. `earthdistance` + `cube`, `pg_trgm`, `uuid-ossp`, `hstore`, `pgcrypto`, `btree_gin`, `btree_gist`) — declared the same way, dependencies pulled in via `CASCADE`.
+- Three vector engines coexist (`vector` / `vectors` / `vchord`) — pick the one the upstream expects; **do not mix them**.
 
 Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinIO/RabbitMQ are analogous):
 
