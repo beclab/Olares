@@ -112,6 +112,7 @@ The only `olares-cli chart` subcommands (source of truth: `--help`). Everything 
 Most of this skill assumes a web app with an HTTP entrance. When the upstream doesn't fit, match a known pattern first; if still unsure, see how the official ports solved it.
 
 - **Headless CLI / service (no web UI)** — no GUI to point an entrance at: add a web-terminal sidecar as a **visible** entrance + expose the API/MCP port as an `invisible` internal entrance. → [archetypes.md](references/olares-chart-archetypes.md)
+- **GUI desktop app (browser-streamed)** — a native Linux desktop app with no web UI: wrap it in a web-desktop base image (Selkies default, or KasmVNC for old hardware/static UIs), point one visible window entrance at HTTP `:3000`, and device-gate optional iGPU/VAAPI acceleration on `.Values.deviceName`. → [archetypes.md](references/olares-chart-archetypes.md)
 - **Still no idea?** look at how the official ports wire it (manifest fields, entrance shapes, middleware/app dependencies, GPU specs) in [beclab/apps](https://github.com/beclab/apps) before guessing:
 
 ```bash
