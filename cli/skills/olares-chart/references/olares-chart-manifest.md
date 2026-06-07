@@ -64,15 +64,7 @@ Category values: [manifest docs](https://docs.olares.com/developer/develop/packa
 
 > **Same for both release targets** — functional requirement, not cosmetic.
 
-Each compose volume became a raw `persistentvolumeclaim-*.yaml`. Map each to a userspace area (table below), **delete the PVC template you replace**, and rewrite `volumeMounts` to the injected userspace path. Olares exposes five mountable areas:
-
-| Dir | Mount value | Permission | Files entry | Scope | Backend / traits |
-|---|---|---|---|---|---|
-| **Home** | `.Values.userspace.userData` | `userData` (list paths) | `drive/Home` | user-level (shared by the user's apps that get the perm) | JuiceFS — cross-node, backed up; for **user-visible** files |
-| **Cache** | `.Values.userspace.appCache` | `appCache: true` | `cache/<node>` | per-app (auto `/<appName>`) | **node-local PV** (`/olares/userdata/Cache/`) — pins the pod to that node via `schedule.nodeName`; fast, regenerable, not guaranteed durable/backed-up |
-| **Data** | `.Values.userspace.appData` | `appData: true` | `drive/Data` | per-app (auto `/<appName>`) | JuiceFS — cross-node, backed up; for **app-private persistent state** (db files, config) |
-| **Common** | `.Values.userspace.appCommon` | `appCommon: true` | `drive/Common` | **cross-app shared** (no `appName` suffix) | JuiceFS; reserved `huggingface`/`ollama`/`llama.cpp`/`comfyui` shared caches; needs Olares ≥ 1.12.6 |
-| **External** | `.Values.sharedlib` | `externalData: true` | `external/<node>/<volume>` | user's external storage | SMB/NFS/USB volumes the user attaches via LarePass; needs schema ≥ 0.12.0 |
+Each compose volume became a raw `persistentvolumeclaim-*.yaml`. Map each to a userspace area, **delete the PVC template you replace**, and rewrite `volumeMounts` to the injected userspace path. The five areas — their mount values, `permission` fields, backends (JuiceFS vs node-local PV), scope, uid-1000 ownership, and version gates — are defined once in the platform **Userspace storage model** (loaded via the SKILL.md prerequisite). **Pick by need:** private db/config → **Data** (`appData`); regenerable cache → **Cache** (`appCache`); user-facing files → **Home** (`userData`); multi-app shared model weights / HF cache → **Common** (`appCommon`, see [olares-chart-gpu.md](olares-chart-gpu.md) §B); external disk/network share → **External** (`sharedlib`).
 
 ```yaml
 permission:
@@ -82,14 +74,6 @@ permission:
   userData:
   - Home/Documents/MyApp/
 ```
-
-Key differences to remember when authoring:
-
-- **Per-app vs shared vs user.** `appData`/`appCache` auto-append `/<appName>` (app-private); `appCommon` is bare `/rootfs/Common` (every app with the perm sees the same dir — that's what makes shared model caches work); `userData` is the user's `/Home`.
-- **Backend decides scheduling + durability.** `userData`/`appData`/`appCommon` are JuiceFS (cross-node, backed up). `appCache` is a node-local PV, so app-service pins the pod to that node — fast local disk, but treat it as disposable.
-- **Owner is uid 1000.** All five are read/written as uid/gid 1000 (`appCommon` is created `chown 1000:1000`). If the main process runs as 1000 it can write any of them directly — see [olares-chart-run-as-user.md](olares-chart-run-as-user.md).
-- **Version gates.** `appCommon` needs Olares ≥ 1.12.6; `externalData`/`sharedlib` needs `olaresManifest.version` ≥ 0.12.0.
-- **Pick by need.** Private db/config → **Data**; regenerable cache → **Cache**; user-facing files → **Home**; multi-app shared model weights / HF cache → **Common** (see [olares-chart-gpu.md](olares-chart-gpu.md) §B); external disk/network share → **External**.
 
 In the deployment template, replace the PVC mount with the injected host path (`appData`/`appCache` are host paths):
 

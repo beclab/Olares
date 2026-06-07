@@ -4,29 +4,11 @@
 
 ## Olares system version
 
-Olares releases follow [semver](https://docs.olares.com/developer/install/versioning.html) — `Major.Minor.Patch[-PreRelease]`:
-
-| Release type | Example |
-|---|---|
-| Stable | `1.12.6` |
-| Release candidate | `1.12.0-rc.0` |
-| Daily build | `1.12.0-20241201` |
-
-The running version lives in the `Terminus` CR `spec.version` and is injected into every chart as `.Values.sysVersion`. "At least" comparisons strip the prerelease/build segment, so a daily build like `1.12.6-20260327` still counts as `>= 1.12.6`.
+The semver scheme (stable / RC / daily), `.Values.sysVersion`, the `-0` prerelease-matching rule, and how to read the target version (`profile list` VERSION column, `--refresh-version`, `settings me version`) are the platform **Olares version & semver model** (loaded via the SKILL.md prerequisite).
 
 ## Porting baseline: Olares >= 1.12.6
 
-**This skill (porting apps) targets Olares >= 1.12.6.** This baseline applies only to porting — other `olares-cli` features have no such floor. The reason: the userspace backends a ported app commonly relies on — `drive/Common` (`appCommon`), archive, and NFS — are gated at `1.12.6`.
-
-Check the target Olares version before porting:
-
-```bash
-olares-cli profile list        # VERSION column shows each profile's Olares version
-olares-cli profile list --refresh-version   # re-fetch for the active profile
-olares-cli settings me version               # live fetch of the running version
-```
-
-`profile list` shows a `VERSION` column — the cached `BackendVersion`, populated at login from `/api/olares-info` `osVersion` (which comes from the Terminus CR). See [`olares-shared`](../../olares-shared/SKILL.md) for profile management.
+**This skill (porting apps) targets Olares >= 1.12.6.** This baseline applies only to porting — other `olares-cli` features have no such floor. The reason: the userspace backends a ported app commonly relies on — `drive/Common` (`appCommon`), archive, and NFS — are gated at `1.12.6`. Check the target before porting (`olares-cli profile list` VERSION column; `--refresh-version` or `settings me version` for a live re-fetch).
 
 ## apiVersion: v3 (skill rule)
 

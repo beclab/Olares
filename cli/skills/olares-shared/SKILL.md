@@ -1,6 +1,6 @@
 ---
 name: olares-shared
-version: 4.1.0
+version: 4.2.0
 description: "Olares profile and auth foundation for olares-cli — prerequisite for all olares-* skills. Profile login, import, list, use, remove, keychain tokens, 401/403 recovery. Use for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, auth errors."
 compatibility: Requires olares-cli on PATH
 metadata:
@@ -13,6 +13,8 @@ metadata:
 # olares-cli shared rules
 
 Foundation for every other `olares-cli` skill. Every business verb under `cluster` / `files` / `market` / `settings` / `dashboard` rides the active profile's token. **Read this first.**
+
+> **This skill also hosts the cross-skill platform model** in [references/olares-platform.md](references/olares-platform.md) — the userspace storage model, uid-1000 run identity, system-managed `drive/Home` dirs, app/namespace & networking, system middleware, and version/semver. `files` / `chart` / `cluster` link there (one hop) instead of re-describing it. That reference is pure platform model and needs no login.
 
 > **Source of truth for flags & syntax is always `olares-cli profile --help`.** This file only carries what `--help` cannot give: the profile mental model, agent-driven login flow, token-storage backends, refresh semantics, and the error → fix matrix.
 

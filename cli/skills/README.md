@@ -11,7 +11,9 @@ cli/skills/
 ├── README.md          # this file
 ├── publish.sh         # publish helper (used locally and from CI)
 ├── olares-shared/
-│   └── SKILL.md       # foundation: profile model, login, token refresh
+│   ├── SKILL.md       # foundation: profile model, login, token refresh
+│   └── references/
+│       └── olares-platform.md   # cross-skill platform model (storage, uid 1000, namespaces, middleware, versions)
 ├── olares-files/
 │   ├── SKILL.md       # cross-cutting concepts + verb index
 │   └── references/    # one file per non-trivial subcommand
@@ -27,7 +29,9 @@ cli/skills/
     └── references/    # one file per refinement area / capability
 ```
 
-`olares-shared` is the foundation — every runtime skill cross-references it for the profile selection, login, and HTTP 401/403 recovery rules. Always install it first. The exception is `olares-chart`: its `chart` verbs are local-only (no profile / login / cluster), so it does not depend on `olares-shared`.
+**Install the whole suite together.** These skills are designed as one set and cross-reference each other by relative path (e.g. `../olares-shared/SKILL.md`, `../olares-shared/references/olares-platform.md`). Installing only a subset leaves those links dangling. `olares-shared` is the foundation — every runtime skill cross-references it for profile selection, login, and HTTP 401/403 recovery, **and it hosts the cross-skill platform model** ([`olares-shared/references/olares-platform.md`](olares-shared/references/olares-platform.md)) that `files` / `chart` / `cluster` link to (one hop from their `SKILL.md`) instead of re-describing it.
+
+`olares-chart` is a partial exception on **login**, not on linking: its authoring verbs (`from-compose` / `lint` / `package`) are local-only and need **no profile / login / cluster**, so it never logs in to author a chart. It still reads `olares-platform.md` for platform facts (no login needed) and only requires `olares-shared` login when **pushing a chart to a real Olares to test** (`market upload` + `install`).
 
 ClawHub publishes the entire skill directory (including `references/`), so reference files ship automatically without any change to `publish.sh`.
 
@@ -52,7 +56,19 @@ What to leave out of SKILL.md (and references):
 
 Target sizes: SKILL.md ≤ 250 lines (≤ 300 for the most complex command tree). Each reference: ≤ 150 lines.
 
+**Reference depth (one level deep):** all reference files link **directly from a `SKILL.md`**, never reference→reference. Nested references get partially read (agents preview with `head` instead of reading the whole file), so a concept buried two hops down is unreliable. Any reference longer than ~100 lines gets a table of contents at the top so a partial read still shows its full scope.
+
 These rules apply to **every** skill, including `olares-chart` — even though it is a local-only chart-authoring skill (no live profile / login) rather than a CLI-driving one, it still avoids Go source-path citations and keeps each reference ≤ 150 lines.
+
+## Cross-skill shared concepts (single source of truth)
+
+Facts used by **≥2 skills** are defined **once** and linked, never copied. This keeps the suite consistent and token-efficient (the lark-cli pattern these skills are modeled on; see also [Anthropic's skill-authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)).
+
+- **One canonical home per shared concept.** The cross-skill Olares platform model (userspace storage, uid-1000 run identity, app/namespace & networking, system middleware, version/semver) lives once in [`olares-shared/references/olares-platform.md`](olares-shared/references/olares-platform.md), with a TOC. Auth/profile facts likewise live once in `olares-shared/SKILL.md`.
+- **Link the shared source one hop from each consumer's `SKILL.md`** with a short must-read prerequisite (`> Platform model (read once): … see ../olares-shared/references/olares-platform.md`). This is the lark-cli `CRITICAL — MUST Read ../lark-shared/SKILL.md` convention.
+- **Do NOT deep-link the shared source from reference files.** A reference that points at another skill's reference is a two-hop nested read. Instead, refer to the shared concept **by name** (matching the source's heading) and rely on the `SKILL.md` prerequisite to have loaded it. (See the chart references, which name "the platform **Userspace storage model**" rather than linking it.)
+- **Self-containment is traded for a suite contract.** Strictly, Skills are self-contained and "cannot reference files in other skill folders". We deliberately cross-link because these skills **ship and install as one suite** (stated under Layout). A standalone install leaves cross-skill links dangling — that is the documented trade-off, not an accident.
+- **When a fact is genuinely two skills' own angle, let each keep its own framing.** `files` describes the storage areas as *addressing* (`drive/Home`), `chart` as *mounting* (`.Values.userspace.appData`). That is not duplication to dedupe — only the underlying platform facts (backends, durability, uid, version gates) are centralized in `olares-platform.md`.
 
 ## Runtime requirement
 

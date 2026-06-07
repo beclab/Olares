@@ -1,6 +1,6 @@
 ---
 name: olares-dashboard
-version: 4.1.0
+version: 4.2.0
 description: "Olares Dashboard via olares-cli dashboard — CPU, memory, disk, network, pods, fan, GPU, ranking, applications; JSON envelope and --watch. Use for Olares Dashboard, overview, resource usage, Olares One fan."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:

@@ -1,6 +1,6 @@
 ---
 name: olares-files
-version: 4.1.0
+version: 4.2.0
 description: "Olares Files via olares-cli files — ls, upload, download, edit, share, SMB mount, Seafile sync on drive/Home, drive/Data, cache, external, cloud. Use for Olares Files, drive, upload, download, share, SMB, LarePass Files."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -13,6 +13,8 @@ metadata:
 # files (per-user files-backend)
 
 **CRITICAL — before running any verb here, load the `olares-shared` skill first (profile selection, login, 401/403 recovery). Flag reference: `olares-cli files --help`.**
+
+> **Platform model (read once):** the storage areas these paths address — the five userspace areas, their backends/durability, uid-1000 ownership, and the system-managed `drive/Home` directories — are defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md). This skill only adds the **addressing** view.
 
 > **Source of truth for flags & wire shapes is always `olares-cli files <verb> --help`.** This file only carries what `--help` cannot give: the cross-cutting frontend-path concept, the trailing-slash convention, the five client-side hard constraints, and the verb index.
 
@@ -91,16 +93,14 @@ This level has no backing filesystem — it just enumerates attached volumes (`h
 
 CLI client-side guards: `mkdir`, `cp` destination, `mv` destination, `upload`, AND `share` (all flavors) reject `external/<node>/` (and one level deeper for `mkdir`). Errors point at the corrected shape `external/<node>/<volume>/<sub>/`. Pure reads (`ls`, `cat`, `rm`, `rename`) DO work — that's how the user discovers what volumes are attached. Mount new volumes via LarePass, not via files-backend mkdir.
 
-### 4. `drive/Home/{Pictures, Music, Movies, Downloads, Documents, Code, Cache, Data, Home, Ollama, Huggingface}` are system-managed
+### 4. The system-managed `drive/Home` directories are protected
 
-These eleven names under `drive/Home/` are LarePass bootstrap directories that user apps look up by exact name (e.g. the model-runtime app's `Ollama` cache, the LarePass UI's "Pictures" sidebar tile). The LarePass GUI greys out cut / copy / paste / delete / rename for them, and so does the CLI:
+The eleven LarePass bootstrap directories under `drive/Home/` (the canonical name list, casing, and why apps depend on them are in [platform.md → System-managed Home directories](../olares-shared/references/olares-platform.md#system-managed-home-directories)). The LarePass GUI greys out cut / copy / paste / delete / rename for them, and so does the CLI:
 
 - `rename`, `rm`, and `mv source` REFUSE these names at the **first level under `drive/Home/` only**.
 - `cp` (copy) is intentionally NOT gated — duplicating bytes (e.g. `cp -r drive/Home/Pictures/ drive/Home/Pictures-Backup/`) preserves the original and is fine.
 - Content nested inside (`drive/Home/Pictures/Trip2024/`) is fully editable.
 - Other namespaces (`drive/Data/Pictures`, `sync/<repo>/Pictures`, `external/...`) are unaffected.
-
-Note LarePass casing: `Huggingface` is one word (not `HuggingFace`). Names are case-sensitive.
 
 ### 5. `cache/<node>/` is a node-picker for share-create only
 

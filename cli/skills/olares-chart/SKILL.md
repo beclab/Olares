@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.1.0
+version: 4.2.0
 description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into an Olares app chart. Release targets: local-run (upload on your Olares) or market-distribute (public Market). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only
 metadata:
@@ -15,6 +15,8 @@ metadata:
 > **Source of truth for flags is always `olares-cli chart <verb> --help`.** This file only carries what `--help` cannot: when to use this skill, the convert→refine→lint loop, release-target routing, and the four refinement areas that turn a raw conversion into a working chart.
 
 > **Porting baseline: Olares >= 1.12.6.** This skill targets Olares >= 1.12.6 (other `olares-cli` features have no such floor). Check the target with `olares-cli profile list` (VERSION column). Full version rules — `apiVersion: v3`, the several chart version fields, `type: system` dependency — are in [references/olares-chart-versioning.md](references/olares-chart-versioning.md).
+
+> **Platform model (read once, no login needed for authoring).** The porting decisions below rely on the Olares storage model, uid-1000 run identity, app/namespace & networking, system middleware, and version model — all defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md). **Packaging an image and authoring/validating the chart (`from-compose` / `lint` / `package`) need no profile login.** Only **pushing to a real Olares to test** (`market upload` + `install`) requires login (see Publish-local below).
 
 ## When to use
 
@@ -34,6 +36,21 @@ metadata:
 - Version rules: Olares system version (semver), `apiVersion: v3`, `olaresManifest.version` 0.8.0 vs 0.12.0, `metadata.version` vs `spec.versionName`, `type: system` dependency, checking the target with `profile list`
 - Three axes: **packaging** (Dockerfile/image), **deployment** (compose/chart), **publishing** (release target); four post-kompose refinement areas (metadata depth gated by target, storage, middleware, entrances)
 - Optional live validation (requires login): package + market upload/install — see [`olares-shared`](../olares-shared/SKILL.md), [`olares-market`](../olares-market/SKILL.md), [`olares-cluster`](../olares-cluster/SKILL.md)
+
+## Olares readiness checklist (think through these before declaring a port done)
+
+kompose/`from-compose` produces a chart that lints but is not yet a good Olares app. Every ported app must satisfy the items below — use this as the entry index; each links to where the actual work is described. (Platform background for all of them: [platform.md](../olares-shared/references/olares-platform.md).)
+
+- **Image** — pullable from a registry, pinned to a version tag (never `:latest`), arch-correct (node arch for local-run; multi-arch for market). Olares pulls images, never builds. → [image.md](references/olares-chart-image.md)
+- **Run identity** — process runs as uid 1000; `spec.runAsUser: true`; initContainer `chown` for root-owned volumes; no root main on non-trusted images (OPA). → [run-as-user.md](references/olares-chart-run-as-user.md)
+- **Storage** — every compose volume mapped to the right userspace area (Data / Cache / Home / Common / External), matching `permission` declared, leftover kompose PVCs deleted. → [manifest.md](references/olares-chart-manifest.md) §2
+- **Middleware** — no bundled `postgres`/`redis`/`mongo`/...; wired to system middleware; SQLite switched to Postgres where supported; companion apps declared as `type: application` deps. → [middleware.md](references/olares-chart-middleware.md)
+- **Entrances & ports** — at least one `entrances[]`; HTTP via entrances, non-HTTP via `ports[]`; internal-only services `invisible: true`; headless apps use the web-terminal archetype. → [manifest.md](references/olares-chart-manifest.md) §4, [archetypes.md](references/olares-chart-archetypes.md)
+- **Env** — app config declared in `envs[]` (v3 `valueFrom`, no inline `OLARES_USER`); install-time `required` prompts; middleware/system/user vars mapped. → [env.md](references/olares-chart-env.md)
+- **Version** — `apiVersion: v3`; `olaresManifest.version` 0.8.0 vs 0.12.0; `metadata.version` == `Chart.yaml` `version`; `options.dependencies` `olares >=1.12.6-0` (`type: system`). → [versioning.md](references/olares-chart-versioning.md)
+- **Shared-app gating** — `apiVersion: v3` ⇒ admin-only install into `<app>-shared`; flag this to the user; for a deliberate multi-user backend follow shared. → [shared.md](references/olares-chart-shared.md)
+- **Resources / accelerator** — a sane CPU/memory envelope; for GPU apps the `spec.accelerator` modes match the image arch and `requiredGPUMemory` is set. → [accelerator.md](references/olares-chart-accelerator.md)
+- **Lint** — `olares-cli chart lint ./<app>` passes (it does NOT catch pinned tags, bundled dbs, or apiVersion — those are on you). → [lint.md](references/olares-chart-lint.md)
 
 ## Start here: establish your release target
 

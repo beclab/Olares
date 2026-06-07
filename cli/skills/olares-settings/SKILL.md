@@ -1,6 +1,6 @@
 ---
 name: olares-settings
-version: 4.1.0
+version: 4.2.0
 description: "Olares Settings via olares-cli settings — mirror of Settings SPA: users, apps, VPN, backup, integration, GPU, search, me/whoami. Use for Olares Settings, role, VPN ACL, backup, integration accounts, language."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -15,6 +15,8 @@ metadata:
 **CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli settings --help`.**
 
 > **Source of truth for flags is always `olares-cli settings <area> <verb> --help`.** This file only carries what `--help` cannot give: routing, the 13-section index, the role-caching / admin-vs-normal floor, the wire-format cheat sheet, and the common-errors table.
+
+> **Platform model:** the Olares version/semver scheme behind `settings me version` is defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md#olares-version--semver-model).
 
 ## When to use
 
