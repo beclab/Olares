@@ -30,7 +30,7 @@ Porting an app is **not** a fixed `from-compose → lint → publish` pipeline �
 
 ## Axis 1 — Packaging (the image)
 
-Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **guided** — you check/install docker and drive `docker login` / build / push **with the developer, never on their behalf** ([references/olares-chart-image.md](references/olares-chart-image.md)). No login needed.
+Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **agent-driven**: ask which registry the developer uses (Docker Hub / ghcr), check docker is usable and already logged in, then **build + push yourself** — only the credential entry (`docker login`) stays manual, and only when not already authenticated ([references/olares-chart-image.md](references/olares-chart-image.md)). No Olares login needed for this.
 
 | Packaging state | Do this | Ready when |
 |---|---|---|
@@ -70,7 +70,7 @@ Decide **who consumes the chart** and what "done" means **before** refining — 
 | packaging+deployment | **Run identity** | process runs as uid 1000; `spec.runAsUser: true`; initContainer `chown` for root-owned volumes; no root main on non-trusted images (OPA) | EACCES on appData/appCache/userData, admission denies a root third-party image | [run-as-user.md](references/olares-chart-run-as-user.md) |
 | deployment | **Storage** | every compose volume mapped to the right userspace area (Data / Cache / Home / Common / External), `permission` declared to match, leftover kompose PVCs deleted | a volume isn't persisting or lands in the wrong area | [manifest.md](references/olares-chart-manifest.md) §2 |
 | deployment | **Middleware & deps** | no bundled `postgres`/`redis`/`mongo`/…; wired to system middleware; SQLite→Postgres where supported; companion apps as `type: application` deps | a bundled db/queue is still in the chart, or a companion should be a dependency | [middleware.md](references/olares-chart-middleware.md) |
-| deployment | **Env** | app config in `envs[]` (v3 `valueFrom`, no inline `OLARES_USER`); install-time `required` prompts; middleware/system/user vars mapped via `.Values.olaresEnv` | install fails on `appenv` 422, or config must be user-supplied | [env.md](references/olares-chart-env.md), [env-defaults.md](references/olares-chart-env-defaults.md) |
+| deployment | **Env** | app config in `envs[]` (v3 `valueFrom`, no inline `OLARES_USER`); install-time `required` prompts; middleware/system/user vars mapped via `.Values.olaresEnv`; platform render context (identity, domain, userspace, oidc, middleware) consumed via `.Values.*` | install fails on `appenv` 422, or config must be user-supplied | [env.md](references/olares-chart-env.md), [env-defaults.md](references/olares-chart-env-defaults.md), [system-values.md](references/olares-chart-system-values.md) |
 | deployment | **Entrances & ports** | ≥1 `entrances[]`; HTTP via entrances, non-HTTP via `ports[]`; internal-only services `invisible: true` | a service is unreachable, or an internal port is exposed as a desktop entrance | [manifest.md](references/olares-chart-manifest.md) §4 |
 | packaging+deployment | **GPU / models** | build a CUDA image without a local GPU (custom-kernel arch flags); download model weights via initContainer into the shared `appCommon` Hugging Face cache | AI app needs a CUDA build, model provisioning, or a shared model cache | [gpu.md](references/olares-chart-gpu.md) |
 | deployment | **Accelerator** | declare `spec.accelerator` modes (nvidia/amd-gpu/apple-m/cpu/…) per what the repo supports; set `requiredGPUMemory`; a sane CPU/memory envelope | GPU/accelerator app needs a resource envelope, or `lint` flags `spec.resources` | [accelerator.md](references/olares-chart-accelerator.md) |
@@ -81,6 +81,7 @@ Decide **who consumes the chart** and what "done" means **before** refining — 
 | deployment | **Validate-local** | `olares-cli chart lint ./<app>` passes, then `chart package` | a refinement changed the manifest/templates | [lint.md](references/olares-chart-lint.md) |
 | publishing | **Publish-local** | `market upload` + `market install`, then diagnose from logs (login required) | proving the chart actually runs on the developer's Olares | [publish-verify.md](references/olares-chart-publish-verify.md) |
 | publishing | **Publish-market** | market-ready checklist + a PR to `beclab/apps` | local validation passed and the user wants a public listing | [market-submit.md](references/olares-chart-market-submit.md) |
+| publishing | **Publish-paid** | `price.yaml` at OAC root + `VERIFIABLE_CREDENTIAL` env wired in; on-chain RSA registration + Merchant app (developer does the on-chain/secret steps) | a market app should be pay-to-download (Closed Beta, Olares >=1.12.3) | [paid-apps.md](references/olares-chart-paid-apps.md) |
 
 > **Publish-local** leans on sibling skills: [`olares-shared`](../olares-shared/SKILL.md) (login check), [`olares-market`](../olares-market/SKILL.md) (upload / install / cleanup), [`olares-cluster`](../olares-cluster/SKILL.md) (logs). **Never log in or upload on the developer's behalf without asking first.** One way to sequence the whole assembly (and the file tree `from-compose` emits) lives in [references/olares-chart-workflow.md](references/olares-chart-workflow.md) — a reference, not a required order.
 
@@ -93,6 +94,7 @@ Use this skill to **author/validate your own** Olares chart from a repo, compose
 | Turn a repo / compose / Helm chart into an Olares app, or validate one you authored | ✅ this skill |
 | Run the app on **my own** Olares (upload + install) | ✅ this skill — release target **local-run** |
 | Publish / list the app on the **public** Olares Market | ✅ this skill — release target **market-distribute** → [market-submit.md](references/olares-chart-market-submit.md) |
+| Sell the app (pay-to-download / paid listing) | ✅ this skill — [paid-apps.md](references/olares-chart-paid-apps.md) |
 | "My chart won't install / the app won't start — why?" | ✅ this skill — diagnosis step of [publish-verify.md](references/olares-chart-publish-verify.md) (then [`olares-cluster`](../olares-cluster/SKILL.md) for deeper log digging) |
 | "Just install / upgrade an existing catalog app" (not validating your own chart) | [`olares-market`](../olares-market/SKILL.md) |
 | "Inspect pods / logs of an unrelated running app" | [`olares-cluster`](../olares-cluster/SKILL.md) |
@@ -112,6 +114,7 @@ The only `olares-cli chart` subcommands (source of truth: `--help`). Everything 
 Most of this skill assumes a web app with an HTTP entrance. When the upstream doesn't fit, match a known pattern first; if still unsure, see how the official ports solved it.
 
 - **Headless CLI / service (no web UI)** — no GUI to point an entrance at: add a web-terminal sidecar as a **visible** entrance + expose the API/MCP port as an `invisible` internal entrance. → [archetypes.md](references/olares-chart-archetypes.md)
+- **GUI desktop app (browser-streamed)** — a native Linux desktop app with no web UI: wrap it in a web-desktop base image (Selkies default, or KasmVNC for old hardware/static UIs), point one visible window entrance at HTTP `:3000`, and device-gate optional iGPU/VAAPI acceleration on `.Values.deviceName`. → [archetypes.md](references/olares-chart-archetypes.md)
 - **Still no idea?** look at how the official ports wire it (manifest fields, entrance shapes, middleware/app dependencies, GPU specs) in [beclab/apps](https://github.com/beclab/apps) before guessing:
 
 ```bash
@@ -120,6 +123,11 @@ gh search code --repo beclab/apps <keyword>      # find charts using a pattern (
 ```
 
 This is the canonical source for cross-app wiring (how a dependency app is reached, real `entrances`/`ports`, accelerator modes) that this skill intentionally does not hardcode.
+
+**When picking a reference app, skip these — they mislead more than they help:**
+
+- **Apps with a `.suspend` (or `.remove`) control file in the OAC root** — suspended / no longer distributed; not a current, reliable pattern.
+- **Legacy v2 shared / cluster-scoped charts** that express sharing with `spec.subCharts[].shared: true` + `options.appScope.clusterScoped: true` + `appRef` (the `ollamaserver`/`ollamav2` shape). For Olares >= 1.12.6 this is superseded by `apiVersion: v3`; copy the shared-app pattern from a current `v3` app, not from these. See [shared.md](references/olares-chart-shared.md).
 
 ## Gotchas (what `lint` won't catch)
 

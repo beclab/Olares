@@ -53,8 +53,8 @@ spec:
     Longer Market description.
   locale: [ en ]
   supportArch: [ amd64, arm64 ]   # must match image platforms
-  featuredImage: https://.../hero.webp
-  promoteImage:
+  featuredImage: https://.../hero.webp        # JPEG/PNG/WEBP, 1440x900, <=8MB, exactly one
+  promoteImage:                                # JPEG/PNG/WEBP, 1440x900, <=8MB each, up to 8 (>=2 recommended)
   - https://.../screenshot1.webp
 ```
 

@@ -8,12 +8,12 @@
 ```
  0. target       local-run | market-distribute   # gates P3 arch flags + D2 metadata depth
 
- Packaging (guided, with the developer; only if an image is missing / wrong-arch):
+ Packaging (agent-driven; only if an image is missing / wrong-arch):
  P1. docker?    docker version && docker buildx version   # else guide install
- P2. registry   docker login  (Docker Hub)  |  docker login ghcr.io  (ghcr, PAT write:packages)
+ P2. registry   ask which registry + <user>/<repo>; check login — if not authed, the developer runs `docker login` (agent can't type their token)
  P3. build+push local-run:     docker buildx build --platform linux/<node-arch> -t <ref>:<tag> --push <ctx>
                 market:        docker buildx build --platform linux/amd64,linux/arm64 -t <ref>:<tag> --push <ctx>
-                -> wire <ref>:<tag> into every build-only `image:` in the compose
+                -> you run build+push, then wire <ref>:<tag> into every build-only `image:` in the compose
 
  Deployment authoring (no login):
  D1. scaffold   olares-cli chart from-compose --name <app> -f docker-compose.yml

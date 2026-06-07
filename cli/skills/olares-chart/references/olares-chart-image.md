@@ -53,28 +53,33 @@ A wrong-architecture image installs but never runs (`ImagePullBackOff` with `no 
 
 Building a CUDA image (no GPU needed on the build box, custom-kernel arch flags, the amd64 / `nvidia`-mode constraint) and provisioning model weights (initContainer + shared Hugging Face cache) are covered in their own reference: [olares-chart-gpu.md](olares-chart-gpu.md).
 
-## Guided environment + registry setup
+## Registry + build/push (agent-driven)
 
-These steps need the developer's machine and credentials. **Guide the developer through them; never run `docker login`, invent tokens, or push under an account on their behalf.** Confirm the `<user>/<repo>` and registry with them first.
+You drive this end to end — ask the registry, check login, build, push, verify. The **only** manual step is the developer typing a registry token into `docker login`, and only when they are not already authenticated. **Never invent/hardcode tokens or push under an account the developer didn't choose.**
 
-1. **Check docker is usable:**
+1. **Ask which registry the developer uses + the target `<user>/<repo>`** before anything else (don't assume one):
+   - **Docker Hub** — image ref `<dockerhub-user>/<repo>`
+   - **GitHub Container Registry (ghcr)** — image ref `ghcr.io/<owner>/<repo>`
+   > Olares-local private registry is not supported here yet (planned). Until then the image must live on a registry the Olares node can pull from publicly.
+
+2. **Check docker is usable:**
    ```bash
    docker version          # must show a Server section; if it errors, the daemon isn't running
    docker buildx version   # buildx is needed for --platform multi-arch
    ```
    If docker is missing or the daemon is down, point the developer to install / start it: Docker Desktop on macOS/Windows, or the engine on Linux — https://docs.docker.com/get-docker/ . Stop and wait until `docker version` shows a Server.
 
-2. **Pick a registry** (the developer chooses one of the two public options):
-   - **Docker Hub** — image ref `<dockerhub-user>/<repo>`
-   - **GitHub Container Registry (ghcr)** — image ref `ghcr.io/<owner>/<repo>`
-   > Olares-local private registry is not supported here yet (planned). Until then the image must live on a registry the Olares node can pull from publicly.
+3. **Check whether they're already logged in to that registry** — don't ask for a login they already have:
+   ```bash
+   docker login <registry>   # already authed? prints "Authenticating with existing credentials" / "Login Succeeded"
+   ```
+   Or read `~/.docker/config.json` `auths` for the registry key (Docker Hub → `https://index.docker.io/v1/`, ghcr → `ghcr.io`; a `credsStore`/`credHelpers` entry can be empty but present). A push that later fails with `unauthorized` / `denied` is the authoritative "not logged in / wrong account" signal.
+   - **Already logged in** → go straight to build + push (step 4).
+   - **Not logged in** → ask the developer to run the right `docker login` (this is the one step you can't do — it needs their secret token), then continue:
+     - Docker Hub: `docker login` with a Docker Hub **access token** (Account Settings → Security → New Access Token).
+     - ghcr: `docker login ghcr.io -u <github-user>` with a **GitHub PAT** that has `write:packages`. After the first push, set the package **visibility to public** so Olares can pull it without auth.
 
-3. **Log in / set the secret** (developer-driven; the "secret" is a registry token, not something you hardcode):
-   - Docker Hub: `docker login` with a Docker Hub **access token** (Account Settings → Security → New Access Token).
-   - ghcr: `docker login ghcr.io -u <github-user>` with a **GitHub PAT** that has `write:packages`.
-   - For a ghcr image to be pullable by Olares without auth, the developer must set the package **visibility to public** after the first push.
-
-4. **Choose `<user>/<repo>` and a tag**, then build for the target arch and push in one step:
+4. **Build for the target arch and push** — you run this, after confirming `<registry-ref>:<tag>` with the developer:
    ```bash
    # local-run (example: amd64 node):
    docker buildx build --platform linux/amd64 -t <registry-ref>:<tag> --push <build-context>

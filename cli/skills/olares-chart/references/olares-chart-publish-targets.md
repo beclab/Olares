@@ -39,6 +39,8 @@ When uncertain, ask one question: *"Do you want to run this only on your own Ola
 
 `lint OK` alone is **not** done for either target. For market-distribute, local validation is a **prerequisite**, not the final step.
 
+> **Paid (pay-to-download)** is a market-distribute app plus `price.yaml` + a `VERIFIABLE_CREDENTIAL` license check — see [olares-chart-paid-apps.md](olares-chart-paid-apps.md).
+
 ## Requirements matrix
 
 | Concern | local-run | market-distribute |
