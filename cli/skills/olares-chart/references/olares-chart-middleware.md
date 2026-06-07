@@ -95,7 +95,7 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
 
 > **Env wiring is its own topic.** The `.Values.<mw>.*` mappings above, plus app config the user supplies at install (admin credentials), reused `OLARES_SYSTEM_*`/`OLARES_USER_*` vars, and the `envs[]` `required`/`type`/`regex` rules, are all covered in [olares-chart-env.md](olares-chart-env.md).
 
-> **PostgreSQL and Redis are always available — no admin pre-install, no extra steps.** Given the extension catalog above (vector/vectors/vchord/postgis/zhparser/... + standard contrib), the system postgres covers nearly every app, so reach for it by default. MongoDB, MySQL, MariaDB, MinIO, RabbitMQ require an admin to install them from the Market first.
+> **Which middleware is always available vs admin-installed** is the platform **System middleware model** (loaded via the SKILL.md prerequisite): PostgreSQL + Redis are always on; MongoDB/MySQL/MariaDB/MinIO/RabbitMQ/NATS need an admin install first. Given the extension catalog above, the system postgres covers nearly every app, so reach for it by default.
 >
 > **Escape hatch (rare):** keep a self-hosted db ONLY when the app needs a specific version or extension that the system middleware genuinely cannot provide — and only after checking the extension catalog above. State the exact missing version/extension when you do; "it's simpler" is not a valid reason.
 

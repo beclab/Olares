@@ -1,9 +1,9 @@
 # Run identity: UID/GID 1000 (packaging + deployment)
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
-> Olares userspace volumes (`appData`, `appCache`, `userData`) are owned and accessed as **uid/gid 1000**. This doc covers how to align a self-built or third-party image with that convention — in the Dockerfile, in `OlaresManifest.yaml`, and in deployment templates.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first (which loads the platform **Run identity** model — uid-1000 ownership of userspace volumes + the OPA root-deny rule).
+> This doc covers the chart-side delta: how to align a self-built or third-party image with that convention — in the Dockerfile, in `OlaresManifest.yaml`, and in deployment templates.
 
-## Why 1000 matters
+## Why 1000 matters (chart-side)
 
 - Userspace paths injected via `.Values.userspace.*` expect the app process to run as **1000**.
 - Setting `spec.runAsUser: true` in `OlaresManifest.yaml` tells Olares to inject `pod.spec.securityContext.runAsUser: 1000` at Pod creation (app-service mutating webhook).

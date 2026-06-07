@@ -1,7 +1,7 @@
 ---
 name: olares-shared
-version: 4.1.0
-description: "Olares profile and auth foundation for olares-cli — prerequisite for all olares-* skills. Profile login, import, list, use, remove, keychain tokens, 401/403 recovery. Use for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, auth errors."
+version: 4.2.0
+description: "Set up and manage the Olares login/identity that every other olares-cli skill depends on — one profile per Olares ID, keychain-stored tokens, transparent token refresh, and auth-error recovery. Use for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, and auth errors (token rejected / invalidated / not logged in)."
 compatibility: Requires olares-cli on PATH
 metadata:
   openclaw:
@@ -14,12 +14,16 @@ metadata:
 
 Foundation for every other `olares-cli` skill. Every business verb under `cluster` / `files` / `market` / `settings` / `dashboard` rides the active profile's token. **Read this first.**
 
+> **This skill also hosts the cross-skill platform model** in [references/olares-platform.md](references/olares-platform.md) — the userspace storage model, uid-1000 run identity, system-managed `drive/Home` dirs, app/namespace & networking, system middleware, and version/semver. `files` / `chart` / `cluster` link there (one hop) instead of re-describing it. That reference is pure platform model and needs no login.
+
 > **Source of truth for flags & syntax is always `olares-cli profile --help`.** This file only carries what `--help` cannot give: the profile mental model, agent-driven login flow, token-storage backends, refresh semantics, and the error → fix matrix.
 
 ## When to use
 
-- Olares, Olares ID, olares-cli, OpenClaw on Olares, profile, login, logout, two-factor / 2FA / TOTP, refresh token, keychain
-- Auth errors: `server rejected the access token`, `refresh token for X became invalid`, `no access token for X`, `already authenticated`, `two-factor authentication required`
+- First time operating on an Olares / a given Olares ID (not logged in yet) — set up the profile
+- Switching identity between several Olares IDs
+- Any `olares-cli` command failed with an auth error (token invalidated / not logged in / 2FA required)
+- Keywords: Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, `server rejected the access token`, `refresh token ... became invalid`, `no access token`, `already authenticated`
 
 ## Profile model
 
@@ -29,7 +33,7 @@ One profile = one Olares instance + one user identity, keyed by **olaresId** (e.
 |---------|---------|
 | `olares-cli profile login` | Mode A — password (+ TOTP if 2FA is on); auto-creates the profile on first run |
 | `olares-cli profile import` | Mode B — bootstrap an access_token from an existing refresh_token |
-| `olares-cli profile list` | List every profile, mark the current one, show login status per profile |
+| `olares-cli profile list` | List every profile (NAME / OLARES-ID / STATUS / VERSION), mark the current one, show login status; `--refresh-version` re-reads the current profile's cached backend version |
 | `olares-cli profile use <name\|->` | Switch the current profile; `-` reverts to the previous one (like `cd -`) |
 | `olares-cli profile remove <name>` | Delete a profile and its stored token in one shot |
 
@@ -44,8 +48,7 @@ olares-cli profile login --olares-id <olaresId>
 ```
 
 - Interactive: prompts for password (echo disabled); prompts for TOTP if 2FA is enabled.
-- Scripted: pipe via `--password-stdin`; if 2FA is on, you MUST also pass `--totp <code>` because there is no second prompt.
-- **There is no `--password <plaintext>` flag** — passwords are never accepted on the command line.
+- Scripted: pipe via `--password-stdin`; if 2FA is on, you MUST also pass `--totp <code>` because there is no second prompt. (Passwords only ever go through the TTY or `--password-stdin` — see Security rules.)
 
 ### Mode B — existing refresh_token
 
@@ -64,22 +67,22 @@ When you (an AI agent) drive the login on the user's behalf, do NOT pass passwor
 `profile list` output:
 
 ```
-   NAME             OLARES-ID              STATUS
-*  alice            alice@olares.com       logged-in (23h59m)
-   bob              bob@olares.com         expired
-   eve              eve@olares.com         invalidated
-   frank            frank@olares.com       never
+   NAME             OLARES-ID              STATUS        VERSION
+*  alice            alice@olares.com       logged-in     1.12.6
+   bob              bob@olares.com         expired        1.12.5
+   eve              eve@olares.com         invalidated   -
+   frank            frank@olares.com       never         -
 ```
 
 | STATUS | Meaning | Recovery |
 |--------|---------|----------|
-| `logged-in (Xh Ym)` | Token valid; column shows time-to-expiry | — |
-| `logged-in` | Token present but JWT has no exp claim (can't verify locally) | Trust until the server says no |
+| `logged-in` | Token valid — JWT exp is in the future, **or** the JWT carries no exp claim (can't verify locally; trust until the server says no) | — |
 | `expired` | JWT exp is in the past | `profile login` |
 | `invalidated` | Server explicitly rejected the refresh leg | `profile login` directly (no need to `profile remove` first) |
 | `never` | No token has ever been stored | `profile login` or `profile import` |
+| `unknown` / `logged-in (unparseable token)` | Token store couldn't be read / the JWT couldn't be parsed | re-run `profile login` if it persists |
 
-The leading `*` marks the current profile. `profile use` accepts either the NAME alias or the olaresId.
+STATUS reflects only what the local token store can prove without a network call (no `(Xh Ym)` time-to-expiry is printed). The `VERSION` column is the cached Olares backend version (`-` until a login eager-fetch or a version-aware command populates it; `--refresh-version` re-reads it). The leading `*` marks the current profile; `profile use` accepts either the NAME alias or the olaresId.
 
 ## Token storage
 
@@ -101,7 +104,7 @@ After `login` / `import` succeeds, the CLI prints `token stored via <backend> (s
 
 **The CLI rotates expired access_tokens transparently.** Users do NOT need to run `profile login` just because their access_token aged out — only when the *refresh_token itself* becomes invalid.
 
-- Replayable requests (every JSON verb, `files cat`, `files download`, `files rm`, `market` verbs, …): on 401/403 the transport calls `/api/refresh` and retries once with the new token.
+- Replayable requests (every JSON verb, `files cat`, `files download`, `files rm`, `market` verbs, …): on 401/403/459 the transport calls `/api/refresh` and retries once with the new token. (459 is Olares' edge / Authelia "auth failed" status, treated like 401/403.)
 - Streaming uploads (`files upload` chunks): pre-decode the JWT exp; if within 60s of expiry, refresh BEFORE sending, because once a `*os.File` chunk is consumed it can't be replayed on a 401.
 
 Across goroutines AND across concurrent `olares-cli` processes, `/api/refresh` is hit at most once per stale token (in-process mutex + cross-process flock).
@@ -114,7 +117,7 @@ Across goroutines AND across concurrent `olares-cli` processes, `/api/refresh` i
 |-------------------------|---------|-----|
 | `refresh token for <id> became invalid at <ts>` | `/api/refresh` returned 401/403 — the grant is dead | `olares-cli profile login --olares-id <id>` |
 | `no access token for <id>` | Profile selected but keychain has no entry | `olares-cli profile login` or `profile import` |
-| `server rejected the access token (HTTP 401)` / `(HTTP 403)` | After auto-refresh the server still rejects (rare) | `olares-cli profile login --olares-id <id>` |
+| `server rejected the access token (HTTP 401)` / `(HTTP 403)` / `(HTTP 459)` | After auto-refresh the server still rejects (rare); 459 = Olares edge (Authelia) "auth failed", handled like 401/403 | `olares-cli profile login --olares-id <id>` |
 | `--olares-id is required` | login / import invoked without olaresId | Add `--olares-id <id>` |
 | `already authenticated for <id> (expires in ...)` | Still-valid token exists | `olares-cli profile remove <id>` then re-run |
 | `a token is already stored for <id> but its expiry can't be determined client-side` | Token present but JWT carries no exp claim | `profile remove <id>` then re-run |
@@ -122,7 +125,7 @@ Across goroutines AND across concurrent `olares-cli` processes, `/api/refresh` i
 | `password is empty` / `TOTP code is empty` | stdin / TTY returned an empty string | Check for premature EOF or an empty pipe |
 | `profile <name> not found` | `profile use` / `profile remove` referenced an unknown profile | `profile list` to see the actual names |
 
-> **Do not silently retry auth errors.** 401/403 after auto-refresh and `already authenticated` are deterministic — follow the table; blind retries make it worse.
+> These auth errors are deterministic — pick the fix from the table above (see also the auto-refresh rules), don't loop.
 
 ## Security rules
 

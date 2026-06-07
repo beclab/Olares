@@ -1,6 +1,6 @@
 ---
 name: olares-cluster
-version: 4.1.0
+version: 4.2.0
 description: "Olares ControlHub K8s view via olares-cli cluster — pods, workloads, logs, scale/restart, jobs, cronjobs, middleware. Not for app lifecycle (market) or host install (node/os/gpu). Use for ControlHub, pods, logs, workloads."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -13,6 +13,8 @@ metadata:
 # cluster (per-user K8s view)
 
 **CRITICAL — before doing anything, load the `olares-shared` skill first (profile model, login, token refresh, auth-error recovery). Flag reference: `olares-cli cluster --help`.**
+
+> **Platform model (read once):** the app/namespace model (`<app>-<owner>` vs `<app>-shared`, application spaces, cross-namespace DNS) and the system-middleware model that this view surfaces are defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md). This skill is the **K8s runtime** view of them.
 
 > **Source of truth for flags & wire shapes is always `olares-cli cluster <noun> <verb> --help`.** This file only carries what `--help` cannot give: routing, the mental model of nouns, the identity-vs-server principle, the mutating-verb safety contract, cross-verb output conventions, and the common-errors → fix table.
 

@@ -1,6 +1,6 @@
 ---
 name: olares-market
-version: 4.1.0
+version: 4.2.0
 description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, upload chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -15,6 +15,8 @@ metadata:
 **CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli market --help`.**
 
 > **Source of truth for flags is always `olares-cli market <verb> --help`.** This file only carries what `--help` cannot give: source resolution, the lifecycle state machine, OpType-vs-State race safety, the verb index, the `-s`/`-a` matrix, and the "what apps do I have" routing.
+
+> **Platform model:** app namespaces (`<app>-<owner>` vs the admin-only `<app>-shared`) and which system-middleware apps an admin installs are defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md#app-namespace--networking-model).
 
 ## When to use
 

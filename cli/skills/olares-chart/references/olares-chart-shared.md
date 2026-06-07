@@ -80,11 +80,7 @@ Required / expected fields:
 
 ## How consumers (reference apps) reach it
 
-A shared app is consumed by **separate reference/client apps**, not by per-user copies of itself:
-
-1. The client declares the dependency: `options.dependencies` with `type: application` on the shared app.
-2. At render time app-service injects the shared namespace's Services into the client's Helm values as `.Values.svcs.<svcName>_host` (= `<svcName>.<app>-shared`) and `.Values.svcs.<svcName>_ports`. The client points its config at that host — a plain in-cluster Service DNS, **no entrance/URL involved**.
-3. Cross-namespace reachability is automatic: a v3 shared app gets the mesh sidecar + NetworkPolicy that allow other namespaces to call it.
+A shared app is consumed by **separate reference/client apps**, not by per-user copies of itself. The client declares an `options.dependencies` `type: application` on the shared app; app-service then injects the shared namespace's Services into the client's Helm values and grants cross-namespace reachability automatically. The full mechanism (`.Values.svcs.<svc>_host` = `<svc>.<app>-shared`, mesh sidecar + NetworkPolicy, no entrance/URL) is the platform **App, namespace & networking model** (loaded via the SKILL.md prerequisite).
 
 ## Legacy v2 shared form (context only)
 
