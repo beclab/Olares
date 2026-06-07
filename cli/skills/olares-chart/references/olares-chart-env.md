@@ -18,7 +18,7 @@ Olares exposes configuration to an app through env vars at **three levels**. The
 >     value: "{{ .Values.olaresEnv.APP_TOKEN }}"
 > ```
 >
-> This is different from system-injected Helm values like `.Values.postgres.*` / `.Values.userspace.*` / `.Values.os.*` (see [olares-chart-manifest.md](olares-chart-manifest.md)) — those are not env vars and also need explicit mapping.
+> This is different from system-injected Helm values like `.Values.postgres.*` / `.Values.userspace.*` / `.Values.os.*` (full catalogue in [olares-chart-system-values.md](olares-chart-system-values.md)) — those are not env vars and also need explicit mapping.
 
 ## When to declare an app-level env
 
