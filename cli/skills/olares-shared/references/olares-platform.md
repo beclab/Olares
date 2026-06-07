@@ -1,15 +1,6 @@
 # Olares platform concepts (single source of truth)
 
-> Cross-skill platform facts that ≥2 `olares-cli` skills rely on. Each section notes which skill reads it from which angle. Skills link here from their `SKILL.md` (one hop) instead of re-describing these facts. Pure platform model — no login/profile content (that is in [`../SKILL.md`](../SKILL.md)).
-
-## Contents
-
-- [Userspace storage model](#userspace-storage-model) — `files` (addressing) + `chart` (mounting)
-- [Run identity: uid/gid 1000](#run-identity-uidgid-1000) — `chart` (runAsUser) + `files` (chown)
-- [System-managed Home directories](#system-managed-home-directories) — `files` (protected names) + `chart` (reserved caches)
-- [App, namespace & networking model](#app-namespace--networking-model) — `chart` (shared apps / deps) + `cluster` (application space)
-- [System middleware model](#system-middleware-model) — `chart` (wire to it) + `cluster` (middleware aggregator)
-- [Olares version & semver model](#olares-version--semver-model) — `chart` (version floor) + `shared` (profile VERSION) + `settings` (me version)
+> Cross-skill platform facts that ≥2 `olares-cli` skills rely on. Each section ends with a `Used by:` note of which skill reads it from which angle. Skills link here from their `SKILL.md` (one hop) instead of re-describing these facts. Pure platform model — no login/profile content (that is in [`../SKILL.md`](../SKILL.md)).
 
 ## Userspace storage model
 
