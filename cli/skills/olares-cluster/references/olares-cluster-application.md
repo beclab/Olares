@@ -66,4 +66,3 @@ olares-cli cluster application pods user-system-alice
 |---|---|---|
 | `(failed: ...)` in one section of `status` | One sub-endpoint errored; others succeeded | Report the partial result; re-run with `-o json` for raw details if needed |
 | 404 on `application get <ns>` | Active profile can't see this namespace, OR the namespace doesn't exist | `application list` to see what's visible |
-| `--interval requires --watch` | Polling cadence without gate flag | Add `-w` or drop `--interval` |

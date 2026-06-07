@@ -29,7 +29,8 @@
 
 ## Safety constraints
 
-- **Every destructive verb confirms with the user.** `--yes` opts out for scripts.
+Every destructive verb follows the parent SKILL.md's Mutating verb safety contract (confirm, `--yes` for scripts, server decides). Workload-specific points:
+
 - **DaemonSet has no `replicas`** — `scale` / `stop` reject it client-side. `start` requires `--replicas` so it implicitly excludes DaemonSet too.
 - **`restart` deletes pods one-by-one (parallel-bounded).** During the operation pods are recreated by the controller. For Deployments with a single replica, this means a brief downtime.
 - **`delete --propagation foreground` waits for the cascade.** Pass `background` only when you intentionally want fire-and-forget.
@@ -94,4 +95,3 @@ This combines the PATCH and the rollout-status poll into one invocation. The age
 | `DaemonSet does not have replicas; use 'cluster workload delete --kind ds' instead` | `scale` / `stop` on a DS | Use `delete` |
 | `--replicas is required` (on `start`) | Tried to "start" without saying how many | Ask the user; there is no cached previous count |
 | 404 on a known-existing workload | Wrong `--kind` | Try with the correct kind, or `list --kind all -n <ns>` |
-| `aborted by user` | Destructive prompt rejected | If intentional, re-run with `--yes` |

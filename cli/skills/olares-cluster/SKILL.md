@@ -18,7 +18,7 @@ metadata:
 
 > **Source of truth for flags & wire shapes is always `olares-cli cluster <noun> <verb> --help`.** This file only carries what `--help` cannot give: routing, the mental model of nouns, the identity-vs-server principle, the mutating-verb safety contract, cross-verb output conventions, and the common-errors → fix table.
 
-## When to use this skill
+## When to use
 
 Against the cluster the active profile can see:
 
@@ -31,15 +31,7 @@ Against the cluster the active profile can see:
 - "What does this object's YAML look like?" (`cluster <noun> yaml`)
 - Watch / follow: pod `-w`, workload `rollout-status -w`, application `status -w`, logs `-f` (poll on `--interval`)
 
-## When NOT to use — route to a sibling skill
-
-| User intent | Use instead | Why |
-|---|---|---|
-| Install / uninstall / upgrade / start / stop an Olares **app** | [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle, not K8s object lifecycle |
-| Edit app entrances / domains / env / policy / ACL from the **user** perspective | [`olares-settings`](../olares-settings/SKILL.md) | The settings UI mirror, scoped to the user's apps |
-| Browse / sync drive files | [`olares-files`](../olares-files/SKILL.md) | File API, not K8s |
-| Cluster install / node join / OS upgrade / GPU drivers | `olares-cli node`, `olares-cli os`, `olares-cli gpu` | Kubeconfig-based host maintenance, NOT profile-based |
-| Profile management, login, token refresh | [`olares-shared`](../olares-shared/SKILL.md) | Auth lives there |
+> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
 > **Mental model:** if the question is *runtime state* of an existing cluster, you are here. If it's *lifecycle* of an Olares app or *day-zero* host setup, you are not.
 
@@ -108,7 +100,7 @@ For flags, examples, and wire shapes, **always start with `olares-cli cluster <n
 Every mutating verb — `pod delete` / `pod restart`, all of `workload scale|restart|stop|start|delete`, `cronjob suspend`, `job rerun` — follows the same contract:
 
 1. **Wrapped in a `ConfirmDestructive` y/N prompt.** Even for "reversible" changes — the prompt is the safety net. **`--yes` / `-y` opts out for scripts.**
-2. **No client-side authorization preflight** — server is the only authority. A 403 surfaces; the CLI does not gate against `cluster context`.
+2. **Authorization follows the identity-vs-server principle above** — no client-side preflight; a 403 surfaces as the authoritative "no".
 3. **Stable JSON summary on success**, not the apiserver's response. JSON consumers care whether the change took, not every field of the object.
 
 Non-destructive verbs (`cronjob resume`, `workload start`, `pod logs`) are NOT wrapped. **Confirm intent with the user BEFORE invoking any destructive verb, even when scripts pass `--yes`.**
@@ -122,7 +114,12 @@ Non-destructive verbs (`cronjob resume`, `workload start`, `pod logs`) are NOT w
 
 ### Pagination (`--page N` / `--all`)
 
-Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `workload` (and the `application pods` / `application workloads` wrappers) supports pagination. Defaults: `--limit 100`, `--page 1`. Pass `--page N` to walk pages, or `--all` to drain every page. `cluster workload images [IMAGE]` follows the same pagination contract (covers Deployment/StatefulSet/DaemonSet/Job/CronJob; `--kind` also accepts `job` / `cronjob`; pass an IMAGE arg to find where a specific image is referenced — an IMAGE lookup always full-scans the cluster); for the plain listing do not assume full-cluster coverage unless `--all` is explicitly set. For a local-image-vs-workload diagnostic, use the top-level `doctor images` command instead — it always scans the cluster in full (no pagination), annotates each local containerd image with its workload reference count across Deployment/StatefulSet/DaemonSet/Job/CronJob, skips pause/sandbox images, and takes `--unused` to show only zero-reference orphans (biggest first, with a reclaimable-size summary). Two caveats: (1) completeness — the local image list reflects the node serving the request (control node), so images living only on a worker node aren't listed; but every listed image is checked cluster-wide, so a listed image's "unused" verdict is safe. (2) coverage — references come only from Deployment/StatefulSet/DaemonSet/Job/CronJob specs, so an image used only by a bare Pod / static pod / other-controller-owned Pod can be mislabeled unused, and the count reflects the workload spec rather than the digest a running container is pinned to; cross-check running Pods before reclaiming.
+Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `workload` (and the `application pods` / `application workloads` wrappers) supports pagination. Defaults: `--limit 100`, `--page 1`. Pass `--page N` to walk pages, or `--all` to drain every page.
+
+Two image-inventory commands ride on top of this:
+
+- `cluster workload images [IMAGE]` follows the same pagination contract. An IMAGE-argument lookup always full-scans the cluster, but the plain listing is NOT full-cluster unless `--all` is set. See [references/olares-cluster-workload.md](references/olares-cluster-workload.md).
+- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. Its completeness/coverage caveats live in that same workload reference's Agent notes.
 
 ### `--watch` / `--follow` semantics (uniform)
 

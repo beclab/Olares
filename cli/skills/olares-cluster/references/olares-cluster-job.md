@@ -18,7 +18,9 @@ K8s Jobs (`apis/batch/v1`) — one-shot batch runs.
 
 ## Safety constraints
 
-- **`rerun` is destructive — confirm with the user.** It re-fires the Job's pod template against the cluster; for jobs with side effects (sends notifications, mutates external state) this happens AGAIN.
+`rerun` follows the parent SKILL.md's Mutating verb safety contract (confirm, `--yes` for scripts, server decides). Job-specific points:
+
+- **`rerun` re-fires the Job's pod template** against the cluster; for jobs with side effects (sends notifications, mutates external state) this happens AGAIN.
 - The CLI fetches the Job's current `resourceVersion` before posting; concurrent reruns by a third party between Get and POST will fail with a conflict (which is the safe outcome).
 
 ## The `pods` two-step
@@ -59,4 +61,3 @@ olares-cli cluster job rerun user-system-alice/migrate-2026-q1
 |---|---|---|
 | `job pods` returned empty | Job has not yet spawned a pod (e.g. just created), OR pods were garbage-collected | Check `cluster job get` → `Conditions`; if older, the pods may be gone |
 | `rerun` returned 409 / conflict | Concurrent modification | Re-run; if persistent, someone else is operating on the same Job |
-| `aborted by user` | y/N prompt rejected | Re-run with `--yes` if intentional |

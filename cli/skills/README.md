@@ -39,7 +39,7 @@ ClawHub publishes the entire skill directory (including `references/`), so refer
 
 `SKILL.md` is NOT meant to compete with `olares-cli <command> --help`. The body references `olares-cli <command> --help` for authoritative flag syntax. The body should only carry what `--help` cannot give:
 
-- **Routing** — when to use this skill vs. siblings
+- **When to use** — this skill's scope / trigger phrases, plus the suite-map pointer for outbound routing (see "Cross-skill shared concepts")
 - **Cross-cutting concepts** referenced by ≥2 subcommands (e.g. olares-files' 3-segment frontend path)
 - **Client-side hard constraints that bite users** (quirks the GUI enforces, server-side auto-rename traps, …)
 - **Error → fix matrix** that is not in `--help`
@@ -69,6 +69,7 @@ Facts used by **≥2 skills** are defined **once** and linked, never copied. Thi
 - **Do NOT deep-link the shared source from reference files.** A reference that points at another skill's reference is a two-hop nested read. Instead, refer to the shared concept **by name** (matching the source's heading) and rely on the `SKILL.md` prerequisite to have loaded it. (See the chart references, which name "the platform **Userspace storage model**" rather than linking it.)
 - **Self-containment is traded for a suite contract.** Strictly, Skills are self-contained and "cannot reference files in other skill folders". We deliberately cross-link because these skills **ship and install as one suite** (stated under Layout). A standalone install leaves cross-skill links dangling — that is the documented trade-off, not an accident.
 - **When a fact is genuinely two skills' own angle, let each keep its own framing.** `files` describes the storage areas as *addressing* (`drive/Home`), `chart` as *mounting* (`.Values.userspace.appData`). That is not duplication to dedupe — only the underlying platform facts (backends, durability, uid, version gates) are centralized in `olares-platform.md`.
+- **Routing has one source of truth too: the Skill suite map** in [`olares-shared/SKILL.md`](olares-shared/SKILL.md). The canonical intent->skill scope for the whole suite lives there once. Each skill folds routing into its `## When to use` section — trigger phrases, then the suite-map pointer (`> Anything outside this scope -> see the Skill suite map …`), plus an optional `> Mental model` one-liner — with no separate `## Routing` section and no per-sibling ✅/❌ rows. `olares-shared` is a must-read prerequisite for the runtime skills, so the map is always already in context.
 
 ## Runtime requirement
 

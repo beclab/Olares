@@ -25,6 +25,22 @@ Foundation for every other `olares-cli` skill. Every business verb under `cluste
 - Any `olares-cli` command failed with an auth error (token invalidated / not logged in / 2FA required)
 - Keywords: Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, `server rejected the access token`, `refresh token ... became invalid`, `no access token`, `already authenticated`
 
+## Skill suite map (routing source of truth)
+
+The olares-cli skills ship and install as one suite; each owns a distinct slice. This is the canonical intent->skill map — a skill's own `## When to use` lists its scope and points here for everything else.
+
+| Skill | Owns | Reach for it when |
+|---|---|---|
+| [`olares-shared`](SKILL.md) | Profile / login / token refresh / auth-error recovery; hosts the platform model | logging in, switching Olares ID, any auth error |
+| [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle: install / uninstall / upgrade / clone / start / stop / cancel; `--mine`; chart upload | installing or managing an app's lifecycle |
+| [`olares-settings`](../olares-settings/SKILL.md) | Post-install config (Settings SPA): app entrance / domain / env / policy, users, VPN, network, backup / restore, integrations | changing config of an installed app or the system |
+| [`olares-cluster`](../olares-cluster/SKILL.md) | K8s runtime view: pods / workloads / jobs / cronjobs / nodes / namespaces; logs; scale / restart / delete | inspecting or operating running K8s objects |
+| [`olares-dashboard`](../olares-dashboard/SKILL.md) | Resource metrics & health: CPU / memory / disk / network / pods / GPU / fan / ranking | "what's the usage / what's eating CPU" |
+| [`olares-files`](../olares-files/SKILL.md) | Per-user file API: drive / sync / cache / external; upload / download; share; SMB; Seafile | browsing or moving files / drives |
+| [`olares-chart`](../olares-chart/SKILL.md) | Local chart authoring: from-compose / lint / package, then publish | authoring or validating your own chart |
+
+> Host-side maintenance (cluster install, node join, OS upgrade, GPU drivers) is NOT a skill — it's the kubeconfig-based `olares-cli node` / `os` / `gpu` trees, separate from this profile-based suite.
+
 ## Profile model
 
 One profile = one Olares instance + one user identity, keyed by **olaresId** (e.g. `alice@olares.com`). Each profile owns its own access_token / refresh_token pair, stored in the OS keychain.
