@@ -110,14 +110,19 @@ All post-publish actions are PRs to `beclab/apps:main`. See [Manage the app life
 
 **No rollbacks** — fix forward with a new `UPDATE` version.
 
+**REMOVE is irreversible** — after merge the chart **folder name can no longer be reused by the owners**. Existing installs keep working; the app just disappears from the catalog and the name is burned.
+
 Before any lifecycle PR: sync fork and rebase onto latest `main` to reduce conflicts.
 
 ## Optimize listing (optional, post-merge)
 
 Improve Market presentation with [promote-apps](https://docs.olares.com/developer/develop/promote-apps.html):
 
-- `spec.promoteImage[]` — screenshot carousel
-- `spec.featuredImage` — hero image on app detail page
+- `metadata.icon` — **required**; PNG/WEBP, 256×256, ≤512 KB
+- `spec.promoteImage[]` — screenshot carousel on the detail page; JPEG/PNG/WEBP, 1440×900, ≤8 MB each, up to 8 (≥2 recommended)
+- `spec.featuredImage` — hero image (recommendations / "My Olares"); JPEG/PNG/WEBP, 1440×900, ≤8 MB, exactly one
+
+Host assets yourself or use the **Olares Market image hosting** service (pick app icon / featured / promotional, upload, copy the generated URL into `OlaresManifest.yaml`).
 
 Submit these via an `UPDATE` PR with a version bump.
 
@@ -142,3 +147,5 @@ For chart content issues surfaced during ingest (not GitBot title/scope), fix th
 | Metadata bar | stub OK | full market-ready checklist |
 
 Many developers stop at Publish-local. Publish-market is the optional upgrade when they want the app in the public index.
+
+**Selling the app?** A pay-to-download listing is a market app plus `price.yaml` + license enforcement — see [olares-chart-paid-apps.md](olares-chart-paid-apps.md).

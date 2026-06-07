@@ -81,6 +81,7 @@ Decide **who consumes the chart** and what "done" means **before** refining — 
 | deployment | **Validate-local** | `olares-cli chart lint ./<app>` passes, then `chart package` | a refinement changed the manifest/templates | [lint.md](references/olares-chart-lint.md) |
 | publishing | **Publish-local** | `market upload` + `market install`, then diagnose from logs (login required) | proving the chart actually runs on the developer's Olares | [publish-verify.md](references/olares-chart-publish-verify.md) |
 | publishing | **Publish-market** | market-ready checklist + a PR to `beclab/apps` | local validation passed and the user wants a public listing | [market-submit.md](references/olares-chart-market-submit.md) |
+| publishing | **Publish-paid** | `price.yaml` at OAC root + `VERIFIABLE_CREDENTIAL` env wired in; on-chain RSA registration + Merchant app (developer does the on-chain/secret steps) | a market app should be pay-to-download (Closed Beta, Olares >=1.12.3) | [paid-apps.md](references/olares-chart-paid-apps.md) |
 
 > **Publish-local** leans on sibling skills: [`olares-shared`](../olares-shared/SKILL.md) (login check), [`olares-market`](../olares-market/SKILL.md) (upload / install / cleanup), [`olares-cluster`](../olares-cluster/SKILL.md) (logs). **Never log in or upload on the developer's behalf without asking first.** One way to sequence the whole assembly (and the file tree `from-compose` emits) lives in [references/olares-chart-workflow.md](references/olares-chart-workflow.md) — a reference, not a required order.
 
@@ -93,6 +94,7 @@ Use this skill to **author/validate your own** Olares chart from a repo, compose
 | Turn a repo / compose / Helm chart into an Olares app, or validate one you authored | ✅ this skill |
 | Run the app on **my own** Olares (upload + install) | ✅ this skill — release target **local-run** |
 | Publish / list the app on the **public** Olares Market | ✅ this skill — release target **market-distribute** → [market-submit.md](references/olares-chart-market-submit.md) |
+| Sell the app (pay-to-download / paid listing) | ✅ this skill — [paid-apps.md](references/olares-chart-paid-apps.md) |
 | "My chart won't install / the app won't start — why?" | ✅ this skill — diagnosis step of [publish-verify.md](references/olares-chart-publish-verify.md) (then [`olares-cluster`](../olares-cluster/SKILL.md) for deeper log digging) |
 | "Just install / upgrade an existing catalog app" (not validating your own chart) | [`olares-market`](../olares-market/SKILL.md) |
 | "Inspect pods / logs of an unrelated running app" | [`olares-cluster`](../olares-cluster/SKILL.md) |
@@ -121,6 +123,11 @@ gh search code --repo beclab/apps <keyword>      # find charts using a pattern (
 ```
 
 This is the canonical source for cross-app wiring (how a dependency app is reached, real `entrances`/`ports`, accelerator modes) that this skill intentionally does not hardcode.
+
+**When picking a reference app, skip these — they mislead more than they help:**
+
+- **Apps with a `.suspend` (or `.remove`) control file in the OAC root** — suspended / no longer distributed; not a current, reliable pattern.
+- **Legacy v2 shared / cluster-scoped charts** that express sharing with `spec.subCharts[].shared: true` + `options.appScope.clusterScoped: true` + `appRef` (the `ollamaserver`/`ollamav2` shape). For Olares >= 1.12.6 this is superseded by `apiVersion: v3`; copy the shared-app pattern from a current `v3` app, not from these. See [shared.md](references/olares-chart-shared.md).
 
 ## Gotchas (what `lint` won't catch)
 
