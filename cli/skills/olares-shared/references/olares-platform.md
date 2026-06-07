@@ -31,6 +31,8 @@ Key facts:
 - **Version gates.** `appCommon` needs Olares ≥ 1.12.6; `externalData`/`sharedlib` needs `olaresManifest.version` ≥ 0.12.0.
 - **Drive's `extend` must be `Home` or `Data` exactly** — `home` is rejected with `invalid drive type`.
 
+Used by: `files` (addressing) and `chart` (mounting).
+
 ## Run identity: uid/gid 1000
 
 Every userspace area above is owned and accessed as **uid/gid 1000**. This is the shared root cause behind two skills:
@@ -39,6 +41,8 @@ Every userspace area above is owned and accessed as **uid/gid 1000**. This is th
 - `files` — `chown` UID conventions: 0 (root) vs 1000 (the userspace owner). Only `drive/Home`, `drive/Data`, `cache/<node>` accept `chown`.
 
 OPA admission: a non-trusted image running as root (or `privileged`/`runAsNonRoot: false`) is denied. Init containers may run as root only with a trusted `beclab/` image. Chart-side alignment recipes (Dockerfile `USER`, initContainer `chown`, OPA boundaries) live in `chart`'s run-as-user reference.
+
+Used by: `chart` (runAsUser) and `files` (chown).
 
 ## System-managed Home directories
 
@@ -53,6 +57,8 @@ Platform invariants:
 - They are created and managed by LarePass; apps depend on the exact names (e.g. the model-runtime app's `Ollama` cache, the LarePass UI's `Pictures` sidebar tile).
 - Casing is significant: `Huggingface` is one word (not `HuggingFace`).
 - `files` enforces them as protected names: `rename` / `rm` / `mv source` refuse them at the **first level under `drive/Home/` only**; `cp` (copy) is allowed; nested content (`drive/Home/Pictures/Trip2024/`) is fully editable; other namespaces (`drive/Data/Pictures`, `sync/...`) are unaffected.
+
+Used by: `files` (protected names) and `chart` (reserved caches).
 
 ## App, namespace & networking model
 
