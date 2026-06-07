@@ -101,31 +101,35 @@ func WithSameVersionCheck() Option {
 	return func(c *OAC) { c.skipSameVersion = false }
 }
 
-// WithServiceAccountRulesCheck enables the RBAC rule inspection which makes
-// sure the chart doesn't grant ServiceAccounts forbidden permissions. It is
-// disabled by default to match historical Lint behaviour; callers that need
-// it can opt in explicitly.
+// WithServiceAccountRulesCheck re-enables the RBAC rule inspection which
+// makes sure the chart doesn't grant ServiceAccounts forbidden permissions.
+// The check is on by default, so calling this on a fresh Checker is a no-op.
 func WithServiceAccountRulesCheck() Option {
 	return func(c *OAC) { c.skipRunRBAC = false }
 }
 
-// WithSecurityContextCheck enables the non-beclab image privileged
+// SkipServiceAccountRulesCheck disables the ServiceAccount RBAC rule
+// inspection. The check is on by default; only opt out when a caller
+// knowingly needs to bypass forbidden-permission detection.
+func SkipServiceAccountRulesCheck() Option {
+	return func(c *OAC) { c.skipRunRBAC = true }
+}
+
+// WithSecurityContextCheck re-enables the non-beclab image privileged
 // securityContext check. The check rejects any container (init or main)
 // whose image is NOT published under the beclab/ namespace and whose
 // effective securityContext grants root-equivalent privileges (any of
 // `privileged: true`, `runAsUser: 0`, `runAsNonRoot: false`, including
-// the value inherited from a pod-level securityContext). It is disabled
-// by default because some legacy charts still embed third-party images
-// that need a manual review before this rule applies; turn it on
-// explicitly when publishing to the app store.
+// the value inherited from a pod-level securityContext). It is on by
+// default; calling this on a fresh Checker is a no-op.
 func WithSecurityContextCheck() Option {
 	return func(c *OAC) { c.skipRunSecurityContext = false }
 }
 
-// SkipSecurityContextCheck clears the non-beclab image securityContext
-// flag. The check is OFF by default, so calling this on a fresh Checker
-// is a no-op; it exists for option-set composition where a previously
-// applied set may have turned the check on.
+// SkipSecurityContextCheck disables the non-beclab image securityContext
+// check. The check is on by default; only opt out when a chart legitimately
+// embeds third-party images that need a manual review before this rule
+// applies.
 func SkipSecurityContextCheck() Option {
 	return func(c *OAC) { c.skipRunSecurityContext = true }
 }

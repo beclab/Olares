@@ -27,7 +27,7 @@ func TestNew_Defaults(t *testing.T) {
 		t.Fatalf("expected empty owner/admin, got %q/%q", c.owner, c.admin)
 	}
 	if c.skipRunRBAC {
-		t.Fatal("RBAC inspection must be set by default")
+		t.Fatal("RBAC inspection must be on by default")
 	}
 	if c.skipManifest || c.skipResource || c.skipFolder {
 		t.Fatal("manifest/resource/folder checks must be on by default")
@@ -92,10 +92,18 @@ func TestOptions_SameVersionToggle(t *testing.T) {
 	}
 }
 
-func TestOptions_WithServiceAccountRulesCheck(t *testing.T) {
-	c := New(WithServiceAccountRulesCheck())
+func TestOptions_ServiceAccountRulesCheckToggle(t *testing.T) {
+	c := New()
 	if c.skipRunRBAC {
-		t.Fatal("WithServiceAccountRulesCheck must enable runRBAC")
+		t.Fatal("RBAC check must be on by default")
+	}
+	c = New(SkipServiceAccountRulesCheck())
+	if !c.skipRunRBAC {
+		t.Fatal("SkipServiceAccountRulesCheck should set skipRunRBAC")
+	}
+	c = New(SkipServiceAccountRulesCheck(), WithServiceAccountRulesCheck())
+	if c.skipRunRBAC {
+		t.Fatal("WithServiceAccountRulesCheck should clear skipRunRBAC")
 	}
 }
 
