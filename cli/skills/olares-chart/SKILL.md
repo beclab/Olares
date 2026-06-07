@@ -30,7 +30,7 @@ Porting an app is **not** a fixed `from-compose → lint → publish` pipeline �
 
 ## Axis 1 — Packaging (the image)
 
-Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **guided** — you check/install docker and drive `docker login` / build / push **with the developer, never on their behalf** ([references/olares-chart-image.md](references/olares-chart-image.md)). No login needed.
+Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **agent-driven**: ask which registry the developer uses (Docker Hub / ghcr), check docker is usable and already logged in, then **build + push yourself** — only the credential entry (`docker login`) stays manual, and only when not already authenticated ([references/olares-chart-image.md](references/olares-chart-image.md)). No Olares login needed for this.
 
 | Packaging state | Do this | Ready when |
 |---|---|---|
