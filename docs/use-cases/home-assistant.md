@@ -23,7 +23,7 @@ In this guide, you will learn how to:
 - Install Home Assistant from the Olares Market.
 - Set up your initial Home Assistant profile.
 - Connect a Dahua camera using the generic RTSP stream or the advanced HACS integration.
-- Create a dashboard to view the live camera feed.
+- Monitor the live camera feed from your Home Assistant dashboard.
 
 ## Prerequisites
 
