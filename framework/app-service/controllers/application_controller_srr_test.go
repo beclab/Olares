@@ -79,7 +79,9 @@ func TestReconcileSharedRouteRegistry_WritesRouteObjects(t *testing.T) {
 		t.Fatalf("reconcileSharedRouteRegistry: %v", err)
 	}
 
-	srrName := gateway.ResourceNameForEntrance("a5be2268", "api")
+	// Per-entrance SRR names derive from GetAppID(Spec.Name); the divergent
+	// Spec.Appid above must be ignored, so the object lands here and survives prune.
+	srrName := gateway.ResourceNameForEntrance(gateway.EntranceAppID(app), "api")
 	srr := &srrv1alpha1.SharedRouteRegistry{}
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "ollama-shared", Name: srrName}, srr); err != nil {
 		t.Fatalf("get SRR: %v", err)
@@ -113,6 +115,82 @@ func TestReconcileSharedRouteRegistry_WritesRouteObjects(t *testing.T) {
 	}
 	if len(got.Status.Conditions) == 0 || got.Status.Conditions[0].Reason != routecontrol.ReasonReconciled {
 		t.Fatalf("status conditions: %+v", got.Status.Conditions)
+	}
+}
+
+func TestReconcileSharedRouteRegistry_AppidIgnoredForNaming(t *testing.T) {
+	t.Setenv("OLARES_PLATFORM_DOMAIN", "olares.com")
+
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		t.Fatalf("clientgo scheme: %v", err)
+	}
+	if err := appv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("app scheme: %v", err)
+	}
+	if err := srrv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("srr scheme: %v", err)
+	}
+	httpRouteGVK := schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"}
+	scheme.AddKnownTypeWithName(httpRouteGVK, &unstructured.Unstructured{})
+
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ollama",
+			UID:  types.UID("app-uid"),
+			Labels: map[string]string{
+				constants.AppApiVersionLabel: constants.AppVersionV3,
+			},
+			Annotations: map[string]string{
+				gateway.AnnotationRouteMode: gateway.AnnotationRouteModeGateway,
+			},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "ollama",
+			Namespace: "ollama-shared",
+			Appid:     "deadbeef",
+			SharedEntrances: []appv1alpha1.Entrance{
+				{Name: "api", Host: "ollama", Port: 11434},
+			},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "ollama", Namespace: "ollama-shared"},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{Name: "http", Port: 11434, Protocol: corev1.ProtocolTCP},
+			},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&srrv1alpha1.SharedRouteRegistry{}).
+		WithObjects(app, svc).
+		Build()
+
+	r := &ApplicationReconciler{Client: c, Scheme: scheme}
+	if err := r.reconcileSharedRouteRegistry(context.Background(), app); err != nil {
+		t.Fatalf("reconcileSharedRouteRegistry: %v", err)
+	}
+
+	nameDerived := gateway.ResourceNameForEntrance(gateway.EntranceAppID(app), "api")
+	specAppidName := gateway.ResourceNameForEntrance(app.Spec.Appid, "api")
+	if nameDerived == specAppidName {
+		t.Fatalf("test setup invalid: Spec.Appid must diverge from name-derived appid")
+	}
+
+	got := &srrv1alpha1.SharedRouteRegistry{}
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "ollama-shared", Name: nameDerived}, got); err != nil {
+		t.Fatalf("SRR must exist under name-derived appid and survive prune: %v", err)
+	}
+	if len(got.Status.Conditions) == 0 || got.Status.Conditions[0].Reason != routecontrol.ReasonReconciled {
+		t.Fatalf("status conditions: %+v", got.Status.Conditions)
+	}
+
+	stray := &srrv1alpha1.SharedRouteRegistry{}
+	err := c.Get(context.Background(), types.NamespacedName{Namespace: "ollama-shared", Name: specAppidName}, stray)
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("Spec.Appid-derived SRR must not exist: err=%v", err)
 	}
 }
 
