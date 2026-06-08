@@ -1,6 +1,6 @@
 # Version rules — Olares version, apiVersion, and the chart version fields
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md). This collects the version-related rules that bite when porting: the Olares system version, the porting baseline, the `apiVersion: v3` skill rule, and the several distinct "version" fields a chart carries.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md). This collects the version-related rules that bite when porting: the Olares system version, the porting baseline, the `apiVersion` install-routing axis (v1 per-user vs v3 shared), and the several distinct "version" fields a chart carries.
 
 ## Olares system version
 
@@ -10,28 +10,28 @@ The semver scheme (stable / RC / daily), `.Values.sysVersion`, the `-0` prerelea
 
 **This skill (porting apps) targets Olares >= 1.12.6.** This baseline applies only to porting — other `olares-cli` features have no such floor. The reason: the userspace backends a ported app commonly relies on — `drive/Common` (`appCommon`), archive, and NFS — are gated at `1.12.6`. Check the target before porting (`olares-cli profile list` VERSION column; `--refresh-version` or `settings me version` for a live re-fetch).
 
-## apiVersion: v3 (skill rule)
+## apiVersion: the install-routing axis (v1 per-user vs v3 shared)
 
-`OlaresManifest.yaml` carries a top-level `apiVersion`. The toolchain accepts `v1`, `v2`, or `v3` (empty defaults to `v1`); only unknown values are rejected by `lint`. `from-compose` does **not** write an `apiVersion`, so a freshly scaffolded chart is implicitly `v1`.
+`OlaresManifest.yaml` carries a top-level `apiVersion`. This is an **install-routing** axis, **not** a manifest-format/schema axis (that is `olaresManifest.version`, below). The toolchain accepts `v1`, `v2`, or `v3` (empty defaults to `v1`); only unknown values are rejected by `lint`. `from-compose` does **not** write an `apiVersion`, so a freshly scaffolded chart is implicitly `v1`.
 
-> **Skill rule: set `apiVersion: v3` for every ported app.** Hand-add it after `from-compose` (it is not added or required by `lint` — this is a skill convention, not a CLI lock):
+On Olares >= 1.12.6 the install handler routes purely on `apiVersion`:
+
+| `apiVersion` | Install model | Namespace | Who can install |
+|---|---|---|---|
+| `v1` (default / empty) | per-user | `<app>-<owner>` | any user |
+| `v3` | admin-installed, cluster-wide **shared** | `<app>-shared` | **admin only** (normal-user install is 403'd) |
+
+> **Skill rule: choose `apiVersion` by app shape — do NOT default everything to `v3`.**
 >
-> ```yaml
-> apiVersion: v3
-> olaresManifest.version: '0.8.0'   # independent axis — see below
-> olaresManifest.type: app
-> metadata:
->   name: myapp
->   ...
-> ```
+> - **Per-user app (the common porting case):** leave `apiVersion` at the default (`v1`). The app installs once per user into `<app>-<owner>`. `from-compose` already scaffolds this; nothing to add.
+> - **Deliberate shared backend** (heavy/accelerator, its own multi-tenancy, one shared dataset for everyone): set `apiVersion: v3`. This is admin-only and lands in `<app>-shared`. Full pattern: [olares-chart-shared.md](olares-chart-shared.md).
 
-What `v3` turns on (enforced by the toolchain only when `apiVersion: v3`):
+What `v3` additionally turns on (enforced by the toolchain only when `apiVersion: v3`):
 
-- **Declarative env rules** — an app-local `envName` must not start with `OLARES_USER`; user/system variables are mapped via `valueFrom`. Full env model: [olares-chart-env.md](olares-chart-env.md).
+- **Declarative env rules** — an app-local `envName` must not start with `OLARES_USER`; user/system variables are mapped via `valueFrom`. (`valueFrom` works the same on v1, it is only the prefix ban that is v3-only.) Full env model: [olares-chart-env.md](olares-chart-env.md).
 - **Chart scan** — `lint` rejects templates that inline `OLARES_USER...` env names.
-- **Admin-installed, cluster-wide shared install** — on Olares >= 1.12.6 the install handler routes `apiVersion: v3` to an admin-only install into the deterministic `<app>-shared` namespace, with cross-namespace shared access enabled. So a v3 app is effectively a **shared app**: a normal-user install is rejected. For a deliberate multi-user shared backend (accelerator/heavy, own accounts, shared data), follow [olares-chart-shared.md](olares-chart-shared.md).
 
-`apiVersion` is independent of `olaresManifest.version` — `v3` works with both `0.8.0` and `0.12.0`.
+`apiVersion` is independent of `olaresManifest.version` — both `v1` and `v3` work with `0.8.0` and `0.12.0`.
 
 ## The version fields in a chart (don't confuse them)
 
@@ -39,7 +39,7 @@ A chart carries several "version" fields with different jobs and different rules
 
 | Field | Where | What it is | Rule |
 |---|---|---|---|
-| `apiVersion` | `OlaresManifest.yaml` (top level) | manifest API generation | skill sets `v3` (toolchain allows `v1`/`v2`/`v3`, default `v1`) |
+| `apiVersion` | `OlaresManifest.yaml` (top level) | install-routing axis | `v1` per-user (default) vs `v3` admin-only shared; toolchain allows `v1`/`v2`/`v3`, default `v1` |
 | `olaresManifest.version` | `OlaresManifest.yaml` | manifest **schema** version | `0.8.0` (legacy) vs `0.12.0` (`--new-schema`); install minimum `>= 0.7.2` |
 | `metadata.version` | `OlaresManifest.yaml` | **Chart version** (Market package) | must be semver and **equal `Chart.yaml` `version`** |
 | `version` | `Chart.yaml` | Helm chart version | `== metadata.version` |
@@ -77,5 +77,5 @@ At install, app-service matches the constraint against the running Terminus vers
 
 - The `>= 1.12.6` baseline is a **porting** concern; it does not apply to other `olares-cli` commands.
 - `profile list`'s version is **cached** — use `--refresh-version` (or `settings me version`) if the target was just upgraded.
-- `lint` does **not** enforce `apiVersion: v3` and does **not** validate the `type: system` semver constraint — both are only checked downstream (skill discipline / install time).
+- `lint` does **not** pick `apiVersion` for you (it allows `v1`/`v2`/`v3`, default `v1`) and does **not** validate the `type: system` semver constraint — the per-user-vs-shared choice is yours, and the semver constraint is only checked at install time.
 - Use the `-0` prerelease suffix in system constraints, or daily/RC builds (which carry a prerelease segment) will fail to match an otherwise-satisfied version.

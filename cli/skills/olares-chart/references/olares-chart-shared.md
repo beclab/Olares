@@ -9,6 +9,8 @@ A **shared app** is installed **once by an admin** and serves the whole Olares c
 
 Typical shape: a local model / inference backend (ollama, vLLM, an LLM gateway). Per-user front-ends are **separate "reference" apps** that depend on the shared backend.
 
+> **`apiVersion: v3` is only for this deliberate shared case.** It is admin-only and lands in `<app>-shared`. A normal per-user port stays on the default `apiVersion: v1` (`<app>-<owner>`, any user installs) — do **not** flip a per-user app to v3 (see [versioning.md](olares-chart-versioning.md)).
+
 ## What `apiVersion: v3` means
 
 In Olares >= 1.12.6 the install handler routes purely on `apiVersion`. `apiVersion: v3` ⇒:

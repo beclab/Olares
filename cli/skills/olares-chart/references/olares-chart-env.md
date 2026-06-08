@@ -38,7 +38,7 @@ Each entry under `envs:` supports these fields ([app-env-vars.md](https://docs.o
 
 | Field | Meaning |
 |---|---|
-| `envName` | App-local name; injected as `.Values.olaresEnv.<envName>`. **Must not start with `OLARES_USER`** — this is enforced because the skill sets `apiVersion: v3` (see [olares-chart-versioning.md](olares-chart-versioning.md)). Map user vars via `valueFrom` instead. |
+| `envName` | App-local name; injected as `.Values.olaresEnv.<envName>`. The `OLARES_USER` prefix is reserved for platform user vars — map those via `valueFrom`, not by naming your own env `OLARES_USER...`. This prefix ban is **lint-enforced only on `apiVersion: v3`** (see [olares-chart-versioning.md](olares-chart-versioning.md)); on `v1` it is allowed as a legacy shortcut, but `valueFrom` is the recommended approach either way (it resolves identically on v1 and v3). |
 | `default` | Developer-supplied fallback. Users cannot edit it. Used when no user value and no `valueFrom`. |
 | `valueFrom.envName` | Map to a system/user variable. The entry then **inherits** `type` / `editable` / `regex` / etc. from the referenced var; local `default` / `options` / `type` are ignored. |
 | `required` | `true` → must resolve to a non-empty value for install to proceed (see below). |
