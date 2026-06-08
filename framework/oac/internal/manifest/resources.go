@@ -322,6 +322,17 @@ func ensureNoGPUSection(sectionPath, mode string, rr ResourceRequirement) error 
 	return errors.Join(errs...)
 }
 
+// AutoResourceValue is the sentinel a template-app author writes into a
+// resource field to declare "resolve this value from the rendered chart at
+// install time" (see app-service compute auto-resource resolution). It is not
+// a Kubernetes quantity, so the quantity / limit-ordering validators below
+// treat it as a valid, deferred value rather than rejecting it.
+const AutoResourceValue = "-1"
+
+func isAutoResourceQuantity(s string) bool {
+	return strings.TrimSpace(s) == AutoResourceValue
+}
+
 func validateQuantities(prefix string, rr ResourceRequirement) error {
 	pairs := []struct {
 		field string
@@ -338,7 +349,7 @@ func validateQuantities(prefix string, rr ResourceRequirement) error {
 	}
 	var errs []error
 	for _, p := range pairs {
-		if p.value == "" {
+		if p.value == "" || isAutoResourceQuantity(p.value) {
 			continue
 		}
 		if !k8sQuantity.MatchString(p.value) {
@@ -362,6 +373,11 @@ func checkLimitGERequired(prefix string, rr ResourceRequirement) error {
 	var errs []error
 	for _, d := range dims {
 		if d.required == "" || d.limited == "" {
+			continue
+		}
+		// An auto-compute sentinel on either side is resolved at install time;
+		// the limit >= required ordering cannot be checked yet, so skip it.
+		if isAutoResourceQuantity(d.required) || isAutoResourceQuantity(d.limited) {
 			continue
 		}
 		req, err := resource.ParseQuantity(d.required)
