@@ -43,5 +43,4 @@ olares-cli cluster middleware list -o json --show-passwords
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| 403 | Active profile lacks the middleware view scope | `cluster context --refresh` to confirm role; switch profile if needed |
 | Empty `list` output | No middleware visible to this profile; OR the aggregator is unreachable | `cluster context` to confirm cluster connectivity; LarePass settings for middleware enrollment |

@@ -24,20 +24,7 @@ metadata:
 - Areas: users, appearance, apps (entrances / env / domain / policy), integration (awss3 / tencent), VPN (devices / ACL / SSH), network, GPU, video, search, backup / restore, advanced (containerd registries, env)
 - Mutating: language set, search rebuild, integration add/delete, VPN SSH / ACL, users create/delete
 
-## Routing
-
-| User intent | Use this skill? |
-|---|---|
-| "Change language / theme / appearance" | ✅ yes |
-| "Add a user / delete a user" | ✅ yes |
-| "Edit my app's entrance / domain / policy / env" | ✅ yes (post-install surface) |
-| "Add an S3 / Tencent integration account" | ✅ yes |
-| "Manage VPN devices / ACL / SSH toggle" | ✅ yes |
-| "Browse backup plans / snapshots / restore plans" | ✅ yes |
-| "Install / uninstall / upgrade / start / stop an Olares app" | ❌ use [`olares-market`](../olares-market/SKILL.md) (this is post-install) |
-| "Identify / log in / switch profile" | ❌ use [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (`profile login`) |
-| "Inspect pods / workloads / nodes" | ❌ use [`olares-cluster`](../olares-cluster/SKILL.md) |
-| "Show CPU / memory / disk metrics" | ❌ use [`olares-dashboard`](../olares-dashboard/SKILL.md) |
+> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
 > **Mental model:** `settings` covers configuration that the Olares Settings SPA exposes — **post-install per-app config**, mesh / VPN, backup, accounts, system appearance. Lifecycle and runtime live in sibling skills.
 

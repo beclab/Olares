@@ -24,17 +24,7 @@ metadata:
 - `my Olares apps`, `我的应用`, `market list --mine`, `is <app> installed yet`, chart upload / delete, `--watch` until terminal state
 - Catalog: `list`, `get`, `categories`; runtime: `status`
 
-## Routing
-
-| User intent | Use this skill? |
-|---|---|
-| "Install / upgrade / uninstall an Olares app" | ✅ yes |
-| "What apps do I have?" / "我的应用" | ✅ yes — `market list --mine` |
-| "Is `<app>` installed yet?" / "Wait for `<app>` to be running" | ✅ yes — `market status <app> --watch` |
-| "Upload my custom helm chart" | ✅ yes — `market upload` |
-| "What pods is `<app>` running?" | use [`olares-cluster`](../olares-cluster/SKILL.md) (`cluster application status <ns>`) |
-| "Edit my app's entrance / domain / env / ACL" | use [`olares-settings`](../olares-settings/SKILL.md) (`settings apps`) |
-| "What's eating CPU on my cluster?" | use [`olares-dashboard`](../olares-dashboard/SKILL.md) (`dashboard overview ranking`) |
+> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
 > **Mental model:** `market` is **lifecycle and inventory** at the app-store level (install / upgrade / chart push). For runtime K8s objects, settings, or metrics, route to a sibling.
 

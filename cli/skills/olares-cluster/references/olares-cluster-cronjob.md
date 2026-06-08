@@ -18,7 +18,9 @@ K8s CronJobs (`apis/batch/v1beta1` — different from `cluster job`'s `batch/v1`
 
 ## Safety constraints
 
-- **`suspend` is destructive — confirm with the user.** Suspending stops the CronJob from spawning new Jobs at scheduled times; **already-running Jobs are NOT affected**, only future schedule fires.
+`suspend` follows the parent SKILL.md's Mutating verb safety contract (confirm, `--yes` for scripts, server decides). CronJob-specific points:
+
+- **Suspending only stops future schedule fires** — **already-running Jobs are NOT affected**.
 - **`suspend` is reversible via `resume`** — flag it as "pause schedule" to the user, not "delete".
 - **No-op short-circuit**: if the cronjob is already in the target state, the verb prints a notice and skips the PATCH — saves an API round-trip and a wasted resource-version bump.
 

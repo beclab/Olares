@@ -16,7 +16,7 @@ metadata:
 
 > **Source of truth for flags is always `olares-cli dashboard --help` (global flags) and `olares-cli dashboard <verb> --help` (per-leaf flags).** This file only carries what `--help` cannot give: the dual-shape JSON envelope contract, three-state empty-data semantics, capability gates, watch / window rules, and the verb index.
 
-## Routing
+## When to use
 
 This subtree is an **AI-agent-first JSON mirror of the Olares Dashboard SPA's Overview and Applications routes**. Use it when:
 
@@ -27,14 +27,7 @@ This subtree is an **AI-agent-first JSON mirror of the Olares Dashboard SPA's Ov
 - Errors: `fan is only available on Olares One devices`, `gpu data temporarily unavailable`
 - Empty-data reasons: `no_<feature>_integration`, `no_<feature>_detected`, `vgpu_unavailable`; windows: `--since` vs `--start`/`--end`
 
-Sibling-skill routing:
-
-| User intent | Use instead |
-|---|---|
-| "What pods / workloads / nodes / namespaces exist?" (object inventory) | [`olares-cluster`](../olares-cluster/SKILL.md) |
-| "Install / start / stop an Olares app" | [`olares-market`](../olares-market/SKILL.md) |
-| "Configure my user settings" | [`olares-settings`](../olares-settings/SKILL.md) |
-| "Browse files / drives" | [`olares-files`](../olares-files/SKILL.md) |
+> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
 > **Mental model:** dashboard answers *"what's the resource usage and health"*. For inventory and lifecycle, route elsewhere.
 

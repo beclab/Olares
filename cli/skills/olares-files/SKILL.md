@@ -24,6 +24,8 @@ metadata:
 - Share: internal cross-Olares-ID, public link (password / expiration), SMB / Samba, Connect to Server, Seafile sync repos
 - Namespaces: `drive`, `cache`, `sync`, `external`, `awss3`, `dropbox`, `google`, `tencent`, `share`
 
+> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
+
 ## Core concept: the 3-segment frontend path
 
 Every resource on the per-user files-backend is addressed by:

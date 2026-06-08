@@ -99,6 +99,8 @@ Use this skill to **author/validate your own** Olares chart from a repo, compose
 | "Just install / upgrade an existing catalog app" (not validating your own chart) | [`olares-market`](../olares-market/SKILL.md) |
 | "Inspect pods / logs of an unrelated running app" | [`olares-cluster`](../olares-cluster/SKILL.md) |
 
+> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
+
 ## CLI verbs
 
 The only `olares-cli chart` subcommands (source of truth: `--help`). Everything else above is docker or sibling skills.
