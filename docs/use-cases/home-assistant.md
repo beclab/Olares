@@ -7,7 +7,7 @@ head:
       content: Olares, Home Assistant, Dahua, IP camera, smart home, RTSP, HACS
 app_version: "1.0.16"
 doc_version: "1.0"
-doc_updated: "2026-06-04"
+doc_updated: "2026-06-08"
 ---
 
 # Build your smart home hub with Home Assistant
@@ -60,7 +60,7 @@ To allow Home Assistant to discover and communicate with the camera, you must lo
 1. Download the device discovery tool according to your operating system:
 
    - Windows: Go to the [Dahua Support website](https://support.dahuasecurity.com/en/toolsDownloadDetails?IsDpValue=Q93jdSLr94chjRuQ1y%2FcQQ%3D%3D) and download the **ConfigTool**.
-   - macOS: Open the App Store and install **CCTV Super Tool**. This guide uses **CCTV Super Tool**.
+   - macOS: Open the App Store and install the **CCTV Super Tool**. This guide uses the CCTV Super Tool.
 
 2. Open CCTV Super Tool, and then click **Scan LAN**.
 3. When prompted to allow the application to find devices on your local networks, select **Allow**.
@@ -79,13 +79,13 @@ To allow Home Assistant to discover and communicate with the camera, you must lo
 
 ## Add the camera to Home Assistant
 
-Integrate your camera using either:
+Integrate your camera using one of the following methods:
 - **Generic Camera integration** for a quick, basic video feed.
 - **HACS integration** for deeper device control and advanced features.
 
 ### Method A: Generic Camera (RTSP) integration
 
-The Generic Camera integration uses the camera Real-Time Streaming Protocol (RTSP) stream URL to display video.
+The Generic Camera integration uses the camera's Real-Time Streaming Protocol (RTSP) stream URL to display video.
 
 #### Step 1. Add the Generic Camera integration
 
@@ -103,7 +103,7 @@ The Generic Camera integration uses the camera Real-Time Streaming Protocol (RTS
     - `password`: The camera's web interface login password.
     - `camera_ip`: The camera's IP address.
     - `rtsp_port`: The RTSP port number of the camera (usually `554`).
-    - `subtype=1`: The stream quality subtype. `0` for the main (high-resolution) stream, `1` for the sub (low-resolution) stream.
+    - `subtype=1`: The stream quality subtype. Use `0` for the main (high-resolution) stream, or `1` for the sub (low-resolution) stream.
 
     For example:
 
