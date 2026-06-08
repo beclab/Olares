@@ -174,7 +174,7 @@ Restart Home Assistant for it to detect the newly uploaded `custom_components` f
    ![Add HACS to Home Assistant](/images/manual/use-cases/home-assistant-add-hacs.png#bordered)
 
 4. Read the notices, select all the acknowledgment checkboxes, and then click **Submit**.
-5. In the **Wait for device activation** window, copy the provided authorization key, and then click https://github.com/login/device.
+5. In the **Wait for device activation** window, copy the provided authorization key, and then click the displayed link, such as https://github.com/login/device.
 6. Sign in with your GitHub account.
 7. Paste the authorization key you copied, and then click **Authorize hacs**.
 8. Return to Home Assistant. HACS now appears on the left sidebar and in the **Integrations** list.
