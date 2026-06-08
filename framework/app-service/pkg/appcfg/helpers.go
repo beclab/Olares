@@ -31,11 +31,26 @@ type DefaultThirdLevelDomainConfig struct {
 }
 
 // IsV3 reports whether the given object (Application or
-// ApplicationManager) carries the v3  marker label. The marker is
-// stamped at install time by the v3 install handler and propagated by the
-// Application controller.
+// ApplicationManager) carries the v3 SCHEMA marker label. This does NOT
+// imply the app is shared: a v3 app may be either a shared cluster-wide
+// singleton or a regular per-user app depending on options.shared in the
+// manifest. Use IsShared to gate shared-app behaviors (admin-only lifecycle,
+// cluster-wide visibility, NATS fan-out, etc.).
 func IsV3(o metav1.Object) bool {
 	return appv1alpha1.IsV3(o)
+}
+
+// IsShared reports whether the given object (Application /
+// ApplicationManager / namespace / workload) is a shared cluster-wide app.
+// The marker is stamped at install time by the v3 install handler when
+// ApplicationConfig.Shared is true (apiVersion: v3 + options.shared: true)
+// and propagated by the Application controller. v1 and v3+per-user apps do
+// NOT carry the label.
+func IsShared(o metav1.Object) bool {
+	if o == nil {
+		return false
+	}
+	return o.GetLabels()[constants.AppSharedLabel] == constants.AppSharedTrue
 }
 
 // IsClusterScoped reports whether the given application is cluster scoped,

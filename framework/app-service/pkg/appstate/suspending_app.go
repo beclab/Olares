@@ -92,8 +92,13 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 	if err := p.scaleOrPatchSuspend(ctx, stopServer); err != nil {
 		return err
 	}
+	var appCfg appcfg.ApplicationConfig
+	if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
+		klog.Errorf("unmarshal app config for compute cleanup failed %v", err)
+		return err
+	}
 
-	if stopServer {
+	if stopServer && appCfg.APIVersion == appcfg.V2 {
 		// For V2 cluster-scoped apps, when server is down, stop all other users' clients
 		// because they share the same server and cannot function without it
 		klog.Infof("stopping other users' clients for v2 app %s", p.manager.Spec.AppName)
@@ -150,11 +155,7 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 			return err
 		}
 	}
-	var appCfg appcfg.ApplicationConfig
-	if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
-		klog.Errorf("unmarshal app config for compute cleanup failed %v", err)
-		return err
-	}
+
 	if err := compute.DeleteAllocationsForComputeTarget(ctx, p.client, &appCfg, stopServer); err != nil {
 		klog.Errorf("delete compute allocation for suspended app %s failed %v", p.manager.Spec.AppName, err)
 		return err
