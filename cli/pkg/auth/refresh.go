@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
 // ErrRefreshUnauthorized is returned (wrapped) by Refresh when the server
@@ -32,6 +34,11 @@ type RefreshRequest struct {
 	AccessToken        string // optional, sent verbatim as X-Authorization when set
 	InsecureSkipVerify bool
 	Timeout            time.Duration
+
+	// Location selects the http.Transport resolver for the refresh round-trip
+	// (the `host` position resolves auth.<terminus> via the in-cluster DNS).
+	// Zero value → LocationExternal, preserving the historical public path.
+	Location olares.Location
 }
 
 type refreshBody struct {
@@ -62,7 +69,7 @@ func Refresh(ctx context.Context, req RefreshRequest) (*Token, error) {
 	if req.RefreshToken == "" {
 		return nil, errors.New("RefreshToken is required")
 	}
-	client := newHTTPClient(req.Timeout, req.InsecureSkipVerify)
+	client := newHTTPClient(req.Timeout, req.Location, req.InsecureSkipVerify)
 
 	headers := map[string]string{}
 	if req.AccessToken != "" {
