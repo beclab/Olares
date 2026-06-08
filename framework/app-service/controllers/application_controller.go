@@ -750,10 +750,7 @@ func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context
 		return fmt.Errorf("platformDomain is empty (ClusterConfig missing and env unset)")
 	}
 
-	appid := strings.TrimSpace(app.Spec.Appid)
-	if appid == "" {
-		appid = appcfg.AppName(app.Spec.Name).GetAppID()
-	}
+	appid := gateway.EntranceAppID(app)
 
 	// Track which entrance SRRs should exist after this pass; everything else
 	// owned by the Application gets cleaned up to handle entrance removals.

@@ -48,6 +48,18 @@ func ResourceNameForEntrance(appid, entranceName string) string {
 	return fmt.Sprintf("shared-%s-%s", appid, entranceName)
 }
 
+// EntranceAppID is the single authoritative appid for per-entrance SRR naming
+// and logical host patterns. It is derived from the Application short name;
+// app.Spec.Appid is intentionally not consulted so the SRR writer and the
+// ApplicationController bookkeeping (desired/keep, uniqueness) can never derive
+// a different name from the same Application.
+func EntranceAppID(app *appv1alpha1.Application) string {
+	if app == nil {
+		return ""
+	}
+	return appcfg.AppName(app.Spec.Name).GetAppID()
+}
+
 // IsOptedIn reports whether the Application carries the gateway opt-in
 // annotation. The caller must additionally check appcfg.IsGatewaySharedApp(app)
 // before reconciling a SRR.
@@ -129,7 +141,7 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 	if svc == nil {
 		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("upstream service is nil")
 	}
-	appid := appcfg.AppName(app.Spec.Name).GetAppID()
+	appid := EntranceAppID(app)
 	pattern, err := appcfg.LogicalHostPattern(appid, entranceIndex, len(app.Spec.SharedEntrances), platformDomain)
 	if err != nil {
 		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("compute logical hostPattern: appid=%q index=%d count=%d platformDomain=%q: %w",
@@ -271,7 +283,7 @@ func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1
 	if ns == "" {
 		return nil, errors.New("application has empty spec.namespace")
 	}
-	appid := appcfg.AppName(app.Spec.Name).GetAppID()
+	appid := EntranceAppID(app)
 	name := ResourceNameForEntrance(appid, entrance.Name)
 	if name == "" {
 		return nil, fmt.Errorf("compute SRR name for entrance %q on app %s", entrance.Name, app.Spec.Name)
