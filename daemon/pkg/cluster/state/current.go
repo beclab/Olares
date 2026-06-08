@@ -293,7 +293,8 @@ func CheckCurrentStatus(ctx context.Context) error {
 		currentTerminusState = Uninitialized
 	}
 
-	if utils.IsIpChanged(ctx, CurrentState.TerminusState != NotInstalled) {
+	if utils.IsIpChanged(ctx, CurrentState.TerminusState != NotInstalled) &&
+		CurrentState.TerminusState != IPChanging {
 		currentTerminusState = InvalidIpAddress
 		return nil
 	}
