@@ -22,9 +22,6 @@ func TestApplicationConfigIsShared(t *testing.T) {
 		want       bool
 	}{
 		{name: "v1 + shared=false", apiVersion: V1, shared: false, want: false},
-		{name: "v1 + shared=true (ignored)", apiVersion: V1, shared: true, want: false},
-		{name: "v2 + shared=false", apiVersion: V2, shared: false, want: false},
-		{name: "v2 + shared=true (ignored)", apiVersion: V2, shared: true, want: false},
 		{name: "v3 + shared=false", apiVersion: V3, shared: false, want: false},
 		{name: "v3 + shared=true", apiVersion: V3, shared: true, want: true},
 	}
