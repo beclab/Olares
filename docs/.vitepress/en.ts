@@ -407,6 +407,10 @@ const side = {
                   text: "Set up hosts file",
                   link: "/manual/olares/settings/set-up-hosts",
                 },
+                {
+                  text: "Manage Overlay Gateway",
+                  link: "/manual/olares/settings/overlay-gateway",
+                },
               ],
             },
             { 
