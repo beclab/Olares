@@ -290,7 +290,7 @@ func fanOutSharedApps(rawAppsMap map[string][]*appv1alpha1.Application,
 	v3Apps := make(map[string]*appv1alpha1.Application)
 	for _, apps := range rawAppsMap {
 		for _, app := range apps {
-			if isV3App(app) {
+			if isSharedApp(app) {
 				if _, ok := v3Apps[app.Spec.Name]; !ok {
 					v3Apps[app.Spec.Name] = app
 				}
@@ -328,11 +328,8 @@ func fanOutSharedApps(rawAppsMap map[string][]*appv1alpha1.Application,
 	return rawAppsMap
 }
 
-// isV3App reports whether the Application is a v3 app, based on
-// the AppApiVersionLabel that the v3 install handler / Application controller
-// stamp on it.
-func isV3App(app *appv1alpha1.Application) bool {
-	return appv1alpha1.IsV3(app)
+func isSharedApp(app *appv1alpha1.Application) bool {
+	return appv1alpha1.IsShared(app)
 }
 
 // fileserverGlobalData holds pod/node data shared across all users within a
@@ -448,7 +445,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 		// per-user grouping by AppInfo.Owner keeps working. Non-v3
 		// keeps the original install-owner.
 		owner := app.Spec.Owner
-		if isV3App(app) {
+		if isSharedApp(app) {
 			owner = username
 		}
 
@@ -461,7 +458,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			Entrances: entrances,
 			Ports:     ports,
 			Settings:  settings,
-			IsShared:  isV3App(app),
+			IsShared:  isSharedApp(app),
 		})
 	}
 	return result
@@ -708,7 +705,7 @@ func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha
 		// the app gets their own customDomain bucket. For v1/v2 keep
 		// the legacy behaviour: customDomain is keyed by install-owner.
 		owner := app.Spec.Owner
-		if isV3App(app) {
+		if isSharedApp(app) {
 			owner = username
 		}
 		customDomainEntrancesMap := getSettingsKeyMap(app, username, settingsCustomDomain)
