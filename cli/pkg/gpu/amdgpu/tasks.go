@@ -3,9 +3,11 @@ package amdgpu
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -279,9 +281,18 @@ func (t *CheckAmdGpuStatus) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("kubectl not found")
 	}
 
+	// in a multi-node cluster there is one amdgpu-device-plugin pod per GPU node,
+	// so we must only check the pod scheduled on the current node.
+	nodeName, err := os.Hostname()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "get hostname error")
+	}
+	nodeName = strings.ToLower(nodeName)
+
 	// Check AMD device plugin pod status using the label from amdgpu-device-plugin.yaml
 	selector := "name=amdgpu-dp-ds"
-	cmd := fmt.Sprintf("%s get pod -n kube-system -l '%s' -o jsonpath='{.items[*].status.phase}'", kubectlpath, selector)
+	fieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
+	cmd := fmt.Sprintf("%s get pod -n kube-system -l '%s' --field-selector '%s' -o jsonpath='{.items[*].status.phase}'", kubectlpath, selector, fieldSelector)
 
 	rphase, _ := runtime.GetRunner().SudoCmd(cmd, false, false)
 	if rphase == "Running" {
