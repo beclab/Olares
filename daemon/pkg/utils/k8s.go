@@ -655,7 +655,7 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 				continue
 			}
 
-			sharedApp := appv1alpha1.IsV3(app)
+			sharedApp := appv1alpha1.IsShared(app)
 			if !sharedApp {
 				if user != "" && app.Spec.Owner != user {
 					continue
