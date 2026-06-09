@@ -54,10 +54,9 @@ func TestLint_AllowMultipleInstall_FixedWorkloadName_Bad(t *testing.T) {
 }
 
 // TestReleaseNameWorkloadCheckApplies pins the gate to its current
-// definition: the release-name workload rule fires whenever
-// options.allowMultipleInstall is true, regardless of apiVersion. The
-// flag (not the schema version) is what enables multiple coexisting
-// installs and therefore demands a release-scoped primary workload.
+// definition: the release-name workload rule fires when
+// options.allowMultipleInstall is true on v1/v3 manifests. v2 is skipped
+// because workloads are rendered from spec.subCharts[], not the parent path.
 func TestReleaseNameWorkloadCheckApplies(t *testing.T) {
 	cases := []struct {
 		api   string
@@ -66,7 +65,7 @@ func TestReleaseNameWorkloadCheckApplies(t *testing.T) {
 	}{
 		{"v1", true, true},
 		{"v3", true, true},
-		{"v2", true, true},
+		{"v2", true, false},
 		{"", true, true},
 		{"v1", false, false},
 		{"v2", false, false},

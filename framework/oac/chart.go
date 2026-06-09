@@ -38,8 +38,8 @@ import (
 //     turn off with SkipResourceNamespaceCheck()
 //     7b. allowMultipleInstall cluster-scoped fixed-name check (v1/v3 only;
 //     skipped for v2) - ALWAYS run when options.allowMultipleInstall is true
-//     7c. allowMultipleInstall release-name workload check - ALWAYS run
-//     when options.allowMultipleInstall is true (any apiVersion);
+//     7c. allowMultipleInstall release-name workload check (v1/v3 only;
+//     skipped for v2) - ALWAYS run when options.allowMultipleInstall is true;
 //     requires at least one Deployment/StatefulSet whose metadata.name
 //     is templated on `{{ .Release.Name }}`
 //  8. Container-level resource limits check - skipped by SkipResourceCheck
@@ -551,12 +551,15 @@ func allowClusterScopedCheckApplies(cfg *manifest.AppConfiguration) bool {
 
 // releaseNameWorkloadCheckApplies reports whether the chart must declare at
 // least one Deployment/StatefulSet whose metadata.name is templated on
-// `{{ .Release.Name }}`. The rule fires whenever
-// options.allowMultipleInstall is true, regardless of apiVersion: that's
-// the flag that allows several installs to coexist, and without a
-// release-scoped workload name those installs would collide.
+// `{{ .Release.Name }}`. The rule fires when options.allowMultipleInstall is
+// true on v1/v3 manifests. v2 is excluded: workloads live in spec.subCharts[]
+// and are rendered per subchart, so a parent-path dry-run cannot inspect them.
 func releaseNameWorkloadCheckApplies(cfg *manifest.AppConfiguration) bool {
-	return cfg.Options.AllowMultipleInstall
+	if !cfg.Options.AllowMultipleInstall {
+		return false
+	}
+	api := strings.ToLower(strings.TrimSpace(cfg.APIVersion))
+	return api != manifest.APIVersionV2
 }
 
 // checkAllowMultipleInstall helm-renders the chart twice with synthetic
