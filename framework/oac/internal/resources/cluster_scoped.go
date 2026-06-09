@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"helm.sh/helm/v3/pkg/kube"
 )
@@ -26,20 +27,27 @@ func ClusterScopedProbeNames() (a, b string) {
 // CheckClusterScopedFixedNames compares two helm dry-run outputs rendered with
 // different release names. Any cluster-scoped resource (empty namespace) whose
 // kind+name is identical in both lists is treated as having a fixed name.
+//
+// All offenders are reported in a single multi-line error: one summary line
+// carrying the remediation hint, followed by one bullet line per (kind, name)
+// violation. Embedding explicit "\n" separators (instead of relying on
+// errors.Join's invisible newlines) keeps the offenders visually separated
+// even when a downstream logger or terminal collapses whitespace, and avoids
+// repeating the long remediation hint once per violation.
 func CheckClusterScopedFixedNames(listA, listB kube.ResourceList) error {
 	fixed := intersectClusterScopedKeys(listA, listB)
 	if len(fixed) == 0 {
 		return nil
 	}
-	var errs []error
+	var b strings.Builder
+	fmt.Fprintf(&b,
+		"the following cluster-scoped resource(s) have a fixed metadata.name; use a release-unique name such as {{ .Release.Name }} when app is v1 or v3 with options.allowMultipleInstall is true\n",
+	)
 	for _, key := range fixed {
 		kind, name := splitClusterScopedKey(key)
-		errs = append(errs, fmt.Errorf(
-			"cluster-scoped %s %q has a fixed name (unchanged across release names %q and %q); use a release-unique name such as {{ .Release.Name }} when app is v1 or v3 with options.allowMultipleInstall is true",
-			kind, name, clusterScopedProbeA, clusterScopedProbeB,
-		))
+		fmt.Fprintf(&b, "\n  - %s %q", kind, name)
 	}
-	return errors.Join(errs...)
+	return errors.New(b.String())
 }
 
 func clusterScopedKeys(list kube.ResourceList) map[string]struct{} {

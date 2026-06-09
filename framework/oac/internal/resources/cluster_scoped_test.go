@@ -37,8 +37,13 @@ func TestCheckClusterScopedFixedNames_FixedName(t *testing.T) {
 	if !strings.Contains(err.Error(), fixed) {
 		t.Fatalf("error should mention %q, got: %v", fixed, err)
 	}
-	if !strings.Contains(err.Error(), clusterScopedProbeA) {
-		t.Fatalf("error should mention probe release %q, got: %v", clusterScopedProbeA, err)
+	// The user-facing remediation hint replaces the older "probe release"
+	// wording: the synthetic probe names (clusterScopedProbeA/B) are an
+	// implementation detail of the two-render comparison, so the error now
+	// points authors directly at the fix -- name resources after
+	// {{ .Release.Name }}.
+	if !strings.Contains(err.Error(), "{{ .Release.Name }}") {
+		t.Fatalf("error should mention the {{ .Release.Name }} remediation hint, got: %v", err)
 	}
 }
 

@@ -65,6 +65,42 @@ func CheckWorkloadReplicas(list kube.ResourceList, replicas map[string]int32) er
 	return errors.Join(errs...)
 }
 
+// CheckReleaseNameWorkload reports whether at least one Deployment or
+// StatefulSet in the rendered chart has its metadata.name templated as
+// `{{ .Release.Name }}`. listA and listB must be two helm dry-runs of the
+// same chart rendered with distinct release names probeA and probeB; a
+// workload whose name is templated on the release name shows up as probeA
+// in listA and probeB in listB simultaneously, while any workload with a
+// fixed name (or with a name that mixes the release name with other tokens,
+// e.g. `{{ .Release.Name }}-web`) won't satisfy both predicates at once.
+//
+// The check exists to back the options.allowMultipleInstall=true safety
+// rule: multiple installs of the same chart need at least one
+// release-scoped primary workload so that namespaced resources do not
+// collide between installs. Callers should only invoke this function when
+// that flag is true; the gate lives in the OAC package.
+func CheckReleaseNameWorkload(listA, listB kube.ResourceList, probeA, probeB string) error {
+	if hasReleaseNamedWorkload(listA, probeA) && hasReleaseNamedWorkload(listB, probeB) {
+		return nil
+	}
+	return fmt.Errorf(
+		"options.allowMultipleInstall=true requires at least one Deployment or StatefulSet whose metadata.name is set to {{ .Release.Name }}; without it multiple installs of this chart would collide on workload names",
+	)
+}
+
+// hasReleaseNamedWorkload reports whether list contains a Deployment or
+// StatefulSet whose metadata.name equals name. It is the per-render half of
+// CheckReleaseNameWorkload's two-render comparison.
+func hasReleaseNamedWorkload(list kube.ResourceList, name string) bool {
+	for _, r := range list {
+		kind := r.Object.GetObjectKind().GroupVersionKind().Kind
+		if (kind == KindDeployment || kind == KindStatefulSet) && r.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // CheckOverlayGatewayWorkloads verifies that every overlayGateway entrance
 // references a workload that exists as a rendered Deployment or StatefulSet.
 // Like CheckWorkloadReplicas it relies on the release-name == app-name render

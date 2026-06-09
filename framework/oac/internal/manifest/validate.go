@@ -104,7 +104,7 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 			validation.Required.Error("spec is required"),
 			validation.By(validateAppSpecFor(c)),
 		),
-		validation.Field(&c.Options, validation.By(validateOptions)),
+		validation.Field(&c.Options, validation.By(validateOptionsFor(c))),
 		validation.Field(&c.OverlayGateway, validation.By(validateOverlayGateway)),
 	)
 	return errors.Join(structErr, checkSubCharts(c), validatePermission(c.ConfigVersion, c.Permission), validateV3Configuration(c))
@@ -468,18 +468,56 @@ func validateOverlayGateway(v interface{}) error {
 	return errors.Join(errs...)
 }
 
-func validateOptions(v interface{}) error {
-	o, ok := v.(Options)
-	if !ok {
-		return fmt.Errorf("options: unexpected type %T", v)
+// validateOptionsFor binds the manifest's apiVersion so options-level
+// cross-field checks (templateOnly => allowMultipleInstall, shared => v3)
+// can reach it. ozzo's validation.By only sees the Options value, so the
+// outer AppConfiguration must be captured here in a closure.
+func validateOptionsFor(cfg *AppConfiguration) validation.RuleFunc {
+	return func(v interface{}) error {
+		o, ok := v.(Options)
+		if !ok {
+			return fmt.Errorf("options: unexpected type %T", v)
+		}
+		return validateOptions(cfg.APIVersion, o)
 	}
-	return validation.ValidateStruct(&o,
+}
+
+// validateOptions runs the options-level validation. It is parameterised on
+// apiVersion because two cross-field rules depend on it:
+//
+//   - options.templateOnly=true requires options.allowMultipleInstall=true.
+//     Template-only apps are installed as multiple clones from a single
+//     template chart; without allowMultipleInstall the platform would only
+//     ever install a single instance, defeating the purpose of the flag.
+//   - options.shared=true is only meaningful on apiVersion=v3. v3 is the
+//     only schema where a single install services multiple users, so a
+//     shared install on v1/v2 would be silently ignored at install time
+//     and is rejected here to avoid the foot-gun.
+//
+// Both cross-field errors are aggregated alongside the existing per-field
+// struct validation so a manifest that violates more than one rule sees
+// every offender in a single Lint run.
+func validateOptions(apiVersion string, o Options) error {
+	structErr := validation.ValidateStruct(&o,
 		validation.Field(&o.Policies, validation.Each(validation.By(validatePolicyValue))),
 		validation.Field(&o.ResetCookie),
 		validation.Field(&o.Dependencies, validation.Each(validation.By(validateDependencyValue))),
 		validation.Field(&o.AppScope),
 		validation.Field(&o.WsConfig),
 	)
+	var crossErrs []error
+	if o.TemplateOnly && !o.AllowMultipleInstall {
+		crossErrs = append(crossErrs, fmt.Errorf(
+			"options.allowMultipleInstall must be true when options.templateOnly is true; template-only apps are installed as multiple clones",
+		))
+	}
+	if o.Shared && normalizeAPIVersion(apiVersion) != APIVersionV3 {
+		crossErrs = append(crossErrs, fmt.Errorf(
+			"options.shared=true is only supported for apiVersion=v3 (got %q)",
+			apiVersion,
+		))
+	}
+	return errors.Join(structErr, errors.Join(crossErrs...))
 }
 
 func validatePolicyValue(v interface{}) error {
