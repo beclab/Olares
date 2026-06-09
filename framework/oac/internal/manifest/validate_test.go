@@ -1152,3 +1152,91 @@ func TestOverlayGateway_RequiredAndPortRules(t *testing.T) {
 		})
 	}
 }
+
+// TestOptions_TemplateOnlyRequiresAllowMultipleInstall pins down the
+// templateOnly => allowMultipleInstall=true cross-field rule on Options:
+// templateOnly apps install as multiple clones, so allowMultipleInstall is
+// mandatory. The default zero value (false) must surface the error, the
+// explicit-false case must too, and pairing templateOnly with
+// allowMultipleInstall=true must validate cleanly.
+func TestOptions_TemplateOnlyRequiresAllowMultipleInstall(t *testing.T) {
+	c := newValidConfig()
+	c.Options.TemplateOnly = true
+	err := ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("expected error: options.templateOnly=true requires allowMultipleInstall=true")
+	}
+	if !strings.Contains(err.Error(), "options.allowMultipleInstall must be true when options.templateOnly is true") {
+		t.Fatalf("error should flag the templateOnly cross-field rule, got: %v", err)
+	}
+
+	c = newValidConfig()
+	c.Options.TemplateOnly = true
+	c.Options.AllowMultipleInstall = false
+	if err := ValidateAppConfiguration(c); err == nil {
+		t.Fatal("expected error: explicit allowMultipleInstall=false still violates the rule")
+	}
+
+	c = newValidConfig()
+	c.Options.TemplateOnly = true
+	c.Options.AllowMultipleInstall = true
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("templateOnly=true + allowMultipleInstall=true must pass: %v", err)
+	}
+
+	// allowMultipleInstall=true on its own is fine; the rule only fires
+	// when templateOnly is true. Keeps backward compatibility for charts
+	// that already opt into multi-install without being template-only.
+	c = newValidConfig()
+	c.Options.AllowMultipleInstall = true
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("allowMultipleInstall=true alone must remain valid: %v", err)
+	}
+}
+
+// TestOptions_SharedRequiresAPIVersionV3 pins down the shared => v3
+// cross-field rule on Options: shared installs only make sense on the v3
+// schema (a single install services multiple users). v1/v2/empty must
+// reject; v3 must accept. The control case (shared=false on v1) confirms
+// the rule does not fire for the default shape.
+func TestOptions_SharedRequiresAPIVersionV3(t *testing.T) {
+	cases := []struct {
+		name       string
+		apiVersion string
+		shared     bool
+		wantErr    bool
+	}{
+		{"v1 + shared=true rejected", APIVersionV1, true, true},
+		{"v2 + shared=true rejected", APIVersionV2, true, true},
+		{"empty + shared=true rejected", "", true, true},
+		{"v3 + shared=true accepted", APIVersionV3, true, false},
+		{"v1 + shared=false accepted", APIVersionV1, false, false},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c := newValidConfig()
+			c.APIVersion = tc.apiVersion
+			c.Options.Shared = tc.shared
+			// v2 needs a shared subchart to satisfy checkSubCharts, otherwise the
+			// test would fail for an unrelated reason. Keep the focus on the
+			// options.shared cross-field rule.
+			if tc.apiVersion == APIVersionV2 {
+				c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
+			}
+			err := ValidateAppConfiguration(c)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for %s", tc.name)
+				}
+				if !strings.Contains(err.Error(), "options.shared=true is only supported for apiVersion=v3") {
+					t.Fatalf("error should flag the shared cross-field rule, got: %v", err)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error for %s: %v", tc.name, err)
+				}
+			}
+		})
+	}
+}
