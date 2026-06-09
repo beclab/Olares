@@ -64,15 +64,15 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   collapsed: true,
                   items: [
                     {
-                      text: "Integrate with Google Workspace",
+                      text: "集成 Google Workspace",
                       link: "/zh/use-cases/nemoclaw-google-workspace",
                     },
                     {
-                      text: "Manage Olares with Olares CLI",
+                      text: "使用 Olares CLI 管理 Olares",
                       link: "/zh/use-cases/nemoclaw-olares-cli",
                     },
                     {
-                      text: "Common issues",
+                      text: "常见问题",
                       link: "/zh/use-cases/nemoclaw-common-issues",
                     },
                   ]
