@@ -668,7 +668,7 @@ func translateVirtualHost(vhIR *ir.VirtualHostIR) *routev3.VirtualHost {
 	// which is invalid per the Fetch spec.
 	vh.ResponseHeadersToAdd = append(vh.ResponseHeadersToAdd,
 		&corev3.HeaderValueOption{
-			Header:       &corev3.HeaderValue{Key: "access-control-allow-headers", Value: "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization"},
+			Header:       &corev3.HeaderValue{Key: "access-control-allow-headers", Value: "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"},
 			AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
 		},
 		&corev3.HeaderValueOption{

@@ -11,6 +11,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
@@ -28,6 +29,7 @@ import (
 	"github.com/emicklei/go-restful/v3"
 	"helm.sh/helm/v3/pkg/time"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
@@ -46,6 +48,7 @@ type installHelperIntf interface {
 	lintChart() error
 	setAppEnv(overrides []sysv1alpha1.AppEnvVar) error
 	applyAppEnv(ctx context.Context) error
+	resolveAutoResources(ctx context.Context) error
 	applyApplicationManager(marketSource string) (opID string, err error)
 }
 
@@ -319,6 +322,20 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 	err = helper.applyAppEnv(req.Request.Context())
 	if err != nil {
 		klog.Errorf("Failed to apply app env err=%v", err)
+		return
+	}
+
+	// For template apps that declare auto-compute ("-1") resource fields, the
+	// concrete demand is only known once the chosen mode + just-applied appenv
+	// are rendered into the chart. Resolve it now — before the
+	// ApplicationManager is created — so the persisted application config
+	// already carries concrete resource requirements and the entire downstream
+	// pipeline (state machine, compute allocation, HAMI binding, resume) runs
+	// the normal flow against real values.
+	err = helper.resolveAutoResources(req.Request.Context())
+	if err != nil {
+		klog.Errorf("Failed to resolve auto compute resources err=%v", err)
+		api.HandleError(resp, req, err)
 		return
 	}
 
@@ -791,6 +808,98 @@ func (h *installHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 		api.HandleError(h.resp, h.req, err)
 	}
 	return
+}
+
+// resolveAutoResources resolves any auto-compute ("-1") resource field the app
+// declares in its accelerator/resources matrix. It renders the chart once with
+// the selected mode and the just-applied appenv (a side-effect-free dry-run),
+// sums the workload container resource requests/limits, and rewrites the
+// selected mode's sentinel fields with the concrete values. It then re-derives
+// appConfig.Requirement so every downstream consumer sees a single resolved
+// requirement.
+//
+// It is a no-op for apps that declare no sentinel, so it is safe to call
+// unconditionally on the install / clone path.
+func (h *installHandlerHelper) resolveAutoResources(ctx context.Context) (err error) {
+	if h.appConfig == nil || !h.appConfig.HasAutoResource() {
+		return nil
+	}
+	if h.chartPath == "" {
+		return fmt.Errorf("cannot resolve auto compute resources: chart path is empty")
+	}
+
+	values, err := appinstaller.BuildBaseHelmValues(ctx, h.h.kubeConfig, h.appConfig, h.appConfig.OwnerName, true)
+	if err != nil {
+		return fmt.Errorf("build helm values for auto resource resolution: %w", err)
+	}
+	totals, err := utils.GetWorkloadResourcesFromChart(h.chartPath, values)
+	if err != nil {
+		return fmt.Errorf("sum workload resources for auto resource resolution: %w", err)
+	}
+
+	backfillAutoResourceMode(h.appConfig, totals)
+
+	resolved, err := h.appConfig.ResolveRequirement(h.appConfig.SelectedGpuType)
+	if err != nil {
+		return fmt.Errorf("resolve requirement after auto resource backfill: %w", err)
+	}
+	h.appConfig.Requirement = *resolved
+	return nil
+}
+
+// backfillAutoResourceMode replaces the auto-compute ("-1") fields of the
+// selected resource mode (or every mode when no specific GPU type is selected)
+// with the concrete totals summed from the rendered chart. Non-sentinel fields
+// are left untouched so manifest-declared values still win.
+func backfillAutoResourceMode(appConfig *appcfg.ApplicationConfig, totals utils.WorkloadResourceTotals) {
+	// GPU memory is conventionally declared only as a limit; fall back across
+	// requests/limits so a sentinel on either side resolves to a usable value.
+	gpuReq := totals.RequestsGPUMem
+	if gpuReq.IsZero() {
+		gpuReq = totals.LimitsGPUMem
+	}
+	gpuLim := totals.LimitsGPUMem
+	if gpuLim.IsZero() {
+		gpuLim = totals.RequestsGPUMem
+	}
+
+	for i := range appConfig.Accelerator {
+		mode := &appConfig.Accelerator[i]
+		if appConfig.SelectedGpuType != "" && mode.Mode != appConfig.SelectedGpuType {
+			continue
+		}
+		rr := &mode.ResourceRequirement
+		if appcfg.IsAutoResource(rr.RequiredCPU) {
+			rr.RequiredCPU = totals.RequestsCPU.String()
+		}
+		if appcfg.IsAutoResource(rr.LimitedCPU) {
+			rr.LimitedCPU = totals.LimitsCPU.String()
+		}
+		if appcfg.IsAutoResource(rr.RequiredMemory) {
+			rr.RequiredMemory = totals.RequestsMemory.String()
+		}
+		if appcfg.IsAutoResource(rr.LimitedMemory) {
+			rr.LimitedMemory = totals.LimitsMemory.String()
+		}
+		if appcfg.IsAutoResource(rr.RequiredGPU) {
+			rr.RequiredGPU = gpuMemMiBToByteString(gpuReq)
+		}
+		if appcfg.IsAutoResource(rr.LimitedGPU) {
+			rr.LimitedGPU = gpuMemMiBToByteString(gpuLim)
+		}
+	}
+}
+
+// gpuMemMiBToByteString converts a summed pod nvidia.com/gpumem quantity (a
+// plain integer count in MiB, the HAMi convention for the extended resource)
+// into a byte-quantity string suitable for the resource mode's
+// requiredGPUMemory/limitedGPUMemory fields, which the compute scheduler and
+// the gpu-inject webhook interpret as bytes. e.g. 8000 (MiB) -> "8000Mi".
+func gpuMemMiBToByteString(mib apiresource.Quantity) string {
+	if mib.IsZero() {
+		return mib.String()
+	}
+	return apiresource.NewQuantity(mib.Value()*1024*1024, apiresource.BinarySI).String()
 }
 
 func (h *installHandlerHelperV2) setAppConfig(req *api.InstallRequest, appName string) {

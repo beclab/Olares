@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vishvananda/netlink"
 	"k8s.io/klog/v2"
 )
 
@@ -840,4 +841,31 @@ func FindBridgeConnection(ctx context.Context) (*BridgeConnection, error) {
 	}
 
 	return nil, nil
+}
+
+func ListenNetworkCarrierChanges(ctx context.Context, downCallback func()) error {
+	updates := make(chan netlink.LinkUpdate)
+
+	if err := netlink.LinkSubscribe(updates, ctx.Done()); err != nil {
+		klog.Error("subscribe network changes error, ", err)
+		return err
+	}
+
+	for {
+		select {
+		case update := <-updates:
+			if update.Attrs().Name == bridgeConnectionName {
+				isLowerUp := (update.Flags & 0x10000) != 0
+				isUp := (update.Flags & 1) != 0
+
+				if !isLowerUp || !isUp {
+					klog.Infof("network change detected: %s, state: %s", update.Attrs().Name, update.Link.Attrs().OperState.String())
+					downCallback()
+				}
+			}
+		case <-ctx.Done():
+			klog.Info("stop listening network changes")
+			return nil
+		}
+	}
 }

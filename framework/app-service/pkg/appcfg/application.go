@@ -348,6 +348,14 @@ func ParseResourceRequirement(req *ResourceRequirement) (AppRequirement, error) 
 		if s == "" {
 			return nil, nil
 		}
+		// The auto-compute sentinel means "to be resolved from the rendered
+		// chart at install time". Treat it as unset here so it never becomes a
+		// negative quantity that would corrupt capacity comparisons; the
+		// install handler backfills the concrete value before this requirement
+		// is persisted / scheduled against.
+		if IsAutoResource(s) {
+			return nil, nil
+		}
 		q, err := resource.ParseQuantity(s)
 		if err != nil {
 			if errors.Is(err, resource.ErrFormatWrong) {
