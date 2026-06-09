@@ -12,7 +12,7 @@ doc_updated: "2026-06-09"
 
 # 与 Discord 集成
 
-将智能体连接到 Discord 机器人，实现远程对话。
+将 OpenClaw 智能体连接到 Discord 机器人，实现远程对话。
 
 ## 学习目标
 
