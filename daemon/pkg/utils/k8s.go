@@ -877,5 +877,5 @@ func isPodReady(pod *corev1.Pod) bool {
 			return false
 		}
 	}
-	return false
+	return true
 }
