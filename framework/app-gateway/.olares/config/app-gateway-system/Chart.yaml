@@ -1,0 +1,17 @@
+apiVersion: v2
+name: app-gateway-system
+description: Olares app-gateway system umbrella chart
+type: application
+version: 0.0.1
+appVersion: "0.0.1"
+maintainers:
+  - name: bytetrade.io
+dependencies:
+  - name: linkerd-control-plane
+    alias: linkerd
+    version: "2026.5.1"
+    repository: file://./charts/linkerd-control-plane-chart
+  - name: gateway-helm
+    alias: envoy-gateway
+    version: "v1.8.0"
+    repository: file://./charts/envoy-gateway-helm

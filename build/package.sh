@@ -78,8 +78,11 @@ run_cmd "cp -rf framework/bfl/.olares/config/launcher ${DIST}/wizard/config/"
 echo "packaging gpu ..."
 run_cmd "cp -rf infrastructure/gpu/.olares/config/gpu ${DIST}/wizard/config/"
 
-echo "packaging app-gateway vendor ..."
-run_cmd "cp -rf framework/app-gateway/.olares/config/app-gateway-vendor ${DIST}/wizard/config/"
+echo "assembling app-gateway-system chart ..."
+run_cmd "bash build/assemble-app-gateway-system.sh"
+
+echo "packaging app-gateway system ..."
+run_cmd "cp -rf framework/app-gateway/.olares/config/app-gateway-system ${DIST}/wizard/config/"
 
 echo "packaging env config ..."
 run_cmd "cp -rf build/system-env.yaml ${DIST}/system-env.yaml"

@@ -75,9 +75,27 @@ func TestValidateVendorDir_linkerdVersionMismatch(t *testing.T) {
 
 func TestValidateInstallerBundle_missingChart(t *testing.T) {
 	dir := t.TempDir()
-	vendor := filepath.Join(dir, "wizard", "config", "app-gateway-vendor")
-	populateVendor(t, vendor)
+	systemDir := filepath.Join(dir, "wizard", "config", AppGatewaySystemChartName)
+	if err := os.MkdirAll(systemDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := ValidateInstallerBundle(dir); err == nil {
-		t.Fatal("expected error when app-gateway chart missing")
+		t.Fatal("expected error when app-gateway-system assets are incomplete")
+	}
+}
+
+func TestValidateInstallerBundle_ok(t *testing.T) {
+	dir := t.TempDir()
+	systemDir := filepath.Join(dir, "wizard", "config", AppGatewaySystemChartName)
+	writeChart(t, systemDir, "0.0.1")
+	if err := os.MkdirAll(filepath.Join(systemDir, "charts"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(systemDir, "crds"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ValidateInstallerBundle(dir); err != nil {
+		t.Fatal(err)
 	}
 }

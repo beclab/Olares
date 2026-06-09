@@ -1,0 +1,12 @@
+{{- if .Values.namespaceCreate }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "app-gateway.namespace" . }}
+  labels:
+    app.kubernetes.io/name: app-gateway
+    applications.app.bytetrade.io/author: bytetrade.io
+  annotations:
+    # Do not set linkerd.io/inject on the namespace: EG data plane opts in via EnvoyProxy pod template.
+    bytetrade.io/ns-type: platform
+{{- end }}

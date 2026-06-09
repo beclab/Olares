@@ -114,13 +114,36 @@ func readHelmChartVersion(chartDir string) (string, error) {
 
 // ValidateInstallerBundle checks paths inside an Olares installer dist (wizard/config/...).
 func ValidateInstallerBundle(installerDir string) error {
-	vendor := filepath.Join(installerDir, "wizard", "config", "app-gateway-vendor")
-	if err := ValidateVendorDir(vendor); err != nil {
+	systemDir := filepath.Join(installerDir, "wizard", "config", AppGatewaySystemChartName)
+	if err := ValidateAppGatewaySystemDir(systemDir); err != nil {
 		return fmt.Errorf("installer incomplete for unified ingress: %w", err)
 	}
-	chart := filepath.Join(installerDir, "wizard", "config", "apps", "app-gateway", "Chart.yaml")
-	if _, err := os.Stat(chart); err != nil {
-		return fmt.Errorf("installer missing app-gateway Helm chart at %s (use a complete Olares release package)", chart)
+	return nil
+}
+
+// ValidateAppGatewaySystemDir ensures app-gateway-system chart assets are present in installer bundle.
+func ValidateAppGatewaySystemDir(systemDir string) error {
+	chartFile := filepath.Join(systemDir, "Chart.yaml")
+	if _, err := os.Stat(chartFile); err != nil {
+		return fmt.Errorf("missing app-gateway-system chart file: %s", chartFile)
+	}
+	if _, err := readHelmChartVersion(systemDir); err != nil {
+		return fmt.Errorf("invalid app-gateway-system chart metadata at %s: %w", chartFile, err)
+	}
+
+	requiredDirs := []string{
+		"charts",
+		"crds",
+	}
+	for _, rel := range requiredDirs {
+		p := filepath.Join(systemDir, rel)
+		st, err := os.Stat(p)
+		if err != nil {
+			return fmt.Errorf("missing app-gateway-system asset directory: %s", p)
+		}
+		if !st.IsDir() {
+			return fmt.Errorf("app-gateway-system asset is not a directory: %s", p)
+		}
 	}
 	return nil
 }
