@@ -148,7 +148,12 @@ func IsTerminusRunning(ctx context.Context, client kubernetes.Interface) (bool, 
 	for _, pod := range pods.Items {
 		if isKeyPod(&pod) {
 			switch pod.Status.Phase {
-			case corev1.PodRunning, corev1.PodSucceeded:
+			case corev1.PodRunning:
+				if !isPodReady(&pod) {
+					return false, nil
+				}
+				continue
+			case corev1.PodSucceeded:
 				continue
 			default:
 				return false, nil
@@ -832,4 +837,45 @@ func GetUserRole(ctx context.Context, username string, client dynamic.Interface)
 	}
 
 	return role, nil
+}
+
+func isPodReady(pod *corev1.Pod) bool {
+	hasReadyCondition := false
+	for _, cond := range pod.Status.Conditions {
+		// K8s 1.28+
+		if cond.Type == "PodReadyToStartContainers" && cond.Status != corev1.ConditionTrue {
+			return false
+		}
+		if cond.Type == corev1.PodReady {
+			if cond.Status == corev1.ConditionTrue {
+				hasReadyCondition = true
+			}
+		}
+	}
+
+	if !hasReadyCondition {
+		return false
+	}
+
+	if len(pod.Status.ContainerStatuses) == 0 {
+		return false
+	}
+
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Running == nil {
+			if containerStatus.State.Waiting != nil {
+				return false
+			}
+			return false
+		}
+
+		if !containerStatus.Ready {
+			return false
+		}
+
+		if containerStatus.State.Running.StartedAt.IsZero() {
+			return false
+		}
+	}
+	return false
 }
