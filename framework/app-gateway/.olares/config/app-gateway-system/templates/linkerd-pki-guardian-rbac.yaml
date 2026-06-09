@@ -1,0 +1,47 @@
+{{- if .Values.linkerdPkiGuardian.enabled }}
+# Minimal namespace-scoped RBAC for the always-on Linkerd PKI guardian.
+# All objects are pinned to the linkerd namespace (the guardian runs alongside
+# the Linkerd control plane and the olares-linkerd-pki Secret); .Release.Namespace
+# is deliberately not used (umbrella release ns is app-gateway).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: linkerd-pki-guardian
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: linkerd-pki-guardian
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: linkerd-pki-guardian
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian
+subjects:
+  - kind: ServiceAccount
+    name: linkerd-pki-guardian
+    namespace: linkerd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: linkerd-pki-guardian
+{{- end }}

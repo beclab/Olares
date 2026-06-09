@@ -1,0 +1,30 @@
+{{- if .Values.linkerdPkiGuardian.enabled }}
+{{- $g := .Values.linkerdPkiGuardian }}
+# M-6: allow the platform Prometheus namespace to scrape the guardian's
+# :8080/metrics. The default linkerd-namespace policy (others-np) only permits
+# same-namespace ingress, so cross-namespace scraping needs this explicit rule.
+# Pinned to the linkerd namespace; .Release.Namespace is not used.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: linkerd-pki-guardian-metrics
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: app-gateway
+      app.kubernetes.io/component: linkerd-pki-guardian
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $g.metrics.prometheusNamespace | default "kubesphere-monitoring-system" | quote }}
+      ports:
+        - protocol: TCP
+          port: {{ $g.prometheus.port | default 8080 }}
+{{- end }}

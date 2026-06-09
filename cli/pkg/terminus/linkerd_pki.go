@@ -15,12 +15,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/framework/app-gateway/pkg/linkerdpki"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -269,50 +267,11 @@ func issuerNeedsRotation(issuerPEM []byte, now time.Time) (bool, time.Duration, 
 }
 
 // MaintainLinkerdPKI rotates the identity issuer when remaining validity is under 6 months.
+// behavior: delegates to framework/app-gateway pkg/linkerdpki; the vendorDir
+// argument is retained for signature compatibility and ignored (rotation reads
+// the in-cluster olares-linkerd-pki Secret only).
 func MaintainLinkerdPKI(ctx context.Context, c client.Client, linkerdNS, _ string) error {
-	mat, ok, err := loadLinkerdPKISecret(ctx, c, linkerdNS)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return errors.New("olares-linkerd-pki secret not found; run install-app-gateway first")
-	}
-	need, remaining, err := issuerNeedsRotation(mat.IssuerCrt, time.Now().UTC())
-	if err != nil {
-		return err
-	}
-	if !need {
-		logger.Infof("Linkerd issuer OK (remaining %s)", remaining.Round(time.Hour))
-		return nil
-	}
-	logger.InfoInstallationProgress(fmt.Sprintf("Linkerd issuer expires in %s; rotating ...", remaining.Round(time.Hour)))
-
-	rotated, err := rotateLinkerdIssuer(mat.CACrt, mat.CAKey)
-	if err != nil {
-		return errors.Wrap(err, "rotate linkerd issuer")
-	}
-
-	version := 1
-	var sec corev1.Secret
-	if err := c.Get(ctx, types.NamespacedName{Namespace: linkerdNS, Name: linkerdPKISecretName}, &sec); err == nil {
-		if metaBytes := sec.Data[linkerdPKIMetadataKey]; len(metaBytes) > 0 {
-			var meta linkerdPKIMetadata
-			if json.Unmarshal(metaBytes, &meta) == nil {
-				version = meta.Version + 1
-			}
-		}
-	}
-	if err := writeLinkerdPKISecret(ctx, c, linkerdNS, rotated, version); err != nil {
-		return err
-	}
-	if err := patchLinkerdIdentityIssuerSecret(ctx, c, linkerdNS, rotated); err != nil {
-		return err
-	}
-	if err := restartLinkerdIdentity(ctx, c, linkerdNS); err != nil {
-		return err
-	}
-	logger.InfoInstallationProgress("Linkerd identity issuer rotated successfully")
-	return nil
+	return linkerdpki.MaintainLinkerdPKI(ctx, c, linkerdNS)
 }
 
 func patchLinkerdIdentityIssuerSecret(ctx context.Context, c client.Client, ns string, mat *linkerdPKIMaterial) error {
@@ -339,120 +298,6 @@ func restartLinkerdIdentity(ctx context.Context, c client.Client, ns string) err
 	dep.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().UTC().Format(time.RFC3339)
 	return c.Update(ctx, &dep)
 }
-
-func ensureLinkerdPKIGuardian(ctx context.Context, c client.Client, linkerdNS string) error {
-	if os.Getenv("OLARES_LINKERD_PKI_GUARDIAN") == "0" {
-		return nil
-	}
-	if err := ensureLinkerdPKIGuardianRBAC(ctx, c, linkerdNS); err != nil {
-		return err
-	}
-	return applyLinkerdPKIGuardianCronJob(ctx, c, linkerdNS)
-}
-
-func ensureLinkerdPKIGuardianRBAC(ctx context.Context, c client.Client, linkerdNS string) error {
-	var err error
-	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: "linkerd-pki-guardian", Namespace: linkerdNS},
-	}
-	var existingSA corev1.ServiceAccount
-	if err := c.Get(ctx, client.ObjectKeyFromObject(sa), &existingSA); apierrors.IsNotFound(err) {
-		if err := c.Create(ctx, sa); err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-
-	role := &rbacv1.Role{
-		ObjectMeta: metav1.ObjectMeta{Name: "linkerd-pki-guardian", Namespace: linkerdNS},
-		Rules: []rbacv1.PolicyRule{
-			{APIGroups: []string{""}, Resources: []string{"secrets"}, Verbs: []string{"get", "update", "patch"}},
-			{APIGroups: []string{"apps"}, Resources: []string{"deployments"}, Verbs: []string{"get", "update", "patch"}},
-		},
-	}
-	var existingRole rbacv1.Role
-	if err := c.Get(ctx, client.ObjectKeyFromObject(role), &existingRole); apierrors.IsNotFound(err) {
-		if err := c.Create(ctx, role); err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-
-	binding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: "linkerd-pki-guardian", Namespace: linkerdNS},
-		Subjects: []rbacv1.Subject{{
-			Kind: "ServiceAccount", Name: "linkerd-pki-guardian", Namespace: linkerdNS,
-		}},
-		RoleRef: rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "Role", Name: "linkerd-pki-guardian"},
-	}
-	var existingBinding rbacv1.RoleBinding
-	err = c.Get(ctx, client.ObjectKeyFromObject(binding), &existingBinding)
-	if apierrors.IsNotFound(err) {
-		return c.Create(ctx, binding)
-	}
-	return err
-}
-
-func applyLinkerdPKIGuardianCronJob(ctx context.Context, c client.Client, linkerdNS string) error {
-	image := os.Getenv("OLARES_CLI_JOB_IMAGE")
-	if image == "" {
-		logger.Info("OLARES_CLI_JOB_IMAGE unset; skip linkerd-pki-guardian CronJob (use: olares-cli maintain-linkerd-pki)")
-		return nil
-	}
-	cron := &batchv1.CronJob{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "linkerd-pki-guardian",
-			Namespace: linkerdNS,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":      "app-gateway",
-				"app.kubernetes.io/component": "linkerd-pki-guardian",
-			},
-		},
-		Spec: batchv1.CronJobSpec{
-			Schedule: "0 0 1 1,7 *",
-			JobTemplate: batchv1.JobTemplateSpec{
-				Spec: batchv1.JobSpec{
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{
-								"app.kubernetes.io/name":      "app-gateway",
-								"app.kubernetes.io/component": "linkerd-pki-guardian",
-							},
-						},
-						Spec: corev1.PodSpec{
-							RestartPolicy:      corev1.RestartPolicyOnFailure,
-							ServiceAccountName: "linkerd-pki-guardian",
-							Containers: []corev1.Container{{
-								Name:            "guardian",
-								Image:           image,
-								ImagePullPolicy: corev1.PullIfNotPresent,
-								Command:         []string{"olares-cli", "maintain-linkerd-pki"},
-							}},
-						},
-					},
-				},
-			},
-			ConcurrencyPolicy:          batchv1.ForbidConcurrent,
-			SuccessfulJobsHistoryLimit: int32Ptr(2),
-			FailedJobsHistoryLimit:     int32Ptr(3),
-		},
-	}
-	var existing batchv1.CronJob
-	err := c.Get(ctx, types.NamespacedName{Namespace: linkerdNS, Name: cron.Name}, &existing)
-	if apierrors.IsNotFound(err) {
-		return c.Create(ctx, cron)
-	}
-	if err != nil {
-		return err
-	}
-	existing.Spec = cron.Spec
-	existing.Labels = cron.Labels
-	return c.Update(ctx, &existing)
-}
-
-func int32Ptr(v int32) *int32 { return &v }
 
 func wipeInstallerLinkerdKeysEnabled() bool {
 	v := os.Getenv("OLARES_LINKERD_PKI_WIPE_INSTALLER_KEYS")

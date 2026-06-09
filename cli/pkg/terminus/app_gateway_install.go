@@ -134,9 +134,6 @@ func (t *InstallAppGatewayVendor) Execute(runtime connector.Runtime) error {
 	if err := applyLinkerdMeshNetworkPolicies(ctx, k8sClient, settingsLinkerd, vendor); err != nil {
 		return errors.Wrap(err, "apply linkerd mesh network policies")
 	}
-	if err := ensureLinkerdPKIGuardian(ctx, k8sClient, linkerdNamespace); err != nil {
-		return errors.Wrap(err, "configure linkerd pki guardian")
-	}
 
 	// Envoy Gateway CRDs + control plane
 	egVals, err := utils.LoadValuesFile(filepath.Join(vendor, "envoy-gateway-values.yaml"))

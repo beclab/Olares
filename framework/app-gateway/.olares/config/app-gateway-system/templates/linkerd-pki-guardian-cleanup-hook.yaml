@@ -1,0 +1,102 @@
+{{- if .Values.linkerdPkiGuardian.enabled }}
+{{- $g := .Values.linkerdPkiGuardian }}
+# Pre-upgrade hook that removes the legacy batch/v1 CronJob "linkerd-pki-guardian"
+# (created by the old cli generator) so it does not run in parallel with the new
+# always-on Deployment. Uses its own ServiceAccount/Role with cronjobs delete
+# permission (the guardian SA intentionally lacks it). All objects are pinned to
+# the linkerd namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: linkerd-pki-guardian-cleanup
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian-cleanup
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: linkerd-pki-guardian-cleanup
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian-cleanup
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+rules:
+  - apiGroups: ["batch"]
+    resources: ["cronjobs"]
+    verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: linkerd-pki-guardian-cleanup
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian-cleanup
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+subjects:
+  - kind: ServiceAccount
+    name: linkerd-pki-guardian-cleanup
+    namespace: linkerd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: linkerd-pki-guardian-cleanup
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: linkerd-pki-guardian-cleanup
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian-cleanup
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 60
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-gateway
+        app.kubernetes.io/component: linkerd-pki-guardian-cleanup
+      annotations:
+        linkerd.io/inject: disabled
+    spec:
+      restartPolicy: Never
+      serviceAccountName: linkerd-pki-guardian-cleanup
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: cleanup
+          image: {{ $g.cleanup.image | default "kubesphere/kubectl:v1.22.0" | quote }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - kubectl -n linkerd delete cronjob linkerd-pki-guardian --ignore-not-found=true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+{{- end }}
