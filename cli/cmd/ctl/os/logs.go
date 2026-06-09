@@ -687,5 +687,7 @@ func NewCmdLogs() *cobra.Command {
 	cmd.Flags().BoolVar(&options.SkipClusterInfo, "skip-cluster-info", options.SkipClusterInfo, "Skip collecting cluster info (kubectl describe/pods-list, envoy config) and olares-cli logs")
 	cmd.Flags().BoolVar(&options.SkipPodLogs, "skip-pod-logs", options.SkipPodLogs, "Skip collecting pod logs from /var/log/pods")
 
+	cmd.AddCommand(newCmdLogsUpload())
+
 	return cmd
 }
