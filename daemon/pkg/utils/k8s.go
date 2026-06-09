@@ -574,7 +574,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	for _, app := range apps.Items {
 		var entrances []appcfg.Entrance
 		var err error
-		if !isV3(&app) {
+		if !appv1alpha1.IsShared(&app) {
 			entrances, err = appcfg.GenEntranceURL(ctx, &app)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
@@ -784,17 +784,8 @@ func GetWorkloadNameFromPod(pod *corev1.Pod) string {
 	return podNameTokens[0]
 }
 
-const (
-	AppApiVersionLabel = "app.bytetrade.io/api-version"
-	AppVersionV3       = "v3"
-)
-
-func isV3(a *appv1alpha1.Application) bool {
-	return a.Labels != nil && a.Labels[AppApiVersionLabel] == AppVersionV3
-}
-
 func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Application) ([]appcfg.Entrance, error) {
-	if !isV3(app) {
+	if !appv1alpha1.IsShared(app) {
 		return nil, nil
 	}
 
