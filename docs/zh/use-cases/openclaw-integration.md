@@ -42,7 +42,7 @@ doc_updated: "2026-06-09"
     - Server Members Intent
     - Message Content Intent
 
-6. 点击 **Save Changes**。
+6. 点击**保存更改**。
 7. 向上滚动至**令牌**部分，点击**重置令牌**，然后复制生成的 Discord 机器人 token。后续在 Control UI 中配置频道时需要用到该 token。
 
     ![重置令牌](/images/zh/manual/use-cases/reset-token.png#bordered)
@@ -81,7 +81,7 @@ doc_updated: "2026-06-09"
     | Channels | Configure/link |
     | Select a channel | Discord (Bot API) |
     | How do you want to provide this Discord bot token | Enter Discord bot token |
-    | Enter Discord bot token | 粘贴[步骤 1](#步骤-1-创建-discord-机器人)中获取的机器人 token |
+    | Enter Discord bot token | 填入[步骤 1](#步骤-1-创建-discord-机器人)中获取的机器人 token |
     | Configure Discord channels access | Yes |
     | Discord channels access | Open (allow all channels) |
     | Select a channel | Finished |

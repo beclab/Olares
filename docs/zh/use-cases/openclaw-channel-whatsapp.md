@@ -27,7 +27,7 @@ doc_updated: "2026-06-09"
 
 ## 配置 WhatsApp 渠道
 
-选择你喜欢的配置方式。
+按需选择如下配置方式。
 
 <Tabs>
 <template #独立账号>
@@ -68,7 +68,7 @@ doc_updated: "2026-06-09"
 
     终端中将显示成功消息，表明配对完成。
 
-9. 在 WhatsApp 上再次向机器人发送消息。你现已连接，可以与机器人对话了。
+9. 在 WhatsApp 上再次向机器人发送消息。连接已建立，现在你可以与机器人对话了。
 </template>
 <template #个人账号>
 
@@ -111,7 +111,7 @@ doc_updated: "2026-06-09"
 
 ## 断开 WhatsApp
 
-要彻底断开 WhatsApp 与 OpenClaw 的连接，你必须同时从 Control UI 和本地系统文件中移除配置。
+要彻底断开 WhatsApp 与 OpenClaw 的连接，你必须同时从 Control UI 和本地系统文件中移除相关配置。
 
 1. 打开 Control UI，在左侧边栏选择 **Agents**。
 2. 在 **Channels** 标签页中，找到 WhatsApp 配置卡片，然后点击 **Logout**。

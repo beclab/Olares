@@ -136,7 +136,7 @@ OpenClaw 可以通过技能和插件进行扩展：
 
 ### 上传技能
 
-1. 从启动台打开文件管理器，然后进入**应用** > **数据** > **clawdbot** > **config**。
+1. 打开文件管理器，然后进入**应用** > **数据** > **clawdbot** > **config**。
 2. 创建一个名为 `skills` 的新文件夹。
 3. 将你的技能包（例如解压后的 `.zip` 文件）上传到此 `skills` 文件夹中。
 4. 如有缺失，安装所需的包依赖。
@@ -158,7 +158,7 @@ OpenClaw 可以通过技能和插件进行扩展：
 2. 使用 `npm` 或 `brew` 手动安装依赖项。有关安装要求的详细信息，请参阅 `skills.md` 文件。
 
     - 示例：`gh-issues` 技能需要安装 `gh`。
-    - 应运行以下命令安装它：
+    - 运行以下命令安装它：
         ```bash
         npm i -g gh
         ```
@@ -196,7 +196,7 @@ OpenClaw 可以通过技能和插件进行扩展：
     ```
 
     :::warning 插件安装被阻止
-    如果安装失败并显示 `Plugin "{Name}" installation blocked` 错误，你可以在命令后附加 `--dangerously-force-unsafe-install` 来绕过此安全限制。只有在确定插件安全且来自可信来源时，才绕过此保护。
+    如果安装失败并显示 `Plugin "{Name}" installation blocked` 错误，你可以在命令后附加 `--dangerously-force-unsafe-install` 来绕过此安全限制。务必先确认插件来源可信且安全，再使用此参数。
     
     例如：
     ```bash

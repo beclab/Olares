@@ -12,16 +12,16 @@ doc_updated: "2026-06-09"
 
 # 可选：在 OpenClaw 中启用网页搜索
 
-默认情况下，OpenClaw 仅使用训练数据回答问题，无法访问时事、实时新闻或在线网页内容。如需让助手具备联网能力，可将其接入网页搜索提供方。
+默认情况下，OpenClaw 仅使用训练数据回答问题，无法获取时事新闻、实时资讯或在线网页内容。如需让助手具备联网搜索能力，可以为其接入网页搜索服务。
 
-本指南使用 SearXNG，一款注重隐私的元搜索引擎，能够聚合多个来源的搜索结果，且不会追踪用户。你可以从 Olares 应用市场安装自托管的 SearXNG 实例。
+本指南以 SearXNG 为例。这是一款注重隐私的元搜索引擎，能够聚合多个来源的搜索结果，且不会追踪用户。你可以从 Olares 应用市场安装自托管的 SearXNG 实例。
 
 ## 学习目标
 
 在本指南中，你将学习如何：
 - 从 Olares 应用市场安装 SearXNG。
 - 获取 SearXNG 的共享端点 URL。
-- 配置 OpenClaw 使用 SearXNG 进行网页搜索和获取。
+- 配置 OpenClaw 使用 SearXNG 进行网页搜索并获取搜索结果。
 - 验证网页搜索工具是否正常工作。
 
 ## 步骤 1：安装 SearXNG
@@ -38,7 +38,7 @@ doc_updated: "2026-06-09"
 
    ![获取 SearXNG 共享端点](/images/zh/manual/use-cases/searxng-shared-laresprime.png#bordered){width=90%}
 
-5. 复制共享端点 URL。例如：
+5. 复制保存共享端点 URL。例如：
 
    ```text
    http://d1236e020.shared.olares.com
@@ -62,7 +62,7 @@ doc_updated: "2026-06-09"
     | Where will the Gateway run | 选择 **Local (this machine)**。 |
     | Enable web_search | 选择 **Yes**。 |
     | Search provider | 选择 **SearXNG Search** 。|
-    | SearXNG Base URL | 粘贴[步骤 1](#步骤-1-安装-searxng) 中复制的 SearXNG 共享端点 URL。 |
+    | SearXNG Base URL | 填写[步骤 1](#步骤-1-安装-searxng) 中获取的 SearXNG 共享端点 URL。 |
     | Enable web_fetch (keyless HTTP fetch) | 选择 **Yes**。 |
 
 ## 步骤 3：验证网页搜索

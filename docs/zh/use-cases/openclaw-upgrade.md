@@ -20,12 +20,12 @@ OpenClaw 2026.05.26 版本引入了重大的架构变更。升级到该版本后
 
 要恢复智能体的功能，打开 OpenClaw CLI，使用以下方法之一：
 
-- **运行自动诊断工具（推荐）**：运行以下命令，让系统自动检测并修复兼容性问题：
+- **运行自动诊断工具（推荐）**：运行以下命令，让系统自动检测并修复兼容性问题。
 
     ```bash
     openclaw doctor --fix
     ```
-- **更新所有插件**：运行以下命令，一次性批量更新所有已安装的插件：
+- **更新所有插件**：运行以下命令，一次性批量更新所有已安装的插件。
 
     ```bash
     openclaw plugins update --all
@@ -35,7 +35,7 @@ OpenClaw 2026.05.26 版本引入了重大的架构变更。升级到该版本后
 
 - **手动更新自定义插件**：如果你是通过手动方式安装插件的（例如，使用 `npx` 或直接上传文件），自动化 CLI 命令无法更新它们。你必须参考原始插件开发者的官方文档获取具体的升级说明。
 
-有关详细信息，请参阅 [OpenClaw 发布说明](https://github.com/openclaw/openclaw/releases/tag/v2026.5.26)。
+更多信息，请参阅 [OpenClaw 发布说明](https://github.com/openclaw/openclaw/releases/tag/v2026.5.26)。
 
 ## 升级到 2026.03.22
 
@@ -43,17 +43,17 @@ OpenClaw 2026.05.26 版本引入了重大的架构变更。升级到该版本后
 在将 OpenClaw 升级到 2026.03.22 之前，你必须先将 Olares OS 升级到 V1.12.5。
 :::
 
-OpenClaw 2026.03.22 版本引入了多项限制插件权限的变更。由于这一安全增强，旧版插件可能不再兼容。有关详细信息，请参阅 [OpenClaw 发布说明](https://github.com/openclaw/openclaw/releases/tag/v2026.3.22)。
+OpenClaw 2026.03.22 版本引入了多项限制插件权限的变更。由于这一安全增强，旧版插件可能不再兼容。更多信息，请参阅 [OpenClaw 发布说明](https://github.com/openclaw/openclaw/releases/tag/v2026.3.22)。
 
-如果你发现某个之前正常工作的插件在升级到该版本后不可用，可以尝试以下解决方案：
+如果你发现某个之前正常工作的插件在升级到该版本后不可用，可尝试以下解决方案：
 - **更新插件**：检查是否有符合更新后权限限制的新版本可用。
 - **验证配置方式**：咨询插件提供方，了解 OpenClaw 2026.03.22 及更高版本是否需要新的配置。
 
 ## 升级到 2026.02.25
 
-OpenClaw 2026.02.25 版本引入了一项安全增强，要求现有用户显式声明允许的 Control UI 访问地址。因此，如果升级后 Control UI 无法启动，可以按照以下步骤解决。
+OpenClaw 2026.02.25 版本引入了一项安全增强，要求现有用户显式声明允许的 Control UI 访问地址。因此，如果升级后 Control UI 无法启动，可按照以下步骤解决。
 
-1. 在桌面上打开控制面板，查看 **clawdbot** 的容器日志。
+1. 从桌面上打开控制面板，查看 **clawdbot** 的容器日志。
 
     ![查看容器日志](/images/zh/manual/use-cases/check-container-logs.png#bordered)
 
@@ -91,7 +91,7 @@ OpenClaw 2026.02.25 版本引入了一项安全增强，要求现有用户显式
 
      ![重启 OpenClaw](/images/zh/manual/use-cases/restart-openclaw.png#bordered)
 
-8. 在**重启 clawdbot** 窗口中，准确输入 `clawdbot`，然后点击**确认**。等待程序状态显示为**运行中**（以绿色圆点表示）。
+8. 在**重启 clawdbot** 窗口中，准确输入 `clawdbot`，然后点击**确认**。等待程序状态显示为**Running**（以绿色圆点表示）。
 9. 再次查看容器日志，验证网关是否已成功启动。
 
       ![验证容器日志](/images/manual/use-cases/verify-container-logs.png#bordered)
