@@ -369,10 +369,8 @@ spec:
               matchLabels:
                 app: headscale
             topologyKey: kubernetes.io/hostname
-      {{- if eq $role "owner" }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-      {{- end }}
       containers:
       - name: tailscale
         image: tailscale/tailscale:v1.94.2
@@ -425,12 +423,10 @@ spec:
             --tun=tailscale0{{ if and .Values.tailscaleUserIndex (ne .Values.tailscaleUserIndex  "0") }}$(USER_INDEX){{ end }}
         - name: TS_ROUTES
           value: $(COREDNS_SVC)/32
-        - name: ADVERTISE_EXIT_NODE
-          value: "false"
         - name: TS_EXTRA_ARGS
           value: >-
             --login-server https://headscale-server-svc
-            --netfilter-mode=off --advertise-exit-node=$(ADVERTISE_EXIT_NODE) --reset
+            --netfilter-mode=off --reset
         - name: TS_USERSPACE
           value: "false"
         - name: TS_KUBE_SECRET
