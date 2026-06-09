@@ -53,7 +53,7 @@ OpenClaw 2026.03.22 版本引入了多项限制插件权限的变更。由于这
 
 OpenClaw 2026.02.25 版本引入了一项安全增强，要求现有用户显式声明允许的 Control UI 访问地址。因此，如果升级后 Control UI 无法启动，可按照以下步骤解决。
 
-1. 从桌面上打开控制面板，查看 **clawdbot** 的容器日志。
+1. 从启动台上打开控制面板，查看 **clawdbot** 的容器日志。
 
     ![查看容器日志](/images/zh/manual/use-cases/check-container-logs.png#bordered)
 

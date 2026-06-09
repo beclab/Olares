@@ -30,7 +30,7 @@ doc_updated: "2026-06-09"
 
 要让智能体获得执行系统操作的权限，你需要先使用账号凭据登录 Olares CLI。
 
-1. 从桌面打开 OpenClaw CLI。
+1. 从启动台打开 OpenClaw CLI。
 2. 运行以下命令，登录你的 Olares 账号。将 `<your-olares-id>` 替换为你的 Olares ID：
 
    ```bash
