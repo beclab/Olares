@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"strconv"
 	"time"
 	"unicode"
 
@@ -110,7 +111,7 @@ func isUDPPortAvailable(port int) bool {
 }
 
 func isTCPPortAvailable(port int) bool {
-	address := fmt.Sprintf("%s:%d", os.Getenv("HOSTIP"), port)
+	address := net.JoinHostPort(os.Getenv("HOSTIP"), strconv.Itoa(port))
 
 	_, err := net.Dial("tcp", address)
 	if err == nil {
