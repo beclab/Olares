@@ -30,7 +30,7 @@ doc_updated: "2026-06-09"
 ## 步骤 1：创建 Discord 机器人
 
 1. 使用 Discord 账号登录 [Discord Developer Portal](https://discord.com/developers/applications)。
-2. 点击 **新 APP**。
+2. 点击**新 APP**。
 3. 输入应用名称，同意条款，然后点击**创建**。
 
     ![创建应用窗口](/images/zh/manual/use-cases/create-app.png#bordered){width=40%}
