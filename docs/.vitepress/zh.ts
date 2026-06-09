@@ -229,6 +229,10 @@ const side = {
               text: "基本文件操作",
               link: "/zh/manual/olares/files/add-edit-download",
             },
+            {
+              text: "压缩与解压缩文件",
+              link: "/zh/manual/olares/files/compress-extract-files",
+            },
             //{
             //   text: "同步与共享",
             //   link: "/zh/manual/larepass/sync-share",
