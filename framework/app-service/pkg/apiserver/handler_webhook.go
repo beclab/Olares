@@ -143,7 +143,7 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 					klog.Warningf("Skipping d2 offloader injection (fail-open): cluster snapshot unavailable for v3 pod uuid=%s namespace=%s err=%v",
 						proxyUUID, req.Namespace, err)
 					webhook.RecordD2InjectSkipped("snapshot_error")
-				} else if snapshot.InClusterGatewayEnabled {
+				} else if serverD2InjectEnabled(snapshot) {
 					h.injectD2OffloaderFailOpen(ctx, resp, &pod, req, appCfg, proxyUUID)
 				}
 			}
@@ -200,6 +200,15 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	}
 
 	return resp
+}
+
+// serverD2InjectEnabled reports whether a shared-entrance server pod should get
+// the server-mode d2 TLS offloader. On meshProfile=lite the EG :443 listener
+// terminates TLS and forwards plaintext to the backend, so the server-side d2
+// offloader is skipped (spec §2.2). MeshLinkerdEnabled() is false on lite, which
+// gates the injection off here while leaving full-mesh behavior unchanged.
+func serverD2InjectEnabled(snapshot cluster.Snapshot) bool {
+	return snapshot.InClusterGatewayEnabled && snapshot.MeshLinkerdEnabled()
 }
 
 // injectD2OffloaderFailOpen applies the v3 d2 offloader patch, failing open.
