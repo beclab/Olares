@@ -39,6 +39,13 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 	if app == nil || app.Spec.Namespace == "" || app.Spec.Name == "" {
 		return nil
 	}
+	// Convergence path for the route-mode automation: shared apps created
+	// before app-gateway was ready, or whose annotation was removed, get the
+	// gateway annotation on the next Application event. The patch triggers
+	// another reconcile that then passes the opt-in check below.
+	if err := EnsureRouteModeAnnotation(ctx, r.Client, app); err != nil {
+		klog.Warningf("ensure gateway route-mode for app %s err=%v", app.Spec.Name, err)
+	}
 	if !appcfg.IsGatewaySharedApp(app) || !IsOptedIn(app) {
 		return DeleteAllForApp(ctx, r.Client, app)
 	}
