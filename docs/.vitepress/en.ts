@@ -248,6 +248,10 @@ const side = {
               link: "/manual/olares/files/mount-SMB",
             },
             {
+              text: "Mount NFS",
+              link: "/manual/olares/files/mount-nfs",
+            },
+            {
               text: "Mount cloud storage",
               link: "/manual/olares/files/mount-cloud-storage",
             },

@@ -246,6 +246,10 @@ const side = {
               link: "/zh/manual/olares/files/mount-SMB",
             },
             {
+              text: "挂载 NFS",
+              link: "/zh/manual/olares/files/mount-nfs",
+            },
+            {
               text: "挂载云存储",
               link: "/zh/manual/olares/files/mount-cloud-storage",
             },
