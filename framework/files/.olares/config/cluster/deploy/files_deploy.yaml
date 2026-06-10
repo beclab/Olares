@@ -178,7 +178,7 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
             - name: TERMINUSD_HOST
-              value: $(NODE_IP):18088  
+              value: master-node:18088  
 {{ end }}
             - name: EXTERNAL_PREFIX
               value: '/External/'
@@ -248,7 +248,7 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
             - name: TERMINUSD_HOST
-              value: $(NODE_IP):18088  
+              value: master-node:18088  
 {{ end }}
             - name: UPLOAD_WEBHOOK_ENABLED
               value: "True"
