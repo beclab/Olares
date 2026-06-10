@@ -55,6 +55,11 @@ func (u upgraderBase) PrepareForUpgrade() []task.Interface {
 			Action: new(prepareUserInfoForUpgrade),
 			Retry:  5,
 		},
+		&task.LocalTask{
+			Name:   "Update Hosts",
+			Action: new(terminus.UpdateKubeKeyHosts),
+			Retry:  5,
+		},
 	)
 	return tasks
 }
