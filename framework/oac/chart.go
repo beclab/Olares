@@ -229,7 +229,7 @@ func (c *OAC) renderForMode(oacPath string, m Manifest, sc ownerScenario, mode s
 	if mode != "" {
 		helmrender.SetGPUType(values, mode)
 	}
-	return helmrender.Render(oacPath, values, m.AppName())
+	return helmrender.Render(oacPath, values, m.AppName(), "")
 }
 
 // buildRenderValues returns the helm values map that all of the Checker's
@@ -300,7 +300,7 @@ func (c *OAC) CheckResources(oacPath string) error {
 	}
 	sc := ownerScenario{owner: c.owner, admin: c.admin}
 	values := c.buildRenderValues(m, sc)
-	defaultList, err := helmrender.Render(oacPath, values, m.AppName())
+	defaultList, err := helmrender.Render(oacPath, values, m.AppName(), "")
 	if err != nil {
 		return err
 	}
@@ -421,7 +421,7 @@ func (c *OAC) checkResourceLimits(oacPath string, m Manifest, sc ownerScenario, 
 	for _, rm := range cfg.Spec.Accelerator {
 		values := c.buildRenderValues(m, sc)
 		helmrender.SetGPUType(values, rm.Mode)
-		list, err := helmrender.Render(oacPath, values, m.AppName())
+		list, err := helmrender.Render(oacPath, values, m.AppName(), "")
 		if err != nil {
 			errs = append(errs, fmt.Errorf("resources mode=%s: %w", rm.Mode, err))
 			continue
@@ -462,7 +462,7 @@ func (c *OAC) renderAllSubCharts(
 			helmrender.SetGPUType(values, mode)
 		}
 		subPath := filepath.Join(oacPath, sub.Name)
-		list, err := helmrender.Render(subPath, values, sub.Name)
+		list, err := helmrender.Render(subPath, values, sub.Name, "")
 		if err != nil {
 			return nil, fmt.Errorf("helm render subchart=%s: %w", sub.Name, err)
 		}
@@ -591,17 +591,35 @@ func (c *OAC) checkAllowMultipleInstall(oacPath string, m Manifest, sc ownerScen
 	}
 	values := c.buildRenderValues(m, sc)
 	probeA, probeB := resources.ClusterScopedProbeNames()
-	listA, err := helmrender.Render(oacPath, values, probeA)
+	listA, err := helmrender.Render(oacPath, values, probeA, "")
 	if err != nil {
 		return fmt.Errorf("helm render (allowMultipleInstall probe %q): %w", probeA, err)
 	}
-	listB, err := helmrender.Render(oacPath, values, probeB)
+	listB, err := helmrender.Render(oacPath, values, probeB, "")
 	if err != nil {
 		return fmt.Errorf("helm render (allowMultipleInstall probe %q): %w", probeB, err)
 	}
 	var errs []error
 	if needCluster {
-		if err := resources.CheckClusterScopedFixedNames(listA, listB); err != nil {
+		clusterOpts := resources.ClusterScopedFixedNameOpts{
+			AllowMultipleInstall: cfg.Options.AllowMultipleInstall,
+		}
+		if !cfg.Options.AllowMultipleInstall {
+			userA, userB, release := resources.ClusterScopedUsernameProbeNames()
+			valuesUserA := c.buildRenderValues(m, ownerScenario{owner: userA, admin: sc.admin})
+			valuesUserB := c.buildRenderValues(m, ownerScenario{owner: userB, admin: sc.admin})
+			listUserA, err := helmrender.Render(oacPath, valuesUserA, release, userA)
+			if err != nil {
+				return fmt.Errorf("helm render (cluster-scoped username probe %q): %w", userA, err)
+			}
+			listUserB, err := helmrender.Render(oacPath, valuesUserB, release, userB)
+			if err != nil {
+				return fmt.Errorf("helm render (cluster-scoped username probe %q): %w", userB, err)
+			}
+			clusterOpts.UsernameProbeA = listUserA
+			clusterOpts.UsernameProbeB = listUserB
+		}
+		if err := resources.CheckClusterScopedFixedNames(listA, listB, clusterOpts); err != nil {
 			errs = append(errs, err)
 		}
 	}

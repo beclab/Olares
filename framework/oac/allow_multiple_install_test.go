@@ -21,6 +21,17 @@ func TestLint_AllowMultipleInstall_ClusterScopedFixedName_Bad(t *testing.T) {
 	}
 }
 
+func TestLint_AllowMultipleInstall_ClusterScopedUsernameScoped_OK(t *testing.T) {
+	err := Lint("testdata/multiclusterusername",
+		WithOwnerAdmin("alice"),
+		SkipResourceCheck(),
+		SkipHostPathCheck(),
+	)
+	if err != nil {
+		t.Fatalf("Lint(multiclusterusername): username-scoped cluster role must pass when allowMultipleInstall=false: %v", err)
+	}
+}
+
 func TestLint_AllowMultipleInstall_ClusterScopedDynamicName_OK(t *testing.T) {
 	err := Lint("testdata/multiclusterok",
 		WithOwnerAdmin("alice"),
