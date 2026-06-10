@@ -160,6 +160,7 @@ func scanFleet(root string) ([]appResult, []string, error) {
 		if strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
+
 		dir := filepath.Join(root, e.Name())
 		if hasSkipMarker(dir) {
 			continue

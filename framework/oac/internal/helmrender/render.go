@@ -42,16 +42,21 @@ const defaultReleaseName = "test-release"
 // map (typically from BuildValues). releaseName drives `{{ .Release.Name }}`
 // substitutions; pass the manifest's metadata.name to mirror how Olares
 // installs apps in production (release name == app name). An empty string
-// falls back to defaultReleaseName.
+// falls back to defaultReleaseName. releaseNamespace drives
+// `{{ .Release.Namespace }}`; an empty string falls back to RenderNamespace.
 //
 // io.EOF from the inner YAML decoder is treated as a clean termination by
 // the caller; the original legacy code did the same.
-func Render(oacPath string, values map[string]interface{}, releaseName string) (kube.ResourceList, error) {
+func Render(oacPath string, values map[string]interface{}, releaseName, releaseNamespace string) (kube.ResourceList, error) {
 	instAction, err := newInstallAction()
 	if err != nil {
 		return nil, err
 	}
-	instAction.Namespace = RenderNamespace
+	if releaseNamespace != "" {
+		instAction.Namespace = releaseNamespace
+	} else {
+		instAction.Namespace = RenderNamespace
+	}
 	if releaseName != "" {
 		instAction.ReleaseName = releaseName
 	}
