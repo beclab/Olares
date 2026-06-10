@@ -77,6 +77,63 @@ func TestInClusterGatewayEnabled_defaultsTrue(t *testing.T) {
 	}
 }
 
+func TestMeshProfileLite_defaultsFalse(t *testing.T) {
+	if meshProfileLite(context.Background(), nil) {
+		t.Fatal("nil client should default to full (not lite)")
+	}
+}
+
+func TestRegenerateCorefileMeshProfileInclusterTarget(t *testing.T) {
+	ctx := context.Background()
+	const ingressIP = "10.233.3.99"
+	const gatewayIP = "10.233.38.210"
+
+	t.Run("TC-LITE-5-1 full keeps ingressIp", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile failed: %v", err)
+		}
+		body := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		if !strings.Contains(body, fmt.Sprintf("60 IN A %s", ingressIP)) {
+			t.Fatalf("full meshProfile should keep ingress IP %s in user template, got:\n%s", ingressIP, body)
+		}
+	})
+
+	t.Run("TC-LITE-5-2 lite uses gatewayDataIP", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
+		if err := setClusterConfigMeshProfile(ctx, dynamicClient, "lite"); err != nil {
+			t.Fatalf("set meshProfile lite failed: %v", err)
+		}
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile failed: %v", err)
+		}
+		body := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		if !strings.Contains(body, fmt.Sprintf("60 IN A %s", gatewayIP)) {
+			t.Fatalf("lite meshProfile should target gateway data IP %s, got:\n%s", gatewayIP, body)
+		}
+		if strings.Contains(body, fmt.Sprintf("60 IN A %s", ingressIP)) {
+			t.Fatalf("lite meshProfile must not keep ingress IP %s for user wildcard, got:\n%s", ingressIP, body)
+		}
+	})
+
+	t.Run("TC-LITE-5-3 lite gatewayDataIP empty degrades to ingressIp", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
+		if err := kubeClient.CoreV1().Services("app-gateway").Delete(ctx, appGatewayDataService, metav1.DeleteOptions{}); err != nil {
+			t.Fatalf("delete app-gateway-data service: %v", err)
+		}
+		if err := setClusterConfigMeshProfile(ctx, dynamicClient, "lite"); err != nil {
+			t.Fatalf("set meshProfile lite failed: %v", err)
+		}
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("RegenerateCorefile failed: %v", err)
+		}
+		body := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		if !strings.Contains(body, fmt.Sprintf("60 IN A %s", ingressIP)) {
+			t.Fatalf("lite without gateway ClusterIP should degrade to ingress IP %s, got:\n%s", ingressIP, body)
+		}
+	})
+}
+
 func TestBuildSharedInclusterTemplates_clusterIPRotation(t *testing.T) {
 	ent := SharedInclusterEntrance{
 		AppID: "a5be2268", EntranceName: "api", EntranceID: "a5be2268", PlatformDomain: "olares.com",
@@ -571,6 +628,18 @@ func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubef
 		clusterConfig, user, srr, app,
 	)
 	return kubeClient, dynamicClient
+}
+
+func setClusterConfigMeshProfile(ctx context.Context, dynamicClient *dynamicfake.FakeDynamicClient, profile string) error {
+	obj, err := dynamicClient.Resource(clusterConfigGVR).Get(ctx, "cluster", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	if err := unstructured.SetNestedField(obj.Object, profile, "spec", "meshProfile"); err != nil {
+		return err
+	}
+	_, err = dynamicClient.Resource(clusterConfigGVR).Update(ctx, obj, metav1.UpdateOptions{})
+	return err
 }
 
 func setClusterConfigInclusterGateway(ctx context.Context, dynamicClient *dynamicfake.FakeDynamicClient, enabled bool) error {

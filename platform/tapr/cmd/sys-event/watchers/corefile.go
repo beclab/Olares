@@ -16,6 +16,7 @@ import (
 	"bytetrade.io/web3os/tapr/pkg/app/application"
 	"github.com/coredns/corefile-migration/migration/corefile"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -174,6 +175,16 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		return err
 	}
 
+	gatewayDataIP, gatewayDataErr := appGatewayDataClusterIP(ctx, kubeClient)
+	inclusterUserZoneIP := ingressIp
+	if meshProfileLite(ctx, dynamicClient) {
+		if gatewayDataErr == nil && gatewayDataIP != "" {
+			inclusterUserZoneIP = gatewayDataIP
+		} else {
+			klog.V(2).Infof("meshProfile=lite: gatewayDataIP unavailable, keep ingressIp: %v", gatewayDataErr)
+		}
+	}
+
 	for _, u := range userList.Items {
 		userzone := u.GetAnnotations()[UserAnnotationZoneKey]
 		if userzone == "" {
@@ -197,7 +208,7 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		}
 
 		templatesPlugins = addUserTemplates(userzone, ip.String(), templatesPlugins)
-		inclusterTemplatesPlugins = addUserTemplates(userzone, ingressIp, inclusterTemplatesPlugins)
+		inclusterTemplatesPlugins = addUserTemplates(userzone, inclusterUserZoneIP, inclusterTemplatesPlugins)
 
 		if masterNodeIp == "" {
 			klog.Info("no master node ip found, skip adding local domain dns record")
@@ -210,10 +221,9 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		localDomainTemplatesPlugins = addUserTemplates(userLocalZone, masterNodeIp, localDomainTemplatesPlugins)
 	}
 
-	gatewayDataIP, err := appGatewayDataClusterIP(ctx, kubeClient)
 	// fix entranceid {md5(appname)[:8]}{i}
 	// find shared entrance ip from applications, set the shared entrance domain to in cluster view
-	err = func() error {
+	sharedEntranceErr := func() error {
 		if len(userList.Items) == 0 {
 			klog.Info("no users found, skip adding shared entrance dns records")
 			return nil
@@ -321,23 +331,27 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 
 		return nil
 	}()
-	if err != nil {
-		klog.Error("get app-gateway-data ClusterIP error, ", err)
-		return err
+	if sharedEntranceErr != nil {
+		klog.Error("shared entrance dns records error, ", sharedEntranceErr)
+		return sharedEntranceErr
 	}
 
 	var sharedInclusterTemplatePlugins []*corefile.Plugin
 	if inClusterGatewayEnabled(ctx, dynamicClient) {
-		srrEntrances, err := sharedInclusterEntrancesFromCluster(ctx, kubeClient, dynamicClient)
-		if err != nil {
-			// degrade: skip shared templates, keep regenerating the rest.
-			// A transient SRR list failure (e.g. RBAC lag, informer thrash)
-			// must not freeze the whole Corefile. Leave the shared template
-			// plugins nil so user wildcard and other zones still update this
-			// round; the shared enhancement converges on the next reconcile.
-			klog.Errorf("degrade: skip shared incluster templates, list SRR error: %v", err)
-		} else if gatewayDataIP != "" {
-			sharedInclusterTemplatePlugins = buildSharedInclusterTemplates(srrEntrances, gatewayDataIP)
+		if gatewayDataErr != nil {
+			klog.Errorf("degrade: skip shared incluster templates, gateway data IP error: %v", gatewayDataErr)
+		} else {
+			srrEntrances, err := sharedInclusterEntrancesFromCluster(ctx, kubeClient, dynamicClient)
+			if err != nil {
+				// degrade: skip shared templates, keep regenerating the rest.
+				// A transient SRR list failure (e.g. RBAC lag, informer thrash)
+				// must not freeze the whole Corefile. Leave the shared template
+				// plugins nil so user wildcard and other zones still update this
+				// round; the shared enhancement converges on the next reconcile.
+				klog.Errorf("degrade: skip shared incluster templates, list SRR error: %v", err)
+			} else if gatewayDataIP != "" {
+				sharedInclusterTemplatePlugins = buildSharedInclusterTemplates(srrEntrances, gatewayDataIP)
+			}
 		}
 	} else {
 		klog.V(2).Info("skip shared incluster CoreDNS templates: inClusterGatewayEnabled=false")
@@ -784,6 +798,31 @@ func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayD
 		})
 	}
 	return plugins
+}
+
+// meshProfileLite reads ClusterConfig.spec.meshProfile via the dynamic client.
+// Absent CR, field, or API errors default to false (full / ingressIp behavior).
+func meshProfileLite(ctx context.Context, dynamicClient dynamic.Interface) bool {
+	if dynamicClient == nil {
+		return false
+	}
+	u, err := dynamicClient.Resource(clusterConfigGVR).Get(ctx, "cluster", metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false
+		}
+		klog.V(2).Infof("clusterconfig get failed, default meshProfile=full: %v", err)
+		return false
+	}
+	spec, found, err := unstructured.NestedMap(u.Object, "spec")
+	if err != nil || !found {
+		return false
+	}
+	v, ok := spec["meshProfile"].(string)
+	if !ok || strings.TrimSpace(v) == "" {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(v), "lite")
 }
 
 func appGatewayDataClusterIP(ctx context.Context, kubeClient kubernetes.Interface) (string, error) {
