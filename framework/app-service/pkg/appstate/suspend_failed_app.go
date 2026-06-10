@@ -2,10 +2,13 @@ package appstate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -69,6 +72,16 @@ func (p *SuspendFailedApp) StateReconcile(ctx context.Context) error {
 			klog.Errorf("stop-failed-middleware %s state reconcile failed %v", p.manager.Spec.AppName, err)
 			return err
 		}
+	}
+
+	var appCfg appcfg.ApplicationConfig
+	if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
+		klog.Errorf("unmarshal app config for compute cleanup of app %s failed %v", p.manager.Spec.AppName, err)
+		return err
+	}
+	if err := compute.DeleteAllocationsForComputeTarget(ctx, p.client, &appCfg, stopServer); err != nil {
+		klog.Errorf("delete compute allocation for suspend-failed app %s failed %v", p.manager.Spec.AppName, err)
+		return err
 	}
 	return nil
 }
