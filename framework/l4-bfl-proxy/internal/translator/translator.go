@@ -550,7 +550,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			routes = append(routes, t.buildFileserverRoutes(user, clusterSet)...)
 		}
 
-		routes = append(routes, &ir.HTTPRouteIR{
+		defaultRoute := &ir.HTTPRouteIR{
 			Name:       fmt.Sprintf("default_%s_%s_%s", user.Name, app.Name, entrance.Name),
 			PathPrefix: "/",
 			Cluster:    clusterName,
@@ -558,13 +558,40 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 				"X-BFL-USER": user.Name,
 			},
 			WebSocketUpgrade: true,
-		})
+		}
+
+		// Shared (v3) apps are cluster-wide and open to all users, so the
+		// whole app is gated behind the viewing user's Authelia instance.
+		if app.IsShared {
+			defaultRoute.ExtAuth = buildSharedAppExtAuthConfig(user)
+		}
+
+		routes = append(routes, defaultRoute)
 
 		vhost.Routes = routes
 		vhosts = append(vhosts, vhost)
 	}
 
 	return vhosts
+}
+
+// buildSharedAppExtAuthConfig returns the Authelia ext_auth config used to gate
+// shared (v3) apps behind the viewing user's per-user Authelia instance. It is
+// intentionally independent from the fileserver ext_auth wiring so the two can
+// evolve separately.
+func buildSharedAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
+	return &ir.ExtAuthConfigIR{
+		Cluster:    fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name),
+		PathPrefix: autheliaPathPrefix,
+		RequestHeaders: []string{
+			"X-Original-URL",
+			"X-Original-Method",
+			"X-Forwarded-For",
+			"X-BFL-USER",
+			"X-Authorization",
+			"Cookie",
+		},
+	}
 }
 
 func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet map[string]*ir.ClusterIR) []*ir.HTTPRouteIR {
@@ -706,21 +733,29 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
 		}
 
+		customRoute := &ir.HTTPRouteIR{
+			Name:       fmt.Sprintf("custom_%s_%s_%s_root", user.Name, app.Name, entrance.Name),
+			PathPrefix: "/",
+			Cluster:    clusterName,
+			RequestHeaders: map[string]string{
+				"X-BFL-USER": user.Name,
+			},
+			WebSocketUpgrade: true,
+		}
+
+		// Shared (v3) apps stay gated behind Authelia even when reached via a
+		// custom domain, so the auth requirement can't be bypassed.
+		if app.IsShared {
+			customRoute.ExtAuth = buildSharedAppExtAuthConfig(user)
+		}
+
 		vhost := &ir.VirtualHostIR{
 			Name:     fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),
 			Domains:  []string{customDomainName},
 			Language: user.Language,
 			UserZone: user.Zone,
 			UserName: user.Name,
-			Routes: []*ir.HTTPRouteIR{{
-				Name:       fmt.Sprintf("custom_%s_%s_%s_root", user.Name, app.Name, entrance.Name),
-				PathPrefix: "/",
-				Cluster:    clusterName,
-				RequestHeaders: map[string]string{
-					"X-BFL-USER": user.Name,
-				},
-				WebSocketUpgrade: true,
-			}},
+			Routes:   []*ir.HTTPRouteIR{customRoute},
 		}
 		vhosts = append(vhosts, vhost)
 	}

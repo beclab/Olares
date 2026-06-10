@@ -1,6 +1,7 @@
 package translator
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
@@ -596,8 +597,28 @@ func TestBuildAppVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 			assert.Nil(t, r.DirectResponse, "no 403 gate is emitted; shared apps are open")
 			assert.NotEmpty(t, r.Cluster, "every user must reach the upstream cluster")
 			assert.NotEmpty(t, clusterSet, "an upstream cluster must be registered")
+
+			require.NotNil(t, r.ExtAuth, "shared apps must be gated behind Authelia ext_auth")
+			assert.Equal(t, fmt.Sprintf("authelia_backend_%s", name), r.ExtAuth.Cluster)
+			assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
+			assert.False(t, r.ExtAuth.Disabled)
 		})
 	}
+}
+
+// Shared apps reached via a custom domain are also gated behind Authelia.
+func TestBuildCustomDomainVirtualHosts_SharedApp_ExtAuth(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", Zone: "alice.example.com"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	vhosts := tr.buildCustomDomainVirtualHosts(user, makeSharedAppWithCustom(), clusterSet)
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	r := vhosts[0].Routes[0]
+	require.NotNil(t, r.ExtAuth, "shared apps must stay gated even on a custom domain")
+	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
 }
 
 // v1/v2 (non-shared) apps continue to reach their upstream cluster directly.
@@ -620,6 +641,7 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
 	assert.Nil(t, vhosts[0].Routes[0].DirectResponse)
+	assert.Nil(t, vhosts[0].Routes[0].ExtAuth, "non-shared apps must not be gated behind ext_auth")
 	assert.NotEmpty(t, clusterSet)
 }
 
