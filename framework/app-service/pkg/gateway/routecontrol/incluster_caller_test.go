@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
@@ -119,6 +120,54 @@ func TestCallerReconciler_optInInjectsAndWritesGatewayIngress(t *testing.T) {
 	}
 	if nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation] != "1-8080,8083-65535" {
 		t.Fatalf("skip-outbound-ports = %q", nsObj.Annotations[LinkerdSkipOutboundPortsAnnotation])
+	}
+}
+
+func TestCallerReconciler_MeshProfileLite_SkipsLinkerdInject(t *testing.T) {
+	cluster.PrimeSnapshotForTest(cluster.Snapshot{MeshProfile: cluster.MeshProfileLite})
+	t.Cleanup(func() { cluster.PrimeSnapshotForTest(cluster.Snapshot{MeshProfile: cluster.MeshProfileFull}) })
+
+	scheme := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = appv1alpha1.AddToScheme(scheme)
+	_ = srrv1alpha1.AddToScheme(scheme)
+	_ = networkingv1.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+
+	ns := "user-space-alice"
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}},
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "app-gateway"}},
+			&appv1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "litellm",
+					Annotations: map[string]string{
+						gateway.AnnotationInCluster: gateway.InClusterGateway,
+					},
+				},
+				Spec: appv1alpha1.ApplicationSpec{
+					Name:      "litellm",
+					Namespace: ns,
+					Settings:  map[string]string{"clusterAppRef": "ollamav2"},
+				},
+			},
+		).Build()
+
+	r := &CallerReconciler{Client: c, GatewayNS: "app-gateway"}
+	if err := r.Reconcile(context.Background(), ns); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var nsObj corev1.Namespace
+	if err := c.Get(context.Background(), types.NamespacedName{Name: ns}, &nsObj); err != nil {
+		t.Fatalf("get ns: %v", err)
+	}
+	if _, ok := nsObj.Annotations[LinkerdInjectAnnotation]; ok {
+		t.Fatalf("lite meshProfile must not set linkerd.io/inject, got %#v", nsObj.Annotations)
+	}
+	if _, ok := nsObj.Labels[security.NamespaceInClusterCallerLabel]; ok {
+		t.Fatalf("lite meshProfile must not set in-cluster-caller label, got %#v", nsObj.Labels)
 	}
 }
 

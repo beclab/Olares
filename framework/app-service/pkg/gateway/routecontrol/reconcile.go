@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
@@ -87,8 +88,10 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteNetworkPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete NetworkPolicy: %w", err)
 		}
-		if err := deleteSharedLinkerdMeshNetworkPolicy(ctx, c, srr); err != nil {
-			return ReconcileResult{}, fmt.Errorf("delete shared linkerd mesh NetworkPolicy: %w", err)
+		if meshLinkerdEnabled(ctx) {
+			if err := deleteSharedLinkerdMeshNetworkPolicy(ctx, c, srr); err != nil {
+				return ReconcileResult{}, fmt.Errorf("delete shared linkerd mesh NetworkPolicy: %w", err)
+			}
 		}
 		if err := deleteReferenceGrant(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete ReferenceGrant: %w", err)
@@ -97,8 +100,10 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if disableNS == "" {
 			disableNS = srr.Namespace
 		}
-		if err := ensureSharedNamespaceLinkerdInject(ctx, c, disableNS, false); err != nil {
-			return ReconcileResult{}, fmt.Errorf("disable shared namespace linkerd inject: %w", err)
+		if meshLinkerdEnabled(ctx) {
+			if err := ensureSharedNamespaceLinkerdInject(ctx, c, disableNS, false); err != nil {
+				return ReconcileResult{}, fmt.Errorf("disable shared namespace linkerd inject: %w", err)
+			}
 		}
 		return ReconcileResult{
 			Status:  metav1.ConditionTrue,
@@ -114,6 +119,14 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 			Message: fmt.Sprintf("unknown routeMode %q", srr.Spec.RouteMode),
 		}, nil
 	}
+}
+
+func meshLinkerdEnabled(ctx context.Context) bool {
+	snap, err := cluster.GetSnapshot(ctx)
+	if err != nil {
+		return true
+	}
+	return snap.MeshLinkerdEnabled()
 }
 
 func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (ReconcileResult, error) {
@@ -161,12 +174,14 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	if err := applyNetworkPolicy(ctx, c, gw, srr, svc, port); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply NetworkPolicy: %w", err)
 	}
-	if err := applySharedLinkerdMeshNetworkPolicy(ctx, c, srr, svc); err != nil {
-		return ReconcileResult{}, fmt.Errorf("apply shared linkerd mesh NetworkPolicy: %w", err)
-	}
-	injectNS := networkPolicyNamespace(srr, svc)
-	if err := ensureSharedNamespaceLinkerdInject(ctx, c, injectNS, true); err != nil {
-		return ReconcileResult{}, fmt.Errorf("enable shared namespace linkerd inject: %w", err)
+	if meshLinkerdEnabled(ctx) {
+		if err := applySharedLinkerdMeshNetworkPolicy(ctx, c, srr, svc); err != nil {
+			return ReconcileResult{}, fmt.Errorf("apply shared linkerd mesh NetworkPolicy: %w", err)
+		}
+		injectNS := networkPolicyNamespace(srr, svc)
+		if err := ensureSharedNamespaceLinkerdInject(ctx, c, injectNS, true); err != nil {
+			return ReconcileResult{}, fmt.Errorf("enable shared namespace linkerd inject: %w", err)
+		}
 	}
 	return ReconcileResult{
 		Status:        metav1.ConditionTrue,

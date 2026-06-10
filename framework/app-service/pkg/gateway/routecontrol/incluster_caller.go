@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
@@ -90,14 +91,16 @@ func (r *CallerReconciler) Reconcile(ctx context.Context, ns string) error {
 	if err := r.gcLegacyCallerEgress(ctx, ns); err != nil {
 		return err
 	}
-	if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, true); err != nil {
-		return err
-	}
-	if err := ensureCallerNamespaceLinkerdSkipPorts(ctx, r.Client, ns); err != nil {
-		return err
-	}
-	if err := ensureCallerNamespaceInClusterLabel(ctx, r.Client, ns, true); err != nil {
-		return err
+	if callerMeshEnabled(ctx) {
+		if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, true); err != nil {
+			return err
+		}
+		if err := ensureCallerNamespaceLinkerdSkipPorts(ctx, r.Client, ns); err != nil {
+			return err
+		}
+		if err := ensureCallerNamespaceInClusterLabel(ctx, r.Client, ns, true); err != nil {
+			return err
+		}
 	}
 	if err := r.applyNetworkPolicy(ctx, security.NewAppGatewayInClusterCallerIngressNP(r.gatewayNS())); err != nil {
 		return err
@@ -171,13 +174,24 @@ func (r *CallerReconciler) cleanupCallerResources(ctx context.Context, ns string
 			return err
 		}
 	}
-	if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, false); err != nil {
-		return err
+	if callerMeshEnabled(ctx) {
+		if err := ensureCallerNamespaceLinkerdInject(ctx, r.Client, ns, false); err != nil {
+			return err
+		}
+		if err := removeCallerNamespaceLinkerdSkipPorts(ctx, r.Client, ns); err != nil {
+			return err
+		}
+		return ensureCallerNamespaceInClusterLabel(ctx, r.Client, ns, false)
 	}
-	if err := removeCallerNamespaceLinkerdSkipPorts(ctx, r.Client, ns); err != nil {
-		return err
+	return nil
+}
+
+func callerMeshEnabled(ctx context.Context) bool {
+	snap, err := cluster.GetSnapshot(ctx)
+	if err != nil {
+		return true
 	}
-	return ensureCallerNamespaceInClusterLabel(ctx, r.Client, ns, false)
+	return snap.MeshLinkerdEnabled()
 }
 
 // isMeshMandatoryCallerNamespace reports whether ns is a user/third-party workload

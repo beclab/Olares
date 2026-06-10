@@ -43,6 +43,14 @@ const (
 	// without first creating the ClusterConfig CR.
 	envPlatformDomain = "OLARES_PLATFORM_DOMAIN"
 
+	// MeshProfileFull / MeshProfileLite are ClusterConfig.spec.meshProfile values.
+	// Absent or unknown values default to full (Linkerd mesh enabled).
+	MeshProfileFull = "full"
+	MeshProfileLite = "lite"
+
+	// envMeshProfile is an install-time bootstrap fallback only; CR wins at runtime.
+	envMeshProfile = "APP_GATEWAY_MESH_PROFILE"
+
 	cacheTTL = 30 * time.Second
 )
 
@@ -54,15 +62,22 @@ var Resource = schema.GroupVersionResource{Group: GroupVersion.Group, Version: G
 
 // Snapshot is a read-only projection of ClusterConfig.spec.
 type Snapshot struct {
-	PlatformDomain            string
-	SharedURLViewerScheme     string
-	InClusterGatewayEnabled   bool
+	PlatformDomain          string
+	SharedURLViewerScheme   string
+	InClusterGatewayEnabled bool
+	MeshProfile             string
 }
 
 // SharedURLViewerEnabled reports whether the v2 per-viewer Shared URL scheme
 // should be used. Treats absent / "disabled" as false.
 func (s Snapshot) SharedURLViewerEnabled() bool {
 	return strings.EqualFold(s.SharedURLViewerScheme, SharedURLViewerSchemeEnabled)
+}
+
+// MeshLinkerdEnabled reports whether Linkerd inject and mesh NetworkPolicies should run.
+// meshProfile=lite disables mesh; absent/unknown values default to full.
+func (s Snapshot) MeshLinkerdEnabled() bool {
+	return !strings.EqualFold(normalizeMeshProfile(s.MeshProfile), MeshProfileLite)
 }
 
 // snapshotCache memoises the last ClusterConfig.Get for a short TTL so the
@@ -179,6 +194,7 @@ func snapshotFromUnstructured(u *unstructured.Unstructured) (Snapshot, error) {
 		PlatformDomain:          envOrDefaultPlatformDomain(),
 		SharedURLViewerScheme:   SharedURLViewerSchemeDisabled,
 		InClusterGatewayEnabled: true,
+		MeshProfile:             MeshProfileFull,
 	}
 	if !found {
 		return out, nil
@@ -198,6 +214,9 @@ func snapshotFromUnstructured(u *unstructured.Unstructured) (Snapshot, error) {
 			out.InClusterGatewayEnabled = true
 		}
 	}
+	if v, ok := spec["meshProfile"].(string); ok && strings.TrimSpace(v) != "" {
+		out.MeshProfile = normalizeMeshProfile(v)
+	}
 	if !validPlatformDomain(out.PlatformDomain) {
 		return out, fmt.Errorf("invalid platformDomain %q", out.PlatformDomain)
 	}
@@ -210,6 +229,24 @@ func fallbackSnapshot() Snapshot {
 		PlatformDomain:          envOrDefaultPlatformDomain(),
 		SharedURLViewerScheme:   SharedURLViewerSchemeDisabled,
 		InClusterGatewayEnabled: true,
+		MeshProfile:             envOrDefaultMeshProfile(),
+	}
+}
+
+func envOrDefaultMeshProfile() string {
+	if v := strings.TrimSpace(os.Getenv(envMeshProfile)); v != "" {
+		return normalizeMeshProfile(v)
+	}
+	return MeshProfileFull
+}
+
+func normalizeMeshProfile(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	switch s {
+	case MeshProfileLite:
+		return MeshProfileLite
+	default:
+		return MeshProfileFull
 	}
 }
 

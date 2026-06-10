@@ -118,6 +118,52 @@ func TestSnapshot_MalformedCR_ReturnsFallback(t *testing.T) {
 	}
 }
 
+func TestSnapshot_MeshProfile(t *testing.T) {
+	cases := []struct {
+		name    string
+		spec    map[string]any
+		env     string
+		missing bool
+		want    string
+		lite    bool
+	}{
+		{name: "TC-LITE-3-1 CR lite", spec: map[string]any{"meshProfile": "lite", "platformDomain": "olares.com"}, want: MeshProfileLite, lite: true},
+		{name: "TC-LITE-3-2 CR full", spec: map[string]any{"meshProfile": "full", "platformDomain": "olares.com"}, want: MeshProfileFull, lite: false},
+		{name: "TC-LITE-3-3 field missing defaults full", spec: map[string]any{"platformDomain": "olares.com"}, want: MeshProfileFull, lite: false},
+		{name: "TC-LITE-3-4 not found uses env lite", missing: true, env: "lite", want: MeshProfileLite, lite: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resetCacheForTest()
+			if tc.env != "" {
+				t.Setenv(envMeshProfile, tc.env)
+			} else {
+				t.Setenv(envMeshProfile, "")
+			}
+			var r stubReader
+			if tc.missing {
+				r = stubReader{}
+			} else {
+				u := &unstructured.Unstructured{}
+				u.SetGroupVersionKind(GroupVersion.WithKind("ClusterConfig"))
+				u.SetName(SingletonName)
+				_ = unstructured.SetNestedMap(u.Object, tc.spec, "spec")
+				r = stubReader{obj: u}
+			}
+			got, err := loadAndCacheWithReader(context.Background(), r)
+			if err != nil {
+				t.Fatalf("load: %v", err)
+			}
+			if got.MeshProfile != tc.want {
+				t.Fatalf("MeshProfile = %q, want %q", got.MeshProfile, tc.want)
+			}
+			if got.MeshLinkerdEnabled() == tc.lite {
+				t.Fatalf("MeshLinkerdEnabled = %v, want %v", got.MeshLinkerdEnabled(), !tc.lite)
+			}
+		})
+	}
+}
+
 func TestSnapshot_DisabledExplicit(t *testing.T) {
 	resetCacheForTest()
 	r := stubReader{obj: newClusterConfig("olares.com", "disabled")}

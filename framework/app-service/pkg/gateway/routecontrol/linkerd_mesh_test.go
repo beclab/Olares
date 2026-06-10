@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,6 +29,35 @@ func gatewaySvc() *corev1.Service {
 	svc := backendService(sharedNS)
 	svc.Name = "sharedentrances-ollama"
 	return svc
+}
+
+func TestReconcileSharedRoute_MeshProfileLite_SkipsLinkerdSideEffects(t *testing.T) {
+	cluster.PrimeSnapshotForTest(cluster.Snapshot{MeshProfile: cluster.MeshProfileLite})
+	t.Cleanup(func() { cluster.PrimeSnapshotForTest(cluster.Snapshot{MeshProfile: cluster.MeshProfileFull}) })
+
+	srr := gatewaySRR(t)
+	c := newFixture(t, gatewaySvc(), srr)
+
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+
+	meshNP := &networkingv1.NetworkPolicy{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: sharedNS,
+		Name:      security.SharedLinkerdMeshIngressNPName,
+	}, meshNP)
+	if err == nil {
+		t.Fatal("lite meshProfile must not create shared linkerd mesh NetworkPolicy")
+	}
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("get mesh NP: %v", err)
+	}
+
+	ns := getNamespace(t, c, sharedNS)
+	if got := ns.Annotations[LinkerdInjectAnnotation]; got != "" {
+		t.Fatalf("lite meshProfile must not set linkerd.io/inject, got %q", got)
+	}
 }
 
 // TestReconcileSharedRoute_GatewayMode_AddsMeshNPAndInject covers the happy path:
