@@ -42,6 +42,7 @@ func (u upgrader_1_12_6) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, upgradeMultus()...)
 	tasks = append(tasks, createAppCommonDir()...)
 	tasks = append(tasks, upgradeNetworkManagerConfig()...)
+	tasks = append(tasks, upgradeUserReverseProxy()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
