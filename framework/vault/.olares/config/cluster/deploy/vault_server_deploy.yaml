@@ -141,7 +141,7 @@ spec:
               apiVersion: v1
               fieldPath: status.hostIP
         - name: TERMINUSD_HOST
-          value: $(NODE_IP):18088
+          value: master-node:18088
         volumeMounts:
         - name: vault-data
           mountPath: /padloc/packages/server/data
