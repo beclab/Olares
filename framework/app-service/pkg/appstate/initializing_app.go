@@ -81,18 +81,29 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 
 				ok, err := ops.WaitForLaunch()
 				if !ok {
-					klog.Errorf("wait for launch failed %v", err)
-					if err != nil {
-						klog.Error("wait for launch error: ", err, ", ", p.manager.Name)
-						p.finally = func() {
-							klog.Info("update app manager status to initializing canceling, ", p.manager.Name)
-							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InitializingCanceling, nil, appsv1.InitializingCanceling.String(), constants.AppStopDueToInitFailed)
-							if updateErr != nil {
-								klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InitializingCanceling, updateErr)
-								return
-							}
+					// A cancel (POST /cancel) or a force uninstall cancels opCtx,
+					// on which WaitForLaunch returns (false, ctx.Err()). That is
+					// NOT an init failure: the initiator has already written the
+					// terminal target state (InitializingCanceling for cancel,
+					// Uninstalling for force uninstall) and owns the transition.
+					// Writing InitializingCanceling here would both mislabel the
+					// initiator's intent and race the cancel/uninstall path.
+					// Bail out quietly and let the initiator drive the state.
+					if err == nil || c.Err() != nil {
+						klog.Infof("initialization of app %s canceled while waiting for launch; leaving terminal state to the initiator", p.manager.Spec.AppName)
+						return
+					}
 
+					klog.Errorf("wait for launch failed %v", err)
+					klog.Error("wait for launch error: ", err, ", ", p.manager.Name)
+					p.finally = func() {
+						klog.Info("update app manager status to initializing canceling, ", p.manager.Name)
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InitializingCanceling, nil, appsv1.InitializingCanceling.String(), constants.AppStopDueToInitFailed)
+						if updateErr != nil {
+							klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InitializingCanceling, updateErr)
+							return
 						}
+
 					}
 					return
 				}

@@ -345,17 +345,29 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 				if p.manager.Spec.Type == appsv1.Middleware {
 					ok, err := ops.WaitForLaunch()
 					if !ok {
-						klog.Errorf("wait for middleware %s launch failed %v", p.manager.Spec.AppName, err)
-						if err != nil {
-							p.finally = func() {
-								klog.Info("update app manager status to installing canceling, ", p.manager.Name)
-								updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCanceling, nil, appsv1.InstallingCanceling.String(), constants.AppStopDueToInitFailed)
-								if updateErr != nil {
-									klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InstallingCanceling, updateErr)
-									return
-								}
+						// A cancel (DELETE /apps/{name}/install) or a force
+						// uninstall cancels opCtx, on which WaitForLaunch returns
+						// (false, ctx.Err()). That is NOT a launch failure: the
+						// initiator has already written the terminal target state
+						// (InstallingCanceling for cancel, Uninstalling for force
+						// uninstall) and owns the transition. Writing
+						// InstallingCanceling here would mislabel the initiator's
+						// intent and race the cancel/uninstall path. Bail out
+						// quietly and let the initiator drive the state.
+						if err == nil || c.Err() != nil {
+							klog.Infof("install of middleware %s canceled while waiting for launch; leaving terminal state to the initiator", p.manager.Spec.AppName)
+							return
+						}
 
+						klog.Errorf("wait for middleware %s launch failed %v", p.manager.Spec.AppName, err)
+						p.finally = func() {
+							klog.Info("update app manager status to installing canceling, ", p.manager.Name)
+							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCanceling, nil, appsv1.InstallingCanceling.String(), constants.AppStopDueToInitFailed)
+							if updateErr != nil {
+								klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InstallingCanceling, updateErr)
+								return
 							}
+
 						}
 						return
 					}
