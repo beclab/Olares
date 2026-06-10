@@ -1,0 +1,11 @@
+# Approved upstream version for the app-gateway control plane.
+# Envoy Gateway is pulled from its official OCI registry at this pinned version
+# by build/assemble-app-gateway-system.sh; charts are NOT vendored into this repo.
+# Changing this version requires architecture review.
+version: "v2"
+envoy_gateway: "v1.8.0"
+source:
+  registry: oci://docker.io/envoyproxy
+  charts:
+    - gateway-helm
+    - gateway-crds-helm

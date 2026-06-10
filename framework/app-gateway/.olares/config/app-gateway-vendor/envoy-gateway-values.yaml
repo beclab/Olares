@@ -1,0 +1,25 @@
+deployment:
+  envoyGateway:
+    resources:
+      limits:
+        memory: 1024Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+autoscaling:
+  enabled: false
+config:
+  envoyGateway:
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    provider:
+      type: Kubernetes
+    logging:
+      level:
+        default: info
+createNamespace: false
+topologyInjector:
+  enabled: true
+certgen:
+  job:
+    ttlSecondsAfterFinished: 30

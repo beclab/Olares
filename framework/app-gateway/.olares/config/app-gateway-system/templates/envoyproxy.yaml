@@ -1,0 +1,34 @@
+{{- if .Values.envoyProxy.enabled }}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: {{ .Values.envoyProxy.name }}
+  namespace: {{ include "app-gateway.namespace" . }}
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: envoy-proxy-config
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  provider:
+    type: Kubernetes
+  {{- if .Values.envoyProxy.accessLog.enabled }}
+  telemetry:
+    accessLog:
+      settings:
+        - format:
+            type: JSON
+            json:
+              authority: '%REQ(:AUTHORITY)%'
+              path: '%REQ(:PATH)%'
+              method: '%REQ(:METHOD)%'
+              rid: '%REQ(X-REQUEST-ID)%'
+              up_cluster: '%UPSTREAM_CLUSTER%'
+              up_host: '%UPSTREAM_HOST%'
+              rsp_code: '%RESPONSE_CODE%'
+              dur_ms: '%DURATION%'
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+  {{- end }}
+{{- end }}

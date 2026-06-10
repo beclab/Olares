@@ -1,0 +1,13 @@
+apiVersion: v2
+name: app-gateway-system
+description: Olares app-gateway umbrella chart (Envoy Gateway control plane + Gateway/GatewayClass/EnvoyProxy/data-plane Service overlay). No service mesh.
+type: application
+version: 0.0.1
+appVersion: "0.0.1"
+maintainers:
+  - name: bytetrade.io
+dependencies:
+  - name: gateway-helm
+    alias: envoy-gateway
+    version: "v1.8.0"
+    repository: file://./charts/envoy-gateway-helm
