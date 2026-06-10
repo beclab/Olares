@@ -92,6 +92,7 @@ const (
 	BindingApplyStatusRequired     = "required"
 	BindingApplyStatusUnavailable  = "unavailable"
 	BindingApplyStatusApplied      = "applied"
+	BindingApplyStatusValid        = "valid"
 	BindingValidationReasonValid   = "valid"
 	BindingValidationReasonInvalid = "invalid"
 	deviceHealthYes                = "yes"
@@ -99,15 +100,16 @@ const (
 )
 
 type DeviceOption struct {
-	NodeName    string `json:"nodeName"`
-	DeviceID    string `json:"deviceId"`
-	CardModel   string `json:"cardModel,omitempty"`
-	SupportType string `json:"supportType"`
-	Capacity    int64  `json:"capacity"`
-	Available   int64  `json:"available"`
-	FitLevel    string `json:"fitLevel,omitempty"`
-	Health      string `json:"health"`
-	Operable    bool   `json:"operable"`
+	NodeName    string       `json:"nodeName"`
+	DeviceID    string       `json:"deviceId"`
+	CardModel   string       `json:"cardModel,omitempty"`
+	SupportType string       `json:"supportType"`
+	Capacity    int64        `json:"capacity"`
+	Available   int64        `json:"available"`
+	FitLevel    string       `json:"fitLevel,omitempty"`
+	Health      string       `json:"health"`
+	Operable    bool         `json:"operable"`
+	Bindings    []Allocation `json:"bindings,omitempty"`
 }
 
 type NodeOption struct {
