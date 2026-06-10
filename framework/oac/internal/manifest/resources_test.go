@@ -100,14 +100,14 @@ func TestResourceMode_Required(t *testing.T) {
 			RequiredCPU: "100m",
 		},
 	}
-	if err := ValidateResourceMode(rm); err == nil {
+	if err := ValidateResourceMode(rm, false); err == nil {
 		t.Fatal("expected error: mode is required")
 	}
 }
 
 func TestResourceMode_BadMode(t *testing.T) {
 	rm := ResourceMode{Mode: "rocm-mi300"}
-	err := ValidateResourceMode(rm)
+	err := ValidateResourceMode(rm, false)
 	if err == nil {
 		t.Fatal("expected error for unknown mode")
 	}
@@ -124,12 +124,50 @@ func TestResourceMode_BadQuantity(t *testing.T) {
 			RequiredMemory: "200Mi",
 		},
 	}
-	err := ValidateResourceMode(rm)
+	err := ValidateResourceMode(rm, false)
 	if err == nil {
 		t.Fatal("expected quantity parse error")
 	}
 	if !strings.Contains(err.Error(), "requiredCpu") {
 		t.Fatalf("error should mention requiredCpu, got: %v", err)
+	}
+}
+
+func TestResourceMode_TemplateOnlyAllowsAutoOnNonDisk(t *testing.T) {
+	rm := ResourceMode{
+		Mode: ResourceModeCPU,
+		ResourceRequirement: ResourceRequirement{
+			RequiredCPU:    AutoResourceValue,
+			LimitedCPU:     AutoResourceValue,
+			RequiredMemory: AutoResourceValue,
+			LimitedMemory:  AutoResourceValue,
+			RequiredDisk:   "1Gi",
+			LimitedDisk:    "2Gi",
+		},
+	}
+	if err := ValidateResourceMode(rm, true); err != nil {
+		t.Fatalf("template-only non-disk -1 values must pass: %v", err)
+	}
+}
+
+func TestResourceMode_TemplateOnlyRejectsAutoOnDisk(t *testing.T) {
+	rm := ResourceMode{
+		Mode: ResourceModeCPU,
+		ResourceRequirement: ResourceRequirement{
+			RequiredCPU:    "100m",
+			LimitedCPU:     "200m",
+			RequiredMemory: "128Mi",
+			LimitedMemory:  "256Mi",
+			RequiredDisk:   AutoResourceValue,
+			LimitedDisk:    "2Gi",
+		},
+	}
+	err := ValidateResourceMode(rm, true)
+	if err == nil {
+		t.Fatal("expected error: template-only apps cannot use -1 on disk fields")
+	}
+	if !strings.Contains(err.Error(), "requiredDisk") {
+		t.Fatalf("error should mention requiredDisk, got: %v", err)
 	}
 }
 
