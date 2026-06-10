@@ -69,7 +69,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 										return fmt.Sprintf("force delete application %s successfully", app.Name)
 									}(),
 									MarketSource: am.Annotations[constants.AppMarketSourceKey],
-									IsV3:         appcfg.IsV3(&app),
+									IsShared:     appcfg.IsShared(&app),
 								})
 
 								ticker := time.NewTicker(2 * time.Second)
@@ -95,7 +95,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 												Reason:       constants.AppForceUninstalled,
 												Message:      fmt.Sprintf("app %s was force uninstalled", app.Spec.Name),
 												MarketSource: am.Annotations[constants.AppMarketSourceKey],
-												IsV3:         appcfg.IsV3(&app),
+												IsShared:     appcfg.IsShared(&app),
 											})
 											return
 										}

@@ -236,7 +236,7 @@ func (imc *ImageManagerClient) updateProgress(ctx context.Context, am *appv1alph
 			Title:        apputils.AppTitle(am.Spec.Config),
 			Icon:         apputils.AppIcon(am.Spec.Config),
 			MarketSource: am.Annotations[constants.AppMarketSourceKey],
-			IsV3:         appcfg.IsV3(am),
+			IsShared:     appcfg.IsShared(am),
 		})
 	}
 	klog.Infof("app %s download progress.... %v", am.Spec.AppName, progressStr)

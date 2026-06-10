@@ -43,10 +43,10 @@ import (
 
 // getAppByName returns the Application matching {ParamAppName} for the
 // caller. Lookup order:
-//  1. legacy v1/v2 install owned by the caller (Spec.Owner == owner),
-//  2. cluster-wide v3 install of the same name.
+//  1. per-user install owned by the caller (Spec.Owner == owner),
+//  2. cluster-wide shared install of the same name (visible to anyone).
 //
-// Callers performing write operations on a v3 / shared app MUST gate the
+// Callers performing write operations on a shared app MUST gate the
 // response themselves (admin-only) — getAppByName itself does NOT enforce
 // authorisation; it just returns the underlying Application.
 func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Application, error) {
@@ -67,7 +67,7 @@ func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Appli
 		return nil, err
 	}
 
-	var v3App *v1alpha1.Application
+	var sharedApp *v1alpha1.Application
 	for i := range applist.Items {
 		app := &applist.Items[i]
 		if app.Spec.Name != appName {
@@ -76,12 +76,12 @@ func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Appli
 		if app.Spec.Owner == owner {
 			return app, nil
 		}
-		if appcfg.IsV3(app) {
-			v3App = app
+		if appcfg.IsShared(app) {
+			sharedApp = app
 		}
 	}
-	if v3App != nil {
-		return v3App, nil
+	if sharedApp != nil {
+		return sharedApp, nil
 	}
 	api.HandleNotFound(resp, req, fmt.Errorf("the application %s not found", appName))
 	return nil, fmt.Errorf("the application %s not found", appName)

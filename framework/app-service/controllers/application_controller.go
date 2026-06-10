@@ -298,6 +298,9 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	if v, ok := deployment.GetLabels()[constants.AppApiVersionLabel]; ok && v != "" {
 		appLabels[constants.AppApiVersionLabel] = v
 	}
+	if v, ok := deployment.GetLabels()[constants.AppSharedLabel]; ok && v != "" {
+		appLabels[constants.AppSharedLabel] = v
+	}
 	// create the application cr
 	newapp := &appv1alpha1.Application{
 		TypeMeta: metav1.TypeMeta{},
@@ -458,13 +461,20 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	klog.Infof("deploymentname: %s, version: %v", deployment.GetName(), deployment.GetResourceVersion())
 	appCopy.Annotations[deploymentResourceVersionAnnotation] = deployment.GetResourceVersion()
 
-	// Propagate the v3 marker from the deployment so the
-	// Application CR carries it for downstream visibility / proxy fan-out.
+	// Propagate the v3 schema marker and the shared marker from the
+	// deployment so the Application CR carries them for downstream
+	// visibility / proxy fan-out / NetworkPolicy decisions.
 	if v, ok := deployment.GetLabels()[constants.AppApiVersionLabel]; ok && v != "" {
 		if appCopy.Labels == nil {
 			appCopy.Labels = make(map[string]string)
 		}
 		appCopy.Labels[constants.AppApiVersionLabel] = v
+	}
+	if v, ok := deployment.GetLabels()[constants.AppSharedLabel]; ok && v != "" {
+		if appCopy.Labels == nil {
+			appCopy.Labels = make(map[string]string)
+		}
+		appCopy.Labels[constants.AppSharedLabel] = v
 	}
 
 	err = r.Patch(ctx, appCopy, client.MergeFrom(app))
@@ -639,7 +649,7 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 				}
 
 				sharedEntrances = appCfg.SharedEntrances
-			} else if appCfg.IsV3() {
+			} else if appCfg.IsShared() {
 				sharedEntrances = appCfg.SharedEntrances
 			}
 			if appCfg.MobileSupported {

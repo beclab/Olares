@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/beclab/Olares/framework/oac/internal/manifest"
 	"helm.sh/helm/v3/pkg/kube"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,10 +39,18 @@ func CheckResourceLimits(list kube.ResourceList, limits ResourceLimits) error {
 	appLCPU, _ := resource.ParseQuantity(limits.LimitedCPU)
 	appLMem, _ := resource.ParseQuantity(limits.LimitedMemory)
 
-	if appRCPU.Cmp(appLCPU) > 0 {
+	// Auto-compute ("-1") envelope fields are resolved at install time from the
+	// rendered chart; their value is unknown at author/lint time, so the
+	// comparisons that involve them are skipped.
+	autoRCPU := manifest.IsAutoResourceQuantity(limits.RequiredCPU)
+	autoRMem := manifest.IsAutoResourceQuantity(limits.RequiredMemory)
+	autoLCPU := manifest.IsAutoResourceQuantity(limits.LimitedCPU)
+	autoLMem := manifest.IsAutoResourceQuantity(limits.LimitedMemory)
+
+	if !autoRCPU && !autoLCPU && appRCPU.Cmp(appLCPU) > 0 {
 		errs = append(errs, fmt.Errorf("spec.requiredCpu should be <= spec.limitedCpu"))
 	}
-	if appRMem.Cmp(appLMem) > 0 {
+	if !autoRMem && !autoLMem && appRMem.Cmp(appLMem) > 0 {
 		errs = append(errs, fmt.Errorf("spec.requiredMemory should be <= spec.limitedMemory"))
 	}
 
@@ -78,16 +87,16 @@ func CheckResourceLimits(list kube.ResourceList, limits ResourceLimits) error {
 		}
 	})
 
-	if sumLimCPU.Cmp(appLCPU) > 0 {
+	if !autoLCPU && sumLimCPU.Cmp(appLCPU) > 0 {
 		errs = append(errs, fmt.Errorf("sum of container resources.limits.cpu must be <= spec.limitedCpu"))
 	}
-	if sumLimMem.Cmp(appLMem) > 0 {
+	if !autoLMem && sumLimMem.Cmp(appLMem) > 0 {
 		errs = append(errs, fmt.Errorf("sum of container resources.limits.memory must be <= spec.limitedMemory"))
 	}
-	if sumReqCPU.Cmp(appRCPU) > 0 {
+	if !autoRCPU && sumReqCPU.Cmp(appRCPU) > 0 {
 		errs = append(errs, fmt.Errorf("sum of container resources.requests.cpu must be <= spec.requiredCpu"))
 	}
-	if sumReqMem.Cmp(appRMem) > 0 {
+	if !autoRMem && sumReqMem.Cmp(appRMem) > 0 {
 		errs = append(errs, fmt.Errorf("sum of container resources.requests.memory must be <= spec.requiredMemory"))
 	}
 	return errors.Join(errs...)
