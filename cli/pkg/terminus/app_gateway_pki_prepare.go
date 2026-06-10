@@ -55,7 +55,7 @@ func prepareLinkerdPKIWithClient(ctx context.Context, c client.Client, installer
 	if err := ensureHelmOwnedNamespace(ctx, c, linkerdNS, appGatewaySystemReleaseName, releaseNS); err != nil {
 		return err
 	}
-	_, err := loadOrCreateLinkerdPKIFunc(ctx, c, linkerdNS, appGatewaySystemPath(installerDir))
+	_, err := loadOrCreateLinkerdPKIFunc(ctx, c, linkerdNS, appGatewayVendorPath(installerDir))
 	if err != nil {
 		return errors.Wrap(err, "prepare linkerd identity certificates")
 	}

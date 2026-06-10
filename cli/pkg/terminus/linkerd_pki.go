@@ -245,6 +245,10 @@ func applyLinkerdPKIMaterialToHelmValues(vals map[string]interface{}, mat *linke
 	return nil
 }
 
+func applyLinkerdPKIToSubchartValues(linkerdVals map[string]interface{}, mat *linkerdPKIMaterial) error {
+	return applyLinkerdPKIMaterialToHelmValues(linkerdVals, mat)
+}
+
 func certificateNotAfter(pemBytes []byte) (time.Time, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {

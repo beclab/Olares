@@ -12,7 +12,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/utils"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -23,6 +25,7 @@ const (
 var (
 	validateAppGatewaySystemInstallerArtifactsFunc = ValidateAppGatewaySystemInstallerArtifacts
 	getConfigForSystemInstall                      = ctrl.GetConfig
+	newClientForSystemInstall                      = func(cfg *rest.Config) (client.Client, error) { return client.New(cfg, client.Options{}) }
 	initConfigForSystemInstall                     = utils.InitConfigForAppGateway
 	upgradeChartsSkipCRDsWaitFunc                  = utils.UpgradeChartsSkipCRDsWait
 	loadAppGatewayDefaultsFunc                     = agwconfig.Load
@@ -83,6 +86,28 @@ func (t *InstallAppGatewaySystem) Execute(runtime connector.Runtime) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
+
+	k8sClient, err := newClientForSystemInstall(config)
+	if err != nil {
+		return err
+	}
+	linkerdNS := agwconfigLinkerdNamespace()
+	mat, ok, err := loadLinkerdPKISecret(ctx, k8sClient, linkerdNS)
+	if err != nil {
+		return fmt.Errorf("load linkerd pki secret: %w", err)
+	}
+	if !ok || mat == nil {
+		return fmt.Errorf("missing %s/%s after PrepareLinkerdPKI", linkerdNS, linkerdPKISecretName)
+	}
+	linkerdVals, _ := vals["linkerd"].(map[string]interface{})
+	if linkerdVals == nil {
+		linkerdVals = map[string]interface{}{}
+	}
+	if err := applyLinkerdPKIToSubchartValues(linkerdVals, mat); err != nil {
+		return err
+	}
+	vals["linkerd"] = linkerdVals
+
 	return upgradeChartsSkipCRDsWaitFunc(
 		ctx,
 		actionConfig,

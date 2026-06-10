@@ -84,6 +84,15 @@ run_cmd "bash build/assemble-app-gateway-system.sh"
 echo "packaging app-gateway system ..."
 run_cmd "cp -rf framework/app-gateway/.olares/config/app-gateway-system ${DIST}/wizard/config/"
 
+echo "packaging app-gateway vendor (PKI installer slice) ..."
+run_cmd "cp -rf framework/app-gateway/.olares/config/app-gateway-vendor ${DIST}/wizard/config/"
+
+_GEN_SCRIPT="framework/app-gateway/hack/generate-linkerd-identity-certs.sh"
+if [[ -f "${_GEN_SCRIPT}" ]]; then
+    run_cmd "cp -f ${_GEN_SCRIPT} ${DIST}/wizard/config/app-gateway-vendor/generate-linkerd-identity-certs.sh"
+    run_cmd "chmod +x ${DIST}/wizard/config/app-gateway-vendor/generate-linkerd-identity-certs.sh"
+fi
+
 echo "packaging env config ..."
 run_cmd "cp -rf build/system-env.yaml ${DIST}/system-env.yaml"
 run_cmd "cp -rf build/user-env.yaml ${DIST}/user-env.yaml"
