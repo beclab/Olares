@@ -5,18 +5,14 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
-	helmrelease "helm.sh/helm/v3/pkg/release"
 	"k8s.io/klog/v2"
 )
 
 func (h *HelmOps) ApplyEnv() error {
-	status, err := h.status()
+	_, err := h.status()
 	if err != nil {
 		klog.Errorf("get release status failed %v", err)
 		return err
-	}
-	if status.Info.Status != helmrelease.StatusDeployed {
-		return fmt.Errorf("cannot upgrade release %s/%s, current state is %s", h.app.Namespace, h.app.AppName, status.Info.Status)
 	}
 
 	values := make(map[string]interface{})

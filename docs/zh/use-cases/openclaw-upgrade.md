@@ -5,14 +5,46 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw 升级, 升级故障排除
-app_version: "1.0.3"
-doc_version: "1.1"
-doc_updated: "2026-06-09"
+app_version: "1.0.8"
+doc_version: "1.2"
+doc_updated: "2026-06-10"
 ---
 
 # 升级 OpenClaw
 
 升级 OpenClaw 前，建议先查看本页面的版本变更内容和故障排除步骤，确保升级顺利。
+
+## 升级到 2026.06.05
+
+OpenClaw 2026.06.05 版本将认证配置文件、认证状态和定时任务从旧版 JSON 文件迁移到了内部 SQLite 数据库。网关现在从 SQLite 中读取这些配置，而非原始 JSON。
+
+:::warning 强制数据迁移
+升级完成后，你必须运行自动修复工具来迁移数据。如果你使用云端托管的模型提供商，在完成迁移之前，你的智能体可能无法与外部 API 通信，并报告以下错误：
+
+```text
+Missing API key for the selected provider on the gateway. Configure provider
+auth, then try again.
+```
+:::
+
+升级完成后，执行以下步骤迁移数据并恢复网关完整功能：
+1. 从启动台打开 OpenClaw CLI。
+2. 运行自动修复工具：
+
+    ```bash
+    openclaw doctor --fix
+    ```
+
+3. 查看输出日志。成功迁移后将显示与以下结构相符的确认信息：
+
+    ```text
+    |  Migrated auth profile JSON for ~/.openclaw/agents/main/agent/auth-profiles.json into  |
+    |  SQLite (backups:                                                                      |
+    |  ~/.openclaw/agents/main/agent/auth-profiles.json.sqlite-import.1781088154476.bak,     |
+    |  ~/.openclaw/agents/main/agent/auth-state.json.sqlite-import.1781088154484.bak).       |
+    ```
+
+更多信息，请参阅 [OpenClaw 发布说明](https://github.com/openclaw/openclaw/releases/tag/v2026.6.5)。
 
 ## 升级到 2026.05.26
 

@@ -110,6 +110,7 @@ type ExternalNetworkSwitchStatusView struct {
 type ActivateRequest struct {
 	Language string `json:"language"`
 	Location string `json:"location"`
+	Timezone string `json:"timezone"`
 	Theme    string `json:"theme"`
 	FRP      struct {
 		Host string `json:"host"`

@@ -55,11 +55,12 @@ type upgradeHandlerHelperV2 struct {
 	*upgradeHandlerHelper
 }
 
-// upgradeHandlerHelperV3 reuses the v1 upgrade flow but treats the caller as
-// admin (v3 apps are admin-managed; the gate above
-// already verified that). Concretely it overrides getAppConfig to always
-// pass IsAdmin=true and Admin=h.owner so GetAppConfig doesn't try to install
-// the upgrade as a different user.
+// upgradeHandlerHelperV3 covers both v3 shared apps and v3 per-user apps.
+// For shared apps it treats the caller as admin (admin-only lifecycle;
+// the gate above already verified that) and overrides getAppConfig to
+// pass IsAdmin=true / Admin=h.owner so GetAppConfig resolves the cluster
+// owner. For v3 per-user apps it falls through to the v1 upgrade flow
+// unchanged.
 type upgradeHandlerHelperV3 struct {
 	*upgradeHandlerHelper
 }
@@ -210,8 +211,8 @@ func (h *upgradeHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	return
 }
 
-func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (*appcfg.ApplicationConfig, error) {
-	klog.Info("Getting app config for V3")
+func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (*appcfg.ApplicationConfig, error) {
+	klog.Info("Getting app config for V3 shared app")
 	appConfig, chartPath, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
 		Owner:        h.owner,
@@ -295,7 +296,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	}
 
 	var appMgr appv1alpha1.ApplicationManager
-	appMgrName, isV3, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
+	appMgrName, isShared, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -306,14 +307,18 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	if isV3 || appcfg.IsV3(&appMgr) {
+	// Shared apps are admin-managed: the resolver picks the shared AM name
+	// and the AM carries the shared label; either signal flips us into
+	// admin gating. v3 per-user apps fall through and follow the regular
+	// per-user path.
+	if isShared || appcfg.IsShared(&appMgr) {
 		isAdmin, ierr := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
 		if ierr != nil {
 			api.HandleError(resp, req, ierr)
 			return
 		}
 		if !isAdmin {
-			api.HandleForbidden(resp, req, fmt.Errorf("only admin users can upgrade v3 app %q", app))
+			api.HandleForbidden(resp, req, fmt.Errorf("only admin users can upgrade shared app %q", app))
 			return
 		}
 	}

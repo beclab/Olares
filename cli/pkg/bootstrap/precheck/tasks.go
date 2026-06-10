@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -143,6 +144,27 @@ func (t *ConflictingContainerdCheck) Check(runtime connector.Runtime) error {
 	containerdSocket := "/run/containerd/containerd.sock"
 	if util.IsExist(containerdSocket) {
 		return fmt.Errorf("found existing containerd socket: %s, a containerd managed by Olares is required to ensure normal function%s", containerdSocket, fixMSG)
+	}
+	return nil
+}
+
+type HostnameCheck struct{}
+
+func (t *HostnameCheck) Name() string {
+	return "Hostname"
+}
+
+func (t *HostnameCheck) Check(runtime connector.Runtime) error {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return fmt.Errorf("failed to get hostname: %v", err)
+	}
+	hostname = strings.ToLower(hostname)
+	if errs := validation.IsDNS1123Subdomain(hostname); len(errs) > 0 {
+		return fmt.Errorf("hostname %q is not a valid Kubernetes node name: %s; "+
+			"please change the hostname to consist of lowercase alphanumeric characters, '-' or '.', "+
+			"and to start and end with an alphanumeric character, then try again",
+			hostname, strings.Join(errs, "; "))
 	}
 	return nil
 }

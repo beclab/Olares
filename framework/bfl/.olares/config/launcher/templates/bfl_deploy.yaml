@@ -265,7 +265,7 @@ spec:
 
       containers:
       - name: api
-        image: beclab/bfl:v0.4.47
+        image: beclab/bfl:v0.4.48
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -303,13 +303,13 @@ spec:
         - name: BACKUP_SERVER
           value: backup-server.os-framework:8082
         - name: L4_PROXY_IMAGE_VERSION
-          value: v0.3.23
+          value: v0.3.24
         - name: L4_PROXY_SERVICE_ACCOUNT
           value: os-network-internal
         - name: L4_PROXY_NAMESPACE
           value: os-network
         - name: REVERSE_PROXY_AGENT_IMAGE_VERSION
-          value: v0.1.10
+          value: v0.1.11
         - name: NODE_NAME
           valueFrom:
             fieldRef:

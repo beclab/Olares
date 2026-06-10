@@ -232,6 +232,9 @@ func (h *Handler) handleActivate(req *restful.Request, resp *restful.Response) {
 			if payload.Location != "" {
 				u.Annotations[constants.UserLocation] = payload.Location
 			}
+			if payload.Timezone != "" {
+				u.Annotations[constants.UserTimezone] = payload.Timezone
+			}
 			if payload.Theme == "" {
 				payload.Theme = "light"
 			}
@@ -673,6 +676,10 @@ func (h *Handler) handleUpdateLocale(req *restful.Request, resp *restful.Respons
 
 				if locale.Location != "" {
 					u.Annotations[constants.UserLocation] = locale.Location
+				}
+
+				if locale.Timezone != "" {
+					u.Annotations[constants.UserTimezone] = locale.Timezone
 				}
 
 				if locale.Theme == "" {

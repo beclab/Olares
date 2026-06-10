@@ -42,6 +42,17 @@ type LogCollectOptions struct {
 	IgnoreKubeErrors bool
 	// Skip retrieving logs from kube-apiserver
 	SkipKubeAPISserver bool
+	// PodNamespaces restricts /var/log/pods collection to the given
+	// namespaces. Nil/empty means collect all namespaces (backward
+	// compatible). Ignored when SkipPodLogs is set.
+	PodNamespaces []string
+	// Section switches. All default to false to preserve the original
+	// full-collection behavior when no flag is given.
+	SkipSystemd     bool
+	SkipDmesg       bool
+	SkipNetwork     bool
+	SkipClusterInfo bool
+	SkipPodLogs     bool
 }
 
 var servicesToCollectLogs = []string{"k3s", "containerd", "olaresd", "kubelet", "juicefs", "redis", "minio", "etcd", "NetworkManager"}
@@ -87,7 +98,7 @@ func collectLogs(options *LogCollectOptions) error {
 		return fmt.Errorf("os: please run as root")
 	}
 
-	if !options.SkipKubeAPISserver {
+	if !options.SkipClusterInfo && !options.SkipKubeAPISserver {
 		setSkipIfK8sNotReachable(options)
 	}
 
@@ -110,14 +121,17 @@ func collectLogs(options *LogCollectOptions) error {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	// collect systemd service logs
-	if err := collectSystemdLogs(tw, options); err != nil {
-		return fmt.Errorf("failed to collect systemd logs: %v", err)
+	if !options.SkipSystemd {
+		if err := collectSystemdLogs(tw, options); err != nil {
+			return fmt.Errorf("failed to collect systemd logs: %v", err)
+		}
 	}
 
-	fmt.Println("collecting dmesg logs ...")
-	if err := collectDmesgLogs(tw, options); err != nil {
-		return fmt.Errorf("failed to collect dmesg logs: %v", err)
+	if !options.SkipDmesg {
+		fmt.Println("collecting dmesg logs ...")
+		if err := collectDmesgLogs(tw, options); err != nil {
+			return fmt.Errorf("failed to collect dmesg logs: %v", err)
+		}
 	}
 
 	fmt.Println("collecting logs from kubernetes cluster...")
@@ -125,14 +139,20 @@ func collectLogs(options *LogCollectOptions) error {
 		return fmt.Errorf("failed to collect kubernetes logs: %v", err)
 	}
 
-	fmt.Println("collecting olares-cli logs...")
-	if err := collectOlaresCLILogs(tw, options); err != nil {
-		return fmt.Errorf("failed to collect OlaresCLI logs: %v", err)
+	// olares-cli's own logs are host-level Olares operational logs; tie
+	// them to cluster-info so a pods-only scoped collection excludes them.
+	if !options.SkipClusterInfo {
+		fmt.Println("collecting olares-cli logs...")
+		if err := collectOlaresCLILogs(tw, options); err != nil {
+			return fmt.Errorf("failed to collect OlaresCLI logs: %v", err)
+		}
 	}
 
-	fmt.Println("collecting network configs...")
-	if err := collectNetworkConfigs(tw, options); err != nil {
-		return fmt.Errorf("failed to collect network configs: %v", err)
+	if !options.SkipNetwork {
+		fmt.Println("collecting network configs...")
+		if err := collectNetworkConfigs(tw, options); err != nil {
+			return fmt.Errorf("failed to collect network configs: %v", err)
+		}
 	}
 
 	fmt.Printf("logs have been collected and archived in: %s\n", archiveName)
@@ -302,50 +322,83 @@ func collectDmesgLogs(tw *tar.Writer, options *LogCollectOptions) error {
 	return nil
 }
 
-func collectKubernetesLogs(tw *tar.Writer, options *LogCollectOptions) error {
+func collectPodLogs(tw *tar.Writer, options *LogCollectOptions) error {
+	if options.SkipPodLogs {
+		return nil
+	}
+
 	podsLogDir := "/var/log/pods"
 	if _, err := os.Stat(podsLogDir); err != nil {
 		fmt.Printf("warning: directory %s does not exist, skipping collecting pod logs\n", podsLogDir)
-	} else {
-		err := filepath.Walk(podsLogDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
+		return nil
+	}
 
-			if info.IsDir() {
-				return nil
-			}
+	var nsFilter map[string]struct{}
+	if len(options.PodNamespaces) > 0 {
+		nsFilter = make(map[string]struct{}, len(options.PodNamespaces))
+		for _, ns := range options.PodNamespaces {
+			nsFilter[ns] = struct{}{}
+		}
+	}
 
-			srcFile, err := os.Open(path)
-			if err != nil {
-				return fmt.Errorf("failed to open file %s: %v", path, err)
-			}
-			defer srcFile.Close()
+	err := filepath.Walk(podsLogDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
-			relPath, err := filepath.Rel(podsLogDir, path)
-			if err != nil {
-				return fmt.Errorf("failed to get relative path: %v", err)
-			}
-
-			header := &tar.Header{
-				Name:    filepath.Join("pods", relPath),
-				Mode:    0644,
-				Size:    info.Size(),
-				ModTime: info.ModTime(),
-			}
-			if err := tw.WriteHeader(header); err != nil {
-				return fmt.Errorf("failed to write header for %s: %v", path, err)
-			}
-
-			// stream file contents to tar
-			if _, err := io.CopyN(tw, srcFile, header.Size); err != nil {
-				return fmt.Errorf("failed to write data for %s: %v", path, err)
+		if info.IsDir() {
+			// /var/log/pods/<namespace>_<pod>_<uid>: prune whole pod dirs
+			// whose namespace is not requested. namespace/pod names never
+			// contain '_', so the prefix is unambiguous.
+			if nsFilter != nil && filepath.Dir(path) == podsLogDir {
+				ns := strings.SplitN(info.Name(), "_", 2)[0]
+				if _, ok := nsFilter[ns]; !ok {
+					return filepath.SkipDir
+				}
 			}
 			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("failed to collect pod logs from /var/log/pods: %v", err)
 		}
+
+		srcFile, err := os.Open(path)
+		if err != nil {
+			return fmt.Errorf("failed to open file %s: %v", path, err)
+		}
+		defer srcFile.Close()
+
+		relPath, err := filepath.Rel(podsLogDir, path)
+		if err != nil {
+			return fmt.Errorf("failed to get relative path: %v", err)
+		}
+
+		header := &tar.Header{
+			Name:    filepath.Join("pods", relPath),
+			Mode:    0644,
+			Size:    info.Size(),
+			ModTime: info.ModTime(),
+		}
+		if err := tw.WriteHeader(header); err != nil {
+			return fmt.Errorf("failed to write header for %s: %v", path, err)
+		}
+
+		// stream file contents to tar
+		if _, err := io.CopyN(tw, srcFile, header.Size); err != nil {
+			return fmt.Errorf("failed to write data for %s: %v", path, err)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to collect pod logs from /var/log/pods: %v", err)
+	}
+	return nil
+}
+
+func collectKubernetesLogs(tw *tar.Writer, options *LogCollectOptions) error {
+	if err := collectPodLogs(tw, options); err != nil {
+		return err
+	}
+
+	if options.SkipClusterInfo {
+		return nil
 	}
 
 	if options.SkipKubeAPISserver {
@@ -627,6 +680,14 @@ func NewCmdLogs() *cobra.Command {
 	cmd.Flags().StringSliceVar(&options.Components, "components", nil, "Specific components (systemd service) to collect logs from (comma-separated). If empty, collects from all Olares-related components that can be found")
 	cmd.Flags().BoolVar(&options.IgnoreKubeErrors, "ignore-kube-errors", options.IgnoreKubeErrors, "Continue collecting logs even if kubectl commands fail")
 	cmd.Flags().BoolVar(&options.SkipKubeAPISserver, "skip-kube-apiserver", options.SkipKubeAPISserver, "Skip retrieving logs from kube-apiserver, it's automatically set if apiserver is not reachable. To tolerate other cases, set the ignore-kube-errors")
+	cmd.Flags().StringSliceVar(&options.PodNamespaces, "pod-namespaces", nil, "Restrict /var/log/pods collection to these namespaces (comma-separated). If empty, collects pod logs from all namespaces")
+	cmd.Flags().BoolVar(&options.SkipSystemd, "skip-systemd", options.SkipSystemd, "Skip collecting systemd service logs")
+	cmd.Flags().BoolVar(&options.SkipDmesg, "skip-dmesg", options.SkipDmesg, "Skip collecting dmesg (kernel) logs")
+	cmd.Flags().BoolVar(&options.SkipNetwork, "skip-network", options.SkipNetwork, "Skip collecting network configs (ip/iptables/nft)")
+	cmd.Flags().BoolVar(&options.SkipClusterInfo, "skip-cluster-info", options.SkipClusterInfo, "Skip collecting cluster info (kubectl describe/pods-list, envoy config) and olares-cli logs")
+	cmd.Flags().BoolVar(&options.SkipPodLogs, "skip-pod-logs", options.SkipPodLogs, "Skip collecting pod logs from /var/log/pods")
+
+	cmd.AddCommand(newCmdLogsUpload())
 
 	return cmd
 }
