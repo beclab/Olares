@@ -32,7 +32,9 @@ This is usually caused by insufficient resources or incorrect GPU allocation. To
 
 If ComfyUI starts successfully, most of these messages do not require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
 
-## ComfyUI fails to start after upgrade with `--normalvram` error
+## ComfyUI fails to start after upgrading to v1.0.37 or later
+
+This issue may occur after upgrading to ComfyUI v1.0.37 or later.
 
 After upgrading ComfyUI, the app may fail to start and show an error like:
 
@@ -47,7 +49,7 @@ To fix this:
 1. Open **ComfyUI Launcher** and go to **Lab** from the left sidebar.
 2. In the **Manually edit extra arguments** field, remove `--normalvram` manually and click **Save**. Alternatively, click **Restore default** to reset to the default launch arguments.
 3. Verify that **Current full launch command** at the top no longer contains `--normalvram`.
-4. Restart ComfyUI.
+4. In ComfyUI Launcher, click **Start ComfyUI** to launch the app.
 
 ## Models cannot be downloaded directly to Olares
 
