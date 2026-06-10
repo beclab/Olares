@@ -1,0 +1,14 @@
+# Lite overlay for Shared HTTPS-Lite gateway bundles (no Linkerd control plane).
+# Merge on top of values.yaml via helm -f; full install defaults are unchanged.
+mesh:
+  linkerd:
+    enabled: false
+linkerdPkiGuardian:
+  enabled: false
+tls:
+  enabled: true
+extAuthz:
+  enabled: true
+  failOpen: false
+demo:
+  enabled: false
