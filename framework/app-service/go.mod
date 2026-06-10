@@ -7,7 +7,7 @@ require (
 	github.com/apecloud/kubeblocks v1.0.0
 	github.com/argoproj/argo-workflows/v3 v3.7.10
 	github.com/beclab/Olares/framework/oac v0.0.0-20260609150043-92e3da08c8a1
-	github.com/beclab/api v0.0.14
+	github.com/beclab/api v0.0.15
 	github.com/beclab/lldap-client v0.0.11
 	github.com/containerd/containerd v1.7.29
 	github.com/containers/image/v5 v5.36.1
