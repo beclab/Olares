@@ -15,6 +15,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -261,6 +262,11 @@ func main() {
 
 	if err = (&gateway.SharedRouteProducerReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "SharedRouteProducer")
+		os.Exit(1)
+	}
+
+	if err = (&routecontrol.SharedRouteReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "SharedRoute")
 		os.Exit(1)
 	}
 
