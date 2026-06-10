@@ -75,6 +75,12 @@ type installHandlerHelperV2 struct {
 	installHandlerHelper
 }
 
+// installHandlerHelperV3 handles the v3 install pipeline. The same helper
+// covers both shared cluster-wide apps (options.shared: true) and per-user
+// v3 apps (options.shared: false / absent); the shared / per-user split
+// is decided per-method by inspecting h.appConfig.IsShared() once the
+// chart has been loaded, so no manifest-peek is needed at dispatch time.
+// v1 apps stay on installHandlerHelper.
 type installHandlerHelperV3 struct {
 	installHandlerHelper
 }
@@ -111,7 +117,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 	klog.Infof("rawAppName: %s", rawAppName)
 	chartVersion := ""
 	originOwner := ""
-	if insReq.RawAppName != "" {
+	if insReq.RawAppName != "" && !insReq.TemplateClone {
 		chartVersion, originOwner, err = h.getOriginChartVersion(rawAppName, owner)
 		if err != nil {
 			api.HandleBadRequest(resp, req, err)
@@ -183,7 +189,6 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		h.validateClusterScope = h._validateClusterScope
 		helper = h
 	case appcfg.V3:
-		klog.Info("Using install handler helper for V3")
 		h := &installHandlerHelperV3{
 			installHandlerHelper: installHandlerHelper{
 				h:          h,
@@ -195,11 +200,11 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 				token:      token,
 				insReq:     insReq,
 				client:     client,
-			},
-		}
+			}}
 
-		// v3 reuses the v1 cluster-scope validation; admin gating + shared-namespace
-		// forcing is handled by the helper's own overrides.
+		// v3 reuses the v1 cluster-scope validation; the V3 helper's own
+		// overrides decide which methods diverge from the v1 base based
+		// on the shared flag.
 		h.validateClusterScope = h._validateClusterScope
 		helper = h
 	default:
@@ -226,6 +231,13 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
 	}
+
+	if !isAdmin && appCfg.Shared {
+		err = errors.New("only admin users can install shared apps")
+		api.HandleForbidden(resp, req, err)
+		return
+	}
+
 	err = helper.lintChart()
 	if err != nil {
 		klog.Errorf("Failed to lint chart err=%v", err)
@@ -359,12 +371,14 @@ func (h *Handler) getOriginChartVersion(rawAppName, owner string) (string, strin
 		return "", "", err
 	}
 	for _, am := range ams.Items {
-		isV3 := am.Labels[constants.AppApiVersionLabel] == "v3"
-		if (am.Spec.AppName == rawAppName && am.Spec.AppOwner == owner) || (am.Spec.AppName == rawAppName && isV3) {
-			// For v3 / shared apps the caller (current admin) may differ
-			// from the user that originally installed the app; return that
+		isShared := appcfg.IsShared(&am)
+		if (am.Spec.AppName == rawAppName && am.Spec.AppOwner == owner) || (am.Spec.AppName == rawAppName && isShared) {
+			// For shared apps the caller (current admin) may differ from
+			// the user that originally installed the app; return that
 			// original install owner so the chart-repo lookup can be keyed
-			// off the user the chart was first uploaded under.
+			// off the user the chart was first uploaded under. v3 per-user
+			// apps fall through to the owner-equality branch above just
+			// like v1 apps.
 			return am.Annotations[api.AppVersionKey], am.Spec.AppOwner, nil
 		}
 	}
@@ -978,28 +992,31 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 
 // ----- v3 helper overrides -----
 
-// getAdminUsers returns the admin user list and rejects non-admin callers
-// with a 403 — v3 / shared apps are admin-managed.
+// getAdminUsers returns the admin user list. Shared apps reject non-admin
+// callers with a 403 (admin-only lifecycle); v3 per-user apps fall through
+// to the v1 helper, which doesn't gate on admin status here.
 func (h *installHandlerHelperV3) getAdminUsers() (admin []string, isAdmin bool, err error) {
 	admin, isAdmin, err = h.installHandlerHelper.getAdminUsers()
 	if err != nil {
 		return
 	}
-	if !isAdmin {
-		err = errors.New("only admin users can install v3 / shared apps")
-		api.HandleForbidden(h.resp, h.req, err)
-		return
-	}
 	return
 }
 
+// getInstalledApps returns no installed apps for shared apps so the v1
+// "install on behalf of admin / install as the cluster owner" branching
+// in installHandlerHelper.getAppConfig is bypassed — the V3 path always
+// resolves to the cluster owner. v3 per-user apps fall through to the v1
+// helper so the regular cluster-scope / clone duplication checks fire.
 func (h *installHandlerHelperV3) getInstalledApps() (installed bool, apps []*v1alpha1.Application, err error) {
 	return
 }
 
-// getAppConfig loads the chart with admin context (the caller is admin —
-// gated above) and forces the namespace to the deterministic shared one so
-// every code path agrees on it regardless of what the manifest specified.
+// getAppConfig loads the manifest. For shared apps the chart is loaded
+// with admin context (the caller is admin — gated above) and the
+// namespace / owner are forced to the deterministic shared values. For
+// v3 per-user apps the v1 install branching applies as-is so the app is
+// installed in the regular per-user namespace under the installing user.
 func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType, originOwner string) (appConfig *appcfg.ApplicationConfig, err error) {
 	var chartPath string
 	appConfig, chartPath, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
@@ -1024,20 +1041,23 @@ func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource 
 	return
 }
 
-// applyApplicationManager creates / updates the cluster-wide v3 AM at the
-// deterministic name SharedAppMgrName(app) and stamps the
-// AppScopeLabel=shared marker on it so listers / proxy can identify the AM
-// as a shared app without re-reading the embedded config.
-//
-// The actual create-or-patch flow is shared with V1/V2 via applyAppMgr —
-// V3 only needs to override the AM name (to the cluster-wide deterministic
-// one) and supply the scope label. The shared namespace itself comes
-// through h.appConfig.Namespace, which V3.getAppConfig already rewrote to
-// SharedAppNamespace(app).
+// applyApplicationManager creates / updates the AM. Shared apps land at
+// the cluster-wide V3AppMgrName(app) with both the api-version=v3 schema
+// label and the shared=true marker so listers / proxy / NetworkPolicy /
+// NATS fan-out can identify them. v3 per-user apps go to the regular
+// per-user FmtAppMgrName(app, owner, "") with only the api-version=v3
+// schema label — they are NOT shared and must not trigger any
+// shared-app behavior downstream.
 func (h *installHandlerHelperV3) applyApplicationManager(marketSource string) (opID string, err error) {
-	name := apputils.V3AppMgrName(h.app)
+	name, _ := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
 	labels := map[string]string{
 		constants.AppApiVersionLabel: constants.AppVersionV3,
+		constants.AppSharedLabel: func() string {
+			if h.appConfig.Shared {
+				return "true"
+			}
+			return "false"
+		}(),
 	}
 	return h.applyAppMgr(name, labels, marketSource)
 }

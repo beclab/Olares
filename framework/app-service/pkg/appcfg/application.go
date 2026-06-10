@@ -116,16 +116,27 @@ type ApplicationConfig struct {
 	InClusterMode string `json:"inCluster,omitempty" yaml:"inCluster,omitempty"`
 	SelectedGpuType      string
 	Accelerator          []ResourceMode
-	// NeedsSharedAccess signals that the app needs cross-namespace access to a
-	// v3 app's services (e.g. for service-mesh sidecar injection).
-	// Force-set to true for v3 apps in toApplicationConfig regardless of
-	// manifest value because v3 apps are themselves the destination of shared
-	// traffic and naturally need the same treatment.
+	// NeedsSharedAccess signals that the app needs cross-namespace access to
+	// a shared app's services (e.g. for service-mesh sidecar injection).
+	// Force-set to true for SHARED apps in toApplicationConfig regardless of
+	// manifest value because shared apps are themselves the destination of
+	// shared traffic and naturally need the same treatment. v3+per-user apps
+	// honor the manifest value, like v1.
 	NeedsSharedAccess   bool
 	LLMGatewaySupported bool
 	OverlayGateway      OverlayGateway
 	WorkloadReplicas    *WorkloadReplicas
 	TemplateOnly        bool
+
+	// Shared mirrors options.shared in OlaresManifest.yaml. Only meaningful
+	// for apiVersion: v3 — when both are true the app is treated as a shared
+	// cluster-wide singleton (one install, admin-managed, visible to all
+	// users); otherwise it is a per-user app with the same install / runtime
+	// semantics as v1.
+	//
+	// v1 manifests that happen to set options.shared are intentionally
+	// ignored by IsShared: the v1 install branch is unchanged.
+	Shared bool
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -136,9 +147,19 @@ func (c *ApplicationConfig) IsV2() bool {
 	return c.APIVersion == V2
 }
 
-// IsV3 reports whether the app is declared with apiVersion: v3.
+// IsV3 reports whether the app is declared with apiVersion: v3. This is
+// strictly a SCHEMA-version check; it does NOT imply the app is shared.
+// Use IsShared to gate shared-app semantics (admin-only lifecycle,
+// cluster-wide namespace, broad visibility, NATS fan-out, etc.).
 func (c *ApplicationConfig) IsV3() bool {
 	return c.APIVersion == V3
+}
+
+// IsShared reports whether the app is a shared cluster-wide singleton.
+// Returns true iff apiVersion: v3 AND options.shared: true. v1 apps are
+// always per-user; v3 apps without shared:true are per-user too.
+func (c *ApplicationConfig) IsShared() bool {
+	return c.Shared
 }
 
 func (c *ApplicationConfig) IsMultiCharts() bool {

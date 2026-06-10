@@ -149,9 +149,9 @@ func PublishAppEventToQueue(p utils.EventParams) {
 
 	// buildEvent constructs the per-recipient event payload. The
 	// `recipient` is the user the event is being routed to; it becomes
-	// both the User field and the NATS subject suffix. For v1/v2 this
-	// is always the nominal Owner; for v3 fan-out it is each activated
-	// user in turn.
+	// both the User field and the NATS subject suffix. For per-user
+	// events (v1 and v3+per-user) this is always the nominal Owner; for
+	// shared-app fan-out it is each activated user in turn.
 	buildEvent := func(recipient string) utils.Event {
 		ev := utils.Event{
 			EventID:         fmt.Sprintf("%s-%s-%d", recipient, p.Name, now.UnixMilli()),
@@ -177,7 +177,7 @@ func PublishAppEventToQueue(p utils.EventParams) {
 		return ev
 	}
 
-	// v3 / shared apps are cluster-wide singletons; their lifecycle is
+	// Shared apps are cluster-wide singletons; their lifecycle is
 	// relevant to every user that can open the app, not just the
 	// nominal owner. Fan the event out to every activated user so each
 	// per-user NATS subscriber sees the state change. Unactivated users
@@ -188,14 +188,14 @@ func PublishAppEventToQueue(p utils.EventParams) {
 	// (kept current by the UserController informer handler) so this
 	// path performs no kube API I/O. If the cache happens to be empty
 	// (e.g. an event was somehow published before the User informer
-	// finished its initial sync), we deliberately drop the v3 event
-	// rather than fall back to a single-owner publish: a v1/v2-style
-	// publish to a v3 app's nominal Owner would be silently misrouted
-	// for everyone else.
-	if p.IsV3 {
+	// finished its initial sync), we deliberately drop the shared event
+	// rather than fall back to a single-owner publish: a per-user style
+	// publish to a shared app's nominal Owner would be silently
+	// misrouted for everyone else.
+	if p.IsShared {
 		recipients := activeusers.List()
 		if len(recipients) == 0 {
-			klog.Infof("v3 fan-out: no activated users (cache empty), dropping event for app %s", p.Name)
+			klog.Infof("shared-app fan-out: no activated users (cache empty), dropping event for app %s", p.Name)
 			return
 		}
 		for _, u := range recipients {

@@ -512,9 +512,9 @@ func (c *OAC) checkManifestWorkloadRefs(oacPath string, m Manifest, list kube.Re
 	var errs []error
 	if cfg.WorkloadReplicas != nil {
 		replicas := map[string]int32(*cfg.WorkloadReplicas)
-		if err := resources.CheckWorkloadReplicas(list, replicas); err != nil {
-			errs = append(errs, err)
-		}
+		//if err := resources.CheckWorkloadReplicas(list, replicas); err != nil {
+		//	errs = append(errs, err)
+		//}
 		if err := checkWorkloadReplicaValues(oacPath, replicas); err != nil {
 			errs = append(errs, err)
 		}

@@ -45,7 +45,7 @@ fi
 rm -rf "${CHARTS_DIR}" "${CRDS_DIR}"
 mkdir -p "${CHARTS_DIR}" "${CRDS_DIR}"
 
-for chart in linkerd-control-plane-chart linkerd-crds-chart envoy-gateway-helm envoy-gateway-crds-helm; do
+for chart in linkerd-control-plane-chart envoy-gateway-helm; do
   cp -a "${UPSTREAM_DIR}/${chart}" "${CHARTS_DIR}/"
 done
 
@@ -84,6 +84,24 @@ if [ "${dependency_envoy_version}" != "${lock_envoy_version}" ]; then
   echo "app-gateway-system dependency envoy-gateway version mismatch: got ${dependency_envoy_version}, want ${lock_envoy_version}" >&2
   exit 1
 fi
+
+python3 - "${CHARTS_DIR}/envoy-gateway-helm/Chart.yaml" "${lock_envoy_version}" <<'PY'
+import pathlib
+import sys
+import yaml
+
+chart_file = pathlib.Path(sys.argv[1])
+pinned_version = sys.argv[2]
+
+with chart_file.open("r", encoding="utf-8") as f:
+    chart = yaml.safe_load(f) or {}
+
+chart["version"] = pinned_version
+chart["appVersion"] = pinned_version.removeprefix("v")
+
+with chart_file.open("w", encoding="utf-8") as f:
+    yaml.safe_dump(chart, f, sort_keys=False)
+PY
 
 python3 - "${VALUES_FILE}" "${VALUES_SRC_DIR}" <<'PY'
 import pathlib

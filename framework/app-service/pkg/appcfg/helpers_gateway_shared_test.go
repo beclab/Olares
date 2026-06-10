@@ -17,12 +17,23 @@ func TestIsGatewaySharedApp(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "v3",
+			name: "shared v3",
+			app: &appv1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
+					constants.AppApiVersionLabel: constants.AppVersionV3,
+					constants.AppSharedLabel:     constants.AppSharedTrue,
+				}},
+				Spec: appv1alpha1.ApplicationSpec{SharedEntrances: shared},
+			},
+			want: true,
+		},
+		{
+			name: "v3 per-user not gateway shared",
 			app: &appv1alpha1.Application{
 				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3}},
 				Spec:       appv1alpha1.ApplicationSpec{SharedEntrances: shared},
 			},
-			want: true,
+			want: false,
 		},
 		{
 			name: "v2 cluster scoped",
@@ -60,24 +71,35 @@ func TestIsGatewaySharedApp(t *testing.T) {
 
 func TestIsSharedServerApp(t *testing.T) {
 	shared := []appv1alpha1.Entrance{{Name: "api", Host: "svc"}}
-	v3Labels := map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3}
+	sharedLabels := map[string]string{
+		constants.AppApiVersionLabel: constants.AppVersionV3,
+		constants.AppSharedLabel:     constants.AppSharedTrue,
+	}
 	cases := []struct {
 		name string
 		app  *appv1alpha1.Application
 		want bool
 	}{
 		{
-			name: "v3 with shared entrances qualifies without clusterScoped",
+			name: "shared v3 with shared entrances qualifies without clusterScoped",
 			app: &appv1alpha1.Application{
-				ObjectMeta: metav1.ObjectMeta{Labels: v3Labels},
+				ObjectMeta: metav1.ObjectMeta{Labels: sharedLabels},
 				Spec:       appv1alpha1.ApplicationSpec{SharedEntrances: shared},
 			},
 			want: true,
 		},
 		{
-			name: "v3 without shared entrances does not qualify",
+			name: "v3 per-user with shared entrances does not qualify",
 			app: &appv1alpha1.Application{
-				ObjectMeta: metav1.ObjectMeta{Labels: v3Labels},
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3}},
+				Spec:       appv1alpha1.ApplicationSpec{SharedEntrances: shared},
+			},
+			want: false,
+		},
+		{
+			name: "shared v3 without shared entrances does not qualify",
+			app: &appv1alpha1.Application{
+				ObjectMeta: metav1.ObjectMeta{Labels: sharedLabels},
 			},
 			want: false,
 		},

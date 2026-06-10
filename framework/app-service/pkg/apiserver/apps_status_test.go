@@ -17,10 +17,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func amObj(name, owner, appName string, state appv1alpha1.ApplicationManagerState, v3 bool) *appv1alpha1.ApplicationManager {
+// amObj builds a fake ApplicationManager. shared=true stamps both the
+// v3 schema marker AND the shared label, matching what the v3 install
+// handler writes for shared cluster-wide apps. shared=false produces a
+// per-user AM (no labels) — these are owner-only in the visibility
+// model, regardless of api-version.
+func amObj(name, owner, appName string, state appv1alpha1.ApplicationManagerState, shared bool) *appv1alpha1.ApplicationManager {
 	labels := map[string]string{}
-	if v3 {
-		labels[appv1alpha1.AppApiVersionLabel] = appv1alpha1.AppVersionV3
+	labels[appv1alpha1.AppApiVersionLabel] = appv1alpha1.AppVersionV3
+	if shared {
+		labels[constants.AppSharedLabel] = constants.AppSharedTrue
 	}
 	return &appv1alpha1.ApplicationManager{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels},
@@ -92,11 +98,17 @@ func names(r appsStatusResult) map[string]bool {
 	return m
 }
 
-func TestAppsStatusFiltersByOwnerAndV3(t *testing.T) {
+// TestAppsStatusFiltersByOwnerAndShared pins the visibility model:
+// shared cluster-wide apps are visible to every authenticated user,
+// while per-user apps (v1 and v3+per-user) are owner-only. The
+// discriminator is the AppSharedLabel, NOT the schema-version label —
+// a v3 per-user AM (api-version=v3 with no shared label) must NOT leak
+// across owners.
+func TestAppsStatusFiltersByOwnerAndShared(t *testing.T) {
 	h := newHandlerWithAMs(t,
 		amObj("a1", "alice", "nginx", appv1alpha1.Running, false),
 		amObj("a2", "bob", "mysql", appv1alpha1.Running, false),
-		amObj("a3", "bob", "shared", appv1alpha1.Running, true), // v3, visible to all
+		amObj("a3", "bob", "shared", appv1alpha1.Running, true), // shared, visible to all
 	)
 	// wait until lister sees all three before asserting (List is eventually consistent).
 	deadline := time.Now().Add(3 * time.Second)
@@ -104,13 +116,56 @@ func TestAppsStatusFiltersByOwnerAndV3(t *testing.T) {
 		got := names(callAppsStatus(t, h, "alice", ""))
 		if got["nginx"] && got["shared"] || time.Now().After(deadline) {
 			if got["mysql"] {
-				t.Errorf("alice should not see bob's non-v3 app, got %v", got)
+				t.Errorf("alice should not see bob's non-shared app, got %v", got)
 			}
 			if !got["nginx"] {
 				t.Errorf("alice should see her own app, got %v", got)
 			}
 			if !got["shared"] {
-				t.Errorf("alice should see the v3 app, got %v", got)
+				t.Errorf("alice should see the shared app, got %v", got)
+			}
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// TestAppsStatusV3PerUserAppNotShared pins that a v3 manifest with
+// options.shared:false produces a per-user AM (api-version=v3 label,
+// no shared label) and that this AM is owner-only — confirming that
+// the shared label, not the schema label, drives visibility. Without
+// this gate v3+per-user apps would silently fan out to every user.
+func TestAppsStatusV3PerUserAppNotShared(t *testing.T) {
+	v3PerUser := &appv1alpha1.ApplicationManager{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "a4",
+			Labels: map[string]string{
+				// schema marker present, shared marker absent → per-user
+				appv1alpha1.AppApiVersionLabel: appv1alpha1.AppVersionV3,
+			},
+		},
+		Spec: appv1alpha1.ApplicationManagerSpec{
+			AppName:      "v3only",
+			AppNamespace: "v3only-bob",
+			AppOwner:     "bob",
+			Source:       "market",
+			Type:         appv1alpha1.App,
+		},
+		Status: appv1alpha1.ApplicationManagerStatus{State: appv1alpha1.Running},
+	}
+	h := newHandlerWithAMs(t,
+		amObj("a1", "alice", "nginx", appv1alpha1.Running, false),
+		v3PerUser,
+	)
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		got := names(callAppsStatus(t, h, "alice", ""))
+		if got["nginx"] || time.Now().After(deadline) {
+			if !got["nginx"] {
+				t.Errorf("alice should see her own app, got %v", got)
+			}
+			if got["v3only"] {
+				t.Errorf("alice must not see bob's v3+per-user app, got %v", got)
 			}
 			return
 		}

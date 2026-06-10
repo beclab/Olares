@@ -192,10 +192,24 @@ const (
 	AppSharedEntrancesLabel = "app.bytetrade.io/shared-entrance"
 	AppMiddlewareLabel      = "app.bytetrade.io/middleware"
 
-	// AppApiVersionLabel marks an Application / ApplicationManager as a v3
-	// app (cluster-wide, admin-managed).
+	// AppApiVersionLabel marks an Application / ApplicationManager / namespace
+	// / workload with the OlaresManifest schema version (currently only v3 is
+	// stamped). This is a SCHEMA marker — a v3 app may be either a shared
+	// cluster-wide singleton or a regular per-user app, depending on
+	// options.shared in the manifest. Use AppSharedLabel to discriminate
+	// between those two; api-version=v3 alone does NOT imply shared.
 	AppApiVersionLabel = "app.bytetrade.io/api-version"
 	AppVersionV3       = "v3"
+
+	// AppSharedLabel marks an Application / ApplicationManager / namespace /
+	// workload as a shared cluster-wide app. Stamped at install time by the
+	// v3 install handler when ApplicationConfig.Shared is true (i.e.
+	// apiVersion: v3 + options.shared: true) and propagated by the
+	// Application controller. Drives admin-only lifecycle, cluster-wide
+	// visibility, NATS fan-out, NetworkPolicy fast-path, etc. Per-user v3
+	// apps do NOT carry this label and are handled like v1 apps.
+	AppSharedLabel = "app.bytetrade.io/app-shared"
+	AppSharedTrue  = "true"
 
 	OneContainerMultiDeviceSplitSymbol = ":"
 	ArchLabelKey                       = "kubernetes.io/arch"

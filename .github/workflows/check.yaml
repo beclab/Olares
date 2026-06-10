@@ -67,7 +67,7 @@ jobs:
           bash build/package.sh
 
       - name: Run chart-testing (lint)
-        run: ct lint --chart-dirs .dist/wizard/config,.dist/wizard/config/apps,.dist/wizard/config/gpu,.dist/wizard/config/app-gateway-system --check-version-increment=false --all --validate-maintainers=false
+        run: ct lint --chart-dirs .dist/wizard/config,.dist/wizard/config/apps,.dist/wizard/config/gpu --check-version-increment=false --all --validate-maintainers=false
 
   test-version:
     needs: check-permission

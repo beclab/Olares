@@ -260,10 +260,10 @@ func (configurator *ReverseProxyConfigurator) setProxyTypeForRelevantComponents(
 	}
 	for i := range appList.Items {
 		app := &appList.Items[i]
-		isV3 := appv1alpha1.IsV3(app)
-		// v1/v2: only this user's apps. v3: every app, but we only care
+		isShared := appv1alpha1.IsShared(app)
+		// v1/v2: only this user's apps. shared: every app, but we only care
 		// when this user has a customDomain overlay.
-		if !isV3 && app.Spec.Owner != constants.Username {
+		if !isShared && app.Spec.Owner != constants.Username {
 			continue
 		}
 
@@ -296,7 +296,7 @@ func (configurator *ReverseProxyConfigurator) setProxyTypeForRelevantComponents(
 			return errors.Wrapf(err, "failed to marshal custom domain settings of app %s", app.Name)
 		}
 
-		if isV3 {
+		if isShared {
 			if app.Spec.UserSettings == nil {
 				app.Spec.UserSettings = make(map[string]map[string]string)
 			}

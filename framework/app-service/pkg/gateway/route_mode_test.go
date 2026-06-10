@@ -83,7 +83,10 @@ func TestComputeRouteModePatch_autoGatewayWhenClusterEnabled(t *testing.T) {
 	app := &appv1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ollama",
-			Labels: map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3},
+			Labels: map[string]string{
+				constants.AppApiVersionLabel: constants.AppVersionV3,
+				constants.AppSharedLabel:     constants.AppSharedTrue,
+			},
 		},
 		Spec: appv1alpha1.ApplicationSpec{
 			SharedEntrances: []appv1alpha1.Entrance{{Name: "api", Host: "svc"}},

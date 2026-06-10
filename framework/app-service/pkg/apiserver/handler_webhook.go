@@ -119,19 +119,19 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	}
 	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectSharedPod, perms)
 
-	v3 := appCfg != nil && appCfg.IsV3()
+	shared := appCfg != nil && appCfg.IsShared()
 	nothingToInject := !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0
 
-	if v3 {
+	if shared {
 		if injectSharedPod != nil {
 			patchBytes, err := patchSharedEntranceLabel(req, &pod, *injectSharedPod)
 			if err != nil {
-				klog.Errorf("Failed to patch shared-entrance label for v3 pod uuid=%s name=%s namespace=%s err=%v",
+				klog.Errorf("Failed to patch shared-entrance label for shared-app pod uuid=%s name=%s namespace=%s err=%v",
 					proxyUUID, pod.Name, req.Namespace, err)
 				return h.sidecarWebhook.AdmissionError(req.UID, err)
 			}
 			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
-			klog.Infof("Patched shared-entrance label for v3 pod uuid=%s namespace=%s injectSharedPod=%v",
+			klog.Infof("Patched shared-entrance label for shared-app pod uuid=%s namespace=%s injectSharedPod=%v",
 				proxyUUID, req.Namespace, *injectSharedPod)
 
 			if *injectSharedPod {
@@ -163,7 +163,7 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 				klog.Infof("Skipping sidecar injection for v3 pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 			}
 		} else {
-			klog.Infof("Skipping sidecar injection for v3 pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+			klog.Infof("Skipping sidecar injection for shared-app pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		}
 		return resp
 	}

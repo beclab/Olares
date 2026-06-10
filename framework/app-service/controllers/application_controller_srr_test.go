@@ -45,6 +45,7 @@ func TestReconcileSharedRouteRegistry_WritesRouteObjects(t *testing.T) {
 			UID:  types.UID("app-uid"),
 			Labels: map[string]string{
 				constants.AppApiVersionLabel: constants.AppVersionV3,
+				constants.AppSharedLabel:     constants.AppSharedTrue,
 			},
 			Annotations: map[string]string{
 				gateway.AnnotationRouteMode: gateway.AnnotationRouteModeGateway,
@@ -140,6 +141,7 @@ func TestReconcileSharedRouteRegistry_AppidIgnoredForNaming(t *testing.T) {
 			UID:  types.UID("app-uid"),
 			Labels: map[string]string{
 				constants.AppApiVersionLabel: constants.AppVersionV3,
+				constants.AppSharedLabel:     constants.AppSharedTrue,
 			},
 			Annotations: map[string]string{
 				gateway.AnnotationRouteMode: gateway.AnnotationRouteModeGateway,

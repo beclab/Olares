@@ -156,13 +156,16 @@ func newClusterApp(name, owner string, clusterScoped string) appv1alpha1.Applica
 	}
 }
 
-// newV3SharedApp builds a v3 shared app (v3 marker label + shared entrances),
+// newV3SharedApp builds a shared v3 app (shared marker + shared entrances),
 // which qualifies as a shared server without settings.clusterScoped.
 func newV3SharedApp(name, owner string) appv1alpha1.Application {
 	return appv1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name + "-" + owner,
-			Labels: map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3},
+			Name: name + "-" + owner,
+			Labels: map[string]string{
+				constants.AppApiVersionLabel: constants.AppVersionV3,
+				constants.AppSharedLabel:     constants.AppSharedTrue,
+			},
 		},
 		Spec: appv1alpha1.ApplicationSpec{
 			Name:            name,

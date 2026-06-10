@@ -841,14 +841,17 @@ func newClusterApp(name, owner string) *appv1alpha1.Application {
 	}
 }
 
-// newV3SharedClusterApp builds a v3 shared server app (v3 marker + shared
-// entrances, no settings.clusterScoped), which must qualify for the shared
-// routing infrastructure via the v3 marker alone.
+// newV3SharedClusterApp builds a shared v3 server app (shared + schema labels,
+// shared entrances, no settings.clusterScoped), which must qualify for the
+// shared routing infrastructure via the shared marker.
 func newV3SharedClusterApp(name, owner string) *appv1alpha1.Application {
 	return &appv1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name + "-" + owner,
-			Labels: map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3},
+			Name: name + "-" + owner,
+			Labels: map[string]string{
+				constants.AppApiVersionLabel: constants.AppVersionV3,
+				constants.AppSharedLabel:     constants.AppSharedTrue,
+			},
 		},
 		Spec: appv1alpha1.ApplicationSpec{
 			Name:            name,
