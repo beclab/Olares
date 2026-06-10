@@ -23,6 +23,8 @@ type upgrader_1_12_7_20260610 struct {
 	upgrader_1_12_7_20260605
 }
 
+const reverseProxyAgentImage = "beclab/reverse-proxy:v0.1.11"
+
 func (u upgrader_1_12_7_20260610) Version() *semver.Version {
 	return semver.MustParse("1.12.7-20260610")
 }
@@ -37,6 +39,18 @@ func (u upgrader_1_12_7_20260610) UpgradeSystemComponents() []task.Interface {
 		},
 	}
 	return append(pre, u.upgrader_1_12_7_20260605.UpgradeSystemComponents()...)
+}
+
+func (u upgrader_1_12_7_20260610) PrepareForUpgrade() []task.Interface {
+	pre := []task.Interface{
+		&task.LocalTask{
+			Name:   "UpgradeUserReverseProxyAgent",
+			Action: new(upgradeUserReverseProxyAgent),
+			Retry:  5,
+			Delay:  10 * time.Second,
+		},
+	}
+	return append(pre, u.upgraderBase.PrepareForUpgrade()...)
 }
 
 func init() {

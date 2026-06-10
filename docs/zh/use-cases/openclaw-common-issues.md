@@ -4,9 +4,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, 故障排除, 常见问题, 常见错误, 报错
-app_version: "1.0.3"
-doc_version: "1.1"
-doc_updated: "2026-06-09"
+app_version: "1.0.8"
+doc_version: "1.2"
+doc_updated: "2026-06-10"
 ---
 
 # 常见问题
@@ -14,6 +14,44 @@ doc_updated: "2026-06-09"
 本页面整理了在 Olares 上运行 OpenClaw 时的常见问题及解决方法。
 
 如遇到此处未列出的问题，参考[升级 OpenClaw](openclaw-upgrade.md)页面了解版本特定的更改，或[ OpenClaw 官方文档](https://docs.openclaw.ai/zh-CN)。
+
+## 升级后智能体提示 "Missing API key" 错误且无响应
+
+使用云端模型提供商时，智能体无法连接或调用外部 API，并报如下错误：
+
+```text
+Missing API key for the selected provider on the gateway. Configure provider
+auth, then try again.
+```
+
+### 原因
+
+从 OpenClaw V2026.06.05 开始，认证配置文件和核心结构配置从旧版 JSON 文件迁移到内部的 SQLite 数据库。
+
+如果你近期升级了应用，但尚未执行数据库迁移工具，网关会在新数据库中查找认证配置文件，从而无法检测到云端 API 密钥。
+
+### 解决方案
+
+在 OpenClaw CLI 中运行自动修复工具，将旧版认证 JSON 文件迁移到 SQLite 数据库。
+
+1. 从启动台打开 OpenClaw CLI。
+2. 运行自动修复命令：
+
+    ```bash
+    openclaw doctor --fix
+    ```
+3. 在终端中查看输出日志。迁移成功时，会确认旧版 JSON 配置文件已导入 SQLite。
+
+    示例输出：
+
+    ```text
+    |  Migrated auth profile JSON for ~/.openclaw/agents/main/agent/auth-profiles.json into  |
+    |  SQLite (backups:                                                                      |
+    |  ~/.openclaw/agents/main/agent/auth-profiles.json.sqlite-import.1781088154476.bak,     |
+    |  ~/.openclaw/agents/main/agent/auth-state.json.sqlite-import.1781088154484.bak).       |
+    ```
+
+    完成后，网关将自动识别密钥并正常连接。
 
 ## 无法在 CLI 中重启 OpenClaw
 

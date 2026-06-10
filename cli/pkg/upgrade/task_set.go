@@ -38,6 +38,10 @@ import (
 	"github.com/beclab/Olares/cli/pkg/utils"
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kkubernetes "k8s.io/client-go/kubernetes"
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -753,6 +757,76 @@ func upgradeNetworkManagerConfig() []task.Interface {
 		&task.LocalTask{
 			Name:   "GenerateNetworkManagerConfig",
 			Action: new(generateNetworkManagerConfigAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
+// upgradeUserReverseProxyAgent iterates over the user list and, for each
+// user-space-<username> namespace that contains a reverse-proxy-agent
+// deployment, sets its image to reverseProxyAgentImage. Namespaces without the
+// deployment are skipped.
+type upgradeUserReverseProxyAgent struct {
+	common.KubeAction
+}
+
+func (u *upgradeUserReverseProxyAgent) Execute(runtime connector.Runtime) error {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get rest config: %s", err)
+	}
+
+	scheme := kruntime.NewScheme()
+	if err := iamv1alpha2.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("failed to add user scheme: %s", err)
+	}
+	userClient, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		return fmt.Errorf("failed to create client: %s", err)
+	}
+
+	client, err := kkubernetes.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("failed to create kubernetes client: %s", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+	var userList iamv1alpha2.UserList
+	if err := userClient.List(ctx, &userList); err != nil {
+		return fmt.Errorf("failed to list users: %s", err)
+	}
+
+	for _, user := range userList.Items {
+		ns := fmt.Sprintf("user-space-%s", user.Name)
+
+		getCtx, getCancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		_, err := client.AppsV1().Deployments(ns).Get(getCtx, "reverse-proxy-agent", metav1.GetOptions{})
+		getCancel()
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				logger.Infof("reverse-proxy-agent deployment not found in namespace %s, skipping", ns)
+				continue
+			}
+			return fmt.Errorf("failed to get reverse-proxy-agent deployment in namespace %s: %v", ns, err)
+		}
+
+		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf(
+			"/usr/local/bin/kubectl set image deployment/reverse-proxy-agent agent=%s -n %s", reverseProxyAgentImage, ns), false, true); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "failed to upgrade reverse-proxy-agent in namespace %s", ns)
+		}
+		logger.Infof("reverse-proxy-agent in namespace %s upgraded to %s successfully", ns, reverseProxyAgentImage)
+	}
+
+	return nil
+}
+
+func upgradeUserReverseProxy() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "upgradeUserReverseProxy",
+			Action: new(upgradeUserReverseProxyAgent),
 			Retry:  5,
 			Delay:  5 * time.Second,
 		},

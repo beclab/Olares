@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 学习, OpenClaw 网页搜索
-app_version: "1.0.2"
-doc_version: "2.0"
-doc_updated: "2026-06-09"
+app_version: "1.0.8"
+doc_version: "2.1"
+doc_updated: "2026-06-10"
 ---
 
 # 可选：在 OpenClaw 中启用网页搜索
@@ -49,13 +49,25 @@ doc_updated: "2026-06-09"
 将 OpenClaw 连接到 SearXNG。
 
 1. 打开 OpenClaw CLI。
-2. 运行以下命令启动配置向导：
+2. 运行以下命令，下载安装 `searxng` 插件：
+
+   ```bash
+   openclaw plugins install searxng
+   ```
+
+3. 运行以下命令重启网关，加载新安装的插件：
+
+   ```bash
+   restart-gateway
+   ```
+
+4. 重启完成后，运行以下命令启动配置向导：
 
     ```bash
     openclaw configure --section web
     ```
 
-3. 按如下方式配置：
+5. 按如下方式配置：
 
     | 配置 | 选项 |
     |:---------|:-------|
