@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	agwconfig "github.com/beclab/Olares/framework/app-gateway/pkg/config"
@@ -17,6 +18,8 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +32,22 @@ const (
 	helmReleaseEGCRDs       = "eg-crds"
 	helmReleaseEG           = "eg"
 	helmReleaseAppGateway   = "app-gateway"
+
+	envMeshProfileBootstrap = "APP_GATEWAY_MESH_PROFILE"
+	meshProfileFull         = "full"
+	meshProfileLite         = "lite"
+	clusterConfigSingleton  = "cluster"
 )
+
+var (
+	upgradeChartsForVendorInstallFunc = utils.UpgradeCharts
+)
+
+var clusterConfigGVK = schema.GroupVersionKind{
+	Group:   "cluster.olares.io",
+	Version: "v1alpha1",
+	Kind:    "ClusterConfig",
+}
 
 func resolveAppGatewayNamespace() string {
 	if ns := os.Getenv("APP_GATEWAY_NAMESPACE"); ns != "" {
@@ -57,6 +75,70 @@ func appGatewayVendorPath(installerDir string) string {
 
 func appGatewayHelmChartPath(installerDir string) string {
 	return filepath.Join(installerDir, "wizard", "config", "apps", "app-gateway")
+}
+
+func resolveMeshProfileFromEnv() string {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(envMeshProfileBootstrap)))
+	if v == meshProfileLite {
+		return meshProfileLite
+	}
+	return meshProfileFull
+}
+
+func meshProfileSkipsLinkerdInstall(profile string) bool {
+	return profile == meshProfileLite
+}
+
+func validateMeshProfileHelmAlignment(profile string, def agwconfig.Defaults) error {
+	if profile == meshProfileLite && def.MeshLinkerdEnabled() {
+		return fmt.Errorf("mesh profile lite conflicts with defaults.yaml mesh.linkerd.enabled=true")
+	}
+	return nil
+}
+
+func applyLiteMeshHelmOverrides(vals map[string]interface{}) {
+	mesh, ok := vals["mesh"].(map[string]interface{})
+	if !ok {
+		mesh = map[string]interface{}{}
+		vals["mesh"] = mesh
+	}
+	linkerd, ok := mesh["linkerd"].(map[string]interface{})
+	if !ok {
+		linkerd = map[string]interface{}{}
+		mesh["linkerd"] = linkerd
+	}
+	linkerd["enabled"] = false
+	vals["linkerdPkiGuardian"] = map[string]interface{}{"enabled": false}
+}
+
+func bootstrapClusterConfigMeshProfile(ctx context.Context, c client.Client, profile string) error {
+	if c == nil || profile == "" {
+		return nil
+	}
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(clusterConfigGVK)
+	err := c.Get(ctx, types.NamespacedName{Name: clusterConfigSingleton}, obj)
+	if apierrors.IsNotFound(err) {
+		obj.SetName(clusterConfigSingleton)
+		if err := unstructured.SetNestedField(obj.Object, profile, "spec", "meshProfile"); err != nil {
+			return err
+		}
+		return c.Create(ctx, obj)
+	}
+	if err != nil {
+		return err
+	}
+	current, _, err := unstructured.NestedString(obj.Object, "spec", "meshProfile")
+	if err != nil {
+		return err
+	}
+	if current == profile {
+		return nil
+	}
+	if err := unstructured.SetNestedField(obj.Object, profile, "spec", "meshProfile"); err != nil {
+		return err
+	}
+	return c.Update(ctx, obj)
 }
 
 // appGatewayStackEnabled reports whether the unified ingress stack is part of this run.
@@ -99,40 +181,57 @@ func (t *InstallAppGatewayVendor) Execute(runtime connector.Runtime) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	appGatewayNS, linkerdNamespace := vendorNamespaces()
-
-	actionLinkerd, settingsLinkerd, err := utils.InitConfigForAppGateway(config, linkerdNamespace)
+	meshProfile := resolveMeshProfileFromEnv()
+	defaults, err := agwconfig.Load()
 	if err != nil {
+		defaults = agwconfig.Defaults{}
+	}
+	if err := validateMeshProfileHelmAlignment(meshProfile, defaults); err != nil {
 		return err
 	}
-	linkerdCRDsChart := filepath.Join(vendor, "linkerd-crds-chart")
-	linkerdCPChart := filepath.Join(vendor, "linkerd-control-plane-chart")
-	crdsVals, err := utils.LoadValuesFile(filepath.Join(vendor, "linkerd-crds-values.yaml"))
-	if err != nil {
-		crdsVals = map[string]interface{}{}
-	}
-	logger.InfoInstallationProgress("Installing Linkerd CRDs chart (helm SDK) ...")
-	if err := utils.UpgradeCharts(ctx, actionLinkerd, settingsLinkerd, helmReleaseLinkerdCRDs, linkerdCRDsChart, "", linkerdNamespace, crdsVals, false); err != nil {
-		return errors.Wrap(err, "install linkerd-crds")
-	}
+
 	k8sClient, err := client.New(config, client.Options{})
 	if err != nil {
 		return err
 	}
+	if err := bootstrapClusterConfigMeshProfile(ctx, k8sClient, meshProfile); err != nil {
+		return errors.Wrap(err, "bootstrap ClusterConfig.spec.meshProfile")
+	}
 
-	linkerdVals, err := utils.LoadValuesFile(filepath.Join(vendor, "linkerd-values.yaml"))
-	if err != nil {
-		linkerdVals = map[string]interface{}{}
-	}
-	if err := enrichLinkerdHelmValues(ctx, k8sClient, linkerdNamespace, vendor, linkerdVals); err != nil {
-		return errors.Wrap(err, "prepare linkerd identity certificates")
-	}
-	logger.InfoInstallationProgress("Installing Linkerd control plane (helm SDK) ...")
-	if err := utils.UpgradeCharts(ctx, actionLinkerd, settingsLinkerd, helmReleaseLinkerd, linkerdCPChart, "", linkerdNamespace, linkerdVals, false); err != nil {
-		return errors.Wrap(err, "install linkerd control plane")
-	}
-	if err := applyLinkerdMeshNetworkPolicies(ctx, k8sClient, settingsLinkerd, vendor); err != nil {
-		return errors.Wrap(err, "apply linkerd mesh network policies")
+	appGatewayNS, linkerdNamespace := vendorNamespaces()
+
+	if !meshProfileSkipsLinkerdInstall(meshProfile) {
+		actionLinkerd, settingsLinkerd, err := utils.InitConfigForAppGateway(config, linkerdNamespace)
+		if err != nil {
+			return err
+		}
+		linkerdCRDsChart := filepath.Join(vendor, "linkerd-crds-chart")
+		linkerdCPChart := filepath.Join(vendor, "linkerd-control-plane-chart")
+		crdsVals, err := utils.LoadValuesFile(filepath.Join(vendor, "linkerd-crds-values.yaml"))
+		if err != nil {
+			crdsVals = map[string]interface{}{}
+		}
+		logger.InfoInstallationProgress("Installing Linkerd CRDs chart (helm SDK) ...")
+		if err := upgradeChartsForVendorInstallFunc(ctx, actionLinkerd, settingsLinkerd, helmReleaseLinkerdCRDs, linkerdCRDsChart, "", linkerdNamespace, crdsVals, false); err != nil {
+			return errors.Wrap(err, "install linkerd-crds")
+		}
+
+		linkerdVals, err := utils.LoadValuesFile(filepath.Join(vendor, "linkerd-values.yaml"))
+		if err != nil {
+			linkerdVals = map[string]interface{}{}
+		}
+		if err := enrichLinkerdHelmValues(ctx, k8sClient, linkerdNamespace, vendor, linkerdVals); err != nil {
+			return errors.Wrap(err, "prepare linkerd identity certificates")
+		}
+		logger.InfoInstallationProgress("Installing Linkerd control plane (helm SDK) ...")
+		if err := upgradeChartsForVendorInstallFunc(ctx, actionLinkerd, settingsLinkerd, helmReleaseLinkerd, linkerdCPChart, "", linkerdNamespace, linkerdVals, false); err != nil {
+			return errors.Wrap(err, "install linkerd control plane")
+		}
+		if err := applyLinkerdMeshNetworkPolicies(ctx, k8sClient, settingsLinkerd, vendor); err != nil {
+			return errors.Wrap(err, "apply linkerd mesh network policies")
+		}
+	} else {
+		logger.InfoInstallationProgress("meshProfile=lite: skipping Linkerd CRDs and control plane install")
 	}
 
 	// Envoy Gateway CRDs + control plane
@@ -241,11 +340,22 @@ func (t *InstallAppGatewayChart) Execute(runtime connector.Runtime) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
+	meshProfile := resolveMeshProfileFromEnv()
+	if err := validateMeshProfileHelmAlignment(meshProfile, def); err != nil {
+		return err
+	}
+
 	vals := buildAppGatewayHelmValues(ns, def)
+	if meshProfileSkipsLinkerdInstall(meshProfile) {
+		applyLiteMeshHelmOverrides(vals)
+	}
 
 	k8sClient, err := client.New(config, client.Options{})
 	if err != nil {
 		return err
+	}
+	if err := bootstrapClusterConfigMeshProfile(ctx, k8sClient, meshProfile); err != nil {
+		return errors.Wrap(err, "bootstrap ClusterConfig.spec.meshProfile")
 	}
 	if err := ensureAppGatewayNamespaceMetadata(ctx, k8sClient, ns); err != nil {
 		return errors.Wrap(err, "prepare app-gateway namespace")
