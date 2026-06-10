@@ -49,7 +49,7 @@ To fix this:
 1. Open **ComfyUI Launcher** and go to **Lab** from the left sidebar.
 2. In the **Manually edit extra arguments** field, remove `--normalvram` manually and click **Save**. Alternatively, click **Restore default** to reset to the default launch arguments.
 3. Verify that **Current full launch command** at the top no longer contains `--normalvram`.
-4. In ComfyUI Launcher, click **Start ComfyUI** to launch the app.
+4. In ComfyUI Launcher Home, click **Start** to launch the ComfyUI.
 
 ## Models cannot be downloaded directly to Olares
 
