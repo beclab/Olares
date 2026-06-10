@@ -309,6 +309,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&routecontrol.EntranceTLSListenerReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "EntranceTLSListener")
+		os.Exit(1)
+	}
+
 	if err = (&routecontrol.SharedHostsReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "SharedHosts")
 		os.Exit(1)
