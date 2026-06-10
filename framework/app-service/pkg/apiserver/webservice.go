@@ -367,6 +367,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to list compute resource bindings", &ComputeBindingResponse{}))
 
+	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/compute-resources/bindings/validate").
+		To(handler.validateComputeBinding).
+		Doc("Validate a compute resource binding selection without applying it").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamAppName, "the name of a application")).
+		Returns(http.StatusOK, "Success to validate the compute resource binding", &ComputeBindingValidationResponse{}))
+
 	ws.Route(ws.DELETE("/apps/{"+ParamAppName+"}/compute-resources/bindings").
 		To(handler.queued(handler.suspend)).
 		Doc("Suspend the application to release compute resource bindings").

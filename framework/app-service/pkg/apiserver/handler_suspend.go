@@ -53,10 +53,22 @@ func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
 	if am.Annotations == nil {
 		am.Annotations = make(map[string]string)
 	}
-	am.Annotations[api.AppStopAllKey] = fmt.Sprintf("%t", request.All)
+	am.Annotations[api.AppStopAllKey] = fmt.Sprintf("%t", true)
 
 	err := h.ctrlClient.Update(req.Request.Context(), &am)
 	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	var appCfg appcfg.ApplicationConfig
+	if err = json.Unmarshal([]byte(am.Spec.Config), &appCfg); err != nil {
+		klog.Errorf("unmarshal app config for compute cleanup of app %s failed %v", app, err)
+		api.HandleError(resp, req, err)
+		return
+	}
+	if err = compute.DeleteAllocationsForComputeTarget(req.Request.Context(), h.ctrlClient, &appCfg, true); err != nil {
+		klog.Errorf("delete compute allocation for suspended app %s failed %v", app, err)
 		api.HandleError(resp, req, err)
 		return
 	}
