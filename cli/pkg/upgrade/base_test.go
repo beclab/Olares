@@ -45,6 +45,33 @@ func TestUpgradeSystemComponents_UpgradeTaskUsesInstallAppGatewaySystemAction(t 
 	}
 }
 
+func TestUpgradeSystemComponents_AppGatewayTaskOrder(t *testing.T) {
+	tasks := (upgraderBase{}).UpgradeSystemComponents()
+	names := taskNames(tasks)
+
+	pkiIdx := indexOf(names, "PrepareLinkerdPKI")
+	crdIdx := indexOf(names, "ApplyNetworkCRDs")
+	upgradeIdx := indexOf(names, "UpgradeAppGatewaySystem")
+	if pkiIdx < 0 || crdIdx < 0 || upgradeIdx < 0 {
+		t.Fatalf("missing app-gateway upgrade tasks in %v", names)
+	}
+	if !(pkiIdx < crdIdx && crdIdx < upgradeIdx) {
+		t.Fatalf("app-gateway upgrade order: got %v want PrepareLinkerdPKI before ApplyNetworkCRDs before UpgradeAppGatewaySystem", names)
+	}
+}
+
+func TestUpgradeSystemComponents_PrepareLinkerdPKIPreservesSecretOnUpgrade(t *testing.T) {
+	tasks := (upgraderBase{}).UpgradeSystemComponents()
+	localByName := localTasksByName(tasks)
+	pkiTask, ok := localByName["PrepareLinkerdPKI"]
+	if !ok {
+		t.Fatal("missing PrepareLinkerdPKI in upgrade chain")
+	}
+	if _, ok := pkiTask.Action.(*terminus.PrepareLinkerdPKI); !ok {
+		t.Fatalf("unexpected action type %T, want *terminus.PrepareLinkerdPKI", pkiTask.Action)
+	}
+}
+
 func localTasksByName(tasks []task.Interface) map[string]*task.LocalTask {
 	res := make(map[string]*task.LocalTask, len(tasks))
 	for _, item := range tasks {
@@ -53,4 +80,23 @@ func localTasksByName(tasks []task.Interface) map[string]*task.LocalTask {
 		}
 	}
 	return res
+}
+
+func taskNames(tasks []task.Interface) []string {
+	names := make([]string, 0, len(tasks))
+	for _, item := range tasks {
+		if lt, ok := item.(*task.LocalTask); ok {
+			names = append(names, lt.Name)
+		}
+	}
+	return names
+}
+
+func indexOf(names []string, target string) int {
+	for i, name := range names {
+		if name == target {
+			return i
+		}
+	}
+	return -1
 }
