@@ -29,7 +29,7 @@ auth, then try again.
 
 When the upgrade is completed, perform the following steps to migrate your data and restore full gateway functionality:
 1. Open the OpenClaw CLI from the Launchpad.
-2. Run the automated repair utility:
+2. Run the automated repair command:
 
     ```bash
     openclaw doctor --fix
