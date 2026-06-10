@@ -32,6 +32,23 @@ This is usually caused by insufficient resources or incorrect GPU allocation. To
 
 If ComfyUI starts successfully, most of these messages do not require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
 
+## ComfyUI fails to start after upgrade with `--normalvram` error
+
+After upgrading ComfyUI, the app may fail to start and show an error like:
+
+```
+main.py: error: unrecognized arguments: --normalvram
+```
+
+This means a custom launch argument from a previous version is still in use, but the new version no longer supports it.
+
+To fix this:
+
+1. Open **ComfyUI Launcher** and go to **Lab** from the left sidebar.
+2. In the **Manually edit extra arguments** field, remove `--normalvram` manually and click **Save**. Alternatively, click **Restore default** to reset to the default launch arguments.
+3. Verify that **Current full launch command** at the top no longer contains `--normalvram`.
+4. Restart ComfyUI.
+
 ## Models cannot be downloaded directly to Olares
 
 Some models require login, access approval, a token, or manual confirmation before they can be downloaded. These models cannot be downloaded directly to Olares through ComfyUI Launcher or Server Download.
