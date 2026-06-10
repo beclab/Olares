@@ -36,7 +36,7 @@ If ComfyUI starts successfully, most of these messages do not require action. In
 
 This issue may occur after upgrading to ComfyUI v1.0.37 or later.
 
-After upgrading ComfyUI, the app may fail to start and show an error like:
+After the upgrade, ComfyUI app may fail to start and show an error like:
 
 ```
 main.py: error: unrecognized arguments: --normalvram
