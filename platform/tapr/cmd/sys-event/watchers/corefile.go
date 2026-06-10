@@ -27,12 +27,14 @@ import (
 )
 
 const (
-	labelDNSPassthrough   = "gateway.olares.io/dns-passthrough"
-	labelSRRAppID         = "gateway.olares.io/appid"
-	labelSRREntrance      = "gateway.olares.io/entrance"
-	appGatewayNamespace   = "app-gateway"
-	appGatewayDataService = "app-gateway-data"
-	srrRouteModeGateway   = "gateway"
+	labelDNSPassthrough     = "gateway.olares.io/dns-passthrough"
+	labelSRRAppID           = "gateway.olares.io/appid"
+	labelSRREntrance        = "gateway.olares.io/entrance"
+	appGatewayNamespace     = "app-gateway"
+	appGatewayDataService   = "app-gateway-data"
+	srrRouteModeGateway     = "gateway"
+	corefileSizeWarnBytes   = 800 * 1024
+	corefileSizeRejectBytes = 950 * 1024
 )
 
 var sharedRouteRegistryGVR = schema.GroupVersionResource{
@@ -92,6 +94,7 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			defaultPlugins = append(defaultPlugins, p)
 		}
 	}
+	defaultPlugins = normalizeReloadInDefaultPlugins(defaultPlugins)
 
 	userList, err := dynamicClient.Resource(schema.GroupVersionResource{
 		Group:    "iam.kubesphere.io",
@@ -325,7 +328,7 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 
 	var sharedInclusterTemplatePlugins []*corefile.Plugin
 	if inClusterGatewayEnabled(ctx, dynamicClient) {
-		srrEntrances, err := sharedInclusterEntrancesFromCluster(ctx, kubeClient, dynamicClient, userList)
+		srrEntrances, err := sharedInclusterEntrancesFromCluster(ctx, kubeClient, dynamicClient)
 		if err != nil {
 			// degrade: skip shared templates, keep regenerating the rest.
 			// A transient SRR list failure (e.g. RBAC lag, informer thrash)
@@ -424,6 +427,20 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 	file.Servers = servers
 
 	newCorefileData := file.ToString()
+	newCorefileSize := len(newCorefileData)
+	if newCorefileSize >= corefileSizeRejectBytes {
+		err := fmt.Errorf("regenerated Corefile size %d exceeds reject threshold %d", newCorefileSize, corefileSizeRejectBytes)
+		klog.Error(err)
+		return err
+	}
+	if newCorefileSize >= corefileSizeWarnBytes {
+		klog.Warningf(
+			"regenerated Corefile size %d exceeds warn threshold %d (reject threshold=%d)",
+			newCorefileSize,
+			corefileSizeWarnBytes,
+			corefileSizeRejectBytes,
+		)
+	}
 	corefileConfigMap.Data["Corefile"] = newCorefileData
 
 	_, err = kubeClient.CoreV1().ConfigMaps("kube-system").Update(ctx, corefileConfigMap, metav1.UpdateOptions{})
@@ -694,26 +711,23 @@ const UserAnnotationZoneKey = "bytetrade.io/zone"
 const UserAnnotationLocalDomainDNSRecord = "bytetrade.io/local-domain-dns-record"
 const UserIndexAna = "bytetrade.io/user-index"
 
-// SharedInclusterEntrance identifies one Shared entrance FQDN that may be rewritten
-// inside the cluster. Callers must expand SRR hostPatterns with per-viewer FQDNs
-// before invoking buildSharedInclusterHosts.
+// SharedInclusterEntrance identifies one Shared entrance that may be rewritten
+// inside the cluster.
 type SharedInclusterEntrance struct {
 	AppID          string
 	EntranceName   string
 	EntranceID     string
-	Viewer         string
 	PlatformDomain string
 }
 
-// fqdn returns the exact host name for this shared entrance and viewer.
-func (e SharedInclusterEntrance) fqdn() string {
-	viewer := strings.ToLower(strings.TrimSpace(e.Viewer))
+// matchRegex returns the wildcard match regex for all viewers.
+func (e SharedInclusterEntrance) matchRegex() string {
 	platformDomain := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
 	entranceID := strings.ToLower(strings.TrimSpace(e.EntranceID))
-	if viewer == "" || platformDomain == "" || entranceID == "" {
+	if platformDomain == "" || entranceID == "" {
 		return ""
 	}
-	return entranceID + "." + viewer + "." + platformDomain
+	return `"^` + strings.ReplaceAll(entranceID, ".", `\.`) + `\.[^.]+\.` + strings.ReplaceAll(platformDomain, ".", `\.`) + `\.$"`
 }
 
 // buildSharedInclusterTemplates builds CoreDNS `template` plugin instances
@@ -728,9 +742,8 @@ func (e SharedInclusterEntrance) fqdn() string {
 // answer with the gateway ClusterIP. `fallthrough` is set so unrelated names
 // continue down the chain to the wildcard templates / forward.
 //
-// requirement: only FQDNs derived from Shared entrances may be rewritten;
-// per-user single-entrance hostnames must never be matched by regex.
-// behavior: deterministic sorted ordering by FQDN; empty input returns nil.
+// requirement: only FQDNs derived from Shared entrances may be rewritten.
+// behavior: deterministic sorted ordering by match regex; empty input returns nil.
 // test: table-driven unit tests in corefile_incluster_test.go.
 func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayDataIP string) []*corefile.Plugin {
 	ip := net.ParseIP(strings.TrimSpace(gatewayDataIP))
@@ -740,32 +753,31 @@ func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayD
 	gatewayDataIP = ip.String()
 
 	seen := make(map[string]struct{})
-	var hosts []string
+	var matches []string
 	for _, ent := range entrances {
-		host := ent.fqdn()
-		if host == "" {
+		match := ent.matchRegex()
+		if match == "" {
 			continue
 		}
-		if _, ok := seen[host]; ok {
+		if _, ok := seen[match]; ok {
 			continue
 		}
-		seen[host] = struct{}{}
-		hosts = append(hosts, host)
+		seen[match] = struct{}{}
+		matches = append(matches, match)
 	}
-	if len(hosts) == 0 {
+	if len(matches) == 0 {
 		return nil
 	}
-	sort.Strings(hosts)
+	sort.Strings(matches)
 
-	plugins := make([]*corefile.Plugin, 0, len(hosts))
-	for _, h := range hosts {
-		matchArg := `"^` + strings.ReplaceAll(h, ".", `\.`) + `\.$"`
-		answerArg := `"{{ .Name }} 60 IN A ` + gatewayDataIP + `"`
+	plugins := make([]*corefile.Plugin, 0, len(matches))
+	for _, match := range matches {
+		answerArg := `"{{ .Name }} 15 IN A ` + gatewayDataIP + `"`
 		plugins = append(plugins, &corefile.Plugin{
 			Name: "template",
 			Args: []string{"IN", "A", "."},
 			Options: []*corefile.Option{
-				{Name: "match", Args: []string{matchArg}},
+				{Name: "match", Args: []string{match}},
 				{Name: "answer", Args: []string{answerArg}},
 				{Name: "fallthrough"},
 			},
@@ -799,27 +811,6 @@ func namespacesWithDNSPassthrough(ctx context.Context, kubeClient kubernetes.Int
 	return out, nil
 }
 
-func viewersFromUserList(userList *unstructured.UnstructuredList) []string {
-	if userList == nil {
-		return nil
-	}
-	seen := make(map[string]struct{})
-	var viewers []string
-	for i := range userList.Items {
-		name := strings.ToLower(strings.TrimSpace(userList.Items[i].GetName()))
-		if name == "" {
-			continue
-		}
-		if _, ok := seen[name]; ok {
-			continue
-		}
-		seen[name] = struct{}{}
-		viewers = append(viewers, name)
-	}
-	sort.Strings(viewers)
-	return viewers
-}
-
 func parseLogicalHostPattern(pattern string) (entranceID, platformDomain string, ok bool) {
 	pattern = strings.ToLower(strings.TrimSpace(pattern))
 	const marker = ".*."
@@ -841,9 +832,8 @@ func parseLogicalHostPattern(pattern string) (entranceID, platformDomain string,
 func sharedInclusterEntrancesFromSRRItems(
 	srrItems []unstructured.Unstructured,
 	passthrough map[string]struct{},
-	viewers []string,
 ) []SharedInclusterEntrance {
-	if len(srrItems) == 0 || len(viewers) == 0 {
+	if len(srrItems) == 0 {
 		return nil
 	}
 	var entrances []SharedInclusterEntrance
@@ -880,15 +870,12 @@ func sharedInclusterEntrancesFromSRRItems(
 		if platformDomain == "" || entranceID == "" {
 			continue
 		}
-		for _, viewer := range viewers {
-			entrances = append(entrances, SharedInclusterEntrance{
-				AppID:          appid,
-				EntranceName:   entranceName,
-				EntranceID:     entranceID,
-				Viewer:         viewer,
-				PlatformDomain: platformDomain,
-			})
-		}
+		entrances = append(entrances, SharedInclusterEntrance{
+			AppID:          appid,
+			EntranceName:   entranceName,
+			EntranceID:     entranceID,
+			PlatformDomain: platformDomain,
+		})
 	}
 	return entrances
 }
@@ -897,21 +884,34 @@ func sharedInclusterEntrancesFromCluster(
 	ctx context.Context,
 	kubeClient kubernetes.Interface,
 	dynamicClient dynamic.Interface,
-	userList *unstructured.UnstructuredList,
 ) ([]SharedInclusterEntrance, error) {
 	passthrough, err := namespacesWithDNSPassthrough(ctx, kubeClient)
 	if err != nil {
 		return nil, err
 	}
-	viewers := viewersFromUserList(userList)
-	if len(viewers) == 0 {
-		return nil, nil
-	}
 	srrList, err := dynamicClient.Resource(sharedRouteRegistryGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return sharedInclusterEntrancesFromSRRItems(srrList.Items, passthrough, viewers), nil
+	return sharedInclusterEntrancesFromSRRItems(srrList.Items, passthrough), nil
+}
+
+func normalizeReloadInDefaultPlugins(defaultPlugins []*corefile.Plugin) []*corefile.Plugin {
+	found := false
+	for _, p := range defaultPlugins {
+		if p == nil || p.Name != "reload" {
+			continue
+		}
+		p.Args = []string{"5s"}
+		found = true
+	}
+	if !found {
+		defaultPlugins = append(defaultPlugins, &corefile.Plugin{
+			Name: "reload",
+			Args: []string{"5s"},
+		})
+	}
+	return defaultPlugins
 }
 
 // CorefileSRRSubscriber regenerates CoreDNS when SharedRouteRegistry changes.
