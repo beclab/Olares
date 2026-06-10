@@ -41,7 +41,7 @@ func CheckClusterScopedFixedNames(listA, listB kube.ResourceList) error {
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b,
-		"the following cluster-scoped resource(s) have a fixed metadata.name; use a release-unique name such as {{ .Release.Name }} when app is v1 or v3 with options.allowMultipleInstall is true\n",
+		"the following cluster-scoped resource(s) have a fixed metadata.name; use a unique name such as {{ .Release.Namespace }} when app is v1 or v3 with options.allowMultipleInstall is true\n",
 	)
 	for _, key := range fixed {
 		kind, name := splitClusterScopedKey(key)
