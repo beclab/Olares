@@ -114,6 +114,8 @@ github.com/beclab/Olares/framework/oac v0.0.0-20260609165114-1b4b40ef78e9 h1:sdz
 github.com/beclab/Olares/framework/oac v0.0.0-20260609165114-1b4b40ef78e9/go.mod h1:lW+D7UM6mHOXKlVPM6MYsvh3AIKUN18yEptcQh58QZI=
 github.com/beclab/Olares/framework/oac v0.0.0-20260610065302-4039c03b0b70 h1:CJkiX/PkVw64qMpKGgZGNV+WIUa6EX7PdExfpfz74qs=
 github.com/beclab/Olares/framework/oac v0.0.0-20260610065302-4039c03b0b70/go.mod h1:lW+D7UM6mHOXKlVPM6MYsvh3AIKUN18yEptcQh58QZI=
+github.com/beclab/Olares/framework/oac v0.0.0-20260610141901-e02b5b7cc1e7 h1:cNFU1Q9HfEwZb4hzG3yeFgO5Ayv58yfJSAstVTZ/NmQ=
+github.com/beclab/Olares/framework/oac v0.0.0-20260610141901-e02b5b7cc1e7/go.mod h1:lW+D7UM6mHOXKlVPM6MYsvh3AIKUN18yEptcQh58QZI=
 github.com/beclab/api v0.0.15 h1:6fBCTwMncaYkSAgGTZaD5p12Kq3SHpN3QxBEivV4jFI=
 github.com/beclab/api v0.0.15/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
 github.com/beclab/lldap-client v0.0.11 h1:/XWzEd2pAFS7nwOtapyr7ClQViyGIUsMiyQ2d8t8sEo=

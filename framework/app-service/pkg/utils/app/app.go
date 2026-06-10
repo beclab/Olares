@@ -22,7 +22,6 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
@@ -799,25 +798,7 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	}
 
 	appcfg.Namespace = namespace
-	// Shared apps are cluster-wide and admin-managed: any admin may
-	// install / upgrade / suspend / uninstall the single cluster-wide
-	// instance, so the install caller is not a stable identity. Persist
-	// the cluster owner here so allocation rows, HAMI binding labels,
-	// pod owner labels and every downstream user-scoped API call
-	// (kubesphere user CR, user-system / user-space namespaces,
-	// X-Bfl-User header, helm bfl.username) all key off the same real
-	// user regardless of which admin operates the app. v3+per-user apps
-	// fall through to the regular per-user owner — they are installed by
-	// and addressed to the real installing user, just like v1 apps.
-	if appcfg.IsShared() {
-		clusterOwner, err := kubesphere.GetClusterOwner(ctx)
-		if err != nil {
-			return nil, chartPath, err
-		}
-		appcfg.OwnerName = clusterOwner
-	} else {
-		appcfg.OwnerName = options.Owner
-	}
+	appcfg.OwnerName = options.Owner
 	appcfg.RepoURL = options.RepoURL
 	return appcfg, chartPath, nil
 }
