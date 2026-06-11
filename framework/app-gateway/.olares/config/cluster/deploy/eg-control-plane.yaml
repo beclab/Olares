@@ -429,7 +429,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway:v1.8.0
+        image: envoyproxy/gateway:v1.8.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
