@@ -12,37 +12,47 @@ const props = defineProps<{
 const router = useRouter();
 const { site } = useData();
 
-const localUrl = computed(() => {
-  let url = "/";
-  if( inBrowser ) {
-    url =  window.location.href.split('/').slice(0,3).join('/');
-    if( !url.endsWith('/') ) {
-      url = url + '/';
+// Site root path prefix (e.g. / or /docs/). Versioned builds use /docs/1.12.4/ as base;
+// strip the active version segment so version links stay under the same prefix.
+const pathPrefix = computed(() => {
+  let base = site.value.base || "/";
+  if (!base.endsWith("/")) {
+    base += "/";
+  }
+  for (const v of props.versions) {
+    if (v === props.latestVersion) continue;
+    const segment = `${v}/`;
+    if (base.endsWith(segment)) {
+      return base.slice(0, base.length - segment.length);
     }
-  } 
-  
-  //console.log('localUrl', url);
-  return url;
+  }
+  return base;
+});
+
+const originUrl = computed(() => {
+  if (!inBrowser) return "";
+  const url = window.location.origin;
+  return url.endsWith("/") ? url : `${url}/`;
 });
 
 const currentVersion = computed(() => {
-  let version = props.latestVersion;
-
+  const path = router.route.path;
+  const prefix = pathPrefix.value;
   for (const v of props.versions) {
-    const u = `/${v}/`;
-    // console.log('u', u);
-    // console.log('router.route.path', router.route.path);
-    if (router.route.path.startsWith(u)) {
-      //console.log('match version', v);
-      version = v;
-      break;
+    if (v === props.latestVersion) continue;
+    if (path.startsWith(`${prefix}${v}/`)) {
+      return v;
     }
   }
-
-  return version;
+  return props.latestVersion;
 });
 
-const customLink = (path) => path.replace(site.value.base || '', '');
+const versionHref = (version: string) => {
+  const prefix = pathPrefix.value;
+  const path =
+    version === props.latestVersion ? prefix : `${prefix}${version}/`;
+  return inBrowser ? `${originUrl.value}${path.replace(/^\//, "")}` : path;
+};
 
 const isOpen = ref(false);
 const toggle = () => {
@@ -65,7 +75,7 @@ const toggle = () => {
           target: '_blank',
           rel: 'a'
         }" />   -->
-       <a v-if="currentVersion != version" :href="`${localUrl}${version}/`" target="_blank">{{ version }}</a>
+       <a v-if="currentVersion != version" :href="versionHref(version)">{{ version }}</a>
       </template>
     </div>
   </VPFlyout>
