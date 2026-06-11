@@ -17,6 +17,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
@@ -332,6 +333,9 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	if tailScale != nil {
 		newapp.Spec.TailScale = *tailScale
 	}
+	if err := gateway.ApplyRouteModeAnnotation(ctx, r.Client, newapp); err != nil {
+		klog.Warningf("apply gateway route-mode for new app %s err=%v", name, err)
+	}
 	app, err := r.AppClientset.AppV1alpha1().Applications().Create(ctx, newapp, metav1.CreateOptions{})
 	if err != nil {
 		ctrl.Log.Error(err, "create application error")
@@ -493,6 +497,12 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 			appCopy.Labels = make(map[string]string)
 		}
 		appCopy.Labels[constants.AppChartOwnerKey] = v
+	}
+
+	// Run after the shared/api-version labels are propagated above so the
+	// shared-app check sees the labels this Patch is about to persist.
+	if err := gateway.ApplyRouteModeAnnotation(ctx, r.Client, appCopy); err != nil {
+		klog.Warningf("apply gateway route-mode for app %s err=%v", appCopy.Spec.Name, err)
 	}
 
 	err = r.Patch(ctx, appCopy, client.MergeFrom(app))
