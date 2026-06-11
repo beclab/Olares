@@ -86,7 +86,7 @@ spec:
       totalMemory: 16Gi
   accelerator:
     - mode: cpu
-      supportMultiCard: true
+      supportMultiCards: true
       supportMultiNodes: true
       requiredCpu: 100m
       limitedCpu: 200m
