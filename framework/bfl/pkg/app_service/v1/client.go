@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 )
 
 type Client struct {
@@ -89,8 +91,8 @@ func (c *Client) ListAppInfosByUser(user string) ([]*AppInfo, error) {
 	return c.getAppListFromData(app)
 }
 
-func (c *Client) FetchUserAppList(user string) ([]map[string]interface{}, error) {
-	return c.doHttpGetList(c.url(AppServiceUserAppListURLTempl, user), "")
+func (c *Client) FetchUserAppList(user string) ([]appv1.Application, error) {
+	return c.doHttpGetApplicationList(c.url(AppServiceUserAppListURLTempl, user), "")
 }
 
 func (c *Client) SetupAppPolicy(app, token string, settings ApplicationsSettings) (map[string]interface{}, error) {
