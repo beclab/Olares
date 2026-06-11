@@ -22,8 +22,21 @@ function normalizePrefix(raw: string): string {
   return p;
 }
 
-// Deploy prefix (e.g. /docs/). On versioned builds site.base is /docs/1.12.4/ or
-// sometimes only /1.12.4/ — SITE_PATH_PREFIX from the build is authoritative.
+function stripTrailingVersionSegment(base: string): string {
+  let b = base || "/";
+  if (!b.endsWith("/")) b += "/";
+  for (const v of props.versions) {
+    const segment = `${v}/`;
+    if (b.endsWith(segment)) {
+      return normalizePrefix(b.slice(0, b.length - segment.length));
+    }
+  }
+  return normalizePrefix(b);
+}
+
+// Deploy prefix (e.g. /docs/). On versioned builds site.base is /docs/1.12.4/ —
+// strip any version suffix; do not skip latestVersion (each branch build may set
+// LATEST_VERSION to its own tag while base still carries that version segment).
 const pathPrefix = computed(() => {
   if (typeof __SITE_PATH_PREFIX__ === "string" && __SITE_PATH_PREFIX__) {
     return normalizePrefix(__SITE_PATH_PREFIX__);
@@ -32,7 +45,6 @@ const pathPrefix = computed(() => {
   if (inBrowser) {
     const pathname = window.location.pathname;
     for (const v of props.versions) {
-      if (v === props.latestVersion) continue;
       const marker = `/${v}/`;
       const idx = pathname.indexOf(marker);
       if (idx > 0) {
@@ -41,16 +53,7 @@ const pathPrefix = computed(() => {
     }
   }
 
-  let base = site.value.base || "/";
-  if (!base.endsWith("/")) base += "/";
-  for (const v of props.versions) {
-    if (v === props.latestVersion) continue;
-    const segment = `${v}/`;
-    if (base.endsWith(segment)) {
-      return normalizePrefix(base.slice(0, base.length - segment.length));
-    }
-  }
-  return normalizePrefix(base);
+  return stripTrailingVersionSegment(site.value.base || "/");
 });
 
 const originUrl = computed(() => {
@@ -68,22 +71,16 @@ const currentVersion = computed(() => {
     return __CURRENT_DOC_VERSION__;
   }
 
-  const path = router.route.path;
-  const prefix = pathPrefix.value;
-
   if (inBrowser) {
     const pathname = window.location.pathname;
     for (const v of props.versions) {
-      if (v === props.latestVersion) continue;
       if (pathname.includes(`/${v}/`)) return v;
     }
   }
 
+  const path = router.route.path;
   for (const v of props.versions) {
-    if (v === props.latestVersion) continue;
-    if (path.startsWith(`/${v}/`) || path.startsWith(`${prefix}${v}/`)) {
-      return v;
-    }
+    if (path.startsWith(`/${v}/`)) return v;
   }
   return props.latestVersion;
 });
@@ -98,9 +95,12 @@ const pathSuffixAfterVersion = computed(() => {
     : pathname.replace(/^\//, "");
 
   for (const v of props.versions) {
-    if (v === props.latestVersion) continue;
     if (rest.startsWith(`${v}/`)) {
       rest = rest.slice(v.length + 1);
+      break;
+    }
+    if (rest === v) {
+      rest = "";
       break;
     }
   }
