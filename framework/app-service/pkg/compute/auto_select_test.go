@@ -103,7 +103,7 @@ func TestAutoSelectModeFromInputs(t *testing.T) {
 			name:        "case1/C: app supports strix-halo/apple-m, no overlap with cluster, errors",
 			appModes:    []string{utils.StrixHaloChipType, utils.AppleMChipType},
 			cluster:     clusterNvidiaOnly,
-			wantErrFrag: "no compute mode runnable",
+			wantErrFrag: "No matching GPU type",
 		},
 		{
 			name:     "case1/D: app supports cpu only, picks cpu",
@@ -155,7 +155,7 @@ func TestAutoSelectModeFromInputs(t *testing.T) {
 			name:        "no GPU in cluster: GPU-only app errors",
 			appModes:    []string{utils.NvidiaCardType},
 			cluster:     stringSet(),
-			wantErrFrag: "no compute mode runnable",
+			wantErrFrag: "No matching GPU type",
 		},
 	}
 

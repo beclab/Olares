@@ -2,8 +2,11 @@ package appstate
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
@@ -70,7 +73,37 @@ func (p *InstallFailedApp) Exec(ctx context.Context) (StatefulInProgressApp, err
 		}
 	}
 
+	// A failed install tears down the namespace above, so any allocation that
+	// AllocateForInstall reserved for this app is now backing a workload that no
+	// longer exists. Release it (guarded, so it is a no-op once cleaned up) to
+	// avoid leaking the GPU/compute reservation.
+	if err := p.cleanupComputeAllocation(ctx); err != nil {
+		klog.Errorf("cleanup compute allocation for install-failed app %s failed %v", p.manager.Spec.AppName, err)
+		return nil, err
+	}
+
 	return nil, nil
+}
+
+func (p *InstallFailedApp) cleanupComputeAllocation(ctx context.Context) error {
+	if p.manager.Spec.Config == "" {
+		return nil
+	}
+	var appCfg appcfg.ApplicationConfig
+	if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
+		klog.Errorf("unmarshal app config for compute cleanup of install-failed app %s failed %v", p.manager.Spec.AppName, err)
+		return err
+	}
+	// A failed install never owns a shared server, so only its own allocation
+	// row (if any) needs releasing; never touch a shared server here.
+	cleaned, err := compute.EnsureAllocationsDeletedForComputeTarget(ctx, p.client, &appCfg, false)
+	if err != nil {
+		return err
+	}
+	if cleaned {
+		klog.Infof("released leaked compute allocation for install-failed app %s", p.manager.Spec.AppName)
+	}
+	return nil
 }
 
 func (p *InstallFailedApp) Cancel(ctx context.Context) error {
