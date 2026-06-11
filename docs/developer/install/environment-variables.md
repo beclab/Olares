@@ -150,7 +150,7 @@ Specifies the password to use instead of a generated one.
 ### TERMINUS_OS_USERNAME 
 
 Specifies the username before installation to skip the interactive prompt. 
-- **Valid values**: Any valid username (2–250 characters, excluding reserved keywords) 
+- **Valid values**: Any valid username (8-24 characters, excluding reserved keywords)
 - **Default**: None (prompts for username if not set) 
 - **Validation**: Reserved keywords include `user`, `system`, `space`, `default`, `os`, `kubesphere`, `kube`, `kubekey`, `kubernetes`, `gpu`, `tapr`, `bfl`, `bytetrade`, `project`, `pod`. 
 
