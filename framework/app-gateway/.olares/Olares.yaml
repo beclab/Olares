@@ -3,5 +3,4 @@ target: prebuilt
 output:
   containers:
     - 
-      name: docker.io/envoyproxy/ratelimit:ff287602
-     
+      name: envoyproxy/ratelimit:ff287602

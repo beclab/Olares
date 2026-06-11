@@ -46,7 +46,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: docker.io/envoyproxy/gateway:v1.8.0
+          image: envoyproxy/gateway:v1.8.0
       type: Kubernetes
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -641,7 +641,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway:v1.8.0
+        image: envoyproxy/gateway:v1.8.0
         imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
         securityContext:
