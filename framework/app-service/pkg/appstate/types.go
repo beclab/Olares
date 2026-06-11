@@ -9,6 +9,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -127,6 +128,17 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 			klog.Errorf("uninstall app %s failed err %v", appCfg.AppName, err)
 			return err
 		}
+	}
+
+	// forceDeleteApp is the shared exit toward Uninstalled for the force-delete
+	// paths (UninstallFailed, RunningApp / UninstalledApp self-heal). The normal
+	// Uninstalling -> Uninstalled flow releases the compute allocation, but
+	// these paths bypass UninstallingApp, so release it here too or the app
+	// would leak its GPU/compute reservation after the workload is gone.
+	uninstallAll := p.manager.Annotations[api.AppUninstallAllKey] == "true"
+	if _, err = compute.EnsureAllocationsDeletedForComputeTarget(ctx, p.client, appCfg, uninstallAll); err != nil {
+		klog.Errorf("delete compute allocation for force-deleted app %s failed %v", appCfg.AppName, err)
+		return err
 	}
 
 	// Wait for namespace to be fully deleted before updating status
