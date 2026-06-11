@@ -133,7 +133,7 @@ export default defineVersionedConfig2(withMermaid({
   },
 
   sitemap: {
-    hostname: "https://docs.olares.com/",
+    hostname: "https://new.olares.com/docs/",
     transformItems: (items) =>
       // Drop noindex pages from sitemap.xml so crawlers don't even discover
       // them via the sitemap. The meta tag above is what ultimately removes

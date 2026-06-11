@@ -67,13 +67,17 @@ Only Olares admin can adjust system parameters through the Control Hub app.
 
 ## Gallery
 
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
 <table>
   <tr>
-    <td><img src="/images/manual/use-cases/sd-example1.png" alt="Image 1" width="200" /></td>
-    <td><img src="/images/manual/use-cases/sd-example2.png" alt="Image 2" width="200" /></td>
+    <td><img :src="withBase('/images/manual/use-cases/sd-example1.png')" alt="Image 1" width="200" /></td>
+    <td><img :src="withBase('/images/manual/use-cases/sd-example2.png')" alt="Image 2" width="200" /></td>
   </tr>
   <tr>
-    <td><img src="/images/manual/use-cases/sd-example3.png" alt="Image 3" width="200" /></td>
-    <td><img src="/images/manual/use-cases/sd-example4.png" alt="Image 4" width="200" /></td>
+    <td><img :src="withBase('/images/manual/use-cases/sd-example3.png')" alt="Image 3" width="200" /></td>
+    <td><img :src="withBase('/images/manual/use-cases/sd-example4.png')" alt="Image 4" width="200" /></td>
   </tr>
 </table>
