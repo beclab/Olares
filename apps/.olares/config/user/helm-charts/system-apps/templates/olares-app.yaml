@@ -301,7 +301,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: olares-app-init
-          image: beclab/system-frontend:v1.10.46
+          image: beclab/system-frontend:v1.10.47
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -437,7 +437,7 @@ spec:
                 fieldRef:
                   fieldPath: status.hostIP
             - name: TERMINUSD_HOST
-              value: $(NODE_IP):18088
+              value: master-node:18088
             - name: APP_SERVICE_SERVICE_HOST
               value: app-service.user-system-{{ .Values.bfl.username }}
             - name: APP_SERVICE_SERVICE_PORT

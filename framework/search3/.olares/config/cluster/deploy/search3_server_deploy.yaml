@@ -265,7 +265,7 @@ spec:
               apiVersion: v1
               fieldPath: metadata.namespace
         - name: TERMINUSD_HOST
-          value: $(NODE_IP):18088  
+          value: master-node:18088  
         - name: DATABASE_URL
           value: postgres://search3_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_search3
         - name: NATS_HOST
@@ -316,7 +316,7 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         - name: TERMINUSD_HOST
-          value: $(NODE_IP):18088  
+          value: master-node:18088  
         - name: DATABASE_URL
           value: postgres://search3_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_search3
         - name: SEARCH3_SERVER_ADDRESS
