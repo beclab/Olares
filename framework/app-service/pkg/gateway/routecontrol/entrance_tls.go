@@ -20,13 +20,13 @@ import (
 )
 
 const (
-	zoneSSLConfigMapName      = "zone-ssl-config"
-	sharedEntranceTLSPrefix   = "shared-entrance-tls-"
-	gatewayTLSSecretName      = "app-gateway-tls"
-	annotationTLSContentHash  = "gateway.olares.io/tls-content-hash"
-	annotationTLSSourceNS     = "gateway.olares.io/tls-source-ns"
-	labelTLSViewer            = "gateway.olares.io/tls-viewer"
-	userSpacePrefix           = "user-space-"
+	zoneSSLConfigMapName     = "zone-ssl-config"
+	sharedEntranceTLSPrefix  = "shared-entrance-tls-"
+	gatewayTLSSecretName     = "app-gateway-tls"
+	annotationTLSContentHash = "gateway.olares.io/tls-content-hash"
+	annotationTLSSourceNS    = "gateway.olares.io/tls-source-ns"
+	labelTLSViewer           = "gateway.olares.io/tls-viewer"
+	userSpacePrefix          = "user-space-"
 )
 
 var dns1123Label = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
@@ -62,9 +62,9 @@ func syncPerViewerTLS(ctx context.Context, c client.Client, cm *corev1.ConfigMap
 	if cm == nil || cm.Name != zoneSSLConfigMapName {
 		return nil
 	}
-	if cm.Data != nil && cm.Data["ephemeral"] == "true" {
-		return deletePerViewerTLSSecret(ctx, c, viewer)
-	}
+	// if cm.Data != nil && cm.Data["ephemeral"] == "true" {
+	// 	return deletePerViewerTLSSecret(ctx, c, viewer)
+	// }
 	cert := strings.TrimSpace(cm.Data["cert"])
 	key := strings.TrimSpace(cm.Data["key"])
 	if cert == "" || key == "" {
