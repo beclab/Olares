@@ -111,6 +111,7 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 		MarketSource: marketSource,
 		IsAdmin:      prevCfg.AppScope.ClusterScoped,
 		SelectedGpu:  prevCfg.SelectedGpuType,
+		ChartOwner:   prevCfg.ChartOwner,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -224,6 +225,7 @@ func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		IsAdmin:      true,
 		RawAppName:   h.rawAppName,
 		SelectedGpu:  prevCfg.SelectedGpuType,
+		ChartOwner:   prevCfg.ChartOwner,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)

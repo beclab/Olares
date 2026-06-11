@@ -30,6 +30,10 @@ type Event struct {
 	Message          string                    `json:"message,omitempty"`
 	SharedEntrances  []v1alpha1.Entrance       `json:"sharedEntrances,omitempty"`
 	MarketSource     string                    `json:"marketSource,omitempty"`
+	// ChartOwner identifies the owner of the chart the app was installed
+	// from: for market apps it is the installing user; for uploaded apps it
+	// is the user who uploaded the chart. Always present on push events.
+	ChartOwner string `json:"chartOwner"`
 }
 
 // EventParams defines parameters to publish an app-related event
@@ -49,6 +53,10 @@ type EventParams struct {
 	SharedEntrances  []v1alpha1.Entrance
 	Icon             string
 	MarketSource     string
+	// ChartOwner identifies the owner of the chart the app was installed
+	// from: the installing user for market apps, or the uploading user for
+	// uploaded apps. See appcfg.GetChartOwner.
+	ChartOwner string
 	// IsShared marks the event as originating from a shared application
 	// (apiVersion: v3 + options.shared: true). When true,
 	// PublishAppEventToQueue fans out the event to every activated user

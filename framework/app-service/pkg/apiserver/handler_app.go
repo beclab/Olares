@@ -323,6 +323,9 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
 			appLabels[constants.AppClonedFromKey] = v
 		}
+		if v, ok := am.Labels[constants.AppChartOwnerKey]; ok {
+			appLabels[constants.AppChartOwnerKey] = v
+		}
 		now := metav1.Now()
 		name, _ := apputils.FmtAppMgrName(am.Spec.AppName, owner, appconfig.Namespace)
 		app := &v1alpha1.Application{
@@ -584,6 +587,9 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		// so it is visible before the real Application CR exists.
 		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
 			appLabels[constants.AppClonedFromKey] = v
+		}
+		if v, ok := am.Labels[constants.AppChartOwnerKey]; ok {
+			appLabels[constants.AppChartOwnerKey] = v
 		}
 		app := v1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},

@@ -107,6 +107,12 @@ const (
 
 	AppMarketSourceKey = "bytetrade.io/market-source"
 
+	// AppChartOwnerKey records the user who uploaded the chart the app was
+	// installed from. It is only meaningful for uploaded (non-market) apps;
+	// market apps leave it empty and fall back to the installing user. Stamped
+	// at install time and read when building push events (chartOwner field).
+	AppChartOwnerKey = "app.bytetrade.io/chart-owner"
+
 	// EnvRefStatus* constants for AppEnvVar.ValueFrom.Status (used for both SystemEnv and UserEnv references)
 	EnvRefStatusPending  = "pending"
 	EnvRefStatusSynced   = "synced"

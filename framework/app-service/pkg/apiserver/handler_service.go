@@ -192,6 +192,9 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
 			appLabels[constants.AppClonedFromKey] = v
 		}
+		if v, ok := am.Labels[constants.AppChartOwnerKey]; ok {
+			appLabels[constants.AppChartOwnerKey] = v
+		}
 		app := &appv1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{

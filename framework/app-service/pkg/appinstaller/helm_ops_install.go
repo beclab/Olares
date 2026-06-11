@@ -212,6 +212,14 @@ func (h *HelmOps) BuildDeploymentLabelPatchData() (nsLabels map[string]string, w
 	if h.app.ClonedFrom != "" {
 		workloadLabels[constants.AppClonedFromKey] = h.app.ClonedFrom
 	}
+	// Stamp the chart owner on the workload so the Application controller can
+	// propagate it onto the Application CR. Only set for uploaded apps; market
+	// installs leave the label off the deployment (push events fall back to
+	// the installing user via appcfg.GetChartOwner).
+	if h.app.ChartOwner != "" {
+		workloadLabels[constants.AppChartOwnerKey] = h.app.ChartOwner
+	}
+
 	workloadPatchData = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": workloadLabels,

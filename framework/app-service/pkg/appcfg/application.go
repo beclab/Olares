@@ -136,6 +136,13 @@ type ApplicationConfig struct {
 	// (non-clone) install; otherwise "template" (cloned from a template)
 	// or "app" (cloned from an existing app).
 	ClonedFrom string
+
+	// ChartOwner records the user who uploaded the chart the app was
+	// installed from so the app.bytetrade.io/chart-owner label can be
+	// stamped on the ApplicationManager / deployment / Application. Empty
+	// for market installs (push events then fall back to the installing
+	// user); otherwise the uploading user.
+	ChartOwner string
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
