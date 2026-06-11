@@ -78,7 +78,7 @@ Supported formats:
     zip, 7z, tar, tar.gz, tgz, tar.bz2, tar.xz, gzip, bzip2, xz
 
 The format is derived from <archive>'s filename suffix when
---format is omitted (.zip / .7z / .tar.gz / .tgz / ...). Pass
+--format is omitted (.zip / .7z / .zip.001 / .7z.001 / .tar.gz / .tgz / ...). Pass
 --format when the archive has no canonical suffix.
 
 Knobs:
