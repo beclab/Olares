@@ -10,24 +10,15 @@ import (
 	"sync"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"os"
 )
 
 const (
 	// SingletonName is the only ClusterConfig name app-service consults.
 	SingletonName = "cluster"
-	// DefaultPlatformDomain is the fallback when no ClusterConfig exists and
-	// OLARES_PLATFORM_DOMAIN is unset.
-	DefaultPlatformDomain = "olares.com"
-	// envPlatformDomain lets dev environments inject a domain without the CR.
-	envPlatformDomain = "OLARES_PLATFORM_DOMAIN"
-	cacheTTL          = 30 * time.Second
+	cacheTTL      = 30 * time.Second
 )
 
 // Resource is the dynamic-client GVR for ClusterConfig.
@@ -59,13 +50,6 @@ func (c *cache) set(d string) {
 
 var defaultCache = &cache{}
 
-func envOrDefaultDomain() string {
-	if d := strings.ToLower(strings.TrimSpace(os.Getenv(envPlatformDomain))); d != "" {
-		return d
-	}
-	return DefaultPlatformDomain
-}
-
 // GetPlatformDomain returns the cluster platform domain. It never returns
 // empty: a missing ClusterConfig or API failure falls back to the env var and
 // then DefaultPlatformDomain. Results are cached for a short TTL.
@@ -73,27 +57,28 @@ func GetPlatformDomain(ctx context.Context) string {
 	if d, ok := defaultCache.get(); ok {
 		return d
 	}
-	domain := envOrDefaultDomain()
-	cfg, err := ctrl.GetConfig()
+
+	// get cluster owner
+	owner, err := kubesphere.GetClusterOwner(ctx) // best effort, just to trigger the cluster owner cache population
 	if err != nil {
-		klog.V(2).Infof("cluster: GetConfig failed, using fallback domain %q: %v", domain, err)
-		return domain
+		klog.V(2).Infof("cluster: get cluster owner failed: %v", err)
+		return ""
 	}
-	dc, err := dynamic.NewForConfig(cfg)
+
+	zone, err := kubesphere.GetUserZone(ctx, owner)
 	if err != nil {
-		klog.V(2).Infof("cluster: dynamic client init failed, using fallback domain %q: %v", domain, err)
-		return domain
+		klog.V(2).Infof("cluster: get user zone failed: %v", err)
+		return ""
 	}
-	u, err := dc.Resource(Resource).Get(ctx, SingletonName, metav1.GetOptions{})
-	if err != nil {
-		klog.V(2).Infof("cluster: ClusterConfig get failed, using fallback domain %q: %v", domain, err)
-		return domain
+
+	zoneTokens := strings.Split(zone, ".")
+	if len(zoneTokens) < 2 {
+		klog.V(2).Infof("cluster: invalid user zone format: %s", zone)
+		return ""
 	}
-	if pd, found, _ := unstructured.NestedString(u.Object, "spec", "platformDomain"); found {
-		if pd = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(pd, "."))); pd != "" {
-			domain = pd
-		}
-	}
+
+	domain := strings.Join(zoneTokens[1:], ".")
+
 	defaultCache.set(domain)
 	return domain
 }
