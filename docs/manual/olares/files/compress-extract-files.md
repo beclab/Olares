@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Compress and extract files in the Olares Files app. Supports ZIP, 7z, TAR, and more formats, with advanced options for compression level, password protection, and split archives.
+description: Compress and extract files in the Olares Files app. Supports ZIP, 7z, TAR, and more formats, with additional options for compression level, password protection, and split archives.
 ---
 
 # Compress and extract files
@@ -38,14 +38,13 @@ In the Files app, you can compress files to save space or share them, and extrac
 ## Extract files
 
 1. Open the Files app.
-2. Right-click the target archive, and then hover over **Extract to...**.
-3. To extract directly to the current location, select **Current folder**.
+2. To preview archive contents before extracting:
 
-    ![Extract files](/images/manual/olares/files-extract-to.png#bordered)
+    a. Right-click the target archive, and then select **Preview contents**.
 
-4. To specify another path or customize extraction settings, click **Choose location**:
+    b. Review the archive contents, and then click **Extract all...**.
 
-    a. In the **Extract archive** window, configure the following settings as needed:
+    c. In the **Extract archive** window, configure the following settings as needed:
 
     ![Extract archive settings](/images/manual/olares/files-extract.png#bordered){width=70%}
 
@@ -56,4 +55,18 @@ In the Files app, you can compress files to save space or share them, and extrac
     | **Preserve symbolic links** | <ul><li>If you select this option, symbolic links in the archive will be <br>extracted as link files as they are.</li><li>If you do not select this option, they will be resolved into actual<br> files or folders during extraction.</li></ul> |
     | **Open folder when done** | If you want the system to automatically open the folder containing <br>the extracted content when extraction is completed, select this option. |
 
-    b. Click **Extract**.
+    d. Click **Extract**.
+
+3. To extract without preview:
+
+    a. Right-click the target archive, and then hover over **Extract to...**.
+
+    b. To extract directly to the current location, select **Current folder**.
+
+    ![Extract files](/images/manual/olares/files-extract-to.png#bordered)
+
+    c. To specify another path or customize extraction settings, click **Choose location**:
+
+    d. In the **Extract archive** window, configure the same settings as in Step 2c.
+
+    e. Click **Extract**.
