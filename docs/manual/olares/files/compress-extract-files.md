@@ -42,6 +42,8 @@ In the Files app, you can compress files to save space or share them, and extrac
 
     a. Right-click the target archive, and then select **Preview contents**.
 
+    ![Preview archive contents](/images/manual/olares/files-preview-archive.png#bordered)
+
     b. Review the archive contents, and then click **Extract all...**.
 
     c. In the **Extract archive** window, configure the following settings as needed:
@@ -52,7 +54,7 @@ In the Files app, you can compress files to save space or share them, and extrac
     |:----|:----|
     | **Extract to** | Specify the destination path for the extracted files. |
     | **On conflict** | Choose how to handle the situation when an extracted file has the <br>same name as an existing file in the destination folder:<ul><li>**Rename (add suffix)**: Keep the existing file and automatically add a <br>sequence number suffix to the extracted file.</li><li>**Overwrite**: Replace the existing file with the extracted file.</li><li>**Skip**: Skip the conflicting file and keep the existing file.</li></ul> |
-    | **Preserve symbolic links** | <ul><li>If you select this option, symbolic links in the archive will be <br>extracted as link files as they are.</li><li>If you do not select this option, they will be resolved into actual<br> files or folders during extraction.</li></ul> |
+    | **Preserve symbolic links** | Specify how to handle symbolic links (similar to shortcuts):<ul><li>If you select this option, symbolic links in the archive will be<br> extracted as link files.</li><li>If you do not select this option, they will be resolved into actual<br> files or folders during extraction.</li></ul> |
     | **Open folder when done** | If you want the system to automatically open the folder containing <br>the extracted content when extraction is completed, select this option. |
 
     d. Click **Extract**.
@@ -65,7 +67,7 @@ In the Files app, you can compress files to save space or share them, and extrac
 
     ![Extract files](/images/manual/olares/files-extract-to.png#bordered)
 
-    c. To specify another path or customize extraction settings, click **Choose location**:
+    c. To specify another path or customize extraction settings, click **Choose location**.
 
     d. In the **Extract archive** window, configure the same settings as in Step 2c.
 
