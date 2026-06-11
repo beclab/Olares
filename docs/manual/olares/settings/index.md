@@ -13,7 +13,7 @@ Settings is organized into the following sections:
 - **Applications**: Configure application entrances, customize app domains, and manage app environment variables.
 - **Integrations**: Centralize external connections, including cloud storages, website cookies, and SMB network credentials.
 - **VPN**: Configure secure remote access to your Olares device.
-- **Network**: Manage network routing by changing the reverse proxy, setting up the hosts file, and enabling Overlay Gateway for supported applications.
+- **Network**: Manage network routing by changing the reverse proxy, setting up the hosts file, and enabling Overlay Gateway for supported apps.
 - **Accelerator**: Allocate and monitor accelerator resources, including GPUs, for hardware-accelerated tasks.
 - **Video**: Configure system-level video playback and transcoding preferences.
 - **Search**: Set up indexing rules to optimize your global file search experience.

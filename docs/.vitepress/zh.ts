@@ -412,7 +412,7 @@ const side = {
                   link: "/zh/manual/olares/settings/set-up-hosts",
                 },
                 {
-                  text: "管理 Overlay Gateway",
+                  text: "启用 Overlay Gateway",
                   link: "/zh/manual/olares/settings/overlay-gateway",
                 },
               ],
