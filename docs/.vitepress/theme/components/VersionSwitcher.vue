@@ -47,10 +47,39 @@ const currentVersion = computed(() => {
   return props.latestVersion;
 });
 
+// Path after the version segment (e.g. /manual/overview), for same-page jumps across versions.
+const pathSuffixAfterVersion = computed(() => {
+  if (!inBrowser) return "/";
+  const pathname = window.location.pathname;
+  const prefix = pathPrefix.value;
+  let rest = pathname.startsWith(prefix)
+    ? pathname.slice(prefix.length)
+    : pathname.replace(/^\//, "");
+
+  for (const v of props.versions) {
+    if (v === props.latestVersion) continue;
+    if (rest.startsWith(`${v}/`)) {
+      rest = rest.slice(v.length + 1);
+      break;
+    }
+  }
+
+  if (!rest) return "/";
+  return rest.startsWith("/") ? rest : `/${rest}`;
+});
+
 const versionHref = (version: string) => {
   const prefix = pathPrefix.value;
-  const path =
+  const base =
     version === props.latestVersion ? prefix : `${prefix}${version}/`;
+
+  const suffix = pathSuffixAfterVersion.value;
+  let path = base;
+  if (suffix && suffix !== "/") {
+    const tail = suffix.startsWith("/") ? suffix.slice(1) : suffix;
+    path = base.endsWith("/") ? `${base}${tail}` : `${base}/${tail}`;
+  }
+
   return inBrowser ? `${originUrl.value}${path.replace(/^\//, "")}` : path;
 };
 
@@ -75,7 +104,12 @@ const toggle = () => {
           target: '_blank',
           rel: 'a'
         }" />   -->
-       <a v-if="currentVersion != version" :href="versionHref(version)">{{ version }}</a>
+       <a
+         v-if="currentVersion != version"
+         :href="versionHref(version)"
+         target="_blank"
+         rel="noopener noreferrer"
+       >{{ version }}</a>
       </template>
     </div>
   </VPFlyout>
