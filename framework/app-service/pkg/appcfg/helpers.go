@@ -94,6 +94,29 @@ func GetMarketSource(a *ApplicationManager) string {
 	return a.Annotations[constants.AppMarketSourceKey]
 }
 
+// appSourceMarket is the Spec.Source value for apps installed from a market
+// (matches api.Market). Apps with any other source are treated as uploaded.
+const appSourceMarket = "market"
+
+// GetChartOwner returns the owner of the chart the app was installed from,
+// used to populate the chartOwner field on push events:
+//   - market apps (Spec.Source == "market"): the installing user (AppOwner).
+//   - uploaded apps: the user who uploaded the chart, persisted at install
+//     time in the origin-owner annotation; falls back to AppOwner when the
+//     annotation is absent (e.g. a self-uploaded chart or a pre-existing AM
+//     installed before this field was introduced).
+func GetChartOwner(a *ApplicationManager) string {
+	if a == nil {
+		return ""
+	}
+	if a.Spec.Source != appSourceMarket && a.Labels != nil {
+		if owner := a.Labels[constants.AppChartOwnerKey]; owner != "" {
+			return owner
+		}
+	}
+	return a.Spec.AppOwner
+}
+
 // AppName provides helpers to derive app IDs and to check the well-known
 // classes of app names (system, generated, etc.). It is a local named string
 // type so helper methods can hang off of it.

@@ -236,6 +236,7 @@ func (imc *ImageManagerClient) updateProgress(ctx context.Context, am *appv1alph
 			Title:        apputils.AppTitle(am.Spec.Config),
 			Icon:         apputils.AppIcon(am.Spec.Config),
 			MarketSource: am.Annotations[constants.AppMarketSourceKey],
+			ChartOwner:   appcfg.GetChartOwner(am),
 			IsShared:     appcfg.IsShared(am),
 		})
 	}

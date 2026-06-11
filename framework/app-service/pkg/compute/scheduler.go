@@ -113,7 +113,7 @@ func RequirementFromMode(mode appcfg.ResourceMode) Requirement {
 	}
 	reqDisk := parseQuantityBytes(source.RequiredDisk)
 	supportMultiNodes := mode.Mode == utils.NvidiaCardType && mode.SupportMultiNodes
-	supportMultiCards := mode.Mode == utils.NvidiaCardType && (mode.SupportMultiCard || supportMultiNodes)
+	supportMultiCards := mode.Mode == utils.NvidiaCardType && (mode.SupportMultiCards || supportMultiNodes)
 	return Requirement{
 		Mode:              mode.Mode,
 		RequiredCPU:       reqCPU,
