@@ -331,6 +331,41 @@ func GetInitContainerSpec(appCfg *appcfg.ApplicationConfig, injectMacvlan bool) 
 	}
 }
 
+// inboundBypassPorts lists TCP destination ports that must reach the app
+// container directly (PROXY_INBOUND RETURN) rather than olares-envoy-sidecar.
+// Manifest ServicePort entries are often empty while per-entrance listeners
+// (e.g. terminal on 8081) still bind inside the pod; omitting those ports
+// breaks WebSocket terminals with 401 / connection_termination at L4.
+func inboundBypassPorts(appCfg *appcfg.ApplicationConfig) []int {
+	if appCfg == nil {
+		return nil
+	}
+	seen := make(map[int]struct{})
+	var ports []int
+	add := func(p int) {
+		if p <= 0 {
+			return
+		}
+		if _, ok := seen[p]; ok {
+			return
+		}
+		seen[p] = struct{}{}
+		ports = append(ports, p)
+	}
+	for _, sp := range appCfg.Ports {
+		if sp.Protocol == "tcp" || sp.Protocol == "" {
+			add(int(sp.Port))
+		}
+	}
+	for _, e := range appCfg.Entrances {
+		add(int(e.Port))
+	}
+	for _, e := range appCfg.SharedEntrances {
+		add(int(e.Port))
+	}
+	return ports
+}
+
 func generateIptablesCommands(appCfg *appcfg.ApplicationConfig, injectMacvlan bool) string {
 	cmd := fmt.Sprintf(`iptables-restore --noflush <<EOF
 # sidecar interception rules
@@ -347,10 +382,10 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig, injectMacvlan bo
 -A PROXY_INBOUND -s 172.30.0.0/16 -j RETURN
 `, constants.EnvoyAdminPort)
 	if appCfg != nil {
-		for _, port := range appCfg.Ports {
-			if port.Protocol == "tcp" || port.Protocol == "" {
-				cmd += fmt.Sprintf("-A PROXY_INBOUND -p tcp --dport %d -j RETURN\n", port.Port)
-			}
+		// inboundBypassPorts includes main's tcp ServicePort RETURN rules and
+		// additionally entrance / shared-entrance listener ports from feat/agw-devel.
+		for _, port := range inboundBypassPorts(appCfg) {
+			cmd += fmt.Sprintf("-A PROXY_INBOUND -p tcp --dport %d -j RETURN\n", port)
 		}
 	}
 
@@ -372,9 +407,21 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig, injectMacvlan bo
 		cmd += "-A PROXY_OUTBOUND -o ${MACVLAN_IFACE} -j RETURN\n"
 	}
 
-	cmd += fmt.Sprintf(`-A PROXY_OUTBOUND -o lo ! -d 127.0.0.1/32 -m owner --uid-owner 1555 -j PROXY_IN_REDIRECT
--A PROXY_OUTBOUND -o lo -m owner ! --uid-owner 1555 -j RETURN
--A PROXY_OUTBOUND -m owner --uid-owner 1555 -j RETURN
+	// PROXY_OUTBOUND exits:
+	//   1. envoy itself (uid 1555) is excluded so its own egress (e.g. health
+	//      probes, upstream calls) is not looped back into 15001.
+	//   2. linkerd-proxy (uid 2102) is excluded for the same reason: when the
+	//      pod is meshed by Linkerd, linkerd-proxy needs to reach the control
+	//      plane (identity:8080 / destination:8086 / policy:8090) and serve
+	//      mTLS to peer proxies; without this rule the 8080 control-plane
+	//      bootstrap traffic falls into the `multiport --dports 80,8080`
+	//      redirect, gets parsed as HTTP by envoy and breaks the TLS handshake
+	//      with `received corrupt message of type InvalidContentType`. See
+	//      constants.LinkerdProxyUID for the matching uid.
+	cmd += fmt.Sprintf(`-A PROXY_OUTBOUND -o lo ! -d 127.0.0.1/32 -m owner --uid-owner %d -j PROXY_IN_REDIRECT
+-A PROXY_OUTBOUND -o lo -m owner ! --uid-owner %d -j RETURN
+-A PROXY_OUTBOUND -m owner --uid-owner %d -j RETURN
+-A PROXY_OUTBOUND -m owner --uid-owner %d -j RETURN
 -A PROXY_OUTBOUND -d 127.0.0.1/32 -j RETURN
 -A PROXY_OUTBOUND -p tcp -m multiport ! --dports 80,8080 -j RETURN
 -A PROXY_OUTBOUND -j PROXY_OUT_REDIRECT
@@ -383,6 +430,10 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig, injectMacvlan bo
 COMMIT
 EOF
 `,
+		constants.EnvoyUID,
+		constants.EnvoyUID,
+		constants.EnvoyUID,
+		constants.LinkerdProxyUID,
 		constants.EnvoyOutboundListenerPort,
 	)
 

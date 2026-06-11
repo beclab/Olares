@@ -1,0 +1,8 @@
+# Envoy Gateway CRDs chart values — applied via helm template + kubectl (not helm install).
+# See gateway-crds-helm README (Helm release Secret 1MiB limit on large CRD templates).
+crds:
+  gatewayAPI:
+    enabled: true
+    channel: standard
+  envoyGateway:
+    enabled: true

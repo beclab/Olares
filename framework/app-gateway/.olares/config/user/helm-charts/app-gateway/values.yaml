@@ -1,0 +1,34 @@
+# AUTO-GENERATED from config/defaults.yaml — run sync-app-gateway-config.sh after editing defaults
+namespace: app-gateway
+namespaceCreate: false
+
+gateway:
+  name: app-gateway
+  gatewayClassName: olares-app-gateway
+
+tls:
+  enabled: true
+
+envoyProxy:
+  enabled: true
+  name: app-gateway-envoy-proxy
+  accessLog:
+    enabled: true
+
+mesh:
+  linkerd:
+    enabled: true
+    opaquePorts: "443,19001,19002,19003"
+
+demo:
+  enabled: false
+  host: demo.agw.local
+
+extAuthz:
+  enabled: true
+  name: app-gateway-ext-authz-allowall
+  failOpen: false
+  service:
+    name: app-service
+    namespace: os-framework
+    port: 9001

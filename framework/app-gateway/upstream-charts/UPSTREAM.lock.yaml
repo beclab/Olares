@@ -1,0 +1,17 @@
+# Approved third-party versions for app-gateway upstream charts (architecture review required to change).
+version: "v1"
+linkerd_edge_chart_version: "2026.5.1"
+envoy_gateway: "v1.8.0"
+charts:
+  linkerd-control-plane-chart:
+    file_count: 43
+    sha256: "b94d9b9d0fed0be61057ed85a4a764c26cf15ed809b8237d9d13c0027b30b32e"
+  linkerd-crds-chart:
+    file_count: 43
+    sha256: "042317ff4f9e9dce02717456837950053ea5f29368c8edf11523824f0b534e4c"
+  envoy-gateway-helm:
+    file_count: 33
+    sha256: "bd0fa1c4d278c69398154cf79308083490375bec8d7011b8470ba5beefaee683"
+  envoy-gateway-crds-helm:
+    file_count: 15
+    sha256: "f291198192fdea5007d24468eef2a3c3b515350157115d0973e06c1f145614ce"

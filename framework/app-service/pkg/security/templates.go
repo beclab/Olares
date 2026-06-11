@@ -15,7 +15,10 @@ const (
 	NamespaceTypeLabel       = "bytetrade.io/ns-type"
 	NamespaceOwnerLabel      = "bytetrade.io/ns-owner"
 	NamespaceSharedLabel     = "bytetrade.io/ns-shared"
-	NamespaceMiddlewareLabel = "bytetrade.io/ns-middleware"
+	// NamespaceInClusterCallerLabel marks opted-in caller namespaces whose meshed
+	// proxies must reach linkerd-identity (app-gateway-mesh-np ingress peer).
+	NamespaceInClusterCallerLabel = "gateway.olares.io/in-cluster-caller"
+	NamespaceMiddlewareLabel      = "bytetrade.io/ns-middleware"
 	System                   = "system"
 	Network                  = "network"
 	Internal                 = "user-internal"
@@ -311,6 +314,14 @@ var (
 	} // end NPUserSpace
 
 	// NPAppSpace is a network policy template for application.
+	//
+	// invariant (NP-minimal scheme):
+	//   NPAppSpace is Ingress-only. The cluster-internal Shared access scheme
+	//   v1.0 relies on this so that caller workload pods have default-allow
+	//   egress (no managed caller egress NP needed). If a future zero-trust
+	//   policy adds PolicyTypes: Egress here, the in-cluster path MUST also
+	//   ship at least one allow-list egress NP in caller namespaces, or the
+	//   gateway URL flow will break silently.
 	NPAppSpace = netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{},
 		Spec: netv1.NetworkPolicySpec{

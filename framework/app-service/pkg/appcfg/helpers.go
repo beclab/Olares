@@ -131,6 +131,67 @@ func (s AppName) SharedEntranceIdPrefix() string {
 	return hashString[:8]
 }
 
+// EIDError carries structured error codes from SharedEntranceID-family helpers.
+type EIDError struct {
+	Code string
+	Msg  string
+}
+
+func (e *EIDError) Error() string { return e.Code + ": " + e.Msg }
+
+// SharedEntranceID returns the first DNS label for v3 shared entrances:
+// appid when count==1, appid+index when count>1.
+func SharedEntranceID(appid string, entranceIndex, entranceCount int) (string, error) {
+	appid = strings.ToLower(strings.TrimSpace(appid))
+	if appid == "" {
+		return "", &EIDError{Code: "EID_EMPTY_APPID", Msg: "appid is empty"}
+	}
+	if entranceCount < 1 || entranceCount > 10 {
+		return "", &EIDError{Code: "EID_TOO_MANY_ENTRANCES", Msg: "entrance count must be in [1,10]"}
+	}
+	if entranceIndex < 0 || entranceIndex >= entranceCount {
+		return "", &EIDError{Code: "EID_INDEX_OUT_OF_RANGE", Msg: "entrance index is out of range"}
+	}
+	if entranceCount == 1 {
+		return appid, nil
+	}
+	return fmt.Sprintf("%s%d", appid, entranceIndex), nil
+}
+
+// GenSharedEntranceURLForUser composes the per-viewer Shared entrance URL.
+func GenSharedEntranceURLForUser(appid string, entranceIndex, entranceCount int,
+	viewer, platformDomain string) (string, error) {
+	viewer = strings.ToLower(strings.TrimSpace(viewer))
+	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
+	if viewer == "" || platformDomain == "" {
+		return "", &EIDError{Code: "EID_INCOMPLETE_URL_INPUT", Msg: "viewer or platformDomain is empty"}
+	}
+	entranceID, err := SharedEntranceID(appid, entranceIndex, entranceCount)
+	if err != nil {
+		return "", err
+	}
+	return "https://" + entranceID + "." + viewer + "." + platformDomain, nil
+}
+
+// LogicalHostPattern returns the SRR hostPattern for a shared entrance
+// One logical pattern covers all viewers of an entrance:
+//
+//	<entranceid>.*.<platformDomain>
+//
+// The literal "*" segment is the marker app-service route control uses when
+// building HTTPRoute hostnames + Host RegularExpression header match.
+func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platformDomain string) (string, error) {
+	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
+	if platformDomain == "" {
+		return "", &EIDError{Code: "EID_INCOMPLETE_URL_INPUT", Msg: "platformDomain is empty"}
+	}
+	entranceID, err := SharedEntranceID(appid, entranceIndex, entranceCount)
+	if err != nil {
+		return "", err
+	}
+	return entranceID + ".*." + platformDomain, nil
+}
+
 // GenEntranceURL fills in entrance URLs on app.Spec.Entrances based on the
 // user's zone. It is a package-level re-implementation of the in-tree
 // (*Application).GenEntranceURL method.

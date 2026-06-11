@@ -9,12 +9,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/authz"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
@@ -47,6 +53,28 @@ import (
 var (
 	errEmptyAdmissionRequestBody = fmt.Errorf("empty request admission request body")
 
+	// Sentinel errors for v3 d2 offloader injection prerequisites. They let the
+	// admission handler fail open and classify the skip reason via errors.Is.
+	ErrD2SnapshotUnavailable    = errors.New("d2 offloader: cluster snapshot unavailable")
+	ErrD2ViewerUnderive         = errors.New("d2 offloader: viewer cannot be derived from pod namespace")
+	ErrD2TLSSecretMissing       = errors.New("d2 offloader: no per-viewer tls replica secret in namespace")
+	ErrD2CallerViewerUnresolved = errors.New("d2 offloader: caller-mode clusterAppRef resolved no owner viewer")
+	ErrD2ClusterAppRefEmpty     = errors.New("d2 offloader: caller opted into gateway but clusterAppRef empty")
+	ErrD2ImageUnconfigured      = errors.New("d2 offloader: sidecar image digest unconfigured")
+
+	// testDeriveViewerFromPodNSHook is a test seam for WI-T1-5 TC-T1-5-04:
+	// the caller-mode resolver must never invoke the server-mode
+	// deriveViewerFromPodNS path. When non-nil, deriveViewerFromPodNS calls
+	// it once per invocation so tests can assert zero calls during
+	// resolveCallerViewers* paths.
+	testDeriveViewerFromPodNSHook func()
+
+	// d2SidecarImageDigest is a seam over the D2_SIDECAR_IMAGE env var (set in
+	// appservice_deploy.yaml), mirroring the ws-gateway/upload env injection.
+	// An empty or placeholder value triggers the image_unconfigured fail-open.
+	// It stays a var so unit tests can override the resolved image.
+	d2SidecarImageDigest = func() string { return os.Getenv(constants.D2SidecarImageEnv) }
+
 	// codecs is the codec factory used by the deserializer.
 	codecs = serializer.NewCodecFactory(runtime.NewScheme())
 
@@ -59,7 +87,7 @@ var (
 
 // Webhook used to implement a webhook.
 type Webhook struct {
-	kubeClient    *kubernetes.Clientset
+	kubeClient    kubernetes.Interface
 	dynamicClient *versioned.Clientset
 }
 
@@ -245,6 +273,485 @@ func (wh *Webhook) CreatePatch(
 		return nil, err
 	}
 	return makePatches(req, pod)
+}
+
+// CreateD2OffloaderPatch mutates pod with d2 offloader and returns JSON patch bytes.
+func (wh *Webhook) CreateD2OffloaderPatch(
+	ctx context.Context,
+	pod *corev1.Pod,
+	req *admissionv1.AdmissionRequest,
+	appCfg *appcfg.ApplicationConfig,
+	proxyUUID uuid.UUID,
+) ([]byte, error) {
+	_ = appCfg
+
+	if hasD2Container(pod) {
+		return makePatches(req, pod)
+	}
+
+	if d2ImageUnconfigured(d2SidecarImageDigest()) {
+		return nil, fmt.Errorf("d2 sidecar image digest unconfigured ns=%s: %w", pod.Namespace, ErrD2ImageUnconfigured)
+	}
+
+	viewer, err := wh.deriveViewerFromPodNS(ctx, pod)
+	if err != nil {
+		return nil, err
+	}
+
+	allowset, err := wh.resolveViewerAllowset(ctx, pod)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshot, err := cluster.GetSnapshot(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("d2 offloader get cluster snapshot: %w", errors.Join(err, ErrD2SnapshotUnavailable))
+	}
+
+	configMapName, volumeName, err := wh.ensureD2NginxConfConfigMap(
+		ctx, pod, proxyUUID.String(), viewer, allowset, snapshot.PlatformDomain,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := wh.ensureD2SharedHostsPlaceholder(ctx, pod.Namespace); err != nil {
+		return nil, err
+	}
+
+	containerSpec := sidecar.GetTLSOffloaderContainerSpec(volumeName, d2SidecarImageDigest())
+	initSpec := sidecar.GetTLSOffloaderInitContainerSpec()
+	vols := sidecar.GetTLSOffloaderVolumes(viewer, configMapName, volumeName)
+	pod.Spec.Containers = append(pod.Spec.Containers, containerSpec)
+	pod.Spec.InitContainers = append(pod.Spec.InitContainers, initSpec)
+	pod.Spec.Volumes = append(pod.Spec.Volumes, vols...)
+
+	return makePatches(req, pod)
+}
+
+func (wh *Webhook) ensureD2NginxConfConfigMap(
+	ctx context.Context,
+	pod *corev1.Pod,
+	proxyUUID, viewer string,
+	allowset []string,
+	platformDomain string,
+) (string, string, error) {
+	configMapName := fmt.Sprintf("%s%s", constants.D2ConfVolumeNamePrefix, proxyUUID)
+	volumeName := configMapName
+
+	nginxConf := sidecar.RenderNginxConf(
+		viewer,
+		allowset,
+		platformDomain,
+		routecontrol.AppGatewayDataNamespace,
+		routecontrol.DefaultInClusterStrongIdentityServicePort,
+	)
+	sharedDecideJS := sidecar.RenderSharedDecideJS(platformDomain, constants.D2SidecarHostsFilePath)
+
+	newConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configMapName,
+			Namespace: pod.Namespace,
+		},
+		Data: map[string]string{
+			constants.D2ConfNginxFileName:          nginxConf,
+			constants.D2ConfSharedDecideJSFileName: sharedDecideJS,
+		},
+	}
+
+	existing, err := wh.kubeClient.CoreV1().ConfigMaps(pod.Namespace).Get(ctx, configMapName, metav1.GetOptions{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return "", "", err
+		}
+		if _, err := wh.kubeClient.CoreV1().ConfigMaps(pod.Namespace).Create(ctx, newConfigMap, metav1.CreateOptions{}); err != nil {
+			return "", "", err
+		}
+		return configMapName, volumeName, nil
+	}
+
+	existing.Data = newConfigMap.Data
+	if _, err := wh.kubeClient.CoreV1().ConfigMaps(pod.Namespace).Update(ctx, existing, metav1.UpdateOptions{}); err != nil {
+		return "", "", err
+	}
+	return configMapName, volumeName, nil
+}
+
+// ensureD2SharedHostsPlaceholder creates an empty olares-d2-shared-hosts
+// ConfigMap so the d2 sidecar can mount it on first injection. The actual
+// host allow-list is populated by routecontrol.SharedHostsReconciler (WI-N6),
+// which adopts this placeholder via the managed-by label on first Update.
+func (wh *Webhook) ensureD2SharedHostsPlaceholder(ctx context.Context, namespace string) error {
+	placeholder := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.D2SharedHostsVolumeName,
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			constants.D2SharedHostsFileName: "",
+		},
+	}
+
+	if _, err := wh.kubeClient.CoreV1().ConfigMaps(namespace).Create(ctx, placeholder, metav1.CreateOptions{}); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (wh *Webhook) resolveViewerAllowset(ctx context.Context, pod *corev1.Pod) ([]string, error) {
+	secretList, err := wh.kubeClient.CoreV1().Secrets(pod.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	allowsetMap := make(map[string]struct{})
+	for _, secret := range secretList.Items {
+		if !strings.HasPrefix(secret.Name, constants.D2SharedTLSSecretNamePrefix) {
+			continue
+		}
+		viewer := strings.TrimSpace(strings.TrimPrefix(secret.Name, constants.D2SharedTLSSecretNamePrefix))
+		if viewer == "" {
+			continue
+		}
+		allowsetMap[strings.ToLower(viewer)] = struct{}{}
+	}
+
+	if len(allowsetMap) == 0 {
+		return nil, fmt.Errorf("no viewer tls secret found in namespace=%s with prefix=%s: %w", pod.Namespace, constants.D2SharedTLSSecretNamePrefix, ErrD2TLSSecretMissing)
+	}
+
+	allowset := make([]string, 0, len(allowsetMap))
+	for viewer := range allowsetMap {
+		allowset = append(allowset, viewer)
+	}
+	sort.Strings(allowset)
+	return allowset, nil
+}
+
+// deriveViewerFromPodNS resolves the d2 offloader viewer for a server pod.
+// behavior: paths 1) and 2) share the same source as request-time authz
+// DeriveViewerWithMeta (ns-owner label, then user-space-/user-system- prefix);
+// path 3) is a pod owner-label fallback that does not pull in the knownUsers
+// app_user_fallback path. All-absent returns ErrD2ViewerUnderive so the
+// admission handler can fail open and classify reason=viewer_underive.
+func (wh *Webhook) deriveViewerFromPodNS(ctx context.Context, pod *corev1.Pod) (string, error) {
+	if testDeriveViewerFromPodNSHook != nil {
+		testDeriveViewerFromPodNSHook()
+	}
+	var nsLabels map[string]string
+	ns, err := wh.kubeClient.CoreV1().Namespaces().Get(ctx, pod.Namespace, metav1.GetOptions{})
+	if err != nil {
+		// A transient namespace read failure must not be stricter than the
+		// surrounding fail-open posture: fall through with empty labels so the
+		// prefix/pod-label paths can still derive a viewer.
+		klog.Warningf("d2 offloader: failed to get namespace=%s labels, falling back to prefix/pod-label err=%v", pod.Namespace, err)
+	} else {
+		nsLabels = ns.Labels
+	}
+
+	// Guard the empty viewer segment (e.g. a bare "user-space-" namespace):
+	// DeriveViewerWithMeta reports ok=true with an empty viewer there, so fall
+	// through to the pod-label path / sentinel instead of returning "".
+	if viewer, _, ok := authz.DeriveViewerWithMeta(pod.Namespace, nsLabels, nil); ok && strings.TrimSpace(viewer) != "" {
+		return viewer, nil
+	}
+
+	if pod.Labels != nil {
+		if owner := strings.ToLower(strings.TrimSpace(pod.Labels[constants.ApplicationOwnerLabel])); owner != "" {
+			return owner, nil
+		}
+	}
+
+	return "", fmt.Errorf("namespace %q has no ns-owner, user-space-/user-system- prefix, or pod owner label: %w", pod.Namespace, ErrD2ViewerUnderive)
+}
+
+// callerViewerResolution captures the outcome of caller-mode viewer/allowset
+// resolution for a pod whose owning Application opts into the cluster-internal
+// gateway (Annotations[gateway.AnnotationInCluster]=gateway.InClusterGateway)
+// with a non-empty clusterAppRef.
+//
+// requirement: caller-mode viewer/allowset resolution.
+// behavior: ViewerSet is deduped + lowercased + sorted; PrimaryRef is the
+// sorted-first ref from the merged refs (deterministic across admission
+// replays); PrimaryViewer is the owner viewer for PrimaryRef (may be
+// comma-joined when a single cluster app has multiple owners, per
+// BuildClusterAppOwnerIndex semantics). Distinct from deriveViewerFromPodNS
+// (server-mode viewer for v3 shared-entrance pods).
+type callerViewerResolution struct {
+	ViewerSet     []string
+	PrimaryRef    string
+	PrimaryViewer string
+}
+
+// resolveCallerViewersFromSnapshot is the pure-logic caller-mode resolver:
+// given a pod namespace and a cluster-wide Application snapshot, derive the
+// viewer set + sorted-first "primary ref"/"primary viewer". It takes no kube
+// client so unit tests can construct inputs deterministically.
+//
+// requirement: caller-mode viewer/allowset resolution.
+// behavior:
+//  1. filter apps to those with Spec.Namespace==podNS opted into the cluster
+//     gateway via Annotations[gateway.AnnotationInCluster]=gateway.InClusterGateway
+//  2. merge every matching app's clusterAppRef via gateway.SplitClusterAppRefs,
+//     then dedupe + sort (the "primary ref determinism" contract that
+//     WI-T1-2 leaves to T1-5 alongside its actual use site)
+//  3. build a cluster-app owner index over the full snapshot
+//  4. PrimaryRef = sorted-first ref; PrimaryViewer = ResolveClusterAppOwner(idx, PrimaryRef)
+//  5. for each ref resolve owners (single value possibly comma-joined for
+//     multi-owner cluster apps), split, normalise, collect into a lowercased
+//     + sorted ViewerSet
+//  6. len(refs)>1 -> warn-log + RecordD2InjectSkipped(multi_ref_unsupported)
+//     (v1 MVP, DP-T1-7 multi-vol expansion follow-up)
+//  7. empty ViewerSet (no refs, or refs that resolve no owners) returns
+//     ErrD2CallerViewerUnresolved -- ClassifyD2SkipReason maps it to the
+//     caller_viewer_unresolved metric reason on the fail-open path.
+func resolveCallerViewersFromSnapshot(podNS string, apps []v1alpha1.Application) (callerViewerResolution, error) {
+	var out callerViewerResolution
+	ns := strings.TrimSpace(podNS)
+	if ns == "" {
+		return out, fmt.Errorf("empty pod namespace: %w", ErrD2CallerViewerUnresolved)
+	}
+
+	refSet := make(map[string]struct{})
+	for i := range apps {
+		app := &apps[i]
+		if strings.TrimSpace(app.Spec.Namespace) != ns {
+			continue
+		}
+		if !strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
+			continue
+		}
+		for _, ref := range gateway.SplitClusterAppRefs(app.Spec.Settings["clusterAppRef"]) {
+			refSet[ref] = struct{}{}
+		}
+	}
+	if len(refSet) == 0 {
+		return out, fmt.Errorf("no clusterAppRef opted into gateway in ns=%s: %w", ns, ErrD2CallerViewerUnresolved)
+	}
+
+	refs := make([]string, 0, len(refSet))
+	for r := range refSet {
+		refs = append(refs, r)
+	}
+	sort.Strings(refs)
+
+	if len(refs) > 1 {
+		klog.Warningf("d2 offloader: multi-ref clusterAppRef truncated to primary primary=%s others=%v ns=%s", refs[0], refs[1:], ns)
+		RecordD2InjectSkipped(d2SkipReasonMultiRefUnsupported)
+	}
+
+	ownerIdx := gateway.BuildClusterAppOwnerIndex(apps)
+
+	viewerSet := make(map[string]struct{})
+	for _, ref := range refs {
+		for _, owner := range gateway.SplitClusterAppRefs(gateway.ResolveClusterAppOwner(ownerIdx, ref)) {
+			normalised := strings.ToLower(strings.TrimSpace(owner))
+			if normalised == "" {
+				continue
+			}
+			viewerSet[normalised] = struct{}{}
+		}
+	}
+	if len(viewerSet) == 0 {
+		return out, fmt.Errorf("clusterAppRef refs=%v resolved no owners in ns=%s: %w", refs, ns, ErrD2CallerViewerUnresolved)
+	}
+
+	viewers := make([]string, 0, len(viewerSet))
+	for v := range viewerSet {
+		viewers = append(viewers, v)
+	}
+	sort.Strings(viewers)
+
+	out.ViewerSet = viewers
+	out.PrimaryRef = refs[0]
+	out.PrimaryViewer = strings.TrimSpace(gateway.ResolveClusterAppOwner(ownerIdx, refs[0]))
+	return out, nil
+}
+
+// resolveCallerViewers is the kube-aware wrapper around
+// resolveCallerViewersFromSnapshot used by the admission patch path. It lists
+// all Applications cluster-wide and delegates the actual logic. WI-T1-3 wires
+// this into CreateD2OffloaderCallerPatch and distinguishes the
+// clusterappref_empty fail-open reason (caller opted in but every clusterAppRef
+// is empty) from caller_viewer_unresolved (refs present, resolve to no owner).
+func (wh *Webhook) resolveCallerViewers(ctx context.Context, pod *corev1.Pod) (callerViewerResolution, error) {
+	list, err := wh.dynamicClient.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return callerViewerResolution{}, err
+	}
+	if callerOptInRefsEmpty(pod.Namespace, list.Items) {
+		return callerViewerResolution{}, fmt.Errorf("clusterAppRef empty though caller opt-in ns=%s: %w", pod.Namespace, ErrD2ClusterAppRefEmpty)
+	}
+	return resolveCallerViewersFromSnapshot(pod.Namespace, list.Items)
+}
+
+// callerOptInRefsEmpty reports whether the pod namespace has an in-cluster
+// caller opt-in app (Annotations[in-cluster]=gateway) whose clusterAppRef is
+// empty -- i.e. the caller contract is hit but no ref was written yet
+// (admission raced the Application write). It returns false once any opted-in
+// app in the namespace carries a non-empty ref, so the resolver can proceed.
+func callerOptInRefsEmpty(podNS string, apps []v1alpha1.Application) bool {
+	ns := strings.TrimSpace(podNS)
+	if ns == "" {
+		return false
+	}
+	optedIn := false
+	for i := range apps {
+		app := &apps[i]
+		if strings.TrimSpace(app.Spec.Namespace) != ns {
+			continue
+		}
+		if !strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
+			continue
+		}
+		optedIn = true
+		if len(gateway.SplitClusterAppRefs(app.Spec.Settings["clusterAppRef"])) > 0 {
+			return false
+		}
+	}
+	return optedIn
+}
+
+// InClusterCallerOptIn reports whether any Application owning a workload in ns
+// opts into the cluster-internal gateway as a caller (Annotations[in-cluster]=
+// gateway). It gates the caller-mode d2 bypasses so non-caller pods never reach
+// the fail-open skip path.
+func (wh *Webhook) InClusterCallerOptIn(ctx context.Context, ns string) bool {
+	n := strings.TrimSpace(ns)
+	if n == "" {
+		return false
+	}
+	list, err := wh.dynamicClient.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Warningf("d2 caller opt-in check: list applications failed ns=%s err=%v", ns, err)
+		return false
+	}
+	for i := range list.Items {
+		app := &list.Items[i]
+		if strings.TrimSpace(app.Spec.Namespace) != n {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
+			return true
+		}
+	}
+	return false
+}
+
+// d2ImageUnconfigured reports whether the d2 sidecar image is still the
+// WI-N1-IMG placeholder (or empty). Injecting an unconfigured image would wedge
+// the caller pod in ImagePullBackOff, so caller-mode injection fails open with
+// reason=image_unconfigured until a real digest lands.
+func d2ImageUnconfigured(digest string) bool {
+	d := strings.TrimSpace(digest)
+	return d == "" || d == constants.D2SidecarImagePlaceholder
+}
+
+// ensureD2DrainGracePeriod sets the default drain grace period only when the
+// caller pod does not already specify one, so the d2 sidecar nginx
+// worker_shutdown_timeout can drain in-flight requests on SIGTERM. An explicit
+// caller value is respected (does not override business semantics).
+func ensureD2DrainGracePeriod(pod *corev1.Pod) {
+	if pod.Spec.TerminationGracePeriodSeconds == nil {
+		pod.Spec.TerminationGracePeriodSeconds = ptr.To(constants.D2DrainGracePeriodSeconds)
+	}
+}
+
+// CreateD2OffloaderCallerPatch mutates a caller pod with the caller-mode d2
+// offloader and returns JSON patch bytes. requirement: caller-mode d2 offloader patch.
+// behavior: fail-open prerequisites surface as sentinel errors classified by
+// ClassifyD2SkipReason; injectD2OffloaderCallerFailOpen records the reason and
+// admits the pod. The entry self-guards hasD2Container (M8) because bypass (a)
+// runs after CreatePatch without its short-circuit. The image digest is checked
+// first so an unconfigured placeholder skips before any API reads.
+func (wh *Webhook) CreateD2OffloaderCallerPatch(
+	ctx context.Context,
+	pod *corev1.Pod,
+	req *admissionv1.AdmissionRequest,
+	appCfg *appcfg.ApplicationConfig,
+	proxyUUID uuid.UUID,
+) ([]byte, error) {
+	_ = appCfg
+
+	if hasD2Container(pod) {
+		return makePatches(req, pod)
+	}
+
+	if d2ImageUnconfigured(d2SidecarImageDigest()) {
+		return nil, fmt.Errorf("d2 sidecar image digest unconfigured ns=%s: %w", pod.Namespace, ErrD2ImageUnconfigured)
+	}
+
+	res, err := wh.resolveCallerViewers(ctx, pod)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshot, err := cluster.GetSnapshot(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("d2 offloader get cluster snapshot: %w", errors.Join(err, ErrD2SnapshotUnavailable))
+	}
+
+	viewer := res.PrimaryViewer
+	allowset := renderCallerAllowset(res.ViewerSet)
+
+	configMapName, volumeName, err := wh.ensureD2NginxConfConfigMap(
+		ctx, pod, proxyUUID.String(), viewer, allowset, snapshot.PlatformDomain,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := wh.ensureD2SharedHostsPlaceholder(ctx, pod.Namespace); err != nil {
+		return nil, err
+	}
+
+	containerSpec := sidecar.GetTLSOffloaderContainerSpec(volumeName, d2SidecarImageDigest())
+	initSpec := sidecar.GetTLSOffloaderInitContainerSpec()
+	vols := sidecar.GetTLSOffloaderVolumes(viewer, configMapName, volumeName)
+	pod.Spec.Containers = append(pod.Spec.Containers, containerSpec)
+	pod.Spec.InitContainers = append(pod.Spec.InitContainers, initSpec)
+	pod.Spec.Volumes = append(pod.Spec.Volumes, vols...)
+
+	ensureD2DrainGracePeriod(pod)
+
+	return makePatches(req, pod)
+}
+
+// renderCallerAllowset turns a caller-mode viewer set into nginx
+// <viewer-allowset-escaped> map values (lowercased literals, no wildcards;
+// WI-N1 §2.3 hit-test compares ssl_server_name against literal viewers).
+// Defensive sanity pass over resolveCallerViewers output: caller-side
+// re-normalisation keeps nginx-template consumers free of ordering and
+// case assumptions.
+func renderCallerAllowset(viewerSet []string) []string {
+	if len(viewerSet) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(viewerSet))
+	out := make([]string, 0, len(viewerSet))
+	for _, v := range viewerSet {
+		n := strings.ToLower(strings.TrimSpace(v))
+		if n == "" {
+			continue
+		}
+		if _, dup := seen[n]; dup {
+			continue
+		}
+		seen[n] = struct{}{}
+		out = append(out, n)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func hasD2Container(pod *corev1.Pod) bool {
+	for _, container := range pod.Spec.Containers {
+		if container.Name == constants.D2SidecarContainerName {
+			return true
+		}
+	}
+	return false
 }
 
 func (wh *Webhook) getProbeUA(ctx context.Context, pod *corev1.Pod) (string, error) {

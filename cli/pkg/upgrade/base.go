@@ -134,6 +134,24 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Delay:  15 * time.Second,
 		},
 		&task.LocalTask{
+			Name:   "PrepareLinkerdPKI",
+			Action: &terminus.PrepareLinkerdPKI{},
+			Retry:  2,
+			Delay:  30 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "ApplyNetworkCRDs",
+			Action: &terminus.ApplyNetworkCRDs{},
+			Retry:  2,
+			Delay:  30 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "UpgradeAppGatewaySystem",
+			Action: &terminus.InstallAppGatewaySystem{},
+			Retry:  2,
+			Delay:  10 * time.Second,
+		},
+		&task.LocalTask{
 			Name:   "UpgradeSystemComponents",
 			Action: new(upgradeSystemComponents),
 			Retry:  10,

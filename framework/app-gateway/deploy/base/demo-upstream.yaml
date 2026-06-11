@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-echo
+  namespace: agw-demo
+  labels:
+    app: http-echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-echo
+  template:
+    metadata:
+      labels:
+        app: http-echo
+      annotations:
+        linkerd.io/inject: enabled
+    spec:
+      containers:
+        - name: echo
+          image: hashicorp/http-echo:0.2.3
+          args:
+            - -text=olares-app-gateway-upstream-ok
+          ports:
+            - containerPort: 5678
+              name: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-echo
+  namespace: agw-demo
+  labels:
+    app: http-echo
+spec:
+  selector:
+    app: http-echo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5678

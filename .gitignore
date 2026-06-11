@@ -45,6 +45,9 @@ cli/olares-cli*
 
 framework/app-service/bin
 
+# Legacy generated tree (vendor source: .olares/config/app-gateway-vendor/)
+framework/app-gateway/vendor-charts/
+
 /files/
 market/
 user-service/

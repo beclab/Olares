@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agw-demo
+  labels:
+    app.kubernetes.io/name: agw-demo
+  annotations:
+    linkerd.io/inject: enabled
+    # When the cluster requires ns-type for linkerd-identity, see devops LINKERD-MESH-OPERATIONS.md
+    bytetrade.io/ns-type: platform

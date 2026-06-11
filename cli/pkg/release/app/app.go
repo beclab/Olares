@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	agwpack "github.com/beclab/Olares/framework/app-gateway/pkg/packaging"
+
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 )
@@ -55,6 +57,10 @@ func (m *Manager) Package() error {
 	}
 
 	if err := m.packageGPU(); err != nil {
+		return err
+	}
+
+	if err := m.packageAppGateway(); err != nil {
 		return err
 	}
 
@@ -125,6 +131,19 @@ func (m *Manager) packageGPU() error {
 		filepath.Join(m.olaresRepoRoot, "infrastructure/gpu/.olares/config/gpu"),
 		filepath.Join(m.distPath, "wizard/config/gpu"),
 	)
+}
+
+func (m *Manager) packageAppGateway() error {
+	src := agwpack.VendorDir(m.olaresRepoRoot)
+	dest := filepath.Join(m.distPath, "wizard/config/app-gateway-vendor")
+	if err := agwpack.ValidateVendorDir(src); err != nil {
+		return fmt.Errorf("cannot package app-gateway-vendor: %w", err)
+	}
+	fmt.Println("packaging app-gateway-vendor ...")
+	if err := os.RemoveAll(dest); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return util.CopyDirectory(src, dest)
 }
 
 func (m *Manager) packageEnvConfig() error {

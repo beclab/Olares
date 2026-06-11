@@ -8,6 +8,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -371,6 +372,9 @@ func (r *SecurityReconciler) createOrUpdateNetworkPolicy(ctx context.Context,
 			}
 			found = true
 		} else {
+			if routecontrol.IsManagedNetworkPolicy(&np) {
+				continue
+			}
 			if namespaceNetworkPolicies != nil && !namespaceNetworkPolicies.Contains(&np) {
 				if err := r.Delete(ctx, &np); err != nil {
 					return err
@@ -642,6 +646,20 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 
 			} // end of func npFix
 
+		} else if security.IsAppGatewayMeshNamespace(ns.Name) {
+			// App-gateway mesh: keep the standard others-np path unchanged; add a second managed NP.
+			peerNS := security.AppGatewayMeshPeerNamespace(ns.Name)
+			meshNP := security.NewAppGatewayMeshNetworkPolicy(ns.Name, peerNS)
+			networkPolicy = security.NetworkPolicies{
+				security.NPDenyAll.DeepCopy(),
+				meshNP,
+				security.NewLinkerdMeshPrometheusScrapeNetworkPolicy(ns.Name),
+			}
+			networkPolicy.SetName("others-np")
+			networkPolicy.SetNamespace(ns.Name)
+			npFix = func(np *netv1.NetworkPolicy) {
+				logger.Info("Update network policy", "name", networkPolicy.Name())
+			}
 		} else {
 			networkPolicy = security.NetworkPolicies{security.NPDenyAll.DeepCopy()}
 			networkPolicy.SetName("others-np")

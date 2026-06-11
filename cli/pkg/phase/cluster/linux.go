@@ -80,6 +80,7 @@ func (l *linuxInstallPhaseBuilder) installTerminus() phase {
 		&terminus.GetNATGatewayIPModule{},
 		&terminus.InstallAccountModule{},
 		&terminus.InstallSettingsModule{},
+		&terminus.InstallAppGatewayVendorModule{},
 		&terminus.InstallOsSystemModule{},
 		&terminus.InstallLauncherModule{},
 		&terminus.InstallAppsModule{},

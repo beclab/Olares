@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-gateway
+  namespace: {{ include "eg.namespace" . }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    control-plane: envoy-gateway
+  {{- include "eg.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  {{- end }}
+  selector:
+    control-plane: envoy-gateway
+  {{- include "eg.selectorLabels" . | nindent 4 }}
+  ports:
+  {{- .Values.deployment.ports | toYaml | nindent 2 -}}
+  {{- if .Values.topologyInjector.enabled }}
+  - name: webhook
+    port: 9443
+    targetPort: 9443
+  {{- end }}
+  {{- with .Values.service.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}

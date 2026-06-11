@@ -1,0 +1,87 @@
+{{- if .Values.linkerdPkiGuardian.enabled }}
+{{- $g := .Values.linkerdPkiGuardian }}
+# Always-on Linkerd identity issuer guardian. Pinned to the linkerd namespace
+# (alongside olares-linkerd-pki / linkerd-identity); .Release.Namespace is not
+# used because the umbrella release namespace is app-gateway.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkerd-pki-guardian
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app-gateway
+      app.kubernetes.io/component: linkerd-pki-guardian
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-gateway
+        app.kubernetes.io/component: linkerd-pki-guardian
+      annotations:
+        prometheus.io/scrape: {{ $g.prometheus.scrape | default true | quote }}
+        prometheus.io/port: {{ $g.prometheus.port | default 8080 | quote }}
+        prometheus.io/path: {{ $g.prometheus.path | default "/metrics" | quote }}
+        # The guardian manages Linkerd identity; do not inject a mesh proxy.
+        linkerd.io/inject: disabled
+    spec:
+      serviceAccountName: linkerd-pki-guardian
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: guardian
+          image: "{{ $g.image.repository }}{{ if $g.image.digest }}@{{ $g.image.digest }}{{ else if $g.image.tag }}:{{ $g.image.tag }}{{ else }}:dev{{ end }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: GUARDIAN_INTERVAL
+              value: {{ $g.interval | default "24h" | quote }}
+            - name: GUARDIAN_LINKERD_NS
+              value: linkerd
+            - name: GUARDIAN_HTTP_ADDR
+              value: ":8080"
+            - name: GOMEMLIMIT
+              value: "32MiB"
+            - name: GOGC
+              value: "50"
+          startupProbe:
+            httpGet:
+              path: /startupz
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            periodSeconds: 60
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            periodSeconds: 30
+            failureThreshold: 2
+          resources:
+            requests:
+              cpu: {{ $g.resources.requests.cpu | default "5m" | quote }}
+              memory: {{ $g.resources.requests.memory | default "16Mi" | quote }}
+            limits:
+              cpu: {{ $g.resources.limits.cpu | default "100m" | quote }}
+              memory: {{ $g.resources.limits.memory | default "64Mi" | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+{{- end }}

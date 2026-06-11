@@ -1,0 +1,24 @@
+{{- if .Values.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: envoy-gateway
+  namespace: {{ include "eg.namespace" $ }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: envoy-gateway
+  {{- if .Values.hpa.minReplicas }}
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  {{- end }}
+  maxReplicas: {{ required ".Values.hps.maxReplicas is required when hpa is enabled" .Values.hpa.maxReplicas }}
+  {{- if .Values.hpa.behavior }}
+  behavior:
+{{ toYaml .Values.hpa.behavior | indent 4 }}
+  {{- end }}
+{{- if .Values.hpa.metrics }}
+  metrics:
+{{ toYaml .Values.hpa.metrics | indent 4 }}
+{{- end }}
+{{- end }}

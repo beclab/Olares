@@ -22,6 +22,7 @@ if [[ "${REPO_PATH}" != "" && "$REPO_PATH" != "/" ]]; then
 fi
 
 
+bash ${BASE_DIR}/assemble-app-gateway-system.sh
 DIST_PATH=${DIST_PATH} bash ${BASE_DIR}/package.sh
 
 bash ${BASE_DIR}/image-manifest.sh

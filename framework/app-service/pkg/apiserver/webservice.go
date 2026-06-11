@@ -284,6 +284,14 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "App namespace validated success", nil)).
 		Consumes(restful.MIME_JSON)
 
+	// handler tls-replica private-key mount guard validate (WI-T1-8)
+	ws.Route(ws.POST("/tls-replica-mount/validate").
+		To(handler.tlsReplicaMountValidate).
+		Doc("validating webhook denying cross-tenant tls-replica private-key bypass mounts").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Pod tls-replica mount validated success", nil)).
+		Consumes(restful.MIME_JSON)
+
 	ws.Route(ws.POST("/runasuser/inject").
 		To(handler.handleRunAsUser).
 		Doc("mutating webhook for inject runasuser 1000 for third party app's pod").

@@ -36,6 +36,9 @@ func GetAppInstallationConfig(app, owner string) (*ApplicationConfig, error) {
 	}
 
 	appcfg.Namespace = namespace
+	if err := ValidateCallerInClusterManifest(appcfg); err != nil {
+		return nil, err
+	}
 	// Shared apps share one cluster-wide installation across admins.
 	// Persist the cluster owner as a stable real-user identity so every
 	// consumer (compute allocation, HAMI binding labels, pod labels,

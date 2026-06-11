@@ -12,7 +12,10 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -66,7 +69,24 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	ctrl.Log.Info("reconcile request", "name", req.Name, "namespace", req.Namespace)
 
 	if req.Namespace == "" {
-		// ignore for-input object watch
+		// Cluster-scoped Application CR updates (e.g. kubectl annotate route-mode)
+		// enqueue with an empty namespace. Reconcile gateway routes directly.
+		if req.Name != "" {
+			app, err := r.AppClientset.AppV1alpha1().Applications().Get(ctx, req.Name, metav1.GetOptions{})
+			if err != nil {
+				if !apierrors.IsNotFound(err) {
+					return ctrl.Result{}, err
+				}
+			} else if err := r.ensureAppGatewayRouteMode(ctx, app); err != nil {
+				klog.Warningf("ensure gateway route-mode for Application %s err=%v", req.Name, err)
+			} else if err := r.ensureCallerInClusterAnnotation(ctx, app); err != nil {
+				klog.Warningf("ensure in-cluster annotation for Application %s err=%v", req.Name, err)
+			} else if err := r.reconcileSharedRouteRegistry(ctx, app); err != nil {
+				klog.Warningf("reconcile SharedRouteRegistry for Application %s err=%v", req.Name, err)
+			} else {
+				r.reconcileCallerNamespace(ctx, app)
+			}
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -190,6 +210,15 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 		}
 	}
+
+	// v2 shared pilots often run the workload in a *-shared namespace while the
+	// Application.spec.namespace points at the installer's user namespace. Local
+	// Deployments may also lack installer owner/name labels, so the loop above
+	// never calls updateApplication. Always reconcile gateway routes from the
+	// Application CR(s) tied to this workload namespace.
+	if err := r.reconcileGatewayRoutesForWorkloadNS(ctx, req.Namespace); err != nil {
+		klog.Warningf("reconcile gateway routes for workload namespace %s err=%v", req.Namespace, err)
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -216,6 +245,37 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}),
 	))
 
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(source.Kind(
+		mgr.GetCache(),
+		&appv1alpha1.Application{},
+		handler.TypedEnqueueRequestsFromMapFunc(
+			func(ctx context.Context, app *appv1alpha1.Application) []reconcile.Request {
+				if app == nil || app.Spec.Namespace == "" {
+					return nil
+				}
+				return []reconcile.Request{{NamespacedName: types.NamespacedName{
+					Name:      app.Spec.Name,
+					Namespace: app.Spec.Namespace,
+				}}}
+			}),
+		predicate.TypedFuncs[*appv1alpha1.Application]{
+			CreateFunc: func(e event.TypedCreateEvent[*appv1alpha1.Application]) bool {
+				app := e.Object
+				return app != nil && strings.EqualFold(app.Annotations[gateway.AnnotationInCluster], gateway.InClusterGateway)
+			},
+			UpdateFunc: func(e event.TypedUpdateEvent[*appv1alpha1.Application]) bool {
+				return inClusterAnnotationChanged(e.ObjectOld, e.ObjectNew)
+			},
+			DeleteFunc: func(e event.TypedDeleteEvent[*appv1alpha1.Application]) bool {
+				app := e.Object
+				return app != nil && app.Annotations[gateway.AnnotationInCluster] != ""
+			},
+		},
+	))
 	if err != nil {
 		return err
 	}
@@ -326,6 +386,10 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	if tailScale != nil {
 		newapp.Spec.TailScale = *tailScale
 	}
+	if err := gateway.ApplyRouteModeAnnotation(ctx, r.Client, newapp); err != nil {
+		klog.Warningf("apply gateway route-mode for new app %s err=%v", name, err)
+	}
+	gateway.ApplyCallerInClusterAnnotation(newapp)
 	app, err := r.AppClientset.AppV1alpha1().Applications().Create(ctx, newapp, metav1.CreateOptions{})
 	if err != nil {
 		ctrl.Log.Error(err, "create application error")
@@ -367,6 +431,10 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 		klog.Infof("Failed to patch err=%v", err)
 	}
 
+	if srrErr := r.reconcileSharedRouteRegistry(ctx, app); srrErr != nil {
+		klog.Warningf("reconcile SharedRouteRegistry for app=%s err=%v", app.Spec.Name, srrErr)
+	}
+
 	return err
 }
 
@@ -376,6 +444,18 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	if app.Annotations != nil {
 		if lastVersion := app.Annotations[deploymentResourceVersionAnnotation]; lastVersion == deployment.GetResourceVersion() {
 			klog.Infof("skip updateApplication: deployment %s not changed, triggered by app modification", deployment.GetName())
+			// Annotation changes (e.g. gateway.olares.io/route-mode opt-in/out)
+			// don't bump the deployment resource version. Run the SRR
+			// reconciler so toggling routeMode is declarative.
+			if err := r.ensureAppGatewayRouteMode(ctx, app); err != nil {
+				klog.Warningf("ensure gateway route-mode on app-only update for %s err=%v", app.Spec.Name, err)
+			}
+			if err := r.ensureCallerInClusterAnnotation(ctx, app); err != nil {
+				klog.Warningf("ensure in-cluster annotation on app-only update for %s err=%v", app.Spec.Name, err)
+			}
+			if srrErr := r.reconcileSharedRouteRegistry(ctx, app); srrErr != nil {
+				klog.Warningf("reconcile SharedRouteRegistry on app-only update for %s err=%v", app.Spec.Name, srrErr)
+			}
 			return nil
 		}
 	}
@@ -434,6 +514,18 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		existingPolicy := appCopy.Spec.Settings[applicationSettingsPolicyKey]
 		appCopy.Spec.Settings[applicationSettingsPolicyKey] = mergePolicySettings(existingPolicy, incomingPolicy)
 	}
+	if settings["clusterScoped"] == "true" {
+		appCopy.Spec.Settings["clusterScoped"] = "true"
+		if settings["clusterAppRef"] != "" {
+			appCopy.Spec.Settings["clusterAppRef"] = settings["clusterAppRef"]
+		}
+	}
+	if settings[gateway.SettingGatewayRouteMode] != "" {
+		appCopy.Spec.Settings[gateway.SettingGatewayRouteMode] = settings[gateway.SettingGatewayRouteMode]
+	}
+	if settings[gateway.SettingInClusterMode] != "" {
+		appCopy.Spec.Settings[gateway.SettingInClusterMode] = settings[gateway.SettingInClusterMode]
+	}
 
 	if tailScale != nil {
 		appCopy.Spec.TailScale = *tailScale
@@ -460,6 +552,11 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	}
 	klog.Infof("deploymentname: %s, version: %v", deployment.GetName(), deployment.GetResourceVersion())
 	appCopy.Annotations[deploymentResourceVersionAnnotation] = deployment.GetResourceVersion()
+
+	if err := gateway.ApplyRouteModeAnnotation(ctx, r.Client, appCopy); err != nil {
+		klog.Warningf("apply gateway route-mode for app %s err=%v", appCopy.Spec.Name, err)
+	}
+	gateway.ApplyCallerInClusterAnnotation(appCopy)
 
 	// Propagate the v3 schema marker and the shared marker from the
 	// deployment so the Application CR carries them for downstream
@@ -515,7 +612,216 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	//	return err
 	//}
 	//klog.Infof("appState: ..%v", a.Status.State)
+	if srrErr := r.reconcileSharedRouteRegistry(ctx, appCopy); srrErr != nil {
+		klog.Warningf("reconcile SharedRouteRegistry for app=%s err=%v", appCopy.Spec.Name, srrErr)
+	}
+	r.reconcileCallerNamespace(ctx, appCopy)
+
 	return err
+}
+
+func (r *ApplicationReconciler) reconcileCallerNamespace(ctx context.Context, app *appv1alpha1.Application) {
+	if app == nil || app.Spec.Namespace == "" {
+		return
+	}
+	cr := &routecontrol.CallerReconciler{Client: r.Client}
+	if err := cr.Reconcile(ctx, app.Spec.Namespace); err != nil {
+		klog.Warningf("caller reconciler for ns=%s app=%s err=%v", app.Spec.Namespace, app.Spec.Name, err)
+	}
+}
+
+// reconcileGatewayRoutesForWorkloadNS runs reconcileSharedRouteRegistry for every
+// cluster Application whose spec.namespace matches the reconciled workload namespace.
+func (r *ApplicationReconciler) reconcileGatewayRoutesForWorkloadNS(ctx context.Context, workloadNS string) error {
+	if workloadNS == "" {
+		return nil
+	}
+	list, err := r.AppClientset.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for i := range list.Items {
+		app := &list.Items[i]
+		if app.Spec.Namespace != workloadNS {
+			continue
+		}
+		if err := r.ensureAppGatewayRouteMode(ctx, app); err != nil {
+			return fmt.Errorf("app %s route-mode: %w", app.Name, err)
+		}
+		if err := r.ensureCallerInClusterAnnotation(ctx, app); err != nil {
+			return fmt.Errorf("app %s in-cluster: %w", app.Name, err)
+		}
+		if err := r.reconcileSharedRouteRegistry(ctx, app); err != nil {
+			return fmt.Errorf("app %s: %w", app.Name, err)
+		}
+		r.reconcileCallerNamespace(ctx, app)
+	}
+	return nil
+}
+
+func inClusterAnnotationChanged(oldApp, newApp *appv1alpha1.Application) bool {
+	if oldApp == nil || newApp == nil {
+		return false
+	}
+	oldV := ""
+	if oldApp.Annotations != nil {
+		oldV = oldApp.Annotations[gateway.AnnotationInCluster]
+	}
+	newV := ""
+	if newApp.Annotations != nil {
+		newV = newApp.Annotations[gateway.AnnotationInCluster]
+	}
+	return oldV != newV
+}
+
+// ensureAppGatewayRouteMode persists gateway.olares.io/route-mode when the
+// automation policy (ClusterConfig + manifest settings) requires it. Explicit
+// operator annotations (gateway or direct) are never overwritten.
+func (r *ApplicationReconciler) ensureAppGatewayRouteMode(ctx context.Context, app *appv1alpha1.Application) error {
+	if app == nil {
+		return nil
+	}
+	need, mode, err := gateway.ComputeRouteModePatch(ctx, r.Client, app)
+	if err != nil || !need {
+		return err
+	}
+	appCopy := app.DeepCopy()
+	if appCopy.Annotations == nil {
+		appCopy.Annotations = map[string]string{}
+	}
+	appCopy.Annotations[gateway.AnnotationRouteMode] = mode
+	updated, err := r.AppClientset.AppV1alpha1().Applications().Update(ctx, appCopy, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	if app.Annotations == nil {
+		app.Annotations = map[string]string{}
+	}
+	app.Annotations[gateway.AnnotationRouteMode] = updated.Annotations[gateway.AnnotationRouteMode]
+	return nil
+}
+
+// ensureCallerInClusterAnnotation persists gateway.olares.io/in-cluster=gateway
+// for callers with clusterAppRef when the manifest or defaults require it.
+func (r *ApplicationReconciler) ensureCallerInClusterAnnotation(ctx context.Context, app *appv1alpha1.Application) error {
+	_ = ctx
+	if app == nil {
+		return nil
+	}
+	need, value := gateway.ComputeCallerInClusterPatch(app)
+	if !need {
+		return nil
+	}
+	appCopy := app.DeepCopy()
+	if appCopy.Annotations == nil {
+		appCopy.Annotations = map[string]string{}
+	}
+	appCopy.Annotations[gateway.AnnotationInCluster] = value
+	updated, err := r.AppClientset.AppV1alpha1().Applications().Update(ctx, appCopy, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	if app.Annotations == nil {
+		app.Annotations = map[string]string{}
+	}
+	app.Annotations[gateway.AnnotationInCluster] = updated.Annotations[gateway.AnnotationInCluster]
+	return nil
+}
+
+// reconcileSharedRouteRegistry writes / deletes the SharedRouteRegistry that
+// declares this shared app's exposure through the shared Envoy Gateway data plane.
+// Only acts when the Application carries gateway.olares.io/route-mode=gateway.
+// Qualifying apps are v3 installs or v2 cluster-scoped apps with
+// spec.sharedEntrances (see appcfg.IsGatewaySharedApp). For any other case
+// (no shared entrances, no annotation, direct mode) the SRR is removed so
+// toggling routeMode is truly declarative.
+func (r *ApplicationReconciler) reconcileSharedRouteRegistry(ctx context.Context, app *appv1alpha1.Application) error {
+	if app == nil || app.Spec.Namespace == "" || app.Spec.Name == "" {
+		return nil
+	}
+	if !appcfg.IsGatewaySharedApp(app) {
+		klog.V(2).Infof("SRR skip app=%s: not a gateway shared app (need v3 label or clusterScoped+sharedEntrances)", app.Spec.Name)
+		return gateway.DeleteAllForApp(ctx, r.Client, app)
+	}
+	if !gateway.IsOptedIn(app) {
+		klog.V(2).Infof("SRR skip app=%s: route-mode is not gateway", app.Spec.Name)
+		return gateway.DeleteAllForApp(ctx, r.Client, app)
+	}
+	klog.Infof("SRR reconcile start app=%s ns=%s entrances=%d", app.Spec.Name, app.Spec.Namespace, len(app.Spec.SharedEntrances))
+
+	// Remove legacy "shared-<appName>" SRR if present, then write one SRR per
+	// sharedEntrance with logical hostPattern <hash8>.*.<platformDomain>.
+	if err := gateway.Delete(ctx, r.Client, app); err != nil {
+		return fmt.Errorf("remove legacy SRR: %w", err)
+	}
+
+	platformDomain := cluster.GetPlatformDomain(ctx)
+	if platformDomain == "" {
+		return fmt.Errorf("platformDomain is empty (ClusterConfig missing and env unset)")
+	}
+
+	appid := gateway.EntranceAppID(app)
+
+	// Track which entrance SRRs should exist after this pass; everything else
+	// owned by the Application gets cleaned up to handle entrance removals.
+	desired := make(map[string]struct{}, len(app.Spec.SharedEntrances))
+
+	for i := range app.Spec.SharedEntrances {
+		entrance := app.Spec.SharedEntrances[i]
+		if entrance.Name == "" {
+			klog.Warningf("SRR skip: app=%s entrance#%d has empty name", app.Spec.Name, i)
+			continue
+		}
+		if entrance.Host == "" {
+			return fmt.Errorf("shared entrance %q on app %s has empty host", entrance.Name, app.Spec.Name)
+		}
+		svc, err := gateway.ResolveSharedEntranceService(ctx, r.Client, app, entrance.Host)
+		if err != nil {
+			return fmt.Errorf("resolve backing service for entrance %q: %w", entrance.Name, err)
+		}
+		spec, err := gateway.BuildSpecForEntrance(app, entrance, i, svc, platformDomain)
+		if err != nil {
+			return fmt.Errorf("build SRR spec for entrance %q: %w", entrance.Name, err)
+		}
+		name := gateway.ResourceNameForEntrance(appid, entrance.Name)
+		if err := gateway.CheckLogicalPatternUniqueness(ctx, r.Client, spec.HostPatterns[0], app.Spec.Namespace, name); err != nil {
+			return fmt.Errorf("uniqueness check for entrance %q: %w", entrance.Name, err)
+		}
+		srrObj, err := gateway.ReconcileForEntrance(ctx, r.Client, app, entrance, spec)
+		if err != nil {
+			return err
+		}
+		desired[name] = struct{}{}
+		klog.V(1).Infof("SRR reconciled app=%s/%s entrance=%s name=%s hostPatterns=%v upstream=%s/%s:%d",
+			app.Spec.Namespace, app.Spec.Name, entrance.Name, name, spec.HostPatterns,
+			spec.Upstream.ServiceNamespace, spec.Upstream.ServiceName, spec.Upstream.Port)
+
+		// Shared ingress route control: after the SRR is written, app-service
+		// ensures the HTTPRoute and NetworkPolicy for this entrance exist in
+		// the Application namespace. Route apply errors are recorded on
+		// SRR.status and do not fail the Application reconcile loop.
+		routeRes, routeErr := routecontrol.ReconcileSharedRoute(ctx, r.Client, routecontrol.GatewayRef{}, srrObj)
+		if routeErr != nil {
+			klog.Warningf("reconcile shared route %s/%s failed: %v", srrObj.Namespace, srrObj.Name, routeErr)
+			routeRes = routecontrol.ReconcileResult{
+				Status:  metav1.ConditionFalse,
+				Reason:  routecontrol.ReasonRouteApplyFailed,
+				Message: routeErr.Error(),
+			}
+		}
+		if statusErr := routecontrol.UpdateSRRStatus(ctx, r.Client, srrObj, routeRes); statusErr != nil {
+			klog.Warningf("update SRR route status %s/%s failed: %v", srrObj.Namespace, srrObj.Name, statusErr)
+		}
+	}
+
+	// Garbage-collect stale per-entrance SRRs (e.g. when sharedEntrances was
+	// trimmed in a Helm upgrade). OwnerReferences ultimately delete on app
+	// removal, but this keeps an opted-in Application's SRR set tight while
+	// the Application still exists.
+	if err := gateway.PruneEntranceSRRs(ctx, r.Client, app, desired); err != nil {
+		return fmt.Errorf("prune stale SRRs: %w", err)
+	}
+	return nil
 }
 
 func (r *ApplicationReconciler) getEntranceServiceAddress(ctx context.Context, deployment client.Object, isMultiApp bool) (map[string][]appv1alpha1.Entrance, error) {
@@ -651,6 +957,12 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 				sharedEntrances = appCfg.SharedEntrances
 			} else if appCfg.IsShared() {
 				sharedEntrances = appCfg.SharedEntrances
+			}
+			if mode := strings.TrimSpace(appCfg.GatewayRouteMode); mode != "" {
+				settings[gateway.SettingGatewayRouteMode] = strings.ToLower(mode)
+			}
+			if mode := strings.TrimSpace(appCfg.InClusterMode); mode != "" {
+				settings[gateway.SettingInClusterMode] = strings.ToLower(mode)
 			}
 			if appCfg.MobileSupported {
 				settings["mobileSupported"] = "true"

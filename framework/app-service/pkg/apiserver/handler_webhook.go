@@ -9,6 +9,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
@@ -132,27 +133,120 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
 			klog.Infof("Patched shared-entrance label for shared-app pod uuid=%s namespace=%s injectSharedPod=%v",
 				proxyUUID, req.Namespace, *injectSharedPod)
+
+			if *injectSharedPod {
+				snapshot, err := cluster.GetSnapshot(ctx)
+				if err != nil {
+					// fail-open: the snapshot only decides whether to add the
+					// d2 enhancement. On error, skip d2 and admit the pod,
+					// which already carries the shared-entrance label.
+					klog.Warningf("Skipping d2 offloader injection (fail-open): cluster snapshot unavailable for v3 pod uuid=%s namespace=%s err=%v",
+						proxyUUID, req.Namespace, err)
+					webhook.RecordD2InjectSkipped("snapshot_error")
+				} else if snapshot.InClusterGatewayEnabled {
+					h.injectD2OffloaderFailOpen(ctx, resp, &pod, req, appCfg, proxyUUID)
+				}
+			}
+		} else if h.sidecarWebhook.InClusterCallerOptIn(ctx, req.Namespace) {
+			// WI-T1-3 bypass (b): a v3 non-shared pod that opts into the
+			// in-cluster gateway as a caller gets the caller-mode d2 offloader
+			// (scenario B). The shared-entrance server subbranch above is
+			// unchanged (G-T1-4).
+			snapshot, err := cluster.GetSnapshot(ctx)
+			if err != nil {
+				klog.Warningf("Skipping caller d2 offloader injection (fail-open): cluster snapshot unavailable for v3 pod uuid=%s namespace=%s err=%v",
+					proxyUUID, req.Namespace, err)
+				webhook.RecordD2InjectSkipped("snapshot_error")
+			} else if snapshot.InClusterGatewayEnabled {
+				h.injectD2OffloaderCallerFailOpen(ctx, resp, &pod, req, appCfg, proxyUUID, webhook.D2InjectScenarioB)
+			} else {
+				klog.Infof("Skipping sidecar injection for v3 pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+			}
 		} else {
 			klog.Infof("Skipping sidecar injection for shared-app pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		}
 		return resp
 	}
 
-	if nothingToInject {
+	// WI-T1-3 bypass (a): a v1/v2 caller pod still needs the caller-mode d2
+	// offloader even when the legacy sidecar fast-path has nothing to inject.
+	callerOptIn := h.sidecarWebhook.InClusterCallerOptIn(ctx, req.Namespace)
+
+	if nothingToInject && !callerOptIn {
 		klog.Infof("Skipping sidecar injection for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return resp
 	}
 
-	patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectWs, injectUpload, injectSharedPod, appMgr, appCfg, perms)
-	if err != nil {
-		klog.Errorf("Failed to create patch for pod uuid=%s name=%s namespace=%s err=%v", proxyUUID, pod.Name, req.Namespace, err)
-		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	if !nothingToInject {
+		patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectWs, injectUpload, injectSharedPod, appMgr, appCfg, perms)
+		if err != nil {
+			klog.Errorf("Failed to create patch for pod uuid=%s name=%s namespace=%s err=%v", proxyUUID, pod.Name, req.Namespace, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+
+		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+		klog.Infof("Success to create patch admission response for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 	}
 
-	h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
-	klog.Infof("Success to create patch admission response for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+	if callerOptIn {
+		snapshot, err := cluster.GetSnapshot(ctx)
+		if err != nil {
+			klog.Warningf("Skipping caller d2 offloader injection (fail-open): cluster snapshot unavailable for pod uuid=%s namespace=%s err=%v",
+				proxyUUID, req.Namespace, err)
+			webhook.RecordD2InjectSkipped("snapshot_error")
+		} else if snapshot.InClusterGatewayEnabled {
+			h.injectD2OffloaderCallerFailOpen(ctx, resp, &pod, req, appCfg, proxyUUID, webhook.D2InjectScenarioA)
+		}
+	}
 
 	return resp
+}
+
+// injectD2OffloaderFailOpen applies the v3 d2 offloader patch, failing open.
+// When a prerequisite (viewer derivation, per-viewer tls replica, cluster
+// snapshot, sidecar image) is not yet ready, it records
+// app_service_d2_inject_skipped_total{reason} and admits the pod with the
+// shared-entrance label already patched, instead of rejecting it. On success it
+// records app_service_d2_inject_succeeded_total{mode=server,scenario=server_main},
+// symmetric to the caller-mode path. Illegal-input errors are handled before
+// this point and remain fail-closed.
+func (h *Handler) injectD2OffloaderFailOpen(ctx context.Context, resp *admissionv1.AdmissionResponse,
+	pod *corev1.Pod, req *admissionv1.AdmissionRequest, appCfg *appcfg_mod.ApplicationConfig, proxyUUID uuid.UUID) {
+	d2Patch, err := h.sidecarWebhook.CreateD2OffloaderPatch(ctx, pod, req, appCfg, proxyUUID)
+	if err != nil {
+		reason := webhook.ClassifyD2SkipReason(err)
+		klog.Warningf("Skipping d2 offloader injection (fail-open) for v3 pod uuid=%s namespace=%s reason=%s err=%v",
+			proxyUUID, req.Namespace, reason, err)
+		webhook.RecordD2InjectSkipped(reason)
+		return
+	}
+	h.sidecarWebhook.PatchAdmissionResponse(resp, d2Patch)
+	webhook.RecordD2InjectSucceeded(webhook.D2InjectModeServer, webhook.D2InjectScenarioServerMain)
+	klog.Infof("Injected d2 offloader for v3 shared-entrance pod uuid=%s namespace=%s",
+		proxyUUID, req.Namespace)
+}
+
+// injectD2OffloaderCallerFailOpen applies the caller-mode d2 offloader patch,
+// failing open. It backs WI-T1-3 bypass (a) (v1/v2, scenario A) and bypass (b)
+// (v3 non-shared, scenario B). On a prerequisite gap it records
+// app_service_d2_inject_skipped_total{reason} and admits the pod; on success it
+// records app_service_d2_inject_succeeded_total{mode=caller,scenario}. It does
+// not reuse the server-mode viewer derivation (caller viewer comes from
+// clusterAppRef, not the pod namespace).
+func (h *Handler) injectD2OffloaderCallerFailOpen(ctx context.Context, resp *admissionv1.AdmissionResponse,
+	pod *corev1.Pod, req *admissionv1.AdmissionRequest, appCfg *appcfg_mod.ApplicationConfig, proxyUUID uuid.UUID, scenario string) {
+	d2Patch, err := h.sidecarWebhook.CreateD2OffloaderCallerPatch(ctx, pod, req, appCfg, proxyUUID)
+	if err != nil {
+		reason := webhook.ClassifyD2SkipReason(err)
+		klog.Warningf("Skipping caller d2 offloader injection (fail-open) for pod uuid=%s namespace=%s scenario=%s reason=%s err=%v",
+			proxyUUID, req.Namespace, scenario, reason, err)
+		webhook.RecordD2InjectSkipped(reason)
+		return
+	}
+	h.sidecarWebhook.PatchAdmissionResponse(resp, d2Patch)
+	webhook.RecordD2InjectSucceeded(webhook.D2InjectModeCaller, scenario)
+	klog.Infof("Injected caller d2 offloader for pod uuid=%s namespace=%s scenario=%s",
+		proxyUUID, req.Namespace, scenario)
 }
 
 // patchSharedEntranceLabel applies only the shared-entrance pod label, without
@@ -248,6 +342,48 @@ func (h *Handler) validate(ctx context.Context, req *admissionv1.AdmissionReques
 	}
 	klog.Infof("Done validate with UID=%s in protected namespace, that's APPROVE", object.GetUID())
 	return resp
+}
+
+// tlsReplicaMountValidate is the WI-T1-8 validating webhook entry. It decodes the
+// admitted Pod and delegates to the mount guard, denying any cross-tenant
+// tls-replica private-key bypass mount. Decode/unmarshal failures fail closed.
+func (h *Handler) tlsReplicaMountValidate(req *restful.Request, resp *restful.Response) {
+	admissionReqBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	if _, _, err := webhook.Deserializer.Decode(admissionReqBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode tls-replica-mount admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.validateTLSReplicaMount(req.Request.Context(), admissionReq.Request)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+	if err := resp.WriteAsJson(&admissionResp); err != nil {
+		klog.Errorf("Failed to write tls-replica-mount admission response err=%v", err)
+	}
+}
+
+func (h *Handler) validateTLSReplicaMount(ctx context.Context, req *admissionv1.AdmissionRequest) *admissionv1.AdmissionResponse {
+	if req == nil {
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal pod for tls-replica-mount validate namespace=%s err=%v", req.Namespace, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	allowed, code := h.sidecarWebhook.ValidateTLSReplicaMount(ctx, &pod, req.Namespace)
+	respObj := &admissionv1.AdmissionResponse{
+		Allowed: allowed,
+		UID:     req.UID,
+	}
+	if !allowed {
+		respObj.Result = &metav1.Status{Message: code}
+	}
+	return respObj
 }
 
 func (h *Handler) gpuLimitInject(req *restful.Request, resp *restful.Response) {

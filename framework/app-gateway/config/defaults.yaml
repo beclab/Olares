@@ -1,0 +1,51 @@
+# app-gateway single source of truth for chart defaults.
+# Edit namespace/gateway names here, then run sync-app-gateway-config.sh to refresh Helm values.
+
+namespace: app-gateway
+
+gateway:
+  name: app-gateway
+  gatewayClassName: olares-app-gateway
+
+envoyProxy:
+  enabled: true
+  name: app-gateway-envoy-proxy
+  accessLog:
+    enabled: true
+
+# Cluster-internal HTTPS on Gateway :443 (WI-05). Cert sync via app-service EntranceTLS;
+# when certs are not ready the https listener stays NotReady while :80 stays up.
+tls:
+  enabled: true
+
+mesh:
+  linkerd:
+    enabled: true
+    opaquePorts: "443,19001,19002,19003"
+
+demo:
+  enabled: false
+  host: demo.agw.local
+  # Debug-only: CLI rollout/wait for curl-client & http-echo mesh. Release builds keep false.
+  meshDebug: false
+
+# Envoy Gateway ext_authz: allow-all baseline; failOpen=false denies
+# ingress when the PEP is down. PEP runs in-process on app-service
+# (os-framework). Cross-namespace backendRef needs ReferenceGrant in
+# os-framework (helm-charts/.../securitypolicy-ext-authz-referencegrant.yaml).
+extAuthz:
+  enabled: true
+  name: app-gateway-ext-authz-allowall
+  failOpen: false
+  service:
+    name: app-service
+    namespace: os-framework
+    port: 9001
+
+# Linkerd control-plane namespace; Envoy Gateway and Gateway API objects use namespace above.
+vendor:
+  linkerdNamespace: linkerd
+
+inCluster:
+  strongIdentityServicePort: 8081
+  httpStrongServicePort: 8082

@@ -1368,7 +1368,7 @@ func buildHTTPAccessLog() *accesslogv3.AccessLog {
 				Format: &corev3.SubstitutionFormatString_TextFormatSource{
 					TextFormatSource: &corev3.DataSource{
 						Specifier: &corev3.DataSource_InlineString{
-							InlineString: "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -> %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON% upstream_connection_id=%UPSTREAM_CONNECTION_ID% connection_termination_details=%CONNECTION_TERMINATION_DETAILS%\n",
+							InlineString: "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -> %UPSTREAM_HOST% %REQ(:AUTHORITY)% %REQ(:PATH)% %RESPONSE_CODE% duration=%DURATION%ms rx=%BYTES_RECEIVED% tx=%BYTES_SENT% flags=%RESPONSE_FLAGS% route=%ROUTE_NAME% cluster=%UPSTREAM_CLUSTER% host_user=%REQ(X-BFL-USER)% details=%RESPONSE_CODE_DETAILS% ufail=%UPSTREAM_TRANSPORT_FAILURE_REASON% upstream_connection_id=%UPSTREAM_CONNECTION_ID% connection_termination_details=%CONNECTION_TERMINATION_DETAILS%\n",
 						},
 					},
 				},

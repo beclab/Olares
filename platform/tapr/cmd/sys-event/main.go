@@ -14,6 +14,7 @@ import (
 	"bytetrade.io/web3os/tapr/pkg/signals"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -29,6 +30,11 @@ func main() {
 		DynamicClient: dynamic.NewForConfigOrDie(config),
 	}
 	w := watchers.NewWatchers(ctx, config, 0)
+	kubeClient := kubernetes.NewForConfigOrDie(config)
+	dynamicClient := dynamic.NewForConfigOrDie(config)
+	if err := watchers.RegisterCorefileSRRWatcher(w, kubeClient, dynamicClient); err != nil {
+		klog.Fatalf("register SharedRouteRegistry corefile watcher: %v", err)
+	}
 
 	// add event subscriber to watchers
 	watchers.AddToWatchers[application.Application](w, application.GVR,

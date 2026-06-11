@@ -1,0 +1,28 @@
+{{- /*
+Cross-namespace ext_authz backendRef requires a ReferenceGrant in the
+Service namespace. Render only when extAuthz.service.namespace != Gateway NS.
+*/}}
+{{- if .Values.extAuthz.enabled }}
+{{- $gwNS := include "app-gateway.namespace" . -}}
+{{- $authzNS := default $gwNS .Values.extAuthz.service.namespace -}}
+{{- if ne $authzNS $gwNS }}
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: app-gateway-ext-authz-backend
+  namespace: {{ $authzNS }}
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: ext-authz
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  from:
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: {{ $gwNS }}
+  to:
+    - group: ""
+      kind: Service
+      name: {{ .Values.extAuthz.service.name }}
+{{- end }}
+{{- end }}
