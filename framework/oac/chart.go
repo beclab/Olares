@@ -591,11 +591,11 @@ func (c *OAC) checkAllowMultipleInstall(oacPath string, m Manifest, sc ownerScen
 	}
 	values := c.buildRenderValues(m, sc)
 	probeA, probeB := resources.ClusterScopedProbeNames()
-	listA, err := helmrender.Render(oacPath, values, probeA, "")
+	listA, err := helmrender.Render(oacPath, values, probeA, probeA)
 	if err != nil {
 		return fmt.Errorf("helm render (allowMultipleInstall probe %q): %w", probeA, err)
 	}
-	listB, err := helmrender.Render(oacPath, values, probeB, "")
+	listB, err := helmrender.Render(oacPath, values, probeB, probeB)
 	if err != nil {
 		return fmt.Errorf("helm render (allowMultipleInstall probe %q): %w", probeB, err)
 	}
