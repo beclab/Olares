@@ -50,10 +50,18 @@ func (c *cache) set(d string) {
 
 var defaultCache = &cache{}
 
+var (
+	platformDomainTestOverride    string
+	platformDomainTestOverrideSet bool
+)
+
 // GetPlatformDomain returns the cluster platform domain. It never returns
 // empty: a missing ClusterConfig or API failure falls back to the env var and
 // then DefaultPlatformDomain. Results are cached for a short TTL.
 func GetPlatformDomain(ctx context.Context) string {
+	if platformDomainTestOverrideSet {
+		return platformDomainTestOverride
+	}
 	if d, ok := defaultCache.get(); ok {
 		return d
 	}
