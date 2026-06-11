@@ -4,7 +4,7 @@ go 1.24.11
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/beclab/api v0.0.14
+	github.com/beclab/api v0.0.16
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/thoas/go-funk v0.9.3
 	helm.sh/helm/v3 v3.19.5
