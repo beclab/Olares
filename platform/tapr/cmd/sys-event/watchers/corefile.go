@@ -30,7 +30,7 @@ const (
 	labelDNSPassthrough     = "gateway.olares.io/dns-passthrough"
 	labelSRRAppID           = "gateway.olares.io/appid"
 	labelSRREntrance        = "gateway.olares.io/entrance"
-	appGatewayNamespace     = "app-gateway"
+	appGatewayNamespace     = "os-gateway"
 	appGatewayDataService   = "app-gateway-data"
 	srrRouteModeGateway     = "gateway"
 	corefileSizeWarnBytes   = 800 * 1024

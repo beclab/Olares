@@ -25,7 +25,7 @@ const (
 	// copied into Application.spec.settings (P1, below explicit annotations).
 	SettingGatewayRouteMode = "gatewayRouteMode"
 
-	defaultGatewayNS   = "app-gateway"
+	defaultGatewayNS   = "os-gateway"
 	defaultGatewayName = "app-gateway"
 )
 

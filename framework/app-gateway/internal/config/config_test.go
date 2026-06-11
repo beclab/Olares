@@ -7,8 +7,8 @@ func TestLoadDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error: %v", err)
 	}
-	if d.Namespace != "app-gateway" {
-		t.Errorf("Namespace = %q, want app-gateway", d.Namespace)
+	if d.Namespace != "os-gateway" {
+		t.Errorf("Namespace = %q, want os-gateway", d.Namespace)
 	}
 	if d.Gateway.Name != "app-gateway" {
 		t.Errorf("Gateway.Name = %q, want app-gateway", d.Gateway.Name)
@@ -25,7 +25,7 @@ func TestLoadDefaults(t *testing.T) {
 }
 
 func TestNamespace(t *testing.T) {
-	if got := Namespace(); got != "app-gateway" {
-		t.Errorf("Namespace() = %q, want app-gateway", got)
+	if got := Namespace(); got != "os-gateway" {
+		t.Errorf("Namespace() = %q, want os-gateway", got)
 	}
 }

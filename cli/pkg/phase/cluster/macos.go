@@ -31,7 +31,6 @@ func (m *macosInstallPhaseBuilder) installTerminus() phase {
 		&terminus.GetNATGatewayIPModule{},
 		&terminus.InstallAccountModule{},
 		&terminus.InstallSettingsModule{},
-		&terminus.InstallAppGatewaySystemModule{},
 		&terminus.InstallOsSystemModule{},
 		&terminus.InstallLauncherModule{},
 		&terminus.InstallAppsModule{},

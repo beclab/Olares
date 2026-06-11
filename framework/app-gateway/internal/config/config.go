@@ -40,12 +40,12 @@ func Load() (Defaults, error) {
 	return cached, loadErr
 }
 
-// Namespace returns the app-gateway namespace (EG control plane + Gateway API objects).
+// Namespace returns the os-gateway namespace (EG control plane + Gateway API objects).
 // Override: APP_GATEWAY_NAMESPACE.
 func Namespace() string {
 	d, err := Load()
 	if err != nil || d.Namespace == "" {
-		return "app-gateway"
+		return "os-gateway"
 	}
 	return d.Namespace
 }

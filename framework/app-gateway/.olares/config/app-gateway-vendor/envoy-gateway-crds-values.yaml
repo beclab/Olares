@@ -1,8 +1,0 @@
-# Envoy Gateway CRDs chart values — applied via helm template + server-side apply
-# (not helm install), to bypass the Helm release Secret 1MiB limit on large CRDs.
-crds:
-  gatewayAPI:
-    enabled: true
-    channel: standard
-  envoyGateway:
-    enabled: true

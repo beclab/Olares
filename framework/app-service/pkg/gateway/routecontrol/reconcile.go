@@ -22,7 +22,7 @@ const (
 	ManagedByValue         = "app-service"
 	InstanceLabel          = "app.kubernetes.io/instance"
 	NetworkPolicyName      = "app-gateway-shared-ingress-np"
-	defaultGatewayNS       = "app-gateway"
+	defaultGatewayNS       = "os-gateway"
 	defaultGatewayName     = "app-gateway"
 	defaultGatewaySectN    = "https"
 	ConditionReady         = "Ready"

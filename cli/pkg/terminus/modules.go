@@ -169,7 +169,6 @@ func GenerateTerminusComponentsModules(runtime connector.Runtime, manifestMap ma
 		&GetNATGatewayIPModule{},
 		&InstallAccountModule{},
 		&InstallSettingsModule{},
-		&InstallAppGatewaySystemModule{},
 		&InstallOsSystemModule{},
 		&InstallLauncherModule{},
 		&InstallAppsModule{},

@@ -1,5 +1,5 @@
 # app-gateway single source of truth for chart defaults (no service mesh).
-namespace: app-gateway
+namespace: os-gateway
 
 gateway:
   name: app-gateway

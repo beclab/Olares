@@ -1,9 +1,8 @@
-{{- if .Values.envoyProxy.enabled }}
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
-  name: {{ .Values.envoyProxy.name }}
-  namespace: {{ include "app-gateway.namespace" . }}
+  name: app-gateway-envoy-proxy
+  namespace: os-gateway
   labels:
     app.kubernetes.io/name: app-gateway
     app.kubernetes.io/component: envoy-proxy-config
@@ -11,7 +10,6 @@ metadata:
 spec:
   provider:
     type: Kubernetes
-  {{- if .Values.envoyProxy.accessLog.enabled }}
   telemetry:
     accessLog:
       settings:
@@ -30,5 +28,3 @@ spec:
             - type: File
               file:
                 path: /dev/stdout
-  {{- end }}
-{{- end }}

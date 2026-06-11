@@ -486,7 +486,7 @@ func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubef
 			Status: corev1.PodStatus{PodIP: "10.233.3.99"},
 		},
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{Name: "app-gateway-data", Namespace: "app-gateway"},
+			ObjectMeta: metav1.ObjectMeta{Name: "app-gateway-data", Namespace: "os-gateway"},
 			Spec:       corev1.ServiceSpec{ClusterIP: gatewayClusterIP},
 		},
 		&corev1.Namespace{
