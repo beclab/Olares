@@ -60,6 +60,9 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 		return fmt.Errorf("platformDomain is empty")
 	}
 	appid := EntranceAppID(app)
+	if appid == "" {
+		return fmt.Errorf("invalid appid derived from app name %q", app.Spec.Name)
+	}
 	desired := make(map[string]struct{}, len(app.Spec.SharedEntrances))
 
 	for i := range app.Spec.SharedEntrances {
