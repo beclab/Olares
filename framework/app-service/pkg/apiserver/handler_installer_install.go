@@ -645,17 +645,47 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 	return h.applyAppMgr(name, nil, marketSource)
 }
 
+// clonedFromValue derives the app.bytetrade.io/app-cloned-from label value
+// from the install request. A regular (non-clone) install has an empty
+// RawAppName and yields "" so the label is stamped with an empty value. A
+// clone sets RawAppName; TemplateClone distinguishes a clone from a template
+// ("template") from a clone of an existing app ("app").
+func clonedFromValue(insReq *api.InstallRequest) string {
+	if insReq == nil || insReq.RawAppName == "" {
+		return ""
+	}
+	if insReq.TemplateClone {
+		return constants.AppClonedFromTemplate
+	}
+	return constants.AppClonedFromApp
+}
+
 // applyAppMgr is the shared create-or-patch implementation used by V1 / V2
 // (via installHandlerHelper.applyApplicationManager) and V3
 // (via installHandlerHelperV3.applyApplicationManager).
 //
 // `name` is the deterministic AM object name; `extraLabels` is merged into
-// metadata.labels on both Create and Patch — V1/V2 pass nil; V3 passes
-// {AppScopeLabel: AppScopeShared} to mark the AM as a shared app. Passing
-// an empty / nil map intentionally omits the "labels" key from the merge
-// patch so existing labels are NOT cleared (a JSON merge patch with
-// `"labels": null` would delete the field entirely).
+// metadata.labels on both Create and Patch — V1/V2 pass nil; V3 passes the
+// shared markers to mark the AM as a shared app. On top of extraLabels the
+// app.bytetrade.io/app-cloned-from label is always stamped (empty value when
+// the install is not a clone), so the "labels" key is always present in the
+// merge patch.
 func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]string, marketSource string) (opID string, err error) {
+	// Record the clone origin on the appConfig so it is persisted in the AM
+	// Config and later propagated to the deployment / Application via the
+	// app.bytetrade.io/app-cloned-from label. Empty for non-clone installs.
+	clonedFrom := clonedFromValue(h.insReq)
+	h.appConfig.ClonedFrom = clonedFrom
+
+	// The cloned-from label is always stamped on the AM (empty value when the
+	// install is not a clone). Merge it on top of any version-specific extra
+	// labels (e.g. the v3 shared markers).
+	labels := make(map[string]string, len(extraLabels)+1)
+	for k, v := range extraLabels {
+		labels[k] = v
+	}
+	labels[constants.AppClonedFromKey] = clonedFrom
+
 	config, err := json.Marshal(h.appConfig)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -696,12 +726,7 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 			OpType:       v1alpha1.InstallOp,
 		},
 	}
-	if len(extraLabels) > 0 {
-		appMgr.Labels = make(map[string]string, len(extraLabels))
-		for k, v := range extraLabels {
-			appMgr.Labels[k] = v
-		}
-	}
+	appMgr.Labels = labels
 
 	a, err := h.client.AppV1alpha1().ApplicationManagers().Get(h.req.Request.Context(), name, metav1.GetOptions{})
 	if err != nil {
@@ -730,13 +755,11 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 				constants.ApplicationTitleLabel: h.appConfig.Title,
 			},
 		}
-		if len(extraLabels) > 0 {
-			labelsPatch := make(map[string]interface{}, len(extraLabels))
-			for k, v := range extraLabels {
-				labelsPatch[k] = v
-			}
-			metadataPatch["labels"] = labelsPatch
+		labelsPatch := make(map[string]interface{}, len(labels))
+		for k, v := range labels {
+			labelsPatch[k] = v
 		}
+		metadataPatch["labels"] = labelsPatch
 		patchData := map[string]interface{}{
 			"metadata": metadataPatch,
 			"spec": map[string]interface{}{

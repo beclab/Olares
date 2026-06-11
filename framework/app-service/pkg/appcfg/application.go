@@ -129,6 +129,13 @@ type ApplicationConfig struct {
 	// v1 manifests that happen to set options.shared are intentionally
 	// ignored by IsShared: the v1 install branch is unchanged.
 	Shared bool
+
+	// ClonedFrom records the origin of a cloned install so the
+	// app.bytetrade.io/app-cloned-from label can be stamped on the
+	// ApplicationManager / deployment / Application. Empty for a regular
+	// (non-clone) install; otherwise "template" (cloned from a template)
+	// or "app" (cloned from an existing app).
+	ClonedFrom string
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {

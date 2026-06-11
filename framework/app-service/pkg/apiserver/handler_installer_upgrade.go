@@ -301,15 +301,15 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
+	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: appMgrName}, &appMgr)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
 	var prevCfg appcfg.ApplicationConfig
 	err = appcfg.GetAppConfig(&appMgr, &prevCfg)
 	if err != nil {
 		klog.Errorf("Failed to get previous app config err=%v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: appMgrName}, &appMgr)
-	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}

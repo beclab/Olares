@@ -146,8 +146,11 @@ const (
 	// Application controller. Drives admin-only lifecycle, cluster-wide
 	// visibility, NATS fan-out, NetworkPolicy fast-path, etc. Per-user v3
 	// apps do NOT carry this label and are handled like v1 apps.
-	AppSharedLabel = "app.bytetrade.io/app-shared"
-	AppSharedTrue  = "true"
+	AppSharedLabel        = "app.bytetrade.io/app-shared"
+	AppSharedTrue         = "true"
+	AppClonedFromKey      = "app.bytetrade.io/app-cloned-from"
+	AppClonedFromTemplate = "template"
+	AppClonedFromApp      = "app"
 
 	OneContainerMultiDeviceSplitSymbol = ":"
 	ArchLabelKey                       = "kubernetes.io/arch"

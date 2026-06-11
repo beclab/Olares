@@ -186,10 +186,17 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 
 		now := metav1.Now()
 		name, _ := apputils.FmtAppMgrName(am.Spec.AppName, owner, appconfig.Namespace)
+		// Mirror the AM's clone-origin label onto the synthesized ("fake")
+		// Application so callers see it before the real Application CR exists.
+		appLabels := map[string]string{}
+		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
+			appLabels[constants.AppClonedFromKey] = v
+		}
 		app := &appv1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              name,
+				Labels:            appLabels,
 				CreationTimestamp: am.CreationTimestamp,
 			},
 			Spec: appv1alpha1.ApplicationSpec{
@@ -199,6 +206,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
+				TailScale:       appconfig.TailScale,
 				Entrances:       appconfig.Entrances,
 				Ports:           appconfig.Ports,
 				SharedEntrances: appconfig.SharedEntrances,
@@ -270,6 +278,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			v.Spec.Settings = a.EffectiveSettings(owner)
 			v.Spec.Entrances = a.EffectiveEntrances(owner)
 			v.Spec.Ports = a.Spec.Ports
+			v.Labels = a.Labels
 		}
 	}
 	for _, app := range appsMap {
