@@ -1,0 +1,28 @@
+bundle: Lite-CRD-Pack-v1.8.0-lite-min
+generated_at: '2026-06-11T10:03:14Z'
+upstream:
+  envoy_gateway: v1.8.0
+  gateway_crds_helm: oci://docker.io/envoyproxy/gateway-crds-helm:v1.8.0
+  gateway_api_channel: standard
+transforms:
+  - trim-openapi-descriptions
+lite_min_crd_set: true
+artifacts:
+- file: gatewayclasses.gateway.networking.k8s.io.yaml
+  bytes: 9636
+  sha256: b86e6e3837b606a083bffe6d5c401ee57479209a2e54af9362a54116b28c89cf
+- file: gateways.gateway.networking.k8s.io.yaml
+  bytes: 60117
+  sha256: 81050935acd4be83dc1692285b1a22636bcba625a65884f96ad76e718f0f6110
+- file: httproutes.gateway.networking.k8s.io.yaml
+  bytes: 146391
+  sha256: b1ece3cf2731a2dc57ce0616af4f2d127b9405f420c24bce16689708ea4e51b7
+- file: referencegrants.gateway.networking.k8s.io.yaml
+  bytes: 5293
+  sha256: 4ffd6ec73671a7b75feb80e3c465cbe2022dfcb153b97f96ffef51bc32904a76
+- file: listenersets.gateway.networking.k8s.io.yaml
+  bytes: 16089
+  sha256: 0c19b8058f00b03fb90e388716ad02440f1444b606eccbfa0602ad292a809fef
+- file: envoyproxies.gateway.envoyproxy.io.yaml
+  bytes: 520244
+  sha256: 0a5b2dcf2c3776d5d2bdec7c4f8015bd44f460558bc8016c4ac2c2fc12f7f8a9
