@@ -190,8 +190,14 @@ func TestFormatFromExtension(t *testing.T) {
 		{"foo.7z", "7z"},
 		{"foo.zip", "zip"},
 		{"foo.gz", "gzip"},
+		{"foo.gzip", "gzip"},
 		{"foo.bz2", "bzip2"},
+		{"foo.bzip2", "bzip2"},
 		{"foo.xz", "xz"},
+		{"foo.zip.001", "zip"},
+		{"foo.zip.123", "zip"},
+		{"foo.7z.001", "7z"},
+		{"foo.7z.999", "7z"},
 		{"FOO.ZIP", "zip"},
 		{"foo.rar", ""}, // unknown
 		{"foo", ""},
@@ -942,15 +948,13 @@ func TestParseVolumeSize(t *testing.T) {
 		{"1GB", 1024, false},    // GiB
 		{"1.5GB", 1536, false},  // fractional GiB
 		{"2G", 2048, false},     // short suffix
-		{"500KB", 1, false},     // sub-MiB floors at 1
-		{"1024KB", 1, false},    // exactly 1 MiB
-		{"1536KB", 2, false},    // 1.5 MiB rounds up to 2
 		{"3M", 3, false},        // short M
 		{"", 0, true},           // empty
 		{"abc", 0, true},        // non-numeric
 		{"-5MB", 0, true},       // negative
 		{"0", 0, true},          // non-positive
-		{"10TB", 0, true},       // unknown suffix (parses "10t" -> not a number)
+		{"500KB", 0, true},      // KB no longer supported
+		{"10TB", 0, true},       // unsupported unit
 	}
 	for _, c := range cases {
 		got, err := ParseVolumeSize(c.in)
