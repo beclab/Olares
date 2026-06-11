@@ -2,6 +2,7 @@ package middlewarerequest
 
 import (
 	"fmt"
+	"strings"
 
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"bytetrade.io/web3os/tapr/pkg/constants"
@@ -78,7 +79,7 @@ func (c *controller) createOrUpdateKVRocksRequest(req *aprv1.MiddlewareRequest, 
 	defer cli.Close()
 
 	// TODO: redis db support
-	requestNamespace := GetKVRocksNamespaceName(req.Namespace, req.Spec.Redis.Namespace)
+	requestNamespace := GetKVRocksNamespaceName(req, req.Spec.Redis.Namespace)
 	token, err := req.Spec.Redis.Password.GetVarValue(c.ctx, c.k8sClientSet, req.Namespace)
 	if err != nil {
 		klog.Error("get redis request password error, ", err, ", ", req.Name, ", ", req.Namespace)
@@ -140,22 +141,34 @@ func (c *controller) deleteKVRocksRequest(req *aprv1.MiddlewareRequest, cluster 
 	defer cli.Close()
 
 	// TODO: redis db support
-	requestNamespace := GetKVRocksNamespaceName(req.Namespace, req.Spec.Redis.Namespace)
-	ns, err := cli.GetNamespace(c.ctx, requestNamespace)
+	token, err := req.Spec.Redis.Password.GetVarValue(c.ctx, c.k8sClientSet, req.Namespace)
 	if err != nil {
-		klog.Error("get kvrocks namespace error, ", err, ", ", req.Name, ", ", req.Namespace)
+		klog.Error("get redis request password error, ", err, ", ", req.Name, ", ", req.Namespace)
 		return err
 	}
 
-	if ns == nil {
+	candidates := kvRocksNamespaceCandidates(req)
+	deleted := false
+	for _, requestNamespace := range candidates {
+		ns, err := cli.GetNamespace(c.ctx, requestNamespace)
+		if err != nil {
+			klog.Error("get kvrocks namespace error, ", err, ", ", req.Name, ", ", requestNamespace)
+			return err
+		}
+		if ns == nil || ns.Token != token {
+			continue
+		}
+
+		err = cli.DeleteNamespace(c.ctx, requestNamespace)
+		if err != nil {
+			klog.Error("delete kvrocks namespace error, ", err, ", ", req.Name, ", ", requestNamespace)
+			return err
+		}
+		deleted = true
+	}
+
+	if !deleted {
 		klog.Info("kvrocks namespace not exists, ", req.Name, ", ", req.Namespace)
-		return nil
-	}
-
-	err = cli.DeleteNamespace(c.ctx, requestNamespace)
-	if err != nil {
-		klog.Error("delete kvrocks namespace error, ", err, ", ", req.Name, ", ", req.Namespace)
-		return err
 	}
 
 	// TODO: delete the keys of this namespace
@@ -163,6 +176,23 @@ func (c *controller) deleteKVRocksRequest(req *aprv1.MiddlewareRequest, cluster 
 	return nil
 }
 
-func GetKVRocksNamespaceName(reqNamespace, dbNamespace string) string {
-	return fmt.Sprintf("%s_%s", reqNamespace, dbNamespace)
+func GetKVRocksNamespaceName(req *aprv1.MiddlewareRequest, dbNamespace string) string {
+	appNamespace := req.Spec.AppNamespace
+	if strings.HasPrefix(appNamespace, "os-") || strings.HasPrefix(appNamespace, "user-space-") {
+		return fmt.Sprintf("%s_%s", req.Namespace, dbNamespace)
+	}
+	return fmt.Sprintf("%s_%s", appNamespace, dbNamespace)
+}
+
+// kvRocksNamespaceCandidates returns KVRocks namespace names to try on delete.
+// New MRs use Spec.AppNamespace; legacy MRs were created with req.Namespace.
+// Only namespaces whose token matches this MR should be deleted.
+func kvRocksNamespaceCandidates(req *aprv1.MiddlewareRequest) []string {
+	dbNamespace := req.Spec.Redis.Namespace
+	current := GetKVRocksNamespaceName(req, dbNamespace)
+	legacy := GetKVRocksNamespaceName(req, dbNamespace)
+	if legacy == current {
+		return []string{current}
+	}
+	return []string{current, legacy}
 }
