@@ -758,7 +758,7 @@ type ConfigOptions struct {
 	// at the conventional local path (appcfg.ChartsPath + "/" + RawAppName).
 	NeedDownloadChart bool
 	// for v3 app, upload source need to find origin chart
-	OriginOwner string
+	ChartOwner string
 }
 
 // GetAppConfig get app installation configuration from app store
@@ -799,6 +799,7 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 
 	appcfg.Namespace = namespace
 	appcfg.OwnerName = options.Owner
+	appcfg.ChartOwner = options.ChartOwner
 	appcfg.RepoURL = options.RepoURL
 	return appcfg, chartPath, nil
 }
@@ -1135,14 +1136,14 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 		SetAuthToken(options.Token).
 		SetHeader(constants.MarketUser, options.Owner).
 		SetHeader(constants.MarketSource, options.MarketSource)
-	if options.OriginOwner != "" {
-		client.SetHeader(constants.MarketUser, options.OriginOwner)
+	if options.ChartOwner != "" {
+		client.SetHeader(constants.MarketUser, options.ChartOwner)
 	}
 	indexFileURL := options.RepoURL
 	if options.RepoURL[len(options.RepoURL)-1] != '/' {
 		indexFileURL += "/"
 	}
-	klog.Infof("GetIndexAndDownloadChart: user: %v, source: %v, originOwner: %v", options.Owner, options.MarketSource, options.OriginOwner)
+	klog.Infof("GetIndexAndDownloadChart: user: %v, source: %v, originOwner: %v", options.Owner, options.MarketSource, options.ChartOwner)
 
 	indexFileURL += "static-index.yaml"
 	resp, err := client.R().Get(indexFileURL)
@@ -1190,7 +1191,7 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 			return "", err
 		}
 	}
-	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource, options.OriginOwner)
+	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource, options.ChartOwner)
 	if err != nil {
 		return "", err
 	}

@@ -193,21 +193,36 @@ func (h *HelmOps) BuildDeploymentLabelPatchData() (nsLabels map[string]string, w
 	ports := ToAppTCPUDPPorts(h.app.Ports)
 	tailScale := ToTailScale(h.app.TailScale)
 
+	workloadLabels := map[string]string{
+		constants.ApplicationNameLabel:       h.app.AppName,
+		constants.ApplicationRawAppNameLabel: h.app.RawAppName,
+		constants.ApplicationOwnerLabel:      h.app.OwnerName,
+		constants.ApplicationTargetLabel:     h.app.Target,
+		constants.ApplicationRunAsUserLabel:  strconv.FormatBool(h.app.RunAsUser),
+		constants.ApplicationMiddlewareLabel: func() string {
+			if h.app.Type == appv1alpha1.Middleware.String() {
+				return "true"
+			}
+			return "false"
+		}(),
+	}
+	// Stamp the clone origin on the workload so the Application controller can
+	// propagate it onto the Application CR. Only set when the app was cloned;
+	// a regular install leaves the label off the deployment.
+	if h.app.ClonedFrom != "" {
+		workloadLabels[constants.AppClonedFromKey] = h.app.ClonedFrom
+	}
+	// Stamp the chart owner on the workload so the Application controller can
+	// propagate it onto the Application CR. Only set for uploaded apps; market
+	// installs leave the label off the deployment (push events fall back to
+	// the installing user via appcfg.GetChartOwner).
+	if h.app.ChartOwner != "" {
+		workloadLabels[constants.AppChartOwnerKey] = h.app.ChartOwner
+	}
+
 	workloadPatchData = map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"labels": map[string]string{
-				constants.ApplicationNameLabel:       h.app.AppName,
-				constants.ApplicationRawAppNameLabel: h.app.RawAppName,
-				constants.ApplicationOwnerLabel:      h.app.OwnerName,
-				constants.ApplicationTargetLabel:     h.app.Target,
-				constants.ApplicationRunAsUserLabel:  strconv.FormatBool(h.app.RunAsUser),
-				constants.ApplicationMiddlewareLabel: func() string {
-					if h.app.Type == appv1alpha1.Middleware.String() {
-						return "true"
-					}
-					return "false"
-				}(),
-			},
+			"labels": workloadLabels,
 			"annotations": map[string]string{
 				constants.ApplicationIconLabel:    h.app.Icon,
 				constants.ApplicationTitleLabel:   h.app.Title,

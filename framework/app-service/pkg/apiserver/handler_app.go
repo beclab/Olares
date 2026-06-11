@@ -311,12 +311,28 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 				appconfig.Entrances[i].AuthLevel = "private"
 			}
 		}
+		appLabels := map[string]string{}
+		if appcfg.IsV3(am) {
+			appLabels[constants.AppApiVersionLabel] = constants.AppVersionV3
+		}
+		if appcfg.IsShared(am) {
+			appLabels[constants.AppSharedLabel] = constants.AppSharedTrue
+		}
+		// Mirror the AM's clone-origin label onto the synthesized Application
+		// so it is visible before the real Application CR exists.
+		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
+			appLabels[constants.AppClonedFromKey] = v
+		}
+		if v, ok := am.Labels[constants.AppChartOwnerKey]; ok {
+			appLabels[constants.AppChartOwnerKey] = v
+		}
 		now := metav1.Now()
 		name, _ := apputils.FmtAppMgrName(am.Spec.AppName, owner, appconfig.Namespace)
 		app := &v1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              name,
+				Labels:            appLabels,
 				CreationTimestamp: am.CreationTimestamp,
 			},
 			Spec: v1alpha1.ApplicationSpec{
@@ -371,6 +387,7 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			v.Spec.Settings = a.Spec.Settings
 			v.Spec.Entrances = a.Spec.Entrances
 			v.Spec.Ports = a.Spec.Ports
+			v.Labels = a.Labels
 		}
 	}
 	for _, app := range appsMap {
@@ -566,6 +583,14 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		if appcfg.IsShared(am) {
 			appLabels[constants.AppSharedLabel] = constants.AppSharedTrue
 		}
+		// Mirror the AM's clone-origin label onto the synthesized Application
+		// so it is visible before the real Application CR exists.
+		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
+			appLabels[constants.AppClonedFromKey] = v
+		}
+		if v, ok := am.Labels[constants.AppChartOwnerKey]; ok {
+			appLabels[constants.AppChartOwnerKey] = v
+		}
 		app := v1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
@@ -581,6 +606,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
+				TailScale:       appconfig.TailScale,
 				Ports:           appconfig.Ports,
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,
@@ -619,6 +645,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			v.Spec.Settings = a.Spec.Settings
 			v.Spec.Entrances = a.Spec.Entrances
 			v.Spec.Ports = a.Spec.Ports
+			v.Labels = a.Labels
 		}
 	}
 
