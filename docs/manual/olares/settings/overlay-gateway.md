@@ -15,7 +15,7 @@ Check the following before you configure overlay gateway:
 - Your Olares device must run on a native Linux host. WSL is not supported.
 - Your Olares device must use a wired Ethernet connection. If you switch to Wi-Fi after enabling overlay gateway, Olares continues to work, but overlay gateway does not take effect.
 - Only apps that declare overlay gateway support are listed.
-- Super Admin permissions are required to turn the system-level overlay gateway service on or off. After the service is enabled, Admins and Members can enable overlay gateway for their own supported apps.
+- Super admin permissions are required to turn the system-level overlay gateway service on or off. After the service is enabled, Admins and Members can enable overlay gateway for their own supported apps.
 
 If the feature is unavailable, the system switch is disabled and the app list is hidden.
 
@@ -28,21 +28,21 @@ If overlay gateway becomes unavailable, such as after switching from Ethernet to
 All users can open **Settings** > **Network**, but available options depend on their role.
 
 | Role | Available actions |
-| ---- | -------------------- |
-| Super Admin | Turn the system-level overlay gateway service on or off, and enable or disable overlay gateway for supported apps. |
-| Admin | View the overlay gateway status, and enable or disable overlay gateway for their own supported apps after the service is enabled. |
-| Member | View the overlay gateway status, and enable or disable overlay gateway for their own supported apps after the service is enabled. |
+| -- | -- |
+| Super admin | Turn the system-level overlay gateway service on or off, and enable or disable <br>overlay gateway for supported apps. |
+| Admin | View the overlay gateway status, and enable or disable overlay gateway for their<br> own supported apps after the service is enabled. |
+| Member | View the overlay gateway status, and enable or disable overlay gateway for their<br> own supported apps after the service is enabled. |
 
 ## Enable overlay gateway
 
 Overlay gateway has two levels:
 
-- The system-level service, managed by the Super Admin.
+- The system-level service, managed by the Super admin.
 - The app-level switch, managed by each user for their own supported apps.
 
 ### Turn on the system-level service
 
-If you are the Super Admin:
+If you are the Super admin:
 
 1. Open **Settings** and go to **Network** > **Overlay gateway**.
 
@@ -80,7 +80,7 @@ Disable overlay gateway at the level that matches your goal:
 
 ### Turn off the system-level service
 
-If you are the Super Admin:
+If you are the Super admin:
 
 1. Open **Settings** and go to **Network** > **Overlay gateway**.
 2. Turn off **Overlay gateway**.
