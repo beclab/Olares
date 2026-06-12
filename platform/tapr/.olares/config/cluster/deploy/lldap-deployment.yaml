@@ -201,13 +201,16 @@ spec:
               value: "os.users"
             - name: NATS_SUBJECT_SYSTEM_GROUPS
               value: "os.groups"
+            - name: LLDAP_HTTP_READONLY_PORT
+              value: "17171"
 
-          image: beclab/lldap:0.0.18
+          image: beclab/lldap:0.0.19
           imagePullPolicy: IfNotPresent
           name: lldap
           ports:
             - containerPort: 3890
             - containerPort: 17170
+            - containerPort: 17171
 
 
 ---
@@ -229,6 +232,9 @@ spec:
     - name: "17170"
       port: 17170
       targetPort: 17170
+    - name: "17171"
+      port: 17171
+      targetPort: 17171
   selector:
     app: lldap
 ---
