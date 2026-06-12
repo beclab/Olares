@@ -64,18 +64,18 @@ func (g GatewayRef) gatewaySection() string {
 	return defaultGatewaySectN
 }
 
-func gatewaySectionForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) string {
+func gatewaySectionForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (string, bool) {
 	if gw.GatewaySection != "" {
-		return gw.GatewaySection
+		return gw.GatewaySection, true
 	}
 	if srr == nil {
-		return defaultGatewaySectN
+		return defaultGatewaySectN, true
 	}
 	switch srr.Spec.EntranceClass {
 	case "", srrv1alpha1.EntranceClassShared:
-		return sharedGatewaySectN
+		return sharedGatewaySectN, true
 	default:
-		return defaultGatewaySectN
+		return "", false
 	}
 }
 
@@ -210,11 +210,13 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 	}
 
 	parentRef := map[string]any{
-		"group":       "gateway.networking.k8s.io",
-		"kind":        "Gateway",
-		"namespace":   gw.gatewayNamespace(),
-		"name":        gw.gatewayName(),
-		"sectionName": gatewaySectionForSRR(gw, srr),
+		"group":     "gateway.networking.k8s.io",
+		"kind":      "Gateway",
+		"namespace": gw.gatewayNamespace(),
+		"name":      gw.gatewayName(),
+	}
+	if section, ok := gatewaySectionForSRR(gw, srr); ok {
+		parentRef["sectionName"] = section
 	}
 	backendRef := map[string]any{
 		"group":     "",

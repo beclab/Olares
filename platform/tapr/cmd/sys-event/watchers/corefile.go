@@ -720,28 +720,49 @@ const UserAnnotationZoneKey = "bytetrade.io/zone"
 const UserAnnotationLocalDomainDNSRecord = "bytetrade.io/local-domain-dns-record"
 const UserIndexAna = "bytetrade.io/user-index"
 
-// SharedInclusterEntrance identifies one Shared entrance that may be rewritten
-// inside the cluster.
+// SharedInclusterEntrance identifies one gateway-mode SRR host pattern that
+// may be rewritten inside the cluster.
 type SharedInclusterEntrance struct {
 	AppID          string
 	EntranceName   string
 	EntranceID     string
 	PlatformDomain string
+	HostPattern    string
 }
 
-// matchRegex returns the exact shared-host regex (<id>.shared.<base>.).
+const (
+	hostPatternSharedExact    = "shared-exact"
+	hostPatternViewerWildcard = "viewer-wildcard"
+)
+
+// matchRegex returns an anchored host regex for one SRR host pattern:
+// - shared exact host:  ^<id>\.shared\.<base>\.$
+// - application logical: ^<id>\.[^.]+\.<base>\.$
 func (e SharedInclusterEntrance) matchRegex() string {
-	platformDomain := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
-	entranceID := strings.ToLower(strings.TrimSpace(e.EntranceID))
-	if platformDomain == "" || entranceID == "" {
+	entranceID, platformDomain, hostPatternType, ok := parseLogicalHostPattern(e.HostPattern)
+	if !ok {
+		platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
+		entranceID = strings.ToLower(strings.TrimSpace(e.EntranceID))
+		hostPatternType = hostPatternSharedExact
+	}
+	if platformDomain == "" || entranceID == "" || hostPatternType == "" {
 		return ""
 	}
-	return `"^` + strings.ReplaceAll(entranceID, ".", `\.`) + `\.shared\.` + strings.ReplaceAll(platformDomain, ".", `\.`) + `\.$"`
+	escapedEntranceID := strings.ReplaceAll(entranceID, ".", `\.`)
+	escapedPlatformDomain := strings.ReplaceAll(platformDomain, ".", `\.`)
+	switch hostPatternType {
+	case hostPatternSharedExact:
+		return `"^` + escapedEntranceID + `\.shared\.` + escapedPlatformDomain + `\.$"`
+	case hostPatternViewerWildcard:
+		return `"^` + escapedEntranceID + `\.[^.]+\.` + escapedPlatformDomain + `\.$"`
+	default:
+		return ""
+	}
 }
 
 // buildSharedInclusterTemplates builds CoreDNS `template` plugin instances
-// that map every registered Shared entrance FQDN to the app-gateway data
-// plane ClusterIP.
+// that map every registered gateway-mode SRR host pattern to the app-gateway
+// data plane ClusterIP.
 //
 // rationale: CoreDNS's plugin.cfg orders `template` before `hosts`, so the
 // per-user wildcard `template IN A <userzone> { match "\w*\.?(<userzone>\.)$" }`
@@ -751,7 +772,7 @@ func (e SharedInclusterEntrance) matchRegex() string {
 // answer with the gateway ClusterIP. `fallthrough` is set so unrelated names
 // continue down the chain to the wildcard templates / forward.
 //
-// requirement: only FQDNs derived from Shared entrances may be rewritten.
+// requirement: only FQDNs derived from SRR hostPatterns may be rewritten.
 // behavior: deterministic sorted ordering by match regex; empty input returns nil.
 // test: table-driven unit tests in corefile_incluster_test.go.
 func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayDataIP string) []*corefile.Plugin {
@@ -820,22 +841,39 @@ func namespacesWithDNSPassthrough(ctx context.Context, kubeClient kubernetes.Int
 	return out, nil
 }
 
-func parseLogicalHostPattern(pattern string) (entranceID, platformDomain string, ok bool) {
+func parseLogicalHostPattern(pattern string) (entranceID, platformDomain, hostPatternType string, ok bool) {
 	pattern = strings.ToLower(strings.TrimSpace(pattern))
-	const marker = ".shared."
-	idx := strings.Index(pattern, marker)
-	if idx <= 0 || len(pattern) <= idx+len(marker) {
-		return "", "", false
+	if pattern == "" {
+		return "", "", "", false
 	}
-	entranceID = strings.TrimSpace(pattern[:idx])
-	if strings.Contains(entranceID, ".") || entranceID == "" {
-		return "", "", false
+	pattern = strings.TrimSuffix(pattern, ".")
+
+	const sharedMarker = ".shared."
+	if idx := strings.Index(pattern, sharedMarker); idx > 0 && len(pattern) > idx+len(sharedMarker) {
+		entranceID = strings.TrimSpace(pattern[:idx])
+		if strings.Contains(entranceID, ".") || entranceID == "" || strings.Contains(entranceID, "*") {
+			return "", "", "", false
+		}
+		platformDomain = strings.TrimSpace(strings.TrimSuffix(pattern[idx+len(sharedMarker):], "."))
+		if platformDomain == "" {
+			return "", "", "", false
+		}
+		return entranceID, platformDomain, hostPatternSharedExact, true
 	}
-	platformDomain = strings.TrimSuffix(pattern[idx+len(marker):], ".")
-	if platformDomain == "" {
-		return "", "", false
+
+	const viewerWildcardMarker = ".*."
+	if idx := strings.Index(pattern, viewerWildcardMarker); idx > 0 && len(pattern) > idx+len(viewerWildcardMarker) {
+		entranceID = strings.TrimSpace(pattern[:idx])
+		if strings.Contains(entranceID, ".") || entranceID == "" || strings.Contains(entranceID, "*") {
+			return "", "", "", false
+		}
+		platformDomain = strings.TrimSpace(strings.TrimSuffix(pattern[idx+len(viewerWildcardMarker):], "."))
+		if platformDomain == "" || strings.Contains(platformDomain, "*") {
+			return "", "", "", false
+		}
+		return entranceID, platformDomain, hostPatternViewerWildcard, true
 	}
-	return entranceID, platformDomain, true
+	return "", "", "", false
 }
 
 func sharedInclusterEntrancesFromSRRItems(
@@ -867,16 +905,18 @@ func sharedInclusterEntrancesFromSRRItems(
 		}
 		entranceID := ""
 		platformDomain := ""
+		hostPattern := ""
 		for _, pattern := range patterns {
-			id, domain, ok := parseLogicalHostPattern(pattern)
+			id, domain, _, ok := parseLogicalHostPattern(pattern)
 			if !ok {
 				continue
 			}
 			entranceID = id
 			platformDomain = domain
+			hostPattern = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(pattern, ".")))
 			break
 		}
-		if platformDomain == "" || entranceID == "" {
+		if platformDomain == "" || entranceID == "" || hostPattern == "" {
 			continue
 		}
 		entrances = append(entrances, SharedInclusterEntrance{
@@ -884,6 +924,7 @@ func sharedInclusterEntrancesFromSRRItems(
 			EntranceName:   entranceName,
 			EntranceID:     entranceID,
 			PlatformDomain: platformDomain,
+			HostPattern:    hostPattern,
 		})
 	}
 	return entrances

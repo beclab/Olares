@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestBuildSharedInclusterTemplates_empty(t *testing.T) {
 		t.Fatalf("expected nil, got %#v", got)
 	}
 	if got := buildSharedInclusterTemplates([]SharedInclusterEntrance{
-		{AppID: "a5be2268", EntranceName: "ollama", EntranceID: "a5be2268", PlatformDomain: "olares.com"},
+		{AppID: "a5be2268", EntranceName: "ollama", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.shared.olares.com"},
 	}, "not-an-ip"); got != nil {
 		t.Fatalf("expected nil for invalid gateway IP, got %#v", got)
 	}
@@ -35,8 +36,8 @@ func TestBuildSharedInclusterTemplates_empty(t *testing.T) {
 
 func TestBuildSharedInclusterTemplates_orderingAndDedup(t *testing.T) {
 	entrances := []SharedInclusterEntrance{
-		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", PlatformDomain: "olares.com"},
-		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", PlatformDomain: "olares.com"},
+		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.shared.olares.com"},
+		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.shared.olares.com"},
 	}
 	plugins := buildSharedInclusterTemplates(entrances, "10.0.0.8")
 	if len(plugins) != 1 {
@@ -48,6 +49,76 @@ func TestBuildSharedInclusterTemplates_orderingAndDedup(t *testing.T) {
 	}
 }
 
+func TestBuildSharedInclusterTemplates_applicationLogicalPattern(t *testing.T) {
+	// TC-M4-09: application logical host <id>.*.<base> maps to
+	// ^<id>\.[^.]+\.<base>\.$ with gatewayDataIP and TTL=15.
+	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
+		{
+			AppID:          "a5be2268",
+			EntranceName:   "api",
+			EntranceID:     "a5be2268",
+			PlatformDomain: "olares.com",
+			HostPattern:    "a5be2268.*.olares.com",
+		},
+	}, "10.0.0.8")
+	if len(plugins) != 1 {
+		t.Fatalf("expected 1 template plugin, got %d", len(plugins))
+	}
+	wantMatch := `"^a5be2268\.[^.]+\.olares\.com\.$"`
+	body := plugins[0].ToString()
+	if !strings.Contains(body, wantMatch) {
+		t.Fatalf("expected application wildcard match %q in %q", wantMatch, body)
+	}
+	if !strings.Contains(body, `"{{ .Name }} 15 IN A 10.0.0.8"`) {
+		t.Fatalf("expected TTL 15 gateway answer, got %q", body)
+	}
+}
+
+func TestBuildSharedInclusterTemplates_nonSRRFQDNFallsThrough(t *testing.T) {
+	// TC-M4-11: non-SRR names must not match the gateway template and
+	// fallthrough must remain to allow user wildcard/l4-bfl-proxy chain.
+	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
+		{
+			AppID:          "a5be2268",
+			EntranceName:   "api",
+			EntranceID:     "a5be2268",
+			PlatformDomain: "olares.com",
+			HostPattern:    "a5be2268.*.olares.com",
+		},
+	}, "10.0.0.8")
+	if len(plugins) != 1 {
+		t.Fatalf("expected 1 template plugin, got %d", len(plugins))
+	}
+
+	matchExpr := ""
+	for _, opt := range plugins[0].Options {
+		if opt != nil && opt.Name == "match" && len(opt.Args) > 0 {
+			matchExpr = strings.Trim(opt.Args[0], `"`)
+			break
+		}
+	}
+	if matchExpr == "" {
+		t.Fatalf("missing match expression: %s", plugins[0].ToString())
+	}
+
+	re, err := regexp.Compile(matchExpr)
+	if err != nil {
+		t.Fatalf("compile match regex %q: %v", matchExpr, err)
+	}
+	for _, host := range []string{
+		"auth.bob.olares.com.",
+		"x.bob.olares.com.",
+		"foo.shared.olares.com.",
+	} {
+		if re.MatchString(host) {
+			t.Fatalf("non-SRR host %q must not match %q", host, matchExpr)
+		}
+	}
+	if !strings.Contains(plugins[0].ToString(), "fallthrough") {
+		t.Fatalf("gateway template must preserve fallthrough: %s", plugins[0].ToString())
+	}
+}
+
 func TestBuildSharedInclusterTemplates_perUserEntranceExcluded(t *testing.T) {
 	// Per-user single-entrance host uses appid.owner.zone — must never be
 	// matched by the shared-template regex (which is anchored on the exact
@@ -55,7 +126,7 @@ func TestBuildSharedInclusterTemplates_perUserEntranceExcluded(t *testing.T) {
 	// '.' so the literal per-user host can be searched verbatim.
 	perUserHost := `a5be2268\.bob\.olares\.com`
 	entrances := []SharedInclusterEntrance{
-		{AppID: "a5be2268", EntranceName: "ollama", EntranceID: "a5be2268", PlatformDomain: "olares.com"},
+		{AppID: "a5be2268", EntranceName: "ollama", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.shared.olares.com"},
 	}
 	plugins := buildSharedInclusterTemplates(entrances, "172.16.0.4")
 	if len(plugins) != 1 {
@@ -79,7 +150,7 @@ func TestInClusterGatewayEnabled_defaultsTrue(t *testing.T) {
 
 func TestBuildSharedInclusterTemplates_clusterIPRotation(t *testing.T) {
 	ent := SharedInclusterEntrance{
-		AppID: "a5be2268", EntranceName: "api", EntranceID: "a5be2268", PlatformDomain: "olares.com",
+		AppID: "a5be2268", EntranceName: "api", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.*.olares.com",
 	}
 	p1 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.1")
 	p2 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.2")
@@ -96,7 +167,7 @@ func TestBuildSharedInclusterTemplates_clusterIPRotation(t *testing.T) {
 
 func TestBuildSharedInclusterTemplates_roundTripCorefile(t *testing.T) {
 	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
-		{AppID: "bc2bd381", EntranceName: "litellm", EntranceID: "bc2bd381", PlatformDomain: "olares.com"},
+		{AppID: "bc2bd381", EntranceName: "litellm", EntranceID: "bc2bd381", PlatformDomain: "olares.com", HostPattern: "bc2bd381.shared.olares.com"},
 	}, "192.168.1.10")
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 plugin, got %d", len(plugins))
@@ -152,20 +223,29 @@ func templateMatchesRegex(plugin *corefile.Plugin, matchExpr, ip string) bool {
 }
 
 func TestParseLogicalHostPattern(t *testing.T) {
-	id, domain, ok := parseLogicalHostPattern("bc2bd381.shared.olares.com")
+	id, domain, hostType, ok := parseLogicalHostPattern("bc2bd381.shared.olares.com")
 	if !ok {
 		t.Fatal("expected shared host pattern to be parsed")
 	}
-	if id != "bc2bd381" || domain != "olares.com" {
-		t.Fatalf("parsed result id=%q domain=%q", id, domain)
+	if id != "bc2bd381" || domain != "olares.com" || hostType != hostPatternSharedExact {
+		t.Fatalf("parsed result id=%q domain=%q hostType=%q", id, domain, hostType)
+	}
+
+	id, domain, hostType, ok = parseLogicalHostPattern("bc2bd381.*.olares.com")
+	if !ok {
+		t.Fatal("expected application logical host pattern to be parsed")
+	}
+	if id != "bc2bd381" || domain != "olares.com" || hostType != hostPatternViewerWildcard {
+		t.Fatalf("parsed logical result id=%q domain=%q hostType=%q", id, domain, hostType)
 	}
 
 	for _, pattern := range []string{
-		"bc2bd381.*.olares.com",
 		"bc2bd381.bob.olares.com",
 		".shared.olares.com",
+		"*.shared.olares.com",
+		"bc2bd381.*.",
 	} {
-		if _, _, ok := parseLogicalHostPattern(pattern); ok {
+		if _, _, _, ok := parseLogicalHostPattern(pattern); ok {
 			t.Fatalf("expected pattern %q to be rejected", pattern)
 		}
 	}
@@ -260,8 +340,11 @@ func TestSharedInclusterEntrancesFromSRRItems_logicalPatternNotFirst(t *testing.
 	if len(got) != 1 {
 		t.Fatalf("expected 1 entrance, got %d (%+v)", len(got), got)
 	}
-	if got[0].EntranceID != prefix {
+	if got[0].EntranceID != "api" {
 		t.Fatalf("unexpected entranceID %q", got[0].EntranceID)
+	}
+	if got[0].HostPattern != "api.*.olares.com" {
+		t.Fatalf("unexpected hostPattern %q", got[0].HostPattern)
 	}
 }
 
@@ -278,7 +361,7 @@ func TestBuildSharedInclusterTemplates_overridesUserWildcard(t *testing.T) {
 	// match must therefore win over the wildcard and the wildcard must still
 	// handle other names in the zone via fallthrough on the shared template.
 	shared := buildSharedInclusterTemplates([]SharedInclusterEntrance{
-		{AppID: "bc2bd381", EntranceName: "litellm", EntranceID: "bc2bd381", PlatformDomain: "olares.com"},
+		{AppID: "bc2bd381", EntranceName: "litellm", EntranceID: "bc2bd381", PlatformDomain: "olares.com", HostPattern: "bc2bd381.shared.olares.com"},
 	}, "10.233.38.210")
 	if len(shared) != 1 {
 		t.Fatalf("expected 1 shared template, got %d", len(shared))
