@@ -311,19 +311,27 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 				// startup polling for them.
 				if p.manager.Spec.Type != appsv1.Middleware {
 					if ok, waitErr := ops.WaitForStartUp(); !ok {
+						// A cancel (DELETE /apps/{name}/install) cancels opCtx,
+						// the only path on which WaitForStartUp returns (false, nil).
+						// That is NOT a startup failure: the InstallingCanceling
+						// state machine has already taken over this ApplicationManager
+						// and owns the terminal transition. Writing Stopping/InitFailed
+						// here would both mislabel a user cancel as an init failure and
+						// race the cancel path into a spurious installingCancelFailed.
+						// Bail out quietly and let the cancel handler drive the state.
+						if waitErr == nil || c.Err() != nil {
+							klog.Infof("install of app %s canceled while waiting for startup; leaving terminal state to the cancel handler", p.manager.Spec.AppName)
+							return
+						}
+
 						klog.Errorf("wait for app %s startup after scale-up failed %v", p.manager.Spec.AppName, waitErr)
 						reason := constants.AppStopDueToInitFailed
-						var wrappedWaitErr error
-						if waitErr != nil {
-							wrappedWaitErr = errors.Wrapf(waitErr, "wait for app %s startup after scale-up failed", p.manager.Spec.AppName)
-							if errors.Is(waitErr, errcode.ErrPodPending) || errors.Is(waitErr, errcode.ErrServerSidePodPending) {
-								reason = constants.AppUnschedulable
-								if errors.Is(waitErr, errcode.ErrHamiUnschedulable) {
-									reason = constants.AppHamiSchedulable
-								}
+						wrappedWaitErr := errors.Wrapf(waitErr, "wait for app %s startup after scale-up failed", p.manager.Spec.AppName)
+						if errors.Is(waitErr, errcode.ErrPodPending) || errors.Is(waitErr, errcode.ErrServerSidePodPending) {
+							reason = constants.AppUnschedulable
+							if errors.Is(waitErr, errcode.ErrHamiUnschedulable) {
+								reason = constants.AppHamiSchedulable
 							}
-						} else {
-							wrappedWaitErr = fmt.Errorf("wait for app %s startup after scale-up failed", p.manager.Spec.AppName)
 						}
 						msg := wrappedWaitErr.Error()
 						p.finally = func() {
