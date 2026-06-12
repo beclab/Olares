@@ -447,6 +447,21 @@ func (c *Client) Create(ctx context.Context, name string) (*Repo, error) {
 	if name == "" {
 		return nil, errors.New("repos Create: empty repo name")
 	}
+	// Whitespace-only names are rejected because the server's
+	// repoName query param happily accepts " " / "  " / "\t" /
+	// "\n" and creates a literal whitespace-named repo that's
+	// invisible in the LarePass library list and impossible to
+	// reference safely in shell pipelines (the id workaround works
+	// but the display name is a footgun). The check uses
+	// strings.TrimSpace so EVERY pure-whitespace shape — single
+	// space, multiple spaces, mixed tab/space, leading-with-
+	// trailing-newline — is rejected, not just the literal " ".
+	// We do NOT trim the name otherwise (a deliberate "  Q3 Plans  "
+	// stays intact on the wire); the policy is binary: 0 non-
+	// whitespace chars = reject, ≥ 1 non-whitespace char = accept.
+	if strings.TrimSpace(name) == "" {
+		return nil, fmt.Errorf("repos Create: repo name %q is whitespace-only; pick a name with at least one non-whitespace character", name)
+	}
 	if name == "." || name == ".." {
 		return nil, fmt.Errorf("repos Create: repo name %q is a path-traversal segment, not a real name", name)
 	}
@@ -496,6 +511,17 @@ func (c *Client) Rename(ctx context.Context, repoID, newName string) error {
 	}
 	if newName == "" {
 		return errors.New("repos Rename: empty new name")
+	}
+	// Symmetric with Create: whitespace-only new names are
+	// rejected client-side. Without this, `repos rename <id> " "`
+	// would set the repo's display label to a single space —
+	// invisible in the LarePass library list and indistinguishable
+	// from "no label" in scripted output. See Create's comment for
+	// the full rationale + the deliberate "don't otherwise trim"
+	// stance (leading/trailing whitespace inside a name with at
+	// least one printable char is the user's choice).
+	if strings.TrimSpace(newName) == "" {
+		return fmt.Errorf("repos Rename: new name %q is whitespace-only; pick a name with at least one non-whitespace character", newName)
 	}
 	if newName == "." || newName == ".." {
 		return fmt.Errorf("repos Rename: new name %q is a path-traversal segment, not a real name", newName)

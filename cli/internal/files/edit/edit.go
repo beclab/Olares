@@ -14,36 +14,26 @@
 // wire.
 //
 // Cloud drives (awss3 / google / dropbox / tencent) are NOT
-// supported on either the read or the write leg, despite an
-// earlier draft of this package claiming awss3/google/dropbox
-// worked uniformly. Two independent failures killed that claim
-// once we wire-traced both legs:
+// supported. The FETCH leg is now fine — the unified
+// `/api/raw/<fileType>/<extend><subPath>?inline=true` endpoint
+// that `files cat` / `files download` use returns raw bytes for
+// cloud namespaces too, so the historical "preview JSON envelope"
+// risk that earlier drafts of this package called out is no longer
+// in play. The remaining gap is the WRITE leg:
 //
-//  1. FETCH leg breaks for ALL cloud namespaces. `files cat`'s
-//     own docs note that `GET /api/raw/<path>` returns preview
-//     metadata / JSON envelopes (NOT raw bytes) for cloud
-//     drives — cat dispatches to a different endpoint
-//     (`/drive/download_sync_stream`) for those. `files edit`'s
-//     Fetch reuses `/api/raw/`, so an `edit awss3/<acc>/...`
-//     would open the JSON envelope in $EDITOR and PUT the
-//     edited envelope back as the new file content (i.e. silent
-//     content corruption). Cat's wire-shape signoff doesn't
-//     transfer to edit because edit needs the same dispatch on
-//     the read side.
+//   - Only `awss3/utils.ts` exports a `put()` helper that calls
+//     `/api/resources/...`. `google/utils.ts` and
+//     `dropbox/utils.ts` have NO save-related helper at all, so
+//     PUT-ing against `/api/resources/<cloud-path>` for those
+//     drivers would be against an endpoint the upstream GUI has
+//     never exercised end-to-end — high risk of either silent
+//     drop or partial-write corruption on the cloud bridge side.
 //
-//  2. WRITE leg is unverified for google / dropbox. Only
-//     `awss3/utils.ts` exports a `put()` helper that calls
-//     `/api/resources/...` — `google/utils.ts` and
-//     `dropbox/utils.ts` have no save-related helper at all,
-//     so even fixing leg (1) would leave us PUT-ing against an
-//     endpoint the upstream GUI has never exercised end-to-end.
-//
-// Until both legs are wire-verified for each cloud driver
-// (fetch routed through the cloud-aware endpoint + a verified
-// PUT shape per driver), the safe answer is to refuse cloud
-// namespaces here and point users at the proven download +
-// edit-locally + upload round-trip. The flip is one allow-list
-// entry away when the wire shapes are signed off.
+// Until the PUT shape is wire-verified for each cloud driver
+// (`tencent` lacks the upload helper too), the safe answer is to
+// refuse cloud namespaces here and point users at the proven
+// `download` + edit-locally + `upload` round-trip. The flip is one
+// allow-list entry away when the wire shapes are signed off.
 //
 // `share` and `internal` namespaces are likewise refused: the
 // LarePass UX exposes them as cross-user / read-only views with no
@@ -143,11 +133,12 @@ func (e *HTTPError) Error() string {
 // directions have been exercised in production.
 //
 // Cloud drives (awss3 / google / dropbox / tencent) are NOT in
-// the allow-list — see the package docstring for the two
-// independent wire-shape gaps (fetch returns JSON envelopes
-// instead of raw bytes; google/dropbox have no GUI put helper).
-// `share` and `internal` are likewise excluded — they're
-// cross-user / read-only views in the LarePass UX.
+// the allow-list — see the package docstring. The fetch leg is
+// fine (the unified /api/raw/ endpoint serves cloud bytes too)
+// but the writeback PUT shape is unverified per driver
+// (google / dropbox / tencent have no GUI put helper). `share`
+// and `internal` are likewise excluded — they're cross-user /
+// read-only views in the LarePass UX.
 var supportedFileTypes = map[string]struct{}{
 	"drive":    {},
 	"sync":     {},
@@ -189,18 +180,21 @@ func Plan(t Target) (Op, error) {
 		// Cloud drives (awss3 / google / dropbox / tencent) get a
 		// targeted message — the surface looks like an arbitrary
 		// allow-list miss otherwise, but the actual reason is
-		// concrete (Bug 1 in the edit verb's bug report:
-		// /api/raw returns preview JSON instead of raw bytes for
-		// cloud namespaces, which would silently corrupt the
-		// file on writeback). The recovery path is the
-		// download → edit-locally → upload round-trip that the
+		// concrete: the writeback (PUT /api/resources/<cloud-path>)
+		// has no wire-shape signoff per driver (only awss3 has a
+		// `put()` helper in its v2 utils; google / dropbox / tencent
+		// have no save-related helper at all). The fetch leg is now
+		// uniform (the unified /api/raw/ endpoint serves cloud bytes
+		// too), so a future flip is just an allow-list entry once
+		// the PUT shape is verified. Until then the recovery path
+		// is the download → edit-locally → upload round-trip the
 		// CLI already supports end-to-end.
 		switch t.FileType {
 		case "awss3", "google", "dropbox", "tencent":
 			return Op{}, fmt.Errorf(
 				"edit: cloud-drive namespace %q is not supported end-to-end "+
-					"(GET /api/raw/<path> returns preview metadata, not raw bytes, on cloud drives — "+
-					"editing would round-trip the JSON envelope back as the new file content); "+
+					"(PUT /api/resources/<cloud-path> is not wire-verified for cloud drivers — "+
+					"only awss3's v2 utils exports a save helper, and writeback shape is unconfirmed); "+
 					"safe alternative: `files download %s/<path> <local>` → edit locally → "+
 					"`files upload <local> %s/<path>`",
 				t.FileType, t.FileType, t.FileType)
