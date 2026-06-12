@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli settings me version`
@@ -19,10 +20,9 @@ import (
 // dedicated `/api/olares-info` endpoint instead — same data shape under
 // `data` (an OlaresInfo), no extra payload.
 //
-// Backend handler: user-service/src/init.controller.ts:46-50
-//   handler delegates to OlaresService.updateOlaresInfo(), which proxies
-//   bfl /bfl/backend/v1/olares-info (framework/bfl/.../handler.go:296)
-//   and returns a `Result<OlaresInfo>` envelope.
+// The olares-info round-trip is shared with the version-cache layer via
+// whoami.FetchOlaresInfo, so there is one olares-info implementation in the
+// CLI rather than a per-call copy.
 //
 // Output:
 //   table  -> tidy 2-column "Field: Value" rendering of the most useful
@@ -55,25 +55,6 @@ scripting against future fields without waiting on a CLI bump.
 	return cmd
 }
 
-// olaresInfoResp mirrors framework/bfl/pkg/apis/backend/v1/model.go's
-// OlaresInfo. We embed json tags rather than importing the type because
-// (a) the bfl package isn't a stable public surface for CLI consumers
-// and (b) we want to be explicit about which fields the table rendering
-// promises to surface.
-type olaresInfoResp struct {
-	OlaresID           string `json:"olaresId"`
-	WizardStatus       string `json:"wizardStatus"`
-	EnableReverseProxy bool   `json:"enableReverseProxy"`
-	TailScaleEnable    bool   `json:"tailScaleEnable"`
-	OsVersion          string `json:"osVersion"`
-	LoginBackground    string `json:"loginBackground"`
-	Avatar             string `json:"avatar"`
-	ID                 string `json:"id"`
-	UserDID            string `json:"did"`
-	Olaresd            string `json:"olaresd"`
-	Style              string `json:"style"`
-}
-
 func runVersion(ctx context.Context, f *cmdutil.Factory, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -88,8 +69,8 @@ func runVersion(ctx context.Context, f *cmdutil.Factory, outputRaw string) error
 		return err
 	}
 
-	var info olaresInfoResp
-	if err := doGetEnvelope(ctx, pc.doer, "/api/olares-info", &info); err != nil {
+	info, err := whoami.FetchOlaresInfo(ctx, pc.doer)
+	if err != nil {
 		return err
 	}
 

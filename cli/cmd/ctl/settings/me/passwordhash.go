@@ -22,6 +22,10 @@ import (
 // We re-implement compareOlaresVersion + saltedMD5 here in Go rather
 // than depending on a shared CGo wrapper (there is none) or shelling
 // out to node, both of which would add weight just to MD5 a string.
+// This comparison is kept bit-for-bit identical to the JS source on
+// purpose (it gates a wire-format decision the backend mirrors); the
+// general-purpose, semver-based comparison used for command-side version
+// branching lives separately in cmdutil.Factory.OlaresBackendAtLeast.
 
 const (
 	passwordSaltSuffix    = "@Olares2025"

@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/market/uninstall"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -91,7 +92,52 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 		opts.info("  --delete-data: will delete persistent data")
 	}
 
-	resp, err := mc.UninstallApp(ctx, appName, cascade, opts.DeleteData)
+	// Uninstall must stay idempotent: unlike stop/resume it is a valid flow
+	// to re-run after the per-user row is already gone (e.g. `--cascade` to
+	// tear down the shared sub-charts of a CS app after a prior uninstall
+	// cleared the per-user row) or to clean up a half-installed / failed
+	// row. So source is resolved leniently here instead of going through
+	// resolveInstalledSource's strict "must be installed" guard — an absent
+	// row must NOT abort the command, otherwise the watcher's
+	// acceptInitialAbsent "already gone == success" path can never run.
+	source := strings.TrimSpace(opts.Source)
+	if source == "" {
+		row, lookupErr := lookupInstalledApp(ctx, mc, appName)
+		if lookupErr != nil {
+			return opts.failOp("uninstall", appName, lookupErr)
+		}
+		if row != nil {
+			source = strings.TrimSpace(row.Source)
+		}
+	}
+
+	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if err != nil {
+		return opts.failOp("uninstall", appName, err)
+	}
+
+	// 1.12.6 requires source in the uninstall body, and the only place we
+	// can learn it is the user's own install state. If the app isn't
+	// installed for this user we can't know its source (or even whether it
+	// was a multi-chart CS app), so there is nothing actionable to delete:
+	// report an idempotent success and let --watch's acceptInitialAbsent
+	// confirm it, rather than sending an invalid (sourceless) request or
+	// erroring out.
+	if atLeast126 && source == "" {
+		opts.info("'%s' is not installed for this user; nothing to uninstall", appName)
+		result := newOperationResult(mc, "uninstall", appName, "", "", "not installed; nothing to uninstall", nil)
+		return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, source))
+	}
+
+	// 1.12.6 added app_name + source to the uninstall body (this is the
+	// change that broke `market uninstall` against the new backend);
+	// opts.Version is empty unless a future --version flag supplies one
+	// (the 1.12.6 builder includes it when set, the 1.12.5 builder ignores
+	// it). On 1.12.5 an absent row still sends the DELETE so a `--cascade`
+	// re-run reaches the backend; the watcher then reports success via
+	// acceptInitialAbsent.
+	method, path, body := uninstall.Build(atLeast126, appName, source, opts.Version, cascade, opts.DeleteData)
+	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
 		return opts.failOp("uninstall", appName, err)
 	}
@@ -100,7 +146,7 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// Uninstall is unique: the row may simply disappear from /market/state
 	// once the backend cleans it up, so the watch target opts in to the
 	// "absent means success (provided we saw it earlier)" shortcut.
-	return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, opts.Source))
+	return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, source))
 }
 
 // shouldAutoCascade decides the default value of --cascade when the user
