@@ -25,6 +25,7 @@ type Base struct {
 type PostLocale struct {
 	Language string `json:"language"`
 	Location string `json:"location"`
+	Timezone string `json:"timezone"`
 	// dark/light
 	Theme string `json:"theme"`
 }
@@ -131,6 +132,7 @@ func (b *Base) HandleGetSysConfig(_ *restful.Request, resp *restful.Response) {
 	cfg := PostLocale{
 		Language: user.Annotations[constants.UserLanguage],
 		Location: user.Annotations[constants.UserLocation],
+		Timezone: user.Annotations[constants.UserTimezone],
 		Theme:    user.Annotations[constants.UserTheme],
 	}
 	response.Success(resp, &cfg)
