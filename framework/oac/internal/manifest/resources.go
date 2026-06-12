@@ -329,7 +329,7 @@ func ensureNoGPUSection(sectionPath, mode string, rr ResourceRequirement) error 
 // treat it as a valid, deferred value rather than rejecting it.
 const AutoResourceValue = "-1"
 
-func isAutoResourceQuantity(s string) bool {
+func IsAutoResourceQuantity(s string) bool {
 	return strings.TrimSpace(s) == AutoResourceValue
 }
 
@@ -349,7 +349,7 @@ func validateQuantities(prefix string, rr ResourceRequirement) error {
 	}
 	var errs []error
 	for _, p := range pairs {
-		if p.value == "" || isAutoResourceQuantity(p.value) {
+		if p.value == "" || IsAutoResourceQuantity(p.value) {
 			continue
 		}
 		if !k8sQuantity.MatchString(p.value) {
@@ -377,7 +377,7 @@ func checkLimitGERequired(prefix string, rr ResourceRequirement) error {
 		}
 		// An auto-compute sentinel on either side is resolved at install time;
 		// the limit >= required ordering cannot be checked yet, so skip it.
-		if isAutoResourceQuantity(d.required) || isAutoResourceQuantity(d.limited) {
+		if IsAutoResourceQuantity(d.required) || IsAutoResourceQuantity(d.limited) {
 			continue
 		}
 		req, err := resource.ParseQuantity(d.required)
