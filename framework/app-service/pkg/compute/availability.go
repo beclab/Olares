@@ -146,6 +146,7 @@ func makeDeviceOption(req Requirement, node Node, device Device, pressure Pressu
 		Capacity:    device.Memory,
 		Available:   available,
 		Health:      device.Health,
+		Bindings:    device.Bindings,
 	}
 	if option.Health == "" {
 		option.Health = deviceHealthYes
@@ -187,7 +188,7 @@ func markOperable(result *AvailabilityResult) {
 			}
 		}
 		for di := range node.Devices {
-			node.Devices[di].Operable = node.Devices[di].Health == deviceHealthYes
+			node.Devices[di].Operable = node.Devices[di].Health == deviceHealthYes && node.Devices[di].Available > 0
 		}
 	}
 }
@@ -320,6 +321,79 @@ func ApplyBindingSelection(ctx context.Context, c client.Client, appConfig *appc
 		Allocations: allocations,
 		TargetApp:   appConfig.AppName,
 		TargetOwner: appConfig.OwnerName,
+	}, nil
+}
+
+// ValidateBindingForResume mirrors ApplyBindingSelection's feasibility
+// checks but performs NO writes: it never mutates the allocation config
+// map and never creates HAMI bindings. It is the read-only counterpart
+// intended for a pre-flight "would this resume succeed?" call the
+// frontend can make before issuing the real resume.
+//
+// The returned BindingApplyResult uses the same status/availability/
+// validation shapes as ApplyBindingSelection so the two endpoints stay
+// format-compatible, with one difference: where ApplyBindingSelection
+// returns BindingApplyStatusApplied after writing, this returns
+// BindingApplyStatusValid (the selection is valid but nothing was
+// applied). The accompanying Allocations describe what WOULD be written.
+func ValidateBindingForResume(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig, selections []BindingSelection, includeSharedServer bool) (*BindingApplyResult, error) {
+	if appConfig == nil {
+		return &BindingApplyResult{Status: BindingApplyStatusNotRequired}, nil
+	}
+	if appConfig.IsV2() && appConfig.HasClusterSharedCharts() && !includeSharedServer {
+		return &BindingApplyResult{Status: BindingApplyStatusNotRequired}, nil
+	}
+	targetConfig, _, err := resolveComputeTarget(ctx, c, appConfig, includeSharedServer)
+	if err != nil {
+		return nil, err
+	}
+	appConfig = targetConfig
+	req, ok := SelectedRequirement(appConfig)
+	if !ok || req.Mode == utils.CPUType {
+		return &BindingApplyResult{Status: BindingApplyStatusNotRequired}, nil
+	}
+	pressure, err := FetchPressureSnapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Exclude the app's own existing allocation rows so a re-binding of the
+	// same app does not count its current claim against availability, matching
+	// the node view ApplyBindingSelection validates against.
+	nodes, err := FetchNodeComputeAllocationsExcludingApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
+	if err != nil {
+		return nil, err
+	}
+	if len(selections) == 0 {
+		return &BindingApplyResult{
+			Status:       BindingApplyStatusRequired,
+			Availability: listAvailableForLaunch(req, nodes, pressure),
+			TargetApp:    appConfig.AppName,
+			TargetOwner:  appConfig.OwnerName,
+		}, nil
+	}
+	resolved, resolveErr := resolveSelection(selections, nodes)
+	if resolveErr != nil {
+		return unavailableBindingApplyResult(req, nodes, pressure, invalidBinding(resolveErr.Error())), nil
+	}
+	validation := validateResolvedBindingSelection(req, resolved, pressure)
+	if !validation.OK {
+		return unavailableBindingApplyResult(req, nodes, pressure, validation), nil
+	}
+	allocations := allocationsFromResolvedSelection(appConfig, req, resolved)
+	if len(allocations) == 0 {
+		return unavailableBindingApplyResult(req, nodes, pressure, invalidBinding("empty-compute-binding")), nil
+	}
+	// Even when the selection is valid we still hand back the full list of
+	// available options so the frontend can render the current selection in
+	// context and offer alternatives, mirroring the Required / Unavailable
+	// payloads exactly (Availability is always populated).
+	return &BindingApplyResult{
+		Status:       BindingApplyStatusValid,
+		Allocations:  allocations,
+		Availability: listAvailableForLaunch(req, nodes, pressure),
+		Validation:   validation,
+		TargetApp:    appConfig.AppName,
+		TargetOwner:  appConfig.OwnerName,
 	}, nil
 }
 

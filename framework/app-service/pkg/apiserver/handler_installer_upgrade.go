@@ -215,7 +215,7 @@ func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 	klog.Info("Getting app config for V3 shared app")
 	appConfig, chartPath, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
-		Owner:        h.owner,
+		Owner:        prevCfg.OwnerName,
 		RepoURL:      h.request.RepoURL,
 		Version:      h.request.Version,
 		Token:        h.token,
@@ -301,6 +301,13 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
+	var prevCfg appcfg.ApplicationConfig
+	err = appcfg.GetAppConfig(&appMgr, &prevCfg)
+	if err != nil {
+		klog.Errorf("Failed to get previous app config err=%v", err)
+		api.HandleError(resp, req, err)
+		return
+	}
 	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: appMgrName}, &appMgr)
 	if err != nil {
 		api.HandleError(resp, req, err)
@@ -347,7 +354,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
-		Owner:        owner,
+		Owner:        prevCfg.OwnerName,
 		RepoURL:      request.RepoURL,
 		MarketSource: marketSource,
 	})
@@ -368,7 +375,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 			request:    request,
 			app:        app,
 			rawAppName: rawAppName,
-			owner:      owner,
+			owner:      prevCfg.OwnerName,
 			token:      token,
 		}
 
@@ -383,7 +390,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 				request:    request,
 				app:        app,
 				rawAppName: rawAppName,
-				owner:      owner,
+				owner:      prevCfg.OwnerName,
 				token:      token,
 			},
 		}
@@ -399,7 +406,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 				request:    request,
 				app:        app,
 				rawAppName: rawAppName,
-				owner:      owner,
+				owner:      prevCfg.OwnerName,
 				token:      token,
 			},
 		}
@@ -414,14 +421,6 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	adminUsers, isAdmin, err := helper.getAdminUsers()
 	if err != nil {
 		klog.Errorf("Failed to get admin users err=%v", err)
-		return
-	}
-
-	var prevCfg appcfg.ApplicationConfig
-	err = appcfg.GetAppConfig(&appMgr, &prevCfg)
-	if err != nil {
-		klog.Errorf("Failed to get previous app config err=%v", err)
-		api.HandleError(resp, req, err)
 		return
 	}
 
@@ -445,7 +444,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 
 	// hold env batch lease during upgrade kickoff
 	// to avoid AppEnv controller racing and switching app manager op/state to ApplyEnv in this window
-	userNamespace := utils.UserspaceName(owner)
+	userNamespace := utils.UserspaceName(prevCfg.OwnerName)
 	releaseLease, err := h.acquireUserEnvBatchLease(req.Request.Context(), userNamespace)
 	if err != nil {
 		klog.Errorf("Failed to acquire user env batch lease err=%v", err)
