@@ -37,10 +37,10 @@ func TestParse(t *testing.T) {
 		{
 			input: "did:example:123456789abcdefghi;foo=bar;baz=qux",
 			output: map[string]interface{}{
-				"alternate": "did:example:123456789abcdefghi;baz=qux;foo=bar",
-				"method":    "example",
-				"id":        "123456789abcdefghi",
-				"uri":       "did:example:123456789abcdefghi",
+				"method": "example",
+				"id":     "123456789abcdefghi",
+				"uri":    "did:example:123456789abcdefghi",
+				"url":    "did:example:123456789abcdefghi;baz=qux;foo=bar",
 				"params": map[string]string{
 					"foo": "bar",
 					"baz": "qux",
@@ -78,13 +78,13 @@ func TestParse(t *testing.T) {
 		{
 			input: "did:example:123456789abcdefghi;foo=bar;baz=qux?p1=v1&p2=v2#keys-1",
 			output: map[string]interface{}{
-				"alternate": "did:example:123456789abcdefghi;baz=quxfoo=bar;?p1=v1&p2=v2#keys-1",
-				"method":    "example",
-				"id":        "123456789abcdefghi",
-				"uri":       "did:example:123456789abcdefghi",
-				"params":    map[string]string{"foo": "bar", "baz": "qux"},
-				"query":     "p1=v1&p2=v2",
-				"fragment":  "keys-1",
+				"method":   "example",
+				"id":       "123456789abcdefghi",
+				"uri":      "did:example:123456789abcdefghi",
+				"url":      "did:example:123456789abcdefghi;baz=qux;foo=bar?p1=v1&p2=v2#keys-1",
+				"params":   map[string]string{"foo": "bar", "baz": "qux"},
+				"query":    "p1=v1&p2=v2",
+				"fragment": "keys-1",
 			},
 		},
 	}
@@ -104,12 +104,8 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			// The Params map doesn't have a reliable order, so check both
-			alt, ok := v.output["alternate"]
-			if ok {
-				firstOrder := v.input == did.URL()
-				secondOrder := alt == did.URL()
-				assert.True(t, firstOrder || secondOrder, "expected one of the orders to match")
+			if v.output["url"] != nil {
+				assert.Equal[interface{}](t, v.output["url"], did.URL())
 			} else {
 				assert.Equal[interface{}](t, v.input, did.URL())
 			}
@@ -141,7 +137,7 @@ func TestDID_ScanValueRoundtrip(t *testing.T) {
 	tests := []struct {
 		object  did.DID
 		raw     string
-		alt     string
+		want    string
 		wantErr bool
 	}{
 		{
@@ -150,7 +146,7 @@ func TestDID_ScanValueRoundtrip(t *testing.T) {
 		},
 		{
 			raw:    "did:example:123456789abcdefghi;foo=bar;baz=qux",
-			alt:    "did:example:123456789abcdefghi;baz=qux;foo=bar",
+			want:   "did:example:123456789abcdefghi;baz=qux;foo=bar",
 			object: did.MustParse("did:example:123456789abcdefghi;foo=bar;baz=qux"),
 		},
 		{
@@ -167,7 +163,7 @@ func TestDID_ScanValueRoundtrip(t *testing.T) {
 		},
 		{
 			raw:    "did:example:123456789abcdefghi;foo=bar;baz=qux?foo=bar&baz=qux#keys-1",
-			alt:    "did:example:123456789abcdefghi;baz=qux;foo=bar?foo=bar&baz=qux#keys-1",
+			want:   "did:example:123456789abcdefghi;baz=qux;foo=bar?foo=bar&baz=qux#keys-1",
 			object: did.MustParse("did:example:123456789abcdefghi;foo=bar;baz=qux?foo=bar&baz=qux#keys-1"),
 		},
 	}
@@ -183,8 +179,8 @@ func TestDID_ScanValueRoundtrip(t *testing.T) {
 			assert.NoError(t, err)
 			actual, ok := value.(string)
 			assert.True(t, ok)
-			if tt.alt != "" {
-				assert.True(t, actual == tt.raw || actual == tt.alt)
+			if tt.want != "" {
+				assert.Equal(t, tt.want, actual)
 			} else {
 				assert.Equal(t, tt.raw, actual)
 			}
