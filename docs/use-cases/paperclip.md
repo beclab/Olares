@@ -47,7 +47,7 @@ Starting with V1.0.22, Paperclip uses the official image and requires new enviro
 
 ## Initialize Paperclip
 
-After installing Paperclip, configure your API key and create the first admin account to complete the initial setup.
+After installing Paperclip, create the first admin account to complete the initial setup. If you plan to use cloud models, configure your API keys first.
 
 ### Configure API keys
 
