@@ -827,3 +827,18 @@ func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Applicat
 
 	return entrances, nil
 }
+
+func GetUserRole(ctx context.Context, username string, client dynamic.Interface) (string, error) {
+	user, err := client.Resource(UserGVR).Get(ctx, username, metav1.GetOptions{})
+	if err != nil {
+		klog.Error("get user error, ", err)
+		return "", err
+	}
+
+	role, ok := user.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
+	if !ok {
+		return "", errors.New("user role not found")
+	}
+
+	return role, nil
+}
