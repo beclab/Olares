@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/l4-bfl-proxy/internal/envoy"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
@@ -70,6 +71,9 @@ func main() {
 	}
 	if err := rbacv1.AddToScheme(scheme); err != nil {
 		klog.Fatalf("add rbacv1 scheme failed: %v", err)
+	}
+	if err := sysv1alpha1.AddToScheme(scheme); err != nil {
+		klog.Fatalf("add sysv1alpha1 scheme failed: %v", err)
 	}
 
 	syncPeriod := resyncPeriod
