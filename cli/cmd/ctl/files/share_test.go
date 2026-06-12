@@ -436,6 +436,14 @@ func TestFrontendPathToShareTarget_AllowsRealPaths(t *testing.T) {
 			flavor: share.TypePublic,
 		},
 		{
+			// drive/Common is share-able ONLY as a public link;
+			// the public flavor must accept it (the internal / SMB
+			// rejection has its own dedicated test below).
+			name:   "public: drive Common subdir",
+			path:   "drive/Common/ollama/",
+			flavor: share.TypePublic,
+		},
+		{
 			// Sync is allowed for Internal only — SMB excludes it
 			// to match the LarePass GUI, Public is locked to
 			// drive. Use Internal as the anchor here; SMB+sync
@@ -461,6 +469,73 @@ func TestFrontendPathToShareTarget_AllowsRealPaths(t *testing.T) {
 				t.Errorf("Target produced for %q has empty fields: %+v", c.path, tgt)
 			}
 		})
+	}
+}
+
+// TestFrontendPathToShareTarget_CommonIsPublicOnly pins the
+// extend-level policy that drive/Common may be shared ONLY as an
+// outbound public link — mirroring TermiPass's `canShowShareOption`
+// (DriveType.Common appears under SHARE_IN_PUBLIC, never under
+// SHARE_IN_INTERNAL / SHARE_IN_SMB). Internal / SMB must be refused
+// even though `drive` is in their fileType allow-list; Public must
+// pass.
+func TestFrontendPathToShareTarget_CommonIsPublicOnly(t *testing.T) {
+	reject := []share.Type{share.TypeInternal, share.TypeSMB}
+	for _, fl := range reject {
+		t.Run("reject_"+shareFlavorFriendlyName(fl), func(t *testing.T) {
+			_, err := frontendPathToShareTarget("drive/Common/ollama/", fl)
+			if err == nil {
+				t.Fatalf("frontendPathToShareTarget(drive/Common, %v): expected refusal", fl)
+			}
+			if !strings.Contains(err.Error(), "drive/Common") ||
+				!strings.Contains(err.Error(), "public") {
+				t.Errorf("error should name drive/Common and the public alternative; got: %v", err)
+			}
+		})
+	}
+	t.Run("allow_public", func(t *testing.T) {
+		tgt, err := frontendPathToShareTarget("drive/Common/ollama/", share.TypePublic)
+		if err != nil {
+			t.Fatalf("frontendPathToShareTarget(drive/Common, public): unexpected error: %v", err)
+		}
+		if tgt.FileType != "drive" || tgt.Extend != "Common" {
+			t.Errorf("unexpected target: %+v", tgt)
+		}
+	})
+}
+
+// TestValidateShareCommonRestriction is the pure-unit companion to
+// the integration-style test above: it exercises the gate directly
+// across flavors and confirms it is a no-op for non-Common paths.
+func TestValidateShareCommonRestriction(t *testing.T) {
+	// Common: public allowed, internal / SMB rejected.
+	if err := validateShareCommonRestriction(share.TypePublic, "drive", "Common", "drive/Common/x/"); err != nil {
+		t.Errorf("public + Common: unexpected error: %v", err)
+	}
+	for _, fl := range []share.Type{share.TypeInternal, share.TypeSMB} {
+		if err := validateShareCommonRestriction(fl, "drive", "Common", "drive/Common/x/"); err == nil {
+			t.Errorf("%v + Common: expected refusal", fl)
+		}
+	}
+	// Non-Common drive extends and other namespaces: always a no-op,
+	// regardless of flavor.
+	noop := []struct {
+		fileType string
+		extend   string
+	}{
+		{"drive", "Home"},
+		{"drive", "Data"},
+		{"external", "node-1"},
+		{"cache", "node-1"},
+		{"sync", "repo"},
+	}
+	for _, fl := range []share.Type{share.TypePublic, share.TypeInternal, share.TypeSMB} {
+		for _, c := range noop {
+			if err := validateShareCommonRestriction(fl, c.fileType, c.extend, "x"); err != nil {
+				t.Errorf("validateShareCommonRestriction(%v, %q, %q): unexpected error: %v",
+					fl, c.fileType, c.extend, err)
+			}
+		}
 	}
 }
 

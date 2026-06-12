@@ -150,6 +150,9 @@ func runRename(
 	if err != nil {
 		return err
 	}
+	if err := requireCommonBackendVersion(ctx, f, isCommonFrontendPath(tgt.FileType, tgt.Extend)); err != nil {
+		return err
+	}
 
 	op, err := rename.Plan(tgt, newName)
 	if err != nil {
