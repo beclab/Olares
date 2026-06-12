@@ -38,6 +38,10 @@ import (
 //     turn off with SkipResourceNamespaceCheck()
 //     7b. allowMultipleInstall cluster-scoped fixed-name check (v1/v3 only;
 //     skipped for v2) - ALWAYS run when options.allowMultipleInstall is true
+//     7c. allowMultipleInstall release-name workload check (v1/v3 only;
+//     skipped for v2) - ALWAYS run when options.allowMultipleInstall is true;
+//     requires at least one Deployment/StatefulSet whose metadata.name
+//     is templated on `{{ .Release.Name }}`
 //  8. Container-level resource limits check - skipped by SkipResourceCheck
 //  9. Chart.yaml <-> manifest same-version check - ON by default, turn off
 //     with SkipSameVersionCheck()
@@ -152,7 +156,7 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 		return err
 	}
 
-	if err := c.checkAllowMultipleInstallClusterScoped(oacPath, m, sc); err != nil {
+	if err := c.checkAllowMultipleInstall(oacPath, m, sc); err != nil {
 		return err
 	}
 
@@ -545,25 +549,68 @@ func allowClusterScopedCheckApplies(cfg *manifest.AppConfiguration) bool {
 	return false
 }
 
-// checkAllowMultipleInstallClusterScoped helm-renders the chart twice with
-// synthetic release names and flags any cluster-scoped resource whose name is
-// identical across both renders.
-func (c *OAC) checkAllowMultipleInstallClusterScoped(oacPath string, m Manifest, sc ownerScenario) error {
+// releaseNameWorkloadCheckApplies reports whether the chart must declare at
+// least one Deployment/StatefulSet whose metadata.name is templated on
+// `{{ .Release.Name }}`. The rule fires when options.allowMultipleInstall is
+// true on v1/v3 manifests. v2 is excluded: workloads live in spec.subCharts[]
+// and are rendered per subchart, so a parent-path dry-run cannot inspect them.
+func releaseNameWorkloadCheckApplies(cfg *manifest.AppConfiguration) bool {
+	if !cfg.Options.AllowMultipleInstall {
+		return false
+	}
+	api := strings.ToLower(strings.TrimSpace(cfg.APIVersion))
+	return api != manifest.APIVersionV2
+}
+
+// checkAllowMultipleInstall helm-renders the chart twice with synthetic
+// release names and runs the two allowMultipleInstall safety checks that
+// can share those renders:
+//
+//  1. cluster-scoped fixed-name detection — any cluster-scoped resource
+//     whose name is identical across both renders has a release-independent
+//     metadata.name and would collide on second install. Gated by
+//     allowClusterScopedCheckApplies.
+//  2. release-name workload presence — at least one Deployment or
+//     StatefulSet must have its metadata.name templated as
+//     `{{ .Release.Name }}` so each install gets a uniquely-named primary
+//     workload. Gated by releaseNameWorkloadCheckApplies.
+//
+// Both checks reuse listA / listB, so the function only renders when at
+// least one of the two gates is open. Errors from each sub-check are
+// aggregated so a chart that violates both rules surfaces both messages
+// in a single Lint run.
+func (c *OAC) checkAllowMultipleInstall(oacPath string, m Manifest, sc ownerScenario) error {
 	cfg, ok := m.Raw().(*manifest.AppConfiguration)
-	if !ok || !allowClusterScopedCheckApplies(cfg) {
+	if !ok {
+		return nil
+	}
+	needCluster := allowClusterScopedCheckApplies(cfg)
+	needWorkload := releaseNameWorkloadCheckApplies(cfg)
+	if !needCluster && !needWorkload {
 		return nil
 	}
 	values := c.buildRenderValues(m, sc)
 	probeA, probeB := resources.ClusterScopedProbeNames()
 	listA, err := helmrender.Render(oacPath, values, probeA)
 	if err != nil {
-		return fmt.Errorf("helm render (allowMultipleInstall cluster-scoped probe %q): %w", probeA, err)
+		return fmt.Errorf("helm render (allowMultipleInstall probe %q): %w", probeA, err)
 	}
 	listB, err := helmrender.Render(oacPath, values, probeB)
 	if err != nil {
-		return fmt.Errorf("helm render (allowMultipleInstall cluster-scoped probe %q): %w", probeB, err)
+		return fmt.Errorf("helm render (allowMultipleInstall probe %q): %w", probeB, err)
 	}
-	return resources.CheckClusterScopedFixedNames(listA, listB)
+	var errs []error
+	if needCluster {
+		if err := resources.CheckClusterScopedFixedNames(listA, listB); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if needWorkload {
+		if err := resources.CheckReleaseNameWorkload(listA, listB, probeA, probeB); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // checkWorkloadReplicaValues verifies that values.yaml declares a

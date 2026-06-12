@@ -1,16 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}
+  name: multiclusterbadworkload
+  namespace: {{ .Release.Namespace }}
 spec:
-  replicas: {{ .Values.workloads.wlreplicas.replicaCount }}
+  replicas: {{ .Values.workloads.multiclusterbadworkload.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}
+      app: multiclusterbadworkload
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}
+        app: multiclusterbadworkload
     spec:
       containers:
         - name: main
