@@ -64,8 +64,8 @@ func TestAppConfiguration_APIVersionEnum(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for apiVersion=v99")
 	}
-	if !strings.Contains(err.Error(), "不支持该版本") {
-		t.Fatalf("error should mention 不支持该版本, got: %v", err)
+	if !strings.Contains(err.Error(), "not supported version") {
+		t.Fatalf("error should mention not supported version, got: %v", err)
 	}
 
 	c = newValidConfig()
@@ -97,7 +97,7 @@ func TestValidateKnownAPIVersion(t *testing.T) {
 	if errV0 == nil {
 		t.Fatal("expected error for v0")
 	}
-	if !strings.Contains(errV0.Error(), "不支持该版本") {
+	if !strings.Contains(errV0.Error(), "not supported version") {
 		t.Fatalf("got: %v", errV0)
 	}
 }
@@ -707,6 +707,61 @@ func TestAPIVersionV2_ModernOlaresRejectsSpecResources(t *testing.T) {
 	want := "spec.resources is not supported for apiVersion=v2"
 	if !strings.Contains(err.Error(), want) {
 		t.Fatalf("error should mention %q, got: %v", want, err)
+	}
+}
+
+func TestSpec_SupportArch_AcceptsKnownArches(t *testing.T) {
+	for _, arch := range []string{"amd64", "arm64"} {
+		c := newValidConfig()
+		c.Spec.SupportArch = []string{arch}
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("supportArch=%q must be accepted: %v", arch, err)
+		}
+	}
+
+	c := newValidConfig()
+	c.Spec.SupportArch = []string{"amd64", "arm64"}
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("supportArch=[amd64 arm64] must be accepted: %v", err)
+	}
+}
+
+func TestSpec_SupportArch_EmptyIsAccepted(t *testing.T) {
+	c := newValidConfig()
+	c.Spec.SupportArch = nil
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("empty supportArch must remain valid (no enum gate): %v", err)
+	}
+
+	c.Spec.SupportArch = []string{}
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("zero-length supportArch slice must remain valid: %v", err)
+	}
+}
+
+func TestSpec_SupportArch_RejectsUnknownArch(t *testing.T) {
+	for _, bad := range []string{"x86", "x86_64", "AMD64", "ARM64", "i386", "riscv64", ""} {
+		c := newValidConfig()
+		c.Spec.SupportArch = []string{bad}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatalf("supportArch=%q must be rejected", bad)
+		}
+		if !strings.Contains(err.Error(), "amd64") || !strings.Contains(err.Error(), "arm64") {
+			t.Fatalf("error should mention the enum constraint, got: %v", err)
+		}
+	}
+}
+
+func TestSpec_SupportArch_RejectsDuplicates(t *testing.T) {
+	c := newValidConfig()
+	c.Spec.SupportArch = []string{"amd64", "amd64"}
+	err := ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("expected duplicate supportArch entries to be rejected")
+	}
+	if !strings.Contains(err.Error(), "duplicate value") {
+		t.Fatalf("error should mention duplicate, got: %v", err)
 	}
 }
 
