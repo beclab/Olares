@@ -33,11 +33,6 @@ func NewPlansCommand(f *cmdutil.Factory) *cobra.Command {
 
 Subcommands:
   list
-  check-url --backup-url URL [--password ... | --password-stdin]
-  create-from-snapshot --snapshot-id SID --path PATH
-  create-from-url --backup-url URL --path PATH [--dir DIR]
-                  [--password ... | --password-stdin]
-  cancel <id> [--yes]
 
 Out of scope (no backup-server route):
   update / delete (non-cancel)

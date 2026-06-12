@@ -38,19 +38,13 @@ func NewEnvCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "env",
 		Short: "system + user environment variables (Settings -> Advanced -> Env)",
-		Long: `Inspect or change the system-wide / user-wide environment variables
+		Long: `Inspect the system-wide / user-wide environment variables
 Olares injects into apps. The corresponding per-app surface lives at
-"olares-cli settings apps env get|set <name>".
+"olares-cli settings apps env get <name>".
 
 Subcommands:
   system list
-  system set --var KEY=VALUE [--var ...]
   user   list
-  user   set --var KEY=VALUE [--var ...]
-
-NOTE: "set" requires --var KEY=VALUE flags (repeatable). Bare positional
-"KEY=VALUE" is NOT accepted — Cobra would treat the first token as a
-sub-verb and report "unknown command".
 `,
 	}
 	cmd.SilenceUsage = true

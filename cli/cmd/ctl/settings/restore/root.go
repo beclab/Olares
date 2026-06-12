@@ -21,11 +21,6 @@ func NewRestoreCommand(f *cmdutil.Factory) *cobra.Command {
 
 Subcommands:
   plans list
-  plans check-url --backup-url URL [--password ... | --password-stdin]
-  plans create-from-snapshot --snapshot-id SID --path PATH
-  plans create-from-url --backup-url URL --path PATH [--dir DIR]
-                        [--password ... | --password-stdin]
-  plans cancel <id> [--yes]
 `,
 	}
 	cmd.SilenceUsage = true
