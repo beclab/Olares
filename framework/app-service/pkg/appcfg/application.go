@@ -103,7 +103,7 @@ type ApplicationConfig struct {
 	HardwareRequirement  Hardware
 	SharedEntrances      []Entrance
 	SelectedGpuType      string
-	Resources            []ResourceMode
+	Accelerator          []ResourceMode
 	// NeedsSharedAccess signals that the app needs cross-namespace access to a
 	// v3 app's services (e.g. for service-mesh sidecar injection).
 	// Force-set to true for v3 apps in toApplicationConfig regardless of
@@ -178,7 +178,7 @@ func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]Entranc
 
 func (c *ApplicationConfig) SelectedResourceMode() (ResourceMode, bool) {
 	modes := c.ComputeResourceModes()
-	if len(modes) == 1 && len(c.Resources) == 0 {
+	if len(modes) == 1 && len(c.Accelerator) == 0 {
 		return modes[0], true
 	}
 	mode := findResourceMode(modes, c.SelectedGpuType)
@@ -195,8 +195,8 @@ func (c *ApplicationConfig) SelectedResourceMode() (ResourceMode, bool) {
 // derived from c.SelectedGpuType / c.Requirement.GPU — see
 // legacyComputeMode for the exact rules.
 func (c *ApplicationConfig) ComputeResourceModes() []ResourceMode {
-	if len(c.Resources) > 0 {
-		return c.Resources
+	if len(c.Accelerator) > 0 {
+		return c.Accelerator
 	}
 	mode := legacyComputeMode(c)
 	return []ResourceMode{{
@@ -387,7 +387,7 @@ func (c *ApplicationConfig) ResolveRequirement(selectedGpu string) (*AppRequirem
 	if len(modes) == 0 {
 		return nil, fmt.Errorf("empty compute resources")
 	}
-	if len(c.Resources) == 0 && len(modes) == 1 {
+	if len(c.Accelerator) == 0 && len(modes) == 1 {
 		req, err := ParseResourceRequirement(&modes[0].ResourceRequirement)
 		if err != nil {
 			return nil, fmt.Errorf("resolve requirement for mode %s: %w", modes[0].Mode, err)

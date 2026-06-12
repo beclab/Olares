@@ -25,7 +25,7 @@ import (
 func TestResolveRequirementSelectedGpuFallbackSemantics(t *testing.T) {
 	nvidiaCpuApp := &ApplicationConfig{
 		AppName: "new-format-multi-mode",
-		Resources: []ResourceMode{
+		Accelerator: []ResourceMode{
 			{
 				Mode: utils.NvidiaCardType,
 				ResourceRequirement: ResourceRequirement{
@@ -43,7 +43,7 @@ func TestResolveRequirementSelectedGpuFallbackSemantics(t *testing.T) {
 	}
 	nvidiaOnlyApp := &ApplicationConfig{
 		AppName: "new-format-nvidia-only",
-		Resources: []ResourceMode{
+		Accelerator: []ResourceMode{
 			{
 				Mode: utils.NvidiaCardType,
 				ResourceRequirement: ResourceRequirement{
