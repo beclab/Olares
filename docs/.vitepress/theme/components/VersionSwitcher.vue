@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useData, useRouter,inBrowser } from "vitepress"
+import { useData, inBrowser } from "vitepress"
 import { computed, ref } from 'vue'
 import VPMenuLink from 'vitepress/dist/client/theme-default/components/VPMenuLink.vue'
 import VPFlyout from 'vitepress/dist/client/theme-default/components/VPFlyout.vue'
@@ -9,7 +9,6 @@ const props = defineProps<{
   latestVersion: string
 }>();
 
-const router = useRouter();
 const { site, page } = useData();
 
 declare const __SITE_PATH_PREFIX__: string;
@@ -34,35 +33,15 @@ function stripTrailingVersionSegment(base: string): string {
   return normalizePrefix(b);
 }
 
-// Current pathname, made reactive to VitePress client-side navigation.
-// Reading router.route.path registers a reactive dependency so dependent
-// computeds recompute on every in-app navigation; window.location.pathname
-// carries the full URL (base + version + page) and is already up to date by
-// the time the route changes.
-const currentPathname = computed(() => {
-  void router.route.path;
-  return inBrowser ? window.location.pathname : "/";
-});
-
-// Deploy prefix (e.g. /docs/). On versioned builds site.base is /docs/1.12.4/ —
-// strip any version suffix; do not skip latestVersion (each branch build may set
-// LATEST_VERSION to its own tag while base still carries that version segment).
+// Deploy prefix (e.g. /docs/). Driven by the build-time SITE_PATH_PREFIX, with
+// site.base as the fallback. site.base is the authoritative deploy root baked
+// into this build (e.g. /docs/ or /docs/1.12.4/), so we never scan the live
+// pathname — a semver-looking segment inside a page slug must not be mistaken
+// for the deploy/version segment.
 const pathPrefix = computed(() => {
   if (typeof __SITE_PATH_PREFIX__ === "string" && __SITE_PATH_PREFIX__) {
     return normalizePrefix(__SITE_PATH_PREFIX__);
   }
-
-  if (inBrowser) {
-    const pathname = currentPathname.value;
-    for (const v of props.versions) {
-      const marker = `/${v}/`;
-      const idx = pathname.indexOf(marker);
-      if (idx > 0) {
-        return normalizePrefix(pathname.slice(0, idx));
-      }
-    }
-  }
-
   return stripTrailingVersionSegment(site.value.base || "/");
 });
 
@@ -81,17 +60,16 @@ const currentVersion = computed(() => {
     return __CURRENT_DOC_VERSION__;
   }
 
-  if (inBrowser) {
-    const pathname = currentPathname.value;
-    for (const v of props.versions) {
-      if (pathname.includes(`/${v}/`)) return v;
-    }
+  // Derive from site.base (the deploy root of this build), not the live
+  // pathname: on a versioned build site.base ends with the version segment
+  // (e.g. /docs/1.12.4/), while page slugs may contain unrelated semver-like
+  // segments that must not be treated as the active version.
+  const trimmed = (site.value.base || "/").replace(/\/+$/, "");
+  const lastSegment = trimmed.slice(trimmed.lastIndexOf("/") + 1);
+  if (props.versions.includes(lastSegment)) {
+    return lastSegment;
   }
 
-  const path = router.route.path;
-  for (const v of props.versions) {
-    if (path.startsWith(`/${v}/`)) return v;
-  }
   return props.latestVersion;
 });
 
