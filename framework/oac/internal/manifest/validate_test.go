@@ -1194,6 +1194,45 @@ func TestOptions_TemplateOnlyRequiresAllowMultipleInstall(t *testing.T) {
 	}
 }
 
+func TestAppSpec_TemplateOnlyAllowsAutoOnNonDiskLegacy(t *testing.T) {
+	c := newValidConfig()
+	c.Options.TemplateOnly = true
+	c.Options.AllowMultipleInstall = true
+	c.Spec.RequiredCPU = AutoResourceValue
+	c.Spec.LimitedCPU = AutoResourceValue
+	c.Spec.RequiredMemory = AutoResourceValue
+	c.Spec.LimitedMemory = AutoResourceValue
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("template-only legacy envelope with -1 on cpu/memory must pass: %v", err)
+	}
+}
+
+func TestAppSpec_TemplateOnlyRejectsAutoOnDiskLegacy(t *testing.T) {
+	c := newValidConfig()
+	c.Options.TemplateOnly = true
+	c.Options.AllowMultipleInstall = true
+	c.Spec.RequiredDisk = AutoResourceValue
+	err := ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("expected error: template-only apps cannot use -1 on requiredDisk")
+	}
+	if !strings.Contains(err.Error(), "requiredDisk") {
+		t.Fatalf("error should mention requiredDisk, got: %v", err)
+	}
+}
+
+func TestAppSpec_NonTemplateRejectsAutoOnLegacyFlat(t *testing.T) {
+	c := newValidConfig()
+	c.Spec.RequiredCPU = AutoResourceValue
+	err := ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("expected error: non-template legacy flat fields cannot use -1")
+	}
+	if !strings.Contains(err.Error(), "requiredCpu") {
+		t.Fatalf("error should mention requiredCpu, got: %v", err)
+	}
+}
+
 // TestOptions_SharedRequiresAPIVersionV3 pins down the shared => v3
 // cross-field rule on Options: shared installs only make sense on the v3
 // schema (a single install services multiple users). v1/v2/empty must
