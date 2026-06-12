@@ -222,6 +222,56 @@ func ParseFrontendPath(raw string) (FrontendPath, error) {
 	}, nil
 }
 
+// ValidateNoDotSegments rejects raw user input whose path segments
+// (after splitting on '/') include `.` or `..`. This is the
+// pre-ParseFrontendPath companion to the `.` / `..` blacklist that
+// `internal/files/mkdir.Plan` and `internal/files/rename.Plan`
+// already enforce on their cleaned inputs.
+//
+// Why a SEPARATE check up front, rather than relying on those
+// per-package planners: `ParseFrontendPath` runs `path.Clean` on the
+// joined sub-path (line ~212), and `path.Clean` SILENTLY collapses
+// `.` / `..` segments — `drive/Home/foo/./bar` becomes
+// `drive/Home/foo/bar`, `drive/Home/foo/../bar` becomes
+// `drive/Home/bar`, and `drive/Home/.` becomes `drive/Home/` (the
+// volume root). By the time mkdir.Plan / rename.Plan see the path,
+// the offending segments are gone — so the planner-side check is
+// effectively dead code on the CLI surface. Worse, the
+// silently-traversed forms (`foo/../bar` → `bar`) can land bytes in a
+// directory the user didn't actually type, which we want to refuse.
+//
+// Scope: only the verbs that CREATE state from the path argument
+// (`files mkdir`, `files rename` source) call this — `ls` / `cat` /
+// `download` / `rm` / `cp` / `mv` / `share` keep the legacy
+// "path.Clean swallows them, backend sandboxes the rest" behavior so
+// existing workflows that rely on the POSIX-y collapse (e.g. shell
+// scripts using `${dir}/./foo`) aren't broken. The comment on
+// ParseFrontendPath ("Path traversal segments like ".." are NOT
+// stripped here — the backend applies its own sandboxing") documents
+// the AUTHOR'S intent for the legacy verbs; this function is the
+// stricter contract for the two CRUD verbs the user-facing rule
+// (`.` and `..` are reserved) targets.
+//
+// Validation runs on the RAW input string (trimmed of leading /
+// trailing '/') and inspects every '/'-separated segment, including
+// the `<fileType>` and `<extend>` slots — those are never legitimate
+// `.` / `..` either, and catching them here gives a uniform error
+// shape regardless of which segment the typo landed in.
+func ValidateNoDotSegments(raw string) error {
+	trimmed := strings.Trim(strings.TrimSpace(raw), "/")
+	if trimmed == "" {
+		return nil
+	}
+	for _, seg := range strings.Split(trimmed, "/") {
+		if seg == "." || seg == ".." {
+			return fmt.Errorf(
+				"path segment %q is a reserved name (`.` / `..` are blocked by the CLI's path-traversal blacklist): %s",
+				seg, raw)
+		}
+	}
+	return nil
+}
+
 // String renders the canonical front-end path as `<fileType>/<extend><subPath>`.
 // SubPath always starts with '/', so the output naturally looks like
 // "drive/Home/Documents" or "drive/Home/" for the root with a trailing slash.

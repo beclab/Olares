@@ -133,6 +133,13 @@ type smbMountOptions struct {
 	passwordStdin bool
 	node          string
 	jsonOut       bool
+	// noHistory, when true, suppresses the per-node SMB history
+	// lookup that would otherwise autofill missing -u / -p values
+	// from a previously-saved favorite. Set via --no-history. Useful
+	// when the saved credentials are known stale (e.g. the user just
+	// rotated the password and wants the new value to take effect
+	// without first running `smb history rm` + `smb history add`).
+	noHistory bool
 }
 
 // newSMBMountCommand: `files smb mount <smb-url>`.
@@ -160,26 +167,57 @@ func newSMBMountCommand(f *cmdutil.Factory) *cobra.Command {
                                     CLI prints them and exits non-zero
                                     so a script can re-target).
 
-Credentials:
+Credentials (resolved in priority order):
 
-    -u / --user            SMB username (required for non-anonymous shares)
+    1. Explicit flags    -u + (-p OR --password-stdin) wins for both fields.
+    2. Saved favorite    If ` + "`<smb-url>`" + ` matches an entry from
+                         ` + "`files smb history list`" + ` on the target node, its
+                         saved username / password autofill any flags the
+                         user did NOT pass. Mirrors LarePass's "Connect to
+                         Server" autofill behavior; suppress with --no-history.
+                         The saved password is ONLY used when the effective
+                         username matches the favorite's username — we do
+                         not lend one account's password to a different
+                         account.
+    3. Interactive       Last-resort prompt. When -u is also missing
+                         (and history didn't fill it in) the CLI
+                         first asks "SMB username (empty for
+                         anonymous):" — echoed, since the username
+                         isn't sensitive — then "SMB password:"
+                         without echo. TTY is required; non-TTY
+                         errors out at the password step so scripts
+                         fail loud instead of hanging.
+
+Flags:
+
+    -u / --user            SMB username (required for non-anonymous shares
+                           when no matching favorite exists)
     -p / --password        SMB password (echoed in shell history!)
     --password-stdin       read password from the first stdin line (preferred for scripts)
-    (none of the above)    interactive: prompts for password without echo
+    --no-history           skip the per-node history autofill; force
+                           explicit flags / interactive prompt only.
 
 After a successful mount the entry appears under
 ` + "`external/<node>/<entry>/`" + ` — confirm with ` + "`olares-cli files ls external/<node>/`" + `.
 
 Examples:
 
+    # Explicit credentials (highest precedence).
     olares-cli files smb mount //host.local/Public -u alice -p s3cret
+
+    # Reuse saved favorite — if //host.local/Public is in the per-node
+    # history with a username + password, no flags needed.
+    olares-cli files smb history add //host.local/Public -u alice -p s3cret
+    olares-cli files smb mount //host.local/Public
+    # → · using saved credentials from SMB history (user=alice)
+    # → ✓ mounted ...
 
     # CI-friendly: pipe the password.
     printf '%s' "$SMB_PASSWORD" | \
         olares-cli files smb mount //host.local/Public -u alice --password-stdin
 
-    # Interactive (TTY only).
-    olares-cli files smb mount //host.local/Public -u alice
+    # Interactive (TTY only), opting out of history autofill.
+    olares-cli files smb mount //host.local/Public -u alice --no-history
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -191,6 +229,7 @@ Examples:
 	cmd.Flags().BoolVar(&o.passwordStdin, "password-stdin", false, "read SMB password from the first stdin line (mutually exclusive with --password)")
 	cmd.Flags().StringVar(&o.node, "node", "", "target node (defaults to the first /api/nodes/ entry)")
 	cmd.Flags().BoolVar(&o.jsonOut, "json", false, "print code-300 share list as JSON (one path per line in default mode)")
+	cmd.Flags().BoolVar(&o.noHistory, "no-history", false, "skip the per-node SMB history autofill (force explicit flags / interactive prompt)")
 	return cmd
 }
 
@@ -213,11 +252,12 @@ func runSMBMount(
 		return errors.New("--password and --password-stdin are mutually exclusive")
 	}
 
-	password, err := resolveSMBPassword(o, in, out)
-	if err != nil {
-		return err
-	}
-
+	// Factory + HTTP client + node MUST be resolved before we can
+	// consult the per-node SMB history. We reorder these steps
+	// ahead of password resolution so the history-autofill branch
+	// can fill in missing credentials BEFORE we'd otherwise drop
+	// into the interactive prompt (which is the whole point of the
+	// feature — mirroring LarePass's "Connect to Server" autofill).
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {
 		return err
@@ -234,6 +274,31 @@ func runSMBMount(
 	node, err := resolveSMBNode(ctx, client, o.node)
 	if err != nil {
 		return reformatSMBHTTPErr(err, rp.OlaresID, fmt.Sprintf("mount %s", smbURL))
+	}
+
+	// History autofill — best-effort. A network blip / 401 on the
+	// history endpoint must not block the mount, so we swallow the
+	// error here (with a one-line warning) and fall through to the
+	// flag- / prompt-driven credential path. The downstream Mount
+	// call still propagates a real auth rejection if the user-
+	// provided creds turn out to be wrong.
+	historyPwHint := applySMBHistoryDefaults(ctx, client, out, node, smbURL, o)
+
+	// User prompt for the username MUST come before the password
+	// resolution, otherwise an interactive `mount //host/share` with
+	// no flags AND no history match silently defaults to
+	// (anonymous), then only prompts for the password — which is
+	// exactly the trap behind `code 500: Incorrect username or
+	// password` for shares that actually require a real account.
+	// This call no-ops in every non-interactive / already-resolved
+	// path so script flows are unaffected.
+	if err := promptSMBUserIfNeeded(o, historyPwHint, in, out); err != nil {
+		return err
+	}
+
+	password, err := resolveSMBPassword(o, in, out, historyPwHint)
+	if err != nil {
+		return err
 	}
 
 	displayNode := node
@@ -281,10 +346,216 @@ func runSMBMount(
 	return fmt.Errorf("mount returned unexpected code %d (message=%q)", res.Code, res.Message)
 }
 
-// resolveSMBPassword consolidates the three input modes. The
-// interactive branch goes through golang.org/x/term so the password
-// is not echoed.
-func resolveSMBPassword(o *smbMountOptions, in io.Reader, prompt io.Writer) (string, error) {
+// applySMBHistoryDefaults consults the per-node SMB favorites for an
+// entry that matches `smbURL` and uses its saved credentials to
+// fill any flags the user did NOT pass on the command line.
+//
+// Return value is the saved-password HINT — non-empty only when we
+// have a usable password to offer (history has one AND the effective
+// username matches the favorite's username). `resolveSMBPassword`
+// consumes this as a lower-precedence fallback than -p /
+// --password-stdin but higher than the interactive prompt, so the
+// "I already saved this in the favorites" case is one keystroke
+// instead of a re-typed password.
+//
+// As a side effect this function may MUTATE `o.user` when the user
+// did not pass -u — favorites are keyed by URL so adopting the
+// saved username is the only way to make the saved password
+// actually usable. The mount progress line later prints from
+// `o.user`, so the user sees which account is being attempted.
+//
+// Soft-fail policy: every failure mode below is logged with a single
+// `· note:` line and the function falls through (no error returned).
+// The downstream Mount call is the authoritative auth gate; a flaky
+// /api/smb_history/ endpoint must not block a perfectly valid
+// explicit-credentials mount.
+//
+//   - --no-history was passed   → skip entirely, no log.
+//   - history endpoint errors   → warning log, no password hint.
+//   - URL doesn't match anything → no log, no password hint
+//     (this is the routine "first time mounting this URL" case).
+//   - URL matches but the user passed an explicit -u that disagrees
+//     with the favorite's username → adopt no defaults, no password
+//     hint (lending creds across accounts is never safe).
+//   - URL matches but the favorite has no password → fill user only
+//     if needed; still falls through to the prompt / explicit -p.
+func applySMBHistoryDefaults(
+	ctx context.Context,
+	client *smbmount.Client,
+	out io.Writer,
+	node, smbURL string,
+	o *smbMountOptions,
+) string {
+	if o.noHistory {
+		return ""
+	}
+	entries, err := client.HistoryList(ctx, node)
+	if err != nil {
+		// One-line, non-blocking warning. Don't reformat through
+		// reformatSMBHTTPErr — the user still gets a working CLI
+		// even if history is unreachable; only surface enough info
+		// to diagnose later.
+		fmt.Fprintf(out, "  · note: SMB history unavailable (%v); proceeding without autofill\n", err)
+		return ""
+	}
+	var match *smbmount.HistoryEntry
+	for i := range entries {
+		if entries[i].URL == smbURL {
+			match = &entries[i]
+			break
+		}
+	}
+	if match == nil {
+		return ""
+	}
+
+	// Effective username: explicit -u wins; otherwise we adopt the
+	// favorite's. If the two disagree, the user is explicitly
+	// asking for a different account — don't quietly slip in the
+	// saved password (which belongs to a different identity).
+	if o.user != "" && match.Username != "" && o.user != match.Username {
+		fmt.Fprintf(out, "  · note: SMB history has saved credentials for user %q but -u %q was passed; using flags as-is\n",
+			match.Username, o.user)
+		return ""
+	}
+	if o.user == "" && match.Username != "" {
+		o.user = match.Username
+	}
+
+	// Password hint only when:
+	//   - the user did NOT pass -p / --password-stdin (those take
+	//     priority and we don't want to fight them);
+	//   - the favorite actually has a password to lend;
+	//   - the effective username equals the favorite's username
+	//     (so we're not lending creds across accounts — same
+	//     guard as the disagreement branch above, but for the
+	//     symmetric "favorite has user, user passed nothing" case
+	//     which the o.user == "" assignment just handled).
+	if o.password != "" || o.passwordStdin {
+		return ""
+	}
+	if match.Password == "" {
+		return ""
+	}
+	if match.Username != o.user {
+		return ""
+	}
+	fmt.Fprintf(out, "  · using saved credentials from SMB history (user=%s)\n", displayUser(o.user))
+	return match.Password
+}
+
+// readSMBUserPrompt reads a single line from `in` as the SMB username
+// (echoed — unlike password input, the username is not sensitive).
+//
+// We deliberately read byte-by-byte rather than via bufio.NewReader
+// so that when `in` IS os.Stdin in production, no read-ahead buffer
+// accidentally swallows bytes that the subsequent term.ReadPassword
+// call (on the same fd) needs to see. In normal canonical-mode TTY
+// input this is a theoretical concern — the terminal only delivers
+// bytes on Enter, one logical line at a time — but a pasted multi-
+// line clipboard payload could trip it; one byte at a time keeps the
+// contract simple and the fd boundary clean for ReadPassword.
+//
+// CR (`\r`) is stripped from the tail so a Windows-style pasted line
+// doesn't smuggle a literal `\r` into the wire username.
+func readSMBUserPrompt(in io.Reader, out io.Writer) (string, error) {
+	if _, err := fmt.Fprint(out, "SMB username (empty for anonymous): "); err != nil {
+		return "", err
+	}
+	var buf []byte
+	one := make([]byte, 1)
+	for {
+		n, err := in.Read(one)
+		if n > 0 {
+			if one[0] == '\n' {
+				break
+			}
+			buf = append(buf, one[0])
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", fmt.Errorf("read SMB username: %w", err)
+		}
+	}
+	return strings.TrimRight(string(buf), "\r"), nil
+}
+
+// promptSMBUserIfNeeded fills `o.user` from an interactive TTY
+// prompt when every cheaper credential source has failed. The
+// helper is a no-op in every other path so script flows are
+// untouched. Conditions for prompting (all must hold):
+//
+//   - `o.user == ""` — the user did NOT pass -u on the command line.
+//   - `o.password == ""` and `!o.passwordStdin` — there's no flag-
+//     supplied password either; we'd otherwise be heading for the
+//     interactive password prompt, so ALSO prompting for the
+//     username keeps the two halves of an SMB credential together
+//     in one interactive gesture.
+//   - `historyPwHint == ""` — applySMBHistoryDefaults didn't manage
+//     to lend us a saved password. (When it did, it also mutated
+//     o.user with the favorite's username, so this branch wouldn't
+//     have triggered anyway.)
+//   - stdin is a real TTY — non-TTY contexts cannot honor an
+//     interactive prompt; we preserve the historical "silently
+//     anonymous" behavior in that case rather than block on input
+//     that will never arrive.
+//
+// Without this helper the original bug surfaces: `mount //host/share`
+// with no flags AND no matching favorite silently mounts as
+// (anonymous), then prompts only for a password — every non-
+// anonymous share rejects with `code 500: Incorrect username or
+// password` and the user has no obvious place to inject the missing
+// username. With this helper they get a clear two-step
+// "SMB username: ... SMB password: ..." sequence instead.
+//
+// Empty submission (Enter without typing) is taken at face value as
+// the explicit "this share allows anonymous access" gesture — same
+// wire shape as the pre-helper default, but now an audible user
+// choice rather than an invisible one.
+func promptSMBUserIfNeeded(o *smbMountOptions, historyPwHint string, in io.Reader, out io.Writer) error {
+	if o.user != "" {
+		return nil
+	}
+	if o.password != "" || o.passwordStdin || historyPwHint != "" {
+		return nil
+	}
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return nil
+	}
+	user, err := readSMBUserPrompt(in, out)
+	if err != nil {
+		return err
+	}
+	o.user = user
+	return nil
+}
+
+// resolveSMBPassword consolidates the input modes for the mount
+// command. Priority order (matches the docstring on the cobra Long
+// description so users can map flag combinations 1:1 to behavior):
+//
+//  1. --password         explicit literal, used as-is
+//  2. --password-stdin   first line of stdin, CR/LF stripped
+//  3. historyPwHint      pre-resolved by applySMBHistoryDefaults;
+//                        non-empty only when the URL matched a
+//                        favorite AND the effective username matches
+//                        the favorite's username (no cross-account
+//                        lending). Passed in rather than re-fetched
+//                        here so this helper stays free of an
+//                        smbmount.Client dependency and easy to
+//                        unit-test in isolation.
+//  4. interactive        TTY-only prompt without echo via
+//                        golang.org/x/term — same UX as the
+//                        original implementation.
+//
+// Note on empty passwords: anonymous SMB shares accept an empty
+// password, so when --password is the literal "" we DO pass it
+// through. The interactive / stdin branches reject empty input
+// because those modes are explicit user gestures and an accidental
+// empty submit is almost always a mistake.
+func resolveSMBPassword(o *smbMountOptions, in io.Reader, prompt io.Writer, historyPwHint string) (string, error) {
 	if o.password != "" {
 		return o.password, nil
 	}
@@ -299,6 +570,9 @@ func resolveSMBPassword(o *smbMountOptions, in io.Reader, prompt io.Writer) (str
 			return "", errors.New("--password-stdin: password is empty")
 		}
 		return line, nil
+	}
+	if historyPwHint != "" {
+		return historyPwHint, nil
 	}
 	// Interactive — prompt without echo. Anonymous SMB shares are a
 	// thing too: an empty password is valid (LarePass also accepts
