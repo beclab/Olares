@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"os"
+	"sync"
 
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/gofiber/fiber/v2"
@@ -10,16 +12,23 @@ import (
 )
 
 const (
-	OverlayGatewayOn           = "on"
-	OverlayGatewayOff          = "off"
-	OverlayGatewayActivating   = "activating"
-	OverlayGatewayDeactivating = "deactivating"
+	OverlayGatewayOn              = "on"
+	OverlayGatewayOff             = "off"
+	OverlayGatewayActivating      = "activating"
+	OverlayGatewayDeactivating    = "deactivating"
+	OverlayGatewayDisableLockFile = "/var/run/overlay_gateway_disable.lock"
+	OverlayGatewayEnableLockFile  = "/var/run/overlay_gateway_enable.lock"
 )
+
+var disableOverlayGatewayError string = ""
+var enableOverlayGatewayError string = ""
+var operateOverlayGatewayMutex sync.Mutex
 
 type OverlayGatewaySupportedApp struct {
 	AppName   string `json:"app_name"`
 	Enabled   bool   `json:"enabled"`
 	SharedApp bool   `json:"shared_app"`
+	AppID     string `json:"app_id"`
 }
 
 type OverlayGatewayStatus struct {
@@ -27,6 +36,7 @@ type OverlayGatewayStatus struct {
 	Disable       bool                         `json:"disable"`
 	DisableReason string                       `json:"disable_reason"`
 	SupportedApps []OverlayGatewaySupportedApp `json:"supported_apps"`
+	ErrorMessage  string                       `json:"error_message"`
 }
 
 func (h *Handlers) GetOverlayGatewayStatus(ctx *fiber.Ctx) error {
@@ -35,13 +45,29 @@ func (h *Handlers) GetOverlayGatewayStatus(ctx *fiber.Ctx) error {
 		return h.ErrJSON(ctx, http.StatusBadRequest, "user is required")
 	}
 
-	s, err := h.getOverlayGatewayStatus(ctx)
+	s, err := h.getOverlayGatewayStatus(ctx.Context())
 	if err != nil {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
 
 	if s == nil {
 		return h.ErrJSON(ctx, http.StatusInternalServerError, "failed to get overlay gateway status")
+	}
+
+	if enableOverlayGatewayError != "" {
+		s.ErrorMessage = enableOverlayGatewayError
+	}
+	if disableOverlayGatewayError != "" {
+		s.ErrorMessage = disableOverlayGatewayError
+	}
+
+	if _, err := os.Stat(OverlayGatewayEnableLockFile); err == nil {
+		s.Status = OverlayGatewayActivating
+		return h.OkJSON(ctx, "success", s)
+	}
+	if _, err := os.Stat(OverlayGatewayDisableLockFile); err == nil {
+		s.Status = OverlayGatewayDeactivating
+		return h.OkJSON(ctx, "success", s)
 	}
 
 	if s.Status == OverlayGatewayOn {
@@ -68,34 +94,34 @@ func (h *Handlers) getOverlayGatewaySupportedApps(ctx context.Context, user stri
 			AppName:   app.AppName,
 			Enabled:   app.Enabled,
 			SharedApp: app.SharedApp,
+			AppID:     app.AppID,
 		})
 	}
 
 	return apps, nil
 }
 
-func (h *Handlers) getOverlayGatewayStatus(ctx *fiber.Ctx) (*OverlayGatewayStatus, error) {
+func (h *Handlers) getOverlayGatewayStatus(ctx context.Context) (*OverlayGatewayStatus, error) {
 	s := &OverlayGatewayStatus{
 		Status: OverlayGatewayOff,
 	}
 
-	s.Disable, s.DisableReason = h.isUnsupported(ctx.Context())
-	if s.Disable {
-		return s, nil
-	}
-
-	c, err := utils.FindBridgeConnection(ctx.Context())
+	c, err := utils.FindBridgeConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if c == nil {
+		s.Disable, s.DisableReason = h.isUnsupported(ctx)
 		return s, nil
 	}
 
 	if c.Active {
 		s.Status = OverlayGatewayOn
+		return s, nil
 	}
+
+	s.Disable, s.DisableReason = h.isUnsupported(ctx)
 
 	return s, nil
 }

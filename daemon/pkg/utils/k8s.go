@@ -614,6 +614,10 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 
 	var supportedApps []OverlayGatewaySupportedApp
 	for _, appMgr := range appMgrs.Items {
+		if appMgr.Spec.Config == "" {
+			continue
+		}
+
 		// check if the app is supported by the overlay gateway
 		var appConfig appcfg.ApplicationConfig
 		err := appcfg.GetAppConfig(&appMgr, &appConfig)
@@ -625,7 +629,7 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 		// check if the app is supported by the overlay gateway
 		if appConfig.OverlayGatewaySupported {
 			// check if the app is enabled
-			app, err := clientset.AppV1alpha1().Applications().Get(ctx, appMgr.Spec.AppName, metav1.GetOptions{})
+			app, err := clientset.AppV1alpha1().Applications().Get(ctx, appMgr.Name, metav1.GetOptions{})
 			if err != nil {
 				klog.Error("get app error, ", err)
 				continue
@@ -646,6 +650,7 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 				Owner:           app.Spec.Owner,
 				SharedApp:       sharedApp,
 				Namespace:       app.Spec.Namespace,
+				AppID:           app.Spec.Appid,
 			})
 		}
 
@@ -689,27 +694,25 @@ func RestartOverlayGatewaySupportedApps(ctx context.Context, apps []OverlayGatew
 	}
 
 	for _, app := range apps {
-		if app.Enabled {
-			// restart the app
-			pods, err := client.CoreV1().Pods(app.Namespace).List(ctx, metav1.ListOptions{})
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					continue
-				}
-				klog.Error("list pods error, ", err)
-				return err
+		// restart the app
+		pods, err := client.CoreV1().Pods(app.Namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
 			}
-
-			for _, pod := range pods.Items {
-				if pod.Labels["applications.app.bytetrade.io/macvlan-init"] == "true" {
-					err = client.CoreV1().Pods(app.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
-					if err != nil {
-						klog.Error("delete pod error, ", err)
-					}
-				}
-			}
-
+			klog.Error("list pods error, ", err)
+			return err
 		}
+
+		for _, pod := range pods.Items {
+			if pod.Labels["applications.app.bytetrade.io/macvlan-init"] == "true" {
+				err = client.CoreV1().Pods(app.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+				if err != nil {
+					klog.Error("delete pod error, ", err)
+				}
+			}
+		}
+
 	}
 
 	return nil

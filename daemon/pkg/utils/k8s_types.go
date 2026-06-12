@@ -29,4 +29,5 @@ type OverlayGatewaySupportedApp struct {
 	Owner           string `json:"owner"`
 	SharedApp       bool   `json:"shared_app"`
 	Namespace       string `json:"namespace"`
+	AppID           string `json:"app_id"`
 }
