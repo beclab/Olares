@@ -11,13 +11,14 @@ import (
 	"strings"
 )
 
-// LogicalPattern is a parsed <hash8>.*.<platformDomain> host pattern.
+// LogicalPattern is a parsed <prefix>.*.<platformDomain> host pattern. Prefix is
+// the shared-entrance hash8 or an application EntranceID label.
 type LogicalPattern struct {
-	Hash8          string
+	Prefix         string
 	PlatformDomain string
 }
 
-// IsLogicalPattern reports whether s has the <hash8>.*.<domain> shape.
+// IsLogicalPattern reports whether s has the <prefix>.*.<domain> shape.
 func IsLogicalPattern(s string) bool {
 	labels := strings.Split(s, ".")
 	return len(labels) >= 3 && labels[1] == "*"
@@ -30,8 +31,8 @@ func ParseLogicalPattern(s string) (LogicalPattern, bool) {
 		return LogicalPattern{}, false
 	}
 	labels := strings.Split(s, ".")
-	hash := strings.ToLower(strings.TrimSpace(labels[0]))
-	if !validHash8(hash) {
+	prefix := strings.ToLower(strings.TrimSpace(labels[0]))
+	if !validLogicalPrefix(prefix) {
 		return LogicalPattern{}, false
 	}
 	dom := strings.ToLower(strings.TrimSpace(strings.Join(labels[2:], ".")))
@@ -41,22 +42,29 @@ func ParseLogicalPattern(s string) (LogicalPattern, bool) {
 	if !validPlatformDomain(dom) {
 		return LogicalPattern{}, false
 	}
-	return LogicalPattern{Hash8: hash, PlatformDomain: dom}, true
+	return LogicalPattern{Prefix: prefix, PlatformDomain: dom}, true
 }
 
-func validHash8(s string) bool {
-	if len(s) != 8 {
+func validLogicalPrefix(s string) bool {
+	if s == "" || len(s) > 63 {
+		return false
+	}
+	if !isLogicalPrefixChar(rune(s[0])) {
+		return false
+	}
+	if len(s) > 1 && !isLogicalPrefixChar(rune(s[len(s)-1])) {
 		return false
 	}
 	for _, r := range s {
-		switch {
-		case r >= '0' && r <= '9':
-		case r >= 'a' && r <= 'f':
-		default:
+		if !(isLogicalPrefixChar(r) || r == '-') {
 			return false
 		}
 	}
 	return true
+}
+
+func isLogicalPrefixChar(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
 }
 
 func validPlatformDomain(s string) bool {
@@ -78,11 +86,11 @@ func validPlatformDomain(s string) bool {
 	return true
 }
 
-// HostRegexValue returns an anchored RE2 regex for (hash8, platformDomain)
+// HostRegexValue returns an anchored RE2 regex for (prefix, platformDomain)
 // with any RFC-1123 single-label viewer between them.
 func HostRegexValue(p LogicalPattern) string {
 	return fmt.Sprintf(`^%s\.[a-z0-9]([-a-z0-9]*[a-z0-9])?\.%s$`,
-		regexp.QuoteMeta(p.Hash8), regexp.QuoteMeta(p.PlatformDomain))
+		regexp.QuoteMeta(p.Prefix), regexp.QuoteMeta(p.PlatformDomain))
 }
 
 // HostHeaderMatch returns the Gateway API Host header match for a logical
