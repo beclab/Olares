@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -65,6 +67,7 @@ func runGet(ctx context.Context, f *cmdutil.Factory, username, outputRaw string)
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	username = strings.TrimSpace(username)
 	if username == "" {
 		return fmt.Errorf("username is required")
 	}
@@ -79,22 +82,60 @@ func runGet(ctx context.Context, f *cmdutil.Factory, username, outputRaw string)
 	}
 
 	var u userInfo
-	path := "/api/users/" + username
+	path := userRecordPath(username)
 	if err := decodeObjectResult(ctx, pc.Doer, path, &u); err != nil {
 		return err
+	}
+
+	// Mirror SPA UserInfoPage: only surface a Wizard URL while the user has
+	// not yet completed activation (wizard_complete=false) and is not in the
+	// terminal Failed state. The URL itself comes from
+	// GET /api/users/<name>/status (Address.Wizard), the same source the SPA
+	// polls during create.
+	wizardLookupErr := ""
+	if !u.WizardComplete && !strings.EqualFold(strings.TrimSpace(u.State), "Failed") {
+		statusPath := userStatusPath(username)
+		var st accountModifyStatus
+		if err := decodeObjectResult(ctx, pc.Doer, statusPath, &st); err != nil {
+			// Non-fatal: keep printing the user record. Surface the reason
+			// on stderr in table mode so the operator knows why the row is
+			// "unavailable"; in JSON mode stay silent (the absent
+			// wizard_url field already conveys it).
+			wizardLookupErr = err.Error()
+		} else if host := strings.TrimSpace(st.Address.Wizard); host != "" {
+			u.WizardURL = "https://" + strings.TrimPrefix(strings.TrimPrefix(host, "https://"), "http://")
+		}
 	}
 
 	switch format {
 	case FormatJSON:
 		return printJSON(os.Stdout, u)
 	default:
+		if wizardLookupErr != "" {
+			fmt.Fprintf(os.Stderr, "[get user] wizard URL lookup failed: %s\n", wizardLookupErr)
+		}
 		return renderUserDetail(os.Stdout, u)
 	}
+}
+
+func userRecordPath(username string) string {
+	return "/api/users/" + url.PathEscape(username)
+}
+
+func userStatusPath(username string) string {
+	return userRecordPath(username) + "/status"
 }
 
 // renderUserDetail prints a 2-column "Field: Value" view rather than the
 // list table — single-record output reads better as labeled rows than as
 // a 1-row table.
+//
+// The Wizard URL row mirrors the SPA's UserInfoPage rules: only shown
+// while the user is still in onboarding (wizard_complete=false and
+// state!=Failed). Once the user activates, the URL is no longer relevant
+// and the row is omitted entirely. If we should have a URL but the
+// /status lookup yielded nothing, surface a hint rather than a dash so
+// the operator knows to retry.
 func renderUserDetail(w io.Writer, u userInfo) error {
 	rows := [][2]string{
 		{"Name", nonEmpty(u.Name)},
@@ -106,12 +147,21 @@ func renderUserDetail(w io.Writer, u userInfo) error {
 		{"Terminus Name", nonEmpty(u.TerminusName)},
 		{"Zone", nonEmpty(u.Zone)},
 		{"Wizard Complete", boolStr(u.WizardComplete)},
-		{"Memory Limit", nonEmpty(u.MemoryLimit)},
-		{"CPU Limit", nonEmpty(u.CpuLimit)},
-		{"Created", fmtUserTime(u.CreationTimestamp)},
-		{"Last Login", fmtUserTimePtr(u.LastLoginTime)},
-		{"UID", nonEmpty(u.UID)},
 	}
+	if !u.WizardComplete && !strings.EqualFold(strings.TrimSpace(u.State), "Failed") {
+		if u.WizardURL != "" {
+			rows = append(rows, [2]string{"Wizard URL", u.WizardURL})
+		} else {
+			rows = append(rows, [2]string{"Wizard URL", "(unavailable; retry after provisioning finishes)"})
+		}
+	}
+	rows = append(rows,
+		[2]string{"Memory Limit", nonEmpty(u.MemoryLimit)},
+		[2]string{"CPU Limit", nonEmpty(u.CpuLimit)},
+		[2]string{"Created", fmtUserTime(u.CreationTimestamp)},
+		[2]string{"Last Login", fmtUserTimePtr(u.LastLoginTime)},
+		[2]string{"UID", nonEmpty(u.UID)},
+	)
 	for _, r := range rows {
 		if _, err := fmt.Fprintf(w, "%-17s %s\n", r[0]+":", r[1]); err != nil {
 			return err

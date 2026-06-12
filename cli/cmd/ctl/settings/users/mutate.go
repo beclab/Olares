@@ -29,9 +29,9 @@ func NewCreateCommand(f *cmdutil.Factory) *cobra.Command {
 		description   string
 		email         string
 		output        string
-		noWait        bool
-		provisionTO   time.Duration
-		provisionPoll time.Duration
+		watch         bool
+		watchTimeout  time.Duration
+		watchInterval time.Duration
 	)
 	cmd := &cobra.Command{
 		Use:   "create <username>",
@@ -46,8 +46,10 @@ With --defaults the CLI uses the same preset as the SPA form: role normal
 
 The initial password is always auto-generated with the same rules as Termipass.
 
-The CLI verifies the new account identity first, then waits until provisioning
-finishes (unless --no-wait), then prints Olares ID, one-time password, and Wizard URL.
+By default the CLI returns once user-service accepts the create request and
+prints the Olares ID and one-time password immediately. Pass -w/--watch to
+block until the user reaches Created and the Wizard URL is available — the
+opt-in shape matches "olares-cli market <verb> --watch".
 
 Human-oriented table mode (default) prints short progress hints to stderr; use
 --output json if you want a quiet stderr for scripting.
@@ -109,17 +111,19 @@ Not the same as "olares-cli user create" (kube / cluster API).
 				return err
 			}
 			return preflight.Wrap(ctx, f, runCreate(ctx, f, createParams{
-				name:            nameArg,
-				ownerRole:       ownerRole,
-				cpuLimit:        cpuLimit,
-				memoryLimit:     memWire,
-				displayName:     displayName,
-				description:     description,
-				email:           email,
-				format:          format,
-				noWaitProvision: noWait,
-				provisionTO:     provisionTO,
-				provisionPoll:   provisionPoll,
+				name:        nameArg,
+				ownerRole:   ownerRole,
+				cpuLimit:    cpuLimit,
+				memoryLimit: memWire,
+				displayName: displayName,
+				description: description,
+				email:       email,
+				format:      format,
+				watch: watchOptions{
+					watch:    watch,
+					timeout:  watchTimeout,
+					interval: watchInterval,
+				},
 			}), "create user")
 		},
 	}
@@ -135,21 +139,32 @@ Not the same as "olares-cli user create" (kube / cluster API).
 	_ = cmd.Flags().MarkHidden("description")
 	cmd.Flags().StringVar(&email, "email", "", "email")
 	_ = cmd.Flags().MarkHidden("email")
-	cmd.Flags().BoolVar(&noWait, "no-wait", false, "do not poll until Created; print password immediately without wizard URL")
-	cmd.Flags().DurationVar(&provisionTO, "provision-timeout", 30*time.Minute, "max time to wait for provisioning to finish")
-	cmd.Flags().DurationVar(&provisionPoll, "provision-poll", 4*time.Second, "how often to check provisioning progress while waiting")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false,
+		"block until the user reaches Created (or Failed) before exiting; same opt-in shape as 'olares-cli market <verb> --watch'")
+	cmd.Flags().DurationVar(&watchTimeout, "watch-timeout", 15*time.Minute,
+		"maximum total time to wait when --watch is set (default 15m, matches market)")
+	cmd.Flags().DurationVar(&watchInterval, "watch-interval", 2*time.Second,
+		"polling interval for /status when --watch is set (default 2s, matches market)")
 	addOutputFlag(cmd, &output)
 
 	cmd.Flags().SortFlags = false
 	return cmd
 }
 
+// watchOptions is the per-command knob bundle for the opt-in `--watch`
+// polling mode. Mirrors cli/cmd/ctl/market/options.go addWatchFlags so
+// both surfaces present the same flag triple to operators.
+type watchOptions struct {
+	watch    bool
+	timeout  time.Duration
+	interval time.Duration
+}
+
 type createParams struct {
 	name, ownerRole, cpuLimit, memoryLimit string
 	displayName, description, email        string
 	format                                 Format
-	noWaitProvision                        bool
-	provisionTO, provisionPoll             time.Duration
+	watch                                  watchOptions
 }
 
 // accountModifyStatus mirrors user-service/account_status proxied body
@@ -223,17 +238,23 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, p createParams) error {
 		createdName = strings.TrimSpace(resp.Name)
 	}
 
-	if humanProgress && !p.noWaitProvision {
-		q := formatDurationBrief(p.provisionPoll)
-		tmax := formatDurationBrief(p.provisionTO)
+	if humanProgress && p.watch.watch {
+		q := formatDurationBrief(p.watch.interval)
+		tmax := formatDurationBrief(p.watch.timeout)
 		fmt.Fprintf(os.Stderr, "[create user] create accepted for %q: waiting for provisioning to finish (check every %s, timeout %s) …\n",
 			createdName, q, tmax)
 	}
 
-	var wizardHost string
-	if !p.noWaitProvision {
-		st, err := waitForUserCreated(ctx, pc.Doer, createdName, humanProgress,
-			p.provisionPoll, p.provisionTO)
+	var (
+		wizardHost  string
+		finalStatus string
+	)
+	if p.watch.watch {
+		st, err := waitForUserState(ctx, pc.Doer, userWatchOptions{
+			Timeout:  p.watch.timeout,
+			Interval: p.watch.interval,
+			Progress: humanProgress,
+		}, newUserWatchTarget(userWatchCreate, createdName))
 		if err != nil {
 			return err
 		}
@@ -241,6 +262,7 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, p createParams) error {
 			fmt.Fprintf(os.Stderr, "[create user] provisioning finished; user is ready.\n")
 		}
 		wizardHost = strings.TrimSpace(st.Address.Wizard)
+		finalStatus = strings.TrimSpace(st.Status)
 	}
 
 	wizardURL := ""
@@ -253,136 +275,21 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, p createParams) error {
 		out := map[string]string{
 			"name":              createdName,
 			"original_password": rawPWD,
-			"status":            "Created",
 		}
-		if wizardURL != "" {
-			out["wizard_url"] = wizardURL
-		} else if p.noWaitProvision {
+		if p.watch.watch {
+			out["status"] = "Created"
+			if finalStatus != "" {
+				out["final_status"] = finalStatus
+			}
+			if wizardURL != "" {
+				out["wizard_url"] = wizardURL
+			}
+		} else {
 			out["status"] = "Accepted"
-			out["note"] = "provisioning was not waited on; use \"settings users get <name>\" or run without --no-wait to wait until the new user is fully ready"
 		}
 		return printJSON(os.Stdout, out)
 	default:
-		return printCreateSuccessTTY(os.Stdout, createdName, rawPWD, wizardURL, p.noWaitProvision)
-	}
-}
-
-func waitForUserCreated(ctx context.Context, d Doer, username string, progress bool, poll, timeout time.Duration) (*accountModifyStatus, error) {
-	if poll <= 0 {
-		poll = 4 * time.Second
-	}
-	if timeout <= 0 {
-		timeout = 30 * time.Minute
-	}
-	path := "/api/users/" + url.PathEscape(username) + "/status"
-	deadline := time.Now().Add(timeout)
-	lastStatus := ""
-	for {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		var st accountModifyStatus
-		if err := decodeObjectResult(ctx, d, path, &st); err != nil {
-			return nil, err
-		}
-		lastStatus = strings.TrimSpace(st.Status)
-		switch lastStatus {
-		case "Created":
-			return &st, nil
-		case "Failed":
-			msg := strings.TrimSpace(st.Message)
-			if msg == "" {
-				msg = "upstream reported Failed with no message"
-			}
-			return nil, fmt.Errorf("user provisioning failed: %s", msg)
-		case "Deleted":
-			return nil, fmt.Errorf("user %q disappeared while provisioning (status Deleted)", username)
-		default:
-			if time.Now().After(deadline) {
-				return nil, fmt.Errorf("timeout waiting for user %q to reach Created (last status=%q)", username, lastStatus)
-			}
-			if progress {
-				label := lastStatus
-				if label == "" {
-					label = "…"
-				}
-				fmt.Fprintf(os.Stderr, "[create user] provisioning in progress for %q (lifecycle state reported by server: %s); next check in %s …\n",
-					username, label, formatDurationBrief(poll))
-			}
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(poll):
-			}
-		}
-	}
-}
-
-func waitForUserDeleted(ctx context.Context, d Doer, username string, progress bool, poll, timeout time.Duration) (*accountModifyStatus, error) {
-	if poll <= 0 {
-		poll = 4 * time.Second
-	}
-	if timeout <= 0 {
-		timeout = 30 * time.Minute
-	}
-	path := "/api/users/" + url.PathEscape(username) + "/status"
-	deadline := time.Now().Add(timeout)
-	lastStatus := ""
-	for {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		var st accountModifyStatus
-		err := decodeObjectResult(ctx, d, path, &st)
-		if err != nil {
-			if httpStatusFromErrHint(err, 404) {
-				st.Name = username
-				st.Status = "Deleted"
-				return &st, nil
-			}
-			if httpStatusFromErrHint(err, 401) || httpStatusFromErrHint(err, 403) {
-				return nil, err
-			}
-			if time.Now().After(deadline) {
-				return nil, fmt.Errorf(
-					"timeout waiting for user %q to reach Deleted while polling status (last known status=%q): %w",
-					username, lastStatus, err)
-			}
-			if progress {
-				fmt.Fprintf(os.Stderr,
-					"[delete user] transient status poll error (%v); retry in %s …\n",
-					err, formatDurationBrief(poll))
-			}
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(poll):
-			}
-			continue
-		}
-
-		lastStatus = strings.TrimSpace(st.Status)
-		switch lastStatus {
-		case "Deleted":
-			return &st, nil
-		default:
-			if time.Now().After(deadline) {
-				return nil, fmt.Errorf("timeout waiting for user %q to reach Deleted (last status=%q)", username, lastStatus)
-			}
-			if progress {
-				label := lastStatus
-				if label == "" {
-					label = "…"
-				}
-				fmt.Fprintf(os.Stderr, "[delete user] removal in progress for %q (lifecycle state reported by server: %s); next check in %s …\n",
-					username, label, formatDurationBrief(poll))
-			}
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(poll):
-			}
-		}
+		return printCreateSuccessTTY(os.Stdout, createdName, rawPWD, wizardURL, p.watch.watch)
 	}
 }
 
@@ -406,15 +313,23 @@ func formatDurationBrief(d time.Duration) string {
 	return s
 }
 
-func printCreateSuccessTTY(w io.Writer, username, rawPassword, wizardURL string, noWait bool) error {
+// printCreateSuccessTTY renders the human-readable summary after a create
+// request. `watched` reflects whether the caller blocked on /status until
+// Created (-w/--watch); when false the Wizard URL was deliberately not
+// fetched and the user must re-query later.
+func printCreateSuccessTTY(w io.Writer, username, rawPassword, wizardURL string, watched bool) error {
 	buf := strings.Builder{}
-	buf.WriteString("User had been created.\n\n")
+	if watched {
+		buf.WriteString("User had been created.\n\n")
+	} else {
+		buf.WriteString("Create request accepted; provisioning continues asynchronously.\n\n")
+	}
 	fmt.Fprintf(&buf, "Olares ID:          %s\n", username)
 	fmt.Fprintf(&buf, "Original password:  %s\n", rawPassword)
 	if wizardURL != "" {
 		fmt.Fprintf(&buf, "Wizard URL:         %s\n", wizardURL)
-	} else if noWait {
-		buf.WriteString("Wizard URL:         (not fetched; --no-wait — run \"settings users get <name>\" after provisioning finishes)\n")
+	} else if !watched {
+		buf.WriteString("Wizard URL:         (not fetched; pass --watch to wait until provisioning completes, then re-run with --watch or use \"olares-cli settings users get <name>\")\n")
 	} else {
 		buf.WriteString("Wizard URL:         (empty — check status later)\n")
 	}
@@ -428,9 +343,9 @@ func NewDeleteCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		skipConfirm   bool
 		output        string
-		noWait        bool
-		deletePoll    time.Duration
-		deleteTimeout time.Duration
+		watch         bool
+		watchTimeout  time.Duration
+		watchInterval time.Duration
 	)
 	cmd := &cobra.Command{
 		Use:   "delete <username>",
@@ -440,9 +355,10 @@ func NewDeleteCommand(f *cmdutil.Factory) *cobra.Command {
 By default type the whole word yes when prompted (like ssh). Use --yes only
 for scripting (skip confirmation).
 
-By default the CLI waits until removal is fully reported as finished (same pacing
-as Termipass); use --no-wait to exit as soon as the stop request is accepted
-(the account may still disappear from the list asynchronously).
+By default the CLI returns once user-service accepts the DELETE request (the
+row may still appear briefly in "users list" while controllers tear it down).
+Pass -w/--watch to block until removal is fully reported as finished — same
+opt-in shape as "olares-cli market <verb> --watch".
 
 Use --output json when you want a quiet stderr stream for scripting.
 `,
@@ -464,32 +380,83 @@ Use --output json when you want a quiet stderr stream for scripting.
 				username:    u,
 				skipConfirm: skipConfirm,
 				format:      format,
-				noWaitPoll:  noWait,
-				poll:        deletePoll,
-				timeout:     deleteTimeout,
+				watch: watchOptions{
+					watch:    watch,
+					timeout:  watchTimeout,
+					interval: watchInterval,
+				},
 			}), "delete user")
 		},
 	}
 	cmd.Flags().BoolVar(&skipConfirm, "yes", false, "skip interactive confirmation (dangerous)")
-	cmd.Flags().BoolVar(&noWait, "no-wait", false, "after delete is accepted, do not wait for removal to finish")
-	cmd.Flags().DurationVar(&deletePoll, "delete-poll", 4*time.Second, "how often to check whether removal has finished while waiting")
-	cmd.Flags().DurationVar(&deleteTimeout, "delete-timeout", 30*time.Minute, "max time to wait for removal to finish after delete is accepted")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false,
+		"block until the user reaches Deleted before exiting; same opt-in shape as 'olares-cli market <verb> --watch'")
+	cmd.Flags().DurationVar(&watchTimeout, "watch-timeout", 15*time.Minute,
+		"maximum total time to wait when --watch is set (default 15m, matches market)")
+	cmd.Flags().DurationVar(&watchInterval, "watch-interval", 2*time.Second,
+		"polling interval for /status when --watch is set (default 2s, matches market)")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
 type deleteParams struct {
-	username      string
-	skipConfirm   bool
-	format        Format
-	noWaitPoll    bool
-	poll, timeout time.Duration
+	username    string
+	skipConfirm bool
+	format      Format
+	watch       watchOptions
+}
+
+func userIsOwner(info *userInfo) bool {
+	if info == nil {
+		return false
+	}
+	for _, r := range info.Roles {
+		if strings.TrimSpace(r) == "owner" {
+			return true
+		}
+	}
+	return false
+}
+
+func fetchUserForDelete(ctx context.Context, d Doer, username string) (*userInfo, error) {
+	path := "/api/users/" + url.PathEscape(username)
+	var info userInfo
+	if err := decodeObjectResult(ctx, d, path, &info); err != nil {
+		return nil, err
+	}
+	return &info, nil
+}
+
+func validateUserDeletable(username string, info *userInfo) error {
+	if info == nil {
+		return fmt.Errorf("user %q was not found", username)
+	}
+	if userIsOwner(info) {
+		return fmt.Errorf("cannot delete user '%s' with role '%s' ", username, "owner")
+	}
+	if strings.TrimSpace(info.State) == "Deleting" {
+		return fmt.Errorf("user %q is already being deleted", username)
+	}
+	return nil
 }
 
 func runDelete(ctx context.Context, f *cmdutil.Factory, p deleteParams) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	info, err := fetchUserForDelete(ctx, pc.Doer, p.username)
+	if err != nil {
+		return err
+	}
+	if err := validateUserDeletable(p.username, info); err != nil {
+		return err
+	}
+
 	if !p.skipConfirm {
 		fmt.Fprintf(os.Stderr, "This will permanently delete Olares user %q.\n"+
 			"Type 'yes' to continue: ", p.username)
@@ -502,10 +469,6 @@ func runDelete(ctx context.Context, f *cmdutil.Factory, p deleteParams) error {
 		}
 	}
 
-	pc, err := prepare(ctx, f)
-	if err != nil {
-		return err
-	}
 	path := "/api/users/" + url.PathEscape(p.username)
 	var resp struct {
 		Name string `json:"name"`
@@ -519,20 +482,29 @@ func runDelete(ctx context.Context, f *cmdutil.Factory, p deleteParams) error {
 	}
 
 	humanProgress := p.format != FormatJSON
-	if humanProgress && p.noWaitPoll {
-		fmt.Fprintf(os.Stderr, "[delete user] not waiting for cleanup to finish (--no-wait); \"%s\" may still appear in the list briefly.\n",
+	if humanProgress && !p.watch.watch {
+		fmt.Fprintf(os.Stderr, "[delete user] delete accepted for %q; not waiting for cleanup (pass --watch to block until Deleted).\n",
 			deletedName)
 	}
-	if humanProgress && !p.noWaitPoll {
+	if humanProgress && p.watch.watch {
 		fmt.Fprintf(os.Stderr, "[delete user] delete accepted for %q: waiting until removal finishes (check every %s, timeout %s) …\n",
-			deletedName, formatDurationBrief(p.poll), formatDurationBrief(p.timeout))
+			deletedName, formatDurationBrief(p.watch.interval), formatDurationBrief(p.watch.timeout))
 	}
-	if !p.noWaitPoll {
-		if _, err := waitForUserDeleted(ctx, pc.Doer, deletedName, humanProgress, p.poll, p.timeout); err != nil {
+	var finalStatus string
+	if p.watch.watch {
+		st, err := waitForUserState(ctx, pc.Doer, userWatchOptions{
+			Timeout:  p.watch.timeout,
+			Interval: p.watch.interval,
+			Progress: humanProgress,
+		}, newUserWatchTarget(userWatchDelete, deletedName))
+		if err != nil {
 			return err
 		}
 		if humanProgress {
 			fmt.Fprintf(os.Stderr, "[delete user] removal finished.\n")
+		}
+		if st != nil {
+			finalStatus = strings.TrimSpace(st.Status)
 		}
 	}
 
@@ -541,20 +513,26 @@ func runDelete(ctx context.Context, f *cmdutil.Factory, p deleteParams) error {
 		out := map[string]string{
 			"name": deletedName,
 		}
-		if p.noWaitPoll {
-			out["status"] = "Deleting"
-			out["note"] = "delete was accepted only; removal may still finish in the background — re-run this command without --no-wait to wait until removal completes"
-		} else {
+		if p.watch.watch {
 			out["status"] = "Deleted"
+			if finalStatus != "" {
+				out["final_status"] = finalStatus
+			}
+		} else {
+			out["status"] = "Accepted"
 		}
 		return printJSON(os.Stdout, out)
 	default:
 		nameOut := deletedName
-		if nameOut != "" {
+		if nameOut == "" {
+			_, err := fmt.Fprintln(os.Stdout, "delete request accepted")
+			return err
+		}
+		if p.watch.watch {
 			_, err := fmt.Fprintf(os.Stdout, "deleted user %q\n", nameOut)
 			return err
 		}
-		_, err := fmt.Fprintln(os.Stdout, "user deleted")
+		_, err := fmt.Fprintf(os.Stdout, "delete request accepted for %q (still removing asynchronously; pass --watch next time to block until Deleted)\n", nameOut)
 		return err
 	}
 }

@@ -1,7 +1,7 @@
 ---
 name: olares-settings
 version: 1.1.0
-description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/) plus a small set of mutating verbs that have been smoke-verified on this release. Read-only surface: users / appearance / apps (list/get/entrances list/env get/domain get/policy get) / integration / vpn (devices list / devices routes / acl all / acl get / ssh status / subroutes status / public-domain-policy get) / network (reverse-proxy get / frp list / external-network get / hosts-file get) / gpu / video / search (status / excludes list / dirs list) / backup (plans list / snapshots list) / restore (plans list) / advanced (status / registries list / images list / env system list / env user list) + a non-canonical `me` self-service tree (whoami / version / check-update / sso list). Verified mutating surface: appearance language set (with --force escape hatch); search rebuild; integration accounts add awss3|tencent + accounts delete; vpn ssh enable/disable; vpn acl add/remove. Covers role caching (owner / admin / normal) on the active profile, the wired soft-preflight helpers, the `-o table | json` output convention, and the upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps with `[]servicePort` ports, raw Headscale JSON on /headscale/* with string `route.id`, BFL envelope on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images). Verbs that ship in the binary but did NOT pass (or were not exercised by) the latest smoke run are catalogued in cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md — treat them as experimental until they appear in a green smoke report. Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, VPN ACLs, language preference, or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
+description: "olares-cli settings command tree: profile-based reads of every section the SPA's Settings page exposes (https://docs.olares.com/manual/olares/settings/) plus a small set of mutating verbs that have been smoke-verified on this release. Read-only surface: users / appearance / apps (list/get/entrances list/env get/domain get/policy get) / integration / vpn (devices list / devices routes / acl all / acl get / ssh status / subroutes status / public-domain-policy get) / network (reverse-proxy get / frp list / hosts-file get) / gpu / video / search (status / dirs list) / backup (plans list / snapshots list) / restore (plans list) / advanced (status / registries list / images list / env system list / env user list) + a non-canonical `me` self-service tree (whoami / version / check-update / sso list). Verified mutating surface: appearance language set (with --force escape hatch); search rebuild; integration accounts add awss3|tencent + accounts delete; vpn ssh enable/disable; vpn acl add/remove. Covers role caching (owner / admin / normal) on the active profile, the wired soft-preflight helpers, the `-o table | json` output convention, and the upstream wire formats the CLI normalizes (BFL envelope on /api/*, app-service ListResult on /api/users-v2 + /api/myapps with `[]servicePort` ports, raw Headscale JSON on /headscale/* with string `route.id`, BFL envelope on /apis/backup/v1/*, terminusd-proxied envelopes for advanced status / containerd registries / images). Verbs that ship in the binary but did NOT pass (or were not exercised by) the latest smoke run are catalogued in cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md — treat them as experimental until they appear in a green smoke report. Use whenever the user mentions Olares Settings, Settings UI, the SPA Settings page, role / owner / admin / normal, integration accounts, SSO tokens, GPU mode, search index, backup plans, restore plans, containerd registries, VPN ACLs, language preference, or wants to know what `olares-cli settings me whoami` / `settings users me` / `profile whoami` actually print."
 metadata:
   requires:
     bins: ["olares-cli"]
@@ -72,8 +72,8 @@ Floor assignment mirrors the SPA's `apps/.../stores/settings/admin.ts:menus` + p
 
 | Floor | Verbs |
 |---|---|
-| **Admin (owner / admin)** | `users list`, `users get`, `users create`, `users delete`; `network reverse-proxy get`, `network frp list`, `network external-network get`, `network hosts-file get`; `gpu list`; `advanced status`, `advanced registries list`, `advanced images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
-| **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list`, `vpn devices routes <id>`; `appearance get`, `appearance language set`; `integration accounts list/list-by-type/get/add/delete`; `video config get`; `search status`, `search excludes list`, `search dirs list`, `search rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env system list`, `advanced env user list` |
+| **Admin (owner / admin)** | `users list`, `users get`, `users create`, `users delete`; `network reverse-proxy get`, `network frp list`, `network hosts-file get`; `gpu list`; `advanced status`, `advanced registries list`, `advanced images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
+| **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list`, `vpn devices routes <id>`; `appearance get`, `appearance language set`; `integration accounts list/list-by-type/get/add/delete`; `video config get`; `search status`, `search dirs list`, `search rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env system list`, `advanced env user list` |
 
 Practical implications for the agent:
 
@@ -100,12 +100,12 @@ Different upstreams return JSON in different envelopes. Each area has its own `c
 | `apps` | `/api/myapps` | BFL envelope, `appInfo.ports` decoded as `[]servicePort` (5-field object array: name / host / port / exposePort / protocol) | `apps get <name>` filters the list client-side because there's no per-app endpoint; honours `--all` / `--show-system` to mirror the SPA's filters |
 | `vpn` | `/headscale/machine`, `/headscale/machine/:id/routes` | Raw Headscale JSON (no envelope), `route.id` is `string` | SPA hits `<SettingsURL>/headscale/...` (settings nginx, not desktop) without `/api` prefix |
 | `vpn` | `/api/launcher-public-domain-access-policy` | Already-unwrapped BFL inner data (`{deny_all: 0|1}`) | user-service strips the envelope |
-| `network` | `/api/reverse-proxy`, `/api/external-network`, `/api/frp-servers`, `/api/ssl/task-state`, `/api/system/hosts-file` | BFL envelope (`doGetEnvelope`) | hosts-file goes through terminusd → olaresd; user-service falls back to `X-Authorization` since the CLI doesn't yet JWS-sign reads |
+| `network` | `/api/reverse-proxy`, `/api/frp-servers`, `/api/ssl/task-state`, `/api/system/hosts-file` | BFL envelope (`doGetEnvelope`) | hosts-file goes through terminusd → olaresd; user-service falls back to `X-Authorization` since the CLI doesn't yet JWS-sign reads |
 | `appearance` | `/api/wallpaper/config/system` | BFL envelope | language + locale only; theme + wallpaper upload stay in the SPA |
 | `integration` | `/api/account/all`, `/api/account/:type/:name` | BFL envelope | `accounts list` returns `accountMini`; `accounts get` returns `accountFull` (includes `raw_data`) |
 | `gpu` | `/api/gpu/list` | BFL envelope (HAMI behind it) | distinct from the top-level `olares-cli gpu` (kubeconfig-driven, cluster-wide) |
 | `video` | `/api/files/video/config` | BFL envelope, but inner data is decoded as `json.RawMessage` (`doGetEnvelopeRaw`) | Schema is provider-versioned; `--output table` collapses to a one-line summary |
-| `search` | `/api/search/task/stats/merged`, `/api/search/monitorsetting/exclude-pattern`, `/api/search/monitorsetting/include-directory/full_content` | BFL envelope | `status` returns a string, `excludes list` / `dirs list` return `[]string` |
+| `search` | `/api/search/task/stats/merged`, `/api/search/monitorsetting/include-directory/full_content` | BFL envelope | `status` returns a string, `dirs list` returns `[]string` |
 | `advanced` | `/api/system/status`, `/api/containerd/registries`, `/api/containerd/images?registry=<n>`, `POST /api/command/collectLogs` | BFL envelope (terminusd → olaresd `returnSucceed`) | `status` table view is a summary; `--output json` for the full struct. `POST /api/command/collectLogs` is for the **Terminus SPA Developer UI** (polls `/api/system/status`); it is **not** a `settings advanced` CLI verb — use top-level **`olares-cli logs`** for CLI log collection |
 | `backup` | `/apis/backup/v1/plans/backup`, `/apis/backup/v1/plans/backup/:id/snapshots` | BFL envelope; **different ingress prefix** (`/apis/backup/v1`, not `/api`) | The SPA's axios global interceptor unwraps `data.data`, which is why upstream code reads `{backups: [...]}` directly |
 | `restore` | `/apis/backup/v1/plans/restore` | BFL envelope; same `/apis/backup/v1` prefix | mirrors `settings backup plans list` shape |
@@ -132,14 +132,41 @@ olares-cli settings me sso list                   # SSO tokens currently bound t
 ```bash
 olares-cli settings users list                    # roster, server-side role-filtered
 olares-cli settings users get alice               # single user record
-olares-cli settings users create bob --defaults                                  # SPA preset: normal, 1 CPU, 4G memory; auto password; DID precheck; waits for provisioning
-olares-cli settings users create alice --role admin --cpu 2 --memory-gb 8 --no-wait   # explicit quota; skip provisioning wait for automation
-olares-cli settings users delete bob              # after DELETE, polls /status until Deleted (like Termipass); type yes or use --yes
-olares-cli settings users delete bob --yes --no-wait   # automation: no prompt, exit right after DELETE (user may still be Deleting in list)
+olares-cli settings users create bob --defaults                                  # SPA preset: normal, 1 CPU, 4G memory; auto password; DID precheck; accepted-then-exit
+olares-cli settings users create bob --defaults --watch                          # synchronous: block until provisioning reaches Created and the Wizard URL is materialized
+olares-cli settings users create alice --role admin --cpu 2 --memory-gb 8        # explicit quota; default accepted-then-exit (use --watch to wait)
+olares-cli settings users delete bob              # accepted-then-exit (the row may still appear briefly in `users list`); type yes or use --yes
+olares-cli settings users delete bob --yes --watch   # synchronous: block until status is Deleted (same opt-in shape as `olares-cli market <verb> --watch`)
+# owner accounts cannot be deleted (CLI rejects before DELETE, same as `olares-cli user delete`)
 olares-cli settings users me                      # alias of `me whoami`
 ```
 
+`create`/`delete` are accepted-then-exit by default; pass `-w/--watch` (with `--watch-timeout` / `--watch-interval`) to block until terminal state — the flag triple mirrors [`olares-cli market --watch`](../olares-market/SKILL.md#watch-flag) so both surfaces feel identical to operators. **Note**: this flips the prior default from "wait by default + `--no-wait`" — scripts that relied on blocking semantics must add `--watch` explicitly.
+
 `create`/`delete` hit the Termipass user-service routes, not `olares-cli user create` (kube CR).
+
+<a id="users-watch-flag"></a>
+#### `users --watch` (block until terminal state)
+
+Same shape as the market verb's [`--watch`](../olares-market/SKILL.md#watch-flag) — opt-in `-w/--watch`, with companion `--watch-timeout` (15m) and `--watch-interval` (2s). Implementation lives in [`cli/cmd/ctl/settings/users/watch.go`](cli/cmd/ctl/settings/users/watch.go) (`waitForUserState`, `newUserWatchTarget`, `userWatchTimeoutError`, `userWatchFailureError`); the loop wraps `signal.NotifyContext` for Ctrl-C and gives up after 5 consecutive transport errors.
+
+Per-op terminal sets (from [`cli/cmd/ctl/settings/users/watch.go`](cli/cmd/ctl/settings/users/watch.go)):
+
+| Op       | Success    | Failure                  | absentMeansSuccess        |
+|----------|------------|--------------------------|---------------------------|
+| `create` | `Created`  | `Failed` / `Deleted`*    | false                     |
+| `delete` | `Deleted`  | (timeout only)           | true (defensive HTTP 404) |
+
+\* `Deleted` during a create watch means the row vanished mid-watch (controller cleanup raced), reported back as a failure so JSON consumers get a non-zero exit.
+
+JSON output adds `final_status` when `--watch` is set:
+
+```json
+{"name":"alice","original_password":"...","status":"Created","final_status":"Created","wizard_url":"https://wizard-alice.example.com"}
+{"name":"bob","status":"Deleted","final_status":"Deleted"}
+```
+
+Without `--watch`, JSON is `{"name":"…","status":"Accepted"}` (create additionally echoes `original_password`).
 
 
 ### `apps` — installed app inventory (mirror of Settings -> Apps)
@@ -163,7 +190,7 @@ The `entrances list` / `domain get` / `policy get` reads target the BFL-style `/
 olares-cli settings vpn devices list              # raw Headscale machines
 olares-cli settings vpn devices routes <device-id>
 olares-cli settings vpn ssh status                # GET /api/acl/ssh/status
-olares-cli settings vpn subroutes status          # GET /api/acl/subroutes/status (raw upstream JSON)
+olares-cli settings vpn subroutes status          # allow_subroutes flag + sub-route list (-o json: unwrapped []string the SPA reads)
 olares-cli settings vpn acl all                   # every app that currently has an ACL row
 olares-cli settings vpn acl get my-app            # per-app ACL vector; -o json for the full payload
 olares-cli settings vpn public-domain-policy get  # deny_all flag (0/1)
@@ -174,7 +201,6 @@ olares-cli settings vpn public-domain-policy get  # deny_all flag (0/1)
 ```bash
 olares-cli settings network reverse-proxy get     # mode collapsed into public-ip / frp / cloudflare / off
 olares-cli settings network frp list              # registry of FRP servers
-olares-cli settings network external-network get  # spec.disabled + status (phase / message / updatedAt)
 olares-cli settings network hosts-file get        # entries from /system/hosts-file (terminusd)
 ```
 
@@ -188,7 +214,6 @@ olares-cli settings integration accounts get awss3 my-bucket
 olares-cli settings gpu list
 olares-cli settings video config get              # raw config; -o json recommended
 olares-cli settings search status
-olares-cli settings search excludes list
 olares-cli settings search dirs list
 olares-cli settings advanced status               # large struct; -o json for the full payload
 olares-cli settings advanced registries list
@@ -208,7 +233,7 @@ olares-cli settings restore plans list
 
 Every mutating verb in this section has been confirmed against a live Olares instance in the latest smoke run (see [`cli/cmd/ctl/settings/scripts/local_report_phase15a.md`](cli/cmd/ctl/settings/scripts/local_report_phase15a.md)). All of them hit the `<DesktopURL>` ingress over `X-Authorization` and none require a JWS-signed body. Verbs that ship in the binary but were not exercised (or did not pass) live in [`cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) — treat them as experimental until they show up here.
 
-**Also ships (awaiting smoke):** `users create` / `users delete` — **admin-floor** preflight; `create` uses `--defaults` (normal / 1 / 4G) or explicit `--role`, `--cpu`, `--memory-gb`; DID precheck; no `--password`; **`delete` by default waits** until removal is reported finished (optional `--delete-poll` / `--delete-timeout`, `--no-wait` for exit-after-accept); **`delete`** needs the whole word `yes` unless **`--yes`**. Smoke pairing: `INCLUDE_USERS_MUTATE=1`. Backend gap: user-service does not role-gate POST/DELETE beyond authentication.
+**Also ships (awaiting smoke):** `users create` / `users delete` — **admin-floor** preflight; `create` uses `--defaults` (normal / 1 / 4G) or explicit `--role`, `--cpu`, `--memory-gb`; DID precheck; no `--password`; **both verbs default to accepted-then-exit**; pass **`-w/--watch`** (with `--watch-timeout` 15m, `--watch-interval` 2s — same triple as [`olares-cli market --watch`](../olares-market/SKILL.md#watch-flag)) to block until `Created` / `Deleted`; **`delete`** needs the whole word `yes` unless **`--yes`**; **`delete` refuses owner** (pre-check via GET, before confirmation). Smoke pairing: `INCLUDE_USERS_MUTATE=1`. Backend gap: user-service does not role-gate POST/DELETE beyond authentication.
 
 ### `appearance` — language
 
@@ -226,7 +251,7 @@ The CLI mirrors the SPA's `supportLanguages` whitelist client-side ([`apps/packa
 olares-cli settings search rebuild                          # POST /api/search/task/rebuild
 ```
 
-`rebuild` is async + heavy: the call returns as soon as search3 accepts the task; verify completion with `olares-cli settings search status` rather than waiting on the POST itself. Excludes / dirs writes ship in the binary but are tracked in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) until a smoke report greens them.
+`rebuild` is async + heavy: the call returns as soon as search3 accepts the task; verify completion with `olares-cli settings search status` rather than waiting on the POST itself. `dirs` writes ship in the binary but are tracked in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) until a smoke report greens them.
 
 ### `vpn ssh` — boolean ACL toggle
 
@@ -240,12 +265,16 @@ Both toggles send an explicit empty `{}` body to match the SPA's request shape, 
 ### `vpn acl` — per-app ACL add / remove (read-modify-write)
 
 ```bash
-olares-cli settings vpn acl add    my-app --tcp 8080               # merge a TCP port into the app's ACL vector
-olares-cli settings vpn acl remove my-app --tcp 80                 # drop a TCP port
-olares-cli settings vpn acl rm     my-app --udp 53                 # alias of `remove`
+olares-cli settings vpn acl add    my-app --tcp '*:8080'              # merge a TCP dst (any source, port 8080)
+olares-cli settings vpn acl add    my-app --tcp '192.168.1.0/24:22'   # restrict source CIDR
+olares-cli settings vpn acl remove my-app --tcp '*:80'                # drop a TCP dst
+olares-cli settings vpn acl rm     my-app --udp '*:53'                # alias of `remove`
+olares-cli settings vpn acl add    olares-app --any-proto '*:8080'    # Web 'Add ACL' parity (proto="")
 ```
 
-`--tcp` / `--udp` accept either repeated flags (`--tcp 80 --tcp 443`) or comma-separated values (`--tcp 80,443`); both forms are deduped client-side. Port strings are passed verbatim — Headscale accepts single ports, ranges (`8000-8100`), `*`, etc., and the CLI doesn't second-guess the format.
+**Destination spec (important).** Every `--tcp` / `--udp` / `--any-proto` value is a Headscale destination spec `<host>:<port>`, **not** a bare port number. The upstream policy parser (Headscale, via BFL `parseDestination`) splits on the last `:` and rejects single-token values with `invalid port format`. Use `'*:8080'` for "any source, port 8080" (this is what the Web UI implicitly sends), `'192.168.1.0/24:22'` to restrict the source, `'tag:api:443'` for tag-based sources, or `'example-host:*'` to allow all ports on one host. The CLI now pre-validates this shape and surfaces a copy-pasteable suggestion rather than letting the BFL reject the POST. Both repeated flags (`--tcp '*:80' --tcp '*:443'`) and comma-separated values (`--tcp '*:80,*:443'`) work and are deduped client-side. The upstream still accepts ranges (`*:8000-8100`) and `*:*`; the CLI only checks that a `:` separates two non-empty halves.
+
+**Web parity via `--any-proto`.** The Settings page's "Add ACL" dialog only collects a port, hardcodes the app to the system `olares-app`, sets the source host to `*`, and posts the entry with `proto=""` so Tailscale expands it to ICMPv4 / ICMPv6 / TCP / UDP. The CLI's `--tcp` / `--udp` flags are strictly more expressive (per-protocol slots, named app, custom hosts/CIDRs/tags) but they always emit a typed proto. To mirror the Web shape one-for-one — including the empty proto so the rule applies to all protocols — pass `--any-proto '<host>:<port>'`; e.g. `vpn acl add olares-app --any-proto '*:8080'` is the exact payload the "Add ACL" dialog would send for port 8080. `add` / `remove` use case-insensitive proto matching on the merge/subtract paths, so empty-proto entries created via `--any-proto` round-trip cleanly alongside `--tcp` / `--udp` ones.
 
 The upstream replaces the **whole** per-app ACL vector on every POST; there is no add / remove endpoint. `vpn acl add` and `vpn acl remove` are read-modify-write sugar over the same POST so unrelated entries survive untouched (matching how the SPA's add / remove buttons work). Use `vpn acl get <app>` (read section) to inspect the current vector before mutating; `vpn acl all` (also read) lists every app that currently has an ACL row.
 
@@ -275,7 +304,8 @@ The verbs below are **not shipped** in this release. They either need more desig
 
 - **App lifecycle: install / uninstall / upgrade / start / stop / cancel / clone** — these route through the market service rather than user-service. Use `olares-cli market install|uninstall|upgrade|start|stop|cancel|clone` instead of `settings apps`. (Per-app `suspend [--all]` / `resume` + `env set` + per-entrance `domain set` / `finish` / `policy set` / `auth-level set` ship in the settings binary but are not yet smoke-verified — see [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md).)
 - **Per-app secrets / permissions / providers** — Infisical-backed per-app secrets, declared permissions, and provider registries were not included in this release. If you need to inspect or write them, use the platform's admin / chart-side tooling instead.
-- **Network writes that require a JWS-signed device-id header** — hosts-file write, FRP server register / delete, SSL enable / disable / update, external-network master switch (the SPA carries these with `X-Signature` headers the CLI doesn't yet produce).
+- **Network writes that require a JWS-signed device-id header** — hosts-file write, FRP server register / delete, SSL enable / disable / update (the SPA carries these with `X-Signature` headers the CLI doesn't yet produce).
+- **External-network master switch (read + write)** — BFL exposes `/api/external-network` and a Go implementation lives in [`cli/cmd/ctl/settings/network/external_network.go`](cli/cmd/ctl/settings/network/external_network.go), but neither the desktop SPA nor TermiPass has surfaced a UI for it yet, and the matching write still needs a JWS-signed device-id header. The verb is intentionally NOT registered on the command tree right now — shipping a read-only verb in isolation only confuses operators. Re-add `cmd.AddCommand(NewExternalNetworkCommand(f))` in [`cli/cmd/ctl/settings/network/root.go`](cli/cmd/ctl/settings/network/root.go) once the UI lands or the JWS key sourcing path is wired.
 - **Containerd registry mutations** — `registries mirrors put / delete`, `images delete / prune` (also `X-Signature`-gated).
 - **Hardware / restart-class** — reboot, shutdown, ssh-password, OS upgrade — these go through TermiPass-issued JWS over a QR callback URL; CLI support arrives once a JWS key sourcing path lands.
 - **Backup plan create / update** — full `BackupPolicy` + `LocationConfig` vector; needs either a `--from-file plan.json` mode or an upstream "create from defaults" shortcut before shipping.
@@ -331,7 +361,7 @@ olares-cli settings integration accounts get awss3 my-bucket -o json
 ## Security rules
 
 - **Never** echo `<access_token>` or any field returned by `me sso list` into the terminal beyond what the table view already shows. SSO tokens identify a TermiPass-bound device session and should never be logged or pasted into chat.
-- `settings users create` / `settings users delete` are destructive (`delete` needs the whole word `yes` unless **`--yes`**). **`delete` waits by default until status is Deleted** (`--no-wait` skips that). `create` always generates the initial password once to stdout; treat transcripts accordingly.
+- `settings users create` / `settings users delete` are destructive (`delete` needs the whole word `yes` unless **`--yes`**). **Both default to accepted-then-exit**; pass **`--watch`** to block until `Created` / `Deleted` (with `--watch-timeout` / `--watch-interval`, same as [`olares-cli market --watch`](../olares-market/SKILL.md#watch-flag)). **`delete` cannot remove the owner account** (fails before DELETE). `create` always generates the initial password once to stdout; treat transcripts accordingly.
 - `settings users get <username>` returns the same record the SPA shows on the user detail page; treat its email / olaresId as PII and avoid forwarding it outside the requesting workflow.
 - For writes that take secrets (`integration accounts add awss3|tencent` is the verified one in this surface), **always** read the secret from an env var or stdin pipe — never paste it into the chat or expand it inline in an `olares-cli ...` command line you suggest. Bash history retention is the user's responsibility; the agent should default to env-var / pipe style invocations (`--access-key-secret "$AWS_SECRET_ACCESS_KEY"`, `printf '%s\n' "$VAR" | ... --password-stdin`) whenever the verb supports it.
 - Other secret-bearing verbs (e.g. `backup password set`, `restore plans check-url / create-from-url`) live in [`UNVERIFIED_COMMANDS.md`](cli/cmd/ctl/settings/scripts/UNVERIFIED_COMMANDS.md) until they're smoke-greened; the same env-var / stdin-pipe rule applies whenever you exercise them by hand.

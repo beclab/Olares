@@ -91,6 +91,13 @@ type userInfo struct {
 	Roles             []string `json:"roles"`
 	MemoryLimit       string   `json:"memory_limit"`
 	CpuLimit          string   `json:"cpu_limit"`
+
+	// WizardURL is not part of the upstream UserInfo JSON. It is populated by
+	// `users get` only when wizard_complete=false and state!=Failed, by an
+	// extra GET /api/users/<name>/status call (same source as the SPA's
+	// UserInfoPage). `users list` never sets it, so omitempty keeps the list
+	// JSON shape unchanged.
+	WizardURL string `json:"wizard_url,omitempty"`
 }
 
 func runList(ctx context.Context, f *cmdutil.Factory, outputRaw string) error {

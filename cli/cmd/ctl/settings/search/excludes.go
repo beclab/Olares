@@ -28,18 +28,29 @@ import (
 //
 // Both endpoints expect *additions / removals*, not the full new list,
 // so the CLI verbs accept one or more patterns as positional args.
+//
+// COMMAND-TREE STATUS: the whole `excludes` subtree (add / rm and the
+// already-unregistered list) is intentionally NOT wired into
+// `settings search` anymore — see search/root.go where the
+// `cmd.AddCommand(NewExcludesCommand(f))` line has been dropped.
+// The Go implementation below (and its `dedupTrim` / `renderStringList`
+// helpers, still used by dirs.go) is preserved verbatim so the verb
+// can be restored in one line by re-adding that AddCommand call. The
+// `list` sub-verb (newExcludesListCommand / runExcludesList /
+// renderExcludePatternsTable) was already unregistered before this
+// change; both restore recipes ship together.
 func NewExcludesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "excludes",
-		Short: "exclude-pattern list (Settings -> Search > File Search)",
-		Long: `Inspect and edit the search index's exclude-pattern list.
+		Short: "exclude-pattern editor (Settings -> Search > File Search)",
+		Long: `Edit the search index's exclude-pattern list.
 
 Subcommands:
-  list
+  add     append one or more patterns
+  rm      drop one or more patterns (built-in must=true rows are refused)
 `,
 	}
 	cmd.SilenceUsage = true
-	cmd.AddCommand(newExcludesListCommand(f))
 	cmd.AddCommand(newExcludesAddCommand(f))
 	cmd.AddCommand(newExcludesRmCommand(f))
 	return cmd

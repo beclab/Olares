@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -31,12 +32,13 @@ func (e *envelopeFakeDoer) DoJSON(ctx context.Context, method, path string, body
 
 func TestBuildACLPayload(t *testing.T) {
 	cases := []struct {
-		name string
-		tcp  []string
-		udp  []string
-		want []AclInfo
+		name     string
+		tcp      []string
+		udp      []string
+		anyProto []string
+		want     []AclInfo
 	}{
-		{name: "empty inputs produce empty payload", tcp: nil, udp: nil, want: []AclInfo{}},
+		{name: "empty inputs produce empty payload", tcp: nil, udp: nil, anyProto: nil, want: []AclInfo{}},
 		{
 			name: "tcp only",
 			tcp:  []string{"80", "443"},
@@ -70,17 +72,100 @@ func TestBuildACLPayload(t *testing.T) {
 			udp:  []string{"53"},
 			want: []AclInfo{{Proto: "udp", Dst: []string{"53"}}},
 		},
+		{
+			name:     "any-proto only — empty proto entry preserved (Web 'Add ACL' parity)",
+			anyProto: []string{"*:8080"},
+			want:     []AclInfo{{Proto: "", Dst: []string{"*:8080"}}},
+		},
+		{
+			name:     "any-proto sorted after tcp and udp",
+			tcp:      []string{"*:80"},
+			udp:      []string{"*:53"},
+			anyProto: []string{"*:22"},
+			want: []AclInfo{
+				{Proto: "tcp", Dst: []string{"*:80"}},
+				{Proto: "udp", Dst: []string{"*:53"}},
+				{Proto: "", Dst: []string{"*:22"}},
+			},
+		},
+		{
+			name:     "any-proto trims and dedupes like tcp/udp",
+			anyProto: []string{"  *:80 ", "*:80", "", "*:443"},
+			want:     []AclInfo{{Proto: "", Dst: []string{"*:80", "*:443"}}},
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := buildACLPayload(c.tcp, c.udp)
+			got := buildACLPayload(c.tcp, c.udp, c.anyProto)
 			if len(got) == 0 && len(c.want) == 0 {
 				return
 			}
 			if !reflect.DeepEqual(got, c.want) {
-				t.Errorf("buildACLPayload(tcp=%v, udp=%v) = %#v, want %#v", c.tcp, c.udp, got, c.want)
+				t.Errorf("buildACLPayload(tcp=%v, udp=%v, anyProto=%v) = %#v, want %#v",
+					c.tcp, c.udp, c.anyProto, got, c.want)
 			}
 		})
+	}
+}
+
+func TestValidateACLDst(t *testing.T) {
+	cases := []struct {
+		name    string
+		in      string
+		wantErr bool
+	}{
+		{name: "wildcard host port", in: "*:8080", wantErr: false},
+		{name: "cidr host port", in: "192.168.1.0/24:22", wantErr: false},
+		{name: "tagged host port", in: "tag:api:443", wantErr: false},
+		{name: "host wildcard port", in: "example-host:*", wantErr: false},
+		{name: "trims surrounding space", in: "  *:8080 ", wantErr: false},
+		{name: "bare port rejected", in: "8080", wantErr: true},
+		{name: "missing port rejected", in: "*:", wantErr: true},
+		{name: "missing host rejected", in: ":8080", wantErr: true},
+		{name: "empty string rejected", in: "", wantErr: true},
+		{name: "whitespace-only rejected", in: "   ", wantErr: true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := validateACLDst(c.in)
+			if (err != nil) != c.wantErr {
+				t.Errorf("validateACLDst(%q) err=%v, wantErr=%v", c.in, err, c.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateACLPayload(t *testing.T) {
+	if err := validateACLPayload(nil); err != nil {
+		t.Errorf("nil payload should be valid, got %v", err)
+	}
+	good := []AclInfo{
+		{Proto: "tcp", Dst: []string{"*:80", "*:443"}},
+		{Proto: "udp", Dst: []string{"*:53"}},
+		{Proto: "", Dst: []string{"*:22"}},
+	}
+	if err := validateACLPayload(good); err != nil {
+		t.Errorf("good payload should be valid, got %v", err)
+	}
+	bad := []AclInfo{
+		{Proto: "tcp", Dst: []string{"*:80", "8080"}}, // bare port slips through
+	}
+	err := validateACLPayload(bad)
+	if err == nil {
+		t.Fatal("expected error for bare-port dst, got nil")
+	}
+	if !contains(err.Error(), "8080") || !contains(err.Error(), "*:8080") {
+		t.Errorf("error should cite offending value and a suggestion; got %q", err.Error())
+	}
+}
+
+func TestRunACLRemoveRejectsInvalidDstBeforePrepare(t *testing.T) {
+	err := runACLRemove(context.Background(), nil, "my-app", []string{"8080"}, nil, nil)
+	if err == nil {
+		t.Fatal("expected invalid destination error")
+	}
+	if !strings.Contains(err.Error(), "invalid destination") || !strings.Contains(err.Error(), "*:8080") {
+		t.Fatalf("err = %q, want ACL destination validation before prepare", err.Error())
 	}
 }
 
@@ -302,6 +387,203 @@ func TestGetAppACLViaDoer_QueryEscaping(t *testing.T) {
 	}
 }
 
+// Pins the fold-on-decode behavior: the per-app endpoint can return
+// multiple rows for the same proto (BFL splices in the legacy
+// spec.TailScaleACLs vector after the per-app slice, and `--any-proto`
+// / Web "Add ACL" entries all share the empty-proto key). The per-app
+// helper used to surface those rows verbatim, but the read-modify-
+// write callers (acl add / acl remove) collapse on proto via indexACL,
+// which silently dropped all but the last entry and shrank the POSTed
+// destination set on the next mutation. We fold on decode so the
+// per-app view matches `vpn acl all` and the RMW loop sees the union.
+func TestGetAppACLViaDoer_FoldsDuplicateProtoRows(t *testing.T) {
+	body := `{"code":0,"data":[
+		{"proto":"tcp","dst":["a:80","b:443"]},
+		{"proto":"tcp","dst":["b:443","c:8080"]},
+		{"proto":"","dst":["d:9000"]},
+		{"proto":"","dst":["d:9000","e:9001"]}
+	]}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAppACLViaDoer(context.Background(), d, "halo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []AclInfo{
+		{Proto: "tcp", Dst: []string{"a:80", "b:443", "c:8080"}},
+		{Proto: "", Dst: []string{"d:9000", "e:9001"}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+// End-to-end pin for the original bug: with duplicate (proto) rows on
+// the wire, `acl add` would previously POST a shrunk vector because
+// indexACL kept only the last row per proto. After folding on decode,
+// the POST body unions the upstream's existing dsts with the
+// additions instead of dropping the earlier rows.
+func TestRunACLAdd_PreservesDuplicateProtoRowsOnTheWire(t *testing.T) {
+	// GET returns two tcp rows + two empty-proto rows. POST must see
+	// the unioned vector plus the new tcp destination.
+	d := &envelopeFakeDoer{respondWith: []byte(`{"code":0,"data":[
+		{"proto":"tcp","dst":["a:80"]},
+		{"proto":"tcp","dst":["b:443"]},
+		{"proto":"","dst":["x:9000"]},
+		{"proto":"","dst":["y:9001"]}
+	]}`)}
+	ctx := context.Background()
+	current, err := getAppACLViaDoer(ctx, d, "halo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	additions := []AclInfo{{Proto: "tcp", Dst: []string{"c:8080"}}}
+	merged := mergeACL(current, additions)
+	want := []AclInfo{
+		{Proto: "tcp", Dst: []string{"a:80", "b:443", "c:8080"}},
+		{Proto: "", Dst: []string{"x:9000", "y:9001"}},
+	}
+	if !reflect.DeepEqual(merged, want) {
+		t.Errorf("merged = %#v, want %#v", merged, want)
+	}
+}
+
+// Same pin for `acl remove`: removing one dst from the second tcp row
+// must keep the first row's dsts intact instead of letting indexACL
+// erase them silently.
+func TestRunACLRemove_PreservesDuplicateProtoRowsOnTheWire(t *testing.T) {
+	d := &envelopeFakeDoer{respondWith: []byte(`{"code":0,"data":[
+		{"proto":"tcp","dst":["a:80"]},
+		{"proto":"tcp","dst":["b:443","c:8080"]}
+	]}`)}
+	ctx := context.Background()
+	current, err := getAppACLViaDoer(ctx, d, "halo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	removals := []AclInfo{{Proto: "tcp", Dst: []string{"c:8080"}}}
+	pruned := subtractACL(current, removals)
+	want := []AclInfo{
+		{Proto: "tcp", Dst: []string{"a:80", "b:443"}},
+	}
+	if !reflect.DeepEqual(pruned, want) {
+		t.Errorf("pruned = %#v, want %#v", pruned, want)
+	}
+}
+
+// TestGetAllACLViaDoer covers all three wire shapes getAllACLViaDoer
+// recognizes plus the two "empty" envelope responses. The flat BFL
+// shape is the only one currently emitted on the wire (see
+// framework/bfl/.../handle_headscale.go:handleHeadscaleACLList); the
+// map and {name, acls} cases are kept as forward/back compat fallbacks
+// and the tests here pin both so a future refactor can't silently
+// regress them.
+func TestGetAllACLViaDoer_FlatBFLShape(t *testing.T) {
+	body := `{"code":0,"data":[
+		{"appName":"halo","appOwner":"u1","proto":"tcp","dst":["x.x.x.x:123"]},
+		{"appName":"halo","appOwner":"u1","proto":"udp","dst":["53"]},
+		{"appName":"files","appOwner":"u1","proto":"tcp","dst":["80","443"]}
+	]}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.method != "GET" || d.path != "/api/acl/all" {
+		t.Errorf("call = %s %s, want GET /api/acl/all", d.method, d.path)
+	}
+	want := map[string][]AclInfo{
+		"halo": {
+			{Proto: "tcp", Dst: []string{"x.x.x.x:123"}},
+			{Proto: "udp", Dst: []string{"53"}},
+		},
+		"files": {
+			{Proto: "tcp", Dst: []string{"80", "443"}},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+func TestGetAllACLViaDoer_SameProtoMultiRowUnion(t *testing.T) {
+	// BFL today emits one row per (app, proto), but a legacy
+	// spec.TailScaleACLs vector can splice in a second row. The CLI
+	// merges them rather than stacking duplicate proto rows so the
+	// table view stays one-row-per-proto.
+	body := `{"code":0,"data":[
+		{"appName":"halo","proto":"tcp","dst":["80","443"]},
+		{"appName":"halo","proto":"tcp","dst":["443","8080"]}
+	]}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]AclInfo{
+		"halo": {{Proto: "tcp", Dst: []string{"80", "443", "8080"}}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+func TestGetAllACLViaDoer_MapShapeFallback(t *testing.T) {
+	// Forward-compat: if BFL ever pivots to a map keyed by appName we
+	// still decode it.
+	body := `{"code":0,"data":{"halo":[{"proto":"tcp","dst":["80"]}]}}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]AclInfo{
+		"halo": {{Proto: "tcp", Dst: []string{"80"}}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+func TestGetAllACLViaDoer_NameAclsFallback(t *testing.T) {
+	// Historical shape: []{name, acls}. The flat-shape decode would
+	// succeed structurally but every row has an empty appName, so we
+	// fall through to this branch.
+	body := `{"code":0,"data":[{"name":"halo","acls":[{"proto":"tcp","dst":["80"]}]}]}`
+	d := &envelopeFakeDoer{respondWith: []byte(body)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]AclInfo{
+		"halo": {{Proto: "tcp", Dst: []string{"80"}}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got = %#v, want %#v", got, want)
+	}
+}
+
+func TestGetAllACLViaDoer_NonZeroCodeMeansEmpty(t *testing.T) {
+	d := &envelopeFakeDoer{respondWith: []byte(`{"code":-1,"message":"not found"}`)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got = %#v, want empty map", got)
+	}
+}
+
+func TestGetAllACLViaDoer_NullData(t *testing.T) {
+	d := &envelopeFakeDoer{respondWith: []byte(`{"code":0,"data":null}`)}
+	got, err := getAllACLViaDoer(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got = %#v, want empty map", got)
+	}
+}
+
 func TestSummarizeACL(t *testing.T) {
 	got := summarizeACL([]AclInfo{
 		{Proto: "TCP", Dst: []string{"443", "80"}},
@@ -313,6 +595,23 @@ func TestSummarizeACL(t *testing.T) {
 	}
 	if got := summarizeACL(nil); got != "(empty)" {
 		t.Errorf("summarizeACL(nil) = %q, want (empty)", got)
+	}
+	// Empty/any-proto entries (what --any-proto and the Web UI's
+	// "Add ACL" dialog emit) should render the proto column as
+	// "any", not the empty string, so the success message stays
+	// human-readable.
+	got = summarizeACL([]AclInfo{
+		{Proto: "", Dst: []string{"*:65001", "*:20"}},
+	})
+	if got != "any=*:20,*:65001" {
+		t.Errorf("summarizeACL empty proto = %q, want any=*:20,*:65001", got)
+	}
+	got = summarizeACL([]AclInfo{
+		{Proto: "tcp", Dst: []string{"*:80"}},
+		{Proto: "", Dst: []string{"*:20"}},
+	})
+	if got != "tcp=*:80 any=*:20" {
+		t.Errorf("summarizeACL tcp+empty = %q, want tcp=*:80 any=*:20", got)
 	}
 }
 
