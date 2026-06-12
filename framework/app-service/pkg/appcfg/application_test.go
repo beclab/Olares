@@ -131,3 +131,80 @@ func TestResolveRequirementSelectedGpuFallbackSemantics(t *testing.T) {
 		})
 	}
 }
+
+// TestHasWorkloadReplicas pins the routing predicate that decides
+// whether an app enters the new two-phase install / scale flow. The
+// invariants:
+//
+//   - nil pointer  → false  (legacy v1/v3 manifest, fall back to old
+//     single-phase helm + direct-patch suspend)
+//   - empty map    → false  (same: the field was rendered but contains
+//     no workloads; nothing to drive a Scale on)
+//   - non-empty    → true   (opt-in confirmed)
+//
+// Mistakes here would either silently downgrade modern apps to the
+// legacy code path or accidentally drag legacy apps into a flow they
+// don't have helm template support for, so this lives in its own test
+// with explicit truth-table coverage.
+func TestHasWorkloadReplicas(t *testing.T) {
+	emptyMap := WorkloadReplicas{}
+	declared := WorkloadReplicas{"affine": 1, "worker": 2}
+
+	cases := []struct {
+		name string
+		cfg  ApplicationConfig
+		want bool
+	}{
+		{name: "nil pointer", cfg: ApplicationConfig{WorkloadReplicas: nil}, want: false},
+		{name: "empty map", cfg: ApplicationConfig{WorkloadReplicas: &emptyMap}, want: false},
+		{name: "declared map", cfg: ApplicationConfig{WorkloadReplicas: &declared}, want: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.cfg.HasWorkloadReplicas(); got != tc.want {
+				t.Fatalf("HasWorkloadReplicas=%v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestDesiredReplicas exercises the per-workload lookup used by Scale
+// and by the helm values renderer. The fallback semantics are
+// deliberate:
+//
+//   - nil map         → 1 (caller is expected to gate on
+//     HasWorkloadReplicas first; this is a
+//     last-resort safe default rather than a 0)
+//   - declared name   → the declared value (including the explicit-zero
+//     case, which lets a manifest pin a workload off
+//     even when the rest of the app is opted in)
+//   - undeclared name → 1 (defensive only: the manifest is required to
+//     list every workload, so this branch should be
+//     unreachable in practice; the 1 is a safe
+//     last-resort default for a malformed manifest)
+func TestDesiredReplicas(t *testing.T) {
+	zero := int32(0)
+	two := int32(2)
+	declared := WorkloadReplicas{"affine": two, "worker": zero}
+
+	cases := []struct {
+		name     string
+		cfg      ApplicationConfig
+		workload string
+		want     int32
+	}{
+		{name: "nil map → default 1", cfg: ApplicationConfig{}, workload: "any", want: 1},
+		{name: "declared value", cfg: ApplicationConfig{WorkloadReplicas: &declared}, workload: "affine", want: 2},
+		{name: "explicit zero is preserved", cfg: ApplicationConfig{WorkloadReplicas: &declared}, workload: "worker", want: 0},
+		{name: "undeclared name → default 1", cfg: ApplicationConfig{WorkloadReplicas: &declared}, workload: "missing", want: 1},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.cfg.DesiredReplicas(tc.workload); got != tc.want {
+				t.Fatalf("DesiredReplicas(%q)=%d, want %d", tc.workload, got, tc.want)
+			}
+		})
+	}
+}
