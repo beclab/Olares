@@ -101,6 +101,7 @@ func main() {
 
 	state.WatchStatus(mainCtx, []watcher.Watcher{
 		system.NewSystemWatcher(),
+		system.NewBridgeConnectionWatcher(),
 		// usb.NewUsbWatcher(),
 		usb.NewUmountWatcher(),
 		upgrade.NewUpgradeWatcher(),
