@@ -270,6 +270,60 @@ func TestReconcileSharedRouteGatewayModeApplicationHostContracts(t *testing.T) {
 	}
 }
 
+func TestReconcileSharedRouteGatewayModeApplicationMultiEntranceHostPattern(t *testing.T) {
+	s := testScheme(t)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	const pattern = "e31111940.*.olares.cn"
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "app-e3111194-terminal", Namespace: "demo-shared", UID: "uid-app-multi"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			HostPatterns:  []string{pattern},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+
+	res, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr)
+	if err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+	if res.Status != metav1.ConditionTrue {
+		t.Fatalf("result status = %s, want True (%s)", res.Status, res.Message)
+	}
+
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "app-e3111194-terminal"}, route); err != nil {
+		t.Fatalf("HTTPRoute not created: %v", err)
+	}
+	hostnames, found, err := unstructured.NestedSlice(route.Object, "spec", "hostnames")
+	if err != nil || !found || len(hostnames) != 1 {
+		t.Fatalf("spec.hostnames invalid: found=%v len=%d err=%v", found, len(hostnames), err)
+	}
+	if got := hostnames[0]; got != "*.olares.cn" {
+		t.Fatalf("hostname = %v, want *.olares.cn", got)
+	}
+	wantHeader, ok := HostHeaderMatch(pattern)
+	if !ok {
+		t.Fatalf("HostHeaderMatch(%q) returned !ok", pattern)
+	}
+	rules, _, err := unstructured.NestedSlice(route.Object, "spec", "rules")
+	if err != nil || len(rules) == 0 {
+		t.Fatalf("spec.rules: %v err=%v", rules, err)
+	}
+	firstRule := rules[0].(map[string]any)
+	matches := firstRule["matches"].([]any)
+	header := matches[0].(map[string]any)["headers"].([]any)[0].(map[string]any)
+	if got := header["value"]; got != wantHeader["value"] {
+		t.Fatalf("host header regex = %v, want %v", got, wantHeader["value"])
+	}
+}
+
 func TestReconcileSharedRouteGatewayModeApplicationBootstrapReady(t *testing.T) {
 	s := testScheme(t)
 	svc := &corev1.Service{
