@@ -66,6 +66,12 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
+		&task.LocalTask{
+			Name:   "PatchCoreDNSControlPlaneAffinity",
+			Action: new(patchCoreDNSControlPlaneAffinity),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
 		// Apply the GPUBinding CRD schema bump BEFORE the HAMi helm upgrade
 		// runs in upgraderBase.UpgradeSystemComponents(); Helm 3 does not
 		// update objects under chart `crds/` on upgrade, so the new spec
