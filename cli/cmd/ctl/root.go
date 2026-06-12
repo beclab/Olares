@@ -10,6 +10,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster"
 	"github.com/beclab/Olares/cli/cmd/ctl/dashboard"
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
+	"github.com/beclab/Olares/cli/cmd/ctl/doctor"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/market"
@@ -55,7 +56,6 @@ func NewDefaultCommand() *cobra.Command {
 			} else {
 				cmd.Usage()
 			}
-			return
 		},
 	}
 	cmds.Flags().BoolVar(&showVendor, "vendor", false, "show the vendor type of olares-cli")
@@ -92,6 +92,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(files.NewFilesCommand(factory))
+	cmds.AddCommand(doctor.NewDoctorCommand(factory))
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
