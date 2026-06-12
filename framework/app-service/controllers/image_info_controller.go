@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -93,7 +92,6 @@ func (r *AppImageInfoController) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile implements the reconciliation loop for the ImageManagerController
 func (r *AppImageInfoController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 	ctrl.Log.Info("reconcile app image request", "name", req.Name)
 
 	var am appv1alpha1.AppImage
