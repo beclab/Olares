@@ -1,9 +1,9 @@
 ---
-description: Personalize your Olares experience by setting system language preferences, switching between light and dark themes, and customizing desktop and login screen wallpapers.
+description: Personalize your Olares experience by setting system language preferences, switching themes, managing Desktop widgets, customizing wallpapers, and resetting the Desktop layout.
 ---
 # Set language and appearance
 
-Personalizing your Olares experience is easy. You can set your preferred language, choose between light and dark themes, and select custom wallpapers for your desktop and login screen.
+Personalizing your Olares experience is easy. You can set your preferred language, choose between light and dark themes, manage Desktop widgets, select custom wallpapers, and reset the Desktop layout when needed.
 
 ## System language
 Olares is currently available in the following languages:
@@ -23,6 +23,20 @@ Switch between light and dark themes for system applications.
 
 The change applies immediately.
 
+## Widgets
+
+Widgets control the information shown in the lower-right corner of Desktop.
+
+1. Open Settings from the Dock.
+2. Select **Appearance** from the left sidebar.
+3. Use the **Widgets** switch as the master control:
+   - Off: Hide all widgets.
+   - On: Enable individual widget settings.
+4. Under **Date & time**, turn the clock and date widget on or off. If it is on, set **24-hour format** and **Date format** as needed.
+5. Turn **Show dashboard** on or off to show or hide CPU, disk, and memory usage.
+
+If both individual widgets are off, Desktop shows no widgets even when **Widgets** is on.
+
 ## Wallpaper
 
 To customize your desktop or login screen background:
@@ -39,3 +53,18 @@ To customize your desktop or login screen background:
       - **Fill**
       - **Tile**
 6. To remove a custom wallpaper, hover over the uploaded image in **Uploaded images** and click the <i class="material-symbols-outlined">close</i> icon.
+
+## Reset Desktop layout
+
+Use **Reset desktop layout** when you want to restore the default Launchpad and Dock organization.
+
+1. Open the Settings app from the Dock or Launchpad.
+2. Select **Appearance** from the left sidebar.
+3. Scroll to **Reset desktop layout**, then click **Reset**.
+4. In the confirmation dialog, choose what to do:
+   - Click **Cancel** to keep your current layout.
+   - Click **Reset** to restore the default layout.
+
+:::warning
+Resetting the desktop layout restores the default Launchpad and Dock layout. Custom icon positions and Dock items are reset. App data is not deleted, but the layout reset cannot be undone.
+:::
