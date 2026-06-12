@@ -62,6 +62,13 @@ npx @olares/cli@latest profile current
 
 Don't use `npm install -g --force` on an Olares host — it would clobber the OS-managed binary.
 
+### What the `npx @olares/cli@latest install` wizard does on this path
+
+Before running `npm install -g`, the wizard reads `--version` on the existing `/usr/local/bin/olares-cli` (or `/usr/bin/olares-cli`):
+
+- **Release-grade** (stable `1.12.7`, or pre-releases `-rc1` / `-beta.1` / `-alpha2`) → left alone; npm hits `EEXIST` and the wizard prints the Option 1 / Option 2 workaround above instead of clobbering it.
+- **Dev / test / dirty** (`0.0.0-development` placeholder, `git describe` outputs like `1.12.7-3-gabc1234-dirty`, check.yaml's `1.12.7-12345678` PR builds, unparseable output) → removed so the npm copy can install over the same path. If `unlink` fails for permission reasons, the wizard exits with a one-line hint to re-run with `sudo` rather than silently failing.
+
 ## Environment
 
 - `OLARES_CLI_DOWNLOAD_MIRROR` — base URL for downloading the prebuilt binary if `https://github.com/beclab/Olares/releases/download/...` is unreachable (defaults to `https://cdn.olares.com`).
