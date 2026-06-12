@@ -16,7 +16,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/utils"
 	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
-	appv1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
@@ -321,11 +321,17 @@ func (h *Handler) listEntrancesWithCustomDomain(req *restful.Request, resp *rest
 		return
 	}
 	var entrances app_service.EntrancesWithCustomDomain
-	for _, app := range appList.Items {
-		if app.Spec.Owner != constants.Username {
+	for i := range appList.Items {
+		app := &appList.Items[i]
+		isV3 := appv1.IsV3(app)
+		// v1/v2: only this user's apps. v3: every app is shared but the
+		// caller's customDomain blob lives under UserSettings[Username].
+		if !isV3 && app.Spec.Owner != constants.Username {
 			continue
 		}
-		customDomainSettingsStr, ok := app.Spec.Settings[constants.ApplicationCustomDomain]
+
+		effectiveSettings := app.EffectiveSettings(constants.Username)
+		customDomainSettingsStr, ok := effectiveSettings[constants.ApplicationCustomDomain]
 		if !ok || customDomainSettingsStr == "" {
 			continue
 		}
@@ -335,7 +341,8 @@ func (h *Handler) listEntrancesWithCustomDomain(req *restful.Request, resp *rest
 			log.Errorf("failed to unmarshal custom domain settings of app %s: %w", app.Name, err)
 			continue
 		}
-		for _, entrance := range app.Spec.Entrances {
+		// EffectiveEntrances picks up per-user AuthLevel overlays for v3.
+		for _, entrance := range app.EffectiveEntrances(constants.Username) {
 			entranceSetting := customDomainSettings[entrance.Name]
 			if entranceSetting == nil {
 				continue

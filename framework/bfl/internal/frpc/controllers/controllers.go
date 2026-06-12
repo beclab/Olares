@@ -10,7 +10,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/utils/k8sutil"
 	"context"
 	"encoding/json"
-	v1alpha1App "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
+	v1alpha1App "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"os"
@@ -352,13 +352,19 @@ func (f *FrpcController) getApps(parentCtx context.Context) (*v1alpha1App.Applic
 }
 
 func (f *FrpcController) getCustomDomains(apps *v1alpha1App.ApplicationList) (customDomains []string, err error) {
-	for _, app := range apps.Items {
-		var settings = app.Spec.Settings
-		if settings == nil || len(settings) == 0 {
+	for i := range apps.Items {
+		app := &apps.Items[i]
+		// For v3 apps, the customDomain blob lives in
+		// Spec.UserSettings[constants.Username]; for v1/v2 it stays in
+		// Spec.Settings. EffectiveSettings hides the difference. We
+		// reject v3 apps that this BFL has no overlay for so we don't
+		// publish another user's domains via this user's frpc.
+		settings := app.EffectiveSettings(constants.Username)
+		if len(settings) == 0 {
 			continue
 		}
 
-		var customDomainSettings = settings[constants.ApplicationCustomDomain]
+		customDomainSettings := settings[constants.ApplicationCustomDomain]
 		if customDomainSettings == "" {
 			continue
 		}
@@ -377,11 +383,21 @@ func (f *FrpcController) getCustomDomains(apps *v1alpha1App.ApplicationList) (cu
 	return
 }
 
+// isOwnerApp gates which Applications this BFL's frpc reacts to:
+//   - v1/v2: only the apps owned by constants.Username (legacy).
+//   - v3: every BFL needs to see CR-level changes because each user
+//     manages their own UserSettings.
 func isOwnerApp(objs ...client.Object) bool {
 	var isTrue = len(objs) != 0
 	for _, obj := range objs {
 		app, ok := obj.(*v1alpha1App.Application)
-		isTrue = ok && app.Spec.Owner == constants.Username && isTrue
+		if !ok {
+			return false
+		}
+		if v1alpha1App.IsV3(app) {
+			continue
+		}
+		isTrue = app.Spec.Owner == constants.Username && isTrue
 	}
 	return isTrue
 }
