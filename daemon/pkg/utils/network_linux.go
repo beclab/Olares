@@ -547,6 +547,7 @@ func ResetBridgeConnection(ctx context.Context) error {
 	}
 
 	// shutdown the bridge connection
+	klog.Infof("turn off the bridge connection [%s]", bridgeConnectionName)
 	cmd = exec.CommandContext(ctx, nmcli, "connection", "down", bridgeConnectionName)
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
@@ -555,6 +556,7 @@ func ResetBridgeConnection(ctx context.Context) error {
 	}
 
 	// turn on the original connection
+	klog.Infof("turn on the original connection [%s]", originalConnectionName)
 	cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", originalConnectionName, "connection.autoconnect", "yes")
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
@@ -571,6 +573,7 @@ func ResetBridgeConnection(ctx context.Context) error {
 
 	// delete the bridge slave connections
 	for _, cname := range slaveConnections {
+		klog.Infof("delete the bridge slave connection [%s]", cname)
 		cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", cname)
 		cmd.Env = os.Environ()
 		_, err = cmd.Output()
@@ -580,6 +583,7 @@ func ResetBridgeConnection(ctx context.Context) error {
 	}
 
 	// delete the bridge connection
+	klog.Infof("delete the bridge connection [%s]", bridgeConnectionName)
 	cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", bridgeConnectionName)
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
@@ -603,8 +607,31 @@ func CreateBridgeConnection(ctx context.Context) error {
 		return err
 	}
 
+	// clear unexpected bridge connections
+	cmd := exec.CommandContext(ctx, nmcli, "-g", "NAME", "connection", "show")
+	cmd.Env = os.Environ()
+	output, err := cmd.Output()
+	if err != nil {
+		klog.Error("failed to execute nmcli: %w", err)
+	} else {
+		lines := bytes.Split(output, []byte("\n"))
+		for _, line := range lines {
+			cname := strings.TrimSpace(string(line))
+			if cname == bridgeConnectionName || strings.HasPrefix(cname, bridgeSlavePrefix) {
+				klog.Infof("clear unexpected bridge connection: %s", cname)
+				cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", cname)
+				cmd.Env = os.Environ()
+				_, err = cmd.Output()
+				if err != nil {
+					klog.Error("failed to execute nmcli: %w", err)
+				}
+			}
+		}
+	}
+
 	// modify the original connection
-	cmd := exec.CommandContext(ctx, nmcli, "connection", "modify", ifUUID, "con-name", originalConnectionName)
+	klog.Infof("backup the original connection [%s] to [%s]", ifUUID, originalConnectionName)
+	cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", ifUUID, "con-name", originalConnectionName)
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
 	if err != nil {
@@ -632,6 +659,7 @@ func CreateBridgeConnection(ctx context.Context) error {
 		ethernet.cloned-mac-address "$PHY_MAC" \
 		ipv4.method auto ipv6.method ignore
 	*/
+	klog.Infof("create bridge connection [%s]", bridgeConnectionName)
 	cmd = exec.CommandContext(ctx, nmcli,
 		"connection", "add", "type", "bridge", "con-name", bridgeConnectionName, "ifname", bridgeConnectionName,
 		"connection.autoconnect", "yes", "bridge.stp", "no",
@@ -652,6 +680,7 @@ func CreateBridgeConnection(ctx context.Context) error {
 		  		master br-olares slave-type bridge connection.autoconnect yes
 	*/
 	slaveConnectionName := fmt.Sprintf("%s%s", bridgeSlavePrefix, iface)
+	klog.Infof("create bridge slave connection [%s]", slaveConnectionName)
 	cmd = exec.CommandContext(ctx, nmcli,
 		"connection", "add", "type", "ethernet", "con-name", slaveConnectionName, "ifname", iface,
 		"master", bridgeConnectionName, "slave-type", "bridge", "connection.autoconnect", "yes",
@@ -680,9 +709,37 @@ func CreateBridgeConnection(ctx context.Context) error {
 	}
 
 	// turn on the bridge connection
+	// modify all ethernet connections to disable auto connect first
+	cmd = exec.CommandContext(ctx, nmcli, "-g", "NAME,TYPE", "connection", "show")
+	cmd.Env = os.Environ()
+	output, err = cmd.Output()
+	if err != nil {
+		klog.Error("failed to execute nmcli: %w", err)
+	} else {
+		lines := bytes.Split(output, []byte("\n"))
+		for _, line := range lines {
+			fields := bytes.SplitN(line, []byte(":"), 2)
+			if len(fields) < 2 {
+				continue
+			}
+			cname := strings.TrimSpace(string(fields[0]))
+			ctype := strings.TrimSpace(string(fields[1]))
+			if cname != slaveConnectionName && strings.Contains(ctype, "ethernet") {
+				klog.Infof("disable auto connect for connection [%s]", cname)
+				cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", cname, "connection.autoconnect", "no")
+				cmd.Env = os.Environ()
+				_, err = cmd.Output()
+				if err != nil {
+					klog.Error("failed to execute nmcli: %w", err)
+				}
+			}
+		}
+	}
+
+	klog.Infof("turn on the bridge connection [%s]", bridgeConnectionName)
 	cmd = exec.CommandContext(ctx, "sh", "-c",
-		fmt.Sprintf("%s connection modify %s connection.autoconnect no && %s connection down %s && %s connection up %s",
-			nmcli, originalConnectionName, nmcli, originalConnectionName, nmcli, bridgeConnectionName))
+		fmt.Sprintf("%s connection modify %s connection.autoconnect yes && %s connection down %s && %s connection up %s",
+			nmcli, slaveConnectionName, nmcli, originalConnectionName, nmcli, bridgeConnectionName))
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
 	if err != nil {
