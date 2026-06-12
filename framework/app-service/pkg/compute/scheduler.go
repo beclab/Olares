@@ -73,6 +73,7 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 	}
 	var pickedAllocations []Allocation
 	allocation, err := mutateAllocations(ctx, c, func(nodes []Node, allocations []Allocation) ([]Allocation, *Allocation, error) {
+		attachBindings(nodes, withoutAppAllocations(allocations, appConfig.AppName, appConfig.OwnerName))
 		picked, ok := PickAllocations(appConfig, req, nodes, pressure)
 		if !ok {
 			return nil, nil, fmt.Errorf("no available compute resource for type %s", req.Mode)

@@ -266,7 +266,7 @@ func ApplyBindingSelection(ctx context.Context, c client.Client, appConfig *appc
 		return nil, err
 	}
 	if len(selections) == 0 {
-		nodes, err := FetchNodeComputeAllocations(ctx, c)
+		nodes, err := FetchNodeComputeAllocationsExcludingApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
 		if err != nil {
 			return nil, err
 		}
@@ -281,6 +281,7 @@ func ApplyBindingSelection(ctx context.Context, c client.Client, appConfig *appc
 	var allocations []Allocation
 	var unavailable *BindingApplyResult
 	if _, err := mutateAllocations(ctx, c, func(nodes []Node, existing []Allocation) ([]Allocation, *Allocation, error) {
+		attachBindings(nodes, withoutAppAllocations(existing, appConfig.AppName, appConfig.OwnerName))
 		resolved, resolveErr := resolveSelection(selections, nodes)
 		if resolveErr != nil {
 			unavailable = unavailableBindingApplyResult(req, nodes, pressure, invalidBinding(resolveErr.Error()))
