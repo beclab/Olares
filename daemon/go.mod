@@ -20,7 +20,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/beclab/Olares/cli v0.0.0-20251230161135-5264df60cc33
 	github.com/beclab/Olares/framework/app-service v0.0.0-20260522162612-61734f52ff96
-	github.com/beclab/api v0.0.8-0.20260522125754-f2fb68d230ca
+	github.com/beclab/api v0.0.8
 	github.com/containerd/containerd v1.7.29
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
