@@ -12,13 +12,6 @@ doc_updated: "2026-06-12"
 
 # Coordinate multiple AI agents with Paperclip
 
-:::warning Upgrade notice
-This upgrade ships with new environment dependencies and uses the official image. The runtime environment may have changed:
-
-- If Paperclip has not been initialized yet or contains no important data, uninstall and remove all data before reinstalling.
-- If initialization is already complete, your settings will be preserved. If you encounter issues after the upgrade, contact us for assistance.
-:::
-
 Paperclip is an open-source platform for coordinating multiple AI agents under one unified workspace. By setting up a virtual company, you add AI agents powered by Claude Code, Codex, OpenCode, Cursor, or other providers, and assign them issues to work on. Whether the task involves coding, research, or content creation, Paperclip manages the workflow.
 
 Running Paperclip as a self-hosted app on Olares ensures that your API keys, task history, and agent outputs remain entirely private on your device.
@@ -35,9 +28,12 @@ In this guide, you will learn how to:
 - Monitor operations and metrics from the dashboard.
 - Use local models with Paperclip (optional).
 
-## Prerequisites
+## Upgrade notice
 
-- At least one API key for a supported agent provider, such as Anthropic, OpenAI, Google, or Cursor.
+When upgrading to version 1.0.22 or later, please be aware that this update introduces new environment dependencies and switches to the official image. As a result, your runtime environment may have changed. We recommend the following:
+
+- If you have not yet initialized Paperclip or there is no important data, uninstall the app and delete all related data before reinstalling.
+- If Paperclip has already been initialized, your existing data will be preserved. However, you may need to reconfigure certain local agent settings and environment dependencies. If you encounter any issues after upgrading, please contact support for assistance.
 
 ## Install Paperclip
 
@@ -49,7 +45,7 @@ In this guide, you will learn how to:
 
 After installation, two entry points are available from the Launchpad.
 
-![Paperclip entry points](/images/manual/use-cases/paperclip-install-entry.png#bordered)
+![Paperclip entry points](/images/manual/use-cases/paperclip-install-entry.png#bordered){width=30%}
 
 ## Initialize Paperclip
 
@@ -59,23 +55,21 @@ Before creating an admin account, set up your API key in **Settings** so cloud m
 
 ### Create an admin account
 
-Paperclip ships without a default user account. To access the platform for the first time, you create a board admin account through the registration flow.
+Paperclip ships without a default user account. To access the platform for the first time, you need to create a admin account through the registration flow.
 
 1. Open Paperclip from the Launchpad. Click **Register account**.
 
-   ![Paperclip register](/images/manual/use-cases/paperclip-register-new.png#bordered){width=60%}
-
 2. On the sign-up page, fill in the required information and submit.
 
-3. Return to Paperclip and click **Claim this instance** to bind the admin account.
+3. After sign-up, click **Claim this instance** to bind the admin account.
 
    ![Claim this instance](/images/manual/use-cases/paperclip-claim-instance.png#bordered){width=60%}
 
-4. Click **Open board** to enter your workspace.
+4. Name your Name your company and finish the onboarding process as instructed.
 
 ### Create your first company
 
-A Paperclip workspace is organized around a virtual company structure. This company organizes your agents, tasks, and issues.
+A Paperclip workspace is organized around a virtual company structure. This company organizes your agents and tasks.
 
 1. On the **Company** tab, configure the basic information:
 
@@ -206,9 +200,9 @@ Paperclip is a fully autonomous multi-agent collaboration platform. Running it e
 This OpenCode runs inside the Paperclip container and is separate from the OpenCode app installed from the Olares Market. You need to configure it independently.
 :::
 
-1. Install a model from Market (for example, Ollama with a model like gemma4:26b).
+1. Install a model from the Market. For this example, we’ll use `gemma4:26b`.
 
-2. During company initialization, select **opencode** as the agent runtime. For the model, you can start with a free option like **big-pickle** to complete initialization.
+2. When creating an agent, choose **OpenCode** as the runtime. For the model, you may begin with a free option such as **big-pickle** to complete the initial setup.
 
 3. After initialization, go to **Data/paperclip/paperclip/.config/opencode/**:
 
@@ -237,41 +231,32 @@ This OpenCode runs inside the Paperclip container and is separate from the OpenC
    }
    ```
 
-   Replace `<your-olares-id>` with your actual Olares ID. The baseURL must use the `/v1` suffix for Ollama.
+   Update `<your-olares-id>` in the configuration with your specific Olares ID. Ensure that the `baseURL` ends with `/v1` to provide OpenAI-compatible API access through Ollama.
 
 4. Restart the Paperclip container.
 
-5. In Paperclip, go to **Agents** > **Configuration** > **Permissions & Configuration** to see the newly added local model.
+5. In Paperclip, go to **Agents** > **Configuration** > **Permissions & Configuration** to verify the newly added local model.
 
    ![OpenCode local model in agent config](/images/manual/use-cases/paperclip-opencode-model-config.png#bordered)
 
    :::warning
-   If you do not plan to use the default `openai/gpt-5.1-codex-mini` as the cheap model, be sure to turn this feature off or switch to another model.
-
-   ![Disable cheap mode](/images/manual/use-cases/paperclip-cheap-mode-warning.png#bordered)
+   If you do not plan to use the default `openai/gpt-5.1-codex-mini` as the cheap model, be sure to turn this feature off or switch to another available model.
    :::
 
-#### Test: Create an agent using a local model
-
-Create a task to have the CEO (driven by a local model) hire a new agent:
-
+### Test the workflow
+:::info Create a task to have the CEO hire a new agent
 **Task title:** Hire a CMO
-
 **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/gemma4:26b as the model.
+:::
 
 You can monitor the execution process and result in the task's **Activity** > **Continuation Summary**.
 
 ![Agent run activity](/images/manual/use-cases/paperclip-agent-run-activity.png#bordered)
 
-![Continuation summary](/images/manual/use-cases/paperclip-agent-continuation-summary.png#bordered)
-
-#### Test: Write a brand story
-
-Create another task to verify the full workflow:
-
+:::info Let the CMO to write a brand story
 **Task title:** Write a brand story
-
 **Task description:** Output in md format and upload the final result as an attachment to the task.
+:::
 
 ![Brand story output](/images/manual/use-cases/paperclip-brand-story-output.png#bordered)
 
@@ -291,7 +276,7 @@ Paperclip currently supports the following agent adapters. You configure specifi
 
 Yes, but it is not recommended for production environments. Note the following:
 
-1. This Hermes Agent runs inside the Paperclip container and is separate from the Hermes Agent app installed from the Olares Market. You need to install and configure it separately using the Paperclip CLI (`pip install hermes-agent`).
+1. This Hermes Agent runs inside the Paperclip container and is separate from the Hermes Agent app installed from the Olares Market. You need to install and configure it separately in the Paperclip CLI (`pip install hermes-agent`).
 
 2. The Hermes Agent and Paperclip adapter are still in development. Connection stability issues may require significant debugging.
 
@@ -304,7 +289,7 @@ Yes, but it is not recommended for production environments. Note the following:
    hermes config set approvals.cron_mode "approve"
    ```
 
-   - Ensure your Hermes Agent has obtained `PAPERCLIP_API_KEY` and has the Paperclip Skills installed to correctly fetch and modify Tasks/Issues in Paperclip.
+   - Ensure your Hermes Agent has obtained `PAPERCLIP_API_KEY` and has the Paperclip Skills installed to correctly fetch and modify Tasks in Paperclip.
 
 ### Codex adapter fails to authenticate
 
