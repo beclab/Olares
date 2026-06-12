@@ -147,6 +147,7 @@ type InstallRequest struct {
 	Title           string                  `json:"title"`
 	Entrances       []EntranceClone         `json:"entrances"`
 	SelectedGpuType string                  `json:"selectedGpuType"`
+	TemplateClone   bool                    `json:"templateClone"`
 }
 
 type Image struct {
