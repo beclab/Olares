@@ -729,14 +729,14 @@ type SharedInclusterEntrance struct {
 	PlatformDomain string
 }
 
-// matchRegex returns the wildcard match regex for all viewers.
+// matchRegex returns the exact shared-host regex (<id>.shared.<base>.).
 func (e SharedInclusterEntrance) matchRegex() string {
 	platformDomain := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
 	entranceID := strings.ToLower(strings.TrimSpace(e.EntranceID))
 	if platformDomain == "" || entranceID == "" {
 		return ""
 	}
-	return `"^` + strings.ReplaceAll(entranceID, ".", `\.`) + `\.[^.]+\.` + strings.ReplaceAll(platformDomain, ".", `\.`) + `\.$"`
+	return `"^` + strings.ReplaceAll(entranceID, ".", `\.`) + `\.shared\.` + strings.ReplaceAll(platformDomain, ".", `\.`) + `\.$"`
 }
 
 // buildSharedInclusterTemplates builds CoreDNS `template` plugin instances
@@ -745,7 +745,7 @@ func (e SharedInclusterEntrance) matchRegex() string {
 //
 // rationale: CoreDNS's plugin.cfg orders `template` before `hosts`, so the
 // per-user wildcard `template IN A <userzone> { match "\w*\.?(<userzone>\.)$" }`
-// would shadow any matching `hosts` entry for `<hash>.<viewer>.<platformDomain>`.
+// would shadow any matching `hosts` entry for `<hash>.shared.<platformDomain>`.
 // We therefore emit exact-FQDN `template` instances anchored at the root zone
 // (`IN A .`) that match the literal FQDN with a `^…\.$` anchored regex and
 // answer with the gateway ClusterIP. `fallthrough` is set so unrelated names
@@ -822,7 +822,7 @@ func namespacesWithDNSPassthrough(ctx context.Context, kubeClient kubernetes.Int
 
 func parseLogicalHostPattern(pattern string) (entranceID, platformDomain string, ok bool) {
 	pattern = strings.ToLower(strings.TrimSpace(pattern))
-	const marker = ".*."
+	const marker = ".shared."
 	idx := strings.Index(pattern, marker)
 	if idx <= 0 || len(pattern) <= idx+len(marker) {
 		return "", "", false

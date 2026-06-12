@@ -42,7 +42,7 @@ func TestBuildSharedInclusterTemplates_orderingAndDedup(t *testing.T) {
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 template plugin, got %d", len(plugins))
 	}
-	wantMatch := `"^a5be2268\.[^.]+\.olares\.com\.$"`
+	wantMatch := `"^a5be2268\.shared\.olares\.com\.$"`
 	if !templateMatchesRegex(plugins[0], wantMatch, "10.0.0.8") {
 		t.Fatalf("template does not target match %s: %s", wantMatch, plugins[0].ToString())
 	}
@@ -61,7 +61,7 @@ func TestBuildSharedInclusterTemplates_perUserEntranceExcluded(t *testing.T) {
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 plugin, got %d", len(plugins))
 	}
-	wantMatch := `"^a5be2268\.[^.]+\.olares\.com\.$"`
+	wantMatch := `"^a5be2268\.shared\.olares\.com\.$"`
 	body := plugins[0].ToString()
 	if !strings.Contains(body, wantMatch) {
 		t.Fatalf("expected anchored match %q in %q", wantMatch, body)
@@ -103,7 +103,7 @@ func TestBuildSharedInclusterTemplates_roundTripCorefile(t *testing.T) {
 	}
 	// Pre-parse rendering must contain the quoted, anchored match string —
 	// CoreDNS expects the match arg to be a quoted regex literal.
-	wantMatch := `"^bc2bd381\.[^.]+\.olares\.com\.$"`
+	wantMatch := `"^bc2bd381\.shared\.olares\.com\.$"`
 	if pre := plugins[0].ToString(); !strings.Contains(pre, wantMatch) {
 		t.Fatalf("pre-parse body missing %q in %q", wantMatch, pre)
 	}
@@ -127,7 +127,7 @@ func TestBuildSharedInclusterTemplates_roundTripCorefile(t *testing.T) {
 	// the anchored regex appears unquoted in the round-tripped body. The
 	// escaped FQDN itself must still be present, along with the gateway IP
 	// and fallthrough directive.
-	escapedFQDN := `bc2bd381\.[^.]+\.olares\.com`
+	escapedFQDN := `bc2bd381\.shared\.olares\.com`
 	body := got.ToString()
 	if !strings.Contains(body, escapedFQDN) {
 		t.Fatalf("missing escaped FQDN %q in %q", escapedFQDN, body)
@@ -149,6 +149,26 @@ func templateMatchesRegex(plugin *corefile.Plugin, matchExpr, ip string) bool {
 	}
 	body := plugin.ToString()
 	return strings.Contains(body, matchExpr) && strings.Contains(body, ip)
+}
+
+func TestParseLogicalHostPattern(t *testing.T) {
+	id, domain, ok := parseLogicalHostPattern("bc2bd381.shared.olares.com")
+	if !ok {
+		t.Fatal("expected shared host pattern to be parsed")
+	}
+	if id != "bc2bd381" || domain != "olares.com" {
+		t.Fatalf("parsed result id=%q domain=%q", id, domain)
+	}
+
+	for _, pattern := range []string{
+		"bc2bd381.*.olares.com",
+		"bc2bd381.bob.olares.com",
+		".shared.olares.com",
+	} {
+		if _, _, ok := parseLogicalHostPattern(pattern); ok {
+			t.Fatalf("expected pattern %q to be rejected", pattern)
+		}
+	}
 }
 
 func TestNormalizeReloadInDefaultPlugins(t *testing.T) {
@@ -182,7 +202,7 @@ func TestSharedInclusterEntrancesFromSRRItems(t *testing.T) {
 	srr := unstructuredSRR("ollama-shared", "shared-a5be2268-ollamav2", map[string]string{
 		labelSRRAppID:    "a5be2268",
 		labelSRREntrance: "ollamav2",
-	}, "gateway", []string{prefix + ".*.olares.com"})
+	}, "gateway", []string{prefix + ".shared.olares.com"})
 
 	got := sharedInclusterEntrancesFromSRRItems(
 		[]unstructured.Unstructured{*srr},
@@ -208,10 +228,10 @@ func TestSharedInclusterEntrancesFromSRRItems_passthroughAndDirect(t *testing.T)
 	prefix := "a5be2268"
 	srrGateway := unstructuredSRR("ollama-shared", "shared-a5be2268-api", map[string]string{
 		labelSRRAppID: "a5be2268", labelSRREntrance: "api",
-	}, "gateway", []string{prefix + ".*.olares.com"})
+	}, "gateway", []string{prefix + ".shared.olares.com"})
 	srrDirect := unstructuredSRR("other-shared", "shared-bc2bd381-litellm", map[string]string{
 		labelSRRAppID: "bc2bd381", labelSRREntrance: "litellm",
-	}, "direct", []string{"bc2bd381.*.olares.com"})
+	}, "direct", []string{"bc2bd381.shared.olares.com"})
 	passthrough := map[string]struct{}{"litellm-ns": {}}
 	got := sharedInclusterEntrancesFromSRRItems(
 		[]unstructured.Unstructured{*srrGateway, *srrDirect},
@@ -230,8 +250,8 @@ func TestSharedInclusterEntrancesFromSRRItems_logicalPatternNotFirst(t *testing.
 	srr := unstructuredSRR("ollama-shared", "shared-a5be2268-api", map[string]string{
 		labelSRRAppID: "a5be2268", labelSRREntrance: "api",
 	}, "gateway", []string{
-		"api.shared.olares.com",
-		prefix + ".*.olares.com",
+		"api.*.olares.com",
+		prefix + ".shared.olares.com",
 	})
 	got := sharedInclusterEntrancesFromSRRItems(
 		[]unstructured.Unstructured{*srr},
@@ -288,10 +308,10 @@ func TestBuildSharedInclusterTemplates_overridesUserWildcard(t *testing.T) {
 	if plugins[0].Name != "template" {
 		t.Fatalf("first plugin must be the shared template, got %s", plugins[0].Name)
 	}
-	wantMatchExpr := `bc2bd381\.[^.]+\.olares\.com`
+	wantMatchExpr := `bc2bd381\.shared\.olares\.com`
 	body := plugins[0].ToString()
 	if !strings.Contains(body, wantMatchExpr) {
-		t.Fatalf("first template missing shared wildcard viewer match: %s", body)
+		t.Fatalf("first template missing exact shared match: %s", body)
 	}
 	if !strings.Contains(body, "10.233.38.210") {
 		t.Fatalf("first template missing gateway IP: %s", body)
@@ -533,7 +553,7 @@ func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubef
 			},
 			"spec": map[string]interface{}{
 				"routeMode":    "gateway",
-				"hostPatterns": []interface{}{sharedHash + ".*.olares.com"},
+				"hostPatterns": []interface{}{sharedHash + ".shared.olares.com"},
 			},
 		},
 	}
@@ -596,15 +616,15 @@ func mustReadCorefileConfigMap(t *testing.T, ctx context.Context, kubeClient *ku
 
 func assertContainsSharedExactTemplate(t *testing.T, corefileBody string) {
 	t.Helper()
-	const sharedEscaped = "bc2bd381\\.[^.]+\\.olares\\.com"
+	const sharedEscaped = "bc2bd381\\.shared\\.olares\\.com"
 	if !strings.Contains(corefileBody, sharedEscaped) {
-		t.Fatalf("expected shared wildcard viewer template match for bc2bd381.<viewer>.olares.com, got:\n%s", corefileBody)
+		t.Fatalf("expected shared exact template match for bc2bd381.shared.olares.com, got:\n%s", corefileBody)
 	}
 }
 
 func assertNotContainsSharedExactTemplate(t *testing.T, corefileBody string) {
 	t.Helper()
-	const sharedEscaped = "bc2bd381\\.[^.]+\\.olares\\.com"
+	const sharedEscaped = "bc2bd381\\.shared\\.olares\\.com"
 	if strings.Contains(corefileBody, sharedEscaped) {
 		t.Fatalf("shared exact template must be removed when disabled, got:\n%s", corefileBody)
 	}
