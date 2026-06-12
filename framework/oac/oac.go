@@ -25,15 +25,15 @@ type OAC struct {
 	// WithAutoOwnerScenarios().
 	autoOwner bool
 
-	skipManifest          bool
-	skipResource          bool
-	skipFolder            bool
-	skipSameVersion       bool
-	skipAppData           bool
-	skipHostPath          bool
-	skipResourceNamespace bool
-	runRBAC               bool
-	runSecurityContext    bool
+	skipManifest           bool
+	skipResource           bool
+	skipFolder             bool
+	skipSameVersion        bool
+	skipAppData            bool
+	skipHostPath           bool
+	skipResourceNamespace  bool
+	skipRunRBAC            bool
+	skipRunSecurityContext bool
 
 	customValidators []CustomValidator
 
@@ -49,16 +49,18 @@ type OAC struct {
 //   - no owner/admin override (templates fall back to the "default" placeholder)
 //   - owner/admin scenarios are NOT auto-expanded — the explicit owner/admin
 //     values are used as-is (see WithAutoOwnerScenarios)
-//   - all built-in checks enabled EXCEPT ServiceAccount rule inspection
-//     (RBAC is off by default; the Chart.yaml <-> manifest same-version
-//     check runs by default — turn it off with SkipSameVersionCheck;
+//   - all built-in checks enabled, including ServiceAccount RBAC rule
+//     inspection — turn it off with SkipServiceAccountRulesCheck();
+//     check runs by default — turn it off with SkipSameVersionCheck();
 //     the permission-vs-template cross-checks (appdata, appCommon,
 //     sharedlib on >= 0.12.0) run by default — turn them off with
 //     SkipAppDataCheck;
 //     the hostPath + rolling-update incompatibility check runs by default
 //     — turn it off with SkipHostPathCheck;
 //     the rendered-resource namespace check runs by default — turn it
-//     off with SkipResourceNamespaceCheck)
+//     off with SkipResourceNamespaceCheck();
+//     the non-beclab image securityContext check runs by default — turn
+//     it off with SkipSecurityContextCheck())
 func New(opts ...Option) *OAC {
 	c := &OAC{}
 	for _, opt := range opts {

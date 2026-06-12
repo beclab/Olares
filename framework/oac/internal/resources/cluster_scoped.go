@@ -35,7 +35,7 @@ func CheckClusterScopedFixedNames(listA, listB kube.ResourceList) error {
 	for _, key := range fixed {
 		kind, name := splitClusterScopedKey(key)
 		errs = append(errs, fmt.Errorf(
-			"cluster-scoped %s %q has a fixed name (unchanged across release names %q and %q); use a release-unique name such as {{ .Release.Name }} when options.allowMultipleInstall is true",
+			"cluster-scoped %s %q has a fixed name (unchanged across release names %q and %q); use a release-unique name such as {{ .Release.Name }} when app is v1 or v3 with options.allowMultipleInstall is true",
 			kind, name, clusterScopedProbeA, clusterScopedProbeB,
 		))
 	}

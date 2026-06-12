@@ -41,10 +41,10 @@ import (
 //  8. Container-level resource limits check - skipped by SkipResourceCheck
 //  9. Chart.yaml <-> manifest same-version check - ON by default, turn off
 //     with SkipSameVersionCheck()
-//  10. ServiceAccount RBAC inspection - OFF by default, turn on with
-//     WithServiceAccountRulesCheck()
-//  11. Non-beclab image privileged securityContext check - OFF by default,
-//     turn on with WithSecurityContextCheck()
+//  10. ServiceAccount RBAC inspection - ON by default, turn off with
+//     SkipServiceAccountRulesCheck()
+//  11. Non-beclab image privileged securityContext check - ON by default,
+//     turn off with SkipSecurityContextCheck()
 //
 // When WithAutoOwnerScenarios() is set, every owner-dependent step runs
 // twice — once with owner == admin and once with owner != admin. That
@@ -174,7 +174,7 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 		}
 	}
 
-	if c.runRBAC {
+	if !c.skipRunRBAC {
 		rules, err := resources.LoadForbiddenRules("")
 		if err != nil {
 			return err
@@ -184,7 +184,7 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 		}
 	}
 
-	if c.runSecurityContext {
+	if !c.skipRunSecurityContext {
 		if err := resources.CheckSecurityContextForNonBeclabImage(list); err != nil {
 			return err
 		}
