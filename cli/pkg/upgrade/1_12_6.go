@@ -62,6 +62,17 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
+		// Apply the GPUBinding CRD schema bump BEFORE the HAMi helm upgrade
+		// runs in upgraderBase.UpgradeSystemComponents(); Helm 3 does not
+		// update objects under chart `crds/` on upgrade, so the new spec
+		// fields (namespace, owner) would otherwise stay unknown to the
+		// apiserver and get pruned out of any binding we write.
+		&task.LocalTask{
+			Name:   "ApplyGPUBindingCRD",
+			Action: new(applyGPUBindingCRD),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
 	}
 	pre = append(pre, u.upgraderBase.UpgradeSystemComponents()...)
 	return append(pre,
@@ -78,6 +89,12 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 		&task.LocalTask{
 			Name:   "BackfillAppGPUConfig",
 			Action: new(backfillAppGPUConfig),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "MigrateLegacyGPUBindings",
+			Action: new(migrateLegacyGPUBindings),
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},

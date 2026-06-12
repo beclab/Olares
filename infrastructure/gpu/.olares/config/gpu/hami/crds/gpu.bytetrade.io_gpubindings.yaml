@@ -45,6 +45,10 @@ spec:
                 - type: string
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
+              namespace:
+                type: string
+              owner:
+                type: string
               podSelector:
                 description: |-
                   A label selector is a label query over a set of resources. The result of matchLabels and
