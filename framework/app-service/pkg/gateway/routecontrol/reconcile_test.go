@@ -129,6 +129,14 @@ func TestReconcileSharedRouteGatewayMode(t *testing.T) {
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: NetworkPolicyName}, np); err != nil {
 		t.Fatalf("NetworkPolicy not created: %v", err)
 	}
+	// The NP must carry the route-control component label so the
+	// security-controller namespace sweep does not delete it.
+	if np.Labels[ManagedByLabel] != ManagedByValue {
+		t.Fatalf("NetworkPolicy managed-by = %q, want %q", np.Labels[ManagedByLabel], ManagedByValue)
+	}
+	if np.Labels[RouteControlComponentLabel] != RouteControlComponentValue {
+		t.Fatalf("NetworkPolicy component = %q, want %q", np.Labels[RouteControlComponentLabel], RouteControlComponentValue)
+	}
 }
 
 func TestReconcileSharedRouteGatewayModeApplicationSection(t *testing.T) {

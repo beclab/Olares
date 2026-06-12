@@ -341,7 +341,8 @@ func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr
 			Name:      NetworkPolicyName,
 			Namespace: npNS,
 			Labels: map[string]string{
-				ManagedByLabel: ManagedByValue,
+				ManagedByLabel:             ManagedByValue,
+				RouteControlComponentLabel: RouteControlComponentValue,
 			},
 		},
 		Spec: networkingv1.NetworkPolicySpec{
