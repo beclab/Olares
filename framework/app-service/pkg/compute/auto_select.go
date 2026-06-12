@@ -141,7 +141,7 @@ func autoSelectModeFromInputs(appModes []string, clusterGPUTypes map[string]stru
 		if validCPU {
 			return utils.CPUType, nil
 		}
-		return "", fmt.Errorf("no compute mode runnable on this cluster; please install on a compatible cluster")
+		return "", fmt.Errorf("The Olares cluster cannot meet the required resource specifications. No matching GPU type")
 	default:
 		return "", ErrAmbiguousComputeMode
 	}

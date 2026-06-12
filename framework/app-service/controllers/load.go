@@ -163,11 +163,13 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 		case appv1alpha1.ResumeFailed:
 			return appstate.NewResumeFailedApp(appmgr, &am)
 
+		case appv1alpha1.Stopped:
+			return appstate.NewStoppedApp(appmgr, &am)
 		case appv1alpha1.DownloadFailed,
 			appv1alpha1.PendingCanceled, appv1alpha1.DownloadingCanceled,
 			appv1alpha1.InstallingCanceled, appv1alpha1.InitializingCanceled,
 			appv1alpha1.UpgradingCanceled, appv1alpha1.ApplyingEnvCanceled,
-			appv1alpha1.ResumingCanceled, appv1alpha1.Stopped:
+			appv1alpha1.ResumingCanceled:
 			return appstate.NewDoNothingApp(appmgr, &am)
 		case appv1alpha1.InstallFailed:
 			return appstate.NewInstallFailedApp(appmgr, &am)
