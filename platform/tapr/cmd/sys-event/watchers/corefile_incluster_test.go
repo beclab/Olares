@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"bytetrade.io/web3os/tapr/pkg/app/application"
 	"github.com/coredns/corefile-migration/migration/corefile"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -640,27 +639,6 @@ func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubef
 			},
 		},
 	}
-	app := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "app.bytetrade.io/v1alpha1",
-			"kind":       "Application",
-			"metadata": map[string]interface{}{
-				"name":      "shared-app",
-				"namespace": "litellm-ns",
-			},
-			"spec": map[string]interface{}{
-				"name":  "shared-app",
-				"owner": sharedViewer,
-				"sharedEntrances": []interface{}{
-					map[string]interface{}{
-						"name": "litellm",
-						"host": "litellm-svc",
-						"port": int64(80),
-					},
-				},
-			},
-		},
-	}
 
 	scheme := runtime.NewScheme()
 	dynamicClient := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
@@ -668,10 +646,9 @@ func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubef
 		map[schema.GroupVersionResource]string{
 			clusterConfigGVR:       "ClusterConfigList",
 			sharedRouteRegistryGVR: "SharedRouteRegistryList",
-			application.GVR:        "ApplicationList",
 			{Group: "iam.kubesphere.io", Version: "v1alpha2", Resource: "users"}: "UserList",
 		},
-		clusterConfig, user, srr, app,
+		clusterConfig, user, srr,
 	)
 	return kubeClient, dynamicClient
 }
