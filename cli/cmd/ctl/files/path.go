@@ -113,6 +113,115 @@ var protectedDriveHomeChildrenList = func() string {
 // to enumerate the protected names without re-sorting on each call.
 func ProtectedDriveHomeChildrenList() string { return protectedDriveHomeChildrenList }
 
+// ProtectedExternalChildren is the set of entry names directly under
+// `external/<node>/` that the LarePass web app treats as
+// system-managed and refuses to expose as rename / delete / cut /
+// copy / paste targets. Currently this is just `ai` — the
+// AI-mountpoint surface Olares creates at the node root so that
+// ComfyUI / Ollama / Huggingface assets can be discovered by
+// per-app readers at a single fixed location, regardless of which
+// physical volume happens to back the bytes. The directory holds a
+// backend-owned layout (output / model / comfyui / ollama — see
+// ProtectedExternalAiChildren) that user apps look up by name;
+// renaming or deleting it from the CLI would silently break those
+// apps and produce a state the GUI can't reach.
+//
+// Path-shape note: the GUI URL `/Files/External/<X>/` and the CLI
+// path `external/<X>/` share the same `<X>` segment — it is the
+// LarePass `masterNode` / files-backend node name (see
+// apps/packages/app/src/api/files/v2/external/data.ts:77 and
+// pages/Mobile/file/FileRootPage.vue:256, both of which append
+// `<masterNode>` directly after `/Files/External/`). The CLI's
+// FrontendPath maps this to (FileType="external", Extend=<node>,
+// SubPath="/..."), so the depth-1 entry surfaced as
+// `/Files/External/<node>/ai/` in the GUI lands at SubPath="/ai/"
+// on the CLI.
+//
+// Source of truth on the wire: the LarePass web app's
+// apps/packages/app/src/stores/operation.ts `externalFolderWhiteList`
+// array, gated by `ieExternalRootPath(path)` (regex
+// `^/Files/External/[^/]+/?$`) in `isDisableMenuItem`. The names
+// below mirror that array verbatim — case-sensitive.
+//
+// Scope: the predicate fires ONLY on the EXACT depth-1 entry under
+// `external/<node>/` (i.e. SubPath trims to a single segment
+// matching one of these names). Deeper paths under it
+// (`external/<node>/ai/foo/`) are gated separately via
+// ProtectedExternalAiChildren when the immediate parent is `ai/`,
+// and paths beyond that (`external/<node>/ai/output/run-2026/`) are
+// user content and stay fully writable.
+//
+// `cp` (copy) is intentionally NOT gated by this list — same
+// reasoning as ProtectedDriveHomeChildren: duplicating bytes
+// elsewhere preserves the source unchanged.
+var ProtectedExternalChildren = map[string]struct{}{
+	"ai": {},
+}
+
+// ProtectedExternalAiChildren is the set of entry names directly
+// under `external/<node>/ai/` that the LarePass web app refuses to
+// expose as rename / delete / cut / copy / paste targets. These are
+// the four feature directories the apps that share the AI
+// mountpoint expect to find by name:
+//
+//   - `output`   final outputs ComfyUI / Ollama produced.
+//   - `model`    model files (.safetensors / .ckpt / .gguf / ...)
+//                the apps load on startup.
+//   - `comfyui`  ComfyUI-specific workflow + state directory.
+//   - `ollama`   Ollama-specific model index + state directory.
+//
+// Source of truth on the wire: the LarePass web app's
+// apps/packages/app/src/stores/operation.ts
+// `externalAiFolderWhiteList` array, gated by `isExternalAiPath(path)`
+// (regex `^/Files/External/[^/]+/ai/?$`).
+//
+// Scope: the predicate fires ONLY on the EXACT depth-2 entry under
+// `external/<node>/ai/` (SubPath trims to `ai/<name>`). Deeper
+// paths (`external/<node>/ai/output/run-2026/`) are user content
+// and stay fully writable.
+var ProtectedExternalAiChildren = map[string]struct{}{
+	"output":  {},
+	"model":   {},
+	"comfyui": {},
+	"ollama":  {},
+}
+
+// protectedExternalChildrenList is the stable, sorted, comma-joined
+// rendering of ProtectedExternalChildren for error messages. Same
+// "compute once" shape as protectedDriveHomeChildrenList; keep in
+// sync with the map above.
+var protectedExternalChildrenList = func() string {
+	out := make([]string, 0, len(ProtectedExternalChildren))
+	for k := range ProtectedExternalChildren {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return strings.Join(out, ", ")
+}()
+
+// protectedExternalAiChildrenList is the stable, sorted,
+// comma-joined rendering of ProtectedExternalAiChildren for error
+// messages. Keep in sync with the map above.
+var protectedExternalAiChildrenList = func() string {
+	out := make([]string, 0, len(ProtectedExternalAiChildren))
+	for k := range ProtectedExternalAiChildren {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return strings.Join(out, ", ")
+}()
+
+// ProtectedExternalChildrenList returns the canonical
+// alphabetically-sorted comma-joined rendering of
+// ProtectedExternalChildren (currently: "ai").
+func ProtectedExternalChildrenList() string { return protectedExternalChildrenList }
+
+// ProtectedExternalAiChildrenList returns the canonical
+// alphabetically-sorted comma-joined rendering of
+// ProtectedExternalAiChildren (currently:
+// "comfyui, model, ollama, output").
+func ProtectedExternalAiChildrenList() string { return protectedExternalAiChildrenList }
+
 // knownFileTypesList is a stable, sorted, comma-joined rendering of
 // knownFileTypes, computed once so the (cold) error path doesn't allocate
 // on every parse failure. Keep in sync with knownFileTypes above.
@@ -407,4 +516,71 @@ func (p FrontendPath) IsProtectedDriveHomeChild() bool {
 	}
 	_, ok := ProtectedDriveHomeChildren[seg]
 	return ok
+}
+
+// IsProtectedExternalChild reports whether this path points exactly
+// at one of the LarePass-managed entries the GUI refuses rename /
+// delete on under `external/<node>/...`. Two layers, both mirroring
+// the GUI's `isDisableMenuItem` logic verbatim:
+//
+//   - depth-1 (`ProtectedExternalChildren`): the path is
+//     `external/<node>/<name>` and `<name>` is in
+//     ProtectedExternalChildren (currently just "ai"). Matches the
+//     GUI's `ieExternalRootPath` + `externalFolderWhiteList` gate
+//     (regex `^/Files/External/[^/]+/?$` on the parent listing).
+//   - depth-2 (`ProtectedExternalAiChildren`): the path is
+//     `external/<node>/ai/<name>` and `<name>` is in
+//     ProtectedExternalAiChildren (output / model / comfyui /
+//     ollama). Matches the GUI's `isExternalAiPath` +
+//     `externalAiFolderWhiteList` gate (regex
+//     `^/Files/External/[^/]+/ai/?$` on the parent listing).
+//
+// Path-shape semantics:
+//
+//   - FileType MUST be "external" — the policy applies only to the
+//     LarePass-managed external root, not to drive / sync / cache
+//     or cloud namespaces (those have their own policies, see
+//     IsProtectedDriveHomeChild and the cloud rejections in the
+//     respective Plan functions).
+//   - Extend (the `<node>` segment) is OPAQUE to the policy — the
+//     GUI's regex `^/Files/External/[^/]+/...` ignores its content
+//     and the rule applies on every node.
+//   - SubPath MUST be exactly 1 segment for the depth-1 layer
+//     (`/ai/?`) or exactly 2 segments with the first == "ai" for
+//     the depth-2 layer (`/ai/<name>/?`). Deeper paths
+//     (e.g. `external/<node>/ai/output/run-2026/`) are user
+//     content and stay rename/delete-able — the same scope the GUI
+//     uses by gating on the selected row's name only.
+//
+// Used by `rename` and `rm` to refuse the operation client-side
+// with a self-describing error. `cp` does NOT use this — see the
+// docstring on ProtectedExternalChildren for why duplicating the
+// bytes is fine even when renaming/deleting the original is not.
+func (p FrontendPath) IsProtectedExternalChild() bool {
+	if p.FileType != "external" {
+		return false
+	}
+	seg := strings.Trim(p.SubPath, "/")
+	if seg == "" {
+		return false
+	}
+	parts := strings.Split(seg, "/")
+	switch len(parts) {
+	case 1:
+		// external/<node>/<name> — depth-1 layer (immediate
+		// child of the node root).
+		_, ok := ProtectedExternalChildren[parts[0]]
+		return ok
+	case 2:
+		// external/<node>/ai/<name> — depth-2 layer. The first
+		// segment MUST be "ai" — depth-2 paths under any other
+		// directory are user content (the GUI's `isExternalAiPath`
+		// regex anchors specifically on `/ai/`).
+		if parts[0] != "ai" {
+			return false
+		}
+		_, ok := ProtectedExternalAiChildren[parts[1]]
+		return ok
+	}
+	return false
 }
