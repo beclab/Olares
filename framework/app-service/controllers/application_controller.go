@@ -651,6 +651,8 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 				}
 
 				sharedEntrances = appCfg.SharedEntrances
+			} else if appCfg.IsV3() {
+				sharedEntrances = appCfg.SharedEntrances
 			}
 			if appCfg.MobileSupported {
 				settings["mobileSupported"] = "true"
