@@ -247,6 +247,33 @@ function tryUnlink(filePath) {
   }
 }
 
+// Decide whether npm's global bin path collides with an existing system-path
+// binary. On a Linux Olares host npm prefix is typically /usr/local, so
+// /usr/local/bin/olares-cli == detectSystemOlaresCli() and any subsequent
+// `npm install -g` would just race to EEXIST. Catching that here lets the
+// wizard bail immediately instead of waiting out the full install timeout.
+// Returns false on any error so the caller falls through to the existing
+// post-install EEXIST handler -- this short-circuit is opportunistic.
+function npmGlobalBinCollidesWith(sysCli) {
+  let prefix;
+  try {
+    prefix = runSilent('npm', ['config', 'get', 'prefix'], { timeout: 10000 })
+      .toString().trim();
+  } catch (_) {
+    return false;
+  }
+  if (!prefix) return false;
+  const npmBin = isWindows
+    ? path.join(prefix, 'olares-cli.cmd')
+    : path.join(prefix, 'bin', 'olares-cli');
+  if (npmBin === sysCli) return true;
+  try {
+    return fs.realpathSync(npmBin) === fs.realpathSync(sysCli);
+  } catch (_) {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Steps
 // ---------------------------------------------------------------------------
@@ -267,6 +294,15 @@ async function stepInstallGlobally(interactive) {
     if (isReleaseGradeVersion(verStr)) {
       const line = fmt(msg.preflightKeepRelease, sysCli, verDisplay);
       if (interactive) p.log.info(line); else console.log(line);
+      if (npmGlobalBinCollidesWith(sysCli)) {
+        // npm's global bin == this exact path, so `npm install -g` would
+        // just race to EEXIST after the full install timeout. Skip the
+        // attempt and jump straight to the EEXIST workaround.
+        if (interactive) p.log.info(msg.step1EexistStop); else console.log(msg.step1EexistStop);
+        const hint = fmt(msg.step1Eexist, PKG, SKILLS_REPO);
+        if (interactive) p.log.warn(hint); else console.error(hint);
+        process.exit(1);
+      }
     } else {
       const line = fmt(msg.preflightReplaceDev, sysCli, verDisplay);
       if (interactive) p.log.warn(line); else console.warn(line);
