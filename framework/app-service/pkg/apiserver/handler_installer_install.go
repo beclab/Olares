@@ -340,7 +340,8 @@ func (h *Handler) getOriginChartVersion(rawAppName, owner string) (string, error
 		return "", err
 	}
 	for _, am := range ams.Items {
-		if am.Spec.AppName == rawAppName && am.Spec.AppOwner == owner {
+		isV3 := am.Labels[constants.AppApiVersionLabel] == "v3"
+		if (am.Spec.AppName == rawAppName && am.Spec.AppOwner == owner) || (am.Spec.AppName == rawAppName && isV3) {
 			return am.Annotations[api.AppVersionKey], nil
 		}
 	}

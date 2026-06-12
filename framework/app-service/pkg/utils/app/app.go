@@ -1096,6 +1096,7 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		LLMGatewaySupported:  cfg.Options.LLMGatewaySupported,
 		OverlayGateway:       cfg.OverlayGateway,
 		WorkloadReplicas:     cfg.WorkloadReplicas,
+		TemplateOnly:         cfg.Options.TemplateOnly,
 	}
 
 	// v3 / shared apps are themselves the destination of cross-namespace
