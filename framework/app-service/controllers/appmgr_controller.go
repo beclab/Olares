@@ -199,6 +199,7 @@ func (r *ApplicationManagerController) publishStateChangeEvent(am *appv1alpha1.A
 		Reason:       am.Status.Reason,
 		Message:      am.Status.Message,
 		MarketSource: am.Annotations[constants.AppMarketSourceKey],
+		ChartOwner:   appcfg.GetChartOwner(am),
 		IsShared:     appcfg.IsShared(am),
 	})
 }

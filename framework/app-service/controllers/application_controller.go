@@ -301,6 +301,12 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	if v, ok := deployment.GetLabels()[constants.AppSharedLabel]; ok && v != "" {
 		appLabels[constants.AppSharedLabel] = v
 	}
+	if v, ok := deployment.GetLabels()[constants.AppClonedFromKey]; ok && v != "" {
+		appLabels[constants.AppClonedFromKey] = v
+	}
+	if v, ok := deployment.GetLabels()[constants.AppChartOwnerKey]; ok && v != "" {
+		appLabels[constants.AppChartOwnerKey] = v
+	}
 	// create the application cr
 	newapp := &appv1alpha1.Application{
 		TypeMeta: metav1.TypeMeta{},
@@ -475,6 +481,18 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 			appCopy.Labels = make(map[string]string)
 		}
 		appCopy.Labels[constants.AppSharedLabel] = v
+	}
+	if v, ok := deployment.GetLabels()[constants.AppClonedFromKey]; ok && v != "" {
+		if appCopy.Labels == nil {
+			appCopy.Labels = make(map[string]string)
+		}
+		appCopy.Labels[constants.AppClonedFromKey] = v
+	}
+	if v, ok := deployment.GetLabels()[constants.AppChartOwnerKey]; ok && v != "" {
+		if appCopy.Labels == nil {
+			appCopy.Labels = make(map[string]string)
+		}
+		appCopy.Labels[constants.AppChartOwnerKey] = v
 	}
 
 	err = r.Patch(ctx, appCopy, client.MergeFrom(app))

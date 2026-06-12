@@ -49,13 +49,22 @@ func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
 		api.HandleBadRequest(resp, req, fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.StopOp, am.Status.State))
 		return
 	}
+
+	// if current user is admin, also stop server side
+	isAdmin, err := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	stopAll := isAdmin || request.All
+
 	am.Spec.OpType = v1alpha1.StopOp
 	if am.Annotations == nil {
 		am.Annotations = make(map[string]string)
 	}
-	am.Annotations[api.AppStopAllKey] = fmt.Sprintf("%t", true)
+	am.Annotations[api.AppStopAllKey] = fmt.Sprintf("%t", stopAll)
 
-	err := h.ctrlClient.Update(req.Request.Context(), &am)
+	err = h.ctrlClient.Update(req.Request.Context(), &am)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -67,7 +76,7 @@ func (h *Handler) suspend(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
-	if err = compute.DeleteAllocationsForComputeTarget(req.Request.Context(), h.ctrlClient, &appCfg, true); err != nil {
+	if err = compute.DeleteAllocationsForComputeTarget(req.Request.Context(), h.ctrlClient, &appCfg, stopAll); err != nil {
 		klog.Errorf("delete compute allocation for suspended app %s failed %v", app, err)
 		api.HandleError(resp, req, err)
 		return
