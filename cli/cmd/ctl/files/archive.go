@@ -129,7 +129,7 @@ Output modes:
 Format detection:
 
     The server infers the archive container from the source's filename
-    extension (.zip / .7z / .tar.gz / .tgz / ...) — no client-side hint
+    extension (.zip / .7z / .zip.001 / .7z.001 / .tar.gz / .tgz / ...) — no client-side hint
     travels on the wire. We still accept --format locally so the CLI can
     pre-validate flag combinations (e.g. --password-stdin only on zip /
     7z); pass it when the file has no canonical extension and you need
@@ -410,7 +410,7 @@ piping into ` + "`less`" + ` / ` + "`hexdump`" + ` / ` + "`head -c`" + ` works a
 Format detection:
 
     The server infers the archive container from the source's filename
-    extension (.zip / .7z / .tar.gz / .tgz / ...) — no client-side hint
+    extension (.zip / .7z / .zip.001 / .7z.001 / .tar.gz / .tgz / ...) — no client-side hint
     travels on the wire. We still accept --format locally so the CLI can
     pre-validate flag combinations (e.g. --password-stdin only on zip /
     7z); pass it when the file has no canonical extension.
