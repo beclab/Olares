@@ -10,8 +10,14 @@ These skills are published to [ClawHub](https://clawhub.ai/), the public registr
 cli/skills/
 ├── README.md          # this file
 ├── publish.sh         # publish helper (used locally and from CI)
-├── olares-shared/     # foundation: profile model, login, token refresh
-├── olares-files/      # olares-cli files
+├── olares-shared/
+│   └── SKILL.md       # foundation: profile model, login, token refresh
+├── olares-files/
+│   ├── SKILL.md       # cross-cutting concepts + verb index
+│   └── references/    # one file per non-trivial subcommand
+│       ├── olares-files-ls.md
+│       ├── olares-files-upload.md
+│       └── ...
 ├── olares-market/     # olares-cli market
 ├── olares-settings/   # olares-cli settings
 ├── olares-dashboard/  # olares-cli dashboard
@@ -19,6 +25,29 @@ cli/skills/
 ```
 
 `olares-shared` is the foundation — every other skill cross-references it for the profile selection, login, and HTTP 401/403 recovery rules. Always install it first.
+
+ClawHub publishes the entire skill directory (including `references/`), so reference files ship automatically without any change to `publish.sh`.
+
+## Writing style
+
+`SKILL.md` is NOT meant to compete with `olares-cli <command> --help`. The frontmatter already declares `cliHelp:` so the agent knows the authoritative `--help` invocation. The body should only carry what `--help` cannot give:
+
+- **Routing** — when to use this skill vs. siblings
+- **Cross-cutting concepts** referenced by ≥2 subcommands (e.g. olares-files' 3-segment frontend path)
+- **Client-side hard constraints that bite users** (quirks the GUI enforces, server-side auto-rename traps, …)
+- **Error → fix matrix** that is not in `--help`
+- **Verb index** — one row per verb pointing at `--help` and (if it exists) `references/<verb>.md`
+
+Each non-trivial subcommand gets a `references/<skill>-<verb>.md` file that adds — on top of `--help` — safety constraints, agent-facing multi-step flows, and common-error troubleshooting tables. Do NOT re-list flag descriptions; trust `--help`.
+
+What to leave out of SKILL.md (and references):
+
+- Per-flag descriptions (in `--help`)
+- Source-path citations like `[cli/cmd/ctl/files/path.go](...)` — agents don't review Go source
+- Internal package walkthroughs / "Source layout" sections
+- "What's NOT here yet" / future-work sections — keep skills focused on current capability
+
+Target sizes: SKILL.md ≤ 250 lines (≤ 300 for the most complex command tree). Each reference: ≤ 150 lines.
 
 ## Runtime requirement
 
