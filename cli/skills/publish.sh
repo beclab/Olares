@@ -23,7 +23,7 @@
 #
 # The CLI binary `olares-cli` itself is NOT published here — it ships with
 # Olares. Each skill declares it as a host requirement via
-# metadata.requires.bins: ["olares-cli"].
+# metadata.openclaw.requires.bins: ["olares-cli"].
 
 set -euo pipefail
 
@@ -80,6 +80,14 @@ read_name() {
   awk '/^---[[:space:]]*$/{n++; next} n==1 && /^name:[[:space:]]*/ {sub(/^name:[[:space:]]*/, ""); gsub(/[[:space:]"]/, ""); print; exit}' "$file"
 }
 
+# Read quoted `description:` value length from frontmatter (OpenCode max 1024).
+read_description_len() {
+  local file="$1"
+  awk '/^---[[:space:]]*$/{n++; next} n==1 && /^description:[[:space:]]*"/ {
+    sub(/^description:[[:space:]]*"/, ""); sub(/"[[:space:]]*$/, ""); print length($0); exit
+  }' "$file"
+}
+
 # Local validation: check required frontmatter fields + semver.
 validate_skill() {
   local dir="$1" slug="$2" file="$dir/SKILL.md"
@@ -88,17 +96,28 @@ validate_skill() {
   [[ -f "$file" ]] || { echo "  - SKILL.md missing"; return 1; }
   head -n1 "$file" | grep -q '^---[[:space:]]*$' || errs+=("frontmatter does not start with --- on line 1")
 
-  local fm_name fm_version
+  local fm_name fm_version desc_len
   fm_name="$(read_name "$file")"
   fm_version="$(read_version "$file")"
+  desc_len="$(read_description_len "$file")"
   [[ -n "$fm_name" ]] || errs+=("missing name: in frontmatter")
   [[ "$fm_name" == "$slug" ]] || errs+=("frontmatter name '$fm_name' != folder slug '$slug'")
   [[ -n "$fm_version" ]] || errs+=("missing version: in frontmatter")
   [[ "$fm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]] \
     || errs+=("version '$fm_version' is not valid semver")
   grep -qE '^description:' "$file" || errs+=("missing description: in frontmatter")
+  if [[ -z "$desc_len" ]]; then
+    errs+=("description must be a single quoted line in frontmatter")
+  elif [[ "$desc_len" -gt 1024 ]]; then
+    errs+=("description length $desc_len exceeds OpenCode limit of 1024")
+  fi
+  grep -qE '^compatibility:' "$file" || errs+=("missing compatibility: in frontmatter")
   grep -qE '^metadata:' "$file" || errs+=("missing metadata: block in frontmatter")
-  grep -qE '"olares-cli"' "$file" || errs+=("metadata.requires.bins should include \"olares-cli\"")
+  grep -qE '^[[:space:]]+openclaw:' "$file" || errs+=("missing metadata.openclaw block in frontmatter")
+  grep -qE '^[[:space:]]+- olares-cli[[:space:]]*$' "$file" || errs+=("metadata.openclaw.requires.bins must list olares-cli")
+  if grep -qE '^  requires:[[:space:]]*$' "$file"; then
+    errs+=("deprecated top-level metadata.requires — use metadata.openclaw.requires.bins")
+  fi
 
   if [[ ${#errs[@]} -gt 0 ]]; then
     for e in "${errs[@]}"; do echo "  - $e"; done

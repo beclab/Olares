@@ -1,16 +1,18 @@
 ---
 name: olares-cluster
-version: 4.0.0
-description: "Olares ControlHub view (olares-cli cluster) — per-Olares-ID command-line mirror of the Olares ControlHub SPA's Cluster page, the Kubernetes view of an Olares instance. Reads pods, containers, workloads (Deployment / StatefulSet / DaemonSet), application spaces (KubeSphere-grouped namespaces), namespaces, nodes, jobs, cronjobs, and Olares-managed middleware (databases, queues, object stores) that the active Olares ID is allowed to see. Mutating verbs (scale / restart / stop / start / delete on workloads, delete / restart on pods, suspend / resume on cronjobs, rerun on jobs) all go through a confirmation prompt that --yes skips. Watch verbs (pod get -w, workload rollout-status -w, application status -w, pod / container logs -f) poll on --interval. Use when the user mentions Olares, Olares ID, Olares ControlHub, olares-cli cluster, or asks 'what's running on my Olares', 'tail logs of <pod>', 'restart / scale / delete this workload', 'who am I on this ControlHub', 'suspend this cronjob', or 'rerun this job'. Do NOT use for Olares app-store lifecycle (use olares-cli market) or host-side install / node join / OS upgrade (use olares-cli node / os / gpu)."
+version: 4.1.0
+description: "Olares ControlHub K8s view via olares-cli cluster — pods, workloads, logs, scale/restart, jobs, cronjobs, middleware. Not for app lifecycle (market) or host install (node/os/gpu). Use for ControlHub, pods, logs, workloads."
+compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
-  requires:
-    bins: ["olares-cli"]
-  cliHelp: "olares-cli cluster --help"
+  openclaw:
+    requires:
+      bins:
+        - olares-cli
 ---
 
 # cluster (per-user K8s view)
 
-**CRITICAL — before doing anything, MUST use the Read tool to read [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for the profile model, login flow, automatic token refresh, and the auth-error recovery table.**
+**CRITICAL — before doing anything, load the `olares-shared` skill first (profile model, login, token refresh, auth-error recovery). Flag reference: `olares-cli cluster --help`.**
 
 > **Source of truth for flags & wire shapes is always `olares-cli cluster <noun> <verb> --help`.** This file only carries what `--help` cannot give: routing, the mental model of nouns, the identity-vs-server principle, the mutating-verb safety contract, cross-verb output conventions, and the common-errors → fix table.
 
@@ -18,12 +20,14 @@ metadata:
 
 Against the cluster the active profile can see:
 
+- Olares ControlHub, olares-cli cluster, what's running on my Olares
 - "What pods / containers / workloads / jobs / cronjobs / namespaces / nodes are running?"
 - "Tail / show logs of `<pod>` (or `<container>` of `<pod>`)"
-- "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app
+- "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app (mutating verbs prompt for confirmation; `--yes` skips)
 - "Suspend / resume `<cronjob>`" or "rerun `<job>`"
 - "Who am I on this cluster, what's my role?" (`cluster context`)
 - "What does this object's YAML look like?" (`cluster <noun> yaml`)
+- Watch / follow: pod `-w`, workload `rollout-status -w`, application `status -w`, logs `-f` (poll on `--interval`)
 
 ## When NOT to use — route to a sibling skill
 

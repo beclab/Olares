@@ -31,7 +31,7 @@ ClawHub publishes the entire skill directory (including `references/`), so refer
 
 ## Writing style
 
-`SKILL.md` is NOT meant to compete with `olares-cli <command> --help`. The frontmatter already declares `cliHelp:` so the agent knows the authoritative `--help` invocation. The body should only carry what `--help` cannot give:
+`SKILL.md` is NOT meant to compete with `olares-cli <command> --help`. The body references `olares-cli <command> --help` for authoritative flag syntax. The body should only carry what `--help` cannot give:
 
 - **Routing** — when to use this skill vs. siblings
 - **Cross-cutting concepts** referenced by ≥2 subcommands (e.g. olares-files' 3-segment frontend path)
@@ -55,10 +55,15 @@ Target sizes: SKILL.md ≤ 250 lines (≤ 300 for the most complex command tree)
 Each `SKILL.md` declares:
 
 ```yaml
+compatibility: Requires olares-cli on PATH
 metadata:
-  requires:
-    bins: ["olares-cli"]
+  openclaw:
+    requires:
+      bins:
+        - olares-cli
 ```
+
+`description` must stay ≤ 1024 characters (OpenCode limit). Put detailed trigger phrases in the skill body's `## When to use` section.
 
 ClawHub does **not** install the `olares-cli` binary for you — it is part of every Olares device, so the `bins:` line just gates the skill behind "you must be on a host that has olares-cli on PATH". The binary itself ships through Olares' regular release channels (see [`cli/.goreleaser.yaml`](../.goreleaser.yaml) and [`.github/workflows/release-cli.yaml`](../../.github/workflows/release-cli.yaml)).
 
@@ -73,7 +78,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 
 ### Local validation (no network)
 
-`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` is valid semver, and that the required `metadata.requires.bins: ["olares-cli"]` declaration is present. It then prints the `clawhub skill publish` command that would actually run.
+`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` is valid semver, that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
 ./cli/skills/publish.sh --dry-run                  # validate all 7

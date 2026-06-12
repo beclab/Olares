@@ -1,16 +1,18 @@
 ---
 name: olares-dashboard
-version: 4.0.0
-description: "Olares Dashboard (olares-cli dashboard) — query the Olares Dashboard SPA's Overview and Applications routes from the command line, scoped to the active Olares ID. An AI-agent-first JSON mirror with a strict dual-shape envelope (leaf items / aggregated sections), stable Kind constants, and human-readable table output. Covers Overview leaves (CPU, memory, disk, network, pods, fan, GPU, ranking), Applications listing and detail, the --watch HTTP-polling loop (interval / iterations / timeout / NDJSON-per-iteration / SIGINT-graceful), --since (sliding window) vs --start/--end (fixed window) selection, three-state empty-data semantics (no_<feature>_integration / no_<feature>_detected / vgpu_unavailable), and capability gates (fan is hard-gated to Olares One hardware; GPU is a soft advisory mirroring the SPA sidebar). Use when the user mentions Olares, Olares ID, Olares Dashboard, Olares One (fan / cooling), olares-cli dashboard, the Olares overview / applications view, 'show CPU / memory / disk / pods / network / fan / GPU / ranking on Olares', wants JSON for an AI agent, or hits errors like 'fan is only available on Olares One devices' or 'gpu data temporarily unavailable'."
+version: 4.1.0
+description: "Olares Dashboard via olares-cli dashboard — CPU, memory, disk, network, pods, fan, GPU, ranking, applications; JSON envelope and --watch. Use for Olares Dashboard, overview, resource usage, Olares One fan."
+compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
-  requires:
-    bins: ["olares-cli"]
-  cliHelp: "olares-cli dashboard --help"
+  openclaw:
+    requires:
+      bins:
+        - olares-cli
 ---
 
 # dashboard (overview + applications, AI-agent first)
 
-**CRITICAL — before doing anything, MUST use the Read tool to read [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for profile selection, login, automatic token refresh, and the auth-error recovery table.**
+**CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli dashboard --help`.**
 
 > **Source of truth for flags is always `olares-cli dashboard --help` (global flags) and `olares-cli dashboard <verb> --help` (per-leaf flags).** This file only carries what `--help` cannot give: the dual-shape JSON envelope contract, three-state empty-data semantics, capability gates, watch / window rules, and the verb index.
 
@@ -22,6 +24,8 @@ This subtree is an **AI-agent-first JSON mirror of the Olares Dashboard SPA's Ov
 - The user wants the workload-grain or application-grain resource ranking.
 - The user wants the JSON form of what the SPA Overview / Applications pages show.
 - The user wants `--watch` for live-tailing one of the above.
+- Errors: `fan is only available on Olares One devices`, `gpu data temporarily unavailable`
+- Empty-data reasons: `no_<feature>_integration`, `no_<feature>_detected`, `vgpu_unavailable`; windows: `--since` vs `--start`/`--end`
 
 Sibling-skill routing:
 
