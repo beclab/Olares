@@ -34,6 +34,16 @@ function stripTrailingVersionSegment(base: string): string {
   return normalizePrefix(b);
 }
 
+// Current pathname, made reactive to VitePress client-side navigation.
+// Reading router.route.path registers a reactive dependency so dependent
+// computeds recompute on every in-app navigation; window.location.pathname
+// carries the full URL (base + version + page) and is already up to date by
+// the time the route changes.
+const currentPathname = computed(() => {
+  void router.route.path;
+  return inBrowser ? window.location.pathname : "/";
+});
+
 // Deploy prefix (e.g. /docs/). On versioned builds site.base is /docs/1.12.4/ —
 // strip any version suffix; do not skip latestVersion (each branch build may set
 // LATEST_VERSION to its own tag while base still carries that version segment).
@@ -43,7 +53,7 @@ const pathPrefix = computed(() => {
   }
 
   if (inBrowser) {
-    const pathname = window.location.pathname;
+    const pathname = currentPathname.value;
     for (const v of props.versions) {
       const marker = `/${v}/`;
       const idx = pathname.indexOf(marker);
@@ -72,7 +82,7 @@ const currentVersion = computed(() => {
   }
 
   if (inBrowser) {
-    const pathname = window.location.pathname;
+    const pathname = currentPathname.value;
     for (const v of props.versions) {
       if (pathname.includes(`/${v}/`)) return v;
     }
@@ -88,7 +98,7 @@ const currentVersion = computed(() => {
 // Path after the version segment (e.g. /manual/overview), for same-page jumps across versions.
 const pathSuffixAfterVersion = computed(() => {
   if (!inBrowser) return "/";
-  const pathname = window.location.pathname;
+  const pathname = currentPathname.value;
   const prefix = pathPrefix.value;
   let rest = pathname.startsWith(prefix)
     ? pathname.slice(prefix.length)
