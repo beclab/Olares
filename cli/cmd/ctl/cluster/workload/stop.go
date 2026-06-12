@@ -81,6 +81,6 @@ want to take it offline.
 	cmd.Flags().DurationVar(&interval, "interval", 2*time.Second, "polling interval for --watch")
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "give up after this duration when --watch is set; 0 = no timeout")
 	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "skip the confirmation prompt")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }

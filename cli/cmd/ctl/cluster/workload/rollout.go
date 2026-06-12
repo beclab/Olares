@@ -94,7 +94,20 @@ ticks are silent so the output matches real progress 1:1.
 			if c.Flags().Changed("timeout") && !watch {
 				return fmt.Errorf("--timeout requires --watch")
 			}
-			return runRolloutStatus(c.Context(), o, ns, name, plural, watch, interval, timeout)
+			err = runRolloutStatus(c.Context(), o, ns, name, plural, watch, interval, timeout)
+			if errors.Is(err, clusteropts.ErrReported) {
+				// We already printed the snapshot line on stdout
+				// inside runRolloutStatus — suppress cobra's default
+				// "Error: <msg>" prefix on stderr so the user doesn't
+				// see a misleading "Error: (already reported)" follow
+				// the legit status line. SilenceErrors is checked by
+				// Execute() AFTER RunE returns, so flipping it here is
+				// honored. The sentinel still propagates the non-zero
+				// exit code that scripts rely on for "not yet
+				// converged".
+				c.SilenceErrors = true
+			}
+			return err
 		},
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional argument is a bare name)")
@@ -102,7 +115,7 @@ ticks are silent so the output matches real progress 1:1.
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "poll until converged or interrupted (Ctrl-C to stop)")
 	cmd.Flags().DurationVar(&interval, "interval", 2*time.Second, "polling interval when --watch is set")
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "give up after this duration when --watch is set; 0 = no timeout")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }
 
@@ -259,8 +272,11 @@ func runRolloutStatus(ctx context.Context, o *clusteropts.ClusterOptions, namesp
 		}
 		if !s.Converged {
 			// Non-zero exit so scripts can branch without parsing
-			// the line. Sentinel keeps cobra from re-printing the
-			// error (we already rendered the snapshot).
+			// the line. NewRolloutStatusCommand's RunE wrapper
+			// recognizes this sentinel and flips cmd.SilenceErrors
+			// before returning, so cobra doesn't print a confusing
+			// "Error: (already reported)" line after the legitimate
+			// snapshot we just rendered to stdout.
 			return clusteropts.ErrReported
 		}
 		return nil
@@ -303,6 +319,13 @@ func runRolloutStatus(ctx context.Context, o *clusteropts.ClusterOptions, namesp
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return nil
+			}
+			// 4xx (except 408/429) won't fix itself on retry — the
+			// resource is gone / forbidden / malformed. Burning the
+			// 5-error budget on a clear-cut NotFound just spams the
+			// user with the same message four extra times.
+			if clusterclient.IsClientError(err) {
+				return err
 			}
 			consecErr++
 			o.Info("rollout-status: failed to fetch (retry %d): %v", consecErr, err)

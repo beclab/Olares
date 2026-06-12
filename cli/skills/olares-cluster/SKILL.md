@@ -22,7 +22,6 @@ Use `olares-cli cluster ...` when the user asks, against the cluster the active 
 - "Suspend / resume `<cronjob>`" or "rerun `<job>`"
 - "What workspaces / application spaces can I see?"
 - "Who am I on this cluster, what's my role?" (`cluster context`)
-- "Rotate the admin password on this `<middleware>`"
 - "What does this object's YAML look like?" (`cluster <noun> yaml`)
 
 ## When NOT to use — route to a sibling skill
@@ -48,7 +47,7 @@ Use `olares-cli cluster ...` when the user asks, against the cluster the active 
 | **Namespace** | `<name>` | The same K8s namespace, but with kubectl-style framing (no workspace grouping). |
 | **Node** | `<name>` | A K8s node visible to the active profile. **Different** from `olares-cli node` (host maintenance). |
 | **Job** | `<ns>/<name>` | A one-shot batch run (`apis/batch/v1`). |
-| **CronJob** | `<ns>/<name>` | A scheduled Job template (`apis/batch/v1beta1`). |
+| **CronJob** | `<ns>/<name>` | A scheduled Job template (`apis/batch/v1`). |
 | **Middleware** | `--type T --name N --namespace NS` | An Olares-managed database / queue / object store. NOT a K8s native resource — uses a separate `/middleware/v1/*` aggregator. |
 
 ## Resource relationships
@@ -92,7 +91,7 @@ cluster context             (identity / role / accessible workspaces)
 
 | Command | Endpoint | What it does |
 |---|---|---|
-| `cluster pod list [-n NS] [-l SEL] [--field-selector S] [--page N\|--all]` | `GET /kapis/resources.kubesphere.io/v1alpha3/[namespaces/<ns>/]pods` | Lists pods. Cross-namespace by default; `NAMESPACE` column appears when scope is wider than one namespace. |
+| `cluster pod list [-n NS] [-l SEL] [--field-selector S] [--page N\|--all]` | `GET /kapis/resources.kubesphere.io/v1alpha3/[namespaces/<ns>/]pods` | Lists pods. Cross-namespace by default; `NAMESPACE` column appears when scope is wider than one namespace. `--field-selector` accepts a kubectl-style subset (`status.phase`, `spec.nodeName`, `metadata.name`, `metadata.namespace`; only `=` / `==`) and is translated to the matching KubeSphere filter params — passing an unsupported field or `!=` errors out instead of returning an empty list. |
 | `cluster pod get <ns/name> [-w] [--interval D]` | `GET /api/v1/namespaces/<ns>/pods/<name>` | Vertical summary + per-container table. With `-w`: clear-screen-redraw on TTY (table) / JSONL (json). |
 | `cluster pod yaml <ns/name>` | same | JSON-to-YAML round-trip via `sigs.k8s.io/yaml`; faithful to every server field. |
 | `cluster pod events <ns/name> [--limit N]` | `GET /api/v1/namespaces/<ns>/events` | Server returns every event in the namespace; CLI filters client-side to `involvedObject.kind=Pod, name=<pod>`. Sorted oldest-first. |
@@ -161,21 +160,21 @@ K8s Jobs (`apis/batch/v1`).
 | `cluster job list [-n NS] [-l SEL] [--page N\|--all]` | `GET /kapis/resources.kubesphere.io/v1alpha3/[namespaces/<ns>/]jobs` | NAMESPACE / NAME / COMPLETIONS / STATUS (Complete/Failed/Suspended/Running/...) / DURATION / AGE. |
 | `cluster job get <ns/name>` | `GET /apis/batch/v1/namespaces/<ns>/jobs/<name>` | Vertical summary + Conditions + `Controlled By: CronJob/<name>` if present. |
 | `cluster job yaml <ns/name>` | same | JSON-to-YAML round-trip. |
-| `cluster job pods <ns/name> [-l ADDITIONAL] [...]` | (1) `job.Get` for `metadata.uid`; (2) `pod list` with `controller-uid=<uid>` | Two-step. `--label` is ANDed onto the controller-uid clause server-side. |
+| `cluster job pods <ns/name> [-l ADDITIONAL] [...]` | (1) `job.Get` to read `spec.selector.matchLabels`; (2) `pod list` with `labelSelector=<key=val,...>` joined from those matchLabels (sorted, deterministic) | Two-step. Uses the **K8s-native selector the Job controller itself wrote** rather than a hardcoded `controller-uid=<uid>` clause — this keeps the verb working across the K8s 1.27 relabel (`controller-uid` → `batch.kubernetes.io/controller-uid`, [KEP-3850](https://github.com/kubernetes/enhancements/issues/3850)) and across `manualSelector: true` Jobs that pick their own keys. Falls back to `controller-uid=<metadata.uid>` only when `spec.selector` is missing (ancient or hand-crafted bare Jobs). `--label` is ANDed onto the derived clause server-side. When the result is empty (Completed Job whose pods were GC'd by `ttlSecondsAfterFinished` or pruned by a parent CronJob's `successfulJobsHistoryLimit`), prints a hint to stderr that quotes the actual selector + source path and points the user at `cluster job yaml` for follow-up — never a silent empty table. |
 | `cluster job events <ns/name> [--limit N]` | `GET /api/v1/namespaces/<ns>/events` | Same shape as `pod events`, filtered to `involvedObject.kind=Job`. Shares `clusteropts.Event` + render/sort/URL helpers with `pod events` and `application status`. |
-| `cluster job rerun <ns/name> [--yes]` | (1) `job.Get` for `resourceVersion`; (2) `POST /kapis/operations.kubesphere.io/v1alpha2/namespaces/<ns>/jobs/<name>?action=rerun&resourceVersion=<rv>` | KubeSphere operations action; server spawns a new pod attempt. `ConfirmDestructive`-wrapped. |
+| `cluster job rerun <ns/name> [--yes] [--concurrency N]` | (1) `job.Get` for `spec.selector` + terminal-state check; (2) `GET /api/v1/namespaces/<ns>/pods?labelSelector=<derived>` (same `jobPodSelector` helper as `cluster job pods` — see that row for why we read `spec.selector.matchLabels` instead of hardcoding `controller-uid=<uid>`); (3) parallel `DELETE /api/v1/namespaces/<ns>/pods/<name>` bounded by `--concurrency` (default 5) | Client-side equivalent of KubeSphere's `action=rerun` — the operations endpoint isn't exposed by Olares, so the verb lists the Job's child Pods and deletes them; the Job controller then reschedules new attempts to satisfy `spec.parallelism` / `spec.completions`. Refuses Jobs already at `Complete=True` / `Failed=True` (they're terminal — delete and recreate instead). `ConfirmDestructive`-wrapped. |
 
 ## CronJobs (`cluster cronjob ...`, aliases `cronjobs` / `cj`)
 
-K8s CronJobs (`apis/batch/v1beta1` — different from Jobs).
+K8s CronJobs (`apis/batch/v1`).
 
 | Command | Endpoint | What it does |
 |---|---|---|
 | `cluster cronjob list [-n NS] [-l SEL] [--page N\|--all]` | `GET /kapis/resources.kubesphere.io/v1alpha3/[namespaces/<ns>/]cronjobs` | NAMESPACE / NAME / SCHEDULE / SUSPEND / ACTIVE / LAST-SCHEDULE / AGE. |
-| `cluster cronjob get <ns/name>` | `GET /apis/batch/v1beta1/namespaces/<ns>/cronjobs/<name>` | Vertical summary + ConcurrencyPolicy + Active Jobs + Job Template Selector. |
+| `cluster cronjob get <ns/name>` | `GET /apis/batch/v1/namespaces/<ns>/cronjobs/<name>` | Vertical summary + TimeZone + ConcurrencyPolicy + Starting Deadline + History limits + Active Jobs + Last Successful + Job Template Selector. |
 | `cluster cronjob yaml <ns/name>` | same | JSON-to-YAML round-trip. |
-| `cluster cronjob jobs <ns/name> [--limit N]` | (1) `cronjob.Get` for `spec.jobTemplate.metadata.labels`; (2) `GET /apis/batch/v1/.../jobs?labelSelector=<derived>` | Two-step. Errors clearly if the jobTemplate carries no labels (rather than fanning to "every job in the namespace"). |
-| `cluster cronjob suspend <ns/name> [--yes]` | `PATCH /apis/batch/v1beta1/.../cronjobs/<name>` body `{"spec":{"suspend":true}}` Content-Type `application/merge-patch+json` | `ConfirmDestructive`. No-op short-circuit when already suspended. |
+| `cluster cronjob jobs <ns/name> [--limit N]` | (1) `cronjob.Get` for `metadata.uid` (+ `spec.jobTemplate.metadata.labels` as an optimization key); (2) `GET /apis/batch/v1/.../jobs` — adds `?labelSelector=<derived>` when the jobTemplate carries labels (apiserver pre-narrow), unfiltered otherwise; (3) client-side filter by `ownerReferences[uid==cronjob.uid, controller=true, kind=CronJob]` (K8s-native parent/child binding — works for both KubeSphere/SPA- and kubectl/yaml-authored CronJobs). | `--limit N` caps items displayed AFTER filtering (default 100). Earlier revisions used labels as the binding mechanism and errored out on kubectl-authored CronJobs (which usually don't set jobTemplate labels); the new flow uses UID as the source of truth so it works for both. |
+| `cluster cronjob suspend <ns/name> [--yes]` | `PATCH /apis/batch/v1/.../cronjobs/<name>` body `{"spec":{"suspend":true}}` Content-Type `application/merge-patch+json` | `ConfirmDestructive`. No-op short-circuit when already suspended. |
 | `cluster cronjob resume <ns/name>` | same path body `{"spec":{"suspend":false}}` | NO `--yes` (re-enabling is non-destructive). No-op short-circuit when already active. |
 
 ## Middleware (`cluster middleware ...`, alias `mw`)
@@ -185,7 +184,6 @@ Olares-managed databases / queues / object stores via the `/middleware/v1/*` agg
 | Command | Endpoint | What it does |
 |---|---|---|
 | `cluster middleware list [-t TYPE] [--show-passwords]` | `GET /middleware/v1/list` | Custom envelope `{code, data:[...]}` — NOT K8s. TYPE / NAME / NAMESPACE / NODES / ADMIN-USER. **Admin password is never printed in table mode**; in `-o json` it's `<redacted>` unless `--show-passwords` is explicitly set. |
-| `cluster middleware password set --type X --name N --namespace NS --user U [--password P] [--yes]` | `POST /middleware/v1/<type>/password` | Sub-noun `password` (future-proof for `password rotate` / `reveal`). **`--password` is OPTIONAL and SHOULD usually be omitted** — when not provided, the verb prompts twice (no echo, must match). Passing it on the command line leaks the secret into shell history. `ConfirmDestructive`-wrapped. JSON output never echoes the password. |
 
 ## Output conventions
 
@@ -194,7 +192,7 @@ Same `-o table | json` flag set as `settings` and `market`.
 - `-o table` (default): tabwriter columns. List verbs add a `NAMESPACE` column when scope is cross-namespace; `get` verbs use a vertical key/value layout plus secondary tables; paginated lists print `(showing X of Y total — pass --limit Y to see more)` to stderr when truncated.
 - `-o json`: pretty-printed JSON. List/get verbs decode through minimal typed structs and re-emit only the fields the CLI knows about. The four `* yaml` verbs are the exception — they forward server bytes verbatim through JSON→YAML.
 - `-q` / `--quiet`: suppress all stdout; exit code carries success/failure. Useful for `cluster pod get foo/bar -q && echo ok`.
-- `--no-headers`: omit table headers (handy for shell pipelines).
+- `--no-headers`: omit table headers on list-style verbs (`<noun> list`, `pod events` / `job events`, `cronjob jobs`, `container env`). Intentionally NOT registered on `<noun> get` — those use a vertical key/value layout that has no column-header row to suppress, so the flag would be a no-op. Per the "don't silently waste a flag" rule (see `--interval requires --watch`), passing `--no-headers` to a get verb errors out with `unknown flag: --no-headers` rather than being silently accepted.
 - **Mutating verbs synthesize a stable JSON summary** (e.g. `{operation, kind, namespace, name, replicas}`) rather than forwarding the apiserver's post-write response — JSON consumers care about whether the change took, not about every field of the object.
 
 ### Pagination (`--page N` / `--all`)
@@ -207,13 +205,13 @@ Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `work
 
 - **Polling, never streaming.** Avoids chunked transfer encoding and matches `olares-cli market --watch`.
 - `signal.NotifyContext(os.Interrupt, SIGTERM)` for graceful Ctrl-C; exits nil so scripts don't get a non-zero from a voluntary stop.
-- Tolerates up to 5 consecutive transient errors before aborting; auth failures propagate immediately.
+- Tolerates up to 5 consecutive transient errors (network blips, 5xx) before aborting. **Terminal 4xx responses short-circuit immediately** — a NotFound / Forbidden / Unauthorized won't fix itself on the next poll, so the loop exits with the first real error instead of spamming the same message four extra times. `408 Request Timeout` and `429 Too Many Requests` are still treated as retryable.
 - TTY detection (`golang.org/x/term.IsTerminal`): clear-screen-redraw for table, raw stream for piped output, JSONL for `-o json`.
 - `--interval D` / `--timeout D` are **rejected with an error** when their gate flag (`-w` or `-f`) isn't also set. Don't silently waste a flag.
 
 ## Mutating verb safety contract
 
-Every mutating verb (`pod delete` / `pod restart`, all of `workload scale|restart|stop|start|delete`, `cronjob suspend`, `job rerun`, `middleware password set`) follows the same contract:
+Every mutating verb (`pod delete` / `pod restart`, all of `workload scale|restart|stop|start|delete`, `cronjob suspend`, `job rerun`) follows the same contract:
 
 1. **Wrapped in `ConfirmDestructive`.** Even for "reversible" changes — the prompt is the safety net, not the apiserver's typed error. `--yes` / `-y` opts out so scripts work non-interactively. `cronjob resume`, `workload start`, and `pod logs` are NOT wrapped (non-destructive).
 2. **No client-side authorization.** Server is the only authority. A 403 from the server is the answer; surface it. Never preflight against the cached cluster context.
@@ -226,8 +224,13 @@ Every mutating verb (`pod delete` / `pod restart`, all of `workload scale|restar
 | `server rejected the request (HTTP 401: ...); please run: olares-cli profile login --olares-id <id>` | Auto-refresh failed, OR refreshed token still rejected. | Run the suggested `profile login`. |
 | `server rejected the request (HTTP 403: ...)` | The active profile's role can't perform this. | Try `cluster context --refresh` to confirm the cached role matches the server. If still 403, the user genuinely lacks permission. |
 | `... HTTP 404 (NotFound): ...` on a list verb | Namespace doesn't exist OR the user can't see it (KubeSphere often returns 404 instead of 403 for "no access"). | `cluster application list` to see what the server thinks is visible. |
+| `--field-selector: field "..." is not supported (supported: ...)` | The cluster pod list `--field-selector` accepts only a translatable subset of kubectl selectors (the upstream KubeSphere endpoint doesn't speak the raw `fieldSelector=` wire syntax). | Use one of the listed fields, or drop `--field-selector` and filter client-side. |
+| `--field-selector: "..." uses the '!=' operator which the upstream KubeSphere pods endpoint does not support` | KubeSphere only matches equality. | Rephrase as a positive match, or filter the output through `jq`. |
 | `aborted by user` / `stdin is not a terminal — pass --yes to confirm: ...` | Destructive prompt rejected, or non-TTY context without `--yes`. | Interactive: answer `y`. Scripted: add `--yes`. |
-| `passwords do not match` (from `middleware password set`) | The two no-echo prompts disagreed. | Re-run. |
+| `job <ns/name> has already terminated (Complete/Failed: ...) — rerun cannot resurrect a terminal Job; delete and recreate the Job instead` (from `cluster job rerun`) | The Job has hit `Complete=True` or `Failed=True`; the controller stops scheduling, so deleting Pods would be a no-op. | Delete the Job (`kubectl delete job`) and recreate it from the same spec, or — if it was spawned by a CronJob — let the CronJob fire again. |
+| `job <ns/name> has no child pods (selector "..." matched nothing) — nothing to rerun` (from `cluster job rerun`) | The Job hasn't scheduled any Pod yet (typically a freshly-created Job that's still in the queue, or one with `spec.suspend=true`), OR a completed Job whose pods were already GC'd. | Wait a few seconds and retry; or `cluster job get` / `cluster job yaml` to inspect status + spec.selector. |
+| `No pods found for job <ns/name> (selector "..." via spec.selector.matchLabels)` (stderr hint from `cluster job pods`) | The selector resolved correctly but no Pods currently match — almost always a Completed Job whose Pods were garbage-collected by `ttlSecondsAfterFinished` or pruned by the parent CronJob's `successfulJobsHistoryLimit`. Exit code is 0 — this is informational, not an error. | Confirm with `olares-cli cluster job yaml <ns/name>` (look for `spec.ttlSecondsAfterFinished` and the parent CronJob's `successfulJobsHistoryLimit`). If you expected Pods to still exist, the parent CronJob may have rotated them out. |
+| `No pods found.` / `No pods found in <ns> namespace.` (stderr hint from `cluster pod list`, `cluster application pods`) | The query returned an empty page — same kubectl convention; exit code is 0. | Re-run with broader scope (drop `-n`, or `--all` to drain all pages) if you expected results. |
 | `--interval requires --follow` / `--interval requires --watch` / `--timeout requires --watch` | Polling cadence flags set without their gate flag. | Add `-f` / `-w`, or drop the offending flag. |
 | `decode ... response: ...` | Endpoint returned something we couldn't parse. | Re-run with `-o json` to see the raw shape. May indicate a server-side schema change. |
 | `refresh token for ... became invalid at ...` (typed `*credential.ErrTokenInvalidated`) | The refresh_token itself is dead — auto-refresh can't recover. | `olares-cli profile login`. See [`olares-shared`](../olares-shared/SKILL.md). |

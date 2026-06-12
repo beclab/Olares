@@ -86,7 +86,7 @@ Pass --yes to skip the confirmation prompt for scripted use.
 	cmd.Flags().StringVar(&kindRaw, "kind", "", "workload kind: deployment | statefulset | daemonset (REQUIRED)")
 	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "skip the confirmation prompt")
 	cmd.Flags().StringVar(&propagationRaw, "propagation", "foreground", "deletion propagation policy: foreground | background | orphan")
-	o.AddOutputFlags(cmd)
+	o.AddDetailOutputFlags(cmd)
 	return cmd
 }
 

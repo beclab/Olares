@@ -36,14 +36,26 @@ type JobMetadata struct {
 	OwnerReferences   []JobOwnerRef     `json:"ownerReferences,omitempty"`
 }
 
-// JobOwnerRef is the minimal subset of metav1.OwnerReference used to
-// surface the parent CronJob in `cluster job get`. We only care about
-// Kind + Name (controller flag is also included so a non-controller
-// owner ref doesn't masquerade as the parent).
+// JobOwnerRef is the minimal subset of metav1.OwnerReference used in
+// this package. Two consumers:
+//
+//   - `cluster job get` only needs Kind + Name to render the
+//     "Controlled By: CronJob/<name>" line.
+//   - `cluster cronjob jobs` matches child Jobs to their parent
+//     CronJob by `UID`, so we model it too. UID is the only field
+//     K8s guarantees stays unique across renames; Name + Kind would
+//     mis-attribute if a CronJob were deleted and recreated with the
+//     same name.
+//
+// The `Controller` flag prevents a non-controller owner ref (e.g. a
+// label-based "soft" reference written by a third-party operator)
+// from masquerading as the parent. We require Controller=true at
+// every call site that consumes this struct.
 type JobOwnerRef struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
 	Name       string `json:"name"`
+	UID        string `json:"uid,omitempty"`
 	Controller bool   `json:"controller,omitempty"`
 }
 
@@ -54,6 +66,24 @@ type JobSpec struct {
 	Parallelism  *int  `json:"parallelism,omitempty"`
 	BackoffLimit *int  `json:"backoffLimit,omitempty"`
 	Suspend      *bool `json:"suspend,omitempty"`
+
+	// Selector is the K8s-native pod selector the Job controller uses
+	// to find its child pods. In K8s 1.27+ the auto-generated
+	// matchLabels switched from the legacy `controller-uid=<uid>` to
+	// `batch.kubernetes.io/controller-uid=<uid>`; using the
+	// server-returned selector keeps `cluster job pods` and
+	// `cluster job rerun` working regardless of which label the cluster
+	// is currently stamping onto pods (manualSelector=true Jobs included).
+	Selector *JobSelector `json:"selector,omitempty"`
+}
+
+// JobSelector mirrors the small subset of metav1.LabelSelector we
+// actually consume. matchExpressions is intentionally omitted —
+// auto-generated Job selectors are matchLabels-only, and the few
+// manualSelector Jobs that use expressions can fall back to the
+// legacy `controller-uid=<uid>` path (see pods.go::jobPodSelector).
+type JobSelector struct {
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }
 
 type JobStatus struct {

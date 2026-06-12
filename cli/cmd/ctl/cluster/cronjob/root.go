@@ -6,9 +6,12 @@
 //   - The SPA also models them separately (jobType enum in
 //     apps/.../controlPanelCommon/network/network.ts has cronjobs +
 //     jobs as siblings).
-//   - The API versions differ: cronjobs live under apis/batch/v1beta1
-//     vs apis/batch/v1 for jobs. Mixing them under one package would
-//     force the verbs to branch on apiVersion at every fetch.
+//   - Even though both live under apis/batch/v1 today, the verb sets
+//     differ (only cronjobs have suspend/resume; only jobs have
+//     rerun) and the SPA itself models them as siblings, so keeping
+//     one package per noun matches the call shape users expect.
+//     (Historical note: cronjobs used to live under apis/batch/v1beta1
+//     pre-K8s 1.25; we no longer reference that path.)
 //   - The verb sets differ: only cronjobs have suspend/resume; only
 //     jobs have rerun. Splitting keeps each package's --help focused.
 //
@@ -31,17 +34,22 @@ func NewCronJobCommand(f *cmdutil.Factory) *cobra.Command {
 		Use:     "cronjob",
 		Aliases: []string{"cronjobs", "cj"},
 		Short:   "Inspect and suspend/resume K8s CronJobs visible to the active profile",
-		Long: `Inspect K8s CronJobs (apis/batch/v1beta1) on the Olares cluster
-from the active profile's ControlHub view, and suspend/resume them.
+		Long: `Inspect K8s CronJobs (apis/batch/v1) on the Olares cluster from
+the active profile's ControlHub view, and suspend/resume them.
 
 Endpoints (all under https://control-hub.<terminus>):
   list           /kapis/resources.kubesphere.io/v1alpha3/cronjobs
                  /kapis/resources.kubesphere.io/v1alpha3/namespaces/<ns>/cronjobs
-  get / yaml     /apis/batch/v1beta1/namespaces/<ns>/cronjobs/<name>
-  jobs           /apis/batch/v1/namespaces/<ns>/jobs?labelSelector=<derived>
-                   (two-step: GET cronjob → derive selector from
-                    spec.jobTemplate.metadata.labels)
-  suspend        PATCH apis/batch/v1beta1/.../cronjobs/<name>
+  get / yaml     /apis/batch/v1/namespaces/<ns>/cronjobs/<name>
+  jobs           (1) GET cronjob for UID (+ jobTemplate labels if any);
+                 (2) GET /apis/batch/v1/namespaces/<ns>/jobs
+                       [?labelSelector=<derived>]  -- label is an
+                       apiserver-side pre-narrow when present;
+                 (3) client-side filter by ownerReferences
+                       [uid==cronjob.uid, controller=true, kind=CronJob]
+                       — the K8s-native source of truth for parent
+                       /child binding.
+  suspend        PATCH apis/batch/v1/.../cronjobs/<name>
                    body {"spec":{"suspend":true}}
                    Content-Type application/merge-patch+json
   resume         same path; body {"spec":{"suspend":false}}
