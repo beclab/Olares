@@ -25,6 +25,7 @@ const (
 	defaultGatewayNS       = "os-gateway"
 	defaultGatewayName     = "app-gateway"
 	defaultGatewaySectN    = "https"
+	sharedGatewaySectN     = "http"
 	ConditionReady         = "Ready"
 	ReasonGatewayMode      = "GatewayMode"
 	ReasonDirectMode       = "DirectMode"
@@ -61,6 +62,21 @@ func (g GatewayRef) gatewaySection() string {
 		return g.GatewaySection
 	}
 	return defaultGatewaySectN
+}
+
+func gatewaySectionForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) string {
+	if gw.GatewaySection != "" {
+		return gw.GatewaySection
+	}
+	if srr == nil {
+		return defaultGatewaySectN
+	}
+	switch srr.Spec.EntranceClass {
+	case "", srrv1alpha1.EntranceClassShared:
+		return sharedGatewaySectN
+	default:
+		return defaultGatewaySectN
+	}
 }
 
 // ReconcileResult is written onto SRR.status after a reconcile pass.
@@ -198,7 +214,7 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 		"kind":        "Gateway",
 		"namespace":   gw.gatewayNamespace(),
 		"name":        gw.gatewayName(),
-		"sectionName": gw.gatewaySection(),
+		"sectionName": gatewaySectionForSRR(gw, srr),
 	}
 	backendRef := map[string]any{
 		"group":     "",

@@ -26,12 +26,12 @@ func TestHostRegexValue(t *testing.T) {
 }
 
 func TestHTTPRouteHostnamesAndHeaderMatches(t *testing.T) {
-	patterns := []string{"ab12cd34.*.olares.com", "exact.example.com", "ab12cd34.*.olares.com"}
+	patterns := []string{"ab12cd34.*.olares.com", "ab12cd34.shared.olares.com", "exact.example.com", "ab12cd34.*.olares.com"}
 	hosts := HTTPRouteHostnames(patterns)
-	if len(hosts) != 2 {
-		t.Fatalf("hosts = %v, want 2 deduped", hosts)
+	if len(hosts) != 3 {
+		t.Fatalf("hosts = %v, want 3 deduped", hosts)
 	}
-	if hosts[0] != "*.olares.com" || hosts[1] != "exact.example.com" {
+	if hosts[0] != "*.olares.com" || hosts[1] != "ab12cd34.shared.olares.com" || hosts[2] != "exact.example.com" {
 		t.Errorf("hosts = %v", hosts)
 	}
 	matches := HTTPRouteHostHeaderMatches(patterns)

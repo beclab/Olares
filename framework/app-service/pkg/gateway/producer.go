@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"k8s.io/klog/v2"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
+	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
 // SharedRouteProducerReconciler turns shared gateway-mode Applications into
@@ -59,9 +61,9 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 	if platformDomain == "" {
 		return fmt.Errorf("platformDomain is empty")
 	}
-	appid := EntranceAppID(app)
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
 	if appid == "" {
-		return fmt.Errorf("invalid appid derived from app name %q", app.Spec.Name)
+		return fmt.Errorf("invalid appid in app.spec.appid for app %q", app.Spec.Name)
 	}
 	desired := make(map[string]struct{}, len(app.Spec.SharedEntrances))
 
@@ -82,6 +84,7 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 		if err != nil {
 			return fmt.Errorf("build SRR spec for entrance %q: %w", entrance.Name, err)
 		}
+		spec.EntranceClass = srrv1alpha1.EntranceClassShared
 		name := ResourceNameForEntrance(appid, entrance.Name)
 		if err := CheckLogicalPatternUniqueness(ctx, r.Client, spec.HostPatterns[0], app.Spec.Namespace, name); err != nil {
 			return fmt.Errorf("uniqueness check for entrance %q: %w", entrance.Name, err)

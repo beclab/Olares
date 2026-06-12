@@ -16,6 +16,23 @@ import (
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
+func mustHTTPRouteSectionName(t *testing.T, route *unstructured.Unstructured) string {
+	t.Helper()
+	parentRefs, found, err := unstructured.NestedSlice(route.Object, "spec", "parentRefs")
+	if err != nil || !found || len(parentRefs) == 0 {
+		t.Fatalf("spec.parentRefs missing: found=%v err=%v", found, err)
+	}
+	parentRef, ok := parentRefs[0].(map[string]any)
+	if !ok {
+		t.Fatalf("parentRefs[0] type = %T, want map[string]any", parentRefs[0])
+	}
+	section, ok := parentRef["sectionName"].(string)
+	if !ok {
+		t.Fatalf("parentRefs[0].sectionName type = %T, want string", parentRef["sectionName"])
+	}
+	return section
+}
+
 func testScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	s := runtime.NewScheme()
@@ -62,9 +79,10 @@ func TestReconcileSharedRouteGatewayMode(t *testing.T) {
 	srr := &srrv1alpha1.SharedRouteRegistry{
 		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo-web", Namespace: "demo-shared", UID: "uid-1"},
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{
-			RouteMode:    srrv1alpha1.RouteModeGateway,
-			HostPatterns: []string{"ab12cd34.*.olares.com"},
-			Upstream:     srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassShared,
+			HostPatterns:  []string{"ab12cd34.shared.olares.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
 		},
 	}
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
@@ -82,10 +100,74 @@ func TestReconcileSharedRouteGatewayMode(t *testing.T) {
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "shared-demo-web"}, route); err != nil {
 		t.Fatalf("HTTPRoute not created: %v", err)
 	}
+	if got := mustHTTPRouteSectionName(t, route); got != "http" {
+		t.Fatalf("HTTPRoute sectionName = %q, want http", got)
+	}
 
 	np := &networkingv1.NetworkPolicy{}
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: NetworkPolicyName}, np); err != nil {
 		t.Fatalf("NetworkPolicy not created: %v", err)
+	}
+}
+
+func TestReconcileSharedRouteGatewayModeApplicationSection(t *testing.T) {
+	s := testScheme(t)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo-app", Namespace: "demo-shared", UID: "uid-app"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			HostPatterns:  []string{"app.viewer.olares.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "shared-demo-app"}, route); err != nil {
+		t.Fatalf("HTTPRoute not created: %v", err)
+	}
+	if got := mustHTTPRouteSectionName(t, route); got != "https" {
+		t.Fatalf("HTTPRoute sectionName = %q, want https", got)
+	}
+}
+
+func TestReconcileSharedRouteGatewayModeEmptyEntranceClassDefaultsToShared(t *testing.T) {
+	s := testScheme(t)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo-empty", Namespace: "demo-shared", UID: "uid-empty"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:    srrv1alpha1.RouteModeGateway,
+			HostPatterns: []string{"empty.shared.olares.com"},
+			Upstream:     srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "shared-demo-empty"}, route); err != nil {
+		t.Fatalf("HTTPRoute not created: %v", err)
+	}
+	if got := mustHTTPRouteSectionName(t, route); got != "http" {
+		t.Fatalf("HTTPRoute sectionName = %q, want http for empty EntranceClass", got)
 	}
 }
 

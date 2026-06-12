@@ -17,37 +17,19 @@ func IsGatewaySharedApp(app *appv1alpha1.Application) bool {
 	return IsShared(app) || IsClusterScoped(app)
 }
 
-// SharedEntranceID returns the first DNS label for v3 shared entrances:
-// appid when count==1, appid+index when count>1.
-func SharedEntranceID(appid string, entranceIndex, entranceCount int) (string, error) {
+// LogicalHostPattern returns the canonical shared gateway host pattern:
+// <sharedEntranceID>.shared.<platformDomain>.
+func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platformDomain string) (string, error) {
 	appid = strings.ToLower(strings.TrimSpace(appid))
 	if appid == "" {
-		return "", fmt.Errorf("shared entrance id: appid is empty")
-	}
-	if entranceCount < 1 || entranceCount > 10 {
-		return "", fmt.Errorf("shared entrance id: entrance count must be in [1,10]")
+		return "", fmt.Errorf("appid is empty")
 	}
 	if entranceIndex < 0 || entranceIndex >= entranceCount {
-		return "", fmt.Errorf("shared entrance id: entrance index out of range")
+		return "", fmt.Errorf("shared entrance index out of range: index=%d count=%d", entranceIndex, entranceCount)
 	}
-	if entranceCount == 1 {
-		return appid, nil
-	}
-	return fmt.Sprintf("%s%d", appid, entranceIndex), nil
-}
-
-// LogicalHostPattern returns the SRR hostPattern for a shared entrance. One
-// logical pattern covers all viewers: <entranceid>.*.<platformDomain>. The
-// literal "*" label is the marker route control expands into a Host regex
-// match in the generated HTTPRoute.
-func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platformDomain string) (string, error) {
 	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
 	if platformDomain == "" {
-		return "", fmt.Errorf("logical host pattern: platformDomain is empty")
+		return "", fmt.Errorf("platformDomain is empty")
 	}
-	entranceID, err := SharedEntranceID(appid, entranceIndex, entranceCount)
-	if err != nil {
-		return "", err
-	}
-	return entranceID + ".*." + platformDomain, nil
+	return fmt.Sprintf("%s.shared.%s", appv1alpha1.SharedEntranceID(appid, entranceIndex, entranceCount), platformDomain), nil
 }

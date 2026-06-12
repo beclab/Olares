@@ -38,6 +38,9 @@ func TestNormalizeHostOrLogicalPattern(t *testing.T) {
 	if got, err := NormalizeHostOrLogicalPattern("ab12cd34.*.olares.com"); err != nil || got != "ab12cd34.*.olares.com" {
 		t.Errorf("logical pattern got %q err %v", got, err)
 	}
+	if got, err := NormalizeHostOrLogicalPattern("ab12cd34.shared.olares.com"); err != nil || got != "ab12cd34.shared.olares.com" {
+		t.Errorf("shared exact host got %q err %v", got, err)
+	}
 	if !IsLogicalHostPattern("ab12cd34.*.olares.com") {
 		t.Error("IsLogicalHostPattern should be true for wildcard pattern")
 	}
