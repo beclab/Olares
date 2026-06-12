@@ -300,6 +300,33 @@ func TestPickAggregateAllocationsAcrossNodes(t *testing.T) {
 	}
 }
 
+// TestPickSingleAllocationGB10MemorySlice guards the GB10 single-card
+// allocation path: a GB10 node's device is decoded with the MemorySlice
+// support type by default (shareModeToSupportType), so PickAllocations must
+// offer MemorySlice in its support-type order. A regression here makes
+// supportTypeOrder fall back to the cpu-only [Exclusive, MemoryShared] set,
+// filters every GB10 candidate out, and surfaces as
+// "no available compute resource for type nvidia-gb10" at install time.
+func TestPickSingleAllocationGB10MemorySlice(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "ollama", OwnerName: "alice"}
+	req := Requirement{
+		Mode:           utils.GB10ChipType,
+		RequiredMemory: 24 * gi,
+		LimitedMemory:  48 * gi,
+	}
+	nodes := []Node{
+		computeNode("spark-ab12", utils.GB10ChipType, 96*gi, SupportTypeMemorySlice),
+	}
+
+	picked, ok := PickAllocations(app, req, nodes, PressureSnapshot{})
+	if !ok || len(picked) != 1 {
+		t.Fatalf("expected a single GB10 allocation, got ok=%v picked=%#v", ok, picked)
+	}
+	if picked[0].NodeName != "spark-ab12" || picked[0].Mode != utils.GB10ChipType {
+		t.Fatalf("unexpected GB10 allocation: %#v", picked[0])
+	}
+}
+
 // TestLegacyComputeMode covers the synthesis of the single ResourceMode for
 // a legacy manifest (no spec.resources matrix). The contract is:
 //

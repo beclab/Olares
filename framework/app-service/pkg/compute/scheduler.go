@@ -392,10 +392,21 @@ func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node 
 }
 
 func supportTypeOrder(mode string) []string {
-	if mode == utils.NvidiaCardType {
+	switch mode {
+	case utils.NvidiaCardType:
 		return []string{SupportTypeExclusive, SupportTypeMemorySlice, SupportTypeTimeSlice}
+	case utils.GB10ChipType:
+		// GB10 devices are decoded from the HAMI node-nvidia-register
+		// annotation and carry MemorySlice (the default) or Exclusive
+		// support types, matching AvailableSupportTypes(GB10ChipType).
+		// MemoryShared is a cpu-only support type and never appears on a
+		// GB10 device, so the default branch below would filter every
+		// candidate out and make AllocateForInstall report
+		// "no available compute resource for type nvidia-gb10".
+		return []string{SupportTypeExclusive, SupportTypeMemorySlice}
+	default:
+		return []string{SupportTypeExclusive, SupportTypeMemoryShared}
 	}
-	return []string{SupportTypeExclusive, SupportTypeMemoryShared}
 }
 
 func deviceAvailableMemory(device Device) int64 {

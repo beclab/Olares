@@ -103,11 +103,11 @@ func desiredCustomDomainTLSSecret(name, domain, sourceNS, cert, key, hash string
 			Namespace: defaultGatewayNS,
 			Labels: map[string]string{
 				ManagedByLabel:       ManagedByValue,
-				labelTLSCustomDomain:   domain,
+				labelTLSCustomDomain: domain,
 			},
 			Annotations: map[string]string{
 				annotationTLSContentHash: hash,
-				annotationTLSSourceNS:  sourceNS,
+				annotationTLSSourceNS:    sourceNS,
 				annotationTLSHostname:    domain,
 			},
 		},
