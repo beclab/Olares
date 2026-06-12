@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -13,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
@@ -42,13 +42,15 @@ func ResourceNameForEntrance(appid, entranceName string) string {
 	return fmt.Sprintf("shared-%s-%s", appid, entranceName)
 }
 
-// EntranceAppID is the authoritative appid for per-entrance SRR naming and
-// logical host patterns, derived from the Application short name.
-func EntranceAppID(app *appv1alpha1.Application) string {
-	if app == nil {
+// ResourceNameForEntranceApp names one SRR per application entrance.
+// Returns "" if either input is empty so the caller can fail closed.
+func ResourceNameForEntranceApp(appid, entranceName string) string {
+	appid = strings.ToLower(strings.TrimSpace(appid))
+	entranceName = strings.ToLower(strings.TrimSpace(entranceName))
+	if appid == "" || entranceName == "" {
 		return ""
 	}
-	return appcfg.AppName(app.Spec.Name).GetAppID()
+	return fmt.Sprintf("app-%s-%s", appid, entranceName)
 }
 
 // IsOptedIn reports whether the Application carries the gateway opt-in
@@ -61,28 +63,52 @@ func IsOptedIn(app *appv1alpha1.Application) bool {
 }
 
 // BuildSpecForEntrance projects one sharedEntrance into a SharedRouteRegistrySpec
-// carrying the logical hostPattern (<hash8>.*.<platformDomain>). The caller
+// carrying the shared hostPattern (<hash8>.shared.<platformDomain>). The caller
 // resolves the backing Service so this helper stays I/O-free.
 func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Entrance,
-	entranceIndex int, svc *corev1.Service, platformDomain string) (srrv1alpha1.SharedRouteRegistrySpec, error) {
+	entranceIndex, entranceCount int, svc *corev1.Service, platformDomain string,
+	entranceClass srrv1alpha1.EntranceClass) (srrv1alpha1.SharedRouteRegistrySpec, error) {
 	if app == nil {
 		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("application is nil")
 	}
 	if entrance.Name == "" {
-		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("shared entrance has empty name")
+		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("entrance has empty name")
 	}
 	if svc == nil {
 		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("upstream service is nil")
 	}
-	appid := EntranceAppID(app)
-	pattern, err := appcfg.LogicalHostPattern(appid, entranceIndex, len(app.Spec.SharedEntrances), platformDomain)
-	if err != nil {
-		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("compute logical hostPattern: appid=%q index=%d count=%d platformDomain=%q: %w",
-			appid, entranceIndex, len(app.Spec.SharedEntrances), platformDomain, err)
+	if entranceIndex < 0 || entranceIndex >= entranceCount {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("entrance index out of range: index=%d count=%d",
+			entranceIndex, entranceCount)
+	}
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+	if appid == "" {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("application spec.appid is empty")
+	}
+	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
+	if platformDomain == "" {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("platformDomain is empty")
+	}
+
+	class := entranceClass
+	if class == "" {
+		class = srrv1alpha1.EntranceClassShared
+	}
+
+	var pattern string
+	switch class {
+	case srrv1alpha1.EntranceClassApplication:
+		pattern = fmt.Sprintf("%s.*.%s", appv1alpha1.EntranceID(appid, entranceIndex, entranceCount), platformDomain)
+	default:
+		var err error
+		pattern, err = appcfg.LogicalHostPattern(appid, entranceIndex, entranceCount, platformDomain)
+		if err != nil {
+			return srrv1alpha1.SharedRouteRegistrySpec{}, err
+		}
 	}
 	norm, err := NormalizeHostOrLogicalPattern(pattern)
 	if err != nil {
-		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("normalize logical pattern %q: %w", pattern, err)
+		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("normalize host pattern %q: %w", pattern, err)
 	}
 
 	upstream := srrv1alpha1.UpstreamRef{
@@ -96,9 +122,10 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 	}
 
 	return srrv1alpha1.SharedRouteRegistrySpec{
-		RouteMode:    srrv1alpha1.RouteModeGateway,
-		HostPatterns: []string{norm},
-		Upstream:     upstream,
+		RouteMode:     srrv1alpha1.RouteModeGateway,
+		EntranceClass: class,
+		HostPatterns:  []string{norm},
+		Upstream:      upstream,
 	}, nil
 }
 
@@ -138,8 +165,8 @@ func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1
 	if ns == "" {
 		return nil, errors.New("application has empty spec.namespace")
 	}
-	appid := EntranceAppID(app)
-	name := ResourceNameForEntrance(appid, entrance.Name)
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+	name := resourceNameForClass(appid, entrance.Name, spec.EntranceClass)
 	if name == "" {
 		return nil, fmt.Errorf("compute SRR name for entrance %q on app %s", entrance.Name, app.Spec.Name)
 	}
@@ -287,4 +314,11 @@ func ownerRefAlreadyPresent(refs []metav1.OwnerReference, uid types.UID) bool {
 		}
 	}
 	return false
+}
+
+func resourceNameForClass(appid, entranceName string, entranceClass srrv1alpha1.EntranceClass) string {
+	if entranceClass == srrv1alpha1.EntranceClassApplication {
+		return ResourceNameForEntranceApp(appid, entranceName)
+	}
+	return ResourceNameForEntrance(appid, entranceName)
 }

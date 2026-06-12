@@ -217,6 +217,7 @@ func (c *ApplicationConfig) DesiredReplicas(name string) int32 {
 func (c *ApplicationConfig) GenEntranceURL(ctx context.Context) ([]Entrance, error) {
 	app := &Application{
 		Spec: ApplicationSpec{
+			Appid:     c.AppID,
 			Owner:     c.OwnerName,
 			Name:      c.AppName,
 			Entrances: c.Entrances,
@@ -241,6 +242,7 @@ func (c *ApplicationConfig) GetEntrances(ctx context.Context) (map[string]Entran
 func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]Entrance, error) {
 	app := &Application{
 		Spec: ApplicationSpec{
+			Appid:           c.AppID,
 			Owner:           c.OwnerName,
 			Name:            c.AppName,
 			SharedEntrances: c.SharedEntrances,
