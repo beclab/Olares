@@ -47,6 +47,53 @@ func TestPlan_GroupsByParent(t *testing.T) {
 	}
 }
 
+// TestPlan_RecursiveForcesDirDirent locks in the Unix-style policy
+// that `rm -r foo` (no trailing slash on the user's path) deletes
+// the FOLDER `foo`, not the file `foo`. Once -r is in play the wire
+// dirent always carries a trailing slash regardless of how the user
+// typed the path.
+//
+// Regression context: an earlier revision of the planner only added
+// the trailing slash when IsDirIntent was already true (i.e. only
+// when the user happened to type `foo/`). That meant
+// `olares-cli files rm -r drive/Home/foo` sent `/foo` (a FILE
+// dirent) to the server, which routed through the file-removal
+// path and either no-op'd or surfaced an obscure server-side error
+// — the user-reported "I added -r, why didn't it delete the folder?"
+// case.
+func TestPlan_RecursiveForcesDirDirent(t *testing.T) {
+	cases := []struct {
+		name      string
+		isDir     bool
+		recursive bool
+		want      string
+	}{
+		{"file form, no -r → file dirent", false, false, "/foo"},
+		{"dir form, with -r → dir dirent", true, true, "/foo/"},
+		{"file form, with -r → dir dirent", false, true, "/foo/"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			groups, err := Plan([]Target{
+				{
+					FileType: "drive", Extend: "Home",
+					ParentSubPath: "/", Name: "foo",
+					IsDirIntent: c.isDir,
+				},
+			}, c.recursive)
+			if err != nil {
+				t.Fatalf("Plan: %v", err)
+			}
+			if len(groups) != 1 || len(groups[0].Dirents) != 1 {
+				t.Fatalf("got %+v", groups)
+			}
+			if groups[0].Dirents[0] != c.want {
+				t.Errorf("dirent = %q, want %q", groups[0].Dirents[0], c.want)
+			}
+		})
+	}
+}
+
 // TestPlan_DirIntentRequiresRecursive replicates Unix `rm`'s refusal:
 // a trailing-slash target without -r must error, and the message must
 // name the offending path.
@@ -103,6 +150,111 @@ func TestPlan_NoTargets(t *testing.T) {
 	_, err := Plan(nil, false)
 	if err == nil {
 		t.Fatal("expected error for no targets")
+	}
+}
+
+// TestPlan_RefusesProtectedDriveHomeChild pins the LarePass-aligned
+// policy that the system-managed first-level children directly under
+// drive/Home/ refuse deletion: the LarePass GUI greys out delete
+// for these entries via `disableMenuItem` in
+// apps/packages/app/src/stores/operation.ts (gated by the user being
+// at /Files/Home/), and the CLI must mirror that to keep scripts
+// from producing GUI-unreachable states (and from destroying
+// bootstrap dirs that user apps assume exist).
+//
+// Each rejection is asserted with --recursive=true so the test
+// proves the protected-name guard fires BEFORE the dir-intent / -r
+// check — otherwise a non-recursive call would error out with the
+// generic "is a directory" message and the policy wouldn't be
+// observable.
+func TestPlan_RefusesProtectedDriveHomeChild(t *testing.T) {
+	rejectNames := []string{
+		"Pictures", "Music", "Movies", "Downloads", "Documents",
+		"Code", "Cache", "Data", "Home", "Ollama", "Huggingface",
+	}
+	for _, name := range rejectNames {
+		t.Run("reject "+name, func(t *testing.T) {
+			tgt := Target{
+				FileType: "drive", Extend: "Home",
+				ParentSubPath: "/", Name: name, IsDirIntent: true,
+			}
+			_, err := Plan([]Target{tgt}, true)
+			if err == nil {
+				t.Fatalf("Plan: expected refusal for drive/Home/%s", name)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, "system-managed Home folder") {
+				t.Errorf("error should mention 'system-managed Home folder'; got: %v", err)
+			}
+			if !strings.Contains(msg, "Files GUI") {
+				t.Errorf("error should reference the Files GUI for context; got: %v", err)
+			}
+			if !strings.Contains(msg, "Pictures") || !strings.Contains(msg, "Huggingface") {
+				t.Errorf("error should enumerate protected names; got: %v", err)
+			}
+		})
+	}
+
+	// Negative cases: paths that LOOK adjacent must remain
+	// deletable so the guard does not over-extend.
+	allowCases := []struct {
+		name   string
+		target Target
+	}{
+		{
+			// Children INSIDE a protected dir are user content
+			// — the GUI per-row gating only covers the row at
+			// /Files/Home/ itself.
+			name: "child of Pictures still deletable",
+			target: Target{
+				FileType: "drive", Extend: "Home",
+				ParentSubPath: "/Pictures/", Name: "trip.jpg",
+			},
+		},
+		{
+			// drive/Data has its own root and a file named
+			// "Pictures" there isn't a Home child by any
+			// definition.
+			name: "drive Data Pictures",
+			target: Target{
+				FileType: "drive", Extend: "Data",
+				ParentSubPath: "/", Name: "Pictures", IsDirIntent: true,
+			},
+		},
+		{
+			// Other namespaces are out of scope.
+			name: "sync repo Pictures",
+			target: Target{
+				FileType: "sync", Extend: "abc-repo",
+				ParentSubPath: "/", Name: "Pictures", IsDirIntent: true,
+			},
+		},
+		{
+			// Lowercase variant: even if a real dir, it isn't
+			// in the case-sensitive protected list.
+			name: "drive Home pictures lowercase",
+			target: Target{
+				FileType: "drive", Extend: "Home",
+				ParentSubPath: "/", Name: "pictures", IsDirIntent: true,
+			},
+		},
+		{
+			// User-created folder under Home: no policy match.
+			name: "drive Home user folder",
+			target: Target{
+				FileType: "drive", Extend: "Home",
+				ParentSubPath: "/", Name: "MyProjects", IsDirIntent: true,
+			},
+		},
+	}
+	for _, c := range allowCases {
+		t.Run("allow "+c.name, func(t *testing.T) {
+			if _, err := Plan([]Target{c.target}, true); err != nil {
+				t.Errorf("Plan: unexpected refusal for %s/%s%s%s: %v",
+					c.target.FileType, c.target.Extend,
+					c.target.ParentSubPath, c.target.Name, err)
+			}
+		})
 	}
 }
 

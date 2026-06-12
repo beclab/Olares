@@ -95,6 +95,33 @@ func TestPlan_RefusesVolumeRoot(t *testing.T) {
 	}
 }
 
+// TestPlan_RefusesExternalNodeRoot guards the customized message
+// for the `external/<node>/` volume-listing layer. The generic
+// "pick a subdirectory name (e.g. external/<node>/NewFolder)"
+// hint that other namespaces emit is misleading here — that
+// suggested shape would still land at the volume-list level,
+// which has no underlying filesystem and would either fail
+// server-side or trip the auto-rename quirk. The customized
+// message must instead surface the `external/<node>/<volume>/<sub>`
+// shape so the user's next attempt actually works.
+func TestPlan_RefusesExternalNodeRoot(t *testing.T) {
+	_, err := Plan(Target{FileType: "external", Extend: "node-1", SubPath: "/"})
+	if err == nil {
+		t.Fatal("expected error for mkdir external/node-1/")
+	}
+	if !strings.Contains(err.Error(), "volume listing layer") {
+		t.Errorf("error should mention 'volume listing layer', got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "external/node-1/<volume>/<sub>/") {
+		t.Errorf("error should suggest the corrected shape, got: %v", err)
+	}
+	// The generic NewFolder hint is misleading for external —
+	// make sure the customized arm did not fall through to it.
+	if strings.Contains(err.Error(), "NewFolder") {
+		t.Errorf("external arm should NOT use the generic NewFolder hint, got: %v", err)
+	}
+}
+
 // TestPlan_RejectsInvalidSegments: empty / '.' / '..' segments
 // anywhere in the path are obvious typos / path-traversal grenades;
 // surface a typed error instead of silently building a malformed

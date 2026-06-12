@@ -141,6 +141,26 @@ func TestUploadRootAndDriveType(t *testing.T) {
 			// this yet" are pinned simultaneously.
 			wantErrSubstr: "/drive/direct_upload_file/<task_id>",
 		},
+		// `external/<node>/` is the volume-listing layer (hdd1 /
+		// usb1 / smb-... mount points) — the wire has no real
+		// filesystem there, so writes against it either fail
+		// server-side or hit the auto-rename quirk against a
+		// non-existent target. uploadRootAndDriveType must reject
+		// it client-side; the user-facing message has to point at
+		// the `external/<node>/<volume>/<sub>` shape so the next
+		// invocation works without trial and error. Cover both
+		// the trailing-slash and bare forms (the parser
+		// synthesizes SubPath="/" for both).
+		{
+			name:          "external node root with trailing slash rejected",
+			path:          "external/node-1/",
+			wantErrSubstr: "volume listing layer",
+		},
+		{
+			name:          "external node root without trailing slash rejected",
+			path:          "external/node-1",
+			wantErrSubstr: "external/node-1/<volume>/<sub>/",
+		},
 	}
 
 	for _, tc := range cases {

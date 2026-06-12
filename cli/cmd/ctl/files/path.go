@@ -52,6 +52,67 @@ var driveExtends = map[string]struct{}{
 	"Data": {},
 }
 
+// ProtectedDriveHomeChildren is the set of first-level child names
+// directly under `drive/Home/` that the LarePass web app treats as
+// system-managed and refuses to expose as rename / delete / cut /
+// copy / paste targets. The CLI mirrors that policy on the verbs that
+// MUTATE the source — `rename`, `rm`, and the `mv` source — so a
+// scripted pipeline can't silently undo what the GUI prevents the
+// user from doing by hand.
+//
+// Source of truth on the wire: the web app's
+// apps/packages/app/src/stores/operation.ts `disableMenuItem` array
+// (gated by `path === '/Files/Home/'` in `isDisableMenuItem`). The
+// names below mirror that array verbatim — case-sensitive, including
+// LarePass-specific quirks like `Huggingface` (one-word) and `Home`
+// (a defensive entry for nested `Home/Home/` shapes the GUI also
+// guards).
+//
+// Scope: the predicate fires ONLY when the path is exactly
+// `drive/Home/<one-of-these>` with no deeper subpath — children of
+// these dirs (e.g. `drive/Home/Pictures/Trip2024/`) are user content
+// and stay fully writable, the same way the GUI's per-row menu only
+// disables on the protected entry itself.
+//
+// `cp` (copy) is intentionally NOT gated by this list: copy preserves
+// the source unchanged, so duplicating `drive/Home/Pictures/` to
+// `drive/Home/PicturesBackup/` is a perfectly reasonable workflow
+// that the LarePass GUI happens to not surface but the CLI sees no
+// reason to forbid. The constraint is about preserving the protected
+// directory itself, not about firewalling its bytes.
+var ProtectedDriveHomeChildren = map[string]struct{}{
+	"Home":        {},
+	"Documents":   {},
+	"Pictures":    {},
+	"Movies":      {},
+	"Downloads":   {},
+	"Data":        {},
+	"Cache":       {},
+	"Code":        {},
+	"Music":       {},
+	"Ollama":      {},
+	"Huggingface": {},
+}
+
+// protectedDriveHomeChildrenList is a stable, sorted, comma-joined
+// rendering of ProtectedDriveHomeChildren for error messages and
+// docstrings. Computed once so the (cold) refusal path doesn't
+// allocate on every Plan call. Keep in sync with the map above.
+var protectedDriveHomeChildrenList = func() string {
+	out := make([]string, 0, len(ProtectedDriveHomeChildren))
+	for k := range ProtectedDriveHomeChildren {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return strings.Join(out, ", ")
+}()
+
+// ProtectedDriveHomeChildrenList returns the canonical
+// alphabetically-sorted comma-joined rendering of
+// ProtectedDriveHomeChildren — useful for error messages that want
+// to enumerate the protected names without re-sorting on each call.
+func ProtectedDriveHomeChildrenList() string { return protectedDriveHomeChildrenList }
+
 // knownFileTypesList is a stable, sorted, comma-joined rendering of
 // knownFileTypes, computed once so the (cold) error path doesn't allocate
 // on every parse failure. Keep in sync with knownFileTypes above.
@@ -191,4 +252,109 @@ func (p FrontendPath) URLPath() string {
 // bare extend reference is its root directory.
 func (p FrontendPath) HasTrailingSlash() bool {
 	return strings.HasSuffix(p.SubPath, "/")
+}
+
+// IsExternalNodeRoot reports whether the path points at the
+// `external/<node>/` layer with no subpath beyond it.
+//
+// On the wire, `external/<node>/` is NOT a real directory — the
+// per-user files-backend exposes attached volumes (hdd1 / usb1 /
+// smb-... mount points) as virtual children of this layer; see the
+// LarePass web app's ExternalDataAPI.fetchDrive in
+// apps/packages/app/src/api/files/v2/external/data.ts (when url=='/'
+// it short-circuits via formatAppDataNode and returns the node /
+// volume listing without ever calling /api/resources/external/). At
+// `external/<node>/` itself the backend has no underlying filesystem
+// to write into, so:
+//
+//   - POST /api/resources/external/<node>/<name>/ (mkdir) and the
+//     follow-on chunk POST in upload either fail server-side or hit
+//     the auto-rename quirk against a non-existent target;
+//   - PATCH /api/paste/<node>/ with destination /external/<node>/...
+//     (cp / mv into the volume-listing layer) likewise has nowhere
+//     to land.
+//
+// Callers that perform writes (`mkdir`, `cp` / `mv` destination,
+// `upload`) use this predicate to fail fast client-side with a
+// self-describing error pointing at the `external/<node>/<volume>/<sub>`
+// shape required for any real I/O. Reads (`ls`, `cat`, `rm`,
+// `rename`, `share`) DO work at this layer (ls in particular is the
+// way users discover what volumes are attached), so the writes-only
+// scope mirrors the LarePass web app's own behavior — its sidebar
+// renders the volume listing as a navigable tree but disables
+// "create folder" / "paste here" / "upload here" actions while the
+// user is at that level.
+func (p FrontendPath) IsExternalNodeRoot() bool {
+	return p.FileType == "external" && strings.Trim(p.SubPath, "/") == ""
+}
+
+// IsCacheNodeRoot reports whether the path points exactly at the
+// `cache/<node>/` layer with no subpath beyond it.
+//
+// Unlike `external/<node>/` (which is a fully virtual volume-listing
+// layer, see IsExternalNodeRoot), `cache/<node>/` IS backed by a real
+// per-node filesystem on the wire — `ls` / `cat` / `cp` / `upload` all
+// work fine against it. The reason this predicate exists is narrower:
+//
+//   - In the LarePass web app, the Cache namespace's root view at
+//     `/Cache/` is rendered by [`CacheDataAPI.fetchCache`](apps/packages/app/src/api/files/v2/cache/data.ts)
+//     which short-circuits via `formatAppDataNode` and synthesizes
+//     children from `filesStore.nodes` (the Olares cluster's node
+//     list) instead of hitting `/api/resources/cache/...`. So when
+//     the user is sitting at `/Files/Cache/` they're picking a node,
+//     not a directory — and "share this node" is not a meaningful
+//     operation: a share at that level points at no concrete dataset,
+//     just an empty container the recipient has no way to populate.
+//
+//   - Once the user picks a node and navigates into `cache/<node>/`,
+//     the wire goes back to the regular `/api/resources/cache/<node>/`
+//     directory listing, and shares of `cache/<node>/<sub>/` are real
+//     and useful.
+//
+// Used by `frontendPathToShareTarget` to fail fast on
+// `share internal|public|smb cache/<node>/`, mirroring the LarePass
+// web app's UX (the `/Files/Cache/` view shows a node picker, not a
+// row the user can right-click → Share). Other verbs (`ls`, `cp`,
+// `mkdir`, ...) DO work at this layer and are unaffected.
+func (p FrontendPath) IsCacheNodeRoot() bool {
+	return p.FileType == "cache" && strings.Trim(p.SubPath, "/") == ""
+}
+
+// IsProtectedDriveHomeChild reports whether this path points exactly
+// at one of the system-managed first-level children directly under
+// `drive/Home/` (see ProtectedDriveHomeChildren for the list and the
+// rationale).
+//
+// The predicate is intentionally narrow:
+//
+//   - FileType MUST be "drive" and Extend MUST be "Home" — the policy
+//     applies only to the LarePass-managed Home volume, not to Data
+//     or any other namespace.
+//   - SubPath MUST be exactly one segment (e.g. "/Pictures" or
+//     "/Pictures/", with or without a directory marker). Deeper
+//     paths like "/Pictures/Trip2024/" are user content and are NOT
+//     protected — the same scope the GUI uses by gating on the
+//     selected row's name only when the user is at /Files/Home/.
+//   - The single segment must match a name in
+//     ProtectedDriveHomeChildren case-sensitively. The GUI compares
+//     enum string values, so we do too (so e.g. `pictures` lowercase
+//     won't trip the predicate, but it would also not be a real
+//     directory under Home — these names are the system-created
+//     bootstrap dirs and their casing is fixed).
+//
+// Used by `rename`, `rm`, and the `mv` source-side check to refuse
+// the operation client-side with a self-describing error. `cp` does
+// NOT use this — see the docstring on ProtectedDriveHomeChildren for
+// why duplicating the bytes is fine even when renaming/deleting the
+// original is not.
+func (p FrontendPath) IsProtectedDriveHomeChild() bool {
+	if p.FileType != "drive" || p.Extend != "Home" {
+		return false
+	}
+	seg := strings.Trim(p.SubPath, "/")
+	if seg == "" || strings.Contains(seg, "/") {
+		return false
+	}
+	_, ok := ProtectedDriveHomeChildren[seg]
+	return ok
 }

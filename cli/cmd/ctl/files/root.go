@@ -21,10 +21,15 @@ import (
 //	files cp       — server-side copy via paste        (cmd/ctl/files/cp.go)
 //	files mv       — server-side move via paste        (cmd/ctl/files/cp.go, action="move")
 //	files rename   — synchronous in-place rename       (cmd/ctl/files/rename.go)
+//	files chown    — get / set POSIX owner uid         (cmd/ctl/files/chown.go,
+//	                  (LarePass "Permission" tab)      internal/files/permission/permission.go)
 //	files share    — create / list / remove shares     (cmd/ctl/files/share.go,
 //	                  internal: cross-user             cmd/ctl/files/share_create.go)
 //	                  public:   external link
 //	                  smb:      Samba network share
+//	files smb      — mount / unmount external SMB      (cmd/ctl/files/smb.go,
+//	                  shares + per-node history book   internal/files/smbmount/smbmount.go)
+//	                  (LarePass "Connect to Server")
 //	files repos    — list / inspect Sync (Seafile)     (cmd/ctl/files/repos.go,
 //	                  libraries (repo_id catalog)      internal/files/repos/repos.go)
 //
@@ -87,7 +92,9 @@ Examples:
 		NewCpCommand(f),
 		NewMvCommand(f),
 		NewRenameCommand(f),
+		NewChownCommand(f),
 		NewShareCommand(f),
+		NewSMBCommand(f),
 		NewReposCommand(f),
 	} {
 		// Same rationale as cmd/ctl/profile/root.go: bad creds / network /
