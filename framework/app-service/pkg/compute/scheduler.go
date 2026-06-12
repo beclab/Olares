@@ -449,7 +449,11 @@ func minInt64(a, b int64) int64 {
 }
 
 func parseQuantityBytes(value string) int64 {
-	if value == "" {
+	// The auto-compute sentinel means the value is resolved from the rendered
+	// chart at install time. Until the install handler backfills it, treat it
+	// as 0 ("no constraint") so the install-time mode feasibility gate only
+	// checks architecture / mode matching for this field, not its capacity.
+	if value == "" || appcfg.IsAutoResource(value) {
 		return 0
 	}
 	q, err := resource.ParseQuantity(value)
@@ -460,7 +464,7 @@ func parseQuantityBytes(value string) int64 {
 }
 
 func parseQuantityMilli(value string) int64 {
-	if value == "" {
+	if value == "" || appcfg.IsAutoResource(value) {
 		return 0
 	}
 	q, err := resource.ParseQuantity(value)
