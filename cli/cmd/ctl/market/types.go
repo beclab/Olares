@@ -38,6 +38,18 @@ type UninstallRequest struct {
 	DeleteData bool `json:"deleteData"`
 }
 
+// UpgradeRequest is the payload for /apps/{name}/upgrade. Deliberately
+// does NOT carry env vars: the Market SPA's upgradeApp() sends only
+// {app_name, source, version} (see InstallButton.vue / useAppAction.ts).
+// Existing env values are preserved server-side from the previous
+// install. Use `olares-cli market env` to update them out-of-band.
+type UpgradeRequest struct {
+	Source  string `json:"source"`
+	AppName string `json:"app_name"`
+	Version string `json:"version"`
+	Sync    bool   `json:"sync"`
+}
+
 // OperationResult is the structured output for mutating commands.
 //
 // FinalState / FinalOpType are populated only by --watch flows once a
@@ -67,7 +79,18 @@ type SourceStateData struct {
 }
 
 type AppStateLatest struct {
-	Status AppStatus `json:"status"`
+	// Version is the version recorded on this per-user state row —
+	// the chart the user picked to install or upgrade to, regardless
+	// of whether that operation has completed. The marketplace backend
+	// exposes it as a sibling of `status`, NOT inside it, so we have
+	// to surface it at this level. The legacy `app` tree never needed
+	// it; the per-user `market list --mine` view does because the
+	// row's version otherwise has to be derived from the catalog,
+	// which is wrong as soon as the catalog's latest moves ahead of
+	// the user's row (the most common case) or when an upgrade is
+	// mid-flight (the user picked vN+1 but vN is still running).
+	Version string    `json:"version,omitempty"`
+	Status  AppStatus `json:"status"`
 }
 
 type AppStatus struct {
@@ -122,6 +145,68 @@ type AppDisplayInfo struct {
 	Version    string   `json:"version"`
 	Source     string   `json:"source"`
 	Categories []string `json:"categories,omitempty"`
+	// State is populated only by the "my apps" listing path
+	// (`market list --mine`). Catalog browsing leaves it empty and
+	// `omitempty` keeps the JSON shape byte-identical with the
+	// pre-flag release.
+	State string `json:"state,omitempty"`
+}
+
+// notInstalledStates is the verbatim mirror of the SPA's
+// `uninstalledAppStates` set in apps/packages/app/src/constant/config.ts
+// (around line 170). That set is what `MarketRemotePage.vue` →
+// `appStore.getSourceInstalledApp(sourceId)` consults via
+// `uninstalledApp(status)` to decide which rows are HIDDEN from the
+// Market UI's "My Terminus" tab.
+//
+// `market list --mine` is the CLI counterpart of "My Terminus", so we
+// deliberately mirror this SPA filter — NOT the broader upstream state
+// machine in framework/app-service/pkg/appstate/state_transition.go —
+// so the two listings show the exact same set of apps. Note this
+// means `--mine` is NOT "已安装应用 / completed installs only": the
+// SPA keeps in-flight install rows (`pending`, `downloading`,
+// `installing`, plus their `*Canceling` / `*CancelFailed` variants),
+// post-install transitional rows (`upgrading`, `resuming`, `stopping`,
+// `applyingEnv`, `uninstalling`), and post-install failures
+// (`upgradeFailed`, `stopFailed`, `resumeFailed`, `applyEnvFailed`,
+// `uninstallFailed`, ...) all visible on My Terminus because they're
+// still "the user's apps" — the user clicked something and expects
+// to see / monitor / cancel / retry the row. Only the 6 SPA-hidden
+// states below — terminal-cancel of the install path and terminal
+// `uninstalled` — are NOT part of "my apps".
+//
+// (The variable name uses "notInstalled" as an internal shorthand for
+// "not part of the user's apps per the SPA filter"; `--mine` is the
+// UX-facing name. Both refer to the same denylist defined here.)
+//
+// If the SPA adds or renames an entry in `uninstalledAppStates`, update
+// this set to match so the two listings stay in sync.
+var notInstalledStates = map[string]struct{}{
+	"pendingCanceled":     {}, // APP_STATUS.PENDING.CANCELED
+	"downloadingCanceled": {}, // APP_STATUS.DOWNLOAD.CANCELED
+	"downloadFailed":      {}, // APP_STATUS.DOWNLOAD.FAILED
+	"installFailed":       {}, // APP_STATUS.INSTALL.FAILED
+	"installingCanceled":  {}, // APP_STATUS.INSTALL.CANCELED
+	"uninstalled":         {}, // APP_STATUS.UNINSTALL.COMPLETED
+}
+
+// isInstalledState reports whether a row's `state` value would render
+// on the SPA's "My Terminus" tab — i.e. whether it counts as one of
+// the user's apps under `market list --mine`. Returns false only for
+// the SPA's six `uninstalledAppStates`; every other state — including
+// in-flight install rows (`pending` / `downloading` / `installing`
+// and their `*Canceling` / `*CancelFailed` variants) plus all
+// post-install transitional / failure states (`upgrading`, `stopping`,
+// `resuming`, `applyingEnv`, `upgradeFailed`, `stopFailed`,
+// `uninstallFailed`, ...) — returns true. The helper name reflects
+// the internal "installed" shorthand; the user-facing semantic is
+// "is this row part of the user's apps?" (== "show on My Terminus").
+func isInstalledState(state string) bool {
+	if state == "" {
+		return false
+	}
+	_, missed := notInstalledStates[state]
+	return !missed
 }
 
 // extractLocalizedString resolves a value that may be a plain string

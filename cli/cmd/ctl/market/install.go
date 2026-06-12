@@ -14,16 +14,37 @@ func NewCmdMarketInstall(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
 	cmd := &cobra.Command{
 		Use:   "install {app-name}",
-		Short: "Install an app",
+		Short: "Install an app from a market source (POST /apps/{name}/install)",
 		Long: `Install an application from a market source.
 
-If --version is not specified, the latest available version is used.
-For apps that declare environment variables, use --env to provide values.
+Source resolution: -s pins the source; omitting it falls back to the
+auto-selected catalog source (typically 'market.olares'). To install
+a locally-uploaded chart, pass '-s upload' (the same bucket
+'market upload' writes to — see 'olares-cli market upload --help').
+
+If --version is omitted, the latest catalog version is used. The CLI
+validates the version is strict semver before sending the request.
+
+For apps that declare environment variables, use --env KEY=VALUE
+(repeatable) to provide values. Required env vars not supplied will
+surface a structured error from the backend (HTTP 422 / type=appenv)
+that the CLI parses into a 'missing required env var(s): ...' message
+listing exactly which vars and their value-source constraints.
+
+--watch blocks until the row settles at 'running' (success) or one of
+the *Failed / *Canceled states (failure). Image-pull-heavy charts
+(Stable Diffusion, Ollama, ...) often need --watch-timeout > 15m.
 
 Examples:
-  olares-cli market install firefox
-  olares-cli market install myapp --version 1.0.0 -s market.olares
-  olares-cli market install myapp --env API_KEY=abc123 --env REGION=us-east`,
+  olares-cli market install firefox                                          # fire-and-forget; returns OperationResult{status:"accepted"}
+  olares-cli market install firefox --watch                                  # happy path: block until running
+  olares-cli market install firefox --version 1.0.11 --env DEBUG=1 --watch
+  olares-cli market install firefox -o json                                  # one accepted-payload JSON doc
+  olares-cli market install firefox --watch -o json | jq -r '.finalState'    # scripted success check
+  olares-cli market install firefox --watch -q                               # silent + block; exit code = terminal verdict
+  olares-cli market install myapp -s upload --watch                          # install from locally-uploaded chart
+  olares-cli market install ollama-webui --watch --watch-timeout 30m         # image-pull-heavy
+  olares-cli market install firefox --watch --watch-interval 1s --watch-timeout 5m   # tight CI bounds`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInstall(opts, args[0])

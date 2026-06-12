@@ -1,6 +1,32 @@
 package market
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
+)
+
+// TestMarketGetDoesNotExposeNoHeaders pins the contract that
+// `olares-cli market get` does NOT accept --no-headers. The flag was
+// briefly registered here (and documented in --help) but the runner
+// always called printAppDetail unconditionally — every "Name: …" /
+// "Title: …" / ... line was hard-coded, so the flag silently did
+// nothing in scripts. `get` renders a key:value detail layout (one
+// record, fields prefixed by their label) closer to `kubectl
+// describe` than a row-oriented table; there are no "headers"
+// separable from values. Use -o json for machine-readable output.
+//
+// This test guards against the flag ever being re-added without a
+// real implementation — if a future change wires addNoHeadersFlag
+// back onto `get`, the test fails and the author has to either drop
+// the registration or actually teach printAppDetail to honor it.
+func TestMarketGetDoesNotExposeNoHeaders(t *testing.T) {
+	f := &cmdutil.Factory{}
+	cmd := NewCmdMarketGet(f)
+	if flag := cmd.Flags().Lookup("no-headers"); flag != nil {
+		t.Fatalf("`market get` must NOT register --no-headers (registered: %+v); see TestMarketGetDoesNotExposeNoHeaders doc for why", flag)
+	}
+}
 
 // TestResolveI18nFieldDoesNotMutateCaller locks down the slice-aliasing fix in
 // resolveI18nField: append(path[:len(path)-1], "i18n") used to write "i18n"

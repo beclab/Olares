@@ -15,19 +15,31 @@ func NewCmdMarketDelete(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete {app-name}",
 		Aliases: []string{"del"},
-		Short:   "Delete a local app chart from the market source",
+		Short:   "Remove an uploaded helm chart from the SPA's Local Sources → Upload bucket",
 		Long: `Remove an app chart that was uploaded to a local source.
-This does not uninstall the app if it is running.
+This does NOT uninstall the app if it is running — use
+'olares-cli market uninstall <app>' for that, then 'market delete'
+to also remove the chart from local sources.
+
+The chart is always removed from the SPA's "Local Sources → Upload"
+bucket (internal id 'upload') — the same bucket 'market upload' writes
+to. The CLI used to expose -s/--source here, but a delete that targets
+a different bucket from where the upload landed never resolved
+correctly. Pinning the source eliminates that mismatch.
+
+If --version is omitted, every uploaded version of the chart in the
+'upload' bucket is removed.
 
 Examples:
-  olares-cli market delete myapp
-  olares-cli market delete myapp --version 1.0.0`,
+  olares-cli market delete myapp                    # remove every uploaded version
+  olares-cli market delete myapp --version 1.0.0    # one version only
+  olares-cli market delete myapp -o json            # structured result
+  olares-cli market delete myapp -q                 # silent; exit code only`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDelete(opts, args[0])
 		},
 	}
-	opts.addSourceFlag(cmd, "local source id to delete the chart from (auto-detected when omitted)")
 	opts.addOutputFlags(cmd)
 	opts.addVersionFlag(cmd)
 	return cmd
@@ -39,16 +51,9 @@ func runDelete(opts *MarketOptions, appName string) error {
 		return opts.failOp("delete", appName, err)
 	}
 
-	if s := strings.TrimSpace(opts.Source); s != "" {
-		if err := validateLocalSource(s); err != nil {
-			return opts.failOp("delete", appName, err)
-		}
-	}
-
-	source := resolveLocalSource(opts)
-	if strings.TrimSpace(opts.Source) == "" {
-		opts.info("Using source: %s", source)
-	}
+	// Source is hard-coded to match what `market upload` writes to;
+	// see chartUploadSource in common.go.
+	source := chartUploadSource
 
 	version := strings.TrimSpace(opts.Version)
 	if version != "" {

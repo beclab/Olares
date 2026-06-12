@@ -16,19 +16,34 @@ func NewCmdMarketUpload(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
 	cmd := &cobra.Command{
 		Use:   "upload {chart-file-or-dir}",
-		Short: "Upload app chart package(s) to the market",
+		Short: "Upload helm chart package(s) to the SPA's Local Sources → Upload bucket",
 		Long: `Upload Helm-style chart package(s) (.tgz or .tar.gz) to the market.
-If the path is a directory, all chart files in the directory are uploaded.
+If the path is a directory, every chart file in the directory is
+uploaded (subdirectories are not recursed).
+
+The target source is hard-coded to the SPA's "Local Sources → Upload"
+bucket (internal id 'upload'). The CLI used to expose -s/--source here,
+but every chart pushed from the CLI belongs in that same bucket —
+pinning it avoids the foot-gun where a chart uploaded to a different
+local source ('cli' / 'studio') was invisible to the SPA's Local Sources
+tab. To install / delete an uploaded chart, pair this with
+'olares-cli market install <app> -s upload' and
+'olares-cli market delete <app>' (also hard-coded to 'upload').
+
+Per-file results are summarized at the end; -o json emits a structured
+report with one entry per file (status / message). Exit code is
+non-zero if any file failed.
 
 Examples:
   olares-cli market upload myapp-1.0.0.tgz
-  olares-cli market upload ./charts/`,
+  olares-cli market upload ./charts/
+  olares-cli market upload ./charts/ -o json    # structured per-file report
+  olares-cli market upload ./charts/ -q         # silent; exit code = aggregate verdict`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUpload(opts, args[0])
 		},
 	}
-	opts.addSourceFlag(cmd, "local source id to upload charts into (auto-detected when omitted)")
 	opts.addOutputFlags(cmd)
 	return cmd
 }
@@ -55,16 +70,9 @@ func runUpload(opts *MarketOptions, path string) error {
 		return opts.failOp("upload", path, err)
 	}
 
-	if s := strings.TrimSpace(opts.Source); s != "" {
-		if err := validateLocalSource(s); err != nil {
-			return opts.failOp("upload", path, err)
-		}
-	}
-
-	source := resolveLocalSource(opts)
-	if strings.TrimSpace(opts.Source) == "" {
-		opts.info("Using source: %s", source)
-	}
+	// Source is hard-coded to the SPA-compatible "upload" bucket; see
+	// chartUploadSource in common.go for why we no longer expose -s here.
+	source := chartUploadSource
 
 	if info.IsDir() {
 		return uploadDir(opts, mc, path, source)
