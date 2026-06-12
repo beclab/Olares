@@ -21,7 +21,7 @@ RUN cd github.com/beclab/Olares/framework/app-service && \
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:debug
+FROM beclab/distroless-static:debug
 WORKDIR /
 COPY --from=builder /workspace/github.com/beclab/Olares/framework/app-service/image-service .
 
