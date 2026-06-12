@@ -10,18 +10,20 @@ userEnvs:
     type: password
     editable: true
   # OLARES_USER_LANGUAGE / OLARES_USER_THEME / OLARES_USER_TIMEZONE are user
-  # locale preferences. Their source of truth is the user CR annotation
-  # (bytetrade.io/language|theme|location), written during activation and via
-  # the locale settings page. app-service syncs the annotation into the Value
-  # one-way (see UserEnvSyncController).
+  # locale preferences. The UserEnv Value is the source of truth: it is seeded
+  # from the user CR annotation (bytetrade.io/language|theme|timezone) during
+  # activation, then owned by the user. app-service's UserEnvSyncController only
+  # seeds the Value when empty and never overrides a user-set value (see
+  # syncLocaleValue).
   #
-  # They are declared editable:false so the env settings page does not offer a
-  # conflicting second edit path. To allow editing env vars directly in
-  # settings later, flip editable:true: the controller then only seeds the
-  # value when empty and never overrides a user-set value.
+  # They are declared editable:true so the value can be edited directly and is
+  # the single source of truth: both the env settings page and bfl's
+  # config-system (locale settings) endpoint read and write these UserEnvs. The
+  # annotation is only used to seed the initial Value (when empty) during
+  # activation; bfl no longer keeps it in sync afterwards.
   - envName: OLARES_USER_LANGUAGE
     type: string
-    editable: false
+    editable: true
     default: "en-US"
     options:
     - title: "English (US)"
@@ -30,7 +32,7 @@ userEnvs:
       value: "zh-CN"
   - envName: OLARES_USER_THEME
     type: string
-    editable: false
+    editable: true
     default: "light"
     options:
     - title: "Light"
@@ -39,7 +41,7 @@ userEnvs:
       value: "dark"
   - envName: OLARES_USER_TIMEZONE
     type: string
-    editable: false
+    editable: true
     default: "UTC"
     options:
     - title: "Africa/Abidjan"
