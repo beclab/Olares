@@ -57,7 +57,7 @@ Before creating an admin account, set up your API key in **Settings** so cloud m
 
 Paperclip ships without a default user account. To access the platform for the first time, you need to create a admin account through the registration flow.
 
-1. Open Paperclip from the Launchpad. Click **Register account**.
+1. Open Paperclip from the Launchpad. Click **Create account**.
 
 2. On the sign-up page, fill in the required information and submit.
 
@@ -65,7 +65,7 @@ Paperclip ships without a default user account. To access the platform for the f
 
    ![Claim this instance](/images/manual/use-cases/paperclip-claim-instance.png#bordered){width=60%}
 
-4. Name your Name your company and finish the onboarding process as instructed.
+4. Name your company and finish the onboarding process as instructed.
 
 ### Create your first company
 
@@ -191,12 +191,16 @@ As your agents complete issues, use the dashboard to track your company's overal
 ## Use local models in Paperclip
 
 :::warning Risk note
-Paperclip is a fully autonomous multi-agent collaboration platform. Running it entirely on local models can cause workflow disruptions due to model capability limits, context overflow, or concurrency restrictions, potentially leading to cascading failures. Use a hybrid setup: configure powerful cloud models for CEO/CTO roles, local models for other execution roles, or use local models as a cheap mode to save token costs. Evaluate model capabilities and your use case before deciding on the best configuration.
+Paperclip is a fully autonomous multi-agent collaboration platform. Running it entirely on local models can cause workflow disruptions due to model capability limits, context overflow, or concurrency restrictions, potentially leading to cascading failures. 
+
+Consider using a hybrid configuration: assign high-performance cloud models to critical roles such as CEO or CTO, while utilizing local models for execution-focused agents to reduce costs. Alternatively, designate local models as `cheap model` for less demanding tasks. 
+
+Carefully assess the capabilities of each model and your workflow requirements to determine the optimal setup.
 :::
 
 ### Use OpenCode to call local models
 
-:::info
+:::info Independte OpenCode instance
 This OpenCode runs inside the Paperclip container and is separate from the OpenCode app installed from the Olares Market. You need to configure it independently.
 :::
 
@@ -244,21 +248,23 @@ This OpenCode runs inside the Paperclip container and is separate from the OpenC
    :::
 
 ### Test the workflow
-:::info Create a task to have the CEO hire a new agent
+You can monitor the execution process and result in the task's **Activity** > **Continuation Summary**.
+
+:::tip Create a task to have the CEO hire a new agent
 **Task title:** Hire a CMO
+
 **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/gemma4:26b as the model.
 :::
 
-You can monitor the execution process and result in the task's **Activity** > **Continuation Summary**.
+![Agent run activity](/images/manual/use-cases/paperclip-agent-run-activity.png#bordered){width=60%}
 
-![Agent run activity](/images/manual/use-cases/paperclip-agent-run-activity.png#bordered)
-
-:::info Let the CMO to write a brand story
+:::tip Let the CMO to write a brand story
 **Task title:** Write a brand story
+
 **Task description:** Output in md format and upload the final result as an attachment to the task.
 :::
 
-![Brand story output](/images/manual/use-cases/paperclip-brand-story-output.png#bordered)
+![Brand story output](/images/manual/use-cases/paperclip-brand-story-output.png#bordered){width=60%}
 
 ## FAQs
 
