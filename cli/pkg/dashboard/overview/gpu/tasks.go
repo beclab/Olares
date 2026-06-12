@@ -2,6 +2,7 @@ package gpu
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,8 +17,43 @@ import (
 // RunList — kept open-coded per leaf so each leaf's HTTP-status
 // branches stay close to the call site (the SPA's task page does
 // the same).
+//
+// Implementation: BuildTasksEnvelope produces the envelope (no
+// stdout); RunTasks adds the legacy "(no vGPU tasks)" prose lines
+// and the table writer. RunDefault (sections envelope) reuses
+// BuildTasksEnvelope directly so a tasks-section transport error
+// doesn't print prose ahead of the graphics section.
 func RunTasks(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags) error {
 	now := time.Now()
+	env := BuildTasksEnvelope(ctx, c, cf, now)
+	if cf.Output == pkgdashboard.OutputJSON {
+		return pkgdashboard.WriteJSON(os.Stdout, env)
+	}
+	if env.Meta.Empty {
+		switch env.Meta.EmptyReason {
+		case "no_vgpu_integration", "no_gpu_detected":
+			fmt.Fprintln(os.Stdout, "(no vGPU tasks)")
+		case "vgpu_unavailable":
+			// stderr advisory already printed by VgpuUnavailableFromError.
+		}
+		return nil
+	}
+	// Mirror of RunList: surface an unclassifiable transport /
+	// 4xx error stashed on Meta.Error to cobra instead of falling
+	// through to an empty-table render. JSON mode is handled by
+	// the early return above (consumers see the envelope with
+	// meta.error populated). See RunList for the full rationale.
+	if env.Meta.Error != "" {
+		return errors.New(env.Meta.Error)
+	}
+	return WriteTasksTable(os.Stdout, env)
+}
+
+// BuildTasksEnvelope assembles the gpu tasks envelope without any
+// stdout side effects. Same 3-state empty-data taxonomy as
+// BuildListEnvelope. Used by RunTasks (Shape A leaf) and by
+// RunDefault as the `tasks` section (Shape B parent).
+func BuildTasksEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags, now time.Time) pkgdashboard.Envelope {
 	advisoryNote, _ := pkgdashboard.GPUAdvisory(ctx, c, cf, os.Stderr)
 	list, err := pkgdashboard.FetchTaskList(ctx, c, nil)
 
@@ -33,31 +69,22 @@ func RunTasks(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Comm
 			env.Meta.Empty = true
 			env.Meta.EmptyReason = "no_vgpu_integration"
 			env.Meta.HTTPStatus = he.Status
-			if cf.Output == pkgdashboard.OutputJSON {
-				return pkgdashboard.WriteJSON(os.Stdout, env)
-			}
-			fmt.Fprintln(os.Stdout, "(no vGPU tasks)")
-			return nil
+			return env
 		}
 		if unavail, ok := pkgdashboard.VgpuUnavailableFromError(c, cf, err, pkgdashboard.KindOverviewGPUTasks, now, os.Stderr); ok {
 			if advisoryNote != "" {
 				unavail.Meta.Note = advisoryNote + " | " + unavail.Meta.Note
 			}
-			if cf.Output == pkgdashboard.OutputJSON {
-				return pkgdashboard.WriteJSON(os.Stdout, unavail)
-			}
-			return nil
+			return unavail
 		}
-		return err
+		env.Meta.Error = err.Error()
+		env.Meta.ErrorKind = pkgdashboard.ClassifyTransportErr(err)
+		return env
 	}
 	if len(list) == 0 {
 		env.Meta.Empty = true
 		env.Meta.EmptyReason = "no_gpu_detected"
-		if cf.Output == pkgdashboard.OutputJSON {
-			return pkgdashboard.WriteJSON(os.Stdout, env)
-		}
-		fmt.Fprintln(os.Stdout, "(no vGPU tasks)")
-		return nil
+		return env
 	}
 	// HAMI's task entries match the SPA's `TaskItem` interface.
 	// The "core util / mem used" columns are arrays (one element
@@ -83,10 +110,7 @@ func RunTasks(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Comm
 		}
 		env.Items = append(env.Items, pkgdashboard.Item{Raw: raw, Display: disp})
 	}
-	if cf.Output == pkgdashboard.OutputJSON {
-		return pkgdashboard.WriteJSON(os.Stdout, env)
-	}
-	return WriteTasksTable(os.Stdout, env)
+	return env
 }
 
 // WriteTasksTable renders the per-task summary table.

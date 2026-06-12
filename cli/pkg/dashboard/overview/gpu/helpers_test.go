@@ -130,6 +130,28 @@ func (m gpuStubMux) server(t *testing.T) *httptest.Server {
 // print.
 func captureStdout(t *testing.T, fn func() error) string {
 	t.Helper()
+	out, runErr := runWithCapturedStdout(t, fn)
+	if runErr != nil {
+		t.Fatalf("captured fn err: %v", runErr)
+	}
+	return out
+}
+
+// captureStdoutAndErr is the captureStdout variant for tests that
+// EXPECT fn to return a non-nil error (e.g. Bug 2's "RunList must
+// return Meta.Error to cobra in table mode" regression). Returns
+// both the captured stdout AND the error so the test can assert on
+// the error wording without losing the prose the leaf may have
+// printed before the failure surfaced.
+func captureStdoutAndErr(t *testing.T, fn func() error) (string, error) {
+	t.Helper()
+	return runWithCapturedStdout(t, fn)
+}
+
+// runWithCapturedStdout is the shared piping body for both
+// captureStdout (success-only) and captureStdoutAndErr (error-OK).
+func runWithCapturedStdout(t *testing.T, fn func() error) (string, error) {
+	t.Helper()
 	old := os.Stdout
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -152,10 +174,7 @@ func captureStdout(t *testing.T, fn func() error) string {
 	os.Stdout = old
 	res := <-done
 	if res.err != nil {
-		t.Fatalf("captureStdout read: %v", res.err)
+		t.Fatalf("runWithCapturedStdout read: %v", res.err)
 	}
-	if runErr != nil {
-		t.Fatalf("captured fn err: %v", runErr)
-	}
-	return res.out
+	return res.out, runErr
 }

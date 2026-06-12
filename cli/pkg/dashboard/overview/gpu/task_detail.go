@@ -13,6 +13,143 @@ import (
 	pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
 )
 
+// RunTaskByRef is the cmd-side entry point for `dashboard
+// overview gpu tasks <ref>` — the SPA-aligned shorthand. `<ref>`
+// matches the row's `name` OR its `podUid` (the two columns the
+// SPA's TasksTable surfaces, and the two values the CLI prints in
+// the bare `gpu` / `gpu tasks` listings — users naturally
+// copy-paste either). The function reverse-resolves the task's
+// pod-uid + sharemode by listing HAMI's /v1/containers (same path
+// the SPA uses when the user clicks "View details"; that click
+// passes podUid + deviceShareModes[0] into the route param). When
+// the ref is unique we delegate to RunTaskDetail; ambiguity /
+// not-found surface as typed errors with a copy-paste-friendly
+// hint listing every candidate (so an agent doesn't have to round-
+// trip the listing endpoint to recover). Empty container list →
+// standard `no_gpu_detected` envelope (single fetch, no fan-out).
+//
+// Pod-uid match wins ties: if the same string somehow matches both
+// a `name` and a `podUid` across two rows (impossible in practice
+// because pod-uids are RFC 4122 UUIDs, but defensive nonetheless),
+// the pod-uid match is used since it's globally unique. Equal-name
+// rows still produce an ambiguity error pointing at the pod-uids.
+func RunTaskByRef(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags, ref string) error {
+	now := time.Now()
+	advisoryNote, _ := pkgdashboard.GPUAdvisory(ctx, c, cf, os.Stderr)
+	list, err := pkgdashboard.FetchTaskList(ctx, c, nil)
+	if err != nil {
+		if he, ok := pkgdashboard.IsHTTPError(err); ok && he.Status == http.StatusNotFound {
+			env := pkgdashboard.Envelope{
+				Kind: pkgdashboard.KindOverviewGPUTaskDetFull,
+				Meta: pkgdashboard.NewMeta(now.In(cf.Timezone.Time()), c.OlaresID(), cf.User),
+			}
+			env.Meta.Empty = true
+			env.Meta.EmptyReason = "no_vgpu_integration"
+			env.Meta.HTTPStatus = he.Status
+			if advisoryNote != "" {
+				env.Meta.Note = advisoryNote
+			}
+			if cf.Output == pkgdashboard.OutputJSON {
+				return pkgdashboard.WriteJSON(os.Stdout, env)
+			}
+			fmt.Fprintln(os.Stdout, "(task not found — HAMI integration absent or task ref invalid)")
+			return nil
+		}
+		if unavail, ok := pkgdashboard.VgpuUnavailableFromError(c, cf, err, pkgdashboard.KindOverviewGPUTaskDetFull, now, os.Stderr); ok {
+			if advisoryNote != "" {
+				unavail.Meta.Note = advisoryNote + " | " + unavail.Meta.Note
+			}
+			if cf.Output == pkgdashboard.OutputJSON {
+				return pkgdashboard.WriteJSON(os.Stdout, unavail)
+			}
+			return nil
+		}
+		return err
+	}
+
+	// First pass: exact pod-uid match (globally unique, wins over
+	// name match if both happen to coincide).
+	for _, t := range list {
+		if fmt.Sprintf("%v", t["podUid"]) == ref {
+			name := fmt.Sprintf("%v", t["name"])
+			podUID := fmt.Sprintf("%v", t["podUid"])
+			sharemode := fmt.Sprintf("%v", firstAnyInArray(t["deviceShareModes"]))
+			return RunTaskDetail(ctx, c, cf, name, podUID, sharemode)
+		}
+	}
+	// Second pass: name match — collect all to detect ambiguity.
+	nameMatches := make([]map[string]any, 0, 2)
+	for _, t := range list {
+		if fmt.Sprintf("%v", t["name"]) == ref {
+			nameMatches = append(nameMatches, t)
+		}
+	}
+	switch len(nameMatches) {
+	case 0:
+		env := pkgdashboard.Envelope{
+			Kind: pkgdashboard.KindOverviewGPUTaskDetFull,
+			Meta: pkgdashboard.NewMeta(now.In(cf.Timezone.Time()), c.OlaresID(), cf.User),
+		}
+		env.Meta.Empty = true
+		env.Meta.EmptyReason = "no_gpu_detected"
+		if advisoryNote != "" {
+			env.Meta.Note = advisoryNote
+		}
+		if cf.Output == pkgdashboard.OutputJSON {
+			return pkgdashboard.WriteJSON(os.Stdout, env)
+		}
+		fmt.Fprintf(os.Stdout, "(no task matches %q — neither a name nor a pod-uid in HAMI's container list)\n", ref)
+		// Nudge the user toward the listing command so they can
+		// copy a real ref. Skip when the list itself is empty.
+		if hint := candidateHintLine(list); hint != "" {
+			fmt.Fprintln(os.Stdout, hint)
+		}
+		return nil
+	case 1:
+		t := nameMatches[0]
+		name := fmt.Sprintf("%v", t["name"])
+		podUID := fmt.Sprintf("%v", t["podUid"])
+		sharemode := fmt.Sprintf("%v", firstAnyInArray(t["deviceShareModes"]))
+		return RunTaskDetail(ctx, c, cf, name, podUID, sharemode)
+	default:
+		// Multiple tasks share the name. Mirror the SPA: it never
+		// allows ambiguity because the user clicks the row directly,
+		// but the CLI must produce a deterministic error AND the
+		// disambiguating ref each pod-uid maps to so the user can
+		// re-run without re-listing.
+		uids := make([]string, 0, len(nameMatches))
+		for _, m := range nameMatches {
+			uids = append(uids, fmt.Sprintf("%v", m["podUid"]))
+		}
+		return fmt.Errorf("task name %q matches %d running pods (%s); rerun with one of the pod-uids: olares-cli dashboard overview gpu tasks <pod-uid>",
+			ref, len(nameMatches), strings.Join(uids, ", "))
+	}
+}
+
+// candidateHintLine renders a short "available refs" suggestion
+// for the not-found prose path. Lists at most 5 distinct names +
+// the matching pod-uid so the user has a concrete copy target;
+// returns "" when the input list is empty (the calling site
+// already prints a plain "not found" line in that case).
+func candidateHintLine(list []map[string]any) string {
+	if len(list) == 0 {
+		return ""
+	}
+	const maxShown = 5
+	pairs := make([]string, 0, maxShown)
+	for i, t := range list {
+		if i >= maxShown {
+			break
+		}
+		pairs = append(pairs, fmt.Sprintf("%v (%v)", t["name"], t["podUid"]))
+	}
+	more := ""
+	if len(list) > maxShown {
+		more = fmt.Sprintf(", … +%d more", len(list)-maxShown)
+	}
+	return fmt.Sprintf("hint: try one of: %s%s", strings.Join(pairs, ", "), more)
+}
+
 // RunTaskDetail is the cmd-side entry point for `dashboard
 // overview gpu task-detail <name> <pod-uid>`. Watch-aware (Runner
 // with 30s recommended cadence); sharemode is the SPA-supplied
@@ -53,10 +190,14 @@ func BuildTaskDetailFullEnvelope(ctx context.Context, c *pkgdashboard.Client, cf
 	}
 	env.Meta.Window = &pkgdashboard.TimeWindow{
 		Since: humanizeSince(since),
-		Start: pkgdashboard.GPUTrendTimestampISO(start),
-		End:   pkgdashboard.GPUTrendTimestampISO(end),
+		Start: pkgdashboard.GPUTrendTimestampISO(start, cf.Timezone.Time()),
+		End:   pkgdashboard.GPUTrendTimestampISO(end, cf.Timezone.Time()),
 		Step:  pkgdashboard.GPUTrendStep(start, end),
 	}
+	// See BuildDetailFullEnvelope for the wire-vs-render TZ split
+	// rationale. Same contract here.
+	wireStart := pkgdashboard.GPUTrendTimestampWire(start)
+	wireEnd := pkgdashboard.GPUTrendTimestampWire(end)
 
 	detail, err := pkgdashboard.FetchTaskDetail(ctx, c, name, podUID, sharemode)
 	if err != nil {
@@ -103,7 +244,8 @@ func BuildTaskDetailFullEnvelope(ctx context.Context, c *pkgdashboard.Client, cf
 	gaugeItems, trendItems, _ := fanoutGaugeAndTrend(
 		ctx, c,
 		gaugeSpecs, trendSpecs,
-		repl, env.Meta.Window.Start, env.Meta.Window.End, env.Meta.Window.Step,
+		repl, wireStart, wireEnd, env.Meta.Window.Step,
+		cf.Timezone.Time(),
 		addWarning,
 		"", // task-detail page doesn't capture power_trend labels
 	)

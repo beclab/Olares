@@ -1347,6 +1347,30 @@ func TestFetchGraphicsDetail_ReturnsBodyAsIs(t *testing.T) {
 	}
 }
 
+// TestFetchGraphicsDetail_SendsUidQueryParam pins the wire-name
+// contract: HAMI accepts the GPU UUID under the `uid` query key
+// (see the SPA's `GraphicsDetailsParams { uid: string }` in
+// src/apps/dashboard/types/gpu.ts). An earlier revision sent
+// `?uuid=...` and HAMI silently returned a zero-filled placeholder
+// object — this test is the regression net for that bug.
+func TestFetchGraphicsDetail_SendsUidQueryParam(t *testing.T) {
+	const want = "GPU-e5d26177-beec-64c1-2681-56cc973d9910"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("uid"); got != want {
+			t.Errorf("query 'uid' = %q, want %q", got, want)
+		}
+		if got := r.URL.Query().Get("uuid"); got != "" {
+			t.Errorf("query 'uuid' = %q, want empty (HAMI expects 'uid')", got)
+		}
+		_, _ = w.Write([]byte(`{"uuid":"` + want + `","type":"NVIDIA","health":true}`))
+	}))
+	defer srv.Close()
+	c := newTestClient(srv)
+	if _, err := fetchGraphicsDetail(context.Background(), c, want); err != nil {
+		t.Fatalf("fetchGraphicsDetail: %v", err)
+	}
+}
+
 // TestFetchTaskDetail_ReturnsBodyAsIs: same wire-shape contract for
 // `/v1/container` (task detail).
 func TestFetchTaskDetail_ReturnsBodyAsIs(t *testing.T) {
@@ -1551,6 +1575,125 @@ func TestGPUTrendStep(t *testing.T) {
 	}
 	if got := gpuTrendStep(base, base.Add(-time.Hour)); got != "1m" {
 		t.Errorf("inverted range: got %q, want 1m", got)
+	}
+}
+
+// TestGPUTrendTimestampISO_RespectsTimezone pins the user-visible
+// bug behind "trends 全空 / Gauges 正常" on UTC hosts. The CLI's
+// `time.Now()` returns absolute time (a TZ-less instant); the
+// HAMI WebUI backend pod runs with TZ=Asia/Shanghai and re-parses
+// the offset-less string with that location. If the formatter
+// ignores the caller's --timezone, the window string carries the
+// host's wall clock (often UTC) but gets re-stamped by HAMI as
+// Asia/Shanghai → the actual queried [start,end] in UTC shifts by
+// 8h into the future → Prometheus returns empty.
+//
+// Contract: same absolute instant, two different `tz` arguments,
+// MUST produce strings that differ by the offset between the two
+// zones. tz=nil falls back to time.Local (matches the legacy
+// unparameterised signature for back-compat in case any caller
+// forgets to plumb cf.Timezone in).
+func TestGPUTrendTimestampISO_RespectsTimezone(t *testing.T) {
+	shanghai, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		t.Skipf("Asia/Shanghai zone unavailable: %v", err)
+	}
+	// Reference instant: 2026-05-25 11:39:54 UTC, which is the exact
+	// `end` the user-reported bug printed when the host was running
+	// in UTC. With tz=UTC the string MUST be 11:39:54; with
+	// tz=Asia/Shanghai it MUST be 19:39:54.
+	instant := time.Date(2026, 5, 25, 11, 39, 54, 0, time.UTC)
+	if got := GPUTrendTimestampISO(instant, time.UTC); got != "2026-05-25 11:39:54" {
+		t.Errorf("UTC formatting = %q, want %q", got, "2026-05-25 11:39:54")
+	}
+	if got := GPUTrendTimestampISO(instant, shanghai); got != "2026-05-25 19:39:54" {
+		t.Errorf("Asia/Shanghai formatting = %q, want %q (UTC instant + 8h)", got, "2026-05-25 19:39:54")
+	}
+	// Two zones, same instant → strings MUST differ by the offset.
+	utcStr := GPUTrendTimestampISO(instant, time.UTC)
+	cnStr := GPUTrendTimestampISO(instant, shanghai)
+	if utcStr == cnStr {
+		t.Fatalf("UTC and Asia/Shanghai produced same string for the same instant (%q == %q); tz arg ignored", utcStr, cnStr)
+	}
+}
+
+// TestGPUTrendTimestampISO_NilTimezoneFallsBackToLocal pins that a
+// nil tz argument doesn't panic and falls back to time.Local — the
+// pre-fix unparameterised behaviour. Any in-tree caller now passes
+// cf.Timezone.Time(), but external callers (Go API consumers using
+// the dashboard package directly) might still be on the old call
+// shape; this fallback prevents a hard break.
+func TestGPUTrendTimestampISO_NilTimezoneFallsBackToLocal(t *testing.T) {
+	instant := time.Date(2026, 5, 25, 11, 39, 54, 0, time.UTC)
+	want := instant.In(time.Local).Format("2006-01-02 15:04:05")
+	if got := GPUTrendTimestampISO(instant, nil); got != want {
+		t.Errorf("nil tz fallback = %q, want %q (time.Local rendering)", got, want)
+	}
+}
+
+// TestGPUTrendTimestampWire_FormatsInHAMIBackendTZ pins the
+// wire-side half of the TZ split. GPUTrendTimestampWire MUST NOT
+// honour the CLI host's TZ or the user's cf.Timezone — it MUST
+// always render in HAMIBackendTimezone() so the absolute instant
+// round-trips through HAMI's `time.ParseInLocation` against its own
+// pod TZ. Conflating wire and render TZ is what caused the original
+// "Gauges populated / Trends empty" bug on UTC hosts.
+func TestGPUTrendTimestampWire_FormatsInHAMIBackendTZ(t *testing.T) {
+	if _, err := time.LoadLocation("Asia/Shanghai"); err != nil {
+		t.Skipf("Asia/Shanghai zone unavailable: %v", err)
+	}
+	// Same instant as the ISO test above, so the two tests double
+	// as a worked example of the wire/render split.
+	instant := time.Date(2026, 5, 25, 11, 39, 54, 0, time.UTC)
+	// Default HAMI backend TZ (no env override) is Asia/Shanghai
+	// → UTC + 8h.
+	t.Setenv("OLARES_HAMI_BACKEND_TZ", "")
+	if got := GPUTrendTimestampWire(instant); got != "2026-05-25 19:39:54" {
+		t.Errorf("wire formatting (default tz) = %q, want %q (UTC instant + 8h Asia/Shanghai)", got, "2026-05-25 19:39:54")
+	}
+}
+
+// TestGPUTrendTimestampWire_RespectsEnvOverride pins the escape
+// hatch for operators on non-default HAMI deployments. Setting
+// OLARES_HAMI_BACKEND_TZ to a valid IANA name MUST change the wire
+// string accordingly; an invalid name MUST fall back to the
+// Asia/Shanghai default (rather than crash or emit UTC), so a typo
+// in an env var doesn't silently break the data fetch.
+func TestGPUTrendTimestampWire_RespectsEnvOverride(t *testing.T) {
+	if _, err := time.LoadLocation("Asia/Shanghai"); err != nil {
+		t.Skipf("Asia/Shanghai zone unavailable: %v", err)
+	}
+	if _, err := time.LoadLocation("America/Los_Angeles"); err != nil {
+		t.Skipf("America/Los_Angeles zone unavailable: %v", err)
+	}
+	instant := time.Date(2026, 5, 25, 11, 39, 54, 0, time.UTC)
+	// May 25 in LA is PDT (UTC-7): 11:39:54 UTC → 04:39:54 PDT.
+	t.Setenv("OLARES_HAMI_BACKEND_TZ", "America/Los_Angeles")
+	if got := GPUTrendTimestampWire(instant); got != "2026-05-25 04:39:54" {
+		t.Errorf("wire formatting (LA override) = %q, want %q (UTC instant - 7h PDT)", got, "2026-05-25 04:39:54")
+	}
+	// Bad env value → silent fallback to the default (Asia/Shanghai).
+	// We deliberately don't return an error here: a CLI session that
+	// runs against a default Olares deployment would otherwise break
+	// just because the operator put a typo into their shell rc.
+	t.Setenv("OLARES_HAMI_BACKEND_TZ", "Not/A_Real_Zone")
+	if got := GPUTrendTimestampWire(instant); got != "2026-05-25 19:39:54" {
+		t.Errorf("wire formatting (bad env) = %q, want %q (fallback to Asia/Shanghai)", got, "2026-05-25 19:39:54")
+	}
+}
+
+// TestHAMIBackendTimezone_DefaultIsAsiaShanghai locks in the
+// hardcoded default: today's Olares-bundled HAMI WebUI chart pins
+// webui.env.backend.TZ to Asia/Shanghai. If that ever changes (new
+// chart release, new region), the failure here is the loud signal
+// to update defaultHAMIBackendTZ in gpu.go AND the SKILL.md table.
+// Test guards against a silent drift between the chart values and
+// the CLI's assumption.
+func TestHAMIBackendTimezone_DefaultIsAsiaShanghai(t *testing.T) {
+	t.Setenv("OLARES_HAMI_BACKEND_TZ", "")
+	loc := HAMIBackendTimezone()
+	if loc.String() != "Asia/Shanghai" {
+		t.Errorf("HAMIBackendTimezone() default = %q, want %q (must match infrastructure/gpu/.olares/config/gpu/hami/values.yaml::webui.env.backend.TZ)", loc.String(), "Asia/Shanghai")
 	}
 }
 

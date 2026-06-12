@@ -30,10 +30,8 @@ func memorySrv(t *testing.T) *httptest.Server {
           {"metric_name":"node_memory_utilisation","data":{"result":[{"metric":{"node":"olares-1"},"value":[1714600000,"0.25"]}]}},
           {"metric_name":"node_memory_cached","data":{"result":[{"metric":{"node":"olares-1"},"value":[1714600000,"1073741824"]}]}},
           {"metric_name":"node_memory_buffers","data":{"result":[{"metric":{"node":"olares-1"},"value":[1714600000,"536870912"]}]}},
-          {"metric_name":"node_memory_swap_total","data":{"result":[{"metric":{"node":"olares-1"},"value":[1714600000,"4294967296"]}]}},
-          {"metric_name":"node_memory_swap_used","data":{"result":[{"metric":{"node":"olares-1"},"value":[1714600000,"1073741824"]}]}},
-          {"metric_name":"node_memory_pgpgin_rate","data":{"result":[{"metric":{"node":"olares-1"},"value":[1714600000,"100"]}]}},
-          {"metric_name":"node_memory_pgpgout_rate","data":{"result":[{"metric":{"node":"olares-1"},"value":[1714600000,"50"]}]}}
+          {"metric_name":"node_vmstat_pswpin_bytes","data":{"result":[{"metric":{"node":"olares-1"},"value":[1714600000,"100"]}]}},
+          {"metric_name":"node_vmstat_pswpout_bytes","data":{"result":[{"metric":{"node":"olares-1"},"value":[1714600000,"50"]}]}}
         ]}`))
 	}))
 }
@@ -75,9 +73,11 @@ func TestMemoryPhysicalMode(t *testing.T) {
 }
 
 // TestMemorySwapMode pins the swap-mode divergence: Raw.mode =
-// "swap", PG_IN / PG_OUT columns populated, and util computed
-// locally as used/total since swap_utilisation isn't a separate
-// upstream series.
+// "swap", SWAP_IN / SWAP_OUT columns populated with throughput
+// rates from `node_vmstat_pswp{in,out}_bytes`, and total/used/util
+// reuse the physical memory series the SPA's "exchange" panel
+// also relies on (KubeSphere doesn't expose a dedicated
+// swap_total / swap_used pair).
 func TestMemorySwapMode(t *testing.T) {
 	srv := memorySrv(t)
 	defer srv.Close()
@@ -97,15 +97,14 @@ func TestMemorySwapMode(t *testing.T) {
 	if row.Raw["mode"] != "swap" {
 		t.Errorf("Raw.mode = %v, want swap", row.Raw["mode"])
 	}
-	for _, key := range []string{"total", "used", "pg_in", "pg_out", "util"} {
+	for _, key := range []string{"total", "used", "swap_in", "swap_out", "util"} {
 		if v, ok := row.Display[key]; !ok || v == nil {
 			t.Errorf("Display missing %q key", key)
 		}
 	}
-	// 1 GiB used / 4 GiB total = 25% — locally computed by
-	// safeRatio rather than a dedicated upstream metric.
+	// 4 GiB used / 16 GiB total => upstream node_memory_utilisation = 0.25 -> "25%".
 	if row.Display["util"] != "25%" {
-		t.Errorf("util = %v, want 25%% (used/total locally)", row.Display["util"])
+		t.Errorf("util = %v, want 25%% (from node_memory_utilisation)", row.Display["util"])
 	}
 }
 
