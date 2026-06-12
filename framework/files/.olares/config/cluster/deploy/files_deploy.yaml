@@ -407,7 +407,7 @@ spec:
             type: DirectoryOrCreate
         - name: common-data
           hostPath:
-            type: DirectoryOrCreate
+            type: Directory
             path: '{{ .Values.rootPath }}/rootfs/Common'
         
 {{ if .Values.sharedlib }}        
