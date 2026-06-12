@@ -7,6 +7,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -265,11 +266,11 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 		// ApplicationManager list using the deterministic
 		// SharedAppNamespace(app) ↔ AM mapping.
 		if _, exists := ns.Labels[security.NamespaceOwnerLabel]; !exists {
-			recovered, err := r.findV3SharedAppOwner(ctx, ns.Name)
+			owner, err := kubesphere.GetClusterOwner(ctx)
 			if err != nil {
-				logger.Info("V3 ns owner reconstruction failed", "ns", ns.Name, "err", err)
-			} else if recovered != "" {
-				ns.Labels[security.NamespaceOwnerLabel] = recovered
+				logger.Info("Failed to get cluster owner", "err", err)
+			} else {
+				ns.Labels[security.NamespaceOwnerLabel] = owner
 				updated = true
 			}
 		}
