@@ -51,6 +51,8 @@ olares-cli profile current
 > **On a Linux host with an existing `olares-cli` in `/usr/local/bin` or `/usr/bin`:** the wizard reads its `--version` and decides keep-vs-replace.
 > - **Release-grade** (stable `1.12.7`, or pre-releases `-rc1` / `-beta.1` / `-alpha2`) → kept; if `npm config get prefix` resolves to the same `bin` directory (typical Olares host: `/usr/local`), the wizard short-circuits the `npm install -g` attempt — no full install timeout — and exits with a side-by-side install block (`npm install -g ... --prefix=$HOME/.olares-cli-npm` + `PATH` export + `npx skills add beclab/Olares -y -g`) you can copy verbatim. The OS bundle is canonical for system-layer verbs and only `olares-cli upgrade` is supposed to replace it. See ["On a Linux Olares host"](#on-a-linux-olares-host-install-side-by-side-with-the-os-bundle) for the long-form reference.
 > - **Dev / test / dirty** (the Makefile placeholder `0.0.0-development`, `git describe` outputs like `1.12.7-3-gabc1234-dirty`, check.yaml's `1.12.7-12345678` PR builds, unparseable output) → removed so npm can install over the same path. If removal needs root, the wizard exits with a one-line sudo hint instead of silently failing.
+>
+> **Permission errors on Linux** (`EACCES` while npm writes to `/usr/lib/node_modules` or `/usr/local/lib/node_modules`): typical for distro-packaged Node (`apt install nodejs`) where the global prefix is root-owned. The wizard surfaces the offending npm `stderr` plus a one-time fix that switches npm to a user-owned prefix (`npm config set prefix ~/.npm-global` + `PATH`) so global installs no longer need `sudo` and `npx skills add -g` writes under your user (not `/root`).
 
 ### Or build from source
 

@@ -28,6 +28,8 @@ olares-cli profile current      # verify
 
 > This package distributes the `olares-cli` binary as a **client** only. The Node wrapper auto-sets `OLARES_CLI_REMOTE_ONLY=1`, which hides the Go binary's host-side verbs (`uninstall`, `upgrade`, `node`, `os`, `gpu`, `disk`, `wizard`, `user`, `osinfo`, `amdgpu`); these are reachable only on an Olares host through `/usr/local/bin/olares-cli`. The `install` verb is intercepted by the Node shim itself and routed to the first-run wizard (it never reaches the Go binary). Installing Olares OS itself is out of scope for this package — on a Linux host run `curl -fsSL https://olares.sh | bash`.
 
+> **Permission errors on Linux** (`EACCES` while npm writes to `/usr/lib/node_modules` or `/usr/local/lib/node_modules`): typical for distro-packaged Node (`apt install nodejs`) where the global prefix is root-owned. The wizard surfaces the offending npm `stderr` plus a one-time fix that switches npm to a user-owned prefix (`npm config set prefix ~/.npm-global` + `PATH`) so global installs no longer need `sudo` and `npx skills add -g` writes under your user (not `/root`).
+
 ## Where the binary lives
 
 | You ran | Binary ends up at |
