@@ -10,7 +10,7 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { site } = useData();
+const { site, page } = useData();
 
 declare const __SITE_PATH_PREFIX__: string;
 declare const __CURRENT_DOC_VERSION__: string;
@@ -95,28 +95,17 @@ const currentVersion = computed(() => {
   return props.latestVersion;
 });
 
-// Path after the version segment (e.g. /manual/overview), for same-page jumps across versions.
+// Path after the version segment (e.g. /manual/overview), for same-page jumps
+// across versions. Derived from page.relativePath, which is reactive AND
+// available during SSR prerender — so the built HTML keeps the current page
+// instead of collapsing to each version root. relativePath is already relative
+// to the docs (version) root, so there is no fragile base/version slicing.
 const pathSuffixAfterVersion = computed(() => {
-  if (!inBrowser) return "/";
-  const pathname = currentPathname.value;
-  const prefix = pathPrefix.value;
-  let rest = pathname.startsWith(prefix)
-    ? pathname.slice(prefix.length)
-    : pathname.replace(/^\//, "");
-
-  for (const v of props.versions) {
-    if (rest.startsWith(`${v}/`)) {
-      rest = rest.slice(v.length + 1);
-      break;
-    }
-    if (rest === v) {
-      rest = "";
-      break;
-    }
-  }
-
-  if (!rest) return "/";
-  return rest.startsWith("/") ? rest : `/${rest}`;
+  const rel = page.value.relativePath || "";
+  // Drop the source extension and map index pages to their directory.
+  let p = rel.replace(/\.(md|html)$/i, "").replace(/(^|\/)index$/i, "$1");
+  if (!p) return "/";
+  return p.startsWith("/") ? p : `/${p}`;
 });
 
 const versionHref = (version: string) => {
