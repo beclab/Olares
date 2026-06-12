@@ -30,15 +30,16 @@ const msg = {
   step1Done:       'Installed globally',
   step1Upgraded:   'Upgraded to v%s',
   step1Fail:       'Failed to install globally. Run manually: npm install -g %s',
+  step1EexistStop: 'Skipped global install: existing olares-cli left in place at /usr/local/bin/olares-cli',
   step1Eexist:
-    'Detected an existing olares-cli at /usr/local/bin/olares-cli (likely the OS bundle on a Linux Olares host).\n' +
-    'npm refuses to overwrite it. Two safe workarounds:\n' +
-    '  1) Side-by-side install:  npm install -g %s --prefix=$HOME/.olares-cli-npm\n' +
-    '                            then add $HOME/.olares-cli-npm/bin to your PATH (before /usr/local/bin).\n' +
-    '  2) One-off ops via npx:   npx %s@latest <verb>\n' +
+    'On a Linux Olares host the OS bundle owns /usr/local/bin/olares-cli; npm will not overwrite it.\n' +
+    'The wizard exited before installing skills -- finish the side-by-side install yourself (keeps the OS bundle for system-layer verbs):\n' +
+    '  npm install -g %s --prefix=$HOME/.olares-cli-npm\n' +
+    '  export PATH="$HOME/.olares-cli-npm/bin:$PATH"   # before /usr/local/bin\n' +
+    '  npx skills add %s -y -g\n' +
     'See cli/README.md "On a Linux Olares host" for details.',
   preflightKeepRelease:
-    'Detected release olares-cli at %s (%s); keeping it (npm copy will install side-by-side if paths differ).',
+    'Detected release olares-cli at %s (%s); keeping it.',
   preflightReplaceDev:
     'Detected non-release olares-cli at %s (%s); replacing.',
   preflightNoPermission:
@@ -116,16 +117,6 @@ function getLatestVersion() {
   }
 }
 
-function semverLessThan(a, b) {
-  const pa = a.replace(/-.*$/, '').split('.').map(Number);
-  const pb = b.replace(/-.*$/, '').split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((pa[i] || 0) < (pb[i] || 0)) return true;
-    if ((pa[i] || 0) > (pb[i] || 0)) return false;
-  }
-  return false;
-}
-
 function getGloballyInstalledVersion() {
   try {
     const out = runSilent('npm', ['list', '-g', PKG], { timeout: 15000 });
@@ -173,10 +164,54 @@ function readOlaresCliVersion(binPath) {
   }
 }
 
-// Classify the version string from `olares-cli --version` (Cobra default
-// emits "olares-cli version X.Y.Z[-PRE]"). Returns true ONLY for what the
-// release pipeline can produce:
-//   - stable:     1.12.7
+function isAllDigits(s) {
+  if (!s) return false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c < 48 || c > 57) return false;
+  }
+  return true;
+}
+
+// Cobra emits "olares-cli version X.Y.Z[-PRE]". Pull the token after
+// "version ", strip an optional leading "v", and stop at the first
+// whitespace. Returns null if no version token can be found.
+function extractVersionToken(verStr) {
+  const marker = 'version ';
+  const idx = verStr.indexOf(marker);
+  if (idx < 0) return null;
+  const tail = verStr.slice(idx + marker.length).trim();
+  if (!tail) return null;
+  let end = tail.length;
+  for (let i = 0; i < tail.length; i++) {
+    const c = tail.charCodeAt(i);
+    if (c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d) { end = i; break; }
+  }
+  let token = tail.slice(0, end);
+  if (token.startsWith('v')) token = token.slice(1);
+  return token || null;
+}
+
+// Accept only the shapes the release pipeline can produce:
+//   rc, rc1, rc.1, beta, beta2, beta.2, alpha, alpha3, alpha.3 (case-insensitive)
+// Anything trailing -- a `-3-gHASH` from git describe, a `-dirty` marker, a
+// numeric-only suffix, or anything else -- falls through to false.
+function isReleasePre(pre) {
+  const lower = pre.toLowerCase();
+  for (const prefix of ['rc', 'beta', 'alpha']) {
+    if (!lower.startsWith(prefix)) continue;
+    const rest = pre.slice(prefix.length);
+    if (rest === '') return true;                                     // rc, beta, alpha
+    if (isAllDigits(rest)) return true;                               // rc1, beta2, alpha3
+    if (rest[0] === '.' && isAllDigits(rest.slice(1))) return true;   // rc.1, beta.2, alpha.3
+    return false;
+  }
+  return false;
+}
+
+// Classify the version string from `olares-cli --version`. Returns true ONLY
+// for what the release pipeline can produce:
+//   - stable:     1.12.7              <-- this is the "正式版本", never replaced
 //   - prerelease: 1.12.8-rc1, 1.13.0-beta.1, 1.14.0-alpha2
 // Returns false for everything else (treat as dev/test, safe to replace):
 //   - 0.0.0-development (placeholder default in cli/version/version.go)
@@ -185,19 +220,22 @@ function readOlaresCliVersion(binPath) {
 //   - `dev` (Makefile no-git fallback) or any unparseable output
 function isReleaseGradeVersion(verStr) {
   if (!verStr) return false;
-  // Capture core MAJOR.MINOR.PATCH plus an optional pre-release suffix
-  // (everything up to the next whitespace). Anchoring on whitespace/EOL
-  // ensures we keep `-3-gabc-dirty` inside `pre` instead of silently dropping
-  // it and mis-classifying the version as stable.
-  const m = verStr.match(/version\s+v?(\d+\.\d+\.\d+)(?:-(\S+))?(?:\s|$)/);
-  if (!m) return false;
-  const [, mmp, pre] = m;
-  if (mmp === '0.0.0') return false;
-  if (!pre) return true;
-  // Strictly `rc[N]`, `beta[.N]`, `alpha[.N]`, etc. Anything trailing -- a
-  // git-describe `-N-gHASH`, a `-dirty` marker, or check.yaml's bare
-  // `-12345678` -- makes this a dev/test build.
-  return /^(rc|beta|alpha)(?:\.?\d+)?$/i.test(pre);
+  const token = extractVersionToken(verStr);
+  if (!token) return false;
+
+  const dash = token.indexOf('-');
+  const core = dash === -1 ? token : token.slice(0, dash);
+  const pre  = dash === -1 ? ''    : token.slice(dash + 1);
+
+  const parts = core.split('.');
+  if (parts.length !== 3) return false;
+  for (const p of parts) {
+    if (!isAllDigits(p)) return false;
+  }
+  if (core === '0.0.0') return false;
+
+  if (pre === '') return true;            // 正式版本 (stable, no -PRE suffix)
+  return isReleasePre(pre);
 }
 
 function tryUnlink(filePath) {
@@ -244,7 +282,11 @@ async function stepInstallGlobally(interactive) {
 
   const installedVer = getGloballyInstalledVersion();
   const latestVer = getLatestVersion();
-  const needsUpgrade = installedVer && latestVer && semverLessThan(installedVer, latestVer);
+  // Exact-inequality only -- we never had to *compare* versions, just decide
+  // whether to call `npm install -g` again. This matters for npm's `latest`
+  // dist-tag: `1.12.5-cli.2` and `1.12.5-cli.4` share the same MAJOR.MINOR.PATCH
+  // so a semver core compare wrongly reported "already at latest".
+  const needsUpgrade = installedVer && latestVer && installedVer !== latestVer;
 
   if (installedVer && !needsUpgrade) {
     const line = fmt(msg.step1Skip, installedVer);
@@ -267,8 +309,8 @@ async function stepInstallGlobally(interactive) {
     if (s) s.stop(doneLine); else console.log(doneLine);
   } catch (err) {
     if (looksLikeEexistConflict(err)) {
-      if (s) s.stop(fmt(msg.step1Fail, PKG)); else console.error(fmt(msg.step1Fail, PKG));
-      const hint = fmt(msg.step1Eexist, PKG, PKG);
+      if (s) s.stop(msg.step1EexistStop); else console.error(msg.step1EexistStop);
+      const hint = fmt(msg.step1Eexist, PKG, SKILLS_REPO);
       if (interactive) p.log.warn(hint); else console.error(hint);
     } else {
       if (s) s.stop(fmt(msg.step1Fail, PKG)); else console.error(fmt(msg.step1Fail, PKG));
