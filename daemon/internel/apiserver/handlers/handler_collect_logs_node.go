@@ -12,38 +12,23 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// roleOf maps a verified access token to the role string authz expects.
-func roleOf(t *utils.ValidToken) string {
-	switch {
-	case t.IsOwner():
-		return utils.Owner
-	case t.IsAdmin():
-		return utils.Admin
-	default:
-		return utils.Normal
-	}
-}
-
-func (h *Handlers) PostCollectLogs(ctx *fiber.Ctx, cmd commands.Interface) error {
-	var param collectlogs.Param
-	if len(ctx.Body()) > 0 {
-		if err := h.ParseBody(ctx, &param); err != nil {
-			return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
-		}
+// PostCollectLogsNode is the node-local executor endpoint invoked by the master
+// orchestrator. It runs on every node (no RequireMaster) and collects only this
+// node's logs into the shared staging directory.
+func (h *Handlers) PostCollectLogsNode(ctx *fiber.Ctx, cmd commands.Interface) error {
+	var req collectlogs.NodeRequest
+	if err := h.ParseBody(ctx, &req); err != nil {
+		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
 	}
 
 	userData, ok := ctx.Context().UserValue(client.USER_CONTEXT).(*utils.ValidToken)
 	if !ok || userData == nil {
 		return h.ErrJSON(ctx, http.StatusForbidden, "user data not found in context")
 	}
-	// Inject the verified caller identity; never trust a body-supplied value.
-	param.CallerUsername = userData.Username
-	param.CallerRole = roleOf(userData)
-	// Forward the verified access token so the orchestrator can authenticate to
-	// each node's node-local endpoint as the same caller.
-	param.CallerToken = ctx.Get(AUTH_HEADER)
+	req.CallerUsername = userData.Username
+	req.CallerRole = roleOf(userData)
 
-	res, err := cmd.Execute(ctx.Context(), &param)
+	res, err := cmd.Execute(ctx.Context(), &req)
 	if err != nil {
 		var denied *collectlogs.ScopeDeniedError
 		switch {
@@ -57,5 +42,5 @@ func (h *Handlers) PostCollectLogs(ctx *fiber.Ctx, cmd commands.Interface) error
 		}
 	}
 
-	return h.OkJSON(ctx, "success to exec command", res)
+	return h.OkJSON(ctx, "success to collect node logs", res)
 }
