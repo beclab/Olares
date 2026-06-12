@@ -58,6 +58,15 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
+# Packages with reliable, cluster-independent tests. Other packages
+# (pkg/kubesphere, pkg/task) require a live cluster and pkg/utils carries a
+# pre-existing environment-dependent test, so they are excluded from CI.
+TEST_UNIT_PKGS ?= ./controllers/... ./pkg/apiserver/... ./pkg/appcfg/... ./pkg/appinstaller/... ./pkg/appstate/... ./pkg/compute/... ./pkg/tapr/... ./pkg/utils/app/...
+
+.PHONY: test-unit
+test-unit: envtest ## Run the curated unit + integration suite with the race detector (skips manifests/generate/fmt/vet regeneration).
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -race $(TEST_UNIT_PKGS) -coverprofile cover.out
+
 ##@ Build app-service
 
 .PHONY: build
@@ -120,6 +129,9 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
+# Pin setup-envtest to the controller-runtime release matching go.mod; @latest
+# now requires a newer Go toolchain than this module builds with.
+ENVTEST_VERSION ?= release-0.22
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -135,4 +147,4 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)

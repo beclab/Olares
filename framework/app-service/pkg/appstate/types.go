@@ -9,7 +9,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
-	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller/versioned"
 	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -20,8 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -52,35 +51,40 @@ func (b *baseStatefulApp) State() string {
 
 func (b *baseStatefulApp) updateStatus(ctx context.Context, am *appsv1.ApplicationManager, state appsv1.ApplicationManagerState,
 	opRecord *appsv1.OpRecord, message, reason string) error {
-	var err error
+	// The read-modify-write below must be atomic: the same ApplicationManager
+	// can be patched concurrently by the main reconcile, per-controller
+	// reconciles, apiserver handlers and the appFactory watcher's Finally().
+	// We use an optimistic-lock patch (resourceVersion precondition) and retry
+	// on conflict so concurrent callers cannot clobber each other's
+	// OpGeneration increment or OpRecords.
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := b.client.Get(ctx, types.NamespacedName{Name: am.Name}, am); err != nil {
+			return err
+		}
 
-	err = b.client.Get(ctx, types.NamespacedName{Name: am.Name}, am)
-	if err != nil {
-		return err
-	}
-
-	now := metav1.Now()
-	amCopy := am.DeepCopy()
-	amCopy.Status.State = state
-	amCopy.Status.Message = message
-	if reason != "" {
-		amCopy.Status.Reason = reason
-	}
-	amCopy.Status.StatusTime = &now
-	amCopy.Status.UpdateTime = &now
-	amCopy.Status.OpGeneration += 1
-	if opRecord != nil {
-		amCopy.Status.OpRecords = append([]appsv1.OpRecord{*opRecord}, amCopy.Status.OpRecords...)
-	}
-	if len(amCopy.Status.OpRecords) > 20 {
-		amCopy.Status.OpRecords = amCopy.Status.OpRecords[:20:20]
-	}
-	err = b.client.Patch(ctx, amCopy, client.MergeFrom(am))
-	if err != nil {
-		klog.Errorf("patch appmgr's  %s status failed %v", am.Name, err)
-		return err
-	}
-	return nil
+		now := metav1.Now()
+		amCopy := am.DeepCopy()
+		amCopy.Status.State = state
+		amCopy.Status.Message = message
+		if reason != "" {
+			amCopy.Status.Reason = reason
+		}
+		amCopy.Status.StatusTime = &now
+		amCopy.Status.UpdateTime = &now
+		amCopy.Status.OpGeneration += 1
+		if opRecord != nil {
+			amCopy.Status.OpRecords = append([]appsv1.OpRecord{*opRecord}, amCopy.Status.OpRecords...)
+		}
+		if len(amCopy.Status.OpRecords) > 20 {
+			amCopy.Status.OpRecords = amCopy.Status.OpRecords[:20:20]
+		}
+		err := b.client.Patch(ctx, amCopy, client.MergeFromWithOptions(am, client.MergeFromWithOptimisticLock{}))
+		if err != nil {
+			klog.Errorf("patch appmgr's  %s status failed %v", am.Name, err)
+			return err
+		}
+		return nil
+	})
 }
 
 func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
@@ -103,7 +107,7 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 		return err
 	}
 
-	kubeConfig, err := ctrl.GetConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
@@ -112,7 +116,7 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 		return p.oldMongodbUninstall(ctx, kubeConfig)
 	}
 
-	ops, err := versioned.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
+	ops, err := newHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err

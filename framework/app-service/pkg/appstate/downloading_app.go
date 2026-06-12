@@ -14,7 +14,6 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -121,7 +120,7 @@ func (p *DownloadingApp) Exec(ctx context.Context) (StatefulInProgressApp, error
 func (p *DownloadingApp) exec(ctx context.Context) error {
 	var err error
 	var appConfig *appcfg.ApplicationConfig
-	kubeConfig, err := ctrl.GetConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
