@@ -88,6 +88,7 @@ jobs:
       version: ${{ needs.test-version.outputs.version }}
       ref: ${{ github.event.pull_request.head.ref }}
       repository: ${{ github.event.pull_request.head.repo.full_name }}
+      publish-npm: false
 
   upload-daemon:
     needs: test-version
