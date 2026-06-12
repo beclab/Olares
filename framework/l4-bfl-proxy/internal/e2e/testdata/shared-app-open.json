@@ -55,6 +55,33 @@
       }
     },
     {
+      "name": "authelia_backend_admin",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "authelia_backend_admin",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "authelia-backend.user-system-admin.svc.cluster.local",
+                      "portValue": 9091
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
       "name": "nonapp_auth_admin",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -136,33 +163,6 @@
       }
     },
     {
-      "name": "authelia_backend_admin",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "authelia_backend_admin",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "authelia-backend.user-system-admin.svc.cluster.local",
-                      "portValue": 9091
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
       "name": "profile_service_alice",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -204,6 +204,33 @@
                     "socketAddress": {
                       "address": "shareme-svc.shareme-shared.svc.cluster.local",
                       "portValue": 8080
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "authelia_backend_alice",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "authelia_backend_alice",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "authelia-backend.user-system-alice.svc.cluster.local",
+                      "portValue": 9091
                     }
                   }
                 }
@@ -298,33 +325,6 @@
       }
     },
     {
-      "name": "authelia_backend_alice",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "authelia_backend_alice",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "authelia-backend.user-system-alice.svc.cluster.local",
-                      "portValue": 9091
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
       "name": "profile_service_bob",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -366,6 +366,33 @@
                     "socketAddress": {
                       "address": "shareme-svc.shareme-shared.svc.cluster.local",
                       "portValue": 8080
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "authelia_backend_bob",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "authelia_backend_bob",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "authelia-backend.user-system-bob.svc.cluster.local",
+                      "portValue": 9091
                     }
                   }
                 }
@@ -447,33 +474,6 @@
                     "socketAddress": {
                       "address": "wizard.user-space-bob.svc.cluster.local",
                       "portValue": 80
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
-      "name": "authelia_backend_bob",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "authelia_backend_bob",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "authelia-backend.user-system-bob.svc.cluster.local",
-                      "portValue": 9091
                     }
                   }
                 }
@@ -1747,6 +1747,12 @@
                   }
                 ]
               },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              },
               "requestHeadersToAdd": [
                 {
                   "header": {
@@ -2176,6 +2182,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
@@ -2607,6 +2619,12 @@
                   }
                 ]
               },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              },
               "requestHeadersToAdd": [
                 {
                   "header": {
@@ -3036,6 +3054,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
@@ -3467,6 +3491,12 @@
                   }
                 ]
               },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              },
               "requestHeadersToAdd": [
                 {
                   "header": {
@@ -3896,6 +3926,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
