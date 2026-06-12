@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wlreplicas
+description: fixture for workloadReplicas + overlayGateway checks
+type: application
+version: 1.0.0
+appVersion: "1"

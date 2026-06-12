@@ -21,8 +21,10 @@ func (f *fakeManifest) AppName() string               { return "x" }
 func (f *fakeManifest) AppVersion() string            { return "0.0.0" }
 func (f *fakeManifest) Entrances() []EntranceInfo     { return nil }
 func (f *fakeManifest) OptionsImages() []string       { return nil }
-func (f *fakeManifest) PermissionAppData() bool       { return false }
-func (f *fakeManifest) Raw() any                      { return f.raw }
+func (f *fakeManifest) PermissionAppData() bool      { return false }
+func (f *fakeManifest) PermissionAppCommon() bool    { return false }
+func (f *fakeManifest) PermissionExternalData() bool { return false }
+func (f *fakeManifest) Raw() any                     { return f.raw }
 
 // fakeStrategy records Parse/Validate invocations so tests can assert what
 // the pipeline actually called. Validate returns valErr; Parse returns
