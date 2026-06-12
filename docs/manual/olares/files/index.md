@@ -30,6 +30,11 @@ Learn the fundamentals of file management in Olares.
 </div>
 
 <div>
+<h4><a href="./common">Use Common directory</a></h4>
+Learn how applications share AI models and cache data in the Common directory.
+</div>
+
+<div>
 <h4><a href="./mount-SMB">Mount SMB</a></h4>
 Learn how to mount and access SMB shared folders from NAS devices or network servers in Olares.
 </div>

@@ -231,6 +231,10 @@ const side = {
               text: "Basic file operations",
               link: "/manual/olares/files/add-edit-download",
             },
+            {
+              text: "Use Common directory",
+              link: "/manual/olares/files/files-common",
+            },
             //   {
             //      text: "Sync and share",
             //     link: "/manual/larepass/sync-share",
