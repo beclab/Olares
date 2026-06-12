@@ -325,8 +325,17 @@ func (t *CheckGpuStatus) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("kubectl not found")
 	}
 
+	// in a multi-node cluster there is one hami-device-plugin pod per GPU node,
+	// so we must only check the pod scheduled on the current node.
+	nodeName, err := os.Hostname()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "get hostname error")
+	}
+	nodeName = strings.ToLower(nodeName)
+
 	selector := "app.kubernetes.io/component=hami-device-plugin"
-	cmd := fmt.Sprintf("%s get pod  -n kube-system -l '%s' -o jsonpath='{.items[*].status.phase}'", kubectlpath, selector)
+	fieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
+	cmd := fmt.Sprintf("%s get pod -n kube-system -l '%s' --field-selector '%s' -o jsonpath='{.items[*].status.phase}'", kubectlpath, selector, fieldSelector)
 
 	rphase, _ := runtime.GetRunner().SudoCmd(cmd, false, false)
 	if rphase == "Running" {
