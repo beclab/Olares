@@ -37,7 +37,7 @@ func TestIsRouteControlManagedNP(t *testing.T) {
 			np: &netv1.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						RouteControlManagedByLabel:   RouteControlManagedByValue,
+						RouteControlManagedByLabel: RouteControlManagedByValue,
 						RouteControlComponentLabel: RouteControlComponentValue,
 					},
 				},

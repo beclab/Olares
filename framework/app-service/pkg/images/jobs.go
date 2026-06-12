@@ -70,18 +70,30 @@ func showProgress(ctx context.Context, rCtx *containerd.RemoteContext, ongoing *
 
 	attempt := 0
 	var descs []ocispec.Descriptor
+	// Honor ctx so cancellation propagates: stop retrying if the parent
+	// context is canceled (e.g. user canceled the download). Without this the
+	// loop can spin for ~17 minutes against context.TODO() and block the
+	// whole reconcile (and any others queued behind it).
 	err := retry.OnError(wait.Backoff{
 		Steps:    10,
 		Duration: time.Second,
 		Factor:   2.0,
 		Jitter:   0.1,
-	}, func(error) bool { return true }, func() error {
-		_, desc, err := rCtx.Resolver.Resolve(context.TODO(), ongoing.name)
+	}, func(err error) bool {
+		if ctx.Err() != nil {
+			return false
+		}
+		return true
+	}, func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		_, desc, err := rCtx.Resolver.Resolve(ctx, ongoing.name)
 		if err != nil {
 			klog.Infof("resolve ref failed err=%v", err)
 			return err
 		}
-		descs, err = getAllLayerDescriptor(rCtx, desc, cs)
+		descs, err = getAllLayerDescriptor(ctx, rCtx, desc, cs)
 		if err != nil {
 			attempt++
 			klog.Infof("image %s,attempt %d to get layer descriptor err=%v", ongoing.name, attempt, err)
@@ -96,6 +108,10 @@ func showProgress(ctx context.Context, rCtx *containerd.RemoteContext, ongoing *
 	})
 	if err != nil {
 		klog.Infof("get all layer descriptor failed err=%v", err)
+		return
+	}
+	if ctx.Err() != nil {
+		klog.Infof("show progress aborted before tick loop name=%s err=%v", ongoing.name, ctx.Err())
 		return
 	}
 	var imageSize int64
@@ -218,7 +234,11 @@ outer:
 				return
 			}
 		case <-ctx.Done():
-			done = true // allow ui to update once more
+			// On cancellation just exit; do NOT loop once more with done=true,
+			// which would force every status to "done"/"exists" and report
+			// progress=100%, racing against the canceled state update.
+			klog.Infof("show progress canceled name=%s err=%v", ongoing.name, ctx.Err())
+			return
 		}
 	}
 }
@@ -402,7 +422,7 @@ func (j *jobs) isResolved() bool {
 	return j.resolved
 }
 
-func getAllLayerDescriptor(rCtx *containerd.RemoteContext, root ocispec.Descriptor, cs content.Store) ([]ocispec.Descriptor, error) {
+func getAllLayerDescriptor(ctx context.Context, rCtx *containerd.RemoteContext, root ocispec.Descriptor, cs content.Store) ([]ocispec.Descriptor, error) {
 	ans := make([]ocispec.Descriptor, 0)
 	childrenHandler := images.ChildrenHandler(cs)
 	childrenHandler = images.SetChildrenMappedLabels(cs, childrenHandler, rCtx.ChildLabelMap)
@@ -418,12 +438,17 @@ func getAllLayerDescriptor(rCtx *containerd.RemoteContext, root ocispec.Descript
 			return nil
 		}
 		for _, c := range descs {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			ans = append(ans, c)
-			children, err := childrenHandler.Handle(context.TODO(), c)
+			children, err := childrenHandler.Handle(ctx, c)
 			if err != nil {
 				return err
 			}
-			getDescriptor(children...)
+			if err := getDescriptor(children...); err != nil {
+				return err
+			}
 		}
 		return nil
 	}

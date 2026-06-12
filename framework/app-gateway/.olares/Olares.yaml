@@ -4,3 +4,5 @@ output:
   containers:
     - 
       name: envoyproxy/ratelimit:ff287602
+    - 
+      name: envoyproxy/envoy:distroless-v1.38.0

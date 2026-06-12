@@ -12,6 +12,7 @@ import (
 	"time"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -50,6 +51,8 @@ const (
 	appEntranceCertConfigMapCertKey          = "cert"
 	appEntranceCertConfigMapKeyKey           = "key"
 	appEntranceCertConfigMapZoneKey          = "zone"
+	userEnvLanguage                          = "olares-user-language"
+	defaultUserLanguage                      = "en-US"
 )
 
 type Config struct {
@@ -102,6 +105,11 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("get pod informer: %w", err)
 	}
 
+	userEnvInformer, err := p.cache.GetInformer(ctx, &sysv1alpha1.UserEnv{})
+	if err != nil {
+		return fmt.Errorf("get userEnv informer: %w", err)
+	}
+
 	baseHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(_ interface{}) { p.notifyChanged() },
 		UpdateFunc: func(_, _ interface{}) { p.notifyChanged() },
@@ -133,8 +141,14 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 
 	if _, err = userInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
-			_, ok := obj.(*iamv1alpha2.User)
-			return ok
+			user, ok := obj.(*iamv1alpha2.User)
+			if !ok {
+				return false
+			}
+			if user.Status.State != "Created" {
+				return false
+			}
+			return true
 		},
 		Handler: baseHandler,
 	}); err != nil {
@@ -152,6 +166,19 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		Handler: baseHandler,
 	}); err != nil {
 		return fmt.Errorf("add pod event handler: %w", err)
+	}
+
+	if _, err = userEnvInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
+		FilterFunc: func(obj interface{}) bool {
+			userEnv, ok := obj.(*sysv1alpha1.UserEnv)
+			if !ok {
+				return false
+			}
+			return isUserEnvLanguage(userEnv)
+		},
+		Handler: baseHandler,
+	}); err != nil {
+		return fmt.Errorf("add userEnv event handler: %w", err)
 	}
 
 	klog.Info("provider: informers and event handlers registered...")
@@ -259,8 +286,12 @@ func (p *Provider) buildResources(ctx context.Context) (*message.Resources, erro
 	if err != nil {
 		return nil, err
 	}
+	userEnvList, err := p.getUserEnvList(ctx)
+	if err != nil {
+		return nil, err
+	}
 	rawAppsMap = fanOutSharedApps(rawAppsMap, userList)
-	users, err := p.listUsers(ctx, userList, rawAppsMap)
+	users, err := p.listUsers(ctx, userList, rawAppsMap, userEnvList)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +495,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 	return result
 }
 
-func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application) ([]*message.UserInfo, error) {
+func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application, userEnvList []sysv1alpha1.UserEnv) ([]*message.UserInfo, error) {
 	var result []*message.UserInfo
 
 	// Fetch cluster-wide data once; reused for every user below.
@@ -485,6 +516,18 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			if name == "cli" && userList[i].Annotations[userAnnotationOwnerRole] == "owner" {
 				return &userList[i]
 			}
+		}
+		return nil
+	}
+	getUserEnvByName := func(name string) *sysv1alpha1.UserEnv {
+		for i := range userEnvList {
+			if userEnvList[i].Namespace != fmt.Sprintf("%s-%s", p.cfg.UserNamespacePrefix, name) {
+				continue
+			}
+			if userEnvList[i].Name != userEnvLanguage {
+				continue
+			}
+			return &userEnvList[i]
 		}
 		return nil
 	}
@@ -562,7 +605,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 
 		cidrs := parseAllowCIDRs(allowCIDR)
 
-		language := getUserLanguage(&user)
+		language := getUserLanguage(getUserEnvByName(user.Name))
 		sslConfig, err := p.getSSLConfig(ctx, user.Name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -666,11 +709,12 @@ func (p *Provider) getSSLConfig(ctx context.Context, username string) (*message.
 	}
 	return cfg, nil
 }
-func getUserLanguage(user *iamv1alpha2.User) string {
-	if user.Annotations != nil {
-		return user.Annotations["bytetrade.io/language"]
+
+func getUserLanguage(userEnv *sysv1alpha1.UserEnv) string {
+	if userEnv == nil {
+		return defaultUserLanguage
 	}
-	return ""
+	return userEnv.GetEffectiveValue()
 }
 
 // listApplicationDetails summarises the viewer's per-user view of a set
@@ -778,6 +822,15 @@ func (p *Provider) getUsers(ctx context.Context) ([]iamv1alpha2.User, error) {
 	return users, nil
 }
 
+func (p *Provider) getUserEnvList(ctx context.Context) ([]sysv1alpha1.UserEnv, error) {
+	var userEnvList sysv1alpha1.UserEnvList
+	if err := p.cache.List(ctx, &userEnvList, client.MatchingLabels{"sys.bytetrade.io/env-type": "language"}); err != nil {
+		klog.Errorf("provider: list userEnv from cache failed: %v", err)
+		return nil, fmt.Errorf("list userEnv from cache failed: %v", err)
+	}
+	return userEnvList.Items, nil
+}
+
 func (p *Provider) getMasterNodeCIDR(ctx context.Context) (string, error) {
 	var nodeList corev1.NodeList
 	if err := p.cache.List(ctx, &nodeList, client.HasLabels{"node-role.kubernetes.io/control-plane"}); err != nil {
@@ -856,4 +909,8 @@ func isCustomDomainCertConfigMap(cm *corev1.ConfigMap) bool {
 
 func isFileServerPod(pod *corev1.Pod) bool {
 	return pod.Labels["app"] == "files"
+}
+
+func isUserEnvLanguage(userEnv *sysv1alpha1.UserEnv) bool {
+	return userEnv.Name == userEnvLanguage
 }
