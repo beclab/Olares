@@ -10,6 +10,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	"bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
+	"bytetrade.io/web3os/bfl/pkg/userenv"
 	"bytetrade.io/web3os/bfl/pkg/utils"
 
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
@@ -118,10 +119,40 @@ func (b *Base) IsAdminUser(ctx context.Context) (bool, error) {
 	return role == constants.RoleOwner || role == constants.RoleAdmin, nil
 }
 
-func (b *Base) HandleGetSysConfig(_ *restful.Request, resp *restful.Response) {
+func (b *Base) HandleGetSysConfig(req *restful.Request, resp *restful.Response) {
+	kc, err := runtime.NewKubeClientInCluster()
+	if err != nil {
+		response.HandleError(resp, errors.Errorf("get user sys config err: new kube client err, %v", err))
+		return
+	}
+	ctx := req.Request.Context()
+	c := kc.CtrlClient()
+
+	// language/theme/timezone are owned by the per-user UserEnvs (see
+	// build/user-env.yaml) and read directly from the UserEnv CRs; an unset
+	// env reads as empty.
+	cfg := PostLocale{}
+	targets := []struct {
+		env string
+		dst *string
+	}{
+		{userenv.EnvLanguage, &cfg.Language},
+		{userenv.EnvTimezone, &cfg.Timezone},
+		{userenv.EnvTheme, &cfg.Theme},
+	}
+	for _, t := range targets {
+		v, _, e := userenv.GetValue(ctx, c, constants.Username, t.env)
+		if e != nil {
+			response.HandleError(resp, errors.Errorf("get user sys config err: read userenv %s err, %v", t.env, e))
+			return
+		}
+		*t.dst = v
+	}
+
+	// Location has no backing UserEnv; it still lives on the user annotation.
 	userOp, err := operator.NewUserOperator()
 	if err != nil {
-		response.HandleError(resp, errors.Errorf("new user operator err, %v", err))
+		response.HandleError(resp, errors.Errorf("get user sys config err: new user operator err, %v", err))
 		return
 	}
 	user, err := userOp.GetUser(constants.Username)
@@ -129,11 +160,7 @@ func (b *Base) HandleGetSysConfig(_ *restful.Request, resp *restful.Response) {
 		response.HandleError(resp, errors.Errorf("get user sys config err: get user err, %v", err))
 		return
 	}
-	cfg := PostLocale{
-		Language: user.Annotations[constants.UserLanguage],
-		Location: user.Annotations[constants.UserLocation],
-		Timezone: user.Annotations[constants.UserTimezone],
-		Theme:    user.Annotations[constants.UserTheme],
-	}
+	cfg.Location = user.Annotations[constants.UserLocation]
+
 	response.Success(resp, &cfg)
 }
