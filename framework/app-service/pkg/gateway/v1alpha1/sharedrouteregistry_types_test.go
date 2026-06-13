@@ -24,9 +24,10 @@ func TestDeepCopyRoundTrip(t *testing.T) {
 	in := &SharedRouteRegistry{
 		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo", Namespace: "demo-shared"},
 		Spec: SharedRouteRegistrySpec{
-			RouteMode:    RouteModeGateway,
-			HostPatterns: []string{"a.example.com", "b.example.com"},
-			Upstream:     UpstreamRef{ServiceName: "demo", Port: 8080},
+			RouteMode:     RouteModeGateway,
+			EntranceClass: EntranceClassShared,
+			HostPatterns:  []string{"a.example.com", "b.example.com"},
+			Upstream:      UpstreamRef{ServiceName: "demo", Port: 8080},
 		},
 		Status: SharedRouteRegistryStatus{
 			Conditions: []metav1.Condition{{Type: "Ready", Status: metav1.ConditionTrue}},
@@ -39,6 +40,10 @@ func TestDeepCopyRoundTrip(t *testing.T) {
 	out.Spec.HostPatterns[0] = "mutated"
 	if in.Spec.HostPatterns[0] == "mutated" {
 		t.Error("HostPatterns slice not deep-copied")
+	}
+	out.Spec.EntranceClass = EntranceClassApplication
+	if in.Spec.EntranceClass != EntranceClassShared {
+		t.Errorf("EntranceClass changed on source object: %q", in.Spec.EntranceClass)
 	}
 	out.Status.Conditions[0].Type = "mutated"
 	if in.Status.Conditions[0].Type == "mutated" {

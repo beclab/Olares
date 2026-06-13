@@ -66,6 +66,13 @@ spec:
                     - gateway
                     - direct
                   default: gateway
+                entranceClass:
+                  description: Marks whether this SRR came from an application/shared entrance.
+                  type: string
+                  enum:
+                    - application
+                    - shared
+                  default: shared
                 hostPatterns:
                   description: |-
                     Externally-visible hostnames Envoy Gateway must route to

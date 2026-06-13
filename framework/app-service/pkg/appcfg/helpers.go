@@ -16,6 +16,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
+var getUserZone = kubesphere.GetUserZone
+
 // Helpers in this file replace methods that used to live on the in-tree
 // Application / ApplicationManager types (see api/app.bytetrade.io/v1alpha1
 // /helper.go before the migration). Because those types are now aliases to
@@ -146,19 +148,11 @@ func (s AppName) IsGeneratedApp() bool {
 	return userspace.IsGeneratedApp(string(s))
 }
 
-// SharedEntranceIdPrefix returns the 8-char md5 prefix used as the base for
-// shared entrance URLs for the app.
-func (s AppName) SharedEntranceIdPrefix() string {
-	hash := md5.Sum([]byte(s.GetAppID() + "shared"))
-	hashString := hex.EncodeToString(hash[:])
-	return hashString[:8]
-}
-
 // GenEntranceURL fills in entrance URLs on app.Spec.Entrances based on the
 // user's zone. It is a package-level re-implementation of the in-tree
 // (*Application).GenEntranceURL method.
 func GenEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
-	zone, err := kubesphere.GetUserZone(ctx, app.Spec.Owner)
+	zone, err := getUserZone(ctx, app.Spec.Owner)
 	if err != nil {
 		klog.Errorf("failed to get user zone: %v", err)
 	}
@@ -172,12 +166,13 @@ func GenEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
 			}
 		}
 
-		appid := AppName(app.Spec.Name).GetAppID()
+		appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
 		if len(app.Spec.Entrances) == 1 {
-			app.Spec.Entrances[0].URL = fmt.Sprintf("%s.%s", appid, zone)
+			app.Spec.Entrances[0] = app.Spec.Entrances[0].ForZone(appid, zone, 0, 1)
 		} else {
+			entrancesForZone := appv1alpha1.Entrances(app.Spec.Entrances).ForZone(appid, zone)
 			for i := range app.Spec.Entrances {
-				app.Spec.Entrances[i].URL = fmt.Sprintf("%s%d.%s", appid, i, zone)
+				app.Spec.Entrances[i] = entrancesForZone[i]
 				for _, adc := range appDomainConfigs {
 					if adc.AppName == app.Spec.Name && adc.EntranceName == app.Spec.Entrances[i].Name && len(adc.ThirdLevelDomain) > 0 {
 						app.Spec.Entrances[i].URL = fmt.Sprintf("%s.%s", adc.ThirdLevelDomain, zone)
@@ -191,7 +186,7 @@ func GenEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
 
 // GenSharedEntranceURL fills in URLs for the app's shared entrances.
 func GenSharedEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
-	zone, err := kubesphere.GetUserZone(ctx, app.Spec.Owner)
+	zone, err := getUserZone(ctx, app.Spec.Owner)
 	if err != nil {
 		klog.Errorf("failed to get user zone: %v", err)
 	}
@@ -201,13 +196,12 @@ func GenSharedEntranceURL(ctx context.Context, app *Application) ([]Entrance, er
 		tokens[0] = "shared"
 		sharedZone := strings.Join(tokens, ".")
 
-		appName := AppName(app.Spec.Name)
-		sharedEntranceIdPrefix := appName.SharedEntranceIdPrefix()
-		for i := range app.Spec.SharedEntrances {
+		appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+		sharedEntrancesForZone := appv1alpha1.Entrances(app.Spec.SharedEntrances).SharedForZone(appid, sharedZone)
+		for i := range sharedEntrancesForZone {
+			app.Spec.SharedEntrances[i] = sharedEntrancesForZone[i]
 			if app.Spec.SharedEntrances[i].Port > 0 {
-				app.Spec.SharedEntrances[i].URL = fmt.Sprintf("%s%d.%s:%d", sharedEntranceIdPrefix, i, sharedZone, app.Spec.SharedEntrances[i].Port)
-			} else {
-				app.Spec.SharedEntrances[i].URL = fmt.Sprintf("%s%d.%s", sharedEntranceIdPrefix, i, sharedZone)
+				app.Spec.SharedEntrances[i].URL = fmt.Sprintf("%s:%d", app.Spec.SharedEntrances[i].URL, app.Spec.SharedEntrances[i].Port)
 			}
 		}
 	}
