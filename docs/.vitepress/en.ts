@@ -217,6 +217,10 @@ const side = {
               link: "/manual/olares/market/clone-apps",
             },
             {
+              text: "Use LLM Base applications",
+              link: "/manual/olares/market/llm-base-apps",
+            },
+            {
               text: "Manage paid applications",
               link: "/manual/olares/market/purchase-paid-apps",
             },
