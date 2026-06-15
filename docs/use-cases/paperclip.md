@@ -231,12 +231,17 @@ This OpenCode runs inside the Paperclip container and is separate from the OpenC
            }
          },
          "options": {
-           "baseURL": "https://<your-olares-id>.olares.com/v1"
+           "baseURL": "https://2b46296c.<your-olares-id>.olares.com/v1"
          }
        }
      }
    }
    ```
+
+
+   :::info
+   `2b46296c` is your actual application route ID. If you are not using Gemma4 26B Q4_K_M (Ollama), replace it with your actual application route ID.
+   :::
 
 4. Restart the Paperclip container.
 5. In Paperclip, go to **Agents** > **Configuration** > **Permissions & Configuration** to verify the newly added local model.
