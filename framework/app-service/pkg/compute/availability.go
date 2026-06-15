@@ -563,13 +563,23 @@ func allocationsFromResolvedSelection(appConfig *appcfg.ApplicationConfig, req R
 	remaining := target
 	for _, item := range resolved {
 		amount := target
-		if item.device.SupportType == SupportTypeMemorySlice && item.memory > 0 {
+		switch {
+		case item.device.SupportType == SupportTypeMemorySlice && item.memory > 0:
+			// Memory-slice cards carve out an explicit per-card slice; the
+			// frontend always sends a positive Memory for them (enforced by
+			// validateResolvedBindingSelection).
 			amount = item.memory
-		}
-		if len(resolved) > 1 {
-			if item.device.SupportType != SupportTypeMemorySlice || item.memory <= 0 {
-				amount = minInt64(deviceAvailableMemory(item.device), remaining)
-			}
+		case isWholeCardMode(req.Mode, item.device.SupportType):
+			// Exclusive / TimeSlice hand the pod the whole card and
+			// buildAllocation records Memory=0, so every selected card must
+			// produce its own binding. These must never be gated on the
+			// shared `remaining` VRAM budget: once an earlier card covered
+			// the RequiredGPU target the budget reaches zero and the rest of
+			// a multi-card selection would be silently dropped, leaving only
+			// a single HAMI binding for a two-card request.
+			amount = deviceAvailableMemory(item.device)
+		case len(resolved) > 1:
+			amount = minInt64(deviceAvailableMemory(item.device), remaining)
 		}
 		if amount <= 0 {
 			continue

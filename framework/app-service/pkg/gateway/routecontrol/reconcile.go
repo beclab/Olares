@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -12,8 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gatewaytimeout "github.com/beclab/Olares/framework/app-service/pkg/gateway/timeout"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
@@ -209,6 +212,15 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 		return "", fmt.Errorf("hostPatterns produced no usable hostnames: %v", srr.Spec.HostPatterns)
 	}
 
+	current := &unstructured.Unstructured{}
+	current.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	getErr := c.Get(ctx, types.NamespacedName{Namespace: srr.Namespace, Name: name}, current)
+	egConfigured := probeExternalSharedRouteTimeout(ctx, c, gw, srr, current)
+	effective, err := gatewaytimeout.EffectiveResponseTimeout(gatewaytimeout.DefaultTimeout(), nil, egConfigured)
+	if err != nil {
+		klog.Warningf("effective timeout fell back to %q for srr=%s/%s: %v", effective, srr.Namespace, srr.Name, err)
+	}
+
 	parentRef := map[string]any{
 		"group":     "gateway.networking.k8s.io",
 		"kind":      "Gateway",
@@ -246,6 +258,10 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 	rule := map[string]any{
 		"matches":     matches,
 		"backendRefs": []any{backendRef},
+		"timeouts": map[string]any{
+			"backendRequest": effective,
+			"request":        effective,
+		},
 	}
 	desired := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "gateway.networking.k8s.io/v1",
@@ -266,17 +282,14 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 	}}
 	setOwnerSRR(desired, srr)
 
-	current := &unstructured.Unstructured{}
-	current.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
-	err := c.Get(ctx, types.NamespacedName{Namespace: srr.Namespace, Name: name}, current)
 	switch {
-	case apierrors.IsNotFound(err):
+	case apierrors.IsNotFound(getErr):
 		if err := c.Create(ctx, desired); err != nil {
 			return "", err
 		}
 		return name, nil
-	case err != nil:
-		return "", err
+	case getErr != nil:
+		return "", getErr
 	}
 	if !reflect.DeepEqual(current.Object["spec"], desired.Object["spec"]) {
 		current.Object["spec"] = desired.Object["spec"]
@@ -292,6 +305,121 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 		}
 	}
 	return name, nil
+}
+
+func probeExternalSharedRouteTimeout(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, current *unstructured.Unstructured) time.Duration {
+	_ = gw
+	var floor time.Duration
+
+	if current != nil {
+		labels := current.GetLabels()
+		if labels[ManagedByLabel] != ManagedByValue {
+			probed, err := extractRouteTimeoutFloor(current)
+			if err != nil {
+				klog.Warningf("probe current route timeout failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
+				return 0
+			}
+			if probed > floor {
+				floor = probed
+			}
+		}
+	}
+
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.envoyproxy.io", Version: "v1alpha1", Kind: "BackendTrafficPolicyList"})
+	if err := c.List(ctx, list, client.InNamespace(srr.Namespace)); err != nil {
+		klog.Warningf("list BackendTrafficPolicy failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
+		return 0
+	}
+
+	for i := range list.Items {
+		item := &list.Items[i]
+		group, _, err := unstructured.NestedString(item.Object, "spec", "targetRef", "group")
+		if err != nil {
+			klog.Warningf("read BackendTrafficPolicy targetRef.group failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
+			return 0
+		}
+		kind, _, err := unstructured.NestedString(item.Object, "spec", "targetRef", "kind")
+		if err != nil {
+			klog.Warningf("read BackendTrafficPolicy targetRef.kind failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
+			return 0
+		}
+		name, _, err := unstructured.NestedString(item.Object, "spec", "targetRef", "name")
+		if err != nil {
+			klog.Warningf("read BackendTrafficPolicy targetRef.name failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
+			return 0
+		}
+		if group != "gateway.networking.k8s.io" || kind != "HTTPRoute" || name != httpRouteName(srr) {
+			continue
+		}
+		raw, found, err := unstructured.NestedString(item.Object, "spec", "timeout", "http", "requestTimeout")
+		if err != nil {
+			klog.Warningf("read BackendTrafficPolicy requestTimeout failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
+			return 0
+		}
+		if !found || raw == "" {
+			continue
+		}
+			d, err := gatewaytimeout.ParseSeconds(raw)
+		if err != nil {
+			klog.Warningf("parse BackendTrafficPolicy requestTimeout=%q failed for srr=%s/%s: %v", raw, srr.Namespace, srr.Name, err)
+			return 0
+		}
+		if err := gatewaytimeout.ValidateResponseTimeout(d); err != nil {
+			klog.Warningf("invalid BackendTrafficPolicy requestTimeout=%q for srr=%s/%s: %v", raw, srr.Namespace, srr.Name, err)
+			return 0
+		}
+		if d > floor {
+			floor = d
+		}
+	}
+	return floor
+}
+
+func extractRouteTimeoutFloor(route *unstructured.Unstructured) (time.Duration, error) {
+	rules, found, err := unstructured.NestedSlice(route.Object, "spec", "rules")
+	if err != nil {
+		return 0, err
+	}
+	if !found {
+		return 0, nil
+	}
+	var floor time.Duration
+	for _, rawRule := range rules {
+		ruleMap, ok := rawRule.(map[string]any)
+		if !ok {
+			return 0, fmt.Errorf("rule has unexpected type %T", rawRule)
+		}
+		timeoutsRaw, ok := ruleMap["timeouts"]
+		if !ok || timeoutsRaw == nil {
+			continue
+		}
+		timeoutsMap, ok := timeoutsRaw.(map[string]any)
+		if !ok {
+			return 0, fmt.Errorf("timeouts has unexpected type %T", timeoutsRaw)
+		}
+		for _, key := range []string{"backendRequest", "request"} {
+			val, ok := timeoutsMap[key]
+			if !ok || val == nil {
+				continue
+			}
+			timeoutStr, ok := val.(string)
+			if !ok {
+				return 0, fmt.Errorf("timeouts.%s has unexpected type %T", key, val)
+			}
+			d, err := gatewaytimeout.ParseSeconds(timeoutStr)
+			if err != nil {
+				return 0, fmt.Errorf("parse timeouts.%s=%q: %w", key, timeoutStr, err)
+			}
+			if err := gatewaytimeout.ValidateResponseTimeout(d); err != nil {
+				return 0, fmt.Errorf("invalid timeouts.%s=%q: %w", key, timeoutStr, err)
+			}
+			if d > floor {
+				floor = d
+			}
+		}
+	}
+	return floor, nil
 }
 
 func deleteHTTPRoute(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {

@@ -2,6 +2,7 @@ package routecontrol
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -69,7 +70,23 @@ func testScheme(t *testing.T) *runtime.Scheme {
 	gw := schema.GroupVersion{Group: "gateway.networking.k8s.io", Version: "v1"}
 	s.AddKnownTypeWithName(gw.WithKind("HTTPRoute"), &unstructured.Unstructured{})
 	s.AddKnownTypeWithName(gw.WithKind("HTTPRouteList"), &unstructured.UnstructuredList{})
+	eg := schema.GroupVersion{Group: "gateway.envoyproxy.io", Version: "v1alpha1"}
+	s.AddKnownTypeWithName(eg.WithKind("BackendTrafficPolicy"), &unstructured.Unstructured{})
+	s.AddKnownTypeWithName(eg.WithKind("BackendTrafficPolicyList"), &unstructured.UnstructuredList{})
 	return s
+}
+
+func mustHTTPRouteFirstRule(t *testing.T, route *unstructured.Unstructured) map[string]any {
+	t.Helper()
+	rules, found, err := unstructured.NestedSlice(route.Object, "spec", "rules")
+	if err != nil || !found || len(rules) == 0 {
+		t.Fatalf("spec.rules missing: found=%v err=%v", found, err)
+	}
+	rule, ok := rules[0].(map[string]any)
+	if !ok {
+		t.Fatalf("rules[0] type=%T, want map[string]any", rules[0])
+	}
+	return rule
 }
 
 func TestResolveServicePort(t *testing.T) {
@@ -378,5 +395,194 @@ func TestReconcileSharedRouteDirectMode(t *testing.T) {
 	}
 	if res.Status != metav1.ConditionTrue || res.Reason != ReasonDirectMode {
 		t.Fatalf("direct result = %+v", res)
+	}
+}
+
+func TestApplyHTTPRouteMaterializesTimeouts(t *testing.T) {
+	s := testScheme(t)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo-timeout", Namespace: "demo-shared", UID: "uid-timeout"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassShared,
+			HostPatterns:  []string{"timeout.shared.olares.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "shared-demo-timeout"}, route); err != nil {
+		t.Fatalf("get route: %v", err)
+	}
+
+	rule := mustHTTPRouteFirstRule(t, route)
+	timeouts, ok := rule["timeouts"].(map[string]any)
+	if !ok {
+		t.Fatalf("timeouts type=%T, want map[string]any", rule["timeouts"])
+	}
+	if got := timeouts["backendRequest"]; got != "600s" {
+		t.Fatalf("timeouts.backendRequest=%v, want 600s", got)
+	}
+	if got := timeouts["request"]; got != "600s" {
+		t.Fatalf("timeouts.request=%v, want 600s", got)
+	}
+}
+
+func TestApplyHTTPRouteProbeFailureStillWritesTimeouts(t *testing.T) {
+	s := testScheme(t)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo-probe-fail", Namespace: "demo-shared", UID: "uid-probe-fail"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassShared,
+			HostPatterns:  []string{"probe-fail.shared.olares.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
+		},
+	}
+	existingRoute := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gateway.networking.k8s.io/v1",
+		"kind":       "HTTPRoute",
+		"metadata": map[string]any{
+			"name":      "shared-demo-probe-fail",
+			"namespace": "demo-shared",
+		},
+		"spec": map[string]any{
+			"rules": []any{
+				map[string]any{
+					"timeouts": map[string]any{
+						"request": int64(12345), // malformed on purpose: triggers probe failure
+					},
+				},
+			},
+		},
+	}}
+	existingRoute.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr, existingRoute).Build()
+
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "shared-demo-probe-fail"}, route); err != nil {
+		t.Fatalf("get route: %v", err)
+	}
+	rule := mustHTTPRouteFirstRule(t, route)
+	timeouts, ok := rule["timeouts"].(map[string]any)
+	if !ok {
+		t.Fatalf("timeouts type=%T, want map[string]any", rule["timeouts"])
+	}
+	if got := timeouts["request"]; got != "600s" {
+		t.Fatalf("timeouts.request=%v, want 600s", got)
+	}
+}
+
+func TestApplyHTTPRouteDiffOnlyTimeouts(t *testing.T) {
+	s := testScheme(t)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo-diff-timeout", Namespace: "demo-shared", UID: "uid-diff-timeout"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassShared,
+			HostPatterns:  []string{"diff-timeout.shared.olares.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
+		},
+	}
+	existingRoute := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gateway.networking.k8s.io/v1",
+		"kind":       "HTTPRoute",
+		"metadata": map[string]any{
+			"name":      "shared-demo-diff-timeout",
+			"namespace": "demo-shared",
+			"labels": map[string]any{
+				ManagedByLabel: ManagedByValue,
+				InstanceLabel:  "shared-demo-diff-timeout",
+			},
+		},
+		"spec": map[string]any{
+			"parentRefs": []any{
+				map[string]any{
+					"group":       "gateway.networking.k8s.io",
+					"kind":        "Gateway",
+					"namespace":   "os-gateway",
+					"name":        "app-gateway",
+					"sectionName": "http",
+				},
+			},
+			"hostnames": []any{"diff-timeout.shared.olares.com"},
+			"rules": []any{
+				map[string]any{
+					"matches": []any{
+						map[string]any{
+							"path": map[string]any{"type": "PathPrefix", "value": "/"},
+						},
+					},
+					"backendRefs": []any{
+						map[string]any{
+							"group":     "",
+							"kind":      "Service",
+							"name":      "demo-svc",
+							"namespace": "demo-shared",
+							"port":      int64(8080),
+							"weight":    int64(1),
+						},
+					},
+				},
+			},
+		},
+	}}
+	existingRoute.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr, existingRoute).Build()
+
+	before := &unstructured.Unstructured{}
+	before.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "shared-demo-diff-timeout"}, before); err != nil {
+		t.Fatalf("get before route: %v", err)
+	}
+	beforeRule := mustHTTPRouteFirstRule(t, before)
+	beforeMatches := beforeRule["matches"]
+	beforeBackendRefs := beforeRule["backendRefs"]
+
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+
+	after := &unstructured.Unstructured{}
+	after.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "shared-demo-diff-timeout"}, after); err != nil {
+		t.Fatalf("get after route: %v", err)
+	}
+	afterRule := mustHTTPRouteFirstRule(t, after)
+	if !reflect.DeepEqual(beforeMatches, afterRule["matches"]) {
+		t.Fatalf("matches changed after timeout materialization")
+	}
+	if !reflect.DeepEqual(beforeBackendRefs, afterRule["backendRefs"]) {
+		t.Fatalf("backendRefs changed after timeout materialization")
+	}
+	timeouts, ok := afterRule["timeouts"].(map[string]any)
+	if !ok {
+		t.Fatalf("timeouts type=%T, want map[string]any", afterRule["timeouts"])
+	}
+	if got := timeouts["request"]; got != "600s" {
+		t.Fatalf("timeouts.request=%v, want 600s", got)
 	}
 }
