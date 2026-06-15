@@ -37,8 +37,9 @@ for mod in "${PACKAGE_MODULE[@]}";do
                             echo "ignoring template value"
                             continue
                         fi
-                        if contains_element "$l" "${IGNORE_IMAGES[@]}"; then
-                            echo "ignoring image in ignore list: $l"
+                        $img=$(echo "$l" | awk '{print $3}')
+                        if contains_element "$img" "${IGNORE_IMAGES[@]}"; then
+                            echo "ignoring image in ignore list: $img"
                             continue
                         fi  
                         echo "$l" >> ${TMP_MANIFEST}
