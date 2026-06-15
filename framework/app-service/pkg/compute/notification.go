@@ -5,8 +5,7 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
-	"k8s.io/klog/v2"
+	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 )
 
 const (
@@ -51,13 +50,5 @@ func PublishComputeInsufficientNotification(appConfig *appcfg.ApplicationConfig,
 			Timestamp: time.Now(),
 		},
 	}
-	nc, err := utils.NewNatsConn()
-	if err != nil {
-		klog.Warningf("failed to connect NATS for compute resource notification: %v", err)
-		return
-	}
-	defer nc.Close()
-	if err := utils.PublishEvent(nc, notificationSubject, data); err != nil {
-		klog.Warningf("failed to publish compute resource notification: %v", err)
-	}
+	appevent.PublishToQueue(notificationSubject, data)
 }

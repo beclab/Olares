@@ -214,7 +214,6 @@ func main() {
 	if err = (&controllers.NodeAlertController{
 		Client:     mgr.GetClient(),
 		KubeConfig: config,
-		NatsConn:   nil,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "NodeAlert")
 		os.Exit(1)
