@@ -38,6 +38,16 @@ const (
 	RouteModeDirect RouteMode = "direct"
 )
 
+// EntranceClass marks which entrance category produced this SRR.
+type EntranceClass string
+
+const (
+	// EntranceClassApplication marks app-level entrance records.
+	EntranceClassApplication EntranceClass = "application"
+	// EntranceClassShared marks shared entrance records.
+	EntranceClassShared EntranceClass = "shared"
+)
+
 // UpstreamRef points at a Service in (by default) the same namespace as the SRR.
 type UpstreamRef struct {
 	// ServiceName is the Kubernetes Service short name (no domain).
@@ -60,6 +70,11 @@ type SharedRouteRegistrySpec struct {
 	// +kubebuilder:validation:Enum=gateway;direct
 	// +kubebuilder:default=gateway
 	RouteMode RouteMode `json:"routeMode,omitempty"`
+
+	// EntranceClass marks whether this SRR came from an application/shared entrance.
+	// +kubebuilder:validation:Enum=application;shared
+	// +kubebuilder:default=shared
+	EntranceClass EntranceClass `json:"entranceClass,omitempty"`
 
 	// HostPatterns must be lowercase DNS names without a port.
 	// +kubebuilder:validation:MinItems=1

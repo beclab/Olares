@@ -7,10 +7,21 @@ func TestParseLogicalPattern(t *testing.T) {
 	if !ok {
 		t.Fatal("expected valid logical pattern")
 	}
-	if p.Hash8 != "ab12cd34" || p.PlatformDomain != "olares.com" {
+	if p.Prefix != "ab12cd34" || p.PlatformDomain != "olares.com" {
 		t.Errorf("parsed = %+v", p)
 	}
-	for _, bad := range []string{"a.example.com", "xyz.*.olares.com", "ab12cd34.*.", "ZZ12cd34.*.olares.com"} {
+	app, ok := ParseLogicalPattern("e31111940.*.olares.cn")
+	if !ok {
+		t.Fatal("expected valid application entrance logical pattern")
+	}
+	if app.Prefix != "e31111940" || app.PlatformDomain != "olares.cn" {
+		t.Errorf("application parsed = %+v", app)
+	}
+	hosts := HTTPRouteHostnames([]string{"e31111940.*.olares.cn"})
+	if len(hosts) != 1 || hosts[0] != "*.olares.cn" {
+		t.Fatalf("application HTTPRouteHostnames = %v, want [*.olares.cn]", hosts)
+	}
+	for _, bad := range []string{"a.example.com", "*.olares.com", "ab12cd34.*.", "-bad.*.olares.com"} {
 		if _, ok := ParseLogicalPattern(bad); ok {
 			t.Errorf("ParseLogicalPattern(%q) should be invalid", bad)
 		}
@@ -18,20 +29,25 @@ func TestParseLogicalPattern(t *testing.T) {
 }
 
 func TestHostRegexValue(t *testing.T) {
-	got := HostRegexValue(LogicalPattern{Hash8: "ab12cd34", PlatformDomain: "olares.com"})
+	got := HostRegexValue(LogicalPattern{Prefix: "ab12cd34", PlatformDomain: "olares.com"})
 	want := `^ab12cd34\.[a-z0-9]([-a-z0-9]*[a-z0-9])?\.olares\.com$`
 	if got != want {
 		t.Errorf("HostRegexValue = %q, want %q", got, want)
 	}
+	appGot := HostRegexValue(LogicalPattern{Prefix: "e31111940", PlatformDomain: "olares.cn"})
+	appWant := `^e31111940\.[a-z0-9]([-a-z0-9]*[a-z0-9])?\.olares\.cn$`
+	if appGot != appWant {
+		t.Errorf("application HostRegexValue = %q, want %q", appGot, appWant)
+	}
 }
 
 func TestHTTPRouteHostnamesAndHeaderMatches(t *testing.T) {
-	patterns := []string{"ab12cd34.*.olares.com", "exact.example.com", "ab12cd34.*.olares.com"}
+	patterns := []string{"ab12cd34.*.olares.com", "ab12cd34.shared.olares.com", "exact.example.com", "ab12cd34.*.olares.com"}
 	hosts := HTTPRouteHostnames(patterns)
-	if len(hosts) != 2 {
-		t.Fatalf("hosts = %v, want 2 deduped", hosts)
+	if len(hosts) != 3 {
+		t.Fatalf("hosts = %v, want 3 deduped", hosts)
 	}
-	if hosts[0] != "*.olares.com" || hosts[1] != "exact.example.com" {
+	if hosts[0] != "*.olares.com" || hosts[1] != "ab12cd34.shared.olares.com" || hosts[2] != "exact.example.com" {
 		t.Errorf("hosts = %v", hosts)
 	}
 	matches := HTTPRouteHostHeaderMatches(patterns)
