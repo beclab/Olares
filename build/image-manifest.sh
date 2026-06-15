@@ -33,11 +33,12 @@ for mod in "${PACKAGE_MODULE[@]}";do
                 bash ${BASE_DIR}/yaml2prop.sh -f $p | while read l;do 
                     if [[ "$l" == *".image = "* || "$l" == "output.containers."*".name"* ]]; then 
                         echo "$l"
-                        if [[ $(echo "$l" | awk '{print $3}') == "value" ]]; then
+                        img=$(echo "$l" | awk '{print $3}')
+                        if [[ "$img" == "value" ]]; then
                             echo "ignoring template value"
                             continue
                         fi
-                        $img=$(echo "$l" | awk '{print $3}')
+                        
                         if contains_element "$img" "${IGNORE_IMAGES[@]}"; then
                             echo "ignoring image in ignore list: $img"
                             continue
