@@ -215,6 +215,8 @@ spec:
           value: "0"
         - name: USER_MEMORY_THRESHOLD
           value: "0"
+        - name: SHARED_BACKEND_RESPONSE_TIMEOUT
+          value: "600s"
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT
