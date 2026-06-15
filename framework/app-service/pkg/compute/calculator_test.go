@@ -195,6 +195,99 @@ func TestValidateBindingSelectionTopologyAndMemorySlice(t *testing.T) {
 	}
 }
 
+// TestAllocationsFromResolvedSelectionMultiCardWholeCard is a regression test
+// for the multi-card binding bug: when the frontend submitted two whole-card
+// (Exclusive / TimeSlice) selections, allocationsFromResolvedSelection folded
+// them into a single RequiredGPU budget and dropped every card past the one
+// that first covered the budget, so only one HAMI GPUBinding was created for a
+// two-card request. Every selected whole card must yield its own allocation.
+func TestAllocationsFromResolvedSelectionMultiCardWholeCard(t *testing.T) {
+	cases := []struct {
+		name        string
+		supportType string
+	}{
+		{name: "exclusive", supportType: SupportTypeExclusive},
+		{name: "timeslice", supportType: SupportTypeTimeSlice},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			app := &appcfg.ApplicationConfig{AppName: "trainer", OwnerName: "alice"}
+			req := Requirement{
+				Mode:              utils.NvidiaCardType,
+				RequiredGPU:       12 * gi,
+				LimitedGPU:        12 * gi,
+				SupportMultiCards: true,
+			}
+			nodes := []Node{
+				nvidiaNode("nvidia-a",
+					Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: tc.supportType},
+					Device{ID: "gpu1", Memory: 16 * gi, Health: deviceHealthYes, SupportType: tc.supportType},
+				),
+			}
+			resolved, err := resolveSelection([]BindingSelection{
+				{NodeName: "nvidia-a", DeviceID: "gpu0"},
+				{NodeName: "nvidia-a", DeviceID: "gpu1"},
+			}, nodes)
+			if err != nil {
+				t.Fatalf("resolveSelection failed: %v", err)
+			}
+			allocations := allocationsFromResolvedSelection(app, req, resolved)
+			if len(allocations) != 2 {
+				t.Fatalf("expected one allocation per selected card, got %d: %#v", len(allocations), allocations)
+			}
+			devices := map[string]struct{}{}
+			for _, a := range allocations {
+				devices[a.DeviceID] = struct{}{}
+				if a.Memory != 0 {
+					t.Fatalf("whole-card allocation should record Memory=0, got %#v", a)
+				}
+				if a.AppName != "trainer" || a.Owner != "alice" || a.NodeName != "nvidia-a" {
+					t.Fatalf("unexpected allocation identity: %#v", a)
+				}
+			}
+			for _, id := range []string{"gpu0", "gpu1"} {
+				if _, ok := devices[id]; !ok {
+					t.Fatalf("expected an allocation for %s, got %#v", id, allocations)
+				}
+			}
+		})
+	}
+}
+
+// TestAllocationsFromResolvedSelectionMultiCardMemorySlice pins the unchanged
+// memory-slice path: each selected card keeps its own explicit slice amount.
+func TestAllocationsFromResolvedSelectionMultiCardMemorySlice(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "trainer", OwnerName: "alice"}
+	req := Requirement{
+		Mode:              utils.NvidiaCardType,
+		RequiredGPU:       12 * gi,
+		LimitedGPU:        12 * gi,
+		SupportMultiCards: true,
+	}
+	nodes := []Node{
+		nvidiaNode("nvidia-a",
+			Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeMemorySlice},
+			Device{ID: "gpu1", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeMemorySlice},
+		),
+	}
+	resolved, err := resolveSelection([]BindingSelection{
+		{NodeName: "nvidia-a", DeviceID: "gpu0", Memory: 6 * gi},
+		{NodeName: "nvidia-a", DeviceID: "gpu1", Memory: 6 * gi},
+	}, nodes)
+	if err != nil {
+		t.Fatalf("resolveSelection failed: %v", err)
+	}
+	allocations := allocationsFromResolvedSelection(app, req, resolved)
+	if len(allocations) != 2 {
+		t.Fatalf("expected one allocation per memory-slice card, got %d: %#v", len(allocations), allocations)
+	}
+	for _, a := range allocations {
+		if a.Memory != 6*gi {
+			t.Fatalf("expected each memory-slice allocation to keep its 6Gi slice, got %#v", a)
+		}
+	}
+}
+
 func TestAvailabilityCrossNodeSumsRawAvailableDespitePerNodePressure(t *testing.T) {
 	req := Requirement{
 		Mode:              utils.NvidiaCardType,
