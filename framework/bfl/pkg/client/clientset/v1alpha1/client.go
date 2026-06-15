@@ -5,6 +5,7 @@ import (
 
 	"bytetrade.io/web3os/bfl/pkg/constants"
 
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	aruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -22,6 +23,9 @@ var (
 func init() {
 	utilruntime.Must(iamV1alpha2.AddToScheme(scheme))
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	// UserEnv (sys.bytetrade.io) so the ctrl client can read/write the per-user
+	// locale env vars backing config-system.
+	utilruntime.Must(sysv1alpha1.AddToScheme(scheme))
 }
 
 // KubeClient global singleton client for kubernetes and kubesphere
