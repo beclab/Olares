@@ -314,7 +314,7 @@ spec:
        
       containers:
         - name: olares-envoy-sidecar
-          image: bytetrade/envoy:v1.25.11
+          image: beclab/envoy:v1.25.11.1
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
