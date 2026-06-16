@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +25,7 @@ const (
 	ManagedByLabel         = "app.kubernetes.io/managed-by"
 	ManagedByValue         = "app-service"
 	InstanceLabel          = "app.kubernetes.io/instance"
+	TimeoutFloorAnnotation = "app-service.olares.com/timeout-floor"
 	NetworkPolicyName      = "app-gateway-shared-ingress-np"
 	defaultGatewayNS       = "os-gateway"
 	defaultGatewayName     = "app-gateway"
@@ -215,7 +217,7 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 	current := &unstructured.Unstructured{}
 	current.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
 	getErr := c.Get(ctx, types.NamespacedName{Namespace: srr.Namespace, Name: name}, current)
-	egConfigured := probeExternalSharedRouteTimeout(ctx, c, gw, srr, current)
+	egConfigured := probeExternalSharedRouteTimeout(ctx, c, gw, srr, current, getErr)
 	effective, err := gatewaytimeout.EffectiveResponseTimeout(gatewaytimeout.DefaultTimeout(), nil, egConfigured)
 	if err != nil {
 		klog.Warningf("effective timeout fell back to %q for srr=%s/%s: %v", effective, srr.Namespace, srr.Name, err)
@@ -284,6 +286,7 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 
 	switch {
 	case apierrors.IsNotFound(getErr):
+		applyTimeoutFloorAnnotation(desired, current, getErr)
 		if err := c.Create(ctx, desired); err != nil {
 			return "", err
 		}
@@ -291,15 +294,15 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 	case getErr != nil:
 		return "", getErr
 	}
-	if !reflect.DeepEqual(current.Object["spec"], desired.Object["spec"]) {
+	specChanged := !reflect.DeepEqual(current.Object["spec"], desired.Object["spec"])
+	prevFloor := strings.TrimSpace(current.GetAnnotations()[TimeoutFloorAnnotation])
+	applyTimeoutFloorAnnotation(current, current, getErr)
+	metaChanged := mergeHTTPRouteMetadataForUpdate(current, desired)
+	annChanged := strings.TrimSpace(current.GetAnnotations()[TimeoutFloorAnnotation]) != prevFloor
+	if specChanged {
 		current.Object["spec"] = desired.Object["spec"]
-		labels := current.GetLabels()
-		if labels == nil {
-			labels = map[string]string{}
-		}
-		labels[ManagedByLabel] = ManagedByValue
-		labels[InstanceLabel] = srr.Name
-		current.SetLabels(labels)
+	}
+	if specChanged || metaChanged || annChanged {
 		if err := c.Update(ctx, current); err != nil {
 			return "", err
 		}
@@ -307,47 +310,67 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 	return name, nil
 }
 
-func probeExternalSharedRouteTimeout(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, current *unstructured.Unstructured) time.Duration {
+func probeExternalSharedRouteTimeout(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, current *unstructured.Unstructured, getErr error) time.Duration {
 	_ = gw
 	var floor time.Duration
 
-	if current != nil {
+	if current != nil && getErr == nil {
+		if ann := strings.TrimSpace(current.GetAnnotations()[TimeoutFloorAnnotation]); ann != "" {
+			d, err := gatewaytimeout.ParseSeconds(ann)
+			if err != nil {
+				klog.Warningf("parse annotation %s=%q failed for srr=%s/%s: %v", TimeoutFloorAnnotation, ann, srr.Namespace, srr.Name, err)
+			} else if err := gatewaytimeout.ValidateResponseTimeout(d); err != nil {
+				klog.Warningf("invalid annotation %s=%q for srr=%s/%s: %v", TimeoutFloorAnnotation, ann, srr.Namespace, srr.Name, err)
+			} else if d > floor {
+				floor = d
+			}
+		}
+
 		labels := current.GetLabels()
 		if labels[ManagedByLabel] != ManagedByValue {
 			probed, err := extractRouteTimeoutFloor(current)
 			if err != nil {
 				klog.Warningf("probe current route timeout failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
-				return 0
-			}
-			if probed > floor {
+			} else if probed > floor {
 				floor = probed
 			}
 		}
 	}
 
+	btpFloor, err := probeBTPTargetRouteTimeout(ctx, c, srr)
+	if err != nil {
+		klog.Warningf("probe BTP failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
+	} else if btpFloor > floor {
+		floor = btpFloor
+	}
+
+	return floor
+}
+
+func probeBTPTargetRouteTimeout(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) (time.Duration, error) {
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.envoyproxy.io", Version: "v1alpha1", Kind: "BackendTrafficPolicyList"})
 	if err := c.List(ctx, list, client.InNamespace(srr.Namespace)); err != nil {
-		klog.Warningf("list BackendTrafficPolicy failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
-		return 0
+		return 0, err
 	}
 
+	var floor time.Duration
 	for i := range list.Items {
 		item := &list.Items[i]
 		group, _, err := unstructured.NestedString(item.Object, "spec", "targetRef", "group")
 		if err != nil {
 			klog.Warningf("read BackendTrafficPolicy targetRef.group failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
-			return 0
+			continue
 		}
 		kind, _, err := unstructured.NestedString(item.Object, "spec", "targetRef", "kind")
 		if err != nil {
 			klog.Warningf("read BackendTrafficPolicy targetRef.kind failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
-			return 0
+			continue
 		}
 		name, _, err := unstructured.NestedString(item.Object, "spec", "targetRef", "name")
 		if err != nil {
 			klog.Warningf("read BackendTrafficPolicy targetRef.name failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
-			return 0
+			continue
 		}
 		if group != "gateway.networking.k8s.io" || kind != "HTTPRoute" || name != httpRouteName(srr) {
 			continue
@@ -355,25 +378,83 @@ func probeExternalSharedRouteTimeout(ctx context.Context, c client.Client, gw Ga
 		raw, found, err := unstructured.NestedString(item.Object, "spec", "timeout", "http", "requestTimeout")
 		if err != nil {
 			klog.Warningf("read BackendTrafficPolicy requestTimeout failed for srr=%s/%s: %v", srr.Namespace, srr.Name, err)
-			return 0
+			continue
 		}
 		if !found || raw == "" {
 			continue
 		}
-			d, err := gatewaytimeout.ParseSeconds(raw)
+		d, err := gatewaytimeout.ParseSeconds(raw)
 		if err != nil {
 			klog.Warningf("parse BackendTrafficPolicy requestTimeout=%q failed for srr=%s/%s: %v", raw, srr.Namespace, srr.Name, err)
-			return 0
+			continue
 		}
 		if err := gatewaytimeout.ValidateResponseTimeout(d); err != nil {
 			klog.Warningf("invalid BackendTrafficPolicy requestTimeout=%q for srr=%s/%s: %v", raw, srr.Namespace, srr.Name, err)
-			return 0
+			continue
 		}
 		if d > floor {
 			floor = d
 		}
 	}
-	return floor
+	return floor, nil
+}
+
+func applyTimeoutFloorAnnotation(target, current *unstructured.Unstructured, getErr error) string {
+	if target == nil {
+		return ""
+	}
+	ann := target.GetAnnotations()
+	if ann == nil {
+		ann = map[string]string{}
+	}
+
+	if getErr == nil && current != nil {
+		labels := current.GetLabels()
+		wasManaged := labels[ManagedByLabel] == ManagedByValue
+		if !wasManaged {
+			routeFloor, err := extractRouteTimeoutFloor(current)
+			if err != nil {
+				klog.Warningf("probe route floor for annotation failed for route=%s/%s: %v", current.GetNamespace(), current.GetName(), err)
+			} else if routeFloor > gatewaytimeout.DefaultTimeout() {
+				formatted, err := gatewaytimeout.FormatSeconds(routeFloor)
+				if err != nil {
+					klog.Warningf("format route floor for annotation failed for route=%s/%s: %v", current.GetNamespace(), current.GetName(), err)
+				} else {
+					ann[TimeoutFloorAnnotation] = formatted
+					target.SetAnnotations(ann)
+					return formatted
+				}
+			}
+		} else if existing := strings.TrimSpace(current.GetAnnotations()[TimeoutFloorAnnotation]); existing != "" {
+			ann[TimeoutFloorAnnotation] = existing
+			target.SetAnnotations(ann)
+			return existing
+		}
+	}
+
+	if existing := strings.TrimSpace(ann[TimeoutFloorAnnotation]); existing != "" {
+		ann[TimeoutFloorAnnotation] = existing
+		target.SetAnnotations(ann)
+		return existing
+	}
+	return ""
+}
+
+func mergeHTTPRouteMetadataForUpdate(current, desired *unstructured.Unstructured) bool {
+	changed := false
+	labels := current.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	desiredLabels := desired.GetLabels()
+	for _, k := range []string{ManagedByLabel, InstanceLabel} {
+		if want := desiredLabels[k]; want != "" && labels[k] != want {
+			labels[k] = want
+			changed = true
+		}
+	}
+	current.SetLabels(labels)
+	return changed
 }
 
 func extractRouteTimeoutFloor(route *unstructured.Unstructured) (time.Duration, error) {
