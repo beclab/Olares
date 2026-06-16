@@ -29,10 +29,17 @@ const (
 	hamiGPUBindingListKind   = "GPUBindingList"
 )
 
+// Node is a physical cluster node in the compute view. A node may support
+// several accelerator modes at once (e.g. an Olares One exposing both nvidia
+// and intel), so GPUTypes is a list rather than a single value; cpu is implicit
+// on every node and is not listed here. Each Device carries the Mode it serves,
+// so callers can filter a node's devices to a single mode (see Node.viewForMode
+// / matchingNodes) without losing the multi-mode view this struct exposes to
+// the API.
 type Node struct {
-	NodeName       string `json:"nodeName"`
-	GPUType        string `json:"gpuType"`
-	Health         string `json:"health,omitempty"`
+	NodeName       string   `json:"nodeName"`
+	GPUTypes       []string `json:"gpuTypes"`
+	Health         string   `json:"health,omitempty"`
 	memoryCapacity int64
 	Devices        []Device `json:"devices"`
 }
@@ -40,12 +47,53 @@ type Node struct {
 type Device struct {
 	ID                    string       `json:"id"`
 	NodeName              string       `json:"nodeName"`
+	Mode                  string       `json:"mode"`
 	CardModel             string       `json:"cardModel,omitempty"`
 	Memory                int64        `json:"memory"`
 	Health                string       `json:"health"`
 	SupportType           string       `json:"supportType"`
 	AvailableSupportTypes []string     `json:"availableSupportTypes,omitempty"`
 	Bindings              []Allocation `json:"bindings,omitempty"`
+}
+
+// SupportsMode reports whether the node can host a pod of the given mode. cpu
+// is universal — every node can run cpu workloads — while non-cpu modes must be
+// advertised in GPUTypes.
+func (n Node) SupportsMode(mode string) bool {
+	if mode == utils.CPUType {
+		return true
+	}
+	for _, m := range n.GPUTypes {
+		if m == mode {
+			return true
+		}
+	}
+	return false
+}
+
+// viewForMode returns a copy of the node projected onto a single mode: only the
+// devices serving that mode are retained. The device-centric scheduler /
+// availability code operates on these single-mode views so it never has to
+// reason about a node's other modes.
+func (n Node) viewForMode(mode string) Node {
+	view := n
+	devices := make([]Device, 0, len(n.Devices))
+	for _, d := range n.Devices {
+		if d.Mode == mode {
+			devices = append(devices, d)
+		}
+	}
+	view.Devices = devices
+	return view
+}
+
+// primaryGPUType returns a single representative mode for display on nodes that
+// don't match a requested mode (e.g. the availability "not-match" listing).
+func (n Node) primaryGPUType() string {
+	if len(n.GPUTypes) > 0 {
+		return n.GPUTypes[0]
+	}
+	return utils.CPUType
 }
 
 type Allocation struct {
@@ -85,7 +133,6 @@ const (
 	AvailabilityScopeCard          = "card"
 	AvailabilityScopeSingleNode    = "single-node-cards"
 	AvailabilityScopeCrossNode     = "cross-node-cards"
-	AvailabilityScopeNode          = "node"
 	FitLevelLimit                  = "limit"
 	FitLevelRequired               = "required"
 	BindingApplyStatusNotRequired  = "not-required"

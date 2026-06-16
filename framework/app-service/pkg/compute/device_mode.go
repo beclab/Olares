@@ -32,15 +32,15 @@ func FindDevice(ctx context.Context, c client.Client, nodeName, deviceID string)
 // callers that have already torn the bindings down should use SwitchDeviceMode
 // directly.
 func UpdateDeviceSupportType(ctx context.Context, c client.Client, nodeName, deviceID, supportType string) (Device, error) {
-	node, device, err := FindDevice(ctx, c, nodeName, deviceID)
+	_, device, err := FindDevice(ctx, c, nodeName, deviceID)
 	if err != nil {
 		return Device{}, err
 	}
-	if !IsHAMIMode(node.GPUType) {
-		return Device{}, fmt.Errorf("device mode switching is not supported for gpu type %s", node.GPUType)
+	if !IsHAMIMode(device.Mode) {
+		return Device{}, fmt.Errorf("device mode switching is not supported for gpu type %s", device.Mode)
 	}
 	if !SupportTypeAvailable(device.AvailableSupportTypes, supportType) {
-		return Device{}, fmt.Errorf("support type %s is not available for gpu type %s", supportType, node.GPUType)
+		return Device{}, fmt.Errorf("support type %s is not available for gpu type %s", supportType, device.Mode)
 	}
 	if len(device.Bindings) > 0 {
 		return Device{}, fmt.Errorf("device %s still has %d compute bindings", deviceID, len(device.Bindings))

@@ -13,10 +13,12 @@ import (
 )
 
 // ErrAmbiguousComputeMode is returned by AutoSelectMode when more than one
-// non-cpu mode declared by the app is also runnable on the cluster, so the
-// caller must surface the ambiguity to the user (e.g. by returning the
-// install compute plan and asking for an explicit selectedGpuType).
-var ErrAmbiguousComputeMode = errors.New("multiple gpu types runnable on this cluster; please specify selectedGpuType")
+// mode declared by the app is runnable on the cluster. cpu is treated as a
+// first-class candidate, so an app that declares both cpu and a matching gpu
+// mode is ambiguous too; the caller must surface the choice to the user (e.g.
+// by returning the install compute plan and asking for an explicit
+// selectedGpuType).
+var ErrAmbiguousComputeMode = errors.New("multiple compute modes runnable on this cluster; please specify selectedGpuType")
 
 // AutoSelectMode picks a compute mode for `appCfg` when the install caller
 // did not supply one explicitly. It is meant to make the common cases
@@ -34,30 +36,30 @@ var ErrAmbiguousComputeMode = errors.New("multiple gpu types runnable on this cl
 //     See AppSupportedModes for the exact rules.
 //
 //  3. valid = (modes the app supports) ∩ (modes runnable on this cluster).
-//     - cpu is "runnable" iff app.modes contains cpu.
+//     - cpu is a first-class candidate: it is "runnable" iff app.modes
+//     contains cpu (every cluster can run cpu pods).
 //     - any non-cpu mode m is "runnable" iff m ∈ cluster.gpuTypes.
 //
-//  4. Decide:
-//     - exactly one non-cpu entry in valid → return that. (Single GPU
-//     candidate, no ambiguity even if cpu fallback is also valid.)
-//     - zero non-cpu entries in valid, but cpu ∈ valid → return cpu.
-//     (App is effectively cpu-only on this cluster.)
-//     - otherwise (multiple non-cpu candidates, or the intersection is
-//     empty) → return an error and let the caller require an explicit
-//     SelectedGpuType.
+//  4. Decide purely on len(valid):
+//     - exactly one entry → return it (the only choice; may be cpu).
+//     - zero entries → error (the app declares only gpu modes, none of
+//     which the cluster has).
+//     - more than one entry → ErrAmbiguousComputeMode; the caller surfaces
+//     the choice. cpu being one of the candidates does NOT auto-resolve it:
+//     {cpu, nvidia} is ambiguous and asks the user to pick.
 //
-// Worked examples (cluster has nvidia + cpu fallback):
+// Worked examples (cluster has nvidia, cpu always runnable):
 //
-//	app supports {nvidia, gb10, strix-halo}     -> nvidia
-//	app supports {nvidia, gb10, cpu}            -> nvidia (one non-cpu match)
-//	app supports {strix-halo, apple-m}          -> error (no overlap)
+//	app supports {nvidia, gb10, amd}            -> nvidia (only nvidia matches)
+//	app supports {nvidia, gb10, cpu}            -> error (ambiguous: nvidia + cpu)
+//	app supports {amd, apple-m}                 -> error (no overlap)
 //	app supports {cpu}                          -> cpu
 //
-// Worked examples (cluster has nvidia + strix-halo + cpu fallback):
+// Worked examples (cluster has nvidia + amd, cpu always runnable):
 //
 //	app supports {nvidia}                       -> nvidia
-//	app supports {strix-halo}                   -> strix-halo
-//	app supports {nvidia, strix-halo}           -> error (ambiguous)
+//	app supports {amd}                          -> amd
+//	app supports {nvidia, amd}                  -> error (ambiguous)
 //	app supports {cpu}                          -> cpu
 //	app supports {cpu, apple-m}                 -> cpu (apple-m not on cluster)
 func AutoSelectMode(ctx context.Context, c client.Client, appCfg *appcfg.ApplicationConfig) (string, error) {
@@ -122,25 +124,31 @@ func AutoSelectMode(ctx context.Context, c client.Client, appCfg *appcfg.Applica
 // out so unit tests can exercise the decision matrix without spinning up a
 // fake controller-runtime client. See AutoSelectMode for the contract.
 func autoSelectModeFromInputs(appModes []string, clusterGPUTypes map[string]struct{}) (string, error) {
-	var validNonCPU []string
-	var validCPU bool
+	seen := make(map[string]struct{})
+	var valid []string
+	add := func(mode string) {
+		if _, ok := seen[mode]; ok {
+			return
+		}
+		seen[mode] = struct{}{}
+		valid = append(valid, mode)
+	}
 	for _, mode := range appModes {
 		if mode == utils.CPUType {
-			validCPU = true
+			// cpu is a first-class candidate: every cluster can run cpu
+			// pods, so it always counts when the app declares it.
+			add(utils.CPUType)
 			continue
 		}
 		if _, ok := clusterGPUTypes[mode]; ok {
-			validNonCPU = append(validNonCPU, mode)
+			add(mode)
 		}
 	}
 
-	switch len(validNonCPU) {
+	switch len(valid) {
 	case 1:
-		return validNonCPU[0], nil
+		return valid[0], nil
 	case 0:
-		if validCPU {
-			return utils.CPUType, nil
-		}
 		return "", fmt.Errorf("The Olares cluster cannot meet the required resource specifications. No matching GPU type")
 	default:
 		return "", ErrAmbiguousComputeMode
