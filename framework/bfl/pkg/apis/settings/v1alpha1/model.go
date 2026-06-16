@@ -237,7 +237,7 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 									//	Port: &containerPort,
 									HTTPGet: &applyCorev1.HTTPGetActionApplyConfiguration{
 										Port: func() *intstr.IntOrString {
-											port := intstr.FromInt(8081)
+											port := intstr.FromInt(18081)
 											return &port
 										}(),
 										Path: func() *string {
@@ -255,7 +255,7 @@ func NewL4ProxyDeploymentApplyConfiguration(namespace, serviceAccountName string
 								ProbeHandlerApplyConfiguration: applyCorev1.ProbeHandlerApplyConfiguration{
 									HTTPGet: &applyCorev1.HTTPGetActionApplyConfiguration{
 										Port: func() *intstr.IntOrString {
-											port := intstr.FromInt(8081)
+											port := intstr.FromInt(18081)
 											return &port
 										}(),
 										Path: func() *string {
