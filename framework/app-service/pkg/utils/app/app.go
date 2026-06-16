@@ -22,6 +22,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
@@ -798,7 +799,20 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	}
 
 	appcfg.Namespace = namespace
-	appcfg.OwnerName = options.Owner
+	// Shared apps are addressed to the cluster owner (the olares "owner"
+	// role user) so OwnerName / Application.spec.owner stay stable across
+	// admins. This is the canonical write site referenced by the reload
+	// path pkg/appcfg.GetAppInstallationConfig. v1/v2 and v3+per-user apps
+	// keep the installing user.
+	if appcfg.IsShared() {
+		clusterOwner, cErr := kubesphere.GetClusterOwner(ctx)
+		if cErr != nil {
+			return nil, chartPath, cErr
+		}
+		appcfg.OwnerName = clusterOwner
+	} else {
+		appcfg.OwnerName = options.Owner
+	}
 	appcfg.ChartOwner = options.ChartOwner
 	appcfg.RepoURL = options.RepoURL
 	return appcfg, chartPath, nil
