@@ -439,7 +439,7 @@ Processing can be slow or unstable for two common reasons:
 To improve performance:
 
 1. Process one source with one transformation first.
-2. Stop or pause other GPU-intensive apps. Keep only the model services assigned in **Manage** > **Models** running. See [Manage GPU resources](/manual/olares/settings/single-gpu.md) for details.
+2. Stop or pause other GPU-intensive apps. Keep only the model services assigned in **Manage** > **Models** running. See [Manage accelerator resources](/manual/olares/settings/gpu-resource.md) for details.
 
 ### Why does vector search return no useful results?
 
@@ -474,4 +474,4 @@ If the error message lists supported voice IDs, update the speaker profile with 
 
 - [Ollama](ollama.md): Download and run local language models on Olares.
 - [Speaches](speaches.md): Set up local speech-to-text and text-to-speech services.
-- [Manage GPU resources](/manual/olares/settings/single-gpu.md): Allocate GPU resources for local AI apps.
+- [Manage accelerator resources](/manual/olares/settings/gpu-resource.md): Allocate accelerator resources for local AI apps.
