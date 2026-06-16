@@ -125,6 +125,13 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 			return
 		}
 	}
+	// For uploaded (non-market) apps record the uploading user as the chart
+	// owner so the chart source path survives even when the app owner is
+	// normalized to the cluster owner (shared apps). Market apps keep
+	// chartOwner empty and fall back to the installing user downstream.
+	if chartOwner == "" && insReq.Source != api.Market {
+		chartOwner = owner
+	}
 
 	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
@@ -378,12 +385,14 @@ func (h *Handler) getOriginChartVersion(rawAppName, owner string) (string, strin
 		isShared := appcfg.IsShared(&am)
 		if (am.Spec.AppName == rawAppName && am.Spec.AppOwner == owner) || (am.Spec.AppName == rawAppName && isShared) {
 			// For shared apps the caller (current admin) may differ from
-			// the user that originally installed the app; return that
-			// original install owner so the chart-repo lookup can be keyed
-			// off the user the chart was first uploaded under. v3 per-user
-			// apps fall through to the owner-equality branch above just
-			// like v1 apps.
-			return am.Annotations[api.AppVersionKey], am.Spec.AppOwner, nil
+			// the user that originally uploaded the chart, and AppOwner is
+			// normalized to the cluster owner — so we cannot key the
+			// chart-repo lookup off AppOwner. GetChartOwner reads the
+			// app.bytetrade.io/chart-owner label (the original uploader)
+			// and only falls back to AppOwner for legacy/market AMs. v3
+			// per-user apps fall through to the owner-equality branch above
+			// just like v1 apps.
+			return am.Annotations[api.AppVersionKey], appcfg.GetChartOwner(&am), nil
 		}
 	}
 	return "", "", fmt.Errorf("rawApp %s not found", rawAppName)
@@ -706,11 +715,11 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 		images = h.insReq.Images
 	}
 	imagesStr, _ := json.Marshal(images)
-	// For v1/v2 appConfig.OwnerName == h.owner (the install caller). For
-	// v3 it is the cluster owner that GetAppConfig resolved at chart
-	// load time — independent of which admin is currently operating, so
-	// the AM stays addressed to a stable user across multi-admin
-	// install / upgrade cycles.
+	// For v1/v2 and v3+per-user apps appConfig.OwnerName == h.owner (the
+	// install caller). For shared apps it is the cluster owner that
+	// GetAppConfig resolved at chart load time — independent of which admin
+	// is currently operating, so the AM stays addressed to a stable user
+	// across multi-admin install / upgrade cycles.
 	appOwner := h.appConfig.OwnerName
 	appMgr := &v1alpha1.ApplicationManager{
 		ObjectMeta: metav1.ObjectMeta{

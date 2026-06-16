@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/users/activeusers"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/nats-io/nats.go"
@@ -193,20 +192,20 @@ func PublishAppEventToQueue(p utils.EventParams) {
 	// rather than fall back to a single-owner publish: a per-user style
 	// publish to a shared app's nominal Owner would be silently
 	// misrouted for everyone else.
-	if p.IsShared {
-		recipients := activeusers.List()
-		if len(recipients) == 0 {
-			klog.Infof("shared-app fan-out: no activated users (cache empty), dropping event for app %s", p.Name)
-			return
-		}
-		for _, u := range recipients {
-			AppEventQueue.enqueue(&QueueEvent{
-				Subject: fmt.Sprintf("os.application.%s", u),
-				Data:    buildEvent(u),
-			})
-		}
-		return
-	}
+	//if p.IsShared {
+	//	recipients := activeusers.List()
+	//	if len(recipients) == 0 {
+	//		klog.Infof("shared-app fan-out: no activated users (cache empty), dropping event for app %s", p.Name)
+	//		return
+	//	}
+	//	for _, u := range recipients {
+	//		AppEventQueue.enqueue(&QueueEvent{
+	//			Subject: fmt.Sprintf("os.application.%s", u),
+	//			Data:    buildEvent(u),
+	//		})
+	//	}
+	//	return
+	//}
 
 	AppEventQueue.enqueue(&QueueEvent{
 		Subject: fmt.Sprintf("os.application.%s", p.Owner),
