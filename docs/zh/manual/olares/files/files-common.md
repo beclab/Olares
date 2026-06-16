@@ -7,7 +7,9 @@ description: 了解如何在 Olares 中使用 Common 目录管理跨应用、跨
 
 公共目录是一个系统级共享空间，用于存储 AI 模型，使多个应用和多个用户能够同时访问相同的模型文件。
 
-## 了解公共目录的工作原理
+## 了解公共目录
+
+### 公共目录的工作原理
 
 要理解公共目录的作用，需要先了解 Olares 的文件存储机制。下表展示了文件管理器中不同位置的存储策略：
 
@@ -25,15 +27,15 @@ description: 了解如何在 Olares 中使用 Common 目录管理跨应用、跨
 
 ![公共目录界面](/images/zh/manual/olares/files-common.png#bordered)
 
-### 了解目录结构
+### 公共目录的结构
 
 公共目录默认包含以下三个子目录，分别遵循对应平台的官方存储结构：
 
 | 子目录 | 用途 | 目录结构说明 |
 |:------|:----|:-----------|
-| **huggingface** | 存储通过 Hugging Face CLI 下载的缓存模型。<br>vLLM、transformers 和 llama.cpp 等应用都从<br>这个统一缓存中读取数据。 | 完全镜像官方的缓存结构。详细了解文件组织方式，请参考 [Hugging Face 官方缓存管理指南](https://huggingface.co/docs/huggingface_hub/guides/manage-cache)。 |
-| **comfyui** | 存储在 ComfyUI 及相关应用之间共享的模型<br>（如 Checkpoint、LoRA 和 VAE）。 | 遵循标准的 ComfyUI `models` 文件夹结构。可以像管理普通文件一样在此处移动或重命名模型。 |
-| **ollama** | 存储由 Ollama 拉取和管理的模型。 | 采用 Ollama 独特的 manifests 和 blobs 存储机制。更多信息，请参考 [Ollama 官方 FAQ](https://docs.ollama.com/faq#where-are-models-stored)。 |
+| **huggingface** | 存储通过 Hugging Face CLI 下载的缓存模型。<br>vLLM、transformers 和 llama.cpp 等应用都从<br>这个统一缓存中读取数据。 | 完全镜像官方的缓存结构。<br><br>详细了解文件组织方式，请参考 [Hugging Face 官方缓存管理指南](https://huggingface.co/docs/huggingface_hub/guides/manage-cache)。 |
+| **comfyui** | 存储在 ComfyUI 及相关应用之间共享的模型<br>（如 Checkpoint、LoRA 和 VAE）。 | 遵循标准的 ComfyUI `models` 文件夹结构。<br><br>详细了解文件组织方式，请参考 [ComfyUI 官方模型文档](https://docs.comfy.org/development/core-concepts/models)。 |
+| **ollama** | 存储由 Ollama 拉取和管理的模型。 | 采用 Ollama 独特的 manifests 和 blobs 存储机制。<br><br>更多信息，请参考 [Ollama 官方 FAQ](https://docs.ollama.com/faq#where-are-models-stored)。 |
 
 ## 升级以使用公共目录
 
@@ -44,7 +46,7 @@ Olares V1.12.6 默认提供 Common 目录，无需单独安装。
 1. 将 Olares 升级至 V1.12.6。
 2. 卸载现有的 AI 应用。
 3. 从应用商店重新安装这些应用的 V3 版本。
-4. 重新下载模型。V3 版本的应用会自动将模型存储在公共目录。
+4. 重新下载所需模型。V3 版本的应用会自动将模型存储在公共目录。
 
 ## 查找和管理共享模型
 
@@ -62,10 +64,8 @@ Olares V1.12.6 默认提供 Common 目录，无需单独安装。
 你可以像操作普通文件夹一样在公共目录中管理文件。
 
 :::warning 注意事项
-- 请务必保持官方建议的文件夹结构，否则应用可能无法正确加载模型。
-- 在管理模型文件前，停止正在运行的 AI 应用，以防止系统报错。
+请务必保持官方建议的文件夹结构，否则应用可能无法正确加载模型。
 :::
 
 - **添加模型**：直接将模型文件拖放到对应的子目录中。
 - **删除模型**：右键点击模型文件夹，选择删除以释放空间。删除后，相关应用将立即失去对该模型的访问权限，需要重新下载才能再次使用。
-- **组织文件**：在目录内移动或重命名模型文件。

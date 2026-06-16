@@ -66,7 +66,7 @@ Access the Common directory in the Files app and manage shared models centrally.
 Manage files in the Common directory just like a regular folder.
 
 :::warning Important notes
-- Always maintain the folder structure recommended by the official documentation. Applications might fail to load models if you change the required hierarchy.
+Always maintain the folder structure recommended by the official documentation. Applications might fail to load models if you change the required hierarchy.
 :::
 
 - **Add models**: Drag and drop model files directly into the corresponding subdirectory.
