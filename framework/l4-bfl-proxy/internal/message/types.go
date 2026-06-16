@@ -3,6 +3,7 @@ package message
 import (
 	"reflect"
 	"sort"
+	"time"
 
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
@@ -71,6 +72,9 @@ type CertInfo struct {
 	Domain   string
 	CertData string
 	KeyData  string
+	// CreatedAt is the creation time of the source (e.g. the cert ConfigMap).
+	// When two configs claim the same domain, the earlier one wins.
+	CreatedAt time.Time
 }
 
 type SSLConfig struct {
