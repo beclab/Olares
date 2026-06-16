@@ -11,7 +11,6 @@ RUN cd github.com/beclab/Olares/framework/app-service && \
 
 # Copy the go source
 COPY cmd/ github.com/beclab/Olares/framework/app-service/cmd/
-COPY api/ github.com/beclab/Olares/framework/app-service/api/
 COPY controllers/ github.com/beclab/Olares/framework/app-service/controllers/
 COPY pkg/ github.com/beclab/Olares/framework/app-service/pkg/
 
