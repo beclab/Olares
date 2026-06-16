@@ -215,6 +215,7 @@ This OpenCode runs inside the Paperclip container and is separate from the OpenC
    c. Replace the default configuration with the following example (using gemma4:26b as the model):
 
    - Replace `<your-olares-id>` in the configuration with your specific Olares ID.
+   - If you are not using Gemma4 26B Q4_K_M (Ollama), replace `2b46296c` with your actual application route ID.
    - Ensure that the `baseURL` ends with `/v1` to provide OpenAI-compatible API access through Ollama.
 
    ```json {wrap}
@@ -231,7 +232,7 @@ This OpenCode runs inside the Paperclip container and is separate from the OpenC
            }
          },
          "options": {
-           "baseURL": "https://<your-olares-id>.olares.com/v1"
+           "baseURL": "https://2b46296c.<your-olares-id>.olares.com/v1"
          }
        }
      }
