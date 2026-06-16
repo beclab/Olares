@@ -128,7 +128,11 @@ export default defineVersionedConfig2(withMermaid({
         'meta',
         { name: 'robots', content: 'noindex, nofollow' },
       ]);
-      noindexPaths.add(pageData.relativePath.replace(/\.md$/, '.html'));
+      // Store the extensionless route so this matches the sitemap item.url
+      // regardless of `cleanUrls` (which drops the .html from item.url).
+      noindexPaths.add(
+        pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
+      );
     }
   },
 
@@ -139,11 +143,14 @@ export default defineVersionedConfig2(withMermaid({
       // them via the sitemap. The meta tag above is what ultimately removes
       // them from search engine indexes; this just avoids the extra hit.
       items.filter((item) => {
-        const p = item.url.replace(/^\/+/, '');
+        // Normalize to the extensionless route so the comparison holds whether
+        // or not cleanUrls is enabled.
+        const p = item.url.replace(/^\/+/, '').replace(/\.html$/, '');
         return !noindexPaths.has(p);
       }),
   },
   lastUpdated: true,
+  cleanUrls: true,
   base: process.env.BASE_URL || "/",
   vite: {
     build: {
@@ -160,6 +167,21 @@ export default defineVersionedConfig2(withMermaid({
     }
   },
   head: [
+    [
+      "script",
+      {
+        async: "",
+        src: "https://www.googletagmanager.com/gtag/js?id=G-G98641Y6R0",
+      },
+    ],
+    [
+      "script",
+      {},
+      `window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-G98641Y6R0');`,
+    ],
     [
       "meta",
       {
