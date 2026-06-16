@@ -168,11 +168,14 @@ func PickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes
 	return pickSingleAllocation(appConfig, req, matching, pressure)
 }
 
+// matchingNodes returns the nodes that support `mode`, each projected onto that
+// single mode (Devices filtered to the mode) so the device-centric scheduling
+// helpers only ever see the relevant devices of a multi-mode node.
 func matchingNodes(mode string, nodes []Node) []Node {
 	out := make([]Node, 0)
 	for _, node := range nodes {
-		if node.GPUType == mode {
-			out = append(out, node)
+		if node.SupportsMode(mode) {
+			out = append(out, node.viewForMode(mode))
 		}
 	}
 	return out

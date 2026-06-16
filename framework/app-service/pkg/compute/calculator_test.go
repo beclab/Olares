@@ -17,18 +17,18 @@ func TestCalculateInstallComputePlanUsesPureInputs(t *testing.T) {
 		Accelerator: []appcfg.ResourceMode{
 			resourceMode(utils.NvidiaCardType, "8Gi", "1Gi"),
 			resourceMode(utils.AppleMChipType, "", "1Gi"),
-			resourceMode(utils.StrixHaloChipType, "", "8Gi"),
+			resourceMode(utils.AMDType, "", "8Gi"),
 		},
 	}
 	nodes := []Node{
 		nvidiaNode("nvidia-a", Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeExclusive}),
-		computeNode("strix-a", utils.StrixHaloChipType, 4*gi, SupportTypeExclusive),
+		computeNode("amd-a", utils.AMDType, 4*gi, SupportTypeExclusive),
 	}
 
 	plan := calculateInstallComputePlan(app, nodes)
 	assertModeStatus(t, plan, utils.NvidiaCardType, StatusInstallable)
 	assertModeStatus(t, plan, utils.AppleMChipType, StatusNoMatchingNode)
-	assertModeStatus(t, plan, utils.StrixHaloChipType, StatusInsufficientResources)
+	assertModeStatus(t, plan, utils.AMDType, StatusInsufficientResources)
 }
 
 func TestInstallComputePlanIgnoresCurrentBindings(t *testing.T) {
@@ -322,11 +322,11 @@ func TestAvailabilityCrossNodeSumsRawAvailableDespitePerNodePressure(t *testing.
 
 func TestAvailabilityNonNvidiaNodeBecomesNotAvailableUnderPressure(t *testing.T) {
 	req := Requirement{
-		Mode:           utils.StrixHaloChipType,
+		Mode:           utils.AMDType,
 		RequiredMemory: 4 * gi,
 		LimitedMemory:  4 * gi,
 	}
-	nodes := []Node{computeNode("strix-a", utils.StrixHaloChipType, 32*gi, SupportTypeExclusive)}
+	nodes := []Node{computeNode("strix-a", utils.AMDType, 32*gi, SupportTypeExclusive)}
 
 	healthyResult := listAvailableForLaunch(req, nodes, PressureSnapshot{})
 	if len(healthyResult.Nodes) != 1 || healthyResult.Nodes[0].Status != NodeStatusAvailable {
@@ -350,13 +350,13 @@ func TestAvailabilityNonNvidiaNodeBecomesNotAvailableUnderPressure(t *testing.T)
 
 func TestValidateBindingSelectionNonNvidiaRequiresSingleSelection(t *testing.T) {
 	req := Requirement{
-		Mode:           utils.StrixHaloChipType,
+		Mode:           utils.AMDType,
 		RequiredMemory: 4 * gi,
 		LimitedMemory:  4 * gi,
 	}
 	nodes := []Node{
-		computeNode("strix-a", utils.StrixHaloChipType, 32*gi, SupportTypeExclusive),
-		computeNode("strix-b", utils.StrixHaloChipType, 32*gi, SupportTypeExclusive),
+		computeNode("strix-a", utils.AMDType, 32*gi, SupportTypeExclusive),
+		computeNode("strix-b", utils.AMDType, 32*gi, SupportTypeExclusive),
 	}
 	result := ValidateBindingSelection(req, []BindingSelection{
 		{NodeName: "strix-a", DeviceID: "strix-a-device"},
@@ -476,9 +476,9 @@ func TestLegacyComputeMode(t *testing.T) {
 			name: "explicit SelectedGpuType wins even when requirement says cpu",
 			cfg: &appcfg.ApplicationConfig{
 				AppName:         "legacy-pinned-on-strix",
-				SelectedGpuType: utils.StrixHaloChipType,
+				SelectedGpuType: utils.AMDType,
 			},
-			want: utils.StrixHaloChipType,
+			want: utils.AMDType,
 		},
 	}
 	for _, tt := range cases {
@@ -509,12 +509,15 @@ func resourceMode(mode, requiredGPU, requiredMemory string) appcfg.ResourceMode 
 func nvidiaNode(name string, devices ...Device) Node {
 	node := Node{
 		NodeName:       name,
-		GPUType:        utils.NvidiaCardType,
+		GPUTypes:       []string{utils.NvidiaCardType},
 		memoryCapacity: 64 * gi,
 		Devices:        devices,
 	}
 	for i := range node.Devices {
 		node.Devices[i].NodeName = name
+		if node.Devices[i].Mode == "" {
+			node.Devices[i].Mode = utils.NvidiaCardType
+		}
 	}
 	return node
 }
@@ -522,11 +525,12 @@ func nvidiaNode(name string, devices ...Device) Node {
 func computeNode(name, gpuType string, memory int64, supportType string) Node {
 	return Node{
 		NodeName:       name,
-		GPUType:        gpuType,
+		GPUTypes:       []string{gpuType},
 		memoryCapacity: 64 * gi,
 		Devices: []Device{{
 			ID:          name + "-device",
 			NodeName:    name,
+			Mode:        gpuType,
 			Memory:      memory,
 			Health:      deviceHealthYes,
 			SupportType: supportType,

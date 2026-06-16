@@ -70,14 +70,14 @@ func mustParseQty(s string) *resource.Quantity {
 // design doc:
 //
 //	cluster A: a single nvidia node (cluster gpu types = {nvidia})
-//	cluster B: nvidia + strix-halo nodes (cluster gpu types = {nvidia, strix-halo})
+//	cluster B: nvidia + amd nodes (cluster gpu types = {nvidia, amd})
 //
 // In both clusters cpu is implicit — every node can run a cpu-mode pod —
 // so cpu is never enumerated in the cluster set itself; the auto-selector
 // only treats cpu as a valid choice when the app declares it.
 func TestAutoSelectModeFromInputs(t *testing.T) {
 	clusterNvidiaOnly := stringSet(utils.NvidiaCardType)
-	clusterNvidiaPlusStrix := stringSet(utils.NvidiaCardType, utils.StrixHaloChipType)
+	clusterNvidiaPlusAMD := stringSet(utils.NvidiaCardType, utils.AMDType)
 
 	tests := []struct {
 		name        string
@@ -88,20 +88,20 @@ func TestAutoSelectModeFromInputs(t *testing.T) {
 	}{
 		// case 1: cluster has only nvidia
 		{
-			name:     "case1/A: app supports nvidia/gb10/strix-halo, only nvidia matches",
-			appModes: []string{utils.NvidiaCardType, utils.GB10ChipType, utils.StrixHaloChipType},
+			name:     "case1/A: app supports nvidia/gb10/amd, only nvidia matches",
+			appModes: []string{utils.NvidiaCardType, utils.GB10ChipType, utils.AMDType},
 			cluster:  clusterNvidiaOnly,
 			wantMode: utils.NvidiaCardType,
 		},
 		{
-			name:     "case1/B: app supports nvidia/gb10/cpu, nvidia wins over cpu fallback",
-			appModes: []string{utils.NvidiaCardType, utils.GB10ChipType, utils.CPUType},
-			cluster:  clusterNvidiaOnly,
-			wantMode: utils.NvidiaCardType,
+			name:        "case1/B: app supports nvidia/gb10/cpu, nvidia + cpu both runnable, ambiguous",
+			appModes:    []string{utils.NvidiaCardType, utils.GB10ChipType, utils.CPUType},
+			cluster:     clusterNvidiaOnly,
+			wantErrFrag: "multiple compute modes",
 		},
 		{
-			name:        "case1/C: app supports strix-halo/apple-m, no overlap with cluster, errors",
-			appModes:    []string{utils.StrixHaloChipType, utils.AppleMChipType},
+			name:        "case1/C: app supports amd/apple-m, no overlap with cluster, errors",
+			appModes:    []string{utils.AMDType, utils.AppleMChipType},
 			cluster:     clusterNvidiaOnly,
 			wantErrFrag: "No matching GPU type",
 		},
@@ -112,35 +112,35 @@ func TestAutoSelectModeFromInputs(t *testing.T) {
 			wantMode: utils.CPUType,
 		},
 
-		// case 2: cluster has both nvidia and strix-halo
+		// case 2: cluster has both nvidia and amd
 		{
 			name:     "case2/A: app supports nvidia, picks nvidia",
 			appModes: []string{utils.NvidiaCardType},
-			cluster:  clusterNvidiaPlusStrix,
+			cluster:  clusterNvidiaPlusAMD,
 			wantMode: utils.NvidiaCardType,
 		},
 		{
-			name:     "case2/B: app supports strix-halo, picks strix-halo",
-			appModes: []string{utils.StrixHaloChipType},
-			cluster:  clusterNvidiaPlusStrix,
-			wantMode: utils.StrixHaloChipType,
+			name:     "case2/B: app supports amd, picks amd",
+			appModes: []string{utils.AMDType},
+			cluster:  clusterNvidiaPlusAMD,
+			wantMode: utils.AMDType,
 		},
 		{
-			name:        "case2/C: app supports both nvidia and strix-halo, ambiguous, errors",
-			appModes:    []string{utils.NvidiaCardType, utils.StrixHaloChipType},
-			cluster:     clusterNvidiaPlusStrix,
-			wantErrFrag: "multiple gpu types",
+			name:        "case2/C: app supports both nvidia and amd, ambiguous, errors",
+			appModes:    []string{utils.NvidiaCardType, utils.AMDType},
+			cluster:     clusterNvidiaPlusAMD,
+			wantErrFrag: "multiple compute modes",
 		},
 		{
 			name:     "case2/D: app supports cpu only, picks cpu",
 			appModes: []string{utils.CPUType},
-			cluster:  clusterNvidiaPlusStrix,
+			cluster:  clusterNvidiaPlusAMD,
 			wantMode: utils.CPUType,
 		},
 		{
 			name:     "case2/E: app supports cpu/apple-m on cluster without apple-m, picks cpu",
 			appModes: []string{utils.CPUType, utils.AppleMChipType},
-			cluster:  clusterNvidiaPlusStrix,
+			cluster:  clusterNvidiaPlusAMD,
 			wantMode: utils.CPUType,
 		},
 

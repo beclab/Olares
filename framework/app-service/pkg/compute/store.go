@@ -201,38 +201,62 @@ func loadNodeResources(ctx context.Context, c client.Client) ([]Node, error) {
 	return out, nil
 }
 
+// buildNodeResource builds the compute view of a single physical node. A node
+// may advertise several accelerator modes at once (e.g. an Olares One exposing
+// both nvidia and intel): GPUTypes lists them all and Devices holds the devices
+// for every mode, each tagged with the Mode it serves. The scheduler /
+// availability code projects this down to a single mode via Node.viewForMode
+// when it needs a per-mode view. A node with no GPU mode is represented with a
+// single cpu memory-shared device, preserving the previous behavior for
+// pure-CPU and unlabeled nodes.
 func buildNodeResource(node *corev1.Node) Node {
 	totalMemory := node.Status.Capacity.Memory().Value()
-	mode := utils.NodeGPUType(node)
+	modes := utils.NodeSupportedGPUTypes(node)
 
 	n := Node{
 		NodeName:       node.Name,
-		GPUType:        mode,
+		GPUTypes:       modes,
 		Health:         nodeHealth(node),
 		memoryCapacity: totalMemory,
 	}
 
-	if IsHAMIMode(mode) {
-		n.Devices = decodeHAMINvidiaDevices(node)
-	} else {
-		supportType := SupportTypeExclusive
-		if mode == utils.CPUType {
-			supportType = SupportTypeMemoryShared
+	if len(modes) == 0 {
+		n.Devices = []Device{nonHAMIDevice(node, utils.CPUType, totalMemory)}
+		return n
+	}
+
+	for _, mode := range modes {
+		if IsHAMIMode(mode) {
+			n.Devices = append(n.Devices, decodeHAMINvidiaDevices(node, mode)...)
+			continue
 		}
-		n.Devices = []Device{{
-			ID:                    fmt.Sprintf("%s-%s-0", node.Name, mode),
-			NodeName:              node.Name,
-			Memory:                totalMemory * 75 / 100,
-			Health:                nodeHealth(node),
-			SupportType:           supportType,
-			AvailableSupportTypes: AvailableSupportTypes(mode),
-		}}
+		n.Devices = append(n.Devices, nonHAMIDevice(node, mode, totalMemory))
 	}
 
 	return n
 }
 
-func decodeHAMINvidiaDevices(node *corev1.Node) []Device {
+// nonHAMIDevice builds the single synthetic device used for unified-memory
+// modes (cpu, apple-m, amd, intel, moore-soc, …): the whole node is one
+// schedulable unit drawing from system memory. cpu is memory-shared; every
+// other such mode is exclusive (the Apple-Silicon path).
+func nonHAMIDevice(node *corev1.Node, mode string, totalMemory int64) Device {
+	supportType := SupportTypeExclusive
+	if mode == utils.CPUType {
+		supportType = SupportTypeMemoryShared
+	}
+	return Device{
+		ID:                    fmt.Sprintf("%s-%s-0", node.Name, mode),
+		NodeName:              node.Name,
+		Mode:                  mode,
+		Memory:                totalMemory * 75 / 100,
+		Health:                nodeHealth(node),
+		SupportType:           supportType,
+		AvailableSupportTypes: AvailableSupportTypes(mode),
+	}
+}
+
+func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
 	raw := node.Annotations[constants.NodeNvidiaRegistryKey]
 	if !strings.Contains(raw, constants.OneContainerMultiDeviceSplitSymbol) {
 		return nil
@@ -249,10 +273,10 @@ func decodeHAMINvidiaDevices(node *corev1.Node) []Device {
 		}
 		devmem, _ := strconv.ParseInt(items[2], 10, 64)
 		healthy, _ := strconv.ParseBool(items[6])
-		mode := utils.NodeGPUType(node)
 		devices = append(devices, Device{
 			ID:                    items[0],
 			NodeName:              node.Name,
+			Mode:                  mode,
 			CardModel:             items[4],
 			Memory:                devmem * mib,
 			Health:                boolHealth(healthy),
