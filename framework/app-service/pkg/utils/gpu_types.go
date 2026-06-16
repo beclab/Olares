@@ -13,14 +13,15 @@ const (
 )
 
 const (
-	CPUType              = "cpu"         // force to use CPU, no GPU
-	NvidiaCardType       = "nvidia"      // handling by HAMi
-	AmdGpuCardType       = "amd-gpu"     //
-	AmdApuCardType       = "amd-apu"     // AMD APU with integrated GPU , AI Max 395 etc.
-	GB10ChipType         = "nvidia-gb10" // NVIDIA GB10 Superchip & unified system memory
-	AppleMChipType       = "apple-m"     // Apple M-series SoC
-	StrixHaloChipType    = "strix-halo"  // AMD Strix Halo GPU & unified system memory
-	MthreadsM100ChipType = "mthreads-m1000"
+	CPUType        = "cpu"         // force to use CPU, no GPU
+	NvidiaCardType = "nvidia"      // discrete NVIDIA card, handled by HAMi
+	GB10ChipType   = "nvidia-gb10" // NVIDIA GB10 Superchip & unified system memory
+	AppleMChipType = "apple-m"     // Apple M-series SoC (unified memory)
+	IntelType      = "intel"       // Intel integrated GPU
+	AMDType        = "amd"         // AMD integrated GPU
+	IntelGPUType   = "intel-gpu"   // Intel discrete GPU
+	AMDGPUType     = "amd-gpu"     // AMD discrete GPU
+	MooreSocType   = "moore-soc"   // Moore Threads SoC
 )
 
 // NodeGPUType returns the canonical GPU type string for a node by reading the
