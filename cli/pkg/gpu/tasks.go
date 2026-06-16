@@ -380,7 +380,7 @@ func (u *UpdateNodeGPUInfo) Execute(runtime connector.Runtime) error {
 		gpuType = GB10ChipType
 	}
 
-	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &driverVersion, &st.CudaVersion, &supported, &gpuType)
+	return SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpuType, &driverVersion, &st.CudaVersion, &supported)
 }
 
 type RemoveNodeLabels struct {
@@ -393,13 +393,13 @@ func (u *RemoveNodeLabels) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), nil, nil, nil, nil)
+	return RemoveAllNodeGpuLabels(context.Background(), client.Kubernetes())
 }
 
-// update k8s node labels gpu.bytetrade.io/driver and gpu.bytetrade.io/cuda.
-// if labels are not exists, create it.
-func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver, cuda *string, supported *string, gpuType *string) error {
-	// get node name from hostname
+// updateCurrentNodeLabels reads the node matching the local hostname, hands its
+// label map to mutate (which returns whether it changed anything) and persists
+// the result with conflict retries when needed.
+func updateCurrentNodeLabels(ctx context.Context, client kubernetes.Interface, mutate func(labels map[string]string) bool) error {
 	nodeName, err := os.Hostname()
 	if err != nil {
 		logger.Error("get hostname error, ", err)
@@ -417,50 +417,61 @@ func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver
 		labels = make(map[string]string)
 	}
 
-	update := false
-	for _, label := range []struct {
-		key   string
-		value *string
-	}{
-		{GpuDriverLabel, driver},
-		{GpuCudaLabel, cuda},
-		{GpuCudaSupportedLabel, supported},
-		{GpuType, gpuType},
-	} {
-		old, ok := labels[label.key]
-		switch {
-		case ok && label.value == nil: // delete label
-			delete(labels, label.key)
-			update = true
-
-		case ok && *label.value != "" && old != *label.value: // update label
-			labels[label.key] = *label.value
-			update = true
-
-		case !ok && label.value != nil && *label.value != "": // create label
-			labels[label.key] = *label.value
-			update = true
-		}
+	if !mutate(labels) {
+		return nil
 	}
 
-	if update {
-		node.SetLabels(labels)
-		safeString := func(s *string) string {
-			if s == nil {
-				return "nil"
-			}
-			return *s
-		}
-		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			logger.Infof("updating node gpu labels, %s, %s", safeString(driver), safeString(cuda))
-			_, err := client.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
-			return err
-		})
+	node.SetLabels(labels)
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		logger.Infof("updating node gpu labels for %s", nodeName)
+		_, err := client.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+		return err
+	})
+	if err != nil {
+		logger.Error("update node error, ", err)
+		return err
+	}
+	return nil
+}
 
-		if err != nil {
-			logger.Error("update node error, ", err)
-			return err
+// SetNodeGpuModeLabel marks the current node as supporting `mode` by setting
+// the existence label gpu.bytetrade.io/<mode>=true. The write is additive:
+// labels for other modes the node already advertises are left untouched, so a
+// node with several accelerators (e.g. nvidia + intel) accumulates one label
+// per mode. The optional driver / cuda / cudaSupported values refresh the
+// corresponding gpu.bytetrade.io/{driver,cuda,cuda-supported} labels (used by
+// the nvidia path); a nil pointer means "leave that label as-is". The legacy
+// gpu.bytetrade.io/type label is intentionally never written.
+func SetNodeGpuModeLabel(ctx context.Context, client kubernetes.Interface, mode string, driver, cuda, cudaSupported *string) error {
+	err := updateCurrentNodeLabels(ctx, client, func(labels map[string]string) bool {
+		update := false
+		if mode != "" && mode != CPUType {
+			key := GpuModeLabel(mode)
+			if labels[key] != "true" {
+				labels[key] = "true"
+				update = true
+			}
 		}
+		for _, label := range []struct {
+			key   string
+			value *string
+		}{
+			{GpuDriverLabel, driver},
+			{GpuCudaLabel, cuda},
+			{GpuCudaSupportedLabel, cudaSupported},
+		} {
+			if label.value == nil || *label.value == "" {
+				continue
+			}
+			if labels[label.key] != *label.value {
+				labels[label.key] = *label.value
+				update = true
+			}
+		}
+		return update
+	})
+	if err != nil {
+		return err
 	}
 
 	if cuda != nil && *cuda != "" {
@@ -471,6 +482,30 @@ func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver
 	}
 
 	return nil
+}
+
+// RemoveAllNodeGpuLabels strips every gpu.bytetrade.io GPU label from the
+// current node: the driver / cuda / cuda-supported labels, all per-mode
+// existence labels (gpu.bytetrade.io/<mode>), and the legacy
+// gpu.bytetrade.io/type label.
+func RemoveAllNodeGpuLabels(ctx context.Context, client kubernetes.Interface) error {
+	return updateCurrentNodeLabels(ctx, client, func(labels map[string]string) bool {
+		update := false
+		del := func(key string) {
+			if _, ok := labels[key]; ok {
+				delete(labels, key)
+				update = true
+			}
+		}
+		del(GpuDriverLabel)
+		del(GpuCudaLabel)
+		del(GpuCudaSupportedLabel)
+		del(GpuType)
+		for _, mode := range AllGpuModeTypes {
+			del(GpuModeLabel(mode))
+		}
+		return update
+	})
 }
 
 func updateCudaVersionSystemEnv(ctx context.Context, cudaVersion string) error {
