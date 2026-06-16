@@ -110,11 +110,21 @@ func main() {
 		klog.Fatalf("setup fileserver reconciler failed: %v", err)
 	}
 
+	xdsSrv := server.New(xdsResources, &server.Config{
+		Address: "127.0.0.1",
+		Port:    xdsServerPort,
+	})
+
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		klog.Fatalf("set up health check failed: %v", err)
 	}
 	if err := mgr.AddReadyzCheck("cache-synced", cacheReadyCheck(mgr)); err != nil {
 		klog.Fatalf("set up ready check failed: %v", err)
+	}
+	// Fail readiness when Envoy rejects the pushed xDS config (e.g. a bad
+	// listener that leaves ports 443/444 not listening).
+	if err := mgr.AddReadyzCheck("envoy-config", xdsSrv.ReadyCheck); err != nil {
+		klog.Fatalf("set up envoy-config ready check failed: %v", err)
 	}
 
 	runners := []runner.Runner{
@@ -125,10 +135,7 @@ func main() {
 			SSLProxyServerPort: sslProxyServerPort,
 		}),
 		xdstranslator.New(xdsIR, xdsResources),
-		server.New(xdsResources, &server.Config{
-			Address: "127.0.0.1",
-			Port:    xdsServerPort,
-		}),
+		xdsSrv,
 	}
 	for _, r := range runners {
 		rn := r

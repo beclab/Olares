@@ -39,6 +39,7 @@ type XdsServer struct {
 	xdsResources  *message.XdsResources
 	snapshotCache cachev3.SnapshotCache
 	cfg           *Config
+	health        *healthTracker
 }
 
 func New(xdsResources *message.XdsResources, cfg *Config) *XdsServer {
@@ -46,6 +47,7 @@ func New(xdsResources *message.XdsResources, cfg *Config) *XdsServer {
 		xdsResources:  xdsResources,
 		snapshotCache: cachev3.NewSnapshotCache(false, cachev3.IDHash{}, nil),
 		cfg:           cfg,
+		health:        newHealthTracker(),
 	}
 }
 
@@ -143,7 +145,7 @@ func (s *XdsServer) runGRPC(ctx context.Context) error {
 		return fmt.Errorf("xds-server: listen %s: %w", addr, err)
 	}
 
-	srv := serverv3.NewServer(ctx, s.snapshotCache, nil)
+	srv := serverv3.NewServer(ctx, s.snapshotCache, s.health.callbacks())
 
 	grpcServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
