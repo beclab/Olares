@@ -25,7 +25,6 @@ The Olares Market offers various ways to discover and browse applications.
 
 ![Market](/images/manual/olares/market-discover1.png#bordered)
 
-
 ### Browse by categories
 
 Upon launching the Market app, the **Discover** page serves as your central hub for exploration, organizing content into intuitive sections to guide your journey:
@@ -37,10 +36,10 @@ Upon launching the Market app, the **Discover** page serves as your central hub 
 You can also browse applications based on their functionality:
 * **Creativity**: Apps for creating and publishing digital content, from AI-generated art and 3D models to blogs and design projects.
 * **Productivity**: Apps for team collaboration, project management, data organization, and building custom AI-powered agents.
-* **Developer Tools**: Toolchain for the software development lifecycle, including code hosting, CI/CD, observability, and database management.
-* **Fun**: Self-hosted applications for entertainment and fun such as gaming, video streaming, and connecting with people. 
+* **Fun**: Self-hosted applications for entertainment and fun such as gaming, video streaming, and connecting with people.
 * **Lifestyle**: Self-hosted applications for managing your smart home, personal photo libraries, and AI identity.
-* **Utilities**: Tools for system management, file sharing, data backup, and running local AI models.
+* **Utilities**: Tools for system management, file sharing, data backup, and running local AI models. 
+* **Developer Tools**: Toolchain for the software development lifecycle, including code hosting, CI/CD, observability, and database management.
 * **AI**: Latest open-source LLMs and generative tools for text, audio, and 3D assets.
 
 ### Search using keywords 
@@ -51,17 +50,17 @@ To search an app in the market:
 2. In the **Manage** submenu on the left, click **Search**.
 3. Enter the keywords. The relevant results will appear as you type.
 
-![Search app](/images/manual/olares/search-app.png#bordered)
+    ![Search app](/images/manual/olares/search-app.png#bordered)
 
 ### Switch market source
 
-You can switch market sources to speed up browsing, searching, and downloading, or to install apps exclusive to a particular source. To switch market sources:
+You can switch market sources to speed up browsing, searching, and downloading, or to install apps exclusive to a particular source.
 
-1.  Open **Market**, and navigate to **My Olares** > **Settings** from the left sidebar.
+1.  Open **Market**, and navigate to **My Olares** > **Settings**.
 2.  Under **Market sources**, click **Add source** to add a new app source. The current official sources include:
     * Global: `https://api.olares.com/market`
     * China: `https://api.olares.cn/market`
-3.  Fill in the source name, URL, and description as required, then click **Confirm** to finish adding.
+3.  Fill in the source name, URL, and description as required, then click **Confirm**.
 4.  In the source list, select the target source to activate it. Wait for about 10 minutes for the store page to switch.
 
 :::info
@@ -72,11 +71,20 @@ Applications from different installation sources will generate corresponding tab
 
 To install an application from Market:
 
-1. Open Market from Dock or Launchpad.
-2. Navigate to the app you want, and click **Get**.
-3. When the operation button changes to **Install**, click it to start the installation.
-4. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
-5. Once finished, the button will change to **Open**.
+1. Open Market from the Dock or Launchpad.
+2. Find your target application, and double-click it to view its details.
+3. (Optional) If the application supports multiple hardware accelerators, configure your deployment in the **RESOURCES** section:
+
+    a. Select your preferred computing resource from the drop-down list. For example, **NVIDIA GPU**, **NVIDIA GB10**, or **CPU**.
+
+    <!--![Accelerator resources](/images/manual/olares/market-accelerator.png#bordered)-->
+
+    b. Review the updated **CPU**, **Memory**, **Required disk**, and **VRAM** requirements, and make sure your hardware meets these requirements.
+
+4. Click **Get**.
+5. When the operation button changes to **Install**, click it to start the installation.
+6. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
+7. When the installation finishes, the button changes to **Open**.
 
 ### Install shared applications
 
@@ -187,6 +195,22 @@ The application operation log details the processes and statuses of app operatio
 You can also click the <i class="material-symbols-outlined">download</i> button to download the logs.
 
 ## FAQs
+
+### Errors in the RESOURCES section
+
+Before you install an application, the system evaluates your current hardware and cluster capacity. If your environment does not meet the selected configuration, an inline error message will appear directly inside the **RESOURCES** panel:
+
+- "Unable to install. The Olares cluster does not have any required accelerator specified."
+
+    The application requires specific computing hardware that is not installed or detected on your device or cluster. When this happens, the resource drop-down will display **N/A**, and the unsupported hardware options will be greyed out and unselectable.
+
+- "Unable to install on this accelerator type. Not enough required {Resource} on Olares cluster."
+
+    Your system possesses the correct hardware type (e.g., an NVIDIA GPU), but its currently available capacity (such as GPU memory) is insufficient to run the app. You must stop other running applications to free up the required resources for this specific accelerator.
+
+- "Unable to install. Not enough required {Resource} available on your quota."
+
+    Your personal account's assigned resource limit (e.g., CPU or Memory) has been reached. Try freeing up your allocated resources by stopping your unused apps, or contact your administrator to request a quota increase.
 
 ### Why can't I install an application?
 If you can't install an application, it might be due to:
