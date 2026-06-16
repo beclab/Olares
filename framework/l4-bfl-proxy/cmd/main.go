@@ -38,8 +38,8 @@ const (
 	sslProxyServerPort  = 444
 	xdsServerPort       = 8794
 	resyncPeriod        = 60 * time.Minute
-	metricsAddr         = ":9001"
-	probeAddr           = ":8081"
+	metricsAddr         = "0"
+	probeAddr           = ":18081"
 )
 
 func main() {
