@@ -846,6 +846,7 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "accept"}},
 				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "cookie"}},
 				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-authorization"}},
+				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-forwarded-for"}},
 			},
 		},
 		TransportApiVersion: corev3.ApiVersion_V3,

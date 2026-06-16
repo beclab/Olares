@@ -128,22 +128,29 @@ export default defineVersionedConfig2(withMermaid({
         'meta',
         { name: 'robots', content: 'noindex, nofollow' },
       ]);
-      noindexPaths.add(pageData.relativePath.replace(/\.md$/, '.html'));
+      // Store the extensionless route so this matches the sitemap item.url
+      // regardless of `cleanUrls` (which drops the .html from item.url).
+      noindexPaths.add(
+        pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
+      );
     }
   },
 
   sitemap: {
-    hostname: "https://docs.olares.com/",
+    hostname: "https://www.olares.com/docs/",
     transformItems: (items) =>
       // Drop noindex pages from sitemap.xml so crawlers don't even discover
       // them via the sitemap. The meta tag above is what ultimately removes
       // them from search engine indexes; this just avoids the extra hit.
       items.filter((item) => {
-        const p = item.url.replace(/^\/+/, '');
+        // Normalize to the extensionless route so the comparison holds whether
+        // or not cleanUrls is enabled.
+        const p = item.url.replace(/^\/+/, '').replace(/\.html$/, '');
         return !noindexPaths.has(p);
       }),
   },
   lastUpdated: true,
+  cleanUrls: true,
   base: process.env.BASE_URL || "/",
   vite: {
     build: {
@@ -153,9 +160,28 @@ export default defineVersionedConfig2(withMermaid({
     define: {
       'process.env.VERSIONS': JSON.stringify(process.env.VERSIONS || JSON.stringify([])),
       'process.env.LANGUAGES': JSON.stringify(process.env.LANGUAGES || JSON.stringify([])),
+      // Deploy path prefix without version (e.g. /docs). Versioned builds set
+      // BASE_URL=/docs/1.12.4/ so site.base alone cannot yield /docs/ for links.
+      __SITE_PATH_PREFIX__: JSON.stringify(process.env.SITE_PATH_PREFIX || ''),
+      __CURRENT_DOC_VERSION__: JSON.stringify(process.env.CURRENT_VERSION || ''),
     }
   },
   head: [
+    [
+      "script",
+      {
+        async: "",
+        src: "https://www.googletagmanager.com/gtag/js?id=G-G98641Y6R0",
+      },
+    ],
+    [
+      "script",
+      {},
+      `window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-G98641Y6R0');`,
+    ],
     [
       "meta",
       {
