@@ -399,7 +399,7 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 		if err != nil {
 			return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 		}
-		err = gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &targetDriverVersionStr, ptr.To(common.CurrentVerifiedCudaVersion), ptr.To("true"), ptr.To(gpu.NvidiaCardType))
+		err = gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.NvidiaCardType, &targetDriverVersionStr, ptr.To(common.CurrentVerifiedCudaVersion), ptr.To("true"))
 		if err != nil {
 			return err
 		}
@@ -605,14 +605,27 @@ func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 			return errors.Wrapf(errors.WithStack(err), "failed to unmarshal config for applicationmanager %s", am.Name)
 		}
 
-		if appCfg.RequiredGPU == "" {
-			continue
-		}
-
 		modified := false
 
-		if appCfg.SelectedGpuType == "" {
-			appCfg.SelectedGpuType = gpuType
+		if appCfg.RequiredGPU != "" {
+			// App declares a GPU requirement but was installed before
+			// SelectedGpuType was recorded: backfill it from the cluster's
+			// gpu type so the new compute model resolves the right mode.
+			if appCfg.SelectedGpuType == "" {
+				appCfg.SelectedGpuType = gpuType
+				modified = true
+			}
+		} else if appCfg.SelectedGpuType != "" && appCfg.SelectedGpuType != "cpu" {
+			// App declares no GPU requirement yet carries a stale GPU
+			// SelectedGpuType: older olares-cli auto-assigned the cluster's
+			// single gpu type to every app it installed, cpu-only ones
+			// included. It was harmless then (GPU scheduling was additionally
+			// gated on a non-zero GPU requirement), but in the new compute
+			// model a non-empty SelectedGpuType resolves the app to that gpu
+			// mode and forces a device binding on resume — wrong for an app
+			// that never needed a GPU. Clear it so the app falls back to cpu
+			// mode, matching the app's effective behavior on the old version.
+			appCfg.SelectedGpuType = ""
 			modified = true
 		}
 
