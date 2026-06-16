@@ -107,6 +107,7 @@ func (r *Resources) DeepCopy() *Resources {
 				}
 			}
 			if u.FileserverNodes != nil {
+				uc.FileserverNodes = make([]*FileserverNodeInfo, 0, len(u.FileserverNodes))
 				for _, fn := range u.FileserverNodes {
 					cp := *fn
 					uc.FileserverNodes = append(uc.FileserverNodes, &cp)
