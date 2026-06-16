@@ -13,11 +13,18 @@ Olares V1.12.6 introduces the local hosting and management platform for large la
 
 ## Locate LLM Base apps
 
-1. Open Market and search for "LLM Base".
+1. Open Market and search for "LLM Base". Four base apps appear: vLLM LLM Base (llm-init), SGLang LLM Base (llm-init), Ollama LLM Base (llm-init), and llama.cpp LLM Base (llm-init).
 
     ![LLM Base apps in Market](/images/manual/olares/llm-base-apps.png#bordered)
 
-2. You can find four base apps: vLLM LLM Base (llm-init), SGLang LLM Base (llm-init), Ollama LLM Base (llm-init), and llama.cpp LLM Base (llm-init).
+2. Each base app is optimized for a different inference scenario. Choose one based on your model source, performance needs, and hardware:
+
+    | Base app | Best for |
+    | :--- | :--- |
+    | **Ollama LLM Base (llm-init)** | Getting started quickly and broad model compatibility. <br>Ollama pulls models automatically using native model<br> tags, making it ideal for chat and embedding tasks. |
+    | **vLLM LLM Base (llm-init)** | High-throughput serving of Hugging Face models<br> under heavy concurrent load. |
+    | **SGLang LLM Base (llm-init)** | Efficient structured generation and advanced<br> reasoning optimizations. |
+    | **llama.cpp LLM Base (llm-init)** | Lightweight GGUF models or deployments with<br> limited GPU memory. |
 
 ## Create a new model instance
 
@@ -221,3 +228,8 @@ With your local model instance successfully running, other client apps can conne
 
 1. Open Olares Settings, and then go to **Applications** > **{Your-New-Model-Instance}** > **Shared entrance** > **{Engine} LLM API**.
 2. Copy the endpoint URL, and enter it along with your defined `MODEL_NAME` into the model configuration section of the client app to connect.
+
+## Uninstall model instances
+
+1. Open the target base app from Market.
+2. In the **Instances** section, locate the target model instance, click the drop-down arrow next to the operation button, and then click **Uninstall**.
