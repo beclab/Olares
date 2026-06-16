@@ -63,11 +63,7 @@ Access the Common directory in the Files app and manage shared models centrally.
 
 ### Manage files
 
-Manage files in the Common directory just like a regular folder.
-
-:::warning Important notes
-Always maintain the folder structure recommended by the official documentation. Applications might fail to load models if you change the required hierarchy.
-:::
+You can add or delete model files in the Common directory, but you must maintain the official recommended structure for each subdirectory. Applications might fail to load models if you change the required hierarchy.
 
 - **Add models**: Drag and drop model files directly into the corresponding subdirectory.
 - **Delete models**: Right-click the model folder and select **Delete** to free up space. After deletion, related applications immediately lose access to the model and require a re-download to use it again.
