@@ -95,8 +95,8 @@ func (r *Resources) DeepCopy() *Resources {
 			uc.AllowCIDRs = append([]string(nil), u.AllowCIDRs...)
 			uc.AllowedDomains = append([]string(nil), u.AllowedDomains...)
 			uc.ServerNameDomains = append([]string(nil), u.ServerNameDomains...)
-			uc.CustomDomainCerts = append([]*CertInfo(nil), u.CustomDomainCerts...)
 			if u.CustomDomainCerts != nil {
+				uc.CustomDomainCerts = make([]*CertInfo, 0, len(u.CustomDomainCerts))
 				for _, c := range u.CustomDomainCerts {
 					cp := *c
 					uc.CustomDomainCerts = append(uc.CustomDomainCerts, &cp)
@@ -117,10 +117,6 @@ func (r *Resources) DeepCopy() *Resources {
 				for i, app := range u.Apps {
 					uc.Apps[i] = app.DeepCopy()
 				}
-			}
-			if u.FileserverNodes != nil {
-				uc.FileserverNodes = append([]*FileserverNodeInfo(nil), u.FileserverNodes...)
-
 			}
 			out.Users = append(out.Users, &uc)
 		}
