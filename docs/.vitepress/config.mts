@@ -133,7 +133,7 @@ export default defineVersionedConfig2(withMermaid({
   },
 
   sitemap: {
-    hostname: "https://docs.olares.com/",
+    hostname: "https://www.olares.com/docs/",
     transformItems: (items) =>
       // Drop noindex pages from sitemap.xml so crawlers don't even discover
       // them via the sitemap. The meta tag above is what ultimately removes
@@ -153,6 +153,10 @@ export default defineVersionedConfig2(withMermaid({
     define: {
       'process.env.VERSIONS': JSON.stringify(process.env.VERSIONS || JSON.stringify([])),
       'process.env.LANGUAGES': JSON.stringify(process.env.LANGUAGES || JSON.stringify([])),
+      // Deploy path prefix without version (e.g. /docs). Versioned builds set
+      // BASE_URL=/docs/1.12.4/ so site.base alone cannot yield /docs/ for links.
+      __SITE_PATH_PREFIX__: JSON.stringify(process.env.SITE_PATH_PREFIX || ''),
+      __CURRENT_DOC_VERSION__: JSON.stringify(process.env.CURRENT_VERSION || ''),
     }
   },
   head: [
