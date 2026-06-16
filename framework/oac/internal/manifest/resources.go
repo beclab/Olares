@@ -12,38 +12,48 @@ import (
 )
 
 const (
-	ResourceModeCPU           = "cpu"
-	ResourceModeAMDAPU        = "amd-apu"
-	ResourceModeAMDGPU        = "amd-gpu"
-	ResourceModeAppleM        = "apple-m"
-	ResourceModeNvidia        = "nvidia"
-	ResourceModeNvidiaGB10    = "nvidia-gb10"
-	ResourceModeMThreadsM1000 = "mthreads-m1000"
-	ResourceModeStrixHalo     = "strix-halo"
+	ResourceModeCPU        = "cpu"
+	ResourceModeNvidia     = "nvidia"
+	ResourceModeNvidiaGB10 = "nvidia-gb10"
+	ResourceModeAppleM     = "apple-m"
+	ResourceModeIntel      = "intel"     // Intel integrated GPU
+	ResourceModeAMD        = "amd"       // AMD integrated GPU
+	ResourceModeIntelGPU   = "intel-gpu" // Intel discrete GPU
+	ResourceModeAMDGPU     = "amd-gpu"   // AMD discrete GPU
+	ResourceModeMooreSoc   = "moore-soc" // Moore Threads SoC
 )
 
 var validResourceModes = []any{
 	ResourceModeCPU,
-	ResourceModeStrixHalo,
-	ResourceModeAMDGPU,
-	ResourceModeAppleM,
 	ResourceModeNvidia,
 	ResourceModeNvidiaGB10,
-	ResourceModeMThreadsM1000,
-	ResourceModeStrixHalo,
+	ResourceModeAppleM,
+	ResourceModeIntel,
+	ResourceModeAMD,
+	ResourceModeIntelGPU,
+	ResourceModeAMDGPU,
+	ResourceModeMooreSoc,
 }
 
 var modeArchRequirement = map[string]string{
-	ResourceModeAMDGPU:        "amd64",
-	ResourceModeNvidia:        "amd64",
-	ResourceModeNvidiaGB10:    "arm64",
-	ResourceModeMThreadsM1000: "arm64",
-	ResourceModeStrixHalo:     "amd64",
+	ResourceModeNvidia:     "amd64",
+	ResourceModeNvidiaGB10: "arm64",
+	ResourceModeAppleM:     "arm64",
+	ResourceModeIntel:      "amd64",
+	ResourceModeAMD:        "amd64",
+	ResourceModeIntelGPU:   "amd64",
+	ResourceModeAMDGPU:     "amd64",
+	ResourceModeMooreSoc:   "arm64",
 }
 
+// gpuMemoryModes are the modes that expose a standalone GPU memory pool, so a
+// manifest may declare requiredGpu / limitedGpu for them. These are the
+// discrete-GPU / HAMi flavors; the unified-memory SoCs (apple-m, intel, amd,
+// nvidia-gb10, moore-soc) draw from system RAM and must not.
 var gpuMemoryModes = map[string]struct{}{
-	ResourceModeNvidia: {},
-	ResourceModeAMDGPU: {},
+	ResourceModeNvidia:   {},
+	ResourceModeAMDGPU:   {},
+	ResourceModeIntelGPU: {},
 }
 
 var minResourcesManifestVersion = semver.MustParse("0.12.0")
