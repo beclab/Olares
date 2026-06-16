@@ -114,17 +114,17 @@ func (h *Handler) updateDeviceSupportType(req *restful.Request, resp *restful.Re
 		return
 	}
 
-	node, device, err := compute.FindDevice(ctx, h.ctrlClient, nodeName, deviceID)
+	_, device, err := compute.FindDevice(ctx, h.ctrlClient, nodeName, deviceID)
 	if err != nil {
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
-	if !compute.IsHAMIMode(node.GPUType) {
-		api.HandleBadRequest(resp, req, fmt.Errorf("device mode switching is not supported for gpu type %s", node.GPUType))
+	if !compute.IsHAMIMode(device.Mode) {
+		api.HandleBadRequest(resp, req, fmt.Errorf("device mode switching is not supported for gpu type %s", device.Mode))
 		return
 	}
 	if !compute.SupportTypeAvailable(device.AvailableSupportTypes, body.SupportType) {
-		api.HandleBadRequest(resp, req, fmt.Errorf("support type %s is not available for gpu type %s", body.SupportType, node.GPUType))
+		api.HandleBadRequest(resp, req, fmt.Errorf("support type %s is not available for gpu type %s", body.SupportType, device.Mode))
 		return
 	}
 	if device.SupportType == body.SupportType {

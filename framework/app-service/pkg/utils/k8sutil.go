@@ -125,25 +125,25 @@ func GetAllNodesTunnelIPCIDRs() (cidrs []string) {
 // 	return gpuType, nil
 // }
 
-// GetAllGpuTypesFromNodes returns the set of explicit GPU types declared by
-// node labels (gpu.bytetrade.io/type). Nodes without the label, or with the
-// label set to an empty string / "none", contribute nothing to the result,
-// so a pure-CPU cluster returns an empty map. Callers that need to surface
-// "CPU" as a user-selectable option should add it on top of this set
-// themselves; mixing it in here would break the chart-render auto-detect
-// path which expects len(gpuTypes)==1 to mean "this cluster has exactly
-// one GPU flavour".
+// GetAllGpuTypesFromNodes returns the set of non-cpu GPU modes declared across
+// the cluster's nodes. Each node may advertise several modes at once via the
+// existence-based per-mode labels gpu.bytetrade.io/<mode> (and the legacy
+// single-value gpu.bytetrade.io/type label is still honored for backward
+// compatibility) — see NodeSupportedGPUTypes. Nodes without any GPU label
+// contribute nothing, so a pure-CPU cluster returns an empty map. Callers that
+// need to surface "CPU" as a user-selectable option should add it on top of
+// this set themselves; mixing it in here would break the chart-render
+// auto-detect path which expects len(gpuTypes)==1 to mean "this cluster has
+// exactly one GPU flavour".
 func GetAllGpuTypesFromNodes(nodes *corev1.NodeList) (map[string]struct{}, error) {
 	gpuTypes := make(map[string]struct{})
 	if nodes == nil {
 		return gpuTypes, errors.New("empty node list")
 	}
-	for _, n := range nodes.Items {
-		typeLabel, ok := n.Labels[NodeGPUTypeLabel]
-		if IsCPUOnlyNodeLabel(typeLabel, ok) {
-			continue
+	for i := range nodes.Items {
+		for _, mode := range NodeSupportedGPUTypes(&nodes.Items[i]) {
+			gpuTypes[mode] = struct{}{} // TODO: add driver version info
 		}
-		gpuTypes[typeLabel] = struct{}{} // TODO: add driver version info
 	}
 	return gpuTypes, nil
 }
