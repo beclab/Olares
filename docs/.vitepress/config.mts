@@ -161,6 +161,21 @@ export default defineVersionedConfig2(withMermaid({
   },
   head: [
     [
+      "script",
+      {
+        async: "",
+        src: "https://www.googletagmanager.com/gtag/js?id=G-G98641Y6R0",
+      },
+    ],
+    [
+      "script",
+      {},
+      `window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-G98641Y6R0');`,
+    ],
+    [
       "meta",
       {
          name:"docsearch:version",
