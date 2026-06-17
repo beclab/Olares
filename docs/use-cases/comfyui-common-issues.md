@@ -21,9 +21,9 @@ ComfyUI fails to start, stops unexpectedly, or behaves abnormally.
 This is usually caused by insufficient resources or incorrect GPU allocation. To resolve this:
 
 1. Check your system resources. If your CPU or memory usage is maxed out, stop other resource-intensive apps.
-2. If system resources look fine, go to **Settings** > **GPU** and check your GPU mode:
+2. If system resources look fine, go to **Settings** > **Accelerator** and check your GPU mode:
    - If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
-   - If you are using **App exclusive**, make sure the exclusive app is set to ComfyUI.
+   - If you are using **Exclusive**, make sure ComfyUI has full GPU access.
 3. Wait a moment, then try to launch ComfyUI again.
 
 ## Launcher log shows errors
