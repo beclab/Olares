@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"github.com/beclab/Olares/cli/pkg/bootstrap/patch"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/gpu"
@@ -109,6 +110,7 @@ func (l *linuxInstallPhaseBuilder) build() []module.Module {
 		addModule(fsModuleBuilder(func() []module.Module {
 			return l.storage()
 		}).withJuiceFS(l.runtime)...).
+		addModule(&patch.CorrectHostnameModule{}).
 		addModule(l.installCluster()...).
 		addModule(gpuModuleBuilder(func() []module.Module {
 			return l.installGpuPlugin()
