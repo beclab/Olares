@@ -229,9 +229,12 @@ func pendingUnschedulableSince(pod *corev1.Pod) (time.Time, bool) {
 // trySuspendApp attempts to suspend the app and returns (true, nil) if a suspend request was issued.
 // If the app is not suspendable yet, returns (false, nil) to trigger a short requeue.
 func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, owner, appName, reason, message, podNamespace string) (bool, error) {
-	name, err := apputils.FmtAppMgrName(appName, owner, "")
+	// Resolve to the live AM (shared cluster-wide or per-user) — a pod-abnormal
+	// suspend on a shared app needs to find the {app}-shared-{app} AM no matter
+	// which user the pod is running under.
+	name, _, err := apputils.ResolveAppMgrName(ctx, appName, owner)
 	if err != nil {
-		klog.Errorf("failed to format app manager name app=%s owner=%s: %v", appName, owner, err)
+		klog.Errorf("failed to resolve app manager name app=%s owner=%s: %v", appName, owner, err)
 		return false, err
 	}
 	var am appv1alpha1.ApplicationManager
