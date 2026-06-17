@@ -3,6 +3,7 @@ package constants
 import (
 	"flag"
 	"os"
+	"time"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -184,6 +185,24 @@ var (
 
 	OLARES_APP_NAME = "olares-app"
 )
+
+// AppMgrTerminalRetention bounds how long an ApplicationManager is allowed to
+// linger in a safely-deletable terminal state (Uninstalled / InstallingCanceled
+// / PendingCanceled / DownloadingCanceled / DownloadFailed / InstallFailed)
+// before the GC controller reclaims it. The retention gives operators a window
+// to inspect the failure reason / op record and gives the install-failure
+// cleanup helper plenty of time to converge the rare NS-finalizer-stuck case
+// before the AM disappears. 60min is conservative enough for both; the
+// retention can be overridden at runtime via the APPMGR_TERMINAL_RETENTION
+// env var on the controller pod.
+var AppMgrTerminalRetention = func() time.Duration {
+	if v := os.Getenv("APPMGR_TERMINAL_RETENTION"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
+		}
+	}
+	return 60 * time.Minute
+}()
 
 type ResourceConditionType string
 

@@ -152,6 +152,18 @@ func UpdateAppState(ctx context.Context, am *v1alpha1.ApplicationManager, state 
 
 }
 
+// StateTransitionGuard, if non-nil, is consulted by UpdateAppMgrStatus to
+// decide whether a (currentState -> requestedState) transition is allowed.
+// Returning false rejects the patch.
+//
+// It is injected at init time by the pkg/appstate package (which owns the
+// authoritative transition table). The indirection breaks an import cycle:
+// pkg/appstate already imports pkg/utils/app, so pkg/utils/app cannot import
+// pkg/appstate directly. When the guard is nil (e.g. in unit tests that do
+// not link pkg/appstate) the legacy behaviour is preserved — any transition
+// is accepted.
+var StateTransitionGuard func(from, to v1alpha1.ApplicationManagerState) bool
+
 // UpdateAppMgrStatus update applicationmanager status, if filed in parameter status is empty that field will not be set.
 func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, modifiers ...func(*v1alpha1.ApplicationManager)) (*v1alpha1.ApplicationManager, error) {
 	client, err := utils.GetClient()
@@ -189,6 +201,19 @@ func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, m
 			}
 		}
 		status.Payload = payload
+
+		// Reject undeclared transitions if a guard has been wired in.
+		// The check runs INSIDE the retry loop so it sees the latest
+		// persisted state, matching pkg/appstate's updateStatus
+		// invariant: if the state was changed underneath us between
+		// Get and Update, the next attempt's check is against the
+		// fresh state, not a stale snapshot.
+		if guard := StateTransitionGuard; guard != nil && !guard(appMgrCopy.Status.State, status.State) {
+			err := fmt.Errorf("invalid state transition for %s: %s -> %s (rejected by guard)",
+				name, appMgrCopy.Status.State, status.State)
+			klog.Warningf("UpdateAppMgrStatus rejected: %v", err)
+			return err
+		}
 
 		appMgrCopy.Status = status
 		for _, modifier := range modifiers {

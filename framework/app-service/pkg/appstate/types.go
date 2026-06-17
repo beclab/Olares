@@ -3,6 +3,7 @@ package appstate
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -60,6 +61,20 @@ func (b *baseStatefulApp) updateStatus(ctx context.Context, am *appsv1.Applicati
 	// OpGeneration increment or OpRecords.
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := b.client.Get(ctx, types.NamespacedName{Name: am.Name}, am); err != nil {
+			return err
+		}
+
+		// Reject writes that are not declared in StateTransitions. The check
+		// runs INSIDE the retry loop so that if the persisted state has
+		// changed underneath us (e.g. user cancelled while this goroutine
+		// was racing toward InstallFailed) we refuse to clobber the new
+		// terminal state with a stale transition. Same-state writes are
+		// still allowed via IsStateTransitionAllowed so idempotent retries
+		// and re-assertions (updated message/reason) keep working.
+		if !IsStateTransitionAllowed(am.Status.State, state) {
+			err := fmt.Errorf("invalid state transition for %s: %s -> %s (not declared in StateTransitions)",
+				am.Name, am.Status.State, state)
+			klog.Warningf("updateStatus rejected: %v", err)
 			return err
 		}
 

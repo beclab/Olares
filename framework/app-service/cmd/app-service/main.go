@@ -162,6 +162,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.ApplicationManagerGCReconciler{
+		Client: mgr.GetClient(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "Application Manager GC")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.EntranceStatusManagerController{
 		Client: mgr.GetClient(),
 	}).SetUpWithManager(mgr); err != nil {
