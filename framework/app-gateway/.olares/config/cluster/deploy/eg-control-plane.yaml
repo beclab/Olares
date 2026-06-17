@@ -46,7 +46,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: envoyproxy/gateway:v1.8.0
+          image: beclab/envoy-gateway@sha256:292a7f1ee559d022f6ed35aa86328bc5ff932543e327e5bfe09d5343bb13cb75
       type: Kubernetes
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -429,7 +429,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: envoyproxy/gateway:v1.8.0
+        image: beclab/envoy-gateway@sha256:292a7f1ee559d022f6ed35aa86328bc5ff932543e327e5bfe09d5343bb13cb75
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -641,7 +641,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: envoyproxy/gateway:v1.8.0
+        image: beclab/envoy-gateway@sha256:292a7f1ee559d022f6ed35aa86328bc5ff932543e327e5bfe09d5343bb13cb75
         imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
         securityContext:
