@@ -80,6 +80,7 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Delay:  5 * time.Second,
 		},
 	}
+	pre = append(pre, retagLegacyAMDGPUImage()...)
 	pre = append(pre, u.upgraderBase.UpgradeSystemComponents()...)
 	pre = append(pre, &task.LocalTask{
 		Name:   "PatchL4BFLProxyProbePort",
