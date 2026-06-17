@@ -41,7 +41,11 @@ func (h *Handler) status(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
-	name, err := apputils.FmtAppMgrName(app, owner, "")
+	// Resolve the AM name to whichever lifecycle variant currently exists
+	// (shared cluster-wide vs per-user). Falling back to the per-user name
+	// directly via FmtAppMgrName loses sight of shared apps any admin
+	// installed under a different owner.
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -147,7 +151,11 @@ func (h *Handler) operate(req *restful.Request, resp *restful.Response) {
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
 	var am v1alpha1.ApplicationManager
-	name, err := apputils.FmtAppMgrName(app, owner, "")
+	// Lifecycle operations (start/stop/uninstall) must dispatch against the
+	// actual AM, not the deterministic per-user name — otherwise any admin
+	// trying to operate a shared app installed by someone else would hit a
+	// spurious "not found".
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return

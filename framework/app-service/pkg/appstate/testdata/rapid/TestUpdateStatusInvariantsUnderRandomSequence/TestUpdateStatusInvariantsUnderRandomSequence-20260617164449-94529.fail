@@ -1,0 +1,13 @@
+# 2026/06/17 16:44:49.750555 [TestUpdateStatusInvariantsUnderRandomSequence] [rapid] draw ops: 1
+# 2026/06/17 16:44:49.750558 [TestUpdateStatusInvariantsUnderRandomSequence] [rapid] draw state: 7
+# 2026/06/17 16:44:49.750558 [TestUpdateStatusInvariantsUnderRandomSequence] [rapid] draw withRecord: false
+# 2026/06/17 16:44:49.750585 [TestUpdateStatusInvariantsUnderRandomSequence] updateStatus call 0: invalid state transition for nginx-rapid: installing -> uninstalling (not declared in StateTransitions)
+# 
+v0.4.8#9265697311218216555
+0x0
+0x0
+0x0
+0x0
+0x1f2b5a0e61c3a6
+0x0
+0x0

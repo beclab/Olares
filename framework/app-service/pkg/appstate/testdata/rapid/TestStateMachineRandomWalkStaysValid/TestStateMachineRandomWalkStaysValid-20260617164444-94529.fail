@@ -1,0 +1,51 @@
+# 2026/06/17 16:44:44.266301 [TestStateMachineRandomWalkStaysValid] [rapid] draw start: 0
+# 2026/06/17 16:44:44.266308 [TestStateMachineRandomWalkStaysValid] [rapid] draw steps: 10
+# 2026/06/17 16:44:44.266309 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 0
+# 2026/06/17 16:44:44.266310 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 0
+# 2026/06/17 16:44:44.266311 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 0
+# 2026/06/17 16:44:44.266312 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 0
+# 2026/06/17 16:44:44.266312 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 0
+# 2026/06/17 16:44:44.266313 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 0
+# 2026/06/17 16:44:44.266314 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 0
+# 2026/06/17 16:44:44.266319 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 0
+# 2026/06/17 16:44:44.266320 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 0
+# 2026/06/17 16:44:44.266320 [TestStateMachineRandomWalkStaysValid] [rapid] draw next: 1
+# 2026/06/17 16:44:44.266321 [TestStateMachineRandomWalkStaysValid] transition resumingCanceling->resumingCancelFailed leads to an unrecognized state
+# 
+v0.4.8#12254038910575936147
+0x0
+0x0
+0x0
+0x0
+0x9867f1f40f739
+0x9
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1

@@ -777,7 +777,9 @@ func (h *Handler) applicationPermissionList(req *restful.Request, resp *restful.
 func (h *Handler) getApplicationPermission(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
-	name, err := apputils.FmtAppMgrName(app, owner, "")
+	// Use ResolveAppMgrName so shared apps installed under a different admin
+	// are still found by their canonical {app}-shared-{app} name.
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -920,7 +922,9 @@ func (h *Handler) getApplicationProviderList(req *restful.Request, resp *restful
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 	app := req.PathParameter(ParamAppName)
 
-	name, err := apputils.FmtAppMgrName(app, owner, "")
+	// Use ResolveAppMgrName so shared apps installed under a different admin
+	// are still found by their canonical {app}-shared-{app} name.
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return

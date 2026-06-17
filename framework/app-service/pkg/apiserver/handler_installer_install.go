@@ -50,6 +50,9 @@ type installHelperIntf interface {
 	applyAppEnv(ctx context.Context) error
 	resolveAutoResources(ctx context.Context) error
 	applyApplicationManager(marketSource string) (opID string, err error)
+	// checkAppNameConflict enforces cluster-wide exclusivity between shared
+	// and per-user installs of the same Spec.AppName.
+	checkAppNameConflict(ctx context.Context, newShared bool) error
 }
 
 var _ installHelperIntf = (*installHandlerHelper)(nil)
@@ -57,18 +60,23 @@ var _ installHelperIntf = (*installHandlerHelperV2)(nil)
 var _ installHelperIntf = (*installHandlerHelperV3)(nil)
 
 type installHandlerHelper struct {
-	h                    *Handler
-	req                  *restful.Request
-	resp                 *restful.Response
-	app                  string
-	rawAppName           string
-	owner                string
-	chartOwner           string
-	token                string
-	insReq               *api.InstallRequest
-	appConfig            *appcfg.ApplicationConfig
-	chartPath            string
-	client               *versioned.Clientset
+	h          *Handler
+	req        *restful.Request
+	resp       *restful.Response
+	app        string
+	rawAppName string
+	owner      string
+	chartOwner string
+	token      string
+	insReq     *api.InstallRequest
+	appConfig  *appcfg.ApplicationConfig
+	chartPath  string
+	// client is the generated app.bytetrade.io clientset. Typed as the
+	// interface (not the concrete *versioned.Clientset) so unit tests can
+	// inject a fake via appfake.NewSimpleClientset. The runtime install
+	// dispatcher still constructs a concrete *versioned.Clientset and
+	// assigns it here; the interface type is purely a substitutability hook.
+	client               versioned.Interface
 	validateClusterScope func(isAdmin bool, installedApps []*v1alpha1.Application) (err error)
 }
 
@@ -239,6 +247,12 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 	if !isAdmin && appCfg.Shared {
 		err = errors.New("only admin users can install shared apps")
 		api.HandleForbidden(resp, req, err)
+		return
+	}
+
+	if err = helper.checkAppNameConflict(req.Request.Context(), appCfg.Shared); err != nil {
+		klog.Errorf("Failed to check app name conflict err=%v", err)
+		api.HandleBadRequest(resp, req, err)
 		return
 	}
 
@@ -647,6 +661,54 @@ func (h *installHandlerHelper) setAppConfig(req *api.InstallRequest, appName str
 func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opID string, err error) {
 	name, _ := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
 	return h.applyAppMgr(name, nil, marketSource)
+}
+
+// checkAppNameConflict enforces cluster-wide exclusivity between shared and
+// per-user installs of the same app name:
+//   - if a shared AM with the same Spec.AppName exists (any owner) → no other
+//     user (and no admin) may install another shared or per-user variant of
+//     that app name;
+//   - if any per-user AM with the same Spec.AppName exists → an admin may not
+//     install the shared variant before that per-user AM is removed.
+//
+// Same-owner same-type collisions are NOT handled here: their AM names are
+// deterministically identical, so applyAppMgr's Get(name) + IsOperationAllowed
+// path already covers them (patch on reinstallable states, reject otherwise).
+// Per-user same-name across different owners is allowed by design.
+func (h *installHandlerHelper) checkAppNameConflict(ctx context.Context, newShared bool) error {
+	list, err := h.client.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for i := range list.Items {
+		am := &list.Items[i]
+		if am.Spec.AppName != h.app {
+			continue
+		}
+		if appstate.IsTerminalReinstallable(am.Status.State) {
+			continue
+		}
+		existingShared := am.Labels[constants.AppSharedLabel] == constants.AppSharedTrue
+		// Same-type collisions fall through to applyAppMgr's name-based path.
+		if existingShared == newShared {
+			continue
+		}
+
+		existingKind := "per-user"
+		if existingShared {
+			existingKind = "shared"
+		}
+		newKind := "per-user"
+		if newShared {
+			newKind = "shared"
+		}
+		err = fmt.Errorf("app %q is already installed as %s (owner=%q, state=%s); "+
+			"uninstall it before installing as %s",
+			h.app, existingKind, am.Spec.AppOwner, am.Status.State, newKind)
+		return err
+	}
+	return nil
 }
 
 // clonedFromValue derives the app.bytetrade.io/app-cloned-from label value
@@ -1094,9 +1156,17 @@ func (h *Handler) isDeployAllowed(req *restful.Request, resp *restful.Response) 
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
-	name := fmt.Sprintf("%s-%s-%s", app, owner, app)
+	// Use ResolveAppMgrName so the "can I deploy?" check observes the
+	// shared cluster-wide AM (if any) and not a phantom per-user name that
+	// nobody ever created. Without this an admin could think a shared
+	// install slot is free just because no per-user AM exists.
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
 	var am v1alpha1.ApplicationManager
-	err := h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
+	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			api.HandleError(resp, req, err)
