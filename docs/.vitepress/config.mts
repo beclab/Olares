@@ -171,7 +171,7 @@ export default defineVersionedConfig2(withMermaid({
       "script",
       {
         async: "",
-        src: "https://www.googletagmanager.com/gtag/js?id=G-G98641Y6R0",
+        src: "https://www.googletagmanager.com/gtag/js?id=G-GMCVWRBP24",
       },
     ],
     [
@@ -180,7 +180,7 @@ export default defineVersionedConfig2(withMermaid({
       `window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-G98641Y6R0');`,
+      gtag('config', 'G-GMCVWRBP24');`,
     ],
     [
       "meta",
