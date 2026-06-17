@@ -245,21 +245,36 @@ func runSearch(ctx context.Context, f *cmdutil.Factory, keyword string, o *optio
 		}
 	} else {
 		reqid := uuid.NewString()
-		body := map[string]interface{}{
+		// Desktop search v2 is session-based for files_v2: always bootstrap
+		// with /api/search/init at offset=0, then page via /api/search/more
+		// using the same reqid.
+		initBody := map[string]interface{}{
 			"reqid":   reqid,
 			"keyword": keyword,
 			"type":    searchType,
 			"app":     app,
-			"offset":  o.offset,
+			"offset":  0,
 			"limit":   o.limit,
 		}
-		if err := doEnvelope(ctx, doer, "POST", "/api/search/init", body, &rawRows); err != nil {
+		// Best-effort session cleanup, mirroring the SPA's searchCancel.
+		// Keep defer close to reqid creation so all return paths are covered.
+		defer func() {
+			_ = doEnvelope(ctx, doer, "POST", "/api/search/cancel",
+				map[string]interface{}{"reqid": reqid}, nil)
+		}()
+		if err := doEnvelope(ctx, doer, "POST", "/api/search/init", initBody, &rawRows); err != nil {
 			return err
 		}
-		// Best-effort session cleanup, mirroring the SPA's searchCancel.
-		// The search has already completed; failures here are harmless.
-		_ = doEnvelope(ctx, doer, "POST", "/api/search/cancel",
-			map[string]interface{}{"reqid": reqid}, nil)
+		if o.offset > 0 {
+			moreBody := map[string]interface{}{
+				"reqid":  reqid,
+				"offset": o.offset,
+				"limit":  o.limit,
+			}
+			if err := doEnvelope(ctx, doer, "POST", "/api/search/more", moreBody, &rawRows); err != nil {
+				return err
+			}
+		}
 	}
 
 	items := make([]resultItem, 0, len(rawRows))
