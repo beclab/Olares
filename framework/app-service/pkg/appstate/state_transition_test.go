@@ -16,6 +16,7 @@ func TestIsStateTransitionValid(t *testing.T) {
 		{appsv1.Downloading, appsv1.Installing, true},
 		{appsv1.Installing, appsv1.Initializing, true},
 		{appsv1.Installing, appsv1.InstallFailed, true},
+		{appsv1.InstallFailed, appsv1.Uninstalling, true},
 		{appsv1.Initializing, appsv1.Running, true},
 		{appsv1.Running, appsv1.Uninstalling, true},
 		{appsv1.Uninstalling, appsv1.Uninstalled, true},
@@ -146,6 +147,7 @@ func TestIsOperationAllowed(t *testing.T) {
 		{appsv1.Running, appsv1.InstallOp, false},
 		{appsv1.Uninstalling, appsv1.UninstallOp, false},
 		{appsv1.InstallFailed, appsv1.InstallOp, true},
+		{appsv1.InstallFailed, appsv1.UninstallOp, true},
 		{appsv1.Pending, appsv1.CancelOp, true},
 		{appsv1.Pending, appsv1.UninstallOp, false},
 	}
