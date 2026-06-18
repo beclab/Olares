@@ -19,15 +19,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-type upgrader_1_12_7_20260617 struct {
+type upgrader_1_12_7_20260618 struct {
 	breakingUpgraderBase
 }
 
-func (u upgrader_1_12_7_20260617) Version() *semver.Version {
-	return semver.MustParse("1.12.7-20260617")
+func (u upgrader_1_12_7_20260618) Version() *semver.Version {
+	return semver.MustParse("1.12.7-20260618")
 }
 
-func (u upgrader_1_12_7_20260617) UpgradeSystemComponents() []task.Interface {
+func (u upgrader_1_12_7_20260618) UpgradeSystemComponents() []task.Interface {
 	tasks := make([]task.Interface, 0)
 	tasks = append(tasks, upgradeNodeExporter()...)
 	tasks = append(tasks, retagLegacyAMDGPUImage()...)
@@ -43,7 +43,7 @@ func (u upgrader_1_12_7_20260617) UpgradeSystemComponents() []task.Interface {
 }
 
 func init() {
-	registerDailyUpgrader(upgrader_1_12_7_20260617{})
+	registerDailyUpgrader(upgrader_1_12_7_20260618{})
 }
 
 // patchL4BFLProxyProbePort updates the livenessProbe and readinessProbe
