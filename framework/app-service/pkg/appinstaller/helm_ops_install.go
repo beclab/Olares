@@ -629,6 +629,11 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 		return true, nil
 	}
 	timer := time.NewTicker(1 * time.Second)
+	// unrecoverableSince records when an unrecoverable pod condition was first
+	// observed while the app is still not started. Once it persists past
+	// unrecoverableGrace, startup fails fast instead of polling until the outer
+	// installing TTL expires (which left CrashLoopBackOff apps stuck ~30m).
+	var unrecoverableSince time.Time
 	for {
 		select {
 		case <-timer.C:
@@ -644,6 +649,18 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 			}
 			if errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending) {
 				return false, err
+			}
+
+			if reason, ok := h.hasUnrecoverablePod(h.ctx); ok {
+				if unrecoverableSince.IsZero() {
+					unrecoverableSince = time.Now()
+					klog.Warningf("app %s has unrecoverable pod (%s); will fail startup if it persists for %s",
+						h.app.AppName, reason, unrecoverableGrace)
+				} else if time.Since(unrecoverableSince) > unrecoverableGrace {
+					return false, fmt.Errorf("app %s failed to start up: %s", h.app.AppName, reason)
+				}
+			} else {
+				unrecoverableSince = time.Time{}
 			}
 
 		case <-h.ctx.Done():
