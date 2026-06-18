@@ -112,7 +112,7 @@ reverts them. Durable fixes go through the image / ConfigMap / workload spec
 	}
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace (required when the positional is a bare pod name)")
 	cmd.Flags().StringVarP(&container, "container", "c", "", "container name (required for multi-container pods)")
-	cmd.Flags().BoolVarP(&stdinFlag, "stdin", "i", false, "keep stdin open to the container")
+	cmd.Flags().BoolVarP(&stdinFlag, "stdin", "i", false, "keep stdin open to the container (interactive -it only)")
 	cmd.Flags().BoolVarP(&ttyFlag, "tty", "t", false, "allocate a TTY (interactive); requires a local terminal")
 	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "skip the confirmation prompt for interactive (-it) exec")
 	cmd.Flags().DurationVar(&timeout, "timeout", 60*time.Second, "one-shot only: abort if the command runs longer (0 = no limit)")
@@ -180,6 +180,9 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 		return nil
 	}
 
+	if p.Stdin {
+		return fmt.Errorf("-i/--stdin is only supported with -t/--tty (interactive); for one-shot file writes use `-- sh -c \"sed -i ...\"`, `printf ... | tee`, or a heredoc `-- sh -c 'cat > /path <<EOF ... EOF'`")
+	}
 	if len(opts.Command) == 0 {
 		return fmt.Errorf("no command given; pass `-- CMD [args...]` (or use -it for an interactive shell)")
 	}
