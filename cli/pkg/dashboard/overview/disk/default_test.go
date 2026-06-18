@@ -41,8 +41,8 @@ func TestBuildSectionsEnvelope_Smoke(t *testing.T) {
             {"metric":{"node":"olares-1","device":"sda"},"value":[1714600000,"35"]}
           ]}},
           {"metric_name":"node_disk_lsblk_info","data":{"result":[
-            {"metric":{"node":"olares-1","name":"sda","pkname":"","size":"1T","fstype":"","mountpoint":"","fsused":"","fsuse_percent":""},"value":[1714600000,"1"]},
-            {"metric":{"node":"olares-1","name":"sda1","pkname":"sda","size":"100G","fstype":"ext4","mountpoint":"/","fsused":"50G","fsuse_percent":"50%"},"value":[1714600000,"1"]}
+            {"metric":{"node":"olares-1","name":"sda","pkname":"","size":"1099511627776","fstype":"","mountpoint":"","fsused":"","fsuse_percent":""},"value":[1714600000,"1"]},
+            {"metric":{"node":"olares-1","name":"sda1","pkname":"sda","size":"107374182400","fstype":"ext4","mountpoint":"/","fsused":"53687091200","fsuse_percent":"50%"},"value":[1714600000,"1"]}
           ]}}
         ]}`))
 	}))
