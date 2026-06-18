@@ -3,18 +3,15 @@
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; pass `chart lint` before starting any of this.
 > This is the **deploy** capability — the done step of the two axes. Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
 
-> **Automation model: confirm once, then auto-loop.** Ask the developer **once** before the first upload. After they say yes (and the profile is logged in), drive package → upload → install → watch → diagnose → fix → retry **automatically**, without stopping to ask per step. Only break out to ask when login / credentials are missing, or when a failure is clearly **not** a chart problem.
+> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile is logged in, drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the profile is not logged in, or when a failure is clearly **not** a chart problem.
 
 `lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This loop does — by pushing the chart to the developer's Olares and watching it install.
 
 ```mermaid
 flowchart TD
   lintok["chart lint OK"] --> login{"profile logged-in?"}
-  login -->|no| tell["tell developer: local checks pass; run profile login to deploy"]
-  login -->|yes| ask["ASK ONCE: upload + install to your Olares?"]
-  ask -->|no| tell
-  ask -->|yes| loop["auto-loop (no further prompts)"]
-  loop --> pkg["chart package -> .tgz"]
+  login -->|no| tell["tell developer: run 'olares-cli profile login --olares-id ID' then re-invoke"]
+  login -->|yes| pkg["chart package -> .tgz"]
   pkg --> up["market upload"]
   up --> inst["market install -s upload --watch -o json"]
   inst -->|running| done["deployed -> cleanup or keep"]
@@ -36,9 +33,9 @@ The `*` marks the active profile; `STATUS` is `logged-in` when usable (see the o
 
 - **Do NOT log in on the developer's behalf unilaterally.** Tell them local `lint` passed and that deploy needs `olares-cli profile login --olares-id <id>` first. Stop here unless they ask you to drive the login (then follow olares-shared's agent-driven login flow).
 
-## 2. Confirm once, then package + upload
+## 2. Package + upload (automatic — no confirmation needed)
 
-Deploy is a write action on a real system — **ask the developer once before the first upload** (olares-shared "confirm intent before write actions"). After the yes, the remaining steps run automatically.
+`lint` passed and the profile is logged in — proceed immediately.
 
 `market upload` takes a `.tgz` / `.tar.gz`, not a raw chart directory, so package first with the built-in verb (no `helm` binary needed):
 
