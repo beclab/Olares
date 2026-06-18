@@ -35,8 +35,15 @@ func NewExecCommand(f *cmdutil.Factory) *cobra.Command {
 
 Identity grammar adds a three-segment positional <ns>/<pod>/<container>; the
 two-segment <ns>/<pod> + --container and bare <pod> + -n/-c forms also work.
-Everything else (one-shot vs -it, --timeout, --max-output-bytes, -o json) is
-identical to ` + "`cluster pod exec`" + `; this verb just delegates.
+
+The container name is mandatory for this verb. (` + "`cluster pod exec`" + `
+auto-selects the sole container of a single-container pod when --container
+is omitted; the container alias asks you to identify it explicitly — via the
+third path segment, ` + "`<ns>/<pod>`" + ` + --container, or bare ` + "`<pod>`" + ` + -n/-c.)
+
+It shares the same execution semantics as ` + "`cluster pod exec`" + ` — one-shot
+vs -it, --timeout, --max-output-bytes, and -o json all behave identically;
+the only divergence is requiring an explicit container.
 `,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -45,7 +52,7 @@ identical to ` + "`cluster pod exec`" + `; this verb just delegates.
 			var command []string
 			if dash == -1 {
 				if len(args) != 1 {
-					return fmt.Errorf("unexpected args %q; put the command after `--`", args[1:])
+					return fmt.Errorf("unexpected args %q; put the command after `--` (e.g. exec ns/pod/ctr -- ls)", args[1:])
 				}
 				target = args[0]
 			} else {
