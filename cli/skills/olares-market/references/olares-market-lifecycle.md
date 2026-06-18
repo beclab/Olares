@@ -76,6 +76,16 @@ The JSON payload field is `all`. Behavior depends on the backend version:
 
 > **1.12.6 caveat — cascade-cleanup after the row is gone:** once a prior uninstall has cleared the per-user row, 1.12.6's uninstall body has no source to send, so the CLI reports an idempotent `nothing to uninstall`. `market uninstall` does **not** expose `--source`, so re-running it to tear down leftover shared sub-charts is not reachable from the CLI today — clean those up from the Market SPA.
 
+### Uninstalling an in-flight app (auto-orchestrated)
+
+app-service only accepts `uninstall` from a settled state (`running` / `stopped` / a terminal `*Failed`, including `installFailed`); while an operation is in flight it accepts only `cancel`. `market uninstall` handles this for you so **`uninstall` always means "fully remove"** regardless of state:
+
+- If the app is **in-flight** (`pending` / `downloading` / `installing` / `initializing` / `upgrading` / `applyingEnv` / `resuming`), the CLI **cancels first**, then:
+  - the `pending` / `downloading` / `installing` flow cancels into a `*Canceled` state that **tears the partial install down (namespace deleted)** — equivalent to uninstalled, so the command finishes there;
+  - `initializing` / `upgrading` / `applyingEnv` / `resuming` cancel only **stops** the app (lands in `stopped`), so the CLI then issues the **real uninstall** to finish removing it.
+- The cancel step always blocks (it must, to decide the next step) even without `--watch`.
+- `installFailed` no longer needs this dance — `uninstall` is accepted directly.
+
 ## `clone`
 
 ```bash
@@ -115,6 +125,7 @@ olares-cli market cancel firefox --watch               # block until row stops m
 - **The widest watcher in the tree**: any "row stopped moving" state counts as success, including `*Canceled`, `*Failed` (the underlying op died, cancel "won by default"), and stable resting states `running` / `stopped` / `uninstalled` (cancel raced and lost, OR rollback landed).
 - Failure is ONLY surfaced for `*CancelFailed` (the cancel request itself was rejected).
 - The terminal row carries the **underlying op** (install / upgrade / ...) as its `opType`, not `cancel`. `matchOpType` is OFF — no race-tracking gate applies.
+- **Teardown vs stop**: cancel of the `pending` / `downloading` / `installing` flow **tears the partial install down (namespace deleted)** — functionally equivalent to uninstall. Cancel of `initializing` / `upgrading` / `applyingEnv` / `resuming` only **stops** the app (lands in `stopped`); the app is still installed. `market uninstall` relies on this split when auto-orchestrating (see `uninstall` above).
 
 ## `--watch` interaction with each verb
 
@@ -122,7 +133,7 @@ olares-cli market cancel firefox --watch               # block until row stops m
 |---|---|---|
 | `install` | `running` | App already installed → returns immediately |
 | `upgrade` | `running` (matchOpType=upgrade) | — (handled by pre-flight) |
-| `uninstall` | `uninstalled`, row disappears | App already uninstalled → returns immediately |
+| `uninstall` | `uninstalled`, row disappears (or `*Canceled` when an in-flight app was auto-canceled) | App already uninstalled → returns immediately; in-flight apps are canceled first, then uninstalled if still present |
 | `clone` | `running` on the new clone name | — |
 | `stop` | `stopped` | Already stopped → returns immediately |
 | `resume` | `running` | Already running → returns immediately |
