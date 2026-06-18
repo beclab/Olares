@@ -3,9 +3,11 @@ package amdgpu
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -54,12 +56,12 @@ func (t *InstallAmdRocm) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
-	strixHaloExists, err := connector.HasStrixHalo(runtime)
+	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
 	if err != nil {
 		return err
 	}
 	// skip rocm install
-	if !strixHaloExists {
+	if !ryzenAIMaxExists {
 		return nil
 	}
 	rocmV, _ := connector.RocmVersion()
@@ -216,24 +218,25 @@ func (t *GenerateAndValidateAmdCDI) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-// UpdateNodeStrixHaloInfo updates Kubernetes node labels with Strix-Halo information.
-type UpdateNodeStrixHaloInfo struct {
+// UpdateNodeAMDInfo labels the node as supporting the "amd" mode (AMD
+// integrated GPU / Ryzen AI Max) once ROCm is present.
+type UpdateNodeAMDInfo struct {
 	common.KubeAction
 }
 
-func (u *UpdateNodeStrixHaloInfo) Execute(runtime connector.Runtime) error {
+func (u *UpdateNodeAMDInfo) Execute(runtime connector.Runtime) error {
 	client, err := clientset.NewKubeClient()
 	if err != nil {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	// Check if Strix-Halo exists
-	strixHaloExists, err := connector.HasStrixHalo(runtime)
+	// Check if an AMD Ryzen AI Max APU is present
+	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
 	if err != nil {
 		return err
 	}
-	if !strixHaloExists {
-		logger.Info("Strix-Halo is not detected")
+	if !ryzenAIMaxExists {
+		logger.Info("AMD Ryzen AI Max APU is not detected")
 		return nil
 	}
 
@@ -246,10 +249,8 @@ func (u *UpdateNodeStrixHaloInfo) Execute(runtime connector.Runtime) error {
 
 	rocmVersion := rocmV.Original()
 
-	gpuType := gpu.StrixHaloChipType
-
-	// Use ROCm version as both driver and "cuda" version for AMD
-	return gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &rocmVersion, nil, nil, &gpuType)
+	// Use the ROCm version as the driver label for the "amd" mode.
+	return gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.AMDType, &rocmVersion, nil, nil)
 }
 
 // InstallAmdPlugin installs the AMD GPU device plugin DaemonSet.
@@ -279,9 +280,18 @@ func (t *CheckAmdGpuStatus) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("kubectl not found")
 	}
 
+	// in a multi-node cluster there is one amdgpu-device-plugin pod per GPU node,
+	// so we must only check the pod scheduled on the current node.
+	nodeName, err := os.Hostname()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "get hostname error")
+	}
+	nodeName = strings.ToLower(nodeName)
+
 	// Check AMD device plugin pod status using the label from amdgpu-device-plugin.yaml
 	selector := "name=amdgpu-dp-ds"
-	cmd := fmt.Sprintf("%s get pod -n kube-system -l '%s' -o jsonpath='{.items[*].status.phase}'", kubectlpath, selector)
+	fieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
+	cmd := fmt.Sprintf("%s get pod -n kube-system -l '%s' --field-selector '%s' -o jsonpath='{.items[*].status.phase}'", kubectlpath, selector, fieldSelector)
 
 	rphase, _ := runtime.GetRunner().SudoCmd(cmd, false, false)
 	if rphase == "Running" {

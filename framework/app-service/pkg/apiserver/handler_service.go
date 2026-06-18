@@ -171,10 +171,11 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 		}
 
 		// Visibility for non-owners:
-		//   • v3 apps: always visible (vis.VisibleSharedApp == true).
-		//   • v1/v2 apps: legacy SharedEntrances feature (untouched).
+		//   • Shared apps: always visible (vis.VisibleSharedApp == true).
+		//   • Per-user apps (v1 and v3+per-user): legacy SharedEntrances
+		//     feature (untouched).
 		if am.Spec.AppOwner != owner {
-			if appcfg.IsV3(am) {
+			if appcfg.IsShared(am) {
 				if !vis.VisibleSharedApp(am.Spec.AppName) {
 					continue
 				}
@@ -185,10 +186,20 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 
 		now := metav1.Now()
 		name, _ := apputils.FmtAppMgrName(am.Spec.AppName, owner, appconfig.Namespace)
+		// Mirror the AM's clone-origin label onto the synthesized ("fake")
+		// Application so callers see it before the real Application CR exists.
+		appLabels := map[string]string{}
+		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
+			appLabels[constants.AppClonedFromKey] = v
+		}
+		if v, ok := am.Labels[constants.AppChartOwnerKey]; ok {
+			appLabels[constants.AppChartOwnerKey] = v
+		}
 		app := &appv1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              name,
+				Labels:            appLabels,
 				CreationTimestamp: am.CreationTimestamp,
 			},
 			Spec: appv1alpha1.ApplicationSpec{
@@ -198,6 +209,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
+				TailScale:       appconfig.TailScale,
 				Entrances:       appconfig.Entrances,
 				Ports:           appconfig.Ports,
 				SharedEntrances: appconfig.SharedEntrances,
@@ -215,12 +227,12 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 		}
 
 		switch {
-		case appcfg.IsV3(am):
-			// v3 apps expose the full entrance list to every
-			// viewer; lifecycle handlers enforce admin-only management.
+		case appcfg.IsShared(am):
+			// Shared apps expose the full entrance list to every viewer;
+			// lifecycle handlers enforce admin-only management.
 			appsMap[app.Name] = app
 		case am.Spec.AppOwner != owner:
-			// v1/v2 non-owner: legacy SharedEntrances behaviour — only
+			// Per-user non-owner: legacy SharedEntrances behaviour — only
 			// expose the shared subset, mask everything else.
 			app.Spec.Entrances = []appv1alpha1.Entrance{}
 			if _, ok := sharedEntranceApps[app.Spec.Appid]; !ok {
@@ -269,6 +281,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			v.Spec.Settings = a.EffectiveSettings(owner)
 			v.Spec.Entrances = a.EffectiveEntrances(owner)
 			v.Spec.Ports = a.Spec.Ports
+			v.Labels = a.Labels
 		}
 	}
 	for _, app := range appsMap {

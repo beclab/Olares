@@ -58,12 +58,6 @@ var defaultACLs = []v1alpha1.ACL{
 		Proto:  "tcp",
 		Dst:    []string{"*:80"},
 	},
-	{
-		Action: "accept",
-		Src:    []string{"*"},
-		Proto:  "",
-		Dst:    []string{"autogroup:internet:*"},
-	},
 }
 
 var defaultSubRoutes = []string{"$(COREDNS_SVC)/32"}
@@ -157,13 +151,9 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	filteredApps := make([]v1alpha1.Application, 0)
-	var sysApp *v1alpha1.Application
 	for _, app := range apps.Items {
 		if app.Spec.Owner != owner {
 			continue
-		}
-		if app.Spec.Appid == "olares-app" {
-			sysApp = &app
 		}
 		filteredApps = append(filteredApps, app)
 	}
@@ -200,7 +190,6 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 	tailScaleRouteEnv := ""
-	advertiseExitNodeEnv := "false"
 	for _, container := range tailScaleDeploy.Spec.Template.Spec.Containers {
 		if container.Name != tailScaleDeployOrContainerName {
 			continue
@@ -209,24 +198,8 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 			if env.Name == subnetRoutesEnv {
 				tailScaleRouteEnv = env.Value
 			}
-			if env.Name == advertiseExitNode {
-				advertiseExitNodeEnv = env.Value
-			}
 		}
 	}
-	isAdvertiseExitNodeChanged := func() bool {
-		if sysApp == nil {
-			return false
-		}
-		exitNode := sysApp.Spec.TailScale.AdvertiseExitNode
-		if exitNode == advertiseExitNodeEnv {
-			return false
-		}
-		if exitNode != "false" && exitNode != "true" {
-			return false
-		}
-		return true
-	}()
 
 	oldTailScaleRoutes := strings.Split(tailScaleRouteEnv, ",")
 	klog.Infof("oldTailScaleRoutes: %v", oldTailScaleRoutes)
@@ -250,34 +223,6 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 		err = r.Update(ctx, tailScaleDeploy)
 		if err != nil {
 			klog.Errorf("update tailscale deploy failed %v", err)
-			return ctrl.Result{}, err
-		}
-	}
-
-	if isAdvertiseExitNodeChanged {
-		newAdvertiseExitNodeEnv := sysApp.Spec.TailScale.AdvertiseExitNode
-		for i := range containers {
-			if containers[i].Name != tailScaleDeployOrContainerName {
-				continue
-			}
-			found := false
-			for j := range containers[i].Env {
-				if containers[i].Env[j].Name == advertiseExitNode {
-					containers[i].Env[j].Value = newAdvertiseExitNodeEnv
-					found = true
-					break
-				}
-			}
-			if !found {
-				containers[i].Env = append(containers[i].Env, corev1.EnvVar{
-					Name:  advertiseExitNode,
-					Value: newAdvertiseExitNodeEnv,
-				})
-			}
-		}
-		err = r.Update(ctx, tailScaleDeploy)
-		if err != nil {
-			klog.Errorf("update tailscale deploy advertise exit node failed %v", err)
 			return ctrl.Result{}, err
 		}
 	}
@@ -340,7 +285,6 @@ func makeACLPolicy(acls []v1alpha1.ACL) ([]byte, error) {
 				"172.16.0.0/12":  {"default@"},
 				"192.168.0.0/16": {"default@"},
 			},
-			ExitNode: []string{"default@"},
 		},
 	}
 	aclPolicyByte, err := json.Marshal(aclPolicy)

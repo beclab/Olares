@@ -41,7 +41,11 @@ func (h *Handler) status(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
-	name, err := apputils.FmtAppMgrName(app, owner, "")
+	// Resolve the AM name to whichever lifecycle variant currently exists
+	// (shared cluster-wide vs per-user). Falling back to the per-user name
+	// directly via FmtAppMgrName loses sight of shared apps any admin
+	// installed under a different owner.
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -104,9 +108,10 @@ func (h *Handler) appsStatus(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	for _, am := range appAms {
-		// v3 apps are visible to every authenticated user
-		// (admin operations are still admin-gated elsewhere).
-		if !(am.Spec.AppOwner == owner || appcfg.IsV3(am)) {
+		// Shared apps are visible to every authenticated user (admin
+		// operations are still admin-gated elsewhere). Per-user apps —
+		// including v3+per-user — are owner-only.
+		if !(am.Spec.AppOwner == owner || appcfg.IsShared(am)) {
 			continue
 		}
 		if !stateSet.Has(am.Status.State.String()) {
@@ -146,7 +151,11 @@ func (h *Handler) operate(req *restful.Request, resp *restful.Response) {
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
 	var am v1alpha1.ApplicationManager
-	name, err := apputils.FmtAppMgrName(app, owner, "")
+	// Lifecycle operations (start/stop/uninstall) must dispatch against the
+	// actual AM, not the deterministic per-user name — otherwise any admin
+	// trying to operate a shared app installed by someone else would hit a
+	// spurious "not found".
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -186,14 +195,14 @@ func (h *Handler) appsOperate(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	// filter by application's owner; v3 / shared apps are visible to all.
+	// filter by application's owner; shared apps are visible to all.
 	filteredOperates := make([]appinstaller.Operate, 0)
 	for _, am := range ams {
 		if am.Spec.Type != v1alpha1.App {
 			continue
 		}
 
-		if !(am.Spec.AppOwner == owner || appcfg.IsV3(am)) {
+		if !(am.Spec.AppOwner == owner || appcfg.IsShared(am)) {
 			continue
 		}
 		operate := appinstaller.Operate{
@@ -310,12 +319,28 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 				appconfig.Entrances[i].AuthLevel = "private"
 			}
 		}
+		appLabels := map[string]string{}
+		if appcfg.IsV3(am) {
+			appLabels[constants.AppApiVersionLabel] = constants.AppVersionV3
+		}
+		if appcfg.IsShared(am) {
+			appLabels[constants.AppSharedLabel] = constants.AppSharedTrue
+		}
+		// Mirror the AM's clone-origin label onto the synthesized Application
+		// so it is visible before the real Application CR exists.
+		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
+			appLabels[constants.AppClonedFromKey] = v
+		}
+		if v, ok := am.Labels[constants.AppChartOwnerKey]; ok {
+			appLabels[constants.AppChartOwnerKey] = v
+		}
 		now := metav1.Now()
 		name, _ := apputils.FmtAppMgrName(am.Spec.AppName, owner, appconfig.Namespace)
 		app := &v1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              name,
+				Labels:            appLabels,
 				CreationTimestamp: am.CreationTimestamp,
 			},
 			Spec: v1alpha1.ApplicationSpec{
@@ -370,6 +395,7 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			v.Spec.Settings = a.Spec.Settings
 			v.Spec.Entrances = a.Spec.Entrances
 			v.Spec.Ports = a.Spec.Ports
+			v.Labels = a.Labels
 		}
 	}
 	for _, app := range appsMap {
@@ -553,12 +579,25 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		}
 
 		now := metav1.Now()
-		// Stamp the AppScopeLabel on the synthesized Application for v3
-		// shared AMs so the per-user fan-out below can identify them
-		// without re-checking the AM.
+		// Stamp marker labels on the synthesized Application so the
+		// per-user fan-out and visibility checks below can identify
+		// shared / v3 apps without re-checking the AM. The shared label
+		// is what drives broad visibility; the api-version label is the
+		// schema marker (also stamped on v3+per-user AMs).
 		appLabels := map[string]string{}
 		if appcfg.IsV3(am) {
 			appLabels[constants.AppApiVersionLabel] = constants.AppVersionV3
+		}
+		if appcfg.IsShared(am) {
+			appLabels[constants.AppSharedLabel] = constants.AppSharedTrue
+		}
+		// Mirror the AM's clone-origin label onto the synthesized Application
+		// so it is visible before the real Application CR exists.
+		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
+			appLabels[constants.AppClonedFromKey] = v
+		}
+		if v, ok := am.Labels[constants.AppChartOwnerKey]; ok {
+			appLabels[constants.AppChartOwnerKey] = v
 		}
 		app := v1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},
@@ -575,6 +614,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				Entrances:       appconfig.Entrances,
+				TailScale:       appconfig.TailScale,
 				Ports:           appconfig.Ports,
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,
@@ -613,6 +653,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			v.Spec.Settings = a.Spec.Settings
 			v.Spec.Entrances = a.Spec.Entrances
 			v.Spec.Ports = a.Spec.Ports
+			v.Labels = a.Labels
 		}
 	}
 
@@ -646,15 +687,16 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		if v, ok := appsEntranceMap[app.Name]; ok {
 			app.Status.EntranceStatuses = v.Status.EntranceStatuses
 		}
-		// v3 apps are cluster-wide singletons. Fan out one entry per
+		// Shared apps are cluster-wide singletons. Fan out one entry per
 		// iam user so consumers grouping by Owner see them under every
-		// account (matching the v1/v2 per-user-AM shape). Every user may
-		// open the app; lifecycle is admin-only.
+		// account (matching the v1 per-user-AM shape). Every user may
+		// open the app; lifecycle is admin-only. v3 per-user apps fall
+		// through with the regular owner-scoped layout.
 		//
 		// For each fanned-out copy, overlay Spec.UserSettings[u] on top
 		// of Spec.Settings / Spec.Entrances so consumers see that user's
 		// effective customDomain / policy / authLevel.
-		if appcfg.IsV3(app) {
+		if appcfg.IsShared(app) {
 			users, uErr := loadAllUsers()
 			if uErr != nil {
 				api.HandleError(resp, req, uErr)

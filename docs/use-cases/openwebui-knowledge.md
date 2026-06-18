@@ -37,11 +37,11 @@ Before you begin, ensure you have the following in place:
 
 Document understanding requires an embedding model to convert text into vector data. To configure Open WebUI, you must first retrieve your embedding model details.
 
-<!--@include: ./openwebui-search.md{38,46}-->
+<!--@include: ./openwebui-search.md{40,46}-->
 
 ### Apply embedding settings in Open WebUI
 
-<!--@include: ./openwebui-search.md{61,69}-->
+<!--@include: ./openwebui-search.md{62,69}-->
 
 ## Analyze individual documents
 

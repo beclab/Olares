@@ -60,6 +60,44 @@ func DeleteAllocationsForComputeTarget(ctx context.Context, c client.Client, app
 	return DeleteAllocationsForApp(ctx, c, target.AppName, target.OwnerName)
 }
 
+// EnsureAllocationsDeletedForComputeTarget releases any leftover compute
+// allocation (and its HAMI bindings) for the app's compute target, but only
+// when one still exists. Unlike DeleteAllocationsForComputeTarget it first
+// reads the allocation rows and skips the ConfigMap rewrite when there is
+// nothing to remove, so it is safe to call from steady-state reconciles (the
+// Stopped / Uninstalled / *Failed handlers run on every pass) without churning
+// the single shared allocation ConfigMap or contending on its optimistic lock.
+// It returns true only when a cleanup was actually performed.
+func EnsureAllocationsDeletedForComputeTarget(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig, includeSharedServer bool) (bool, error) {
+	if appConfig == nil {
+		return false, nil
+	}
+	// Mirror DeleteAllocationsForComputeTarget: for v2 cluster-shared apps the
+	// only allocation row lives at (appName, sharedServerOwner). Leave it and
+	// its bindings alone unless the caller intends to touch the shared server.
+	if appConfig.IsV2() && appConfig.HasClusterSharedCharts() && !includeSharedServer {
+		return false, nil
+	}
+	target, _, err := resolveComputeTarget(ctx, c, appConfig, includeSharedServer)
+	if err != nil {
+		return false, err
+	}
+	if target == nil {
+		return false, nil
+	}
+	allocations, err := FindAllocationsForApp(ctx, c, target.AppName, target.OwnerName)
+	if err != nil {
+		return false, err
+	}
+	if len(allocations) == 0 {
+		return false, nil
+	}
+	if err := DeleteAllocationsForApp(ctx, c, target.AppName, target.OwnerName); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func ManagesSharedServer(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) (bool, error) {
 	target, manage, err := resolveComputeTarget(ctx, c, appConfig, false)
 	if err != nil {

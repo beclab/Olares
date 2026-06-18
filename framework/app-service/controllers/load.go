@@ -69,7 +69,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 										return fmt.Sprintf("force delete application %s successfully", app.Name)
 									}(),
 									MarketSource: am.Annotations[constants.AppMarketSourceKey],
-									IsV3:         appcfg.IsV3(&app),
+									IsShared:     appcfg.IsShared(&app),
 								})
 
 								ticker := time.NewTicker(2 * time.Second)
@@ -95,7 +95,7 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 												Reason:       constants.AppForceUninstalled,
 												Message:      fmt.Sprintf("app %s was force uninstalled", app.Spec.Name),
 												MarketSource: am.Annotations[constants.AppMarketSourceKey],
-												IsV3:         appcfg.IsV3(&app),
+												IsShared:     appcfg.IsShared(&app),
 											})
 											return
 										}
@@ -163,11 +163,13 @@ func LoadStatefulApp(ctx context.Context, appmgr *ApplicationManagerController, 
 		case appv1alpha1.ResumeFailed:
 			return appstate.NewResumeFailedApp(appmgr, &am)
 
+		case appv1alpha1.Stopped:
+			return appstate.NewStoppedApp(appmgr, &am)
 		case appv1alpha1.DownloadFailed,
 			appv1alpha1.PendingCanceled, appv1alpha1.DownloadingCanceled,
 			appv1alpha1.InstallingCanceled, appv1alpha1.InitializingCanceled,
 			appv1alpha1.UpgradingCanceled, appv1alpha1.ApplyingEnvCanceled,
-			appv1alpha1.ResumingCanceled, appv1alpha1.Stopped:
+			appv1alpha1.ResumingCanceled:
 			return appstate.NewDoNothingApp(appmgr, &am)
 		case appv1alpha1.InstallFailed:
 			return appstate.NewInstallFailedApp(appmgr, &am)

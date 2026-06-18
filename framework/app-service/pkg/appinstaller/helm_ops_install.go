@@ -193,21 +193,36 @@ func (h *HelmOps) BuildDeploymentLabelPatchData() (nsLabels map[string]string, w
 	ports := ToAppTCPUDPPorts(h.app.Ports)
 	tailScale := ToTailScale(h.app.TailScale)
 
+	workloadLabels := map[string]string{
+		constants.ApplicationNameLabel:       h.app.AppName,
+		constants.ApplicationRawAppNameLabel: h.app.RawAppName,
+		constants.ApplicationOwnerLabel:      h.app.OwnerName,
+		constants.ApplicationTargetLabel:     h.app.Target,
+		constants.ApplicationRunAsUserLabel:  strconv.FormatBool(h.app.RunAsUser),
+		constants.ApplicationMiddlewareLabel: func() string {
+			if h.app.Type == appv1alpha1.Middleware.String() {
+				return "true"
+			}
+			return "false"
+		}(),
+	}
+	// Stamp the clone origin on the workload so the Application controller can
+	// propagate it onto the Application CR. Only set when the app was cloned;
+	// a regular install leaves the label off the deployment.
+	if h.app.ClonedFrom != "" {
+		workloadLabels[constants.AppClonedFromKey] = h.app.ClonedFrom
+	}
+	// Stamp the chart owner on the workload so the Application controller can
+	// propagate it onto the Application CR. Only set for uploaded apps; market
+	// installs leave the label off the deployment (push events fall back to
+	// the installing user via appcfg.GetChartOwner).
+	if h.app.ChartOwner != "" {
+		workloadLabels[constants.AppChartOwnerKey] = h.app.ChartOwner
+	}
+
 	workloadPatchData = map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"labels": map[string]string{
-				constants.ApplicationNameLabel:       h.app.AppName,
-				constants.ApplicationRawAppNameLabel: h.app.RawAppName,
-				constants.ApplicationOwnerLabel:      h.app.OwnerName,
-				constants.ApplicationTargetLabel:     h.app.Target,
-				constants.ApplicationRunAsUserLabel:  strconv.FormatBool(h.app.RunAsUser),
-				constants.ApplicationMiddlewareLabel: func() string {
-					if h.app.Type == appv1alpha1.Middleware.String() {
-						return "true"
-					}
-					return "false"
-				}(),
-			},
+			"labels": workloadLabels,
 			"annotations": map[string]string{
 				constants.ApplicationIconLabel:    h.app.Icon,
 				constants.ApplicationTitleLabel:   h.app.Title,
@@ -986,6 +1001,11 @@ func (h *HelmOps) WaitForLaunch() (bool, error) {
 			entranceCount++
 		}
 	}
+	// unrecoverableSince records when an unrecoverable pod condition was first
+	// observed while the entrances are still unreachable. Once it persists past
+	// unrecoverableGrace, the launch fails fast instead of polling until the
+	// outer initializing TTL (60m) expires.
+	var unrecoverableSince time.Time
 	for {
 		select {
 		case <-timer.C:
@@ -1004,11 +1024,88 @@ func (h *HelmOps) WaitForLaunch() (bool, error) {
 				return true, nil
 			}
 
+			if reason, ok := h.hasUnrecoverablePod(h.ctx); ok {
+				if unrecoverableSince.IsZero() {
+					unrecoverableSince = time.Now()
+					klog.Warningf("app %s has unrecoverable pod (%s); will fail launch if it persists for %s",
+						h.app.AppName, reason, unrecoverableGrace)
+				} else if time.Since(unrecoverableSince) > unrecoverableGrace {
+					return false, fmt.Errorf("app %s failed to launch: %s", h.app.AppName, reason)
+				}
+			} else {
+				unrecoverableSince = time.Time{}
+			}
+
 		case <-h.ctx.Done():
 			klog.Infof("Waiting for launch canceled appName=%s", h.app.AppName)
 			return false, h.ctx.Err()
 		}
 	}
+}
+
+const (
+	// unrecoverableGrace is how long an unrecoverable pod condition must
+	// persist (while entrances remain unreachable) before WaitForLaunch
+	// gives up. It tolerates transient crashes during normal startup.
+	unrecoverableGrace = 5 * time.Minute
+	// crashLoopRestartThreshold is the minimum container restart count for a
+	// CrashLoopBackOff pod to be treated as unrecoverable. CrashLoopBackOff
+	// backoff caps at 300s, so >=5 restarts means several minutes of failing.
+	crashLoopRestartThreshold = 5
+)
+
+// hasUnrecoverablePod inspects pods in the app namespace and reports whether
+// any is in a state that will not heal on its own. It returns a human-readable
+// reason and true when such a pod is found.
+//
+// Two tiers are considered:
+//   - hard errors that never self-heal: ImagePullBackOff, ErrImagePull,
+//     InvalidImageName, CreateContainerConfigError, and Unschedulable pods.
+//   - CrashLoopBackOff with RestartCount >= crashLoopRestartThreshold, which
+//     covers a dependency that keeps crashing (e.g. due to a permission error)
+//     while avoiding false positives on slow-starting apps.
+func (h *HelmOps) hasUnrecoverablePod(ctx context.Context) (string, bool) {
+	pods, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(h.app.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Warningf("list pods in namespace %s failed, skip unrecoverable check: %v", h.app.Namespace, err)
+		return "", false
+	}
+
+	hardErrorReasons := map[string]bool{
+		"ImagePullBackOff":           true,
+		"ErrImagePull":               true,
+		"InvalidImageName":           true,
+		"CreateContainerConfigError": true,
+	}
+
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+
+		for _, cond := range pod.Status.Conditions {
+			if cond.Type == corev1.PodScheduled && cond.Status == corev1.ConditionFalse &&
+				cond.Reason == corev1.PodReasonUnschedulable {
+				return fmt.Sprintf("pod %s unschedulable: %s", pod.Name, cond.Message), true
+			}
+		}
+
+		statuses := append([]corev1.ContainerStatus{}, pod.Status.InitContainerStatuses...)
+		statuses = append(statuses, pod.Status.ContainerStatuses...)
+		for _, cs := range statuses {
+			waiting := cs.State.Waiting
+			if waiting == nil {
+				continue
+			}
+			if hardErrorReasons[waiting.Reason] {
+				return fmt.Sprintf("pod %s container %s: %s (%s)", pod.Name, cs.Name, waiting.Reason, waiting.Message), true
+			}
+			if waiting.Reason == "CrashLoopBackOff" && cs.RestartCount >= crashLoopRestartThreshold {
+				return fmt.Sprintf("pod %s container %s: CrashLoopBackOff after %d restarts (%s)",
+					pod.Name, cs.Name, cs.RestartCount, waiting.Message), true
+			}
+		}
+	}
+
+	return "", false
 }
 
 func (h *HelmOps) App() *appcfg.ApplicationConfig {

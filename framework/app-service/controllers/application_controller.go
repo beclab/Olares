@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -298,6 +299,15 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	if v, ok := deployment.GetLabels()[constants.AppApiVersionLabel]; ok && v != "" {
 		appLabels[constants.AppApiVersionLabel] = v
 	}
+	if v, ok := deployment.GetLabels()[constants.AppSharedLabel]; ok && v != "" {
+		appLabels[constants.AppSharedLabel] = v
+	}
+	if v, ok := deployment.GetLabels()[constants.AppClonedFromKey]; ok && v != "" {
+		appLabels[constants.AppClonedFromKey] = v
+	}
+	if v, ok := deployment.GetLabels()[constants.AppChartOwnerKey]; ok && v != "" {
+		appLabels[constants.AppChartOwnerKey] = v
+	}
 	// create the application cr
 	newapp := &appv1alpha1.Application{
 		TypeMeta: metav1.TypeMeta{},
@@ -322,6 +332,9 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	}
 	if tailScale != nil {
 		newapp.Spec.TailScale = *tailScale
+	}
+	if err := gateway.ApplyRouteModeAnnotation(ctx, r.Client, newapp); err != nil {
+		klog.Warningf("apply gateway route-mode for new app %s err=%v", name, err)
 	}
 	app, err := r.AppClientset.AppV1alpha1().Applications().Create(ctx, newapp, metav1.CreateOptions{})
 	if err != nil {
@@ -458,13 +471,38 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	klog.Infof("deploymentname: %s, version: %v", deployment.GetName(), deployment.GetResourceVersion())
 	appCopy.Annotations[deploymentResourceVersionAnnotation] = deployment.GetResourceVersion()
 
-	// Propagate the v3 marker from the deployment so the
-	// Application CR carries it for downstream visibility / proxy fan-out.
+	// Propagate the v3 schema marker and the shared marker from the
+	// deployment so the Application CR carries them for downstream
+	// visibility / proxy fan-out / NetworkPolicy decisions.
 	if v, ok := deployment.GetLabels()[constants.AppApiVersionLabel]; ok && v != "" {
 		if appCopy.Labels == nil {
 			appCopy.Labels = make(map[string]string)
 		}
 		appCopy.Labels[constants.AppApiVersionLabel] = v
+	}
+	if v, ok := deployment.GetLabels()[constants.AppSharedLabel]; ok && v != "" {
+		if appCopy.Labels == nil {
+			appCopy.Labels = make(map[string]string)
+		}
+		appCopy.Labels[constants.AppSharedLabel] = v
+	}
+	if v, ok := deployment.GetLabels()[constants.AppClonedFromKey]; ok && v != "" {
+		if appCopy.Labels == nil {
+			appCopy.Labels = make(map[string]string)
+		}
+		appCopy.Labels[constants.AppClonedFromKey] = v
+	}
+	if v, ok := deployment.GetLabels()[constants.AppChartOwnerKey]; ok && v != "" {
+		if appCopy.Labels == nil {
+			appCopy.Labels = make(map[string]string)
+		}
+		appCopy.Labels[constants.AppChartOwnerKey] = v
+	}
+
+	// Run after the shared/api-version labels are propagated above so the
+	// shared-app check sees the labels this Patch is about to persist.
+	if err := gateway.ApplyRouteModeAnnotation(ctx, r.Client, appCopy); err != nil {
+		klog.Warningf("apply gateway route-mode for app %s err=%v", appCopy.Spec.Name, err)
 	}
 
 	err = r.Patch(ctx, appCopy, client.MergeFrom(app))
@@ -639,7 +677,7 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 				}
 
 				sharedEntrances = appCfg.SharedEntrances
-			} else if appCfg.IsV3() {
+			} else if appCfg.IsShared() {
 				sharedEntrances = appCfg.SharedEntrances
 			}
 			if appCfg.MobileSupported {

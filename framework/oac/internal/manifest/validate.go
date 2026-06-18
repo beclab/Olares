@@ -104,7 +104,7 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 			validation.Required.Error("spec is required"),
 			validation.By(validateAppSpecFor(c)),
 		),
-		validation.Field(&c.Options, validation.By(validateOptions)),
+		validation.Field(&c.Options, validation.By(validateOptionsFor(c))),
 		validation.Field(&c.OverlayGateway, validation.By(validateOverlayGateway)),
 	)
 	return errors.Join(structErr, checkSubCharts(c), validatePermission(c.ConfigVersion, c.Permission), validateV3Configuration(c))
@@ -181,7 +181,7 @@ func validateAppSpecFor(cfg *AppConfiguration) validation.RuleFunc {
 		if !ok {
 			return fmt.Errorf("spec: unexpected type %T", v)
 		}
-		return validateAppSpec(cfg.ConfigVersion, cfg.APIVersion, s)
+		return validateAppSpec(cfg.ConfigVersion, cfg.APIVersion, cfg.Options.TemplateOnly, s)
 	}
 }
 
@@ -230,11 +230,10 @@ func normalizeAPIVersion(api string) string {
 // only validated as Kubernetes quantities. They live at the spec level for
 // backwards compatibility but should be expressed inside a
 // spec.resources[] entry on modern manifests.
-func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
-	quantityRule := validation.Match(k8sQuantity).Error("must be a valid Kubernetes quantity")
-	optionalGPUQuantity := validation.When(s.RequiredGPU != "", quantityRule)
-	optionalLimitedGPUQuantity := validation.When(s.LimitedGPU != "", quantityRule)
-	optionalLimitedDiskQuantity := validation.When(s.LimitedDisk != "", quantityRule)
+func validateAppSpec(configVersion, apiVersion string, templateOnly bool, s AppSpec) error {
+	optionalGPUQuantity := validation.When(s.RequiredGPU != "", flatResourceQuantityRule("spec.requiredGpu", templateOnly))
+	optionalLimitedGPUQuantity := validation.When(s.LimitedGPU != "", flatResourceQuantityRule("spec.limitedGpu", templateOnly))
+	optionalLimitedDiskQuantity := validation.When(s.LimitedDisk != "", flatResourceQuantityRule("spec.limitedDisk", templateOnly))
 
 	fields := []*validation.FieldRules{
 		validation.Field(&s.RequiredGPU, optionalGPUQuantity),
@@ -268,7 +267,7 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 	case modern:
 		fields = append(fields,
 			validation.Field(&s.Accelerator,
-				validation.By(validateResourceModeValueFor(&s)),
+				validation.By(validateResourceModeValueFor(templateOnly, &s)),
 			),
 		)
 	case isLegacyEnvelopeMissing(&s):
@@ -279,7 +278,7 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 			validation.Field(&s.LimitedDisk, optionalLimitedDiskQuantity),
 		)
 	default:
-		fields = append(fields, legacyEnvelopeFieldRules(&s, quantityRule, optionalLimitedDiskQuantity)...)
+		fields = append(fields, legacyEnvelopeFieldRules(&s, templateOnly)...)
 	}
 
 	structErr := validation.ValidateStruct(&s, fields...)
@@ -294,25 +293,35 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 // Factored out of validateAppSpec so the legacy branch can install it with
 // a single append, and so any future caller (or test) that wants the same
 // shape doesn't have to redeclare every Field rule.
-func legacyEnvelopeFieldRules(s *AppSpec, quantityRule, optionalLimitedDiskQuantity validation.Rule) []*validation.FieldRules {
+func legacyEnvelopeFieldRules(s *AppSpec, templateOnly bool) []*validation.FieldRules {
 	return []*validation.FieldRules{
 		validation.Field(&s.RequiredMemory,
 			validation.Required.Error("spec.requiredMemory is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
+			flatResourceQuantityRule("spec.requiredMemory", templateOnly)),
 		validation.Field(&s.RequiredDisk,
 			validation.Required.Error("spec.requiredDisk is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
+			flatResourceQuantityRule("spec.requiredDisk", templateOnly)),
 		validation.Field(&s.RequiredCPU,
 			validation.Required.Error("spec.requiredCpu is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
+			flatResourceQuantityRule("spec.requiredCpu", templateOnly)),
 		validation.Field(&s.LimitedMemory,
 			validation.Required.Error("spec.limitedMemory is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
+			flatResourceQuantityRule("spec.limitedMemory", templateOnly)),
 		validation.Field(&s.LimitedCPU,
 			validation.Required.Error("spec.limitedCpu is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
-		validation.Field(&s.LimitedDisk, optionalLimitedDiskQuantity),
+			flatResourceQuantityRule("spec.limitedCpu", templateOnly)),
+		validation.Field(&s.LimitedDisk,
+			validation.When(s.LimitedDisk != "", flatResourceQuantityRule("spec.limitedDisk", templateOnly))),
 	}
+}
+
+// flatResourceQuantityRule validates a legacy flat spec.* quantity field.
+// When templateOnly is true, non-disk fields may use AutoResourceValue ("-1").
+func flatResourceQuantityRule(field string, templateOnly bool) validation.Rule {
+	return validation.By(func(value interface{}) error {
+		s, _ := value.(string)
+		return validateResourceQuantity(s, field, templateOnly, false)
+	})
 }
 
 // validateResourceModeValueFor binds spec so the modern (>= 0.12.0,
@@ -339,16 +348,16 @@ func legacyEnvelopeFieldRules(s *AppSpec, quantityRule, optionalLimitedDiskQuant
 // fields) is still enforced by ensureLegacyAndResourcesAreMutuallyExclusive
 // from specResourceCrossFieldRules, which runs for every version, so this
 // closure does not need to repeat it.
-func validateResourceModeValueFor(spec *AppSpec) validation.RuleFunc {
+func validateResourceModeValueFor(templateOnly bool, spec *AppSpec) validation.RuleFunc {
 	return func(v interface{}) error {
 		var errs []error
 		for i, rm := range spec.Accelerator {
-			if err := ValidateResourceMode(rm); err != nil {
+			if err := ValidateResourceMode(rm, templateOnly); err != nil {
 				errs = append(errs, fmt.Errorf("spec.resources[%d]: %w", i, err))
 			}
 		}
 		if len(spec.Accelerator) == 0 {
-			if err := validateFlatResourceQuantities(spec); err != nil {
+			if err := validateFlatResourceQuantities(spec, templateOnly); err != nil {
 				errs = append(errs, err)
 			}
 			if !hasAnyFlatResourceQuantity(spec) {
@@ -390,7 +399,7 @@ func hasAnyFlatResourceQuantity(spec *AppSpec) bool {
 // quantities, so a manifest that mixes any of them will get format
 // feedback before Rule 7 weighs in on whether they were allowed to be
 // set at all.
-func validateFlatResourceQuantities(spec *AppSpec) error {
+func validateFlatResourceQuantities(spec *AppSpec, templateOnly bool) error {
 	pairs := []struct {
 		name  string
 		value string
@@ -406,14 +415,8 @@ func validateFlatResourceQuantities(spec *AppSpec) error {
 	}
 	var errs []error
 	for _, p := range pairs {
-		if p.value == "" {
-			continue
-		}
-		if !k8sQuantity.MatchString(p.value) {
-			errs = append(errs, fmt.Errorf(
-				"%s must be a valid Kubernetes quantity (got %q)",
-				p.name, p.value,
-			))
+		if err := validateResourceQuantity(p.value, p.name, templateOnly, false); err != nil {
+			errs = append(errs, err)
 		}
 	}
 	return errors.Join(errs...)
@@ -468,18 +471,56 @@ func validateOverlayGateway(v interface{}) error {
 	return errors.Join(errs...)
 }
 
-func validateOptions(v interface{}) error {
-	o, ok := v.(Options)
-	if !ok {
-		return fmt.Errorf("options: unexpected type %T", v)
+// validateOptionsFor binds the manifest's apiVersion so options-level
+// cross-field checks (templateOnly => allowMultipleInstall, shared => v3)
+// can reach it. ozzo's validation.By only sees the Options value, so the
+// outer AppConfiguration must be captured here in a closure.
+func validateOptionsFor(cfg *AppConfiguration) validation.RuleFunc {
+	return func(v interface{}) error {
+		o, ok := v.(Options)
+		if !ok {
+			return fmt.Errorf("options: unexpected type %T", v)
+		}
+		return validateOptions(cfg.APIVersion, o)
 	}
-	return validation.ValidateStruct(&o,
+}
+
+// validateOptions runs the options-level validation. It is parameterised on
+// apiVersion because two cross-field rules depend on it:
+//
+//   - options.templateOnly=true requires options.allowMultipleInstall=true.
+//     Template-only apps are installed as multiple clones from a single
+//     template chart; without allowMultipleInstall the platform would only
+//     ever install a single instance, defeating the purpose of the flag.
+//   - options.shared=true is only meaningful on apiVersion=v3. v3 is the
+//     only schema where a single install services multiple users, so a
+//     shared install on v1/v2 would be silently ignored at install time
+//     and is rejected here to avoid the foot-gun.
+//
+// Both cross-field errors are aggregated alongside the existing per-field
+// struct validation so a manifest that violates more than one rule sees
+// every offender in a single Lint run.
+func validateOptions(apiVersion string, o Options) error {
+	structErr := validation.ValidateStruct(&o,
 		validation.Field(&o.Policies, validation.Each(validation.By(validatePolicyValue))),
 		validation.Field(&o.ResetCookie),
 		validation.Field(&o.Dependencies, validation.Each(validation.By(validateDependencyValue))),
 		validation.Field(&o.AppScope),
 		validation.Field(&o.WsConfig),
 	)
+	var crossErrs []error
+	if o.TemplateOnly && !o.AllowMultipleInstall {
+		crossErrs = append(crossErrs, fmt.Errorf(
+			"options.allowMultipleInstall must be true when options.templateOnly is true; template-only apps are installed as multiple clones",
+		))
+	}
+	if o.Shared && normalizeAPIVersion(apiVersion) != APIVersionV3 {
+		crossErrs = append(crossErrs, fmt.Errorf(
+			"options.shared=true is only supported for apiVersion=v3 (got %q)",
+			apiVersion,
+		))
+	}
+	return errors.Join(structErr, errors.Join(crossErrs...))
 }
 
 func validatePolicyValue(v interface{}) error {

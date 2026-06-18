@@ -248,11 +248,11 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 			ns.Labels[security.NamespaceOwnerLabel] = owner
 			updated = true
 		}
-	} else if v, ok := ns.Labels[constants.AppApiVersionLabel]; ok && v == constants.AppVersionV3 {
-		// V3 namespace fast path.
+	} else if v, ok := ns.Labels[constants.AppSharedLabel]; ok && v == constants.AppSharedTrue {
+		// Shared namespace fast path.
 		//
 		// The install handler explicitly stamps:
-		//   - applications.app.bytetrade.io/scope=shared
+		//   - app.bytetrade.io/shared=true
 		//   - bytetrade.io/ns-owner=<admin>
 		// so we MUST NOT fall through to the generic findOwnerOfNamespace
 		// branch below — that branch reverse-engineers ownership from
@@ -260,6 +260,9 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 		// deployment label patch may not have landed yet, which would
 		// then wipe the ns-owner label we just set and drop the namespace
 		// back into the "others-np" deny-all bucket on every reconcile.
+		//
+		// v3+per-user namespaces do NOT carry the shared label and are
+		// handled by the regular per-user owner branch below.
 		//
 		// Belt-and-suspenders: if ns-owner is somehow missing (legacy
 		// installs, manual edits), reconstruct it from the
@@ -369,6 +372,11 @@ func (r *SecurityReconciler) createOrUpdateNetworkPolicy(ctx context.Context,
 			found = true
 		} else {
 			if namespaceNetworkPolicies != nil && !namespaceNetworkPolicies.Contains(&np) {
+				// routecontrol reconcilers (e.g. WI-LITE-6 caller ingress NP on
+				// os-gateway) write NP outside security templates; do not prune.
+				if security.IsRouteControlManagedNP(&np) {
+					continue
+				}
 				if err := r.Delete(ctx, &np); err != nil {
 					return err
 				}
@@ -467,8 +475,8 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 			npFix = func(np *netv1.NetworkPolicy) {
 				logger.Info("Update network policy", "name", networkPolicy.Name())
 			}
-		} else if scope, ok := ns.Labels[constants.AppApiVersionLabel]; ok && scope == constants.AppVersionV3 {
-			// V3 namespace.
+		} else if scope, ok := ns.Labels[constants.AppSharedLabel]; ok && scope == constants.AppSharedTrue {
+			// Shared-app namespace.
 			//
 			// Emits exactly 4 NetworkPolicies into <app>-shared:
 			//   - app-np            (main, from NPAppSpace template; npFix
@@ -1015,10 +1023,10 @@ func (r *SecurityReconciler) findV3SharedAppOwner(ctx context.Context, nsName st
 	}
 	for i := range amList.Items {
 		am := &amList.Items[i]
-		if !appcfg.IsV3(am) {
+		if !appcfg.IsShared(am) {
 			continue
 		}
-		if apputils.V3AppNamespace(am.Spec.AppName) == nsName {
+		if apputils.SharedAppNamespace(am.Spec.AppName) == nsName {
 			return am.Spec.AppOwner, nil
 		}
 	}

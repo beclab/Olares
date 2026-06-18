@@ -2,7 +2,7 @@
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) and [olares-chart-manifest.md](olares-chart-manifest.md) first. This is refinement area 3 — the database/queue and companion-app half of the manifest. Env wiring of the `.Values.<mw>.*` values below is in [olares-chart-env.md](olares-chart-env.md).
 
-> **Same for both release targets** — functional requirement, not cosmetic.
+> **Functional requirement, not cosmetic** — always required.
 
 ## Use the system service, don't bundle one
 

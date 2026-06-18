@@ -55,6 +55,11 @@ func (u upgraderBase) PrepareForUpgrade() []task.Interface {
 			Action: new(prepareUserInfoForUpgrade),
 			Retry:  5,
 		},
+		&task.LocalTask{
+			Name:   "Update Hosts",
+			Action: new(terminus.UpdateKubeKeyHosts),
+			Retry:  5,
+		},
 	)
 	return tasks
 }
@@ -142,7 +147,7 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 		},
 		&task.LocalTask{
 			Name:   "UpgradeL4BFLProxy",
-			Action: &upgradeL4BFLProxy{Tag: "v0.3.22"},
+			Action: &upgradeL4BFLProxy{Tag: "v0.3.32"},
 			Retry:  6,
 			Delay:  15 * time.Second,
 		},

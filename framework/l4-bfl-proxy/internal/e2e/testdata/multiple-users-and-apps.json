@@ -512,6 +512,9 @@
                           },
                           {
                             "exact": "x-authorization"
+                          },
+                          {
+                            "exact": "x-forwarded-for"
                           }
                         ]
                       }
@@ -691,6 +694,9 @@
                           },
                           {
                             "exact": "x-authorization"
+                          },
+                          {
+                            "exact": "x-forwarded-for"
                           }
                         ]
                       }
@@ -890,6 +896,9 @@
                           },
                           {
                             "exact": "x-authorization"
+                          },
+                          {
+                            "exact": "x-forwarded-for"
                           }
                         ]
                       }
@@ -1069,6 +1078,9 @@
                           },
                           {
                             "exact": "x-authorization"
+                          },
+                          {
+                            "exact": "x-forwarded-for"
                           }
                         ]
                       }

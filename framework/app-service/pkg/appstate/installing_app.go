@@ -105,11 +105,33 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 					Token:     token,
 				}
 
+				// toInstallFailed is the single entry point for every "this install
+				// failed, mark the AM InstallFailed" path. Before flipping the
+				// status it runs cleanupAfterInstallFailure synchronously: that
+				// helper is idempotent and handles the resource gaps left by
+				// post-helm-validation (path D) and Scale (path E) failures, and
+				// — critically — blocks until manager.Spec.AppNamespace is
+				// confirmed IsNotFound (up to installFailureNSDeletionTimeout)
+				// so callers observing InstallFailed can trust the strong
+				// invariant "NS already gone, AM safely deletable".
+				//
+				// If cleanup times out the helper returns context.DeadlineExceeded;
+				// we still transition to InstallFailed (we must not block the
+				// state machine indefinitely) but tag Status.Message with the
+				// timeout so operators can investigate, and InstallFailedApp.Exec
+				// will keep retrying the same helper on subsequent reconciles.
 				toInstallFailed := func(msg string) {
+					cleanupErr := cleanupAfterInstallFailure(context.TODO(), p.client, p.manager)
+					finalMsg := msg
+					if cleanupErr != nil {
+						klog.Warningf("install-failure cleanup for %s timed out waiting for NS: %v; will retry in InstallFailedApp.Exec",
+							p.manager.Name, cleanupErr)
+						finalMsg = fmt.Sprintf("%s; cleanup timeout: %v", msg, cleanupErr)
+					}
 					p.finally = func() {
 						klog.Errorf("app %s install failed, update app state to installFailed", p.manager.Spec.AppName)
 						opRecord := makeRecord(p.manager, appsv1.InstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, msg))
-						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallFailed, opRecord, msg, appsv1.InstallFailed.String())
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallFailed, opRecord, finalMsg, appsv1.InstallFailed.String())
 						if updateErr != nil {
 							klog.Errorf("update status failed %v", updateErr)
 						}
@@ -157,20 +179,18 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 					})
 				if err != nil {
 					klog.Errorf("make helm ops failed %v", err)
-					p.finally = func() {
-						klog.Errorf("app %s install failed, update app state to installFailed", p.manager.Spec.AppName)
-						opRecord := makeRecord(p.manager, appsv1.InstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
-						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallFailed, opRecord, err.Error(), appsv1.InstallFailed.String())
-						if updateErr != nil {
-							klog.Errorf("update status failed %v", updateErr)
-						}
-					}
+					toInstallFailed(err.Error())
 					return
 				}
 
 				err = ops.Install()
 				if err != nil {
 					klog.Errorf("install app %s failed %v", p.manager.Spec.AppName, err)
+					// Release compute allocation up-front so the pending-pod paths
+					// (ErrServerSidePodPending / ErrPodPending → Stopping) don't leak
+					// the GPU/compute reservation. The generic InstallFailed branch
+					// below re-runs the same cleanup via cleanupAfterInstallFailure
+					// but that call is idempotent.
 					if cleanupErr := compute.DeleteAllocationsForApp(context.TODO(), p.client, appCfg.AppName, appCfg.OwnerName); cleanupErr != nil {
 						klog.Warningf("cleanup compute allocation for failed install %s failed: %v", appCfg.AppName, cleanupErr)
 					}
@@ -224,24 +244,19 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 						return
 					}
 
-					p.finally = func() {
-						klog.Errorf("app %s install failed, update app state to installFailed", p.manager.Spec.AppName)
-						opRecord := makeRecord(p.manager, appsv1.InstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
-						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallFailed, opRecord, err.Error(), appsv1.InstallFailed.String())
-						if updateErr != nil {
-							klog.Errorf("update status failed %v", updateErr)
-						}
-					}
-
+					toInstallFailed(err.Error())
 					return
 				} // end of err != nil
 
 				if twoPhase {
 					decision, runErr := runValidation()
 					if runErr != nil {
-						if cleanupErr := compute.DeleteAllocationsForApp(context.TODO(), p.client, appCfg.AppName, appCfg.OwnerName); cleanupErr != nil {
-							klog.Warningf("cleanup compute allocation after post-helm validation error for %s failed: %v", appCfg.AppName, cleanupErr)
-						}
+						// Path D: ops.Install() already succeeded, so helm release + main
+						// NS + permissions + Provider are still in the cluster. cleanupAfter
+						// InstallFailure (invoked by toInstallFailed) is the only thing that
+						// actually tears these down and confirms NS is gone before we mark
+						// InstallFailed; the old standalone compute.DeleteAllocationsForApp
+						// call has been folded into the helper.
 						toInstallFailed(runErr.Error())
 						return
 					}
@@ -289,18 +304,15 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 				// Scale up to the manifest-declared replica counts via a
 				// second helm upgrade. Any failure here is treated as a
 				// generic install failure to mirror the v1 behavior.
+				//
+				// Path E: ops.Install() already succeeded, so the helm release is in
+				// the cluster. cleanupAfterInstallFailure (invoked by toInstallFailed)
+				// owns the teardown + NS-gone confirmation before InstallFailed; the
+				// old standalone compute.DeleteAllocationsForApp call has been folded
+				// into the helper.
 				if scaleErr := ops.Scale(-1); scaleErr != nil {
 					klog.Errorf("scale-up after install failed for app %s: %v", p.manager.Spec.AppName, scaleErr)
-					if cleanupErr := compute.DeleteAllocationsForApp(context.TODO(), p.client, appCfg.AppName, appCfg.OwnerName); cleanupErr != nil {
-						klog.Warningf("cleanup compute allocation after scale-up failure for %s failed: %v", appCfg.AppName, cleanupErr)
-					}
-					p.finally = func() {
-						opRecord := makeRecord(p.manager, appsv1.InstallFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, scaleErr.Error()))
-						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallFailed, opRecord, scaleErr.Error(), appsv1.InstallFailed.String())
-						if updateErr != nil {
-							klog.Errorf("update status failed %v", updateErr)
-						}
-					}
+					toInstallFailed(scaleErr.Error())
 					return
 				}
 
@@ -345,17 +357,29 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 				if p.manager.Spec.Type == appsv1.Middleware {
 					ok, err := ops.WaitForLaunch()
 					if !ok {
-						klog.Errorf("wait for middleware %s launch failed %v", p.manager.Spec.AppName, err)
-						if err != nil {
-							p.finally = func() {
-								klog.Info("update app manager status to installing canceling, ", p.manager.Name)
-								updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCanceling, nil, appsv1.InstallingCanceling.String(), constants.AppStopDueToInitFailed)
-								if updateErr != nil {
-									klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InstallingCanceling, updateErr)
-									return
-								}
+						// A cancel (DELETE /apps/{name}/install) or a force
+						// uninstall cancels opCtx, on which WaitForLaunch returns
+						// (false, ctx.Err()). That is NOT a launch failure: the
+						// initiator has already written the terminal target state
+						// (InstallingCanceling for cancel, Uninstalling for force
+						// uninstall) and owns the transition. Writing
+						// InstallingCanceling here would mislabel the initiator's
+						// intent and race the cancel/uninstall path. Bail out
+						// quietly and let the initiator drive the state.
+						if err == nil || c.Err() != nil {
+							klog.Infof("install of middleware %s canceled while waiting for launch; leaving terminal state to the initiator", p.manager.Spec.AppName)
+							return
+						}
 
+						klog.Errorf("wait for middleware %s launch failed %v", p.manager.Spec.AppName, err)
+						p.finally = func() {
+							klog.Info("update app manager status to installing canceling, ", p.manager.Name)
+							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCanceling, nil, appsv1.InstallingCanceling.String(), constants.AppStopDueToInitFailed)
+							if updateErr != nil {
+								klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InstallingCanceling, updateErr)
+								return
 							}
+
 						}
 						return
 					}

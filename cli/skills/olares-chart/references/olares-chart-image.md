@@ -3,14 +3,9 @@
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
 > This is the **packaging** capability. It is orthogonal to having a compose — a compose says nothing about whether an image needs building — and can be entered up front or looped back to later (an install that hits `ImagePullBackOff` sends you here).
 
-## Arch strategy by release target
+## Arch strategy
 
-| Target | Build strategy | Manifest follow-up |
-|---|---|---|
-| **local-run** | Single-arch for **this node** — query with `olares-cli cluster node list` (needs login) | `spec.supportArch` optional |
-| **market-distribute** | Multi-arch (`linux/amd64,linux/arm64`) | Declare matching `spec.supportArch: [amd64, arm64]` in `OlaresManifest.yaml` |
-
-See [olares-chart-publish-targets.md](olares-chart-publish-targets.md) for the full matrix.
+Deploying to your Olares only needs **this node's arch** (single-arch) — query it with `olares-cli cluster node list` (needs login); `spec.supportArch` is optional. Multi-arch (`linux/amd64,linux/arm64` + a matching `spec.supportArch: [amd64, arm64]`) is only required when **publishing to the public Market** — see the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill.
 
 ## When you need it
 
@@ -35,7 +30,7 @@ flowchart TD
 
 A wrong-architecture image installs but never runs (`ImagePullBackOff` with `no match for platform`, or the container `exec format error`-crashes):
 
-1. **Find the target node arch** (local-run):
+1. **Find the target node arch:**
    ```bash
    olares-cli cluster node list          # the node row shows amd64 / arm64 (needs login)
    ```
@@ -44,10 +39,7 @@ A wrong-architecture image installs but never runs (`ImagePullBackOff` with `no 
    docker manifest inspect <image-ref>   # look for the platform.architecture entries
    ```
    (No docker daemon? Query the registry manifest list over HTTP and read each `platform.architecture`.)
-3. **Build for the release target:**
-   - **local-run:** single platform matching the node — `--platform linux/amd64` or `linux/arm64`
-   - **market-distribute:** multi-arch — `--platform linux/amd64,linux/arm64`
-   If you build single-arch, it **must** equal the node arch.
+3. **Build single platform matching the node** — `--platform linux/amd64` or `linux/arm64`. A single-arch image **must** equal the node arch. (Multi-arch is only for publishing — see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
 
 ## GPU / CUDA images
 
@@ -79,14 +71,12 @@ You drive this end to end — ask the registry, check login, build, push, verify
      - Docker Hub: `docker login` with a Docker Hub **access token** (Account Settings → Security → New Access Token).
      - ghcr: `docker login ghcr.io -u <github-user>` with a **GitHub PAT** that has `write:packages`. After the first push, set the package **visibility to public** so Olares can pull it without auth.
 
-4. **Build for the target arch and push** — you run this, after confirming `<registry-ref>:<tag>` with the developer:
+4. **Build for the node arch and push** — you run this, after confirming `<registry-ref>:<tag>` with the developer:
    ```bash
-   # local-run (example: amd64 node):
+   # this node (example: amd64):
    docker buildx build --platform linux/amd64 -t <registry-ref>:<tag> --push <build-context>
-
-   # market-distribute:
-   docker buildx build --platform linux/amd64,linux/arm64 -t <registry-ref>:<tag> --push <build-context>
    ```
+   (Publishing to the public Market? Build multi-arch instead — `--platform linux/amd64,linux/arm64` — per [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
    `<build-context>` can be a local path (`.`) or a git URL (e.g. `https://github.com/org/repo.git#main`). Use the upstream Dockerfile or one you authored.
 
 5. **Verify the pushed image** before wiring it in:
@@ -116,6 +106,6 @@ When using a **third-party** image, inspect `docker inspect <ref> --format '{{.C
 ## Hard rules
 
 - **Every service must reference a publicly pullable image** for the node arch — no `build:`, no local-only tags, no private registry (until Olares-local registry support lands).
-- **local-run:** arch must match the node. **market-distribute:** prefer multi-arch; declare `spec.supportArch`. Verify with `docker manifest inspect`.
+- **Deploy to your Olares:** arch must match the node. Verify with `docker manifest inspect`. (Multi-arch + `spec.supportArch` is only for publishing — [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
 - **Never bake registry credentials into the chart** (no `imagePullSecrets` with inline tokens, no secrets in `values.yaml`). Public images only.
 - **Pin every image to a specific version tag** — **never `:latest`** or an untagged image (implicit `latest`). `latest` drifts, so installs become non-reproducible and rollbacks/caching unreliable. Bump the tag when you rebuild. (`lint` does not enforce this — it's on you.)

@@ -152,6 +152,18 @@ func UpdateAppState(ctx context.Context, am *v1alpha1.ApplicationManager, state 
 
 }
 
+// StateTransitionGuard, if non-nil, is consulted by UpdateAppMgrStatus to
+// decide whether a (currentState -> requestedState) transition is allowed.
+// Returning false rejects the patch.
+//
+// It is injected at init time by the pkg/appstate package (which owns the
+// authoritative transition table). The indirection breaks an import cycle:
+// pkg/appstate already imports pkg/utils/app, so pkg/utils/app cannot import
+// pkg/appstate directly. When the guard is nil (e.g. in unit tests that do
+// not link pkg/appstate) the legacy behaviour is preserved — any transition
+// is accepted.
+var StateTransitionGuard func(from, to v1alpha1.ApplicationManagerState) bool
+
 // UpdateAppMgrStatus update applicationmanager status, if filed in parameter status is empty that field will not be set.
 func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, modifiers ...func(*v1alpha1.ApplicationManager)) (*v1alpha1.ApplicationManager, error) {
 	client, err := utils.GetClient()
@@ -189,6 +201,19 @@ func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, m
 			}
 		}
 		status.Payload = payload
+
+		// Reject undeclared transitions if a guard has been wired in.
+		// The check runs INSIDE the retry loop so it sees the latest
+		// persisted state, matching pkg/appstate's updateStatus
+		// invariant: if the state was changed underneath us between
+		// Get and Update, the next attempt's check is against the
+		// fresh state, not a stale snapshot.
+		if guard := StateTransitionGuard; guard != nil && !guard(appMgrCopy.Status.State, status.State) {
+			err := fmt.Errorf("invalid state transition for %s: %s -> %s (rejected by guard)",
+				name, appMgrCopy.Status.State, status.State)
+			klog.Warningf("UpdateAppMgrStatus rejected: %v", err)
+			return err
+		}
 
 		appMgrCopy.Status = status
 		for _, modifier := range modifiers {
@@ -374,36 +399,38 @@ func FmtAppMgrName(app, owner, ns string) (string, error) {
 	return fmt.Sprintf("%s-%s", namespace, app), nil
 }
 
-// V3AppNamespace returns the deterministic namespace used for a v3 /
+// SharedAppNamespace returns the deterministic namespace used for a
 // shared app. Single source of truth so install handlers, lookups and the
 // proxy all agree on the same value.
-func V3AppNamespace(app string) string {
+func SharedAppNamespace(app string) string {
 	return fmt.Sprintf("%s-shared", app)
 }
 
-// V3AppMgrName returns the deterministic ApplicationManager name for a
-// v3  app: '{app}-shared-{app}', following the same '{ns}-{app}' rule
+// SharedAppMgrName returns the deterministic ApplicationManager name for a
+// shared  app: '{app}-shared-{app}', following the same '{ns}-{app}' rule
 // FmtAppMgrName uses for v1/v2.
-func V3AppMgrName(app string) string {
-	return fmt.Sprintf("%s-%s", V3AppNamespace(app), app)
+func SharedAppMgrName(app string) string {
+	return fmt.Sprintf("%s-%s", SharedAppNamespace(app), app)
 }
 
 // ResolveAppMgrName returns the ApplicationManager name for the given app:
-//   - if a v3 AM exists at SharedAppMgrName(app), return that name
-//     and isShared=true.
-//   - otherwise fall back to FmtAppMgrName(app, owner, "") and isV3=false.
+//   - if a shared AM exists at SharedAppMgrName(app), return that name and
+//     isShared=true.
+//   - otherwise fall back to FmtAppMgrName(app, owner, "") and
+//     isShared=false. This covers both v1 apps and v3+per-user apps, both
+//     of which use the per-user "{app}-{owner}-{app}" name format.
 //
 // Lifecycle handlers should call this first so any admin can target a shared
 // app regardless of who originally installed it. Install does NOT need this
 // helper — install creates the AM, it doesn't look it up.
-func ResolveAppMgrName(ctx context.Context, app, owner string) (name string, isV3 bool, err error) {
+func ResolveAppMgrName(ctx context.Context, app, owner string) (name string, isShared bool, err error) {
 	versioned, err := utils.GetClient()
 	if err != nil {
 		return "", false, err
 	}
-	v3Name := V3AppMgrName(app)
-	if _, getErr := versioned.AppV1alpha1().ApplicationManagers().Get(ctx, v3Name, metav1.GetOptions{}); getErr == nil {
-		return v3Name, true, nil
+	sharedName := SharedAppMgrName(app)
+	if _, getErr := versioned.AppV1alpha1().ApplicationManagers().Get(ctx, sharedName, metav1.GetOptions{}); getErr == nil {
+		return sharedName, true, nil
 	} else if !apierrors.IsNotFound(getErr) {
 		return "", false, getErr
 	}
@@ -757,7 +784,7 @@ type ConfigOptions struct {
 	// at the conventional local path (appcfg.ChartsPath + "/" + RawAppName).
 	NeedDownloadChart bool
 	// for v3 app, upload source need to find origin chart
-	OriginOwner string
+	ChartOwner string
 }
 
 // GetAppConfig get app installation configuration from app store
@@ -784,8 +811,8 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	var namespace string
 	if appcfg.Namespace != "" {
 		namespace, _ = utils.AppNamespace(options.App, options.Owner, appcfg.Namespace)
-	} else if appcfg.APIVersion == "v3" {
-		namespace = V3AppNamespace(options.App)
+	} else if appcfg.IsShared() {
+		namespace = SharedAppNamespace(options.App)
 	} else {
 		namespace = fmt.Sprintf("%s-%s", options.App, options.Owner)
 	}
@@ -797,23 +824,21 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	}
 
 	appcfg.Namespace = namespace
-	// v3 apps are cluster-shared and admin-managed: any admin may
-	// install / upgrade / suspend / uninstall the single cluster-wide
-	// instance, so the install caller is not a stable identity. Persist
-	// the cluster owner here so allocation rows, HAMI binding labels,
-	// pod owner labels and every downstream user-scoped API call
-	// (kubesphere user CR, user-system / user-space namespaces,
-	// X-Bfl-User header, helm bfl.username) all key off the same real
-	// user regardless of which admin operates the app.
-	if appcfg.IsV3() {
-		clusterOwner, err := kubesphere.GetClusterOwner(ctx)
-		if err != nil {
-			return nil, chartPath, err
+	// Shared apps are addressed to the cluster owner (the olares "owner"
+	// role user) so OwnerName / Application.spec.owner stay stable across
+	// admins. This is the canonical write site referenced by the reload
+	// path pkg/appcfg.GetAppInstallationConfig. v1/v2 and v3+per-user apps
+	// keep the installing user.
+	if appcfg.IsShared() {
+		clusterOwner, cErr := kubesphere.GetClusterOwner(ctx)
+		if cErr != nil {
+			return nil, chartPath, cErr
 		}
 		appcfg.OwnerName = clusterOwner
 	} else {
 		appcfg.OwnerName = options.Owner
 	}
+	appcfg.ChartOwner = options.ChartOwner
 	appcfg.RepoURL = options.RepoURL
 	return appcfg, chartPath, nil
 }
@@ -909,7 +934,7 @@ func parseLegacyAppRequirement(cfg *appcfg.AppConfiguration, selectedGpu string)
 	if !oac.IsNewOlaresManifestVersion(cfg.ConfigVersion) {
 		// Default supportedGpu list when the manifest leaves it empty.
 		if len(cfg.Spec.SupportedGpu) == 0 {
-			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType, utils.StrixHaloChipType, utils.CPUType, utils.MthreadsM100ChipType, utils.AppleMChipType}
+			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType, utils.AMDType, utils.CPUType, utils.MooreSocType, utils.AppleMChipType, utils.IntelType}
 		}
 
 		if selectedGpu != "" && gpu != nil && !gpu.IsZero() {
@@ -1099,14 +1124,16 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		OverlayGateway:       cfg.OverlayGateway,
 		WorkloadReplicas:     cfg.WorkloadReplicas,
 		TemplateOnly:         cfg.Options.TemplateOnly,
+		Shared:               cfg.Options.Shared,
 	}
 
-	// v3 / shared apps are themselves the destination of cross-namespace
-	// shared traffic and need the same downstream treatment (mesh sidecar,
-	// NetworkPolicy, etc.) as v1/v2 apps that opt in. Force the flag true
-	// for v3 regardless of manifest value so v3 authors don't have to
-	// remember to set it.
-	if appConfig.IsV3() {
+	// Shared apps are themselves the destination of cross-namespace shared
+	// traffic and need the same downstream treatment (mesh sidecar,
+	// NetworkPolicy, etc.) as v1 apps that opt in. Force the flag true for
+	// shared apps regardless of manifest value so authors don't have to
+	// remember to set it. v3+per-user apps honor the manifest value, like
+	// v1 — the schema version alone does not imply shared traffic.
+	if appConfig.IsShared() {
 		appConfig.NeedsSharedAccess = true
 	}
 
@@ -1148,14 +1175,14 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 		SetAuthToken(options.Token).
 		SetHeader(constants.MarketUser, options.Owner).
 		SetHeader(constants.MarketSource, options.MarketSource)
-	if options.OriginOwner != "" {
-		client.SetHeader(constants.MarketUser, options.OriginOwner)
+	if options.ChartOwner != "" {
+		client.SetHeader(constants.MarketUser, options.ChartOwner)
 	}
 	indexFileURL := options.RepoURL
 	if options.RepoURL[len(options.RepoURL)-1] != '/' {
 		indexFileURL += "/"
 	}
-	klog.Infof("GetIndexAndDownloadChart: user: %v, source: %v, originOwner: %v", options.Owner, options.MarketSource, options.OriginOwner)
+	klog.Infof("GetIndexAndDownloadChart: user: %v, source: %v, originOwner: %v", options.Owner, options.MarketSource, options.ChartOwner)
 
 	indexFileURL += "static-index.yaml"
 	resp, err := client.R().Get(indexFileURL)
@@ -1203,7 +1230,7 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 			return "", err
 		}
 	}
-	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource, options.OriginOwner)
+	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource, options.ChartOwner)
 	if err != nil {
 		return "", err
 	}

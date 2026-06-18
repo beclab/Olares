@@ -23,7 +23,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: monitoring-server
-        image: beclab/monitoring-server-v1:v0.3.12
+        image: beclab/monitoring-server-v1:v0.3.14
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
@@ -33,7 +33,7 @@ spec:
               fieldRef:
                 fieldPath: status.hostIP
           - name: TERMINUSD_HOST
-            value: $(NODE_IP):18088
+            value: master-node:18088
 
 
 ---

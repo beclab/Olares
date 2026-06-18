@@ -4,9 +4,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, troubleshoot, FAQ, common issues, errors
-app_version: "1.0.3"
-doc_version: "1.1"
-doc_updated: "2026-05-29"
+app_version: "1.0.8"
+doc_version: "1.2"
+doc_updated: "2026-06-10"
 ---
 
 # Common issues
@@ -14,6 +14,44 @@ doc_updated: "2026-05-29"
 This page provides solutions to common issues and answers to frequently asked questions when running OpenClaw on Olares.
 
 If you encounter a problem not listed here, check the [Upgrade OpenClaw](openclaw-upgrade.md) page for version-specific changes or refer to the [official OpenClaw documentation](https://docs.openclaw.ai).
+
+## Agent fails to respond with "Missing API key" error after upgrade
+
+When using a cloud-hosted LLM provider, your agent fails to connect or communicate with external APIs and reports the following error:
+
+```text
+Missing API key for the selected provider on the gateway. Configure provider
+auth, then try again.
+```
+
+### Cause
+
+Starting with OpenClaw V2026.06.05, authentication profiles and core structural configurations migrate out of legacy JSON files and into an internal SQLite database.
+
+If you recently upgraded your application but have not executed the database migration utility, the gateway will look for authentication profiles in the new database and fail to detect your cloud API keys.
+
+### Solution
+
+Run the automated repair utility in the OpenClaw CLI to migrate your legacy authentication JSON files into the SQLite database.
+
+1. Open the OpenClaw CLI from the Launchpad.
+2. Run the automated repair and migration command:
+
+    ```bash
+    openclaw doctor --fix
+    ```
+3. Verify the output logs in your terminal. A successful migration confirms that your old JSON profiles have been imported into SQLite.
+
+    Example output:
+
+    ```text
+    |  Migrated auth profile JSON for ~/.openclaw/agents/main/agent/auth-profiles.json into  |
+    |  SQLite (backups:                                                                      |
+    |  ~/.openclaw/agents/main/agent/auth-profiles.json.sqlite-import.1781088154476.bak,     |
+    |  ~/.openclaw/agents/main/agent/auth-state.json.sqlite-import.1781088154484.bak).       |
+    ``` 
+
+    Once complete, the gateway will automatically detect your keys and connect normally.
 
 ## Cannot restart OpenClaw in CLI
 

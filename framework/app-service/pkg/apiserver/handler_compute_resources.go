@@ -2,6 +2,7 @@ package apiserver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -28,6 +29,23 @@ type ComputeResourcesResponse struct {
 type ComputeBindingResponse struct {
 	api.Response `json:",inline"`
 	Data         []compute.Allocation `json:"data"`
+}
+
+// ComputeBindingValidationResponse is the 200 success payload returned by
+// the read-only compute binding validation endpoint when the binding is
+// acceptable (BindingApplyStatusValid or BindingApplyStatusNotRequired).
+// The Required / Unavailable cases instead return a FailedCheckResponse
+// carrying ComputeBindingFailedCheck, matching the resume endpoint.
+type ComputeBindingValidationResponse struct {
+	api.Response `json:",inline"`
+	Data         ComputeBindingValidationData `json:"data"`
+}
+
+type ComputeBindingValidationData struct {
+	Status       string                           `json:"status"`
+	Availability *compute.AvailabilityResult      `json:"availability,omitempty"`
+	Validation   *compute.BindingValidationResult `json:"validation,omitempty"`
+	Allocations  []compute.Allocation             `json:"allocations,omitempty"`
 }
 
 // ComputeBindingFailedCheck is the payload returned by the resume endpoint
@@ -96,17 +114,17 @@ func (h *Handler) updateDeviceSupportType(req *restful.Request, resp *restful.Re
 		return
 	}
 
-	node, device, err := compute.FindDevice(ctx, h.ctrlClient, nodeName, deviceID)
+	_, device, err := compute.FindDevice(ctx, h.ctrlClient, nodeName, deviceID)
 	if err != nil {
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
-	if !compute.IsHAMIMode(node.GPUType) {
-		api.HandleBadRequest(resp, req, fmt.Errorf("device mode switching is not supported for gpu type %s", node.GPUType))
+	if !compute.IsHAMIMode(device.Mode) {
+		api.HandleBadRequest(resp, req, fmt.Errorf("device mode switching is not supported for gpu type %s", device.Mode))
 		return
 	}
 	if !compute.SupportTypeAvailable(device.AvailableSupportTypes, body.SupportType) {
-		api.HandleBadRequest(resp, req, fmt.Errorf("support type %s is not available for gpu type %s", body.SupportType, node.GPUType))
+		api.HandleBadRequest(resp, req, fmt.Errorf("support type %s is not available for gpu type %s", body.SupportType, device.Mode))
 		return
 	}
 	if device.SupportType == body.SupportType {
@@ -317,6 +335,75 @@ func (h *Handler) listComputeBindings(req *restful.Request, resp *restful.Respon
 	resp.WriteAsJson(ComputeBindingResponse{
 		Response: api.Response{Code: api.CodeSuccess},
 		Data:     allocations,
+	})
+}
+
+func (h *Handler) validateComputeBinding(req *restful.Request, resp *restful.Response) {
+	app := req.PathParameter(ParamAppName)
+	owner := req.Attribute(constants.UserContextAttribute).(string)
+	request := &ResumeRequest{}
+	if err := readOptionalEntity(req, request); err != nil {
+		api.HandleBadRequest(resp, req, err)
+		return
+	}
+
+	_, amPtr, ok := h.loadAuthorizedLifecycleAM(req.Request.Context(), req, resp, app, owner)
+	if !ok {
+		return
+	}
+	am := *amPtr
+
+	var appCfg *appcfg.ApplicationConfig
+	if err := json.Unmarshal([]byte(am.Spec.Config), &appCfg); err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	isAdmin, err := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	includeSharedServer, err := compute.ShouldIncludeSharedServerForResume(req.Request.Context(), h.ctrlClient, appCfg, isAdmin)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	bindingResult, err := compute.ValidateBindingForResume(req.Request.Context(), h.ctrlClient, appCfg, request.ComputeBinding, includeSharedServer)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	// Required / Unavailable still report through the same FailedCheckResponse
+	// envelope the resume endpoint uses so the frontend can reuse identical
+	// handling. Valid / NotRequired mean the binding is acceptable, so return
+	// a plain 200 success carrying the resolved status plus the available
+	// options for context.
+	switch bindingResult.Status {
+	case compute.BindingApplyStatusRequired:
+		api.HandleFailedCheck(resp, api.CheckTypeComputeBindingRequired, ComputeBindingFailedCheck{
+			Availability: bindingResult.Availability,
+			Validation:   bindingResult.Validation,
+		})
+		return
+	case compute.BindingApplyStatusUnavailable:
+		api.HandleFailedCheck(resp, api.CheckTypeComputeBindingUnavailable, ComputeBindingFailedCheck{
+			Availability: bindingResult.Availability,
+			Validation:   bindingResult.Validation,
+		})
+		return
+	}
+
+	resp.WriteAsJson(ComputeBindingValidationResponse{
+		Response: api.Response{Code: api.CodeSuccess},
+		Data: ComputeBindingValidationData{
+			Status:       bindingResult.Status,
+			Availability: bindingResult.Availability,
+			Validation:   bindingResult.Validation,
+			Allocations:  bindingResult.Allocations,
+		},
 	})
 }
 

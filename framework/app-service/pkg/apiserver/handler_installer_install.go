@@ -50,6 +50,9 @@ type installHelperIntf interface {
 	applyAppEnv(ctx context.Context) error
 	resolveAutoResources(ctx context.Context) error
 	applyApplicationManager(marketSource string) (opID string, err error)
+	// checkAppNameConflict enforces cluster-wide exclusivity between shared
+	// and per-user installs of the same Spec.AppName.
+	checkAppNameConflict(ctx context.Context, newShared bool) error
 }
 
 var _ installHelperIntf = (*installHandlerHelper)(nil)
@@ -57,17 +60,23 @@ var _ installHelperIntf = (*installHandlerHelperV2)(nil)
 var _ installHelperIntf = (*installHandlerHelperV3)(nil)
 
 type installHandlerHelper struct {
-	h                    *Handler
-	req                  *restful.Request
-	resp                 *restful.Response
-	app                  string
-	rawAppName           string
-	owner                string
-	token                string
-	insReq               *api.InstallRequest
-	appConfig            *appcfg.ApplicationConfig
-	chartPath            string
-	client               *versioned.Clientset
+	h          *Handler
+	req        *restful.Request
+	resp       *restful.Response
+	app        string
+	rawAppName string
+	owner      string
+	chartOwner string
+	token      string
+	insReq     *api.InstallRequest
+	appConfig  *appcfg.ApplicationConfig
+	chartPath  string
+	// client is the generated app.bytetrade.io clientset. Typed as the
+	// interface (not the concrete *versioned.Clientset) so unit tests can
+	// inject a fake via appfake.NewSimpleClientset. The runtime install
+	// dispatcher still constructs a concrete *versioned.Clientset and
+	// assigns it here; the interface type is purely a substitutability hook.
+	client               versioned.Interface
 	validateClusterScope func(isAdmin bool, installedApps []*v1alpha1.Application) (err error)
 }
 
@@ -75,6 +84,12 @@ type installHandlerHelperV2 struct {
 	installHandlerHelper
 }
 
+// installHandlerHelperV3 handles the v3 install pipeline. The same helper
+// covers both shared cluster-wide apps (options.shared: true) and per-user
+// v3 apps (options.shared: false / absent); the shared / per-user split
+// is decided per-method by inspecting h.appConfig.IsShared() once the
+// chart has been loaded, so no manifest-peek is needed at dispatch time.
+// v1 apps stay on installHandlerHelper.
 type installHandlerHelperV3 struct {
 	installHandlerHelper
 }
@@ -110,13 +125,20 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 	}
 	klog.Infof("rawAppName: %s", rawAppName)
 	chartVersion := ""
-	originOwner := ""
-	if insReq.RawAppName != "" {
-		chartVersion, originOwner, err = h.getOriginChartVersion(rawAppName, owner)
+	chartOwner := ""
+	if insReq.RawAppName != "" && !insReq.TemplateClone {
+		chartVersion, chartOwner, err = h.getOriginChartVersion(rawAppName, owner)
 		if err != nil {
 			api.HandleBadRequest(resp, req, err)
 			return
 		}
+	}
+	// For uploaded (non-market) apps record the uploading user as the chart
+	// owner so the chart source path survives even when the app owner is
+	// normalized to the cluster owner (shared apps). Market apps keep
+	// chartOwner empty and fall back to the installing user downstream.
+	if chartOwner == "" && insReq.Source != api.Market {
+		chartOwner = owner
 	}
 
 	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
@@ -127,9 +149,9 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		MarketSource: marketSource,
 		Version:      chartVersion,
 		SelectedGpu:  insReq.SelectedGpuType,
-		OriginOwner:  originOwner,
+		ChartOwner:   chartOwner,
 	})
-	klog.Infof("chartVersion: %s, originOwner: %s", chartVersion, originOwner)
+	klog.Infof("chartVersion: %s, originOwner: %s", chartVersion, chartOwner)
 
 	if err != nil {
 		klog.Errorf("Failed to get api version err=%v", err)
@@ -156,6 +178,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 			app:        app,
 			rawAppName: rawAppName,
 			owner:      owner,
+			chartOwner: chartOwner,
 			token:      token,
 			insReq:     insReq,
 			client:     client,
@@ -174,6 +197,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 				app:        app,
 				rawAppName: rawAppName,
 				owner:      owner,
+				chartOwner: chartOwner,
 				token:      token,
 				insReq:     insReq,
 				client:     client,
@@ -183,7 +207,6 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		h.validateClusterScope = h._validateClusterScope
 		helper = h
 	case appcfg.V3:
-		klog.Info("Using install handler helper for V3")
 		h := &installHandlerHelperV3{
 			installHandlerHelper: installHandlerHelper{
 				h:          h,
@@ -192,14 +215,15 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 				app:        app,
 				rawAppName: rawAppName,
 				owner:      owner,
+				chartOwner: chartOwner,
 				token:      token,
 				insReq:     insReq,
 				client:     client,
-			},
-		}
+			}}
 
-		// v3 reuses the v1 cluster-scope validation; admin gating + shared-namespace
-		// forcing is handled by the helper's own overrides.
+		// v3 reuses the v1 cluster-scope validation; the V3 helper's own
+		// overrides decide which methods diverge from the v1 base based
+		// on the shared flag.
 		h.validateClusterScope = h._validateClusterScope
 		helper = h
 	default:
@@ -221,11 +245,24 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	appCfg, err := helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType, originOwner)
+	appCfg, err := helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType, chartOwner)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
 	}
+
+	if !isAdmin && appCfg.Shared {
+		err = errors.New("only admin users can install shared apps")
+		api.HandleForbidden(resp, req, err)
+		return
+	}
+
+	if err = helper.checkAppNameConflict(req.Request.Context(), appCfg.Shared); err != nil {
+		klog.Errorf("Failed to check app name conflict err=%v", err)
+		api.HandleBadRequest(resp, req, err)
+		return
+	}
+
 	err = helper.lintChart()
 	if err != nil {
 		klog.Errorf("Failed to lint chart err=%v", err)
@@ -275,7 +312,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		// from appCfg.Requirement, so we need to re-parse from the
 		// manifest with the chosen mode to recover them.
 		if chosen != appCfg.SelectedGpuType {
-			appCfg, err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, chosen, originOwner)
+			appCfg, err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, chosen, chartOwner)
 			if err != nil {
 				klog.Errorf("Failed to reload appConfig with auto-selected gpu type %s: %v", chosen, err)
 				api.HandleError(resp, req, err)
@@ -359,13 +396,17 @@ func (h *Handler) getOriginChartVersion(rawAppName, owner string) (string, strin
 		return "", "", err
 	}
 	for _, am := range ams.Items {
-		isV3 := am.Labels[constants.AppApiVersionLabel] == "v3"
-		if (am.Spec.AppName == rawAppName && am.Spec.AppOwner == owner) || (am.Spec.AppName == rawAppName && isV3) {
-			// For v3 / shared apps the caller (current admin) may differ
-			// from the user that originally installed the app; return that
-			// original install owner so the chart-repo lookup can be keyed
-			// off the user the chart was first uploaded under.
-			return am.Annotations[api.AppVersionKey], am.Spec.AppOwner, nil
+		isShared := appcfg.IsShared(&am)
+		if (am.Spec.AppName == rawAppName && am.Spec.AppOwner == owner) || (am.Spec.AppName == rawAppName && isShared) {
+			// For shared apps the caller (current admin) may differ from
+			// the user that originally uploaded the chart, and AppOwner is
+			// normalized to the cluster owner — so we cannot key the
+			// chart-repo lookup off AppOwner. GetChartOwner reads the
+			// app.bytetrade.io/chart-owner label (the original uploader)
+			// and only falls back to AppOwner for legacy/market AMs. v3
+			// per-user apps fall through to the owner-equality branch above
+			// just like v1 apps.
+			return am.Annotations[api.AppVersionKey], appcfg.GetChartOwner(&am), nil
 		}
 	}
 	return "", "", fmt.Errorf("rawApp %s not found", rawAppName)
@@ -534,7 +575,7 @@ func (h *installHandlerHelper) getInstalledApps() (installed bool, app []*v1alph
 	return
 }
 
-func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType, originOwner string) (appConfig *appcfg.ApplicationConfig, err error) {
+func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType, chartOwner string) (appConfig *appcfg.ApplicationConfig, err error) {
 	var (
 		admin                   string
 		installAsAdmin          bool
@@ -586,7 +627,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 		IsAdmin:      installAsAdmin,
 		MarketSource: marketSource,
 		SelectedGpu:  selectedGpuType,
-		OriginOwner:  originOwner,
+		ChartOwner:   chartOwner,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)
@@ -631,17 +672,101 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 	return h.applyAppMgr(name, nil, marketSource)
 }
 
+// checkAppNameConflict enforces cluster-wide exclusivity between shared and
+// per-user installs of the same app name:
+//   - if a shared AM with the same Spec.AppName exists (any owner) → no other
+//     user (and no admin) may install another shared or per-user variant of
+//     that app name;
+//   - if any per-user AM with the same Spec.AppName exists → an admin may not
+//     install the shared variant before that per-user AM is removed.
+//
+// Same-owner same-type collisions are NOT handled here: their AM names are
+// deterministically identical, so applyAppMgr's Get(name) + IsOperationAllowed
+// path already covers them (patch on reinstallable states, reject otherwise).
+// Per-user same-name across different owners is allowed by design.
+func (h *installHandlerHelper) checkAppNameConflict(ctx context.Context, newShared bool) error {
+	list, err := h.client.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for i := range list.Items {
+		am := &list.Items[i]
+		if am.Spec.AppName != h.app {
+			continue
+		}
+		if appstate.IsTerminalReinstallable(am.Status.State) {
+			continue
+		}
+		existingShared := am.Labels[constants.AppSharedLabel] == constants.AppSharedTrue
+		// Same-type collisions fall through to applyAppMgr's name-based path.
+		if existingShared == newShared {
+			continue
+		}
+
+		existingKind := "per-user"
+		if existingShared {
+			existingKind = "shared"
+		}
+		newKind := "per-user"
+		if newShared {
+			newKind = "shared"
+		}
+		err = fmt.Errorf("app %q is already installed as %s (owner=%q, state=%s); "+
+			"uninstall it before installing as %s",
+			h.app, existingKind, am.Spec.AppOwner, am.Status.State, newKind)
+		return err
+	}
+	return nil
+}
+
+// clonedFromValue derives the app.bytetrade.io/app-cloned-from label value
+// from the install request. A regular (non-clone) install has an empty
+// RawAppName and yields "" so the label is stamped with an empty value. A
+// clone sets RawAppName; TemplateClone distinguishes a clone from a template
+// ("template") from a clone of an existing app ("app").
+func clonedFromValue(insReq *api.InstallRequest) string {
+	if insReq == nil || insReq.RawAppName == "" {
+		return ""
+	}
+	if insReq.TemplateClone {
+		return constants.AppClonedFromTemplate
+	}
+	return constants.AppClonedFromApp
+}
+
 // applyAppMgr is the shared create-or-patch implementation used by V1 / V2
 // (via installHandlerHelper.applyApplicationManager) and V3
 // (via installHandlerHelperV3.applyApplicationManager).
 //
 // `name` is the deterministic AM object name; `extraLabels` is merged into
-// metadata.labels on both Create and Patch — V1/V2 pass nil; V3 passes
-// {AppScopeLabel: AppScopeShared} to mark the AM as a shared app. Passing
-// an empty / nil map intentionally omits the "labels" key from the merge
-// patch so existing labels are NOT cleared (a JSON merge patch with
-// `"labels": null` would delete the field entirely).
+// metadata.labels on both Create and Patch — V1/V2 pass nil; V3 passes the
+// shared markers to mark the AM as a shared app. On top of extraLabels the
+// app.bytetrade.io/app-cloned-from label is always stamped (empty value when
+// the install is not a clone), so the "labels" key is always present in the
+// merge patch.
 func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]string, marketSource string) (opID string, err error) {
+	// Record the clone origin on the appConfig so it is persisted in the AM
+	// Config and later propagated to the deployment / Application via the
+	// app.bytetrade.io/app-cloned-from label. Empty for non-clone installs.
+	clonedFrom := clonedFromValue(h.insReq)
+	h.appConfig.ClonedFrom = clonedFrom
+
+	// Record the chart owner on the appConfig so it is persisted in the AM
+	// Config and later propagated to the deployment / Application via the
+	// app.bytetrade.io/chart-owner label. Empty for market installs.
+	h.appConfig.ChartOwner = h.chartOwner
+
+	// The cloned-from label is always stamped on the AM (empty value when the
+	// install is not a clone). Merge it on top of any version-specific extra
+	// labels (e.g. the v3 shared markers).
+	labels := make(map[string]string, len(extraLabels)+1)
+	for k, v := range extraLabels {
+		labels[k] = v
+	}
+	labels[constants.AppClonedFromKey] = clonedFrom
+	labels[constants.AppChartOwnerKey] = h.chartOwner
+
 	config, err := json.Marshal(h.appConfig)
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -652,11 +777,11 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 		images = h.insReq.Images
 	}
 	imagesStr, _ := json.Marshal(images)
-	// For v1/v2 appConfig.OwnerName == h.owner (the install caller). For
-	// v3 it is the cluster owner that GetAppConfig resolved at chart
-	// load time — independent of which admin is currently operating, so
-	// the AM stays addressed to a stable user across multi-admin
-	// install / upgrade cycles.
+	// For v1/v2 and v3+per-user apps appConfig.OwnerName == h.owner (the
+	// install caller). For shared apps it is the cluster owner that
+	// GetAppConfig resolved at chart load time — independent of which admin
+	// is currently operating, so the AM stays addressed to a stable user
+	// across multi-admin install / upgrade cycles.
 	appOwner := h.appConfig.OwnerName
 	appMgr := &v1alpha1.ApplicationManager{
 		ObjectMeta: metav1.ObjectMeta{
@@ -682,12 +807,7 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 			OpType:       v1alpha1.InstallOp,
 		},
 	}
-	if len(extraLabels) > 0 {
-		appMgr.Labels = make(map[string]string, len(extraLabels))
-		for k, v := range extraLabels {
-			appMgr.Labels[k] = v
-		}
-	}
+	appMgr.Labels = labels
 
 	a, err := h.client.AppV1alpha1().ApplicationManagers().Get(h.req.Request.Context(), name, metav1.GetOptions{})
 	if err != nil {
@@ -702,7 +822,7 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 		}
 	} else {
 		if !appstate.IsOperationAllowed(a.Status.State, v1alpha1.InstallOp) {
-			err = fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.InstallOp, a.Status.State)
+			err = appstate.ExplainOperationNotAllowed(a.Status.State, v1alpha1.InstallOp)
 			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
@@ -716,13 +836,11 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 				constants.ApplicationTitleLabel: h.appConfig.Title,
 			},
 		}
-		if len(extraLabels) > 0 {
-			labelsPatch := make(map[string]interface{}, len(extraLabels))
-			for k, v := range extraLabels {
-				labelsPatch[k] = v
-			}
-			metadataPatch["labels"] = labelsPatch
+		labelsPatch := make(map[string]interface{}, len(labels))
+		for k, v := range labels {
+			labelsPatch[k] = v
 		}
+		metadataPatch["labels"] = labelsPatch
 		patchData := map[string]interface{}{
 			"metadata": metadataPatch,
 			"spec": map[string]interface{}{
@@ -927,7 +1045,7 @@ func (h *installHandlerHelperV2) _validateClusterScope(isAdmin bool, installedAp
 	return nil
 }
 
-func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType, originOwner string) (appConfig *appcfg.ApplicationConfig, err error) {
+func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType, chartOwner string) (appConfig *appcfg.ApplicationConfig, err error) {
 	klog.Info("get app config for install handler v2")
 
 	var (
@@ -957,7 +1075,7 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 		MarketSource: marketSource,
 		IsAdmin:      isAdmin,
 		SelectedGpu:  selectedGpuType,
-		OriginOwner:  originOwner,
+		ChartOwner:   chartOwner,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)
@@ -973,29 +1091,32 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 
 // ----- v3 helper overrides -----
 
-// getAdminUsers returns the admin user list and rejects non-admin callers
-// with a 403 — v3 / shared apps are admin-managed.
+// getAdminUsers returns the admin user list. Shared apps reject non-admin
+// callers with a 403 (admin-only lifecycle); v3 per-user apps fall through
+// to the v1 helper, which doesn't gate on admin status here.
 func (h *installHandlerHelperV3) getAdminUsers() (admin []string, isAdmin bool, err error) {
 	admin, isAdmin, err = h.installHandlerHelper.getAdminUsers()
 	if err != nil {
 		return
 	}
-	if !isAdmin {
-		err = errors.New("only admin users can install v3 / shared apps")
-		api.HandleForbidden(h.resp, h.req, err)
-		return
-	}
 	return
 }
 
+// getInstalledApps returns no installed apps for shared apps so the v1
+// "install on behalf of admin / install as the cluster owner" branching
+// in installHandlerHelper.getAppConfig is bypassed — the V3 path always
+// resolves to the cluster owner. v3 per-user apps fall through to the v1
+// helper so the regular cluster-scope / clone duplication checks fire.
 func (h *installHandlerHelperV3) getInstalledApps() (installed bool, apps []*v1alpha1.Application, err error) {
 	return
 }
 
-// getAppConfig loads the chart with admin context (the caller is admin —
-// gated above) and forces the namespace to the deterministic shared one so
-// every code path agrees on it regardless of what the manifest specified.
-func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType, originOwner string) (appConfig *appcfg.ApplicationConfig, err error) {
+// getAppConfig loads the manifest. For shared apps the chart is loaded
+// with admin context (the caller is admin — gated above) and the
+// namespace / owner are forced to the deterministic shared values. For
+// v3 per-user apps the v1 install branching applies as-is so the app is
+// installed in the regular per-user namespace under the installing user.
+func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource string, isAdmin, appInstalled bool, installedApps []*v1alpha1.Application, chartVersion, selectedGpuType, chartOwner string) (appConfig *appcfg.ApplicationConfig, err error) {
 	var chartPath string
 	appConfig, chartPath, err = apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
@@ -1007,7 +1128,7 @@ func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource 
 		IsAdmin:      true,
 		MarketSource: marketSource,
 		SelectedGpu:  selectedGpuType,
-		OriginOwner:  originOwner,
+		ChartOwner:   chartOwner,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)
@@ -1019,20 +1140,23 @@ func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource 
 	return
 }
 
-// applyApplicationManager creates / updates the cluster-wide v3 AM at the
-// deterministic name SharedAppMgrName(app) and stamps the
-// AppScopeLabel=shared marker on it so listers / proxy can identify the AM
-// as a shared app without re-reading the embedded config.
-//
-// The actual create-or-patch flow is shared with V1/V2 via applyAppMgr —
-// V3 only needs to override the AM name (to the cluster-wide deterministic
-// one) and supply the scope label. The shared namespace itself comes
-// through h.appConfig.Namespace, which V3.getAppConfig already rewrote to
-// SharedAppNamespace(app).
+// applyApplicationManager creates / updates the AM. Shared apps land at
+// the cluster-wide V3AppMgrName(app) with both the api-version=v3 schema
+// label and the shared=true marker so listers / proxy / NetworkPolicy /
+// NATS fan-out can identify them. v3 per-user apps go to the regular
+// per-user FmtAppMgrName(app, owner, "") with only the api-version=v3
+// schema label — they are NOT shared and must not trigger any
+// shared-app behavior downstream.
 func (h *installHandlerHelperV3) applyApplicationManager(marketSource string) (opID string, err error) {
-	name := apputils.V3AppMgrName(h.app)
+	name, _ := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
 	labels := map[string]string{
 		constants.AppApiVersionLabel: constants.AppVersionV3,
+		constants.AppSharedLabel: func() string {
+			if h.appConfig.Shared {
+				return "true"
+			}
+			return "false"
+		}(),
 	}
 	return h.applyAppMgr(name, labels, marketSource)
 }
@@ -1041,9 +1165,17 @@ func (h *Handler) isDeployAllowed(req *restful.Request, resp *restful.Response) 
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
-	name := fmt.Sprintf("%s-%s-%s", app, owner, app)
+	// Use ResolveAppMgrName so the "can I deploy?" check observes the
+	// shared cluster-wide AM (if any) and not a phantom per-user name that
+	// nobody ever created. Without this an admin could think a shared
+	// install slot is free just because no per-user AM exists.
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
 	var am v1alpha1.ApplicationManager
-	err := h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
+	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &am)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			api.HandleError(resp, req, err)

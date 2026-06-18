@@ -18,6 +18,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
 	"github.com/beclab/Olares/cli/cmd/ctl/profile"
+	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
@@ -102,6 +103,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(doctor.NewDoctorCommand(factory))
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
+	cmds.AddCommand(search.NewSearchCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	return cmds

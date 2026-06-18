@@ -24,6 +24,20 @@ rules:
   - list
   - watch
 - apiGroups:
+  - gateway.olares.io
+  resources:
+  - sharedrouteregistries
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cluster.olares.io
+  resources:
+  - clusterconfigs
+  verbs:
+  - get
+- apiGroups:
   - '*'
   resources:
   - backups
@@ -79,7 +93,7 @@ spec:
         runAsUser: 0
       containers:
       - name: tapr-sysevent
-        image: beclab/sys-event:0.2.21
+        image: beclab/sys-event:0.2.25
         imagePullPolicy: IfNotPresent
 
 ---

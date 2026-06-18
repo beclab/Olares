@@ -9,6 +9,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -49,16 +50,28 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 	}
 	am := *amPtr
 
-	if !appstate.IsOperationAllowed(am.Status.State, v1alpha1.UninstallOp) {
-		api.HandleBadRequest(resp, req, fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.UninstallOp, am.Status.State))
+	if !request.Force && !appstate.IsOperationAllowed(am.Status.State, v1alpha1.UninstallOp) {
+		api.HandleBadRequest(resp, req, appstate.ExplainOperationNotAllowed(am.Status.State, v1alpha1.UninstallOp))
 		return
 	}
+	if request.Force {
+		klog.Warningf("force uninstalling app %s from %s state", app, am.Status.State)
+	}
+
+	// if current user is admin, also uninstall server side
+	isAdmin, err := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	uninstallAll := isAdmin || request.All
+
 	am.Spec.OpType = v1alpha1.UninstallOp
 	if am.Annotations == nil {
 		am.Annotations = make(map[string]string)
 	}
 	am.Annotations[api.AppTokenKey] = token
-	am.Annotations[api.AppUninstallAllKey] = fmt.Sprintf("%t", request.All)
+	am.Annotations[api.AppUninstallAllKey] = fmt.Sprintf("%t", uninstallAll)
 	am.Annotations[api.AppDeleteDataKey] = fmt.Sprintf("%t", request.DeleteData)
 	err = h.ctrlClient.Update(req.Request.Context(), &am)
 	if err != nil {

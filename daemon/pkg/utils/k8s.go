@@ -148,7 +148,12 @@ func IsTerminusRunning(ctx context.Context, client kubernetes.Interface) (bool, 
 	for _, pod := range pods.Items {
 		if isKeyPod(&pod) {
 			switch pod.Status.Phase {
-			case corev1.PodRunning, corev1.PodSucceeded:
+			case corev1.PodRunning:
+				if !isPodReady(&pod) {
+					return false, nil
+				}
+				continue
+			case corev1.PodSucceeded:
 				continue
 			default:
 				return false, nil
@@ -574,7 +579,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	for _, app := range apps.Items {
 		var entrances []appcfg.Entrance
 		var err error
-		if !isV3(&app) {
+		if !appv1alpha1.IsShared(&app) {
 			entrances, err = appcfg.GenEntranceURL(ctx, &app)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
@@ -655,7 +660,7 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 				continue
 			}
 
-			sharedApp := appv1alpha1.IsV3(app)
+			sharedApp := appv1alpha1.IsShared(app)
 			if !sharedApp {
 				if user != "" && app.Spec.Owner != user {
 					continue
@@ -784,17 +789,8 @@ func GetWorkloadNameFromPod(pod *corev1.Pod) string {
 	return podNameTokens[0]
 }
 
-const (
-	AppApiVersionLabel = "app.bytetrade.io/api-version"
-	AppVersionV3       = "v3"
-)
-
-func isV3(a *appv1alpha1.Application) bool {
-	return a.Labels != nil && a.Labels[AppApiVersionLabel] == AppVersionV3
-}
-
 func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Application) ([]appcfg.Entrance, error) {
-	if !isV3(app) {
+	if !appv1alpha1.IsShared(app) {
 		return nil, nil
 	}
 
@@ -841,4 +837,45 @@ func GetUserRole(ctx context.Context, username string, client dynamic.Interface)
 	}
 
 	return role, nil
+}
+
+func isPodReady(pod *corev1.Pod) bool {
+	hasReadyCondition := false
+	for _, cond := range pod.Status.Conditions {
+		// K8s 1.28+
+		if cond.Type == "PodReadyToStartContainers" && cond.Status != corev1.ConditionTrue {
+			return false
+		}
+		if cond.Type == corev1.PodReady {
+			if cond.Status == corev1.ConditionTrue {
+				hasReadyCondition = true
+			}
+		}
+	}
+
+	if !hasReadyCondition {
+		return false
+	}
+
+	if len(pod.Status.ContainerStatuses) == 0 {
+		return false
+	}
+
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Running == nil {
+			if containerStatus.State.Waiting != nil {
+				return false
+			}
+			return false
+		}
+
+		if !containerStatus.Ready {
+			return false
+		}
+
+		if containerStatus.State.Running.StartedAt.IsZero() {
+			return false
+		}
+	}
+	return true
 }

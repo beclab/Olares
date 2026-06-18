@@ -42,6 +42,7 @@ func (u upgrader_1_12_6) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, upgradeMultus()...)
 	tasks = append(tasks, createAppCommonDir()...)
 	tasks = append(tasks, upgradeNetworkManagerConfig()...)
+	tasks = append(tasks, upgradeUserReverseProxy()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
@@ -61,6 +62,12 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
+		&task.LocalTask{
+			Name:   "PatchCoreDNSControlPlaneAffinity",
+			Action: new(patchCoreDNSControlPlaneAffinity),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
 		// Apply the GPUBinding CRD schema bump BEFORE the HAMi helm upgrade
 		// runs in upgraderBase.UpgradeSystemComponents(); Helm 3 does not
 		// update objects under chart `crds/` on upgrade, so the new spec
@@ -73,7 +80,14 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Delay:  5 * time.Second,
 		},
 	}
+	pre = append(pre, retagLegacyAMDGPUImage()...)
 	pre = append(pre, u.upgraderBase.UpgradeSystemComponents()...)
+	pre = append(pre, &task.LocalTask{
+		Name:   "PatchL4BFLProxyProbePort",
+		Action: new(patchL4BFLProxyProbePort),
+		Retry:  3,
+		Delay:  5 * time.Second,
+	})
 	return append(pre,
 		&task.LocalTask{
 			Name: "WaitForAppServiceReady",

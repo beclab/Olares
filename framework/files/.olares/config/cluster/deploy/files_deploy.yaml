@@ -178,7 +178,7 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
             - name: TERMINUSD_HOST
-              value: $(NODE_IP):18088  
+              value: master-node:18088  
 {{ end }}
             - name: EXTERNAL_PREFIX
               value: '/External/'
@@ -210,7 +210,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.181
+          image: beclab/files-server:v0.2.186
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -248,7 +248,7 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
             - name: TERMINUSD_HOST
-              value: $(NODE_IP):18088  
+              value: master-node:18088  
 {{ end }}
             - name: UPLOAD_WEBHOOK_ENABLED
               value: "True"

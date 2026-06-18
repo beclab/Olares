@@ -3,6 +3,7 @@ package message
 import (
 	"reflect"
 	"sort"
+	"time"
 
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
@@ -71,6 +72,9 @@ type CertInfo struct {
 	Domain   string
 	CertData string
 	KeyData  string
+	// CreatedAt is the creation time of the source (e.g. the cert ConfigMap).
+	// When two configs claim the same domain, the earlier one wins.
+	CreatedAt time.Time
 }
 
 type SSLConfig struct {
@@ -95,14 +99,15 @@ func (r *Resources) DeepCopy() *Resources {
 			uc.AllowCIDRs = append([]string(nil), u.AllowCIDRs...)
 			uc.AllowedDomains = append([]string(nil), u.AllowedDomains...)
 			uc.ServerNameDomains = append([]string(nil), u.ServerNameDomains...)
-			uc.CustomDomainCerts = append([]*CertInfo(nil), u.CustomDomainCerts...)
 			if u.CustomDomainCerts != nil {
+				uc.CustomDomainCerts = make([]*CertInfo, 0, len(u.CustomDomainCerts))
 				for _, c := range u.CustomDomainCerts {
 					cp := *c
 					uc.CustomDomainCerts = append(uc.CustomDomainCerts, &cp)
 				}
 			}
 			if u.FileserverNodes != nil {
+				uc.FileserverNodes = make([]*FileserverNodeInfo, 0, len(u.FileserverNodes))
 				for _, fn := range u.FileserverNodes {
 					cp := *fn
 					uc.FileserverNodes = append(uc.FileserverNodes, &cp)
@@ -117,10 +122,6 @@ func (r *Resources) DeepCopy() *Resources {
 				for i, app := range u.Apps {
 					uc.Apps[i] = app.DeepCopy()
 				}
-			}
-			if u.FileserverNodes != nil {
-				uc.FileserverNodes = append([]*FileserverNodeInfo(nil), u.FileserverNodes...)
-
 			}
 			out.Users = append(out.Users, &uc)
 		}

@@ -6,41 +6,32 @@
 ## A typical assembly (compose with a build-only image)
 
 ```
- 0. target       local-run | market-distribute   # gates P3 arch flags + D2 metadata depth
-
  Packaging (agent-driven; only if an image is missing / wrong-arch):
  P1. docker?    docker version && docker buildx version   # else guide install
  P2. registry   ask which registry + <user>/<repo>; check login — if not authed, the developer runs `docker login` (agent can't type their token)
- P3. build+push local-run:     docker buildx build --platform linux/<node-arch> -t <ref>:<tag> --push <ctx>
-                market:        docker buildx build --platform linux/amd64,linux/arm64 -t <ref>:<tag> --push <ctx>
+ P3. build+push docker buildx build --platform linux/<node-arch> -t <ref>:<tag> --push <ctx>
                 -> you run build+push, then wire <ref>:<tag> into every build-only `image:` in the compose
 
  Deployment authoring (no login):
  D1. scaffold   olares-cli chart from-compose --name <app> -f docker-compose.yml
  D2. refine     edit OlaresManifest.yaml + templates/ for the 4 refinement areas
-                (metadata depth per release target — see manifest.md)
+                (metadata stub OK for local deploy — see manifest.md)
  D3. lint       olares-cli chart lint ./<app>        # loop D2<->D3 until OK
  D4. package    olares-cli chart package ./<app>
 
- Publish-local (requires login + developer consent; local-run done here):
+ Deploy to your Olares (requires login; confirm once, then auto-loop):
  V1. logged-in? olares-cli profile list              # if not: tell developer, stop
- V2. ask        confirm with the developer before uploading to a real Olares
+ V2. ask once   confirm with the developer before the first upload — then run V3-V6 automatically
  V3. upload     olares-cli market upload ./<app>-<ver>.tgz
  V4. run        olares-cli market install <app> -s upload --version <ver> --watch -o json
  V5. on failure fetch market / chartrepo / app-service / app-pod logs and diagnose
- V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; uid/EACCES -> run-as-user.md ; else report & ask
+ V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; uid/EACCES -> run-as-user.md ; not a chart problem -> break out, report & ask
  V7. cleanup    olares-cli market uninstall <app> --watch ; olares-cli market delete <app>
-
- Publish-market (market-distribute only; requires V pass first):
- M1. polish     full metadata, categories, listing images, spec.supportArch — publish-targets checklist
- M2. lint       olares-cli chart lint ./<app>        # re-check after polish
- M3. package    olares-cli chart package ./<app>
- M4. fork       developer forks beclab/apps, adds OAC + owners file
- M5. PR         [NEW][<app>][<ver>] Summary — see market-submit.md
- M6. wait        GitBot validates → auto-merge → app appears in Market
 ```
 
-Step D1 produces a chart that **already passes `lint`** but is NOT yet a good app: kompose translates containers literally and cannot make product decisions. The value you add is D2. Treat the generated `OlaresManifest.yaml` as a stub — how much you polish §1 Metadata depends on the release target. The V steps cross into sibling skills — full procedure in [olares-chart-publish-verify.md](olares-chart-publish-verify.md). M steps are for market-distribute only — [olares-chart-market-submit.md](olares-chart-market-submit.md). Only proceed past D3 upload with the developer's consent.
+Step D1 produces a chart that **already passes `lint`** but is NOT yet a good app: kompose translates containers literally and cannot make product decisions. The value you add is D2. Treat the generated `OlaresManifest.yaml` as a stub — for deploying to your own Olares, §1 Metadata can stay a stub. The V steps cross into sibling skills — full procedure in [olares-chart-deploy.md](olares-chart-deploy.md). Confirm once before the first upload, then drive the loop automatically.
+
+> **Publishing to the public Market** (multi-arch build, full market-ready metadata, the `beclab/apps` PR, paid apps) is the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill — start there once the app runs on your Olares.
 
 ## What the conversion produces
 

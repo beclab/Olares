@@ -81,7 +81,7 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 
 	appCopy := app.DeepCopy()
 	caller := req.Attribute(constants.UserContextAttribute).(string)
-	isV3 := appcfg.IsV3(appCopy)
+	isShared := appcfg.IsShared(appCopy)
 
 	// TODO: validate settings keys
 	for k, v := range settings {
@@ -97,11 +97,12 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 			str = []byte(v.(string))
 		}
 		// App-level keys are global to the Application and always land
-		// in Spec.Settings; on v3 (shared) apps any other key overlays
-		// into Spec.UserSettings[caller] so per-user views stay
-		// isolated. v1/v2 apps have no UserSettings concept and keep
-		// the legacy behavior of writing everything to Spec.Settings.
-		if isV3 && !isAppLevelSettingKey(k) {
+		// in Spec.Settings; on shared apps any other key overlays into
+		// Spec.UserSettings[caller] so per-user views stay isolated.
+		// Per-user apps (v1 and v3+per-user) have no UserSettings
+		// concept and keep the legacy behavior of writing everything to
+		// Spec.Settings.
+		if isShared && !isAppLevelSettingKey(k) {
 			if appCopy.Spec.UserSettings == nil {
 				appCopy.Spec.UserSettings = map[string]map[string]string{}
 			}
@@ -165,7 +166,7 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	}
 	appCopy := app.DeepCopy()
 	caller := req.Attribute(constants.UserContextAttribute).(string)
-	isV3 := appcfg.IsV3(app)
+	isShared := appcfg.IsShared(app)
 
 	kclient := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 
@@ -217,7 +218,7 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	}
 
 	var patchData map[string]interface{}
-	if isV3 {
+	if isShared {
 		// Patch only Spec.UserSettings[caller]["customDomain"]. JSON
 		// merge-patch leaves other users' entries and other Settings
 		// keys untouched.
@@ -433,8 +434,8 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 		}
 		appCopy := current.DeepCopy()
 
-		if appcfg.IsV3(appCopy) {
-			// v3: only Spec.UserSettings[caller]["authLevel"] +
+		if appcfg.IsShared(appCopy) {
+			// Shared apps: only Spec.UserSettings[caller]["authLevel"] +
 			// ["policy"] for the affected entrance are touched. The
 			// global Spec.Entrances[*].AuthLevel stays as the install-
 			// time default for everybody else.
@@ -597,7 +598,7 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 			return err
 		}
 		appCopy := current.DeepCopy()
-		isV3 := appcfg.IsV3(appCopy)
+		isShared := appcfg.IsShared(appCopy)
 
 		effSettings := appCopy.EffectiveSettings(caller)
 
@@ -624,7 +625,7 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 		}
 
 		var patchData map[string]interface{}
-		if isV3 {
+		if isShared {
 			patchData = map[string]interface{}{
 				"spec": map[string]interface{}{
 					"userSettings": map[string]interface{}{
@@ -776,7 +777,9 @@ func (h *Handler) applicationPermissionList(req *restful.Request, resp *restful.
 func (h *Handler) getApplicationPermission(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
-	name, err := apputils.FmtAppMgrName(app, owner, "")
+	// Use ResolveAppMgrName so shared apps installed under a different admin
+	// are still found by their canonical {app}-shared-{app} name.
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -919,7 +922,9 @@ func (h *Handler) getApplicationProviderList(req *restful.Request, resp *restful
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 	app := req.PathParameter(ParamAppName)
 
-	name, err := apputils.FmtAppMgrName(app, owner, "")
+	// Use ResolveAppMgrName so shared apps installed under a different admin
+	// are still found by their canonical {app}-shared-{app} name.
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return

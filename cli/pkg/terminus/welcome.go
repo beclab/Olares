@@ -72,7 +72,7 @@ func (t *WelcomeMessage) Execute(runtime connector.Runtime) error {
 
 	// If AMD GPU on Ubuntu 22.04/24.04, print warning about reboot for ROCm
 	if si := runtime.GetSystemInfo(); si.IsUbuntu() && (si.IsUbuntuVersionEqual(connector.Ubuntu2204) || si.IsUbuntuVersionEqual(connector.Ubuntu2404)) {
-		if hasStrixHalo, _ := connector.HasStrixHalo(runtime); hasStrixHalo {
+		if hasRyzenAIMax, _ := connector.HasRyzenAIMax(runtime); hasRyzenAIMax {
 			logger.Warnf("\x1b[31mWarning: To enable ROCm, please reboot your machine after activation.\x1b[0m")
 			fmt.Println()
 		}

@@ -384,7 +384,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 				klog.Error(err)
 			}
 
-			restarting, err := utils.SystemStartLessThan(3 * time.Minute) // uptime less then 3 minutes
+			restarting, err := utils.SystemStartLessThan(1 * time.Minute) // uptime less then 1 minutes
 			if err != nil {
 				return err
 			}

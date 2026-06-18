@@ -17,18 +17,18 @@ func TestCalculateInstallComputePlanUsesPureInputs(t *testing.T) {
 		Accelerator: []appcfg.ResourceMode{
 			resourceMode(utils.NvidiaCardType, "8Gi", "1Gi"),
 			resourceMode(utils.AppleMChipType, "", "1Gi"),
-			resourceMode(utils.StrixHaloChipType, "", "8Gi"),
+			resourceMode(utils.AMDType, "", "8Gi"),
 		},
 	}
 	nodes := []Node{
 		nvidiaNode("nvidia-a", Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeExclusive}),
-		computeNode("strix-a", utils.StrixHaloChipType, 4*gi, SupportTypeExclusive),
+		computeNode("amd-a", utils.AMDType, 4*gi, SupportTypeExclusive),
 	}
 
 	plan := calculateInstallComputePlan(app, nodes)
 	assertModeStatus(t, plan, utils.NvidiaCardType, StatusInstallable)
 	assertModeStatus(t, plan, utils.AppleMChipType, StatusNoMatchingNode)
-	assertModeStatus(t, plan, utils.StrixHaloChipType, StatusInsufficientResources)
+	assertModeStatus(t, plan, utils.AMDType, StatusInsufficientResources)
 }
 
 func TestInstallComputePlanIgnoresCurrentBindings(t *testing.T) {
@@ -195,6 +195,99 @@ func TestValidateBindingSelectionTopologyAndMemorySlice(t *testing.T) {
 	}
 }
 
+// TestAllocationsFromResolvedSelectionMultiCardWholeCard is a regression test
+// for the multi-card binding bug: when the frontend submitted two whole-card
+// (Exclusive / TimeSlice) selections, allocationsFromResolvedSelection folded
+// them into a single RequiredGPU budget and dropped every card past the one
+// that first covered the budget, so only one HAMI GPUBinding was created for a
+// two-card request. Every selected whole card must yield its own allocation.
+func TestAllocationsFromResolvedSelectionMultiCardWholeCard(t *testing.T) {
+	cases := []struct {
+		name        string
+		supportType string
+	}{
+		{name: "exclusive", supportType: SupportTypeExclusive},
+		{name: "timeslice", supportType: SupportTypeTimeSlice},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			app := &appcfg.ApplicationConfig{AppName: "trainer", OwnerName: "alice"}
+			req := Requirement{
+				Mode:              utils.NvidiaCardType,
+				RequiredGPU:       12 * gi,
+				LimitedGPU:        12 * gi,
+				SupportMultiCards: true,
+			}
+			nodes := []Node{
+				nvidiaNode("nvidia-a",
+					Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: tc.supportType},
+					Device{ID: "gpu1", Memory: 16 * gi, Health: deviceHealthYes, SupportType: tc.supportType},
+				),
+			}
+			resolved, err := resolveSelection([]BindingSelection{
+				{NodeName: "nvidia-a", DeviceID: "gpu0"},
+				{NodeName: "nvidia-a", DeviceID: "gpu1"},
+			}, nodes)
+			if err != nil {
+				t.Fatalf("resolveSelection failed: %v", err)
+			}
+			allocations := allocationsFromResolvedSelection(app, req, resolved)
+			if len(allocations) != 2 {
+				t.Fatalf("expected one allocation per selected card, got %d: %#v", len(allocations), allocations)
+			}
+			devices := map[string]struct{}{}
+			for _, a := range allocations {
+				devices[a.DeviceID] = struct{}{}
+				if a.Memory != 0 {
+					t.Fatalf("whole-card allocation should record Memory=0, got %#v", a)
+				}
+				if a.AppName != "trainer" || a.Owner != "alice" || a.NodeName != "nvidia-a" {
+					t.Fatalf("unexpected allocation identity: %#v", a)
+				}
+			}
+			for _, id := range []string{"gpu0", "gpu1"} {
+				if _, ok := devices[id]; !ok {
+					t.Fatalf("expected an allocation for %s, got %#v", id, allocations)
+				}
+			}
+		})
+	}
+}
+
+// TestAllocationsFromResolvedSelectionMultiCardMemorySlice pins the unchanged
+// memory-slice path: each selected card keeps its own explicit slice amount.
+func TestAllocationsFromResolvedSelectionMultiCardMemorySlice(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "trainer", OwnerName: "alice"}
+	req := Requirement{
+		Mode:              utils.NvidiaCardType,
+		RequiredGPU:       12 * gi,
+		LimitedGPU:        12 * gi,
+		SupportMultiCards: true,
+	}
+	nodes := []Node{
+		nvidiaNode("nvidia-a",
+			Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeMemorySlice},
+			Device{ID: "gpu1", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeMemorySlice},
+		),
+	}
+	resolved, err := resolveSelection([]BindingSelection{
+		{NodeName: "nvidia-a", DeviceID: "gpu0", Memory: 6 * gi},
+		{NodeName: "nvidia-a", DeviceID: "gpu1", Memory: 6 * gi},
+	}, nodes)
+	if err != nil {
+		t.Fatalf("resolveSelection failed: %v", err)
+	}
+	allocations := allocationsFromResolvedSelection(app, req, resolved)
+	if len(allocations) != 2 {
+		t.Fatalf("expected one allocation per memory-slice card, got %d: %#v", len(allocations), allocations)
+	}
+	for _, a := range allocations {
+		if a.Memory != 6*gi {
+			t.Fatalf("expected each memory-slice allocation to keep its 6Gi slice, got %#v", a)
+		}
+	}
+}
+
 func TestAvailabilityCrossNodeSumsRawAvailableDespitePerNodePressure(t *testing.T) {
 	req := Requirement{
 		Mode:              utils.NvidiaCardType,
@@ -229,11 +322,11 @@ func TestAvailabilityCrossNodeSumsRawAvailableDespitePerNodePressure(t *testing.
 
 func TestAvailabilityNonNvidiaNodeBecomesNotAvailableUnderPressure(t *testing.T) {
 	req := Requirement{
-		Mode:           utils.StrixHaloChipType,
+		Mode:           utils.AMDType,
 		RequiredMemory: 4 * gi,
 		LimitedMemory:  4 * gi,
 	}
-	nodes := []Node{computeNode("strix-a", utils.StrixHaloChipType, 32*gi, SupportTypeExclusive)}
+	nodes := []Node{computeNode("strix-a", utils.AMDType, 32*gi, SupportTypeExclusive)}
 
 	healthyResult := listAvailableForLaunch(req, nodes, PressureSnapshot{})
 	if len(healthyResult.Nodes) != 1 || healthyResult.Nodes[0].Status != NodeStatusAvailable {
@@ -257,13 +350,13 @@ func TestAvailabilityNonNvidiaNodeBecomesNotAvailableUnderPressure(t *testing.T)
 
 func TestValidateBindingSelectionNonNvidiaRequiresSingleSelection(t *testing.T) {
 	req := Requirement{
-		Mode:           utils.StrixHaloChipType,
+		Mode:           utils.AMDType,
 		RequiredMemory: 4 * gi,
 		LimitedMemory:  4 * gi,
 	}
 	nodes := []Node{
-		computeNode("strix-a", utils.StrixHaloChipType, 32*gi, SupportTypeExclusive),
-		computeNode("strix-b", utils.StrixHaloChipType, 32*gi, SupportTypeExclusive),
+		computeNode("strix-a", utils.AMDType, 32*gi, SupportTypeExclusive),
+		computeNode("strix-b", utils.AMDType, 32*gi, SupportTypeExclusive),
 	}
 	result := ValidateBindingSelection(req, []BindingSelection{
 		{NodeName: "strix-a", DeviceID: "strix-a-device"},
@@ -297,6 +390,33 @@ func TestPickAggregateAllocationsAcrossNodes(t *testing.T) {
 	}
 	if len(nodesPicked) != 2 {
 		t.Fatalf("expected allocations to span both nodes, got %#v", nodesPicked)
+	}
+}
+
+// TestPickSingleAllocationGB10MemorySlice guards the GB10 single-card
+// allocation path: a GB10 node's device is decoded with the MemorySlice
+// support type by default (shareModeToSupportType), so PickAllocations must
+// offer MemorySlice in its support-type order. A regression here makes
+// supportTypeOrder fall back to the cpu-only [Exclusive, MemoryShared] set,
+// filters every GB10 candidate out, and surfaces as
+// "no available compute resource for type nvidia-gb10" at install time.
+func TestPickSingleAllocationGB10MemorySlice(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "ollama", OwnerName: "alice"}
+	req := Requirement{
+		Mode:           utils.GB10ChipType,
+		RequiredMemory: 24 * gi,
+		LimitedMemory:  48 * gi,
+	}
+	nodes := []Node{
+		computeNode("spark-ab12", utils.GB10ChipType, 96*gi, SupportTypeMemorySlice),
+	}
+
+	picked, ok := PickAllocations(app, req, nodes, PressureSnapshot{})
+	if !ok || len(picked) != 1 {
+		t.Fatalf("expected a single GB10 allocation, got ok=%v picked=%#v", ok, picked)
+	}
+	if picked[0].NodeName != "spark-ab12" || picked[0].Mode != utils.GB10ChipType {
+		t.Fatalf("unexpected GB10 allocation: %#v", picked[0])
 	}
 }
 
@@ -356,9 +476,9 @@ func TestLegacyComputeMode(t *testing.T) {
 			name: "explicit SelectedGpuType wins even when requirement says cpu",
 			cfg: &appcfg.ApplicationConfig{
 				AppName:         "legacy-pinned-on-strix",
-				SelectedGpuType: utils.StrixHaloChipType,
+				SelectedGpuType: utils.AMDType,
 			},
-			want: utils.StrixHaloChipType,
+			want: utils.AMDType,
 		},
 	}
 	for _, tt := range cases {
@@ -389,12 +509,15 @@ func resourceMode(mode, requiredGPU, requiredMemory string) appcfg.ResourceMode 
 func nvidiaNode(name string, devices ...Device) Node {
 	node := Node{
 		NodeName:       name,
-		GPUType:        utils.NvidiaCardType,
+		GPUTypes:       []string{utils.NvidiaCardType},
 		memoryCapacity: 64 * gi,
 		Devices:        devices,
 	}
 	for i := range node.Devices {
 		node.Devices[i].NodeName = name
+		if node.Devices[i].Mode == "" {
+			node.Devices[i].Mode = utils.NvidiaCardType
+		}
 	}
 	return node
 }
@@ -402,11 +525,12 @@ func nvidiaNode(name string, devices ...Device) Node {
 func computeNode(name, gpuType string, memory int64, supportType string) Node {
 	return Node{
 		NodeName:       name,
-		GPUType:        gpuType,
+		GPUTypes:       []string{gpuType},
 		memoryCapacity: 64 * gi,
 		Devices: []Device{{
 			ID:          name + "-device",
 			NodeName:    name,
+			Mode:        gpuType,
 			Memory:      memory,
 			Health:      deviceHealthYes,
 			SupportType: supportType,
