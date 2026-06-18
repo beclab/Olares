@@ -62,7 +62,12 @@ olares-cli market install <app> -s upload --version <version> --watch -o json
 ```
 
 - Parse `.finalState`: `running` = deployed. `*Failed` / a watcher stuck near `*Failed` = go diagnose. See [`../../olares-market/references/olares-market-lifecycle.md`](../../olares-market/references/olares-market-lifecycle.md) for the state machine and `missing required env var(s)` (re-run with `--env KEY=VALUE`).
-- **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in the chart repo immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. This is the one install failure you *should* retry: wait for hydration, then re-run the same `install`. Don't re-`upload` (same-version re-upload is rejected: `new version X is not higher than current version X`) and don't bump the version — the chart is already stored. Confirm hydration finished via the `appstore-backend` log (`isAppHydrationComplete RETURNING TRUE ... appID=<app>` → `Added new app to latest: <app>` → `new_app_ready`), or just poll `olares-cli market get <app> -s upload` until it resolves.
+- **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in the chart repo immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. Poll until hydration is complete, then install:
+  ```bash
+  until olares-cli market get <app> -s upload -o json 2>/dev/null | grep -q '"name"'; do sleep 2; done
+  olares-cli market install <app> -s upload --version <version> --watch -o json
+  ```
+  Don't re-`upload` (same-version re-upload is rejected: `new version X is not higher than current version X`) and don't bump the version — the chart is already stored.
 
 ## 4. Diagnose by fetching logs
 
@@ -83,7 +88,18 @@ Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster p
 
 ## 5. Decide: fix the chart, or report back
 
-- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md) and [`olares-chart-run-as-user.md`](olares-chart-run-as-user.md), re-run `chart lint`, and re-upload (the auto-loop continues). Bump `metadata.version` + `Chart.yaml` `version` together so the new bytes install cleanly.
+- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md) and [`olares-chart-run-as-user.md`](olares-chart-run-as-user.md), re-run `chart lint`, and re-upload. Bump `metadata.version` + `Chart.yaml` `version` together so the new bytes install cleanly:
+  ```bash
+  # bump both version fields, then:
+  olares-cli chart package ./<app>
+  olares-cli market upload ./<app>-<newversion>.tgz
+  # ... wait for hydration, then install/upgrade
+  ```
+  **Special case — the first upload itself failed (HTTP 400 from `market upload`):** chartrepo may have stored a partial entry despite the error. Re-uploading the same version is rejected (`new version X is not higher than current version X`). Delete the stale entry first:
+  ```bash
+  olares-cli market delete <app> --version <ver>   # --version is required; bare 'delete <app>' fails
+  olares-cli market upload ./<app>-<ver>.tgz        # same version is fine after delete
+  ```
 - **Problem is not in the chart, or unclear:** break out of the auto-loop — summarize the failing state and the relevant log excerpts in plain language, suggest likely causes, and **ask the developer how to proceed.** Do not silently retry install in a loop — install/auth failures are deterministic (see olares-market / olares-shared error tables). The lone exception is the post-upload hydration `404` in section 3, which is transient and meant to be retried once hydration completes.
 
 ## 6. Clean up the test install
@@ -91,11 +107,11 @@ Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster p
 Whether it passed or failed, don't leave a half-installed test app behind (unless the developer wants to keep using it — ask first):
 
 ```bash
-olares-cli market uninstall <app> --watch       # tear down the deployment
-olares-cli market delete <app>                   # remove the chart from the upload bucket
+olares-cli market uninstall <app> --watch              # tear down the deployment
+olares-cli market delete <app> --version <ver>         # remove chart from upload bucket
 ```
 
-(See the market charts reference: `uninstall` and `delete` are separate — uninstall stops the app, delete removes the uploaded chart.)
+`delete` requires `--version` — omitting it fails with "cannot determine version in source 'upload': app not found". `uninstall` and `delete` are separate steps: uninstall stops the running app, delete removes the stored chart.
 
 ## Next step
 
