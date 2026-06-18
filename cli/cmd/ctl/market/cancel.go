@@ -2,9 +2,11 @@ package market
 
 import (
 	"context"
+	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/market/cancel"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -54,7 +56,33 @@ func runCancel(opts *MarketOptions, appName string) error {
 	opts.info("Canceling in-progress operation for '%s' (user '%s')...", appName, mc.olaresID)
 
 	ctx := context.Background()
-	resp, err := mc.CancelOperation(ctx, appName)
+
+	// 1.12.6 moved the cancel body to {app_name, source, version} (the
+	// 1.12.5 body only sent {sync}, which the new backend rejects with
+	// "Missing required fields: app_name is required"). Resolve source and
+	// the installed version from the per-user state row; an explicit
+	// --source wins for the source. version is best-effort — the builder
+	// only includes it when non-empty.
+	source := strings.TrimSpace(opts.Source)
+	version := ""
+	row, lookupErr := lookupInstalledApp(ctx, mc, appName)
+	if lookupErr != nil {
+		return opts.failOp("cancel", appName, lookupErr)
+	}
+	if row != nil {
+		if source == "" {
+			source = strings.TrimSpace(row.Source)
+		}
+		version = strings.TrimSpace(row.Version)
+	}
+
+	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if err != nil {
+		return opts.failOp("cancel", appName, err)
+	}
+
+	method, path, body := cancel.Build(atLeast126, appName, source, version)
+	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
 		return opts.failOp("cancel", appName, err)
 	}
@@ -63,5 +91,5 @@ func runCancel(opts *MarketOptions, appName string) error {
 	// Cancel's terminal row carries the *underlying* OpType (install /
 	// upgrade / ...), not "cancel", so the watch target opts out of
 	// strict OpType matching via matchOpType=false in newWatchTarget.
-	return runWithWatch(opts, mc, result, newWatchTarget(watchCancel, appName, opts.Source))
+	return runWithWatch(opts, mc, result, newWatchTarget(watchCancel, appName, source))
 }
