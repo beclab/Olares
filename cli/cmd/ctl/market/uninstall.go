@@ -85,6 +85,11 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// row must NOT abort the command, otherwise the watcher's
 	// acceptInitialAbsent "already gone == success" path can never run.
 	//
+	// Caveat for 1.12.6: that body REQUIRES source, which (absent --source)
+	// only the per-user row can supply. Once the row is gone we can't build a
+	// valid request, so the `--cascade` re-run is only actionable when the
+	// caller passes --source explicitly — see the source=="" guard below.
+	//
 	// version is read from the same per-user state row and fed to the 1.12.6
 	// body (the SPA's onUninstall() sends the installed version). The 1.12.6
 	// builder includes it only when non-empty; the 1.12.5 builder ignores it.
@@ -131,7 +136,19 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// report an idempotent success and let --watch's acceptInitialAbsent
 	// confirm it, rather than sending an invalid (sourceless) request or
 	// erroring out.
+	//
+	// Exception: when the caller explicitly asked to cascade, they are
+	// almost certainly re-running uninstall to tear down shared sub-charts
+	// left behind after a prior uninstall already cleared the per-user row
+	// (the "re-run --cascade" flow documented above). Silently reporting
+	// "nothing to uninstall" there would hide the leftover shared charts, so
+	// surface an actionable error pointing at --source — the one way to
+	// supply the source the 1.12.6 body needs once the row is gone.
 	if atLeast126 && source == "" {
+		if cascade {
+			return opts.failOp("uninstall", appName, fmt.Errorf(
+				"'%s' is no longer in your installed apps, so its source can't be resolved; re-run with --source <name> to cascade-clean its shared sub-charts", appName))
+		}
 		opts.info("'%s' is not installed for this user; nothing to uninstall", appName)
 		result := newOperationResult(mc, "uninstall", appName, "", "", "not installed; nothing to uninstall", nil)
 		return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, source))
