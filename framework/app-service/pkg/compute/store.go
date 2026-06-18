@@ -238,20 +238,18 @@ func buildNodeResource(node *corev1.Node) Node {
 
 // nonHAMIDevice builds the single synthetic device used for unified-memory
 // modes (cpu, apple-m, amd, intel, moore-soc, …): the whole node is one
-// schedulable unit drawing from system memory. cpu is memory-shared; every
-// other such mode is exclusive (the Apple-Silicon path).
+// schedulable unit drawing from system memory. The support type is the mode's
+// default (defaultSupportType): cpu / intel / amd / moore-soc share the memory
+// via MemorySlice, while apple-m and any discrete-GPU / future mode take the
+// whole device exclusively.
 func nonHAMIDevice(node *corev1.Node, mode string, totalMemory int64) Device {
-	supportType := SupportTypeExclusive
-	if mode == utils.CPUType {
-		supportType = SupportTypeMemoryShared
-	}
 	return Device{
 		ID:                    fmt.Sprintf("%s-%s-0", node.Name, mode),
 		NodeName:              node.Name,
 		Mode:                  mode,
 		Memory:                totalMemory * 75 / 100,
 		Health:                nodeHealth(node),
-		SupportType:           supportType,
+		SupportType:           defaultSupportType(mode),
 		AvailableSupportTypes: AvailableSupportTypes(mode),
 	}
 }
@@ -303,6 +301,9 @@ func boolHealth(healthy bool) string {
 	return deviceHealthNo
 }
 
+// shareModeToSupportType maps a device's HAMI share-mode annotation to a
+// support type. An unset / unrecognized annotation falls back to the mode's
+// default (defaultSupportType): nvidia → TimeSlice, nvidia-gb10 → MemorySlice.
 func shareModeToSupportType(gpuType, shareMode string) string {
 	switch shareMode {
 	case "0":
@@ -310,10 +311,7 @@ func shareModeToSupportType(gpuType, shareMode string) string {
 	case "1":
 		return SupportTypeMemorySlice
 	default:
-		if gpuType == utils.GB10ChipType {
-			return SupportTypeMemorySlice
-		}
-		return SupportTypeTimeSlice
+		return defaultSupportType(gpuType)
 	}
 }
 
@@ -334,17 +332,33 @@ func shareModeAnnotationKey(deviceID string) string {
 	return fmt.Sprintf("sharemode.gpu.bytetrade.io/%s", deviceID)
 }
 
+// AvailableSupportTypes lists the support types a device of the given mode may
+// take. The first entry is the mode's default — the one assigned when no share
+// mode is configured (see defaultSupportType). nvidia can switch among all
+// three; nvidia-gb10 defaults to MemorySlice but may switch to Exclusive; cpu
+// and the unified-memory accelerators (intel / amd / moore-soc) only do
+// MemorySlice; apple-m and any discrete-GPU (intel-gpu / amd-gpu) or future
+// mode are Exclusive-only for now.
 func AvailableSupportTypes(mode string) []string {
 	switch mode {
 	case utils.NvidiaCardType:
 		return []string{SupportTypeTimeSlice, SupportTypeMemorySlice, SupportTypeExclusive}
 	case utils.GB10ChipType:
 		return []string{SupportTypeMemorySlice, SupportTypeExclusive}
-	case utils.CPUType:
-		return []string{SupportTypeMemoryShared}
+	case utils.CPUType, utils.IntelType, utils.AMDType, utils.MooreSocType:
+		return []string{SupportTypeMemorySlice}
 	default:
 		return []string{SupportTypeExclusive}
 	}
+}
+
+// defaultSupportType is the support type a device of the given mode receives
+// when its share mode has not been explicitly configured. It is, by contract,
+// the first entry of AvailableSupportTypes(mode): nvidia → TimeSlice,
+// nvidia-gb10 and the unified-memory modes (cpu / intel / amd / moore-soc) →
+// MemorySlice, apple-m and any discrete-GPU / future mode → Exclusive.
+func defaultSupportType(mode string) string {
+	return AvailableSupportTypes(mode)[0]
 }
 
 func attachBindings(nodes []Node, allocations []Allocation) {
