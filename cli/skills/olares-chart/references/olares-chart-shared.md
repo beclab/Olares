@@ -103,6 +103,6 @@ For new ports targeting 1.12.6+ use the `apiVersion: v3` form above instead; thi
 ## Caveats
 
 - **Only an admin can install a v3 app** — surface this to the user; a normal user install will 403.
-- The namespace is **always** `<app>-shared` regardless of what the manifest says; app-service rewrites it.
+- **`<app>-shared` namespace requires `isShared: true`** in the manifest. Without it, even a `apiVersion: v3` app installs into `<app>-<adminUsername>` (the admin's personal namespace). Add `isShared: true` when the app genuinely needs cluster-wide shared storage/services accessible across namespaces; omit it for apps that just need admin-only install but manage their own users internally.
 - Do not add `sharedEntrances` (removed in 1.12.6+).
 - A shared app is still subject to the rest of the skill: run-as-user 1000 ([run-as-user.md](olares-chart-run-as-user.md)), pinned image tags, accelerator sizing ([accelerator.md](olares-chart-accelerator.md)), env rules ([env.md](olares-chart-env.md)).

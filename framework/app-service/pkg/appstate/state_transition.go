@@ -172,6 +172,7 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 	},
 	appv1alpha1.InstallFailed: {
 		appv1alpha1.Pending,
+		appv1alpha1.Uninstalling,
 	},
 
 	appv1alpha1.StopFailed: {
@@ -313,7 +314,8 @@ var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1a
 		appv1alpha1.InstallOp: true,
 	},
 	appv1alpha1.InstallFailed: {
-		appv1alpha1.InstallOp: true,
+		appv1alpha1.InstallOp:   true,
+		appv1alpha1.UninstallOp: true,
 	},
 	//appv1alpha1.InitialFailed: {
 	//	appv1alpha1.UpgradeOp:   true,

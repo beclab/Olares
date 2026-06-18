@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"k8s.io/klog"
 	"net/url"
 	"os"
 	"strings"
@@ -23,13 +24,13 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/api/manifest"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
@@ -575,15 +576,37 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		klog.Error("list applications error, ", err)
 		return nil, err
 	}
-
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	uc, err := iamv1alpha2.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
 	for _, app := range apps.Items {
 		var entrances []appcfg.Entrance
 		var err error
+		zone, err := iamv1alpha2.GetUserZone(ctx, uc.Users, app.Spec.Owner)
+		if err != nil {
+			continue
+		}
 		if !appv1alpha1.IsShared(&app) {
 			entrances, err = appcfg.GenEntranceURL(ctx, &app)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
 				continue
+			}
+			if zone == "" {
+				continue
+			}
+			// GenEntranceURL / BatchGenSharedAppEntranceURL only fill in the
+			// default appid-based URLs. User-customized third-level domains live
+			// in the "customDomain" setting, so without this the intranet (.local)
+			// layer never learns about custom subdomains and cannot resolve them.
+			thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, app.Spec.Owner)
+			for _, tl := range thirdLevelURLs {
+				entrances = append(entrances, appcfg.Entrance{URL: tl})
 			}
 		} else {
 
@@ -819,6 +842,14 @@ func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Applicat
 		}
 
 		entrances = append(entrances, a.Spec.Entrances...)
+		zone := u.GetAnnotations()["bytetrade.io/zone"]
+		if zone == "" {
+			continue
+		}
+		thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, u.GetName())
+		for _, tl := range thirdLevelURLs {
+			entrances = append(entrances, appcfg.Entrance{URL: tl})
+		}
 	}
 
 	return entrances, nil
