@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -176,6 +177,16 @@ func RunInteractive(ctx context.Context, rp *credential.ResolvedProfile, token s
 		}
 	}
 
+	// gorilla *websocket.Conn is not safe for concurrent writers; the resize
+	// goroutine, the stdin pump, and the initial sendResize all write, so
+	// serialize every outbound write through this helper.
+	var writeMu sync.Mutex
+	writeMsg := func(data []byte) error {
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		return conn.WriteMessage(websocket.BinaryMessage, data)
+	}
+
 	sendResize := func() {
 		if !term.IsTerminal(fd) {
 			return
@@ -185,16 +196,23 @@ func RunInteractive(ctx context.Context, rp *credential.ResolvedProfile, token s
 			return
 		}
 		if frame, ferr := ResizeFrame(uint16(w), uint16(h)); ferr == nil {
-			_ = conn.WriteMessage(websocket.BinaryMessage, frame)
+			_ = writeMsg(frame)
 		}
 	}
 	sendResize()
 	winch := make(chan os.Signal, 1)
 	signal.Notify(winch, syscall.SIGWINCH)
 	defer signal.Stop(winch)
+	done := make(chan struct{})
+	defer close(done)
 	go func() {
-		for range winch {
-			sendResize()
+		for {
+			select {
+			case <-winch:
+				sendResize()
+			case <-done:
+				return
+			}
 		}
 	}()
 
@@ -203,7 +221,7 @@ func RunInteractive(ctx context.Context, rp *credential.ResolvedProfile, token s
 		for {
 			n, rerr := stdin.Read(buf)
 			if n > 0 {
-				_ = conn.WriteMessage(websocket.BinaryMessage, Frame(ChannelStdin, buf[:n]))
+				_ = writeMsg(Frame(ChannelStdin, buf[:n]))
 			}
 			if rerr != nil {
 				return
