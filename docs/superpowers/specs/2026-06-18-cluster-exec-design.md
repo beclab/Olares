@@ -31,10 +31,11 @@ Non-goals (YAGNI): `node exec` (host shell), `cp` (file copy), port-forward,
 
 1. Both modes: one-shot default + `-it` interactive.
 2. Wire protocol: **native Kubernetes exec** over WebSocket
-   (`/api/v1/namespaces/<ns>/pods/<pod>/exec`, subprotocol `v5.channel.k8s.io`,
-   auto-fallback to `v4`). Chosen over the KubeSphere terminal WS because native
-   exec gives separated stdout/stderr **and a real exit code** — both critical
-   for an AI to judge success deterministically.
+   (`/api/v1/namespaces/<ns>/pods/<pod>/exec`, subprotocol `v4.channel.k8s.io`).
+   Chosen over the KubeSphere terminal WS because native exec gives separated
+   stdout/stderr **and a real exit code** — both critical for an AI to judge
+   success deterministically. (`v5.channel.k8s.io`, which adds a stream-close
+   signal needed to half-close stdin, is deferred — see "Stdin in one-shot".)
 3. Interactive `-it` requires a `y/N` confirmation before entering.
 4. The required edge nginx change ships **within this design** (not a separate PR).
 
@@ -71,7 +72,8 @@ multi-container errors with the list; `-c` overrides.
 
 Flags:
 
-- `-i, --stdin` — keep stdin open to the container.
+- `-i, --stdin` — keep stdin open to the container. **Interactive (`-it`) only**
+  (see "Stdin in one-shot"); rejected with guidance in one-shot mode.
 - `-t, --tty` — allocate a TTY. `-it` is the interactive shorthand.
 - `--timeout DUR` — one-shot only; bounded wait (default `60s`). On expiry:
   abort, return captured partial output + a typed timeout error, `exitCode=null`.
@@ -87,7 +89,8 @@ container (no implicit shell). For pipes/redirects/vars, the caller writes
 
 ### One-shot (default)
 
-- No TTY, stdin closed (unless `--stdin`). Output is clean text, no ANSI/prompt/echo.
+- No TTY, stdin closed. Output is clean text, no ANSI/prompt/echo. (`--stdin` is
+  rejected here — see "Stdin in one-shot".)
 - stdout and stderr captured separately.
 - The in-container command's exit code becomes the CLI process exit code.
 - A non-zero command exit is a *normal result*, not a CLI error: do NOT print the
@@ -135,7 +138,7 @@ container (no implicit shell). For pipes/redirects/vars, the caller writes
    - **ephemeral vs durable fixes** (in-container changes revert on restart;
      durable fixes go through `workload`/ConfigMap/image);
    - compose multi-step repairs with `-- sh -c '...'` (stateless);
-   - canonical file-edit recipes (`--stdin` + `cat >`, `sed -i`, `tee`);
+   - canonical file-edit recipes (heredoc `cat > /path <<EOF`, `sed -i`, `tee`);
    - that exec is RBAC-gated and server-side audited.
 
 ## Designing for AI repair work
@@ -175,14 +178,28 @@ in-container change as a permanent fix.
 
 ### Writing files / editing config
 
-Editing is core to repair, but there is no interactive editor. Supported patterns:
+Editing is core to repair, but there is no interactive editor. Because one-shot
+exec is stateless and self-contained, the new content travels inside the command
+itself (no stdin streaming required). Supported patterns:
 
-- `--stdin` streams the CLI's stdin into the container, enabling
-  `exec ... -i -- sh -c 'cat > /etc/app.conf'` with the new content piped in.
-- In-place edits via `-- sh -c "sed -i 's/old/new/' /etc/app.conf"` or
-  `-- sh -c 'printf "%s" "..." | tee /path'`.
+- Heredoc: `-- sh -c 'cat > /etc/app.conf <<EOF
+  <content>
+  EOF'`.
+- In-place edits via `-- sh -c "sed -i 's/old/new/' /etc/app.conf"`.
+- `-- sh -c 'printf "%s" "..." | tee /path'`.
 
 The skill documents these as the canonical "AI edits a file" recipes.
+
+### Stdin in one-shot (descoped)
+
+Forwarding the CLI's stdin into a one-shot command (`-i -- sh -c 'cat > /path'`)
+would require half-closing the stdin stream so the in-container reader sees EOF.
+The `v4.channel.k8s.io` protocol has **no per-stream close signal**, so a piped
+`cat >` would hang until `--timeout`. The stream-close signal exists only in
+`v5.channel.k8s.io`. Rather than ship a flag that hangs, one-shot **rejects
+`-i/--stdin`** with guidance to use the heredoc/`sed`/`tee` recipes above, which
+cover file editing without stdin. `-i` remains valid for interactive `-it`.
+Implementing v5 (to enable one-shot stdin streaming) is a possible follow-up.
 
 ### Environment constraints → clear errors
 
@@ -206,15 +223,42 @@ command intent can't be reliably classified as destructive). The guardrails are:
 
 ## Implementation approach (WS client)
 
-- **Preferred:** `k8s.io/client-go/tools/remotecommand` WebSocket executor. It
-  handles channel framing, stdout/stderr demux, TTY, resize, and exit-code
-  parsing. Build a `*rest.Config` pointed at `ControlHubURL` and inject the
-  existing `X-Authorization` refreshing transport via `WrapTransport`. Risk:
-  adapting client-go's WS handshake to a non-Bearer `X-Authorization` header.
-- **Fallback:** `github.com/gorilla/websocket` direct handshake (trivially adds
-  the `X-Authorization` header) plus a ~100-line v4 channel framer. Maximum
-  control, fewest moving parts, if header injection into client-go proves awkward.
-- Decision deferred to the implementation plan; try preferred first.
+**Locked: `github.com/gorilla/websocket` direct handshake + a small `v4.channel.k8s.io`
+framer.** Rationale: the control-hub→K8s path authenticates only when the request
+carries **all three** of `X-Authorization: <jwt>`, `Cookie: auth_token=<jwt>`, and
+`X-Unauth-Error: Non-Redirect` (see `refreshingTransport.send`,
+`cli/pkg/cmdutil/factory.go` — without the `auth_token` cookie the K8s proxy
+returns `403 system:anonymous`). client-go's `remotecommand` WebSocket executor
+builds its handshake from a `rest.Config` and does not let us set an arbitrary
+cookie + non-Bearer header cleanly, so gorilla (where we own the handshake
+`http.Header`) is the right tool.
+
+Token freshness: resolve the active profile, do one cheap authenticated preflight
+(`pod.Get`, which routes through the refreshing transport and rotates an expired
+token) before dialing, then read the (now-fresh) `rp.AccessToken` for the three
+handshake headers. If the handshake still returns 401/403/459, surface the
+existing friendly CTA.
+
+### `v4.channel.k8s.io` framing (what the framer implements)
+
+Request: `GET .../exec?container=<c>&command=<c0>&command=<c1>...&stdout=true&stderr=true`
+(one-shot) or `...&stdin=true&stdout=true&tty=true` (interactive; `stderr` MUST be
+omitted/false when `tty=true` because the PTY merges it). Handshake sets
+`Sec-WebSocket-Protocol: v4.channel.k8s.io`.
+
+Binary messages, first byte = channel:
+
+| Ch | Direction | Meaning |
+|---|---|---|
+| 0 | client→server | stdin |
+| 1 | server→client | stdout |
+| 2 | server→client | stderr |
+| 3 | server→client | error/status (`metav1.Status` JSON at process end) |
+| 4 | client→server | resize (`{"Width":N,"Height":N}` JSON, TTY only) |
+
+Exit code: parse the channel-3 `metav1.Status`. `status == "Success"` → exit 0.
+Otherwise walk `details.causes[]` for `reason == "ExitCode"` and parse its
+`message` as the integer code; fall back to exit 1 if absent.
 
 ## Auth & safety
 
