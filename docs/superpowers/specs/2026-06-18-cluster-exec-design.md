@@ -233,11 +233,14 @@ builds its handshake from a `rest.Config` and does not let us set an arbitrary
 cookie + non-Bearer header cleanly, so gorilla (where we own the handshake
 `http.Header`) is the right tool.
 
-Token freshness: resolve the active profile, do one cheap authenticated preflight
-(`pod.Get`, which routes through the refreshing transport and rotates an expired
-token) before dialing, then read the (now-fresh) `rp.AccessToken` for the three
-handshake headers. If the handshake still returns 401/403/459, surface the
-existing friendly CTA.
+Token freshness: because the handshake bypasses `HTTPClient`'s reactive
+401-refresh transport, the client gets a token via `Factory.ValidAccessToken`,
+which proactively refreshes (`/api/refresh`) when the cached token is within
+`preflightSkew` of expiry and returns the fresh token for the three handshake
+headers. (When `--container` is omitted, the verb also does a `pod.Get` first to
+auto-select the sole container; that call independently rides the refreshing
+transport.) If the handshake still returns 401/403/459, surface the existing
+friendly CTA.
 
 ### `v4.channel.k8s.io` framing (what the framer implements)
 
