@@ -2,14 +2,31 @@ package market
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/market/cancel"
 	"github.com/beclab/Olares/cli/cmd/ctl/market/uninstall"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
+
+// inFlightCancelableStates mirrors app-service's CancelableStates: while the
+// app is mid-operation, app-service rejects a direct uninstall and only
+// accepts a cancel. `market uninstall` orchestrates around this (cancel
+// first, then finish with a real uninstall if the cancel only stopped the
+// app) so "uninstall == fully remove" holds regardless of state.
+var inFlightCancelableStates = map[string]bool{
+	"pending":      true,
+	"downloading":  true,
+	"installing":   true,
+	"initializing": true,
+	"upgrading":    true,
+	"applyingEnv":  true,
+	"resuming":     true,
+}
 
 func NewCmdMarketUninstall(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
@@ -95,6 +112,7 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// builder includes it only when non-empty; the 1.12.5 builder ignores it.
 	source := strings.TrimSpace(opts.Source)
 	version := strings.TrimSpace(opts.Version)
+	var curState string
 	row, lookupErr := lookupInstalledApp(ctx, mc, appName)
 	if lookupErr != nil {
 		return opts.failOp("uninstall", appName, lookupErr)
@@ -106,6 +124,7 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 		if version == "" {
 			version = strings.TrimSpace(row.Version)
 		}
+		curState = strings.TrimSpace(row.State)
 	}
 
 	cascadeExplicit := cmd != nil && cmd.Flags().Changed("cascade")
@@ -119,6 +138,15 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 		} else {
 			opts.info("--cascade auto-enabled: %s", why)
 		}
+	}
+
+	// In-flight app: app-service rejects a direct uninstall while an
+	// operation is in progress and only accepts cancel. Orchestrate the full
+	// removal from the CLI (cancel first, then a real uninstall if the cancel
+	// only stopped the app) so "uninstall == fully remove" holds regardless
+	// of state.
+	if row != nil && inFlightCancelableStates[curState] {
+		return runUninstallViaCancel(opts, mc, appName, source, version, cascade, curState, atLeast126)
 	}
 
 	opts.info("Uninstalling '%s' for user '%s'...", appName, mc.olaresID)
@@ -165,6 +193,93 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// once the backend cleans it up, so the watch target opts in to the
 	// "absent means success (provided we saw it earlier)" shortcut.
 	return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, source))
+}
+
+// runUninstallViaCancel handles `uninstall` against an in-flight app.
+// app-service rejects a direct uninstall while an operation is in progress
+// and only accepts cancel, so we orchestrate the removal entirely from the
+// CLI:
+//
+//  1. cancel and block until the row settles;
+//  2. if the cancel tore the app down (the pending/downloading/installing
+//     flow cancels into a *Canceled state with the namespace deleted, or the
+//     row reaches uninstalled / vanishes) we are done — that is equivalent to
+//     uninstalled;
+//  3. if the cancel only stopped the app (initializing/upgrading/applyingEnv/
+//     resuming cancel into stopped, or a race left it running) the app is
+//     still present, so issue the real uninstall — now allowed from
+//     stopped/running — and finish under --watch.
+//
+// The cancel step always blocks (it must, to decide step 3) regardless of
+// --watch.
+func runUninstallViaCancel(opts *MarketOptions, mc *MarketClient, appName, source, version string, cascade bool, curState string, atLeast126 bool) error {
+	ctx := context.Background()
+
+	opts.info("'%s' is %s (operation in progress); canceling it first...", appName, curState)
+	cancelMethod, cancelPath, cancelBody := cancel.Build(atLeast126, appName, source, version)
+	if _, err := mc.doRequest(ctx, cancelMethod, cancelPath, cancelBody); err != nil {
+		return opts.failOp("uninstall", appName, fmt.Errorf("cancel in-progress operation: %w", err))
+	}
+
+	// watchCancel's success set is the widest in the tree (any "stopped
+	// moving" state); it fails only on *CancelFailed.
+	cancelRow, err := waitForTerminal(ctx, mc, opts, newWatchTarget(watchCancel, appName, source))
+	if err != nil {
+		return finishWatchError(opts, mc, "uninstall", appName, source, err)
+	}
+	settled := strings.TrimSpace(cancelRow.State)
+
+	// Install-flow cancel deletes the namespace -> the app is gone. Treat
+	// *Canceled / uninstalled / a vanished row as a completed uninstall.
+	if settled == "" || settled == "uninstalled" || canceledStates[settled] {
+		final := newOperationResult(mc, "uninstall", appName, source, "", "", nil)
+		final.Status = "success"
+		final.State = settled
+		final.FinalState = settled
+		final.Source = source
+		final.Message = fmt.Sprintf("uninstall completed via cancel (state=%s)", valueOrUnknown(settled))
+		if !opts.Quiet {
+			opts.printResult(final)
+		}
+		return nil
+	}
+
+	// Cancel only stopped the app (or raced and left it running); the app is
+	// still present, so finish the job with a real uninstall.
+	opts.info("'%s' settled at %s after cancel; issuing uninstall to fully remove it...", appName, settled)
+
+	method, path, body := uninstall.Build(atLeast126, appName, source, version, cascade, opts.DeleteData)
+	resp, err := mc.doRequest(ctx, method, path, body)
+	if err != nil {
+		return opts.failOp("uninstall", appName, err)
+	}
+	result := newOperationResult(mc, "uninstall", appName, source, "", "uninstall requested", resp)
+	return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, source))
+}
+
+// finishWatchError renders a terminal watch error (failure / timeout) as a
+// failed OperationResult and returns errReported, mirroring runWithWatch's
+// error path so multi-step flows surface structured output too.
+func finishWatchError(opts *MarketOptions, mc *MarketClient, op, appName, source string, err error) error {
+	failed := newOperationResult(mc, op, appName, source, "", "", nil)
+	failed.Status = "failed"
+	failed.Message = err.Error()
+	var fail *watchFailureError
+	if errors.As(err, &fail) {
+		failed.State = fail.row.State
+		failed.Progress = fail.row.Progress
+		failed.FinalState = fail.row.State
+		failed.FinalOpType = fail.row.OpType
+	}
+	var to *watchTimeoutError
+	if errors.As(err, &to) && to.last != nil {
+		failed.State = to.last.State
+		failed.Progress = to.last.Progress
+		failed.FinalState = to.last.State
+		failed.FinalOpType = to.last.OpType
+	}
+	opts.printResult(failed)
+	return errReported
 }
 
 // resolveCascade computes the final value of the `all` flag for uninstall /
