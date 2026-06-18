@@ -20,7 +20,12 @@ Add an `exec` verb under both `cluster pod` and `cluster container` (mirroring
   (one-shot, the default — optimized for AI iterative troubleshooting), and
 - attach an interactive TTY shell for a human (`-it`, like `kubectl exec -it`).
 
-Non-goals (YAGNI): `node exec` (host shell), `cp` (file copy), port-forward.
+The intent is to let an AI agent enter a container to **both troubleshoot and
+perform repairs/fixes** (edit config, restart a process, install a tool, etc.),
+not just read state.
+
+Non-goals (YAGNI): `node exec` (host shell), `cp` (file copy), port-forward,
+**stateful exec sessions** (see "Stateless vs stateful" below).
 
 ## Decisions (locked during brainstorming)
 
@@ -125,8 +130,79 @@ container (no implicit shell). For pipes/redirects/vars, the caller writes
    parseable output for agents; bounded by `--timeout` and `--max-output-bytes`
    so a hung or chatty command can't stall or flood the agent.
 4. Update the `olares-cluster` skill (`cli/skills/olares-cluster/`): add `exec`
-   to the verb index and document the JSON contract + safety so the AI discovers
-   and uses it correctly.
+   to the verb index and document, for the AI:
+   - the JSON contract + exit-code semantics;
+   - **ephemeral vs durable fixes** (in-container changes revert on restart;
+     durable fixes go through `workload`/ConfigMap/image);
+   - compose multi-step repairs with `-- sh -c '...'` (stateless);
+   - canonical file-edit recipes (`--stdin` + `cat >`, `sed -i`, `tee`);
+   - that exec is RBAC-gated and server-side audited.
+
+## Designing for AI repair work
+
+The premise is an AI agent that *fixes* things inside containers, not only reads
+them. That raises issues a read-only logs flow never hits:
+
+### Stateless vs stateful
+
+One-shot exec is **stateless**: each command is a fresh process, so `cd`, shell
+variables, and interactive editors do not persist across calls. We deliberately
+keep it stateless rather than building stateful sessions:
+
+- It covers the vast majority of repairs because any sequence can be composed in
+  one call: `-- sh -c 'cd /app && sed -i ... && kill -HUP 1'`. Filesystem effects
+  (e.g. `apk add curl`) DO persist in the running container across calls — only
+  process/shell state doesn't.
+- Stateless commands are self-contained, deterministic, and reproducible — which
+  is *easier* for an AI to reason about than hidden session state (current cwd,
+  prior exports).
+- A stateful session would require a long-lived connection held by a background
+  daemon between short-lived CLI invocations, plus a session registry, output
+  cursoring, timeouts/GC, and concurrency handling — a large, fragile subsystem.
+  Deferred as YAGNI; revisit only if a concrete need appears.
+
+Guidance to encode in the skill: for multi-step repairs, compose with
+`-- sh -c '...'` rather than expecting state to carry between calls.
+
+### Ephemeral vs durable fixes (CRITICAL)
+
+Changes made inside a running container are **ephemeral** — a pod restart or any
+controller-driven recreation (rollout, eviction, node drain) reverts them. exec
+is a *hotfix* tool. Durable fixes must change the source of truth: the image, a
+ConfigMap/Secret, env, or the Deployment/StatefulSet spec (the `cluster workload`
+path). The skill MUST state this explicitly so the AI does not report a transient
+in-container change as a permanent fix.
+
+### Writing files / editing config
+
+Editing is core to repair, but there is no interactive editor. Supported patterns:
+
+- `--stdin` streams the CLI's stdin into the container, enabling
+  `exec ... -i -- sh -c 'cat > /etc/app.conf'` with the new content piped in.
+- In-place edits via `-- sh -c "sed -i 's/old/new/' /etc/app.conf"` or
+  `-- sh -c 'printf "%s" "..." | tee /path'`.
+
+The skill documents these as the canonical "AI edits a file" recipes.
+
+### Environment constraints → clear errors
+
+Repairs fail in predictable ways that need legible messages, not raw dumps:
+
+- No shell/tools in image (distroless/scratch): "no `sh` in container" hint.
+- Read-only root filesystem / non-root user / restrictive securityContext:
+  surface `EROFS` / `EACCES` with a "container filesystem is read-only or
+  permission-restricted" hint.
+
+### Safety stance for mutating exec
+
+One-shot stays **non-prompting** (per-command y/N would defeat AI autonomy, and
+command intent can't be reliably classified as destructive). The guardrails are:
+
+- `pods/exec` RBAC (server-side SAR) gates *who* can exec at all.
+- Server-side audit: ks-apiserver already audit-logs exec subresource calls, so
+  every AI exec is attributable without building new audit plumbing. The skill
+  notes that exec actions are audited.
+- `-it` interactive (human) keeps its y/N confirmation.
 
 ## Implementation approach (WS client)
 
@@ -156,6 +232,8 @@ container (no implicit shell). For pipes/redirects/vars, the caller writes
 |---|---|
 | Command not found in container | exit code `127` (normal result, not CLI error) |
 | Not executable | exit code `126` |
+| No shell in image (distroless/scratch) | exit/stderr maps to a "no `sh` in container" hint |
+| Read-only fs / permission denied on write | `EROFS`/`EACCES` surfaced with "filesystem read-only or permission-restricted" hint |
 | Pod/container not running | `HTTPError` (4xx, terminal) with pod state hint |
 | No `pods/exec` permission | 403 + `profile login` / `context --refresh` CTA |
 | Old Olares (edge nginx lacks exec WS whitelist) | handshake not upgraded → typed "exec not supported on this Olares version; please upgrade" |
