@@ -24,14 +24,17 @@ cli/skills/
 ├── olares-settings/   # olares-cli settings
 ├── olares-dashboard/  # olares-cli dashboard
 ├── olares-cluster/    # olares-cli cluster (per-user K8s view)
-└── olares-chart/      # olares-cli chart (local-only chart authoring)
+├── olares-chart/      # olares-cli chart (chart authoring + deploy to your Olares)
+│   ├── SKILL.md
+│   └── references/    # one file per refinement area / capability
+└── olares-publish/    # public Olares Market distribution (beclab/apps PR, paid apps)
     ├── SKILL.md
-    └── references/    # one file per refinement area / capability
+    └── references/    # market-ready targets / submit / paid-apps
 ```
 
 **Install the whole suite together.** These skills are designed as one set and cross-reference each other by relative path (e.g. `../olares-shared/SKILL.md`, `../olares-shared/references/olares-platform.md`). Installing only a subset leaves those links dangling. `olares-shared` is the foundation — every runtime skill cross-references it for profile selection, login, and HTTP 401/403 recovery, **and it hosts the cross-skill platform model** ([`olares-shared/references/olares-platform.md`](olares-shared/references/olares-platform.md)) that `files` / `chart` / `cluster` link to (one hop from their `SKILL.md`) instead of re-describing it.
 
-`olares-chart` is a partial exception on **login**, not on linking: its authoring verbs (`from-compose` / `lint` / `package`) are local-only and need **no profile / login / cluster**, so it never logs in to author a chart. It still reads `olares-platform.md` for platform facts (no login needed) and only requires `olares-shared` login when **pushing a chart to a real Olares to test** (`market upload` + `install`).
+`olares-chart` is a partial exception on **login**, not on linking: its authoring verbs (`from-compose` / `lint` / `package`) are local-only and need **no profile / login / cluster**, so it never logs in to author a chart. It still reads `olares-platform.md` for platform facts (no login needed) and only requires `olares-shared` login when **deploying a chart to a real Olares** (`market upload` + `install`). `olares-publish` is the public-distribution counterpart: it picks up after the app already runs locally (via `olares-chart`) and covers market-ready polish, the `beclab/apps` PR, and paid apps.
 
 ClawHub publishes the entire skill directory (including `references/`), so reference files ship automatically without any change to `publish.sh`.
 
@@ -102,7 +105,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 `clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` is valid semver, that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
-./cli/skills/publish.sh --dry-run                  # validate all 7
+./cli/skills/publish.sh --dry-run                  # validate all 8
 ./cli/skills/publish.sh --dry-run olares-shared    # validate one
 ```
 
@@ -124,7 +127,7 @@ Note: `clawhub sync` defaults to bumping the patch version on updates. For deter
 ### Publish
 
 ```bash
-./cli/skills/publish.sh                            # publish all 7
+./cli/skills/publish.sh                            # publish all 8
 ./cli/skills/publish.sh olares-files olares-market # publish a subset
 ```
 
@@ -132,7 +135,7 @@ Versions come from each skill's frontmatter `version:` field — bump the field 
 
 ## Slug policy
 
-The 7 skills publish under their canonical short names:
+The 8 skills publish under their canonical short names:
 
 | Slug              | Display name                                |
 |-------------------|---------------------------------------------|
@@ -143,5 +146,6 @@ The 7 skills publish under their canonical short names:
 | `olares-dashboard`| Olares Dashboard (olares-cli dashboard)     |
 | `olares-cluster`  | Olares Cluster (olares-cli cluster)         |
 | `olares-chart`    | Olares Chart (olares-cli chart)             |
+| `olares-publish`  | Olares Publish (Olares Market distribution) |
 
 If a slug is ever taken on ClawHub, fall back to the `olares-cli-` prefix (e.g. `olares-cli-shared`) and update **all** cross-references to `../olares-shared/SKILL.md` inside the runtime skills accordingly.

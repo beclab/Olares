@@ -1,7 +1,7 @@
 # Compose: obtain or author a docker-compose (deployment-input axis)
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
-> `chart from-compose` needs a docker-compose as input. This is the **deployment-input** capability: get a compose, then hand it to [olares-chart-from-compose.md](olares-chart-from-compose.md). It is orthogonal to packaging — see [olares-chart-image.md](olares-chart-image.md) for making each service's image pullable. Metadata polish depth depends on release target — [olares-chart-publish-targets.md](olares-chart-publish-targets.md).
+> `chart from-compose` needs a docker-compose as input. This is the **deployment-input** capability: get a compose, then hand it to [olares-chart-from-compose.md](olares-chart-from-compose.md). It is orthogonal to packaging — see [olares-chart-image.md](olares-chart-image.md) for making each service's image pullable.
 
 You either already have a compose, are handed several, or have only source:
 

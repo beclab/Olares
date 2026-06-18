@@ -42,7 +42,7 @@ olares-cli chart from-compose --name myapp -f docker-compose.yml --new-schema
 
 The command prints the absolute chart path and a reminder to refine + lint. Then inspect:
 
-- `OlaresManifest.yaml` — the stub you will refine (see [olares-chart-manifest.md](olares-chart-manifest.md); metadata depth per [olares-chart-publish-targets.md](olares-chart-publish-targets.md)).
+- `OlaresManifest.yaml` — the stub you will refine (see [olares-chart-manifest.md](olares-chart-manifest.md); metadata can stay a stub for local deploy).
 - `templates/deployment-<app>.yaml` — the primary workload (renamed to the app name; required by lint).
 - `templates/service-*.yaml` — exposed services; the entrance `host` points at one of these service names.
 - `templates/persistentvolumeclaim-*.yaml` — one per compose volume; **these are the storage decisions you must revisit** (most should become userspace volumes; PVCs belonging to a bundled db must be deleted along with that db's workload — see middleware below).
@@ -53,7 +53,7 @@ The command prints the absolute chart path and a reminder to refine + lint. Then
 - **`hostPath` / bind mounts** (`./dir:/path`) are dropped by kompose with a warning — the host path won't exist on Olares. Re-model these as userspace volumes.
 - **Bundled db/queue services** (`postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats`) come through as plain workloads. **Delete them and wire to system middleware** — do not keep them just because they render (see manifest §3; this is the default, not optional).
 - **`depends_on`, healthchecks, restart policies** don't all map 1:1; verify the rendered templates.
-- The conversion **always passes `lint` as-is** but is not production-ready — the four refinement areas in the parent skill are mandatory before the app will run well. Metadata depth (§1) depends on release target; functional refine (§2–§4) is required for both targets.
+- The conversion **always passes `lint` as-is** but is not production-ready — the four refinement areas in the parent skill are mandatory before the app will run well. Metadata (§1) can stay a stub for local deploy; functional refine (§2–§4) is always required.
 
 ## Next step
 
@@ -63,4 +63,4 @@ Once refined, validate in a loop:
 olares-cli chart lint ./myapp      # see olares-chart-lint.md
 ```
 
-Then, with the developer's consent, live-validate on a real Olares (Publish-local — [olares-chart-publish-verify.md](olares-chart-publish-verify.md)). For market-distribute, continue to [olares-chart-market-submit.md](olares-chart-market-submit.md) after local validation passes.
+Then, with the developer's consent (confirm once), deploy to a real Olares — [olares-chart-deploy.md](olares-chart-deploy.md). To list it on the public Market afterwards, see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).
