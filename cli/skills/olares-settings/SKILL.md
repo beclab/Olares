@@ -1,6 +1,6 @@
 ---
 name: olares-settings
-version: 4.2.0
+version: 4.2.1
 description: "Olares Settings via olares-cli settings — mirror of Settings SPA: users, apps, VPN, backup, integration, GPU, search, me/whoami. Use for Olares Settings, role, VPN ACL, backup, integration accounts, language."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -56,7 +56,7 @@ For every area, **start with `olares-cli settings <area> --help`**. References b
 | `network` | `olares-cli settings network --help` (read-only reverse-proxy / frp / hosts-file; writes blocked by JWS gap — see below) |
 | `gpu` | `olares-cli settings gpu --help` (read-only `list`) |
 | `video` | `olares-cli settings video --help` (read-only `config get`) |
-| `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list`) |
+| `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list/add/rm`). `dirs` = the **full-content** index directories (filenames are indexed broadly by default; full-text defaults to Drive `/Documents/` only — add more with `dirs add`). `status` shows the index `Status` plus a full-text-extraction `Failures` count (`-o json` for per-file detail). Exclude-pattern view/edit is SPA-only today. Index coverage model lives in [`olares-search`](../olares-search/SKILL.md) |
 | `restore` | `olares-cli settings restore --help` (read-only `plans list`) |
 | `advanced` | `olares-cli settings advanced --help` (read-only `status`, `registries list`, `images list`, `env (system|user) list`) |
 
