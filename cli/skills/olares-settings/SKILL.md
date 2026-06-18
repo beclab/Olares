@@ -1,6 +1,6 @@
 ---
 name: olares-settings
-version: 4.2.1
+version: 4.2.2
 description: "Olares Settings via olares-cli settings — mirror of Settings SPA: users, apps, VPN, backup, integration, GPU, search, me/whoami. Use for Olares Settings, role, VPN ACL, backup, integration accounts, language."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -121,7 +121,7 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 | `vpn ssh` | `enable` / `disable` | VERIFIED |
 | `vpn acl` | `add` / `remove` | VERIFIED |
 | `integration accounts` | `add awss3` / `add tencent` / `delete` | VERIFIED |
-| `apps` | `suspend [--all]` / `resume`, `env set`, `domain set/finish`, `policy set`, `auth-level set` | UNVERIFIED |
+| `apps` | `suspend [--cascade]` / `resume` (thin aliases over `market stop` / `market resume`), `env set`, `domain set/finish`, `policy set`, `auth-level set` | UNVERIFIED |
 | `backup` | `password set` | UNVERIFIED |
 
 **Not yet implemented** (and the CLI deliberately does NOT register them):
