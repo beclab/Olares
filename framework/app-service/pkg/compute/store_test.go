@@ -43,8 +43,8 @@ func TestBuildNodeResourcePureCPU(t *testing.T) {
 	if len(n.GPUTypes) != 0 {
 		t.Fatalf("pure-cpu node should advertise no gpu types, got %v", n.GPUTypes)
 	}
-	if len(n.Devices) != 1 || n.Devices[0].Mode != utils.CPUType || n.Devices[0].SupportType != SupportTypeMemoryShared {
-		t.Fatalf("expected a single cpu memory-shared device, got %+v", n.Devices)
+	if len(n.Devices) != 1 || n.Devices[0].Mode != utils.CPUType || n.Devices[0].SupportType != SupportTypeMemorySlice {
+		t.Fatalf("expected a single cpu memory-slice device, got %+v", n.Devices)
 	}
 	if !n.SupportsMode(utils.CPUType) {
 		t.Fatal("every node must support cpu")
@@ -70,11 +70,11 @@ func TestBuildNodeResourceMultiMode(t *testing.T) {
 		t.Fatal("node must not claim support for amd")
 	}
 
-	// The intel mode follows the Apple-Silicon path: one exclusive device,
-	// tagged with its mode and the node-mode device id.
+	// Intel is a unified-memory accelerator: one MemorySlice device, tagged
+	// with its mode and the node-mode device id.
 	intelDevs := devicesForMode(n, utils.IntelType)
-	if len(intelDevs) != 1 || intelDevs[0].SupportType != SupportTypeExclusive {
-		t.Fatalf("expected one exclusive intel device, got %+v", intelDevs)
+	if len(intelDevs) != 1 || intelDevs[0].SupportType != SupportTypeMemorySlice {
+		t.Fatalf("expected one memory-slice intel device, got %+v", intelDevs)
 	}
 	if intelDevs[0].ID != "olares-one-intel-0" {
 		t.Fatalf("unexpected intel device id %q", intelDevs[0].ID)
@@ -100,7 +100,7 @@ func TestBindingSelectionResolvesDeviceOnMultiModeNode(t *testing.T) {
 		memoryCapacity: 32 * gi,
 		Devices: []Device{
 			{ID: "gpu0", NodeName: "olares-one", Mode: utils.NvidiaCardType, Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeExclusive, AvailableSupportTypes: AvailableSupportTypes(utils.NvidiaCardType)},
-			{ID: "olares-one-intel-0", NodeName: "olares-one", Mode: utils.IntelType, Memory: 24 * gi, Health: deviceHealthYes, SupportType: SupportTypeExclusive, AvailableSupportTypes: AvailableSupportTypes(utils.IntelType)},
+			{ID: "olares-one-intel-0", NodeName: "olares-one", Mode: utils.IntelType, Memory: 24 * gi, Health: deviceHealthYes, SupportType: SupportTypeMemorySlice, AvailableSupportTypes: AvailableSupportTypes(utils.IntelType)},
 		},
 	}
 	nodes := []Node{node}

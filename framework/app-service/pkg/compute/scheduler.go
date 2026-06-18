@@ -405,21 +405,17 @@ func isWholeCardMode(mode, supportType string) bool {
 }
 
 func supportTypeOrder(mode string) []string {
-	switch mode {
-	case utils.NvidiaCardType:
+	if mode == utils.NvidiaCardType {
 		return []string{SupportTypeExclusive, SupportTypeMemorySlice, SupportTypeTimeSlice}
-	case utils.GB10ChipType:
-		// GB10 devices are decoded from the HAMI node-nvidia-register
-		// annotation and carry MemorySlice (the default) or Exclusive
-		// support types, matching AvailableSupportTypes(GB10ChipType).
-		// MemoryShared is a cpu-only support type and never appears on a
-		// GB10 device, so the default branch below would filter every
-		// candidate out and make AllocateForInstall report
-		// "no available compute resource for type nvidia-gb10".
-		return []string{SupportTypeExclusive, SupportTypeMemorySlice}
-	default:
-		return []string{SupportTypeExclusive, SupportTypeMemoryShared}
 	}
+	// Every non-nvidia mode (nvidia-gb10 plus the unified-memory accelerators:
+	// cpu / apple-m / intel / amd / moore-soc / discrete GPUs) only ever
+	// carries Exclusive or MemorySlice devices — TimeSlice is nvidia-only.
+	// Listing Exclusive first keeps the scheduler's preference for whole-device
+	// placement before it falls back to a memory slice, and including
+	// MemorySlice is what lets GB10 (decoded as MemorySlice by default) and the
+	// memory-slicing accelerators be scheduled at all.
+	return []string{SupportTypeExclusive, SupportTypeMemorySlice}
 }
 
 func deviceAvailableMemory(device Device) int64 {
@@ -429,7 +425,7 @@ func deviceAvailableMemory(device Device) int64 {
 			return 0
 		}
 		return device.Memory
-	case SupportTypeMemorySlice, SupportTypeMemoryShared:
+	case SupportTypeMemorySlice:
 		return remainingMemory(device)
 	case SupportTypeTimeSlice:
 		return device.Memory

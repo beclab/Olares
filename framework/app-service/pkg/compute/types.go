@@ -11,10 +11,9 @@ const (
 	StatusInsufficientResources = "insufficient-resources"
 	StatusNoMatchingNode        = "no-matching-node"
 
-	SupportTypeTimeSlice    = "TimeSlice"
-	SupportTypeMemorySlice  = "MemorySlice"
-	SupportTypeExclusive    = "Exclusive"
-	SupportTypeMemoryShared = "MemoryShared"
+	SupportTypeTimeSlice   = "TimeSlice"
+	SupportTypeMemorySlice = "MemorySlice"
+	SupportTypeExclusive   = "Exclusive"
 
 	allocationConfigMapNamespace = "os-framework"
 	allocationConfigMapName      = "app-gpu-allocations"

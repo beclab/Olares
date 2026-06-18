@@ -61,7 +61,7 @@ func TestLegacyAppConfigIsMappedToComputeModes(t *testing.T) {
 		},
 	}
 	plan := calculateInstallComputePlan(cpuApp, []Node{
-		computeNode("cpu-a", utils.CPUType, 64*gi, SupportTypeMemoryShared),
+		computeNode("cpu-a", utils.CPUType, 64*gi, SupportTypeMemorySlice),
 	})
 	assertModeStatus(t, plan, utils.CPUType, StatusInstallable)
 
@@ -92,7 +92,7 @@ func TestCPUModeFallsBackToGPUTypeNodesWithoutUsingGPUMemory(t *testing.T) {
 		LimitedMemory:  8 * gi,
 	}
 	nodes := []Node{
-		computeNode("cpu-small", utils.CPUType, 4*gi, SupportTypeMemoryShared),
+		computeNode("cpu-small", utils.CPUType, 4*gi, SupportTypeMemorySlice),
 		nvidiaNode("nvidia-a", Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeExclusive}),
 	}
 
@@ -121,7 +121,7 @@ func TestListAvailableForLaunchFiltersNotMatchAndMarksOperable(t *testing.T) {
 			Device{ID: "gpu1", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeExclusive},
 		),
 		nvidiaNode("nvidia-b", Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeExclusive}),
-		computeNode("cpu-a", utils.CPUType, 64*gi, SupportTypeMemoryShared),
+		computeNode("cpu-a", utils.CPUType, 64*gi, SupportTypeMemorySlice),
 	}
 
 	result := listAvailableForLaunch(req, nodes, PressureSnapshot{})
@@ -145,7 +145,7 @@ func TestListAvailableForLaunchFiltersNotMatchAndMarksOperable(t *testing.T) {
 func TestListAvailableForLaunchReportsNoMatchingNode(t *testing.T) {
 	req := Requirement{Mode: utils.NvidiaCardType, RequiredGPU: gi, LimitedGPU: gi}
 	result := listAvailableForLaunch(req, []Node{
-		computeNode("cpu-a", utils.CPUType, 64*gi, SupportTypeMemoryShared),
+		computeNode("cpu-a", utils.CPUType, 64*gi, SupportTypeMemorySlice),
 	}, PressureSnapshot{})
 
 	if result.Schedulable || result.Reason != "no-matching-node" || len(result.Nodes) != 0 {
@@ -396,10 +396,10 @@ func TestPickAggregateAllocationsAcrossNodes(t *testing.T) {
 // TestPickSingleAllocationGB10MemorySlice guards the GB10 single-card
 // allocation path: a GB10 node's device is decoded with the MemorySlice
 // support type by default (shareModeToSupportType), so PickAllocations must
-// offer MemorySlice in its support-type order. A regression here makes
-// supportTypeOrder fall back to the cpu-only [Exclusive, MemoryShared] set,
-// filters every GB10 candidate out, and surfaces as
-// "no available compute resource for type nvidia-gb10" at install time.
+// offer MemorySlice in its support-type order. GB10 shares the non-nvidia
+// [Exclusive, MemorySlice] order; dropping MemorySlice from it would filter
+// every GB10 candidate out and surface as "no available compute resource for
+// type nvidia-gb10" at install time.
 func TestPickSingleAllocationGB10MemorySlice(t *testing.T) {
 	app := &appcfg.ApplicationConfig{AppName: "ollama", OwnerName: "alice"}
 	req := Requirement{
