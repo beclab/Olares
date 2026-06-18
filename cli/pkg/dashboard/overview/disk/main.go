@@ -56,9 +56,14 @@ func RunMain(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Commo
 // All queries are instant (`step=0s`) — the SPA passes
 // `step:'0s'` in IndexPage.vue:113.
 //
+// The table is a 1:1 of the SPA card's visible content: device /
+// type / health header + the contentData rows (total capacity,
+// model, serial, protocol, temperature, firmware, 4K-native, node,
+// power-on hours, data written). The SPA computes used / avail /
+// utilisation in headerData but does NOT render them, so they are
+// kept in Raw (for JSON consumers) but omitted from the table.
 // Per the user's policy decision the per-second IOPS / throughput
-// columns are intentionally NOT emitted; the table is otherwise a
-// 1:1 of the SPA card content.
+// columns are intentionally NOT emitted.
 func BuildMainEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags, now time.Time) (pkgdashboard.Envelope, error) {
 	metrics := []string{
 		"node_disk_smartctl_info",
@@ -207,6 +212,7 @@ func BuildMainEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashb
 			"physical_block":     physicalBlk,
 			"is_4k_native":       is4K,
 			"temperature_c":      celsius,
+			"temperature_f":      format.ConvertTemperature(celsius, format.TempF),
 			"power_on_hours":     powerHours,
 			"data_bytes_written": written,
 		}
@@ -216,10 +222,7 @@ func BuildMainEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashb
 			"type":           typeStr,
 			"health":         healthStr,
 			"total":          format.GetDiskSize(capLabel),
-			"used":           format.GetDiskSize(formatFloat(usedSize)),
-			"avail":          format.GetDiskSize(formatFloat(availUsed)),
-			"util":           percentString(ratio),
-			"temperature":    renderDiskTemperature(celsius, cf.TempUnit),
+			"temperature":    renderDiskTemperature(celsius),
 			"model":          dispOrDash(s.labels["model"]),
 			"serial":         dispOrDash(s.labels["serial"]),
 			"protocol":       dispOrDash(s.labels["protocol"]),
@@ -237,15 +240,17 @@ func BuildMainEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashb
 	}, nil
 }
 
-// renderDiskTemperature mirrors `renderTemperature` but only emits
-// the active --temp-unit value (no dual celsius/fahrenheit display).
-// Empty/zero celsius prints "-" the way the SPA does (config.ts:219).
-// Private — only the disk-main row builder calls this.
-func renderDiskTemperature(celsius float64, target format.TempUnit) string {
+// renderDiskTemperature mirrors the SPA card's dual-unit temperature
+// cell (config.ts:218–223): always emit both Celsius and Fahrenheit
+// as "<c>°C/<f>°F" regardless of --temp-unit, and print "-/-" for an
+// empty/zero reading. Private — only the disk-main row builder calls
+// this.
+func renderDiskTemperature(celsius float64) string {
 	if celsius == 0 {
-		return "-"
+		return "-/-"
 	}
-	return pkgdashboard.RenderTemperature(celsius, target)
+	return pkgdashboard.RenderTemperature(celsius, format.TempC) + "/" +
+		pkgdashboard.RenderTemperature(celsius, format.TempF)
 }
 
 // renderHoursOrDash renders power-on hours as "Xh", or "-" when the
@@ -275,11 +280,11 @@ func ifYesNo(b bool) string {
 	return "No"
 }
 
-// WriteMainTable renders the per-disk summary. Per the user's
-// decision IOPS / throughput columns are dropped; everything that
-// fits the SPA card lives here in column form. Column order is
-// pinned: agents that scrape stdout rely on the index being stable
-// across releases.
+// WriteMainTable renders the per-disk summary. Columns mirror the
+// SPA card's visible fields 1:1 (used / avail / util are computed
+// but unrendered on the card, so they stay out of the table and
+// live only in Raw). Column order is pinned: agents that scrape
+// stdout rely on the index being stable across releases.
 func WriteMainTable(w io.Writer, env pkgdashboard.Envelope) error {
 	cols := []pkgdashboard.TableColumn{
 		{Header: "DEVICE", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "device") }},
@@ -287,9 +292,6 @@ func WriteMainTable(w io.Writer, env pkgdashboard.Envelope) error {
 		{Header: "TYPE", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "type") }},
 		{Header: "HEALTH", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "health") }},
 		{Header: "TOTAL", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "total") }},
-		{Header: "USED", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "used") }},
-		{Header: "AVAIL", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "avail") }},
-		{Header: "UTIL", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "util") }},
 		{Header: "TEMP", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "temperature") }},
 		{Header: "MODEL", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "model") }},
 		{Header: "SERIAL", Get: func(it pkgdashboard.Item) string { return pkgdashboard.DisplayString(it, "serial") }},
