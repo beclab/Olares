@@ -1,6 +1,6 @@
 ---
 name: olares-cluster
-version: 4.2.0
+version: 4.3.0
 description: "Olares ControlHub K8s view via olares-cli cluster — pods, workloads, logs, scale/restart, jobs, cronjobs, middleware. Not for app lifecycle (market) or host install (node/os/gpu). Use for ControlHub, pods, logs, workloads."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -85,8 +85,8 @@ For flags, examples, and wire shapes, **always start with `olares-cli cluster <n
 | Noun | Verbs | `--help` first, then... |
 |---|---|---|
 | `context` | (single verb) | `olares-cli cluster context --help` |
-| `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart` | [references/olares-cluster-pod.md](references/olares-cluster-pod.md) |
-| `container` | `list`, `env`, `logs` | `olares-cli cluster container --help` |
+| `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart`, `exec` | [references/olares-cluster-pod.md](references/olares-cluster-pod.md) |
+| `container` | `list`, `env`, `logs`, `exec` | `olares-cli cluster container --help` |
 | `workload` (alias `wl`) | `list`, `images`, `get`, `yaml`, `rollout-status`, `scale`, `restart`, `stop`, `start`, `delete` | [references/olares-cluster-workload.md](references/olares-cluster-workload.md) |
 | `application` (alias `app`) | `list`, `get`, `workloads`, `pods`, `status` | [references/olares-cluster-application.md](references/olares-cluster-application.md) |
 | `namespace` (alias `ns`) | `list`, `get` | `olares-cli cluster namespace --help` |
@@ -146,3 +146,44 @@ Two image-inventory commands ride on top of this:
 | `refresh token for ... became invalid at ...` (typed `*credential.ErrTokenInvalidated`) | The refresh_token itself is dead — auto-refresh can't recover | `olares-cli profile login` |
 
 For the full auth-error matrix see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
+
+## exec (run commands inside a container)
+
+`cluster {pod,container} exec` runs a command inside a container over the
+native K8s exec WebSocket. Two modes:
+
+- **One-shot (default, best for agents):**
+  `olares-cli cluster container exec <ns>/<pod>/<ctr> -o json -- cat /etc/hosts`
+  Returns `{stdout, stderr, exitCode, truncated, durationMs}`. Judge success by
+  `exitCode` (0 = ok). stdout/stderr are separated. Bounded by `--timeout`
+  (default 60s) and `--max-output-bytes` (default 2MiB).
+- **Interactive (`-it`, for humans):** allocates a TTY, prompts y/N, needs a
+  real terminal. Agents should stay on one-shot.
+
+Agent guidance:
+
+- Pass argv after `--` (no implicit shell). For pipes/vars/multi-step, use
+  `-- sh -c '...'` — exec is stateless, so chain steps in one call rather than
+  expecting `cd`/exports to persist. (Filesystem effects like `apk add` DO
+  persist in the running container; shell/process state does not.)
+- Edit files without an interactive editor (one-shot is non-interactive; `-i`
+  is interactive-only):
+  - heredoc: `-- sh -c 'cat > /path <<EOF
+    <content>
+    EOF'`
+  - in-place: `-- sh -c "sed -i 's/old/new/' /path"`
+  - whole file: `-- sh -c 'printf "%s" "<content>" | tee /path'`
+- **Fixes are ephemeral:** changes inside a running container revert on pod
+  restart/recreation (rollout, eviction, node drain). For a durable fix, change
+  the image / ConfigMap / Deployment spec via the `workload` path — do not
+  report an in-container change as permanent.
+- Common exit codes: `127` command not found, `126` not executable. A "no sh in
+  container" failure means a distroless/scratch image (no shell). `EROFS`/`EACCES`
+  on writes means a read-only or permission-restricted filesystem.
+- `container exec` requires the container to be identified explicitly (3rd path
+  segment, or `<ns>/<pod>` + `-c`, or bare `<pod>` + `-n`/`-c`); `pod exec`
+  auto-selects the sole container of a single-container pod.
+- exec requires `pods/exec` permission (server-side SAR; 403 if missing) and is
+  audited server-side by ks-apiserver.
+- Requires a recent Olares; on older versions the handshake fails with
+  "this Olares version may not support `cluster exec`".
