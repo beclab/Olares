@@ -39,6 +39,16 @@ type depRequest struct {
 	Data []appcfg.Dependency `json:"data"`
 }
 
+// getAppClient is the seam used by call sites (e.g. checkAppNameConflict)
+// that need a cluster-wide app.bytetrade.io clientset constructed from the
+// in-cluster / KUBECONFIG context. It defaults to utils.GetClient; unit
+// tests in this package override it to inject an appfake.NewSimpleClientset.
+// The return type is the versioned.Interface so both the real
+// *versioned.Clientset and the generated *fake.Clientset satisfy it.
+var getAppClient = func() (versioned.Interface, error) {
+	return utils.GetClient()
+}
+
 type installHelperIntf interface {
 	getAdminUsers() (admin []string, isAdmin bool, err error)
 	getInstalledApps() (installed bool, app []*v1alpha1.Application, err error)
@@ -685,7 +695,7 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 // path already covers them (patch on reinstallable states, reject otherwise).
 // Per-user same-name across different owners is allowed by design.
 func (h *installHandlerHelper) checkAppNameConflict(ctx context.Context, newShared bool) error {
-	clientset, err := utils.GetClient()
+	clientset, err := getAppClient()
 	if err != nil {
 		klog.Errorf("checkAppNameConflict: failed to get clientset %v", err)
 		return err
