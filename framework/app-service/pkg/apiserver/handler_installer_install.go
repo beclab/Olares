@@ -685,13 +685,19 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 // path already covers them (patch on reinstallable states, reject otherwise).
 // Per-user same-name across different owners is allowed by design.
 func (h *installHandlerHelper) checkAppNameConflict(ctx context.Context, newShared bool) error {
-	list, err := h.client.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
+	clientset, err := utils.GetClient()
 	if err != nil {
+		klog.Errorf("checkAppNameConflict: failed to get clientset %v", err)
+		return err
+	}
+	apps, err := clientset.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Errorf("checkAppNameConflict: failed to get appmgr list %v", err)
 		return err
 	}
 
-	for i := range list.Items {
-		am := &list.Items[i]
+	for i := range apps.Items {
+		am := &apps.Items[i]
 		if am.Spec.AppName != h.app {
 			continue
 		}

@@ -657,18 +657,6 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		}
 	}
 
-	// allUsers is needed only when at least one v3 / shared app is present;
-	// computed lazily so the common (no-shared) path stays free.
-	var allUsers []string
-	var allUsersErr error
-	loadAllUsers := func() ([]string, error) {
-		if allUsers != nil || allUsersErr != nil {
-			return allUsers, allUsersErr
-		}
-		allUsers, allUsersErr = h.getAllUser()
-		return allUsers, allUsersErr
-	}
-
 	for _, app := range appsMap {
 		entrances, err := appcfg.GenEntranceURL(req.Request.Context(), app)
 		if err != nil {
@@ -687,30 +675,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		if v, ok := appsEntranceMap[app.Name]; ok {
 			app.Status.EntranceStatuses = v.Status.EntranceStatuses
 		}
-		// Shared apps are cluster-wide singletons. Fan out one entry per
-		// iam user so consumers grouping by Owner see them under every
-		// account (matching the v1 per-user-AM shape). Every user may
-		// open the app; lifecycle is admin-only. v3 per-user apps fall
-		// through with the regular owner-scoped layout.
-		//
-		// For each fanned-out copy, overlay Spec.UserSettings[u] on top
-		// of Spec.Settings / Spec.Entrances so consumers see that user's
-		// effective customDomain / policy / authLevel.
-		if appcfg.IsShared(app) {
-			users, uErr := loadAllUsers()
-			if uErr != nil {
-				api.HandleError(resp, req, uErr)
-				return
-			}
-			for _, u := range users {
-				cp := *app
-				cp.Spec.Owner = u
-				cp.Spec.Settings = app.EffectiveSettings(u)
-				cp.Spec.Entrances = app.EffectiveEntrances(u)
-				filteredApps = append(filteredApps, cp)
-			}
-			continue
-		}
+
 		filteredApps = append(filteredApps, *app)
 	}
 
