@@ -74,7 +74,8 @@ func TestUpdateStatusInvariantsUnderRandomSequence(t *testing.T) {
 				rt.Fatalf("after call %d newest record=%q, want %q", i, got.Status.OpRecords[0].OpID, id)
 			}
 		}
-	})}
+	})
+}
 
 // Companion test: invalid transitions must be rejected and must NOT mutate
 // any storage-level state (no OpGeneration bump, no record prepend).
