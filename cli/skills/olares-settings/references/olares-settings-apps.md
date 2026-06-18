@@ -24,8 +24,10 @@ The **post-install** surface for an Olares app. Inspect the app, list its entran
 | `policy list <app>` | normal | VERIFIED | Every entrance's policy |
 | `policy set <app> <entrance> [flags]` | normal | UNVERIFIED | RMW update |
 | `auth-level set <app> <entrance> --level X` | normal | UNVERIFIED | `private` / `public` / `internal` |
-| `suspend <app> [--all]` | normal | UNVERIFIED | Suspend running app |
-| `resume <app>` | normal | UNVERIFIED | Resume suspended app |
+| `suspend <app> [--cascade]` | normal | UNVERIFIED | Suspend (stop) a running app — thin alias over `market stop` |
+| `resume <app>` | normal | UNVERIFIED | Resume a suspended app — thin alias over `market resume` |
+
+> `suspend` / `resume` carry **no settings-side logic**: on 1.12.6 the Settings page routes stop/resume through the Market flow, so the CLI reuses `market stop` / `market resume` verbatim (renamed verb only). They inherit the full market behavior — `--cascade` / `--watch`, source-implicit resolution, and the 1.12.6 force-cascade for CS/shared apps. See [`olares-market`](../../olares-market/SKILL.md) lifecycle for the cascade and watch semantics.
 
 ## The per-entrance editing pipeline
 

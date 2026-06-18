@@ -36,6 +36,11 @@ SPA's csAppUninstall() dialog:
   - --cascade=false: force disabled (the canonical override for the
     single-user CS auto-default).
 
+On Olares 1.12.6+ a CS/shared app (simpleInfo apiVersion=='v2' || shared)
+is ALWAYS cascaded — the backend forces all=true and the SPA disables
+the checkbox — so --cascade=false is overridden (a stderr note reports
+the force). The --cascade=false override only takes effect on 1.12.5.
+
 Use --delete-data to also remove the app's persistent data.
 
 --watch blocks until the row reaches 'uninstalled' or disappears

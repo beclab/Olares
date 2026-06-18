@@ -146,7 +146,7 @@ func (o *MarketOptions) addAllSourcesFlag(cmd *cobra.Command) {
 
 func (o *MarketOptions) addCascadeFlag(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Cascade, "cascade", false,
-		"apply to shared sub-charts on v2 multi-chart apps (auto-enabled for single-user CS apps when omitted; pass --cascade=false to override)")
+		"apply to shared sub-charts on v2 multi-chart apps (auto-enabled for single-user CS apps when omitted; pass --cascade=false to override). On Olares 1.12.6+ CS/shared apps are force-cascaded and --cascade=false cannot disable it")
 }
 
 func (o *MarketOptions) addEnvFlag(cmd *cobra.Command) {

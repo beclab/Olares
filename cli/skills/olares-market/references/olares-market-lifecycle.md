@@ -23,7 +23,8 @@ The mutating verb family. Every verb here returns an `OperationResult` JSON shap
 | Verb | `-s / --source` | Why |
 |---|---|---|
 | `install`, `upgrade`, `clone` | accepts; defaults to auto-selected source | The chart can live in different sources |
-| `uninstall`, `stop`, `resume`, `cancel` | **NOT exposed** | Acts on whichever per-user state row matches the app name, regardless of source |
+| `uninstall`, `stop`, `resume` | **NOT exposed** | Acts on whichever per-user state row matches the app name, regardless of source |
+| `cancel` | exposes `--source`, but only as a 1.12.6 fallback | Source is read from the state row; pass `--source` only when the row is gone (or `/market/state` is unreadable) and the 1.12.6 cancel body still needs one |
 
 ## `install`
 
@@ -65,13 +66,15 @@ olares-cli market uninstall firefox --cascade=true     # tear down shared sub-ch
 olares-cli market uninstall firefox --watch
 ```
 
-### `--cascade` auto-decision (C/S v2 multi-chart apps)
+### `--cascade` (C/S v2 multi-chart apps)
 
-The JSON payload field is `all`. Default behavior mirrors the SPA's `csAppUninstall()` dialog:
+The JSON payload field is `all`. Behavior depends on the backend version:
 
-- `--cascade NOT passed`: **auto-decided**. When the cluster has a single user AND the target app is a v2 multi-chart bundle (`isCSV2`), default to `--cascade=true`; otherwise `--cascade=false`.
-- A short reason is printed on **stderr** when the auto-decision flips the default to true.
-- Probe errors (user count / app info) soft-fail to `--cascade=false`; the backend has the final say either way.
+- **Olares 1.12.6+ (current):** a CS/shared app (detected from `simpleInfo`: `apiVersion=='v2' || shared`) is **always cascaded** — the backend forces `all=true` and the SPA disables the checkbox. `--cascade=false` is overridden (stderr prints `--cascade force-enabled ...`). Non-CS apps keep your value (default false).
+- **Olares 1.12.5:** `--cascade NOT passed` is **auto-decided** — single-user cluster AND v2 multi-chart bundle (`isCSV2`) defaults to `--cascade=true`, else false; an explicit value wins. A short reason is printed on stderr when the auto-decision flips to true.
+- Probe errors (user count / app info / simpleInfo) soft-fail to the user's value; the backend has the final say either way.
+
+> **1.12.6 caveat — cascade-cleanup after the row is gone:** once a prior uninstall has cleared the per-user row, 1.12.6's uninstall body has no source to send, so the CLI reports an idempotent `nothing to uninstall`. `market uninstall` does **not** expose `--source`, so re-running it to tear down leftover shared sub-charts is not reachable from the CLI today — clean those up from the Market SPA.
 
 ## `clone`
 
@@ -81,7 +84,7 @@ olares-cli market clone firefox --title "Work Browser" --entrance-title web=Work
 olares-cli market clone firefox --title "Work Browser" --watch
 ```
 
-- **Only apps that advertise `cloneable: true`** in `market get <app> -o json` support this. Pre-flight check the source app first if unsure.
+- **Clonable apps** are either multi-instance apps (`allowMultipleInstall: true`) **or** template apps (`templateOnly: true`). A template app has no installable body — instances are created from it via clone — and on 1.12.6+ the CLI sends `templateClone:true` for it automatically. Pre-flight check the source app's `market get <app> -o json` if unsure.
 - `--title` is REQUIRED — feeds the cloned app's desktop shortcut title.
 - For apps with multiple entrances: `--entrance-title NAME=TITLE` (repeatable) overrides per-entrance titles. For single-entrance apps, the entrance title defaults to `--title`.
 - **The backend mints a per-instance app name** (e.g. `firefoxe992`). The CLI surfaces it as `cloneTarget` in the JSON output so scripted callers can chain follow-ups. **`--watch` tracks the new clone name, not the source app.**
@@ -98,7 +101,7 @@ olares-cli market resume firefox --watch               # block until `running`
 ```
 
 - Source is implicit on both.
-- `--cascade` on `stop` follows the same auto-decision rules as `uninstall`.
+- `--cascade` on `stop` follows the same rules as `uninstall` — including the 1.12.6 force-on for CS/shared apps (`--cascade=false` cannot disable it there).
 - **`resume` is idempotent**: against an already-`running` row, returns immediately with success (`{state=running, opType=""}`), instead of hanging until `--watch-timeout` fires.
 
 ## `cancel`
@@ -108,7 +111,7 @@ olares-cli market cancel firefox                       # cancel current op
 olares-cli market cancel firefox --watch               # block until row stops moving
 ```
 
-- Source is implicit.
+- Source is normally implicit (read from the per-user state row). On **1.12.6+** the cancel body requires a source; if the row is gone (or `/market/state` is unreadable) the CLI reports an idempotent `nothing to cancel` — pass `--source <id>` to still send the request. On 1.12.5 the body needs no source, so a failed state read never blocks cancel.
 - **The widest watcher in the tree**: any "row stopped moving" state counts as success, including `*Canceled`, `*Failed` (the underlying op died, cancel "won by default"), and stable resting states `running` / `stopped` / `uninstalled` (cancel raced and lost, OR rollback landed).
 - Failure is ONLY surfaced for `*CancelFailed` (the cancel request itself was rejected).
 - The terminal row carries the **underlying op** (install / upgrade / ...) as its `opType`, not `cancel`. `matchOpType` is OFF — no race-tracking gate applies.
@@ -141,7 +144,8 @@ olares-cli market cancel firefox --watch               # block until row stops m
 | `app 'X' is not in an upgradable state (current: Y)` | Pre-flight gate 2 | Wait for terminal state, or run `cancel` first |
 | `no newer version available (installed: 1.2.3, latest: 1.2.3)` | Pre-flight gate 3 | Nothing to upgrade |
 | `app labels forbid upgrade (suspend / remove / disabled-upgrade)` | Pre-flight gate 4 | App is marked non-upgradable in the catalog; contact app maintainer |
-| `app 'X' is not cloneable` | `clone` against non-cloneable app | Check `market get X -o json` for `cloneable` |
+| `app 'X' is not cloneable` | `clone` against an app that is neither multi-instance nor a template | Check `market get X -o json` for `allowMultipleInstall` / `templateOnly` |
 | `--title is required` | `clone` without `--title` | Add `--title "..."` |
 | Watcher hangs near `*Failed` | Backend op failed | `market status <app>` to inspect; `market cancel <app>` if applicable |
-| Stderr hint about `--cascade` auto-decision | C/S v2 single-user cluster | Informational; override with `--cascade=false` if needed |
+| `--cascade auto-enabled ...` (stderr) | 1.12.5 C/S v2 single-user cluster | Informational; override with `--cascade=false` if needed |
+| `--cascade force-enabled ... (CS/shared apps always cascade)` (stderr) | 1.12.6 CS/shared app | Informational; `--cascade=false` cannot disable cascade on 1.12.6 |
