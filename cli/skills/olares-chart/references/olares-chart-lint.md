@@ -1,6 +1,6 @@
 # chart lint (validate a chart)
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) and [olares-chart-publish-targets.md](olares-chart-publish-targets.md) first.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
 > **Flags & examples:** `olares-cli chart lint --help`. This file adds the meaning of each check and a failure→fix table.
 
 `lint` runs the **same ingest pipeline the Olares Market uses to validate chart structure**, against a directory or a `.tgz` / `.tar.gz`. Local-only; no Olares login.
@@ -14,9 +14,9 @@
 | `featuredImage`, `promoteImage`, `fullDescription` | ❌ | recommended for listing |
 | Multi-arch / `spec.supportArch` alignment | partial (cross-field if accelerator set) | expected for public Market |
 
-**local-run:** `lint OK` + live install → sufficient. Stub metadata is fine.
+**Deploy to your Olares:** `lint OK` + a live install reaching `running` → sufficient. Stub metadata is fine.
 
-**market-distribute:** `lint OK` is necessary but not sufficient — complete the [market-ready checklist](olares-chart-publish-targets.md#market-distribute-market-ready-checklist) before opening a PR.
+**Publishing to the public Market:** `lint OK` is necessary but not sufficient — complete the market-ready checklist in the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill before opening a PR.
 
 ```bash
 olares-cli chart lint ./myapp
@@ -62,7 +62,7 @@ By default lint renders the chart under **both** `owner==admin` (admin install) 
 
 `lint` exit code is the signal: `0` = OK (prints `<path>: OK`), non-zero = a domain error printed without a usage dump. Keep editing the manifest/templates and re-running until it prints OK.
 
-Then by release target:
+Then:
 
-- **local-run:** [olares-chart-publish-verify.md](olares-chart-publish-verify.md) (upload + install)
-- **market-distribute:** market-ready checklist → re-lint → [olares-chart-market-submit.md](olares-chart-market-submit.md)
+- **Deploy to your Olares:** [olares-chart-deploy.md](olares-chart-deploy.md) (upload + install)
+- **Publish to the public Market:** market-ready checklist → re-lint → the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill

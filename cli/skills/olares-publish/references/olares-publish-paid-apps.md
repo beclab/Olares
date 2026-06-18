@@ -1,7 +1,7 @@
 # Paid apps: price.yaml, on-chain RSA, Merchant
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md), [olares-chart-publish-targets.md](olares-chart-publish-targets.md), and [olares-chart-market-submit.md](olares-chart-market-submit.md) first.
-> A paid app is a **market-distribute** app plus pricing + license enforcement. Everything in the market-distribute path still applies; this file adds only the paid extras. Official docs: [Publish paid applications](https://docs.olares.com/developer/develop/paid-apps.html).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md), [olares-publish-targets.md](olares-publish-targets.md), and [olares-publish-submit.md](olares-publish-submit.md) first.
+> A paid app is a **public-Market** app plus pricing + license enforcement. Everything in the public-distribution path still applies; this file adds only the paid extras. Official docs: [Publish paid applications](https://docs.olares.com/developer/develop/paid-apps.html).
 
 ## What "paid" adds to a normal market app
 
@@ -16,14 +16,14 @@ Only pay-to-download is supported today. In-app purchases and subscriptions are 
 
 - **Closed Beta** — paid distribution requires approved developer status; apply by email (see the official doc). Do not assume access.
 - Olares ID (DID), e.g. `alice@olares.com`.
-- Olares OS host running **>= 1.12.3** (paid distribution floor; separate from this skill's general 1.12.6 porting baseline).
+- Olares OS host running **>= 1.12.3** (paid distribution floor; separate from the chart skill's general 1.12.6 porting baseline).
 - Local machine with Node.js (for `did-cli`).
 
 ## Step 1 — Register RSA keys on-chain (one-time)
 
 The buyer's license is signed against an RSA public key bound to your Olares ID on-chain. Registration is an on-chain write and costs a small gas fee on Optimism.
 
-1. Fund a wallet: import your LarePass mnemonic (LarePass → Settings → Safety → Mnemonic phrase) into MetaMask, switch to **Optimism (OP Mainnet)**, send a small amount of ETH (>= ~0.0005 ETH recommended) to the wallet address.
+1. Fund a wallet: import your LarePass mnemonic (LarePass -> Settings -> Safety -> Mnemonic phrase) into MetaMask, switch to **Optimism (OP Mainnet)**, send a small amount of ETH (>= ~0.0005 ETH recommended) to the wallet address.
 2. Generate and register the key with `did-cli`:
 
 ```bash
@@ -72,7 +72,7 @@ The app reads the buyer's purchase credential from an injected env var. Add it t
   value: "{{ .Values.olaresEnv.VERIFIABLE_CREDENTIAL }}"
 ```
 
-Declare it in `OlaresManifest.yaml` (env rules — [env.md](olares-chart-env.md)):
+Declare it in `OlaresManifest.yaml` (env rules — [`../../olares-chart/references/olares-chart-env.md`](../../olares-chart/references/olares-chart-env.md)):
 
 ```yaml
 envs:
@@ -85,7 +85,7 @@ envs:
 
 ### Submit
 
-Submit through the standard flow — see [olares-chart-market-submit.md](olares-chart-market-submit.md). No extra PR type for paid; it is a normal `NEW`/`UPDATE` PR whose OAC happens to contain `price.yaml`.
+Submit through the standard flow — see [olares-publish-submit.md](olares-publish-submit.md). No extra PR type for paid; it is a normal `NEW`/`UPDATE` PR whose OAC happens to contain `price.yaml`.
 
 ## Step 3 — Merchant app (checkout + license management)
 
@@ -101,7 +101,7 @@ Merchant is the developer-side panel that issues licenses and verifies them when
 
 To change RSA keys, product info, pricing, or receiving wallet:
 
-1. Regenerate keys / edit the OAC, submit an `UPDATE` PR ([olares-chart-market-submit.md](olares-chart-market-submit.md)), wait for merge.
+1. Regenerate keys / edit the OAC, submit an `UPDATE` PR ([olares-publish-submit.md](olares-publish-submit.md)), wait for merge.
 2. Reopen Merchant; when prompted, click **Update / Re-install** to apply the latest config.
 
 ## Agent boundaries
