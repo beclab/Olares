@@ -53,7 +53,7 @@ type NodeAlertController struct {
 	lastAlertTime map[string]time.Time
 	// lastPressureState tracks the last known pressure state for each node and pressure type
 	lastPressureState map[string]bool
-	mutex sync.RWMutex
+	mutex             sync.RWMutex
 }
 
 // SetupWithManager sets up the controller with the Manager.
