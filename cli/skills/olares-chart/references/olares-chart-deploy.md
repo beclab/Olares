@@ -82,6 +82,23 @@ Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster p
 - Pod names for the Deployments are dynamic (`market-deployment-*`, `chartrepo-deployment-*`); resolve the exact name first with `olares-cli cluster pod list -n os-framework` (filter the output for `market` / `chartrepo`).
 - **Admin caveat:** `os-framework` system pods are typically visible only to an **admin** profile. If you get `HTTP 403` / `HTTP 404`, the active developer profile isn't admin — don't fight it; report that the platform logs need an admin and fall back to the app's own pod logs.
 
+## 4b. Upgrade recovery: `stopped` after upgrade
+
+An upgrade can leave the **market row** in `state=stopped` while the **workload** is actually `Running`. Two paths land in `stopped`: upgrading an **already-stopped** app re-renders the chart at `replicas=0` and intentionally returns to `stopped` (by design); and **canceling an in-flight** op (`initializing` / `upgrading` / `applyingEnv` / `resuming`) only *stops* the app — so if a crashing initContainer was fixed and the workload later came up on its own, the row can read `stopped` while the pod is `1/1 Running`:
+
+```bash
+olares-cli market status <app> -s upload   # state=stopped
+olares-cli cluster application status <ns> # Deployment 1/1 Running
+```
+
+This is **not** a failure — the market row just needs to be resumed. Recovery:
+
+```bash
+olares-cli market resume <app> --watch
+```
+
+`resume` scales the workloads back up and waits for startup (`stopped → resuming → running`). If the pod is already running it completes quickly and flips the market row to `running`.
+
 ## 5. Decide: fix the chart, or report back
 
 - **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md) and [`olares-chart-run-as-user.md`](olares-chart-run-as-user.md), re-run `chart lint`, and re-upload (the auto-loop continues). **No version bump needed to redeploy a fix** — `upload` requires the new version be **>= the stored** one, so re-uploading the *same* version overwrites the stored chart. Keep `Chart.yaml` `version` == `metadata.version` (lint enforces equality); bump only if you want to track iterations (a *lower* version is rejected).

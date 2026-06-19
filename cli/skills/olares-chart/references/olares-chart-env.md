@@ -118,3 +118,10 @@ Copy-pasteable examples (init admin credentials, reuse a user var, optional-with
 - **`valueFrom` inherits** `type`/`editable`/`regex` from the referenced var; local `default`/`options`/`type` are ignored.
 - **Install-time override.** A value can be supplied at install via the CLI `--env KEY=VALUE` (see [`olares-market`](../../olares-market/SKILL.md)).
 - **`applyOnChange: false`** means edits only take effect on upgrade/reinstall — stopping and starting the app does nothing.
+- **Helm renders unset optional env vars as empty strings.** When a user hasn't filled in an optional env (`required: false`, no `default`) and the template contains `value: "{{ .Values.olaresEnv.FOO }}"`, Helm renders this as `value: ""` — an empty string, not an absent env var. Apps that treat these as URLs (e.g. an HF endpoint, a proxy address) will receive `""` and fail with "missing protocol" or similar errors. Guard at app startup: unset any env var whose value is an empty string before the library reads it. Example (Python):
+  ```python
+  for var in ("HF_ENDPOINT", "HF_TOKEN"):
+      if not os.environ.get(var, "").strip():
+          os.environ.pop(var, None)
+  ```
+  This `""` behavior applies only to a key **declared in `envs[]`** (so it exists in `.Values.olaresEnv`). A reference to a key that is *not declared at all* renders as `<no value>` instead — a different failure mode — so keep every env you template referenced in `envs[]`.
