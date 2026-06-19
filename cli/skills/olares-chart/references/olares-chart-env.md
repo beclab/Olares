@@ -124,3 +124,4 @@ Copy-pasteable examples (init admin credentials, reuse a user var, optional-with
       if not os.environ.get(var, "").strip():
           os.environ.pop(var, None)
   ```
+  This `""` behavior applies only to a key **declared in `envs[]`** (so it exists in `.Values.olaresEnv`). A reference to a key that is *not declared at all* renders as `<no value>` instead — a different failure mode — so keep every env you template referenced in `envs[]`.

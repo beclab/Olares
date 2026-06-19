@@ -84,20 +84,20 @@ Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster p
 
 ## 4b. Upgrade recovery: `stopped` after upgrade
 
-After `market upgrade`, app-service orchestrates stop → deploy → start. If the sequence is interrupted mid-flight (e.g. watcher timeout, or a crashing initContainer that was later fixed and redeployed), the app can land in `state=stopped` even though the pod is actually `Running`:
+An upgrade can leave the **market row** in `state=stopped` while the **workload** is actually `Running`. Two paths land in `stopped`: upgrading an **already-stopped** app re-renders the chart at `replicas=0` and intentionally returns to `stopped` (by design); and **canceling an in-flight** op (`initializing` / `upgrading` / `applyingEnv` / `resuming`) only *stops* the app — so if a crashing initContainer was fixed and the workload later came up on its own, the row can read `stopped` while the pod is `1/1 Running`:
 
 ```bash
-olares-cli market status <app> -s upload   # state=stopped, op=upgrade
+olares-cli market status <app> -s upload   # state=stopped
 olares-cli cluster application status <ns> # Deployment 1/1 Running
 ```
 
-This is **not** a failure — it means stop succeeded but start was never issued. Recovery:
+This is **not** a failure — the market row just needs to be resumed. Recovery:
 
 ```bash
 olares-cli market resume <app> --watch
 ```
 
-`resume` transitions `stopped → resuming → running`. If the pod is already running it completes instantly and flips the market row to `running`.
+`resume` scales the workloads back up and waits for startup (`stopped → resuming → running`). If the pod is already running it completes quickly and flips the market row to `running`.
 
 ## 5. Decide: fix the chart, or report back
 
