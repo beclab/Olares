@@ -150,11 +150,14 @@ func (o *MarketOptions) addCascadeFlag(cmd *cobra.Command) {
 }
 
 func (o *MarketOptions) addEnvFlag(cmd *cobra.Command) {
-	cmd.Flags().StringSliceVar(&o.Envs, "env", nil, "set env var in KEY=VALUE format (repeatable)")
+	// StringArrayVar (not StringSliceVar) so a single value may contain commas
+	// (e.g. MODEL_SUPPORTS=tools,thinking). StringSliceVar splits on commas,
+	// which corrupts comma-bearing env values; matches the settings env commands.
+	cmd.Flags().StringArrayVar(&o.Envs, "env", nil, "set env var in KEY=VALUE format (repeatable; value may contain commas)")
 }
 
 func (o *MarketOptions) addEntranceTitleFlag(cmd *cobra.Command) {
-	cmd.Flags().StringSliceVar(&o.EntranceTitles, "entrance-title", nil, "set cloned entrance title in NAME=TITLE format (repeatable)")
+	cmd.Flags().StringArrayVar(&o.EntranceTitles, "entrance-title", nil, "set cloned entrance title in NAME=TITLE format (repeatable; title may contain commas)")
 }
 
 func (o *MarketOptions) addDeleteDataFlag(cmd *cobra.Command) {
