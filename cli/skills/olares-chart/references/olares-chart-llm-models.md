@@ -91,12 +91,43 @@ Required-per-model envs and how each engine differs:
 | `MODEL_SOURCE` | download channel | vLLM/SGLang: `hf://owner/repo` (whole repo, **no `--include`**). llama.cpp: `hf://owner/repo-GGUF --include <file>.gguf` (sharded GGUF: give the `*-00001-of-*` name). Ollama: `ollama://tag` / `hf://...-GGUF --include ...gguf`. Mirror via `HF_ENDPOINT` — `--endpoint` inside the value is blacklisted (fail-fast). |
 | `MODEL_NAME` | client `model` alias; also fed to the engine | llama.cpp template runs `llama-server -hf "$MODEL_NAME"` → must be `owner/repo` or `owner/repo:quant` matching `MODEL_SOURCE`. vLLM `--model` / SGLang `--model-path` → `owner/repo` matching `MODEL_SOURCE`. Ollama: free alias (may differ from the upstream tag). |
 | `MODEL_MODE` | `chat` \| `embedding` | embedding: llama.cpp auto-adds `--embedding`, SGLang auto-adds `--is-embedding`; **vLLM needs `--task embed` in `ENGINE_ARGS` yourself**. |
-| `MODEL_SUPPORTS` | capability seed | Pick coarse GROUP tokens (multi-select, comma): `vision` / `tools` / `thinking` / `embedding`. The chart expands each to the `supports_*` keys llm-init validates (`tools` → function-calling keys, `thinking` → reasoning keys, `embedding` → none). Required field; leave only `embedding` (or empty) when the model has no extra caps. |
+| `MODEL_SUPPORTS` | capability seed | Comma-joined coarse GROUP tokens (`vision` / `tools` / `thinking` / `embedding`) that the chart expands into the `supports_*` keys llm-init validates. Required field. **How to choose the tokens, the full expansion table, and the model-vs-deployment caveat are in [§5.1](#51-model_supports--capability-mapping--how-to-choose).** |
 | `ENGINE_ARGS` | engine-native startup flags (string) | vLLM: `--max-model-len 8192 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 [--quantization awq\|gptq\|fp8]`. SGLang: `--context-length 8192 --mem-fraction-static 0.8 --tp 1`. llama.cpp: `-c 8192 -ngl all -fa on` (drop `-ngl` for CPU). Ollama: `OLLAMA_NUM_CTX=8192 OLLAMA_KEEP_ALIVE=30m` (`KEY=VALUE` list). Unknown tokens pass through, never fail. |
 | `<ENGINE>_REQUIRED_GPU_MEMORY` | per-instance GPU quota → `nvidia.com/gpumem` | `LLAMACPP_/OLLAMA_/VLLM_/SGLANG_REQUIRED_GPU_MEMORY`. Accepts `8Gi` / `8192` / `8192Mi` (bare MiB). Set it to the Step-2 floor. Non-editable after install. |
 | `HF_ENDPOINT` / `HF_TOKEN` | mirror / private repo | auto-injected from `OLARES_USER_HUGGINGFACE_*`; set a token only for gated/private repos. Read only when an `hf://` source exists. |
 
 `LOG_LEVEL` (debug/info/warn/error) and the `*_CPU_REQUEST` / `*_MEMORY_*` envs default sanely — leave them.
+
+### 5.1 `MODEL_SUPPORTS` — capability mapping & how to choose
+
+`MODEL_SUPPORTS` is a **required** field: a comma-joined list of coarse capability GROUP tokens. The chart expands each token one-to-many into the `supports_*` keys llm-init validates against its gateway mirror, then re-joins them into the CSV the container env expects. Pass multiple tokens with a literal comma in one flag value (`--env MODEL_SUPPORTS=tools,thinking`).
+
+| token | expands to `supports_*` keys |
+|---|---|
+| `vision` | `supports_vision` |
+| `tools` | `supports_function_calling`, `supports_parallel_function_calling`, `supports_tool_choice` |
+| `thinking` | `supports_reasoning`, `supports_reasoning_effort` |
+| `embedding` | (no keys — the required-field fallback) |
+
+Unknown tokens pass through verbatim, so a raw `supports_*` key can be supplied directly when you need one the groups don't cover.
+
+**How to choose from the Hugging Face model card** (the four facts from Step 1 plus a quick card read):
+
+| HF signal | token |
+|---|---|
+| `pipeline_tag: image-text-to-text`, a "Vision Encoder" / multimodal section | `vision` — **but only when you actually serve the projector** (see caveat) |
+| "thinking" / "reasoning mode", `--reasoning-parser`, a `<think>` template | `thinking` |
+| "function calling" / "tool use", `--tool-call-parser`, tool-calling chat template | `tools` |
+| pure embedding / reranker model | `embedding` (also set `MODEL_MODE=embedding`) |
+| no extra capabilities | `embedding` (or leave it as the lone fallback token) |
+
+**Model capability vs deployed capability — the key caveat.** `MODEL_SUPPORTS` must describe what *this deployment actually exposes*, not what the upstream model can do in theory. A natively multimodal model served as a **text-only GGUF** does **not** expose vision, so it must **not** claim `vision`. To genuinely enable vision on llama.cpp you must also pull the mmproj projector via the indexed multi-source form ([§9](#9-download-multiple-models-at-once)(b), `MODEL_SOURCE_<i>_ROLE=mmproj`); only then add `vision`.
+
+Example — Qwen3.6-27B and Gemma4-26B-A4B-it are both multimodal (`image-text-to-text`) + reasoning + function-calling upstream, but when deployed as a plain text GGUF (no mmproj) the correct value is:
+
+```bash
+--env MODEL_SUPPORTS=tools,thinking      # NOT vision: no mmproj projector served
+```
 
 Worked example (Qwen2.5-7B four ways, model-landscape §7):
 
@@ -127,6 +158,18 @@ olares-cli market clone llamacppllmbasev3 -s upload \
   --env MODEL_MODE=chat --env MODEL_SUPPORTS=tools \
   --env ENGINE_ARGS='-c 8192 -ngl all -fa on' \
   --env LLAMACPP_REQUIRED_GPU_MEMORY=6Gi --watch
+```
+
+A reasoning + tool-calling model just adds a comma-joined `MODEL_SUPPORTS` (the value carries the comma fine — see [§5.1](#51-model_supports--capability-mapping--how-to-choose)):
+
+```bash
+olares-cli market clone llamacppllmbasev3 -s upload \
+  --title "Qwen3.6 27B Q4" \
+  --env MODEL_SOURCE='hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf' \
+  --env MODEL_NAME='unsloth/Qwen3.6-27B-GGUF:Q4_K_M' \
+  --env MODEL_MODE=chat --env MODEL_SUPPORTS=tools,thinking \
+  --env ENGINE_ARGS='-c 16384 -ngl all -fa on' \
+  --env LLAMACPP_REQUIRED_GPU_MEMORY=22Gi --watch
 ```
 
 - `templateOnly` apps are created via `clone` (the CLI sends `templateClone:true` on 1.12.6+); `clone` mints a per-instance name and `--watch` tracks it. Single local test instance can also use `market install <base> -s upload --env ...`.
