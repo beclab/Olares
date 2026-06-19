@@ -396,6 +396,16 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           ]
         },
         {
+          text: "Finance",
+          collapsed: false,
+          items: [
+            {
+              text: "Freqtrade",
+              link: "/use-cases/freqtrade",
+            },
+          ]
+        },
+        {
           text: "Developer tools",
           collapsed: false,
           items: [
