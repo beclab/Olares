@@ -54,23 +54,22 @@ olares-cli profile current
 >
 > **Permission errors on Linux** (`EACCES` while npm writes to `/usr/lib/node_modules` or `/usr/local/lib/node_modules`): typical for distro-packaged Node (`apt install nodejs`) where the global prefix is root-owned. The wizard surfaces the offending npm `stderr` plus a one-time fix that switches npm to a user-owned prefix (`npm config set prefix ~/.npm-global` + `PATH`) so global installs no longer need `sudo` and `npx skills add -g` writes under your user (not `/root`).
 
-### Or build from source
+### Local dev (install your build + local skills)
 
-For local development or pinning to a specific commit. Requires Go 1.24+ and the full Olares repo — the CLI's [`cli/go.mod`](go.mod) has a relative `replace` directive into `../framework/oac`, so a `cli/`-only clone won't build.
+For working on the CLI itself: installs the binary you just built and the skills from your current checkout. Requires Go 1.24+ and a full repo clone — [`cli/go.mod`](go.mod) has a relative `replace` into `../framework/oac`, so a `cli/`-only clone won't build.
 
 ```bash
-git clone https://github.com/beclab/Olares.git
-cd Olares/cli
-
-sudo make install                                    # → /usr/local/bin/olares-cli
-sudo make install PREFIX=$HOME/.local                # or pick your own prefix
-make uninstall                                       # remove the same binary
-
-# Install the agent skills (Scenario A does this for you; from-source doesn't):
-npx skills add beclab/Olares -y -g
+cd cli
+sudo make install                                            # or: make install PREFIX="$HOME/.local"
+npx skills add "$(pwd)/skills" --skill '*' -a cursor -g -y   # install the local checkout's skills
+make uninstall                                               # remove the binary again
 ```
 
-The resulting binary reports `git describe --tags --always --dirty` as its version (e.g. `1.12.7-3-gabc1234-dirty`), distinguishable from official releases (stable / `rc` / `beta` / `alpha` semver) and from `npm install -g` copies.
+Step 2 points the [skills](https://github.com/vercel-labs/skills) CLI at the local `cli/skills/` directory, so your in-progress edits are what get installed (not the published `beclab/Olares` copy). Notes:
+
+- **Pick your agent** with `-a` (`cursor`, `claude-code`, `codex`, ...). Without it, the CLI auto-detects, and when you run it through an AI agent it may pick an unsupported one and fail with `does not support global skill installation`.
+- **Never run step 2 with `sudo`.** It creates root-owned `~/.agents/skills/olares-*` directories that later break reinstalls with `EACCES`. Only step 1 (`make install` into a system prefix) may need `sudo`.
+- On Windows, step 1 needs Git Bash / MSYS (for `make` and `install`); step 2 runs natively.
 
 ### Client on a non-Olares machine (Scenario B)
 
