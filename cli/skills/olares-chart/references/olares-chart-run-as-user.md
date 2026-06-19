@@ -102,6 +102,13 @@ spec:
 
 Also set `spec.runAsUser: true` in `OlaresManifest.yaml`. Run `chown` for **each** userspace mount the app writes to (combine paths in one command if needed).
 
+> **CAP_CHOWN limitation — upgrade scenario.** Olares drops `CAP_CHOWN` from all containers at admission. This means:
+>
+> - **Fresh install:** the `hostPath` root dir is created empty by `DirectoryOrCreate` (owned by kubelet/root). The busybox initContainer runs as root and can `chown` it because root owns the directory. Works.
+> - **Upgrade:** if the main container previously created subdirectories as uid 1000, the busybox initContainer (root, no `CAP_CHOWN`) **cannot** chown those uid-1000-owned subdirs — `Operation not permitted`. The initContainer crash-loops and the pod stays in `Initializing` indefinitely.
+>
+> **Practical rule:** For `appData` / `appCache` with `permission.appData: true`, Olares already creates the root dir with uid 1000 ownership. If the app creates its own subdirectories at runtime (e.g. `os.makedirs("/data/models")` in Python), the whole tree stays uid 1000 and **no initContainer is needed**. Only reach for initContainer `chown` when the upstream image's entrypoint writes root-owned files before the process drops to uid 1000.
+
 ### C — image must start as root internally
 
 If the upstream entrypoint **requires** root for its own initialization, you cannot set `runAsUser: 1000` on the main container without breaking it.

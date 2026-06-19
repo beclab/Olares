@@ -82,6 +82,23 @@ Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster p
 - Pod names for the Deployments are dynamic (`market-deployment-*`, `chartrepo-deployment-*`); resolve the exact name first with `olares-cli cluster pod list -n os-framework` (filter the output for `market` / `chartrepo`).
 - **Admin caveat:** `os-framework` system pods are typically visible only to an **admin** profile. If you get `HTTP 403` / `HTTP 404`, the active developer profile isn't admin — don't fight it; report that the platform logs need an admin and fall back to the app's own pod logs.
 
+## 4b. Upgrade recovery: `stopped` after upgrade
+
+After `market upgrade`, app-service orchestrates stop → deploy → start. If the sequence is interrupted mid-flight (e.g. watcher timeout, or a crashing initContainer that was later fixed and redeployed), the app can land in `state=stopped` even though the pod is actually `Running`:
+
+```bash
+olares-cli market status <app> -s upload   # state=stopped, op=upgrade
+olares-cli cluster application status <ns> # Deployment 1/1 Running
+```
+
+This is **not** a failure — it means stop succeeded but start was never issued. Recovery:
+
+```bash
+olares-cli market resume <app> --watch
+```
+
+`resume` transitions `stopped → resuming → running`. If the pod is already running it completes instantly and flips the market row to `running`.
+
 ## 5. Decide: fix the chart, or report back
 
 - **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md) and [`olares-chart-run-as-user.md`](olares-chart-run-as-user.md), re-run `chart lint`, and re-upload (the auto-loop continues). **No version bump needed to redeploy a fix** — `upload` requires the new version be **>= the stored** one, so re-uploading the *same* version overwrites the stored chart. Keep `Chart.yaml` `version` == `metadata.version` (lint enforces equality); bump only if you want to track iterations (a *lower* version is rejected).
