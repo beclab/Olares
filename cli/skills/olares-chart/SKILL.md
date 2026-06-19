@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.3.0
+version: 4.5.0
 description: "Help a developer turn their own code or any open-source project into an app that runs on their own Olares. Two coupled axes: packaging the container image and authoring/refining the Olares app chart (OlaresManifest), then deploying it to the current Olares with an automatic upload + install + diagnose loop. Use when deploying a repo, docker-compose, or Helm chart to Olares, packaging an Olares app, wiring storage / system middleware / entrances / env / GPU, or fixing a failed install (ImagePullBackOff, permission denied / EACCES, app won't start). Publishing to the public Olares Market is the olares-publish skill."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, deploy needs login
 metadata:
@@ -23,6 +23,7 @@ metadata:
 - Turn a repo / docker-compose / generic Helm chart into an Olares app, or validate an OlaresManifest you authored
 - Package an Olares app image; wire storage / system middleware / entrances / env / GPU
 - Deploy / run the app on **your own** Olares (`market upload` + `install`)
+- Serve a specific LLM / embedding model (HF or Ollama) with no chart authoring — clone an `llm-init` base app and fill env ([llm-models.md](references/olares-chart-llm-models.md))
 - Fix a failed install (`ImagePullBackOff`, permission denied / `EACCES`, app won't start)
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
@@ -80,6 +81,7 @@ For deploying to your own Olares, **metadata can stay a stub** (`Utilities` cate
 | deployment | **Env** | app config in `envs[]` (v3 `valueFrom`, no inline `OLARES_USER`); install-time `required` prompts; middleware/system/user vars mapped via `.Values.olaresEnv`; platform render context (identity, domain, userspace, oidc, middleware) consumed via `.Values.*` | install fails on `appenv` 422, or config must be user-supplied | [env.md](references/olares-chart-env.md), [env-defaults.md](references/olares-chart-env-defaults.md), [system-values.md](references/olares-chart-system-values.md) |
 | deployment | **Entrances & ports** | ≥1 `entrances[]`; HTTP via entrances, non-HTTP via `ports[]`; internal-only services `invisible: true` | a service is unreachable, or an internal port is exposed as a desktop entrance | [manifest.md](references/olares-chart-manifest.md) §4 |
 | packaging+deployment | **GPU / models** | build a CUDA image without a local GPU (custom-kernel arch flags); download model weights via initContainer into the shared `appCommon` Hugging Face cache | AI app needs a CUDA build, model provisioning, or a shared model cache | [gpu.md](references/olares-chart-gpu.md) |
+| deployment | **LLM model serving** | serve any HF/Ollama model with no chart authoring — pick an engine by format, fill env, clone an `llm-init` base app (llama.cpp / Ollama / vLLM / SGLang) | user wants to run/serve/host a specific LLM or embedding model, not author a new app | [llm-models.md](references/olares-chart-llm-models.md) |
 | deployment | **Accelerator** | declare `spec.accelerator` modes (nvidia/amd-gpu/apple-m/cpu/…) per what the repo supports; set `requiredGPUMemory`; a sane CPU/memory envelope | GPU/accelerator app needs a resource envelope, or `lint` flags `spec.resources` | [accelerator.md](references/olares-chart-accelerator.md) |
 | packaging+deployment | **DinD** | a privileged `beclab/docker` daemon sidecar (`ENABLE_DIND`, `DOCKER_HOST`) while the main container stays non-privileged | a terminal/agent app must run `docker` / `docker compose` | [dind.md](references/olares-chart-dind.md) |
 | deployment | **Shared backend** | `apiVersion: v3` ⇒ admin-only install into `<app>-shared`; consumers reach it over cross-namespace Service DNS; flag the admin-install to the user | a heavy/accelerator backend serves many users over shared data | [shared.md](references/olares-chart-shared.md) |

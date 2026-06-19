@@ -65,6 +65,19 @@ olares-cli market install <app> -s upload --version <version> --watch -o json
   olares-cli market install <app> -s upload --version <version> --watch -o json
   ```
 
+### Watch a slow image pull (progress + speed)
+
+A `--watch` that sits in `downloading` for minutes is usually a **healthy but large image pull** (multi-GB AI / engine images — e.g. `ollama/ollama` is ~3.4GB), not a hang. `market list --mine` only shows the coarse state; byte-level progress + speed come from the per-node `image-service` DaemonSet (it pulls via containerd and logs each layer):
+
+```bash
+olares-cli cluster pod list -n os-framework | grep image-service        # one pod per node
+olares-cli cluster pod logs os-framework/<image-service-pod> -f | grep -E "progress=|downloading,ref:"
+```
+
+- `download image <ref> progress=<pct>, imageSize=<bytes>, offset=<bytes>` is the whole-image percent; `status: downloading,ref: layer-... offset:/Total:` is the active layer. Sample `offset` across two ticks ÷ the time gap = bytes/s. A **flat `offset` over many ticks = a stalled pull** (registry / mirror / network), not a slow one — go check the mirror / connectivity.
+- The same offset/total is mirrored into the `imagemanagers` CRD that drives the install %: on the host, `kubectl -n os-framework get imagemanagers -o yaml` (match the entry to your app instance) shows `.status.conditions[node][image]{offset,total}` without scraping logs.
+- The **model weights** download (engine pulling the model *after* its image is up) is a separate phase, NOT in image-service — watch it on the app's own llm-init container: `cluster pod logs <ns>/<app-pod> -c llm-init` or its `/api/progress` entrance.
+
 ## 4. Diagnose by fetching logs
 
 Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster pod logs` / `cluster container logs`). The platform backends all live in namespace `os-framework`:
