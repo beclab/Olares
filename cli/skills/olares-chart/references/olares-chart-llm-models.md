@@ -27,7 +27,9 @@ The four base apps wrap the `llm-init` sidecar (downloads the model, writes a re
 5. Step 4 — fill the env (the core)
 6. Step 5 — install it (base apps are not on the Market yet)
 7. Manage / switch the model
-8. Errors → fixes
+8. Download-only — pre-warm the shared cache (no engine)
+9. Download multiple models at once
+10. Errors → fixes
 
 ## 1. Five-step flow
 
@@ -136,7 +138,55 @@ olares-cli market clone llamacppllmbasev3 -s upload \
 - Change the model/tuning later: edit the envs and re-apply via the Market lifecycle ([`../../olares-market/SKILL.md`](../../olares-market/SKILL.md)); the shared HF cache (`appCommon/huggingface`) keeps old snapshots so swapping `MODEL_SOURCE` back is instant.
 - The capability card (`mode` / `supports` / `context_size` / pricing) is editable at runtime on the llm-init dashboard (its `/v1/*` entrance) via `PUT /api/model-spec`.
 
-## 8. Errors → fixes
+## 8. Download-only — pre-warm the shared cache (no engine)
+
+Leaving `ENGINE_KIND` **empty/unset** puts llm-init in *download-only* mode: it runs the full download lifecycle, writes the readiness sentinel, and flips `phase=ready` (so `/readyz` reports done), but starts **no engine** and mounts **no `/v1/*` data plane** — only the control plane (`/livez` `/readyz` `/api/progress` `/api/config`) stays up. The model bytes just land in the shared HF cache for a sibling container (ComfyUI, an audio app, etc.) to consume. It does **not** exit after downloading; it idles serving the control plane.
+
+The four base charts each hard-wire their engine, so download-only is reached by clearing `ENGINE_KIND` (or via a sibling app that embeds llm-init purely as a downloader). Rules in this mode:
+
+- `MODEL_NAME` is still required; `MODEL_SOURCE` must be `hf://` or `https?://`. An `ollama://` source is **rejected at boot** (exit 2) — there is no Ollama daemon to pull into.
+- `ENGINE_ARGS` is ignored (no engine to launch); the dashboard hides the engine-status / args / perf cards.
+
+```bash
+# Pre-populate the shared HF cache with a repo for a sibling app — no engine
+MODEL_SOURCE=hf://Qwen/Qwen2.5-7B-Instruct  MODEL_NAME=Qwen/Qwen2.5-7B-Instruct
+MODEL_MODE=chat  ENGINE_KIND=        # empty == download-only
+```
+
+## 9. Download multiple models at once
+
+One llm-init instance can fetch several sources in a single deploy. There are two syntaxes — pick one (they are mutually exclusive):
+
+**(a) Comma form** — list extra sources in `MODEL_SOURCE`, comma-separated. The **first** segment is `role=main` (binds the engine, gets the sentinel, registered as `MODEL_NAME`); every later segment is `role=extra` (downloaded/pre-pulled into the cache only — no sentinel, not registered). A comma is only a separator when it directly precedes a new scheme (`hf://` / `ollama://` / `http(s)://`), so **don't put a bare comma inside a flag value** like `--include`. `MODEL_SOURCE_LOCAL` (only for `https?://`) aligns 1:1 with the comma segments (leave a slot empty for `hf://` / `ollama://`).
+
+```bash
+# Main model + an extra model pre-pulled into the same cache
+MODEL_SOURCE=ollama://qwen3:0.6b,ollama://llama3:8b   # 1st=main, 2nd=extra
+```
+
+**(b) Indexed form** — `MODEL_SOURCE_NUM=N` plus `MODEL_SOURCE_<i>` (1-based, contiguous), each with optional `MODEL_SOURCE_<i>_LOCAL` and `MODEL_SOURCE_<i>_ROLE`. Use this for heterogeneous multi-file models (a main weight + a vision projector), since flag values can carry commas safely here.
+
+| `_ROLE` | meaning |
+|---|---|
+| `main` | primary weight; **exactly one** required (the default when `_ROLE` is omitted). Multiple `main` → fail-fast. |
+| `mmproj` | llama.cpp vision projector. lifecycle writes a `${RUN_DIR}/mmproj_path` sentinel and the wrapper appends `--mmproj <path>`. |
+| `extra` | pre-download only; **auto-assigned by the comma form** — don't hand-write it in the indexed form. |
+
+```bash
+# VLM main repo + an mmproj projector file (llama.cpp)
+MODEL_SOURCE_NUM=2
+MODEL_SOURCE_1=hf://InternVL/InternVL3-8B               # _ROLE defaults to main
+MODEL_SOURCE_2=https://example.com/mmproj-v3.gguf#sha256=...
+MODEL_SOURCE_2_LOCAL=/cache/internvl/mmproj.gguf
+MODEL_SOURCE_2_ROLE=mmproj
+```
+
+Notes:
+
+- All `hf://` repos share the one HF cache root `/cache/hf/hub` (the `appCommon/huggingface` volume); each repo lands under `models--<owner>--<repo>/snapshots/<sha>/`.
+- Sources are fetched **sequentially** (extras first, then the main dispatch; an HF `mmproj` is a second `hf` call). `MAX_CONCURRENT_DOWNLOADS` (default `4`, range `[1,16]`, wired to the HF CLI `--max-workers`) only caps parallelism **within** one fetch — push past ~8–16 and HF Hub starts rate-limiting.
+
+## 10. Errors → fixes
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -146,3 +196,5 @@ olares-cli market clone llamacppllmbasev3 -s upload \
 | llama.cpp won't start, bad `-hf` | `MODEL_NAME` not `owner/repo[:quant]` | set `MODEL_NAME` to the repo (and quant) matching `MODEL_SOURCE` |
 | SGLang/vLLM can't load a GGUF | wrong engine for the format | use `llamacpp`/`ollama` for GGUF; safetensors for vLLM/SGLang |
 | uploaded chart invisible | wrong source | always pair `market upload` with `-s upload` on install/clone |
+| `download-only mode ... cannot use an ollama:// source` | empty `ENGINE_KIND` + `ollama://` | use `hf://` / `https://` for download-only, or set `ENGINE_KIND=ollama` |
+| `multiple sources have ROLE=main` / `no source has ROLE=main` | indexed multi-source mis-roled | mark exactly one `MODEL_SOURCE_<i>_ROLE=main` (or omit `_ROLE` on it) |
