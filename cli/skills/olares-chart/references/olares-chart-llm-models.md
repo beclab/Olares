@@ -66,7 +66,7 @@ GPU memory ≈ weights + KV-cache/activations + ~1–2Gi runtime overhead
 weights ≈ params × bytes-per-param   (fp16 ≈ 2B, int8/Q8 ≈ 1B, 4-bit ≈ 0.5B)
 ```
 
-e.g. 7B fp16 ≈ 14Gi weights → ~16Gi floor; 7B Q4 ≈ 3.5Gi → ~6Gi floor. If it won't fit: pick a smaller quant, offload to CPU (llama.cpp `-ngl` partial / omit), or choose a smaller model.
+e.g. 7B fp16 ≈ 14Gi weights → ~16Gi floor; 7B Q4 ≈ 3.5Gi → ~6Gi floor. If it won't fit: pick a smaller quant, offload to CPU (llama.cpp `-ngl` partial / omit), or choose a smaller model. The KV-cache term scales with the context window, so size that window against this same budget — see [§5.2](#52-context-length--make-it-as-long-as-the-hardware-stably-allows).
 
 ## 4. Step 3 — pick the engine
 
@@ -92,7 +92,7 @@ Required-per-model envs and how each engine differs:
 | `MODEL_NAME` | client `model` alias; also fed to the engine | llama.cpp template runs `llama-server -hf "$MODEL_NAME"` → must be `owner/repo` or `owner/repo:quant` matching `MODEL_SOURCE`. vLLM `--model` / SGLang `--model-path` → `owner/repo` matching `MODEL_SOURCE`. Ollama: free alias (may differ from the upstream tag). |
 | `MODEL_MODE` | `chat` \| `embedding` | embedding: llama.cpp auto-adds `--embedding`, SGLang auto-adds `--is-embedding`; **vLLM needs `--task embed` in `ENGINE_ARGS` yourself**. |
 | `MODEL_SUPPORTS` | capability seed | Comma-joined coarse GROUP tokens (`vision` / `tools` / `thinking` / `embedding`) that the chart expands into the `supports_*` keys llm-init validates. Required field. **How to choose the tokens, the full expansion table, and the model-vs-deployment caveat are in [§5.1](#51-model_supports--capability-mapping--how-to-choose).** |
-| `ENGINE_ARGS` | engine-native startup flags (string) | vLLM: `--max-model-len 8192 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 [--quantization awq\|gptq\|fp8]`. SGLang: `--context-length 8192 --mem-fraction-static 0.8 --tp 1`. llama.cpp: `-c 8192 -ngl all -fa on` (drop `-ngl` for CPU). Ollama: `OLLAMA_NUM_CTX=8192 OLLAMA_KEEP_ALIVE=30m` (`KEY=VALUE` list). Unknown tokens pass through, never fail. |
+| `ENGINE_ARGS` | engine-native startup flags (string) | vLLM: `--max-model-len 8192 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 [--quantization awq\|gptq\|fp8]`. SGLang: `--context-length 8192 --mem-fraction-static 0.8 --tp 1`. llama.cpp: `-c 8192 -ngl all -fa on` (drop `-ngl` for CPU). Ollama: `OLLAMA_NUM_CTX=8192 OLLAMA_KEEP_ALIVE=30m` (`KEY=VALUE` list). Unknown tokens pass through, never fail. **Size the context window (`-c` / `--max-model-len` / …) per [§5.2](#52-context-length--make-it-as-long-as-the-hardware-stably-allows) — default to the longest that fits stably.** |
 | `<ENGINE>_REQUIRED_GPU_MEMORY` | per-instance GPU quota → `nvidia.com/gpumem` | `LLAMACPP_/OLLAMA_/VLLM_/SGLANG_REQUIRED_GPU_MEMORY`. Accepts `8Gi` / `8192` / `8192Mi` (bare MiB). Set it to the Step-2 floor. Non-editable after install. |
 | `HF_ENDPOINT` / `HF_TOKEN` | mirror / private repo | auto-injected from `OLARES_USER_HUGGINGFACE_*`; set a token only for gated/private repos. Read only when an `hf://` source exists. |
 
@@ -128,6 +128,23 @@ Example — Qwen3.6-27B and Gemma4-26B-A4B-it are both multimodal (`image-text-t
 ```bash
 --env MODEL_SUPPORTS=tools,thinking      # NOT vision: no mmproj projector served
 ```
+
+### 5.2 Context length — make it as long as the hardware stably allows
+
+The context window is set **only** through `ENGINE_ARGS` (llama.cpp `-c` / `LLAMA_ARG_CTX_SIZE`, vLLM `--max-model-len`, SGLang `--context-length`, Ollama `OLLAMA_NUM_CTX`); llm-init passes it verbatim and does **not** validate it. There is no separate context env.
+
+**Default policy: pick the largest context that fits the GPU-memory budget with stable headroom — longer context is better for agent use, so do not default to a small `-c`.** How to size it:
+
+1. **Upper bound = the model's trained context** (HF `config.json` `max_position_embeddings`, or the model card). Never exceed it — it buys nothing and can silently trigger RoPE extension. Modern models train long (Qwen3.6 / Gemma4 are 100K+), so VRAM is usually the real limit, not this cap.
+2. **Budget for the KV cache** = `*_REQUIRED_GPU_MEMORY` − weights (quantized size, see [accelerator.md §C](olares-chart-accelerator.md)) − ~1–2Gi runtime overhead. The KV cache grows roughly linearly with context length, so fit the largest `-c` into that remaining budget.
+3. **Stretch the budget** so a longer window fits: llama.cpp `-fa on -ctk q8_0 -ctv q8_0` (flash-attention + 8-bit KV ≈ halves KV memory vs f16); vLLM `--kv-cache-dtype fp8`; SGLang `--mem-fraction-static`.
+4. **Leave stable headroom** — size for the working peak (concurrent requests, long generations), take the largest value that runs *stably*, not the absolute byte-max. Verify on the real node and raise until it stops fitting.
+
+Notes:
+
+- `-c 0` means "use the model's full trained context" — convenient but it will OOM on a 100K+ model under a fixed GPU budget, so **don't** use it as the default; compute the fitting value instead.
+- **CPU / unified-memory modes** (no discrete GPU): the window is bounded by host RAM rather than VRAM — more forgiving, same "as long as it stays stable" policy.
+- Keep the advertised `context_size` in sync — see [§7](#7-manage--switch-the-model).
 
 Worked example (Qwen2.5-7B four ways, model-landscape §7):
 
@@ -168,9 +185,11 @@ olares-cli market clone llamacppllmbasev3 -s upload \
   --env MODEL_SOURCE='hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf' \
   --env MODEL_NAME='unsloth/Qwen3.6-27B-GGUF:Q4_K_M' \
   --env MODEL_MODE=chat --env MODEL_SUPPORTS=tools,thinking \
-  --env ENGINE_ARGS='-c 16384 -ngl all -fa on' \
+  --env ENGINE_ARGS='-c 32768 -ngl all -fa on -ctk q8_0 -ctv q8_0' \
   --env LLAMACPP_REQUIRED_GPU_MEMORY=22Gi --watch
 ```
+
+`-fa on -ctk q8_0 -ctv q8_0` halves KV memory so a longer `-c` fits the 22Gi budget; per [§5.2](#52-context-length--make-it-as-long-as-the-hardware-stably-allows) push `-c` to the largest value that runs stably on the node, then set the card's `context_size` to the same value ([§7](#7-manage--switch-the-model)).
 
 - `templateOnly` apps are created via `clone` (the CLI sends `templateClone:true` on 1.12.6+); `clone` mints a per-instance name and `--watch` tracks it. Single local test instance can also use `market install <base> -s upload --env ...`.
 - `lint` the chart first if you edited it: `olares-cli chart lint ./<base>`.
@@ -180,6 +199,7 @@ olares-cli market clone llamacppllmbasev3 -s upload \
 
 - Change the model/tuning later: edit the envs and re-apply via the Market lifecycle ([`../../olares-market/SKILL.md`](../../olares-market/SKILL.md)); the shared HF cache (`appCommon/huggingface`) keeps old snapshots so swapping `MODEL_SOURCE` back is instant.
 - The capability card (`mode` / `supports` / `context_size` / pricing) is editable at runtime on the llm-init dashboard (its `/v1/*` entrance) via `PUT /api/model-spec`.
+- **`context_size` is decoupled from the engine window** — an auto-generated spec defaults it to `0` (unknown), and nothing syncs it to the engine's actual `-c`. Set it (via `PUT /api/model-spec` or a disk spec at `MODEL_SPEC_PATH`) to **match — and never exceed — the real `-c`** from [§5.2](#52-context-length--make-it-as-long-as-the-hardware-stably-allows); otherwise clients trust the advertised window and send prompts the engine truncates or rejects.
 
 ## 8. Download-only — pre-warm the shared cache (no engine)
 
