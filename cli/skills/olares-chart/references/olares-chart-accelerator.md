@@ -8,22 +8,34 @@ On the modern schema (`olaresManifest.version >= 0.12.0`) an app that needs an a
 
 > **Naming gotchas (these bite):**
 > - The YAML key is `spec.accelerator`, but `lint` error messages call it **`spec.resources`** — same thing.
-> - The GPU-memory key inside an entry is **`requiredGPUMemory` / `limitedGPUMemory`** (the legacy flat field at `< 0.12.0` is `spec.requiredGpu` / `limitedGpu` — also a memory quantity, not a card count).
+> - The GPU-memory key inside an entry is **`requiredGPUMemory` / `limitedGPUMemory`** (the legacy flat field at `< 0.12.0` is `spec.requiredGpu` / `spec.limitedGpu` — also a memory quantity, not a card count). The two live at different levels: `requiredGPUMemory` sits inside an `accelerator[]` entry; `requiredGpu` is a top-level `spec.*` field — they are mutually exclusive (declare one shape, not both).
+> - `lint` error messages for a missing accelerator-entry GPU field still say **`requiredGpu` / `limitedGpu`**, even though the YAML key you must write in the entry is `requiredGPUMemory` / `limitedGPUMemory`. Don't let the message rename your field.
+> - Only **discrete-GPU** modes carry a GPU-memory field; unified/SoC modes (`nvidia-gb10`, `apple-m`, `intel`, `amd`, `moore-soc`) omit it and size via pod `requiredMemory` / `limitedMemory` instead.
 
 ### Accelerator modes (not just NVIDIA)
 
-| `mode` | Target device | Arch required (`spec.supportArch`) |
-|---|---|---|
-| `cpu` | no accelerator, CPU only | none |
-| `nvidia` | NVIDIA discrete GPU (via HAMi) | `amd64` |
-| `amd-gpu` | AMD discrete GPU (ROCm) | `amd64` |
-| `amd-apu` | AMD APU integrated GPU (AI Max 395+) | (amd64 in practice) |
-| `strix-halo` | AMD Strix Halo + unified memory | `amd64` |
-| `nvidia-gb10` | NVIDIA GB10 superchip + unified memory | `arm64` |
-| `apple-m` | Apple M-series SoC (Mac, Metal/MPS) | (arm64 in practice) |
-| `mthreads-m1000` | Moore Threads M1000 | `arm64` |
+The canonical mode set is the one the platform recognizes on nodes — `gpu.bytetrade.io/<mode>` labels, defined in `framework/app-service/pkg/utils/gpu_types.go`. A node advertises a mode by carrying that label (a node can advertise several at once); `cpu` is never labeled because every node runs CPU workloads.
 
-`lint` cross-checks the mode against `spec.supportArch` for the rows that declare an arch (`nvidia`/`amd-gpu`/`strix-halo` → `amd64`; `nvidia-gb10`/`mthreads-m1000` → `arm64`). Only `nvidia` and `amd-gpu` may declare GPU-memory fields. (The legacy `spec.supportedGpu` list is superseded — on `0.12.0` use `spec.accelerator`.)
+| `mode` | Target device | Memory model | Typical arch |
+|---|---|---|---|
+| `cpu` | no accelerator, CPU only (implicit on every node) | host RAM only | any |
+| `nvidia` | discrete NVIDIA card (via HAMi) | discrete — own GPU-memory quota → `nvidia.com/gpumem` | `amd64` |
+| `nvidia-gb10` | NVIDIA GB10 Superchip | unified system memory — uses pod memory, no separate gpumem | `arm64` |
+| `apple-m` | Apple M-series SoC (Metal/MPS) | unified memory — pod memory | `arm64` |
+| `intel` | Intel integrated GPU | unified memory — pod memory | `amd64` |
+| `amd` | AMD integrated GPU (Ryzen AI Max) | unified memory — pod memory | `amd64` |
+| `intel-gpu` | Intel discrete GPU | discrete — own GPU-memory quota | `amd64` |
+| `amd-gpu` | AMD discrete GPU (ROCm) | discrete — own GPU-memory quota | `amd64` |
+| `moore-soc` | Moore Threads SoC | unified — pod memory | per hardware |
+
+Rule of thumb: **discrete** cards (`nvidia`, `intel-gpu`, `amd-gpu`) take a standalone GPU-memory quota (`requiredGPUMemory`/`limitedGPUMemory`); **unified / SoC** modes (`nvidia-gb10`, `apple-m`, `intel`, `amd`, `moore-soc`) draw from pod memory and declare no GPU-memory field. (The legacy `spec.supportedGpu` list is superseded — on `0.12.0` use `spec.accelerator`.)
+
+> **OAC `lint` currently lags `gpu_types.go`.** Today `olares-cli chart lint` validates the older set in `framework/oac/internal/manifest/resources.go` (`validResourceModes`): only `cpu`, `nvidia`, `nvidia-gb10`, `apple-m`, `amd-gpu`, plus the legacy names `strix-halo` / `mthreads-m1000`. So:
+> - `nvidia`, `nvidia-gb10`, `apple-m`, `amd-gpu`, `cpu` pass lint **and** match `gpu_types.go` — safe to use now.
+> - `intel`, `amd`, `intel-gpu`, `moore-soc` are real node modes but are **not yet accepted by `lint`** — declaring them fails validation until OAC is upgraded to the `gpu_types.go` set.
+> - `strix-halo` / `mthreads-m1000` are lint-only legacy names with no `gpu_types.go` equivalent; avoid them in new charts.
+>
+> `lint` also cross-checks mode → `spec.supportArch` for the arch-bound modes (`nvidia`/`amd-gpu` → `amd64`; `nvidia-gb10` → `arm64`), and only `nvidia`/`amd-gpu` are blessed for the GPU-memory fields (`gpuMemoryModes`). Both checks widen when OAC adopts `gpu_types.go`.
 
 ### Shape and semantics
 
@@ -58,12 +70,25 @@ spec:
 - Each declared mode entry must be **complete** (all CPU/memory/disk pairs present); `lint` reports every missing field.
 - `spec.accelerator` is **mutually exclusive** with the legacy flat `spec.requiredCpu/...` fields, is **rejected on `apiVersion: v2`**, and only applies at `olaresManifest.version >= 0.12.0`.
 
-## B. Which modes to declare — follow what the repo actually supports
+## B. Which modes to declare — local deploy vs publish
 
-Do **not** invent modes. Declare only the backends the upstream project genuinely supports:
+**The bar differs by destination:**
+
+- **Deploying to your own Olares (local):** declare **only the mode(s) your local node actually advertises**. There is no value in declaring `apple-m` or `amd-gpu` for a node that only has an NVIDIA card — it just adds unbuildable image variants. Read the node's advertised modes first:
+
+```bash
+olares-cli cluster node get <node> -o json | grep gpu.bytetrade.io   # existence-based gpu.bytetrade.io/<mode> labels
+olares-cli dashboard overview gpu -o json                            # per-GPU vendor + memory
+```
+
+  Then declare that one mode (plus `cpu` only if the app genuinely runs CPU-only). For the typical single NVIDIA node, that's just `nvidia` (+ optional `cpu`).
+
+- **Publishing to the Market:** the app may land on any user's hardware, so you must **cover every backend the upstream genuinely supports** across arches — ask the user which modes to target and declare one entry per chosen backend (each usually needs its own image / build variant). Market-readiness lives in [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).
+
+Either way, **do not invent modes** — declare only backends the upstream project genuinely supports:
 
 1. **Inspect the repo for its accelerator backends.** Check the Dockerfile / dependencies and build flags: CUDA / cuDNN (→ `nvidia`), ROCm / HIP (→ `amd-gpu`), Apple Metal / MPS (→ `apple-m`), Vulkan / oneAPI, or pure CPU. Read the README hardware requirements, the model card's recommended VRAM, and any device-selection logic in compose / entrypoints (e.g. `llama.cpp`'s `GGML_CUDA` / `GGML_HIP` / `GGML_METAL` / `GGML_VULKAN`, or a PyTorch backend switch).
-2. **Repo supports multiple backends → ask the user** which to target, then declare one `accelerator` mode per chosen backend. Remember the arch split (`nvidia`/`amd*`/`strix-halo` are `amd64`; `nvidia-gb10`/`mthreads` are `arm64`), so multiple modes usually mean multiple images / build variants — extra cost.
+2. **Repo supports multiple backends → ask the user** which to target, then declare one `accelerator` mode per chosen backend. Remember the arch split (`nvidia`/`amd-gpu`/`intel-gpu`/`intel`/`amd` are `amd64`; `nvidia-gb10`/`apple-m` are `arm64`), so multiple modes usually mean multiple images / build variants — extra cost.
 3. **Repo supports only one backend → declare only that one** (CUDA-only → just `nvidia`; CPU-only → just `cpu`).
 4. **CPU fallback only when real.** Add a `cpu` mode only if the upstream actually runs on CPU; many CUDA-only projects do not — don't add it for them.
 
