@@ -3,7 +3,7 @@
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; pass `chart lint` before starting any of this.
 > This is the **deploy** capability — the done step of the two axes. Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
 
-> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile is logged in, drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the profile is not logged in, or when a failure is clearly **not** a chart problem.
+> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile is logged in, drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the profile is not logged in, or when a failure is clearly **not** a chart problem. During the install wait, if you can multitask, proactively tail the app's own pod status + logs in parallel rather than only watching the coarse market row (see [§3 Don't just wait](#dont-just-wait--diagnose-the-apps-own-pods-in-parallel)).
 
 `lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This loop does — by pushing the chart to the developer's Olares and watching it install.
 
@@ -77,6 +77,29 @@ olares-cli cluster pod logs os-framework/<image-service-pod> -f | grep -E "progr
 - `download image <ref> progress=<pct>, imageSize=<bytes>, offset=<bytes>` is the whole-image percent; `status: downloading,ref: layer-... offset:/Total:` is the active layer. Sample `offset` across two ticks ÷ the time gap = bytes/s. A **flat `offset` over many ticks = a stalled pull** (registry / mirror / network), not a slow one — go check the mirror / connectivity.
 - The same offset/total is mirrored into the `imagemanagers` CRD that drives the install %: on the host, `kubectl -n os-framework get imagemanagers -o yaml` (match the entry to your app instance) shows `.status.conditions[node][image]{offset,total}` without scraping logs.
 - The **model weights** download (engine pulling the model *after* its image is up) is a separate phase, NOT in image-service — watch it on the app's own llm-init container: `cluster pod logs <ns>/<app-pod> -c llm-init` or its `/api/progress` entrance.
+
+### Don't just wait — diagnose the app's own pods in parallel
+
+The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal. If you can multitask, kick off `market install ... --watch` AND, in parallel, watch the app's own workload directly — don't wait for app-service to flip the row.
+
+A crashlooping **main** container is NOT fast-failed while the row reads `initializing`. After the install scale-up, app-service moves the app to `Initializing` and polls **entrance TCP reachability** every 1s in `WaitForLaunch` (`framework/app-service/pkg/appstate/initializing_app.go:82` → `framework/app-service/pkg/appinstaller/helm_ops_install.go:1008`). It only gives up on a crashloop once `hasUnrecoverablePod` sees `CrashLoopBackOff` with `RestartCount >= 5` (`helm_ops_install.go:1118`, threshold `crashLoopRestartThreshold`) AND that condition persists past a **5-minute** grace (`unrecoverableGrace`, `helm_ops_install.go:1067`). So `initializing` legitimately persists for several minutes while the container is already CrashLoopBackOff. The fast signal is the pod's own container status + logs, not the market row.
+
+The app namespace is `<app>-<owner>` (e.g. `pdfextractkit-pptest03`). Catch the crash early:
+
+```bash
+# Container status of the app's pod — watch the MAIN container.
+olares-cli cluster pod list -n <app>-<owner> -o json   # status.containerStatuses[].{ready,restartCount,state}
+```
+
+- `restartCount` climbing or `state.waiting.reason == CrashLoopBackOff` on the main container = **start diagnosing now**, don't wait out the grace window.
+
+```bash
+# Crash traceback — current and (after a restart) the last failed start.
+olares-cli cluster pod logs <app>-<owner>/<pod> -c <main-container>
+olares-cli cluster pod logs <app>-<owner>/<pod> -c <main-container> --previous   # last crashed instance
+```
+
+`--previous` grabs the buffer from the instance that just died — usually where the real traceback is. Then jump to [§4 Diagnose by fetching logs](#4-diagnose-by-fetching-logs) and [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`--previous` is mutually exclusive with `-f`).
 
 ## 4. Diagnose by fetching logs
 
