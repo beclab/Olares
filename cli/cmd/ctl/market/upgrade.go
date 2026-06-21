@@ -34,7 +34,14 @@ still surfaces the exit code). Four gates:
   3. Strict semver newer          — target > installed via
                                     Masterminds/semver/v3 strict parse;
                                     rejects downgrade and same-version
-                                    no-ops.
+                                    no-ops. EXCEPTION: for source
+                                    'upload', target == installed is
+                                    allowed — re-uploading the same
+                                    version overwrites the stored chart
+                                    and app-service permits a
+                                    same-version upgrade, so this is the
+                                    way to re-apply an edited chart or
+                                    recover an upgradeFailed upload app.
   4. Not suspended / withdrawn    — catalog labels exclude both
                                     'suspend' and 'remove' (verbatim
                                     suspendApp predicate). Soft-fails
@@ -97,8 +104,9 @@ func runUpgrade(opts *MarketOptions, appName string) error {
 	ctx := context.Background()
 	// Pre-flight gate mirroring the SPA's canUpgrade(): refuse early
 	// (with an actionable message) when the state row is missing, in a
-	// non-upgradable state, when the target version is not strictly
-	// newer than the installed version, or when the catalog row is
+	// non-upgradable state, when the target version is not newer than
+	// the installed version (same version is allowed for the 'upload'
+	// source — see preflightUpgrade gate 3), or when the catalog row is
 	// marked suspend / remove. Soft-fails on transient catalog probe
 	// errors — see preflightUpgrade for rationale.
 	if err := preflightUpgrade(ctx, opts, mc, appName, version, source); err != nil {
