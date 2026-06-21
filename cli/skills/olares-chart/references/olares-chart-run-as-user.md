@@ -131,6 +131,7 @@ If the upstream entrypoint **requires** root for its own initialization, you can
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | CrashLoop, `Permission denied` writing data dir | uid ≠ 1000 or dir owned by root | A or B above |
+| CrashLoop / `Permission denied` on an **appended subdir or `subPath`** under a userspace mount | only the granted dir (`.../Data/<appName>`) is chowned to 1000; the nested subdir was created root-owned (`DirectoryOrCreate`/kubelet) | Mount the bare `.Values.userspace.*` value (it already ends in `/<appName>`), or `chown` the subdir via initContainer B; avoid `subPath` for userspace mounts (see [olares-chart-manifest.md](olares-chart-manifest.md) §2) |
 | Install OK but config/data not persisted | Writes go to container-local path, or EACCES silently ignored | Check mount paths + run identity |
 | Admission denied: untrusted image + root | Third-party main container runs as root | A (force 1000) or B; never root main on third-party |
 | OPA OK but app still can't write | `spec.runAsUser` not set, or volume pre-dates chown | `spec.runAsUser: true` + B |

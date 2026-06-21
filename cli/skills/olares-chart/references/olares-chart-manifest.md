@@ -51,15 +51,22 @@ permission:
   - Home/Documents/MyApp/
 ```
 
-In the deployment template, replace the PVC mount with the injected host path (`appData`/`appCache` are host paths):
+In the deployment template, replace the PVC mount with the injected host path (`appData`/`appCache` are host paths). **The value already ends in `/<appName>` — mount it as-is; do not append the app name again:**
 
 ```yaml
       volumes:
       - name: app-data
         hostPath:
-          path: {{ .Values.userspace.appData }}/myapp
+          # appData/appCache already resolve to .../Data/<appName> / .../Cache/<appName>
+          # (owned by uid 1000). Mount the bare value — appending /<app> again would
+          # give .../Data/<app>/<app>.
+          path: {{ .Values.userspace.appData }}
           type: DirectoryOrCreate
 ```
+
+> **The value already includes `/<appName>` — don't re-append it.** `.Values.userspace.appData` / `.appCache` resolve to `.../Data/<appName>` / `.../Cache/<appName>`, created and `chown`ed to uid 1000. Mount the bare value. **`appCommon` is the exception** — it is a *bare* cross-app dir (no `appName` suffix), so you do append the reserved cache name, e.g. `{{ .Values.userspace.appCommon }}/huggingface`.
+
+> **If you append a subdir (or use `subPath`), you own its permissions.** Only the granted dir (`.../Data/<appName>`) is `chown`ed to uid 1000. A subdir you add via `path: {{ .Values.userspace.appData }}/sub` or a `volumeMounts.subPath` is created **root-owned** (by `DirectoryOrCreate` / kubelet) — so a process running as **uid 1000** (`spec.runAsUser: true`) hits `Permission denied` → CrashLoop. Either mount the bare value, let the app create the subdir at runtime (it inherits uid 1000), or `chown` it in an initContainer ([olares-chart-run-as-user.md](olares-chart-run-as-user.md) §B). Prefer not using `subPath` for userspace mounts.
 
 > Anything declared in a template (`.Values.userspace.appData/appCache/userData`) MUST have the matching `permission` field, or `lint`'s app-data cross-check fails. Drop leftover kompose PVCs.
 
