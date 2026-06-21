@@ -186,6 +186,9 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 		appv1alpha1.Stopping,
 		appv1alpha1.Upgrading,
 		appv1alpha1.Uninstalling,
+		// OperationAllowedInState[UpgradeFailed][InstallOp]=true; the install
+		// handler re-targets the AM by writing Status.State=Pending.
+		appv1alpha1.Pending,
 	},
 	appv1alpha1.ApplyEnvFailed: {
 		appv1alpha1.Stopping,
@@ -339,6 +342,12 @@ var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1a
 	appv1alpha1.UpgradeFailed: {
 		appv1alpha1.UninstallOp: true,
 		appv1alpha1.UpgradeOp:   true,
+		// An upgrade can leave the app with no usable helm release (e.g. the
+		// release was lost while the AM still believes the app is installed),
+		// in which case UpgradeOp keeps failing at GetDeployedReleaseVersion
+		// with "release: not found". Allow InstallOp as a recovery path so a
+		// fresh (re)install can reconcile the app, mirroring InstallFailed.
+		appv1alpha1.InstallOp: true,
 	},
 	appv1alpha1.ApplyEnvFailed: {
 		appv1alpha1.UninstallOp: true,
@@ -487,9 +496,14 @@ func StateToDuration(state appv1alpha1.ApplicationManagerState) time.Duration {
 	return 10 * time.Minute
 }
 
-// IsTerminalReinstallable reports whether an AM is in a terminal state from
-// which an Install operation is allowed. This is the broadest set; it matches
-// OperationAllowedInState[state][InstallOp] == true with a non-empty state.
+// IsTerminalReinstallable reports whether an AM is in a terminal state that is
+// known to hold no live cluster resources, so a re-install can re-target the
+// AM without first reconciling an existing deployment.
+//
+// It is a subset of "states that allow InstallOp": UpgradeFailed also allows
+// InstallOp (as a recovery path when the helm release was lost), but it may
+// still have a running previous release, so it is deliberately NOT listed here
+// — checkAppNameConflict must keep treating it as occupied.
 //
 // NOTE: "reinstallable" does not imply "safe to delete the AM CR". InstallFailed
 // historically left dangling helm/permission/provider/shared-NS resources before

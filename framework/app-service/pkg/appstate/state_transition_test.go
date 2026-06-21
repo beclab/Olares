@@ -42,6 +42,8 @@ func TestIsStateTransitionValid(t *testing.T) {
 		{appsv1.DownloadingCanceled, appsv1.Pending, true},
 		{appsv1.InstallingCanceled, appsv1.Pending, true},
 		{appsv1.Uninstalled, appsv1.Pending, true},
+		// UpgradeFailed allows InstallOp as a recovery path (release lost).
+		{appsv1.UpgradeFailed, appsv1.Pending, true},
 
 		// invalid jumps (still rejected after the table was augmented).
 		{appsv1.Pending, appsv1.Running, false},
@@ -148,6 +150,8 @@ func TestIsOperationAllowed(t *testing.T) {
 		{appsv1.Uninstalling, appsv1.UninstallOp, false},
 		{appsv1.InstallFailed, appsv1.InstallOp, true},
 		{appsv1.InstallFailed, appsv1.UninstallOp, true},
+		{appsv1.UpgradeFailed, appsv1.InstallOp, true},
+		{appsv1.UpgradeFailed, appsv1.UpgradeOp, true},
 		{appsv1.Pending, appsv1.CancelOp, true},
 		{appsv1.Pending, appsv1.UninstallOp, false},
 	}
