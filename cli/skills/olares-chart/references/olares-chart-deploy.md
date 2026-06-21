@@ -101,6 +101,20 @@ olares-cli cluster pod logs <app>-<owner>/<pod> -c <main-container> --previous  
 
 `--previous` grabs the buffer from the instance that just died — usually where the real traceback is. Then jump to [§4 Diagnose by fetching logs](#4-diagnose-by-fetching-logs) and [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`--previous` is mutually exclusive with `-f`).
 
+**Empty logs across restarts? Read the exit code, not the (missing) traceback.** A container that emits nothing and still CrashLoopBackOffs did not crash on an exception — it either never started or exited cleanly. `cluster pod get -o json` **trims `lastState`** (and `securityContext`), so the terminated detail is invisible at rest; `workload restart` the deployment and poll `state` until you catch the `terminated` snapshot before it backs off again:
+
+```bash
+olares-cli cluster workload restart <ns>/<app> --kind deployment --yes
+# poll the main container's state until it shows terminated.{exitCode,reason}
+olares-cli cluster pod get <ns>/<pod> -o json   # status.containerStatuses[].state.terminated
+```
+
+Triage by what you find:
+
+- **`terminated.exitCode == 0` / `reason: Completed`** (often `startedAt == finishedAt`) → the process exited cleanly without serving — wrong/missing command, no long-lived server, the image's effective `CMD` is a no-op (e.g. bare `node` hitting EOF on a non-TTY stdin), or a **stale cached image** under a mutable tag (Olares renders `imagePullPolicy: IfNotPresent`, so a node that cached wrong bytes never re-pulls). Fix: set an explicit `command`/`args`, pin the image by digest. **Not** a permission issue — see [olares-chart-run-as-user.md](olares-chart-run-as-user.md).
+- **`terminated.exitCode != 0`** → a genuine crash; the traceback is in the `--previous` logs above.
+- **`state.waiting.reason == CreateContainerConfigError`** (the full text is in `state.waiting.message`) → securityContext / config mismatch (e.g. `runAsNonRoot` vs a non-numeric image `USER`), not an app bug.
+
 ## 4. Diagnose by fetching logs
 
 Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster pod logs` / `cluster container logs`). The platform backends all live in namespace `os-framework`:
@@ -112,6 +126,7 @@ Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster p
 | Install can't fetch the chart | Deployment `chartrepo-deployment`, container `chartrepo` | `olares-cli cluster container logs os-framework/<chartrepo-deployment-pod>/chartrepo` |
 | Install / orchestration failed | StatefulSet pod `app-service-0`, container `app-service` | `olares-cli cluster container logs os-framework/app-service-0/app-service` |
 | The app's own container crash-loops | the app's pods (usually `user-space-<id>` or the app namespace) | `olares-cli cluster application status <ns>` then `olares-cli cluster pod logs <ns>/<pod>` |
+| CrashLoopBackOff with **empty logs** + `exitCode 0` / `Completed` | main process exits immediately — wrong/missing command, no long-lived server, no-op image `CMD` (e.g. bare `node`), or a stale cached image under a mutable tag | set an explicit `command`/`args`, pin the image by digest — [olares-chart-run-as-user.md](olares-chart-run-as-user.md); **not** a permission fix (triage in §3) |
 | `Permission denied` / EACCES writing data, or data not persisting | uid ≠ 1000, root-owned dirs on userspace mount, missing `spec.runAsUser` | [olares-chart-run-as-user.md](olares-chart-run-as-user.md) — then back to refine + lint |
 | Admission denied: untrusted image + root | third-party main container runs as root | [olares-chart-run-as-user.md](olares-chart-run-as-user.md) — force uid 1000 or initContainer chown |
 

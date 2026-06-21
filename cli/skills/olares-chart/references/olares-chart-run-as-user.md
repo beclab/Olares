@@ -128,10 +128,13 @@ If the upstream entrypoint **requires** root for its own initialization, you can
 
 ## Symptoms → fix
 
+> **Not every CrashLoop is a permission problem.** Before reaching for `chown` / `runAsUser`, read the container's `terminated.exitCode` / `reason` (triage in [olares-chart-deploy.md](olares-chart-deploy.md) §3). A clean `exitCode 0` / `Completed` with **empty logs** is the main process exiting immediately — not a write-permission failure.
+
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | CrashLoop, `Permission denied` writing data dir | uid ≠ 1000 or dir owned by root | A or B above |
 | CrashLoop / `Permission denied` on an **appended subdir or `subPath`** under a userspace mount | only the granted dir (`.../Data/<appName>`) is chowned to 1000; the nested subdir was created root-owned (`DirectoryOrCreate`/kubelet) | Mount the bare `.Values.userspace.*` value (it already ends in `/<appName>`), or `chown` the subdir via initContainer B; avoid `subPath` for userspace mounts (see [olares-chart-manifest.md](olares-chart-manifest.md) §2) |
+| CrashLoopBackOff but `exitCode 0` / `reason: Completed` / **empty logs** | **NOT a permission problem** — the main process exits immediately (no long-lived server, wrong/missing command, the image's effective `CMD` is a no-op such as bare `node` reading EOF on a non-TTY stdin, or a stale cached image under a mutable tag) | Don't `chown`/`runAsUser`. Verify the image runs a long-lived server with the chart's exact command/env; set an explicit `command`/`args` (e.g. `command: ["node", "app.js"]` + `workingDir: /app`); pin the image by digest. Triage: [olares-chart-deploy.md](olares-chart-deploy.md) §3 |
 | Install OK but config/data not persisted | Writes go to container-local path, or EACCES silently ignored | Check mount paths + run identity |
 | Admission denied: untrusted image + root | Third-party main container runs as root | A (force 1000) or B; never root main on third-party |
 | OPA OK but app still can't write | `spec.runAsUser` not set, or volume pre-dates chown | `spec.runAsUser: true` + B |
