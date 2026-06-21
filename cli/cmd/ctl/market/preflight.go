@@ -208,7 +208,11 @@ func appLabels(appInfo map[string]interface{}) []string {
 //
 //  1. state ∈ isUpgradableStates  (`isUpgradable`)
 //  2. installed + target version both present
-//  3. target version > installed (strict semver)
+//  3. target version > installed (strict semver) — EXCEPT for the
+//     `upload` source, where target == installed is also allowed
+//     (re-uploading the same version overwrites the stored chart and
+//     app-service permits a same-version upgrade); a true downgrade is
+//     always rejected
 //  4. catalog row is NOT marked `suspend` / `remove` (`isAppSuspended`)
 //
 // Returns nil on pass. On any explicit gate failure returns a typed
@@ -255,11 +259,22 @@ func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient
 		return fmt.Errorf("cannot upgrade '%s': target version is empty (internal error — version resolution did not produce a version string)", appName)
 	}
 
+	// The "upload" bucket (chartUploadSource) overwrites the stored
+	// chart in place when the same version is re-uploaded, and
+	// app-service accepts a same-version upgrade (it gates on
+	// `>= deployedVersion`, not strictly greater — see
+	// framework/app-service/pkg/appstate/upgrading_app.go). So for
+	// upload-source apps, `upgrade` to the SAME version is the
+	// sanctioned way to re-apply an edited chart (and to recover an
+	// app stuck in upgradeFailed) without an artificial version bump.
+	// We only relax the same-version no-op gate; a true downgrade
+	// (cmp < 0) is still rejected because app-service rejects it too.
+	isUpload := strings.TrimSpace(source) == chartUploadSource
 	cmp, err := compareSemver(targetVersion, row.Version)
 	if err != nil {
 		return fmt.Errorf("cannot upgrade '%s': version comparison failed: %w (installed %q, target %q)", appName, err, row.Version, targetVersion)
 	}
-	if cmp == 0 {
+	if cmp == 0 && !isUpload {
 		return fmt.Errorf("cannot upgrade '%s': target version '%s' is already installed — nothing to do", appName, targetVersion)
 	}
 	if cmp < 0 {

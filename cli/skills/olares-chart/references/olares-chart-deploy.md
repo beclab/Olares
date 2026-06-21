@@ -13,8 +13,12 @@ flowchart TD
   login -->|no| tell["tell developer: run 'olares-cli profile login --olares-id ID' then re-invoke"]
   login -->|yes| pkg["chart package -> .tgz"]
   pkg --> up["market upload"]
-  up --> inst["market install -s upload --watch -o json"]
+  up --> exists{"app already exists on this Olares?"}
+  exists -->|"no (first deploy / installFailed / uninstalled)"| inst["market install -s upload --watch -o json"]
+  exists -->|"yes (running / stopped / upgradeFailed / applyEnvFailed / stopFailed)"| upg["market upgrade -s upload --version SAME --watch -o json"]
   inst -->|running| done["deployed -> cleanup or keep"]
+  upg -->|running| done
+  upg -->|failed/stuck| diag
   inst -->|failed/stuck| diag["fetch logs"]
   diag --> isChart{"chart problem?"}
   isChart -->|yes| fix["fix chart -> back to refine + lint -> retry loop"]
@@ -58,6 +62,12 @@ Upload only stores the chart; installing it is what proves it runs:
 olares-cli market install <app> -s upload --version <version> --watch -o json
 ```
 
+- **`install` is for an app that does NOT yet exist on this Olares** (first deploy, or after `uninstall`, or retrying an `installFailed`). If the app already exists in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`), `install` is rejected by app-service — **re-apply with `upgrade` instead** (next bullet). When in doubt, `olares-cli market get <app> -s upload -o json` and read `.state`.
+- **Re-apply an edited chart to an already-deployed app → `upgrade`, same version:**
+  ```bash
+  olares-cli market upgrade <app> -s upload --version <SAME version> --watch -o json
+  ```
+  Re-uploading the same version overwrites the stored chart, and `-s upload` allows a **same-version** upgrade (the CLI's strict-newer gate is waived for the upload source; app-service gates on `>= deployed`). This is the canonical loop for iterating on an installed app and for recovering one stuck in `upgradeFailed` — no version bump required.
 - Parse `.finalState`: `running` = deployed. `*Failed` / a watcher stuck near `*Failed` = go diagnose. See [`../../olares-market/references/olares-market-lifecycle.md`](../../olares-market/references/olares-market-lifecycle.md) for the state machine and `missing required env var(s)` (re-run with `--env KEY=VALUE`).
 - **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in the chart repo immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. This is the one install failure you *should* retry: wait for hydration, then re-run the same `install`. No need to re-`upload` or bump the version — the chart is already stored; re-uploading the same bytes wouldn't speed up hydration. Confirm hydration finished via the `appstore-backend` log (`isAppHydrationComplete RETURNING TRUE ... appID=<app>` → `Added new app to latest: <app>` → `new_app_ready`), or poll `olares-cli market get <app> -s upload` until it resolves:
   ```bash
@@ -135,9 +145,11 @@ olares-cli market resume <app> --watch
 
 `resume` scales the workloads back up and waits for startup (`stopped → resuming → running`). If the pod is already running it completes quickly and flips the market row to `running`.
 
+If an upgrade instead left the app in **`upgradeFailed`** (the upgrade itself errored, not a `stopped` row), recover by fixing the chart, re-uploading the **same version**, and re-running `market upgrade <app> -s upload --version <SAME> --watch` — `upgradeFailed` is an upgradable state and the upload source permits a same-version upgrade (see §3). Do **not** fall back to `install`: app-service rejects `install` from `upgradeFailed`, which only re-wedges the row.
+
 ## 5. Decide: fix the chart, or report back
 
-- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md) and [`olares-chart-run-as-user.md`](olares-chart-run-as-user.md), re-run `chart lint`, and re-upload (the auto-loop continues). **No version bump needed to redeploy a fix** — `upload` requires the new version be **>= the stored** one, so re-uploading the *same* version overwrites the stored chart. Keep `Chart.yaml` `version` == `metadata.version` (lint enforces equality); bump only if you want to track iterations (a *lower* version is rejected).
+- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md) and [`olares-chart-run-as-user.md`](olares-chart-run-as-user.md), re-run `chart lint`, and re-upload (the auto-loop continues). **No version bump needed to redeploy a fix** — `upload` requires the new version be **>= the stored** one, so re-uploading the *same* version overwrites the stored chart. Keep `Chart.yaml` `version` == `metadata.version` (lint enforces equality); bump only if you want to track iterations (a *lower* version is rejected). **After re-upload, re-apply with the right verb:** if the app no longer exists / is `installFailed` → `market install -s upload`; if it already exists in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`) → `market upgrade -s upload --version <SAME>` (same-version upgrade is allowed for the upload source — see §3). Re-running `install` against an already-existing app is rejected by app-service and leaves the row in `upgradeFailed`/`installFailed`; `upgrade` is the recovery path.
 - **Problem is not in the chart, or unclear:** break out of the auto-loop — summarize the failing state and the relevant log excerpts in plain language, suggest likely causes, and **ask the developer how to proceed.** Do not silently retry install in a loop — install/auth failures are deterministic (see olares-market / olares-shared error tables). The lone exception is the post-upload hydration `404` in section 3, which is transient and meant to be retried once hydration completes.
 
 ## 6. Clean up the test install
