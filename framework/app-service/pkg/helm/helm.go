@@ -97,6 +97,18 @@ func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, sett
 	if repoURL != "" {
 		client.RepoURL = repoURL
 	}
+	// helm's action.Upgrade.Run does not honor the `Install` field (the
+	// `helm upgrade --install` behavior lives in helm's CLI layer), so mirror
+	// it here: if the release does not exist, install it instead of failing
+	// with "release: not found". This self-heals an app whose helm release was
+	// lost while the ApplicationManager still considers it installed.
+	hist := action.NewHistory(actionConfig)
+	hist.Max = 1
+	if _, herr := hist.Run(appName); errors.Is(herr, driver.ErrReleaseNotFound) {
+		ctrl.Log.Info("helm release not found on upgrade; installing instead",
+			"appName", appName, "namespace", namespace)
+		return InstallCharts(ctx, actionConfig, settings, appName, chartName, repoURL, namespace, vals)
+	}
 	r, err := runUpgrade(ctx, []string{appName, chartName}, client, settings, vals)
 	if err != nil {
 		return err

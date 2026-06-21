@@ -23,6 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -167,12 +168,22 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	}
 	var appConfig *appcfg.ApplicationConfig
 	deployedVersion, _, err := apputils.GetDeployedReleaseVersion(actionConfig, p.manager.Spec.AppName)
+	releaseMissing := false
 	if err != nil {
-		klog.Errorf("Failed to get release revision err=%v", err)
-		return err
+		if errors.Is(err, driver.ErrReleaseNotFound) {
+			// The helm release is gone while the AM still considers the app
+			// installed (orphaned/incomplete prior install). Don't fail into
+			// upgradeFailed: let the flow continue so helm.UpgradeCharts can
+			// (re)install the release instead of erroring "release: not found".
+			klog.Warningf("helm release for %s not found during upgrade; will reinstall it", p.manager.Spec.AppName)
+			releaseMissing = true
+		} else {
+			klog.Errorf("Failed to get release revision err=%v", err)
+			return err
+		}
 	}
 
-	if !utils.MatchVersion(version, ">= "+deployedVersion) {
+	if !releaseMissing && !utils.MatchVersion(version, ">= "+deployedVersion) {
 		err = errors.New("upgrade version should great than deployed version")
 		return err
 	}
