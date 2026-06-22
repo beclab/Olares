@@ -7,7 +7,7 @@ import Layout from "./components/Layout.vue";
 import { App } from "vue";
 import Tabs from "./components/tabs.vue";
 import LaunchCard from "./components/LaunchCard.vue";
-import FilterableList from "./components/FilterableList.vue";
+import UseCaseGallery from "./components/UseCaseGallery.vue";
 import { onMounted, watch, nextTick, onBeforeMount,computed } from "vue";
 import mediumZoom from "medium-zoom";
 import OSTabs from "./components/OStabs.vue";
@@ -29,7 +29,7 @@ export default {
 enhanceApp({ app, router }: { app: App; router: Router }) {
     app.component("Tabs", Tabs);
     app.component("LaunchCard", LaunchCard);
-    app.component("FilterableList", FilterableList);
+    app.component("UseCaseGallery", UseCaseGallery);
     app.component("OSTabs", OSTabs);
     app.component("VersionSwitcher", VersionSwitcher);
     app.component('AppLinkGlobal', AppLinkGlobal)

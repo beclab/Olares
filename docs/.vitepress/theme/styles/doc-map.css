@@ -1,0 +1,62 @@
+/* Documentation map: grid of single-destination section cards on the overview page. */
+.doc-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 2.5rem 0 3rem;
+}
+
+a.doc-map-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background-color: var(--vp-c-bg);
+  text-decoration: none;
+  transition: box-shadow 0.25s ease;
+}
+
+a.doc-map-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.doc-map-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  background-color: var(--vp-c-default-soft);
+}
+
+.doc-map-icon .material-symbols-outlined {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--vp-c-text-1);
+}
+
+.doc-map-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+.doc-map-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--vp-c-text-2);
+}
+
+.dark a.doc-map-card {
+  background-color: var(--vp-c-bg-soft);
+}
+
+.dark a.doc-map-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}

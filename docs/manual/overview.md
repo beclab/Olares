@@ -1,82 +1,101 @@
 ---
 description: Learn about Olares, an open-source sovereign cloud OS for local AI. Discover how to self-host services, run AI applications, manage files, and collaborate securely with enterprise-grade features.
+aside: false
 ---
 # Olares documentation
 
 ## What is Olares?
-
 Olares is an open-source personal cloud operating system designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, ComfyUI for image generation, and Vane (formerly Perplexica) for private, AI-driven search and reasoning. Imagine the power of the cloud, but with you in complete command.
 
-<div class="cta">
-  <a href="./get-started/">
-    <div class="content">
-      <h3>New to Olares?</h3>
-      <p>Check out the get-started guide to set up Olares on your local machine</p>
-    </div>
-    <div class="arrow">→</div>
+## Set up Olares
+
+Get Olares running, whether you install the OS yourself or use a dedicated device.
+
+<div class="doc-map">
+  <a class="doc-map-card" href="./get-started/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">rocket_launch</span></span>
+    <span class="doc-map-title">Get started</span>
+    <span class="doc-map-desc">Create your Olares ID and install Olares on your device</span>
+  </a>
+  <a class="doc-map-card" href="../one/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">memory</span></span>
+    <span class="doc-map-title">Olares One</span>
+    <span class="doc-map-desc">Set up and get the most out of the Olares One personal AI device</span>
   </a>
 </div>
 
-## Core components
+## Use Olares
 
-Olares comprises the following core components:
+Manage your cloud, applications, files, identity, and access from day to day.
 
-- [**Olares ID**](../developer/concepts/olares-id.md): A decentralized identity and credit system that facilitates secure, trustless exchanges of information and value. It serves as your digital identity across the Olares ecosystem.
-
-- [**Olares OS**](https://github.com/beclab/Olares): An open-source, self-hosted operating system that transforms edge devices into robust personal cloud.
-
-- [**LarePass**](./larepass/): A secure, cross-platform client that bridges you and your Olares system. It provides seamless access, unified identity management, fast file synchronization, and comprehensive device management across all your devices.
-
-## Highlighted features
-
-Olares offers a wide array of features designed to enhance security, ease of use, and development flexibility:
-
-- **Enterprise-grade security**: Secure your self-hosted cloud with simplified network configuration using Tailscale, Headscale, Cloudflare Tunnel, and FRP.
-- **Secure and permissionless application ecosystem**: Access nearly 100 free applications in a secure, sandboxed environment. [See what Olares Market has to offer](https://market.olares.com/).
-- **Unified file system and database**: Support automated scaling, backups, and high availability.
-- **Single sign-on**: Log in once to access all applications within Olares with a shared authentication service.
-- **AI capabilities**: Manage GPU resources, host AI models locally, and build private knowledge bases with complete privacy.
-- **Built-in applications**: Get started with essential pre-installed applications such as Files, Vault, Wise, Profile and Dashboard.
-- **Seamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
-- **Development tools**: Build and port applications easily with comprehensive development tools.
-
-## Key use cases
-
-- 🖥️ **Homelab server**: Turn your personal devices into a versatile homelab for experimenting with containerized applications, running local AI models, managing self-hosted services, or testing cloud technologies—all within your own private infrastructure.
-  
-- 🤖 **Local AI**: Host and run cutting-edge open-source AI models—including large language models, image generation, and speech recognition—directly on your devices. Build custom AI assistants that integrate with your data and applications while keeping everything private and secure.
-
-- 💻 **Personal data repository**: Securely store, sync, and manage your photos, documents, and important files in a unified, private storage system accessible from anywhere.
-
-- 🛠️ **Self-hosted workspace**: Create a free, collaborative workspace for your team or family with open-source alternatives to commercial productivity tools.
-
-- 🎥 **Private media server**: Turn your personal media collection into your own streaming service, hosted entirely on your devices.
-- 🏡 **Smart home**: Use Olares as the central control point for managing IoT devices and home automation.
-- 🤝 **Decentralized social media**: Host decentralized social media platforms like Mastodon, Ghost, or WordPress to build your personal brand without the risks of bans or platform fees.
-
-<!--
-## Pick your path
-
-Before you roll up your sleeves and get your hands dirty with Olares, feel free to take a quick tour. Here are some alternative paths to get a feel for what Olares can do.
-
-<div class="cta-container">
-  <a href="../use-cases/" class="cta-link">
-    <p class="cta-title">Explore use cases</p>
-    <p class="cta-description">Discover real-world applications and see how Olares solves common challenges.</p>
+<div class="doc-map">
+  <a class="doc-map-card" href="./olares/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">apps</span></span>
+    <span class="doc-map-title">Olares applications</span>
+    <span class="doc-map-desc">Daily guides for Desktop, Market, Files, Vault, Control Hub, and Settings</span>
   </a>
-  <a href="./olares/" class="cta-link">
-    <p class="cta-title">Learn how-tos</p>
-    <p class="cta-description">Comprehensive system app guides covering daily tasks of using Olares.</p>
+  <a class="doc-map-card" href="./larepass/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>
+    <span class="doc-map-title">LarePass</span>
+    <span class="doc-map-desc">Manage your accounts, devices, VPN, files, and passwords</span>
   </a>
-  <a href="../developer/concepts/" class="cta-link">
-    <p class="cta-title">Understand Olares</p>
-    <p class="cta-description">Grasp the fundamental principles and architecture behind Olares.</p>
+  <a class="doc-map-card" href="./space/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">cloud</span></span>
+    <span class="doc-map-title">Olares Space</span>
+    <span class="doc-map-desc">Manage Olares, custom domains, backups, and billing</span>
+  </a>
+  <a class="doc-map-card" href="./best-practices/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
+    <span class="doc-map-title">Tutorials</span>
+    <span class="doc-map-desc">Advanced, step-by-step guides for custom domains, clusters, storage, and more</span>
   </a>
 </div>
--->
 
-## Other resources
+## Build and go further
 
-- [Develop Olares apps](../developer/develop/)
-- [Join our community on Discord](https://discord.gg/olares)
-- [Check out Olares blogs](https://blog.olares.com/)
+Go further with the Olares CLI and real-world examples from the community.
+
+<div class="doc-map">
+  <a class="doc-map-card" href="../developer/cli-overview">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">terminal</span></span>
+    <span class="doc-map-title">Olares CLI</span>
+    <span class="doc-map-desc">Operate Olares from the command line, and power AI agents with its Agent Skills</span>
+  </a>
+  <a class="doc-map-card" href="../use-cases/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">lightbulb</span></span>
+    <span class="doc-map-title">Use cases</span>
+    <span class="doc-map-desc">Explore real-world setups and third-party app walkthroughs</span>
+  </a>
+</div>
+
+## Get help and connect
+
+Find answers when you're stuck, and join the community to share setups and stay up to date.
+
+<div class="doc-map">
+  <a class="doc-map-card" href="./help/olares">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">help</span></span>
+    <span class="doc-map-title">Help &amp; troubleshooting</span>
+    <span class="doc-map-desc">Find answers in FAQs, known issues, and technical support</span>
+  </a>
+  <a class="doc-map-card" href="https://discord.gg/olares" target="_blank" rel="noopener noreferrer">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">chat</span></span>
+    <span class="doc-map-title">Discord</span>
+    <span class="doc-map-desc">Join the community to chat and get help</span>
+  </a>
+  <a class="doc-map-card" href="https://blog.olares.com/" target="_blank" rel="noopener noreferrer">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">newspaper</span></span>
+    <span class="doc-map-title">Blog</span>
+    <span class="doc-map-desc">Read product updates, guides, and deep dives</span>
+  </a>
+  <a class="doc-map-card" href="https://www.youtube.com/@OlaresOS" target="_blank" rel="noopener noreferrer">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">smart_display</span></span>
+    <span class="doc-map-title">YouTube</span>
+    <span class="doc-map-desc">Watch tutorials, demos, and walkthroughs</span>
+  </a>
+  <a class="doc-map-card" href="https://www.olares.com/forum/" target="_blank" rel="noopener noreferrer">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">forum</span></span>
+    <span class="doc-map-title">Forum</span>
+    <span class="doc-map-desc">Ask questions and share setups with other users</span>
+  </a>
+</div>
