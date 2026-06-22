@@ -38,38 +38,34 @@ Some applications only support opening in a browser tab.
 
 ### Widgets
 
-Desktop can display optional widgets in the lower-right corner:
+Desktop can display optional widgets in the lower-right corner for quick information such as time, date, and system performance:
 
 - **Date & time**: Shows the current time, weekday, and date.
 - **Dashboard**: Shows CPU, disk, and memory usage.
 
-The **Widgets** switch is the master switch. Turning it off hides all widgets. When it is on, you can control each widget separately.
+By default, all widgets are enabled. The **Widgets** switch is the master switch. Turning it off hides all widgets. When it is on, you can control each widget separately.
 
 1. Open **Settings** from the Dock or Launchpad.
 2. Select **Appearance** in the sidebar.
-3. Use the **Widgets** switch as the master control:
-   - Off: Hide all widgets.
-   - On: Enable individual widget settings.
-4. Under **Date & time**, turn the clock and date widget on or off. If it is on, set **24-hour format** and **Date format** as needed.
-5. Turn **Show dashboard** on or off to show or hide CPU, disk, and memory usage.
-
-If both individual widgets are off, Desktop shows no widgets even when **Widgets** is on.
+3. To disable all widgets at once, turn off **Widgets**.
+4. To customize individual widgets:
+   - Turn the **Date & time** widget on or off.
+   - Turn **24-hour format** on or off to switch between 24-hour and 12-hour time.
+   - Select the **Date format**.
+   - Turn **Show dashboard** on or off to show or hide CPU, disk, and memory usage.
 
 ## Reset Desktop layout
 
 If you want to restore the default Desktop organization, reset the layout from Settings.
 
-1. Open **Settings** from the Dock or Launchpad.
-2. Select **Appearance** in the sidebar.
-3. Scroll to **Reset desktop layout**, then click **Reset**.
-
-4. In the confirmation dialog, choose what to do:
-   - Click **Cancel** to keep your current layout.
-   - Click **Reset** to restore the default Launchpad and Dock layout.
-
 :::warning
 Resetting the desktop layout restores the default Launchpad and Dock layout. Custom icon positions and Dock items are reset. App data is not deleted, but the layout reset cannot be undone.
 :::
+
+1. Open **Settings** from the Dock or Launchpad.
+2. Select **Appearance** in the sidebar.
+3. Scroll to **Reset desktop layout**, then click **Reset**.
+4. In the confirmation window, click **Reset**.
 
 ## Use Launchpad
 
