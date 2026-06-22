@@ -314,6 +314,10 @@ func (h *Handler) listComputeResources(req *restful.Request, resp *restful.Respo
 		api.HandleError(resp, req, err)
 		return
 	}
+	if err := compute.AttachBoundAppSpecs(req.Request.Context(), h.ctrlClient, nodes); err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
 	resp.WriteAsJson(ComputeResourcesResponse{
 		Response: api.Response{Code: api.CodeSuccess},
 		Data:     nodes,

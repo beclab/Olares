@@ -103,6 +103,12 @@ type Allocation struct {
 	NodeName string `json:"nodeName"`
 	DeviceID string `json:"deviceId"`
 	Memory   int64  `json:"memory"`
+	// Spec carries the bound app's currently-selected resource-mode
+	// requirement (require/limit GPU & memory, multi-card / multi-node
+	// support). It is resolved at read time for the compute-resources
+	// listing (see AttachBoundAppSpecs) and is never persisted to the
+	// allocation config map.
+	Spec *Requirement `json:"spec,omitempty"`
 }
 
 type Requirement struct {
