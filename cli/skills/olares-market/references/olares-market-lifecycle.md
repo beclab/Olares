@@ -54,7 +54,7 @@ Mirrors the SPA's `canUpgrade()`. Bails locally with a self-contained error (for
 
 1. **Row exists** — state row found via `Name` or `RawName` (clones included)
 2. **State is upgradable** — `running` / `stopped` / `stopFailed` / `upgradeFailed` / `applyEnvFailed`
-3. **Newer chart available** — `targetVersion > installedVersion` (semver compare)
+3. **Newer chart available** — `targetVersion > installedVersion` (semver compare). **Exception for `-s upload`:** `targetVersion == installedVersion` is allowed — re-uploading the same version overwrites the stored chart, and app-service permits a same-version upgrade (it gates on `>= deployed`). This is the sanctioned way to re-apply an edited upload chart or recover an `upgradeFailed` upload app **without** bumping the version. A true downgrade (`target < installed`) is still rejected for every source.
 4. **App labels don't forbid upgrade** — `disabled-upgrade`, `suspend`, `remove` labels
 
 ## `uninstall`
@@ -140,6 +140,7 @@ olares-cli market cancel firefox --watch               # block until row stops m
 
 - **For "install X and tell me when it's running"** → `market install X --watch -o json`, then parse `.finalState`.
 - **For "upgrade X if there's a newer version"** → `market get X -o json` to check version, then `market upgrade X --watch`. The pre-flight will short-circuit if there's no newer chart.
+- **For "re-apply an upload chart I just re-uploaded"** → `market upgrade X -s upload --version <same-version> --watch`. The same-version upgrade is allowed for `-s upload` (gate 3 exception) and is the right verb once the app already exists (`running` / `upgradeFailed` / ...) — `install` would be rejected by app-service in those states.
 - **For "stop everything for this user"** → `market list --mine -o json | jq -r '.[].name'` + a shell loop calling `market stop`. The cluster doesn't expose a bulk-stop verb.
 - **For "install a custom chart"** → `market upload ./mychart.tgz` (always lands in source `upload`), then `market install <name> -s upload`.
 - **For ambiguous source rows on uninstall/stop/resume**: the verb already resolves automatically. Don't pass `-s` even when the SPA shows it under multiple sources.
@@ -150,7 +151,7 @@ olares-cli market cancel firefox --watch               # block until row stops m
 |---|---|---|
 | `missing required env var(s): KEY1, KEY2 ...` (install) | App declares required envs | Re-run with `--env KEY=VALUE` per missing var |
 | `app 'X' is not in an upgradable state (current: Y)` | Pre-flight gate 2 | Wait for terminal state, or run `cancel` first |
-| `no newer version available (installed: 1.2.3, latest: 1.2.3)` | Pre-flight gate 3 | Nothing to upgrade |
+| `target version '1.2.3' is already installed — nothing to do` | Pre-flight gate 3 | Nothing to upgrade. **Does NOT fire for `-s upload`** — same-version upgrade is allowed there to re-apply an overwritten chart |
 | `app labels forbid upgrade (suspend / remove / disabled-upgrade)` | Pre-flight gate 4 | App is marked non-upgradable in the catalog; contact app maintainer |
 | `app 'X' is not cloneable` | `clone` against non-cloneable app | Check `market get X -o json` for `cloneable` |
 | `--title is required` | `clone` without `--title` | Add `--title "..."` |
