@@ -13,7 +13,7 @@ Olares's built-in Files app offers users a secure and efficient solution for fil
 
 The interface is similar to Windows Explorer or macOS Finder, allowing you to organize and access documents, images, videos, or any other files you own.
 
-![Files](/images/manual/olares/files-index.png#bordered)
+![Files](/images/manual/olares/files-index2.png#bordered)
 
 It mainly consists of the following components:
 
