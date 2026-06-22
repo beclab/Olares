@@ -484,11 +484,13 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 		if req.Mode == utils.NvidiaCardType && hasTimeSlice {
 			addedGPU = req.LimitedGPU
 		}
-		if pressure.WouldPressure(node, AddedResources{
+		if dims := pressure.PressuredDimensions(node, AddedResources{
 			CPU:    req.RequiredCPU,
 			Memory: req.RequiredMemory + addedGPU,
-		}) {
-			return invalidBinding("node-pressure:" + nodeName)
+		}); len(dims) > 0 {
+			result := invalidBinding("node-pressure:" + nodeName)
+			result.NodePressure = &NodePressureDetail{NodeName: nodeName, Dimensions: dims}
+			return result
 		}
 	}
 	return &BindingValidationResult{OK: true, Code: BindingValidationReasonValid}
