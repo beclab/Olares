@@ -39,19 +39,20 @@ func listAvailableForLaunch(req Requirement, nodes []Node, pressure PressureSnap
 func classifyLaunchNodes(req Requirement, nodes []Node, pressure PressureSnapshot) []NodeOption {
 	out := make([]NodeOption, 0, len(nodes))
 	for _, node := range nodes {
-		if node.GPUType != req.Mode {
+		if !node.SupportsMode(req.Mode) {
 			out = append(out, NodeOption{
 				NodeName: node.NodeName,
-				GPUType:  node.GPUType,
+				GPUType:  node.primaryGPUType(),
 				Status:   NodeStatusNotMatch,
 			})
 			continue
 		}
+		view := node.viewForMode(req.Mode)
 		var option NodeOption
 		if req.Mode == utils.NvidiaCardType {
-			option = classifyNvidiaNode(req, node, pressure)
+			option = classifyNvidiaNode(req, view, pressure)
 		} else {
-			option = classifyNonNvidiaNode(req, node, pressure)
+			option = classifyNonNvidiaNode(req, view, pressure)
 		}
 		out = append(out, option)
 	}
@@ -62,7 +63,7 @@ func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) N
 	summary := summarizeNvidiaNode(req, node, pressure)
 	option := NodeOption{
 		NodeName: node.NodeName,
-		GPUType:  node.GPUType,
+		GPUType:  req.Mode,
 		Devices:  summary.devices,
 	}
 	if req.SupportMultiCards || req.SupportMultiNodes {
@@ -74,7 +75,7 @@ func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) N
 }
 
 func classifyNonNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) NodeOption {
-	option := NodeOption{NodeName: node.NodeName, GPUType: node.GPUType}
+	option := NodeOption{NodeName: node.NodeName, GPUType: req.Mode}
 	if len(node.Devices) == 0 {
 		option.Status = NodeStatusNotAvailable
 		return option
@@ -168,10 +169,10 @@ func availabilityScope(req Requirement) string {
 	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
 		return AvailabilityScopeSingleNode
 	}
-	if req.Mode == utils.NvidiaCardType {
-		return AvailabilityScopeCard
-	}
-	return AvailabilityScopeNode
+	// Single-nvidia-card and every non-nvidia mode (cpu / amd / intel /
+	// apple-m / moore-soc — each modeled as one node-level device) share the
+	// per-card scope: the unit of scheduling is a single device.
+	return AvailabilityScopeCard
 }
 
 func markOperable(result *AvailabilityResult) {
@@ -436,7 +437,7 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 		if item.device.Health != "" && item.device.Health != deviceHealthYes {
 			return invalidBinding("device-unhealthy:" + item.device.ID)
 		}
-		if item.node.GPUType != req.Mode {
+		if item.device.Mode != req.Mode {
 			return invalidBinding("gpu-type-mismatch")
 		}
 		available := deviceAvailableMemory(item.device)
