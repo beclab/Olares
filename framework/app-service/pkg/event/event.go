@@ -214,6 +214,14 @@ func PublishAppEventToQueue(p utils.EventParams) {
 	})
 }
 
+// PublishToQueue enqueues an arbitrary message for asynchronous, retried
+// delivery to NATS. It reuses the single shared JetStream connection held
+// by AppEventQueue (see ensureNatsConnected) instead of dialing a new one,
+// so callers that previously opened their own connection should use this.
+func PublishToQueue(subject string, data interface{}) {
+	AppEventQueue.enqueue(&QueueEvent{Subject: subject, Data: data})
+}
+
 func PublishUserEventToQueue(topic, user, operator string) {
 	subject := "os.users"
 	data := UserEvent{

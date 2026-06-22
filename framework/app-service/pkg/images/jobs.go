@@ -234,11 +234,7 @@ outer:
 				return
 			}
 		case <-ctx.Done():
-			// On cancellation just exit; do NOT loop once more with done=true,
-			// which would force every status to "done"/"exists" and report
-			// progress=100%, racing against the canceled state update.
-			klog.Infof("show progress canceled name=%s err=%v", ongoing.name, ctx.Err())
-			return
+			done = true // allow ui to update once more
 		}
 	}
 }

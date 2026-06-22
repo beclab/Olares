@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,8 +10,11 @@ import (
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 	"k8s.io/klog/v2"
 )
+
+const natsPublishTimeout = 10 * time.Second
 
 type Event struct {
 	EventID          string                    `json:"eventID"`
@@ -76,7 +80,14 @@ func publish(nc *nats.Conn, subject string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = nc.Publish(subject, d)
+	js, err := jetstream.New(nc)
+	if err != nil {
+		klog.Infof("jetstream init err=%v", err)
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), natsPublishTimeout)
+	defer cancel()
+	_, err = js.Publish(ctx, subject, d)
 	if err != nil {
 		klog.Infof("publish err=%v", err)
 		return err
