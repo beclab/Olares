@@ -250,7 +250,7 @@ spec:
                               break
                           fi
                       done
-                      sleep 1
+                      sleep 2
                       headscale apikeys create -e 3650d > /etc/headscale/apikey
                       headscale users create default
                       USER_ID=$(headscale users list | awk '/default/ {print $1; exit}')
