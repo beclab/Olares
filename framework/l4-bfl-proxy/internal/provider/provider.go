@@ -667,9 +667,10 @@ func (p *Provider) getCustomDomainCerts(ctx context.Context) (map[string][]*mess
 			continue
 		}
 		certs[owner] = append(certs[owner], &message.CertInfo{
-			Domain:   domain,
-			CertData: certData,
-			KeyData:  keyData,
+			Domain:    domain,
+			CertData:  certData,
+			KeyData:   keyData,
+			CreatedAt: cm.CreationTimestamp.Time,
 		})
 	}
 	for owner := range certs {
