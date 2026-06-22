@@ -1,6 +1,7 @@
 package apiserver
 
 import (
+	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +32,40 @@ type AppEnvReferrer struct {
 	AppName   string `json:"appName"`
 	AppOwner  string `json:"appOwner"`
 	Namespace string `json:"namespace,omitempty"`
+}
+
+// collectAppEnvReferrers builds a map from a referenced env name to the apps
+// that reference it via AppEnv.ValueFrom. When ownerFilter is non-empty, only
+// AppEnvs owned by that user are considered (used for user envs); an empty
+// ownerFilter considers every app (used for system envs).
+func (h *Handler) collectAppEnvReferrers(ctx context.Context, ownerFilter string) (map[string][]AppEnvReferrer, error) {
+	var appEnvList sysv1alpha1.AppEnvList
+	if err := h.ctrlClient.List(ctx, &appEnvList); err != nil {
+		return nil, err
+	}
+	refMap := make(map[string][]AppEnvReferrer)
+	for _, ae := range appEnvList.Items {
+		if ownerFilter != "" && ae.AppOwner != ownerFilter {
+			continue
+		}
+		seen := make(map[string]struct{})
+		for _, envVar := range ae.Envs {
+			if envVar.ValueFrom == nil || envVar.ValueFrom.EnvName == "" {
+				continue
+			}
+			envName := envVar.ValueFrom.EnvName
+			if _, ok := seen[envName]; ok {
+				continue
+			}
+			seen[envName] = struct{}{}
+			refMap[envName] = append(refMap[envName], AppEnvReferrer{
+				AppName:   ae.AppName,
+				AppOwner:  ae.AppOwner,
+				Namespace: ae.Namespace,
+			})
+		}
+	}
+	return refMap, nil
 }
 
 func (h *Handler) ensureAdmin(req *restful.Request, resp *restful.Response) (string, bool) {
@@ -184,6 +219,16 @@ func (h *Handler) deleteSystemEnv(req *restful.Request, resp *restful.Response) 
 		return
 	}
 
+	refMap, err := h.collectAppEnvReferrers(ctx, "")
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	if refs := refMap[current.EnvName]; len(refs) > 0 {
+		api.HandleBadRequest(resp, req, fmt.Errorf("systemenv '%s' is referenced by %d app(s) and cannot be deleted", current.EnvName, len(refs)))
+		return
+	}
+
 	if err := h.ctrlClient.Delete(ctx, &current); err != nil {
 		if !apierrors.IsNotFound(err) {
 			api.HandleError(resp, req, err)
@@ -194,17 +239,39 @@ func (h *Handler) deleteSystemEnv(req *restful.Request, resp *restful.Response) 
 	resp.WriteEntity(api.Response{Code: 200})
 }
 
-// listSystemEnvs returns all system env specs
+// listSystemEnvs returns all system env specs. The referencedBy field is only
+// populated for admin users.
 func (h *Handler) listSystemEnvs(req *restful.Request, resp *restful.Response) {
+	ctx := req.Request.Context()
 	var list sysv1alpha1.SystemEnvList
-	if err := h.ctrlClient.List(req.Request.Context(), &list); err != nil {
+	if err := h.ctrlClient.List(ctx, &list); err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
 
-	result := make([]sysv1alpha1.EnvVarSpec, 0, len(list.Items))
+	owner := getCurrentUser(req)
+	isAdmin, err := kubesphere.IsAdmin(ctx, h.kubeConfig, owner)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	var refMap map[string][]AppEnvReferrer
+	if isAdmin {
+		refMap, err = h.collectAppEnvReferrers(ctx, "")
+		if err != nil {
+			api.HandleError(resp, req, err)
+			return
+		}
+	}
+
+	result := make([]SystemEnvDetail, 0, len(list.Items))
 	for _, item := range list.Items {
-		result = append(result, item.EnvVarSpec)
+		detail := SystemEnvDetail{EnvVarSpec: item.EnvVarSpec}
+		if isAdmin {
+			detail.ReferencedBy = refMap[item.EnvName]
+		}
+		result = append(result, detail)
 	}
 	resp.WriteAsJson(result)
 }
@@ -237,23 +304,12 @@ func (h *Handler) getSystemEnvDetail(req *restful.Request, resp *restful.Respons
 
 	detail := SystemEnvDetail{EnvVarSpec: current.EnvVarSpec}
 
-	var appEnvList sysv1alpha1.AppEnvList
-	if err := h.ctrlClient.List(ctx, &appEnvList); err != nil {
+	refMap, err := h.collectAppEnvReferrers(ctx, "")
+	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-	for _, ae := range appEnvList.Items {
-		for _, envVar := range ae.Envs {
-			if envVar.ValueFrom != nil && envVar.ValueFrom.EnvName == current.EnvName {
-				detail.ReferencedBy = append(detail.ReferencedBy, AppEnvReferrer{
-					AppName:   ae.AppName,
-					AppOwner:  ae.AppOwner,
-					Namespace: ae.Namespace,
-				})
-				break
-			}
-		}
-	}
+	detail.ReferencedBy = refMap[current.EnvName]
 
 	resp.WriteAsJson(detail)
 }
