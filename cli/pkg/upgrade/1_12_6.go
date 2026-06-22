@@ -85,6 +85,12 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 		},
 	}
 	pre = append(pre, u.upgraderBase.UpgradeSystemComponents()...)
+	pre = append(pre, &task.LocalTask{
+		Name:   "PatchL4BFLProxyProbePort",
+		Action: new(patchL4BFLProxyProbePort),
+		Retry:  3,
+		Delay:  5 * time.Second,
+	})
 	return append(pre,
 		&task.LocalTask{
 			Name: "WaitForAppServiceReady",
