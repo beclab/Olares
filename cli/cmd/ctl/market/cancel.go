@@ -2,9 +2,11 @@ package market
 
 import (
 	"context"
+	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/market/cancel"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -14,8 +16,9 @@ func NewCmdMarketCancel(f *cmdutil.Factory) *cobra.Command {
 		Use:   "cancel {app-name}",
 		Short: "Cancel the current in-progress app operation (install / upgrade / uninstall / ...)",
 		Long: `Cancel the current in-progress operation for an app
-(DELETE /apps/{name}/install). Source is implicit — cancel acts on
-whichever per-user state row matches the app name (no -s flag exposed).
+(DELETE /apps/{name}/install). Source is normally read from the
+per-user state row; on 1.12.6+ pass --source when that row is absent
+or /market/state is unreadable and you still need to cancel.
 
 The cancel watcher is the widest in the market tree: any "row stopped
 moving" state counts as success, including *Canceled, *Failed (the
@@ -40,6 +43,7 @@ Examples:
 			return runCancel(opts, args[0])
 		},
 	}
+	opts.addSourceFlag(cmd, "market source id (1.12.6+ when state row is absent)")
 	opts.addOutputFlags(cmd)
 	opts.addWatchFlags(cmd)
 	return cmd
@@ -54,7 +58,46 @@ func runCancel(opts *MarketOptions, appName string) error {
 	opts.info("Canceling in-progress operation for '%s' (user '%s')...", appName, mc.olaresID)
 
 	ctx := context.Background()
-	resp, err := mc.CancelOperation(ctx, appName)
+
+	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if err != nil {
+		return opts.failOp("cancel", appName, err)
+	}
+
+	// 1.12.6 moved the cancel body to {app_name, source, version} (the
+	// 1.12.5 body only sent {sync}, which the new backend rejects with
+	// "Missing required fields: app_name is required"). Resolve source and
+	// the installed version from the per-user state row when available; an
+	// explicit --source wins. version is best-effort — the builder only
+	// includes it when non-empty.
+	//
+	// On 1.12.5 the wire format does not need source, so a failed
+	// /market/state read must not block cancel (the old flow never
+	// depended on state). On 1.12.6 the body requires source; when the
+	// row is gone and --source was not passed, report idempotent success
+	// rather than sending a sourceless request the backend will reject.
+	// An explicit --source bypasses the state-read failure path too.
+	source := strings.TrimSpace(opts.Source)
+	version := ""
+	row, lookupErr := lookupInstalledApp(ctx, mc, appName)
+	if lookupErr != nil && atLeast126 && source == "" {
+		return opts.failOp("cancel", appName, lookupErr)
+	}
+	if row != nil {
+		if source == "" {
+			source = strings.TrimSpace(row.Source)
+		}
+		version = strings.TrimSpace(row.Version)
+	}
+
+	if atLeast126 && source == "" {
+		opts.info("'%s' has no in-progress operation for this user; nothing to cancel", appName)
+		result := newOperationResult(mc, "cancel", appName, "", "", "nothing in progress; nothing to cancel", nil)
+		return finishOperation(opts, mc, result)
+	}
+
+	method, path, body := cancel.Build(atLeast126, appName, source, version)
+	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
 		return opts.failOp("cancel", appName, err)
 	}
@@ -63,5 +106,5 @@ func runCancel(opts *MarketOptions, appName string) error {
 	// Cancel's terminal row carries the *underlying* OpType (install /
 	// upgrade / ...), not "cancel", so the watch target opts out of
 	// strict OpType matching via matchOpType=false in newWatchTarget.
-	return runWithWatch(opts, mc, result, newWatchTarget(watchCancel, appName, opts.Source))
+	return runWithWatch(opts, mc, result, newWatchTarget(watchCancel, appName, source))
 }

@@ -70,17 +70,54 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	}
 
 	ctx := context.Background()
-	cascade := opts.Cascade
+
+	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if err != nil {
+		return opts.failOp("uninstall", appName, err)
+	}
+
+	// Uninstall must stay idempotent: unlike stop/resume it is a valid flow
+	// to re-run after the per-user row is already gone (e.g. `--cascade` to
+	// tear down the shared sub-charts of a CS app after a prior uninstall
+	// cleared the per-user row) or to clean up a half-installed / failed
+	// row. So source is resolved leniently here instead of going through
+	// resolveInstalledSource's strict "must be installed" guard — an absent
+	// row must NOT abort the command, otherwise the watcher's
+	// acceptInitialAbsent "already gone == success" path can never run.
+	//
+	// Caveat for 1.12.6: that body REQUIRES source, which (absent --source)
+	// only the per-user row can supply. Once the row is gone we can't build a
+	// valid request, so the `--cascade` re-run is only actionable when the
+	// caller passes --source explicitly — see the source=="" guard below.
+	//
+	// version is read from the same per-user state row and fed to the 1.12.6
+	// body (the SPA's onUninstall() sends the installed version). The 1.12.6
+	// builder includes it only when non-empty; the 1.12.5 builder ignores it.
+	source := strings.TrimSpace(opts.Source)
+	version := strings.TrimSpace(opts.Version)
+	row, lookupErr := lookupInstalledApp(ctx, mc, appName)
+	if lookupErr != nil {
+		return opts.failOp("uninstall", appName, lookupErr)
+	}
+	if row != nil {
+		if source == "" {
+			source = strings.TrimSpace(row.Source)
+		}
+		if version == "" {
+			version = strings.TrimSpace(row.Version)
+		}
+	}
+
 	cascadeExplicit := cmd != nil && cmd.Flags().Changed("cascade")
-	if !cascadeExplicit {
-		// Auto-cascade only ever flips OFF → ON (never the other way),
-		// matching the SPA's "default all:true for single-user CS apps,
-		// otherwise default all:false" rule in csAppUninstall(). On any
-		// detection error we soft-fail to the original false default —
-		// the user can always pass --cascade=true explicitly.
-		if auto, why := shouldAutoCascade(ctx, opts, mc, appName); auto {
-			cascade = true
-			opts.info("--cascade auto-enabled: %s (pass --cascade=false to override)", why)
+	cascade, why := resolveCascade(ctx, opts, mc, appName, atLeast126, opts.Cascade, cascadeExplicit)
+	if why != "" {
+		if cascadeExplicit && !opts.Cascade {
+			// 1.12.6 force-true: CS/shared apps always cascade, so an
+			// explicit --cascade=false is overridden (matches the SPA
+			// disabling the checkbox for CS/shared apps).
+			opts.info("--cascade force-enabled: %s (CS/shared apps always cascade)", why)
+		} else {
+			opts.info("--cascade auto-enabled: %s", why)
 		}
 	}
 
@@ -92,30 +129,6 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 		opts.info("  --delete-data: will delete persistent data")
 	}
 
-	// Uninstall must stay idempotent: unlike stop/resume it is a valid flow
-	// to re-run after the per-user row is already gone (e.g. `--cascade` to
-	// tear down the shared sub-charts of a CS app after a prior uninstall
-	// cleared the per-user row) or to clean up a half-installed / failed
-	// row. So source is resolved leniently here instead of going through
-	// resolveInstalledSource's strict "must be installed" guard — an absent
-	// row must NOT abort the command, otherwise the watcher's
-	// acceptInitialAbsent "already gone == success" path can never run.
-	source := strings.TrimSpace(opts.Source)
-	if source == "" {
-		row, lookupErr := lookupInstalledApp(ctx, mc, appName)
-		if lookupErr != nil {
-			return opts.failOp("uninstall", appName, lookupErr)
-		}
-		if row != nil {
-			source = strings.TrimSpace(row.Source)
-		}
-	}
-
-	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
-	if err != nil {
-		return opts.failOp("uninstall", appName, err)
-	}
-
 	// 1.12.6 requires source in the uninstall body, and the only place we
 	// can learn it is the user's own install state. If the app isn't
 	// installed for this user we can't know its source (or even whether it
@@ -123,20 +136,25 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// report an idempotent success and let --watch's acceptInitialAbsent
 	// confirm it, rather than sending an invalid (sourceless) request or
 	// erroring out.
+	//
+	// Exception: when the caller explicitly asked to cascade, they are
+	// almost certainly re-running uninstall to tear down shared sub-charts
+	// left behind after a prior uninstall already cleared the per-user row
+	// (the "re-run --cascade" flow documented above). Silently reporting
+	// "nothing to uninstall" there would hide the leftover shared charts, so
+	// surface an actionable error pointing at --source — the one way to
+	// supply the source the 1.12.6 body needs once the row is gone.
 	if atLeast126 && source == "" {
+		if cascade {
+			return opts.failOp("uninstall", appName, fmt.Errorf(
+				"'%s' is no longer in your installed apps, so its source can't be resolved; re-run with --source <name> to cascade-clean its shared sub-charts", appName))
+		}
 		opts.info("'%s' is not installed for this user; nothing to uninstall", appName)
 		result := newOperationResult(mc, "uninstall", appName, "", "", "not installed; nothing to uninstall", nil)
 		return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, source))
 	}
 
-	// 1.12.6 added app_name + source to the uninstall body (this is the
-	// change that broke `market uninstall` against the new backend);
-	// opts.Version is empty unless a future --version flag supplies one
-	// (the 1.12.6 builder includes it when set, the 1.12.5 builder ignores
-	// it). On 1.12.5 an absent row still sends the DELETE so a `--cascade`
-	// re-run reaches the backend; the watcher then reports success via
-	// acceptInitialAbsent.
-	method, path, body := uninstall.Build(atLeast126, appName, source, opts.Version, cascade, opts.DeleteData)
+	method, path, body := uninstall.Build(atLeast126, appName, source, version, cascade, opts.DeleteData)
 	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
 		return opts.failOp("uninstall", appName, err)
@@ -147,6 +165,67 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// once the backend cleans it up, so the watch target opts in to the
 	// "absent means success (provided we saw it earlier)" shortcut.
 	return runWithWatch(opts, mc, result, newWatchTarget(watchUninstall, appName, source))
+}
+
+// resolveCascade computes the final value of the `all` flag for uninstall /
+// stop, branching on backend version:
+//
+//   - 1.12.6: the SPA forces the cascade ON (and disables the checkbox) for any
+//     CS/shared app — uninstallChoicePrompt sets all=isCsV2 with allDisabled,
+//     stopChoicePrompt forces all=true for CS v2 — where CS/shared is now read
+//     from simpleInfo (apiVersion=='v2' || shared). We mirror that with
+//     force-true: a CS/shared app cascades regardless of --cascade=false. A
+//     non-CS app keeps the user's value (default false) since the flag is
+//     meaningless there.
+//   - 1.12.5: legacy behavior — only auto-enable (single-user + isCSV2 by
+//     subCharts) when the user did NOT pass --cascade; an explicit value wins.
+//
+// The returned reason string is only meaningful (non-empty) when the function
+// flipped the default ON; callers print it on stderr.
+func resolveCascade(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName string, atLeast126, userCascade, userExplicit bool) (bool, string) {
+	if atLeast126 {
+		if cs, why := isCsOrSharedWith(ctx, newCascadeProbe(opts, mc), appName); cs {
+			return true, why
+		}
+		return userCascade, ""
+	}
+	if userExplicit {
+		return userCascade, ""
+	}
+	if auto, why := shouldAutoCascadeWith(ctx, newCascadeProbe(opts, mc), appName); auto {
+		return true, why
+	}
+	return userCascade, ""
+}
+
+// isCsOrSharedWith reports whether appName is a 1.12.6 CS/shared app, reading
+// the predicate from simpleInfo (isCsOrSharedFromSimple). It reuses the same
+// RawName-preferred catalog lookup as shouldAutoCascadeWith so clones resolve
+// against their source app's catalog entry. All probe failures are non-fatal
+// (return false): the backend's own validation has the final say.
+func isCsOrSharedWith(ctx context.Context, p cascadeProbe, appName string) (bool, string) {
+	row, err := p.lookupRow(ctx, appName)
+	if err != nil || row == nil || row.Source == "" {
+		return false, ""
+	}
+	lookupName := strings.TrimSpace(row.RawName)
+	if lookupName == "" {
+		lookupName = row.Name
+	}
+	if lookupName == "" {
+		lookupName = appName
+	}
+	appInfo, err := p.fetchAppMeta(ctx, lookupName, row.Source)
+	if err != nil {
+		return false, ""
+	}
+	if !isCsOrSharedFromSimple(appInfo) {
+		return false, ""
+	}
+	if lookupName != "" && lookupName != appName {
+		return true, fmt.Sprintf("CS/shared app (via source app %q in source %q)", lookupName, row.Source)
+	}
+	return true, fmt.Sprintf("CS/shared app (source %q)", row.Source)
 }
 
 // shouldAutoCascade decides the default value of --cascade when the user

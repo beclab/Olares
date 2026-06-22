@@ -30,6 +30,11 @@ type CloneRequest struct {
 	Sync      bool          `json:"sync"`
 	Envs      []AppEnvVar   `json:"envs,omitempty"`
 	Entrances []AppEntrance `json:"entrances,omitempty"`
+	// TemplateClone marks an instance created from a template app (no
+	// installable body), mirroring the SPA's onClone() which sets
+	// templateClone:true for templateOnly apps (1.12.6+). omitempty keeps
+	// the 1.12.5 wire byte-identical (the flag is only ever set on 1.12.6).
+	TemplateClone bool `json:"templateClone,omitempty"`
 }
 
 type UninstallRequest struct {

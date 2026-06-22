@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/market/cancel"
 	"github.com/beclab/Olares/cli/cmd/ctl/market/resume"
 	"github.com/beclab/Olares/cli/cmd/ctl/market/stop"
 	"github.com/beclab/Olares/cli/cmd/ctl/market/uninstall"
@@ -49,6 +50,26 @@ func TestResumeWireFormat(t *testing.T) {
 	m, p, b = resume.Build(true, "firefox", "market.olares")
 	assertReq(t, m, p, b, http.MethodPost, "/apps/resume", map[string]any{
 		"app_name": "firefox", "source": "market.olares",
+	})
+}
+
+func TestCancelWireFormat(t *testing.T) {
+	m, p, b := cancel.Build(false, "firefox", "market.olares", "1.2.3")
+	assertReq(t, m, p, b, http.MethodDelete, "/apps/firefox/install", map[string]any{
+		"sync": true,
+	})
+
+	// 1.12.6 with no version supplied: body omits "version".
+	m, p, b = cancel.Build(true, "firefox", "market.olares", "")
+	assertReq(t, m, p, b, http.MethodDelete, "/apps/firefox/install", map[string]any{
+		"app_name": "firefox", "source": "market.olares", "sync": true,
+	})
+
+	// 1.12.6 with a version: body includes "version".
+	m, p, b = cancel.Build(true, "firefox", "market.olares", "1.2.3")
+	assertReq(t, m, p, b, http.MethodDelete, "/apps/firefox/install", map[string]any{
+		"app_name": "firefox", "source": "market.olares",
+		"sync": true, "version": "1.2.3",
 	})
 }
 

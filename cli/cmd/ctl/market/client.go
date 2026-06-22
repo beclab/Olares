@@ -264,17 +264,18 @@ func (c *MarketClient) InstallApp(ctx context.Context, appName, version, source 
 	})
 }
 
-func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title string, envs []AppEnvVar, entrances []AppEntrance) (*APIResponse, error) {
+func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title string, envs []AppEnvVar, entrances []AppEntrance, templateClone bool) (*APIResponse, error) {
 	if source == "" {
 		source = c.source
 	}
 	return c.doRequest(ctx, http.MethodPost, "/apps/"+appName+"/clone", CloneRequest{
-		Source:    source,
-		AppName:   appName,
-		Title:     title,
-		Sync:      true,
-		Envs:      envs,
-		Entrances: entrances,
+		Source:        source,
+		AppName:       appName,
+		Title:         title,
+		Sync:          true,
+		Envs:          envs,
+		Entrances:     entrances,
+		TemplateClone: templateClone,
 	})
 }
 
@@ -295,18 +296,13 @@ func (c *MarketClient) UpgradeApp(ctx context.Context, appName, version, source 
 	})
 }
 
-func (c *MarketClient) CancelOperation(ctx context.Context, appName string) (*APIResponse, error) {
-	return c.doRequest(ctx, http.MethodDelete, "/apps/"+appName+"/install", map[string]interface{}{
-		"sync": true,
-	})
-}
-
-// StopApp / ResumeApp / UninstallApp used to build their request bodies here.
-// Their wire format diverges across Olares versions (TermiPass PR #1162:
-// stop/resume/uninstall all moved to {app_name, source, ...}), so body shaping
-// now lives in per-command, per-version builder sub-packages
-// (market/{stop,resume,uninstall}/{v1_12_5,v1_12_6}). Those builders return
-// (method, path, body); the runners pick the version with
+// StopApp / ResumeApp / UninstallApp / CancelOperation used to build their
+// request bodies here. Their wire format diverges across Olares versions
+// (TermiPass PR #1162: stop/resume/uninstall all moved to {app_name, source,
+// ...}; cancel moved to {app_name, source, version}), so body shaping now lives
+// in per-command, per-version builder sub-packages
+// (market/{stop,resume,uninstall,cancel}/{1_12_5,1_12_6}). Those builders
+// return (method, path, body); the runners pick the version with
 // cmdutil.Factory.OlaresBackendAtLeast and send through doRequest, so transport
 // (auth injection, refresh-on-401, envelope validation) is never re-implemented.
 // UninstallRequest is retained in types.go as the 1.12.5 body shape reference.
