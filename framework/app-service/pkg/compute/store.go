@@ -375,3 +375,44 @@ func attachBindings(nodes []Node, allocations []Allocation) {
 		}
 	}
 }
+
+// AttachBoundAppSpecs enriches every device binding with the bound app's
+// currently-selected resource-mode requirement (Allocation.Spec), so callers
+// listing compute resources can see each app's require/limit and multi-card /
+// multi-node support without a second round of lookups. The requirement is
+// resolved once per unique (appName, owner) pair from the app's
+// ApplicationManager config and shared across that app's bindings. If any
+// bound app's config can't be loaded or its selected mode can't be resolved,
+// the whole listing fails with an error.
+func AttachBoundAppSpecs(ctx context.Context, c client.Client, nodes []Node) error {
+	specs := make(map[string]*Requirement)
+	resolve := func(appName, owner string) (*Requirement, error) {
+		key := owner + "/" + appName
+		if spec, ok := specs[key]; ok {
+			return spec, nil
+		}
+		cfg, err := loadAppConfigForOwner(ctx, c, appName, owner)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load app config for %s/%s: %w", owner, appName, err)
+		}
+		req, ok := SelectedRequirement(cfg)
+		if !ok {
+			return nil, fmt.Errorf("failed to resolve selected resource mode for %s/%s", owner, appName)
+		}
+		specs[key] = &req
+		return specs[key], nil
+	}
+	for ni := range nodes {
+		for di := range nodes[ni].Devices {
+			bindings := nodes[ni].Devices[di].Bindings
+			for bi := range bindings {
+				spec, err := resolve(bindings[bi].AppName, bindings[bi].Owner)
+				if err != nil {
+					return err
+				}
+				bindings[bi].Spec = spec
+			}
+		}
+	}
+	return nil
+}
