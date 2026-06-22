@@ -30,6 +30,7 @@ func (u upgrader_1_12_7_20260617) Version() *semver.Version {
 func (u upgrader_1_12_7_20260617) UpgradeSystemComponents() []task.Interface {
 	tasks := make([]task.Interface, 0)
 	tasks = append(tasks, upgradeNodeExporter()...)
+	tasks = append(tasks, retagLegacyAMDGPUImage()...)
 
 	tasks = append(tasks, u.upgraderBase.UpgradeSystemComponents()...)
 	tasks = append(tasks, &task.LocalTask{
