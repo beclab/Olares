@@ -408,7 +408,7 @@ const side = {
                   link: "/manual/olares/settings/set-up-hosts",
                 },
                 {
-                  text: "Enable Overlay Gateway",
+                  text: "Manage Overlay Gateway",
                   link: "/manual/olares/settings/overlay-gateway",
                 },
               ],
