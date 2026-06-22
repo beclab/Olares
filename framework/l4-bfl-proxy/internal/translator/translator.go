@@ -24,6 +24,8 @@ const (
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
+	settingsCustomDomainCert             = "cert"
+	settingsCustomDomainKey              = "key"
 )
 
 var nodeLocationPrefixes = []string{
@@ -221,7 +223,7 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 			CertData: user.SSL.CertData,
 			KeyData:  user.SSL.KeyData,
 		})
-		for _, cert := range user.CustomDomainCerts {
+		for _, cert := range t.collectCustomDomainCerts(user) {
 			xds.Secrets = append(xds.Secrets, &ir.SecretIR{
 				Name:     fmt.Sprintf("custom-tls-%s-%s", user.Name, cert.Domain),
 				CertData: cert.CertData,
@@ -317,6 +319,58 @@ func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*
 	}
 }
 
+// collectCustomDomainCerts gathers the TLS certs that need their own filter
+// chain for a user, from two distinct sources by domain type:
+//
+//   - Third-party domains: cert/key are carried inline in each app's
+//     "customDomain" setting, next to "third_party_domain" (this is what the
+//     app CR stores). This is the authoritative source for third-party domains.
+//   - Third-level domains: certs come from the dedicated cert ConfigMaps loaded
+//     by the provider into user.CustomDomainCerts (the original source).
+//
+// Settings (third-party) are collected first so they win on any domain
+// collision. Results are deduped by domain and sorted for deterministic output.
+// Only entries with a non-empty domain, cert and key are kept, so a
+// half-provisioned domain (cert not issued yet) is skipped rather than
+// producing a filter chain with no usable cert.
+func (t *Translator) collectCustomDomainCerts(user *message.UserInfo) []*message.CertInfo {
+	seen := make(map[string]bool)
+	var certs []*message.CertInfo
+
+	// Third-party domains → app.settings.customDomain (inline cert/key).
+	for _, app := range user.Apps {
+		customDomainMap := parseSettingsJSON(app.Settings, settingsCustomDomain)
+		for _, entranceCfg := range customDomainMap {
+			domain := entranceCfg[settingsCustomDomainThirdPartyDomain]
+			certData := entranceCfg[settingsCustomDomainCert]
+			keyData := entranceCfg[settingsCustomDomainKey]
+			if domain == "" || certData == "" || keyData == "" {
+				continue
+			}
+			if seen[domain] {
+				continue
+			}
+			seen[domain] = true
+			certs = append(certs, &message.CertInfo{Domain: domain, CertData: certData, KeyData: keyData})
+		}
+	}
+
+	// Third-level domains → original cert ConfigMap source.
+	for _, c := range user.CustomDomainCerts {
+		if c == nil || c.Domain == "" || c.CertData == "" || c.KeyData == "" {
+			continue
+		}
+		if seen[c.Domain] {
+			continue
+		}
+		seen[c.Domain] = true
+		certs = append(certs, c)
+	}
+
+	sort.Slice(certs, func(i, j int) bool { return certs[i].Domain < certs[j].Domain })
+	return certs
+}
+
 // buildUserFilterChains produces one or more HTTPListenerIR entries for a
 // single user on a given port, using pre-built virtual hosts.
 //
@@ -352,8 +406,9 @@ func (t *Translator) buildUserFilterChains(user *message.UserInfo, vhosts []*ir.
 		}
 	}
 
-	customDomainSet := make(map[string]bool, len(user.CustomDomainCerts))
-	for _, cert := range user.CustomDomainCerts {
+	customCerts := t.collectCustomDomainCerts(user)
+	customDomainSet := make(map[string]bool, len(customCerts))
+	for _, cert := range customCerts {
 		customDomainSet[cert.Domain] = true
 	}
 
@@ -386,7 +441,7 @@ func (t *Translator) buildUserFilterChains(user *message.UserInfo, vhosts []*ir.
 	}
 
 	// Custom domain filter chains (separate TLS certs, same virtual hosts)
-	for _, cert := range user.CustomDomainCerts {
+	for _, cert := range customCerts {
 		customTLS := &ir.SecretIR{
 			Name:     fmt.Sprintf("custom-tls-%s-%s", user.Name, cert.Domain),
 			CertData: cert.CertData,
