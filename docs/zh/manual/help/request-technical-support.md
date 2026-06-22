@@ -16,7 +16,7 @@ description: 了解如何通过提交工单或在 GitHub 上提 issue 来获取 
 
 你可以通过设备上的 Ticket 应用提交请求，或者使用 Olares GitHub 仓库。
 
-### 方式一：使用 Ticket 应用
+### 方式 1：使用 Ticket 应用
 
 你可以通过 Ticket 应用直接从 Olares 设备寻求帮助，在一个地方完成提问、报告问题和跟踪回复。
 
@@ -38,7 +38,7 @@ description: 了解如何通过提交工单或在 GitHub 上提 issue 来获取 
 
    c. 确认状态后，点击工单查看详情。
 
-### 方式二：使用 Olares GitHub 仓库
+### 方式 2：使用 Olares GitHub 仓库
 
 如果你无法访问 Olares 桌面，或希望公开报告问题，可以使用 GitHub。
 
