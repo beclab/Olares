@@ -189,6 +189,20 @@ type BindingValidationResult struct {
 	OK     bool   `json:"ok"`
 	Code   string `json:"code,omitempty"`
 	Reason string `json:"reason,omitempty"`
+	// NodePressure is populated only when the binding is rejected because
+	// a selected node would be pushed past its resource pressure
+	// threshold (Code "node-pressure:<node>"). It breaks the rejection
+	// down per resource so the caller can tell whether cpu, memory, or
+	// both fell short, how much the app needs, and how much headroom the
+	// node still has.
+	NodePressure *NodePressureDetail `json:"nodePressure,omitempty"`
+}
+
+// NodePressureDetail carries the per-resource breakdown behind a
+// "node-pressure" binding rejection for a single node.
+type NodePressureDetail struct {
+	NodeName   string              `json:"nodeName"`
+	Dimensions []DimensionPressure `json:"dimensions"`
 }
 
 type BindingApplyResult struct {
