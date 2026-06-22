@@ -125,3 +125,20 @@ Copy-pasteable examples (init admin credentials, reuse a user var, optional-with
           os.environ.pop(var, None)
   ```
   This `""` behavior applies only to a key **declared in `envs[]`** (so it exists in `.Values.olaresEnv`). A reference to a key that is *not declared at all* renders as `<no value>` instead — a different failure mode — so keep every env you template referenced in `envs[]`.
+
+## Kubernetes service-link env collision (default `enableServiceLinks: false`)
+
+Kubernetes injects, into every container, an env var per same-namespace Service that predates the pod (a Docker `--link` legacy). The biting one is Docker-link style — a Service named `psitransfer` yields `PSITRANSFER_PORT=tcp://10.233.4.38:3000` (plus `*_SERVICE_HOST` / `*_SERVICE_PORT` / `*_PORT_<n>_TCP*`; service name upper-cased, `-`→`_`).
+
+**The trap:** when that upper-cased Service name is also the prefix an app uses for its own config, the injected `<SVC>_PORT=tcp://...` silently clobbers it. Real case: psitransfer reads `PSITRANSFER_PORT` as its listen port → `parseInt("tcp://...")` = `NaN` → never binds → the container **exits 0 with empty logs** (looks like a mysterious crashloop).
+
+Default to `enableServiceLinks: false` on the pod template:
+
+```yaml
+spec:
+  template:
+    spec:
+      enableServiceLinks: false
+```
+
+DNS discovery (`<svc>.<ns>.svc.cluster.local`) and the always-present `KUBERNETES_SERVICE_*` are unaffected — you only drop the legacy injection modern apps don't use. To debug a suspected hit, `olares-cli cluster container env <ns>/<pod>/<container> | grep <APPNAME>` for a `*_PORT=tcp://...`; alternatively declare the colliding var explicitly in `env:` (explicit wins).
