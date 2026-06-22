@@ -99,7 +99,7 @@ Sort files and folders in the current directory by different criteria.
    - In grid view, click **Last modified** in the upper-left corner, and select a sorting option.
 
 3. To reverse the sort order, click the active column header or sorting option again.
-
+<!-- #region files-format-support -->
 ### Supported formats
 
 The Files app supports many file formats for previewing and editing. The following tables list some typical examples by category.
@@ -121,7 +121,7 @@ The Files app supports many file formats for previewing and editing. The followi
 |----------------|------------------------|
 | Text & markup | Text (`.txt`), Markdown (`.md`), HTML (`.html`), XML (`.xml`) |
 | Code & config | Python (`.py`), JavaScript (`.js`), Java (`.java`),<br> C/C++ (`.c`/`.cpp`), Go (`.go`), Rust (`.rs`), Shell (`.sh`),<br> CSS (`.css`), JSON (`.json`), YAML (`.yaml`), TOML (`.toml`), INI (`.ini`) |
-
+<!-- #endregion files-format-support -->
 ### Procedure
 
 - To preview a file, double-click the target file.
