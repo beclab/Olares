@@ -28,7 +28,7 @@ export const useCaseCategories: string[] = [
 
 // Localized category labels, keyed by the canonical English category above.
 export const categoryLabelsZh: Record<string, string> = {
-  "AI agent": "AI 智能体",
+  "AI agent": "AI Agent",
   "AI workbench": "AI 工作台",
   "Creative media": "创意媒体",
   "Model services": "模型服务",
