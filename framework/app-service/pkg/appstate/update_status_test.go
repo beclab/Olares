@@ -92,3 +92,50 @@ func TestUpdateStatusNilRecordKeepsRecords(t *testing.T) {
 		t.Errorf("OpRecords len=%d want 1 (unchanged)", len(got.Status.OpRecords))
 	}
 }
+
+// updateStatus must reject any (from -> to) edge not declared in
+// StateTransitions. A jump like Pending -> Uninstalled would clobber the
+// state machine's invariants, so the patch must be refused and the stored
+// state must remain unchanged.
+func TestUpdateStatusRejectsInvalidTransition(t *testing.T) {
+	am := testutil.NewAppManager("nginx", testutil.WithState(appsv1.Pending))
+	c := testutil.NewFakeClient(am)
+	b := &baseStatefulApp{manager: am, client: c}
+
+	err := b.updateStatus(context.TODO(), am, appsv1.Uninstalled, nil, "msg", "")
+	if err == nil {
+		t.Fatalf("updateStatus(Pending -> Uninstalled) returned nil, want error")
+	}
+
+	got := getAM(t, b, "nginx")
+	if got.Status.State != appsv1.Pending {
+		t.Errorf("state=%s want Pending (rejected write must not mutate)", got.Status.State)
+	}
+	if got.Status.OpGeneration != 0 {
+		t.Errorf("OpGeneration=%d want 0 (rejected write must not bump generation)", got.Status.OpGeneration)
+	}
+}
+
+// Idempotent same-state writes must still succeed even though the table
+// does not list a (X -> X) self-loop. This protects RetryOnConflict
+// re-reads, deferred Finally re-assertions, and operator workflows that
+// refresh message/reason without changing state.
+func TestUpdateStatusAllowsSelfWrite(t *testing.T) {
+	am := testutil.NewAppManager("nginx", testutil.WithState(appsv1.InstallFailed))
+	c := testutil.NewFakeClient(am)
+	b := &baseStatefulApp{manager: am, client: c}
+
+	if err := b.updateStatus(context.TODO(), am, appsv1.InstallFailed, nil, "updated msg", "updated reason"); err != nil {
+		t.Fatalf("updateStatus self-write rejected: %v", err)
+	}
+	got := getAM(t, b, "nginx")
+	if got.Status.State != appsv1.InstallFailed {
+		t.Errorf("state=%s want InstallFailed", got.Status.State)
+	}
+	if got.Status.Message != "updated msg" || got.Status.Reason != "updated reason" {
+		t.Errorf("message/reason=%q/%q want updated values", got.Status.Message, got.Status.Reason)
+	}
+	if got.Status.OpGeneration != 1 {
+		t.Errorf("OpGeneration=%d want 1 (self-write should still bump generation)", got.Status.OpGeneration)
+	}
+}
