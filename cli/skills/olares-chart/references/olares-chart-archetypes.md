@@ -186,6 +186,7 @@ spec:
     metadata:
       labels: { io.kompose.service: <app> }
     spec:
+      enableServiceLinks: false   # avoid k8s injecting <SVC>_PORT=tcp://... that can clobber app config env; see olares-chart-env.md
       containers:
         - name: <app>
           image: "docker.io/<your-namespace>/<app>:<pinned-tag>"   # never :latest

@@ -191,6 +191,8 @@ olares-cli market clone llamacppllmbasev3 -s upload \
 
 `-fa on -ctk q8_0 -ctv q8_0` halves KV memory so a longer `-c` fits the 22Gi budget; per [§5.2](#52-context-length--make-it-as-long-as-the-hardware-stably-allows) push `-c` to the largest value that runs stably on the node, then set the card's `context_size` to the same value ([§7](#7-manage--switch-the-model)).
 
+> **Entrance timeout for long generations.** The `/v1/*` entrance inherits the platform default **15s** request timeout, so a long completion/stream is cut at the entrance (504 / closed connection) even though the engine is still generating. This is `options.apiTimeout` in the base chart's `OlaresManifest.yaml` — a manifest field, **not** a clone-time env. Set `apiTimeout: 0` (disable) before `chart package`, then upload/clone. See [olares-chart-manifest.md](olares-chart-manifest.md).
+
 - `templateOnly` apps are created via `clone` (the CLI sends `templateClone:true` on 1.12.6+); `clone` mints a per-instance name and `--watch` tracks it. Single local test instance can also use `market install <base> -s upload --env ...`.
 - `lint` the chart first if you edited it: `olares-cli chart lint ./<base>`.
 - A long `downloading` state is the multi-GB engine image pull (then the model), not a hang — watch byte progress + speed via the `image-service` logs ([olares-chart-deploy.md](olares-chart-deploy.md) §3).
