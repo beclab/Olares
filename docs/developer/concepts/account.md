@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Core principles of Olares account system, including synchronization mechanisms, account stages and unified authentication. Covers multi-factor authentication and multi-device sync fundamentals.
 ---
 
-# Olares account
+# Olares account system
 
 This document covers concepts and designs related to account system in Olares.
 

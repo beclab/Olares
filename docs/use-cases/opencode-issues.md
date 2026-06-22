@@ -7,7 +7,7 @@ head:
       content: Olares, OpenCode, troubleshooting, common issues, self-hosted
 ---
 
-# Common issues
+# OpenCode common issues
 
 ## Terminal does not accept input on ARM64 devices
 

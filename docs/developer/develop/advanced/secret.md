@@ -2,7 +2,7 @@
 outline: [2, 3]
 ---
 
-# Secret
+# Use secrets in apps
 
 In an app, it's often necessary to save some important user information, such as `passwords` and `Access Tokens` for external systems. Olares provides a unified Vault, based on Infisical, to securely store various keys.
 

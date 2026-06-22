@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Known issues in Olares, including affected environments, impact, workarounds, and fix status.
 ---
 
-# Known issues
+# Olares known issues
 
 This page lists confirmed issues that may affect Olares users. Each issue includes the affected environment, user impact, current status, and available workarounds.
 
