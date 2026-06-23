@@ -42,14 +42,29 @@ func TestStopWireFormat(t *testing.T) {
 }
 
 func TestResumeWireFormat(t *testing.T) {
-	m, p, b := resume.Build(false, "firefox", "market.olares")
+	// 1.12.5: {appName}; source + computeBinding are ignored on this version.
+	m, p, b := resume.Build(false, "firefox", "market.olares", nil)
 	assertReq(t, m, p, b, http.MethodPost, "/apps/resume", map[string]any{
 		"appName": "firefox",
 	})
 
-	m, p, b = resume.Build(true, "firefox", "market.olares")
+	// 1.12.6 without a binding: minimal {app_name, source} body.
+	m, p, b = resume.Build(true, "firefox", "market.olares", nil)
 	assertReq(t, m, p, b, http.MethodPost, "/apps/resume", map[string]any{
 		"app_name": "firefox", "source": "market.olares",
+	})
+
+	// 1.12.6 with a binding: computeBinding is added.
+	binding := []BindingSelection{{NodeName: "node-1", DeviceID: "gpu-0", Memory: 8 * giBytes}}
+	m, p, b = resume.Build(true, "firefox", "market.olares", binding)
+	assertReq(t, m, p, b, http.MethodPost, "/apps/resume", map[string]any{
+		"app_name": "firefox", "source": "market.olares", "computeBinding": binding,
+	})
+
+	// 1.12.5 must NOT carry a binding even if one is passed (untouched path).
+	m, p, b = resume.Build(false, "firefox", "market.olares", binding)
+	assertReq(t, m, p, b, http.MethodPost, "/apps/resume", map[string]any{
+		"appName": "firefox",
 	})
 }
 
