@@ -76,7 +76,7 @@ func TestRejectIfRemoved(t *testing.T) {
 		Verb:        "settings gpu list",
 		Detail:      "legacy HAMI /api/gpu/list",
 		RemovedIn:   "1.12.6",
-		Replacement: "olares-cli settings compute resources list",
+		Replacement: "olares-cli settings compute list",
 	}
 
 	t.Run("at or after removal is rejected with replacement", func(t *testing.T) {

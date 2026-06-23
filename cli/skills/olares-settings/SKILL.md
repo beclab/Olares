@@ -54,7 +54,7 @@ For every area, **start with `olares-cli settings <area> --help`**. References b
 | `backup` | [references/olares-settings-backup.md](references/olares-settings-backup.md) (plans / snapshots / password) |
 | `appearance` | `olares-cli settings appearance --help` (`get`, `language set`) |
 | `network` | `olares-cli settings network --help` (read-only reverse-proxy / frp / hosts-file; writes blocked by JWS gap — see below) |
-| `gpu` | `olares-cli settings gpu --help` (read-only `list`; **legacy, 1.12.5 only** HAMI `/api/gpu/list` — **removed in 1.12.6**: the CLI fails fast there and points at `compute resources list`) |
+| `gpu` | `olares-cli settings gpu --help` (read-only `list`; **legacy, 1.12.5 only** HAMI `/api/gpu/list` — **removed in 1.12.6**: the CLI fails fast there and points at `compute list`) |
 | `compute` | `olares-cli settings compute --help` (**1.12.6+ new "Accelerator"**: `list`, `unbind <app>`, `set-type <node> <device>`; version-gated, replaces `gpu list`. `<node>`/`<device>` come from `list`'s node header + DEVICE-ID column) |
 | `video` | `olares-cli settings video --help` (read-only `config get`) |
 | `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list/add/rm`). `dirs` = the **full-content** index directories (filenames are indexed broadly by default; full-text defaults to Drive `/Documents/` only — add more with `dirs add`). `status` shows the index `Status` plus a full-text-extraction `Failures` count (`-o json` for per-file detail). Exclude-pattern view/edit is SPA-only today. Index coverage model lives in [`olares-search`](../olares-search/SKILL.md) |

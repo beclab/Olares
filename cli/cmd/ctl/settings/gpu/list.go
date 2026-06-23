@@ -43,7 +43,7 @@ func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 				Verb:        "settings gpu list",
 				Detail:      "legacy HAMI /api/gpu/list",
 				RemovedIn:   "1.12.6",
-				Replacement: "olares-cli settings compute resources list",
+				Replacement: "olares-cli settings compute list",
 			}); err != nil {
 				return err
 			}

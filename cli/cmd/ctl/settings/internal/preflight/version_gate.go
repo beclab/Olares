@@ -86,7 +86,7 @@ type RemovedGate struct {
 	// RemovedIn is the first Olares line that no longer ships the API, e.g. "1.12.6".
 	RemovedIn string
 	// Replacement is an optional replacement command to suggest, e.g.
-	// "olares-cli settings compute resources list".
+	// "olares-cli settings compute list".
 	Replacement string
 }
 
