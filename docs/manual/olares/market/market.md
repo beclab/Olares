@@ -73,7 +73,7 @@ To install an application from Market:
 
 1. Open Market from the Dock or Launchpad.
 2. Find your target application, and double-click it to view its details.
-3. (Optional) If the application supports multiple hardware accelerators, configure your deployment in the **RESOURCES** section:
+3. If the application supports multiple hardware accelerators, configure your deployment in the **RESOURCES** section:
 
     a. Select your preferred computing resource from the drop-down list. For example, **NVIDIA GPU**, **NVIDIA GB10**, or **CPU**.
 
@@ -82,9 +82,10 @@ To install an application from Market:
     b. Review the updated **CPU**, **Memory**, **Required disk**, and **VRAM** requirements, and make sure your hardware meets these requirements.
 
 4. Click **Get**.
-5. When the operation button changes to **Install**, click it to start the installation.
-6. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
-7. When the installation finishes, the button changes to **Open**.
+5. When the operation button changes to **Install**, click it.
+6. If prompted, confirm your hardware accelerator choice. The installation starts.
+7. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
+8. When the installation finishes, the button changes to **Open**.
 
 ### Install shared applications
 
