@@ -116,7 +116,6 @@ func (h *HelmOps) Uninstall_(client kubernetes.Interface, actionConfig *action.C
 	permCfg, err := apputils.ProviderPermissionsConvertor(perm).ToPermissionCfg(h.ctx, h.app.OwnerName, h.options.MarketSource)
 	if err != nil {
 		klog.Errorf("Failed to convert app permissions for %s: %v", h.app.AppName, err)
-		return err
 	}
 
 	err = h.unregisterAppPerm(h.app.ServiceAccountName, h.app.OwnerName, permCfg)
