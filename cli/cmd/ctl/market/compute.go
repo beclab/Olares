@@ -346,22 +346,151 @@ func operableDevices(av *computeAvailability) []computeDeviceOption {
 	return out
 }
 
+// bindingRejectReason renders a rejected BindingValidationResult into the same
+// human-readable wording the SPA shows. The backend puts the actionable reason
+// in Code ("node-pressure:<node>", "device-vram-insufficient:<dev>",
+// "gpu-type-mismatch", ...) and only a generic "invalid" bucket in Reason, so
+// we must read Code — not Reason — to tell the user anything useful.
 func bindingRejectReason(p *computeBindingPrompt) string {
 	if p == nil {
 		return ""
 	}
-	if p.Validation != nil && !p.Validation.OK {
-		if r := strings.TrimSpace(p.Validation.Reason); r != "" {
-			return r
-		}
-		if c := strings.TrimSpace(p.Validation.Code); c != "" {
-			return c
+	if v := p.Validation; v != nil && !v.OK {
+		if msg := humanizeBindingValidation(v); msg != "" {
+			return msg
 		}
 	}
 	if p.Availability != nil {
 		return strings.TrimSpace(p.Availability.Reason)
 	}
 	return ""
+}
+
+// Backend BindingValidationResult.Reason bucket values (compute.types.go).
+const (
+	bindingReasonValid   = "valid"
+	bindingReasonInvalid = "invalid"
+)
+
+// Validation code prefixes the SPA localizes (constant/compute.ts
+// COMPUTE_VALIDATION_PREFIX). The full code is "<prefix>:<targetId>".
+const (
+	computeCodeAggregateVRAMInsufficient = "aggregate-vram-insufficient"
+	computeCodeDeviceVRAMInsufficient    = "device-vram-insufficient"
+	computeCodeDeviceMemoryInsufficient  = "device-memory-insufficient"
+	computeCodeNodePressure              = "node-pressure"
+)
+
+// SPA copy for each localized validation prefix (i18n/market/en-US
+// compute.validation_code.*). Kept verbatim so the CLI and the dialog say the
+// same thing for the same backend code.
+const (
+	msgAggregateVRAMInsufficient = "The selected GPUs do not have enough combined VRAM. Add more GPUs or pick another node."
+	msgDeviceVRAMInsufficient    = "This GPU does not have enough VRAM. Remove apps from this GPU to free up VRAM first."
+	msgDeviceMemoryInsufficient  = "The node for this GPU does not have enough memory. Pick another GPU or node."
+	msgNodePressure              = "Unable to bind to this accelerator. Scheduling the app to this node will cause overload. Please retry later or switch to another node."
+)
+
+// humanizeBindingValidation mirrors SelectComputeBindingDialog's
+// topValidationMessage / nodeValidationMessage: the resource/pressure codes map
+// to the localized sentence (node-pressure additionally lists the per-resource
+// breakdown), while the structural codes the dialog prevents but a hand-typed
+// --compute-binding can hit (gpu-type-mismatch, memory-required:<dev>,
+// exclusive-already-bound:<dev>, multi-card-not-supported, ...) surface the raw
+// Code — far more actionable than the generic "invalid" the backend leaves in
+// Reason.
+func humanizeBindingValidation(v *computeBindingValidation) string {
+	prefix, _ := splitValidationCode(v.Code)
+	switch prefix {
+	case computeCodeNodePressure:
+		if detail := nodePressureDetail(v.NodePressure); detail != "" {
+			return detail
+		}
+		return msgNodePressure
+	case computeCodeAggregateVRAMInsufficient:
+		return msgAggregateVRAMInsufficient
+	case computeCodeDeviceVRAMInsufficient:
+		return msgDeviceVRAMInsufficient
+	case computeCodeDeviceMemoryInsufficient:
+		return msgDeviceMemoryInsufficient
+	}
+	if code := strings.TrimSpace(v.Code); code != "" && code != bindingReasonInvalid && code != bindingReasonValid {
+		return code
+	}
+	return strings.TrimSpace(v.Reason)
+}
+
+// splitValidationCode splits "<prefix>:<targetId>" on the FIRST colon (mirrors
+// the SPA parseValidationCode: deviceIds contain hyphens but no colons,
+// nodeNames are plain). targetId is "" when there is no colon.
+func splitValidationCode(code string) (prefix, targetID string) {
+	code = strings.TrimSpace(code)
+	if i := strings.IndexByte(code, ':'); i >= 0 {
+		return code[:i], code[i+1:]
+	}
+	return code, ""
+}
+
+// nodePressureDetail mirrors SelectComputeBindingDialog.nodePressureMessage:
+// the base node-pressure sentence followed by one line per pressured resource
+// dimension ("Memory: Total X, Used Y, Needed Z"). Empty when there is no
+// pressured dimension to report (caller then falls back to the base sentence).
+func nodePressureDetail(np *computeNodePressure) string {
+	if np == nil {
+		return ""
+	}
+	lines := make([]string, 0, len(np.Dimensions))
+	for _, d := range np.Dimensions {
+		if !d.Pressured {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("  %s: Total %s, Used %s, Needed %s",
+			pressureResourceLabel(d.Resource),
+			formatPressureAmount(d.Resource, d.Capacity),
+			formatPressureAmount(d.Resource, d.Used),
+			formatPressureAmount(d.Resource, d.Required)))
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	return msgNodePressure + "\n" + strings.Join(lines, "\n")
+}
+
+// pressureResourceLabel mirrors compute.pressure_resource.* (en-US).
+func pressureResourceLabel(resource string) string {
+	switch resource {
+	case "memory":
+		return "Memory"
+	case "cpu":
+		return "CPU"
+	case "disk":
+		return "Disk"
+	default:
+		return resource
+	}
+}
+
+// formatPressureAmount mirrors formatComputePressureAmount: cpu values are
+// millicores rendered as cores, memory/disk are bytes rendered as Gi.
+func formatPressureAmount(resource string, value int64) string {
+	if resource == "cpu" {
+		return marketCPUCores(value)
+	}
+	return marketMemoryGi(value) + " Gi"
+}
+
+// marketCPUCores mirrors formatComputeCpuCores: millicores -> "<cores> Core",
+// trimmed to at most 2 decimals.
+func marketCPUCores(milli int64) string {
+	if milli <= 0 {
+		return "0 Core"
+	}
+	cores := float64(milli) / 1000
+	rounded := math.Round(cores*100) / 100
+	if rounded == math.Trunc(rounded) {
+		return fmt.Sprintf("%d Core", int64(rounded))
+	}
+	return fmt.Sprintf("%s Core", strconv.FormatFloat(rounded, 'f', 2, 64))
 }
 
 func deviceOptionLabels(devices []computeDeviceOption) []string {

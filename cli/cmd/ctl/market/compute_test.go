@@ -106,17 +106,90 @@ func TestResolveComputeBindingNonInteractive(t *testing.T) {
 }
 
 func TestComputeBindingRejected(t *testing.T) {
+	// The backend leaves the actionable reason in Code ("node-pressure:<node>")
+	// and only the generic "invalid" in Reason; we must surface the SPA-aligned
+	// node-pressure sentence, not "invalid".
 	data := `{"availability":{"scope":"card","nodes":[{"nodeName":"node-1","devices":[` +
 		`{"nodeName":"node-1","deviceId":"gpu-0","supportType":"Exclusive","operable":true}]}]},` +
-		`"validation":{"ok":false,"code":"node-pressure:node-1","reason":"node under memory pressure"}}`
+		`"validation":{"ok":false,"code":"node-pressure:node-1","reason":"invalid"}}`
 	_, raw := parseFailedCheck(failedCheckResp(checkTypeComputeBindingUnavailable, data))
 
 	err := computeBindingRejected(raw, "comfyui", []BindingSelection{{NodeName: "node-2", DeviceID: "gpu-9"}})
 	msg := err.Error()
-	for _, want := range []string{"node-2:gpu-9", "rejected", "node under memory pressure", "node-1:gpu-0"} {
+	for _, want := range []string{"node-2:gpu-9", "rejected", "Scheduling the app to this node will cause overload", "node-1:gpu-0"} {
 		if !strings.Contains(msg, want) {
 			t.Fatalf("rejected message %q missing %q", msg, want)
 		}
+	}
+	if strings.Contains(msg, "invalid") {
+		t.Fatalf("rejected message should not leak the generic %q bucket: %q", "invalid", msg)
+	}
+}
+
+func TestBindingRejectReason(t *testing.T) {
+	const gib = int64(1) << 30
+	cases := []struct {
+		name string
+		p    *computeBindingPrompt
+		want string
+	}{
+		{
+			name: "localized device-vram-insufficient (Code, not Reason)",
+			p: &computeBindingPrompt{Validation: &computeBindingValidation{
+				OK: false, Code: "device-vram-insufficient:gpu-0", Reason: "invalid",
+			}},
+			want: msgDeviceVRAMInsufficient,
+		},
+		{
+			name: "aggregate-vram-insufficient",
+			p: &computeBindingPrompt{Validation: &computeBindingValidation{
+				OK: false, Code: "aggregate-vram-insufficient", Reason: "invalid",
+			}},
+			want: msgAggregateVRAMInsufficient,
+		},
+		{
+			name: "structural code surfaces raw code, not invalid",
+			p: &computeBindingPrompt{Validation: &computeBindingValidation{
+				OK: false, Code: "gpu-type-mismatch", Reason: "invalid",
+			}},
+			want: "gpu-type-mismatch",
+		},
+		{
+			name: "node-pressure without dimensions falls back to base sentence",
+			p: &computeBindingPrompt{Validation: &computeBindingValidation{
+				OK: false, Code: "node-pressure:olares", Reason: "invalid",
+			}},
+			want: msgNodePressure,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := bindingRejectReason(tc.p); got != tc.want {
+				t.Fatalf("bindingRejectReason = %q, want %q", got, tc.want)
+			}
+		})
+	}
+
+	// node-pressure WITH a pressured dimension lists the per-resource breakdown
+	// (memory in Gi, cpu in cores), mirroring the SPA dialog.
+	withDims := &computeBindingPrompt{Validation: &computeBindingValidation{
+		OK: false, Code: "node-pressure:olares", Reason: "invalid",
+		NodePressure: &computeNodePressure{
+			NodeName: "olares",
+			Dimensions: []computePressureDimension{
+				{Resource: "memory", Capacity: 32 * gib, Used: 30 * gib, Required: 4 * gib, Pressured: true},
+				{Resource: "cpu", Capacity: 8000, Used: 7000, Required: 2000, Pressured: false}, // not pressured -> skipped
+			},
+		},
+	}}
+	got := bindingRejectReason(withDims)
+	for _, want := range []string{msgNodePressure, "Memory: Total 32 Gi, Used 30 Gi, Needed 4 Gi"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("node-pressure detail %q missing %q", got, want)
+		}
+	}
+	if strings.Contains(got, "CPU:") {
+		t.Fatalf("non-pressured cpu dimension should be skipped: %q", got)
 	}
 }
 
@@ -150,9 +223,9 @@ func TestParseBindingMemory(t *testing.T) {
 		in   string
 		want int64
 	}{
-		{"8", 8 * giBytes},      // bare number defaults to Gi
-		{"8Gi", 8 * giBytes},    // explicit Gi
-		{"8gi", 8 * giBytes},    // case-insensitive suffix
+		{"8", 8 * giBytes},       // bare number defaults to Gi
+		{"8Gi", 8 * giBytes},     // explicit Gi
+		{"8gi", 8 * giBytes},     // case-insensitive suffix
 		{"1.5", 3 * giBytes / 2}, // fractional Gi
 		{"512Mi", 512 * miBytes}, // Mi suffix
 		{"512mi", 512 * miBytes},

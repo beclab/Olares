@@ -90,10 +90,34 @@ type computeDeviceOption struct {
 }
 
 // computeBindingValidation mirrors app-service compute.BindingValidationResult.
+// Code carries the actionable reason (e.g. "node-pressure:<node>",
+// "device-vram-insufficient:<dev>", "gpu-type-mismatch"); Reason is only the
+// generic "valid" / "invalid" bucket. NodePressure is populated when Code is
+// "node-pressure:<node>" so the per-resource breakdown can be surfaced exactly
+// like the SPA's SelectComputeBindingDialog.
 type computeBindingValidation struct {
-	OK     bool   `json:"ok"`
-	Code   string `json:"code,omitempty"`
-	Reason string `json:"reason,omitempty"`
+	OK           bool                 `json:"ok"`
+	Code         string               `json:"code,omitempty"`
+	Reason       string               `json:"reason,omitempty"`
+	NodePressure *computeNodePressure `json:"nodePressure,omitempty"`
+}
+
+// computeNodePressure mirrors app-service compute.NodePressureDetail.
+type computeNodePressure struct {
+	NodeName   string                     `json:"nodeName"`
+	Dimensions []computePressureDimension `json:"dimensions"`
+}
+
+// computePressureDimension mirrors app-service compute.DimensionPressure.
+// Resource is "memory" / "cpu" / "disk"; memory & disk are bytes, cpu is
+// millicores (matching the SPA's formatComputePressureAmount).
+type computePressureDimension struct {
+	Resource  string `json:"resource"`
+	Required  int64  `json:"required"`
+	Used      int64  `json:"used"`
+	Capacity  int64  `json:"capacity"`
+	Available int64  `json:"available"`
+	Pressured bool   `json:"pressured"`
 }
 
 type CloneRequest struct {
