@@ -154,6 +154,44 @@ func TestEffectiveUsedMemory(t *testing.T) {
 	}
 }
 
+func TestDeviceMemoryCell(t *testing.T) {
+	const gib = int64(1) << 30
+
+	// TimeSlice never allocates memory => capacity only, no "0 / total".
+	timeSlice := computeDevice{Memory: 16 * gib, SupportType: "TimeSlice"}
+	if got, want := deviceMemoryCell(timeSlice), computeMemoryValue(16*gib); got != want {
+		t.Fatalf("TimeSlice deviceMemoryCell = %q, want %q", got, want)
+	}
+
+	// Idle MemorySlice (nothing allocated) => capacity only.
+	idle := computeDevice{Memory: 16 * gib, SupportType: "MemorySlice"}
+	if got, want := deviceMemoryCell(idle), computeMemoryValue(16*gib); got != want {
+		t.Fatalf("idle deviceMemoryCell = %q, want %q", got, want)
+	}
+
+	// MemorySlice with an allocation => "used / total".
+	used := computeDevice{
+		Memory:      16 * gib,
+		SupportType: "MemorySlice",
+		Bindings:    []computeBinding{{AppName: "comfyui", Memory: 4 * gib}},
+	}
+	want := computeMemoryValue(4*gib) + " / " + computeMemoryValue(16*gib)
+	if got := deviceMemoryCell(used); got != want {
+		t.Fatalf("used deviceMemoryCell = %q, want %q", got, want)
+	}
+
+	// Exclusive + bound app => reads as fully used.
+	exclusive := computeDevice{
+		Memory:      16 * gib,
+		SupportType: "Exclusive",
+		Bindings:    []computeBinding{{AppName: "comfyui", Memory: 1 * gib}},
+	}
+	wantExclusive := computeMemoryValue(16*gib) + " / " + computeMemoryValue(16*gib)
+	if got := deviceMemoryCell(exclusive); got != wantExclusive {
+		t.Fatalf("exclusive deviceMemoryCell = %q, want %q", got, wantExclusive)
+	}
+}
+
 func TestDeviceDisplayName(t *testing.T) {
 	if got := (computeDevice{Name: "GPU0", CardModel: "RTX", Mode: "nvidia", ID: "x"}).deviceDisplayName(); got != "GPU0" {
 		t.Fatalf("name priority = %q, want GPU0", got)

@@ -33,6 +33,7 @@ olares-cli market install firefox                      # auto-selected source, l
 olares-cli market install firefox --version 1.2.3      # pin version (strict semver)
 olares-cli market install firefox -s upload            # install a locally-uploaded chart
 olares-cli market install gitea --env GITEA_TOKEN=...  # required envs
+olares-cli market install comfyui --compute-mode nvidia  # pin GPU mode (1.12.6+)
 olares-cli market install firefox --watch              # block until terminal
 olares-cli market install firefox --watch -o json
 ```
@@ -40,6 +41,7 @@ olares-cli market install firefox --watch -o json
 - `--version` defaults to the latest catalog version. Strict semver validated client-side before send.
 - `--env KEY=VALUE` (repeatable) for required env vars. Missing required envs surface as `missing required env var(s): KEY1, KEY2 ...` (server returns HTTP 422 / `type=appenv`).
 - **To install a locally-uploaded chart, pass `-s upload`** (the bucket `market upload` writes to).
+- `--compute-mode <type>` (**Olares 1.12.6+ only**) pins the accelerator mode (`cpu`, `nvidia`, ...). Apps that can run on more than one mode require a choice: when `--compute-mode` is omitted the backend returns HTTP 422 / `type=computeModeSelect`, and the CLI either **prompts interactively** (TTY) or **fails listing the installable modes** (non-interactive: `-q`, `-o json`, or a pipe) so you re-run with the flag. On **1.12.5 the install path is unchanged** and `--compute-mode` is rejected.
 
 ## `upgrade`
 
@@ -108,11 +110,15 @@ olares-cli market stop firefox --watch                 # block until `stopped`
 
 olares-cli market resume firefox                       # un-suspend
 olares-cli market resume firefox --watch               # block until `running`
+olares-cli market resume comfyui --compute-binding node-1:gpu-0        # pin a device (1.12.6+)
+olares-cli market resume comfyui --compute-binding node-1:gpu-0:8      # MemorySlice: 8 Gi
+olares-cli market resume comfyui --compute-binding node-1:gpu-0:512Mi  # MemorySlice: 512 Mi
 ```
 
 - Source is implicit on both.
 - `--cascade` on `stop` follows the same rules as `uninstall` — including the 1.12.6 force-on for CS/shared apps (`--cascade=false` cannot disable it there).
 - **`resume` is idempotent**: against an already-`running` row, returns immediately with success (`{state=running, opType=""}`), instead of hanging until `--watch-timeout` fires.
+- `--compute-binding <node>:<device>[:<mem>]` (repeatable; **Olares 1.12.6+ only**) pins the accelerator device(s) a GPU app resumes onto; the optional `mem` is a `MemorySlice` allocation — a bare number is Gi, or add a `Gi`/`Mi` suffix (e.g. `8`, `8Gi`, `512Mi`), mirroring the SPA's two-unit VRAM input. `<node>` / `<device>` are the NODE / DEVICE-ID from `olares-cli settings compute list`. When a binding is required and the flag is omitted, the backend returns HTTP 422 / `type=computeBindingRequired` (or `computeBindingUnavailable` when a prior choice no longer fits) and the CLI **prompts interactively** (TTY) or **fails listing the available devices** (non-interactive). An explicit `--compute-binding` the backend rejects is reported with the reason rather than retried. **`stop` takes no compute flags** — the backend releases the device allocation automatically. On **1.12.5 the resume path is unchanged** and `--compute-binding` is rejected.
 
 ## `cancel`
 

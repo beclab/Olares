@@ -21,6 +21,79 @@ type InstallRequest struct {
 	Version string      `json:"version"`
 	Sync    bool        `json:"sync"`
 	Envs    []AppEnvVar `json:"envs,omitempty"`
+	// SelectedGpuType pins the compute mode (cpu / nvidia / ...) the
+	// install should schedule against. It mirrors the Market SPA's
+	// install payload field of the same name and is only honored by
+	// Olares 1.12.6+ (the auto-select / computeModeSelect surface). It
+	// is omitempty so a 1.12.5 install — where the CLI never sets it —
+	// keeps the exact same wire bytes as before this field existed.
+	SelectedGpuType string `json:"selectedGpuType,omitempty"`
+}
+
+// BindingSelection is one device a resume picks for an app's compute
+// binding. Mirrors app-service compute.BindingSelection and the SPA's
+// ComputeBindingItem ({nodeName, deviceId, memory?}). Memory is the
+// allocated bytes for MemorySlice devices; omitempty for whole-card modes.
+type BindingSelection struct {
+	NodeName string `json:"nodeName"`
+	DeviceID string `json:"deviceId"`
+	Memory   int64  `json:"memory,omitempty"`
+}
+
+// computeModePlan mirrors one entry of app-service compute.ModePlanResult,
+// the per-mode install plan the backend returns under a computeModeSelect
+// 422 when more than one declared mode is runnable on the cluster. Status
+// is "installable" / "insufficient-resources" / "no-matching-node".
+type computeModePlan struct {
+	ComputeType string `json:"computeType"`
+	Status      string `json:"status"`
+	Reason      string `json:"reason,omitempty"`
+}
+
+// computeBindingPrompt mirrors app-service ComputeBindingFailedCheck — the
+// payload under a computeBindingRequired / computeBindingUnavailable 422 on
+// resume. Availability lists the selectable devices; Validation explains why
+// the previously-supplied binding was rejected (only on *Unavailable).
+type computeBindingPrompt struct {
+	Availability *computeAvailability      `json:"availability"`
+	Validation   *computeBindingValidation `json:"validation,omitempty"`
+}
+
+// computeAvailability mirrors app-service compute.AvailabilityResult.
+type computeAvailability struct {
+	Schedulable bool                `json:"schedulable"`
+	Scope       string              `json:"scope"`
+	Nodes       []computeNodeOption `json:"nodes"`
+	Reason      string              `json:"reason,omitempty"`
+}
+
+// computeNodeOption mirrors app-service compute.NodeOption.
+type computeNodeOption struct {
+	NodeName string                `json:"nodeName"`
+	GPUType  string                `json:"gpuType"`
+	Status   string                `json:"status"`
+	Devices  []computeDeviceOption `json:"devices"`
+}
+
+// computeDeviceOption mirrors app-service compute.DeviceOption. Operable
+// reports whether this device can actually take the binding right now.
+type computeDeviceOption struct {
+	NodeName    string `json:"nodeName"`
+	DeviceID    string `json:"deviceId"`
+	CardModel   string `json:"cardModel,omitempty"`
+	SupportType string `json:"supportType"`
+	Capacity    int64  `json:"capacity"`
+	Available   int64  `json:"available"`
+	FitLevel    string `json:"fitLevel,omitempty"`
+	Health      string `json:"health"`
+	Operable    bool   `json:"operable"`
+}
+
+// computeBindingValidation mirrors app-service compute.BindingValidationResult.
+type computeBindingValidation struct {
+	OK     bool   `json:"ok"`
+	Code   string `json:"code,omitempty"`
+	Reason string `json:"reason,omitempty"`
 }
 
 type CloneRequest struct {
