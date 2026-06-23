@@ -392,7 +392,21 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			continue
 		}
 		if v, ok := appsMap[a.Name]; ok {
+			// title and market_source come from AM annotations and may not
+			// be present in the Application CR's Settings. Fall back to the
+			// synthesized values so they are not lost on overwrite.
+			title := v.Spec.Settings["title"]
+			marketSource := v.Spec.Settings["market_source"]
 			v.Spec.Settings = a.Spec.Settings
+			if v.Spec.Settings == nil {
+				v.Spec.Settings = map[string]string{}
+			}
+			if _, ok := v.Spec.Settings["title"]; !ok {
+				v.Spec.Settings["title"] = title
+			}
+			if _, ok := v.Spec.Settings["market_source"]; !ok {
+				v.Spec.Settings["market_source"] = marketSource
+			}
 			v.Spec.Entrances = a.Spec.Entrances
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
@@ -650,7 +664,21 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			continue
 		}
 		if v, ok := appsMap[a.Name]; ok {
+			// title and market_source come from AM annotations and may not
+			// be present in the Application CR's Settings. Fall back to the
+			// synthesized values so they are not lost on overwrite.
+			title := v.Spec.Settings["title"]
+			marketSource := v.Spec.Settings["market_source"]
 			v.Spec.Settings = a.Spec.Settings
+			if v.Spec.Settings == nil {
+				v.Spec.Settings = map[string]string{}
+			}
+			if _, ok := v.Spec.Settings["title"]; !ok {
+				v.Spec.Settings["title"] = title
+			}
+			if _, ok := v.Spec.Settings["market_source"]; !ok {
+				v.Spec.Settings["market_source"] = marketSource
+			}
 			v.Spec.Entrances = a.Spec.Entrances
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
