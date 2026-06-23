@@ -3,7 +3,6 @@ package routecontrol
 import (
 	"context"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,9 +98,6 @@ func desiredInClusterCallerIngressNP() *networkingv1.NetworkPolicy {
 							},
 						},
 					},
-				},
-				{
-					From: security.NodeTunnelRule(),
 				},
 			},
 		},
