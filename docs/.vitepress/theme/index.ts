@@ -52,43 +52,51 @@ enhanceApp({ app, router }: { app: App; router: Router }) {
   setup() {
     const route = useRoute();
     const router = useRouter();
-    const { lang } = useData();
+    const { lang, site } = useData();
 
+    // Auto-redirect a fresh page load to the visitor's remembered language.
+    // router.route.path includes the site base (e.g. "/docs/" or
+    // "/docs/1.12.4/"); the version, when present, lives entirely in that base.
+    // We therefore strip the base first and match the language prefix on the
+    // base-relative path. (The previous implementation matched against the raw
+    // path without accounting for the base, so under a "/docs" deploy the
+    // default+en combination produced an empty prefix that matched everything
+    // and corrupted the URL, e.g. /docs/zh/... -> /zh/docs/zh/...).
     const routerRedirect = () => {
       let localLanguage = localStorage.getItem(LANGUAGE_LOCAL_KEY) || 'en';
-      
-      const versions = process.env.VERSIONS!.split(",") ||[];
-      versions.push('default');
 
-      const languages = process.env.LANGUAGES!.split(",") || [];
-      languages.push('en');
-      console.log(versions, languages,localLanguage)
+      const languages = process.env.LANGUAGES ? process.env.LANGUAGES.split(",") : [];
+      if (!languages.includes('en')) languages.push('en');
 
-      if(!languages?.includes(localLanguage) ){
+      if (!languages.includes(localLanguage)) {
         localLanguage = 'en';
       }
 
+      const base = site.value.base || '/';
+      const rawPath = router.route.path;
+      // Base-relative path without a leading slash, e.g. "zh/manual/x" or "manual/x".
+      const rel = rawPath.startsWith(base)
+        ? rawPath.slice(base.length)
+        : rawPath.replace(/^\//, '');
 
-      const currentPath = router.route.path;
-      
-      console.log('router.route.path', router.route.path);
-      for( const l of languages ) {
-        let localLanguagePath = (l === 'en' ? '' : `/${l}`);
-        for (const v of versions) {
-            let localVersionPath = (v === 'default' ? '' : `/${v}`);
-            const u = `${localVersionPath}${localLanguagePath}`;
-            console.log('checkPrefix', u);
-            if (currentPath.startsWith(u)) {
-                console.log('find localLanguage', localLanguage, l);
-                if( l !== localLanguage ) {
-                  let targetLanguagePath = (localLanguage === 'en' ? '' : `/${localLanguage}`);
-                  const nextUrl = `${localVersionPath}${targetLanguagePath}${route.path.replace(u, '')}`;
-                  router.go(nextUrl);
-                }            
-                return;
-            
-          }
+      // Detect the current language from the (non-en) prefix, if any.
+      let currentLanguage = 'en';
+      let pagePath = rel;
+      for (const l of languages) {
+        if (l === 'en') continue;
+        if (rel === l || rel.startsWith(`${l}/`)) {
+          currentLanguage = l;
+          pagePath = rel.slice(l.length).replace(/^\//, '');
+          break;
         }
+      }
+
+      if (currentLanguage === localLanguage) return;
+
+      const langPrefix = localLanguage === 'en' ? '' : `${localLanguage}/`;
+      const target = `${base}${langPrefix}${pagePath}`;
+      if (target !== rawPath) {
+        router.go(target);
       }
     };
 
