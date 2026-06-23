@@ -366,7 +366,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           ]
         },
         {
-          text: "效率",
+          text: "生产力",
           collapsed: false,
           items: [
             {
@@ -396,7 +396,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
-          text: "开发工具",
+          text: "开发者工具",
           collapsed: false,
           items: [
             {
@@ -406,7 +406,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
-          text: "工具",
+          text: "实用工具",
           collapsed: false,
           items: [
             {

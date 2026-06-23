@@ -60,6 +60,11 @@ export default defineVersionedConfig2(withMermaid({
     },
   },
   themeConfig: {
+    logoLink: "https://www.olares.com/",
+    editLink: {
+      pattern: "https://github.com/beclab/Olares/edit/main/docs/:path",
+      text: "Edit this page on GitHub",
+    },
     search: {
       provider: "algolia",
       options: {
@@ -167,6 +172,13 @@ export default defineVersionedConfig2(withMermaid({
     }
   },
   head: [
+    [
+      "link",
+      {
+        rel: "icon",
+        href: (process.env.BASE_URL || "/") + "icon1.png",
+      },
+    ],
     [
       "script",
       {
