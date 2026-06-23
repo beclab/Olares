@@ -20,6 +20,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/appearance"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/apps"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/backup"
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/compute"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/gpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/integration"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/me"
@@ -80,6 +81,7 @@ https://desktop.<terminus>; backup / restore use the same origin with a
 		vpn.NewVPNCommand(f),
 		network.NewNetworkCommand(f),
 		gpu.NewGPUCommand(f),
+		compute.NewComputeCommand(f),
 		video.NewVideoCommand(f),
 		search.NewSearchCommand(f),
 		backup.NewBackupCommand(f),
