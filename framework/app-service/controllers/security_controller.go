@@ -530,6 +530,9 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 						sel.MatchLabels[security.NamespaceOwnerLabel] = owner
 					}
 				}
+				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+					From: security.NodeTunnelRule(),
+				})
 			}
 		} else if owner, ok := ns.Labels[security.NamespaceOwnerLabel]; ok && owner != "" {
 			// app namespace networkpolicy
@@ -582,6 +585,9 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 					}
 				}
 
+				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+					From: security.NodeTunnelRule(),
+				})
 			}
 		} else if shared, ok := ns.Labels[security.NamespaceSharedLabel]; ok && shared != "false" {
 			// shared namespace networkpolicy
@@ -644,6 +650,10 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 						})
 					}
 				}
+
+				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+					From: security.NodeTunnelRule(),
+				})
 
 			} // end of func npFix
 
