@@ -158,13 +158,17 @@ func promptComputeMode(appName string, installable []string) (string, error) {
 // reason (on *Unavailable) and the selectable devices so the user can re-run
 // with --compute-binding.
 type computeBindingError struct {
-	appName string
-	reason  string
-	options []string
+	appName     string
+	reason      string
+	requirement string
+	options     []string
 }
 
 func (e *computeBindingError) Error() string {
 	msg := fmt.Sprintf("app %q requires a compute binding", e.appName)
+	if e.requirement != "" {
+		msg += fmt.Sprintf(" (%s)", e.requirement)
+	}
 	if e.reason != "" {
 		msg += ": " + e.reason
 	}
@@ -191,7 +195,12 @@ func resolveComputeBinding(raw json.RawMessage, appName string, interactive bool
 	reason := bindingRejectReason(&prompt)
 
 	if !interactive || len(operable) == 0 {
-		return nil, &computeBindingError{appName: appName, reason: reason, options: deviceOptionLabels(operable)}
+		return nil, &computeBindingError{
+			appName:     appName,
+			reason:      reason,
+			requirement: availabilityRequirementSummary(prompt.Availability),
+			options:     deviceOptionLabels(operable),
+		}
 	}
 	if reason != "" {
 		fmt.Fprintf(os.Stderr, "Previous compute binding was rejected: %s\n", reason)
@@ -225,7 +234,11 @@ func computeBindingRejected(raw json.RawMessage, appName string, attempted []Bin
 
 func promptComputeBinding(appName string, av *computeAvailability, operable []computeDeviceOption) ([]BindingSelection, error) {
 	multi := av != nil && (av.Scope == "single-node-cards" || av.Scope == "cross-node-cards")
-	fmt.Fprintf(os.Stderr, "App %q needs a compute device binding. Available devices:\n", appName)
+	if summary := availabilityRequirementSummary(av); summary != "" {
+		fmt.Fprintf(os.Stderr, "App %q needs a compute device binding (%s). Available devices:\n", appName, summary)
+	} else {
+		fmt.Fprintf(os.Stderr, "App %q needs a compute device binding. Available devices:\n", appName)
+	}
 	for i, d := range operable {
 		fmt.Fprintf(os.Stderr, "  [%d] %s\n", i+1, deviceOptionLine(d))
 	}
@@ -562,6 +575,74 @@ func marketMemoryGi(bytes int64) string {
 		return strconv.FormatInt(int64(floored), 10)
 	}
 	return strconv.FormatFloat(floored, 'f', 2, 64)
+}
+
+// giRoundEpsilon mirrors the SPA GI_ROUND_EPSILON: absorbs byte<->Gi float
+// drift before ceil at 2 decimals so a value that is a hair over an exact Gi
+// (rounding noise) doesn't bump the displayed need up by 0.01.
+const giRoundEpsilon = 1e-6
+
+// marketMemoryGiCeil mirrors the SPA formatComputeMemoryCeil: bytes -> Gi
+// rounded UP to 2 decimals (minus the drift epsilon), so a displayed "requires"
+// never understates the real need. Returns "0" for non-positive input.
+func marketMemoryGiCeil(bytes int64) string {
+	if bytes <= 0 {
+		return "0"
+	}
+	gi := float64(bytes) / float64(giBytes)
+	ceiled := math.Ceil(gi*100-giRoundEpsilon) / 100
+	if ceiled == math.Trunc(ceiled) {
+		return strconv.FormatInt(int64(ceiled), 10)
+	}
+	return strconv.FormatFloat(ceiled, 'f', 2, 64)
+}
+
+// requiredResourceBytes mirrors getComputeRequirementResourceBytes: the
+// threshold the SPA shows as "required" — RequiredGpu for an nvidia
+// requirement, RequiredMemory otherwise.
+func requiredResourceBytes(req *computeRequirement) int64 {
+	if req == nil {
+		return 0
+	}
+	if normalizeMarketComputeMode(req.Mode) == "nvidia" {
+		return req.RequiredGpu
+	}
+	return req.RequiredMemory
+}
+
+// requirementSummary mirrors the SPA useComputeSummary.requirementTags plus the
+// required amount: "<mode label>, <scope chip>[, requires <ceil> Gi]". The
+// scope chip follows requirementTags: nvidia + multi-node -> "multi-node",
+// else multi-card -> "multi-card", else "single card".
+func requirementSummary(req *computeRequirement) string {
+	if req == nil {
+		return ""
+	}
+	parts := make([]string, 0, 3)
+	if label := marketComputeModeTitle(req.Mode); label != "" {
+		parts = append(parts, label)
+	}
+	switch {
+	case normalizeMarketComputeMode(req.Mode) == "nvidia" && req.SupportMultiNodes:
+		parts = append(parts, "multi-node")
+	case req.SupportMultiCards:
+		parts = append(parts, "multi-card")
+	default:
+		parts = append(parts, "single card")
+	}
+	if b := requiredResourceBytes(req); b > 0 {
+		parts = append(parts, fmt.Sprintf("requires %s Gi", marketMemoryGiCeil(b)))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// availabilityRequirementSummary is requirementSummary for an availability
+// payload, guarding the nil chain.
+func availabilityRequirementSummary(av *computeAvailability) string {
+	if av == nil {
+		return ""
+	}
+	return requirementSummary(av.Requirement)
 }
 
 func normalizeMarketComputeMode(mode string) string {

@@ -85,7 +85,7 @@ func TestResolveComputeMode(t *testing.T) {
 }
 
 func TestResolveComputeBindingNonInteractive(t *testing.T) {
-	data := `{"availability":{"scope":"card","nodes":[{"nodeName":"node-1","gpuType":"nvidia","status":"available","devices":[` +
+	data := `{"availability":{"scope":"card","requirement":{"mode":"nvidia","requiredGpu":6442450944,"supportMultiCards":false},"nodes":[{"nodeName":"node-1","gpuType":"nvidia","status":"available","devices":[` +
 		`{"nodeName":"node-1","deviceId":"gpu-0","supportType":"Exclusive","capacity":17179869184,"available":17179869184,"operable":true,"health":"yes"},` +
 		`{"nodeName":"node-1","deviceId":"gpu-1","supportType":"Exclusive","capacity":17179869184,"available":0,"operable":false,"health":"yes"}]}]},` +
 		`"validation":{"ok":false,"reason":"binding required"}}`
@@ -102,6 +102,100 @@ func TestResolveComputeBindingNonInteractive(t *testing.T) {
 	// Only the operable device is offered.
 	if !reflect.DeepEqual(bindErr.options, []string{"node-1:gpu-0"}) {
 		t.Fatalf("options = %v, want [node-1:gpu-0]", bindErr.options)
+	}
+	// The requirement (parsed from availability.requirement) is surfaced so a
+	// non-interactive caller knows how much the app needs.
+	for _, want := range []string{"NVIDIA GPU", "single card", "requires 6 Gi"} {
+		if !strings.Contains(bindErr.requirement, want) {
+			t.Fatalf("requirement %q missing %q", bindErr.requirement, want)
+		}
+	}
+	if msg := bindErr.Error(); !strings.Contains(msg, "requires 6 Gi") {
+		t.Fatalf("error message should surface the requirement: %q", msg)
+	}
+}
+
+func TestRequiredResourceBytes(t *testing.T) {
+	const gib = int64(1) << 30
+	// nvidia -> requiredGpu
+	if got := requiredResourceBytes(&computeRequirement{Mode: "nvidia", RequiredGpu: 8 * gib, RequiredMemory: 2 * gib}); got != 8*gib {
+		t.Fatalf("nvidia requiredResourceBytes = %d, want %d", got, 8*gib)
+	}
+	// non-nvidia -> requiredMemory
+	if got := requiredResourceBytes(&computeRequirement{Mode: "intel", RequiredGpu: 8 * gib, RequiredMemory: 2 * gib}); got != 2*gib {
+		t.Fatalf("intel requiredResourceBytes = %d, want %d", got, 2*gib)
+	}
+	if got := requiredResourceBytes(nil); got != 0 {
+		t.Fatalf("nil requiredResourceBytes = %d, want 0", got)
+	}
+}
+
+func TestMarketMemoryGiCeil(t *testing.T) {
+	const gib = int64(1) << 30
+	cases := []struct {
+		in   int64
+		want string
+	}{
+		{0, "0"},
+		{-1, "0"},
+		{8 * gib, "8"},
+		{6 * gib, "6"},
+		{gib + gib/2, "1.50"},          // 1.5 Gi exact (2 decimals, like SPA toFixed)
+		{gib + 1, "1"},                 // 1 byte over 1 Gi is drift -> still "1"
+		{gib + gib/50, "1.02"},         // ~1.02 Gi rounds UP to 2 decimals
+		{gib*15 + gib*99/100, "15.99"}, // ~15.99 Gi
+	}
+	for _, tc := range cases {
+		if got := marketMemoryGiCeil(tc.in); got != tc.want {
+			t.Fatalf("marketMemoryGiCeil(%d) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestRequirementSummary(t *testing.T) {
+	const gib = int64(1) << 30
+	cases := []struct {
+		name string
+		req  *computeRequirement
+		want []string
+	}{
+		{
+			name: "nvidia single card",
+			req:  &computeRequirement{Mode: "nvidia", RequiredGpu: 6 * gib},
+			want: []string{"NVIDIA GPU", "single card", "requires 6 Gi"},
+		},
+		{
+			name: "nvidia multi-card (single node)",
+			req:  &computeRequirement{Mode: "nvidia", RequiredGpu: 12 * gib, SupportMultiCards: true},
+			want: []string{"NVIDIA GPU", "multi-card", "requires 12 Gi"},
+		},
+		{
+			name: "nvidia multi-node",
+			req:  &computeRequirement{Mode: "nvidia", RequiredGpu: 24 * gib, SupportMultiCards: true, SupportMultiNodes: true},
+			want: []string{"NVIDIA GPU", "multi-node", "requires 24 Gi"},
+		},
+		{
+			name: "non-nvidia uses requiredMemory",
+			req:  &computeRequirement{Mode: "intel", RequiredMemory: 4 * gib},
+			want: []string{"single card", "requires 4 Gi"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := requirementSummary(tc.req)
+			for _, w := range tc.want {
+				if !strings.Contains(got, w) {
+					t.Fatalf("requirementSummary = %q, missing %q", got, w)
+				}
+			}
+		})
+	}
+	// non-nvidia multi-node still reports multi-card (multi-node chip is nvidia-only).
+	if got := requirementSummary(&computeRequirement{Mode: "intel", SupportMultiCards: true, SupportMultiNodes: true}); !strings.Contains(got, "multi-card") {
+		t.Fatalf("non-nvidia multi-node summary = %q, want multi-card chip", got)
+	}
+	if got := requirementSummary(nil); got != "" {
+		t.Fatalf("nil requirementSummary = %q, want empty", got)
 	}
 }
 

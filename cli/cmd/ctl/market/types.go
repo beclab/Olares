@@ -62,9 +62,25 @@ type computeBindingPrompt struct {
 // computeAvailability mirrors app-service compute.AvailabilityResult.
 type computeAvailability struct {
 	Schedulable bool                `json:"schedulable"`
+	Requirement *computeRequirement `json:"requirement,omitempty"`
 	Scope       string              `json:"scope"`
 	Nodes       []computeNodeOption `json:"nodes"`
 	Reason      string              `json:"reason,omitempty"`
+}
+
+// computeRequirement mirrors app-service compute.Requirement — the bound app's
+// selected resource-mode need. RequiredGpu / RequiredMemory are bytes; the SPA
+// shows RequiredGpu for nvidia and RequiredMemory otherwise.
+type computeRequirement struct {
+	Mode              string `json:"mode"`
+	RequiredCpu       int64  `json:"requiredCpu"`
+	RequiredGpu       int64  `json:"requiredGpu"`
+	LimitedGpu        int64  `json:"limitedGpu"`
+	RequiredMemory    int64  `json:"requiredMemory"`
+	LimitedMemory     int64  `json:"limitedMemory"`
+	RequiredDisk      int64  `json:"requiredDisk"`
+	SupportMultiCards bool   `json:"supportMultiCards"`
+	SupportMultiNodes bool   `json:"supportMultiNodes"`
 }
 
 // computeNodeOption mirrors app-service compute.NodeOption.
