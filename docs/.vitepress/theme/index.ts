@@ -74,10 +74,17 @@ enhanceApp({ app, router }: { app: App; router: Router }) {
 
       const base = site.value.base || '/';
       const rawPath = router.route.path;
-      // Base-relative path without a leading slash, e.g. "zh/manual/x" or "manual/x".
-      const rel = rawPath.startsWith(base)
-        ? rawPath.slice(base.length)
-        : rawPath.replace(/^\//, '');
+      // Base-relative path without a leading slash, e.g. "zh/manual/x" or
+      // "manual/x". Handle the base both with and without its trailing slash:
+      // router.route.path can be "/docs" as well as "/docs/".
+      let rel: string;
+      if (rawPath.startsWith(base)) {
+        rel = rawPath.slice(base.length);
+      } else if (base.endsWith('/') && rawPath === base.slice(0, -1)) {
+        rel = '';
+      } else {
+        rel = rawPath.replace(/^\//, '');
+      }
 
       // Detect the current language from the (non-en) prefix, if any.
       let currentLanguage = 'en';
