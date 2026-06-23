@@ -10,6 +10,10 @@ doc_version: "1.0"
 doc_updated: "2026-05-14"
 ---
 
+:::warning
+本页面由 AI 自动翻译，部分技术术语可能与中文习惯存在差异。如有疑问，请以[英文原文](../../use-cases/openwebui-knowledge.md)为准。
+:::
+
 # 与文档和知识库聊天
 
 Open WebUI 支持检索增强生成（RAG），可帮助本地 AI 模型基于你上传的文档或整理好的知识库回答问题。

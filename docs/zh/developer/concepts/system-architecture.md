@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 全面了解 Olares 架构，涵盖基础设施、平台服务和应用框架。
 ---
 
-# Olares 架构
+# Olares 系统架构
 
 本文详细介绍了 Olares 的架构，阐述了各层及其组件的用途和功能。
 
