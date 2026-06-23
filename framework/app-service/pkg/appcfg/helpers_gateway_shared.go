@@ -9,9 +9,10 @@ import (
 
 // IsGatewaySharedApp reports whether the Application participates in the shared
 // Envoy Gateway path (SRR + HTTPRoute). Qualifying apps are shared cluster-wide
-// installs or v2 cluster-scoped apps that expose spec.sharedEntrances.
+// installs (options.shared) or cluster-scoped apps. sharedEntrances are optional;
+// apps with only spec.entrances still qualify and receive application-class SRRs.
 func IsGatewaySharedApp(app *appv1alpha1.Application) bool {
-	if app == nil || len(app.Spec.SharedEntrances) == 0 {
+	if app == nil {
 		return false
 	}
 	return IsShared(app) || IsClusterScoped(app)
