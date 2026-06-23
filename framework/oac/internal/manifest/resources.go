@@ -396,7 +396,7 @@ func validateQuantities(prefix string, rr ResourceRequirement, templateOnly bool
 	}
 	var errs []error
 	for _, p := range pairs {
-		if p.value == "" || IsAutoResourceQuantity(p.value) {
+		if p.value == "" {
 			continue
 		}
 		if err := validateResourceQuantity(p.value, prefix+p.field, templateOnly, true); err != nil {
