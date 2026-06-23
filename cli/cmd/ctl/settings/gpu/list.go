@@ -19,15 +19,15 @@ import (
 // Backed by user-service's /api/gpu/list, which proxies HAMI. The body
 // is a BFL envelope around an array of GPUInfo:
 //
-//   {
-//     "nodeName": "...", "id": "...", "type": "...",
-//     "count": 1, "devmem": 12288, "devcore": 80,
-//     "mode": "exclusive" | "shared",
-//     "sharemode": "...",
-//     "health": true,
-//     "memoryAllocated": 0, "memoryAvailable": 0,
-//     "apps": [{"appName": "...", "memory": <int>}],
-//   }
+//	{
+//	  "nodeName": "...", "id": "...", "type": "...",
+//	  "count": 1, "devmem": 12288, "devcore": 80,
+//	  "mode": "exclusive" | "shared",
+//	  "sharemode": "...",
+//	  "health": true,
+//	  "memoryAllocated": 0, "memoryAvailable": 0,
+//	  "apps": [{"appName": "...", "memory": <int>}],
+//	}
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
@@ -37,6 +37,14 @@ func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := c.Context()
 			if err := preflight.Gate(ctx, f, whoami.RoleAdmin, "list GPUs"); err != nil {
+				return err
+			}
+			if err := preflight.RejectIfRemoved(ctx, f, preflight.RemovedGate{
+				Verb:        "settings gpu list",
+				Detail:      "legacy HAMI /api/gpu/list",
+				RemovedIn:   "1.12.6",
+				Replacement: "olares-cli settings compute resources list",
+			}); err != nil {
 				return err
 			}
 			return preflight.Wrap(ctx, f, runList(ctx, f, output), "list GPUs")
