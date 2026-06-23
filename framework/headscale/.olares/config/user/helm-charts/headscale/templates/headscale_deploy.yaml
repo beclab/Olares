@@ -250,6 +250,7 @@ spec:
                               break
                           fi
                       done
+                      sleep 2
                       headscale apikeys create -e 3650d > /etc/headscale/apikey
                       headscale users create default
                       USER_ID=$(headscale users list | awk '/default/ {print $1; exit}')
@@ -291,7 +292,7 @@ spec:
         command:
         - /bin/sh
         - -c
-        image: beclab/headscale-api-wrapper:v0.1.8
+        image: beclab/headscale-api-wrapper:v0.1.9
         imagePullPolicy: IfNotPresent
         name: headscale-api-wrapper
         securityContext:
