@@ -185,7 +185,9 @@ func (e *computeBindingError) Error() string {
 // 422 payload into the computeBinding to retry the resume with, when the caller
 // supplied NO --compute-binding. An interactive TTY prompts a selection;
 // a non-interactive session returns computeBindingError listing the options.
-func resolveComputeBinding(raw json.RawMessage, appName string, interactive bool) ([]BindingSelection, error) {
+// checkType distinguishes a first-time required binding from a no-longer-valid
+// one so we never misreport why we're prompting.
+func resolveComputeBinding(raw json.RawMessage, checkType, appName string, interactive bool) ([]BindingSelection, error) {
 	var prompt computeBindingPrompt
 	if err := json.Unmarshal(raw, &prompt); err != nil {
 		return nil, fmt.Errorf("parse compute binding options: %w", err)
@@ -193,6 +195,7 @@ func resolveComputeBinding(raw json.RawMessage, appName string, interactive bool
 
 	operable := operableDevices(prompt.Availability)
 	reason := bindingRejectReason(&prompt)
+	rejected := bindingWasRejected(&prompt, checkType)
 
 	if !interactive || len(operable) == 0 {
 		return nil, &computeBindingError{
@@ -202,10 +205,27 @@ func resolveComputeBinding(raw json.RawMessage, appName string, interactive bool
 			options:     deviceOptionLabels(operable),
 		}
 	}
-	if reason != "" {
-		fmt.Fprintf(os.Stderr, "Previous compute binding was rejected: %s\n", reason)
+	// Only announce a rejection when a prior binding actually failed; a
+	// first-time computeBindingRequired has no prior binding to reject, so we
+	// fall straight through to the device picker (which prints the
+	// requirement summary). Mirrors the SPA, whose top notice is
+	// validation-driven and never promotes availability.reason to a banner.
+	if rejected && reason != "" {
+		fmt.Fprintf(os.Stderr, "Previous compute binding is no longer valid: %s\n", reason)
 	}
 	return promptComputeBinding(appName, prompt.Availability, operable)
+}
+
+// bindingWasRejected reports whether the prompt reflects a prior binding that
+// failed — a failed validation, or a computeBindingUnavailable (a previously
+// stored binding that is no longer schedulable). A first-time
+// computeBindingRequired is NOT a rejection: the user has supplied nothing yet,
+// so availability.reason there is a general note, not a "rejected" cause.
+func bindingWasRejected(p *computeBindingPrompt, checkType string) bool {
+	if p != nil && p.Validation != nil && !p.Validation.OK {
+		return true
+	}
+	return checkType == checkTypeComputeBindingUnavailable
 }
 
 // computeBindingRejected builds the error surfaced when an explicit

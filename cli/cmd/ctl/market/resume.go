@@ -101,7 +101,7 @@ func runResume(opts *MarketOptions, appName string) error {
 			if len(bindings) > 0 {
 				return opts.failOp("resume", appName, computeBindingRejected(raw, appName, bindings))
 			}
-			sel, berr := resolveComputeBinding(raw, appName, opts.isInteractive())
+			sel, berr := resolveComputeBinding(raw, checkType, appName, opts.isInteractive())
 			if berr != nil {
 				return opts.failOp("resume", appName, berr)
 			}

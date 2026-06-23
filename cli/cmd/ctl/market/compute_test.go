@@ -91,7 +91,7 @@ func TestResolveComputeBindingNonInteractive(t *testing.T) {
 		`"validation":{"ok":false,"reason":"binding required"}}`
 	_, raw := parseFailedCheck(failedCheckResp(checkTypeComputeBindingRequired, data))
 
-	_, err := resolveComputeBinding(raw, "comfyui", false)
+	_, err := resolveComputeBinding(raw, checkTypeComputeBindingRequired, "comfyui", false)
 	var bindErr *computeBindingError
 	if !errors.As(err, &bindErr) {
 		t.Fatalf("want *computeBindingError, got %T (%v)", err, err)
@@ -112,6 +112,39 @@ func TestResolveComputeBindingNonInteractive(t *testing.T) {
 	}
 	if msg := bindErr.Error(); !strings.Contains(msg, "requires 6 Gi") {
 		t.Fatalf("error message should surface the requirement: %q", msg)
+	}
+}
+
+func TestBindingWasRejected(t *testing.T) {
+	failed := &computeBindingPrompt{Validation: &computeBindingValidation{OK: false}}
+	okVal := &computeBindingPrompt{Validation: &computeBindingValidation{OK: true}}
+	none := &computeBindingPrompt{}
+
+	cases := []struct {
+		name      string
+		prompt    *computeBindingPrompt
+		checkType string
+		want      bool
+	}{
+		// First-time required with no validation is NOT a rejection: nothing
+		// was ever submitted, so availability.reason must not be reported as a
+		// "previous binding was rejected".
+		{"required no validation", none, checkTypeComputeBindingRequired, false},
+		// A failed validation is always a rejection, regardless of type.
+		{"required failed validation", failed, checkTypeComputeBindingRequired, true},
+		// Unavailable means a previously-stored binding is no longer valid.
+		{"unavailable no validation", none, checkTypeComputeBindingUnavailable, true},
+		{"unavailable failed validation", failed, checkTypeComputeBindingUnavailable, true},
+		// An ok validation on a required check is not a rejection.
+		{"required ok validation", okVal, checkTypeComputeBindingRequired, false},
+		{"nil prompt required", nil, checkTypeComputeBindingRequired, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := bindingWasRejected(tc.prompt, tc.checkType); got != tc.want {
+				t.Fatalf("bindingWasRejected = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 

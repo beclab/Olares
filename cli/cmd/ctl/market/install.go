@@ -123,10 +123,15 @@ func runInstall(opts *MarketOptions, appName string) error {
 		selected = computeMode
 	}
 	resp, err := mc.InstallApp(ctx, appName, version, source, selected, envs)
-	// 1.12.6+: recover once from a computeModeSelect 422 by resolving the
-	// mode (from --compute-mode, an interactive prompt, or a clear error)
-	// and retrying. Skipped entirely on 1.12.5.
-	if err != nil && atLeast126 {
+	// Recover once from a computeModeSelect 422 by resolving the mode (from
+	// --compute-mode, an interactive prompt, or a clear error) and retrying.
+	// This is keyed off the response check type, NOT the pre-flight version
+	// probe: computeModeSelect is a 1.12.6+ signal that 1.12.5 never emits, so
+	// 1.12.5 can't enter this branch even when the version probe was skipped or
+	// failed (atLeast126 conservatively false). That closes the gap where a
+	// real 1.12.6 backend returns computeModeSelect but the probe couldn't
+	// confirm the version, leaving the user with a raw API error.
+	if err != nil {
 		if checkType, raw := parseFailedCheck(resp); isComputeModeSelect(checkType) {
 			mode, merr := resolveComputeMode(raw, appName, computeMode, opts.isInteractive())
 			if merr != nil {
