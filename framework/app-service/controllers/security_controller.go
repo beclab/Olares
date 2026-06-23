@@ -421,7 +421,11 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 			networkPolicy = security.NetworkPolicies{security.NPUnderLayerSystem.DeepCopy()}
 			networkPolicy.SetName("underlayer-system-np")
 			networkPolicy.SetNamespace(ns.Name)
-			npFix = nil
+			npFix = func(np *netv1.NetworkPolicy) {
+				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+					From: security.NodeTunnelRule(),
+				})
+			}
 		} else if security.IsOSSystemNamespace(ns.Name) {
 			networkPolicy = security.NetworkPolicies{
 				security.NPOSSystem.DeepCopy(),
@@ -432,7 +436,11 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 			}
 			networkPolicy.SetName("os-system-np")
 			networkPolicy.SetNamespace(ns.Name)
-			npFix = nil
+			npFix = func(np *netv1.NetworkPolicy) {
+				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+					From: security.NodeTunnelRule(),
+				})
+			}
 		} else if security.IsOSProtectedNamespace(ns.Name) {
 			networkPolicy = security.NetworkPolicies{security.NPOSProtected.DeepCopy(), security.NPSystemProvider.DeepCopy()}
 			networkPolicy.SetName("os-protected-np")
@@ -938,13 +946,24 @@ func (r *SecurityReconciler) namespacesShouldAllowNodeTunnel(ctx context.Context
 		return nil, err
 	}
 
-	reqs := []reconcile.Request{
-		{
+	var reqs []reconcile.Request
+
+	for _, n := range []string{
+		"os-network",
+		"os-platform",
+		"os-framework",
+		"os-gateway",
+		"kube-system",
+		"kubesphere-monitoring-system",
+		"kubesphere-system",
+	} {
+		reqs = append(reqs, reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name: "os-network",
+				Name: n,
 			},
-		},
+		})
 	}
+
 	for _, u := range users.Items {
 		reqs = append(reqs, reconcile.Request{
 			NamespacedName: types.NamespacedName{
