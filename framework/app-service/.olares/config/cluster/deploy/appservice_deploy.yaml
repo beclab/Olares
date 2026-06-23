@@ -171,7 +171,6 @@ spec:
       containers:
       - name: app-service
         image: beclab/app-service:0.5.56
-        image: beclab/app-service:0.5.53
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
