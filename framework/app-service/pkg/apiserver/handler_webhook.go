@@ -370,7 +370,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	}
 	GPUType := computeReq.Mode
 	if computeReq.RequiredGPU == 0 {
-		cleanupAndReturn()
+		return cleanupAndReturn()
 	}
 
 	// app is CPU-only (no GPU mode selected). Clean up any GPU keys that
