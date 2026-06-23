@@ -83,6 +83,7 @@ const (
 	ByteTradeAuthor = "bytetrade.io"
 	PatchOpAdd      = "add"
 	PatchOpReplace  = "replace"
+	PatchOpRemove   = "remove"
 	EnvGPUType      = "GPU_TYPE"
 
 	// gpu resource keys
