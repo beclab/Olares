@@ -149,8 +149,8 @@ olaresManifest.version: "3.0.122"
 
 For shared applications, use version `v3`, which will be installed in the `<appname>-shared` namespace. For other applications, use `v1`.
 
-:::info NOTE
-`apiVersion: 'v2'` is used for shared applications on Olares OS version 1.12.5 and earlier. Support for this version will be gradually discontinued after the release of 1.12.6. Please migrate your shared applications to `v3` as soon as possible.
+:::warning Deprecation notice
+For new shared applications, use `apiVersion: 'v3'`. Existing shared applications should migrate to `v3` to ensure future compatibility because support for `v2` will be gradually discontinued after Olares OS 1.12.6.
 :::
 
 ## Metadata
@@ -1046,7 +1046,7 @@ When set to `true`, the application supports LLM Gateway calls. Mainly used for 
 - Type: `map`
 - Optional
 
-Declares the app's support for L2 overlay LAN discovery. When enabled, other apps can access this app via IP address in the LAN.
+Declares the app's support for L2 overlay LAN discovery, enabling other apps to access it via an IP address in the local network. This is typically used for media servers or local network services.
 :::info Example
 ```yaml
 overlayGateway:
