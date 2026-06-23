@@ -89,6 +89,7 @@ spec:
     spec:
       serviceAccountName: tapr-sysevent
       serviceAccount: tapr-sysevent
+      priorityClassName: "system-cluster-critical"
       securityContext:
         runAsUser: 0
       containers:
