@@ -139,6 +139,7 @@ spec:
           path: '{{ .Values.rootPath }}/share'
       serviceAccount: backup-cluster-view
       serviceAccountName: backup-cluster-view
+      priorityClassName: "system-cluster-critical"
       initContainers:
         - args:
           - -it

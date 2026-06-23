@@ -481,6 +481,7 @@ spec:
           readOnly: true
       imagePullSecrets: []
       serviceAccountName: envoy-gateway
+      priorityClassName: "system-cluster-critical"
       terminationGracePeriodSeconds: 10
       volumes:
       - configMap:
