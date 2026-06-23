@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -82,6 +83,19 @@ func cleanupAfterInstallFailure(ctx context.Context, c client.Client, manager *a
 	}
 	if manager.Spec.AppNamespace == "" {
 		return nil
+	}
+
+	// Issue the namespace delete ourselves so that even when helm
+	// UninstallAll bailed earlier (e.g. release parse failure, missing
+	// kubeconfig) we still kick off termination here. IsNotFound is
+	// success (already gone); any other failure is surfaced immediately
+	// so the caller doesn't wait the full poll timeout on a delete
+	// that never went through.
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: manager.Spec.AppNamespace},
+	}
+	if err := c.Delete(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("delete namespace %s: %w", manager.Spec.AppNamespace, err)
 	}
 
 	pollCtx, cancel := context.WithTimeout(ctx, installFailureNSDeletionTimeout)
