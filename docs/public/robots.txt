@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://docs.olares.com/sitemap.xml
+Sitemap: https://www.olares.com/docs/sitemap.xml
