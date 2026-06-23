@@ -440,6 +440,15 @@ var (
 		"iptables-save | grep -v KUBE- | grep -v CALICO- | iptables-restore",
 		"ip6tables-save | grep -v KUBE- | grep -v CALICO- | ip6tables-restore",
 		"ipset x",
+		// BIRD is configured with "persist", so the Calico-managed overlay routes
+		// (proto bird, via tunl0) are NOT removed when calico-node stops. They
+		// linger in the kernel FIB and, after re-joining a new master, a fresh
+		// BIRD won't overwrite a same-prefix route it learns on startup, leaving
+		// stale next-hops pointing at the old master. Flush them explicitly and
+		// drop the IPIP tunnel device so re-join starts from a clean state.
+		"ip route flush proto bird",
+		"ip route flush proto bird table all",
+		"ip link del tunl0",
 	}
 )
 
