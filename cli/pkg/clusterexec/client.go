@@ -170,6 +170,12 @@ func RunInteractive(ctx context.Context, rp *credential.ResolvedProfile, token s
 	}
 	defer conn.Close()
 
+	// Set the terminal title to the target so it stays visible in the tab even
+	// after the screen scrolls; restore it on exit. Terminals that don't grok
+	// OSC sequences silently ignore these bytes.
+	fmt.Fprintf(stdout, "\033]0;%s/%s/%s\a", o.Namespace, o.Pod, o.Container)
+	defer fmt.Fprint(stdout, "\033]0;\a")
+
 	fd := int(stdin.Fd())
 	if term.IsTerminal(fd) {
 		if old, merr := term.MakeRaw(fd); merr == nil {

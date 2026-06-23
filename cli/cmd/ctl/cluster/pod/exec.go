@@ -165,11 +165,22 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 		if len(opts.Command) == 0 {
 			opts.Command = []string{"sh"}
 		}
+		// Inject a prompt that names the target on every line so the user can
+		// always tell which pod/container this shell is attached to — even deep
+		// in scrollback (the kubelet doesn't expose the container name inside the
+		// container; only the pod name shows up as the hostname). This fires both
+		// when no command was given (default `sh`) and when the user explicitly
+		// asked for a bare login shell like `-- sh` / `-- bash`, since that's the
+		// common interactive case.
+		label := fmt.Sprintf("%s/%s/%s", p.Namespace, p.Pod, container)
+		opts.Command = injectPromptLabel(opts.Command, label)
 		if err := clusteropts.ConfirmDestructive(os.Stderr, os.Stdin,
 			fmt.Sprintf("Open an interactive shell in %s/%s [container %s]?", p.Namespace, p.Pod, container),
 			p.AssumeYes); err != nil {
 			return err
 		}
+		fmt.Fprintf(os.Stderr, "Connected to %s/%s [container %s]  (Ctrl-D to exit)\n",
+			p.Namespace, p.Pod, container)
 		exit, rerr := clusterexec.RunInteractive(ctx, rp, token, opts, os.Stdin, os.Stdout)
 		if rerr != nil {
 			return rerr
@@ -206,6 +217,33 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 		os.Exit(*res.ExitCode)
 	}
 	return nil
+}
+
+// injectPromptLabel wraps a bare interactive shell so its prompt always shows
+// the target [ns/pod/container] plus the working directory. Only single-element
+// commands whose basename is a known shell are wrapped; anything else (e.g.
+// `-- python`, `-- bash -lc '...'`) is returned untouched. The label is literal
+// text so it never depends on prompt-escape support; the cwd uses each shell's
+// native mechanism ($PWD for the POSIX family, %~ for zsh). The exported prompt
+// is inherited by the `exec`'d interactive shell.
+func injectPromptLabel(cmd []string, label string) []string {
+	if len(cmd) != 1 {
+		return cmd
+	}
+	shell := cmd[0]
+	base := shell
+	if i := strings.LastIndex(base, "/"); i >= 0 {
+		base = base[i+1:]
+	}
+	switch base {
+	case "sh", "bash", "ash", "dash":
+		return []string{shell, "-c",
+			fmt.Sprintf("export PS1='[%s] $PWD $ '; exec %s", label, shell)}
+	case "zsh":
+		return []string{shell, "-c",
+			fmt.Sprintf("export PROMPT='[%s] %%~ %%# '; exec %s", label, shell)}
+	}
+	return cmd
 }
 
 func renderOneShot(o *clusteropts.ClusterOptions, p ExecParams, container string, res clusterexec.Result, exit *int, dur time.Duration, timedOut bool) {
