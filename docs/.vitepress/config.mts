@@ -117,6 +117,7 @@ export default defineVersionedConfig2(withMermaid({
     hostname: "https://docs.olares.com/",
   },
   lastUpdated: true,
+  cleanUrls: true,
   base: process.env.BASE_URL || "/",
   vite: {
     build: {
