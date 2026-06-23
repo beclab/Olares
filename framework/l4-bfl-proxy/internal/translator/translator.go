@@ -47,6 +47,7 @@ var nodeLocationPrefixes = []string{
 	"/api/permission/cache/",
 	"/api/permission/external/",
 	"/api/task/",
+	"/api/archive/",
 }
 
 var masterLocationPrefixes = []string{
