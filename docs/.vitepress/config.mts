@@ -156,6 +156,17 @@ export default defineVersionedConfig2(withMermaid({
   },
   lastUpdated: true,
   cleanUrls: true,
+  // Snippet-only fragments and repo READMEs are pulled into real pages via
+  // `<!--@include-->` (which reads the raw file directly, so excluding them as
+  // routes does NOT break includes). Keeping them out of the build stops them
+  // from leaking into routes, search, and sitemap.xml as junk URLs.
+  srcExclude: [
+    "**/README.md",
+    "**/reusables/**",
+    "**/reusables.md",
+    "**/reusables-*.md",
+    "**/*.reusables.md",
+  ],
   base: process.env.BASE_URL || "/",
   vite: {
     build: {
