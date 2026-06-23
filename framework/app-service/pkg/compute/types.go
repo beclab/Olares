@@ -103,6 +103,12 @@ type Allocation struct {
 	NodeName string `json:"nodeName"`
 	DeviceID string `json:"deviceId"`
 	Memory   int64  `json:"memory"`
+	// Spec carries the bound app's currently-selected resource-mode
+	// requirement (require/limit GPU & memory, multi-card / multi-node
+	// support). It is resolved at read time for the compute-resources
+	// listing (see AttachBoundAppSpecs) and is never persisted to the
+	// allocation config map.
+	Spec *Requirement `json:"spec,omitempty"`
 }
 
 type Requirement struct {
@@ -183,6 +189,20 @@ type BindingValidationResult struct {
 	OK     bool   `json:"ok"`
 	Code   string `json:"code,omitempty"`
 	Reason string `json:"reason,omitempty"`
+	// NodePressure is populated only when the binding is rejected because
+	// a selected node would be pushed past its resource pressure
+	// threshold (Code "node-pressure:<node>"). It breaks the rejection
+	// down per resource so the caller can tell whether cpu, memory, or
+	// both fell short, how much the app needs, and how much headroom the
+	// node still has.
+	NodePressure *NodePressureDetail `json:"nodePressure,omitempty"`
+}
+
+// NodePressureDetail carries the per-resource breakdown behind a
+// "node-pressure" binding rejection for a single node.
+type NodePressureDetail struct {
+	NodeName   string              `json:"nodeName"`
+	Dimensions []DimensionPressure `json:"dimensions"`
 }
 
 type BindingApplyResult struct {
