@@ -449,19 +449,14 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		appCopy.Spec.TailScale = *tailScale
 	}
 
-	actionConfig, _, err := helm.InitConfig(r.Kubeconfig, appCopy.Spec.Namespace)
-	if err != nil {
-		ctrl.Log.Error(err, "init helm config error")
-	}
-
-	if !userspace.IsSysApp(app.Spec.Name) {
-		version, _, err := apputils.GetDeployedReleaseVersion(actionConfig, name)
-		if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
-			ctrl.Log.Error(err, "get deployed release version error")
-		}
-		if err == nil {
-			appCopy.Spec.Settings["version"] = version
-		}
+	// Source the app version from the deployment annotation
+	// (applications.app.bytetrade.io/version) populated in settings by
+	// getAppSettings, so Spec.Settings["version"] stays consistent with the
+	// manifest version stamped on the workload. Skip the assignment when the
+	// annotation is missing/empty so we don't wipe a previously recorded
+	// version.
+	if v := settings["version"]; v != "" {
+		appCopy.Spec.Settings["version"] = v
 	}
 
 	// Record deployment resourceVersion to detect app-only modifications
