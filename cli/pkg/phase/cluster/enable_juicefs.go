@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
-	"github.com/beclab/Olares/cli/pkg/container"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/module"
@@ -34,47 +33,42 @@ import (
 // without uninstalling. Once it completes, the master satisfies the JuiceFS
 // precondition required by `olares-cli node add`, so worker nodes can join.
 //
-// The whole operation is idempotent and resumable: if JuiceFS is already
-// enabled (the systemd unit exists, which only happens after the data has been
-// migrated and the rootfs swapped), it skips straight to ensuring Olares is
-// running and the rootfs type is set.
-func EnableJuiceFS(runtime *common.KubeRuntime, manifestMap manifest.InstallationManifest, stopTimeout, stopCheckInterval time.Duration) *pipeline.Pipeline {
+// The caller must already have checked that JuiceFS is not yet enabled (the
+// "already migrated" case short-circuits earlier, before this pipeline is even
+// built). This pipeline therefore always performs the migration.
+//
+// The migration requires Olares to be stopped beforehand (it fails fast with a
+// hint to run `olares-cli stop` otherwise): with the kubernetes/container layer
+// down nothing writes to the rootfs, so a single full rsync migrates all the
+// data in one pass. The bundled object store (MinIO) and metadata engine
+// (Redis) are (re)started as part of the migration so they can serve the
+// JuiceFS mount during the sync. Olares is brought back up at the end so the
+// rootfs type and fsnotify charts can be updated.
+func EnableJuiceFS(runtime *common.KubeRuntime, manifestMap manifest.InstallationManifest) *pipeline.Pipeline {
 	manifestModule := manifest.ManifestModule{
 		Manifest: manifestMap,
 		BaseDir:  runtime.GetBaseDir(),
 	}
 
-	var modules []module.Module
-	if storage.IsJuiceFSEnabled() {
-		logger.Info("JuiceFS is already enabled on this node, ensuring Olares is started and the rootfs type is set")
-		modules = []module.Module{
-			&terminus.StartOlaresModule{},
-			&UpdateRootFSTypeModule{},
-			&ReRenderFsnotifyChartsModule{},
-		}
-	} else {
-		// the bundled MinIO is only installed when using the managed-minio
-		// backend; for external object storage (s3/oss/cos/external minio) we
-		// validate the provided credentials instead and JuiceFS is formatted
-		// against that remote bucket.
-		useManagedMinIO := runtime.Arg.Storage == nil || runtime.Arg.Storage.StorageType == common.ManagedMinIO
-		modules = []module.Module{
-			&MigratePrecheckModule{},
-			&storage.ValidateModule{Skip: useManagedMinIO},
-			&storage.InstallMinioModule{
-				ManifestModule: manifestModule,
-				Skip:           !useManagedMinIO,
-			},
-			&storage.InstallRedisModule{ManifestModule: manifestModule},
-			&MigrateRootFSToJuiceFSModule{
-				ManifestModule: manifestModule,
-				StopTimeout:    stopTimeout,
-				CheckInterval:  stopCheckInterval,
-			},
-			&terminus.StartOlaresModule{},
-			&UpdateRootFSTypeModule{},
-			&ReRenderFsnotifyChartsModule{},
-		}
+	// the bundled MinIO is only installed when using the managed-minio
+	// backend; for external object storage (s3/oss/cos/external minio) we
+	// validate the provided credentials instead and JuiceFS is formatted
+	// against that remote bucket.
+	useManagedMinIO := runtime.Arg.Storage == nil || runtime.Arg.Storage.StorageType == common.ManagedMinIO
+	modules := []module.Module{
+		&MigratePrecheckModule{},
+		&storage.ValidateModule{Skip: useManagedMinIO},
+		&storage.InstallMinioModule{
+			ManifestModule: manifestModule,
+			Skip:           !useManagedMinIO,
+		},
+		&storage.InstallRedisModule{ManifestModule: manifestModule},
+		&MigrateRootFSToJuiceFSModule{
+			ManifestModule: manifestModule,
+		},
+		&terminus.StartOlaresModule{},
+		&UpdateRootFSTypeModule{},
+		&ReRenderFsnotifyChartsModule{},
 	}
 
 	return &pipeline.Pipeline{
@@ -93,6 +87,12 @@ type MigratePrecheckModule struct {
 func (m *MigratePrecheckModule) Init() {
 	m.Name = "MigratePrecheck"
 	m.Tasks = []task.Interface{
+		// Olares must be stopped before we touch the rootfs; bail out early
+		// (with a hint to run `olares-cli stop`) if it is still running.
+		&task.LocalTask{
+			Name:   "CheckOlaresStopped",
+			Action: new(storage.CheckOlaresStopped),
+		},
 		&task.LocalTask{
 			Name:   "CheckMigrationPrecheck",
 			Action: new(storage.CheckMigrationPrecheck),
@@ -101,14 +101,13 @@ func (m *MigratePrecheckModule) Init() {
 }
 
 // MigrateRootFSToJuiceFSModule installs the JuiceFS client, formats the
-// filesystem, syncs the local rootfs into it (online + a final offline
-// incremental pass), swaps the rootfs directory for the JuiceFS mount, and
-// regenerates the container runtime service so it gates on JuiceFS.
+// filesystem, syncs the local rootfs into it in a single full pass (Olares is
+// already stopped, so the rootfs is quiescent), swaps the rootfs directory for
+// the JuiceFS mount, and regenerates the container runtime service so it gates
+// on JuiceFS.
 type MigrateRootFSToJuiceFSModule struct {
 	common.KubeModule
 	manifest.ManifestModule
-	StopTimeout   time.Duration
-	CheckInterval time.Duration
 }
 
 func (m *MigrateRootFSToJuiceFSModule) Init() {
@@ -145,38 +144,21 @@ func (m *MigrateRootFSToJuiceFSModule) Init() {
 		Retry:  1,
 	}
 
-	// 2. mount JuiceFS on a temp mount point and do the first (online) sync
+	// 2. mount JuiceFS on a temp mount point and do a single full sync. Olares
+	// is already stopped (enforced by the precheck), so nothing writes to the
+	// rootfs and one pass with --delete migrates everything.
 	mountForMigration := &task.LocalTask{
 		Name:   "MountJuiceFSForMigration",
 		Action: new(storage.MountJuiceFSForMigration),
 		Retry:  1,
 	}
-	firstSync := &task.LocalTask{
-		Name:   "SyncRootFSDataOnline",
-		Action: &storage.SyncRootFSData{Delete: false},
-		Retry:  1,
-	}
-
-	// 3. stop the workloads so nothing writes to the rootfs anymore.
-	// NOTE: we deliberately stop ONLY the kubernetes/container layer here, not
-	// the full StopOlares flow, because MinIO/Redis/JuiceFS must stay up to
-	// serve the second sync and the final mount.
-	m.Tasks = []task.Interface{
-		getRedisConfig,
-		cleanupStaleBinary,
-		installJuiceFs,
-		formatJuiceFs,
-		mountForMigration,
-		firstSync,
-	}
-	m.appendStopWorkloadsTasks()
-
-	// 4. final incremental sync, unmount temp, swap rootfs, mount JuiceFS on rootfs
-	secondSync := &task.LocalTask{
-		Name:   "SyncRootFSDataFinal",
+	syncRootFS := &task.LocalTask{
+		Name:   "SyncRootFSData",
 		Action: &storage.SyncRootFSData{Delete: true},
 		Retry:  1,
 	}
+
+	// 3. unmount temp, swap rootfs, mount JuiceFS on rootfs, verify
 	unmountMigration := &task.LocalTask{
 		Name:   "UnmountJuiceFSMigration",
 		Action: new(storage.UnmountJuiceFSMigration),
@@ -198,43 +180,23 @@ func (m *MigrateRootFSToJuiceFSModule) Init() {
 		Retry:  5,
 		Delay:  5 * time.Second,
 	}
-	m.Tasks = append(m.Tasks, secondSync, unmountMigration, swapRootFS, enableJuiceFs, checkJuiceFs)
+	m.Tasks = []task.Interface{
+		getRedisConfig,
+		cleanupStaleBinary,
+		installJuiceFs,
+		formatJuiceFs,
+		mountForMigration,
+		syncRootFS,
+		unmountMigration,
+		swapRootFS,
+		enableJuiceFs,
+		checkJuiceFs,
+	}
 
-	// 5. regenerate the container runtime service so it gains the JuiceFS
+	// 4. regenerate the container runtime service so it gains the JuiceFS
 	// pre-check (After=juicefs.service + ExecStartPre=juicefs summary) now that
 	// the unit exists.
 	m.appendRegenerateRuntimeServiceTasks()
-}
-
-func (m *MigrateRootFSToJuiceFSModule) appendStopWorkloadsTasks() {
-	stopUnits := []string{"k3s"}
-	if m.KubeConf.Arg.Kubetype == common.K8s {
-		stopUnits = []string{"kubelet"}
-	}
-	m.Tasks = append(m.Tasks,
-		&task.LocalTask{
-			Name: "StopKubernetes",
-			Action: &terminus.SystemctlCommand{
-				Command:   "stop",
-				UnitNames: stopUnits,
-			},
-			Retry: 3,
-		},
-		&task.LocalTask{
-			Name: "KillContainers",
-			Action: &container.KillContainerdProcess{
-				Signal:        "TERM",
-				Timeout:       m.StopTimeout,
-				CheckInterval: m.CheckInterval,
-			},
-			Retry: 3,
-		},
-		&task.LocalTask{
-			Name:   "ClearKubernetesMounts",
-			Action: new(kubernetes.UmountKubelet),
-			Retry:  3,
-		},
-	)
 }
 
 func (m *MigrateRootFSToJuiceFSModule) appendRegenerateRuntimeServiceTasks() {

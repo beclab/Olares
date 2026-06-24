@@ -51,6 +51,39 @@ func IsJuiceFSEnabled() bool {
 	return util.IsExist(JuiceFsServiceFile)
 }
 
+// isOlaresRunning reports whether the kubernetes/container layer of Olares
+// (k3s or kubelet) is currently active on this node. `systemctl is-active`
+// prints exactly "active" on stdout (and exits 0) when the unit is running,
+// and a non-"active" word otherwise, regardless of exit code.
+func isOlaresRunning(runtime connector.Runtime) bool {
+	for _, unit := range []string{"k3s", "kubelet"} {
+		out, _ := runtime.GetRunner().SudoCmd(fmt.Sprintf("systemctl is-active %s", unit), false, false)
+		if strings.TrimSpace(out) == "active" {
+			return true
+		}
+	}
+	return false
+}
+
+// CheckOlaresStopped aborts the migration if Olares is still running.
+//
+// The rootfs migration now requires Olares (the kubernetes/container layer) to
+// be stopped beforehand: with nothing writing to the rootfs, a single full
+// rsync captures all the data, so we no longer need the previous online +
+// offline two-phase sync. Rather than stopping Olares ourselves, we ask the
+// user to do it explicitly so they stay in control of the cluster lifecycle.
+type CheckOlaresStopped struct {
+	common.KubeAction
+}
+
+func (t *CheckOlaresStopped) Execute(runtime connector.Runtime) error {
+	if isOlaresRunning(runtime) {
+		return fmt.Errorf("Olares is still running; the rootfs migration requires it to be stopped first. " +
+			"Please run 'olares-cli stop' and then re-run this command")
+	}
+	return nil
+}
+
 // isPathMounted returns whether the given absolute path is currently a mount
 // point (of any filesystem type) by consulting /proc/self/mounts on the node.
 func isPathMounted(runtime connector.Runtime, target string) (bool, error) {
@@ -196,11 +229,9 @@ func (t *MountJuiceFSForMigration) Execute(runtime connector.Runtime) error {
 // SyncRootFSData copies the content of the local rootfs into the JuiceFS
 // filesystem mounted at the migration temp mount point.
 //
-// It is meant to be run twice:
-//   - first (Delete=false) while Olares is still running, to copy the bulk of
-//     the data without downtime;
-//   - then (Delete=true) after the workloads have been stopped, to copy the
-//     incremental changes and remove anything deleted in the meantime.
+// Because Olares is required to be stopped before the migration runs, the
+// rootfs is quiescent and a single full sync (Delete=true) captures all the
+// data in one pass, mirroring deletions as well.
 type SyncRootFSData struct {
 	common.KubeAction
 	Delete bool
