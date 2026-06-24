@@ -10,7 +10,9 @@ import (
 // version above the gate (so checkResources actually runs). Because the
 // modern path rejects every legacy flat spec.required*/spec.limited* field
 // (Rule 7), this helper explicitly clears the legacy quantities populated
-// by newValidConfig.
+// by newValidConfig. workloadReplicas is populated too: it is required for
+// olaresManifest.version >= 0.12.0 on non-v2 manifests, and every modern
+// resources test inherits that gate.
 func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c := newValidConfig()
 	c.ConfigVersion = "0.13.0" // >= 0.12.0 -> rules apply
@@ -25,6 +27,8 @@ func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c.Spec.LimitedDisk = ""
 	c.Spec.RequiredGPU = ""
 	c.Spec.LimitedGPU = ""
+	wr := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
 	return c
 }
 
