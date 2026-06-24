@@ -402,6 +402,10 @@ const side = {
                   text: "设置 hosts 文件",
                   link: "/zh/manual/olares/settings/set-up-hosts",
                 },
+                {
+                  text: "管理 Overlay Gateway",
+                  link: "/zh/manual/olares/settings/overlay-gateway",
+                },
               ],
             },
             {
