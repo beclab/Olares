@@ -40,13 +40,9 @@ The change takes effect immediately.
 
 Use **Widgets** to control the information shown in the lower-right corner of Desktop.
 
-1. Use the **Widgets** switch as the master control:
-   - Off: Hide all widgets.
-   - On: Enable individual widget settings.
-2. Under **Date & time**, turn the clock and date widget on or off. If it is on, set **24-hour format** and **Date format** as needed.
+1. To hide all widgets, turn off **Widgets**.
+2. Under **Date & time**, set **24-hour format** and **Date format** as needed.
 3. Turn **Show dashboard** on or off to show or hide CPU, disk, and memory usage.
-
-If both individual widgets are off, Desktop shows no widgets even when **Widgets** is on.
 
 ### Change wallpaper
 
