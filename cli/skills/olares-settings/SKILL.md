@@ -65,7 +65,8 @@ For every area, **start with `olares-cli settings <area> --help`**. References b
 | `backup` | [references/olares-settings-backup.md](references/olares-settings-backup.md) (plans / snapshots / password) |
 | `appearance` | `olares-cli settings appearance --help` (`get`, `language set`) |
 | `network` | `olares-cli settings network --help` (read-only reverse-proxy / frp / hosts-file; writes blocked by JWS gap — see below) |
-| `gpu` | `olares-cli settings gpu --help` (read-only `list`) |
+| `gpu` | `olares-cli settings gpu --help` (read-only `list`; **legacy, 1.12.5 only** HAMI `/api/gpu/list` — **removed in 1.12.6**: the CLI fails fast there and points at `compute list`) |
+| `compute` | `olares-cli settings compute --help` (**1.12.6+ new "Accelerator"**: `list`, `unbind <app>`, `set-type <node> <device>`; version-gated, replaces `gpu list`. `<node>`/`<device>` come from `list`'s node header + DEVICE-ID column) |
 | `video` | `olares-cli settings video --help` (read-only `config get`) |
 | `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list`) |
 | `restore` | `olares-cli settings restore --help` (read-only `plans list`) |
@@ -89,7 +90,7 @@ All three delegate to the same driver — same output, same caching, same `--ref
 
 | Floor | Verbs |
 |---|---|
-| **Admin (owner / admin)** | `users list / get / create / delete`; `network reverse-proxy get`, `network frp list`, `network hosts-file get`; `gpu list`; `advanced status / registries list / images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
+| **Admin (owner / admin)** | `users list / get / create / delete`; `network reverse-proxy get`, `network frp list`, `network hosts-file get`; `gpu list`; `compute list`, `compute unbind`, `compute set-type`; `advanced status / registries list / images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
 | **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list / routes <id>`; `appearance get`, `appearance language set`; `integration accounts list / list-by-type / get / add / delete`; `video config get`; `search status / dirs list / rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env (system|user) list` |
 
 ### Soft preflight behavior
@@ -132,7 +133,8 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 | `vpn ssh` | `enable` / `disable` | VERIFIED |
 | `vpn acl` | `add` / `remove` | VERIFIED |
 | `integration accounts` | `add awss3` / `add tencent` / `delete` | VERIFIED |
-| `apps` | `suspend [--all]` / `resume`, `env set`, `domain set/finish`, `policy set`, `auth-level set` | UNVERIFIED |
+| `apps` | `suspend [--cascade]` / `resume` (thin aliases over `market stop` / `market resume`), `env set`, `domain set/finish`, `policy set`, `auth-level set` | UNVERIFIED |
+| `compute` | `unbind <app>` (unbind + stop app), `set-type <node> <device> --type X` (may stop bound apps; handles `bound-apps-stop-blocked`) — **1.12.6+** | UNVERIFIED |
 | `backup` | `password set` | UNVERIFIED |
 
 **Not yet implemented** (and the CLI deliberately does NOT register them):
