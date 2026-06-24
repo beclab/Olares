@@ -111,6 +111,7 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 		structErr,
 		checkSubCharts(c),
 		validatePermission(c.ConfigVersion, c.Permission),
+		validateRootProvider(c.ConfigVersion, c.Provider),
 		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
 		validateV3Configuration(c),
 	)
@@ -453,17 +454,55 @@ func validateFlatResourceQuantities(spec *AppSpec, templateOnly bool) error {
 	return errors.Join(errs...)
 }
 
-// validatePermission gates the manifest-level permission flags. Only
-// permission.externalData carries a version constraint: it grants access to
-// the External directory, a capability introduced with olaresManifest.version
-// 0.12.0, so declaring it on an older manifest is rejected. permission.appCommon
-// (access to the Common directory) is accepted at every version and needs no
-// extra validation here.
+// validatePermission gates the manifest-level permission flags whose
+// acceptance changes across olaresManifest.version boundaries:
+//
+//   - permission.externalData (grants access to the External directory) was
+//     introduced with olaresManifest.version 0.12.0; declaring it on an
+//     older manifest is rejected.
+//   - permission.provider (cross-app provider access) was retired starting
+//     with olaresManifest.version 0.12.0; the field is still accepted
+//     structurally for backwards compatibility on legacy manifests, but a
+//     modern manifest must leave it empty so the platform can finish
+//     migrating callers away from it.
+//
+// permission.appCommon (access to the Common directory) is accepted at
+// every version and needs no extra validation here.
 func validatePermission(configVersion string, p Permission) error {
+	var errs []error
 	if p.ExternalData && !resourcesCheckApplies(configVersion) {
-		return fmt.Errorf("permission.externalData is only supported for olaresManifest.version >= %s", minResourcesManifestVersion)
+		errs = append(errs, fmt.Errorf(
+			"permission.externalData is only supported for olaresManifest.version >= %s",
+			minResourcesManifestVersion,
+		))
 	}
-	return nil
+	if len(p.Provider) > 0 && resourcesCheckApplies(configVersion) {
+		errs = append(errs, fmt.Errorf(
+			"permission.provider must be empty for olaresManifest.version >= %s; cross-app provider access is no longer granted via permission.provider",
+			minResourcesManifestVersion,
+		))
+	}
+	return errors.Join(errs...)
+}
+
+// validateRootProvider enforces that the top-level AppConfiguration.Provider
+// section (the per-app published interfaces, declared at the document root
+// rather than under permission) is empty on olaresManifest.version >= 0.12.0.
+// The section was retired alongside permission.provider once the platform
+// stopped granting cross-app access through manifest-declared provider lists;
+// legacy manifests still accept arbitrary entries for backwards
+// compatibility.
+func validateRootProvider(configVersion string, providers []Provider) error {
+	if !resourcesCheckApplies(configVersion) {
+		return nil
+	}
+	if len(providers) == 0 {
+		return nil
+	}
+	return fmt.Errorf(
+		"provider must be empty for olaresManifest.version >= %s; the top-level provider section is no longer accepted on modern manifests",
+		minResourcesManifestVersion,
+	)
 }
 
 // validateWorkloadReplicas enforces that workloadReplicas is declared (non-nil

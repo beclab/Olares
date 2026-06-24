@@ -1238,6 +1238,180 @@ func TestAppSpec_NonTemplateRejectsAutoOnLegacyFlat(t *testing.T) {
 	}
 }
 
+// TestRootProvider_ForbiddenAtOrAbove012 documents the modern gate on the
+// top-level provider section (AppConfiguration.Provider, distinct from
+// permission.provider): starting with olaresManifest.version 0.12.0 the
+// section must be empty, regardless of apiVersion. Below 0.12.0 the
+// legacy behaviour (arbitrary provider entries accepted) is preserved.
+func TestRootProvider_ForbiddenAtOrAbove012(t *testing.T) {
+	const wantMsg = "provider must be empty for olaresManifest.version >="
+
+	providerEntry := Provider{Name: "ollamaclient", Entrance: "main", Paths: []string{"/api"}, Verbs: []string{"GET"}}
+
+	t.Run("v1_modern_with_root_provider_rejected", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.12.0"
+		c.Provider = []Provider{providerEntry}
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: root provider must be empty at >= 0.12.0")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the root provider gate, got: %v", err)
+		}
+	})
+
+	t.Run("v3_modern_with_root_provider_rejected", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.APIVersion = APIVersionV3
+		c.Provider = []Provider{providerEntry}
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: root provider must be empty at >= 0.12.0 (v3)")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the root provider gate, got: %v", err)
+		}
+	})
+
+	t.Run("v2_modern_with_root_provider_rejected", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.APIVersion = APIVersionV2
+		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
+		c.Provider = []Provider{providerEntry}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: root provider must be empty at >= 0.12.0 (v2)")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the root provider gate, got: %v", err)
+		}
+	})
+
+	t.Run("modern_without_root_provider_accepted", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("modern manifest without root provider must validate: %v", err)
+		}
+	})
+
+	t.Run("legacy_with_root_provider_accepted", func(t *testing.T) {
+		c := newValidConfig() // ConfigVersion 0.11.0
+		c.Provider = []Provider{providerEntry}
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("legacy manifest with root provider must validate: %v", err)
+		}
+	})
+
+	t.Run("modern_with_both_provider_sections_aggregated", func(t *testing.T) {
+		// Both gates (permission.provider AND root provider) must surface
+		// in a single Validate run so a manifest carrying both retired
+		// shapes sees every offender at once.
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		c.Provider = []Provider{providerEntry}
+		c.Permission.Provider = []ProviderPermission{{AppName: "ollama", ProviderName: "ollamaclient"}}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected aggregated errors for root provider + permission.provider")
+		}
+		msg := err.Error()
+		if !strings.Contains(msg, "permission.provider must be empty") {
+			t.Fatalf("error should mention permission.provider gate, got: %v", err)
+		}
+		if !strings.Contains(msg, wantMsg) {
+			t.Fatalf("error should mention root provider gate, got: %v", err)
+		}
+	})
+}
+
+// TestPermission_ProviderForbiddenAtOrAbove012 documents the modern gate
+// on permission.provider: starting with olaresManifest.version 0.12.0 the
+// field must be empty, regardless of apiVersion. Below 0.12.0 the legacy
+// behaviour (any number of provider entries accepted) is preserved.
+func TestPermission_ProviderForbiddenAtOrAbove012(t *testing.T) {
+	const wantMsg = "permission.provider must be empty for olaresManifest.version >="
+
+	providerEntry := ProviderPermission{AppName: "ollama", ProviderName: "ollamaclient"}
+
+	t.Run("v1_modern_with_provider_rejected", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.12.0"
+		c.Permission.Provider = []ProviderPermission{providerEntry}
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: permission.provider must be empty at >= 0.12.0")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the provider gate, got: %v", err)
+		}
+	})
+
+	t.Run("v3_modern_with_provider_rejected", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.APIVersion = APIVersionV3
+		c.Permission.Provider = []ProviderPermission{providerEntry}
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: permission.provider must be empty at >= 0.12.0 (v3)")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the provider gate, got: %v", err)
+		}
+	})
+
+	t.Run("v2_modern_with_provider_rejected", func(t *testing.T) {
+		// The rule does not depend on apiVersion — the field is retired
+		// platform-wide on the modern channel. v2 must hit the same gate.
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.APIVersion = APIVersionV2
+		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
+		c.Permission.Provider = []ProviderPermission{providerEntry}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: permission.provider must be empty at >= 0.12.0 (v2)")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the provider gate, got: %v", err)
+		}
+	})
+
+	t.Run("modern_without_provider_accepted", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("modern manifest without permission.provider must validate: %v", err)
+		}
+	})
+
+	t.Run("legacy_with_provider_accepted", func(t *testing.T) {
+		c := newValidConfig() // ConfigVersion 0.11.0
+		c.Permission.Provider = []ProviderPermission{providerEntry}
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("legacy manifest with permission.provider must validate: %v", err)
+		}
+	})
+}
+
 // TestWorkloadReplicas_RequiredAtOrAbove012 documents the new gate: a
 // modern (olaresManifest.version >= 0.12.0) manifest must declare a
 // non-empty workloadReplicas map, except for apiVersion=v2, which carries
