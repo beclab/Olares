@@ -12,7 +12,9 @@ import (
 // (Rule 7), this helper explicitly clears the legacy quantities populated
 // by newValidConfig. workloadReplicas is populated too: it is required for
 // olaresManifest.version >= 0.12.0 on non-v2 manifests, and every modern
-// resources test inherits that gate.
+// resources test inherits that gate. The Olares system dependency is also
+// installed at the v1/v2-compatible default range (>=1.12.3-0,<1.12.6),
+// because validateOlaresDependency rejects modern manifests that omit it.
 func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c := newValidConfig()
 	c.ConfigVersion = "0.13.0" // >= 0.12.0 -> rules apply
@@ -29,7 +31,25 @@ func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c.Spec.LimitedGPU = ""
 	wr := WorkloadReplicas{c.Metadata.Name: 1}
 	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
 	return c
+}
+
+// newOlaresSystemDep returns the canonical options.dependencies entry that
+// satisfies validateOlaresDependency on a modern (olaresManifest.version
+// >= 0.12.0) manifest. The constraint matches the rule for the supplied
+// apiVersion: v3 manifests require >=1.12.6-0, v1/v2 (and empty, which
+// normalizes to v1) require >=1.12.3-0,<1.12.6.
+func newOlaresSystemDep(apiVersion string) Dependency {
+	constraint := ">=1.12.3-0,<1.12.6"
+	if normalizeAPIVersion(apiVersion) == APIVersionV3 {
+		constraint = ">=1.12.6-0"
+	}
+	return Dependency{
+		Name:    olaresSystemDepName,
+		Version: constraint,
+		Type:    "system",
+	}
 }
 
 func TestResourcesCheckApplies(t *testing.T) {
