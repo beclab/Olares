@@ -113,7 +113,7 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 		validatePermission(c.ConfigVersion, c.Permission),
 		validateRootProvider(c.ConfigVersion, c.Provider),
 		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
-		validateOlaresDependency(c.ConfigVersion, c.APIVersion, c.Options.Dependencies),
+		validateOlaresDependency(c),
 		validateV3Configuration(c),
 	)
 }
@@ -489,7 +489,7 @@ func validatePermission(configVersion string, p Permission) error {
 // olaresSystemDepName is the canonical name of the Olares system entry
 // inside options.dependencies. validateOlaresDependency uses this exact
 // (name, type) tuple — name="olares", type="system" — to locate the entry
-// whose version constraint is gated by the apiVersion-keyed rules below.
+// whose version constraint is gated by the rules below.
 const olaresSystemDepName = "olares"
 
 // olaresDepConstraintRule describes the version-constraint range that the
@@ -505,59 +505,116 @@ type olaresDepConstraintRule struct {
 	// forbidden lists versions that are JUST outside the required range
 	// (one or two below the floor, one at/above the ceiling, plus a wide-
 	// margin sample). A constraint that allows any of these would be too
-	// permissive for this apiVersion family.
+	// permissive for the active rule.
 	forbidden []string
 }
 
-// olaresDepRules maps each apiVersion family to its constraint rule. The
-// v1/v2 family (which empty apiVersion normalizes into) targets
-// >=1.12.3-0,<1.12.6 — the floor lifts every modern manifest to the
-// 0.12.0-era Olares baseline, and the ceiling locks legacy schemas out
-// of the 1.12.6 systems that ship apiVersion=v3. v3 manifests instead
-// require >=1.12.6-0, the release that introduced the v3 runtime.
-var olaresDepRules = map[string]olaresDepConstraintRule{
-	APIVersionV1: {
-		requirement: ">=1.12.3-0,<1.12.6",
-		forbidden:   []string{"1.12.2", "1.12.6", "2.0.0"},
-	},
-	APIVersionV2: {
-		requirement: ">=1.12.3-0,<1.12.6",
-		forbidden:   []string{"1.12.2", "1.12.6", "2.0.0"},
-	},
-	APIVersionV3: {
-		requirement: ">=1.12.6-0",
-		forbidden:   []string{"1.12.5", "1.12.0", "0.1.0"},
-	},
+// olaresDepRulePreV3 is the constraint window for legacy-schema modern
+// manifests (apiVersion in {empty, v1, v2} AND no 1.12.6-only feature
+// is declared). The floor 1.12.3-0 is the minimum Olares that ships
+// olaresManifest.version 0.12.0; the ceiling 1.12.6 locks these manifests
+// out of systems that ship the v3 runtime.
+var olaresDepRulePreV3 = olaresDepConstraintRule{
+	requirement: ">=1.12.3-0,<1.12.6",
+	forbidden:   []string{"1.12.2", "1.12.6", "2.0.0"},
 }
 
-// validateOlaresDependency enforces the apiVersion-keyed rules on the
-// Olares system dependency (the options.dependencies entry with
-// name="olares" and type="system"). The gate fires only on modern
-// manifests (olaresManifest.version >= 0.12.0); legacy manifests retain
-// their existing freedom to declare any version constraint they like.
+// olaresDepRulePostV3 is the constraint window selected when the manifest
+// either is apiVersion=v3 or declares any of the 1.12.6-only feature
+// fields enumerated in detectOlares1126OnlyFields. 1.12.6-0 is the first
+// Olares release that ships those features.
+var olaresDepRulePostV3 = olaresDepConstraintRule{
+	requirement: ">=1.12.6-0",
+	forbidden:   []string{"1.12.5", "1.12.0", "0.1.0"},
+}
+
+// detectOlares1126OnlyFields returns the set of manifest field labels
+// that — when declared on c — pin the Olares system requirement to
+// >=1.12.6-0 regardless of apiVersion (rule 4). apiVersion=v3 itself is
+// intentionally not in this list: it is handled as a separate trigger by
+// the caller so the error message can distinguish "v3 manifest demands
+// 1.12.6+" from "v1/v2 manifest opts into a 1.12.6-only feature".
 //
-// Three rules combine into the per-apiVersion expected ranges:
+// Labels are the user-facing names the manifest author writes, so they
+// can be threaded straight into error messages.
+func detectOlares1126OnlyFields(c *AppConfiguration) []string {
+	var fields []string
+	if len(c.Spec.Accelerator) > 0 {
+		fields = append(fields, "spec.accelerator")
+	}
+	if c.WorkloadReplicas != nil && len(*c.WorkloadReplicas) > 0 {
+		fields = append(fields, "workloadReplicas")
+	}
+	if c.OverlayGateway.Enable || len(c.OverlayGateway.Entrances) > 0 {
+		fields = append(fields, "overlayGateway")
+	}
+	if c.Options.LLMGatewaySupported {
+		fields = append(fields, "options.LLMGatewaySupported")
+	}
+	if c.Options.TemplateOnly {
+		fields = append(fields, "options.templateOnly")
+	}
+	if c.Options.Shared {
+		fields = append(fields, "options.shared")
+	}
+	if c.Permission.AppCommon {
+		fields = append(fields, "permission.appCommon")
+	}
+	return fields
+}
+
+// pickOlaresDepRule selects the constraint window that applies to c.
+// apiVersion=v3 or any 1.12.6-only feature field forces the post-v3
+// (>=1.12.6-0) window; everything else falls back to the legacy
+// pre-v3 (>=1.12.3-0,<1.12.6) window. The returned trigger list is
+// non-empty iff a feature field promoted a v1/v2 manifest into the
+// post-v3 window; callers use it to explain the promotion in error
+// messages without surprising users whose manifests are already v3.
+func pickOlaresDepRule(c *AppConfiguration) (rule olaresDepConstraintRule, featureTriggers []string) {
+	api := normalizeAPIVersion(c.APIVersion)
+	if api == APIVersionV3 {
+		return olaresDepRulePostV3, nil
+	}
+	triggers := detectOlares1126OnlyFields(c)
+	if len(triggers) > 0 {
+		return olaresDepRulePostV3, triggers
+	}
+	return olaresDepRulePreV3, nil
+}
+
+// validateOlaresDependency enforces the rules on the Olares system
+// dependency (the options.dependencies entry with name="olares" and
+// type="system"). The gate fires only on modern manifests
+// (olaresManifest.version >= 0.12.0); legacy manifests retain their
+// existing freedom to declare any version constraint they like.
 //
-//  1. apiVersion in {empty, v1, v2}: the constraint must restrict Olares
-//     to <1.12.6 (apiVersion=v3 was introduced in 1.12.6, so legacy
-//     schemas must not be installed on systems that ship the v3 runtime).
+// Four rules combine into a per-manifest required range, captured by
+// pickOlaresDepRule:
+//
+//  1. apiVersion in {empty, v1, v2}: legacy schemas default to <1.12.6
+//     (must not install on systems that ship the v3 runtime).
 //  2. apiVersion=v3: the constraint must restrict Olares to >=1.12.6-0
-//     (the v3 runtime is only available there).
+//     (the release that introduced the v3 runtime).
 //  3. Across every apiVersion the constraint's lower bound must be at
 //     least 1.12.3-0, the floor under which modern manifests are not
 //     supported at all.
+//  4. If the manifest declares any 1.12.6-only feature field
+//     (spec.accelerator, workloadReplicas, overlayGateway,
+//     options.LLMGatewaySupported, options.templateOnly, options.shared,
+//     permission.appCommon), the constraint must restrict to >=1.12.6-0
+//     even on a v1/v2 manifest — those fields are not honoured by older
+//     Olares releases.
 //
-// The combined per-apiVersion expectation is captured in olaresDepRules.
 // A missing Olares system dependency is itself an error on modern
 // manifests — the platform always pins the host Olares version, so
 // omitting it makes the manifest non-portable.
-func validateOlaresDependency(configVersion, apiVersion string, deps []Dependency) error {
-	if !resourcesCheckApplies(configVersion) {
+func validateOlaresDependency(c *AppConfiguration) error {
+	if !resourcesCheckApplies(c.ConfigVersion) {
 		return nil
 	}
 	var olaresDep *Dependency
-	for i := range deps {
-		d := &deps[i]
+	for i := range c.Options.Dependencies {
+		d := &c.Options.Dependencies[i]
 		if d.Name == olaresSystemDepName && d.Type == "system" {
 			olaresDep = d
 			break
@@ -576,12 +633,21 @@ func validateOlaresDependency(configVersion, apiVersion string, deps []Dependenc
 			olaresSystemDepName, olaresDep.Version, err,
 		)
 	}
-	api := normalizeAPIVersion(apiVersion)
-	rule, ok := olaresDepRules[api]
-	if !ok {
-		// apiVersion not in our table; struct-level validation will have
-		// already surfaced this as "not supported version".
+	api := normalizeAPIVersion(c.APIVersion)
+	if _, knownAPI := map[string]struct{}{
+		APIVersionV1: {}, APIVersionV2: {}, APIVersionV3: {},
+	}[api]; !knownAPI {
+		// apiVersion outside the supported set; the struct-level validator
+		// already surfaces "not supported version" elsewhere.
 		return nil
+	}
+	rule, triggers := pickOlaresDepRule(c)
+	promotion := ""
+	if len(triggers) > 0 {
+		promotion = fmt.Sprintf(
+			" because the manifest declares %s, which requires Olares 1.12.6+",
+			strings.Join(triggers, " / "),
+		)
 	}
 	var errs []error
 	for _, v := range rule.forbidden {
@@ -591,8 +657,8 @@ func validateOlaresDependency(configVersion, apiVersion string, deps []Dependenc
 		}
 		if constraint.Check(sv) {
 			errs = append(errs, fmt.Errorf(
-				"options.dependencies[name=%s].version %q must restrict the Olares system version to %q for apiVersion=%s; the constraint currently allows %s, which is outside the supported range",
-				olaresSystemDepName, olaresDep.Version, rule.requirement, api, sv.String(),
+				"options.dependencies[name=%s].version %q must restrict the Olares system version to %q for apiVersion=%s%s; the constraint currently allows %s, which is outside the supported range",
+				olaresSystemDepName, olaresDep.Version, rule.requirement, api, promotion, sv.String(),
 			))
 		}
 	}

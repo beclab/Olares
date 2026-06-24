@@ -31,23 +31,23 @@ func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c.Spec.LimitedGPU = ""
 	wr := WorkloadReplicas{c.Metadata.Name: 1}
 	c.WorkloadReplicas = &wr
-	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
 	return c
 }
 
-// newOlaresSystemDep returns the canonical options.dependencies entry that
-// satisfies validateOlaresDependency on a modern (olaresManifest.version
-// >= 0.12.0) manifest. The constraint matches the rule for the supplied
-// apiVersion: v3 manifests require >=1.12.6-0, v1/v2 (and empty, which
-// normalizes to v1) require >=1.12.3-0,<1.12.6.
-func newOlaresSystemDep(apiVersion string) Dependency {
-	constraint := ">=1.12.3-0,<1.12.6"
-	if normalizeAPIVersion(apiVersion) == APIVersionV3 {
-		constraint = ">=1.12.6-0"
-	}
+// newOlaresSystemDep returns the canonical options.dependencies entry
+// that satisfies validateOlaresDependency for c. It mirrors the validator
+// rules: apiVersion=v3 OR any 1.12.6-only feature field on the config
+// selects the post-v3 (>=1.12.6-0) constraint, otherwise the legacy
+// pre-v3 (>=1.12.3-0,<1.12.6) constraint is used. Callers should set
+// every relevant config field (workloadReplicas, overlayGateway, etc.)
+// before invoking this helper so the picked constraint stays in sync
+// with the validator's view of the same config.
+func newOlaresSystemDep(c *AppConfiguration) Dependency {
+	rule, _ := pickOlaresDepRule(c)
 	return Dependency{
 		Name:    olaresSystemDepName,
-		Version: constraint,
+		Version: rule.requirement,
 		Type:    "system",
 	}
 }
