@@ -128,13 +128,24 @@ func TestCleanupAfterInstallFailure_ProtectedNamespaceShortCircuits(t *testing.T
 // We use a short ctx deadline to keep the test fast; the real
 // installFailureNSDeletionTimeout (5min) is enforced internally with
 // context.WithTimeout, but the OUTER ctx deadline can cut it short.
+//
+// The fake namespace carries the standard "kubernetes" finalizer so that
+// cleanupAfterInstallFailure's c.Delete call only marks it for deletion
+// (DeletionTimestamp gets set) but does not physically remove the object
+// from the fake store — mirroring real K8s NS finalizer behavior and
+// keeping the poll loop spinning until the outer ctx deadline fires.
 func TestCleanupAfterInstallFailure_NamespaceStillPresentBlocksUntilCtx(t *testing.T) {
 	_, cfgJSON := newCleanupManagerFixture(t, "demoapp-ns")
 	am := testutil.NewAppManager("demoapp",
 		testutil.WithNamespace("demoapp-ns"),
 		testutil.WithConfigJSON(string(cfgJSON)),
 	)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demoapp-ns"}}
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "demoapp-ns",
+			Finalizers: []string{"kubernetes"},
+		},
+	}
 	c := testutil.NewFakeClient(am, ns)
 	fake := testutil.NewFakeHelmOps()
 	injectHelmOps(t, fake)

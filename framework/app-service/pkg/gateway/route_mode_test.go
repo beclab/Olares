@@ -123,12 +123,12 @@ func TestComputeRouteModePatch_skipsNonSharedApp(t *testing.T) {
 		t.Fatalf("non-shared app: got need=%v mode=%q err=%v, want no patch", need, mode, err)
 	}
 
-	// Shared label but no sharedEntrances.
+	// Shared label without sharedEntrances still qualifies (entrances-only shared singleton).
 	app = newSharedApp()
 	app.Spec.SharedEntrances = nil
 	need, mode, err = ComputeRouteModePatch(ctx, c, app)
-	if err != nil || need || mode != "" {
-		t.Fatalf("no sharedEntrances: got need=%v mode=%q err=%v, want no patch", need, mode, err)
+	if err != nil || !need || mode != AnnotationRouteModeGateway {
+		t.Fatalf("shared without sharedEntrances: got need=%v mode=%q err=%v, want gateway patch", need, mode, err)
 	}
 }
 

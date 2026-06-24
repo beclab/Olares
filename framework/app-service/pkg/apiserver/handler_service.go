@@ -215,7 +215,8 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
-					"title": am.Annotations[constants.ApplicationTitleLabel],
+					"title":         am.Annotations[constants.ApplicationTitleLabel],
+					"market_source": am.Annotations[constants.AppMarketSourceKey],
 				},
 			},
 			Status: appv1alpha1.ApplicationStatus{
@@ -278,7 +279,21 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			continue
 		}
 		if v, ok := appsMap[a.Name]; ok {
+			// title and market_source come from AM annotations and may not
+			// be present in the Application CR's Settings. Fall back to the
+			// synthesized values so they are not lost on overwrite.
+			title := v.Spec.Settings["title"]
+			marketSource := v.Spec.Settings["market_source"]
 			v.Spec.Settings = a.EffectiveSettings(owner)
+			if v.Spec.Settings == nil {
+				v.Spec.Settings = map[string]string{}
+			}
+			if _, ok := v.Spec.Settings["title"]; !ok {
+				v.Spec.Settings["title"] = title
+			}
+			if _, ok := v.Spec.Settings["market_source"]; !ok {
+				v.Spec.Settings["market_source"] = marketSource
+			}
 			v.Spec.Entrances = a.EffectiveEntrances(owner)
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels

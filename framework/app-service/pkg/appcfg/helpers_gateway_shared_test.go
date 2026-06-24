@@ -14,10 +14,23 @@ func TestIsGatewaySharedApp(t *testing.T) {
 		}
 	})
 
-	t.Run("no shared entrances", func(t *testing.T) {
+	t.Run("non shared app", func(t *testing.T) {
 		app := &appv1alpha1.Application{}
 		if IsGatewaySharedApp(app) {
-			t.Fatal("app without shared entrances must not be treated as gateway shared")
+			t.Fatal("app without shared or cluster-scoped label must not be treated as gateway shared")
+		}
+	})
+
+	t.Run("shared app without sharedEntrances", func(t *testing.T) {
+		app := &appv1alpha1.Application{
+			Spec: appv1alpha1.ApplicationSpec{
+				Entrances: []appv1alpha1.Entrance{{Name: "web", Host: "svc"}},
+			},
+		}
+		app.Labels = map[string]string{constants.AppSharedLabel: constants.AppSharedTrue}
+
+		if !IsGatewaySharedApp(app) {
+			t.Fatal("shared app without sharedEntrances should still qualify for gateway shared")
 		}
 	})
 
