@@ -65,7 +65,6 @@ Update your Olares login password to enhance your account security.
 
 Define system-level access and authentication policies to control how users connect to your Olares.
 
-* **Login security requirement**: Set the authentication method for logging into Olares.
   * **Two-factor** (Recommended): Requires both your login password and a two-factor authentication code for enhanced security.
   * **One-factor**: Only requires your login password.
 
