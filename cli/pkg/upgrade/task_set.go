@@ -457,6 +457,23 @@ func (a *applyKubernetesPrometheusRuleAction) Execute(runtime connector.Runtime)
 	return nil
 }
 
+// applyKubernetesPrometheusOperatorAction applies embedded prometheus kubernetes prometheus operator
+type applyKubernetesPrometheusOperatorAction struct {
+	common.KubeAction
+}
+
+func (a *applyKubernetesPrometheusOperatorAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "prometheus-operator", "prometheus-operator-deployment.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply prometheus-operator failed")
+	}
+	return nil
+}
+
 func upgradeNodeExporterServiceMonitor() []task.Interface {
 	return []task.Interface{
 		// prometheus node-exporter ServiceMonitor
@@ -475,6 +492,18 @@ func upgradeKubernetesPrometheusRule() []task.Interface {
 		&task.LocalTask{
 			Name:   "ApplyKubernetesPrometheusRule",
 			Action: new(applyKubernetesPrometheusRuleAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
+func upgradePrometheusOperator() []task.Interface {
+	return []task.Interface{
+		// prometheus operator
+		&task.LocalTask{
+			Name:   "ApplyKubernetesPrometheusOperatorAction",
+			Action: new(applyKubernetesPrometheusOperatorAction),
 			Retry:  5,
 			Delay:  5 * time.Second,
 		},
