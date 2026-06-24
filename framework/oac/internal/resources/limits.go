@@ -86,20 +86,63 @@ func CheckResourceLimits(list kube.ResourceList, limits ResourceLimits) error {
 			sumLimCPU.Add(*cLimits.Cpu())
 		}
 	})
-
+	exceed := false
 	if !autoLCPU && sumLimCPU.Cmp(appLCPU) > 0 {
-		errs = append(errs, fmt.Errorf("sum of container resources.limits.cpu must be <= spec.limitedCpu"))
+		if !exceed {
+			errs = append(errs, fmt.Errorf("The total requested container resources exceed the allocated spec in OlaresManifest.yaml\n"))
+			exceed = true
+		}
+		errs = append(errs, fmt.Errorf(
+			"sum of container resources.limits.cpu (%s) must be <= limitedCpu (%s)",
+			sumLimCPU.String(), quantityDisplay(limits.LimitedCPU, appLCPU),
+		))
 	}
 	if !autoLMem && sumLimMem.Cmp(appLMem) > 0 {
-		errs = append(errs, fmt.Errorf("sum of container resources.limits.memory must be <= spec.limitedMemory"))
+		if !exceed {
+			errs = append(errs, fmt.Errorf("The total requested container resources exceed the allocated spec in OlaresManifest.yaml\n"))
+			exceed = true
+		}
+		errs = append(errs, fmt.Errorf(
+			"sum of container resources.limits.memory (%s) must be <= limitedMemory (%s)",
+			sumLimMem.String(), quantityDisplay(limits.LimitedMemory, appLMem),
+		))
 	}
 	if !autoRCPU && sumReqCPU.Cmp(appRCPU) > 0 {
-		errs = append(errs, fmt.Errorf("sum of container resources.requests.cpu must be <= spec.requiredCpu"))
+		if !exceed {
+			errs = append(errs, fmt.Errorf("The total requested container resources exceed the allocated spec in OlaresManifest.yaml\n"))
+			exceed = true
+		}
+		errs = append(errs, fmt.Errorf(
+			"sum of container resources.requests.cpu (%s) must be <= requiredCpu (%s)",
+			sumReqCPU.String(), quantityDisplay(limits.RequiredCPU, appRCPU),
+		))
 	}
 	if !autoRMem && sumReqMem.Cmp(appRMem) > 0 {
-		errs = append(errs, fmt.Errorf("sum of container resources.requests.memory must be <= spec.requiredMemory"))
+		if !exceed {
+			errs = append(errs, fmt.Errorf("The total requested container resources exceed the allocated spec in OlaresManifest.yaml\n"))
+			exceed = true
+		}
+		errs = append(errs, fmt.Errorf(
+			"sum of container resources.requests.memory (%s) must be <= requiredMemory (%s)",
+			sumReqMem.String(), quantityDisplay(limits.RequiredMemory, appRMem),
+		))
 	}
 	return errors.Join(errs...)
+}
+
+// quantityDisplay picks the most readable rendering for a manifest-side
+// resource quantity: when the manifest text parses cleanly, we surface
+// the author's exact spelling (e.g. "200m" or "1Gi") rather than the
+// canonical form Quantity.String() produces, because the same number
+// can render either way and matching the manifest helps the reader
+// locate the offending field. We fall back to the parsed Quantity's
+// String() when the raw text is empty or unparseable so the error
+// message never shows an empty parenthesis pair.
+func quantityDisplay(raw string, parsed resource.Quantity) string {
+	if raw != "" {
+		return raw
+	}
+	return parsed.String()
 }
 
 // CheckUploadConfig ensures that, if the manifest declares an options.upload
