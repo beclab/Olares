@@ -1,6 +1,7 @@
 package search
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -118,14 +119,51 @@ func runAppSearch(ctx context.Context, f *cmdutil.Factory, keyword string, o *ap
 }
 
 func fetchMyApps(ctx context.Context, doer *whoami.HTTPClient) ([]appRaw, error) {
-	var apps []appRaw
-	if err := doEnvelope(ctx, doer, "POST", "/server/myApps", map[string]interface{}{}, &apps); err == nil {
+	const method = "POST"
+	const path = "/server/myApps"
+
+	var raw json.RawMessage
+	if err := doer.DoJSON(ctx, method, path, map[string]interface{}{}, &raw); err != nil {
+		return nil, err
+	}
+	return decodeMyAppsResponse(method, path, raw)
+}
+
+// decodeMyAppsResponse handles both BFL {code,message,data} envelopes and bare
+// JSON arrays returned by /server/myApps on some deployments. Upstream business
+// errors (non-zero code) are returned directly — never masked by a bare-array retry.
+func decodeMyAppsResponse(method, path string, raw json.RawMessage) ([]appRaw, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return nil, nil
+	}
+	if trimmed[0] == '[' {
+		var apps []appRaw
+		if err := json.Unmarshal(trimmed, &apps); err != nil {
+			return nil, fmt.Errorf("%s %s: decode response: %w", method, path, err)
+		}
 		return apps, nil
 	}
 
-	// Fallback: some deployments return a bare JSON array without the BFL envelope.
-	if err := doer.DoJSON(ctx, "POST", "/server/myApps", map[string]interface{}{}, &apps); err != nil {
-		return nil, err
+	var env bflEnvelope
+	if err := json.Unmarshal(trimmed, &env); err != nil {
+		return nil, fmt.Errorf("%s %s: decode response: %w", method, path, err)
+	}
+	switch env.Code {
+	case 0, 200:
+	default:
+		msg := strings.TrimSpace(env.Message)
+		if msg == "" {
+			return nil, fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
+		}
+		return nil, fmt.Errorf("%s %s: upstream returned code %d: %s", method, path, env.Code, msg)
+	}
+	if len(env.Data) == 0 {
+		return nil, nil
+	}
+	var apps []appRaw
+	if err := json.Unmarshal(env.Data, &apps); err != nil {
+		return nil, fmt.Errorf("%s %s: decode data: %w", method, path, err)
 	}
 	return apps, nil
 }
