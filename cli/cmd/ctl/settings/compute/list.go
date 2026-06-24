@@ -109,7 +109,7 @@ func renderResources(w io.Writer, nodes []computeNode) error {
 				nonEmpty(computeModeTitle(d.Mode)),
 				nonEmpty(d.SupportType),
 				deviceAvailableCell(d),
-				fmt.Sprintf("%s / %s", computeMemoryValue(d.effectiveUsedMemory()), computeMemoryValue(d.Memory)),
+				deviceMemoryCell(d),
 				nonEmpty(d.Health),
 				deviceAppsCell(d),
 			); err != nil {
@@ -168,6 +168,20 @@ func nodeSummaryLine(node computeNode) string {
 		tiles = append(tiles, "Shared RAM: "+formatComputeMemory(sharedTotal))
 	}
 	return strings.Join(tiles, "  ")
+}
+
+// deviceMemoryCell renders the MEM(Gi) column. It mirrors AcceleratorDeviceCard
+// usageText: always show the device capacity, and only prefix the allocated
+// amount as "used / total" when some memory is actually allocated. TimeSlice
+// devices (and any idle device) therefore show capacity alone instead of a
+// misleading "0 / total".
+func deviceMemoryCell(d computeDevice) string {
+	used := d.effectiveUsedMemory()
+	total := computeMemoryValue(d.Memory)
+	if used <= 0 {
+		return total
+	}
+	return fmt.Sprintf("%s / %s", computeMemoryValue(used), total)
 }
 
 // deviceAvailableCell lists the support types this device can switch to
