@@ -55,6 +55,7 @@ olaresManifest.version: '0.10.0'
 olaresManifest.type: app
 metadata:
   name: helloworld
+  appid: helloworld
   title: Hello World
   description: app helloworld
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
@@ -153,6 +154,7 @@ Basic information about the app shown in the system and Olares Market.
 ```yaml
 metadata:
   name: nextcloud
+  appid: nextcloud
   title: Nextcloud
   description: The productivity platform that keeps you in control
   icon: https://app.cdn.olares.com/appstore/nextcloud/icon.png
@@ -169,6 +171,14 @@ metadata:
 - Accepted Value: `^[a-z][a-z0-9]{0,29}$`
 
 App’s namespace in Olares, lowercase alphanumeric characters only. It can be up to 30 characters, and needs to be consistent with `FolderName` and `name` field in `Chart.yaml`.
+
+### appid
+
+- Type: `string`
+- Optional
+- Accepted Value: Use a lowercase alphanumeric app identifier, like `metadata.name`; it must not be a reserved system app id such as `market`, `auth`, `desktop`, `files`, or `settings`.
+
+The app id used by Olares system services. The loader normalizes `metadata.appid` to `md5(metadata.name)[:8]` before returning the manifest, so the value written here is not preserved at load time. A manifest with an app id that collides with a reserved system app id is rejected by the validator.
 
 ### title
 
