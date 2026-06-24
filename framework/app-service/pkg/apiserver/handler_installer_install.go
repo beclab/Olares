@@ -261,6 +261,12 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	if appCfg.APIVersion == appcfg.V2 {
+		err = errors.New("app with apiVersion v2 is incompatible and cannot be install")
+		api.HandleForbidden(resp, req, err)
+		return
+	}
+
 	if !isAdmin && appCfg.Shared {
 		err = errors.New("only admin users can install shared apps")
 		api.HandleForbidden(resp, req, err)
