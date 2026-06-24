@@ -42,6 +42,10 @@ envs:
 options:
   policies: []
   resetCookie: { enabled: false }
+  dependencies:
+    - name: olares
+      type: system
+      version: ">=1.12.6-0"
 `
 	os.WriteFile(filepath.Join(dir, "Chart.yaml"), []byte("apiVersion: v2\nname: v3env\nversion: 1.0.0\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "values.yaml"), []byte("x: y\nworkloads:\n  v3env:\n    replicaCount: 1\n"), 0o644)

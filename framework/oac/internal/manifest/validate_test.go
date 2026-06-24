@@ -880,6 +880,7 @@ func TestAPIVersionV2_ModernOlaresUsesLegacyEnvelope(t *testing.T) {
 	c.ConfigVersion = "0.13.0"
 	c.APIVersion = APIVersionV2
 	c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
 	if err := ValidateAppConfiguration(c); err != nil {
 		t.Fatalf("v2 with olaresManifest.version >= 0.12.0 and legacy flat fields must validate: %v", err)
 	}
@@ -1060,13 +1061,15 @@ func TestPermission_ExternalDataVersionGate(t *testing.T) {
 	}
 
 	// externalData on a modern (>= 0.12.0) manifest is accepted.
-	// workloadReplicas is required at this version (non-v2), so populate
-	// a minimal one to keep this test focused on permission.externalData.
+	// workloadReplicas and the Olares system dependency are required at
+	// this version (non-v2), so populate minimal ones to keep this test
+	// focused on permission.externalData.
 	c = newValidConfig()
 	c.ConfigVersion = "0.12.0"
 	c.Permission.ExternalData = true
 	wr := WorkloadReplicas{c.Metadata.Name: 1}
 	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
 	if err := ValidateAppConfiguration(c); err != nil {
 		t.Fatalf("permission.externalData should be accepted at >= 0.12.0: %v", err)
 	}
@@ -1299,6 +1302,7 @@ func TestRootProvider_ForbiddenAtOrAbove012(t *testing.T) {
 		c.ConfigVersion = "0.13.0"
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
+		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
 		if err := ValidateAppConfiguration(c); err != nil {
 			t.Fatalf("modern manifest without root provider must validate: %v", err)
 		}
@@ -1320,6 +1324,7 @@ func TestRootProvider_ForbiddenAtOrAbove012(t *testing.T) {
 		c.ConfigVersion = "0.13.0"
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
+		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
 		c.Provider = []Provider{providerEntry}
 		c.Permission.Provider = []ProviderPermission{{AppName: "ollama", ProviderName: "ollamaclient"}}
 		err := ValidateAppConfiguration(c)
@@ -1398,6 +1403,7 @@ func TestPermission_ProviderForbiddenAtOrAbove012(t *testing.T) {
 		c.ConfigVersion = "0.13.0"
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
+		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
 		if err := ValidateAppConfiguration(c); err != nil {
 			t.Fatalf("modern manifest without permission.provider must validate: %v", err)
 		}
@@ -1451,6 +1457,7 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 		c.ConfigVersion = "0.13.0"
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
+		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
 		if err := ValidateAppConfiguration(c); err != nil {
 			t.Fatalf("modern v1 with workloadReplicas must validate: %v", err)
 		}
@@ -1475,6 +1482,7 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 		c.APIVersion = APIVersionV3
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
+		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
 		if err := ValidateAppConfiguration(c); err != nil {
 			t.Fatalf("modern v3 with workloadReplicas must validate: %v", err)
 		}
@@ -1498,6 +1506,7 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 		c.ConfigVersion = "0.13.0"
 		c.APIVersion = APIVersionV2
 		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
+		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c.APIVersion)}
 		if err := ValidateAppConfiguration(c); err != nil {
 			t.Fatalf("modern v2 must not require workloadReplicas (workloads live in subCharts): %v", err)
 		}
@@ -1514,6 +1523,171 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestOlaresDependency_ConstraintGate documents the apiVersion-keyed
+// version-constraint rules on the Olares system dependency
+// (options.dependencies entry with name="olares" and type="system"):
+//
+//   - On olaresManifest.version >= 0.12.0, the entry must exist.
+//   - apiVersion in {empty, v1, v2}: the constraint must restrict Olares
+//     to >=1.12.3-0,<1.12.6 (no leakage into 1.12.6+, no permission below
+//     the 1.12.3-0 floor).
+//   - apiVersion=v3: the constraint must restrict Olares to >=1.12.6-0.
+//   - Below the modern gate (< 0.12.0), the entry is unconstrained.
+//
+// Each subtest builds a config that already satisfies every other modern
+// gate so the assertion truly tracks validateOlaresDependency alone.
+func TestOlaresDependency_ConstraintGate(t *testing.T) {
+	modern := func(apiVersion string) *AppConfiguration {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.APIVersion = apiVersion
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		if normalizeAPIVersion(apiVersion) == APIVersionV2 {
+			c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
+		}
+		return c
+	}
+
+	setOlaresDep := func(c *AppConfiguration, version string) {
+		c.Options.Dependencies = []Dependency{{
+			Name:    olaresSystemDepName,
+			Version: version,
+			Type:    "system",
+		}}
+	}
+
+	t.Run("modern_without_olares_dep_rejected", func(t *testing.T) {
+		c := modern(APIVersionV1)
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: modern manifest must declare the Olares system dependency")
+		}
+		if !strings.Contains(err.Error(), `options.dependencies must declare an entry with name="olares" and type="system"`) {
+			t.Fatalf("error should mention the missing Olares dep, got: %v", err)
+		}
+	})
+
+	t.Run("legacy_without_olares_dep_accepted", func(t *testing.T) {
+		c := newValidConfig() // ConfigVersion 0.11.0; no dep set
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("legacy manifest without Olares dep must validate: %v", err)
+		}
+	})
+
+	t.Run("v1_accepts_in_range_constraint", func(t *testing.T) {
+		c := modern(APIVersionV1)
+		setOlaresDep(c, ">=1.12.3-0,<1.12.6")
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("v1 manifest with >=1.12.3-0,<1.12.6 must validate: %v", err)
+		}
+	})
+
+	t.Run("v1_rejects_constraint_that_leaks_into_v3_range", func(t *testing.T) {
+		c := modern(APIVersionV1)
+		// >=1.12.0 allows 1.12.6 and 2.0.0 — both outside the v1/v2 window.
+		setOlaresDep(c, ">=1.12.0")
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: v1 dep constraint must not allow 1.12.6 / 2.0.0")
+		}
+		if !strings.Contains(err.Error(), `must restrict the Olares system version to ">=1.12.3-0,<1.12.6" for apiVersion=v1`) {
+			t.Fatalf("error should mention the v1 constraint requirement, got: %v", err)
+		}
+	})
+
+	t.Run("v1_rejects_constraint_below_floor", func(t *testing.T) {
+		c := modern(APIVersionV1)
+		// <1.12.6 allows everything below 1.12.6, including 1.12.2 (below the 1.12.3-0 floor).
+		setOlaresDep(c, "<1.12.6")
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: v1 dep constraint must enforce the >=1.12.3-0 floor")
+		}
+		if !strings.Contains(err.Error(), "1.12.2") {
+			t.Fatalf("error should call out the below-floor sample 1.12.2, got: %v", err)
+		}
+	})
+
+	t.Run("v2_uses_same_constraint_as_v1", func(t *testing.T) {
+		c := modern(APIVersionV2)
+		setOlaresDep(c, ">=1.12.3-0,<1.12.6")
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("v2 manifest with >=1.12.3-0,<1.12.6 must validate: %v", err)
+		}
+	})
+
+	t.Run("v2_rejects_v3_only_range", func(t *testing.T) {
+		c := modern(APIVersionV2)
+		setOlaresDep(c, ">=1.12.6-0")
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: v2 dep constraint must not target the v3-only Olares range")
+		}
+		if !strings.Contains(err.Error(), `apiVersion=v2`) {
+			t.Fatalf("error should mention apiVersion=v2, got: %v", err)
+		}
+	})
+
+	t.Run("empty_apiversion_treated_as_v1", func(t *testing.T) {
+		c := modern("")
+		setOlaresDep(c, ">=1.12.3-0,<1.12.6")
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("empty apiVersion must use the v1 constraint window: %v", err)
+		}
+	})
+
+	t.Run("v3_accepts_in_range_constraint", func(t *testing.T) {
+		c := modern(APIVersionV3)
+		setOlaresDep(c, ">=1.12.6-0")
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("v3 manifest with >=1.12.6-0 must validate: %v", err)
+		}
+	})
+
+	t.Run("v3_rejects_pre_1_12_6_constraint", func(t *testing.T) {
+		c := modern(APIVersionV3)
+		// Allows 1.12.5 (below the 1.12.6-0 floor for v3).
+		setOlaresDep(c, ">=1.12.5,<2.0.0")
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: v3 dep constraint must restrict Olares to >=1.12.6-0")
+		}
+		if !strings.Contains(err.Error(), `must restrict the Olares system version to ">=1.12.6-0" for apiVersion=v3`) {
+			t.Fatalf("error should mention the v3 constraint requirement, got: %v", err)
+		}
+	})
+
+	t.Run("malformed_constraint_rejected", func(t *testing.T) {
+		c := modern(APIVersionV1)
+		setOlaresDep(c, "not-a-semver-constraint")
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: malformed semver constraint must be rejected")
+		}
+		if !strings.Contains(err.Error(), "is not a valid semver constraint") {
+			t.Fatalf("error should mention invalid semver constraint, got: %v", err)
+		}
+	})
+
+	t.Run("wrong_type_does_not_count_as_olares_system_dep", func(t *testing.T) {
+		c := modern(APIVersionV1)
+		// Same name but type=application — does not satisfy the gate.
+		c.Options.Dependencies = []Dependency{{
+			Name:    olaresSystemDepName,
+			Version: ">=1.12.3-0,<1.12.6",
+			Type:    "application",
+		}}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: only type=system Olares dependency satisfies the gate")
+		}
+		if !strings.Contains(err.Error(), `options.dependencies must declare an entry with name="olares" and type="system"`) {
+			t.Fatalf("error should mention the missing system Olares dep, got: %v", err)
+		}
+	})
 }
 
 // TestOptions_SharedRequiresAPIVersionV3 pins down the shared => v3
