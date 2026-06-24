@@ -643,17 +643,56 @@ type UninstallNvidiaDrivers struct {
 	common.KubeAction
 }
 
+// nvidiaDriverPkgFilter narrows a list of installed package names down to the
+// apt-installed NVIDIA *driver* packages that overlap with what the runfile
+// installer provides (the kernel module, userland libraries,
+// nvidia-smi/settings/modprobe/persistenced, the Xorg driver and the GSP
+// firmware). It deliberately leaves alone vendor/OEM packages that merely carry
+// "nvidia" in their name but are unrelated to the GPU driver. This matters on
+// NVIDIA DGX Spark, where the OS kernel itself is nvidia-branded
+// (linux-image/-headers/-modules-*-nvidia, linux-nvidia-*) and there are many
+// tooling/config packages (nvidia-disable-aqc-nic, nvidia-spark-*,
+// nvidia-dgx-*, nvidia-system-station-*, ...) that must not be removed.
+//
+// Note: libnvidia-container* / nvidia-container-toolkit and the GPUDirect
+// Storage kernel module (linux-modules-nvidia-fs-*) are explicitly excluded,
+// since the runfile driver does not provide them.
+const nvidiaDriverPkgFilter = "grep -E '^(nvidia-driver-|nvidia-dkms-|nvidia-kernel-common-|nvidia-kernel-source-|nvidia-compute-utils-|nvidia-utils-|nvidia-firmware-|nvidia-settings|nvidia-modprobe|nvidia-persistenced|nvidia-fabricmanager-|libnvidia-|xserver-xorg-video-nvidia|linux-modules-nvidia-)' | grep -Ev '(^linux-modules-nvidia-fs|container)'"
+
 func (t *UninstallNvidiaDrivers) Execute(runtime connector.Runtime) error {
 	_, _ = runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get -y autoremove --purge", false, true)
 	_, _ = runtime.GetRunner().SudoCmd("dpkg --configure -a || true", false, true)
-	listCmd := "dpkg -l | awk '/^(ii|i[UuFHWt]|rc|..R)/ {print $2}' | grep nvidia | grep -v container"
+	listCmd := fmt.Sprintf("dpkg -l | awk '/^(ii|i[UuFHWt]|rc|..R)/ {print $2}' | %s", nvidiaDriverPkgFilter)
 	pkgs, _ := runtime.GetRunner().SudoCmd(listCmd, false, false)
 	pkgs = strings.ReplaceAll(pkgs, "\n", " ")
 	pkgs = strings.TrimSpace(pkgs)
 	if pkgs != "" {
 		removeCmd := fmt.Sprintf("DEBIAN_FRONTEND=noninteractive apt-get -y --auto-remove --purge remove %s", pkgs)
 		if _, err := runtime.GetRunner().SudoCmd(removeCmd, false, true); err != nil {
-			return errors.Wrap(errors.WithStack(err), "failed to remove nvidia packages via apt-get")
+			// apt-get/dpkg can exit non-zero when a vendor package's postrm
+			// script fails while purging leftover config files, even though
+			// the driver binaries themselves were already removed. For
+			// example, NVIDIA DGX Spark ships nvidia-disable-aqc-nic with a
+			// postrm that does not handle the "purge" argument and exits 1,
+			// which makes dpkg return exit status 100. Keep purging, but try
+			// to recover the dpkg state and verify the actual driver packages
+			// are gone before treating this as a fatal error.
+			logger.Warnf("apt-get reported errors while purging nvidia packages, attempting to recover dpkg state: %v", err)
+			_, _ = runtime.GetRunner().SudoCmd("dpkg --configure -a || true", false, true)
+			_, _ = runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get -y -f install || true", false, true)
+
+			// re-check whether any nvidia packages are still actually
+			// installed (states ii/iU/iF/iH/iW/it or reinst-required),
+			// ignoring packages left only in the "rc" state (removed, just
+			// config files remaining), which are harmless for reinstalling
+			// the driver.
+			remainingCmd := fmt.Sprintf("dpkg -l | awk '/^(ii|i[UuFHWt]|..R)/ {print $2}' | %s", nvidiaDriverPkgFilter)
+			remaining, _ := runtime.GetRunner().SudoCmd(remainingCmd, false, false)
+			remaining = strings.TrimSpace(strings.ReplaceAll(remaining, "\n", " "))
+			if remaining != "" {
+				return errors.Wrap(errors.WithStack(err), fmt.Sprintf("failed to remove nvidia packages via apt-get, still installed: %s", remaining))
+			}
+			logger.Warn("nvidia driver packages were removed but apt-get reported errors while purging config files; continuing")
 		}
 		_, _ = runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get -y autoremove --purge", false, true)
 	}
