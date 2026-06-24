@@ -586,8 +586,9 @@ func TestValidateAppSpec_ModernAcceptsLegacyFlatEnvelope(t *testing.T) {
 
 	// populated builds a modern (0.12.0) manifest that declares the
 	// legacy flat envelope and leaves spec.resources[] empty.
-	// newResourcesConfig clears every flat field; we re-populate the
-	// five mandatory quantities here.
+	// newResourcesConfig clears every flat field (and pre-populates
+	// workloadReplicas, which the modern gate also requires); we
+	// re-populate the five mandatory quantities here.
 	populated := func() *AppConfiguration {
 		c := newResourcesConfig() // no modes, ConfigVersion=0.13.0, every flat field cleared
 		c.ConfigVersion = modernBoundary
@@ -1059,9 +1060,13 @@ func TestPermission_ExternalDataVersionGate(t *testing.T) {
 	}
 
 	// externalData on a modern (>= 0.12.0) manifest is accepted.
+	// workloadReplicas is required at this version (non-v2), so populate
+	// a minimal one to keep this test focused on permission.externalData.
 	c = newValidConfig()
 	c.ConfigVersion = "0.12.0"
 	c.Permission.ExternalData = true
+	wr := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
 	if err := ValidateAppConfiguration(c); err != nil {
 		t.Fatalf("permission.externalData should be accepted at >= 0.12.0: %v", err)
 	}
@@ -1230,6 +1235,110 @@ func TestAppSpec_NonTemplateRejectsAutoOnLegacyFlat(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "requiredCpu") {
 		t.Fatalf("error should mention requiredCpu, got: %v", err)
+	}
+}
+
+// TestWorkloadReplicas_RequiredAtOrAbove012 documents the new gate: a
+// modern (olaresManifest.version >= 0.12.0) manifest must declare a
+// non-empty workloadReplicas map, except for apiVersion=v2, which carries
+// workloads inside subCharts and therefore has no parent-level field to
+// require. Legacy versions (< 0.12.0) remain unconstrained.
+func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
+	const wantMsg = "workloadReplicas is required for olaresManifest.version >="
+
+	t.Run("v1_at_boundary_missing_rejected", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.12.0"
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: workloadReplicas missing at olaresManifest.version=0.12.0 (v1)")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the workloadReplicas gate, got: %v", err)
+		}
+	})
+
+	t.Run("v1_above_boundary_empty_map_rejected", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		empty := WorkloadReplicas{}
+		c.WorkloadReplicas = &empty
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: empty workloadReplicas map must not satisfy the gate")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the workloadReplicas gate, got: %v", err)
+		}
+	})
+
+	t.Run("v1_above_boundary_with_entry_accepted", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("modern v1 with workloadReplicas must validate: %v", err)
+		}
+	})
+
+	t.Run("v3_at_boundary_missing_rejected", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.12.0"
+		c.APIVersion = APIVersionV3
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: workloadReplicas missing at olaresManifest.version=0.12.0 (v3)")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the workloadReplicas gate, got: %v", err)
+		}
+	})
+
+	t.Run("v3_above_boundary_with_entry_accepted", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.APIVersion = APIVersionV3
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("modern v3 with workloadReplicas must validate: %v", err)
+		}
+	})
+
+	t.Run("empty_apiversion_defaults_to_v1_and_requires", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.APIVersion = ""
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: empty apiVersion is treated as v1 and must require workloadReplicas at >= 0.12.0")
+		}
+		if !strings.Contains(err.Error(), wantMsg) {
+			t.Fatalf("error should mention the workloadReplicas gate, got: %v", err)
+		}
+	})
+
+	t.Run("v2_modern_does_not_require", func(t *testing.T) {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.APIVersion = APIVersionV2
+		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("modern v2 must not require workloadReplicas (workloads live in subCharts): %v", err)
+		}
+	})
+
+	legacyVersions := []string{"0.11.9", "0.11.0", "0.10.0"}
+	for _, v := range legacyVersions {
+		v := v
+		t.Run("legacy_"+v+"_unconstrained", func(t *testing.T) {
+			c := newValidConfig()
+			c.ConfigVersion = v
+			if err := ValidateAppConfiguration(c); err != nil {
+				t.Fatalf("legacy version %s must not require workloadReplicas: %v", v, err)
+			}
+		})
 	}
 }
 

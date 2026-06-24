@@ -28,8 +28,10 @@ func CollectWorkloadNames(list kube.ResourceList) map[string]struct{} {
 // CheckWorkloadReplicas enforces an exact correspondence between the manifest's
 // workloadReplicas keys and the rendered Deployment/StatefulSet names: every
 // workload must have a workloadReplicas entry, and every workloadReplicas entry
-// must name a real workload. Callers should only invoke this when the manifest
-// declares workloadReplicas at all (the field is optional).
+// must name a real workload. The manifest validator already requires
+// workloadReplicas on modern (olaresManifest.version >= 0.12.0) non-v2
+// manifests; on legacy versions (and on v2) the field stays optional and
+// callers should only invoke this when the manifest actually declares it.
 func CheckWorkloadReplicas(list kube.ResourceList, replicas map[string]int32) error {
 	workloads := CollectWorkloadNames(list)
 	var errs []error

@@ -107,7 +107,13 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 		validation.Field(&c.Options, validation.By(validateOptionsFor(c))),
 		validation.Field(&c.OverlayGateway, validation.By(validateOverlayGateway)),
 	)
-	return errors.Join(structErr, checkSubCharts(c), validatePermission(c.ConfigVersion, c.Permission), validateV3Configuration(c))
+	return errors.Join(
+		structErr,
+		checkSubCharts(c),
+		validatePermission(c.ConfigVersion, c.Permission),
+		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
+		validateV3Configuration(c),
+	)
 }
 
 func validateAppMetaData(v interface{}) error {
@@ -456,6 +462,34 @@ func validateFlatResourceQuantities(spec *AppSpec, templateOnly bool) error {
 func validatePermission(configVersion string, p Permission) error {
 	if p.ExternalData && !resourcesCheckApplies(configVersion) {
 		return fmt.Errorf("permission.externalData is only supported for olaresManifest.version >= %s", minResourcesManifestVersion)
+	}
+	return nil
+}
+
+// validateWorkloadReplicas enforces that workloadReplicas is declared (non-nil
+// and non-empty) on modern manifests (olaresManifest.version >= 0.12.0). The
+// rule mirrors the install-time convention that every Deployment/StatefulSet's
+// replica count is sourced from .Values.workloads.<name>.replicaCount, so a
+// modern app that omits the field would have no way to express its replica
+// envelope.
+//
+// apiVersion=v2 is exempt: v2 manifests render workloads inside subCharts, so
+// the parent-level workloadReplicas does not apply. Below the 0.12.0 gate the
+// field stays optional. Whenever the field is declared, the existing
+// chart-render lint phase still verifies the per-entry name/values.yaml
+// correspondence — this check only adds the "must be declared" gate.
+func validateWorkloadReplicas(configVersion, apiVersion string, wr *WorkloadReplicas) error {
+	if !resourcesCheckApplies(configVersion) {
+		return nil
+	}
+	if normalizeAPIVersion(apiVersion) == APIVersionV2 {
+		return nil
+	}
+	if wr == nil || len(*wr) == 0 {
+		return fmt.Errorf(
+			"workloadReplicas is required for olaresManifest.version >= %s; declare a workloadReplicas.<workload>: <count> entry for every Deployment/StatefulSet",
+			minResourcesManifestVersion,
+		)
 	}
 	return nil
 }
