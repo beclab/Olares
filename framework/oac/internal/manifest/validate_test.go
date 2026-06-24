@@ -1988,6 +1988,13 @@ func TestOptions_SharedRequiresAPIVersionV3(t *testing.T) {
 			if tc.apiVersion == APIVersionV2 {
 				c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
 			}
+			// validateSharedAppRequirements also fires on shared=true and
+			// would mask the apiVersion gate for the v3 happy path. Set
+			// the minimum extra fields it demands so the assertion stays
+			// focused on the shared+v3 rule.
+			if tc.apiVersion == APIVersionV3 && tc.shared {
+				c.Spec.OnlyAdmin = true
+			}
 			err := ValidateAppConfiguration(c)
 			if tc.wantErr {
 				if err == nil {
@@ -2003,4 +2010,141 @@ func TestOptions_SharedRequiresAPIVersionV3(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestOptions_SharedAppRequirements documents the cross-field gates that
+// fire on top of the apiVersion=v3 requirement whenever options.shared
+// is true. Each subtest starts from a v3 manifest that satisfies every
+// other validator gate (the helper is intentionally kept minimal: only
+// what the shared/v3 path requires) and flips exactly one offending
+// field. The negative cases assert both that the error fires AND that
+// the message names the specific field, so a manifest with multiple
+// violations gives the author a precise checklist.
+func TestOptions_SharedAppRequirements(t *testing.T) {
+	// validSharedV3 builds the canonical "everything set up correctly"
+	// shared+v3 manifest used as the baseline for every subtest. Each
+	// subtest copies it and flips exactly one field to verify a single
+	// gate in isolation.
+	validSharedV3 := func() *AppConfiguration {
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.APIVersion = APIVersionV3
+		c.Options.Shared = true
+		c.Spec.OnlyAdmin = true
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
+		return c
+	}
+
+	t.Run("baseline_accepted", func(t *testing.T) {
+		// Anchor test: confirms the helper itself is a valid manifest so
+		// every "flip one field" subtest below can attribute its failure
+		// to the flipped field rather than to a baseline issue.
+		if err := ValidateAppConfiguration(validSharedV3()); err != nil {
+			t.Fatalf("shared+v3 baseline must validate: %v", err)
+		}
+	})
+
+	t.Run("missing_only_admin_rejected", func(t *testing.T) {
+		c := validSharedV3()
+		c.Spec.OnlyAdmin = false
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: spec.onlyAdmin must be true when options.shared=true")
+		}
+		if !strings.Contains(err.Error(), "spec.onlyAdmin must be true when options.shared=true") {
+			t.Fatalf("error should flag the onlyAdmin gate, got: %v", err)
+		}
+	})
+
+	t.Run("subcharts_set_rejected", func(t *testing.T) {
+		c := validSharedV3()
+		c.Spec.SubCharts = []Chart{
+			{Name: "ollamaserver", Shared: true},
+			{Name: "ollamav2"},
+		}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: spec.subCharts must be empty when options.shared=true")
+		}
+		if !strings.Contains(err.Error(), "spec.subCharts must be empty when options.shared=true") {
+			t.Fatalf("error should flag the subCharts gate, got: %v", err)
+		}
+	})
+
+	t.Run("appscope_cluster_scoped_rejected", func(t *testing.T) {
+		c := validSharedV3()
+		c.Options.AppScope.ClusterScoped = true
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: options.appScope.clusterScoped must be false when options.shared=true")
+		}
+		if !strings.Contains(err.Error(), "options.appScope.clusterScoped must be false when options.shared=true") {
+			t.Fatalf("error should flag the clusterScoped gate, got: %v", err)
+		}
+	})
+
+	t.Run("appscope_app_ref_rejected", func(t *testing.T) {
+		c := validSharedV3()
+		c.Options.AppScope.AppRef = []string{"ollamav2"}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: options.appScope.appRef must be empty when options.shared=true")
+		}
+		if !strings.Contains(err.Error(), "options.appScope.appRef must be empty when options.shared=true") {
+			t.Fatalf("error should flag the appRef gate, got: %v", err)
+		}
+	})
+
+	t.Run("multiple_violations_are_aggregated", func(t *testing.T) {
+		// A manifest authored against the wrong schema can easily hit
+		// every gate at once. The aggregator must surface them all in a
+		// single Lint run so the author sees the full checklist instead
+		// of fixing one field, re-running, and discovering the next.
+		c := validSharedV3()
+		c.Spec.OnlyAdmin = false
+		c.Spec.SubCharts = []Chart{{Name: "ollamaserver", Shared: true}}
+		c.Options.AppScope = AppScope{
+			ClusterScoped: true,
+			AppRef:        []string{"ollamav2"},
+		}
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected aggregated errors for multiple shared-app violations")
+		}
+		msg := err.Error()
+		wantFragments := []string{
+			"spec.onlyAdmin must be true when options.shared=true",
+			"spec.subCharts must be empty when options.shared=true",
+			"options.appScope.clusterScoped must be false when options.shared=true",
+			"options.appScope.appRef must be empty when options.shared=true",
+		}
+		for _, frag := range wantFragments {
+			if !strings.Contains(msg, frag) {
+				t.Fatalf("aggregated error should contain %q, got: %v", frag, err)
+			}
+		}
+	})
+
+	t.Run("rules_dormant_when_shared_false", func(t *testing.T) {
+		// Every constraint here is gated on options.shared=true. Build
+		// a config that would otherwise violate every gate, then leave
+		// shared=false and confirm validation passes (the offending
+		// fields are unrelated to the shared rule when shared is off).
+		// This documents that the gate keys off shared, not off the
+		// presence of subCharts/appScope/onlyAdmin themselves.
+		c := newValidConfig()
+		c.APIVersion = APIVersionV2
+		c.Spec.OnlyAdmin = false
+		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
+		c.Options.AppScope = AppScope{
+			ClusterScoped: true,
+			AppRef:        []string{"other"},
+		}
+		// options.shared stays at its zero value (false).
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("shared=false config must not trip the shared-app gates: %v", err)
+		}
+	})
 }

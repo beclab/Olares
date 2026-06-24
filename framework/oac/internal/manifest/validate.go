@@ -114,6 +114,7 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 		validateRootProvider(c.ConfigVersion, c.Provider),
 		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
 		validateOlaresDependency(c),
+		validateSharedAppRequirements(c),
 		validateV3Configuration(c),
 	)
 }
@@ -661,6 +662,60 @@ func validateOlaresDependency(c *AppConfiguration) error {
 				olaresSystemDepName, olaresDep.Version, rule.requirement, api, promotion, sv.String(),
 			))
 		}
+	}
+	return errors.Join(errs...)
+}
+
+// validateSharedAppRequirements enforces the cross-field rules that an
+// options.shared=true manifest must satisfy. A shared install services
+// every user on the cluster from a single deployment, which is only
+// compatible with a narrow shape:
+//
+//   - spec.onlyAdmin must be true — shared apps span every user, so the
+//     installer must be restricted to admins; allowing a regular user to
+//     install one would let them install on behalf of everyone else.
+//   - spec.subCharts must be empty — subCharts is the v2-only multi-chart
+//     delivery mechanism. Shared apps require apiVersion=v3 (enforced in
+//     validateOptions), and v3 ships every workload in a single chart;
+//     declaring subCharts here is meaningless and almost certainly a
+//     manifest authored against the wrong schema.
+//   - options.appScope.clusterScoped must be false AND
+//     options.appScope.appRef must be empty — both fields express a
+//     scoping intent (cluster-wide singleton, or shared access with
+//     specific other apps) that overlaps with "shared". Declaring them
+//     together makes the install topology ambiguous. The two are
+//     checked independently so the error message pinpoints the offender
+//     instead of forcing the user to clear the whole appScope block to
+//     discover which field tripped the rule.
+//
+// The apiVersion=v3 requirement on shared apps is enforced separately in
+// validateOptions; these gates run alongside it so a manifest that
+// violates multiple constraints surfaces every offender in a single Lint
+// run.
+func validateSharedAppRequirements(c *AppConfiguration) error {
+	if !c.Options.Shared {
+		return nil
+	}
+	var errs []error
+	if !c.Spec.OnlyAdmin {
+		errs = append(errs, fmt.Errorf(
+			"spec.onlyAdmin must be true when options.shared=true; shared apps service every user on the cluster and may only be installed by an admin",
+		))
+	}
+	if len(c.Spec.SubCharts) > 0 {
+		errs = append(errs, fmt.Errorf(
+			"spec.subCharts must be empty when options.shared=true; shared apps require apiVersion=v3 and deliver every workload in a single chart",
+		))
+	}
+	if c.Options.AppScope.ClusterScoped {
+		errs = append(errs, fmt.Errorf(
+			"options.appScope.clusterScoped must be false when options.shared=true; the shared scope already covers every user and is incompatible with cluster scoping",
+		))
+	}
+	if len(c.Options.AppScope.AppRef) > 0 {
+		errs = append(errs, fmt.Errorf(
+			"options.appScope.appRef must be empty when options.shared=true; shared apps do not declare cross-app scoping",
+		))
 	}
 	return errors.Join(errs...)
 }
