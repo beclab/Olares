@@ -61,6 +61,15 @@ func NewDefaultCommand() *cobra.Command {
 	}
 	cmds.Flags().BoolVar(&showVendor, "vendor", false, "show the vendor type of olares-cli")
 
+	// Keep the first line byte-for-byte identical to Cobra's default
+	// ("olares-cli version <VERSION>") so existing parsers that read only
+	// the first line / the third whitespace-delimited token keep working,
+	// while appending the build metadata on following lines.
+	cmds.SetVersionTemplate(fmt.Sprintf(
+		"{{with .Name}}{{.}} {{end}}version {{.Version}}\nGit commit: %s\nBuild time: %s\n",
+		version.GitCommit, version.BuildTime,
+	))
+
 	// Version-compat controls (--olares-version / --refresh-version) live on
 	// the `profile` command tree, not here: backend version is a per-profile
 	// property (cached in config.json, eagerly fetched at login). Other

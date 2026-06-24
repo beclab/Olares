@@ -23,6 +23,8 @@ builds:
       - -s
       - -w
       - -X github.com/beclab/Olares/cli/version.VERSION={{ .Version }}
+      - -X github.com/beclab/Olares/cli/version.GitCommit={{ .FullCommit }}
+      - -X github.com/beclab/Olares/cli/version.BuildTime={{ .Date }}
       - >-
         {{- if index .Env "OLARES_VENDOR_TYPE" }}
         -X github.com/beclab/Olares/cli/version.VENDOR={{ .Env.OLARES_VENDOR_TYPE }}
