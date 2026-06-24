@@ -468,7 +468,7 @@ func (a *applyKubernetesPrometheusOperatorAction) Execute(runtime connector.Runt
 		return errors.Wrap(errors.WithStack(err), "kubectl not found")
 	}
 	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "prometheus-operator", "prometheus-operator-deployment.yaml")
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s --force-conflicts --server-side", kubectlpath, manifest), false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "apply prometheus-operator failed")
 	}
 	return nil
