@@ -20,6 +20,7 @@ cli/skills/
 │       ├── olares-files-ls.md
 │       ├── olares-files-upload.md
 │       └── ...
+├── olares-search/     # olares-cli search (Desktop global / full-content search; single leaf command)
 ├── olares-market/     # olares-cli market
 ├── olares-settings/   # olares-cli settings
 ├── olares-dashboard/  # olares-cli dashboard
@@ -105,7 +106,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 `clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` is valid semver, that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
-./cli/skills/publish.sh --dry-run                  # validate all 8
+./cli/skills/publish.sh --dry-run                  # validate all 9
 ./cli/skills/publish.sh --dry-run olares-shared    # validate one
 ```
 
@@ -127,7 +128,7 @@ Note: `clawhub sync` defaults to bumping the patch version on updates. For deter
 ### Publish
 
 ```bash
-./cli/skills/publish.sh                            # publish all 8
+./cli/skills/publish.sh                            # publish all 9
 ./cli/skills/publish.sh olares-files olares-market # publish a subset
 ```
 
@@ -135,12 +136,13 @@ Versions come from each skill's frontmatter `version:` field — bump the field 
 
 ## Slug policy
 
-The 8 skills publish under their canonical short names:
+The 9 skills publish under their canonical short names:
 
 | Slug              | Display name                                |
 |-------------------|---------------------------------------------|
 | `olares-shared`   | Olares Shared (olares-cli foundation)       |
 | `olares-files`    | Olares Files (olares-cli files)             |
+| `olares-search`   | Olares Search (olares-cli search)           |
 | `olares-market`   | Olares Market (olares-cli market)           |
 | `olares-settings` | Olares Settings (olares-cli settings)       |
 | `olares-dashboard`| Olares Dashboard (olares-cli dashboard)     |

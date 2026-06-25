@@ -97,9 +97,20 @@ func runClone(opts *MarketOptions, appName string) error {
 		return opts.failOp("clone", appName, err)
 	}
 
+	// Template bodies (templateOnly) are cloned to create instances even
+	// though the body itself is never installed; the SPA's onClone() sets
+	// templateClone:true for them so the backend / dialog can branch. Only
+	// emit the flag on 1.12.6+ (the field is omitempty, so 1.12.5 stays
+	// byte-identical).
+	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if err != nil {
+		return opts.failOp("clone", appName, err)
+	}
+	templateClone := atLeast126 && appIsTemplateOnly(appInfo)
+
 	opts.info("Cloning '%s' as '%s' from '%s' for user '%s'...", appName, title, source, mc.olaresID)
 
-	resp, err := mc.CloneApp(ctx, appName, source, title, envs, entrances)
+	resp, err := mc.CloneApp(ctx, appName, source, title, envs, entrances, templateClone)
 	if err != nil {
 		if envErr := parseServerEnvError(resp, appName); envErr != nil {
 			return opts.failOp("clone", appName, envErr)

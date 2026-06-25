@@ -81,5 +81,6 @@ Olares releases follow [semver](https://docs.olares.com/developer/install/versio
 - The running version lives in the `Terminus` CR `spec.version` and is injected into every chart as `.Values.sysVersion`.
 - **"At least" comparisons strip the prerelease/build segment**, so a daily build `1.12.6-20260327` still counts as `>= 1.12.6`. Always use the `-0` suffix in constraints (`>=1.12.6-0`) or prerelease/daily/RC builds fail to match.
 - Reading the target version: `olares-cli profile list` (cached `VERSION` column, populated at login from `/api/olares-info`), `olares-cli profile list --refresh-version`, or live `olares-cli settings me version`.
+- Overriding detection: when `/api/olares-info` is unreachable (or to force a code path), pass `--olares-version <ver>` — version-gated verbs (e.g. `files compress` / `extract` / `archive` / `nfs`, `drive/Common`) read it instead of probing the backend.
 
-Used by: `chart` (the `>= 1.12.6` porting floor + `options.dependencies` `type: system`), `shared` (the profile `VERSION` column), and `settings` (`me version`).
+Used by: `chart` (the `>= 1.12.6` porting floor + `options.dependencies` `type: system`), `shared` (the profile `VERSION` column), `settings` (`me version`), and `files` (the `compress` / `extract` / `archive` / `nfs` + `drive/Common` version gate).

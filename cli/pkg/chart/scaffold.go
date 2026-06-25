@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	oac "github.com/beclab/Olares/framework/oac"
@@ -24,11 +25,16 @@ const (
 	defaultIcon    = "https://app.cdn.olares.com/appstore/default/defaulticon.webp"
 	appCfgFileName = "OlaresManifest.yaml"
 
-	// newSchemaConfigVersion projects resources into spec.accelerator[mode=cpu];
-	// legacySchemaConfigVersion writes the flat spec.requiredX/limitedX fields.
-	newSchemaConfigVersion    = "0.12.0"
-	legacySchemaConfigVersion = "0.8.0"
-	resourceModeCPU           = "cpu"
+	// configVersion is the olaresManifest.version every scaffold emits:
+	// resources live under spec.accelerator[mode=cpu].
+	configVersion   = "0.12.0"
+	resourceModeCPU = "cpu"
+
+	// olaresSystemDepName / olaresSystemDepVersion are the options.dependencies
+	// entry the 0.12.0 schema requires: spec.accelerator and workloadReplicas
+	// are 1.12.6-only features, so the constraint must restrict to >=1.12.6-0.
+	olaresSystemDepName    = "olares"
+	olaresSystemDepVersion = ">=1.12.6-0"
 
 	// entranceAnnotation marks the compose service the user wants exposed as
 	// the primary entrance (set via a compose label of the same name).
@@ -58,8 +64,6 @@ type Options struct {
 	Title string
 	// Type is the OlaresManifest type: app | recommend | middleware.
 	Type string
-	// NewSchema selects the 0.12.0 layout (spec.accelerator) over legacy 0.8.0.
-	NewSchema bool
 	// Profiles / NoInterpolate are passed straight to the kompose loader.
 	Profiles      []string
 	NoInterpolate bool
@@ -127,6 +131,7 @@ func writeChart(opts Options, resources []runtime.Object) error {
 	// selects it.
 	renamePrimaryWorkload(resources, opts.Name)
 
+	replicas := manifest.WorkloadReplicas{}
 	for i := range resources {
 		resource := resources[i]
 		addResourcesRequirements(resource)
@@ -139,11 +144,20 @@ func writeChart(opts Options, resources []runtime.Object) error {
 			obj.SetNamespace("{{ .Release.Namespace }}")
 		}
 
+		// wireReplica is set for the workload kinds whose spec.replicas must be
+		// driven by .Values.workloads.<name>.replicaCount (Deployment/StatefulSet).
+		wireReplica := false
 		switch obj := resource.(type) {
 		case *appsv1.Deployment:
 			accumulateContainerResources(obj.Spec.Template.Spec.Containers, totalRequests, totalLimits)
+			obj.Spec.Replicas = ptrInt32(1)
+			replicas[obj.GetName()] = 1
+			wireReplica = true
 		case *appsv1.StatefulSet:
 			accumulateContainerResources(obj.Spec.Template.Spec.Containers, totalRequests, totalLimits)
+			obj.Spec.Replicas = ptrInt32(1)
+			replicas[obj.GetName()] = 1
+			wireReplica = true
 		case *appsv1.DaemonSet:
 			accumulateContainerResources(obj.Spec.Template.Spec.Containers, totalRequests, totalLimits)
 		case *corev1.Pod:
@@ -158,6 +172,12 @@ func writeChart(opts Options, resources []runtime.Object) error {
 		if err != nil {
 			return err
 		}
+		if wireReplica {
+			// app-service drives replica counts (install/suspend/resume) purely
+			// through .Values.workloads.<name>.replicaCount, so the template must
+			// reference it instead of the literal kompose replica count.
+			yml = wireReplicasValue(yml, mobj.GetName())
+		}
 		kind := strings.ToLower(resource.GetObjectKind().GroupVersionKind().Kind)
 		filename := filepath.Join(templatesDir, fmt.Sprintf("%s-%s.yaml", kind, mobj.GetName()))
 		if err := os.WriteFile(filename, yml, 0644); err != nil {
@@ -165,7 +185,7 @@ func writeChart(opts Options, resources []runtime.Object) error {
 		}
 	}
 
-	return writeManifest(opts, host, port, totalRequests, totalLimits)
+	return writeManifest(opts, host, port, totalRequests, totalLimits, replicas)
 }
 
 // renamePrimaryWorkload renames one workload to appName so the chart has a
@@ -212,14 +232,14 @@ func renamePrimaryWorkload(resources []runtime.Object, appName string) {
 }
 
 // writeManifest assembles the OlaresManifest.yaml + Chart.yaml + values.yaml.
-func writeManifest(opts Options, entranceHost string, entrancePort int32, totalRequests, totalLimits corev1.ResourceList) error {
+func writeManifest(opts Options, entranceHost string, entrancePort int32, totalRequests, totalLimits corev1.ResourceList, replicas manifest.WorkloadReplicas) error {
 	cpuReq := totalRequests[corev1.ResourceCPU]
 	memReq := totalRequests[corev1.ResourceMemory]
 	cpuLim := totalLimits[corev1.ResourceCPU]
 	memLim := totalLimits[corev1.ResourceMemory]
 
 	appcfg := manifest.AppConfiguration{
-		ConfigVersion: configVersionFor(opts.NewSchema),
+		ConfigVersion: configVersion,
 		ConfigType:    opts.Type,
 		Metadata: manifest.AppMetaData{
 			Name:        opts.Name,
@@ -236,9 +256,17 @@ func writeManifest(opts Options, entranceHost string, entrancePort int32, totalR
 		},
 		Options: manifest.Options{
 			AppScope: manifest.AppScope{AppRef: []string{}},
+			Dependencies: []manifest.Dependency{{
+				Name:    olaresSystemDepName,
+				Version: olaresSystemDepVersion,
+				Type:    "system",
+			}},
 		},
 	}
-	applyAppResources(&appcfg.Spec, opts.NewSchema, oac.ManifestResourceLimits{
+	if len(replicas) > 0 {
+		appcfg.WorkloadReplicas = &replicas
+	}
+	applyAppResources(&appcfg.Spec, oac.ManifestResourceLimits{
 		RequiredCPU:    cpuReq.String(),
 		RequiredMemory: memReq.String(),
 		RequiredDisk:   "50Mi",
@@ -274,7 +302,26 @@ func writeManifest(opts Options, entranceHost string, entrancePort int32, totalR
 	if err := writeYAMLFile(filepath.Join(opts.OutputDir, "Chart.yaml"), meta); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(opts.OutputDir, "values.yaml"), []byte{}, 0644)
+	return writeValuesFile(filepath.Join(opts.OutputDir, "values.yaml"), replicas)
+}
+
+// writeValuesFile seeds values.yaml with workloads.<name>.replicaCount for
+// every workload in replicas. The 0.12.0 lint sources each workload's replica
+// count from .Values.workloads.<name>.replicaCount, so an empty values.yaml
+// would fail validation as soon as workloadReplicas is declared.
+func writeValuesFile(path string, replicas manifest.WorkloadReplicas) error {
+	if len(replicas) == 0 {
+		return os.WriteFile(path, []byte{}, 0644)
+	}
+	workloads := make(map[string]map[string]int32, len(replicas))
+	for name, count := range replicas {
+		workloads[name] = map[string]int32{"replicaCount": count}
+	}
+	out, err := yaml.Marshal(map[string]any{"workloads": workloads})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, out, 0644)
 }
 
 // detectEntrance picks the primary entrance for the scaffolded manifest:
@@ -336,27 +383,10 @@ func isSelectorMatch(podLabels, selector map[string]string) bool {
 	return true
 }
 
-// applyAppResources writes r into spec per the active schema. New schema
-// projects into spec.Accelerator[mode=cpu] (the v0.0.8 field; devbox's older
-// api used spec.Resources); legacy writes the flat spec.RequiredX/LimitedX.
-func applyAppResources(spec *manifest.AppSpec, newSchema bool, r oac.ManifestResourceLimits) {
-	if !newSchema {
-		spec.RequiredCPU = r.RequiredCPU
-		spec.LimitedCPU = r.LimitedCPU
-		spec.RequiredMemory = r.RequiredMemory
-		spec.LimitedMemory = r.LimitedMemory
-		spec.RequiredDisk = r.RequiredDisk
-		spec.LimitedDisk = r.LimitedDisk
-		return
-	}
-
-	spec.RequiredCPU = ""
-	spec.RequiredMemory = ""
-	spec.RequiredDisk = ""
-	spec.LimitedDisk = ""
-	spec.LimitedCPU = ""
-	spec.LimitedMemory = ""
-
+// applyAppResources projects r into spec.Accelerator[mode=cpu] (the modern
+// 0.12.0 resource envelope); the legacy flat spec.RequiredX/LimitedX fields
+// are intentionally left empty.
+func applyAppResources(spec *manifest.AppSpec, r oac.ManifestResourceLimits) {
 	mode := manifest.ResourceMode{
 		Mode: resourceModeCPU,
 		ResourceRequirement: manifest.ResourceRequirement{
@@ -375,13 +405,6 @@ func applyAppResources(spec *manifest.AppSpec, newSchema bool, r oac.ManifestRes
 		}
 	}
 	spec.Accelerator = append(spec.Accelerator, mode)
-}
-
-func configVersionFor(newSchema bool) string {
-	if newSchema {
-		return newSchemaConfigVersion
-	}
-	return legacySchemaConfigVersion
 }
 
 func addResourcesRequirements(resource runtime.Object) {
@@ -443,6 +466,19 @@ func accumulateContainerResources(containers []corev1.Container, totalRequests, 
 
 func toYAML(v any) ([]byte, error) {
 	return yaml.Marshal(v)
+}
+
+func ptrInt32(v int32) *int32 { return &v }
+
+var replicasLineRE = regexp.MustCompile(`(?m)^(\s*)replicas: \d+\s*$`)
+
+// wireReplicasValue rewrites a serialized Deployment/StatefulSet's literal
+// spec.replicas line into a Helm reference to .Values.workloads.<name>.replicaCount.
+// app-service installs and suspends/resumes apps by overriding that value, so a
+// hardcoded replicas count would make the lifecycle scale operations inert.
+func wireReplicasValue(yml []byte, name string) []byte {
+	repl := fmt.Sprintf("${1}replicas: {{ .Values.workloads.%s.replicaCount }}", name)
+	return replicasLineRE.ReplaceAll(yml, []byte(repl))
 }
 
 func writeYAMLFile(path string, v any) error {

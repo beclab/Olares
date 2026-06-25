@@ -36,7 +36,8 @@ The olares-cli skills ship and install as one suite; each owns a distinct slice.
 | [`olares-settings`](../olares-settings/SKILL.md) | Post-install config (Settings SPA): app entrance / domain / env / policy, users, VPN, network, backup / restore, integrations | changing config of an installed app or the system |
 | [`olares-cluster`](../olares-cluster/SKILL.md) | K8s runtime view: pods / workloads / jobs / cronjobs / nodes / namespaces; logs; scale / restart / delete | inspecting or operating running K8s objects |
 | [`olares-dashboard`](../olares-dashboard/SKILL.md) | Resource metrics & health: CPU / memory / disk / network / pods / GPU / fan / ranking | "what's the usage / what's eating CPU" |
-| [`olares-files`](../olares-files/SKILL.md) | Per-user file API: drive / sync / cache / external; upload / download; share; SMB; Seafile | browsing or moving files / drives |
+| [`olares-files`](../olares-files/SKILL.md) | Per-user file API: drive / sync / cache / external; upload / download; share; SMB / NFS; compress / extract; Seafile | browsing or moving files / drives |
+| [`olares-search`](../olares-search/SKILL.md) | Full-content search (Desktop "Text Search") over the per-user index: Drive files + Sync libraries | finding a file by its content / keyword |
 | [`olares-chart`](../olares-chart/SKILL.md) | Local chart authoring + deploy to your Olares: from-compose / lint / package, then upload + install | authoring, validating, or deploying your own chart |
 | [`olares-publish`](../olares-publish/SKILL.md) | Public Market distribution: market-ready metadata / multi-arch, the beclab/apps PR, paid apps | listing / submitting / selling an app on the public Market |
 

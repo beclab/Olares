@@ -7,8 +7,12 @@ head:
       content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 使用指南, 消息平台集成, Discord 集成
 app_version: "1.0.1"
 doc_version: "2.0"
-doc_updated: "2026-06-09"
+doc_updated: "2026-05-27"
 ---
+
+:::warning
+本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openclaw-integration.md)。
+:::
 
 # 与 Discord 集成
 
@@ -60,7 +64,11 @@ doc_updated: "2026-06-09"
     ![机器人权限](/images/zh/manual/use-cases/bot-permissions1.png#bordered)
 
 2. 复制底部**已生成的 URL**。
-3. 将该 URL 粘贴到新的浏览器标签页中，在**添加至服务器**中选择你的 Discord 服务器，点击**继续**，然后点击**授权**。机器人会被添加到你的服务器。
+3. 将该 URL 粘贴到新的浏览器标签页中，在**添加至服务器**中选择你的 Discord 服务器，点击**继续**，然后点击**授权**。 
+
+    机器人已被授权并添加到你的服务器。
+
+    ![机器人已添加到服务器](/images/manual/use-cases/bot-added.png#bordered)
 
 ## 步骤 3：配置频道
 

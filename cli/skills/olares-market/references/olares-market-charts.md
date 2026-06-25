@@ -82,7 +82,7 @@ olares-cli market list -s upload                                   # confirm
 ## Safety constraints
 
 - **`delete` is destructive** — it removes the chart from the bucket. If the app is still running, the deployment continues to work but you can no longer reinstall from the local bucket.
-- **`upload` overwrites by `(name, version)`** — uploading `mychart-1.0.0.tgz` twice replaces the previous bytes. To bump, change the version inside `Chart.yaml` and re-upload.
+- **`upload` overwrites by `(name, version)`** — uploading `mychart-1.0.0.tgz` twice replaces the previous bytes. The uploaded version must be **>= the stored** version (equal overwrites; a *lower* version is rejected). To bump, change the version inside `Chart.yaml` and re-upload.
 
 ## Common errors
 

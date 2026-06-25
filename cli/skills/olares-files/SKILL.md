@@ -1,7 +1,7 @@
 ---
 name: olares-files
-version: 4.2.0
-description: "Olares Files via olares-cli files — ls, upload, download, edit, share, SMB mount, Seafile sync on drive/Home, drive/Data, cache, external, cloud. Use for Olares Files, drive, upload, download, share, SMB, LarePass Files."
+version: 4.3.1
+description: "Olares Files via olares-cli files — ls, upload, download, edit, share, SMB/NFS mount, compress/extract archives, Seafile sync on drive/Home, drive/Data, drive/Common, cache, external, cloud. Use for Olares Files, drive, upload, download, share, SMB, NFS, compress, extract, archive, LarePass Files."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -20,11 +20,15 @@ metadata:
 
 ## When to use
 
-- Olares Files, olares-cli files, LarePass Files, drive, Home, Data, sync, cache, upload, download, list, edit, rename, chown
+- Olares Files, olares-cli files, LarePass Files, drive, Home, Data, Common, sync, cache, upload, download, list, edit, rename, chown
+- Archives: compress / extract; inspect (`archive entries` / `archive cat`); manage the async queue (`task` cancel / pause / resume)
 - Share: internal cross-Olares-ID, public link (password / expiration), SMB / Samba, Connect to Server, Seafile sync repos
+- Mount external servers: SMB (`smb`) and NFS (`nfs`)
 - Namespaces: `drive`, `cache`, `sync`, `external`, `awss3`, `dropbox`, `google`, `tencent`, `share`
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
+
+> **Finding files by name/content** (and what the index covers — filenames everywhere vs. full-text only in `/Documents/`) lives in [`olares-search`](../olares-search/SKILL.md); configure which directories get full-text indexing via `settings search dirs` in [`olares-settings`](../olares-settings/SKILL.md).
 
 ## Core concept: the 3-segment frontend path
 
@@ -37,12 +41,12 @@ Every resource on the per-user files-backend is addressed by:
 | Segment | Meaning |
 |---------|---------|
 | `fileType` | Storage class (lowercase, case-sensitive): `drive`, `cache`, `sync`, `external`, `awss3`, `dropbox`, `google`, `tencent`, `share`, `internal` |
-| `extend` | Volume / repo / account inside that class. **Case-sensitive.** Drive: only `Home` or `Data`. Cache / external: node name. Sync: seafile repo id. Cloud (`awss3`/`dropbox`/`google`/`tencent`): account key |
+| `extend` | Volume / repo / account inside that class. **Case-sensitive.** Drive: `Home`, `Data`, or `Common`. Cache / external: node name. Sync: seafile repo id. Cloud (`awss3`/`dropbox`/`google`/`tencent`): account key |
 | `subPath` | Path inside `extend` (root if omitted). Leading `/` is implicit |
 
-Examples: `drive/Home/`, `drive/Home/Documents/report.pdf`, `sync/<repo_id>/notes/`, `awss3/<account>/<bucket>/key.txt`.
+Examples: `drive/Home/`, `drive/Home/Documents/report.pdf`, `drive/Common/huggingface/`, `sync/<repo_id>/notes/`, `awss3/<account>/<bucket>/key.txt`.
 
-> Drive's `extend` MUST be `Home` or `Data` exactly — `home` is rejected with `invalid drive type`.
+> Drive's `extend` MUST be `Home`, `Data`, or `Common` exactly (case-sensitive; `home` is rejected with `drive extend must be Home, Data, or Common`). `Common` is the cross-app shared data area (reserved `huggingface`/`ollama`/... caches), and needs **Olares >= 1.12.6** — see [platform.md → Userspace storage model](../olares-shared/references/olares-platform.md#userspace-storage-model).
 
 ### Per-verb namespace support
 
@@ -57,7 +61,10 @@ Examples: `drive/Home/`, `drive/Home/Documents/report.pdf`, `sync/<repo_id>/note
 | `share internal` | `drive`, `sync`, `external`, `cache` (cloud refused) |
 | `share smb` | `drive`, `external`, `cache` (sync + cloud refused) |
 | `share public` | `drive` only |
+| `compress` / `extract` / `archive entries` / `archive cat` | `drive/Home`, `drive/Data`, `drive/Common`, `cache/<node>`, `external/<node>/<volume>` only (sync + all cloud refused). Needs Olares >= 1.12.6 |
 | `smb mount` / `unmount` / `history` | keyed by `<node>` + `<smb-url>`, not frontend paths |
+| `nfs mount` / `unmount` / `history` | keyed by `<node>` + NFS target (`host` or `host:/export`), not frontend paths. Needs Olares >= 1.12.6 |
+| `task cancel` / `pause` / `resume` | keyed by `<node>` + `task_id`, not frontend paths |
 | `repos` | operates on the Sync (Seafile) library catalog, not frontend paths |
 
 ## Trailing-slash convention (critical)
@@ -108,6 +115,23 @@ The eleven LarePass bootstrap directories under `drive/Home/` (the canonical nam
 
 `cache/<node>/` IS a real per-node directory on the wire, so `ls` / `cp` / `mkdir` / `upload` / `rm` / `rename` work fine. BUT the share-create flavors (`share internal` / `share public` / `share smb`) reject the bare node root because a share record on the node-picker layer points at no concrete dataset. Use `cache/<node>/<sub>/` for shares; `files ls cache/<node>/` for discovery.
 
+## Async task queue (compress / extract)
+
+Unlike every other verb, `compress` and `extract` are **asynchronous**: the POST returns immediately with a `task_id`, and the byte-writing runs on the server's per-node task queue. Mental model:
+
+- Without `--wait`, the command prints the `task_id` and exits — the task is still running server-side.
+- With `--wait`, the command polls and prints progress until the task reaches a terminal status.
+- **Ctrl-C / context cancel only stops the local poll; the server-side task keeps running.** To actually stop it, use `files task cancel <task_id> --node <node>`.
+- Tasks are **per-node** — the `<node>` segment must match the node the task was queued on (`compress` / `extract` print it in their "queued ... task" line). `files task pause` / `resume` / `cancel` manage a queued task; `cancel --all` drops every task on the node.
+
+## Version gate (Olares >= 1.12.6)
+
+The archive surface (`compress` / `extract` / `archive`), the `nfs` verbs, and the `drive/Common` namespace were all introduced in **Olares 1.12.6**. The CLI fails closed on an older (or undetectable) backend with an actionable upgrade message rather than an opaque server 404/500.
+
+- Before reaching for these, check the backend version: the `VERSION` column of `olares-cli profile list`, or live `olares-cli settings me version` (see [olares-shared](../olares-shared/SKILL.md) and [platform.md → version model](../olares-shared/references/olares-platform.md#olares-version--semver-model)).
+- Comparison is on `major.minor.patch` only, so a daily build like `1.12.6-20260603` still counts as `>= 1.12.6`.
+- If detection fails (`/api/olares-info` unreachable), pass `--olares-version <ver>` to set it manually.
+
 ## Authentication transport
 
 Every files API call carries `X-Authorization: <access_token>` (NOT `Authorization: Bearer ...`). The transport auto-refreshes expired tokens transparently — reactive on 401/403 for replayable requests (every verb except `upload`), pro-active JWT-exp pre-flight for streaming `upload` chunks (because once an `*os.File` chunk is consumed it can't be replayed). Concurrent goroutines and processes serialize on a single `/api/refresh`.
@@ -130,8 +154,13 @@ For flags, examples, and wire shapes, **always start with `olares-cli files <ver
 | `rename` | [references/olares-files-rename.md](references/olares-files-rename.md) | In-place only (synchronous PATCH); protected-names list; bare basename only |
 | `cp` / `mv` | [references/olares-files-cp-mv.md](references/olares-files-cp-mv.md) | Drop-into-dir semantics; `mv` source rejects protected names; preflight Stat of every src + dst dir |
 | `chown` | [references/olares-files-chown.md](references/olares-files-chown.md) | UID 0 / 1000 conventions; namespace allow-list; volume-root refusal |
+| `compress` | [references/olares-files-compress.md](references/olares-files-compress.md) | Async (`task_id` + `--wait`); format set; single-file-compressor limits; password / split-volume zip+7z only; `--level` / `--conflict`. Needs >= 1.12.6 |
+| `extract` | [references/olares-files-extract.md](references/olares-files-extract.md) | Async; `<dst-dir>/` must end with `/`; interactive password retry; `--conflict`. Needs >= 1.12.6 |
+| `archive` | [references/olares-files-archive.md](references/olares-files-archive.md) | Read-only inspect: `entries` (`--json` / `--max-entries`), `cat` (`-o`); bzip2 / xz not previewable. Needs >= 1.12.6 |
+| `task` | [references/olares-files-task.md](references/olares-files-task.md) | Control the per-node queue: `cancel [--all]` / `pause` / `resume`; `pause_able` precheck; `--force` |
 | `share` | [references/olares-files-share.md](references/olares-files-share.md) | Three flavors (internal / public / smb); directory-only; per-flavor namespace allow-list; update verbs (`set-members` / `set-password` / `set-smb`) |
 | `smb` | [references/olares-files-smb.md](references/olares-files-smb.md) | Mount → `external/<node>/<entry>/`; host-only address triggers share discovery; favorites history |
+| `nfs` | [references/olares-files-nfs.md](references/olares-files-nfs.md) | Mount → `external/<node>/<entry>/`; bare host triggers export discovery; no credentials; shares the smb favorites book. Needs >= 1.12.6 |
 | `repos` | `olares-cli files repos --help` | List / create / rename / rm Seafile libraries; repo_id is the `<extend>` segment |
 
 ## Common errors (cross-verb)
@@ -146,12 +175,18 @@ For flags, examples, and wire shapes, **always start with `olares-cli files <ver
 | `tencent upload is not supported` (or similar) | Tencent's octet protocol is not implemented | Use the LarePass web app for tencent uploads |
 | `<src> does not exist on the server` (from `cp`/`mv`/`rm`) | Preflight Stat failed | `files ls` the parent and confirm the path |
 | `HTTP 500` from `/api/resources/<file>` | Quirk #2 — backend tried to embed file bytes | Use `files cat` / `files download` instead |
+| `require Olares >= 1.12.6` (from `compress`/`extract`/`archive`/`nfs`) or `drive/Common ... requires Olares >= 1.12.6` | Version gate — backend predates the feature | Upgrade Olares, or pass `--olares-version` if detection misfired |
+| ``files compress` does not support the "sync"/"<cloud>" namespace` | Archive allow-list (drive/cache/external only) | Stage into `drive/Home` first, or use the LarePass web app for cloud |
+| `archive requires a password` / `archive password is incorrect` | Encrypted zip / 7z | Supply it via `--password-stdin` (or answer the interactive prompt) |
+| `previewing "bzip2"/"xz" archives is not supported` | Raw single-stream compressor, no entry table | `files extract` it instead of `archive entries` / `archive cat` |
+| `task ... is already <status>` / `not controllable: ... pause_able=false` | Task is terminal or non-interruptible | Nothing to do, or pass `--force` to send anyway |
 
 For auth-related errors (`server rejected the access token`, `refresh token for X became invalid`, …) see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
 
 ## Safety contract
 
-- **Write & delete verbs** (`rm`, `rename`, `cp`, `mv`, `chown --uid`, `share rm`, `repos rm`, `smb unmount`) — confirm intent with the user FIRST. Several verbs preflight against the server before any state change; do not bypass that by retry-on-404.
+- **Write & delete verbs** (`rm`, `rename`, `cp`, `mv`, `chown --uid`, `compress`, `extract`, `share rm`, `repos rm`, `smb unmount`, `nfs unmount`, `nfs history rm`, `task cancel`) — confirm intent with the user FIRST. Several verbs preflight against the server before any state change; do not bypass that by retry-on-404.
 - **`rm -f` skips the y/N prompt but NOT the preflight existence check** — a missing path still aborts.
-- **Never echo `access_token` / `refresh_token` to the terminal.** Use `--password-stdin` (where supported) for SMB passwords too.
-- **Confirm destination paths** before any `upload --overwrite`, `cp` to an existing file, or any operation that could clobber bytes.
+- **`task cancel --all` drops EVERY task on the node** (including ones started elsewhere) — confirm explicitly; it refuses in a non-TTY context without `--force`.
+- **Never echo `access_token` / `refresh_token` to the terminal.** Use `--password-stdin` (where supported) for SMB and archive passwords too.
+- **Confirm destination paths** before any `upload --overwrite`, `cp` to an existing file, `compress`/`extract --conflict overwrite`, or any operation that could clobber bytes.

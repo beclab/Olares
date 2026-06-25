@@ -11,6 +11,7 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.34.0
 	k8s.io/client-go => k8s.io/client-go v0.34.0
 	kubesphere.io/api => ../../kubesphere-ext/staging/src/kubesphere.io/api/
+	olares.com/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.19.6
 )
 
@@ -20,7 +21,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/beclab/Olares/cli v0.0.0-20251230161135-5264df60cc33
 	github.com/beclab/Olares/framework/app-service v0.0.0-20260528090802-b69f2bf96b82
-	github.com/beclab/api v0.0.17
+	github.com/beclab/api v0.0.21-0.20260618085457-f1a6694882f5
 	github.com/containerd/containerd v1.7.29
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
@@ -66,6 +67,7 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/cri-api v0.34.1
 	k8s.io/cri-client v0.34.1
+	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/mount-utils v0.31.0
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2

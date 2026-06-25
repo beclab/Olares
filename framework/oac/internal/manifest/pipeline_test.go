@@ -193,6 +193,94 @@ func TestSinglePipeline_Strategy(t *testing.T) {
 	}
 }
 
+// TestSinglePipeline_RejectsTemplateSyntaxOnModernManifest documents
+// the pre-parse gate added for olaresManifest.version >= 0.12.0: a raw
+// payload that still carries an unquoted `{{` / `}}` delimiter must
+// fail before the strategy's YAML parser ever sees it, otherwise the
+// user gets the downstream "could not find expected ':'" error that
+// prompted this check.
+func TestSinglePipeline_RejectsTemplateSyntaxOnModernManifest(t *testing.T) {
+	s := &fakeStrategy{}
+	p := singlePipeline{strat: s, olaresVersion: "0.12.0"}
+
+	raw := []byte("metadata:\n  name: {{ .Values.bfl.username }}\n")
+	_, err := p.Parse(raw, nil, "", "")
+	if err == nil {
+		t.Fatal("expected template-syntax rejection, got nil")
+	}
+	if !strings.Contains(err.Error(), "template syntax") {
+		t.Fatalf("error must mention template syntax, got: %v", err)
+	}
+	if len(s.parseCalls) != 0 {
+		t.Fatalf("strategy.Parse must not be invoked when the gate trips, got %d calls", len(s.parseCalls))
+	}
+}
+
+// TestSinglePipeline_ValidateRejectsTemplateSyntaxOnModernManifest
+// mirrors the Parse-side gate for the parsed==nil branch of Validate,
+// which is the path Lint/ValidateManifestContent uses when the caller
+// hasn't parsed the manifest yet. The sample value is intentionally
+// *unquoted* — quoted scalars and block scalars are shielded by the
+// YAML-aware masker, so the gate must trip only on the bare form that
+// would otherwise derail the YAML decoder.
+func TestSinglePipeline_ValidateRejectsTemplateSyntaxOnModernManifest(t *testing.T) {
+	s := &fakeStrategy{}
+	p := singlePipeline{strat: s, olaresVersion: "0.12.0"}
+
+	raw := []byte("spec:\n  name: {{ .Values.foo }}\n")
+	err := p.Validate(raw, nil, nil, "", "")
+	if err == nil {
+		t.Fatal("expected template-syntax rejection from Validate, got nil")
+	}
+	if !strings.Contains(err.Error(), "template syntax") {
+		t.Fatalf("error must mention template syntax, got: %v", err)
+	}
+	if len(s.parseCalls) != 0 {
+		t.Fatalf("strategy.Parse must not be invoked when the gate trips, got %d calls", len(s.parseCalls))
+	}
+	if len(s.validCalls) != 0 {
+		t.Fatalf("strategy.Validate must not be invoked when the gate trips, got %d calls", len(s.validCalls))
+	}
+}
+
+// TestSinglePipeline_AllowsTemplateSyntaxInsideQuotedString documents
+// the flip side: a `{{ ... }}` (or stand-alone `{{` / `}}`) that
+// belongs to a key's value scalar — be it single-quoted, double-
+// quoted, or a `|`/`>` block scalar — does not trip the gate, because
+// YAML decodes the line cleanly and the placeholder reads as
+// documentation text on a modern manifest.
+func TestSinglePipeline_AllowsTemplateSyntaxInsideQuotedString(t *testing.T) {
+	s := &fakeStrategy{}
+	p := singlePipeline{strat: s, olaresVersion: "0.12.0"}
+
+	raw := []byte("spec:\n  description: \"use {{ .Values.foo }} as a placeholder\"\n")
+	if _, err := p.Parse(raw, nil, "", ""); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(s.parseCalls) != 1 {
+		t.Fatalf("strategy.Parse must run when the placeholder is shielded by a string, got %d calls", len(s.parseCalls))
+	}
+}
+
+// TestSinglePipeline_AllowsTemplateSyntaxOnUnknownVersion documents
+// another flip side of the gate: when olaresManifest.version is empty
+// or unparseable (the cases NewPipeline still routes through
+// singlePipeline), the template-syntax check is intentionally skipped.
+// The legacy/probing callers that rely on this fallback must keep
+// working.
+func TestSinglePipeline_AllowsTemplateSyntaxOnUnknownVersion(t *testing.T) {
+	s := &fakeStrategy{}
+	p := singlePipeline{strat: s} // olaresVersion left empty
+
+	raw := []byte("metadata:\n  name: {{ .Values.foo }}\n")
+	if _, err := p.Parse(raw, nil, "", ""); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(s.parseCalls) != 1 {
+		t.Fatalf("strategy.Parse must run when the version is unknown, got %d calls", len(s.parseCalls))
+	}
+}
+
 func TestDualOwnerPipeline_ParseUsesCallerInputs(t *testing.T) {
 	s := &fakeStrategy{manifest: &fakeManifest{apiVersion: "v1", configVersion: "0.8.1"}}
 	p := dualOwnerPipeline{strat: s}

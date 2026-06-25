@@ -167,7 +167,7 @@ func TestGpuDetailDisplayCopy_SPAFieldWhitelist(t *testing.T) {
 		"powerLimit":     0,
 		"temperature":    0,
 		"device_no":      "nvidia0",
-		"driver_version": "595.80",
+		"driver_version": "595.84",
 		"health":         true,
 	}
 	got := gpuDetailDisplayCopy(src)

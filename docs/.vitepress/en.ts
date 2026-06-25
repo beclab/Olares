@@ -202,6 +202,7 @@ const side = {
     },
     {
       text: "Olares applications",
+      link: "/manual/olares/",
       items: [
         { text: "Desktop", link: "/manual/olares/desktop", },
         {
@@ -577,7 +578,6 @@ const side = {
 export const en = defineConfig({
   lang: "en",
   themeConfig: {
-    //logo: "/icon.png",
     socialLinks: [{ icon: "github", link: "https://github.com/beclab/olares" }],
 
     nav: [

@@ -3,7 +3,7 @@ outline: [2,3]
 description: This page documents the known issues and unexpected behaviors you might encounter when using Windows on Olares, along with their corresponding solutions or workarounds.
 ---
 
-# Known issues
+# Windows VM known issues
 
 Use this page to identify and troubleshoot currently known issues with Windows on Olares.
 

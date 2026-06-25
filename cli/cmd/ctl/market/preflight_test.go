@@ -360,6 +360,30 @@ func TestPreflightUpgrade(t *testing.T) {
 			wantErrSub: "is older than installed",
 		},
 		{
+			// upload bucket overwrites in place; re-applying the same
+			// version is the sanctioned re-deploy / recovery path, so
+			// the same-version no-op gate must NOT fire here.
+			name:    "upload source: target == installed → allowed (re-apply)",
+			appName: "psitransfer",
+			target:  "3.0.9",
+			source:  "upload",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["upload"] = fakeStateRow{name: "psitransfer", state: "upgradeFailed", version: "3.0.9"}
+			},
+		},
+		{
+			// The upload carve-out is same-version only — a true
+			// downgrade is still rejected (app-service rejects it too).
+			name:    "upload source: target < installed → still bail (downgrade)",
+			appName: "psitransfer",
+			target:  "3.0.8",
+			source:  "upload",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["upload"] = fakeStateRow{name: "psitransfer", state: "upgradeFailed", version: "3.0.9"}
+			},
+			wantErrSub: "is older than installed",
+		},
+		{
 			name:    "invalid installed version → comparison error",
 			appName: "firefox",
 			target:  "1.0.12",

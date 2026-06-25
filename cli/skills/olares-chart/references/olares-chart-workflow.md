@@ -39,7 +39,7 @@ Step D1 produces a chart that **already passes `lint`** but is NOT yet a good ap
 <output>/
 ├── Chart.yaml              # helm chart metadata (name/version pinned to 0.0.1)
 ├── OlaresManifest.yaml     # Olares app manifest — the file you refine
-├── values.yaml             # empty; fill if you template values
+├── values.yaml             # seeded with workloads.<name>.replicaCount; add more as you template values
 └── templates/
     ├── deployment-<app>.yaml          # the primary workload, renamed to <app>
     ├── deployment-<svc>.yaml          # one per extra compose service
@@ -50,6 +50,7 @@ Step D1 produces a chart that **already passes `lint`** but is NOT yet a good ap
 - Every resource is namespaced with `namespace: '{{ .Release.Namespace }}'`.
 - Default CPU/memory requests+limits are stamped onto every container.
 - One **entrance** is auto-detected (the `olares.service.type: Entrance`-labeled service, else the first service with a port, else a `port: 80` placeholder).
-- `olaresManifest.version` is `0.8.0` (legacy) unless you pass `--new-schema` (`0.12.0`, resources under `spec.accelerator`) — see [olares-chart-manifest.md](olares-chart-manifest.md).
+- `olaresManifest.version` is always `0.12.0` (resources under `spec.accelerator`) — see [olares-chart-manifest.md](olares-chart-manifest.md).
+- For 0.12.0, the scaffold also emits `workloadReplicas.<workload>: 1` (with the matching `values.yaml` `workloads.<name>.replicaCount`, and each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}` so suspend/resume work) plus the required `options.dependencies` `olares >=1.12.6-0` (`type: system`), so a fresh scaffold passes `lint`.
 
 > **Tip:** label the service you want exposed in the compose file with `labels: { olares.service.type: Entrance }` so the right workload becomes the entrance and gets renamed to the app name.

@@ -18,7 +18,7 @@ The semver scheme (stable / RC / daily), `.Values.sysVersion`, the `-0` prerelea
 >
 > ```yaml
 > apiVersion: v3
-> olaresManifest.version: '0.8.0'   # independent axis — see below
+> olaresManifest.version: '0.12.0'   # independent axis — see below
 > olaresManifest.type: app
 > metadata:
 >   name: myapp
@@ -29,9 +29,12 @@ What `v3` turns on (enforced by the toolchain only when `apiVersion: v3`):
 
 - **Declarative env rules** — an app-local `envName` must not start with `OLARES_USER`; user/system variables are mapped via `valueFrom`. Full env model: [olares-chart-env.md](olares-chart-env.md).
 - **Chart scan** — `lint` rejects templates that inline `OLARES_USER...` env names.
-- **Admin-installed, cluster-wide shared install** — on Olares >= 1.12.6 the install handler routes `apiVersion: v3` to an admin-only install into the deterministic `<app>-shared` namespace, with cross-namespace shared access enabled. So a v3 app is effectively a **shared app**: a normal-user install is rejected. For a deliberate multi-user shared backend (accelerator/heavy, own accounts, shared data), follow [olares-chart-shared.md](olares-chart-shared.md).
+- **Admin-only install** — a normal-user install is rejected; only the admin can install a v3 app.
+- **Namespace depends on `isShared`** in the manifest:
+  - Without `isShared: true` → installs into `<app>-<adminUsername>` (the admin's personal namespace). Use this when the app just needs admin-only install but manages its own users internally.
+  - With `isShared: true` → installs into `<app>-shared` (cluster-wide, cross-namespace access enabled). Use this for heavy shared backends (GPU inference servers, shared databases) that other apps consume. See [olares-chart-shared.md](olares-chart-shared.md).
 
-`apiVersion` is independent of `olaresManifest.version` — `v3` works with both `0.8.0` and `0.12.0`.
+`apiVersion` is independent of `olaresManifest.version` — `v3` is the skill rule for the API axis, while the schema axis is always `0.12.0` (see below).
 
 ## The version fields in a chart (don't confuse them)
 
@@ -40,24 +43,25 @@ A chart carries several "version" fields with different jobs and different rules
 | Field | Where | What it is | Rule |
 |---|---|---|---|
 | `apiVersion` | `OlaresManifest.yaml` (top level) | manifest API generation | skill sets `v3` (toolchain allows `v1`/`v2`/`v3`, default `v1`) |
-| `olaresManifest.version` | `OlaresManifest.yaml` | manifest **schema** version | `0.8.0` (legacy) vs `0.12.0` (`--new-schema`); install minimum `>= 0.7.2` |
+| `olaresManifest.version` | `OlaresManifest.yaml` | manifest **schema** version | always `0.12.0` for new apps (`from-compose` emits it; install minimum `>= 0.7.2`, legacy `< 0.12.0` charts still install) |
 | `metadata.version` | `OlaresManifest.yaml` | **Chart version** (Market package) | must be semver and **equal `Chart.yaml` `version`** |
 | `version` | `Chart.yaml` | Helm chart version | `== metadata.version` |
 | `spec.versionName` | `OlaresManifest.yaml` | **upstream app** version (display) | tracks `Chart.yaml` `appVersion` — convention, not enforced |
 
 > **Name clash:** `Chart.yaml` also has its own `apiVersion` (`v2`) — that is the **Helm** chart API and is unrelated to the OlaresManifest `apiVersion`. Don't copy one into the other.
 
-### Schema version: 0.8.0 (legacy) vs 0.12.0 (`--new-schema`)
+### Schema version: 0.12.0
 
-`olaresManifest.version` declares which manifest schema the chart uses. `from-compose` emits **0.8.0** by default and **0.12.0** with `--new-schema`. The difference is not cosmetic — some fields only exist on 0.12.0:
+`olaresManifest.version` declares which manifest schema the chart uses. **New apps always use `0.12.0`** — `from-compose` emits it unconditionally (the old `--new-schema` flag is a deprecated no-op). The 0.12.0 schema:
 
-| | 0.8.0 (legacy, default) | 0.12.0 (`--new-schema`) |
-|---|---|---|
-| Resource envelope | flat `spec.requiredCpu` / `requiredMemory` / `requiredDisk` / `limitedCpu` / ... | `spec.resources[]` / `spec.accelerator[]` (mode-keyed: `cpu`, `nvidia`, ...) |
-| GPU / accelerator | not expressible cleanly | `spec.accelerator` with mode → arch cross-check at `lint` |
-| `permission.externalData` (`.Values.sharedlib`) | rejected | supported |
+- **Resource envelope** lives under `spec.resources[]` / `spec.accelerator[]` (mode-keyed: `cpu`, `nvidia`, ...), not the legacy flat `spec.requiredCpu` / `requiredMemory` / ... fields.
+- **GPU / accelerator** is declared via `spec.accelerator` with a mode → arch cross-check at `lint`.
+- **`permission.externalData`** (`.Values.sharedlib`) is supported.
+- **`workloadReplicas` is required** (non-v2): a map of every Deployment/StatefulSet → replica count, with each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}`. See [olares-chart-manifest.md](olares-chart-manifest.md) (Workloads & replicas).
 
-**Use 0.12.0 when** the app declares GPU/accelerator resources, needs `permission.externalData`, or you want the modern resource envelope (recommended for new Market apps). Otherwise 0.8.0 is fine. To switch an existing stub, re-scaffold with `from-compose --new-schema` (or edit `olaresManifest.version` and migrate the resource fields). Accelerator mode declaration and sizing are in [olares-chart-accelerator.md](olares-chart-accelerator.md).
+Accelerator mode declaration and sizing are in [olares-chart-accelerator.md](olares-chart-accelerator.md).
+
+> **Legacy `< 0.12.0` (e.g. `0.8.0`) charts** still install and validate (the install minimum is `>= 0.7.2`), and the validator reads their flat `spec.requiredCpu` / ... fields. You only meet them when reading old charts; do not author new ones on the legacy schema.
 
 ## Declaring system-version compatibility
 

@@ -7,7 +7,23 @@ The scaffolded manifest is a stub. The four areas below are what kompose cannot 
 
 ## Schema version and apiVersion
 
-`olaresManifest.version` (the manifest **schema**: `0.8.0` default vs `0.12.0` via `--new-schema`) and the top-level `apiVersion` (skill sets **`v3`**) are separate axes from the chart/app versions. Use `0.12.0` when the app needs `spec.accelerator` or `permission.externalData`. The full schema-field table, the version-field map, and the `type: system` dependency are in [olares-chart-versioning.md](olares-chart-versioning.md); accelerator sizing is in [olares-chart-gpu.md](olares-chart-gpu.md).
+`olaresManifest.version` (the manifest **schema**: always `0.12.0` for new apps) and the top-level `apiVersion` (skill sets **`v3`**) are separate axes from the chart/app versions. `0.12.0` carries `spec.accelerator` and `permission.externalData`. The full schema description, the version-field map, and the `type: system` dependency are in [olares-chart-versioning.md](olares-chart-versioning.md); accelerator sizing is in [olares-chart-gpu.md](olares-chart-gpu.md).
+
+## Workloads & replicas (required on 0.12.0)
+
+On `0.12.0` the manifest **must** declare a top-level `workloadReplicas` map — one entry per **Deployment / StatefulSet** the chart renders → its replica count (`lint` rejects a modern non-v2 manifest that omits it). `from-compose` scaffolds this for you; you only touch it when you add or rename workloads.
+
+```yaml
+workloadReplicas:
+  myapp: 1          # every Deployment/StatefulSet name must appear here
+  worker: 1
+```
+
+Three rules that bite:
+
+- **Key = rendered workload name.** Each key must equal the rendered `metadata.name` of a Deployment/StatefulSet. **DaemonSets are excluded** (they are one-per-node, not replica-controlled).
+- **Template wiring contract.** Every listed workload's `spec.replicas` **must** be `{{ .Values.workloads.<name>.replicaCount }}`, and `values.yaml` must carry a matching `workloads.<name>.replicaCount`. The `.Values.workloads.*` value is documented in [olares-chart-system-values.md](olares-chart-system-values.md).
+- **Why it matters (non-obvious).** app-service drives the whole lifecycle through this Helm value: install is two-phase (helm renders at `replicas: 0`, then scales up), suspend scales every listed workload to `0`, resume scales back to the declared counts. If a template **hardcodes** `replicas`, `lint` may still pass but **suspend/resume and the staged install silently stop working** — the value override has nothing to drive. `from-compose` already wires the scaffolded workloads; any workload you add by hand must be wired the same way.
 
 ## 1. Metadata
 
@@ -30,7 +46,7 @@ spec:
   runAsUser: true             # optional but recommended — Olares injects pod runAsUser 1000; see run-as-user.md
 ```
 
-> **`appid` vs `lint`:** `chart lint` only requires `name`, `icon`, `description`, `title`, `version` (`appid` is `omitempty` in the schema, so a chart lints without it). But `from-compose` always writes `appid: <name>`, and the platform uses it as the app's identity (e.g. the entrance host `<appid>.<zone>` — see [olares-chart-system-values.md](olares-chart-system-values.md)). **Keep `appid` present and equal to `metadata.name`** when hand-authoring a manifest (e.g. from a generic Helm chart); rename it alongside `name` / the folder / `Chart.yaml`.
+> **`appid` vs `lint`:** `chart lint` only requires `name`, `icon`, `description`, `title`, `version` (`appid` is `omitempty` in the schema, so a chart lints without it). But `from-compose` always writes `appid: <name>`, and the platform uses it as the app's identity (e.g. the entrance host `<appid>.<zone>` — see [olares-chart-system-values.md](olares-chart-system-values.md)). **Keep `appid` present and equal to `metadata.name`** when hand-authoring a manifest (e.g. from a generic Helm chart); rename it alongside `name` / the folder / `Chart.yaml`. **`lint` passes without it; `market upload` does not** — omitting it produces `upload payload missing ... metadata.appid`.
 
 ### Keep as stub (deploy to your Olares)
 
@@ -99,6 +115,7 @@ entrances:
     exposePort: 47777    # cluster-unique; avoid reserved 22/80/81/443/444/2379/18088
   ```
 - **Outbound non-HTTP** (e.g. the app sends SMTP): `options.allowedOutboundPorts: [465, 587]`.
+- **Long-running HTTP requests** (LLM streaming, big uploads, slow report generation): the per-app **entrance proxy** caps every request at `options.apiTimeout` **seconds** — **default 15s**, so anything slower is cut at the entrance (504 / closed connection) regardless of the app or browser. Set `options.apiTimeout: 0` to disable the cap, or a large value (e.g. `3600`) for a bounded one. It is an install-time **manifest** field (not an install-time env), so for `templateOnly` env-driven charts you must edit it in the chart manifest and re-package.
 
 ## After refining
 

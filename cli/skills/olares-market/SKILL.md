@@ -1,6 +1,6 @@
 ---
 name: olares-market
-version: 4.2.0
+version: 4.3.0
 description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, upload chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -67,7 +67,8 @@ The market backend serves multiple "sources" of charts. The CLI resolves which o
 | `-s / --source` | `list`, `categories`, `status`, `get` | `install`, `upgrade`, `clone` | — (hard-coded `upload`) |
 | `-a / --all-sources` | `list`, `categories`, `status` | — | — |
 
-> **`-s` is NOT on `uninstall` / `stop` / `resume` / `cancel`:** they act on whichever per-user state row matches the app name, regardless of source.
+> **`-s` is NOT on `uninstall` / `stop` / `resume`:** they act on whichever per-user state row matches the app name, regardless of source.
+> **`cancel` now exposes `--source`** — but only as a fallback for the Olares 1.12.6+ edge case where the per-user state row is gone (or `/market/state` is unreadable) and the 1.12.6 cancel body still needs a source. In the normal case the source is read from the state row; do not pass it.
 
 ## App lifecycle / state machine
 
@@ -128,9 +129,15 @@ The same `State` can mean different things depending on which mutation is in fli
 | `app 'X' is not installed (run 'olares-cli market install X' to install it)` | `status <app>` could not find the row anywhere | Install first, or verify the app name spelling |
 | `App is installed under source 'Y' (not 'X')` (stderr) | `-s X` but the row is actually in source Y | Drop `-s`, or pass the correct source. The CLI still renders the row |
 | `missing required env var(s): KEY1, KEY2 ...` | `install` for an app that declares required envs | Re-run with `--env KEY=VALUE` (repeatable) for each missing var |
+| `app 'X' supports multiple compute modes; re-run with --compute-mode <type> ...` | 1.12.6+ `install` (non-interactive) of an app runnable on several accelerators | Re-run with `--compute-mode <type>` (e.g. `nvidia`); a TTY would prompt instead |
+| `app 'X' requires a compute binding ... re-run with --compute-binding ...` | 1.12.6+ `resume` (non-interactive) of a GPU app needing a device | Re-run with `--compute-binding <node>:<device>[:<mem>]` (mem accepts Gi/Mi; repeat the flag once per card for multi-GPU apps) from `settings compute list`; a TTY would prompt instead (comma-separated for multi-card) |
+| `the supplied --compute-binding (...) was rejected ...: <reason>` | 1.12.6+ `resume` with an explicit binding the backend refused | `<reason>` mirrors the SPA wording for that `validation.code` — e.g. `aggregate-vram-insufficient` (combined VRAM), `device-vram-insufficient`, `node-pressure` (lists Memory/CPU/Disk Total/Used/Needed), or a raw structural code like `multi-card-not-supported` / `gpu-type-mismatch`. Pick different/more cards per the available list |
+| `--compute-mode/--compute-binding requires Olares 1.12.6+ ...` | Flag passed against a 1.12.5 backend | Drop the flag — 1.12.5 uses a different, unchanged code path |
 | Lifecycle watcher hangs near `*Failed` state | Backend failed but kept the failure row visible | Inspect `market status <app>` for the failure detail; cancel with `market cancel <app>` if applicable |
 | `cannot --watch 'status' (no app argument)` | `market status` without an app + `--watch` | Use `status <app> --watch` |
 | 401 / 403 from any verb after refresh | Token rotation / consistent server-side rejection | See [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) |
-| `--cascade NOT passed: auto-decided ...` (stderr) | C/S v2 multi-chart app on single-user cluster | Informational — the CLI picked `--cascade=true`; pass `--cascade=false` explicitly to override |
+| `--cascade auto-enabled ...` (stderr) | 1.12.5: C/S v2 multi-chart app on single-user cluster | Informational — the CLI picked `--cascade=true`; pass `--cascade=false` to override (1.12.5 only) |
+| `--cascade force-enabled ... (CS/shared apps always cascade)` (stderr) | 1.12.6: target is a CS/shared app (apiVersion v2 / shared) | Informational — on 1.12.6 CS/shared apps are always cascaded; `--cascade=false` cannot disable it |
+| `'X' has no in-progress operation for this user; nothing to cancel` | `cancel` on 1.12.6 with the per-user row gone and no `--source` | Nothing to cancel; if you must still cancel a stuck op, pass `--source <id>` |
 
 For the full auth-error matrix see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).

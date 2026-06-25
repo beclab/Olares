@@ -89,7 +89,25 @@ jobs:
             echo "::error::binary version output '$actual' does not contain expected '$expected_stripped'"
             exit 1
           fi
-          echo "binary version OK: $actual"
+          # Assert build metadata (git commit / build time) was injected and is
+          # not the unknown/placeholder default baked into version.go.
+          if ! echo "$actual" | grep -qE '^Git commit: '; then
+            echo "::error::binary version output is missing the 'Git commit:' line"
+            echo "output: $actual"
+            exit 1
+          fi
+          if ! echo "$actual" | grep -qE '^Build time: '; then
+            echo "::error::binary version output is missing the 'Build time:' line"
+            echo "output: $actual"
+            exit 1
+          fi
+          if echo "$actual" | grep -qE '^(Git commit|Build time): unknown$'; then
+            echo "::error::build metadata still reports 'unknown'; ldflags did not take effect"
+            echo "output: $actual"
+            exit 1
+          fi
+          echo "binary version OK:"
+          echo "$actual"
 
       - name: Install coscmd
         run: pip install coscmd        
