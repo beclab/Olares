@@ -11,7 +11,7 @@ The scaffolded manifest is a stub. The four areas below are what kompose cannot 
 
 ## Workloads & replicas (required on 0.12.0)
 
-On `0.12.0` the manifest **must** declare a top-level `workloadReplicas` map — one entry per **Deployment / StatefulSet** the chart renders → its replica count (`lint` rejects a modern non-v2 manifest that omits it). `from-compose` scaffolds this for you; you only touch it when you add or rename workloads.
+A `0.12.0` chart **must** declare a top-level `workloadReplicas` map — one entry per **Deployment / StatefulSet** the chart renders → its replica count. **This is a mandatory part of authoring a v3 chart, and it is on you to get right: declare it and confirm it yourself for every chart, whether you scaffolded with `from-compose` or hand-authored, and re-check it whenever you add, rename, or remove a workload. Do not assume a scaffolder produced it correctly, and do not treat a passing `lint` as proof it is present and wired** — `lint` rejecting an omitted map is a backstop, not the reason you write it.
 
 ```yaml
 workloadReplicas:
@@ -19,11 +19,13 @@ workloadReplicas:
   worker: 1
 ```
 
-Three rules that bite:
+**Self-check (inspect the files directly — do not rely on any tool):**
 
-- **Key = rendered workload name.** Each key must equal the rendered `metadata.name` of a Deployment/StatefulSet. **DaemonSets are excluded** (they are one-per-node, not replica-controlled).
-- **Template wiring contract.** Every listed workload's `spec.replicas` **must** be `{{ .Values.workloads.<name>.replicaCount }}`, and `values.yaml` must carry a matching `workloads.<name>.replicaCount`. The `.Values.workloads.*` value is documented in [olares-chart-system-values.md](olares-chart-system-values.md).
-- **Why it matters (non-obvious).** app-service drives the whole lifecycle through this Helm value: install is two-phase (helm renders at `replicas: 0`, then scales up), suspend scales every listed workload to `0`, resume scales back to the declared counts. If a template **hardcodes** `replicas`, `lint` may still pass but **suspend/resume and the staged install silently stop working** — the value override has nothing to drive. `from-compose` already wires the scaffolded workloads; any workload you add by hand must be wired the same way.
+1. `OlaresManifest.yaml` top-level `workloadReplicas` lists **every** Deployment/StatefulSet the chart renders (by rendered `metadata.name`) → its replica count. **DaemonSets are excluded** (one-per-node, not replica-controlled).
+2. Every listed workload's template sets `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — **never a hardcoded number**.
+3. `values.yaml` carries a matching `workloads.<name>.replicaCount` for each. The `.Values.workloads.*` value is documented in [olares-chart-system-values.md](olares-chart-system-values.md).
+
+**Why the template wiring matters (non-obvious).** app-service drives the whole lifecycle through this Helm value: install is two-phase (helm renders at `replicas: 0`, then scales up), suspend scales every listed workload to `0`, resume scales back to the declared counts. If a template **hardcodes** `replicas`, **suspend/resume and the staged install silently stop working** — the value override has nothing to drive.
 
 ## 1. Metadata
 
