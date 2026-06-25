@@ -120,28 +120,43 @@ func (d *DefaultProvider) Resolve(_ context.Context, profile *cliconfig.ProfileC
 // buildResolved is shared between DefaultProvider and any future provider that
 // needs to turn (ProfileConfig, accessToken) into a ResolvedProfile.
 func buildResolved(profile *cliconfig.ProfileConfig, accessToken string, exp time.Time) (*ResolvedProfile, error) {
-	authURL, err := profile.ResolvedAuthURL()
-	if err != nil {
-		return nil, fmt.Errorf("derive auth URL: %w", err)
-	}
 	id, err := olares.ParseID(profile.OlaresID)
 	if err != nil {
 		return nil, err
 	}
+	// rawLoc preserves the stored value verbatim (including "" = never
+	// probed) so the Factory can tell "unknown, please backfill" apart from a
+	// genuine "external". For URL derivation an empty/invalid value falls
+	// back to LocationExternal so the resolved URLs are always usable.
+	rawLoc := olares.Location(profile.Location)
+	derivLoc := rawLoc
+	if !derivLoc.Valid() {
+		derivLoc = olares.LocationExternal
+	}
+	ep := id.Endpoints(derivLoc, profile.LocalURLPrefix)
+
+	authURL := ep.Auth
+	if profile.AuthURLOverride != "" {
+		authURL = profile.AuthURLOverride
+	}
+
 	rp := &ResolvedProfile{
 		Name:               profile.DisplayName(),
 		OlaresID:           profile.OlaresID,
 		UserUID:            profile.UserUID,
 		AuthURL:            authURL,
-		VaultURL:           id.VaultURL(profile.LocalURLPrefix),
-		DesktopURL:         id.DesktopURL(profile.LocalURLPrefix),
-		SettingsURL:        id.SettingsURL(profile.LocalURLPrefix),
-		FilesURL:           id.FilesURL(profile.LocalURLPrefix),
-		MarketURL:          id.MarketURL(profile.LocalURLPrefix),
-		DashboardURL:       id.DashboardURL(profile.LocalURLPrefix),
-		ControlHubURL:      id.ControlHubURL(profile.LocalURLPrefix),
+		VaultURL:           ep.Vault,
+		DesktopURL:         ep.Desktop,
+		SettingsURL:        ep.Settings,
+		FilesURL:           ep.Files,
+		MarketURL:          ep.Market,
+		DashboardURL:       ep.Dashboard,
+		ControlHubURL:      ep.ControlHub,
 		AccessToken:        accessToken,
 		InsecureSkipVerify: profile.InsecureSkipVerify,
+		Location:           rawLoc,
+		LocalURLPrefix:     profile.LocalURLPrefix,
+		AuthURLOverride:    profile.AuthURLOverride,
 	}
 	if !exp.IsZero() {
 		rp.ExpiresAt = exp.Unix()

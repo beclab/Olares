@@ -19,19 +19,35 @@ package cmdutil
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 
+	"github.com/beclab/Olares/cli/pkg/access"
 	"github.com/beclab/Olares/cli/pkg/auth"
+	"github.com/beclab/Olares/cli/pkg/cliconfig"
 	"github.com/beclab/Olares/cli/pkg/credential"
+	"github.com/beclab/Olares/cli/pkg/olares"
 )
+
+// locationCooldown is how long after an "every probe failed" result the CLI
+// skips a fresh (slow) re-probe and fails fast instead. Short enough to
+// self-heal quickly once connectivity returns, long enough that a burst of
+// commands during an outage doesn't each pay the full probe cost.
+const locationCooldown = 30 * time.Second
+
+// locationProbeBudget bounds a single reprobe triggered by a mid-request
+// network error, so a switch attempt can't hang a command much longer than
+// the original request would have. Derived from the probe timeouts (plus a
+// small buffer) rather than hard-coded, so it can never silently truncate the
+// final external probe when those timeouts change.
+var locationProbeBudget = access.MaxProbeDuration() + time.Second
 
 // statusAuthFailureOlares459 is the non-standard status code Olares' edge
 // stack (Authelia ext-authz wired through l4-bfl-proxy) returns when an
@@ -103,6 +119,13 @@ type Factory struct {
 	tokenCellOnce sync.Once
 	tokenCell     *tokenCell
 
+	// locationState is the shared mutable connection-method cell (current
+	// Location + its base http.Transport). Both http.Clients hold the same
+	// pointer so a network-error-triggered switch through one is immediately
+	// visible to the other.
+	locationStateOnce sync.Once
+	locationState     *locationState
+
 	clientOnce sync.Once
 	client     *http.Client
 
@@ -159,9 +182,57 @@ func (f *Factory) ResolveProfile(ctx context.Context) (*credential.ResolvedProfi
 			f.resolveErr = err
 			return
 		}
+		f.maybeBackfillLocation(ctx, rp)
 		f.resolved = rp
 	})
 	return f.resolved, f.resolveErr
+}
+
+// maybeBackfillLocation lazily probes + persists the network position for a
+// pre-existing profile that predates the Location field (rp.Location empty /
+// invalid). It is a no-op for env-resolved profiles (nothing local to write),
+// for profiles with a pinned auth URL override, for already-known locations,
+// and while a recent outage cooldown is in effect (use the external defaults
+// and fail fast). On a successful probe it re-derives rp's URLs in place and
+// writes the result to config.json best-effort. On ErrUnreachable it leaves
+// the external defaults and does NOT persist, so the next command re-probes.
+func (f *Factory) maybeBackfillLocation(ctx context.Context, rp *credential.ResolvedProfile) {
+	if rp == nil || rp.Source != "default" || rp.AuthURLOverride != "" {
+		return
+	}
+	if rp.Location.Valid() {
+		return
+	}
+	if inLocationCooldown(rp.OlaresID, time.Now()) {
+		return
+	}
+	id, err := olares.ParseID(rp.OlaresID)
+	if err != nil {
+		return
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, locationProbeBudget)
+	defer cancel()
+	loc, err := access.ProbeLocation(probeCtx, id, rp.LocalURLPrefix, rp.InsecureSkipVerify)
+	if err != nil {
+		return
+	}
+	rp.ApplyLocation(loc)
+	var cfg cliconfig.MultiProfileConfig
+	_ = cfg.SetLocation(rp.OlaresID, string(loc), time.Now().Unix())
+}
+
+// inLocationCooldown reports whether the profile keyed by olaresID recorded an
+// "every probe failed" result within the cooldown window ending at now.
+func inLocationCooldown(olaresID string, now time.Time) bool {
+	cfg, err := cliconfig.LoadMultiProfileConfig()
+	if err != nil {
+		return false
+	}
+	p := cfg.FindByOlaresID(olaresID)
+	if p == nil || p.LocationUnreachableAt == 0 {
+		return false
+	}
+	return now.Unix()-p.LocationUnreachableAt < int64(locationCooldown/time.Second)
 }
 
 // Refresher returns the lazily-constructed cross-process token refresher.
@@ -246,19 +317,70 @@ func (f *Factory) sharedTokenCell(initial string) *tokenCell {
 	return f.tokenCell
 }
 
-// newRefreshingTransport builds a refreshingTransport bound to rp. Both
-// HTTPClient and HTTPClientWithoutTimeout reuse the same Refresher and the
-// same tokenCell so a refresh on one is immediately visible on the other.
-func (f *Factory) newRefreshingTransport(rp *credential.ResolvedProfile) *refreshingTransport {
-	base := http.DefaultTransport.(*http.Transport).Clone()
-	if rp.InsecureSkipVerify {
-		base.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- explicit profile opt-in
+// locationState is the shared, mutable connection-method cell: the current
+// Location plus the base http.Transport configured for it. A network-error
+// reprobe swaps both under mu.
+//
+// unreachableMarked tracks whether an outage cooldown stamp is believed to be
+// persisted for this profile — either carried over from a previous run or set
+// by markUnreachable this run. clearUnreachable flips it false on the first
+// success after a mark (doing exactly one config write to lift the cooldown)
+// and markUnreachable re-arms it, so back-to-back outage/recovery cycles in a
+// long-lived process (e.g. a chunked upload) are each handled rather than
+// collapsing to a single per-process clear.
+type locationState struct {
+	mu                sync.Mutex
+	loc               olares.Location
+	base              http.RoundTripper
+	unreachableMarked atomic.Bool
+}
+
+// sharedLocationState lazily builds the process-wide locationState from rp's
+// (possibly backfilled) Location. Both http.Clients share the pointer so a
+// switch is visible to all in-flight requests.
+func (f *Factory) sharedLocationState(rp *credential.ResolvedProfile) *locationState {
+	f.locationStateOnce.Do(func() {
+		loc := rp.Location
+		if !loc.Valid() {
+			loc = olares.LocationExternal
+		}
+		ls := &locationState{
+			loc:  loc,
+			base: access.Transport(loc, rp.InsecureSkipVerify),
+		}
+		// Seed the marker from disk so the first success this run clears a
+		// cooldown stamp left behind by a previous (failed) run.
+		ls.unreachableMarked.Store(hasUnreachableStamp(rp.OlaresID))
+		f.locationState = ls
+	})
+	return f.locationState
+}
+
+// hasUnreachableStamp reports whether the profile keyed by olaresID currently
+// has a persisted outage cooldown stamp. A read error is treated as "no
+// stamp" (best-effort).
+func hasUnreachableStamp(olaresID string) bool {
+	cfg, err := cliconfig.LoadMultiProfileConfig()
+	if err != nil {
+		return false
 	}
+	p := cfg.FindByOlaresID(olaresID)
+	return p != nil && p.LocationUnreachableAt != 0
+}
+
+// newRefreshingTransport builds a refreshingTransport bound to rp. Both
+// HTTPClient and HTTPClientWithoutTimeout reuse the same Refresher, tokenCell
+// and locationState so a refresh or location switch through one is immediately
+// visible on the other.
+func (f *Factory) newRefreshingTransport(rp *credential.ResolvedProfile) *refreshingTransport {
+	id, _ := olares.ParseID(rp.OlaresID)
 	return &refreshingTransport{
-		base:               base,
+		id:                 id,
 		olaresID:           rp.OlaresID,
-		authURL:            rp.AuthURL,
+		localPrefix:        rp.LocalURLPrefix,
+		authURLOverride:    rp.AuthURLOverride,
 		insecureSkipVerify: rp.InsecureSkipVerify,
+		loc:                f.sharedLocationState(rp),
 		refresher:          f.Refresher(),
 		token:              f.sharedTokenCell(rp.AccessToken),
 	}
@@ -286,10 +408,12 @@ func (f *Factory) newRefreshingTransport(rp *credential.ResolvedProfile) *refres
 // rewindable body types (*bytes.Reader, *bytes.Buffer, *strings.Reader)
 // which covers all current JSON callers.
 type refreshingTransport struct {
-	base               http.RoundTripper
+	id                 olares.ID
 	olaresID           string
-	authURL            string
+	localPrefix        string
+	authURLOverride    string
 	insecureSkipVerify bool
+	loc                *locationState
 	refresher          *credential.Refresher
 	token              *tokenCell
 
@@ -299,8 +423,23 @@ type refreshingTransport struct {
 	now func() time.Time
 }
 
+// authURL derives the /api/refresh base for the current Location, honoring a
+// pinned auth URL override when present.
+func (t *refreshingTransport) authURL(loc olares.Location) string {
+	if t.authURLOverride != "" {
+		return t.authURLOverride
+	}
+	return t.id.Endpoints(loc, t.localPrefix).Auth
+}
+
 func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	snap := t.token.snapshot()
+
+	// Snapshot the current connection method (Location + base transport).
+	t.loc.mu.Lock()
+	curLoc := t.loc.loc
+	base := t.loc.base
+	t.loc.mu.Unlock()
 
 	// Pre-flight refresh for non-replayable bodies. Once a streaming
 	// body (e.g. *os.File chunk for files upload) is handed to the
@@ -313,7 +452,7 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	// it's one extra HTTP round-trip in the rare expiry case, but
 	// avoids a JWT decode on every request.
 	if !canRetry(req) {
-		newAT, ok, err := t.preflightRefresh(req.Context(), snap)
+		newAT, ok, err := t.preflightRefresh(req.Context(), snap, curLoc)
 		if err != nil {
 			return nil, err
 		}
@@ -322,10 +461,33 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		}
 	}
 
-	resp, err := t.send(req, snap)
+	resp, err := t.send(base, req, snap)
 	if err != nil {
+		// Transport-layer failure (DNS / connect / timeout). If it's the
+		// kind a different connection method might fix AND the body is
+		// replayable, re-probe the Location and retry exactly once against
+		// the new method. TLS errors, caller-cancels and anything that
+		// produced an HTTP response are NOT switchable.
+		if canRetry(req) && access.IsSwitchableNetErr(err, req.Context()) {
+			if newLoc, newBase, switched := t.ensureSwitched(req.Context(), curLoc); switched {
+				retryReq, rerr := cloneWithBody(req)
+				if rerr != nil {
+					return nil, err
+				}
+				retryReq.URL = t.id.RebaseURL(retryReq.URL, newLoc, t.localPrefix)
+				retryReq.Host = ""
+				return t.send(newBase, retryReq, snap)
+			}
+			// No connection method worked (cooldown, or every probe failed):
+			// surface the friendly, classified "unreachable" message while
+			// keeping the raw transport error reachable via Unwrap.
+			return nil, access.NewUnreachable(t.olaresID, err)
+		}
 		return nil, err
 	}
+	// A real HTTP response means the path is up; lift any outage cooldown.
+	t.clearUnreachable()
+
 	if !isAuthFailureStatus(resp.StatusCode) {
 		return resp, nil
 	}
@@ -338,7 +500,7 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	// Drain + close so the underlying connection can be reused.
 	drainAndClose(resp)
 
-	newAT, rerr := t.refresher.Refresh(req.Context(), t.olaresID, t.authURL, snap, t.insecureSkipVerify)
+	newAT, rerr := t.refresher.Refresh(req.Context(), t.olaresID, t.authURL(curLoc), snap, t.insecureSkipVerify, curLoc)
 	if rerr != nil {
 		// Refresh itself failed (network, 5xx) or the grant is dead
 		// (ErrTokenInvalidated, ErrNotLoggedIn). Surface the typed
@@ -352,7 +514,115 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	if err != nil {
 		return nil, fmt.Errorf("clone request for retry: %w", err)
 	}
-	return t.send(retryReq, newAT)
+	return t.send(base, retryReq, newAT)
+}
+
+// ensureSwitched re-probes the Location after a switchable network error and,
+// if a usable method is found, swaps the shared base transport to it. It
+// returns (newLoc, newBase, true) when the caller should retry, or
+// (failedLoc, currentBase, false) when no switch happened (cooldown, every
+// probe failed, or the caller's context expired).
+//
+// Concurrency mirrors the Refresher's "lock then re-check": if another
+// goroutine already switched away from failedLoc while we waited on the mutex,
+// we adopt their result instead of probing again.
+func (t *refreshingTransport) ensureSwitched(ctx context.Context, failedLoc olares.Location) (olares.Location, http.RoundTripper, bool) {
+	// Fast path under the lock: a peer may have already switched, or we may be
+	// in cooldown — both decided without paying for a (slow) probe.
+	t.loc.mu.Lock()
+	if t.loc.loc != failedLoc {
+		loc, base := t.loc.loc, t.loc.base
+		t.loc.mu.Unlock()
+		return loc, base, true
+	}
+	if t.inCooldown() {
+		base := t.loc.base
+		t.loc.mu.Unlock()
+		return failedLoc, base, false
+	}
+	t.loc.mu.Unlock()
+
+	// Probe WITHOUT holding the lock, so concurrent requests can keep reading
+	// the current connection method (RoundTrip's quick snapshot) instead of
+	// blocking for the whole probe budget behind us.
+	probeCtx, cancel := context.WithTimeout(ctx, locationProbeBudget)
+	defer cancel()
+	newLoc, probeErr := access.ProbeLocation(probeCtx, t.id, t.localPrefix, t.insecureSkipVerify)
+
+	// Commit under the lock, re-checking for a switch that landed while we
+	// probed (mirrors the Refresher's "lock then re-compare").
+	t.loc.mu.Lock()
+	if t.loc.loc != failedLoc {
+		// A peer already switched away from failedLoc — adopt their result
+		// rather than stomping it with ours.
+		loc, base := t.loc.loc, t.loc.base
+		t.loc.mu.Unlock()
+		return loc, base, true
+	}
+	if probeErr != nil {
+		base := t.loc.base
+		t.loc.mu.Unlock()
+		// Every method failed: stamp the cooldown so back-to-back commands
+		// fail fast. Keep the last-known-good Location (don't downgrade it).
+		// Done outside the lock so the disk/flock write doesn't stall readers.
+		if access.IsUnreachable(probeErr) {
+			t.markUnreachable()
+		}
+		return failedLoc, base, false
+	}
+	// newLoc == failedLoc means a transient blip at the same position; rebuild
+	// the base (drop stale idle conns) and retry once. A different position is
+	// a genuine switch — update the shared state and persist it.
+	newBase := access.Transport(newLoc, t.insecureSkipVerify)
+	t.loc.loc = newLoc
+	t.loc.base = newBase
+	switched := newLoc != failedLoc
+	t.loc.mu.Unlock()
+	if switched {
+		t.persistLocation(newLoc)
+	}
+	return newLoc, newBase, true
+}
+
+// persistLocation best-effort writes a freshly switched-to Location to
+// config.json (and clears any outage cooldown via SetLocation). SetLocation
+// re-reads config under the config lock, so an empty receiver is fine.
+func (t *refreshingTransport) persistLocation(loc olares.Location) {
+	var cfg cliconfig.MultiProfileConfig
+	_ = cfg.SetLocation(t.olaresID, string(loc), t.clock().Unix())
+}
+
+// markUnreachable best-effort stamps the outage cooldown after an
+// every-probe-failed result, and arms the marker so the next success lifts it.
+func (t *refreshingTransport) markUnreachable() {
+	var cfg cliconfig.MultiProfileConfig
+	if err := cfg.SetLocationUnreachable(t.olaresID, t.clock().Unix()); err != nil {
+		return
+	}
+	t.loc.unreachableMarked.Store(true)
+}
+
+// clearUnreachable best-effort lifts the outage cooldown after a successful
+// response. The CAS gate makes this a no-op (no disk read/write) unless an
+// outage was actually marked since the last clear, so a chunked upload's
+// steady-state successes don't touch config — while a later outage re-arms it
+// so a subsequent recovery is still cleared.
+func (t *refreshingTransport) clearUnreachable() {
+	if !t.loc.unreachableMarked.CompareAndSwap(true, false) {
+		return
+	}
+	var cfg cliconfig.MultiProfileConfig
+	if err := cfg.ClearLocationUnreachable(t.olaresID); err != nil {
+		// Re-arm: we didn't actually clear, so a future success should retry.
+		t.loc.unreachableMarked.Store(true)
+	}
+}
+
+// inCooldown reports whether this profile recorded an every-probe-failed
+// result within the cooldown window. Caller must hold no assumptions about
+// disk state; a read error is treated as "not in cooldown".
+func (t *refreshingTransport) inCooldown() bool {
+	return inLocationCooldown(t.olaresID, t.clock())
 }
 
 // preflightRefresh decides whether snap is close enough to expiring
@@ -367,7 +637,7 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 // Refresher.Refresh has its own in-process mutex + cross-process flock,
 // so concurrent chunk uploads collapse to a single /api/refresh hit
 // even when they all decide to pre-flight at the same moment.
-func (t *refreshingTransport) preflightRefresh(ctx context.Context, snap string) (string, bool, error) {
+func (t *refreshingTransport) preflightRefresh(ctx context.Context, snap string, loc olares.Location) (string, bool, error) {
 	if snap == "" {
 		return "", false, nil
 	}
@@ -383,7 +653,7 @@ func (t *refreshingTransport) preflightRefresh(ctx context.Context, snap string)
 	if !expired {
 		return "", false, nil
 	}
-	newAT, rerr := t.refresher.Refresh(ctx, t.olaresID, t.authURL, snap, t.insecureSkipVerify)
+	newAT, rerr := t.refresher.Refresh(ctx, t.olaresID, t.authURL(loc), snap, t.insecureSkipVerify, loc)
 	if rerr != nil {
 		return "", false, rerr
 	}
@@ -440,15 +710,15 @@ func (t *refreshingTransport) clock() time.Time {
 // pre-existing Cookie header rather than replacing it; in the unlikely
 // event the caller pre-set its own auth_token cookie both values are
 // sent (per RFC 6265 §5.4 the server picks one, typically the first).
-func (t *refreshingTransport) send(req *http.Request, token string) (*http.Response, error) {
+func (t *refreshingTransport) send(base http.RoundTripper, req *http.Request, token string) (*http.Response, error) {
 	if token == "" {
-		return t.base.RoundTrip(req)
+		return base.RoundTrip(req)
 	}
 	clone := req.Clone(req.Context())
 	clone.Header.Set("X-Authorization", token)
 	clone.AddCookie(&http.Cookie{Name: "auth_token", Value: token})
 	clone.Header.Set("X-Unauth-Error", "Non-Redirect")
-	return t.base.RoundTrip(clone)
+	return base.RoundTrip(clone)
 }
 
 // canRetry reports whether req's body can be replayed. A request with no

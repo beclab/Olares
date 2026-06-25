@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/auth"
+	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
 // fakeStore is the in-memory TokenStore stand-in used by every test in
@@ -150,7 +151,7 @@ func TestRefresh_HappyPath(t *testing.T) {
 	srv := newRefreshServer(t)
 
 	r := NewRefresherWith(store, time.Now)
-	got, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "old-AT", false)
+	got, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "old-AT", false, olares.LocationExternal)
 	if err != nil {
 		t.Fatalf("Refresh: %v", err)
 	}
@@ -185,7 +186,7 @@ func TestRefresh_AlreadyFreshShortCircuit(t *testing.T) {
 
 	r := NewRefresherWith(store, time.Now)
 	// The caller's snapshot is "old-AT"; the store now holds AT-already-new.
-	got, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "old-AT", false)
+	got, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "old-AT", false, olares.LocationExternal)
 	if err != nil {
 		t.Fatalf("Refresh: %v", err)
 	}
@@ -212,7 +213,7 @@ func TestRefresh_Unauthorized(t *testing.T) {
 	})
 
 	r := NewRefresherWith(store, time.Now)
-	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false)
+	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false, olares.LocationExternal)
 	var inv *ErrTokenInvalidated
 	if !errors.As(err, &inv) {
 		t.Fatalf("err = %v, want *ErrTokenInvalidated", err)
@@ -241,7 +242,7 @@ func TestRefresh_AlreadyInvalidated(t *testing.T) {
 	srv := newRefreshServer(t)
 
 	r := NewRefresherWith(store, time.Now)
-	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false)
+	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false, olares.LocationExternal)
 	var inv *ErrTokenInvalidated
 	if !errors.As(err, &inv) {
 		t.Fatalf("err = %v, want *ErrTokenInvalidated", err)
@@ -259,7 +260,7 @@ func TestRefresh_NotLoggedIn(t *testing.T) {
 	srv := newRefreshServer(t)
 
 	r := NewRefresherWith(store, time.Now)
-	_, err := r.Refresh(context.Background(), "ghost@olares.com", srv.URL, "AT", false)
+	_, err := r.Refresh(context.Background(), "ghost@olares.com", srv.URL, "AT", false, olares.LocationExternal)
 	var nli *ErrNotLoggedIn
 	if !errors.As(err, &nli) {
 		t.Fatalf("err = %v, want *ErrNotLoggedIn", err)
@@ -295,7 +296,7 @@ func TestRefresh_ConcurrentGoroutines(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			defer wg.Done()
-			at, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "old", false)
+			at, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "old", false, olares.LocationExternal)
 			results[i] = at
 			errs[i] = err
 		}(i)
@@ -337,7 +338,7 @@ func TestRefresh_MarkInvalidatedFailureSurfaces(t *testing.T) {
 	})
 
 	r := NewRefresherWith(store, time.Now)
-	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false)
+	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false, olares.LocationExternal)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -363,7 +364,7 @@ func TestRefresh_EmptyRefreshToken(t *testing.T) {
 	srv := newRefreshServer(t)
 
 	r := NewRefresherWith(store, time.Now)
-	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false)
+	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false, olares.LocationExternal)
 	var nli *ErrNotLoggedIn
 	if !errors.As(err, &nli) {
 		t.Fatalf("err = %v, want *ErrNotLoggedIn", err)
@@ -390,7 +391,7 @@ func TestRefresh_TransientErrorPropagates(t *testing.T) {
 	})
 
 	r := NewRefresherWith(store, time.Now)
-	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false)
+	_, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "AT", false, olares.LocationExternal)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -502,7 +503,7 @@ func runChildRefresh() {
 		os.Exit(2)
 	}
 	r := NewRefresherWith(store, time.Now)
-	got, err := r.Refresh(context.Background(), olaresID, authURL, cur.AccessToken, false)
+	got, err := r.Refresh(context.Background(), olaresID, authURL, cur.AccessToken, false, olares.LocationExternal)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "child: refresh: %v\n", err)
 		os.Exit(2)
