@@ -33,13 +33,13 @@ GPU modes control how apps share the GPU. For most users, the main choice is whe
 | **Exclusive** | One app gets full access to the<br> GPU. Other apps cannot bind to<br> it until it is released. | Use this for heavy workloads that need maximum performance, such as large models, rendering, or high-end gaming. |
 
 :::info
-In **Time slicing** mode, launch may be blocked if the selected node's system RAM usage reaches the 90% threshold, even when GPU VRAM is enough.
+In **Time slicing** mode, Olares also checks node system memory. The current estimate is the app's memory requirement plus the GPU's dedicated VRAM. Launch is blocked if adding that amount would bring node memory usage to 90% or more. See [Manage accelerator resources](/manual/olares/settings/gpu-resource.md#gpu-modes) for an example.
 :::
 
 ## View accelerator resources
 
 1. Go to **Settings** > **Accelerator**.
-2. Review the resource card. It shows the node name, resource type, GPU model, current mode, VRAM usage, and apps currently assigned to the resource.
+2. Review the resource card. It shows the node name, resource type, dedicated VRAM, GPU model, current mode, and apps currently assigned to the resource.
 
    ![Accelerator overview](/images/manual/olares/settings-gpu-info.png#bordered)
 
@@ -64,19 +64,18 @@ You can resume a stopped app and manually assign resources from either **Setting
 
    The dialog shows the required resource type, whether the app is **Single-GPU** or **Multi-GPU**, and the minimum VRAM required to run the app.
 
-3. Under **Select GPUs**, choose an **Available** resource. If a GPU cannot be selected, check the message in the launch dialog:
-   - **Insufficient free VRAM**: Expand **Assigned apps** under the GPU, then click **Remove** for an assigned app to free resources.
-   - **Not enough VRAM**: Select another GPU. Removing apps will not increase the GPU's total VRAM.
+3. Under **Select GPUs**, choose a resource. If the app cannot be launched, check the message in the launch dialog:
+   - If the available quota is too low, expand **Assigned apps** under the GPU, then click **Remove** for an assigned app to free resources.
+   - If the GPU's total dedicated VRAM is too low, select another GPU. Removing apps will not increase its total capacity.
+   - In **Time slicing** mode, the node memory check may also block launch. Retry later or select another node.
 
    ![Resume an app](/images/manual/olares/settings-gpu-resume-app.png#bordered){width=70%}
 
-4. If you select a **Memory slicing** GPU, Olares allocates the app's minimum required VRAM by default. To change it, click **Configure**, enter an amount, and click **Confirm**.
+4. If you select a **Memory slicing** GPU, **Quota for current app** defaults to the app's minimum required VRAM. To change it, enter a new amount directly in the quota field.
 
    :::info Reallocate VRAM
    You cannot adjust VRAM after the app is assigned. To change it later, remove the app from the GPU and resume it again.
    :::
-
-   <!-- TODO: Add screenshot placeholder for Configure VRAM. -->
 
 5. Click **Launch**.
 

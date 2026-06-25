@@ -414,7 +414,7 @@ const side = {
               ],
             },
             {
-              text: "管理计算资源",
+              text: "管理 AI 算力",
               link: "/zh/manual/olares/settings/gpu-resource",
             },
             { text: "视频设置", link: "/zh/manual/olares/settings/video" },
