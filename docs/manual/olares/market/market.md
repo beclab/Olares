@@ -84,7 +84,7 @@ Shared applications are deployed centrally by the administrator, and cluster mem
 
 * **Headless backend service**:
 
-    This type of shared application provides API services and does not include a graphical user interface. Any client that supports the corresponding API can directly invoke the service. Take Ollama as an example:
+    This type of shared application provides API services and does not include a graphical user interface. Any client that supports the corresponding API can directly invoke the service. Take which app as an example?
 
     1. The administrator installs Ollama first. Once installed, the shared service starts within the cluster and exposes a standard API endpoint.
     
