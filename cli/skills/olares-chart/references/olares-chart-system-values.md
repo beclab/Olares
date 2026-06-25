@@ -35,7 +35,7 @@ Populated in `BuildBaseHelmValues` for every install (mostly from app-service's 
 | `.Values.downloadCdnURL` | system CDN base (`OLARES_SYSTEM_CDN_SERVICE`) | URL |
 | `.Values.fs_type` | rootfs type (`OLARES_SYSTEM_ROOTFS_TYPE`) | `fs` (default, local) \| `jfs` (JuiceFS) — templates branch on `{{ if eq (.Values.fs_type \| default "fs") "jfs" }}` |
 | `.Values.sharedlib` | External storage base path (`/Files/External/<deviceName>/`) — the External area in [platform.md](../../olares-shared/references/olares-platform.md) (storage model) | path |
-| `.Values.workloads.<name>.replicaCount` | per-workload replica count; only when the manifest declares `WorkloadReplicas` | integer |
+| `.Values.workloads.<name>.replicaCount` | per-workload replica count; present whenever the manifest declares `workloadReplicas` (required on 0.12.0). Each listed Deployment/StatefulSet **must** wire `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — app-service overrides this value for install (staged at 0) and suspend/resume, so a hardcoded `replicas` makes those operations inert. See [olares-chart-manifest.md](olares-chart-manifest.md) (Workloads & replicas). | integer |
 
 ```yaml
         env:

@@ -9,6 +9,22 @@ The scaffolded manifest is a stub. The four areas below are what kompose cannot 
 
 `olaresManifest.version` (the manifest **schema**: always `0.12.0` for new apps) and the top-level `apiVersion` (skill sets **`v3`**) are separate axes from the chart/app versions. `0.12.0` carries `spec.accelerator` and `permission.externalData`. The full schema description, the version-field map, and the `type: system` dependency are in [olares-chart-versioning.md](olares-chart-versioning.md); accelerator sizing is in [olares-chart-gpu.md](olares-chart-gpu.md).
 
+## Workloads & replicas (required on 0.12.0)
+
+On `0.12.0` the manifest **must** declare a top-level `workloadReplicas` map — one entry per **Deployment / StatefulSet** the chart renders → its replica count (`lint` rejects a modern non-v2 manifest that omits it). `from-compose` scaffolds this for you; you only touch it when you add or rename workloads.
+
+```yaml
+workloadReplicas:
+  myapp: 1          # every Deployment/StatefulSet name must appear here
+  worker: 1
+```
+
+Three rules that bite:
+
+- **Key = rendered workload name.** Each key must equal the rendered `metadata.name` of a Deployment/StatefulSet. **DaemonSets are excluded** (they are one-per-node, not replica-controlled).
+- **Template wiring contract.** Every listed workload's `spec.replicas` **must** be `{{ .Values.workloads.<name>.replicaCount }}`, and `values.yaml` must carry a matching `workloads.<name>.replicaCount`. The `.Values.workloads.*` value is documented in [olares-chart-system-values.md](olares-chart-system-values.md).
+- **Why it matters (non-obvious).** app-service drives the whole lifecycle through this Helm value: install is two-phase (helm renders at `replicas: 0`, then scales up), suspend scales every listed workload to `0`, resume scales back to the declared counts. If a template **hardcodes** `replicas`, `lint` may still pass but **suspend/resume and the staged install silently stop working** — the value override has nothing to drive. `from-compose` already wires the scaffolded workloads; any workload you add by hand must be wired the same way.
+
 ## 1. Metadata
 
 For deploying to your own Olares, metadata can stay a stub as long as `lint` passes. Full market-ready metadata (custom icon, dual-version categories, listing images, marketing spec) is only needed when **publishing to the public Market** — see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).
