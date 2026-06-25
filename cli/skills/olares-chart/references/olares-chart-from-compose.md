@@ -35,7 +35,7 @@ olares-cli chart from-compose --name myapp -f base.yml -f override.yml      # me
 | `-o, --output` | chart root dir (default `./<name>`) |
 | `--title` | human title (default = name) |
 | `--type` | `app` (default) / `recommend` / `middleware` |
-| `--new-schema` | **deprecated no-op** — every scaffold now emits `olaresManifest.version: 0.12.0` (resources under `spec.accelerator[mode=cpu]`) regardless |
+| `--new-schema` | **deprecated no-op** — the scaffold always emits `olaresManifest.version: 0.12.0` (resources under `spec.accelerator[mode=cpu]`) |
 
 ## Reading the output
 

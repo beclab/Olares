@@ -11,21 +11,21 @@ Typical shape: a local model / inference backend (ollama, vLLM, an LLM gateway).
 
 ## What `apiVersion: v3` means
 
-In Olares >= 1.12.6 the install handler routes purely on `apiVersion`. `apiVersion: v3` ⇒:
+The install handler routes purely on `apiVersion`. `apiVersion: v3` ⇒:
 
 - **Admin-only install** — non-admin callers are rejected ("only admin users can install v3 / shared apps").
 - **Deterministic shared namespace** `<app>-shared` (not the per-user `<app>-<owner>`).
 - **Cluster-wide ApplicationManager** named `<app>-shared-<app>`.
 - **Cross-namespace shared access is force-enabled** so the app is a first-class destination for cross-namespace traffic (service-mesh sidecar + NetworkPolicy).
 
-So for ported apps targeting 1.12.6+, **`apiVersion: v3` is itself the "shared app" declaration** — there is no separate `subCharts shared:true` / `appScope.clusterScoped` wiring to add (that was the legacy v2 form, below).
+So **`apiVersion: v3` is itself the "shared app" declaration** — there is no separate sub-chart / app-scope wiring to add.
 
-> **There is no `sharedEntrances` in 1.12.6+.** Earlier shared apps exposed cross-user entrances on a `shared.<zone>` domain; a network redesign removed that. Consumers now reach the shared app's in-cluster Service directly (below). Do **not** add `sharedEntrances` — if you see it in an existing chart (e.g. a stray entry in `ollamav3`), treat it as a leftover and drop it.
+> **There is no `sharedEntrances`.** Consumers reach the shared app's in-cluster Service directly (below). Do **not** add `sharedEntrances` — if you see it in an existing chart, treat it as a leftover and drop it.
 
 ## Manifest (annotated, based on `ollamav3`)
 
 ```yaml
-olaresManifest.version: '0.12.0'      # modern schema (accelerator / externalData)
+olaresManifest.version: '0.12.0'      # accelerator / externalData
 olaresManifest.type: app
 apiVersion: 'v3'                       # => admin-installed, cluster-wide shared app
 metadata:
@@ -47,7 +47,7 @@ permission:
 options:
   allowMultipleInstall: true
   conflicts:
-    - name: ollamav2                   # conflict with the non-shared / v2 variant
+    - name: ollamav2                   # conflict with the non-shared variant
       type: application
   dependencies:
     - name: olares
@@ -72,7 +72,7 @@ Required / expected fields:
 |---|---|
 | `apiVersion: 'v3'` | makes it an admin-installed, cluster-wide shared app |
 | `olaresManifest.version: '0.12.0'` | needed for `spec.accelerator` / `permission.externalData` (see [manifest.md](olares-chart-manifest.md)) |
-| `options.dependencies` `olares` `>=1.12.6-0` (`type: system`) | **mandatory** — the shared/v3 model only exists on Olares >= 1.12.6 ([versioning.md](olares-chart-versioning.md)) |
+| `options.dependencies` `olares` `>=1.12.6-0` (`type: system`) | **mandatory** system dependency every chart declares ([versioning.md](olares-chart-versioning.md)) |
 | `spec.onlyAdmin: true` | explicit admin-only install (generally set on shared apps) |
 | `spec.accelerator` | GPU/accelerator envelope for the heavy backend — sizing in [olares-chart-accelerator.md](olares-chart-accelerator.md) |
 | `options.conflicts` | avoid co-installing the per-user / older variant of the same backend |
@@ -82,27 +82,9 @@ Required / expected fields:
 
 A shared app is consumed by **separate reference/client apps**, not by per-user copies of itself. The client declares an `options.dependencies` `type: application` on the shared app; app-service then injects the shared namespace's Services into the client's Helm values and grants cross-namespace reachability automatically. The full mechanism (`.Values.svcs.<svc>_host` = `<svc>.<app>-shared`, mesh sidecar + NetworkPolicy, no entrance/URL) is the platform **App, namespace & networking model** (loaded via the SKILL.md prerequisite).
 
-## Legacy v2 shared form (context only)
-
-Pre-v3 shared apps (still in the catalog: `ytdlp`, `searxngv2`, `vllm*`) expressed sharing inside an `apiVersion: 'v2'` app by marking one sub-chart shared:
-
-```yaml
-spec:
-  subCharts:
-    - name: <app>server   # the heavy/shared workload -> lands in <chart>-shared namespace
-      shared: true
-    - name: <app>         # the per-user part
-options:
-  appScope:
-    clusterScoped: true
-    appRef: [ "<consumer>.*" ]   # which apps may reference it
-```
-
-For new ports targeting 1.12.6+ use the `apiVersion: v3` form above instead; this is here only to read existing charts.
-
 ## Caveats
 
 - **Only an admin can install a v3 app** — surface this to the user; a normal user install will 403.
 - **`<app>-shared` namespace requires `isShared: true`** in the manifest. Without it, even a `apiVersion: v3` app installs into `<app>-<adminUsername>` (the admin's personal namespace). Add `isShared: true` when the app genuinely needs cluster-wide shared storage/services accessible across namespaces; omit it for apps that just need admin-only install but manage their own users internally.
-- Do not add `sharedEntrances` (removed in 1.12.6+).
+- Do not add `sharedEntrances` (not supported).
 - A shared app is still subject to the rest of the skill: run-as-user 1000 ([run-as-user.md](olares-chart-run-as-user.md)), pinned image tags, accelerator sizing ([accelerator.md](olares-chart-accelerator.md)), env rules ([env.md](olares-chart-env.md)).

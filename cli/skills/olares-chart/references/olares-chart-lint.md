@@ -55,7 +55,8 @@ By default lint renders the chart under **both** `owner==admin` (admin install) 
 | `Chart.yaml` vs manifest version mismatch | the two `version` fields differ | set them equal |
 | hostPath + rolling update | a template mounts a `hostPath` with a rolling-update workload | switch to a userspace volume, or set the workload strategy to `Recreate` if a host mount is truly required |
 | resource limit missing | a container has no CPU/memory limit | add `resources.limits` (or `--skip-resource` only for a quick check, not for market submit) |
-| `workloadReplicas is required` (or a workload not listed) | the 0.12.0 `workloadReplicas` map is missing, incomplete, or not wired | run the three-point self-check in [olares-chart-manifest.md](olares-chart-manifest.md) Workloads & replicas |
+| `workloadReplicas is required` (or a workload not listed) | the `workloadReplicas` map is missing, incomplete, or not wired | run the three-point self-check in [olares-chart-manifest.md](olares-chart-manifest.md) Workloads & replicas |
+| `options.dependencies must declare ... name="olares" ... type="system"` | the `olares` system dependency is missing from `options.dependencies` | add it per [olares-chart-manifest.md](olares-chart-manifest.md) System dependency: olares |
 | manifest structural error | required field missing/invalid | fix per [olares-chart-manifest.md](olares-chart-manifest.md) |
 | namespace check failed | a resource has a hardcoded namespace | use `namespace: '{{ .Release.Namespace }}'` |
 

@@ -48,8 +48,8 @@ middleware:
     namespace: db0           # logical Redis db namespace for this app
 options:
   dependencies:
-  - name: olares
-    version: ">=1.0.0-0"
+  - name: olares             # required system dep — author per manifest.md (System dependency: olares)
+    version: ">=1.12.6-0"
     type: system
   - name: mysql              # middleware deps: set mandatory when install must wait for it
     version: ">=8.0.0-0"
@@ -108,8 +108,8 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
    ```yaml
    options:
      dependencies:
-     - name: olares
-       version: ">=1.0.0-0"
+     - name: olares            # required system dep — author per manifest.md (System dependency: olares)
+       version: ">=1.12.6-0"
        type: system
      - name: searxng           # exact Market app name
        version: ">=1.0.0-0"    # semver constraint matched against the installed app
