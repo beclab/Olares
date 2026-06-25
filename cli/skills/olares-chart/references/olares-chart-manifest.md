@@ -7,7 +7,7 @@ The scaffolded manifest is a stub. The four areas below are what kompose cannot 
 
 ## Schema version and apiVersion
 
-`olaresManifest.version` (the manifest **schema**: `0.8.0` default vs `0.12.0` via `--new-schema`) and the top-level `apiVersion` (skill sets **`v3`**) are separate axes from the chart/app versions. Use `0.12.0` when the app needs `spec.accelerator` or `permission.externalData`. The full schema-field table, the version-field map, and the `type: system` dependency are in [olares-chart-versioning.md](olares-chart-versioning.md); accelerator sizing is in [olares-chart-gpu.md](olares-chart-gpu.md).
+`olaresManifest.version` (the manifest **schema**: always `0.12.0` for new apps) and the top-level `apiVersion` (skill sets **`v3`**) are separate axes from the chart/app versions. `0.12.0` carries `spec.accelerator` and `permission.externalData`. The full schema description, the version-field map, and the `type: system` dependency are in [olares-chart-versioning.md](olares-chart-versioning.md); accelerator sizing is in [olares-chart-gpu.md](olares-chart-gpu.md).
 
 ## 1. Metadata
 
