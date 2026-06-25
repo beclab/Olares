@@ -57,6 +57,7 @@ A chart carries several "version" fields with different jobs and different rules
 - **Resource envelope** lives under `spec.resources[]` / `spec.accelerator[]` (mode-keyed: `cpu`, `nvidia`, ...), not the legacy flat `spec.requiredCpu` / `requiredMemory` / ... fields.
 - **GPU / accelerator** is declared via `spec.accelerator` with a mode → arch cross-check at `lint`.
 - **`permission.externalData`** (`.Values.sharedlib`) is supported.
+- **`workloadReplicas` is required** (non-v2): a map of every Deployment/StatefulSet → replica count, with each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}`. See [olares-chart-manifest.md](olares-chart-manifest.md) (Workloads & replicas).
 
 Accelerator mode declaration and sizing are in [olares-chart-accelerator.md](olares-chart-accelerator.md).
 
