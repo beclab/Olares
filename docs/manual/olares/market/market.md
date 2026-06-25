@@ -16,7 +16,7 @@ Before you start, it is recommended to familiarize yourself with a few concepts 
 |:------------|:--------------|
 | [System application](../../../developer/concepts/application.md#system-applications)   | Built-in applications that come pre-installed with Olares,<br/> such as Profile, Files, and Vault. |
 | [Community application](../../../developer/concepts/application.md#community-applications)  | Applications that are created and maintained by third-party<br/> developers.   |
-| [Shared application](../../../developer/concepts/application.md#shared-applications) | A special type of community application that provides shared<br/> resources or services to all users in a cluster. <br/><br/>After the administrator installs it, all members can use it directly;<br/> backend services expose a standard API through a shared entrance<br/> for third-party clients to consume. |
+| [Shared application](../../../developer/concepts/application.md#shared-applications) | A special type of community application, deployed centrally by the<br/> administrator, that provides shared resources or services to all users<br/> in a cluster. <br/><br/>Applications with a UI can be opened directly from the Launchpad.<br/> Headless backend services expose a standard API through a shared<br/> entrance for third-party clients to consume. |
 | [Dependencies](../../../developer/concepts/application.md#dependencies) | Prerequisite applications that must already be<br/> installed before a user can access an application <br/>that requires them.  | 
 
 ## Find applications
@@ -82,29 +82,27 @@ To install an application from Market:
 
 Shared applications are deployed centrally by the administrator, and cluster members do not need to install them themselves. To ensure a shared service is running and accessible within the cluster, follow the installation process based on the type of shared application:
 
-* **Headless backend service**:
+#### Headless backend service
 
-    This type of shared application provides API services and does not include a graphical user interface. Any client that supports the corresponding API can directly invoke the service. Take which app as an example?
+This type of shared application provides only API services without a graphical user interface. Any client that supports the corresponding API can invoke the service. Take Ollama LLM Base (llm-init) as an example:
 
-    1. The administrator installs Ollama first. Once installed, the shared service starts within the cluster and exposes a standard API endpoint.
-    
-    2. Cluster members access the shared service:
+1. **Administrator deploys the model**: The administrator clicks **View** on Ollama LLM Base (llm-init) in Market and creates a model instance based on the base application. Once deployed, the model instance starts as a shared service within the cluster, and a model application entry with the same name is generated on the Launchpad. Open this entry to enter the model console, which displays the shared entrance address for the standard API.
+2. **Members configure and use it**:
 
-        a. Get the access address of Ollama in Olares **Settings** > **Applications** > **Ollama** > **Shared entrance**.
+    a. Get the access address: On the Launchpad, open the model application entry to enter the model console, and copy the shared entrance address displayed on the page.
 
-        b. Install a client that supports the Ollama API, such as LobeChat or Open WebUI, and enter the access address in the client's configuration settings.
+    b. Configure the client: Install any third-party client that supports the corresponding API, such as LobeChat or Open WebUI, and enter the address above in the client's configuration settings to start using it.
 
-* **Applications with built-in UI**:
+#### Application with built-in UI
 
-    This type of shared application include both a backend service and a Web UI. They can provide services to users independently. Typical examples are Dify Shared and ComfyUI Shared.
-    
-    1. The administrator installs the shared application first. Once installed, the shared service starts within the cluster, and an application entry with the same name is added to the Launchpad.
-    
-       ::: tip ComfyUI Launcher
-       ComfyUI Shared contains a web launcher component to facilitate the management of related services and resources. The administrator needs to configure and start the service from the ComfyUI Launcher.
-       :::
+This type of shared application includes both a backend service and a web UI, and can provide services to users independently. Typical examples are Dify Shared and ComfyUI Shared.
 
-    2. Cluster members find the application entry on the Launchpad and click to open it directly, without installing any additional client.
+1. **Administrator installs the application**: The administrator installs the shared application in Market. Once installed, the shared service starts within the cluster, and an application entry with the same name is added to the Launchpad.
+
+    ::: tip ComfyUI Launcher
+    ComfyUI Shared contains a desktop launcher component to manage ComfyUI services and related resources. The administrator needs to configure and start the service from the ComfyUI Launcher.
+    :::
+2. **Members use it directly**: Cluster members find the application entry on the Launchpad and click to open it directly, without installing any additional client.
 
 ::: info Manage shared applications
 The administrator is responsible for upgrading, stopping, resuming, and uninstalling shared applications. These operations affect all members in the cluster, so please confirm before proceeding.
