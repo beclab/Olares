@@ -103,12 +103,13 @@ func runWhoami(ctx context.Context, f *cmdutil.Factory, refresh bool, outputRaw 
 	}
 
 	d, err := whoami.DetectAndCache(ctx, whoami.DetectInput{
-		Cfg:         cfg,
-		OlaresID:    rp.OlaresID,
-		LocalPrefix: rp.LocalURLPrefix,
-		Insecure:    rp.InsecureSkipVerify,
-		AccessToken: rp.AccessToken,
-		Now:         time.Now,
+		Cfg:             cfg,
+		OlaresID:        rp.OlaresID,
+		LocalPrefix:     rp.LocalURLPrefix,
+		Insecure:        rp.InsecureSkipVerify,
+		AccessToken:     rp.AccessToken,
+		AuthURLOverride: rp.AuthURLOverride,
+		Now:             time.Now,
 	})
 	if err != nil {
 		return err

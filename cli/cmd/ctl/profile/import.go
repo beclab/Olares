@@ -83,9 +83,14 @@ func runImport(ctx context.Context, o *importOptions) error {
 	profile.LocationProbedAt = time.Now().Unix()
 
 	tok, err := auth.Refresh(ctx, auth.RefreshRequest{
-		AuthURL:            authURL,
-		RefreshToken:       o.refreshToken,
-		InsecureSkipVerify: o.insecureSkipVerify,
+		AuthURL:      authURL,
+		RefreshToken: o.refreshToken,
+		// Use the merged profile's value, not the raw CLI flag: a profile that
+		// already has TLS verification disabled in config keeps it on re-import
+		// even when --insecure-skip-verify isn't passed again. This matches the
+		// probe above (profile.InsecureSkipVerify), so the /api/refresh call
+		// can't fail with cert errors after the probe succeeded.
+		InsecureSkipVerify: profile.InsecureSkipVerify,
 		Location:           loc,
 	})
 	if err != nil {

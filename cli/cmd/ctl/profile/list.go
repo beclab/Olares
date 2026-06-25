@@ -63,12 +63,13 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 			fmt.Fprintf(os.Stderr, "warning: could not resolve the current profile to refresh: %v\n", rerr)
 		} else if cfg0, cerr := cliconfig.LoadMultiProfileConfig(); cerr == nil {
 			if _, derr := whoami.DetectAndCache(ctx, whoami.DetectInput{
-				Cfg:         cfg0,
-				OlaresID:    rp.OlaresID,
-				LocalPrefix: rp.LocalURLPrefix,
-				Insecure:    rp.InsecureSkipVerify,
-				AccessToken: rp.AccessToken,
-				Now:         time.Now,
+				Cfg:             cfg0,
+				OlaresID:        rp.OlaresID,
+				LocalPrefix:     rp.LocalURLPrefix,
+				Insecure:        rp.InsecureSkipVerify,
+				AccessToken:     rp.AccessToken,
+				AuthURLOverride: rp.AuthURLOverride,
+				Now:             time.Now,
 			}); derr != nil {
 				fmt.Fprintf(os.Stderr, "warning: could not refresh the current profile: %v\n", derr)
 			}

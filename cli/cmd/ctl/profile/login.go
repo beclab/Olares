@@ -129,8 +129,13 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 		// L368 (loginTerminus): the web UI always asks Authelia to set
 		// the session cookie because it follows up with
 		// /api/secondfactor/totp when fa2 fires.
-		AcceptCookie:       true,
-		InsecureSkipVerify: o.insecureSkipVerify,
+		AcceptCookie: true,
+		// Use the merged profile's value, not the raw CLI flag: a profile
+		// that already has TLS verification disabled in config keeps it on
+		// re-login even when --insecure-skip-verify isn't passed again. This
+		// matches the probe above (which used profile.InsecureSkipVerify), so
+		// auth can't fail with cert errors after the probe succeeded.
+		InsecureSkipVerify: profile.InsecureSkipVerify,
 	}, olaresID)
 	if err != nil {
 		return err

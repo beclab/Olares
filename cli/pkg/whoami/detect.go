@@ -32,6 +32,14 @@ type DetectInput struct {
 	// token client (NewHTTPClientWithToken) rather than a Factory client so it
 	// can target whichever Location it just probed.
 	AccessToken string
+	// AuthURLOverride, when non-empty, marks the profile as pinned to an
+	// explicit auth endpoint (dev/internal use). It mirrors the login/import
+	// probeProfileLocation + factory.maybeBackfillLocation contract: a pinned
+	// profile never gets probed — its position is LocationExternal — so a
+	// `whoami --refresh` / `list --refresh` can't silently rewrite the
+	// service URLs to a probed LAN/host/cluster position while auth stays on
+	// the override. Ignored when KnownLocation is already set.
+	AuthURLOverride string
 	// KnownLocation lets callers that already probed (profile login / import)
 	// skip the probe and reuse the result. Zero/invalid → probe now.
 	KnownLocation olares.Location
@@ -87,11 +95,19 @@ func DetectAndCache(ctx context.Context, in DetectInput) (*DetectDisplay, error)
 
 	loc := in.KnownLocation
 	if !loc.Valid() {
-		probed, perr := access.ProbeLocation(ctx, id, in.LocalPrefix, in.Insecure)
-		if perr != nil {
-			return nil, perr
+		if in.AuthURLOverride != "" {
+			// Pinned auth endpoint: do not probe (mirrors login/import's
+			// probeProfileLocation and factory.maybeBackfillLocation), so a
+			// refresh can't move the profile off external while auth stays on
+			// the override.
+			loc = olares.LocationExternal
+		} else {
+			probed, perr := access.ProbeLocation(ctx, id, in.LocalPrefix, in.Insecure)
+			if perr != nil {
+				return nil, perr
+			}
+			loc = probed
 		}
-		loc = probed
 	}
 
 	ep := id.Endpoints(loc, in.LocalPrefix)
