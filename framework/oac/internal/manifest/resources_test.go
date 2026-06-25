@@ -10,7 +10,11 @@ import (
 // version above the gate (so checkResources actually runs). Because the
 // modern path rejects every legacy flat spec.required*/spec.limited* field
 // (Rule 7), this helper explicitly clears the legacy quantities populated
-// by newValidConfig.
+// by newValidConfig. workloadReplicas is populated too: it is required for
+// olaresManifest.version >= 0.12.0 on non-v2 manifests, and every modern
+// resources test inherits that gate. The Olares system dependency is also
+// installed at the v1/v2-compatible default range (>=1.12.3-0,<1.12.6),
+// because validateOlaresDependency rejects modern manifests that omit it.
 func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c := newValidConfig()
 	c.ConfigVersion = "0.13.0" // >= 0.12.0 -> rules apply
@@ -25,7 +29,27 @@ func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c.Spec.LimitedDisk = ""
 	c.Spec.RequiredGPU = ""
 	c.Spec.LimitedGPU = ""
+	wr := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
 	return c
+}
+
+// newOlaresSystemDep returns the canonical options.dependencies entry
+// that satisfies validateOlaresDependency for c. It mirrors the validator
+// rules: apiVersion=v3 OR any 1.12.6-only feature field on the config
+// selects the post-v3 (>=1.12.6-0) constraint, otherwise the legacy
+// pre-v3 (>=1.12.3-0,<1.12.6) constraint is used. Callers should set
+// every relevant config field (workloadReplicas, overlayGateway, etc.)
+// before invoking this helper so the picked constraint stays in sync
+// with the validator's view of the same config.
+func newOlaresSystemDep(c *AppConfiguration) Dependency {
+	rule, _ := pickOlaresDepRule(c)
+	return Dependency{
+		Name:    olaresSystemDepName,
+		Version: rule.requirement,
+		Type:    "system",
+	}
 }
 
 func TestResourcesCheckApplies(t *testing.T) {
