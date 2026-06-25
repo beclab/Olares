@@ -7,7 +7,6 @@ Fixes applied per app (when applicable):
   X  permission.externalData: true when templates reference .Values.sharedlib
   M  middleware workloadReplicas + values.yaml (metadata.name)
   L  legacy spec resource envelope for olaresManifest.version < 0.12.0
-  E  envName starting with OLARES_USER_ renamed to app-local names
 """
 
 from __future__ import annotations
@@ -362,16 +361,6 @@ def repair_app(app_dir: Path) -> List[str]:
             if ok:
                 applied.append("L")
                 manifest_changed = True
-
-    if data is not None:
-        if fix_olares_user_env_names_struct(data):
-            applied.append("E")
-            manifest_changed = True
-    else:
-        text, ok = fix_olares_user_env_names_regex(text)
-        if ok:
-            applied.append("E")
-            manifest_changed = True
 
     if manifest_changed:
         if data is not None:
