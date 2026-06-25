@@ -21,7 +21,7 @@ Local deploy (in `olares-chart`) proves the app **runs**: `chart lint` OK, a pul
 | **`spec.featuredImage` / `promoteImage`** | Skip | Strongly recommended — see [promote-apps](https://docs.olares.com/developer/develop/promote-apps.html) |
 | **`spec.locale`** | Skip | Recommended (`en` at minimum) |
 | **`spec.supportArch`** | Optional (omit unless using accelerator modes) | Required — must match image platforms (`amd64`, `arm64`, or both) |
-| **`spec.accelerator` / GPU resources** | Only if the app needs GPU on **this** node | Fully declared when the app uses GPU/NPU; mode -> arch cross-check applies at `lint` for schema >= 0.12.0 |
+| **`spec.accelerator` / GPU resources** | Only if the app needs GPU on **this** node | Fully declared when the app uses GPU/NPU; mode -> arch cross-check applies at `lint` |
 | **`owners` file** | Not needed | Required in the OAC root for the `beclab/apps` PR |
 | **Validate** | `lint` + upload + install | Same, then the PR — [olares-publish-submit.md](olares-publish-submit.md) |
 
@@ -44,7 +44,7 @@ Complete **after** the app runs locally. Use this as a pre-PR gate.
 - [ ] **Listing assets:** `featuredImage`, `promoteImage[]` (URLs reachable by the Market CDN)
 - [ ] **Locale:** `spec.locale: [en]` (add more if translated)
 - [ ] **Architecture:** multi-arch images pushed; `spec.supportArch` lists every supported arch
-- [ ] **Resources:** if GPU/NPU needed, `spec.accelerator[]` complete with quantities; consider `--new-schema`
+- [ ] **Resources:** if GPU/NPU needed, `spec.accelerator[]` complete with quantities
 - [ ] **Versions:** `metadata.version` = `Chart.yaml` `version`; bump together for updates
 - [ ] **`owners` file** in the chart root with the submitter's GitHub username
 - [ ] **Folder name** valid for `beclab/apps` (lowercase alphanumeric, no hyphens, <=30 chars)

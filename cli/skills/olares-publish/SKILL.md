@@ -1,6 +1,6 @@
 ---
 name: olares-publish
-version: 4.3.0
+version: 4.3.1
 description: "Publish an Olares app that already runs on your own Olares to the public Olares Market — the release-target requirements matrix, the market-ready metadata/image/arch checklist, the PR to beclab/apps (GitBot rules + lifecycle), and pay-to-download (paid) listings. Use when the user wants to submit / list / distribute / 上架 an app to the public Market, open a beclab/apps PR, or sell a paid app. Authoring and deploying the chart itself lives in olares-chart; this skill is the public-distribution step that comes after the app already installs and runs locally."
 compatibility: Requires olares-cli on PATH; PR submission needs a GitHub account
 metadata:

@@ -1,10 +1,10 @@
 # Accelerator resources (`spec.accelerator`) — modes & sizing
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. This covers declaring accelerator modes and sizing the resource envelope on the modern schema (`olaresManifest.version >= 0.12.0`). Building the CUDA image and provisioning model weights are in [olares-chart-gpu.md](olares-chart-gpu.md).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. This covers declaring accelerator modes and sizing the resource envelope on the `0.12.0` schema (the schema every new app uses). Building the CUDA image and provisioning model weights are in [olares-chart-gpu.md](olares-chart-gpu.md).
 
 ## A. Declaring accelerator modes (`spec.accelerator`)
 
-On the modern schema (`olaresManifest.version >= 0.12.0`) an app that needs an accelerator declares one `spec.accelerator[]` entry **per compute mode** it supports. Without it the app is scheduled as plain `cpu` and never gets an accelerator device or GPU memory.
+On the `0.12.0` schema an app that needs an accelerator declares one `spec.accelerator[]` entry **per compute mode** it supports. Without it the app is scheduled as plain `cpu` and never gets an accelerator device or GPU memory.
 
 > **Naming gotchas (these bite):**
 > - The YAML key is `spec.accelerator`, but `lint` error messages call it **`spec.resources`** — same thing.
