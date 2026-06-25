@@ -79,7 +79,7 @@ To install an application from Market:
 
     <!--![Accelerator resources](/images/manual/olares/market-accelerator.png#bordered)-->
 
-    b. Review the updated **CPU**, **Memory**, **Required disk**, and **VRAM** requirements, and make sure your hardware meets these requirements.
+    b. Review the **CPU**, **Memory**, **Required disk**, and **VRAM** requirements for the selected computing resource, and make sure your hardware meets them.
 
 4. Click **Get**.
 5. When the operation button changes to **Install**, click it.
@@ -207,11 +207,11 @@ Before you install an application, the system evaluates your current hardware an
 
 - "Unable to install on this accelerator type. Not enough required {Resource} on Olares cluster."
 
-    Your system possesses the correct hardware type (e.g., an NVIDIA GPU), but its currently available capacity (such as GPU memory) is insufficient to run the app. You must stop other running applications to free up the required resources for this specific accelerator.
+    Your device or cluster has the required accelerator type, but the selected accelerator does not have enough available resources, such as GPU memory. You must stop other running applications to free up the required resources for this specific accelerator.
 
 - "Unable to install. Not enough required {Resource} available on your quota."
 
-    Your personal account's assigned resource limit (e.g., CPU or Memory) has been reached. Try freeing up your allocated resources by stopping your unused apps, or contact your administrator to request a quota increase.
+    Your account has reached its assigned resource quota, such as CPU or memory. Try freeing up your allocated resources by stopping your unused apps, or contact your administrator to request a quota increase.
 
 ### Why can't I install an application?
 If you can't install an application, it might be due to:
