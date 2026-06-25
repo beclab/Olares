@@ -62,7 +62,21 @@ How Olares apps are placed in namespaces and reach each other:
 - **Dependency injection.** When app B declares a `type: application` dependency on a shared app A, app-service injects A's Services into B's Helm values as `.Values.svcs.<svcName>_host` (= `<svcName>.<app>-shared`) and `.Values.svcs.<svcName>_ports`.
 - **`sharedEntrances` was removed in 1.12.6+.** Do not add it; treat any leftover as stale.
 
-Used by: `chart` (authoring shared apps and `application` dependencies) and `cluster` (the application-space / namespace runtime view).
+### Finding an app's namespace
+
+`<owner>` is the Olares ID local part (e.g. `alice`). Given an app name, its namespace follows the install kind:
+
+- **Per-user app** → `<app>-<owner>` (the common case).
+- **Shared app** (`apiVersion: v3`) → `<app>-shared` (admin-only, cluster-wide).
+- **System app** → `user-space-<owner>` (NOT `<app>-<owner>`).
+- **v2 multi-chart app** → one namespace **per sub-chart**: `<chartName>-<owner>` (or `<chartName>-shared` for a shared sub-chart). Such an app **spans several namespaces** — do not assume a single one.
+- The ApplicationManager name encodes the namespace as `<namespace>-<app>` (per-user `<app>-<owner>-<app>`, shared `<app>-shared-<app>`).
+
+In practice: derive `<app>-<owner>`; for a shared app check `<app>-shared`; when unsure — or for any v2 app — run `olares-cli cluster application list` instead of guessing. See [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) for the list/get commands.
+
+System components are not per-app: framework services (app-service, market, chart-repo, ...) live in `os-framework`, and system middleware (PostgreSQL / Redis / NATS / MongoDB) in `os-platform`. Discover specifics live via the `cluster` skill (`cluster namespace list`, `cluster pod list -n <ns>`) rather than hardcoding service names.
+
+Used by: `chart` (authoring shared apps and `application` dependencies) and `cluster` (the application-space / namespace runtime view, and locating an app's namespace).
 
 ## System middleware model
 
