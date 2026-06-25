@@ -61,7 +61,7 @@ kind: Deployment
 metadata:
   name: v3env
 spec:
-  replicas: 1
+  replicas: {{ .Values.workloads.v3env.replicaCount }}
   selector:
     matchLabels:
       app: v3env

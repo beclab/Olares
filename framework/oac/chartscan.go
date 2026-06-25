@@ -2,6 +2,7 @@ package oac
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,24 @@ import (
 // chart files. v3 apps must reference app envs via .Values.olaresEnv.<envName>
 // instead of inlining OLARES_USER_* names in templates or values.yaml.
 var olaresUserChartRef = regexp.MustCompile(`\bOLARES_USER`)
+
+var (
+	// workloadReplicaCountDotRef matches the canonical replica-count reference
+	// {{ .Values.workloads.<name>.replicaCount }}.
+	workloadReplicaCountDotRef = regexp.MustCompile(`\.Values\.workloads\.([A-Za-z0-9_]+)\.replicaCount`)
+	// workloadReplicaCountIndexRef matches the index spelling
+	// {{ (index .Values.workloads "<name>").replicaCount }}, which is required
+	// when <name> contains characters (e.g. a hyphen) the dot accessor cannot
+	// express.
+	workloadReplicaCountIndexRef = regexp.MustCompile(`index\s+\.Values\.workloads\s+"([^"]+)"\s*\)\s*\.replicaCount`)
+
+	// workloadKindLine matches a `kind: Deployment` / `kind: StatefulSet` line.
+	workloadKindLine = regexp.MustCompile(`^\s*kind:\s*["']?(Deployment|StatefulSet)["']?\s*$`)
+	// replicasFieldLine matches a `replicas: <value>` line and captures the value.
+	replicasFieldLine = regexp.MustCompile(`^\s*replicas:\s*(\S.*?)\s*$`)
+	// yamlDocSeparator splits a multi-document YAML file on `---` lines.
+	yamlDocSeparator = regexp.MustCompile(`(?m)^---\s*$`)
+)
 
 func isChartYAMLFile(path string) bool {
 	lower := strings.ToLower(path)
@@ -103,4 +122,128 @@ func checkV3OLARESUserInChart(oacPath string) error {
 		)
 	}
 	return nil
+}
+
+// isUnderTemplatesDir reports whether path has a "templates" path segment, i.e.
+// the file is a chart template. This intentionally matches nested layouts
+// (templates/web/deployment.yaml) and subchart templates, not just files whose
+// immediate parent is templates/.
+func isUnderTemplatesDir(path string) bool {
+	for _, seg := range strings.Split(filepath.ToSlash(path), "/") {
+		if seg == "templates" {
+			return true
+		}
+	}
+	return false
+}
+
+// checkWorkloadReplicaTemplates verifies that every Deployment/StatefulSet
+// template under oacPath that declares spec.replicas sources the value from
+// .Values.workloads.<name>.replicaCount, where <name> is a key declared in the
+// manifest's workloadReplicas map.
+//
+// It complements checkWorkloadReplicaValues: that function guarantees
+// values.yaml carries each workloads.<name>.replicaCount default, while this
+// one guarantees the templates actually consume it instead of hardcoding a
+// replica count. Documents that omit replicas: are left to helm's default and
+// to the rendered-name correspondence check.
+func checkWorkloadReplicaTemplates(oacPath string, replicas map[string]int32) error {
+	root := oacPath
+	if !strings.HasSuffix(root, string(filepath.Separator)) {
+		root += string(filepath.Separator)
+	}
+	var errs []error
+	walkErr := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info == nil || info.IsDir() || !isUnderTemplatesDir(path) || !isChartYAMLFile(path) {
+			return nil
+		}
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return fmt.Errorf("read %s: %w", path, readErr)
+		}
+		rel, relErr := filepath.Rel(oacPath, path)
+		if relErr != nil {
+			rel = filepath.Base(path)
+		}
+		errs = append(errs, scanWorkloadReplicaDoc(rel, string(data), replicas)...)
+		return nil
+	})
+	if walkErr != nil {
+		return walkErr
+	}
+	return errors.Join(errs...)
+}
+
+// scanWorkloadReplicaDoc splits content into YAML documents and returns one
+// error per Deployment/StatefulSet document whose replicas: field is hardcoded
+// (or otherwise not a .Values.workloads.<name>.replicaCount reference) or whose
+// reference names a workload absent from replicas. rel is the chart-relative
+// path used in error messages.
+func scanWorkloadReplicaDoc(rel, content string, replicas map[string]int32) []error {
+	var errs []error
+	for _, doc := range yamlDocSeparator.Split(content, -1) {
+		if !isWorkloadDoc(doc) {
+			continue
+		}
+		value, ok := findReplicasValue(doc)
+		if !ok {
+			continue
+		}
+		name, matched := workloadReplicaRefName(value)
+		if !matched {
+			errs = append(errs, fmt.Errorf(
+				"%s: Deployment/StatefulSet spec.replicas is set to %q; it must reference .Values.workloads.<name>.replicaCount so the replica count is sourced from values.yaml",
+				rel, value,
+			))
+			continue
+		}
+		if _, ok := replicas[name]; !ok {
+			errs = append(errs, fmt.Errorf(
+				"%s: spec.replicas references .Values.workloads.%s.replicaCount, but %q is not declared in workloadReplicas",
+				rel, name, name,
+			))
+		}
+	}
+	return errs
+}
+
+// isWorkloadDoc reports whether a YAML document declares a Deployment or
+// StatefulSet kind.
+func isWorkloadDoc(doc string) bool {
+	for _, line := range strings.Split(doc, "\n") {
+		if workloadKindLine.MatchString(line) {
+			return true
+		}
+	}
+	return false
+}
+
+// findReplicasValue returns the value of the first non-comment `replicas:` line
+// in doc. Deployments and StatefulSets carry exactly one such field (spec.replicas).
+func findReplicasValue(doc string) (string, bool) {
+	for _, line := range strings.Split(doc, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		if m := replicasFieldLine.FindStringSubmatch(line); m != nil {
+			return strings.TrimSpace(m[1]), true
+		}
+	}
+	return "", false
+}
+
+// workloadReplicaRefName extracts the workload name from a replicas value that
+// references .Values.workloads.<name>.replicaCount in either the dot or index
+// spelling. It returns false when value is not such a reference.
+func workloadReplicaRefName(value string) (string, bool) {
+	if m := workloadReplicaCountDotRef.FindStringSubmatch(value); m != nil {
+		return m[1], true
+	}
+	if m := workloadReplicaCountIndexRef.FindStringSubmatch(value); m != nil {
+		return m[1], true
+	}
+	return "", false
 }

@@ -11,24 +11,6 @@ from typing import List, Optional, Tuple
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTDATA = REPO_ROOT / "testdata" / "terminus-apps"
 
-# Apps that need template OLARES_USER -> olaresEnv renames after envName fixes.
-TEMPLATE_ENV_FIXES = {
-    "fireflyiii": [
-        (r"\.Values\.olaresEnv\.OLARES_USER_TIMEZONE", ".Values.olaresEnv.APP_TIMEZONE"),
-    ],
-    "freshrss": [
-        (r"\.Values\.olaresEnv\.OLARES_USER_TIMEZONE", ".Values.olaresEnv.APP_TIMEZONE"),
-    ],
-    "ntfy": [
-        (r"\.Values\.olaresEnv\.OLARES_USER_TIMEZONE", ".Values.olaresEnv.APP_TIMEZONE"),
-    ],
-    "openwebui": [
-        (r"\.Values\.olaresEnv\.OLARES_USER_HUGGINGFACE_SERVICE", ".Values.olaresEnv.HF_ENDPOINT"),
-        (r"\.Values\.olaresEnv\.OLARES_USER_HUGGINGFACE_TOKEN", ".Values.olaresEnv.HF_TOKEN"),
-    ],
-}
-
-
 def manifest_version(text: str) -> str:
     m = re.search(r"^olaresManifest\.version:\s*['\"]?([^'\"\n]+)", text, flags=re.MULTILINE)
     return m.group(1).strip() if m else ""
@@ -93,24 +75,6 @@ def add_spec_only_admin(text: str) -> Tuple[str, bool]:
     return text[:insert_at] + "\n  onlyAdmin: true" + text[insert_at:], True
 
 
-def fix_templates(app_dir: Path, app_name: str) -> bool:
-    fixes = TEMPLATE_ENV_FIXES.get(app_name)
-    if not fixes:
-        return False
-    changed = False
-    for p in app_dir.rglob("*"):
-        if not p.is_file() or p.suffix not in {".yaml", ".yml", ".tpl"}:
-            continue
-        text = p.read_text()
-        new = text
-        for old, new_val in fixes:
-            new = re.sub(old, new_val, new)
-        if new != text:
-            p.write_text(new)
-            changed = True
-    return changed
-
-
 def fix_nofx_deployment(app_dir: Path) -> bool:
     dep = app_dir / "templates" / "nofx" / "deployment.yaml"
     if not dep.exists():
@@ -164,9 +128,6 @@ def repair_app(app_dir: Path) -> List[str]:
 
     if applied and any(t in applied for t in ("X-", "A-", "D", "O")):
         manifest.write_text(text)
-
-    if fix_templates(app_dir, app_dir.name):
-        applied.append("T")
 
     if app_dir.name == "nofx" and fix_nofx_deployment(app_dir):
         applied.append("N")

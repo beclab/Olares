@@ -631,12 +631,17 @@ func (c *OAC) checkAllowMultipleInstall(oacPath string, m Manifest, sc ownerScen
 	return errors.Join(errs...)
 }
 
-// checkWorkloadReplicaValues verifies that values.yaml declares a
-// workloads.<name>.replicaCount entry for every workload named in
-// workloadReplicas. This mirrors the install-time convention that each
-// workload's replica count is driven from .Values.workloads.<name>.replicaCount,
-// so a missing entry would render the manifest's workloadReplicas value
-// unusable.
+// checkWorkloadReplicaValues verifies the two halves of the workloadReplicas
+// install convention:
+//
+//  1. values.yaml declares a workloads.<name>.replicaCount entry for every
+//     workload named in workloadReplicas, and
+//  2. every Deployment/StatefulSet template that sets spec.replicas sources the
+//     value from .Values.workloads.<name>.replicaCount (see
+//     checkWorkloadReplicaTemplates) rather than hardcoding it.
+//
+// Together they ensure the manifest's workloadReplicas value is actually
+// honoured at install time instead of being silently ignored.
 func checkWorkloadReplicaValues(oacPath string, replicas map[string]int32) error {
 	data, err := os.ReadFile(filepath.Join(oacPath, "values.yaml"))
 	if err != nil {
@@ -663,6 +668,9 @@ func checkWorkloadReplicaValues(oacPath string, replicas map[string]int32) error
 		if _, ok := wl["replicaCount"]; !ok {
 			errs = append(errs, fmt.Errorf("values.yaml must define workloads.%s.replicaCount", name))
 		}
+	}
+	if err := checkWorkloadReplicaTemplates(oacPath, replicas); err != nil {
+		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
 }
