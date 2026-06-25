@@ -17,7 +17,7 @@
  D2. refine     edit OlaresManifest.yaml + templates/ for the 4 refinement areas
                 (metadata stub OK for local deploy — see manifest.md)
  D3. lint       olares-cli chart lint ./<app>        # loop D2<->D3 until OK
- D4. package    olares-cli chart package ./<app>
+ D4. package    bump metadata.version (= Chart.yaml version), then olares-cli chart package ./<app>
 
  Deploy to your Olares (requires login; confirm once, then auto-loop):
  V1. logged-in? olares-cli profile list              # if not: tell developer, stop
