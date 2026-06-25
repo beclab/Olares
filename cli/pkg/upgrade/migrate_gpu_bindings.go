@@ -44,6 +44,7 @@ const (
 	supportTypeExclusive       = "Exclusive"
 	supportTypeMemorySlice     = "MemorySlice"
 	supportTypeTimeSlice       = "TimeSlice"
+	sharedNamespaceSuffix      = "-shared"
 )
 
 type migrateLegacyGPUBindings struct {
@@ -245,7 +246,59 @@ func resolveBindingApplication(ctx context.Context, c ctrlclient.Client, manager
 	if owner = ownerFromBindingSelector(ctx, c, binding, managers); owner != "" {
 		return findApplicationManager(managers, appName, owner)
 	}
+	// v2 client-server apps with a cluster-shared subchart can be installed
+	// by multiple users (one ApplicationManager each) while only a single
+	// server side actually holds the GPU. app-service attributes that GPU to
+	// the "shared server owner" — the install_user label on the shared
+	// namespace (see compute.sharedServerOwner). Resolve to that owner before
+	// falling back to findSingleApplicationManager, which would otherwise fail
+	// with "multiple applicationmanagers found".
+	if owner = ownerFromSharedServer(ctx, c, managers, appName); owner != "" {
+		return findApplicationManager(managers, appName, owner)
+	}
 	return findSingleApplicationManager(managers, appName)
+}
+
+// ownerFromSharedServer resolves the shared-server owner for a v2
+// client-server app whose GPU is held by a single, cluster-shared server side.
+// It mirrors compute.sharedServerOwner: for each ApplicationManager matching
+// appName that declares a v2 cluster-shared chart, it reads the install_user
+// label on the shared namespace (<sharedChart>-shared) and returns it. Returns
+// "" when the app is not a v2 shared app or the shared namespace is missing.
+func ownerFromSharedServer(ctx context.Context, c ctrlclient.Client, managers *appv1alpha1.ApplicationManagerList, appName string) string {
+	for i := range managers.Items {
+		am := &managers.Items[i]
+		if am.Spec.AppName != appName {
+			continue
+		}
+		cfg, err := decodeAppConfig(am)
+		if err != nil || cfg == nil {
+			continue
+		}
+		if !cfg.IsV2() || !cfg.HasClusterSharedCharts() {
+			continue
+		}
+		for j := range cfg.SubCharts {
+			chart := cfg.SubCharts[j]
+			if !chart.Shared {
+				continue
+			}
+			// Mirror appcfg.ChartNamespace for shared charts: the shared
+			// server always lives in "<chartName>-shared" regardless of
+			// the installing user.
+			var ns corev1.Namespace
+			if err := c.Get(ctx, types.NamespacedName{Name: chart.Name + sharedNamespaceSuffix}, &ns); err != nil {
+				continue
+			}
+			if name := ns.Labels[appNameLabelKey]; name != "" && name != appName {
+				continue
+			}
+			if owner := ns.Labels[appInstallUserLabelKey]; owner != "" {
+				return owner
+			}
+		}
+	}
+	return ""
 }
 
 func findApplicationManager(managers *appv1alpha1.ApplicationManagerList, appName, owner string) (*appv1alpha1.ApplicationManager, *appcfg.ApplicationConfig, error) {
