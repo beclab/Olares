@@ -53,7 +53,7 @@ The command prints the absolute chart path and a reminder to refine + lint. Then
 - **Bundled db/queue services** (`postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats`) come through as plain workloads. **Delete them and wire to system middleware** — do not keep them just because they render (see manifest §3; this is the default, not optional).
 - **`depends_on`, healthchecks, restart policies** don't all map 1:1; verify the rendered templates.
 - **Workloads you add by hand** (extra Deployments/StatefulSets beyond what kompose rendered) must each be added to `workloadReplicas`, get a `values.yaml` `workloads.<name>.replicaCount`, and wire `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — otherwise suspend/resume won't control them (see manifest Workloads & replicas).
-- The conversion **always passes `lint` as-is** but is not production-ready — the four refinement areas in the parent skill are mandatory before the app will run well. Metadata (§1) can stay a stub for local deploy; functional refine (§2–§4) is always required.
+- The conversion clears the **local structural `lint`**, but a passing local `lint` is not proof the target Olares accepts it and not proof it is production-ready — confirm `workloadReplicas` and the other required manifest fields yourself (see manifest Workloads & replicas), and the four refinement areas in the parent skill are mandatory before the app will run well. Metadata (§1) can stay a stub for local deploy; functional refine (§2–§4) is always required.
 
 ## Next step
 
