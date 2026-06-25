@@ -16,7 +16,7 @@ Before you start, it is recommended to familiarize yourself with a few concepts 
 |:------------|:--------------|
 | [System application](../../../developer/concepts/application.md#system-applications)   | Built-in applications that come pre-installed with Olares,<br/> such as Profile, Files, and Vault. |
 | [Community application](../../../developer/concepts/application.md#community-applications)  | Applications that are created and maintained by third-party<br/> developers.   |
-| [Shared application](../../../developer/concepts/application.md#shared-applications) | A special category of community applications on Olares designed<br/> to provide unified, shared resources or services to all users within<br/> an Olares cluster. <br/><br/>Shared applications expose standard APIs or shared entrances that<br/> can be directly invoked by any application in the cluster. |
+| [Shared application](../../../developer/concepts/application.md#shared-applications) | A special type of community application that provides shared<br/> resources or services to all users in a cluster. <br/><br/>After the administrator installs it, all members can use it directly;<br/> backend services expose a standard API through a shared entrance<br/> for third-party clients to consume. |
 | [Dependencies](../../../developer/concepts/application.md#dependencies) | Prerequisite applications that must already be<br/> installed before a user can access an application <br/>that requires them.  | 
 
 ## Find applications
