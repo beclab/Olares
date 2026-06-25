@@ -86,11 +86,13 @@ A **shared application** is a special category of community applications on Olar
 
 Key characteristics of shared applications include:
 
-* **Centralized management**: Only administrators can install the core service of a shared application. Administrators are responsible for installing, configuring, and hosting the app's service, resources, and runtime environment within the cluster.
-* **Easy identification**: In Olares Market, shared applications are typically marked with a "Shared" label for easy identification.
-* **Flexible access**: The method for accessing a shared application depends on the app's form:
-    * **Headless backend service**: For shared applications that typically run as a background service without a graphical UI (e.g., Ollama), no dedicated reference application is required. The service exposes standard APIs and shared entrances that can be directly consumed by any compatible third‑party client such as LobeChat and Open WebUI. Users install the client and point it to the shared app’s API endpoint found in the Olares **Settings** > **Applications** > **Entrances**. 
-    * **Complete application with built-in UI**: For shared applications that include a complete user interface and backend service themselves (e.g., ComfyUI Shared or Dify Shared), administrators and other users in the cluster can obtain the service access point by directly installing the shared application itself.
+- **Centralized management**: Only administrators can install, upgrade, stop, resume, and uninstall shared applications. Administrators are responsible for configuring and hosting the app's service, resources, and runtime environment within the cluster.
+- **Easy identification**: In Olares Market, shared applications are typically marked with a "Shared" label for easy identification.
+- **Ready to use for members**: Once the administrator completes the installation, all members in the cluster can access the shared application directly, without additional authorization or installing any client.
+- **Unified access address with data isolation**: All shared applications follow this unified URL access rule: `https://<app-id>.<username>.<platform-domain>`. Members access the same shared application through their own usernames, and the system automatically isolates each member's data based on the username, ensuring members can only access their own data.
+- **Flexible access**: The method for accessing a shared application depends on the app's form.
+    * **Headless backend service**: For shared applications that run as a background service without a graphical UI (e.g., Ollama), the service exposes a standard API through its shared entrance, which can be consumed by any compatible third-party client such as LobeChat and Open WebUI. After installing the client, members point it to the shared app's API endpoint, which can be found in Olares **Settings** > **Applications** > **[App Name]** > **Entrances**.
+    * **Complete application with built-in UI**: For shared applications that include a complete user interface and backend service themselves (e.g., ComfyUI Shared or Dify Shared), an application entry with the same name is generated on the Launchpad after the administrator installs it, and cluster members can access it directly through this entry.
 
 ### Dependencies
 

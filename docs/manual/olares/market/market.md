@@ -80,31 +80,35 @@ To install an application from Market:
 
 ### Install shared applications
 
-To ensure a shared service is running and accessible within the cluster, follow the installation process based on the type of shared application:
+Shared applications are deployed centrally by the administrator, and cluster members do not need to install them themselves. To ensure a shared service is running and accessible within the cluster, follow the installation process based on the type of shared application:
 
 * **Headless backend service**:
 
-    This type of shared application provides API services and does not include a graphical user interface. No dedicated reference application is required. Any client that supports the corresponding API can directly invoke the service. Take Ollama as an example:
+    This type of shared application provides API services and does not include a graphical user interface. Any client that supports the corresponding API can directly invoke the service. Take Ollama as an example:
 
     1. The administrator installs Ollama first. Once installed, the shared service starts within the cluster and exposes a standard API endpoint.
     
     2. Cluster members access the shared service:
 
-        a. Retrieve the access address of Ollama in Olares **Settings** > **Applications** > **Ollama** > **Shared entrances**.
+        a. Get the access address of Ollama in Olares **Settings** > **Applications** > **Ollama** > **Shared entrance**.
 
-        b. Install a third-party client that supports the Ollama API, such as LobeChat or Open WebUI, and enter the access address in the client's configuration settings.
+        b. Install a client that supports the Ollama API, such as LobeChat or Open WebUI, and enter the access address in the client's configuration settings.
 
 * **Applications with built-in UI**:
 
-    This type of shared applications include both a backend service and a Web UI. They can provide services to users independently. Typical examples are Dify Shared and ComfyUI Shared.
+    This type of shared application include both a backend service and a Web UI. They can provide services to users independently. Typical examples are Dify Shared and ComfyUI Shared.
     
-    1. The administrator installs the shared application first. This not only launches the shared service for the cluster, but also installs the client-side interface as the access point.
+    1. The administrator installs the shared application first. Once installed, the shared service starts within the cluster, and an application entry with the same name is added to the Launchpad.
     
        ::: tip ComfyUI Launcher
        ComfyUI Shared contains a web launcher component to facilitate the management of related services and resources. The administrator needs to configure and start the service from the ComfyUI Launcher.
        :::
 
-    2. Cluster members install the same application. For these users, only the access point to the shared application is installed.
+    2. Cluster members find the application entry on the Launchpad and click to open it directly, without installing any additional client.
+
+::: info Manage shared applications
+The administrator is responsible for upgrading, stopping, resuming, and uninstalling shared applications. These operations affect all members in the cluster, so please confirm before proceeding.
+:::
 
 ### Install custom applications
 
@@ -256,3 +260,11 @@ In Olares 1.12.4 and earlier versions, to fully release resources, you must use 
 - Stop the app in Market and ensure that the **Also stop the shared server (affects all users)** option is selected.
 - If the user-facing application has already been stopped through Settings, you must first resume it in Market, and then stop the shared application while ensuring the **Also stop the shared server (affects all users)** option is selected. 
 :::
+
+### What happens to my previously installed shared applications after upgrading to V1.12.6?
+
+The system automatically migrates legacy (V2) shared applications to the new unified shared architecture:
+
+- **Automatic cleanup of legacy client components**: The system cleans up the legacy client-side components and keeps only the unified shared server, resolving the legacy issue where the server became inaccessible after the client was uninstalled.
+- **Mutually exclusive apps must be uninstalled first**: For apps where the new V3 version conflicts with the legacy V2 version (such as ComfyUI), the system prompts you to uninstall the old version before installing the new one. Follow the on-screen instructions.
+- **Unified change to access addresses**: After the migration completes, the access address for all users changes to the unified format `https://<app-id>.<username>.<platform-domain>`. Existing bookmarks or saved API addresses become invalid. Use the address that the shared application redirects to after opening instead.
