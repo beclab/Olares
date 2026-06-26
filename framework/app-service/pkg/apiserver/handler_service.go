@@ -296,7 +296,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			if _, ok := v.Spec.Settings["market_source"]; !ok {
 				v.Spec.Settings["market_source"] = marketSource
 			}
-			if v.Spec.Settings["version"] != version {
+			if v.Spec.Settings["version"] != version && version != "" {
 				v.Spec.Settings["version"] = version
 			}
 			v.Spec.Entrances = a.EffectiveEntrances(owner)
