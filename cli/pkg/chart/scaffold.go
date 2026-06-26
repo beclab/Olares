@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	oac "github.com/beclab/Olares/framework/oac"
@@ -143,13 +144,20 @@ func writeChart(opts Options, resources []runtime.Object) error {
 			obj.SetNamespace("{{ .Release.Namespace }}")
 		}
 
+		// wireReplica is set for the workload kinds whose spec.replicas must be
+		// driven by .Values.workloads.<name>.replicaCount (Deployment/StatefulSet).
+		wireReplica := false
 		switch obj := resource.(type) {
 		case *appsv1.Deployment:
 			accumulateContainerResources(obj.Spec.Template.Spec.Containers, totalRequests, totalLimits)
+			obj.Spec.Replicas = ptrInt32(1)
 			replicas[obj.GetName()] = 1
+			wireReplica = true
 		case *appsv1.StatefulSet:
 			accumulateContainerResources(obj.Spec.Template.Spec.Containers, totalRequests, totalLimits)
+			obj.Spec.Replicas = ptrInt32(1)
 			replicas[obj.GetName()] = 1
+			wireReplica = true
 		case *appsv1.DaemonSet:
 			accumulateContainerResources(obj.Spec.Template.Spec.Containers, totalRequests, totalLimits)
 		case *corev1.Pod:
@@ -163,6 +171,12 @@ func writeChart(opts Options, resources []runtime.Object) error {
 		yml, err := toYAML(resource)
 		if err != nil {
 			return err
+		}
+		if wireReplica {
+			// app-service drives replica counts (install/suspend/resume) purely
+			// through .Values.workloads.<name>.replicaCount, so the template must
+			// reference it instead of the literal kompose replica count.
+			yml = wireReplicasValue(yml, mobj.GetName())
 		}
 		kind := strings.ToLower(resource.GetObjectKind().GroupVersionKind().Kind)
 		filename := filepath.Join(templatesDir, fmt.Sprintf("%s-%s.yaml", kind, mobj.GetName()))
@@ -452,6 +466,19 @@ func accumulateContainerResources(containers []corev1.Container, totalRequests, 
 
 func toYAML(v any) ([]byte, error) {
 	return yaml.Marshal(v)
+}
+
+func ptrInt32(v int32) *int32 { return &v }
+
+var replicasLineRE = regexp.MustCompile(`(?m)^(\s*)replicas: \d+\s*$`)
+
+// wireReplicasValue rewrites a serialized Deployment/StatefulSet's literal
+// spec.replicas line into a Helm reference to .Values.workloads.<name>.replicaCount.
+// app-service installs and suspends/resumes apps by overriding that value, so a
+// hardcoded replicas count would make the lifecycle scale operations inert.
+func wireReplicasValue(yml []byte, name string) []byte {
+	repl := fmt.Sprintf("${1}replicas: {{ .Values.workloads.%s.replicaCount }}", name)
+	return replicasLineRE.ReplaceAll(yml, []byte(repl))
 }
 
 func writeYAMLFile(path string, v any) error {

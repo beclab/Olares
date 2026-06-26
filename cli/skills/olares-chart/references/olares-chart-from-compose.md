@@ -41,8 +41,8 @@ olares-cli chart from-compose --name myapp -f base.yml -f override.yml      # me
 
 The command prints the absolute chart path and a reminder to refine + lint. Then inspect:
 
-- `OlaresManifest.yaml` — the stub you will refine (see [olares-chart-manifest.md](olares-chart-manifest.md)).
-- `templates/deployment-<app>.yaml` — the primary workload (renamed to the app name; required by lint).
+- `OlaresManifest.yaml` — the stub you will refine (see [olares-chart-manifest.md](olares-chart-manifest.md); metadata can stay a stub for local deploy). It already carries `workloadReplicas` for every rendered Deployment/StatefulSet plus the `olares` system dependency.
+- `templates/deployment-<app>.yaml` — the primary workload (renamed to the app name; required by lint). Its `spec.replicas` is wired to `{{ .Values.workloads.<name>.replicaCount }}` (seeded in `values.yaml`) so app-service can scale it for install / suspend / resume.
 - `templates/service-*.yaml` — exposed services; the entrance `host` points at one of these service names.
 - `templates/persistentvolumeclaim-*.yaml` — one per compose volume; **these are the storage decisions you must revisit** (most should become userspace volumes or disappear into system middleware).
 
@@ -52,7 +52,8 @@ The command prints the absolute chart path and a reminder to refine + lint. Then
 - **`hostPath` / bind mounts** (`./dir:/path`) are dropped by kompose with a warning — the host path won't exist on Olares. Re-model these as userspace volumes.
 - **Services without `ports`** (e.g. a bare database) produce no Service and no entrance — fine, since you'll usually replace them with system middleware anyway.
 - **`depends_on`, healthchecks, restart policies** don't all map 1:1; verify the rendered templates.
-- The conversion **always passes `lint` as-is** but is not production-ready — the four judgment calls in the parent skill are mandatory before publishing.
+- **Workloads you add by hand** (extra Deployments/StatefulSets beyond what kompose rendered) must each be added to `workloadReplicas`, get a `values.yaml` `workloads.<name>.replicaCount`, and wire `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — otherwise suspend/resume won't control them (see manifest Workloads & replicas).
+- The conversion **always passes `lint` as-is** but is not production-ready — the four refinement areas in the parent skill are mandatory before the app will run well. Metadata (§1) can stay a stub for local deploy; functional refine (§2–§4) is always required.
 
 ## Next step
 
