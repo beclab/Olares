@@ -12,7 +12,6 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/miekg/dns"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 )
 
@@ -185,13 +184,7 @@ var adguardHealth bool
 
 func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.ServerOptions) error {
 	// try to find adguard dns pod ip and mac
-	k8sClient, err := utils.GetKubeClient()
-	if err != nil {
-		klog.Error("get kube client error, ", err)
-		return err
-	}
-
-	dnsPods, err := k8sClient.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	dnsPods, err := utils.ListPods(ctx)
 	if err != nil {
 		klog.Error("list pods error, ", err)
 		return err
@@ -199,7 +192,7 @@ func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.S
 
 	var dnsPodIp, dnsPodMac, calicoRouteIface string
 	const adguardDnsAppLabel = "applications.app.bytetrade.io/name"
-	for _, pod := range dnsPods.Items {
+	for _, pod := range dnsPods {
 		switch {
 		case pod.Labels[adguardDnsAppLabel] == "adguardhome":
 			dnsPodIp = pod.Status.PodIP
