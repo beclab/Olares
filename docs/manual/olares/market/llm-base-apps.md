@@ -21,26 +21,26 @@ Olares V1.12.6 introduces the local hosting and management platform for large la
 
     | Base app | When to choose |
     | :--- | :--- |
+    | **llama.cpp LLM Base (llm-init)** | Choose llama.cpp when you are running lightweight<br> GGUF models or deploying with limited GPU memory. |    
     | **Ollama LLM Base (llm-init)** | Choose Ollama when you want to get started quickly with<br> broad model compatibility. It pulls models automatically<br> using native model tags, making it ideal for chat and embedding tasks. |
     | **vLLM LLM Base (llm-init)** | Choose vLLM when you need high-throughput serving <br>of Hugging Face models under heavy concurrent load. |
     | **SGLang LLM Base (llm-init)** | Choose SGLang when you need efficient structured<br> generation or advanced reasoning optimizations. |
-    | **llama.cpp LLM Base (llm-init)** | Choose llama.cpp when you are running lightweight<br> GGUF models or deploying with limited GPU memory. |
 
 ## Create a new model instance
 
 An LLM Base app serves as a template. To run a model, you must first clone the base app into an independent running instance.
 
-1. Select the base app that matches your preferred inference engine, and then click **View** on it. For example, **Ollama LLM Base (llm-init)**.
+1. Select the base app that matches your preferred inference engine, and then click **View** on it. For example, **llama.cpp LLM Base (llm-init)**.
 2. Click **Create** to initialize a new instance.
 
-    ![Create a model instance](/images/manual/olares/llm-base-apps-create-instance.png#bordered)
+    ![Create a model instance](/images/manual/olares/llm-base-apps-create-instance1.png#bordered)
 
 3. Specify the instance identity settings:
 
-    - **New app name**: Enter a unique name for the instance. This name is displayed as the app name in Market and Settings. For example, `Ollama-qwen3.5-2b`.
-    - **Shortcut name for {client}**: Enter a unique shortcut name for the instance. This name is displayed on the Launchpad. For example, `qwen3.5-2b`.
+    - **New app name**: Enter a unique name for the instance. This name is displayed as the app name in Market and Settings. For example, `Qwen3.6-35B-A3B`.
+    - **Shortcut name for {client}**: Enter a unique shortcut name for the instance. This name is displayed on the Launchpad. For example, `qwen3.6-35b-a3b`.
 
-4. Select **Create** to proceed to the environment configuration.
+4. Click **Create** to proceed to the environment configuration.
 
 ## Configure engine environment variables
 
@@ -50,24 +50,23 @@ After creating the instance, the configuration window opens. Define where your e
 
     | Variable | Description |
     | :--- | :--- |
-    | **MODEL_SOURCE** | Specify the model source address. <br>The format depends on the selected engine.<br>Example: `ollama://qwen3.5:2b` or `hf://Qwen/Qwen3.5-2B`. |
-    | **MODEL_NAME** | Specify the exact model name for client app connections. <br>Example: `qwen3.5-2b`. |
+    | **MODEL_SOURCE** | Specify where the engine pulls the model. The format depends on the selected engine:<ul><li>**Ollama**: `ollama://<model>:<size>`<br>Example: `ollama://qwen3.5:2b`</li><li>**llama.cpp**: `hf://<repo> --include <file>.gguf`<br>Example: `hf://unsloth/Qwen3.6-35B-A3B-GGUF --include Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf`</li><li>**vLLM** / **SGLang**: `hf://<repo>`<br>Example: `hf://Qwen/Qwen3.5-2B`</li></ul> |
+    | **MODEL_NAME** | The exact model name used for client app connections. How to derive it depends on the engine:<ul><li>**Ollama**: Use the string after `ollama://` in `MODEL_SOURCE`.<br>Example: `ollama://qwen3.5:2b` → `qwen3.5:2b`</li><li>**llama.cpp**: Use the repo name plus the quantization tag. Each instance can carry only one quantization.<br>Example: `hf://unsloth/Qwen3.6-35B-A3B-GGUF --include Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf` → `unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL`</li><li>**vLLM** / **SGLang**: the string after `hf://` in `MODEL_SOURCE`.<br>Example: `hf://Qwen/Qwen3.5-2B` → `Qwen/Qwen3.5-2B`</li></ul> |
     | **MODEL_MODE** | Select **Chat** or **Embedding**. |
-    | **MODEL_SUPPORTS** | Select the model capabilities to expose to client apps. <br>Choose one or more from **Vision**, **Tools**, **Thinking**, and **Embedding**. |
-    | **ENGINE_ARGS** | Specify the startup parameters for the engine.<br>Separate multiple parameters with spaces.<br>Example: `OLLAMA_CONTEXT_LENGTH=4096`.<br>Reference: [Ollama tuning arguments](#reference-ollama-tuning-arguments). |
-    | **{ENGINE}_REQUIRED<br>_GPU_MEMORY** | Sets the minimum video memory required by the instance in MB or Gi. <br>Example: `8192`. |
-    <!--| **MODEL_SUPPORTS** | Enter a comma-separated list of model capabilities:<ul><li>**Reasoning models**: Include `supports_reasoning`.</li><li>**Tool calling models**: Include `supports_function_calling`.<br>Add `supports_parallel_function_calling` for simultaneous tasks.</li><li>**Vision models**: Include `supports_vision`.</li><li>**Embedding models**: Leave this field empty. Do not include chat capability flags.</li></ul>Example: `supports_function_calling,supports_tool_choice`.<br>Reference: [Model capability flags](#reference-model-capability-flags).|-->
+    | **MODEL_SUPPORTS** | Select the model capabilities to expose to client apps. <br>Choose one or more from **Vision**, **Tools**, **Thinking**, and **Embedding**.<br>Check the model on its source (for example, the [Ollama library](https://ollama.com/library) or the Hugging Face model page) to confirm which ones apply. |
+    | **ENGINE_ARGS** | Specify the startup parameters for the engine.<br>Separate multiple parameters with spaces.<br>Example (llama.cpp, `Qwen3.6-35B-A3B`): `-c 65536 -ngl all -fa on -ctk q8_0 -ctv q8_0`.<br>Reference: [Engine tuning arguments](#reference-engine-tuning-arguments). |
+    | **{ENGINE}_REQUIRED<br>_GPU_MEMORY** | Sets the minimum GPU memory the instance needs, in MB or Gi.<br>Example: `20Gi`. |
 
 2. Click **Confirm** to save the configuration and start the instance installation.
 
-    An **Instances** panel appears on the right side of the page and displays the installation progress. After the setup finishes, the instance operation button changes to **Open**, indicating the base service is running.
+    An **Instances** panel appears on the right side of the page, showing the installation progress. Once the setup completes, the instance's operation button changes to **Open**, indicating that the base service is running. A model app with the same name also appears on the Launchpad.
 
-    ![Model instance installed](/images/manual/olares/llm-base-model-instance-installed.png#bordered)
+    ![Model instance installed](/images/manual/olares/llm-base-model-instance-installed1.png#bordered)
 
     :::info
     Model instances created from LLM Base apps show a `From template` tag next to the app name. You can see this tag when viewing the app in Market or Settings.
 
-    ![Model instance tag](/images/manual/olares/llm-base-model-instance-tag.png#bordered){width=70%}   
+    ![Model instance tag](/images/manual/olares/llm-base-model-instance-tag1.png#bordered){width=70%}   
     :::
 <!--
 ### Reference: Model capability flags
@@ -220,30 +219,27 @@ SGLANG_REQUIRED_GPU_MEMORY=8192
 
 Track model downloads, verify engine readiness, and manage operational parameters through the built-in model console.
 
-1. Locate the model instance in the **Instances** panel on the LLM Base app details page.
-2. Click **Open** to launch the dedicated model console.
-3. Review the initialization telemetry on the **Status** tab:
+1. Locate the model instance in the **Instances** panel on the LLM Base app details page, or find it on the Launchpad.
+2. Open it to launch the dedicated model console.
 
-    - **Model status**: Monitors the active model name, source URL, operational state, and download progress percentage.
-    
-        - Pause or cancel the transfer directly when the download is in progress.
-        - If a download fails due to network issues or incorrect source tags, review the error message and click **Retry**.
-    - **Service status**: Tracks the deployment state of the model and engine. When both are in **READY** status, configure your routing and integration details:
+    The console opens on the **Status** tab by default. The model files are start downloading automatically.
 
+    ![Model console status tab](/images/manual/use-cases/llm-base-model-console-status.png#bordered)
+
+3. Tracks the readiness of the model and the engine:
+
+    - **Model**: Shows `READY` once the files are downloaded and verified. Copy the **Model name** to use for client app connections.
+    - **Engine**: Shows `RUNNING` once the inference service is online. Configure how client apps reach it:
         - **WHO IS CALLING**: Select who can access the API, **Apps in Olares**, **Devices in LAN**, or **Remote**.
-        - **WHAT API FORMAT**: Select the API format, **Ollama**, **OpenAI-Compatible**, or **Anthropic-Compatible**.
+        - **WHAT API FORMAT**: Select the API format. The available options depend on the engine, for example **OpenAI-Compatible**, **Anthropic-Compatible**, or **Ollama**.
         - **Base URL**: Copy this URL to use for client app connections.
         - **Supported Endpoints**: Expand to see the available API endpoints.
 
-    :::info
-    In **Download-Only** mode, the instance only downloads the model files and stores them on disk. The inference engine is not started.
-    :::
+    ![Model console ready](/images/manual/use-cases/llm-base-model-console-ready.png#bordered)
 
 4. Select the **Config** tab to audit runtime metrics, modify configurations, or execute performance tests.
 
-    :::info
-    The **Config** tab is not available in **Download-Only** mode.
-    :::
+    ![Model console, config page](/images/manual/use-cases/llm-base-model-console-config.png#bordered)
 
     - **Model spec**: Review the primary model attributes, such as the model name, mode, and context size. Click the block to inspect the raw JSON specification, or click **Edit** to adjust the settings.
     - **Parameters**: View and edit engine parameters. Common parameters such as **Context Length** are shown by default; expand **Advanced parameters** to see more. Use the **Form/Raw** toggle to switch between form editing and raw text (YAML) editing.
