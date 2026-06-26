@@ -217,6 +217,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				Settings: map[string]string{
 					"title":         am.Annotations[constants.ApplicationTitleLabel],
 					"market_source": am.Annotations[constants.AppMarketSourceKey],
+					"version":       am.Annotations[api.AppVersionKey],
 				},
 			},
 			Status: appv1alpha1.ApplicationStatus{
@@ -284,6 +285,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			// synthesized values so they are not lost on overwrite.
 			title := v.Spec.Settings["title"]
 			marketSource := v.Spec.Settings["market_source"]
+			version := v.Spec.Settings["version"]
 			v.Spec.Settings = a.EffectiveSettings(owner)
 			if v.Spec.Settings == nil {
 				v.Spec.Settings = map[string]string{}
@@ -293,6 +295,9 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			}
 			if _, ok := v.Spec.Settings["market_source"]; !ok {
 				v.Spec.Settings["market_source"] = marketSource
+			}
+			if v.Spec.Settings["version"] != version {
+				v.Spec.Settings["version"] = version
 			}
 			v.Spec.Entrances = a.EffectiveEntrances(owner)
 			v.Spec.Ports = a.Spec.Ports
