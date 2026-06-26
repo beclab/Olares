@@ -19,7 +19,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
@@ -170,30 +169,35 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 	return nil
 }
 
-// waitForNamespaceDeleted waits for the namespace to be completely deleted
+// waitForNamespaceDeleted performs a single-shot check on the namespace and
+// returns a RequeueError if the namespace is still present, asking the
+// controller to re-enqueue the request after a short delay. This avoids the
+// caller (typically the reconcile worker) blocking on a long PollImmediate
+// loop and starving every other ApplicationManager — with MaxConcurrentReconciles=1
+// a 30-minute synchronous wait here would freeze the whole controller.
+//
+// Callers must propagate the returned error verbatim so the reconciler can
+// dispatch on appstate.RequeueError. The helm uninstall / compute cleanup
+// steps that precede this check in forceDeleteApp are idempotent, so it is
+// safe to re-run them on every requeue iteration.
 func (p *baseStatefulApp) waitForNamespaceDeleted(ctx context.Context) error {
 	namespace := p.manager.Spec.AppNamespace
 	if apputils.IsProtectedNamespace(namespace) {
 		return nil
 	}
 
-	klog.Infof("waiting for namespace %s to be fully deleted", namespace)
-	err := utilwait.PollImmediate(time.Second, 30*time.Minute, func() (done bool, err error) {
-		var ns corev1.Namespace
-		err = p.client.Get(ctx, types.NamespacedName{Name: namespace}, &ns)
-		if err != nil && !apierrors.IsNotFound(err) {
-			klog.Errorf("failed to get namespace %s: %v", namespace, err)
-			return false, err
-		}
-		if apierrors.IsNotFound(err) {
-			klog.Infof("namespace %s has been fully deleted", namespace)
-			return true, nil
-		}
-		klog.Infof("namespace %s still exists, waiting...", namespace)
-		return false, nil
-	})
-
-	return err
+	var ns corev1.Namespace
+	err := p.client.Get(ctx, types.NamespacedName{Name: namespace}, &ns)
+	if err != nil && !apierrors.IsNotFound(err) {
+		klog.Errorf("failed to get namespace %s: %v", namespace, err)
+		return err
+	}
+	if apierrors.IsNotFound(err) {
+		klog.Infof("namespace %s has been fully deleted", namespace)
+		return nil
+	}
+	klog.Infof("namespace %s still exists, requeueing in 5s", namespace)
+	return NewWaitingInLine(5)
 }
 
 type OperationApp interface {
