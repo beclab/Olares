@@ -138,7 +138,29 @@ export default defineVersionedConfig2(withMermaid({
       noindexPaths.add(
         pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
       );
+      // Skip canonical on noindex pages: a self/duplicate canonical combined
+      // with `noindex` sends contradictory signals to crawlers.
+      return;
     }
+
+    // Self-referencing canonical for every indexable doc page. Built from the
+    // *unversioned* route on the production origin (matches the sitemap
+    // hostname below) so versioned (/docs/<version>/...) duplicates consolidate
+    // onto the latest /docs/... URL. `cleanUrls` is on, so the route is
+    // extensionless; directory indexes keep their trailing slash.
+    const route = pageData.relativePath
+      .replace(/(^|\/)index\.md$/, '$1')
+      .replace(/\.md$/, '');
+    pageData.frontmatter.head ??= [];
+    pageData.frontmatter.head.push([
+      'link',
+      {
+        rel: 'canonical',
+        href: route
+          ? `https://www.olares.com/docs/${route}`
+          : 'https://www.olares.com/docs/',
+      },
+    ]);
   },
 
   sitemap: {
