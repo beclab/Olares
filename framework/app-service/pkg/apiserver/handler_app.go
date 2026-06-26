@@ -410,7 +410,7 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			if _, ok := v.Spec.Settings["market_source"]; !ok {
 				v.Spec.Settings["market_source"] = marketSource
 			}
-			if v.Spec.Settings["version"] != version {
+			if v.Spec.Settings["version"] != version && version != "" {
 				v.Spec.Settings["version"] = version
 			}
 			v.Spec.Entrances = a.Spec.Entrances
@@ -687,7 +687,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			if _, ok := v.Spec.Settings["market_source"]; !ok {
 				v.Spec.Settings["market_source"] = marketSource
 			}
-			if v.Spec.Settings["version"] != version {
+			if v.Spec.Settings["version"] != version && version != "" {
 				v.Spec.Settings["version"] = version
 			}
 			v.Spec.Entrances = a.Spec.Entrances
