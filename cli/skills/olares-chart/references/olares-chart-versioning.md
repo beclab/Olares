@@ -44,13 +44,15 @@ A chart carries several "version" fields with different jobs. Their values are f
 | `version` | `Chart.yaml` | Helm chart version | `== metadata.version` |
 | `spec.versionName` | `OlaresManifest.yaml` | **upstream app** version (display) | tracks `Chart.yaml` `appVersion` — convention, not enforced |
 
+> **Bump on every upload:** raise `metadata.version` (= `Chart.yaml` `version`, kept equal) before each `market upload` — a patch bump (e.g. `0.0.1 → 0.0.2`) by default. The upload gate only requires `>=` the stored version, but presenting a strictly-newer version keeps each upload distinct; same-version overwrite is a fallback for when the chart didn't change. See [olares-chart-deploy.md](olares-chart-deploy.md) §2.
+
 > **Name clash:** `Chart.yaml` has its own `apiVersion` (Helm's chart API) — unrelated to the OlaresManifest `apiVersion`. Don't copy one into the other.
 
 ### olaresManifest.version: 0.12.0
 
 `0.12.0` is the manifest schema every chart uses (`from-compose` emits it). It defines:
 
-- **Resource envelope** under `spec.resources[]` / `spec.accelerator[]` (mode-keyed: `cpu`, `nvidia`, ...).
+- **Resource envelope**, in one of two mutually-exclusive shapes: a non-accelerator app uses the flat `spec.requiredCpu` / `limitedCpu` / `requiredMemory` / `limitedMemory` / `requiredDisk` (no `mode`); a GPU/accelerator app uses the mode-keyed `spec.accelerator[]` (`cpu`, `nvidia`, ...). `lint` error messages call `spec.accelerator` **`spec.resources`** — that is just an alias in the message, not a separate field.
 - **GPU / accelerator** declared via `spec.accelerator` with a mode → arch cross-check at `lint`.
 - **`permission.externalData`** (`.Values.sharedlib`).
 - **`workloadReplicas`** — a required map of every Deployment/StatefulSet → replica count, with each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}`. See [olares-chart-manifest.md](olares-chart-manifest.md) (Workloads & replicas).

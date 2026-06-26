@@ -4,6 +4,8 @@
 
 ## A. Declaring accelerator modes (`spec.accelerator`)
 
+`spec.accelerator[]` is **only** for apps that need an accelerator / GPU device. A **non-accelerator (CPU-only) app does not declare any `mode`** — it sets the flat resource envelope `spec.requiredCpu` / `limitedCpu` / `requiredMemory` / `limitedMemory` / `requiredDisk` directly under `spec` instead (see §A.1 below). Only read on if your app targets an accelerator.
+
 An app that needs an accelerator declares one `spec.accelerator[]` entry **per compute mode** it supports. Without it the app is scheduled as plain `cpu` and never gets an accelerator device or GPU memory.
 
 > **Naming gotchas (these bite):**
@@ -68,7 +70,24 @@ spec:
 - `required*` is the **scheduling floor** (reserved); `limited*` is the **cap**. They map to Kubernetes container `requests` / `limits`.
 - **GPU is allocated by memory, not whole cards.** `requiredGPUMemory` is the vGPU memory the scheduler reserves (matched against device memory); a card count is not what you request here.
 - Each declared mode entry must be **complete** (all CPU/memory/disk pairs present); `lint` reports every missing field.
-- The resource envelope lives entirely under `spec.accelerator[]` (mode-keyed) — there is no flat top-level `spec.requiredCpu/...`.
+- **Two mutually-exclusive ways to express the envelope** — a chart uses one, never both (`lint` rejects mixing them):
+  - **Accelerator / GPU app:** the mode-keyed `spec.accelerator[]` shown here.
+  - **Non-accelerator app:** the flat top-level `spec.requiredCpu` / `limitedCpu` / `requiredMemory` / `limitedMemory` / `requiredDisk` (optional `limitedDisk`) — no `mode`. See §A.1.
+
+### A.1 Non-accelerator (CPU-only) envelope — flat fields, no mode
+
+An app that needs no accelerator declares its resources flat under `spec`, with no `spec.accelerator[]` and no `mode`:
+
+```yaml
+spec:
+  requiredCpu: 100m
+  limitedCpu: "1"
+  requiredMemory: 128Mi
+  limitedMemory: 512Mi
+  requiredDisk: 1Gi
+```
+
+app-service derives an implicit `cpu` mode from these fields at install. This and `spec.accelerator[]` are **mutually exclusive** — declaring both fails `lint`. (`from-compose` instead scaffolds the equivalent `spec.accelerator[mode=cpu]` shape; both are valid, so leave whichever the chart already uses rather than mixing them.)
 
 ## B. Which modes to declare — local deploy vs publish
 

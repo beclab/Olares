@@ -15,7 +15,7 @@ flowchart TD
   pkg --> up["market upload"]
   up --> exists{"app already exists on this Olares?"}
   exists -->|"no (first deploy / installFailed / uninstalled)"| inst["market install -s upload --watch -o json"]
-  exists -->|"yes (running / stopped / upgradeFailed / applyEnvFailed / stopFailed)"| upg["market upgrade -s upload --version SAME --watch -o json"]
+  exists -->|"yes (running / stopped / upgradeFailed / applyEnvFailed / stopFailed)"| upg["market upgrade -s upload --version NEW --watch -o json"]
   inst -->|running| done["deployed -> cleanup or keep"]
   upg -->|running| done
   upg -->|failed/stuck| diag
@@ -41,15 +41,17 @@ The `*` marks the active profile; `STATUS` is `logged-in` when usable (see the o
 
 `lint` passed and the profile is logged in — proceed immediately.
 
+**Bump the version on every (re)upload.** Before packaging, bump `Chart.yaml` `version` and `OlaresManifest.yaml` `metadata.version` together (keep them equal — `lint` enforces it); a patch bump (e.g. `0.0.1 → 0.0.2`) is the default. Market's upload gate only requires `>=` the stored version, but always presenting a strictly-newer version keeps each upload distinct and makes the `upgrade --version` unambiguous. (Same-version overwrite still works as a fallback when the chart didn't change — see §3.)
+
 `market upload` takes a `.tgz` / `.tar.gz`, not a raw chart directory, so package first with the built-in verb (no `helm` binary needed):
 
 ```bash
-olares-cli chart package ./<app>           # -> <app>-<version>.tgz  (name/version from Chart.yaml)
+olares-cli chart package ./<app>           # -> <app>-<version>.tgz  (name/version from Chart.yaml — reflects the bump)
 olares-cli chart package ./<app> -o ./dist # or write the .tgz into a chosen dir
-olares-cli market upload ./<app>-<version>.tgz
+olares-cli market upload ./<app>-<version>.tgz   # use the new <version> in the filename
 ```
 
-`chart package` mirrors `helm package` and preserves `OlaresManifest.yaml`, so the archive is accepted as-is by both `chart lint` and `market upload`.
+`chart package` mirrors `helm package` and preserves `OlaresManifest.yaml`, so the archive is accepted as-is by both `chart lint` and `market upload`. Because the filename is `<app>-<version>.tgz`, a bumped version produces a new `.tgz` name — pass that name to `upload` and the new number to `install` / `upgrade --version`.
 
 - `upload` always lands the chart in the `upload` source (see [`../../olares-market/references/olares-market-charts.md`](../../olares-market/references/olares-market-charts.md)). `-s` is intentionally not exposed.
 - Upload runs the server-side ingest, so a chart that passed local `lint` can still be rejected here (e.g. cluster-specific checks). Surface that message as a chart problem and go back to refine.
@@ -63,13 +65,13 @@ olares-cli market install <app> -s upload --version <version> --watch -o json
 ```
 
 - **`install` is for an app that does NOT yet exist on this Olares** (first deploy, or after `uninstall`, or retrying an `installFailed`). If the app already exists in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`), `install` is rejected by app-service — **re-apply with `upgrade` instead** (next bullet). When in doubt, `olares-cli market get <app> -s upload -o json` and read `.state`.
-- **Re-apply an edited chart to an already-deployed app → `upgrade`, same version:**
+- **Re-apply an edited chart to an already-deployed app → bump the version, then `upgrade` to it:**
   ```bash
-  olares-cli market upgrade <app> -s upload --version <SAME version> --watch -o json
+  olares-cli market upgrade <app> -s upload --version <NEW version> --watch -o json
   ```
-  Re-uploading the same version overwrites the stored chart, and `-s upload` allows a **same-version** upgrade (the CLI's strict-newer gate is waived for the upload source; app-service gates on `>= deployed`). This is the canonical loop for iterating on an installed app and for recovering one stuck in `upgradeFailed` — no version bump required.
+  Bump `metadata.version` (= `Chart.yaml` `version`), re-package, and re-upload, then upgrade to the new number. This is the canonical loop for iterating on an installed app and for recovering one stuck in `upgradeFailed`. **Fallback:** the upload source also permits a **same-version** upgrade (the CLI's strict-newer gate is waived there; app-service gates on `>= deployed`), so re-uploading the same version overwrites the stored chart — use this only when the chart didn't change (a *lower* version is always rejected).
 - Parse `.finalState`: `running` = deployed. `*Failed` / a watcher stuck near `*Failed` = go diagnose. See [`../../olares-market/references/olares-market-lifecycle.md`](../../olares-market/references/olares-market-lifecycle.md) for the state machine and `missing required env var(s)` (re-run with `--env KEY=VALUE`).
-- **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in the chart repo immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. This is the one install failure you *should* retry: wait for hydration, then re-run the same `install`. No need to re-`upload` or bump the version — the chart is already stored; re-uploading the same bytes wouldn't speed up hydration. Confirm hydration finished via the `appstore-backend` log (`isAppHydrationComplete RETURNING TRUE ... appID=<app>` → `Added new app to latest: <app>` → `new_app_ready`), or poll `olares-cli market get <app> -s upload` until it resolves:
+- **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in the chart repo immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. This is the one install failure you *should* retry: wait for hydration, then re-run the same `install`. The chart didn't change here, so there's nothing to re-`upload` or bump — the chart is already stored and re-uploading the same bytes wouldn't speed up hydration. Confirm hydration finished via the `appstore-backend` log (`isAppHydrationComplete RETURNING TRUE ... appID=<app>` → `Added new app to latest: <app>` → `new_app_ready`), or poll `olares-cli market get <app> -s upload` until it resolves:
   ```bash
   until olares-cli market get <app> -s upload -o json 2>/dev/null | grep -q '"name"'; do sleep 2; done
   olares-cli market install <app> -s upload --version <version> --watch -o json
@@ -145,11 +147,11 @@ olares-cli market resume <app> --watch
 
 `resume` scales the workloads back up and waits for startup (`stopped → resuming → running`). If the pod is already running it completes quickly and flips the market row to `running`.
 
-If an upgrade instead left the app in **`upgradeFailed`** (the upgrade itself errored, not a `stopped` row), recover by fixing the chart, re-uploading the **same version**, and re-running `market upgrade <app> -s upload --version <SAME> --watch` — `upgradeFailed` is an upgradable state and the upload source permits a same-version upgrade (see §3). Do **not** fall back to `install`: app-service rejects `install` from `upgradeFailed`, which only re-wedges the row.
+If an upgrade instead left the app in **`upgradeFailed`** (the upgrade itself errored, not a `stopped` row), recover by fixing the chart, **bumping the version**, re-packaging + re-uploading, and re-running `market upgrade <app> -s upload --version <NEW> --watch` — `upgradeFailed` is an upgradable state (the upload source also permits a same-version upgrade as a fallback if nothing changed — see §3). Do **not** fall back to `install`: app-service rejects `install` from `upgradeFailed`, which only re-wedges the row.
 
 ## 5. Decide: fix the chart, or report back
 
-- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md) and [`olares-chart-run-as-user.md`](olares-chart-run-as-user.md), re-run `chart lint`, and re-upload (the auto-loop continues). **No version bump needed to redeploy a fix** — `upload` requires the new version be **>= the stored** one, so re-uploading the *same* version overwrites the stored chart. Keep `Chart.yaml` `version` == `metadata.version` (lint enforces equality); bump only if you want to track iterations (a *lower* version is rejected). **After re-upload, re-apply with the right verb:** if the app no longer exists / is `installFailed` → `market install -s upload`; if it already exists in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`) → `market upgrade -s upload --version <SAME>` (same-version upgrade is allowed for the upload source — see §3). Re-running `install` against an already-existing app is rejected by app-service and leaves the row in `upgradeFailed`/`installFailed`; `upgrade` is the recovery path.
+- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per [`olares-chart-manifest.md`](olares-chart-manifest.md) and [`olares-chart-run-as-user.md`](olares-chart-run-as-user.md), re-run `chart lint`, and re-upload (the auto-loop continues). **Bump the version on each redeploy** — bump `Chart.yaml` `version` == `metadata.version` together (lint enforces equality), re-package (the new `<app>-<version>.tgz` reflects it), and upload that file. Market's gate only requires `>= the stored` version, but presenting a strictly-newer version keeps each redeploy distinct; a *lower* version is always rejected, and same-version overwrite is a fallback for when the chart didn't change. **After re-upload, re-apply with the right verb:** if the app no longer exists / is `installFailed` → `market install -s upload --version <NEW>`; if it already exists in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`) → `market upgrade -s upload --version <NEW>`. Re-running `install` against an already-existing app is rejected by app-service and leaves the row in `upgradeFailed`/`installFailed`; `upgrade` is the recovery path.
 - **Problem is not in the chart, or unclear:** break out of the auto-loop — summarize the failing state and the relevant log excerpts in plain language, suggest likely causes, and **ask the developer how to proceed.** Do not silently retry install in a loop — install/auth failures are deterministic (see olares-market / olares-shared error tables). The lone exception is the post-upload hydration `404` in section 3, which is transient and meant to be retried once hydration completes.
 
 ## 6. Clean up the test install
