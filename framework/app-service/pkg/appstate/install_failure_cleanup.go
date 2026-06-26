@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -23,44 +23,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// installFailureNSDeletionTimeout caps how long the synchronous install-failure
-// cleanup blocks waiting for the app namespace to disappear. Beyond this point
-// the AM still moves to InstallFailed but InstallFailedApp.Exec keeps retrying
-// the same helper on every reconcile until the namespace is truly gone.
-// Aligned with cancel poll timeouts (which use install TTL via opCtx); 10 min is
-// plenty for normal NS finalizers and short enough to keep the controller
-// responsive.
-const installFailureNSDeletionTimeout = 10 * time.Minute
-
 // cleanupAfterInstallFailure performs the same cluster-side teardown as
 // HelmOps.Uninstall (=UninstallAll: PVCs + helm UninstallCharts + perm/Provider
 // unregister + ClearMiddlewareRequests + ClearCache/Data + DeleteNamespace)
-// plus compute allocation cleanup, AND THEN BLOCKS until the app namespace is
-// actually gone (IsNotFound) — only then is the caller allowed to mark the AM
-// InstallFailed.
+// plus compute allocation cleanup, AND THEN single-shot CHECKS whether the
+// app namespace is gone (IsNotFound). If the namespace is still present it
+// returns an appstate.RequeueError so the controller re-enqueues the request
+// after a short delay instead of the calling goroutine blocking on a long
+// poll — with MaxConcurrentReconciles=1 a multi-minute synchronous wait
+// would starve every other ApplicationManager.
 //
-// This mirrors installing_canceling_app.go's poll() which gates the
-// InstallingCanceled transition on the same namespace deletion event.
-//
-// It is idempotent:
+// It is idempotent (safe to re-run on every requeue iteration):
 //   - releases that don't exist: UninstallCharts swallows ErrReleaseNotFound
-//   - namespace that doesn't exist: DeleteNamespace + poll return immediately
+//   - namespace that doesn't exist: DeleteNamespace + check return immediately
 //   - permissions/providers already unregistered: existing klog.Warning path
 //
 // Callers:
-//   - installing_app.go at each transition into InstallFailed (synchronous;
-//     fills the D/E post-helm validation / scale failure gaps and confirms
-//     NS gone on C paths);
-//   - InstallFailedApp.Exec on every reconcile (defensive retry; covers the
-//     rare case where the synchronous wait above timed out).
+//   - installing_app.go at each transition into InstallFailed (runs inside
+//     the InstallingApp.Exec goroutine, so a RequeueError there is just
+//     logged and the transition to InstallFailed still proceeds; the
+//     subsequent InstallFailedApp.Exec re-runs the helper);
+//   - InstallFailedApp.Exec on every reconcile, which propagates the
+//     RequeueError up so the reconciler honors the short backoff.
 //
-// Returns nil iff NS is confirmed gone. On cleanup timeout returns
-// context.DeadlineExceeded — callers in installing_app.go still proceed to
-// InstallFailed but with an explicit warning in Status.Message;
-// InstallFailedApp.Exec will keep trying.
-//
+// Returns nil iff NS is confirmed gone (or no NS was created).
 // manager.Spec.Config may be empty (e.g. failure happened before unmarshal):
-// in that case only the compute-allocation cleanup runs and the NS poll
+// in that case only the compute-allocation cleanup runs and the NS check
 // short-circuits because no namespace was created either.
 func cleanupAfterInstallFailure(ctx context.Context, c client.Client, manager *appsv1.ApplicationManager) error {
 	appCfg, cfgErr := parseAppConfig(manager)
@@ -98,9 +86,7 @@ func cleanupAfterInstallFailure(ctx context.Context, c client.Client, manager *a
 		return fmt.Errorf("delete namespace %s: %w", manager.Spec.AppNamespace, err)
 	}
 
-	pollCtx, cancel := context.WithTimeout(ctx, installFailureNSDeletionTimeout)
-	defer cancel()
-	return waitForNamespaceGone(pollCtx, c, manager.Spec.AppNamespace)
+	return waitForNamespaceGone(ctx, c, manager.Spec.AppNamespace)
 }
 
 // parseAppConfig unmarshals the JSON config snapshot persisted on the AM. It
@@ -141,32 +127,25 @@ func runHelmUninstallForFailure(ctx context.Context, manager *appsv1.Application
 	return nil
 }
 
-// waitForNamespaceGone polls every second until the named namespace returns
-// IsNotFound, ctx is canceled, or ctx deadline is exceeded. Mirrors
-// installingCancelInProgressApp.poll in spirit; kept as a package-private
-// helper so failure-cleanup is not coupled to the cancel state machine.
+// waitForNamespaceGone performs a single-shot check: it returns nil when the
+// named namespace is gone (IsNotFound), an appstate.RequeueError when the
+// namespace is still present (asking the reconciler to retry after a short
+// delay), or a transient client error otherwise.
+//
+// Single-shot semantics keep the reconcile worker free: with
+// MaxConcurrentReconciles=1, blocking here for minutes would freeze every
+// other ApplicationManager. The caller (typically cleanupAfterInstallFailure)
+// is expected to propagate the error so controller-runtime re-enqueues.
 func waitForNamespaceGone(ctx context.Context, c client.Client, name string) error {
-	// First-shot check before starting the ticker: if the namespace is already
-	// gone we can return immediately without burning a 1-second tick.
 	var ns corev1.Namespace
-	if err := c.Get(ctx, types.NamespacedName{Name: name}, &ns); apierrors.IsNotFound(err) {
+	err := c.Get(ctx, types.NamespacedName{Name: name}, &ns)
+	if apierrors.IsNotFound(err) {
 		return nil
 	}
-
-	timer := time.NewTicker(time.Second)
-	defer timer.Stop()
-	for {
-		select {
-		case <-timer.C:
-			err := c.Get(ctx, types.NamespacedName{Name: name}, &ns)
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
-			if err != nil {
-				klog.V(4).Infof("waitForNamespaceGone %s: transient get error: %v", name, err)
-			}
-		case <-ctx.Done():
-			return ctx.Err()
-		}
+	if err != nil {
+		klog.V(4).Infof("waitForNamespaceGone %s: transient get error: %v", name, err)
+		return err
 	}
+	klog.Infof("namespace %s still exists, requeueing in 5s", name)
+	return NewWaitingInLine(5)
 }
