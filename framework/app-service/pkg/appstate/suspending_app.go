@@ -164,8 +164,10 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 }
 
 func (p *SuspendingApp) Cancel(ctx context.Context) error {
-	// FIXME: cancel suspend operation if timeout
-	return nil
+	opRecord := makeRecord(p.manager, appsv1.StopFailed,
+		fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, "stopping ttl exceeded"))
+	return p.updateStatus(ctx, p.manager, appsv1.StopFailed, opRecord,
+		"stopping ttl exceeded", appsv1.StopFailed.String())
 }
 
 // scaleOrPatchSuspend chooses between the helm-upgrade-based Scale(0)
