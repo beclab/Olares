@@ -74,8 +74,12 @@ func runImport(ctx context.Context, o *importOptions) error {
 
 	// Detect the network position before exchanging the refresh token, so the
 	// /api/refresh round-trip (and every later command) uses the fastest
-	// reachable connection method. --auth-url-override skips the probe.
-	loc, authURL, err := probeProfileLocation(ctx, id, profile.LocalURLPrefix, profile.InsecureSkipVerify, o.authURLOverride)
+	// reachable connection method. Use the merged profile's AuthURLOverride
+	// (not the raw CLI flag): a profile that already pins its auth endpoint in
+	// config keeps it on re-import even when --auth-url-override isn't passed
+	// again, so the probe is skipped (external) and the pinned URL is used —
+	// matching maybeBackfillLocation / DetectAndCache / Factory auth resolution.
+	loc, authURL, err := probeProfileLocation(ctx, id, profile.LocalURLPrefix, profile.InsecureSkipVerify, profile.AuthURLOverride)
 	if err != nil {
 		return err
 	}

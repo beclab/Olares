@@ -102,7 +102,7 @@ func runWhoami(ctx context.Context, f *cmdutil.Factory, refresh bool, outputRaw 
 		return whoami.RenderDetect(os.Stdout, whoami.DetectFromCache(cfg, rp.OlaresID), format)
 	}
 
-	d, err := whoami.DetectAndCache(ctx, whoami.DetectInput{
+	d, derr := whoami.DetectAndCache(ctx, whoami.DetectInput{
 		Cfg:             cfg,
 		OlaresID:        rp.OlaresID,
 		LocalPrefix:     rp.LocalURLPrefix,
@@ -111,8 +111,18 @@ func runWhoami(ctx context.Context, f *cmdutil.Factory, refresh bool, outputRaw 
 		AuthURLOverride: rp.AuthURLOverride,
 		Now:             time.Now,
 	})
-	if err != nil {
-		return err
+	// DetectAndCache returns a nil display only when the probe itself failed
+	// (every connection method down) — that's a hard error with nothing to
+	// show. When the probe succeeded but a role/version fetch failed, it
+	// returns a populated display AND has already persisted the location plus
+	// any successful fields; mirror eagerDetect and render that partial result
+	// with a warning rather than failing the command outright.
+	if d == nil {
+		return derr
+	}
+	if derr != nil {
+		fmt.Fprintf(os.Stderr, "warning: re-detect did not fully complete: %v\n", derr)
+		fmt.Fprintln(os.Stderr, "         (location and any successfully fetched fields were still cached)")
 	}
 	return whoami.RenderDetect(os.Stdout, d, format)
 }

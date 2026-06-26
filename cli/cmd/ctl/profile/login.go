@@ -100,8 +100,12 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 
 	// Detect where we sit relative to this Olares before authenticating, so
 	// the auth round-trips (and every later command) use the fastest reachable
-	// connection method. On --auth-url-override this is a no-op (external).
-	loc, authURL, err := probeProfileLocation(ctx, id, profile.LocalURLPrefix, profile.InsecureSkipVerify, o.authURLOverride)
+ 	// connection method. Use the merged profile's AuthURLOverride (not the raw
+	// CLI flag): a profile that already pins its auth endpoint in config keeps
+	// it on re-login even when --auth-url-override isn't passed again, so the
+	// probe is skipped (external) and the pinned URL is used — matching
+	// maybeBackfillLocation / DetectAndCache / Factory auth resolution.
+	loc, authURL, err := probeProfileLocation(ctx, id, profile.LocalURLPrefix, profile.InsecureSkipVerify, profile.AuthURLOverride)
 	if err != nil {
 		return err
 	}
