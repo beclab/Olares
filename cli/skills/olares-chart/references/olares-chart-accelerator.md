@@ -1,14 +1,14 @@
 # Accelerator resources (`spec.accelerator`) — modes & sizing
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. This covers declaring accelerator modes and sizing the resource envelope on the `0.12.0` schema (the schema every new app uses). Building the CUDA image and provisioning model weights are in [olares-chart-gpu.md](olares-chart-gpu.md).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. This covers declaring accelerator modes and sizing the resource envelope. Building the CUDA image and provisioning model weights are in [olares-chart-gpu.md](olares-chart-gpu.md).
 
 ## A. Declaring accelerator modes (`spec.accelerator`)
 
-On the `0.12.0` schema an app that needs an accelerator declares one `spec.accelerator[]` entry **per compute mode** it supports. Without it the app is scheduled as plain `cpu` and never gets an accelerator device or GPU memory.
+An app that needs an accelerator declares one `spec.accelerator[]` entry **per compute mode** it supports. Without it the app is scheduled as plain `cpu` and never gets an accelerator device or GPU memory.
 
 > **Naming gotchas (these bite):**
 > - The YAML key is `spec.accelerator`, but `lint` error messages call it **`spec.resources`** — same thing.
-> - The GPU-memory key inside an entry is **`requiredGPUMemory` / `limitedGPUMemory`** (the legacy flat field at `< 0.12.0` is `spec.requiredGpu` / `spec.limitedGpu` — also a memory quantity, not a card count). The two live at different levels: `requiredGPUMemory` sits inside an `accelerator[]` entry; `requiredGpu` is a top-level `spec.*` field — they are mutually exclusive (declare one shape, not both).
+> - The GPU-memory key inside an entry is **`requiredGPUMemory` / `limitedGPUMemory`** (a memory quantity, not a card count).
 > - `lint` error messages for a missing accelerator-entry GPU field still say **`requiredGpu` / `limitedGpu`**, even though the YAML key you must write in the entry is `requiredGPUMemory` / `limitedGPUMemory`. Don't let the message rename your field.
 > - Only **discrete-GPU** modes carry a GPU-memory field; unified/SoC modes (`nvidia-gb10`, `apple-m`, `intel`, `amd`, `moore-soc`) omit it and size via pod `requiredMemory` / `limitedMemory` instead.
 
@@ -28,14 +28,14 @@ The canonical mode set is the one the platform recognizes on nodes — `gpu.byte
 | `amd-gpu` | AMD discrete GPU (ROCm) | discrete — own GPU-memory quota | `amd64` |
 | `moore-soc` | Moore Threads SoC | unified — pod memory | per hardware |
 
-Rule of thumb: **discrete** cards (`nvidia`, `intel-gpu`, `amd-gpu`) take a standalone GPU-memory quota (`requiredGPUMemory`/`limitedGPUMemory`); **unified / SoC** modes (`nvidia-gb10`, `apple-m`, `intel`, `amd`, `moore-soc`) draw from pod memory and declare no GPU-memory field. (The legacy `spec.supportedGpu` list is superseded — on `0.12.0` use `spec.accelerator`.)
+Rule of thumb: **discrete** cards (`nvidia`, `intel-gpu`, `amd-gpu`) take a standalone GPU-memory quota (`requiredGPUMemory`/`limitedGPUMemory`); **unified / SoC** modes (`nvidia-gb10`, `apple-m`, `intel`, `amd`, `moore-soc`) draw from pod memory and declare no GPU-memory field. Declare modes with `spec.accelerator`.
 
-> **OAC `lint` currently lags `gpu_types.go`.** Today `olares-cli chart lint` validates the older set in `framework/oac/internal/manifest/resources.go` (`validResourceModes`): only `cpu`, `nvidia`, `nvidia-gb10`, `apple-m`, `amd-gpu`, plus the legacy names `strix-halo` / `mthreads-m1000`. So:
-> - `nvidia`, `nvidia-gb10`, `apple-m`, `amd-gpu`, `cpu` pass lint **and** match `gpu_types.go` — safe to use now.
-> - `intel`, `amd`, `intel-gpu`, `moore-soc` are real node modes but are **not yet accepted by `lint`** — declaring them fails validation until OAC is upgraded to the `gpu_types.go` set.
-> - `strix-halo` / `mthreads-m1000` are lint-only legacy names with no `gpu_types.go` equivalent; avoid them in new charts.
+> **Which modes `lint` accepts.** `olares-cli chart lint` accepts `cpu`, `nvidia`, `nvidia-gb10`, `apple-m`, `amd-gpu` (`validResourceModes` in `framework/oac/internal/manifest/resources.go`). So:
+> - `nvidia`, `nvidia-gb10`, `apple-m`, `amd-gpu`, `cpu` pass lint — safe to use.
+> - `intel`, `amd`, `intel-gpu`, `moore-soc` are real node modes but are **not accepted by `lint`** — declaring them fails validation.
+> - Avoid `strix-halo` / `mthreads-m1000`.
 >
-> `lint` also cross-checks mode → `spec.supportArch` for the arch-bound modes (`nvidia`/`amd-gpu` → `amd64`; `nvidia-gb10` → `arm64`), and only `nvidia`/`amd-gpu` are blessed for the GPU-memory fields (`gpuMemoryModes`). Both checks widen when OAC adopts `gpu_types.go`.
+> `lint` also cross-checks mode → `spec.supportArch` for the arch-bound modes (`nvidia`/`amd-gpu` → `amd64`; `nvidia-gb10` → `arm64`), and only `nvidia`/`amd-gpu` are blessed for the GPU-memory fields (`gpuMemoryModes`).
 
 ### Shape and semantics
 
@@ -68,7 +68,7 @@ spec:
 - `required*` is the **scheduling floor** (reserved); `limited*` is the **cap**. They map to Kubernetes container `requests` / `limits`.
 - **GPU is allocated by memory, not whole cards.** `requiredGPUMemory` is the vGPU memory the scheduler reserves (matched against device memory); a card count is not what you request here.
 - Each declared mode entry must be **complete** (all CPU/memory/disk pairs present); `lint` reports every missing field.
-- `spec.accelerator` is **mutually exclusive** with the legacy flat `spec.requiredCpu/...` fields, is **rejected on `apiVersion: v2`**, and only applies at `olaresManifest.version >= 0.12.0`.
+- The resource envelope lives entirely under `spec.accelerator[]` (mode-keyed) — there is no flat top-level `spec.requiredCpu/...`.
 
 ## B. Which modes to declare — local deploy vs publish
 
