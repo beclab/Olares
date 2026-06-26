@@ -9,7 +9,6 @@
 olares-cli chart from-compose --name myapp -f docker-compose.yml
 olares-cli chart from-compose --name myapp -f compose.yml -o ./charts/myapp --title "My App"
 olares-cli chart from-compose --name myapp -f base.yml -f override.yml      # merged in order
-olares-cli chart from-compose --name myapp -f docker-compose.yml --new-schema
 ```
 
 ## Before you run
@@ -36,7 +35,7 @@ olares-cli chart from-compose --name myapp -f docker-compose.yml --new-schema
 | `-o, --output` | chart root dir (default `./<name>`) |
 | `--title` | human title (default = name) |
 | `--type` | `app` (default) / `recommend` / `middleware` |
-| `--new-schema` | emit `olaresManifest.version: 0.12.0` with resources under `spec.accelerator[mode=cpu]` instead of legacy `0.8.0` flat fields |
+| `--new-schema` | **deprecated no-op** — every scaffold now emits `olaresManifest.version: 0.12.0` (resources under `spec.accelerator[mode=cpu]`) regardless |
 
 ## Reading the output
 

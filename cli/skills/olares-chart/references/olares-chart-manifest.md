@@ -3,7 +3,11 @@
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
 > This is the field-by-field map from a raw `from-compose` stub to a publishable chart. After every change, re-run `olares-cli chart lint ./<app>` (see [olares-chart-lint.md](olares-chart-lint.md)).
 
-The scaffolded manifest is a stub. The four areas below are what kompose cannot decide.
+The scaffolded manifest is a stub. The four areas below are what kompose cannot decide. **§1 Metadata can stay a stub for deploying to your Olares; §2–§4 are functional and always required. Full market-ready metadata is only for publishing — see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).**
+
+## Schema version and apiVersion
+
+`olaresManifest.version` (the manifest **schema**: always `0.12.0` for new apps) and the top-level `apiVersion` (skill sets **`v3`**) are separate axes from the chart/app versions. `0.12.0` carries `spec.accelerator` and `permission.externalData`. The full schema description, the version-field map, and the `type: system` dependency are in [olares-chart-versioning.md](olares-chart-versioning.md); accelerator sizing is in [olares-chart-gpu.md](olares-chart-gpu.md).
 
 ## 1. Metadata
 

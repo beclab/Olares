@@ -1,8 +1,8 @@
 ---
 name: olares-chart
-version: 1.6.0
-description: "Olares Chart via olares-cli chart — from-compose, lint, package; turn compose/Helm/repo into publishable Olares app chart (local-only, no login). Use for OlaresManifest, docker-compose to Olares, chart lint/package, Market upload, ImagePullBackOff."
-compatibility: Requires olares-cli on PATH; chart authoring is local-only
+version: 4.6.0
+description: "Help a developer turn their own code or any open-source project into an app that runs on their own Olares. Two coupled axes: packaging the container image and authoring/refining the Olares app chart (OlaresManifest), then deploying it to the current Olares with an automatic upload + install + diagnose loop. Use when deploying a repo, docker-compose, or Helm chart to Olares, packaging an Olares app, wiring storage / system middleware / entrances / env / GPU, or fixing a failed install (ImagePullBackOff, permission denied / EACCES, app won't start). Publishing to the public Olares Market is the olares-publish skill."
+compatibility: Requires olares-cli on PATH; chart authoring is local-only, deploy needs login
 metadata:
   openclaw:
     requires:
@@ -76,7 +76,7 @@ The image-building work is **guided** — you check/install docker and drive `do
 | deployment | **Accelerator** | declare `spec.accelerator` modes (nvidia/amd-gpu/apple-m/cpu/…) per what the repo supports; set `requiredGPUMemory`; a sane CPU/memory envelope | GPU/accelerator app needs a resource envelope, or `lint` flags `spec.resources` | [accelerator.md](references/olares-chart-accelerator.md) |
 | packaging+deployment | **DinD** | a privileged `beclab/docker` daemon sidecar (`ENABLE_DIND`, `DOCKER_HOST`) while the main container stays non-privileged | a terminal/agent app must run `docker` / `docker compose` | [dind.md](references/olares-chart-dind.md) |
 | deployment | **Shared backend** | `apiVersion: v3` ⇒ admin-only install into `<app>-shared`; consumers reach it over cross-namespace Service DNS; flag the admin-install to the user | a heavy/accelerator backend serves many users over shared data | [shared.md](references/olares-chart-shared.md) |
-| deployment | **Version rules** | `apiVersion: v3`; `olaresManifest.version` 0.8.0 vs 0.12.0; `metadata.version` == `Chart.yaml` `version`; `options.dependencies` `olares >=1.12.6-0` (`type: system`) | install rejects the manifest, or behavior differs by Olares version | [versioning.md](references/olares-chart-versioning.md) |
+| deployment | **Version rules** | `apiVersion: v3`; `olaresManifest.version` always `0.12.0`; `metadata.version` == `Chart.yaml` `version`; `options.dependencies` `olares >=1.12.6-0` (`type: system`) | install rejects the manifest, or behavior differs by Olares version | [versioning.md](references/olares-chart-versioning.md) |
 | deployment | **Metadata** | stub OK for local deploy (`Utilities`, default icon) as long as `lint` passes; full `metadata.*` + listing images only when publishing to the Market | `lint` flags missing metadata, or you want a public listing | [manifest.md](references/olares-chart-manifest.md) §1 |
 | deployment | **Validate-local** | `olares-cli chart lint ./<app>` passes, then `chart package` | a refinement changed the manifest/templates | [lint.md](references/olares-chart-lint.md) |
 | deploy | **Deploy** | `market upload` + `market install`, then diagnose from logs — automatic after `lint` passes (login required) | proving the chart actually runs on the developer's Olares | [deploy.md](references/olares-chart-deploy.md) |
