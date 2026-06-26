@@ -22,6 +22,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
+	clistate "github.com/beclab/Olares/cli/pkg/daemon/state"
 	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
 	"github.com/beclab/Olares/cli/pkg/gpu/intelgpu"
@@ -410,6 +411,17 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 
 	needReboot := changed || (status != nil && status.Mismatch)
 	a.PipelineCache.Set(cacheRebootNeeded, needReboot)
+	if needReboot {
+		// Drop a tmpfs marker now, before the OlaresVersion CR is flipped in
+		// the next task. While it exists, olaresd keeps reporting the system
+		// as upgrading-and-rebooting instead of briefly reporting the upgrade
+		// as complete during the window between the version flip and the
+		// actual reboot. The marker lives under /run and is cleared
+		// automatically once the machine reboots.
+		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("touch %s", clistate.UpgradeRebootMarkFile), false, false); err != nil {
+			logger.Warnf("failed to write upgrade reboot marker %s: %v", clistate.UpgradeRebootMarkFile, err)
+		}
+	}
 	return nil
 }
 

@@ -225,6 +225,18 @@ func CheckCurrentStatus(ctx context.Context) error {
 	if shutdown, err := IsSystemShuttingdown(); err != nil {
 		return err
 	} else if shutdown {
+		// If this shutdown is the reboot triggered at the end of an upgrade
+		// (olares-cli writes the reboot marker before flipping the
+		// OlaresVersion CR to the target), keep reporting the system as
+		// Upgrading rather than Shutdown, so the frontend keeps showing the
+		// upgrade as in progress (about to reboot) instead of briefly
+		// reporting it complete. Gating on the real shutdown signal here -
+		// instead of on the marker alone - means a stale marker left behind by
+		// a reboot that never happened cannot wedge the state in Upgrading.
+		if _, statErr := os.Stat(UpgradeRebootMarkFile); statErr == nil {
+			currentTerminusState = Upgrading
+			return nil
+		}
 		currentTerminusState = Shutdown
 		return nil
 	}
