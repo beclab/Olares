@@ -240,6 +240,7 @@ func (w *WorkerPool) ExistsTask(owner string, backupId, snapshotId string) error
 	})
 
 	if snapshotExists {
+		w.sendBackupCanceledEvent(owner, backupId, snapshotId, constant.MessageTaskExists)
 		return fmt.Errorf(constant.MessageTaskExists)
 	}
 
@@ -276,7 +277,7 @@ func (w *WorkerPool) CancelBackup(owner, backupId string) {
 	if activeTask != nil && *activeTask != nil {
 		backupTask := (*activeTask).(*BackupTask)
 		if backupTask.backupId == backupId {
-			w.sendBackupCanceledEvent(backupTask.owner, backupTask.backupId, backupTask.snapshotId)
+			w.sendBackupCanceledEvent(backupTask.owner, backupTask.backupId, backupTask.snapshotId, "")
 			backupTask.BaseTask.cancel()
 		}
 	}
@@ -312,7 +313,7 @@ func (w *WorkerPool) CancelSnapshot(owner, snapshotId string) {
 	if activeTask != nil && *activeTask != nil {
 		backupTask := (*activeTask).(*BackupTask)
 		if backupTask.snapshotId == snapshotId {
-			w.sendBackupCanceledEvent(backupTask.owner, backupTask.backupId, backupTask.snapshotId)
+			w.sendBackupCanceledEvent(backupTask.owner, backupTask.backupId, backupTask.snapshotId, "")
 			backupTask.BaseTask.cancel()
 		}
 	}
@@ -355,14 +356,14 @@ func (w *WorkerPool) CancelRestore(owner, restoreId string) {
 	}
 }
 
-func (w *WorkerPool) sendBackupCanceledEvent(owner string, backupId string, snapshotId string) {
+func (w *WorkerPool) sendBackupCanceledEvent(owner string, backupId string, snapshotId string, message string) {
 	var data = map[string]interface{}{
 		"id":       snapshotId,
 		"type":     constant.MessageTypeBackup,
 		"backupId": backupId,
 		"endat":    time.Now().Unix(),
 		"status":   constant.Canceled.String(),
-		"message":  "",
+		"message":  message,
 	}
 	notification.DataSender.Send(owner, data)
 }

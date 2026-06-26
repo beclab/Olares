@@ -599,7 +599,7 @@ func parseResponseRestoreDetailFromBackupUrl(restore *sysv1.Restore) (*ResponseR
 
 	restoreFullPath := filepath.Join(restorePath, subPath)
 	if backupType == constant.BackupTypeFile {
-		restoreFullPath = filepath.Join(restorePath, fmt.Sprintf("%s-%d", subPath, subPathTimestamp))
+		restoreFullPath = filepath.Join(restorePath, fmt.Sprintf("%s-%d", subPath, subPathTimestamp)) + "/"
 	}
 
 	result = &ResponseRestoreDetail{
