@@ -1,6 +1,6 @@
 ---
 name: olares-market
-version: 4.1.0
+version: 4.4.0
 description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, upload chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -109,6 +109,12 @@ The same `State` can mean different things depending on which mutation is in fli
 - With `--watch`, the CLI blocks until the row reaches a terminal bucket (success OR failure) matching the OpType safety rules above.
 - **Idempotent**: `resume` against an already-`running` row returns immediately with success; `install` against an already-installed row returns immediately with `state=running`. Watcher never hangs on "no-op" mutations.
 - `--watch-iterations` / `--watch-interval` / `--watch-timeout` are **rejected without `--watch`**.
+
+### Don't just wait — diagnose a stuck install
+
+The `--watch` market row is **coarse**: `installing` / `initializing` can show no progress for a long time, because app-service only fast-fails on a few hard pod conditions and otherwise polls a long TTL. **Rule:** let `--watch` run for the first **1-2 minutes**; if the row is still `installing` / `initializing` with no progress, stop waiting and diagnose the app's own pods instead of sitting on the watch.
+
+For the app-service facts (TTLs, fast-fail conditions, the soft-hang / `Pending` → `Stopping` traps) see [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md#stuck-in-installing--initializing); for the actual pod/log commands see [`../olares-cluster/SKILL.md`](../olares-cluster/SKILL.md).
 
 ## "What apps do I have?" routing
 

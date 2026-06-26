@@ -163,6 +163,15 @@ olares-cli market cancel firefox --watch               # block until row stops m
 - **For "install a custom chart"** → `market upload ./mychart.tgz` (always lands in source `upload`), then `market install <name> -s upload`.
 - **For ambiguous source rows on uninstall/stop/resume**: the verb already resolves automatically. Don't pass `-s` even when the SPA shows it under multiple sources.
 
+## Stuck in installing / initializing
+
+The `--watch` market row is coarse: a long `installing` / `initializing` is NOT the same as a failure, but app-service can keep polling for a long time before it gives up. So after ~1-2 minutes with no progress, stop watching passively and inspect the app's own pods. Two non-obvious traps:
+
+- A soft hang (pod Running but the app never becomes serve-ready, without crashing) is never fast-failed — only the pod itself reveals it, not the row.
+- A scheduling failure (pod `Pending`) ends in `Stopping` / `stopped`, NOT `installFailed` — watching only for `*Failed` misses it.
+
+Once stalled, resolve the app's namespace (per [`../../olares-shared/references/olares-platform.md`](../../olares-shared/references/olares-platform.md#finding-an-apps-namespace) — shared apps use `<app>-shared` and a v2 app spans several namespaces, so don't assume `<app>-<owner>`) and diagnose its workload; for orchestration issues, also check the app-service pod `os-framework/app-service-0` — pod status, logs, and previous-instance logs are all via [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md). Note `os-framework` system pods are typically admin-only; if the active profile can't see them, fall back to the app's own pod logs. For the crash triage (exitCode / `CreateContainerConfigError` / permission), see [`../../olares-chart/references/olares-chart-deploy.md`](../../olares-chart/references/olares-chart-deploy.md).
+
 ## Common errors
 
 | Symptom | Cause | Fix |
