@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -289,7 +290,22 @@ func GetBaseDirFromReleaseFile() (string, error) {
 	return baseDir, nil
 }
 
+var (
+	cpuNameOnce  sync.Once
+	cpuNameValue string
+)
+
+// GetCPUName returns the CPU brand name. The result is static for the lifetime
+// of the process, so it is computed once and cached: the fallbacks below shell
+// out to lscpu/dmidecode, which is wasteful to repeat every status tick.
 func GetCPUName() string {
+	cpuNameOnce.Do(func() {
+		cpuNameValue = computeCPUName()
+	})
+	return cpuNameValue
+}
+
+func computeCPUName() string {
 	brandName := cpu.CPU.BrandName
 	if brandName == "" {
 		// cannot read info from /proc/cpuinfo, try to get from lscpu command
