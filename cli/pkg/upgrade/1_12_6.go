@@ -86,6 +86,10 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 		},
 	}
 	pre = append(pre, retagLegacyAMDGPUImage()...)
+	// backfill the per-mode (multi-mode) node labels for Intel/AMD GPUs so
+	// devices upgraded from before the per-mode labeling scheme advertise
+	// their GPU mode to the scheduler.
+	pre = append(pre, labelIntelAMDGPUNode()...)
 	pre = append(pre, u.upgraderBase.UpgradeSystemComponents()...)
 	pre = append(pre, &task.LocalTask{
 		Name:   "PatchL4BFLProxyProbePort",

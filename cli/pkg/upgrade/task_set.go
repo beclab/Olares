@@ -23,6 +23,8 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/intelgpu"
 	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	k3stemplates "github.com/beclab/Olares/cli/pkg/k3s/templates"
@@ -862,6 +864,32 @@ func (u *upgradeUserReverseProxyAgent) Execute(runtime connector.Runtime) error 
 	}
 
 	return nil
+}
+
+// labelIntelAMDGPUNode detects whether the current node carries an Intel
+// integrated GPU or an AMD Ryzen AI Max APU and, if so, sets the corresponding
+// gpu.bytetrade.io/<mode> existence label. Devices that gained Intel/AMD GPU
+// support before the per-mode (multi-mode) labeling scheme existed never got
+// these labels, so after an upgrade their GPU mode wouldn't be advertised to
+// the scheduler. Reusing the install-time actions here backfills the labels
+// without a fresh install. Both actions are idempotent and no-op on nodes
+// without the respective GPU (and the AMD one additionally requires ROCm to be
+// present, matching the install behavior).
+func labelIntelAMDGPUNode() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "LabelIntelGPUNode",
+			Action: new(intelgpu.UpdateNodeIntelGPUInfo),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "LabelAMDGPUNode",
+			Action: new(amdgpu.UpdateNodeAMDInfo),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+	}
 }
 
 func upgradeUserReverseProxy() []task.Interface {
