@@ -57,13 +57,13 @@ Each non-trivial subcommand gets a `references/<skill>-<verb>.md` file that adds
 What to leave out of SKILL.md (and references):
 
 - Per-flag descriptions (in `--help`)
-- Source-path citations like `[cli/cmd/ctl/files/path.go](...)` — agents don't review Go source
+- Source-path citations like `cli/cmd/ctl/files/path.go` — agents don't review Go source
 - Internal package walkthroughs / "Source layout" sections
 - "What's NOT here yet" / future-work sections — keep skills focused on current capability
 
 Target sizes: SKILL.md ≤ 250 lines (≤ 300 for the most complex command tree). Each reference: ≤ 150 lines.
 
-**Reference depth (one level deep):** all reference files link **directly from a `SKILL.md`**, never reference→reference. Nested references get partially read (agents preview with `head` instead of reading the whole file), so a concept buried two hops down is unreliable. Any reference longer than ~100 lines gets a table of contents at the top so a partial read still shows its full scope.
+**Reference depth (one level deep):** all reference files link **directly from a `SKILL.md`**, never reference→reference. A concept buried two hops down is unreliable. Keep each reference short enough to be read whole (≤ 150 lines); when one outgrows that, split it into sibling references rather than adding an in-file table of contents — the `##` headings already are the structure, so a TOC just duplicates them and spends the line budget.
 
 These rules apply to **every** skill, including `olares-chart` — even though it is a local-only chart-authoring skill (no live profile / login) rather than a CLI-driving one, it still avoids Go source-path citations and keeps each reference ≤ 150 lines.
 
@@ -71,7 +71,7 @@ These rules apply to **every** skill, including `olares-chart` — even though i
 
 Facts used by **≥2 skills** are defined **once** and linked, never copied. This keeps the suite consistent and token-efficient (the lark-cli pattern these skills are modeled on; see also [Anthropic's skill-authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)).
 
-- **One canonical home per shared concept.** The cross-skill Olares platform model (userspace storage, uid-1000 run identity, app/namespace & networking, system middleware, version/semver) lives once in [`olares-shared/references/olares-platform.md`](olares-shared/references/olares-platform.md), with a TOC. Auth/profile facts likewise live once in `olares-shared/SKILL.md`.
+- **One canonical home per shared concept.** The cross-skill Olares platform model (userspace storage, uid-1000 run identity, app/namespace & networking, system middleware, version/semver) lives once in [`olares-shared/references/olares-platform.md`](olares-shared/references/olares-platform.md). The application state machine (states, transitions, fail TTLs, single-download serialization, `running` semantics, progress caveats) lives once in [`olares-shared/references/olares-platform-appstate.md`](olares-shared/references/olares-platform-appstate.md). Auth/profile facts likewise live once in `olares-shared/SKILL.md`.
 - **Link the shared source one hop from each consumer's `SKILL.md`** with a short must-read prerequisite (`> Platform model (read once): … see ../olares-shared/references/olares-platform.md`). This is the lark-cli `CRITICAL — MUST Read ../lark-shared/SKILL.md` convention.
 - **Do NOT deep-link the shared source from reference files.** A reference that points at another skill's reference is a two-hop nested read. Instead, refer to the shared concept **by name** (matching the source's heading) and rely on the `SKILL.md` prerequisite to have loaded it. (See the chart references, which name "the platform **Userspace storage model**" rather than linking it.)
 - **Self-containment is traded for a suite contract.** Strictly, Skills are self-contained and "cannot reference files in other skill folders". We deliberately cross-link because these skills **ship and install as one suite** (stated under Layout). A standalone install leaves cross-skill links dangling — that is the documented trade-off, not an accident.

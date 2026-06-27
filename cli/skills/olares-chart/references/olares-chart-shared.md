@@ -1,6 +1,6 @@
 # Shared apps (apiVersion v3, admin-installed, cluster-wide)
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first, and [versioning.md](olares-chart-versioning.md) (`apiVersion: v3`, Olares >= 1.12.6).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; this assumes the Version & deps fields (`apiVersion: v3`, Olares >= 1.12.6).
 
 A **shared app** is installed **once by an admin** and serves the whole Olares cluster: every user reaches the same instance, and other apps consume its services across namespaces. Reach for it when the app:
 
@@ -33,7 +33,7 @@ metadata:
   # ...
 spec:
   onlyAdmin: true                      # independent admin-only-install gate (optional; shared already implies admin-only)
-  accelerator:                         # heavy/GPU resource envelope — see accelerator.md
+  accelerator:                         # heavy/GPU resource envelope — see the Accelerator sizing
     - mode: nvidia
       requiredMemory: 5Gi
       limitedMemory: 40Gi
@@ -73,12 +73,12 @@ Required / expected fields:
 |---|---|
 | `apiVersion: 'v3'` | selects the v3 manifest schema (env/accelerator rules) — prerequisite for `options.shared` |
 | `options.shared: true` | **what actually makes the app shared**: admin-only install, `<app>-shared` namespace, cross-namespace access |
-| `olaresManifest.version: '0.12.0'` | needed for `spec.accelerator` / `permission.externalData` (see [manifest.md](olares-chart-manifest.md)) |
-| `options.dependencies` `olares` `>=1.12.6-0` (`type: system`) | **mandatory** system dependency every chart declares ([versioning.md](olares-chart-versioning.md)) |
+| `olaresManifest.version: '0.12.0'` | needed for `spec.accelerator` / `permission.externalData` (see the Manifest refinement areas) |
+| `options.dependencies` `olares` `>=1.12.6-0` (`type: system`) | **mandatory** system dependency every chart declares (the Version & deps fields) |
 | `spec.onlyAdmin: true` | independent admin-only-install gate (redundant for shared apps, which are already admin-only) |
-| `spec.accelerator` | GPU/accelerator envelope for the heavy backend — sizing in [olares-chart-accelerator.md](olares-chart-accelerator.md) |
+| `spec.accelerator` | GPU/accelerator envelope for the heavy backend — sizing in the Accelerator sizing |
 | `options.conflicts` | avoid co-installing the per-user / older variant of the same backend |
-| `middleware` | shared backends can use system middleware normally (e.g. `llmgatewayv3` uses postgres) — see [olares-chart-middleware.md](olares-chart-middleware.md) |
+| `middleware` | shared backends can use system middleware normally (e.g. `llmgatewayv3` uses postgres) — see the Middleware & dependencies area |
 
 ## How consumers (reference apps) reach it
 
@@ -89,4 +89,4 @@ A shared app is consumed by **separate reference/client apps**, not by per-user 
 - **Only an admin can install a shared app** — surface this to the user; a normal user install will 403.
 - **`<app>-shared` namespace requires `options.shared: true`** in the manifest. Without it, even an `apiVersion: v3` app installs into the **installing user's** `<app>-<owner>` namespace. Set `options.shared: true` when the app genuinely needs cluster-wide shared storage/services accessible across namespaces; omit it (and use `spec.onlyAdmin: true` instead) for an app that just needs admin-only install but manages its own users internally.
 - Do not add `sharedEntrances` (not supported).
-- A shared app is still subject to the rest of the skill: run-as-user 1000 ([run-as-user.md](olares-chart-run-as-user.md)), pinned image tags, accelerator sizing ([accelerator.md](olares-chart-accelerator.md)), env rules ([env.md](olares-chart-env.md)).
+- A shared app is still subject to the rest of the skill: the run identity (uid 1000) guidance, pinned image tags, the Accelerator sizing, env rules (the Env area).

@@ -22,7 +22,7 @@ metadata:
 
 - Turn a repo / docker-compose / generic Helm chart into an Olares app, or validate an OlaresManifest; package its image; wire storage / middleware / entrances / env / GPU
 - Deploy / run the app on **your own** Olares (`market upload` + `install`), or fix a failed install (`ImagePullBackOff`, `EACCES`, app won't start)
-- Serve a specific LLM / embedding model (HF or Ollama) with no chart authoring — clone an `llm-init` base app and fill env ([llm-models.md](references/olares-chart-llm-models.md))
+- Serve a specific LLM / embedding model (HF or Ollama) with no chart authoring — clone an `llm-init` base app and fill env ([llm-models.md](references/olares-chart-llm-models.md)); capability/context tuning + day-2 ops in [llm-ops.md](references/olares-chart-llm-ops.md)
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
@@ -77,7 +77,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | deployment | **Env** | app config in `envs[]` (v3 `valueFrom`, no inline `OLARES_USER`); install-time `required` prompts; middleware/system/user vars via `.Values.olaresEnv`; platform context via `.Values.*` | install fails on `appenv` 422, or config must be user-supplied | [env.md](references/olares-chart-env.md), [env-defaults.md](references/olares-chart-env-defaults.md), [system-values.md](references/olares-chart-system-values.md) |
 | deployment | **Entrances & ports** | ≥1 `entrances[]`; HTTP via entrances, non-HTTP via `ports[]`; internal-only services `invisible: true` | a service is unreachable, or an internal port is exposed as a desktop entrance | [manifest.md](references/olares-chart-manifest.md) §4 |
 | packaging+deployment | **GPU / models** | build a CUDA image without a local GPU; download model weights via initContainer into the shared `appCommon` Hugging Face cache | AI app needs a CUDA build, model provisioning, or a shared model cache | [gpu.md](references/olares-chart-gpu.md) |
-| deployment | **LLM model serving** | serve any HF/Ollama model without authoring — pick an engine by format, fill env, clone an `llm-init` base app (llama.cpp / Ollama / vLLM / SGLang); set `MODEL_SUPPORTS` from the model card | user wants to run/serve a specific LLM or embedding model, not author a new app | [llm-models.md](references/olares-chart-llm-models.md) |
+| deployment | **LLM model serving** | serve any HF/Ollama model without authoring — pick an engine by format, fill env, clone an `llm-init` base app (llama.cpp / Ollama / vLLM / SGLang); set `MODEL_SUPPORTS` from the model card | user wants to run/serve a specific LLM or embedding model, not author a new app | [llm-models.md](references/olares-chart-llm-models.md) + [llm-ops.md](references/olares-chart-llm-ops.md) |
 | deployment | **Accelerator** | **GPU/accelerator apps only:** declare `spec.accelerator` modes per repo support; set `requiredGPUMemory`. A non-accelerator app needs no `mode` — use the flat `spec.requiredCpu/limitedCpu/requiredMemory/limitedMemory/requiredDisk` envelope (mutually exclusive with `spec.accelerator`) | app targets a GPU/accelerator device, or `lint` flags `spec.resources` | [accelerator.md](references/olares-chart-accelerator.md) |
 | packaging+deployment | **DinD** | a privileged `beclab/docker` daemon sidecar (`ENABLE_DIND`, `DOCKER_HOST`); main container stays non-privileged | a terminal/agent app must run `docker` / `docker compose` | [dind.md](references/olares-chart-dind.md) |
 | deployment | **Shared backend** | `options.shared: true` (on a v3 app) ⇒ admin-only install into `<app>-shared`; consumers reach it via cross-namespace Service DNS; flag the admin-install | a heavy/accelerator backend serves many users over shared data | [shared.md](references/olares-chart-shared.md) |
@@ -103,8 +103,8 @@ The only `olares-cli chart` subcommands (source of truth: `--help`). Everything 
 
 Most of this skill assumes a web app with an HTTP entrance. When the upstream doesn't fit, match a known pattern first; if still unsure, see how the official ports solved it.
 
-- **Headless CLI / service (no web UI)** — no GUI to point an entrance at: add a web-terminal sidecar as a **visible** entrance + expose the API/MCP port as an `invisible` internal entrance. → [archetypes.md](references/olares-chart-archetypes.md)
-- **GUI desktop app (browser-streamed)** — a native Linux desktop app with no web UI: wrap it in a web-desktop base image (Selkies default, or KasmVNC for old hardware/static UIs), point one visible window entrance at HTTP `:3000`, and device-gate optional iGPU/VAAPI acceleration on `.Values.deviceName`. → [archetypes.md](references/olares-chart-archetypes.md)
+- **Headless CLI / service (no web UI)** — no GUI to point an entrance at: add a web-terminal sidecar as a **visible** entrance + expose the API/MCP port as an `invisible` internal entrance. → [archetype-headless.md](references/olares-chart-archetype-headless.md)
+- **GUI desktop app (browser-streamed)** — a native Linux desktop app with no web UI: wrap it in a web-desktop base image (Selkies default, or KasmVNC for old hardware/static UIs), point one visible window entrance at HTTP `:3000`, and device-gate optional iGPU/VAAPI acceleration on `.Values.deviceName`. → [archetype-gui.md](references/olares-chart-archetype-gui.md)
 - **Still no idea?** look at how the official ports wire it (manifest fields, entrance shapes, middleware/app dependencies, GPU specs) in [beclab/apps](https://github.com/beclab/apps) before guessing:
 
 ```bash
@@ -123,6 +123,7 @@ This is the canonical source for cross-app wiring this skill intentionally does 
 
 `lint` validates structure, not Olares correctness. Beyond the concerns table above, these blind spots bite and are entirely on you:
 
-- **`metadata.name` must match the chart folder and `Chart.yaml` `name`**, and be `^[a-z][a-z0-9]{0,29}$`. Keep `metadata.appid` equal to `metadata.name` (`from-compose` sets it; it backs the entrance domain `<appid>.<zone>`). Rename all four together.
+- **`metadata.name` must match the chart folder and `Chart.yaml` `name`**, and be `^[a-z][a-z0-9]{0,29}$`. Keep `metadata.appid` equal to `metadata.name` (`from-compose` sets it; it backs the entrance domain `<appid>.<zone>`). Rename all four together. **`lint` does NOT require `metadata.appid`** — an empty value passes (the loader normalizes it to `md5(metadata.name)[:8]`), but **`market upload` rejects a missing `appid`**, so set it explicitly or a lint-clean chart still fails to upload.
 - **Declared `.Values.userspace.appData`/`appCache`/`userData` mounts MUST have the matching `permission` field**, or the app-data cross-check fails.
 - **`hostPath` volumes + rolling updates are incompatible** — replace host mounts with the userspace volumes above.
+- **The entrance proxy caps every request at `options.apiTimeout` seconds (default 15s)** — long LLM streams / big uploads / slow reports get cut at the entrance (504 / closed connection) even when the pod is healthy. Set `options.apiTimeout: 0` to disable, or a large bounded value; a *negative* value is not "unlimited" (it falls back to 15s). See the Manifest refinement areas.

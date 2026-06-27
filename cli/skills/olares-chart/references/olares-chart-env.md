@@ -1,6 +1,6 @@
 # Environment variables — system / user / app level
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md). Env wiring is the configuration that accompanies the §3 Middleware & dependencies area of [olares-chart-manifest.md](olares-chart-manifest.md) (middleware values are its sibling).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md). Env wiring is the configuration that accompanies the §3 Middleware & dependencies area of the Manifest refinement areas (middleware values are its sibling).
 
 Olares exposes configuration to an app through env vars at **three levels**. The app declares only the app-level ones (in `OlaresManifest.yaml` `envs[]`); the other two are platform-managed and consumed by reference.
 
@@ -18,7 +18,7 @@ Olares exposes configuration to an app through env vars at **three levels**. The
 >     value: "{{ .Values.olaresEnv.APP_TOKEN }}"
 > ```
 >
-> This is different from system-injected Helm values like `.Values.postgres.*` / `.Values.userspace.*` / `.Values.os.*` (full catalogue in [olares-chart-system-values.md](olares-chart-system-values.md)) — those are not env vars and also need explicit mapping.
+> This is different from system-injected Helm values like `.Values.postgres.*` / `.Values.userspace.*` / `.Values.os.*` (full catalogue in the system-injected Helm values reference) — those are not env vars and also need explicit mapping.
 
 ## When to declare an app-level env
 
@@ -38,7 +38,7 @@ Each entry under `envs:` supports these fields ([app-env-vars.md](https://docs.o
 
 | Field | Meaning |
 |---|---|
-| `envName` | App-local name; injected as `.Values.olaresEnv.<envName>`. **Must not start with `OLARES_USER`** — this is enforced because the skill sets `apiVersion: v3` (see [olares-chart-versioning.md](olares-chart-versioning.md)). Map user vars via `valueFrom` instead. |
+| `envName` | App-local name; injected as `.Values.olaresEnv.<envName>`. **Must not start with `OLARES_USER`** — this is enforced because the skill sets `apiVersion: v3` (see the Version & deps fields). Map user vars via `valueFrom` instead. |
 | `default` | Developer-supplied fallback. Users cannot edit it. Used when no user value and no `valueFrom`. |
 | `valueFrom.envName` | Map to a system/user variable. The entry then **inherits** `type` / `editable` / `regex` / etc. from the referenced var; local `default` / `options` / `type` are ignored. |
 | `required` | `true` → must resolve to a non-empty value for install to proceed (see below). |
@@ -109,7 +109,7 @@ The CLI renders these (e.g. as "missing required env var(s): …"). **`lint` doe
 
 ## Worked examples & default variables
 
-Copy-pasteable examples (init admin credentials, reuse a user var, optional-with-default) and the full list of default `OLARES_SYSTEM_*` / `OLARES_USER_*` variables you can map via `valueFrom` are in [olares-chart-env-defaults.md](olares-chart-env-defaults.md).
+Copy-pasteable examples (init admin credentials, reuse a user var, optional-with-default) and the full list of default `OLARES_SYSTEM_*` / `OLARES_USER_*` variables you can map via `valueFrom` are in the Env worked-examples reference.
 
 ## Caveats
 

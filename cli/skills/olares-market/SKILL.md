@@ -43,6 +43,7 @@ For verb-specific behavior, **always start with `olares-cli market <verb> --help
 |---|---|
 | catalog + runtime | [references/olares-market-list.md](references/olares-market-list.md) (`list` / `--mine` / `categories` / `get` / `status`) |
 | lifecycle | [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md) (`install` / `upgrade` / `uninstall` / `clone` / `stop` / `resume` / `cancel`) |
+| `--watch` / stuck / errors | [references/olares-market-watch.md](references/olares-market-watch.md) (per-verb watch buckets, foreground windows, stuck-state handling, common errors) |
 | charts | [references/olares-market-charts.md](references/olares-market-charts.md) (`upload` / `delete`) |
 
 ## Source resolution (cross-cutting)
@@ -78,9 +79,9 @@ The backend tracks two orthogonal axes per app: **`State`** (where the row curre
 
 | Bucket | Examples | Meaning |
 |---|---|---|
-| **Progressing** | `pending`, `installing`, `upgrading`, `uninstalling`, `stopping`, `resuming`, `*Canceling` | Backend is actively working — keep polling |
+| **Progressing** | `pending`, `downloading`, `installing`, `initializing`, `applyingEnv`, `upgrading`, `uninstalling`, `stopping`, `resuming`, `*Canceling` | Backend is actively working — keep polling |
 | **Terminal success** | `running`, `stopped`, `uninstalled` | Mutation finished cleanly |
-| **Terminal failure** | `installFailed`, `upgradeFailed`, `uninstallFailed`, `stopFailed`, `resumeFailed` | Mutation finished with a hard error |
+| **Terminal failure** | `downloadFailed`, `installFailed`, `applyEnvFailed`, `upgradeFailed`, `uninstallFailed`, `stopFailed`, `resumeFailed` | Mutation finished with a hard error |
 | **Canceled / cancel-failed** | `*Canceled`, `*CancelFailed` | A `cancel` request landed (or itself failed) |
 
 (Examples are illustrative, not exhaustive — the full state enum per bucket is in the [appstate reference](../olares-shared/references/olares-platform-appstate.md#lifecycle-state-machine).) Each lifecycle verb maps to its own subset of terminal-success buckets — see the lifecycle reference.
@@ -102,14 +103,14 @@ The same `State` can mean different things depending on which mutation is in fli
 - `--watch-timeout D` caps total wall-clock time.
 - One-shot (no `--watch`) returns as soon as the backend ACKs the mutation request — the row may still be `progressing` for minutes.
 - With `--watch`, the CLI blocks until the row reaches a terminal bucket (success OR failure) matching the OpType safety rules above.
-- **Idempotent**: `resume` against an already-`running` row returns immediately with success; `install` against an already-installed row returns immediately with `state=running`. Watcher never hangs on "no-op" mutations.
-- `--watch-iterations` / `--watch-interval` / `--watch-timeout` are **rejected without `--watch`**.
+- **Idempotent no-ops — `stop` / `resume` only**: `stop` on an already-`stopped` row and `resume` on an already-`running` row return immediately with success (the watcher recognizes the backend's no-op `opType=""` instead of hanging). `install` / `upgrade` / `clone` have **no** such shortcut — they require the matching `OpType` before declaring success.
+- `--watch-timeout` / `--watch-interval` are **no-ops without `--watch`** (silently ignored, not rejected). There is no `--watch-iterations` flag on market verbs.
 
 ### Agent watch discipline (don't block on a long watch)
 
 `--watch` defaults to a 15-minute timeout, and progressing states have very long backend TTLs (`downloading` is **30 days** — see the appstate reference). A foreground `--watch` can therefore block far longer than an agent should sit idle. Discipline:
 
-1. **Use a short foreground window, not the 15m default.** Pass a small `--watch-timeout` sized to the verb (see [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md#per-op-foreground-watch-windows)): ~30s for `stop`/`cancel`/`resume`/`uninstall`, ~1m for the `install` deploy phase / `upgrade` / `clone`.
+1. **Use a short foreground window, not the 15m default.** Pass a small `--watch-timeout` sized to the verb (see [references/olares-market-watch.md](references/olares-market-watch.md#per-op-foreground-watch-windows)): ~30s for `stop`/`cancel`/`resume`/`uninstall`, ~1m for the `install` deploy phase / `upgrade` / `clone`.
 2. **Timeout is NOT failure.** A `--watch` that times out only means "not terminal yet". Don't report failure — switch to polling `market status <app> --watch --watch-interval 5s` (or fire-and-forget + periodic `market status <app>`), or hand off to diagnosis.
 3. **Judge by STATE transitions, never the PROGRESS number** (it is unreliable — appstate reference). A long `downloading` is judged by image-pull progress, not by waiting for terminal.
 4. **When a short window expires with no STATE movement, stop waiting and diagnose** — route to [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) (app stuck / won't start), which orchestrates the pod/log evidence.
@@ -120,7 +121,7 @@ The same `State` can mean different things depending on which mutation is in fli
 |---|---|---|
 | "Show me my apps" / "我的应用" | `market list --mine` (alias `-m`) | Matches the Market UI's "My Terminus" tab exactly — includes in-flight installs, failed rows, transitional states. Wider than "completed installs only" |
 | "Runtime status of `<app>`" / "is it installed yet" | `market status <app>` or `market status <app> --watch` | Focused view: `STATE / OPERATION / PROGRESS / SOURCE`. The single-app form does cross-source fallback if `-s` doesn't find the row |
-| "Which apps are running right now" | `market status` (no app) | All installed-app rows in the resolved source. Add `-a` for every source. **Cannot `--watch`** — use `status <app> --watch` instead |
+| "Which apps are running right now" | `market status [-a]` then filter `STATE=running` | `status` returns installed-app rows, not a running-only view. For resource ranking use `dashboard applications`; for title search across visible installed apps use `search app` |
 | "Browse the catalog" | `market list` (no `--mine`) | Hits `/market/data`, not `/market/state`. Browse-and-discover, not inventory |
 
 > **`list --mine` is NOT the same as "completed installs only".** It hides only the 6 SPA-hidden `uninstalledAppStates` (`pendingCanceled`, `downloadingCanceled`, `downloadFailed`, `installFailed`, `installingCanceled`, `uninstalled`). In-flight installs and post-install failures stay visible because the user clicked something and expects to monitor / retry / cancel them.

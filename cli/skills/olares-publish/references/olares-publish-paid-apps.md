@@ -1,6 +1,6 @@
 # Paid apps: price.yaml, on-chain RSA, Merchant
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md), [olares-publish-targets.md](olares-publish-targets.md), and [olares-publish-submit.md](olares-publish-submit.md) first.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first and follow its paid-listing flow order.
 > A paid app is a **public-Market** app plus pricing + license enforcement. Everything in the public-distribution path still applies; this file adds only the paid extras. Official docs: [Publish paid applications](https://docs.olares.com/developer/develop/paid-apps.html).
 
 ## What "paid" adds to a normal market app
@@ -85,7 +85,7 @@ envs:
 
 ### Submit
 
-Submit through the standard flow — see [olares-publish-submit.md](olares-publish-submit.md). No extra PR type for paid; it is a normal `NEW`/`UPDATE` PR whose OAC happens to contain `price.yaml`.
+Submit through the standard flow — follow the parent SKILL's submit route. No extra PR type for paid; it is a normal `NEW`/`UPDATE` PR whose OAC happens to contain `price.yaml`.
 
 ## Step 3 — Merchant app (checkout + license management)
 
@@ -101,7 +101,7 @@ Merchant is the developer-side panel that issues licenses and verifies them when
 
 To change RSA keys, product info, pricing, or receiving wallet:
 
-1. Regenerate keys / edit the OAC, submit an `UPDATE` PR ([olares-publish-submit.md](olares-publish-submit.md)), wait for merge.
+1. Regenerate keys / edit the OAC, submit an `UPDATE` PR (the submit route), wait for merge.
 2. Reopen Merchant; when prompted, click **Update / Re-install** to apply the latest config.
 
 ## Agent boundaries

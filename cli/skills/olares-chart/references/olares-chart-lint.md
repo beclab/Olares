@@ -21,7 +21,7 @@
 ```bash
 olares-cli chart lint ./myapp
 olares-cli chart lint ./myapp-1.0.0.tgz
-olares-cli chart lint ./myapp --skip-resource --with-rbac
+olares-cli chart lint ./myapp --skip-resource --skip-app-data
 olares-cli chart lint ./myapp --auto-owner=false --owner alice --admin root
 ```
 
@@ -37,10 +37,12 @@ olares-cli chart lint ./myapp --auto-owner=false --owner alice --admin root
 | Namespace check | rendered resource pinned to a non-templated namespace | `--skip-namespace` |
 | App-data cross-check | `.Values.userspace.appData/appCache/userData` used in a template but not declared in `permission` (or vice versa) | `--skip-app-data` |
 | Version match | `Chart.yaml` `version` ≠ `metadata.version` | `--skip-same-version` |
+| RBAC rules | a ServiceAccount granted forbidden cluster permissions | (always) |
+| securityContext | a non-`beclab/` image running with root-equivalent privileges (`privileged`/`runAsUser: 0`/`runAsNonRoot: false`) | (always) |
 
-Off by default (opt in): `--with-rbac` (ServiceAccount forbidden-rule check), `--with-security-context` (non-beclab privileged securityContext check).
+> **The RBAC + securityContext checks run unconditionally.** `--with-rbac` / `--with-security-context` exist as flags (and their `--help` text claims "off by default"), but the CLI never actually disables either check — both run on every `chart lint`, so passing the flags is a no-op. Don't rely on them to *enable* anything; treat both checks as always-on.
 
-> **lint does not check middleware usage.** A chart that bundles its own `postgres`/`redis` instead of using system middleware passes `lint` cleanly — removing the bundled db is the author's responsibility (see [olares-chart-middleware.md](olares-chart-middleware.md)).
+> **lint does not check middleware usage.** A chart that bundles its own `postgres`/`redis` instead of using system middleware passes `lint` cleanly — removing the bundled db is the author's responsibility (see the Middleware & dependencies area).
 
 ## Owner scenarios
 
@@ -55,9 +57,9 @@ By default lint renders the chart under **both** `owner==admin` (admin install) 
 | `Chart.yaml` vs manifest version mismatch | the two `version` fields differ | set them equal |
 | hostPath + rolling update | a template mounts a `hostPath` with a rolling-update workload | switch to a userspace volume, or set the workload strategy to `Recreate` if a host mount is truly required |
 | resource limit missing | a container has no CPU/memory limit | add `resources.limits` (or `--skip-resource` only for a quick check, not for market submit) |
-| `workloadReplicas is required` (or a workload not listed) | the `workloadReplicas` map is missing, incomplete, or not wired | run the three-point self-check in [olares-chart-manifest.md](olares-chart-manifest.md) Workloads & replicas |
-| `options.dependencies must declare ... name="olares" ... type="system"` | the `olares` system dependency is missing from `options.dependencies` | add it per [olares-chart-manifest.md](olares-chart-manifest.md) System dependency: olares |
-| manifest structural error | required field missing/invalid | fix per [olares-chart-manifest.md](olares-chart-manifest.md) |
+| `workloadReplicas is required` (or a workload not listed) | the `workloadReplicas` map is missing, incomplete, or not wired | run the three-point self-check in the Manifest refinement areas (Workloads & replicas) |
+| `options.dependencies must declare ... name="olares" ... type="system"` | the `olares` system dependency is missing from `options.dependencies` | add it per the Manifest refinement areas (System dependency: olares) |
+| manifest structural error | required field missing/invalid | fix per the Manifest refinement areas |
 | namespace check failed | a resource has a hardcoded namespace | use `namespace: '{{ .Release.Namespace }}'` |
 
 ## In the loop
@@ -66,5 +68,5 @@ By default lint renders the chart under **both** `owner==admin` (admin install) 
 
 Then:
 
-- **Deploy to your Olares:** [olares-chart-deploy.md](olares-chart-deploy.md) (upload + install)
+- **Deploy to your Olares:** the Deploy step (upload + install)
 - **Publish to the public Market:** market-ready checklist → re-lint → the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill

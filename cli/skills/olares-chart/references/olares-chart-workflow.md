@@ -15,7 +15,7 @@
  Deployment authoring (no login):
  D1. scaffold   olares-cli chart from-compose --name <app> -f docker-compose.yml
  D2. refine     edit OlaresManifest.yaml + templates/ for the 4 refinement areas
-                (metadata stub OK for local deploy — see manifest.md)
+                (metadata stub OK for local deploy — see the Manifest refinement areas)
  D3. lint       olares-cli chart lint ./<app>        # loop D2<->D3 until OK
  D4. package    bump metadata.version (= Chart.yaml version), then olares-cli chart package ./<app>
 
@@ -25,11 +25,11 @@
  V3. upload     olares-cli market upload ./<app>-<ver>.tgz
  V4. run        olares-cli market install <app> -s upload --version <ver> --watch -o json
  V5. on failure diagnose via olares-doctor (symptom -> root cause), then loop back
- V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; uid/EACCES -> run-as-user.md ; not a chart problem -> break out, report & ask
+ V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; uid/EACCES -> run identity (uid 1000) guidance ; not a chart problem -> break out, report & ask
  V7. cleanup    olares-cli market uninstall <app> --watch ; olares-cli market delete <app>
 ```
 
-Step D1 produces a chart that **already passes `lint`** but is NOT yet a good app: kompose translates containers literally and cannot make product decisions. The value you add is D2. Treat the generated `OlaresManifest.yaml` as a stub — for deploying to your own Olares, §1 Metadata can stay a stub. The V steps cross into sibling skills — full procedure in [olares-chart-deploy.md](olares-chart-deploy.md); runtime diagnosis is [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md). Drive the loop automatically once `lint` passes (stop only if not logged in, or the failure is clearly not a chart problem); never log in on the developer's behalf without asking.
+Step D1 produces a chart that **already passes `lint`** but is NOT yet a good app: kompose translates containers literally and cannot make product decisions. The value you add is D2. Treat the generated `OlaresManifest.yaml` as a stub — for deploying to your own Olares, §1 Metadata can stay a stub. The V steps cross into sibling skills — full procedure in the Deploy step; runtime diagnosis is [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md). Drive the loop automatically once `lint` passes (stop only if not logged in, or the failure is clearly not a chart problem); never log in on the developer's behalf without asking.
 
 > **Publishing to the public Market** (multi-arch build, full market-ready metadata, the `beclab/apps` PR, paid apps) is the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill — start there once the app runs on your Olares.
 
@@ -50,7 +50,7 @@ Step D1 produces a chart that **already passes `lint`** but is NOT yet a good ap
 - Every resource is namespaced with `namespace: '{{ .Release.Namespace }}'`.
 - Default CPU/memory requests+limits are stamped onto every container.
 - One **entrance** is auto-detected (the `olares.service.type: Entrance`-labeled service, else the first service with a port, else a `port: 80` placeholder).
-- `olaresManifest.version` is `0.12.0` (resources under `spec.accelerator`) — see [olares-chart-manifest.md](olares-chart-manifest.md).
+- `olaresManifest.version` is `0.12.0` (resources under `spec.accelerator`) — see the Manifest refinement areas.
 - The scaffold also emits `workloadReplicas.<workload>: 1` (with the matching `values.yaml` `workloads.<name>.replicaCount`, and each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}` so suspend/resume work) plus the required `options.dependencies` `olares >=1.12.6-0` (`type: system`), so a fresh scaffold passes `lint`.
 
 > **Tip:** label the service you want exposed in the compose file with `labels: { olares.service.type: Entrance }` so the right workload becomes the entrance and gets renamed to the app name.

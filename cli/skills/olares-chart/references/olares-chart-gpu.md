@@ -1,6 +1,6 @@
 # GPU / CUDA apps: building the image + provisioning models
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) and [olares-chart-image.md](olares-chart-image.md) first.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; this builds on the Image capability.
 > Two concerns that GPU/AI apps add on top of a normal chart: (A) building a CUDA image, and (B) getting model weights onto the node. Build and runtime are separate machines — keep that in mind throughout.
 
 ```mermaid
@@ -33,7 +33,7 @@ Watch out for:
 
 > CUDA driver/toolkit version compatibility is not a concern here — Olares GPU nodes keep the driver current, so the image's CUDA version generally does not need to be pinned down to match the host.
 
-Declaring the accelerator modes and sizing the resource envelope are covered in [olares-chart-accelerator.md](olares-chart-accelerator.md).
+Declaring the accelerator modes and sizing the resource envelope are covered in the Accelerator sizing.
 
 ## B. Model download: initContainer → shared HF cache (appCommon)
 
@@ -43,7 +43,7 @@ Olares already reserves a shared Hugging Face cache: `appCommon/huggingface` (al
 
 - Mount `.Values.userspace.appCommon` (requires `permission.appCommon: true`) and point `HF_HOME` / `HF_HUB_CACHE` at `{{ .Values.userspace.appCommon }}/huggingface`.
 - An **initContainer** runs `huggingface-cli download` and blocks until the weights are present, then the main container starts. (Use an initContainer, not a long-lived sidecar — the main process must not start before the model exists.)
-- Reuse Olares' Hugging Face values instead of hardcoding, via app-level envs that map the user vars: declare them in `envs[]` with `valueFrom` (`OLARES_USER_HUGGINGFACE_SERVICE` → `HF_ENDPOINT`, `OLARES_USER_HUGGINGFACE_TOKEN` → `HF_TOKEN`) and template `.Values.olaresEnv.<name>` into the container. Do **not** inline `$(OLARES_USER_...)` — v3 `lint` rejects raw `OLARES_USER...` references in templates (see [olares-chart-env.md](olares-chart-env.md)).
+- Reuse Olares' Hugging Face values instead of hardcoding, via app-level envs that map the user vars: declare them in `envs[]` with `valueFrom` (`OLARES_USER_HUGGINGFACE_SERVICE` → `HF_ENDPOINT`, `OLARES_USER_HUGGINGFACE_TOKEN` → `HF_TOKEN`) and template `.Values.olaresEnv.<name>` into the container. Do **not** inline `$(OLARES_USER_...)` — v3 `lint` rejects raw `OLARES_USER...` references in templates (see the Env area).
 - `appCommon` is created `chown 1000:1000`, so a process running as uid 1000 writes it directly — no chown initContainer needed.
 
 ```yaml
@@ -102,8 +102,8 @@ Caveats:
 - **Olares ≥ 1.12.6** — `appCommon` (the `drive/Common` area) only exists on 1.12.6+. On older targets fall back to per-app `appData`/`appCache` (no cross-app sharing).
 - **Concurrent downloads** — multiple AI apps writing the same shared cache is safe: the HF cache is content-addressed (blobs + atomic snapshot renames), so concurrent reads and same-model writes don't corrupt each other.
 - **Non-HF-cache-aware apps** — if the app expects weights at a fixed path rather than the HF cache layout, download/symlink into that path instead; the shared-cache benefit only applies to HF-cache-aware loaders.
-- **Permission cross-check** — any template that references `.Values.userspace.appCommon` MUST declare `permission.appCommon: true`, or `lint`'s app-data cross-check fails. See the userspace directory comparison in [olares-chart-manifest.md](olares-chart-manifest.md).
+- **Permission cross-check** — any template that references `.Values.userspace.appCommon` MUST declare `permission.appCommon: true`, or `lint`'s app-data cross-check fails. See the userspace directory comparison in the Manifest refinement areas.
 
 ## C. Declaring accelerator modes & sizing
 
-Once the image and model provisioning are sorted, declare which accelerator modes the app supports (`spec.accelerator`, nvidia/amd-gpu/apple-m/cpu/...) and size the CPU/memory/GPU-memory envelope. That is its own reference: [olares-chart-accelerator.md](olares-chart-accelerator.md).
+Once the image and model provisioning are sorted, declare which accelerator modes the app supports (`spec.accelerator`, nvidia/amd-gpu/apple-m/cpu/...) and size the CPU/memory/GPU-memory envelope. That is its own area: the Accelerator sizing.

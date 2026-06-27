@@ -14,7 +14,7 @@ metadata:
 
 > **This skill is the public-distribution step, not the authoring step.** Turning a repo / compose / Helm chart into an Olares app, refining it, and proving it installs and reaches `running` on your own Olares all live in [`../olares-chart/SKILL.md`](../olares-chart/SKILL.md). Come here **after** the app already runs locally and you want it in the public Olares Market.
 
-> **Source of truth for chart fields is `olares-cli chart lint` + the manifest reference** in [`../olares-chart/references/olares-chart-manifest.md`](../olares-chart/references/olares-chart-manifest.md). This skill carries only what distribution adds on top of a working local chart: market-ready depth, the `beclab/apps` PR contract, and paid-app extras.
+> **Source of truth for chart fields is `olares-cli chart lint` + the manifest authoring** guidance in the [`olares-chart`](../olares-chart/SKILL.md) skill (its Manifest refinement areas). This skill carries only what distribution adds on top of a working local chart: market-ready depth, the `beclab/apps` PR contract, and paid-app extras.
 
 ## When to use
 
@@ -23,7 +23,7 @@ metadata:
 - Sell an app (pay-to-download / paid listing)
 - Keywords: publish to Market, submit to beclab/apps, app store listing, `featuredImage` / `promoteImage`, `spec.supportArch`, multi-arch, GitBot, `owners` file, `price.yaml`, paid app
 
-> **Prerequisite — the app must already run on your Olares.** Public submission without a working local install wastes GitBot cycles and reviewer time. Do the deploy loop in [`../olares-chart/references/olares-chart-deploy.md`](../olares-chart/references/olares-chart-deploy.md) first.
+> **Prerequisite — the app must already run on your Olares.** Public submission without a working local install wastes GitBot cycles and reviewer time. Do the deploy loop in the [`olares-chart`](../olares-chart/SKILL.md) skill (its Deploy step) first.
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
 
