@@ -291,17 +291,21 @@ func GetBaseDirFromReleaseFile() (string, error) {
 }
 
 var (
-	cpuNameOnce  sync.Once
+	cpuNameMu    sync.Mutex
 	cpuNameValue string
 )
 
 // GetCPUName returns the CPU brand name. The result is static for the lifetime
-// of the process, so it is computed once and cached: the fallbacks below shell
-// out to lscpu/dmidecode, which is wasteful to repeat every status tick.
+// of the process, so it is cached to avoid the lscpu/dmidecode fallbacks below
+// running on every status tick. An empty result (e.g. a transient boot-time
+// failure) is not cached, so a later tick can still populate it.
 func GetCPUName() string {
-	cpuNameOnce.Do(func() {
-		cpuNameValue = computeCPUName()
-	})
+	cpuNameMu.Lock()
+	defer cpuNameMu.Unlock()
+	if cpuNameValue != "" {
+		return cpuNameValue
+	}
+	cpuNameValue = computeCPUName()
 	return cpuNameValue
 }
 
