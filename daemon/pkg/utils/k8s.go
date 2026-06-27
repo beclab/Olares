@@ -9,8 +9,10 @@ import (
 	"k8s.io/klog"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	bflconst "bytetrade.io/web3os/bfl/pkg/constants"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -50,13 +52,63 @@ const (
 // success, so a failure before the cluster is reachable is retried on the next
 // call instead of being cached permanently.
 var (
-	clientCacheMu       sync.Mutex
-	cachedConfig        *rest.Config
-	cachedKubeClient    kubernetes.Interface
-	cachedDynamicClient dynamic.Interface
-	cachedAppClientSet  *versioned.Clientset
-	cachedApixClient    apixclientset.Interface
+	clientCacheMu           sync.Mutex
+	cachedConfig            *rest.Config
+	cachedKubeClient        kubernetes.Interface
+	cachedDynamicClient     dynamic.Interface
+	cachedAppClientSet      *versioned.Clientset
+	cachedApixClient        apixclientset.Interface
+	cachedKubeconfigPath    string
+	cachedKubeconfigModTime time.Time
 )
+
+// kubeconfigPath resolves the kubeconfig file backing ctrl.GetConfig, mirroring
+// the env/default lookup. It returns "" when no file applies (e.g. in-cluster),
+// in which case the freshness check is skipped.
+func kubeconfigPath() string {
+	if v := os.Getenv("KUBECONFIG"); v != "" {
+		if parts := filepath.SplitList(v); len(parts) > 0 {
+			return parts[0]
+		}
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".kube", "config")
+}
+
+// ensureFreshLocked invalidates the cached config and clients when the
+// kubeconfig file changes (e.g. IP change or k3s cert rotation), so olaresd
+// recovers without a restart instead of pinning a stale config forever.
+// Callers must hold clientCacheMu.
+func ensureFreshLocked() {
+	path := kubeconfigPath()
+	if path == "" {
+		return
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	modTime := info.ModTime()
+	if cachedConfig == nil {
+		cachedKubeconfigPath = path
+		cachedKubeconfigModTime = modTime
+		return
+	}
+	if path == cachedKubeconfigPath && modTime.Equal(cachedKubeconfigModTime) {
+		return
+	}
+	klog.Info("kubeconfig changed, rebuilding k8s clients")
+	cachedConfig = nil
+	cachedKubeClient = nil
+	cachedDynamicClient = nil
+	cachedAppClientSet = nil
+	cachedApixClient = nil
+	cachedKubeconfigPath = path
+	cachedKubeconfigModTime = modTime
+}
 
 // configLocked returns the cached rest.Config, loading it once on first
 // success. Callers must hold clientCacheMu.
@@ -76,19 +128,20 @@ func configLocked() (*rest.Config, error) {
 func GetConfig() (*rest.Config, error) {
 	clientCacheMu.Lock()
 	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
 	return configLocked()
 }
 
 func GetKubeClient() (kubernetes.Interface, error) {
 	clientCacheMu.Lock()
 	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
 	if cachedKubeClient != nil {
 		return cachedKubeClient, nil
 	}
 
 	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return nil, err
 	}
 
@@ -105,13 +158,13 @@ func GetKubeClient() (kubernetes.Interface, error) {
 func GetDynamicClient() (dynamic.Interface, error) {
 	clientCacheMu.Lock()
 	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
 	if cachedDynamicClient != nil {
 		return cachedDynamicClient, nil
 	}
 
 	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return nil, err
 	}
 
@@ -128,13 +181,13 @@ func GetDynamicClient() (dynamic.Interface, error) {
 func GetAppClientSet() (versioned.Clientset, error) {
 	clientCacheMu.Lock()
 	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
 	if cachedAppClientSet != nil {
 		return *cachedAppClientSet, nil
 	}
 
 	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return versioned.Clientset{}, err
 	}
 
@@ -687,13 +740,13 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 func GetApixClient() (apixclientset.Interface, error) {
 	clientCacheMu.Lock()
 	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
 	if cachedApixClient != nil {
 		return cachedApixClient, nil
 	}
 
 	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return nil, err
 	}
 
