@@ -42,6 +42,6 @@ The cloud envelope ALSO omits the parent-level `numDirs` / `numFiles` / `modifie
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `invalid drive type` | `drive/home/...` instead of `drive/Home/...` | Use exact casing: `Home` or `Data` |
+| `drive extend must be Home, Data, or Common (got "home")` | `drive/home/...` instead of `drive/Home/...` | Use exact casing: `Home`, `Data`, or `Common` |
 | Empty `items` / `data` array on a known-non-empty dir | Wrong identity — the active profile can't see this scope | `olares-cli profile list` and switch with `profile use` |
 | 401/403 | Token rotation or invalidation | See [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) |

@@ -80,7 +80,7 @@ All three delegate to the same driver — same output, same caching, same `--ref
 | Floor | Verbs |
 |---|---|
 | **Admin (owner / admin)** | `users list / get / create / delete`; `network reverse-proxy get`, `network frp list`, `network hosts-file get`; `gpu list`; `compute list`, `compute unbind`, `compute set-type`; `advanced status / registries list / images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
-| **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list / routes <id>`; `appearance get`, `appearance language set`; `integration accounts list / list-by-type / get / add / delete`; `video config get`; `search status / dirs list / rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env (system|user) list` |
+| **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list / routes <id>`; `appearance get`, `appearance language set`; `integration accounts list / list-by-type / get / add / delete`; `video config get`; `search status / dirs list / dirs add / dirs rm / rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env (system|user) list` |
 
 ### Soft preflight behavior
 
@@ -118,7 +118,7 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 |---|---|---|
 | `appearance` | `language set <code>` | VERIFIED |
 | `users` | `create` / `delete` (with `--watch`) | VERIFIED |
-| `search` | `rebuild`, `dirs add / remove` | VERIFIED (rebuild + dirs writes) |
+| `search` | `rebuild`, `dirs add / rm` | VERIFIED (rebuild + dirs writes) |
 | `vpn ssh` | `enable` / `disable` | VERIFIED |
 | `vpn acl` | `add` / `remove` | VERIFIED |
 | `integration accounts` | `add awss3` / `add tencent` / `delete` | VERIFIED |

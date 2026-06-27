@@ -23,14 +23,15 @@ metadata:
   ...
 ```
 
-What `apiVersion: v3` governs:
+What `apiVersion: v3` governs (schema only — it does NOT gate admin or namespace):
 
 - **Declarative env rules** — an app-local `envName` must not start with `OLARES_USER`; user/system variables are mapped via `valueFrom`. Full env model: [olares-chart-env.md](olares-chart-env.md).
 - **Chart scan** — `lint` rejects templates that inline `OLARES_USER...` env names.
-- **Admin-only install** — a normal-user install is rejected; only the admin can install the app.
-- **Namespace depends on `isShared`** in the manifest:
-  - Without `isShared: true` → installs into `<app>-<adminUsername>` (the admin's personal namespace). Use this when the app just needs admin-only install but manages its own users internally.
-  - With `isShared: true` → installs into `<app>-shared` (cluster-wide, cross-namespace access enabled). Use this for heavy shared backends (GPU inference servers, shared databases) that other apps consume. See [olares-chart-shared.md](olares-chart-shared.md).
+
+A plain v3 app installs into the installing user's `<app>-<owner>` namespace and **any user can install it**. Admin-only install and the shared namespace are opt-in, independent of v3:
+
+- **`options.shared: true`** → cluster-wide singleton in `<app>-shared` (cross-namespace access enabled, owned by the cluster owner) **and** admin-only install. For heavy shared backends (GPU inference servers, shared databases) other apps consume. See [olares-chart-shared.md](olares-chart-shared.md).
+- **`spec.onlyAdmin: true`** → admin-only install with no shared namespace; for an app that manages its own users internally.
 
 ## The version fields in a chart (don't confuse them)
 

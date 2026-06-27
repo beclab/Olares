@@ -43,13 +43,20 @@ Olares already reserves a shared Hugging Face cache: `appCommon/huggingface` (al
 
 - Mount `.Values.userspace.appCommon` (requires `permission.appCommon: true`) and point `HF_HOME` / `HF_HUB_CACHE` at `{{ .Values.userspace.appCommon }}/huggingface`.
 - An **initContainer** runs `huggingface-cli download` and blocks until the weights are present, then the main container starts. (Use an initContainer, not a long-lived sidecar — the main process must not start before the model exists.)
-- Read the injected Hugging Face env instead of hardcoding: `OLARES_USER_HUGGINGFACE_SERVICE` → `HF_ENDPOINT`, `OLARES_USER_HUGGINGFACE_TOKEN` → `HF_TOKEN`.
+- Reuse Olares' Hugging Face values instead of hardcoding, via app-level envs that map the user vars: declare them in `envs[]` with `valueFrom` (`OLARES_USER_HUGGINGFACE_SERVICE` → `HF_ENDPOINT`, `OLARES_USER_HUGGINGFACE_TOKEN` → `HF_TOKEN`) and template `.Values.olaresEnv.<name>` into the container. Do **not** inline `$(OLARES_USER_...)` — v3 `lint` rejects raw `OLARES_USER...` references in templates (see [olares-chart-env.md](olares-chart-env.md)).
 - `appCommon` is created `chown 1000:1000`, so a process running as uid 1000 writes it directly — no chown initContainer needed.
 
 ```yaml
 # OlaresManifest.yaml
 permission:
   appCommon: true
+envs:
+  - envName: HF_ENDPOINT          # surfaced as .Values.olaresEnv.HF_ENDPOINT
+    valueFrom:
+      envName: OLARES_USER_HUGGINGFACE_SERVICE
+  - envName: HF_TOKEN             # surfaced as .Values.olaresEnv.HF_TOKEN
+    valueFrom:
+      envName: OLARES_USER_HUGGINGFACE_TOKEN
 ```
 
 ```yaml
@@ -68,9 +75,9 @@ spec:
         - name: HF_HOME
           value: {{ .Values.userspace.appCommon }}/huggingface
         - name: HF_ENDPOINT
-          value: $(OLARES_USER_HUGGINGFACE_SERVICE)
+          value: "{{ .Values.olaresEnv.HF_ENDPOINT }}"
         - name: HF_TOKEN
-          value: $(OLARES_USER_HUGGINGFACE_TOKEN)
+          value: "{{ .Values.olaresEnv.HF_TOKEN }}"
         volumeMounts:
         - name: hf-cache
           mountPath: {{ .Values.userspace.appCommon }}/huggingface

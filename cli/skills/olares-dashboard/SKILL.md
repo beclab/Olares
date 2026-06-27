@@ -203,7 +203,7 @@ These are bound on the `dashboard` root and inherited by every leaf. **Defaults 
 | `(advisory) GPU sidebar entry is hidden for non-admin profiles ...` (stderr) | Soft gate; data still returned | Surface to user as a note; don't treat as error |
 | `gpu data temporarily unavailable: HAMI returned HTTP 500` | `vgpu_unavailable`; transient | Retry; if persistent, file a server-side issue |
 | `--user requires platform-admin role` | Non-admin profile passing `--user` | Use the active profile, or switch with `olares-cli profile use` |
-| `--watch-iterations requires --watch` (or `--interval` / `--timeout` similarly) | Polling knob without gate flag | Add `--watch` or drop the knob |
+| `--watch-iterations requires --watch` (or `--watch-interval` / `--watch-timeout` similarly) | Polling knob without gate flag | Add `--watch` or drop the knob |
 | `--since and --start/--end are mutually exclusive` | Both window forms set | Pick one |
 | 401/403 from any dashboard verb | Token rotation / invalidation | See [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) |
 

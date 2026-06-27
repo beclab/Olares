@@ -91,5 +91,5 @@ olares-cli market list -s upload                                   # confirm
 | `unsupported file extension: must be .tgz or .tar.gz` | Wrong file type | Repackage with `helm package` |
 | `failed to upload: HTTP 413 (Payload Too Large)` | Chart exceeds the server's upload size limit | Slim the chart's contents; ask the operator about the limit |
 | `chart not found in source 'upload'` (delete) | The chart was never uploaded, or was uploaded to a different bucket | `market list -s upload` to confirm |
-| `chart still in use by running app 'X'` | `delete` while the app is running | `market uninstall X` first, then re-run `delete` |
+| `delete` removed the chart but the app keeps running | `delete` only removes the chart from the `upload` bucket; it never uninstalls | Expected — run `market uninstall X` separately to stop/remove the app |
 | Exit non-zero on directory upload despite some files succeeding | Partial failure | Inspect the per-file JSON report for which files failed |
