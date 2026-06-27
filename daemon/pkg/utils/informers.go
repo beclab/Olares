@@ -9,7 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	k8sinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
@@ -29,8 +28,6 @@ const informerResyncPeriod = 10 * time.Minute
 var (
 	informerMu       sync.Mutex
 	informerCtx      context.Context
-	informerCancel   context.CancelFunc
-	informerClient   kubernetes.Interface
 	informerFactory  k8sinformers.SharedInformerFactory
 	podLister        corelisters.PodLister
 	podsSynced       cache.InformerSynced
@@ -53,12 +50,15 @@ func InitInformers(ctx context.Context) {
 	informerCtx = ctx
 }
 
-// ensureStartedLocked lazily creates and starts the shared informer factory,
-// rebuilding it if the underlying kube client was replaced (e.g. after a
-// kubeconfig change invalidated the cached client). Callers must hold
-// informerMu.
+// ensureStartedLocked lazily creates and starts the shared informer factory on
+// first use, once the cluster is reachable. Callers must hold informerMu.
+//
+// The factory is started once and left running for the process lifetime: it
+// stops only when informerCtx is canceled at shutdown. GetKubeClient builds a
+// fresh clientset on each call, so the factory must not be tied to client
+// identity; a kubeconfig change is instead handled by an olaresd restart.
 func ensureStartedLocked() {
-	if informerCtx == nil {
+	if informerCtx == nil || informersStarted {
 		return
 	}
 
@@ -68,42 +68,15 @@ func ensureStartedLocked() {
 		return
 	}
 
-	if informersStarted {
-		if client == informerClient {
-			return
-		}
-		// The cached kube client was rebuilt; stop the stale factory and
-		// recreate it against the new client so watches keep working.
-		resetInformersLocked()
-		klog.Info("kube client changed, restarting shared informers")
-	}
-
-	ctx, cancel := context.WithCancel(informerCtx)
 	factory := k8sinformers.NewSharedInformerFactory(client, informerResyncPeriod)
 	podInformer := factory.Core().V1().Pods()
 	podLister = podInformer.Lister()
 	podsSynced = podInformer.Informer().HasSynced
 
-	factory.Start(ctx.Done())
+	factory.Start(informerCtx.Done())
 	informerFactory = factory
-	informerCancel = cancel
-	informerClient = client
 	informersStarted = true
 	klog.Info("shared informers started")
-}
-
-// resetInformersLocked stops the running factory and clears the cached
-// listers so the next access rebuilds them. Callers must hold informerMu.
-func resetInformersLocked() {
-	if informerCancel != nil {
-		informerCancel()
-		informerCancel = nil
-	}
-	informerFactory = nil
-	informerClient = nil
-	podLister = nil
-	podsSynced = nil
-	informersStarted = false
 }
 
 // podListerIfSynced returns the pod lister only when its cache has synced,
