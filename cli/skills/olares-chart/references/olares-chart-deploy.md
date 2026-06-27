@@ -53,7 +53,7 @@ olares-cli market upload ./<app>-<version>.tgz   # use the new <version> in the 
 
 `chart package` mirrors `helm package` and preserves `OlaresManifest.yaml`, so the archive is accepted as-is by both `chart lint` and `market upload`. Because the filename is `<app>-<version>.tgz`, a bumped version produces a new `.tgz` name — pass that name to `upload` and the new number to `install` / `upgrade --version`.
 
-- `upload` always lands the chart in the `upload` source (see [`../../olares-market/references/olares-market-charts.md`](../../olares-market/references/olares-market-charts.md)). `-s` is intentionally not exposed.
+- `upload` always lands the chart in the `upload` source (see [`../../olares-market/SKILL.md`](../../olares-market/SKILL.md)). `-s` is intentionally not exposed.
 - Upload runs the server-side ingest, so a chart that passed local `lint` can still be rejected here (e.g. cluster-specific checks). Surface that message as a chart problem and go back to refine.
 
 ## 3. Actually run it
@@ -70,7 +70,7 @@ olares-cli market install <app> -s upload --version <version> --watch -o json
   olares-cli market upgrade <app> -s upload --version <NEW version> --watch -o json
   ```
   Bump `metadata.version` (= `Chart.yaml` `version`), re-package, and re-upload, then upgrade to the new number. This is the canonical loop for iterating on an installed app and for recovering one stuck in `upgradeFailed`. **Fallback:** the upload source also permits a **same-version** upgrade (the CLI's strict-newer gate is waived there; app-service gates on `>= deployed`), so re-uploading the same version overwrites the stored chart — use this only when the chart didn't change (a *lower* version is always rejected).
-- Parse `.finalState`: `running` = deployed. `*Failed` / a watcher stuck near `*Failed` = go diagnose. See [`../../olares-market/references/olares-market-lifecycle.md`](../../olares-market/references/olares-market-lifecycle.md) for the state machine and `missing required env var(s)` (re-run with `--env KEY=VALUE`).
+- Parse `.finalState`: `running` = deployed. `*Failed` / a watcher stuck near `*Failed` = go diagnose. The lifecycle state machine (states, transitions, fail TTLs, `running` semantics) is the platform **application state machine** ([`../../olares-shared/references/olares-platform-appstate.md`](../../olares-shared/references/olares-platform-appstate.md)); the verb-level watch behavior and `missing required env var(s)` handling (re-run with `--env KEY=VALUE`) are in [`../../olares-market/references/olares-market-lifecycle.md`](../../olares-market/references/olares-market-lifecycle.md).
 - **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in the chart repo immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. This is the one install failure you *should* retry: wait for hydration, then re-run the same `install`. The chart didn't change here, so there's nothing to re-`upload` or bump — the chart is already stored and re-uploading the same bytes wouldn't speed up hydration. Confirm hydration finished via the `appstore-backend` log (`isAppHydrationComplete RETURNING TRUE ... appID=<app>` → `Added new app to latest: <app>` → `new_app_ready`), or poll `olares-cli market get <app> -s upload` until it resolves:
   ```bash
   until olares-cli market get <app> -s upload -o json 2>/dev/null | grep -q '"name"'; do sleep 2; done
@@ -81,13 +81,7 @@ olares-cli market install <app> -s upload --version <version> --watch -o json
 
 The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal, and a crashlooping main container is NOT fast-failed for several minutes (the 5-minute `hasUnrecoverablePod` grace). If you can multitask, kick off `market install ... --watch` AND, in parallel, inspect the app's own workload directly rather than waiting for the row to flip.
 
-**The runtime diagnosis itself now lives in [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing shared by catalog and dev apps:
-
-- A slow vs **stalled** image pull (byte-level progress from the per-node `image-service` DaemonSet / `imagemanagers` CRD; model-weights are a separate phase) → [olares-doctor-app-stuck.md](../../olares-doctor/references/olares-doctor-app-stuck.md).
-- A crashlooping / non-starting container (catch it early via `restartCount` / `state.waiting.reason`, read `--previous` logs) → [olares-doctor-app-crash.md](../../olares-doctor/references/olares-doctor-app-crash.md).
-- `running` but the entrance is unreachable / 504 → [olares-doctor-running-unhealthy.md](../../olares-doctor/references/olares-doctor-running-unhealthy.md).
-
-Doctor diagnoses the root cause; **for a chart you author, it points back here** — the fix is a manifest/template edit (next section), then re-lint + re-deploy.
+**The runtime diagnosis itself lives in [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing (stalled image pull, crashlooping / non-starting container, `running`-but-unreachable) shared by catalog and dev apps. Doctor diagnoses the root cause; **for a chart you author, it points back here** — the fix is a manifest/template edit (§4b below), then re-lint + re-deploy.
 
 ## 4. Diagnose: deploy-pipeline logs (chart-specific), then the app's runtime via doctor
 

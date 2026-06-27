@@ -29,7 +29,7 @@ This subtree is an **AI-agent-first JSON mirror of the Olares Dashboard SPA's Ov
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
-> **Mental model:** dashboard answers *"what's the resource usage and health"*. For inventory and lifecycle, route elsewhere.
+> **Mental model:** dashboard answers *"what's the resource usage and health"*. For inventory and lifecycle, route elsewhere. When the metrics reveal a problem (resource pressure, an app that's `running` but slow/unreachable), hand off to [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) for root-cause diagnosis.
 
 ## JSON envelope (two shapes, frozen)
 
