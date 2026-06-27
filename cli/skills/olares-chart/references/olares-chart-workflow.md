@@ -19,17 +19,17 @@
  D3. lint       olares-cli chart lint ./<app>        # loop D2<->D3 until OK
  D4. package    bump metadata.version (= Chart.yaml version), then olares-cli chart package ./<app>
 
- Deploy to your Olares (requires login; confirm once, then auto-loop):
+ Deploy to your Olares (requires login; automatic once lint passes):
  V1. logged-in? olares-cli profile list              # if not: tell developer, stop
- V2. ask once   confirm with the developer before the first upload — then run V3-V6 automatically
+ V2. auto       after lint passes + logged-in, run V3-V6 WITHOUT asking (stop only if not logged in, or a failure is clearly not a chart problem)
  V3. upload     olares-cli market upload ./<app>-<ver>.tgz
  V4. run        olares-cli market install <app> -s upload --version <ver> --watch -o json
- V5. on failure fetch market / chartrepo / app-service / app-pod logs and diagnose
+ V5. on failure diagnose via olares-doctor (symptom -> root cause), then loop back
  V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; uid/EACCES -> run-as-user.md ; not a chart problem -> break out, report & ask
  V7. cleanup    olares-cli market uninstall <app> --watch ; olares-cli market delete <app>
 ```
 
-Step D1 produces a chart that **already passes `lint`** but is NOT yet a good app: kompose translates containers literally and cannot make product decisions. The value you add is D2. Treat the generated `OlaresManifest.yaml` as a stub — for deploying to your own Olares, §1 Metadata can stay a stub. The V steps cross into sibling skills — full procedure in [olares-chart-deploy.md](olares-chart-deploy.md). Confirm once before the first upload, then drive the loop automatically.
+Step D1 produces a chart that **already passes `lint`** but is NOT yet a good app: kompose translates containers literally and cannot make product decisions. The value you add is D2. Treat the generated `OlaresManifest.yaml` as a stub — for deploying to your own Olares, §1 Metadata can stay a stub. The V steps cross into sibling skills — full procedure in [olares-chart-deploy.md](olares-chart-deploy.md); runtime diagnosis is [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md). Drive the loop automatically once `lint` passes (stop only if not logged in, or the failure is clearly not a chart problem); never log in on the developer's behalf without asking.
 
 > **Publishing to the public Market** (multi-arch build, full market-ready metadata, the `beclab/apps` PR, paid apps) is the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill — start there once the app runs on your Olares.
 

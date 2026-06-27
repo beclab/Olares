@@ -26,7 +26,7 @@ metadata:
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
-> **Mental model:** this skill authors, validates, and **deploys your own chart to your own Olares**. Listing / selling it on the **public** Olares Market is [`../olares-publish/SKILL.md`](../olares-publish/SKILL.md); installing or managing an **already-published** catalog app is [`../olares-market/SKILL.md`](../olares-market/SKILL.md); inspecting pods/logs of an unrelated running app is [`../olares-cluster/SKILL.md`](../olares-cluster/SKILL.md).
+> **Mental model:** this skill authors, validates, and **deploys your own chart to your own Olares**, and owns the **fixes that mean editing your chart**. **Diagnosing a runtime failure** (won't install / start, crashes, `running` but unreachable, image won't pull) is [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) — it finds the root cause and points back here for the chart edit. Listing / selling it on the **public** Olares Market is [`../olares-publish/SKILL.md`](../olares-publish/SKILL.md); installing or managing an **already-published** catalog app is [`../olares-market/SKILL.md`](../olares-market/SKILL.md); inspecting pods/logs of an unrelated running app is [`../olares-cluster/SKILL.md`](../olares-cluster/SKILL.md).
 
 ## The shape of the work — two axes
 
@@ -87,7 +87,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | deployment | **Validate-local** | `olares-cli chart lint ./<app>` passes, then `chart package` | a refinement changed the manifest/templates | [lint.md](references/olares-chart-lint.md) |
 | deploy | **Deploy** | `market upload` + `market install`, then diagnose from logs — automatic after `lint` passes (login required) | proving the chart actually runs on the developer's Olares | [deploy.md](references/olares-chart-deploy.md) |
 
-> **Deploy** leans on sibling skills: [`olares-shared`](../olares-shared/SKILL.md) (login check), [`olares-market`](../olares-market/SKILL.md) (upload / install / cleanup), [`olares-cluster`](../olares-cluster/SKILL.md) (logs). **After `lint` passes, drive the deploy loop automatically without asking; never log in on the developer's behalf without asking.** One way to sequence the whole assembly (and the file tree `from-compose` emits) lives in [references/olares-chart-workflow.md](references/olares-chart-workflow.md) — a reference, not a required order.
+> **Deploy** leans on sibling skills: [`olares-shared`](../olares-shared/SKILL.md) (login check), [`olares-market`](../olares-market/SKILL.md) (upload / install / cleanup), [`olares-cluster`](../olares-cluster/SKILL.md) (logs), and [`olares-doctor`](../olares-doctor/SKILL.md) (runtime root-cause diagnosis when a deploy fails or the app won't start). **After `lint` passes, drive the deploy loop automatically without asking; never log in on the developer's behalf without asking.** One way to sequence the whole assembly (and the file tree `from-compose` emits) lives in [references/olares-chart-workflow.md](references/olares-chart-workflow.md) — a reference, not a required order.
 
 ## CLI verbs
 

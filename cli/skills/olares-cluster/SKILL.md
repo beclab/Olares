@@ -33,6 +33,8 @@ Against the cluster the active profile can see:
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
+> **Diagnosing *why* an app is broken** (stuck install, crash loop, `running` but unreachable, image won't pull, resource pressure) is [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) — it orchestrates these `cluster` commands into symptom→root-cause routing. `cluster` stays the raw runtime view and the place that mutates K8s objects.
+
 > **Mental model:** if the question is *runtime state* of an existing cluster, you are here. If it's *lifecycle* of an Olares app or *day-zero* host setup, you are not.
 
 ## Core concepts
@@ -119,7 +121,7 @@ Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `work
 Two image-inventory commands ride on top of this:
 
 - `cluster workload images [IMAGE]` follows the same pagination contract. An IMAGE-argument lookup always full-scans the cluster, but the plain listing is NOT full-cluster unless `--all` is set. See [references/olares-cluster-workload.md](references/olares-cluster-workload.md).
-- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. Its completeness/coverage caveats live in that same workload reference's Agent notes.
+- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. It is owned by [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md); its completeness/coverage caveats live in [`../olares-doctor/references/olares-doctor-image.md`](../olares-doctor/references/olares-doctor-image.md).
 
 ### `--watch` / `--follow` semantics (uniform)
 
@@ -131,7 +133,7 @@ Two image-inventory commands ride on top of this:
 - TTY detection: clear-screen-redraw for table, raw stream for piped output, JSONL for `-o json`.
 - `--interval D` / `--timeout D` are **rejected with an error** when their gate flag (`-w` or `-f`) isn't also set — don't silently waste a flag.
 
-## Common errors → fixes
+## Common errors
 
 | Error message starts with | Meaning | Fix |
 |---|---|---|

@@ -50,10 +50,8 @@ olares-cli cluster workload images --limit 50 --page 1
 # Where is a given image referenced? (tag/digest-normalized; full scan)
 olares-cli cluster workload images docker.io/library/nginx:latest
 
-# Local images + workload reference counts (full scan; pause excluded).
-olares-cli doctor images -o json
-# Only the orphans (zero refs), biggest first, with reclaimable-size footer.
-olares-cli doctor images --unused
+# For local-image-vs-workload reference counts / orphan pruning, use `doctor images`
+# (owned by the olares-doctor skill, not cluster).
 
 # Get + watch rollout to convergence.
 olares-cli cluster workload get user-system-alice/api --kind deploy
@@ -85,7 +83,7 @@ This combines the PATCH and the rollout-status poll into one invocation. The age
 - **`--kind` errors are the most common gotcha.** Always include it in `get` / `yaml` / mutating verbs. For `list`, omit it (or use `all`) when the user doesn't specify a type.
 - **`start <name> --replicas N` requires the user to know N.** If the user says "start this back up", ask what replica count they want before invoking. There is intentionally no "remember previous replicas" cache.
 - For "restart this app" requests, **prefer `pod delete` on a specific pod** when the user just wants a single pod to bounce; reach for `workload restart` only when they actually want every replica to recycle.
-- **`doctor images --unused` is a prune *hint*, not a green light.** Two limits: (1) it only lists images on the control node, so it's not a full-cluster census (but a listed image's verdict is checked cluster-wide and therefore safe); (2) references come only from Deployment/StatefulSet/DaemonSet/Job/CronJob specs, so an image used solely by a bare Pod / static pod / other-controller-owned Pod, or one a running container still pins by an old digest, can show as unused. Before telling a user to delete, cross-check running Pods.
+- **Local-image inventory / orphan pruning (`doctor images`) is owned by [`../../olares-doctor/references/olares-doctor-image.md`](../../olares-doctor/references/olares-doctor-image.md)** — including the prune-hint caveats (control-node-only census, reference-counting limits). Use `cluster workload images` for "where is THIS image referenced"; reach for `doctor images` for the reverse (local images + their reference counts).
 
 ## Common errors
 

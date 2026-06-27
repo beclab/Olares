@@ -27,6 +27,10 @@ metadata:
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
 
+## Mental model
+
+Publishing is a **one-way diff against `beclab/apps`**, not a CLI lifecycle. There is no `olares-cli publish` verb: the only command you run is `olares-cli chart lint` (flags owned by [`../olares-chart/SKILL.md`](../olares-chart/SKILL.md)); everything else is git/GitHub plus a metadata/image/PR checklist that `lint` does **not** enforce. So the work is: take a chart that already installs and runs locally, layer on market-ready metadata + multi-arch images, then open a PR that GitBot will gate and a human will merge. You own the chart edits and PR authoring; you never run on-chain or wallet writes for the developer.
+
 ## What publishing adds on top of a working local chart
 
 A chart that installs and runs locally is **functionally** done (storage / middleware / entrances / a pullable image are all settled in `olares-chart`). Public distribution adds three layers, none of which `chart lint` enforces:
@@ -61,6 +65,7 @@ flowchart TD
 ## Agent boundaries
 
 - **Do NOT** fork, push, or open PRs on the developer's behalf without explicit consent — these write to their GitHub account.
+- **The fork here is legitimate and required.** Submitting to the public Market is the standard open-source contribution flow: fork [`beclab/apps`](https://github.com/beclab/apps), push a branch, open a PR. This is the *public app catalog*, a different repo from the beclab dev repos the workspace "no-fork, push to `origin`" rule covers — that rule does not apply to `beclab/apps` submissions.
 - **Do NOT** run `did-cli rsa set` (an on-chain, gas-costing write), touch the wallet mnemonic, or handle `rsa-private.pem` for paid apps — guide the user to run those themselves.
 - **Do** verify the chart against the market-ready checklist, author `price.yaml`, wire the manifest, and interpret GitBot labels.
 - Login / token / auth-error recovery: [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md). Upload / install verbs (for the local-validation prerequisite): [`../olares-market/SKILL.md`](../olares-market/SKILL.md).

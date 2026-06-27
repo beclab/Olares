@@ -10,7 +10,7 @@ A paid (pay-to-download) app is **almost identical** to a free market app. Only 
 1. A `price.yaml` at the OAC root.
 2. The `VERIFIABLE_CREDENTIAL` env exposed to the workload so it can read the buyer's purchase credential.
 
-Only pay-to-download is supported today. In-app purchases and subscriptions are not implemented (`products: []`).
+Only pay-to-download is supported. In-app purchases and subscriptions are not implemented (`products: []`).
 
 ## Prerequisites
 

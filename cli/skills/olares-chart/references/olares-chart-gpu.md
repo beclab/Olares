@@ -29,7 +29,7 @@ Watch out for:
    ENV TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0"
    ```
 2. **Arch is amd64.** Olares' `nvidia` GPU mode requires `amd64`, so GPU apps are single-arch: build `--platform linux/amd64` and declare `supportArch: [amd64]` — do NOT multi-arch. (arm64 NVIDIA is the niche `nvidia-gb10` mode.)
-3. **No local smoke test** — a CPU build box can't run the container. Validate on a GPU Olares node (Publish-local on a GPU host).
+3. **No local smoke test** — a CPU build box can't run the container. Validate by deploying to a GPU Olares node (the olares-chart deploy loop, run on a GPU host).
 
 > CUDA driver/toolkit version compatibility is not a concern here — Olares GPU nodes keep the driver current, so the image's CUDA version generally does not need to be pinned down to match the host.
 

@@ -16,6 +16,8 @@ Foundation for every other `olares-cli` skill. Every business verb under `cluste
 
 > **This skill also hosts the cross-skill platform model** in [references/olares-platform.md](references/olares-platform.md) — the userspace storage model, uid-1000 run identity, system-managed `drive/Home` dirs, app/namespace & networking, system middleware, and version/semver. `files` / `chart` / `cluster` link there (one hop) instead of re-describing it. That reference is pure platform model and needs no login.
 
+> **It also hosts the application state machine** in [references/olares-platform-appstate.md](references/olares-platform-appstate.md) — app-service's lifecycle states/transitions, per-state allowed operations, backend fail TTLs, single-download serialization, what `running` actually proves, and why `progress` is unreliable. `market` / `chart` / `doctor` link there instead of re-stating these backend facts. Also pure platform contract, no login.
+
 > **Source of truth for flags & syntax is always `olares-cli profile --help`.** This file only carries what `--help` cannot give: the profile mental model, agent-driven login flow, token-storage backends, refresh semantics, and the error → fix matrix.
 
 ## When to use
@@ -40,6 +42,9 @@ The olares-cli skills ship and install as one suite; each owns a distinct slice.
 | [`olares-search`](../olares-search/SKILL.md) | Full-content search (Desktop "Text Search") over the per-user index: Drive files + Sync libraries | finding a file by its content / keyword |
 | [`olares-chart`](../olares-chart/SKILL.md) | Local chart authoring + deploy to your Olares: from-compose / lint / package, then upload + install | authoring, validating, or deploying your own chart |
 | [`olares-publish`](../olares-publish/SKILL.md) | Public Market distribution: market-ready metadata / multi-arch, the beclab/apps PR, paid apps | listing / submitting / selling an app on the public Market |
+| [`olares-doctor`](../olares-doctor/SKILL.md) | Runtime diagnosis: symptom -> root cause for an app that won't install, won't start, crashes, is `running` but unreachable, or is slow; orchestrates `cluster` / `dashboard` / `market` to gather evidence | an app or the system is misbehaving and you need to find out why — both catalog (`market`) and dev (`chart`) apps hand runtime failures here |
+
+> **The four-skill develop->deploy->debug combo:** porting and running your own app usually loads [`olares-chart`](../olares-chart/SKILL.md) (package + deploy + chart fixes), [`olares-market`](../olares-market/SKILL.md) (lifecycle), this `olares-shared` (platform facts), and [`olares-doctor`](../olares-doctor/SKILL.md) (runtime diagnosis) together. `chart` owns fixes that mean editing your chart; `doctor` owns figuring out the root cause regardless of who deployed the app.
 
 > Host-side maintenance (cluster install, node join, OS upgrade, GPU drivers) is NOT a skill — it's the kubeconfig-based `olares-cli node` / `os` / `gpu` trees, separate from this profile-based suite.
 

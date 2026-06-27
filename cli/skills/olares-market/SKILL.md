@@ -14,7 +14,7 @@ metadata:
 
 **CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli market --help`.**
 
-> **Source of truth for flags is always `olares-cli market <verb> --help`.** This file only carries what `--help` cannot give: source resolution, the lifecycle state machine, OpType-vs-State race safety, the verb index, the `-s`/`-a` matrix, and the "what apps do I have" routing.
+> **Source of truth for flags is always `olares-cli market <verb> --help`.** This file only carries what `--help` cannot give: source resolution, the CLI's OpType-vs-State view of the lifecycle (the state machine itself lives in the appstate reference), OpType-vs-State race safety, the verb index, the `-s`/`-a` matrix, and the "what apps do I have" routing.
 
 > **Platform model:** app namespaces (`<app>-<owner>` vs the admin-only `<app>-shared`) and which system-middleware apps an admin installs are defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md#app-namespace--networking-model).
 
@@ -72,6 +72,8 @@ The market backend serves multiple "sources" of charts. The CLI resolves which o
 
 ## App lifecycle / state machine
 
+> **Backend facts (states, legal transitions, per-state allowed operations, fail TTLs, single-download serialization, `running` semantics, progress) live once in [`../olares-shared/references/olares-platform-appstate.md`](../olares-shared/references/olares-platform-appstate.md).** This section is only the CLI's view of them. Don't re-derive the state machine here.
+
 The backend tracks two orthogonal axes per app: **`State`** (where the row currently is) and **`OpType`** (which mutation is in flight). The CLI groups the full enum into four buckets:
 
 | Bucket | Examples | Meaning |
@@ -81,7 +83,7 @@ The backend tracks two orthogonal axes per app: **`State`** (where the row curre
 | **Terminal failure** | `installFailed`, `upgradeFailed`, `uninstallFailed`, `stopFailed`, `resumeFailed` | Mutation finished with a hard error |
 | **Canceled / cancel-failed** | `*Canceled`, `*CancelFailed` | A `cancel` request landed (or itself failed) |
 
-Each lifecycle verb maps to its own subset of terminal-success buckets — see the lifecycle reference.
+(Examples are illustrative, not exhaustive — the full state enum per bucket is in the [appstate reference](../olares-shared/references/olares-platform-appstate.md#lifecycle-state-machine).) Each lifecycle verb maps to its own subset of terminal-success buckets — see the lifecycle reference.
 
 ## OpType vs State (race-safety)
 
@@ -103,11 +105,14 @@ The same `State` can mean different things depending on which mutation is in fli
 - **Idempotent**: `resume` against an already-`running` row returns immediately with success; `install` against an already-installed row returns immediately with `state=running`. Watcher never hangs on "no-op" mutations.
 - `--watch-iterations` / `--watch-interval` / `--watch-timeout` are **rejected without `--watch`**.
 
-### Don't just wait — diagnose a stuck install
+### Agent watch discipline (don't block on a long watch)
 
-The `--watch` market row is **coarse**: `installing` / `initializing` can show no progress for a long time, because app-service only fast-fails on a few hard pod conditions and otherwise polls a long TTL. **Rule:** let `--watch` run for the first **1-2 minutes**; if the row is still `installing` / `initializing` with no progress, stop waiting and diagnose the app's own pods instead of sitting on the watch.
+`--watch` defaults to a 15-minute timeout, and progressing states have very long backend TTLs (`downloading` is **30 days** — see the appstate reference). A foreground `--watch` can therefore block far longer than an agent should sit idle. Discipline:
 
-For the app-service facts (TTLs, fast-fail conditions, the soft-hang / `Pending` → `Stopping` traps) see [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md#stuck-in-installing--initializing); for the actual pod/log commands see [`../olares-cluster/SKILL.md`](../olares-cluster/SKILL.md).
+1. **Use a short foreground window, not the 15m default.** Pass a small `--watch-timeout` sized to the verb (see [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md#per-op-foreground-watch-windows)): ~30s for `stop`/`cancel`/`resume`/`uninstall`, ~1m for the `install` deploy phase / `upgrade` / `clone`.
+2. **Timeout is NOT failure.** A `--watch` that times out only means "not terminal yet". Don't report failure — switch to polling `market status <app> --watch --watch-interval 5s` (or fire-and-forget + periodic `market status <app>`), or hand off to diagnosis.
+3. **Judge by STATE transitions, never the PROGRESS number** (it is unreliable — appstate reference). A long `downloading` is judged by image-pull progress, not by waiting for terminal.
+4. **When a short window expires with no STATE movement, stop waiting and diagnose** — route to [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) (app stuck / won't start), which orchestrates the pod/log evidence.
 
 ## "What apps do I have?" routing
 

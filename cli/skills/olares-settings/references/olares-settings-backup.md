@@ -51,7 +51,7 @@ echo -n "my-secret-password" | olares-cli settings backup password set my-plan -
 - **Default reads from a TTY without echo.** `--password-stdin` reads once from stdin (newline-terminated; trim newline if your producer adds one).
 - **Losing the password means losing the ability to decrypt existing snapshots.** The upstream cannot recover this password — make sure the user has it stored somewhere safe (password manager) BEFORE the call.
 
-## Plan create / update — out of scope (today)
+## Plan create / update — out of scope
 
 `plans create` and `plans update` are **not implemented yet**. They need either:
 
