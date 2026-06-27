@@ -9,7 +9,9 @@ import (
 	"k8s.io/klog"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
+	"sync"
 
 	bflconst "bytetrade.io/web3os/bfl/pkg/constants"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -562,9 +564,44 @@ func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[str
 	return status, nil
 }
 
-func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
-	var urls []string
+var (
+	appUrlMu    sync.Mutex
+	appUrlSig   string
+	appUrlCache []string
+)
 
+// appUrlSignature returns a stable signature of the inputs that determine the
+// application entrance URLs: the set of applications and the set of users (whose
+// zone annotation feeds the URLs). Any change to an app spec or a user bumps its
+// resourceVersion, so this detects when GetApplicationUrlAll must recompute.
+func appUrlSignature(apps []appv1alpha1.Application, users []*unstructured.Unstructured) string {
+	appSigs := make([]string, 0, len(apps))
+	for i := range apps {
+		appSigs = append(appSigs, apps[i].Name+":"+apps[i].ResourceVersion)
+	}
+	sort.Strings(appSigs)
+
+	userSigs := make([]string, 0, len(users))
+	for _, u := range users {
+		userSigs = append(userSigs, u.GetName()+":"+u.GetResourceVersion())
+	}
+	sort.Strings(userSigs)
+
+	var b strings.Builder
+	b.WriteString("apps\n")
+	for _, s := range appSigs {
+		b.WriteString(s)
+		b.WriteByte('\n')
+	}
+	b.WriteString("users\n")
+	for _, s := range userSigs {
+		b.WriteString(s)
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
+func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	clientset, err := GetAppClientSet()
 	if err != nil {
 		klog.Error("get app clientset error, ", err)
@@ -576,19 +613,44 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		klog.Error("list applications error, ", err)
 		return nil, err
 	}
-	config, err := ctrl.GetConfig()
+
+	dynamicClient, err := GetDynamicClient()
 	if err != nil {
+		klog.Error("get dynamic client error, ", err)
 		return nil, err
 	}
-	uc, err := iamv1alpha2.NewClient(config)
+	users, err := ListUsers(ctx, dynamicClient)
 	if err != nil {
+		klog.Error("list users error, ", err)
 		return nil, err
 	}
+
+	// Skip the per-app entrance URL recompute (each app otherwise triggers
+	// GetUserZone/GenEntranceURL API calls) when neither the apps nor the users
+	// changed since the last successful computation.
+	sig := appUrlSignature(apps.Items, users)
+	appUrlMu.Lock()
+	if appUrlCache != nil && sig == appUrlSig {
+		cached := make([]string, len(appUrlCache))
+		copy(cached, appUrlCache)
+		appUrlMu.Unlock()
+		return cached, nil
+	}
+	appUrlMu.Unlock()
+
+	// Owner zone is just the user's zone annotation, so read it from the user
+	// list instead of building an IAM REST client and doing a per-app lookup.
+	zoneMap := make(map[string]string, len(users))
+	for _, u := range users {
+		zoneMap[u.GetName()] = u.GetAnnotations()[iamv1alpha2.UserAnnotationZoneKey]
+	}
+
+	urls := make([]string, 0)
 	for _, app := range apps.Items {
 		var entrances []appcfg.Entrance
 		var err error
-		zone, err := iamv1alpha2.GetUserZone(ctx, uc.Users, app.Spec.Owner)
-		if err != nil {
+		zone, ok := zoneMap[app.Spec.Owner]
+		if !ok {
 			continue
 		}
 		if !appv1alpha1.IsShared(&app) {
@@ -621,6 +683,11 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 			urls = append(urls, entrance.URL)
 		}
 	}
+
+	appUrlMu.Lock()
+	appUrlSig = sig
+	appUrlCache = urls
+	appUrlMu.Unlock()
 
 	return urls, nil
 }
