@@ -111,7 +111,7 @@ Once the app's container is the problem (it pulled, scheduled, and started but m
 
 After the chart fix: re-lint, bump the version, re-package, re-upload, and re-apply with the right verb (§3 / §5).
 
-## 4c. Upgrade recovery: `stopped` after upgrade
+### 4c. Upgrade recovery: `stopped` after upgrade
 
 An upgrade can leave the **market row** in `state=stopped` while the **workload** is actually `Running`. Two paths land in `stopped`: upgrading an **already-stopped** app re-renders the chart at `replicas=0` and intentionally returns to `stopped` (by design); and **canceling an in-flight** op (`initializing` / `upgrading` / `applyingEnv` / `resuming`) only *stops* the app — so if a crashing initContainer was fixed and the workload later came up on its own, the row can read `stopped` while the pod is `1/1 Running`:
 
