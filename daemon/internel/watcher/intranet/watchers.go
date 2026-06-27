@@ -115,13 +115,15 @@ func (w *applicationWatcher) Watch(ctx context.Context) {
 			w.lastAppliedSig = sig
 			klog.V(8).Info("Intranet server config reloaded")
 		} else {
-			// Start the intranet server
+			// Start the intranet server. Start only brings up the DNS/proxy/DSR
+			// goroutines; the DSR backend, VIP and reconfigure are applied by
+			// Reload. Leave lastAppliedSig empty so the next tick performs that
+			// first Reload instead of treating the server as fully configured.
 			err = w.intranetServer.Start(o)
 			if err != nil {
 				klog.Error("start intranet server error, ", err)
 				return
 			}
-			w.lastAppliedSig = sig
 			klog.Info("Intranet server started")
 		}
 	}
