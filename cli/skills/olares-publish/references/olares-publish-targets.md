@@ -1,6 +1,6 @@
 # Market-ready requirements: what public distribution demands
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first, and confirm the app already installs and reaches `running` on your Olares via [`../../olares-chart/references/olares-chart-deploy.md`](../../olares-chart/references/olares-chart-deploy.md).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first, and confirm the app already installs and reaches `running` on your Olares via the [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md) deploy flow.
 > This file is the requirements matrix + checklist for a **public Market** listing. It assumes the chart is already functionally complete (storage / middleware / entrances / a pullable image) from `olares-chart`.
 
 ## What local deploy gives you vs. what the Market demands
@@ -57,7 +57,7 @@ Then proceed to [olares-publish-submit.md](olares-publish-submit.md).
 
 Common path: get the app running locally first (in `olares-chart`), then polish for public listing.
 
-1. Confirm local install already reached `running` ([../../olares-chart/references/olares-chart-deploy.md](../../olares-chart/references/olares-chart-deploy.md)).
+1. Confirm local install already reached `running` (via the [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md) deploy flow).
 2. Work through the market-ready checklist above.
 3. Rebuild images multi-arch if currently single-arch.
 4. Add `spec.supportArch` matching the image platforms.

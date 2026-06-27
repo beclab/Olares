@@ -121,7 +121,7 @@ Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `work
 Two image-inventory commands ride on top of this:
 
 - `cluster workload images [IMAGE]` follows the same pagination contract. An IMAGE-argument lookup always full-scans the cluster, but the plain listing is NOT full-cluster unless `--all` is set. See [references/olares-cluster-workload.md](references/olares-cluster-workload.md).
-- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. It is owned by [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md); its completeness/coverage caveats live in [`../olares-doctor/references/olares-doctor-image.md`](../olares-doctor/references/olares-doctor-image.md).
+- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. It is owned by [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md), which routes to its image-diagnosis reference for the completeness/coverage caveats.
 
 ### `--watch` / `--follow` semantics (uniform)
 
@@ -135,7 +135,7 @@ Two image-inventory commands ride on top of this:
 
 ## Common errors
 
-| Error message starts with | Meaning | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
 | `server rejected the request (HTTP 401: ...); please run: olares-cli profile login --olares-id <id>` | Auto-refresh failed, OR refreshed token still rejected | Run the suggested `profile login` |
 | `server rejected the request (HTTP 403: ...)` | The active profile's role can't perform this | `cluster context --refresh` to confirm the cached role matches the server. If still 403, the user genuinely lacks permission |

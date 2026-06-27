@@ -3,6 +3,12 @@
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
 > The rest of the skill assumes the upstream maps onto a web app with an HTTP entrance. Many don't. When the upstream ships no compose/chart and the deployment shape is unclear, **match it to an archetype below, apply the recipe, then continue with Refine -> lint** ([olares-chart-manifest.md](olares-chart-manifest.md)).
 
+## Contents
+
+- [Archetype: Headless CLI / service (no web UI)](#archetype-headless-cli--service-no-web-ui)
+- [Archetype: GUI desktop application (browser-streamed)](#archetype-gui-desktop-application-browser-streamed)
+- [Adding an archetype](#adding-an-archetype)
+
 ## Archetype: Headless CLI / service (no web UI)
 
 A tool you operate from a command line, or a daemon exposing an API, that ships **no GUI**. The Olares challenge: an app must have at least one entrance, but there is no web page to point at.
@@ -70,7 +76,7 @@ metadata:
   labels:
     io.kompose.service: terminal
 spec:
-  replicas: 1
+  replicas: {{ .Values.workloads.terminal.replicaCount }}
   selector:
     matchLabels:
       io.kompose.service: terminal
@@ -178,7 +184,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels: { io.kompose.service: <app> }
 spec:
-  replicas: 1
+  replicas: {{ .Values.workloads.<app>.replicaCount }}
   strategy: { type: Recreate }
   selector:
     matchLabels: { io.kompose.service: <app> }

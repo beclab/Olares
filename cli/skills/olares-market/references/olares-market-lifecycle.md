@@ -18,6 +18,15 @@ The mutating verb family. Every verb here returns an `OperationResult` JSON shap
 }
 ```
 
+## Contents
+
+- [Source-aware vs source-implicit verbs](#source-aware-vs-source-implicit-verbs)
+- [`install`](#install) · [`upgrade`](#upgrade) · [`uninstall`](#uninstall) · [`clone`](#clone) · [`stop` / `resume`](#stop--resume) · [`cancel`](#cancel)
+- [`--watch` interaction with each verb](#--watch-interaction-with-each-verb)
+- [Agent best practices](#agent-best-practices)
+- [Stuck in installing / initializing](#stuck-in-installing--initializing)
+- [Common errors](#common-errors)
+
 ## Source-aware vs source-implicit verbs
 
 | Verb | `-s / --source` | Why |
@@ -175,7 +184,7 @@ When STATE is `downloading`, the app is pulling images and may legitimately stay
 
 ### Verifying an app is actually healthy
 
-`state=running` only proves each entrance is **TCP-reachable**, not that the app serves correctly (backend fact: [`../../olares-shared/references/olares-platform-appstate.md`](../../olares-shared/references/olares-platform-appstate.md#what-running-really-means-tcp-reachable-not-healthy)). For a quick post-install confidence check: `state=running` (necessary, not sufficient) -> pod Ready and `RESTARTS` stable (`cluster application status <ns>`) -> entrance returns a real HTTP response -> still stable a few checks later. If any rung fails (running-but-unreachable, crashloop, soft-hang), it's a runtime-health problem — the full ladder + triage is [`../../olares-doctor/references/olares-doctor-running-unhealthy.md`](../../olares-doctor/references/olares-doctor-running-unhealthy.md).
+`state=running` only proves each entrance is **TCP-reachable**, not that the app serves correctly ([what `running` really means](../../olares-shared/references/olares-platform-appstate.md#what-running-really-means-tcp-reachable-not-healthy)). Treat `running` as necessary-but-not-sufficient. If a freshly-installed app is `running` but anything looks off (running-but-unreachable, crashloop, soft-hang), hand it to [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md), which owns the full health ladder and triage.
 
 ## Agent best practices
 
@@ -190,9 +199,9 @@ When STATE is `downloading`, the app is pulling images and may legitimately stay
 
 ## Stuck in installing / initializing
 
-A long `installing` / `initializing` is NOT a failure — app-service polls a long TTL before giving up. Discipline: let a **short window** (~1m, post-download) run; if STATE hasn't moved, **stop watching passively and diagnose**. Two non-obvious traps make `--watch` misleading here (full backend detail in the appstate reference): a **soft hang** (pod Running but never serve-ready) is never fast-failed, and a **scheduling failure** (pod `Pending`) ends in `stopped`, NOT `installFailed`.
+A long `installing` / `initializing` is NOT a failure — app-service polls a long TTL before giving up, and two non-obvious traps make `--watch` misleading here (a soft-hang is never fast-failed; a scheduling failure ends in `stopped`, not `installFailed` — see [the appstate reference](../../olares-shared/references/olares-platform-appstate.md#two-non-obvious-terminal-behaviors)). Operational discipline: let a **short window** (~1m, post-download) run; if STATE hasn't moved, **stop watching passively and diagnose**.
 
-**Hand stuck/won't-start installs to [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** ([app-stuck](../../olares-doctor/references/olares-doctor-app-stuck.md)) — it owns the symptom→root-cause routing (queue vs stalled download vs scheduling failure vs soft-hang), the namespace resolution, and the exact pod/log/event commands. This reference no longer duplicates that triage.
+**Hand stuck/won't-start installs to [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing (queue vs stalled download vs scheduling failure vs soft-hang), the namespace resolution, and the exact pod/log/event commands. This reference does not duplicate that triage.
 
 ## Common errors
 

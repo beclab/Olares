@@ -1,6 +1,6 @@
 # Environment variables — system / user / app level
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md). Env wiring is the configuration half of refinement §3 in [olares-chart-manifest.md](olares-chart-manifest.md) (middleware values are siblings of this).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md). Env wiring is the configuration that accompanies the §3 Middleware & dependencies area of [olares-chart-manifest.md](olares-chart-manifest.md) (middleware values are its sibling).
 
 Olares exposes configuration to an app through env vars at **three levels**. The app declares only the app-level ones (in `OlaresManifest.yaml` `envs[]`); the other two are platform-managed and consumed by reference.
 

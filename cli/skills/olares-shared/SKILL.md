@@ -136,7 +136,7 @@ Across goroutines AND across concurrent `olares-cli` processes, `/api/refresh` i
 
 ## Auth error recovery table
 
-| Error message (excerpt) | Meaning | Fix |
+| Symptom | Cause | Fix |
 |-------------------------|---------|-----|
 | `refresh token for <id> became invalid at <ts>` | `/api/refresh` returned 401/403 — the grant is dead | `olares-cli profile login --olares-id <id>` |
 | `no access token for <id>` | Profile selected but keychain has no entry | `olares-cli profile login` or `profile import` |
