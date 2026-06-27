@@ -5,7 +5,7 @@
 
 ## Before you start
 
-**The app must already run locally first.** Upload + install on the developer's Olares and confirm `running` — see [`../../olares-chart/references/olares-chart-deploy.md`](../../olares-chart/references/olares-chart-deploy.md). Market submission without a working install wastes GitBot cycles and reviewer time.
+**The app must already run locally first.** Upload + install on the developer's Olares and confirm `running` — see the [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md) deploy flow. Market submission without a working install wastes GitBot cycles and reviewer time.
 
 **Market-ready checklist must be complete** — see [olares-publish-targets.md](olares-publish-targets.md#market-ready-checklist). In particular:
 
@@ -126,9 +126,9 @@ Host assets yourself or use the **Olares Market image hosting** service (pick ap
 
 Submit these via an `UPDATE` PR with a version bump.
 
-## Troubleshooting GitBot rejection
+## Common errors (GitBot rejection)
 
-| Symptom | Likely cause | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
 | Invalid categories | stub `Utilities` only, or wrong enum value | Add both 1.11 + 1.12 category values per [manifest docs](https://docs.olares.com/developer/develop/package/manifest.html#categories) |
 | Name/version mismatch in title | PR title folder or version != chart | Align PR title with folder name and `Chart.yaml` / `metadata.version` |

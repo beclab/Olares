@@ -57,7 +57,7 @@ For every area, **start with `olares-cli settings <area> --help`**. References b
 | `gpu` | `olares-cli settings gpu --help` (read-only `list`; **legacy, 1.12.5 only** HAMI `/api/gpu/list` — **removed in 1.12.6**: the CLI fails fast there and points at `compute list`) |
 | `compute` | `olares-cli settings compute --help` (**1.12.6+ new "Accelerator"**: `list`, `unbind <app>`, `set-type <node> <device>`; version-gated, replaces `gpu list`. `<node>`/`<device>` come from `list`'s node header + DEVICE-ID column) |
 | `video` | `olares-cli settings video --help` (read-only `config get`) |
-| `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list/add/rm`). `dirs` = the **full-content** index directories (filenames are indexed broadly by default; full-text defaults to Drive `/Documents/` only — add more with `dirs add`). `status` shows the index `Status` plus a full-text-extraction `Failures` count (`-o json` for per-file detail). Exclude-pattern view/edit is SPA-only (the CLI's `settings search excludes` is not wired up). Index coverage model lives in [`olares-search`](../olares-search/SKILL.md) |
+| `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list/add/rm`). `dirs` = the **full-content** index directories; `status` shows the index `Status` plus a full-text-extraction `Failures` count (`-o json` for per-file detail). Exclude-pattern view/edit is SPA-only (the CLI's `settings search excludes` is not wired up). The index coverage model (what's indexed by filename vs full-text, and the defaults) lives once in [`olares-search`](../olares-search/SKILL.md) |
 | `restore` | `olares-cli settings restore --help` (read-only `plans list`) |
 | `advanced` | `olares-cli settings advanced --help` (read-only `status`, `registries list`, `images list`, `env (system|user) list`) |
 
@@ -148,7 +148,7 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 
 ## Common errors
 
-| Error | Cause | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
 | `this command needs role "<R>" or higher to <verb>, but profile "<id>" is cached as "<r>"` | Cached role below the verb's floor | If your role on the server changed: `olares-cli profile whoami --refresh`. Otherwise ask owner to grant the role |
 | `HTTP 403 while attempting to <verb>` (with refresh hint) | Server rejected even though cache said OK — stale role cache | `olares-cli profile whoami --refresh`, retry the verb |

@@ -169,7 +169,7 @@ For flags, examples, and wire shapes, **always start with `olares-cli files <ver
 
 ## Common errors
 
-| Error fragment | Meaning | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
 | `is the volume listing layer (read-only); point at a real volume, e.g. external/<node>/<volume>/<sub>/` | Quirk #3 — bare `external/<node>/` write attempt | Add the `<volume>` segment |
 | `refusing to mkdir external/<node>/<X>/: depth-1 entries under external/<node>/ are mounted volumes` | Quirk #3 depth-1 — would create a phantom volume | Mount the volume via LarePass; target an existing one |
