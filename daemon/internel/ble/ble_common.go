@@ -34,6 +34,7 @@ func (s *service) scanInterval() time.Duration {
 func (s *service) Start() {
 	go func() {
 		defer s.cancel()
+		s.scanOnce()
 		for {
 			timer := time.NewTimer(s.scanInterval())
 			select {
@@ -42,14 +43,18 @@ func (s *service) Start() {
 				return
 
 			case <-timer.C:
-				s.getAPList()
-				s.getTerminusInfo()
-				if s.update != nil {
-					s.update()
-				}
+				s.scanOnce()
 			}
 		}
 	}()
+}
+
+func (s *service) scanOnce() {
+	s.getAPList()
+	s.getTerminusInfo()
+	if s.update != nil {
+		s.update()
+	}
 }
 
 func (s *service) Stop() {
