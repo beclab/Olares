@@ -89,6 +89,9 @@ func GetAppClientSet() (versioned.Clientset, error) {
 	return *client, nil
 }
 
+// IsTerminusInitialized reports whether the owner user finished initialization.
+// The client argument is retained for signature compatibility; user reads now
+// go through the shared informer cache.
 func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initialized bool, failed bool, err error) {
 	users, err := listUsersRaw(ctx)
 	if err != nil {
@@ -139,6 +142,9 @@ func IsTerminusInitializing(ctx context.Context, client dynamic.Interface) (bool
 	return status != string(bflconst.Completed), nil
 }
 
+// IsTerminusRunning reports whether all key pods are ready. The client argument
+// is retained for signature compatibility; pod reads now go through the shared
+// informer cache.
 func IsTerminusRunning(ctx context.Context, client kubernetes.Interface) (bool, error) {
 	pods, err := ListPods(ctx)
 	if err != nil {
@@ -381,6 +387,10 @@ func GetAdminUser(ctx context.Context, client dynamic.Interface) (*unstructured.
 	return u[0], nil
 }
 
+// ListUsers returns user CRs matching the given filters. The client argument is
+// retained for signature compatibility; reads come from the shared informer
+// cache. The returned objects are shared read-only cache references, so callers
+// must DeepCopy before mutating.
 func ListUsers(ctx context.Context, client dynamic.Interface, filters ...Filter) ([]*unstructured.Unstructured, error) {
 	users, err := listUsersRaw(ctx)
 	if err != nil {
