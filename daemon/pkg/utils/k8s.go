@@ -646,6 +646,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	}
 
 	urls := make([]string, 0)
+	hadError := false
 	for _, app := range apps.Items {
 		var entrances []appcfg.Entrance
 		var err error
@@ -657,6 +658,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 			entrances, err = appcfg.GenEntranceURL(ctx, &app)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
+				hadError = true
 				continue
 			}
 			if zone == "" {
@@ -675,6 +677,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 			entrances, err = BatchGenSharedAppEntranceURL(ctx, &app)
 			if err != nil {
 				klog.Error("generate shared application entrance url error, ", err, ", ", app.Name)
+				hadError = true
 				continue
 			}
 		}
@@ -684,10 +687,16 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		}
 	}
 
-	appUrlMu.Lock()
-	appUrlSig = sig
-	appUrlCache = urls
-	appUrlMu.Unlock()
+	// Only memoize a complete computation. If any app failed to generate its
+	// entrance URLs, return the best-effort result for this tick but leave the
+	// cache untouched so the next tick retries instead of pinning a partial list
+	// until an app or user resourceVersion changes.
+	if !hadError {
+		appUrlMu.Lock()
+		appUrlSig = sig
+		appUrlCache = urls
+		appUrlMu.Unlock()
+	}
 
 	return urls, nil
 }
