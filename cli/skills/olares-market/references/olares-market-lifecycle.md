@@ -18,6 +18,15 @@ The mutating verb family. Every verb here returns an `OperationResult` JSON shap
 }
 ```
 
+## Contents
+
+- [Source-aware vs source-implicit verbs](#source-aware-vs-source-implicit-verbs)
+- [`install`](#install) · [`upgrade`](#upgrade) · [`uninstall`](#uninstall) · [`clone`](#clone) · [`stop` / `resume`](#stop--resume) · [`cancel`](#cancel)
+- [`--watch` interaction with each verb](#--watch-interaction-with-each-verb)
+- [Agent best practices](#agent-best-practices)
+- [Stuck in installing / initializing](#stuck-in-installing--initializing)
+- [Common errors](#common-errors)
+
 ## Source-aware vs source-implicit verbs
 
 | Verb | `-s / --source` | Why |
