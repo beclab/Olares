@@ -53,15 +53,17 @@ func runSyncSearch(ctx context.Context, f *cmdutil.Factory, keyword string, o *s
 		return err
 	}
 
+	// The sync proxy (user-service -> files /api/search/sync_search/) only
+	// forwards the query and ignores offset/limit, so paginate client-side to
+	// keep --offset/--limit honest.
 	body := map[string]interface{}{
-		"query":  keyword,
-		"offset": o.offset,
-		"limit":  o.limit,
+		"query": keyword,
 	}
 	var rawRows []json.RawMessage
 	if err := doEnvelope(ctx, doer, "POST", "/api/search/sync", body, &rawRows); err != nil {
 		return err
 	}
+	rawRows = paginateRaw(rawRows, o.offset, o.limit)
 
 	items, err := decodeResultRows(rawRows)
 	if err != nil {
