@@ -22,8 +22,9 @@ func newDriveCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "Full-content search of user Drive files",
 		Long: `Search the per-user search3 index for Drive files.
 
-Drive search is session-based: the CLI bootstraps /api/search/init, then
-pages deeper results via /api/search/more using the same session id.
+Drive search is session-based: the CLI bootstraps /api/search/init and, only
+when the requested window runs past the first page, pages deeper via
+/api/search/more using the same session id.
 
 Note: a single search resolves at most ~50 hits server-side, so --limit is
 effectively capped around 50.

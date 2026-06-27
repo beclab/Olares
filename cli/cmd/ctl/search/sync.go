@@ -20,6 +20,8 @@ func newSyncCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "Search Seafile/Sync libraries",
 		Long: `Search the user's Sync (Seafile) libraries via /api/search/sync.
 
+--offset/--limit are applied client-side; the backend returns the full result set.
+
 Examples:
   olares-cli search sync notes
   olares-cli search sync invoice --limit 50
