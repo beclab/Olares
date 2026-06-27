@@ -92,9 +92,4 @@ For `gpu tasks <ref>`, `<ref>` accepts EITHER the TASK column (`name`) OR the PO
 
 ## Common errors
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `not_olares_one` empty envelope on `fan *` | Hard gate | Don't ask for fan data on this device |
-| `(advisory) ...` line on stderr from `gpu *` | Soft gate; data still returned | Surface the note to the user as informational |
-| `--user requires platform-admin role` | Non-admin tried `--user <other>` | Use the active profile only |
-| 404 / 5xx on `overview gpu *` | HAMI absent or unhealthy (`no_vgpu_integration` / `vgpu_unavailable`) | Branch on `meta.empty_reason` |
+The fan / GPU gate, `--user` admin-only, and HAMI-absent errors are in the consolidated [Common errors](../SKILL.md#common-errors) table in the parent skill.

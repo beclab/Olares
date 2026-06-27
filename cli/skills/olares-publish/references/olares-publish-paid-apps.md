@@ -72,7 +72,7 @@ The app reads the buyer's purchase credential from an injected env var. Add it t
   value: "{{ .Values.olaresEnv.VERIFIABLE_CREDENTIAL }}"
 ```
 
-Declare it in `OlaresManifest.yaml` (env rules — [`../../olares-chart/references/olares-chart-env.md`](../../olares-chart/references/olares-chart-env.md)):
+Declare it in `OlaresManifest.yaml` (env rules — see the env reference under [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md)):
 
 ```yaml
 envs:
