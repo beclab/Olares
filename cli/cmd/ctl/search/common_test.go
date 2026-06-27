@@ -2,43 +2,58 @@ package search
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 )
 
 func TestPaginateRaw(t *testing.T) {
 	t.Parallel()
 
+	// Each row encodes its own index so the test can assert the window is
+	// sliced at the right offset, not merely that the count matches.
 	rows := func(n int) []json.RawMessage {
 		out := make([]json.RawMessage, n)
 		for i := range out {
-			out[i] = json.RawMessage(`{}`)
+			out[i] = json.RawMessage(strconv.Itoa(i))
 		}
 		return out
 	}
 
 	cases := []struct {
-		name   string
-		total  int
-		offset int
-		limit  int
-		want   int
+		name      string
+		total     int
+		offset    int
+		limit     int
+		wantFirst int // index of the first returned row; -1 when empty
+		wantLen   int
 	}{
-		{"limit smaller than total", 20, 0, 10, 10},
-		{"limit larger than total", 5, 0, 50, 5},
-		{"offset past end", 5, 10, 20, 0},
-		{"offset at end", 5, 5, 20, 0},
-		{"offset with remaining window", 30, 20, 20, 10},
-		{"offset plus limit within total", 30, 5, 10, 10},
-		{"empty input", 0, 0, 20, 0},
+		{"limit smaller than total", 20, 0, 10, 0, 10},
+		{"limit larger than total", 5, 0, 50, 0, 5},
+		{"offset past end", 5, 10, 20, -1, 0},
+		{"offset at end", 5, 5, 20, -1, 0},
+		{"offset with remaining window", 30, 20, 20, 20, 10},
+		{"offset plus limit within total", 30, 5, 10, 5, 10},
+		{"empty input", 0, 0, 20, -1, 0},
 	}
 
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := paginateRaw(rows(tc.total), tc.offset, tc.limit)
-			if len(got) != tc.want {
+			if len(got) != tc.wantLen {
 				t.Fatalf("paginateRaw(total=%d, offset=%d, limit=%d) = %d rows, want %d",
-					tc.total, tc.offset, tc.limit, len(got), tc.want)
+					tc.total, tc.offset, tc.limit, len(got), tc.wantLen)
+			}
+			for k, raw := range got {
+				wantIdx := tc.wantFirst + k
+				var gotIdx int
+				if err := json.Unmarshal(raw, &gotIdx); err != nil {
+					t.Fatalf("row %d: decode %s: %v", k, raw, err)
+				}
+				if gotIdx != wantIdx {
+					t.Fatalf("paginateRaw(total=%d, offset=%d, limit=%d): row %d = index %d, want %d",
+						tc.total, tc.offset, tc.limit, k, gotIdx, wantIdx)
+				}
 			}
 		})
 	}
