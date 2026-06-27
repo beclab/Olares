@@ -195,7 +195,7 @@ olares-cli market clone llamacppllmbasev3 -s upload \
 
 - `templateOnly` apps are created via `clone` (the CLI sends `templateClone:true` on 1.12.6+); `clone` mints a per-instance name and `--watch` tracks it. Single local test instance can also use `market install <base> -s upload --env ...`.
 - `lint` the chart first if you edited it: `olares-cli chart lint ./<base>`.
-- A long `downloading` state is the multi-GB engine image pull (then the model), not a hang — watch byte progress + speed via the `image-service` logs ([olares-chart-deploy.md](olares-chart-deploy.md) §3).
+- A long `downloading` state is the multi-GB engine image pull (then the model), not a hang — watch byte progress + speed via the `image-service` logs ([`../../olares-doctor/references/olares-doctor-app-stuck.md`](../../olares-doctor/references/olares-doctor-app-stuck.md)).
 
 ## 7. Manage / switch the model
 

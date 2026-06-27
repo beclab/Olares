@@ -26,7 +26,7 @@ Populated in `BuildBaseHelmValues` for every install (mostly from app-service's 
 | `.Values.isAdmin` | `true` if the owner is an admin | `true` \| `false` |
 | `.Values.admin` | admin username (rewritten to the owner of an already-installed cluster-scoped instance when present) | free-form |
 | `.Values.sysVersion` | running Olares version, from the `Terminus` CR — see [platform.md](../../olares-shared/references/olares-platform.md) (version model) | semver, e.g. `1.12.6` |
-| `.Values.GPU.Type` / `.Values.gpu` | selected GPU flavour | `cpu` \| `nvidia` \| `amd-gpu` \| `amd-apu` \| `strix-halo` \| `nvidia-gb10` \| `apple-m` \| `mthreads-m1000` — the `spec.accelerator` mode names in [olares-chart-accelerator.md](olares-chart-accelerator.md) |
+| `.Values.GPU.Type` / `.Values.gpu` | selected GPU flavour the platform injected at install | `cpu` \| `nvidia` \| `amd-gpu` \| `amd-apu` \| `strix-halo` \| `nvidia-gb10` \| `apple-m` \| `mthreads-m1000` — the runtime flavour set is a **superset** of the `lint`-accepted `spec.accelerator` modes in [olares-chart-accelerator.md](olares-chart-accelerator.md) (some real node flavours aren't valid manifest modes) |
 | `.Values.GPU.Cuda` | CUDA version (`OLARES_SYSTEM_CUDA_VERSION`) | version string, may be empty on non-NVIDIA |
 | `.Values.cluster.arch` | node CPU arch | `amd64` \| `arm64` |
 | `.Values.nodes` | per-node hardware metadata; advanced, rarely templated. Each entry: `cudaVersion`, `cpu[]` (`coreNumber`/`arch`/`frequency`/`model`/`modelName`/`vendor`), `memory.total`, `gpus[]` (`vendor`/`arch`/`model`/`memory`/`modelName`) | list of NodeInfo |

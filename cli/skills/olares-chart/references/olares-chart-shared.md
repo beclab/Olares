@@ -39,7 +39,7 @@ spec:
       limitedMemory: 40Gi
       requiredGPUMemory: 1Gi
       limitedGPUMemory: 24Gi
-    - mode: strix-halo
+    - mode: apple-m
       # ...
 permission:
   appData: true

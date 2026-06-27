@@ -30,6 +30,10 @@ metadata:
 
 > **Finding files by name/content** (and what the index covers — filenames everywhere vs. full-text only in `/Documents/`) lives in [`olares-search`](../olares-search/SKILL.md); configure which directories get full-text indexing via `settings search dirs` in [`olares-settings`](../olares-settings/SKILL.md).
 
+## Mental model
+
+`files` is an **addressing layer** over the platform storage areas (which the [platform model](../olares-shared/references/olares-platform.md#userspace-storage-model) owns): you name a resource with a 3-segment frontend path and call a verb. Almost every surprise traces back to one of four things, so internalize them before reaching for a verb — (1) the **3-segment path** `fileType/extend[/subPath]` and which namespaces each verb accepts, (2) the **trailing-slash** dir-vs-file convention, (3) the **5 client-side quirks** that you respect rather than work around, and (4) the **>= 1.12.6 version gate** on the archive / `nfs` / `drive/Common` surface. Everything else is per-verb `--help`.
+
 ## Core concept: the 3-segment frontend path
 
 Every resource on the per-user files-backend is addressed by:
@@ -163,7 +167,7 @@ For flags, examples, and wire shapes, **always start with `olares-cli files <ver
 | `nfs` | [references/olares-files-nfs.md](references/olares-files-nfs.md) | Mount → `external/<node>/<entry>/`; bare host triggers export discovery; no credentials; shares the smb favorites book. Needs >= 1.12.6 |
 | `repos` | `olares-cli files repos --help` | List / create / rename / rm Seafile libraries; repo_id is the `<extend>` segment |
 
-## Common errors (cross-verb)
+## Common errors
 
 | Error fragment | Meaning | Fix |
 |---|---|---|

@@ -77,62 +77,47 @@ olares-cli market install <app> -s upload --version <version> --watch -o json
   olares-cli market install <app> -s upload --version <version> --watch -o json
   ```
 
-### Watch a slow image pull (progress + speed)
-
-A `--watch` that sits in `downloading` for minutes is usually a **healthy but large image pull** (multi-GB AI / engine images — e.g. `ollama/ollama` is ~3.4GB), not a hang. `market list --mine` only shows the coarse state; byte-level progress + speed come from the per-node `image-service` DaemonSet (it pulls via containerd and logs each layer):
-
-```bash
-olares-cli cluster pod list -n os-framework | grep image-service        # one pod per node
-olares-cli cluster pod logs os-framework/<image-service-pod> -f | grep -E "progress=|downloading,ref:"
-```
-
-- `download image <ref> progress=<pct>, imageSize=<bytes>, offset=<bytes>` is the whole-image percent; `status: downloading,ref: layer-... offset:/Total:` is the active layer. Sample `offset` across two ticks ÷ the time gap = bytes/s. A **flat `offset` over many ticks = a stalled pull** (registry / mirror / network), not a slow one — go check the mirror / connectivity.
-- The same offset/total is mirrored into the `imagemanagers` CRD that drives the install %: on the host, `kubectl -n os-framework get imagemanagers -o yaml` (match the entry to your app instance) shows `.status.conditions[node][image]{offset,total}` without scraping logs.
-- The **model weights** download (engine pulling the model *after* its image is up) is a separate phase, NOT in image-service — watch it on the app's own llm-init container: `cluster pod logs <ns>/<app-pod> -c llm-init` or its `/api/progress` entrance.
-
 ### Don't just wait — diagnose the app's own pods in parallel
 
-The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal. If you can multitask, kick off `market install ... --watch` AND, in parallel, watch the app's own workload directly — don't wait for app-service to flip the row.
+The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal, and a crashlooping main container is NOT fast-failed for several minutes (the 5-minute `hasUnrecoverablePod` grace). If you can multitask, kick off `market install ... --watch` AND, in parallel, inspect the app's own workload directly rather than waiting for the row to flip.
 
-A crashlooping **main** container is NOT fast-failed while the row reads `initializing`. After the install scale-up, app-service moves the app to `Initializing` and polls **entrance TCP reachability** every 1s in `WaitForLaunch` (`framework/app-service/pkg/appstate/initializing_app.go:82` → `framework/app-service/pkg/appinstaller/helm_ops_install.go:1008`). It only gives up on a crashloop once `hasUnrecoverablePod` sees `CrashLoopBackOff` with `RestartCount >= 5` (`helm_ops_install.go:1118`, threshold `crashLoopRestartThreshold`) AND that condition persists past a **5-minute** grace (`unrecoverableGrace`, `helm_ops_install.go:1067`). So `initializing` legitimately persists for several minutes while the container is already CrashLoopBackOff. The fast signal is the pod's own container status + logs, not the market row.
+**The runtime diagnosis itself now lives in [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing shared by catalog and dev apps:
 
-The app namespace is `<app>-<owner>` (e.g. `pdfextractkit-pptest03`). Catch the crash early:
+- A slow vs **stalled** image pull (byte-level progress from the per-node `image-service` DaemonSet / `imagemanagers` CRD; model-weights are a separate phase) → [olares-doctor-app-stuck.md](../../olares-doctor/references/olares-doctor-app-stuck.md).
+- A crashlooping / non-starting container (catch it early via `restartCount` / `state.waiting.reason`, read `--previous` logs) → [olares-doctor-app-crash.md](../../olares-doctor/references/olares-doctor-app-crash.md).
+- `running` but the entrance is unreachable / 504 → [olares-doctor-running-unhealthy.md](../../olares-doctor/references/olares-doctor-running-unhealthy.md).
 
-```bash
-# Container status of the app's pod — watch the MAIN container.
-olares-cli cluster pod list -n <app>-<owner> -o json   # status.containerStatuses[].{ready,restartCount,state}
-```
+Doctor diagnoses the root cause; **for a chart you author, it points back here** — the fix is a manifest/template edit (next section), then re-lint + re-deploy.
 
-- `restartCount` climbing or `state.waiting.reason == CrashLoopBackOff` on the main container = **start diagnosing now**, don't wait out the grace window.
+## 4. Diagnose: deploy-pipeline logs (chart-specific), then the app's runtime via doctor
 
-```bash
-# Crash traceback — current and (after a restart) the last failed start.
-olares-cli cluster pod logs <app>-<owner>/<pod> -c <main-container>
-olares-cli cluster pod logs <app>-<owner>/<pod> -c <main-container> --previous   # last crashed instance
-```
+### 4a. Deploy-pipeline log sources (specific to pushing your chart)
 
-`--previous` grabs the buffer from the instance that just died — usually where the real traceback is. Then jump to [§4 Diagnose by fetching logs](#4-diagnose-by-fetching-logs) and [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`--previous` is mutually exclusive with `-f`).
-
-## 4. Diagnose by fetching logs
-
-Use [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) (`cluster pod logs` / `cluster container logs`). The platform backends all live in namespace `os-framework`:
+When the failure is in the **deploy pipeline** (not the app's own runtime), read the platform backend that rejected it. All live in `os-framework`; resolve dynamic pod names first with `olares-cli cluster pod list -n os-framework` (filter for `market` / `chartrepo`):
 
 | What you suspect | Where to look (`os-framework`) | Command |
 |---|---|---|
-| Image can't be pulled / wrong CPU arch (`ImagePullBackOff`, `no match for platform`, `exec format error`) | the app's own pods | `olares-cli cluster application status <ns>` then `olares-cli cluster pod logs <ns>/<pod>` — rebuild a pullable, node-arch image per [olares-chart-image.md](olares-chart-image.md) |
 | Upload / ingest rejected the chart | Deployment `market-deployment`, container `appstore-backend` | `olares-cli cluster container logs os-framework/<market-deployment-pod>/appstore-backend` |
 | Install can't fetch the chart | Deployment `chartrepo-deployment`, container `chartrepo` | `olares-cli cluster container logs os-framework/<chartrepo-deployment-pod>/chartrepo` |
-| Install failed (orchestration error, or the chart/manifest was rejected at install) | StatefulSet pod `app-service-0`, container `app-service` (cross-check the market backend `appstore-backend` row above) | `olares-cli cluster container logs os-framework/app-service-0/app-service` — read the error and fix the chart per [olares-chart-manifest.md](olares-chart-manifest.md) |
-| The app's own container crash-loops | the app's pods (usually `user-space-<id>` or the app namespace) | `olares-cli cluster application status <ns>` then `olares-cli cluster pod logs <ns>/<pod>` |
-| Main container `Completed` (exit 0) with **empty logs**, or app reads a bogus port/host | k8s service-link env collision — the Service name injects `<SVC>_PORT=tcp://...` that clobbers the app's own config env | set `spec.template.spec.enableServiceLinks: false` (see [olares-chart-env.md](olares-chart-env.md)) — then back to refine + lint |
-| Frontend request times out / 504 / connection closed at ~15s on a long request (LLM generation, big upload, slow report) — app pod healthy | entrance proxy route timeout `options.apiTimeout` defaults to 15s | set `options.apiTimeout: 0` (disable) or a large value in the manifest (see [olares-chart-manifest.md](olares-chart-manifest.md)) — then re-package + re-deploy |
-| `Permission denied` / EACCES writing data, or data not persisting | uid ≠ 1000, root-owned dirs on userspace mount, missing `spec.runAsUser` | [olares-chart-run-as-user.md](olares-chart-run-as-user.md) — then back to refine + lint |
-| Admission denied: untrusted image + root | third-party main container runs as root | [olares-chart-run-as-user.md](olares-chart-run-as-user.md) — force uid 1000 or initContainer chown |
+| Install failed (orchestration error, or the chart/manifest was rejected at install) | StatefulSet pod `app-service-0`, container `app-service` | `olares-cli cluster container logs os-framework/app-service-0/app-service` — read the error and fix the chart per [olares-chart-manifest.md](olares-chart-manifest.md) |
 
-- Pod names for the Deployments are dynamic (`market-deployment-*`, `chartrepo-deployment-*`); resolve the exact name first with `olares-cli cluster pod list -n os-framework` (filter the output for `market` / `chartrepo`).
-- **Admin caveat:** `os-framework` system pods are typically visible only to an **admin** profile. If you get `HTTP 403` / `HTTP 404`, the active developer profile isn't admin — don't fight it; report that the platform logs need an admin and fall back to the app's own pod logs.
+- **Admin caveat:** `os-framework` system pods are typically visible only to an **admin** profile. On `HTTP 403` / `HTTP 404`, the active developer profile isn't admin — fall back to the app's own pod logs.
 
-## 4b. Upgrade recovery: `stopped` after upgrade
+### 4b. The app's own runtime failure -> doctor, with the chart fix it points back to
+
+Once the app's container is the problem (it pulled, scheduled, and started but misbehaves), diagnose via [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md). The root causes most relevant to a chart you author, and the fix doctor routes you back to:
+
+| Root cause doctor identifies | Chart fix |
+|---|---|
+| Image can't be pulled / wrong CPU arch (`ImagePullBackOff`, `no match for platform`, `exec format error`) | rebuild a pullable, node-arch image — [olares-chart-image.md](olares-chart-image.md) |
+| Main container `Completed` (exit 0) with **empty logs**, or app reads a bogus port/host (k8s service-link env collision) | `spec.template.spec.enableServiceLinks: false` — [olares-chart-env.md](olares-chart-env.md) |
+| Frontend 504 / connection closed at ~15s on a long request, app pod healthy (entrance proxy `options.apiTimeout` defaults to 15s) | `options.apiTimeout: 0` or a large value — [olares-chart-manifest.md](olares-chart-manifest.md) |
+| `Permission denied` / EACCES writing data, or data not persisting (uid != 1000) | [olares-chart-run-as-user.md](olares-chart-run-as-user.md) |
+| Admission denied: untrusted image runs as root | force uid 1000 or initContainer chown — [olares-chart-run-as-user.md](olares-chart-run-as-user.md) |
+
+After the chart fix: re-lint, bump the version, re-package, re-upload, and re-apply with the right verb (§3 / §5).
+
+## 4c. Upgrade recovery: `stopped` after upgrade
 
 An upgrade can leave the **market row** in `state=stopped` while the **workload** is actually `Running`. Two paths land in `stopped`: upgrading an **already-stopped** app re-renders the chart at `replicas=0` and intentionally returns to `stopped` (by design); and **canceling an in-flight** op (`initializing` / `upgrading` / `applyingEnv` / `resuming`) only *stops* the app — so if a crashing initContainer was fixed and the workload later came up on its own, the row can read `stopped` while the pod is `1/1 Running`:
 

@@ -76,7 +76,7 @@ The JSON payload field is `all`. Behavior depends on the backend version:
 - **Olares 1.12.5:** `--cascade NOT passed` is **auto-decided** — single-user cluster AND v2 multi-chart bundle (`isCSV2`) defaults to `--cascade=true`, else false; an explicit value wins. A short reason is printed on stderr when the auto-decision flips to true.
 - Probe errors (user count / app info / simpleInfo) soft-fail to the user's value; the backend has the final say either way.
 
-> **1.12.6 caveat — cascade-cleanup after the row is gone:** once a prior uninstall has cleared the per-user row, 1.12.6's uninstall body has no source to send, so the CLI reports an idempotent `nothing to uninstall`. `market uninstall` does **not** expose `--source`, so re-running it to tear down leftover shared sub-charts is not reachable from the CLI today — clean those up from the Market SPA.
+> **1.12.6 caveat — cascade-cleanup after the row is gone:** once a prior uninstall has cleared the per-user row, 1.12.6's uninstall body has no source to send, so the CLI reports an idempotent `nothing to uninstall`. `market uninstall` does **not** expose `--source`, so re-running it to tear down leftover shared sub-charts is not reachable from the CLI — clean those up from the Market SPA.
 
 ### Uninstalling an in-flight app (auto-orchestrated)
 
@@ -157,6 +157,26 @@ olares-cli market cancel firefox --watch               # block until row stops m
 | `resume` | `running` | Already running → returns immediately |
 | `cancel` | Any "stopped moving" state | — |
 
+### Per-op foreground watch windows
+
+`--watch` defaults to a 15m timeout, but progressing states have very long backend TTLs (`downloading` = 30 days; `installing` 30m; `initializing`/`upgrading` 1h — see [`../../olares-shared/references/olares-platform-appstate.md`](../../olares-shared/references/olares-platform-appstate.md#backend-fail-ttls-how-long-a-state-can-sit-before-app-service-gives-up)). Don't sit on the default. Use a short foreground window sized to the verb, then switch to polling:
+
+| Verb / phase | Suggested foreground `--watch-timeout` | After timeout |
+|---|---|---|
+| `stop` / `cancel` / `resume` / `uninstall` | `30s` | poll `market status <app> --watch --watch-interval 5s` |
+| `install` deploy phase (post-download) / `upgrade` / `clone` | `1m` | poll `status`, then diagnose if STATE doesn't move |
+| `install` while STATE is `downloading` | judge by pull progress, not a timeout (see below) | keep polling patiently — a 30-day TTL means it won't self-fail |
+
+A timed-out short window is **not** a failure — it just means "not terminal yet". Re-judge by the STATE row, never by the PROGRESS number (unreliable).
+
+### `install` download phase is special
+
+When STATE is `downloading`, the app is pulling images and may legitimately stay there for many minutes (multi-GB images), with a 30-day backend TTL — so it will not self-fail. Poll patiently (`market status <app> --watch --watch-interval 5s`); only once it **leaves** `downloading` (into `installing`/`initializing`) do the 1m deploy-phase window and the "stuck" rules apply. A `downloading` row that never advances AND whose byte-level pull progress is flat is a *stalled* pull, not a slow one — diagnose via [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md) (it shows where real pull progress lives). Judge by STATE, not PROGRESS.
+
+### Verifying an app is actually healthy
+
+`state=running` only proves each entrance is **TCP-reachable**, not that the app serves correctly (backend fact: [`../../olares-shared/references/olares-platform-appstate.md`](../../olares-shared/references/olares-platform-appstate.md#what-running-really-means-tcp-reachable-not-healthy)). For a quick post-install confidence check: `state=running` (necessary, not sufficient) -> pod Ready and `RESTARTS` stable (`cluster application status <ns>`) -> entrance returns a real HTTP response -> still stable a few checks later. If any rung fails (running-but-unreachable, crashloop, soft-hang), it's a runtime-health problem — the full ladder + triage is [`../../olares-doctor/references/olares-doctor-running-unhealthy.md`](../../olares-doctor/references/olares-doctor-running-unhealthy.md).
+
 ## Agent best practices
 
 - **For "install X and tell me when it's running"** → `market install X --watch -o json`, then parse `.finalState`.
@@ -165,15 +185,14 @@ olares-cli market cancel firefox --watch               # block until row stops m
 - **For "stop everything for this user"** → `market list --mine -o json | jq -r '.[].name'` + a shell loop calling `market stop`. The cluster doesn't expose a bulk-stop verb.
 - **For "install a custom chart"** → `market upload ./mychart.tgz` (always lands in source `upload`), then `market install <name> -s upload`.
 - **For ambiguous source rows on uninstall/stop/resume**: the verb already resolves automatically. Don't pass `-s` even when the SPA shows it under multiple sources.
+- **Don't block on a long foreground watch.** Use a short `--watch-timeout` per the table above; on timeout switch to `market status <app> --watch --watch-interval 5s`, or fire-and-forget the mutation and poll `market status <app>` periodically. Judge by STATE, not PROGRESS.
+- **For "install X and watch it without hanging"** → `market install X --watch --watch-timeout 1m -o json`; if it returns non-terminal (still `downloading`/`installing`), poll `market status X --watch --watch-interval 5s` and only diagnose once a short window passes with no STATE movement.
 
 ## Stuck in installing / initializing
 
-The `--watch` market row is coarse: a long `installing` / `initializing` is NOT the same as a failure, but app-service can keep polling for a long time before it gives up. So after ~1-2 minutes with no progress, stop watching passively and inspect the app's own pods. Two non-obvious traps:
+A long `installing` / `initializing` is NOT a failure — app-service polls a long TTL before giving up. Discipline: let a **short window** (~1m, post-download) run; if STATE hasn't moved, **stop watching passively and diagnose**. Two non-obvious traps make `--watch` misleading here (full backend detail in the appstate reference): a **soft hang** (pod Running but never serve-ready) is never fast-failed, and a **scheduling failure** (pod `Pending`) ends in `stopped`, NOT `installFailed`.
 
-- A soft hang (pod Running but the app never becomes serve-ready, without crashing) is never fast-failed — only the pod itself reveals it, not the row.
-- A scheduling failure (pod `Pending`) ends in `Stopping` / `stopped`, NOT `installFailed` — watching only for `*Failed` misses it.
-
-Once stalled, resolve the app's namespace (per [`../../olares-shared/references/olares-platform.md`](../../olares-shared/references/olares-platform.md#finding-an-apps-namespace) — shared apps use `<app>-shared` and a v2 app spans several namespaces, so don't assume `<app>-<owner>`) and diagnose its workload; for orchestration issues, also check the app-service pod `os-framework/app-service-0` — pod status, logs, and previous-instance logs are all via [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md). Note `os-framework` system pods are typically admin-only; if the active profile can't see them, fall back to the app's own pod logs. For the crash triage (exitCode / `CreateContainerConfigError` / permission), see [`../../olares-chart/references/olares-chart-deploy.md`](../../olares-chart/references/olares-chart-deploy.md).
+**Hand stuck/won't-start installs to [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** ([app-stuck](../../olares-doctor/references/olares-doctor-app-stuck.md)) — it owns the symptom→root-cause routing (queue vs stalled download vs scheduling failure vs soft-hang), the namespace resolution, and the exact pod/log/event commands. This reference no longer duplicates that triage.
 
 ## Common errors
 

@@ -67,4 +67,4 @@ olares-cli files chown cache/<node>/scratch/build/ --uid 1000 -r
 |---|---|---|
 | `chown is not supported for this namespace` | sync / external / cloud target | Use `files repos` (sync) or LarePass GUI (external) |
 | `refusing to chown a volume root` | `drive/Home/` / `drive/Data/` / `cache/<node>/` | Pick a sub-path |
-| 403 from server | Server-side ACL rejection | Confirm via `files ls -ld` (when available) or LarePass that the active user has permission |
+| 403 from server | Server-side ACL rejection | Confirm via `files ls --json` or LarePass that the active user has permission |

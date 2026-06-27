@@ -7,7 +7,7 @@ The scaffolded manifest is a stub. This doc covers, in order: the fixed **header
 
 ## Header fields
 
-The manifest top sets `apiVersion: v3` and `olaresManifest.version: '0.12.0'`. `0.12.0` carries `spec.accelerator` and `permission.externalData`. The fixed version-field values, the `olares` system dependency, and the field map are in [olares-chart-versioning.md](olares-chart-versioning.md); accelerator sizing is in [olares-chart-gpu.md](olares-chart-gpu.md).
+The manifest top sets `apiVersion: v3` and `olaresManifest.version: '0.12.0'`. `0.12.0` carries `spec.accelerator` and `permission.externalData`. The fixed version-field values, the `olares` system dependency, and the field map are in [olares-chart-versioning.md](olares-chart-versioning.md); accelerator modes & sizing are in [olares-chart-accelerator.md](olares-chart-accelerator.md).
 
 > **Two required manifest entries — author both yourself for every chart; `lint` rejects either if missing:** the `workloadReplicas` map (below) and the `olares` system dependency under `options.dependencies` (next section). Both live at the **top level of `OlaresManifest.yaml`** — siblings of `metadata`, `spec`, and `options`. In particular `workloadReplicas` is **not** nested under the manifest `spec`.
 

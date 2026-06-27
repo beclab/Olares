@@ -63,4 +63,4 @@ Once refined, validate in a loop:
 olares-cli chart lint ./myapp      # see olares-chart-lint.md
 ```
 
-Then, with the developer's consent (confirm once), deploy to a real Olares — [olares-chart-deploy.md](olares-chart-deploy.md). To list it on the public Market afterwards, see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).
+Once `lint` passes, deploy to a real Olares automatically (no extra confirmation needed; stop only if not logged in or a failure is clearly not a chart problem) — [olares-chart-deploy.md](olares-chart-deploy.md). To list it on the public Market afterwards, see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).

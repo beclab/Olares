@@ -30,11 +30,11 @@ metadata:
 
 ## 13 area sub-trees
 
-The umbrella registers the 12 canonical Settings docs sections, plus a 13th non-canonical `me` self-service tree:
+The umbrella registers the 12 canonical Settings docs sections, plus a 13th non-canonical `me` self-service tree. The accelerator section is **version-split**: `gpu` on Olares 1.12.5 (legacy HAMI), `compute` on 1.12.6+ (see the per-area table) — they are the same Settings slot across versions, not two extra areas:
 
 ```
 users         appearance   apps          integration   vpn         network
-gpu           video        search        backup        restore     advanced
+gpu / compute video        search        backup        restore     advanced
 + me (self-service: whoami / version / check-update / sso list)
 ```
 
@@ -53,11 +53,11 @@ For every area, **start with `olares-cli settings <area> --help`**. References b
 | `integration` | [references/olares-settings-integration.md](references/olares-settings-integration.md) (`accounts add awss3|tencent`) |
 | `backup` | [references/olares-settings-backup.md](references/olares-settings-backup.md) (plans / snapshots / password) |
 | `appearance` | `olares-cli settings appearance --help` (`get`, `language set`) |
-| `network` | `olares-cli settings network --help` (read-only reverse-proxy / frp / hosts-file; writes blocked by JWS gap — see below) |
+| `network` | `olares-cli settings network --help` (read-only reverse-proxy / frp / hosts-file; writes blocked by JWS gap — see [Currently-implemented mutating verbs](#currently-implemented-mutating-verbs)) |
 | `gpu` | `olares-cli settings gpu --help` (read-only `list`; **legacy, 1.12.5 only** HAMI `/api/gpu/list` — **removed in 1.12.6**: the CLI fails fast there and points at `compute list`) |
 | `compute` | `olares-cli settings compute --help` (**1.12.6+ new "Accelerator"**: `list`, `unbind <app>`, `set-type <node> <device>`; version-gated, replaces `gpu list`. `<node>`/`<device>` come from `list`'s node header + DEVICE-ID column) |
 | `video` | `olares-cli settings video --help` (read-only `config get`) |
-| `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list/add/rm`). `dirs` = the **full-content** index directories (filenames are indexed broadly by default; full-text defaults to Drive `/Documents/` only — add more with `dirs add`). `status` shows the index `Status` plus a full-text-extraction `Failures` count (`-o json` for per-file detail). Exclude-pattern view/edit is SPA-only today. Index coverage model lives in [`olares-search`](../olares-search/SKILL.md) |
+| `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list/add/rm`). `dirs` = the **full-content** index directories (filenames are indexed broadly by default; full-text defaults to Drive `/Documents/` only — add more with `dirs add`). `status` shows the index `Status` plus a full-text-extraction `Failures` count (`-o json` for per-file detail). Exclude-pattern view/edit is SPA-only (the CLI's `settings search excludes` is not wired up). Index coverage model lives in [`olares-search`](../olares-search/SKILL.md) |
 | `restore` | `olares-cli settings restore --help` (read-only `plans list`) |
 | `advanced` | `olares-cli settings advanced --help` (read-only `status`, `registries list`, `images list`, `env (system|user) list`) |
 
@@ -136,7 +136,7 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 - Backup plan create / update (needs full `BackupPolicy` + `LocationConfig` vector design)
 - Restore plan update / non-cancel delete — backup-server has no routes
 
-**Don't suggest the deferred verbs today** — they will error with "command not found".
+**Don't suggest the deferred verbs** — they will error with "command not found".
 
 ## Security rules
 
@@ -146,7 +146,7 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 - Read-only verbs do NOT carry "this will change X" prompts. **Don't fabricate one for read verbs.**
 - The `profile whoami --refresh` recovery path is the only authentication-adjacent action this skill recommends. **All** other auth recovery belongs in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
 
-## Common errors → fixes
+## Common errors
 
 | Error | Cause | Fix |
 |---|---|---|
