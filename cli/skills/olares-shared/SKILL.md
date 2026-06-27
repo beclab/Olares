@@ -99,13 +99,22 @@ When you (an AI agent) drive the login on the user's behalf, do NOT pass passwor
 
 | STATUS | Meaning | Recovery |
 |--------|---------|----------|
-| `logged-in` | Token valid — JWT exp is in the future, **or** the JWT carries no exp claim (can't verify locally; trust until the server says no) | — |
-| `expired` | JWT exp is in the past | `profile login` |
-| `invalidated` | Server explicitly rejected the refresh leg | `profile login` directly (no need to `profile remove` first) |
+| `logged-in` | Token valid — JWT exp is in the future, **or** the JWT carries no exp claim (can't verify locally; trust until the server says no) | — (usable; just run the command) |
+| `expired` | Access-token JWT exp is in the past | **Usually none — the next command auto-refreshes** (see Automatic token refresh). `profile login` only if that refresh leg is itself rejected (which flips it to `invalidated`) |
+| `invalidated` | Server explicitly rejected the refresh leg (`/api/refresh` returned 401/403/459) | `profile login` directly (no need to `profile remove` first) |
 | `never` | No token has ever been stored | `profile login` or `profile import` |
 | `unknown` / `logged-in (unparseable token)` | Token store couldn't be read / the JWT couldn't be parsed | re-run `profile login` if it persists |
 
 STATUS reflects only what the local token store can prove without a network call (no `(Xh Ym)` time-to-expiry is printed). The `VERSION` column is the cached Olares backend version (`-` until a login eager-fetch or a version-aware command populates it; `--refresh-version` re-reads it). The leading `*` marks the current profile; `profile use` accepts either the NAME alias or the olaresId.
+
+## Auth-readiness gate
+
+**The single rule every skill uses to decide "proceed, or stop for login?" — proceed by default.** Other skills link here instead of re-deriving it; the STATUS table above is the source for what each value means.
+
+- **Pre-flight (you ran `profile list` first):** proceed on `logged-in` and `expired`. An `expired` access token auto-refreshes on the first call (see Automatic token refresh), so it is NOT a reason to stop. Stop only when the CLI has no credential it can send or refresh: `never` (no profile) or `invalidated` (refresh grant dead). The rare corrupt states — `unknown` (token store unreadable) and `logged-in (unparseable token)` — also fail at command time and recover the same way (`profile login`).
+- **Reactive (a command came back with an auth error):** don't pre-empt it — run the command and read the result. Only the typed errors `ErrNotLoggedIn` (`no access token …`) and `ErrTokenInvalidated` (`refresh token … became invalid`) mean "must log in" → `profile login` / `import`. A 401/403/459 is auto-refreshed and retried once for you; a network / 5xx error is transient — surface it, do not preemptively log in, and do not build retry loops on top of auth errors.
+
+`ResolveProfile` hands even a stale JWT to the refreshing transport and no command pre-flights on the STATUS string, which is why `expired` never blocks. When the decision is **stop**, tell the user which command to run — never log in on their behalf without being asked (see the agent-driven login flow above).
 
 ## Token storage
 
@@ -125,7 +134,7 @@ After `login` / `import` succeeds, the CLI prints `token stored via <backend> (s
 
 ## Automatic token refresh
 
-**The CLI rotates expired access_tokens transparently.** Users do NOT need to run `profile login` just because their access_token aged out — only when the *refresh_token itself* becomes invalid.
+**The CLI rotates expired access_tokens transparently.** Users do NOT need to run `profile login` just because their access_token aged out — only when the *refresh_token itself* becomes invalid. This is why a `profile list` STATUS of `expired` is not a blocker: the very next business command swaps the stale token out and succeeds. For the proceed/stop decision built on this, see the Auth-readiness gate above.
 
 - Replayable requests (every JSON verb, `files cat`, `files download`, `files rm`, `market` verbs, …): on 401/403/459 the transport calls `/api/refresh` and retries once with the new token. (459 is Olares' edge / Authelia "auth failed" status, treated like 401/403.)
 - Streaming uploads (`files upload` chunks): pre-decode the JWT exp; if within 60s of expiry, refresh BEFORE sending, because once a `*os.File` chunk is consumed it can't be replayed on a 401.

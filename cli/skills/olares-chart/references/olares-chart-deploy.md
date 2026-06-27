@@ -3,15 +3,15 @@
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; pass `chart lint` before starting any of this.
 > This is the **deploy** capability — the done step of the two axes. Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
 
-> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile is logged in, drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the profile is not logged in, or when a failure is clearly **not** a chart problem. During the install wait, if you can multitask, proactively tail the app's own pod status + logs in parallel rather than only watching the coarse market row (see [§3 Don't just wait](#dont-just-wait--diagnose-the-apps-own-pods-in-parallel)).
+> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile clears olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate), drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the gate says stop, or when a failure is clearly **not** a chart problem. During the install wait, if you can multitask, proactively tail the app's own pod status + logs in parallel rather than only watching the coarse market row (see [§3 Don't just wait](#dont-just-wait--diagnose-the-apps-own-pods-in-parallel)).
 
 `lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This loop does — by pushing the chart to the developer's Olares and watching it install.
 
 ```mermaid
 flowchart TD
-  lintok["chart lint OK"] --> login{"profile logged-in?"}
-  login -->|no| tell["tell developer: run 'olares-cli profile login --olares-id ID' then re-invoke"]
-  login -->|yes| pkg["chart package -> .tgz"]
+  lintok["chart lint OK"] --> login{"auth-readiness gate (olares-shared)"}
+  login -->|"stop"| tell["tell developer: run 'olares-cli profile login --olares-id ID' then re-invoke"]
+  login -->|"go"| pkg["chart package -> .tgz"]
   pkg --> up["market upload"]
   up --> exists{"app already exists on this Olares?"}
   exists -->|"no (first deploy / installFailed / uninstalled)"| inst["market install -s upload --watch --watch-timeout 1m -o json"]
@@ -29,13 +29,13 @@ flowchart TD
 
 ## 1. Is the CLI logged in?
 
-Run `olares-cli profile list` — the `*` marks the active profile; `STATUS` is `logged-in` when usable (see the olares-shared status table). If the active profile is `expired` / `invalidated` / `never`:
+Run `olares-cli profile list` and apply olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate): `logged-in` / `expired` → **go** (an `expired` token auto-refreshes on the first call — not a reason to stop); `invalidated` / `never` → **stop**.
 
-- **Do NOT log in on the developer's behalf unilaterally.** Tell them local `lint` passed and that deploy needs `olares-cli profile login --olares-id <id>` first. Stop here unless they ask you to drive the login (then follow olares-shared's agent-driven login flow).
+- When the gate says **stop**, **do NOT log in on the developer's behalf unilaterally.** Tell them local `lint` passed and that deploy needs `olares-cli profile login --olares-id <id>` first. Stop here unless they ask you to drive the login (then follow olares-shared's agent-driven login flow).
 
 ## 2. Package + upload (automatic — no confirmation needed)
 
-`lint` passed and the profile is logged in — proceed immediately. **Bump the version on every (re)upload.** Before packaging, bump `Chart.yaml` `version` and `OlaresManifest.yaml` `metadata.version` together (keep them equal — `lint` enforces it); a patch bump (e.g. `0.0.1 → 0.0.2`) is the default. Market's upload gate only requires `>=` the stored version, but always presenting a strictly-newer version keeps each upload distinct and makes the `upgrade --version` unambiguous. (Same-version overwrite still works as a fallback when the chart didn't change — see §3.)
+`lint` passed and the profile cleared the auth-readiness gate — proceed immediately. **Bump the version on every (re)upload.** Before packaging, bump `Chart.yaml` `version` and `OlaresManifest.yaml` `metadata.version` together (keep them equal — `lint` enforces it); a patch bump (e.g. `0.0.1 → 0.0.2`) is the default. Market's upload gate only requires `>=` the stored version, but always presenting a strictly-newer version keeps each upload distinct and makes the `upgrade --version` unambiguous. (Same-version overwrite still works as a fallback when the chart didn't change — see §3.)
 
 `market upload` takes a `.tgz` / `.tar.gz`, not a raw chart directory, so package first with the built-in verb (no `helm` binary needed):
 
