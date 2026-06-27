@@ -60,11 +60,11 @@ Examples: `drive/Home/`, `drive/Home/Documents/report.pdf`, `drive/Common/huggin
 | `edit` | `drive`, `sync`, `cache`, `external` only (cloud / tencent / share / internal refused) |
 | `mkdir` | all of `drive`, `cache`, `sync`, `external`, `awss3`, `google`, `dropbox`, `tencent` |
 | `cp` / `mv` | same as `mkdir` (PATCH `/api/paste/<node>/`) |
-| `upload` | `drive/Home`, `drive/Data`, `sync/<repo_id>`, `cache/<node>`, `external/<node>/<volume>`, `awss3`, `google`, `dropbox` — **`tencent` rejected** (different upload protocol) |
-| `chown` | `drive/Home`, `drive/Data`, `cache/<node>` only (cloud, sync, external all refused) |
-| `share internal` | `drive`, `sync`, `external`, `cache` (cloud refused) |
-| `share smb` | `drive`, `external`, `cache` (sync + cloud refused) |
-| `share public` | `drive` only |
+| `upload` | `drive/Home`, `drive/Data`, `drive/Common`, `sync/<repo_id>`, `cache/<node>`, `external/<node>/<volume>`, `awss3`, `google`, `dropbox` — **`tencent` rejected** (different upload protocol). `drive/Common` needs Olares >= 1.12.6 |
+| `chown` | `drive/Home`, `drive/Data`, `drive/Common`, `cache/<node>` (cloud, sync, external all refused). `drive/Common` needs Olares >= 1.12.6 |
+| `share internal` | `drive`, `sync`, `external`, `cache` (cloud refused) — **`drive/Common` refused** (public-only) |
+| `share smb` | `drive`, `external`, `cache` (sync + cloud refused) — **`drive/Common` refused** (public-only) |
+| `share public` | `drive` only (this is the **only** share flavor `drive/Common` allows) |
 | `compress` / `extract` / `archive entries` / `archive cat` | `drive/Home`, `drive/Data`, `drive/Common`, `cache/<node>`, `external/<node>/<volume>` only (sync + all cloud refused). Needs Olares >= 1.12.6 |
 | `smb mount` / `unmount` / `history` | keyed by `<node>` + `<smb-url>`, not frontend paths |
 | `nfs mount` / `unmount` / `history` | keyed by `<node>` + NFS target (`host` or `host:/export`), not frontend paths. Needs Olares >= 1.12.6 |

@@ -70,7 +70,7 @@ e.g. 7B fp16 ≈ 14Gi weights → ~16Gi floor; 7B Q4 ≈ 3.5Gi → ~6Gi floor. I
 
 ## 4. Step 3 — pick the engine
 
-GGUF world (Ollama + llama.cpp) and safetensors world (vLLM + SGLang) barely overlap — a model is rarely usable by all four (model-landscape §4):
+GGUF world (Ollama + llama.cpp) and safetensors world (vLLM + SGLang) barely overlap — a model is rarely usable by all four:
 
 | model situation | engine | MODEL_SOURCE shape |
 |---|---|---|
@@ -146,7 +146,7 @@ Notes:
 - **CPU / unified-memory modes** (no discrete GPU): the window is bounded by host RAM rather than VRAM — more forgiving, same "as long as it stays stable" policy.
 - Keep the advertised `context_size` in sync — see [§7](#7-manage--switch-the-model).
 
-Worked example (Qwen2.5-7B four ways, model-landscape §7):
+Worked example (Qwen2.5-7B four ways):
 
 ```bash
 # vLLM — full safetensors repo

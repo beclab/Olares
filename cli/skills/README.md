@@ -25,6 +25,9 @@ cli/skills/
 ├── olares-settings/   # olares-cli settings
 ├── olares-dashboard/  # olares-cli dashboard
 ├── olares-cluster/    # olares-cli cluster (per-user K8s view)
+├── olares-doctor/     # runtime diagnosis (thin router over cluster / market / dashboard)
+│   ├── SKILL.md
+│   └── references/    # one file per symptom (app stuck / crash / image / unhealthy / resources)
 ├── olares-chart/      # olares-cli chart (chart authoring + deploy to your Olares)
 │   ├── SKILL.md
 │   └── references/    # one file per refinement area / capability
@@ -106,7 +109,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 `clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` is valid semver, that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
-./cli/skills/publish.sh --dry-run                  # validate all 9
+./cli/skills/publish.sh --dry-run                  # validate all 10
 ./cli/skills/publish.sh --dry-run olares-shared    # validate one
 ```
 
@@ -128,7 +131,7 @@ Note: `clawhub sync` defaults to bumping the patch version on updates. For deter
 ### Publish
 
 ```bash
-./cli/skills/publish.sh                            # publish all 9
+./cli/skills/publish.sh                            # publish all 10
 ./cli/skills/publish.sh olares-files olares-market # publish a subset
 ```
 
@@ -136,7 +139,7 @@ Versions come from each skill's frontmatter `version:` field — bump the field 
 
 ## Slug policy
 
-The 9 skills publish under their canonical short names:
+The 10 skills publish under their canonical short names:
 
 | Slug              | Display name                                |
 |-------------------|---------------------------------------------|
@@ -147,6 +150,7 @@ The 9 skills publish under their canonical short names:
 | `olares-settings` | Olares Settings (olares-cli settings)       |
 | `olares-dashboard`| Olares Dashboard (olares-cli dashboard)     |
 | `olares-cluster`  | Olares Cluster (olares-cli cluster)         |
+| `olares-doctor`   | Olares Doctor (runtime diagnosis)           |
 | `olares-chart`    | Olares Chart (olares-cli chart)             |
 | `olares-publish`  | Olares Publish (Olares Market distribution) |
 

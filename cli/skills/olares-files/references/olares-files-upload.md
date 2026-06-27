@@ -11,6 +11,7 @@ Resumable chunked upload of a local file or directory tree into the per-user fil
 |---|---|
 | `drive/Home/<sub>` | Olares Home volume. Upload `<node>` defaults to the first entry from `/api/nodes/` |
 | `drive/Data/<sub>` | Olares Data volume. Same default node |
+| `drive/Common/<sub>` | App common data area (`appCommon`). Needs Olares >= 1.12.6 |
 | `sync/<repo_id>/<sub>` | Seafile library. Chunk POST hits `/seafhttp/upload-aj/<token>`; the form's `parent_dir` is the **in-repo** path (no `sync/<repo>/` prefix) |
 | `cache/<node>/<sub>` | Node-local cache. `<node>` IS the upload node — CLI skips `/api/nodes/` |
 | `external/<node>/<volume>/<sub>` | Attached external storage. Same `<node>` short-circuit as cache |
