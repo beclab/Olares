@@ -62,42 +62,55 @@ var (
 	cachedKubeconfigModTime time.Time
 )
 
-// kubeconfigPath resolves the kubeconfig file backing ctrl.GetConfig, mirroring
-// the env/default lookup. It returns "" when no file applies (e.g. in-cluster),
-// in which case the freshness check is skipped.
-func kubeconfigPath() string {
+// kubeconfigPaths resolves the kubeconfig files backing ctrl.GetConfig,
+// mirroring the env/default lookup. ctrl.GetConfig merges every file listed in
+// KUBECONFIG, so all of them are tracked for freshness. It returns nil when no
+// file applies (e.g. in-cluster), in which case the freshness check is skipped.
+func kubeconfigPaths() []string {
 	if v := os.Getenv("KUBECONFIG"); v != "" {
 		if parts := filepath.SplitList(v); len(parts) > 0 {
-			return parts[0]
+			return parts
 		}
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ""
+		return nil
 	}
-	return filepath.Join(home, ".kube", "config")
+	return []string{filepath.Join(home, ".kube", "config")}
 }
 
-// ensureFreshLocked invalidates the cached config and clients when the
+// ensureFreshLocked invalidates the cached config and clients when any tracked
 // kubeconfig file changes (e.g. IP change or k3s cert rotation), so olaresd
 // recovers without a restart instead of pinning a stale config forever.
 // Callers must hold clientCacheMu.
 func ensureFreshLocked() {
-	path := kubeconfigPath()
-	if path == "" {
+	paths := kubeconfigPaths()
+	if len(paths) == 0 {
 		return
 	}
-	info, err := os.Stat(path)
-	if err != nil {
+	key := strings.Join(paths, string(os.PathListSeparator))
+	var modTime time.Time
+	for _, p := range paths {
+		info, err := os.Stat(p)
+		if err != nil {
+			continue
+		}
+		if mt := info.ModTime(); mt.After(modTime) {
+			modTime = mt
+		}
+	}
+	if modTime.IsZero() {
+		// None of the tracked files are readable right now; keep any cached
+		// clients. A momentarily-missing file (e.g. during an atomic rewrite)
+		// should not tear down a working in-memory client.
 		return
 	}
-	modTime := info.ModTime()
 	if cachedConfig == nil {
-		cachedKubeconfigPath = path
+		cachedKubeconfigPath = key
 		cachedKubeconfigModTime = modTime
 		return
 	}
-	if path == cachedKubeconfigPath && modTime.Equal(cachedKubeconfigModTime) {
+	if key == cachedKubeconfigPath && modTime.Equal(cachedKubeconfigModTime) {
 		return
 	}
 	klog.Info("kubeconfig changed, rebuilding k8s clients")
@@ -106,7 +119,7 @@ func ensureFreshLocked() {
 	cachedDynamicClient = nil
 	cachedAppClientSet = nil
 	cachedApixClient = nil
-	cachedKubeconfigPath = path
+	cachedKubeconfigPath = key
 	cachedKubeconfigModTime = modTime
 }
 
