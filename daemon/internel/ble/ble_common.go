@@ -35,15 +35,22 @@ func (s *service) Start() {
 	go func() {
 		defer s.cancel()
 		s.scanOnce()
+		lastScan := time.Now()
+		// Poll at the active cadence so a connectivity drop is noticed within a
+		// couple of seconds, but only run the expensive D-Bus scan when due:
+		// every tick while offline, every bleScanIntervalIdle once online.
 		for {
-			timer := time.NewTimer(s.scanInterval())
+			timer := time.NewTimer(bleScanIntervalActive)
 			select {
 			case <-s.ctx.Done():
 				timer.Stop()
 				return
 
 			case <-timer.C:
-				s.scanOnce()
+				if time.Since(lastScan) >= s.scanInterval() {
+					s.scanOnce()
+					lastScan = time.Now()
+				}
 			}
 		}
 	}()
