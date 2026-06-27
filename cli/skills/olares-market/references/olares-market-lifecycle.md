@@ -1,31 +1,25 @@
-# market lifecycle (install / upgrade / uninstall / clone / stop / resume / cancel)
+# market lifecycle verbs (install / upgrade / uninstall / clone / stop / resume / cancel)
 
-> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) (especially "App lifecycle / state machine", "OpType vs State", and "`--watch` semantics") first.
-> **Flags & examples:** `olares-cli market <verb> --help` for each verb.
+> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) (especially "App lifecycle / state machine", "OpType vs State", and "`--watch` semantics") first. **Flags & examples:** `olares-cli market <verb> --help` for each verb.
 
 The mutating verb family. Every verb here returns an `OperationResult` JSON shape on `-o json`:
 
 ```json
 {
-  "name": "firefox",
-  "op": "install",
-  "accepted": true,
-  "finalState": "running",
-  "finalOpType": "",
+  "app": "firefox",
+  "operation": "install",
+  "status": "accepted",       // "accepted" (no --watch) | "success" | "failed" (--watch verdict)
   "message": "",
-  "watched": true,
-  "cloneTarget": ""          // only set for `clone`
+  "source": "market.olares",  // omitempty
+  "version": "1.2.3",         // omitempty
+  "state": "running",         // omitempty; latest observed row state
+  "finalState": "running",    // omitempty; set only by --watch once terminal
+  "finalOpType": "",          // omitempty; set only by --watch once terminal
+  "targetApp": "firefoxe992"  // omitempty; only set for `clone` (the new instance name)
 }
 ```
 
-## Contents
-
-- [Source-aware vs source-implicit verbs](#source-aware-vs-source-implicit-verbs)
-- [`install`](#install) · [`upgrade`](#upgrade) · [`uninstall`](#uninstall) · [`clone`](#clone) · [`stop` / `resume`](#stop--resume) · [`cancel`](#cancel)
-- [`--watch` interaction with each verb](#--watch-interaction-with-each-verb)
-- [Agent best practices](#agent-best-practices)
-- [Stuck in installing / initializing](#stuck-in-installing--initializing)
-- [Common errors](#common-errors)
+> Field keys are exactly `app` / `operation` / `status` / `targetApp` / `finalState` / `finalOpType` (not `name` / `op` / `accepted` / `watched` / `cloneTarget`). Scripts parse the watch verdict from `.status` (`"success"`/`"failed"`) and the landing state from `.finalState`.
 
 ## Source-aware vs source-implicit verbs
 
@@ -43,8 +37,7 @@ olares-cli market install firefox --version 1.2.3      # pin version (strict sem
 olares-cli market install firefox -s upload            # install a locally-uploaded chart
 olares-cli market install gitea --env GITEA_TOKEN=...  # required envs
 olares-cli market install comfyui --compute-mode nvidia  # pin GPU mode (1.12.6+)
-olares-cli market install firefox --watch              # block until terminal
-olares-cli market install firefox --watch -o json
+olares-cli market install firefox --watch              # block until terminal (add -o json for scripts)
 ```
 
 - `--version` defaults to the latest catalog version. Strict semver validated client-side before send.
@@ -67,7 +60,7 @@ Mirrors the SPA's `canUpgrade()`. Bails locally with a self-contained error (for
 1. **Row exists** — state row found via `Name` or `RawName` (clones included)
 2. **State is upgradable** — `running` / `stopped` / `stopFailed` / `upgradeFailed` / `applyEnvFailed`
 3. **Newer chart available** — `targetVersion > installedVersion` (semver compare). **Exception for `-s upload`:** `targetVersion == installedVersion` is allowed — re-uploading the same version overwrites the stored chart, and app-service permits a same-version upgrade (it gates on `>= deployed`). This is the sanctioned way to re-apply an edited upload chart or recover an `upgradeFailed` upload app **without** bumping the version. A true downgrade (`target < installed`) is still rejected for every source.
-4. **App labels don't forbid upgrade** — `disabled-upgrade`, `suspend`, `remove` labels
+4. **Catalog row not withdrawn** — `app_simple_info.app_labels` must not contain `suspend` or `remove` (the only two labels `isAppSuspended` checks; mirrors the SPA hiding the Upgrade button). On a transient catalog-probe error this gate soft-fails (warns, lets the upgrade proceed)
 
 ## `uninstall`
 
@@ -108,7 +101,7 @@ olares-cli market clone firefox --title "Work Browser" --watch
 - **Clonable apps** are either multi-instance apps (`allowMultipleInstall: true`) **or** template apps (`templateOnly: true`). A template app has no installable body — instances are created from it via clone — and on 1.12.6+ the CLI sends `templateClone:true` for it automatically. Pre-flight check the source app's `market get <app> -o json` if unsure.
 - `--title` is REQUIRED — feeds the cloned app's desktop shortcut title.
 - For apps with multiple entrances: `--entrance-title NAME=TITLE` (repeatable) overrides per-entrance titles. For single-entrance apps, the entrance title defaults to `--title`.
-- **The backend mints a per-instance app name** (e.g. `firefoxe992`). The CLI surfaces it as `cloneTarget` in the JSON output so scripted callers can chain follow-ups. **`--watch` tracks the new clone name, not the source app.**
+- **The backend mints a per-instance app name** (e.g. `firefoxe992`). The CLI surfaces it as `targetApp` in the JSON output so scripted callers can chain follow-ups (`jq -r '.targetApp'`). **`--watch` tracks the new clone name, not the source app.**
 
 ## `stop` / `resume`
 
@@ -125,8 +118,7 @@ olares-cli market resume comfyui --compute-binding node-1:gpu-0:512Mi  # MemoryS
 
 # Multi-GPU apps: repeat --compute-binding once per card.
 olares-cli market resume vllm --compute-binding node-1:gpu-0 --compute-binding node-1:gpu-1                # two cards on one node
-olares-cli market resume vllm --compute-binding node-1:gpu-0:8 --compute-binding node-1:gpu-1:8            # two MemorySlice cards, 8 Gi each
-olares-cli market resume vllm --compute-binding node-1:gpu-0 --compute-binding node-2:gpu-0                # cross-node (multi-node apps only)
+olares-cli market resume vllm --compute-binding node-1:gpu-0:8 --compute-binding node-1:gpu-1:8            # two MemorySlice cards, 8 Gi each (cross-node form: node-2:gpu-0, multi-node apps only)
 ```
 
 - Source is implicit on both.
@@ -153,66 +145,3 @@ olares-cli market cancel firefox --watch               # block until row stops m
 - Failure is ONLY surfaced for `*CancelFailed` (the cancel request itself was rejected).
 - The terminal row carries the **underlying op** (install / upgrade / ...) as its `opType`, not `cancel`. `matchOpType` is OFF — no race-tracking gate applies.
 - **Teardown vs stop**: cancel of the `pending` / `downloading` / `installing` flow **tears the partial install down (namespace deleted)** — functionally equivalent to uninstall. Cancel of `initializing` / `upgrading` / `applyingEnv` / `resuming` only **stops** the app (lands in `stopped`); the app is still installed. `market uninstall` relies on this split when auto-orchestrating (see `uninstall` above).
-
-## `--watch` interaction with each verb
-
-| Verb | Terminal-success buckets | Idempotent shortcut |
-|---|---|---|
-| `install` | `running` | App already installed → returns immediately |
-| `upgrade` | `running` (matchOpType=upgrade) | — (handled by pre-flight) |
-| `uninstall` | `uninstalled`, row disappears (or `*Canceled` when an in-flight app was auto-canceled) | App already uninstalled → returns immediately; in-flight apps are canceled first, then uninstalled if still present |
-| `clone` | `running` on the new clone name | — |
-| `stop` | `stopped` | Already stopped → returns immediately |
-| `resume` | `running` | Already running → returns immediately |
-| `cancel` | Any "stopped moving" state | — |
-
-### Per-op foreground watch windows
-
-`--watch` defaults to a 15m timeout, but progressing states have very long backend TTLs (`downloading` = 30 days; `installing` 30m; `initializing`/`upgrading` 1h — see [`../../olares-shared/references/olares-platform-appstate.md`](../../olares-shared/references/olares-platform-appstate.md#backend-fail-ttls-how-long-a-state-can-sit-before-app-service-gives-up)). Don't sit on the default. Use a short foreground window sized to the verb, then switch to polling:
-
-| Verb / phase | Suggested foreground `--watch-timeout` | After timeout |
-|---|---|---|
-| `stop` / `cancel` / `resume` / `uninstall` | `30s` | poll `market status <app> --watch --watch-interval 5s` |
-| `install` deploy phase (post-download) / `upgrade` / `clone` | `1m` | poll `status`, then diagnose if STATE doesn't move |
-| `install` while STATE is `downloading` | judge by pull progress, not a timeout (see below) | keep polling patiently — a 30-day TTL means it won't self-fail |
-
-A timed-out short window is **not** a failure — it just means "not terminal yet". Re-judge by the STATE row, never by the PROGRESS number (unreliable).
-
-### `install` download phase is special
-
-When STATE is `downloading`, the app is pulling images and may legitimately stay there for many minutes (multi-GB images), with a 30-day backend TTL — so it will not self-fail. Poll patiently (`market status <app> --watch --watch-interval 5s`); only once it **leaves** `downloading` (into `installing`/`initializing`) do the 1m deploy-phase window and the "stuck" rules apply. A `downloading` row that never advances AND whose byte-level pull progress is flat is a *stalled* pull, not a slow one — diagnose via [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md) (it shows where real pull progress lives). Judge by STATE, not PROGRESS.
-
-### Verifying an app is actually healthy
-
-`state=running` only proves each entrance is **TCP-reachable**, not that the app serves correctly ([what `running` really means](../../olares-shared/references/olares-platform-appstate.md#what-running-really-means-tcp-reachable-not-healthy)). Treat `running` as necessary-but-not-sufficient. If a freshly-installed app is `running` but anything looks off (running-but-unreachable, crashloop, soft-hang), hand it to [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md), which owns the full health ladder and triage.
-
-## Agent best practices
-
-- **For "install X and tell me when it's running"** → `market install X --watch -o json`, then parse `.finalState`.
-- **For "upgrade X if there's a newer version"** → `market get X -o json` to check version, then `market upgrade X --watch`. The pre-flight will short-circuit if there's no newer chart.
-- **For "re-apply an upload chart I just re-uploaded"** → `market upgrade X -s upload --version <same-version> --watch`. The same-version upgrade is allowed for `-s upload` (gate 3 exception) and is the right verb once the app already exists (`running` / `upgradeFailed` / ...) — `install` would be rejected by app-service in those states.
-- **For "stop everything for this user"** → `market list --mine -o json | jq -r '.[].name'` + a shell loop calling `market stop`. The cluster doesn't expose a bulk-stop verb.
-- **For "install a custom chart"** → `market upload ./mychart.tgz` (always lands in source `upload`), then `market install <name> -s upload`.
-- **For ambiguous source rows on uninstall/stop/resume**: the verb already resolves automatically. Don't pass `-s` even when the SPA shows it under multiple sources.
-- **Don't block on a long foreground watch.** Use a short `--watch-timeout` per the table above; on timeout switch to `market status <app> --watch --watch-interval 5s`, or fire-and-forget the mutation and poll `market status <app>` periodically. Judge by STATE, not PROGRESS.
-- **For "install X and watch it without hanging"** → `market install X --watch --watch-timeout 1m -o json`; if it returns non-terminal (still `downloading`/`installing`), poll `market status X --watch --watch-interval 5s` and only diagnose once a short window passes with no STATE movement.
-
-## Stuck in installing / initializing
-
-A long `installing` / `initializing` is NOT a failure — app-service polls a long TTL before giving up, and two non-obvious traps make `--watch` misleading here (a soft-hang is never fast-failed; a scheduling failure ends in `stopped`, not `installFailed` — see [the appstate reference](../../olares-shared/references/olares-platform-appstate.md#two-non-obvious-terminal-behaviors)). Operational discipline: let a **short window** (~1m, post-download) run; if STATE hasn't moved, **stop watching passively and diagnose**.
-
-**Hand stuck/won't-start installs to [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing (queue vs stalled download vs scheduling failure vs soft-hang), the namespace resolution, and the exact pod/log/event commands. This reference does not duplicate that triage.
-
-## Common errors
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| `missing required env var(s): KEY1, KEY2 ...` (install) | App declares required envs | Re-run with `--env KEY=VALUE` per missing var |
-| `app 'X' is not in an upgradable state (current: Y)` | Pre-flight gate 2 | Wait for terminal state, or run `cancel` first |
-| `target version '1.2.3' is already installed — nothing to do` | Pre-flight gate 3 | Nothing to upgrade. **Does NOT fire for `-s upload`** — same-version upgrade is allowed there to re-apply an overwritten chart |
-| `app labels forbid upgrade (suspend / remove / disabled-upgrade)` | Pre-flight gate 4 | App is marked non-upgradable in the catalog; contact app maintainer |
-| `app 'X' is not cloneable` | `clone` against an app that is neither multi-instance nor a template | Check `market get X -o json` for `allowMultipleInstall` / `templateOnly` |
-| `--title is required` | `clone` without `--title` | Add `--title "..."` |
-| Watcher hangs near `*Failed` | Backend op failed | `market status <app>` to inspect; `market cancel <app>` if applicable |
-| `--cascade auto-enabled ...` (stderr) | 1.12.5 C/S v2 single-user cluster | Informational; override with `--cascade=false` if needed |
-| `--cascade force-enabled ... (CS/shared apps always cascade)` (stderr) | 1.12.6 CS/shared app | Informational; `--cascade=false` cannot disable cascade on 1.12.6 |

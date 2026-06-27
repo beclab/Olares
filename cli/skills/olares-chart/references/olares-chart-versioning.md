@@ -25,12 +25,12 @@ metadata:
 
 What `apiVersion: v3` governs (schema only — it does NOT gate admin or namespace):
 
-- **Declarative env rules** — an app-local `envName` must not start with `OLARES_USER`; user/system variables are mapped via `valueFrom`. Full env model: [olares-chart-env.md](olares-chart-env.md).
+- **Declarative env rules** — an app-local `envName` must not start with `OLARES_USER`; user/system variables are mapped via `valueFrom`. Full env model: the Env area.
 - **Chart scan** — `lint` rejects templates that inline `OLARES_USER...` env names.
 
 A plain v3 app installs into the installing user's `<app>-<owner>` namespace and **any user can install it**. Admin-only install and the shared namespace are opt-in, independent of v3:
 
-- **`options.shared: true`** → cluster-wide singleton in `<app>-shared` (cross-namespace access enabled, owned by the cluster owner) **and** admin-only install. For heavy shared backends (GPU inference servers, shared databases) other apps consume. See [olares-chart-shared.md](olares-chart-shared.md).
+- **`options.shared: true`** → cluster-wide singleton in `<app>-shared` (cross-namespace access enabled, owned by the cluster owner) **and** admin-only install. For heavy shared backends (GPU inference servers, shared databases) other apps consume. See the Shared backend pattern.
 - **`spec.onlyAdmin: true`** → admin-only install with no shared namespace; for an app that manages its own users internally.
 
 ## The version fields in a chart (don't confuse them)
@@ -45,7 +45,7 @@ A chart carries several "version" fields with different jobs. Their values are f
 | `version` | `Chart.yaml` | Helm chart version | `== metadata.version` |
 | `spec.versionName` | `OlaresManifest.yaml` | **upstream app** version (display) | tracks `Chart.yaml` `appVersion` — convention, not enforced |
 
-> **Bump on every upload:** raise `metadata.version` (= `Chart.yaml` `version`, kept equal) before each `market upload` — a patch bump (e.g. `0.0.1 → 0.0.2`) by default. The upload gate only requires `>=` the stored version, but presenting a strictly-newer version keeps each upload distinct; same-version overwrite is a fallback for when the chart didn't change. See [olares-chart-deploy.md](olares-chart-deploy.md) §2.
+> **Bump on every upload:** raise `metadata.version` (= `Chart.yaml` `version`, kept equal) before each `market upload` — a patch bump (e.g. `0.0.1 → 0.0.2`) by default. The upload gate only requires `>=` the stored version, but presenting a strictly-newer version keeps each upload distinct; same-version overwrite is a fallback for when the chart didn't change. See the Deploy step §2.
 
 > **Name clash:** `Chart.yaml` has its own `apiVersion` (Helm's chart API) — unrelated to the OlaresManifest `apiVersion`. Don't copy one into the other.
 
@@ -56,13 +56,13 @@ A chart carries several "version" fields with different jobs. Their values are f
 - **Resource envelope**, in one of two mutually-exclusive shapes: a non-accelerator app uses the flat `spec.requiredCpu` / `limitedCpu` / `requiredMemory` / `limitedMemory` / `requiredDisk` (no `mode`); a GPU/accelerator app uses the mode-keyed `spec.accelerator[]` (`cpu`, `nvidia`, ...). `lint` error messages call `spec.accelerator` **`spec.resources`** — that is just an alias in the message, not a separate field.
 - **GPU / accelerator** declared via `spec.accelerator` with a mode → arch cross-check at `lint`.
 - **`permission.externalData`** (`.Values.sharedlib`).
-- **`workloadReplicas`** — a required map of every Deployment/StatefulSet → replica count, with each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}`. See [olares-chart-manifest.md](olares-chart-manifest.md) (Workloads & replicas).
+- **`workloadReplicas`** — a required map of every Deployment/StatefulSet → replica count, with each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}`. See the Manifest refinement areas (Workloads & replicas).
 
-Accelerator mode declaration and sizing are in [olares-chart-accelerator.md](olares-chart-accelerator.md).
+Accelerator mode declaration and sizing are in the Accelerator sizing.
 
 ## System dependency: the constraint
 
-Every chart declares the `olares` `type: system` dependency in `options.dependencies` — the entry's shape and the "author it yourself" rule are in [olares-chart-manifest.md](olares-chart-manifest.md) (System dependency: olares). What this section adds is the **constraint semantics**:
+Every chart declares the `olares` `type: system` dependency in `options.dependencies` — the entry's shape and the "author it yourself" rule are in the Manifest refinement areas (System dependency: olares). What this section adds is the **constraint semantics**:
 
 - At install, app-service matches the version constraint against the running Olares version (semver); a mismatch blocks install.
 - Declare exactly `>=1.12.6-0`. The `-0` prerelease suffix is required so daily/RC builds (e.g. `1.12.6-20260327`) match — without it they fail to match an otherwise-satisfied version.

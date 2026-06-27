@@ -86,7 +86,7 @@ For `gpu tasks <ref>`, `<ref>` accepts EITHER the TASK column (`name`) OR the PO
 ## Agent notes
 
 - For "give me a single-screen vital-signs view", **`olares-cli dashboard overview -o json` is the right verb** (Shape B envelope with physical + user + ranking).
-- For "tail CPU / memory live", **add `--watch -o json`** to a per-section command. The output is NDJSON, one envelope per iteration. See [olares-dashboard-watch.md](olares-dashboard-watch.md).
+- For "tail CPU / memory live", **add `--watch -o json`** to a per-section command. The output is NDJSON, one envelope per iteration. See the dashboard watch (NDJSON streaming) reference.
 - For "what apps are using the most CPU", **`overview ranking --sort desc --head 10`** is the right entry point — it returns a workload-grain ranking with both `raw` (machine-friendly) and `display` (human-friendly) columns.
 - For `--user <other>` cross-tenant queries, **only platform-admins succeed**; non-admins get an immediate error. Run `cluster context` first if you need to confirm the active role.
 

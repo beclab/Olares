@@ -128,7 +128,7 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 
 **Not yet implemented** (and the CLI deliberately does NOT register them):
 
-- App lifecycle (`install` / `uninstall` / `upgrade` / `start` / `stop` / `cancel` / `clone`) → use [`olares-market`](../olares-market/SKILL.md) instead
+- App lifecycle (`install` / `uninstall` / `upgrade` / `stop` / `resume` / `cancel` / `clone`) → use [`olares-market`](../olares-market/SKILL.md) instead
 - Per-app secrets / permissions / providers (Infisical-backed) → admin / chart-side tooling
 - Network writes requiring a JWS-signed device-id header (`hosts-file set`, `frp set`, `ssl enable/disable/update`)
 - Containerd registry mutations (`registries mirrors put/delete`, `images delete/prune`) — JWS-gated

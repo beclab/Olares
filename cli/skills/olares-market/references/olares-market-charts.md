@@ -16,12 +16,11 @@ The history: an earlier revision exposed `-s` on these verbs, and users pushed c
 ```bash
 olares-cli market upload ./mychart.tgz                 # single file
 olares-cli market upload ./charts/                     # every chart in a directory (no recursion)
-olares-cli market upload ./a.tgz ./b.tar.gz            # multiple files
 olares-cli market upload ./charts/ -o json             # structured per-file report
 olares-cli market upload ./mychart.tgz -q              # exit code only
 ```
 
-- Accepts `.tgz` or `.tar.gz` files.
+- Takes **exactly one path argument** — a single `.tgz` / `.tar.gz` file, or one directory. To upload several charts at once, point it at a directory; it does not accept multiple file arguments.
 - Directory mode uploads every `.tgz` / `.tar.gz` directly under the directory. **Subdirectories are NOT recursed.**
 - **Per-file results are summarized at the end.** `-o json` emits a structured report with one entry per file (`status` / `message`).
 - **Exit code is the OR of per-file results** — any single failure flips the overall exit non-zero.
@@ -69,7 +68,7 @@ olares-cli market delete mychart --version 1.0.0                   # remove the 
 
 ```bash
 # Bulk-upload every chart in a release directory.
-olares-cli market upload ./dist/ -o json | jq '.[] | select(.status != "uploaded")'
+olares-cli market upload ./dist/ -o json | jq '.[] | select(.status != "success")'
 # JSON exit code is the OR of all per-file results; the jq filter surfaces the failures
 ```
 

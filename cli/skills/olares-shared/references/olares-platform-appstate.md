@@ -2,7 +2,7 @@
 
 > Cross-skill platform facts about how app-service drives an app through its lifecycle. `market` (operational gating + `--watch` discipline), `chart` (deploy loop), and `doctor` (diagnosis) all link here (one hop) instead of re-stating the state machine. Pure backend contract — no login/profile content (that is in [`../SKILL.md`](../SKILL.md)).
 >
-> Source of truth in the backend: `framework/app-service/pkg/appstate/state_transition.go` (states, transitions, allowed ops, TTLs), `pending_app.go` (download serialization), `appinstaller/helm_ops_install.go` (`WaitForLaunch` / `WaitForStartUp`), `images/puller.go` (progress).
+> Source of truth in the backend: app-service's appstate state-transition logic (states, transitions, allowed ops, TTLs), its pending-app download serialization, the helm install waiters (`WaitForLaunch` / `WaitForStartUp`), and the image puller's progress reporting.
 
 ## Lifecycle state machine
 
@@ -71,7 +71,7 @@ Used by: `market` (why `--watch` blocks so long), `doctor` (distinguishing a sta
 
 ## Serialized downloads (only one app downloads at a time)
 
-app-service admits **at most one app in `downloading`** cluster-wide (`pending_app.go`: it counts `Downloading` rows and only proceeds when `count < 1`, else the app waits in line in `pending`).
+app-service admits **at most one app in `downloading`** cluster-wide (it counts `Downloading` rows and only proceeds when `count < 1`, else the app waits in line in `pending`).
 
 - A batch of installs therefore drains **serially**: one downloads while the rest sit in `pending`. This is normal queuing, NOT a stuck install.
 - An app parked in `pending` while another app is `downloading` needs no intervention — it advances once the in-flight download finishes.
@@ -95,7 +95,7 @@ Used by: `market` (the "running ≠ healthy" verification ladder), `doctor` (a `
 
 The `PROGRESS` field on the state row cannot be trusted for fine-grained tracking:
 
-- Image-pull progress is a no-op in app-service (`images/puller.go` `Progress()` returns `""`).
+- Image-pull progress is a no-op in app-service (its puller's `Progress()` returns `""`).
 - The install progress is initialized to a hardcoded `"0.00"`.
 
 **Judge by STATE transitions, not by the progress number.** Byte-level image-pull progress comes from the per-node `image-service` DaemonSet logs / `imagemanagers` CRD, not from this field (see `doctor`).

@@ -34,12 +34,12 @@ The olares-cli skills ship and install as one suite; each owns a distinct slice.
 | Skill | Owns | Reach for it when |
 |---|---|---|
 | [`olares-shared`](SKILL.md) | Profile / login / token refresh / auth-error recovery; hosts the platform model | logging in, switching Olares ID, any auth error |
-| [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle: install / uninstall / upgrade / clone / start / stop / cancel; `--mine`; chart upload | installing or managing an app's lifecycle |
+| [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle: install / uninstall / upgrade / clone / stop / resume / cancel; `--mine`; chart upload | installing or managing an app's lifecycle |
 | [`olares-settings`](../olares-settings/SKILL.md) | Post-install config (Settings SPA): app entrance / domain / env / policy, users, VPN, network, backup / restore, integrations | changing config of an installed app or the system |
 | [`olares-cluster`](../olares-cluster/SKILL.md) | K8s runtime view: pods / workloads / jobs / cronjobs / nodes / namespaces; logs; scale / restart / delete | inspecting or operating running K8s objects |
 | [`olares-dashboard`](../olares-dashboard/SKILL.md) | Resource metrics & health: CPU / memory / disk / network / pods / GPU / fan / ranking | "what's the usage / what's eating CPU" |
 | [`olares-files`](../olares-files/SKILL.md) | Per-user file API: drive / sync / cache / external; upload / download; share; SMB / NFS; compress / extract; Seafile | browsing or moving files / drives |
-| [`olares-search`](../olares-search/SKILL.md) | Full-content search (Desktop "Text Search") over the per-user index: Drive files + Sync libraries | finding a file by its content / keyword |
+| [`olares-search`](../olares-search/SKILL.md) | Full-content search (Desktop "Text Search") over the per-user index: Drive files + Sync libraries; plus `search app` to find an installed app by title | finding a file by its content / keyword, or finding an installed app by name (not lifecycle inventory — that's `market`) |
 | [`olares-chart`](../olares-chart/SKILL.md) | Local chart authoring + deploy to your Olares: from-compose / lint / package, then upload + install | authoring, validating, or deploying your own chart |
 | [`olares-publish`](../olares-publish/SKILL.md) | Public Market distribution: market-ready metadata / multi-arch, the beclab/apps PR, paid apps | listing / submitting / selling an app on the public Market |
 | [`olares-doctor`](../olares-doctor/SKILL.md) | Runtime diagnosis: symptom -> root cause for an app that won't install, won't start, crashes, is `running` but unreachable, or is slow; orchestrates `cluster` / `dashboard` / `market` to gather evidence | an app or the system is misbehaving and you need to find out why — both catalog (`market`) and dev (`chart`) apps hand runtime failures here |

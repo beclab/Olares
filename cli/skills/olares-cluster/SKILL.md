@@ -25,7 +25,7 @@ Against the cluster the active profile can see:
 - Olares ControlHub, olares-cli cluster, what's running on my Olares
 - "What pods / containers / workloads / jobs / cronjobs / namespaces / nodes are running?"
 - "Tail / show logs of `<pod>` (or `<container>` of `<pod>`)"
-- "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app (mutating verbs prompt for confirmation; `--yes` skips)
+- "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app lifecycle. `workload stop/start` scales replicas and does not update the app-store state row; use `market stop/resume` for app-level lifecycle (mutating verbs prompt for confirmation; `--yes` skips)
 - "Suspend / resume `<cronjob>`" or "rerun `<job>`"
 - "Who am I on this cluster, what's my role?" (`cluster context`)
 - "What does this object's YAML look like?" (`cluster <noun> yaml`)

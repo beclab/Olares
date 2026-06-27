@@ -21,7 +21,7 @@ olares-cli dashboard applications -o json
 
 ## Pod can't schedule
 
-A pod stuck `Pending` (and a fresh install that ended in `stopped` — see the trap in [olares-doctor-app-stuck.md](olares-doctor-app-stuck.md)) is usually a scheduling constraint:
+A pod stuck `Pending` (and a fresh install that ended in `stopped`, the app-stuck scheduling trap) is usually a scheduling constraint:
 
 ```bash
 olares-cli cluster pod events <ns>/<pod>     # "Insufficient cpu/memory", taints, node affinity, no GPU
@@ -30,12 +30,12 @@ olares-cli cluster node list -o json         # allocatable vs requested per node
 
 | Event reason | Root cause | Next step |
 |---|---|---|
-| `Insufficient memory` / `cpu` | Node lacks headroom | Free resources (stop other apps), or lower the app's requests in the chart ([`../../olares-chart/references/olares-chart-accelerator.md`](../../olares-chart/references/olares-chart-accelerator.md)) |
+| `Insufficient memory` / `cpu` | Node lacks headroom | Free resources (stop other apps), or lower the chart resource envelope |
 | `Insufficient <gpu resource>` / no schedulable node | No matching GPU/accelerator capacity | Pick a node/device with capacity; check `settings compute list` |
-| `node-pressure` on a GPU `resume` (Memory/CPU/Disk Total/Used/Needed) | The compute binding can't fit | Free resources or pick different cards — see `market resume` `--compute-binding` ([`../../olares-market/references/olares-market-lifecycle.md`](../../olares-market/references/olares-market-lifecycle.md)) |
+| `node-pressure` on a GPU `resume` (Memory/CPU/Disk Total/Used/Needed) | The compute binding can't fit | Free resources or pick different cards with `market resume --compute-binding` |
 
 ## GPU / VRAM rejections
 
-GPU binding rejections (`aggregate-vram-insufficient`, `device-vram-insufficient`, `node-pressure`, `multi-card-not-supported`, `gpu-type-mismatch`) come back from `market install`/`resume`. The full reason matrix and how to re-pick devices live in [`../../olares-market/references/olares-market-lifecycle.md`](../../olares-market/references/olares-market-lifecycle.md); list operable devices with `olares-cli settings compute list`.
+GPU binding rejections (`aggregate-vram-insufficient`, `device-vram-insufficient`, `node-pressure`, `multi-card-not-supported`, `gpu-type-mismatch`) come back from `market install`/`resume`. Re-pick devices with `market resume --compute-binding`; list operable devices with `olares-cli settings compute list`.
 
-> Pruning unused images to reclaim disk is in [olares-doctor-image.md](olares-doctor-image.md) (`doctor images --unused`).
+> Pruning unused images to reclaim disk is **doctor: image / pull failures** (`doctor images --unused`).

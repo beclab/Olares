@@ -5,7 +5,7 @@
 
 "Application space" = a K8s Namespace seen through the KubeSphere lens (grouped by workspace). Same underlying resource as `cluster namespace`, but framed for app-level navigation. Read-only.
 
-> **NOT to be confused with app-store lifecycle.** For install / uninstall / upgrade / start / stop of an Olares app, use [`olares-market`](../../olares-market/SKILL.md). This tree is the runtime-state view of the resulting K8s namespaces.
+> **NOT to be confused with app-store lifecycle.** For install / uninstall / upgrade / stop / resume of an Olares app, use [`olares-market`](../../olares-market/SKILL.md). This tree is the runtime-state view of the resulting K8s namespaces.
 
 ## Verbs at a glance
 

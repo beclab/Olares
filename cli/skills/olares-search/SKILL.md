@@ -25,7 +25,7 @@ metadata:
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
-> **Mental model:** `search drive` / `search sync` answers *"which file CONTAINS this text"* by querying the pre-built per-user index. `search app` answers *"which installed app matches this name"*. To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
+> **Mental model:** `search drive` / `search sync` answers *"which file CONTAINS this text"* by querying the pre-built per-user index. `search app` answers *"which installed app matches this name"*. It is not lifecycle inventory (`market list --mine` / `market status`) or resource ranking (`dashboard applications`). To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
 
 ## What it is
 
@@ -57,9 +57,9 @@ Multiple words are joined into one keyword (quote multi-word phrases to be expli
 
 ### app
 
-- Fetches installed apps from `/server/myApps`, expands visible entrances, filters by case-insensitive substring match on entrance title.
+- Fetches installed apps from `/server/myApps`, expands visible entrances, filters by case-insensitive substring match on the entrance title (falling back to the app title when an entrance declares none).
 - Client-side pagination via `--limit` / `--offset` after filtering.
-- Skips uninstalled/failed apps and invisible entrances (same rules as the Desktop SPA).
+- Skips uninstalled/failed apps and invisible entrances (same rules as the Desktop SPA). For a `running` app the row shows the per-entrance state.
 
 ### Indexing (drive / sync only)
 

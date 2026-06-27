@@ -15,11 +15,11 @@ olares-cli cluster pod events <ns>/<pod>        # "Failed to pull image ...": th
 
 | Reason | Root cause | Next step |
 |---|---|---|
-| `ImagePullBackOff` / `ErrImagePull` | Image missing, private without creds, or registry/mirror unreachable | Confirm the ref is public & pullable; if a mirror is down, that is a stalled-pull/network issue (see [olares-doctor-app-stuck.md](olares-doctor-app-stuck.md)) |
-| `InvalidImageName` | Malformed image ref in the workload spec | For a chart you author, fix the image ref — [`../../olares-chart/references/olares-chart-image.md`](../../olares-chart/references/olares-chart-image.md) |
-| `no match for platform` / `exec format error` | Image arch != node arch | Rebuild for this node's arch (`cluster node list` for arch) — [`../../olares-chart/references/olares-chart-image.md`](../../olares-chart/references/olares-chart-image.md) |
+| `ImagePullBackOff` / `ErrImagePull` | Image missing, private without creds, or registry/mirror unreachable | Confirm the ref is public & pullable; if a mirror is down, treat it as the app-stuck stalled-pull path |
+| `InvalidImageName` | Malformed image ref in the workload spec | For a chart you author, fix the image reference |
+| `no match for platform` / `exec format error` | Image arch != node arch | Rebuild for this node's arch (`cluster node list` for arch) |
 
-A slow-but-progressing pull is NOT a failure — see the `downloading` section of [olares-doctor-app-stuck.md](olares-doctor-app-stuck.md) for distinguishing slow from stalled.
+A slow-but-progressing pull is NOT a failure — use the app-stuck `downloading` procedure to distinguish slow from stalled.
 
 ## Unused local images (`doctor images`)
 
