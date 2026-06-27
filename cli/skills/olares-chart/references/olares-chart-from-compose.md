@@ -63,4 +63,4 @@ Once refined, validate in a loop:
 olares-cli chart lint ./myapp      # see the Validate-local (lint) step
 ```
 
-Once `lint` passes, deploy to a real Olares automatically (no extra confirmation needed; stop only if not logged in or a failure is clearly not a chart problem) — the Deploy step. To list it on the public Market afterwards, see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).
+Once `lint` passes, deploy to a real Olares automatically (no extra confirmation needed; proceed unless olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate) says stop, or a failure is clearly not a chart problem) — the Deploy step. To list it on the public Market afterwards, see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).

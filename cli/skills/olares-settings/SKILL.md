@@ -152,9 +152,7 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 |---|---|---|
 | `this command needs role "<R>" or higher to <verb>, but profile "<id>" is cached as "<r>"` | Cached role below the verb's floor | If your role on the server changed: `olares-cli profile whoami --refresh`. Otherwise ask owner to grant the role |
 | `HTTP 403 while attempting to <verb>` (with refresh hint) | Server rejected even though cache said OK — stale role cache | `olares-cli profile whoami --refresh`, retry the verb |
-| `refresh token for <id> became invalid at <ts>; please run: olares-cli profile login --olares-id <id>` | The refresh_token itself is dead — see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) | `olares-cli profile login --olares-id <id>` |
-| `no access token for <id>; run: olares-cli profile login --olares-id <id>` | Keychain has no entry for the active profile | `olares-cli profile login` or `profile import` |
 | `unsupported --output "<x>" (allowed: table, json)` | Typo on `-o` | Use `-o table` or `-o json` |
 | `GET <path>: upstream returned code <N>: <msg>` | user-service / BFL / backup-server returned non-success envelope | Read the message verbatim; it almost always carries actionable detail (e.g. "user not found") |
 
-For the full auth-error matrix see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
+Any auth / token error (token invalidated, no access token, refresh expired) → see the [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) auth error recovery table.
