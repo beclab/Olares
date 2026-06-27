@@ -9,26 +9,37 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jaypipes/ghw"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 )
 
+// gpuEmptyRescanInterval bounds how often an empty GPU scan is retried, so a
+// node without a GPU does not re-scan the PCI bus on every status tick while a
+// GPU that only appears after boot is still eventually detected.
+const gpuEmptyRescanInterval = 5 * time.Minute
+
 var (
 	gpuInfoMu     sync.Mutex
 	gpuInfoCached bool
 	gpuInfoValue  *string
+	gpuLastScan   time.Time
 )
 
 // GetGpuInfo returns the primary GPU description. GPUs are not hot-plugged at
-// runtime, but scanning the PCI bus via ghw on every status tick is expensive,
-// so the result is cached after the first successful scan. A failed scan is not
-// cached and will be retried on the next call.
+// runtime, but scanning the PCI bus via ghw on every status tick is expensive.
+// A found GPU is cached for the process lifetime; an empty scan is retried at
+// most once per gpuEmptyRescanInterval, and a failed scan is retried on the
+// next call.
 func GetGpuInfo() (*string, error) {
 	gpuInfoMu.Lock()
 	defer gpuInfoMu.Unlock()
 	if gpuInfoCached {
+		return gpuInfoValue, nil
+	}
+	if !gpuLastScan.IsZero() && time.Since(gpuLastScan) < gpuEmptyRescanInterval {
 		return gpuInfoValue, nil
 	}
 
@@ -37,6 +48,7 @@ func GetGpuInfo() (*string, error) {
 		klog.Errorf("Error getting GPU info: %v", err)
 		return nil, err
 	}
+	gpuLastScan = time.Now()
 
 	var first string
 	var result *string
@@ -60,6 +72,8 @@ func GetGpuInfo() (*string, error) {
 	}
 
 	gpuInfoValue = result
-	gpuInfoCached = true
+	if result != nil {
+		gpuInfoCached = true
+	}
 	return result, nil
 }
