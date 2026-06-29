@@ -55,7 +55,8 @@ func (u upgrader_1_12_7_20260629) UpgradeSystemComponents() []task.Interface {
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
-	}, u.upgraderBase.UpgradeSystemComponents()...)
+	})
+	tasks = append(u.upgraderBase.UpgradeSystemComponents(), tasks...)
 	return tasks
 }
 
@@ -69,9 +70,27 @@ func init() {
 // template does NOT already set a priorityClassName, patches it to
 // system-cluster-critical via a strategic merge patch. Workloads that already
 // have any priorityClassName configured (e.g. system-node-critical) are left
-// untouched.
+// untouched, as are Helm-managed workloads (so the patch is not reverted on
+// the next `helm upgrade`).
 type patchWorkloadPriorityClassName struct {
 	common.KubeAction
+}
+
+// isHelmManagedWorkload reports whether the given object is owned by Helm.
+// We treat both the standard managed-by label and the meta.helm.sh release
+// annotations as evidence, because some charts only set one or the other.
+func isHelmManagedWorkload(obj metav1.Object) bool {
+	if v, ok := obj.GetLabels()["app.kubernetes.io/managed-by"]; ok && v == "Helm" {
+		return true
+	}
+	annotations := obj.GetAnnotations()
+	if _, ok := annotations["meta.helm.sh/release-name"]; ok {
+		return true
+	}
+	if _, ok := annotations["meta.helm.sh/release-namespace"]; ok {
+		return true
+	}
+	return false
 }
 
 func (a *patchWorkloadPriorityClassName) Execute(_ connector.Runtime) error {
@@ -153,6 +172,10 @@ func patchNamespaceWorkloadsMissingPriorityClassName(client *kubernetes.Clientse
 		if d.Spec.Template.Spec.PriorityClassName != "" {
 			continue
 		}
+		if isHelmManagedWorkload(&d.ObjectMeta) {
+			logger.Infof("skipping Helm-managed deployment %s/%s priorityClassName patch", namespace, d.Name)
+			continue
+		}
 		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			_, patchErr := client.AppsV1().Deployments(namespace).Patch(
 				ctx, d.Name, types.StrategicMergePatchType, patch, metav1.PatchOptions{},
@@ -176,6 +199,10 @@ func patchNamespaceWorkloadsMissingPriorityClassName(client *kubernetes.Clientse
 		if ds.Spec.Template.Spec.PriorityClassName != "" {
 			continue
 		}
+		if isHelmManagedWorkload(&ds.ObjectMeta) {
+			logger.Infof("skipping Helm-managed daemonset %s/%s priorityClassName patch", namespace, ds.Name)
+			continue
+		}
 		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			_, patchErr := client.AppsV1().DaemonSets(namespace).Patch(
 				ctx, ds.Name, types.StrategicMergePatchType, patch, metav1.PatchOptions{},
@@ -197,6 +224,10 @@ func patchNamespaceWorkloadsMissingPriorityClassName(client *kubernetes.Clientse
 	for i := range statefulSets.Items {
 		sts := &statefulSets.Items[i]
 		if sts.Spec.Template.Spec.PriorityClassName != "" {
+			continue
+		}
+		if isHelmManagedWorkload(&sts.ObjectMeta) {
+			logger.Infof("skipping Helm-managed statefulset %s/%s priorityClassName patch", namespace, sts.Name)
 			continue
 		}
 		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
