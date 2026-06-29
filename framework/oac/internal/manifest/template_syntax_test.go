@@ -114,6 +114,38 @@ func TestCheckNoTemplateSyntax(t *testing.T) {
 			content: "metadata:\n  labels: {a: 1, b: 2}\n",
 			wantErr: false,
 		},
+		{
+			// CRLF-terminated files are common when manifests are
+			// authored on Windows or carried through tools that
+			// rewrite line endings. The `\r` must not stop the
+			// block-scalar header (`|` / `>`) from opening or the
+			// body braces from being masked.
+			name:    "CRLF block scalar `|` shields placeholders on body lines",
+			content: "spec:\r\n  description: |\r\n    Multi-line text\r\n    that shows {{ .Values.foo }}\r\n    and {{ .Values.bar }} too.\r\n",
+			wantErr: false,
+		},
+		{
+			name:    "CRLF folded block scalar `>-` shields placeholders",
+			content: "spec:\r\n  description: >-\r\n    Folded text {{ .x }}\r\n    inline.\r\n",
+			wantErr: false,
+		},
+		{
+			name:    "CRLF double-quoted scalar shields a paired `{{ ... }}`",
+			content: "spec:\r\n  description: \"use {{ .Values.foo }} as a placeholder\"\r\n",
+			wantErr: false,
+		},
+		{
+			// Even with CRLF, an unquoted placeholder still leaks
+			// and the reported line number must reflect the
+			// original (CRLF-counted) line.
+			name:     "CRLF unquoted `{{ ... }}` value is still rejected",
+			content:  "line1\r\nline2\r\nmetadata:\r\n  name: {{ .Values.bfl.username }}\r\n",
+			wantErr:  true,
+			wantLine: 4,
+			wantInMsg: []string{
+				"{{",
+			},
+		},
 	}
 	for _, tc := range cases {
 		tc := tc
