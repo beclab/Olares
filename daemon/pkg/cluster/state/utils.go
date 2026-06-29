@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -139,7 +140,27 @@ func IsIpChangeRunning() (bool, error) {
 	return running, err
 }
 
+var (
+	machineInfoMu     sync.Mutex
+	machineInfoCached bool
+	machineInfoCache  struct {
+		osType, osInfo, osArch, osVersion, osKernel string
+	}
+)
+
+// GetMachineInfo returns OS type/info/arch/version/kernel. These are static for
+// the lifetime of the process, but the underlying `olares-cli osinfo show` is a
+// subprocess fork that the status loop ran on every 5s tick. The result is
+// cached after the first successful read; if the CLI is not yet available the
+// call returns empty values and is retried on the next tick.
 func GetMachineInfo(ctx context.Context) (osType, osInfo, osArch, osVersion, osKernel string, err error) {
+	machineInfoMu.Lock()
+	defer machineInfoMu.Unlock()
+	if machineInfoCached {
+		c := machineInfoCache
+		return c.osType, c.osInfo, c.osArch, c.osVersion, c.osKernel, nil
+	}
+
 	cmd := exec.CommandContext(ctx, cli.TERMINUS_CLI, "osinfo", "show")
 
 	if output, err := cmd.Output(); err == nil {
@@ -162,6 +183,17 @@ func GetMachineInfo(ctx context.Context) (osType, osInfo, osArch, osVersion, osK
 				osKernel = kv[1]
 			}
 		}
+	}
+
+	// Cache only once we actually parsed something, so an early-boot read before
+	// olares-cli is ready does not get memoized as permanently empty.
+	if osType != "" || osInfo != "" || osArch != "" || osVersion != "" || osKernel != "" {
+		machineInfoCache.osType = osType
+		machineInfoCache.osInfo = osInfo
+		machineInfoCache.osArch = osArch
+		machineInfoCache.osVersion = osVersion
+		machineInfoCache.osKernel = osKernel
+		machineInfoCached = true
 	}
 
 	return
