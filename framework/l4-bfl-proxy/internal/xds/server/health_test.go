@@ -1,61 +1,125 @@
 package server
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
-
-	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	"google.golang.org/genproto/googleapis/rpc/status"
 )
 
-func TestHealthTracker_NackThenAckRecovers(t *testing.T) {
-	h := newHealthTracker()
+func newListenersServer(t *testing.T, status int, body string) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/listeners" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(body))
+	}))
+}
 
-	if err := h.err(); err != nil {
-		t.Fatalf("fresh tracker should be healthy, got %v", err)
-	}
+// useAdminAddr points the readiness check at addr for the duration of the test.
+func useAdminAddr(t *testing.T, addr string) {
+	t.Helper()
+	old := envoyAdminAddr
+	envoyAdminAddr = addr
+	t.Cleanup(func() { envoyAdminAddr = old })
+}
 
-	// Envoy NACKs the listener config.
-	h.observe(resourcev3.ListenerType, "nonce-1", "duplicate matcher")
-	if err := h.err(); err == nil {
-		t.Fatal("expected unhealthy after NACK")
-	}
+func adminHostPort(ts *httptest.Server) string {
+	return strings.TrimPrefix(ts.URL, "http://")
+}
 
-	// A subsequent ACK (nonce set, no error) clears it.
-	h.observe(resourcev3.ListenerType, "nonce-2", "")
-	if err := h.err(); err != nil {
-		t.Fatalf("expected healthy after ACK, got %v", err)
+const sampleListeners = `http_redirect_81::0.0.0.0:81
+https_443::0.0.0.0:443
+https_pp_444::0.0.0.0:444
+stream_udp_olarestest004_53::0.0.0.0:53
+`
+
+// All core ingress listeners are active → ready.
+func TestReadyCheck_AllActive_Ready(t *testing.T) {
+	ts := newListenersServer(t, http.StatusOK, sampleListeners)
+	defer ts.Close()
+	useAdminAddr(t, adminHostPort(ts))
+
+	s := &XdsServer{}
+	if err := s.ReadyCheck(nil); err != nil {
+		t.Fatalf("expected ready, got %v", err)
 	}
 }
 
-func TestHealthTracker_InitialRequestIgnored(t *testing.T) {
-	h := newHealthTracker()
-	// Envoy's first request for a type has no nonce and no error; it must not
-	// be treated as an ACK or NACK.
-	h.observe(resourcev3.ClusterType, "", "")
-	if err := h.err(); err != nil {
-		t.Fatalf("initial request should keep tracker healthy, got %v", err)
+// A core ingress listener missing from Envoy → not ready, and the error names
+// the missing listener.
+func TestReadyCheck_MissingCritical_NotReady(t *testing.T) {
+	body := "http_redirect_81::0.0.0.0:81\nhttps_443::0.0.0.0:443\n" // no 444
+	ts := newListenersServer(t, http.StatusOK, body)
+	defer ts.Close()
+	useAdminAddr(t, adminHostPort(ts))
+
+	s := &XdsServer{}
+	err := s.ReadyCheck(nil)
+	if err == nil {
+		t.Fatal("expected not ready when https_pp_444 is missing")
+	}
+	if !strings.Contains(err.Error(), "https_pp_444") {
+		t.Fatalf("error should name the missing listener, got %v", err)
 	}
 }
 
-func TestHealthTracker_CallbacksWireUp(t *testing.T) {
-	h := newHealthTracker()
-	cb := h.callbacks()
+// A per-app stream listener failing to bind (absent from /listeners) does not
+// affect readiness, since it is not a critical listener.
+func TestReadyCheck_AppStreamListenerIrrelevant(t *testing.T) {
+	body := "https_443::0.0.0.0:443\nhttps_pp_444::0.0.0.0:444\n" // 53 never bound
+	ts := newListenersServer(t, http.StatusOK, body)
+	defer ts.Close()
+	useAdminAddr(t, adminHostPort(ts))
 
-	_ = cb.StreamDeltaRequestFunc(1, &discoverygrpc.DeltaDiscoveryRequest{
-		TypeUrl:       resourcev3.ListenerType,
-		ResponseNonce: "n1",
-		ErrorDetail:   &status.Status{Message: "boom"},
-	})
-	if err := h.err(); err == nil {
-		t.Fatal("expected unhealthy after delta NACK callback")
+	s := &XdsServer{}
+	if err := s.ReadyCheck(nil); err != nil {
+		t.Fatalf("app stream listener absence must not affect readiness, got %v", err)
 	}
+}
 
-	_ = cb.StreamDeltaRequestFunc(1, &discoverygrpc.DeltaDiscoveryRequest{
-		TypeUrl:       resourcev3.ListenerType,
-		ResponseNonce: "n2",
-	})
-	if err := h.err(); err != nil {
-		t.Fatalf("expected healthy after delta ACK callback, got %v", err)
+// Envoy admin unreachable → not ready.
+func TestReadyCheck_AdminUnreachable_NotReady(t *testing.T) {
+	ts := newListenersServer(t, http.StatusOK, sampleListeners)
+	addr := adminHostPort(ts)
+	ts.Close() // now unreachable
+	useAdminAddr(t, addr)
+
+	s := &XdsServer{}
+	if err := s.ReadyCheck(nil); err == nil {
+		t.Fatal("expected not ready when admin is unreachable")
+	}
+}
+
+func TestEvaluateReadiness(t *testing.T) {
+	active := map[string]bool{"https_443": true, "https_pp_444": true}
+	if err := evaluateReadiness([]string{"https_443", "https_pp_444"}, active); err != nil {
+		t.Fatalf("expected ready, got %v", err)
+	}
+	err := evaluateReadiness([]string{"https_443", "https_pp_444"}, map[string]bool{"https_443": true})
+	if err == nil || !strings.Contains(err.Error(), "https_pp_444") {
+		t.Fatalf("expected error naming https_pp_444, got %v", err)
+	}
+}
+
+func TestFetchActiveListeners_Parsing(t *testing.T) {
+	ts := newListenersServer(t, http.StatusOK, sampleListeners)
+	defer ts.Close()
+
+	active, err := fetchActiveListeners(context.Background(), adminHostPort(ts))
+	if err != nil {
+		t.Fatalf("fetchActiveListeners: %v", err)
+	}
+	for _, name := range []string{"http_redirect_81", "https_443", "https_pp_444", "stream_udp_olarestest004_53"} {
+		if !active[name] {
+			t.Errorf("expected listener %q to be parsed as active", name)
+		}
+	}
+	if len(active) != 4 {
+		t.Errorf("expected 4 active listeners, got %d", len(active))
 	}
 }
