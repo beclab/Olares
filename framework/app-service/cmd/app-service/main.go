@@ -336,14 +336,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	// start api server
+	// start api server and wait for webhook listener before controllers reconcile
+	webhookReady := make(chan struct{})
 	func(ctx context.Context, errCh chan error, ksHost string, kubeConfig *rest.Config) {
 		go func() {
-			if err := runAPIServer(ctx, ksHost, kubeConfig, mgr.GetClient()); err != nil {
+			if err := runAPIServer(ctx, webhookReady, ksHost, kubeConfig, mgr.GetClient()); err != nil {
 				errCh <- err
 			}
 		}()
 	}(ictx, errCh, fmt.Sprintf("%s:%s", ksHost, ksPort), config)
+
+	select {
+	case <-webhookReady:
+		setupLog.Info("Webhook server is listening, starting controllers")
+	case <-ictx.Done():
+		os.Exit(1)
+	}
 
 	setupLog.Info("Starting manager")
 	if err := mgr.Start(ictx); err != nil {
@@ -355,7 +363,7 @@ func main() {
 	cancelFunc()
 }
 
-func runAPIServer(ctx context.Context, ksHost string, kubeConfig *rest.Config, client client.Client) error {
+func runAPIServer(ctx context.Context, webhookReady chan struct{}, ksHost string, kubeConfig *rest.Config, client client.Client) error {
 	server, err := apiserver.New(ctx)
 	if err != nil {
 		return err
@@ -369,6 +377,6 @@ func runAPIServer(ctx context.Context, ksHost string, kubeConfig *rest.Config, c
 		return err
 	}
 
-	err = server.Run()
+	err = server.Run(webhookReady)
 	return err
 }
