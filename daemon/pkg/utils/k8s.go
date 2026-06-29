@@ -214,8 +214,11 @@ func GetAppClientSet() (versioned.Clientset, error) {
 	return *client, nil
 }
 
+// IsTerminusInitialized reports whether the owner user finished initialization.
+// The client argument is retained for signature compatibility; user reads now
+// go through the shared informer cache.
 func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initialized bool, failed bool, err error) {
-	users, err := client.Resource(UserGVR).List(ctx, metav1.ListOptions{})
+	users, err := listUsersRaw(ctx)
 	if err != nil {
 		klog.Error("list user error, ", err)
 		initialized = false
@@ -223,7 +226,7 @@ func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initi
 		return
 	}
 
-	for _, u := range users.Items {
+	for _, u := range users {
 		role, ok := u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
 		if !ok {
 			continue
@@ -264,18 +267,21 @@ func IsTerminusInitializing(ctx context.Context, client dynamic.Interface) (bool
 	return status != string(bflconst.Completed), nil
 }
 
+// IsTerminusRunning reports whether all key pods are ready. The client argument
+// is retained for signature compatibility; pod reads now go through the shared
+// informer cache.
 func IsTerminusRunning(ctx context.Context, client kubernetes.Interface) (bool, error) {
-	pods, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	pods, err := ListPods(ctx)
 	if err != nil {
 		klog.Error("list pods error, ", err)
 		return false, err
 	}
 
-	for _, pod := range pods.Items {
-		if isKeyPod(&pod) {
+	for _, pod := range pods {
+		if isKeyPod(pod) {
 			switch pod.Status.Phase {
 			case corev1.PodRunning:
-				if !isPodReady(&pod) {
+				if !isPodReady(pod) {
 					return false, nil
 				}
 				continue
@@ -506,18 +512,22 @@ func GetAdminUser(ctx context.Context, client dynamic.Interface) (*unstructured.
 	return u[0], nil
 }
 
+// ListUsers returns user CRs matching the given filters. The client argument is
+// retained for signature compatibility; reads come from the shared informer
+// cache. The returned objects are shared read-only cache references, so callers
+// must DeepCopy before mutating.
 func ListUsers(ctx context.Context, client dynamic.Interface, filters ...Filter) ([]*unstructured.Unstructured, error) {
-	users, err := client.Resource(UserGVR).List(ctx, metav1.ListOptions{})
+	users, err := listUsersRaw(ctx)
 	if err != nil {
 		klog.Error("list user error, ", err)
 		return nil, err
 	}
 
 	var userList []*unstructured.Unstructured
-	for _, u := range users.Items {
+	for _, u := range users {
 		var skip bool
 		for _, filter := range filters {
-			if !filter(&u) {
+			if !filter(u) {
 				skip = true
 				break
 			}
@@ -526,7 +536,7 @@ func ListUsers(ctx context.Context, client dynamic.Interface, filters ...Filter)
 			continue
 		}
 
-		userList = append(userList, &u)
+		userList = append(userList, u)
 	}
 
 	return userList, nil
@@ -607,7 +617,7 @@ func GetTerminusInitializedTime(ctx context.Context, client kubernetes.Interface
 }
 
 func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName, nodeIp, nodeRole string, err error) {
-	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodes, err := ListNodes(ctx)
 	if err != nil {
 		klog.Error("list nodes error, ", err)
 		return
@@ -619,7 +629,7 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 		return
 	}
 
-	for _, node := range nodes.Items {
+	for _, node := range nodes {
 		var foundIp bool
 		for _, address := range node.Status.Addresses {
 			switch address.Type {
@@ -669,14 +679,14 @@ func GetUserspacePvcHostPath(ctx context.Context, user string, client kubernetes
 }
 
 func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[string][]NodePressure, error) {
-	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodes, err := ListNodes(ctx)
 	if err != nil {
 		klog.Error("list nodes error, ", err)
 		return nil, err
 	}
 
 	status := make(map[string][]NodePressure)
-	for _, node := range nodes.Items {
+	for _, node := range nodes {
 		for _, condition := range node.Status.Conditions {
 			if condition.Type != corev1.NodeReady && condition.Status == corev1.ConditionTrue {
 				status[node.Name] = append(status[node.Name], NodePressure{Type: string(condition.Type), Message: condition.Message})
@@ -690,13 +700,7 @@ func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[str
 func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	var urls []string
 
-	clientset, err := GetAppClientSet()
-	if err != nil {
-		klog.Error("get app clientset error, ", err)
-		return nil, err
-	}
-
-	apps, err := clientset.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	apps, err := ListApplications(ctx)
 	if err != nil {
 		klog.Error("list applications error, ", err)
 		return nil, err
@@ -709,15 +713,18 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, app := range apps.Items {
+	for _, cached := range apps {
+		// Objects from the informer cache are shared and read-only, and
+		// GenEntranceURL mutates the application spec, so work on a copy.
+		app := cached.DeepCopy()
 		var entrances []appcfg.Entrance
 		var err error
 		zone, err := iamv1alpha2.GetUserZone(ctx, uc.Users, app.Spec.Owner)
 		if err != nil {
 			continue
 		}
-		if !appv1alpha1.IsShared(&app) {
-			entrances, err = appcfg.GenEntranceURL(ctx, &app)
+		if !appv1alpha1.IsShared(app) {
+			entrances, err = appcfg.GenEntranceURL(ctx, app)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
 				continue
@@ -735,7 +742,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 			}
 		} else {
 
-			entrances, err = BatchGenSharedAppEntranceURL(ctx, &app)
+			entrances, err = BatchGenSharedAppEntranceURL(ctx, app)
 			if err != nil {
 				klog.Error("generate shared application entrance url error, ", err, ", ", app.Name)
 				continue
