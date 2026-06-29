@@ -5,7 +5,7 @@ description: Learn how to use the LLM Base applications on Olares to self-host l
 
 # Host local large language models with LLM Base apps
 
-Olares V1.12.6 introduces the local hosting and management platform for large language models (LLMs), a self-hosting solution powered by the `llm-init` project. This platform provides four LLM Base applications, each for one inference engine: **Ollama LLM Base**, **vLLM LLM Base**, **llama.cpp LLM Base**, and **SGLang LLM Base**. Select the base app for the engine you want, use it to deploy different models, and then monitor model performance through a dedicated console. 
+Olares V1.12.6 introduces the local hosting and management platform for large language models (LLMs), a self-hosting solution powered by the `llm-init` project. This platform provides four LLM Base applications, each for one inference engine: **Ollama LLM Base**, **vLLM LLM Base**, **llama.cpp LLM Base**, and **SGLang LLM Base**. Select the base app for the engine you want, use it to deploy different models, and then monitor model performance through a dedicated console.
 
 ## Before you start
 
@@ -23,11 +23,10 @@ Olares V1.12.6 introduces the local hosting and management platform for large la
 
     | Base app | When to choose |
     | :--- | :--- |
-    | **llama.cpp LLM Base (llm-init)** | Choose llama.cpp when you are running lightweight<br> GGUF models or deploying with limited GPU memory. |    
+    | **llama.cpp LLM Base (llm-init)** | Choose llama.cpp when you are running lightweight<br> GGUF models or deploying with limited GPU memory.<br>It is the recommended engine on Olares One. |
     | **Ollama LLM Base (llm-init)** | Choose Ollama when you want to get started quickly with<br> broad model compatibility. It pulls models automatically<br> using native model tags, making it ideal for chat and embedding tasks. |
     | **SGLang LLM Base (llm-init)** | Choose SGLang when you need efficient structured<br> generation or advanced reasoning optimizations. |
-    | **vLLM LLM Base (llm-init)** | Choose vLLM when you need high-throughput serving <br>of Hugging Face models under heavy concurrent load. |
-
+    | **vLLM LLM Base (llm-init)** | Choose vLLM when you need high-throughput serving<br> of Hugging Face models under heavy concurrent load. |
 
 ## Create a new model instance
 
@@ -99,7 +98,7 @@ After creating the instance, the configuration window opens. Define where your e
     :::info
     Model instances created from LLM Base apps show a `From template` tag next to the app name. You can see this tag when viewing the app in Market or Settings.
 
-    ![Model instance tag](/images/manual/olares/llm-base-model-instance-tag1.png#bordered){width=70%}   
+    ![Model instance tag](/images/manual/olares/llm-base-model-instance-tag1.png#bordered){width=70%}
     :::
 
 :::tip Update variables later
@@ -132,7 +131,7 @@ For other llama.cpp arguments, see the [official documentation](https://github.c
 | `OLLAMA_KEEP_ALIVE` | Sets how long the model stays resident in<br> GPU memory after the last request. When the<br> time expires, the weights are swapped to<br> system RAM.<ul><li>`-1` keeps it in GPU memory permanently.</li><li>`3m` keeps it for 3 minutes.</li></ul>Default: `-1`. | `-1` or `30m` |
 | `OLLAMA_FLASH_ATTENTION` | Enables Flash Attention. It must be enabled<br> to use `OLLAMA_KV_CACHE_TYPE` for KV cache<br> quantization.<br><br>Default: `1`. | `1` (Enabled) |
 | `OLLAMA_KV_CACHE_TYPE` | Sets the key-value (KV) cache quantization<br> type to save video memory. <br><br>Default: `f16`. | `q8_0` (minor precision loss) or `q4_0` |
-| `OLLAMA_NUM_PARALLEL` | Sets the number of concurrent<br> requests processed per model. <br><br>Ollama determines this automatically<br> based on your available VRAM, <br>typically `1` or `4`.<br><br>Default: `1` | `1` |
+| `OLLAMA_NUM_PARALLEL` | Sets the number of concurrent<br> requests processed per model。 <br><br>Default: `1`. | `1` |
 
 For other Ollama arguments, see the [official documentation](https://github.com/ollama/ollama/blob/main/docs/faq.mdx).
 </template>
@@ -163,66 +162,51 @@ For other vLLM arguments, see the [official documentation](https://docs.vllm.ai/
 </template>
 </tabs>
 
-### Sample engine configurations
+### Recommended models and parameters
+
+The following per-engine recommendations are validated best practices. Use them as a starting point, then adjust for your hardware.
 
 <tabs>
 <template #Llama-cpp>
 
-```text
-MODEL_SOURCE=hf://unsloth/Qwen3.5-2B-GGUF --include Qwen3.5-2B-UD-Q4_K_XL.gguf,hf://unsloth/Qwen3.5-2B-GGUF --include mmproj-F16.gguf
-MODEL_NAME=unsloth/Qwen3.5-2B-GGUF:UD-Q4_K_XL
-MODEL_MODE=chat
-MODEL_SUPPORTS=supports_vision,supports_reasoning
-ENGINE_ARGS=-c 65536 -ngl all -fa on
-LLAMACPP_REQUIRED_GPU_MEMORY=8192
-```
+For the best speed, pick an MTP model so the engine can apply speculative decoding.
+
+- **Recommended model**: [`unsloth/gemma-4-26B-A4B-it-GGUF`](https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF), an MTP model, and the `MODEL_SOURCE` must include the `mtp-gemma-4-26B-A4B-it.gguf` file
+- **MODEL_SOURCE**: `hf://unsloth/gemma-4-26B-A4B-it-GGUF --include gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf,hf://unsloth/gemma-4-26B-A4B-it-GGUF --include mmproj-F16.gguf,hf://unsloth/gemma-4-26B-A4B-it-GGUF --include mtp-gemma-4-26B-A4B-it.gguf`
+- **MODEL_NAME**: `unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q4_K_XL`
+- **ENGINE_ARGS**: `-c 65536 -ngl all -fa on -ctk q8_0 -ctv q8_0 --spec-type draft-mtp --spec-draft-n-max 3`
 
 </template>
 <template #Ollama>
 
-**Chat Model Example**
-```text
-MODEL_SOURCE=ollama://qwen3.5:2b
-MODEL_NAME=qwen3.5-2b
-MODEL_MODE=chat
-MODEL_SUPPORTS=supports_function_calling,supports_tool_choice
-ENGINE_ARGS=OLLAMA_CONTEXT_LENGTH=8192
-OLLAMA_REQUIRED_GPU_MEMORY=4096
-```
-
-**Embedding Model Example**
-```text
-MODEL_SOURCE=ollama://nomic-embed-text
-MODEL_NAME=nomic-embed-text
-MODEL_MODE=supports_embedding
-MODEL_SUPPORTS=embedding
-ENGINE_ARGS=OLLAMA_KEEP_ALIVE=-1
-OLLAMA_REQUIRED_GPU_MEMORY=4096
-```
+- **Recommended model**: `gemma4-26b` from the Ollama library, which defaults to Q4_K_M quantization
+- **MODEL_SOURCE**: `ollama://gemma4-26b`
+- **MODEL_NAME**: `gemma4-26b`
+- **ENGINE_ARGS**: `OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=65536 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 OLLAMA_NUM_PARALLEL=1`
 
 </template>
 <template #SGLang>
 
-```text
-MODEL_SOURCE=hf://Qwen/Qwen3.5-2B
-MODEL_NAME=Qwen/Qwen3.5-2B
-MODEL_MODE=chat
-MODEL_SUPPORTS=supports_function_calling,supports_tool_choice,supports_reasoning,supports_thinking
-ENGINE_ARGS=--context-length 32768 --mem-fraction-static 0.85 --max-running-requests 64 --reasoning-parser qwen3
-SGLANG_REQUIRED_GPU_MEMORY=8192
-```
+:::info
+SGLang models can take a while to load before the engine reaches `RUNNING`.
+:::
+
+- **Recommended model**: [`gpt-oss-20b`](https://huggingface.co/openai/gpt-oss-20b) from Hugging Face
+- **MODEL_SOURCE**: `hf://openai/gpt-oss-20b`
+- **MODEL_NAME**: `openai/gpt-oss-20b`
+- **ENGINE_ARGS**: `--context-length 65536 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser gpt-oss --tool-call-parser gpt-oss`
 
 </template>
 <template #vLLM>
 
-```text
-MODEL_SOURCE=hf://Qwen/Qwen3.5-2B
-MODEL_NAME=Qwen/Qwen3.5-2B
-MODEL_MODE=chat
-MODEL_SUPPORTS=supports_reasoning
-ENGINE_ARGS=--max-model-len 8192 --gpu-memory-utilization 0.9 --tensor-parallel-size 1
-VLLM_REQUIRED_GPU_MEMORY=10Gi
-```
+:::info
+vLLM models can take a while to load before the engine reaches `RUNNING`.
+:::
+
+- **Recommended model**: [`gpt-oss-20b`](https://huggingface.co/openai/gpt-oss-20b) from Hugging Face
+- **MODEL_SOURCE**: `hf://openai/gpt-oss-20b`
+- **MODEL_NAME**: `openai/gpt-oss-20b`
+- **ENGINE_ARGS**: `--max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --enable-prefix-caching --kv-cache-dtype fp8`
 
 </template>
 </tabs>
@@ -278,7 +262,7 @@ Open the built-in model console to track the model download, confirm the model a
 
 ## Connect client apps to the model service
 
-Once the model instance is running, any client app that speaks the OpenAI-compatible API can connect to it through the base URL. 
+Once the model instance is running, any client app that speaks the OpenAI-compatible API can connect to it through the base URL.
 
 The following example uses [OpenCode](../../../use-cases/opencode.md) as the client.
 
