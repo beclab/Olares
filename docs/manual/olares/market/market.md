@@ -10,13 +10,14 @@ description: Complete guide to managing Olares applications - install from Marke
 This guide helps users understand how to install, update, and uninstall applications through the Market. We'll also cover how to install custom applications.
 
 ## Before you begin
+
 Before you start, it is recommended to familiarize yourself with a few concepts for Olares applications:
 
 | Terminology | Description   |
 |:------------|:--------------|
 | [System application](../../../developer/concepts/application.md#system-applications)   | Built-in applications that come pre-installed with Olares,<br/> such as Profile, Files, and Vault. |
 | [Community application](../../../developer/concepts/application.md#community-applications)  | Applications that are created and maintained by third-party<br/> developers.   |
-| [Shared application](../../../developer/concepts/application.md#shared-applications) | A special type of community application, deployed centrally by the<br/> administrator, that provides shared resources or services to all users<br/> in a cluster. <br/><br/>Applications with a UI can be opened directly from the Launchpad.<br/> Headless backend services expose a standard API through a shared<br/> entrance for third-party clients to consume. |
+| [Shared application](shared-apps.md) | A special type of community application, deployed centrally by the<br/> administrator, that provides shared resources or services to all users<br/> in a cluster. <br/><br/>Applications with a UI can be opened directly from the Launchpad.<br/> Headless backend services expose a standard API through a shared<br/> entrance for third-party clients to consume. |
 | [Dependencies](../../../developer/concepts/application.md#dependencies) | Prerequisite applications that must already be<br/> installed before a user can access an application <br/>that requires them.  | 
 
 ## Find applications
@@ -24,7 +25,6 @@ Before you start, it is recommended to familiarize yourself with a few concepts 
 The Olares Market offers various ways to discover and browse applications.
 
 ![Market](/images/manual/olares/market-discover1.png#bordered)
-
 
 ### Browse by categories
 
@@ -130,6 +130,7 @@ During app installation, if an environment variable is required for the app but 
 After completing the environment variable setup, you can continue the installation.
 
 ## Update applications
+
 To update an application from Market:
 
 1. Open Market from the Dock or Launchpad.
@@ -191,6 +192,7 @@ You can also click the <i class="material-symbols-outlined">download</i> button 
 ## FAQs
 
 ### Why can't I install an application?
+
 If you can't install an application, it might be due to:
 * **Insufficient system resources**: Try freeing up system resources, or increasing your resource quota.
 * **Missing dependencies**: Check the **Dependency** section on the application details page and make sure all required apps are installed.
@@ -261,8 +263,6 @@ In Olares 1.12.4 and earlier versions, to fully release resources, you must use 
 
 ### What happens to my previously installed shared applications after upgrading to V1.12.6?
 
-The system automatically migrates legacy (V2) shared applications to the new unified shared architecture:
+Olares 1.12.6 introduces a new V3 shared application architecture. Legacy V2 shared applications can still be started, stopped, paused, and resumed, but they cannot be upgraded directly to V3. To use the V3 version, uninstall the V2 app first, then install the V3 version. Existing data must be migrated manually.
 
-- **Automatic cleanup of legacy client components**: The system cleans up the legacy client-side components and keeps only the unified shared server, resolving the legacy issue where the server became inaccessible after the client was uninstalled.
-- **Mutually exclusive apps must be uninstalled first**: For apps where the new V3 version conflicts with the legacy V2 version (such as ComfyUI), the system prompts you to uninstall the old version before installing the new one. Follow the on-screen instructions.
-- **Unified change to access addresses**: After the migration completes, the access address for all users changes to the unified format `https://<app-id>.<username>.<platform-domain>`, and existing bookmarks or API addresses saved in clients become invalid. Get the new address again.
+For a full explanation of the architecture change and the migration workflow, see [Shared applications](shared-apps.md).
