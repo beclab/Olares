@@ -25,7 +25,7 @@ metadata:
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
-> **Mental model:** `search drive` / `search sync` answers *"which file CONTAINS this text"* by querying the pre-built per-user index. `search app` answers *"which installed app matches this name"*. To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
+> **Mental model:** `search drive` / `search sync` answers *"which file CONTAINS this text"* by querying the pre-built per-user index. `search app` answers *"which installed app matches this name"*. It is not lifecycle inventory (`market list --mine` / `market status`) or resource ranking (`dashboard applications`). To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
 
 ## What it is
 
@@ -46,33 +46,33 @@ Multiple words are joined into one keyword (quote multi-word phrases to be expli
 
 ### drive
 
-- Session-based: bootstraps `/api/search/init` (offset always 0), pages deeper with `/api/search/more` (same `reqid`), best-effort cleanup via `/api/search/cancel`.
+- Session-based: bootstraps `/api/search/init`, pages deeper with `/api/search/more` (same `reqid`), best-effort cleanup via `/api/search/cancel`.
 - `--type aggregate` (default) is full-content search; `--type file_name` matches on filename only.
-- `--limit` (default 20) caps results; `--offset` pages. `--offset > 0` triggers the `/more` page after the init bootstrap.
+- `--limit` (default 20) caps results; `--offset` pages. `/init` always returns the first 20 hits and ignores offset/limit, so the CLI honors them itself: when the requested window fits inside those 20 hits (or the search returned fewer), it is sliced client-side with no extra call; only a window past the first 20 triggers `/more` (limit clamped to the backend's 1-100). A single search resolves at most ~50 hits server-side, so `--limit` is effectively capped around 50, and an `--offset` past the end prints "no results" rather than erroring.
 
 ### sync
 
-- Single endpoint: `POST /api/search/sync {query, offset, limit}`.
-- Supports `--limit`, `--offset`, `--output`. **No `--type` flag** (sync does not support search mode selection).
+- Single endpoint: `POST /api/search/sync {query}` (the proxy ignores any paging fields).
+- **No `--type` flag** (sync does not support search mode selection). `--limit` / `--offset` are applied **client-side** by the CLI (the backend returns the full result set and does not paginate), so they still work but every call fetches everything first.
 
 ### app
 
-- Fetches installed apps from `/server/myApps`, expands visible entrances, filters by case-insensitive substring match on entrance title.
+- Fetches installed apps from `/server/myApps`, expands visible entrances, filters by case-insensitive substring match on the entrance title (falling back to the app title when an entrance declares none).
 - Client-side pagination via `--limit` / `--offset` after filtering.
-- Skips uninstalled/failed apps and invisible entrances (same rules as the Desktop SPA).
+- Skips uninstalled/failed apps and invisible entrances (same rules as the Desktop SPA). For a `running` app the row shows the per-entrance state.
 
 ### Indexing (drive / sync only)
 
-Indexing is asynchronous on the server: a just-created/just-uploaded file may not be searchable until the index catches up. A miss is "not indexed yet", not necessarily "absent" — confirm a known path with `files ls`, check progress with `olares-cli settings search status`, and force a full reindex with `olares-cli settings search rebuild` (both in the `olares-settings` skill).
+Indexing is asynchronous on the server: a just-created/just-uploaded file may not be searchable until the index catches up. A miss is "not indexed yet", not necessarily "absent" — confirm a known path with `files ls`, check progress with `olares-cli settings search status`, and force a full reindex with `olares-cli settings search rebuild` (both in the [`olares-settings`](../olares-settings/SKILL.md) skill).
 
 ## Index coverage (drive only)
 
 Two distinct indexes back Drive search — knowing which one a query hits explains most "why didn't it find X" cases.
 
 - **Filenames — indexed broadly by default.** Effectively every Drive file's *name* is indexed, so `--type file_name` hits almost anywhere. The only opt-outs are paths matching an **exclude pattern** (a per-user regex list: built-in non-removable entries plus user-added ones).
-- **Full-text (content) — only `/Documents/` by default.** A `--type aggregate` query matches file *contents* only where content indexing is enabled, which by default is just the Drive `/Documents/` directory. Everywhere else you get filename matches but no in-content hits. Supported full-text formats: pdf, doc/docx, csv, rtf, txt/md/json/xml.
-- **To make another directory full-text searchable**, add it to the full-content index: `olares-cli settings search dirs add <path>` (inspect the current set with `olares-cli settings search dirs list`). This lives in the `olares-settings` skill (`settings search`).
-- **To see what is being blocked**, the exclude patterns are currently viewable/editable only in the Olares Settings SPA → Search → File search (the CLI's `settings search excludes` subcommand is not wired up); built-in patterns cannot be removed.
+- **Full-text (content) — only `/Documents/` by default.** A `--type aggregate` query matches file *contents* only where content indexing is enabled, which by default is just the Drive `/Documents/` directory. Everywhere else you get filename matches but no in-content hits. Supported full-text formats: pdf, Word (doc/docx), Excel (xls/xlsx), csv, rtf, plus a wide range of plain-text and source-code extensions (txt/md/json/xml/yaml and many more).
+- **To make another directory full-text searchable**, add it to the full-content index: `olares-cli settings search dirs add <path>` (inspect the current set with `olares-cli settings search dirs list`). This lives in the [`olares-settings`](../olares-settings/SKILL.md) skill (`settings search`).
+- **To see what is being blocked**, the exclude patterns are viewable/editable only in the Olares Settings SPA → Search → File search (the CLI's `settings search excludes` subcommand is not wired up); built-in patterns cannot be removed.
 - **Full-text extraction can fail per file** (encrypted / corrupt / oversized), so a supported-format file in an indexed directory may still have no in-content hits. `olares-cli settings search status` surfaces a `Failures` count (use `-o json` for the per-file detail) — check it first when content search misses a file you expect.
 
 ## Examples

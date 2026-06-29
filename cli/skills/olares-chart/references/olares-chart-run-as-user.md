@@ -11,7 +11,7 @@
 
 ## Self-built images (packaging axis)
 
-When authoring a Dockerfile ([olares-chart-image.md](olares-chart-image.md)), prefer uid/gid 1000 end-to-end:
+When authoring a Dockerfile (the Image capability), prefer uid/gid 1000 end-to-end:
 
 ```dockerfile
 RUN addgroup -g 1000 app && adduser -u 1000 -G app -D app
@@ -116,7 +116,7 @@ Also set `spec.runAsUser: true` in `OlaresManifest.yaml`. Run `chown` for **each
 If the upstream entrypoint **requires** root for its own initialization, you cannot set `runAsUser: 1000` on the main container without breaking it.
 
 - Use B's initContainer to fix volume ownership **before** the main container starts.
-- If the main container still runs as root with a **non-trusted** image, OPA **will reject** the Pod — loop back to the Image capability ([olares-chart-image.md](olares-chart-image.md)) and rebuild or fork the image so the main process can run non-root.
+- If the main container still runs as root with a **non-trusted** image, OPA **will reject** the Pod — loop back to the Image capability and rebuild or fork the image so the main process can run non-root.
 
 ## OPA and lint boundaries
 
@@ -135,4 +135,4 @@ If the upstream entrypoint **requires** root for its own initialization, you can
 | Admission denied: untrusted image + root | Third-party main container runs as root | A (force 1000) or B; never root main on third-party |
 | OPA OK but app still can't write | `spec.runAsUser` not set, or volume pre-dates chown | `spec.runAsUser: true` + B |
 
-After any template change, re-run `olares-cli chart lint ./<app>` ([olares-chart-lint.md](olares-chart-lint.md)).
+After any template change, re-run `olares-cli chart lint ./<app>` (the Validate-local (lint) step).

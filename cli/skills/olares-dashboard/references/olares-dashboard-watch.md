@@ -132,9 +132,4 @@ olares-cli dashboard overview ranking --watch -o json \
 
 ## Common errors
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `--watch-iterations requires --watch` | Knob without gate | Add `--watch` or drop the knob |
-| `--since and --start/--end are mutually exclusive` | Both window forms set | Pick one |
-| Process exits non-zero immediately on the first iteration | `ErrNotLoggedIn` / `ErrTokenInvalidated` | Run `olares-cli profile login` and retry |
-| Process exits non-zero after a few iterations | 3 consecutive transient errors | Investigate upstream (HAMI / capi); restart the loop |
+The watch-knob, window mutual-exclusion, and iteration-failure exit errors are in the consolidated [Common errors](../SKILL.md#common-errors) table in the parent skill (with the exit-code semantics described above).

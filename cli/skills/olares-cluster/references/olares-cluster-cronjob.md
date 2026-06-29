@@ -3,7 +3,7 @@
 > **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) first.
 > **Flags & wire shapes:** `olares-cli cluster cronjob --help` and `olares-cli cluster cronjob <verb> --help`.
 
-K8s CronJobs (`apis/batch/v1beta1` — different from `cluster job`'s `batch/v1`). Scheduled Job templates.
+K8s CronJobs (`apis/batch/v1`, same group/version as `cluster job`). Scheduled Job templates.
 
 ## Verbs at a glance
 
@@ -64,4 +64,4 @@ olares-cli cluster cronjob resume user-system-alice/nightly-backup
 |---|---|---|
 | `jobTemplate has no labels — cannot derive selector` (from `jobs`) | The CronJob's job template doesn't set labels | Inspect manually with `cluster cronjob yaml` and the user's own labels |
 | `cronjob already suspended` / `already active` | No-op short-circuit | Notice, no action needed |
-| 404 on `cronjob get` | Wrong API group? — Olares uses `batch/v1beta1` here, not `batch/v1` | The CLI uses the right one; if 404 surfaces, the CronJob actually doesn't exist for this profile |
+| 404 on `cronjob get` | CronJob doesn't exist for this profile | Verify the `ns/name` with `cronjob list` (the CLI already uses the correct `apis/batch/v1` group) |
