@@ -84,12 +84,6 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
-		&task.LocalTask{
-			Name:   "PatchWorkloadPriorityClassName",
-			Action: new(patchWorkloadPriorityClassName),
-			Retry:  3,
-			Delay:  5 * time.Second,
-		},
 	}
 	pre = append(pre, retagLegacyAMDGPUImage()...)
 	// backfill the per-mode (multi-mode) node labels for Intel/AMD GPUs so
@@ -123,6 +117,12 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 		&task.LocalTask{
 			Name:   "MigrateLegacyGPUBindings",
 			Action: new(migrateLegacyGPUBindings),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "PatchWorkloadPriorityClassName",
+			Action: new(patchWorkloadPriorityClassName),
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
