@@ -39,6 +39,41 @@ func TestResolveInstalledSource(t *testing.T) {
 		}
 	})
 
+	t.Run("same name in two sources resolves to the installed one", func(t *testing.T) {
+		// firefox lingers as `uninstalled` in market.olares but is
+		// `stopped` (installed) in market.test. resolveInstalledSource
+		// must resolve the live instance's source so `resume firefox`
+		// works, instead of failing on the uninstalled row.
+		const multiSource = `{
+            "user_data": {
+                "sources": {
+                    "market.olares": {
+                        "type": "market",
+                        "app_state_latest": [
+                            {"version": "1.0.11", "status": {"name": "firefox", "rawAppName": "firefox", "state": "uninstalled"}}
+                        ]
+                    },
+                    "market.test": {
+                        "type": "market",
+                        "app_state_latest": [
+                            {"version": "1.2.11", "status": {"name": "firefox", "rawAppName": "firefox", "state": "stopped"}}
+                        ]
+                    }
+                }
+            }
+        }`
+		srv := newFakeMarketDataServer(t, stateAndDataResponses{state: multiSource})
+		mc := newTestMarketClient(t, srv.URL)
+
+		got, err := resolveInstalledSource(context.Background(), &MarketOptions{}, mc, "firefox")
+		if err != nil {
+			t.Fatalf("resolveInstalledSource on multi-source app: %v", err)
+		}
+		if got != "market.test" {
+			t.Fatalf("source = %q, want market.test (the installed instance)", got)
+		}
+	})
+
 	t.Run("explicit --source bypasses the state lookup", func(t *testing.T) {
 		// Point at a server that has NO matching row; an explicit source
 		// must still win without consulting /market/state.
