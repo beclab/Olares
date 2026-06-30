@@ -54,11 +54,11 @@ Existing data from a V2 shared app is not moved to V3 automatically. To move to 
 
 ## Migrate from V2 to V3
 
-Different apps require different migration paths. Choose the path below that matches the app you are migrating.
+Different apps require different migration paths. Choose the option below that matches the app you are migrating.
 
-### Path 1: Uninstall V2, install V3, system migrates data
+### Option 1: Uninstall V2, install V3, system migrates data
 
-Use this path when the app supports automatic data migration.
+Use this option when the app supports automatic data migration.
 
 **Apps in this category:**
 - **ComfyUI Shared**
@@ -68,9 +68,9 @@ Use this path when the app supports automatic data migration.
 2. Install the V3 shared app.
 3. The system migrates your data automatically.
 
-### Path 2: Uninstall V2, then install V3
+### Option 2: Uninstall V2, then install V3
 
-Use this path when the app has no user-created data to migrate.
+Use this option when the app has no user-created data to migrate.
 
 **Apps in this category:**
 - **Model apps** such as Qwen3-Coder 30B (Ollama) and Gemma3 27B (vLLM).
@@ -81,9 +81,9 @@ Use this path when the app has no user-created data to migrate.
 2. Install the V3 shared app.
 3. For model apps, deploy the model again on an Engine Base app and reconfigure your clients.
 
-### Path 3: Back up, uninstall V2, install V3, then restore data
+### Option 3: Back up, uninstall V2, install V3, then restore data
 
-Use this path when the app stores user-created data or settings that must be moved manually.
+Use this option when the app stores user-created data or settings that must be moved manually.
 
 **Apps in this category:**
 - **Dify Shared** — apps, knowledge bases, agent configurations, and settings.
@@ -112,15 +112,15 @@ Use this path when the app stores user-created data or settings that must be mov
 
    V3 shared apps use the unified address format `https://<app-id>.<username>.<platform-domain>`. Update client configurations that still point to the old V2 address.
 
-### Path 4: Ollama / Engine Base transition
+### Option 4: Migrate from Ollama to Engine Base
 
-Use this path when you are migrating from the standalone Ollama V2 app.
+Use this option when you are migrating from the standalone Ollama V2 app.
 
 The standalone **Ollama** shared app has been replaced by the **Engine Base** architecture. Previously, each Ollama-based model was a separate shared app that bundled its own copy of the inference engine. This caused duplicated engines and heavy maintenance. In the new architecture, Olares maintains a small set of Engine Base apps, including **Ollama Engine Base**, **vLLM Engine Base**, **SGLang Engine Base**, and **llama.cpp Engine Base**, and you create the model instances you need on top of them.
 
 **Steps:**
 1. Uninstall the Ollama V2 app.
-2. Select the LLM base app you want.
+2. Select the engine base app you want.
 3. Create an instance for the model you need.
 4. Get the model service API address in the model console, and update the address in your clients.
 
