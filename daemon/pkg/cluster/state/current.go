@@ -131,13 +131,13 @@ func CheckCurrentStatus(ctx context.Context) error {
 		return err
 	}
 
-	// Use a single lightweight enumeration that also switches unmanaged
-	// devices to managed. CheckCurrentStatus only reads Name/Type/Connection
-	// below, so the expensive per-device detail queries are intentionally
-	// skipped here to avoid hammering NetworkManager on this 5s poll.
-	devices, err := utils.ManagedDeviceStatus(ctx)
+	if _, err := utils.ManagedAllDevices(ctx); err != nil {
+		klog.Error("managed all devices error, ", err)
+	}
+
+	devices, err := utils.GetAllDevice(ctx)
 	if err != nil {
-		klog.Error("managed device status error, ", err)
+		klog.Error(err)
 	}
 
 	// clear value
