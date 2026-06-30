@@ -8,13 +8,16 @@ Every **Olares Application Chart** should include an `OlaresManifest.yaml` file 
 
 :::info NOTE
 Latest Olares Manifest version: `0.12.0`
-- Modified the `apiVersion` field: added support for `v3` shared applications; the previous `v2` version of shared applications will be deprecated.
+- **Template rendering is no longer supported**: `OlaresManifest.yaml` must not use `{{}}` or other template rendering functions.
+- Modified the `apiVersion` field: added support for `v3` shared applications; `v2` will be rejected in Olares OS 1.12.6.
+- Added `options.shared` field to indicate shared applications
 - Added `spec.accelerator` field for GPU resource declaration
 - Added `workloadReplicas` field to declare all workload replica counts
 - Added `overlayGateway` field for L2 overlay LAN discovery support
 - Added `LLMGatewaySupported` in options for LLM Gateway support
-- Added `appCommon` and `externalData` permissions
+- Added `appCommon` and `externalData` permissions (both default to `false`)
 - Added `templateOnly` field to mark template-type applications
+- **Deprecated fields**: `provider`, `permission.provider`, `permission.sysData`, `appScope` (for shared apps), `subCharts` (for shared apps), and OS 1.11 categories are rejected.
 
 :::
 :::details Changelog
@@ -150,7 +153,13 @@ olaresManifest.version: "3.0.122"
 For shared applications, use version `v3`, which will be installed in the `<appname>-shared` namespace. For other applications, use `v1`.
 
 :::warning Deprecation notice
-For new shared applications, use `apiVersion: 'v3'`. Existing shared applications should migrate to `v3` to ensure future compatibility because support for `v2` will be gradually discontinued after Olares OS 1.12.6.
+- `apiVersion: 'v2'` is used for shared applications in Olares OS 1.12.5 and earlier, and will be gradually discontinued after 1.12.6.
+- In Olares OS 1.12.6:
+  - If `apiVersion` is missing, it will be parsed as `v1`.
+  - If `apiVersion: 'v2'`, the app will be rejected as incompatible and cannot be installed.
+  - If `apiVersion: 'v1'`, it will be parsed following 1.12.5 behavior.
+- When `options.shared: true`, `apiVersion` must be set to `'v3'`.
+- Please migrate shared applications to `v3` as soon as possible.
 :::
 
 ## Metadata
@@ -176,7 +185,7 @@ metadata:
 - Type: `string`
 - Accepted Value: `^[a-z][a-z0-9]{0,29}$`
 
-App’s namespace in Olares, lowercase alphanumeric characters only. It can be up to 30 characters, and needs to be consistent with `FolderName` and `name` field in `Chart.yaml`.
+App's namespace in Olares, lowercase alphanumeric characters only. It can be up to 30 characters, and needs to be consistent with `FolderName` and `name` field in `Chart.yaml`.
 
 ### title
 
@@ -210,10 +219,7 @@ The **Chart Version** of the application. It should be incremented each time the
 
 Used to display your app on different category page in Olares Market.
 
-Accepted Value for OS 1.11:
-- `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
-
-Accepted Value for OS 1.12: 
+Accepted Value for OS 1.12:
 - `Creativity`
 - `Productivity_v112` (displayed as Productivity)
 - `Developer Tools`
@@ -222,8 +228,8 @@ Accepted Value for OS 1.12:
 - `Utilities_v112` (displayed as Utilities)
 - `AI`
 
-:::info NOTE
-Olares Market categories were updated in OS 1.12.0. To ensure your app is compatible with both versions 1.11 and 1.12, include category values for both versions in your configuration.
+:::warning Deprecation notice
+OS 1.11 categories (`Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`) are deprecated and will no longer be accepted. Use only OS 1.12 category values.
 :::
 
 ## Entrances
@@ -416,7 +422,7 @@ tailscale:
     - "*:46879"
   - proto: "" # Optional. If not specified, all supported protocols will be allowed.
     dst:
-    -  "*:4557"    
+    -  "*:4557"
 ```
 :::
 
@@ -428,7 +434,7 @@ permission:
   appCache: true
   appData: true
   userData:
-  - /Home/ 
+  - /Home/
 ```
 :::
 
@@ -449,14 +455,15 @@ Whether the app requires read and write permission to the `Data` folder. If `.Va
 ### appCommon
 
 - Type: `boolean`
+- Default: `false`
 - Optional
 
 Whether the app requires read and write permission to the `App Common` folder (cross-node, cross-app shared files, such as models). Use `{{ .Values.userspace.appCommon }}` in the deployment YAML to get the App Common directory path.
 
-
 ### externalData
 
 - Type: `boolean`
+- Default: `false`
 - Optional
 
 Whether the app requires read and write permission to the `External` directory, typically used for accessing mounted NAS or other external disk data. In version 0.11.0, applications have External access enabled by default. Starting from version 0.12.0, you need to explicitly declare this field.
@@ -470,38 +477,8 @@ Whether the app requires read and write permission to user's `Home` folder. List
 
 ### provider
 
-- Type: `list<map>`
-- Optional
-
-Use this field to declare APIs from other applications that your app needs to access. The target application must have exposed a `providerName` in its own `provider` section (refer to the Provider section below).
-
-To configure access:
-1. Set the `appName` field to the `name` of the target application.
-2. Set the `providerName` field to match the `name` specified in the target app’s provider configuration. 
-
-You can optionally use the `podSelectors` field to specify which pods in your app should have access. If this field is omitted, all pods in your app will be injected with the `outbound envoy sidecar` to enable access.
-
-:::info Example for calling app
-```yaml
-# App requiring provider, e.g. sonarr
-permission:  
-  provider:
-  - appName: bazarr
-    providerName: bazarr-svc
-    podSelectors:
-      - matchLabels:
-          io.kompose.service: api
-```
-:::
-:::info Example for provider app
-```yaml
-#  Provider app, e.g. bazarr
-provider:
-- name: bazarr-svc
-  entrance: bazarr-svc
-  paths: ["/*"]
-  verbs: ["*"]
-```
+:::warning Deprecation notice
+The `permission.provider` and top-level `provider` fields are deprecated in OlaresManifest 0.12.0. Apps containing these fields will be rejected during PR submission and installation. Remove all `provider` and `permission.provider` configurations from your manifest.
 :::
 
 ## Spec
@@ -510,7 +487,7 @@ Additional information about the application, primarily used for display in the 
 :::info Example
 ```yaml
 spec:
-  versionName: '10.8.11' 
+  versionName: '10.8.11'
   # The version of the application that this chart contains. It is recommended to enclose the version number in quotes. This value corresponds to the appVersion field in the `Chart.yaml` file. Note that it is not related to the `version` field.
 
   featuredImage: https://app.cdn.olares.com/appstore/jellyfin/promote_image_1.jpg
@@ -637,7 +614,7 @@ Declares GPU resources required by the application. For apps that need GPU, use 
 ```yaml
 spec:
   accelerator:
-    mode: nvidia  # Supported modes: nvidia, nvidia-gb10, apple-m, strix-halo, cpu
+    mode: nvidia  # Supported modes: nvidia, nvidia-gb10, apple-m, strix-halo, mthreads-m1000, intel, amd, intel-gpu, amd-gpu, cpu
     limitedCpu: 7000m
     requiredCpu: 150m
     requiredDisk: 50Mi
@@ -648,6 +625,16 @@ spec:
     limitedGPUMemory: 24Gi
 ```
 :::
+
+For apps that do not require GPU, it is recommended to use the `cpu` mode to declare resources. The original field-based declaration is also supported for backward compatibility:
+```yaml
+spec:
+  requiredMemory: 2Gi
+  requiredDisk: 50Mi
+  requiredCpu: 0.25
+  limitedMemory: 10240Mi
+  limitedCpu: '4'
+```
 
 ## workloadReplicas
 - Type: `map`
@@ -693,7 +680,7 @@ middleware:
       - vectors
       - earthdistance
       scripts:
-      - BEGIN;                                           
+      - BEGIN;
       - ALTER DATABASE $databasename SET search_path TO "$user", public, vectors;
       - ALTER SCHEMA vectors OWNER TO $dbusername;
       - COMMIT;
@@ -785,11 +772,11 @@ Use the middleware information in deployment YAML
 ### RabbitMQ
 :::info Example
 ```yaml
-middleware:  
+middleware:
   rabbitmq:
     username: rabbitmquser
     vhosts:
-    - name: aaa  
+    - name: aaa
 ```
 :::
 Use the middleware information in deployment YAML
@@ -805,7 +792,7 @@ Use the middleware information in deployment YAML
   - name: RABBITMQ_PASSWORD
     value: "{{ .Values.rabbitmq.password }}"
   - name: RABBITMQ_VHOST
-    value: "{{ .Values.rabbitmq.vhosts.aaa }}"    
+    value: "{{ .Values.rabbitmq.vhosts.aaa }}"
 
 user := os.Getenv("RABBITMQ_USER")
 password := os.Getenv("RABBITMQ_PASSWORD")
@@ -817,7 +804,7 @@ url := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, portMQ, vhost)
 ### MariaDB
 :::info Example
 ```yaml
-middleware:  
+middleware:
   mariadb:
     username: mariadbclient
     databases:
@@ -843,11 +830,11 @@ Use the middleware information in deployment YAML
 ### MySQL
 :::info Example
 ```yaml
-middleware:  
+middleware:
   mysql:
     username: mysqlclient
     databases:
-    - name: aaa      
+    - name: aaa
 ```
 :::
 Use the middleware information in deployment YAML
@@ -863,7 +850,7 @@ Use the middleware information in deployment YAML
   - name: MDB_PASSWORD
     value: "{{ .Values.mysql.password }}"
   - name: MDB_DB
-    value: "{{ .Values.mysql.databases.aaa }}"    
+    value: "{{ .Values.mysql.databases.aaa }}"
 ```
 
 ## Options
@@ -893,6 +880,10 @@ options:
 - Optional
 
 Specifies whether the app should be installed for all users in the Olares cluster. For shared apps, set `clusterScoped` to `true` and provide the current app's name in the `appRef` field.
+
+:::warning Deprecation notice
+When `options.shared: true`, the `appScope` field is not allowed. Use `apiVersion: 'v3'` instead for shared applications.
+:::
 
 :::info Example of ollamav2
 ```yaml
@@ -955,7 +946,7 @@ options:
   - name: comfyui
     type: application
   - name: comfyuiclient
-    type: application  
+    type: application
 ```
 :::
 
@@ -1027,6 +1018,28 @@ allowedOutboundPorts:
 - Optional
 
 This application supports deploying multiple independent instances within the same Olares cluster. This setting does not apply to paid applications or clients of shared applications.
+
+### shared
+- Type: `boolean`
+- Default: `false`
+- Optional
+
+When set to `true`, indicates this is a shared application. When `options.shared: true`:
+- `apiVersion` must be set to `'v3'`
+- `onlyAdmin` must be set to `true`
+- The following fields are not allowed:
+  ```yaml
+  spec:
+    subCharts:
+    - name: ollamaserver
+      shared: true
+    - name: ollamav2
+  options:
+    appScope:
+      clusterScoped: true
+      appRef:
+      - ollamav2
+  ```
 
 ### templateOnly
 - Type: `boolean`
@@ -1104,9 +1117,9 @@ envs:
       envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
     # Reference the value from a system environment variable. When this is used, manual input is not allowed.
     # All declarable fields  (type, editable, etc.) will be overridden by the referenced variable's attributes; default/value fields are also ignored.
-    
+
     applyOnChange: true
-    # Whether to automatically redeploy the app when this variable changes. 
+    # Whether to automatically redeploy the app when this variable changes.
     # If set to false, changes take effect only on upgrade/reinstallation, not on restart.
 
     description: "DESCRIPTION"
@@ -1128,14 +1141,6 @@ To use the values of environment variables in your deployment YAML file, simply 
 
 ## Provider
 
-Declare the interfaces that this application exposes to other applications here. The system will automatically generate a Service for each declared interface, enabling other applications within the cluster to access them through the internal network. If another application needs to access these interfaces, it must first request permission for the specific provider in the permissions section.
-
-:::info Example
-```yaml
-provider:
-- name: bazarr
-  entrance: bazarr-svc   # The entry name of the service
-  paths: ["/api*"]       # API paths to expose; cannot consist of * only
-  verbs: ["*"]           # Supported: post, get, put, delete, patch; "*" allows all methods
-```
+:::warning Deprecation notice
+The `provider` section is deprecated in OlaresManifest 0.12.0. Apps containing this field will be rejected during PR submission and installation. Remove all `provider` configurations from your manifest.
 :::

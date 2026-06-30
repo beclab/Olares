@@ -8,13 +8,16 @@ outline: [2, 3]
 
 :::info 提示
 最新的 Olares 系统使用的 Manifest 版本为： `0.12.0`
-- 修改 `apiVersion` 字段，增加`v3`共享应用，原`v2`版共享应用将作废
+- **不再支持模版渲染**：`OlaresManifest.yaml` 中不能使用 `{{}}` 等模板渲染函数
+- 修改 `apiVersion` 字段，增加 `v3` 共享应用，`v2` 将在 Olares OS 1.12.6 中被拒绝安装
+- 增加 `options.shared` 字段，用于标识共享应用
 - 增加 `spec.accelerator` 字段，用于 GPU 资源声明
 - 增加 `workloadReplicas` 字段，声明所有 workload 的副本数
 - 增加 `overlayGateway` 字段，支持 L2 overlay 局域网发现
 - 增加 `LLMGatewaySupported` 选项，支持 LLM Gateway
-- 增加 `appCommon` 和 `externalData` 权限
-- 增加 `templateOnly`字段，用于标记模版类应用
+- 增加 `appCommon` 和 `externalData` 权限（均默认为 `false`）
+- 增加 `templateOnly` 字段，用于标记模版类应用
+- **废弃字段**：`provider`、`permission.provider`、`permission.sysData`、`appScope`（共享应用时）、`subCharts`（共享应用时）以及 OS 1.11 的分类值将被拒绝
 
 :::
 :::details Changelog
@@ -149,8 +152,15 @@ olaresManifest.version: "3.0.122"
 - 默认值：`v1`
 
 共享应用需使用 `v3`，将被安装在 `<appname>-shared` namespace 中。其他应用请使用 `v1`。
-:::info 提示
-`apiVersion: 'v2'` 用于Olares OS 1.12.5及以前版本的共享应用，并将在 1.12.6 发布后逐步停止支持。请尽快迁移共享应用至 `v3`
+
+:::warning 废弃通知
+- `apiVersion: 'v2'` 用于 Olares OS 1.12.5 及以前版本的共享应用，将在 1.12.6 发布后逐步停止支持。
+- 在 Olares OS 1.12.6 版本上：
+  - 如果缺失 `apiVersion`，按照 `v1` 解析。
+  - 如果 `apiVersion: 'v2'`，将返回应用不兼容，无法安装。
+  - 如果 `apiVersion: 'v1'`，按照 1.12.5 的代码解析。
+- 当 `options.shared: true` 时，`apiVersion` 必须设置为 `'v3'`。
+- 请尽快迁移共享应用至 `v3`。
 :::
 
 ## Metadata
@@ -210,9 +220,6 @@ Olares 应用市场中的应用名称下方显示的简短说明。
 
 描述在应用市场的哪个类别下展示应用。
 
-OS 1.11 有效值：
-- `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
-
 OS 1.12 有效值：
 - `Creativity`：设计创作
 - `Productivity_v112`：工作效率
@@ -222,8 +229,8 @@ OS 1.12 有效值：
 - `Utilities_v112`：实用工具
 - `AI`：AI
 
-:::info 提示
-Olares OS 1.12.0 版本对应用商店的应用分类进行了调整，因此如果应用需要同时兼容 1.11 和 1.12 版本，请同时填写两个版本所需的分类。
+:::warning 废弃通知
+OS 1.11 的分类值（`Blockchain`、`Utilities`、`Social Network`、`Entertainment`、`Productivity`）已废弃，不再被接受。请仅使用 OS 1.12 的分类值。
 :::
 
 ## Entrances
@@ -447,6 +454,7 @@ permission:
 ### appCommon
 
 - 类型： `boolean`
+- 默认值：`false`
 - 可选
 
 是否需要对 `App Common` 目录(跨节点跨应用共享的文件，例如模型文件)进行读写权限。在部署 yaml 文件中使用 `{{ .Values.userspace.appCommon }}` 获取 App Common 目录地址。
@@ -454,6 +462,7 @@ permission:
 ### externalData
 
 - 类型： `boolean`
+- 默认值：`false`
 - 可选
 
 是否需要 `External` 目录的读写权限，通常用于访问挂载的 NAS 或其他外部磁盘数据。0.11.0 版本的应用默认开启External权限，升级到0.12.0后，需要添加此字段显性声明。
@@ -467,38 +476,8 @@ permission:
 
 ### provider
 
-- 类型：`list<map>`
-- 可选
-
-用于声明本应用需访问的其他应用接口。被访问的应用需在其 `provider` 部分声明对外开放的 `providerName`，详见下方 Provider 章节。
-
-配置访问的方式如下
-1. 在 `appName` 字段填写目标应用的 `name` 字段。
-2. 在`providerName` 字段填写目标应用 `provider` 配置中的 `name` 字段。
-
-你可以使用 `podSelectors` 字段来指定本应用中哪些 pod 需要访问目标应用。如果未声明此字段，则默认为本应用的所有 pod 注入 `outbound envoy sidecar`。
-
-:::info 调用应用示例
-```yaml
-# 需要调用其他应用的应用，如 sonarr
-permission:
-  provider:
-  - appName: bazarr
-    providerName: bazarr-svc
-    podSelectors:
-      - matchLabels:
-          io.kompose.service: api
-```
-:::
-:::info 被调用应用示例
-```yaml
-# 被调用方应用，如 bazarr
-provider:
-- name: bazarr-svc
-  entrance: bazarr-svc
-  paths: ["/*"]
-  verbs: ["*"]
-```
+:::warning 废弃通知
+`permission.provider` 和顶层 `provider` 字段在 OlaresManifest 0.12.0 中已废弃。包含这些字段的应用将在 PR 提交和安装时被拒绝。请从 manifest 中移除所有 `provider` 和 `permission.provider` 配置。
 :::
 
 
@@ -635,7 +614,7 @@ Olares 目前不支持混合架构的集群。
 ```yaml
 spec:
   accelerator:
-    mode: nvidia  # 支持的 mode：nvidia、nvidia-gb10、apple-m、strix-halo、cpu
+    mode: nvidia  # 支持的 mode：nvidia、nvidia-gb10、apple-m、strix-halo、mthreads-m1000、intel、amd、intel-gpu、amd-gpu、cpu
     limitedCpu: 7000m
     requiredCpu: 150m
     requiredDisk: 50Mi
@@ -646,6 +625,16 @@ spec:
     limitedGPUMemory: 24Gi
 ```
 :::
+
+不需要 GPU 的应用，建议使用 cpu mode 来声明，也兼容使用原来字段方式声明：
+```yaml
+spec:
+  requiredMemory: 2Gi
+  requiredDisk: 50Mi
+  requiredCpu: 0.25
+  limitedMemory: 10240Mi
+  limitedCpu: '4'
+```
 
 ## workloadReplicas
 - 类型： `map`
@@ -887,6 +876,10 @@ options:
 
 是否为 Olares 集群中的所有用户安装此应用程序。对用共享应用，需要设置 `clusterScoped` 为 `true`， 同时在 `appRef` 字段填入应用名称
 
+:::warning 废弃通知
+当 `options.shared: true` 时，不允许使用 `appScope` 字段。共享应用请使用 `apiVersion: 'v3'` 替代。
+:::
+
 
 :::info 应用ollamav2示例
 ```yaml
@@ -1022,6 +1015,28 @@ allowedOutboundPorts:
 
 该应用支持在同一 Olares 集群中部署多个独立实例。此设置对付费应用和共享应用客户端无效。
 
+### shared
+- 类型： `boolean`
+- 默认值： `false`
+- 可选
+
+设置为 `true` 时，表示该应用为共享应用。当 `options.shared: true` 时：
+- `apiVersion` 必须设置为 `'v3'`
+- `onlyAdmin` 必须设置为 `true`
+- 不允许包含以下字段：
+  ```yaml
+  spec:
+    subCharts:
+    - name: ollamaserver
+      shared: true
+    - name: ollamav2
+  options:
+    appScope:
+      clusterScoped: true
+      appRef:
+      - ollamav2
+  ```
+
 ### templateOnly
 - 类型： `boolean`
 - 默认值： `false`
@@ -1125,15 +1140,6 @@ BACKEND_MAIL_SENDER: "{{ .Values.olaresEnv.MAIL_SENDER }}"
 
 ## Provider
 
-在此声明本应用向其他应用开放的接口。系统会自动为这些接口生成 Service，让集群内其他应用能够通过内部网络访问。如果其他应用要调用这些接口，需要在 permission 部分申请访问该 provider 的权限。
-
-:::info 示例
-```yaml
-provider:
-- name: bazarr
-  entrance: bazarr-svc   # 该服务的入口名称
-  paths: ["/api*"]       # 开放的接口路径，不能只包含通配符 *
-  verbs: ["*"]           # 支持post，get，put，delete，patch;"*"表示允许所有方法
-
-```
+:::warning 废弃通知
+`provider` 部分在 OlaresManifest 0.12.0 中已废弃。包含此字段的应用将在 PR 提交和安装时被拒绝。请从 manifest 中移除所有 `provider` 配置。
 :::
