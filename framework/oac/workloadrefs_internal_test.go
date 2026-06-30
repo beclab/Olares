@@ -138,6 +138,30 @@ spec:
 	}
 }
 
+// TestCheckWorkloadReplicaTemplates_HardcodedWithBOM guards against the
+// codeserver regression: chart files saved by Windows editors / older
+// PowerShell pipelines carry a UTF-8 BOM (EF BB BF). Go's regexp \s class
+// does not include U+FEFF, so the kind: / replicas: ^-anchored regexes used
+// to silently skip the first YAML document, turning the rule into a no-op
+// for the entire file. The scan must strip the BOM before matching.
+func TestCheckWorkloadReplicaTemplates_HardcodedWithBOM(t *testing.T) {
+	dir := t.TempDir()
+	writeTemplateFile(t, dir, "deployment.yaml", "\ufeff"+`kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: web
+spec:
+  replicas: 1
+`)
+	err := checkWorkloadReplicaTemplates(dir, map[string]int32{"web": 1})
+	if err == nil {
+		t.Fatal("expected error for hardcoded spec.replicas in a BOM-prefixed file")
+	}
+	if !strings.Contains(err.Error(), "must reference .Values.workloads") {
+		t.Fatalf("error should explain the values requirement, got: %v", err)
+	}
+}
+
 func TestCheckWorkloadReplicaValues_AllPresent(t *testing.T) {
 	dir := writeValues(t, `
 workloads:

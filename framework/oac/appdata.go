@@ -2,6 +2,7 @@ package oac
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -20,6 +21,9 @@ var (
 
 // findFirstTemplateRef scans templates/*.yaml under oacPath and returns the
 // basename of the first file whose content matches re, or "" when none match.
+//
+// File bytes are passed through stripUTF8BOM before scanning; see the
+// helper's doc for the BOM-induced false-negative this guards against.
 func findFirstTemplateRef(oacPath string, re *regexp.Regexp) (string, error) {
 	if !strings.HasSuffix(oacPath, string(filepath.Separator)) {
 		oacPath += string(filepath.Separator)
@@ -33,12 +37,11 @@ func findFirstTemplateRef(oacPath string, re *regexp.Regexp) (string, error) {
 		if !strings.HasSuffix(path, ".yaml") {
 			return nil
 		}
-		f, e := os.Open(path)
-		if e != nil {
-			return e
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
 		}
-		defer f.Close()
-		scanner := bufio.NewScanner(f)
+		scanner := bufio.NewScanner(bytes.NewReader(stripUTF8BOM(data)))
 		for scanner.Scan() {
 			if re.MatchString(scanner.Text()) {
 				if firstHit == "" {
