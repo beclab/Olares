@@ -362,6 +362,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "*Arrs",
               link: "/use-cases/arrs",
+              collapsed: true,
+              items: [
+                {
+                  text: "Upgrade notes",
+                  link: "/use-cases/arrs-upgrade",
+                },
+              ]
             },
           ]
         },
