@@ -218,6 +218,10 @@ const side = {
               text: "管理付费应用",
               link: "/zh/manual/olares/market/purchase-paid-apps",
             },
+            {
+              text: "共享应用",
+              link: "/zh/manual/olares/market/shared-apps",
+            },
           ],
         },
         {
