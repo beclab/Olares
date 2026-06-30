@@ -60,7 +60,7 @@ export default defineVersionedConfig2(withMermaid({
     },
   },
   themeConfig: {
-    logoLink: "https://www.olares.com/",
+    logoLink: { link: "https://www.olares.com/", target: "_self" },
     editLink: {
       pattern: "https://github.com/beclab/Olares/edit/main/docs/:path",
       text: "Edit this page on GitHub",
