@@ -12,56 +12,24 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-const (
-	// bleScanIntervalActive is used during onboarding (the node is not online
-	// yet), when the LarePass app needs a fresh WiFi AP list to connect.
-	bleScanIntervalActive = 2 * time.Second
-	// bleScanIntervalIdle is used once the node is online, when the AP list
-	// rarely matters. Backing off here removes the bulk of the periodic D-Bus
-	// WiFi scan CPU cost.
-	bleScanIntervalIdle = 30 * time.Second
-)
-
-// scanInterval picks the WiFi scan cadence based on network connectivity:
-// frequent while onboarding (no network), relaxed once the node is online.
-func (s *service) scanInterval() time.Duration {
-	if state.CurrentState.WiredConnected || state.CurrentState.WifiConnected {
-		return bleScanIntervalIdle
-	}
-	return bleScanIntervalActive
-}
-
 func (s *service) Start() {
+	ticker := time.NewTicker(2 * time.Second)
 	go func() {
-		defer s.cancel()
-		s.scanOnce()
-		lastScan := time.Now()
-		// Poll at the active cadence so a connectivity drop is noticed within a
-		// couple of seconds, but only run the expensive D-Bus scan when due:
-		// every tick while offline, every bleScanIntervalIdle once online.
 		for {
-			timer := time.NewTimer(bleScanIntervalActive)
 			select {
 			case <-s.ctx.Done():
-				timer.Stop()
-				return
+				s.cancel()
+				ticker.Stop()
 
-			case <-timer.C:
-				if time.Since(lastScan) >= s.scanInterval() {
-					s.scanOnce()
-					lastScan = time.Now()
+			case <-ticker.C:
+				s.getAPList()
+				s.getTerminusInfo()
+				if s.update != nil {
+					s.update()
 				}
 			}
 		}
 	}()
-}
-
-func (s *service) scanOnce() {
-	s.getAPList()
-	s.getTerminusInfo()
-	if s.update != nil {
-		s.update()
-	}
 }
 
 func (s *service) Stop() {
