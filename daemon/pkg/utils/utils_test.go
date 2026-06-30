@@ -72,11 +72,6 @@ func TestGetGpu(t *testing.T) {
 		return
 	}
 
-	if s == nil {
-		t.Log("no gpu info")
-		return
-	}
-
 	t.Log(*s)
 }
 
