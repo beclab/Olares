@@ -44,11 +44,3 @@ If you no longer need to access the NFS share, you can safely unmount it.
 2. Right-click the NFS share directory you want to unmount, and then select **Unmount**.
 
    The share is immediately disconnected from Olares and removed from the **External** directory.
-
-## Frequently asked questions
-
-### What is the difference between NFS shares and SMB shares in usage?
-
-Basic operations are the same, and both allow you to manage files like a local folder. The main differences are:
-- **Connection method**: NFS does not require a username or password, only the server address and share path.
-- **Protocol characteristics**: NFS performs better in Unix/Linux environments, with better file permissions and POSIX compatibility.
