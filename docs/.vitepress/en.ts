@@ -232,6 +232,10 @@ const side = {
               text: "Basic file operations",
               link: "/manual/olares/files/add-edit-download",
             },
+            {
+              text: "Compress and extract files",
+              link: "/manual/olares/files/compress-extract-files",
+            },
             //   {
             //      text: "Sync and share",
             //     link: "/manual/larepass/sync-share",
