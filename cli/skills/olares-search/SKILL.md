@@ -58,7 +58,7 @@ Multiple words are joined into one keyword (quote multi-word phrases to be expli
 ### app
 
 - Fetches installed apps from `/server/myApps`, expands visible entrances, filters by case-insensitive substring match on the entrance title (falling back to the app title when an entrance declares none).
-- Client-side pagination via `--limit` / `--offset` after filtering.
+- Returns all matches in one response (**no `--limit` / `--offset`**).
 - Skips uninstalled/failed apps and invisible entrances (same rules as the Desktop SPA). For a `running` app the row shows the per-entrance state.
 
 ### Indexing (drive / sync only)
