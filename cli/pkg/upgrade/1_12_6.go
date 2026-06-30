@@ -43,6 +43,7 @@ func (u upgrader_1_12_6) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, createAppCommonDir()...)
 	tasks = append(tasks, upgradeNetworkManagerConfig()...)
 	tasks = append(tasks, upgradeUserReverseProxy()...)
+	tasks = append(tasks, upgradePrometheusOperator()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
@@ -80,7 +81,18 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Delay:  5 * time.Second,
 		},
 	}
+	pre = append(pre, retagLegacyAMDGPUImage()...)
+	// backfill the per-mode (multi-mode) node labels for Intel/AMD GPUs so
+	// devices upgraded from before the per-mode labeling scheme advertise
+	// their GPU mode to the scheduler.
+	pre = append(pre, labelIntelAMDGPUNode()...)
 	pre = append(pre, u.upgraderBase.UpgradeSystemComponents()...)
+	pre = append(pre, &task.LocalTask{
+		Name:   "PatchL4BFLProxyProbePort",
+		Action: new(patchL4BFLProxyProbePort),
+		Retry:  3,
+		Delay:  5 * time.Second,
+	})
 	return append(pre,
 		&task.LocalTask{
 			Name: "WaitForAppServiceReady",
@@ -101,6 +113,12 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 		&task.LocalTask{
 			Name:   "MigrateLegacyGPUBindings",
 			Action: new(migrateLegacyGPUBindings),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "PatchWorkloadPriorityClassName",
+			Action: new(patchWorkloadPriorityClassName),
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},

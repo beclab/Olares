@@ -14,6 +14,9 @@ import (
 	"github.com/beclab/Olares/framework/app-service/controllers"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
+	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
@@ -51,6 +54,7 @@ func init() {
 	utilruntime.Must(iamv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(kbappsv1.AddToScheme(scheme))
 	utilruntime.Must(kbopv1alphav1.AddToScheme(scheme))
+	utilruntime.Must(srrv1alpha1.AddToScheme(scheme))
 
 	//+kubebuilder:scaffold:scheme
 }
@@ -158,6 +162,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.ApplicationManagerGCReconciler{
+		Client: mgr.GetClient(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "Application Manager GC")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.EntranceStatusManagerController{
 		Client: mgr.GetClient(),
 	}).SetUpWithManager(mgr); err != nil {
@@ -210,7 +221,6 @@ func main() {
 	if err = (&controllers.NodeAlertController{
 		Client:     mgr.GetClient(),
 		KubeConfig: config,
-		NatsConn:   nil,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "NodeAlert")
 		os.Exit(1)
@@ -256,6 +266,36 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&gateway.SharedRouteProducerReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "SharedRouteProducer")
+		os.Exit(1)
+	}
+
+	if err = (&routecontrol.SharedRouteReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "SharedRoute")
+		os.Exit(1)
+	}
+
+	if err = (&routecontrol.EntranceTLSReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "EntranceTLS")
+		os.Exit(1)
+	}
+
+	if err = (&routecontrol.EntranceTLSListenerReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "EntranceTLSListener")
+		os.Exit(1)
+	}
+
+	if err = (&routecontrol.CustomDomainTLSReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "CustomDomainTLS")
+		os.Exit(1)
+	}
+
+	if err = (&routecontrol.GatewayInClusterIngressNPReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "GatewayInClusterIngressNP")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -296,14 +336,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	// start api server
+	// start api server and wait for webhook listener before controllers reconcile
+	webhookReady := make(chan struct{})
 	func(ctx context.Context, errCh chan error, ksHost string, kubeConfig *rest.Config) {
 		go func() {
-			if err := runAPIServer(ctx, ksHost, kubeConfig, mgr.GetClient()); err != nil {
+			if err := runAPIServer(ctx, webhookReady, ksHost, kubeConfig, mgr.GetClient()); err != nil {
 				errCh <- err
 			}
 		}()
 	}(ictx, errCh, fmt.Sprintf("%s:%s", ksHost, ksPort), config)
+
+	select {
+	case <-webhookReady:
+		setupLog.Info("Webhook server is listening, starting controllers")
+	case <-ictx.Done():
+		os.Exit(1)
+	}
 
 	setupLog.Info("Starting manager")
 	if err := mgr.Start(ictx); err != nil {
@@ -315,7 +363,7 @@ func main() {
 	cancelFunc()
 }
 
-func runAPIServer(ctx context.Context, ksHost string, kubeConfig *rest.Config, client client.Client) error {
+func runAPIServer(ctx context.Context, webhookReady chan struct{}, ksHost string, kubeConfig *rest.Config, client client.Client) error {
 	server, err := apiserver.New(ctx)
 	if err != nil {
 		return err
@@ -329,6 +377,6 @@ func runAPIServer(ctx context.Context, ksHost string, kubeConfig *rest.Config, c
 		return err
 	}
 
-	err = server.Run()
+	err = server.Run(webhookReady)
 	return err
 }

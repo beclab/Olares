@@ -4,12 +4,8 @@ import (
 	"context"
 	"time"
 
-	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -37,39 +33,30 @@ func NewInstallFailedApp(c client.Client,
 		})
 }
 
+// Exec is the defensive retry loop that complements installing_app.go's
+// synchronous cleanupAfterInstallFailure call. In the happy case the
+// synchronous helper already confirmed Spec.AppNamespace is IsNotFound before
+// the AM transitioned to InstallFailed, and the helper invocation here is
+// effectively a no-op (helm release / NS / perms / Provider all gone, NS poll
+// returns immediately on first IsNotFound). In the rare case where the
+// synchronous wait timed out (NS finalizer stuck > 5min), every subsequent
+// reconcile lands here and keeps retrying the same idempotent cleanup until
+// the namespace truly disappears.
+//
+// This also covers the upgrade-time scenario where an AM was already sitting
+// in InstallFailed under the old controller version (no synchronous cleanup):
+// the first reconcile after the upgrade will run the full helper and re-align
+// the AM with the new invariant.
+//
+// Cleanup failure or NS-still-present is reported as a returned error so the
+// controller keeps re-driving Exec on backoff; once the helper returns nil the
+// AM is left untouched in InstallFailed and the GC controller (§4.3) will pick
+// it up after the retention period.
 func (p *InstallFailedApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
-	if !apputils.IsProtectedNamespace(p.manager.Spec.AppNamespace) {
-		var pvcs corev1.PersistentVolumeClaimList
-		err := p.client.List(ctx, &pvcs, client.InNamespace(p.manager.Spec.AppNamespace))
-		if err != nil {
-			klog.Errorf("failed to list pvcs %v", err)
-			return nil, err
-		}
-		for _, pvc := range pvcs.Items {
-			var curPvc corev1.PersistentVolumeClaim
-			err = p.client.Get(ctx, types.NamespacedName{Name: pvc.Name, Namespace: pvc.Namespace}, &curPvc)
-			if err != nil && !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-			err = p.client.Delete(ctx, &curPvc)
-			if err != nil && !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-		}
-		var ns corev1.Namespace
-		err = p.client.Get(ctx, types.NamespacedName{Name: p.manager.Spec.AppNamespace}, &ns)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return nil, err
-		}
-		if err == nil {
-			e := p.client.Delete(ctx, &ns)
-			if e != nil {
-				klog.Errorf("failed to delete ns %s, err=%v", p.manager.Spec.AppNamespace, e)
-				return nil, e
-			}
-		}
+	if err := cleanupAfterInstallFailure(ctx, p.client, p.manager); err != nil {
+		klog.Warningf("InstallFailedApp.Exec cleanup for %s pending: %v", p.manager.Name, err)
+		return nil, err
 	}
-
 	return nil, nil
 }
 

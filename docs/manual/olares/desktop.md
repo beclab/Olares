@@ -1,3 +1,7 @@
+---
+description: Get familiar with Olares Desktop, including the Dock, Launchpad, application windows, widgets, layout reset, and global search.
+---
+
 # Get familiar with Desktop
 
 Desktop is the primary interface for interacting with Olares. From here, you can open and manage built-in system apps as well as the apps you install.
@@ -31,6 +35,36 @@ Some applications only support opening in a browser tab.
 
 - **Search**: Quickly launch applications and find supported content across Olares.
 - **Notifications**: Click the notification icon to view system and application notifications.
+
+### Widgets
+
+Desktop can display optional widgets in the lower-right corner for quick information such as time, date, and system performance:
+
+- **Date & time**: Shows the current time, weekday, and date.
+- **Dashboard**: Shows CPU, disk, and memory usage.
+
+By default, all widgets are enabled. The **Widgets** switch is the master switch. Turning it off hides all widgets.
+
+1. Open **Settings** from the Dock or Launchpad.
+2. Select **Appearance** in the sidebar.
+3. To disable all widgets at once, turn off **Widgets**.
+4. To customize the widgets:
+   - Turn **24-hour format** on or off to switch between 24-hour and 12-hour time.
+   - Select the **Date format**.
+   - Turn **Show dashboard** on or off to show or hide CPU, disk, and memory usage.
+
+## Reset Desktop layout
+
+If you want to restore the default Desktop organization, reset the layout from Settings.
+
+:::warning
+Resetting the desktop layout restores the default Launchpad and Dock layout. Custom icon positions and Dock items are reset. App data is not deleted, but the layout reset cannot be undone.
+:::
+
+1. Open **Settings** from the Dock or Launchpad.
+2. Select **Appearance** in the sidebar.
+3. Scroll to **Reset desktop layout**, then click **Reset**.
+4. In the confirmation window, click **Reset**.
 
 ## Use Launchpad
 

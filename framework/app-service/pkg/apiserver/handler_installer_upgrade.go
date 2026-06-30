@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"slices"
 	"strconv"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -111,6 +113,7 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 		MarketSource: marketSource,
 		IsAdmin:      prevCfg.AppScope.ClusterScoped,
 		SelectedGpu:  prevCfg.SelectedGpuType,
+		ChartOwner:   prevCfg.ChartOwner,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -224,6 +227,7 @@ func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		IsAdmin:      true,
 		RawAppName:   h.rawAppName,
 		SelectedGpu:  prevCfg.SelectedGpuType,
+		ChartOwner:   prevCfg.ChartOwner,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -301,15 +305,15 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
+	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: appMgrName}, &appMgr)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
 	var prevCfg appcfg.ApplicationConfig
 	err = appcfg.GetAppConfig(&appMgr, &prevCfg)
 	if err != nil {
 		klog.Errorf("Failed to get previous app config err=%v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: appMgrName}, &appMgr)
-	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
@@ -424,7 +428,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	_, err = helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
+	appCfg, err := helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
@@ -439,6 +443,33 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	err = helper.lintChart()
 	if err != nil {
 		klog.Errorf("Failed to lint chart err=%v", err)
+		return
+	}
+
+	// Reject upgrades whose new chart's declared resource requirements
+	// exceed the cluster's total schedulable capacity, before we acquire
+	// any env-batch lease or kick off helm. Mirrors the install handler's
+	// cluster-capacity gate (handler_installer_install.go) but uses the
+	// upgrade-specific chain — UpgradabilityValidators currently only
+	// runs clusterCapacityValidator (see that function for why the other
+	// install-time checks are intentionally skipped on upgrade).
+	decision, err := validation.Run(req.Request.Context(), validation.Input{
+		Client:    h.ctrlClient,
+		AppConfig: appCfg,
+		Op:        appv1alpha1.UpgradeOp,
+		Token:     token,
+	}, validation.UpgradabilityValidators()...)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	if !decision.OK {
+		resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
+			Response: api.Response{Code: 400},
+			Resource: decision.Resource.String(),
+			Message:  decision.Message,
+			Reason:   decision.Reason.String(),
+		})
 		return
 	}
 

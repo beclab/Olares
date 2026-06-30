@@ -6,9 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"k8s.io/klog"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	bflconst "bytetrade.io/web3os/bfl/pkg/constants"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -22,14 +26,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/api/manifest"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
@@ -40,10 +45,116 @@ const (
 	RoleOwner = "owner"
 )
 
-func GetKubeClient() (kubernetes.Interface, error) {
+// K8s clients and the rest.Config are safe for concurrent use and do not need
+// to be rebuilt on every call. olaresd's status loop reconstructs them many
+// times per 5s tick; caching them removes the repeated ctrl.GetConfig +
+// NewForConfig (REST/HTTP/TLS transport) churn. Each value is memoized only on
+// success, so a failure before the cluster is reachable is retried on the next
+// call instead of being cached permanently.
+var (
+	clientCacheMu           sync.Mutex
+	cachedConfig            *rest.Config
+	cachedKubeClient        kubernetes.Interface
+	cachedDynamicClient     dynamic.Interface
+	cachedAppClientSet      *versioned.Clientset
+	cachedApixClient        apixclientset.Interface
+	cachedKubeconfigPath    string
+	cachedKubeconfigModTime time.Time
+)
+
+// kubeconfigPaths resolves the kubeconfig files backing ctrl.GetConfig,
+// mirroring the env/default lookup. ctrl.GetConfig merges every file listed in
+// KUBECONFIG, so all of them are tracked for freshness. It returns nil when no
+// file applies (e.g. in-cluster), in which case the freshness check is skipped.
+func kubeconfigPaths() []string {
+	if v := os.Getenv("KUBECONFIG"); v != "" {
+		if parts := filepath.SplitList(v); len(parts) > 0 {
+			return parts
+		}
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	return []string{filepath.Join(home, ".kube", "config")}
+}
+
+// ensureFreshLocked invalidates the cached config and clients when any tracked
+// kubeconfig file changes (e.g. IP change or k3s cert rotation), so olaresd
+// recovers without a restart instead of pinning a stale config forever.
+// Callers must hold clientCacheMu.
+func ensureFreshLocked() {
+	paths := kubeconfigPaths()
+	if len(paths) == 0 {
+		return
+	}
+	key := strings.Join(paths, string(os.PathListSeparator))
+	var modTime time.Time
+	for _, p := range paths {
+		info, err := os.Stat(p)
+		if err != nil {
+			continue
+		}
+		if mt := info.ModTime(); mt.After(modTime) {
+			modTime = mt
+		}
+	}
+	if modTime.IsZero() {
+		// None of the tracked files are readable right now; keep any cached
+		// clients. A momentarily-missing file (e.g. during an atomic rewrite)
+		// should not tear down a working in-memory client.
+		return
+	}
+	if cachedConfig == nil {
+		cachedKubeconfigPath = key
+		cachedKubeconfigModTime = modTime
+		return
+	}
+	if key == cachedKubeconfigPath && modTime.Equal(cachedKubeconfigModTime) {
+		return
+	}
+	klog.Info("kubeconfig changed, rebuilding k8s clients")
+	cachedConfig = nil
+	cachedKubeClient = nil
+	cachedDynamicClient = nil
+	cachedAppClientSet = nil
+	cachedApixClient = nil
+	cachedKubeconfigPath = key
+	cachedKubeconfigModTime = modTime
+}
+
+// configLocked returns the cached rest.Config, loading it once on first
+// success. Callers must hold clientCacheMu.
+func configLocked() (*rest.Config, error) {
+	if cachedConfig != nil {
+		return cachedConfig, nil
+	}
 	config, err := ctrl.GetConfig()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
+		return nil, err
+	}
+	cachedConfig = config
+	return config, nil
+}
+
+// GetConfig returns the cached rest.Config, loading it once on first success.
+func GetConfig() (*rest.Config, error) {
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	return configLocked()
+}
+
+func GetKubeClient() (kubernetes.Interface, error) {
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedKubeClient != nil {
+		return cachedKubeClient, nil
+	}
+
+	config, err := configLocked()
+	if err != nil {
 		return nil, err
 	}
 
@@ -53,13 +164,20 @@ func GetKubeClient() (kubernetes.Interface, error) {
 		return nil, err
 	}
 
+	cachedKubeClient = client
 	return client, nil
 }
 
 func GetDynamicClient() (dynamic.Interface, error) {
-	config, err := ctrl.GetConfig()
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedDynamicClient != nil {
+		return cachedDynamicClient, nil
+	}
+
+	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return nil, err
 	}
 
@@ -69,13 +187,20 @@ func GetDynamicClient() (dynamic.Interface, error) {
 		return nil, err
 	}
 
+	cachedDynamicClient = client
 	return client, nil
 }
 
 func GetAppClientSet() (versioned.Clientset, error) {
-	config, err := ctrl.GetConfig()
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedAppClientSet != nil {
+		return *cachedAppClientSet, nil
+	}
+
+	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return versioned.Clientset{}, err
 	}
 
@@ -85,6 +210,7 @@ func GetAppClientSet() (versioned.Clientset, error) {
 		return versioned.Clientset{}, err
 	}
 
+	cachedAppClientSet = client
 	return *client, nil
 }
 
@@ -575,15 +701,37 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		klog.Error("list applications error, ", err)
 		return nil, err
 	}
-
+	config, err := GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	uc, err := iamv1alpha2.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
 	for _, app := range apps.Items {
 		var entrances []appcfg.Entrance
 		var err error
+		zone, err := iamv1alpha2.GetUserZone(ctx, uc.Users, app.Spec.Owner)
+		if err != nil {
+			continue
+		}
 		if !appv1alpha1.IsShared(&app) {
 			entrances, err = appcfg.GenEntranceURL(ctx, &app)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
 				continue
+			}
+			if zone == "" {
+				continue
+			}
+			// GenEntranceURL / BatchGenSharedAppEntranceURL only fill in the
+			// default appid-based URLs. User-customized third-level domains live
+			// in the "customDomain" setting, so without this the intranet (.local)
+			// layer never learns about custom subdomains and cannot resolve them.
+			thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, app.Spec.Owner)
+			for _, tl := range thirdLevelURLs {
+				entrances = append(entrances, appcfg.Entrance{URL: tl})
 			}
 		} else {
 
@@ -603,9 +751,15 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 }
 
 func GetApixClient() (apixclientset.Interface, error) {
-	config, err := ctrl.GetConfig()
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedApixClient != nil {
+		return cachedApixClient, nil
+	}
+
+	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return nil, err
 	}
 
@@ -615,6 +769,7 @@ func GetApixClient() (apixclientset.Interface, error) {
 		return nil, err
 	}
 
+	cachedApixClient = client
 	return client, nil
 }
 
@@ -819,6 +974,14 @@ func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Applicat
 		}
 
 		entrances = append(entrances, a.Spec.Entrances...)
+		zone := u.GetAnnotations()["bytetrade.io/zone"]
+		if zone == "" {
+			continue
+		}
+		thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, u.GetName())
+		for _, tl := range thirdLevelURLs {
+			entrances = append(entrances, appcfg.Entrance{URL: tl})
+		}
 	}
 
 	return entrances, nil

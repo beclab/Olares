@@ -32,6 +32,8 @@ spec:
   limitedMemory: 256Mi
   requiredDisk: 1Gi
   supportArch: [amd64]
+workloadReplicas:
+  v3env: 1
 envs:
   - envName: SMTP_HOST
     applyOnChange: true
@@ -40,9 +42,13 @@ envs:
 options:
   policies: []
   resetCookie: { enabled: false }
+  dependencies:
+    - name: olares
+      type: system
+      version: ">=1.12.6-0"
 `
 	os.WriteFile(filepath.Join(dir, "Chart.yaml"), []byte("apiVersion: v2\nname: v3env\nversion: 1.0.0\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "values.yaml"), []byte("x: y\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "values.yaml"), []byte("x: y\nworkloads:\n  v3env:\n    replicaCount: 1\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "OlaresManifest.yaml"), []byte(manifest), 0o644)
 	tmpl := filepath.Join(dir, "templates")
 	os.MkdirAll(tmpl, 0o755)
@@ -55,7 +61,7 @@ kind: Deployment
 metadata:
   name: v3env
 spec:
-  replicas: 1
+  replicas: {{ .Values.workloads.v3env.replicaCount }}
   selector:
     matchLabels:
       app: v3env

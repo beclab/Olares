@@ -46,8 +46,10 @@ cli/olares-cli*
 framework/app-service/bin
 
 /files/
-market/
-user-service/
+/market/
+/user-service/
+/framework/market/src
+/framework/chart-repo/src
 
 /settings/
 apps/packages/app/.quasar/*

@@ -114,17 +114,17 @@ func (h *Handler) updateDeviceSupportType(req *restful.Request, resp *restful.Re
 		return
 	}
 
-	node, device, err := compute.FindDevice(ctx, h.ctrlClient, nodeName, deviceID)
+	_, device, err := compute.FindDevice(ctx, h.ctrlClient, nodeName, deviceID)
 	if err != nil {
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
-	if !compute.IsHAMIMode(node.GPUType) {
-		api.HandleBadRequest(resp, req, fmt.Errorf("device mode switching is not supported for gpu type %s", node.GPUType))
+	if len(device.AvailableSupportTypes) <= 1 {
+		api.HandleBadRequest(resp, req, fmt.Errorf("device mode switching is not supported for gpu type %s", device.Mode))
 		return
 	}
 	if !compute.SupportTypeAvailable(device.AvailableSupportTypes, body.SupportType) {
-		api.HandleBadRequest(resp, req, fmt.Errorf("support type %s is not available for gpu type %s", body.SupportType, node.GPUType))
+		api.HandleBadRequest(resp, req, fmt.Errorf("support type %s is not available for gpu type %s", body.SupportType, device.Mode))
 		return
 	}
 	if device.SupportType == body.SupportType {
@@ -311,6 +311,10 @@ func (h *Handler) commitStopForBoundApps(ctx context.Context, apps []stoppableAp
 func (h *Handler) listComputeResources(req *restful.Request, resp *restful.Response) {
 	nodes, err := compute.FetchNodeComputeAllocations(req.Request.Context(), h.ctrlClient)
 	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	if err := compute.AttachBoundAppSpecs(req.Request.Context(), h.ctrlClient, nodes); err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}

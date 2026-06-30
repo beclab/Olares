@@ -47,6 +47,7 @@ var nodeLocationPrefixes = []string{
 	"/api/permission/cache/",
 	"/api/permission/external/",
 	"/api/task/",
+	"/api/archive/",
 }
 
 var masterLocationPrefixes = []string{
@@ -404,6 +405,7 @@ func (t *Translator) buildUserFilterChains(user *message.UserInfo, vhosts []*ir.
 			SNIMatches:      []string{cert.Domain},
 			TLSCert:         customTLS,
 			UserName:        user.Name,
+			CreatedAt:       cert.CreatedAt,
 		})
 	}
 

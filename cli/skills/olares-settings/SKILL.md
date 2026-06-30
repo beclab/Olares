@@ -1,6 +1,6 @@
 ---
 name: olares-settings
-version: 4.2.0
+version: 4.2.2
 description: "Olares Settings via olares-cli settings — mirror of Settings SPA: users, apps, VPN, backup, integration, GPU, search, me/whoami. Use for Olares Settings, role, VPN ACL, backup, integration accounts, language."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -30,11 +30,11 @@ metadata:
 
 ## 13 area sub-trees
 
-The umbrella registers the 12 canonical Settings docs sections, plus a 13th non-canonical `me` self-service tree:
+The umbrella registers the 12 canonical Settings docs sections, plus a 13th non-canonical `me` self-service tree. The accelerator section is **version-split**: `gpu` on Olares 1.12.5 (legacy HAMI), `compute` on 1.12.6+ (see the per-area table) — they are the same Settings slot across versions, not two extra areas:
 
 ```
 users         appearance   apps          integration   vpn         network
-gpu           video        search        backup        restore     advanced
+gpu / compute video        search        backup        restore     advanced
 + me (self-service: whoami / version / check-update / sso list)
 ```
 
@@ -53,10 +53,11 @@ For every area, **start with `olares-cli settings <area> --help`**. References b
 | `integration` | [references/olares-settings-integration.md](references/olares-settings-integration.md) (`accounts add awss3|tencent`) |
 | `backup` | [references/olares-settings-backup.md](references/olares-settings-backup.md) (plans / snapshots / password) |
 | `appearance` | `olares-cli settings appearance --help` (`get`, `language set`) |
-| `network` | `olares-cli settings network --help` (read-only reverse-proxy / frp / hosts-file; writes blocked by JWS gap — see below) |
-| `gpu` | `olares-cli settings gpu --help` (read-only `list`) |
+| `network` | `olares-cli settings network --help` (read-only reverse-proxy / frp / hosts-file; writes blocked by JWS gap — see [Currently-implemented mutating verbs](#currently-implemented-mutating-verbs)) |
+| `gpu` | `olares-cli settings gpu --help` (read-only `list`; **legacy, 1.12.5 only** HAMI `/api/gpu/list` — **removed in 1.12.6**: the CLI fails fast there and points at `compute list`) |
+| `compute` | `olares-cli settings compute --help` (**1.12.6+ new "Accelerator"**: `list`, `unbind <app>`, `set-type <node> <device>`; version-gated, replaces `gpu list`. `<node>`/`<device>` come from `list`'s node header + DEVICE-ID column) |
 | `video` | `olares-cli settings video --help` (read-only `config get`) |
-| `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list`) |
+| `search` | `olares-cli settings search --help` (`status`, `rebuild`, `dirs list/add/rm`). `dirs` = the **full-content** index directories; `status` shows the index `Status` plus a full-text-extraction `Failures` count (`-o json` for per-file detail). Exclude-pattern view/edit is SPA-only (the CLI's `settings search excludes` is not wired up). The index coverage model (what's indexed by filename vs full-text, and the defaults) lives once in [`olares-search`](../olares-search/SKILL.md) |
 | `restore` | `olares-cli settings restore --help` (read-only `plans list`) |
 | `advanced` | `olares-cli settings advanced --help` (read-only `status`, `registries list`, `images list`, `env (system|user) list`) |
 
@@ -78,8 +79,8 @@ All three delegate to the same driver — same output, same caching, same `--ref
 
 | Floor | Verbs |
 |---|---|
-| **Admin (owner / admin)** | `users list / get / create / delete`; `network reverse-proxy get`, `network frp list`, `network hosts-file get`; `gpu list`; `advanced status / registries list / images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
-| **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list / routes <id>`; `appearance get`, `appearance language set`; `integration accounts list / list-by-type / get / add / delete`; `video config get`; `search status / dirs list / rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env (system|user) list` |
+| **Admin (owner / admin)** | `users list / get / create / delete`; `network reverse-proxy get`, `network frp list`, `network hosts-file get`; `gpu list`; `compute list`, `compute unbind`, `compute set-type`; `advanced status / registries list / images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
+| **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list / routes <id>`; `appearance get`, `appearance language set`; `integration accounts list / list-by-type / get / add / delete`; `video config get`; `search status / dirs list / dirs add / dirs rm / rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env (system|user) list` |
 
 ### Soft preflight behavior
 
@@ -117,16 +118,17 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 |---|---|---|
 | `appearance` | `language set <code>` | VERIFIED |
 | `users` | `create` / `delete` (with `--watch`) | VERIFIED |
-| `search` | `rebuild`, `dirs add / remove` | VERIFIED (rebuild + dirs writes) |
+| `search` | `rebuild`, `dirs add / rm` | VERIFIED (rebuild + dirs writes) |
 | `vpn ssh` | `enable` / `disable` | VERIFIED |
 | `vpn acl` | `add` / `remove` | VERIFIED |
 | `integration accounts` | `add awss3` / `add tencent` / `delete` | VERIFIED |
-| `apps` | `suspend [--all]` / `resume`, `env set`, `domain set/finish`, `policy set`, `auth-level set` | UNVERIFIED |
+| `apps` | `suspend [--cascade]` / `resume` (thin aliases over `market stop` / `market resume`), `env set`, `domain set/finish`, `policy set`, `auth-level set` | UNVERIFIED |
+| `compute` | `unbind <app>` (unbind + stop app), `set-type <node> <device> --type X` (may stop bound apps; handles `bound-apps-stop-blocked`) — **1.12.6+** | UNVERIFIED |
 | `backup` | `password set` | UNVERIFIED |
 
 **Not yet implemented** (and the CLI deliberately does NOT register them):
 
-- App lifecycle (`install` / `uninstall` / `upgrade` / `start` / `stop` / `cancel` / `clone`) → use [`olares-market`](../olares-market/SKILL.md) instead
+- App lifecycle (`install` / `uninstall` / `upgrade` / `stop` / `resume` / `cancel` / `clone`) → use [`olares-market`](../olares-market/SKILL.md) instead
 - Per-app secrets / permissions / providers (Infisical-backed) → admin / chart-side tooling
 - Network writes requiring a JWS-signed device-id header (`hosts-file set`, `frp set`, `ssl enable/disable/update`)
 - Containerd registry mutations (`registries mirrors put/delete`, `images delete/prune`) — JWS-gated
@@ -134,7 +136,7 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 - Backup plan create / update (needs full `BackupPolicy` + `LocationConfig` vector design)
 - Restore plan update / non-cancel delete — backup-server has no routes
 
-**Don't suggest the deferred verbs today** — they will error with "command not found".
+**Don't suggest the deferred verbs** — they will error with "command not found".
 
 ## Security rules
 
@@ -144,15 +146,13 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 - Read-only verbs do NOT carry "this will change X" prompts. **Don't fabricate one for read verbs.**
 - The `profile whoami --refresh` recovery path is the only authentication-adjacent action this skill recommends. **All** other auth recovery belongs in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
 
-## Common errors → fixes
+## Common errors
 
-| Error | Cause | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
 | `this command needs role "<R>" or higher to <verb>, but profile "<id>" is cached as "<r>"` | Cached role below the verb's floor | If your role on the server changed: `olares-cli profile whoami --refresh`. Otherwise ask owner to grant the role |
 | `HTTP 403 while attempting to <verb>` (with refresh hint) | Server rejected even though cache said OK — stale role cache | `olares-cli profile whoami --refresh`, retry the verb |
-| `refresh token for <id> became invalid at <ts>; please run: olares-cli profile login --olares-id <id>` | The refresh_token itself is dead — see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) | `olares-cli profile login --olares-id <id>` |
-| `no access token for <id>; run: olares-cli profile login --olares-id <id>` | Keychain has no entry for the active profile | `olares-cli profile login` or `profile import` |
 | `unsupported --output "<x>" (allowed: table, json)` | Typo on `-o` | Use `-o table` or `-o json` |
 | `GET <path>: upstream returned code <N>: <msg>` | user-service / BFL / backup-server returned non-success envelope | Read the message verbatim; it almost always carries actionable detail (e.g. "user not found") |
 
-For the full auth-error matrix see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
+Any auth / token error (token invalidated, no access token, refresh expired) → see the [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) auth error recovery table.

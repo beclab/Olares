@@ -1,6 +1,9 @@
 package ir
 
-import "reflect"
+import (
+	"reflect"
+	"time"
+)
 
 type ProtocolType string
 
@@ -26,6 +29,10 @@ type HTTPListenerIR struct {
 	SourceCIDRs []string  // source CIDR restrictions (deny_all)
 	TLSCert     *SecretIR // per-user TLS certificate
 	UserName    string    // user identifier for per-user ext_authz
+	// CreatedAt is the creation time of the underlying config (custom domain
+	// cert). When two chains match the same SNI, the earliest-created wins and
+	// later duplicates are dropped. Zero for chains without a dated source.
+	CreatedAt time.Time
 }
 
 type VirtualHostIR struct {

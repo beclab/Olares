@@ -202,6 +202,7 @@ const side = {
     },
     {
       text: "Olares applications",
+      link: "/manual/olares/",
       items: [
         { text: "Desktop", link: "/manual/olares/desktop", },
         {
@@ -230,6 +231,10 @@ const side = {
             {
               text: "Basic file operations",
               link: "/manual/olares/files/add-edit-download",
+            },
+            {
+              text: "Compress and extract files",
+              link: "/manual/olares/files/compress-extract-files",
             },
             //   {
             //      text: "Sync and share",
@@ -577,7 +582,6 @@ const side = {
 export const en = defineConfig({
   lang: "en",
   themeConfig: {
-    //logo: "/icon.png",
     socialLinks: [{ icon: "github", link: "https://github.com/beclab/olares" }],
 
     nav: [

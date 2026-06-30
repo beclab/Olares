@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -558,6 +559,84 @@ func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, injectAll bool, injec
 	}
 	patches = append(patches, addEnvToPatch(tpl, envKeyValues)...)
 	return json.Marshal(patches)
+}
+
+// CreateCleanupPatchForDeployment scans the workload template for any
+// GPU-related fields that may have been added by a previous run of the
+// gpu-limit mutating webhook (nvidia.com/gpu, nvidia.com/gpumem,
+// amd.com/gpu, amd.com/apu in both resources.limits and
+// resources.requests, plus runtimeClassName="nvidia") and returns an
+// RFC 6902 JSON Patch that removes them. Returns nil when nothing needs
+// to be cleaned up.
+//
+// This is the counterpart of addGpuResourceLimits: when an app no longer
+// needs GPU (e.g., its OlaresManifest dropped requiredGpu on upgrade),
+// the inject path used to early-return without emitting any patch. Helm
+// upgrade then preserves the previously-injected GPU keys as "live-only"
+// fields via strategic merge, leaving stale resources on the pod. By
+// emitting explicit remove ops the desired object that K8s sees no
+// longer carries the GPU keys, so 3-way merge can drop them.
+func CreateCleanupPatchForDeployment(tpl *corev1.PodTemplateSpec) ([]byte, error) {
+	patches := removeGpuResources(tpl)
+	if len(patches) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(patches)
+}
+
+// gpuResourceKeys lists every extended-resource key the gpu-limit
+// webhook may have injected on a prior install. Keep in sync with
+// addGpuResourceLimits / getGPUResourceTypeKey.
+var gpuResourceKeys = []string{
+	constants.NvidiaGPU,
+	constants.NvidiaGPUMem,
+	constants.AMDGPU,
+	constants.AMDAPU,
+}
+
+// jsonPointerEscape escapes a string per RFC 6901 so it is safe to use
+// as a JSON Pointer path segment. The order matters: "~" must be
+// replaced before "/".
+func jsonPointerEscape(s string) string {
+	s = strings.ReplaceAll(s, "~", "~0")
+	s = strings.ReplaceAll(s, "/", "~1")
+	return s
+}
+
+func removeGpuResources(tpl *corev1.PodTemplateSpec) []patchOp {
+	if tpl == nil {
+		return nil
+	}
+	var patches []patchOp
+
+	for i := range tpl.Spec.Containers {
+		container := &tpl.Spec.Containers[i]
+		for _, key := range gpuResourceKeys {
+			resName := corev1.ResourceName(key)
+			escaped := jsonPointerEscape(key)
+			if _, ok := container.Resources.Limits[resName]; ok {
+				patches = append(patches, patchOp{
+					Op:   constants.PatchOpRemove,
+					Path: fmt.Sprintf("/spec/template/spec/containers/%d/resources/limits/%s", i, escaped),
+				})
+			}
+			if _, ok := container.Resources.Requests[resName]; ok {
+				patches = append(patches, patchOp{
+					Op:   constants.PatchOpRemove,
+					Path: fmt.Sprintf("/spec/template/spec/containers/%d/resources/requests/%s", i, escaped),
+				})
+			}
+		}
+	}
+
+	if tpl.Spec.RuntimeClassName != nil && *tpl.Spec.RuntimeClassName == "nvidia" {
+		patches = append(patches, patchOp{
+			Op:   constants.PatchOpRemove,
+			Path: runtimeClassPath,
+		})
+	}
+
+	return patches
 }
 
 func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, typeKey string, gpumem *string) (patch []patchOp, err error) {

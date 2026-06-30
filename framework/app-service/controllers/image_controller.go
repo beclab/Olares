@@ -125,6 +125,16 @@ func (r *ImageManagerController) reconcile(ctx context.Context, instance *appv1a
 	if _, ok := imageManager[instance.Name]; ok {
 		return nil
 	}
+
+	// Guard against terminal states so a stale Reconcile request (e.g. one
+	// queued while a previous reconcile was still running) does not overwrite
+	// a terminal state set by app-service (downloadingCanceled) or by an
+	// earlier reconcile (failed/completed).
+	if isTerminalState(cur.Status.State) {
+		klog.Infof("skip reconcile for im=%s in terminal state=%s", cur.Name, cur.Status.State)
+		return nil
+	}
+
 	imageManager[instance.Name] = cancel
 	if cur.Status.State != appv1alpha1.Downloading.String() {
 		err = r.updateStatus(ctx, &cur, appv1alpha1.Downloading.String(), "start downloading")
@@ -153,7 +163,15 @@ func (r *ImageManagerController) reconcile(ctx context.Context, instance *appv1a
 		}
 		return err
 	}
-	time.Sleep(2 * time.Second)
+	// Respect cancellation in this final window: if the user canceled the
+	// download right after it finished, do not proceed to mark the IM as
+	// completed (which would race with the downloadingCanceled state).
+	select {
+	case <-time.After(2 * time.Second):
+	case <-ctx.Done():
+		klog.Infof("reconcile canceled for im=%s before marking completed err=%v", instance.Name, ctx.Err())
+		return ctx.Err()
+	}
 	err = r.updateStatus(context.TODO(), instance, "completed", "image download completed")
 	if err != nil {
 		klog.Infof("Failed to update status err=%v", err)
@@ -164,10 +182,17 @@ func (r *ImageManagerController) reconcile(ctx context.Context, instance *appv1a
 	return nil
 }
 
+// isTerminalState returns true when the IM has reached a state from which
+// the controller must not transition back to an in-progress state.
+func isTerminalState(state string) bool {
+	return state == "failed" ||
+		state == "completed" ||
+		state == appv1alpha1.DownloadingCanceled.String()
+}
+
 func (r *ImageManagerController) preEnqueueCheckForCreate(obj client.Object) bool {
 	im, _ := obj.(*appv1alpha1.ImageManager)
-	if im.Status.State == "failed" || im.Status.State == appv1alpha1.DownloadingCanceled.String() ||
-		im.Status.State == "completed" {
+	if isTerminalState(im.Status.State) {
 		return false
 	}
 	klog.Infof("enqueue check: %v", im.Status.State)
@@ -175,9 +200,22 @@ func (r *ImageManagerController) preEnqueueCheckForCreate(obj client.Object) boo
 }
 
 func (r *ImageManagerController) preEnqueueCheckForUpdate(old, new client.Object) bool {
-	im, _ := new.(*appv1alpha1.ImageManager)
-	if im.Status.State == appv1alpha1.DownloadingCanceled.String() {
-		go r.cancel(im)
+	oldIm, _ := old.(*appv1alpha1.ImageManager)
+	newIm, _ := new.(*appv1alpha1.ImageManager)
+	if newIm == nil {
+		return false
+	}
+	// On transition to downloadingCanceled, fire the in-process cancel so the
+	// running reconcile (if any) stops pulling. The IM state itself is
+	// already persisted by the writer (app-service); reconcile/updateStatus
+	// is responsible for not regressing it (see isTerminalState guards).
+	if newIm.Status.State == appv1alpha1.DownloadingCanceled.String() &&
+		(oldIm == nil || oldIm.Status.State != appv1alpha1.DownloadingCanceled.String()) {
+		go func() {
+			if err := r.cancel(newIm); err != nil {
+				klog.Infof("cancel im=%s on downloadingCanceled: %v", newIm.Name, err)
+			}
+		}()
 	}
 	return false
 }
@@ -221,6 +259,19 @@ func (r *ImageManagerController) updateStatus(ctx context.Context, im *appv1alph
 		err = r.Get(ctx, types.NamespacedName{Name: im.Name}, im)
 		if err != nil {
 			return err
+		}
+
+		// Refuse to overwrite a terminal state with a different state. This
+		// protects against races where app-service patched the IM to
+		// downloadingCanceled while this reconcile was already on its way to
+		// write another state (e.g. "downloading" at the start of reconcile,
+		// or "completed" right after the download finished). Idempotent
+		// re-writes of the same terminal state are allowed; the only valid
+		// transition out of a terminal state is recreating the IM.
+		if isTerminalState(im.Status.State) && im.Status.State != state {
+			klog.Infof("skip updateStatus for im=%s: cannot move terminal state=%s to state=%s",
+				im.Name, im.Status.State, state)
+			return nil
 		}
 
 		now := metav1.Now()

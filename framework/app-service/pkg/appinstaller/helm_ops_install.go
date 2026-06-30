@@ -193,21 +193,36 @@ func (h *HelmOps) BuildDeploymentLabelPatchData() (nsLabels map[string]string, w
 	ports := ToAppTCPUDPPorts(h.app.Ports)
 	tailScale := ToTailScale(h.app.TailScale)
 
+	workloadLabels := map[string]string{
+		constants.ApplicationNameLabel:       h.app.AppName,
+		constants.ApplicationRawAppNameLabel: h.app.RawAppName,
+		constants.ApplicationOwnerLabel:      h.app.OwnerName,
+		constants.ApplicationTargetLabel:     h.app.Target,
+		constants.ApplicationRunAsUserLabel:  strconv.FormatBool(h.app.RunAsUser),
+		constants.ApplicationMiddlewareLabel: func() string {
+			if h.app.Type == appv1alpha1.Middleware.String() {
+				return "true"
+			}
+			return "false"
+		}(),
+	}
+	// Stamp the clone origin on the workload so the Application controller can
+	// propagate it onto the Application CR. Only set when the app was cloned;
+	// a regular install leaves the label off the deployment.
+	if h.app.ClonedFrom != "" {
+		workloadLabels[constants.AppClonedFromKey] = h.app.ClonedFrom
+	}
+	// Stamp the chart owner on the workload so the Application controller can
+	// propagate it onto the Application CR. Only set for uploaded apps; market
+	// installs leave the label off the deployment (push events fall back to
+	// the installing user via appcfg.GetChartOwner).
+	if h.app.ChartOwner != "" {
+		workloadLabels[constants.AppChartOwnerKey] = h.app.ChartOwner
+	}
+
 	workloadPatchData = map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"labels": map[string]string{
-				constants.ApplicationNameLabel:       h.app.AppName,
-				constants.ApplicationRawAppNameLabel: h.app.RawAppName,
-				constants.ApplicationOwnerLabel:      h.app.OwnerName,
-				constants.ApplicationTargetLabel:     h.app.Target,
-				constants.ApplicationRunAsUserLabel:  strconv.FormatBool(h.app.RunAsUser),
-				constants.ApplicationMiddlewareLabel: func() string {
-					if h.app.Type == appv1alpha1.Middleware.String() {
-						return "true"
-					}
-					return "false"
-				}(),
-			},
+			"labels": workloadLabels,
 			"annotations": map[string]string{
 				constants.ApplicationIconLabel:    h.app.Icon,
 				constants.ApplicationTitleLabel:   h.app.Title,
@@ -614,6 +629,11 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 		return true, nil
 	}
 	timer := time.NewTicker(1 * time.Second)
+	// unrecoverableSince records when an unrecoverable pod condition was first
+	// observed while the app is still not started. Once it persists past
+	// unrecoverableGrace, startup fails fast instead of polling until the outer
+	// installing TTL expires (which left CrashLoopBackOff apps stuck ~30m).
+	var unrecoverableSince time.Time
 	for {
 		select {
 		case <-timer.C:
@@ -629,6 +649,18 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 			}
 			if errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending) {
 				return false, err
+			}
+
+			if reason, ok := h.hasUnrecoverablePod(h.ctx); ok {
+				if unrecoverableSince.IsZero() {
+					unrecoverableSince = time.Now()
+					klog.Warningf("app %s has unrecoverable pod (%s); will fail startup if it persists for %s",
+						h.app.AppName, reason, unrecoverableGrace)
+				} else if time.Since(unrecoverableSince) > unrecoverableGrace {
+					return false, fmt.Errorf("app %s failed to start up: %s", h.app.AppName, reason)
+				}
+			} else {
+				unrecoverableSince = time.Time{}
 			}
 
 		case <-h.ctx.Done():

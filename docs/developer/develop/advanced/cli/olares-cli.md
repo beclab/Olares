@@ -1,7 +1,7 @@
 ---
 outline: [2, 3]
 ---
-# Olares CLI
+# Olares CLI reference
 
 Olares provides Olares CLI, a command-line tool for developers and system administrators to customize or troubleshoot the Olares installation process.
 

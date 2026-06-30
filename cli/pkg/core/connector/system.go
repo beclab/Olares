@@ -82,7 +82,8 @@ type Systems interface {
 	IsAmdGPU() bool
 	IsAmdGPUOrAPU() bool
 	IsMThreadsM1000() bool
-	IsStrixHalo() bool
+	IsRyzenAIMax() bool
+	IsIntelGPU() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -255,8 +256,16 @@ func (s *SystemInfo) IsAmdGPU() bool {
 	return s.HasAmdGPU
 }
 
-func (s *SystemInfo) IsStrixHalo() bool {
-	return s.CpuInfo.IsStrixHalo
+// IsRyzenAIMax reports whether the node carries an AMD "Ryzen AI Max" APU
+// (integrated GPU). It drives ROCm install + the "amd" node mode label.
+func (s *SystemInfo) IsRyzenAIMax() bool {
+	return s.CpuInfo.IsRyzenAIMax
+}
+
+// IsIntelGPU reports whether the node exposes an Intel GPU (drives the "intel"
+// node mode label)
+func (s *SystemInfo) IsIntelGPU() bool {
+	return s.CpuInfo.IsIntelGPU
 }
 
 func (s *SystemInfo) IsAmdGPUOrAPU() bool {
@@ -480,7 +489,8 @@ type CpuInfo struct {
 	IsGB10Chip       bool   `json:"is_gb10_chip,omitempty"`
 	HasAmdAPU        bool   `json:"has_amd_apu,omitempty"`
 	IsMThreadsM1000  bool   `json:"is_mthreads_m1000,omitempty"`
-	IsStrixHalo      bool   `json:"is_strix_halo,omitempty"`
+	IsRyzenAIMax     bool   `json:"is_ryzen_ai_max,omitempty"`
+	IsIntelGPU       bool   `json:"is_intel_gpu,omitempty"`
 }
 
 // Not considering the case where AMD GPU and AMD APU coexist.
@@ -549,19 +559,23 @@ func getCpu() *CpuInfo {
 		hasAmdAPU = false
 	}
 
-	// check if it is Strix Halo
-	isStrixHalo, err := HasStrixHaloLocal()
+	// check if it is an AMD Ryzen AI Max APU
+	isRyzenAIMax, err := HasRyzenAIMaxLocal()
 	if err != nil {
-		fmt.Printf("Error checking Strix Halo: %v\n", err)
-		isStrixHalo = false
+		fmt.Printf("Error checking AMD Ryzen AI Max: %v\n", err)
+		isRyzenAIMax = false
 	}
+
+	// check if it has an Intel GPU
+	isIntelGPU := HasIntelGPULocal()
 
 	// check if it is mthreads m1000
 	ret.IsMThreadsM1000 = IsMThreadsAIBookM1000Local()
 
 	ret.IsGB10Chip = isGB10Chip
 	ret.HasAmdAPU = hasAmdAPU
-	ret.IsStrixHalo = isStrixHalo
+	ret.IsRyzenAIMax = isRyzenAIMax
+	ret.IsIntelGPU = isIntelGPU
 
 	return ret
 }

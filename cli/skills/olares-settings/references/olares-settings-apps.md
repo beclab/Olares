@@ -5,7 +5,7 @@
 
 The **post-install** surface for an Olares app. Inspect the app, list its entrances, edit per-entrance domain / policy / auth-level / env vars, suspend / resume.
 
-> **NOT for install / uninstall / upgrade / clone / start / stop** — use [`olares-market`](../../olares-market/SKILL.md) for app lifecycle. `settings apps` is for tweaking an app that's already installed.
+> **NOT for install / uninstall / upgrade / clone / stop / resume** — use [`olares-market`](../../olares-market/SKILL.md) for app lifecycle. `settings apps` is for tweaking an app that's already installed.
 
 ## Verbs at a glance
 
@@ -24,27 +24,25 @@ The **post-install** surface for an Olares app. Inspect the app, list its entran
 | `policy list <app>` | normal | VERIFIED | Every entrance's policy |
 | `policy set <app> <entrance> [flags]` | normal | UNVERIFIED | RMW update |
 | `auth-level set <app> <entrance> --level X` | normal | UNVERIFIED | `private` / `public` / `internal` |
-| `suspend <app> [--all]` | normal | UNVERIFIED | Suspend running app |
-| `resume <app>` | normal | UNVERIFIED | Resume suspended app |
+| `suspend <app> [--cascade]` | normal | UNVERIFIED | Suspend (stop) a running app — thin alias over `market stop` |
+| `resume <app>` | normal | UNVERIFIED | Resume a suspended app — thin alias over `market resume` |
+
+> `suspend` / `resume` carry **no settings-side logic**: on 1.12.6 the Settings page routes stop/resume through the Market flow, so the CLI reuses `market stop` / `market resume` verbatim (renamed verb only). They inherit the full market behavior — `--cascade` / `--watch`, source-implicit resolution, and the 1.12.6 force-cascade for CS/shared apps. See [`olares-market`](../../olares-market/SKILL.md) lifecycle for the cascade and watch semantics.
 
 ## The per-entrance editing pipeline
 
 Most per-entrance edits follow a 4-step pattern:
 
 ```bash
-# 1. Discover entrances on the app.
+# 1. Discover entrances (ENTRANCE / STATE / AUTH LEVEL / DOMAIN columns).
 olares-cli settings apps entrances list firefox
-# → produces ENTRANCE / STATE / AUTH LEVEL / DOMAIN columns
-
-# 2. Inspect current setup of the entrance you want to edit.
+# 2. Inspect the entrance you want to edit.
 olares-cli settings apps domain get firefox www
 olares-cli settings apps policy get firefox www
-
 # 3. RMW update (unspecified flags survive).
 olares-cli settings apps domain set firefox www --third-level my-firefox
 olares-cli settings apps policy set firefox www --default-policy two_factor
-
-# 4. For third-party domains: confirm CNAME after DNS propagation.
+# 4. Third-party domains: confirm CNAME after DNS propagation.
 olares-cli settings apps domain set firefox www --third-party firefox.example.com \
   --cert-file /path/to/cert.pem --key-file /path/to/key.pem
 olares-cli settings apps domain finish firefox www
@@ -124,8 +122,8 @@ olares-cli settings apps env set gitea GITEA_TOKEN=abc DB_PASS=xyz
 
 ```bash
 olares-cli settings apps list                  # SPA-equivalent filtered view (current user, no system apps)
-olares-cli settings apps list --show-system    # include system apps
-olares-cli settings apps list --all            # every state + every kind (cluster-wide for admins)
+olares-cli settings apps list --show-system    # also include system apps (Files / Settings / Vault / ...)
+olares-cli settings apps list --all            # also include uninstalled / pending / installing / upgrading / reinstalling states
 ```
 
 `get <app>` filters client-side — there is no per-app endpoint upstream. For multi-instance / cloned apps, pass the per-instance name (e.g. `windowsefe992`), not the source name (`windows`).

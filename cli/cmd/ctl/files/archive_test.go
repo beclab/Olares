@@ -288,7 +288,7 @@ func TestResolveVolumeSizeMB(t *testing.T) {
 		{"mb-only", "", 100, 100, false},
 		{"size-only-bare", "100", 0, 100, false},
 		{"size-only-unit", "1.5GB", 0, 1536, false},
-		{"size-sub-mib-floors", "500KB", 0, 1, false},
+		{"size-kb-rejected", "500KB", 0, 0, true},
 		{"both-set", "100MB", 50, 0, true},
 		{"negative-mb", "", -1, 0, true},
 		{"bad-size", "abc", 0, 0, true},
@@ -301,6 +301,75 @@ func TestResolveVolumeSizeMB(t *testing.T) {
 			}
 			if !c.err && got != c.want {
 				t.Errorf("resolveVolumeSizeMB(%q, %d): got %d want %d", c.volumeSize, c.volumeMB, got, c.want)
+			}
+		})
+	}
+}
+
+func TestDetectCompressedSingleSource(t *testing.T) {
+	cases := []struct {
+		name        string
+		sourceCount int
+		isDir       bool
+		plainPath   string
+		statName    string
+		wantFormat  string
+		wantReject  bool
+	}{
+		{
+			name:        "single zip file rejected",
+			sourceCount: 1,
+			isDir:       false,
+			plainPath:   "drive/Home/a.zip",
+			statName:    "a.zip",
+			wantFormat:  "zip",
+			wantReject:  true,
+		},
+		{
+			name:        "single split zip main part rejected",
+			sourceCount: 1,
+			isDir:       false,
+			plainPath:   "drive/Home/a.zip.001",
+			statName:    "a.zip.001",
+			wantFormat:  "zip",
+			wantReject:  true,
+		},
+		{
+			name:        "single normal file allowed",
+			sourceCount: 1,
+			isDir:       false,
+			plainPath:   "drive/Home/a.txt",
+			statName:    "a.txt",
+			wantFormat:  "",
+			wantReject:  false,
+		},
+		{
+			name:        "single directory allowed",
+			sourceCount: 1,
+			isDir:       true,
+			plainPath:   "drive/Home/dir",
+			statName:    "dir",
+			wantFormat:  "",
+			wantReject:  false,
+		},
+		{
+			name:        "multiple sources skip format check",
+			sourceCount: 2,
+			isDir:       false,
+			plainPath:   "drive/Home/a.zip",
+			statName:    "a.zip",
+			wantFormat:  "",
+			wantReject:  false,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			gotFormat, gotReject := detectCompressedSingleSource(c.sourceCount, c.isDir, c.plainPath, c.statName)
+			if gotReject != c.wantReject {
+				t.Fatalf("detectCompressedSingleSource(...): reject=%v want %v", gotReject, c.wantReject)
+			}
+			if gotFormat != c.wantFormat {
+				t.Fatalf("detectCompressedSingleSource(...): format=%q want %q", gotFormat, c.wantFormat)
 			}
 		})
 	}

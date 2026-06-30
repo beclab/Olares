@@ -7,8 +7,12 @@ head:
       content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 使用指南, 安装技能, 安装插件
 app_version: "1.0.3"
 doc_version: "1.1"
-doc_updated: "2026-06-09"      
+doc_updated: "2026-05-29"      
 ---
+
+:::warning
+本页面为 AI 翻译版本，内容仅供快速参考。关键信息建议以[英文原文](../../use-cases/openclaw-skills.md)为准。
+:::
 
 # 管理技能和插件
 
