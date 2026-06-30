@@ -55,17 +55,34 @@ func EnableJuiceFS(runtime *common.KubeRuntime, manifestMap manifest.Installatio
 	// validate the provided credentials instead and JuiceFS is formatted
 	// against that remote bucket.
 	useManagedMinIO := runtime.Arg.Storage == nil || runtime.Arg.Storage.StorageType == common.ManagedMinIO
+
+	// When the juicefs service is already enabled, the data has already been
+	// migrated and the rootfs swapped, so a resumed run must skip every
+	// migration step (prechecks, the object store / metadata engine install,
+	// and the rootfs migration itself) and only re-run the idempotent
+	// finalization modules below (StartOlares, the rootfs-type flip and the
+	// fsnotify re-render). This is also why the prechecks must be skipped:
+	// they require Olares to be stopped, whereas finalization needs it running.
+	alreadyEnabled := storage.IsJuiceFSEnabled()
+
 	modules := []module.Module{
-		&MigratePrecheckModule{},
-		&storage.ValidateModule{Skip: useManagedMinIO},
+		&MigratePrecheckModule{Skip: alreadyEnabled},
+		&storage.ValidateModule{Skip: useManagedMinIO || alreadyEnabled},
 		&storage.InstallMinioModule{
 			ManifestModule: manifestModule,
-			Skip:           !useManagedMinIO,
+			Skip:           !useManagedMinIO || alreadyEnabled,
 		},
-		&storage.InstallRedisModule{ManifestModule: manifestModule},
+		&storage.InstallRedisModule{ManifestModule: manifestModule, Skip: alreadyEnabled},
 		&MigrateRootFSToJuiceFSModule{
 			ManifestModule: manifestModule,
+			Skip:           alreadyEnabled,
 		},
+		// Always run (idempotent): regenerate the container-runtime service unit
+		// so it gains the JuiceFS pre-check now that juicefs.service exists. This
+		// lives in its own module rather than inside the migration module so that
+		// a run interrupted between enabling the juicefs service and this step is
+		// still repaired on resume (when the migration module is skipped).
+		&RegenerateRuntimeServiceModule{},
 		&terminus.StartOlaresModule{},
 		&UpdateRootFSTypeModule{},
 		&ReRenderFsnotifyChartsModule{},
@@ -82,6 +99,11 @@ func EnableJuiceFS(runtime *common.KubeRuntime, manifestMap manifest.Installatio
 // is enough disk space to do so.
 type MigratePrecheckModule struct {
 	common.KubeModule
+	Skip bool
+}
+
+func (m *MigratePrecheckModule) IsSkip() bool {
+	return m.Skip
 }
 
 func (m *MigratePrecheckModule) Init() {
@@ -103,11 +125,17 @@ func (m *MigratePrecheckModule) Init() {
 // MigrateRootFSToJuiceFSModule installs the JuiceFS client, formats the
 // filesystem, syncs the local rootfs into it in a single full pass (Olares is
 // already stopped, so the rootfs is quiescent), swaps the rootfs directory for
-// the JuiceFS mount, and regenerates the container runtime service so it gates
-// on JuiceFS.
+// the JuiceFS mount, and enables the juicefs service. The container-runtime
+// service unit is regenerated separately (RegenerateRuntimeServiceModule) so
+// that step survives resumption even when this module is skipped.
 type MigrateRootFSToJuiceFSModule struct {
 	common.KubeModule
 	manifest.ManifestModule
+	Skip bool
+}
+
+func (m *MigrateRootFSToJuiceFSModule) IsSkip() bool {
+	return m.Skip
 }
 
 func (m *MigrateRootFSToJuiceFSModule) Init() {
@@ -192,14 +220,23 @@ func (m *MigrateRootFSToJuiceFSModule) Init() {
 		enableJuiceFs,
 		checkJuiceFs,
 	}
-
-	// 4. regenerate the container runtime service so it gains the JuiceFS
-	// pre-check (After=juicefs.service + ExecStartPre=juicefs summary) now that
-	// the unit exists.
-	m.appendRegenerateRuntimeServiceTasks()
 }
 
-func (m *MigrateRootFSToJuiceFSModule) appendRegenerateRuntimeServiceTasks() {
+// RegenerateRuntimeServiceModule regenerates the container-runtime service unit
+// so it gains the JuiceFS pre-check (After=juicefs.service + ExecStartPre=juicefs
+// summary) now that juicefs.service exists.
+//
+// It is a standalone, always-run module (not part of the migration module) and
+// every task in it is idempotent, so a run that was interrupted between enabling
+// the juicefs service and this regeneration is still repaired on resume, even
+// though the migration module itself is skipped once JuiceFS is enabled.
+type RegenerateRuntimeServiceModule struct {
+	common.KubeModule
+}
+
+func (m *RegenerateRuntimeServiceModule) Init() {
+	m.Name = "RegenerateRuntimeService"
+
 	// Only the container-runtime *service* unit needs regenerating: now that
 	// juicefs.service exists, the template adds the JuiceFS pre-check
 	// (After=juicefs.service + ExecStartPre=juicefs summary). The service *env*
@@ -207,7 +244,7 @@ func (m *MigrateRootFSToJuiceFSModule) appendRegenerateRuntimeServiceTasks() {
 	// migration, so we must NOT regenerate it - doing so would require the
 	// cluster status from the pipeline cache and risks clobbering the token.
 	if m.KubeConf.Arg.Kubetype == common.K8s {
-		m.Tasks = append(m.Tasks,
+		m.Tasks = []task.Interface{
 			&task.LocalTask{
 				Name:   "RegenerateKubeletService",
 				Action: new(kubernetes.GenerateKubeletService),
@@ -216,10 +253,10 @@ func (m *MigrateRootFSToJuiceFSModule) appendRegenerateRuntimeServiceTasks() {
 				Name:   "ReloadSystemdUnits",
 				Action: &terminus.SystemctlCommand{DaemonReloadPreExec: true},
 			},
-		)
+		}
 		return
 	}
-	m.Tasks = append(m.Tasks,
+	m.Tasks = []task.Interface{
 		&task.LocalTask{
 			Name:   "RegenerateK3sService",
 			Action: new(k3s.GenerateK3sService),
@@ -230,7 +267,7 @@ func (m *MigrateRootFSToJuiceFSModule) appendRegenerateRuntimeServiceTasks() {
 			Name:   "EnableK3sService",
 			Action: new(k3s.EnableK3sService),
 		},
-	)
+	}
 }
 
 // UpdateRootFSTypeModule flips OLARES_SYSTEM_ROOTFS_TYPE to "jfs". It runs after
@@ -346,6 +383,13 @@ func (t *ReRenderFsnotifyCharts) Execute(runtime connector.Runtime) error {
 			logger.Warnf("failed to re-render fsnotify for user %s: %v", user, err)
 		}
 		ucancel()
+	}
+
+	// The cluster-scoped fsnotify re-render (the critical step) succeeded, so
+	// the migration is now fully finalized. Record it so subsequent
+	// enable-juicefs runs short-circuit instead of resuming finalization.
+	if err := storage.MarkMigrationFinalized(); err != nil {
+		return fmt.Errorf("failed to record the rootfs migration as finalized: %w", err)
 	}
 
 	return nil
