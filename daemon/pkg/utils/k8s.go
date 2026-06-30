@@ -265,17 +265,17 @@ func IsTerminusInitializing(ctx context.Context, client dynamic.Interface) (bool
 }
 
 func IsTerminusRunning(ctx context.Context, client kubernetes.Interface) (bool, error) {
-	pods, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	pods, err := ListPods(ctx)
 	if err != nil {
 		klog.Error("list pods error, ", err)
 		return false, err
 	}
 
-	for _, pod := range pods.Items {
-		if isKeyPod(&pod) {
+	for _, pod := range pods {
+		if isKeyPod(pod) {
 			switch pod.Status.Phase {
 			case corev1.PodRunning:
-				if !isPodReady(&pod) {
+				if !isPodReady(pod) {
 					return false, nil
 				}
 				continue
