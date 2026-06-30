@@ -1,48 +1,49 @@
 ---
 outline: [2, 3]
-description: Learn how to use the LLM Base applications on Olares to self-host large language models and run different inference engines by cloning the base apps.
+description: Learn how to use the Engine Base applications on Olares to self-host large language models and run different inference engines by cloning the base apps.
 ---
 
-# Host local large language models with LLM Base apps
+# Host local large language models with Engine Base apps
 
-Olares V1.12.6 introduces the local hosting and management platform for large language models (LLMs), a self-hosting solution powered by the `llm-init` project. This platform provides four LLM Base applications, each for one inference engine: **Ollama LLM Base**, **vLLM LLM Base**, **llama.cpp LLM Base**, and **SGLang LLM Base**. Select the base app for the engine you want, use it to deploy different models, and then monitor model performance through a dedicated console.
+Olares V1.12.6 introduces the local hosting and management platform for large language models (LLMs), a self-hosting solution powered by the `llm-init` project. This platform provides four Engine Base applications, each for one inference engine: **Ollama Engine Base**, **vLLM Engine Base**, **llama.cpp Engine Base**, and **SGLang Engine Base**. Select the base app for the engine you want, use it to deploy different models, and then monitor model performance through a dedicated console.
 
 ## Before you start
 
 - Your Olares system has been upgraded to V1.12.6 or later.
 
-## Locate LLM Base apps
+## Locate Engine Base apps
 
-1. Open Market and search for "LLM Base".
+1. Open Market and search for "Engine Base".
 
-    Four base apps appear: vLLM LLM Base (llm-init), SGLang LLM Base (llm-init), Ollama LLM Base (llm-init), and llama.cpp LLM Base (llm-init).
+    Four engine base apps appear: vLLM Engine Base, SGLang Engine Base, Ollama Engine Base, and llama.cpp Engine Base.
 
-    ![LLM Base apps in Market](/images/manual/olares/llm-base-apps.png#bordered)
+    ![Engine Base apps in Market](/images/manual/olares/llm-base-apps.png#bordered)
 
-2. Choose the base app that fits your needs. Each one is optimized for a different inference scenario:
+2. Choose the engine base that fits your needs. Each one is optimized for a different inference scenario:
 
-    | Base app | When to choose |
+    | Engine Base | When to choose |
     | :--- | :--- |
-    | **llama.cpp LLM Base (llm-init)** | Choose llama.cpp when you are running lightweight<br> GGUF models or deploying with limited GPU memory.<br>It is the recommended engine on Olares One. |
-    | **Ollama LLM Base (llm-init)** | Choose Ollama when you want to get started quickly with<br> broad model compatibility. It pulls models automatically<br> using native model tags, making it ideal for chat and embedding tasks. |
-    | **SGLang LLM Base (llm-init)** | Choose SGLang when you need efficient structured<br> generation or advanced reasoning optimizations. |
-    | **vLLM LLM Base (llm-init)** | Choose vLLM when you need high-throughput serving<br> of Hugging Face models under heavy concurrent load. |
+    | **llama.cpp Engine Base** | Choose llama.cpp when you are running lightweight<br> GGUF models or deploying with limited GPU memory.<br>It is the recommended engine on Olares One. |
+    | **Ollama Engine Base** | Choose Ollama when you want to get started quickly with<br> broad model compatibility. It pulls models automatically<br> using native model tags, making it ideal for chat and <br>embedding tasks. |
+    | **SGLang Engine Base** | Choose SGLang when you need efficient structured<br> generation or advanced reasoning optimizations. |
+    | **vLLM Engine Base** | Choose vLLM when you need high-throughput serving<br> of Hugging Face models under heavy concurrent load. |
 
 ## Create a new model instance
 
-An LLM Base app serves as a template. To run a model, you must first clone the base app into an independent running instance.
+An Engine Base app serves as a template. To run a model, you must first clone the base app into an independent running instance.
 
-1. Select the base app that matches your preferred inference engine, and then click **View** on it. For example, **llama.cpp LLM Base (llm-init)**.
+1. Select the base app that matches your preferred inference engine, and then click **View** on it. For example, **llama.cpp Engine Base**.
 2. Click **Create** to initialize a new instance.
 
-    ![Create a model instance](/images/manual/olares/llm-base-apps-create-instance1.png#bordered)
+    ![Create a model instance](/images/manual/olares/llm-base-apps-create-instance2.png#bordered)
 
-3. Specify the instance identity settings:
+3. Select the hardware accelerator for the instance to run on, and then click **Confirm**.
+4. Specify the instance identity settings:
 
     - **New app name**: Enter a unique name for the instance. This name is displayed as the app name in Market and Settings. For example, `Qwen3.6-35B-A3B`.
     - **Shortcut name for {client}**: Enter a unique shortcut name for the instance. This name is displayed on the Launchpad. For example, `qwen3.6-35b-a3b`.
 
-4. Click **Create** to proceed to the environment configuration.
+5. Click **Create** to proceed to the environment configuration.
 
 ## Configure engine environment variables
 
@@ -96,7 +97,7 @@ After creating the instance, the configuration window opens. Define where your e
     ![Model instance installed](/images/manual/olares/llm-base-model-instance-installed1.png#bordered)
 
     :::info
-    Model instances created from LLM Base apps show a `From template` tag next to the app name. You can see this tag when viewing the app in Market or Settings.
+    Model instances created from Engine Base apps show a `From template` tag next to the app name. You can see this tag when viewing the app in Market or Settings.
 
     ![Model instance tag](/images/manual/olares/llm-base-model-instance-tag1.png#bordered){width=70%}
     :::
@@ -118,8 +119,6 @@ Use the `ENGINE_ARGS` variable to add custom settings that adjust memory usage, 
 | `-ngl` | Offloads all model layers to the GPU<br> to avoid CPU-bound slowdowns. | `all` |
 | `-fa` | Enables Flash Attention to speed up<br> attention computation. | `on` |
 | `-ctk` / `-ctv` | Quantizes the KV Cache to 8-bit,<br> balancing GPU memory use and precision. | `q8_0` |
-| `--spec-type` | Enables MTP (Multi-Token Prediction)<br>speculative decoding. | `draft-mtp` |
-| `--spec-draft-n-max` | Sets the maximum number of tokens<br> the drafter guesses ahead per<br> speculative step. | `3` |
 
 For other llama.cpp arguments, see the [official documentation](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md).
 </template>
@@ -131,7 +130,7 @@ For other llama.cpp arguments, see the [official documentation](https://github.c
 | `OLLAMA_KEEP_ALIVE` | Sets how long the model stays resident in<br> GPU memory after the last request. When the<br> time expires, the weights are swapped to<br> system RAM.<ul><li>`-1` keeps it in GPU memory permanently.</li><li>`3m` keeps it for 3 minutes.</li></ul>Default: `-1`. | `-1` or `30m` |
 | `OLLAMA_FLASH_ATTENTION` | Enables Flash Attention. It must be enabled<br> to use `OLLAMA_KV_CACHE_TYPE` for KV cache<br> quantization.<br><br>Default: `1`. | `1` (Enabled) |
 | `OLLAMA_KV_CACHE_TYPE` | Sets the key-value (KV) cache quantization<br> type to save video memory. <br><br>Default: `f16`. | `q8_0` (minor precision loss) or `q4_0` |
-| `OLLAMA_NUM_PARALLEL` | Sets the number of concurrent<br> requests processed per model。 <br><br>Default: `1`. | `1` |
+| `OLLAMA_NUM_PARALLEL` | Sets the number of concurrent<br> requests processed per model. <br><br>Default: `1`. | `1` |
 
 For other Ollama arguments, see the [official documentation](https://github.com/ollama/ollama/blob/main/docs/faq.mdx).
 </template>
@@ -142,8 +141,6 @@ For other Ollama arguments, see the [official documentation](https://github.com/
 | `--context-length` | Sets the maximum context length. | `65536` |
 | `--mem-fraction-static` | Sets the fraction of GPU memory<br> pre-allocated for static usage, similar<br> to vLLM's `--gpu-memory-utilization`. | `0.85` |
 | `--chunked-prefill-size` | Splits very long inputs into chunks so<br> they don't block the GPU for long,<br> keeping concurrent requests' streaming<br> smooth. | `4096` |
-| `--reasoning-parser` | Separates chain-of-thought output:<br> writes the model's reasoning to the<br> `reasoning_content` field and the final<br> answer to the `content` field. Set it<br> to match the model. | `gpt-oss` |
-| `--tool-call-parser` | Enables parsing of function calling output.<br> Set it to match the model. | `gpt-oss` |
 
 For other SGLang arguments, see the [official documentation](https://docs.sglang.io/docs/advanced_features/server_arguments).
 </template>
@@ -156,7 +153,6 @@ For other SGLang arguments, see the [official documentation](https://docs.sglang
 | `--tensor-parallel-size` | Sets the tensor-parallel size, that is,<br> how many GPUs split and run one<br> model together. | `1` |
 | `--max-num-batched-tokens` | Limits the maximum number of tokens<br> processed per batch, so response time<br> stays stable when a very long request<br> arrives. | `8192` |
 | `--enable-prefix-caching` | Caches the KV Cache of shared prompt<br> prefixes and reuses it across requests. | Enabled |
-| `--kv-cache-dtype` | Sets the KV Cache data type. Using<br> `fp8` raises throughput while preserving<br> quality. <br><br>Accepted values: `auto`, `bfloat16`,<br> `fp8`, `fp8_ds_mla`, `fp8_e4m3`,<br> `fp8_e5m2`, `fp8_inc`. <br><br>Default: `auto`. | `fp8` |
 
 For other vLLM arguments, see the [official documentation](https://docs.vllm.ai/en/v0.17.0/configuration/engine_args/).
 </template>
@@ -169,12 +165,17 @@ The following per-engine recommendations are validated best practices. Use them 
 <tabs>
 <template #Llama-cpp>
 
-For the best speed, pick an MTP model so the engine can apply speculative decoding.
+- **Recommended model**: [`unsloth/Qwen3.6-27B-GGUF`](https://huggingface.co/unsloth/Qwen3.6-27B-GGUF), quantized to `Q4_K_M`
+- **MODEL_SOURCE**: `hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf`
 
-- **Recommended model**: [`unsloth/gemma-4-26B-A4B-it-GGUF`](https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF), an MTP model, and the `MODEL_SOURCE` must include the `mtp-gemma-4-26B-A4B-it.gguf` file
-- **MODEL_SOURCE**: `hf://unsloth/gemma-4-26B-A4B-it-GGUF --include gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf,hf://unsloth/gemma-4-26B-A4B-it-GGUF --include mmproj-F16.gguf,hf://unsloth/gemma-4-26B-A4B-it-GGUF --include mtp-gemma-4-26B-A4B-it.gguf`
-- **MODEL_NAME**: `unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q4_K_XL`
-- **ENGINE_ARGS**: `-c 65536 -ngl all -fa on -ctk q8_0 -ctv q8_0 --spec-type draft-mtp --spec-draft-n-max 3`
+    :::tip Multimodal models
+    If the model has multimodal capabilities, include the `mmproj-F16.gguf` file in `MODEL_SOURCE`:
+
+    `hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf,hf://unsloth/Qwen3.6-27B-GGUF --include mmproj-F16.gguf`
+    :::
+
+- **MODEL_NAME**: `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`
+- **ENGINE_ARGS**: `-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0`
 
 </template>
 <template #Ollama>
@@ -182,7 +183,7 @@ For the best speed, pick an MTP model so the engine can apply speculative decodi
 - **Recommended model**: `gemma4-26b` from the Ollama library, which defaults to Q4_K_M quantization
 - **MODEL_SOURCE**: `ollama://gemma4-26b`
 - **MODEL_NAME**: `gemma4-26b`
-- **ENGINE_ARGS**: `OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=65536 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 OLLAMA_NUM_PARALLEL=1`
+- **ENGINE_ARGS**: `OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=131072 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 OLLAMA_NUM_PARALLEL=1`
 
 </template>
 <template #SGLang>
@@ -191,10 +192,10 @@ For the best speed, pick an MTP model so the engine can apply speculative decodi
 SGLang models can take a while to load before the engine reaches `RUNNING`.
 :::
 
-- **Recommended model**: [`gpt-oss-20b`](https://huggingface.co/openai/gpt-oss-20b) from Hugging Face
-- **MODEL_SOURCE**: `hf://openai/gpt-oss-20b`
-- **MODEL_NAME**: `openai/gpt-oss-20b`
-- **ENGINE_ARGS**: `--context-length 65536 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser gpt-oss --tool-call-parser gpt-oss`
+- **Recommended model**: [`cyankiwi/Ornith-1.0-9B-AWQ-FP8`](https://huggingface.co/cyankiwi/Ornith-1.0-9B-AWQ-FP8) from Hugging Face
+- **MODEL_SOURCE**: `hf://cyankiwi/Ornith-1.0-9B-AWQ-FP8`
+- **MODEL_NAME**: `cyankiwi/Ornith-1.0-9B-AWQ-FP8`
+- **ENGINE_ARGS**: `--context-length 131072 --mem-fraction-static 0.85 --chunked-prefill-size 4096`
 
 </template>
 <template #vLLM>
@@ -203,10 +204,10 @@ SGLang models can take a while to load before the engine reaches `RUNNING`.
 vLLM models can take a while to load before the engine reaches `RUNNING`.
 :::
 
-- **Recommended model**: [`gpt-oss-20b`](https://huggingface.co/openai/gpt-oss-20b) from Hugging Face
-- **MODEL_SOURCE**: `hf://openai/gpt-oss-20b`
-- **MODEL_NAME**: `openai/gpt-oss-20b`
-- **ENGINE_ARGS**: `--max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --enable-prefix-caching --kv-cache-dtype fp8`
+- **Recommended model**: [`cyankiwi/Ornith-1.0-9B-AWQ-FP8`](https://huggingface.co/cyankiwi/Ornith-1.0-9B-AWQ-FP8) from Hugging Face
+- **MODEL_SOURCE**: `hf://cyankiwi/Ornith-1.0-9B-AWQ-FP8`
+- **MODEL_NAME**: `cyankiwi/Ornith-1.0-9B-AWQ-FP8`
+- **ENGINE_ARGS**: `--max-model-len 131072 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --enable-prefix-caching`
 
 </template>
 </tabs>
@@ -215,7 +216,7 @@ vLLM models can take a while to load before the engine reaches `RUNNING`.
 
 Open the built-in model console to track the model download, confirm the model and engine readiness, configure client access, and inspect GPU usage and performance.
 
-1. Locate the model instance in the **Instances** panel on the LLM Base app details page, or find it on the Launchpad.
+1. Locate the model instance in the **Instances** panel on the Engine Base app details page, or find it on the Launchpad.
 2. Open it to launch the dedicated model console.
 
     The console opens on the **Status** tab by default, and the model files start downloading automatically.

@@ -217,7 +217,7 @@ const side = {
               link: "/manual/olares/market/clone-apps",
             },
             {
-              text: "Use LLM Base applications",
+              text: "Use Engine Base applications",
               link: "/manual/olares/market/llm-base-apps",
             },
             {

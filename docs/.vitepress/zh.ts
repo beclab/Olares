@@ -215,7 +215,7 @@ const side = {
               link: "/zh/manual/olares/market/clone-apps",
             },
             {
-              text: "使用大模型底座",
+              text: "使用引擎底座",
               link: "/zh/manual/olares/market/llm-base-apps",
             },
             {
