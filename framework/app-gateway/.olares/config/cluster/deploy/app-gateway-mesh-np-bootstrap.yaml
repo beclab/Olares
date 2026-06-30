@@ -1,0 +1,32 @@
+# Supplemental NetworkPolicies for Linkerd mesh on Olares.
+# Olares security-controller applies others-np (same-namespace ingress only) to app-gateway and linkerd.
+# Proxies in app-gateway must reach linkerd-identity:8080 (and related control-plane ports).
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app-gateway-to-linkerd-control-plane
+  namespace: linkerd
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-mesh
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-gateway
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8086
+        - protocol: TCP
+          port: 8090
+        - protocol: TCP
+          port: 9443
+        - protocol: TCP
+          port: 443
