@@ -144,7 +144,7 @@ func (imc *ImageManagerClient) PollDownloadProgress(ctx context.Context, am *app
 				return err
 			}
 
-			if im.Status.State == "failed" {
+			if im.Status.State == "failed" || im.Status.State == appv1alpha1.DownloadingCanceled.String() {
 				return errors.New(im.Status.Message)
 			}
 
