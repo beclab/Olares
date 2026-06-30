@@ -23,6 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -330,8 +331,15 @@ func (p *UpgradingApp) Cancel(ctx context.Context) error {
 	klog.Infof("execute upgrading cancel operation appName=%s", p.manager.Spec.AppName)
 	err = p.imageClient.UpdateStatus(ctx, p.manager.Name, appsv1.DownloadingCanceled.String(), appsv1.DownloadingCanceled.String())
 	if err != nil {
-		klog.Errorf("update im name=%s to downloadingCanceled state failed %v", p.manager.Name, err)
-		return err
+		// IM may  has already been cleaned up.
+		// Either way, there is no IM status to mark canceled; the in-process
+		// cancel below is still required so the running upgrade goroutine
+		// observes context.Canceled and unwinds.
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("update im name=%s to downloadingCanceled state failed %v", p.manager.Name, err)
+			return err
+		}
+		klog.Infof("im name=%s not found while canceling upgrade (timeout), treating as already canceled", p.manager.Name)
 	}
 
 	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
