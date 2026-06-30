@@ -113,6 +113,7 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 		validatePermission(c.ConfigVersion, c.Permission),
 		validateRootProvider(c.ConfigVersion, c.Provider),
 		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
+		validateModernFieldRequiresManifestVersion(c),
 		validateOlaresDependency(c),
 		validateSharedAppRequirements(c),
 		validateV3Configuration(c),
@@ -468,8 +469,11 @@ func validateFlatResourceQuantities(spec *AppSpec, templateOnly bool) error {
 //     modern manifest must leave it empty so the platform can finish
 //     migrating callers away from it.
 //
-// permission.appCommon (access to the Common directory) is accepted at
-// every version and needs no extra validation here.
+// permission.appCommon (access to the cross-app Common directory) is a
+// >= 1.12.6 field and is gated by validateModernFieldRequiresManifestVersion
+// (requires olaresManifest.version >= 0.12.0 + Olares dep locked to
+// >=1.12.6-0), so this function deliberately leaves it alone — adding a
+// check here would emit a duplicate error.
 func validatePermission(configVersion string, p Permission) error {
 	var errs []error
 	if p.ExternalData && !resourcesCheckApplies(configVersion) {
@@ -581,6 +585,48 @@ func pickOlaresDepRule(c *AppConfiguration) (rule olaresDepConstraintRule, featu
 		return olaresDepRulePostV3, triggers
 	}
 	return olaresDepRulePreV3, nil
+}
+
+// validateModernFieldRequiresManifestVersion is the inverse gate of
+// validateOlaresDependency: it fires only on LEGACY manifests
+// (olaresManifest.version < 0.12.0) and rejects any manifest that
+// declares a field whose semantics only exist on Olares 1.12.6+.
+//
+// Two trigger sources are checked:
+//
+//   - apiVersion=v3 — the v3 runtime itself ships with Olares 1.12.6+.
+//   - any field returned by detectOlares1126OnlyFields (spec.accelerator,
+//     workloadReplicas, overlayGateway, options.LLMGatewaySupported,
+//     options.templateOnly, options.shared, permission.appCommon).
+//
+// When any trigger is declared the manifest must bump
+// olaresManifest.version to at least 0.12.0 AND lock
+// options.dependencies[name=olares].version to ">=1.12.6-0". The
+// dependency-side check itself is owned by validateOlaresDependency
+// (which only runs on modern manifests), so this function deliberately
+// stays out of the legacy-but-no-triggers branch: pre-existing legacy
+// manifests with no modern fields keep their historical freedom to
+// declare any (or no) Olares dependency. The error message names the
+// triggers so a manifest that backslid on multiple fields surfaces them
+// all in one Lint run, and explicitly states the >=1.12.6-0 requirement
+// to spare the user a second round trip once they bump the version.
+func validateModernFieldRequiresManifestVersion(c *AppConfiguration) error {
+	if resourcesCheckApplies(c.ConfigVersion) {
+		return nil
+	}
+	var triggers []string
+	if normalizeAPIVersion(c.APIVersion) == APIVersionV3 {
+		triggers = append(triggers, "apiVersion=v3")
+	}
+	triggers = append(triggers, detectOlares1126OnlyFields(c)...)
+	if len(triggers) == 0 {
+		return nil
+	}
+	return fmt.Errorf(
+		"olaresManifest.version must be >= %s when the manifest declares %s; bump olaresManifest.version to >= %s and lock options.dependencies[name=%s].version to \">=1.12.6-0\"",
+		minResourcesManifestVersion, strings.Join(triggers, " / "),
+		minResourcesManifestVersion, olaresSystemDepName,
+	)
 }
 
 // validateOlaresDependency enforces the rules on the Olares system
