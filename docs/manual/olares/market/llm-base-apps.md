@@ -102,7 +102,7 @@ After creating the instance, the configuration window opens. Define where your e
     ![Model instance tag](/images/manual/olares/llm-base-model-instance-tag1.png#bordered){width=70%}
     :::
 
-:::tip Update variables later
+:::tip Update environment variables later
 To change these variables after installation, go to Olares **Settings** > **Applications** > **[App-Name]** > **Manage environment variables**. Click the edit icon next to a variable, update its value, save your change, and then click **Apply**.
 :::
 
