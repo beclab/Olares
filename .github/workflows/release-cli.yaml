@@ -55,17 +55,41 @@ jobs:
           BINARY_VERSION: ${{ inputs.binary-version }}
           REF: ${{ inputs.ref }}
           BRANCH: ${{ inputs.branch }}
+          PUBLISH_NPM: ${{ inputs.publish-npm }}
         run: |
           set -euo pipefail
           npm_ver="${VERSION}"
           bin_ver="${BINARY_VERSION}"
-          if [ -z "$bin_ver" ]; then
+
+          # An explicit binary-version must be a clean OS-line semver so the
+          # upgrade framework can parse it (cli/pkg/upgrade/version.go).
+          if [ -n "$bin_ver" ] && ! echo "$bin_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::binary-version '$bin_ver' must match X.Y.Z (OS line)"
+            exit 1
+          fi
+
+          if [ "$PUBLISH_NPM" = "true" ]; then
+            # The publish path is the iterating CLI line; enforce the canonical
+            # npm version so package.json/CDN names and the derived binary
+            # version stay well-formed.
+            if ! echo "$npm_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-cli\.[0-9]+$'; then
+              echo "::error::version '$npm_ver' must match X.Y.Z-cli.N when publishing to npm"
+              exit 1
+            fi
+            if [ -z "$bin_ver" ]; then
+              bin_ver=$(echo "$npm_ver" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)-cli\.[0-9]+$/\1/')
+            fi
+          elif [ -z "$bin_ver" ]; then
+            # Non-publish callers (daily/check/release) build from their own
+            # version forms (1.12.7-<date>, 1.12.7-<random>, a release tag);
+            # keep the previous behavior and reuse the npm version as-is.
             if echo "$npm_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-cli\.[0-9]+$'; then
-              bin_ver=$(echo "$npm_ver" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)-cli\.[0-9]+/\1/')
+              bin_ver=$(echo "$npm_ver" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)-cli\.[0-9]+$/\1/')
             else
               bin_ver="$npm_ver"
             fi
           fi
+
           checkout_ref="${REF:-${BRANCH:-main}}"
           echo "npm_version=$npm_ver" >> "$GITHUB_OUTPUT"
           echo "binary_version=$bin_ver" >> "$GITHUB_OUTPUT"
@@ -229,8 +253,10 @@ jobs:
 
       - name: Sync npm package.json version
         working-directory: cli/npm
+        env:
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
         run: |
-          npm version "${{ needs.resolve-versions.outputs.npm_version }}" \
+          npm version "$NPM_VERSION" \
             --no-git-tag-version \
             --allow-same-version
 
