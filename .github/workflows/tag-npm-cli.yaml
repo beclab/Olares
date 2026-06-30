@@ -1,0 +1,38 @@
+name: Tag npm CLI
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Published npm version (e.g. 1.12.6-cli.5)'
+        type: string
+        required: true
+      tag:
+        description: 'npm dist-tag to point at this version'
+        type: string
+        default: latest
+
+jobs:
+  tag:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify version exists on npm and apply dist-tag
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_OLARES_PUBLISH_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! npm view "@olares/cli@${VERSION}" version; then
+            echo "::error::@olares/cli@${VERSION} is not published on npm"
+            exit 1
+          fi
+          npm dist-tag add "@olares/cli@${VERSION}" "${TAG}"
+          echo "dist-tag ${TAG} -> @olares/cli@${VERSION}"
+          npm dist-tag ls @olares/cli
