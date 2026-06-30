@@ -55,6 +55,7 @@ olaresManifest.version: '0.10.0'
 olaresManifest.type: app
 metadata:
   name: helloworld
+  appid: helloworld
   title: Hello World
   description: app helloworld
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
@@ -154,6 +155,7 @@ olaresManifest.version: "3.0.122"
 ```yaml
 metadata:
   name: nextcloud
+  appid: nextcloud
   title: Nextcloud
   description: The productivity platform that keeps you in control
   icon: https://app.cdn.olares.com/appstore/nextcloud/icon.png
@@ -170,6 +172,14 @@ metadata:
 - 有效值：`^[a-z][a-z0-9]{0,29}$`
 
 Olares 中的应用的命名空间，仅限小写字母数字字符。最多 30 个字符，需要与 `Chart.yaml` 中的 `FolderName` 和 `name` 字段保持一致。
+
+### appid
+
+- 类型： `string`
+- 可选
+- 有效值：使用由小写字母和数字组成的应用标识符，例如 `metadata.name`。不得使用系统保留的应用 ID，例如 `market`、`auth`、`desktop`、`files` 或 `settings`。
+
+Olares 系统服务使用的应用 ID。加载器在返回 manifest 前，会将 `metadata.appid` 规范化为 `md5(metadata.name)[:8]`，因此，此处填写的原始值不会在加载时保留。若应用 ID 与系统保留 ID 发生冲突，验证器将拒绝该 manifest。
 
 ### title
 
