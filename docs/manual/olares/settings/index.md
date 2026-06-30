@@ -8,7 +8,7 @@ The Settings application in Olares provides a clean, intuitive interface for con
 
 Settings is organized into the following sections:
 - **Users**: Manage user accounts within your Olares system.
-- **Appearance**: Personalize your system by setting the language, theme, and background wallpaper.
+- **Appearance**: Personalize your system by setting the language, theme, Desktop widgets, background wallpaper, and Desktop layout.
 - **Applications**: Configure application entrances, customize app domains, and manage app environment variables.
 - **Integration**: Centralize external connections, including cloud storages, website cookies, and SMB network credentials.
 - **VPN**: Configure secure remote access to your Olares device.
