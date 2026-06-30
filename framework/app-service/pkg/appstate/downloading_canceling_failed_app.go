@@ -62,6 +62,9 @@ func (p *DownloadingCancelFailedApp) Exec(ctx context.Context) (StatefulInProgre
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, err
 	}
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
 	if im.Status.State != appsv1.DownloadingCanceled.String() {
 		err = p.imageClient.UpdateStatus(ctx, p.manager.Name, appsv1.DownloadingCanceled.String(), appsv1.DownloadingCanceled.String())
 		if err != nil {
