@@ -75,9 +75,9 @@ To install an application from Market:
 2. Find your target application, and double-click it to view its details.
 3. If the application supports multiple hardware accelerators, configure your deployment in the **RESOURCES** section:
 
-    a. Select your preferred computing resource from the drop-down list. For example, **NVIDIA GPU**, **NVIDIA GB10**, or **CPU**.
+    ![Accelerator resources](/images/manual/olares/market-accelerator1.png#bordered)
 
-    <!--![Accelerator resources](/images/manual/olares/market-accelerator.png#bordered)-->
+    a. Select your preferred computing resource from the drop-down list. For example, **NVIDIA GPU**, **NVIDIA GB10**, or **CPU**.
 
     b. Review the **CPU**, **Memory**, **Required disk**, and **VRAM** requirements for the selected computing resource, and make sure your hardware meets them.
 
@@ -196,22 +196,6 @@ The application operation log details the processes and statuses of app operatio
 You can also click the <i class="material-symbols-outlined">download</i> button to download the logs.
 
 ## FAQs
-
-### Errors in the RESOURCES section
-
-Before you install an application, the system evaluates your current hardware and cluster capacity. If your environment does not meet the selected configuration, an inline error message will appear directly inside the **RESOURCES** panel:
-
-- "Unable to install. The Olares cluster does not have any required accelerator specified."
-
-    The application requires specific computing hardware that is not installed or detected on your device or cluster. When this happens, the resource drop-down will display **N/A**, and the unsupported hardware options will be greyed out and unselectable.
-
-- "Unable to install on this accelerator type. Not enough required {Resource} on Olares cluster."
-
-    Your device or cluster has the required accelerator type, but the selected accelerator does not have enough available resources, such as GPU memory. You must stop other running applications to free up the required resources for this specific accelerator.
-
-- "Unable to install. Not enough required {Resource} available on your quota."
-
-    Your account has reached its assigned resource quota, such as CPU or memory. Try freeing up your allocated resources by stopping your unused apps, or contact your administrator to request a quota increase.
 
 ### Why can't I install an application?
 If you can't install an application, it might be due to:
