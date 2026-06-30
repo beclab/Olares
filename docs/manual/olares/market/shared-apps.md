@@ -19,7 +19,7 @@ Key characteristics of shared applications include:
 - **Easy identification**: In Olares Market, shared applications are typically marked with labels such as "Shared", "Shared app", or the <i class="material-symbols-outlined">group</i> icon.
 - **Flexible access**: The way you access a shared application depends on its form.
 
-    - **Headless backend service**: Provides API services for compatible clients, with no end-user graphical interface. For example, model instances created on LLM base apps expose a shared entrance address in their model console. Members paste this address into clients such as Open WebUI or LobeChat.
+    - **Headless backend service**: Provides API services for compatible clients, with no end-user graphical interface. For example, model instances created on Engine Base apps expose a shared entrance address in their model console. Members paste this address into clients such as Open WebUI or LobeChat.
     
     - **Applications with built-in UI**: Includes both a backend service and a web UI. Members open it directly from the Launchpad. Examples include **Dify Shared** and **ComfyUI Shared**.
     
@@ -79,7 +79,7 @@ Use this path when the app has no user-created data to migrate.
 **Steps:**
 1. Uninstall the V2 shared app.
 2. Install the V3 shared app.
-3. For model apps, deploy the model again on an LLM base app and reconfigure your clients.
+3. For model apps, deploy the model again on an Engine Base app and reconfigure your clients.
 
 ### Path 3: Back up, uninstall V2, install V3, then restore data
 
@@ -112,11 +112,11 @@ Use this path when the app stores user-created data or settings that must be mov
 
    V3 shared apps use the unified address format `https://<app-id>.<username>.<platform-domain>`. Update client configurations that still point to the old V2 address.
 
-### Path 4: Ollama / LLM base transition
+### Path 4: Ollama / Engine Base transition
 
 Use this path when you are migrating from the standalone Ollama V2 app.
 
-The standalone **Ollama** shared app has been replaced by the **LLM base** architecture. Previously, each Ollama-based model was a separate shared app that bundled its own copy of the inference engine. This caused duplicated engines and heavy maintenance. In the new architecture, Olares maintains a small set of LLM base apps, including **Ollama LLM Base (llm-init)**, **vLLM LLM Base**, **SGLang LLM Base**, and **llama.cpp LLM Base**, and you create the model instances you need on top of them.
+The standalone **Ollama** shared app has been replaced by the **Engine Base** architecture. Previously, each Ollama-based model was a separate shared app that bundled its own copy of the inference engine. This caused duplicated engines and heavy maintenance. In the new architecture, Olares maintains a small set of Engine Base apps, including **Ollama Engine Base**, **vLLM Engine Base**, **SGLang Engine Base**, and **llama.cpp Engine Base**, and you create the model instances you need on top of them.
 
 **Steps:**
 1. Uninstall the Ollama V2 app.
@@ -134,12 +134,12 @@ To get new features, fixes, or the improved V3 architecture, you must uninstall 
 
 ### What happened to Ollama?
 
-The standalone **Ollama** shared app has been replaced by the **LLM base** architecture.
+The standalone **Ollama** shared app has been replaced by the **Engine Base** architecture.
 
 Previously, Olares provided models mainly through individual shared model apps in Market, such as Qwen3.5 35B A3B UD-Q4 (Ollama) and Qwen3 30B (vLLM). Each of these apps bundled its own copy of the inference engine with the model. This created two problems:
 - Duplicate engines: Running several models meant running several copies of the same engine, which consumed extra resources.
 - Heavy maintenance: Every new model had to be packaged and published as a separate shared app by Olares. This did not scale and slowed down the release of new models.
 
-In the new architecture, Olares only maintains a small set of LLM base apps: **Ollama LLM Base (llm-init)**, **vLLM LLM Base**, **SGLang LLM Base**, and **llama.cpp LLM Base**. You select the base engine you want, and then create the model instances you need. Each instance runs as its own shared service and appears as a separate entry on the Launchpad.
+In the new architecture, Olares only maintains a small set of Engine Base apps: **Ollama Engine Base**, **vLLM Engine Base**, **SGLang Engine Base**, and **llama.cpp Engine Base**. You select the base engine you want, and then create the model instances you need. Each instance runs as its own shared service and appears as a separate entry on the Launchpad.
 
-Because the engine is shared, multiple models can run on top of one LLM base without installing a new engine each time. You can also choose the best engine for each model, for example, Ollama for local CPU/GPU inference, vLLM or SGLang for high-throughput serving, or llama.cpp for edge deployments.
+Because the engine is shared, multiple models can run on top of one Engine Base without installing a new engine each time. You can also choose the best engine for each model, for example, Ollama for local CPU/GPU inference, vLLM or SGLang for high-throughput serving, or llama.cpp for edge deployments.
