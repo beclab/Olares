@@ -108,7 +108,7 @@ If the issue persists, back up the existing configuration, delete `qBittorrent.c
 
 ### Transmission
 
-1. Open Transmission, click the menu icon in the top right, and then select **Edit preferences**.
+1. Open Transmission, click <i class="material-symbols-outlined">menu</i> in the top right, and then select **Edit preferences**.
 2. Update the following paths:
    - **Download to**: Change `/downloads/complete` to `/olares/userdata/home/Downloads/transmission/complete`
    - **Use temporary folder**: Change `/downloads/incomplete` to `/olares/userdata/home/Downloads/transmission/incomplete`
