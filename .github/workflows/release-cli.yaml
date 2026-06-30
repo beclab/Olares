@@ -40,6 +40,9 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: read
+
 jobs:
   resolve-versions:
     runs-on: ubuntu-latest

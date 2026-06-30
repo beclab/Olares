@@ -9,8 +9,15 @@ on:
         required: true
       tag:
         description: 'npm dist-tag to point at this version'
-        type: string
+        type: choice
         default: latest
+        options:
+          - latest
+          - next
+          - daily
+
+permissions:
+  contents: read
 
 jobs:
   tag:
