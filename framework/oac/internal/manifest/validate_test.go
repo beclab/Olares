@@ -74,8 +74,17 @@ func TestAppConfiguration_APIVersionEnum(t *testing.T) {
 		t.Fatalf("empty apiVersion should be accepted: %v", err)
 	}
 
+	// apiVersion=v3 is a 1.12.6-only trigger, so the legacy baseline
+	// trips validateModernFieldRequiresManifestVersion. Pair v3 with a
+	// modern manifest version + locked Olares dep so the assertion
+	// really tracks the apiVersion enum rule rather than the
+	// manifest-version gate.
 	c = newValidConfig()
+	c.ConfigVersion = "0.13.0"
 	c.APIVersion = APIVersionV3
+	wr := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
 	if err := ValidateAppConfiguration(c); err != nil {
 		t.Fatalf("apiVersion=v3 should be accepted: %v", err)
 	}
@@ -1045,9 +1054,17 @@ func TestPolicy_DurationPattern(t *testing.T) {
 	}
 }
 
-// TestPermission_ExternalDataVersionGate documents that permission.externalData
-// is only accepted on modern manifests (olaresManifest.version >= 0.12.0).
-// permission.appCommon carries no such gate and must validate at any version.
+// TestPermission_ExternalDataVersionGate documents that
+// permission.externalData and permission.appCommon are both gated by
+// olaresManifest.version >= 0.12.0:
+//
+//   - permission.externalData was introduced at 0.12.0; the gate is
+//     enforced directly by validatePermission and emits a message naming
+//     the field.
+//   - permission.appCommon is one of the 1.12.6-only trigger fields, so
+//     the gate fires from validateModernFieldRequiresManifestVersion and
+//     additionally requires options.dependencies[name=olares].version to
+//     be locked to ">=1.12.6-0".
 func TestPermission_ExternalDataVersionGate(t *testing.T) {
 	// externalData on a legacy (< 0.12.0) manifest is rejected.
 	c := newValidConfig() // ConfigVersion "0.11.0"
@@ -1074,11 +1091,30 @@ func TestPermission_ExternalDataVersionGate(t *testing.T) {
 		t.Fatalf("permission.externalData should be accepted at >= 0.12.0: %v", err)
 	}
 
-	// appCommon is unconstrained: it must validate on a legacy manifest.
+	// appCommon on a legacy (< 0.12.0) manifest is rejected by
+	// validateModernFieldRequiresManifestVersion: appCommon is one of
+	// the 1.12.6-only trigger fields and demands both
+	// olaresManifest.version >= 0.12.0 and a locked Olares dep.
 	c = newValidConfig()
 	c.Permission.AppCommon = true
+	err = ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("expected error for permission.appCommon on olaresManifest.version < 0.12.0")
+	}
+	if !strings.Contains(err.Error(), "permission.appCommon") {
+		t.Fatalf("error should mention permission.appCommon, got: %v", err)
+	}
+
+	// appCommon on a modern manifest validates once the prerequisites
+	// (workloadReplicas + locked Olares dep) are in place.
+	c = newValidConfig()
+	c.ConfigVersion = "0.13.0"
+	c.Permission.AppCommon = true
+	wr = WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
 	if err := ValidateAppConfiguration(c); err != nil {
-		t.Fatalf("permission.appCommon should be accepted at any version: %v", err)
+		t.Fatalf("permission.appCommon should validate on modern manifest with locked dep: %v", err)
 	}
 }
 
@@ -1092,8 +1128,33 @@ func newValidOverlayEntrance() OverlayEntrance {
 	}
 }
 
-func TestOverlayGateway_ValidEntrance(t *testing.T) {
+// newOverlayGatewayBaseline returns a modern (>= 0.12.0) baseline that
+// declares the prerequisites overlayGateway requires:
+//
+//   - olaresManifest.version=0.13.0 — overlayGateway is a 1.12.6-only
+//     feature field, so the legacy fixture would trip
+//     validateModernFieldRequiresManifestVersion before the overlay
+//     entrance is even inspected.
+//   - workloadReplicas with one entry — required on every non-v2 modern
+//     manifest, and the test wouldn't be exercising overlay-specific
+//     behaviour if it failed for missing replicas instead.
+//   - the olares system dependency locked to the post-v3 window —
+//     overlayGateway promotes the dep window to >=1.12.6-0 via
+//     pickOlaresDepRule, so the helper picks that automatically.
+//
+// Each test then layers exactly one overlay entrance on top so the
+// assertion focuses on overlay rules alone.
+func newOverlayGatewayBaseline() *AppConfiguration {
 	c := newValidConfig()
+	c.ConfigVersion = "0.13.0"
+	wr := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
+	return c
+}
+
+func TestOverlayGateway_ValidEntrance(t *testing.T) {
+	c := newOverlayGatewayBaseline()
 	c.OverlayGateway = OverlayGateway{
 		Enable:    true,
 		Entrances: []OverlayEntrance{newValidOverlayEntrance()},
@@ -1117,7 +1178,7 @@ func TestOverlayGateway_ProtocolEnum(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.value, func(t *testing.T) {
-			c := newValidConfig()
+			c := newOverlayGatewayBaseline()
 			e := newValidOverlayEntrance()
 			e.Protocol = tc.value
 			c.OverlayGateway = OverlayGateway{Enable: true, Entrances: []OverlayEntrance{e}}
@@ -1185,9 +1246,18 @@ func TestOptions_TemplateOnlyRequiresAllowMultipleInstall(t *testing.T) {
 		t.Fatal("expected error: explicit allowMultipleInstall=false still violates the rule")
 	}
 
+	// templateOnly is a 1.12.6-only trigger, so the happy-path case
+	// requires a modern manifest with the prerequisites
+	// (workloadReplicas + locked Olares dep). Without them the new
+	// validateModernFieldRequiresManifestVersion gate would mask the
+	// templateOnly+allowMultipleInstall pairing under test here.
 	c = newValidConfig()
+	c.ConfigVersion = "0.13.0"
 	c.Options.TemplateOnly = true
 	c.Options.AllowMultipleInstall = true
+	wr := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
 	if err := ValidateAppConfiguration(c); err != nil {
 		t.Fatalf("templateOnly=true + allowMultipleInstall=true must pass: %v", err)
 	}
@@ -1202,14 +1272,26 @@ func TestOptions_TemplateOnlyRequiresAllowMultipleInstall(t *testing.T) {
 	}
 }
 
+// TestAppSpec_TemplateOnlyAllowsAutoOnNonDiskLegacy verifies that a
+// template-only manifest may use AutoResourceValue ("-1") on the legacy
+// flat cpu/memory fields. "Legacy" in the name refers to the legacy
+// resource ENVELOPE (flat spec.required*/limited* fields) rather than
+// the manifest version itself: templateOnly is a 1.12.6-only trigger,
+// so the manifest must still declare olaresManifest.version >= 0.12.0
+// and lock the Olares dep. The legacy flat envelope remains a supported
+// shape at modern versions when spec.resources[] is not used.
 func TestAppSpec_TemplateOnlyAllowsAutoOnNonDiskLegacy(t *testing.T) {
 	c := newValidConfig()
+	c.ConfigVersion = "0.13.0"
 	c.Options.TemplateOnly = true
 	c.Options.AllowMultipleInstall = true
 	c.Spec.RequiredCPU = AutoResourceValue
 	c.Spec.LimitedCPU = AutoResourceValue
 	c.Spec.RequiredMemory = AutoResourceValue
 	c.Spec.LimitedMemory = AutoResourceValue
+	wr := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
 	if err := ValidateAppConfiguration(c); err != nil {
 		t.Fatalf("template-only legacy envelope with -1 on cpu/memory must pass: %v", err)
 	}
@@ -1958,6 +2040,182 @@ func TestOlaresDependency_FeatureTriggersPromoteRange(t *testing.T) {
 	})
 }
 
+// TestModernFieldRequiresManifestVersion is the inverse of
+// TestOlaresDependency_FeatureTriggersPromoteRange: on a LEGACY manifest
+// (olaresManifest.version < 0.12.0), declaring any 1.12.6-only feature
+// field — or apiVersion=v3 — must be rejected with guidance to bump the
+// manifest version AND lock the Olares dep to >=1.12.6-0.
+//
+// Each subtest starts from the legacy baseline (newValidConfig pins
+// ConfigVersion=0.11.0), flips exactly one trigger, and asserts:
+//
+//  1. validation fails;
+//  2. the error names the field that triggered the gate;
+//  3. the error spells out the >=1.12.6-0 dep requirement so the user
+//     doesn't have to discover it on a second Lint pass after bumping
+//     olaresManifest.version.
+//
+// The "no triggers stay legacy" control case anchors the gate so future
+// edits don't accidentally fire it on plain legacy manifests.
+func TestModernFieldRequiresManifestVersion(t *testing.T) {
+	cases := []struct {
+		name       string
+		flip       func(c *AppConfiguration)
+		wantLabel  string
+		extraSetup func(c *AppConfiguration)
+	}{
+		{
+			name: "apiVersion=v3",
+			flip: func(c *AppConfiguration) {
+				c.APIVersion = APIVersionV3
+			},
+			wantLabel: "apiVersion=v3",
+		},
+		{
+			name: "spec.accelerator",
+			flip: func(c *AppConfiguration) {
+				c.Spec.Accelerator = []ResourceMode{{
+					Mode: ResourceModeCPU,
+					ResourceRequirement: ResourceRequirement{
+						RequiredCPU:    "100m",
+						LimitedCPU:     "200m",
+						RequiredMemory: "128Mi",
+						LimitedMemory:  "256Mi",
+						RequiredDisk:   "10Mi",
+						LimitedDisk:    "20Mi",
+					},
+				}}
+			},
+			wantLabel: "spec.accelerator",
+		},
+		{
+			name: "workloadReplicas",
+			flip: func(c *AppConfiguration) {
+				wr := WorkloadReplicas{c.Metadata.Name: 1}
+				c.WorkloadReplicas = &wr
+			},
+			wantLabel: "workloadReplicas",
+		},
+		{
+			name: "overlayGateway",
+			flip: func(c *AppConfiguration) {
+				c.OverlayGateway = OverlayGateway{
+					Enable:    true,
+					Entrances: []OverlayEntrance{newValidOverlayEntrance()},
+				}
+			},
+			wantLabel: "overlayGateway",
+		},
+		{
+			name: "options.LLMGatewaySupported",
+			flip: func(c *AppConfiguration) {
+				c.Options.LLMGatewaySupported = true
+			},
+			wantLabel: "options.LLMGatewaySupported",
+		},
+		{
+			name: "options.templateOnly",
+			flip: func(c *AppConfiguration) {
+				// templateOnly cross-field rule also requires
+				// allowMultipleInstall=true; set it so this assertion
+				// stays focused on the manifest-version gate.
+				c.Options.AllowMultipleInstall = true
+				c.Options.TemplateOnly = true
+			},
+			wantLabel: "options.templateOnly",
+		},
+		{
+			name: "options.shared",
+			flip: func(c *AppConfiguration) {
+				// shared has additional cross-field rules; the
+				// manifest-version gate must fire regardless of those.
+				c.Options.Shared = true
+			},
+			wantLabel: "options.shared",
+		},
+		{
+			name: "permission.appCommon",
+			flip: func(c *AppConfiguration) {
+				c.Permission.AppCommon = true
+			},
+			wantLabel: "permission.appCommon",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name+"_rejected_on_legacy_manifest", func(t *testing.T) {
+			c := newValidConfig() // ConfigVersion=0.11.0
+			if tc.extraSetup != nil {
+				tc.extraSetup(c)
+			}
+			tc.flip(c)
+			err := ValidateAppConfiguration(c)
+			if err == nil {
+				t.Fatalf("expected error: declaring %s on olaresManifest.version=0.11.0 must be rejected", tc.wantLabel)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, tc.wantLabel) {
+				t.Fatalf("error should name the trigger %s, got: %v", tc.wantLabel, err)
+			}
+			if !strings.Contains(msg, "olaresManifest.version must be >= 0.12.0") {
+				t.Fatalf("error should require bumping olaresManifest.version, got: %v", err)
+			}
+			if !strings.Contains(msg, `">=1.12.6-0"`) {
+				t.Fatalf("error should mention the Olares dep lock, got: %v", err)
+			}
+		})
+	}
+
+	t.Run("legacy_without_triggers_accepted", func(t *testing.T) {
+		// Anchor case: a plain legacy manifest must keep validating.
+		// Catches regressions where the new gate accidentally fires on
+		// every legacy manifest.
+		c := newValidConfig()
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("legacy manifest without triggers must validate: %v", err)
+		}
+	})
+
+	t.Run("modern_with_triggers_does_not_double_fire", func(t *testing.T) {
+		// At olaresManifest.version>=0.12.0 the legacy gate must stay
+		// silent — the dep window is owned by validateOlaresDependency.
+		// permission.appCommon would trigger the legacy gate at 0.11.0
+		// but here we expect the error (if any) to come from the dep
+		// check, not from the legacy gate.
+		c := newValidConfig()
+		c.ConfigVersion = "0.13.0"
+		c.Permission.AppCommon = true
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("modern manifest with permission.appCommon and locked dep must validate: %v", err)
+		}
+	})
+
+	t.Run("multiple_triggers_listed_together", func(t *testing.T) {
+		// When several triggers fire on one legacy manifest the gate
+		// should list every offender in a single message so the author
+		// fixes the version once instead of chasing them piecemeal.
+		c := newValidConfig()
+		c.APIVersion = APIVersionV3
+		c.Permission.AppCommon = true
+		wr := WorkloadReplicas{c.Metadata.Name: 1}
+		c.WorkloadReplicas = &wr
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: legacy manifest with multiple triggers")
+		}
+		msg := err.Error()
+		for _, want := range []string{"apiVersion=v3", "workloadReplicas", "permission.appCommon"} {
+			if !strings.Contains(msg, want) {
+				t.Fatalf("error should list trigger %q, got: %v", want, err)
+			}
+		}
+	})
+}
+
 // TestOptions_SharedRequiresAPIVersionV3 pins down the shared => v3
 // cross-field rule on Options: shared installs only make sense on the v3
 // schema (a single install services multiple users). v1/v2/empty must
@@ -1992,8 +2250,19 @@ func TestOptions_SharedRequiresAPIVersionV3(t *testing.T) {
 			// would mask the apiVersion gate for the v3 happy path. Set
 			// the minimum extra fields it demands so the assertion stays
 			// focused on the shared+v3 rule.
+			//
+			// apiVersion=v3 (and options.shared=true) are 1.12.6-only
+			// triggers, so the legacy fixture would also trip
+			// validateModernFieldRequiresManifestVersion before the v3
+			// happy path is reached. Bump the manifest to a modern
+			// version and pin the Olares dep so the assertion really
+			// tracks the shared/v3 rule and nothing else.
 			if tc.apiVersion == APIVersionV3 && tc.shared {
 				c.Spec.OnlyAdmin = true
+				c.ConfigVersion = "0.13.0"
+				wr := WorkloadReplicas{c.Metadata.Name: 1}
+				c.WorkloadReplicas = &wr
+				c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
 			}
 			err := ValidateAppConfiguration(c)
 			if tc.wantErr {
