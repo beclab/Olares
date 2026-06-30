@@ -17,7 +17,6 @@ outline: [2, 3]
 - 增加 `LLMGatewaySupported` 选项，支持 LLM Gateway
 - 增加 `appCommon` 和 `externalData` 权限（均默认为 `false`）
 - 增加 `templateOnly` 字段，用于标记模版类应用
-- **废弃字段**：`provider`、`permission.provider`、`permission.sysData`、`appScope`（共享应用时）、`subCharts`（共享应用时）以及 OS 1.11 的分类值将被拒绝
 
 :::
 :::details Changelog
@@ -228,10 +227,6 @@ OS 1.12 有效值：
 - `Lifestyle`：生活方式
 - `Utilities_v112`：实用工具
 - `AI`：AI
-
-:::warning 废弃通知
-OS 1.11 的分类值（`Blockchain`、`Utilities`、`Social Network`、`Entertainment`、`Productivity`）已废弃，不再被接受。请仅使用 OS 1.12 的分类值。
-:::
 
 ## Entrances
 
@@ -474,11 +469,7 @@ permission:
 
 应用是否需要对用户的 `Home` 文件夹进行读写权限。列出应用需要访问的用户 `Home` 下的所有目录。部署 YAML 中配置的所有 `userData` 目录都必须包含在此处。
 
-### provider
 
-:::warning 废弃通知
-`permission.provider` 和顶层 `provider` 字段在 OlaresManifest 0.12.0 中已废弃。包含这些字段的应用将在 PR 提交和安装时被拒绝。请从 manifest 中移除所有 `provider` 和 `permission.provider` 配置。
-:::
 
 
 ## Spec
@@ -876,10 +867,6 @@ options:
 
 是否为 Olares 集群中的所有用户安装此应用程序。对用共享应用，需要设置 `clusterScoped` 为 `true`， 同时在 `appRef` 字段填入应用名称
 
-:::warning 废弃通知
-当 `options.shared: true` 时，不允许使用 `appScope` 字段。共享应用请使用 `apiVersion: 'v3'` 替代。
-:::
-
 
 :::info 应用ollamav2示例
 ```yaml
@@ -1138,8 +1125,17 @@ BACKEND_MAIL_SENDER: "{{ .Values.olaresEnv.MAIL_SENDER }}"
 ```
 :::
 
-## Provider
+## 废弃字段（0.12.0）
 
-:::warning 废弃通知
-`provider` 部分在 OlaresManifest 0.12.0 中已废弃。包含此字段的应用将在 PR 提交和安装时被拒绝。请从 manifest 中移除所有 `provider` 配置。
-:::
+以下字段在 OlaresManifest 0.12.0 中已废弃。包含这些字段的应用将在 PR 提交和安装时被**拒绝**。
+
+| 字段 | 替代方案 |
+|------|----------|
+| `provider`（顶层） | 移除 |
+| `permission.provider` | 移除 |
+| `permission.sysData` | 移除 |
+| `spec.subCharts`（当 `options.shared: true` 时） | 使用 `apiVersion: 'v3'` |
+| `options.appScope`（当 `options.shared: true` 时） | 使用 `apiVersion: 'v3'` |
+| OS 1.11 分类值：`Blockchain`、`Utilities`、`Social Network`、`Entertainment`、`Productivity` | 使用 OS 1.12 分类值 |
+
+

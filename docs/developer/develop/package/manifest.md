@@ -17,7 +17,6 @@ Latest Olares Manifest version: `0.12.0`
 - Added `LLMGatewaySupported` in options for LLM Gateway support
 - Added `appCommon` and `externalData` permissions (both default to `false`)
 - Added `templateOnly` field to mark template-type applications
-- **Deprecated fields**: `provider`, `permission.provider`, `permission.sysData`, `appScope` (for shared apps), `subCharts` (for shared apps), and OS 1.11 categories are rejected.
 
 :::
 :::details Changelog
@@ -227,10 +226,6 @@ Accepted Value for OS 1.12:
 - `Lifestyle`
 - `Utilities_v112` (displayed as Utilities)
 - `AI`
-
-:::warning Deprecation notice
-OS 1.11 categories (`Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`) are deprecated and will no longer be accepted. Use only OS 1.12 category values.
-:::
 
 ## Entrances
 
@@ -475,11 +470,7 @@ Whether the app requires read and write permission to the `External` directory, 
 
 Whether the app requires read and write permission to user's `Home` folder. List all directories that the application needs to access under the user's `Home`. All `userData` directory configured in the deployment YAML, must be included here.
 
-### provider
 
-:::warning Deprecation notice
-The `permission.provider` and top-level `provider` fields are deprecated in OlaresManifest 0.12.0. Apps containing these fields will be rejected during PR submission and installation. Remove all `provider` and `permission.provider` configurations from your manifest.
-:::
 
 ## Spec
 Additional information about the application, primarily used for display in the Olares Market.
@@ -881,10 +872,6 @@ options:
 
 Specifies whether the app should be installed for all users in the Olares cluster. For shared apps, set `clusterScoped` to `true` and provide the current app's name in the `appRef` field.
 
-:::warning Deprecation notice
-When `options.shared: true`, the `appScope` field is not allowed. Use `apiVersion: 'v3'` instead for shared applications.
-:::
-
 :::info Example of ollamav2
 ```yaml
 metadata:
@@ -1139,8 +1126,17 @@ To use the values of environment variables in your deployment YAML file, simply 
 ```
 :::
 
-## Provider
+## Deprecated Fields (0.12.0)
 
-:::warning Deprecation notice
-The `provider` section is deprecated in OlaresManifest 0.12.0. Apps containing this field will be rejected during PR submission and installation. Remove all `provider` configurations from your manifest.
-:::
+The following fields are deprecated in OlaresManifest 0.12.0. Apps containing these fields will be **rejected** during PR submission and installation.
+
+| Field | Replacement |
+|-------|-------------|
+| `provider` (top-level) | Remove |
+| `permission.provider` | Remove |
+| `permission.sysData` | Remove |
+| `spec.subCharts` (when `options.shared: true`) | Use `apiVersion: 'v3'` |
+| `options.appScope` (when `options.shared: true`) | Use `apiVersion: 'v3'` |
+| OS 1.11 categories: `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity` | Use OS 1.12 categories |
+
+
