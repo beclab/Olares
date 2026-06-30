@@ -182,3 +182,21 @@ func TestPeek_HandlesCRLF(t *testing.T) {
 		t.Fatalf("unexpected header: %+v", h)
 	}
 }
+
+// TestPeek_HandlesUTF8BOM exercises the same Windows-editor scenario the
+// chart-scan rules guard against: manifests written with a leading UTF-8
+// BOM (EF BB BF). The header probe uses ^-anchored regexes whose \s does
+// NOT match U+FEFF, so without an explicit strip the BOM sticks to
+// "olaresManifest.version" and the header silently comes back empty,
+// which would send the manifest down the wrong dispatch pipeline
+// (legacy vs modern) downstream.
+func TestPeek_HandlesUTF8BOM(t *testing.T) {
+	content := []byte("\ufeff" + "olaresManifest.version: 0.12.0\napiVersion: v3\n")
+	h, err := Peek(content)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if h.OlaresVersion != "0.12.0" || h.APIVersion != "v3" {
+		t.Fatalf("unexpected header: %+v", h)
+	}
+}
