@@ -221,6 +221,13 @@ type AppStatus struct {
 	Progress string `json:"progress,omitempty"`
 	Message  string `json:"message,omitempty"`
 	Reason   string `json:"reason,omitempty"`
+	// StatusTime is the backend-generated timestamp the SPA uses as the
+	// canonical ordering key for a status row (getEffectiveTime in
+	// apps/.../constant/constants.ts prefers statusTime; updateTime is
+	// commented out and lastTransitionTime is not used for ordering). The
+	// restart watcher uses it as a baseline to tell a freshly-completed
+	// restart apart from the identical-looking pre-restart resting row.
+	StatusTime string `json:"statusTime,omitempty"`
 }
 
 type SourceInfoData struct {
