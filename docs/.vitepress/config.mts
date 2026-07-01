@@ -179,7 +179,12 @@ export default defineVersionedConfig2(withMermaid({
     ]);
   },
 
-  sitemap: {
+  // Archived versioned builds noindex every page, so their sitemap would be
+  // empty. The `sitemap` package throws `EmptySitemap` when the stream ends
+  // with zero URLs, which crashes the whole build (exit != 0) and makes the
+  // release-docs pipeline silently skip that version. Since we explicitly do
+  // not want archived versions in the sitemap anyway, disable it for them.
+  sitemap: isArchivedVersionBuild ? undefined : {
     hostname: "https://www.olares.com/docs/",
     transformItems: (items) =>
       // Drop noindex pages from sitemap.xml so crawlers don't even discover
