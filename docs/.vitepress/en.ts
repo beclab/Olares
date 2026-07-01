@@ -217,10 +217,6 @@ const side = {
               link: "/manual/olares/market/clone-apps",
             },
             {
-              text: "Use Engine Base applications",
-              link: "/manual/olares/market/llm-base-apps",
-            },
-            {
               text: "Manage paid applications",
               link: "/manual/olares/market/purchase-paid-apps",
             },

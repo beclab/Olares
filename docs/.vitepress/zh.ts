@@ -215,10 +215,6 @@ const side = {
               link: "/zh/manual/olares/market/clone-apps",
             },
             {
-              text: "使用引擎底座",
-              link: "/zh/manual/olares/market/llm-base-apps",
-            },
-            {
               text: "管理付费应用",
               link: "/zh/manual/olares/market/purchase-paid-apps",
             },

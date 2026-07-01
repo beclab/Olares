@@ -2,6 +2,10 @@ export const redirects = {
     // Root → default docs landing
     '/': '/manual/overview',
 
+    // Move: Engine Base apps guide relocated from manual to use cases
+    '/manual/olares/market/llm-base-apps': '/use-cases/llm-base-apps',
+    '/zh/manual/olares/market/llm-base-apps': '/zh/use-cases/llm-base-apps',
+
     // Refactor: /manual/olares/studio/** → /developer/develop/tutorial/**
     '/manual/olares/studio/': '/developer/develop/tutorial/',
     '/manual/olares/studio/deploy': '/developer/develop/tutorial/deploy',

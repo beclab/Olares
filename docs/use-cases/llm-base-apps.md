@@ -5,7 +5,9 @@ description: Learn how to use the Engine Base applications on Olares to self-hos
 
 # Host local large language models with Engine Base apps
 
-Olares V1.12.6 introduces the local hosting and management platform for large language models (LLMs), a self-hosting solution powered by the `llm-init` project. This platform provides four Engine Base applications, each for one inference engine: **Ollama Engine Base**, **vLLM Engine Base**, **llama.cpp Engine Base**, and **SGLang Engine Base**. Select the base app for the engine you want, use it to deploy different models, and then monitor model performance through a dedicated console.
+Olares V1.12.6 introduces **Model Console**, a platform that manages the full lifecycle of local large language models (LLMs). This platform provides four Engine Base applications, each built on a different inference engine: **Ollama Engine Base**, **vLLM Engine Base**, **llama.cpp Engine Base**, and **SGLang Engine Base**.
+
+Choose the base app for the engine you want, clone it to deploy a model, then run and manage that model from its dedicated console.
 
 ## Before you start
 
@@ -56,36 +58,36 @@ After creating the instance, the configuration window opens. Define where your e
 
     | Variable | Description |
     | :--- | :--- |
-    | **MODEL_SOURCE** | Specify where the engine pulls the model.<br><br>Format: `hf://<repo> --include <file>.gguf`.<br>To download more than one file, separate each entry with a comma.<br><br>Example:<ul><li>Model page: `https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF`</li><li>`MODEL_SOURCE` (single file): `hf://unsloth/Qwen3.6-35B-A3B-GGUF --include Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf`</li><li>`MODEL_SOURCE` (multiple files): `hf://unsloth/Qwen3.6-35B-A3B-GGUF --include Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf,hf://unsloth/Qwen3.6-35B-A3B-GGUF --include mmproj-F16.gguf`</li></ul> |
+    | **MODEL_SOURCE** | Specify where the engine pulls the model.<br><br>Format: `hf://<repo> --include <file>.gguf`<br><br>To download multiple files, separate each entry with a comma:<br>`hf://<repo> --include <file1>.gguf,hf://<repo> --include <file2>.gguf`.<br><br>Example:<ul><li>Model page: `https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF`</li><li>`MODEL_SOURCE`: `hf://unsloth/Qwen3.6-35B-A3B-GGUF --include Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf`</li></ul> |
     | **MODEL_NAME** | Define the name that client apps use to call this instance.<br><br>Derive it from `MODEL_SOURCE` and use this format:<br> `<repo>:<quantization>` (one quantization per instance).<br><br>Example:<ul><li>`MODEL_SOURCE`: `hf://unsloth/Qwen3.6-35B-A3B-GGUF --include Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf`</li><li>`MODEL_NAME`: `unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL`</li></ul> |
     | **MODEL_MODE** | Select **Chat** or **Embedding**. |
-    | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> **Thinking**, or **Embedding**. |
-    | **ENGINE_ARGS** | Specify the engine startup parameters, separated by spaces.<br><br>Example:<ul><li>`-c 65536`</li><li>`-c 65536 -ngl all`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
-    | **LLAMACPP<br>_REQUIRED<br>_GPU_MEMORY** | Enter the minimum GPU memory the instance needs to start, <br>in MB or Gi. For example, `20Gi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li></ul> |
+    | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> or **Thinking**. For an embedding model, select **None**. |
+    | **ENGINE_ARGS** | Set the engine startup parameters. The context size (`-c`) is required.<br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>`-c 65536`</li><li>`-c 65536 -ngl all`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
+    | **LLAMACPP<br>_REQUIRED<br>_GPU_MEMORY** | Enter the minimum GPU memory the instance needs to start, <br>in MB or Gi. For example, `20Gi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li><li>In CPU mode, set it to `0`.</li></ul> |
 
     </template>
     <template #Ollama>
 
     | Variable | Description |
     | :--- | :--- |
-    | **MODEL_SOURCE** | Specify where the engine pulls the model.<br><br>Format: `ollama://<model>:<size-tag>`.<br><br>Example:<ul><li>Model page: `https://ollama.com/library/qwen3.5`</li><li>`MODEL_SOURCE`: `ollama://qwen3.5:2b`</li></ul> |
+    | **MODEL_SOURCE** | Specify where the engine pulls the model.<br><br>Format: `ollama://<model>:<size-tag>`<br><br>Example:<ul><li>Model page: `https://ollama.com/library/qwen3.5`</li><li>`MODEL_SOURCE`: `ollama://qwen3.5:2b`</li></ul> |
     | **MODEL_NAME** | Define the name that client apps use to call this instance.<br><br>Derive it from `MODEL_SOURCE`: Use the string after `ollama://`.<br><br>Example:<ul><li>`MODEL_SOURCE`: `ollama://qwen3.5:2b`</li><li>`MODEL_NAME`: `qwen3.5:2b`</li></ul> |
     | **MODEL_MODE** | Select **Chat** or **Embedding**. |
-    | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> **Thinking**, or **Embedding**. |
-    | **ENGINE_ARGS** | Specify the engine startup parameters, separated by spaces.<br><br>Example:<ul><li>`OLLAMA_CONTEXT_LENGTH=8192`</li><li>`OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_KV_CACHE_TYPE=q8_0`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
-    | **OLLAMA<br>_REQUIRED<br>_GPU_MEMORY** | Enter the minimum GPU memory the instance needs to start,<br>in MB or Gi. For example, `20Gi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li></ul> |
+    | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> or **Thinking**. For an embedding model, select **None**. |
+    | **ENGINE_ARGS** | Set the engine startup parameters. The context size is required. <br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>`OLLAMA_CONTEXT_LENGTH=8192`</li><li>`OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_KV_CACHE_TYPE=q8_0`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
+    | **OLLAMA<br>_REQUIRED<br>_GPU_MEMORY** | Enter the minimum GPU memory the instance needs to start,<br>in MB or Gi. For example, `20Gi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li><li>In CPU mode, set it to `0`.</li></ul> |
 
     </template>
     <template #vLLM-or-SGLang>
 
     | Variable | Description |
     | :--- | :--- |
-    | **MODEL_SOURCE** | Specify where the engine pulls the model. Choose a repository<br>that contains `.safetensors` weight files.<br><br>Format: `hf://<repo>`.<br><br>Example:<ul><li>Model page: `https://huggingface.co/Qwen/Qwen3.5-2B`</li><li>`MODEL_SOURCE`: `hf://Qwen/Qwen3.5-2B`</li></ul> |
+    | **MODEL_SOURCE** | Specify where the engine pulls the model. Choose a repository<br>that contains `.safetensors` weight files.<br><br>Format: `hf://<repo>`<br><br>Example:<ul><li>Model page: `https://huggingface.co/Qwen/Qwen3.5-2B`</li><li>`MODEL_SOURCE`: `hf://Qwen/Qwen3.5-2B`</li></ul> |
     | **MODEL_NAME** | Define the name that client apps use to call this instance.<br><br>Derive it from `MODEL_SOURCE`: Use the string after `hf://`.<br><br>Example:<ul><li>`MODEL_SOURCE`: `hf://Qwen/Qwen3.5-2B`</li><li>`MODEL_NAME`: `Qwen/Qwen3.5-2B`</li></ul> |
     | **MODEL_MODE** | Select **Chat** or **Embedding**. |
-    | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> **Thinking**, or **Embedding**. |
-    | **ENGINE_ARGS** | Specify the engine startup parameters, separated by spaces.<br><br>Example:<ul><li>vLLM: `--max-model-len 65536`</li><li>SGLang: `--context-length 65536`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
-    | **VLLM/SGLANG<br>_REQUIRED_GPU<br>_MEMORY** | Enter the minimum GPU memory the instance needs to start, <br>in MB or Gi. For example, `20Gi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li></ul> |
+    | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> or **Thinking**. For an embedding model, select **None**. |
+    | **ENGINE_ARGS** | Set the engine startup parameters. The context size is required. <br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>vLLM: `--max-model-len 65536`</li><li>SGLang: `--context-length 65536`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
+    | **VLLM/SGLANG<br>_REQUIRED_GPU<br>_MEMORY** | Enter the minimum GPU memory the instance needs to start, <br>in MB or Gi. For example, `20Gi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li><li>In CPU mode, set it to `0`.</li></ul> |
 
     </template>
     </tabs>
@@ -225,35 +227,36 @@ Open the built-in model console to track the model download, confirm the model a
 
 3. Under **Service status**, track the readiness of the model and the engine:
 
-    - **Model**: Shows `READY` after the files are downloaded and verified.
-    - **Engine**: Shows `RUNNING` after the inference service is online.
+    - **Model**: Shows `Ready` after the files are downloaded and verified.
+    - **Engine**: Shows `Running` after the inference service is online.
 
     ![Model console ready](/images/manual/olares/llm-base-model-console-ready.png#bordered)
 
-4. When the engine shows `RUNNING`, configure how client apps reach the service.
+4. When the engine shows `Running`, configure how client apps reach the service.
 
-    - **WHO IS CALLING**: Select where the client runs.
+    - **Connection source**: Select where the client runs.
         - **Apps in Olares**: For apps running in Olares.
-        - **Devices in LAN**: For devices on the same local network.
+        - **Devices on your network**: For devices on the same local network.
         - **Remote**: For access over the public internet, which requires you to enable the VPN in LarePass first.
-    - **WHAT API FORMAT**: Select the API style your client requires.
+    - **API format**: Select the API style your client requires.
         - **OpenAI-Compatible**: Exposes OpenAI-style endpoints, such as `/v1/chat/completions` and `/v1/embeddings`.
         - **Anthropic-Compatible**: Exposes Anthropic Messages endpoints, such as `/v1/messages`.
+        - **Ollama**: Exposes Ollama-native endpoints, such as `/api/chat` and `/api/generate`.
     - **Base URL**: Copy the URL to use for client app connections.
-    - **Supported Endpoints**: Expand to see the endpoints available for the selected API format.
+    - **Supported endpoints**: Expand to see the endpoints available for the selected API format.
 
-5. Select the **Config** tab to review the model's details:
+5. Select the **Configuration** tab to review the model's details:
 
-    ![Config tab in model console](/images/manual/olares/llm-base-model-console-config.png#bordered)
+    ![Configuration tab in model console](/images/manual/olares/llm-base-model-console-config.png#bordered)
 
     - **Model**: Shows the model name, mode, and the capability tags the instance exposes.
     - **Parameters**: View the engine parameters. Expand **Advanced parameters** for the full set, and switch the view between **Form** and **Raw**.
 
-6. In the **GPU Residency** section, click **Detect**, and then:
+6. In the **GPU residency** section, click **Detect**, and then:
 
     - **Check the mode**: Confirm the model runs on the GPU.
-        - `full GPU`: All layers run on the GPU. This is the expected, fastest state.
-        - `partial` or `cpu_only`: Part or all of the model fell back to the CPU, which makes inference much slower. On a GPU host, this usually means an environment mis-mount; review your `{ENGINE}_REQUIRED_GPU_MEMORY` setting and engine arguments.
+        - `Full GPU`: All layers run on the GPU. This is the expected, fastest state.
+        - `Split` or `CPU`: Part or all of the model fell back to the CPU, which makes inference much slower. On a GPU host, this usually means an environment mis-mount; review your `{ENGINE}_REQUIRED_GPU_MEMORY` setting and engine arguments.
     - **Check the memory usage**: Review the **VRAM**, **KV cache used**, and **GPU mem util** to see how much memory the model occupies and how much headroom is left for longer contexts or more concurrent requests.
 
 7. In the **Performance** section, click **Run test** to measure two response-speed metrics. Use them to compare quantization levels, context sizes, or engine arguments, and to verify that a change actually improved speed before you use it:
@@ -265,12 +268,12 @@ Open the built-in model console to track the model download, confirm the model a
 
 Once the model instance is running, any client app that speaks the OpenAI-compatible API can connect to it through the base URL.
 
-The following example uses [OpenCode](../../../use-cases/opencode.md) as the client.
+The following example uses [OpenCode](./opencode.md) as the client.
 
 1. In the model console, go to the **Status** tab. Under **Service status**:
 
-    - **WHO IS CALLING**: Select **Apps in Olares**, because OpenCode runs in Olares.
-    - **WHAT API FORMAT**: Select **OpenAI-Compatible**.
+    - **Connection source*: Select **Apps in Olares**, because OpenCode runs in Olares.
+    - **API format**: Select **OpenAI-Compatible**.
     - Copy the **Base URL** and note down the **Model name**.
 
 2. In OpenCode, click <i class="material-symbols-outlined">settings</i> in the bottom-left corner, select **Providers**, then scroll down and select **Connect** next to **Custom Provider**.
