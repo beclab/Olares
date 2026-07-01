@@ -1,7 +1,8 @@
 ---
 outline: [2, 3]
-description: Learn essential file operations in Olares including adding new files, editing existing content, and downloading files across different devices.
+description: Learn basic file operations in Olares, such as uploading, previewing, editing, and downloading files.
 ---
+
 # Basic file operations
 Operations in Files are essentially the same as in other file managers. This page will introduce some common tasks in Files to get you started.
 
@@ -11,8 +12,8 @@ Operations in Files are essentially the same as in other file managers. This pag
 1. Open the Files app from the Dock or Launchpad on Olares.
 2. In the left sidebar, select the directory where you want to upload files. For example, **Documents**.
 3. Upload multiple files or folders using one of these methods:
-   - Drag and drop files from your local file manager into the Files window. 
-   - Click <i class="material-symbols-outlined">drive_folder_upload</i> in the top right corner. 
+   - Drag and drop files from your local file manager into the Files window.
+   - Click <i class="material-symbols-outlined">drive_folder_upload</i> in the top right corner.
    - Right-click in an empty space and select from the context menu.
 
 :::info
@@ -30,7 +31,7 @@ You can also upload files or folders on your phone via the LarePass app.
 <Tabs>
 <template #Direct-upload>
 
-1. Open LarePass app and navigate to the **Files** tab.
+1. Open the LarePass app and navigate to the **Files** tab.
 2. Select the directory where you want to upload files.
 3. Tap <i class="material-symbols-outlined">add_circle</i> in the bottom-right corner, and select one of the following upload options:
    - **File**: Select from your phone's storage.
@@ -60,7 +61,7 @@ This method allows you to quickly upload files or media via your phone's sharing
 Files uploaded via the LarePass mobile app will also sync automatically with your Olares ID.
 
 ## Download files
-When downloading multiple files, the behavior differs between the Files in Olares and LarePass desktop application.
+When downloading multiple files, the behavior differs between the Files app in Olares and LarePass desktop application.
 * **Files in Olares (web interface)**: Download tasks are managed directly in your browser. Manage the download queue, pause, resume, or cancel a download in the download manager of the browser. 
 * **LarePass desktop**: Downloads are queued in LarePass, allowing you to pause, resume, or cancel tasks, and easily locate downloaded files.
 :::tip Notes
@@ -72,19 +73,55 @@ When downloading multiple files, the behavior differs between the Files in Olare
 2. Select any file, right-click to open the context menu, and select **Download**.
 3. Select the save location in the popup window.
 
-## Preview and edit files
+## Change display view
 
+Switch between list view and grid view to display your files and folders.
+
+1. Open the Files app, and go to your target directory.
+2. In the upper-right corner, click <i class="material-symbols-outlined">dock_to_right</i> for list view or <i class="material-symbols-outlined">grid_view</i> for grid view.
+
+![Display view](/images/manual/olares/files-display-view.png)
+
+## Sort files
+
+Sort files and folders in the current directory by different criteria.
+
+1. Open the Files app, and go to your target directory.
+2. Sort the items:
+
+   - In list view, click a column header:
+
+     - **Name**: Sort alphabetically by file or folder name.
+     - **Size**: Sort by file size.
+     - **Type**: Sort by file type.
+     - **Last modified**: Sort by the most recent modification date.
+
+   - In grid view, click **Last modified** in the upper-left corner, and select a sorting option.
+
+3. To reverse the sort order, click the active column header or sorting option again.
+<!-- #region files-format-support -->
 ### Supported formats
 
-The Files app supports the following file formats for previewing and editing:
-- Preview:
-   * Images: JPG, JPEG, PNG, BMP, WEBP, SVG
-   * Videos: MP4, MKV, MOV, MPEG, MTS, WMV, WEBM, RM, 3GP
-   * Audio: MP3, WMA, WAV, OGG, AAC, M4A, APE, FLAC
-   * Text: PDF, TXT, JS, CSS, XML, YAML, HTML
-- Edit: 
-   * TXT, JS, CSS, XML, YAML, HTML
+The Files app supports many file formats for previewing and editing. The following tables list some typical examples by category.
 
+#### Preview-supported formats
+
+| Category | Format examples |
+|----------------|------------------------|
+| Documents | Word (`.docx`), Excel (`.xlsx`), PowerPoint (`.pptx`),<br> PDF (`.pdf`), RTF (`.rtf`), EPUB (`.epub`) |
+| Images | JPEG (`.jpg`), PNG (`.png`), GIF (`.gif`), BMP (`.bmp`),<br> SVG (`.svg`), TIFF (`.tiff`) |
+| Media | MP3 (`.mp3`), M4A (`.m4a`), WAV (`.wav`), FLAC (`.flac`),<br> OGG (`.ogg`), MP4 (`.mp4`), MKV (`.mkv`), MOV (`.mov`),<br>AVI (`.avi`), WebM (`.webm`), 3GP (`.3gp`) |
+| Subtitles | SRT (`.srt`), VTT (`.vtt`), ASS (`.ass`) |
+| Text & markup | Text (`.txt`), Markdown (`.md`), HTML (`.html`), XML (`.xml`) |
+| Code & config | Python (`.py`), JavaScript (`.js`), Java (`.java`),<br> C/C++ (`.c`/`.cpp`), Go (`.go`), Rust (`.rs`), Shell (`.sh`),<br> JSON (`.json`), YAML (`.yaml`), TOML (`.toml`), INI (`.ini`) |
+
+#### Edit-supported formats
+
+| Category | Format examples |
+|----------------|------------------------|
+| Text & markup | Text (`.txt`), Markdown (`.md`), HTML (`.html`), XML (`.xml`) |
+| Code & config | Python (`.py`), JavaScript (`.js`), Java (`.java`),<br> C/C++ (`.c`/`.cpp`), Go (`.go`), Rust (`.rs`), Shell (`.sh`),<br> CSS (`.css`), JSON (`.json`), YAML (`.yaml`), TOML (`.toml`), INI (`.ini`) |
+<!-- #endregion files-format-support -->
 ### Procedure
 
 - To preview a file, double-click the target file.
@@ -100,11 +137,12 @@ You can easily find files in the Files app using desktop search.
 :::tip
 Full-text search is available for the `/Documents/` directory in **Drive**, allowing you to search within file contents. For other directories, you can search files using their file names.
 :::
-1. Click <i class="material-symbols-outlined">search</i>in the Dock to open the search window.
+1. Click <i class="material-symbols-outlined">search</i> in the Dock to open the search window.
 2. In the search field, enter keywords related to the file you're looking for.
 3. Use arrow keys <i class="material-symbols-outlined">arrow_upward</i><i class="material-symbols-outlined">arrow_downward</i> to select the search scope: **Drive** or **Sync**, and press **Enter** to see search results.
 
-![Search](/images/manual/olares/files-search.png#bordered){width="90%""}
+![Search](/images/manual/olares/files-search.png#bordered){width="90%"}
+
 ## Delete files
 :::warning
 Deleted files cannot be recovered.
@@ -115,12 +153,8 @@ Deleted files cannot be recovered.
    - Click <i class="material-symbols-outlined">more_horiz</i> in the top right corner and select **Delete**.
 3. Confirm the deletion in the popup window.
 
-## Change display view
-
-Switch between list view and grid view to display your files and folders differently.
-
-![Display view](/images/manual/olares/files-display-view.png)
 ## Shortcuts
+
 To select multiple files:
 
 * **On Windows**: Control + click

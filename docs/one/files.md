@@ -34,17 +34,7 @@ Familiarize yourself with the workspace. The Files interface mainly consists of 
 
 ![Files](/images/manual/olares/files-index.png#bordered)
 
-### File formats support
-
-The Files app supports the following file formats for previewing and editing:
-
-- Preview:
-   * Images: JPG, JPEG, PNG, BMP, WEBP, SVG
-   * Videos: MP4, MKV, MOV, MPEG, MTS, WMV, WEBM, RM, 3GP
-   * Audio: MP3, WMA, WAV, OGG, AAC, M4A, APE, FLAC
-   * Text: PDF, TXT, JS, CSS, XML, YAML, HTML
-- Edit: 
-   * TXT, JS, CSS, XML, YAML, HTML
+<!--@include: ../manual/olares/files/add-edit-download.md#files-format-support-->
 
 ## Upload files
 
