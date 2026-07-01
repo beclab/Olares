@@ -110,7 +110,7 @@ To change these variables after installation, go to Olares **Settings** > **Appl
 
 ### Reference: Engine tuning arguments
 
-Use the `ENGINE_ARGS` variable to add custom settings that adjust memory usage, context limits, and processing behaviors. Separate multiple arguments with spaces. Select your inference engine below to view the available tuning arguments.
+Use the `ENGINE_ARGS` variable to add custom settings that adjust memory usage, context limits, and processing behaviors. Separate multiple arguments with spaces. Select your inference engine below to view some commonly used tuning arguments.
 
 <tabs>
 <template #Llama-cpp>
@@ -209,7 +209,7 @@ vLLM models can take a while to load before the engine reaches `RUNNING`.
 - **Recommended model**: [`cyankiwi/Ornith-1.0-9B-AWQ-FP8`](https://huggingface.co/cyankiwi/Ornith-1.0-9B-AWQ-FP8) from Hugging Face
 - **MODEL_SOURCE**: `hf://cyankiwi/Ornith-1.0-9B-AWQ-FP8`
 - **MODEL_NAME**: `cyankiwi/Ornith-1.0-9B-AWQ-FP8`
-- **ENGINE_ARGS**: `--max-model-len 131072 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --enable-prefix-caching`
+- **ENGINE_ARGS**: `--max-model-len 131072 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser qwen3_coder --reasoning-parser qwen3 --enable-prefix-caching --enable-auto-tool-choice`
 
 </template>
 </tabs>
