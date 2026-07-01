@@ -8,7 +8,7 @@ Every **Olares Application Chart** should include an `OlaresManifest.yaml` file 
 
 :::info NOTE
 Latest Olares Manifest version: `0.12.0`
-- **Template rendering is no longer supported**: `OlaresManifest.yaml` must not use `{{}}` or other template rendering functions.
+- **Template rendering is no longer supported**: `OlaresManifest.yaml` must not use  <code v-pre>{{ ... }}</code> or other template rendering functions.
 - Modified valid values for the `apiVersion` field: added `v3`; the original `v2` format will no longer be supported in Olares OS 1.12.6.
 - Added `options.shared` field to indicate shared applications
 - Added `spec.accelerator` field for GPU resource declaration
@@ -17,7 +17,7 @@ Latest Olares Manifest version: `0.12.0`
 - Added `LLMGatewaySupported` in options for LLM Gateway support
 - Added `appCommon` and `externalData` permissions (both default to `false`)
 - Added `templateOnly` field to mark template-type applications
-- Removed [deprecated fields](#deprecated-fields-0120)
+- Removed [deprecated fields](#deprecated-fields-0-12-0)
 :::
 
 :::tip Upgrading to Manifest 0.12.0
@@ -458,7 +458,7 @@ Whether the app requires read and write permission to the `Data` folder. If `.Va
 - Default: `false`
 - Optional
 
-Whether the app requires read and write permission to the `App Common` folder (cross-node, cross-app shared files, such as models). Use `{{ .Values.userspace.appCommon }}` in the deployment YAML to get the App Common directory path.
+Whether the app requires read and write permission to the `App Common` folder (cross-node, cross-app shared files, such as models). Use `.Values.userspace.appCommon` in the deployment YAML to get the App Common directory path.
 
 ### externalData
 
