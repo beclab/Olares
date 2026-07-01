@@ -98,3 +98,20 @@ func (m *CorrectHostnameModule) Init() {
 		correctHostname,
 	}
 }
+
+type PatchNfsScriptModule struct {
+	common.KubeModule
+}
+
+func (m *PatchNfsScriptModule) Init() {
+	m.Name = "PatchNfsScript"
+
+	patchNfsScript := &task.LocalTask{
+		Name:   "PatchNfsScript",
+		Action: new(PatchNfsScriptTask),
+	}
+
+	m.Tasks = []task.Interface{
+		patchNfsScript,
+	}
+}
