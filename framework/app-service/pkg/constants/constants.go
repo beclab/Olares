@@ -3,6 +3,7 @@ package constants
 import (
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -185,7 +186,39 @@ var (
 	CHART_REPO_URL string = "http://chart-repo-service.os-framework:82/"
 
 	OLARES_APP_NAME = "olares-app"
+
+	// RemoteOptionsDomainWhitelist restricts which domains the remote-options
+	// proxy (proxyRemoteOptions) may fetch from. The proxy lets any normal user
+	// have app-service issue an outbound GET, so without a whitelist it becomes
+	// an open proxy / SSRF vector to arbitrary URLs. Validating only against the
+	// remoteOptions URL declared in the app manifest is insufficient, because a
+	// user can bypass that by uploading a custom chart, so we gate on an
+	// explicit domain whitelist instead. Currently only the Olares app CDN is
+	// used, but it is kept as a list for future entries. Override at runtime
+	// with the comma-separated REMOTE_OPTIONS_DOMAIN_WHITELIST env var.
+	RemoteOptionsDomainWhitelist = []string{"app.cdn.olares.com"}
 )
+
+// IsRemoteOptionsHostAllowed reports whether host is permitted by the
+// remote-options domain whitelist. A whitelist entry matches the exact host or
+// any of its subdomains (both compared case-insensitively). An empty whitelist
+// denies everything.
+func IsRemoteOptionsHostAllowed(host string) bool {
+	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	if host == "" {
+		return false
+	}
+	for _, d := range RemoteOptionsDomainWhitelist {
+		d = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(d), "."))
+		if d == "" {
+			continue
+		}
+		if host == d || strings.HasSuffix(host, "."+d) {
+			return true
+		}
+	}
+	return false
+}
 
 // AppMgrTerminalRetention bounds how long an ApplicationManager is allowed to
 // linger in a safely-deletable terminal state (Uninstalled / InstallingCanceled
@@ -288,5 +321,17 @@ func init() {
 	url := os.Getenv("CHART_REPO_URL")
 	if url != "" {
 		CHART_REPO_URL = url
+	}
+
+	if wl := os.Getenv("REMOTE_OPTIONS_DOMAIN_WHITELIST"); wl != "" {
+		domains := make([]string, 0)
+		for _, d := range strings.Split(wl, ",") {
+			if d = strings.TrimSpace(d); d != "" {
+				domains = append(domains, d)
+			}
+		}
+		if len(domains) > 0 {
+			RemoteOptionsDomainWhitelist = domains
+		}
 	}
 }
