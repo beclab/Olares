@@ -580,6 +580,9 @@ func pickOlaresDepRule(c *AppConfiguration) (rule olaresDepConstraintRule, featu
 	if api == APIVersionV3 {
 		return olaresDepRulePostV3, nil
 	}
+	if api == APIVersionV1 || api == APIVersionV2 || len(api) == 0 {
+		return olaresDepRulePreV3, nil
+	}
 	triggers := detectOlares1126OnlyFields(c)
 	if len(triggers) > 0 {
 		return olaresDepRulePostV3, triggers
@@ -656,9 +659,9 @@ func validateModernFieldRequiresManifestVersion(c *AppConfiguration) error {
 // manifests — the platform always pins the host Olares version, so
 // omitting it makes the manifest non-portable.
 func validateOlaresDependency(c *AppConfiguration) error {
-	if !resourcesCheckApplies(c.ConfigVersion) {
-		return nil
-	}
+	//if !resourcesCheckApplies(c.ConfigVersion) {
+	//	return nil
+	//}
 	var olaresDep *Dependency
 	for i := range c.Options.Dependencies {
 		d := &c.Options.Dependencies[i]
