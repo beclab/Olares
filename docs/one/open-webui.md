@@ -93,12 +93,12 @@ This guide walks you through installing Open WebUI and Qwen3.5 27B on Olares One
 ## Troubleshooting
 ### Qwen3.5 27B is stuck at "Waiting for Ollama" or "Needs attention"
 
-If the Qwen3.5 27B app stays in one of these states for more than a few minutes, first check your GPU mode in **Settings** > **GPU**:
+If the Qwen3.5 27B app stays in one of these states for more than a few minutes, first check your GPU mode in **Settings** > **Accelerator**:
 
 - If you are in **Memory slicing** mode, make sure you have bound the Qwen3.5 27B app and allocated it sufficient VRAM.
-- If you are in **App exclusive** mode, make sure the app with full GPU access is Qwen3.5 27B.
+- If you are in **Exclusive** mode, make sure the app with full GPU access is Qwen3.5 27B.
 
 ## Resources
 - [Open WebUI Documentation Hub](https://docs.openwebui.com/getting-started/)
-- [Switch GPU mode](gpu.md)
+- [Manage accelerator resources](gpu.md)
 - [More Open WebUI features](../use-cases/openwebui.md)

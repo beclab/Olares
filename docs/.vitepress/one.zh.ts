@@ -53,7 +53,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/comfyui",
         },
         {
-          text: "Switch GPU mode",
+          text: "Manage accelerator resources",
           link: "/zh/one/gpu",
         },
       ]
@@ -197,7 +197,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           // items:
           //   [
           //     {
-          //       text: "Manage GPU",
+          //       text: "Manage accelerator resources",
           //       link: "/zh/one/two-one-gpu",
           //     },
           //     {

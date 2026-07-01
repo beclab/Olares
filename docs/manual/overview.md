@@ -35,7 +35,7 @@ Olares offers a wide array of features designed to enhance security, ease of use
 - **Secure and permissionless application ecosystem**: Access nearly 100 free applications in a secure, sandboxed environment. [See what Olares Market has to offer](https://market.olares.com/).
 - **Unified file system and database**: Support automated scaling, backups, and high availability.
 - **Single sign-on**: Log in once to access all applications within Olares with a shared authentication service.
-- **AI capabilities**: Manage GPU resources, host AI models locally, and build private knowledge bases with complete privacy.
+- **AI capabilities**: Manage accelerator resources, host AI models locally, and build private knowledge bases with complete privacy.
 - **Built-in applications**: Get started with essential pre-installed applications such as Files, Vault, Wise, Profile and Dashboard.
 - **Seamless anywhere access**: Access your devices from anywhere using dedicated clients for mobile, desktop, and browsers.
 - **Development tools**: Build and port applications easily with comprehensive development tools.
