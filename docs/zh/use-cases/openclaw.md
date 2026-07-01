@@ -7,8 +7,12 @@ head:
       content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 使用指南, OpenClaw 安装
 app_version: "1.0.3"
 doc_version: "2.0"
-doc_updated: "2026-06-09"
+doc_updated: "2026-05-29"
 ---
+
+:::warning
+当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../use-cases/openclaw.md)。
+:::
 
 # OpenClaw
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
@@ -151,6 +152,18 @@ func UpdateAppState(ctx context.Context, am *v1alpha1.ApplicationManager, state 
 
 }
 
+// StateTransitionGuard, if non-nil, is consulted by UpdateAppMgrStatus to
+// decide whether a (currentState -> requestedState) transition is allowed.
+// Returning false rejects the patch.
+//
+// It is injected at init time by the pkg/appstate package (which owns the
+// authoritative transition table). The indirection breaks an import cycle:
+// pkg/appstate already imports pkg/utils/app, so pkg/utils/app cannot import
+// pkg/appstate directly. When the guard is nil (e.g. in unit tests that do
+// not link pkg/appstate) the legacy behaviour is preserved — any transition
+// is accepted.
+var StateTransitionGuard func(from, to v1alpha1.ApplicationManagerState) bool
+
 // UpdateAppMgrStatus update applicationmanager status, if filed in parameter status is empty that field will not be set.
 func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, modifiers ...func(*v1alpha1.ApplicationManager)) (*v1alpha1.ApplicationManager, error) {
 	client, err := utils.GetClient()
@@ -188,6 +201,19 @@ func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, m
 			}
 		}
 		status.Payload = payload
+
+		// Reject undeclared transitions if a guard has been wired in.
+		// The check runs INSIDE the retry loop so it sees the latest
+		// persisted state, matching pkg/appstate's updateStatus
+		// invariant: if the state was changed underneath us between
+		// Get and Update, the next attempt's check is against the
+		// fresh state, not a stale snapshot.
+		if guard := StateTransitionGuard; guard != nil && !guard(appMgrCopy.Status.State, status.State) {
+			err := fmt.Errorf("invalid state transition for %s: %s -> %s (rejected by guard)",
+				name, appMgrCopy.Status.State, status.State)
+			klog.Warningf("UpdateAppMgrStatus rejected: %v", err)
+			return err
+		}
 
 		appMgrCopy.Status = status
 		for _, modifier := range modifiers {
@@ -758,7 +784,7 @@ type ConfigOptions struct {
 	// at the conventional local path (appcfg.ChartsPath + "/" + RawAppName).
 	NeedDownloadChart bool
 	// for v3 app, upload source need to find origin chart
-	OriginOwner string
+	ChartOwner string
 }
 
 // GetAppConfig get app installation configuration from app store
@@ -798,7 +824,21 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	}
 
 	appcfg.Namespace = namespace
-	appcfg.OwnerName = options.Owner
+	// Shared apps are addressed to the cluster owner (the olares "owner"
+	// role user) so OwnerName / Application.spec.owner stay stable across
+	// admins. This is the canonical write site referenced by the reload
+	// path pkg/appcfg.GetAppInstallationConfig. v1/v2 and v3+per-user apps
+	// keep the installing user.
+	if appcfg.IsShared() {
+		clusterOwner, cErr := kubesphere.GetClusterOwner(ctx)
+		if cErr != nil {
+			return nil, chartPath, cErr
+		}
+		appcfg.OwnerName = clusterOwner
+	} else {
+		appcfg.OwnerName = options.Owner
+	}
+	appcfg.ChartOwner = options.ChartOwner
 	appcfg.RepoURL = options.RepoURL
 	return appcfg, chartPath, nil
 }
@@ -894,7 +934,7 @@ func parseLegacyAppRequirement(cfg *appcfg.AppConfiguration, selectedGpu string)
 	if !oac.IsNewOlaresManifestVersion(cfg.ConfigVersion) {
 		// Default supportedGpu list when the manifest leaves it empty.
 		if len(cfg.Spec.SupportedGpu) == 0 {
-			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType, utils.StrixHaloChipType, utils.CPUType, utils.MthreadsM100ChipType, utils.AppleMChipType}
+			cfg.Spec.SupportedGpu = []interface{}{utils.NvidiaCardType, utils.GB10ChipType, utils.AMDType, utils.CPUType, utils.MooreSocType, utils.AppleMChipType, utils.IntelType}
 		}
 
 		if selectedGpu != "" && gpu != nil && !gpu.IsZero() {
@@ -1135,14 +1175,14 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 		SetAuthToken(options.Token).
 		SetHeader(constants.MarketUser, options.Owner).
 		SetHeader(constants.MarketSource, options.MarketSource)
-	if options.OriginOwner != "" {
-		client.SetHeader(constants.MarketUser, options.OriginOwner)
+	if options.ChartOwner != "" {
+		client.SetHeader(constants.MarketUser, options.ChartOwner)
 	}
 	indexFileURL := options.RepoURL
 	if options.RepoURL[len(options.RepoURL)-1] != '/' {
 		indexFileURL += "/"
 	}
-	klog.Infof("GetIndexAndDownloadChart: user: %v, source: %v, originOwner: %v", options.Owner, options.MarketSource, options.OriginOwner)
+	klog.Infof("GetIndexAndDownloadChart: user: %v, source: %v, originOwner: %v", options.Owner, options.MarketSource, options.ChartOwner)
 
 	indexFileURL += "static-index.yaml"
 	resp, err := client.R().Get(indexFileURL)
@@ -1190,7 +1230,7 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 			return "", err
 		}
 	}
-	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource, options.OriginOwner)
+	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource, options.ChartOwner)
 	if err != nil {
 		return "", err
 	}

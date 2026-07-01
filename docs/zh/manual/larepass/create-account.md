@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 在 LarePass 移动端创建 Olares ID，几步即可完成。
 ---
 
-# 创建 Olares ID
+# 在 LarePass 中创建 Olares ID
 
 Olares ID 是你在 Olares 上的身份标识，会作为你的个人域名（例如 `yourname.olares.com`），也是你的登录账户。
 

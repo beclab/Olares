@@ -1,10 +1,12 @@
 package cluster
 
 import (
+	"github.com/beclab/Olares/cli/pkg/bootstrap/patch"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/intelgpu"
 	"github.com/beclab/Olares/cli/pkg/gpu/mtgpu"
 	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
 	"github.com/beclab/Olares/cli/pkg/manifest"
@@ -61,13 +63,19 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 		&gpu.RestartK3sServiceModule{Skip: !(l.runtime.Arg.Kubetype == common.K3s)},
 		&gpu.InstallPluginModule{Skip: skipGpuPlugin},
 		&amdgpu.InstallAmdPluginModule{Skip: func() bool {
-			if l.runtime.GetSystemInfo().IsStrixHalo() {
+			if l.runtime.GetSystemInfo().IsRyzenAIMax() {
 				return false
 			}
 			return true
 		}()},
 		&mtgpu.InstallMThreadsPluginModule{Skip: func() bool {
 			if l.runtime.GetSystemInfo().IsMThreadsM1000() {
+				return false
+			}
+			return true
+		}()},
+		&intelgpu.InstallIntelPluginModule{Skip: func() bool {
+			if l.runtime.GetSystemInfo().IsIntelGPU() {
 				return false
 			}
 			return true
@@ -102,6 +110,7 @@ func (l *linuxInstallPhaseBuilder) build() []module.Module {
 		addModule(fsModuleBuilder(func() []module.Module {
 			return l.storage()
 		}).withJuiceFS(l.runtime)...).
+		addModule(&patch.CorrectHostnameModule{}).
 		addModule(l.installCluster()...).
 		addModule(gpuModuleBuilder(func() []module.Module {
 			return l.installGpuPlugin()

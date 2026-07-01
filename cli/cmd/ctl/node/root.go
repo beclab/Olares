@@ -9,5 +9,6 @@ func NewNodeCommand() *cobra.Command {
 	}
 	cmd.AddCommand(NewCmdMasterInfo())
 	cmd.AddCommand(NewCmdAddNode())
+	cmd.AddCommand(NewCmdEnableJuiceFS())
 	return cmd
 }

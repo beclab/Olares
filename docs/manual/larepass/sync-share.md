@@ -1,7 +1,7 @@
 ---
 description: Keep files synchronized across devices and share content securely with other Olares members using built-in file sharing capabilities.
 ---
-# Sync and share files
+# Sync and share files with LarePass
 
 Sync in Olares is similar to cloud storage services like iCloud, where you can keep your most important information up to date, and available across all your devices. Sync also makes it easy to share files with other members within an Olares server. 
 

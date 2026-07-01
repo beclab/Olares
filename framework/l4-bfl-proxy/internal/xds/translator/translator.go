@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strings"
 	"time"
 
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
@@ -341,6 +342,21 @@ func (t *XdsTranslator) Translate(xdsIR *ir.Xds) *message.XdsSnapshot {
 // listener filter peeks at the ClientHello to extract the SNI before any filter
 // chain is selected. If proxyProtocol is true, a PROXY protocol listener filter
 // is prepended so the real client IP is available downstream.
+// chainMatchKey returns a stable key describing a filter chain's matching rules
+// (SNI server names plus source CIDRs). The second return value is false when
+// the chain has no match criteria at all, in which case it must not be
+// de-duplicated against other unmatched chains.
+func chainMatchKey(httpIR *ir.HTTPListenerIR) (string, bool) {
+	if len(httpIR.SNIMatches) == 0 && len(httpIR.SourceCIDRs) == 0 {
+		return "", false
+	}
+	sni := append([]string(nil), httpIR.SNIMatches...)
+	sort.Strings(sni)
+	cidrs := append([]string(nil), httpIR.SourceCIDRs...)
+	sort.Strings(cidrs)
+	return "sni=[" + strings.Join(sni, ",") + "] src=[" + strings.Join(cidrs, ",") + "]", true
+}
+
 func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners []*ir.HTTPListenerIR, clusterMap map[string]*ir.ClusterIR, clusterSet map[string]bool) (*listenerv3.Listener, []*routev3.RouteConfiguration, []cachetypes.Resource) {
 	var filterChains []*listenerv3.FilterChain
 	var routeConfigs []*routev3.RouteConfiguration
@@ -351,7 +367,38 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		listenerName = fmt.Sprintf("https_pp_%d", port)
 	}
 
-	for _, httpIR := range httpListeners {
+	// Defensive SNI/source de-duplication. Envoy rejects an entire listener if
+	// two filter chains declare identical matching rules (e.g. the same custom
+	// domain configured twice). When that happens we keep the earliest-created
+	// config and drop the later one, so adding a conflicting config never takes
+	// down ports 443/444 nor steals the domain from the existing one.
+	//
+	// Pass 1: pick the winner per match key (earliest CreatedAt; ties keep the
+	// first in iteration order). winnerIdx is keyed by match → slice index.
+	winnerIdx := make(map[string]int)
+	for i, httpIR := range httpListeners {
+		key, matched := chainMatchKey(httpIR)
+		if !matched {
+			continue
+		}
+		if w, ok := winnerIdx[key]; !ok {
+			winnerIdx[key] = i
+		} else if httpIR.CreatedAt.Before(httpListeners[w].CreatedAt) {
+			winnerIdx[key] = i
+		}
+	}
+
+	for i, httpIR := range httpListeners {
+		// Pass 2: drop any chain whose match is claimed by an earlier-created
+		// (or, on ties, earlier-listed) chain.
+		if key, matched := chainMatchKey(httpIR); matched {
+			if winnerIdx[key] != i {
+				klog.Warningf("xds-translator: listener %s: dropping filter chain %q with duplicate match (kept earlier-created %q): %s",
+					listenerName, httpIR.Name, httpListeners[winnerIdx[key]].Name, key)
+				continue
+			}
+		}
+
 		routeConfigName := httpIR.Name + "_routes"
 
 		// Build virtual hosts
@@ -846,6 +893,7 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "accept"}},
 				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "cookie"}},
 				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-authorization"}},
+				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-forwarded-for"}},
 			},
 		},
 		TransportApiVersion: corev3.ApiVersion_V3,

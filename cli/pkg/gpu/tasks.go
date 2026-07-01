@@ -380,7 +380,7 @@ func (u *UpdateNodeGPUInfo) Execute(runtime connector.Runtime) error {
 		gpuType = GB10ChipType
 	}
 
-	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &driverVersion, &st.CudaVersion, &supported, &gpuType)
+	return SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpuType, &driverVersion, &st.CudaVersion, &supported)
 }
 
 type RemoveNodeLabels struct {
@@ -393,13 +393,13 @@ func (u *RemoveNodeLabels) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	return UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), nil, nil, nil, nil)
+	return RemoveAllNodeGpuLabels(context.Background(), client.Kubernetes())
 }
 
-// update k8s node labels gpu.bytetrade.io/driver and gpu.bytetrade.io/cuda.
-// if labels are not exists, create it.
-func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver, cuda *string, supported *string, gpuType *string) error {
-	// get node name from hostname
+// updateCurrentNodeLabels reads the node matching the local hostname, hands its
+// label map to mutate (which returns whether it changed anything) and persists
+// the result with conflict retries when needed.
+func updateCurrentNodeLabels(ctx context.Context, client kubernetes.Interface, mutate func(labels map[string]string) bool) error {
 	nodeName, err := os.Hostname()
 	if err != nil {
 		logger.Error("get hostname error, ", err)
@@ -417,50 +417,61 @@ func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver
 		labels = make(map[string]string)
 	}
 
-	update := false
-	for _, label := range []struct {
-		key   string
-		value *string
-	}{
-		{GpuDriverLabel, driver},
-		{GpuCudaLabel, cuda},
-		{GpuCudaSupportedLabel, supported},
-		{GpuType, gpuType},
-	} {
-		old, ok := labels[label.key]
-		switch {
-		case ok && label.value == nil: // delete label
-			delete(labels, label.key)
-			update = true
-
-		case ok && *label.value != "" && old != *label.value: // update label
-			labels[label.key] = *label.value
-			update = true
-
-		case !ok && label.value != nil && *label.value != "": // create label
-			labels[label.key] = *label.value
-			update = true
-		}
+	if !mutate(labels) {
+		return nil
 	}
 
-	if update {
-		node.SetLabels(labels)
-		safeString := func(s *string) string {
-			if s == nil {
-				return "nil"
-			}
-			return *s
-		}
-		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			logger.Infof("updating node gpu labels, %s, %s", safeString(driver), safeString(cuda))
-			_, err := client.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
-			return err
-		})
+	node.SetLabels(labels)
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		logger.Infof("updating node gpu labels for %s", nodeName)
+		_, err := client.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+		return err
+	})
+	if err != nil {
+		logger.Error("update node error, ", err)
+		return err
+	}
+	return nil
+}
 
-		if err != nil {
-			logger.Error("update node error, ", err)
-			return err
+// SetNodeGpuModeLabel marks the current node as supporting `mode` by setting
+// the existence label gpu.bytetrade.io/<mode>=true. The write is additive:
+// labels for other modes the node already advertises are left untouched, so a
+// node with several accelerators (e.g. nvidia + intel) accumulates one label
+// per mode. The optional driver / cuda / cudaSupported values refresh the
+// corresponding gpu.bytetrade.io/{driver,cuda,cuda-supported} labels (used by
+// the nvidia path); a nil pointer means "leave that label as-is". The legacy
+// gpu.bytetrade.io/type label is intentionally never written.
+func SetNodeGpuModeLabel(ctx context.Context, client kubernetes.Interface, mode string, driver, cuda, cudaSupported *string) error {
+	err := updateCurrentNodeLabels(ctx, client, func(labels map[string]string) bool {
+		update := false
+		if mode != "" && mode != CPUType {
+			key := GpuModeLabel(mode)
+			if labels[key] != "true" {
+				labels[key] = "true"
+				update = true
+			}
 		}
+		for _, label := range []struct {
+			key   string
+			value *string
+		}{
+			{GpuDriverLabel, driver},
+			{GpuCudaLabel, cuda},
+			{GpuCudaSupportedLabel, cudaSupported},
+		} {
+			if label.value == nil || *label.value == "" {
+				continue
+			}
+			if labels[label.key] != *label.value {
+				labels[label.key] = *label.value
+				update = true
+			}
+		}
+		return update
+	})
+	if err != nil {
+		return err
 	}
 
 	if cuda != nil && *cuda != "" {
@@ -471,6 +482,30 @@ func UpdateNodeGpuLabel(ctx context.Context, client kubernetes.Interface, driver
 	}
 
 	return nil
+}
+
+// RemoveAllNodeGpuLabels strips every gpu.bytetrade.io GPU label from the
+// current node: the driver / cuda / cuda-supported labels, all per-mode
+// existence labels (gpu.bytetrade.io/<mode>), and the legacy
+// gpu.bytetrade.io/type label.
+func RemoveAllNodeGpuLabels(ctx context.Context, client kubernetes.Interface) error {
+	return updateCurrentNodeLabels(ctx, client, func(labels map[string]string) bool {
+		update := false
+		del := func(key string) {
+			if _, ok := labels[key]; ok {
+				delete(labels, key)
+				update = true
+			}
+		}
+		del(GpuDriverLabel)
+		del(GpuCudaLabel)
+		del(GpuCudaSupportedLabel)
+		del(GpuType)
+		for _, mode := range AllGpuModeTypes {
+			del(GpuModeLabel(mode))
+		}
+		return update
+	})
 }
 
 func updateCudaVersionSystemEnv(ctx context.Context, cudaVersion string) error {
@@ -608,17 +643,56 @@ type UninstallNvidiaDrivers struct {
 	common.KubeAction
 }
 
+// nvidiaDriverPkgFilter narrows a list of installed package names down to the
+// apt-installed NVIDIA *driver* packages that overlap with what the runfile
+// installer provides (the kernel module, userland libraries,
+// nvidia-smi/settings/modprobe/persistenced, the Xorg driver and the GSP
+// firmware). It deliberately leaves alone vendor/OEM packages that merely carry
+// "nvidia" in their name but are unrelated to the GPU driver. This matters on
+// NVIDIA DGX Spark, where the OS kernel itself is nvidia-branded
+// (linux-image/-headers/-modules-*-nvidia, linux-nvidia-*) and there are many
+// tooling/config packages (nvidia-disable-aqc-nic, nvidia-spark-*,
+// nvidia-dgx-*, nvidia-system-station-*, ...) that must not be removed.
+//
+// Note: libnvidia-container* / nvidia-container-toolkit and the GPUDirect
+// Storage kernel module (linux-modules-nvidia-fs-*) are explicitly excluded,
+// since the runfile driver does not provide them.
+const nvidiaDriverPkgFilter = "grep -E '^(nvidia-driver-|nvidia-dkms-|nvidia-kernel-common-|nvidia-kernel-source-|nvidia-compute-utils-|nvidia-utils-|nvidia-firmware-|nvidia-settings|nvidia-modprobe|nvidia-persistenced|nvidia-fabricmanager-|libnvidia-|xserver-xorg-video-nvidia|linux-modules-nvidia-)' | grep -Ev '(^linux-modules-nvidia-fs|container)'"
+
 func (t *UninstallNvidiaDrivers) Execute(runtime connector.Runtime) error {
 	_, _ = runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get -y autoremove --purge", false, true)
 	_, _ = runtime.GetRunner().SudoCmd("dpkg --configure -a || true", false, true)
-	listCmd := "dpkg -l | awk '/^(ii|i[UuFHWt]|rc|..R)/ {print $2}' | grep nvidia | grep -v container"
+	listCmd := fmt.Sprintf("dpkg -l | awk '/^(ii|i[UuFHWt]|rc|..R)/ {print $2}' | %s", nvidiaDriverPkgFilter)
 	pkgs, _ := runtime.GetRunner().SudoCmd(listCmd, false, false)
 	pkgs = strings.ReplaceAll(pkgs, "\n", " ")
 	pkgs = strings.TrimSpace(pkgs)
 	if pkgs != "" {
 		removeCmd := fmt.Sprintf("DEBIAN_FRONTEND=noninteractive apt-get -y --auto-remove --purge remove %s", pkgs)
 		if _, err := runtime.GetRunner().SudoCmd(removeCmd, false, true); err != nil {
-			return errors.Wrap(errors.WithStack(err), "failed to remove nvidia packages via apt-get")
+			// apt-get/dpkg can exit non-zero when a vendor package's postrm
+			// script fails while purging leftover config files, even though
+			// the driver binaries themselves were already removed. For
+			// example, NVIDIA DGX Spark ships nvidia-disable-aqc-nic with a
+			// postrm that does not handle the "purge" argument and exits 1,
+			// which makes dpkg return exit status 100. Keep purging, but try
+			// to recover the dpkg state and verify the actual driver packages
+			// are gone before treating this as a fatal error.
+			logger.Warnf("apt-get reported errors while purging nvidia packages, attempting to recover dpkg state: %v", err)
+			_, _ = runtime.GetRunner().SudoCmd("dpkg --configure -a || true", false, true)
+			_, _ = runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get -y -f install || true", false, true)
+
+			// re-check whether any nvidia packages are still actually
+			// installed (states ii/iU/iF/iH/iW/it or reinst-required),
+			// ignoring packages left only in the "rc" state (removed, just
+			// config files remaining), which are harmless for reinstalling
+			// the driver.
+			remainingCmd := fmt.Sprintf("dpkg -l | awk '/^(ii|i[UuFHWt]|..R)/ {print $2}' | %s", nvidiaDriverPkgFilter)
+			remaining, _ := runtime.GetRunner().SudoCmd(remainingCmd, false, false)
+			remaining = strings.TrimSpace(strings.ReplaceAll(remaining, "\n", " "))
+			if remaining != "" {
+				return errors.Wrap(errors.WithStack(err), fmt.Sprintf("failed to remove nvidia packages via apt-get, still installed: %s", remaining))
+			}
+			logger.Warn("nvidia driver packages were removed but apt-get reported errors while purging config files; continuing")
 		}
 		_, _ = runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get -y autoremove --purge", false, true)
 	}

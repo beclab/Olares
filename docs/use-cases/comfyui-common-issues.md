@@ -6,7 +6,7 @@ head:
     - name: keywords
       content: Olares, ComfyUI, troubleshooting, common issues, self-hosted
 ---
-# Common issues
+# ComfyUI common issues
 
 Use this page to identify and resolve common issues with ComfyUI on Olares.
 

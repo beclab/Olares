@@ -144,7 +144,7 @@ func (imc *ImageManagerClient) PollDownloadProgress(ctx context.Context, am *app
 				return err
 			}
 
-			if im.Status.State == "failed" {
+			if im.Status.State == "failed" || im.Status.State == appv1alpha1.DownloadingCanceled.String() {
 				return errors.New(im.Status.Message)
 			}
 
@@ -236,6 +236,7 @@ func (imc *ImageManagerClient) updateProgress(ctx context.Context, am *appv1alph
 			Title:        apputils.AppTitle(am.Spec.Config),
 			Icon:         apputils.AppIcon(am.Spec.Config),
 			MarketSource: am.Annotations[constants.AppMarketSourceKey],
+			ChartOwner:   appcfg.GetChartOwner(am),
 			IsShared:     appcfg.IsShared(am),
 		})
 	}

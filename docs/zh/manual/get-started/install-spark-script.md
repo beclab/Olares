@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 在 NVIDIA DGX Spark 上通过命令行安装脚本快速部署 Olares。
 ---
 
-# 使用命令行安装 Olares
+# 在 Spark 上使用命令行安装 Olares
 
 本文介绍如何在 NVIDIA DGX Spark 上通过命令行安装脚本安装 Olares。
 

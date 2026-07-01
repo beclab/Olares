@@ -1,6 +1,6 @@
 ---
 name: olares-shared
-version: 4.2.0
+version: 4.3.0
 description: "Set up and manage the Olares login/identity that every other olares-cli skill depends on — one profile per Olares ID, keychain-stored tokens, transparent token refresh, and auth-error recovery. Use for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, and auth errors (token rejected / invalidated / not logged in)."
 compatibility: Requires olares-cli on PATH
 metadata:
@@ -15,6 +15,8 @@ metadata:
 Foundation for every other `olares-cli` skill. Every business verb under `cluster` / `files` / `market` / `settings` / `dashboard` rides the active profile's token. **Read this first.**
 
 > **This skill also hosts the cross-skill platform model** in [references/olares-platform.md](references/olares-platform.md) — the userspace storage model, uid-1000 run identity, system-managed `drive/Home` dirs, app/namespace & networking, system middleware, and version/semver. `files` / `chart` / `cluster` link there (one hop) instead of re-describing it. That reference is pure platform model and needs no login.
+
+> **It also hosts the application state machine** in [references/olares-platform-appstate.md](references/olares-platform-appstate.md) — app-service's lifecycle states/transitions, per-state allowed operations, backend fail TTLs, single-download serialization, what `running` actually proves, and why `progress` is unreliable. `market` / `chart` / `doctor` link there instead of re-stating these backend facts. Also pure platform contract, no login.
 
 > **Source of truth for flags & syntax is always `olares-cli profile --help`.** This file only carries what `--help` cannot give: the profile mental model, agent-driven login flow, token-storage backends, refresh semantics, and the error → fix matrix.
 
@@ -32,12 +34,17 @@ The olares-cli skills ship and install as one suite; each owns a distinct slice.
 | Skill | Owns | Reach for it when |
 |---|---|---|
 | [`olares-shared`](SKILL.md) | Profile / login / token refresh / auth-error recovery; hosts the platform model | logging in, switching Olares ID, any auth error |
-| [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle: install / uninstall / upgrade / clone / start / stop / cancel; `--mine`; chart upload | installing or managing an app's lifecycle |
+| [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle: install / uninstall / upgrade / clone / stop / resume / cancel; `--mine`; chart upload | installing or managing an app's lifecycle |
 | [`olares-settings`](../olares-settings/SKILL.md) | Post-install config (Settings SPA): app entrance / domain / env / policy, users, VPN, network, backup / restore, integrations | changing config of an installed app or the system |
 | [`olares-cluster`](../olares-cluster/SKILL.md) | K8s runtime view: pods / workloads / jobs / cronjobs / nodes / namespaces; logs; scale / restart / delete | inspecting or operating running K8s objects |
 | [`olares-dashboard`](../olares-dashboard/SKILL.md) | Resource metrics & health: CPU / memory / disk / network / pods / GPU / fan / ranking | "what's the usage / what's eating CPU" |
-| [`olares-files`](../olares-files/SKILL.md) | Per-user file API: drive / sync / cache / external; upload / download; share; SMB; Seafile | browsing or moving files / drives |
-| [`olares-chart`](../olares-chart/SKILL.md) | Local chart authoring: from-compose / lint / package, then publish | authoring or validating your own chart |
+| [`olares-files`](../olares-files/SKILL.md) | Per-user file API: drive / sync / cache / external; upload / download; share; SMB / NFS; compress / extract; Seafile | browsing or moving files / drives |
+| [`olares-search`](../olares-search/SKILL.md) | Full-content search (Desktop "Text Search") over the per-user index: Drive files + Sync libraries; plus `search app` to find an installed app by title | finding a file by its content / keyword, or finding an installed app by name (not lifecycle inventory — that's `market`) |
+| [`olares-chart`](../olares-chart/SKILL.md) | Local chart authoring + deploy to your Olares: from-compose / lint / package, then upload + install | authoring, validating, or deploying your own chart |
+| [`olares-publish`](../olares-publish/SKILL.md) | Public Market distribution: market-ready metadata / multi-arch, the beclab/apps PR, paid apps | listing / submitting / selling an app on the public Market |
+| [`olares-doctor`](../olares-doctor/SKILL.md) | Runtime diagnosis: symptom -> root cause for an app that won't install, won't start, crashes, is `running` but unreachable, or is slow; orchestrates `cluster` / `dashboard` / `market` to gather evidence | an app or the system is misbehaving and you need to find out why — both catalog (`market`) and dev (`chart`) apps hand runtime failures here |
+
+> **The four-skill develop->deploy->debug combo:** porting and running your own app usually loads [`olares-chart`](../olares-chart/SKILL.md) (package + deploy + chart fixes), [`olares-market`](../olares-market/SKILL.md) (lifecycle), this `olares-shared` (platform facts), and [`olares-doctor`](../olares-doctor/SKILL.md) (runtime diagnosis) together. `chart` owns fixes that mean editing your chart; `doctor` owns figuring out the root cause regardless of who deployed the app.
 
 > Host-side maintenance (cluster install, node join, OS upgrade, GPU drivers) is NOT a skill — it's the kubeconfig-based `olares-cli node` / `os` / `gpu` trees, separate from this profile-based suite.
 
@@ -92,13 +99,22 @@ When you (an AI agent) drive the login on the user's behalf, do NOT pass passwor
 
 | STATUS | Meaning | Recovery |
 |--------|---------|----------|
-| `logged-in` | Token valid — JWT exp is in the future, **or** the JWT carries no exp claim (can't verify locally; trust until the server says no) | — |
-| `expired` | JWT exp is in the past | `profile login` |
-| `invalidated` | Server explicitly rejected the refresh leg | `profile login` directly (no need to `profile remove` first) |
+| `logged-in` | Token valid — JWT exp is in the future, **or** the JWT carries no exp claim (can't verify locally; trust until the server says no) | — (usable; just run the command) |
+| `expired` | Access-token JWT exp is in the past | **Usually none — the next command auto-refreshes** (see Automatic token refresh). `profile login` only if that refresh leg is itself rejected (which flips it to `invalidated`) |
+| `invalidated` | Server explicitly rejected the refresh leg (`/api/refresh` returned 401/403/459) | `profile login` directly (no need to `profile remove` first) |
 | `never` | No token has ever been stored | `profile login` or `profile import` |
 | `unknown` / `logged-in (unparseable token)` | Token store couldn't be read / the JWT couldn't be parsed | re-run `profile login` if it persists |
 
 STATUS reflects only what the local token store can prove without a network call (no `(Xh Ym)` time-to-expiry is printed). The `VERSION` column is the cached Olares backend version (`-` until a login eager-fetch or a version-aware command populates it; `--refresh-version` re-reads it). The leading `*` marks the current profile; `profile use` accepts either the NAME alias or the olaresId.
+
+## Auth-readiness gate
+
+**The single rule every skill uses to decide "proceed, or stop for login?" — proceed by default.** Other skills link here instead of re-deriving it; the STATUS table above is the source for what each value means.
+
+- **Pre-flight (you ran `profile list` first):** proceed on `logged-in` and `expired`. An `expired` access token auto-refreshes on the first call (see Automatic token refresh), so it is NOT a reason to stop. Stop only when the CLI has no credential it can send or refresh: `never` (no profile) or `invalidated` (refresh grant dead). The rare corrupt states — `unknown` (token store unreadable) and `logged-in (unparseable token)` — also fail at command time and recover the same way (`profile login`).
+- **Reactive (a command came back with an auth error):** don't pre-empt it — run the command and read the result. Only the typed errors `ErrNotLoggedIn` (`no access token …`) and `ErrTokenInvalidated` (`refresh token … became invalid`) mean "must log in" → `profile login` / `import`. A 401/403/459 is auto-refreshed and retried once for you; a network / 5xx error is transient — surface it, do not preemptively log in, and do not build retry loops on top of auth errors.
+
+`ResolveProfile` hands even a stale JWT to the refreshing transport and no command pre-flights on the STATUS string, which is why `expired` never blocks. When the decision is **stop**, tell the user which command to run — never log in on their behalf without being asked (see the agent-driven login flow above).
 
 ## Token storage
 
@@ -118,7 +134,7 @@ After `login` / `import` succeeds, the CLI prints `token stored via <backend> (s
 
 ## Automatic token refresh
 
-**The CLI rotates expired access_tokens transparently.** Users do NOT need to run `profile login` just because their access_token aged out — only when the *refresh_token itself* becomes invalid.
+**The CLI rotates expired access_tokens transparently.** Users do NOT need to run `profile login` just because their access_token aged out — only when the *refresh_token itself* becomes invalid. This is why a `profile list` STATUS of `expired` is not a blocker: the very next business command swaps the stale token out and succeeds. For the proceed/stop decision built on this, see the Auth-readiness gate above.
 
 - Replayable requests (every JSON verb, `files cat`, `files download`, `files rm`, `market` verbs, …): on 401/403/459 the transport calls `/api/refresh` and retries once with the new token. (459 is Olares' edge / Authelia "auth failed" status, treated like 401/403.)
 - Streaming uploads (`files upload` chunks): pre-decode the JWT exp; if within 60s of expiry, refresh BEFORE sending, because once a `*os.File` chunk is consumed it can't be replayed on a 401.
@@ -129,7 +145,7 @@ Across goroutines AND across concurrent `olares-cli` processes, `/api/refresh` i
 
 ## Auth error recovery table
 
-| Error message (excerpt) | Meaning | Fix |
+| Symptom | Cause | Fix |
 |-------------------------|---------|-----|
 | `refresh token for <id> became invalid at <ts>` | `/api/refresh` returned 401/403 — the grant is dead | `olares-cli profile login --olares-id <id>` |
 | `no access token for <id>` | Profile selected but keychain has no entry | `olares-cli profile login` or `profile import` |

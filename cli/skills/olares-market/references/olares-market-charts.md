@@ -16,12 +16,11 @@ The history: an earlier revision exposed `-s` on these verbs, and users pushed c
 ```bash
 olares-cli market upload ./mychart.tgz                 # single file
 olares-cli market upload ./charts/                     # every chart in a directory (no recursion)
-olares-cli market upload ./a.tgz ./b.tar.gz            # multiple files
 olares-cli market upload ./charts/ -o json             # structured per-file report
 olares-cli market upload ./mychart.tgz -q              # exit code only
 ```
 
-- Accepts `.tgz` or `.tar.gz` files.
+- Takes **exactly one path argument** — a single `.tgz` / `.tar.gz` file, or one directory. To upload several charts at once, point it at a directory; it does not accept multiple file arguments.
 - Directory mode uploads every `.tgz` / `.tar.gz` directly under the directory. **Subdirectories are NOT recursed.**
 - **Per-file results are summarized at the end.** `-o json` emits a structured report with one entry per file (`status` / `message`).
 - **Exit code is the OR of per-file results** — any single failure flips the overall exit non-zero.
@@ -69,7 +68,7 @@ olares-cli market delete mychart --version 1.0.0                   # remove the 
 
 ```bash
 # Bulk-upload every chart in a release directory.
-olares-cli market upload ./dist/ -o json | jq '.[] | select(.status != "uploaded")'
+olares-cli market upload ./dist/ -o json | jq '.[] | select(.status != "success")'
 # JSON exit code is the OR of all per-file results; the jq filter surfaces the failures
 ```
 
@@ -82,7 +81,7 @@ olares-cli market list -s upload                                   # confirm
 ## Safety constraints
 
 - **`delete` is destructive** — it removes the chart from the bucket. If the app is still running, the deployment continues to work but you can no longer reinstall from the local bucket.
-- **`upload` overwrites by `(name, version)`** — uploading `mychart-1.0.0.tgz` twice replaces the previous bytes. To bump, change the version inside `Chart.yaml` and re-upload.
+- **`upload` overwrites by `(name, version)`** — uploading `mychart-1.0.0.tgz` twice replaces the previous bytes. The uploaded version must be **>= the stored** version (equal overwrites; a *lower* version is rejected). To bump, change the version inside `Chart.yaml` and re-upload.
 
 ## Common errors
 
@@ -91,5 +90,5 @@ olares-cli market list -s upload                                   # confirm
 | `unsupported file extension: must be .tgz or .tar.gz` | Wrong file type | Repackage with `helm package` |
 | `failed to upload: HTTP 413 (Payload Too Large)` | Chart exceeds the server's upload size limit | Slim the chart's contents; ask the operator about the limit |
 | `chart not found in source 'upload'` (delete) | The chart was never uploaded, or was uploaded to a different bucket | `market list -s upload` to confirm |
-| `chart still in use by running app 'X'` | `delete` while the app is running | `market uninstall X` first, then re-run `delete` |
+| `delete` removed the chart but the app keeps running | `delete` only removes the chart from the `upload` bucket; it never uninstalls | Expected — run `market uninstall X` separately to stop/remove the app |
 | Exit non-zero on directory upload despite some files succeeding | Partial failure | Inspect the per-file JSON report for which files failed |

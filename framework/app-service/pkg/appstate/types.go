@@ -3,12 +3,14 @@ package appstate
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -17,7 +19,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
@@ -59,6 +60,20 @@ func (b *baseStatefulApp) updateStatus(ctx context.Context, am *appsv1.Applicati
 	// OpGeneration increment or OpRecords.
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := b.client.Get(ctx, types.NamespacedName{Name: am.Name}, am); err != nil {
+			return err
+		}
+
+		// Reject writes that are not declared in StateTransitions. The check
+		// runs INSIDE the retry loop so that if the persisted state has
+		// changed underneath us (e.g. user cancelled while this goroutine
+		// was racing toward InstallFailed) we refuse to clobber the new
+		// terminal state with a stale transition. Same-state writes are
+		// still allowed via IsStateTransitionAllowed so idempotent retries
+		// and re-assertions (updated message/reason) keep working.
+		if !IsStateTransitionAllowed(am.Status.State, state) {
+			err := fmt.Errorf("invalid state transition for %s: %s -> %s (not declared in StateTransitions)",
+				am.Name, am.Status.State, state)
+			klog.Warningf("updateStatus rejected: %v", err)
 			return err
 		}
 
@@ -129,6 +144,17 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 		}
 	}
 
+	// forceDeleteApp is the shared exit toward Uninstalled for the force-delete
+	// paths (UninstallFailed, RunningApp / UninstalledApp self-heal). The normal
+	// Uninstalling -> Uninstalled flow releases the compute allocation, but
+	// these paths bypass UninstallingApp, so release it here too or the app
+	// would leak its GPU/compute reservation after the workload is gone.
+	uninstallAll := p.manager.Annotations[api.AppUninstallAllKey] == "true"
+	if _, err = compute.EnsureAllocationsDeletedForComputeTarget(ctx, p.client, appCfg, uninstallAll); err != nil {
+		klog.Errorf("delete compute allocation for force-deleted app %s failed %v", appCfg.AppName, err)
+		return err
+	}
+
 	// Wait for namespace to be fully deleted before updating status
 	if err = p.waitForNamespaceDeleted(ctx); err != nil {
 		klog.Errorf("wait for namespace %s deleted failed %v", p.manager.Spec.AppNamespace, err)
@@ -143,30 +169,35 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 	return nil
 }
 
-// waitForNamespaceDeleted waits for the namespace to be completely deleted
+// waitForNamespaceDeleted performs a single-shot check on the namespace and
+// returns a RequeueError if the namespace is still present, asking the
+// controller to re-enqueue the request after a short delay. This avoids the
+// caller (typically the reconcile worker) blocking on a long PollImmediate
+// loop and starving every other ApplicationManager — with MaxConcurrentReconciles=1
+// a 30-minute synchronous wait here would freeze the whole controller.
+//
+// Callers must propagate the returned error verbatim so the reconciler can
+// dispatch on appstate.RequeueError. The helm uninstall / compute cleanup
+// steps that precede this check in forceDeleteApp are idempotent, so it is
+// safe to re-run them on every requeue iteration.
 func (p *baseStatefulApp) waitForNamespaceDeleted(ctx context.Context) error {
 	namespace := p.manager.Spec.AppNamespace
 	if apputils.IsProtectedNamespace(namespace) {
 		return nil
 	}
 
-	klog.Infof("waiting for namespace %s to be fully deleted", namespace)
-	err := utilwait.PollImmediate(time.Second, 30*time.Minute, func() (done bool, err error) {
-		var ns corev1.Namespace
-		err = p.client.Get(ctx, types.NamespacedName{Name: namespace}, &ns)
-		if err != nil && !apierrors.IsNotFound(err) {
-			klog.Errorf("failed to get namespace %s: %v", namespace, err)
-			return false, err
-		}
-		if apierrors.IsNotFound(err) {
-			klog.Infof("namespace %s has been fully deleted", namespace)
-			return true, nil
-		}
-		klog.Infof("namespace %s still exists, waiting...", namespace)
-		return false, nil
-	})
-
-	return err
+	var ns corev1.Namespace
+	err := p.client.Get(ctx, types.NamespacedName{Name: namespace}, &ns)
+	if err != nil && !apierrors.IsNotFound(err) {
+		klog.Errorf("failed to get namespace %s: %v", namespace, err)
+		return err
+	}
+	if apierrors.IsNotFound(err) {
+		klog.Infof("namespace %s has been fully deleted", namespace)
+		return nil
+	}
+	klog.Infof("namespace %s still exists, requeueing in 5s", namespace)
+	return NewWaitingInLine(5)
 }
 
 type OperationApp interface {

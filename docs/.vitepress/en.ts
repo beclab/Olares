@@ -202,6 +202,7 @@ const side = {
     },
     {
       text: "Olares applications",
+      link: "/manual/olares/",
       items: [
         { text: "Desktop", link: "/manual/olares/desktop", },
         {
@@ -250,6 +251,10 @@ const side = {
             {
               text: "Mount SMB",
               link: "/manual/olares/files/mount-SMB",
+            },
+            {
+              text: "Mount NFS",
+              link: "/manual/olares/files/mount-nfs",
             },
             {
               text: "Mount cloud storage",
@@ -585,7 +590,6 @@ const side = {
 export const en = defineConfig({
   lang: "en",
   themeConfig: {
-    //logo: "/icon.png",
     socialLinks: [{ icon: "github", link: "https://github.com/beclab/olares" }],
 
     nav: [

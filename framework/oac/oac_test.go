@@ -409,8 +409,9 @@ func TestAllImageRenderModes_ContainsExpected(t *testing.T) {
 		"apple-m",
 		"nvidia",
 		"nvidia-gb10",
-		"mthreads-m1000",
-		"strix-halo",
+		"moore-soc",
+		"amd",
+		"intel",
 	}
 	if !reflect.DeepEqual(oac.AllImageRenderModes, want) {
 		t.Fatalf("AllImageRenderModes drift: got %v, want %v", oac.AllImageRenderModes, want)

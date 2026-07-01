@@ -1,0 +1,217 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: envoypatchpolicies.gateway.envoyproxy.io
+spec:
+  group: gateway.envoyproxy.io
+  names:
+    categories:
+    - envoy-gateway
+    kind: EnvoyPatchPolicy
+    listKind: EnvoyPatchPolicyList
+    plural: envoypatchpolicies
+    shortNames:
+    - epp
+    singular: envoypatchpolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.ancestors[0].conditions[?(@.type=="Accepted")].status
+      name: Accepted
+      type: string
+    - jsonPath: .status.ancestors[0].conditions[?(@.type=="Programmed")].status
+      name: Programmed
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              jsonPatches:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    operation:
+                      properties:
+                        from:
+                          type: string
+                        jsonPath:
+                          type: string
+                        op:
+                          enum:
+                          - add
+                          - remove
+                          - replace
+                          - move
+                          - copy
+                          - test
+                          type: string
+                        path:
+                          type: string
+                        value:
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - op
+                      type: object
+                    type:
+                      enum:
+                      - type.googleapis.com/envoy.config.listener.v3.Listener
+                      - type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+                      - type.googleapis.com/envoy.config.cluster.v3.Cluster
+                      - type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+                      - type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
+                      type: string
+                  required:
+                  - name
+                  - operation
+                  - type
+                  type: object
+                type: array
+              priority:
+                format: int32
+                type: integer
+              targetRef:
+                properties:
+                  group:
+                    maxLength: 253
+                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  kind:
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                    type: string
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - group
+                - kind
+                - name
+                type: object
+              type:
+                enum:
+                - JSONPatch
+                type: string
+            required:
+            - targetRef
+            - type
+            type: object
+          status:
+            properties:
+              ancestors:
+                items:
+                  properties:
+                    ancestorRef:
+                      properties:
+                        group:
+                          default: gateway.networking.k8s.io
+                          maxLength: 253
+                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        kind:
+                          default: Gateway
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                          type: string
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        port:
+                          format: int32
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                        sectionName:
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    conditions:
+                      items:
+                        properties:
+                          lastTransitionTime:
+                            format: date-time
+                            type: string
+                          message:
+                            maxLength: 32768
+                            type: string
+                          observedGeneration:
+                            format: int64
+                            minimum: 0
+                            type: integer
+                          reason:
+                            maxLength: 1024
+                            minLength: 1
+                            pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                            type: string
+                          status:
+                            enum:
+                            - 'True'
+                            - 'False'
+                            - Unknown
+                            type: string
+                          type:
+                            maxLength: 316
+                            pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                            type: string
+                        required:
+                        - lastTransitionTime
+                        - message
+                        - reason
+                        - status
+                        - type
+                        type: object
+                      maxItems: 8
+                      minItems: 1
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - type
+                      x-kubernetes-list-type: map
+                    controllerName:
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$
+                      type: string
+                  required:
+                  - ancestorRef
+                  - conditions
+                  - controllerName
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-list-type: atomic
+            required:
+            - ancestors
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -129,6 +129,20 @@ type ApplicationConfig struct {
 	// v1 manifests that happen to set options.shared are intentionally
 	// ignored by IsShared: the v1 install branch is unchanged.
 	Shared bool
+
+	// ClonedFrom records the origin of a cloned install so the
+	// app.bytetrade.io/app-cloned-from label can be stamped on the
+	// ApplicationManager / deployment / Application. Empty for a regular
+	// (non-clone) install; otherwise "template" (cloned from a template)
+	// or "app" (cloned from an existing app).
+	ClonedFrom string
+
+	// ChartOwner records the user who uploaded the chart the app was
+	// installed from so the app.bytetrade.io/chart-owner label can be
+	// stamped on the ApplicationManager / deployment / Application. Empty
+	// for market installs (push events then fall back to the installing
+	// user); otherwise the uploading user.
+	ChartOwner string
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -203,6 +217,7 @@ func (c *ApplicationConfig) DesiredReplicas(name string) int32 {
 func (c *ApplicationConfig) GenEntranceURL(ctx context.Context) ([]Entrance, error) {
 	app := &Application{
 		Spec: ApplicationSpec{
+			Appid:     c.AppID,
 			Owner:     c.OwnerName,
 			Name:      c.AppName,
 			Entrances: c.Entrances,
@@ -227,6 +242,7 @@ func (c *ApplicationConfig) GetEntrances(ctx context.Context) (map[string]Entran
 func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]Entrance, error) {
 	app := &Application{
 		Spec: ApplicationSpec{
+			Appid:           c.AppID,
 			Owner:           c.OwnerName,
 			Name:            c.AppName,
 			SharedEntrances: c.SharedEntrances,

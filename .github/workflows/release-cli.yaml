@@ -12,14 +12,24 @@ on:
         type: string
       release-id:
         type: string
+      binary-version:
+        type: string
       publish-npm:
         type: boolean
         default: false
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Git branch to build from'
+        type: string
+        default: main
       version:
+        description: 'npm version and CDN tar name (e.g. 1.12.6-cli.5)'
         type: string
         required: true
+      binary-version:
+        description: 'Go binary VERSION (OS line, e.g. 1.12.6). Defaults from version.'
+        type: string
       ref:
         type: string
       repository:
@@ -29,31 +39,102 @@ on:
       publish-npm:
         type: boolean
         default: true
+
+permissions:
+  contents: read
+
 jobs:
+  resolve-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      npm_version: ${{ steps.resolve.outputs.npm_version }}
+      binary_version: ${{ steps.resolve.outputs.binary_version }}
+      checkout_ref: ${{ steps.resolve.outputs.checkout_ref }}
+    steps:
+      - name: Resolve npm and binary versions
+        id: resolve
+        env:
+          VERSION: ${{ inputs.version }}
+          BINARY_VERSION: ${{ inputs.binary-version }}
+          REF: ${{ inputs.ref }}
+          BRANCH: ${{ inputs.branch }}
+          PUBLISH_NPM: ${{ inputs.publish-npm }}
+        run: |
+          set -euo pipefail
+          npm_ver="${VERSION}"
+          bin_ver="${BINARY_VERSION}"
+
+          # An explicit binary-version must be a clean OS-line semver so the
+          # upgrade framework can parse it (cli/pkg/upgrade/version.go).
+          if [ -n "$bin_ver" ] && ! echo "$bin_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::binary-version '$bin_ver' must match X.Y.Z (OS line)"
+            exit 1
+          fi
+
+          if [ "$PUBLISH_NPM" = "true" ]; then
+            # The publish path is the iterating CLI line; enforce the canonical
+            # npm version so package.json/CDN names and the derived binary
+            # version stay well-formed.
+            if ! echo "$npm_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-cli\.[0-9]+$'; then
+              echo "::error::version '$npm_ver' must match X.Y.Z-cli.N when publishing to npm"
+              exit 1
+            fi
+            if [ -z "$bin_ver" ]; then
+              bin_ver=$(echo "$npm_ver" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)-cli\.[0-9]+$/\1/')
+            fi
+          elif [ -z "$bin_ver" ]; then
+            # Non-publish callers (daily/check/release) build from their own
+            # version forms (1.12.7-<date>, 1.12.7-<random>, a release tag);
+            # keep the previous behavior and reuse the npm version as-is.
+            if echo "$npm_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-cli\.[0-9]+$'; then
+              bin_ver=$(echo "$npm_ver" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)-cli\.[0-9]+$/\1/')
+            else
+              bin_ver="$npm_ver"
+            fi
+          fi
+
+          checkout_ref="${REF:-${BRANCH:-main}}"
+          echo "npm_version=$npm_ver" >> "$GITHUB_OUTPUT"
+          echo "binary_version=$bin_ver" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$checkout_ref" >> "$GITHUB_OUTPUT"
+          echo "npm_version=$npm_ver binary_version=$bin_ver checkout_ref=$checkout_ref"
+
   goreleaser:
+    needs: [resolve-versions]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-          ref: ${{ inputs.ref }}
+          ref: ${{ needs.resolve-versions.outputs.checkout_ref }}
           repository: ${{ inputs.repository }}
 
-      - name: Add Local Git Tag For GoReleaser
-        run: git tag ${{ inputs.version }}
-        continue-on-error: true
+      - name: Preflight npm version (publish only)
+        if: ${{ inputs.publish-npm }}
+        env:
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
+        run: |
+          set -euo pipefail
+          if npm view "@olares/cli@${NPM_VERSION}" version 2>/dev/null; then
+            echo "::error::@olares/cli@${NPM_VERSION} already exists on npm"
+            exit 1
+          fi
+
+      # GoReleaser derives .Version from the current git tag. This workflow
+      # never pushes tags; the tag is local only. When building from an
+      # already-tagged ref (e.g. release.yaml builds from an existing tag),
+      # the tag is already present, so tolerate the failure.
+      - name: Add local git tag for GoReleaser
+        env:
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
+        run: git tag "${NPM_VERSION}" || true
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: 1.24.11
-          
-      - name: Install x86_64 cross-compiler
-        run: sudo apt-get update && sudo apt-get install -y build-essential
-
-      - name: Install ARM cross-compiler
-        run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+          cache-dependency-path: cli/go.sum
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3.1.0
@@ -64,10 +145,13 @@ jobs:
           args: release --clean
         env:
           OLARES_RELEASE_ID: ${{ inputs.release-id }}
+          BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Assert binary version was injected
         working-directory: cli
+        env:
+          EXPECTED_BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
         run: |
           set -euo pipefail
           binary=$(find ./output -type f -name 'olares-cli' -path '*linux_amd64*' | head -n1)
@@ -77,22 +161,37 @@ jobs:
             exit 1
           fi
           actual=$("$binary" --version 2>&1)
-          expected="${{ inputs.version }}"
-          expected_stripped="${expected#v}"
+          expected="${EXPECTED_BINARY_VERSION#v}"
           if echo "$actual" | grep -qE '0\.0\.0-development'; then
             echo "::error::binary still reports placeholder version; ldflags did not take effect"
             echo "binary: $binary"
             echo "output: $actual"
             exit 1
           fi
-          if ! echo "$actual" | grep -qF "$expected_stripped"; then
-            echo "::error::binary version output '$actual' does not contain expected '$expected_stripped'"
+          if ! echo "$actual" | grep -qF "$expected"; then
+            echo "::error::binary version output '$actual' does not contain expected '$expected'"
             exit 1
           fi
-          echo "binary version OK: $actual"
+          if ! echo "$actual" | grep -qE '^Git commit: '; then
+            echo "::error::binary version output is missing the 'Git commit:' line"
+            echo "output: $actual"
+            exit 1
+          fi
+          if ! echo "$actual" | grep -qE '^Build time: '; then
+            echo "::error::binary version output is missing the 'Build time:' line"
+            echo "output: $actual"
+            exit 1
+          fi
+          if echo "$actual" | grep -qE '^(Git commit|Build time): unknown$'; then
+            echo "::error::build metadata still reports 'unknown'; ldflags did not take effect"
+            echo "output: $actual"
+            exit 1
+          fi
+          echo "binary version OK:"
+          echo "$actual"
 
       - name: Install coscmd
-        run: pip install coscmd        
+        run: pip install coscmd
 
       - name: Configure coscmd
         env:
@@ -105,7 +204,7 @@ jobs:
           coscmd config -a $TENCENT_SECRET_ID \
                         -s $TENCENT_SECRET_KEY \
                         -b $COS_BUCKET \
-                        -r $COS_REGION 
+                        -r $COS_REGION
 
       - name: Upload to CDN
         run: |
@@ -113,8 +212,27 @@ jobs:
             coscmd upload "$file" ${{ secrets.REPO_PATH }}${file}
           done
 
+      # Verify the exact URL @olares/cli postinstall fetches (see
+      # cli/npm/scripts/install.js: `${CDN_BASE}/${name}`, no REPO_PATH prefix).
+      - name: Verify CDN tar for npm postinstall (publish only)
+        if: ${{ inputs.publish-npm }}
+        env:
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
+        run: |
+          set -euo pipefail
+          for arch in linux_amd64 darwin_arm64; do
+            file="olares-cli-v${NPM_VERSION}_${arch}.tar.gz"
+            url="https://cdn.olares.com/${file}"
+            code=$(curl -sS -o /dev/null -w '%{http_code}' -I "$url" || true)
+            if [ "$code" != "200" ]; then
+              echo "::error::CDN asset not reachable: ${url} (HTTP ${code})"
+              exit 1
+            fi
+            echo "CDN OK: ${url}"
+          done
+
   publish-npm:
-    needs: [goreleaser]
+    needs: [resolve-versions, goreleaser]
     if: ${{ inputs.publish-npm }}
     runs-on: ubuntu-22.04
     steps:
@@ -122,7 +240,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-          ref: ${{ inputs.ref }}
+          ref: ${{ needs.resolve-versions.outputs.checkout_ref }}
           repository: ${{ inputs.repository }}
 
       - name: Set up Node.js
@@ -131,15 +249,17 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Sync npm package.json version to release input
+      - name: Sync npm package.json version
         working-directory: cli/npm
+        env:
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
         run: |
-          npm version "${{ inputs.version }}" \
+          npm version "$NPM_VERSION" \
             --no-git-tag-version \
             --allow-same-version
 
-      - name: Publish @olares/cli (dist-tag latest)
+      - name: Publish @olares/cli (dist-tag next)
         working-directory: cli/npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_OLARES_PUBLISH_TOKEN }}
-        run: npm publish --access public
+        run: npm publish --access public --tag next

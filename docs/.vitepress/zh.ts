@@ -200,6 +200,7 @@ const side = {
     },
     {
       text: "Olares 应用",
+      link: "/zh/manual/olares/",
       items: [
         { text: "桌面", link: "/zh/manual/olares/desktop" },
         {
@@ -248,6 +249,10 @@ const side = {
             {
               text: "挂载 SMB",
               link: "/zh/manual/olares/files/mount-SMB",
+            },
+            {
+              text: "挂载 NFS",
+              link: "/zh/manual/olares/files/mount-nfs",
             },
             {
               text: "挂载云存储",
@@ -586,7 +591,10 @@ const side = {
 export const zh = defineConfig({
   lang: "zh",
   themeConfig: {
-    //logo: "/icon.png",
+    editLink: {
+      pattern: "https://github.com/beclab/Olares/edit/main/docs/:path",
+      text: "在 GitHub 上编辑此页面",
+    },
     socialLinks: [{ icon: "github", link: "https://github.com/beclab/olares" }],
 
     nav: [

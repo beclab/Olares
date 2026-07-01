@@ -2,7 +2,7 @@
 outline: [2, 3]
 description: Understand how application distribution works in Olares.
 ---
-# Distribute Olares applications
+# Submit an Olares application
 
 Distributing applications on Olares is based on open standards and automated validation.
 If your application is already packaged as an Olares Application Chart (OAC), you can publish it to Olares Market and make it available to users with minimal friction.

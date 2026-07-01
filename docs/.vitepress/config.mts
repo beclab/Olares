@@ -9,6 +9,16 @@ import _ from "lodash";
 // filter them out without re-reading frontmatter from disk.
 const noindexPaths = new Set<string>();
 
+// Archived (non-latest) versioned doc builds deploy under /docs/<version>/
+// (e.g. /docs/1.12.4/...) and duplicate the latest docs almost verbatim,
+// which is the main driver of the "duplicate content" / "missing canonical"
+// findings. Mark every page in such a build `noindex` so the versioned copies
+// drop out of search and consolidate onto the canonical latest /docs/... URLs.
+// Detected from the deploy base, the only signal reliably set for archived
+// builds: it always carries a version segment (e.g. "/docs/1.12.4/") and can
+// never match the latest deploy, whose base is "/docs/" or "/" (no version).
+const isArchivedVersionBuild = /\/\d+\.\d+/.test(process.env.BASE_URL || "");
+
  
 
 function defineVersionedConfig2(
@@ -60,6 +70,11 @@ export default defineVersionedConfig2(withMermaid({
     },
   },
   themeConfig: {
+    logoLink: { link: "https://www.olares.com/", target: "_self" },
+    editLink: {
+      pattern: "https://github.com/beclab/Olares/edit/main/docs/:path",
+      text: "Edit this page on GitHub",
+    },
     search: {
       provider: "algolia",
       options: {
@@ -122,7 +137,8 @@ export default defineVersionedConfig2(withMermaid({
     // to its frontmatter. Implemented here (rather than per-file `head`) so
     // we don't shift source line numbers, which would break `@include` ranges
     // in files that embed this one as a snippet.
-    if (pageData.frontmatter?.noindex) {
+    // Archived versioned builds noindex every page (see isArchivedVersionBuild).
+    if (isArchivedVersionBuild || pageData.frontmatter?.noindex) {
       pageData.frontmatter.head ??= [];
       pageData.frontmatter.head.push([
         'meta',
@@ -133,11 +149,38 @@ export default defineVersionedConfig2(withMermaid({
       noindexPaths.add(
         pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
       );
+      // Skip canonical on noindex pages: a self/duplicate canonical combined
+      // with `noindex` sends contradictory signals to crawlers.
+      return;
     }
+
+    // Self-referencing canonical for every indexable doc page. Built from the
+    // *unversioned* route on the production origin (matches the sitemap
+    // hostname below) so versioned (/docs/<version>/...) duplicates consolidate
+    // onto the latest /docs/... URL. `cleanUrls` is on, so the route is
+    // extensionless; directory indexes keep their trailing slash.
+    const route = pageData.relativePath
+      .replace(/(^|\/)index\.md$/, '$1')
+      .replace(/\.md$/, '');
+    const canonicalHref = route
+      ? `https://www.olares.com/docs/${route}`
+      : 'https://www.olares.com/docs/';
+    pageData.frontmatter.head ??= [];
+    pageData.frontmatter.head.push([
+      'link',
+      { rel: 'canonical', href: canonicalHref },
+    ]);
+    // Keep og:url identical to the canonical URL. A mismatch between the two
+    // sends conflicting signals to crawlers and social scrapers about the
+    // page's authoritative address.
+    pageData.frontmatter.head.push([
+      'meta',
+      { property: 'og:url', content: canonicalHref },
+    ]);
   },
 
   sitemap: {
-    hostname: "https://docs.olares.com/",
+    hostname: "https://www.olares.com/docs/",
     transformItems: (items) =>
       // Drop noindex pages from sitemap.xml so crawlers don't even discover
       // them via the sitemap. The meta tag above is what ultimately removes
@@ -146,11 +189,25 @@ export default defineVersionedConfig2(withMermaid({
         // Normalize to the extensionless route so the comparison holds whether
         // or not cleanUrls is enabled.
         const p = item.url.replace(/^\/+/, '').replace(/\.html$/, '');
+        // Repo READMEs are srcExclude'd above, but guard the sitemap too so a
+        // stray /docs/README (or nested README) can never leak back in.
+        if (p === 'README' || p.endsWith('/README')) return false;
         return !noindexPaths.has(p);
       }),
   },
   lastUpdated: true,
   cleanUrls: true,
+  // Snippet-only fragments and repo READMEs are pulled into real pages via
+  // `<!--@include-->` (which reads the raw file directly, so excluding them as
+  // routes does NOT break includes). Keeping them out of the build stops them
+  // from leaking into routes, search, and sitemap.xml as junk URLs.
+  srcExclude: [
+    "**/README.md",
+    "**/reusables/**",
+    "**/reusables.md",
+    "**/reusables-*.md",
+    "**/*.reusables.md",
+  ],
   base: process.env.BASE_URL || "/",
   vite: {
     build: {
@@ -160,9 +217,35 @@ export default defineVersionedConfig2(withMermaid({
     define: {
       'process.env.VERSIONS': JSON.stringify(process.env.VERSIONS || JSON.stringify([])),
       'process.env.LANGUAGES': JSON.stringify(process.env.LANGUAGES || JSON.stringify([])),
+      // Deploy path prefix without version (e.g. /docs). Versioned builds set
+      // BASE_URL=/docs/1.12.4/ so site.base alone cannot yield /docs/ for links.
+      __SITE_PATH_PREFIX__: JSON.stringify(process.env.SITE_PATH_PREFIX || ''),
+      __CURRENT_DOC_VERSION__: JSON.stringify(process.env.CURRENT_VERSION || ''),
     }
   },
   head: [
+    [
+      "link",
+      {
+        rel: "icon",
+        href: (process.env.BASE_URL || "/") + "icon1.png",
+      },
+    ],
+    [
+      "script",
+      {
+        async: "",
+        src: "https://www.googletagmanager.com/gtag/js?id=G-GMCVWRBP24",
+      },
+    ],
+    [
+      "script",
+      {},
+      `window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-GMCVWRBP24');`,
+    ],
     [
       "meta",
       {

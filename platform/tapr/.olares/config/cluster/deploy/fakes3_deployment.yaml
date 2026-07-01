@@ -48,6 +48,7 @@ spec:
       labels:
         app: tapr-s3
     spec:
+      priorityClassName: "system-cluster-critical"
       containers:
       - name: s3-fake-sidecar
         image: beclab/s3rver:latest

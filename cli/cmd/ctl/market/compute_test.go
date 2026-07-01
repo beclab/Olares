@@ -1,0 +1,372 @@
+package market
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"reflect"
+	"strings"
+	"testing"
+)
+
+// failedCheckResp builds the market-wrapped FailedCheckResponse envelope the
+// CLI receives: APIResponse.Data carries data.backend_response.data.{type, Data},
+// the exact shape parseServerEnvError / parseFailedCheck unwrap.
+func failedCheckResp(checkType, dataJSON string) *APIResponse {
+	inner := fmt.Sprintf(`{"backend_response":{"code":422,"data":{"type":%q,"Data":%s}}}`, checkType, dataJSON)
+	return &APIResponse{Data: json.RawMessage(inner)}
+}
+
+func TestInstallRequestWireFormat(t *testing.T) {
+	// Without a compute mode the field is omitted entirely (1.12.5 wire
+	// stays byte-identical to before SelectedGpuType existed).
+	b, _ := json.Marshal(InstallRequest{Source: "market.olares", AppName: "firefox", Version: "1.0.0", Sync: true})
+	if strings.Contains(string(b), "selectedGpuType") {
+		t.Fatalf("install body must omit selectedGpuType when empty: %s", b)
+	}
+	// With a mode the field is present.
+	b, _ = json.Marshal(InstallRequest{Source: "market.olares", AppName: "comfyui", Version: "1.0.0", Sync: true, SelectedGpuType: "nvidia"})
+	if !strings.Contains(string(b), `"selectedGpuType":"nvidia"`) {
+		t.Fatalf("install body must carry selectedGpuType when set: %s", b)
+	}
+}
+
+func TestParseFailedCheck(t *testing.T) {
+	checkType, raw := parseFailedCheck(failedCheckResp(checkTypeComputeModeSelect,
+		`[{"computeType":"cpu","status":"installable"}]`))
+	if checkType != checkTypeComputeModeSelect {
+		t.Fatalf("checkType = %q, want %q", checkType, checkTypeComputeModeSelect)
+	}
+	var plan []computeModePlan
+	if err := json.Unmarshal(raw, &plan); err != nil || len(plan) != 1 || plan[0].ComputeType != "cpu" {
+		t.Fatalf("unexpected plan from raw %s (err=%v): %#v", raw, err, plan)
+	}
+
+	// A non-failed-check response yields an empty type.
+	if ct, _ := parseFailedCheck(&APIResponse{Data: json.RawMessage(`{"app_name":"firefox"}`)}); ct != "" {
+		t.Fatalf("expected empty checkType for non-failed-check, got %q", ct)
+	}
+	if ct, _ := parseFailedCheck(nil); ct != "" {
+		t.Fatalf("expected empty checkType for nil resp, got %q", ct)
+	}
+}
+
+func TestResolveComputeMode(t *testing.T) {
+	twoInstallable := `[{"computeType":"cpu","status":"installable"},{"computeType":"nvidia","status":"installable"}]`
+	_, raw := parseFailedCheck(failedCheckResp(checkTypeComputeModeSelect, twoInstallable))
+
+	// preset that is installable -> returned verbatim.
+	if mode, err := resolveComputeMode(raw, "comfyui", "nvidia", false); err != nil || mode != "nvidia" {
+		t.Fatalf("preset nvidia: got (%q, %v), want (nvidia, nil)", mode, err)
+	}
+
+	// preset declared but not installable -> error explaining why.
+	_, raw2 := parseFailedCheck(failedCheckResp(checkTypeComputeModeSelect,
+		`[{"computeType":"cpu","status":"installable"},{"computeType":"nvidia","status":"insufficient-resources","reason":"not enough VRAM"}]`))
+	_, err := resolveComputeMode(raw2, "comfyui", "nvidia", false)
+	if err == nil || !strings.Contains(err.Error(), "not enough VRAM") {
+		t.Fatalf("preset non-installable: want error mentioning reason, got %v", err)
+	}
+
+	// preset not a declared mode -> error.
+	if _, err := resolveComputeMode(raw, "comfyui", "amd", false); err == nil || !strings.Contains(err.Error(), "not a declared mode") {
+		t.Fatalf("undeclared preset: want 'not a declared mode' error, got %v", err)
+	}
+
+	// no preset, non-interactive -> typed computeModeSelectError listing modes.
+	_, err = resolveComputeMode(raw, "comfyui", "", false)
+	var modeErr *computeModeSelectError
+	if !errors.As(err, &modeErr) {
+		t.Fatalf("non-interactive empty preset: want *computeModeSelectError, got %T (%v)", err, err)
+	}
+	if !reflect.DeepEqual(modeErr.installable, []string{"cpu", "nvidia"}) {
+		t.Fatalf("installable = %v, want [cpu nvidia]", modeErr.installable)
+	}
+}
+
+func TestResolveComputeBindingNonInteractive(t *testing.T) {
+	data := `{"availability":{"scope":"card","requirement":{"mode":"nvidia","requiredGpu":6442450944,"supportMultiCards":false},"nodes":[{"nodeName":"node-1","gpuType":"nvidia","status":"available","devices":[` +
+		`{"nodeName":"node-1","deviceId":"gpu-0","supportType":"Exclusive","capacity":17179869184,"available":17179869184,"operable":true,"health":"yes"},` +
+		`{"nodeName":"node-1","deviceId":"gpu-1","supportType":"Exclusive","capacity":17179869184,"available":0,"operable":false,"health":"yes"}]}]},` +
+		`"validation":{"ok":false,"reason":"binding required"}}`
+	_, raw := parseFailedCheck(failedCheckResp(checkTypeComputeBindingRequired, data))
+
+	_, err := resolveComputeBinding(raw, checkTypeComputeBindingRequired, "comfyui", false)
+	var bindErr *computeBindingError
+	if !errors.As(err, &bindErr) {
+		t.Fatalf("want *computeBindingError, got %T (%v)", err, err)
+	}
+	if bindErr.reason != "binding required" {
+		t.Fatalf("reason = %q, want %q", bindErr.reason, "binding required")
+	}
+	// Only the operable device is offered.
+	if !reflect.DeepEqual(bindErr.options, []string{"node-1:gpu-0"}) {
+		t.Fatalf("options = %v, want [node-1:gpu-0]", bindErr.options)
+	}
+	// The requirement (parsed from availability.requirement) is surfaced so a
+	// non-interactive caller knows how much the app needs.
+	for _, want := range []string{"NVIDIA GPU", "single card", "requires 6 Gi"} {
+		if !strings.Contains(bindErr.requirement, want) {
+			t.Fatalf("requirement %q missing %q", bindErr.requirement, want)
+		}
+	}
+	if msg := bindErr.Error(); !strings.Contains(msg, "requires 6 Gi") {
+		t.Fatalf("error message should surface the requirement: %q", msg)
+	}
+}
+
+func TestBindingWasRejected(t *testing.T) {
+	failed := &computeBindingPrompt{Validation: &computeBindingValidation{OK: false}}
+	okVal := &computeBindingPrompt{Validation: &computeBindingValidation{OK: true}}
+	none := &computeBindingPrompt{}
+
+	cases := []struct {
+		name      string
+		prompt    *computeBindingPrompt
+		checkType string
+		want      bool
+	}{
+		// First-time required with no validation is NOT a rejection: nothing
+		// was ever submitted, so availability.reason must not be reported as a
+		// "previous binding was rejected".
+		{"required no validation", none, checkTypeComputeBindingRequired, false},
+		// A failed validation is always a rejection, regardless of type.
+		{"required failed validation", failed, checkTypeComputeBindingRequired, true},
+		// Unavailable means a previously-stored binding is no longer valid.
+		{"unavailable no validation", none, checkTypeComputeBindingUnavailable, true},
+		{"unavailable failed validation", failed, checkTypeComputeBindingUnavailable, true},
+		// An ok validation on a required check is not a rejection.
+		{"required ok validation", okVal, checkTypeComputeBindingRequired, false},
+		{"nil prompt required", nil, checkTypeComputeBindingRequired, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := bindingWasRejected(tc.prompt, tc.checkType); got != tc.want {
+				t.Fatalf("bindingWasRejected = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRequiredResourceBytes(t *testing.T) {
+	const gib = int64(1) << 30
+	// nvidia -> requiredGpu
+	if got := requiredResourceBytes(&computeRequirement{Mode: "nvidia", RequiredGpu: 8 * gib, RequiredMemory: 2 * gib}); got != 8*gib {
+		t.Fatalf("nvidia requiredResourceBytes = %d, want %d", got, 8*gib)
+	}
+	// non-nvidia -> requiredMemory
+	if got := requiredResourceBytes(&computeRequirement{Mode: "intel", RequiredGpu: 8 * gib, RequiredMemory: 2 * gib}); got != 2*gib {
+		t.Fatalf("intel requiredResourceBytes = %d, want %d", got, 2*gib)
+	}
+	if got := requiredResourceBytes(nil); got != 0 {
+		t.Fatalf("nil requiredResourceBytes = %d, want 0", got)
+	}
+}
+
+func TestMarketMemoryGiCeil(t *testing.T) {
+	const gib = int64(1) << 30
+	cases := []struct {
+		in   int64
+		want string
+	}{
+		{0, "0"},
+		{-1, "0"},
+		{8 * gib, "8"},
+		{6 * gib, "6"},
+		{gib + gib/2, "1.50"},          // 1.5 Gi exact (2 decimals, like SPA toFixed)
+		{gib + 1, "1"},                 // 1 byte over 1 Gi is drift -> still "1"
+		{gib + gib/50, "1.02"},         // ~1.02 Gi rounds UP to 2 decimals
+		{gib*15 + gib*99/100, "15.99"}, // ~15.99 Gi
+	}
+	for _, tc := range cases {
+		if got := marketMemoryGiCeil(tc.in); got != tc.want {
+			t.Fatalf("marketMemoryGiCeil(%d) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestRequirementSummary(t *testing.T) {
+	const gib = int64(1) << 30
+	cases := []struct {
+		name string
+		req  *computeRequirement
+		want []string
+	}{
+		{
+			name: "nvidia single card",
+			req:  &computeRequirement{Mode: "nvidia", RequiredGpu: 6 * gib},
+			want: []string{"NVIDIA GPU", "single card", "requires 6 Gi"},
+		},
+		{
+			name: "nvidia multi-card (single node)",
+			req:  &computeRequirement{Mode: "nvidia", RequiredGpu: 12 * gib, SupportMultiCards: true},
+			want: []string{"NVIDIA GPU", "multi-card", "requires 12 Gi"},
+		},
+		{
+			name: "nvidia multi-node",
+			req:  &computeRequirement{Mode: "nvidia", RequiredGpu: 24 * gib, SupportMultiCards: true, SupportMultiNodes: true},
+			want: []string{"NVIDIA GPU", "multi-node", "requires 24 Gi"},
+		},
+		{
+			name: "non-nvidia uses requiredMemory",
+			req:  &computeRequirement{Mode: "intel", RequiredMemory: 4 * gib},
+			want: []string{"single card", "requires 4 Gi"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := requirementSummary(tc.req)
+			for _, w := range tc.want {
+				if !strings.Contains(got, w) {
+					t.Fatalf("requirementSummary = %q, missing %q", got, w)
+				}
+			}
+		})
+	}
+	// non-nvidia multi-node still reports multi-card (multi-node chip is nvidia-only).
+	if got := requirementSummary(&computeRequirement{Mode: "intel", SupportMultiCards: true, SupportMultiNodes: true}); !strings.Contains(got, "multi-card") {
+		t.Fatalf("non-nvidia multi-node summary = %q, want multi-card chip", got)
+	}
+	if got := requirementSummary(nil); got != "" {
+		t.Fatalf("nil requirementSummary = %q, want empty", got)
+	}
+}
+
+func TestComputeBindingRejected(t *testing.T) {
+	// The backend leaves the actionable reason in Code ("node-pressure:<node>")
+	// and only the generic "invalid" in Reason; we must surface the SPA-aligned
+	// node-pressure sentence, not "invalid".
+	data := `{"availability":{"scope":"card","nodes":[{"nodeName":"node-1","devices":[` +
+		`{"nodeName":"node-1","deviceId":"gpu-0","supportType":"Exclusive","operable":true}]}]},` +
+		`"validation":{"ok":false,"code":"node-pressure:node-1","reason":"invalid"}}`
+	_, raw := parseFailedCheck(failedCheckResp(checkTypeComputeBindingUnavailable, data))
+
+	err := computeBindingRejected(raw, "comfyui", []BindingSelection{{NodeName: "node-2", DeviceID: "gpu-9"}})
+	msg := err.Error()
+	for _, want := range []string{"node-2:gpu-9", "rejected", "Scheduling the app to this node will cause overload", "node-1:gpu-0"} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("rejected message %q missing %q", msg, want)
+		}
+	}
+	if strings.Contains(msg, "invalid") {
+		t.Fatalf("rejected message should not leak the generic %q bucket: %q", "invalid", msg)
+	}
+}
+
+func TestBindingRejectReason(t *testing.T) {
+	const gib = int64(1) << 30
+	cases := []struct {
+		name string
+		p    *computeBindingPrompt
+		want string
+	}{
+		{
+			name: "localized device-vram-insufficient (Code, not Reason)",
+			p: &computeBindingPrompt{Validation: &computeBindingValidation{
+				OK: false, Code: "device-vram-insufficient:gpu-0", Reason: "invalid",
+			}},
+			want: msgDeviceVRAMInsufficient,
+		},
+		{
+			name: "aggregate-vram-insufficient",
+			p: &computeBindingPrompt{Validation: &computeBindingValidation{
+				OK: false, Code: "aggregate-vram-insufficient", Reason: "invalid",
+			}},
+			want: msgAggregateVRAMInsufficient,
+		},
+		{
+			name: "structural code surfaces raw code, not invalid",
+			p: &computeBindingPrompt{Validation: &computeBindingValidation{
+				OK: false, Code: "gpu-type-mismatch", Reason: "invalid",
+			}},
+			want: "gpu-type-mismatch",
+		},
+		{
+			name: "node-pressure without dimensions falls back to base sentence",
+			p: &computeBindingPrompt{Validation: &computeBindingValidation{
+				OK: false, Code: "node-pressure:olares", Reason: "invalid",
+			}},
+			want: msgNodePressure,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := bindingRejectReason(tc.p); got != tc.want {
+				t.Fatalf("bindingRejectReason = %q, want %q", got, tc.want)
+			}
+		})
+	}
+
+	// node-pressure WITH a pressured dimension lists the per-resource breakdown
+	// (memory in Gi, cpu in cores), mirroring the SPA dialog.
+	withDims := &computeBindingPrompt{Validation: &computeBindingValidation{
+		OK: false, Code: "node-pressure:olares", Reason: "invalid",
+		NodePressure: &computeNodePressure{
+			NodeName: "olares",
+			Dimensions: []computePressureDimension{
+				{Resource: "memory", Capacity: 32 * gib, Used: 30 * gib, Required: 4 * gib, Pressured: true},
+				{Resource: "cpu", Capacity: 8000, Used: 7000, Required: 2000, Pressured: false}, // not pressured -> skipped
+			},
+		},
+	}}
+	got := bindingRejectReason(withDims)
+	for _, want := range []string{msgNodePressure, "Memory: Total 32 Gi, Used 30 Gi, Needed 4 Gi"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("node-pressure detail %q missing %q", got, want)
+		}
+	}
+	if strings.Contains(got, "CPU:") {
+		t.Fatalf("non-pressured cpu dimension should be skipped: %q", got)
+	}
+}
+
+func TestParseComputeBindingFlags(t *testing.T) {
+	got, err := parseComputeBindingFlags([]string{"node-1:gpu-0", "node-1:gpu-1:8", "node-1:gpu-2:512Mi"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []BindingSelection{
+		{NodeName: "node-1", DeviceID: "gpu-0"},
+		{NodeName: "node-1", DeviceID: "gpu-1", Memory: 8 * giBytes},
+		{NodeName: "node-1", DeviceID: "gpu-2", Memory: 512 * miBytes},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("parseComputeBindingFlags = %#v, want %#v", got, want)
+	}
+
+	for _, bad := range []string{"nodeonly", "node:dev:8:extra", "node::8", ":dev", "node-1:gpu-0:notanumber", "node-1:gpu-0:-3"} {
+		if _, err := parseComputeBindingFlags([]string{bad}); err == nil {
+			t.Fatalf("expected error for %q, got nil", bad)
+		}
+	}
+
+	if got, err := parseComputeBindingFlags(nil); err != nil || got != nil {
+		t.Fatalf("nil input: got (%#v, %v), want (nil, nil)", got, err)
+	}
+}
+
+func TestParseBindingMemory(t *testing.T) {
+	cases := []struct {
+		in   string
+		want int64
+	}{
+		{"8", 8 * giBytes},       // bare number defaults to Gi
+		{"8Gi", 8 * giBytes},     // explicit Gi
+		{"8gi", 8 * giBytes},     // case-insensitive suffix
+		{"1.5", 3 * giBytes / 2}, // fractional Gi
+		{"512Mi", 512 * miBytes}, // Mi suffix
+		{"512mi", 512 * miBytes},
+		{" 4 Gi ", 4 * giBytes}, // surrounding / inner whitespace tolerated
+	}
+	for _, tc := range cases {
+		got, err := parseBindingMemory(tc.in)
+		if err != nil || got != tc.want {
+			t.Fatalf("parseBindingMemory(%q) = (%d, %v), want (%d, nil)", tc.in, got, err, tc.want)
+		}
+	}
+	for _, bad := range []string{"", "0", "-1", "abc", "Gi", "8Ti", "8 GB"} {
+		if _, err := parseBindingMemory(bad); err == nil {
+			t.Fatalf("expected error for %q", bad)
+		}
+	}
+}

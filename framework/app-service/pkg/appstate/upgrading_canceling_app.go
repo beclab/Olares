@@ -7,6 +7,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,8 +46,14 @@ func (p *UpgradingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp
 	klog.Infof("execute upgrading cancel operation appName=%s", p.manager.Spec.AppName)
 	err = p.imageClient.UpdateStatus(ctx, p.manager.Name, appsv1.DownloadingCanceled.String(), appsv1.DownloadingCanceled.String())
 	if err != nil {
-		klog.Errorf("update im name=%s to downloadingCanceled state failed %v", p.manager.Name, err)
-		return nil, err
+		// IM may has been cleaned up.
+		// Treat as already canceled and continue so the AM proceeds to
+		// Stopping instead of getting pinned in UpgradingCancelFailed.
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("update im name=%s to downloadingCanceled state failed %v", p.manager.Name, err)
+			return nil, err
+		}
+		klog.Infof("im name=%s not found while canceling upgrade, treating as already canceled", p.manager.Name)
 	}
 
 	if ok := appFactory.cancelOperation(p.manager.Name); !ok {

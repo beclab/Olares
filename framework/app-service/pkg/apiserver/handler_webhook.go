@@ -323,6 +323,29 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		UID:     req.UID,
 	}
 
+	// cleanupAndReturn emits remove patches for any GPU-related fields the
+	// gpu-limit webhook may have injected on a prior install/upgrade. We
+	// call this on every "no GPU injection" branch below, so that Helm 3-way
+	// strategic merge can drop the previously-injected GPU keys (otherwise
+	// they survive as "live-only" fields because the chart template never
+	// declared them).
+	cleanupAndReturn := func() *admissionv1.AdmissionResponse {
+		if tpl == nil {
+			return resp
+		}
+		patchBytes, cleanupErr := webhook.CreateCleanupPatchForDeployment(tpl)
+		if cleanupErr != nil {
+			klog.Errorf("create gpu cleanup patch error %v", cleanupErr)
+			return h.sidecarWebhook.AdmissionError(req.UID, cleanupErr)
+		}
+		if len(patchBytes) > 0 {
+			klog.Infof("[gpu-limit] emitting cleanup patch namespace=%s name=%s kind=%s patch=%s",
+				req.Namespace, req.Name, req.Kind.Kind, string(patchBytes))
+			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+		}
+		return resp
+	}
+
 	_, appcfg, _, err := h.sidecarWebhook.GetAppConfig(req.Namespace)
 	if err != nil {
 		klog.Error(err)
@@ -341,13 +364,19 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 
 	computeReq, ok := compute.SelectedRequirement(appcfg)
 	if !ok {
-		return resp
+		// app declares no compute resource mode at all (e.g., legacy app
+		// dropped its GPU declaration). Clean up any stale GPU keys.
+		return cleanupAndReturn()
 	}
 	GPUType := computeReq.Mode
+	if computeReq.RequiredGPU == 0 {
+		return cleanupAndReturn()
+	}
 
-	// no gpu found, no need to inject env, just return.
+	// app is CPU-only (no GPU mode selected). Clean up any GPU keys that
+	// might still be on the live workload from a previous GPU-mode install.
 	if GPUType == "" || GPUType == utils.CPUType {
-		return resp
+		return cleanupAndReturn()
 	}
 
 	var injectContainer []string

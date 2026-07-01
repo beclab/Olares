@@ -48,8 +48,16 @@ func NewDownloadingCancelingApp(c client.Client,
 func (p *DownloadingCancelingApp) exec(ctx context.Context) error {
 	err := p.imageClient.UpdateStatus(ctx, p.manager.Name, appsv1.DownloadingCanceled.String(), appsv1.DownloadingCanceled.String())
 	if err != nil {
-		klog.Errorf("update im name=%s to downloadingCanceled state failed %v", p.manager.Name, err)
-		return err
+		// Im may has already been cleaned up. In either case there is nothing to mark as canceled on the IM
+		// side and the cancel must still continue with namespace cleanup and
+		// the transition to DownloadingCanceled; otherwise the AM gets pinned
+		// in DownloadingCancelFailed (which only re-enters DownloadingCanceling
+		// and would hit the same NotFound again).
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("update im name=%s to downloadingCanceled state failed %v", p.manager.Name, err)
+			return err
+		}
+		klog.Infof("im name=%s not found while canceling download, treating as already canceled", p.manager.Name)
 	}
 	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
 		klog.Errorf("app %s operation is not ", p.manager.Name)
