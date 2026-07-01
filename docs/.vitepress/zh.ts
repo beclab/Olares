@@ -232,6 +232,8 @@ const side = {
             {
               text: "使用公共目录",
               link: "/zh/manual/olares/files/files-common",
+              text: "压缩与解压缩文件",
+              link: "/zh/manual/olares/files/compress-extract-files",
             },
             //{
             //   text: "同步与共享",

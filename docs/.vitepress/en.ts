@@ -234,6 +234,8 @@ const side = {
             {
               text: "Use Common directory",
               link: "/manual/olares/files/files-common",
+              text: "Compress and extract files",
+              link: "/manual/olares/files/compress-extract-files",
             },
             //   {
             //      text: "Sync and share",
