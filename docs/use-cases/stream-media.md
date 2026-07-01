@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Jellyfin, media server, self-hosted streaming, overlay gateway, DLNA, TV casting
-app_version: "1.0.17"
+app_version: "1.0.19"
 doc_version: "1.1"
-doc_updated: "2026-06-29"
+doc_updated: "2026-07-01"
 ---
 
 # Build your private media server with Jellyfin
@@ -140,12 +140,12 @@ Since each plugin behaves differently, check the plugin's **GitHub repository** 
 
 Overlay gateway assigns a local IP to Jellyfin so TVs on the same local network can find it to play media directly or use DLNA casting.
 
-:::warning Use only on trusted local networks
-Overlay gateway exposes Jellyfin directly on your local network so TVs and DLNA-capable devices can discover it. This bypasses Olares's usual access protection for Jellyfin, so enable it only when you need TV discovery or DLNA casting.
+:::warning Use a trusted network
+Overlay gateway exposes Jellyfin directly on your local network. Enable it only in a trusted network environment when you need TV discovery or DLNA casting.
 :::
 
 :::info Network requirements
-Connect your Olares device through wired Ethernet, and keep your TV on the same trusted local network while setting up and playing media.
+Connect your Olares device through wired Ethernet, and keep your TV on the same local network while setting up and playing media.
 :::
 
 ### Enable overlay gateway for Jellyfin
