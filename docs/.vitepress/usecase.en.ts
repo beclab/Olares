@@ -253,6 +253,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/litellm",
                 },
                 {
+                  text: "LLM Gateway",
+                  link: "/use-cases/llm-gateway",
+                },
+                {
                   text: "TensorZero",
                   link: "/use-cases/tensorzero",
                 },
