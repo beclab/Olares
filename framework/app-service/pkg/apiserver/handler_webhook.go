@@ -369,7 +369,14 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		return cleanupAndReturn()
 	}
 	GPUType := computeReq.Mode
-	if computeReq.RequiredGPU == 0 {
+	// A zero RequiredGPU means "app dropped its GPU need" ONLY for nvidia
+	// discrete/HAMi mode (installed with requiredGpu>0, then upgraded to 0),
+	// so we clean up the previously-injected GPU keys. The unified-memory
+	// modes (nvidia-gb10/amd/intel/apple-m/moore-soc) legitimately carry
+	// RequiredGPU==0 by design (their manifests must not declare requiredGpu),
+	// and must still fall through to be injected (gb10 -> nvidia.com/gpu) or
+	// get their nodeSelector, so they must NOT be cleaned up here.
+	if computeReq.RequiredGPU == 0 && GPUType == utils.NvidiaCardType {
 		return cleanupAndReturn()
 	}
 
