@@ -232,8 +232,6 @@ const side = {
               link: "/manual/olares/files/add-edit-download",
             },
             {
-              text: "Use Common directory",
-              link: "/manual/olares/files/files-common",
               text: "Compress and extract files",
               link: "/manual/olares/files/compress-extract-files",
             },
@@ -256,6 +254,10 @@ const side = {
             {
               text: "Mount cloud storage",
               link: "/manual/olares/files/mount-cloud-storage",
+            },
+            {
+              text: "Use Common directory",
+              link: "/manual/olares/files/files-common",
             },
           ],
         },

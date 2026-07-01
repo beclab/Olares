@@ -230,8 +230,6 @@ const side = {
               link: "/zh/manual/olares/files/add-edit-download",
             },
             {
-              text: "使用公共目录",
-              link: "/zh/manual/olares/files/files-common",
               text: "压缩与解压缩文件",
               link: "/zh/manual/olares/files/compress-extract-files",
             },
@@ -254,6 +252,10 @@ const side = {
             {
               text: "挂载云存储",
               link: "/zh/manual/olares/files/mount-cloud-storage",
+            },
+            {
+              text: "使用公共目录",
+              link: "/zh/manual/olares/files/files-common",
             },
           ],
         },
