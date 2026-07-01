@@ -8,6 +8,7 @@ Every **Olares Application Chart** should include an `OlaresManifest.yaml` file 
 
 :::info NOTE
 Latest Olares Manifest version: `0.12.0`
+- Requires Olares OS version 1.12.6 or later
 - **Template rendering is no longer supported**: `OlaresManifest.yaml` must not use  <code v-pre>{{ ... }}</code> or other template rendering functions.
 - Modified valid values for the `apiVersion` field: added `v3`; the original `v2` format will no longer be supported in Olares OS 1.12.6.
 - Added `options.shared` field to indicate shared applications
@@ -21,7 +22,7 @@ Latest Olares Manifest version: `0.12.0`
 :::
 
 :::tip Upgrading to Manifest 0.12.0
-If you maintain an existing app chart, pay special attention to apiVersion, workloadReplicas, and permission.externalData before upgrading. These fields contain breaking changes or new mandatory requirements that may require updates to your existing configurations.
+If you maintain an existing app chart, pay special attention to `apiVersion`, `workloadReplicas`, and `permission.externalData` before upgrading. These fields contain breaking changes or new mandatory requirements that may require updates to your existing configurations.
 :::
 
 :::details Changelog
@@ -67,8 +68,13 @@ Here's an example of what a `OlaresManifest.yaml` file might look like:
 ::: details OlaresManifest.yaml Example
 
 ```yaml
-olaresManifest.version: '0.10.0'
+olaresManifest.version: '0.12.0'
 olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  helloworld: 1
+
 metadata:
   name: helloworld
   title: Hello World
@@ -76,7 +82,8 @@ metadata:
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
   version: 0.0.1
   categories:
-  - Utilities
+  - AI
+
 entrances:
 - name: helloworld
   port: 8080
@@ -84,13 +91,25 @@ entrances:
   host: helloworld
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
   authLevel: private
+  openMethod: default
+
+sharedEntrances:
+- name: helloworld
+  host: sharedentrances-api
+  port: 0
+  title: Hello World API
+  invisible: true
+  authLevel: internal
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
+
 permission:
   appCache: true
   appData: true
+  appCommon: true
   userData:
   - Home/Documents/
-  - Home/Pictures/
-  - Home/Downloads/BTDownloads/
+  externalData: true
+  
 spec:
   versionName: '0.0.1'
   featuredImage: https://link.to/featured_image.webp
@@ -106,33 +125,52 @@ spec:
   sourceCode: https://link.to.sourceCode
   submitter: Submitter's Name
   locale:
-  - en
+  - en-US
+  - zh-CN
   doc: https://link.to.documents
   supportArch:
   - amd64
-  limitedCpu: 1000m
-  limitedMemory: 1000Mi
-  requiredCpu: 50m
-  requiredDisk: 50Mi
-  requiredMemory: 12Mi
+  - arm64
+  onlyAdmin: true
+
+  accelerator:
+  - mode: nvidia
+    requiredCpu: "1"
+    limitedCpu: "7"
+    requiredMemory: 13Gi
+    limitedMemory: 34Gi
+    requiredDisk: 36Gi
+    limitedDisk: 100Gi
+    requiredGPUMemory: 12Gi
+    limitedGPUMemory: 24Gi
+  - mode: cpu  
+    requiredCpu: 50m
+    limitedCpu: 1000m
+    requiredMemory: 12Mi
+    limitedMemory: 1000Mi
+    requiredDisk: 50Mi
+    limitedDisk: 100Gi
 
 options:
   dependencies:
   - name: olares
     type: system
-    version: '>=0.1.0'
+    version: '>=1.12.6-0'
+  shared: true
+  apiTimeout: 0
+  conflicts:
+    - name: conflictapp
+      type: application
+
+envs:
+  - envName: USERNAME
+    required: true
+    type: string
+    editable: true
+    applyOnChange: true
+    description: 'default username'
+    regex: '^[\w\-!@#$%^&*()+={}\[\]:,.?~]{6,}$'
 ```
-:::
-
-## olaresManifest.type
-
-- Type: `string`
-- Accepted Value: `app`, `middleware`
-
-Olares currently supports 2 types of applications, each requiring different fields. This document uses `app` as an example to explain each field.
-
-:::info
-The `recommend` type is no longer included in the latest OlaresManifest specification.
 :::
 
 ## olaresManifest.version
@@ -142,35 +180,44 @@ The `recommend` type is no longer included in the latest OlaresManifest specific
 As Olares evolves, the configuration specification of `OlaresManifest.yaml` may change. You can identify whether these changes will affect your application by checking the `olaresManifest.version`. The `olaresManifest.version` consists of three integers separated by periods.
 
 - An increase in the **first digit** indicates the introduction of incompatible configuration items. Applications that haven't updated their `OlaresManifest.yaml` will be unable to distribute or install.
-- An increase in the **second digit** signifies changes in the mandatory fields for distribution and installation. However, the Olares remains compatible with the application distribution and installation of previous configuration versions. We recommend developers to promptly update and upgrade the application's `OlaresManifest.yaml` file.
+- An increase in the **second digit** signifies changes in the mandatory fields for distribution and installation. However, Olares remains compatible with application distribution and installation of previous configuration versions. We recommend developers promptly update and upgrade the application's `OlaresManifest.yaml` file.
 - A change in the **third digit** does not affect the application's distribution and installation.
 
-Developers can use 1-3 digit version numbers to indicate the application's configuration version. Here are some examples of valid versions:
+Please use a 3 digit version numbers to indicate the application's configuration version. Here are some examples of valid versions:
 ```yaml
-olaresManifest.version: 1
-olaresManifest.version: 1.1.0
-olaresManifest.version: '2.2'
-olaresManifest.version: "3.0.122"
+olaresManifest.version: 0.1.0
+olaresManifest.version: '0.1.2'
+olaresManifest.version: "0.12.0"
 ```
+
+## olaresManifest.type
+
+- Type: `string`
+- Accepted Value: `app`, `middleware`
+
+Olares currently supports 2 types of applications, which differ in certain fields. This document uses the `app` type as an example to explain each field.
+
+:::info
+The `recommend` type is no longer included in the latest OlaresManifest specification.
+:::
+
 ## apiVersion
 - Type: `string`
-- Optional
 - Accepted Value: `v1`, `v3`
 - Default: `v1`
 
-For shared applications, use version `v3`, which will be installed in the `<appname>-shared` namespace. For other applications, use `v1`.
+Starting from `olaresManifest.version: '0.12.0'`, `apiVersion` is upgraded to `v3`, adopting a new resource declaration and shared application configuration format, and removing OlaresManifest template rendering. If this field is omitted, it defaults to `v1`.
 
-:::warning Deprecation notice
+Olares OS 1.12.6 supports installation of both `v1` and `v3` format applications, but no longer supports `v2` format shared application installation. 
+
+:::warning `apiVersion: 'v2'` deprecation
 - `apiVersion: 'v2'` is used for shared applications in Olares OS 1.12.5 and earlier, and will be gradually discontinued after 1.12.6.
-- In Olares OS 1.12.6:
-  - If `apiVersion` is missing, it will be parsed as `v1`.
-  - If `apiVersion: 'v2'`, the app will be rejected as incompatible and cannot be installed.
-  - If `apiVersion: 'v1'`, it will be parsed following 1.12.5 behavior.
-- When `options.shared: true`, `apiVersion` must be set to `'v3'`.
-- Please migrate shared applications to `v3` as soon as possible.
+- After upgrading to Olares OS 1.12.6:
+  - Already installed `apiVersion: 'v2'` applications are unaffected and can continue to be used, but cannot be upgraded further. We recommend migrating to shared applications with `apiVersion: 'v3'` as soon as possible.
+  - Applications with `apiVersion: 'v2'` are no longer shown in the Market and cannot be installed.
 :::
 
-## Metadata
+## metadata
 
 Basic information about the app shown in the system and Olares Market.
 
@@ -183,8 +230,8 @@ metadata:
   icon: https://app.cdn.olares.com/appstore/nextcloud/icon.png
   version: 0.0.2
   categories:
-  - Utilities
-  - Productivity
+  - Utilities_v112
+  - Productivity_v112
 ```
 :::
 
@@ -611,6 +658,8 @@ When set to `true`, Olares forces the application to run under user ID `1000` (a
 ### accelerator
 - Type: `map`
 - Optional
+
+Declares GPU resources required by the application. For GPU apps, use the `spec.accelerator` field to declare resources; do not include the original root-level fields such as `spec.requiredMemory`.
 
 Declares GPU or hardware accelerator resources required by the application. Use this field for accelerator-aware apps, such as LLMs, image generation, video processing, or AI model serving.
 
@@ -1064,9 +1113,7 @@ When set to `true`, indicates this is a shared application. When `options.shared
 - Default: `false`
 - Optional
 
-When set to `true`, this application is marked as a template app. The app cannot be installed directly. An instance must be created before installation. If this option is enabled, `allowMultipleInstall` must also be set to `true`.
-
-When set to `true`, this application is marked as a template and cannot be installed directly. An instance must be created before use. Because a template app is designed to spawn multiple instances, `allowMultipleInstall` must also be set to true.
+When set to `true`, this application is marked as a template and cannot be installed directly. An instance must be created before use. Because a template app is designed to spawn multiple instances, `allowMultipleInstall` must also be set to `true`.
 
 ### LLMGatewaySupported
 - Type: `boolean`
@@ -1079,7 +1126,7 @@ When set to `true`, the application supports LLM Gateway calls. Mainly used for 
 - Type: `map`
 - Optional
 
-Declares the app's support for L2 overlay LAN discovery, enabling other apps to access it via an IP address in the local network. This is typically used for media servers or local network services.
+Declares the app's support for L2 overlay LAN discovery. When enabled, other apps can access this app via an IP address in the local network.
 :::info Example
 ```yaml
 overlayGateway:
@@ -1172,4 +1219,6 @@ The following fields are deprecated in OlaresManifest 0.12.0. Apps containing th
 | `options.appScope` (when `options.shared: true`) | Use `apiVersion: 'v3'` |
 | OS 1.11 categories: `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity` | Use OS 1.12 categories |
 
+
+metadata.appid
 
