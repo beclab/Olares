@@ -131,6 +131,10 @@ options:
 
 Olares 市场目前支持 2 种类型的应用，各自对应不同场景。本文档以 "app" 为例来解释各个字段。
 
+:::info
+`recommend` 类型已不再包含在最新的 OlaresManifest 规范中。
+:::
+
 ## olaresManifest.version
 
 - 类型：`string`
@@ -457,7 +461,8 @@ permission:
 - 默认值：`false`
 - 可选
 
-是否需要对 `App Common` 目录(跨节点跨应用共享的文件，例如模型文件)进行读写权限。在部署 yaml 文件中使用 `.Values.userspace.appCommon` 获取 App Common 目录地址。
+应用是否需要对 `App Common` 目录的读写权限。设置为 true 时，应用可以访问多个应用或节点间共享的文件（如 AI 模型等）。在部署 YAML 中可通过 `.Values.userspace.appCommon` 获取 App Common 目录的路径。
+
 
 ### externalData
 
@@ -465,7 +470,11 @@ permission:
 - 默认值：`false`
 - 可选
 
-是否需要 `External` 目录的读写权限，通常用于访问挂载的 NAS 或其他外部磁盘数据。0.11.0 版本的应用默认开启External权限，升级到0.12.0后，需要添加此字段显性声明。
+应用是否需要对 `External` 目录（通常用于访问挂载的 NAS 或其他外部磁盘数据）进行读写权限。
+
+:::warning
+从 Manifest 0.12.0 版本开始，externalData 权限默认不会开启。如果您的应用需要访问挂载的 NAS 或外部磁盘，必须显式声明 externalData: true。若未声明，将无法获得该权限。
+:::
 
 ### userData
 
@@ -606,6 +615,18 @@ Olares 目前不支持混合架构的集群。
 
 声明应用所需的 GPU 资源。需要 GPU 的应用，使用 `spec.accelerator` 字段声明资源，不能包含原来的 `spec.requiredMemory` 等字段。
 
+声明应用所需的 GPU 或硬件加速资源。对于需要加速能力的应用（如大语言模型、图像生成、视频处理或人工智能模型服务等），应使用此字段进行声明。
+
+:::info 提示
+当使用 accelerator 字段时，所有相关的资源需求（CPU、内存、磁盘、GPU 显存等）都必须在该字段内部进行声明，而不能再依赖于 spec.requiredMemory 或 spec.requiredCpu 这些根级别字段。
+:::
+
+支持的模式
+
+nvidia、nvidia-gb10、apple-m、strix-halo：适用于特定的 GPU/NPU 硬件。
+cpu：用于兜底，或在支持加速的应用中强制只使用 CPU 计算。
+
+
 :::info 示例
 ```yaml
 spec:
@@ -634,21 +655,30 @@ spec:
 
 ## workloadReplicas
 - 类型： `map`
-- 可选
 
 声明 chart 中所有 workload 的副本数。从 0.12.0 开始，应用需要在 OlaresManifest 里添加变量，声明 chart 中所有 workload 的副本数量。
-:::info 示例
-```yaml
+
+在 `workloadReplicas` 中指定的 workload 名称必须与 `values.yaml` 文件下 `workloads` 中对应的 workload 名称完全一致。这样做是为了保证向后兼容。
+:::info OlaresManifest.yaml
+```yaml 
 workloadReplicas:
   affine: 1
 ```
 :::
-对应的 `values.yaml` 中也必须填入这个值（用于旧版本兼容）：
+:::info values.yaml
 ```yaml
 workloads:
   affine:
     replicaCount: 1
 ```
+:::
+部署时，请确保引用该值来设置每个 workload 的副本数量。
+:::info deployment.yaml
+```yaml 
+spec:
+  replicas: {{ .Values.workloads.affine.replicaCount }}
+```
+:::
 
 ## Middleware
 - 类型：`map`
@@ -1034,7 +1064,7 @@ allowedOutboundPorts:
 - 默认值： `false`
 - 可选
 
-设置为 `true` 时，表示应用为模板应用，不存在可安装本体，只能创建一个实例后再安装该实例。启用此项时，allowMultipleInstall 必须为`true`。
+设置为 `true` 时，应用会被标记为模板应用，无法直接安装，必须先创建一个实例后才能使用。由于模板应用主要用于生成多个实例，因此 `allowMultipleInstall` 也必须设为 `true`。
 
 ### LLMGatewaySupported
 - 类型： `boolean`

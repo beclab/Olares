@@ -131,6 +131,10 @@ options:
 
 Olares currently supports 2 types of applications, each requiring different fields. This document uses `app` as an example to explain each field.
 
+:::info
+The `recommend` type is no longer included in the latest OlaresManifest specification.
+:::
+
 ## olaresManifest.version
 
 - Type: `string`
@@ -458,7 +462,7 @@ Whether the app requires read and write permission to the `Data` folder. If `.Va
 - Default: `false`
 - Optional
 
-Whether the app requires read and write permission to the `App Common` folder (cross-node, cross-app shared files, such as models). Use `.Values.userspace.appCommon` in the deployment YAML to get the App Common directory path.
+Whether the app requires read and write permission to the `App Common` folder. When set to true, the app can access files shared across multiple apps or nodes, such as AI models. Use `.Values.userspace.appCommon` in the deployment YAML to get the App Common directory path.
 
 ### externalData
 
@@ -466,7 +470,11 @@ Whether the app requires read and write permission to the `App Common` folder (c
 - Default: `false`
 - Optional
 
-Whether the app requires read and write permission to the `External` directory, typically used for accessing mounted NAS or other external disk data. In version 0.11.0, applications have External access enabled by default. Starting from version 0.12.0, you need to explicitly declare this field.
+Whether the app requires read and write permission to the `External` directory, typically used for accessing mounted NAS or other external disk data.
+
+:::warning
+Starting from Manifest 0.12.0, external access is no longer enabled by default. If your app needs access to mounted NAS or external disks, you must explicitly set externalData: true. If omitted, permission will be denied.
+:::
 
 ### userData
 
@@ -604,7 +612,16 @@ When set to `true`, Olares forces the application to run under user ID `1000` (a
 - Type: `map`
 - Optional
 
-Declares GPU resources required by the application. For apps that need GPU, use `spec.accelerator` to declare resources instead of `spec.requiredMemory` or similar fields.
+Declares GPU or hardware accelerator resources required by the application. Use this field for accelerator-aware apps, such as LLMs, image generation, video processing, or AI model serving.
+
+:::info NOTE
+When accelerator is used, all related resource requirements (CPU, memory, disk, and GPU memory) must be declared inside this block, instead of relying on the root-level spec.requiredMemory or spec.requiredCpu fields.
+:::
+
+Supported Modes:
+
+nvidia, nvidia-gb10, apple-m, strix-halo: For specific GPU/NPU hardware.
+cpu: Used as a fallback or to explicitly force CPU-only computation in accelerator-aware applications.
 
 :::info Example
 ```yaml
@@ -634,22 +651,31 @@ spec:
 
 ## workloadReplicas
 - Type: `map`
-- Optional
 
 Declares the replica count for each workload in the chart. Starting from 0.12.0, apps must add this variable in `OlaresManifest.yaml` to declare replica counts for all workloads.
 
-:::info Example
-```yaml
+
+The workload name specified in `workloadReplicas` must exactly match the corresponding workload name under `workloads` in `values.yaml`. This inclusion is required for backward compatibility.
+:::info OlaresManifest.yaml
+```yaml 
 workloadReplicas:
   affine: 1
 ```
 :::
-The corresponding `values.yaml` must also include this value for backward compatibility:
+:::info values.yaml
 ```yaml
 workloads:
   affine:
     replicaCount: 1
 ```
+:::
+When deploying, be sure to reference this value to set the number of replicas for each workload.
+:::info deployment.yaml
+```yaml 
+spec:
+  replicas: {{ .Values.workloads.affine.replicaCount }}
+```
+:::
 
 ## Middleware
 - Type: `map`
@@ -1039,6 +1065,8 @@ When set to `true`, indicates this is a shared application. When `options.shared
 - Optional
 
 When set to `true`, this application is marked as a template app. The app cannot be installed directly. An instance must be created before installation. If this option is enabled, `allowMultipleInstall` must also be set to `true`.
+
+When set to `true`, this application is marked as a template and cannot be installed directly. An instance must be created before use. Because a template app is designed to spawn multiple instances, `allowMultipleInstall` must also be set to true.
 
 ### LLMGatewaySupported
 - Type: `boolean`
