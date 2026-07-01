@@ -20,7 +20,7 @@ Olares ID 只能在 LarePass 移动端创建。
 ## 创建 Olares ID
 
 1. 在 LarePass 应用中，点击**创建账户**。
-2. 输入你想要的用户名，至少 8 个字符，仅支持小写字母和数字。
+2. 输入你想要的用户名，长度为 8-24 个字符，仅支持小写字母和数字。
 3. 点击**继续**完成创建。
 
    ![创建 Olares ID](/images/manual/larepass/create-olares-id1.png#bordered)

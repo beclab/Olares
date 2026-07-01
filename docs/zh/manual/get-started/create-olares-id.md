@@ -30,11 +30,11 @@ Olares ID 由本地名称和域名两部分组成。以 `alice123@olares.cn` 为
 1. 打开 LarePass 应用，点击**创建账号**。
 2. 输入想要使用的 Olares ID。需要满足以下要求：
    * 之前从未被注册过
-   * 长度不少于 8 个字符
+   * 长度为 8-24 个字符
    * 仅可使用小写字母和数字
 3. 点击**继续**完成创建。
 
-![快速创建](/images/manual/get-started/create-olares-id.png)
+![快速创建](/images/manual/get-started/create-olares-id-1.12.6.png)
 
 ## 后续步骤
 
