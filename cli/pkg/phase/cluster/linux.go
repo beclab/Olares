@@ -111,6 +111,7 @@ func (l *linuxInstallPhaseBuilder) build() []module.Module {
 			return l.storage()
 		}).withJuiceFS(l.runtime)...).
 		addModule(&patch.CorrectHostnameModule{}).
+		addModule(&patch.PatchNfsScriptModule{}).
 		addModule(l.installCluster()...).
 		addModule(gpuModuleBuilder(func() []module.Module {
 			return l.installGpuPlugin()
