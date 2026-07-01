@@ -9,7 +9,7 @@ Every **Olares Application Chart** should include an `OlaresManifest.yaml` file 
 :::info NOTE
 Latest Olares Manifest version: `0.12.0`
 - **Template rendering is no longer supported**: `OlaresManifest.yaml` must not use `{{}}` or other template rendering functions.
-- Modified the `apiVersion` field: added support for `v3` shared applications; `v2` will be rejected in Olares OS 1.12.6.
+- Modified valid values for the `apiVersion` field: added `v3`; the original `v2` format will no longer be supported in Olares OS 1.12.6.
 - Added `options.shared` field to indicate shared applications
 - Added `spec.accelerator` field for GPU resource declaration
 - Added `workloadReplicas` field to declare all workload replica counts
@@ -17,8 +17,13 @@ Latest Olares Manifest version: `0.12.0`
 - Added `LLMGatewaySupported` in options for LLM Gateway support
 - Added `appCommon` and `externalData` permissions (both default to `false`)
 - Added `templateOnly` field to mark template-type applications
-
+- Removed [deprecated fields](#deprecated-fields-0120)
 :::
+
+:::tip Upgrading to Manifest 0.12.0
+If you maintain an existing app chart, pay special attention to apiVersion, workloadReplicas, and permission.externalData before upgrading. These fields contain breaking changes or new mandatory requirements that may require updates to your existing configurations.
+:::
+
 :::details Changelog
 `0.11.0`
 - Removed deprecated `sysData` field

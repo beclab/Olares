@@ -9,7 +9,7 @@ outline: [2, 3]
 :::info 提示
 最新的 Olares 系统使用的 Manifest 版本为： `0.12.0`
 - **不再支持模版渲染**：`OlaresManifest.yaml` 中不能使用 `{{}}` 等模板渲染函数
-- 修改 `apiVersion` 字段，增加 `v3` 共享应用，`v2` 将在 Olares OS 1.12.6 中被拒绝安装
+- 修改 `apiVersion` 字段有效值，增加`v3`，原 `v2` 格式将在 1.12.6 不再支持
 - 增加 `options.shared` 字段，用于标识共享应用
 - 增加 `spec.accelerator` 字段，用于 GPU 资源声明
 - 增加 `workloadReplicas` 字段，声明所有 workload 的副本数
@@ -17,8 +17,13 @@ outline: [2, 3]
 - 增加 `LLMGatewaySupported` 选项，支持 LLM Gateway
 - 增加 `appCommon` 和 `externalData` 权限（均默认为 `false`）
 - 增加 `templateOnly` 字段，用于标记模版类应用
-
+- 移除 [已废弃字段](#废弃字段0120)
 :::
+
+:::tip 升级至 Manifest 0.12.0
+如果你正在维护已有的应用 Chart，在升级至新版本前，务必重点关注 apiVersion、workloadReplicas 以及 permission.externalData 这几个字段。它们涉及显著变更或新增的强制要求，可能需要你根据实际情况对现有配置进行适配和调整。
+:::
+
 :::details Changelog
 `0.11.0`
 - 移除已不支持的 `sysData` 配置项
