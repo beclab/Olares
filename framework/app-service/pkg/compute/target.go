@@ -123,6 +123,28 @@ func ShouldIncludeSharedServerForResume(ctx context.Context, c client.Client, ap
 	return false, nil
 }
 
+// SharedServerSuspended reports whether appConfig's v2 cluster-shared server
+// side is currently scaled to zero (all its shared-chart workloads suspended).
+// It returns false for apps that are not v2 cluster-shared, and false when the
+// shared namespace / workloads can't be found (nothing to reclaim).
+//
+// Unlike the AppStopAllKey annotation — which is consumed and deleted as soon
+// as the suspend op finishes — this reflects the live workload state, so
+// steady-state reconcilers (e.g. StoppedApp) can decide whether a shared
+// server's compute allocation is still in use or safe to release long after
+// the original stop request's annotation is gone. It is the stop-side mirror
+// of the check ShouldIncludeSharedServerForResume performs on resume.
+func SharedServerSuspended(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) (bool, error) {
+	if appConfig == nil || !appConfig.IsV2() || !appConfig.HasClusterSharedCharts() {
+		return false, nil
+	}
+	suspended, found, err := sharedServerSuspended(ctx, c, appConfig)
+	if err != nil {
+		return false, err
+	}
+	return found && suspended, nil
+}
+
 func sharedServerSuspended(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) (bool, bool, error) {
 	for _, chart := range appConfig.SubCharts {
 		if !chart.Shared {

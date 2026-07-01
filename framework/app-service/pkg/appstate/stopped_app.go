@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -62,9 +61,21 @@ func (p *StoppedApp) cleanupComputeAllocation(ctx context.Context) error {
 		klog.Errorf("unmarshal app config for compute cleanup of stopped app %s failed %v", p.manager.Spec.AppName, err)
 		return err
 	}
-	// Mirror SuspendingApp / SuspendFailedApp: stop-all also frees the shared
-	// server's allocation, a client-only stop must not.
-	stopServer := p.manager.Annotations[api.AppStopAllKey] == "true"
+	// Whether to also release the shared server's allocation. SuspendingApp /
+	// SuspendFailedApp read this from the AppStopAllKey annotation because they
+	// run while the original stop request is still in flight. StoppedApp is the
+	// steady-state handler and runs long after that annotation has been
+	// consumed and deleted (see suspendOrResumeApp in utils.go), so keying off
+	// it would always evaluate false and leak a stopped shared server's
+	// allocation. Instead decide from the live workload state: only reclaim the
+	// shared server's allocation once its workloads are actually scaled to zero
+	// — the stop-side mirror of ShouldIncludeSharedServerForResume. For
+	// non-shared apps this is false and EnsureAllocationsDeletedForComputeTarget
+	// still releases the app's own allocation.
+	stopServer, err := compute.SharedServerSuspended(ctx, p.client, &appCfg)
+	if err != nil {
+		return err
+	}
 	cleaned, err := compute.EnsureAllocationsDeletedForComputeTarget(ctx, p.client, &appCfg, stopServer)
 	if err != nil {
 		return err
