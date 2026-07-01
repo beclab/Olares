@@ -25,7 +25,6 @@ The Olares Market offers various ways to discover and browse applications.
 
 ![Market](/images/manual/olares/market-discover1.png#bordered)
 
-
 ### Browse by categories
 
 Upon launching the Market app, the **Discover** page serves as your central hub for exploration, organizing content into intuitive sections to guide your journey:
@@ -37,10 +36,10 @@ Upon launching the Market app, the **Discover** page serves as your central hub 
 You can also browse applications based on their functionality:
 * **Creativity**: Apps for creating and publishing digital content, from AI-generated art and 3D models to blogs and design projects.
 * **Productivity**: Apps for team collaboration, project management, data organization, and building custom AI-powered agents.
-* **Developer Tools**: Toolchain for the software development lifecycle, including code hosting, CI/CD, observability, and database management.
-* **Fun**: Self-hosted applications for entertainment and fun such as gaming, video streaming, and connecting with people. 
+* **Fun**: Self-hosted applications for entertainment and fun such as gaming, video streaming, and connecting with people.
 * **Lifestyle**: Self-hosted applications for managing your smart home, personal photo libraries, and AI identity.
-* **Utilities**: Tools for system management, file sharing, data backup, and running local AI models.
+* **Utilities**: Tools for system management, file sharing, data backup, and running local AI models. 
+* **Developer Tools**: Toolchain for the software development lifecycle, including code hosting, CI/CD, observability, and database management.
 * **AI**: Latest open-source LLMs and generative tools for text, audio, and 3D assets.
 
 ### Search using keywords 
@@ -51,17 +50,17 @@ To search an app in the market:
 2. In the **Manage** submenu on the left, click **Search**.
 3. Enter the keywords. The relevant results will appear as you type.
 
-![Search app](/images/manual/olares/search-app.png#bordered)
+    ![Search app](/images/manual/olares/search-app.png#bordered)
 
 ### Switch market source
 
-You can switch market sources to speed up browsing, searching, and downloading, or to install apps exclusive to a particular source. To switch market sources:
+You can switch market sources to speed up browsing, searching, and downloading, or to install apps exclusive to a particular source.
 
-1.  Open **Market**, and navigate to **My Olares** > **Settings** from the left sidebar.
+1.  Open **Market**, and navigate to **My Olares** > **Settings**.
 2.  Under **Market sources**, click **Add source** to add a new app source. The current official sources include:
     * Global: `https://api.olares.com/market`
     * China: `https://api.olares.cn/market`
-3.  Fill in the source name, URL, and description as required, then click **Confirm** to finish adding.
+3.  Fill in the source name, URL, and description as required, then click **Confirm**.
 4.  In the source list, select the target source to activate it. Wait for about 10 minutes for the store page to switch.
 
 :::info
@@ -72,11 +71,21 @@ Applications from different installation sources will generate corresponding tab
 
 To install an application from Market:
 
-1. Open Market from Dock or Launchpad.
-2. Navigate to the app you want, and click **Get**.
-3. When the operation button changes to **Install**, click it to start the installation.
-4. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
-5. Once finished, the button will change to **Open**.
+1. Open Market from the Dock or Launchpad.
+2. Find your target application, and double-click it to view its details.
+3. If the application supports multiple hardware accelerators, configure your deployment in the **RESOURCES** section:
+
+    ![Accelerator resources](/images/manual/olares/market-accelerator1.png#bordered)
+
+    a. Select your preferred computing resource from the drop-down list. For example, **NVIDIA GPU**, **NVIDIA GB10**, or **CPU**.
+
+    b. Review the **CPU**, **Memory**, **Required disk**, and **VRAM** requirements for the selected computing resource, and make sure your hardware meets them.
+
+4. Click **Get**.
+5. When the operation button changes to **Install**, click it.
+6. If prompted, confirm your hardware accelerator choice. The installation starts.
+7. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
+8. When the installation finishes, the button changes to **Open**.
 
 ### Install shared applications
 
