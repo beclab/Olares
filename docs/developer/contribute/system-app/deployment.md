@@ -196,7 +196,7 @@ spec:
                 fieldPath: status.podIP
       containers:
         - name: desktop
-          image: "aboveos/node-ts-dev"
+          image: "beclab/node20-ts-dev:1.0.1"
           imagePullPolicy: IfNotPresent
           ports:
             - name: port
