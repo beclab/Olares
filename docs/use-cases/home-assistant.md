@@ -87,7 +87,7 @@ After enabling the overlay gateway, configure Home Assistant to listen on the lo
 
 ## Add devices manually
 
-You can also add a device manually by entering its network details, whether it doesn't appear in the **Discovered** panel or you simply prefer to set it up yourself. This section uses a Dahua IP camera as an example.
+You can also add a device manually, whether it doesn't appear in the **Discovered** panel or you prefer to set it up yourself. This section uses a Dahua IP camera as an example.
 
 Before you start, make sure that:
 
