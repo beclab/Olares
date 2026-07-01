@@ -15,6 +15,11 @@ import (
 // apps stopped, mirroring OverlayGatewayPage's `!isStopped` guard.
 const appStateStopped = "stopped"
 
+// restartMinOlaresVersion is the first Olares line that exposes POST
+// /apps/restart. Restart shipped as part of the overlay feature set in 1.12.6;
+// on 1.12.5 the endpoint doesn't exist.
+const restartMinOlaresVersion = "1.12.6"
+
 func NewCmdMarketRestart(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
 	cmd := &cobra.Command{
@@ -25,15 +30,20 @@ func NewCmdMarketRestart(f *cmdutil.Factory) *cobra.Command {
 Source is implicit: restart acts on whichever per-user state row matches
 the app name, regardless of source (no -s flag exposed).
 
-The restart endpoint is version-agnostic (the SPA shares one body between
-resume and restart): POST /apps/restart with {app_name, source}. On
-Olares 1.12.6+ an app that uses a GPU/accelerator may need a device
+Requires Olares >= 1.12.6: POST /apps/restart is part of the overlay
+feature set introduced in 1.12.6 (the SPA shares one wire body between
+resume and restart: {app_name, source}). On 1.12.5 the command fails fast
+with a version error. An app that uses a GPU/accelerator may need a device
 selected; use --compute-binding <node>:<device>[:<mem>] (repeatable) to
-pin it, or answer the interactive prompt. On 1.12.5 --compute-binding is
-rejected.
+pin it, or answer the interactive prompt.
 
---watch blocks until the row settles back at 'running' (or one of the
-resumeFailed / resumingCanceled / resumingCancelFailed failure states).
+--watch blocks until the restart's stop-then-resume cycle actually
+completes. Because a finished restart looks identical to the app's
+pre-restart resting row ('running' with opType 'resume'), --watch
+captures the row's statusTime before the request and only reports success
+once the row is 'running' with a strictly newer statusTime. Failure is
+reported for either phase (stopFailed in the stop phase; resumeFailed /
+resumingCanceled / resumingCancelFailed in the resume phase).
 
 Examples:
   olares-cli market restart firefox                    # fire-and-forget; returns once backend accepts
@@ -60,32 +70,40 @@ func runRestart(opts *MarketOptions, appName string) error {
 
 	ctx := context.Background()
 
-	// Resolve the installed app's source: enforces the "only operate on an
-	// installed app" guard and yields the source the restart body needs
-	// (restart exposes no -s). The resolved source also sharpens --watch.
-	source, err := resolveInstalledSource(ctx, opts, mc, appName)
-	if err != nil {
+	// `market restart` posts to /apps/restart, which is part of the overlay
+	// feature set introduced in Olares 1.12.6 (the SPA shares one wire body
+	// between resume and restart). Older backends don't expose the endpoint,
+	// so fail fast with an actionable message instead of surfacing a confusing
+	// 404 from the POST below.
+	if err := requireRestartBackendVersion(ctx, opts); err != nil {
 		return opts.failOp("restart", appName, err)
 	}
 
-	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	// Resolve the installed app's row: enforces the "only operate on an
+	// installed app" guard and yields both the source the restart body needs
+	// (restart exposes no -s) and the row's current statusTime, which we
+	// capture as the --watch baseline BEFORE issuing the restart. A completed
+	// restart rests at `running, OpType=resume` — identical to this
+	// pre-restart row — so the watcher can only tell them apart by requiring
+	// a strictly-newer statusTime (see watchRestart / requireNewerThanBaseline).
+	row, err := resolveInstalledRow(ctx, mc, appName)
 	if err != nil {
 		return opts.failOp("restart", appName, err)
 	}
+	source := row.Source
+	baselineStatusTime := parseStatusTime(row.StatusTime)
 
-	// --compute-binding is a 1.12.6+ concept; reject it on 1.12.5.
+	// --compute-binding is a 1.12.6+ concept; the command is already gated to
+	// >= 1.12.6 above, so no separate 1.12.5 rejection is needed here.
 	bindings, err := parseComputeBindingFlags(opts.ComputeBinding)
 	if err != nil {
 		return opts.failOp("restart", appName, err)
 	}
-	if len(bindings) > 0 && !atLeast126 {
-		return opts.failOp("restart", appName, fmt.Errorf("--compute-binding requires Olares 1.12.6+; re-run without --compute-binding"))
-	}
 
 	resp, err := sendRestart(ctx, mc, appName, source, bindings)
-	// 1.12.6+: recover once from a computeBindingRequired / Unavailable 422,
-	// exactly as `market resume` does.
-	if err != nil && atLeast126 {
+	// Recover once from a computeBindingRequired / Unavailable 422, exactly as
+	// `market resume` does (restart is 1.12.6+, so this path always applies).
+	if err != nil {
 		if checkType, raw := parseFailedCheck(resp); isComputeBindingPrompt(checkType) {
 			if len(bindings) > 0 {
 				return opts.failOp("restart", appName, computeBindingRejected(raw, appName, bindings))
@@ -102,7 +120,35 @@ func runRestart(opts *MarketOptions, appName string) error {
 	}
 
 	result := newOperationResult(mc, "restart", appName, "", "", "restart requested", resp)
-	return runWithWatch(opts, mc, result, newWatchTarget(watchResume, appName, source))
+	target := newWatchTarget(watchRestart, appName, source)
+	target.baselineStatusTime = baselineStatusTime
+	return runWithWatch(opts, mc, result, target)
+}
+
+// requireRestartBackendVersion gates `market restart` on Olares >=
+// restartMinOlaresVersion. POST /apps/restart is part of the overlay feature
+// set that landed in 1.12.6; on 1.12.5 the endpoint doesn't exist and the call
+// would 404. Fail-closed (mirrors settings' RequireMinVersion / files'
+// requireArchiveBackendVersion): an undetectable version is rejected because
+// the feature provably doesn't exist on anything older, with --olares-version
+// as the escape hatch.
+func requireRestartBackendVersion(ctx context.Context, opts *MarketOptions) error {
+	ok, err := opts.factory.OlaresBackendAtLeast(ctx, restartMinOlaresVersion)
+	if err != nil {
+		return fmt.Errorf(
+			"market restart requires Olares >= %s (the overlay feature set), but the backend version could not be determined: %w; pass --%s <version> to set it manually (e.g. --%s %s)",
+			restartMinOlaresVersion, err, cmdutil.FlagOlaresVersion, cmdutil.FlagOlaresVersion, restartMinOlaresVersion)
+	}
+	if !ok {
+		got := "unknown"
+		if v, verr := opts.factory.OlaresBackendVersion(ctx); verr == nil && v != nil {
+			got = v.Original()
+		}
+		return fmt.Errorf(
+			"market restart requires Olares >= %s (the overlay feature set, incl. POST /apps/restart), but this backend is %s",
+			restartMinOlaresVersion, got)
+	}
+	return nil
 }
 
 // sendRestart posts the restart body ({app_name, source, computeBinding?}) to
