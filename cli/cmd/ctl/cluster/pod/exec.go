@@ -162,18 +162,19 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 		if !term.IsTerminal(int(os.Stdin.Fd())) || !term.IsTerminal(int(os.Stdout.Fd())) {
 			return fmt.Errorf("-t/--tty requires an interactive terminal; for non-interactive use run one-shot (drop -it and pass `-- CMD`)")
 		}
-		if len(opts.Command) == 0 {
-			opts.Command = []string{"sh"}
-		}
 		// Inject a prompt that names the target on every line so the user can
 		// always tell which pod/container this shell is attached to — even deep
 		// in scrollback (the kubelet doesn't expose the container name inside the
 		// container; only the pod name shows up as the hostname). This fires both
-		// when no command was given (default `sh`) and when the user explicitly
+		// when no command was given (default shell) and when the user explicitly
 		// asked for a bare login shell like `-- sh` / `-- bash`, since that's the
 		// common interactive case.
 		label := fmt.Sprintf("%s/%s/%s", p.Namespace, p.Pod, container)
-		opts.Command = injectPromptLabel(opts.Command, label)
+		if len(opts.Command) == 0 {
+			opts.Command = defaultInteractiveShell(label)
+		} else {
+			opts.Command = injectPromptLabel(opts.Command, label)
+		}
 		if err := clusteropts.ConfirmDestructive(os.Stderr, os.Stdin,
 			fmt.Sprintf("Open an interactive shell in %s/%s [container %s]?", p.Namespace, p.Pod, container),
 			p.AssumeYes); err != nil {
@@ -217,6 +218,17 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 		os.Exit(*res.ExitCode)
 	}
 	return nil
+}
+
+// defaultInteractiveShell builds the command used when the user runs `-it`
+// without an explicit `-- CMD`. It prefers `bash` (readline gives arrow-key
+// history and line editing) and falls back to `sh` when the image ships no
+// bash — many minimal images link /bin/sh to dash/busybox, which echoes
+// `^[[A` on the arrow keys instead of recalling history. The PS1 export names
+// the target and is inherited by whichever shell we finally exec.
+func defaultInteractiveShell(label string) []string {
+	return []string{"sh", "-c",
+		fmt.Sprintf("export PS1='[%s] $PWD $ '; if command -v bash >/dev/null 2>&1; then exec bash; else exec sh; fi", label)}
 }
 
 // injectPromptLabel wraps a bare interactive shell so its prompt always shows
