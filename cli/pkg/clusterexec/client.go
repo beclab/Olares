@@ -231,6 +231,26 @@ func RunInteractive(ctx context.Context, rp *credential.ResolvedProfile, token s
 		}
 	}()
 
+	// Keepalive: an idle interactive shell sends no data, so a proxy in the
+	// chain (edge nginx proxy_read_timeout, the rbac-proxy, or a load balancer)
+	// will eventually drop the "silent" connection. Periodic WS pings keep
+	// traffic flowing — each ping draws a server pong, which resets the
+	// upstream read timeout. gorilla's WriteControl is safe to call concurrently
+	// with the other writers, and incoming server pings are auto-ponged by the
+	// default handler inside ReadMessage.
+	go func() {
+		ticker := time.NewTicker(20 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				_ = conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(10*time.Second))
+			case <-done:
+				return
+			}
+		}
+	}()
+
 	go func() {
 		buf := make([]byte, 4096)
 		for {
