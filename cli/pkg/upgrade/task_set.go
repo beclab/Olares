@@ -590,6 +590,25 @@ func (w *waitForStatefulSetReady) Execute(_ connector.Runtime) error {
 	return nil
 }
 
+// newComputeFormatManifestVersion is the OlaresManifest (CfgFileVersion)
+// version from which apps declare their compute needs through the per-mode
+// resource matrix (spec.resources / accelerator) instead of the scalar
+// spec.requiredGpu. From this version on, SelectedGpuType is chosen
+// authoritatively by the install-time auto-selector.
+var newComputeFormatManifestVersion = semver.MustParse("0.12.0")
+
+// isNewComputeFormatManifest reports whether cfgFileVersion is a new-format
+// (>= 0.12.0) manifest. An empty or unparseable version is treated as legacy
+// (older manifests predate reliable CfgFileVersion stamping), so the legacy
+// backfill heuristics still apply to them.
+func isNewComputeFormatManifest(cfgFileVersion string) bool {
+	v, err := semver.NewVersion(strings.TrimSpace(cfgFileVersion))
+	if err != nil {
+		return false
+	}
+	return v.Compare(newComputeFormatManifestVersion) >= 0
+}
+
 type backfillAppGPUConfig struct {
 	common.KubeAction
 }
@@ -646,6 +665,19 @@ func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 		var appCfg appcfg.ApplicationConfig
 		if err := json.Unmarshal([]byte(am.Spec.Config), &appCfg); err != nil {
 			return errors.Wrapf(errors.WithStack(err), "failed to unmarshal config for applicationmanager %s", am.Name)
+		}
+
+		// The heuristics below are for legacy manifests only: they infer GPU
+		// need from the scalar spec.requiredGpu (appCfg.RequiredGPU) and fix up
+		// a SelectedGpuType that predates the compute model. New-format
+		// (>= 0.12.0) manifests declare GPU need in the per-mode resource
+		// matrix (spec.requiredGpu stays empty) and already carry an
+		// authoritative SelectedGpuType chosen by the install-time
+		// auto-selector. Running the requiredGpu-scalar heuristics against them
+		// would misread RequiredGPU == "" as "no GPU needed" and wrongly clear
+		// a correctly-selected GPU mode, so skip them entirely.
+		if isNewComputeFormatManifest(appCfg.CfgFileVersion) {
+			continue
 		}
 
 		modified := false
