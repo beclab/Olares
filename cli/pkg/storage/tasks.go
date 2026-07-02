@@ -281,6 +281,7 @@ func (t *RemoveJuiceFSFiles) Execute(runtime connector.Runtime) error {
 		"/usr/local/bin/juicefs",
 		"/etc/systemd/system/redis-server.service",
 		"/etc/systemd/system/juicefs.service",
+		MigrateStateFile,
 	}
 
 	for _, f := range files {

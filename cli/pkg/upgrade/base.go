@@ -109,6 +109,14 @@ func (u upgraderBase) UpdateReleaseFile() []task.Interface {
 			Name:   "UpdateReleaseFile",
 			Action: new(terminus.WriteReleaseFile),
 		},
+		&task.LocalTask{
+			Name:   "UpdatePreparedMarker",
+			Action: new(terminus.PrepareFinished),
+		},
+		&task.LocalTask{
+			Name:   "UpdateInstalledMarker",
+			Action: new(terminus.InstallFinished),
+		},
 	}
 }
 
