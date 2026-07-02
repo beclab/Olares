@@ -365,8 +365,12 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Upgrade notes",
+                  text: "Upgrade *Arrs",
                   link: "/use-cases/arrs-upgrade",
+                },
+                {
+                  text: "Upgrade download clients",
+                  link: "/use-cases/download-clients-upgrade",
                 },
               ]
             },

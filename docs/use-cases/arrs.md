@@ -19,7 +19,7 @@ By configuring connections between these tools, they communicate with each other
 ## Learning objectives
 
 In this guide, you will learn how to:
-- Install the *Arrs applications.
+- Install the *Arr applications.
 - Get the internal entrance URL of the *Arr apps in Olares.
 - Connect qBittorrent to Sonarr as a download client.
 - Connect Prowlarr to Sonarr as an indexer manager.
@@ -27,7 +27,7 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-This guide focuses specifically on configuring the connections between the *Arrs applications. It does not cover the complete setup or general usage of each individual app. 
+This guide focuses specifically on configuring the connections between the *Arr apps. It does not cover the complete setup or general usage of each individual app. 
 
 Ensure you have properly configured the core settings of your media managers and download clients before connecting them.
 
@@ -35,9 +35,9 @@ Ensure you have properly configured the core settings of your media managers and
 
 Starting with Olares V1.12.6, *Arr apps use internal entrance URLs instead of provider URLs. If you upgraded from an earlier version, check the [Upgrade notes for *Arrs](arrs-upgrade.md) and update the affected settings.
 
-## Install the *Arrs applications
+## Install the *Arr applications
 
-Install the *Arrs applications you need for your media stack. This tutorial uses Sonarr, Prowlarr, Bazarr, and qBittorrent.
+Install the *Arr apps you need for your media stack. This tutorial uses Sonarr, Prowlarr, Bazarr, and qBittorrent.
 
 1. Open Market and search for "Sonarr".
 
