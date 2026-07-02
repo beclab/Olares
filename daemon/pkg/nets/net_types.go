@@ -11,5 +11,6 @@ var (
 		"dockerhub.kubekey.local",
 		"lb.kubesphere.local",
 		"localhost",
+		"master-node",
 	}
 )
