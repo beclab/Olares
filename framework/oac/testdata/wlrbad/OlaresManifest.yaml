@@ -44,9 +44,7 @@ overlayGateway:
 options:
   policies: []
   resetCookie: { enabled: false }
-  # workloadReplicas + overlayGateway are 1.12.6-only triggers, so the
-  # Olares system dep must lock to the post-v3 window.
   dependencies:
     - name: olares
       type: system
-      version: ">=1.12.6-0"
+      version: ">=1.12.3-0,<1.12.6"

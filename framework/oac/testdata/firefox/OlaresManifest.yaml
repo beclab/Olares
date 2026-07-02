@@ -40,7 +40,7 @@ options:
     version: ">=0.1.0"
   - name: olares
     type: system
-    version: '>=1.10.1-0'
+    version: '>=1.12.3-0,<1.12.6'
 entrances:
 {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
 - name: firefox
