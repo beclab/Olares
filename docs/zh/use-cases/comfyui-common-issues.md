@@ -6,11 +6,6 @@ head:
     - name: keywords
       content: Olares, ComfyUI, troubleshooting, common issues, self-hosted
 ---
-
-:::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/comfyui-common-issues.md)。
-:::
-
 # ComfyUI 常见问题
 
 使用本页面识别和解决 Olares 上 ComfyUI 的常见问题。
@@ -26,9 +21,9 @@ ComfyUI 无法启动、意外停止或行为异常。
 这通常由资源不足或 GPU 分配不正确引起。要解决此问题：
 
 1. 检查你的系统资源。如果你的 CPU 或内存使用率已满，请停止其他资源密集型应用。
-2. 如果系统资源看起来正常，请前往 **Settings** > **GPU** 检查你的 GPU 模式：
-   - 如果你使用 **Memory slicing**，请确保 ComfyUI 已绑定到 GPU 并有足够的 VRAM 分配。
-   - 如果你使用 **App exclusive**，请确保独占应用设置为 ComfyUI。
+2. 如果系统资源看起来正常，前往**设置** > **AI 算力**检查你的 GPU 模式：
+   - 如果你使用的是**容量分片**，需确保 ComfyUI 已绑定到 GPU 并有足够的显存分配。
+   - 如果你使用的是**独占分配**，需确保独占应用设置为 ComfyUI。
 3. 等待片刻，然后再次尝试启动 ComfyUI。
 
 ## 启动器日志显示错误
@@ -95,21 +90,35 @@ main.py: error: unrecognized arguments: --normalvram
 
 当工作流需要的 VRAM 超过显卡所拥有的容量时，系统会将重负载放在单个 CPU 核心上进行数据交换，导致温度升高。
 
-长期解决方案是减少工作流的 VRAM 占用（例如，降低分辨率、使用更小的模型或启用模型卸载）。作为临时解决方法，你可以降低最大 CPU 频率。
+长期解决方案是减少工作流的 VRAM 占用，例如降低分辨率、使用更小的模型或启用模型卸载。作为临时解决方法，可以在工作负载运行期间限制最大 CPU 频率。
 
-Olares One 配备的 CPU 默认最大频率为 5.4 GHz。以下步骤在工作负载期间将其降低到 5.0 GHz，然后恢复。
+### Olares OS 1.12.6 或更高版本
 
-1. 打开 Control Hub 应用。
-2. 在左侧边栏中，**Terminal** 下，点击 **Olares**。
+Olares One 配备的 CPU 默认最大频率为 5.4 GHz。使用**限制 CPU 频率**开关，可在工作负载期间将其降至 5.0 GHz。工作负载完成后，再关闭该开关。
 
-   ![打开终端](/images/manual/use-cases/comfyui-ts-terminal.png#bordered){width=90%}
+1. 打开**设置**。
+2. 点击左上角头像，打开**我的 Olares**。
+3. 在**硬件**下，开启**限制 CPU 频率**。
+4. 在 ComfyUI 中运行任务。
+5. 工作负载完成后，关闭**限制 CPU 频率**。
+
+更多信息请参阅[限制 CPU 频率](/zh/manual/olares/settings/my-olares#limit-cpu-frequency)。
+
+### Olares OS 1.12.5 或更早版本
+
+如果设备运行 Olares OS 1.12.5 或更早版本，请使用终端命令在工作负载期间降低最大 CPU 频率，并在完成后恢复。
+
+1. 打开控制面板。
+2. 在左侧边栏的**终端**下，点击 **Olares**。
+
+   ![打开终端](/images/zh/manual/use-cases/comfyui-ts-terminal.png#bordered){width=90%}
 
 3. 运行以下命令将最大 CPU 频率降低到 5.0 GHz：
     ```bash
     echo 5000000 | sudo tee /sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq
     ```
-   在其他设备上，根据你的 CPU 最大频率调整目标值。先运行 `cat /sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq` 来检查。
-4. 在 ComfyUI 中运行你的任务。
+   在其他设备上，根据 CPU 最大频率调整目标值。先运行 `cat /sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq` 来检查。
+4. 在 ComfyUI 中运行任务。
 5. 工作负载完成后，运行以下命令恢复默认的 5.4 GHz 最大 CPU 频率：
     ```bash
     echo 5400000 | sudo tee /sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq
