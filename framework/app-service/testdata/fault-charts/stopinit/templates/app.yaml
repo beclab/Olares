@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stopinit
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.stopinit.replicaCount }}
+  selector:
+    matchLabels:
+      app: stopinit
+  template:
+    metadata:
+      labels:
+        app: stopinit
+    spec:
+      containers:
+        - name: stopinit
+          image: docker.io/beclab/harveyff-adguardhome:v0.107.77
+          args: ["--version"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stopinit-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: stopinit
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

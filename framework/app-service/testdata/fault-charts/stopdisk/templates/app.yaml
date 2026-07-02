@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stopdisk
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.stopdisk.replicaCount }}
+  selector:
+    matchLabels:
+      app: stopdisk
+  template:
+    metadata:
+      labels:
+        app: stopdisk
+    spec:
+      containers:
+        - name: stopdisk
+          image: docker.io/beclab/harveyff-adguardhome:v0.107.77
+          args: ["--web-addr", "0.0.0.0:80", "--no-check-update"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stopdisk-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: stopdisk
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

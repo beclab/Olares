@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	lifecycleapi "github.com/beclab/Olares/framework/app-service/pkg/applifecycle/apiserver"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
@@ -56,7 +57,15 @@ func New(ctx context.Context) (*APIServer, error) {
 }
 
 // PrepareRun do prepares for API server.
-func (s *APIServer) PrepareRun(ksHost string, kubeConfig *rest.Config, client client.Client, stopCh <-chan struct{}) (err error) {
+//
+// opDispatcher is the applifecycle Runner adapter every v2 HTTP
+// handler consults to deliver TriggerOp actions. It is optional
+// (may be nil) — a nil dispatcher means the v2 handlers fall back
+// to their legacy Status-writing siblings via the guard each v2
+// handler carries. This makes wiring flip-able one binary at a
+// time; the router itself never conditionally routes based on
+// dispatcher presence.
+func (s *APIServer) PrepareRun(ksHost string, kubeConfig *rest.Config, client client.Client, opDispatcher lifecycleapi.OpDispatcher, stopCh <-chan struct{}) (err error) {
 	s.container.Filter(logRequestAndResponse)
 	s.container.Router(restful.CurlyRouter{})
 	s.container.RecoverHandler(func(panicReason interface{}, httpWriter http.ResponseWriter) {
@@ -69,6 +78,7 @@ func (s *APIServer) PrepareRun(ksHost string, kubeConfig *rest.Config, client cl
 		WithKubesphereConfig(ksHost).
 		WithKubernetesConfig(kubeConfig).
 		WithCtrlClient(client).
+		WithOpDispatcher(opDispatcher).
 		WithAppInformer()
 	apiHandler, err = apiHandlerBuilder.Build()
 	if err != nil {

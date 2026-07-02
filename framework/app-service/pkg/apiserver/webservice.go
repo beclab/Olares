@@ -418,9 +418,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success", nil))
 
-	// app operate
+	// app operate — routed to v2 handlers backed by the app-lifecycle
+	// Runner (see pkg/applifecycle/apiserver/doc.go). handler.queued
+	// serialises per-app HTTP work to preserve the "one op per app in
+	// flight" invariant the v2 handlers assume when they patch AM.Spec
+	// and deliver a TriggerOp to the state machine.
 	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/install").
-		To(handler.queued(handler.install)).
+		To(handler.queued(handler.installV2)).
 		Doc("Install the application").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
@@ -441,35 +445,35 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "Success to validate the compute resource binding", &ComputeBindingValidationResponse{}))
 
 	ws.Route(ws.DELETE("/apps/{"+ParamAppName+"}/compute-resources/bindings").
-		To(handler.queued(handler.suspend)).
+		To(handler.queued(handler.suspendV2)).
 		Doc("Suspend the application to release compute resource bindings").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to suspend the application", &api.InstallationResponse{}))
 
 	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/uninstall").
-		To(handler.queued(handler.uninstall)).
+		To(handler.queued(handler.uninstallV2)).
 		Doc("Uninstall the application").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to begin a uninstallation of the application", &api.InstallationResponse{}))
 
 	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/suspend").
-		To(handler.queued(handler.suspend)).
+		To(handler.queued(handler.suspendV2)).
 		Doc("suspend the application").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to suspend of the application", &api.InstallationResponseData{}))
 
 	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/resume").
-		To(handler.queued(handler.resume)).
+		To(handler.queued(handler.resumeV2)).
 		Doc("resume the application").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to begin to resume the application", &api.InstallationResponseData{}))
 
 	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/upgrade").
-		To(handler.queued(handler.appUpgrade)).
+		To(handler.queued(handler.appUpgradeV2)).
 		Reads(api.UpgradeRequest{}).
 		Doc("Upgrade the application").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
@@ -477,14 +481,14 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "Success to begin upgrade of the application", &api.ReleaseUpgradeResponse{}))
 
 	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/applyenv").
-		To(handler.queued(handler.appApplyEnv)).
+		To(handler.queued(handler.appApplyEnvV2)).
 		Doc("Apply the application environment variables").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to begin apply of the application environment variables", &api.Response{}))
 
 	ws.Route(ws.POST("/apps/{"+ParamAppName+"}/cancel").
-		To(handler.queued(handler.cancel)).
+		To(handler.queued(handler.cancelV2)).
 		Doc("cancel pending or installing app").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamInstallationID, "the id of a installation or uninstallation")).
@@ -624,107 +628,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("get terminus all nodes").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "get nodes of terminus", nil))
-
-	ws.Route(ws.POST("/recommends/{"+ParamWorkflowName+"}/install").
-		To(handler.installRecommend).
-		Doc("Install the recommend workflow").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of a workflow")).
-		Returns(http.StatusOK, "Success to install the workflow", &api.InstallationResponse{}))
-
-	ws.Route(ws.POST("/recommends/{"+ParamWorkflowName+"}/uninstall").
-		To(handler.uninstallRecommend).
-		Doc("Uninstall the recommend workflow").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of a recommend")).
-		Returns(http.StatusOK, "Success to uninstall the recommend", &api.InstallationResponse{}))
-
-	ws.Route(ws.POST("/recommends/{"+ParamWorkflowName+"}/upgrade").
-		To(handler.upgradeRecommend).
-		Doc("upgrade the recommend workflow").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of a recommend")).
-		Returns(http.StatusOK, "Success to upgrade the recommend", &api.InstallationResponse{}))
-
-	ws.Route(ws.GET("/recommends/{"+ParamWorkflowName+"}/status").
-		To(handler.statusRecommend).
-		Doc("get the recommend workflow status").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of a recommend")).
-		Returns(http.StatusOK, "Success to get the recommend status", &api.InstallationResponse{}))
-
-	ws.Route(ws.GET("/recommends/status").
-		To(handler.statusRecommendList).
-		Doc("get the recommend workflow status list").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to get the recommend status list", &api.InstallationResponse{}))
-
-	ws.Route(ws.GET("/recommenddev/{"+UserName+"}/status").
-		To(handler.statusListDev).
-		Doc("get the recommend workflow status list dev").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to get the recommend status list", &api.InstallationResponse{}))
-
-	ws.Route(ws.GET("/recommends/{"+ParamWorkflowName+"}/operate").
-		To(handler.operateRecommend).
-		Doc("get specified recommend operate").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of recommend")).
-		Returns(http.StatusOK, "Success to get a workflow operate", nil))
-
-	ws.Route(ws.GET("/recommends/operate").
-		To(handler.operateRecommendList).
-		Doc("get recommends operate list").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "get recommends operate list", nil))
-
-	// middleware route
-	ws.Route(ws.POST("/middlewares/{"+ParamAppName+"}/install").
-		To(handler.installMiddleware).
-		Doc("Install the middleware").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of a middleware")).
-		Returns(http.StatusOK, "Success to install the middleware", &api.InstallationResponse{}))
-
-	ws.Route(ws.POST("/middlewares/{"+ParamAppName+"}/uninstall").
-		To(handler.uninstallMiddleware).
-		Doc("Uninstall the middleware").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of a recommend")).
-		Returns(http.StatusOK, "Success to uninstall the middleware", &api.InstallationResponse{}))
-
-	ws.Route(ws.GET("/middlewares/{"+ParamAppName+"}/status").
-		To(handler.statusMiddleware).
-		Doc("get the middleware status").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of a middleware")).
-		Returns(http.StatusOK, "Success to get the middleware status", &api.InstallationResponse{}))
-
-	ws.Route(ws.GET("/middlewares/status").
-		To(handler.statusMiddlewareList).
-		Doc("get the middleware status list").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to get the recommend status list", &api.InstallationResponse{}))
-
-	ws.Route(ws.GET("/middlewares/{"+ParamAppName+"}/operate").
-		To(handler.operateMiddleware).
-		Doc("get specified middleware operate").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamWorkflowName, "the name of middleware")).
-		Returns(http.StatusOK, "Success to get a middleware operate", nil))
-
-	ws.Route(ws.GET("/middlewares/operate").
-		To(handler.operateMiddlewareList).
-		Doc("get middlewares operate list").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "get middleware operate list", nil))
-
-	ws.Route(ws.POST("/middlewares/{"+ParamAppName+"}/cancel").
-		To(handler.cancelMiddleware).
-		Doc("cancel installing middleware").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.PathParameter(ParamInstallationID, "the id of a installation or uninstallation")).
-		Returns(http.StatusOK, "Success to cancel app install", &api.InstallationResponse{}))
 
 	ws.Route(ws.POST("/systemenvs").
 		To(handler.createSystemEnv).

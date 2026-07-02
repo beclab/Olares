@@ -130,8 +130,8 @@ func TestCheckAppNameConflict_CrossTypeActiveReturnsConflict(t *testing.T) {
 	}
 }
 
-// Cross-type collisions where the existing AM sits in an
-// IsTerminalReinstallable state are SKIPPED by the conflict check: no error
+// Cross-type collisions where the existing AM sits in a
+// DefaultTable.IsTerminalReinstallable state are SKIPPED by the conflict check: no error
 // is surfaced and the install proceeds, but the check itself does NOT delete
 // the stale AM. Reclaiming the AM CR is the appmgr GC controller's job
 // (after AppMgrTerminalRetention) — keeping the responsibility in one place
@@ -143,7 +143,6 @@ func TestCheckAppNameConflict_CrossTypeReinstallableSkipped(t *testing.T) {
 	reinstallableStates := []appv1alpha1.ApplicationManagerState{
 		appv1alpha1.Uninstalled,
 		appv1alpha1.InstallingCanceled,
-		appv1alpha1.InstallFailed,
 		appv1alpha1.PendingCanceled,
 		appv1alpha1.DownloadingCanceled,
 		appv1alpha1.DownloadFailed,
