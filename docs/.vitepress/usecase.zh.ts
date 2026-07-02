@@ -241,7 +241,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "引擎底座",
+                  text: "引擎基座",
                   link: "/zh/use-cases/llm-base-apps",
                 },
                 {
