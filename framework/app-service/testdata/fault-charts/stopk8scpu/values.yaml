@@ -1,0 +1,5 @@
+userspace:
+  appData: ""
+workloads:
+  stopk8scpu:
+    replicaCount: 1

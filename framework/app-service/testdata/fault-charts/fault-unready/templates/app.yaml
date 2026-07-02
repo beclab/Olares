@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faultunready
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.faultunready.replicaCount }}
+  selector:
+    matchLabels:
+      app: faultunready
+  template:
+    metadata:
+      labels:
+        app: faultunready
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: faultunready
+          image: docker.io/library/redis:7.4
+          command: ["sleep", "3600"]
+          ports:
+            - name: http
+              containerPort: 80
+          # A volume Secret that does not exist keeps the pod Pending.
+          # The FailedMount event is fatal after a 3 minute grace, so
+          # wait-startup fails before the 5 minute installing timeout.
+          volumeMounts:
+            - name: missing-secret
+              mountPath: /mnt/missing
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: missing-secret
+          secret:
+            secretName: does-not-exist
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: faultunready-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: faultunready
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

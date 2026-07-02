@@ -13,7 +13,21 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/controllers"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/computeops"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/computevalidator"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/ctrlrequeue"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/helmops"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/imgpull"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/k8sstore"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/mwops"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/natsrecorder"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/realclock"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/handlers"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/runner"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/runner/ctrladapter"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
@@ -22,6 +36,7 @@ import (
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
+	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
@@ -189,14 +204,110 @@ func main() {
 		}
 	}()
 
-	if err = (&controllers.ApplicationManagerController{
-		Client:      mgr.GetClient(),
-		KubeConfig:  config,
-		ImageClient: images.NewImageManager(mgr.GetClient()),
-		Deps:        appstate.DefaultDeps(mgr.GetClient()),
-		//Manager:    make(map[string]context.CancelFunc),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "Unable to create controller", "controller", "Application Manager")
+	// ---------------------------------------------------------------
+	// applifecycle Runner wiring — LIVE MODE (cutover complete).
+	//
+	// After this block the Runner is the AUTHORITATIVE writer of
+	// every ApplicationManager.Status field. State-change events
+	// reach bfl only through EmitEvent → natsrecorder. The retired
+	// ApplicationManager controller no longer publishes them.
+	//
+	// Ports wiring (all REAL adapters):
+	//
+	//   * AMStore   → k8sstore(live)   — Runner reads AND writes AM.
+	//                 Shadow mode is off; Runner-emitted PatchStatus
+	//                 effects now persist to real k8s.
+	//   * Clock     → realclock         — time.Now / time.After.
+	//   * Requeuer  → runnerRequeuer    — CallWorkload callbacks
+	//                 re-enter the same workqueue after delivering
+	//                 an in-memory result.
+	//   * WorkloadOps → helmops         — thin passthrough over the
+	//                 legacy versioned.NewHelmOps pipeline. All 9
+	//                 write methods + WaitForNamespaceDeleted come
+	//                 through this adapter now.
+	//   * Validator → computevalidator  — wraps pkg/compute/validation
+	//                 chain; NotifyInsufficientCompute uses the
+	//                 recorder below via a small closure so payload
+	//                 shape is byte-identical to legacy.
+	//   * ImagePuller → imgpull         — wraps images.ImageManagerClient
+	//                 for CreateJob/CancelJob/UpdateJobStatus and
+	//                 provides a pure Progress reader. The RefResolver
+	//                 closure runs a helm dry-run through
+	//                 appinstaller.BuildBaseHelmValues +
+	//                 appstate.GetRefsForImageManager (matches
+	//                 defaultResolveImageRefs in pkg/appstate/deps.go
+	//                 verbatim).
+	//   * Recorder  → natsrecorder      — publishes AppLifecycleEvent
+	//                 and generic notifications on the SAME
+	//                 QueuedEventController the legacy
+	//                 publishStateChangeEvent enqueues into. bfl sees
+	//                 no schema change; only the origin of the events
+	//                 shifts as legacy handlers stop firing.
+	//
+	// The transition table is populated end-to-end: NewDefaultTable
+	// seeds every legacy edge with PlaceholderHandler so the topology
+	// is dispatch-complete on day one; handlers.Register overwrites
+	// each of those edges, including the InitialState "" → Pending
+	// install bootstrap.
+	// ---------------------------------------------------------------
+	runnerRequeuer := ctrlrequeue.New()
+	runnerTable := domain.DefaultTable
+	handlers.Register(runnerTable)
+	runnerEngine := domain.NewEngine(runnerTable)
+
+	// Recorder is constructed FIRST so computevalidator can borrow
+	// its RecordNotification method for the "insufficient compute"
+	// notification — one publisher, one queue, one NATS subject
+	// contract.
+	runnerRecorder := natsrecorder.New(appEventQueue)
+
+	// notify is the seam computevalidator's NotifyInsufficientCompute
+	// delegates to. Sends the pkg/compute.BuildInsufficientPayload
+	// output to NATS via the recorder's generic notification path.
+	notify := func(ctx context.Context, subject string, payload any) error {
+		return runnerRecorder.RecordNotification(ctx, subject, payload)
+	}
+
+	// refResolver is the seam imgpull's ResolveRefs delegates to.
+	// Byte-identical to pkg/appstate/deps.go's defaultResolveImageRefs
+	// — factored inline here so the imgpull adapter can be wired
+	// without a hard dependency on pkg/appstate (which is being
+	// deleted in the follow-up cleanup pass).
+	refResolver := func(ctx context.Context, am *appv1alpha1.ApplicationManager, cfg *appcfg.ApplicationConfig) ([]appv1alpha1.Ref, error) {
+		values, err := appinstaller.BuildBaseHelmValues(ctx, config, cfg, am.Spec.AppOwner, true)
+		if err != nil {
+			return nil, err
+		}
+		return images.GetRefsForImageManager(cfg, values)
+	}
+
+	mongoUninstall := func(ctx context.Context, cfg *middlewareinstaller.MiddlewareConfig) error {
+		return middlewareinstaller.Uninstall(ctx, config, cfg)
+	}
+
+	appRunner, err := runner.New(runner.Config{
+		Engine: runnerEngine,
+		// LIVE k8sstore. Runner is the sole writer of AM.Status.
+		AMStore:       k8sstore.New(mgr.GetClient()),
+		WorkloadOps:   helmops.New(mgr.GetClient(), config),
+		Validator:     computevalidator.New(mgr.GetClient(), notify),
+		ImagePuller:   imgpull.New(mgr.GetClient(), refResolver),
+		Recorder:      runnerRecorder,
+		Clock:         realclock.New(),
+		Requeuer:      runnerRequeuer,
+		ComputeOps:    computeops.New(mgr.GetClient()),
+		MiddlewareOps: mwops.New(mgr.GetClient(), mongoUninstall),
+	})
+	if err != nil {
+		setupLog.Error(err, "Unable to construct app-lifecycle Runner")
+		os.Exit(1)
+	}
+	// Stop drains in-flight CallWorkload goroutines (helm installs,
+	// image pulls, namespace waits).
+	defer appRunner.Stop()
+
+	if err = ctrladapter.Setup(mgr, appRunner, runnerRequeuer); err != nil {
+		setupLog.Error(err, "Unable to register app-lifecycle-runner reconciler")
 		os.Exit(1)
 	}
 

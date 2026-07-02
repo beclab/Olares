@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
@@ -1616,7 +1616,7 @@ func (h *Handler) validateApplicationManager(ctx context.Context, req *admission
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 
-	if t := appstate.OperatingStates[am.Status.State]; t == true {
+	if domain.DefaultTable.IsOperating(am.Status.State) {
 		resp.Allowed = false
 		return h.sidecarWebhook.AdmissionError(req.UID, errors.New("ing state application manager can not be delete"))
 	}
