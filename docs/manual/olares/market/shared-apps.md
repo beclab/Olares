@@ -9,6 +9,8 @@ Shared applications are a special category of community applications in Olares. 
 
 This page explains what shared applications are, why Olares moved to a new architecture in Olares 1.12.6, and how to migrate from legacy v2 to the new v3 architecture.
 
+## What are shared applications
+
 <!-- #region shared-apps-what-are -->
 A shared application provides shared resources or services to all users in an Olares cluster. Instead of every member installing and running their own instance, the administrator installs and manages one instance that everyone uses.
 
