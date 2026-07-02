@@ -5,13 +5,13 @@ description: Learn how to use the Engine Base applications on Olares to self-hos
 
 # Host local large language models with Engine Base apps
 
-Olares V1.12.6 introduces **Model Console**, a platform that manages the full lifecycle of local large language models (LLMs). This platform provides four Engine Base applications, each built on a different inference engine: **Ollama Engine Base**, **vLLM Engine Base**, **llama.cpp Engine Base**, and **SGLang Engine Base**.
+Olares v1.12.6 introduces **Model Console**, a platform that manages the full lifecycle of local large language models (LLMs). This platform provides four Engine Base applications, each built on a different inference engine: **Ollama Engine Base**, **vLLM Engine Base**, **llama.cpp Engine Base**, and **SGLang Engine Base**.
 
 Choose the base app for the engine you want, clone it to deploy a model, then run and manage that model from its dedicated console.
 
 ## Before you start
 
-- Your Olares system has been upgraded to V1.12.6 or later.
+- Your Olares system has been upgraded to v1.12.6 or later.
 
 ## Locate Engine Base apps
 
@@ -75,7 +75,7 @@ After creating the instance, the configuration window opens. Define where your e
     | **MODEL_MODE** | Select **Chat** or **Embedding**. |
     | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> or **Thinking**. For an embedding model, select **None**. |
     | **ENGINE_ARGS** | Set the engine startup parameters. The context size is required. <br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>`OLLAMA_CONTEXT_LENGTH=8192`</li><li>`OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_KV_CACHE_TYPE=q8_0`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
-    | **OLLAMA<br>_REQUIRED<br>_GPU_MEMORY** | Enter the minimum GPU memory the instance needs to start,<br>in MB or Gi. For example, `20Gi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li><li>In CPU mode, set it to `0`.</li></ul> |
+    | **OLLAMA<br>_REQUIRED<br>_GPU_MEMORY** | Enter the minimum GPU memory the instance needs to start,<br>in MB or Gi. For example, `8Gi` and `8192Mi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li><li>In CPU mode, set it to `0`.</li></ul> |
 
     </template>
     <template #vLLM-or-SGLang>
@@ -238,31 +238,28 @@ Open the built-in model console to track the model download, confirm the model a
         - **Apps in Olares**: For apps running in Olares.
         - **Devices on your network**: For devices on the same local network.
         - **Remote**: For access over the public internet, which requires you to enable the VPN in LarePass first.
-    - **API format**: Select the API style your client requires.
-        - **OpenAI-Compatible**: Exposes OpenAI-style endpoints, such as `/v1/chat/completions` and `/v1/embeddings`.
-        - **Anthropic-Compatible**: Exposes Anthropic Messages endpoints, such as `/v1/messages`.
-        - **Ollama**: Exposes Ollama-native endpoints, such as `/api/chat` and `/api/generate`.
+    - **API format**: Select the API style that matches your client: **Ollama**, **OpenAI-Compatible**, or **Anthropic-Compatible**.
     - **Base URL**: Copy the URL to use for client app connections.
-    - **Supported endpoints**: Expand to see the endpoints available for the selected API format.
+    - **Supported endpoints**: Expand this list to see every endpoint the selected API format exposes, with its HTTP method, path, and purpose.
 
 5. Select the **Configuration** tab to review the model's details:
 
     ![Configuration tab in model console](/images/manual/olares/llm-base-model-console-config.png#bordered)
 
-    - **Model**: Shows the model name, mode, and the capability tags the instance exposes.
+    - **Model**: Shows the model name, mode, and the capability tags.
     - **Parameters**: View the engine parameters. Expand **Advanced parameters** for the full set, and switch the view between **Form** and **Raw**.
 
 6. In the **GPU residency** section, click **Detect**, and then:
 
     - **Check the mode**: Confirm the model runs on the GPU.
-        - `Full GPU`: All layers run on the GPU. This is the expected, fastest state.
-        - `Split` or `CPU`: Part or all of the model fell back to the CPU, which makes inference much slower. On a GPU host, this usually means an environment mis-mount; review your `{ENGINE}_REQUIRED_GPU_MEMORY` setting and engine arguments.
-    - **Check the memory usage**: Review the **VRAM**, **KV cache used**, and **GPU mem util** to see how much memory the model occupies and how much headroom is left for longer contexts or more concurrent requests.
+        - `Full GPU`: The entire model runs on the GPU. This is the expected, fastest state.
+        - `Split` or `CPU`: Part or all of the model fell back to the CPU, which makes inference slower. On a GPU host, this usually means an environment mis-mount; review your `{ENGINE}_REQUIRED_GPU_MEMORY` setting and engine arguments.
+    - **Check the memory usage**: Review the **VRAM**, **KV cache used**, and **GPU memory utilization** to see how much memory the model occupies and how much headroom is left for longer contexts or more concurrent requests.
 
 7. In the **Performance** section, click **Run test** to measure two response-speed metrics. Use them to compare quantization levels, context sizes, or engine arguments, and to verify that a change actually improved speed before you use it:
 
     - **TTFT** (Time To First Token): How long you wait before the first word appears. A lower value means the model responds faster.
-    - **perf.cold**: How long the engine takes to load the model from scratch, for example after a restart. A lower value means the model is ready to serve sooner.
+    - **Cold start**: How long the engine takes to load the model from scratch, for example after a restart. A lower value means the model is ready to serve sooner.
 
 ## Connect client apps to the model service
 
