@@ -7,14 +7,31 @@ outline: [2, 3]
 Every **Olares Application Chart** should include an `OlaresManifest.yaml` file in the root directory. `OlaresManifest.yaml` provides all the essential information about an Olares App. Both the **Olares Market protocol** and the Olares depend on this information to distribute and install applications.
 
 :::info NOTE
-Latest Olares Manifest version: `0.11.0`
-- Removed deprecated fields of sysData
-- Updated the example of shared app
-- Added the apiVersion
-- Added the sharedEntrance section
-
+Latest Olares Manifest version: `0.12.0`
+- Requires Olares OS version 1.12.6 or later
+- **Template rendering is no longer supported**: `OlaresManifest.yaml` must not use  <code v-pre>{{ ... }}</code> or other template rendering functions.
+- Modified valid values for the `apiVersion` field: added `v3`; the original `v2` format will no longer be supported in Olares OS 1.12.6.
+- Added `options.shared` field to indicate shared applications
+- Added `spec.accelerator` field for GPU resource declaration
+- Added `workloadReplicas` field to declare all workload replica counts
+- Added `overlayGateway` field for L2 overlay LAN discovery support
+- Added `LLMGatewaySupported` in options for LLM Gateway support
+- Added `appCommon` and `externalData` permissions (both default to `false`)
+- Added `templateOnly` field to mark template-type applications
+- Removed [deprecated fields](#deprecated-fields-0-12-0)
 :::
+
+:::tip Upgrading to Manifest 0.12.0
+If you maintain an existing app chart, pay special attention to `apiVersion`, `workloadReplicas`, and `permission.externalData` before upgrading. These fields contain breaking changes or new mandatory requirements that may require updates to your existing configurations.
+:::
+
 :::details Changelog
+`0.11.0`
+- Removed deprecated `sysData` field
+- Updated shared app example
+- Added `apiVersion` field
+- Added `sharedEntrance` section
+
 `0.10.0`
 - Modified the `categories` field
 - Added the `provider` field in the Permission section
@@ -51,8 +68,13 @@ Here's an example of what a `OlaresManifest.yaml` file might look like:
 ::: details OlaresManifest.yaml Example
 
 ```yaml
-olaresManifest.version: '0.10.0'
+olaresManifest.version: '0.12.0'
 olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  helloworld: 1
+
 metadata:
   name: helloworld
   title: Hello World
@@ -60,7 +82,8 @@ metadata:
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
   version: 0.0.1
   categories:
-  - Utilities
+  - AI
+
 entrances:
 - name: helloworld
   port: 8080
@@ -68,13 +91,25 @@ entrances:
   host: helloworld
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
   authLevel: private
+  openMethod: default
+
+sharedEntrances:
+- name: helloworld
+  host: sharedentrances-api
+  port: 0
+  title: Hello World API
+  invisible: true
+  authLevel: internal
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
+
 permission:
   appCache: true
   appData: true
+  appCommon: true
   userData:
   - Home/Documents/
-  - Home/Pictures/
-  - Home/Downloads/BTDownloads/
+  externalData: true
+  
 spec:
   versionName: '0.0.1'
   featuredImage: https://link.to/featured_image.webp
@@ -90,34 +125,52 @@ spec:
   sourceCode: https://link.to.sourceCode
   submitter: Submitter's Name
   locale:
-  - en
+  - en-US
+  - zh-CN
   doc: https://link.to.documents
   supportArch:
   - amd64
-  limitedCpu: 1000m
-  limitedMemory: 1000Mi
-  requiredCpu: 50m
-  requiredDisk: 50Mi
-  requiredMemory: 12Mi
+  - arm64
+  onlyAdmin: true
+
+  accelerator:
+  - mode: nvidia
+    requiredCpu: "1"
+    limitedCpu: "7"
+    requiredMemory: 13Gi
+    limitedMemory: 34Gi
+    requiredDisk: 36Gi
+    limitedDisk: 100Gi
+    requiredGPUMemory: 12Gi
+    limitedGPUMemory: 24Gi
+  - mode: cpu  
+    requiredCpu: 50m
+    limitedCpu: 1000m
+    requiredMemory: 12Mi
+    limitedMemory: 1000Mi
+    requiredDisk: 50Mi
+    limitedDisk: 100Gi
 
 options:
   dependencies:
   - name: olares
     type: system
-    version: '>=0.1.0'
+    version: '>=1.12.6-0'
+  shared: true
+  apiTimeout: 0
+  conflicts:
+    - name: conflictapp
+      type: application
+
+envs:
+  - envName: USERNAME
+    required: true
+    type: string
+    editable: true
+    applyOnChange: true
+    description: 'default username'
+    regex: '^[\w\-!@#$%^&*()+={}\[\]:,.?~]{6,}$'
 ```
-:::
-
-## olaresManifest.type
-
-- Type: `string`
-- Accepted Value: `app`, `recommend`, `middleware`
-
-Olares currently supports 3 types of applications, each requiring different fields. This document uses `app` as an example to explain each field. For information on other types, please refer to the corresponding configuration guide.
-- [Recommend Configuration Guide](recommend.md)
-
-:::info NOTE
-`recommend` apps will not be listed in the Olares Market, but you can install recommendation algorithms for Wise by uploading a custom Chart.
 :::
 
 ## olaresManifest.version
@@ -127,25 +180,44 @@ Olares currently supports 3 types of applications, each requiring different fiel
 As Olares evolves, the configuration specification of `OlaresManifest.yaml` may change. You can identify whether these changes will affect your application by checking the `olaresManifest.version`. The `olaresManifest.version` consists of three integers separated by periods.
 
 - An increase in the **first digit** indicates the introduction of incompatible configuration items. Applications that haven't updated their `OlaresManifest.yaml` will be unable to distribute or install.
-- An increase in the **second digit** signifies changes in the mandatory fields for distribution and installation. However, the Olares remains compatible with the application distribution and installation of previous configuration versions. We recommend developers to promptly update and upgrade the application's `OlaresManifest.yaml` file.
+- An increase in the **second digit** signifies changes in the mandatory fields for distribution and installation. However, Olares remains compatible with application distribution and installation of previous configuration versions. We recommend developers promptly update and upgrade the application's `OlaresManifest.yaml` file.
 - A change in the **third digit** does not affect the application's distribution and installation.
 
-Developers can use 1-3 digit version numbers to indicate the application's configuration version. Here are some examples of valid versions:
+Please use a 3 digit version numbers to indicate the application's configuration version. Here are some examples of valid versions:
 ```yaml
-olaresManifest.version: 1
-olaresManifest.version: 1.1.0
-olaresManifest.version: '2.2'
-olaresManifest.version: "3.0.122"
+olaresManifest.version: 0.1.0
+olaresManifest.version: '0.1.2'
+olaresManifest.version: "0.12.0"
 ```
+
+## olaresManifest.type
+
+- Type: `string`
+- Accepted Value: `app`, `middleware`
+
+Olares currently supports 2 types of applications, which differ in certain fields. This document uses the `app` type as an example to explain each field.
+
+:::info
+The `recommend` type is no longer included in the latest OlaresManifest specification.
+:::
+
 ## apiVersion
 - Type: `string`
-- Optional
-- Accepted Value: `v1`,`v2`
+- Accepted Value: `v1`, `v3`
 - Default: `v1`
 
-For shared applications, use version `v2`, which supports multiple subcharts in a single OAC. For other applications, use `v1`.
+Starting from `olaresManifest.version: '0.12.0'`, `apiVersion` is upgraded to `v3`, adopting a new resource declaration and shared application configuration format, and removing OlaresManifest template rendering. If this field is omitted, it defaults to `v1`.
 
-## Metadata
+Olares OS 1.12.6 supports installation of both `v1` and `v3` format applications, but no longer supports `v2` format shared application installation. 
+
+:::warning `apiVersion: 'v2'` deprecation
+- `apiVersion: 'v2'` is used for shared applications in Olares OS 1.12.5 and earlier, and will be gradually discontinued after 1.12.6.
+- After upgrading to Olares OS 1.12.6:
+  - Already installed `apiVersion: 'v2'` applications are unaffected and can continue to be used, but cannot be upgraded further. We recommend migrating to shared applications with `apiVersion: 'v3'` as soon as possible.
+  - Applications with `apiVersion: 'v2'` are no longer shown in the Market and cannot be installed.
+:::
+
+## metadata
 
 Basic information about the app shown in the system and Olares Market.
 
@@ -158,8 +230,8 @@ metadata:
   icon: https://app.cdn.olares.com/appstore/nextcloud/icon.png
   version: 0.0.2
   categories:
-  - Utilities
-  - Productivity
+  - Utilities_v112
+  - Productivity_v112
 ```
 :::
 
@@ -168,7 +240,7 @@ metadata:
 - Type: `string`
 - Accepted Value: `^[a-z][a-z0-9]{0,29}$`
 
-App’s namespace in Olares, lowercase alphanumeric characters only. It can be up to 30 characters, and needs to be consistent with `FolderName` and `name` field in `Chart.yaml`.
+App's namespace in Olares, lowercase alphanumeric characters only. It can be up to 30 characters, and needs to be consistent with `FolderName` and `name` field in `Chart.yaml`.
 
 ### title
 
@@ -202,10 +274,7 @@ The **Chart Version** of the application. It should be incremented each time the
 
 Used to display your app on different category page in Olares Market.
 
-Accepted Value for OS 1.11:
-- `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
-
-Accepted Value for OS 1.12: 
+Accepted Value for OS 1.12:
 - `Creativity`
 - `Productivity_v112` (displayed as Productivity)
 - `Developer Tools`
@@ -214,11 +283,7 @@ Accepted Value for OS 1.12:
 - `Utilities_v112` (displayed as Utilities)
 - `AI`
 
-:::info NOTE
-Olares Market categories were updated in OS 1.12.0. To ensure your app is compatible with both versions 1.11 and 1.12, include category values for both versions in your configuration.
-:::
-
-## Entrances
+## entrances
 
 The entrances (up to 10) that users can use to access the app. At least 1 is required.
 
@@ -352,7 +417,7 @@ sharedEntrances:
 ```
 :::
 
-## Ports
+## ports
 
 Specify exposed ports
 
@@ -393,11 +458,11 @@ The protocol used for the exposed port. If specified, Olares exposes only the sp
 
 When the `addToTailscaleAcl` field is set to `true`, the system will automatically assign a random port and add it to the Tailscale ACLs.
 
-## Tailscale
+## tailscale
 - Type: `map`
 - Optional
 
-Allow applications to add Access Control Lists (ACL) in Tailscale to open specified ports.
+Allow applications to open specified ports in Tailscale ACL (Access Control Lists).
 
 :::info Example
 ```yaml
@@ -406,92 +471,69 @@ tailscale:
   - proto: tcp
     dst:
     - "*:46879"
-  - proto: "" # Optional. If not specified, all supported protocols will be allowed.
+  - proto: "" # Optional. If not specified, all supported protocols are allowed.
     dst:
-    -  "*:4557"    
+    -  "*:4557"
 ```
 :::
 
-## Permission
-
-:::info Example
-```yaml
-permission:
-  appCache: true
-  appData: true
-  userData:
-  - /Home/ 
-```
-:::
+## permission
 
 ### appCache
 
 - Type: `boolean`
+- Default: `false`
 - Optional
 
-Whether the app requires read and write permission to the `Cache` folder. If `.Values.userspace.appCache` is used in the deployment YAML, then `appCache` must be set to `true`.
+Whether the app needs to create an application directory in the `Cache` folder. When set to `true`, the app can access the `Cache` directory path via `.Values.userspace.appCache` in the deployment YAML.
 
 ### appData
 
 - Type: `boolean`
+- Default: `false`
 - Optional
 
-Whether the app requires read and write permission to the `Data` folder. If `.Values.userspace.appData` is used in the deployment YAML, then `appData` must be set to `true`.
+Whether the app needs to create an application directory in the `Data` folder. When set to `true`, the app can access the `Data` directory path via `.Values.userspace.appData` in the deployment YAML.
+
+### appCommon
+
+- Type: `boolean`
+- Default: `false`
+- Optional
+
+Whether the app requires read and write permission to the `App Common` folder. When set to `true`, the app can access the `App Common` directory path via `.Values.userspace.appCommon` in the deployment YAML, enabling shared files across multiple apps or nodes (such as AI models).
+
+### externalData
+
+- Type: `boolean`
+- Default: `false`
+- Optional
+
+Whether the app requires read and write permission to the `External` directory (typically used for accessing mounted NAS or other external disk data). When set to `true`, the app can access the `External` directory path via `.Values.sharedlib` in the deployment YAML.
+
+:::warning
+Starting from Manifest 0.12.0, the `externalData` permission is disabled by default. If your app needs access to mounted NAS or external disks, you must explicitly set `externalData: true`. If omitted, permission will be denied.
+:::
 
 ### userData
 
 - Type: `list<string>`
 - Optional
 
-Whether the app requires read and write permission to user's `Home` folder. List all directories that the application needs to access under the user's `Home`. All `userData` directory configured in the deployment YAML, must be included here.
+Whether the app requires read and write permission to specific directories in the user's `Home` folder. List all `Home` subdirectories the app needs to access in this field. In the deployment YAML, use `.Values.userspace.userData` to get the root path of the Home directory. All Home subdirectories that need to be mounted must be explicitly declared in this field before they can be accessed.
 
-### provider
 
-- Type: `list<map>`
-- Optional
-
-Use this field to declare APIs from other applications that your app needs to access. The target application must have exposed a `providerName` in its own `provider` section (refer to the Provider section below).
-
-To configure access:
-1. Set the `appName` field to the `name` of the target application.
-2. Set the `providerName` field to match the `name` specified in the target app’s provider configuration. 
-
-You can optionally use the `podSelectors` field to specify which pods in your app should have access. If this field is omitted, all pods in your app will be injected with the `outbound envoy sidecar` to enable access.
-
-:::info Example for calling app
-```yaml
-# App requiring provider, e.g. sonarr
-permission:  
-  provider:
-  - appName: bazarr
-    providerName: bazarr-svc
-    podSelectors:
-      - matchLabels:
-          io.kompose.service: api
-```
-:::
-:::info Example for provider app
-```yaml
-#  Provider app, e.g. bazarr
-provider:
-- name: bazarr-svc
-  entrance: bazarr-svc
-  paths: ["/*"]
-  verbs: ["*"]
-```
-:::
-
-## Spec
-Additional information about the application, primarily used for display in the Olares Market.
+## spec
+Additional information about the application.
 
 :::info Example
 ```yaml
 spec:
-  versionName: '10.8.11' 
+  versionName: '10.8.11'
   # The version of the application that this chart contains. It is recommended to enclose the version number in quotes. This value corresponds to the appVersion field in the `Chart.yaml` file. Note that it is not related to the `version` field.
 
   featuredImage: https://app.cdn.olares.com/appstore/jellyfin/promote_image_1.jpg
-  # The featured image is displayed when the app is featured in the Market.
+  # Displayed on the My Olares page after the app is installed.
 
   promoteImage:
   - https://app.cdn.olares.com/appstore/jellyfin/promote_image_1.jpg
@@ -509,23 +551,27 @@ spec:
   locale:
   - en-US
   - zh-CN
-  # List languages and regions supported by this app
-
-  requiredMemory: 256Mi
-  requiredDisk: 128Mi
-  requiredCpu: 0.5
-  # Specifies the minimum resources required to install and run the application. Once the app is installed, the system will reserve these resources to ensure optimal performance.
-
-  limitedDisk: 256Mi
-  limitedCpu: 1
-  limitedMemory: 512Mi
-  # Specifies the maximum resource limits for the application. If the app exceeds these limits, it will be temporarily suspended to prevent system overload and ensure stability.
-
-  legal:
-  - text: Community Standards
-    url: https://jellyfin.org/docs/general/community-standards/
-  - text: Security policy
-    url: https://github.com/jellyfin/jellyfin/security/policy
+  # Languages and regions supported on the app's Market page
+  
+  accelerator:
+  - mode: nvidia
+    limitedCpu: 7000m
+    requiredCpu: 150m
+    requiredDisk: 50Mi
+    limitedDisk: 500Gi
+    limitedMemory: 40Gi
+    requiredMemory: 5Gi
+    requiredGPUMemory: 1Gi
+    limitedGPUMemory: 24Gi
+  - mode: cpu
+    limitedCpu: 7000m
+    requiredCpu: 150m
+    requiredDisk: 50Mi
+    limitedDisk: 500Gi
+    limitedMemory: 40Gi
+    requiredMemory: 5Gi
+  # If the app requires GPU or other hardware acceleration, list all supported accelerator modes and resource requirements here. For CPU-only scenarios, use mode: cpu; the fields below follow the same format as previous versions.
+  
   license:
   - text: GPL-2.0
     url: https://github.com/jellyfin/jellyfin/blob/master/LICENSE
@@ -604,7 +650,78 @@ When set to `true`, only the admin can install this app.
 
 When set to `true`, Olares forces the application to run under user ID `1000` (as a non-root user).
 
-## Middleware
+### accelerator
+- Type: `map`
+- Optional
+
+Declares accelerator compute resources required by the application (such as GPU or integrated graphics). For accelerator-aware apps such as LLMs, image generation, video processing, or AI model serving, use the `spec.accelerator` field to declare resources; do not include the original root-level fields such as `spec.requiredMemory`.
+
+:::info NOTE
+When accelerator is used, all related resource requirements (CPU, memory, disk, and GPU memory) must be declared inside this block, instead of relying on the root-level spec.requiredMemory or spec.requiredCpu fields.
+:::
+
+Supported modes
+
+- `nvidia`, `nvidia-gb10`, `apple-m`, `strix-halo`, `intel`, `amd`, `intel-gpu`, `amd-gpu`: For apps that support specific GPU/NPU hardware acceleration.
+- `cpu`: For conventional apps, or to explicitly force CPU-only computation in accelerator-aware applications.
+
+:::info Example
+```yaml
+spec:
+  accelerator:
+  - mode: nvidia  # Supported modes: nvidia, nvidia-gb10, apple-m, strix-halo, mthreads-m1000, intel, amd, intel-gpu, amd-gpu, cpu
+    limitedCpu: 7000m
+    requiredCpu: 150m
+    requiredDisk: 50Mi
+    limitedDisk: 500Gi
+    limitedMemory: 40Gi
+    requiredMemory: 5Gi
+    requiredGPUMemory: 1Gi
+    limitedGPUMemory: 24Gi
+```
+:::
+
+For apps that do not require GPU, it is recommended to declare resources using `cpu` mode:
+:::info Example
+```yaml
+spec:
+  requiredMemory: 2Gi
+  requiredDisk: 50Mi
+  requiredCpu: 0.25
+  limitedMemory: 10240Mi
+  limitedCpu: '4'
+```
+:::
+
+## workloadReplicas
+- Type: `map`
+
+Declares the replica count for each workload in the chart. Starting from 0.12.0, apps must declare replica counts for all workloads in `workloadReplicas`.
+
+Developers must also define the corresponding variables under `workloads` in `values.yaml`, and ensure the workload names in `workloadReplicas` exactly match those under `workloads` in `values.yaml` for compatibility.
+:::info OlaresManifest.yaml
+```yaml 
+workloadReplicas:
+  affine: 1
+```
+:::
+:::info values.yaml
+```yaml
+workloads:
+  affine:
+    replicaCount: 1
+```
+:::
+
+When deploying, be sure to reference this value to set the number of replicas for each workload.
+:::info deployment.yaml
+```yaml 
+spec:
+  replicas: {{ .Values.workloads.affine.replicaCount }}
+```
+:::
+
+## middleware
 - Type: `map`
 - Optional
 
@@ -629,7 +746,7 @@ middleware:
       - vectors
       - earthdistance
       scripts:
-      - BEGIN;                                           
+      - BEGIN;
       - ALTER DATABASE $databasename SET search_path TO "$user", public, vectors;
       - ALTER SCHEMA vectors OWNER TO $dbusername;
       - COMMIT;
@@ -721,11 +838,11 @@ Use the middleware information in deployment YAML
 ### RabbitMQ
 :::info Example
 ```yaml
-middleware:  
+middleware:
   rabbitmq:
     username: rabbitmquser
     vhosts:
-    - name: aaa  
+    - name: aaa
 ```
 :::
 Use the middleware information in deployment YAML
@@ -741,7 +858,7 @@ Use the middleware information in deployment YAML
   - name: RABBITMQ_PASSWORD
     value: "{{ .Values.rabbitmq.password }}"
   - name: RABBITMQ_VHOST
-    value: "{{ .Values.rabbitmq.vhosts.aaa }}"    
+    value: "{{ .Values.rabbitmq.vhosts.aaa }}"
 
 user := os.Getenv("RABBITMQ_USER")
 password := os.Getenv("RABBITMQ_PASSWORD")
@@ -753,7 +870,7 @@ url := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, portMQ, vhost)
 ### MariaDB
 :::info Example
 ```yaml
-middleware:  
+middleware:
   mariadb:
     username: mariadbclient
     databases:
@@ -779,11 +896,11 @@ Use the middleware information in deployment YAML
 ### MySQL
 :::info Example
 ```yaml
-middleware:  
+middleware:
   mysql:
     username: mysqlclient
     databases:
-    - name: aaa      
+    - name: aaa
 ```
 :::
 Use the middleware information in deployment YAML
@@ -799,10 +916,10 @@ Use the middleware information in deployment YAML
   - name: MDB_PASSWORD
     value: "{{ .Values.mysql.password }}"
   - name: MDB_DB
-    value: "{{ .Values.mysql.databases.aaa }}"    
+    value: "{{ .Values.mysql.databases.aaa }}"
 ```
 
-## Options
+## options
 
 Configure Olares OS related options here.
 
@@ -823,39 +940,6 @@ options:
       entranceName: gitlab
 ```
 :::
-
-### appScope
-- Type: `map`
-- Optional
-
-Specifies whether the app should be installed for all users in the Olares cluster. For shared apps, set `clusterScoped` to `true` and provide the current app's name in the `appRef` field.
-
-:::info Example of ollamav2
-```yaml
-metadata:
-  name: ollamav2
-options:
-  appScope:
-  {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}  # Only the administrator installs the shared service
-    clusterScoped: true
-    appRef:
-      - ollamav2 # the name of current app specified in metadata.name
-  {{- else }}
-    clusterScoped: false
-  {{- end }}
-  dependencies:
-    - name: olares
-      version: '>=1.12.3-0'
-      type: system
-  {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
-  {{- else }}
-      type: application
-      version: '>=1.0.1'
-      mandatory: true   # Other users install the client, depend on the shared service installed by the admin
-  {{- end }}
-```
-:::
-
 
 ### dependencies
 - Type: `list<map>`
@@ -891,7 +975,7 @@ options:
   - name: comfyui
     type: application
   - name: comfyuiclient
-    type: application  
+    type: application
 ```
 :::
 
@@ -964,7 +1048,63 @@ allowedOutboundPorts:
 
 This application supports deploying multiple independent instances within the same Olares cluster. This setting does not apply to paid applications or clients of shared applications.
 
-## Envs
+### shared
+- Type: `boolean`
+- Default: `false`
+- Optional
+
+When set to `true`, indicates this is a shared application. The app will be installed in the `<appname>-shared` namespace.
+
+When `options.shared: true`:
+- `apiVersion` must be set to `'v3'`
+- `onlyAdmin` must be set to `true`
+- The following `apiVersion: 'v3'` fields are not allowed:
+  ```yaml
+  spec:
+    subCharts:
+    - name: ollamaserver
+      shared: true
+    - name: ollamav2
+  options:
+    appScope:
+      clusterScoped: true
+      appRef:
+      - ollamav2
+  ```
+
+### templateOnly
+- Type: `boolean`
+- Default: `false`
+- Optional
+
+When set to `true`, this application is marked as a template and cannot be installed directly. An instance must be created before use. Because a template app is designed to spawn multiple instances, `allowMultipleInstall` must also be set to `true`.
+
+### LLMGatewaySupported
+- Type: `boolean`
+- Default: `false`
+- Optional
+
+When set to `true`, the application supports LLM Gateway calls. Mainly used for model-related application services.
+
+### overlayGateway
+- Type: `map`
+- Optional
+
+Declares the app's support for L2 overlay LAN discovery. When enabled, other apps can access this app via an IP address in the local network.
+:::info Example
+```yaml
+overlayGateway:
+  enable: true  # Enable L2 overlay LAN discovery, default false
+  entrances:
+  - port: 8096  # Overlay listening port
+    title: Jellyfin  # Overlay entrance name
+    workload: jellyfin  # Workload name for OAC validation
+    description: "Access Jellyfin using IP address in LAN"
+    protocol: tcp  # Supported protocols: tcp/udp; defaults to both tcp and udp if omitted
+```
+:::
+
+## envs
 
 Declare the environment variables required for your application to run here. You can allow users to manually enter these values or reference existing system environment variables directly.
 
@@ -1001,6 +1141,10 @@ envs:
     remoteOptions: https://xxx.xxx/xx
     # URL providing a list of accepted options. The response body should be a JSON-encoded options list.
 
+    multiSelect: true
+    splitter: ","
+    # When `options` or `remoteOptions` is set, enables multi-select. Selected values are joined with `splitter` and passed to the app as a string.
+
     regex: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     # The value must match this regular expression.
 
@@ -1008,9 +1152,9 @@ envs:
       envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
     # Reference the value from a system environment variable. When this is used, manual input is not allowed.
     # All declarable fields  (type, editable, etc.) will be overridden by the referenced variable's attributes; default/value fields are also ignored.
-    
+
     applyOnChange: true
-    # Whether to automatically redeploy the app when this variable changes. 
+    # Whether to automatically redeploy the app when this variable changes.
     # If set to false, changes take effect only on upgrade/reinstallation, not on restart.
 
     description: "DESCRIPTION"
@@ -1018,28 +1162,30 @@ envs:
 ```
 :::
 
-To use the values of environment variables in your deployment YAML file, simply use `.Values.olaresEnv.ENV_NAME` in the appropriate place. The system will automatically inject the olaresEnv variables into the Values.yaml during deployment. For example:
-:::info deployment.yaml
-```yaml
-  BACKEND_MAIL_HOST: "{{ .Values.olaresEnv.MAIL_HOST }}"
-  BACKEND_MAIL_PORT: "{{ .Values.olaresEnv.MAIL_PORT }}"
-  BACKEND_MAIL_AUTH_USER: "{{ .Values.olaresEnv.MAIL_AUTH_USER }}"
-  BACKEND_MAIL_AUTH_PASS: "{{ .Values.olaresEnv.MAIL_AUTH_PASS }}"
-  BACKEND_MAIL_SECURE: "{{ .Values.olaresEnv.MAIL_SECURE }}"
-  BACKEND_MAIL_SENDER: "{{ .Values.olaresEnv.MAIL_SENDER }}"
-```
-:::
-
-## Provider
-
-Declare the interfaces that this application exposes to other applications here. The system will automatically generate a Service for each declared interface, enabling other applications within the cluster to access them through the internal network. If another application needs to access these interfaces, it must first request permission for the specific provider in the permissions section.
+To use the values of environment variables in your deployment YAML file, simply use `.Values.olaresEnv.ENV_NAME` in the appropriate place. The system will automatically inject the olaresEnv variables into values during deployment. For example:
 
 :::info Example
 ```yaml
-provider:
-- name: bazarr
-  entrance: bazarr-svc   # The entry name of the service
-  paths: ["/api*"]       # API paths to expose; cannot consist of * only
-  verbs: ["*"]           # Supported: post, get, put, delete, patch; "*" allows all methods
+BACKEND_MAIL_HOST: "{{ .Values.olaresEnv.MAIL_HOST }}"
+BACKEND_MAIL_PORT: "{{ .Values.olaresEnv.MAIL_PORT }}"
+BACKEND_MAIL_AUTH_USER: "{{ .Values.olaresEnv.MAIL_AUTH_USER }}"
+BACKEND_MAIL_AUTH_PASS: "{{ .Values.olaresEnv.MAIL_AUTH_PASS }}"
+BACKEND_MAIL_SECURE: "{{ .Values.olaresEnv.MAIL_SECURE }}"
+BACKEND_MAIL_SENDER: "{{ .Values.olaresEnv.MAIL_SENDER }}"
 ```
 :::
+
+## Deprecated Fields (0.12.0)
+
+The following fields are deprecated in OlaresManifest 0.12.0. Remove them promptly. Apps containing these fields may be **rejected** during installation.
+
+| Field | Action |
+|-------|--------|
+| `metadata.appid` | Remove; it is created automatically from `metadata.name` |
+| `provider` (top-level) | Remove; use an entrance with `authLevel: internal` for other apps to call instead |
+| `permission.provider` | Remove |
+| `permission.sysData` | Remove |
+| `options.appScope` | Remove; declare shared applications using the `apiVersion: 'v3'` format |
+| `spec.subCharts` | Remove; declare shared applications using the `apiVersion: 'v3'` format |
+| `spec.requiredMemory`, etc. | Update; declare under `spec.accelerator` with `mode: cpu` |
+| OS 1.11 categories: `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity` | Use OS 1.12 categories |
