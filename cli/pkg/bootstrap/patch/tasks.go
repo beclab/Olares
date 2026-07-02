@@ -312,3 +312,28 @@ func (t *DisableLocalDNSTask) configResolvConf(runtime connector.Runtime) error 
 	}
 	return nil
 }
+
+// patch nfs script to fix the issue that when nfs mounting systemd reloading will cause the GPU driver to fail in the running containers
+type PatchNfsScriptTask struct {
+	common.KubeAction
+}
+
+func (t *PatchNfsScriptTask) Execute(runtime connector.Runtime) error {
+	if utils.IsExist("/lib/systemd/system/rpc-statd.service") ||
+		utils.IsExist("/etc/systemd/system/rpc-statd.service") {
+		if _, err := runtime.GetRunner().SudoCmd("systemctl add-wants --runtime remote-fs.target rpc-statd.service", false, true); err != nil {
+			logger.Errorf("exec systemctl add-wants error %v", err)
+			return err
+		}
+
+	}
+
+	if utils.IsExist("/usr/sbin/start-statd") {
+		if _, err := runtime.GetRunner().SudoCmd("sed -i 's/systemctl add-wants/#systemctl add-wants/' /usr/sbin/start-statd", false, true); err != nil {
+			logger.Errorf("exec sed error %v", err)
+			return err
+		}
+	}
+
+	return nil
+}
