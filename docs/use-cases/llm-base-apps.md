@@ -223,14 +223,12 @@ Open the built-in model console to track the model download, confirm the model a
 
     The console opens on the **Status** tab by default, and the model files start downloading automatically.
 
-    ![Model console status tab](/images/manual/olares/llm-base-model-console-status.png#bordered)
-
 3. Under **Service status**, track the readiness of the model and the engine:
 
     - **Model**: Shows `Ready` after the files are downloaded and verified.
     - **Engine**: Shows `Running` after the inference service is online.
 
-    ![Model console ready](/images/manual/olares/llm-base-model-console-ready.png#bordered)
+    ![Model console ready](/images/manual/olares/llm-base-model-console-status.png#bordered)
 
 4. When the engine shows `Running`, configure how client apps reach the service.
 
