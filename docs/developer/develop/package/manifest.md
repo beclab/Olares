@@ -651,7 +651,7 @@ When set to `true`, only the admin can install this app.
 When set to `true`, Olares forces the application to run under user ID `1000` (as a non-root user).
 
 ### accelerator
-- Type: `map`
+- Type: `list<map>`
 - Optional
 
 Declares accelerator compute resources required by the application (such as GPU or integrated graphics). For accelerator-aware apps such as LLMs, image generation, video processing, or AI model serving, use the `spec.accelerator` field to declare resources; do not include the original root-level fields such as `spec.requiredMemory`.
@@ -685,11 +685,13 @@ For apps that do not require GPU, it is recommended to declare resources using `
 :::info Example
 ```yaml
 spec:
-  requiredMemory: 2Gi
-  requiredDisk: 50Mi
-  requiredCpu: 0.25
-  limitedMemory: 10240Mi
-  limitedCpu: '4'
+  accelerator:
+  - mode: cpu
+    requiredMemory: 2Gi
+    requiredDisk: 50Mi
+    requiredCpu: 0.25
+    limitedMemory: 10240Mi
+    limitedCpu: '4'
 ```
 :::
 
