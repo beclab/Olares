@@ -18,6 +18,29 @@ import (
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
+// overlayMinOlaresVersion is the first Olares line that ships the overlay
+// gateway wire surface (GET /api/system/overlay-gateway-status/{user},
+// POST /api/command/{enable,disable}-[app-]overlay-gateway). On 1.12.5 those
+// routes do not exist, so every overlay verb is gated to >= 1.12.6 — the same
+// feature set `market restart` (POST /apps/restart) is gated on.
+const overlayMinOlaresVersion = "1.12.6"
+
+// requireOverlayBackendVersion is the client-side version preflight for the
+// overlay gateway surface. Without it, an overlay verb on a 1.12.5 backend
+// surfaces an opaque HTTP 404 from the daemon route instead of an actionable
+// error. It is a thin wrapper that supplies this area's gate copy to the shared
+// preflight.RequireMinVersion helper (fail-closed: an undetectable version is
+// rejected, with --olares-version as the escape hatch), mirroring
+// `settings compute`'s requireComputeBackendVersion.
+func requireOverlayBackendVersion(ctx context.Context, f *cmdutil.Factory) error {
+	return preflight.RequireMinVersion(ctx, f, preflight.MinVersionGate{
+		Verb:       "settings network overlay",
+		MinVersion: overlayMinOlaresVersion,
+		Reason:     "overlay gateway APIs",
+		Fallback:   "upgrade the Olares system to >= " + overlayMinOlaresVersion,
+	})
+}
+
 // `olares-cli settings network overlay ...`
 //
 // 1:1 mirror of the SPA's Settings -> Network -> Overlay Gateway page
@@ -155,6 +178,9 @@ protocol, and description).
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := c.Context()
+			if err := requireOverlayBackendVersion(ctx, f); err != nil {
+				return err
+			}
 			return preflight.Wrap(ctx, f, runOverlayStatus(ctx, f, output), "show overlay gateway status")
 		},
 	}
@@ -351,6 +377,9 @@ while. Re-run 'status' (or the SPA polls every 8s) to see it settle at
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := c.Context()
+			if err := requireOverlayBackendVersion(ctx, f); err != nil {
+				return err
+			}
 			if err := preflight.Gate(ctx, f, whoami.RoleOwner, "enable overlay gateway"); err != nil {
 				return err
 			}
@@ -375,6 +404,9 @@ until it does.
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := c.Context()
+			if err := requireOverlayBackendVersion(ctx, f); err != nil {
+				return err
+			}
 			if err := preflight.Gate(ctx, f, whoami.RoleOwner, "disable overlay gateway"); err != nil {
 				return err
 			}
@@ -469,6 +501,9 @@ func newOverlayAppToggleCommand(f *cmdutil.Factory, enable bool) *cobra.Command 
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			ctx := c.Context()
+			if err := requireOverlayBackendVersion(ctx, f); err != nil {
+				return err
+			}
 			return preflight.Wrap(ctx, f, runOverlayAppToggle(ctx, f, args[0], enable, wf), verb)
 		},
 	}
