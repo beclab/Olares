@@ -382,6 +382,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/karakeep",
             },
             {
+              text: "OnlyOffice",
+              link: "/zh/use-cases/onlyoffice",
+            },
+            {
               text: "Penpot",
               link: "/zh/use-cases/penpot",
             },
