@@ -2,6 +2,7 @@ package translator
 
 import (
 	"testing"
+	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -484,6 +485,95 @@ func TestBuildMultiUserHTTPSListener(t *testing.T) {
 
 	// Clusters created
 	assert.True(t, len(clusters) >= 2)
+}
+
+// Two filter chains with identical SNI (e.g. the same custom domain configured
+// twice) must collapse to one so Envoy never rejects the listener for having
+// duplicate matching rules.
+func TestBuildMultiUserHTTPSListener_DuplicateSNIDropped(t *testing.T) {
+	mk := func() *ir.HTTPListenerIR {
+		return &ir.HTTPListenerIR{
+			Name:       "https_443_olaresid_custom_test-app-domain3_bytetrade_com",
+			Address:    "0.0.0.0",
+			Port:       443,
+			TLS:        true,
+			SNIMatches: []string{"test-app-domain3.bytetrade.com"},
+			TLSCert:    &ir.SecretIR{Name: "custom-tls", CertData: "cert", KeyData: "key"},
+			UserName:   "olaresid",
+			VirtualHosts: []*ir.VirtualHostIR{{
+				Name:    "vh",
+				Domains: []string{"test-app-domain3.bytetrade.com"},
+				Routes:  []*ir.HTTPRouteIR{{Name: "r", PathPrefix: "/", Cluster: ""}},
+			}},
+		}
+	}
+
+	httpListeners := []*ir.HTTPListenerIR{mk(), mk()}
+	clusterSet := make(map[string]bool)
+	listener, _, _ := buildMultiUserHTTPSListener(443, false, httpListeners, map[string]*ir.ClusterIR{}, clusterSet)
+
+	require.NotNil(t, listener)
+	require.Len(t, listener.FilterChains, 1)
+	assert.Equal(t, []string{"test-app-domain3.bytetrade.com"}, listener.FilterChains[0].FilterChainMatch.ServerNames)
+}
+
+// When the same SNI is claimed twice, the earliest-created config must win and
+// the later-created one must be dropped — regardless of slice order.
+func TestBuildMultiUserHTTPSListener_EarliestCreatedWins(t *testing.T) {
+	mk := func(name string, created time.Time) *ir.HTTPListenerIR {
+		return &ir.HTTPListenerIR{
+			Name:       name,
+			Port:       443,
+			TLS:        true,
+			SNIMatches: []string{"dup.example.com"},
+			TLSCert:    &ir.SecretIR{Name: "custom-tls", CertData: "cert", KeyData: "key"},
+			UserName:   "olaresid",
+			CreatedAt:  created,
+			VirtualHosts: []*ir.VirtualHostIR{{
+				Name:    "vh",
+				Domains: []string{"dup.example.com"},
+				Routes:  []*ir.HTTPRouteIR{{Name: "r", PathPrefix: "/"}},
+			}},
+		}
+	}
+
+	old := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	recent := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+
+	// The later-created chain is listed FIRST to prove order doesn't decide it.
+	httpListeners := []*ir.HTTPListenerIR{mk("chain_new", recent), mk("chain_old", old)}
+	clusterSet := make(map[string]bool)
+	listener, _, _ := buildMultiUserHTTPSListener(443, false, httpListeners, map[string]*ir.ClusterIR{}, clusterSet)
+
+	require.NotNil(t, listener)
+	require.Len(t, listener.FilterChains, 1)
+	assert.Equal(t, "chain_old", listener.FilterChains[0].Name)
+}
+
+// Chains for distinct SNIs must all be preserved.
+func TestBuildMultiUserHTTPSListener_DistinctSNIKept(t *testing.T) {
+	mk := func(domain string) *ir.HTTPListenerIR {
+		return &ir.HTTPListenerIR{
+			Name:       "https_443_olaresid_custom_" + domain,
+			Port:       443,
+			TLS:        true,
+			SNIMatches: []string{domain},
+			TLSCert:    &ir.SecretIR{Name: "custom-tls", CertData: "cert", KeyData: "key"},
+			UserName:   "olaresid",
+			VirtualHosts: []*ir.VirtualHostIR{{
+				Name:    "vh",
+				Domains: []string{domain},
+				Routes:  []*ir.HTTPRouteIR{{Name: "r", PathPrefix: "/"}},
+			}},
+		}
+	}
+
+	httpListeners := []*ir.HTTPListenerIR{mk("a.example.com"), mk("b.example.com")}
+	clusterSet := make(map[string]bool)
+	listener, _, _ := buildMultiUserHTTPSListener(443, false, httpListeners, map[string]*ir.ClusterIR{}, clusterSet)
+
+	require.NotNil(t, listener)
+	require.Len(t, listener.FilterChains, 2)
 }
 
 // ---------------------------------------------------------------------------

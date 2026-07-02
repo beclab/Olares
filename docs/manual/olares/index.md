@@ -1,30 +1,58 @@
 ---
 description: Learn how to use Olares system applications with step-by-step guides covering personalization, application management, file handling, security setup, and team collaboration features. Updated regularly with the latest Olares functionality.
+aside: false
 ---
+
 # Olares system applications
 
-Olares system applications are a core component of the Olares ecosystem, pre-installed on your Olares to provide a fundamental yet powerful set of tools. These applications are designed to help you efficiently manage files and applications, organize knowledge, configure system, and accomplish many other daily tasks. Understanding the functions and value of these system applications will enable you to fully leverage Olares' potential, creating a personal cloud environment tailored to your personal needs.
+Olares system applications are a core part of the Olares ecosystem. Pre-installed on your device, they provide the essential tools for managing files, applications, security, and settings from a single place.
 
-This document serves as your comprehensive guide to exploring Olares system applications, empowering you to better navigate your Olares system.
+## Explore the apps
 
-## What can you do with system applications?
-
-Explore the following guides to get the most out of Olares’s built-in apps:
-
-[**Navigate and customize your Desktop**](./desktop.md): Launch apps, organize your workspace, and search across Olares.
-
-[**Install and manage apps with Market**](./market/market.md): Discover, install, update, remove, and clone apps, as well as purchase and restore paid applications.
-
-[**Store, sync, and access Files**](./files/): Upload, download, organize, and share files securely across devices with centralized storage and real-time synchronization.
-
-[**Secure and manage passwords with Vault**](./vault/): Store credentials, manage digital identities, and generate OTPs in a powerful, secure password management tool.
-
-[**Collect and curate knowledge with Wise**](./wise/): Collect, consume, and manage content from various platforms, get personalized recommendations, creating and maintaining your personal information hub.
-
-[**Configure and customize your Olares with Settings**](./settings/): Set up users, apps, network, integrations, security, appearance, backups, and more, all from one centralized interface.
-
-[**Monitor and control Olares environment with Control Hub**](./controlhub/): Monitor system status, manage application services, and fine-tune your Olares environment from a single console.
-
-[**Learn system status with Dashboard**](./resources-usage.md): View real-time resource usage and performance metrics in an easy-to-understand interface.
-
-[**Design your unique Olares Profile**](profile.md): Customize your personal homepage on Olares to reflect your identity and share with others.
+<div class="doc-map">
+  <a class="doc-map-card" href="./desktop">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">desktop_windows</span></span>
+    <span class="doc-map-title">Desktop</span>
+    <span class="doc-map-desc">Launch apps, organize your workspace, and search across Olares</span>
+  </a>
+  <a class="doc-map-card" href="./market/market">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">storefront</span></span>
+    <span class="doc-map-title">Market</span>
+    <span class="doc-map-desc">Discover, install, update, and clone applications</span>
+  </a>
+  <a class="doc-map-card" href="./files/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">folder</span></span>
+    <span class="doc-map-title">Files</span>
+    <span class="doc-map-desc">Store, sync, and share files securely across devices</span>
+  </a>
+  <a class="doc-map-card" href="./vault/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">lock</span></span>
+    <span class="doc-map-title">Vault</span>
+    <span class="doc-map-desc">Store credentials, manage identities, and generate OTPs</span>
+  </a>
+  <!-- <a class="doc-map-card" href="./wise/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
+    <span class="doc-map-title">Wise</span>
+    <span class="doc-map-desc">Collect, read, and organize content into a personal hub</span>
+  </a> -->
+  <a class="doc-map-card" href="./settings/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">settings</span></span>
+    <span class="doc-map-title">Settings</span>
+    <span class="doc-map-desc">Configure users, apps, network, security, and appearance</span>
+  </a>
+  <a class="doc-map-card" href="./controlhub/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">tune</span></span>
+    <span class="doc-map-title">Control Hub</span>
+    <span class="doc-map-desc">Monitor status and manage application services</span>
+  </a>
+  <a class="doc-map-card" href="./resources-usage">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">monitoring</span></span>
+    <span class="doc-map-title">Dashboard</span>
+    <span class="doc-map-desc">View real-time resource usage and performance metrics</span>
+  </a>
+  <a class="doc-map-card" href="./profile">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">badge</span></span>
+    <span class="doc-map-title">Profile</span>
+    <span class="doc-map-desc">Customize your personal Olares homepage</span>
+  </a>
+</div>

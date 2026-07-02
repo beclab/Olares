@@ -18,6 +18,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
 	"github.com/beclab/Olares/cli/cmd/ctl/profile"
+	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
@@ -59,6 +60,15 @@ func NewDefaultCommand() *cobra.Command {
 		},
 	}
 	cmds.Flags().BoolVar(&showVendor, "vendor", false, "show the vendor type of olares-cli")
+
+	// Keep the first line byte-for-byte identical to Cobra's default
+	// ("olares-cli version <VERSION>") so existing parsers that read only
+	// the first line / the third whitespace-delimited token keep working,
+	// while appending the build metadata on following lines.
+	cmds.SetVersionTemplate(fmt.Sprintf(
+		"{{with .Name}}{{.}} {{end}}version {{.Version}}\nGit commit: %s\nBuild time: %s\n",
+		version.GitCommit, version.BuildTime,
+	))
 
 	// Version-compat controls (--olares-version / --refresh-version) live on
 	// the `profile` command tree, not here: backend version is a per-profile
@@ -102,6 +112,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(doctor.NewDoctorCommand(factory))
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
+	cmds.AddCommand(search.NewSearchCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	return cmds

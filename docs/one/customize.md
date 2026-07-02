@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to personalize your Olares experience by customizing your desktop background, system theme, and designing your public profile page.
+description: Learn how to personalize your Olares experience by customizing Desktop widgets, wallpaper, system theme, layout, and your public profile page.
 head:
   - - meta
     - name: keywords
@@ -9,13 +9,15 @@ head:
 
 # Customize Olares <Badge text="15 min"/>
 
-Olares allows you to customize both your private workspace and your public identity. This guide shows you how to set up your desktop appearance and design a profile page to share with others.
+Olares allows you to customize both your private workspace and your public identity. This guide shows you how to set up your desktop appearance, manage Desktop widgets, reset the Desktop layout, and design a profile page to share with others.
 
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:
 - Switch between light and dark system themes.
+- Manage Desktop widgets for date, time, and resource usage.
 - Customize your desktop and login screen wallpapers.
+- Reset the Launchpad and Dock layout when needed.
 - Design your public profile with social links and content blocks.
 - Style your page and share it.
 
@@ -33,6 +35,14 @@ You can adjust the look and feel of your local Olares environment through the sy
 In **Theme**, choose between **Light** or **Dark** mode.
 
 The change takes effect immediately.
+
+### Manage Desktop widgets
+
+Use **Widgets** to control the information shown in the lower-right corner of Desktop.
+
+1. To hide all widgets, turn off **Widgets**.
+2. Under **Date & time**, set **24-hour format** and **Date format** as needed.
+3. Turn **Show dashboard** on or off to show or hide CPU, disk, and memory usage.
 
 ### Change wallpaper
 
@@ -53,6 +63,20 @@ You can set a distinct look for your desktop and login screen.
 Uploaded wallpapers appear in a separate **Uploaded images** section.
 
 To delete an uploaded image, hover over it and click the <i class="material-symbols-outlined">close</i> icon in the top-right corner.
+
+### Reset Desktop layout
+
+Use **Reset desktop layout** when you want to restore the default Launchpad and Dock organization.
+
+1. Scroll to **Reset desktop layout**, then click **Reset**.
+
+2. In the confirmation dialog, choose what to do:
+   - Click **Cancel** to keep your current layout.
+   - Click **Reset** to restore the default layout.
+
+:::warning
+Resetting the desktop layout restores the default Launchpad and Dock layout. Custom icon positions and Dock items are reset. App data is not deleted, but the layout reset cannot be undone.
+:::
 
 ## Design your public profile
 

@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括系统要求、安装命令和激活流程。
 ---
 
-# 通过 ISO 镜像安装 Olares
+# 在 Linux 设备上通过 ISO 镜像安装 Olares
 
 本文介绍如何通过官方 ISO 镜像在物理机上安装 Olares 系统。
 

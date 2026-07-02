@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"k8s.io/klog"
+
 	bflconst "bytetrade.io/web3os/bfl/pkg/constants"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/nets"
@@ -23,13 +25,13 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/api/manifest"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
@@ -575,15 +577,37 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		klog.Error("list applications error, ", err)
 		return nil, err
 	}
-
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	uc, err := iamv1alpha2.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
 	for _, app := range apps.Items {
 		var entrances []appcfg.Entrance
 		var err error
+		zone, err := iamv1alpha2.GetUserZone(ctx, uc.Users, app.Spec.Owner)
+		if err != nil {
+			continue
+		}
 		if !appv1alpha1.IsShared(&app) {
 			entrances, err = appcfg.GenEntranceURL(ctx, &app)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
 				continue
+			}
+			if zone == "" {
+				continue
+			}
+			// GenEntranceURL / BatchGenSharedAppEntranceURL only fill in the
+			// default appid-based URLs. User-customized third-level domains live
+			// in the "customDomain" setting, so without this the intranet (.local)
+			// layer never learns about custom subdomains and cannot resolve them.
+			thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, app.Spec.Owner)
+			for _, tl := range thirdLevelURLs {
+				entrances = append(entrances, appcfg.Entrance{URL: tl})
 			}
 		} else {
 
@@ -819,6 +843,14 @@ func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Applicat
 		}
 
 		entrances = append(entrances, a.Spec.Entrances...)
+		zone := u.GetAnnotations()["bytetrade.io/zone"]
+		if zone == "" {
+			continue
+		}
+		thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, u.GetName())
+		for _, tl := range thirdLevelURLs {
+			entrances = append(entrances, appcfg.Entrance{URL: tl})
+		}
 	}
 
 	return entrances, nil
@@ -878,4 +910,45 @@ func isPodReady(pod *corev1.Pod) bool {
 		}
 	}
 	return true
+}
+
+func IsMasterNode(n *corev1.Node) bool {
+	if cp, ok := n.Labels["node-role.kubernetes.io/control-plane"]; ok && cp != "false" {
+		return true
+	}
+	if m, ok := n.Labels["node-role.kubernetes.io/master"]; ok && m != "false" {
+		return true
+	}
+	return false
+}
+
+func IsNodeReady(n *corev1.Node) bool {
+	for _, c := range n.Status.Conditions {
+		if c.Type == corev1.NodeReady {
+			return c.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
+func GetMasterNodeIpInCluster(ctx context.Context, client kubernetes.Interface) (string, error) {
+	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", fmt.Errorf("error listing nodes: %s", err)
+	}
+	for _, node := range nodes.Items {
+		if !IsMasterNode(&node) {
+			continue
+		}
+		if !IsNodeReady(&node) {
+			continue
+		}
+		for _, address := range node.Status.Addresses {
+			if address.Type == corev1.NodeInternalIP {
+				return address.Address, nil
+			}
+		}
+	}
+
+	return "", errors.New("no master node found")
 }

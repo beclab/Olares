@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Comprehensive guide to Olares architecture covering infrastructure, platform services, and application framework. Learn about container orchestration, storage, networking, and system components.
 ---
 
-# Olares architecture
+# Olares system architecture
 
 This document provides a comprehensive explanation of the Olares architecture, outlining the purpose and functionality of each layer and its components.
 

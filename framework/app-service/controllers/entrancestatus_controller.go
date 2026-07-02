@@ -255,6 +255,7 @@ func (r *EntranceStatusManagerController) updateEntranceStatus(ctx context.Conte
 				Icon:             app.AppIcon(am.Spec.Config),
 				SharedEntrances:  appCopy.Spec.SharedEntrances,
 				MarketSource:     am.Annotations[constants.AppMarketSourceKey],
+				ChartOwner:       appcfg.GetChartOwner(&am),
 				IsShared:         appcfg.IsShared(&am),
 			})
 		}

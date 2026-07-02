@@ -33,6 +33,12 @@ func (h *HelmOps) ApplyEnv() error {
 	if h.app.Type == appv1alpha1.Middleware.String() {
 		return nil
 	}
+	if h.options.SkipWaitForStartUp {
+		// App was Stopped (release scaled to zero); the env upgrade keeps it at
+		// zero replicas, so there are no pods to wait for.
+		klog.Infof("App %s applyenv with skipWaitForStartUp, not waiting for pods", h.app.AppName)
+		return nil
+	}
 	ok, err := h.WaitForStartUp()
 	if !ok {
 		klog.Errorf("Failed to wait for app %s startup", h.app.AppName)

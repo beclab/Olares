@@ -46,8 +46,10 @@ cli/olares-cli*
 framework/app-service/bin
 
 /files/
-market/
-user-service/
+/market/
+/user-service/
+/framework/market/src
+/framework/chart-repo/src
 
 /settings/
 apps/packages/app/.quasar/*
@@ -55,3 +57,6 @@ cli/cmd/ctl/settings/scripts/*
 cli/cmd/ctl/settings/KNOWN_ISSUES.md
 cli/cmd/ctl/settings/NOTES.md
 cli/cmd/ctl/files/scripts/*
+
+# Trellis task-management scaffolding (local workflow state; not product code).
+.trellis/

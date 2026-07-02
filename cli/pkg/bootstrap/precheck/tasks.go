@@ -412,13 +412,13 @@ func (r *RocmChecker) Check(runtime connector.Runtime) error {
 		return nil
 	}
 
-	// detect Strix-Halo presence
-	strixHaloExists, err := connector.HasStrixHalo(runtime)
+	// detect AMD Ryzen AI Max APU presence
+	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
 	if err != nil {
 		return err
 	}
-	// no Strix-Halo found, no need to check rocm
-	if !strixHaloExists {
+	// no AMD Ryzen AI Max found, no need to check rocm
+	if !ryzenAIMaxExists {
 		return nil
 	}
 

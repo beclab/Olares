@@ -11,7 +11,7 @@
 
 ## Self-built images (packaging axis)
 
-When authoring a Dockerfile ([olares-chart-image.md](olares-chart-image.md)), prefer uid/gid 1000 end-to-end:
+When authoring a Dockerfile (the Image capability), prefer uid/gid 1000 end-to-end:
 
 ```dockerfile
 RUN addgroup -g 1000 app && adduser -u 1000 -G app -D app
@@ -102,12 +102,21 @@ spec:
 
 Also set `spec.runAsUser: true` in `OlaresManifest.yaml`. Run `chown` for **each** userspace mount the app writes to (combine paths in one command if needed).
 
+> **`chown` of pre-owned subdirs can fail on upgrade.** A root initContainer can `chown` a root-owned directory, but has been observed to fail with `Operation not permitted` when `chown`-ing subdirectories the main container previously created as uid 1000 — as if `CAP_CHOWN` is unavailable. This means:
+>
+> - **Fresh install:** the `hostPath` root dir is created empty by `DirectoryOrCreate` (owned by kubelet/root). The busybox initContainer runs as root and can `chown` it because root owns the directory. Works.
+> - **Upgrade:** if the main container previously created subdirectories as uid 1000, the busybox initContainer **fails to** `chown` those uid-1000-owned subdirs — `Operation not permitted` — crash-loops, and the pod stays in `Initializing` indefinitely.
+>
+> A plain root container normally keeps `CAP_CHOWN`, so the cap-dropping layer is environment-specific (likely enforced below the cluster at the node / container-runtime level). It is **not** the Olares OPA policy, which only denies untrusted-image + root/`privileged` pods (see [OPA and lint boundaries](#opa-and-lint-boundaries) below) and mutates nothing about capabilities. Treat the rule below as the safe pattern regardless of the exact mechanism.
+>
+> **Practical rule:** For `appData` / `appCache` with `permission.appData: true`, Olares already creates the root dir with uid 1000 ownership. If the app creates its own subdirectories at runtime (e.g. `os.makedirs("/data/models")` in Python), the whole tree stays uid 1000 and **no initContainer is needed**. Only reach for initContainer `chown` when the upstream image's entrypoint writes root-owned files before the process drops to uid 1000.
+
 ### C — image must start as root internally
 
 If the upstream entrypoint **requires** root for its own initialization, you cannot set `runAsUser: 1000` on the main container without breaking it.
 
 - Use B's initContainer to fix volume ownership **before** the main container starts.
-- If the main container still runs as root with a **non-trusted** image, OPA **will reject** the Pod — loop back to the Image capability ([olares-chart-image.md](olares-chart-image.md)) and rebuild or fork the image so the main process can run non-root.
+- If the main container still runs as root with a **non-trusted** image, OPA **will reject** the Pod — loop back to the Image capability and rebuild or fork the image so the main process can run non-root.
 
 ## OPA and lint boundaries
 
@@ -126,4 +135,4 @@ If the upstream entrypoint **requires** root for its own initialization, you can
 | Admission denied: untrusted image + root | Third-party main container runs as root | A (force 1000) or B; never root main on third-party |
 | OPA OK but app still can't write | `spec.runAsUser` not set, or volume pre-dates chown | `spec.runAsUser: true` + B |
 
-After any template change, re-run `olares-cli chart lint ./<app>` ([olares-chart-lint.md](olares-chart-lint.md)).
+After any template change, re-run `olares-cli chart lint ./<app>` (the Validate-local (lint) step).

@@ -22,7 +22,10 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
+	clistate "github.com/beclab/Olares/cli/pkg/daemon/state"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/intelgpu"
 	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	k3stemplates "github.com/beclab/Olares/cli/pkg/k3s/templates"
@@ -399,7 +402,7 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 		if err != nil {
 			return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 		}
-		err = gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &targetDriverVersionStr, ptr.To(common.CurrentVerifiedCudaVersion), ptr.To("true"), ptr.To(gpu.NvidiaCardType))
+		err = gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.NvidiaCardType, &targetDriverVersionStr, ptr.To(common.CurrentVerifiedCudaVersion), ptr.To("true"))
 		if err != nil {
 			return err
 		}
@@ -408,6 +411,17 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 
 	needReboot := changed || (status != nil && status.Mismatch)
 	a.PipelineCache.Set(cacheRebootNeeded, needReboot)
+	if needReboot {
+		// Drop a tmpfs marker now, before the OlaresVersion CR is flipped in
+		// the next task. While it exists, olaresd keeps reporting the system
+		// as upgrading-and-rebooting instead of briefly reporting the upgrade
+		// as complete during the window between the version flip and the
+		// actual reboot. The marker lives under /run and is cleared
+		// automatically once the machine reboots.
+		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("touch %s", clistate.UpgradeRebootMarkFile), false, false); err != nil {
+			logger.Warnf("failed to write upgrade reboot marker %s: %v", clistate.UpgradeRebootMarkFile, err)
+		}
+	}
 	return nil
 }
 
@@ -457,6 +471,23 @@ func (a *applyKubernetesPrometheusRuleAction) Execute(runtime connector.Runtime)
 	return nil
 }
 
+// applyKubernetesPrometheusOperatorAction applies embedded prometheus kubernetes prometheus operator
+type applyKubernetesPrometheusOperatorAction struct {
+	common.KubeAction
+}
+
+func (a *applyKubernetesPrometheusOperatorAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "prometheus-operator", "prometheus-operator-deployment.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s --force-conflicts --server-side", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply prometheus-operator failed")
+	}
+	return nil
+}
+
 func upgradeNodeExporterServiceMonitor() []task.Interface {
 	return []task.Interface{
 		// prometheus node-exporter ServiceMonitor
@@ -475,6 +506,18 @@ func upgradeKubernetesPrometheusRule() []task.Interface {
 		&task.LocalTask{
 			Name:   "ApplyKubernetesPrometheusRule",
 			Action: new(applyKubernetesPrometheusRuleAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
+func upgradePrometheusOperator() []task.Interface {
+	return []task.Interface{
+		// prometheus operator
+		&task.LocalTask{
+			Name:   "ApplyKubernetesPrometheusOperatorAction",
+			Action: new(applyKubernetesPrometheusOperatorAction),
 			Retry:  5,
 			Delay:  5 * time.Second,
 		},
@@ -547,6 +590,25 @@ func (w *waitForStatefulSetReady) Execute(_ connector.Runtime) error {
 	return nil
 }
 
+// newComputeFormatManifestVersion is the OlaresManifest (CfgFileVersion)
+// version from which apps declare their compute needs through the per-mode
+// resource matrix (spec.resources / accelerator) instead of the scalar
+// spec.requiredGpu. From this version on, SelectedGpuType is chosen
+// authoritatively by the install-time auto-selector.
+var newComputeFormatManifestVersion = semver.MustParse("0.12.0")
+
+// isNewComputeFormatManifest reports whether cfgFileVersion is a new-format
+// (>= 0.12.0) manifest. An empty or unparseable version is treated as legacy
+// (older manifests predate reliable CfgFileVersion stamping), so the legacy
+// backfill heuristics still apply to them.
+func isNewComputeFormatManifest(cfgFileVersion string) bool {
+	v, err := semver.NewVersion(strings.TrimSpace(cfgFileVersion))
+	if err != nil {
+		return false
+	}
+	return v.Compare(newComputeFormatManifestVersion) >= 0
+}
+
 type backfillAppGPUConfig struct {
 	common.KubeAction
 }
@@ -605,14 +667,40 @@ func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 			return errors.Wrapf(errors.WithStack(err), "failed to unmarshal config for applicationmanager %s", am.Name)
 		}
 
-		if appCfg.RequiredGPU == "" {
+		// The heuristics below are for legacy manifests only: they infer GPU
+		// need from the scalar spec.requiredGpu (appCfg.RequiredGPU) and fix up
+		// a SelectedGpuType that predates the compute model. New-format
+		// (>= 0.12.0) manifests declare GPU need in the per-mode resource
+		// matrix (spec.requiredGpu stays empty) and already carry an
+		// authoritative SelectedGpuType chosen by the install-time
+		// auto-selector. Running the requiredGpu-scalar heuristics against them
+		// would misread RequiredGPU == "" as "no GPU needed" and wrongly clear
+		// a correctly-selected GPU mode, so skip them entirely.
+		if isNewComputeFormatManifest(appCfg.CfgFileVersion) {
 			continue
 		}
 
 		modified := false
 
-		if appCfg.SelectedGpuType == "" {
-			appCfg.SelectedGpuType = gpuType
+		if appCfg.RequiredGPU != "" {
+			// App declares a GPU requirement but was installed before
+			// SelectedGpuType was recorded: backfill it from the cluster's
+			// gpu type so the new compute model resolves the right mode.
+			if appCfg.SelectedGpuType == "" {
+				appCfg.SelectedGpuType = gpuType
+				modified = true
+			}
+		} else if appCfg.SelectedGpuType != "" && appCfg.SelectedGpuType != "cpu" {
+			// App declares no GPU requirement yet carries a stale GPU
+			// SelectedGpuType: older olares-cli auto-assigned the cluster's
+			// single gpu type to every app it installed, cpu-only ones
+			// included. It was harmless then (GPU scheduling was additionally
+			// gated on a non-zero GPU requirement), but in the new compute
+			// model a non-empty SelectedGpuType resolves the app to that gpu
+			// mode and forces a device binding on resume — wrong for an app
+			// that never needed a GPU. Clear it so the app falls back to cpu
+			// mode, matching the app's effective behavior on the old version.
+			appCfg.SelectedGpuType = ""
 			modified = true
 		}
 
@@ -820,6 +908,32 @@ func (u *upgradeUserReverseProxyAgent) Execute(runtime connector.Runtime) error 
 	}
 
 	return nil
+}
+
+// labelIntelAMDGPUNode detects whether the current node carries an Intel
+// integrated GPU or an AMD Ryzen AI Max APU and, if so, sets the corresponding
+// gpu.bytetrade.io/<mode> existence label. Devices that gained Intel/AMD GPU
+// support before the per-mode (multi-mode) labeling scheme existed never got
+// these labels, so after an upgrade their GPU mode wouldn't be advertised to
+// the scheduler. Reusing the install-time actions here backfills the labels
+// without a fresh install. Both actions are idempotent and no-op on nodes
+// without the respective GPU (and the AMD one additionally requires ROCm to be
+// present, matching the install behavior).
+func labelIntelAMDGPUNode() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "LabelIntelGPUNode",
+			Action: new(intelgpu.UpdateNodeIntelGPUInfo),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "LabelAMDGPUNode",
+			Action: new(amdgpu.UpdateNodeAMDInfo),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+	}
 }
 
 func upgradeUserReverseProxy() []task.Interface {

@@ -84,6 +84,10 @@ type statusRow struct {
 	CfgType  string `json:"cfgType,omitempty"`
 	Message  string `json:"message,omitempty"`
 	Source   string `json:"source"`
+	// StatusTime carries the backend-generated statusTime verbatim (RFC3339).
+	// The restart watcher parses it (see effectiveTime) to compare against a
+	// pre-restart baseline; empty/unparseable means "no reliable timestamp".
+	StatusTime string `json:"statusTime,omitempty"`
 }
 
 func parseStatusRows(resp *APIResponse, source string, showAll bool) ([]statusRow, error) {
@@ -121,13 +125,14 @@ func parseStatusRows(resp *APIResponse, source string, showAll bool) ([]statusRo
 				progress = "-"
 			}
 			rows = append(rows, statusRow{
-				Name:     name,
-				State:    appState.Status.State,
-				OpType:   appState.Status.OpType,
-				Progress: progress,
-				CfgType:  appState.Status.CfgType,
-				Message:  appState.Status.Message,
-				Source:   sourceName,
+				Name:       name,
+				State:      appState.Status.State,
+				OpType:     appState.Status.OpType,
+				Progress:   progress,
+				CfgType:    appState.Status.CfgType,
+				Message:    appState.Status.Message,
+				Source:     sourceName,
+				StatusTime: strings.TrimSpace(appState.Status.StatusTime),
 			})
 		}
 	}

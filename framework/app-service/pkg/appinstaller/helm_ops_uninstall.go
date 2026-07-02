@@ -72,7 +72,7 @@ func (h *HelmOps) UninstallAll() error {
 		h.ClearData(client, appDataDirs)
 		if err != nil {
 			klog.Errorf("Failed to clear app data dirs %v err=%v", appDataDirs, err)
-			return err
+			//return err
 		}
 	}
 

@@ -21,6 +21,119 @@ type InstallRequest struct {
 	Version string      `json:"version"`
 	Sync    bool        `json:"sync"`
 	Envs    []AppEnvVar `json:"envs,omitempty"`
+	// SelectedGpuType pins the compute mode (cpu / nvidia / ...) the
+	// install should schedule against. It mirrors the Market SPA's
+	// install payload field of the same name and is only honored by
+	// Olares 1.12.6+ (the auto-select / computeModeSelect surface). It
+	// is omitempty so a 1.12.5 install — where the CLI never sets it —
+	// keeps the exact same wire bytes as before this field existed.
+	SelectedGpuType string `json:"selectedGpuType,omitempty"`
+}
+
+// BindingSelection is one device a resume picks for an app's compute
+// binding. Mirrors app-service compute.BindingSelection and the SPA's
+// ComputeBindingItem ({nodeName, deviceId, memory?}). Memory is the
+// allocated bytes for MemorySlice devices; omitempty for whole-card modes.
+type BindingSelection struct {
+	NodeName string `json:"nodeName"`
+	DeviceID string `json:"deviceId"`
+	Memory   int64  `json:"memory,omitempty"`
+}
+
+// computeModePlan mirrors one entry of app-service compute.ModePlanResult,
+// the per-mode install plan the backend returns under a computeModeSelect
+// 422 when more than one declared mode is runnable on the cluster. Status
+// is "installable" / "insufficient-resources" / "no-matching-node".
+type computeModePlan struct {
+	ComputeType string `json:"computeType"`
+	Status      string `json:"status"`
+	Reason      string `json:"reason,omitempty"`
+}
+
+// computeBindingPrompt mirrors app-service ComputeBindingFailedCheck — the
+// payload under a computeBindingRequired / computeBindingUnavailable 422 on
+// resume. Availability lists the selectable devices; Validation explains why
+// the previously-supplied binding was rejected (only on *Unavailable).
+type computeBindingPrompt struct {
+	Availability *computeAvailability      `json:"availability"`
+	Validation   *computeBindingValidation `json:"validation,omitempty"`
+}
+
+// computeAvailability mirrors app-service compute.AvailabilityResult.
+type computeAvailability struct {
+	Schedulable bool                `json:"schedulable"`
+	Requirement *computeRequirement `json:"requirement,omitempty"`
+	Scope       string              `json:"scope"`
+	Nodes       []computeNodeOption `json:"nodes"`
+	Reason      string              `json:"reason,omitempty"`
+}
+
+// computeRequirement mirrors app-service compute.Requirement — the bound app's
+// selected resource-mode need. RequiredGpu / RequiredMemory are bytes; the SPA
+// shows RequiredGpu for nvidia and RequiredMemory otherwise.
+type computeRequirement struct {
+	Mode              string `json:"mode"`
+	RequiredCpu       int64  `json:"requiredCpu"`
+	RequiredGpu       int64  `json:"requiredGpu"`
+	LimitedGpu        int64  `json:"limitedGpu"`
+	RequiredMemory    int64  `json:"requiredMemory"`
+	LimitedMemory     int64  `json:"limitedMemory"`
+	RequiredDisk      int64  `json:"requiredDisk"`
+	SupportMultiCards bool   `json:"supportMultiCards"`
+	SupportMultiNodes bool   `json:"supportMultiNodes"`
+}
+
+// computeNodeOption mirrors app-service compute.NodeOption.
+type computeNodeOption struct {
+	NodeName string                `json:"nodeName"`
+	GPUType  string                `json:"gpuType"`
+	Status   string                `json:"status"`
+	Devices  []computeDeviceOption `json:"devices"`
+}
+
+// computeDeviceOption mirrors app-service compute.DeviceOption. Operable
+// reports whether this device can actually take the binding right now.
+type computeDeviceOption struct {
+	NodeName    string `json:"nodeName"`
+	DeviceID    string `json:"deviceId"`
+	CardModel   string `json:"cardModel,omitempty"`
+	SupportType string `json:"supportType"`
+	Capacity    int64  `json:"capacity"`
+	Available   int64  `json:"available"`
+	FitLevel    string `json:"fitLevel,omitempty"`
+	Health      string `json:"health"`
+	Operable    bool   `json:"operable"`
+}
+
+// computeBindingValidation mirrors app-service compute.BindingValidationResult.
+// Code carries the actionable reason (e.g. "node-pressure:<node>",
+// "device-vram-insufficient:<dev>", "gpu-type-mismatch"); Reason is only the
+// generic "valid" / "invalid" bucket. NodePressure is populated when Code is
+// "node-pressure:<node>" so the per-resource breakdown can be surfaced exactly
+// like the SPA's SelectComputeBindingDialog.
+type computeBindingValidation struct {
+	OK           bool                 `json:"ok"`
+	Code         string               `json:"code,omitempty"`
+	Reason       string               `json:"reason,omitempty"`
+	NodePressure *computeNodePressure `json:"nodePressure,omitempty"`
+}
+
+// computeNodePressure mirrors app-service compute.NodePressureDetail.
+type computeNodePressure struct {
+	NodeName   string                     `json:"nodeName"`
+	Dimensions []computePressureDimension `json:"dimensions"`
+}
+
+// computePressureDimension mirrors app-service compute.DimensionPressure.
+// Resource is "memory" / "cpu" / "disk"; memory & disk are bytes, cpu is
+// millicores (matching the SPA's formatComputePressureAmount).
+type computePressureDimension struct {
+	Resource  string `json:"resource"`
+	Required  int64  `json:"required"`
+	Used      int64  `json:"used"`
+	Capacity  int64  `json:"capacity"`
+	Available int64  `json:"available"`
+	Pressured bool   `json:"pressured"`
 }
 
 type CloneRequest struct {
@@ -30,6 +143,11 @@ type CloneRequest struct {
 	Sync      bool          `json:"sync"`
 	Envs      []AppEnvVar   `json:"envs,omitempty"`
 	Entrances []AppEntrance `json:"entrances,omitempty"`
+	// TemplateClone marks an instance created from a template app (no
+	// installable body), mirroring the SPA's onClone() which sets
+	// templateClone:true for templateOnly apps (1.12.6+). omitempty keeps
+	// the 1.12.5 wire byte-identical (the flag is only ever set on 1.12.6).
+	TemplateClone bool `json:"templateClone,omitempty"`
 }
 
 type UninstallRequest struct {
@@ -103,6 +221,13 @@ type AppStatus struct {
 	Progress string `json:"progress,omitempty"`
 	Message  string `json:"message,omitempty"`
 	Reason   string `json:"reason,omitempty"`
+	// StatusTime is the backend-generated timestamp the SPA uses as the
+	// canonical ordering key for a status row (getEffectiveTime in
+	// apps/.../constant/constants.ts prefers statusTime; updateTime is
+	// commented out and lastTransitionTime is not used for ordering). The
+	// restart watcher uses it as a baseline to tell a freshly-completed
+	// restart apart from the identical-looking pre-restart resting row.
+	StatusTime string `json:"statusTime,omitempty"`
 }
 
 type SourceInfoData struct {

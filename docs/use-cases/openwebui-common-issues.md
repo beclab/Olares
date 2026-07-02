@@ -10,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-05-14"
 ---
 
-# Common issues
+# Open WebUI common issues
 
 Use this page to identify and resolve common issues with Open WebUI on Olares.
 

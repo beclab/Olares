@@ -16,6 +16,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	app_service "bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
+	"bytetrade.io/web3os/bfl/pkg/userenv"
 	"bytetrade.io/web3os/bfl/pkg/utils"
 	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
 
@@ -667,25 +668,15 @@ func (h *Handler) handleUpdateLocale(req *restful.Request, resp *restful.Respons
 		return
 	}
 
+	// Location has no backing UserEnv, so it stays on the user annotation; also
+	// advance the wizard status here. language/theme/timezone are persisted to
+	// the UserEnv CRs below.
 	err = func() error {
 		if err = userOp.UpdateUser(user, []func(*iamV1alpha2.User){
 			func(u *iamV1alpha2.User) {
-				if locale.Language != "" {
-					u.Annotations[constants.UserLanguage] = locale.Language
-				}
-
 				if locale.Location != "" {
 					u.Annotations[constants.UserLocation] = locale.Location
 				}
-
-				if locale.Timezone != "" {
-					u.Annotations[constants.UserTimezone] = locale.Timezone
-				}
-
-				if locale.Theme == "" {
-					locale.Theme = "light"
-				}
-				u.Annotations[constants.UserTheme] = locale.Theme
 
 				if u.Annotations[constants.UserTerminusWizardStatus] != string(constants.Completed) {
 					u.Annotations[constants.UserTerminusWizardStatus] = string(constants.WaitActivateNetwork)
@@ -700,6 +691,43 @@ func (h *Handler) handleUpdateLocale(req *restful.Request, resp *restful.Respons
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("update user locale err: %v", err))
 		return
+	}
+
+	// language/theme/timezone are owned by the per-user UserEnvs (see
+	// build/user-env.yaml) and persisted directly to the UserEnv CRs as the
+	// single source of truth (the env settings page reads/writes the same CRs).
+	// These UserEnvs are provisioned when the user reaches the "Created" state,
+	// before activation, so they exist by the time this runs.
+	kc, err := runtime.NewKubeClientInCluster()
+	if err != nil {
+		response.HandleError(resp, errors.Errorf("update user locale err: new kube client err, %v", err))
+		return
+	}
+	ctx := req.Request.Context()
+	c := kc.CtrlClient()
+	envValues := []struct {
+		env string
+		val string
+	}{
+		{userenv.EnvLanguage, locale.Language},
+		{userenv.EnvTimezone, locale.Timezone},
+		{userenv.EnvTheme, locale.Theme},
+	}
+	for _, ev := range envValues {
+		if ev.val == "" {
+			continue
+		}
+		ok, e := userenv.SetValue(ctx, c, constants.Username, ev.env, ev.val)
+		if e != nil {
+			err = e
+			response.HandleError(resp, errors.Errorf("update user locale err: set userenv %s err, %v", ev.env, e))
+			return
+		}
+		if !ok {
+			err = errors.Errorf("update user locale err: userenv %s not provisioned", ev.env)
+			response.HandleError(resp, err)
+			return
+		}
 	}
 
 	response.SuccessNoData(resp)

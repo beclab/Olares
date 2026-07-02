@@ -187,6 +187,16 @@ func TestChainShapes(t *testing.T) {
 	}
 	assertChainNames(t, "InstallabilityValidators", InstallabilityValidators(), wantInstall)
 
+	// UpgradabilityValidators is intentionally just cluster-capacity:
+	// upgrade reuses the existing allocation (compute-mode), the
+	// running deployment is already counted against the owner's quota
+	// (user-quota), and helm upgrade goes through kube-scheduler for
+	// the rest. See UpgradabilityValidators in validators.go.
+	wantUpgrade := []string{
+		"cluster-capacity",
+	}
+	assertChainNames(t, "UpgradabilityValidators", UpgradabilityValidators(), wantUpgrade)
+
 	wantRuntime := []string{
 		"cluster-pressure",
 		"k8s-request",
@@ -225,8 +235,11 @@ func assertChainNames(t *testing.T, label string, chain []Validator, want []stri
 // here would silently include or exclude the wrong validator for a
 // given lifecycle stage.
 //
-// UpgradeOp is intentionally absent across the board: upgrade does not
-// use this validation package (no AppliesTo returns true for UpgradeOp).
+// UpgradeOp is opted into ONLY by cluster-capacity (so the upgrade
+// handler can reject a new chart whose declared requirements exceed
+// the cluster's total schedulable capacity before any helm work
+// happens). Every other validator in this package is intentionally
+// false for UpgradeOp.
 //
 // The remaining semantic mapping (matching the comments inside
 // validators.go):
@@ -235,10 +248,10 @@ func assertChainNames(t *testing.T, label string, chain []Validator, want []stri
 //     install + resume.
 //   - user-quota         : install + resume (quota is a running total
 //     that grows on either transition).
-//   - cluster-capacity   : install only — resume reuses the placement
-//     chosen at install; the cluster's total
-//     schedulable capacity hasn't shrunk in any
-//     normal flow, and pathological "cluster
+//   - cluster-capacity   : install + upgrade — resume reuses the
+//     placement chosen at install; the cluster's
+//     total schedulable capacity hasn't shrunk in
+//     any normal flow, and pathological "cluster
 //     shrank" cases are caught by the runtime
 //     gate (k8s-request / node-pressure) with a
 //     more actionable message.
@@ -252,15 +265,19 @@ func TestAppliesToMatrix(t *testing.T) {
 		want map[Op]bool
 	}{
 		{
-			// cluster-capacity runs at install only: resume reuses the
-			// placement chosen at install, and pathological "cluster
-			// shrank while the app was stopped" cases are caught by
-			// the runtime gate (k8s-request / node-pressure).
+			// cluster-capacity runs at install and upgrade: resume
+			// reuses the placement chosen at install, and pathological
+			// "cluster shrank while the app was stopped" cases are
+			// caught by the runtime gate (k8s-request / node-pressure).
+			// Upgrade is included so a new chart whose declared
+			// requirements exceed the cluster's total schedulable
+			// capacity is rejected at HTTP submit time, before any
+			// helm work happens.
 			name: "cluster-capacity",
 			v:    clusterCapacityValidator{},
 			want: map[Op]bool{
 				v1alpha1.InstallOp: true,
-				v1alpha1.UpgradeOp: false,
+				v1alpha1.UpgradeOp: true,
 				v1alpha1.ResumeOp:  false,
 				v1alpha1.StopOp:    false,
 			},

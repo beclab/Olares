@@ -39,19 +39,20 @@ func listAvailableForLaunch(req Requirement, nodes []Node, pressure PressureSnap
 func classifyLaunchNodes(req Requirement, nodes []Node, pressure PressureSnapshot) []NodeOption {
 	out := make([]NodeOption, 0, len(nodes))
 	for _, node := range nodes {
-		if node.GPUType != req.Mode {
+		if !node.SupportsMode(req.Mode) {
 			out = append(out, NodeOption{
 				NodeName: node.NodeName,
-				GPUType:  node.GPUType,
+				GPUType:  node.primaryGPUType(),
 				Status:   NodeStatusNotMatch,
 			})
 			continue
 		}
+		view := node.viewForMode(req.Mode)
 		var option NodeOption
 		if req.Mode == utils.NvidiaCardType {
-			option = classifyNvidiaNode(req, node, pressure)
+			option = classifyNvidiaNode(req, view, pressure)
 		} else {
-			option = classifyNonNvidiaNode(req, node, pressure)
+			option = classifyNonNvidiaNode(req, view, pressure)
 		}
 		out = append(out, option)
 	}
@@ -62,7 +63,7 @@ func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) N
 	summary := summarizeNvidiaNode(req, node, pressure)
 	option := NodeOption{
 		NodeName: node.NodeName,
-		GPUType:  node.GPUType,
+		GPUType:  req.Mode,
 		Devices:  summary.devices,
 	}
 	if req.SupportMultiCards || req.SupportMultiNodes {
@@ -74,7 +75,7 @@ func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) N
 }
 
 func classifyNonNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) NodeOption {
-	option := NodeOption{NodeName: node.NodeName, GPUType: node.GPUType}
+	option := NodeOption{NodeName: node.NodeName, GPUType: req.Mode}
 	if len(node.Devices) == 0 {
 		option.Status = NodeStatusNotAvailable
 		return option
@@ -168,10 +169,10 @@ func availabilityScope(req Requirement) string {
 	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
 		return AvailabilityScopeSingleNode
 	}
-	if req.Mode == utils.NvidiaCardType {
-		return AvailabilityScopeCard
-	}
-	return AvailabilityScopeNode
+	// Single-nvidia-card and every non-nvidia mode (cpu / amd / intel /
+	// apple-m / moore-soc — each modeled as one node-level device) share the
+	// per-card scope: the unit of scheduling is a single device.
+	return AvailabilityScopeCard
 }
 
 func markOperable(result *AvailabilityResult) {
@@ -436,7 +437,7 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 		if item.device.Health != "" && item.device.Health != deviceHealthYes {
 			return invalidBinding("device-unhealthy:" + item.device.ID)
 		}
-		if item.node.GPUType != req.Mode {
+		if item.device.Mode != req.Mode {
 			return invalidBinding("gpu-type-mismatch")
 		}
 		available := deviceAvailableMemory(item.device)
@@ -483,11 +484,13 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 		if req.Mode == utils.NvidiaCardType && hasTimeSlice {
 			addedGPU = req.LimitedGPU
 		}
-		if pressure.WouldPressure(node, AddedResources{
+		if dims := pressure.PressuredDimensions(node, AddedResources{
 			CPU:    req.RequiredCPU,
 			Memory: req.RequiredMemory + addedGPU,
-		}) {
-			return invalidBinding("node-pressure:" + nodeName)
+		}); len(dims) > 0 {
+			result := invalidBinding("node-pressure:" + nodeName)
+			result.NodePressure = &NodePressureDetail{NodeName: nodeName, Dimensions: dims}
+			return result
 		}
 	}
 	return &BindingValidationResult{OK: true, Code: BindingValidationReasonValid}
@@ -563,13 +566,23 @@ func allocationsFromResolvedSelection(appConfig *appcfg.ApplicationConfig, req R
 	remaining := target
 	for _, item := range resolved {
 		amount := target
-		if item.device.SupportType == SupportTypeMemorySlice && item.memory > 0 {
+		switch {
+		case item.device.SupportType == SupportTypeMemorySlice && item.memory > 0:
+			// Memory-slice cards carve out an explicit per-card slice; the
+			// frontend always sends a positive Memory for them (enforced by
+			// validateResolvedBindingSelection).
 			amount = item.memory
-		}
-		if len(resolved) > 1 {
-			if item.device.SupportType != SupportTypeMemorySlice || item.memory <= 0 {
-				amount = minInt64(deviceAvailableMemory(item.device), remaining)
-			}
+		case isWholeCardMode(req.Mode, item.device.SupportType):
+			// Exclusive / TimeSlice hand the pod the whole card and
+			// buildAllocation records Memory=0, so every selected card must
+			// produce its own binding. These must never be gated on the
+			// shared `remaining` VRAM budget: once an earlier card covered
+			// the RequiredGPU target the budget reaches zero and the rest of
+			// a multi-card selection would be silently dropped, leaving only
+			// a single HAMI binding for a two-card request.
+			amount = deviceAvailableMemory(item.device)
+		case len(resolved) > 1:
+			amount = minInt64(deviceAvailableMemory(item.device), remaining)
 		}
 		if amount <= 0 {
 			continue

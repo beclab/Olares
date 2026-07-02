@@ -13,6 +13,7 @@ import (
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -44,6 +45,14 @@ const (
 	supportTypeExclusive       = "Exclusive"
 	supportTypeMemorySlice     = "MemorySlice"
 	supportTypeTimeSlice       = "TimeSlice"
+	sharedNamespaceSuffix      = "-shared"
+
+	// gpuBindingMemoryBytesPerMiB converts a GPUBinding spec.memory value to
+	// bytes. HAMi expresses the vGPU memory limit in MiB (the quantity holds a
+	// bare MiB number, e.g. 2048 for 2GiB — the same value app-service writes
+	// back via allocation.Memory/mib in compute.createHAMIBinding), while the
+	// compute-allocation model stores memory in bytes.
+	gpuBindingMemoryBytesPerMiB = int64(1024 * 1024)
 )
 
 type migrateLegacyGPUBindings struct {
@@ -72,6 +81,9 @@ func (m *migrateLegacyGPUBindings) Execute(_ connector.Runtime) error {
 	}
 	if err := corev1.AddToScheme(scheme); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to add corev1 scheme")
+	}
+	if err := appsv1.AddToScheme(scheme); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to add apps/v1 scheme")
 	}
 
 	c, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
@@ -141,12 +153,32 @@ func (m *migrateLegacyGPUBindings) Execute(_ connector.Runtime) error {
 		}
 
 		if !shouldMigrateLegacyGPUBinding(am.Status.State.String()) {
-			if err := c.Delete(ctx, binding); err != nil && !apierrors.IsNotFound(err) {
-				return errors.Wrapf(errors.WithStack(err), "failed to delete stale GPUBinding %s", binding.GetName())
+			// A non-holding AM state normally means the binding is stale. But
+			// for a v2 cluster-shared app the binding belongs to the shared
+			// *server*, which keeps holding its GPU as long as its workloads
+			// are running — independent of this AM's declared state. The
+			// resolved AM (the install_user's) can be Stopped after a
+			// client-only stop while the server stays up for other users, and a
+			// stop-all would have scaled the server to zero. So only drop the
+			// binding when the shared server is actually not running; otherwise
+			// migrate it.
+			serverRunning := false
+			if appConfig != nil && appConfig.IsV2() && appConfig.HasClusterSharedCharts() {
+				running, err := sharedServerRunning(ctx, c, appConfig)
+				if err != nil {
+					return err
+				}
+				serverRunning = running
 			}
-			logger.Infof("deleted legacy GPUBinding %s for app %s owner %s in state %s", binding.GetName(), am.Spec.AppName, am.Spec.AppOwner, am.Status.State)
-			deleted++
-			continue
+			if !serverRunning {
+				if err := c.Delete(ctx, binding); err != nil && !apierrors.IsNotFound(err) {
+					return errors.Wrapf(errors.WithStack(err), "failed to delete stale GPUBinding %s", binding.GetName())
+				}
+				logger.Infof("deleted legacy GPUBinding %s for app %s owner %s in state %s", binding.GetName(), am.Spec.AppName, am.Spec.AppOwner, am.Status.State)
+				deleted++
+				continue
+			}
+			logger.Infof("keeping legacy GPUBinding %s for app %s owner %s: shared server still running despite AM state %s", binding.GetName(), am.Spec.AppName, am.Spec.AppOwner, am.Status.State)
 		}
 
 		nodeName, supportType := findDevicePlacement(&nodes, deviceID)
@@ -162,15 +194,24 @@ func (m *migrateLegacyGPUBindings) Execute(_ connector.Runtime) error {
 		var memory int64
 		if supportType == supportTypeMemorySlice {
 			memoryRaw, _, _ := unstructured.NestedFieldNoCopy(binding.Object, "spec", "memory")
-			memory, err = bindingMemory(memoryRaw)
-			if err != nil {
-				return errors.Wrapf(errors.WithStack(err), "failed to parse memory of GPUBinding %s", binding.GetName())
+			memoryMiB, memErr := bindingMemory(memoryRaw)
+			if memErr != nil {
+				return errors.Wrapf(errors.WithStack(memErr), "failed to parse memory of GPUBinding %s", binding.GetName())
 			}
-			if memory <= 0 {
+			if memoryMiB <= 0 {
 				logger.Warnf("skip MemorySlice GPUBinding %s because spec.memory is empty", binding.GetName())
 				skipped++
 				continue
 			}
+			// GPUBinding.spec.memory is the vGPU memory limit in MiB, but the
+			// compute-allocation model stores Allocation.Memory in bytes (it is
+			// subtracted from the byte-scale device capacity during
+			// availability/scheduling and divided back by 1MiB when the binding
+			// is re-emitted). Convert MiB -> bytes here; without it the migrated
+			// allocation is ~1e6x too small — it renders as 0Gi in the UI and
+			// makes the device look almost entirely free, risking GPU
+			// over-allocation.
+			memory = memoryMiB * gpuBindingMemoryBytesPerMiB
 		}
 		key := allocationKey(am.Spec.AppName, am.Spec.AppOwner, deviceID)
 		if _, exists := allocationKeys[key]; !exists {
@@ -230,8 +271,28 @@ func patchMigratedGPUBinding(ctx context.Context, c ctrlclient.Client, binding *
 }
 
 func resolveBindingApplication(ctx context.Context, c ctrlclient.Client, managers *appv1alpha1.ApplicationManagerList, binding *unstructured.Unstructured, appName, owner, namespace string) (*appv1alpha1.ApplicationManager, *appcfg.ApplicationConfig, error) {
+	// An explicitly recorded owner (new-schema binding, or a prior migration
+	// pass) is authoritative.
 	if owner != "" {
 		return findApplicationManager(managers, appName, owner)
+	}
+	// v2 client-server apps with a cluster-shared subchart can be installed by
+	// multiple users (one ApplicationManager each) while only a single server
+	// side actually holds the GPU. app-service attributes that GPU to the
+	// "shared server owner" — the install_user label on the shared namespace
+	// (see compute.sharedServerOwner). This is the authoritative owner and must
+	// be resolved BEFORE the namespace / pod-selector heuristics below: those
+	// inspect the (legacy) binding's podSelector, which can carry a client
+	// user's owner label or match a client user's pods/namespace, and would
+	// otherwise attribute the shared server's GPU to a client user instead of
+	// the install_user. ownerFromSharedServer returns "" for non-shared apps,
+	// so this is a no-op outside the v2 cluster-shared case. Only adopt it when
+	// the install_user actually has a matching ApplicationManager; otherwise
+	// (e.g. a stale install_user label) fall through to the heuristics.
+	if sharedOwner := ownerFromSharedServer(ctx, c, managers, appName); sharedOwner != "" {
+		if am, cfg, err := findApplicationManager(managers, appName, sharedOwner); err != nil || am != nil {
+			return am, cfg, err
+		}
 	}
 	if namespace != "" {
 		if am, cfg, err := findApplicationManagerByNamespace(managers, namespace); err != nil || am != nil {
@@ -246,6 +307,93 @@ func resolveBindingApplication(ctx context.Context, c ctrlclient.Client, manager
 		return findApplicationManager(managers, appName, owner)
 	}
 	return findSingleApplicationManager(managers, appName)
+}
+
+// ownerFromSharedServer resolves the shared-server owner for a v2
+// client-server app whose GPU is held by a single, cluster-shared server side.
+// It mirrors compute.sharedServerOwner: for each ApplicationManager matching
+// appName that declares a v2 cluster-shared chart, it reads the install_user
+// label on the shared namespace (<sharedChart>-shared) and returns it. Returns
+// "" when the app is not a v2 shared app or the shared namespace is missing.
+func ownerFromSharedServer(ctx context.Context, c ctrlclient.Client, managers *appv1alpha1.ApplicationManagerList, appName string) string {
+	for i := range managers.Items {
+		am := &managers.Items[i]
+		if am.Spec.AppName != appName {
+			continue
+		}
+		cfg, err := decodeAppConfig(am)
+		if err != nil || cfg == nil {
+			continue
+		}
+		if !cfg.IsV2() || !cfg.HasClusterSharedCharts() {
+			continue
+		}
+		for j := range cfg.SubCharts {
+			chart := cfg.SubCharts[j]
+			if !chart.Shared {
+				continue
+			}
+			// Mirror appcfg.ChartNamespace for shared charts: the shared
+			// server always lives in "<chartName>-shared" regardless of
+			// the installing user.
+			var ns corev1.Namespace
+			if err := c.Get(ctx, types.NamespacedName{Name: chart.Name + sharedNamespaceSuffix}, &ns); err != nil {
+				continue
+			}
+			if name := ns.Labels[appNameLabelKey]; name != "" && name != appName {
+				continue
+			}
+			if owner := ns.Labels[appInstallUserLabelKey]; owner != "" {
+				return owner
+			}
+		}
+	}
+	return ""
+}
+
+// sharedServerRunning reports whether the v2 cluster-shared server side of
+// appConfig still has running workloads (any shared-chart Deployment /
+// StatefulSet in the <chart>-shared namespace with a non-zero replica count).
+// A nil replica count is treated as running (defaults to 1). It is the
+// migration-side counterpart to compute.SharedServerSuspended and lets the
+// GPUBinding migration keep a shared server's binding while the server is up,
+// even when the resolved ApplicationManager reports a stopped state (a
+// client-only stop leaves the server running for other users).
+func sharedServerRunning(ctx context.Context, c ctrlclient.Client, appConfig *appcfg.ApplicationConfig) (bool, error) {
+	if appConfig == nil || !appConfig.IsV2() || !appConfig.HasClusterSharedCharts() {
+		return false, nil
+	}
+	for _, chart := range appConfig.SubCharts {
+		if !chart.Shared {
+			continue
+		}
+		namespace := chart.Name + sharedNamespaceSuffix
+		var deployments appsv1.DeploymentList
+		if err := c.List(ctx, &deployments, ctrlclient.InNamespace(namespace)); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return false, errors.Wrapf(errors.WithStack(err), "failed to list deployments in shared namespace %s", namespace)
+		}
+		for i := range deployments.Items {
+			if replicas := deployments.Items[i].Spec.Replicas; replicas == nil || *replicas > 0 {
+				return true, nil
+			}
+		}
+		var statefulSets appsv1.StatefulSetList
+		if err := c.List(ctx, &statefulSets, ctrlclient.InNamespace(namespace)); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return false, errors.Wrapf(errors.WithStack(err), "failed to list statefulsets in shared namespace %s", namespace)
+		}
+		for i := range statefulSets.Items {
+			if replicas := statefulSets.Items[i].Spec.Replicas; replicas == nil || *replicas > 0 {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 func findApplicationManager(managers *appv1alpha1.ApplicationManagerList, appName, owner string) (*appv1alpha1.ApplicationManager, *appcfg.ApplicationConfig, error) {

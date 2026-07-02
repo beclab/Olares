@@ -1,8 +1,10 @@
-// Package validation aggregates resource feasibility checks for install
-// and resume. Legacy installs run InstallRuntimePressureValidators before
-// helm; two-phase installs (workloadReplicas) run the same chain after
-// helm at replicas=0 and before Scale(-1). Upgrade does not use this
-// package.
+// Package validation aggregates resource feasibility checks for install,
+// upgrade and resume. Legacy installs run InstallRuntimePressureValidators
+// before helm; two-phase installs (workloadReplicas) run the same chain
+// after helm at replicas=0 and before Scale(-1). The upgrade handler
+// runs UpgradabilityValidators at HTTP submit time, which currently only
+// gates on cluster-capacity (see that function for the rationale on why
+// the other install-time checks are intentionally skipped on upgrade).
 //
 // Each individual check (cluster pressure, per-user quota, k8s request
 // availability, per-node pressure, GPU compute plan) is wrapped in a

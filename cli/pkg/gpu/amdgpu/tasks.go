@@ -56,12 +56,12 @@ func (t *InstallAmdRocm) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
-	strixHaloExists, err := connector.HasStrixHalo(runtime)
+	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
 	if err != nil {
 		return err
 	}
 	// skip rocm install
-	if !strixHaloExists {
+	if !ryzenAIMaxExists {
 		return nil
 	}
 	rocmV, _ := connector.RocmVersion()
@@ -218,24 +218,25 @@ func (t *GenerateAndValidateAmdCDI) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-// UpdateNodeStrixHaloInfo updates Kubernetes node labels with Strix-Halo information.
-type UpdateNodeStrixHaloInfo struct {
+// UpdateNodeAMDInfo labels the node as supporting the "amd" mode (AMD
+// integrated GPU / Ryzen AI Max) once ROCm is present.
+type UpdateNodeAMDInfo struct {
 	common.KubeAction
 }
 
-func (u *UpdateNodeStrixHaloInfo) Execute(runtime connector.Runtime) error {
+func (u *UpdateNodeAMDInfo) Execute(runtime connector.Runtime) error {
 	client, err := clientset.NewKubeClient()
 	if err != nil {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	// Check if Strix-Halo exists
-	strixHaloExists, err := connector.HasStrixHalo(runtime)
+	// Check if an AMD Ryzen AI Max APU is present
+	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
 	if err != nil {
 		return err
 	}
-	if !strixHaloExists {
-		logger.Info("Strix-Halo is not detected")
+	if !ryzenAIMaxExists {
+		logger.Info("AMD Ryzen AI Max APU is not detected")
 		return nil
 	}
 
@@ -248,10 +249,8 @@ func (u *UpdateNodeStrixHaloInfo) Execute(runtime connector.Runtime) error {
 
 	rocmVersion := rocmV.Original()
 
-	gpuType := gpu.StrixHaloChipType
-
-	// Use ROCm version as both driver and "cuda" version for AMD
-	return gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), &rocmVersion, nil, nil, &gpuType)
+	// Use the ROCm version as the driver label for the "amd" mode.
+	return gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.AMDType, &rocmVersion, nil, nil)
 }
 
 // InstallAmdPlugin installs the AMD GPU device plugin DaemonSet.

@@ -52,7 +52,7 @@ func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface)
 		}
 
 		t := time.NewTicker(2 * time.Second)
-		timeout := time.NewTimer(10 * time.Second)
+		timeout := time.NewTimer(60 * time.Second)
 		defer t.Stop()
 		defer timeout.Stop()
 		for {

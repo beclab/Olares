@@ -113,7 +113,7 @@ func RequirementFromMode(mode appcfg.ResourceMode) Requirement {
 	}
 	reqDisk := parseQuantityBytes(source.RequiredDisk)
 	supportMultiNodes := mode.Mode == utils.NvidiaCardType && mode.SupportMultiNodes
-	supportMultiCards := mode.Mode == utils.NvidiaCardType && (mode.SupportMultiCard || supportMultiNodes)
+	supportMultiCards := mode.Mode == utils.NvidiaCardType && (mode.SupportMultiCards || supportMultiNodes)
 	return Requirement{
 		Mode:              mode.Mode,
 		RequiredCPU:       reqCPU,
@@ -168,11 +168,14 @@ func PickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes
 	return pickSingleAllocation(appConfig, req, matching, pressure)
 }
 
+// matchingNodes returns the nodes that support `mode`, each projected onto that
+// single mode (Devices filtered to the mode) so the device-centric scheduling
+// helpers only ever see the relevant devices of a multi-mode node.
 func matchingNodes(mode string, nodes []Node) []Node {
 	out := make([]Node, 0)
 	for _, node := range nodes {
-		if node.GPUType == mode {
-			out = append(out, node)
+		if node.SupportsMode(mode) {
+			out = append(out, node.viewForMode(mode))
 		}
 	}
 	return out
@@ -376,8 +379,7 @@ func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node 
 	// omits spec.memory and HAMI treats the pod as unrestricted. The
 	// scheduler's accounting (deviceAvailableMemory / remainingMemory)
 	// never reads Allocation.Memory for these modes, so this is safe.
-	if req.Mode == utils.NvidiaCardType &&
-		(device.SupportType == SupportTypeExclusive || device.SupportType == SupportTypeTimeSlice) {
+	if isWholeCardMode(req.Mode, device.SupportType) {
 		memory = 0
 	}
 	return Allocation{
@@ -391,11 +393,29 @@ func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node 
 	}
 }
 
+// isWholeCardMode reports whether binding a pod to a device with this NVIDIA
+// support type grants it the entire card: Exclusive (solo binding) or
+// TimeSlice (full memory during the pod's slice). buildAllocation records
+// Memory=0 for these, and they are always one-binding-per-card, so allocation
+// distribution must emit a separate binding for every selected card instead of
+// folding several of them into a single shared VRAM budget.
+func isWholeCardMode(mode, supportType string) bool {
+	return mode == utils.NvidiaCardType &&
+		(supportType == SupportTypeExclusive || supportType == SupportTypeTimeSlice)
+}
+
 func supportTypeOrder(mode string) []string {
 	if mode == utils.NvidiaCardType {
 		return []string{SupportTypeExclusive, SupportTypeMemorySlice, SupportTypeTimeSlice}
 	}
-	return []string{SupportTypeExclusive, SupportTypeMemoryShared}
+	// Every non-nvidia mode (nvidia-gb10 plus the unified-memory accelerators:
+	// cpu / apple-m / intel / amd / moore-soc / discrete GPUs) only ever
+	// carries Exclusive or MemorySlice devices — TimeSlice is nvidia-only.
+	// Listing Exclusive first keeps the scheduler's preference for whole-device
+	// placement before it falls back to a memory slice, and including
+	// MemorySlice is what lets GB10 (decoded as MemorySlice by default) and the
+	// memory-slicing accelerators be scheduled at all.
+	return []string{SupportTypeExclusive, SupportTypeMemorySlice}
 }
 
 func deviceAvailableMemory(device Device) int64 {
@@ -405,7 +425,7 @@ func deviceAvailableMemory(device Device) int64 {
 			return 0
 		}
 		return device.Memory
-	case SupportTypeMemorySlice, SupportTypeMemoryShared:
+	case SupportTypeMemorySlice:
 		return remainingMemory(device)
 	case SupportTypeTimeSlice:
 		return device.Memory

@@ -1,6 +1,6 @@
 # Environment variables — system / user / app level
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md). Env wiring is the configuration half of refinement §3 in [olares-chart-manifest.md](olares-chart-manifest.md) (middleware values are siblings of this).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md). Env wiring is the configuration that accompanies the §3 Middleware & dependencies area of the Manifest refinement areas (middleware values are its sibling).
 
 Olares exposes configuration to an app through env vars at **three levels**. The app declares only the app-level ones (in `OlaresManifest.yaml` `envs[]`); the other two are platform-managed and consumed by reference.
 
@@ -18,7 +18,7 @@ Olares exposes configuration to an app through env vars at **three levels**. The
 >     value: "{{ .Values.olaresEnv.APP_TOKEN }}"
 > ```
 >
-> This is different from system-injected Helm values like `.Values.postgres.*` / `.Values.userspace.*` / `.Values.os.*` (full catalogue in [olares-chart-system-values.md](olares-chart-system-values.md)) — those are not env vars and also need explicit mapping.
+> This is different from system-injected Helm values like `.Values.postgres.*` / `.Values.userspace.*` / `.Values.os.*` (full catalogue in the system-injected Helm values reference) — those are not env vars and also need explicit mapping.
 
 ## When to declare an app-level env
 
@@ -38,7 +38,7 @@ Each entry under `envs:` supports these fields ([app-env-vars.md](https://docs.o
 
 | Field | Meaning |
 |---|---|
-| `envName` | App-local name; injected as `.Values.olaresEnv.<envName>`. **Must not start with `OLARES_USER`** — this is enforced because the skill sets `apiVersion: v3` (see [olares-chart-versioning.md](olares-chart-versioning.md)). Map user vars via `valueFrom` instead. |
+| `envName` | App-local name; injected as `.Values.olaresEnv.<envName>`. **Must not start with `OLARES_USER`** — this is enforced because the skill sets `apiVersion: v3` (see the Version & deps fields). Map user vars via `valueFrom` instead. |
 | `default` | Developer-supplied fallback. Users cannot edit it. Used when no user value and no `valueFrom`. |
 | `valueFrom.envName` | Map to a system/user variable. The entry then **inherits** `type` / `editable` / `regex` / etc. from the referenced var; local `default` / `options` / `type` are ignored. |
 | `required` | `true` → must resolve to a non-empty value for install to proceed (see below). |
@@ -109,7 +109,7 @@ The CLI renders these (e.g. as "missing required env var(s): …"). **`lint` doe
 
 ## Worked examples & default variables
 
-Copy-pasteable examples (init admin credentials, reuse a user var, optional-with-default) and the full list of default `OLARES_SYSTEM_*` / `OLARES_USER_*` variables you can map via `valueFrom` are in [olares-chart-env-defaults.md](olares-chart-env-defaults.md).
+Copy-pasteable examples (init admin credentials, reuse a user var, optional-with-default) and the full list of default `OLARES_SYSTEM_*` / `OLARES_USER_*` variables you can map via `valueFrom` are in the Env worked-examples reference.
 
 ## Caveats
 
@@ -118,3 +118,27 @@ Copy-pasteable examples (init admin credentials, reuse a user var, optional-with
 - **`valueFrom` inherits** `type`/`editable`/`regex` from the referenced var; local `default`/`options`/`type` are ignored.
 - **Install-time override.** A value can be supplied at install via the CLI `--env KEY=VALUE` (see [`olares-market`](../../olares-market/SKILL.md)).
 - **`applyOnChange: false`** means edits only take effect on upgrade/reinstall — stopping and starting the app does nothing.
+- **Helm renders unset optional env vars as empty strings.** When a user hasn't filled in an optional env (`required: false`, no `default`) and the template contains `value: "{{ .Values.olaresEnv.FOO }}"`, Helm renders this as `value: ""` — an empty string, not an absent env var. Apps that treat these as URLs (e.g. an HF endpoint, a proxy address) will receive `""` and fail with "missing protocol" or similar errors. Guard at app startup: unset any env var whose value is an empty string before the library reads it. Example (Python):
+  ```python
+  for var in ("HF_ENDPOINT", "HF_TOKEN"):
+      if not os.environ.get(var, "").strip():
+          os.environ.pop(var, None)
+  ```
+  This `""` behavior applies only to a key **declared in `envs[]`** (so it exists in `.Values.olaresEnv`). A reference to a key that is *not declared at all* renders as `<no value>` instead — a different failure mode — so keep every env you template referenced in `envs[]`.
+
+## Kubernetes service-link env collision (default `enableServiceLinks: false`)
+
+Kubernetes injects, into every container, an env var per same-namespace Service that predates the pod (a Docker `--link` legacy). The biting one is Docker-link style — a Service named `psitransfer` yields `PSITRANSFER_PORT=tcp://10.233.4.38:3000` (plus `*_SERVICE_HOST` / `*_SERVICE_PORT` / `*_PORT_<n>_TCP*`; service name upper-cased, `-`→`_`).
+
+**The trap:** when that upper-cased Service name is also the prefix an app uses for its own config, the injected `<SVC>_PORT=tcp://...` silently clobbers it. Real case: psitransfer reads `PSITRANSFER_PORT` as its listen port → `parseInt("tcp://...")` = `NaN` → never binds → the container **exits 0 with empty logs** (looks like a mysterious crashloop).
+
+Default to `enableServiceLinks: false` on the pod template:
+
+```yaml
+spec:
+  template:
+    spec:
+      enableServiceLinks: false
+```
+
+DNS discovery (`<svc>.<ns>.svc.cluster.local`) and the always-present `KUBERNETES_SERVICE_*` are unaffected — you only drop the legacy injection modern apps don't use. To debug a suspected hit, `olares-cli cluster container env <ns>/<pod>/<container> | grep <APPNAME>` for a `*_PORT=tcp://...`; alternatively declare the colliding var explicitly in `env:` (explicit wins).
