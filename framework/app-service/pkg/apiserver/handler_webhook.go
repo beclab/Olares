@@ -417,10 +417,8 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	}
 
 	var hamiGpuMemory *string
-	if compute.IsHAMIMode(GPUType) && computeReq.RequiredGPU > 0 {
-		gpuRequiredValue := computeReq.RequiredGPU / 1024 / 1024 // HAMi gpu memory format
-		hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
-		hamiGpuMemory = ptr.To(hamiFormatGpuRequired.String())
+	if compute.IsHAMIMode(GPUType) {
+		hamiGpuMemory = hamiGPUMemoryLimit(computeReq)
 	}
 	patchBytes, err := webhook.CreatePatchForDeployment(
 		tpl,
@@ -458,6 +456,26 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
 	}
 	return resp
+}
+
+// hamiGPUMemoryLimit derives the HAMi nvidia.com/gpumem value (in MiB) for a
+// compute requirement. It prefers LimitedGPU (the runtime cap the app may use)
+// when set, falling back to RequiredGPU (the scheduling floor). This mirrors
+// the FitLevelLimit convention in pkg/compute/scheduler.go so requiredGpu stays
+// the scheduling floor while limitedGpu becomes the runtime memory cap. In HAMI
+// mode this injected gpumem is what the scheduler/device-plugin places the pod
+// against, so pods with limitedGpu are intentionally scheduled against that cap.
+// It returns nil when neither value is positive (no gpumem injection).
+func hamiGPUMemoryLimit(req compute.Requirement) *string {
+	gpuMemBytes := req.RequiredGPU
+	if req.LimitedGPU > 0 {
+		gpuMemBytes = req.LimitedGPU
+	}
+	if gpuMemBytes <= 0 {
+		return nil
+	}
+	gpuMemValue := gpuMemBytes / 1024 / 1024 // HAMi gpu memory format (MiB)
+	return ptr.To(resource.NewQuantity(gpuMemValue, resource.DecimalSI).String())
 }
 
 // FIXME: should not hardcode
