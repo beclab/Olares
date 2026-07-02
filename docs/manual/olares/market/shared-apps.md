@@ -9,8 +9,7 @@ Shared applications are a special category of community applications in Olares. 
 
 This page explains what shared applications are, why Olares moved to a new architecture in Olares 1.12.6, and how to migrate from legacy v2 to the new v3 architecture.
 
-## What are shared applications
-
+<!-- #region shared-apps-what-are -->
 A shared application provides shared resources or services to all users in an Olares cluster. Instead of every member installing and running their own instance, the administrator installs and manages one instance that everyone uses.
 
 Key characteristics of shared applications include:
@@ -24,6 +23,7 @@ Key characteristics of shared applications include:
     - **Applications with built-in UI**: Includes both a backend service and a web UI. Members open it directly from the Launchpad. Examples include **Dify Shared** and **ComfyUI Shared**.
     
 - **Unified HTTPS address**: All shared applications use the same URL pattern, that is `https://<app-id>.<username>.<platform-domain>`. Each member accesses the same shared application through their own username.
+<!-- #endregion shared-apps-what-are -->
 
 ## Why the new v3 architecture
 

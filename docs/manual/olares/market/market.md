@@ -17,7 +17,7 @@ Before you start, it is recommended to familiarize yourself with a few concepts 
 |:------------|:--------------|
 | [System application](../../../developer/concepts/application.md#system-applications)   | Built-in applications that come pre-installed with Olares,<br/> such as Profile, Files, and Vault. |
 | [Community application](../../../developer/concepts/application.md#community-applications)  | Applications that are created and maintained by third-party<br/> developers.   |
-| [Shared application](shared-apps.md) | A special type of community application, deployed centrally by the<br/> administrator, that provides shared resources or services to all users<br/> in a cluster. <br/><br/>Applications with a UI can be opened directly from the Launchpad.<br/> Headless backend services expose a standard API through a shared<br/> entrance for third-party clients to consume. |
+| [Shared application](shared-apps.md) | A special type of community application, deployed centrally by the<br/> administrator, that provides shared resources or services to all users<br/> in a cluster. <br/><br/>Applications with a UI can be opened directly from the Launchpad.<br/> Headless backend services expose a standard API for client connections. |
 | [Dependencies](../../../developer/concepts/application.md#dependencies) | Prerequisite applications that must already be<br/> installed before a user can access an application <br/>that requires them.  | 
 
 ## Find applications
@@ -80,16 +80,20 @@ To install an application from Market:
 
 ### Install shared applications
 
-Shared applications are deployed centrally by the administrator, and cluster members do not need to install them themselves. To ensure a shared service is running and accessible within the cluster, follow the installation process based on the type of shared application:
+Shared applications are deployed centrally by the administrator, and cluster members do not need to install them themselves. To ensure a shared service is running and accessible within the cluster, follow the installation process based on the type of shared application.
+
+::: info Manage shared applications
+The administrator is responsible for upgrading, stopping, resuming, and uninstalling shared applications. These operations affect all members in the cluster, so please confirm before proceeding.
+:::
 
 #### Headless backend service
 
-This type of shared application provides only API services without a graphical user interface. Any client that supports the corresponding API can invoke the service. Take Ollama LLM Base (llm-init) as an example:
+This type of shared application provides only API services without a graphical user interface. Any client that supports the corresponding API can invoke the service. Take a model instance created on **Ollama Engine Base** as an example:
 
-1. **Administrator deploys the model**: The administrator clicks **View** on Ollama LLM Base (llm-init) in Market and creates a model instance based on the base application. Once deployed, the model instance starts as a shared service within the cluster, and a model application entry with the same name is generated on the Launchpad. Open this entry to enter the model console, which displays the shared entrance address for the standard API.
+1. **Administrator deploys the model**: The administrator creates a model instance from **Ollama Engine Base** in Market. Once deployed, the model instance starts as a shared service within the cluster, and a model application entry with the same name is generated on the Launchpad.
 2. **Members configure and use it**:
 
-    a. Get the access address: On the Launchpad, open the model application entry to enter the model console, and copy the shared entrance address displayed on the page.
+    a. Get the access address: On the Launchpad, open the model application entry to enter the model console, and copy the **Base URL** displayed on the page.
 
     b. Configure the client: Install any third-party client that supports the corresponding API, such as LobeChat or Open WebUI, and enter the address above in the client's configuration settings to start using it.
 
@@ -103,10 +107,6 @@ This type of shared application includes both a backend service and a web UI, an
     ComfyUI Shared contains a desktop launcher component to manage ComfyUI services and related resources. The administrator needs to configure and start the service from the ComfyUI Launcher.
     :::
 2. **Members use it directly**: Cluster members find the application entry on the Launchpad and click to open it directly, without installing any additional client.
-
-::: info Manage shared applications
-The administrator is responsible for upgrading, stopping, resuming, and uninstalling shared applications. These operations affect all members in the cluster, so please confirm before proceeding.
-:::
 
 ### Install custom applications
 

@@ -82,16 +82,7 @@ gitlab-client-bob
 
 ### Shared applications
 
-A **shared application** is a special category of community applications on Olares designed to provide unified, shared resources or services to all users within an Olares cluster.
-
-Key characteristics of shared applications include:
-
-- **Centralized management**: Only administrators can install, upgrade, stop, resume, and uninstall shared applications. Administrators are responsible for configuring and hosting the app's service, resources, and runtime environment within the cluster.
-- **Easy identification**: In Olares Market, shared applications are typically marked with labels such as "Shared", "Shared app", or the <i class="material-symbols-outlined">group</i> icon.
-- **Flexible access**: The way you access a shared application depends on its form.
-    - **Headless backend service**: For backend service shared applications without a graphical UI, the service exposes a standard API through a shared entrance, which can be consumed by any compatible third-party client such as LobeChat and Open WebUI. Take LLM base applications like Ollama LLM Base as an example: in Market, the base application provides a **View** entry. After an administrator clicks **View**, they can create a specific model instance (e.g., Qwen3.5 27B). Each deployed model displays its shared entrance address in its model console, where members can get the address and configure it in their clients.
-    - **Complete application with built-in UI**: For shared applications that include a complete user interface and backend service themselves (e.g., ComfyUI Shared or Dify Shared), an application entry with the same name is generated on the Launchpad after the administrator installs it, and cluster members can access it directly through this entry.
-- **Unified access address with data isolation**: All shared applications follow this unified URL access rule: `https://<app-id>.<username>.<platform-domain>`. Members access the same shared application through their own usernames, and the system automatically isolates each member's data based on the username, ensuring members can only access their own data.
+<!--@include: ../../manual/olares/market/shared-apps.md{12,26}-->
 
 ### Dependencies
 
