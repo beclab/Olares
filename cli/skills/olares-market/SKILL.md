@@ -1,7 +1,7 @@
 ---
 name: olares-market
-version: 4.4.0
-description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, upload chart."
+version: 4.5.0
+description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume, restart apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, restart app, upload chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -18,7 +18,7 @@ metadata:
 
 ## When to use
 
-- Olares Market, olares-cli market, Olares app store, install / upgrade / uninstall / clone / stop / resume / cancel an app
+- Olares Market, olares-cli market, Olares app store, install / upgrade / uninstall / clone / stop / resume / restart / cancel an app
 - `my Olares apps`, `我的应用`, `market list --mine`, `is <app> installed yet`, chart upload / delete, `--watch` until terminal state
 - Catalog: `list`, `get`, `categories`; runtime: `status`
 
@@ -42,7 +42,7 @@ metadata:
 |---|---|---|
 | **catalog** | `list`, `get`, `categories` | no |
 | **runtime** | `status` | no |
-| **lifecycle** | `install`, `upgrade`, `uninstall`, `clone`, `stop`, `resume`, `cancel` | yes |
+| **lifecycle** | `install`, `upgrade`, `uninstall`, `clone`, `stop`, `resume`, `restart`, `cancel` | yes |
 | **charts** | `upload`, `delete` | yes |
 
 For verb-specific behavior, **always start with `olares-cli market <verb> --help`**. Then drill into a reference if listed:
@@ -50,7 +50,8 @@ For verb-specific behavior, **always start with `olares-cli market <verb> --help
 | Family | Reference |
 |---|---|
 | catalog + runtime | [references/olares-market-list.md](references/olares-market-list.md) (`list` / `--mine` / `categories` / `get` / `status`) |
-| lifecycle | [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md) (`install` / `upgrade` / `uninstall` / `clone` / `stop` / `resume` / `cancel`) |
+| lifecycle | [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md) (`install` / `upgrade` / `uninstall` / `clone` / `stop` / `resume` / `cancel`). `restart` (POST `/apps/restart`, version-agnostic body `{app_name, source}`) shares the `resume` watch bucket (`running`) and, like `stop`/`resume`, exposes no `-s`; it also backs the auto-restart in `settings network overlay app enable/disable` |
+| `--watch` / stuck / errors | [references/olares-market-watch.md](references/olares-market-watch.md) (per-verb watch buckets, foreground windows, stuck-state handling, common errors) |
 | charts | [references/olares-market-charts.md](references/olares-market-charts.md) (`upload` / `delete`) |
 
 ## Source resolution (cross-cutting)
@@ -75,7 +76,8 @@ The market backend serves multiple "sources" of charts. The CLI resolves which o
 | `-s / --source` | `list`, `categories`, `status`, `get` | `install`, `upgrade`, `clone` | — (hard-coded `upload`) |
 | `-a / --all-sources` | `list`, `categories`, `status` | — | — |
 
-> **`-s` is NOT on `uninstall` / `stop` / `resume` / `cancel`:** they act on whichever per-user state row matches the app name, regardless of source.
+> **`-s` is NOT on `uninstall` / `stop` / `resume` / `restart`:** they act on whichever per-user state row matches the app name, regardless of source.
+> **`cancel` now exposes `--source`** — but only as a fallback for the Olares 1.12.6+ edge case where the per-user state row is gone (or `/market/state` is unreadable) and the 1.12.6 cancel body still needs a source. In the normal case the source is read from the state row; do not pass it.
 
 ## App lifecycle / state machine
 
@@ -107,8 +109,8 @@ The same `State` can mean different things depending on which mutation is in fli
 - `--watch-timeout D` caps total wall-clock time.
 - One-shot (no `--watch`) returns as soon as the backend ACKs the mutation request — the row may still be `progressing` for minutes.
 - With `--watch`, the CLI blocks until the row reaches a terminal bucket (success OR failure) matching the OpType safety rules above.
-- **Idempotent**: `resume` against an already-`running` row returns immediately with success; `install` against an already-installed row returns immediately with `state=running`. Watcher never hangs on "no-op" mutations.
-- `--watch-iterations` / `--watch-interval` / `--watch-timeout` are **rejected without `--watch`**.
+- **Idempotent no-ops — `stop` / `resume` only**: `stop` on an already-`stopped` row and `resume` on an already-`running` row return immediately with success (the watcher recognizes the backend's no-op `opType=""` instead of hanging). `install` / `upgrade` / `clone` have **no** such shortcut — they require the matching `OpType` before declaring success. `restart` reuses the `resume` watch bucket (terminal `running`), so its `--watch` inherits the same idempotent-`running` shortcut.
+- `--watch-timeout` / `--watch-interval` are **no-ops without `--watch`** (silently ignored, not rejected). There is no `--watch-iterations` flag on market verbs.
 
 ### Don't just wait — diagnose a stuck install
 

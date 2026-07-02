@@ -1,7 +1,7 @@
 ---
 name: olares-settings
-version: 4.1.0
-description: "Olares Settings via olares-cli settings — mirror of Settings SPA: users, apps, VPN, backup, integration, GPU, search, me/whoami. Use for Olares Settings, role, VPN ACL, backup, integration accounts, language."
+version: 4.4.0
+description: "Olares Settings via olares-cli settings — mirror of Settings SPA: users, apps, VPN, network (reverse-proxy / overlay gateway), backup, integration, GPU, search, me/whoami. Use for Olares Settings, role, VPN ACL, overlay gateway, backup, integration accounts, language."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -64,7 +64,7 @@ For every area, **start with `olares-cli settings <area> --help`**. References b
 | `integration` | [references/olares-settings-integration.md](references/olares-settings-integration.md) (`accounts add awss3|tencent`) |
 | `backup` | [references/olares-settings-backup.md](references/olares-settings-backup.md) (plans / snapshots / password) |
 | `appearance` | `olares-cli settings appearance --help` (`get`, `language set`) |
-| `network` | `olares-cli settings network --help` (read-only reverse-proxy / frp / hosts-file; writes blocked by JWS gap — see below) |
+| `network` | `olares-cli settings network --help` (read-only frp / hosts-file; `reverse-proxy get/set` (owner set); `overlay` gateway `status` / `enable` / `disable` (owner) / `app enable`|`app disable` — NOT JWS-gated, see [Currently-implemented mutating verbs](#currently-implemented-mutating-verbs). `frp set` / `ssl` / `hosts-file set` still blocked by the JWS gap.) |
 | `gpu` | `olares-cli settings gpu --help` (read-only `list`; **legacy, 1.12.5 only** HAMI `/api/gpu/list` — **removed in 1.12.6**: the CLI fails fast there and points at `compute list`) |
 | `compute` | `olares-cli settings compute --help` (**1.12.6+ new "Accelerator"**: `list`, `unbind <app>`, `set-type <node> <device>`; version-gated, replaces `gpu list`. `<node>`/`<device>` come from `list`'s node header + DEVICE-ID column) |
 | `video` | `olares-cli settings video --help` (read-only `config get`) |
@@ -91,7 +91,8 @@ All three delegate to the same driver — same output, same caching, same `--ref
 | Floor | Verbs |
 |---|---|
 | **Admin (owner / admin)** | `users list / get / create / delete`; `network reverse-proxy get`, `network frp list`, `network hosts-file get`; `gpu list`; `compute list`, `compute unbind`, `compute set-type`; `advanced status / registries list / images list`; `vpn ssh status/enable/disable`, `vpn subroutes status`, `vpn acl all/get/add/remove`, `vpn public-domain-policy get` |
-| **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `vpn devices list / routes <id>`; `appearance get`, `appearance language set`; `integration accounts list / list-by-type / get / add / delete`; `video config get`; `search status / dirs list / rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env (system|user) list` |
+| **Owner only** | `network reverse-proxy set` (BFL owner-gated), `network overlay enable`, `network overlay disable` |
+| **Normal (any authenticated user)** | `me whoami / version / check-update / sso list`; `apps list/get`, `apps entrances list`, `apps env get`, `apps domain get`, `apps policy get`; `network overlay status`, `network overlay app enable`, `network overlay app disable`; `vpn devices list / routes <id>`; `appearance get`, `appearance language set`; `integration accounts list / list-by-type / get / add / delete`; `video config get`; `search status / dirs list / dirs add / dirs rm / rebuild`; `backup plans list`, `backup snapshots list`; `restore plans list`; `advanced env (system|user) list` |
 
 ### Soft preflight behavior
 
@@ -115,6 +116,7 @@ Different upstream services return JSON in different envelopes. The CLI normaliz
 | Area | Endpoint family | Wire envelope |
 |---|---|---|
 | `me`, `apps`, `network`, `appearance`, `integration`, `gpu`, `video`, `search`, `advanced` | `/api/*` (user-service / BFL / terminusd) | Unwrapped BFL `{data: ...}` envelope |
+| `network overlay` | `GET /api/system/overlay-gateway-status/{user}`, `POST /api/command/{enable,disable}-overlay-gateway`, `POST /api/command/{enable,disable}-app-overlay-gateway` (user-service → olaresd) | BFL `{code,message,data}` envelope. Status `data`: `{status, disable, disable_reason, supported_apps[], error_message}`; each app: `{app_name, app_id, enabled, shared_app, underlay_networks[]}`. `status` path `{user}` must be the current user (daemon `itsMe`); `-o json` for per-port workload/protocol/description |
 | `users` | `/api/users/v2`, `/api/users/:name`, `POST/DELETE /api/users/...` | List-result decoder; mutating returns axios-inner `{name}` |
 | `vpn` devices / ACL | `<SettingsURL>/headscale/machine`, `/headscale/machine/:id/routes` | Raw Headscale JSON (NO envelope), `route.id` is a string |
 | `vpn` public-domain-policy | `/api/launcher-public-domain-access-policy` | Already-unwrapped `{deny_all: 0|1}` |
@@ -127,6 +129,8 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 
 | Area | Verb | Status |
 |---|---|---|
+| `network overlay` | `enable` / `disable` (owner; gateway master switch, async — status settles at on/off; `--watch` polls until it settles) | UNVERIFIED |
+| `network overlay` | `app enable <app>` / `app disable <app>` (any user; auto-restarts the app when running, via `market restart`; `--watch` polls until enabled+IP assigned / disabled) | UNVERIFIED |
 | `appearance` | `language set <code>` | VERIFIED |
 | `users` | `create` / `delete` (with `--watch`) | VERIFIED |
 | `search` | `rebuild`, `dirs add / remove` | VERIFIED (rebuild + dirs writes) |
@@ -141,7 +145,7 @@ Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Ve
 
 - App lifecycle (`install` / `uninstall` / `upgrade` / `start` / `stop` / `cancel` / `clone`) → use [`olares-market`](../olares-market/SKILL.md) instead
 - Per-app secrets / permissions / providers (Infisical-backed) → admin / chart-side tooling
-- Network writes requiring a JWS-signed device-id header (`hosts-file set`, `frp set`, `ssl enable/disable/update`)
+- Network writes requiring a JWS-signed device-id header (`hosts-file set`, `frp set`, `ssl enable/disable/update`) — note the overlay-gateway writes are NOT in this bucket: they only need Authorization (plus RequireOwner on the gateway master switch), so `network overlay enable/disable` and `overlay app enable/disable` ARE implemented
 - Containerd registry mutations (`registries mirrors put/delete`, `images delete/prune`) — JWS-gated
 - Hardware / restart-class (reboot, shutdown, ssh-password, OS upgrade) — JWS-gated via TermiPass QR callback
 - Backup plan create / update (needs full `BackupPolicy` + `LocationConfig` vector design)

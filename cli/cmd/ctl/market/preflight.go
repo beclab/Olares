@@ -66,6 +66,10 @@ type installedAppRow struct {
 	Source  string
 	State   string
 	Version string
+	// StatusTime is the backend-generated statusTime on the matched row
+	// (RFC3339, verbatim). restart captures it before POST /apps/restart as
+	// the --watch baseline; empty when the backend omits it.
+	StatusTime string
 }
 
 // lookupInstalledApp finds the active profile's per-user state row
@@ -151,11 +155,12 @@ func lookupInstalledApp(ctx context.Context, mc *MarketClient, appName string) (
 				continue
 			}
 			row := &installedAppRow{
-				Name:    appName,
-				RawName: strings.TrimSpace(appState.Status.RawName),
-				Source:  sn,
-				State:   appState.Status.State,
-				Version: strings.TrimSpace(appState.Version),
+				Name:       appName,
+				RawName:    strings.TrimSpace(appState.Status.RawName),
+				Source:     sn,
+				State:      appState.Status.State,
+				Version:    strings.TrimSpace(appState.Version),
+				StatusTime: strings.TrimSpace(appState.Status.StatusTime),
 			}
 			if isInstalledState(row.State) {
 				return row, nil
@@ -184,11 +189,12 @@ func lookupInstalledApp(ctx context.Context, mc *MarketClient, appName string) (
 				continue
 			}
 			row := &installedAppRow{
-				Name:    rawName,
-				RawName: rawName,
-				Source:  sn,
-				State:   appState.Status.State,
-				Version: strings.TrimSpace(appState.Version),
+				Name:       rawName,
+				RawName:    rawName,
+				Source:     sn,
+				State:      appState.Status.State,
+				Version:    strings.TrimSpace(appState.Version),
+				StatusTime: strings.TrimSpace(appState.Status.StatusTime),
 			}
 			if isInstalledState(row.State) {
 				return row, nil

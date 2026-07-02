@@ -52,3 +52,6 @@ cli/cmd/ctl/settings/scripts/*
 cli/cmd/ctl/settings/KNOWN_ISSUES.md
 cli/cmd/ctl/settings/NOTES.md
 cli/cmd/ctl/files/scripts/*
+
+# Trellis task-management scaffolding (local workflow state; not product code).
+.trellis/
