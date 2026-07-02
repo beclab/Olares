@@ -75,7 +75,3 @@ If the issue persists, back up the existing configuration, delete `qBittorrent.c
 1. Open Deluge and go to **Preferences** > **Downloads**.
 2. Update the download path from `/downloads` to `/olares/userdata/home/Downloads/deluge`.
 3. Click **Apply** and then click **OK**.
-
-## See also
-
-- [Upgrade notes for *Arrs](./arrs-upgrade.md)
