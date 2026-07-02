@@ -5,12 +5,14 @@ type HostsItem struct {
 	Host string `json:"host"`
 }
 
+const MASTER_NODE_HOSTNAME = "master-node"
+
 var (
 	internalHostsItem []string = []string{
 		".cluster.local",
 		"dockerhub.kubekey.local",
 		"lb.kubesphere.local",
 		"localhost",
-		"master-node",
+		MASTER_NODE_HOSTNAME,
 	}
 )
