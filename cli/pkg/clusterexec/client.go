@@ -161,7 +161,12 @@ func RunOneShot(ctx context.Context, rp *credential.ResolvedProfile, token strin
 // RunInteractive attaches a TTY: local stdin -> channel 0, server stdout/stderr
 // -> stdout, SIGWINCH -> channel 4 resize. Returns the exit code (nil if none
 // was reported).
-func RunInteractive(ctx context.Context, rp *credential.ResolvedProfile, token string, o Options, stdin *os.File, stdout io.Writer) (*int, error) {
+//
+// onConnected, if non-nil, is invoked exactly once right after the WebSocket
+// handshake succeeds and before the local terminal is switched to raw mode —
+// the caller uses it to turn a "Connecting ..." status into "Connected ...".
+// It is not called when the dial fails.
+func RunInteractive(ctx context.Context, rp *credential.ResolvedProfile, token string, o Options, stdin *os.File, stdout io.Writer, onConnected func()) (*int, error) {
 	o.Stdin = true
 	o.TTY = true
 	conn, resp, err := dial(ctx, rp.ControlHubURL, token, rp.InsecureSkipVerify, o)
@@ -169,6 +174,10 @@ func RunInteractive(ctx context.Context, rp *credential.ResolvedProfile, token s
 		return nil, handshakeError(err, resp)
 	}
 	defer conn.Close()
+
+	if onConnected != nil {
+		onConnected()
+	}
 
 	// Set the terminal title to the target so it stays visible in the tab even
 	// after the screen scrolls; restore it on exit. Terminals that don't grok

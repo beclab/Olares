@@ -157,8 +157,8 @@ native K8s exec WebSocket. Two modes:
   Returns `{stdout, stderr, exitCode, truncated, durationMs}`. Judge success by
   `exitCode` (0 = ok). stdout/stderr are separated. Bounded by `--timeout`
   (default 60s) and `--max-output-bytes` (default 2MiB).
-- **Interactive (`-it`, for humans):** allocates a TTY, prompts y/N, needs a
-  real terminal. Agents should stay on one-shot.
+- **Interactive (`-it`, for humans):** allocates a TTY, needs a real terminal
+  (no prompt). The TTY requirement keeps agents off this path; stay on one-shot.
 
 Agent guidance:
 

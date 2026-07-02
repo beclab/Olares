@@ -24,7 +24,6 @@ func NewExecCommand(f *cmdutil.Factory) *cobra.Command {
 		container string
 		stdinFlag bool
 		ttyFlag   bool
-		assumeYes bool
 		timeout   time.Duration
 		maxBytes  int
 	)
@@ -69,7 +68,7 @@ the only divergence is requiring an explicit container.
 			return pod.RunExec(c.Context(), o, pod.ExecParams{
 				Namespace: ns, Pod: podName, Container: ctr,
 				Command: command, Stdin: stdinFlag, TTY: ttyFlag,
-				AssumeYes: assumeYes, Timeout: timeout, MaxBytes: maxBytes,
+				Timeout: timeout, MaxBytes: maxBytes,
 			})
 		},
 	}
@@ -77,7 +76,6 @@ the only divergence is requiring an explicit container.
 	cmd.Flags().StringVarP(&container, "container", "c", "", "container name (required when the positional doesn't include one)")
 	cmd.Flags().BoolVarP(&stdinFlag, "stdin", "i", false, "keep stdin open to the container (interactive -it only)")
 	cmd.Flags().BoolVarP(&ttyFlag, "tty", "t", false, "allocate a TTY (interactive); requires a local terminal")
-	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "skip the confirmation prompt for interactive (-it) exec")
 	cmd.Flags().DurationVar(&timeout, "timeout", 60*time.Second, "one-shot only: abort if the command runs longer (0 = no limit)")
 	cmd.Flags().IntVar(&maxBytes, "max-output-bytes", 2<<20, "one-shot only: cap per-stream captured output in bytes (0 = unlimited)")
 	o.AddDetailOutputFlags(cmd)

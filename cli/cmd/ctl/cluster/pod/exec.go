@@ -27,7 +27,6 @@ type ExecParams struct {
 	Command   []string
 	Stdin     bool
 	TTY       bool
-	AssumeYes bool
 	Timeout   time.Duration
 	MaxBytes  int
 }
@@ -51,7 +50,8 @@ type execJSON struct {
 //
 // One-shot (default) is the AI-friendly path: separated stdout/stderr,
 // exit-code propagation, bounded by --timeout and --max-output-bytes.
-// `-it` is the human path: TTY + terminal attach with a y/N confirm.
+// `-it` is the human path: TTY allocation + terminal attach (no prompt; the
+// TTY requirement itself keeps non-terminal AI callers on the one-shot path).
 func NewExecCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
 	var (
@@ -59,7 +59,6 @@ func NewExecCommand(f *cmdutil.Factory) *cobra.Command {
 		container string
 		stdinFlag bool
 		ttyFlag   bool
-		assumeYes bool
 		timeout   time.Duration
 		maxBytes  int
 	)
@@ -75,8 +74,9 @@ and --max-output-bytes so a hung/chatty command can't stall or flood callers.
 Use ` + "`-- sh -c '...'`" + ` for pipes/redirects or multi-step repairs.
 
 Interactive (-i -t / -it): allocate a TTY and attach your terminal, like
-` + "`kubectl exec -it`" + `. Requires a local terminal and prompts for
-confirmation (--yes skips). Default command is ` + "`sh`" + ` when none given.
+` + "`kubectl exec -it`" + `. Requires a local terminal (a non-TTY caller such
+as an AI tool call is refused with guidance to use one-shot instead). Default
+command is ` + "`sh`" + ` when none given.
 
 NOTE: changes made inside a running container are ephemeral — a pod restart
 reverts them. Durable fixes go through the image / ConfigMap / workload spec
@@ -106,7 +106,7 @@ reverts them. Durable fixes go through the image / ConfigMap / workload spec
 			return RunExec(c.Context(), o, ExecParams{
 				Namespace: ns, Pod: podName, Container: container,
 				Command: command, Stdin: stdinFlag, TTY: ttyFlag,
-				AssumeYes: assumeYes, Timeout: timeout, MaxBytes: maxBytes,
+				Timeout: timeout, MaxBytes: maxBytes,
 			})
 		},
 	}
@@ -114,7 +114,6 @@ reverts them. Durable fixes go through the image / ConfigMap / workload spec
 	cmd.Flags().StringVarP(&container, "container", "c", "", "container name (required for multi-container pods)")
 	cmd.Flags().BoolVarP(&stdinFlag, "stdin", "i", false, "keep stdin open to the container (interactive -it only)")
 	cmd.Flags().BoolVarP(&ttyFlag, "tty", "t", false, "allocate a TTY (interactive); requires a local terminal")
-	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "skip the confirmation prompt for interactive (-it) exec")
 	cmd.Flags().DurationVar(&timeout, "timeout", 60*time.Second, "one-shot only: abort if the command runs longer (0 = no limit)")
 	cmd.Flags().IntVar(&maxBytes, "max-output-bytes", 2<<20, "one-shot only: cap per-stream captured output in bytes (0 = unlimited)")
 	o.AddDetailOutputFlags(cmd)
@@ -175,16 +174,58 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 		} else {
 			opts.Command = injectPromptLabel(opts.Command, label)
 		}
-		if err := clusteropts.ConfirmDestructive(os.Stderr, os.Stdin,
-			fmt.Sprintf("Open an interactive shell in %s/%s [container %s]?", p.Namespace, p.Pod, container),
-			p.AssumeYes); err != nil {
-			return err
+		// No confirmation here: opening an interactive shell isn't itself
+		// destructive, and the TTY requirement above already keeps non-terminal
+		// callers (AI tool calls) off this path — matching `kubectl/docker exec
+		// -it`, which don't prompt either.
+		//
+		// Show a "Connecting ..." status before the (potentially slow) WebSocket
+		// handshake so the user isn't left staring at a blank screen, then
+		// overwrite it with "Connected ..." once RunInteractive reports the dial
+		// succeeded. Colors/ANSI only when stderr is a real terminal.
+		target := fmt.Sprintf("%s/%s [container %s]", p.Namespace, p.Pod, container)
+		connMsg := fmt.Sprintf("Connecting to %s ...", target)
+		stderrTTY := term.IsTerminal(int(os.Stderr.Fd()))
+		// Only overwrite the "Connecting ..." line in place (\r) when it fits on
+		// one terminal row; otherwise it wraps and \r\033[K would clear just the
+		// last row, leaving the earlier row(s) as garbage. When it can't fit we
+		// fall back to printing "Connected ..." on its own line.
+		overwrite := false
+		if stderrTTY {
+			if w, _, gerr := term.GetSize(int(os.Stderr.Fd())); gerr == nil && w > 0 && len(connMsg) < w {
+				overwrite = true
+			}
+			fmt.Fprintf(os.Stderr, "\033[2m%s\033[0m", connMsg)
+			if !overwrite {
+				fmt.Fprintln(os.Stderr)
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, connMsg)
 		}
-		fmt.Fprintf(os.Stderr, "Connected to %s/%s [container %s]  (Ctrl-D to exit)\n",
-			p.Namespace, p.Pod, container)
-		exit, rerr := clusterexec.RunInteractive(ctx, rp, token, opts, os.Stdin, os.Stdout)
+		onConnected := func() {
+			switch {
+			case stderrTTY && overwrite:
+				fmt.Fprintf(os.Stderr, "\r\033[K\033[1;32mConnected to %s\033[0m  \033[2m(Ctrl-D to exit)\033[0m\n", target)
+			case stderrTTY:
+				fmt.Fprintf(os.Stderr, "\033[1;32mConnected to %s\033[0m  \033[2m(Ctrl-D to exit)\033[0m\n", target)
+			default:
+				fmt.Fprintf(os.Stderr, "Connected to %s  (Ctrl-D to exit)\n", target)
+			}
+		}
+		exit, rerr := clusterexec.RunInteractive(ctx, rp, token, opts, os.Stdin, os.Stdout, onConnected)
 		if rerr != nil {
+			if stderrTTY && overwrite {
+				fmt.Fprintln(os.Stderr) // break off the dangling "Connecting ..." line before the error
+			}
 			return rerr
+		}
+		// ssh-style farewell so the user always knows the session ended (a clean
+		// Ctrl-D exit and a mid-session drop otherwise look identical — you just
+		// land back at the local prompt).
+		if stderrTTY {
+			fmt.Fprintf(os.Stderr, "\033[2mConnection to %s closed.\033[0m\n", target)
+		} else {
+			fmt.Fprintf(os.Stderr, "Connection to %s closed.\n", target)
 		}
 		if exit != nil && *exit != 0 {
 			os.Exit(*exit)
