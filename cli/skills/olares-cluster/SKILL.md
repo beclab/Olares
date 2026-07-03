@@ -25,6 +25,7 @@ Against the cluster the active profile can see:
 - Olares ControlHub, olares-cli cluster, what's running on my Olares
 - "What pods / containers / workloads / jobs / cronjobs / namespaces / nodes are running?"
 - "Tail / show logs of `<pod>` (or `<container>` of `<pod>`)"
+- "Run a command inside a container / debug in-container" (`pod exec` / `container exec` — one-shot is the agent path, `-it` is human-only)
 - "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app (mutating verbs prompt for confirmation; `--yes` skips)
 - "Suspend / resume `<cronjob>`" or "rerun `<job>`"
 - "Who am I on this cluster, what's my role?" (`cluster context`)
@@ -40,7 +41,7 @@ Against the cluster the active profile can see:
 | Noun | Identifier grammar | What it is |
 |---|---|---|
 | **Pod** | `<ns>/<pod>` (or `-n NS <pod>`) | One running pod with one or more containers |
-| **Container** | `<ns>/<pod>/<container>` (or `-n NS <pod> -c NAME`) | A single container inside a pod (logs / env target) |
+| **Container** | `<ns>/<pod>/<container>` (or `-n NS <pod> -c NAME`) | A single container inside a pod (logs / env / exec target) |
 | **Workload** | `<ns>/<name>` + `--kind deployment\|statefulset\|daemonset` | The controller that owns pods. Subject of `scale` / `restart` / `stop` / `start` / `rollout-status` |
 | **Application space** | `<namespace>` | A KubeSphere-grouped K8s namespace; the "Olares Application Space" framing groups namespaces by workspace |
 | **Namespace** | `<name>` | The same K8s namespace, kubectl-style framing (no workspace grouping) |
@@ -146,18 +147,3 @@ Two image-inventory commands ride on top of this:
 | `refresh token for ... became invalid at ...` (typed `*credential.ErrTokenInvalidated`) | The refresh_token itself is dead — auto-refresh can't recover | `olares-cli profile login` |
 
 For the full auth-error matrix see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
-
-## exec (run commands inside a container)
-
-`cluster {pod,container} exec` runs a command inside a container over the native
-K8s exec WebSocket. **One-shot (default) is the agent path**: argv after `--`,
-runs to completion, `-o json` returns `{stdout, stderr, exitCode, truncated,
-durationMs}` — judge success by `exitCode`. **`-it` is human-only** (needs a
-real terminal; the TTY requirement keeps agents on one-shot). Requires Olares
->= 1.12.7 and `pods/exec` permission (server-side SAR, audited).
-
-Key agent rules — stateless (chain steps in one `-- sh -c '...'`), in-container
-fixes are **ephemeral** (durable changes go through `workload`), and never-
-returning commands (`watch`, `tail -f`) must be **bounded** (`timeout`,
-snapshot+poll, or raise `--timeout`). Full detail, editing recipes, examples,
-and the error table: [references/olares-cluster-exec.md](references/olares-cluster-exec.md).
