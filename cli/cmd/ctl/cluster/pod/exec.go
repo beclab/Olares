@@ -120,6 +120,40 @@ reverts them. Durable fixes go through the image / ConfigMap / workload spec
 	return cmd
 }
 
+// execMinOlaresVersion is the first Olares OS line whose ControlHub edge nginx
+// exposes the exec WebSocket route (`/api/v1/namespaces/.../pods/.../exec`).
+// Earlier backends close the upgrade, so `cluster {pod,container} exec` is
+// gated on this version.
+const execMinOlaresVersion = "1.12.7"
+
+// requireExecBackendVersion is the client-side version preflight for exec. It
+// mirrors the files feature gates: >= 1.12.7 allowed; a detected-but-older
+// backend is rejected with an upgrade hint; an undetectable version is rejected
+// with a hint to (re-)establish the profile so the version is cached. The
+// backend version is cached per profile at login, so in the common case this
+// adds no network round-trip. (--olares-version lives on the `profile` tree,
+// not here, so it's intentionally not suggested.)
+func requireExecBackendVersion(ctx context.Context, f *cmdutil.Factory) error {
+	ok, err := f.OlaresBackendAtLeast(ctx, execMinOlaresVersion)
+	if err != nil {
+		return fmt.Errorf(
+			"`cluster exec` requires Olares >= %s (the ControlHub exec route was added then), but the backend "+
+				"version could not be determined: %v; ensure you are logged in (`olares-cli profile login`) "+
+				"and refresh it with `olares-cli profile list --refresh-version`",
+			execMinOlaresVersion, err)
+	}
+	if !ok {
+		got := "unknown"
+		if v, verr := f.OlaresBackendVersion(ctx); verr == nil && v != nil {
+			got = v.Original()
+		}
+		return fmt.Errorf(
+			"`cluster exec` requires Olares >= %s, but this backend is %s; upgrade the Olares system to use exec",
+			execMinOlaresVersion, got)
+	}
+	return nil
+}
+
 // RunExec is the exported entry point for the exec verb, shared with
 // Task 5's `cluster container exec` alias. It resolves the container
 // (auto-selecting the sole container, or erroring with the candidate
@@ -130,6 +164,14 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 		ctx = context.Background()
 	}
 	f := o.Factory()
+
+	// Feature gate: the exec WebSocket route is only reachable once the system
+	// ControlHub app's edge nginx allows/upgrades `/api/v1/.../exec`, which
+	// shipped in Olares 1.12.7. On older backends the dial fails with an opaque
+	// handshake error, so we fail fast with an actionable version message.
+	if err := requireExecBackendVersion(ctx, f); err != nil {
+		return err
+	}
 
 	container := strings.TrimSpace(p.Container)
 	if container == "" {
