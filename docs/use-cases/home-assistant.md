@@ -7,7 +7,7 @@ head:
       content: Olares, Home Assistant, smart home, local discovery, home automation, overlay gateway, Dahua, IP camera, RTSP, HACS
 app_version: "1.0.23"
 doc_version: "1.0"
-doc_updated: "2026-07-01"
+doc_updated: "2026-07-03"
 ---
 
 # Build your smart home hub with Home Assistant
@@ -52,7 +52,7 @@ By default, Home Assistant runs isolated from your local network and cannot auto
 ### Enable the overlay gateway
 
 1. Open Olares Settings, and then go to **Network** > **Overlay gateway**.
-2. Ensure the system-level **Enable overlay gateway** option is enabled. If you cannot enable it for yourself, ask the Super admin to enable it first.
+2. Ensure the system-level **Enable overlay gateway** option is enabled. If you can't enable it, ask the Super Admin to enable it first.
 3. Under **Applications**, find **Home Assistant**, and then enable overlay gateway for it.
 4. In the confirmation dialog, click **Confirm**. Olares assigns a local IP address to Home Assistant.
 
@@ -66,7 +66,7 @@ After enabling the overlay gateway, configure Home Assistant to listen on the lo
 2. Clear the checkbox for **Autoconfigure**.
 3. Select **Adapter: eth0** and **Adapter: net1**.
 
-    ![Home Assistant network adapter settings](/images/manual/use-cases/home-assistant-network-adapter.png#bordered)
+   ![Home Assistant network adapter settings](/images/manual/use-cases/home-assistant-network-adapter.png#bordered)
 
 4. Click **Save**.
 5. Go back to **Settings** > **System**, and then click <i class="material-symbols-outlined">power_settings_new</i> in the upper-right corner.
@@ -78,9 +78,14 @@ After enabling the overlay gateway, configure Home Assistant to listen on the lo
 
 1. In Home Assistant, go to **Settings** > **Devices & services**.
 
-   A **Discovered** panel appears, listing devices such as a DLNA media renderer, Apple TV, UPnP/IGD router, Synology DSM, or HomeKit accessory.
+   The **Discovered** panel appears, listing devices found on your local network. For example:
+   - **DLNA Digital Media Renderer**: Smart TVs, set-top boxes, or speakers that can play media streams from Home Assistant.
+   - **UPnP/IGD**: Routers or gateways that expose network information.
+   - **Synology DSM**: NAS devices on the local network.
+   - **HomeKit accessory**: HomeKit-compatible devices such as lights, plugs, or sensors.
+   - **Internet Printing Protocol (IPP)**: network printers.
 
-    ![Discovered devices](/images/manual/use-cases/ha-discovered1.png#bordered)
+   ![Discovered devices](/images/manual/use-cases/ha-discovered2.png#bordered)
 
 2. Click **Add** on the device you want to add, and then follow the on-screen prompts to finish pairing. Some devices might ask for a PIN code.
 3. Assign the device to an area, and then click **Finish**. After pairing, you can find and control the device on your **Overview** dashboard.
@@ -142,7 +147,7 @@ The Generic Camera integration uses the camera's Real-Time Streaming Protocol (R
     rtsp://{username}:{password}@{camera_ip}:{rtsp_port}/cam/realmonitor?channel=1&subtype=1
     ```
 
-    Where,
+    Where:
     - `username`: The camera's web interface login username.
     - `password`: The camera's web interface login password.
     - `camera_ip`: The camera's IP address.
