@@ -6,10 +6,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"k8s.io/klog"
 	"net/url"
 	"os"
 	"strings"
+
+	"k8s.io/klog"
 
 	bflconst "bytetrade.io/web3os/bfl/pkg/constants"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -909,4 +910,45 @@ func isPodReady(pod *corev1.Pod) bool {
 		}
 	}
 	return true
+}
+
+func IsMasterNode(n *corev1.Node) bool {
+	if cp, ok := n.Labels["node-role.kubernetes.io/control-plane"]; ok && cp != "false" {
+		return true
+	}
+	if m, ok := n.Labels["node-role.kubernetes.io/master"]; ok && m != "false" {
+		return true
+	}
+	return false
+}
+
+func IsNodeReady(n *corev1.Node) bool {
+	for _, c := range n.Status.Conditions {
+		if c.Type == corev1.NodeReady {
+			return c.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
+func GetMasterNodeIpInCluster(ctx context.Context, client kubernetes.Interface) (string, error) {
+	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", fmt.Errorf("error listing nodes: %s", err)
+	}
+	for _, node := range nodes.Items {
+		if !IsMasterNode(&node) {
+			continue
+		}
+		if !IsNodeReady(&node) {
+			continue
+		}
+		for _, address := range node.Status.Addresses {
+			if address.Type == corev1.NodeInternalIP {
+				return address.Address, nil
+			}
+		}
+	}
+
+	return "", errors.New("no master node found")
 }
