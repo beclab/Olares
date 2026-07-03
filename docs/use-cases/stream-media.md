@@ -151,11 +151,8 @@ Connect your Olares device through wired Ethernet, and keep your TV on the same 
 ### Enable overlay gateway for Jellyfin
 
 1. Open **Settings**, then go to **Network** > **Overlay gateway**.
-
 2. Ensure the system-level **Enable overlay gateway** option is turned on. If you cannot turn it on yourself, ask the Super admin to enable it first.
-
 3. Under **Applications**, find Jellyfin and enable overlay gateway for it.
-
 4. In the confirmation dialog, click **Confirm**.
 
    ![Enable overlay gateway for Jellyfin](/images/manual/use-cases/jellyfin-enable-overlay-gateway.png#bordered){width=90%}
@@ -167,13 +164,9 @@ If Jellyfin is running, Olares restarts it to apply the network change. Wait unt
 Use the Jellyfin app to play media directly on your TV.
 
 1. Install the latest Jellyfin app on your TV.
-
 2. Open the Jellyfin app on your TV, then choose the option to select or add a server. The app should automatically find Jellyfin through its overlay gateway local IP.
-
 3. In the list, select the Jellyfin server that matches the overlay gateway IP shown for Jellyfin in **Settings**.
-
 4. Sign in with the Jellyfin username and password you created during setup.
-
 5. Open a media item and confirm that the video starts playing on the TV.
 
 ### Cast from Jellyfin to a TV
@@ -181,15 +174,12 @@ Use the Jellyfin app to play media directly on your TV.
 Start a video in Jellyfin on Olares, then send it to a DLNA-capable TV. You do not need to open the Jellyfin app on the TV before casting.
 
 1. Open Jellyfin on Olares.
-
 2. Click the <i class="material-symbols-outlined">menu</i> icon in the upper-left corner, then click **Dashboard** in the sidebar.
 
    ![Jellyfin dashboard](/images/manual/use-cases/jellyfin-dashboard.png#bordered){width=90%}
 
 3. In the dashboard sidebar, scroll down to **Plugins**, then click **Catalog**.
-
 4. Search for "DLNA", open the DLNA plugin result, and click **Install**.
-
 5. After the plugin installs successfully, restart Jellyfin from Olares:
 
    a. Open **Settings**, then go to **Applications** > **Jellyfin**.
@@ -199,9 +189,7 @@ Start a video in Jellyfin on Olares, then send it to a DLNA-capable TV. You do n
    c. After Jellyfin stops, click **Resume**.
 
 6. Reopen Jellyfin on Olares.
-
 7. Open the video you want to cast.
-
 8. Click the <i class="material-symbols-outlined">cast</i> icon (**Play on**) in the upper-right corner. Jellyfin should automatically find your TV.
 
    ![Select a TV from Play on in Jellyfin](/images/manual/use-cases/jellyfin-play-on-tv.png#bordered){width=90%}
