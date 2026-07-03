@@ -43,7 +43,7 @@ An Engine Base app serves as a template. To run a model, you must first clone th
 4. Specify the instance identity settings:
 
     - **New app name**: Enter a unique name for the instance. This name is displayed as the app name in Market and Settings. For example, `Qwen3.6-35B-A3B`.
-    - **Shortcut name for {client}**: Enter a unique shortcut name for the instance. This name is displayed on the Launchpad. For example, `qwen3.6-35b-a3b`.
+    - **Shortcut name for [client]**: Enter a unique shortcut name for the instance. This name is displayed on the Launchpad. For example, `qwen3.6-35b-a3b`.
 
 5. Click **Create** to proceed to the environment configuration.
 
@@ -225,12 +225,12 @@ Open the built-in model console to track the model download, confirm the model a
 
 3. Under **Service status**, track the readiness of the model and the engine:
 
-    - **Model**: Shows `Ready` after the files are downloaded and verified.
-    - **Engine**: Shows `Running` after the inference service is online.
+    - **Model**: Shows **Ready** after the files are downloaded and verified.
+    - **Engine**: Shows **Running** after the inference service is online.
 
     ![Model console ready](/images/manual/olares/llm-base-model-console-status.png#bordered)
 
-4. When the engine shows `Running`, configure how client apps reach the service.
+4. When the engine shows **Running**, configure how client apps reach the service.
 
     - **Connection source**: Select where the client runs.
         - **Apps in Olares**: For apps running in Olares.
@@ -249,12 +249,16 @@ Open the built-in model console to track the model download, confirm the model a
 
 6. In the **GPU residency** section, click **Detect**, and then:
 
-    - **Check the mode**: Confirm the model runs on the GPU.
-        - `Full GPU`: The entire model runs on the GPU. This is the expected, fastest state.
-        - `Split` or `CPU`: Part or all of the model fell back to the CPU, which makes inference slower. On a GPU host, this usually means an environment mis-mount; review your `{ENGINE}_REQUIRED_GPU_MEMORY` setting and engine arguments.
-    - **Check the memory usage**: Review the **VRAM**, **KV cache used**, and **GPU memory utilization** to see how much memory the model occupies and how much headroom is left for longer contexts or more concurrent requests.
+    - **Check the mode**: Confirm where the model is running.
+        - **Full GPU**: The entire model runs on the GPU. This is the fastest state, and is expected when you selected the GPU accelerator during installation.
+        - **CPU** or **Split**: Part or all of the model runs on the CPU, which makes inference slower.
+            - If you chose the CPU accelerator during installation, `CPU` is expected. 
+            - If you chose the GPU accelerator, review your `[ENGINE]_REQUIRED_GPU_MEMORY` setting and engine arguments.
+    - **Check the memory usage**: Review the **VRAM**, **KV cache used**, and **GPU memory utilization** to see how much memory the model occupies and how much memory is left for longer contexts or more concurrent requests.
 
-7. In the **Performance** section, click **Run test** to measure two response-speed metrics. Use them to compare quantization levels, context sizes, or engine arguments, and to verify that a change actually improved speed before you use it:
+7. In the **Performance** section, click **Run test** to measure two response-speed metrics.
+
+    Use them to compare quantization levels, context sizes, or engine arguments, and to verify that a change actually improved speed before you use it:
 
     - **TTFT** (Time To First Token): How long you wait before the first word appears. A lower value means the model responds faster.
     - **Cold start**: How long the engine takes to load the model from scratch, for example after a restart. A lower value means the model is ready to serve sooner.
