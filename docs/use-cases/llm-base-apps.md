@@ -267,7 +267,7 @@ The following example uses [OpenCode](./opencode.md) as the client.
 
 1. In the model console, go to the **Status** tab. Under **Service status**:
 
-    - **Connection source*: Select **Apps in Olares**, because OpenCode runs in Olares.
+    - **Connection source**: Select **Apps in Olares**, because OpenCode runs in Olares.
     - **API format**: Select **OpenAI-Compatible**.
     - Copy the **Base URL** and note down the **Model name**.
 
