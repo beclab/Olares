@@ -95,12 +95,14 @@ app-service only accepts `uninstall` from a settled state (`running` / `stopped`
 ```bash
 olares-cli market clone firefox --title "Work Browser"
 olares-cli market clone firefox --title "Work Browser" --entrance-title web=WorkWeb
+olares-cli market clone comfyui --title "ComfyUI Dev" --compute-mode nvidia  # pin GPU mode (1.12.6+)
 olares-cli market clone firefox --title "Work Browser" --watch
 ```
 
 - **Clonable apps** are either multi-instance apps (`allowMultipleInstall: true`) **or** template apps (`templateOnly: true`). A template app has no installable body — instances are created from it via clone — and on 1.12.6+ the CLI sends `templateClone:true` for it automatically. Pre-flight check the source app's `market get <app> -o json` if unsure.
 - `--title` is REQUIRED — feeds the cloned app's desktop shortcut title.
 - For apps with multiple entrances: `--entrance-title NAME=TITLE` (repeatable) overrides per-entrance titles. For single-entrance apps, the entrance title defaults to `--title`.
+- `--compute-mode <type>` (**Olares 1.12.6+ only**) works exactly like on `install`: apps runnable on more than one accelerator (`cpu`, `nvidia`, ...) require a choice, so when it is omitted the backend returns HTTP 422 / `type=computeModeSelect` and the CLI either **prompts interactively** (TTY) or **fails listing the installable modes** (non-interactive: `-q`, `-o json`, or a pipe) so you re-run with the flag. On **1.12.5 the clone path is unchanged** and `--compute-mode` is rejected.
 - **The backend mints a per-instance app name** (e.g. `firefoxe992`). The CLI surfaces it as `targetApp` in the JSON output so scripted callers can chain follow-ups (`jq -r '.targetApp'`). **`--watch` tracks the new clone name, not the source app.**
 
 ## `stop` / `resume`

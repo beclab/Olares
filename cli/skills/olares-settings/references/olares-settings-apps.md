@@ -133,7 +133,7 @@ olares-cli settings apps list --all            # also include uninstalled / pend
 - **Always run `entrances list <app>` before any per-entrance edit.** Don't assume entrance names; the user-facing names (e.g. `www`) often differ from the chart-defined service names.
 - **For `policy set`**, surface `policy get` output to the user BEFORE applying — the sub-policy replacement semantics are easy to misuse.
 - **For `domain set --third-party`**, remind the user to set up the CNAME at their DNS provider AND run `domain finish` once it propagates.
-- **For UNVERIFIED verbs**, the CLI emits a one-line "experimental" hint on stderr — don't suppress it.
+- **For UNVERIFIED verbs** (`env set`, `domain set/finish`, `policy set`, `auth-level set`), the result is provisional (not yet smoke-tested against a live instance) — confirm the outcome after running.
 
 ## Common errors
 
@@ -143,4 +143,3 @@ olares-cli settings apps list --all            # also include uninstalled / pend
 | `--cert-file and --key-file are required when --third-party is set` | Third-party domain without cert | Provide both, or use `--clear-third-party` |
 | `--default-policy: invalid value 'X' (allowed: system, one_factor, two_factor, public)` | Typo | Use one of the four valid values |
 | `auth-level get is not supported (no upstream endpoint); use 'apps entrances list <app>' to read the AUTH LEVEL column` | Tried to GET auth-level | Read from `entrances list` |
-| `experimental: this verb is not yet smoke-verified` (stderr) | UNVERIFIED verb | Informational; proceed with caution |

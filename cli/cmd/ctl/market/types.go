@@ -143,6 +143,12 @@ type CloneRequest struct {
 	Sync      bool          `json:"sync"`
 	Envs      []AppEnvVar   `json:"envs,omitempty"`
 	Entrances []AppEntrance `json:"entrances,omitempty"`
+	// SelectedGpuType pins the compute mode (cpu / nvidia / ...) the clone
+	// should schedule against, mirroring InstallRequest.SelectedGpuType and
+	// the Market SPA's clone payload field of the same name. Only honored by
+	// Olares 1.12.6+ (the auto-select / computeModeSelect surface); omitempty
+	// keeps a 1.12.5 clone — where the CLI never sets it — byte-identical.
+	SelectedGpuType string `json:"selectedGpuType,omitempty"`
 	// TemplateClone marks an instance created from a template app (no
 	// installable body), mirroring the SPA's onClone() which sets
 	// templateClone:true for templateOnly apps (1.12.6+). omitempty keeps
