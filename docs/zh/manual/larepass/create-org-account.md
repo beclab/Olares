@@ -11,6 +11,8 @@ description: 使用自定义域名创建 Olares ID。首次设置域名创建组
 
 在 Olares 中，自定义域名通过组织进行管理。域名所有者先创建组织，然后添加成员，成员即可在该域名下创建自己的 Olares ID。
 
+自定义域名下的用户名长度为 2-24 个字符，仅支持小写字母和数字。
+
 ## 创建 DID
 
 <!--@include: ../../reusables/custom-domain.md#custom-domain-create-did-->
