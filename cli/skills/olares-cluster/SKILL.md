@@ -156,7 +156,8 @@ native K8s exec WebSocket. Two modes:
   `olares-cli cluster container exec <ns>/<pod>/<ctr> -o json -- cat /etc/hosts`
   Returns `{stdout, stderr, exitCode, truncated, durationMs}`. Judge success by
   `exitCode` (0 = ok). stdout/stderr are separated. Bounded by `--timeout`
-  (default 60s) and `--max-output-bytes` (default 2MiB).
+  (default 60s, `0` = no limit) and `--max-output-bytes` (default 2MiB, `0` =
+  unlimited; on overflow output is cut and `truncated:true`).
 - **Interactive (`-it`, for humans):** allocates a TTY, needs a real terminal
   (no prompt). The TTY requirement keeps agents off this path; stay on one-shot.
 
@@ -173,6 +174,17 @@ Agent guidance:
     EOF'`
   - in-place: `-- sh -c "sed -i 's/old/new/' /path"`
   - whole file: `-- sh -c 'printf "%s" "<content>" | tee /path'`
+- **Long-running / streaming / watch — make it bounded, never open-ended.**
+  One-shot buffers to completion, so a command that never returns (`watch`,
+  `tail -f`, `top`, `journalctl -f`, a bare server) just blocks until `--timeout`
+  kills it with no exit code. Instead:
+  - Snapshot + poll: run a one-shot that returns (`-- ps aux`, `-- tail -n 200
+    app.log`) and re-invoke every few seconds rather than following a stream.
+  - Bound a stream: wrap follow-mode in `timeout`, e.g.
+    `-- sh -c 'timeout 10 tail -f /var/log/app.log'` (returns after 10s).
+  - Genuinely long job: raise `--timeout` (e.g. `600`, or `0` to disable), or
+    detach in-container and poll — `-- sh -c 'nohup ./job.sh >/tmp/job.log 2>&1
+    & echo $!'` then poll `/tmp/job.log` + `kill -0 <pid>`.
 - **Fixes are ephemeral:** changes inside a running container revert on pod
   restart/recreation (rollout, eviction, node drain). For a durable fix, change
   the image / ConfigMap / Deployment spec via the `workload` path — do not
@@ -185,5 +197,7 @@ Agent guidance:
   auto-selects the sole container of a single-container pod.
 - exec requires `pods/exec` permission (server-side SAR; 403 if missing) and is
   audited server-side by ks-apiserver.
-- Requires a recent Olares; on older versions the handshake fails with
-  "this Olares version may not support `cluster exec`".
+- Requires Olares >= 1.12.7 (the ControlHub exec route shipped then). exec
+  preflights the cached backend version and fails fast: an older backend tells
+  you to upgrade Olares; an undetectable version tells you to log in and
+  `olares-cli profile list --refresh-version`.
