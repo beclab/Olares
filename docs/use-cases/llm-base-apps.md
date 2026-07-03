@@ -12,6 +12,14 @@ Choose the base app for the engine you want, clone it to deploy a model, then ru
 ## Before you start
 
 - Your Olares system has been upgraded to v1.12.6 or later.
+- If you want to skip manual configuration, install a pre-built model app from Market instead. The following pre-built model apps are currently available in Market. These apps package the recommended model-and-engine combinations validated for Olares。
+    - Qwen3.6-27B-MTP-GGUF (llama.cpp)
+    - Qwen3.6-35B-A3B-MTP-GGUF (llama.cpp)
+    - gemma-4-26B-A4B-it-GGUF (llama.cpp)
+    - Ornith-1.0-35B-GGUF (llama.cpp)
+    - Ornith-1.0-9B-AWQ-FP8 (vLLM / SGLang)
+    - gemma4:26b (Ollama)
+    - ornith:35b (Ollama)
 
 ## Locate Engine Base apps
 
