@@ -2,14 +2,14 @@ export const redirects = {
     // Root → default docs landing
     '/': '/manual/overview',
 
-    // Refactor: /manual/olares/studio/** → /developer/develop/tutorial/**
-    '/manual/olares/studio/': '/developer/develop/tutorial/',
-    '/manual/olares/studio/deploy': '/developer/develop/tutorial/deploy',
-    '/manual/olares/studio/develop': '/developer/develop/tutorial/develop',
-    '/manual/olares/studio/package-upload': '/developer/develop/tutorial/package-upload',
-    '/manual/olares/studio/assets': '/developer/develop/tutorial/assets',
-    '/developer/develop/tutorial/studio': '/developer/develop/tutorial',
-    '/zh/developer/develop/tutorial/studio': '/zh/developer/develop/tutorial',
+    // Studio docs are hidden; redirect legacy Studio URLs to the docs overview.
+    '/manual/olares/studio/': '/manual/overview',
+    '/manual/olares/studio/deploy': '/manual/overview',
+    '/manual/olares/studio/develop': '/manual/overview',
+    '/manual/olares/studio/package-upload': '/manual/overview',
+    '/manual/olares/studio/assets': '/manual/overview',
+    '/developer/develop/tutorial/studio': '/manual/overview',
+    '/zh/developer/develop/tutorial/studio': '/zh/manual/overview',
 
     // Refactor: /space/** → /manual/space/**
     '/space/': '/manual/space/',

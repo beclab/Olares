@@ -210,10 +210,6 @@ An app for monitoring system resource usage.
 
 The console for Olares, providing precise and autonomous control over the system and its environment.
 
-### Studio
-
-A development tool for building and deploying Olares applications.
-
 ## Learn more
 - To get started with Olares, see the [Getting Started guide](../../manual/get-started/index.md).
 - To learn more about the internals of Olares, see the topics in [Concept](index.md).

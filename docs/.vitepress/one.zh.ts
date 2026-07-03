@@ -85,11 +85,12 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "下载 YouTube 视频",
           link: "/zh/one/wise-download",
         },*/
+        /*
         {
           text: "部署应用",
           link: "/zh/one/deploy",
         },
-
+        */
       ]
     },
     {
