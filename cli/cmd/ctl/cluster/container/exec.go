@@ -43,24 +43,54 @@ third path segment, ` + "`<ns>/<pod>`" + ` + --container, or bare ` + "`<pod>`" 
 It shares the same execution semantics as ` + "`cluster pod exec`" + ` — one-shot
 vs -it, --timeout, --max-output-bytes, and -o json all behave identically;
 the only divergence is requiring an explicit container.
+
+With -it and NO target, an interactive picker lists every container visible to
+your profile (type to filter, arrows to move, enter to select). Add -n <ns> to
+scope the picker to one namespace.
 `,
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
 			dash := c.ArgsLenAtDash()
 			var target string
 			var command []string
-			if dash == -1 {
-				if len(args) != 1 {
+			switch {
+			case dash == -1:
+				if len(args) > 1 {
 					return fmt.Errorf("unexpected args %q; put the command after `--` (e.g. exec ns/pod/ctr -- ls)", args[1:])
 				}
-				target = args[0]
-			} else {
-				if dash < 1 {
-					return fmt.Errorf("missing <pod> before `--`")
+				if len(args) == 1 {
+					target = args[0]
 				}
-				target = args[0]
+			default:
+				if dash > 1 {
+					return fmt.Errorf("unexpected args before `--`: %q", args[1:dash])
+				}
+				if dash == 1 {
+					target = args[0]
+				}
 				command = args[dash:]
 			}
+
+			// No target + -it → interactive picker (the picked container is
+			// authoritative; -c is ignored in this path).
+			if target == "" {
+				if !ttyFlag {
+					return fmt.Errorf("missing <pod>; give a target (e.g. exec ns/pod/ctr -- ls) or add -it to pick a container interactively")
+				}
+				ns, podName, ctr, canceled, perr := pod.PickInteractiveTarget(c.Context(), o, namespace)
+				if perr != nil {
+					return perr
+				}
+				if canceled {
+					return nil
+				}
+				return pod.RunExec(c.Context(), o, pod.ExecParams{
+					Namespace: ns, Pod: podName, Container: ctr,
+					Command: command, Stdin: stdinFlag, TTY: ttyFlag,
+					Timeout: timeout, MaxBytes: maxBytes,
+				})
+			}
+
 			ns, podName, ctr, err := splitNsPodContainer(namespace, container, target)
 			if err != nil {
 				return err

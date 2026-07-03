@@ -12,6 +12,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/clusteropts"
+	"github.com/beclab/Olares/cli/cmd/ctl/cluster/internal/picker"
 	"github.com/beclab/Olares/cli/pkg/clusterexec"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
@@ -78,27 +79,57 @@ Interactive (-i -t / -it): allocate a TTY and attach your terminal, like
 as an AI tool call is refused with guidance to use one-shot instead). Default
 command is ` + "`sh`" + ` when none given.
 
+With -it and NO target, an interactive picker lists every container visible to
+your profile (type to filter, arrows to move, enter to select). Add -n <ns> to
+scope the picker to one namespace.
+
 NOTE: changes made inside a running container are ephemeral — a pod restart
 reverts them. Durable fixes go through the image / ConfigMap / workload spec
 (see ` + "`cluster workload`" + `).
 `,
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
 			dash := c.ArgsLenAtDash()
 			var target string
 			var command []string
-			if dash == -1 {
-				if len(args) != 1 {
+			switch {
+			case dash == -1:
+				if len(args) > 1 {
 					return fmt.Errorf("unexpected args %q; put the command after `--` (e.g. exec mypod -- ls)", args[1:])
 				}
-				target = args[0]
-			} else {
-				if dash < 1 {
-					return fmt.Errorf("missing <pod> before `--`")
+				if len(args) == 1 {
+					target = args[0]
 				}
-				target = args[0]
+			default:
+				if dash > 1 {
+					return fmt.Errorf("unexpected args before `--`: %q", args[1:dash])
+				}
+				if dash == 1 {
+					target = args[0]
+				}
 				command = args[dash:]
 			}
+
+			// No target + -it → interactive picker. Without -it we keep the
+			// old "target required" contract (one-shot must be explicit).
+			if target == "" {
+				if !ttyFlag {
+					return fmt.Errorf("missing <pod>; give a target (e.g. exec ns/pod -- ls) or add -it to pick a container interactively")
+				}
+				ns, podName, ctr, canceled, perr := PickInteractiveTarget(c.Context(), o, namespace)
+				if perr != nil {
+					return perr
+				}
+				if canceled {
+					return nil
+				}
+				return RunExec(c.Context(), o, ExecParams{
+					Namespace: ns, Pod: podName, Container: ctr,
+					Command: command, Stdin: stdinFlag, TTY: ttyFlag,
+					Timeout: timeout, MaxBytes: maxBytes,
+				})
+			}
+
 			ns, podName, err := clusteropts.SplitNsName(namespace, target)
 			if err != nil {
 				return err
@@ -223,42 +254,34 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 		//
 		// Show a "Connecting ..." status before the (potentially slow) WebSocket
 		// handshake so the user isn't left staring at a blank screen, then
-		// overwrite it with "Connected ..." once RunInteractive reports the dial
-		// succeeded. Colors/ANSI only when stderr is a real terminal.
+		// replace it with "Connected ..." once RunInteractive reports the dial
+		// succeeded. On a TTY the status is an animated spinner (same as the
+		// interactive picker's loading state); on non-TTY it's a plain line.
 		target := fmt.Sprintf("%s/%s [container %s]", p.Namespace, p.Pod, container)
-		connMsg := fmt.Sprintf("Connecting to %s ...", target)
 		stderrTTY := term.IsTerminal(int(os.Stderr.Fd()))
-		// Only overwrite the "Connecting ..." line in place (\r) when it fits on
-		// one terminal row; otherwise it wraps and \r\033[K would clear just the
-		// last row, leaving the earlier row(s) as garbage. When it can't fit we
-		// fall back to printing "Connected ..." on its own line.
-		overwrite := false
+		var sp *picker.Spinner
 		if stderrTTY {
-			if w, _, gerr := term.GetSize(int(os.Stderr.Fd())); gerr == nil && w > 0 && len(connMsg) < w {
-				overwrite = true
-			}
-			fmt.Fprintf(os.Stderr, "\033[2m%s\033[0m", connMsg)
-			if !overwrite {
-				fmt.Fprintln(os.Stderr)
-			}
+			sp = picker.StartSpinner(func() string { return "Connecting to " + target + "\u2026" })
 		} else {
-			fmt.Fprintln(os.Stderr, connMsg)
+			fmt.Fprintf(os.Stderr, "Connecting to %s ...\n", target)
+		}
+		stopSpinner := func() {
+			if sp != nil {
+				sp.Stop() // clears the spinner line and blocks until stopped
+				sp = nil
+			}
 		}
 		onConnected := func() {
-			switch {
-			case stderrTTY && overwrite:
-				fmt.Fprintf(os.Stderr, "\r\033[K\033[1;32mConnected to %s\033[0m  \033[2m(Ctrl-D to exit)\033[0m\n", target)
-			case stderrTTY:
+			stopSpinner()
+			if stderrTTY {
 				fmt.Fprintf(os.Stderr, "\033[1;32mConnected to %s\033[0m  \033[2m(Ctrl-D to exit)\033[0m\n", target)
-			default:
+			} else {
 				fmt.Fprintf(os.Stderr, "Connected to %s  (Ctrl-D to exit)\n", target)
 			}
 		}
 		exit, rerr := clusterexec.RunInteractive(ctx, rp, token, opts, os.Stdin, os.Stdout, onConnected)
+		stopSpinner() // no-op if onConnected already stopped it; clears the line on dial failure
 		if rerr != nil {
-			if stderrTTY && overwrite {
-				fmt.Fprintln(os.Stderr) // break off the dangling "Connecting ..." line before the error
-			}
 			return rerr
 		}
 		// ssh-style farewell so the user always knows the session ended (a clean
