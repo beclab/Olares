@@ -64,8 +64,6 @@ Olares 可以展示以下加速器类型：
 - 内存缺口：`36 GiB - 34.79 GiB = 1.21 GiB`
 
 由于内存缺口大于零，Olares 无法将该应用调度到此节点。
-
-此计算方式反映当前的调度行为，后续可能随调度逻辑定稿而调整。
 :::
 
 ## 查看 AI 算力资源
@@ -108,7 +106,7 @@ Olares 可以展示以下加速器类型：
    - 如果 GPU 的独立显存总量低于应用的最低需求，移除应用也无法解决，需要选择其他 GPU。
    - 在**分时共享**模式下，节点内存检查也可能阻止启动。提示信息会显示节点内存总量、已用内存和应用所需内存。请稍后重试或选择其他节点。
 
-   ![恢复应用](/images/zh/manual/olares/settings-gpu-resume-app.png#bordered){width=70%}
+   ![系统内存不足无法启动应用](/images/zh/manual/olares/settings-gpu-launch-node-memory-overload-warning.png#bordered){width=70%}
 
 5. 对于**容量分片**模式，**当前应用配额**默认为应用所需的最低显存。如需调整，直接在配额输入框中输入新的值。该值不能超过可用配额。
 
