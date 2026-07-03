@@ -1,13 +1,13 @@
 ---
 outline: deep
-description: 升级到 Olares 1.12.6 时，*Arr 媒体管理器的升级说明。
+description: 升级到 Olares 1.12.6 后，*Arr 媒体管理器的升级说明。
 head:
   - - meta
     - name: keywords
       content: Olares, *Arrs, Sonarr, Radarr, Prowlarr, 升级, 1.12.6
 app_version: "1.0.x"
 doc_version: "1.0"
-doc_updated: "2026-07-02"
+doc_updated: "2026-07-03"
 ---
 
 :::warning

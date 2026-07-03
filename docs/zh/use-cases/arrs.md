@@ -7,7 +7,7 @@ head:
       content: Olares, *Arrs, *Arr, Starr, Starrs, Sonarr, Radarr, Prowlarr, Bazarr, qBittorrent, media server, self-hosted
 app_version: "1.0.x"
 doc_version: "1.1"
-doc_updated: "2026-06-30"
+doc_updated: "2026-07-03"
 ---
 
 :::warning
