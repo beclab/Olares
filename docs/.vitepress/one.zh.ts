@@ -45,6 +45,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "入门使用",
       items: [
         {
+          text: "使用 OpenCode 管理 Olares",
+          link: "/zh/one/opencode",
+        },
+        {
           text: "与本地 LLM 对话",
           link: "/zh/one/open-webui",
         },

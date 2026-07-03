@@ -48,6 +48,7 @@ Follow the path from first boot to everyday use and advanced customization.
       <div class="vpath-title">Onboarding</div>
       <div class="vpath-links">
         <a href="./open-webui">Chat with local LLMs</a>
+        <a href="./opencode">Manage Olares with OpenCode</a>
         <a href="./comfyui">Generate images and videos with ComfyUI</a>
         <a href="./gpu">Switch GPU mode</a>
       </div>
