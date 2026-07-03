@@ -21,7 +21,7 @@ If you want to create an Olares ID under a custom domain, see [Create an Olares 
 2. Enter your desired username. It must be 8-24 characters long and contain only lowercase letters and numbers.
 3. Tap **Continue** to finish the creation process.
 
-   ![Create Olares ID](/images/manual/larepass/create-olares-id1.png#bordered)
+   ![Create Olares ID](/images/manual/larepass/create-olares-id-1.12.6.png#bordered)
 
 After you get your Olares ID, wait for [Olares installation](../get-started/install-olares.md) to complete, then proceed with [activation](../larepass/activate-olares.md).
 

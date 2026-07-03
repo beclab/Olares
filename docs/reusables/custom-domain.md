@@ -90,7 +90,7 @@ Once TXT and NS records are verified, you can proceed to create an organization 
    :::info
    The username part of your Olares ID should be 2-24 characters long, with lowercase alphanumeric characters only.
    :::
-   ![Create an Olares ID with admin privileges](/images/manual/tutorials/custom-domain-create-olares-id-as-admin.png)
+   ![Create an Olares ID with admin privileges](/images/manual/tutorials/custom-domain-create-olares-id-as-admin1.png)
 
 5. Tap **Confirm**.
 
