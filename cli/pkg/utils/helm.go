@@ -1,11 +1,14 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
+	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/storage/driver"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
@@ -17,6 +20,7 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/release"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Config helm client config.
@@ -41,6 +45,33 @@ func InitConfig(kubeConfig *rest.Config, namespace string) (*action.Configuratio
 	settings.KubeToken = kubeConfig.BearerToken
 	settings.KubeInsecureSkipTLSVerify = true
 	settings.SetNamespace(namespace)
+	if err := actionConfig.Init(settings.RESTClientGetter(), namespace, helmDriver, debug); err != nil {
+		logger.Error(err, "helm config init error")
+		return nil, nil, err
+	}
+
+	return actionConfig, settings, nil
+}
+
+// InitConfigForAppGateway initializes Helm for the app-gateway / Linkerd install path.
+func InitConfigForAppGateway(kubeConfig *rest.Config, namespace string) (*action.Configuration, *cli.EnvSettings, error) {
+	actionConfig := new(action.Configuration)
+	settings := cli.New()
+	helmDriver := os.Getenv("HELM_DRIVER")
+	settings.SetNamespace(namespace)
+
+	if kc := os.Getenv("KUBECONFIG"); kc != "" {
+		settings.KubeConfig = kc
+	} else if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
+		settings.KubeConfig = clientcmd.RecommendedHomeFile
+	} else {
+		settings.KubeAPIServer = kubeConfig.Host
+		if kubeConfig.BearerToken != "" {
+			settings.KubeToken = kubeConfig.BearerToken
+		}
+		settings.KubeInsecureSkipTLSVerify = kubeConfig.Insecure
+	}
+
 	if err := actionConfig.Init(settings.RESTClientGetter(), namespace, helmDriver, debug); err != nil {
 		logger.Error(err, "helm config init error")
 		return nil, nil, err
@@ -255,4 +286,109 @@ func logReleaseUpgrade(release *release.Release) {
 		"NAMESPACE", release.Namespace,
 		"STATUS", release.Info.Status.String(),
 		"REVISION", release.Version)
+}
+
+// TemplateAndServerSideApply renders a chart and applies manifests with kubectl server-side apply.
+func TemplateAndServerSideApply(ctx context.Context, actionConfig *action.Configuration, settings *cli.EnvSettings,
+	releaseName, chartPath, namespace string, vals map[string]interface{}) error {
+	inst := action.NewInstall(actionConfig)
+	inst.ReleaseName = releaseName
+	inst.Namespace = namespace
+	inst.DryRun = true
+	inst.ClientOnly = true
+	inst.Replace = true
+	inst.IncludeCRDs = true
+	inst.Timeout = 300 * time.Second
+	if namespace != "" {
+		inst.CreateNamespace = true
+	}
+
+	chartRequested, err := helmLoader.Load(chartPath)
+	if err != nil {
+		return err
+	}
+
+	rel, err := inst.Run(chartRequested, vals)
+	if err != nil {
+		return err
+	}
+	if len(bytes.TrimSpace([]byte(rel.Manifest))) == 0 {
+		logger.Infof("[helm] %s: no manifests to apply", releaseName)
+		return nil
+	}
+	logger.Infof("[helm] applying %s manifests via kubectl server-side apply", releaseName)
+	return kubectlServerSideApply(ctx, settings, rel.Manifest)
+}
+
+// KubectlApplyFile runs kubectl apply --server-side on a manifest file.
+func KubectlApplyFile(ctx context.Context, settings *cli.EnvSettings, manifestPath string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return errors.Wrap(err, "kubectl not found in PATH")
+	}
+	cmd := exec.CommandContext(ctx, kubectl, "apply", "--server-side", "--force-conflicts", "-f", manifestPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if settings != nil && settings.KubeConfig != "" {
+		cmd.Env = append(os.Environ(), "KUBECONFIG="+settings.KubeConfig)
+	}
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "kubectl apply -f")
+	}
+	return nil
+}
+
+// KubectlApplyDirectory applies all YAML files in a directory via server-side apply.
+func KubectlApplyDirectory(ctx context.Context, settings *cli.EnvSettings, dir string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return errors.Wrap(err, "kubectl not found in PATH")
+	}
+	cmd := exec.CommandContext(ctx, kubectl, "apply", "--server-side", "--force-conflicts", "-f", dir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if settings != nil && settings.KubeConfig != "" {
+		cmd.Env = append(os.Environ(), "KUBECONFIG="+settings.KubeConfig)
+	}
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "kubectl apply -f")
+	}
+	return nil
+}
+
+func kubectlServerSideApply(ctx context.Context, settings *cli.EnvSettings, manifest string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return errors.Wrap(err, "kubectl not found in PATH")
+	}
+	cmd := exec.CommandContext(ctx, kubectl, "apply", "--server-side", "--force-conflicts", "-f", "-")
+	cmd.Stdin = bytes.NewBufferString(manifest)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if settings != nil && settings.KubeConfig != "" {
+		cmd.Env = append(os.Environ(), "KUBECONFIG="+settings.KubeConfig)
+	}
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "kubectl apply --server-side")
+	}
+	return nil
+}
+
+// LoadValuesFile reads a Helm values YAML file into a map (missing file returns empty map).
+func LoadValuesFile(path string) (map[string]interface{}, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return map[string]interface{}{}, nil
+		}
+		return nil, err
+	}
+	if len(data) == 0 {
+		return map[string]interface{}{}, nil
+	}
+	out := map[string]interface{}{}
+	if err := yaml.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
