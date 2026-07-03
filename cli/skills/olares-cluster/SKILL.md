@@ -85,8 +85,8 @@ For flags, examples, and wire shapes, **always start with `olares-cli cluster <n
 | Noun | Verbs | `--help` first, then... |
 |---|---|---|
 | `context` | (single verb) | `olares-cli cluster context --help` |
-| `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart`, `exec` | [references/olares-cluster-pod.md](references/olares-cluster-pod.md) |
-| `container` | `list`, `env`, `logs`, `exec` | `olares-cli cluster container --help` |
+| `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart`, `exec` | [references/olares-cluster-pod.md](references/olares-cluster-pod.md); exec → [references/olares-cluster-exec.md](references/olares-cluster-exec.md) |
+| `container` | `list`, `env`, `logs`, `exec` | `olares-cli cluster container --help`; exec → [references/olares-cluster-exec.md](references/olares-cluster-exec.md) |
 | `workload` (alias `wl`) | `list`, `images`, `get`, `yaml`, `rollout-status`, `scale`, `restart`, `stop`, `start`, `delete` | [references/olares-cluster-workload.md](references/olares-cluster-workload.md) |
 | `application` (alias `app`) | `list`, `get`, `workloads`, `pods`, `status` | [references/olares-cluster-application.md](references/olares-cluster-application.md) |
 | `namespace` (alias `ns`) | `list`, `get` | `olares-cli cluster namespace --help` |
@@ -149,55 +149,15 @@ For the full auth-error matrix see [`../olares-shared/SKILL.md`](../olares-share
 
 ## exec (run commands inside a container)
 
-`cluster {pod,container} exec` runs a command inside a container over the
-native K8s exec WebSocket. Two modes:
+`cluster {pod,container} exec` runs a command inside a container over the native
+K8s exec WebSocket. **One-shot (default) is the agent path**: argv after `--`,
+runs to completion, `-o json` returns `{stdout, stderr, exitCode, truncated,
+durationMs}` — judge success by `exitCode`. **`-it` is human-only** (needs a
+real terminal; the TTY requirement keeps agents on one-shot). Requires Olares
+>= 1.12.7 and `pods/exec` permission (server-side SAR, audited).
 
-- **One-shot (default, best for agents):**
-  `olares-cli cluster container exec <ns>/<pod>/<ctr> -o json -- cat /etc/hosts`
-  Returns `{stdout, stderr, exitCode, truncated, durationMs}`. Judge success by
-  `exitCode` (0 = ok). stdout/stderr are separated. Bounded by `--timeout`
-  (default 60s, `0` = no limit) and `--max-output-bytes` (default 2MiB, `0` =
-  unlimited; on overflow output is cut and `truncated:true`).
-- **Interactive (`-it`, for humans):** allocates a TTY, needs a real terminal
-  (no prompt). The TTY requirement keeps agents off this path; stay on one-shot.
-
-Agent guidance:
-
-- Pass argv after `--` (no implicit shell). For pipes/vars/multi-step, use
-  `-- sh -c '...'` — exec is stateless, so chain steps in one call rather than
-  expecting `cd`/exports to persist. (Filesystem effects like `apk add` DO
-  persist in the running container; shell/process state does not.)
-- Edit files without an interactive editor (one-shot is non-interactive; `-i`
-  is interactive-only):
-  - heredoc: `-- sh -c 'cat > /path <<EOF
-    <content>
-    EOF'`
-  - in-place: `-- sh -c "sed -i 's/old/new/' /path"`
-  - whole file: `-- sh -c 'printf "%s" "<content>" | tee /path'`
-- **Long-running / streaming / watch — make it bounded, never open-ended.**
-  One-shot buffers to completion, so a command that never returns (`watch`,
-  `tail -f`, `top`, `journalctl -f`, a bare server) just blocks until `--timeout`
-  kills it with no exit code. Instead:
-  - Snapshot + poll: run a one-shot that returns (`-- ps aux`, `-- tail -n 200
-    app.log`) and re-invoke every few seconds rather than following a stream.
-  - Bound a stream: wrap follow-mode in `timeout`, e.g.
-    `-- sh -c 'timeout 10 tail -f /var/log/app.log'` (returns after 10s).
-  - Genuinely long job: raise `--timeout` (e.g. `600`, or `0` to disable), or
-    detach in-container and poll — `-- sh -c 'nohup ./job.sh >/tmp/job.log 2>&1
-    & echo $!'` then poll `/tmp/job.log` + `kill -0 <pid>`.
-- **Fixes are ephemeral:** changes inside a running container revert on pod
-  restart/recreation (rollout, eviction, node drain). For a durable fix, change
-  the image / ConfigMap / Deployment spec via the `workload` path — do not
-  report an in-container change as permanent.
-- Common exit codes: `127` command not found, `126` not executable. A "no sh in
-  container" failure means a distroless/scratch image (no shell). `EROFS`/`EACCES`
-  on writes means a read-only or permission-restricted filesystem.
-- `container exec` requires the container to be identified explicitly (3rd path
-  segment, or `<ns>/<pod>` + `-c`, or bare `<pod>` + `-n`/`-c`); `pod exec`
-  auto-selects the sole container of a single-container pod.
-- exec requires `pods/exec` permission (server-side SAR; 403 if missing) and is
-  audited server-side by ks-apiserver.
-- Requires Olares >= 1.12.7 (the ControlHub exec route shipped then). exec
-  preflights the cached backend version and fails fast: an older backend tells
-  you to upgrade Olares; an undetectable version tells you to log in and
-  `olares-cli profile list --refresh-version`.
+Key agent rules — stateless (chain steps in one `-- sh -c '...'`), in-container
+fixes are **ephemeral** (durable changes go through `workload`), and never-
+returning commands (`watch`, `tail -f`) must be **bounded** (`timeout`,
+snapshot+poll, or raise `--timeout`). Full detail, editing recipes, examples,
+and the error table: [references/olares-cluster-exec.md](references/olares-cluster-exec.md).
