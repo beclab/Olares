@@ -40,9 +40,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CalicoTunnelAddrAnnotation annotation key for calico tunnel address.
-const CalicoTunnelAddrAnnotation = "projectcalico.org/IPv4IPIPTunnelAddr"
-const DefaultRegistry = "https://registry-1.docker.io"
+const (
+	// CalicoTunnelAddrAnnotation annotation key for calico tunnel address.
+	CalicoTunnelAddrAnnotation = "projectcalico.org/IPv4IPIPTunnelAddr"
+	DefaultRegistry            = "https://registry-1.docker.io"
+
+	minikubeLabelPrefix = "minikube.k8s.io/"
+	// docker or  podman driver's providerID prefix
+	minikubeKICProvider = "kic://"
+)
 
 // GetAllNodesPodCIDRs returns all node pod's cidr.
 func GetAllNodesPodCIDRs() (cidrs []string) {
@@ -516,4 +522,42 @@ func GetPendingKind(ctrlClient client.Client, pod *corev1.Pod) (string, error) {
 		}
 	}
 	return pendingKind, nil
+}
+
+func IsMinikubeNode(node *corev1.Node) bool {
+	if node == nil {
+		return false
+	}
+	for k := range node.Labels {
+		if strings.HasPrefix(k, minikubeLabelPrefix) {
+			return true
+		}
+	}
+	if strings.HasPrefix(node.Spec.ProviderID, minikubeKICProvider) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(node.Name), "minikube") {
+		return true
+	}
+	return false
+}
+
+func IsRunningOnMinikube(ctx context.Context, client kubernetes.Interface) (bool, error) {
+	if nodeName := os.Getenv("NODE_NAME"); nodeName != "" {
+		node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		return IsMinikubeNode(node), nil
+	}
+	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+	for i := range nodes.Items {
+		if IsMinikubeNode(&nodes.Items[i]) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
