@@ -37,7 +37,7 @@ For advanced use cases, such as creating an Olares ID using your social account 
    * only lowercase letters and numbers
 3. Click **Continue** to finish the creation process.
 
-![Fast creation](/images/manual/get-started/create-olares-id.png)
+![Fast creation](/images/manual/get-started/create-olares-id-1.12.6.png)
 
 :::tip `.cn` vs. `.com` domains
 To ensure the best connectivity and performance, Olares automatically assigns a domain based on your phone's system language and region.
