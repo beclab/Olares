@@ -649,7 +649,7 @@ Olares 目前不支持混合架构的集群。
 当设置为 `true` 时，Olares 会强制以用户 ID "1000"（非 root 用户）运行应用程序。
 
 ### accelerator
-- 类型： `map`
+- 类型：`list<map>`
 - 可选
 
 声明应用所需的加速计算资源（如 GPU，核显等）。对于需要加速能力的应用（如大语言模型、图像生成、视频处理或人工智能模型服务等），应该使用 `spec.accelerator` 字段声明资源，不能包含原来的 `spec.requiredMemory` 等字段。
