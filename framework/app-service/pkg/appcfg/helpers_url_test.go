@@ -40,7 +40,7 @@ func TestGenSharedEntranceURLSingleEntranceUsesApiSharedID(t *testing.T) {
 		t.Fatalf("expected 1 shared entrance, got %d", len(got))
 	}
 
-	sharedID := appv1alpha1.SharedEntranceID(app.Spec.Appid, 0)
+	sharedID := appv1alpha1.SharedEntranceIDV2(app.Spec.Appid, 0, 1)
 	want := sharedID + ".shared.olares.com:8080"
 	if got[0].URL != want {
 		t.Fatalf("shared URL = %q, want %q", got[0].URL, want)
@@ -115,7 +115,7 @@ func TestApplicationConfigGenURLPassesAppID(t *testing.T) {
 	if len(sharedEntrances) != 1 {
 		t.Fatalf("expected 1 shared entrance, got %d", len(sharedEntrances))
 	}
-	sharedID := appv1alpha1.SharedEntranceID(cfg.AppID, 0)
+	sharedID := appv1alpha1.SharedEntranceIDV2(cfg.AppID, 0, len(sharedEntrances))
 	wantSharedURL := sharedID + ".shared.olares.com"
 	if sharedEntrances[0].URL != wantSharedURL {
 		t.Fatalf("shared URL = %q, want %q", sharedEntrances[0].URL, wantSharedURL)
