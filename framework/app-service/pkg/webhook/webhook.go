@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
@@ -61,7 +62,7 @@ var (
 
 // Webhook used to implement a webhook.
 type Webhook struct {
-	kubeClient    *kubernetes.Clientset
+	kubeClient    kubernetes.Interface
 	dynamicClient *versioned.Clientset
 }
 
@@ -254,13 +255,38 @@ func (wh *Webhook) CreatePatch(
 }
 
 func (wh *Webhook) shouldInjectEnvoySidecar(ctx context.Context, injectPolicy bool, appConfig *appcfg.ApplicationConfig, pod *corev1.Pod) bool {
-	if mesh.ShouldSkipEnvoySidecar(ctx) {
-		return false
+	if !injectPolicy {
+		if wh != nil && wh.kubeClient != nil && mesh.ShouldSkipEnvoySidecar(ctx, wh.kubeClient) {
+			return false
+		}
 	}
 	if appConfig == nil {
 		return injectPolicy
 	}
 	return injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod)
+}
+
+func (wh *Webhook) shouldSkipInboundEntranceSidecar(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns, entranceName string) (bool, error) {
+	if appConfig == nil || wh == nil || wh.kubeClient == nil {
+		return false, nil
+	}
+	applicationName, err := apputils.FmtAppMgrName(appConfig.AppName, appConfig.OwnerName, ns)
+	if err != nil {
+		return false, err
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+	if appid == "" {
+		return false, nil
+	}
+	srrName := gateway.ResourceNameForEntranceApp(appid, entranceName)
+	return mesh.ShouldSkipInboundEntranceSidecar(ctx, wh.kubeClient, app.Spec.Namespace, srrName), nil
 }
 
 func (wh *Webhook) getProbeUA(ctx context.Context, pod *corev1.Pod) (string, error) {
@@ -417,7 +443,13 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 			}
 
 			if isEntrancePod {
-				injectPolicy = true
+				skip, skipErr := wh.shouldSkipInboundEntranceSidecar(ctx, appConfig, namespace, e.Name)
+				if skipErr != nil {
+					return false, false, false, nil, perms, nil, nil, skipErr
+				}
+				if !skip {
+					injectPolicy = true
+				}
 				break
 			}
 		}
