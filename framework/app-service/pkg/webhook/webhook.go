@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
@@ -166,6 +167,8 @@ func (wh *Webhook) CreatePatch(
 
 	// inject sidecar only for the app's namespace
 	if req.Namespace == appmgr.Spec.AppNamespace {
+		needsEnvoySidecar := wh.shouldInjectEnvoySidecar(ctx, injectPolicy, appConfig, pod)
+
 		configMapName, err := wh.createSidecarConfigMap(ctx, pod, proxyUUID.String(), req.Namespace, injectPolicy, injectWs, injectUpload, appmgr, appConfig, perms)
 		if err != nil {
 			return nil, err
@@ -177,17 +180,17 @@ func (wh *Webhook) CreatePatch(
 			pod.Spec.Volumes = []corev1.Volume{}
 		}
 
-		pod.Spec.Volumes = append(pod.Spec.Volumes, volume, sidecar.GetEnvoyConfigWorkVolume())
+		if needsEnvoySidecar {
+			pod.Spec.Volumes = append(pod.Spec.Volumes, volume, sidecar.GetEnvoyConfigWorkVolume())
 
-		clusterID := fmt.Sprintf("%s.%s", pod.Spec.ServiceAccountName, req.Name)
-		envoyFilename := constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigFileName
-		// pod is not an entrance pod, just inject outbound proxy
-		if !injectPolicy {
-			envoyFilename = constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigOnlyOutBoundFileName
-		}
-		appKey, appSecret, _ := wh.getAppKeySecret(req.Namespace)
+			clusterID := fmt.Sprintf("%s.%s", pod.Spec.ServiceAccountName, req.Name)
+			envoyFilename := constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigFileName
+			// pod is not an entrance pod, just inject outbound proxy
+			if !injectPolicy {
+				envoyFilename = constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigOnlyOutBoundFileName
+			}
+			appKey, appSecret, _ := wh.getAppKeySecret(req.Namespace)
 
-		if injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod) {
 			// If the owning Application enables overlay-gateway, multus will
 			// attach a macvlan NIC (net1) to the pod. Tell the iptables init
 			// container to install bypass RETURN rules for that interface so
@@ -208,6 +211,8 @@ func (wh *Webhook) CreatePatch(
 					sidecar.GetInitContainerSpecForRenderEnvoyConfig(),
 				},
 				pod.Spec.InitContainers...)
+		} else if injectWs || injectUpload {
+			pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
 		}
 
 		if injectWs {
@@ -246,6 +251,16 @@ func (wh *Webhook) CreatePatch(
 		return nil, err
 	}
 	return makePatches(req, pod)
+}
+
+func (wh *Webhook) shouldInjectEnvoySidecar(ctx context.Context, injectPolicy bool, appConfig *appcfg.ApplicationConfig, pod *corev1.Pod) bool {
+	if mesh.ShouldSkipEnvoySidecar(ctx) {
+		return false
+	}
+	if appConfig == nil {
+		return injectPolicy
+	}
+	return injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod)
 }
 
 func (wh *Webhook) getProbeUA(ctx context.Context, pod *corev1.Pod) (string, error) {
