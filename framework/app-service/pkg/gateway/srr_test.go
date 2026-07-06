@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"testing"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -41,7 +42,13 @@ func TestIsOptedIn(t *testing.T) {
 
 func TestBuildSpecForEntrance(t *testing.T) {
 	app := &appv1alpha1.Application{
-		ObjectMeta: metav1.ObjectMeta{Name: "demo"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "demo",
+			Labels: map[string]string{
+				constants.AppApiVersionLabel: "v3",
+			},
+		},
+
 		Spec: appv1alpha1.ApplicationSpec{
 			Appid:     "demo1234",
 			Name:      "demo",
@@ -63,7 +70,7 @@ func TestBuildSpecForEntrance(t *testing.T) {
 	if spec.RouteMode != srrv1alpha1.RouteModeGateway {
 		t.Errorf("routeMode = %q, want gateway", spec.RouteMode)
 	}
-	wantHost := appv1alpha1.SharedEntranceID(app.Spec.Appid, 0) + ".shared.olares.com"
+	wantHost := appv1alpha1.SharedEntranceID(app.Spec.Appid, 0, len(app.Spec.SharedEntrances)) + ".shared.olares.com"
 	if len(spec.HostPatterns) != 1 || spec.HostPatterns[0] != wantHost {
 		t.Errorf("hostPatterns = %v, want %q", spec.HostPatterns, wantHost)
 	}

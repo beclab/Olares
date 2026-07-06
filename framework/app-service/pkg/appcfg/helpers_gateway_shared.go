@@ -20,7 +20,7 @@ func IsGatewaySharedApp(app *appv1alpha1.Application) bool {
 
 // LogicalHostPattern returns the canonical shared gateway host pattern:
 // <sharedEntranceID>.shared.<platformDomain>.
-func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platformDomain string) (string, error) {
+func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platformDomain string, isShared bool) (string, error) {
 	appid = strings.ToLower(strings.TrimSpace(appid))
 	if appid == "" {
 		return "", fmt.Errorf("appid is empty")
@@ -32,5 +32,8 @@ func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platform
 	if platformDomain == "" {
 		return "", fmt.Errorf("platformDomain is empty")
 	}
-	return fmt.Sprintf("%s.shared.%s", appv1alpha1.SharedEntranceID(appid, entranceIndex), platformDomain), nil
+	if isShared {
+		return fmt.Sprintf("%s.shared.%s", appv1alpha1.SharedEntranceID(appid, entranceIndex, entranceCount), platformDomain), nil
+	}
+	return fmt.Sprintf("%s.shared.%s", appv1alpha1.SharedEntranceIDV2(appid, entranceIndex, entranceCount), platformDomain), nil
 }
