@@ -100,8 +100,9 @@ Use this option when the app has no user-created data to migrate.
 
 **Steps:**
 1. Uninstall the v2 shared app.
-2. Install the new shared app.
-3. For model apps, deploy the model again on an Engine Base app and reconfigure your clients.
+2. Install the replacement.
+   - **For model apps:** Deploy the model on an Engine Base app, and reconfigure your clients.
+   - **For other apps:** Install the new shared app.
 
 ### Option 3: Back up, uninstall v2, install the new app, then restore data
 
