@@ -45,7 +45,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "Onboarding",
       items: [
         {
-          text: "Manage Olares with OpenCode",
+          text: "Manage Olares through natural language",
           link: "/one/opencode",
         },
         {

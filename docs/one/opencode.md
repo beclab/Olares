@@ -1,34 +1,38 @@
 ---
 outline: [2, 3]
-description: Learn how to install the Qwen3.6-27B (llama.cpp) model app on Olares One, connect it to OpenCode, and use Olares CLI skills to manage your device through natural language.
+description: Learn how to use OpenCode with a local model and its built-in Olares CLI Agent Skills to manage your Olares One device through natural language.
 head:
   - - meta
     - name: keywords
-      content: OpenCode, Qwen3.6 27B, llama.cpp, local LLM, Olares CLI skills, AI agent, Olares One
+      content: Olares One, AI agent, OpenCode, Qwen3.6 27B, llama.cpp, local LLM, Olares CLI skills
 ---
 
-# Manage Olares with OpenCode and a local model <Badge type="tip" text="30 min" />
+# Manage Olares through natural language <Badge type="tip" text="1 h" />
 
-OpenCode is an AI coding agent. Pair it with a capable local model such as Qwen3.6-27B (llama.cpp), and you can manage your Olares device through natural language.
+`olares-cli` is the command-line tool for managing Olares. To let AI agents use it, Olares provides CLI Agent Skills in the form of tool definitions that translate natural language into the right `olares-cli` commands. They cover common tasks such as listing files, installing apps from Market, checking system metrics, and deploying custom apps. 
 
-This guide walks you through installing the model app, connecting it to OpenCode, logging in to the Olares CLI from OpenCode, and completing a few tasks with Olares skills.
+The agent apps on Olares come with these skills built in. This guide uses OpenCode as an example. It walks you through installing the Qwen3.6-27B (llama.cpp) model app, connecting it to OpenCode, authenticating the Olares CLI with your Olares account, and completing a few common tasks through chat.
 
 ## Learning objectives
 
 - Install the Qwen3.6-27B (llama.cpp) model app and get its connection details.
 - Install OpenCode and connect it to the local model.
-- Log in to the Olares CLI from OpenCode and load Olares skills.
-- Use natural language in OpenCode to manage Olares, from simple questions to installing and porting apps.
+- Authenticate the Olares CLI with your Olares account.
+- Use natural language in OpenCode to manage Olares.
 
 ## Prerequisites
 
+**System**
+- Olares OS upgraded to v1.12.6.
+- If you have a previous OpenCode installation, uninstall it after the Olares OS upgrade, and then install it again.
+
 **Hardware** <br>
 - Olares One connected to a stable network.
-- Sufficient disk space to download the model.
-- At least 23 GB of GPU VRAM is recommended for Qwen3.6 27B.
+- Sufficient free disk space to download the model and its dependencies.
+- At least 23 Gi of GPU memory is required for Qwen3.6 27B.
 
 **User permissions**
-- Admin privileges to install shared apps from the Market and manage GPU resources.
+- Admin privileges are required to install shared apps from the Market and manage GPU resources.
 
 ## Step 1: Install the model app and get the connection details
 
@@ -37,8 +41,18 @@ This guide walks you through installing the model app, connecting it to OpenCode
    ![Install Qwen3.6-27B](/images/one/qwen3.6-27b-llamacpp-market.png#bordered)
 
 2. Click **Get**, and then click **Install**.
-3. Select a hardware accelerator, and then click **Confirm**.
+3. Select **GPU** as the hardware accelerator, and then click **Confirm**. The installation starts.
+
+   :::tip First deployment takes time
+   The first deployment can take a long time because the model weights must be downloaded. The time depends on the model size and your network speed.
+   :::
+
 4. When the installation finishes, click **Open**. The model console opens and the model download starts automatically.
+
+   :::tip First download takes time
+   The first time you open the model console, downloading the model files might take a while, depending on the file size and your network speed.
+   :::
+
 5. Wait for the download to finish. You will see:
    - **Model**: **READY**
    - **Engine**: **RUNNING**
@@ -82,7 +96,7 @@ This guide walks you through installing the model app, connecting it to OpenCode
    ![OpenCode custom provider](/images/manual/use-cases/opencode-custom-provider.png#bordered)
 
 3. Specify the following settings:
-   - **Provider ID**: A unique identifier. For example, `olares-qwen3.6`.
+   - **Provider ID**: A unique identifier. For example, `olares-engine-base`.
    - **Display name**: The name shown in the provider list. For example, `local-llamacpp`.
    - **Base URL**: The **Base URL** you noted down in Step 1. Make sure it ends with `/v1`.
    - **Models**:
@@ -95,9 +109,9 @@ This guide walks you through installing the model app, connecting it to OpenCode
 5. Start a new chat.
 6. Below the chat box, click **Big Pickle** to open the model selector, and then select the model you just added.
 
-## Step 4: Log in to the Olares CLI and load skills
+## Step 4: Authenticate the Olares CLI with your Olares account
 
-OpenCode can use the built-in Olares CLI Agent Skills to manage your device. Before the agent can run commands, you must log in to the Olares CLI from OpenCode.
+Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the Olares CLI with your Olares account.
 
 1. In OpenCode, click **Search project** at the top of the page, and then select **Toggle terminal**.
 
@@ -134,38 +148,50 @@ OpenCode can use the built-in Olares CLI Agent Skills to manage your device. Bef
 
 With the model connected and the Olares CLI authenticated, you can now manage your Olares device by chatting with OpenCode in natural language. The following examples cover some common scenarios.
 
-### Ask a simple question
+### Ask a question
 
 Start with a basic question to confirm the Olares skills are available:
 
 ```text
-What apps are currently installed on my Olares?
-```
-
-Or ask about resource usage:
-
-```text
 Show me the CPU and memory usage of my Olares device.
 ```
+
+![Ask a simple question in OpenCode](/images/one/onboard-scenario-question.png#bordered)
 
 ### Install an app from Market
 
 Ask OpenCode to install an app for you:
 
 ```text
-Install Firefox from the Olares Market and tell me when it's ready.
+Install Chromium from the Olares Market and tell me when it's ready.
 ```
 
-### Port an app to Olares
+![Install an app using Olares skill in OpenCode](/images/one/onboard-scenario-install.png#bordered)
 
-For a more advanced task, ask OpenCode to deploy a project:
+### Deploy a model
+
+Ask OpenCode to deploy a specific model using the Ollama Engine Base app:
+
+```text
+Deploy qwen3.5:0.8b on this Olares device using the Ollama Engine Base.
+```
+
+![Deploy a model using Olares skill in OpenCode](/images/one/onboard-scenario-model-deployment.png#bordered)
+
+When the model deployment finishes, the model app appears on the Launchpad. Open it to launch the model console directly.
+
+### Deploy an app from a GitHub repository
+
+For a more advanced task, ask OpenCode to upload and deploy a project from a GitHub repository:
 
 ```text
 Upload and deploy this GitHub repository as an Olares app:
 https://github.com/chandruk4321/dockerize-static-web-project
 ```
 
-Follow the prompts and approvals until the app is deployed to **My Olares**.
+Follow the prompts and approvals until the deployment finishes. You can then find the app on the Launchpad and in **My Olares**.
+
+![Deploy an app using Olares skill in OpenCode](/images/one/onboard-scenario-port.png#bordered)
 
 ## Resources
 
