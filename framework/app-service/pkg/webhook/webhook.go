@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/calleragent"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
@@ -150,7 +151,7 @@ func (wh *Webhook) CreatePatch(
 	ctx context.Context,
 	pod *corev1.Pod,
 	req *admissionv1.AdmissionRequest,
-	proxyUUID uuid.UUID, injectPolicy, injectWs, injectUpload bool,
+	proxyUUID uuid.UUID, injectPolicy, injectWs, injectUpload, injectCallerAgent bool,
 	injectSharedPod *bool,
 	appmgr *v1alpha1.ApplicationManager,
 	appConfig *appcfg.ApplicationConfig,
@@ -219,6 +220,10 @@ func (wh *Webhook) CreatePatch(
 			if uploadSidecar != nil {
 				pod.Spec.Containers = append(pod.Spec.Containers, *uploadSidecar)
 			}
+		}
+		if injectCallerAgent {
+			pod.Spec.Volumes = append(pod.Spec.Volumes, calleragent.JWTSecretVolume())
+			pod.Spec.Containers = append(pod.Spec.Containers, calleragent.ContainerSpec())
 		}
 	} // end of inject sidecar
 
@@ -327,7 +332,7 @@ func (wh *Webhook) AdmissionError(uid types.UID, err error) *admissionv1.Admissi
 
 // MustInject checks which inject operation should do for a pod.
 func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace string) (
-	injectPolicy, injectWs, injectUpload bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
+	injectPolicy, injectWs, injectUpload, injectCallerAgent bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
 	appConfig *appcfg.ApplicationConfig, appMgr *v1alpha1.ApplicationManager, err error) {
 	var isShared bool
 
@@ -398,7 +403,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 			isEntrancePod, err = wh.isAppEntrancePod(ctx, appConfig.AppName, e.Host, pod, namespace)
 			klog.Infof("entranceName=%s isEntrancePod=%v", e.Name, isEntrancePod)
 			if err != nil {
-				return false, false, false, nil, perms, nil, nil, err
+				return false, false, false, false, nil, perms, nil, nil, err
 			}
 
 			if isEntrancePod {
@@ -413,7 +418,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		isEntrancePod, err = wh.isAppEntrancePod(ctx, appConfig.AppName, e.Host, pod, namespace)
 		klog.Infof("entranceName=%s isEntrancePod=%v", e.Name, isEntrancePod)
 		if err != nil {
-			return false, false, false, nil, perms, nil, nil, err
+			return false, false, false, false, nil, perms, nil, nil, err
 		}
 
 		if isEntrancePod {
@@ -429,7 +434,30 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		}
 	}
 
+	injectCallerAgent, err = wh.shouldInjectCallerAgent(ctx, appConfig, namespace, isShared)
+	if err != nil {
+		return false, false, false, false, nil, perms, nil, nil, err
+	}
+
 	return
+}
+
+func (wh *Webhook) shouldInjectCallerAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isShared bool) (bool, error) {
+	if appConfig == nil || isShared {
+		return false, nil
+	}
+	applicationName, err := apputils.FmtAppMgrName(appConfig.AppName, appConfig.OwnerName, ns)
+	if err != nil {
+		return false, err
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return calleragent.ShouldInject(app, isShared), nil
 }
 
 func (wh *Webhook) isAppEntrancePod(ctx context.Context, appname, host string, pod *corev1.Pod, namespace string) (bool, error) {
