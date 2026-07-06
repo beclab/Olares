@@ -45,10 +45,17 @@ Olares V1.12.6 includes the Common directory by default.
 
 If you are using an older version of Olares, do not manually migrate existing model files. Manual migration involves complex steps and risks breaking application dependencies. Instead, follow these steps to upgrade:
 
-1. Upgrade Olares to V1.12.6.
-2. Uninstall your existing AI applications.
-3. Install the V3 versions of these applications from the Market.
-4. Re-download your required models. The V3 applications automatically store models in the new Common directory.
+1. Upgrade Olares to v1.12.6.
+2. Uninstall your existing AI model-serving applications. For example:
+
+    - Pre-packaged model applications from the Market
+    - Ollama (installed as a base engine with models pulled manually)
+    - ComfyUI
+
+3. Install the new versions of these applications from the Market:
+
+    - For pre-packaged model apps and Ollama-based models: Deploy the model you need using the new Engine Base apps (llama.cpp Engine Base, Ollama Engine Base, SGLang Engine Base, and vLLM Engine Base). The model files will be saved into the `huggingface` or `ollama` subdirectories accordingly.
+    - For ComfyUI, re-download required model files. They will be saved iinto the `comfyui` subdirectory automatically.
 
 ## Find and manage shared models
 
