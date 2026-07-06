@@ -18,6 +18,10 @@ func UninstallGpuDrivers() error {
 		fmt.Println("WSL's GPU driver is managed by Windows, does not support uninstalling from inside.")
 		os.Exit(1)
 	}
+	if arg.SystemInfo.IsGB10Chip() {
+		fmt.Println("NVIDIA DGX Spark / GB10 systems ship and manage their own GPU driver stack as part of the OS, intertwined with vendor packages and an nvidia-branded kernel. We cannot reliably uninstall it without risking the factory NVIDIA driver environment, so the GPU driver uninstall is skipped on these systems.")
+		return nil
+	}
 	arg.SetConsoleLog("gpuuninstall.log", true)
 
 	runtime, err := common.NewKubeRuntime(*arg)
