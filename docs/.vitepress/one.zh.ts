@@ -48,14 +48,14 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "通过自然语言管理 Olares",
           link: "/zh/one/opencode",
         },
-        {
+        /*{
           text: "与本地 LLM 对话",
           link: "/zh/one/open-webui",
         },
         {
           text: "使用 ComfyUI 生成图片和视频",
           link: "/zh/one/comfyui",
-        },
+        },*/
         {
           text: "切换 GPU 模式",
           link: "/zh/one/gpu",

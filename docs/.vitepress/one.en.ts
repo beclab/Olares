@@ -48,14 +48,14 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Manage Olares through natural language",
           link: "/one/opencode",
         },
-        {
+        /*{
           text: "Chat with local LLMs",
           link: "/one/open-webui",
         },
         {
           text: "Generate images and videos with ComfyUI",
           link: "/one/comfyui",
-        },
+        },*/
         {
           text: "Switch GPU mode",
           link: "/one/gpu",
