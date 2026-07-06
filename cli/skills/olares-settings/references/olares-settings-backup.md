@@ -74,5 +74,4 @@ Until then, **create / update backup plans via the SPA** (Settings → Backup). 
 | `plan '<name>' not found` | Wrong backup-id or name | `plans list` to enumerate |
 | `snapshots list: backup-id required` | Missing positional | Provide the backup-id from `plans list` |
 | `failed to read password from stdin: EOF` | `--password-stdin` invoked without piped input | Pipe from `echo -n` / a file / a secret manager |
-| `experimental: this verb is not yet smoke-verified` (stderr) | UNVERIFIED (`password set`) | Proceed with caution; verify result manually |
 | `GET /apis/backup/v1/plans/backup: upstream returned code N` | Backup-server unreachable / 5xx | Check `settings advanced status` for backup-server health |
