@@ -44,7 +44,8 @@ Available actions are:
     - **Silent mode** – Limits CPU and GPU power for quiet operation, suitable for everyday workloads.
     - **Performance mode** – Enables maximum CPU and GPU performance for demanding tasks such as AI inference or gaming.
 
-- **Limit CPU frequency**
+<a id="limit-cpu-frequency"></a>
+- **Limit CPU frequency** <Badge type="tip" text="Olares One Only" />
 
   Turn on this switch to limit the CPU frequency from 5.4 GHz to 5.0 GHz. Turn it off to restore the original maximum frequency.
 

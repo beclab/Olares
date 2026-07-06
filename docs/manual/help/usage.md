@@ -13,7 +13,7 @@ Find answers to common questions about daily usage, applications, and system man
 
 The [Olares Market](https://market.olares.com/) maintains popular open-source apps like Ollama, ComfyUI, and Open WebUI.
 
-If you have Docker experience, you can manually [deploy apps](../../developer/develop/tutorial/index.md) not listed in the Olares Market in a testing environment.
+If you have Docker experience, you can package apps not listed in the Olares Market as [Olares Application Charts](../../developer/develop/package/chart.md) and test them on your own Olares device.
 
 ### Can I play games on my Olares device?
 
@@ -30,7 +30,7 @@ For detailed instructions, refer to [Run a Windows VM on your Olares device](../
 
 ### Can I develop apps on Olares?
 
-Yes. Install [Studio](../../developer/develop/tutorial/index.md) to code directly in your browser, or connect your local VS Code to the device. This provides a development experience similar to your local machine while leveraging the greater power of your server hardware.
+Yes. Build your app with your preferred local tools, package it as an [Olares Application Chart](../../developer/develop/package/chart.md), and test it on an Olares device before submitting it to the Market.
 
 ### Can I manually update an application version?
 

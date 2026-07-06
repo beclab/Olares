@@ -23,7 +23,7 @@ This is usually caused by insufficient resources or incorrect GPU allocation. To
 1. Check your system resources. If your CPU or memory usage is maxed out, stop other resource-intensive apps.
 2. If system resources look fine, go to **Settings** > **Accelerator** and check your GPU mode:
    - If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
-   - If you are using **Exclusive**, make sure ComfyUI has full GPU access.
+   - If you are using **Exclusive**, make sure the exclusive app is set to ComfyUI.
 3. Wait a moment, then try to launch ComfyUI again.
 
 ## Launcher log shows errors
@@ -90,9 +90,23 @@ If the URL is not shown in the template notes or dialog, inspect the page in you
 
 When a workflow requires more VRAM than your graphics card has, the system places heavy load on a single CPU core to swap data, driving the temperature high.
 
-The long-term fix is to reduce the VRAM footprint of your workflow (for example, lower resolution, use a smaller model, or enable model offloading). As a temporary workaround, you can lower the maximum CPU frequency.
+The long-term fix is to reduce the VRAM footprint of your workflow (for example, lower resolution, use a smaller model, or enable model offloading). As a temporary workaround, limit the maximum CPU frequency while the workload is running.
 
-Olares One ships with a CPU whose default maximum frequency is 5.4 GHz. The steps below lower it to 5.0 GHz during the workload, then restore it.
+### Olares OS 1.12.6 or later
+
+Olares One ships with a CPU whose default maximum frequency is 5.4 GHz. Use the **Limit CPU frequency** switch to lower it to 5.0 GHz during the workload, then turn the switch off when the workload completes.
+
+1. Open **Settings**.
+2. Select your avatar in the top-left corner to open **My Olares**.
+3. Under **My hardware**, turn on **Limit CPU frequency**.
+4. Run your task in ComfyUI.
+5. After the workload completes, turn off **Limit CPU frequency**.
+
+For more details, see [Limit CPU frequency](/manual/olares/settings/my-olares#limit-cpu-frequency).
+
+### Olares OS 1.12.5 or earlier
+
+If your device is running Olares OS 1.12.5 or earlier, use terminal commands to lower the maximum CPU frequency during the workload, then restore it afterward.
 
 1. Open the Control Hub app.
 2. In the left sidebar, under **Terminal**, click **Olares**.

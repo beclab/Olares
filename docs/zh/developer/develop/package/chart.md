@@ -1,46 +1,19 @@
-# Olares 应用 Chart 包的结构
+# Olares 应用 Chart 结构
 
-Olares 应用 Chart 基于 Helm Chart 的基础结构，扩展 Olares 特有信息，主要为：
+Olares 应用 Chart 基于标准 **Helm Chart** 结构，并扩展了 Olares 独有的信息。通常，`App` 和 `Middleware` 的标准应用 Chart 目录包含以下文件：
+
 ```
-|-- Chart.yaml                   # chart 的 metadata
-|-- OlaresManifest.yaml          # Olares 应用的配置
-|-- templates                    # chart 安装部署模版文件
-|   |-- deployment.yaml          # 应用部署脚本
-|-- values.yaml                  # chart 安装部署参数
+AppName
+|-- Chart.yaml                   # chart 的元数据
+|-- OlaresManifest.yaml          # Olares 应用专属配置
+|-- templates/                   # 部署资源的模板
+|   |-- deployment.yaml          # Deployment 资源定义
+|-- owners                       # 提交到 Market 时必需；列出允许维护与更新此应用的 GitHub 账号
+|-- crds/                        # 可选：Custom Resource Definitions
+|-- values.yaml                  # 可选：此 chart 的默认部署参数
+|-- values.schema.json           # 可选：用于约束 values.yaml 文件结构的 JSON Schema
+|-- README.md                    # 可选：关于该应用的可读文档
 ```
 :::info 注意
 为了使 `templates` 目录更易于理解，你可以将部署拆分为多个文件。
 :::
-
-- 应用 Chart 包示例：
-```
-AppName
-|-- Chart.yaml                # 必选: 包含了 chart 信息的 YAML文件
-|-- OlaresManifest.yaml       # 必选: 应用的配置文档
-|-- values.yaml               # 必选: chart 默认的配置值
-|-- templates                 # 必选: 模板目录， 当和 values 结合时，可生成有效的 Kubernetes manifest 文件
-|   |-- NOTES.txt             # 可选: 包含简要使用说明的纯文本文件
-|   |-- deployment.yaml       # 定义应用安装的 Deployment
-|   |-- service.yaml          # 定义应用提供 Entrance 的 Service
-|   |-- provider.yaml         # 可选：如果需要暴露 Provider 接口
-|-- LICENSE                   # 可选: 包含 chart 许可证的纯文本文件
-|-- README.md                 # 可选: 可读的 README 文件
-```
-
-- 推算算法 Chart 包示例：
-
-```
-RecommendName
-|-- Chart.yaml                # 必选: 包含了 chart 信息的 YAML 文件
-|-- OlaresManifest.yaml     # 必选: 推荐算法的配置文档
-|-- values.yaml               # 必选: chart 默认的配置值
-|-- templates                 # 必选: 模板目录， 当和 values 结合时，可生成有效的 Kubernetes manifest 文件
-|   |-- NOTES.txt             # 可选: 包含简要使用说明的纯文本文件
-|   |-- train.yaml            # 定义推荐算法 workflows 中的 train 流程
-|   |-- prerank.yaml          # 定义推荐算法 workflows 中的 prerank 流程
-|   |-- rank.yaml             # 定义推荐算法 workflows 中的 rank 流程
-|   |-- embedding.yaml        # 定义推荐算法 workflows 中的 embedding 流程
-|-- LICENSE                   # 可选: 包含 chart 许可证的纯文本文件
-|-- README.md                 # 可选: 可读的 README 文件
-
-```
