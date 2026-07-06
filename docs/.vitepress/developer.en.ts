@@ -126,6 +126,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
       text: "Develop Olares apps",
       link: "/developer/develop/",
       items: [
+        /*
         {
           text: "Develop with Studio",
           collapsed: true,
@@ -149,6 +150,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             },
           ],
         },
+        */
         {
           text: "Application package",
           collapsed: true,
@@ -382,6 +384,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
     {
       text: "Contribute to Olares",
       items: [
+        /*
         {
           text: "Develop system app",
           collapsed: true,
@@ -408,6 +411,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             },
           ],
         },
+        */
         {
           text: "Develop protocols",
           collapsed: true,

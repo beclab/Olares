@@ -14,8 +14,8 @@ Before submitting, make sure your application has been fully tested on Olares.
 
 Recommended workflow:
 
-- Use [Studio](/developer/develop/tutorial/develop.md) development container to test and debug in a real online environment.
-- [Install the app via Olares Market](/developer/develop/tutorial/package-upload.md) to test installation and upgrades as a user would.
+- Review the [Olares Application Chart structure](/developer/develop/package/chart.md) and confirm all required files are present.
+- Install the packaged app on a test Olares device to check installation, upgrades, and runtime behavior as a user would.
 
 ## Submit a new application
 
