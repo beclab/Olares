@@ -55,7 +55,7 @@ If you are using an older version of Olares, do not manually migrate existing mo
 3. Install the new versions of these applications from the Market:
 
     - For pre-packaged model apps and Ollama-based models: Deploy the model you need using the new Engine Base apps (llama.cpp Engine Base, Ollama Engine Base, SGLang Engine Base, and vLLM Engine Base). The model files will be saved into the `huggingface` or `ollama` subdirectories accordingly.
-    - For ComfyUI, re-download required model files. They will be saved iinto the `comfyui` subdirectory automatically.
+    - For ComfyUI, re-download required model files. They will be saved into the `comfyui` subdirectory automatically.
 
 ## Find and manage shared models
 
