@@ -7,7 +7,7 @@ head:
       content: Olares, 下载客户端, qBittorrent, NZBGet, Transmission, Deluge, 升级, 1.12.6
 app_version: "1.0.x"
 doc_version: "1.0"
-doc_updated: "2026-07-03"
+doc_updated: "2026-07-06"
 ---
 
 :::warning
@@ -23,13 +23,13 @@ doc_updated: "2026-07-03"
 ## qBittorrent
 
 1. 打开 qBittorrent。
-2. 在工具栏中选择 **工具** > **选项**。
-3. 在 **选项** 窗口中，进入 **下载** 选项卡。
-4. 将 **默认保存路径** 从 `/downloads/home/Downloads/qBittorrent` 更新为 `/olares/userdata/home/Downloads/qBittorrent`。
+2. 在工具栏中选择**工具** > **选项**。
+3. 在**选项**窗口中，进入**下载**选项卡。
+4. 将**默认保存路径**从 `/downloads/home/Downloads/qBittorrent` 更新为 `/olares/userdata/home/Downloads/qBittorrent`。
 
    ![qBittorrent 默认保存路径](/images/manual/use-cases/update-default-save-path.png#bordered)
    
-5. 向下滚动并点击 **保存**。
+5. 向下滚动并点击**保存**。
 
 ### 升级后 qBittorrent 要求登录
 
@@ -61,7 +61,7 @@ doc_updated: "2026-07-03"
 
 ## NZBGet
 
-1. 打开 NZBGet，进入 **设置** > **PATHS**。
+1. 打开 NZBGet，进入**设置** > **PATHS**。
 2. 更新以下路径：
    - **DestDir**：将 `/downloads/completed` 改为 `/olares/userdata/home/Downloads/nzbget/completed`
    - **InterDir**：将 `/downloads/intermediate` 改为 `/olares/userdata/home/Downloads/nzbget/intermediate`
@@ -69,13 +69,13 @@ doc_updated: "2026-07-03"
 
 ## Transmission
 
-1. 打开 Transmission，点击右上角的 <i class="material-symbols-outlined">menu</i>，然后选择 **编辑首选项**。
+1. 打开 Transmission，点击右上角的 <i class="material-symbols-outlined">menu</i>，然后选择**编辑首选项**。
 2. 更新以下路径：
    - **下载到**：将 `/downloads/complete` 改为 `/olares/userdata/home/Downloads/transmission/complete`
    - **使用临时文件夹**：将 `/downloads/incomplete` 改为 `/olares/userdata/home/Downloads/transmission/incomplete`
 
 ## Deluge
 
-1. 打开 Deluge，进入 **首选项** > **下载**。
+1. 打开 Deluge，进入**首选项** > **下载**。
 2. 将下载路径从 `/downloads` 更新为 `/olares/userdata/home/Downloads/deluge`。
-3. 点击 **应用**，然后点击 **确定**。
+3. 点击**应用**，然后点击**确定**。
