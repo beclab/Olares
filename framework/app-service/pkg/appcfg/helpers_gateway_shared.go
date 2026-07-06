@@ -32,5 +32,5 @@ func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platform
 	if platformDomain == "" {
 		return "", fmt.Errorf("platformDomain is empty")
 	}
-	return fmt.Sprintf("%s.shared.%s", appv1alpha1.SharedEntranceID(appid, entranceIndex, entranceCount), platformDomain), nil
+	return fmt.Sprintf("%s.shared.%s", appv1alpha1.SharedEntranceID(appid, entranceIndex), platformDomain), nil
 }
