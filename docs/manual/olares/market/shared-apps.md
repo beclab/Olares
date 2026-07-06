@@ -1,13 +1,13 @@
 ---
 outline: [2, 3]
-description: Understand Olares shared applications, why the v3 architecture replaces v2, how the Engine Base architecture replaced the standalone Ollama app, and how to migrate from legacy v2 shared apps.
+description: Understand Olares shared applications, why the new shared architecture replaces v2, how the Engine Base architecture replaced the standalone Ollama app, and how to migrate from legacy v2 shared apps.
 ---
 
 # Shared applications
 
 Shared applications are a special category of community applications in Olares. They are deployed and managed centrally by the administrator, and every member of the cluster can use them without installing their own copy.
 
-This page explains what shared applications are, why Olares moved to a new architecture in Olares 1.12.6, and how to migrate from legacy v2 to the new v3 architecture.
+This page explains what shared applications are, why Olares moved to a new architecture in Olares 1.12.6, and how to migrate from legacy v2 to the new architecture.
 
 ## What are shared applications
 
@@ -27,30 +27,30 @@ Key characteristics of shared applications include:
 - **Unified HTTPS address**: All shared applications use the same URL pattern, that is `https://<app-id>.<username>.<platform-domain>`. Each member accesses the same shared application through their own username.
 <!-- #endregion shared-apps-what-are -->
 
-## Why the new v3 architecture
+## Why the new shared architecture
 
 Before v1.12.6, shared applications were split into a server component and a client-side access point. This design had an issue: the server was tightly coupled to these access points, so uninstalling one could leave the shared server inaccessible, breaking the service for everyone.
 
-The v3 architecture replaces the client/server split with a single, unified shared server:
+The new architecture replaces the client/server split with a single, unified shared server:
 
-| v2 architecture | v3 architecture |
+| v2 architecture | New architecture |
 |:----------------|:----------------|
 | Server + client-side access point | Single unified shared server |
 | Uninstalling an access point might break the server | Server lifecycle is independent of any access point |
 | Multiple access addresses and formats | Unified address format for all users |
 | Client and server managed separately | Administrators manage one shared service |
 
-Benefits of v3 include:
+Benefits of the new architecture include:
 - **Simpler management**: Administrators manage one shared application instead of coordinating client and server components.
 - **No orphaned services**: Uninstalling a user-facing app no longer affects the shared server.
 - **Personalized access**: Every member accesses a shared app through their own username, using the same HTTPS URL pattern across all shared apps.
 
 ## v2 shared app lifecycle
 
-Installed v2 shared apps continue to work after upgrading to Olares v1.12.6. You can start, use, stop, and resume them as before, but you cannot upgrade them directly to v3.
+Installed v2 shared apps continue to work after upgrading to Olares v1.12.6. You can start, use, stop, and resume them as before, but you cannot upgrade them directly to the new architecture.
 
 :::warning Data is not migrated automatically
-Existing data from a v2 shared app is not moved to v3 automatically. To move to the new architecture, uninstall the v2 app, install the v3 app, and then optionally migrate your data according to the app type. See [Migrate from v2 to v3](#migrate-from-v2-to-v3) for details.
+Existing data from a v2 shared app is not moved to the new architecture automatically. To move to the new architecture, uninstall the v2 app, install the new shared app, and then optionally migrate your data according to the app type. See [Migrate from v2 to the new architecture](#migrate-from-v2-to-the-new-architecture) for details.
 :::
 
 ## From Ollama to Engine Base
@@ -70,11 +70,11 @@ This brings several benefits:
 - **Centralized management in Market**: Engines are maintained in one place through the base apps. When Olares updates a base, you can upgrade your cloned instances to the new engine version.
 - **Flexible configuration**: You set each instance's model source, parameters, and capabilities yourself, and pick the best engine for each model. For example, select Ollama for quick local inference, vLLM or SGLang for high-throughput serving, or llama.cpp for edge deployments.
 
-## Migrate from v2 to v3
+## Migrate from v2 to the new architecture
 
 Different apps require different migration paths. Choose the option below that matches the app you are migrating.
 
-### Option 1: Uninstall v2, install v3, system migrates data
+### Option 1: Uninstall v2, install the new app, system migrates data
 
 Use this option when the app supports automatic data migration.
 
@@ -83,14 +83,14 @@ Use this option when the app supports automatic data migration.
 
 **Steps:**
 1. Uninstall the v2 shared app.
-2. Install the v3 shared app.
+2. Install the new shared app.
 3. The system migrates your data automatically.
 
 :::tip New ComfyUI data locations
-In v2, ComfyUI stored its main program under the `External` directory. In v3, the main program moves to `Data`, and model files move to `Common`. If you access these files directly, note the new locations after migrating. For details, see [ComfyUI Shared migration guide](#).<!-- TODO: replace with the ComfyUI use-case subpage link once published -->
+In the v2 architecture, ComfyUI stored its main program under the `External` directory. In the new architecture, the main program moves to `Data`, and model files move to `Common`. If you access these files directly, note the new locations after migrating. For details, see [ComfyUI Shared migration guide](#).<!-- TODO: replace with the ComfyUI use-case subpage link once published -->
 :::
 
-### Option 2: Uninstall v2, then install v3
+### Option 2: Uninstall v2, then install the new app
 
 Use this option when the app has no user-created data to migrate.
 
@@ -100,10 +100,10 @@ Use this option when the app has no user-created data to migrate.
 
 **Steps:**
 1. Uninstall the v2 shared app.
-2. Install the v3 shared app.
+2. Install the new shared app.
 3. For model apps, deploy the model again on an Engine Base app and reconfigure your clients.
 
-### Option 3: Back up, uninstall v2, install v3, then restore data
+### Option 3: Back up, uninstall v2, install the new app, then restore data
 
 Use this option when the app stores user-created data or settings that must be moved manually.
 
@@ -124,17 +124,17 @@ Use this option when the app stores user-created data or settings that must be m
 
    Open Market or the Launchpad, uninstall the v2 app, and make sure you select **Also uninstall the shared server (affects all users)**. This fully removes the old service and frees its resources.
 
-3. **Install the v3 app**
+3. **Install the new app**
 
-   Find the v3 version of the shared app in Market and install it. The administrator must perform this step.
+   Find the new version of the shared app in Market and install it. The administrator must perform this step.
 
 4. **Migrate or reconfigure your data**
 
-   Copy your backup into the v3 app's data directory, or reconfigure the app according to its own migration instructions.
+   Copy your backup into the new app's data directory, or reconfigure the app according to its own migration instructions.
 
 5. **Update access addresses**
 
-   v3 shared apps use the unified address format `https://<app-id>.<username>.<platform-domain>`. Update client configurations that still point to the old v2 address.
+   New shared apps use the unified address format `https://<app-id>.<username>.<platform-domain>`. Update client configurations that still point to the old v2 address.
 
 ### Option 4: Migrate from Ollama to Engine Base
 
