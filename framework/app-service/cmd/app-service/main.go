@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
@@ -295,6 +296,11 @@ func main() {
 
 	if err = (&routecontrol.GatewayInClusterIngressNPReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "GatewayInClusterIngressNP")
+		os.Exit(1)
+	}
+
+	if err = (&callerjwt.IssuerReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "CallerJWTIssuer")
 		os.Exit(1)
 	}
 
