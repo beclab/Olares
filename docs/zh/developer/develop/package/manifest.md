@@ -683,11 +683,13 @@ spec:
 :::info 示例
 ```yaml
 spec:
-  requiredMemory: 2Gi
-  requiredDisk: 50Mi
-  requiredCpu: 0.25
-  limitedMemory: 10240Mi
-  limitedCpu: '4'
+  accelerator:
+  - mode: cpu
+    requiredMemory: 2Gi
+    requiredDisk: 50Mi
+    requiredCpu: 0.25
+    limitedMemory: 10240Mi
+    limitedCpu: '4'
 ```
 :::
 
