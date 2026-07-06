@@ -15,7 +15,7 @@ func IsGatewaySharedApp(app *appv1alpha1.Application) bool {
 	if app == nil {
 		return false
 	}
-	return IsShared(app) || IsClusterScoped(app)
+	return IsShared(app) // || IsClusterScoped(app)
 }
 
 // LogicalHostPattern returns the canonical shared gateway host pattern:
