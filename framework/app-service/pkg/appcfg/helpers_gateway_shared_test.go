@@ -68,7 +68,7 @@ func TestLogicalHostPattern(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LogicalHostPattern() error = %v", err)
 		}
-		want := appv1alpha1.SharedEntranceID("demo1234", 0, 1) + ".shared.olares.com"
+		want := appv1alpha1.SharedEntranceID("demo1234", 0) + ".shared.olares.com"
 		if got != want {
 			t.Fatalf("LogicalHostPattern() = %q, want %q", got, want)
 		}
@@ -79,7 +79,7 @@ func TestLogicalHostPattern(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LogicalHostPattern() error = %v", err)
 		}
-		want := appv1alpha1.SharedEntranceID("demo1234", 1, 2) + ".shared.olares.com"
+		want := appv1alpha1.SharedEntranceID("demo1234", 1) + ".shared.olares.com"
 		if got != want {
 			t.Fatalf("LogicalHostPattern() = %q, want %q", got, want)
 		}
