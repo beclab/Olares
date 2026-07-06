@@ -105,7 +105,7 @@ doc_updated: "2026-07-03"
 
    ![Sonarr Download Clients 页面](/images/manual/use-cases/arrs-sonarr-download-clients.png#bordered)
 
-2. 点击 <span class="material-symbols-outlined">add_2</span>，然后向下滚动选择 **qBittorrent** 以添加新的客户端连接。
+2. 点击 <i class="material-symbols-outlined">add_2</i>，然后向下滚动选择 **qBittorrent** 以添加新的客户端连接。
 3. 按如下方式指定连接详细信息：
 
    ![Sonarr Download Clients 设置](/images/manual/use-cases/arrs-sonarr-download-clients-settings1.png#bordered)
@@ -166,7 +166,7 @@ doc_updated: "2026-07-03"
 
    ![Prowlarr 添加应用](/images/manual/use-cases/arrs-prowlarr-add-apps.png#bordered)
 
-3. 点击 <span class="material-symbols-outlined">add_2</span>，然后选择要连接的应用，即 Sonarr。
+3. 点击 <i class="material-symbols-outlined">add_2</i>，然后选择要连接的应用，即 Sonarr。
 4. 在 **Add Application - Sonarr** 窗口中，指定以下设置：
 
    - **Prowlarr Server**：输入 Prowlarr 的内部入口 URL，例如 `https://e5e5b409.alexmiles.olares.com`。
