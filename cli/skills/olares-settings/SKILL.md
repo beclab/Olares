@@ -1,6 +1,6 @@
 ---
 name: olares-settings
-version: 4.4.0
+version: 4.4.2
 description: "Olares Settings via olares-cli settings — mirror of Settings SPA: users, apps, VPN, network (reverse-proxy / overlay gateway), backup, integration, GPU, search, me/whoami. Use for Olares Settings, role, VPN ACL, overlay gateway, backup, integration accounts, language."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -53,7 +53,7 @@ For every area, **start with `olares-cli settings <area> --help`**. References b
 | `integration` | [references/olares-settings-integration.md](references/olares-settings-integration.md) (`accounts add awss3|tencent`) |
 | `backup` | [references/olares-settings-backup.md](references/olares-settings-backup.md) (plans / snapshots / password) |
 | `appearance` | `olares-cli settings appearance --help` (`get`, `language set`) |
-| `network` | `olares-cli settings network --help` (read-only frp / hosts-file; `reverse-proxy get/set` (owner set); `overlay` gateway `status` / `enable` / `disable` (owner) / `app enable`|`app disable` — NOT JWS-gated, see [Currently-implemented mutating verbs](#currently-implemented-mutating-verbs). `frp set` / `ssl` / `hosts-file set` still blocked by the JWS gap.) |
+| `network` | `olares-cli settings network --help` (read-only frp / hosts-file; `reverse-proxy get/set` (owner set); `overlay` gateway `status` / `enable` / `disable` (owner) / `app enable`|`app disable` — **all `overlay` verbs are Olares 1.12.6+ only** (the overlay gateway wire surface landed in 1.12.6; on 1.12.5 the CLI fails fast with `requires Olares >= 1.12.6` instead of a raw 404), NOT JWS-gated, see [Currently-implemented mutating verbs](#currently-implemented-mutating-verbs). `frp set` / `ssl` / `hosts-file set` still blocked by the JWS gap.) |
 | `gpu` | `olares-cli settings gpu --help` (read-only `list`; **legacy, 1.12.5 only** HAMI `/api/gpu/list` — **removed in 1.12.6**: the CLI fails fast there and points at `compute list`) |
 | `compute` | `olares-cli settings compute --help` (**1.12.6+ new "Accelerator"**: `list`, `unbind <app>`, `set-type <node> <device>`; version-gated, replaces `gpu list`. `<node>`/`<device>` come from `list`'s node header + DEVICE-ID column) |
 | `video` | `olares-cli settings video --help` (read-only `config get`) |
@@ -105,7 +105,7 @@ Different upstream services return JSON in different envelopes. The CLI normaliz
 | Area | Endpoint family | Wire envelope |
 |---|---|---|
 | `me`, `apps`, `network`, `appearance`, `integration`, `gpu`, `video`, `search`, `advanced` | `/api/*` (user-service / BFL / terminusd) | Unwrapped BFL `{data: ...}` envelope |
-| `network overlay` | `GET /api/system/overlay-gateway-status/{user}`, `POST /api/command/{enable,disable}-overlay-gateway`, `POST /api/command/{enable,disable}-app-overlay-gateway` (user-service → olaresd) | BFL `{code,message,data}` envelope. Status `data`: `{status, disable, disable_reason, supported_apps[], error_message}`; each app: `{app_name, app_id, enabled, shared_app, underlay_networks[]}`. `status` path `{user}` must be the current user (daemon `itsMe`); `-o json` for per-port workload/protocol/description |
+| `network overlay` | `GET /api/system/overlay-gateway-status/{user}`, `POST /api/command/{enable,disable}-overlay-gateway`, `POST /api/command/{enable,disable}-app-overlay-gateway` (user-service → olaresd) — **1.12.6+ only** (client-side version-gated; on 1.12.5 these routes 404, so the CLI rejects up front) | BFL `{code,message,data}` envelope. Status `data`: `{status, disable, disable_reason, supported_apps[], error_message}`; each app: `{app_name, app_id, enabled, shared_app, underlay_networks[]}`. `status` path `{user}` must be the current user (daemon `itsMe`); `-o json` for per-port workload/protocol/description |
 | `users` | `/api/users/v2`, `/api/users/:name`, `POST/DELETE /api/users/...` | List-result decoder; mutating returns axios-inner `{name}` |
 | `vpn` devices / ACL | `<SettingsURL>/headscale/machine`, `/headscale/machine/:id/routes` | Raw Headscale JSON (NO envelope), `route.id` is a string |
 | `vpn` public-domain-policy | `/api/launcher-public-domain-access-policy` | Already-unwrapped `{deny_all: 0|1}` |
@@ -114,20 +114,21 @@ Different upstream services return JSON in different envelopes. The CLI normaliz
 
 ## Currently-implemented mutating verbs
 
-Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Verbs flagged **UNVERIFIED** ship in the binary but are tracked as experimental; the CLI emits a one-line "experimental" stderr hint when they run.
+Verbs marked **VERIFIED** have been confirmed against a live Olares instance. Verbs flagged **UNVERIFIED** ship in the binary and work the same way, but have not yet been smoke-tested against a live instance — treat their result as provisional and confirm the outcome after running.
 
 | Area | Verb | Status |
 |---|---|---|
-| `network overlay` | `enable` / `disable` (owner; gateway master switch, async — status settles at on/off; `--watch` polls until it settles) | UNVERIFIED |
-| `network overlay` | `app enable <app>` / `app disable <app>` (any user; auto-restarts the app when running, via `market restart`; `--watch` polls until enabled+IP assigned / disabled) | UNVERIFIED |
+| `network overlay` | `enable` / `disable` (owner; gateway master switch, async — status settles at on/off; `--watch` polls until it settles) | VERIFIED |
+| `network overlay` | `app enable <app>` / `app disable <app>` (any user; auto-restarts the app when running, via `market restart`; `--watch` polls until enabled+IP assigned / disabled) | VERIFIED |
 | `appearance` | `language set <code>` | VERIFIED |
 | `users` | `create` / `delete` (with `--watch`) | VERIFIED |
 | `search` | `rebuild`, `dirs add / rm` | VERIFIED (rebuild + dirs writes) |
 | `vpn ssh` | `enable` / `disable` | VERIFIED |
 | `vpn acl` | `add` / `remove` | VERIFIED |
 | `integration accounts` | `add awss3` / `add tencent` / `delete` | VERIFIED |
-| `apps` | `suspend [--cascade]` / `resume` (thin aliases over `market stop` / `market resume`), `env set`, `domain set/finish`, `policy set`, `auth-level set` | UNVERIFIED |
-| `compute` | `unbind <app>` (unbind + stop app), `set-type <node> <device> --type X` (may stop bound apps; handles `bound-apps-stop-blocked`) — **1.12.6+** | UNVERIFIED |
+| `apps` | `suspend [--cascade]` / `resume` (thin aliases over `market stop` / `market resume`) | VERIFIED |
+| `apps` | `env set`, `domain set/finish`, `policy set`, `auth-level set` | UNVERIFIED |
+| `compute` | `unbind <app>` (unbind + stop app), `set-type <node> <device> --type X` (may stop bound apps; handles `bound-apps-stop-blocked`) — **1.12.6+** | VERIFIED |
 | `backup` | `password set` | UNVERIFIED |
 
 **Not yet implemented** (and the CLI deliberately does NOT register them):

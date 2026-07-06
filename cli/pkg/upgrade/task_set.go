@@ -320,6 +320,15 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 	if !(sys.IsUbuntu() || sys.IsDebian()) {
 		return nil
 	}
+	// NVIDIA DGX Spark / GB10 OEM systems ship and manage their own GPU driver
+	// stack as part of the OS. The driver is intertwined with vendor packages
+	// and an nvidia-branded kernel, so reusing the generic uninstall/runfile
+	// upgrade flow here is unsafe (it can purge unrelated system packages and
+	// break the machine). Skip the driver upgrade entirely on these systems.
+	if sys.IsGB10Chip() {
+		logger.Info("detected NVIDIA DGX Spark / GB10 system, skipping GPU driver upgrade")
+		return nil
+	}
 
 	model, _, err := utils.DetectNvidiaModelAndArch(runtime)
 	if err != nil {

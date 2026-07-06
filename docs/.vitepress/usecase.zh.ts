@@ -362,6 +362,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "*Arrs",
               link: "/zh/use-cases/arrs",
+              collapsed: true,
+              items: [
+                {
+                  text: "升级 *Arrs",
+                  link: "/zh/use-cases/arrs-upgrade",
+                },
+                {
+                  text: "升级下载客户端",
+                  link: "/zh/use-cases/download-clients-upgrade",
+                },
+              ]
             },
           ]
         },
@@ -428,6 +439,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "FlareSolverr",
               link: "/zh/use-cases/flaresolverr",
+            },
+            {
+              text: "Home Assistant",
+              link: "/zh/use-cases/home-assistant",
             },
           ],
         },
