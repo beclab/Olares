@@ -45,6 +45,11 @@ type VirtualHostIR struct {
 	UserZone              string
 	UserName              string
 	SourceCIDRs           []string // When non-empty, only these source IPs may reach this VH (RBAC).
+	// IsFileserver is true for vhosts that host fileserver routes (files/settings apps).
+	// Used by the xds layer to attach CORS response headers
+	// that the upstream fileserver / nginx do not emit, so Capacitor / browser
+	// cross-origin requests to /api/preview/*, /api/raw/*, etc. succeed.
+	IsFileserver bool
 }
 
 type HTTPRouteIR struct {
