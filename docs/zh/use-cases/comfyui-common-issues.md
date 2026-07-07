@@ -49,6 +49,23 @@ ComfyUI 1.12.6 使用了新的[共享应用机制](/zh/manual/olares/market/shar
 卸载后，你的模型、插件、工作流和输入输出文件仍保留在设备上。新版 ComfyUI 会自动找到并迁移它们。
 :::
 
+### 迁移内容说明
+
+新版 ComfyUI 安装后，将自动完成数据的迁移工作，具体规则如下：
+
+| 数据类型 | 原路径 | 新路径 |
+|:---|:---|:---|
+| ComfyUI 核心数据（插件、工作流等） | `External/<your_hostname>/ai/comfyui/` | `/Data/comfyuisharev3/comfyui/` |
+| 模型数据 | `External/<your_hostname>/ai/model/` | `Common/comfyui/model/` |
+| 输出文件 | `External/<your_hostname>/ai/output/comfyui/` | `Common/comfyui/output/` |
+| 输入文件 | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
+
+:::warning
+迁移完成后，请勿再将模型或输入文件上传至 `External/<your_hostname>/ai/` 目录下。新版 ComfyUI 不再挂载这两个目录，因此无法识别这些文件。
+:::
+
+数据迁移会在每次 ComfyUI 应用重启时进行。如果原路径下有新增数据，将在重启后按上述规则迁移到新目录位置，并删除 `External/<your_hostname>/ai/` 目录下对应的文件。为避免文件冲突和不必要的数据迁移等待，请使用新目录上传文件。
+
 ## 升级到 v1.0.37 或更高版本后 ComfyUI 无法启动
 
 升级到 ComfyUI v1.0.37 或更高版本后可能会出现此问题。

@@ -49,6 +49,23 @@ Your existing ComfyUI will continue to work after upgrading to 1.12.6, but it ca
 After uninstalling, your models, plugins, workflows, and input/output files remain on your device. The new ComfyUI automatically locates and migrates them.
 :::
 
+### What gets migrated
+
+After the new ComfyUI is installed, data is migrated automatically as follows:
+
+| Data type | Old location | New location |
+|:---|:---|:---|
+| ComfyUI core (plugins, workflows, etc.) | `External/<your_hostname>/ai/comfyui/` | `/Data/comfyuisharev3/comfyui/` |
+| Models | `External/<your_hostname>/ai/model/` | `Common/comfyui/model/` |
+| Output files | `External/<your_hostname>/ai/output/comfyui/` | `Common/comfyui/output/` |
+| Input files | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
+
+:::warning
+After migration, do not upload models or input files to `External/<your_hostname>/ai/`. The new ComfyUI no longer mounts these directories and will not recognize files placed there.
+:::
+
+The migration runs every time ComfyUI restarts. If new files are added under the old paths, they will be migrated to the new locations on the next restart, and the originals under `External/<your_hostname>/ai/` will be deleted. To avoid file conflicts and migration delays, use the new directories for uploading files.
+
 ## ComfyUI fails to start after upgrading to v1.0.37 or later
 
 This issue may occur after upgrading to ComfyUI v1.0.37 or later.
