@@ -14,33 +14,15 @@ Use this page to identify and resolve common issues with ComfyUI on Olares.
 If you are encountering an issue that is not listed here, refer to [Troubleshooting flow](./comfyui-launcher#troubleshooting-flow).
 :::
 
-## ComfyUI cannot start
+## How to migrating to the new ComfyUI after upgrading to Olares 1.12.6
 
-ComfyUI fails to start, stops unexpectedly, or behaves abnormally.
+Olares 1.12.6 brings a major update to the [shared app](/manual/olares/market/shared-apps) system. As a result, you cannot update ComfyUI in place. Instead, you need to install the new ComfyUI app, which is built on the updated architecture. Just follow the migration steps below, and all your data (including models, plugins, workflows, and files) will be moved over automatically. 
 
-This is usually caused by insufficient resources or incorrect GPU allocation. To resolve this:
-
-1. Check your system resources. If your CPU or memory usage is maxed out, stop other resource-intensive apps.
-2. If system resources look fine, go to **Settings** > **Accelerator** and check your GPU mode:
-   - If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
-   - If you are using **Exclusive**, make sure the exclusive app is set to ComfyUI.
-3. Wait a moment, then try to launch ComfyUI again.
-
-## Launcher log shows errors
-
-`Error` messages in the Launcher logs do not necessarily indicate a system failure. During startup and plugin scanning, ComfyUI often logs non-fatal errors for missing optional dependencies or environment checks, even when running normally.
-
-If ComfyUI starts successfully, most of these messages do not require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
-
-## Migrating to the new ComfyUI in 1.12.6
-
-ComfyUI 1.12.6 uses a new [shared app mechanism](/manual/olares/market/shared-apps) (see [PR #3485](https://github.com/beclab/Olares/pull/3485)). To update to the new version, you must migrate your existing ComfyUI installation. The migration is automatic — the new ComfyUI transfers your models, plugins, workflows, and input/output files during the process.
-
-Your existing ComfyUI will continue to work after upgrading to 1.12.6, but it cannot receive further updates. We recommend migrating to the new version as soon as possible.
+Your existing `ComfyUI Shared` will continue to work after upgrading to 1.12.6, but it cannot receive further updates. We recommend migrating to the new version as soon as possible.
 
 ### Migration steps
 
-1. Uninstall the current ComfyUI. In the popup dialog, **do not** check "Also remove all local data".
+1. Uninstall the current `ComfyUI Shared`. In the popup dialog, **DO NOT** check "Also remove all local data".
 2. Open Market and search for **ComfyUI**. Click **Install**.
 
    On the app's detail page, check the **Compatibility** field under **Information**. If it shows **"Olares >=1.12.6-0"**, you have the new version.
@@ -65,6 +47,25 @@ After migration, do not upload models or input files to `External/<your_hostname
 :::
 
 The migration runs every time ComfyUI restarts. If new files are added under the old paths, they will be migrated to the new locations on the next restart, and the originals under `External/<your_hostname>/ai/` will be deleted. To avoid file conflicts and migration delays, use the new directories for uploading files.
+
+
+## ComfyUI cannot start
+
+ComfyUI fails to start, stops unexpectedly, or behaves abnormally.
+
+This is usually caused by insufficient resources or incorrect GPU allocation. To resolve this:
+
+1. Check your system resources. If your CPU or memory usage is maxed out, stop other resource-intensive apps.
+2. If system resources look fine, go to **Settings** > **Accelerator** and check your GPU mode:
+   - If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
+   - If you are using **Exclusive**, make sure the exclusive app is set to ComfyUI.
+3. Wait a moment, then try to launch ComfyUI again.
+
+## Launcher log shows errors
+
+`Error` messages in the Launcher logs do not necessarily indicate a system failure. During startup and plugin scanning, ComfyUI often logs non-fatal errors for missing optional dependencies or environment checks, even when running normally.
+
+If ComfyUI starts successfully, most of these messages do not require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
 
 ## ComfyUI fails to start after upgrading to v1.0.37 or later
 
