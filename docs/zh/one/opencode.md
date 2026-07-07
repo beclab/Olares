@@ -174,7 +174,7 @@ Install Chromium from the Olares Market and tell me when it's ready.
 
 ### 部署模型
 
-让 OpenCode 使用 Ollama Engine Base 应用部署指定模型：
+让 OpenCode 使用新的引擎基座应用部署指定模型：
 
 ```text
 Deploy qwen3.5:0.8b on this Olares device using the Ollama Engine Base.

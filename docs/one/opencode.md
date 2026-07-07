@@ -170,7 +170,7 @@ Install Chromium from the Olares Market and tell me when it's ready.
 
 ### Deploy a model
 
-Ask OpenCode to deploy a specific model using the Ollama Engine Base app:
+Ask OpenCode to deploy a specific model using the new Engine Base apps:
 
 ```text
 Deploy qwen3.5:0.8b on this Olares device using the Ollama Engine Base.
