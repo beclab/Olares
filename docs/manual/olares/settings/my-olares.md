@@ -44,13 +44,18 @@ Available actions are:
     - **Silent mode** – Limits CPU and GPU power for quiet operation, suitable for everyday workloads.
     - **Performance mode** – Enables maximum CPU and GPU performance for demanding tasks such as AI inference or gaming.
 
-- **Limit CPU frequency**
+<a id="limit-cpu-frequency"></a>
+- **Limit CPU frequency** <Badge type="tip" text="Olares One Only" />
 
   Turn on this switch to limit the CPU frequency from 5.4 GHz to 5.0 GHz. Turn it off to restore the original maximum frequency.
 
-- **Automatic startup**
+- **Automatic startup** <Badge type="tip" text="Olares One Only" />
 
   Turn on this switch to start the device automatically when power is connected or restored after a power outage.
+
+  :::info
+  Requires Olares OS 1.12.6 or later and EC firmware 1.03 or later. If either prerequisite is not met, the toggle is visible but disabled.
+  :::
   
 
 ## Olares Space

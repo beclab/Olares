@@ -264,6 +264,10 @@ const side = {
               text: "Mount cloud storage",
               link: "/manual/olares/files/mount-cloud-storage",
             },
+            {
+              text: "Manage shared AI models with the Common directory",
+              link: "/manual/olares/files/files-common",
+            },
           ],
         },
         {
@@ -422,20 +426,9 @@ const side = {
                 },
               ],
             },
-            { 
-              text: "Manage GPU", 
-              collapsed: true,
+            {
+              text: "Manage accelerator resources",
               link: "/manual/olares/settings/gpu-resource",
-              items:[
-                {
-                  text: "Manage single-GPU resources",
-                  link: "/manual/olares/settings/single-gpu" 
-                },
-                {
-                  text: "Manage multi-GPU resources",
-                  link: "/manual/olares/settings/multi-gpu"
-                },
-              ]
             },
             { text: "Set video playback", link: "/manual/olares/settings/video" },
             { text: "Manage search rules", link: "/manual/olares/settings/search" },

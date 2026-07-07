@@ -162,7 +162,7 @@ spec:
             memory: 300Mi
             
       - name: download-server
-        image: "beclab/download-server:v0.1.23"
+        image: "beclab/download-server:v1.0.2"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -171,7 +171,7 @@ spec:
         - name: DEBUG
           value: "false"
         - name: YTDLP_SERVER_URL
-          value: http://ytdlp-svc.ytserver-shared:3082
+          value: http://ytdlp-svc.ytdlp-shared:3082
         - name: ARIA2_RPC_URL
           value: http://download-svc:6800/jsonrpc
         - name: PG_USERNAME
@@ -197,6 +197,24 @@ spec:
               name: download-secrets
         - name: NATS_PROGRESS_PUBLISH_SUB
           value: os.download_status
+        - name: LLDAP_READONLY_URL
+          value: http://lldap-service.os-platform:17171
+        - name: LLDAP_NATS_URL
+          value: nats://nats.os-platform:4222
+        - name: LLDAP_NATS_USERNAME
+          value: os-framework-download
+        - name: LLDAP_NATS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: download-secrets
+              key: password
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: LLDAP_RESYNC_SECONDS
+          value: '30'
         volumeMounts:
         - name: download-dir
           mountPath: /app/downloads

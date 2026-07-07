@@ -1,6 +1,6 @@
 ---
 name: olares-market
-version: 4.5.0
+version: 4.5.1
 description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume, restart apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, restart app, upload chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:

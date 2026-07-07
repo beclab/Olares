@@ -370,6 +370,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "*Arrs",
               link: "/use-cases/arrs",
+              collapsed: true,
+              items: [
+                {
+                  text: "Upgrade *Arrs",
+                  link: "/use-cases/arrs-upgrade",
+                },
+                {
+                  text: "Upgrade download clients",
+                  link: "/use-cases/download-clients-upgrade",
+                },
+              ]
             },
           ]
         },
@@ -444,6 +455,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "SearXNG",
               link: "/use-cases/searxng",
+            },
+            {
+              text: "Home Assistant",
+              link: "/use-cases/home-assistant",
             },
           ]
         },

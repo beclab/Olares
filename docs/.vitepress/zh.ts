@@ -262,6 +262,10 @@ const side = {
               text: "挂载云存储",
               link: "/zh/manual/olares/files/mount-cloud-storage",
             },
+            {
+              text: "使用公共目录管理共享 AI 模型",
+              link: "/zh/manual/olares/files/files-common",
+            },
           ],
         },
         {
@@ -418,19 +422,8 @@ const side = {
               ],
             },
             {
-              text: "管理 GPU",
-              collapsed: true,
+              text: "管理 AI 算力",
               link: "/zh/manual/olares/settings/gpu-resource",
-              items: [
-                {
-                  text: "管理单 GPU 资源",
-                  link: "/zh/manual/olares/settings/single-gpu",
-                },
-                {
-                  text: "管理多 GPU 资源",
-                  link: "/zh/manual/olares/settings/multi-gpu",
-                },
-              ],
             },
             { text: "视频设置", link: "/zh/manual/olares/settings/video" },
             { text: "文件搜索", link: "/zh/manual/olares/settings/search" },

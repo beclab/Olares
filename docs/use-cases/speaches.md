@@ -295,7 +295,7 @@ To fix this issue:
 - Increase the VRAM assigned to Speaches in **Memory slicing** mode.
 - Or switch the GPU to another mode.
 
-For detailed instructions, see [Manage GPU resources](/manual/olares/settings/single-gpu.md).
+For detailed instructions, see [Manage accelerator resources](/manual/olares/settings/gpu-resource.md).
 
 ### Can I use a different Ollama instance for Audio Chat?
 
