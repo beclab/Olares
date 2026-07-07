@@ -12,8 +12,12 @@ Choose the base app for the engine you want, clone it to deploy a model, then ru
 ## Before you start
 
 - Your Olares system has been upgraded to v1.12.6 or later.
-- If you want to skip manual configuration, install a pre-built model app from Market instead. The following pre-built model apps are currently available in Market. These apps package the recommended model-and-engine combinations validated for Olares。
-    - Qwen3.6-27B-MTP-GGUF (llama.cpp)
+- If you want to skip manual configuration and quickly try out a model, install a pre-built model app from Market instead. The following pre-built model apps are currently available in Market. These apps package the recommended model-and-engine combinations validated for Olares.
+
+  <!-- This list is still being modified and will be updated once the final model app lineup is confirmed. -->
+
+    - Qwen3.6-27B (llama.cpp)
+    - Qwen3.6-27B MTP (llama.cpp)
     - Qwen3.6-35B-A3B-MTP-GGUF (llama.cpp)
     - gemma-4-26B-A4B-it-GGUF (llama.cpp)
     - Ornith-1.0-35B-GGUF (llama.cpp)
@@ -116,112 +120,6 @@ After creating the instance, the configuration window opens. Define where your e
 To change these variables after installation, go to Olares **Settings** > **Applications** > **[App-Name]** > **Manage environment variables**. Click the edit icon next to a variable, update its value, save your change, and then click **Apply**.
 :::
 
-### Reference: Engine tuning arguments
-
-Use the `ENGINE_ARGS` variable to add custom settings that adjust memory usage, context limits, and processing behaviors. Separate multiple arguments with spaces. Select your inference engine below to view some commonly used tuning arguments.
-
-<tabs>
-<template #Llama-cpp>
-
-| Argument | Purpose | Recommended |
-| :--- | :--- | :--- |
-| `-c` | Sets the maximum context length<br> in tokens. | `65536` |
-| `-ngl` | Offloads all model layers to the GPU<br> to avoid CPU-bound slowdowns. | `all` |
-| `-fa` | Enables Flash Attention to speed up<br> attention computation. | `on` |
-| `-ctk` / `-ctv` | Quantizes the KV Cache to 8-bit,<br> balancing GPU memory use and precision. | `q8_0` |
-
-For other llama.cpp arguments, see the [official documentation](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md).
-</template>
-<template #Ollama>
-
-| Argument | Purpose | Recommended |
-| :--- | :--- | :--- |
-| `OLLAMA_CONTEXT_LENGTH` | Sets the default context window<br> size in tokens. <br><br>Default scales by VRAM:<ul><li>Less than 24G: 4096</li><li>Between 24G and 48G: 32768</li><li>48G and more: 262144</li></ul> | `8192` to `131072` |
-| `OLLAMA_KEEP_ALIVE` | Sets how long the model stays resident in<br> GPU memory after the last request. When the<br> time expires, the weights are swapped to<br> system RAM.<ul><li>`-1` keeps it in GPU memory permanently.</li><li>`3m` keeps it for 3 minutes.</li></ul>Default: `-1`. | `-1` or `30m` |
-| `OLLAMA_FLASH_ATTENTION` | Enables Flash Attention. It must be enabled<br> to use `OLLAMA_KV_CACHE_TYPE` for KV cache<br> quantization.<br><br>Default: `1`. | `1` (Enabled) |
-| `OLLAMA_KV_CACHE_TYPE` | Sets the key-value (KV) cache quantization<br> type to save video memory. <br><br>Default: `f16`. | `q8_0` (minor precision loss) or `q4_0` |
-| `OLLAMA_NUM_PARALLEL` | Sets the number of concurrent<br> requests processed per model. <br><br>Default: `1`. | `1` |
-
-For other Ollama arguments, see the [official documentation](https://github.com/ollama/ollama/blob/main/docs/faq.mdx).
-</template>
-<template #SGLang>
-
-| Argument | Purpose | Recommended |
-| :--- | :--- | :--- |
-| `--context-length` | Sets the maximum context length. | `65536` |
-| `--mem-fraction-static` | Sets the fraction of GPU memory<br> pre-allocated for static usage, similar<br> to vLLM's `--gpu-memory-utilization`. | `0.85` |
-| `--chunked-prefill-size` | Splits very long inputs into chunks so<br> they don't block the GPU for long,<br> keeping concurrent requests' streaming<br> smooth. | `4096` |
-
-For other SGLang arguments, see the [official documentation](https://docs.sglang.io/docs/advanced_features/server_arguments).
-</template>
-<template #vLLM>
-
-| Argument | Purpose | Recommended |
-| :--- | :--- | :--- |
-| `--max-model-len` | Sets the maximum context length. | `65536` |
-| `--gpu-memory-utilization` | Sets the fraction of GPU memory that the<br> vLLM engine uses. | `0.9` |
-| `--tensor-parallel-size` | Sets the tensor-parallel size, that is,<br> how many GPUs split and run one<br> model together. | `1` |
-| `--max-num-batched-tokens` | Limits the maximum number of tokens<br> processed per batch, so response time<br> stays stable when a very long request<br> arrives. | `8192` |
-| `--enable-prefix-caching` | Caches the KV Cache of shared prompt<br> prefixes and reuses it across requests. | Enabled |
-
-For other vLLM arguments, see the [official documentation](https://docs.vllm.ai/en/v0.17.0/configuration/engine_args/).
-</template>
-</tabs>
-
-### Recommended models and parameters
-
-The following per-engine recommendations are validated best practices. Use them as a starting point, then adjust for your hardware.
-
-<tabs>
-<template #Llama-cpp>
-
-- **Recommended model**: [`unsloth/Qwen3.6-27B-GGUF`](https://huggingface.co/unsloth/Qwen3.6-27B-GGUF), quantized to `Q4_K_M`
-- **MODEL_SOURCE**: `hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf`
-
-    :::tip Multimodal models
-    If the model has multimodal capabilities, include the `mmproj-F16.gguf` file in `MODEL_SOURCE`:
-
-    `hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf,hf://unsloth/Qwen3.6-27B-GGUF --include mmproj-F16.gguf`
-    :::
-
-- **MODEL_NAME**: `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`
-- **ENGINE_ARGS**: `-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0`
-
-</template>
-<template #Ollama>
-
-- **Recommended model**: `gemma4-26b` from the Ollama library, which defaults to Q4_K_M quantization
-- **MODEL_SOURCE**: `ollama://gemma4-26b`
-- **MODEL_NAME**: `gemma4-26b`
-- **ENGINE_ARGS**: `OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=131072 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 OLLAMA_NUM_PARALLEL=1`
-
-</template>
-<template #SGLang>
-
-:::info
-SGLang models can take a while to load before the engine reaches `RUNNING`.
-:::
-
-- **Recommended model**: [`cyankiwi/Ornith-1.0-9B-AWQ-FP8`](https://huggingface.co/cyankiwi/Ornith-1.0-9B-AWQ-FP8) from Hugging Face
-- **MODEL_SOURCE**: `hf://cyankiwi/Ornith-1.0-9B-AWQ-FP8`
-- **MODEL_NAME**: `cyankiwi/Ornith-1.0-9B-AWQ-FP8`
-- **ENGINE_ARGS**: `--context-length 131072 --mem-fraction-static 0.85 --chunked-prefill-size 4096`
-
-</template>
-<template #vLLM>
-
-:::info
-vLLM models can take a while to load before the engine reaches `RUNNING`.
-:::
-
-- **Recommended model**: [`cyankiwi/Ornith-1.0-9B-AWQ-FP8`](https://huggingface.co/cyankiwi/Ornith-1.0-9B-AWQ-FP8) from Hugging Face
-- **MODEL_SOURCE**: `hf://cyankiwi/Ornith-1.0-9B-AWQ-FP8`
-- **MODEL_NAME**: `cyankiwi/Ornith-1.0-9B-AWQ-FP8`
-- **ENGINE_ARGS**: `--max-model-len 131072 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser qwen3_coder --reasoning-parser qwen3 --enable-prefix-caching --enable-auto-tool-choice`
-
-</template>
-</tabs>
-
 ## Monitor deployment and configure the model service
 
 Open the built-in model console to track the model download, confirm the model and engine readiness, configure client access, and inspect GPU usage and performance.
@@ -295,11 +193,15 @@ The following example uses [OpenCode](./opencode.md) as the client.
         - **Display Name**: The name shown for this model. For example, `Qwen3.6 35B A3B`.
 
 4. Click **Submit** to save the configuration. The provider appears in the provider list.
-5. Run a task to test the connection. This example uses the Olares skill to upload and deploy an app to Olares.
+5. Run a task to test the connection. This example uses the Olares skills to deploy an app to Olares.
 
     a. At the top, click the **Search** field and select **Toggle terminal** to open a terminal.
 
-    b. Log in to the Olares CLI. Replace `alice123@olares.com` with your own Olares ID: `olares-cli profile login --olares-id alice123@olares.com`.
+    b. Log in to the Olares CLI to use the built-in Olares skills. Replace `alice123@olares.com` with your own Olares ID.
+    
+    ```bash
+    olares-cli profile login --olares-id alice123@olares.com
+    ```
 
     c. When prompted, type your Olares password and press **Enter**. The input stays hidden.
 
@@ -320,7 +222,123 @@ The following example uses [OpenCode](./opencode.md) as the client.
 
     ![Todo app deployed to My Olares](/images/manual/olares/llm-base-model-inst-task.png#bordered)
 
-## Uninstall model instances
+## References
 
-1. Open Market, go to **My Olares**, and then locate the model instance app.
-2. Click the drop-down arrow next to the operation button, and then select **Uninstall**.
+### Engine tuning arguments
+
+Use the `ENGINE_ARGS` variable to add custom settings that adjust memory usage, context limits, and processing behaviors. Separate multiple arguments with spaces. Select your inference engine below to view some commonly used tuning arguments.
+
+<tabs>
+<template #Llama-cpp>
+
+| Argument | Purpose | Recommended |
+| :--- | :--- | :--- |
+| `-c` | Sets the maximum context length in tokens. | `65536` |
+| `-ngl` | Offloads all model layers to the GPU to avoid <br>CPU-bound slowdowns. | `all` |
+| `-fa` | Enables Flash Attention to speed up attention <br>computation. | `on` |
+| `-ctk` / `-ctv` | Quantizes the KV Cache to 8-bit, balancing <br>GPU memory use and precision. | `q8_0` |
+
+For other llama.cpp arguments, see the [official documentation](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md).
+</template>
+<template #Ollama>
+
+| Argument | Purpose | Recommended |
+| :--- | :--- | :--- |
+| `OLLAMA_CONTEXT_LENGTH` | Sets the default context window<br> size in tokens. <br><br>Default scales by VRAM:<ul><li>Less than 24G: 4096</li><li>Between 24G and 48G: 32768</li><li>48G and more: 262144</li></ul> | `8192` to `131072` |
+| `OLLAMA_KEEP_ALIVE` | Sets how long the model stays resident in<br> GPU memory after the last request. When the<br> time expires, the weights are swapped to<br> system RAM.<ul><li>`-1` keeps it in GPU memory permanently.</li><li>`3m` keeps it for 3 minutes.</li></ul>Default: `-1`. | `-1` or `30m` |
+| `OLLAMA_FLASH_ATTENTION` | Enables Flash Attention. It must be enabled<br> to use `OLLAMA_KV_CACHE_TYPE` for KV cache<br> quantization.<br><br>Default: `1`. | `1` (Enabled) |
+| `OLLAMA_KV_CACHE_TYPE` | Sets the key-value (KV) cache quantization<br> type to save video memory. <br><br>Default: `f16`. | `q8_0` (minor precision loss) or `q4_0` |
+| `OLLAMA_NUM_PARALLEL` | Sets the number of concurrent<br> requests processed per model. <br><br>Default: `1`. | `1` |
+
+For other Ollama arguments, see the [official documentation](https://github.com/ollama/ollama/blob/main/docs/faq.mdx).
+</template>
+<template #SGLang>
+
+| Argument | Purpose | Recommended |
+| :--- | :--- | :--- |
+| `--context-length` | Sets the maximum context length. | `65536` |
+| `--mem-fraction-static` | Sets the fraction of GPU memory<br> pre-allocated for static usage, similar<br> to vLLM's `--gpu-memory-utilization`. | `0.85` |
+| `--chunked-prefill-size` | Splits very long inputs into chunks so<br> they don't block the GPU for long,<br> keeping concurrent requests' streaming<br> smooth. | `4096` |
+
+For other SGLang arguments, see the [official documentation](https://docs.sglang.io/docs/advanced_features/server_arguments).
+</template>
+<template #vLLM>
+
+| Argument | Purpose | Recommended |
+| :--- | :--- | :--- |
+| `--max-model-len` | Sets the maximum context length. | `65536` |
+| `--gpu-memory-utilization` | Sets the fraction of GPU memory that the<br> vLLM engine uses. | `0.9` |
+| `--tensor-parallel-size` | Sets the tensor-parallel size, that is,<br> how many GPUs split and run one<br> model together. | `1` |
+| `--max-num-batched-tokens` | Limits the maximum number of tokens<br> processed per batch, so response time<br> stays stable when a very long request<br> arrives. | `8192` |
+| `--enable-prefix-caching` | Caches the KV Cache of shared prompt<br> prefixes and reuses it across requests. | Enabled |
+
+For other vLLM arguments, see the [official documentation](https://docs.vllm.ai/en/v0.17.0/configuration/engine_args/).
+</template>
+</tabs>
+
+### Recommended models and parameters
+
+The following per-engine recommendations are validated best practices. Use them as a starting point, then adjust for your hardware.
+
+<tabs>
+<template #Llama-cpp>
+
+- **Recommended model**: [`unsloth/Qwen3.6-27B-GGUF`](https://huggingface.co/unsloth/Qwen3.6-27B-GGUF), quantized to `Q4_K_M`
+- **MODEL_SOURCE**: `hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf`
+
+    :::tip Multimodal models
+    If the model has multimodal capabilities, include the `mmproj-F16.gguf` file in `MODEL_SOURCE`:
+
+    `hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf,hf://unsloth/Qwen3.6-27B-GGUF --include mmproj-F16.gguf`
+    :::
+
+- **MODEL_NAME**: `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`
+- **MODEL_MODE**: `Chat`
+- **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
+- **ENGINE_ARGS**: `-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0`
+- **LOG_LEVEL**: Info
+- **LLAMACPP_REQUIRED_GPU_MEMORY**: `23Gi`
+
+</template>
+<template #Ollama>
+
+- **Recommended model**: `gemma4-26b` from the Ollama library, which defaults to Q4_K_M quantization
+- **MODEL_SOURCE**: `ollama://gemma4-26b`
+- **MODEL_NAME**: `gemma4-26b`
+- **MODEL_MODE**: `Chat`
+- **MODEL_SUPPORTS**: Thinking, Tools, Vision
+- **ENGINE_ARGS**: `OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=131072 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 OLLAMA_NUM_PARALLEL=1`
+- **OLLAMA_REQUIRED_GPU_MEMORY**: `23Gi`
+
+</template>
+<template #SGLang>
+
+:::info
+SGLang models can take a while to load before the engine reaches `RUNNING`.
+:::
+
+- **Recommended model**: [`openai/gpt-oss-20b`](https://huggingface.co/openai/gpt-oss-20b) from Hugging Face
+- **MODEL_SOURCE**: `hf://openai/gpt-oss-20b`
+- **MODEL_NAME**: `openai/gpt-oss-20b`
+- **MODEL_MODE**: `Chat`
+- **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
+- **ENGINE_ARGS**: `--context-length 131072 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser gpt-oss --tool-call-parser gpt-oss`
+- **SGLANG_REQUIRED_GPU_MEMORY**: `23Gi`
+
+</template>
+<template #vLLM>
+
+:::info
+vLLM models can take a while to load before the engine reaches `RUNNING`.
+:::
+
+- **Recommended model**: [`cyankiwi/Ornith-1.0-9B-AWQ-FP8`](https://huggingface.co/cyankiwi/Ornith-1.0-9B-AWQ-FP8) from Hugging Face
+- **MODEL_SOURCE**: `hf://cyankiwi/Ornith-1.0-9B-AWQ-FP8`
+- **MODEL_NAME**: `cyankiwi/Ornith-1.0-9B-AWQ-FP8`
+- **MODEL_MODE**: `Chat`
+- **MODEL_SUPPORTS**: `Thinking`, `Tools`
+- **ENGINE_ARGS**: `--max-model-len 131072 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser qwen3_coder --reasoning-parser qwen3 --enable-prefix-caching --enable-auto-tool-choice`
+- **VLLM_REQUIRED_GPU_MEMORY**: `23Gi` 
+
+</template>
+</tabs>
