@@ -41,19 +41,43 @@ The Common directory includes three default subdirectories. Each follows the off
 
 ## Migrate models to the Common directory
 
-Olares v1.12.6 includes the Common directory by default. If you are using an older version of Olares, do not manually migrate existing model files. Manual migration involves complex steps and risks breaking application dependencies. Instead, follow these steps:
+Olares v1.12.6 includes the Common directory by default. If you are using an older version of Olares, follow the steps below to migrate your existing models.
 
 1. Upgrade Olares to v1.12.6.
-2. Uninstall your existing AI model-serving applications. For example:
+2. Uninstall your existing AI model-serving applications:
 
     - Pre-packaged model applications
-    - Ollama (installed as a base engine with models pulled manually)
-    - ComfyUI
+    - Ollama (installed as a base engine with models pulled manually). Do not select **Also remove all local data**.
+    - ComfyUI. Do not select **Also remove all local data**.
 
 3. Install the new versions and restore your models:
 
-    - For pre-packaged model apps and Ollama-based models: Deploy the model you need using the new Engine Base apps (llama.cpp Engine Base, Ollama Engine Base, SGLang Engine Base, and vLLM Engine Base). The model files will be saved into the `huggingface` or `ollama` subdirectories accordingly.
-    - For ComfyUI, install the new version, and then re-download required model files. The model files will be saved into the `comfyui` subdirectory automatically.
+    <Tabs>
+    <template #Model-apps>
+
+    Deploy the model you need using the new Engine Base apps (llama.cpp Engine Base, Ollama Engine Base, SGLang Engine Base, or vLLM Engine Base).
+
+    The model files will be saved into the `huggingface` or `ollama` subdirectories accordingly.
+
+    </template>
+
+    <template #Ollama-models>
+
+    For models pulled via Ollama:
+
+    - To re-download models, deploy the models you need using the new Ollama Engine Base app. The model files will be saved into the `ollama` subdirectory automatically.
+    - To reuse existing models, manually copy them to the `ollama` subdirectory.
+
+    </template>
+
+    <template #ComfyUI>
+
+    Reinstall ComfyUI from the Market.
+
+    The system will automatically move your existing model files to the `comfyui` subdirectory.
+
+    </template>
+    </Tabs>
 
 ## Find and manage shared models
 
