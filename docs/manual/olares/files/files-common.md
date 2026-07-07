@@ -41,9 +41,7 @@ The Common directory includes three default subdirectories. Each follows the off
 
 ## Upgrade to use the Common directory
 
-Olares V1.12.6 includes the Common directory by default.
-
-If you are using an older version of Olares, do not manually migrate existing model files. Manual migration involves complex steps and risks breaking application dependencies. Instead, follow these steps to upgrade:
+Olares V1.12.6 includes the Common directory by default. If you are using an older version of Olares, do not manually migrate existing model files. Manual migration involves complex steps and risks breaking application dependencies. Instead, follow these steps to upgrade:
 
 1. Upgrade Olares to v1.12.6.
 2. Uninstall your existing AI model-serving applications. For example:
@@ -52,10 +50,10 @@ If you are using an older version of Olares, do not manually migrate existing mo
     - Ollama (installed as a base engine with models pulled manually)
     - ComfyUI
 
-3. Install the new versions of these applications from the Market:
+3. Install the new versions and restore your models:
 
     - For pre-packaged model apps and Ollama-based models: Deploy the model you need using the new Engine Base apps (llama.cpp Engine Base, Ollama Engine Base, SGLang Engine Base, and vLLM Engine Base). The model files will be saved into the `huggingface` or `ollama` subdirectories accordingly.
-    - For ComfyUI, re-download required model files. They will be saved into the `comfyui` subdirectory automatically.
+    - For ComfyUI, re-download required model files. The model files will be saved into the `comfyui` subdirectory automatically.
 
 ## Find and manage shared models
 
