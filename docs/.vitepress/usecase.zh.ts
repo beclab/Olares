@@ -181,6 +181,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Vane (Perplexica)",
                   link: "/zh/use-cases/perplexica",
                 },
+                {
+                  text: "Dify Shared",
+                  link: "/zh/use-cases/dify-shared",
+                },
               ],
             },
             {
@@ -259,6 +263,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "LLMFit",
                   link: "/zh/use-cases/llmfit",
+                },
+                {
+                  text: "Xinference",
+                  link: "/zh/use-cases/xinference",
                 },
                 // {
                 //   text: "Dify",
@@ -389,6 +397,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "RNA Sequencing",
               link: "/zh/use-cases/rna-sequencing",
             },
+            {
+              text: "OnlyOffice",
+              link: "/zh/use-cases/onlyoffice",
+            },
             // {
             //   text: "Stirling PDF",
             //   link: "/zh/use-cases/stirling-pdf",
@@ -428,6 +440,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "FlareSolverr",
               link: "/zh/use-cases/flaresolverr",
+            },
+            {
+              text: "SearXNG",
+              link: "/zh/use-cases/searxng",
             },
           ],
         },

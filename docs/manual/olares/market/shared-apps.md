@@ -82,13 +82,8 @@ Use this option when the app supports automatic data migration.
 - **ComfyUI Shared**
 
 **Steps:**
-1. Uninstall the v2 shared app.
-2. Install the new shared app.
-3. The system migrates your data automatically.
 
-:::tip New ComfyUI data locations
-In the v2 architecture, ComfyUI stored its main program under the `External` directory. In the new architecture, the main program moves to `Data`, and model files move to `Common`. If you access these files directly, note the new locations after migrating. For details, see [ComfyUI Shared migration guide](#).<!-- TODO: replace with the ComfyUI use-case subpage link once published -->
-:::
+For detailed steps on migrating ComfyUI Shared, including how to preserve your data and the new data locations, see [ComfyUI Shared migration notes](/use-cases/comfyui-common-issues.md).
 
 ### Option 2: Uninstall v2, then install the new app
 
@@ -109,33 +104,14 @@ Use this option when the app has no user-created data to migrate.
 Use this option when the app stores user-created data or settings that must be moved manually.
 
 **Apps in this category:**
-- **Dify Shared** — apps, knowledge bases, agent configurations, and settings.
-- **OnlyOffice** — documents and application settings.
-- **SearXNG** — search preferences and configuration.
-- **Xinference** — deployed models and service settings.
-
-<!-- TODO: Per-app migration tutorials (Dify Shared, OnlyOffice, SearXNG, Xinference) are not yet written in use cases. For now, the generic steps below cover all of them. Once the per-app use-case pages are published, link each app to its own tutorial. -->
+- **[Dify Shared](/use-cases/dify-shared.md)**
+- **[OnlyOffice](/use-cases/onlyoffice.md)**
+- **[SearXNG](/use-cases/searxng.md)**
+- **[Xinference](/use-cases/xinference.md)**
 
 **Steps:**
-1. **Back up v2 app data**
 
-   Open Files and go to **Application** > **Data** > `<app-name>`. Download or copy any files, configuration, or data you want to keep.
-
-2. **Uninstall the v2 shared app**
-
-   Open Market or the Launchpad, uninstall the v2 app, and make sure you select **Also uninstall the shared server (affects all users)**. This fully removes the old service and frees its resources.
-
-3. **Install the new app**
-
-   Find the new version of the shared app in Market and install it. The administrator must perform this step.
-
-4. **Migrate or reconfigure your data**
-
-   Copy your backup into the new app's data directory, or reconfigure the app according to its own migration instructions.
-
-5. **Update access addresses**
-
-   New shared apps use the unified address format `https://<app-id>.<username>.<platform-domain>`. Update client configurations that still point to the old v2 address.
+Follow the migration guide for the app you are migrating. The per-app guides are linked above.
 
 ### Option 4: Migrate from Ollama to Engine Base
 
