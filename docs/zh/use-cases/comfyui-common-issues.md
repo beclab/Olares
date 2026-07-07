@@ -32,6 +32,23 @@ ComfyUI 无法启动、意外停止或行为异常。
 
 如果 ComfyUI 成功启动，大多数这些消息不需要采取行动。仅在 ComfyUI 无法启动、工作流无法运行或插件停止工作时才调查日志。
 
+## 迁移到 1.12.6 的新版 ComfyUI
+
+ComfyUI 1.12.6 使用了新的[共享应用机制](/zh/manual/olares/market/shared-apps)（参见 [PR #3485](https://github.com/beclab/Olares/pull/3485)）。要更新到新版本，你必须迁移现有的 ComfyUI。迁移过程是自动的——新版 ComfyUI 会在迁移过程中自动转移你的模型、插件、工作流以及输入输出文件。
+
+已安装的 ComfyUI 在升级到 1.12.6 后仍可继续使用，但无法接收后续更新。我们建议你尽快迁移到新版 ComfyUI。
+
+### 迁移步骤
+
+1. 卸载当前的 ComfyUI。在弹窗中，**不要**勾选"Also remove all local data"。
+2. 打开应用市场，搜索 **ComfyUI**，点击**安装**。
+
+   在应用详情页查看 **Information** 下的 **Compatibility** 项，若显示为 **"Olares >=1.12.6-0"**，说明安装的是新版本。
+
+:::info
+卸载后，你的模型、插件、工作流和输入输出文件仍保留在设备上。新版 ComfyUI 会自动找到并迁移它们。
+:::
+
 ## 升级到 v1.0.37 或更高版本后 ComfyUI 无法启动
 
 升级到 ComfyUI v1.0.37 或更高版本后可能会出现此问题。

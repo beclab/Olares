@@ -32,6 +32,23 @@ This is usually caused by insufficient resources or incorrect GPU allocation. To
 
 If ComfyUI starts successfully, most of these messages do not require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
 
+## Migrating to the new ComfyUI in 1.12.6
+
+ComfyUI 1.12.6 uses a new [shared app mechanism](/manual/olares/market/shared-apps) (see [PR #3485](https://github.com/beclab/Olares/pull/3485)). To update to the new version, you must migrate your existing ComfyUI installation. The migration is automatic — the new ComfyUI transfers your models, plugins, workflows, and input/output files during the process.
+
+Your existing ComfyUI will continue to work after upgrading to 1.12.6, but it cannot receive further updates. We recommend migrating to the new version as soon as possible.
+
+### Migration steps
+
+1. Uninstall the current ComfyUI. In the popup dialog, **do not** check "Also remove all local data".
+2. Open Market and search for **ComfyUI**. Click **Install**.
+
+   On the app's detail page, check the **Compatibility** field under **Information**. If it shows **"Olares >=1.12.6-0"**, you have the new version.
+
+:::info
+After uninstalling, your models, plugins, workflows, and input/output files remain on your device. The new ComfyUI automatically locates and migrates them.
+:::
+
 ## ComfyUI fails to start after upgrading to v1.0.37 or later
 
 This issue may occur after upgrading to ComfyUI v1.0.37 or later.
