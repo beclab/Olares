@@ -258,6 +258,10 @@ const side = {
               text: "挂载云存储",
               link: "/zh/manual/olares/files/mount-cloud-storage",
             },
+            {
+              text: "使用公共目录管理共享 AI 模型",
+              link: "/zh/manual/olares/files/files-common",
+            },
           ],
         },
         {
