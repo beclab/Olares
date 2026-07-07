@@ -89,6 +89,7 @@ func (l *linuxInstallPhaseBuilder) installTerminus() phase {
 		&terminus.InstallAccountModule{},
 		&terminus.InstallSettingsModule{},
 		&terminus.InstallOsSystemModule{},
+		&terminus.InstallLinkerdFullAddonModule{},
 		&terminus.InstallLauncherModule{},
 		&terminus.InstallAppsModule{},
 	}

@@ -6,3 +6,9 @@ output:
       name: envoyproxy/ratelimit:ff287602
     - 
       name: envoyproxy/envoy:distroless-v1.38.0
+    - 
+      name: cr.l5d.io/linkerd/proxy:edge-26.5.1
+    - 
+      name: cr.l5d.io/linkerd/controller:edge-26.5.1
+    - 
+      name: beclab/linkerd-pki-guardian@sha256:28c8a9dce2a0c9c953a674dd40af58e8bbe86e45899dbcd7408639e16a3862f8

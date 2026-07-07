@@ -170,6 +170,7 @@ func GenerateTerminusComponentsModules(runtime connector.Runtime, manifestMap ma
 		&InstallAccountModule{},
 		&InstallSettingsModule{},
 		&InstallOsSystemModule{},
+		&InstallLinkerdFullAddonModule{},
 		&InstallLauncherModule{},
 		&InstallAppsModule{},
 	}

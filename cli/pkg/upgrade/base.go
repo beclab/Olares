@@ -148,6 +148,24 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Delay:  15 * time.Second,
 		},
 		&task.LocalTask{
+			Name:   "WaitAppGatewayMeshNP",
+			Action: &terminus.WaitAppGatewayMeshNP{},
+			Retry:  3,
+			Delay:  15 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "SyncLinkerdPKIAndIdentity",
+			Action: &terminus.SyncLinkerdPKIAndIdentity{},
+			Retry:  3,
+			Delay:  15 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "WaitLinkerdControlPlaneReady",
+			Action: &terminus.WaitLinkerdControlPlaneReady{},
+			Retry:  3,
+			Delay:  15 * time.Second,
+		},
+		&task.LocalTask{
 			Name:   "UpgradeUserEnvs",
 			Action: new(terminus.CreateUserEnvConfigMap),
 			Retry:  5,
