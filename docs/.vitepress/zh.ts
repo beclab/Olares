@@ -259,7 +259,7 @@ const side = {
               link: "/zh/manual/olares/files/mount-cloud-storage",
             },
             {
-              text: "使用公共目录",
+              text: "使用公共目录管理共享 AI 模型",
               link: "/zh/manual/olares/files/files-common",
             },
           ],

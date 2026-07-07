@@ -261,7 +261,7 @@ const side = {
               link: "/manual/olares/files/mount-cloud-storage",
             },
             {
-              text: "Use Common directory",
+              text: "Manage shared AI models with the Common directory",
               link: "/manual/olares/files/files-common",
             },
           ],
