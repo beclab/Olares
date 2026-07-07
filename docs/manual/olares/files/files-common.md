@@ -25,7 +25,7 @@ The following table shows the storage strategies for different locations in the 
 - **Difficulty sharing models between applications**: Multiple AI applications might require the same underlying models. For example, ComfyUI and Stable Diffusion share the same image model files, and vLLM and llama.cpp can read from the same Hugging Face cache directory. Isolated storage prevents direct reuse of these files across applications.
 - **Wasted space from repeated downloads**: Storing massive model files in isolated user or application directories forces different applications or users to download the same model repeatedly. This wastes disk space and network bandwidth.
 
-The Common directory resolves these issues. It provides a centralized space where different apps and users read the same model files, eliminating storage redundancy.
+The Common directory resolves these issues. It provides a centralized space where different apps and users read the same model files, preventing storage redundancy.
 
 ![Common directory interface](/images/manual/olares/files-common.png#bordered)
 
@@ -57,16 +57,16 @@ Olares v1.12.6 includes the Common directory by default. If you are using an old
 
 ## Find and manage shared models
 
-Access the Common directory in the Files app and manage shared models centrally.
+Access the Common directory in the Files app and manage shared model files centrally.
 
 ### Access the Common directory
 
 1. Open the Files app from the Launchpad.
 2. Select **Application** > **Common** in the left sidebar.
 3. Open the `huggingface`, `ollama`, or `comfyui` subdirectory.
-4. Find your target model file.
+4. Find your target model files.
 
-### Manage files
+### Manage model files
 
 You can add or delete model files in the Common directory, but you must maintain the official recommended structure for each subdirectory. Applications might fail to load models if you change the required hierarchy.
 
