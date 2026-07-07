@@ -5,7 +5,7 @@ description: Use the Common directory in Olares to manage AI models shared acros
 
 # Manage shared AI models with the Common directory
 
-The Common directory provides a system-level shared space to store AI models. Multiple applications and users access the exact same model files simultaneously to save storage space and eliminate duplicate downloads.
+The Common directory provides a system-level shared space to store AI models. Multiple applications and users access the exact same model files simultaneously to save storage space and prevent duplicate downloads.
 
 ## Understand the Common directory
 
