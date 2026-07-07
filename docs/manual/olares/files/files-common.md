@@ -41,7 +41,7 @@ The Common directory includes three default subdirectories. Each follows the off
 
 ## Upgrade to use the Common directory
 
-Olares V1.12.6 includes the Common directory by default. If you are using an older version of Olares, do not manually migrate existing model files. Manual migration involves complex steps and risks breaking application dependencies. Instead, follow these steps to upgrade:
+Olares v1.12.6 includes the Common directory by default. If you are using an older version of Olares, do not manually migrate existing model files. Manual migration involves complex steps and risks breaking application dependencies. Instead, follow these steps to upgrade:
 
 1. Upgrade Olares to v1.12.6.
 2. Uninstall your existing AI model-serving applications. For example:
