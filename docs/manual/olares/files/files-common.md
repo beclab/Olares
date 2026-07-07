@@ -11,7 +11,7 @@ The Common directory provides a system-level shared space to store AI models. Mu
 
 ### How the Common directory works
 
-Understand Olares's file storage mechanisms to see the benefits of the Common directory. 
+Understand Olares's file storage mechanisms to see the benefits of the Common directory.
 
 The following table shows the storage strategies for different locations in the Files app:
 
