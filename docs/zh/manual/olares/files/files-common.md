@@ -37,9 +37,9 @@ description: 了解如何在 Olares 中使用 Common 目录管理跨应用、跨
 | **comfyui** | 存储在 ComfyUI 及相关应用之间共享的模型<br>（如 Checkpoint、LoRA 和 VAE）。 | 遵循标准的 ComfyUI `models` 文件夹结构。<br><br>详细了解文件组织方式，请参考 [ComfyUI 官方模型文档](https://docs.comfy.org/development/core-concepts/models)。 |
 | **ollama** | 存储由 Ollama 拉取和管理的模型。 | 采用 Ollama 独特的 manifests 和 blobs 存储机制。<br><br>更多信息，请参考 [Ollama 官方 FAQ](https://docs.ollama.com/faq#where-are-models-stored)。 |
 
-## 升级以使用公共目录
+## 迁移模型到公共目录
 
-Olares v1.12.6 默认提供 Common 目录，无需单独安装。如果你使用的是旧版本 Olares，请勿手动迁移旧的模型文件。手动迁移步骤复杂，且容易破坏应用依赖。请按以下步骤操作：
+Olares v1.12.6 默认提供公共目录，无需单独安装。如果你使用的是旧版本 Olares，请勿手动迁移旧的模型文件。手动迁移步骤复杂，且容易破坏应用依赖。请按以下步骤操作：
 
 1. 将 Olares 升级至 v1.12.6。
 2. 卸载现有的 AI 模型服务应用。例如：
@@ -55,16 +55,16 @@ Olares v1.12.6 默认提供 Common 目录，无需单独安装。如果你使用
 
 ## 查找和管理共享模型
 
-在文件管理器中访问共享目录，并集中管理。
+在文件管理器中访问公共目录，并集中管理共享的 AI 模型文件。
 
-### 访问目录
+### 访问公共目录
 
 1. 从启动台打开文件管理器。
 2. 选择左侧边栏中的 **应用** > **公共**。
 3. 进入 `huggingface`、`ollama` 或 `comfyui` 子目录。
 4. 找到目标模型文件。
 
-### 管理文件
+### 管理模型文件
 
 你可以在公共目录中添加或删除模型文件，但必须保持各子目录的官方推荐结构，否则应用可能无法正确加载模型。
 

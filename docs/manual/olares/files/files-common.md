@@ -39,9 +39,9 @@ The Common directory includes three default subdirectories. Each follows the off
 | **comfyui** | Stores models shared between ComfyUI <br>and related applications, such as<br> Checkpoint, LoRA, and VAE. | Follows the standard ComfyUI `models` folder structure.<br><br>For details on file organization, see the [ComfyUI models documentation](https://docs.comfy.org/development/core-concepts/models).|
 | **ollama** | Stores models pulled and managed by Ollama. | Uses Ollama's unique manifests and blobs storage mechanism.<br><br>For more information, see the [Ollama FAQ](https://docs.ollama.com/faq#where-are-models-stored). |
 
-## Upgrade to use the Common directory
+## Migrate models to the Common directory
 
-Olares v1.12.6 includes the Common directory by default. If you are using an older version of Olares, do not manually migrate existing model files. Manual migration involves complex steps and risks breaking application dependencies. Instead, follow these steps to upgrade:
+Olares v1.12.6 includes the Common directory by default. If you are using an older version of Olares, do not manually migrate existing model files. Manual migration involves complex steps and risks breaking application dependencies. Instead, follow these steps:
 
 1. Upgrade Olares to v1.12.6.
 2. Uninstall your existing AI model-serving applications. For example:
