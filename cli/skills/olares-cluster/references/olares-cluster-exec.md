@@ -13,7 +13,20 @@ Run a command inside a container over the native K8s exec WebSocket. Available a
 | **Interactive** (`-i -t` / `-it`) | humans | allocates a TTY and attaches your terminal, like `kubectl exec -it` |
 
 - **One-shot** returns `{stdout, stderr, exitCode, truncated, durationMs}` (via `-o json`). Judge success by `exitCode` (0 = ok); stdout/stderr are separated. Bounded by `--timeout` (default 60s, `0` = no limit) and `--max-output-bytes` (default 2MiB, `0` = unlimited; on overflow output is cut and `truncated:true`).
-- **Interactive** needs a real terminal (no confirmation prompt). A non-TTY caller (an AI tool call) is refused — the TTY requirement itself keeps agents on the one-shot path. With `-it` and **no target**, an interactive picker lists every container visible to your profile (type to filter, arrows to move, enter to select); `-n <ns>` scopes it.
+- **Interactive** needs a real terminal (no confirmation prompt). A non-TTY caller (an AI tool call) is refused — the TTY requirement itself keeps agents on the one-shot path. With `-it` and **no target**, an interactive picker lists every container you're allowed to exec into (type to filter, arrows to move, enter to select); `-n <ns>` scopes it. Containers you can't exec into (see **Permission gate**) are omitted.
+
+## Permission gate
+
+exec is checked by namespace before dialing. Who can exec where:
+
+- **Admin (`platform-admin`)**: namespaces whose name **contains your username** (`user-space-<you>` / `user-system-<you>`), any **system namespace**, any **`*-shared`** namespace, or **`os-protected`**. The main account **cannot** exec into a sub-account's namespace like `user-space-alice`.
+- **Everyone else**: only namespaces whose name **contains their username**.
+
+Notes:
+
+- Gates **exec only**. Viewing (`list` / `get` / `logs` / images) is unaffected by this gate — but is still bounded by the server: an admin can view a blocked namespace, a regular user usually can't see another user's namespace at all.
+- A blocked exec fails immediately with `permission denied: ...` (no WebSocket dial); it is a client-side decision, not a server 403.
+- The check uses identity from `/capi/app/detail` (fetched fresh, not the `cluster context` cache). After a role change, `olares-cli cluster context --refresh` if it looks stale.
 
 ## Container identification
 
@@ -60,4 +73,6 @@ olares-cli cluster pod exec user-system-alice/my-pod -c app -it
 | `-t/--tty requires an interactive terminal` | `-it` from a non-TTY caller (agent) | drop `-it`, run one-shot with `-- CMD` |
 | command hangs until `[timed out]` | a never-returning command (`watch`, `-f`) under one-shot | bound it (`timeout`, snapshot+poll) or raise `--timeout` |
 | `cluster exec requires Olares >= 1.12.7 ...` | backend older than the ControlHub exec route, or version undetectable | upgrade Olares; if undetectable, log in and `olares-cli profile list --refresh-version` |
-| `HTTP 403` on dial | active profile lacks `pods/exec` (server-side SAR) | use a profile/role that has exec; server-side audited by ks-apiserver |
+| `permission denied: <user> (<role>) may not exec into namespace "..."` | **Permission gate** (above): the target namespace is outside your exec scope (e.g. main account → sub-account) | exec into your own / a system / a `*-shared` namespace, or switch to a profile that owns the target |
+| `cannot verify exec permission: the ControlHub identity ... is empty` | `/capi/app/detail` returned no username | `olares-cli cluster context --refresh`, then retry |
+| `HTTP 403` on dial | gate passed but server still denied (`pods/exec` SAR) | use a profile/role that has exec; server-side audited by ks-apiserver |

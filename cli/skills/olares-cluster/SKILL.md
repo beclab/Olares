@@ -1,6 +1,6 @@
 ---
 name: olares-cluster
-version: 4.3.0
+version: 4.4.0
 description: "Olares ControlHub K8s view via olares-cli cluster — pods, workloads, logs, scale/restart, jobs, cronjobs, middleware. Not for app lifecycle (market) or host install (node/os/gpu). Use for ControlHub, pods, logs, workloads."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -73,7 +73,7 @@ cluster context             (identity / role / accessible workspaces)
 ## The identity-vs-server-decides principle (cross-cutting)
 
 1. **Identity = the currently-selected profile.** Switch with `olares-cli profile use <name>` ahead of time. There is no per-invocation `--profile` override — agents must commit to one role up-front.
-2. **The server decides what the active profile can see; the CLI never preflights.** Pass the request, render whatever the server returns. **A 403 is the authoritative "no" — surface it.** Never gate a call against the locally cached `cluster context`; that cache is for display only.
+2. **The server decides what the active profile can see; the CLI never preflights.** Pass the request, render whatever the server returns. **A 403 is the authoritative "no" — surface it.** Never gate a call against the locally cached `cluster context`; that cache is for display only. (**Exception — `exec`:** it is gated client-side by namespace so the main account can't shell into a sub-account's container. Details in [references/olares-cluster-exec.md](references/olares-cluster-exec.md).)
 3. All requests go through `https://control-hub.<terminus>` and ride the active profile's `access_token` via the auto-refreshing transport. See [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for refresh mechanics and `ErrTokenInvalidated` recovery.
 4. The same nginx fans out four prefixes: `/capi/*` (Olares aggregator), `/api/v1/*` + `/apis/<g>/<v>/*` (K8s native), `/kapis/*` (KubeSphere paginated), `/middleware/v1/*` (Olares middleware aggregator). The right helper is picked per-call by the CLI.
 

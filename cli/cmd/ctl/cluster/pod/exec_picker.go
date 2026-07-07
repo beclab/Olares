@@ -49,6 +49,16 @@ func buildPickerEntries(ctx context.Context, o *clusteropts.ClusterOptions, name
 	}
 
 	entries := podsToEntries(pods, namespace)
+
+	// Only offer containers the active profile may actually exec into, so the
+	// picker matches the SPA (which never shows a Terminal button for off-limits
+	// namespaces) and a selection never dead-ends on a permission error. If the
+	// identity can't be resolved we leave the list intact — RunExec re-checks
+	// and surfaces the reason on the chosen target.
+	if info, ierr := resolveExecIdentity(ctx, o); ierr == nil {
+		entries = filterExecEntries(entries, info)
+	}
+
 	picker.Sort(entries)
 	return entries, capped, nil
 }

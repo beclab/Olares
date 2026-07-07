@@ -204,6 +204,15 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 		return err
 	}
 
+	// Permission gate: mirror the ControlHub SPA's per-namespace exec rule
+	// client-side so the main account can't open a shell in a sub-account's
+	// container (and non-admins stay confined to their own namespaces). This
+	// matches the SPA hiding the Terminal button via hasPermission(namespace);
+	// viewing/listing is untouched. Fails fast before any Get/dial.
+	if err := gateExecPermission(ctx, o, p.Namespace); err != nil {
+		return err
+	}
+
 	container := strings.TrimSpace(p.Container)
 	if container == "" {
 		pod, err := Get(ctx, o, p.Namespace, p.Pod)
