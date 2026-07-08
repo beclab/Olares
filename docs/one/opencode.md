@@ -116,33 +116,33 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
 
    ![OpenCode terminal panel](/images/one/opencode-terminal.png#bordered)
 
-2. Run the following commands one by one to confirm that both `olares-cli` and its skills are properly installed and enabled:
+2. Run the following command to confirm that both `olares-cli` and its skills are properly installed and enabled:
 
    ```bash
    olares-cli -v
-   opencode skills list
    ```
 
-   Example outputs:
+   Example output:
 
    ```bash
-   olares-cli version 1.12.5-cli.8
+   olares-cli version 1.12.6
    ```
 
-2. Run the following command to log in to your Olares account. Replace `<your-olares-id>` with your actual Olares ID.
+3. Run the following command to log in to your Olares account. Replace `<your-olares-id>` with your actual Olares ID.
 
    ```bash
    olares-cli profile login --olares-id <your-olares-id>
    ```
 
-   For example:
+   Example:
 
    ```bash
    olares-cli profile login --olares-id laresprime@olares.com
    ```
 
-3. When prompted, enter your Olares login password. The password is hidden as you type.
-4. Run the following command to verify that the profile is created and logged in:
+4. When prompted, enter your Olares login password. The password is hidden as you type.
+5. If two-factor authentication is enabled on your Olares, the CLI prompts you for a two-factor code for this Olares ID. Enter the 6-digit code from LarePass, and then press **Enter**.
+6. Run the following command to verify that the profile is created and logged in:
 
    ```bash
    olares-cli profile list
@@ -164,10 +164,18 @@ With the model connected and the Olares CLI authenticated, you can now manage yo
 Start with a basic question to confirm the Olares skills are available:
 
 ```text
+List your Olares skills.
+```
+
+![Ask a question in OpenCode](/images/one/onboard-scenario-question-2.png#bordered)
+
+Or ask about your system:
+
+```text
 Show me the CPU and memory usage of my Olares device.
 ```
 
-![Ask a simple question in OpenCode](/images/one/onboard-scenario-question.png#bordered)
+![Ask another question in OpenCode](/images/one/onboard-scenario-question.png#bordered)
 
 ### Install an app from Market
 
