@@ -32,10 +32,6 @@ This all-in-one package includes a stable, fully tested NVIDIA graphics driver s
 
 1. Download the [driver package](https://cdn.olares.com/common/OlaresOne_driver_251125.zip).
 
-    :::tip Browser security warning
-    Because the download links use a standard HTTP connection rather than HTTPS, your web browser might flag or block it as an insecure download. If this happens, select **Keep** or **Allow** in your browser's download manager to continue the download.
-    :::
-
     :::info Download time
     The driver package is large. Depending on your internet connection speed, the download might take a while to complete.
     :::
