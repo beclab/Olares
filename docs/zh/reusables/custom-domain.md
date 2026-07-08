@@ -88,9 +88,9 @@ TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
 4. 输入 Olares ID 的用户名部分。例如输入 `alex`，则 Olares ID 为 `alex@space.n1.monster`。
 
    :::info
-   用户名部分应为 1-63 个字符，仅支持小写字母和数字。
+   用户名部分应为 2-24 个字符，仅支持小写字母和数字。
    :::
-   ![以管理员身份创建 Olares ID](/images/manual/tutorials/custom-domain-create-olares-id-as-admin.png)
+   ![以管理员身份创建 Olares ID](/images/manual/tutorials/custom-domain-create-olares-id-as-admin1.png)
 
 5. 点击**确认**。
 

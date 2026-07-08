@@ -11,6 +11,8 @@ For a complete end-to-end walkthrough including domain setup, Olares installatio
 
 In Olares, custom domains are managed through organizations. To use a custom domain, the domain owner first creates an organization, then adds members who can create their own Olares IDs under that domain.
 
+Usernames under a custom domain must be 2-24 characters long and contain only lowercase letters and numbers.
+
 ## Create a DID
 
 <!--@include: ../../reusables/custom-domain.md#custom-domain-create-did-->

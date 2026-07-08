@@ -38,12 +38,13 @@ The format of an Olares ID is the same as an email address, consisting of two pa
 For example, in `alice123@olares.com`, *`alice123`* is the local name, and *`olares.com`* is the domain.
 
 Local names are unique within each domain, ensuring that each Olares ID is unique.
+For individual domains, local names must be 8-24 characters long. For organizational domains, local names must be 2-24 characters long.
 
 ### Domain types
 Within Olares, there are three types of Domains:
 
 * Individual domain: For personal use, similar to personal email. Currently, Olares provides default domain `olares.com` for individual users.
-* Organizational domain: For organizational use, like company email addresses. After joining an organization, users can apply for an Olares ID under that organization's domain. The administrator can revoke this Olares ID when the user leaves the organization.
+* Organizational domain: For organizational use, like company email addresses. After joining an organization, users can apply for an Olares ID under that organization's domain.
 * Entity domain: For applications and other entities that cannot be classified as either personal or organizational.
 
 ### Olares ID creation for individuals
