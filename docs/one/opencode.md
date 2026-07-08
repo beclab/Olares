@@ -9,7 +9,7 @@ head:
 
 # Manage Olares through natural language <Badge type="tip" text="1 h" />
 
-`olares-cli` is the command-line tool for managing Olares. To let AI agents use it, Olares provides CLI Agent Skills in the form of tool definitions that translate natural language into the right `olares-cli` commands. They cover common tasks such as listing files, installing apps from Market, checking system metrics, and deploying custom apps. 
+`olares-cli` is the command-line tool for managing Olares. To let AI agents use it, Olares provides CLI Agent Skills in the form of tool definitions that translate natural language into the right `olares-cli` commands. They cover common tasks such as listing files, installing apps from Market, checking system metrics, and deploying custom apps.
 
 The agent apps on Olares come with these skills built in. This guide uses OpenCode as an example. It walks you through installing the Qwen3.6-27B (llama.cpp) model app, connecting it to OpenCode, authenticating the Olares CLI with your Olares account, and completing a few common tasks through chat.
 
@@ -41,11 +41,6 @@ The agent apps on Olares come with these skills built in. This guide uses OpenCo
 
 2. Click **Get**, and then click **Install**.
 3. Select **GPU** as the hardware accelerator, and then click **Confirm**. The installation starts.
-
-   :::tip First deployment takes time
-   The first deployment can take a long time because the model weights must be downloaded. The time depends on the model size and your network speed.
-   :::
-
 4. When the installation finishes, click **Open**. The model console opens and the model download starts automatically.
 
    :::tip First download takes time
@@ -68,7 +63,7 @@ The agent apps on Olares come with these skills built in. This guide uses OpenCo
 ## Step 2: Install OpenCode
 
 :::tip
-If you have a previous OpenCode installation, uninstall it after the Olares OS upgrade, and then install the new version as described below.
+If you have a previous OpenCode installation, upgrade it to the latest version after the Olares OS upgrade.
 :::
 
 1. Open Market, and search for "OpenCode".
@@ -125,7 +120,7 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
    Example output:
 
    ```bash
-   olares-cli version 1.12.6
+   olares-cli version >=1.12.6
    ```
 
 3. Run the following command to log in to your Olares account. Replace `<your-olares-id>` with your actual Olares ID.
