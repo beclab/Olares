@@ -16,9 +16,13 @@ If you are encountering an issue that is not listed here, refer to [Troubleshoot
 
 ## How to migrate to the new ComfyUI after upgrading to Olares 1.12.6
 
-Olares 1.12.6 brings a major update to the [shared app](/manual/olares/market/shared-apps) system. As a result, you cannot update ComfyUI in place. Instead, you need to install the new ComfyUI app, which is built on the updated architecture. Just follow the migration steps below, and all your data (including models, plugins, workflows, and files) will be moved over automatically. 
+Use this section if you upgraded to Olares 1.12.6 and already had ComfyUI Shared installed. If you are installing ComfyUI for the first time on Olares 1.12.6 or later, install ComfyUI directly from Market.
 
-Your existing `ComfyUI Shared` will continue to work after upgrading to 1.12.6, but it cannot receive further updates. We recommend migrating to the new version as soon as possible.
+Olares 1.12.6 updates the [shared app](/manual/olares/market/shared-apps) architecture. The old ComfyUI Shared app can still run after the upgrade, but it cannot receive future updates. To keep ComfyUI up to date, uninstall the old app without deleting local data, then install the new ComfyUI app from Market.
+
+:::warning
+When uninstalling the old app, do not select **Also remove all local data**. Selecting this option may delete your models, plugins, workflows, and input/output files.
+:::
 
 ### Migration steps
 
