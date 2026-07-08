@@ -26,14 +26,12 @@ When uninstalling the old app, do not select **Also remove all local data**. Sel
 
 ### Migration steps
 
-1. Uninstall the current `ComfyUI Shared`. In the popup dialog, **DO NOT** check "Also remove all local data".
-2. Open Market and search for **ComfyUI**. Click **Install**.
-
-   On the app's detail page, check the **Compatibility** field under **Information**. If it shows **"Olares >=1.12.6-0"**, you have the new version.
-
-:::info
-After uninstalling, your models, plugins, workflows, and input/output files remain on your device. The new ComfyUI automatically locates and migrates them.
-:::
+1. Open Market and go to **My Olares**.
+2. Find ComfyUI Shared, click the dropdown arrow next to its operation button, and select **Uninstall**.
+3. In the **Uninstall** window, leave **Also remove all local data** unselected, then click **Confirm**.
+4. In Market, search for "ComfyUI" and click **Install**.
+5. On the app details page, check **Information** > **Compatibility**. If it shows `Olares >=1.12.6-0`, you are installing the new version.
+6. After installation, open ComfyUI and check that your models, plugins, workflows, and input/output files are available.
 
 ### What gets migrated
 
