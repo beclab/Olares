@@ -22,7 +22,7 @@ Key characteristics of shared applications include:
 
     - **Headless backend service**: Provides API services for compatible clients, with no end-user graphical interface. For example, model instances created on Engine Base apps expose a **Base URL** in their model console. Members paste this address into clients such as Open WebUI or LobeChat.
     
-    - **Applications with built-in UI**: Includes both a backend service and a web UI. Members open it directly from the Launchpad. Examples include **Dify Shared** and **ComfyUI Shared**.
+    - **Applications with built-in UI**: Includes both a backend service and a web UI. Members open it directly from the Launchpad. Examples include **Dify** and **ComfyUI Shared**.
     
 - **Unified HTTPS address**: All shared applications use the same URL pattern, that is `https://<app-id>.<username>.<platform-domain>`. Each member accesses the same shared application through their own username.
 <!-- #endregion shared-apps-what-are -->
@@ -104,7 +104,7 @@ Use this option when the app has no user-created data to migrate.
 Use this option when the app stores user-created data or settings that must be moved manually.
 
 **Apps in this category:**
-- **[Dify Shared](/use-cases/dify-shared.md)**
+- **[Dify](/use-cases/dify-upgrade.md)**
 - **[OnlyOffice](/use-cases/onlyoffice.md)**
 - **[SearXNG](/use-cases/searxng.md)**
 - **[Xinference](/use-cases/xinference.md)**

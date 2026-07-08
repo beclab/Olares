@@ -26,11 +26,7 @@ OnlyOffice currently ships with the Document Server only. The web interface is t
    
     b. Select the documents you uploaded through OnlyOffice, and then download them to another location.
 
-2. Uninstall the previously installed OnlyOffice app. When prompted:
-
-    - Do not select **Also remove all local data**.
-    - Select **Also uninstall the shared server (affects all users)**.
-
+2. Uninstall the previously installed OnlyOffice app. When prompted, do not select **Also remove all local data**.
 3. Install the new OnlyOffice app.
 
    a. Open Market and search for "OnlyOffice".

@@ -182,8 +182,8 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/perplexica",
                 },
                 {
-                  text: "Dify Shared",
-                  link: "/use-cases/dify-shared",
+                  text: "Dify",
+                  link: "/use-cases/dify-upgrade",
                 },
               ],
             },
