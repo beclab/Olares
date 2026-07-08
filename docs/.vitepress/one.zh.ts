@@ -46,7 +46,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       items: [
         {
           text: "通过自然语言管理 Olares",
-          link: "/zh/one/opencode",
+          link: "/zh/one/olares-onboarding",
         },
         /*{
           text: "与本地 LLM 对话",

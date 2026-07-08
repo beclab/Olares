@@ -46,7 +46,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       items: [
         {
           text: "Manage Olares through natural language",
-          link: "/one/opencode",
+          link: "/one/olares-onboarding",
         },
         /*{
           text: "Chat with local LLMs",

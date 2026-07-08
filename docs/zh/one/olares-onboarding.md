@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-本页面由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/opencode.md)。
+本页面由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/olares-onboarding.md)。
 :::
 
 # 通过自然语言管理 Olares <Badge type="tip" text="1 h" />
