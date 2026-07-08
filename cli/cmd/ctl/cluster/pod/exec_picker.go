@@ -14,32 +14,44 @@ import (
 // limit of 100 ≈ 2000 pods; past that we show what we have and hint at -n.
 const maxPickerPages = 20
 
+// pickerFetch is the result of draining the pod list for the picker: the
+// flattened+filtered container entries plus the pod-level counts used to
+// describe a truncated scan. capped is true when the drain hit maxPickerPages
+// before exhausting the list; fetchedPods is how many pods were actually
+// fetched and totalPods is the server-reported total (so the header can say
+// "first X of Y pods" rather than misreporting the container-row count).
+type pickerFetch struct {
+	entries     []picker.Entry
+	capped      bool
+	fetchedPods int
+	totalPods   int
+}
+
 // buildPickerEntries fetches the pods visible to the active profile (scoped to
 // namespace when non-empty) and flattens them into one picker.Entry per
 // container. The KubeSphere pods list envelope already carries spec.containers
 // and status, so a single paginated drain yields everything — no per-pod Get.
-//
-// Returns (entries, capped, err) where capped is true when the drain hit
-// maxPickerPages before exhausting the list.
-func buildPickerEntries(ctx context.Context, o *clusteropts.ClusterOptions, namespace string) ([]picker.Entry, bool, error) {
+func buildPickerEntries(ctx context.Context, o *clusteropts.ClusterOptions, namespace string) (pickerFetch, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	client, err := o.Prepare()
 	if err != nil {
-		return nil, false, err
+		return pickerFetch{}, err
 	}
 	p := clusteropts.NewPaginationOptions() // limit 100, page 1
 
 	var pods []Pod
 	capped := false
+	totalPods := 0
 	for page := 1; page <= maxPickerPages; page++ {
 		path := buildListPath(namespace, "", nil, p, page)
 		resp, err := clusterclient.GetKubeSphereList[Pod](ctx, client, path)
 		if err != nil {
-			return nil, false, fmt.Errorf("list pods: %w", err)
+			return pickerFetch{}, fmt.Errorf("list pods: %w", err)
 		}
 		pods = append(pods, resp.Items...)
+		totalPods = resp.TotalItems
 		if resp.TotalItems == 0 || len(pods) >= resp.TotalItems || len(resp.Items) < p.Limit {
 			break
 		}
@@ -60,7 +72,12 @@ func buildPickerEntries(ctx context.Context, o *clusteropts.ClusterOptions, name
 	}
 
 	picker.Sort(entries)
-	return entries, capped, nil
+	return pickerFetch{
+		entries:     entries,
+		capped:      capped,
+		fetchedPods: len(pods),
+		totalPods:   totalPods,
+	}, nil
 }
 
 // podsToEntries flattens pods into one picker.Entry per container. nsFallback
@@ -106,11 +123,12 @@ func PickInteractiveTarget(ctx context.Context, o *clusteropts.ClusterOptions, n
 		msg = fmt.Sprintf("Loading containers in %s\u2026", namespace)
 	}
 	sp := picker.StartSpinner(func() string { return msg })
-	entries, capped, err := buildPickerEntries(ctx, o, namespace)
+	fetch, err := buildPickerEntries(ctx, o, namespace)
 	sp.Stop()
 	if err != nil {
 		return "", "", "", false, err
 	}
+	entries := fetch.entries
 	if len(entries) == 0 {
 		if namespace != "" {
 			return "", "", "", false, fmt.Errorf("no containers visible in namespace %q for the active profile", namespace)
@@ -122,8 +140,15 @@ func PickInteractiveTarget(ctx context.Context, o *clusteropts.ClusterOptions, n
 	if namespace != "" {
 		header = fmt.Sprintf("Select a container in %s to exec into", namespace)
 	}
-	if capped {
-		header += fmt.Sprintf("  (showing first %d — narrow with -n)", len(entries))
+	// When the drain was truncated, describe it in POD terms — the cap is a
+	// pod-page limit, so reporting the flattened container-row count (len
+	// entries) would understate what was skipped and read as "list complete".
+	if fetch.capped {
+		if fetch.totalPods > fetch.fetchedPods {
+			header += fmt.Sprintf("  (scanned first %d of %d pods — narrow with -n)", fetch.fetchedPods, fetch.totalPods)
+		} else {
+			header += fmt.Sprintf("  (scanned first %d pods — narrow with -n)", fetch.fetchedPods)
+		}
 	}
 
 	sel, perr := picker.Pick(entries, header)
