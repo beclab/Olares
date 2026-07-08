@@ -132,9 +132,16 @@ func (m *InstallSettingsModule) Init() {
 		Retry:  1,
 	}
 
+	installOSLinkerdCRDs := &task.LocalTask{
+		Name:   "InstallOSLinkerdCRDs",
+		Action: new(InstallOSLinkerdCRDs),
+		Retry:  1,
+	}
+
 	m.Tasks = []task.Interface{
 		detectPublicIPAddress,
 		setSettingsValues,
 		installSettings,
+		installOSLinkerdCRDs,
 	}
 }

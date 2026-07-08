@@ -29,8 +29,10 @@ fi
 APP_DIST=${DIST}/wizard/config/apps
 SETTINGS_DIST=${DIST}/wizard/config/settings/templates
 CRD_DIST=${SETTINGS_DIST}/crds
+LINKERD_CRD_DIST=${DIST}/wizard/config/os-linkerd-crds/templates/crds
 mkdir -p ${APP_DIST}
 mkdir -p ${CRD_DIST}
+mkdir -p ${LINKERD_CRD_DIST}
 
 for mod in "${PACKAGE_MODULE[@]}";do
     echo "packaging ${mod} ..."
@@ -56,6 +58,14 @@ for mod in "${PACKAGE_MODULE[@]}";do
         if [ -d ${crd_path} ]; then
             ls ${crd_path} | while read crd; do
                 run_cmd "cp -rf ${crd_path}/${crd} ${CRD_DIST}"
+            done
+        fi
+
+        # package Linkerd CRDs to os-linkerd-crds chart (separate release from settings)
+        linkerd_crd_path="${app}/config/cluster/linkerd-crds"
+        if [ -d ${linkerd_crd_path} ]; then
+            ls ${linkerd_crd_path} | while read crd; do
+                run_cmd "cp -rf ${linkerd_crd_path}/${crd} ${LINKERD_CRD_DIST}"
             done
         fi
 
