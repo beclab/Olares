@@ -45,13 +45,17 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "入门使用",
       items: [
         {
+          text: "通过自然语言管理 Olares",
+          link: "/zh/one/olares-onboarding",
+        },
+        /*{
           text: "与本地 LLM 对话",
           link: "/zh/one/open-webui",
         },
         {
           text: "使用 ComfyUI 生成图片和视频",
           link: "/zh/one/comfyui",
-        },
+        },*/
         {
           text: "管理 AI 算力资源",
           link: "/zh/one/gpu",

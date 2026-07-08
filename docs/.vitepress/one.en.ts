@@ -45,13 +45,17 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "Onboarding",
       items: [
         {
+          text: "Manage Olares through natural language",
+          link: "/one/olares-onboarding",
+        },
+        /*{
           text: "Chat with local LLMs",
           link: "/one/open-webui",
         },
         {
           text: "Generate images and videos with ComfyUI",
           link: "/one/comfyui",
-        },
+        },*/
         {
           text: "Manage accelerator resources",
           link: "/one/gpu",
