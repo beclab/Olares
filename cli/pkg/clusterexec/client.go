@@ -9,10 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -232,21 +230,13 @@ func RunInteractive(ctx context.Context, rp *credential.ResolvedProfile, token s
 		}
 	}
 	sendResize()
-	winch := make(chan os.Signal, 1)
-	signal.Notify(winch, syscall.SIGWINCH)
-	defer signal.Stop(winch)
+	// Watch for local terminal size changes and forward them as resize frames.
+	// This is platform-specific: Unix uses SIGWINCH, Windows (which has no
+	// SIGWINCH) falls back to polling — see resize_unix.go / resize_windows.go.
+	stopResize := watchTerminalResize(fd, sendResize)
+	defer stopResize()
 	done := make(chan struct{})
 	defer close(done)
-	go func() {
-		for {
-			select {
-			case <-winch:
-				sendResize()
-			case <-done:
-				return
-			}
-		}
-	}()
 
 	// Keepalive: an idle interactive shell sends no data, so a proxy in the
 	// chain (edge nginx proxy_read_timeout, the rbac-proxy, or a load balancer)
