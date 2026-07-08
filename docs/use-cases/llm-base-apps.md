@@ -74,7 +74,7 @@ After creating the instance, the configuration window opens. Define where your e
     | **MODEL_NAME** | Define the name that client apps use to call this instance.<br><br>Derive it from `MODEL_SOURCE` and use this format:<br> `<repo>:<quantization>` (one quantization per instance).<br><br>Example:<ul><li>`MODEL_SOURCE`: `hf://unsloth/Qwen3.6-35B-A3B-GGUF --include Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf`</li><li>`MODEL_NAME`: `unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL`</li></ul> |
     | **MODEL_MODE** | Select **Chat** or **Embedding**. |
     | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> or **Thinking**. For an embedding model, select **None**. |
-    | **ENGINE_ARGS** | Set the engine startup parameters. The context size (`-c`) is required.<br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>`-c 65536`</li><li>`-c 65536 -ngl all`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
+    | **ENGINE_ARGS** | Set the engine startup parameters. The context size (`-c`) is required.<br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>`-c 65536`</li><li>`-c 65536 -ngl all`</li></ul>For more arguments, see [Engine tuning arguments](#engine-tuning-arguments). |
     | **LLAMACPP<br>_REQUIRED<br>_GPU_MEMORY** | Enter the minimum GPU memory the instance needs to start, <br>in MB or Gi. For example, `20Gi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li><li>In CPU mode, set it to `0`.</li></ul> |
 
     </template>
@@ -86,7 +86,7 @@ After creating the instance, the configuration window opens. Define where your e
     | **MODEL_NAME** | Define the name that client apps use to call this instance.<br><br>Derive it from `MODEL_SOURCE`: Use the string after `ollama://`.<br><br>Example:<ul><li>`MODEL_SOURCE`: `ollama://qwen3.5:2b`</li><li>`MODEL_NAME`: `qwen3.5:2b`</li></ul> |
     | **MODEL_MODE** | Select **Chat** or **Embedding**. |
     | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> or **Thinking**. For an embedding model, select **None**. |
-    | **ENGINE_ARGS** | Set the engine startup parameters. The context size is required. <br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>`OLLAMA_CONTEXT_LENGTH=8192`</li><li>`OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_KV_CACHE_TYPE=q8_0`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
+    | **ENGINE_ARGS** | Set the engine startup parameters. The context size is required. <br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>`OLLAMA_CONTEXT_LENGTH=8192`</li><li>`OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_KV_CACHE_TYPE=q8_0`</li></ul>For more arguments, see [Engine tuning arguments](#engine-tuning-arguments). |
     | **OLLAMA<br>_REQUIRED<br>_GPU_MEMORY** | Enter the minimum GPU memory the instance needs to start,<br>in MB or Gi. For example, `8Gi` and `8192Mi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li><li>In CPU mode, set it to `0`.</li></ul> |
 
     </template>
@@ -98,7 +98,7 @@ After creating the instance, the configuration window opens. Define where your e
     | **MODEL_NAME** | Define the name that client apps use to call this instance.<br><br>Derive it from `MODEL_SOURCE`: Use the string after `hf://`.<br><br>Example:<ul><li>`MODEL_SOURCE`: `hf://Qwen/Qwen3.5-2B`</li><li>`MODEL_NAME`: `Qwen/Qwen3.5-2B`</li></ul> |
     | **MODEL_MODE** | Select **Chat** or **Embedding**. |
     | **MODEL_SUPPORTS** | Select the capabilities the model supports: **Vision**, **Tools**,<br> or **Thinking**. For an embedding model, select **None**. |
-    | **ENGINE_ARGS** | Set the engine startup parameters. The context size is required. <br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>vLLM: `--max-model-len 65536`</li><li>SGLang: `--context-length 65536`</li></ul>For more arguments, see [Engine tuning arguments](#reference-engine-tuning-arguments). |
+    | **ENGINE_ARGS** | Set the engine startup parameters. The context size is required. <br>Separate multiple parameters with spaces.<br><br>Example:<ul><li>vLLM: `--max-model-len 65536`</li><li>SGLang: `--context-length 65536`</li></ul>For more arguments, see [Engine tuning arguments](#engine-tuning-arguments). |
     | **VLLM/SGLANG<br>_REQUIRED_GPU<br>_MEMORY** | Enter the minimum GPU memory the instance needs to start, <br>in MB or Gi. For example, `20Gi`.<ul><li>In time slicing or exclusive mode, set it below your total VRAM.</li><li>In memory slicing mode, set it below your remaining VRAM.</li><li>In CPU mode, set it to `0`.</li></ul> |
 
     </template>
@@ -205,16 +205,18 @@ The following example uses [OpenCode](./opencode.md) as the client.
 
     c. When prompted, type your Olares password and press **Enter**. The input stays hidden.
 
-    d. Below the chat box, select **Big Pickle** to open the model selector, and select **Qwen3.6 35B A3B** from the list.
+    d. If two-factor authentication is enabled on your Olares, the CLI prompts you for a two-factor code for the Olares ID. Enter the 6-digit code from LarePass and press **Enter**.
 
-    e. Send a task:
+    e. Below the chat box, select **Big Pickle** to open the model selector, and select **Qwen3.6 35B A3B** from the list.
+
+    f. Send a task:
 
     ```text
     Upload and deploy this app to Olares:
     https://github.com/chandruk4321/dockerize-static-web-project
     ```
 
-    f. Respond to OpenCode's questions, decisions, and approvals until the task finishes.
+    g. Respond to OpenCode's questions, decisions, and approvals until the task finishes.
 
     ![Running the task in OpenCode](/images/manual/olares/llm-base-model-inst-test.png#bordered)
 
@@ -285,24 +287,22 @@ The following per-engine recommendations are validated best practices. Use them 
 
 - **Recommended model**: [`unsloth/Qwen3.6-27B-GGUF`](https://huggingface.co/unsloth/Qwen3.6-27B-GGUF), quantized to `Q4_K_M`
 - **MODEL_SOURCE**: `hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf`
-
     :::tip Multimodal models
     If the model has multimodal capabilities, include the `mmproj-F16.gguf` file in `MODEL_SOURCE`:
 
     `hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf,hf://unsloth/Qwen3.6-27B-GGUF --include mmproj-F16.gguf`
     :::
-
 - **MODEL_NAME**: `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`
 - **MODEL_MODE**: `Chat`
 - **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
 - **ENGINE_ARGS**: `-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0`
-- **LOG_LEVEL**: Info
+- **LOG_LEVEL**: `Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**: `23Gi`
 
 </template>
 <template #Ollama>
 
-- **Recommended model**: `gemma4-26b` from the Ollama library, which defaults to Q4_K_M quantization
+- **Recommended model**: [`gemma4-26b`](https://ollama.com/library/gemma4:26b) from the Ollama library, which defaults to Q4_K_M quantization
 - **MODEL_SOURCE**: `ollama://gemma4-26b`
 - **MODEL_NAME**: `gemma4-26b`
 - **MODEL_MODE**: `Chat`
@@ -317,12 +317,13 @@ The following per-engine recommendations are validated best practices. Use them 
 SGLang models can take a while to load before the engine reaches `RUNNING`.
 :::
 
-- **Recommended model**: [`openai/gpt-oss-20b`](https://huggingface.co/openai/gpt-oss-20b) from Hugging Face
-- **MODEL_SOURCE**: `hf://openai/gpt-oss-20b`
-- **MODEL_NAME**: `openai/gpt-oss-20b`
+- **Recommended model**: [`Qwen3.5-9B-AWQ-4bit`](https://huggingface.co/cyankiwi/Qwen3.5-9B-AWQ-4bit) from Hugging Face
+- **MODEL_SOURCE**: `hf://cyankiwi/Qwen3.5-9B-AWQ-4bit`
+- **MODEL_NAME**: `cyankiwi/Qwen3.5-9B-AWQ-4bit`
 - **MODEL_MODE**: `Chat`
 - **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
-- **ENGINE_ARGS**: `--context-length 131072 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser gpt-oss --tool-call-parser gpt-oss`
+- **ENGINE_ARGS**: `--context-length 65536 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser qwen3 --tool-call-parser qwen3_coder`
+- **LOG_LEVEL**: `Info`
 - **SGLANG_REQUIRED_GPU_MEMORY**: `23Gi`
 
 </template>
@@ -332,12 +333,13 @@ SGLang models can take a while to load before the engine reaches `RUNNING`.
 vLLM models can take a while to load before the engine reaches `RUNNING`.
 :::
 
-- **Recommended model**: [`cyankiwi/Ornith-1.0-9B-AWQ-FP8`](https://huggingface.co/cyankiwi/Ornith-1.0-9B-AWQ-FP8) from Hugging Face
-- **MODEL_SOURCE**: `hf://cyankiwi/Ornith-1.0-9B-AWQ-FP8`
-- **MODEL_NAME**: `cyankiwi/Ornith-1.0-9B-AWQ-FP8`
+- **Recommended model**: [`gemma-4-12B-it-AWQ-INT4`](https://huggingface.co/cyankiwi/gemma-4-12B-it-AWQ-INT4) from Hugging Face
+- **MODEL_SOURCE**: `hf://cyankiwi/gemma-4-12B-it-AWQ-INT4`
+- **MODEL_NAME**: `cyankiwi/gemma-4-12B-it-AWQ-INT4`
 - **MODEL_MODE**: `Chat`
-- **MODEL_SUPPORTS**: `Thinking`, `Tools`
-- **ENGINE_ARGS**: `--max-model-len 131072 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser qwen3_coder --reasoning-parser qwen3 --enable-prefix-caching --enable-auto-tool-choice`
+- **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
+- **ENGINE_ARGS**: `--max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser qwen3_coder --reasoning-parser qwen3 --enable-prefix-caching --enable-auto-tool-choice`
+- **LOG_LEVEL**: `Info`
 - **VLLM_REQUIRED_GPU_MEMORY**: `23Gi` 
 
 </template>
