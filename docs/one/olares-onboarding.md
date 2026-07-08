@@ -105,7 +105,7 @@ If you have a previous OpenCode installation, upgrade it to the latest version a
 
 ## Step 4: Authenticate the Olares CLI with your Olares ID
 
-Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the Olares CLI with your Olares account.
+Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the Olares CLI with your Olares ID.
 
 1. In OpenCode, click **Search project** at the top of the page, and then select **Toggle terminal**.
 
