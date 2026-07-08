@@ -3,6 +3,7 @@ package clusterexec
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +20,14 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
+
+// ErrClosedBeforeExit signals that the exec WebSocket closed before the
+// channel-3 status frame that reports the command's exit code arrived. In the
+// k8s v4 exec protocol the server always sends that frame when the process
+// completes, so a close without one means the handshake/transport failed or the
+// connection dropped mid-stream — the command's success is unknown. Callers
+// must treat this as a failure (non-zero exit) rather than a clean exit 0.
+var ErrClosedBeforeExit = errors.New("exec connection closed before the command's exit status was received; the command may not have completed")
 
 // Options describes one exec invocation.
 type Options struct {
@@ -155,7 +164,15 @@ func RunOneShot(ctx context.Context, rp *credential.ResolvedProfile, token strin
 		}
 		sink.Write(ch, payload)
 	}
-	return Result{Stdout: sink.Stdout, Stderr: sink.Stderr, ExitCode: exit, Truncated: sink.Truncated}, nil
+	res := Result{Stdout: sink.Stdout, Stderr: sink.Stderr, ExitCode: exit, Truncated: sink.Truncated}
+	if exit == nil {
+		// The connection closed without a channel-3 status frame, so we never
+		// learned the command's exit code. Return the partial output alongside
+		// ErrClosedBeforeExit so callers can still surface what was captured
+		// while failing the run instead of reporting a bogus exit 0.
+		return res, ErrClosedBeforeExit
+	}
+	return res, nil
 }
 
 // RunInteractive attaches a TTY: local stdin -> channel 0, server stdout/stderr

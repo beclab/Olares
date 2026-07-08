@@ -326,6 +326,13 @@ func RunExec(ctx context.Context, o *clusteropts.ClusterOptions, p ExecParams) e
 			renderOneShot(o, p, container, res, nil, dur, true)
 			return fmt.Errorf("command timed out after %s", p.Timeout)
 		}
+		// The socket closed before the exit-status frame: render whatever
+		// partial output was captured (with a null exit code), then fail so the
+		// run isn't mistaken for a clean success.
+		if errors.Is(rerr, clusterexec.ErrClosedBeforeExit) {
+			renderOneShot(o, p, container, res, nil, dur, false)
+			return rerr
+		}
 		return rerr
 	}
 	renderOneShot(o, p, container, res, res.ExitCode, dur, false)
