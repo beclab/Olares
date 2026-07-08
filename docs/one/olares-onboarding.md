@@ -103,7 +103,7 @@ If you have a previous OpenCode installation, upgrade it to the latest version a
 5. Start a new chat.
 6. Below the chat box, click **Big Pickle** to open the model selector, and then select the model you just added.
 
-## Step 4: Authenticate the Olares CLI with your Olares account
+## Step 4: Authenticate the Olares CLI with your Olares ID
 
 Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the Olares CLI with your Olares account.
 
