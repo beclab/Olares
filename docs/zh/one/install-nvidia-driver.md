@@ -34,7 +34,7 @@ head:
 
 ## 步骤 1：下载并解压驱动包
 
-1. 下载[驱动包](http://cdn.olares.com/common/OlaresOne_driver_251125.zip)。
+1. 下载[驱动包](https://cdn.olares.com/common/OlaresOne_driver_251125.zip)。
 
     :::tip 浏览器安全警告
     由于下载链接使用标准的 HTTP 连接而非 HTTPS，你的 Web 浏览器可能会将其标记或阻止为不安全下载。如果发生这种情况，请在浏览器的下载管理器中选择 **保留** 或 **允许** 以继续下载。
