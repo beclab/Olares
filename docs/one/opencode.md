@@ -24,7 +24,6 @@ The agent apps on Olares come with these skills built in. This guide uses OpenCo
 
 **System**
 - Olares OS upgraded to v1.12.6.
-- If you have a previous OpenCode installation, uninstall it after the Olares OS upgrade, and then install it again.
 
 **Hardware** <br>
 - Olares One connected to a stable network.
@@ -68,22 +67,22 @@ The agent apps on Olares come with these skills built in. This guide uses OpenCo
 
 ## Step 2: Install OpenCode
 
+:::tip
+If you have a previous OpenCode installation, uninstall it after the Olares OS upgrade, and then install the new version as described below.
+:::
+
 1. Open Market, and search for "OpenCode".
 
    ![Install OpenCode](/images/manual/use-cases/opencode.png#bordered)
 
-2. Click **Get**, and then click **Install**. When the installation finishes, two shortcuts appear in the Launchpad:
+2. Click the OpenCode app card in the search results to open its details page.
+3. In the **Information** panel, check **Compatibility**. If it shows **Olares >=1.12.6-0**, this is the new version.
+4. Click **Get**, and then click **Install**. When the installation finishes, two shortcuts appear in the Launchpad:
 
    - **OpenCode**: The graphical web interface for chatting with the agent and managing projects.
    - **OpenCode Terminal**: The terminal for running CLI commands or launching the TUI (Terminal User Interface).
 
-3. Open **OpenCode**.
-
-   On first launch, OpenCode downloads dependency packages. This can take 10 to 30 minutes depending on your network.
-
-   :::tip Track initialization progress
-   To see the download progress, open Control Hub, select the OpenCode project, go to **Deployments** > **opencode**, click the running pod, and view the logs for the **init-packages** container.
-   :::
+5. Click the **OpenCode** shortcut.
 
 ## Step 3: Connect OpenCode to the model
 
@@ -117,6 +116,19 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
 
    ![OpenCode terminal panel](/images/one/opencode-terminal.png#bordered)
 
+2. Run the following commands one by one to confirm that both `olares-cli` and its skills are properly installed and enabled:
+
+   ```bash
+   olares-cli -v
+   opencode skills list
+   ```
+
+   Example outputs:
+
+   ```bash
+   olares-cli version 1.12.5-cli.8
+   ```
+
 2. Run the following command to log in to your Olares account. Replace `<your-olares-id>` with your actual Olares ID.
 
    ```bash
@@ -130,7 +142,6 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
    ```
 
 3. When prompted, enter your Olares login password. The password is hidden as you type.
-
 4. Run the following command to verify that the profile is created and logged in:
 
    ```bash
@@ -167,18 +178,6 @@ Install Chromium from the Olares Market and tell me when it's ready.
 ```
 
 ![Install an app using Olares skill in OpenCode](/images/one/onboard-scenario-install.png#bordered)
-
-### Deploy a model
-
-Ask OpenCode to deploy a specific model using the new Engine Base apps:
-
-```text
-Deploy qwen3.5:0.8b on this Olares device using the Ollama Engine Base.
-```
-
-![Deploy a model using Olares skill in OpenCode](/images/one/onboard-scenario-model-deployment.png#bordered)
-
-When the model deployment finishes, the model app appears on the Launchpad. Open it to launch the model console directly.
 
 ### Deploy an app from a GitHub repository
 
