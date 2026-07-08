@@ -11,13 +11,13 @@ head:
 
 `olares-cli` is the command-line tool for managing Olares. To let AI agents use it, Olares provides CLI Agent Skills in the form of tool definitions that translate natural language into the right `olares-cli` commands. They cover common tasks such as listing files, installing apps from Market, checking system metrics, and deploying custom apps.
 
-The agent apps on Olares come with these skills built in. This guide uses OpenCode as an example. It walks you through installing the Qwen3.6-27B (llama.cpp) model app, connecting it to OpenCode, authenticating the Olares CLI with your Olares account, and completing a few common tasks through chat.
+The agent apps on Olares come with these skills built in. This guide uses OpenCode as an example. It walks you through installing the Qwen3.6-27B (llama.cpp) model app, connecting it to OpenCode, authenticating the Olares CLI with your Olares ID, and completing a few common tasks through chat.
 
 ## Learning objectives
 
 - Install the Qwen3.6-27B (llama.cpp) model app and get its connection details.
 - Install OpenCode and connect it to the local model.
-- Authenticate the Olares CLI with your Olares account.
+- Authenticate the Olares CLI with your Olares ID.
 - Use natural language in OpenCode to manage Olares.
 
 ## Prerequisites
