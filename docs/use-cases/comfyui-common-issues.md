@@ -14,7 +14,7 @@ Use this page to identify and resolve common issues with ComfyUI on Olares.
 If you are encountering an issue that is not listed here, refer to [Troubleshooting flow](./comfyui-launcher#troubleshooting-flow).
 :::
 
-## How to migrating to the new ComfyUI after upgrading to Olares 1.12.6
+## How to migrate to the new ComfyUI after upgrading to Olares 1.12.6
 
 Olares 1.12.6 brings a major update to the [shared app](/manual/olares/market/shared-apps) system. As a result, you cannot update ComfyUI in place. Instead, you need to install the new ComfyUI app, which is built on the updated architecture. Just follow the migration steps below, and all your data (including models, plugins, workflows, and files) will be moved over automatically. 
 
