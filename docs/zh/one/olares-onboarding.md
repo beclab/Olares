@@ -107,9 +107,9 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
 5. 开始一个新聊天。
 6. 在聊天框下方，点击 **Big Pickle** 打开模型选择器，然后选择刚刚添加的模型。
 
-## 步骤 4：使用 Olares 账号认证 Olares CLI
+## 步骤 4：使用 Olares ID 认证 Olares CLI
 
-在 OpenCode 能够代你运行 Olares CLI Agent Skills 之前，你必须使用 Olares 账号认证 Olares CLI。
+在 OpenCode 能够代你运行 Olares CLI Agent Skills 之前，你必须使用 Olares ID 认证 Olares CLI。
 
 1. 在 OpenCode 中，点击页面顶部的 **Search project**，然后选择 **Toggle terminal**。
 
