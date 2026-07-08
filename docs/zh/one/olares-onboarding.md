@@ -15,13 +15,13 @@ head:
 
 `olares-cli` 是用于管理 Olares 的命令行工具。为了让 AI 智能体能够使用它，Olares 提供了 CLI Agent Skills，即以工具定义的形式将自然语言转换为正确的 `olares-cli` 命令。它们覆盖常见的任务，例如列出文件、从 Market 安装应用、查看系统指标以及部署自定义应用。
 
-Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例，带你完成安装 Qwen3.6-27B (llama.cpp) 模型应用、将其连接到 OpenCode、使用 Olares 账号认证 Olares CLI，并通过聊天完成几个常见任务。
+Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例，带你完成安装 Qwen3.6-27B (llama.cpp) 模型应用、将其连接到 OpenCode、使用 Olares ID 认证 Olares CLI，并通过聊天完成几个常见任务。
 
 ## 学习目标
 
 - 安装 Qwen3.6-27B (llama.cpp) 模型应用，并获取其连接信息。
 - 安装 OpenCode 并连接该模型。
-- 使用 Olares 账号认证 Olares CLI。
+- 使用 Olares ID 认证 Olares CLI。
 - 在 OpenCode 中通过自然语言管理 Olares。
 
 ## 前提条件
