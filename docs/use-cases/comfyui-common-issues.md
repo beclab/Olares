@@ -45,10 +45,10 @@ After the new ComfyUI is installed, data is migrated automatically as follows:
 | Input files | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
 
 :::warning
-After migration, do not upload models or input files to `External/<your_hostname>/ai/`. The new ComfyUI no longer mounts these directories and will not recognize files placed there.
+After migration, upload new models and input files to the new locations under `Common/comfyui/`. The new ComfyUI no longer uses `External/<your_hostname>/ai/` as its active file location.
 :::
 
-The migration runs every time ComfyUI restarts. If new files are added under the old paths, they will be migrated to the new locations on the next restart, and the originals under `External/<your_hostname>/ai/` will be deleted. To avoid file conflicts and migration delays, use the new directories for uploading files.
+The migration runs each time ComfyUI restarts. If files are later added to the old locations, ComfyUI will move them to the new locations on the next restart and delete the originals from `External/<your_hostname>/ai/`. To avoid confusion, upload new files directly to the new locations.
 
 
 ## ComfyUI cannot start
