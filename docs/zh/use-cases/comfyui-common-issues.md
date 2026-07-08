@@ -14,6 +14,43 @@ head:
 如果你遇到的问题未在此处列出，请参阅[故障排查流程](./comfyui-launcher#故障排查流程)。
 :::
 
+## 升级到 Olares 1.12.6 后如何迁移到新版 ComfyUI
+
+如果你已升级到 Olares 1.12.6，且之前安装过 ComfyUI Shared，可参考本节完成迁移。如果你是在 Olares 1.12.6 或更高版本上首次安装 ComfyUI，直接从应用市场安装 ComfyUI 即可。
+
+Olares 1.12.6 更新了共享应用架构。旧版 ComfyUI Shared 在升级后仍可继续运行，但无法接收后续更新。要继续获取更新，需在保留本地数据的情况下卸载旧版应用，然后从应用市场安装新版 ComfyUI。
+
+:::warning
+卸载旧版应用时，不要勾选**同时删除所有本地数据**。如果勾选此项，你的模型、插件、工作流以及输入/输出文件会被删除。
+:::
+
+
+### 迁移步骤
+
+1. 打开应用市场，进入**我的 Olares**。
+2. 找到 ComfyUI Shared，点击操作按钮旁的下拉箭头，然后选择**卸载**。
+3. 在卸载窗口中，确保未勾选**同时删除所有本地数据**，然后点击**确认**。
+4. 返回应用市场，搜索 “ComfyUI”，然后点击**安装**。
+5. 在应用详情页，查看**信息**下的**兼容性**。如果显示 `Olares >=1.12.6-0`，说明这是新版 ComfyUI。
+6. 安装完成后，打开 ComfyUI，确认模型、插件、工作流以及输入/输出文件是否可正常使用。
+
+### 迁移内容说明
+
+新版 ComfyUI 安装后，将自动完成数据的迁移工作，具体规则如下：
+
+| 数据类型 | 原路径 | 新路径 |
+|:---|:---|:---|
+| ComfyUI 核心数据（插件、工作流等） | `External/<your_hostname>/ai/comfyui/` | `/Data/comfyuisharev3/comfyui/` |
+| 模型数据 | `External/<your_hostname>/ai/model/` | `Common/comfyui/model/` |
+| 输出文件 | `External/<your_hostname>/ai/output/comfyui/` | `Common/comfyui/output/` |
+| 输入文件 | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
+
+:::warning
+迁移完成后，需将新的模型和输入文件上传到 `Common/comfyui/` 下的新路径。新版 ComfyUI 不再将 `External/<your_hostname>/ai/` 作为当前使用的文件位置。
+:::
+
+数据迁移会在每次 ComfyUI 重启时运行。如果你之后又将文件添加到旧路径，ComfyUI 会在下次重启时将这些文件移动到新路径，并删除 `External/<your_hostname>/ai/` 下的原文件。为避免混淆，需直接使用新路径上传文件。
+
 ## ComfyUI 无法启动
 
 ComfyUI 无法启动、意外停止或行为异常。

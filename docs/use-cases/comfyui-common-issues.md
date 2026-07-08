@@ -14,6 +14,43 @@ Use this page to identify and resolve common issues with ComfyUI on Olares.
 If you are encountering an issue that is not listed here, refer to [Troubleshooting flow](./comfyui-launcher#troubleshooting-flow).
 :::
 
+## How to migrate to the new ComfyUI after upgrading to Olares 1.12.6
+
+Use this section if you upgraded to Olares 1.12.6 and already had ComfyUI Shared installed. If you are installing ComfyUI for the first time on Olares 1.12.6 or later, install ComfyUI directly from Market.
+
+Olares 1.12.6 updates the shared app architecture. The old ComfyUI Shared app can still run after the upgrade, but it cannot receive future updates. To keep ComfyUI up to date, uninstall the old app without deleting local data, then install the new ComfyUI app from Market.
+
+:::warning
+When uninstalling the old app, do not select **Also remove all local data**. Selecting this option may delete your models, plugins, workflows, and input/output files.
+:::
+
+### Migration steps
+
+1. Open Market and go to **My Olares**.
+2. Find ComfyUI Shared, click the dropdown arrow next to its operation button, and select **Uninstall**.
+3. In the **Uninstall** window, leave **Also remove all local data** unselected, then click **Confirm**.
+4. In Market, search for "ComfyUI" and click **Install**.
+5. On the app details page, check **Information** > **Compatibility**. If it shows `Olares >=1.12.6-0`, you are installing the new version.
+6. After installation, open ComfyUI and check that your models, plugins, workflows, and input/output files are available.
+
+### What gets migrated
+
+After the new ComfyUI is installed, data is migrated automatically as follows:
+
+| Data type | Old location | New location |
+|:---|:---|:---|
+| ComfyUI core (plugins, workflows, etc.) | `External/<your_hostname>/ai/comfyui/` | `/Data/comfyuisharev3/comfyui/` |
+| Models | `External/<your_hostname>/ai/model/` | `Common/comfyui/model/` |
+| Output files | `External/<your_hostname>/ai/output/comfyui/` | `Common/comfyui/output/` |
+| Input files | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
+
+:::warning
+After migration, upload new models and input files to the new locations under `Common/comfyui/`. The new ComfyUI no longer uses `External/<your_hostname>/ai/` as its active file location.
+:::
+
+The migration runs each time ComfyUI restarts. If files are later added to the old locations, ComfyUI will move them to the new locations on the next restart and delete the originals from `External/<your_hostname>/ai/`. To avoid confusion, upload new files directly to the new locations.
+
+
 ## ComfyUI cannot start
 
 ComfyUI fails to start, stops unexpectedly, or behaves abnormally.
