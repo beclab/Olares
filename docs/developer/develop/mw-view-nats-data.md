@@ -25,7 +25,7 @@ Before connecting, obtain NATS connection details from the Control Hub.
 
 ### Deploy `nats-box`
 
-1. Download the example [`nats-box.yaml`](http://cdn.olares.com/common/nats-box.yaml) file, then upload it to the Olares machine.
+1. Download the example [`nats-box.yaml`](https://cdn.olares.com/common/nats-box.yaml) file, then upload it to the Olares machine.
 2. Navigate to the directory containing the YAML file and deploy `nats-box`:
     ```bash
     kubectl apply -f nats-box.yaml
