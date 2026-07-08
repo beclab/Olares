@@ -1,4 +1,4 @@
-# Account
+# Subscribe to Olares user events
 
 If an app in Olares wants to use the system user as the app's user, it can obtain the user information by defining a `SysEventRegistry` in application chart to receive system user event callbacks.
 

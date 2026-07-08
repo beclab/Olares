@@ -62,7 +62,21 @@ How Olares apps are placed in namespaces and reach each other:
 - **Dependency injection.** When app B declares a `type: application` dependency on a shared app A, app-service injects A's Services into B's Helm values as `.Values.svcs.<svcName>_host` (= `<svcName>.<app>-shared`) and `.Values.svcs.<svcName>_ports`.
 - **`sharedEntrances` was removed in 1.12.6+.** Do not add it; treat any leftover as stale.
 
-Used by: `chart` (authoring shared apps and `application` dependencies) and `cluster` (the application-space / namespace runtime view).
+### Finding an app's namespace
+
+`<owner>` is the Olares ID local part (e.g. `alice`). Given an app name, its namespace follows the install kind:
+
+- **Per-user app** → `<app>-<owner>` (the common case).
+- **Shared app** (`apiVersion: v3`) → `<app>-shared` (admin-only, cluster-wide).
+- **System app** → `user-space-<owner>` (NOT `<app>-<owner>`).
+- **v2 multi-chart app** → one namespace **per sub-chart**: `<chartName>-<owner>` (or `<chartName>-shared` for a shared sub-chart). Such an app **spans several namespaces** — do not assume a single one.
+- The ApplicationManager name encodes the namespace as `<namespace>-<app>` (per-user `<app>-<owner>-<app>`, shared `<app>-shared-<app>`).
+
+In practice: derive `<app>-<owner>`; for a shared app check `<app>-shared`; when unsure — or for any v2 app — run `olares-cli cluster application list` instead of guessing. See [`../../olares-cluster/SKILL.md`](../../olares-cluster/SKILL.md) for the list/get commands.
+
+System components are not per-app: framework services (app-service, market, chart-repo, ...) live in `os-framework`, and system middleware (PostgreSQL / Redis / NATS / MongoDB) in `os-platform`. Discover specifics live via the `cluster` skill (`cluster namespace list`, `cluster pod list -n <ns>`) rather than hardcoding service names.
+
+Used by: `chart` (authoring shared apps and `application` dependencies) and `cluster` (the application-space / namespace runtime view, and locating an app's namespace).
 
 ## System middleware model
 
@@ -81,5 +95,6 @@ Olares releases follow [semver](https://docs.olares.com/developer/install/versio
 - The running version lives in the `Terminus` CR `spec.version` and is injected into every chart as `.Values.sysVersion`.
 - **"At least" comparisons strip the prerelease/build segment**, so a daily build `1.12.6-20260327` still counts as `>= 1.12.6`. Always use the `-0` suffix in constraints (`>=1.12.6-0`) or prerelease/daily/RC builds fail to match.
 - Reading the target version: `olares-cli profile list` (cached `VERSION` column, populated at login from `/api/olares-info`), `olares-cli profile list --refresh-version`, or live `olares-cli settings me version`.
+- Overriding detection: when `/api/olares-info` is unreachable (or to force a code path), pass `--olares-version <ver>` — version-gated verbs (e.g. `files compress` / `extract` / `archive` / `nfs`, `drive/Common`) read it instead of probing the backend.
 
-Used by: `chart` (the `>= 1.12.6` porting floor + `options.dependencies` `type: system`), `shared` (the profile `VERSION` column), and `settings` (`me version`).
+Used by: `chart` (the `>= 1.12.6` porting floor + `options.dependencies` `type: system`), `shared` (the profile `VERSION` column), `settings` (`me version`), and `files` (the `compress` / `extract` / `archive` / `nfs` + `drive/Common` version gate).

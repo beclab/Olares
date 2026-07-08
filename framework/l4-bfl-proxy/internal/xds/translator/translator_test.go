@@ -779,6 +779,34 @@ func TestTranslate_EmptyIR(t *testing.T) {
 	assert.Empty(t, snap.Clusters)
 }
 
+// TestTranslateVirtualHost_CORSFileserverOnly pins the invariant that only
+// vhosts flagged as IsFileserver receive Envoy-level CORS response headers.
+// Regular vhosts (profile, generic apps) must be left alone so upstream CORS
+// is passed through untouched.
+func TestTranslateVirtualHost_CORSFileserverOnly(t *testing.T) {
+	hasCORSOrigin := func(vh *routev3.VirtualHost) bool {
+		for _, h := range vh.GetResponseHeadersToAdd() {
+			if h.GetHeader().GetKey() == "access-control-allow-origin" {
+				return true
+			}
+		}
+		return false
+	}
+
+	fs := translateVirtualHost(&ir.VirtualHostIR{
+		Name:         "app_alice_files_files",
+		Domains:      []string{"files.alice.example.com"},
+		IsFileserver: true,
+	})
+	assert.True(t, hasCORSOrigin(fs), "fileserver vhost must carry allow-origin")
+
+	other := translateVirtualHost(&ir.VirtualHostIR{
+		Name:    "app_alice_vault_vault-frontend",
+		Domains: []string{"vault.alice.example.com"},
+	})
+	assert.False(t, hasCORSOrigin(other), "non-fileserver vhost must not carry allow-origin")
+}
+
 // ---------------------------------------------------------------------------
 // suppress unused imports
 // ---------------------------------------------------------------------------

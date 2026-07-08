@@ -76,6 +76,31 @@ Before running `npm install -g`, the wizard reads `--version` on the existing `/
 - `OLARES_CLI_DOWNLOAD_MIRROR` — base URL for downloading the prebuilt binary if `https://github.com/beclab/Olares/releases/download/...` is unreachable (defaults to `https://cdn.olares.com`).
 - `OLARES_CLI_SKIP_DOWNLOAD=1` — install the JS shim only, no binary fetch.
 
+## Versioning and release (maintainers)
+
+Two version numbers are tracked:
+
+| Field | Example | Used for |
+| --- | --- | --- |
+| **npm version** | `1.12.6-cli.5` | `package.json`, npm registry, CDN/GitHub tar names |
+| **binary version** (`version.VERSION`) | `1.12.6` | Olares OS upgrade line; shown by `olares-cli --version` |
+
+`postinstall` downloads `olares-cli-v{npm_version}_{platform}.tar.gz` using the npm package version, so each `-cli.N` bump is a distinct artifact and does not overwrite prior builds.
+
+**npm dist-tags**
+
+| Tag | Meaning |
+| --- | --- |
+| `latest` | Production default (`npx @olares/cli@latest`, install wizard). Set manually via **Tag npm CLI** workflow. |
+| `next` | Fresh CI publish from **Release CLI** (`npx @olares/cli@next`). Does not move `latest`. |
+| `daily` | Optional tag for daily builds (manual promote). |
+
+**Release CLI** (`release-cli.yaml`, manual dispatch): builds with GoReleaser, uploads tars to CDN, publishes `@olares/cli` with `--tag next`. Inputs: `branch` (default `main`), `version` (npm), optional `binary-version` (defaults from `version` — strips `-cli.N` suffix).
+
+**Tag npm CLI** (`tag-npm-cli.yaml`): promotes an already-published version to a dist-tag (default `latest`). Fails if the version is not on npm.
+
+Daily / OS release pipelines call **Release CLI** with `publish-npm: false` — they only upload binaries; npm publish stays a separate manual step.
+
 ## Links
 
 - GitHub: <https://github.com/beclab/Olares>

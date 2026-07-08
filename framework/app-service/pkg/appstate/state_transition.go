@@ -113,6 +113,14 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 		appv1alpha1.Initializing,
 		appv1alpha1.ApplyEnvFailed,
 		appv1alpha1.ApplyingEnvCanceling,
+		// OperationAllowedInState[ApplyingEnv][StopOp]=true, so
+		// pod_abnormal_suspend_app_controller can flip ApplyingEnv -> Stopping
+		// as a fallback when a pod goes abnormal mid-applyEnv.
+		appv1alpha1.Stopping,
+		// applying_env_app.go: applyEnv-from-Stopped (workloadReplicas app whose
+		// release stays scaled to zero) lands back in Stopped via landedState,
+		// mirroring the upgrade-from-Stopped path on Upgrading.
+		appv1alpha1.Stopped,
 	},
 	appv1alpha1.Uninstalling: {
 		appv1alpha1.Uninstalled,
@@ -172,6 +180,7 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 	},
 	appv1alpha1.InstallFailed: {
 		appv1alpha1.Pending,
+		appv1alpha1.Uninstalling,
 	},
 
 	appv1alpha1.StopFailed: {
@@ -268,6 +277,7 @@ var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1a
 	},
 	appv1alpha1.ApplyingEnv: {
 		appv1alpha1.CancelOp: true,
+		appv1alpha1.StopOp:   true,
 	},
 	appv1alpha1.Resuming: {
 		appv1alpha1.CancelOp: true,
@@ -313,7 +323,8 @@ var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1a
 		appv1alpha1.InstallOp: true,
 	},
 	appv1alpha1.InstallFailed: {
-		appv1alpha1.InstallOp: true,
+		appv1alpha1.InstallOp:   true,
+		appv1alpha1.UninstallOp: true,
 	},
 	//appv1alpha1.InitialFailed: {
 	//	appv1alpha1.UpgradeOp:   true,
@@ -341,6 +352,7 @@ var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1a
 	appv1alpha1.ApplyEnvFailed: {
 		appv1alpha1.UninstallOp: true,
 		appv1alpha1.ApplyEnvOp:  true,
+		appv1alpha1.StopOp:      true,
 	},
 	appv1alpha1.PendingCancelFailed: {
 		appv1alpha1.CancelOp: true,

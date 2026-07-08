@@ -85,10 +85,10 @@ TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
    为域名创建组织后，该域名将无法从 Olares Space 中移除。
    :::
 
-4. 输入 Olares ID 的用户名部分。例如输入 `alex`，则 Olares ID 为 `alex@space.n1.monster`。
+4. 输入 Olares ID 的用户名部分。例如输入 `alex2026`，则 Olares ID 为 `alex2026@space.n1.monster`。
 
    :::info
-   用户名部分应为 1-63 个字符，仅支持小写字母和数字。
+   用户名部分应为 8-24 个字符，仅支持小写字母和数字。
    :::
    ![以管理员身份创建 Olares ID](/images/manual/tutorials/custom-domain-create-olares-id-as-admin.png)
 

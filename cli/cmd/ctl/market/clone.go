@@ -38,12 +38,21 @@ Cloned rows look up their catalog metadata via RawName (the source
 app's name), so a clone like 'windowsefe992' renders the source app
 'windows' title / categories in 'list --mine'.
 
+Compute mode (Olares 1.12.6+ only): apps that can run on more than one
+accelerator (e.g. cpu vs nvidia) need a mode picked at clone time. Use
+--compute-mode <type> to pin it; if omitted, an interactive terminal
+prompts you to choose from the installable modes, while a non-interactive
+session (-q, -o json, or a pipe) fails with the list so you can re-run
+with the flag. On Olares 1.12.5 the clone path is unchanged and
+--compute-mode is rejected.
+
 Examples:
   olares-cli market clone firefox --title "Firefox Dev"
   olares-cli market clone firefox --title "Firefox Dev" --watch                   # block until clone reaches running
   olares-cli market clone firefox --title "Firefox Dev" --watch -o json | jq '.cloneTarget'   # capture new app name
   olares-cli market clone myapp --title "MyApp Dev" --env API_URL=http://dev.example.com
   olares-cli market clone myapp --title "MyApp Dev" --entrance-title ui="New UI" --entrance-title api="New API"
+  olares-cli market clone comfyui --title "ComfyUI Dev" --compute-mode nvidia     # pin GPU mode (1.12.6+)
   olares-cli market clone myapp --title "MyApp Dev" --watch --watch-timeout 20m   # heavyweight clones`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -55,6 +64,7 @@ Examples:
 	opts.addTitleFlag(cmd)
 	opts.addEnvFlag(cmd)
 	opts.addEntranceTitleFlag(cmd)
+	opts.addComputeModeFlag(cmd)
 	opts.addWatchFlags(cmd)
 	return cmd
 }
@@ -97,20 +107,52 @@ func runClone(opts *MarketOptions, appName string) error {
 		return opts.failOp("clone", appName, err)
 	}
 
+	// Compute-mode selection and template bodies are both 1.12.6+ concepts,
+	// so detect the backend version once. Version handling mirrors `market
+	// install`: on 1.12.5 (or an undetectable version, unless --compute-mode
+	// is explicitly set) we send no selectedGpuType and never interpret a
+	// computeModeSelect 422, keeping the clone byte-identical to before.
+	computeMode := strings.TrimSpace(opts.ComputeMode)
+	atLeast126, verr := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if verr != nil {
+		if computeMode != "" {
+			return opts.failOp("clone", appName, fmt.Errorf("cannot determine Olares backend version to honor --compute-mode: %w", verr))
+		}
+		atLeast126 = false
+	}
+	if computeMode != "" && !atLeast126 {
+		return opts.failOp("clone", appName, fmt.Errorf("--compute-mode requires Olares 1.12.6+; this backend uses a different (unchanged) clone path — re-run without --compute-mode"))
+	}
+	selected := ""
+	if atLeast126 {
+		selected = computeMode
+	}
+
 	// Template bodies (templateOnly) are cloned to create instances even
 	// though the body itself is never installed; the SPA's onClone() sets
 	// templateClone:true for them so the backend / dialog can branch. Only
 	// emit the flag on 1.12.6+ (the field is omitempty, so 1.12.5 stays
 	// byte-identical).
-	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
-	if err != nil {
-		return opts.failOp("clone", appName, err)
-	}
 	templateClone := atLeast126 && appIsTemplateOnly(appInfo)
 
 	opts.info("Cloning '%s' as '%s' from '%s' for user '%s'...", appName, title, source, mc.olaresID)
 
-	resp, err := mc.CloneApp(ctx, appName, source, title, envs, entrances, templateClone)
+	resp, err := mc.CloneApp(ctx, appName, source, title, selected, envs, entrances, templateClone)
+	// Recover once from a computeModeSelect 422 by resolving the mode (from
+	// --compute-mode, an interactive prompt, or a clear error) and retrying.
+	// Keyed off the response check type, NOT the version probe: computeModeSelect
+	// is a 1.12.6+ signal that 1.12.5 never emits, so 1.12.5 can't enter this
+	// branch even when the probe was skipped or failed (atLeast126 false).
+	if err != nil {
+		if checkType, raw := parseFailedCheck(resp); isComputeModeSelect(checkType) {
+			mode, merr := resolveComputeMode(raw, appName, computeMode, opts.isInteractive())
+			if merr != nil {
+				return opts.failOp("clone", appName, merr)
+			}
+			opts.info("Selected compute mode: %s", mode)
+			resp, err = mc.CloneApp(ctx, appName, source, title, mode, envs, entrances, templateClone)
+		}
+	}
 	if err != nil {
 		if envErr := parseServerEnvError(resp, appName); envErr != nil {
 			return opts.failOp("clone", appName, envErr)

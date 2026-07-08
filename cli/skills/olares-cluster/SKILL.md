@@ -26,13 +26,15 @@ Against the cluster the active profile can see:
 - "What pods / containers / workloads / jobs / cronjobs / namespaces / nodes are running?"
 - "Tail / show logs of `<pod>` (or `<container>` of `<pod>`)"
 - "Run a command inside a container / debug in-container" (`pod exec` / `container exec` — one-shot is the agent path, `-it` is human-only)
-- "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app (mutating verbs prompt for confirmation; `--yes` skips)
+- "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app lifecycle. `workload stop/start` scales replicas and does not update the app-store state row; use `market stop/resume` for app-level lifecycle (mutating verbs prompt for confirmation; `--yes` skips)
 - "Suspend / resume `<cronjob>`" or "rerun `<job>`"
 - "Who am I on this cluster, what's my role?" (`cluster context`)
 - "What does this object's YAML look like?" (`cluster <noun> yaml`)
 - Watch / follow: pod `-w`, workload `rollout-status -w`, application `status -w`, logs `-f` (poll on `--interval`)
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
+
+> **Diagnosing *why* an app is broken** (stuck install, crash loop, `running` but unreachable, image won't pull, resource pressure) is [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) — it orchestrates these `cluster` commands into symptom→root-cause routing. `cluster` stays the raw runtime view and the place that mutates K8s objects.
 
 > **Mental model:** if the question is *runtime state* of an existing cluster, you are here. If it's *lifecycle* of an Olares app or *day-zero* host setup, you are not.
 
@@ -120,7 +122,7 @@ Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `work
 Two image-inventory commands ride on top of this:
 
 - `cluster workload images [IMAGE]` follows the same pagination contract. An IMAGE-argument lookup always full-scans the cluster, but the plain listing is NOT full-cluster unless `--all` is set. See [references/olares-cluster-workload.md](references/olares-cluster-workload.md).
-- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. Its completeness/coverage caveats live in that same workload reference's Agent notes.
+- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. It is owned by [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md), which routes to its image-diagnosis reference for the completeness/coverage caveats.
 
 ### `--watch` / `--follow` semantics (uniform)
 
@@ -132,9 +134,9 @@ Two image-inventory commands ride on top of this:
 - TTY detection: clear-screen-redraw for table, raw stream for piped output, JSONL for `-o json`.
 - `--interval D` / `--timeout D` are **rejected with an error** when their gate flag (`-w` or `-f`) isn't also set — don't silently waste a flag.
 
-## Common errors → fixes
+## Common errors
 
-| Error message starts with | Meaning | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
 | `server rejected the request (HTTP 401: ...); please run: olares-cli profile login --olares-id <id>` | Auto-refresh failed, OR refreshed token still rejected | Run the suggested `profile login` |
 | `server rejected the request (HTTP 403: ...)` | The active profile's role can't perform this | `cluster context --refresh` to confirm the cached role matches the server. If still 403, the user genuinely lacks permission |

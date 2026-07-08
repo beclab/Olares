@@ -45,15 +45,19 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "Onboarding",
       items: [
         {
+          text: "Manage Olares through natural language",
+          link: "/one/olares-onboarding",
+        },
+        /*{
           text: "Chat with local LLMs",
           link: "/one/open-webui",
         },
         {
           text: "Generate images and videos with ComfyUI",
           link: "/one/comfyui",
-        },
+        },*/
         {
-          text: "Switch GPU mode",
+          text: "Manage accelerator resources",
           link: "/one/gpu",
         },
       ]
@@ -85,10 +89,12 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Download YouTube videos",
           link: "/one/wise-download",
         },*/
+        /*
         {
           text: "Deploy an app",
           link: "/one/deploy",
         },
+        */
       ]
     },
     {
@@ -196,7 +202,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           // items:
           //   [
           //     {
-          //       text: "Manage GPU",
+          //       text: "Manage accelerator resources",
           //       link: "/one/two-one-gpu",
           //     },
           //     {

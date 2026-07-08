@@ -170,16 +170,13 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.5.50
+        image: beclab/app-service:0.5.67
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
-        readinessProbe:
-          failureThreshold: 5
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          tcpSocket:
-            port: 6755
+          name: api
+        - containerPort: 8433
+          name: webhook
         securityContext:
           runAsUser: 0
         env:
@@ -405,7 +402,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
         - name: image-service
-          image: beclab/image-service:0.5.49
+          image: beclab/image-service:0.5.63
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0

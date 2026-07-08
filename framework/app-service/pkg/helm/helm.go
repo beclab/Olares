@@ -3,6 +3,7 @@ package helm
 import (
 	"context"
 	"fmt"
+	"helm.sh/helm/v3/pkg/storage/driver"
 	"os"
 	"time"
 
@@ -110,6 +111,9 @@ func UninstallCharts(cfg *action.Configuration, releaseName string) error {
 	uninstall.KeepHistory = false
 	r, err := uninstall.Run(releaseName)
 	if err != nil {
+		if errors.Is(err, driver.ErrReleaseNotFound) {
+			return nil
+		}
 		if r != nil && r.Release != nil && r.Release.Info != nil &&
 			r.Release.Info.Status == release.StatusUninstalled {
 			return nil

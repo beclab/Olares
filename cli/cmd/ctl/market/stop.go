@@ -34,6 +34,11 @@ csAppStop() dialog:
     single-user CS auto-default; matches the SPA where the user
     unchecks the cascade checkbox in the multi-user dialog).
 
+On Olares 1.12.6+ a CS/shared app (simpleInfo apiVersion=='v2' || shared)
+is ALWAYS cascaded — the backend forces all=true and the SPA disables
+the checkbox — so --cascade=false is overridden (a stderr note reports
+the force). The --cascade=false override only takes effect on 1.12.5.
+
 --watch blocks until the row settles at 'stopped' (or one of the
 stopFailed / stoppingCanceled / stoppingCancelFailed failure states).
 The watcher is idempotent: 'stop' against an already-stopped row

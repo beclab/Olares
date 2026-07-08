@@ -123,36 +123,45 @@ func TestCleanupAfterInstallFailure_ProtectedNamespaceShortCircuits(t *testing.T
 	}
 }
 
-// When the namespace is still present and never gets deleted, the helper must
-// return context.DeadlineExceeded (or Canceled) instead of blocking forever.
-// We use a short ctx deadline to keep the test fast; the real
-// installFailureNSDeletionTimeout (5min) is enforced internally with
-// context.WithTimeout, but the OUTER ctx deadline can cut it short.
-func TestCleanupAfterInstallFailure_NamespaceStillPresentBlocksUntilCtx(t *testing.T) {
+// When the namespace is still present after the helm/compute teardown step,
+// the helper must NOT block — it must return an appstate.RequeueError
+// (WaitingInLine) immediately so the reconciler can re-enqueue the request
+// instead of pinning the single-threaded worker on a multi-minute poll.
+//
+// The fake namespace carries the standard "kubernetes" finalizer so that
+// cleanupAfterInstallFailure's c.Delete call only marks it for deletion
+// (DeletionTimestamp gets set) but does not physically remove the object
+// from the fake store — mirroring real K8s NS finalizer behavior so the
+// single-shot Get inside waitForNamespaceGone observes the NS still present.
+func TestCleanupAfterInstallFailure_NamespaceStillPresentReturnsRequeue(t *testing.T) {
 	_, cfgJSON := newCleanupManagerFixture(t, "demoapp-ns")
 	am := testutil.NewAppManager("demoapp",
 		testutil.WithNamespace("demoapp-ns"),
 		testutil.WithConfigJSON(string(cfgJSON)),
 	)
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demoapp-ns"}}
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "demoapp-ns",
+			Finalizers: []string{"kubernetes"},
+		},
+	}
 	c := testutil.NewFakeClient(am, ns)
 	fake := testutil.NewFakeHelmOps()
 	injectHelmOps(t, fake)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
 	start := time.Now()
-	err := cleanupAfterInstallFailure(ctx, c, am)
+	err := cleanupAfterInstallFailure(context.Background(), c, am)
 	elapsed := time.Since(start)
 
 	if err == nil {
-		t.Fatalf("cleanupAfterInstallFailure returned nil, want context deadline error")
+		t.Fatalf("cleanupAfterInstallFailure returned nil, want RequeueError")
 	}
-	if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
-		t.Fatalf("cleanupAfterInstallFailure returned %v, want DeadlineExceeded/Canceled", err)
+	if !IsWaitingInLine(err) {
+		t.Fatalf("cleanupAfterInstallFailure returned %v (%T), want *WaitingInLine", err, err)
 	}
-	if elapsed > 4*time.Second {
-		t.Fatalf("cleanupAfterInstallFailure blocked for %s, expected ~2s ctx deadline", elapsed)
+	// Single-shot semantics: must return ~instantly, not block on a poll loop.
+	if elapsed > 500*time.Millisecond {
+		t.Fatalf("cleanupAfterInstallFailure blocked for %s, expected <500ms single-shot return", elapsed)
 	}
 }
 
@@ -171,24 +180,29 @@ func TestWaitForNamespaceGone_FastPathNoTick(t *testing.T) {
 	}
 }
 
-// waitForNamespaceGone returns when the namespace is deleted mid-poll. Drive
-// this by deleting the NS from another goroutine after the helper has had a
-// chance to take at least one tick.
-func TestWaitForNamespaceGone_ResolvesAfterDelete(t *testing.T) {
+// waitForNamespaceGone is single-shot: it must return a RequeueError while
+// the namespace is still present, and nil once a subsequent call sees it
+// gone. We assert both halves by calling the helper twice with a Delete in
+// between, mirroring how the controller drives this via requeue.
+func TestWaitForNamespaceGone_RequeueThenResolveAfterDelete(t *testing.T) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demoapp-ns"}}
 	c := testutil.NewFakeClient(ns)
 
-	go func() {
-		time.Sleep(1500 * time.Millisecond)
-		_ = c.Delete(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demoapp-ns"}})
-	}()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := waitForNamespaceGone(ctx, c, "demoapp-ns"); err != nil {
-		t.Fatalf("waitForNamespaceGone returned %v, want nil after delete", err)
+	err := waitForNamespaceGone(context.Background(), c, "demoapp-ns")
+	if err == nil {
+		t.Fatalf("waitForNamespaceGone first call returned nil, want RequeueError while NS still present")
 	}
-	// Sanity check: the NS really is gone in the fake store.
+	if !IsWaitingInLine(err) {
+		t.Fatalf("waitForNamespaceGone returned %v (%T), want *WaitingInLine", err, err)
+	}
+
+	if err := c.Delete(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demoapp-ns"}}); err != nil {
+		t.Fatalf("delete namespace: %v", err)
+	}
+
+	if err := waitForNamespaceGone(context.Background(), c, "demoapp-ns"); err != nil {
+		t.Fatalf("waitForNamespaceGone after delete returned %v, want nil", err)
+	}
 	var got corev1.Namespace
 	if err := c.Get(context.Background(), types.NamespacedName{Name: "demoapp-ns"}, &got); !apierrors.IsNotFound(err) {
 		t.Fatalf("expected IsNotFound, got %v", err)

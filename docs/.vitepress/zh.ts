@@ -200,6 +200,7 @@ const side = {
     },
     {
       text: "Olares 应用",
+      link: "/zh/manual/olares/",
       items: [
         { text: "桌面", link: "/zh/manual/olares/desktop" },
         {
@@ -229,6 +230,10 @@ const side = {
               text: "基本文件操作",
               link: "/zh/manual/olares/files/add-edit-download",
             },
+            {
+              text: "压缩与解压缩文件",
+              link: "/zh/manual/olares/files/compress-extract-files",
+            },
             //{
             //   text: "同步与共享",
             //   link: "/zh/manual/larepass/sync-share",
@@ -246,8 +251,16 @@ const side = {
               link: "/zh/manual/olares/files/mount-SMB",
             },
             {
+              text: "挂载 NFS",
+              link: "/zh/manual/olares/files/mount-nfs",
+            },
+            {
               text: "挂载云存储",
               link: "/zh/manual/olares/files/mount-cloud-storage",
+            },
+            {
+              text: "使用公共目录管理共享 AI 模型",
+              link: "/zh/manual/olares/files/files-common",
             },
           ],
         },
@@ -402,22 +415,15 @@ const side = {
                   text: "设置 hosts 文件",
                   link: "/zh/manual/olares/settings/set-up-hosts",
                 },
+                {
+                  text: "管理 Overlay Gateway",
+                  link: "/zh/manual/olares/settings/overlay-gateway",
+                },
               ],
             },
             {
-              text: "管理 GPU",
-              collapsed: true,
+              text: "管理 AI 算力",
               link: "/zh/manual/olares/settings/gpu-resource",
-              items: [
-                {
-                  text: "管理单 GPU 资源",
-                  link: "/zh/manual/olares/settings/single-gpu",
-                },
-                {
-                  text: "管理多 GPU 资源",
-                  link: "/zh/manual/olares/settings/multi-gpu",
-                },
-              ],
             },
             { text: "视频设置", link: "/zh/manual/olares/settings/video" },
             { text: "文件搜索", link: "/zh/manual/olares/settings/search" },
@@ -578,7 +584,10 @@ const side = {
 export const zh = defineConfig({
   lang: "zh",
   themeConfig: {
-    //logo: "/icon.png",
+    editLink: {
+      pattern: "https://github.com/beclab/Olares/edit/main/docs/:path",
+      text: "在 GitHub 上编辑此页面",
+    },
     socialLinks: [{ icon: "github", link: "https://github.com/beclab/olares" }],
 
     nav: [

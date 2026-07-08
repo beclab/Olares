@@ -7,6 +7,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	appfake "github.com/beclab/api/pkg/generated/clientset/versioned/fake"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,6 +43,16 @@ func newConflictHelper(t *testing.T, app string, ams ...*appv1alpha1.Application
 		objs = append(objs, am)
 	}
 	client := appfake.NewSimpleClientset(objs...)
+
+	// checkAppNameConflict obtains its clientset via the package-level
+	// getAppClient seam (which in production wraps utils.GetClient and
+	// requires in-cluster / KUBECONFIG access). Swap it for one that
+	// hands back the fake constructed above, and restore on teardown so
+	// later tests in the suite still see the production wiring.
+	origGetAppClient := getAppClient
+	getAppClient = func() (versioned.Interface, error) { return client, nil }
+	t.Cleanup(func() { getAppClient = origGetAppClient })
+
 	return &installHandlerHelper{
 		app:    app,
 		owner:  "alice",

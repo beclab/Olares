@@ -7,13 +7,13 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 
 你可以通过设置中的**我的 Olares** 功能管理 Olares 账户、连接设备和安全策略。点击**设置**页面左上角的个人头像即可进入**我的 Olares**。
 
-![My Olares](/images/zh/manual/olares/my-olares.png#bordered)
+![My Olares](/images/zh/manual/olares/my-olares-1.12.6.png#bordered)
 
-## 我的硬件
+## 硬件
 
 查看和管理 Olares 硬件。你可以查看**型号**、**设备状态**、**设备标识符**、 **CPU** 和 **GPU** 信息。
 
-![我的硬件](/images/zh/manual/olares/my-hardware.png#bordered)
+![硬件](/images/zh/manual/olares/my-hardware-1.12.6.png#bordered)
 
 可执行的操作包括：
 
@@ -23,8 +23,8 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 * **重置 SSH 密码** <Badge type="tip" text="Olares One 专有" />
 
   修改默认 SSH 密码以避免非授权的远程访问，步骤如下：
-   1. 在**我的硬件**页面点击**重置 SSH 密码**。
-   2. 在弹窗中输入新的 SSH 密码（需满足强度要求），点击 **好的**。
+   1. 在**硬件**页面点击**重置 SSH 密码**。
+   2. 在弹窗中输入新的 SSH 密码（需满足强度要求），点击**重置**。
    3. 使用 LarePass 应用扫描页面上的二维码。
    4. 在 LarePass 中点击**确认**以完成重置。
 
@@ -33,15 +33,20 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
   切换 Olares One 的性能档位，支持以下两种模式：
   - **静音模式**：限制 CPU/GPU 功耗，满足日常负载并保持安静。
   - **性能模式**：释放 CPU/GPU 最大性能，适合 AI 推理、游戏等高负载场景。
+
+* **限制 CPU 频率** <Badge type="tip" text="Olares One 专有" /> <br>
+开启后，将 CPU 频率上限从 5.4 GHz 降至 5.0 GHz。关闭后恢复原有最高频率。
+
+* **自动开机** <Badge type="tip" text="Olares One 专有" />：开启后，设备在接通电源或停电后恢复供电时会自动开机。
+
+  :::info
+  需要 Olares OS 1.12.6 或更高版本，以及 EC 固件 1.03 或更高版本。如果任一条件未满足，开关会显示但无法操作。
+  :::
   
 
 ## Olares Space
 在 Olares Space 中查看你的订阅计划详情和使用情况，包括反向代理方案、
 备份、流量消耗等。首次使用时需按提示登录 Olares Space。
-
-## 支持与反馈
-
-获取帮助资源，或向 Olares 团队提交反馈，改进系统使用体验。
 
 ## 更改密码
 
@@ -50,24 +55,25 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 ## 设置网络访问策略
 
 定义 Olares 系统级身份验证策略，控制用户如何登录到你的 Olares。
-
-- **登录安全要求**：设置登录 Olares 的身份验证方式。
   * **双因素**（推荐）：需要你的登录密码和 LarePass 生成的两步验证码，安全性更高。
   * **单因素**：仅需要你的登录密码。
 
-## 当前版本
+## Olares OS 版本
 
-查看当前 Olares 系统的版本。如果提示有可用的新版本，请转至 LarePass 手机客户端**设置** > **Olares 管理**页面下完成系统升级。详细步骤请参考[升级 Olares](../../larepass/manage-olares.md#升级-olares)。
+查看当前 Olares 系统的版本。如果提示有可用的新版本，可转至 LarePass 手机客户端**设置** > **Olares 管理**页面下完成系统升级。详细步骤请参考[升级 Olares](../../larepass/manage-olares.md#升级-olares)。
 
-## 查看登录历史
+## 沟通与反馈
 
-查看所有登录 Olares 账户的详细记录。每个登录条目包含登录时间、状态、源 IP 地址和登录原因等信息。
+获取帮助资源，或向 Olares 团队提交反馈，改进系统使用体验。
 
-## 设备管理
+## 致谢
 
-**设备**部分允许你查看和管理所有已授权访问 Olares 的设备。每个设备条目都提供有关连接设备的详细信息，例如其名称、操作系统、连接方法、设备 IP 地址和上次连接时间等。
+查看 Olares 使用的开源组件许可证及相关致谢信息。
 
-可执行的操作包括：
+## 设备
 
-* **查看设备信息**：点击特定设备以查看其详细信息，包括软件类型、上次活跃时间、位置和令牌详情等。
-* **注销设备**：远程断开设备与 Olares 的连接。该设备需再次登录才能访问 Olares。
+查看已授权访问 Olares 的设备。每个设备条目会显示设备名称和客户端类型。点击某台设备可查看更多详情或管理其访问权限。
+
+## 退出登录
+
+点击**退出登录**可退出当前 Olares 会话。退出后，如需从该设备继续访问 Olares，需要重新登录。

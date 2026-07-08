@@ -148,11 +148,13 @@ spec:
           name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.58
+        image: beclab/market-backend:v0.6.73
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
         env:
+          - name: OLARES_VERSION
+            value: "1.12.6"
           - name: APP_SOTRE_SERVICE_SERVICE_PORT
             value: "443"
           - name: APP_SERVICE_SERVICE_HOST

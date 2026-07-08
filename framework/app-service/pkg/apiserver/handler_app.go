@@ -357,6 +357,7 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 				Settings: map[string]string{
 					"title":         am.Annotations[constants.ApplicationTitleLabel],
 					"market_source": am.Annotations[constants.AppMarketSourceKey],
+					"version":       am.Annotations[api.AppVersionKey],
 				},
 			},
 			Status: v1alpha1.ApplicationStatus{
@@ -392,7 +393,26 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			continue
 		}
 		if v, ok := appsMap[a.Name]; ok {
+			// title and market_source come from AM annotations and may not
+			// be present in the Application CR's Settings. Fall back to the
+			// synthesized values so they are not lost on overwrite.
+			title := v.Spec.Settings["title"]
+			marketSource := v.Spec.Settings["market_source"]
+			version := v.Spec.Settings["version"]
+
 			v.Spec.Settings = a.Spec.Settings
+			if v.Spec.Settings == nil {
+				v.Spec.Settings = map[string]string{}
+			}
+			if _, ok := v.Spec.Settings["title"]; !ok {
+				v.Spec.Settings["title"] = title
+			}
+			if _, ok := v.Spec.Settings["market_source"]; !ok {
+				v.Spec.Settings["market_source"] = marketSource
+			}
+			if v.Spec.Settings["version"] != version && version != "" {
+				v.Spec.Settings["version"] = version
+			}
 			v.Spec.Entrances = a.Spec.Entrances
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
@@ -621,6 +641,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 				Settings: map[string]string{
 					"title":         am.Annotations[constants.ApplicationTitleLabel],
 					"market_source": am.Annotations[constants.AppMarketSourceKey],
+					"version":       am.Annotations[api.AppVersionKey],
 				},
 			},
 			Status: v1alpha1.ApplicationStatus{
@@ -650,23 +671,29 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			continue
 		}
 		if v, ok := appsMap[a.Name]; ok {
+			// title and market_source come from AM annotations and may not
+			// be present in the Application CR's Settings. Fall back to the
+			// synthesized values so they are not lost on overwrite.
+			title := v.Spec.Settings["title"]
+			marketSource := v.Spec.Settings["market_source"]
+			version := v.Spec.Settings["version"]
 			v.Spec.Settings = a.Spec.Settings
+			if v.Spec.Settings == nil {
+				v.Spec.Settings = map[string]string{}
+			}
+			if _, ok := v.Spec.Settings["title"]; !ok {
+				v.Spec.Settings["title"] = title
+			}
+			if _, ok := v.Spec.Settings["market_source"]; !ok {
+				v.Spec.Settings["market_source"] = marketSource
+			}
+			if v.Spec.Settings["version"] != version && version != "" {
+				v.Spec.Settings["version"] = version
+			}
 			v.Spec.Entrances = a.Spec.Entrances
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}
-	}
-
-	// allUsers is needed only when at least one v3 / shared app is present;
-	// computed lazily so the common (no-shared) path stays free.
-	var allUsers []string
-	var allUsersErr error
-	loadAllUsers := func() ([]string, error) {
-		if allUsers != nil || allUsersErr != nil {
-			return allUsers, allUsersErr
-		}
-		allUsers, allUsersErr = h.getAllUser()
-		return allUsers, allUsersErr
 	}
 
 	for _, app := range appsMap {
@@ -687,30 +714,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		if v, ok := appsEntranceMap[app.Name]; ok {
 			app.Status.EntranceStatuses = v.Status.EntranceStatuses
 		}
-		// Shared apps are cluster-wide singletons. Fan out one entry per
-		// iam user so consumers grouping by Owner see them under every
-		// account (matching the v1 per-user-AM shape). Every user may
-		// open the app; lifecycle is admin-only. v3 per-user apps fall
-		// through with the regular owner-scoped layout.
-		//
-		// For each fanned-out copy, overlay Spec.UserSettings[u] on top
-		// of Spec.Settings / Spec.Entrances so consumers see that user's
-		// effective customDomain / policy / authLevel.
-		if appcfg.IsShared(app) {
-			users, uErr := loadAllUsers()
-			if uErr != nil {
-				api.HandleError(resp, req, uErr)
-				return
-			}
-			for _, u := range users {
-				cp := *app
-				cp.Spec.Owner = u
-				cp.Spec.Settings = app.EffectiveSettings(u)
-				cp.Spec.Entrances = app.EffectiveEntrances(u)
-				filteredApps = append(filteredApps, cp)
-			}
-			continue
-		}
+
 		filteredApps = append(filteredApps, *app)
 	}
 

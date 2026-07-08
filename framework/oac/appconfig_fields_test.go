@@ -67,6 +67,13 @@ func TestLoadAppConfiguration_PreservesAllYAMLFields(t *testing.T) {
 
 	var missing, mismatched []string
 	for path, want := range inputLeaves {
+		// metadata.appid is intentionally not preserved: LoadAppConfiguration
+		// normalizes it to md5(metadata.name)[:8] to align with the
+		// runtime-derived id (framework/app-service/pkg/appcfg.GetAppID), so
+		// whatever the YAML wrote there is discarded.
+		if path == "metadata.appid" {
+			continue
+		}
 		got, ok := lookupTestYAMLPath(outputNorm, path)
 		if !ok {
 			missing = append(missing, path)

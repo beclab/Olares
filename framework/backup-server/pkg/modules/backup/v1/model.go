@@ -592,13 +592,23 @@ func parseResponseRestoreDetailFromBackupUrl(restore *sysv1.Restore) (*ResponseR
 		subPath = typeMap["subPath"].(string)
 	}
 
+	var subPathTimestamp int64
+	if v, ok := typeMap["subPathTimestamp"].(float64); ok {
+		subPathTimestamp = int64(v)
+	}
+
+	restoreFullPath := filepath.Join(restorePath, subPath)
+	if backupType == constant.BackupTypeFile {
+		restoreFullPath = filepath.Join(restorePath, fmt.Sprintf("%s-%d", subPath, subPathTimestamp)) + "/"
+	}
+
 	result = &ResponseRestoreDetail{
 		BackupName:        backupName,
 		BackupPath:        backupPath,
 		BackupType:        backupType,
 		BackupAppTypeName: backupAppTypeName,
 		SnapshotTime:      util.ParseToInt64(snapshotTime),
-		RestorePath:       filepath.Join(restorePath, subPath),
+		RestorePath:       restoreFullPath,
 		Progress:          restore.Spec.Progress,
 		Status:            *restore.Spec.Phase,
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	manifestsysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 
@@ -241,6 +242,16 @@ func (c *ApplicationConfig) GetEntrances(ctx context.Context) (map[string]Entran
 
 func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]Entrance, error) {
 	app := &Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				constants.AppSharedLabel: func() string {
+					if c.IsShared() {
+						return "true"
+					}
+					return "false"
+				}(),
+			},
+		},
 		Spec: ApplicationSpec{
 			Appid:           c.AppID,
 			Owner:           c.OwnerName,

@@ -238,22 +238,38 @@ func buildNodeResource(node *corev1.Node) Node {
 
 // nonHAMIDevice builds the single synthetic device used for unified-memory
 // modes (cpu, apple-m, amd, intel, moore-soc, …): the whole node is one
-// schedulable unit drawing from system memory. cpu is memory-shared; every
-// other such mode is exclusive (the Apple-Silicon path).
+// schedulable unit drawing from system memory. The support type starts at the
+// mode's default (defaultSupportType) but, for the modes that can switch (intel
+// / amd / moore-soc), honors the per-device share-mode annotation written by
+// SwitchDeviceMode so a switch to Exclusive survives a rebuild of this view.
+// cpu / apple-m / discrete-GPU modes only have a single available support type,
+// so the annotation (if any) is clamped back to their default.
 func nonHAMIDevice(node *corev1.Node, mode string, totalMemory int64) Device {
-	supportType := SupportTypeExclusive
-	if mode == utils.CPUType {
-		supportType = SupportTypeMemoryShared
-	}
+	deviceID := fmt.Sprintf("%s-%s-0", node.Name, mode)
 	return Device{
-		ID:                    fmt.Sprintf("%s-%s-0", node.Name, mode),
+		ID:                    deviceID,
 		NodeName:              node.Name,
 		Mode:                  mode,
 		Memory:                totalMemory * 75 / 100,
 		Health:                nodeHealth(node),
-		SupportType:           supportType,
+		SupportType:           nonHAMISupportType(mode, node.Annotations[shareModeAnnotationKey(deviceID)]),
 		AvailableSupportTypes: AvailableSupportTypes(mode),
 	}
+}
+
+// nonHAMISupportType resolves a non-HAMI device's support type from its
+// share-mode annotation: honor the annotation only when it names a support type
+// the mode actually allows, otherwise fall back to the mode's default. This
+// keeps device.SupportType always within AvailableSupportTypes(mode), so a mode
+// with a single available type (cpu / apple-m / discrete GPUs) stays pinned to
+// it even if a stale annotation is left behind.
+func nonHAMISupportType(mode, shareMode string) string {
+	for _, supportType := range AvailableSupportTypes(mode) {
+		if code, _ := supportTypeToShareMode(supportType); code == shareMode {
+			return supportType
+		}
+	}
+	return defaultSupportType(mode)
 }
 
 func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
@@ -303,6 +319,9 @@ func boolHealth(healthy bool) string {
 	return deviceHealthNo
 }
 
+// shareModeToSupportType maps a device's HAMI share-mode annotation to a
+// support type. An unset / unrecognized annotation falls back to the mode's
+// default (defaultSupportType): nvidia → TimeSlice, nvidia-gb10 → MemorySlice.
 func shareModeToSupportType(gpuType, shareMode string) string {
 	switch shareMode {
 	case "0":
@@ -310,10 +329,7 @@ func shareModeToSupportType(gpuType, shareMode string) string {
 	case "1":
 		return SupportTypeMemorySlice
 	default:
-		if gpuType == utils.GB10ChipType {
-			return SupportTypeMemorySlice
-		}
-		return SupportTypeTimeSlice
+		return defaultSupportType(gpuType)
 	}
 }
 
@@ -334,17 +350,34 @@ func shareModeAnnotationKey(deviceID string) string {
 	return fmt.Sprintf("sharemode.gpu.bytetrade.io/%s", deviceID)
 }
 
+// AvailableSupportTypes lists the support types a device of the given mode may
+// take. The first entry is the mode's default — the one assigned when no share
+// mode is configured (see defaultSupportType). nvidia can switch among all
+// three; nvidia-gb10 defaults to MemorySlice but may switch to Exclusive; the
+// unified-memory integrated accelerators (intel / amd / moore-soc) default to
+// MemorySlice but may also switch to Exclusive; cpu is MemorySlice-only (it has
+// no dedicated device to monopolize); apple-m and any discrete-GPU (intel-gpu /
+// amd-gpu) or future mode are Exclusive-only for now.
 func AvailableSupportTypes(mode string) []string {
 	switch mode {
 	case utils.NvidiaCardType:
 		return []string{SupportTypeTimeSlice, SupportTypeMemorySlice, SupportTypeExclusive}
-	case utils.GB10ChipType:
+	case utils.GB10ChipType, utils.IntelType, utils.AMDType, utils.MooreSocType:
 		return []string{SupportTypeMemorySlice, SupportTypeExclusive}
 	case utils.CPUType:
-		return []string{SupportTypeMemoryShared}
+		return []string{SupportTypeMemorySlice}
 	default:
 		return []string{SupportTypeExclusive}
 	}
+}
+
+// defaultSupportType is the support type a device of the given mode receives
+// when its share mode has not been explicitly configured. It is, by contract,
+// the first entry of AvailableSupportTypes(mode): nvidia → TimeSlice,
+// nvidia-gb10 and the unified-memory modes (cpu / intel / amd / moore-soc) →
+// MemorySlice, apple-m and any discrete-GPU / future mode → Exclusive.
+func defaultSupportType(mode string) string {
+	return AvailableSupportTypes(mode)[0]
 }
 
 func attachBindings(nodes []Node, allocations []Allocation) {
@@ -360,4 +393,45 @@ func attachBindings(nodes []Node, allocations []Allocation) {
 			}
 		}
 	}
+}
+
+// AttachBoundAppSpecs enriches every device binding with the bound app's
+// currently-selected resource-mode requirement (Allocation.Spec), so callers
+// listing compute resources can see each app's require/limit and multi-card /
+// multi-node support without a second round of lookups. The requirement is
+// resolved once per unique (appName, owner) pair from the app's
+// ApplicationManager config and shared across that app's bindings. If any
+// bound app's config can't be loaded or its selected mode can't be resolved,
+// the whole listing fails with an error.
+func AttachBoundAppSpecs(ctx context.Context, c client.Client, nodes []Node) error {
+	specs := make(map[string]*Requirement)
+	resolve := func(appName, owner string) (*Requirement, error) {
+		key := owner + "/" + appName
+		if spec, ok := specs[key]; ok {
+			return spec, nil
+		}
+		cfg, err := loadAppConfigForOwner(ctx, c, appName, owner)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load app config for %s/%s: %w", owner, appName, err)
+		}
+		req, ok := SelectedRequirement(cfg)
+		if !ok {
+			return nil, fmt.Errorf("failed to resolve selected resource mode for %s/%s", owner, appName)
+		}
+		specs[key] = &req
+		return specs[key], nil
+	}
+	for ni := range nodes {
+		for di := range nodes[ni].Devices {
+			bindings := nodes[ni].Devices[di].Bindings
+			for bi := range bindings {
+				spec, err := resolve(bindings[bi].AppName, bindings[bi].Owner)
+				if err != nil {
+					return err
+				}
+				bindings[bi].Spec = spec
+			}
+		}
+	}
+	return nil
 }

@@ -119,7 +119,7 @@ func (h *Handler) updateDeviceSupportType(req *restful.Request, resp *restful.Re
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
-	if !compute.IsHAMIMode(device.Mode) {
+	if len(device.AvailableSupportTypes) <= 1 {
 		api.HandleBadRequest(resp, req, fmt.Errorf("device mode switching is not supported for gpu type %s", device.Mode))
 		return
 	}
@@ -311,6 +311,10 @@ func (h *Handler) commitStopForBoundApps(ctx context.Context, apps []stoppableAp
 func (h *Handler) listComputeResources(req *restful.Request, resp *restful.Response) {
 	nodes, err := compute.FetchNodeComputeAllocations(req.Request.Context(), h.ctrlClient)
 	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	if err := compute.AttachBoundAppSpecs(req.Request.Context(), h.ctrlClient, nodes); err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}

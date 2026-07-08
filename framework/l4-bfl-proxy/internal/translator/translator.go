@@ -47,6 +47,7 @@ var nodeLocationPrefixes = []string{
 	"/api/permission/cache/",
 	"/api/permission/external/",
 	"/api/task/",
+	"/api/archive/",
 }
 
 var masterLocationPrefixes = []string{
@@ -543,6 +544,8 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			Language:              user.Language,
 			UserZone:              zone,
 			UserName:              user.Name,
+			// Only the (files,settings apps) vhost needs Envoy-level CORS
+			IsFileserver: fileserverPatchApps[prefix],
 		}
 
 		var routes []*ir.HTTPRouteIR

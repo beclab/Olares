@@ -2,7 +2,7 @@
 outline: [2, 3]
 ---
 
-# FAQ
+# Olares FAQ
 
 ## What is the relationship with WorldCoin?
 

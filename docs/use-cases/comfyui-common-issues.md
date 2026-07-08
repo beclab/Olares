@@ -6,13 +6,50 @@ head:
     - name: keywords
       content: Olares, ComfyUI, troubleshooting, common issues, self-hosted
 ---
-# Common issues
+# ComfyUI common issues
 
 Use this page to identify and resolve common issues with ComfyUI on Olares.
 
 :::tip Need more help?
 If you are encountering an issue that is not listed here, refer to [Troubleshooting flow](./comfyui-launcher#troubleshooting-flow).
 :::
+
+## How to migrate to the new ComfyUI after upgrading to Olares 1.12.6
+
+Use this section if you upgraded to Olares 1.12.6 and already had ComfyUI Shared installed. If you are installing ComfyUI for the first time on Olares 1.12.6 or later, install ComfyUI directly from Market.
+
+Olares 1.12.6 updates the shared app architecture. The old ComfyUI Shared app can still run after the upgrade, but it cannot receive future updates. To keep ComfyUI up to date, uninstall the old app without deleting local data, then install the new ComfyUI app from Market.
+
+:::warning
+When uninstalling the old app, do not select **Also remove all local data**. Selecting this option may delete your models, plugins, workflows, and input/output files.
+:::
+
+### Migration steps
+
+1. Open Market and go to **My Olares**.
+2. Find ComfyUI Shared, click the dropdown arrow next to its operation button, and select **Uninstall**.
+3. In the **Uninstall** window, leave **Also remove all local data** unselected, then click **Confirm**.
+4. In Market, search for "ComfyUI" and click **Install**.
+5. On the app details page, check **Information** > **Compatibility**. If it shows `Olares >=1.12.6-0`, you are installing the new version.
+6. After installation, open ComfyUI and check that your models, plugins, workflows, and input/output files are available.
+
+### What gets migrated
+
+After the new ComfyUI is installed, data is migrated automatically as follows:
+
+| Data type | Old location | New location |
+|:---|:---|:---|
+| ComfyUI core (plugins, workflows, etc.) | `External/<your_hostname>/ai/comfyui/` | `/Data/comfyuisharev3/comfyui/` |
+| Models | `External/<your_hostname>/ai/model/` | `Common/comfyui/model/` |
+| Output files | `External/<your_hostname>/ai/output/comfyui/` | `Common/comfyui/output/` |
+| Input files | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
+
+:::warning
+After migration, upload new models and input files to the new locations under `Common/comfyui/`. The new ComfyUI no longer uses `External/<your_hostname>/ai/` as its active file location.
+:::
+
+The migration runs each time ComfyUI restarts. If files are later added to the old locations, ComfyUI will move them to the new locations on the next restart and delete the originals from `External/<your_hostname>/ai/`. To avoid confusion, upload new files directly to the new locations.
+
 
 ## ComfyUI cannot start
 
@@ -21,9 +58,9 @@ ComfyUI fails to start, stops unexpectedly, or behaves abnormally.
 This is usually caused by insufficient resources or incorrect GPU allocation. To resolve this:
 
 1. Check your system resources. If your CPU or memory usage is maxed out, stop other resource-intensive apps.
-2. If system resources look fine, go to **Settings** > **GPU** and check your GPU mode:
+2. If system resources look fine, go to **Settings** > **Accelerator** and check your GPU mode:
    - If you are using **Memory slicing**, make sure ComfyUI is bound to the GPU and has enough VRAM allocated.
-   - If you are using **App exclusive**, make sure the exclusive app is set to ComfyUI.
+   - If you are using **Exclusive**, make sure the exclusive app is set to ComfyUI.
 3. Wait a moment, then try to launch ComfyUI again.
 
 ## Launcher log shows errors
@@ -90,9 +127,23 @@ If the URL is not shown in the template notes or dialog, inspect the page in you
 
 When a workflow requires more VRAM than your graphics card has, the system places heavy load on a single CPU core to swap data, driving the temperature high.
 
-The long-term fix is to reduce the VRAM footprint of your workflow (for example, lower resolution, use a smaller model, or enable model offloading). As a temporary workaround, you can lower the maximum CPU frequency.
+The long-term fix is to reduce the VRAM footprint of your workflow (for example, lower resolution, use a smaller model, or enable model offloading). As a temporary workaround, limit the maximum CPU frequency while the workload is running.
 
-Olares One ships with a CPU whose default maximum frequency is 5.4 GHz. The steps below lower it to 5.0 GHz during the workload, then restore it.
+### Olares OS 1.12.6 or later
+
+Olares One ships with a CPU whose default maximum frequency is 5.4 GHz. Use the **Limit CPU frequency** switch to lower it to 5.0 GHz during the workload, then turn the switch off when the workload completes.
+
+1. Open **Settings**.
+2. Select your avatar in the top-left corner to open **My Olares**.
+3. Under **My hardware**, turn on **Limit CPU frequency**.
+4. Run your task in ComfyUI.
+5. After the workload completes, turn off **Limit CPU frequency**.
+
+For more details, see [Limit CPU frequency](/manual/olares/settings/my-olares#limit-cpu-frequency).
+
+### Olares OS 1.12.5 or earlier
+
+If your device is running Olares OS 1.12.5 or earlier, use terminal commands to lower the maximum CPU frequency during the workload, then restore it afterward.
 
 1. Open the Control Hub app.
 2. In the left sidebar, under **Terminal**, click **Olares**.
