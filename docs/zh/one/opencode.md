@@ -26,9 +26,8 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
 
 ## 前提条件
 
-**系统要求**
+**系统**
 - Olares OS 已升级至 v1.12.6。
-- 如果你之前安装过 OpenCode，请在升级 Olares OS 后将其卸载，然后重新安装。
 
 **硬件** <br>
 - Olares One 连接到稳定的网络。
@@ -46,11 +45,6 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
 
 2. 点击 **Get**，然后点击 **Install**。
 3. 选择 **GPU** 作为硬件加速器，然后点击 **Confirm**。安装开始。
-
-   :::tip 首次部署耗时较长
-   首次部署可能需要较长时间，因为需要下载模型权重。具体时间取决于模型大小和网络速度。
-   :::
-
 4. 安装完成后，点击 **Open**。模型控制台会自动打开，模型也会自动开始下载。
 
    :::tip 首次下载耗时较长
@@ -72,22 +66,22 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
 
 ## 步骤 2：安装 OpenCode
 
+:::tip
+如果你之前安装过 OpenCode，请在 Olares OS 升级完成后，将 OpenCode 升级到最新版本。
+:::
+
 1. 打开 Market，搜索 "OpenCode"。
 
    ![安装 OpenCode](/images/manual/use-cases/opencode.png#bordered)
 
-2. 点击 **Get**，然后点击 **Install**。安装完成后，启动台上会出现两个快捷方式：
+2. 点击搜索结果中的 OpenCode 应用卡片，打开应用详情页。
+3. 在 **Information** 面板中，查看 **Compatibility**。如果显示 **Olares >=1.12.6-0**，说明这是新版本。
+4. 点击 **Get**，然后点击 **Install**。安装完成后，启动台上会出现两个快捷方式：
 
    - **OpenCode**：用于与智能体对话和管理项目的图形化 Web 界面。
    - **OpenCode Terminal**：用于运行 CLI 命令或启动 TUI（Terminal User Interface）的终端。
 
-3. 打开 **OpenCode**。
-
-   首次启动时，OpenCode 会下载依赖包，根据网络情况可能需要 10 到 30 分钟。
-
-   :::tip 查看初始化进度
-   如需查看下载进度，可打开 Control Hub，选择 OpenCode 项目，进入 **Deployments** > **opencode**，点击运行中的 pod，然后查看 **init-packages** 容器的日志。
-   :::
+5. 点击 **OpenCode** 快捷方式。
 
 ## 步骤 3：将 OpenCode 连接到模型
 
@@ -121,7 +115,19 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
 
    ![OpenCode 终端面板](/images/one/opencode-terminal.png#bordered)
 
-2. 运行以下命令登录你的 Olares 账号。将 `<你的-olares-id>` 替换为你的真实 Olares ID。
+2. 运行以下命令，确认 `olares-cli` 及其技能已正确安装并启用：
+
+   ```bash
+   olares-cli -v
+   ```
+
+   示例输出：
+
+   ```bash
+   olares-cli version >=1.12.6
+   ```
+
+3. 运行以下命令登录你的 Olares 账号。将 `<你的-olares-id>` 替换为你的真实 Olares ID。
 
    ```bash
    olares-cli profile login --olares-id <你的-olares-id>
@@ -133,9 +139,9 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
    olares-cli profile login --olares-id laresprime@olares.com
    ```
 
-3. 按提示输入 Olares 登录密码。输入时密码不会显示。
-
-4. 运行以下命令验证 profile 已创建并处于登录状态：
+4. 按提示输入 Olares 登录密码。输入时密码不会显示。
+5. 如果你的 Olares 账号启用了两步验证，CLI 会提示你输入该 Olares ID 的两步验证码。从 LarePass 输入 6 位验证码，然后按 **Enter**。
+6. 运行以下命令验证 profile 已创建并处于登录状态：
 
    ```bash
    olares-cli profile list
@@ -157,6 +163,14 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
 先问一个简单问题，确认 Olares 技能可用：
 
 ```text
+List your Olares skills.
+```
+
+![在 OpenCode 中提问](/images/one/onboard-scenario-question-2.png#bordered)
+
+或者询问系统状态：
+
+```text
 Show me the CPU and memory usage of my Olares device.
 ```
 
@@ -172,19 +186,7 @@ Install Chromium from the Olares Market and tell me when it's ready.
 
 ![在 OpenCode 中使用 Olares skill 安装应用](/images/one/onboard-scenario-install.png#bordered)
 
-### 部署模型
-
-让 OpenCode 使用新的引擎基座应用部署指定模型：
-
-```text
-Deploy qwen3.5:0.8b on this Olares device using the Ollama Engine Base.
-```
-
-![在 OpenCode 中使用 Olares skill 部署模型](/images/one/onboard-scenario-model-deployment.png#bordered)
-
-模型部署完成后，模型应用会出现在启动台上。打开它即可直接进入模型控制台。
-
-### 移植应用到 Olares
+### 从 GitHub 仓库部署应用
 
 进阶任务：让 OpenCode 上传并部署一个 GitHub 仓库中的项目：
 
