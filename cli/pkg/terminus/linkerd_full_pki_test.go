@@ -2,6 +2,7 @@ package terminus
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -152,7 +153,7 @@ func TestRestartLinkerdControlPlaneAfterPKISync_restartsAllDeployments(t *testin
 		}
 	}
 
-	if err := restartLinkerdControlPlaneAfterPKISync(ctx, c, ns); err != nil {
+	if err := restartLinkerdControlPlaneAfterPKISync(ctx, c, ns, 1); err != nil {
 		t.Fatalf("restart control plane: %v", err)
 	}
 
@@ -166,6 +167,9 @@ func TestRestartLinkerdControlPlaneAfterPKISync_restartsAllDeployments(t *testin
 		if got == "" {
 			t.Fatalf("deployment %s missing restartedAt annotation", name)
 		}
+		if dep.Spec.Template.Annotations[linkerdControlPlaneSyncGenerationAnnotation] != "1" {
+			t.Fatalf("deployment %s missing sync generation annotation", name)
+		}
 		if restartedAt == "" {
 			restartedAt = got
 			continue
@@ -173,5 +177,93 @@ func TestRestartLinkerdControlPlaneAfterPKISync_restartsAllDeployments(t *testin
 		if got != restartedAt {
 			t.Fatalf("deployment %s restartedAt %q != %q", name, got, restartedAt)
 		}
+	}
+}
+
+func TestLinkerdControlPlaneRestartRequired_pendingFlag(t *testing.T) {
+	mat, err := generateInitialLinkerdPKIMaterial()
+	if err != nil {
+		t.Fatalf("generate pki material: %v", err)
+	}
+	meta, err := buildLinkerdPKIMetadata(mat, 1)
+	if err != nil {
+		t.Fatalf("build metadata: %v", err)
+	}
+	meta.ControlPlaneSyncGeneration = 2
+	meta.ControlPlaneRestartPending = true
+	metaBytes, err := json.Marshal(meta)
+	if err != nil {
+		t.Fatalf("marshal metadata: %v", err)
+	}
+
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	_ = appsv1.AddToScheme(scheme)
+	const ns = "linkerd"
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: linkerdPKISecretName, Namespace: ns},
+			Data: map[string][]byte{linkerdPKIMetadataKey: metaBytes},
+		}).Build()
+	ctx := context.Background()
+
+	required, syncGen, err := linkerdControlPlaneRestartRequired(ctx, c, ns)
+	if err != nil {
+		t.Fatalf("restart required: %v", err)
+	}
+	if !required || syncGen != 2 {
+		t.Fatalf("expected restart required with generation 2, got required=%v gen=%d", required, syncGen)
+	}
+}
+
+func TestEnsureLinkerdControlPlaneRestartedAfterPKISync_clearsPending(t *testing.T) {
+	mat, err := generateInitialLinkerdPKIMaterial()
+	if err != nil {
+		t.Fatalf("generate pki material: %v", err)
+	}
+	meta, err := buildLinkerdPKIMetadata(mat, 1)
+	if err != nil {
+		t.Fatalf("build metadata: %v", err)
+	}
+	meta.ControlPlaneSyncGeneration = 1
+	meta.ControlPlaneRestartPending = true
+	metaBytes, err := json.Marshal(meta)
+	if err != nil {
+		t.Fatalf("marshal metadata: %v", err)
+	}
+
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	_ = appsv1.AddToScheme(scheme)
+	const ns = "linkerd"
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
+	ctx := context.Background()
+	if err := c.Create(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: linkerdPKISecretName, Namespace: ns},
+		Data:       map[string][]byte{linkerdPKIMetadataKey: metaBytes},
+	}); err != nil {
+		t.Fatalf("create pki secret: %v", err)
+	}
+	for _, name := range linkerdControlPlaneDeployments {
+		if err := c.Create(ctx, &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+		}); err != nil {
+			t.Fatalf("create deployment %s: %v", name, err)
+		}
+	}
+
+	if err := ensureLinkerdControlPlaneRestartedAfterPKISync(ctx, c, ns); err != nil {
+		t.Fatalf("ensure restart: %v", err)
+	}
+
+	loaded, err := loadLinkerdPKIMetadata(ctx, c, ns)
+	if err != nil {
+		t.Fatalf("load metadata: %v", err)
+	}
+	if loaded.ControlPlaneRestartPending {
+		t.Fatal("expected restart pending cleared")
+	}
+	if loaded.ControlPlaneSyncGeneration != 1 {
+		t.Fatalf("expected sync generation preserved, got %d", loaded.ControlPlaneSyncGeneration)
 	}
 }

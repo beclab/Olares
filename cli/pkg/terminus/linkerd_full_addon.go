@@ -59,9 +59,29 @@ func (t *SyncLinkerdPKIAndIdentity) Execute(_ connector.Runtime) error {
 		return errors.Wrap(err, "sync linkerd identity secrets")
 	}
 	if changed {
-		if err := restartLinkerdControlPlaneAfterPKISync(ctx, k8sClient, linkerdNS); err != nil {
-			return errors.Wrap(err, "restart linkerd control plane after pki sync")
+		if err := markLinkerdControlPlaneRestartPending(ctx, k8sClient, linkerdNS); err != nil {
+			return errors.Wrap(err, "mark linkerd control plane restart pending")
 		}
+	}
+	if err := ensureLinkerdControlPlaneRestartedAfterPKISync(ctx, k8sClient, linkerdNS); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ensureLinkerdControlPlaneRestartedAfterPKISync(ctx context.Context, c client.Client, ns string) error {
+	required, syncGeneration, err := linkerdControlPlaneRestartRequired(ctx, c, ns)
+	if err != nil {
+		return errors.Wrap(err, "check linkerd control plane restart required")
+	}
+	if !required {
+		return nil
+	}
+	if err := restartLinkerdControlPlaneAfterPKISync(ctx, c, ns, syncGeneration); err != nil {
+		return errors.Wrap(err, "restart linkerd control plane after pki sync")
+	}
+	if err := clearLinkerdControlPlaneRestartPending(ctx, c, ns); err != nil {
+		return errors.Wrap(err, "clear linkerd control plane restart pending")
 	}
 	return nil
 }

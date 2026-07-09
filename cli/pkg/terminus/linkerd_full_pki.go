@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,6 +45,8 @@ const (
 
 	linkerdIdentitySecretsSyncTimeout  = 5 * time.Minute
 	linkerdIdentitySecretsPollInterval = 5 * time.Second
+
+	linkerdControlPlaneSyncGenerationAnnotation = "olares.linkerd/sync-generation"
 )
 
 type linkerdPKIMaterial struct {
@@ -57,6 +60,10 @@ type linkerdPKIMetadata struct {
 	CANotAfter     time.Time `json:"caNotAfter"`
 	IssuerNotAfter time.Time `json:"issuerNotAfter"`
 	Version        int       `json:"version"`
+	// ControlPlaneSyncGeneration bumps when identity issuer or trust roots are patched.
+	ControlPlaneSyncGeneration int `json:"controlPlaneSyncGeneration,omitempty"`
+	// ControlPlaneRestartPending stays true until all control-plane Deployments roll.
+	ControlPlaneRestartPending bool `json:"controlPlaneRestartPending,omitempty"`
 }
 
 func prepareLinkerdPKI(ctx context.Context, c client.Client, linkerdNS string) (*linkerdPKIMaterial, error) {
@@ -178,6 +185,15 @@ func writeLinkerdPKISecret(ctx context.Context, c client.Client, ns string, mat 
 	}
 	if err != nil {
 		return err
+	}
+	if prev, err := parseLinkerdPKIMetadata(existing.Data[linkerdPKIMetadataKey]); err == nil {
+		meta.ControlPlaneSyncGeneration = prev.ControlPlaneSyncGeneration
+		meta.ControlPlaneRestartPending = prev.ControlPlaneRestartPending
+		metaBytes, err = json.Marshal(meta)
+		if err != nil {
+			return err
+		}
+		desired.Data[linkerdPKIMetadataKey] = metaBytes
 	}
 	existing.Data = desired.Data
 	existing.Labels = desired.Labels
@@ -335,19 +351,119 @@ func patchLinkerdTrustRootsConfigMap(ctx context.Context, c client.Client, ns st
 	return true, c.Update(ctx, &cm)
 }
 
+func parseLinkerdPKIMetadata(raw []byte) (linkerdPKIMetadata, error) {
+	if len(raw) == 0 {
+		return linkerdPKIMetadata{}, nil
+	}
+	var meta linkerdPKIMetadata
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return linkerdPKIMetadata{}, errors.Wrap(err, "parse linkerd pki metadata")
+	}
+	return meta, nil
+}
+
+func loadLinkerdPKIMetadata(ctx context.Context, c client.Client, ns string) (linkerdPKIMetadata, error) {
+	var sec corev1.Secret
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: linkerdPKISecretName}, &sec); err != nil {
+		return linkerdPKIMetadata{}, err
+	}
+	return parseLinkerdPKIMetadata(sec.Data[linkerdPKIMetadataKey])
+}
+
+func updateLinkerdPKIMetadata(ctx context.Context, c client.Client, ns string, update func(*linkerdPKIMetadata) error) error {
+	var sec corev1.Secret
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: linkerdPKISecretName}, &sec); err != nil {
+		return err
+	}
+	meta, err := parseLinkerdPKIMetadata(sec.Data[linkerdPKIMetadataKey])
+	if err != nil {
+		return err
+	}
+	if update != nil {
+		if err := update(&meta); err != nil {
+			return err
+		}
+	}
+	metaBytes, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	if sec.Data == nil {
+		sec.Data = map[string][]byte{}
+	}
+	sec.Data[linkerdPKIMetadataKey] = metaBytes
+	return c.Update(ctx, &sec)
+}
+
+func markLinkerdControlPlaneRestartPending(ctx context.Context, c client.Client, ns string) error {
+	return updateLinkerdPKIMetadata(ctx, c, ns, func(meta *linkerdPKIMetadata) error {
+		meta.ControlPlaneSyncGeneration++
+		meta.ControlPlaneRestartPending = true
+		return nil
+	})
+}
+
+func clearLinkerdControlPlaneRestartPending(ctx context.Context, c client.Client, ns string) error {
+	return updateLinkerdPKIMetadata(ctx, c, ns, func(meta *linkerdPKIMetadata) error {
+		meta.ControlPlaneRestartPending = false
+		return nil
+	})
+}
+
+func linkerdControlPlaneRestartRequired(ctx context.Context, c client.Client, ns string) (bool, int, error) {
+	meta, err := loadLinkerdPKIMetadata(ctx, c, ns)
+	if err != nil {
+		return false, 0, err
+	}
+	if meta.ControlPlaneRestartPending {
+		return true, meta.ControlPlaneSyncGeneration, nil
+	}
+	if meta.ControlPlaneSyncGeneration == 0 {
+		return false, 0, nil
+	}
+	for _, name := range linkerdControlPlaneDeployments {
+		var dep appsv1.Deployment
+		if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, &dep); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, meta.ControlPlaneSyncGeneration, nil
+			}
+			return false, 0, err
+		}
+		if deploymentSyncGeneration(&dep) < meta.ControlPlaneSyncGeneration {
+			return true, meta.ControlPlaneSyncGeneration, nil
+		}
+	}
+	return false, meta.ControlPlaneSyncGeneration, nil
+}
+
+func deploymentSyncGeneration(dep *appsv1.Deployment) int {
+	if dep == nil || dep.Spec.Template.Annotations == nil {
+		return 0
+	}
+	raw := dep.Spec.Template.Annotations[linkerdControlPlaneSyncGenerationAnnotation]
+	if raw == "" {
+		return 0
+	}
+	gen, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0
+	}
+	return gen
+}
+
 // restartLinkerdControlPlaneAfterPKISync rolls all Linkerd control-plane Deployments
 // so sidecars re-read linkerd-identity-trust-roots after a CA or issuer change.
-func restartLinkerdControlPlaneAfterPKISync(ctx context.Context, c client.Client, ns string) error {
+func restartLinkerdControlPlaneAfterPKISync(ctx context.Context, c client.Client, ns string, syncGeneration int) error {
 	restartedAt := time.Now().UTC().Format(time.RFC3339)
 	for _, name := range linkerdControlPlaneDeployments {
-		if err := restartLinkerdDeployment(ctx, c, ns, name, restartedAt); err != nil {
+		if err := restartLinkerdDeployment(ctx, c, ns, name, restartedAt, syncGeneration); err != nil {
 			return errors.Wrapf(err, "restart %s", name)
 		}
 	}
 	return nil
 }
 
-func restartLinkerdDeployment(ctx context.Context, c client.Client, ns, name, restartedAt string) error {
+func restartLinkerdDeployment(ctx context.Context, c client.Client, ns, name, restartedAt string, syncGeneration int) error {
 	var dep appsv1.Deployment
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, &dep); err != nil {
 		return err
@@ -356,6 +472,7 @@ func restartLinkerdDeployment(ctx context.Context, c client.Client, ns, name, re
 		dep.Spec.Template.Annotations = map[string]string{}
 	}
 	dep.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = restartedAt
+	dep.Spec.Template.Annotations[linkerdControlPlaneSyncGenerationAnnotation] = strconv.Itoa(syncGeneration)
 	return c.Update(ctx, &dep)
 }
 
