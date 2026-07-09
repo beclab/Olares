@@ -1,4 +1,5 @@
 ---
+search: false
 outline: [2, 3]
 description: Deploy a single-container Docker app to Olares using Studio.
 head:
@@ -252,9 +253,3 @@ Once running, you can manage the app from its deployment details page in Studio.
 - Check events or logs to investigate runtime errors. See [Export container logs for troubleshooting](/manual/olares/controlhub/manage-container.md#export-container-logs-for-troubleshooting) for details.
 
   ![App deployment details](/images/manual/olares/studio-app-deployment-details.png#bordered)
-
-## Resources
-
-- [Package and upload your app to Market](/developer/develop/tutorial/package-upload.md): Learn how to package and upload an app for Market.
-- [Develop in a dev container](/developer/develop/tutorial/develop.md): Develop in an isolated environment identical to the production runtime.
-- [Add icons, feature image, and promotional images](/developer/develop/tutorial/assets.md): Prepare and upload icons, feature image, and promotional images for your Olares apps.

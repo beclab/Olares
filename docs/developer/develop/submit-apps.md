@@ -10,12 +10,7 @@ Terminus-Gitbot validates your PR based on the title, file scope, and ownership 
 
 ## Prerequisites
 
-Before submitting, make sure your application has been fully tested on Olares.
-
-Recommended workflow:
-
-- Use [Studio](/developer/develop/tutorial/develop.md) development container to test and debug in a real online environment.
-- [Install the app via Olares Market](/developer/develop/tutorial/package-upload.md) to test installation and upgrades as a user would.
+Before submitting, make sure your application has been packaged as an Olares Application Chart (OAC) and fully tested on Olares.
 
 ## Submit a new application
 

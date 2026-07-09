@@ -81,15 +81,16 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "安全密码",
           link: "/zh/one/vault",
         },
-        /*{
-          text: "下载 YouTube 视频",
-          link: "/zh/one/wise-download",
-        },*/
+        /*
         {
           text: "部署应用",
           link: "/zh/one/deploy",
         },
-
+        */
+        /*{
+          text: "下载 YouTube 视频",
+          link: "/zh/one/wise-download",
+        },*/
       ]
     },
     {

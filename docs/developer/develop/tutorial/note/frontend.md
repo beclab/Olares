@@ -1,3 +1,7 @@
+---
+search: false
+---
+
 # Develop Frontend Program
 
 ## Preview App

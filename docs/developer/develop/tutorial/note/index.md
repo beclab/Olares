@@ -1,3 +1,7 @@
+---
+search: false
+---
+
 # Create Your First Olares App
 
 You can learn how to develop an Olares app using Studio through this tutorial.

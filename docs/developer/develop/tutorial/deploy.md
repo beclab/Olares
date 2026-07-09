@@ -1,4 +1,5 @@
 ---
+search: false
 outline: [2, 3]
 description: Deploy a single-container Docker app to Olares using Studio.
 ---

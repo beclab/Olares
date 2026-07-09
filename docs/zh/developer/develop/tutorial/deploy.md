@@ -1,4 +1,5 @@
 ---
+search: false
 outline: [2, 3]
 description: 如何使用 Studio 将单容器 Docker 应用快速部署到 Olares。
 ---

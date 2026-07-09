@@ -1,3 +1,7 @@
+---
+search: false
+---
+
 # 其它
 
 ## ProviderRegistry

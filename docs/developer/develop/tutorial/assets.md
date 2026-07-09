@@ -1,4 +1,5 @@
 ---
+search: false
 description: Learn how to prepare and upload icons, feature image, and promotional images for your Olares apps.
 ---
 # Add icons, feature image, and promotional images

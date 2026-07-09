@@ -1,4 +1,5 @@
 ---
+search: false
 description: 了解如何为 Olares 应用准备和上传图标、功能图像以及宣传图。
 ---
 # 添加图标、功能图像和宣传图

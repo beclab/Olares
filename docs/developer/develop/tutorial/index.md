@@ -1,4 +1,5 @@
 ---
+search: false
 description: Get started with Studio to deploy Docker-based apps, develop new apps, package and upload locally, and manage assets on your Olares device.
 ---
 # Deploy and develop apps in Olares

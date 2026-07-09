@@ -1,3 +1,7 @@
+---
+search: false
+---
+
 # Other
 
 ## Change Provider Registry

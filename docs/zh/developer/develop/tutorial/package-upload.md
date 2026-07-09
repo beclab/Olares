@@ -1,4 +1,5 @@
 ---
+search: false
 description: 从 Studio 下载应用包并在 Olares 应用市场中安装，以实现稳定且长期的使用。
 ---
 

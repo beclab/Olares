@@ -1,3 +1,7 @@
+---
+search: false
+---
+
 # 创建你的首个 Olares 应用
 
 你可以通过本教程学习如何使用 Studio 开发一个 Olares 应用。

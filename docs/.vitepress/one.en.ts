@@ -81,14 +81,16 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Secure passwords",
           link: "/one/vault",
         },
-        /*{
-          text: "Download YouTube videos",
-          link: "/one/wise-download",
-        },*/
+        /*
         {
           text: "Deploy an app",
           link: "/one/deploy",
         },
+        */
+        /*{
+          text: "Download YouTube videos",
+          link: "/one/wise-download",
+        },*/
       ]
     },
     {
