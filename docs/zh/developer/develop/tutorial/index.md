@@ -1,4 +1,5 @@
 ---
+search: false
 description: 学习如何使用 Studio 在 Olares 设备上部署 Docker 应用、开发新应用、进行本地打包上传以及管理应用素材。
 ---
 # 在 Olares 上部署与开发应用

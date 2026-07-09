@@ -85,10 +85,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Download YouTube videos",
           link: "/one/wise-download",
         },*/
-        {
-          text: "Deploy an app",
-          link: "/one/deploy",
-        },
       ]
     },
     {

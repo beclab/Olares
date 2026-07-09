@@ -141,29 +141,6 @@ export const developerSidebar: DefaultTheme.Sidebar = {
           link: "/zh/developer/develop/",
           items: [
             {
-              text: "使用 Studio 开发",
-              collapsed: true,
-              link: "/zh/developer/develop/tutorial/",
-              items: [
-                {
-                  text: "部署应用",
-                  link: "/zh/developer/develop/tutorial/deploy",
-                },
-                {
-                  text: "使用开发容器",
-                  link: "/zh/developer/develop/tutorial/develop",
-                },
-                {
-                  text: "打包与上传",
-                  link: "/zh/developer/develop/tutorial/package-upload",
-                },
-                {
-                  text: "添加应用素材",
-                  link: "/zh/developer/develop/tutorial/assets",
-                },
-              ],
-            },
-            {
               text: "应用包管理",
               collapsed: true,
               items: [
@@ -412,32 +389,6 @@ export const developerSidebar: DefaultTheme.Sidebar = {
         {
           text: "参与贡献",
           items: [
-            {
-              text: "开发系统应用",
-              collapsed: true,
-              items: [
-                {
-                  text: "概述",
-                  link: "/zh/developer/contribute/system-app/overview",
-                },
-                {
-                  text: "应用部署配置",
-                  link: "/zh/developer/contribute/system-app/deployment",
-                },
-                {
-                  text: "Olares 权限配置",
-                  link: "/zh/developer/contribute/system-app/olares-manifest",
-                },
-                {
-                  text: "安装",
-                  link: "/zh/developer/contribute/system-app/install",
-                },
-                {
-                  text: "其他",
-                  link: "/zh/developer/contribute/system-app/other",
-                },
-              ],
-            },
             {
               text: "开发协议",
               collapsed: true,

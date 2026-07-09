@@ -127,29 +127,6 @@ export const developerSidebar: DefaultTheme.Sidebar = {
       link: "/developer/develop/",
       items: [
         {
-          text: "Develop with Studio",
-          collapsed: true,
-          link: "/developer/develop/tutorial/",
-          items: [
-            {
-              text: "Deploy an app",
-              link: "/developer/develop/tutorial/deploy",
-            },
-            {
-              text: "Develop in a dev container",
-              link: "/developer/develop/tutorial/develop",
-            },
-            {
-              text: "Package and upload",
-              link: "/developer/develop/tutorial/package-upload",
-            },
-            {
-              text: "Add app assets",
-              link: "/developer/develop/tutorial/assets",
-            },
-          ],
-        },
-        {
           text: "Application package",
           collapsed: true,
           items: [
@@ -382,32 +359,6 @@ export const developerSidebar: DefaultTheme.Sidebar = {
     {
       text: "Contribute to Olares",
       items: [
-        {
-          text: "Develop system app",
-          collapsed: true,
-          items: [
-            {
-              text: "Overview",
-              link: "/developer/contribute/system-app/overview",
-            },
-            {
-              text: "Configure deployment",
-              link: "/developer/contribute/system-app/deployment",
-            },
-            {
-              text: "Configure permissions",
-              link: "/developer/contribute/system-app/olares-manifest",
-            },
-            {
-              text: "Install",
-              link: "/developer/contribute/system-app/install",
-            },
-            {
-              text: "Other",
-              link: "/developer/contribute/system-app/other",
-            },
-          ],
-        },
         {
           text: "Develop protocols",
           collapsed: true,

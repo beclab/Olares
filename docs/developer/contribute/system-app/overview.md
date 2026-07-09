@@ -1,4 +1,8 @@
 
+---
+search: false
+---
+
 # Develop System Application for Olares
 
 ::: tip Prerequisites Knowledge

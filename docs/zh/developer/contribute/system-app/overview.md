@@ -1,4 +1,8 @@
 
+---
+search: false
+---
+
 # 开发 Olares 的系统应用
 
 ::: tip 前置知识：

@@ -1,4 +1,5 @@
 ---
+search: false
 description: Download an app package from Studio and install it in the Olares Market for stable, long-term use.
 ---
 

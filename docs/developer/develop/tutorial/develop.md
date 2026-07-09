@@ -1,4 +1,5 @@
 ---
+search: false
 outline: [2, 3]
 description: Learn how to use Studio to set up a dev container, access it via VS Code, and configure port forwarding.
 ---

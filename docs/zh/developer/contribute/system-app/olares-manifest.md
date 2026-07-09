@@ -1,3 +1,7 @@
+---
+search: false
+---
+
 # OlaresManifest.yaml
 
 ## Permission

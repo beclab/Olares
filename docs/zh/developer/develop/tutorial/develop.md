@@ -1,4 +1,5 @@
 ---
+search: false
 outline: [2, 3]
 description: 了解如何使用 Studio 设置开发容器，通过 VS Code 访问，并配置端口转发。
 ---

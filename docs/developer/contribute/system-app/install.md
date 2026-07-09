@@ -1,3 +1,7 @@
+---
+search: false
+---
+
 # Install System Application
 
 ## Install

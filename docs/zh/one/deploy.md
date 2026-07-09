@@ -1,4 +1,5 @@
 ---
+search: false
 outline: [2, 3]
 description: 使用 Studio 将单容器 Docker 应用部署到 Olares。
 head:
@@ -257,9 +258,3 @@ Wallos 需要两个卷。逐一添加。
 - 检查事件或日志以调查运行时错误。详情请参阅[导出容器日志以进行故障排除](../../manual/olares/controlhub/manage-container.md#export-container-logs-for-troubleshooting)。
 
   ![应用部署详情](/images/manual/olares/studio-app-deployment-details.png#bordered)
-
-## 资源
-
-- [打包并上传你的应用到 Market](../../developer/develop/tutorial/package-upload.md)：了解如何将应用打包并上传到 Market。
-- [在开发容器中开发](../../developer/develop/tutorial/develop.md)：在与生产运行时相同的环境中进行开发。
-- [添加图标、功能图和宣传图](../../developer/develop/tutorial/assets.md)：为你的 Olares 应用准备并上传图标、功能图和宣传图。
