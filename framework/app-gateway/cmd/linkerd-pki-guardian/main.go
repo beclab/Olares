@@ -24,10 +24,37 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "bootstrap" {
+		if err := runBootstrapOneshot(); err != nil {
+			slog.Error("linkerd-pki-guardian bootstrap fatal", "error", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 	if err := run(); err != nil {
 		slog.Error("linkerd-pki-guardian fatal", "error", err)
 		os.Exit(1)
 	}
+}
+
+func runBootstrapOneshot() error {
+	ns := getenv("GUARDIAN_LINKERD_NS", linkerdpki.DefaultLinkerdNamespace)
+	cl, err := buildClient()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	created, err := linkerdpki.BootstrapIfMissing(ctx, cl, ns)
+	if err != nil {
+		return err
+	}
+	syncChanged, err := linkerdpki.SyncIdentityToLinkerd(ctx, cl, ns)
+	if err != nil {
+		return err
+	}
+	slog.Info("linkerd-pki-guardian bootstrap oneshot complete",
+		"op", "bootstrap", "namespace", ns, "created", created, "sync_changed", syncChanged)
+	return nil
 }
 
 func run() error {

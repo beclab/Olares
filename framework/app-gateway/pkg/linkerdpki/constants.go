@@ -20,13 +20,18 @@ const (
 
 	// IssuerLifetimeDays is the validity (3 years) of a freshly signed issuer.
 	IssuerLifetimeDays = 1095
+
+	// CALifetimeDays is the validity (30 years) of the cluster trust anchor CA.
+	CALifetimeDays = 10950
 )
 
 const (
-	identityIssuerSecret  = "linkerd-identity-issuer"
-	identityDeployment    = "linkerd-identity"
-	identityIssuerCrtKey  = "crt.pem"
-	identityIssuerKeyKey  = "key.pem"
+	identityIssuerSecret   = "linkerd-identity-issuer"
+	identityTrustRootsCM   = "linkerd-identity-trust-roots"
+	identityTrustRootsKey  = "ca-bundle.crt"
+	identityDeployment     = "linkerd-identity"
+	identityIssuerCrtKey   = "crt.pem"
+	identityIssuerKeyKey   = "key.pem"
 
 	pkiCACrtKey     = "ca.crt"
 	pkiCAKeyKey     = "ca.key"
