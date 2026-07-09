@@ -241,6 +241,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "Engine Base apps",
+                  link: "/use-cases/llm-base-apps",
+                },
+                {
                   text: "Ollama",
                   link: "/use-cases/ollama",
                 },
