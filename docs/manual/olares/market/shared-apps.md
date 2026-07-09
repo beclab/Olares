@@ -45,14 +45,6 @@ Benefits of the new architecture include:
 - **No orphaned services**: Uninstalling a user-facing app no longer affects the shared server.
 - **Personalized access**: Every member accesses a shared app through their own username, using the same HTTPS URL pattern across all shared apps.
 
-## Manage legacy v2 shared apps
-
-Installed v2 shared apps continue to work after upgrading to Olares v1.12.6. You can start, use, stop, and resume them as before, but you cannot upgrade them directly to the new architecture.
-
-:::warning Data is not migrated automatically
-Existing data from a v2 shared app is not moved to the new architecture automatically. To move to the new architecture, uninstall the v2 app, install the new shared app, and then optionally migrate your data according to the app type. See [Migrate from v2 to the new architecture](#migrate-from-v2-to-the-new-architecture) for details.
-:::
-
 ## Replace Ollama with Engine Base
 
 The standalone **Ollama** shared app has been replaced by the **Engine Base** architecture.
@@ -69,6 +61,14 @@ This brings several benefits:
 - **Works with GPU time-slicing**: Model instances follow Olares' scheduling, so you can run multiple models without the conflicts of the old standalone Ollama app.
 - **Centralized management in Market**: Engines are maintained in one place through the base apps. When Olares updates a base, you can upgrade your cloned instances to the new engine version.
 - **Flexible configuration**: You set each instance's model source, parameters, and capabilities yourself, and pick the best engine for each model. For example, select Ollama for quick local inference, vLLM or SGLang for high-throughput serving, or llama.cpp for edge deployments.
+
+## Manage legacy v2 shared apps
+
+Installed v2 shared apps continue to work after upgrading to Olares v1.12.6. You can start, use, stop, and resume them as before, but you cannot upgrade them directly to the new architecture.
+
+:::warning Data is not migrated automatically
+Existing data from a v2 shared app is not moved to the new architecture automatically. To move to the new architecture, uninstall the v2 app, install the new shared app, and then optionally migrate your data according to the app type. See [Migrate from v2 to the new architecture](#migrate-from-v2-to-the-new-architecture) for details.
+:::
 
 ## Migrate from v2 to the new architecture
 
@@ -99,8 +99,8 @@ Use this option when the app has no user-created data to migrate.
 
 Use this option when the app stores user-created data or settings that must be moved manually.
 
-- **Apps in this category**: Dify, OnlyOffice, SearXNG, and Xinference
-- **Steps**: Follow the migration guide for the app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), [SearXNG](/use-cases/searxng.md), [Xinference](/use-cases/xinference.md).
+- **Apps in this category**: Dify, OnlyOffice, and SearXNG
+- **Steps**: Follow the migration guide for the app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), and [SearXNG](/use-cases/searxng.md)
 
 ### Option 4: Upgrade Ollama and models to Engine Base
 
