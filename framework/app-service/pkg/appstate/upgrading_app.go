@@ -129,7 +129,15 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 						}
 						p.finallyCh <- func() {
 							klog.Infof("upgrade app %s landed in state %s (reason=%s)", p.manager.Name, landed, reason)
-							updateErr := p.updateStatus(context.TODO(), p.manager, landed, nil, landed.String(), reason)
+							// Append an op record for the completed upgrade so the
+							// installed version advances to the new chart version.
+							// Upgrade-from-Stopped lands here without ever passing
+							// through Running, so without this record the op ledger
+							// would keep reporting the pre-upgrade version while the
+							// app stays Stopped (makeRecord takes the version from
+							// the already-bumped AppVersionKey annotation).
+							opRecord := makeRecord(p.manager, landed, fmt.Sprintf(constants.UpgradeOperationCompletedTpl, p.manager.Spec.Type.String(), p.manager.Spec.AppName))
+							updateErr := p.updateStatus(context.TODO(), p.manager, landed, opRecord, landed.String(), reason)
 							if updateErr != nil {
 								klog.Errorf("update appmgr state to %s failed %v", landed, updateErr)
 							}

@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
@@ -62,6 +63,17 @@ func (h *Handler) status(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	now := metav1.Now()
+	// While a download is in flight, am.Status.Progress is not refreshed
+	// (progress is published out-of-band over NATS). Compute it live from the
+	// ImageManager CR so pollers of this endpoint see real download progress.
+	// Pure read; no status write, so it triggers no reconcile or etcd write.
+	progress := am.Status.Progress
+	switch am.Status.State {
+	case v1alpha1.Downloading, v1alpha1.Upgrading:
+		if p, found, e := images.GetDownloadProgress(req.Request.Context(), h.ctrlClient, &am); e == nil && found {
+			progress = strconv.FormatFloat(p, 'f', 2, 64)
+		}
+	}
 	sts := appinstaller.Status{
 		Name:              am.Spec.AppName,
 		AppID:             appcfg.AppName(am.Spec.AppName).GetAppID(),
@@ -70,7 +82,7 @@ func (h *Handler) status(req *restful.Request, resp *restful.Response) {
 		Source:            am.Spec.Source,
 		AppStatus: v1alpha1.ApplicationStatus{
 			State:      am.Status.State.String(),
-			Progress:   am.Status.Progress,
+			Progress:   progress,
 			StatusTime: &now,
 			UpdateTime: &now,
 		},
