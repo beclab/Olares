@@ -47,43 +47,47 @@ Benefits of the new architecture include:
 
 ## Replace Ollama with Engine Base
 
-The standalone **Ollama** shared app has been replaced by the **Engine Base** architecture.
+The standalone **Ollama** shared app and legacy model apps have been replaced by the new **Engine Base** architecture.
 
-Previously, Olares provided models mainly through shared model apps in Market, such as Qwen3.5 35B A3B UD-Q4 (Ollama). Each app bundled a model with its own inference engine. This design had two main problems:
-- **Scheduling conflicts**: The standalone Ollama app did not work with Olares' GPU time-slicing management, so running several models at once led to conflicts over the GPU.
-- **Tight coupling**: Because the engine and model were bundled in each app, updating an engine or adding a model meant shipping a new app for every model, which slowed down the release of new models.
+Previously, you had two options to run local LLMs on Olares:
+- **Ollama**: You installed the standalone Ollama shared app and pulled models manually via its command line. The major pain point here was scheduling conflicts: the standalone Ollama app did not work with Olares' GPU time-slicing management, so running several models at once led to conflicts over the GPU.
+- **Pre-packaged model apps**: Olares also provided dedicated model apps, but each app bundled a specific model with a specific engine. The major pain point here was tight coupling: updating an underlying engine or shipping a new model required releasing a new app every time, slowing down the release of new models.
 
-The Engine Base architecture keeps the same basic runtime, where each model instance still runs with its own engine, but abstracts the engine into a reusable base app：
-- Olares maintains a small set of Engine Base apps: **Ollama Engine Base**, **vLLM Engine Base**, **SGLang Engine Base**, and **llama.cpp Engine Base**.
-- You select the base you want, and then create the model instances you need. Each instance runs as its own shared service and appears as a separate entry on the Launchpad.
+To resolve these platform-wide challenges, Olares introduced the Engine Base architecture. This new design abstracts the inference engines into four reusable base applications: **Ollama Engine Base**, **vLLM Engine Base**, **SGLang Engine Base**, and **llama.cpp Engine Base**.
 
-This brings several benefits:
-- **Works with GPU time-slicing**: Model instances follow Olares' scheduling, so you can run multiple models without the conflicts of the old standalone Ollama app.
-- **Centralized management in Market**: Engines are maintained in one place through the base apps. When Olares updates a base, you can upgrade your cloned instances to the new engine version.
+Instead of pulling models into a single Ollama app or installing pre-bundled apps, you now select the desired engine base and clone it into independent, tailored model instances. This architecture shift brings the following core benefits:
+
+- **Works with GPU time-slicing**: Model instances follow Olares' scheduling rules, so you can now run multiple models smoothly without hardware or scheduling conflicts.
+- **Centralized management**: Engines are maintained centrally via the base apps. When Olares updates an engine base, you can upgrade your cloned instances without waiting for a new model app release.
 - **Flexible configuration**: You set each instance's model source, parameters, and capabilities yourself, and pick the best engine for each model. For example, select Ollama for quick local inference, vLLM or SGLang for high-throughput serving, or llama.cpp for edge deployments.
+- **Built-in model console**: Each instance features a dedicated console to monitor GPU residency, track performance, and manage client connections.
 
 ## Manage legacy v2 shared apps
 
 Installed v2 shared apps continue to work after upgrading to Olares v1.12.6. You can start, use, stop, and resume them as before, but you cannot upgrade them directly to the new architecture.
 
-:::warning Data is not migrated automatically
-Existing data from a v2 shared app is not moved to the new architecture automatically. To move to the new architecture, uninstall the v2 app, install the new shared app, and then optionally migrate your data according to the app type. See [Migrate from v2 to the new architecture](#migrate-from-v2-to-the-new-architecture) for details.
+:::tip Identify v2 shared apps
+To check if an app is a legacy v2 version, open its details page in Market and check the **Compatibility** field in the **Information** panel. A v2 shared app typically shows `Olares >=1.12.3-0, <1.12.6`.
+:::
+
+:::warning Check your app data before uninstalling
+Before you uninstall, you might need to back up app-specific data to avoid losing your workflows. See [Migrate from v2 to the new architecture](#migrate-from-v2-to-the-new-architecture) for app-specific guidance.
 :::
 
 ## Migrate from v2 to the new architecture
 
-Different apps require different migration paths. Choose the option below that matches the app you are migrating.
+Different shared apps require different migration paths. Choose the option below that matches the shared app you are migrating.
 
 ### Option 1: Migrate data automatically
 
-Use this option when the app supports automatic data migration.
+Use this option when the shared app supports automatic data migration.
 
 - **Apps in this category**: ComfyUI
 - **Steps**: For detailed steps on migrating ComfyUI, including how to preserve your data and the new data locations, see [ComfyUI migration notes](/use-cases/comfyui-common-issues.md).
 
 ### Option 2: Perform a clean reinstallation
 
-Use this option when the app has no user-created data to migrate.
+Use this option when the shared app has no user-created data to migrate.
 
 - **Apps in this category**: Apps with no significant data, such as Falco and MTranServer
 - **Steps**: Uninstall the v2 shared app, and then install the new shared app from Market.
@@ -97,17 +101,17 @@ Use this option when the app has no user-created data to migrate.
 
 ### Option 3: Back up and restore manually
 
-Use this option when the app stores user-created data or settings that must be moved manually.
+Use this option when the shared app stores user-created data or settings that must be moved manually.
 
 - **Apps in this category**: Dify, OnlyOffice, and SearXNG
-- **Steps**: Follow the migration guide for the app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), and [SearXNG](/use-cases/searxng.md)
+- **Steps**: Follow the migration guide for the shared app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), and [SearXNG](/use-cases/searxng.md)
 
-### Option 4: Upgrade Ollama and models to Engine Base
+### Option 4: Upgrade the Ollama app to Engine Base
 
-Use this option when you are migrating from standalone Ollama or legacy model apps to the new Engine Base architecture.
+Use this option when you are migrating from the standalone Ollama shared app to the new Engine Base architecture.
 
-- **Apps in this category**: Model apps, and the Ollama app installed to pull models
-- **Steps**: Deploy the model on an Engine Base app, get the Base URL in the model console, and then reconfigure your clients.
+- **Apps in this category**: The Ollama app installed to pull models
+- **Steps**: Deploy the model pulled via Ollama on an Engine Base app, get the Base URL in the model console, and then reconfigure your clients.
 
 ## FAQs
 
