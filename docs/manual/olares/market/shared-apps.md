@@ -53,7 +53,7 @@ Previously, you had two options to run local LLMs on Olares:
 - **Ollama**: You installed the standalone Ollama shared app and pulled models manually via its command line. The major pain point here was scheduling conflicts: the standalone Ollama app did not work with Olares' GPU time-slicing management, so running several models at once led to conflicts over the GPU.
 - **Pre-packaged model apps**: Olares also provided dedicated model apps, but each app bundled a specific model with a specific engine. The major pain point here was tight coupling: updating an underlying engine or shipping a new model required releasing a new app every time, slowing down the release of new models.
 
-To resolve these platform-wide challenges, Olares introduced the Engine Base architecture. This new design abstracts the inference engines into four reusable base applications: **Ollama Engine Base**, **vLLM Engine Base**, **SGLang Engine Base**, and **llama.cpp Engine Base**.
+To resolve these challenges, Olares introduced the Engine Base architecture. This new design abstracts the inference engines into four reusable base applications: **Ollama Engine Base**, **vLLM Engine Base**, **SGLang Engine Base**, and **llama.cpp Engine Base**.
 
 Instead of pulling models into a single Ollama app or installing pre-bundled apps, you now select the desired engine base and clone it into independent, tailored model instances. This architecture shift brings the following core benefits:
 
@@ -104,7 +104,7 @@ Use this option when the shared app has no user-created data to migrate.
 Use this option when the shared app stores user-created data or settings that must be moved manually.
 
 - **Apps in this category**: Dify, OnlyOffice, and SearXNG
-- **Steps**: Follow the migration guide for the shared app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), and [SearXNG](/use-cases/searxng.md)
+- **Steps**: Follow the migration guide for the shared app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), and [SearXNG](/use-cases/searxng.md).
 
 ### Option 4: Upgrade the Ollama app to Engine Base
 
