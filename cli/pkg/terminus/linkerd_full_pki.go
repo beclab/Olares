@@ -11,8 +11,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -39,6 +41,9 @@ const (
 
 	linkerdIssuerLifetimeDays = 1095
 	linkerdCALifetimeDays      = 10950
+
+	linkerdIdentitySecretsSyncTimeout  = 5 * time.Minute
+	linkerdIdentitySecretsPollInterval = 5 * time.Second
 )
 
 type linkerdPKIMaterial struct {
@@ -208,13 +213,91 @@ func certificateNotAfter(pemBytes []byte) (time.Time, error) {
 }
 
 func syncLinkerdIdentitySecrets(ctx context.Context, c client.Client, linkerdNS string, mat *linkerdPKIMaterial) error {
-	if err := patchLinkerdIdentityIssuerSecret(ctx, c, linkerdNS, mat); err != nil {
-		if apierrors.IsNotFound(err) {
+	return waitSyncLinkerdIdentitySecrets(
+		ctx, c, linkerdNS, mat,
+		linkerdIdentitySecretsSyncTimeout,
+		linkerdIdentitySecretsPollInterval,
+	)
+}
+
+func waitSyncLinkerdIdentitySecrets(
+	ctx context.Context,
+	c client.Client,
+	linkerdNS string,
+	mat *linkerdPKIMaterial,
+	timeout, pollInterval time.Duration,
+) error {
+	start := time.Now()
+	for {
+		issuerReady, err := linkerdIdentityIssuerSecretExists(ctx, c, linkerdNS)
+		if err != nil {
+			logger.Errorf("sync linkerd identity secrets: check %s in namespace %s: %v", linkerdIdentityIssuerSecret, linkerdNS, err)
+			return errors.Wrapf(err, "check %s", linkerdIdentityIssuerSecret)
+		}
+		trustReady, err := linkerdIdentityTrustRootsExists(ctx, c, linkerdNS)
+		if err != nil {
+			logger.Errorf("sync linkerd identity secrets: check %s in namespace %s: %v", linkerdIdentityTrustRootsCM, linkerdNS, err)
+			return errors.Wrapf(err, "check %s", linkerdIdentityTrustRootsCM)
+		}
+		if issuerReady && trustReady {
+			if err := patchLinkerdIdentityIssuerSecret(ctx, c, linkerdNS, mat); err != nil {
+				logger.Errorf("sync linkerd identity secrets: patch %s in namespace %s: %v", linkerdIdentityIssuerSecret, linkerdNS, err)
+				return errors.Wrapf(err, "patch %s", linkerdIdentityIssuerSecret)
+			}
+			if err := patchLinkerdTrustRootsConfigMap(ctx, c, linkerdNS, mat.CACrt); err != nil {
+				logger.Errorf("sync linkerd identity secrets: patch %s in namespace %s: %v", linkerdIdentityTrustRootsCM, linkerdNS, err)
+				return errors.Wrapf(err, "patch %s", linkerdIdentityTrustRootsCM)
+			}
 			return nil
 		}
-		return err
+		var pending []string
+		if !issuerReady {
+			pending = append(pending, linkerdIdentityIssuerSecret)
+		}
+		if !trustReady {
+			pending = append(pending, linkerdIdentityTrustRootsCM)
+		}
+		if time.Since(start) >= timeout {
+			err := fmt.Errorf(
+				"sync linkerd identity secrets: timed out after %s waiting for %s in namespace %s",
+				timeout,
+				strings.Join(pending, ", "),
+				linkerdNS,
+			)
+			logger.Error(err)
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			logger.Errorf("sync linkerd identity secrets: context cancelled in namespace %s: %v", linkerdNS, ctx.Err())
+			return ctx.Err()
+		case <-time.After(pollInterval):
+		}
 	}
-	return patchLinkerdTrustRootsConfigMap(ctx, c, linkerdNS, mat.CACrt)
+}
+
+func linkerdIdentityIssuerSecretExists(ctx context.Context, c client.Client, ns string) (bool, error) {
+	var sec corev1.Secret
+	err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: linkerdIdentityIssuerSecret}, &sec)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func linkerdIdentityTrustRootsExists(ctx context.Context, c client.Client, ns string) (bool, error) {
+	var cm corev1.ConfigMap
+	err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: linkerdIdentityTrustRootsCM}, &cm)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func patchLinkerdIdentityIssuerSecret(ctx context.Context, c client.Client, ns string, mat *linkerdPKIMaterial) error {

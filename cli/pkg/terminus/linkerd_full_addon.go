@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const linkerdPKIGuardianDeployment = "linkerd-pki-guardian"
+
 var linkerdControlPlaneDeployments = []string{
 	"linkerd-destination",
 	"linkerd-identity",
@@ -28,6 +30,8 @@ var linkerdControlPlaneDeployments = []string{
 // linkerdControlPlaneReadyTimeout covers identity restart after PKI sync plus
 // guardian cold start on resource-constrained user hardware.
 const linkerdControlPlaneReadyTimeout = 10 * time.Minute
+
+const linkerdControlPlanePollInterval = 5 * time.Second
 
 // SyncLinkerdPKIAndIdentity patches Linkerd identity secrets after os-framework apply.
 type SyncLinkerdPKIAndIdentity struct {
@@ -75,7 +79,42 @@ func (t *WaitLinkerdControlPlaneReady) Execute(_ connector.Runtime) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), linkerdControlPlaneReadyTimeout)
 	defer cancel()
-	return waitLinkerdControlPlaneReady(ctx, k8sClient, agwconfig.LinkerdNamespace(), linkerdControlPlaneReadyTimeout)
+	return waitLinkerdControlPlaneReadyWithPoll(
+		ctx, k8sClient, agwconfig.LinkerdNamespace(), linkerdControlPlaneReadyTimeout, linkerdControlPlanePollInterval,
+	)
+}
+
+func waitLinkerdControlPlaneReady(ctx context.Context, c client.Client, ns string, timeout time.Duration) error {
+	return waitLinkerdControlPlaneReadyWithPoll(ctx, c, ns, timeout, linkerdControlPlanePollInterval)
+}
+
+func waitLinkerdControlPlaneReadyWithPoll(
+	ctx context.Context, c client.Client, ns string, timeout, pollInterval time.Duration,
+) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		pending, err := linkerdControlPlaneNotReady(ctx, c, ns)
+		if err != nil {
+			return err
+		}
+		if len(pending) == 0 {
+			logger.InfoInstallationProgress("Linkerd control plane and PKI guardian are ready")
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(pollInterval):
+		}
+	}
+	pending, err := linkerdControlPlaneNotReady(ctx, c, ns)
+	if err != nil {
+		return err
+	}
+	return fmt.Errorf(
+		"WaitLinkerdControlPlaneReady: timed out after %s waiting for Linkerd control plane deployments in namespace %s; not ready: %s",
+		timeout, ns, strings.Join(pending, ", "),
+	)
 }
 
 func linkerdControlPlaneNotReady(ctx context.Context, c client.Client, ns string) ([]string, error) {
@@ -94,37 +133,14 @@ func linkerdControlPlaneNotReady(ctx context.Context, c client.Client, ns string
 		}
 	}
 	var guardian appsv1.Deployment
-	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: "linkerd-pki-guardian"}, &guardian); err == nil {
-		if guardian.Status.ReadyReplicas < 1 {
-			pending = append(pending, "linkerd-pki-guardian")
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: linkerdPKIGuardianDeployment}, &guardian); err != nil {
+		if apierrors.IsNotFound(err) {
+			pending = append(pending, linkerdPKIGuardianDeployment+" (not found)")
+		} else {
+			return nil, err
 		}
+	} else if guardian.Status.ReadyReplicas < 1 {
+		pending = append(pending, linkerdPKIGuardianDeployment)
 	}
 	return pending, nil
-}
-
-func waitLinkerdControlPlaneReady(ctx context.Context, c client.Client, ns string, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		pending, err := linkerdControlPlaneNotReady(ctx, c, ns)
-		if err != nil {
-			return err
-		}
-		if len(pending) == 0 {
-			logger.InfoInstallationProgress("Linkerd control plane and PKI guardian are ready")
-			return nil
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(5 * time.Second):
-		}
-	}
-	pending, err := linkerdControlPlaneNotReady(ctx, c, ns)
-	if err != nil {
-		return err
-	}
-	return fmt.Errorf(
-		"WaitLinkerdControlPlaneReady: timed out after %s waiting for Linkerd control plane deployments in namespace %s; not ready: %s",
-		timeout, ns, strings.Join(pending, ", "),
-	)
 }
