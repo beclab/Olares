@@ -54,11 +54,14 @@ func (t *SyncLinkerdPKIAndIdentity) Execute(_ connector.Runtime) error {
 	if err != nil {
 		return errors.Wrap(err, "prepare linkerd pki")
 	}
-	if err := syncLinkerdIdentitySecrets(ctx, k8sClient, linkerdNS, mat); err != nil {
+	changed, err := syncLinkerdIdentitySecrets(ctx, k8sClient, linkerdNS, mat)
+	if err != nil {
 		return errors.Wrap(err, "sync linkerd identity secrets")
 	}
-	if err := restartLinkerdIdentityIfNeeded(ctx, k8sClient, linkerdNS); err != nil {
-		return errors.Wrap(err, "restart linkerd-identity")
+	if changed {
+		if err := restartLinkerdControlPlaneAfterPKISync(ctx, k8sClient, linkerdNS); err != nil {
+			return errors.Wrap(err, "restart linkerd control plane after pki sync")
+		}
 	}
 	return nil
 }

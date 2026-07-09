@@ -1,6 +1,7 @@
 package terminus
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -27,7 +28,6 @@ import (
 const (
 	linkerdPKISecretName        = "olares-linkerd-pki"
 	linkerdIdentityIssuerSecret = "linkerd-identity-issuer"
-	linkerdIdentityDeployment   = "linkerd-identity"
 	linkerdIdentityIssuerCrtKey = "crt.pem"
 	linkerdIdentityIssuerKeyKey = "key.pem"
 	linkerdIdentityTrustRootsCM = "linkerd-identity-trust-roots"
@@ -212,7 +212,7 @@ func certificateNotAfter(pemBytes []byte) (time.Time, error) {
 	return cert.NotAfter, nil
 }
 
-func syncLinkerdIdentitySecrets(ctx context.Context, c client.Client, linkerdNS string, mat *linkerdPKIMaterial) error {
+func syncLinkerdIdentitySecrets(ctx context.Context, c client.Client, linkerdNS string, mat *linkerdPKIMaterial) (bool, error) {
 	return waitSyncLinkerdIdentitySecrets(
 		ctx, c, linkerdNS, mat,
 		linkerdIdentitySecretsSyncTimeout,
@@ -226,29 +226,31 @@ func waitSyncLinkerdIdentitySecrets(
 	linkerdNS string,
 	mat *linkerdPKIMaterial,
 	timeout, pollInterval time.Duration,
-) error {
+) (bool, error) {
 	start := time.Now()
 	for {
 		issuerReady, err := linkerdIdentityIssuerSecretExists(ctx, c, linkerdNS)
 		if err != nil {
 			logger.Errorf("sync linkerd identity secrets: check %s in namespace %s: %v", linkerdIdentityIssuerSecret, linkerdNS, err)
-			return errors.Wrapf(err, "check %s", linkerdIdentityIssuerSecret)
+			return false, errors.Wrapf(err, "check %s", linkerdIdentityIssuerSecret)
 		}
 		trustReady, err := linkerdIdentityTrustRootsExists(ctx, c, linkerdNS)
 		if err != nil {
 			logger.Errorf("sync linkerd identity secrets: check %s in namespace %s: %v", linkerdIdentityTrustRootsCM, linkerdNS, err)
-			return errors.Wrapf(err, "check %s", linkerdIdentityTrustRootsCM)
+			return false, errors.Wrapf(err, "check %s", linkerdIdentityTrustRootsCM)
 		}
 		if issuerReady && trustReady {
-			if err := patchLinkerdIdentityIssuerSecret(ctx, c, linkerdNS, mat); err != nil {
+			issuerChanged, err := patchLinkerdIdentityIssuerSecret(ctx, c, linkerdNS, mat)
+			if err != nil {
 				logger.Errorf("sync linkerd identity secrets: patch %s in namespace %s: %v", linkerdIdentityIssuerSecret, linkerdNS, err)
-				return errors.Wrapf(err, "patch %s", linkerdIdentityIssuerSecret)
+				return false, errors.Wrapf(err, "patch %s", linkerdIdentityIssuerSecret)
 			}
-			if err := patchLinkerdTrustRootsConfigMap(ctx, c, linkerdNS, mat.CACrt); err != nil {
+			trustChanged, err := patchLinkerdTrustRootsConfigMap(ctx, c, linkerdNS, mat.CACrt)
+			if err != nil {
 				logger.Errorf("sync linkerd identity secrets: patch %s in namespace %s: %v", linkerdIdentityTrustRootsCM, linkerdNS, err)
-				return errors.Wrapf(err, "patch %s", linkerdIdentityTrustRootsCM)
+				return false, errors.Wrapf(err, "patch %s", linkerdIdentityTrustRootsCM)
 			}
-			return nil
+			return issuerChanged || trustChanged, nil
 		}
 		var pending []string
 		if !issuerReady {
@@ -265,12 +267,12 @@ func waitSyncLinkerdIdentitySecrets(
 				linkerdNS,
 			)
 			logger.Error(err)
-			return err
+			return false, err
 		}
 		select {
 		case <-ctx.Done():
 			logger.Errorf("sync linkerd identity secrets: context cancelled in namespace %s: %v", linkerdNS, ctx.Err())
-			return ctx.Err()
+			return false, ctx.Err()
 		case <-time.After(pollInterval):
 		}
 	}
@@ -300,43 +302,60 @@ func linkerdIdentityTrustRootsExists(ctx context.Context, c client.Client, ns st
 	return true, nil
 }
 
-func patchLinkerdIdentityIssuerSecret(ctx context.Context, c client.Client, ns string, mat *linkerdPKIMaterial) error {
+func patchLinkerdIdentityIssuerSecret(ctx context.Context, c client.Client, ns string, mat *linkerdPKIMaterial) (bool, error) {
 	var sec corev1.Secret
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: linkerdIdentityIssuerSecret}, &sec); err != nil {
-		return err
+		return false, err
 	}
 	if sec.Data == nil {
 		sec.Data = map[string][]byte{}
 	}
+	if bytes.Equal(sec.Data[linkerdIdentityIssuerCrtKey], mat.IssuerCrt) &&
+		bytes.Equal(sec.Data[linkerdIdentityIssuerKeyKey], mat.IssuerKey) {
+		return false, nil
+	}
 	sec.Data[linkerdIdentityIssuerCrtKey] = mat.IssuerCrt
 	sec.Data[linkerdIdentityIssuerKeyKey] = mat.IssuerKey
-	return c.Update(ctx, &sec)
+	return true, c.Update(ctx, &sec)
 }
 
-func patchLinkerdTrustRootsConfigMap(ctx context.Context, c client.Client, ns string, caCrt []byte) error {
+func patchLinkerdTrustRootsConfigMap(ctx context.Context, c client.Client, ns string, caCrt []byte) (bool, error) {
 	var cm corev1.ConfigMap
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: linkerdIdentityTrustRootsCM}, &cm); err != nil {
-		return err
+		return false, err
 	}
 	if cm.Data == nil {
 		cm.Data = map[string]string{}
 	}
-	cm.Data[linkerdIdentityTrustRootsKey] = string(caCrt)
-	return c.Update(ctx, &cm)
+	desired := string(caCrt)
+	if cm.Data[linkerdIdentityTrustRootsKey] == desired {
+		return false, nil
+	}
+	cm.Data[linkerdIdentityTrustRootsKey] = desired
+	return true, c.Update(ctx, &cm)
 }
 
-func restartLinkerdIdentityIfNeeded(ctx context.Context, c client.Client, ns string) error {
-	var dep appsv1.Deployment
-	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: linkerdIdentityDeployment}, &dep); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
+// restartLinkerdControlPlaneAfterPKISync rolls all Linkerd control-plane Deployments
+// so sidecars re-read linkerd-identity-trust-roots after a CA or issuer change.
+func restartLinkerdControlPlaneAfterPKISync(ctx context.Context, c client.Client, ns string) error {
+	restartedAt := time.Now().UTC().Format(time.RFC3339)
+	for _, name := range linkerdControlPlaneDeployments {
+		if err := restartLinkerdDeployment(ctx, c, ns, name, restartedAt); err != nil {
+			return errors.Wrapf(err, "restart %s", name)
 		}
+	}
+	return nil
+}
+
+func restartLinkerdDeployment(ctx context.Context, c client.Client, ns, name, restartedAt string) error {
+	var dep appsv1.Deployment
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, &dep); err != nil {
 		return err
 	}
 	if dep.Spec.Template.Annotations == nil {
 		dep.Spec.Template.Annotations = map[string]string{}
 	}
-	dep.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().UTC().Format(time.RFC3339)
+	dep.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = restartedAt
 	return c.Update(ctx, &dep)
 }
 
