@@ -1,0 +1,16 @@
+metadata:
+  labels:
+    app.kubernetes.io/component: linkerd-mesh
+    app.kubernetes.io/managed-by: app-service
+    app.kubernetes.io/name: app-gateway
+  name: app-gateway-mesh-np
+  namespace: os-gateway
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: linkerd
+  podSelector: {}
+  policyTypes:
+  - Ingress
