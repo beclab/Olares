@@ -170,6 +170,10 @@ spec:
         env:
         - name: DEBUG
           value: "false"
+        - name: SA_TOKEN_NAMESPACE
+          value: {{ .Release.Namespace }}
+        - name: SA_TOKEN_NAME
+          value: download-cluster-view
         - name: YTDLP_SERVER_URL
           value: http://ytdlp-svc.ytdlp-shared:3082
         - name: ARIA2_RPC_URL
@@ -218,6 +222,8 @@ spec:
         volumeMounts:
         - name: download-dir
           mountPath: /app/downloads
+        - name: config-dir
+          mountPath: /app/ytdlp/downloads
         ports:
         - containerPort: 8080
         resources:
