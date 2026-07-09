@@ -12,18 +12,19 @@ Choose the base app for the engine you want, clone it to deploy a model, then ru
 ## Before you start
 
 - Your Olares system has been upgraded to v1.12.6 or later.
-- If you want to skip manual configuration and quickly try out a model, install a pre-built model app from Market instead. The following pre-built model apps are currently available in Market. These apps package the recommended model-and-engine combinations validated for Olares.
+- If you want to skip manual configuration and quickly try out a model, install a pre-built model app from Market instead. These apps package the recommended model-and-engine combinations validated for Olares.
 
-  <!-- This list is still being modified and will be updated once the final model app lineup is confirmed. -->
-
-    - Qwen3.6-27B (llama.cpp)
-    - Qwen3.6-27B MTP (llama.cpp)
-    - Qwen3.6-35B-A3B-MTP-GGUF (llama.cpp)
-    - gemma-4-26B-A4B-it-GGUF (llama.cpp)
-    - Ornith-1.0-35B-GGUF (llama.cpp)
-    - Ornith-1.0-9B-AWQ-FP8 (vLLM / SGLang)
-    - gemma4:26b (Ollama)
-    - ornith:35b (Ollama)
+  ::: details Check available pre-built model apps
+  - Qwen3.6-27B (llama.cpp)
+  - Qwen3.6-35B-A3B (llama.cpp)
+  - Ornith-1.0-35B (llama.cpp)
+  - Qwen3.6-27B MTP (llama.cpp)
+  - Qwopus3.6-27B MTP (llama.cpp)
+  - Gemma-4-12B (vLLM)
+  - Qwen3.5-9B (SGLang)
+  - Gemma 4 26B (Ollama)
+  - Ornith 35B (Ollama)
+  :::
 
 ## Locate Engine Base apps
 
@@ -209,20 +210,15 @@ The following example uses [OpenCode](./opencode.md) as the client.
 
     e. Below the chat box, select **Big Pickle** to open the model selector, and select **Qwen3.6 35B A3B** from the list.
 
-    f. Send a task:
+    f. Send a task. The example below uses `dockersamples/101-tutorial`, a beginner-friendly Docker tutorial web app.
 
     ```text
-    Upload and deploy this app to Olares:
-    https://github.com/chandruk4321/dockerize-static-web-project
+    Deploy this app to Olares: https://github.com/dockersamples/101-tutorial
     ```
 
-    g. Respond to OpenCode's questions, decisions, and approvals until the task finishes.
+    g. Follow any prompts that appear until the deployment finishes. You can then find the app on the Launchpad and in **My Olares**.
 
-    ![Running the task in OpenCode](/images/manual/olares/llm-base-model-inst-test.png#bordered)
-
-    In this example, the Todo app is uploaded and deployed to **My Olares**. Open it from **My Olares** or the Launchpad to use the running app.
-
-    ![Todo app deployed to My Olares](/images/manual/olares/llm-base-model-inst-task.png#bordered)
+    ![App deployed to My Olares](/images/manual/olares/llm-base-model-inst-task1.png#bordered)
 
 ## References
 
