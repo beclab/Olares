@@ -32,7 +32,7 @@ Choose the base app for the engine you want, clone it to deploy a model, then ru
 
     Four engine base apps appear: vLLM Engine Base, SGLang Engine Base, Ollama Engine Base, and llama.cpp Engine Base.
 
-    ![Engine Base apps in Market](/images/manual/olares/llm-base-apps.png#bordered)
+    ![Engine Base apps in Market](/images/manual/olares/llm-base-apps1.png#bordered)
 
 2. Choose the engine base that fits your needs. Each one is optimized for a different inference scenario:
 
