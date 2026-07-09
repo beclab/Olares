@@ -4,7 +4,7 @@ description: 了解如何在 Olares One 上使用 OpenCode 配合本地模型及
 head:
   - - meta
     - name: keywords
-      content: OpenCode, Qwen3.6 27B, llama.cpp, 本地 LLM, Olares CLI 技能, AI 助手, Olares One
+      content: Olares One, AI 助手, OpenCode, Qwen3.6 27B, llama.cpp, 本地 LLM, Olares CLI 技能
 ---
 
 :::warning
@@ -41,7 +41,7 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
 
 1. 打开 Market，搜索 **Qwen3.6-27B (llama.cpp)**。
 
-   ![安装 Qwen3.6-27B](/images/one/qwen3.6-27b-llamacpp-market.png#bordered)
+   ![安装 Qwen3.6-27B](/images/one/qwen3.6-27b-llamacpp-market1.png#bordered)
 
 2. 点击 **Get**，然后点击 **Install**。
 3. 选择 **GPU** 作为硬件加速器，然后点击 **Confirm**。安装开始。
@@ -181,23 +181,26 @@ Show me the CPU and memory usage of my Olares device.
 让 OpenCode 帮你安装一个应用：
 
 ```text
-Install Chromium from the Olares Market and tell me when it's ready.
+Install Code Server from the Olares Market and tell me when it's ready.
 ```
 
-![在 OpenCode 中使用 Olares skill 安装应用](/images/one/onboard-scenario-install.png#bordered)
+![在 OpenCode 中使用 Olares skill 安装应用](/images/one/onboard-scenario-install1.png#bordered)
 
 ### 从 GitHub 仓库部署应用
 
-进阶任务：让 OpenCode 上传并部署一个 GitHub 仓库中的项目：
+进阶任务：让 OpenCode 从 GitHub 仓库部署一个项目。下面的示例使用 `dockersamples/101-tutorial`，一个适合初学者的 Docker 教程 Web 应用：
 
 ```text
-Upload and deploy this GitHub repository as an Olares app:
-https://github.com/chandruk4321/dockerize-static-web-project
+Deploy this app to Olares: https://github.com/dockersamples/101-tutorial
 ```
 
-跟随 OpenCode 的提示和确认步骤，直到部署完成。然后你可以在启动台和 **My Olares** 中找到该应用。
+如果出现提示，按提示操作直到部署完成。
 
-![在 OpenCode 中使用 Olares skill 部署应用](/images/one/onboard-scenario-port.png#bordered)
+![在 OpenCode 中使用 Olares skill 部署应用](/images/one/onboard-scenario-porting.png#bordered)
+
+部署完成后，你可以在启动台和 **My Olares** 中找到该应用。
+
+![应用部署完成](/images/one/onboard-scenario-ported.png#bordered)
 
 ## 资源
 
