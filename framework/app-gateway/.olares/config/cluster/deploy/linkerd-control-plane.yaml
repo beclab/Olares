@@ -1254,7 +1254,7 @@ spec:
       - command: ["/linkerd-policy-controller"]
         args:
         - --admin-addr=0.0.0.0:9990
-        - --control-plane-namespace=linkerd
+        - --control-plane-namespace=os-mesh
         - --grpc-addr=0.0.0.0:8090
         - --server-addr=0.0.0.0:9443
         - --server-tls-key=/var/run/linkerd/tls/tls.key
@@ -1958,7 +1958,7 @@ spec:
         - proxy-injector
         - -log-level=info
         - -log-format=plain
-        - -linkerd-namespace=linkerd
+        - -linkerd-namespace=os-mesh
         - -enable-pprof=false
         image: cr.l5d.io/linkerd/controller:edge-26.5.1
         imagePullPolicy: IfNotPresent
