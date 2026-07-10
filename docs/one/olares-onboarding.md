@@ -200,4 +200,4 @@ You can then find the app on the Launchpad and in **My Olares**.
 
 - [Set up OpenCode as your AI coding agent](../use-cases/opencode.md): Full OpenCode setup guide.
 - [Install and use Agent Skills](../developer/cli-agent-skills.md): Details about the Olares CLI skill bundles.
-- [Switch GPU mode](gpu.md)
+- [Manage accelerator resources](gpu.md): Learn how to check GPU usage, switch GPU modes, and release accelerator resources on Olares One.
