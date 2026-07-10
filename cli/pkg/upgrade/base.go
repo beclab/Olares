@@ -136,12 +136,6 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Delay:  15 * time.Second,
 		},
 		&task.LocalTask{
-			Name:   "UpgradeOSLinkerdCRDs",
-			Action: new(upgradeOSLinkerdCRDs),
-			Retry:  10,
-			Delay:  15 * time.Second,
-		},
-		&task.LocalTask{
 			Name:   "UpgradeSystemEnvs",
 			Action: new(terminus.ApplySystemEnv),
 			Retry:  5,

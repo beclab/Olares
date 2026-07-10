@@ -21,6 +21,5 @@ const (
 	ChartNameAccount             = "account"
 	ChartNameOSFramework         = "os-framework"
 	ChartNameOSPlatform          = "os-platform"
-	ChartNameSettings            = "settings"
-	ChartNameOSLinkerdCRDs       = "os-linkerd-crds"
+	ChartNameSettings = "settings"
 )

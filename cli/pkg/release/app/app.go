@@ -93,15 +93,9 @@ func (m *Manager) packageModule(mod string) error {
 			return err
 		}
 
-		// Package cluster CRDs
+		// Package cluster CRDs (EG + Linkerd + others → settings)
 		crdPath := filepath.Join(path, "config/cluster/crds")
 		if err := util.CopyDirectoryIfExists(crdPath, filepath.Join(m.distPath, "wizard/config/settings/templates/crds")); err != nil {
-			return err
-		}
-
-		// Package Linkerd CRDs to os-linkerd-crds chart (separate release from settings)
-		linkerdCRDPath := filepath.Join(path, "config/cluster/linkerd-crds")
-		if err := util.CopyDirectoryIfExists(linkerdCRDPath, filepath.Join(m.distPath, "wizard/config/os-linkerd-crds/templates/crds")); err != nil {
 			return err
 		}
 
