@@ -121,6 +121,8 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
 
    ```bash
    olares-cli version 1.12.6
+   Git commit: d30eca705df2fb614bf2bbea95daa2e6998adeeb
+   Build time: 2026-07-06T06:33:00Z
    ```
 
 3. Run the following command to log in to your Olares account. Replace `<your-olares-id>` with your actual Olares ID.

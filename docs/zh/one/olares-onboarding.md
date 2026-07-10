@@ -125,6 +125,8 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
 
    ```bash
    olares-cli version 1.12.6
+   Git commit: d30eca705df2fb614bf2bbea95daa2e6998adeeb
+   Build time: 2026-07-06T06:33:00Z
    ```
 
 3. 运行以下命令登录你的 Olares 账号。将 `<你的-olares-id>` 替换为你的真实 Olares ID。
