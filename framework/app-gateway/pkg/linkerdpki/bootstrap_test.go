@@ -86,16 +86,28 @@ func TestSyncIdentityToLinkerd_Idempotent(t *testing.T) {
 	}
 	secret := testPKISecret(ns, mat)
 	issuer := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: identityIssuerSecret, Namespace: ns},
-		Type:       corev1.SecretTypeOpaque,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      identityIssuerSecret,
+			Namespace: ns,
+			Annotations: map[string]string{
+				helmResourcePolicyKeep: helmResourcePolicyKeepValue,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
 			identityIssuerCrtKey: mat.IssuerCrt,
 			identityIssuerKeyKey: mat.IssuerKey,
 		},
 	}
 	trust := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: identityTrustRootsCM, Namespace: ns},
-		Data:       map[string]string{identityTrustRootsKey: string(mat.CACrt)},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      identityTrustRootsCM,
+			Namespace: ns,
+			Annotations: map[string]string{
+				helmResourcePolicyKeep: helmResourcePolicyKeepValue,
+			},
+		},
+		Data: map[string]string{identityTrustRootsKey: string(mat.CACrt)},
 	}
 	scheme := runtime.NewScheme()
 	if err := corev1.AddToScheme(scheme); err != nil {
