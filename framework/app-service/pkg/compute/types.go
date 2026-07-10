@@ -280,7 +280,7 @@ func IsHAMIMode(mode string) bool {
 // and rely on nodeSelector to reach the correct node.
 func UsesGPUExtendedResource(mode string) bool {
 	switch mode {
-	case utils.NvidiaCardType, utils.GB10ChipType, utils.AMDType, utils.AMDGPUType:
+	case utils.NvidiaCardType, utils.GB10ChipType, utils.AMDType, utils.AMDGPUType, utils.IntelType, utils.IntelGPUType:
 		return true
 	default:
 		return false
