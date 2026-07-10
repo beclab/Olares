@@ -1163,7 +1163,7 @@ spec:
       - args:
         - destination
         - -addr=:8086
-        - -controller-namespace=linkerd
+        - -controller-namespace=os-mesh
         - -outbound-transport-mode=transport-header
         - -enable-h2-upgrade=true
         - -log-level=info
@@ -1437,7 +1437,7 @@ spec:
         - identity
         - -log-level=info
         - -log-format=plain
-        - -controller-namespace=linkerd
+        - -controller-namespace=os-mesh
         - -identity-trust-domain=cluster.local
         - -identity-issuance-lifetime=24h0m0s
         - -identity-clock-skew-allowance=20s
@@ -2133,7 +2133,7 @@ spec:
               value: "the heartbeat controller does not use the proxy"
             args:
             - "heartbeat"
-            - "-controller-namespace=linkerd"
+            - "-controller-namespace=os-mesh"
             - "-log-level=info"
             - "-log-format=plain"
             - "-prometheus-url=http://prometheus-k8s.kubesphere-monitoring-system.svc.cluster.local:9090"
