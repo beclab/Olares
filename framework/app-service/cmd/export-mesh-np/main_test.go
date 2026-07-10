@@ -28,6 +28,8 @@ func TestExportMeshNP(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.file, func(t *testing.T) {
 			want := security.NewAppGatewayMeshNetworkPolicy(tc.ns, tc.peerNS)
+			want.APIVersion = "networking.k8s.io/v1"
+			want.Kind = "NetworkPolicy"
 			raw, err := os.ReadFile(filepath.Join(dir, tc.file))
 			if err != nil {
 				t.Fatalf("read: %v", err)
@@ -35,6 +37,9 @@ func TestExportMeshNP(t *testing.T) {
 			var got netv1.NetworkPolicy
 			if err := yaml.Unmarshal(raw, &got); err != nil {
 				t.Fatalf("unmarshal: %v", err)
+			}
+			if got.APIVersion != "networking.k8s.io/v1" || got.Kind != "NetworkPolicy" {
+				t.Fatalf("exported manifest must include apiVersion/kind; got apiVersion=%q kind=%q", got.APIVersion, got.Kind)
 			}
 			if diff := cmp.Diff(want, &got); diff != "" {
 				t.Fatalf("snapshot mismatch (-want +got):\n%s", diff)

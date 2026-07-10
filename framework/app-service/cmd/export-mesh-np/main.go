@@ -38,6 +38,8 @@ func run(outDir string) error {
 	}
 	for _, spec := range exports {
 		np := security.NewAppGatewayMeshNetworkPolicy(spec.ns, spec.peerNS)
+		np.APIVersion = "networking.k8s.io/v1"
+		np.Kind = "NetworkPolicy"
 		data, err := yaml.Marshal(np)
 		if err != nil {
 			return fmt.Errorf("marshal %s: %w", spec.filename, err)
