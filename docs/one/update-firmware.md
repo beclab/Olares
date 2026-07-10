@@ -34,11 +34,11 @@ Review the following changelogs for features or fixes included in each update.
 If your current versions are older than the ones listed below, download the corresponding update packages to proceed.
 
 ### BIOS versions
+<!--| [1.05 (Download)](https://cdn.olares.com/common/OlaresOne_BIOS_1.05.zip) | 2026-07-06 | <ul><li>Fix the Thunderbolt port issue by disabling the D3 (D3Cold) low-power state only for the GPU. Previously, D3 was disabled for all devices to address the abnormal power consumption issue.</li></ul> |-->
 
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
-| [1.05 (Download)](https://cdn.olares.com/common/OlaresOne_BIOS_1.05.zip) | 2026-07-06 | <ul><li>Fix the Thunderbolt port issue by disabling the D3 (D3Cold) low-power state only for the GPU. Previously, D3 was disabled for all devices to address the abnormal power consumption issue.</li></ul> |
-| 1.04 | 2026-05-09 | <ul><li>Add a warning prompt when changing the **Primary Display** setting to **HG**.</li><li>Fix the issue where the GPU unexpectedly disconnects by locking the GPU PCIe speed to Gen4.</li><li>Fix the issue where performance degrades and power consumption is abnormally limited after prolonged use by disabling the function that puts the GPU into sleep mode when the product is idle.</li></ul> |
+| [1.04 (Download)](https://cdn.olares.com/common/OlaresOne_BIOS_1.04.zip) | 2026-05-09 | <ul><li>Add a warning prompt when changing the **Primary Display** setting to **HG**.</li><li>Fix the issue where the GPU unexpectedly disconnects by locking the GPU PCIe speed to Gen4.</li><li>Fix the issue where performance degrades and power consumption is abnormally limited after prolonged use by disabling the function that puts the GPU into sleep mode when the product is idle.</li></ul> |
 | 1.03  | 2026-03-19 | <ul><li>Fix the ACPI error that occurs during Ubuntu system boot.</li><li>Update the Intel CPU microcode to version 0x121.</li></ul> |
 | 1.01  | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
 | 1.00 | 2025-11-28 | <ul><li>Update version naming convention.</li></ul> |
