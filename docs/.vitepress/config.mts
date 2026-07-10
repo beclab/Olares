@@ -34,6 +34,13 @@ function defineVersionedConfig2(
   const latestVersion = process.env.LATEST_VERSION || versions![versions!.length - 1];
   console.log(versions, latestVersion);
 
+  // With a single published version, every non-latest copy 301s to /docs/, so
+  // the switcher would render an empty dropdown (its only entry equals the
+  // current version and is filtered out). Skip injecting it entirely.
+  if( !versions || versions.length <= 1 ) {
+    return config;
+  }
+
   for( const locale of Object.keys(config.locales) ) {
     let themeConfig = config.locales[locale]!.themeConfig!;
 
