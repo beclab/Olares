@@ -139,6 +139,13 @@ export const redirects = {
     
     // Refactor: /zh/manual/docs-home → /zh/manual/overview
     '/zh/manual/docs-home': '/zh/manual/overview',
+
+    //Refactor: /developer/develop/extension → /developer/develop/app-sys-injected-variables
+    '/developer/develop/package/extension': '/developer/develop/app-sys-injected-variables',
+
+    //Refactor: /zh/developer/develop/extension → /zh/developer/develop/app-sys-injected-variables
+    '/zh/developer/develop/package/extension': '/zh/developer/develop/app-sys-injected-variables',
+
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.
