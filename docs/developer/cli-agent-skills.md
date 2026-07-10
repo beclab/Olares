@@ -17,15 +17,12 @@ The bundles are located in [`cli/skills/`](https://github.com/beclab/Olares/tree
 
 | Skill | Description |
 |-------|--------|
-| `olares-chart` | Deploy charts, package app images, validate manifests, configure wiring, and fix installs. |
-| `olares-cluster` | Read and modify pods, workloads, nodes, jobs, cronjobs, and<br>  middleware passwords. |
-| `olares-dashboard` | Overview and application metrics, with a stable JSON schema. |
-| `olares-doctor` | Diagnose runtime issues for misbehaving apps and identify root causes. |
-| `olares-files` | List, upload, download, share, mount SMB/NFS, and compress files. |
-| `olares-market` | Browse, install, upgrade, uninstall, and upload local charts. |
-| `olares-search` | Search globally across files, content, and apps with `olares-cli search`. |
-| `olares-settings` | Read and modify settings that the web UI exposes. |
 | `olares-shared` | Profile model, log-in flows, token storage, automatic refresh, and<br> auth-error recovery. Foundation for every other skill. |
+| `olares-files` | List, upload, download, edit, share, mount SMB, and manage Sync repos. |
+| `olares-market` | Browse, install, upgrade, uninstall, and upload local charts. |
+| `olares-settings` | Read and modify settings that the web UI exposes. |
+| `olares-dashboard` | Overview and application metrics, with a stable JSON schema. |
+| `olares-cluster` | Read and modify pods, workloads, nodes, jobs, cronjobs, and<br>  middleware passwords. |
 
 :::warning Always install `olares-shared` first
 All other bundles assume `olares-shared` is already loaded. It owns the profile model, the token refresh logic, and the auth-error recovery hints that the other skills rely on. An agent that loads only `olares-files`, for example, encounters auth errors with no recovery path.
@@ -35,7 +32,7 @@ All other bundles assume `olares-shared` is already loaded. It owns the profile 
 
 If you set up the CLI with `npx @olares/cli@latest install`, the skills are already installed and you can skip this step.
 
-Otherwise, install all bundles into your active agent with the following command:
+Otherwise, install all six bundles into your active agent with the following command:
 
 ```bash
 npx skills add beclab/Olares -y -g

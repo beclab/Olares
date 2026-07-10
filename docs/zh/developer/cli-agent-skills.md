@@ -17,15 +17,12 @@ description: 从 Cursor、Claude Code 等 AI 运行时，或 Hermes Agent、Open
 
 | Skill | 说明 |
 |-------|------|
-| `olares-chart` | 部署 chart、打包应用镜像、验证清单、配置 wiring、修复安装问题。 |
-| `olares-cluster` | 读取和修改 Pod、工作负载、节点、Job、CronJob，以及中间件密码。 |
-| `olares-dashboard` | 总览和应用指标，JSON 结构稳定。 |
-| `olares-doctor` | 诊断异常应用的运行时问题并定位根因。 |
-| `olares-files` | 列出、上传、下载、分享、挂载 SMB/NFS，以及压缩文件。 |
-| `olares-market` | 浏览、安装、升级、卸载，以及上传本地 chart。 |
-| `olares-search` | 通过 `olares-cli search` 进行全局搜索，覆盖文件、内容和应用。 |
-| `olares-settings` | 读取和修改网页端开放的设置。 |
 | `olares-shared` | profile 模型、登录流程、令牌存储、自动刷新和鉴权错误恢复。<br>其他所有技能的基础。 |
+| `olares-files` | 列出、上传、下载、编辑、分享、挂载 SMB，以及管理 Sync 仓库。 |
+| `olares-market` | 浏览、安装、升级、卸载，以及上传本地 chart。 |
+| `olares-settings` | 读取和修改网页端开放的设置。 |
+| `olares-dashboard` | 总览和应用指标，JSON 结构稳定。 |
+| `olares-cluster` | 读取和修改 Pod、工作负载、节点、Job、CronJob，以及中间件密码。 |
 
 :::warning 务必先安装 `olares-shared`
 其他所有技能都默认 `olares-shared` 已经加载。它定义了 profile 模型、令牌刷新逻辑，以及其他技能依赖的鉴权错误恢复提示。比如只加载了 `olares-files` 的 Agent，遇到鉴权错误时就无从恢复。
@@ -33,7 +30,7 @@ description: 从 Cursor、Claude Code 等 AI 运行时，或 Hermes Agent、Open
 
 ## 手动安装技能
 
-如果你是用 `npx @olares/cli@latest install` 安装的 CLI，这些技能已经一并装好，可以跳过本节。如果是单独安装的 CLI，运行下面的命令把所有技能一次装好：
+如果你是用 `npx @olares/cli@latest install` 安装的 CLI，这些技能已经一并装好，可以跳过本节。如果是单独安装的 CLI，运行下面的命令把六个技能一次装好：
 
 ```bash
 npx skills add beclab/Olares -y -g
