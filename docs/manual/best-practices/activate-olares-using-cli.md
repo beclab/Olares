@@ -25,8 +25,8 @@ Before you begin, ensure the following requirements are met:
 - You can run commands as the root user, or prepend commands with `sudo`.
 - You have created an Olares ID using the LarePass app, and have [backed up your 12-word mnemonic phrase](../larepass/back-up-mnemonics.md).
 
-    ![Fast creation](/images/manual/get-started/create-olares-id.png)
-
+    ![Fast creation](/images/manual/get-started/create-olares-id-1.12.6.png)
+    
 ## Step 1: Prepare the CLI tool
 
 Determine your CLI preparation steps based on your Olares version.
@@ -163,7 +163,7 @@ Run the activation command to configure and secure your device. This process con
     sudo olares-cli wizard activate alice2026@olares.com \
     --mnemonic "abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef" \
     --password="b8Ln6qbz" \
-    --reset-password="Ab1234@" \
+    --reset-password="Abw1234@" \
     --authurl=http://192.168.31.127:30180 \
     --vault=http://192.168.31.127:30180/server \
     --bfl=http://192.168.31.127:30180 \
@@ -193,7 +193,7 @@ Run the activation command to configure and secure your device. This process con
     sudo ./olares-cli wizard activate alice2026@olares.com \
     --mnemonic "abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef abcdef" \
     --password="b8Ln6qbz" \
-    --reset-password="Ab1234@" \
+    --reset-password="Abw1234@" \
     --authurl=http://192.168.31.127:30180 \
     --vault=http://192.168.31.127:30180/server \
     --bfl=http://192.168.31.127:30180 \
