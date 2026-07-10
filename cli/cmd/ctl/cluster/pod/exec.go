@@ -116,6 +116,12 @@ reverts them. Durable fixes go through the image / ConfigMap / workload spec
 				if !ttyFlag {
 					return fmt.Errorf("missing <pod>; give a target (e.g. exec ns/pod -- ls) or add -it to pick a container interactively")
 				}
+				// Preflight the backend version before showing the picker so an
+				// unsupported backend fails fast with the upgrade hint instead
+				// of popping the picker only to reject the selection in RunExec.
+				if err := requireExecBackendVersion(c.Context(), o.Factory()); err != nil {
+					return err
+				}
 				ns, podName, ctr, canceled, perr := PickInteractiveTarget(c.Context(), o, namespace)
 				if perr != nil {
 					return perr
