@@ -147,10 +147,11 @@ Olares 上的智能体应用已内置这些技能。本指南以 OpenCode 为例
    olares-cli profile list
    ```
 
-   示例输出：
+   示例输出（开头的 `*` 标记着当前 profile）：
 
    ```text
      NAME                   OLARES-ID              STATUS     VERSION
+     laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6-alpha.15
    * laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6-alpha.15  
    ```
 

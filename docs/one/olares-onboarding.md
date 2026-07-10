@@ -143,10 +143,11 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
    olares-cli profile list
    ```
 
-   Example output:
+   Example output (`*` marks the current profile):
 
    ```text
      NAME                   OLARES-ID              STATUS     VERSION
+     laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6-alpha.15
    * laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6-alpha.15  
    ```
 
