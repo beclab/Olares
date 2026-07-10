@@ -4,50 +4,50 @@ kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: linkerd-destination
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 ---
 # Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
 kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: linkerd-heartbeat
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: heartbeat
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 ---
 # Source: linkerd-control-plane/templates/identity-rbac.yaml
 kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: linkerd-identity
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: identity
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 ---
 # Source: linkerd-control-plane/templates/proxy-injector-rbac.yaml
 kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: linkerd-proxy-injector
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 ---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 kind: Secret
 apiVersion: v1
 metadata:
   name: linkerd-sp-validator-k8s-tls
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 type: kubernetes.io/tls
@@ -60,10 +60,10 @@ kind: Secret
 apiVersion: v1
 metadata:
   name: linkerd-policy-validator-k8s-tls
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 type: kubernetes.io/tls
@@ -76,10 +76,10 @@ kind: Secret
 apiVersion: v1
 metadata:
   name: linkerd-proxy-injector-k8s-tls
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 type: kubernetes.io/tls
@@ -92,10 +92,10 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: linkerd-config
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: controller
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 data:
@@ -432,7 +432,7 @@ metadata:
   name: linkerd-linkerd-destination
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 rules:
 - apiGroups: ["apps"]
   resources: ["replicasets"]
@@ -464,7 +464,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: Linkerd
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 rules:
   - apiGroups:
       - ""
@@ -546,7 +546,7 @@ kind: ClusterRole
 metadata:
   name: linkerd-heartbeat
   labels:
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 rules:
 - apiGroups: [""]
   resources: ["namespaces"]
@@ -565,7 +565,7 @@ metadata:
   name: linkerd-linkerd-identity
   labels:
     linkerd.io/control-plane-component: identity
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 rules:
 - apiGroups: ["authentication.k8s.io"]
   resources: ["tokenreviews"]
@@ -586,7 +586,7 @@ metadata:
   name: linkerd-linkerd-proxy-injector
   labels:
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 rules:
 - apiGroups: [""]
   resources: ["events"]
@@ -611,7 +611,7 @@ metadata:
   name: linkerd-linkerd-destination
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -619,7 +619,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: linkerd-destination
-  namespace: linkerd
+  namespace: os-mesh
 ---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -629,7 +629,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: Linkerd
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -637,7 +637,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: linkerd-destination
-    namespace: linkerd
+    namespace: os-mesh
 ---
 # Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -645,7 +645,7 @@ kind: ClusterRoleBinding
 metadata:
   name: linkerd-heartbeat
   labels:
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 roleRef:
   kind: ClusterRole
   name: linkerd-heartbeat
@@ -653,7 +653,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: linkerd-heartbeat
-  namespace: linkerd
+  namespace: os-mesh
 ---
 # Source: linkerd-control-plane/templates/identity-rbac.yaml
 kind: ClusterRoleBinding
@@ -662,7 +662,7 @@ metadata:
   name: linkerd-linkerd-identity
   labels:
     linkerd.io/control-plane-component: identity
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -670,7 +670,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: linkerd-identity
-  namespace: linkerd
+  namespace: os-mesh
 ---
 # Source: linkerd-control-plane/templates/proxy-injector-rbac.yaml
 kind: ClusterRoleBinding
@@ -679,11 +679,11 @@ metadata:
   name: linkerd-linkerd-proxy-injector
   labels:
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 subjects:
 - kind: ServiceAccount
   name: linkerd-proxy-injector
-  namespace: linkerd
+  namespace: os-mesh
   apiGroup: ""
 roleRef:
   kind: ClusterRole
@@ -695,11 +695,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   labels:
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
   name: ext-namespace-metadata-linkerd-config
-  namespace: linkerd
+  namespace: os-mesh
 rules:
 - apiGroups: [""]
   resources: ["configmaps"]
@@ -711,11 +711,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: remote-discovery
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     app.kubernetes.io/part-of: Linkerd
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 rules:
   - apiGroups:
       - ""
@@ -734,9 +734,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: linkerd-heartbeat
-  namespace: linkerd
+  namespace: os-mesh
   labels:
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 rules:
 - apiGroups: [""]
   resources: ["configmaps"]
@@ -748,11 +748,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: linkerd-destination-remote-discovery
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     app.kubernetes.io/part-of: Linkerd
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -760,16 +760,16 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: linkerd-destination
-    namespace: linkerd
+    namespace: os-mesh
 ---
 # Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: linkerd-heartbeat
-  namespace: linkerd
+  namespace: os-mesh
   labels:
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 roleRef:
   kind: Role
   name: linkerd-heartbeat
@@ -777,7 +777,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: linkerd-heartbeat
-  namespace: linkerd
+  namespace: os-mesh
 ---
 # Source: linkerd-control-plane/templates/destination.yaml
 ###
@@ -787,10 +787,10 @@ kind: Service
 apiVersion: v1
 metadata:
   name: linkerd-dst
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 spec:
@@ -807,10 +807,10 @@ kind: Service
 apiVersion: v1
 metadata:
   name: linkerd-dst-headless
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 spec:
@@ -827,10 +827,10 @@ kind: Service
 apiVersion: v1
 metadata:
   name: linkerd-sp-validator
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 spec:
@@ -847,10 +847,10 @@ kind: Service
 apiVersion: v1
 metadata:
   name: linkerd-policy
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 spec:
@@ -867,10 +867,10 @@ kind: Service
 apiVersion: v1
 metadata:
   name: linkerd-policy-validator
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 spec:
@@ -887,10 +887,10 @@ kind: Service
 apiVersion: v1
 metadata:
   name: linkerd-identity
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: identity
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 spec:
@@ -907,10 +907,10 @@ kind: Service
 apiVersion: v1
 metadata:
   name: linkerd-identity-headless
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: identity
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 spec:
@@ -927,10 +927,10 @@ kind: Service
 apiVersion: v1
 metadata:
   name: linkerd-proxy-injector
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
     config.linkerd.io/opaque-ports: "443"
@@ -954,16 +954,16 @@ metadata:
     app.kubernetes.io/part-of: Linkerd
     app.kubernetes.io/version: edge-26.5.1
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   name: linkerd-destination
-  namespace: linkerd
+  namespace: os-mesh
 spec:
   replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:
       linkerd.io/control-plane-component: destination
-      linkerd.io/control-plane-ns: linkerd
+      linkerd.io/control-plane-ns: os-mesh
       linkerd.io/proxy-deployment: linkerd-destination
   strategy:
     rollingUpdate:
@@ -980,7 +980,7 @@ spec:
         config.linkerd.io/default-inbound-policy: "all-unauthenticated"
       labels:
         linkerd.io/control-plane-component: destination
-        linkerd.io/control-plane-ns: linkerd
+        linkerd.io/control-plane-ns: os-mesh
         linkerd.io/workload-ns: linkerd
         linkerd.io/proxy-deployment: linkerd-destination
     spec:
@@ -1400,16 +1400,16 @@ metadata:
     app.kubernetes.io/part-of: Linkerd
     app.kubernetes.io/version: edge-26.5.1
     linkerd.io/control-plane-component: identity
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   name: linkerd-identity
-  namespace: linkerd
+  namespace: os-mesh
 spec:
   replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:
       linkerd.io/control-plane-component: identity
-      linkerd.io/control-plane-ns: linkerd
+      linkerd.io/control-plane-ns: os-mesh
       linkerd.io/proxy-deployment: linkerd-identity
   strategy:
     rollingUpdate:
@@ -1425,7 +1425,7 @@ spec:
         config.linkerd.io/default-inbound-policy: "all-unauthenticated"
       labels:
         linkerd.io/control-plane-component: identity
-        linkerd.io/control-plane-ns: linkerd
+        linkerd.io/control-plane-ns: os-mesh
         linkerd.io/workload-ns: linkerd
         linkerd.io/proxy-deployment: linkerd-identity
     spec:
@@ -1749,9 +1749,9 @@ metadata:
     app.kubernetes.io/part-of: Linkerd
     app.kubernetes.io/version: edge-26.5.1
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   name: linkerd-proxy-injector
-  namespace: linkerd
+  namespace: os-mesh
 spec:
   replicas: 1
   revisionHistoryLimit: 10
@@ -1774,7 +1774,7 @@ spec:
         config.linkerd.io/default-inbound-policy: "all-unauthenticated"
       labels:
         linkerd.io/control-plane-component: proxy-injector
-        linkerd.io/control-plane-ns: linkerd
+        linkerd.io/control-plane-ns: os-mesh
         linkerd.io/workload-ns: linkerd
         linkerd.io/proxy-deployment: linkerd-proxy-injector
     spec:
@@ -2093,13 +2093,13 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: linkerd-heartbeat
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     app.kubernetes.io/name: heartbeat
     app.kubernetes.io/part-of: Linkerd
     app.kubernetes.io/version: edge-26.5.1
     linkerd.io/control-plane-component: heartbeat
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
   annotations:
     linkerd.io/created-by: linkerd/helm edge-26.5.1
 spec:
@@ -2178,7 +2178,7 @@ metadata:
   name: linkerd-proxy-injector-webhook-config
   labels:
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 webhooks:
 - name: linkerd-proxy-injector.linkerd.io
   namespaceSelector:
@@ -2201,7 +2201,7 @@ webhooks:
   clientConfig:
     service:
       name: linkerd-proxy-injector
-      namespace: linkerd
+      namespace: os-mesh
       path: "/"
     caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURVakNDQWpxZ0F3SUJBZ0lRSnR0T29Vd2JWbFZZNFQ5aHVsOUkzREFOQmdrcWhraUc5dzBCQVFzRkFEQXQKTVNzd0tRWURWUVFERXlKc2FXNXJaWEprTFhCeWIzaDVMV2x1YW1WamRHOXlMbXhwYm10bGNtUXVjM1pqTUI0WApEVEkyTURjd05qQTVNRE13TmxvWERUSTNNRGN3TmpBNU1ETXdObG93TFRFck1Da0dBMVVFQXhNaWJHbHVhMlZ5ClpDMXdjbTk0ZVMxcGJtcGxZM1J2Y2k1c2FXNXJaWEprTG5OMll6Q0NBU0l3RFFZSktvWklodmNOQVFFQkJRQUQKZ2dFUEFEQ0NBUW9DZ2dFQkFLKzdJK1JiUmVZNk1WM3lqcEpqVnVMK3k1N1liYkxpUkU4VytldGMxOE1mT0YraAo5V1JSL0U2dTlZVTNMK1RVNG9kRlRCU3FzUExSeVUxcWwvV3hqYlY5cC9rMUxYVXVjRWJJQUMyQ25RSUw1L0RiCnk4bGdQWGlnMk5YVjZuaU1BbDBDNDhwZzRtb1J4QU9hODNMY3V0WThteXh1OERHT2RsT1M1SFRkVjIwNUpvU2EKVWNJOVZmRGpKMXVuY2xZdUprdE9mUzFESlMyQkFpclBwWFFEczlMdUcyc21oaStseW9OU0Z1QXNZYnpLZTQ1RQo1WXlYOEQxQ0lRQ2xRQi9RSU96RzREY21OOG41RGQwUTFyZTNWY3hSODRRYWJIWFYxS0R0bnJ3d2k3ZkZDelJMClQzSjVpN3RIU3VuZXNTQlRoYjVuTUtUaGo4TG82cGFEKzNOcHc4VUNBd0VBQWFOdU1Hd3dEZ1lEVlIwUEFRSC8KQkFRREFnV2dNQjBHQTFVZEpRUVdNQlFHQ0NzR0FRVUZCd01CQmdnckJnRUZCUWNEQWpBTUJnTlZIUk1CQWY4RQpBakFBTUMwR0ExVWRFUVFtTUNTQ0lteHBibXRsY21RdGNISnZlSGt0YVc1cVpXTjBiM0l1YkdsdWEyVnlaQzV6CmRtTXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSHdZcG5Ea2tES3VoYjZwL0tISnpEWHM3RFE0UDRPYVVNWkcKZmFoSzk4eXJBaFdhcG5VeGgyMW12RDRPSnlXNjd6RUVKbmduVjRXZVlsdGEvR21LbHlVTkM0OVdLbFlYc1hUYgovR1dONWZJVDNNM3BSTG1TeTQxbkd6S3FGZnowMVcyQkpxVjcvL01GYkI2b0RuMUYxZmxnOGJZMERnNllvRnp2CjAwMTByMXVCY1I0TkE1UFFkT3N2bERvV2xUNXR3Zkh4cHMvdTArQmd6QnVxTDE0dnRDYVorZHhlSDBBc2JLb0MKRFZIN3QwNW1pdlY5WHphdE5CdUM3dkh3ZzJ6ZEgrdk44ZzlPaGR4Q3FVMkZYejdOYlhMRjRSanNiTFdDaXRxeQpCRG80c0ZiVzFiVW5RRnhQdk1BL3gvOUlZUUxuckhOekllMlQrY1V2Z0dJTjQwQjFxZ2s9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
   failurePolicy: Ignore
@@ -2222,7 +2222,7 @@ metadata:
   name: linkerd-sp-validator-webhook-config
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 webhooks:
 - name: linkerd-sp-validator.linkerd.io
   namespaceSelector:
@@ -2234,7 +2234,7 @@ webhooks:
   clientConfig:
     service:
       name: linkerd-sp-validator
-      namespace: linkerd
+      namespace: os-mesh
       path: "/"
     caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURURENDQWpTZ0F3SUJBZ0lRSzV0VTE2c01DWTNycTRlSy9nRFJDVEFOQmdrcWhraUc5dzBCQVFzRkFEQXIKTVNrd0p3WURWUVFERXlCc2FXNXJaWEprTFhOd0xYWmhiR2xrWVhSdmNpNXNhVzVyWlhKa0xuTjJZekFlRncweQpOakEzTURZd09UQXpNRFphRncweU56QTNNRFl3T1RBek1EWmFNQ3N4S1RBbkJnTlZCQU1USUd4cGJtdGxjbVF0CmMzQXRkbUZzYVdSaGRHOXlMbXhwYm10bGNtUXVjM1pqTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEEKTUlJQkNnS0NBUUVBbkJ0UWk0RUIzSExLeWp5czEyUHJmRDlxY3dWRForWDZ5anp2ZmQzSU0yYVBNWEFvRWRKWAp1enA1N0JXQlFPc2FqOGp6WFFqSmwydXkyZGJBTzBTV2F4U29XQ0FIREVKK0JnUnBZUHcvc1d4R0lwMjdxV2o4CmJnNWE0dVQyT3IxSUcvY3BEZTBocHV3cDVzS2FrbURxeVpkaXRqT3E4bVFhSklqVFB3MEZkZjNyZ0VhK1MveGEKdDkybFhFRUFQSHhhdGFqellvSUxMbHA4bStmZXVmZmh5QmZTSVM4RWhjbThiVmoxY2FWRDllTVFEN3Ezb0QyUgpwV1FzMGpvUC9CSlpPMnJuSFBRejlFM2dLSlliSE5jaC9ya1JvQmp4VTZCS2V3aDlvR1VTQjc5dDVzZUhSNUhYCjRkcHdZaWVndU1VYklnT1h2Q0U2SUNDVG1rbW9ReHR3SlFJREFRQUJvMnd3YWpBT0JnTlZIUThCQWY4RUJBTUMKQmFBd0hRWURWUjBsQkJZd0ZBWUlLd1lCQlFVSEF3RUdDQ3NHQVFVRkJ3TUNNQXdHQTFVZEV3RUIvd1FDTUFBdwpLd1lEVlIwUkJDUXdJb0lnYkdsdWEyVnlaQzF6Y0MxMllXeHBaR0YwYjNJdWJHbHVhMlZ5WkM1emRtTXdEUVlKCktvWklodmNOQVFFTEJRQURnZ0VCQUdLN1p1V3o0NFMrc2kzYmNweW1ZWVlMV2RJeXhDeFlXZGNRYzExQ3FYNmUKSlltQjRIMW9KUzdMV2RSUk5nZTJXZ09KUTV4c2FTcEJCSDdhWGtqOElYdlAyZEYvUTJtWmdUNUJJc0t5M1VoaAprREVFaVNEK0h5OXhTenhmeS9JZTlESENSd29HZzFjL2NoeUJQTUVndHdIS3IvNGovOXdUd3lNN0RPOUFlRVY0CkV3eDdNMDVtaStLUEk3eWV0OFBVb0Y1bG96Wlh1U0tYZFgyZGdURFUzbi9KSUo3MzNyZ003bEcxKzM1RTRqdGcKdGNpWEFBckJZN2tzTUhydk1jOG9GN0JpTDZkM1p1bi9NMDB0SVdKVnJHa1MvNGpWUEJoOGhNNkV1SmNHRWI1dQo4L3lhd2lrLzUvSWRGaGROVDd6d1Q2Z28wSjhKQ3BlcWdmQTVLa3Npa2xNPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t
   failurePolicy: Ignore
@@ -2253,7 +2253,7 @@ metadata:
   name: linkerd-policy-validator-webhook-config
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: linkerd
+    linkerd.io/control-plane-ns: os-mesh
 webhooks:
 - name: linkerd-policy-validator.linkerd.io
   namespaceSelector:
@@ -2265,7 +2265,7 @@ webhooks:
   clientConfig:
     service:
       name: linkerd-policy-validator
-      namespace: linkerd
+      namespace: os-mesh
       path: "/"
     caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURXRENDQWtDZ0F3SUJBZ0lRTXRuU2syYWt0TDcrMFBBQkJmVS9JVEFOQmdrcWhraUc5dzBCQVFzRkFEQXYKTVMwd0t3WURWUVFERXlSc2FXNXJaWEprTFhCdmJHbGplUzEyWVd4cFpHRjBiM0l1YkdsdWEyVnlaQzV6ZG1NdwpIaGNOTWpZd056QTJNRGt3TXpBMldoY05NamN3TnpBMk1Ea3dNekEyV2pBdk1TMHdLd1lEVlFRREV5UnNhVzVyClpYSmtMWEJ2YkdsamVTMTJZV3hwWkdGMGIzSXViR2x1YTJWeVpDNXpkbU13Z2dFaU1BMEdDU3FHU0liM0RRRUIKQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUURNOGVNazZyYkdCQWNWY3dEb1VMcFh6RENmM2xkZlBCMWRHd0hxNzF5Vwp0cm14TVVSVXUrcVc0YW94aW1WY3dadXQxMHpwZ201c0hlZ290L1pVQWx3WVhnbmVrN2d6S0hvbEpJUTkrcitwCnFxejhGTkZ0d2V3U1dTdVQvRllUL2YxQ0hhK3p0TDJUNnh5bVFyZEFQdFAxR1E4ZTJQSG4vTHorQy80dW5VYXAKM2ZVWHZsQ25iT0h1blFqamZGZUdqUzVSRytscHFXNTZpMzZva3hzaEJBRUJBbWh6ZFNzcUFPRFdkZWZGdHhhWAplS1VWMjF1VXVVMksrbnJjNVF3VXdvenVjdDM1NENHYTlDUkpWZWdMSlJZRkpWWVdzYk0weXk0V3FpMmpNWGxUCml3Y2FzbnEzOFkxMWx6NHg0U015WU1CcXBHWWRSZ2V6aWJBVDJlTG55MXVOQWdNQkFBR2pjREJ1TUE0R0ExVWQKRHdFQi93UUVBd0lGb0RBZEJnTlZIU1VFRmpBVUJnZ3JCZ0VGQlFjREFRWUlLd1lCQlFVSEF3SXdEQVlEVlIwVApBUUgvQkFJd0FEQXZCZ05WSFJFRUtEQW1naVJzYVc1clpYSmtMWEJ2YkdsamVTMTJZV3hwWkdGMGIzSXViR2x1CmEyVnlaQzV6ZG1Nd0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFGczRmY05obWVoUjJWL0hDMkRVM3lGS1VPKzIKWXBVWmZKMC82WW5CbHIySEUreVV1UWhxYjZNZVRTZ1RJdjZXZllIR3VQYjRxQWdFU0RFZDlEcEhjSnBsS20wOQpEd28zekNsVkZzNUZoUXhwT29RNEk4YnkrMzRaT0VnZDcxU2FiWnZuZEQ1VE5UZTlNdk9jT2hiRC9JSHVDSXB0CmI5QStaRUtHK1BlRVZGY0VJUUJacmdtS3N4dXQ0T3J2dW1UUEtaSEdDbFMvb0tkeTNVTVNtVkR0eDBsMDE1Q0oKc1YzekFmZG9ULytHRjNrL2xpcXhRTXNkcXlPaFk3djRueC9FQk9JSnJHZlVvSStyNmVTOGtZeVJIdHJzVEVVdwp5VWo4aGUvSXB2Z0VyRFNNdzRzcno2YTBoMVhrclNUdkplY3BUYTdNQ3A2K3hyZHVzK0ZlbHo5RlF1ST0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ==
   failurePolicy: Ignore

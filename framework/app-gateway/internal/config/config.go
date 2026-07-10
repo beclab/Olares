@@ -57,7 +57,7 @@ func Namespace() string {
 func LinkerdNamespace() string {
 	d, err := Load()
 	if err != nil || d.Vendor.LinkerdNamespace == "" {
-		return "linkerd"
+		return "os-mesh"
 	}
 	return d.Vendor.LinkerdNamespace
 }

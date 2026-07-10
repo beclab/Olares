@@ -40,7 +40,7 @@ var (
 
 	// AppGatewayMeshNamespaces are namespaces used by the Olares app-gateway stack.
 	AppGatewayMeshNamespaces = []string{
-		"linkerd",
+		"os-mesh",
 		"os-gateway",
 		"linkerd-viz",
 	}
@@ -54,10 +54,10 @@ func IsAppGatewayMeshNamespace(ns string) bool {
 // AppGatewayMeshPeerNamespace returns the paired namespace for app-gateway-mesh-np ingress.
 func AppGatewayMeshPeerNamespace(ns string) string {
 	switch ns {
-	case "linkerd":
+	case "os-mesh":
 		return "os-gateway"
 	case "os-gateway", "linkerd-viz":
-		return "linkerd"
+		return "os-mesh"
 	default:
 		return ""
 	}

@@ -12,7 +12,7 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: linkerd
+          kubernetes.io/metadata.name: os-mesh
   podSelector: {}
   policyTypes:
   - Ingress

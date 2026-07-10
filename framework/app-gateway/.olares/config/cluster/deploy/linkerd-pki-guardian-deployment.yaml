@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: linkerd-pki-guardian
-  namespace: linkerd
+  namespace: os-mesh
   labels:
     app.kubernetes.io/name: app-gateway
     app.kubernetes.io/component: linkerd-pki-guardian

@@ -7,8 +7,8 @@ import "time"
 
 const (
 	// DefaultLinkerdNamespace is the namespace hosting the Linkerd control
-	// plane and the PKI Secrets the guardian maintains.
-	DefaultLinkerdNamespace = "linkerd"
+	// plane and the PKI Secrets the guardian maintains (platform os-* NS).
+	DefaultLinkerdNamespace = "os-mesh"
 
 	// PKISecretName is the single source of truth Secret storing ca.* and
 	// issuer.* material for issuer rotation; access is restricted via RBAC.

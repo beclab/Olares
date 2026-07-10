@@ -15,8 +15,8 @@ var exports = []struct {
 	ns       string
 	peerNS   string
 }{
-	{filename: "app-gateway-mesh-np-linkerd.yaml", ns: "linkerd", peerNS: "os-gateway"},
-	{filename: "app-gateway-mesh-np-os-gateway.yaml", ns: "os-gateway", peerNS: "linkerd"},
+	{filename: "app-gateway-mesh-np-os-mesh.yaml", ns: "os-mesh", peerNS: "os-gateway"},
+	{filename: "app-gateway-mesh-np-os-gateway.yaml", ns: "os-gateway", peerNS: "os-mesh"},
 }
 
 func main() {

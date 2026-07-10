@@ -30,9 +30,9 @@ var LinkerdControlPlaneIngressPeerNamespaces = []string{"os-gateway", "linkerd-v
 const SharedLinkerdMeshIngressNPName = "shared-linkerd-mesh-ingress-np"
 
 // SharedLinkerdMeshIngressPeerNamespaces are platform namespaces whose pods must reach
-// linkerd-proxy / app containers in shared workload namespaces. Kept ordered: linkerd
+// linkerd-proxy / app containers in shared workload namespaces. Kept ordered: os-mesh
 // first (required for sidecar startup); linkerd-viz second (optional observability).
-var SharedLinkerdMeshIngressPeerNamespaces = []string{"linkerd", "linkerd-viz"}
+var SharedLinkerdMeshIngressPeerNamespaces = []string{"os-mesh", "linkerd-viz"}
 
 // LinkerdMeshPrometheusScrapePorts are proxy/admin ports scraped by platform Prometheus.
 var LinkerdMeshPrometheusScrapePorts = []int32{4191, 8085, 9990, 9943, 9994, 9995}
@@ -49,11 +49,11 @@ func NewAppGatewayMeshNetworkPolicy(ns, peerNS string) *netv1.NetworkPolicy {
 			},
 		},
 	}
-	if ns == "linkerd" {
+	if ns == "os-mesh" {
 		from = linkerdControlPlaneIngressPeers()
 	}
 	ingress := netv1.NetworkPolicyIngressRule{From: from}
-	if ns == "linkerd" {
+	if ns == "os-mesh" {
 		tcp := (*corev1.Protocol)(pointer.String(string(corev1.ProtocolTCP)))
 		for _, port := range LinkerdMeshIngressPortsFromAppGateway {
 			ingress.Ports = append(ingress.Ports, netv1.NetworkPolicyPort{

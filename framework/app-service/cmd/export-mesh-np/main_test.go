@@ -22,8 +22,8 @@ func TestExportMeshNP(t *testing.T) {
 		ns     string
 		peerNS string
 	}{
-		{"app-gateway-mesh-np-linkerd.yaml", "linkerd", "os-gateway"},
-		{"app-gateway-mesh-np-os-gateway.yaml", "os-gateway", "linkerd"},
+		{"app-gateway-mesh-np-os-mesh.yaml", "os-mesh", "os-gateway"},
+		{"app-gateway-mesh-np-os-gateway.yaml", "os-gateway", "os-mesh"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.file, func(t *testing.T) {

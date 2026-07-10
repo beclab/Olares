@@ -17,4 +17,4 @@ tls:
   enabled: true
 
 vendor:
-  linkerdNamespace: linkerd
+  linkerdNamespace: os-mesh
