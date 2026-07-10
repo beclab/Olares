@@ -39,11 +39,10 @@ head:
 
 ### BIOS 版本
 
-<!--| [1.05 (下载)](https://cdn.olares.com/common/OlaresOne_BIOS_1.05.zip) | 2026-07-06 | <ul><li>修复雷电口功能异常的问题。此前为改善功耗异常，禁用了所有设备的 D3 (D3Cold) 低功耗状态；现在仅禁用 GPU 的 D3 状态。</li></ul> |-->
-
 | 版本 | 发布日期 | 更新日志 |
 |:--------|:-------------|:----------|
-| [1.04 (下载)](https://cdn.olares.com/common/OlaresOne_BIOS_1.04.zip)| 2026-05-09 | <ul><li>在将 **Primary Display** 设置更改为 **HG** 时添加警告提示。</li><li>通过锁定 GPU PCIe 速度为 Gen4 修复 GPU 意外断开连接的问题。</li><li>通过禁用产品空闲时将 GPU 置于睡眠模式的功能，修复长时间使用后性能下降且功耗异常受限的问题。</li></ul> |
+| [1.05 (下载)](https://cdn.olares.com/common/OlaresOne_BIOS_1.05.zip) | 2026-07-06 | <ul><li>修复雷电口功能异常的问题。此前为改善功耗异常，禁用了所有设备的 D3 (D3Cold) 低功耗状态；现在仅禁用 GPU 的 D3 状态。</li></ul> |
+| 1.04 | 2026-05-09 | <ul><li>在将 **Primary Display** 设置更改为 **HG** 时添加警告提示。</li><li>通过锁定 GPU PCIe 速度为 Gen4 修复 GPU 意外断开连接的问题。</li><li>通过禁用产品空闲时将 GPU 置于睡眠模式的功能，修复长时间使用后性能下降且功耗异常受限的问题。</li></ul> |
 | 1.03  | 2026-03-19 | <ul><li>修复 Ubuntu 系统启动时出现的 ACPI 错误。</li><li>将 Intel CPU 微码更新至版本 0x121。</li></ul> |
 | 1.01  | 2025-12-04 | <ul><li>通过禁用 SSD1 和 SSD2 的 ASPM 和 L-state 电源管理，修复 SSD 意外断开连接的问题。</li></ul> |
 | 1.00 | 2025-11-28 | <ul><li>更新版本命名规范。</li></ul> |
