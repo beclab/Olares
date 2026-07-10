@@ -120,7 +120,7 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
    Example output:
 
    ```bash
-   olares-cli version >=1.12.6
+   olares-cli version 1.12.6
    ```
 
 3. Run the following command to log in to your Olares account. Replace `<your-olares-id>` with your actual Olares ID.
@@ -146,8 +146,8 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
    Example output:
 
    ```text
-      NAME                   OLARES-ID              STATUS
-   *  laresprime@olares.com  laresprime@olares.com  logged-in
+     NAME                   OLARES-ID              STATUS     VERSION
+   * laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6-alpha.15  
    ```
 
 ## Step 5: Manage Olares through natural language
