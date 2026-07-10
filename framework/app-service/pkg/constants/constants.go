@@ -91,8 +91,9 @@ const (
 	NvidiaGPU    = "nvidia.com/gpu"
 	NvidiaGPUMem = "nvidia.com/gpumem"
 	//	NvidiaGB10GPU = "nvidia.com/gb10"
-	AMDAPU = "amd.com/apu"
-	AMDGPU = "amd.com/gpu"
+	AMDAPU   = "amd.com/apu"
+	AMDGPU   = "amd.com/gpu"
+	IntelGPU = "gpu.intel.com/i915"
 
 	AuthorizationLevelOfPublic   = "public"
 	AuthorizationLevelOfPrivate  = "private"
