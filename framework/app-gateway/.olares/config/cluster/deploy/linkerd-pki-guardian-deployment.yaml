@@ -32,7 +32,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: guardian
-          image: beclab/linkerd-pki-guardian@sha256:28c8a9dce2a0c9c953a674dd40af58e8bbe86e45899dbcd7408639e16a3862f8
+          image: beclab/linkerd-pki-guardian@sha256:74e57f82cc741452ba32888a7e67f6c2196949e4f09b6d8e8f6a21806df1d58c
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
