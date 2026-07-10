@@ -28,6 +28,10 @@ const (
 const (
 	identityIssuerSecret   = "linkerd-identity-issuer"
 	identityTrustRootsCM   = "linkerd-identity-trust-roots"
+	// helmResourcePolicyKeep prevents Helm from deleting hook-managed PKI objects when
+	// they are removed from the os-framework chart manifest on brownfield upgrade.
+	helmResourcePolicyKeep = "helm.sh/resource-policy"
+	helmResourcePolicyKeepValue = "keep"
 	identityTrustRootsKey  = "ca-bundle.crt"
 	identityDeployment     = "linkerd-identity"
 	identityIssuerCrtKey   = "crt.pem"

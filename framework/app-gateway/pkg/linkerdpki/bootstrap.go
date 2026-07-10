@@ -115,6 +115,9 @@ func syncIdentityIssuerSecret(ctx context.Context, c client.Client, ns string, m
 					"linkerd.io/control-plane-component": "identity",
 					"linkerd.io/control-plane-ns":        ns,
 				},
+				Annotations: map[string]string{
+					helmResourcePolicyKeep: helmResourcePolicyKeepValue,
+				},
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
@@ -137,13 +140,28 @@ func patchIdentityIssuerIfChanged(ctx context.Context, c client.Client, sec *cor
 	if sec.Data == nil {
 		sec.Data = map[string][]byte{}
 	}
-	if bytesEqual(sec.Data[identityIssuerCrtKey], mat.IssuerCrt) &&
-		bytesEqual(sec.Data[identityIssuerKeyKey], mat.IssuerKey) {
+	dataChanged := !bytesEqual(sec.Data[identityIssuerCrtKey], mat.IssuerCrt) ||
+		!bytesEqual(sec.Data[identityIssuerKeyKey], mat.IssuerKey)
+	if dataChanged {
+		sec.Data[identityIssuerCrtKey] = mat.IssuerCrt
+		sec.Data[identityIssuerKeyKey] = mat.IssuerKey
+	}
+	annoChanged := applyHelmKeepAnnotation(&sec.ObjectMeta)
+	if !dataChanged && !annoChanged {
 		return false, nil
 	}
-	sec.Data[identityIssuerCrtKey] = mat.IssuerCrt
-	sec.Data[identityIssuerKeyKey] = mat.IssuerKey
-	return true, c.Update(ctx, sec)
+	return dataChanged || annoChanged, c.Update(ctx, sec)
+}
+
+func applyHelmKeepAnnotation(meta *metav1.ObjectMeta) bool {
+	if meta.Annotations != nil && meta.Annotations[helmResourcePolicyKeep] == helmResourcePolicyKeepValue {
+		return false
+	}
+	if meta.Annotations == nil {
+		meta.Annotations = map[string]string{}
+	}
+	meta.Annotations[helmResourcePolicyKeep] = helmResourcePolicyKeepValue
+	return true
 }
 
 func syncIdentityTrustRoots(ctx context.Context, c client.Client, ns string, caCrt []byte) (bool, error) {
@@ -157,6 +175,9 @@ func syncIdentityTrustRoots(ctx context.Context, c client.Client, ns string, caC
 				Labels: map[string]string{
 					"linkerd.io/control-plane-component": "controller",
 					"linkerd.io/control-plane-ns":        ns,
+				},
+				Annotations: map[string]string{
+					helmResourcePolicyKeep: helmResourcePolicyKeepValue,
 				},
 			},
 			Data: map[string]string{
@@ -175,11 +196,15 @@ func syncIdentityTrustRoots(ctx context.Context, c client.Client, ns string, caC
 		cm.Data = map[string]string{}
 	}
 	desired := string(caCrt)
-	if cm.Data[identityTrustRootsKey] == desired {
+	dataChanged := cm.Data[identityTrustRootsKey] != desired
+	if dataChanged {
+		cm.Data[identityTrustRootsKey] = desired
+	}
+	annoChanged := applyHelmKeepAnnotation(&cm.ObjectMeta)
+	if !dataChanged && !annoChanged {
 		return false, nil
 	}
-	cm.Data[identityTrustRootsKey] = desired
-	return true, c.Update(ctx, &cm)
+	return dataChanged || annoChanged, c.Update(ctx, &cm)
 }
 
 func bytesEqual(a, b []byte) bool {
