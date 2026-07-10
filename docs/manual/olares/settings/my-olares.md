@@ -54,7 +54,10 @@ Available actions are:
   Turn on this switch to start the device automatically when power is connected or restored after a power outage.
 
   :::info
-  Requires Olares OS 1.12.6 or later and EC firmware 1.03 or later. If either prerequisite is not met, the toggle is visible but disabled.
+
+  Requires Olares OS 1.12.6 or later and EC firmware 1.03 or later. If either prerequisite is not met, the toggle is visible but disabled. 
+  
+  To check your current EC firmware version or update EC firmware, see [Manage BIOS and EC](/one/update-firmware.md).
   :::
   
 

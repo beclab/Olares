@@ -181,6 +181,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Vane (Perplexica)",
                   link: "/zh/use-cases/perplexica",
                 },
+                {
+                  text: "Dify",
+                  link: "/zh/use-cases/dify-upgrade",
+                },
               ],
             },
             {
@@ -241,6 +245,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "引擎基座",
+                  link: "/zh/use-cases/llm-base-apps",
+                },
+                {
                   text: "Ollama",
                   link: "/zh/use-cases/ollama",
                 },
@@ -260,6 +268,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "LLMFit",
                   link: "/zh/use-cases/llmfit",
                 },
+                // {
+                //   text: "Xinference",
+                //   link: "/zh/use-cases/xinference",
+                // },
                 // {
                 //   text: "Dify",
                 //   link: "/zh/use-cases/dify",
@@ -400,6 +412,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "RNA Sequencing",
               link: "/zh/use-cases/rna-sequencing",
             },
+            {
+              text: "OnlyOffice",
+              link: "/zh/use-cases/onlyoffice",
+            },
             // {
             //   text: "Stirling PDF",
             //   link: "/zh/use-cases/stirling-pdf",
@@ -439,6 +455,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "FlareSolverr",
               link: "/zh/use-cases/flaresolverr",
+            },
+            {
+              text: "SearXNG",
+              link: "/zh/use-cases/searxng",
             },
             {
               text: "Home Assistant",

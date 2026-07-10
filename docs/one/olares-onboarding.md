@@ -37,7 +37,7 @@ The agent apps on Olares come with these skills built in. This guide uses OpenCo
 
 1. Open Market, and search for "Qwen3.6-27B (llama.cpp)".
 
-   ![Install Qwen3.6-27B](/images/one/qwen3.6-27b-llamacpp-market.png#bordered)
+   ![Install Qwen3.6-27B](/images/one/qwen3.6-27b-llamacpp-market1.png#bordered)
 
 2. Click **Get**, and then click **Install**.
 3. Select **GPU** as the hardware accelerator, and then click **Confirm**. The installation starts.
@@ -177,23 +177,24 @@ Show me the CPU and memory usage of my Olares device.
 Ask OpenCode to install an app for you:
 
 ```text
-Install Chromium from the Olares Market and tell me when it's ready.
+Install Code Server from the Olares Market and tell me when it's ready.
 ```
 
-![Install an app using Olares skill in OpenCode](/images/one/onboard-scenario-install.png#bordered)
+![Install an app using Olares skill in OpenCode](/images/one/onboard-scenario-install1.png#bordered)
 
 ### Deploy an app from a GitHub repository
 
-For a more advanced task, ask OpenCode to upload and deploy a project from a GitHub repository:
+For a more advanced task, ask OpenCode to deploy a project from a GitHub repository. The example below uses `dockersamples/101-tutorial`, a beginner-friendly Docker tutorial web app:
 
 ```text
-Upload and deploy this GitHub repository as an Olares app:
-https://github.com/chandruk4321/dockerize-static-web-project
+Deploy this app to Olares: https://github.com/dockersamples/101-tutorial
 ```
 
-Follow the prompts and approvals until the deployment finishes. You can then find the app on the Launchpad and in **My Olares**.
+Follow any prompts that appear until the deployment finishes.
+![Deploying an app using Olares skill in OpenCode](/images/one/onboard-scenario-porting.png#bordered)
 
-![Deploy an app using Olares skill in OpenCode](/images/one/onboard-scenario-port.png#bordered)
+You can then find the app on the Launchpad and in **My Olares**.
+![App deployed using Olares skill in OpenCode](/images/one/onboard-scenario-ported.png#bordered)
 
 ## Resources
 

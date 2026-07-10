@@ -434,7 +434,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	if !compute.IsHAMIMode(GPUType) && GPUType != utils.CPUType {
+	if !compute.UsesGPUExtendedResource(GPUType) && GPUType != utils.CPUType {
 		allocations, err := compute.FindAllocationsForApp(ctx, h.ctrlClient, appName, appcfg.OwnerName)
 		if err != nil {
 			klog.Errorf("find compute allocation for app %s failed %v", appName, err)
@@ -467,6 +467,8 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 		return constants.NvidiaGPU
 	case utils.GB10ChipType:
 		return constants.NvidiaGPU
+	case utils.AMDType, utils.AMDGPUType:
+		return constants.AMDGPU
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")
 		return ""

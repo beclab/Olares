@@ -41,6 +41,8 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 
   :::info
   需要 Olares OS 1.12.6 或更高版本，以及 EC 固件 1.03 或更高版本。如果任一条件未满足，开关会显示但无法操作。
+  
+  如需查看当前 EC 固件版本或升级 EC 固件，可参考[管理 BIOS 和 EC](/zh/one/update-firmware.md)。
   :::
   
 
