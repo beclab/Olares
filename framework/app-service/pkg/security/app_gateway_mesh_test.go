@@ -33,7 +33,7 @@ func TestNewAppGatewayMeshNetworkPolicy_appGateway_noPortList(t *testing.T) {
 }
 
 func TestNewLinkerdMeshPrometheusScrapeNetworkPolicy(t *testing.T) {
-	np := NewLinkerdMeshPrometheusScrapeNetworkPolicy("linkerd-viz")
+	np := NewLinkerdMeshPrometheusScrapeNetworkPolicy("os-mesh-viz")
 	require.Equal(t, LinkerdMeshPrometheusScrapeNPName, np.Name)
 	require.Equal(t, PlatformPrometheusNamespace,
 		np.Spec.Ingress[0].From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"])
@@ -41,8 +41,8 @@ func TestNewLinkerdMeshPrometheusScrapeNetworkPolicy(t *testing.T) {
 }
 
 func TestAppGatewayMeshNamespaces_includeLinkerdViz(t *testing.T) {
-	require.True(t, IsAppGatewayMeshNamespace("linkerd-viz"))
-	require.Equal(t, "os-mesh", AppGatewayMeshPeerNamespace("linkerd-viz"))
+	require.True(t, IsAppGatewayMeshNamespace("os-mesh-viz"))
+	require.Equal(t, "os-mesh", AppGatewayMeshPeerNamespace("os-mesh-viz"))
 }
 
 func TestNewSharedLinkerdControlPlaneIngressNetworkPolicy(t *testing.T) {
@@ -59,5 +59,5 @@ func TestNewSharedLinkerdControlPlaneIngressNetworkPolicy(t *testing.T) {
 		gotPeers = append(gotPeers, peer.NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"])
 	}
 	require.Equal(t, SharedLinkerdMeshIngressPeerNamespaces, gotPeers,
-		"peers must include os-mesh (control-plane) and linkerd-viz (tap/metrics)")
+		"peers must include os-mesh (control-plane) and os-mesh-viz (tap/metrics)")
 }

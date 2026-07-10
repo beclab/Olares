@@ -228,7 +228,7 @@ data:
         namespaceSelector: |
           matchNames:
             - {{ .Release.Namespace }}
-            - linkerd-viz
+            - os-mesh-viz
       enabled: false
       labels: {}
       proxy:

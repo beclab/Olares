@@ -21,5 +21,5 @@ const (
 	ChartNameAccount             = "account"
 	ChartNameOSFramework         = "os-framework"
 	ChartNameOSPlatform          = "os-platform"
-	ChartNameSettings = "settings"
+	ChartNameSettings            = "settings"
 )

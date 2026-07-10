@@ -15,7 +15,7 @@ spec:
           kubernetes.io/metadata.name: os-gateway
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: linkerd-viz
+          kubernetes.io/metadata.name: os-mesh-viz
     - namespaceSelector:
         matchLabels:
           bytetrade.io/ns-shared: "true"

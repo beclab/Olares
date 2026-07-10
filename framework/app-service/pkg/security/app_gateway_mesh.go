@@ -22,8 +22,8 @@ const (
 var LinkerdMeshIngressPortsFromAppGateway = []int32{8080, 8086, 8090, 9443, 443}
 
 // LinkerdControlPlaneIngressPeerNamespaces lists namespaces whose meshed proxies may reach
-// the linkerd control plane (app-gateway data plane and linkerd-viz observability stack).
-var LinkerdControlPlaneIngressPeerNamespaces = []string{"os-gateway", "linkerd-viz"}
+// the linkerd control plane (app-gateway data plane and os-mesh-viz observability stack).
+var LinkerdControlPlaneIngressPeerNamespaces = []string{"os-gateway", "os-mesh-viz"}
 
 // SharedLinkerdMeshIngressNPName allows the linkerd control plane and viz stack to reach
 // meshed proxies in shared workload namespaces (policy watches, identity callbacks, tap).
@@ -31,8 +31,8 @@ const SharedLinkerdMeshIngressNPName = "shared-linkerd-mesh-ingress-np"
 
 // SharedLinkerdMeshIngressPeerNamespaces are platform namespaces whose pods must reach
 // linkerd-proxy / app containers in shared workload namespaces. Kept ordered: os-mesh
-// first (required for sidecar startup); linkerd-viz second (optional observability).
-var SharedLinkerdMeshIngressPeerNamespaces = []string{"os-mesh", "linkerd-viz"}
+// first (required for sidecar startup); os-mesh-viz second (optional observability).
+var SharedLinkerdMeshIngressPeerNamespaces = []string{"os-mesh", "os-mesh-viz"}
 
 // LinkerdMeshPrometheusScrapePorts are proxy/admin ports scraped by platform Prometheus.
 var LinkerdMeshPrometheusScrapePorts = []int32{4191, 8085, 9990, 9943, 9994, 9995}
