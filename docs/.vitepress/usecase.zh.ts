@@ -393,6 +393,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/karakeep",
             },
             {
+              text: "Obsidian LiveSync",
+              link: "/zh/use-cases/obsidian-livesync",
+            },
+            {
               text: "Penpot",
               link: "/zh/use-cases/penpot",
             },

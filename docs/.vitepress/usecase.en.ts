@@ -381,10 +381,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
-              text: "Plane",
-              link: "/use-cases/plane",
-            },
-            {
               text: "Excalidraw",
               link: "/use-cases/excalidraw",
             },
@@ -393,8 +389,16 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/karakeep",
             },
             {
+              text: "Obsidian LiveSync",
+              link: "/use-cases/obsidian-livesync",
+            },
+            {
               text: "Penpot",
               link: "/use-cases/penpot",
+            },
+            {
+              text: "Plane",
+              link: "/use-cases/plane",
             },
             {
               text: "RNA Sequencing",
