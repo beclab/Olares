@@ -89,7 +89,7 @@ spec:
             - --oneshot
           env:
             - name: GUARDIAN_LINKERD_NS
-              value: linkerd
+              value: os-mesh
           resources:
             requests:
               cpu: 5m

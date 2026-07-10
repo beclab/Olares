@@ -1094,7 +1094,7 @@ spec:
             fieldRef:
               fieldPath: spec.serviceAccountName
         - name: _l5d_ns
-          value: linkerd
+          value: os-mesh
         - name: _l5d_trustdomain
           value: cluster.local
         - name: LINKERD2_PROXY_IDENTITY_DIR
@@ -1594,7 +1594,7 @@ spec:
             fieldRef:
               fieldPath: spec.serviceAccountName
         - name: _l5d_ns
-          value: linkerd
+          value: os-mesh
         - name: _l5d_trustdomain
           value: cluster.local
         - name: LINKERD2_PROXY_IDENTITY_DIR
@@ -1888,7 +1888,7 @@ spec:
             fieldRef:
               fieldPath: spec.serviceAccountName
         - name: _l5d_ns
-          value: linkerd
+          value: os-mesh
         - name: _l5d_trustdomain
           value: cluster.local
         - name: LINKERD2_PROXY_IDENTITY_DIR
