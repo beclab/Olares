@@ -1,8 +1,0 @@
-apiVersion: v2
-name: os-linkerd-crds
-description: Olares platform Linkerd CRD Helm chart
-maintainers:
-- name: bytetrade
-type: application
-version: 0.1.0
-appVersion: "2026.5.1"
