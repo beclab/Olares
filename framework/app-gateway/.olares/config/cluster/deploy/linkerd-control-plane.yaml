@@ -1107,15 +1107,15 @@ spec:
         - name: LINKERD2_PROXY_IDENTITY_TOKEN_FILE
           value: /var/run/secrets/tokens/linkerd-identity-token
         - name: LINKERD2_PROXY_IDENTITY_SVC_ADDR
-          value: linkerd-identity-headless.linkerd.svc.cluster.local.:8080
+          value: linkerd-identity-headless.os-mesh.svc.cluster.local.:8080
         - name: LINKERD2_PROXY_IDENTITY_LOCAL_NAME
-          value: $(_pod_sa).$(_pod_ns).serviceaccount.identity.linkerd.cluster.local
+          value: $(_pod_sa).$(_pod_ns).serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_IDENTITY_SVC_NAME
-          value: linkerd-identity.linkerd.serviceaccount.identity.linkerd.cluster.local
+          value: linkerd-identity.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_DESTINATION_SVC_NAME
-          value: linkerd-destination.linkerd.serviceaccount.identity.linkerd.cluster.local
+          value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_POLICY_SVC_NAME
-          value: linkerd-destination.linkerd.serviceaccount.identity.linkerd.cluster.local
+          value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         image: cr.l5d.io/linkerd/proxy:edge-26.5.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -1522,11 +1522,11 @@ spec:
         - name: LINKERD2_PROXY_LOG_FORMAT
           value: "plain"
         - name: LINKERD2_PROXY_DESTINATION_SVC_ADDR
-          value: linkerd-dst-headless.linkerd.svc.cluster.local.:8086
+          value: linkerd-dst-headless.os-mesh.svc.cluster.local.:8086
         - name: LINKERD2_PROXY_DESTINATION_PROFILE_NETWORKS
           value: "10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16,fd00::/8"
         - name: LINKERD2_PROXY_POLICY_SVC_ADDR
-          value: linkerd-policy.linkerd.svc.cluster.local.:8090
+          value: linkerd-policy.os-mesh.svc.cluster.local.:8090
         - name: LINKERD2_PROXY_POLICY_WORKLOAD
           value: |
             {"ns":"$(_pod_ns)", "pod":"$(_pod_name)"}
@@ -1609,13 +1609,13 @@ spec:
         - name: LINKERD2_PROXY_IDENTITY_SVC_ADDR
           value: localhost.:8080
         - name: LINKERD2_PROXY_IDENTITY_LOCAL_NAME
-          value: $(_pod_sa).$(_pod_ns).serviceaccount.identity.linkerd.cluster.local
+          value: $(_pod_sa).$(_pod_ns).serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_IDENTITY_SVC_NAME
-          value: linkerd-identity.linkerd.serviceaccount.identity.linkerd.cluster.local
+          value: linkerd-identity.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_DESTINATION_SVC_NAME
-          value: linkerd-destination.linkerd.serviceaccount.identity.linkerd.cluster.local
+          value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_POLICY_SVC_NAME
-          value: linkerd-destination.linkerd.serviceaccount.identity.linkerd.cluster.local
+          value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         image: cr.l5d.io/linkerd/proxy:edge-26.5.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -1816,11 +1816,11 @@ spec:
         - name: LINKERD2_PROXY_LOG_FORMAT
           value: "plain"
         - name: LINKERD2_PROXY_DESTINATION_SVC_ADDR
-          value: linkerd-dst-headless.linkerd.svc.cluster.local.:8086
+          value: linkerd-dst-headless.os-mesh.svc.cluster.local.:8086
         - name: LINKERD2_PROXY_DESTINATION_PROFILE_NETWORKS
           value: "10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16,fd00::/8"
         - name: LINKERD2_PROXY_POLICY_SVC_ADDR
-          value: linkerd-policy.linkerd.svc.cluster.local.:8090
+          value: linkerd-policy.os-mesh.svc.cluster.local.:8090
         - name: LINKERD2_PROXY_POLICY_WORKLOAD
           value: |
             {"ns":"$(_pod_ns)", "pod":"$(_pod_name)"}
@@ -1901,15 +1901,15 @@ spec:
         - name: LINKERD2_PROXY_IDENTITY_TOKEN_FILE
           value: /var/run/secrets/tokens/linkerd-identity-token
         - name: LINKERD2_PROXY_IDENTITY_SVC_ADDR
-          value: linkerd-identity-headless.linkerd.svc.cluster.local.:8080
+          value: linkerd-identity-headless.os-mesh.svc.cluster.local.:8080
         - name: LINKERD2_PROXY_IDENTITY_LOCAL_NAME
-          value: $(_pod_sa).$(_pod_ns).serviceaccount.identity.linkerd.cluster.local
+          value: $(_pod_sa).$(_pod_ns).serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_IDENTITY_SVC_NAME
-          value: linkerd-identity.linkerd.serviceaccount.identity.linkerd.cluster.local
+          value: linkerd-identity.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_DESTINATION_SVC_NAME
-          value: linkerd-destination.linkerd.serviceaccount.identity.linkerd.cluster.local
+          value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_POLICY_SVC_NAME
-          value: linkerd-destination.linkerd.serviceaccount.identity.linkerd.cluster.local
+          value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         image: cr.l5d.io/linkerd/proxy:edge-26.5.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
