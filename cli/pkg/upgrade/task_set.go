@@ -757,6 +757,12 @@ func upgradeMultus() []task.Interface {
 			},
 		},
 		&task.LocalTask{
+			Name:   "UpgradeCNIPlugins",
+			Desc:   "Upgrade CNI plugins",
+			Action: new(upgradeCniPluginsBinaryOnly),
+			Retry:  5,
+		},
+		&task.LocalTask{
 			Name:   "DeployMultus",
 			Desc:   "Deploy multus",
 			Action: new(network.DeployNetworkMultusPlugin),
@@ -954,4 +960,31 @@ func upgradeUserReverseProxy() []task.Interface {
 			Delay:  5 * time.Second,
 		},
 	}
+}
+
+type upgradeCniPluginsBinaryOnly struct {
+	common.KubeAction
+}
+
+func (u *upgradeCniPluginsBinaryOnly) Execute(runtime connector.Runtime) error {
+	m, err := manifest.ReadAll(u.KubeConf.Arg.Manifest)
+
+	binary, err := m.Get("cni-plugins")
+	if err != nil {
+		return fmt.Errorf("get cni-plugins binary info failed: %w", err)
+	}
+
+	path := binary.FilePath(runtime.GetBaseDir())
+
+	fileName := binary.Filename
+	dst := filepath.Join(common.TmpDir, fileName)
+	logger.Debugf("SyncKubeBinary cp cni-plugins from %s to %s", path, dst)
+	if err := runtime.GetRunner().Scp(path, dst); err != nil {
+		return errors.Wrap(errors.WithStack(err), fmt.Sprintf("sync kube binaries failed"))
+	}
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("tar -zxf %s -C /opt/cni/bin", dst), false, false); err != nil {
+		return err
+	}
+
+	return nil
 }
