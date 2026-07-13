@@ -105,8 +105,8 @@ Use this option when the shared app has no user-created data to migrate.
 
 Use this option when the shared app stores user-created data or settings that must be moved manually.
 
-- **Apps in this category**: Dify, OnlyOffice, and SearXNG
-- **Steps**: Follow the migration guide for the shared app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), and [SearXNG](/use-cases/searxng.md).
+- **Apps in this category**: Dify, OnlyOffice, SearXNG, and Xinference
+- **Steps**: Follow the migration guide for the shared app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), [SearXNG](/use-cases/searxng.md), and [Xinference](/use-cases/xinference.md).
 
 ### Option 4: Upgrade the Ollama app to Engine Base
 

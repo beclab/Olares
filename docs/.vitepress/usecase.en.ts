@@ -268,10 +268,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "LLMFit",
                   link: "/use-cases/llmfit",
                 },
-                // {
-                //   text: "Xinference",
-                //   link: "/use-cases/xinference",
-                // },
+                {
+                  text: "Xinference",
+                  link: "/use-cases/xinference",
+                },
                 // {
                 //   text: "Dify",
                 //   link: "/use-cases/dify",
