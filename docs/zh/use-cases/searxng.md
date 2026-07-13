@@ -38,7 +38,7 @@ Preferences hash 是一串包含你所有 SearXNG 设置的编码字符串。复
    
    ![复制 SearXNG preferences hash](/images/manual/use-cases/searxng-copy-preferences-hash.png#bordered)
 
-2. 卸载之前安装的 SearXNG。
+2. 卸载之前安装的 SearXNG。在提示时，不要勾选**同时删除所有本地数据**。
 3. 安装新版 SearXNG。
 
    a. 打开 Market，搜索 "SearXNG"。

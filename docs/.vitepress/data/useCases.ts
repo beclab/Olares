@@ -68,7 +68,7 @@ export const useCases: UseCase[] = [
   { title: "TensorZero", link: "/use-cases/tensorzero", category: "Model services", description: "AI model gateway and observability platform", descriptionZh: "AI 模型网关与可观测性平台" },
   { title: "LLMFit", link: "/use-cases/llmfit", category: "Model services", description: "Benchmark your hardware to find the best models", descriptionZh: "对硬件进行基准测试以找到最合适的模型" },
   { title: "Engine Base apps", link: "/use-cases/llm-base-apps", category: "Model services", description: "Self-host local LLMs by cloning base apps for different inference engines", descriptionZh: "通过克隆不同推理引擎的基座应用来自托管本地大语言模型" },
-  // { title: "Xinference", link: "/use-cases/xinference", category: "Model services", description: "Deploy and serve models on Olares", descriptionZh: "在 Olares 上部署和提供模型服务" },
+  { title: "Xinference", link: "/use-cases/xinference", category: "Model services", description: "Deploy and serve models on Olares", descriptionZh: "在 Olares 上部署和提供模型服务" },
   { title: "Isaac Lab", link: "/use-cases/isaac-lab", category: "Embodied AI", description: "GPU-accelerated robot simulation training", descriptionZh: "GPU 加速的机器人仿真训练" },
   { title: "macOS", link: "/use-cases/macos", category: "Virtual machine", description: "Run a macOS VM with browser-based VNC", descriptionZh: "通过浏览器 VNC 运行 macOS 虚拟机" },
   { title: "Windows", link: "/use-cases/windows", category: "Virtual machine", description: "Run a Windows VM with VNC or Remote Desktop", descriptionZh: "通过 VNC 或远程桌面运行 Windows 虚拟机" },

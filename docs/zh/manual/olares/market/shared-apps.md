@@ -110,8 +110,8 @@ head:
 
 以下情况使用该方法：应用存储了用户创建的数据或设置，必须手动迁移。
 
-- **属于该方法的应用**：Dify、OnlyOffice 和 SearXNG
-- **步骤**：按应用查看对应的迁移指南：[Dify](/zh/use-cases/dify-upgrade.md)、[OnlyOffice](/zh/use-cases/onlyoffice.md) 和 [SearXNG](/zh/use-cases/searxng.md)。
+- **属于该方法的应用**：Dify、OnlyOffice、SearXNG 和 Xinference
+- **步骤**：按应用查看对应的迁移指南：[Dify](/zh/use-cases/dify-upgrade.md)、[OnlyOffice](/zh/use-cases/onlyoffice.md)、[SearXNG](/zh/use-cases/searxng.md) 和 [Xinference](/zh/use-cases/xinference.md)。
 
 ### 选项四：将 Ollama 应用升级到引擎基座
 
