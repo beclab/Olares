@@ -98,7 +98,10 @@ func (s *mDNSServer) SetHosts(hosts []DNSConfig, reset bool) {
 		} else {
 
 			if reset {
-				server.queryServer.Shutdown()
+				// reset existing host, shutdown the server and remove it from the map
+				if server != nil && server.queryServer != nil {
+					server.queryServer.Shutdown()
+				}
 				s.servers[host.Domain] = nil
 			}
 		}
