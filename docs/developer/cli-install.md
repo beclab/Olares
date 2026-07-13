@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install olares-cli with npm or npx. Covers the first-run wizard, a persistent install, one-off runs, and the special case of a machine that already runs Olares OS.
+description: Install and update olares-cli with npm or npx. Covers the first-run wizard, a persistent install, one-off runs, and the special case of a machine that already runs Olares OS.
 ---
 
 # Install olares-cli
@@ -17,7 +17,7 @@ Pick the path that fits how you work.
 
 ### Set up the CLI and Agent Skills
 
-This is the recommended path for driving Olares from an AI agent. 
+Use this path when you plan to control Olares from an AI agent. 
 
 Open your terminal and run the following command to install the CLI and the Agent Skills with an interactive wizard:
 
@@ -44,7 +44,7 @@ Then tell your AI agent: "Load the olares-shared skill, then use olares-cli to .
 ```
 
 :::info
-The wizard runs `npm install -g @olares/cli` and then installs the six Agent Skills. It does not install Olares OS, and it does not log you in.
+The wizard runs `npm install -g @olares/cli` and then installs the Agent Skills. It does not install Olares OS, and it does not log you in.
 :::
 
 ### Install the CLI only
@@ -71,19 +71,47 @@ npx @olares/cli files ls /drive/Home
 The CLI you install with npm or run with npx works on behalf of an Olares user. It can manage files, apps, settings, and the cluster on a running Olares, but it can't install or maintain Olares OS itself. Host commands such as `upgrade`, `node`, `gpu`, and `disk` run only from the CLI bundled with Olares OS at `/usr/local/bin/olares-cli`.
 :::
 
+## Update olares-cli
+
+To update an npm-installed CLI to the latest release, run one of the following commands.
+
+Install the latest version explicitly:
+
+```bash
+npm install -g @olares/cli@latest
+```
+
+Or use npm's built-in update command:
+
+```bash
+npm update -g @olares/cli
+```
+
+Verify the update:
+
+```bash
+olares-cli --version
+```
+
+The output shows the installed version. The exact version depends on the release you have installed.
+
+:::info
+Updating the CLI does not update the Agent Skills. To update the skills after updating the CLI, see [Update the skills](./cli-agent-skills.md#update-the-skills).
+:::
+
 ## Special case: a Linux host running Olares OS
 
-This applies only when you install the CLI directly on a Linux machine that already runs Olares OS, where `/usr/local/bin/olares-cli` already exists. macOS and Windows don't run into this, even when Olares OS is running, because the bundled binary lives in a Linux environment. On those machines, use the methods above.
+Olares OS runs on Linux and ships a bundled CLI at `/usr/local/bin/olares-cli`. On such a host, installing the npm CLI can conflict with this bundled binary. On macOS and Windows, use the [methods above](#choose-an-install-method).
 
-On a Linux Olares host, `npm install -g @olares/cli` stops with an `EEXIST` message. This is expected: it's npm's safeguard against overwriting a binary it doesn't manage, so your system `olares-cli` stays intact. To install the npm copy alongside it, use a separate prefix:
+On a Linux Olares host, `npm install -g @olares/cli` exits with `EEXIST`. npm refuses to overwrite a binary it does not manage, so the system `olares-cli` remains unchanged. To install the npm copy in parallel, use a separate prefix:
 
 ```bash
 npm install -g @olares/cli --prefix ~/.olares-cli-npm
 export PATH="$HOME/.olares-cli-npm/bin:$PATH"
 ```
 
-:::warning
-Don't run `npm install -g @olares/cli --force` on an Olares host. That overwrites the OS-managed `/usr/local/bin/olares-cli`, which breaks the version chain with `olaresd` and the cluster. The OS bundle is upgraded only through `olares-cli upgrade`.
+:::warning Do not overwrite the system `olares-cli`
+Don't run `npm install -g @olares/cli --force` on an Olares host. That overwrites the OS-managed `/usr/local/bin/olares-cli`, which breaks the version chain with `olaresd` and the cluster. The OS bundle is updated only through `olares-cli upgrade`.
 :::
 
 ## Next step

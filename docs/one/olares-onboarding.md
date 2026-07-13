@@ -120,7 +120,9 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
    Example output:
 
    ```bash
-   olares-cli version >=1.12.6
+   olares-cli version 1.12.6
+   Git commit: d30eca705df2fb614bf2bbea95daa2e6998adeeb
+   Build time: 2026-07-06T06:33:00Z
    ```
 
 3. Run the following command to log in to your Olares account. Replace `<your-olares-id>` with your actual Olares ID.
@@ -143,11 +145,12 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
    olares-cli profile list
    ```
 
-   Example output:
+   Example output (`*` marks the current profile):
 
    ```text
-      NAME                   OLARES-ID              STATUS
-   *  laresprime@olares.com  laresprime@olares.com  logged-in
+     NAME                   OLARES-ID              STATUS     VERSION
+     laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6-alpha.15
+   * laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6-alpha.15  
    ```
 
 ## Step 5: Manage Olares through natural language
@@ -200,4 +203,4 @@ You can then find the app on the Launchpad and in **My Olares**.
 
 - [Set up OpenCode as your AI coding agent](../use-cases/opencode.md): Full OpenCode setup guide.
 - [Install and use Agent Skills](../developer/cli-agent-skills.md): Details about the Olares CLI skill bundles.
-- [Switch GPU mode](gpu.md)
+- [Manage accelerator resources](gpu.md): Learn how to check GPU usage, switch GPU modes, and release accelerator resources on Olares One.

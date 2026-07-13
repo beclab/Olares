@@ -34,7 +34,7 @@ The preferences hash is an encoded string that contains all your SearXNG setting
    
    ![Copy SearXNG preferences hash](/images/manual/use-cases/searxng-copy-preferences-hash.png#bordered)
 
-2. Uninstall the previously installed SearXNG app.
+2. Uninstall the previously installed SearXNG app. When prompted, do not select **Also remove all local data**.
 3. Install the new SearXNG app.
 
    a. Open Market and search for "SearXNG".

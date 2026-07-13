@@ -22,7 +22,7 @@ Key characteristics of shared applications include:
 
     - **Headless backend service**: Provides API services for compatible clients, with no end-user graphical interface. For example, model instances created on Engine Base apps expose a **Base URL** in their model console. Members paste this address into clients such as Open WebUI or LobeChat.
     
-    - **Applications with built-in UI**: Includes both a backend service and a web UI. Members open it directly from the Launchpad. Examples include **Dify** and **ComfyUI Shared**.
+    - **Applications with built-in UI**: Includes both a backend service and a web UI. Members open it directly from the Launchpad. Examples include **Dify** and **ComfyUI**.
     
 - **Unified HTTPS address**: All shared applications use the same URL pattern, that is `https://<app-id>.<username>.<platform-domain>`. Each member accesses the same shared application through their own username.
 <!-- #endregion shared-apps-what-are -->
@@ -36,7 +36,7 @@ The new architecture replaces the client/server split with a single, unified sha
 | v2 architecture | New architecture |
 |:----------------|:----------------|
 | Server + client-side access point | Single unified shared server |
-| Uninstalling an access point might break the server | Server lifecycle is independent of any access point |
+| Uninstalling an access point might<br>break the server | Server lifecycle is independent<br>of any access point |
 | Multiple access addresses and formats | Unified address format for all users |
 | Client and server managed separately | Administrators manage one shared service |
 
@@ -61,6 +61,8 @@ Instead of pulling models into a single Ollama app or installing pre-bundled app
 - **Centralized management**: Engines are maintained centrally via the base apps. When Olares updates an engine base, you can upgrade your cloned instances without waiting for a new model app release.
 - **Flexible configuration**: You set each instance's model source, parameters, and capabilities yourself, and pick the best engine for each model. For example, select Ollama for quick local inference, vLLM or SGLang for high-throughput serving, or llama.cpp for edge deployments.
 - **Built-in model console**: Each instance features a dedicated console to monitor GPU residency, track performance, and manage client connections.
+
+For details on creating and configuring model instances with Engine Base apps, see [Host local large language models with Engine Base apps](/use-cases/llm-base-apps.md).
 
 ## Manage legacy v2 shared apps
 
@@ -103,15 +105,15 @@ Use this option when the shared app has no user-created data to migrate.
 
 Use this option when the shared app stores user-created data or settings that must be moved manually.
 
-- **Apps in this category**: Dify, OnlyOffice, and SearXNG
-- **Steps**: Follow the migration guide for the shared app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), and [SearXNG](/use-cases/searxng.md).
+- **Apps in this category**: Dify, OnlyOffice, SearXNG, and Xinference
+- **Steps**: Follow the migration guide for the shared app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice.md), [SearXNG](/use-cases/searxng.md), and [Xinference](/use-cases/xinference.md).
 
 ### Option 4: Upgrade the Ollama app to Engine Base
 
 Use this option when you are migrating from the standalone Ollama shared app to the new Engine Base architecture.
 
 - **Apps in this category**: The Ollama app installed to pull models
-- **Steps**: Deploy the model pulled via Ollama on an Engine Base app, get the Base URL in the model console, and then reconfigure your clients.
+- **Steps**: Deploy the model pulled via Ollama on an [Engine Base app](/use-cases/llm-base-apps.md), get the Base URL in the model console, and then reconfigure your clients.
 
 ## FAQs
 

@@ -7,7 +7,7 @@ head:
       content: GPU, 时间切片, 应用独占, 内存切片, GPU 管理
 ---
 
-# 切换 GPU 模式 <Badge text="10 min"/>
+# 管理加速器资源 <Badge text="10 min"/>
 
 :::warning
 本页面由 AI 自动翻译，部分技术术语可能与中文习惯存在差异。如有疑问，请以[英文原文](../../one/gpu.md)为准。
