@@ -386,7 +386,7 @@ type EnableCniDhcpService struct {
 }
 
 func (e *EnableCniDhcpService) Execute(runtime connector.Runtime) error {
-	if _, err := runtime.GetRunner().SudoCmd("systemctl daemon-reload && systemctl enable --now cni-dhcp",
+	if _, err := runtime.GetRunner().SudoCmd("systemctl daemon-reload && systemctl enable --now cni-dhcp && systemctl restart cni-dhcp",
 		false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "enable cni-dhcp failed")
 	}
