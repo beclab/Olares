@@ -151,7 +151,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.74
+        image: beclab/market-backend:v0.6.75
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -183,17 +183,6 @@ spec:
                 name: market-backend-nats-secret
           - name: SYNCER_REMOTE
             value: https://appstore-china-server-prod.api.jointerminus.cn
-          - name: REDIS_HOST
-            value: redis-cluster-proxy.os-platform
-          - name: REDIS_PORT
-            value: "6379"
-          - name: REDIS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                key: redis-passwords
-                name: market-secrets
-          - name: REDIS_DB_NUMBER
-            value: "0"
           - name: POSTGRES_HOST
             value: citus-headless.os-platform
           - name: POSTGRES_PORT
