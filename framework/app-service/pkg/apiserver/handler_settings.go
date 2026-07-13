@@ -21,6 +21,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
 	"github.com/emicklei/go-restful/v3"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -177,6 +178,22 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	merge := make(map[string]interface{})
 
 	keys := []string{"third_level_domain", "third_party_domain"}
+
+	// Reject the request if the caller is trying to set a domain that is
+	// already taken. third_party_domain (a full custom domain) must be
+	// globally unique across every user and app; third_level_domain only
+	// needs to be unique within the caller's own apps because it resolves
+	// to "<prefix>.<caller-zone>" and the zone is bound to the user. Only
+	// the values the caller explicitly provided are checked so a re-save
+	// of the untouched sibling field is not flagged against itself.
+	if ok {
+		reqThirdLevel, _ := customDomain["third_level_domain"].(string)
+		reqThirdParty, _ := customDomain["third_party_domain"].(string)
+		if err = checkEntranceDomainDuplicate(req.Request.Context(), kclient.AppClient, caller, appCopy.Spec.Name, entranceName, reqThirdLevel, reqThirdParty); err != nil {
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+	}
 
 	if len(existing) > 0 {
 		var origins map[string]interface{}
@@ -342,6 +359,267 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	// Respond with the caller's effective view so the UI sees their own
 	// customDomain entries (the global Spec.Settings is admin-only for v3).
 	resp.WriteAsJson(appUpdated.EffectiveSettings(caller))
+}
+
+// reservedThirdLevelDomains are subdomain prefixes owned by system apps
+// (auth.<zone>, desktop.<zone>, wizard-<user>.<zone>, ...) that a caller
+// must never be able to claim as a custom third_level_domain. Keys are
+// lower-cased for case-insensitive matching.
+var reservedThirdLevelDomains = map[string]struct{}{
+	"auth":    {},
+	"desktop": {},
+	"wizard":  {},
+}
+
+// entranceCustomDomain is the per-entrance shape stored under the
+// "customDomain" settings key: {"third_level_domain": "", "third_party_domain": ""}.
+type entranceCustomDomain struct {
+	thirdLevel string
+	thirdParty string
+}
+
+// parseCustomDomain decodes a "customDomain" settings blob
+// ({"<entrance>": {"third_level_domain": "", "third_party_domain": ""}})
+// into a per-entrance map. A malformed or empty blob yields an empty map.
+func parseCustomDomain(blob string) map[string]entranceCustomDomain {
+	out := make(map[string]entranceCustomDomain)
+	if blob == "" {
+		return out
+	}
+	var raw map[string]map[string]interface{}
+	if err := json.Unmarshal([]byte(blob), &raw); err != nil {
+		klog.Warningf("failed to parse customDomain blob for duplicate check: %v", err)
+		return out
+	}
+	for entrance, cfg := range raw {
+		tl, _ := cfg["third_level_domain"].(string)
+		tp, _ := cfg["third_party_domain"].(string)
+		out[entrance] = entranceCustomDomain{thirdLevel: tl, thirdParty: tp}
+	}
+	return out
+}
+
+// ownedCustomDomainBlob is a customDomain blob tagged with the user it belongs
+// to: the install owner for the global Spec.Settings entry, or the map key for
+// a per-user Spec.UserSettings overlay.
+type ownedCustomDomainBlob struct {
+	owner string
+	blob  string
+}
+
+// allCustomDomainBlobs returns every customDomain blob stored on the app —
+// the global Spec.Settings entry (owner = install owner) plus every per-user
+// overlay in Spec.UserSettings (owner = the user key) — each tagged with its
+// owner. Used for the global third_party_domain uniqueness scan, where the
+// owner is needed to skip only the caller's own entry: a shared app lets each
+// user set their own third_party per entrance, so other users' overlays on the
+// same entrance must still be enforced.
+func allCustomDomainBlobs(app *v1alpha1.Application) []ownedCustomDomainBlob {
+	blobs := make([]ownedCustomDomainBlob, 0)
+	if b := app.Spec.Settings["customDomain"]; b != "" {
+		blobs = append(blobs, ownedCustomDomainBlob{owner: app.Spec.Owner, blob: b})
+	}
+	for user, us := range app.Spec.UserSettings {
+		if b := us["customDomain"]; b != "" {
+			blobs = append(blobs, ownedCustomDomainBlob{owner: user, blob: b})
+		}
+	}
+	return blobs
+}
+
+// callerCustomDomainBlob returns the customDomain blob that resolves under the
+// caller's zone for the given app. It must match the effective view the domain
+// handler itself uses (EffectiveSettings(caller)):
+//   - shared app: the caller's Spec.UserSettings[caller] overlay when present,
+//     otherwise the global Spec.Settings default — both are effective in the
+//     caller's zone, so a prefix present only in the global blob still counts;
+//   - per-user app the caller owns: the global Spec.Settings entry.
+//
+// Other users' entries live under their own zones and are irrelevant to the
+// caller's third_level_domain scope, so per-user apps not owned by the caller
+// contribute nothing.
+func callerCustomDomainBlob(app *v1alpha1.Application, caller string) string {
+	if appcfg.IsShared(app) {
+		// EffectiveSettings overlays UserSettings[caller] onto Spec.Settings,
+		// falling back to the global customDomain when the caller has no
+		// per-user override — exactly what resolves in the caller's zone.
+		return app.EffectiveSettings(caller)["customDomain"]
+	}
+	if app.Spec.Owner == caller {
+		return app.Spec.Settings["customDomain"]
+	}
+	return ""
+}
+
+// defaultThirdLevelPrefixes returns the live default third-level subdomain
+// prefix of every entrance of the app, mirroring the URL generation in
+// GenEntranceURL / EntrancesWithZone (and the gateway's resolveEntrancePrefix):
+//   - a single-entrance app always uses the bare "<appid>" and ignores any
+//     defaultThirdLevelDomainConfig override;
+//   - a multi-entrance app uses the configured thirdLevelDomain for an entrance
+//     when present, otherwise the positional "<appid><i>".
+//
+// These are the domains a caller-supplied third_level_domain must not collide
+// with. Resolving per entrance (rather than pre-filling then overriding) keeps
+// the result limited to entrances that actually exist on the app.
+func defaultThirdLevelPrefixes(app *v1alpha1.Application) map[string]string {
+	out := make(map[string]string)
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+	if appid == "" {
+		return out
+	}
+
+	var cfgs []appcfg.DefaultThirdLevelDomainConfig
+	if raw := app.Spec.Settings["defaultThirdLevelDomainConfig"]; raw != "" {
+		if err := json.Unmarshal([]byte(raw), &cfgs); err != nil {
+			klog.Warningf("failed to parse defaultThirdLevelDomainConfig for duplicate check: %v", err)
+		}
+	}
+
+	for i := range app.Spec.Entrances {
+		out[app.Spec.Entrances[i].Name] = resolveDefaultThirdLevelPrefix(app.Spec.Entrances, i, appid, app.Spec.Name, cfgs)
+	}
+	return out
+}
+
+func resolveDefaultThirdLevelPrefix(entrances []v1alpha1.Entrance, index int, appid, appName string, cfgs []appcfg.DefaultThirdLevelDomainConfig) string {
+	for _, cfg := range cfgs {
+		if cfg.AppName == appName && cfg.EntranceName == entrances[index].Name && cfg.ThirdLevelDomain != "" {
+			return cfg.ThirdLevelDomain
+		}
+	}
+	if len(entrances) == 1 {
+		return appid
+	}
+	return fmt.Sprintf("%s%d", appid, index)
+}
+
+// checkEntranceDomainDuplicate reports an error when the requested
+// third_level_domain / third_party_domain for (currentApp, currentEntrance)
+// is already taken. thirdLevel/thirdParty are the raw requested values; an
+// empty value is skipped. The (currentApp, currentEntrance) entrance itself
+// is excluded so re-saving an unchanged value is never a conflict.
+func checkEntranceDomainDuplicate(ctx context.Context, appClient versioned.Interface, caller, currentApp, currentEntrance, thirdLevel, thirdParty string) error {
+	thirdLevel = strings.TrimSpace(thirdLevel)
+	thirdParty = strings.TrimSpace(thirdParty)
+	if thirdLevel == "" && thirdParty == "" {
+		return nil
+	}
+
+	applist, err := appClient.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	return findEntranceDomainConflict(applist.Items, caller, currentApp, currentEntrance, thirdLevel, thirdParty)
+}
+
+// domainRecord is one already-claimed entrance domain, flattened out of the
+// whole cluster so the conflict check is a single linear scan.
+//   - thirdParty is compared globally (across every user and app);
+//   - thirdLevel is only compared when inCallerZone, i.e. the value resolves
+//     under the caller's own zone, because third_level_domain expands to
+//     "<prefix>.<caller-zone>" and the zone is bound to the user;
+//   - isSelf marks the exact entry the caller is editing (same app + entrance,
+//     owned by the caller) so re-saving an unchanged value never conflicts;
+//   - isDefault marks a synthesized default subdomain (appid / appid<i>) rather
+//     than a user-set value, so the error can say so.
+type domainRecord struct {
+	app          string
+	entrance     string
+	thirdLevel   string
+	thirdParty   string
+	inCallerZone bool
+	isSelf       bool
+	isDefault    bool
+}
+
+// collectDomainRecords flattens every claimed entrance domain in the cluster
+// into a single slice, tagging each record with the scope flags the conflict
+// scan needs (see domainRecord). currentApp/currentEntrance identify the entry
+// being edited so it can be excluded.
+func collectDomainRecords(apps []v1alpha1.Application, caller, currentApp, currentEntrance string) []domainRecord {
+	records := make([]domainRecord, 0)
+	for i := range apps {
+		app := &apps[i]
+
+		// Global third_party scope: every stored blob, tagged with the user
+		// that actually set it so only the caller's own target entry is
+		// treated as self (a same-named install owned by another user, or
+		// another user's overlay on a shared app, still counts).
+		for _, ob := range allCustomDomainBlobs(app) {
+			for entrance, cfg := range parseCustomDomain(ob.blob) {
+				records = append(records, domainRecord{
+					app:        app.Spec.Name,
+					entrance:   entrance,
+					thirdParty: cfg.thirdParty,
+					isSelf:     app.Spec.Name == currentApp && entrance == currentEntrance && ob.owner == caller,
+				})
+			}
+		}
+
+		// Caller-zone third_level scope: the blob effective in the caller's
+		// zone (their overlay, or the shared/global default they inherit).
+		for entrance, cfg := range parseCustomDomain(callerCustomDomainBlob(app, caller)) {
+			records = append(records, domainRecord{
+				app:          app.Spec.Name,
+				entrance:     entrance,
+				thirdLevel:   cfg.thirdLevel,
+				inCallerZone: true,
+				isSelf:       app.Spec.Name == currentApp && entrance == currentEntrance,
+			})
+		}
+
+		// Default subdomains (appid / appid<i>) resolve in the caller's zone
+		// for shared apps and for per-user apps the caller owns; other users'
+		// per-user apps render under their own zones and cannot collide.
+		if appcfg.IsShared(app) || app.Spec.Owner == caller {
+			for entrance, prefix := range defaultThirdLevelPrefixes(app) {
+				records = append(records, domainRecord{
+					app:          app.Spec.Name,
+					entrance:     entrance,
+					thirdLevel:   prefix,
+					inCallerZone: true,
+					isDefault:    true,
+					isSelf:       app.Spec.Name == currentApp && entrance == currentEntrance,
+				})
+			}
+		}
+	}
+	return records
+}
+
+// findEntranceDomainConflict is the pure comparison core of
+// checkEntranceDomainDuplicate: given the full set of applications it reports
+// the first conflict for the requested third_level_domain / third_party_domain
+// of (currentApp, currentEntrance). thirdLevel/thirdParty are already trimmed
+// and at least one is non-empty. The (currentApp, currentEntrance) entrance is
+// excluded so re-saving an unchanged value is never a conflict.
+func findEntranceDomainConflict(apps []v1alpha1.Application, caller, currentApp, currentEntrance, thirdLevel, thirdParty string) error {
+	// Reserved system subdomains (auth.<zone>, desktop.<zone>,
+	// wizard-<user>.<zone>, ...) can never be claimed as a custom
+	// third-level domain regardless of which apps exist.
+	if thirdLevel != "" {
+		if _, ok := reservedThirdLevelDomains[strings.ToLower(thirdLevel)]; ok {
+			return fmt.Errorf("third_level_domain %q is reserved and cannot be used", thirdLevel)
+		}
+	}
+
+	for _, r := range collectDomainRecords(apps, caller, currentApp, currentEntrance) {
+		if r.isSelf {
+			continue
+		}
+		if thirdParty != "" && r.thirdParty != "" && strings.EqualFold(r.thirdParty, thirdParty) {
+			return fmt.Errorf("third_party_domain %q is already used by entrance %q of app %q", thirdParty, r.entrance, r.app)
+		}
+		if thirdLevel != "" && r.inCallerZone && r.thirdLevel != "" && strings.EqualFold(r.thirdLevel, thirdLevel) {
+			if r.isDefault {
+				return fmt.Errorf("third_level_domain %q conflicts with the default domain of entrance %q of app %q", thirdLevel, r.entrance, r.app)
+			}
+			return fmt.Errorf("third_level_domain %q is already used by entrance %q of app %q", thirdLevel, r.entrance, r.app)
+		}
+	}
+	return nil
 }
 
 func (h *Handler) getAppEntrances(req *restful.Request, resp *restful.Response) {
