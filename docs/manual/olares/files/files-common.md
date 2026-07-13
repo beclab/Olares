@@ -55,7 +55,7 @@ Olares v1.12.6 includes the Common directory by default. If you are using an old
     <Tabs>
     <template #Model-apps>
 
-    Deploy the model you need using the new Engine Base apps (llama.cpp Engine Base, Ollama Engine Base, SGLang Engine Base, or vLLM Engine Base).
+    Deploy the model you need using the new [Engine Base apps](/use-cases/llm-base-apps.md) (llama.cpp Engine Base, Ollama Engine Base, SGLang Engine Base, or vLLM Engine Base).
 
     The model files will be saved into the `huggingface` or `ollama` subdirectories accordingly.
 
@@ -65,16 +65,20 @@ Olares v1.12.6 includes the Common directory by default. If you are using an old
 
     For models pulled via Ollama:
 
-    - To re-download models, deploy the models you need using the new Ollama Engine Base app. The model files will be saved into the `ollama` subdirectory automatically.
+    - To re-download models, deploy the models you need using the new Ollama [Engine Base app](/use-cases/llm-base-apps.md). The model files will be saved into the `ollama` subdirectory automatically.
     - To reuse existing models, manually copy them to the `ollama` subdirectory.
 
     </template>
 
     <template #ComfyUI>
 
-    Reinstall ComfyUI from the Market.
+    Install the new version of ComfyUI from the Market. The system will automatically move your existing model files to the `comfyui` subdirectory.
 
-    The system will automatically move your existing model files to the `comfyui` subdirectory.
+    :::tip Identify v2 and new versions
+    On the app details page, check the **Compatibility** field in the **Information** panel:
+    - The v2 shared app shows `Olares >=1.12.3-0, <1.12.6`.
+    - The new shared app shows `Olares >=1.12.6-0`.
+    :::
 
     </template>
     </Tabs>
