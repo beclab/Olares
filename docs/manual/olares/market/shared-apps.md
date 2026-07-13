@@ -22,7 +22,7 @@ Key characteristics of shared applications include:
 
     - **Headless backend service**: Provides API services for compatible clients, with no end-user graphical interface. For example, model instances created on Engine Base apps expose a **Base URL** in their model console. Members paste this address into clients such as Open WebUI or LobeChat.
     
-    - **Applications with built-in UI**: Includes both a backend service and a web UI. Members open it directly from the Launchpad. Examples include **Dify** and **ComfyUI Shared**.
+    - **Applications with built-in UI**: Includes both a backend service and a web UI. Members open it directly from the Launchpad. Examples include **Dify** and **ComfyUI**.
     
 - **Unified HTTPS address**: All shared applications use the same URL pattern, that is `https://<app-id>.<username>.<platform-domain>`. Each member accesses the same shared application through their own username.
 <!-- #endregion shared-apps-what-are -->
@@ -36,7 +36,7 @@ The new architecture replaces the client/server split with a single, unified sha
 | v2 architecture | New architecture |
 |:----------------|:----------------|
 | Server + client-side access point | Single unified shared server |
-| Uninstalling an access point might break the server | Server lifecycle is independent of any access point |
+| Uninstalling an access point might<br>break the server | Server lifecycle is independent<br>of any access point |
 | Multiple access addresses and formats | Unified address format for all users |
 | Client and server managed separately | Administrators manage one shared service |
 
