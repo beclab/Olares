@@ -401,10 +401,53 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 
 		routeConfigName := httpIR.Name + "_routes"
 
-		// Build virtual hosts
+		// Build virtual hosts.
+		//
+		// Envoy rejects the ENTIRE RouteConfiguration ("Only unique values for
+		// domains are permitted") if a domain appears on more than one virtual
+		// host. A single misconfigured app — e.g. two apps sharing the same
+		// custom third_level_domain or third_party_domain, or an app whose
+		// third_level_domain collides with a system service — would otherwise
+		// take the whole route table down and 404 every request for that user.
+		//
+		// Defensively de-duplicate domains within each route config. Domains are
+		// claimed in descending Priority order (system services outrank apps and
+		// custom domains, so a misconfigured app can never hijack auth/desktop/
+		// wizard); within the same priority the earlier-declared virtual host
+		// wins. Virtual hosts are still EMITTED in their original declaration
+		// order; a virtual host left with no domains is skipped entirely.
+		claimOrder := make([]int, len(httpIR.VirtualHosts))
+		for i := range claimOrder {
+			claimOrder[i] = i
+		}
+		sort.SliceStable(claimOrder, func(a, b int) bool {
+			return httpIR.VirtualHosts[claimOrder[a]].Priority > httpIR.VirtualHosts[claimOrder[b]].Priority
+		})
+		keptDomains := make([][]string, len(httpIR.VirtualHosts))
+		seenDomains := make(map[string]struct{}, len(httpIR.VirtualHosts))
+		for _, idx := range claimOrder {
+			vhIR := httpIR.VirtualHosts[idx]
+			uniqueDomains := make([]string, 0, len(vhIR.Domains))
+			for _, d := range vhIR.Domains {
+				if _, dup := seenDomains[d]; dup {
+					klog.Warningf("xds-translator: route %s: dropping duplicate domain %q from virtual host %q (already claimed by a higher-priority or earlier virtual host)", routeConfigName, d, vhIR.Name)
+					continue
+				}
+				seenDomains[d] = struct{}{}
+				uniqueDomains = append(uniqueDomains, d)
+			}
+			keptDomains[idx] = uniqueDomains
+		}
+
 		var virtualHosts []*routev3.VirtualHost
-		for _, vhIR := range httpIR.VirtualHosts {
+		for i, vhIR := range httpIR.VirtualHosts {
+			if len(keptDomains[i]) == 0 {
+				klog.Warningf("xds-translator: route %s: skipping virtual host %q with no unique domains", routeConfigName, vhIR.Name)
+				continue
+			}
+
 			vh := translateVirtualHost(vhIR)
+			vh.Domains = keptDomains[i]
 			virtualHosts = append(virtualHosts, vh)
 
 			for _, route := range vhIR.Routes {

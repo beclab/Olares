@@ -24,6 +24,11 @@ const (
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
+
+	// systemServicePriority makes system-service virtual hosts (auth/desktop/
+	// wizard) outrank apps and custom domains when a domain is claimed by more
+	// than one virtual host in the same route config.
+	systemServicePriority = 100
 )
 
 var nodeLocationPrefixes = []string{
@@ -462,6 +467,7 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 				"X-BFL-USER": user.Name,
 			},
 		}},
+		Priority: systemServicePriority,
 	}
 	vhosts = append(vhosts, profileVHost)
 
@@ -546,6 +552,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			UserName:              user.Name,
 			// Only the (files,settings apps) vhost needs Envoy-level CORS
 			IsFileserver: fileserverPatchApps[prefix],
+			Priority:     systemAppPriority(app.Name),
 		}
 
 		var routes []*ir.HTTPRouteIR
@@ -696,6 +703,9 @@ func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemSe
 		Language: user.Language,
 		UserZone: zone,
 		UserName: user.Name,
+		// System services (auth/desktop/wizard) outrank apps and custom domains
+		// when claiming a domain, so a misconfigured app cannot hijack them.
+		Priority: systemServicePriority,
 		Routes: []*ir.HTTPRouteIR{{
 			Name:       fmt.Sprintf("nonapp_%s_root_%s", def.Name, user.Name),
 			PathPrefix: "/",
@@ -871,4 +881,11 @@ func sanitizeName(s string) string {
 		s = s[:40]
 	}
 	return s
+}
+
+func systemAppPriority(appName string) int {
+	if appName == "olares-app" {
+		return systemServicePriority
+	}
+	return 0
 }
