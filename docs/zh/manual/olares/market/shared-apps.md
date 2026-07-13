@@ -67,6 +67,8 @@ head:
 - **配置更灵活**：你可以自行设置每个实例的模型来源、参数和能力，并为不同模型选择最合适的引擎。例如，本地快速推理用 Ollama、高并发服务用 vLLM 或 SGLang、边缘部署用 llama.cpp。
 - **内置模型控制台**：每个模型实例都有专属模型控制台，用于监控 GPU 驻留情况、跟踪性能以及管理客户端连接。
 
+有关如何使用引擎基座应用创建和配置模型实例的详细信息，请参阅[使用引擎基座应用托管本地大语言模型](/zh/use-cases/llm-base-apps.md)。
+
 ## 管理旧版 v2 共享应用
 
 升级到 Olares v1.12.6 后，已安装的 v2 共享应用仍可继续工作。你可以像以前一样启动、使用、暂停和恢复它们，但无法直接升级到新架构。
@@ -108,15 +110,15 @@ head:
 
 以下情况使用该方法：应用存储了用户创建的数据或设置，必须手动迁移。
 
-- **属于该方法的应用**：Dify、OnlyOffice 和 SearXNG
-- **步骤**：按应用查看对应的迁移指南：[Dify](/zh/use-cases/dify-upgrade.md)、[OnlyOffice](/zh/use-cases/onlyoffice.md) 和 [SearXNG](/zh/use-cases/searxng.md)。
+- **属于该方法的应用**：Dify、OnlyOffice、SearXNG 和 Xinference
+- **步骤**：按应用查看对应的迁移指南：[Dify](/zh/use-cases/dify-upgrade.md)、[OnlyOffice](/zh/use-cases/onlyoffice.md)、[SearXNG](/zh/use-cases/searxng.md) 和 [Xinference](/zh/use-cases/xinference.md)。
 
 ### 选项四：将 Ollama 应用升级到引擎基座
 
 以下情况使用该方法：你从 Ollama 共享应用迁移到新的引擎基座架构。
 
 - **属于该方法的应用**：用于拉取模型的 Ollama 应用
-- **步骤**：将 Ollama 拉取的模型部署到引擎基座应用上，在模型控制台中获取 Base URL，然后重新配置客户端。
+- **步骤**：将 Ollama 拉取的模型部署到[引擎基座应用](/zh/use-cases/llm-base-apps.md)上，在模型控制台中获取 Base URL，然后重新配置客户端。
 
 ## 常见问题
 

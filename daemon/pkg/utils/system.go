@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -289,7 +290,26 @@ func GetBaseDirFromReleaseFile() (string, error) {
 	return baseDir, nil
 }
 
+var (
+	cpuNameMu    sync.Mutex
+	cpuNameValue string
+)
+
+// GetCPUName returns the CPU brand name. The result is static for the lifetime
+// of the process, so it is cached to avoid the lscpu/dmidecode fallbacks below
+// running on every status tick. An empty result (e.g. a transient boot-time
+// failure) is not cached, so a later tick can still populate it.
 func GetCPUName() string {
+	cpuNameMu.Lock()
+	defer cpuNameMu.Unlock()
+	if cpuNameValue != "" {
+		return cpuNameValue
+	}
+	cpuNameValue = computeCPUName()
+	return cpuNameValue
+}
+
+func computeCPUName() string {
 	brandName := cpu.CPU.BrandName
 	if brandName == "" {
 		// cannot read info from /proc/cpuinfo, try to get from lscpu command

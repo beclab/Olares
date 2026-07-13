@@ -162,7 +162,7 @@ spec:
             memory: 300Mi
             
       - name: download-server
-        image: "beclab/download-server:v1.0.3"
+        image: "beclab/download-server:v1.0.4"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -224,6 +224,8 @@ spec:
           mountPath: /app/downloads
         - name: config-dir
           mountPath: /app/ytdlp/downloads
+        - name: common-data
+          mountPath: /appcommon
         ports:
         - containerPort: 8080
         resources:
@@ -243,6 +245,10 @@ spec:
         hostPath:
           type: DirectoryOrCreate
           path: '{{ .Values.rootPath }}/rootfs/userspace'
+      - name: common-data
+        hostPath:
+          type: DirectoryOrCreate
+          path: '{{ .Values.rootPath }}/rootfs/Common'
           
 ---
 

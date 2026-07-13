@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, OpenCode, AI coding agent, Ollama, OpenAI, ChatGPT, self-hosted, code generation, TUI
 app_version: "1.0.11"
-doc_version: "1.1"
-doc_updated: "2026-04-27"
+doc_version: "1.2"
+doc_updated: "2026-07-10"
 ---
 
 # Set up OpenCode as your AI coding agent
@@ -49,14 +49,6 @@ This option installs OpenCode as an application on your Olares device. You acces
 After installation, you will see two icons on Launchpad:
 - OpenCode: The main interface for OpenCode.
 - OpenCode Terminal: A command-line terminal for OpenCode. Use this if you prefer working in the TUI.
-
-Open OpenCode from Launchpad. On first launch, OpenCode needs to download dependency packages. This might take 10 to 30 minutes depending on your network conditions.
-
-To track the download progress:
-1. Open Control Hub and select the OpenCode project from the sidebar.
-2. Navigate to **Deployments** > **opencode** and click the running pod.
-3. Under **Containers**, locate the **init-packages** container, and click <i class="material-symbols-outlined">article</i> to open the log window.
-   ![Check initialization progress in Control Hub](/images/manual/use-cases/opencode-init-package.png#bordered)
 
 ### Get the model endpoint
 
