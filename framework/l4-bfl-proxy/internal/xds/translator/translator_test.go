@@ -576,6 +576,142 @@ func TestBuildMultiUserHTTPSListener_DistinctSNIKept(t *testing.T) {
 	require.Len(t, listener.FilterChains, 2)
 }
 
+// Two virtual hosts inside the same route config sharing a domain (e.g. two
+// apps configured with the same custom third_level_domain) must not make Envoy
+// reject the whole RouteConfiguration. The first virtual host keeps the shared
+// domain; the second keeps only its own unique domains.
+func TestBuildMultiUserHTTPSListener_DuplicateDomainDeduped(t *testing.T) {
+	httpIR := &ir.HTTPListenerIR{
+		Name:       "https_443_onetest06_zone",
+		Address:    "0.0.0.0",
+		Port:       443,
+		TLS:        true,
+		SNIMatches: []string{"*.onetest06.olares.com", "onetest06.olares.com"},
+		TLSCert:    &ir.SecretIR{Name: "tls", CertData: "cert", KeyData: "key"},
+		UserName:   "onetest06",
+		VirtualHosts: []*ir.VirtualHostIR{
+			{
+				Name:    "app_onetest06_radarr",
+				Domains: []string{"radarr.onetest06.olares.com", "test.onetest06.olares.com"},
+				Routes:  []*ir.HTTPRouteIR{{Name: "r1", PathPrefix: "/", Cluster: ""}},
+			},
+			{
+				Name:    "app_onetest06_sonarr",
+				Domains: []string{"sonarr.onetest06.olares.com", "test.onetest06.olares.com"},
+				Routes:  []*ir.HTTPRouteIR{{Name: "r2", PathPrefix: "/", Cluster: ""}},
+			},
+		},
+	}
+
+	clusterSet := make(map[string]bool)
+	_, routeConfigs, _ := buildMultiUserHTTPSListener(443, false, []*ir.HTTPListenerIR{httpIR}, map[string]*ir.ClusterIR{}, clusterSet)
+
+	require.Len(t, routeConfigs, 1)
+	rc := asRouteConfig(t, routeConfigs[0])
+
+	domainsByVH := map[string][]string{}
+	seen := map[string]int{}
+	for _, vh := range rc.VirtualHosts {
+		domainsByVH[vh.Name] = vh.Domains
+		for _, d := range vh.Domains {
+			seen[d]++
+		}
+	}
+
+	// No domain appears twice across the whole route config (Envoy's rule).
+	for d, n := range seen {
+		assert.Equalf(t, 1, n, "domain %q must appear exactly once across the route config", d)
+	}
+	// First virtual host keeps the shared domain.
+	assert.Contains(t, domainsByVH["app_onetest06_radarr"], "test.onetest06.olares.com")
+	// Second keeps its own unique domain but loses the duplicate.
+	assert.Contains(t, domainsByVH["app_onetest06_sonarr"], "sonarr.onetest06.olares.com")
+	assert.NotContains(t, domainsByVH["app_onetest06_sonarr"], "test.onetest06.olares.com")
+}
+
+// A virtual host whose every domain is already claimed (e.g. a second app with
+// an identical third_party_domain and no other domain) is dropped entirely
+// instead of poisoning the route config.
+func TestBuildMultiUserHTTPSListener_VirtualHostFullyDuplicateDropped(t *testing.T) {
+	httpIR := &ir.HTTPListenerIR{
+		Name:       "https_443_onetest06_zone",
+		Port:       443,
+		TLS:        true,
+		SNIMatches: []string{"onetest06.olares.com"},
+		TLSCert:    &ir.SecretIR{Name: "tls", CertData: "cert", KeyData: "key"},
+		UserName:   "onetest06",
+		VirtualHosts: []*ir.VirtualHostIR{
+			{
+				Name:    "custom_onetest06_appA",
+				Domains: []string{"foo.example.com"},
+				Routes:  []*ir.HTTPRouteIR{{Name: "r1", PathPrefix: "/"}},
+			},
+			{
+				Name:    "custom_onetest06_appB",
+				Domains: []string{"foo.example.com"},
+				Routes:  []*ir.HTTPRouteIR{{Name: "r2", PathPrefix: "/"}},
+			},
+		},
+	}
+
+	clusterSet := make(map[string]bool)
+	_, routeConfigs, _ := buildMultiUserHTTPSListener(443, false, []*ir.HTTPListenerIR{httpIR}, map[string]*ir.ClusterIR{}, clusterSet)
+
+	require.Len(t, routeConfigs, 1)
+	rc := asRouteConfig(t, routeConfigs[0])
+
+	var names []string
+	for _, vh := range rc.VirtualHosts {
+		names = append(names, vh.Name)
+	}
+	assert.Contains(t, names, "custom_onetest06_appA")
+	assert.NotContains(t, names, "custom_onetest06_appB")
+}
+
+// A higher-Priority virtual host (e.g. a system service) must keep a contested
+// domain even when a lower-Priority virtual host (an app) is declared earlier,
+// so a misconfigured app cannot hijack auth/desktop/wizard.
+func TestBuildMultiUserHTTPSListener_HigherPriorityWinsDomain(t *testing.T) {
+	httpIR := &ir.HTTPListenerIR{
+		Name:       "https_443_bob_zone",
+		Port:       443,
+		TLS:        true,
+		SNIMatches: []string{"bob.snowinning.com"},
+		TLSCert:    &ir.SecretIR{Name: "tls", CertData: "cert", KeyData: "key"},
+		UserName:   "bob",
+		VirtualHosts: []*ir.VirtualHostIR{
+			{
+				// App declared first but lower priority.
+				Name:     "app_bob_desktop",
+				Priority: 0,
+				Domains:  []string{"desktop.bob.snowinning.com"},
+				Routes:   []*ir.HTTPRouteIR{{Name: "r1", PathPrefix: "/"}},
+			},
+			{
+				// System service declared later but higher priority.
+				Name:     "nonapp_desktop_bob",
+				Priority: 100,
+				Domains:  []string{"desktop.bob.snowinning.com"},
+				Routes:   []*ir.HTTPRouteIR{{Name: "r2", PathPrefix: "/"}},
+			},
+		},
+	}
+
+	clusterSet := make(map[string]bool)
+	_, routeConfigs, _ := buildMultiUserHTTPSListener(443, false, []*ir.HTTPListenerIR{httpIR}, map[string]*ir.ClusterIR{}, clusterSet)
+
+	require.Len(t, routeConfigs, 1)
+	rc := asRouteConfig(t, routeConfigs[0])
+
+	domainsByVH := map[string][]string{}
+	for _, vh := range rc.VirtualHosts {
+		domainsByVH[vh.Name] = vh.Domains
+	}
+	// System service keeps the domain; the app is dropped (no domains left).
+	assert.Equal(t, []string{"desktop.bob.snowinning.com"}, domainsByVH["nonapp_desktop_bob"])
+	assert.NotContains(t, domainsByVH, "app_bob_desktop")
+}
+
 // ---------------------------------------------------------------------------
 // parseCIDR
 // ---------------------------------------------------------------------------
