@@ -10,11 +10,15 @@ doc_version: "1.0"
 doc_updated: "2026-07-13"
 ---
 
+:::warning WARNING
+本页面内容由 AI 翻译生成，仅供参考。如有疑问，请以[英文原文](../../use-cases/xinference.md)为准。
+:::
+
 # 将 Xinference 迁移到新架构
 
 Xinference 是 Olares 上用于部署和提供模型服务的共享应用。Olares 1.12.6 更新了共享应用架构，因此无法直接原地升级 Xinference。本文介绍如何在升级到 Olares 1.12.6 后重新安装 Xinference 并重新下载模型。
 
-## 迁移前须知
+## 开始之前
 
 在 v2 应用中，Xinference 将所有模型以 local files 的形式存放在自己的 Cache 目录中。
 

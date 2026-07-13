@@ -14,7 +14,7 @@ doc_updated: "2026-07-13"
 
 Xinference is a shared application on Olares for deploying and serving models. Olares 1.12.6 updates the shared app architecture, so you cannot update Xinference in place. This guide shows how to reinstall Xinference and re-download your models after upgrading to Olares 1.12.6.
 
-## Before you migrate
+## Before you begin
 
 Previously, Xinference stored all models as local files in its own Cache directory.
 
