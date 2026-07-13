@@ -50,6 +50,12 @@ type VirtualHostIR struct {
 	// that the upstream fileserver / nginx do not emit, so Capacitor / browser
 	// cross-origin requests to /api/preview/*, /api/raw/*, etc. succeed.
 	IsFileserver bool
+	// Priority controls who keeps a domain when two virtual hosts in the same
+	// route config declare it. Domains are claimed in descending Priority order
+	// (higher wins); within the same priority the earlier-declared vhost wins.
+	// System services (auth/desktop/wizard) use a high priority so a
+	// misconfigured app can never hijack their domains. Default 0.
+	Priority int
 }
 
 type HTTPRouteIR struct {
