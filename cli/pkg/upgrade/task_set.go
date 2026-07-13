@@ -968,6 +968,9 @@ type upgradeCniPluginsBinaryOnly struct {
 
 func (u *upgradeCniPluginsBinaryOnly) Execute(runtime connector.Runtime) error {
 	m, err := manifest.ReadAll(u.KubeConf.Arg.Manifest)
+	if err != nil {
+		return fmt.Errorf("read manifest failed: %w", err)
+	}
 
 	binary, err := m.Get("cni-plugins")
 	if err != nil {
