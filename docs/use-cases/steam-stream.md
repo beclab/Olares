@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Comprehensive tutorial on streaming Steam games with Olares. Learn to install Steam Headless, configure the streaming service, and stream games on Moonlight from both local and remote networks.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Steam Headless, game streaming, Moonlight, self-hosted game streaming, stream Steam games, Steam Headless on Olares
 ---
 
 # Stream your games with Steam Headless

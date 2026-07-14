@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: Learn how to install Home Assistant on Olares, connect it to your local network, and add smart home devices both automatically and manually.
+description: Install Home Assistant on Olares to run your smart home hub without a separate Raspberry Pi or Docker setup. Connect your local network and add devices in a few clicks.
 head:
   - - meta
     - name: keywords
-      content: Olares, Home Assistant, smart home, local discovery, home automation, overlay gateway, Dahua, IP camera, RTSP, HACS
+      content: Olares, Home Assistant, home assistant on olares, home assistant docker, home assistant raspberry pi, smart home, home automation, HACS
 app_version: "1.0.23"
 doc_version: "1.0"
 doc_updated: "2026-07-03"

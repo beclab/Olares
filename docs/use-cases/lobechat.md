@@ -1,10 +1,10 @@
 ---
 outline: [2, 4] 
-description: Learn how to install LobeHub (LobeChat) on Olares and integrate it with Ollama to build and enhance your local custom AI assistants.
+description: Install LobeHub (LobeChat) on Olares and connect it to Ollama to build self-hosted, local AI assistants with knowledge bases and multimodal input.
 head:
   - - meta
     - name: keywords
-      content: Olares, LobeHub agent, LobeChat assistant, AI agent, AI agent team
+      content: Olares, LobeHub, LobeChat, self-hosted lobechat, AI agent, lobechat on olares
 ---
 
 # Build your local AI agent with LobeHub (LobeChat)

@@ -75,6 +75,14 @@ export const redirects = {
     '/use-cases/openwebui-ollama': '/use-cases/openwebui',
     '/zh/use-cases/openwebui-ollama': '/zh/use-cases/openwebui',
 
+    // Rename: descriptive slugs → brand slugs (permanent: old names retired)
+    '/use-cases/stream-media': '/use-cases/jellyfin',
+    '/zh/use-cases/stream-media': '/zh/use-cases/jellyfin',
+    '/use-cases/stream-game': '/use-cases/steam-stream',
+    '/zh/use-cases/stream-game': '/zh/use-cases/steam-stream',
+    '/use-cases/play-games-directly': '/use-cases/steam-direct-play',
+    '/zh/use-cases/play-games-directly': '/zh/use-cases/steam-direct-play',
+
     // Refactor: /manual/concepts/** → /developer/concepts/**
     '/manual/system-architecture': '/developer/concepts/system-architecture',
     '/manual/concepts/': '/developer/concepts/',

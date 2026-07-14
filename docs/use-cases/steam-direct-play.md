@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to turn your Olares device into a gaming console by connecting a monitor and peripherals directly.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Steam Headless, play Steam games locally, Steam on Olares, local gaming, Olares gaming console
 ---
 
 # Play Steam games locally on Olares
@@ -239,7 +243,7 @@ Audio now plays directly from your monitor or speakers. You are ready to play.
 
 ## Optional: Enable audio for remote streaming
 :::info
-For detailed streaming and pairing instructions, refer to [Stream your games with Steam Headless](stream-game.md).
+For detailed streaming and pairing instructions, refer to [Stream your games with Steam Headless](steam-stream.md).
 :::
 Local play and remote streaming use exclusive audio modes.
 - **Local play** requires the `module-alsa-sink` module loaded.

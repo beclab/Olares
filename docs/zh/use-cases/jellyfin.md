@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上设置 Jellyfin 的逐步指南，用于个人媒体串流播放。了解如何管理媒体文件、添加媒体库、启用硬件加速、连接 Jellyfin 客户端，以及在开启 Overlay 网关后通过电视播放和投屏媒体。
+description: 在 Olares 上用 Jellyfin 搭建私人媒体服务器，作为自托管的 Plex 替代方案。添加媒体库、启用硬件转码，并串流到你的各种设备和电视。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
 ---
 # 使用 Jellyfin 构建你的私人媒体服务器
 

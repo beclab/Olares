@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: 本页面记录了在 Olares 上使用 Windows 时可能遇到的已知问题和意外行为，以及相应的解决方案或变通方法。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Windows VM, Windows on Olares issues, Windows VM troubleshooting, RDP connection failed, Windows VM known issues
 ---
 
 :::warning

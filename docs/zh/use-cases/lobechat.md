@@ -1,10 +1,10 @@
 ---
 outline: [2, 4]
-description: 了解如何在 Olares 上安装 LobeHub (LobeChat) 并将其与 Ollama 集成，以构建和增强你的本地自定义 AI 助手。
+description: 在 Olares 上安装 LobeHub (LobeChat) 并接入 Ollama，构建自托管的本地 AI 助手，支持知识库和多模态输入。
 head:
   - - meta
     - name: keywords
-      content: Olares, LobeHub agent, LobeChat assistant, AI agent, AI agent team
+      content: Olares, LobeHub, LobeChat, self-hosted lobechat, AI agent, lobechat on olares
 ---
 
 :::warning

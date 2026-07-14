@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中使用引擎基座应用来自托管本地大语言模型，并通过克隆基座应用运行不同的推理引擎。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Model Console, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
 ---
 
 :::warning

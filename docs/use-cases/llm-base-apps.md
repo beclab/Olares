@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to use the Engine Base applications on Olares to self-host large language models and run different inference engines by cloning the base apps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Model Console, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
 ---
 
 # Host local large language models with Engine Base apps

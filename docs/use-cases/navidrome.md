@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: Set up Navidrome on Olares to build a private music streaming server, organize your music library, and play it from a mobile Subsonic-compatible client.
+description: Set up Navidrome on Olares as a self-hosted Spotify alternative and home music server. Organize your library and stream it from any Subsonic-compatible mobile client.
 head:
   - - meta
     - name: keywords
-      content: Olares, Navidrome, music streaming, self-hosted music server, Subsonic, mobile music client
+      content: Olares, Navidrome, self-hosted spotify, home music server, self-hosted music server, Subsonic, navidrome on synology, navidrome on olares
 app_version: "1.0.0"
 doc_version: "1.0"
 doc_updated: "2026-05-26"
@@ -124,5 +124,5 @@ To make lyrics work consistently, embed synchronized lyrics into the audio files
 
 ## Learn more
 
-- [Build your private media server with Jellyfin](stream-media.md): Stream movies, shows, and music from Olares with Jellyfin.
+- [Build your private media server with Jellyfin](jellyfin.md): Stream movies, shows, and music from Olares with Jellyfin.
 - [Build your digital library with Komga](komga.md): Manage comics, manga, magazines, and e-books on Olares.

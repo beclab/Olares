@@ -1,6 +1,11 @@
 ---
+noindex: true
 outline: [2, 5]
 description: A step-by-step guide to installing and using Stirling PDF on Olares. Learn how to securely manage PDF documents, covering essential tasks such as merging, editing, format conversion, and creating automated workflow pipelines.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Stirling PDF, self-hosted PDF tools, merge PDF, edit PDF, PDF converter, Stirling PDF on Olares
 ---
 
 # Manage PDF documents with Stirling PDF

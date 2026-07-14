@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: Learn how to run Olares on Windows using WSL 2 and Docker, including system preparation, configuration, and container management.
 ---

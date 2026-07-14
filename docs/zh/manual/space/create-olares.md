@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: 在云端创建 Olares 实例的操作指南，涵盖环境设置、资源配置、安装进度查看和系统激活步骤，帮助快速部署并开始使用。
 ---

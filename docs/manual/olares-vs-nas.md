@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: Compares Olares and general NAS, highlighting key differences in storage solutions, application ecosystem, virtual machine support, network configuration, and AI capabilities.
 ---

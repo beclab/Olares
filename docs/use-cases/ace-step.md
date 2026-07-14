@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Step-by-step guide to installing ACE-Step AI on Olares, generating songs with lyrics or instrumentals, optimizing audio with retake and repainting, and using Audio2Audio to transform reference audio into new music.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, ACE-Step, self-hosted ACE-Step, AI music generation, text to music, run ACE-Step locally, ACE-Step on Olares
 ---
 
 # Create your own AI-generated music with ACE-Step
