@@ -306,8 +306,8 @@ The following per-engine recommendations are validated best practices. Use them 
     :::
 - **MODEL_NAME**: `unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL`
 - **MODEL_MODE**: `Chat`
-- **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
-- **ENGINE_ARGS**: `-c 100352 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2`
+- **MODEL_SUPPORTS**: `Thinking`, `Tools`
+- **ENGINE_ARGS**: `-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2`
 - **LOG_LEVEL**: `Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**: `23Gi`
 
@@ -321,8 +321,8 @@ The following per-engine recommendations are validated best practices. Use them 
     :::
 - **MODEL_NAME**: `Jackrong/Qwopus3.6-27B-v2-MTP-GGUF:Q4_K_M`
 - **MODEL_MODE**: `Chat`
-- **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
-- **ENGINE_ARGS**: `-c 100352 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2`
+- **MODEL_SUPPORTS**: `Thinking`, `Tools`
+- **ENGINE_ARGS**: `-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2`
 - **LOG_LEVEL**: `Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**: `23Gi`
 
