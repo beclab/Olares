@@ -281,6 +281,7 @@ The following per-engine recommendations are validated best practices. Use them 
 <tabs>
 <template #Llama-cpp>
 
+<!--
 - **Recommended model**: [`unsloth/Qwen3.6-27B-GGUF`](https://huggingface.co/unsloth/Qwen3.6-27B-GGUF), quantized to `Q4_K_M`
 - **MODEL_SOURCE**: `hf://unsloth/Qwen3.6-27B-GGUF --include Qwen3.6-27B-Q4_K_M.gguf`
     :::tip Multimodal models
@@ -292,6 +293,36 @@ The following per-engine recommendations are validated best practices. Use them 
 - **MODEL_MODE**: `Chat`
 - **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
 - **ENGINE_ARGS**: `-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0`
+- **LOG_LEVEL**: `Info`
+- **LLAMACPP_REQUIRED_GPU_MEMORY**: `23Gi`
+-->
+**Recommended model 1**
+- **Recommended model**: [`unsloth/Qwen3.6-27B-MTP-GGUF`](https://huggingface.co/unsloth/Qwen3.6-27B-MTP-GGUF), quantized to `UD-Q4_K_XL`
+- **MODEL_SOURCE**: `hf://unsloth/Qwen3.6-27B-MTP-GGUF --include Qwen3.6-27B-UD-Q4_K_XL.gguf`
+    :::tip Multimodal models
+    If the model has multimodal capabilities, include the `mmproj-F16.gguf` file in `MODEL_SOURCE`:
+
+    `hf://unsloth/Qwen3.6-27B-MTP-GGUF --include Qwen3.6-27B-UD-Q4_K_XL.gguf,hf://unsloth/Qwen3.6-27B-MTP-GGUF --include mmproj-F16.gguf`
+    :::
+- **MODEL_NAME**: `unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL`
+- **MODEL_MODE**: `Chat`
+- **MODEL_SUPPORTS**: `Thinking`, `Tools`
+- **ENGINE_ARGS**: `-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2`
+- **LOG_LEVEL**: `Info`
+- **LLAMACPP_REQUIRED_GPU_MEMORY**: `23Gi`
+
+**Recommended model 2**
+- **Recommended model**: [`Jackrong/Qwopus3.6-27B-v2-MTP-GGUF`](https://huggingface.co/Jackrong/Qwopus3.6-27B-v2-MTP-GGUF), quantized to `Q4_K_M`
+- **MODEL_SOURCE**: `hf://Jackrong/Qwopus3.6-27B-v2-MTP-GGUF --include Qwopus3.6-27B-v2-MTP-Q4_K_M.gguf`
+    :::tip Multimodal models
+    If the model has multimodal capabilities, include the `mmproj-F32.gguf` file in `MODEL_SOURCE`:
+
+    `hf://Jackrong/Qwopus3.6-27B-v2-MTP-GGUF --include Qwopus3.6-27B-v2-MTP-Q4_K_M.gguf,hf://Jackrong/Qwopus3.6-27B-v2-MTP-GGUF --include mmproj-F32.gguf`
+    :::
+- **MODEL_NAME**: `Jackrong/Qwopus3.6-27B-v2-MTP-GGUF:Q4_K_M`
+- **MODEL_MODE**: `Chat`
+- **MODEL_SUPPORTS**: `Thinking`, `Tools`
+- **ENGINE_ARGS**: `-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2`
 - **LOG_LEVEL**: `Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**: `23Gi`
 
