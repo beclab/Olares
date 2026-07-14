@@ -32,7 +32,7 @@ Familiarize yourself with the workspace. The Files interface mainly consists of 
 * Cloud storage: Access files from integrated services such as Google Drive and AWS S3.
 * Share: A centralized hub for managing shared folders.
 
-![Files](/images/manual/olares/files-index.png#bordered)
+![Files](/images/manual/olares/files-index2.png#bordered)
 
 <!--@include: ../manual/olares/files/add-edit-download.md#files-format-support-->
 

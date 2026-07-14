@@ -67,7 +67,8 @@ export const useCases: UseCase[] = [
   { title: "LiteLLM", link: "/use-cases/litellm", category: "Model services", description: "Unify model providers behind one OpenAI-compatible API", descriptionZh: "用统一的 OpenAI 兼容 API 整合多家模型提供商" },
   { title: "TensorZero", link: "/use-cases/tensorzero", category: "Model services", description: "AI model gateway and observability platform", descriptionZh: "AI 模型网关与可观测性平台" },
   { title: "LLMFit", link: "/use-cases/llmfit", category: "Model services", description: "Benchmark your hardware to find the best models", descriptionZh: "对硬件进行基准测试以找到最合适的模型" },
-  // { title: "Xinference", link: "/use-cases/xinference", category: "Model services", description: "Deploy and serve models on Olares", descriptionZh: "在 Olares 上部署和提供模型服务" },
+  { title: "Engine Base apps", link: "/use-cases/llm-base-apps", category: "Model services", description: "Self-host local LLMs by cloning base apps for different inference engines", descriptionZh: "通过克隆不同推理引擎的基座应用来自托管本地大语言模型" },
+  { title: "Xinference", link: "/use-cases/xinference", category: "Model services", description: "Deploy and serve models on Olares", descriptionZh: "在 Olares 上部署和提供模型服务" },
   { title: "Isaac Lab", link: "/use-cases/isaac-lab", category: "Embodied AI", description: "GPU-accelerated robot simulation training", descriptionZh: "GPU 加速的机器人仿真训练" },
   { title: "macOS", link: "/use-cases/macos", category: "Virtual machine", description: "Run a macOS VM with browser-based VNC", descriptionZh: "通过浏览器 VNC 运行 macOS 虚拟机" },
   { title: "Windows", link: "/use-cases/windows", category: "Virtual machine", description: "Run a Windows VM with VNC or Remote Desktop", descriptionZh: "通过 VNC 或远程桌面运行 Windows 虚拟机" },
@@ -91,4 +92,5 @@ export const useCases: UseCase[] = [
   { title: "Firecrawl", link: "/use-cases/firecrawl", category: "Utilities", description: "Web page loader and scraper for apps", descriptionZh: "面向应用的网页加载与抓取工具" },
   { title: "FlareSolverr", link: "/use-cases/flaresolverr", category: "Utilities", description: "Bypass Cloudflare protection in Prowlarr", descriptionZh: "在 Prowlarr 中绕过 Cloudflare 防护" },
   { title: "SearXNG", link: "/use-cases/searxng", category: "Utilities", description: "Privacy-focused meta search engine", descriptionZh: "注重隐私的元搜索引擎" },
+  { title: "Home Assistant", link: "/use-cases/home-assistant", category: "Utilities", description: "Build your smart home hub with local device discovery and automation", descriptionZh: "搭建智能家居中枢，支持本地设备发现与自动化" },
 ];

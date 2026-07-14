@@ -79,55 +79,87 @@ func EnableWifi(ctx context.Context) error {
 }
 
 func GetWifiDevice(ctx context.Context) (map[string]Device, error) {
-	return deviceStatus(ctx, func(d *Device) bool { return d.Type == "wifi" })
+	return deviceStatus(ctx, func(d *Device) bool { return d.Type == "wifi" }, true)
+}
+
+// managedByOthers reports whether the device is managed by another component
+// (CNI, tunnels, tailscale, ...) and should be skipped by NetworkManager logic.
+func managedByOthers(name string) bool {
+	for _, devPrefix := range []string{"cali", "kube", "tun", "tailscale"} {
+		if strings.HasPrefix(name, devPrefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func GetAllDevice(ctx context.Context) (map[string]Device, error) {
 	return deviceStatus(ctx, func(d *Device) bool {
-		managedByOthers := []string{"cali", "kube", "tun", "tailscale"}
-		for _, devPrefix := range managedByOthers {
-			if strings.HasPrefix(d.Name, devPrefix) {
-				return false
-			}
-		}
+		return !managedByOthers(d.Name)
+	}, true)
+}
 
-		return true
-	})
+// setDeviceManaged switches a single device to managed via nmcli.
+func setDeviceManaged(ctx context.Context, name string) error {
+	nmcli, err := findCommand(ctx, "nmcli")
+	if err != nil {
+		klog.Error("find nmcli error, ", err)
+		return err
+	}
+
+	cmd := exec.CommandContext(ctx, nmcli, "device", "set", name, "managed", "yes")
+	cmd.Env = os.Environ()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		klog.Error("exec cmd error, ", err, ", nmcli device set ", name, " managed yes")
+		return err
+	}
+	if strings.Contains(string(output), "Error") {
+		err = errors.New(string(output))
+		klog.Error("exec cmd error, ", err, ", nmcli device set ", name, " managed yes")
+		return err
+	}
+	return nil
 }
 
 func ManagedAllDevices(ctx context.Context) (map[string]Device, error) {
 	return deviceStatus(ctx, func(d *Device) bool {
-		managedByOthers := []string{"cali", "kube", "tun", "tailscale"}
-		for _, devPrefix := range managedByOthers {
-			if strings.HasPrefix(d.Name, devPrefix) {
-				return false
-			}
+		if managedByOthers(d.Name) {
+			return false
 		}
 		if d.State == "unmanaged" {
-			nmcli, err := findCommand(ctx, "nmcli")
-			if err != nil {
-				klog.Error("find nmcli error, ", err)
-				return false
-			}
-
-			cmd := exec.CommandContext(ctx, nmcli, "device", "set", d.Name, "managed", "yes")
-			cmd.Env = os.Environ()
-			output, err := cmd.CombinedOutput()
-			if err != nil {
-				klog.Error("exec cmd error, ", err, ", nmcli device set ", d.Name, " managed yes")
-				return false
-			}
-			if strings.Contains(string(output), "Error") {
-				err = errors.New(string(output))
-				klog.Error("exec cmd error, ", err, ", nmcli device set ", d.Name, " managed yes")
+			if err := setDeviceManaged(ctx, d.Name); err != nil {
 				return false
 			}
 		}
 		return true
-	})
+	}, true)
 }
 
-func deviceStatus(ctx context.Context, filter func(d *Device) bool) (map[string]Device, error) {
+// ManagedDeviceStatus enumerates network devices with a single
+// `nmcli device status` call and, in the same pass, switches any unmanaged
+// device to managed. It deliberately skips the per-device `nmcli device show`
+// / `nmcli connection show` fan-out (i.e. it does not populate IP/gateway/DNS/
+// method fields), because the frequent state-polling path only needs
+// Name/Type/State/Connection. This replaces the previous back-to-back
+// ManagedAllDevices + GetAllDevice calls, which together spawned ~(4 + 8M)
+// bash/nmcli processes per poll (M = device count) and kept NetworkManager
+// busy.
+func ManagedDeviceStatus(ctx context.Context) (map[string]Device, error) {
+	return deviceStatus(ctx, func(d *Device) bool {
+		if managedByOthers(d.Name) {
+			return false
+		}
+		if d.State == "unmanaged" {
+			if err := setDeviceManaged(ctx, d.Name); err != nil {
+				return false
+			}
+		}
+		return true
+	}, false)
+}
+
+func deviceStatus(ctx context.Context, filter func(d *Device) bool, details bool) (map[string]Device, error) {
 	nmcli, err := findCommand(ctx, "nmcli")
 	if err != nil {
 		return nil, err
@@ -161,10 +193,12 @@ func deviceStatus(ctx context.Context, filter func(d *Device) bool) (map[string]
 		}
 
 		if filter == nil || filter(&d) {
-			err = showDeviceByNM(ctx, d.Name, &d)
-			if err != nil {
-				klog.Error("failed to get device details for ", d.Name, ": ", err)
-				continue
+			if details {
+				err = showDeviceByNM(ctx, d.Name, &d)
+				if err != nil {
+					klog.Error("failed to get device details for ", d.Name, ": ", err)
+					continue
+				}
 			}
 
 			statuss[d.Name] = d
