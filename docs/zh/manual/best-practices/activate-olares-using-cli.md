@@ -55,7 +55,7 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 1. 运行以下命令查看当前 Olares 版本。
 
     ```bash
-    sudo olares-check
+    sudo olares-cli --version
     ```
 
 2. 查看输出中的版本号，选择相应方式。

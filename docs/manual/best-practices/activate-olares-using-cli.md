@@ -54,7 +54,7 @@ Determine your CLI preparation steps based on your Olares version.
 1. Run the following command to check the current Olares version.
 
     ```bash
-    sudo olares-check
+    sudo olares-cli --version
     ```
 
 2. Check the version in the output, and select the method based on your version.
