@@ -173,6 +173,12 @@ export const redirects = {
 
     // Removed: stale olares-id section hero page → first olares-id doc
     '/developer/contribute/olares-id/': '/developer/contribute/olares-id/contract/contract',
+
+    // Removed: single-gpu/multi-gpu were noindex include-only fragments of gpu-resource → consolidated page
+    '/manual/olares/settings/single-gpu': '/manual/olares/settings/gpu-resource',
+    '/manual/olares/settings/multi-gpu': '/manual/olares/settings/gpu-resource',
+    '/zh/manual/olares/settings/single-gpu': '/zh/manual/olares/settings/gpu-resource',
+    '/zh/manual/olares/settings/multi-gpu': '/zh/manual/olares/settings/gpu-resource',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.
