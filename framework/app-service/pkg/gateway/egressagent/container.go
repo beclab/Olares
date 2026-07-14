@@ -10,17 +10,22 @@ import (
 
 const (
 	egressAgentImageEnv = "EGRESS_AGENT_IMAGE"
-	defaultStubImage    = "beclab/egress-agent:0.0.0-stub"
-	systemServerHost    = "system-server.user-system"
-	systemServerPort    = "28080"
+	// DefaultImage is the R2 nginx alpine-slim agent (digest pin in charts).
+	DefaultImage       = "beclab/nginx:1.30.0-alpine-slim-olares-r2"
+	systemServerHost   = "system-server.user-system"
+	systemServerPort   = "28080"
+	InitContainerName  = "olares-egress-agent-iptables"
+	ConfVolumeName     = "olares-egress-agent-conf"
+	ConfMountPath      = "/etc/nginx"
 )
 
-// ContainerSpec returns the minimal egress agent scaffold (WI-OC-EGRESS-01).
+// ContainerSpec returns the egress agent sidecar (WI-OC-EGRESS-01 / IWO-OC-L2B-01).
 func ContainerSpec() corev1.Container {
 	return corev1.Container{
 		Name:            ContainerName,
 		Image:           egressAgentImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"nginx", "-g", "daemon off;"},
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          ListenPortName,
@@ -34,11 +39,8 @@ func ContainerSpec() corev1.Container {
 			{Name: "EGRESS_SYSTEM_SERVER_PORT", Value: systemServerPort},
 		},
 		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      SATokenVolumeName,
-				MountPath: SATokenMountPath,
-				ReadOnly:  true,
-			},
+			{Name: SATokenVolumeName, MountPath: SATokenMountPath, ReadOnly: true},
+			{Name: ConfVolumeName, MountPath: ConfMountPath, ReadOnly: true},
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
@@ -48,6 +50,21 @@ func ContainerSpec() corev1.Container {
 			Limits: corev1.ResourceList{
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
+		},
+	}
+}
+
+// InitContainerSpec redirects outbound TCP/80 and TCP/8080 into the egress agent.
+func InitContainerSpec() corev1.Container {
+	script := "iptables -t nat -A OUTPUT -p tcp --dport 80 -m owner ! --uid-owner 101 -j REDIRECT --to-ports 15001 || true; " +
+		"iptables -t nat -A OUTPUT -p tcp --dport 8080 -m owner ! --uid-owner 101 -j REDIRECT --to-ports 15001 || true"
+	return corev1.Container{
+		Name:            InitContainerName,
+		Image:           egressAgentImage(),
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/sh", "-c", script},
+		SecurityContext: &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"}},
 		},
 	}
 }
@@ -73,9 +90,24 @@ func SATokenVolume() corev1.Volume {
 	}
 }
 
+// ConfVolume holds RenderEgressNginxConf output.
+func ConfVolume() corev1.Volume {
+	return corev1.Volume{
+		Name: ConfVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	}
+}
+
 func egressAgentImage() string {
 	if img := strings.TrimSpace(os.Getenv(egressAgentImageEnv)); img != "" {
 		return img
 	}
-	return defaultStubImage
+	return DefaultImage
+}
+
+// IsStubImage reports whether image is the deprecated scaffold stub.
+func IsStubImage(image string) bool {
+	return strings.Contains(image, "0.0.0-stub")
 }
