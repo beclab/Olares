@@ -99,9 +99,11 @@ Once published, you can improve how your app is presented in Olares Market by ad
 
 For details, see [Promote your apps](/developer/develop/promote-apps.md).
 
+<!--
 ### 6. (Optional) Publish paid applications
 
 Olares Market also supports paid application distribution.
 Paid apps require additional identity registration, pricing configuration, and license management.
 
 For details, see [Publish paid applications](/developer/develop/paid-apps.md).
+-->

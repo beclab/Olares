@@ -404,11 +404,11 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               text: "推广应用",
               link:"/zh/developer/develop/promote-apps"
             },
-            {
+            /*{
               text: "发布付费应用",
               link: "/zh/developer/develop/paid-apps",
-            },
-            
+            },*/
+
           ],
         },
         {
