@@ -578,6 +578,10 @@ const side = {
           text: "Connect AI apps",
           link: "/manual/best-practices/connect-ai-apps",
         },
+        {
+          text: "Connect AI client apps to model services",
+          link: "/manual/best-practices/connect-ai-apps-new",
+        },
       ],
     },
     { text: "Glossary", link: "/manual/glossary" },

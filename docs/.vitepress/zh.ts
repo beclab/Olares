@@ -578,7 +578,11 @@ const side = {
         {
           text: "连接 AI 应用",
           link: "/zh/manual/best-practices/connect-ai-apps",
-        },        
+        },
+        {
+          text: "连接 AI 客户端应用到模型服务",
+          link: "/zh/manual/best-practices/connect-ai-apps-new",
+        },
       ],
     },
     { text: "术语", link: "/zh/manual/glossary" },
