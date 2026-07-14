@@ -222,7 +222,13 @@ func (wh *Webhook) CreatePatch(
 			}
 		}
 		if injectCallerAgent {
-			pod.Spec.Volumes = append(pod.Spec.Volumes, calleragent.JWTSecretVolume())
+			pod.Spec.Volumes = append(pod.Spec.Volumes,
+				calleragent.JWTSecretVolume(),
+				calleragent.CertsVolume(),
+				calleragent.SharedHostsVolume(),
+				calleragent.ConfVolume(),
+			)
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, calleragent.InitContainerSpec())
 			pod.Spec.Containers = append(pod.Spec.Containers, calleragent.ContainerSpec())
 		}
 	} // end of inject sidecar
