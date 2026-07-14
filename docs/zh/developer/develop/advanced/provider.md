@@ -1,3 +1,7 @@
+---
+noindex: true
+description: APP 的开发者可在应用的 Chart 中配置 ProviderRegistry 或者请求调用其他 Provider 的权限。
+---
 # Service Provider
 
 APP 的开发者可在应用的 Chart 中配置 `ProviderRegistry` 或者请求调用其他 Provider 的权限。

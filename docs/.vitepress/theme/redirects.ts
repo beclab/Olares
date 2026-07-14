@@ -147,6 +147,32 @@ export const redirects = {
     
     // Refactor: /zh/manual/docs-home → /zh/manual/overview
     '/zh/manual/docs-home': '/zh/manual/overview',
+
+    // Removed: orphaned developer install-step fragments (duplicates of manual/get-started) → install overview
+    '/developer/install/activate-olares': '/developer/install/',
+    '/developer/install/install-and-activate-olares': '/developer/install/',
+    '/developer/install/log-in-to-olares': '/developer/install/',
+    '/developer/install/installation-troubleshooting': '/developer/install/',
+    '/developer/install/reusables': '/developer/install/',
+    '/zh/developer/install/activate-olares': '/zh/developer/install/',
+    '/zh/developer/install/install-and-activate-olares': '/zh/developer/install/',
+    '/zh/developer/install/log-in-to-olares': '/zh/developer/install/',
+    '/zh/developer/install/reusables': '/zh/developer/install/',
+
+    // Removed: empty advanced-dev stub pages → advanced overview
+    '/developer/develop/advanced/rss': '/developer/develop/advanced/',
+    '/developer/develop/advanced/frontend': '/developer/develop/advanced/',
+    '/developer/develop/advanced/notification': '/developer/develop/advanced/',
+    '/zh/developer/develop/advanced/rss': '/zh/developer/develop/advanced/',
+    '/zh/developer/develop/advanced/frontend': '/zh/developer/develop/advanced/',
+    '/zh/developer/develop/advanced/notification': '/zh/developer/develop/advanced/',
+
+    // Removed: empty contribute overview stub → contribute landing
+    '/developer/contribute/overview': '/developer/contribute/olares',
+    '/zh/developer/contribute/overview': '/zh/developer/contribute/olares',
+
+    // Removed: stale olares-id section hero page → first olares-id doc
+    '/developer/contribute/olares-id/': '/developer/contribute/olares-id/contract/contract',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.

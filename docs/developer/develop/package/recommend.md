@@ -1,3 +1,7 @@
+---
+noindex: true
+description: "When creating an application chart for recommend, you'll primarily need to configure the four files located in the templates/ folder: embedding.yaml, prerank.yaml, rank.yaml, train.yaml."
+---
 # Configuration Guideline for Recommend
 
 When creating an application chart for `recommend`, you'll primarily need to configure the four files located in the `templates/` folder: `embedding.yaml`, `prerank.yaml`, `rank.yaml`, `train.yaml`.

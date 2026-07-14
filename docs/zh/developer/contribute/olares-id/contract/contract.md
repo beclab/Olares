@@ -1,4 +1,5 @@
 ---
+description: Olares ID 智能合约的结构说明，涵盖 DID 管理与链上信誉系统。
 outline: [2, 4]
 ---
 

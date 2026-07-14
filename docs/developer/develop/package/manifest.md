@@ -1,4 +1,5 @@
 ---
+description: Every Olares Application Chart should include an OlaresManifest.yaml file in the root directory.
 outline: [2, 3]
 ---
 

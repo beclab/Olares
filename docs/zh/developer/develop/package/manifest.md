@@ -1,4 +1,5 @@
 ---
+description: 每一个 Olares 应用的 Chart 根目录下都必须有一个名为 OlaresManifest.yaml 的文件。OlaresManifest.yaml 描述了一个 Olares 应用的所有基本信息。
 outline: [2, 3]
 ---
 

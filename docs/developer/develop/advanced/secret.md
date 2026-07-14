@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: In an app, it's often necessary to save some important user information, such as passwords and Access Tokens for external systems.
 outline: [2, 3]
 ---
 
