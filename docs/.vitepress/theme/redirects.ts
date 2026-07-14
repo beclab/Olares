@@ -148,16 +148,19 @@ export const redirects = {
     // Refactor: /zh/manual/docs-home → /zh/manual/overview
     '/zh/manual/docs-home': '/zh/manual/overview',
 
-    // Removed: orphaned developer install-step fragments (duplicates of manual/get-started) → install overview
-    '/developer/install/activate-olares': '/developer/install/',
-    '/developer/install/install-and-activate-olares': '/developer/install/',
-    '/developer/install/log-in-to-olares': '/developer/install/',
-    '/developer/install/installation-troubleshooting': '/developer/install/',
-    '/developer/install/reusables': '/developer/install/',
-    '/zh/developer/install/activate-olares': '/zh/developer/install/',
-    '/zh/developer/install/install-and-activate-olares': '/zh/developer/install/',
-    '/zh/developer/install/log-in-to-olares': '/zh/developer/install/',
-    '/zh/developer/install/reusables': '/zh/developer/install/',
+    // Removed: legacy developer install-step pages (onboarding docs that once lived
+    // under /developer/install/) → the real Get started install overview. Note:
+    // /developer/install/ is now the "Cluster management" (olares-cli) page, so these
+    // must NOT redirect there. No zh installation-troubleshooting: it never existed in zh.
+    '/developer/install/activate-olares': '/manual/get-started/install-olares',
+    '/developer/install/install-and-activate-olares': '/manual/get-started/install-olares',
+    '/developer/install/log-in-to-olares': '/manual/get-started/install-olares',
+    '/developer/install/installation-troubleshooting': '/manual/get-started/install-olares',
+    '/developer/install/reusables': '/manual/get-started/install-olares',
+    '/zh/developer/install/activate-olares': '/zh/manual/get-started/install-olares',
+    '/zh/developer/install/install-and-activate-olares': '/zh/manual/get-started/install-olares',
+    '/zh/developer/install/log-in-to-olares': '/zh/manual/get-started/install-olares',
+    '/zh/developer/install/reusables': '/zh/manual/get-started/install-olares',
 
     // Removed: empty advanced-dev stub pages → advanced overview
     '/developer/develop/advanced/rss': '/developer/develop/advanced/',
