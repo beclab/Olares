@@ -23,7 +23,7 @@ metadata:
   name: backend:download-provider
   annotations:
     provider-registry-ref: {{ .Release.Namespace }}/download-provider-svc
-    provider-service-ref: download-provider-svc.{{ .Release.Namespace }}:28080
+    provider-service-ref: download-svc.{{ .Release.Namespace }}:8080
 rules:
   - nonResourceURLs:
       - "/api/download*"
