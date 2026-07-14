@@ -94,3 +94,25 @@ func ShouldSkipInboundEntranceSidecar(ctx context.Context, kube kubernetes.Inter
 	}
 	return HasEntranceExtAuthPolicy(ctx, appNamespace, srrName)
 }
+
+// EvaluateSkipOes is the pure L2-c gate (REF §3.9.5):
+// LinkerdReady ∧ L2aExtAuthReady ∧ (¬HasProvider ∨ EgressAgentReady).
+func EvaluateSkipOes(linkerdReady, extAuthReady, hasProvider, egressAgentReady bool) bool {
+	if !linkerdReady || !extAuthReady {
+		return false
+	}
+	if hasProvider && !egressAgentReady {
+		return false
+	}
+	return true
+}
+
+// ShouldSkipOes combines Linkerd/extAuth cluster probes with provider/egress readiness.
+func ShouldSkipOes(ctx context.Context, kube kubernetes.Interface, appNamespace, entranceSRRName string, hasProvider, egressAgentReady bool) bool {
+	return EvaluateSkipOes(
+		IsLinkerdLayer1Ready(ctx, kube),
+		HasEntranceExtAuthPolicy(ctx, appNamespace, entranceSRRName),
+		hasProvider,
+		egressAgentReady,
+	)
+}

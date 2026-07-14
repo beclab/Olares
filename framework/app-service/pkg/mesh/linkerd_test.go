@@ -54,3 +54,25 @@ func TestEntranceExtAuthPolicyName(t *testing.T) {
 		t.Fatalf("policy name = %q", got)
 	}
 }
+
+func TestEvaluateSkipOes(t *testing.T) {
+	cases := []struct {
+		name                                 string
+		linkerd, extAuth, provider, egress bool
+		want                                 bool
+	}{
+		{"all ready no provider", true, true, false, false, true},
+		{"provider needs egress", true, true, true, false, false},
+		{"provider with egress", true, true, true, true, true},
+		{"no linkerd", false, true, false, false, false},
+		{"no extAuth", true, false, false, false, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := EvaluateSkipOes(tc.linkerd, tc.extAuth, tc.provider, tc.egress)
+			if got != tc.want {
+				t.Fatalf("got %v want %v", got, tc.want)
+			}
+		})
+	}
+}
