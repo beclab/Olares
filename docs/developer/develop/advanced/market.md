@@ -1,3 +1,7 @@
+---
+noindex: true
+description: To install or uninstall apps in developing applications (for example, third-party Market extensions), developers can use the install and uninstall API provided by the Market.
+---
 # Market
 
 To install or uninstall apps in developing applications (for example, third-party Market extensions), developers can use the `install` and `uninstall` API provided by the **Market**.

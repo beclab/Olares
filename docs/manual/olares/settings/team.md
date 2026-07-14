@@ -1,4 +1,5 @@
 ---
+noindex: true
 description: Create collaborative environments in Olares for teams, families, or organizations. Share resources, manage multi-user access, and build customized workspaces efficiently.
 ---
 # Start a team

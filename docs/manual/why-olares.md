@@ -1,4 +1,5 @@
 ---
+noindex: true
 description: Explore key use cases for Olares including edge AI, personal data management, self-hosted workspace, private media server, smart home control, and decentralized social media deployment.
 ---
 # Why Olares

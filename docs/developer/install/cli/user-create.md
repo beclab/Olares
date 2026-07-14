@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The create subcommand creates a new user account in the Olares system.
+---
 # `create`
 
 ## Synopsis

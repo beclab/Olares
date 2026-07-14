@@ -1,4 +1,5 @@
 ---
+noindex: true
 description: Collaborate effectively in Olares using shared file storage, secure vault sharing, customized application access, and VPN capabilities for seamless remote team workflows.
 ---
 # Collaborate in Olares

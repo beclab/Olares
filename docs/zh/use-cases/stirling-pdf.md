@@ -1,6 +1,11 @@
 ---
+noindex: true
 outline: [2, 5]
 description: 在 Olares 上安装和使用 Stirling PDF 的分步指南。学习如何安全地管理 PDF 文档，涵盖合并、编辑、格式转换以及创建自动化工作流流水线等核心任务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Stirling PDF, self-hosted PDF tools, merge PDF, edit PDF, PDF converter, Stirling PDF on Olares
 ---
 
 :::warning

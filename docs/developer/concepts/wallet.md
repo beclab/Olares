@@ -1,3 +1,6 @@
+---
+description: A Digital Identity Wallet is an essential tool in the self-sovereign identity ecosystem, allowing users to manage their decentralized identifiers (DIDs), credentials, and interactions with digital ser…
+---
 # Identity Wallet App
 
 A Digital Identity Wallet is an essential tool in the self-sovereign identity ecosystem, allowing users to manage their decentralized identifiers (DIDs), credentials, and interactions with digital services, without relying on centralized entities for authentication or data sharing. 

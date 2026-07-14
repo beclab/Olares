@@ -190,7 +190,7 @@ const side = {
         },
         {
           text: "安全访问 Olares",
-          link: "zh/manual/get-started/local-access",
+          link: "/zh/manual/get-started/local-access",
         },
         {
           text: "探索",

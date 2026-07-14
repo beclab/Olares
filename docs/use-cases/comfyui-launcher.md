@@ -1,6 +1,10 @@
 ---
 outline: deep
 description: Administrators' guide for managing ComfyUI on Olares, covering service control, network configuration, model and plugin management, Python dependencies, and troubleshooting.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, ComfyUI Launcher, manage ComfyUI, ComfyUI models, ComfyUI plugins, self-hosted ComfyUI, ComfyUI on Olares
 ---
 # Manage ComfyUI on Olares
 

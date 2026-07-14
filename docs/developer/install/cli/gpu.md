@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The gpu command manages GPU-related operations, including installing, enabling, disabling, and uninstalling GPU drivers and related components, as well as checking the GPU status.
+---
 # `gpu`
 
 ## Synopsis

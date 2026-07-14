@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: 了解如何在 Olares 上安装 Home Assistant，将其连接到本地网络，并自动或手动添加智能家居设备。
+description: 在 Olares 上安装 Home Assistant，无需单独的树莓派或 Docker 配置即可运行智能家居中枢。连接本地网络，几步添加设备。
 head:
   - - meta
     - name: keywords
-      content: Olares, Home Assistant, 智能家居, 本地发现, 家庭自动化, 覆盖网关, 大华, IP 摄像头, RTSP, HACS
+      content: Olares, Home Assistant, home assistant on olares, home assistant docker, home assistant raspberry pi, smart home, home automation, HACS
 app_version: "1.0.23"
 doc_version: "1.0"
 doc_updated: "2026-07-06"

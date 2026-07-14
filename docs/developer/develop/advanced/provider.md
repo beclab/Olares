@@ -1,3 +1,7 @@
+---
+noindex: true
+description: App developers can define the ProviderRegistry in the application chart or request permission to call other providers.
+---
 # Service Provider
 
 App developers can define the `ProviderRegistry` in the application chart or request permission to call other providers.

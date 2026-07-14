@@ -10,7 +10,7 @@ doc_version: "1.1"
 doc_updated: "2026-05-28"
 ---
 
-# Optional: Enable sandbox
+# Enable the OpenClaw sandbox
 
 By default, OpenClaw executes commands and code directly within its primary container. While this is generally safe for everyday tasks, granting your agent the ability to run arbitrary code or install external dependencies carries inherent risks. 
 

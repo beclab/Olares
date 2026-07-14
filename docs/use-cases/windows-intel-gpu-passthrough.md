@@ -1,6 +1,10 @@
 ---
 outline: [2, 4]
 description: Learn how to enable Intel integrated GPU passthrough for a Windows virtual machine on Olares, including supported devices, host configuration, Windows app settings, driver installation, and verification.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Windows VM, Intel GPU passthrough, iGPU passthrough, Windows VM GPU, Intel graphics passthrough, Olares Windows GPU
 ---
 
 # Enable Intel integrated GPU passthrough for Windows VM

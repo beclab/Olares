@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: Set up Jellyfin on Olares for personal media streaming. Manage media files, add libraries, enable hardware acceleration, connect Jellyfin clients, and play media on a TV after enabling overlay gateway.
+description: Build a private media server with Jellyfin on Olares, a self-hosted Plex alternative. Add libraries, enable hardware transcoding, and stream to your devices and TV.
 head:
   - - meta
     - name: keywords
-      content: Olares, Jellyfin, media server, self-hosted streaming, overlay gateway, DLNA, TV casting
+      content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
 app_version: "1.0.19"
 doc_version: "1.1"
 doc_updated: "2026-07-01"

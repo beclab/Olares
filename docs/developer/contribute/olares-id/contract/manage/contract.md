@@ -1,4 +1,5 @@
 ---
+description: There are two interfaces for fetching the metadata of a DID - getMetadata(tokenId) and getMetadata(name).
 outline: [2, 3]
 ---
 
