@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Build a private media server with Jellyfin on Olares, a self-hosted Plex alternative. Add libraries, enable hardware transcoding, and stream to your devices and TV.
+description: Build a private Jellyfin media server on Olares. Add libraries, enable hardware transcoding, and stream to phones, computers, and TVs.
 head:
   - - meta
     - name: keywords

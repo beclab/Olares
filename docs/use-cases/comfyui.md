@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: "Run ComfyUI locally on Olares: install ComfyUI and its models in one click, generate AI images with the default workflow, and keep every output on your own device."
+description: Run ComfyUI locally on Olares. Install models in one click, generate AI images with the default workflow, and keep outputs on your device.
 head:
   - - meta
     - name: keywords

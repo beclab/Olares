@@ -1,6 +1,6 @@
 ---
 outline: deep
-description: Administrators' guide for managing ComfyUI on Olares, covering service control, network configuration, model and plugin management, Python dependencies, and troubleshooting.
+description: Manage ComfyUI on Olares. Control services, configure networking, install models and plugins, manage Python dependencies, and troubleshoot issues.
 head:
   - - meta
     - name: keywords

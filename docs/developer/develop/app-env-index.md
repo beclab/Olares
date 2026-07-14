@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how variables are injected during Olares app deployment, including declarative environment variables (.Values.olaresEnv) and system-injected runtime Helm values (.Values.*).
+description: Learn how Olares injects app environment variables through declarative .Values.olaresEnv settings and system-provided .Values runtime values.
 ---
 
 # Environment variables overview

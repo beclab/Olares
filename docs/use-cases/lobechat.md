@@ -1,13 +1,14 @@
 ---
 outline: [2, 4] 
-description: Install LobeHub (LobeChat) on Olares and connect it to Ollama to build self-hosted, local AI assistants with knowledge bases and multimodal input.
+title: Build a local AI agent with LobeHub
+description: Install LobeHub on Olares and connect it to Ollama to build self-hosted local AI assistants with knowledge bases and multimodal input.
 head:
   - - meta
     - name: keywords
       content: Olares, LobeHub, LobeChat, self-hosted lobechat, AI agent, lobechat on olares
 ---
 
-# Build your local AI agent with LobeHub (LobeChat)
+# Build your local AI agent with LobeHub
 
 LobeHub (previously LobeChat) is an open‑source framework for building secure, local AI chat experiences. It supports file handling, knowledge bases, and multimodal inputs, and it supports Ollama to run and switch local LLMs.
 

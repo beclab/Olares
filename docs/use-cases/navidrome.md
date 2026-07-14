@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Set up Navidrome on Olares as a self-hosted Spotify alternative and home music server. Organize your library and stream it from any Subsonic-compatible mobile client.
+description: Self-host Navidrome on Olares as a Spotify alternative. Organize your music library and stream it with Subsonic-compatible mobile apps.
 head:
   - - meta
     - name: keywords

@@ -84,6 +84,7 @@ function defineVersionedConfig2(
 // https://vitepress.dev/reference/site-config
 export default defineVersionedConfig2(withMermaid({
   title: "Olares",
+  titleTemplate: ":title | Olares Docs",
   description: "Let people own their data again",
   lang: "en",
   locales: {

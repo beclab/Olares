@@ -1,5 +1,6 @@
 ---
 outline: [2, 3]
+title: Host local LLMs with Engine Base apps
 description: Learn how to use the Engine Base applications on Olares to self-host large language models and run different inference engines by cloning the base apps.
 head:
   - - meta

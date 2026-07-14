@@ -1,6 +1,7 @@
 ---
 outline: [2, 3]
-description: Run OpenClaw as a self-hosted personal AI agent on Olares. Install, configure, and connect it to Discord and Slack while keeping your assistant and data on your device.
+title: Run a self-hosted OpenClaw AI agent
+description: Run OpenClaw on Olares as a self-hosted personal AI agent. Connect Discord or Slack while keeping the assistant and its data on your device.
 head:
   - - meta
     - name: keywords
