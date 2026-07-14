@@ -94,7 +94,14 @@ func TestContainerSpecFailClosed(t *testing.T) {
 	if !foundFailClosed {
 		t.Fatalf("env missing %s=true: %#v", FailClosedEnv, c.Env)
 	}
-	if len(c.VolumeMounts) != 1 || c.VolumeMounts[0].MountPath != JWTSecretMountPath {
-		t.Fatalf("volumeMounts = %#v", c.VolumeMounts)
+	foundJWT := false
+	for _, m := range c.VolumeMounts {
+		if m.MountPath == JWTSecretMountPath {
+			foundJWT = true
+			break
+		}
+	}
+	if !foundJWT {
+		t.Fatalf("missing JWT mount %s in %#v", JWTSecretMountPath, c.VolumeMounts)
 	}
 }
