@@ -369,7 +369,7 @@ vLLM models can take a while to load before the engine reaches `RUNNING`.
 - **MODEL_NAME**: `cyankiwi/gemma-4-12B-it-AWQ-INT4`
 - **MODEL_MODE**: `Chat`
 - **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
-- **ENGINE_ARGS**: `--max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser qwen3_coder --reasoning-parser qwen3 --enable-prefix-caching --enable-auto-tool-choice`
+- **ENGINE_ARGS**: `--max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser gemma4 --reasoning-parser gemma4 --enable-prefix-caching --enable-auto-tool-choice`
 - **LOG_LEVEL**: `Info`
 - **VLLM_REQUIRED_GPU_MEMORY**: `23Gi` 
 
