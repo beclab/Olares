@@ -60,6 +60,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Manage accelerator resources",
           link: "/one/gpu",
         },
+        {
+          text: "Manage GPU resources",
+          link: "/one/manage-gpu",
+        },        
       ]
     },
     {
