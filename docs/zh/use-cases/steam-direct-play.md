@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 学习如何把你的 Olares 设备变成一台游戏主机，直接连接显示器和外设即可畅玩 Steam 游戏。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Steam Headless, play Steam games locally, Steam on Olares, local gaming, Olares gaming console
 ---
 
 # 在 Olares 本机畅玩 Steam 游戏
@@ -241,7 +245,7 @@ YAML 语法或缩进错误可能会导致应用程序无法启动。
 
 ## 可选：启用远程串流音频
 :::info
-有关串流和配对说明的详情，参见[使用 Steam Headless 串流喜爱的游戏](stream-game.md)。
+有关串流和配对说明的详情，参见[使用 Steam Headless 串流喜爱的游戏](steam-stream.md)。
 :::
 本地游玩与远程串流的音频模式互斥。
 - **本地游玩**：需要加载 `module-alsa-sink` 模块。

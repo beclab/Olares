@@ -1,3 +1,6 @@
+---
+description: Decentralized Identifiers (DIDs), as defined by the W3C, are self-sovereign globally unique identifiers that are verifiable without centralized registry.
+---
 # Decentralized Identifier (DID)
 
 Decentralized Identifiers (DIDs), as defined by the [W3C](https://www.w3.org/TR/did-core/), are self-sovereign globally unique identifiers that are verifiable without centralized registry. A DID can refer to any subject (e.g., a person, organization, thing, data model, abstract entity, etc.) as determined by its controller.

@@ -15,6 +15,3 @@ envoyProxy:
 # when certs are not ready the https listener stays NotReady while :80 stays up.
 tls:
   enabled: true
-
-vendor:
-  linkerdNamespace: os-mesh

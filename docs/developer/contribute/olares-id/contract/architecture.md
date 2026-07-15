@@ -1,4 +1,5 @@
 ---
+description: "The TerminusDID Contract System is divided into two parts: DID Management and Tag Management."
 outline: [2, 4]
 ---
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
-description: Learn how to install Ollama on Olares, manage models using the CLI, and configure it as a central AI service for other applications.
+description: Install Ollama on Olares to run private LLMs locally. Manage models from the CLI and serve Ollama as a central AI backend for your other self-hosted apps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Ollama, private llm, run llama locally, ollama vs lm studio, self-hosted llm, ollama on olares
 ---
 
 # Download and run local AI models via Ollama

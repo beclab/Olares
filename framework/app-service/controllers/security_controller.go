@@ -670,19 +670,6 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 
 			} // end of func npFix
 
-		} else if security.IsAppGatewayMeshNamespace(ns.Name) {
-			peerNS := security.AppGatewayMeshPeerNamespace(ns.Name)
-			meshNP := security.NewAppGatewayMeshNetworkPolicy(ns.Name, peerNS)
-			networkPolicy = security.NetworkPolicies{
-				security.NPDenyAll.DeepCopy(),
-				meshNP,
-				security.NewLinkerdMeshPrometheusScrapeNetworkPolicy(ns.Name),
-			}
-			networkPolicy.SetName("others-np")
-			networkPolicy.SetNamespace(ns.Name)
-			npFix = func(np *netv1.NetworkPolicy) {
-				logger.Info("Update network policy", "name", networkPolicy.Name())
-			}
 		} else {
 			networkPolicy = security.NetworkPolicies{security.NPDenyAll.DeepCopy()}
 			networkPolicy.SetName("others-np")

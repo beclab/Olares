@@ -10,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-05-13"
 ---
 
-# Set up multi-user access
+# Set up multi-user access in Open WebUI
 
 Configure additional user accounts in Open WebUI to share your local models and AI resources. This configuration enables multiple people to use the same Open WebUI instance on your Olares device using their own separate accounts.
 
