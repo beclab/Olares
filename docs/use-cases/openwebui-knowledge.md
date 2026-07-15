@@ -1,5 +1,6 @@
 ---
 outline: deep
+title: Chat with documents in Open WebUI
 description: Upload documents and create a knowledge base in Open WebUI on Olares for retrieval-augmented generation (RAG).
 head:
   - - meta

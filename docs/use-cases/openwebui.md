@@ -1,6 +1,6 @@
 ---
 outline: [2, 4]
-description: Set up Open WebUI on Olares as a self-hosted ChatGPT alternative. Connect a local Ollama backend to chat with private LLMs while keeping conversations on your device.
+description: Self-host Open WebUI on Olares as a private ChatGPT alternative. Connect Ollama to chat with local LLMs while keeping conversations on your device.
 head:
   - - meta
     - name: keywords

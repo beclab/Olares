@@ -1,5 +1,6 @@
 ---
 outline: [2, 3]
+title: Cannot remove app in App exclusive mode
 description: Troubleshoot when a stopped app cannot be removed in App exclusive mode in Olares 1.12.5.
 ---
 

@@ -1,6 +1,6 @@
 ---
 noindex: true
-description: The install command installs Olares on your system. It supports various options to customize the installation process, such as specifying directories, Kubernetes types, or Minikube profiles.
+description: Use the olares-cli install command to deploy Olares with custom directories, Kubernetes distributions, Minikube profiles, and other options.
 ---
 # `install`
 

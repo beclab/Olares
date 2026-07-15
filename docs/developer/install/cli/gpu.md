@@ -1,6 +1,6 @@
 ---
 noindex: true
-description: The gpu command manages GPU-related operations, including installing, enabling, disabling, and uninstalling GPU drivers and related components, as well as checking the GPU status.
+description: Use the olares-cli gpu command to install, enable, disable, or remove GPU drivers and components, and check GPU status in Olares.
 ---
 # `gpu`
 
@@ -54,5 +54,4 @@ olares-cli gpu disable
 # Uninstall GPU drivers and components
 olares-cli gpu uninstall
 ```
-
 

@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install Home Assistant on Olares to run your smart home hub without a separate Raspberry Pi or Docker setup. Connect your local network and add devices in a few clicks.
+description: Run Home Assistant on Olares as a self-hosted smart home hub. Discover devices on your local network and build automations without a separate server.
 head:
   - - meta
     - name: keywords

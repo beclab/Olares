@@ -1,6 +1,6 @@
 ---
 outline: deep
-description: Self-host Immich on Olares as an open-source Google Photos alternative. Back up, organize, and search photos and videos with AI while keeping your data on your device.
+description: Self-host Immich on Olares as a Google Photos alternative. Back up, organize, and search photos and videos with AI while keeping data private.
 head:
   - - meta
     - name: keywords

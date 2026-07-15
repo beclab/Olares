@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Set up AnythingLLM on Olares to build a private, self-hosted knowledge base with RAG. Upload documents, embed them with a local model, and query them in natural language.
+description: Build a private knowledge base with AnythingLLM on Olares. Add documents, create embeddings with a local model, and query them with RAG.
 head:
   - - meta
     - name: keywords
