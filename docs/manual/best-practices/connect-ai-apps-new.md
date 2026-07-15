@@ -46,6 +46,10 @@ An endpoint is the URL through which an application's entrance can be reached. I
 | **LLM services** | Model Console | Provides dynamic, network-optimized<br>APIs depending on whether your client<br>is inside Olares, on your local network,<br>or remote.<br><br>Open the app to launch the Model Console, and then get the **Base URL**. | <ul><li>Qwen3.6-27B<br>(llama.cpp)</li><li>Gemma 4 26B (Ollama)</li></ul> |
 | **Other AI services** | Application Settings | Uses standard HTTPS endpoints.<br><br>Open Olares **Settings**, go to **Applications** > **[AppName]** > **Entrances**, and then copy the **Endpoint URL**. | <ul><li>SearXNG</li><li>PaddleOCR</li></ul> |
 
+:::tip Multiple entrances
+Some apps expose more than one entrance. Choose the entrance that matches your client's protocol or use case. For example, use the main entrance for web UI access and a dedicated API entrance for programmatic integrations.
+:::
+
 ### Authentication levels
 
 Olares provides the following access levels for application entrances:

@@ -51,6 +51,10 @@ Olares 上的许多 AI 应用都遵循一种标准的连接模式：一个 **AI 
 | **LLM 服务** | 模型控制台 | 根据客户端位于 Olares 内部、本地网络还是远程，提供动态、网络优化的 API。<br><br>打开应用启动模型控制台，然后获取 **Base URL**。 | <ul><li>Qwen3.6-27B<br>(llama.cpp)</li><li>Gemma 4 26B (Ollama)</li></ul> |
 | **其他 AI 服务** | 应用设置 | 使用标准 HTTPS 端点。<br><br>打开 Olares **设置**，进入 **应用** > **[应用名称]** > **入口**，然后复制 **Endpoint URL**。 | <ul><li>SearXNG</li><li>PaddleOCR</li></ul> |
 
+:::tip 多个入口
+部分应用会暴露多个入口。请根据客户端的协议或使用场景选择对应的入口。例如，网页访问使用主入口，程序化集成使用专用 API 入口。
+:::
+
 ### 认证级别
 
 Olares 为应用入口提供以下访问级别：
