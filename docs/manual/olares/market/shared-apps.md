@@ -117,10 +117,13 @@ Use this option when you are migrating from the standalone Ollama shared app to 
 
 ## FAQs
 
-### What about the Shared Entrance?
+### Shared entrance usage
 
 The **Shared entrance** is still present in the system, but you should not use it to access a shared app.
 
 Moving forward, this non-user-specific address is reserved for internal system-level integrations, such as pre-configured Agent-to-Agent API calls that require a unified address.
 
-To access a shared app yourself, open it from the Launchpad. To connect a client, use the Base URL shown in the model console.
+- To access a shared app yourself, open it from the Launchpad.
+- To connect a shared app to a client app:
+  - **For LLM service apps**: Open the app, and use the **Base URL** shown in the model console.
+  - **For other shared apps**: Go to Olares **Settings** > **Applications** > **[App-Name]** > **Entrances**, and use the `https` endpoint under **Endpoint settings**.

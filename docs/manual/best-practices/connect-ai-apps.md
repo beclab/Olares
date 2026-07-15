@@ -36,7 +36,7 @@ Connecting a client app to an AI service app usually involves three steps:
 ### Authentication levels
 
 Olares provides the following access levels for application entrance:
-- **Internal (recommmended)**: Allows apps to communicate without login prompts. It also allows access via your local network or via LarePass VPN. 
+- **Internal (recommended)**: Allows apps to communicate without login prompts. It also allows access via your local network or via LarePass VPN. 
 <!--- **Private**: Requires user authentication, which might break automated API connections between apps.-->
 - **Public**: Open to anyone on the internet. Not recommended for private services.
 
