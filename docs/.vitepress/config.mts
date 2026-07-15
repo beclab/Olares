@@ -203,10 +203,47 @@ export default defineVersionedConfig2(withMermaid({
     // Keep og:url identical to the canonical URL. A mismatch between the two
     // sends conflicting signals to crawlers and social scrapers about the
     // page's authoritative address.
-    pageData.frontmatter.head.push([
-      'meta',
-      { property: 'og:url', content: canonicalHref },
-    ]);
+    const isZh = pageData.relativePath.startsWith('zh/');
+    const siteName = isZh ? 'Olares 文档' : 'Olares Docs';
+    const defaultDescription = isZh
+      ? '让人们重新拥有自己的数据'
+      : 'Let people own their data again';
+    const ogTitle = pageData.title
+      ? `${pageData.title} | ${siteName}`
+      : siteName;
+    const ogDescription =
+      pageData.description?.trim() || defaultDescription;
+    // Same brand OG asset as marketing (from Olares One / Shopify, 1200×630).
+    const ogImage = 'https://www.olares.com/docs/olares-og.jpg';
+    const ogLocale = isZh ? 'zh_CN' : 'en_US';
+    for (const [property, content] of [
+      ['og:url', canonicalHref],
+      ['og:title', ogTitle],
+      ['og:description', ogDescription],
+      ['og:image', ogImage],
+      ['og:image:width', '1200'],
+      ['og:image:height', '630'],
+      ['og:image:type', 'image/jpeg'],
+      ['og:type', 'website'],
+      ['og:site_name', siteName],
+      ['og:locale', ogLocale],
+    ] as const) {
+      pageData.frontmatter.head.push([
+        'meta',
+        { property, content },
+      ]);
+    }
+    for (const [name, content] of [
+      ['twitter:card', 'summary_large_image'],
+      ['twitter:title', ogTitle],
+      ['twitter:description', ogDescription],
+      ['twitter:image', ogImage],
+    ] as const) {
+      pageData.frontmatter.head.push([
+        'meta',
+        { name, content },
+      ]);
+    }
   },
 
   // Archived versioned builds noindex every page, so their sitemap would be
