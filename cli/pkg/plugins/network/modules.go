@@ -392,8 +392,7 @@ func (e *EnableCniDhcpService) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(err, "failed to get current Olares version")
 	}
 
-	stdout, _ := runtime.GetRunner().SudoCmd("systemctl is-active cni-dhcp", false, false)
-	if stdout != "active" && !greaterThan1125 {
+	if !greaterThan1125 {
 		if _, err := runtime.GetRunner().SudoCmd("systemctl daemon-reload && systemctl enable --now cni-dhcp",
 			false, false); err != nil {
 			return errors.Wrap(errors.WithStack(err), "enable cni-dhcp failed")
