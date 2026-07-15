@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Complete guide to building your knowledge hub with Wise in Olares. Learn how to collect web content, manage PDFs and e-books, subscribe to RSS feeds, and organize your digital content library effectively.
+description: Build a knowledge hub with Wise on Olares. Collect web pages, manage PDFs and e-books, subscribe to RSS feeds, and organize your content library.
 ---
 # Build your knowledge hub with Wise
 
@@ -201,4 +201,3 @@ In addition to regular RSS subscriptions, Wise offers a fully local, privacy-pro
 - [Wise basics](../olares/wise/basics.md)
 - [Discover themed content](../olares/wise/recommend.md)
 - [Subscribe and manage feeds](../olares/wise/subscribe.md)
-

@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Common issues and solutions for ComfyUI on Olares, including startup problems, launcher log messages, model download limitations, workflow errors, and high CPU temperature on Olares One.
+description: Troubleshoot ComfyUI on Olares, including startup, launcher logs, model downloads, workflow errors, and high CPU temperature on Olares One.
 head:
   - - meta
     - name: keywords

@@ -1,3 +1,7 @@
+---
+noindex: true
+description: uninstall 命令用于从你的设备中卸载 Olares 及其所有组件。
+---
 # `uninstall`
 
 ## 命令说明

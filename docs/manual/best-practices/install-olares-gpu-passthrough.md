@@ -1,9 +1,10 @@
 ---
 outline: [2, 3]
+title: Install Olares on PVE with GPU passthrough
 description: Step-by-step tutorial on how to set up GPU passthrough in Proxmox VE (PVE) and install Olares in a virtual machine with GPU acceleration enabled.
 ---
 
-# Install Olares on PVE via ISO with GPU Passthrough
+# Install Olares on PVE via ISO with GPU passthrough
 
 GPU passthrough in **Proxmox Virtual Environment (PVE)** allows virtual machines (VMs) to directly access the physical GPU, enabling hardware-accelerated computing for workloads like AI model inference and graphics processing.
 

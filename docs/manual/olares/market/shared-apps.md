@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Understand Olares shared applications, why the new shared architecture replaces v2, how the Engine Base architecture replaced the standalone Ollama app, and how to migrate from legacy v2 shared apps.
+description: Understand shared apps in Olares, the Engine Base architecture, differences from v2, and how to migrate legacy shared applications.
 ---
 
 # Shared applications

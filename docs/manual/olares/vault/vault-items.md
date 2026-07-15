@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Understand Vault basics in Olares. Learn to set up vaults, manage vault items, organize sensitive data with tags, and protect your information with local passwords and encryption.
+description: Learn Olares Vault basics. Create vaults, manage and tag sensitive items, and protect data with local passwords and encryption.
 ---
 
 # Vault basics

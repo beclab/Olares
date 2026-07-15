@@ -1,5 +1,5 @@
 ---
-description: This page documents the known issues and unexpected behaviors you might encounter when using Olares One, along with their corresponding solutions or workarounds.
+description: Review known Olares One issues affecting initial setup and Thunderbolt 5 detection in Windows, with symptoms and workarounds.
 ---
 
 # Olares One known issues

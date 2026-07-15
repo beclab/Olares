@@ -1,6 +1,11 @@
 ---
 outline: [2, 3]
+title: Host local LLMs with Engine Base apps
 description: Learn how to use the Engine Base applications on Olares to self-host large language models and run different inference engines by cloning the base apps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Model Console, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
 ---
 
 # Host local large language models with Engine Base apps
@@ -365,7 +370,7 @@ vLLM models can take a while to load before the engine reaches `RUNNING`.
 - **MODEL_NAME**: `cyankiwi/gemma-4-12B-it-AWQ-INT4`
 - **MODEL_MODE**: `Chat`
 - **MODEL_SUPPORTS**: `Thinking`, `Tools`, `Vision`
-- **ENGINE_ARGS**: `--max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser qwen3_coder --reasoning-parser qwen3 --enable-prefix-caching --enable-auto-tool-choice`
+- **ENGINE_ARGS**: `--max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser gemma4 --reasoning-parser gemma4 --enable-prefix-caching --enable-auto-tool-choice`
 - **LOG_LEVEL**: `Info`
 - **VLLM_REQUIRED_GPU_MEMORY**: `23Gi` 
 
