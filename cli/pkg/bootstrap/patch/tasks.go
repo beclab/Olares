@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 
@@ -319,6 +320,16 @@ type PatchNfsScriptTask struct {
 }
 
 func (t *PatchNfsScriptTask) Execute(runtime connector.Runtime) error {
+	greaterThan1125, err := phase.OlaresVersionGreaterThan("1.12.5")
+	if err != nil {
+		return errors.Wrap(err, "failed to get current Olares version")
+	}
+
+	if greaterThan1125 {
+		logger.Infof("Olares version is greater than 1.12.5, no need to patch nfs script")
+		return nil
+	}
+
 	if utils.IsExist("/lib/systemd/system/rpc-statd.service") ||
 		utils.IsExist("/etc/systemd/system/rpc-statd.service") {
 		if _, err := runtime.GetRunner().SudoCmd("systemctl add-wants --runtime remote-fs.target rpc-statd.service", false, true); err != nil {
