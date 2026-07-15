@@ -40,7 +40,7 @@ Olares 上的许多 AI 应用都遵循一种标准的连接模式：一个 **AI 
 - **LLM 服务应用**：托管大型语言模型，用于文本生成、代码补全和聊天。包括：
     - **[引擎基座应用](/zh/use-cases/llm-base-apps.md)**：四个可复用的基座应用，分别是 Ollama Engine Base、vLLM Engine Base、SGLang Engine Base 和 llama.cpp Engine Base。你可以将它们克隆为独立的模型实例并自行配置。
     - **预构建模型应用**：即开即用的应用，将特定模型与特定引擎打包在一起，例如 Qwen3.6-27B（llama.cpp）和 Gemma 4 26B（Ollama）。
-- **其他 AI 服务应用**：提供 LLM 之外的其他 AI 能力，例如 SearXNG（搜索）和 PaddleOCR（OCR）。
+- **其他 AI 服务应用**：提供 LLM 之外的其他 AI 能力，例如 SearXNG（搜索）和 PaddleOCR（文本识别）。
 
 ### AI 服务应用如何暴露端点
 
