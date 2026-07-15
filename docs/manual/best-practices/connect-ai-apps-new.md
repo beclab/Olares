@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to connect AI applications, IDEs, and workflow automation tools to your self-hosted large language models on Olares using the Model Console.
+description: Learn how to connect AI client apps to AI service apps on Olares using the Model Console and application entrances.
 ---
 
 # Connect AI apps
@@ -25,23 +25,23 @@ By the end of this tutorial, you will be able to:
 
 ### AI service apps vs. AI client apps
 
-- **AI service apps**: They provide AI capabilities for compatible clients over an API, such as chat, search, and speech recognition capabilities. Some AI service apps have their own web interface for management, while others run primarily as headless backend services.
-- **AI client apps**: They provide the chat interface or workflow canvas you interact with directly, but they rely on an AI service app to perform AI tasks such as generating text, searching the web, or recognizing text. For example, LobeHub and Open WebUI.
+- **AI service apps**: They provide AI capabilities for compatible clients over an API, such as chat, search, and speech recognition. Some AI service apps have their own web interface for management, while others run primarily as headless backend services.
+- **AI client apps**: They provide the chat interface or workflow canvas you interact with directly, but they rely on an AI service app to perform AI tasks such as generating text, searching the web, or recognizing text. For example, LobeHub (formerly LobeChat) and Open WebUI.
 
 ### Types of AI service apps
 
-AI service apps mainly fall into the following categories:
+In Olares, AI service apps mainly fall into the following categories:
 
 - **LLM service apps**: Apps that host large language models for text generation, code completion, and chat. They include:
     - **[Engine Base apps](/use-cases/llm-base-apps.md)**: Four reusable base applications (Ollama Engine Base, vLLM Engine Base, SGLang Engine Base, and llama.cpp Engine Base). You clone them into independent model instances and configure each instance yourself.
     - **Pre-built model apps**: Nine ready-to-use apps that package a specific model with a specific engine, such as Qwen3.6-27B (llama.cpp) and Gemma 4 26B (Ollama).
-- **Other AI service apps**: Apps that provide other AI capabilities beyond LLMs, such as SearXNG and PaddleOCR.
+- **Other AI service apps**: Apps that provide other AI capabilities beyond LLMs, such as SearXNG (search) and PaddleOCR (OCR).
 
 ### How AI service apps expose endpoints
 
 An endpoint is the URL through which an application's entrance can be reached. In Olares, AI service apps expose their endpoints through two different paths, depending on the type of capability they provide:
 
-| Service type | Endpoint location| Description | Examples |
+| Service type | Endpoint location | Description | Examples |
 | :--- | :--- | :--- | :--- |
 | **LLM services** | Model Console | Provides dynamic, network-optimized<br>APIs depending on whether your client<br>is inside Olares, on your local network,<br>or remote.<br><br>Open the app to launch the Model Console, and then get the **Base URL**. | <ul><li>Qwen3.6-27B<br>(llama.cpp)</li><li>Gemma 4 26B (Ollama)</li></ul> |
 | **Other AI services** | Application Settings | Uses standard HTTPS endpoints.<br><br>Open Olares **Settings**, go to **Applications** > **[AppName]** > **Entrances**, and then copy the **Endpoint URL**. | <ul><li>SearXNG</li><li>PaddleOCR</li></ul> |
@@ -63,9 +63,11 @@ The same internal-entrance pattern also applies when connecting non-AI apps to e
 
 ## Examples
 
+The following examples focus on how to connect AI service apps to AI client apps. They assume that the relevant apps are already installed and configured.
+
 ### Connect an LLM service app to LobeHub
 
-In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service app, and LobeHub (previously LobeChat) is the client app.
+In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service app, and LobeHub is the client app.
 
 1. Open Gemma 4 26B (Ollama) from the Launchpad to launch its Model Console.
 2. Ensure that the **Model** shows **Ready** and the **Engine** shows **Running**.
@@ -97,47 +99,24 @@ In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service
 
 ### Connect SearXNG to Vane
 
-In this example, SearXNG is the AI service app that provides web search capabilities, and Vane is the client app.
-
-#### Step 1: Get the SearXNG endpoint
+In this example, SearXNG is the AI service app that provides web search capabilities, and Vane (formerly Perplexica) is the client app.
 
 1. Open Olares Settings, and then go to **Applications** > **SearXNG** > **Entrances** > **SearXNG**.
 2. In the **Access policies** section, ensure the **Authentication level** is set to **Internal**.
 3. In the **Endpoint settings** section, copy the endpoint URL, such as `https://84a93c3c.alice2026.olares.com`.
 
-    ![SearXNG endpoint in Settings](/images/manual/tutorials/connect-apps-searxng-endpoint.png#bordered)
+    ![SearXNG endpoint in Settings](/images/manual/tutorials/connect-apps-searxng-endpoint.png#bordered){width=70%}
 
-#### Step 2: Complete the Vane initial setup
-
-If this is your first time launching Vane:
-
-1. Open Vane, and then click **Add Connection**.
-2. In the **Add new connection** window, configure the LLM provider:
-
-    - **Select connection type**: **Ollama**
-    - **Connection name**: Enter a name such as `Olares Ollama`.
-    - **Base URL**: Enter the Base URL from the Model Console of your Ollama model, such as `https://74bfa5ee.alice2026.olares.com`.
-
-3. Click **Add Connection**.
-4. Click **Next**.
-5. Select an embedding model. If you don't have one in Ollama, pick a built-in option such as `Transformers - all-MiniLM-L6-v2`.
-6. Click **Finish**.
-
-#### Step 3: Configure SearXNG in Vane
-
-1. On the Vane home page, click the **Settings** icon in the lower-left corner, and then select **Search**.
-2. Enter the SearXNG internal endpoint URL you copied, such as `https://84a93c3c.alice2026.olares.com`.
+4. On the Vane home page, click <i class="material-symbols-outlined">settings</i> in the lower-left corner, and then select **Search**.
+5. Enter the SearXNG internal endpoint URL you copied, such as `https://84a93c3c.alice2026.olares.com`.
 
     ![SearXNG settings in Vane](/images/manual/tutorials/connect-apps-searxng-vane.png#bordered)
 
-#### Step 4: Test the connection
+6. In the Vane chat box, ask a question that requires web search, such as `What is the latest news about OpenAI?`.
 
-In the Vane chat box, ask a question that requires web search, such as `What is the latest news about OpenAI?`.
+    If SearXNG is connected correctly, Vane shows **Sources** and **Found X results**, and then returns an answer with web search citations.
 
-- If SearXNG is connected correctly, Vane shows **Sources** and **Found X results**, and then returns an answer with web search citations.
-- If SearXNG is not running or not configured, Vane gets stuck at **Searching X queries** without returning sources.
-
-![Vane answering with SearXNG search results](/images/manual/tutorials/connect-apps-searxng-vane-working.png#bordered)
+    ![Vane answering with SearXNG search results](/images/manual/tutorials/connect-apps-searxng-vane-working.png#bordered)
 
 ## Learn more
 
