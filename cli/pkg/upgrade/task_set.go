@@ -783,7 +783,7 @@ func upgradeMultus() []task.Interface {
 		&task.LocalTask{
 			Name:   "EnableCniDhcpService",
 			Desc:   "Enable multus CNI DHCP service",
-			Action: new(network.EnableCniDhcpService),
+			Action: &network.EnableCniDhcpService{CheckVersion: true},
 			Retry:  5,
 		},
 		&task.LocalTask{

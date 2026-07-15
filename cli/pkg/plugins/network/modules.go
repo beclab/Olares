@@ -384,15 +384,21 @@ func K8sVersionAtLeast(version string, compare string) bool {
 
 type EnableCniDhcpService struct {
 	common.KubeAction
+	CheckVersion bool
 }
 
 func (e *EnableCniDhcpService) Execute(runtime connector.Runtime) error {
-	greaterThan1125, err := phase.OlaresVersionGreaterThan("1.12.5")
-	if err != nil {
-		return errors.Wrap(err, "failed to get current Olares version")
+	needReload := true
+	if e.CheckVersion {
+		greaterThan1125, err := phase.OlaresVersionGreaterThan("1.12.5")
+		if err != nil {
+			return errors.Wrap(err, "failed to get current Olares version")
+		}
+
+		needReload = !greaterThan1125
 	}
 
-	if !greaterThan1125 {
+	if needReload {
 		if _, err := runtime.GetRunner().SudoCmd("systemctl daemon-reload && systemctl enable --now cni-dhcp",
 			false, false); err != nil {
 			return errors.Wrap(errors.WithStack(err), "enable cni-dhcp failed")
