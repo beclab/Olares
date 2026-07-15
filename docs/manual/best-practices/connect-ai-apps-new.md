@@ -112,7 +112,7 @@ In this example, SearXNG is the AI service app that provides web search capabili
 
     ![SearXNG settings in Vane](/images/manual/tutorials/connect-apps-searxng-vane.png#bordered)
 
-6. In the Vane chat box, ask a question that requires web search, such as `What is the latest news about OpenAI?`.
+6. In the Vane chat box, ask a question that requires web search, such as `What is the latest news about OpenAI`.
 
     If SearXNG is connected correctly, Vane shows **Sources** and **Found X results**, and then returns an answer with web search citations.
 
@@ -120,7 +120,6 @@ In this example, SearXNG is the AI service app that provides web search capabili
 
 ## Learn more
 
+- [Use cases](../../use-cases/index.md)
 - [Host local large language models with Engine Base apps](../../use-cases/llm-base-apps.md)
-- [Shared applications](../olares/market/shared-apps.md)
 - [Manage application entrances](../olares/settings/manage-entrance.md)
-- [Network](../../developer/concepts/network.md)
