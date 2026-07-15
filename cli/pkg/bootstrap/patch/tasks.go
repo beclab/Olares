@@ -317,17 +317,20 @@ func (t *DisableLocalDNSTask) configResolvConf(runtime connector.Runtime) error 
 // patch nfs script to fix the issue that when nfs mounting systemd reloading will cause the GPU driver to fail in the running containers
 type PatchNfsScriptTask struct {
 	common.KubeAction
+	CheckVersion bool
 }
 
 func (t *PatchNfsScriptTask) Execute(runtime connector.Runtime) error {
-	greaterThan1125, err := phase.OlaresVersionGreaterThan("1.12.5")
-	if err != nil {
-		return errors.Wrap(err, "failed to get current Olares version")
-	}
+	if t.CheckVersion {
+		greaterThan1125, err := phase.OlaresVersionGreaterThan("1.12.5")
+		if err != nil {
+			return errors.Wrap(err, "failed to get current Olares version")
+		}
 
-	if greaterThan1125 {
-		logger.Infof("Olares version is greater than 1.12.5, no need to patch nfs script")
-		return nil
+		if greaterThan1125 {
+			logger.Infof("Olares version is greater than 1.12.5, no need to patch nfs script")
+			return nil
+		}
 	}
 
 	if utils.IsExist("/lib/systemd/system/rpc-statd.service") ||
