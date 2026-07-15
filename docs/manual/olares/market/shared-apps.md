@@ -36,9 +36,9 @@ The new architecture replaces the client/server split with a single, unified sha
 | v2 architecture | New architecture |
 |:----------------|:----------------|
 | Server + client-side access point | Single unified shared server |
-| Uninstalling an access point might<br>break the server | Server lifecycle is independent<br>of any access point |
-| Multiple access addresses and formats | Unified address format for all users |
-| Client and server managed separately | Administrators manage one shared service |
+| Uninstalling an access point<br>might break the server | Server lifecycle is independent<br>of any access point |
+| Multiple access addresses<br>and formats | Unified address format for<br>all users |
+| Client and server managed<br>separately | Administrators manage one<br>shared service |
 
 Benefits of the new architecture include:
 - **Simpler management**: Administrators manage one shared application instead of coordinating client and server components.
