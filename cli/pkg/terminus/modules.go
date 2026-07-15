@@ -707,8 +707,15 @@ func (m *ChangeIPModule) addRestartTasks() {
 		})
 
 	hostnameChanged, _ := m.PipelineCache.GetMustBool(common.CacheHostnameChanged)
+	// ensureNode scopes the final readiness check. For a same-node IP change we
+	// keep checking the (stable) local node. For a hostname change we check the
+	// whole cluster ("" = all nodes): right after the old node is deleted its
+	// pods are recreated as unscheduled Pending replacements (empty NodeName),
+	// which a new-node-scoped check would skip, so it could pass before the
+	// workloads actually reschedule and become ready.
 	ensureNode := newNodeName
 	if hostnameChanged {
+		ensureNode = ""
 		m.addRenamedNodeMigrationTasks(newNodeName)
 	} else {
 		m.addSameNodeRestartTasks(newNodeName)

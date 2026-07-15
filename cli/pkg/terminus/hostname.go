@@ -490,25 +490,7 @@ func (a *MigrateRenamedNodeGPUAllocations) Execute(_ connector.Runtime) error {
 		return errors.Wrapf(err, "failed to parse %s", gpuAllocationsConfigMapKey)
 	}
 
-	changed := false
-	for i := range allocations {
-		row := allocations[i]
-		if newName, ok := rewriteStringField(row, "nodeName", func(v string) string {
-			if v == a.OldNode {
-				return a.NewNode
-			}
-			return v
-		}); ok {
-			logger.Infof("migrating GPU allocation nodeName -> %q", newName)
-			changed = true
-		}
-		if newID, ok := rewriteStringField(row, "deviceId", func(v string) string {
-			return rewriteNodeScopedID(v, a.OldNode, a.NewNode)
-		}); ok {
-			logger.Infof("migrating GPU allocation deviceId -> %q", newID)
-			changed = true
-		}
-	}
+	changed := migrateGPUAllocationRows(allocations, a.OldNode, a.NewNode)
 	if !changed {
 		logger.Infof("no GPU allocations reference old node %q; nothing to migrate", a.OldNode)
 		return nil
@@ -527,6 +509,44 @@ func (a *MigrateRenamedNodeGPUAllocations) Execute(_ connector.Runtime) error {
 	}
 	logger.Warnf("migrated GPU allocations from old node %q to new node %q", a.OldNode, a.NewNode)
 	return nil
+}
+
+// migrateGPUAllocationRows rewrites, in place, the allocation rows that belong
+// to oldNode: their nodeName becomes newNode and their node-scoped (non-HAMI)
+// deviceId is rewritten. Rows for other nodes are left untouched, so a node
+// whose name merely shares the "<oldNode>-" prefix used by node-scoped device
+// ids is never corrupted. Returns whether anything changed.
+func migrateGPUAllocationRows(allocations []map[string]json.RawMessage, oldNode, newNode string) bool {
+	changed := false
+	for i := range allocations {
+		row := allocations[i]
+		if name, ok := stringField(row, "nodeName"); !ok || name != oldNode {
+			continue
+		}
+		if _, ok := rewriteStringField(row, "nodeName", func(string) string { return newNode }); ok {
+			changed = true
+		}
+		if _, ok := rewriteStringField(row, "deviceId", func(v string) string {
+			return rewriteNodeScopedID(v, oldNode, newNode)
+		}); ok {
+			changed = true
+		}
+	}
+	return changed
+}
+
+// stringField returns the string value of a generic JSON object field, or
+// ("", false) when the field is missing or not a JSON string.
+func stringField(row map[string]json.RawMessage, field string) (string, bool) {
+	raw, ok := row[field]
+	if !ok {
+		return "", false
+	}
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "", false
+	}
+	return value, true
 }
 
 // rewriteStringField applies fn to a string field of a generic JSON object and

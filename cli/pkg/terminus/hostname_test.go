@@ -98,6 +98,44 @@ func TestRewriteStringField(t *testing.T) {
 	}
 }
 
+func TestMigrateGPUAllocationRows(t *testing.T) {
+	rows := []map[string]json.RawMessage{
+		// old node, NVIDIA (stable UUID device id)
+		{"nodeName": json.RawMessage(`"olares-rn7"`), "deviceId": json.RawMessage(`"GPU-abc-123"`), "owner": json.RawMessage(`"alice"`)},
+		// old node, non-HAMI (node-scoped device id)
+		{"nodeName": json.RawMessage(`"olares-rn7"`), "deviceId": json.RawMessage(`"olares-rn7-intel-0"`)},
+		// a DIFFERENT node whose name shares the "olares-rn7-" prefix: must be untouched
+		{"nodeName": json.RawMessage(`"olares-rn7-worker"`), "deviceId": json.RawMessage(`"olares-rn7-worker-intel-0"`)},
+	}
+
+	changed := migrateGPUAllocationRows(rows, "olares-rn7", "olares-rn8")
+	if !changed {
+		t.Fatalf("expected changes")
+	}
+
+	get := func(i int, field string) string {
+		v, _ := stringField(rows[i], field)
+		return v
+	}
+	if get(0, "nodeName") != "olares-rn8" || get(0, "deviceId") != "GPU-abc-123" {
+		t.Fatalf("nvidia row = (%q,%q), want (olares-rn8, GPU-abc-123)", get(0, "nodeName"), get(0, "deviceId"))
+	}
+	if get(0, "owner") != "alice" {
+		t.Fatalf("unmodeled field must be preserved, got owner=%q", get(0, "owner"))
+	}
+	if get(1, "nodeName") != "olares-rn8" || get(1, "deviceId") != "olares-rn8-intel-0" {
+		t.Fatalf("intel row = (%q,%q), want (olares-rn8, olares-rn8-intel-0)", get(1, "nodeName"), get(1, "deviceId"))
+	}
+	if get(2, "nodeName") != "olares-rn7-worker" || get(2, "deviceId") != "olares-rn7-worker-intel-0" {
+		t.Fatalf("other-node row must be untouched, got (%q,%q)", get(2, "nodeName"), get(2, "deviceId"))
+	}
+
+	// idempotent: a second run against the (already migrated) rows is a no-op
+	if migrateGPUAllocationRows(rows, "olares-rn7", "olares-rn8") {
+		t.Fatalf("second migration should be a no-op")
+	}
+}
+
 func TestLabelAndAnnotationAllowlist(t *testing.T) {
 	if !labelIsAllowlistedForRestore("gpu.bytetrade.io/nvidia") {
 		t.Fatalf("gpu.bytetrade.io/* label should be allowlisted")
