@@ -208,6 +208,14 @@ const (
 
 	CacheCountPodsWaitForRecreation = "count_pods_wait_for_recreation"
 
+	// CacheHostnameChanged is set to true by the change-ip flow when it detects
+	// that the current machine is already registered in Kubernetes under a
+	// different (old) node name, i.e. the hostname was changed before running
+	// change-ip. The old node name and UID identify the exact stale resource.
+	CacheHostnameChanged = "hostname_changed"
+	CacheOldNodeName     = "old_node_name"
+	CacheOldNodeUID      = "old_node_uid"
+
 	CacheUpgradeUsers     = "upgrade_users"
 	CacheUpgradeAdminUser = "upgrade_admin_user"
 

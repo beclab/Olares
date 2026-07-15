@@ -697,10 +697,45 @@ func (m *ChangeIPModule) addKubernetesTasks() {
 }
 
 func (m *ChangeIPModule) addRestartTasks() {
+	newNodeName := m.Runtime.GetLocalHost().GetName()
+
+	m.Tasks = append(m.Tasks,
+		&task.LocalTask{
+			Name:   "WaitForKubeAPIServerUp",
+			Action: new(precheck.GetKubernetesNodesStatus),
+			Retry:  20,
+		})
+
+	hostnameChanged, _ := m.PipelineCache.GetMustBool(common.CacheHostnameChanged)
+	// ensureNode scopes the final readiness check. For a same-node IP change we
+	// keep checking the (stable) local node. For a hostname change we check the
+	// whole cluster ("" = all nodes): right after the old node is deleted its
+	// pods are recreated as unscheduled Pending replacements (empty NodeName),
+	// which a new-node-scoped check would skip, so it could pass before the
+	// workloads actually reschedule and become ready.
+	ensureNode := newNodeName
+	if hostnameChanged {
+		ensureNode = ""
+		m.addRenamedNodeMigrationTasks(newNodeName)
+	} else {
+		m.addSameNodeRestartTasks(newNodeName)
+	}
+
+	m.Tasks = append(m.Tasks, &task.LocalTask{
+		Name:   "EnsurePodsUpAndRunningAgain",
+		Action: &CheckKeyPodsRunning{Node: ensureNode},
+		Delay:  10 * time.Second,
+		Retry:  60,
+	})
+}
+
+// addSameNodeRestartTasks is the original change-ip behavior: the node name is
+// unchanged, so pods pinned to the host IP are deleted and awaited for recreation.
+func (m *ChangeIPModule) addSameNodeRestartTasks(newNodeName string) {
 	restartPodsTasks := []task.Interface{
 		&task.LocalTask{
 			Name:   "RestartAllPods",
-			Action: &DeleteAllPods{Node: m.Runtime.GetLocalHost().GetName()},
+			Action: &DeleteAllPods{Node: newNodeName},
 			Retry:  5,
 			Delay:  15 * time.Second,
 		},
@@ -723,20 +758,59 @@ func (m *ChangeIPModule) addRestartTasks() {
 			},
 		}
 	}
+	m.Tasks = append(m.Tasks, restartPodsTasks...)
+}
+
+// addRenamedNodeMigrationTasks handles the case where the hostname changed before
+// change-ip ran: k3s registers a brand-new node under the new name. We restore
+// the labels Olares applied onto the new node, drop node-local PVs pinned to the
+// old node (disposable Prometheus monitoring data that would otherwise keep the
+// recreated PVC bound to an unschedulable PV), then delete the old node so its
+// controllers reschedule pods onto the new node. The host-IP pod dance is skipped
+// because deleting the old node already forces every pod to be recreated.
+func (m *ChangeIPModule) addRenamedNodeMigrationTasks(newNodeName string) {
+	oldNodeName, _ := m.PipelineCache.GetMustString(common.CacheOldNodeName)
 	m.Tasks = append(m.Tasks,
 		&task.LocalTask{
-			Name:   "WaitForKubeAPIServerUp",
-			Action: new(precheck.GetKubernetesNodesStatus),
+			Name:   "RestoreRenamedNodeLabels",
+			Action: &RestoreLabelsFromRenamedNode{OldNode: oldNodeName, NewNode: newNodeName},
+			Delay:  6 * time.Second,
 			Retry:  20,
-		})
-	m.Tasks = append(m.Tasks, restartPodsTasks...)
-
-	m.Tasks = append(m.Tasks, &task.LocalTask{
-		Name:   "EnsurePodsUpAndRunningAgain",
-		Action: &CheckKeyPodsRunning{Node: m.Runtime.GetLocalHost().GetName()},
-		Delay:  10 * time.Second,
-		Retry:  60,
-	})
+		},
+		&task.LocalTask{
+			Name:   "MigrateRenamedNodeGPUAllocations",
+			Action: &MigrateRenamedNodeGPUAllocations{OldNode: oldNodeName, NewNode: newNodeName},
+			Delay:  3 * time.Second,
+			Retry:  10,
+		},
+		&task.LocalTask{
+			Name:   "CleanupRenamedNodeLocalPVs",
+			Action: &CleanupRenamedNodeLocalPVs{OldNode: oldNodeName},
+			Delay:  10 * time.Second,
+			Retry:  10,
+		},
+		&task.LocalTask{
+			Name:   "DeleteRenamedOldNode",
+			Action: &DeleteRenamedOldNode{OldNode: oldNodeName},
+			Delay:  6 * time.Second,
+			Retry:  5,
+		},
+		// Wait for the old node's pods to actually drain before the shared
+		// EnsurePodsUpAndRunningAgain readiness check runs; otherwise that check
+		// would pass on the old node's stale (still-Running) pods immediately
+		// after the node object is deleted, before anything migrated.
+		&task.LocalTask{
+			Name:   "WaitForRenamedOldNodeDrained",
+			Action: &WaitForRenamedOldNodeDrained{OldNode: oldNodeName},
+			Delay:  10 * time.Second,
+			Retry:  60,
+		},
+	)
+	// Readiness of the recreated pods on the new node is then handled by the
+	// shared EnsurePodsUpAndRunningAgain step (cluster-wide scope). We
+	// intentionally do not pre-capture a pod count to wait against: a snapshot
+	// count is fragile (transient/Job/scaled-down pods may never come back, which
+	// would block forever).
 }
 
 type ChangeHostIPModule struct {
