@@ -129,7 +129,7 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 		},
 		&task.LocalTask{
 			Name:   "PatchNfsScript",
-			Action: new(patch.PatchNfsScriptTask),
+			Action: &patch.PatchNfsScriptTask{CheckVersion: true},
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},

@@ -771,17 +771,19 @@ func upgradeMultus() []task.Interface {
 		&task.LocalTask{
 			Name: "GenerateMultusDhcpService",
 			Desc: "Generate multus DHCP service",
-			Action: &action.Template{
-				Name:     "GenerateMultusDhcpService",
-				Template: templates.CniDhcpService,
-				Dst:      path.Join("/etc/systemd/system", templates.CniDhcpService.Name()),
+			Action: &generateMultusDhcpService{
+				action.Template{
+					Name:     "GenerateMultusDhcpService",
+					Template: templates.CniDhcpService,
+					Dst:      path.Join("/etc/systemd/system", templates.CniDhcpService.Name()),
+				},
 			},
 			Retry: 5,
 		},
 		&task.LocalTask{
 			Name:   "EnableCniDhcpService",
 			Desc:   "Enable multus CNI DHCP service",
-			Action: new(network.EnableCniDhcpService),
+			Action: &network.EnableCniDhcpService{CheckVersion: true},
 			Retry:  5,
 		},
 		&task.LocalTask{
@@ -990,4 +992,22 @@ func (u *upgradeCniPluginsBinaryOnly) Execute(runtime connector.Runtime) error {
 	}
 
 	return nil
+}
+
+type generateMultusDhcpService struct {
+	action.Template
+}
+
+func (a *generateMultusDhcpService) Execute(runtime connector.Runtime) error {
+	greaterThan1125, err := phase.OlaresVersionGreaterThan("1.12.5")
+	if err != nil {
+		return errors.Wrap(err, "failed to get current Olares version")
+	}
+
+	if greaterThan1125 {
+		logger.Infof("Olares version is greater than 1.12.5, skipping generateMultusDhcpService")
+		return nil
+	}
+
+	return a.Template.Execute(runtime)
 }

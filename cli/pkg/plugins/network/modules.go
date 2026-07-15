@@ -27,6 +27,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/images"
+	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/plugins/network/templates"
 	"github.com/pkg/errors"
 	versionutil "k8s.io/apimachinery/pkg/util/version"
@@ -383,13 +384,34 @@ func K8sVersionAtLeast(version string, compare string) bool {
 
 type EnableCniDhcpService struct {
 	common.KubeAction
+	CheckVersion bool
 }
 
 func (e *EnableCniDhcpService) Execute(runtime connector.Runtime) error {
-	if _, err := runtime.GetRunner().SudoCmd("systemctl daemon-reload && systemctl enable --now cni-dhcp && systemctl restart cni-dhcp",
-		false, false); err != nil {
-		return errors.Wrap(errors.WithStack(err), "enable cni-dhcp failed")
+	needReload := true
+	if e.CheckVersion {
+		greaterThan1125, err := phase.OlaresVersionGreaterThan("1.12.5")
+		if err != nil {
+			return errors.Wrap(err, "failed to get current Olares version")
+		}
+
+		needReload = !greaterThan1125
 	}
+
+	if needReload {
+		if _, err := runtime.GetRunner().SudoCmd("systemctl daemon-reload && systemctl enable --now cni-dhcp",
+			false, false); err != nil {
+			return errors.Wrap(errors.WithStack(err), "enable cni-dhcp failed")
+		}
+	} else {
+		logger.Infof("cni-dhcp service is already active or Olares version is greater than 1.12.5, skipping enable cni-dhcp")
+	}
+
+	if _, err := runtime.GetRunner().SudoCmd("systemctl restart cni-dhcp",
+		false, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "restart cni-dhcp failed")
+	}
+
 	return nil
 }
 
