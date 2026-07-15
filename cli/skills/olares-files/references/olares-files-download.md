@@ -5,6 +5,8 @@
 
 Download a file or directory tree from the per-user files-backend.
 
+> **Not** the download-server task centre (`olares-cli download …`) — for URL/yt-dlp/aria2 *tasks*, use [`olares-download`](../../olares-download/SKILL.md).
+
 ## Safety constraints
 
 - **Without `--resume` or `--overwrite`, the command refuses to clobber an existing local file** — confirm intent with the user before suggesting `--overwrite`.

@@ -20,6 +20,9 @@ cli/skills/
 │       ├── olares-files-ls.md
 │       ├── olares-files-upload.md
 │       └── ...
+├── olares-download/   # olares-cli download (download-server task centre; Olares >= 1.12.7)
+│   ├── SKILL.md
+│   └── references/    # lifecycle / inspect+prefs (torrent etc. land later)
 ├── olares-search/     # olares-cli search (Desktop global / full-content search; single leaf command)
 ├── olares-market/     # olares-cli market
 ├── olares-settings/   # olares-cli settings

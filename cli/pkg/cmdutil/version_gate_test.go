@@ -1,4 +1,4 @@
-package preflight
+package cmdutil_test
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func factoryWithVersion(t *testing.T, v string) *cmdutil.Factory {
 }
 
 func TestRequireMinVersion(t *testing.T) {
-	gate := MinVersionGate{
+	gate := cmdutil.MinVersionGate{
 		Verb:       "settings compute",
 		MinVersion: "1.12.6",
 		Reason:     "compute-resources APIs",
@@ -31,17 +31,16 @@ func TestRequireMinVersion(t *testing.T) {
 	}
 
 	t.Run("at or above min passes", func(t *testing.T) {
-		if err := RequireMinVersion(context.Background(), factoryWithVersion(t, "1.12.6"), gate); err != nil {
+		if err := cmdutil.RequireMinVersion(context.Background(), factoryWithVersion(t, "1.12.6"), gate); err != nil {
 			t.Fatalf("expected nil, got %v", err)
 		}
-		// A daily build of the same line counts as >= the line.
-		if err := RequireMinVersion(context.Background(), factoryWithVersion(t, "1.12.6-20260603"), gate); err != nil {
+		if err := cmdutil.RequireMinVersion(context.Background(), factoryWithVersion(t, "1.12.6-20260603"), gate); err != nil {
 			t.Fatalf("daily build: expected nil, got %v", err)
 		}
 	})
 
 	t.Run("below min is rejected with reason + fallback", func(t *testing.T) {
-		err := RequireMinVersion(context.Background(), factoryWithVersion(t, "1.12.5"), gate)
+		err := cmdutil.RequireMinVersion(context.Background(), factoryWithVersion(t, "1.12.5"), gate)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -54,7 +53,7 @@ func TestRequireMinVersion(t *testing.T) {
 	})
 
 	t.Run("undetectable version is fail-closed and suggests the flag", func(t *testing.T) {
-		err := RequireMinVersion(context.Background(), factoryWithVersion(t, "not-a-version"), gate)
+		err := cmdutil.RequireMinVersion(context.Background(), factoryWithVersion(t, "not-a-version"), gate)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -65,14 +64,14 @@ func TestRequireMinVersion(t *testing.T) {
 	})
 
 	t.Run("nil factory passes", func(t *testing.T) {
-		if err := RequireMinVersion(context.Background(), nil, gate); err != nil {
+		if err := cmdutil.RequireMinVersion(context.Background(), nil, gate); err != nil {
 			t.Fatalf("nil factory: expected nil, got %v", err)
 		}
 	})
 }
 
 func TestRejectIfRemoved(t *testing.T) {
-	gate := RemovedGate{
+	gate := cmdutil.RemovedGate{
 		Verb:        "settings gpu list",
 		Detail:      "legacy HAMI /api/gpu/list",
 		RemovedIn:   "1.12.6",
@@ -80,7 +79,7 @@ func TestRejectIfRemoved(t *testing.T) {
 	}
 
 	t.Run("at or after removal is rejected with replacement", func(t *testing.T) {
-		err := RejectIfRemoved(context.Background(), factoryWithVersion(t, "1.12.6"), gate)
+		err := cmdutil.RejectIfRemoved(context.Background(), factoryWithVersion(t, "1.12.6"), gate)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -93,19 +92,19 @@ func TestRejectIfRemoved(t *testing.T) {
 	})
 
 	t.Run("before removal passes (legacy still works)", func(t *testing.T) {
-		if err := RejectIfRemoved(context.Background(), factoryWithVersion(t, "1.12.5"), gate); err != nil {
+		if err := cmdutil.RejectIfRemoved(context.Background(), factoryWithVersion(t, "1.12.5"), gate); err != nil {
 			t.Fatalf("expected nil, got %v", err)
 		}
 	})
 
 	t.Run("undetectable version is fail-open", func(t *testing.T) {
-		if err := RejectIfRemoved(context.Background(), factoryWithVersion(t, "not-a-version"), gate); err != nil {
+		if err := cmdutil.RejectIfRemoved(context.Background(), factoryWithVersion(t, "not-a-version"), gate); err != nil {
 			t.Fatalf("undetectable should fail-open (nil), got %v", err)
 		}
 	})
 
 	t.Run("nil factory passes", func(t *testing.T) {
-		if err := RejectIfRemoved(context.Background(), nil, gate); err != nil {
+		if err := cmdutil.RejectIfRemoved(context.Background(), nil, gate); err != nil {
 			t.Fatalf("nil factory: expected nil, got %v", err)
 		}
 	})
