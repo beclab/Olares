@@ -104,6 +104,87 @@ func TestDoMutateTransportError(t *testing.T) {
 	}
 }
 
+func TestDoMutateFileCheckEnvelope(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":200,"exist":true}`)}
+	var res FileCheckResult
+	if err := doGet(context.Background(), d, "/api/download/file_check/none?user=alice&path=drive/Home/x", &res); err != nil {
+		t.Fatal(err)
+	}
+	if !res.Exist {
+		t.Fatalf("expected Exist=true, got %+v", res)
+	}
+}
+
+func TestDoMutateTorrentInspectEnvelope(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":200,"data":{"name":"x","files":[{"index":1,"path":"a","length":5}]}}`)}
+	var res TorrentInspectResult
+	if err := doMutate(context.Background(), d, "POST", "/api/download/torrent/inspect", TorrentInspectReq{TorrentFileB64: "AA=="}, &res); err != nil {
+		t.Fatal(err)
+	}
+	if res.Name != "x" || len(res.Files) != 1 || res.Files[0].Index != 1 || res.Files[0].Length != 5 {
+		t.Fatalf("unexpected inspect result: %+v", res)
+	}
+}
+
+func TestDoMutateTorrentFilesBody(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":200,"data":{"task_id":7,"selected":[1,3]}}`)}
+	var res SetTorrentFilesResult
+	if err := doMutate(context.Background(), d, "PUT", "/api/download/7/torrent/files", SetTorrentFilesReq{Selected: []int{1, 3}}, &res); err != nil {
+		t.Fatal(err)
+	}
+	if d.lastMethod != "PUT" || d.lastPath != "/api/download/7/torrent/files" {
+		t.Fatalf("unexpected call %s %s", d.lastMethod, d.lastPath)
+	}
+	body, ok := d.lastBody.(SetTorrentFilesReq)
+	if !ok {
+		t.Fatalf("unexpected body type %T", d.lastBody)
+	}
+	if len(body.Selected) != 2 || body.Selected[0] != 1 || body.Selected[1] != 3 {
+		t.Fatalf("unexpected body selected: %+v", body.Selected)
+	}
+	if res.TaskID != 7 || len(res.Selected) != 2 {
+		t.Fatalf("unexpected result: %+v", res)
+	}
+}
+
+func TestParseSelectedIndices(t *testing.T) {
+	cases := []struct {
+		in      string
+		want    []int
+		wantErr bool
+	}{
+		{"1,3,5", []int{1, 3, 5}, false},
+		{" 2 , 4 ", []int{2, 4}, false},
+		{"all", []int{}, false},
+		{"ALL", []int{}, false},
+		{"", nil, true},
+		{"0", nil, true},
+		{"x", nil, true},
+		{"1,x", nil, true},
+		{"-1", nil, true},
+	}
+	for _, tc := range cases {
+		got, err := parseSelectedIndices(tc.in)
+		if tc.wantErr {
+			if err == nil {
+				t.Fatalf("parseSelectedIndices(%q) expected error, got %v", tc.in, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("parseSelectedIndices(%q) unexpected error: %v", tc.in, err)
+		}
+		if len(got) != len(tc.want) {
+			t.Fatalf("parseSelectedIndices(%q)=%v want %v", tc.in, got, tc.want)
+		}
+		for i := range got {
+			if got[i] != tc.want[i] {
+				t.Fatalf("parseSelectedIndices(%q)=%v want %v", tc.in, got, tc.want)
+			}
+		}
+	}
+}
+
 func TestParseTaskID(t *testing.T) {
 	id, err := parseTaskID("99")
 	if err != nil || id != 99 {

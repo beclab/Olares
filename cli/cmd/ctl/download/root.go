@@ -30,11 +30,13 @@ This is the download *task centre* (create / list / pause / …). It is
 not the top-level "download" command (installer packages) and not
 "files download" (copy a file out of Drive).
 
-Verb families (phase 1):
+Verb families:
 
   lifecycle   create, list, info, pause, resume, cancel, remove
   probe       inspect
   prefs       prefs get, prefs set
+  torrent     torrent inspect, stats, peers, files, seed stop|resume
+  file        file exists, file check, file remove
 
 Universal flags:
 
@@ -60,5 +62,7 @@ Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
 	cmd.AddCommand(NewRemoveCommand(f))
 	cmd.AddCommand(NewInspectCommand(f))
 	cmd.AddCommand(NewPrefsCommand(f))
+	cmd.AddCommand(NewTorrentCommand(f))
+	cmd.AddCommand(NewFileCommand(f))
 	return cmd
 }

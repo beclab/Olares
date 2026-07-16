@@ -113,6 +113,7 @@ type dsEnvelope struct {
 	List    json.RawMessage `json:"list"`
 	Total   *int64          `json:"total"`
 	HasMore *bool           `json:"has_more"`
+	Exist   *bool           `json:"exist"`
 }
 
 func doGet(ctx context.Context, d Doer, path string, out interface{}) error {
@@ -146,6 +147,12 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 		}
 		if env.Total != nil {
 			lr.Total = *env.Total
+		}
+		return nil
+	}
+	if fc, ok := out.(*FileCheckResult); ok {
+		if env.Exist != nil {
+			fc.Exist = *env.Exist
 		}
 		return nil
 	}
