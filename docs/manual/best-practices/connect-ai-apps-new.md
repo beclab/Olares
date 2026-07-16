@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Learn how to connect AI client apps to AI service apps on Olares using the Model Console and application entrances.
 ---
 
-# Connect AI apps
+# Connect AI apps <Badge type="tip" text="^1.12.6" />
 
 Many AI applications on Olares follow a standard connection pattern: one AI service app provides AI capabilities over an API, and another AI client app provides the chat interface you interact with every day. Once you understand this pattern, you can connect almost any compatible combination of apps.
 
