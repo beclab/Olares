@@ -3,67 +3,76 @@ outline: [2, 3]
 description: Learn how to connect AI client apps to AI service apps on Olares using the Model Console and application entrances.
 ---
 
-# Connect AI apps <Badge type="tip" text="^1.12.6" />
+# Connect AI apps <Badge type="tip" text="^ 1.12.6" />
 
-Many AI applications on Olares follow a standard connection pattern: one AI service app provides AI capabilities over an API, and another AI client app provides the chat interface you interact with every day. Once you understand this pattern, you can connect almost any compatible combination of apps.
+When you use AI on Olares, you typically work with two separate applications: one AI service app provides AI capabilities in the background, and another AI client app provides the chat interface you interact with directly. To make them work together, you must connect them.
 
-This tutorial explains the core concepts and walks you through a few practical examples.
-
-:::tip For Olares 1.12.5 and earlier
-This guide applies to Olares v1.12.6 and later. The way AI apps connect changed in v1.12.6 with the introduction of the Model Console. If you are on Olares 1.12.5 or earlier, refer to the [legacy AI apps connection guide](./connect-ai-apps.md).
-:::
+This guide explains how to understand your apps, gather the required connection details, and configure the connection.
 
 ## Learning objectives
 
 By the end of this tutorial, you will be able to:
 - Distinguish between AI service apps and AI client apps.
-- Understand the types of AI service apps available in Olares.
-- Identify the correct endpoint source for different types of AI service apps.
+- Gather the essential connection parameters.
+- Locate the correct endpoint for different types of AI service apps.
 - Connect common AI apps.
 
-## Core concepts
+## Identify your AI apps
 
-### AI service apps vs. AI client apps
+Before configuring a connection, determine which app is providing the AI capabilities and which app is consuming them. This helps you know where to look for your network parameters.
 
+- **AI client apps**: They provide the chat interface or workflow canvas you interact with directly, such as LobeHub and Open WebUI. They rely on an AI service app (often called a **provider**) to perform AI tasks, such as generating text and recognizing images.
 - **AI service apps**: They provide AI capabilities for compatible clients over an API, such as chat, search, and speech recognition. Some AI service apps have their own web interface for management, while others run primarily as headless backend services.
-- **AI client apps**: They provide the chat interface or workflow canvas you interact with directly, but they rely on an AI service app to perform AI tasks such as generating text, searching the web, or recognizing text. For example, LobeHub (formerly LobeChat) and Open WebUI.
 
-### Types of AI service apps
+    On Olares, AI service apps fall into two categories:
+    - **LLM service apps**: Apps that host large language models for text generation, code completion, and chat. They include eight pre-built model apps, and custom model instances created on [Engine Base apps](/use-cases/llm-base-apps.md).
+    - **Other AI service apps**: Utility apps that provide non-LLM features, such as speech recognition (Speaches) and text extraction (PaddleOCR).
 
-In Olares, AI service apps mainly fall into the following categories:
+## Gather connection parameters
 
-- **LLM service apps**: Apps that host large language models for text generation, code completion, and chat. They include:
-    - **[Engine Base apps](/use-cases/llm-base-apps.md)**: Four reusable base applications (Ollama Engine Base, vLLM Engine Base, SGLang Engine Base, and llama.cpp Engine Base). You clone them into independent model instances and configure each instance yourself.
-    - **Pre-built model apps**: Eight ready-to-use apps that package a specific model with a specific engine, such as Qwen3.6-27B (llama.cpp) and Gemma 4 26B (Ollama).
-- **Other AI service apps**: Apps that provide other AI capabilities beyond LLMs, such as SearXNG (search) and PaddleOCR (text recognition).
+Most AI client apps require four pieces of information to establish a connection. Missing or mismatching any of these will cause the connection to fail. Gather these details before setting up your client.
 
-### How AI service apps expose endpoints
+### Provider and API format <Badge type="tip" text="LLM services only"/>
 
-An endpoint is the URL through which an application's entrance can be reached. In Olares, AI service apps expose their endpoints through two different paths, depending on the type of capability they provide:
+In most AI client apps, a **provider** is the service or vendor that supplies the LLM (such as OpenAI, Anthropic, or Ollama). On Olares, your local **LLM service app** acts as this provider. Instead of sending requests to a cloud vendor, your client app sends them to your local LLM service app.
 
-| Service type | Endpoint location | Description | Examples |
-| :--- | :--- | :--- | :--- |
-| **LLM services** | Model Console | Provides dynamic, network-optimized<br>APIs depending on whether your client<br>is inside Olares, on your local network,<br>or remote.<br><br>Open the app to launch the Model Console, and then get the **Base URL**. | <ul><li>Qwen3.6-27B<br>(llama.cpp)</li><li>Gemma 4 26B (Ollama)</li></ul> |
-| **Other AI services** | Application Settings | Uses standard HTTPS endpoints.<br><br>Open Olares **Settings**, go to **Applications** > **[AppName]** > **Entrances**, and then copy the **Endpoint URL**. | <ul><li>SearXNG</li><li>PaddleOCR</li></ul> |
+Because different providers use different communication rules, they rely on specific **API formats** (the "language" the apps use to talk to each other). The two most common formats are **OpenAI-Compatible** and **Ollama**.
 
-:::tip Multiple entrances
-Some apps expose more than one entrance. Choose the entrance that matches your client's protocol or use case. For example, use the main entrance for web UI access and a dedicated API entrance for programmatic integrations.
+When configuring an LLM connection, check your client app to see which providers it supports. Then, in the Model Console, you must select the exact **API format** that matches the provider you chose in your client app.
+
+:::info
+Non-LLM services like PaddleOCR do not use these generic formats. They communicate using their own tool-specific protocols, so you do not need to configure a provider format for them.
 :::
 
-### Authentication levels
+### Base URL
 
-Olares provides the following access levels for application entrances:
+The Base URL is the network address (or endpoint) where the AI service app receives requests.
 
-- **Internal (recommended)**: Allows apps to communicate without login prompts. It also allows access via your local network or via LarePass VPN.
-- **Public**: Open to anyone on the internet. Not recommended for private services.
+How you find it depends on the type of the service app:
 
-How you apply these access levels depends on the type of AI service app:
-- For LLM service apps, the Model Console handles access control through the **Connection source** you select.
-- For other AI service apps whose endpoints come from **Settings > Applications > [App Name] > Entrances**, set the entrance's **Authentication level** to **Internal** before connecting a client.
+- **For LLM service apps**: Open the app to launch its **Model Console**. Select the **Connection source** that matches where your client runs, choose the **API format**, and then copy the generated **Base URL**.
+- **For other AI service apps**: Open Olares Settings, go to **Applications** > **[AppName]** > **Entrances**, and then copy the **Endpoint URL**. Ensure the entrance's **Authentication level** is set to **Internal** so other apps can access it without a login prompt.
 
-:::info Non-AI apps use the same pattern
-The same internal-entrance pattern also applies when connecting non-AI apps to each other. For example, the *Arrs media stack uses internal entrance URLs to connect Sonarr, Radarr, Prowlarr, Bazarr, and qBittorrent. See [Manage your media library with the *Arrs ecosystem](/use-cases/arrs.md).
-:::
+    :::tip Multiple entrances
+    Some apps expose more than one entrance. Choose the entrance that matches your client's protocol or use case. For example, use the main entrance for web UI access and a dedicated API entrance for programmatic integrations.
+    :::
+
+### Model name <Badge type="tip" text="LLM services only"/>
+
+The model name is the exact identifier of the model. The client sends this ID with every request so the service knows which model file to process.
+
+In the **Model Console**, copy the **Model name** exactly as displayed. Do not remove any repository prefixes (like `unsloth/`) or quantization tags (like `UD-Q4_K_XL`). Otherwise, the client might return a "Model not found" error.
+
+### API key
+
+An API key (also called "Auth Token" or "API Token") is a security credential used to authenticate requests.
+
+For AI service apps deployed locally on Olares, an API key is usually not required. The internal entrance already trusts requests from other apps in the same cluster.
+
+If the client app forces you to enter an API key:
+
+- Try leaving the field blank.
+- If the app does not allow an empty value, enter any placeholder string such as `olares`.
 
 ## Examples
 
@@ -75,7 +84,7 @@ In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service
 
 1. Open Gemma 4 26B (Ollama) from the Launchpad to launch its Model Console.
 2. Ensure that the **Model** shows **Ready** and the **Engine** shows **Running**.
-3. Specify the following settings:
+3. Select the connection options that match your client app to get the correct Base URL:
 
     - **Connection source**: Select **Apps in Olares**, because LobeHub is installed directly in the Olares cluster.
     - **API format**: Select **Ollama**, because LobeHub's Ollama provider expects this format.
@@ -101,26 +110,19 @@ In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service
 
     ![LobeHub connected to a model instance](/images/manual/tutorials/connect-app-eg-lobehub2.png#bordered)
 
-### Connect SearXNG to Vane
 
-In this example, SearXNG is the AI service app that provides web search capabilities, and Vane (formerly Perplexica) is the client app.
+### Connect PaddleOCR to Open WebUI
 
-1. Open Olares Settings, and then go to **Applications** > **SearXNG** > **Entrances** > **SearXNG**.
-2. In the **Access policies** section, ensure the **Authentication level** is set to **Internal**.
-3. In the **Endpoint settings** section, copy the endpoint URL, such as `https://84a93c3c.alice2026.olares.com`.
+In this example, PaddleOCR is the AI service app that provides capabilities, and Open WebUI is the client app.
+<!--I will fill in this section tmrw.-->
 
-    ![SearXNG endpoint in Settings](/images/manual/tutorials/connect-apps-searxng-endpoint.png#bordered){width=70%}
+## FAQs
 
-4. On the Vane home page, click <i class="material-symbols-outlined">settings</i> in the lower-left corner, and then select **Search**.
-5. Enter the SearXNG internal endpoint URL you copied, such as `https://84a93c3c.alice2026.olares.com`.
+### How to connect non-AI apps?
 
-    ![SearXNG settings in Vane](/images/manual/tutorials/connect-apps-searxng-vane.png#bordered)
-
-6. In the Vane chat box, ask a question that requires web search, such as `What is the latest news about OpenAI`.
-
-    If SearXNG is connected correctly, Vane shows **Sources** and **Found X results**, and then returns an answer with web search citations.
-
-    ![Vane answering with SearXNG search results](/images/manual/tutorials/connect-apps-searxng-vane-working.png#bordered)
+The same internal-entrance pattern applies when connecting non-AI apps to each other. For example:
+- The *Arrs media stack uses internal entrance URLs to connect Sonarr, Radarr, Prowlarr, Bazarr, and qBittorrent. See [Manage your media library with the *Arrs ecosystem](/use-cases/arrs.md).
+- SearXNG can be connected to Vane for private, enhanced search capabilities. See [Connect SearXNG to Vane](/use-cases/perplexica.md).
 
 ## Learn more
 
