@@ -405,6 +405,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/karakeep",
             },
             {
+              text: "NocoDB",
+              link: "/use-cases/nocodb",
+            },
+            {
               text: "Penpot",
               link: "/use-cases/penpot",
             },
