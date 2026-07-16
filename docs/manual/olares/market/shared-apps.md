@@ -35,23 +35,15 @@ The new architecture replaces the client/server split with a single, unified sha
 
 | v2 architecture | New architecture |
 |:----------------|:----------------|
-| Server + client-side<br>access point | Single unified shared server |
-| Uninstalling an access point<br>might break the server | Server lifecycle is independent<br>of any access point |
-| Multiple access addresses<br>and formats | Unified address format for<br>all users |
-| Client and server managed<br>separately | Administrators manage one<br>shared service |
+| Server + client-side access point | Single unified shared server |
+| Uninstalling an access point might break the server | Server lifecycle is independent of any access point |
+| Multiple access addresses and formats | Unified address format for all users |
+| Client and server managed separately | Administrators manage one shared service |
 
 Benefits of the new architecture include:
 - **Simpler management**: Administrators manage one shared application instead of coordinating client and server components.
 - **No orphaned services**: Uninstalling a user-facing app no longer affects the shared server.
 - **Personalized access**: Every member accesses a shared app through their own username, using the same HTTPS URL pattern across all shared apps.
-
-Test table line breaking:
-| v2 architecture | New architecture |
-|:----------------|:----------------|
-| Server + client-side access point | Single unified shared server |
-| Uninstalling an access point might break the server | Server lifecycle is independent of any access point |
-| Multiple access addresses and formats | Unified address format for all users |
-| Client and server managed separately | Administrators manage one shared service |
 
 ## Replace Ollama with Engine Base
 
