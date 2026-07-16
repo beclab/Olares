@@ -204,15 +204,21 @@ func (p *Patch) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "patch globalrole workspace manager failed")
 	}
 
-	patchFelixConfigContent := `{"spec":{"featureDetectOverride": "SNATFullyRandom=false,MASQFullyRandom=false"}}`
-	patchFelixConfigCMD := fmt.Sprintf(
-		"%s patch felixconfiguration default -p '%s'  --type='merge'",
-		kubectl,
-		patchFelixConfigContent,
-	)
-	_, err = runtime.GetRunner().SudoCmd(patchFelixConfigCMD, false, true)
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to patch felix configuration")
+	// Only patch FelixConfiguration when Calico is the active CNI.
+	// On clusters using a different CNI (e.g. kindnet on Minikube), the
+	// felixconfigurations CRD does not exist and the patch would fail.
+	checkCalicoCRD := fmt.Sprintf("%s get crd felixconfigurations.crd.projectcalico.org", kubectl)
+	if _, err = runtime.GetRunner().SudoCmd(checkCalicoCRD, false, false); err == nil {
+		patchFelixConfigContent := `{"spec":{"featureDetectOverride": "SNATFullyRandom=false,MASQFullyRandom=false"}}`
+		patchFelixConfigCMD := fmt.Sprintf(
+			"%s patch felixconfiguration default -p '%s'  --type='merge'",
+			kubectl,
+			patchFelixConfigContent,
+		)
+		_, err = runtime.GetRunner().SudoCmd(patchFelixConfigCMD, false, true)
+		if err != nil {
+			return errors.Wrap(errors.WithStack(err), "failed to patch felix configuration")
+		}
 	}
 
 	return nil
