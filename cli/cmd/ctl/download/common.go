@@ -22,6 +22,16 @@ import (
 const (
 	minOlaresVersion = "1.12.7"
 	defaultApp       = "wise"
+	// ytdlpQualityValues is the server-accepted --quality enum
+	// (download-server services.IsValidYtdlpQuality). Kept here so the
+	// --help text stays in sync with what the backend validates.
+	ytdlpQualityValues = "best, 2160p, 1080p, 720p, 480p, 360p, audio"
+	// defaultDownloadPath mirrors the wise front-end default landing
+	// directory (Termipass collect-site downloadFile: opts.path ||
+	// 'Downloads/', normalised to drive/Home/Downloads/). The manager
+	// itself applies no default (empty task.Path lands at the PVC root),
+	// so the CLI seeds this to match what wise users see.
+	defaultDownloadPath = "drive/Home/Downloads/"
 )
 
 type Format string

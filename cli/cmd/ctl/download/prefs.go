@@ -50,7 +50,7 @@ func newPrefsSetCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set",
 		Short: "set yt-dlp quality preference for an app",
-		Long:  `PUT /api/user/preferences. --quality must be one of: best, 2160p, 1080p, 720p, 480p, 360p, audio.`,
+		Long:  `PUT /api/user/preferences. --quality must be one of: ` + ytdlpQualityValues + `.`,
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runPrefsSet(c.Context(), f, app, quality, output)
@@ -58,7 +58,7 @@ func newPrefsSetCommand(f *cmdutil.Factory) *cobra.Command {
 	}
 	addAppFlag(cmd, &app)
 	addOutputFlag(cmd, &output)
-	cmd.Flags().StringVar(&quality, "quality", "", "yt-dlp quality preset (required)")
+	cmd.Flags().StringVar(&quality, "quality", "", "yt-dlp quality preset, required (one of: "+ytdlpQualityValues+")")
 	_ = cmd.MarkFlagRequired("quality")
 	return cmd
 }

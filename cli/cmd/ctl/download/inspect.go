@@ -20,6 +20,10 @@ func NewInspectCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "probe a URL for provider and available qualities",
 		Long: `Probe a URL (GET /api/url/inspect).
 
+Quote the URL. A URL with ?, & or = must be wrapped in single quotes,
+otherwise the shell splits it on & and drops the query string:
+  olares-cli knowledge download inspect 'https://host/v?a=1&b=2'
+
 Inspect is advisory: the server may return HTTP 200 with data.error set
 when the probe fails. That does not block create.`,
 		Args: cobra.ExactArgs(1),

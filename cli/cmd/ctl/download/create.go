@@ -27,9 +27,32 @@ func NewCreateCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "create a download task",
 		Long: `Create a download task (POST /api/download).
 
---quality maps to extra.ytdlp_quality; --format-id maps to extra.format_id.
+Quote the URL. A URL with ?, & or = must be wrapped in single quotes,
+otherwise the shell splits it on & and drops the query string:
+  olares-cli knowledge download create 'https://host/v?a=1&b=2'
+
+--quality maps to extra.ytdlp_quality (one of: ` + ytdlpQualityValues + `).
+--format-id maps to extra.format_id.
 --extra accepts a JSON object of string values merged into extra (wins last).
---path accepts drive/Home/... (or a files resource URL).`,
+--path must start with drive/Home/ or drive/Data/, e.g.
+  --path drive/Home/Pictures/
+The first segment is literally "drive"; the second is "Home" or "Data"
+(case-sensitive). A full API URL also works:
+  --path 'https://files.<user>.olares.cn/api/resources/drive/Home/Pictures/'
+NOT accepted: the browser address like .../Files/Home/... , or a bare
+Home/... without the drive/ prefix (both fail as unsupported file type).
+Defaults to ` + defaultDownloadPath + ` (aligned with wise). Pass --path ""
+to send an empty path (e.g. HuggingFace cache mode) and let the server decide.
+
+HuggingFace: the destination is picked by extra._hf_dest, not by --path/--name.
+  local (default when _hf_dest is unset): lands under <path>/<repoID>/. --path
+         applies; --name is unnecessary (the repo id is the folder name).
+  cache: shared HF_HOME (Files UI: /Common/huggingface/). --path and --name are
+         ignored; send --path "" to match wise.
+Set HF options via --extra (keys map to hf CLI flags), e.g.:
+  --extra '{"_hf_dest":"cache"}'
+  --extra '{"_hf_dest":"local","token":"hf_xxx","revision":"v1.0","include":"*.safetensors"}'
+Note wise defaults HF to cache; this CLI defaults to local unless you pass _hf_dest.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runCreate(c.Context(), f, args[0], app, path, name, quality, formatID, extraRaw, output)
@@ -37,9 +60,9 @@ func NewCreateCommand(f *cmdutil.Factory) *cobra.Command {
 	}
 	addAppFlag(cmd, &app)
 	addOutputFlag(cmd, &output)
-	cmd.Flags().StringVar(&path, "path", "", "destination path (drive/Home/... or files resource URL)")
-	cmd.Flags().StringVar(&name, "name", "", "suggested file_name")
-	cmd.Flags().StringVar(&quality, "quality", "", "yt-dlp quality preset (best, 2160p, 1080p, …)")
+	cmd.Flags().StringVar(&path, "path", defaultDownloadPath, "destination starting with drive/Home/ or drive/Data/ (e.g. drive/Home/Pictures/); \"\" lets the server decide")
+	cmd.Flags().StringVar(&name, "name", "", "suggested file_name (ignored for HuggingFace: repo id / cache layout wins)")
+	cmd.Flags().StringVar(&quality, "quality", "", "yt-dlp quality preset (one of: "+ytdlpQualityValues+")")
 	cmd.Flags().StringVar(&formatID, "format-id", "", "yt-dlp format_id override")
 	cmd.Flags().StringVar(&extraRaw, "extra", "", "JSON object merged into extra (string values)")
 	return cmd
