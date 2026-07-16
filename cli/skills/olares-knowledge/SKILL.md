@@ -1,7 +1,7 @@
 ---
-name: olares-download
+name: olares-knowledge
 version: 1.0.0
-description: "Olares download task centre via olares-cli download — create / list / pause / resume / cancel / remove tasks, inspect URLs, and set yt-dlp quality prefs. Use for download task, pause download, yt-dlp, download-server, wise download."
+description: "Olares knowledge CLI via olares-cli knowledge — download-server task centre (create / list / pause / resume / cancel / remove, inspect URLs, yt-dlp prefs). Use for download task, pause download, yt-dlp, download-server, wise download, knowledge download."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
   openclaw:
@@ -10,27 +10,27 @@ metadata:
         - olares-cli
 ---
 
-# download (task centre)
+# knowledge
 
-**CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli download <verb> --help`.**
+**CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli knowledge download <verb> --help`.**
 
-> **Source of truth for flags is always `olares-cli download <verb> --help`.** This file only carries scope, edge path, version gate, and the error → fix matrix.
+> **Source of truth for flags is always `olares-cli knowledge download <verb> --help`.** This file only carries scope, edge path, version gate, and the error → fix matrix.
 
 ## When to use
 
-- Manage download-server tasks: create a URL download, list / inspect progress, pause / resume / cancel / remove.
+- Manage download-server tasks via `knowledge download`: create a URL download, list / inspect progress, pause / resume / cancel / remove.
 - Probe a URL for provider + available yt-dlp qualities before create.
 - Read or set per-app default yt-dlp quality (`prefs`).
-- Keywords: download task, pause download, yt-dlp, aria2, huggingface download, wise download, download-server.
+- Keywords: knowledge download, download task, pause download, yt-dlp, aria2, huggingface download, wise download, download-server.
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
-> **Not** `files download` (pull a Drive/Sync file to the local machine) — that lives in [`olares-files`](../olares-files/SKILL.md). **Not** `os download` (installer packages).
+> **Not** top-level `download` (installer packages: `download component` / `wizard` / `check`). **Not** `files download` (pull a Drive/Sync file) — that lives in [`olares-files`](../olares-files/SKILL.md).
 
 ## Edge path & auth
 
 ```text
-olares-cli download
+olares-cli knowledge download
   → SettingsURL + "/download" + /api/...
   → settings nginx → user-service DownloadController
   → download provider → download-server
@@ -45,7 +45,7 @@ olares-cli download
 Requires **Olares >= 1.12.7** (settings `/download` edge + download provider). Below that, every verb fails closed before any HTTP call:
 
 ```text
-`download` requires Olares >= 1.12.7 (settings /download edge + download provider), but this backend is …
+`knowledge download` requires Olares >= 1.12.7 (settings /download edge + download provider), but this backend is …
 ```
 
 Escape hatch when version detection fails: `--olares-version 1.12.7` (same flag as other gated trees).
@@ -54,8 +54,8 @@ Escape hatch when version detection fails: `--olares-version 1.12.7` (same flag 
 
 | Family | Verbs | Details |
 |---|---|---|
-| lifecycle | `create` / `list` / `info` / `pause` / `resume` / `cancel` / `remove` | [references/olares-download-lifecycle.md](references/olares-download-lifecycle.md) |
-| probe + prefs | `inspect` / `prefs get` / `prefs set` | [references/olares-download-inspect.md](references/olares-download-inspect.md) |
+| lifecycle | `create` / `list` / `info` / `pause` / `resume` / `cancel` / `remove` | [references/olares-knowledge-download-lifecycle.md](references/olares-knowledge-download-lifecycle.md) |
+| probe + prefs | `inspect` / `prefs get` / `prefs set` | [references/olares-knowledge-download-inspect.md](references/olares-knowledge-download-inspect.md) |
 
 Universal: `-o table|json`. Identity/cluster from the active profile only (`profile use` / `profile login`).
 

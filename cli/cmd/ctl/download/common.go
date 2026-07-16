@@ -1,6 +1,6 @@
-// Package download hosts `olares-cli download` — the download-server task
-// centre via Settings edge `https://settings.<terminus>/download/...`.
-// Distinct from `files download` (pull files) and `os download` (install packages).
+// Package download hosts `olares-cli knowledge download` — the download-server
+// task centre via Settings edge `https://settings.<terminus>/download/...`.
+// Distinct from top-level `download` (installer packages) and `files download`.
 package download
 
 import (
@@ -74,7 +74,7 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 		return nil, fmt.Errorf("internal error: download not wired with cmdutil.Factory")
 	}
 	if err := cmdutil.RequireMinVersion(ctx, f, cmdutil.MinVersionGate{
-		Verb:       "download",
+		Verb:       "knowledge download",
 		MinVersion: minOlaresVersion,
 		Reason:     "settings /download edge + download provider",
 	}); err != nil {

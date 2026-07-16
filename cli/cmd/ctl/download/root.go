@@ -6,18 +6,20 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewDownloadCommand assembles the `olares-cli download` subtree.
+// NewDownloadCommand assembles `olares-cli knowledge download`.
 // Identity and transport come from the active profile (same as market /
 // files / settings). Requires Olares >= 1.12.7.
 //
 // Naming: this tree is the download-server *task centre*. It is not
-// `files download` (pull a file from files-backend) and not `os download`
-// (installer package fetch).
+// top-level `download` (installer packages) and not `files download`
+// (pull a file from files-backend).
 func NewDownloadCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download",
 		Short: "Manage download-server tasks (Settings /download edge)",
 		Long: `Manage download tasks via download-server.
+
+Invoked as: olares-cli knowledge download <verb>
 
 Requires Olares 1.12.7+. Calls go through the active profile's Settings
 URL with a /download prefix (user-service relay → download provider →
@@ -25,8 +27,8 @@ download-server). Auth is the profile access token (X-Authorization);
 the gateway injects X-Bfl-User — do not set it from the CLI.
 
 This is the download *task centre* (create / list / pause / …). It is
-not "files download" (copy a file out of Drive) and not "os download"
-(install packages).
+not the top-level "download" command (installer packages) and not
+"files download" (copy a file out of Drive).
 
 Verb families (phase 1):
 
@@ -39,7 +41,7 @@ Universal flags:
   -o, --output {table,json}
       --app <name>     default wise (create / list / prefs)
 
-Run "olares-cli download <verb> --help" for verb-specific flags.
+Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
 `,
 	}
 	cmd.SilenceErrors = true
