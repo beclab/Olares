@@ -39,7 +39,7 @@ You can verify whether they have completed the activation in the **Users** page.
 
 :::tip
 New users can activate their account through the wizard without installing Olares locally.
-For detailed instructions, see [Activate Olares](../../get-started/activate-olares).
+For detailed instructions, see [Join an Olares cluster](../../get-started/join-olares.md#step-2-activate-your-account).
 :::
 
 ## Remove a user
