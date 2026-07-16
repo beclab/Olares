@@ -34,7 +34,7 @@ In Olares, AI service apps mainly fall into the following categories:
 
 - **LLM service apps**: Apps that host large language models for text generation, code completion, and chat. They include:
     - **[Engine Base apps](/use-cases/llm-base-apps.md)**: Four reusable base applications (Ollama Engine Base, vLLM Engine Base, SGLang Engine Base, and llama.cpp Engine Base). You clone them into independent model instances and configure each instance yourself.
-    - **Pre-built model apps**: Nine ready-to-use apps that package a specific model with a specific engine, such as Qwen3.6-27B (llama.cpp) and Gemma 4 26B (Ollama).
+    - **Pre-built model apps**: Eight ready-to-use apps that package a specific model with a specific engine, such as Qwen3.6-27B (llama.cpp) and Gemma 4 26B (Ollama).
 - **Other AI service apps**: Apps that provide other AI capabilities beyond LLMs, such as SearXNG (search) and PaddleOCR (text recognition).
 
 ### How AI service apps expose endpoints
