@@ -22,7 +22,6 @@ Choose the base app for the engine you want, clone it to deploy a model, then ru
   ::: details Check available pre-built model apps
   - Qwen3.6-27B (llama.cpp)
   - Qwen3.6-35B-A3B (llama.cpp)
-  - Ornith-1.0-35B (llama.cpp)
   - Qwen3.6-27B MTP (llama.cpp)
   - Qwopus3.6-27B MTP (llama.cpp)
   - Gemma-4-12B (vLLM)
