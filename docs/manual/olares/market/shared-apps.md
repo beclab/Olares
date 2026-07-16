@@ -45,6 +45,14 @@ Benefits of the new architecture include:
 - **No orphaned services**: Uninstalling a user-facing app no longer affects the shared server.
 - **Personalized access**: Every member accesses a shared app through their own username, using the same HTTPS URL pattern across all shared apps.
 
+Test table line breaking:
+| v2 architecture | New architecture |
+|:----------------|:----------------|
+| Server + client-side access point | Single unified shared server |
+| Uninstalling an access point might break the server | Server lifecycle is independent of any access point |
+| Multiple access addresses and formats | Unified address format for all users |
+| Client and server managed separately | Administrators manage one shared service |
+
 ## Replace Ollama with Engine Base
 
 The standalone **Ollama** shared app and legacy model apps have been replaced by the new **Engine Base** architecture.
