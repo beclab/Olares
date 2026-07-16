@@ -28,10 +28,10 @@ type ApplyingEnvApp struct {
 	landedReason string
 }
 
-func NewApplyingEnvApp(c client.Client,
+func NewApplyingEnvApp(deps Deps,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &ApplyingEnvApp{
 				baseOperationApp: &baseOperationApp{
@@ -49,7 +49,7 @@ func (a *ApplyingEnvApp) Exec(ctx context.Context) (StatefulInProgressApp, error
 	klog.Infof("Starting ApplyEnv operation for app: %s", a.manager.Name)
 
 	opCtx, cancel := context.WithCancel(context.Background())
-	return appFactory.execAndWatch(opCtx, a,
+	return a.deps.Factory.execAndWatch(opCtx, a,
 		func(c context.Context) (StatefulInProgressApp, error) {
 			in := applyingEnvInProgressApp{
 				ApplyingEnvApp: a,
@@ -69,7 +69,7 @@ func (a *ApplyingEnvApp) Exec(ctx context.Context) (StatefulInProgressApp, error
 						opRecord := makeRecord(a.manager, appsv1.ApplyEnvFailed,
 							fmt.Sprintf(constants.OperationFailedTpl, a.manager.Spec.OpType, err.Error()))
 
-						updateErr := a.updateStatus(context.Background(), a.manager, appsv1.ApplyEnvFailed, opRecord, err.Error(), "")
+						updateErr := a.updateStatus(context.Background(), a.manager, appsv1.ApplyEnvFailed, opRecord, err.Error(), appsv1.ApplyEnvFailed.String())
 						if updateErr != nil {
 							klog.Errorf("update appmgr state to ApplyEnvFailed state failed %v", updateErr)
 							return
@@ -96,7 +96,7 @@ func (a *ApplyingEnvApp) Exec(ctx context.Context) (StatefulInProgressApp, error
 
 				a.finally = func() {
 					klog.Info("ApplyEnv operation success, update app status to Initializing, ", a.manager.Name)
-					updateErr := a.updateStatus(context.Background(), a.manager, appsv1.Initializing, nil, "Environment variables applied, waiting for application to initialize", "")
+					updateErr := a.updateStatus(context.Background(), a.manager, appsv1.Initializing, nil, "Environment variables applied, waiting for application to initialize", appsv1.Initializing.String())
 					if updateErr != nil {
 						klog.Errorf("update appmgr state to Initializing state failed %v", updateErr)
 					}
@@ -110,7 +110,7 @@ func (a *ApplyingEnvApp) Exec(ctx context.Context) (StatefulInProgressApp, error
 func (a *ApplyingEnvApp) exec(ctx context.Context) error {
 	var err error
 
-	kubeConfig, err := getKubeConfig()
+	kubeConfig, err := a.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("Failed to get kube config: %v", err)
 		return err
@@ -132,7 +132,7 @@ func (a *ApplyingEnvApp) exec(ctx context.Context) error {
 	preState := a.manager.Annotations[api.AppPreUpgradeStateKey]
 	skipWaitForStartUp := preState == appsv1.Stopped.String()
 
-	helmOps, err := newHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{
+	helmOps, err := a.deps.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{
 		Source:             a.manager.Spec.Source,
 		MarketSource:       appcfg.GetMarketSource(a.manager),
 		SkipWaitForStartUp: skipWaitForStartUp,
@@ -158,7 +158,7 @@ func (a *ApplyingEnvApp) exec(ctx context.Context) error {
 }
 
 func (a *ApplyingEnvApp) Cancel(ctx context.Context) error {
-	err := a.updateStatus(ctx, a.manager, appsv1.ApplyingEnvCanceling, nil, constants.OperationCanceledByTerminusTpl, "")
+	err := a.updateStatus(ctx, a.manager, appsv1.ApplyingEnvCanceling, nil, constants.ApplyEnvCanceledByTimeout, constants.ApplyEnvCancelBySystem)
 	if err != nil {
 		klog.Errorf("update appmgr state to upgradingCanceling state failed %v", err)
 		return err
