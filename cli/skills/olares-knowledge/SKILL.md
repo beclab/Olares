@@ -56,8 +56,11 @@ Escape hatch when version detection fails: `--olares-version 1.12.7` (same flag 
 |---|---|---|
 | lifecycle | `create` / `list` / `info` / `pause` / `resume` / `cancel` / `remove` | [references/olares-knowledge-download-lifecycle.md](references/olares-knowledge-download-lifecycle.md) |
 | probe + prefs | `inspect` / `prefs get` / `prefs set` | [references/olares-knowledge-download-inspect.md](references/olares-knowledge-download-inspect.md) |
+| sync | `unfinished` / `sync` (`--after` cursor, `--all` drain) | [references/olares-knowledge-download-sync.md](references/olares-knowledge-download-sync.md) |
 | torrent | `torrent inspect` / `stats` / `peers` / `files` / `seed stop\|resume` (+ `create --torrent` / `--select-files` / magnet) | [references/olares-knowledge-download-torrent.md](references/olares-knowledge-download-torrent.md) |
 | file tools | `file exists` (URL pre-check) / `file check` / `file remove` (resource path) | [references/olares-knowledge-download-files.md](references/olares-knowledge-download-files.md) |
+| cookies | `cookies list` / `set` / `delete` / `retrieve` / `health` (provider cookies) | [references/olares-knowledge-download-cookies.md](references/olares-knowledge-download-cookies.md) |
+| settings | `settings get` / `settings set` (download-server global config) | [references/olares-knowledge-download-settings.md](references/olares-knowledge-download-settings.md) |
 
 Universal: `-o table|json`. Identity/cluster from the active profile only (`profile use` / `profile login`).
 

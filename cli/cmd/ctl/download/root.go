@@ -35,8 +35,11 @@ Verb families:
   lifecycle   create, list, info, pause, resume, cancel, remove
   probe       inspect
   prefs       prefs get, prefs set
+  sync        unfinished, sync
   torrent     torrent inspect, stats, peers, files, seed stop|resume
   file        file exists, file check, file remove
+  cookies     cookies list, set, delete, retrieve, health
+  settings    settings get, settings set  (download-server global config)
 
 Universal flags:
 
@@ -62,7 +65,11 @@ Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
 	cmd.AddCommand(NewRemoveCommand(f))
 	cmd.AddCommand(NewInspectCommand(f))
 	cmd.AddCommand(NewPrefsCommand(f))
+	cmd.AddCommand(NewUnfinishedCommand(f))
+	cmd.AddCommand(NewSyncCommand(f))
 	cmd.AddCommand(NewTorrentCommand(f))
 	cmd.AddCommand(NewFileCommand(f))
+	cmd.AddCommand(NewCookiesCommand(f))
+	cmd.AddCommand(NewSettingsCommand(f))
 	return cmd
 }

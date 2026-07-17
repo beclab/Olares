@@ -82,9 +82,20 @@ func runList(ctx context.Context, f *cmdutil.Factory, app, status string, page, 
 }
 
 func renderListTable(w io.Writer, result ListResult) error {
+	if err := renderTasksTable(w, result.List); err != nil {
+		return err
+	}
+	if result.Total > 0 {
+		fmt.Fprintf(w, "\n%d of %d\n", len(result.List), result.Total)
+	}
+	return nil
+}
+
+// renderTasksTable prints the shared task table (list / sync / unfinished).
+func renderTasksTable(w io.Writer, tasks []DownloadTask) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "ID\tSTATUS\tPROVIDER\tPERCENT\tNAME\tAPP\tUPDATED")
-	for _, t := range result.List {
+	for _, t := range tasks {
 		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			t.ID,
 			orDash(t.Status),
@@ -95,13 +106,7 @@ func renderListTable(w io.Writer, result ListResult) error {
 			formatTime(t.UpdatedAt),
 		)
 	}
-	if err := tw.Flush(); err != nil {
-		return err
-	}
-	if result.Total > 0 {
-		fmt.Fprintf(w, "\n%d of %d\n", len(result.List), result.Total)
-	}
-	return nil
+	return tw.Flush()
 }
 
 func orDash(s string) string {
@@ -126,4 +131,12 @@ func formatTime(t time.Time) string {
 		return "-"
 	}
 	return t.Local().Format("2006-01-02 15:04")
+}
+
+// formatUnix renders a unix-seconds timestamp (cookies / settings) or "-".
+func formatUnix(sec int64) string {
+	if sec <= 0 {
+		return "-"
+	}
+	return time.Unix(sec, 0).Local().Format("2006-01-02 15:04")
 }

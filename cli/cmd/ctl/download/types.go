@@ -161,3 +161,79 @@ type FileExistsData struct {
 type FileCheckResult struct {
 	Exist bool `json:"exist"`
 }
+
+// SyncResult is GET /api/download/sync data: {items, has_more, next_cursor}.
+// Unlike list responses, has_more/next_cursor live inside data, not at the top
+// level. Tasks are ordered by ascending id; next_cursor is the last item's id.
+type SyncResult struct {
+	Items      []DownloadTask `json:"items"`
+	HasMore    bool           `json:"has_more"`
+	NextCursor int64          `json:"next_cursor"`
+}
+
+// CookieSummary is a row of GET /api/integration/cookies. It never carries the
+// plaintext cookie (only whether one is stored).
+type CookieSummary struct {
+	Domain    string `json:"domain"`
+	Provider  string `json:"provider"`
+	HasCookie bool   `json:"has_cookie"`
+	UpdatedAt int64  `json:"updated_at"` // unix seconds
+}
+
+// CookieListResult is the GET /api/integration/cookies success body
+// (top-level {code, total, list} of CookieSummary).
+type CookieListResult struct {
+	List  []CookieSummary
+	Total int64
+}
+
+// UpsertCookieReq is PUT /api/integration/cookies body. Cookie is the full
+// Netscape cookies.txt text.
+type UpsertCookieReq struct {
+	Domain   string `json:"domain"`
+	Provider string `json:"provider,omitempty"`
+	Cookie   string `json:"cookie"`
+}
+
+// RetrieveCookieReq is POST /api/integration/cookies/retrieve body.
+type RetrieveCookieReq struct {
+	Domain   string `json:"domain"`
+	Provider string `json:"provider,omitempty"`
+}
+
+// RetrieveCookieResult is the retrieve response data; Cookie (Netscape text)
+// is only populated when Found is true.
+type RetrieveCookieResult struct {
+	Domain    string `json:"domain"`
+	Found     bool   `json:"found"`
+	Cookie    string `json:"cookie,omitempty"`
+	UpdatedAt int64  `json:"updated_at,omitempty"`
+}
+
+// IntegrationHealth is GET /api/integration/healthz data.
+type IntegrationHealth struct {
+	Healthy   bool              `json:"healthy"`
+	Providers map[string]string `json:"providers"` // provider -> "ok" | "error: ..."
+}
+
+// SystemSettings is GET/PUT /api/system/settings data.
+type SystemSettings struct {
+	Aria2MaxConcurrent    int     `json:"aria2_max_concurrent"`
+	Aria2MaxConnPerServer int     `json:"aria2_max_conn_per_server"`
+	Aria2Split            int     `json:"aria2_split"`
+	YtdlpConcurrent       int     `json:"ytdlp_concurrent"`
+	SeedRatioLimit        float64 `json:"seed_ratio_limit"`
+	SeedTimeLimit         int64   `json:"seed_time_limit"` // seconds
+	UpdatedAt             int64   `json:"updated_at,omitempty"`
+}
+
+// UpdateSystemSettingsReq is PUT /api/system/settings body; nil fields are
+// left unchanged (partial patch).
+type UpdateSystemSettingsReq struct {
+	Aria2MaxConcurrent    *int     `json:"aria2_max_concurrent,omitempty"`
+	Aria2MaxConnPerServer *int     `json:"aria2_max_conn_per_server,omitempty"`
+	Aria2Split            *int     `json:"aria2_split,omitempty"`
+	YtdlpConcurrent       *int     `json:"ytdlp_concurrent,omitempty"`
+	SeedRatioLimit        *float64 `json:"seed_ratio_limit,omitempty"`
+	SeedTimeLimit         *int64   `json:"seed_time_limit,omitempty"`
+}

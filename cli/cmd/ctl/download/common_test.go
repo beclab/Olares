@@ -185,6 +185,53 @@ func TestParseSelectedIndices(t *testing.T) {
 	}
 }
 
+func TestDoMutateSyncEnvelope(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":200,"data":{"items":[{"id":7,"status":"downloading","app":"wise"}],"has_more":true,"next_cursor":7}}`)}
+	var res SyncResult
+	if err := doGet(context.Background(), d, "/api/download/sync?limit=100", &res); err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Items) != 1 || res.Items[0].ID != 7 || !res.HasMore || res.NextCursor != 7 {
+		t.Fatalf("unexpected sync result: %+v", res)
+	}
+}
+
+func TestDoMutateCookieListEnvelope(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":200,"total":1,"list":[{"domain":"youtube.com","provider":"yt-dlp","has_cookie":true,"updated_at":1700000000}]}`)}
+	var res CookieListResult
+	if err := doGet(context.Background(), d, "/api/integration/cookies", &res); err != nil {
+		t.Fatal(err)
+	}
+	if res.Total != 1 || len(res.List) != 1 || res.List[0].Domain != "youtube.com" || !res.List[0].HasCookie {
+		t.Fatalf("unexpected cookie list: %+v", res)
+	}
+}
+
+func TestBuildSettingsPatch(t *testing.T) {
+	// nothing changed -> error
+	if _, err := buildSettingsPatch(map[string]bool{}, 0, 0, 0, 0, 0, 0); err == nil {
+		t.Fatal("expected error when no flags changed")
+	}
+	// only the changed fields become non-nil
+	changed := map[string]bool{
+		"aria2-max-concurrent": true,
+		"seed-ratio-limit":     true,
+	}
+	req, err := buildSettingsPatch(changed, 5, 99, 99, 99, 1.5, 99)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.Aria2MaxConcurrent == nil || *req.Aria2MaxConcurrent != 5 {
+		t.Fatalf("aria2_max_concurrent not set: %+v", req.Aria2MaxConcurrent)
+	}
+	if req.SeedRatioLimit == nil || *req.SeedRatioLimit != 1.5 {
+		t.Fatalf("seed_ratio_limit not set: %+v", req.SeedRatioLimit)
+	}
+	if req.Aria2Split != nil || req.YtdlpConcurrent != nil || req.Aria2MaxConnPerServer != nil || req.SeedTimeLimit != nil {
+		t.Fatalf("unchanged fields must stay nil: %+v", req)
+	}
+}
+
 func TestParseTaskID(t *testing.T) {
 	id, err := parseTaskID("99")
 	if err != nil || id != 99 {

@@ -150,6 +150,17 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 		}
 		return nil
 	}
+	if cl, ok := out.(*CookieListResult); ok {
+		if len(env.List) > 0 {
+			if err := json.Unmarshal(env.List, &cl.List); err != nil {
+				return fmt.Errorf("%s %s: decode list: %w", method, path, err)
+			}
+		}
+		if env.Total != nil {
+			cl.Total = *env.Total
+		}
+		return nil
+	}
 	if fc, ok := out.(*FileCheckResult); ok {
 		if env.Exist != nil {
 			fc.Exist = *env.Exist
