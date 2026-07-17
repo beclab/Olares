@@ -1,306 +1,307 @@
 ---
 outline: [2, 3]
-title: Install Olares on PVE with GPU passthrough
-description: Step-by-step tutorial on how to set up GPU passthrough in Proxmox VE (PVE) and install Olares in a virtual machine with GPU acceleration enabled.
+title: Install Olares on PVE via ISO with GPU passthrough
+description: Step-by-step tutorial on configuring GPU passthrough in Proxmox VE and installing Olares from ISO in a VM with GPU acceleration.
 ---
 
 # Install Olares on PVE via ISO with GPU passthrough
 
-GPU passthrough in **Proxmox Virtual Environment (PVE)** allows virtual machines (VMs) to directly access the physical GPU, enabling hardware-accelerated computing for workloads like AI model inference and graphics processing.
+GPU passthrough in Proxmox Virtual Environment (PVE) lets virtual machines (VMs) access the physical GPU directly, enabling hardware-accelerated computing for workloads like AI model inference and graphics processing.
 
-This tutorial provides a comprehensive process for:
-- Configuring a PVE host for GPU passthrough. 
-- Installing Olares from its official ISO image into a new VM that fully leverage the dedicated GPU.
-
-::: warning Not recommended for production use
-Currently, Olares on PVE has certain limitations. We recommend using it only for development or testing purposes.
+:::warning Not for production use
+Currently, Olares on PVE has certain limitations. Use it only for development or testing purposes.
 :::
+
+## Learning objectives
+
+By the end of this tutorial, you will be able to:
+
+- Enable GPU passthrough on a PVE host.
+- Create a PVE VM with an NVIDIA GPU passed through.
+- Install Olares from the official ISO and verify the GPU is recognized.
 
 ## Prerequisites
 
-Before proceeding, ensure that your setup meets the following requirements:
+Make sure you have:
 
-- CPU: At least 4 cores, with IOMMU enabled in BIOS
+- **CPU**: At least 4 cores, with IOMMU enabled in BIOS
   - Intel: `VT-d`
   - AMD: `AMD-Vi`/`IOMMU`
-- GPU: NVIDIA GPU that supports GPU passthrough
-- RAM: Recommended 16 GB or more 
-- Storage: Minimum 200 GB SSD (installation may fail on HDD)  
-- PVE Version: 8.3.2
-- Olares ISO Image: Download the [official Olares ISO image](https://cdn.olares.com/olares-latest-amd64.iso) before you start.
+- **GPU**: NVIDIA GPU that supports GPU passthrough
+- **RAM**: Recommended 16 GB or more
+- **Storage**: Minimum 200 GB SSD (installation may fail on HDD)
+- **PVE version**: 8.3.2
+- **Olares ISO image**: Download the [official Olares ISO image](https://cdn.olares.com/olares-latest-amd64.iso)
 
 ## Configure GPU passthrough in PVE
 
-To use GPU-accelerated workloads in Olares, you must first enable GPU passthrough for the PVE host.
+To use GPU-accelerated workloads in Olares, first enable GPU passthrough on the PVE host.
 
 ### Enable IOMMU
 
-The **Input-Output Memory Management Unit (IOMMU)** is a hardware feature that allows the operating system to control how devices access memory, which is essential for passthrough.
+**Input-Output Memory Management Unit (IOMMU)** is a hardware feature that lets the operating system control how devices access memory. This control is required for passthrough.
 
-1. In the PVE command line (Shell), run the following command to open the GRUB configuration file:
-        
-    ```bash
-    nano /etc/default/grub
-    ```
-    
-2. Find the line: `GRUB_CMDLINE_LINUX_DEFAULT="quiet"`
-    
-    Replace it with the line corresponding to your CPU vendor:
-   
-    ::: code-group
-    ```bash [Intel]
-    GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt"
-    ```
-    ```bash [AMD]
-    GRUB_CMDLINE_LINUX_DEFAULT="quiet amd_iommu=on iommu=pt"
-    ```
-    :::
+1. In the PVE Shell, open the GRUB configuration file:
 
-3. Save and close the GRUB configuration file, then apply GRUB changes:
-  
-    ```bash
-    update-grub
-    reboot
-    ```
+   ```bash
+   nano /etc/default/grub
+   ```
 
-4.  After restarting, check whether IOMMU is enabled on the PVE host:
-    
-    ```bash
-    dmesg | grep -e DMAR -e IOMMU
-    ```
-       If successful, you should see output similar to the following:
+2. Find the line:
 
-    ::: code-group
-    ```bash [Intel]
-    [0.061644] DMAR: IOMMU enabled
-    ...
-    [0.408103] DMAR: Intel(R) Virtualization Technology for Directed I/O
-    ```
-    ```bash [AMD]
-    [1.219719] AMD-Vi: Found IOMMU at 0000:00:00.2 cap 0x40
-    ```
-    :::
+   ```plain
+   GRUB_CMDLINE_LINUX_DEFAULT="quiet"
+   ```
+
+   Replace it with the line for your CPU vendor:
+
+   ::: code-group
+   ```bash [Intel]
+   GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt"
+   ```
+   ```bash [AMD]
+   GRUB_CMDLINE_LINUX_DEFAULT="quiet amd_iommu=on iommu=pt"
+   ```
+   :::
+
+3. Save and close the file, then update GRUB and reboot the host:
+
+   ```bash
+   update-grub
+   reboot
+   ```
+
+4. After the host restarts, check whether IOMMU is enabled:
+
+   ```bash
+   dmesg | grep -e DMAR -e IOMMU
+   ```
+
+   If successful, you should see output similar to:
+
+   ::: code-group
+   ```plain [Intel]
+   [0.061644] DMAR: IOMMU enabled
+   ...
+   [0.408103] DMAR: Intel(R) Virtualization Technology for Directed I/O
+   ```
+   ```plain [AMD]
+   [1.219719] AMD-Vi: Found IOMMU at 0000:00:00.2 cap 0x40
+   ```
+   :::
 
 ### Add VFIO modules
 
 **Virtual Function I/O (VFIO)** enables a VM to directly access PCI devices such as GPUs.
 
-1. On the PVE host, run the following command to open the `modules` file:
+1. On the PVE host, open the `modules` file:
 
-    ```bash
-    nano /etc/modules
-    ```
+   ```bash
+   nano /etc/modules
+   ```
 
 2. Add these lines to the end of the file:
-    
-    ```
-    vfio
-    vfio_iommu_type1
-    vfio_pci
-    vfio_virqfd
-    ```
+
+   ```plain
+   vfio
+   vfio_iommu_type1
+   vfio_pci
+   vfio_virqfd
+   ```
 
 3. Save and close the file.
 
 ### Blacklist host GPU drivers
 
-To prevent the Proxmox host from using the GPU you plan to pass through, it's best to blacklist its default drivers. This ensures the GPU is available for `vfio-pci`.
+Blacklist the host's default GPU drivers so the GPU is available for `vfio-pci`.
 
-1. Run the following command on the PVE host to create the blacklist configuration:
+1. Create the blacklist configuration:
 
-    ```bash
-    nano /etc/modprobe.d/blacklist.conf
-    ```
+   ```bash
+   nano /etc/modprobe.d/blacklist.conf
+   ```
 
 2. Add the following lines to block NVIDIA drivers:
 
-    ```
-    blacklist nouveau 
-    blacklist nvidia 
-    blacklist nvidiafb
-    blacklist nvidia_drm
-    blacklist nvidia_modeset
-    ```
+   ```plain
+   blacklist nouveau
+   blacklist nvidia
+   blacklist nvidiafb
+   blacklist nvidia_drm
+   blacklist nvidia_modeset
+   ```
 
 3. Save and close the file.
 
 ### Bind GPU to VFIO
 
-1. Run the following command on the PVE host to find your GPU's PCI address:
+1. On the PVE host, find your GPU's PCI address:
 
-    ```bash
-    lspci | grep NVIDIA
-    ```
+   ```bash
+   lspci | grep NVIDIA
+   ```
 
-    **Example output**:
+   Example output:
 
-    ```
-    01:00.0 VGA compatible controller: NVIDIA Corporation AD106 [GeForce RTX 4060 Ti] (rev a1)
-    01:00.1 Audio device: NVIDIA Corporation AD106M High Definition Audio Controller (rev a1)
-    ```
+   ```plain
+   01:00.0 VGA compatible controller: NVIDIA Corporation AD106 [GeForce RTX 4060 Ti] (rev a1)
+   01:00.1 Audio device: NVIDIA Corporation AD106M High Definition Audio Controller (rev a1)
+   ```
 
-    Here, the GPU's PCI address is `01:00`, with two functions listed.
+   In this example, the GPU's PCI address is `01:00`, with two functions listed.
 
-2. Get the PCI idenfiers of your GPU:
-   
-    ```bash
-    lspci -n -s 01:00
-    ```
-    **Example output**:
+2. Get the PCI identifiers of your GPU:
 
-    ```
-    01:00.0 0300: 10de:2803 (rev a1)
-    01:00.1 0403: 10de:22bd (rev a1)
-    ```
+   ```bash
+   lspci -n -s 01:00
+   ```
 
-    In this case, the IDs of the GPU are `10de:2803` and `10de:22bd`.
+   Example output:
+
+   ```plain
+   01:00.0 0300: 10de:2803 (rev a1)
+   01:00.1 0403: 10de:22bd (rev a1)
+   ```
+
+   In this case, the GPU IDs are `10de:2803` and `10de:22bd`.
 
 3. Bind the IDs to VFIO (replace the IDs with your own):
 
-    ```bash
-    echo "options vfio-pci ids=10de:2803,10de:22bd" > /etc/modprobe.d/vfio.conf
-    ```
+   ```bash
+   echo "options vfio-pci ids=10de:2803,10de:22bd" > /etc/modprobe.d/vfio.conf
+   ```
 
-4. Apply all module and driver changes by updating the `initramfs` (the root file system), then reboot:
+4. Update the `initramfs` and reboot:
 
-    ```bash
-    update-initramfs -u
-    reboot
-    ```
+   ```bash
+   update-initramfs -u
+   reboot
+   ```
 
-5. After rebooting, check if the GPU is now using the `vfio-pci` driver:
+5. After the host restarts, check that the GPU is using the `vfio-pci` driver:
 
-    ```bash
-    lspci -v
-    ```
+   ```bash
+   lspci -v
+   ```
 
-    You should see the output similar to:
+   You should see output similar to:
 
-    ```
-    01:00.0 VGA compatible controller: NVIDIA Corporation AD106 [GeForce RTX 4060 Ti] (rev a1) (prog-if 00 [VGA controller])    
-    Subsystem: Gigabyte Technology Co., Ltd AD106 [GeForce RTX 4060 Ti]
-    Flags: fast devsel, IRQ 255, IOMMU group 11
-    ...
-    Kernel driver in use: vfio-pci
-    ```
-
+   ```plain
+   01:00.0 VGA compatible controller: NVIDIA Corporation AD106 [GeForce RTX 4060 Ti] (rev a1) (prog-if 00 [VGA controller])
+   Subsystem: Gigabyte Technology Co., Ltd AD106 [GeForce RTX 4060 Ti]
+   Flags: fast devsel, IRQ 255, IOMMU group 11
+   ...
+   Kernel driver in use: vfio-pci
+   ```
 
 ## Set up VM and install Olares
 
-With the GPU passthrough enabled, you can now install Olares in PVE. 
+With GPU passthrough enabled, you can now install Olares in PVE.
 
 ### Create and configure the VM
 
-This section creates and configures a VM using the Olares ISO image:
+1. Upload the official Olares ISO to your PVE storage (for example, `local`):
 
-1. Upload the official Olares ISO you downloaded to your PVE storage (e.g., `local`). 
-    
-    1. In the PVE web interface, select your target storage (e.g., `local`).
-
-    2. Click **ISO Images** > **Upload**.
-
-    3. Click **Select File**, choose the Olares ISO file you downloaded, and then click **Upload**. 
+   1. In the PVE web interface, select your target storage.
+   2. Click **ISO Images** > **Upload**.
+   3. Click **Select File**, choose the Olares ISO file, and click **Upload**.
 
 2. Click **Create VM**.
 
-3. Configure the VM settings as follows:
+3. Configure the VM as follows:
 
-    - OS:
-        - `ISO image`: Select the official Olares ISO image you just downloaded.
-    - System:
-        - `BIOS`: Select OVMF (UEFI).
-        - `EFI Storage`: Choose a storage location (for example, a local LVM or directory) to store UEFI firmware variables.
-        - `Pre-Enroll keys`: **Uncheck** the option to disable Secure Boot.
-    - Disks:
-        - `Disk size (GiB)`: At least 200GB.
-    - CPU:
-        - `Cores`: At least 4 cores
-    - Memory:
-        - `Memory (MiB)`: At least 8GB
+   - **OS**:
+     - `ISO image`: Select the official Olares ISO image you downloaded.
+   - **System**:
+     - `BIOS`: Select OVMF (UEFI).
+     - `EFI Storage`: Choose a storage location, for example a local LVM or directory, to store UEFI firmware variables.
+     - `Pre-Enroll keys`: **Uncheck** to disable Secure Boot.
+   - **Disks**:
+     - `Disk size (GiB)`: At least 200 GB.
+   - **CPU**:
+     - `Cores`: At least 4 cores.
+   - **Memory**:
+     - `Memory (MiB)`: At least 8 GB.
+
+   The following screenshot shows the sample hardware configuration.
+
+   ![PVE VM hardware settings sample](/images/developer/install/pve-hardware.png#bordered)
 
 4. Click **Finish**. **Do not** start the VM yet.
 
-    Below is a sample configuration for the VM hardware settings in PVE. 
-    ![PVE Hardware](/images/developer/install/pve-hardware.png#bordered)
-
 ### Bind GPU to the VM
 
-Follow these steps to bind the GPU to your VM:
-
 1. In the PVE interface, select your VM and go to **Hardware** > **Add** > **PCI Device**.
-![Add PCI](/images/manual/tutorials/pve-add-pci.png#bordered)
+
+   ![Add PCI device to VM](/images/manual/tutorials/pve-add-pci.png#bordered)
 
 2. Select **Raw Device**, then pick your GPU by the PCI address (for example, `01:00`).
 
-3. In the bottom-right corner, select the **Advanced** options and check **PCI-Express**.
+3. In the bottom-right corner, select **Advanced** and check **PCI-Express**.
 
-4. Click **Add** to save.
-![Add GPU](/images/manual/tutorials/pve-add-pci-gpu.png#bordered)
+4. Click **Add**.
+
+   ![Add GPU PCI device to VM](/images/manual/tutorials/pve-add-pci-gpu.png#bordered){width=70%}
 
 Now your VM is ready to use GPU passthrough.
 
 ### Install Olares
 
-Once the VM is set up, follow these steps to install Olares using the installer ISO image.
+Install Olares from the ISO image:
 
 1. Select and start the VM you just created.
 
 2. From the boot menu, select **Install Olares to Hard Disk** and press **Enter**.
 
-3. In the Olares System Installer interface, select the installation disk.
+3. In the Olares System Installer interface, select the installation disk:
 
-    1. Review the list of available disks (for example, `sda 200G QEMU HARDDISK`).
+   1. Review the list of available disks (for example, `sda 200G QEMU HARDDISK`).
+   2. Select the first disk by typing `/dev/` plus its name (for example, `/dev/sda`).
+   3. When the disk warning appears, type `yes` to continue.
 
-    2. Select the first disk by typing `/dev/` plus its name (for example, `/dev/sda`). 
-    
-    3. When the on-screen warning appears, just type `yes` to continue.
-
-    ::: tip Note
-    During installation, warnings related to the NVIDIA graphics driver will appear. Press **Enter** to ignore them.
-    :::
+   :::info Ignore NVIDIA driver warnings
+   During installation, warnings related to the NVIDIA graphics driver will appear. Press **Enter** to dismiss them.
+   :::
 
 4. Once the installation completes, you'll see the message:
 
-    ```
-    Installation completed successfully!
-    ```
-    
-5.  **Reboot the VM** in the Proxmox web interface.
+   ```plain
+   Installation completed successfully!
+   ```
+
+5. In the Proxmox web interface, reboot the VM.
 
 ### Verify the installation and GPU passthrough
 
-After the VM restarts, it will boot into the Ubuntu system.
+After the VM restarts, it boots into Ubuntu.
 
 1. Log in to Ubuntu using the default credentials:
-  - Username: `olares`
-  - Password: `olares`
 
-2. Confirm that Olares has been installed successfully using the following command:
+   - Username: `olares`
+   - Password: `olares`
 
-    ```bash
-    sudo olares-check
-    ```
+2. Run the following command to confirm that Olares installed successfully:
 
-    The installation is successful if you see results like:
+   ```bash
+   sudo olares-check
+   ```
 
-    ```      
-    ...
-    check Olaresd:  success
-    check Containerd:  success
-    ```
+   The installation is successful if you see output like:
 
-3. Finally, verify that the GPU is successfully passed through and recognized by Olares using the NVIDIA System Management Interface tool:
+   ```plain
+   ...
+   check Olaresd:  success
+   check Containerd:  success
+   ```
 
-    ```bash
-    nvidia-smi
-    ```
+3. Check that the GPU is passed through and recognized by Olares using the NVIDIA System Management Interface tool:
 
-    If successful, this command will display a table with your NVIDIA GPU's details, including its name, driver version, and memory usage.
+   ```bash
+   nvidia-smi
+   ```
 
-## Next steps
+   If GPU passthrough is set up correctly, this command displays a table with your NVIDIA GPU details, including its name, driver version, and memory usage.
 
-Olares is now installed and running with full GPU acceleration. 
-To start using Olares, activate the device and log in with your account.
-For detailed steps, see our official guides:
-- [Finish installation and activate Olares](../get-started/install-and-activate-olares.md)
-- [Log in to Olares](../get-started/log-in-to-olares.md)
+<!--@include: ../get-started/install-and-activate-olares.md-->
+
+<!--@include: ../get-started/log-in-to-olares.md-->

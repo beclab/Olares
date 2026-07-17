@@ -282,6 +282,13 @@ export default defineVersionedConfig2(withMermaid({
     "**/reusables.md",
     "**/reusables-*.md",
     "**/*.reusables.md",
+    // Get-started snippets (included by host pages only)
+    "manual/get-started/activate-olares.md",
+    "manual/get-started/log-in-to-olares.md",
+    "manual/get-started/install-and-activate-olares.md",
+    "zh/manual/get-started/activate-olares.md",
+    "zh/manual/get-started/log-in-to-olares.md",
+    "zh/manual/get-started/install-and-activate-olares.md",
   ],
   base: process.env.BASE_URL || "/",
   vite: {
