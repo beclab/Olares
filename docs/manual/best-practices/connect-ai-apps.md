@@ -16,7 +16,7 @@ By the end of this tutorial, you will be able to:
 - Understand the essential connection parameters and how to get them.
 - Connect common AI apps.
 
-## Identify your AI apps
+## Understand your AI apps
 
 Before configuring a connection, determine which app is providing the AI capabilities and which app is using them. This step ensures you know whether to look for your connection details in the Model Console or in Olares Settings later in this guide.
 
@@ -27,7 +27,7 @@ Before configuring a connection, determine which app is providing the AI capabil
     - **LLM service apps**: Apps that host large language models for text generation, code completion, and chat. They include eight pre-built model apps, and custom model instances created on [Engine Base apps](/use-cases/llm-base-apps.md).
     - **Other AI service apps**: Utility apps that provide non-LLM functions, such as speech recognition (Speaches) and text extraction (PaddleOCR).
 
-## Gather connection parameters
+## Prepare connection details
 
 Connecting an AI client app generally involves configuring up to four key parameters. Gather these details before setting up your client.
 
