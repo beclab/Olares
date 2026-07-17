@@ -1,197 +1,153 @@
 ---
 outline: [2, 3]
-description: 了解如何在 Olares 上连接 AI 应用，重点讲解共享端点的用法，并以 Ollama 为例演示。
+description: 学习如何在 Olares 上使用模型控制台和应用入口连接 AI 客户端应用到 AI 服务应用。
 ---
 
-# 连接 AI 应用
-
 :::warning
-本页面由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../../manual/best-practices/connect-ai-apps.md)。
+本文档由 AI 翻译生成，仅供参考。如有歧义，请参阅[英文原文](/manual/best-practices/connect-ai-apps.md)。
 :::
 
-Olares 上的很多 AI 应用都遵循同一种模式：一个应用通过 API 提供 AI 能力，另一个应用提供你日常使用的界面。理解了这种模式，你就能用同样的步骤，把几乎任意一对兼容的应用连接起来。
+# 连接 AI 应用 <Badge type="tip" text="^ 1.12.6" />
 
-本教程讲解其中的核心概念，并以 Ollama 作为 AI 服务应用，带你走完几个实际示例。
+在 Olares 上使用 AI 时，你通常需要同时操作两个应用：一个 AI 服务应用在后台提供 AI 能力，另一个 AI 客户端应用则提供你每天直接交互的聊天界面。要让它们协同工作，你必须先将它们连接起来。
+
+本指南介绍如何识别你的应用、收集所需的连接信息，并完成连接配置。
 
 ## 学习目标
 
 完成本教程后，你将能够：
 
-- 区分 AI 服务应用和客户端应用。
-- 配置认证级别，让应用之间顺畅通信。
-- 判断什么时候用共享端点、什么时候用用户端点。
-- 把 LobeHub（原 LobeChat）、n8n、Continue.dev 等常见客户端应用连接到 Ollama。
+- 区分 AI 服务应用和 AI 客户端应用。
+- 理解连接所需的关键参数，以及如何在 Olares 中获取它们。
+- 连接常见的 AI 应用。
 
-## 工作原理
+## 了解你的 AI 应用
 
-把一个客户端应用连接到 AI 服务应用，通常分三步：
+在配置连接之前，先确定哪个应用提供 AI 能力、哪个应用使用这些能力。这样可以确保你在后续步骤中知道是去模型控制台还是 Olares 设置里查找连接信息。
 
-1. 在 Olares 设置中找到 AI 服务应用的 API 入口，把它的**认证级别**设为**内部**。
-2. 复制该入口显示的端点地址。
-3. 在客户端应用中，把这个端点填进模型或 API 配置页。如果连不上，参照[该用哪个端点](#which-endpoint-to-use)里的规则调整端点。
+- **AI 客户端应用**：提供你直接交互的前端聊天界面或工作流画布，例如 LobeHub 和 Open WebUI。它们依赖 AI 服务应用（通常称为 **provider**）来执行生成文本、提取数据等 AI 任务。
+- **AI 服务应用**：通过 API 为兼容的客户端提供 AI 能力，例如聊天、搜索和语音识别。部分 AI 服务应用自带管理 Web 界面，而另一些则主要作为无界面的后端服务运行。
 
-## 核心概念
+    在 Olares 上，AI 服务应用分为两类：
+    - **LLM 服务应用**：托管大型语言模型（LLM），用于文本生成、代码补全和聊天。包括八个预构建模型应用，以及在[引擎基座应用](/zh/use-cases/llm-base-apps.md)上创建的自定义模型实例。
+    - **其他 AI 服务应用**：提供 LLM 之外的其他功能的工具应用，例如语音识别（Speaches）和文本提取（PaddleOCR）。
 
-### AI 服务应用与客户端应用
+## 准备连接详情
 
-- **AI 服务应用**：充当后端引擎，通过 API 对外提供 AI 能力，通常作为服务在后台运行，自身没有聊天界面。例如 Ollama 和 ComfyUI Shared。
-- **客户端应用**：面向用户的应用，提供你直接操作的聊天界面，但要靠 AI 服务应用来生成回复。例如 LobeHub、Open WebUI 和 n8n。
+连接 AI 客户端应用通常涉及配置最多四个关键参数。在设置客户端之前，先收集好这些信息。
 
-### 认证级别
+### Provider 和 API 格式 <Badge type="tip" text="仅 LLM 服务"/>
 
-Olares 为应用入口提供以下访问级别：
-- **内部（推荐）**：应用之间通信时不会弹出登录提示，同时支持通过本地网络或 LarePass VPN 访问。
-- **公开**：对互联网上任何人开放，私有服务不建议使用。
+在大多数 AI 客户端应用中，**provider** 指提供大语言模型的服务或厂商（例如 OpenAI、Anthropic 或 Ollama）。在 Olares 上，你的本地 **LLM 服务应用**就扮演这个角色。客户端应用不再向云厂商发送请求，而是向本地 LLM 服务应用发送请求。
 
-### 前端调用与后端调用 {#frontend-calls-vs-backend-calls}
+由于不同 provider 使用不同的通信规则，它们依赖特定的 **API 格式**。你可以把这些格式理解为应用之间交流的“语言”。最常见的两种格式是 **OpenAI-Compatible** 和 **Ollama**。
 
-客户端应用向 AI 服务应用发送 API 请求，有两种方式：
-- **后端调用（强烈推荐）**：由客户端应用的服务端进程直接向 AI 服务应用发请求。把服务应用的 API 设为“内部”后，这类请求会跳过认证，是最稳定的连接方式。
-- **前端调用**：请求直接从浏览器发出，不经过服务端转发，通常更快。但即使设成了“内部”权限，这类请求仍可能触发 Olares 登录提示，或被跨域（CORS）限制拦截，导致连接失败。
+配置 LLM 连接时，先确认客户端应用支持哪些 provider，然后在模型控制台中选择与客户端匹配的 **API 格式**。模型控制台会根据你的选择动态显示对应的 Base URL。
 
-### 端点
-
-端点（endpoint）就是访问应用入口的 URL。当 AI 服务应用开放一个 API 入口时，你通常会看到两种端点：
-
-| 类型 | 格式 | 说明 |
-|------|------|------|
-| 用户端点 | `https://{route-ID}.{OlaresID}.olares.com` | 用于前端调用，或通过 VPN 从外部访问。 |
-| 共享端点 | `http://{route-ID}.shared.olares.com` | 用于后端调用。系统内全局可达，应用间通信非常可靠。 |
-
-### 该用哪个端点 {#which-endpoint-to-use}
-
-:::tip
-本教程演示的是通过 `olares.com` 域名连接。如果客户端设备与 Olares 在同一局域网内，用 `.local` 地址的方法完全相同。
+:::info
+PaddleOCR 等非 LLM 服务不使用这些通用格式。它们使用自己工具专属的协议进行通信，因此无需为它们配置 provider 格式。
 :::
 
-1. 先试共享端点（`http://{route-ID}.shared.olares.com`）。
+### Base URL
 
-   共享端点专为应用间的直接 API 访问设计，不需要用户凭证，通常是最可靠的选择。
-2. 不行再用用户端点（`https://{route-ID}.{OlaresID}.olares.com`）。
+Base URL 是 AI 服务应用接收并处理任务的地址（即端点）。查找方式取决于服务应用的类别：
 
-   如果共享端点不可用，或者客户端应用是从浏览器（而非自己的服务端）发请求，就改用用户端点。把它的**认证级别**设为**内部**（推荐），这样既能免登录访问，又不会公开暴露到互联网。
-3. 需要时补上后缀。
+- **对于 LLM 服务应用**：打开应用启动**模型控制台**。选择与你客户端运行位置匹配的**连接来源（Connection source）**，选择 **API 格式**，然后复制给出的 **Base URL**。请原样复制，包括 `/v1` 等路径后缀。
+- **对于其他 AI 服务应用**：打开 Olares **设置**，进入 **应用** > **[应用名称]** > **入口**，然后复制 **Endpoint URL**。请确保入口的**认证级别**设置为 **Internal**，以便其他应用无需登录即可访问。
 
-   很多客户端应用要求基础 URL 以 `/v1`（OpenAI 兼容 API）或 `/api`（其他格式）结尾。如果连不上，试着加上对应后缀，例如 `http://{route-ID}.shared.olares.com/v1`。两种端点都适用。
-4. 用占位 API key。
+    :::tip 多个入口
+    部分应用会暴露多个入口。请根据客户端的协议或使用场景选择对应的入口。例如，网页访问使用主入口，程序化集成使用专用 API 入口。
+    :::
 
-   如果客户端应用要求填 API key，但服务本身并不需要，随便填个占位文字（比如 `ollama`）满足必填项即可。
+### 模型名称
+
+模型名称是模型的唯一标识。客户端会在每次请求中发送该 ID，以便后端服务知道应该使用哪个模型文件进行处理。
+
+在**模型控制台**中，按照显示的完整内容复制**模型名称**。
+
+:::warning 复制完整模型名称
+不要缩写模型名称，也不要删除任何仓库前缀（如 `unsloth/`）或量化标签（如 `UD-Q4_K_XL`）。否则客户端可能会返回类似 “Model not found” 这样的错误。
+:::
+
+### API key
+
+API key（也称为“Auth Token”或“API Token”）是一种密钥凭证。AI 客户端应用将其提供给 AI 服务应用，以证明自己的身份并获取使用 AI 能力的权限。
+
+对于部署在 Olares 本地的 AI 服务应用，通常不需要真实的 API key。内部入口默认信任来自同一集群中其他应用的请求。
+
+然而，大多数 AI 客户端应用仍要求该字段必须有值。此时可以输入任意占位文本，例如 `olares` 或 `local`，即可继续。
 
 ## 示例
 
-### 将 Ollama 连接到 LobeHub
+以下示例展示如何在真实客户端应用中收集并应用上述连接参数。开始之前，请确保相关应用已安装。
 
-本示例中，Ollama 作为 AI 服务应用，LobeHub 作为客户端应用。
+### 将 LLM 服务应用连接到 LobeHub
 
-示例使用 `qwen2.5:1.5b` 模型，开始前请确认你已经下载好它。
+在本示例中，预构建模型应用 Gemma 4 26B（Ollama）是 LLM 服务应用，LobeHub（前身为 LobeChat）是客户端应用。
 
-1. 在 Olares 上打开设置，进入 **应用** > **Ollama**。
-2. 在**共享入口**中，选择 **Ollama API**。
-   ![Ollama 共享入口](/images/manual/use-cases/obtain-ollama-hosturl2.png#bordered)
+1. 从启动台打开 **Gemma 4 26B (Ollama)**，启动其模型控制台。
+2. 确保 **Model** 显示 **READY**，**Engine** 显示 **RUNNING**。
+3. 选择与你客户端应用匹配的连接选项，以获取正确的 Base URL：
 
-3. 复制共享端点 URL。
-4. 打开 LobeHub，进入 **设置** > **AI 服务商** > **Ollama**。
-5. 在 **接口代理地址** 字段中，粘贴刚才复制的共享端点。
-   :::warning
-   如果你用的是本地 Ollama 模型，不要开启 **客户端请求模式**。这个开关会让应用改用[前端调用](#frontend-calls-vs-backend-calls)，而在使用本地 AI 服务应用时，前端调用经常会触发登录提示或导致连接失败。
-   :::
-   ![填入共享端点](/images/manual/tutorials/api-lobechat-enter-url.png#bordered)
-6. 验证连接：
+    - **Connection source**：选择 **Apps in Olares**，因为 LobeHub 直接安装在 Olares 集群中。
+    - **API format**：选择 **Ollama**，因为 LobeHub 的 Ollama provider 需要这种格式。
 
-   a. 点击 **获取模型列表**，你在 Ollama 里下载过的模型会出现在列表中。
-   ![获取模型列表](/images/manual/tutorials/api-lobechat-fetch-models.png#bordered)
+4. 记下以下信息：
 
-   b. 启用你想用的模型，例如 **Qwen2.5 1.5B**。
+    - **Model name**：`gemma4:26b`
+    - **Base URL**：`https://74bfa5ee.alice2026.olares.com`
 
-   c. 在 **连通性检查** 处，从下拉菜单选择 **qwen2.5:1.5b**，然后点击 **检查**。
+    ![LobeHub 的模型控制台](/images/manual/tutorials/connect-app-exp-model-console.png#bordered)
 
-      出现 **检查通过** 时，连接就建立好了。
-      ![检查通过](/images/manual/tutorials/api-lobechat-check-passed.png#bordered)
+5. 打开 **LobeHub**，然后进入 **Settings** > **AI Service Provider** > **Ollama**。
+6. 在 **Interface proxy address** 字段中，粘贴你复制的 **Base URL**。
+7. 确保 **Use Client Request Mode** 已关闭。
 
-### 将 Ollama 连接到 n8n
+    :::warning 禁用 Client Request Mode
+    不要在 LobeHub 中启用 **Use Client Request Mode**。启用后，应用会改为通过浏览器发起前端调用，可能触发跨域（CORS）限制或 Olares 安全认证提示。保持关闭可确保安全的后端到后端通信。
+    :::
 
-n8n 是从浏览器（而非自己的服务端）发请求的，所以需要用户端点。把认证级别设为**内部**，访问时就不会弹出登录提示。
+8. 在 **Model List** 旁边，点击 **Fetch models**。模型名称 `gemma4:26b` 会出现在列表中。
+9. 打开 `gemma4:26b` 的开关以启用该模型。
+10. 在 **Connectivity Check** 右侧，从下拉列表中选择该模型名称，然后点击 **Check**。当显示 **Check Passed** 时，连接即建立成功。
 
-:::tip 网络要求
-请确保你的设备与 Olares 处于同一局域网，或已在 LarePass 中开启 VPN，否则连接无法成功。
-:::
+    ![LobeHub 成功连接模型](/images/manual/tutorials/connect-app-eg-lobehub2.png#bordered)
 
-1. 在 Olares 上打开设置，进入 **应用** > **Ollama**。
-2. 在**入口**下，点击 **Ollama API**。
-3. 把**认证级别**设为**内部**。
-4. 在**端点配置**下，复制 **端点** 旁显示的端点 URL。
-5. 在 n8n 中新建一个 Ollama 凭证：
+### 将 PaddleOCR 连接到 Open WebUI
 
-   a. 在 n8n 左侧导航栏选择 **+** > **Credential**。
+在本示例中，PaddleOCR 是提供图片文字识别能力的 AI 服务应用，Open WebUI 是客户端应用。
 
-   b. 在 **Add new credential** 对话框中，从下拉菜单选择 **Ollama**，然后点击 **Continue**。
+1. 打开 Olares **设置**，然后进入**应用** > **PaddleOCR** > **入口** > **PaddleOCR**。
 
-   c. 粘贴刚才复制的 Ollama 端点 URL。
+   ![PaddleOCR 入口](/images/manual/use-cases/paddleocr-entrances.png#bordered){width=75%}
 
-   d. 点击 **Save**，n8n 会自动测试连接。
+2. 确保**认证级别**设置为 **Internal**。
+3. 复制端点 URL。例如：`https://17b4c78a.alice2026.olares.com`。
 
-      出现 **Connection tested successfully** 时，连接就建立好了。
-      ![n8n 已连接 Ollama](/images/manual/tutorials/api-n8n-connected.png#bordered)
+   ![PaddleOCR 端点](/images/manual/use-cases/paddleocr-endpoint.png#bordered){width=75%}
 
-### 将 Ollama 连接到 Continue.dev（Olares 之外）
+4. 在 Open WebUI 中，点击左下角的头像图标，然后进入 **Admin Panel** > **Settings** > **Documents**。
+5. 在 **General** 区域中，按如下方式配置设置：
 
-你可以把本地 IDE 连接到运行在 Olares 上的 Ollama，让 AI 辅助和代码补全都跑在你自己的硬件上，而不是第三方云端。
+    - **Content Extraction Engine**：选择 **PaddleOCR-vl**。
+    - **API Base URL**：输入你刚刚复制的 PaddleOCR 端点 URL。
+    - **API Token**：输入任意占位文本。请勿留空。
 
-示例使用 `llama3.1:8b`、`qwen2.5-coder:7b` 和 `qwen2.5-coder:1.5b`，开始前请确认这些模型都已下载。
+   ![Open WebUI 中的 PaddleOCR 配置](/images/manual/use-cases/openwebui-paddleocr-config1.png#bordered)
 
-1. 在 Olares 上打开设置，进入 **应用** > **Ollama**。
-2. 在**入口**下，点击 **Ollama API**。
-3. 把**认证级别**设为**内部**。
-4. 在**端点配置**下，复制 **端点** 旁显示的端点 URL。
-5. 在本地 IDE（例如 IntelliJ IDEA）中，打开 Continue 面板。
-6. 在 Continue 中配置模型以使用 Ollama：
+6. 点击右下角的 **Save**。
 
-   a. 点击 **Local Config** 打开 **Configs** 菜单，再点击 **Local Config** 旁的设置图标。
-   ![打开 local config](/images/manual/tutorials/api-continue-local-config.png#bordered){width=45%}
+## 常见问题
 
-   b. 在打开的 `config.yaml` 中，用刚才复制的 Ollama 端点更新各个模型条目：
-   ```yaml
-   name: Local Config
-   version: 1.0.0
-   schema: v1
-   models:
-   - name: Llama3.1-8B
-      provider: ollama
-      model: llama3.1:8b
-      apiBase: https://<your-ollama-endpoint>
-      roles:
-         - chat
-   - name: Qwen2.5-Coder 7B
-      provider: ollama
-      model: qwen2.5-coder:7b
-      apiBase: https://<your-ollama-endpoint>
-      roles:
-         - edit
-         - embed
-         - rerank
-   - name: Qwen2.5-Coder 1.5B
-      provider: ollama
-      model: qwen2.5-coder:1.5b
-      apiBase: https://<your-ollama-endpoint>
-      roles:
-         - autocomplete
-         - apply
-   ```
-7. 在 LarePass 桌面客户端上开启 VPN。
-   ![在桌面端开启 LarePass VPN](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
+### 如何连接非 AI 应用？
 
-8. 在 Continue 聊天面板中输入一个 prompt 测试连接，例如：
-   ```plain
-   Write a hello world python script
-   ```
-   ![输入 prompt](/images/manual/tutorials/api-continue-prompt.png#bordered){width=45%}
+相同的内部入口模式也适用于非 AI 应用之间的连接。例如：
 
-   Continue 会把请求转发到你 Olares 上的 Ollama 并返回结果。开启 LarePass VPN 后，你的 IDE 就能像在同一私有网络里一样访问 Ollama 端点。
-   ![结果](/images/manual/tutorials/api-continue-hello-world.png#bordered){width=45%}
+- *Arrs 媒体栈使用内部入口 URL 连接 Sonarr、Radarr、Prowlarr、Bazarr 和 qBittorrent。详见[使用 *Arrs 生态管理媒体库](/zh/use-cases/arrs.md)。
+- SearXNG 本身不是 AI 模型，但它可以连接到 Vane 等 AI 客户端，用于私有增强搜索。详见[将 SearXNG 连接到 Vane](/zh/use-cases/perplexica.md)。
 
-## 延伸阅读
+## 了解更多
 
-- [应用](../../developer/concepts/application.md)
-- [网络](../../developer/concepts/network.md)
-- [管理应用入口](../olares/settings/manage-entrance.md)
-- [使用场景](../../use-cases/index.md)
+- [应用示例](/zh/use-cases/index.md)
+- [使用引擎基座应用托管本地大语言模型](/zh/use-cases/llm-base-apps.md)
+- [管理应用入口](/zh/manual/olares/settings/manage-entrance.md)
