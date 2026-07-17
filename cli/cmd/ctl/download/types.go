@@ -216,24 +216,25 @@ type IntegrationHealth struct {
 	Providers map[string]string `json:"providers"` // provider -> "ok" | "error: ..."
 }
 
-// SystemSettings is GET/PUT /api/system/settings data.
+// systemSettingAria2MaxConcurrent is the only download-server system
+// setting key today (manager models.SystemSettingAria2MaxConcurrent):
+// aria2 max-concurrent-downloads, a bare JSON integer in [1, 16].
+const systemSettingAria2MaxConcurrent = "aria2_max_concurrent"
+
+// SystemSettings is the GET /api/system/settings snapshot (and the
+// object echoed back by PUT). It mirrors the manager's typed response,
+// which currently exposes a single global knob; the value is server
+// authoritative (defaults + range clamping happen server-side).
 type SystemSettings struct {
-	Aria2MaxConcurrent    int     `json:"aria2_max_concurrent"`
-	Aria2MaxConnPerServer int     `json:"aria2_max_conn_per_server"`
-	Aria2Split            int     `json:"aria2_split"`
-	YtdlpConcurrent       int     `json:"ytdlp_concurrent"`
-	SeedRatioLimit        float64 `json:"seed_ratio_limit"`
-	SeedTimeLimit         int64   `json:"seed_time_limit"` // seconds
-	UpdatedAt             int64   `json:"updated_at,omitempty"`
+	Aria2MaxConcurrent int `json:"aria2_max_concurrent"`
 }
 
-// UpdateSystemSettingsReq is PUT /api/system/settings body; nil fields are
-// left unchanged (partial patch).
-type UpdateSystemSettingsReq struct {
-	Aria2MaxConcurrent    *int     `json:"aria2_max_concurrent,omitempty"`
-	Aria2MaxConnPerServer *int     `json:"aria2_max_conn_per_server,omitempty"`
-	Aria2Split            *int     `json:"aria2_split,omitempty"`
-	YtdlpConcurrent       *int     `json:"ytdlp_concurrent,omitempty"`
-	SeedRatioLimit        *float64 `json:"seed_ratio_limit,omitempty"`
-	SeedTimeLimit         *int64   `json:"seed_time_limit,omitempty"`
+// SystemSettingUpdateReq is the PUT /api/system/settings body. The
+// manager applies exactly one key/value pair per request (a bad value
+// for one knob must not clobber the others), so the CLI mirrors that
+// shape rather than sending a whole-object patch. Value is whatever
+// JSON the key expects (a bare integer for aria2_max_concurrent).
+type SystemSettingUpdateReq struct {
+	Key   string `json:"key"`
+	Value any    `json:"value"`
 }

@@ -207,28 +207,29 @@ func TestDoMutateCookieListEnvelope(t *testing.T) {
 	}
 }
 
-func TestBuildSettingsPatch(t *testing.T) {
-	// nothing changed -> error
-	if _, err := buildSettingsPatch(map[string]bool{}, 0, 0, 0, 0, 0, 0); err == nil {
-		t.Fatal("expected error when no flags changed")
-	}
-	// only the changed fields become non-nil
-	changed := map[string]bool{
-		"aria2-max-concurrent": true,
-		"seed-ratio-limit":     true,
-	}
-	req, err := buildSettingsPatch(changed, 5, 99, 99, 99, 1.5, 99)
-	if err != nil {
+func TestSettingsUpdateKeyValueBody(t *testing.T) {
+	// PUT /api/system/settings is a single {key,value} pair (not a
+	// whole-object patch); the manager rejects a missing key with 400
+	// "key is required". Assert the CLI sends the manager-expected shape
+	// and decodes the echoed snapshot.
+	d := &fakeDoer{resp: []byte(`{"code":200,"data":{"aria2_max_concurrent":3}}`)}
+	req := SystemSettingUpdateReq{Key: systemSettingAria2MaxConcurrent, Value: 3}
+	var s SystemSettings
+	if err := doMutate(context.Background(), d, "PUT", "/api/system/settings", req, &s); err != nil {
 		t.Fatal(err)
 	}
-	if req.Aria2MaxConcurrent == nil || *req.Aria2MaxConcurrent != 5 {
-		t.Fatalf("aria2_max_concurrent not set: %+v", req.Aria2MaxConcurrent)
+	if d.lastMethod != "PUT" || d.lastPath != "/api/system/settings" {
+		t.Fatalf("unexpected call %s %s", d.lastMethod, d.lastPath)
 	}
-	if req.SeedRatioLimit == nil || *req.SeedRatioLimit != 1.5 {
-		t.Fatalf("seed_ratio_limit not set: %+v", req.SeedRatioLimit)
+	body, ok := d.lastBody.(SystemSettingUpdateReq)
+	if !ok {
+		t.Fatalf("unexpected body type %T", d.lastBody)
 	}
-	if req.Aria2Split != nil || req.YtdlpConcurrent != nil || req.Aria2MaxConnPerServer != nil || req.SeedTimeLimit != nil {
-		t.Fatalf("unchanged fields must stay nil: %+v", req)
+	if body.Key != "aria2_max_concurrent" {
+		t.Fatalf("unexpected key: %q", body.Key)
+	}
+	if s.Aria2MaxConcurrent != 3 {
+		t.Fatalf("unexpected settings: %+v", s)
 	}
 }
 
