@@ -13,45 +13,43 @@ This guide explains how to understand your apps, gather the required connection 
 
 By the end of this tutorial, you will be able to:
 - Distinguish between AI service apps and AI client apps.
-- Gather the essential connection parameters.
+- Understand the essential connection parameters and how to get them.
 - Locate the correct endpoint for different types of AI service apps.
 - Connect common AI apps.
 
 ## Identify your AI apps
 
-Before configuring a connection, determine which app is providing the AI capabilities and which app is consuming them. This helps you know where to look for your network parameters.
+Before configuring a connection, determine which app is providing the AI capabilities and which app is using them. This step ensures you know whether to look for your connection details in the Model Console or in Olares Settings later in this guide.
 
-- **AI client apps**: They provide the chat interface or workflow canvas you interact with directly, such as LobeHub and Open WebUI. They rely on an AI service app (often called a **provider**) to perform AI tasks, such as generating text and recognizing images.
+- **AI client apps**: They provide the front-end chat interface or workflow canvas you interact with directly, such as LobeHub and Open WebUI. They rely on an AI service app (often called a **provider**) to perform AI tasks, such as generating text and extracting data.
 - **AI service apps**: They provide AI capabilities for compatible clients over an API, such as chat, search, and speech recognition. Some AI service apps have their own web interface for management, while others run primarily as headless backend services.
 
     On Olares, AI service apps fall into two categories:
     - **LLM service apps**: Apps that host large language models for text generation, code completion, and chat. They include eight pre-built model apps, and custom model instances created on [Engine Base apps](/use-cases/llm-base-apps.md).
-    - **Other AI service apps**: Utility apps that provide non-LLM features, such as speech recognition (Speaches) and text extraction (PaddleOCR).
+    - **Other AI service apps**: Utility apps that provide non-LLM functions, such as speech recognition (Speaches) and text extraction (PaddleOCR).
 
 ## Gather connection parameters
 
-Most AI client apps require four pieces of information to establish a connection. Missing or mismatching any of these will cause the connection to fail. Gather these details before setting up your client.
+Connecting an AI client app generally involves configuring up to four key parameters. Gather these details before setting up your client.
 
 ### Provider and API format <Badge type="tip" text="LLM services only"/>
 
 In most AI client apps, a **provider** is the service or vendor that supplies the LLM (such as OpenAI, Anthropic, or Ollama). On Olares, your local **LLM service app** acts as this provider. Instead of sending requests to a cloud vendor, your client app sends them to your local LLM service app.
 
-Because different providers use different communication rules, they rely on specific **API formats** (the "language" the apps use to talk to each other). The two most common formats are **OpenAI-Compatible** and **Ollama**.
+Because different providers use different communication rules, they rely on specific **API formats**. You can think of these formats as the "languages" that the apps use to talk to each other. The two most common formats are **OpenAI-Compatible** and **Ollama**.
 
-When configuring an LLM connection, check your client app to see which providers it supports. Then, in the Model Console, you must select the exact **API format** that matches the provider you chose in your client app.
+When configuring an LLM connection, first check which providers your client app supports. Then, in the Model Console, select the **API format** that matches the provider you chose in the client. The Model Console will dynamically display the correct Base URL according to your selection. 
 
 :::info
-Non-LLM services like PaddleOCR do not use these generic formats. They communicate using their own tool-specific protocols, so you do not need to configure a provider format for them.
+Non-LLM services like PaddleOCR do not use these generic formats. They communicate using their own tool-specific protocols, so you do not need to configure the provider format for them.
 :::
 
 ### Base URL
 
-The Base URL is the network address (or endpoint) where the AI service app receives requests.
+The Base URL is the network address (or endpoint) where the AI service app receives and processes your tasks. How you locate it depends on the category of your service app:
 
-How you find it depends on the type of the service app:
-
-- **For LLM service apps**: Open the app to launch its **Model Console**. Select the **Connection source** that matches where your client runs, choose the **API format**, and then copy the generated **Base URL**.
-- **For other AI service apps**: Open Olares Settings, go to **Applications** > **[AppName]** > **Entrances**, and then copy the **Endpoint URL**. Ensure the entrance's **Authentication level** is set to **Internal** so other apps can access it without a login prompt.
+- **For LLM service apps**: Open the app to launch its **Model Console**. Select the **Connection source** that matches where your client runs, choose the **API format**, and then copy the provided **Base URL**. Copy it exactly as displayed, including any path suffix such as `/v1`.
+- **For other AI service apps**: Open Olares Settings, go to **Applications** > **[AppName]** > **Entrances**, and then copy the **Endpoint URL**. Ensure the entrance's **Authentication level** is set to **Internal** so other apps can access it without a login barrier.
 
     :::tip Multiple entrances
     Some apps expose more than one entrance. Choose the entrance that matches your client's protocol or use case. For example, use the main entrance for web UI access and a dedicated API entrance for programmatic integrations.
@@ -59,28 +57,29 @@ How you find it depends on the type of the service app:
 
 ### Model name <Badge type="tip" text="LLM services only"/>
 
-The model name is the exact identifier of the model. The client sends this ID with every request so the service knows which model file to process.
+The model name is the exact identifier of the model. The client sends this ID with every request so the backend service knows which model file to process.
 
-In the **Model Console**, copy the **Model name** exactly as displayed. Do not remove any repository prefixes (like `unsloth/`) or quantization tags (like `UD-Q4_K_XL`). Otherwise, the client might return a "Model not found" error.
+In the **Model Console**, copy the **Model name** exactly as displayed.
+
+:::warning Copy the full model name
+Do not abbreviate the model name or remove any repository prefixes (like `unsloth/`) or quantization tags (like `UD-Q4_K_XL`). Otherwise, the client might return an error similar to "Model not found".
+:::
 
 ### API key
 
-An API key (also called "Auth Token" or "API Token") is a security credential used to authenticate requests.
+An API key (also called an "Auth Token" or "API Token") is a secret credential. The AI client app presents it to the AI service app to prove its identity and gain permission to access the AI capabilities.
 
-For AI service apps deployed locally on Olares, an API key is usually not required. The internal entrance already trusts requests from other apps in the same cluster.
+For AI service apps deployed locally on Olares, a real API key is usually not required. The internal entrance already trusts requests from other apps in the same cluster.
 
-If the client app forces you to enter an API key:
-
-- Try leaving the field blank.
-- If the app does not allow an empty value, enter any placeholder string such as `olares`.
+However, most AI client apps still require a value in the API key field. Enter any placeholder text such as `olares` or `local` to proceed.
 
 ## Examples
 
-The following examples focus on how to connect AI service apps to AI client apps. They assume that the relevant apps are already installed and configured.
+The following examples demonstrate how to gather and apply the connection parameters in real client applications. Ensure that the relevant apps are installed before starting.
 
 ### Connect an LLM service app to LobeHub
 
-In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service app, and LobeHub is the client app.
+In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service app, and LobeHub (previously known as LobeChat) is the client app.
 
 1. Open Gemma 4 26B (Ollama) from the Launchpad to launch its Model Console.
 2. Ensure that the **Model** shows **Ready** and the **Engine** shows **Running**.
@@ -110,11 +109,27 @@ In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service
 
     ![LobeHub connected to a model instance](/images/manual/tutorials/connect-app-eg-lobehub2.png#bordered)
 
-
 ### Connect PaddleOCR to Open WebUI
 
-In this example, PaddleOCR is the AI service app that provides capabilities, and Open WebUI is the client app.
-<!--I will fill in this section tmrw.-->
+In this example, PaddleOCR is the AI service app that provides OCR capabilities, and Open WebUI is the client app.
+
+1. Open Olares Settings, and then go to **Applications** > **PaddleOCR** > **Entrances** > **PaddleOCR**.
+
+   ![PaddleOCR entrance](/images/manual/use-cases/paddleocr-entrances.png#bordered){width=75%}
+
+2. Ensure the **Authentication level** is set to **Internal**.
+3. Copy the endpoint URL. For example, `https://17b4c78a.alice2026.olares.com`.
+
+   ![PaddleOCR endpoint](/images/manual/use-cases/paddleocr-endpoint.png#bordered){width=75%}
+
+4. In Open WebUI, click the profile icon in the lower left corner, and then go to **Admin Panel** > **Settings** > **Documents**.
+5. In the **General** section, select **PaddleOCR-vl** for **Content Extraction Engine**.
+6. In **API Base URL**, enter the PaddleOCR endpoint URL. 
+7. In **API Token**, enter any placeholder text. Do not leave this field empty.
+   
+   ![PaddleOCR config in Open WebUI](/images/manual/use-cases/openwebui-paddleocr-config1.png#bordered)
+
+8. Click **Save** in the lower right corner.
 
 ## FAQs
 
@@ -122,7 +137,7 @@ In this example, PaddleOCR is the AI service app that provides capabilities, and
 
 The same internal-entrance pattern applies when connecting non-AI apps to each other. For example:
 - The *Arrs media stack uses internal entrance URLs to connect Sonarr, Radarr, Prowlarr, Bazarr, and qBittorrent. See [Manage your media library with the *Arrs ecosystem](/use-cases/arrs.md).
-- SearXNG can be connected to Vane for private, enhanced search capabilities. See [Connect SearXNG to Vane](/use-cases/perplexica.md).
+- SearXNG itself is not an AI model, but it can be connected to an AI client such as Vane for private, enhanced search. See [Connect SearXNG to Vane](/use-cases/perplexica.md).
 
 ## Learn more
 
