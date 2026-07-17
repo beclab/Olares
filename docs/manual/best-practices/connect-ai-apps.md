@@ -24,7 +24,7 @@ Before configuring a connection, determine which app is providing the AI capabil
 - **AI service apps**: They provide AI capabilities for compatible clients over an API, such as chat, search, and speech recognition. Some AI service apps have their own web interface for management, while others run primarily as headless backend services.
 
     On Olares, AI service apps fall into two categories:
-    - **LLM service apps**: Apps that host large language models for text generation, code completion, and chat. They include eight pre-built model apps, and custom model instances created on [Engine Base apps](/use-cases/llm-base-apps.md).
+    - **LLM service apps**: Apps that host large language models (LLMs) for text generation, code completion, and chat. They include eight pre-built model apps, and custom model instances created on [Engine Base apps](/use-cases/llm-base-apps.md).
     - **Other AI service apps**: Utility apps that provide non-LLM functions, such as speech recognition (Speaches) and text extraction (PaddleOCR).
 
 ## Prepare connection details
@@ -81,7 +81,7 @@ The following examples demonstrate how to gather and apply the connection parame
 In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service app, and LobeHub (previously known as LobeChat) is the client app.
 
 1. Open Gemma 4 26B (Ollama) from the Launchpad to launch its Model Console.
-2. Ensure that the **Model** shows **Ready** and the **Engine** shows **Running**.
+2. Ensure that the **Model** shows **READY** and the **Engine** shows **RUNNING**.
 3. Select the connection options that match your client app to get the correct Base URL:
 
     - **Connection source**: Select **Apps in Olares**, because LobeHub is installed directly in the Olares cluster.
@@ -110,7 +110,7 @@ In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service
 
 ### Connect PaddleOCR to Open WebUI
 
-In this example, PaddleOCR is the AI service app that provides OCR capabilities, and Open WebUI is the client app.
+In this example, PaddleOCR is the AI service app that provides image text recognition capabilities, and Open WebUI is the client app.
 
 1. Open Olares Settings, and then go to **Applications** > **PaddleOCR** > **Entrances** > **PaddleOCR**.
 
@@ -121,14 +121,16 @@ In this example, PaddleOCR is the AI service app that provides OCR capabilities,
 
    ![PaddleOCR endpoint](/images/manual/use-cases/paddleocr-endpoint.png#bordered){width=75%}
 
-4. In Open WebUI, click the profile icon in the lower left corner, and then go to **Admin Panel** > **Settings** > **Documents**.
-5. In the **General** section, select **PaddleOCR-vl** for **Content Extraction Engine**.
-6. In **API Base URL**, enter the PaddleOCR endpoint URL. 
-7. In **API Token**, enter any placeholder text. Do not leave this field empty.
+4. In Open WebUI, click the profile icon, and then go to **Admin Panel** > **Settings** > **Documents**.
+5. In the **General** section, configure the settings as follows:
+
+    - **Content Extraction Engine**: Select **PaddleOCR-vl**.
+    - **API Base URL**: Enter the PaddleOCR endpoint URL you just copied. 
+    - **API Token**: Enter any placeholder text. Do not leave this field empty.
    
    ![PaddleOCR config in Open WebUI](/images/manual/use-cases/openwebui-paddleocr-config1.png#bordered)
 
-8. Click **Save** in the lower right corner.
+6. Click **Save**.
 
 ## FAQs
 
