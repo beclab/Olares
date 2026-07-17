@@ -30,6 +30,9 @@ type UserInfo struct {
 	Apps              []*AppInfo
 	FileserverNodes   []*FileserverNodeInfo
 	MasterNodeCIDR    string
+	// PortRoutes are dynamic per-port subdomains (`<appid>-<port>.<zone>`)
+	// sourced from ProxyListener CRs, routed directly to a pod IP.
+	PortRoutes []*PortRouteInfo
 }
 
 type AppInfo struct {
@@ -66,6 +69,16 @@ type FileserverNodeInfo struct {
 	NodeName string
 	PodIP    string
 	IsMaster bool
+}
+
+// PortRouteInfo describes one dynamic port subdomain sourced from a
+// ProxyListener CR. l4-bfl-proxy builds an HTTPS vhost `<Appid>-<Port>.<zone>`
+// that routes directly to PodIP:Port via an Envoy STATIC cluster.
+type PortRouteInfo struct {
+	Appid    string
+	Port     int32
+	PodIP    string
+	Protocol string
 }
 
 type CertInfo struct {
@@ -113,6 +126,13 @@ func (r *Resources) DeepCopy() *Resources {
 					uc.FileserverNodes = append(uc.FileserverNodes, &cp)
 				}
 			}
+			if u.PortRoutes != nil {
+				uc.PortRoutes = make([]*PortRouteInfo, 0, len(u.PortRoutes))
+				for _, pr := range u.PortRoutes {
+					cp := *pr
+					uc.PortRoutes = append(uc.PortRoutes, &cp)
+				}
+			}
 			if u.SSL != nil {
 				cp := *u.SSL
 				uc.SSL = &cp
@@ -143,6 +163,12 @@ func (r *Resources) Sort() {
 		})
 		sort.Slice(u.FileserverNodes, func(i, j int) bool {
 			return u.FileserverNodes[i].NodeName < u.FileserverNodes[j].NodeName
+		})
+		sort.Slice(u.PortRoutes, func(i, j int) bool {
+			if u.PortRoutes[i].Appid != u.PortRoutes[j].Appid {
+				return u.PortRoutes[i].Appid < u.PortRoutes[j].Appid
+			}
+			return u.PortRoutes[i].Port < u.PortRoutes[j].Port
 		})
 		sort.Slice(u.Apps, func(i, j int) bool {
 			return u.Apps[i].Name < u.Apps[j].Name

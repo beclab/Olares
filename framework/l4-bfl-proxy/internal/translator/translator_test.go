@@ -645,6 +645,77 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	assert.NotEmpty(t, clusterSet)
 }
 
+// Dynamic ProxyListener port routes become `<appid>-<port>.<zone>` vhosts that
+// route directly to the backend pod IP via an Envoy STATIC cluster.
+func TestBuildPortRouteVirtualHost(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{
+		Name:      "alice",
+		Language:  "en",
+		Zone:      "alice.example.com",
+		Namespace: "user-space-alice",
+		PortRoutes: []*message.PortRouteInfo{
+			{Appid: "28f57292", Port: 9999, PodIP: "10.1.2.3", Protocol: "http"},
+		},
+	}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	vhosts := tr.buildUserVirtualHosts(user, user.Zone, false, clusterSet)
+
+	var prVhost *ir.VirtualHostIR
+	for _, vh := range vhosts {
+		for _, d := range vh.Domains {
+			if d == "28f57292-9999.alice.example.com" {
+				prVhost = vh
+			}
+		}
+	}
+	require.NotNil(t, prVhost, "expected a vhost for 28f57292-9999.alice.example.com")
+
+	require.Len(t, prVhost.Routes, 1)
+	assert.Equal(t, "/", prVhost.Routes[0].PathPrefix)
+	assert.True(t, prVhost.Routes[0].WebSocketUpgrade)
+	assert.Equal(t, "alice", prVhost.Routes[0].RequestHeaders["X-BFL-USER"])
+
+	clusterName := prVhost.Routes[0].Cluster
+	cl := clusterSet[clusterName]
+	require.NotNil(t, cl)
+	assert.False(t, cl.UseDNS, "port route must be a STATIC cluster (no DNS)")
+	assert.Equal(t, "10.1.2.3", cl.Host)
+	assert.Equal(t, uint32(9999), cl.Port)
+}
+
+// Ephemeral users get the username injected into the port-route hostname.
+func TestBuildPortRouteVirtualHost_Ephemeral(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{
+		Name:        "bob",
+		Language:    "en",
+		Zone:        "alice.example.com",
+		Namespace:   "user-space-bob",
+		IsEphemeral: true,
+		PortRoutes: []*message.PortRouteInfo{
+			{Appid: "28f57292", Port: 9999, PodIP: "10.1.2.3", Protocol: "http"},
+		},
+	}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	pr := tr.buildPortRouteVirtualHost(user, user.PortRoutes[0], user.Zone, true, clusterSet)
+	require.NotNil(t, pr)
+	assert.Contains(t, pr.Domains, "28f57292-9999-bob.alice.example.com")
+}
+
+// Invalid port routes are skipped rather than producing a broken vhost/cluster.
+func TestBuildPortRouteVirtualHost_InvalidSkipped(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Zone: "alice.example.com"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	assert.Nil(t, tr.buildPortRouteVirtualHost(user, &message.PortRouteInfo{Appid: "", Port: 9999, PodIP: "10.1.2.3"}, user.Zone, false, clusterSet))
+	assert.Nil(t, tr.buildPortRouteVirtualHost(user, &message.PortRouteInfo{Appid: "abc", Port: 0, PodIP: "10.1.2.3"}, user.Zone, false, clusterSet))
+	assert.Nil(t, tr.buildPortRouteVirtualHost(user, &message.PortRouteInfo{Appid: "abc", Port: 9999, PodIP: ""}, user.Zone, false, clusterSet))
+	assert.Empty(t, clusterSet)
+}
+
 // Custom domains for shared apps are also open to every user.
 func TestBuildCustomDomainVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 	for _, name := range []string{"admin", "alice"} {

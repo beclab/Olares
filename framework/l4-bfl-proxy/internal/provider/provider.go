@@ -110,6 +110,11 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("get userEnv informer: %w", err)
 	}
 
+	proxyListenerInformer, err := p.cache.GetInformer(ctx, &appv1alpha1.ProxyListener{})
+	if err != nil {
+		return fmt.Errorf("get proxyListener informer: %w", err)
+	}
+
 	baseHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(_ interface{}) { p.notifyChanged() },
 		UpdateFunc: func(_, _ interface{}) { p.notifyChanged() },
@@ -179,6 +184,16 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		Handler: baseHandler,
 	}); err != nil {
 		return fmt.Errorf("add userEnv event handler: %w", err)
+	}
+
+	if _, err = proxyListenerInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
+		FilterFunc: func(obj interface{}) bool {
+			_, ok := obj.(*appv1alpha1.ProxyListener)
+			return ok
+		},
+		Handler: baseHandler,
+	}); err != nil {
+		return fmt.Errorf("add proxyListener event handler: %w", err)
 	}
 
 	klog.Info("provider: informers and event handlers registered...")
@@ -507,6 +522,10 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 	if err != nil {
 		return nil, err
 	}
+	portRoutes, err := p.getProxyListenersMap(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	getUserByName := func(name string) *iamv1alpha2.User {
 		for i := range userList {
@@ -642,6 +661,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			CustomDomainCerts: allCerts[user.Name],
 			FileserverNodes:   fileserverNodes,
 			MasterNodeCIDR:    masterNodeCIDR,
+			PortRoutes:        portRoutes[user.Name],
 		}
 		result = append(result, info)
 	}
@@ -787,6 +807,36 @@ func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha
 	}
 
 	return publicApps, publicCustomDomainApps, customDomainApps, customDomainAppsWithUsers
+}
+
+// getProxyListenersMap lists ProxyListener CRs cluster-wide and groups them by
+// owner (Olares username). Invalid entries (missing appid/port/podIP/owner) are
+// skipped so a malformed CR cannot break the whole snapshot.
+func (p *Provider) getProxyListenersMap(ctx context.Context) (map[string][]*message.PortRouteInfo, error) {
+	var plList appv1alpha1.ProxyListenerList
+	if err := p.cache.List(ctx, &plList); err != nil {
+		klog.Errorf("provider: list proxyListeners from cache: %v", err)
+		return nil, fmt.Errorf("list proxyListeners from cache failed: %v", err)
+	}
+	out := make(map[string][]*message.PortRouteInfo)
+	for i := range plList.Items {
+		pl := &plList.Items[i]
+		if pl.Spec.Appid == "" || pl.Spec.Port <= 0 || pl.Spec.PodIP == "" || pl.Spec.Owner == "" {
+			klog.Warningf("provider: skipping invalid ProxyListener %s/%s", pl.Namespace, pl.Name)
+			continue
+		}
+		protocol := pl.Spec.Protocol
+		if protocol == "" {
+			protocol = "http"
+		}
+		out[pl.Spec.Owner] = append(out[pl.Spec.Owner], &message.PortRouteInfo{
+			Appid:    strings.ToLower(pl.Spec.Appid),
+			Port:     pl.Spec.Port,
+			PodIP:    pl.Spec.PodIP,
+			Protocol: protocol,
+		})
+	}
+	return out, nil
 }
 
 func (p *Provider) getAppsMap(ctx context.Context) (map[string][]*appv1alpha1.Application, error) {

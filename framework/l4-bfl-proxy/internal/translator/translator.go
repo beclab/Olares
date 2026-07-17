@@ -477,6 +477,13 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 		vhosts = append(vhosts, appVhosts...)
 	}
 
+	// Dynamic port routes (`<appid>-<port>.<zone>`) → STATIC cluster to pod IP.
+	for _, pr := range user.PortRoutes {
+		if prVhost := t.buildPortRouteVirtualHost(user, pr, zone, isEphemeral, clusterSet); prVhost != nil {
+			vhosts = append(vhosts, prVhost)
+		}
+	}
+
 	// System services (auth, desktop, wizard)
 	for _, def := range systemServices {
 		vhost := t.buildSystemVirtualHost(user, def, zone, isEphemeral, namespace, clusterSet)
@@ -584,6 +591,56 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 	}
 
 	return vhosts
+}
+
+// buildPortRouteVirtualHost builds the vhost for a dynamic ProxyListener port.
+// The hostname is `<appid>-<port>.<zone>` (plus the .olares.local alias) and the
+// traffic is routed directly to the backend pod IP:port via an Envoy STATIC
+// cluster (UseDNS=false), so no Service/endpoint plumbing is required. Deny-all
+// restrictions are applied later by applyDenyAllRestrictions, matching private
+// entrance behaviour.
+func (t *Translator) buildPortRouteVirtualHost(user *message.UserInfo, pr *message.PortRouteInfo, zone string, isEphemeral bool, clusterSet map[string]*ir.ClusterIR) *ir.VirtualHostIR {
+	if pr.Appid == "" || pr.Port <= 0 || pr.PodIP == "" {
+		klog.Warningf("buildPortRouteVirtualHost: user %s has invalid port route %#v, skipping", user.Name, pr)
+		return nil
+	}
+
+	prefix := fmt.Sprintf("%s-%d", pr.Appid, pr.Port)
+	hostname := fmt.Sprintf("%s.%s", prefix, zone)
+	if isEphemeral {
+		hostname = fmt.Sprintf("%s-%s.%s", prefix, user.Name, zone)
+	}
+
+	localHost := toLocalDomain(hostname)
+	domains := []string{hostname}
+	if localHost != hostname {
+		domains = append(domains, localHost)
+	}
+
+	clusterName := fmt.Sprintf("portroute_%s_%s_%d", user.Name, pr.Appid, pr.Port)
+	clusterSet[clusterName] = &ir.ClusterIR{
+		Name:   clusterName,
+		Host:   pr.PodIP,
+		Port:   uint32(pr.Port),
+		UseDNS: false,
+	}
+
+	return &ir.VirtualHostIR{
+		Name:     clusterName,
+		Domains:  domains,
+		Language: user.Language,
+		UserZone: zone,
+		UserName: user.Name,
+		Routes: []*ir.HTTPRouteIR{{
+			Name:       fmt.Sprintf("default_%s", clusterName),
+			PathPrefix: "/",
+			Cluster:    clusterName,
+			RequestHeaders: map[string]string{
+				"X-BFL-USER": user.Name,
+			},
+			WebSocketUpgrade: true,
+		}},
+	}
 }
 
 // buildSharedAppExtAuthConfig returns the Authelia ext_auth config used to gate
