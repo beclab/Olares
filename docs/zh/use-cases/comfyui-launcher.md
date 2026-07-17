@@ -1,6 +1,10 @@
 ---
 outline: deep
 description: 在 Olares 上管理 ComfyUI 的管理员指南，涵盖服务控制、网络配置、模型和插件管理、Python 依赖以及故障排查。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, ComfyUI Launcher, manage ComfyUI, ComfyUI models, ComfyUI plugins, self-hosted ComfyUI, ComfyUI on Olares
 ---
 
 :::warning

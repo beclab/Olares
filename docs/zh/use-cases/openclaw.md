@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: 学习如何在 Olares 上安装、配置、个性化设置 OpenClaw，并将其与 Discord 集成。
+description: 在 Olares 上把 OpenClaw 作为自托管私人 AI 助手运行：完成安装、配置，并接入 Discord 和 Slack，助手与数据都留在你自己的设备上。
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 使用指南, OpenClaw 安装
+      content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
 app_version: "1.0.3"
 doc_version: "2.0"
 doc_updated: "2026-05-29"
@@ -14,7 +14,7 @@ doc_updated: "2026-05-29"
 当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../use-cases/openclaw.md)。
 :::
 
-# OpenClaw
+# 运行 OpenClaw：你的自托管私人 AI 助手
 
 OpenClaw 是一款专为本地设备设计的个人 AI 助手，可接入 Discord、Slack 等消息平台，在这些平台中与其交互。
 

@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to manage the BIOS and EC firmware on your Olares One, including checking firmware versions, downloading firmware update packages, executing updates, unlocking advanced mode, and troubleshooting issues such as black screen.
+description: Manage Olares One BIOS and EC firmware. Check versions, download and install updates, unlock advanced mode, and troubleshoot black screens.
 head:
   - - meta
     - name: keywords

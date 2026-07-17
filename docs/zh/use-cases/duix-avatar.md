@@ -1,6 +1,11 @@
 ---
+noindex: true
 outline: [2, 3]
 description: 学习在 Olares 上部署 Duix.Avatar，从模型训练到视频合成，创建文本驱动的数字人视频。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Duix.Avatar, HeyGem, digital avatar, AI avatar video, self-hosted digital human, Duix.Avatar on Olares
 ---
 
 :::warning

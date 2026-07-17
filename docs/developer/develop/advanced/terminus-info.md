@@ -1,3 +1,7 @@
+---
+noindex: true
+description: olares-info is an API without authentication. It displays publicly available system information.
+---
 # olares-info
 
 olares-info is an API without authentication. It displays publicly available system information. You can think of it as a house number sign.

@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: 了解如何在 Olares One 上设置 Open WebUI，使用 Ollama 与本地 LLM 聊天。
 head:

@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to use Whisper-WebUI on Olares for speech-to-text transcription, subtitle generation, real-time recording, subtitle translation, and vocal separation across 96 languages.
+description: Run Whisper-WebUI on Olares for speech-to-text, recording, subtitles, translation, and vocal separation across 96 languages.
 head:
   - - meta
     - name: keywords
