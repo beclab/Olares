@@ -581,7 +581,7 @@ const side = {
         },        
       ],
     },
-    { text: "术语", link: "/zh/manual/glossary" },
+    { text: "术语表", link: "/zh/manual/glossary" },
   ],
 };
 
