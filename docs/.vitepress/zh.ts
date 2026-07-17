@@ -576,12 +576,8 @@ const side = {
           link: "/zh/manual/best-practices/local-access",
         },
         {
-          text: "连接 AI 应用（旧版）",
-          link: "/zh/manual/best-practices/connect-ai-apps",
-        },
-        {
           text: "连接 AI 应用",
-          link: "/zh/manual/best-practices/connect-ai-apps-new",
+          link: "/zh/manual/best-practices/connect-ai-apps",
         },
       ],
     },

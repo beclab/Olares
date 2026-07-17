@@ -575,12 +575,8 @@ const side = {
           link: "/manual/best-practices/local-access",
         },
         {
-          text: "Connect AI apps (legacy)",
-          link: "/manual/best-practices/connect-ai-apps",
-        },
-        {
           text: "Connect AI apps",
-          link: "/manual/best-practices/connect-ai-apps-new",
+          link: "/manual/best-practices/connect-ai-apps",
         },
       ],
     },
