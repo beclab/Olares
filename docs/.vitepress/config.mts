@@ -306,6 +306,31 @@ export default defineVersionedConfig2(withMermaid({
         href: (process.env.BASE_URL || "/") + "icon1.png",
       },
     ],
+    // Organization schema (shared with olares.com; single #organization entity).
+    [
+      "script",
+      { type: "application/ld+json" },
+      JSON.stringify({
+        "@context": "https://schema.org",
+        "@id": "https://www.olares.com/#organization",
+        "@type": "Organization",
+        name: "Olares",
+        url: "https://www.olares.com/",
+        logo: {
+          "@type": "ImageObject",
+          url: "https://www.olares.com/olares-logo.png",
+          width: 1000,
+          height: 236,
+        },
+        sameAs: [
+          "https://github.com/beclab/Olares",
+          "https://x.com/Olares_OS",
+          "https://www.linkedin.com/company/olarestech/",
+          "https://www.youtube.com/@OlaresOS/featured",
+          "https://www.facebook.com/people/Olares/61579156063357/",
+        ],
+      }),
+    ],
     [
       "script",
       {
