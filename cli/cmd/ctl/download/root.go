@@ -38,7 +38,6 @@ Verb families:
   sync        unfinished, sync
   torrent     torrent inspect, stats, peers, files, seed stop|resume
   file        file exists, file check, file remove
-  cookies     cookies list, set, delete, retrieve, health
   settings    settings get, settings set  (download-server global config)
 
 Universal flags:

@@ -2,6 +2,14 @@
 
 > **Flags:** `olares-cli knowledge download cookies <verb> --help`.
 
+> **Hidden command.** On a production cluster the integration provider is
+> read-only and only implements `POST /api/cookie/retrieve`, so only
+> `cookies retrieve` works there. `list` / `set` / `delete` / `health`
+> target endpoints that exist only in the local `mock-integration` and
+> return **404** against a real cluster. The whole `cookies` tree is
+> therefore hidden from `--help` (still invokable for scripts / local
+> dev). Do not surface `list` / `set` / `delete` as working prod verbs.
+
 Provider cookies let download providers (e.g. yt-dlp) fetch gated content.
 Cookies are stored per domain and supplied as a **Netscape cookies.txt** file.
 

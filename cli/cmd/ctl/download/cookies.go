@@ -15,12 +15,26 @@ import (
 )
 
 // NewCookiesCommand assembles `olares-cli knowledge download cookies`.
+//
+// Hidden: the production integration-provider is read-only and exposes
+// a single endpoint, POST /api/cookie/retrieve (see
+// framework/integration .../router/api/cookie/cookie.go). The list /
+// set / delete / health verbs here were written against the local
+// mock-integration (which implements the full CRUD) and 404 against a
+// real cluster, so we keep the whole tree registered — `retrieve`
+// still works and existing scripts do not break — but hide it from
+// help until the provider grows a write/list surface.
 func NewCookiesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cookies",
-		Short: "manage provider cookies (yt-dlp Netscape cookies)",
+		Use:    "cookies",
+		Hidden: true,
+		Short:  "manage provider cookies (yt-dlp Netscape cookies)",
 		Long: `Store and inspect per-domain provider cookies used by download
 providers (e.g. yt-dlp) to fetch gated content.
+
+NOTE: On a production cluster the integration provider only implements
+"retrieve"; "list", "set", "delete" and "health" have no backing
+endpoint and return 404. This command tree is hidden for that reason.
 
 Cookies are supplied as a Netscape cookies.txt file. The listing and
 retrieve responses never expose the stored cookie text unless you pass
