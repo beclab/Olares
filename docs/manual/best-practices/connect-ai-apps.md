@@ -54,7 +54,7 @@ The Base URL is the network address (or endpoint) where the AI service app recei
     Some apps expose more than one entrance. Choose the entrance that matches your client's protocol or use case. For example, use the main entrance for web UI access and a dedicated API entrance for programmatic integrations.
     :::
 
-### Model name <Badge type="tip" text="LLM services only"/>
+### Model name
 
 The model name is the exact identifier of the model. The client sends this ID with every request so the backend service knows which model file to process.
 
