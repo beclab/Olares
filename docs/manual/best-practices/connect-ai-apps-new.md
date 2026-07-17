@@ -14,7 +14,6 @@ This guide explains how to understand your apps, gather the required connection 
 By the end of this tutorial, you will be able to:
 - Distinguish between AI service apps and AI client apps.
 - Understand the essential connection parameters and how to get them.
-- Locate the correct endpoint for different types of AI service apps.
 - Connect common AI apps.
 
 ## Identify your AI apps
