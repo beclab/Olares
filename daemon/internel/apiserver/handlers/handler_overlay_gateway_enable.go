@@ -39,21 +39,28 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 		return h.ErrJSON(ctx, http.StatusBadRequest, "overlay gateway is already enabled")
 	}
 
+	// create the lock file synchronously while holding the mutex so that a
+	// concurrent enable request observes it and returns "activating" instead of
+	// starting a second switch (single-flight).
+	os.Create(OverlayGatewayEnableLockFile)
+	enableOverlayGatewayError = ""
+	disableOverlayGatewayError = ""
+
 	go func() {
-		// create the lock file
-		os.Create(OverlayGatewayEnableLockFile)
 		defer os.Remove(OverlayGatewayEnableLockFile)
-		enableOverlayGatewayError = ""
-		disableOverlayGatewayError = ""
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		_, err = cmd.Execute(ctx, nil)
+
+		// CreateBridgeConnection is atomic: a nil error means the bridge is up
+		// with an IPv4 address, a non-nil error means it has been rolled back to
+		// the original network. Surface the failure so the UI stops spinning.
+		_, err := cmd.Execute(ctx, nil)
 		if err != nil {
 			enableOverlayGatewayError = err.Error()
 			return
 		}
 
-		// check if the overlay gateway is enabled
+		// confirm the reported status reaches "on"
 		t := time.NewTicker(2 * time.Second)
 		timeout := time.NewTimer(60 * time.Second)
 		defer t.Stop()
@@ -61,8 +68,9 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 		for {
 			select {
 			case <-t.C:
-				s, err = h.getOverlayGatewayStatus(ctx)
+				s, err := h.getOverlayGatewayStatus(ctx)
 				if err != nil {
+					enableOverlayGatewayError = err.Error()
 					return
 				}
 				if s.Status == OverlayGatewayOn {
@@ -71,6 +79,7 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 				}
 			case <-timeout.C:
 				klog.Error("overlay gateway enable timeout")
+				enableOverlayGatewayError = "overlay gateway enable timeout"
 				return
 			}
 		}
