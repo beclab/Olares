@@ -1,5 +1,9 @@
 ---
 description: Learn how to create and manage backups for your important files and apps on Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, backup, data backup, incremental backup, snapshot, backup schedule, restore
 ---
 # Backup your data in Olares
 
@@ -58,3 +62,8 @@ At the bottom of the backup management page, you’ll see a list of snapshots fo
 - **Size**: Size of the snapshot.
 - **Status**: The execution status of the snapshot.
 - **Backup type**: The snapshot is a full backup or an incremental backup.
+
+## Resources
+
+- [Restore backup data](restore.md): Recover files or app data from a snapshot.
+- [Back up and restore in Olares Space](../../space/backup-restore.md): Manage cloud backups for your Olares.

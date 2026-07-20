@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: Manage accelerator resources in Olares, including GPU modes, app GPU requirements, app resume, and resource release.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, GPU, accelerator, GPU modes, time slicing, memory slicing, exclusive mode, VRAM
 ---
 # Manage accelerator resources
 
@@ -138,3 +142,8 @@ If an app is bound to multiple GPUs or GPUs across multiple nodes, removing the 
 :::info
 Resource release may take a short time. If no resource can be assigned to the app immediately after removal, refresh the resource list and check again.
 :::
+
+## Resources
+
+- [Monitor resource usage](../resources-usage.md): Track GPU and system usage in the Dashboard.
+- [GPU requirements](../../get-started/gpu-requirements.md): Check supported GPUs and driver requirements.

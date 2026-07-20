@@ -48,7 +48,7 @@ description: 了解如何利用“我的 Olares”页面管理账户、设备、
 
 ## Olares Space
 在 Olares Space 中查看你的订阅计划详情和使用情况，包括反向代理方案、
-备份、流量消耗等。首次使用时需按提示登录 Olares Space。
+备份、流量消耗等。首次使用时需按提示登录 Olares Space。详情参见[查看系统状态](../../space/manage-olares.md#查看系统状态)。
 
 ## 更改密码
 

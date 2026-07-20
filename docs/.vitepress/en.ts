@@ -513,7 +513,7 @@ const side = {
           link: "/manual/space/manage-accounts",
         },
         {
-          text: "Manage Olares",
+          text: "Monitor Olares",
           link: "/manual/space/manage-olares",
         },
         {

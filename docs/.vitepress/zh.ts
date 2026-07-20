@@ -510,7 +510,7 @@ const side = {
             link: "/zh/manual/space/manage-accounts",
           },
           {
-            text: "管理 Olares",
+            text: "监控 Olares",
             link: "/zh/manual/space/manage-olares",
           },
           {
@@ -587,6 +587,7 @@ const side = {
 
 export const zh = defineConfig({
   lang: "zh",
+  titleTemplate: ":title | Olares 中文文档",
   themeConfig: {
     editLink: {
       pattern: "https://github.com/beclab/Olares/edit/main/docs/:path",
