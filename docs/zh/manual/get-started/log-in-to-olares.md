@@ -1,5 +1,6 @@
 ---
 search: false
+noindex: true
 ---
 ## 登录 Olares
 

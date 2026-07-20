@@ -1,3 +1,7 @@
+---
+noindex: true
+description: olares-info 是一个无需鉴权的接口，我们将一些系统可以对外展示的信息放在这里。可以理解为它是房子的门牌。
+---
 # olares-info
 
 olares-info 是一个无需鉴权的接口，我们将一些系统可以对外展示的信息放在这里。可以理解为它是房子的门牌。

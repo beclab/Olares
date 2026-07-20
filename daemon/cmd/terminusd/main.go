@@ -138,17 +138,19 @@ func main() {
 		if state.CurrentState.TerminusState == state.TerminusRunning {
 			found := false
 			if client, err := utils.GetKubeClient(); err == nil {
-				if deployments, err := client.AppsV1().Deployments("").List(mainCtx, metav1.ListOptions{}); err == nil {
-					for _, d := range deployments.Items {
-						if d.Name == "steamheadless" {
-							found = true
-							if err := sunshine.Restart(); err != nil {
-								klog.Error(err)
-							}
-							break
+				// Use a name field selector so the apiserver returns only the
+				// steamheadless deployment instead of every deployment in the
+				// cluster, which the status loop otherwise listed and
+				// deserialized on every tick.
+				if deployments, err := client.AppsV1().Deployments("").List(mainCtx, metav1.ListOptions{
+					FieldSelector: "metadata.name=steamheadless",
+				}); err == nil {
+					if len(deployments.Items) > 0 {
+						found = true
+						if err := sunshine.Restart(); err != nil {
+							klog.Error(err)
 						}
 					}
-
 				}
 			}
 

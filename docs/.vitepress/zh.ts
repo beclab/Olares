@@ -190,7 +190,7 @@ const side = {
         },
         {
           text: "安全访问 Olares",
-          link: "zh/manual/get-started/local-access",
+          link: "/zh/manual/get-started/local-access",
         },
         {
           text: "探索",
@@ -215,9 +215,13 @@ const side = {
               text: "克隆应用",
               link: "/zh/manual/olares/market/clone-apps",
             },
-            {
+            /*{
               text: "管理付费应用",
               link: "/zh/manual/olares/market/purchase-paid-apps",
+            },*/
+            {
+              text: "共享应用",
+              link: "/zh/manual/olares/market/shared-apps",
             },
           ],
         },
@@ -229,6 +233,10 @@ const side = {
             {
               text: "基本文件操作",
               link: "/zh/manual/olares/files/add-edit-download",
+            },
+            {
+              text: "压缩与解压缩文件",
+              link: "/zh/manual/olares/files/compress-extract-files",
             },
             //{
             //   text: "同步与共享",
@@ -247,8 +255,16 @@ const side = {
               link: "/zh/manual/olares/files/mount-SMB",
             },
             {
+              text: "挂载 NFS",
+              link: "/zh/manual/olares/files/mount-nfs",
+            },
+            {
               text: "挂载云存储",
               link: "/zh/manual/olares/files/mount-cloud-storage",
+            },
+            {
+              text: "使用公共目录管理共享 AI 模型",
+              link: "/zh/manual/olares/files/files-common",
             },
           ],
         },
@@ -403,22 +419,15 @@ const side = {
                   text: "设置 hosts 文件",
                   link: "/zh/manual/olares/settings/set-up-hosts",
                 },
+                {
+                  text: "管理 Overlay Gateway",
+                  link: "/zh/manual/olares/settings/overlay-gateway",
+                },
               ],
             },
             {
-              text: "管理 GPU",
-              collapsed: true,
+              text: "管理 AI 算力",
               link: "/zh/manual/olares/settings/gpu-resource",
-              items: [
-                {
-                  text: "管理单 GPU 资源",
-                  link: "/zh/manual/olares/settings/single-gpu",
-                },
-                {
-                  text: "管理多 GPU 资源",
-                  link: "/zh/manual/olares/settings/multi-gpu",
-                },
-              ],
             },
             { text: "视频设置", link: "/zh/manual/olares/settings/video" },
             { text: "文件搜索", link: "/zh/manual/olares/settings/search" },
@@ -569,10 +578,10 @@ const side = {
         {
           text: "连接 AI 应用",
           link: "/zh/manual/best-practices/connect-ai-apps",
-        },        
+        },
       ],
     },
-    { text: "术语", link: "/zh/manual/glossary" },
+    { text: "术语表", link: "/zh/manual/glossary" },
   ],
 };
 

@@ -1,6 +1,6 @@
 # Market-ready requirements: what public distribution demands
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first, and confirm the app already installs and reaches `running` on your Olares via [`../../olares-chart/references/olares-chart-deploy.md`](../../olares-chart/references/olares-chart-deploy.md).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first, and confirm the app already installs and reaches `running` on your Olares via the [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md) deploy flow.
 > This file is the requirements matrix + checklist for a **public Market** listing. It assumes the chart is already functionally complete (storage / middleware / entrances / a pullable image) from `olares-chart`.
 
 ## What local deploy gives you vs. what the Market demands
@@ -23,7 +23,7 @@ Local deploy (in `olares-chart`) proves the app **runs**: `chart lint` OK, a pul
 | **`spec.supportArch`** | Optional (omit unless using accelerator modes) | Required — must match image platforms (`amd64`, `arm64`, or both) |
 | **`spec.accelerator` / GPU resources** | Only if the app needs GPU on **this** node | Fully declared when the app uses GPU/NPU; mode -> arch cross-check applies at `lint` |
 | **`owners` file** | Not needed | Required in the OAC root for the `beclab/apps` PR |
-| **Validate** | `lint` + upload + install | Same, then the PR — [olares-publish-submit.md](olares-publish-submit.md) |
+| **Validate** | `lint` + upload + install | Same, then submit the `beclab/apps` PR |
 
 ## What `lint` does NOT check (market-only)
 
@@ -51,13 +51,13 @@ Complete **after** the app runs locally. Use this as a pre-PR gate.
 - [ ] **Re-lint:** `olares-cli chart lint ./<app>` after all edits
 - [ ] **Runs locally** on a real Olares (upload + install -> `running`)
 
-Then proceed to [olares-publish-submit.md](olares-publish-submit.md).
+Then proceed to the submit flow from the parent SKILL.
 
 ## From "runs locally" to "in the public Market"
 
 Common path: get the app running locally first (in `olares-chart`), then polish for public listing.
 
-1. Confirm local install already reached `running` ([../../olares-chart/references/olares-chart-deploy.md](../../olares-chart/references/olares-chart-deploy.md)).
+1. Confirm local install already reached `running` (via the [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md) deploy flow).
 2. Work through the market-ready checklist above.
 3. Rebuild images multi-arch if currently single-arch.
 4. Add `spec.supportArch` matching the image platforms.
@@ -66,4 +66,4 @@ Common path: get the app running locally first (in `olares-chart`), then polish 
 
 Functional refine (storage / middleware / entrances) should already be done from the local phase — usually no changes needed there.
 
-> **Paid (pay-to-download)** is a public-Market app plus `price.yaml` + a `VERIFIABLE_CREDENTIAL` license check — see [olares-publish-paid-apps.md](olares-publish-paid-apps.md).
+> **Paid (pay-to-download)** is a public-Market app plus `price.yaml` + a `VERIFIABLE_CREDENTIAL` license check; enter it from the parent SKILL's paid-app route.

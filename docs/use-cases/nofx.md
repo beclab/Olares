@@ -1,5 +1,6 @@
 ---
 outline: deep
+title: Set up an autonomous trading agent with NOFX
 description: Run NOFX, an open-source autonomous AI trading agent, on Olares. Fund an AI wallet, connect an exchange, configure a strategy, and let the agent trade.
 head:
   - - meta

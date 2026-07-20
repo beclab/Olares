@@ -238,20 +238,38 @@ func buildNodeResource(node *corev1.Node) Node {
 
 // nonHAMIDevice builds the single synthetic device used for unified-memory
 // modes (cpu, apple-m, amd, intel, moore-soc, …): the whole node is one
-// schedulable unit drawing from system memory. The support type is the mode's
-// default (defaultSupportType): cpu / intel / amd / moore-soc share the memory
-// via MemorySlice, while apple-m and any discrete-GPU / future mode take the
-// whole device exclusively.
+// schedulable unit drawing from system memory. The support type starts at the
+// mode's default (defaultSupportType) but, for the modes that can switch (intel
+// / amd / moore-soc), honors the per-device share-mode annotation written by
+// SwitchDeviceMode so a switch to Exclusive survives a rebuild of this view.
+// cpu / apple-m / discrete-GPU modes only have a single available support type,
+// so the annotation (if any) is clamped back to their default.
 func nonHAMIDevice(node *corev1.Node, mode string, totalMemory int64) Device {
+	deviceID := fmt.Sprintf("%s-%s-0", node.Name, mode)
 	return Device{
-		ID:                    fmt.Sprintf("%s-%s-0", node.Name, mode),
+		ID:                    deviceID,
 		NodeName:              node.Name,
 		Mode:                  mode,
 		Memory:                totalMemory * 75 / 100,
 		Health:                nodeHealth(node),
-		SupportType:           defaultSupportType(mode),
+		SupportType:           nonHAMISupportType(mode, node.Annotations[shareModeAnnotationKey(deviceID)]),
 		AvailableSupportTypes: AvailableSupportTypes(mode),
 	}
+}
+
+// nonHAMISupportType resolves a non-HAMI device's support type from its
+// share-mode annotation: honor the annotation only when it names a support type
+// the mode actually allows, otherwise fall back to the mode's default. This
+// keeps device.SupportType always within AvailableSupportTypes(mode), so a mode
+// with a single available type (cpu / apple-m / discrete GPUs) stays pinned to
+// it even if a stale annotation is left behind.
+func nonHAMISupportType(mode, shareMode string) string {
+	for _, supportType := range AvailableSupportTypes(mode) {
+		if code, _ := supportTypeToShareMode(supportType); code == shareMode {
+			return supportType
+		}
+	}
+	return defaultSupportType(mode)
 }
 
 func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
@@ -335,17 +353,18 @@ func shareModeAnnotationKey(deviceID string) string {
 // AvailableSupportTypes lists the support types a device of the given mode may
 // take. The first entry is the mode's default — the one assigned when no share
 // mode is configured (see defaultSupportType). nvidia can switch among all
-// three; nvidia-gb10 defaults to MemorySlice but may switch to Exclusive; cpu
-// and the unified-memory accelerators (intel / amd / moore-soc) only do
-// MemorySlice; apple-m and any discrete-GPU (intel-gpu / amd-gpu) or future
-// mode are Exclusive-only for now.
+// three; nvidia-gb10 defaults to MemorySlice but may switch to Exclusive; the
+// unified-memory integrated accelerators (intel / amd / moore-soc) default to
+// MemorySlice but may also switch to Exclusive; cpu is MemorySlice-only (it has
+// no dedicated device to monopolize); apple-m and any discrete-GPU (intel-gpu /
+// amd-gpu) or future mode are Exclusive-only for now.
 func AvailableSupportTypes(mode string) []string {
 	switch mode {
 	case utils.NvidiaCardType:
 		return []string{SupportTypeTimeSlice, SupportTypeMemorySlice, SupportTypeExclusive}
-	case utils.GB10ChipType:
+	case utils.GB10ChipType, utils.IntelType, utils.AMDType, utils.MooreSocType:
 		return []string{SupportTypeMemorySlice, SupportTypeExclusive}
-	case utils.CPUType, utils.IntelType, utils.AMDType, utils.MooreSocType:
+	case utils.CPUType:
 		return []string{SupportTypeMemorySlice}
 	default:
 		return []string{SupportTypeExclusive}

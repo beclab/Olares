@@ -25,6 +25,9 @@ cli/skills/
 ├── olares-settings/   # olares-cli settings
 ├── olares-dashboard/  # olares-cli dashboard
 ├── olares-cluster/    # olares-cli cluster (per-user K8s view)
+├── olares-doctor/     # runtime diagnosis (thin router over cluster / market / dashboard)
+│   ├── SKILL.md
+│   └── references/    # one file per symptom (app stuck / crash / image / unhealthy / resources)
 ├── olares-chart/      # olares-cli chart (chart authoring + deploy to your Olares)
 │   ├── SKILL.md
 │   └── references/    # one file per refinement area / capability
@@ -48,19 +51,21 @@ ClawHub publishes the entire skill directory (including `references/`), so refer
 - **Client-side hard constraints that bite users** (quirks the GUI enforces, server-side auto-rename traps, …)
 - **Error → fix matrix** that is not in `--help`
 - **Verb index** — one row per verb pointing at `--help` and (if it exists) `references/<verb>.md`
+- **Ground every behavioral claim in the implementation.** Before documenting what a verb / flag / error does, confirm it against the code (status derivation, typed error names, retry / timeout, argument arity). Model agent stop / continue rules on the tool's real control flow — typed errors, auto-retry, transient vs terminal — not on a surface status string. Keep this verification in your process only: still **no Go source-path citations** in the shipped skill (see "What to leave out" below).
+- **One representation per fact within a file.** Don't place two tables / sections that encode the same thing. When a decision derives from a fact table, express it as prose that points at that table, not a second parallel table.
 
 Each non-trivial subcommand gets a `references/<skill>-<verb>.md` file that adds — on top of `--help` — safety constraints, agent-facing multi-step flows, and common-error troubleshooting tables. Do NOT re-list flag descriptions; trust `--help`.
 
 What to leave out of SKILL.md (and references):
 
 - Per-flag descriptions (in `--help`)
-- Source-path citations like `[cli/cmd/ctl/files/path.go](...)` — agents don't review Go source
+- Source-path citations like `cli/cmd/ctl/files/path.go` — agents don't review Go source
 - Internal package walkthroughs / "Source layout" sections
 - "What's NOT here yet" / future-work sections — keep skills focused on current capability
 
 Target sizes: SKILL.md ≤ 250 lines (≤ 300 for the most complex command tree). Each reference: ≤ 150 lines.
 
-**Reference depth (one level deep):** all reference files link **directly from a `SKILL.md`**, never reference→reference. Nested references get partially read (agents preview with `head` instead of reading the whole file), so a concept buried two hops down is unreliable. Any reference longer than ~100 lines gets a table of contents at the top so a partial read still shows its full scope.
+**Reference depth (one level deep):** all reference files link **directly from a `SKILL.md`**, never reference→reference. A concept buried two hops down is unreliable. Keep each reference short enough to be read whole (≤ 150 lines); when one outgrows that, split it into sibling references rather than adding an in-file table of contents — the `##` headings already are the structure, so a TOC just duplicates them and spends the line budget.
 
 These rules apply to **every** skill, including `olares-chart` — even though it is a local-only chart-authoring skill (no live profile / login) rather than a CLI-driving one, it still avoids Go source-path citations and keeps each reference ≤ 150 lines.
 
@@ -68,7 +73,8 @@ These rules apply to **every** skill, including `olares-chart` — even though i
 
 Facts used by **≥2 skills** are defined **once** and linked, never copied. This keeps the suite consistent and token-efficient (the lark-cli pattern these skills are modeled on; see also [Anthropic's skill-authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)).
 
-- **One canonical home per shared concept.** The cross-skill Olares platform model (userspace storage, uid-1000 run identity, app/namespace & networking, system middleware, version/semver) lives once in [`olares-shared/references/olares-platform.md`](olares-shared/references/olares-platform.md), with a TOC. Auth/profile facts likewise live once in `olares-shared/SKILL.md`.
+- **One canonical home per shared concept.** The cross-skill Olares platform model (userspace storage, uid-1000 run identity, app/namespace & networking, system middleware, version/semver) lives once in [`olares-shared/references/olares-platform.md`](olares-shared/references/olares-platform.md). The application state machine (states, transitions, fail TTLs, single-download serialization, `running` semantics, progress caveats) lives once in [`olares-shared/references/olares-platform-appstate.md`](olares-shared/references/olares-platform-appstate.md). Auth/profile facts likewise live once in `olares-shared/SKILL.md`.
+- **A cross-skill decision or rule is a shared concept too — give it one named, linkable home and link to it; never re-derive it per skill.** Example: the proceed-vs-stop auth check lives once as the `## Auth-readiness gate` in `olares-shared/SKILL.md`; chart / settings / files link to that anchor instead of re-listing `logged-in / expired / invalidated / never`. A rule copied into N skills drifts in N places — an `expired`-handling fix once meant editing four chart files because each had re-derived the same decision.
 - **Link the shared source one hop from each consumer's `SKILL.md`** with a short must-read prerequisite (`> Platform model (read once): … see ../olares-shared/references/olares-platform.md`). This is the lark-cli `CRITICAL — MUST Read ../lark-shared/SKILL.md` convention.
 - **Do NOT deep-link the shared source from reference files.** A reference that points at another skill's reference is a two-hop nested read. Instead, refer to the shared concept **by name** (matching the source's heading) and rely on the `SKILL.md` prerequisite to have loaded it. (See the chart references, which name "the platform **Userspace storage model**" rather than linking it.)
 - **Self-containment is traded for a suite contract.** Strictly, Skills are self-contained and "cannot reference files in other skill folders". We deliberately cross-link because these skills **ship and install as one suite** (stated under Layout). A standalone install leaves cross-skill links dangling — that is the documented trade-off, not an accident.
@@ -106,7 +112,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 `clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` is valid semver, that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
-./cli/skills/publish.sh --dry-run                  # validate all 9
+./cli/skills/publish.sh --dry-run                  # validate all 10
 ./cli/skills/publish.sh --dry-run olares-shared    # validate one
 ```
 
@@ -128,7 +134,7 @@ Note: `clawhub sync` defaults to bumping the patch version on updates. For deter
 ### Publish
 
 ```bash
-./cli/skills/publish.sh                            # publish all 9
+./cli/skills/publish.sh                            # publish all 10
 ./cli/skills/publish.sh olares-files olares-market # publish a subset
 ```
 
@@ -136,7 +142,7 @@ Versions come from each skill's frontmatter `version:` field — bump the field 
 
 ## Slug policy
 
-The 9 skills publish under their canonical short names:
+The 10 skills publish under their canonical short names:
 
 | Slug              | Display name                                |
 |-------------------|---------------------------------------------|
@@ -147,6 +153,7 @@ The 9 skills publish under their canonical short names:
 | `olares-settings` | Olares Settings (olares-cli settings)       |
 | `olares-dashboard`| Olares Dashboard (olares-cli dashboard)     |
 | `olares-cluster`  | Olares Cluster (olares-cli cluster)         |
+| `olares-doctor`   | Olares Doctor (runtime diagnosis)           |
 | `olares-chart`    | Olares Chart (olares-cli chart)             |
 | `olares-publish`  | Olares Publish (Olares Market distribution) |
 

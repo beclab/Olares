@@ -2,9 +2,8 @@
 
 > **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) first.
 > **Flags & wire shape:** `olares-cli files task --help`, `olares-cli files task cancel --help`.
-> **Needs Olares >= 1.12.6** (shares the archive surface).
 
-Control the per-node task queue that backs the asynchronous file verbs (`compress` / `extract` today). They return a `task_id`; this is how you act on it AFTER it's queued.
+Control the per-node task queue that backs the asynchronous file verbs (`compress` / `extract`). They return a `task_id`; this is how you act on it AFTER it's queued. (`files task` itself has no version floor; the `compress` / `extract` verbs that enqueue work do — see the compress / extract reference.)
 
 ## Sub-commands
 

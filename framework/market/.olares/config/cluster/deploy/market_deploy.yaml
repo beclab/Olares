@@ -54,6 +54,15 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+    - app.bytetrade.io
+    resources:
+    - applicationmanagers
+    - applications
+    verbs:
+    - list
+    - watch
+    - get
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -78,15 +87,6 @@ metadata:
 type: Opaque
 data:
   nats_password: {{ $nats_password }}
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: market-secrets
-  namespace: {{ .Release.Namespace }}
-type: Opaque
-data:
-  redis-passwords: {{ $redis_password }}
 ---
 apiVersion: v1
 kind: Secret
@@ -140,23 +140,21 @@ spec:
           image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
           name: check-appservice
-        - args:
-          - -it
-          - chart-repo-service.os-framework.svc.cluster.local:82
-          image: owncloudci/wait-for:latest
-          imagePullPolicy: IfNotPresent
-          name: check-chart-repo
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.69
+        image: beclab/market-backend:v0.6.78
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
         env:
+          - name: OLARES_VERSION
+            value: "1.12.6"
           - name: APP_SOTRE_SERVICE_SERVICE_PORT
             value: "443"
           - name: APP_SERVICE_SERVICE_HOST
             value: app-service
+          - name: IMAGE_INFOS
+            value: /opt/app/data/v3/images-info
           - name: MODULE_ENABLE_STATUS_CORRECTION_CHECKER
             value: 'true'
           - name: APP_SERVICE_SERVICE_PORT
@@ -164,7 +162,7 @@ spec:
           - name: REPO_URL_PORT
             value: "82"
           - name: REPO_URL_HOST
-            value: chart-repo-service
+            value: appstore-service
           - name: NATS_HOST
             value: nats.os-platform
           - name: NATS_PORT
@@ -178,17 +176,6 @@ spec:
                 name: market-backend-nats-secret
           - name: SYNCER_REMOTE
             value: https://appstore-china-server-prod.api.jointerminus.cn
-          - name: REDIS_HOST
-            value: redis-cluster-proxy.os-platform
-          - name: REDIS_PORT
-            value: "6379"
-          - name: REDIS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                key: redis-passwords
-                name: market-secrets
-          - name: REDIS_DB_NUMBER
-            value: "0"
           - name: POSTGRES_HOST
             value: citus-headless.os-platform
           - name: POSTGRES_PORT
@@ -215,15 +202,23 @@ spec:
           - name: API_DETAIL_PATH
             value: /api/v1/applications/info
           - name: CHART_ROOT
-            value: /opt/app/data/v3
+            value: /opt/app/data
           - name: NATS_SUBJECT_SYSTEM_USER_STATE
             value: os.users
           - name: GO_ENV
             value: prod
           - name: CHART_REPO_SERVICE_HOST
-            value: chart-repo-service:82
+            value: localhost:82
           - name: IS_ACCOUNT_FROM_HEADER
             value: 'true'
+        volumeMounts:
+          - name: opt-data
+            mountPath: /opt/app/data
+      volumes:
+      - name: opt-data
+        hostPath:
+          path: '{{ .Values.rootPath }}/userdata/Cache/chartrepo'
+          type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service
@@ -239,23 +234,10 @@ spec:
       name: appstore-backend
       port: 81
       targetPort: 8080
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: market-redis
-  namespace: {{ .Release.Namespace }}
-spec:
-  app: market
-  appNamespace: {{ .Release.Namespace }}
-  middleware: redis
-  redis:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: redis-passwords
-          name: market-secrets
-    namespace: market
+    - name: chart-repo
+      port: 82
+      protocol: TCP
+      targetPort: 82
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest

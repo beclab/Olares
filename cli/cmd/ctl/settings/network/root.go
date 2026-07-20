@@ -25,20 +25,21 @@ import (
 func NewNetworkCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "network",
-		Short: "Network settings (reverse-proxy, FRP, SSL, hosts-file)",
+		Short: "Network settings (reverse-proxy, FRP, SSL, hosts-file, overlay)",
 		Long: `Read and configure network plumbing: reverse-proxy mode, FRP server,
-SSL toggles, and the system hosts-file.
+SSL toggles, the system hosts-file, and the overlay gateway.
 
 Subcommands:
-  reverse-proxy get
+  reverse-proxy get / set
   frp list
   hosts-file get
+  overlay status / enable / disable / app enable / app disable
 
 Out of scope until a JWS key sourcing path exists:
   frp set, ssl enable / disable / update, hosts-file set
 
-Note: reverse-proxy set is owner-only; non-owner callers will hit a
-403 from BFL.
+Note: reverse-proxy set and overlay enable / disable are owner-only;
+non-owner callers will hit a 403 from BFL.
 `,
 	}
 	cmd.SilenceUsage = true
@@ -46,5 +47,6 @@ Note: reverse-proxy set is owner-only; non-owner callers will hit a
 	cmd.AddCommand(NewFRPCommand(f))
 	cmd.AddCommand(NewSSLCommand(f))
 	cmd.AddCommand(NewHostsFileCommand(f))
+	cmd.AddCommand(NewOverlayCommand(f))
 	return cmd
 }

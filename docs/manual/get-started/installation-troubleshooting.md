@@ -1,5 +1,6 @@
 ---
-search:false
+search: false
+noindex: true
 ---
 :::info Troubleshooting installation issues
 If any issues arise during installation, report them by [creating a GitHub issue](https://github.com/beclab/Olares/issues/new). Include the following details:

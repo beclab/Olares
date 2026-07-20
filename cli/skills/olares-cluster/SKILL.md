@@ -1,6 +1,6 @@
 ---
 name: olares-cluster
-version: 4.2.0
+version: 4.4.0
 description: "Olares ControlHub K8s view via olares-cli cluster — pods, workloads, logs, scale/restart, jobs, cronjobs, middleware. Not for app lifecycle (market) or host install (node/os/gpu). Use for ControlHub, pods, logs, workloads."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -25,13 +25,16 @@ Against the cluster the active profile can see:
 - Olares ControlHub, olares-cli cluster, what's running on my Olares
 - "What pods / containers / workloads / jobs / cronjobs / namespaces / nodes are running?"
 - "Tail / show logs of `<pod>` (or `<container>` of `<pod>`)"
-- "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app (mutating verbs prompt for confirmation; `--yes` skips)
+- "Run a command inside a container / debug in-container" (`pod exec` / `container exec` — one-shot is the agent path, `-it` is human-only)
+- "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app lifecycle. `workload stop/start` scales replicas and does not update the app-store state row; use `market stop/resume` for app-level lifecycle (mutating verbs prompt for confirmation; `--yes` skips)
 - "Suspend / resume `<cronjob>`" or "rerun `<job>`"
 - "Who am I on this cluster, what's my role?" (`cluster context`)
 - "What does this object's YAML look like?" (`cluster <noun> yaml`)
 - Watch / follow: pod `-w`, workload `rollout-status -w`, application `status -w`, logs `-f` (poll on `--interval`)
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
+
+> **Diagnosing *why* an app is broken** (stuck install, crash loop, `running` but unreachable, image won't pull, resource pressure) is [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) — it orchestrates these `cluster` commands into symptom→root-cause routing. `cluster` stays the raw runtime view and the place that mutates K8s objects.
 
 > **Mental model:** if the question is *runtime state* of an existing cluster, you are here. If it's *lifecycle* of an Olares app or *day-zero* host setup, you are not.
 
@@ -40,7 +43,7 @@ Against the cluster the active profile can see:
 | Noun | Identifier grammar | What it is |
 |---|---|---|
 | **Pod** | `<ns>/<pod>` (or `-n NS <pod>`) | One running pod with one or more containers |
-| **Container** | `<ns>/<pod>/<container>` (or `-n NS <pod> -c NAME`) | A single container inside a pod (logs / env target) |
+| **Container** | `<ns>/<pod>/<container>` (or `-n NS <pod> -c NAME`) | A single container inside a pod (logs / env / exec target) |
 | **Workload** | `<ns>/<name>` + `--kind deployment\|statefulset\|daemonset` | The controller that owns pods. Subject of `scale` / `restart` / `stop` / `start` / `rollout-status` |
 | **Application space** | `<namespace>` | A KubeSphere-grouped K8s namespace; the "Olares Application Space" framing groups namespaces by workspace |
 | **Namespace** | `<name>` | The same K8s namespace, kubectl-style framing (no workspace grouping) |
@@ -72,7 +75,7 @@ cluster context             (identity / role / accessible workspaces)
 ## The identity-vs-server-decides principle (cross-cutting)
 
 1. **Identity = the currently-selected profile.** Switch with `olares-cli profile use <name>` ahead of time. There is no per-invocation `--profile` override — agents must commit to one role up-front.
-2. **The server decides what the active profile can see; the CLI never preflights.** Pass the request, render whatever the server returns. **A 403 is the authoritative "no" — surface it.** Never gate a call against the locally cached `cluster context`; that cache is for display only.
+2. **The server decides what the active profile can see; the CLI never preflights.** Pass the request, render whatever the server returns. **A 403 is the authoritative "no" — surface it.** Never gate a call against the locally cached `cluster context`; that cache is for display only. (**Exception — `exec`:** it is gated client-side by namespace so the main account can't shell into a sub-account's container. Details in [references/olares-cluster-exec.md](references/olares-cluster-exec.md).)
 3. All requests go through `https://control-hub.<terminus>` and ride the active profile's `access_token` via the auto-refreshing transport. See [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for refresh mechanics and `ErrTokenInvalidated` recovery.
 4. The same nginx fans out four prefixes: `/capi/*` (Olares aggregator), `/api/v1/*` + `/apis/<g>/<v>/*` (K8s native), `/kapis/*` (KubeSphere paginated), `/middleware/v1/*` (Olares middleware aggregator). The right helper is picked per-call by the CLI.
 
@@ -85,8 +88,8 @@ For flags, examples, and wire shapes, **always start with `olares-cli cluster <n
 | Noun | Verbs | `--help` first, then... |
 |---|---|---|
 | `context` | (single verb) | `olares-cli cluster context --help` |
-| `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart` | [references/olares-cluster-pod.md](references/olares-cluster-pod.md) |
-| `container` | `list`, `env`, `logs` | `olares-cli cluster container --help` |
+| `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart`, `exec` | [references/olares-cluster-pod.md](references/olares-cluster-pod.md); exec → [references/olares-cluster-exec.md](references/olares-cluster-exec.md) |
+| `container` | `list`, `env`, `logs`, `exec` | `olares-cli cluster container --help`; exec → [references/olares-cluster-exec.md](references/olares-cluster-exec.md) |
 | `workload` (alias `wl`) | `list`, `images`, `get`, `yaml`, `rollout-status`, `scale`, `restart`, `stop`, `start`, `delete` | [references/olares-cluster-workload.md](references/olares-cluster-workload.md) |
 | `application` (alias `app`) | `list`, `get`, `workloads`, `pods`, `status` | [references/olares-cluster-application.md](references/olares-cluster-application.md) |
 | `namespace` (alias `ns`) | `list`, `get` | `olares-cli cluster namespace --help` |
@@ -119,7 +122,7 @@ Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `work
 Two image-inventory commands ride on top of this:
 
 - `cluster workload images [IMAGE]` follows the same pagination contract. An IMAGE-argument lookup always full-scans the cluster, but the plain listing is NOT full-cluster unless `--all` is set. See [references/olares-cluster-workload.md](references/olares-cluster-workload.md).
-- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. Its completeness/coverage caveats live in that same workload reference's Agent notes.
+- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. It is owned by [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md), which routes to its image-diagnosis reference for the completeness/coverage caveats.
 
 ### `--watch` / `--follow` semantics (uniform)
 
@@ -131,9 +134,9 @@ Two image-inventory commands ride on top of this:
 - TTY detection: clear-screen-redraw for table, raw stream for piped output, JSONL for `-o json`.
 - `--interval D` / `--timeout D` are **rejected with an error** when their gate flag (`-w` or `-f`) isn't also set — don't silently waste a flag.
 
-## Common errors → fixes
+## Common errors
 
-| Error message starts with | Meaning | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
 | `server rejected the request (HTTP 401: ...); please run: olares-cli profile login --olares-id <id>` | Auto-refresh failed, OR refreshed token still rejected | Run the suggested `profile login` |
 | `server rejected the request (HTTP 403: ...)` | The active profile's role can't perform this | `cluster context --refresh` to confirm the cached role matches the server. If still 403, the user genuinely lacks permission |

@@ -1,4 +1,5 @@
 ---
+description: 获取 DID 的元数据有两个接口 - getMetadata(tokenId) 和 getMetadata(name)。
 outline: [2, 3]
 ---
 

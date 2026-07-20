@@ -25,7 +25,7 @@ var uninstalledAppStates = map[string]struct{}{
 }
 
 type appOptions struct {
-	pagingOptions
+	output string
 }
 
 type appEntrance struct {
@@ -71,8 +71,7 @@ entrance title (case-insensitive substring match).
 
 Examples:
   olares-cli search app wise
-  olares-cli search app drive --limit 10
-  olares-cli search app notes -o json
+  olares-cli search app firefox -o json
 `,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -84,7 +83,7 @@ Examples:
 		},
 	}
 	cmd.SilenceUsage = true
-	registerPagingFlags(cmd, &o.pagingOptions)
+	cmd.Flags().StringVarP(&o.output, "output", "o", "table", "output format: table, json")
 	return cmd
 }
 
@@ -92,7 +91,7 @@ func runAppSearch(ctx context.Context, f *cmdutil.Factory, keyword string, o *ap
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	format, err := o.validate()
+	format, err := parseFormat(o.output)
 	if err != nil {
 		return err
 	}
@@ -107,8 +106,7 @@ func runAppSearch(ctx context.Context, f *cmdutil.Factory, keyword string, o *ap
 		return err
 	}
 
-	matched := filterAppsByKeyword(apps, keyword)
-	items := paginateAppItems(matched, o.offset, o.limit)
+	items := filterAppsByKeyword(apps, keyword)
 
 	switch format {
 	case FormatJSON:
@@ -213,17 +211,6 @@ func filterAppsByKeyword(apps []appRaw, keyword string) []appItem {
 		}
 	}
 	return items
-}
-
-func paginateAppItems(items []appItem, offset, limit int) []appItem {
-	if offset >= len(items) {
-		return nil
-	}
-	end := offset + limit
-	if end > len(items) {
-		end = len(items)
-	}
-	return items[offset:end]
 }
 
 func printAppResultsJSON(w io.Writer, items []appItem) error {

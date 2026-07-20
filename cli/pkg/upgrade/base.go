@@ -109,6 +109,14 @@ func (u upgraderBase) UpdateReleaseFile() []task.Interface {
 			Name:   "UpdateReleaseFile",
 			Action: new(terminus.WriteReleaseFile),
 		},
+		&task.LocalTask{
+			Name:   "UpdatePreparedMarker",
+			Action: new(terminus.PrepareFinished),
+		},
+		&task.LocalTask{
+			Name:   "UpdateInstalledMarker",
+			Action: new(terminus.InstallFinished),
+		},
 	}
 }
 
@@ -147,7 +155,7 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 		},
 		&task.LocalTask{
 			Name:   "UpgradeL4BFLProxy",
-			Action: &upgradeL4BFLProxy{Tag: "v0.3.32"},
+			Action: &upgradeL4BFLProxy{Tag: "v0.3.37"},
 			Retry:  6,
 			Delay:  15 * time.Second,
 		},

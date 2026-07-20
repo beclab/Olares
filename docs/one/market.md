@@ -38,8 +38,10 @@ Browse the Market catalog and install new software on your device.
 
     :::tip Progress indicator
     Installation time depends on the app size and your internet speed. The **Install** button changes to a progress bar, indicating the download and installation status. You can navigate away and continue using Olares when it downloads in the background.
+    :::
 
-4. When the installation finishes, the button changes to **Open**. Click it to launch the app immediately.
+4. If prompted to choose a hardware accelerator, select the one you want the app to use (such as a GPU), and then click **Confirm**.
+5. When the installation finishes, the button changes to **Open**. Click it to launch the app immediately.
 
     ![Open app](/images/one/open-app.png#bordered)
 
@@ -71,5 +73,5 @@ Remove applications that you no longer need to save storage space.
 ## Resources
 
 - [Clone applications](../manual/olares/market/clone-apps.md)
-- [Manage paid applications](../manual/olares/market/purchase-paid-apps.md)
+<!-- - [Manage paid applications](../manual/olares/market/purchase-paid-apps.md) -->
 - [Installation FAQs](../manual/olares/market/market.md#faqs)

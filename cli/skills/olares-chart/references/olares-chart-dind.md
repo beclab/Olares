@@ -1,6 +1,6 @@
 # Docker-in-Docker sidecar (terminal/agent apps)
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first, and the [Headless CLI / service archetype](olares-chart-archetypes.md) — DinD is an **optional add-on** to a terminal-based app, not a standalone archetype.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first, and the Headless CLI / service archetype — DinD is an **optional add-on** to a terminal-based app, not a standalone archetype.
 
 Some terminal/agent apps (coding agents, dev sandboxes) need to run `docker` / `docker compose` from inside the workspace. Olares pods cannot reach the host Docker daemon, so the chart ships its **own** daemon as a privileged sidecar and exposes the `docker` CLI to the main (non-privileged) container over TCP.
 
@@ -22,12 +22,7 @@ flowchart LR
   dind -->|"/opt/data (same path)"| ws
 ```
 
-Four moving parts, all gated behind one `ENABLE_DIND` env so users on hosts that forbid privileged containers can turn it off:
-
-1. **CLI injection** — an initContainer copies the `docker` client out of the dind image into an `emptyDir`; the main container mounts just that binary read-only. The main container stays UID 1000 / non-privileged / `drop ALL`.
-2. **Daemon sidecar** — the **only** privileged container; runs `dockerd` on `tcp://0.0.0.0:2375`.
-3. **Wiring** — the main container talks to it via `DOCKER_HOST=tcp://localhost:2375` (same pod = `localhost`).
-4. **Same-path workspace** — the workspace volume is mounted at the **same path** in both containers so bind-mounts resolve inside the daemon.
+Four moving parts, all gated behind one `ENABLE_DIND` env (so hosts that forbid privileged containers can turn it off): **(1) CLI injection** — an initContainer copies the `docker` client out of the dind image into an `emptyDir` the main container mounts read-only; **(2) daemon sidecar** — the **only** privileged container, running `dockerd` on `tcp://0.0.0.0:2375`; **(3) wiring** — the main container (UID 1000, non-privileged, `drop ALL`) reaches it via `DOCKER_HOST=tcp://localhost:2375` (same pod = `localhost`); **(4) same-path workspace** — the workspace volume is mounted at the **same path** in both containers so bind-mounts resolve inside the daemon.
 
 ## Templates (copy-pasteable)
 
@@ -123,7 +118,7 @@ volumes:
   {{- end }}
 ```
 
-**`OlaresManifest.yaml` — the toggle env (see [env.md](olares-chart-env.md)):**
+**`OlaresManifest.yaml` — the toggle env (see the Env area):**
 
 ```yaml
 envs:
@@ -138,11 +133,11 @@ envs:
 
 ## Hard rules
 
-- **The daemon image must be a trusted `beclab/*` image** (e.g. `docker.io/beclab/docker:29.3.0-dind`). A privileged container with a non-trusted image is **denied by OPA** (`privileged` → admission denied, see [run-as-user.md](olares-chart-run-as-user.md)). Do **not** use Docker Hub's library `docker:dind`. Pin the tag — never `:latest`.
+- **The daemon image must be a trusted `beclab/*` image** (e.g. `docker.io/beclab/docker:29.3.0-dind`). A privileged container with a non-trusted image is **denied by OPA** (`privileged` → admission denied, see the run identity (uid 1000) guidance). Do **not** use Docker Hub's library `docker:dind`. Pin the tag — never `:latest`.
 - **Only the daemon sidecar is `privileged: true`.** Keep the main container UID 1000, `allowPrivilegeEscalation: false`, `drop: ["ALL"]` — it never needs privilege; it just talks TCP to the daemon.
 - **Use `strategy: type: Recreate`.** The pattern relies on `hostPath` volumes (`appData/home`, `appData/docker`); `lint` rejects `hostPath` + rolling update, and the docker storage dir must not be opened by two pods at once.
 - **Mount the workspace at the same path** in main + daemon (e.g. `/opt/data`). `docker run -v /opt/data/work:/work` is resolved by `dockerd`, so the path must mean the same thing in the daemon's mount namespace.
-- **Declare headroom.** Image layers under `appData/docker` grow fast — set a generous `spec.limitedDisk`, and size the sidecar's `requests`/`limits` for real builds. The sidecar's resources are **in addition** to the main container's (the lint resource check sums all containers — see [olares-chart-accelerator.md](olares-chart-accelerator.md) §C).
+- **Declare headroom.** Image layers under `appData/docker` grow fast — set a generous `spec.limitedDisk`, and size the sidecar's `requests`/`limits` for real builds. The sidecar's resources are **in addition** to the main container's (the lint resource check sums all containers — see the Accelerator sizing §C).
 - **Security:** a privileged DinD sidecar has effectively host-level kernel access. Only ship it on single-user dev/agent apps where the user already drives arbitrary shell commands, and keep it behind `ENABLE_DIND` so it can be turned off.
 
 ## Variants

@@ -76,7 +76,7 @@ Same shape as [`olares-cli market --watch`](../../olares-market/SKILL.md): opt-i
 - **Always run `users get <name>` before `users delete <name>`** in interactive sessions to confirm role and quota — gives the user a chance to back out if they targeted the wrong account.
 - For "create user and tell me when they can log in" → `users create <name> --defaults --watch -o json | jq '.wizard_url'`.
 - **NEVER paste the auto-generated password into chat.** Recommend the user copy it directly from the CLI output.
-- The opt-in `--watch` shape **flipped from a prior default of "wait by default + `--no-wait`"** — existing scripts that relied on blocking semantics must add `--watch` explicitly.
+- `--watch` is **opt-in**: without it, `users create` / `users delete` return as soon as the request is accepted. Scripts that need blocking semantics must pass `--watch` explicitly.
 
 ## Common errors
 

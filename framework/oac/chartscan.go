@@ -2,6 +2,7 @@ package oac
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -9,6 +10,28 @@ import (
 	"regexp"
 	"strings"
 )
+
+// utf8BOM is the canonical UTF-8 byte-order mark sequence (U+FEFF encoded
+// as three bytes). Editors on Windows and pre-7 PowerShell pipelines often
+// emit it at the head of newly-saved YAML files.
+var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
+
+// stripUTF8BOM trims a leading UTF-8 BOM from data, returning data
+// otherwise unchanged.
+//
+// The chart-scan rules in this package match ^-anchored regexes against
+// chart files line by line. Go's regexp \s class does not include U+FEFF,
+// so an unstripped BOM at column 0 of the first line silently breaks the
+// kind: / replicas: anchors and turns the affected rule into a no-op for
+// the entire first YAML document. YAML/Helm parsers tolerate the BOM
+// transparently, so the same file renders fine and the regression goes
+// unnoticed (see the codeserver fleet-report case where chartmuseum.yaml's
+// hardcoded `replicas: 1` slipped past checkWorkloadReplicaTemplates).
+// Callers should run file bytes through this helper before handing them
+// off to the line-oriented scanners below.
+func stripUTF8BOM(data []byte) []byte {
+	return bytes.TrimPrefix(data, utf8BOM)
+}
 
 // olaresUserChartRef matches user-level environment variable names embedded in
 // chart files. v3 apps must reference app envs via .Values.olaresEnv.<envName>
@@ -62,6 +85,10 @@ func shouldScanChartFile(oacPath, path string) bool {
 // findFirstInChartFiles scans chart templates and values.yaml files under
 // oacPath (including subcharts) and returns the relative path of the first
 // file whose content matches re.
+//
+// File bytes are passed through stripUTF8BOM before scanning so a leading
+// UTF-8 BOM on Windows-authored files doesn't desynchronise ^-anchored
+// patterns from the first line.
 func findFirstInChartFiles(oacPath string, re *regexp.Regexp) (string, error) {
 	if !strings.HasSuffix(oacPath, string(filepath.Separator)) {
 		oacPath += string(filepath.Separator)
@@ -77,12 +104,11 @@ func findFirstInChartFiles(oacPath string, re *regexp.Regexp) (string, error) {
 		if !shouldScanChartFile(oacPath, path) {
 			return nil
 		}
-		f, e := os.Open(path)
-		if e != nil {
-			return e
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return fmt.Errorf("read %s: %w", path, readErr)
 		}
-		defer f.Close()
-		scanner := bufio.NewScanner(f)
+		scanner := bufio.NewScanner(bytes.NewReader(stripUTF8BOM(data)))
 		for scanner.Scan() {
 			if re.MatchString(scanner.Text()) {
 				if firstHit == "" {
@@ -168,7 +194,7 @@ func checkWorkloadReplicaTemplates(oacPath string, replicas map[string]int32) er
 		if relErr != nil {
 			rel = filepath.Base(path)
 		}
-		errs = append(errs, scanWorkloadReplicaDoc(rel, string(data), replicas)...)
+		errs = append(errs, scanWorkloadReplicaDoc(rel, string(stripUTF8BOM(data)), replicas)...)
 		return nil
 	})
 	if walkErr != nil {

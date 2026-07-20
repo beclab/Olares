@@ -119,7 +119,7 @@ func (h *Handler) updateDeviceSupportType(req *restful.Request, resp *restful.Re
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
-	if !compute.IsHAMIMode(device.Mode) {
+	if len(device.AvailableSupportTypes) <= 1 {
 		api.HandleBadRequest(resp, req, fmt.Errorf("device mode switching is not supported for gpu type %s", device.Mode))
 		return
 	}

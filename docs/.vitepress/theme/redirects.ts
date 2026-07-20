@@ -2,14 +2,46 @@ export const redirects = {
     // Root → default docs landing
     '/': '/manual/overview',
 
-    // Refactor: /manual/olares/studio/** → /developer/develop/tutorial/**
-    '/manual/olares/studio/': '/developer/develop/tutorial/',
-    '/manual/olares/studio/deploy': '/developer/develop/tutorial/deploy',
-    '/manual/olares/studio/develop': '/developer/develop/tutorial/develop',
-    '/manual/olares/studio/package-upload': '/developer/develop/tutorial/package-upload',
-    '/manual/olares/studio/assets': '/developer/develop/tutorial/assets',
-    '/developer/develop/tutorial/studio': '/developer/develop/tutorial',
-    '/zh/developer/develop/tutorial/studio': '/zh/developer/develop/tutorial',
+    // Studio docs are hidden; redirect legacy Studio URLs to the docs overview.
+    '/manual/olares/studio/': '/manual/overview',
+    '/manual/olares/studio/deploy': '/manual/overview',
+    '/manual/olares/studio/develop': '/manual/overview',
+    '/manual/olares/studio/package-upload': '/manual/overview',
+    '/manual/olares/studio/assets': '/manual/overview',
+    '/developer/develop/tutorial/studio': '/manual/overview',
+    '/zh/developer/develop/tutorial/studio': '/zh/manual/overview',
+
+    // Hidden Studio docs → docs overview
+    '/developer/develop/tutorial/': '/manual/overview',
+    '/developer/develop/tutorial/deploy': '/manual/overview',
+    '/developer/develop/tutorial/develop': '/manual/overview',
+    '/developer/develop/tutorial/package-upload': '/manual/overview',
+    '/developer/develop/tutorial/assets': '/manual/overview',
+    '/developer/develop/tutorial/note/': '/manual/overview',
+    '/developer/develop/tutorial/note/create': '/manual/overview',
+    '/developer/develop/tutorial/note/backend': '/manual/overview',
+    '/developer/develop/tutorial/note/frontend': '/manual/overview',
+    '/developer/contribute/system-app/overview': '/manual/overview',
+    '/developer/contribute/system-app/deployment': '/manual/overview',
+    '/developer/contribute/system-app/olares-manifest': '/manual/overview',
+    '/developer/contribute/system-app/install': '/manual/overview',
+    '/developer/contribute/system-app/other': '/manual/overview',
+    '/one/deploy': '/manual/overview',
+    '/zh/developer/develop/tutorial/': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/deploy': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/develop': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/package-upload': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/assets': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/note/': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/note/create': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/note/backend': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/note/frontend': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/overview': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/deployment': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/olares-manifest': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/install': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/other': '/zh/manual/overview',
+    '/zh/one/deploy': '/zh/manual/overview',
 
     // Refactor: /space/** → /manual/space/**
     '/space/': '/manual/space/',
@@ -42,6 +74,14 @@ export const redirects = {
     // Refactor: openwebui-ollama → openwebui (merged: Ollama is now Option A in the unified quick start)
     '/use-cases/openwebui-ollama': '/use-cases/openwebui',
     '/zh/use-cases/openwebui-ollama': '/zh/use-cases/openwebui',
+
+    // Rename: descriptive slugs → brand slugs (permanent: old names retired)
+    '/use-cases/stream-media': '/use-cases/jellyfin',
+    '/zh/use-cases/stream-media': '/zh/use-cases/jellyfin',
+    '/use-cases/stream-game': '/use-cases/steam-stream',
+    '/zh/use-cases/stream-game': '/zh/use-cases/steam-stream',
+    '/use-cases/play-games-directly': '/use-cases/steam-direct-play',
+    '/zh/use-cases/play-games-directly': '/zh/use-cases/steam-direct-play',
 
     // Refactor: /manual/concepts/** → /developer/concepts/**
     '/manual/system-architecture': '/developer/concepts/system-architecture',
@@ -107,6 +147,41 @@ export const redirects = {
     
     // Refactor: /zh/manual/docs-home → /zh/manual/overview
     '/zh/manual/docs-home': '/zh/manual/overview',
+
+    // Removed: legacy developer install-step pages (onboarding docs that once lived
+    // under /developer/install/) → the real Get started install overview. Note:
+    // /developer/install/ is now the "Cluster management" (olares-cli) page, so these
+    // must NOT redirect there. No zh installation-troubleshooting: it never existed in zh.
+    '/developer/install/activate-olares': '/manual/get-started/install-olares',
+    '/developer/install/install-and-activate-olares': '/manual/get-started/install-olares',
+    '/developer/install/log-in-to-olares': '/manual/get-started/install-olares',
+    '/developer/install/installation-troubleshooting': '/manual/get-started/install-olares',
+    '/developer/install/reusables': '/manual/get-started/install-olares',
+    '/zh/developer/install/activate-olares': '/zh/manual/get-started/install-olares',
+    '/zh/developer/install/install-and-activate-olares': '/zh/manual/get-started/install-olares',
+    '/zh/developer/install/log-in-to-olares': '/zh/manual/get-started/install-olares',
+    '/zh/developer/install/reusables': '/zh/manual/get-started/install-olares',
+
+    // Removed: empty advanced-dev stub pages → advanced overview
+    '/developer/develop/advanced/rss': '/developer/develop/advanced/',
+    '/developer/develop/advanced/frontend': '/developer/develop/advanced/',
+    '/developer/develop/advanced/notification': '/developer/develop/advanced/',
+    '/zh/developer/develop/advanced/rss': '/zh/developer/develop/advanced/',
+    '/zh/developer/develop/advanced/frontend': '/zh/developer/develop/advanced/',
+    '/zh/developer/develop/advanced/notification': '/zh/developer/develop/advanced/',
+
+    // Removed: empty contribute overview stub → contribute landing
+    '/developer/contribute/overview': '/developer/contribute/olares',
+    '/zh/developer/contribute/overview': '/zh/developer/contribute/olares',
+
+    // Removed: stale olares-id section hero page → first olares-id doc
+    '/developer/contribute/olares-id/': '/developer/contribute/olares-id/contract/contract',
+
+    // Removed: single-gpu/multi-gpu were noindex include-only fragments of gpu-resource → consolidated page
+    '/manual/olares/settings/single-gpu': '/manual/olares/settings/gpu-resource',
+    '/manual/olares/settings/multi-gpu': '/manual/olares/settings/gpu-resource',
+    '/zh/manual/olares/settings/single-gpu': '/zh/manual/olares/settings/gpu-resource',
+    '/zh/manual/olares/settings/multi-gpu': '/zh/manual/olares/settings/gpu-resource',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.

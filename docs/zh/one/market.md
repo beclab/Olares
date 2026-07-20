@@ -76,5 +76,5 @@ Olares Market 是一个开放且无需许可的应用平台。你可以在这里
 ## 资源
 
 - [克隆应用](../../manual/olares/market/clone-apps.md)
-- [管理付费应用](../../manual/olares/market/purchase-paid-apps.md)
+<!-- - [管理付费应用](../../manual/olares/market/purchase-paid-apps.md) -->
 - [安装常见问题](../../manual/olares/market/market.md#faqs)

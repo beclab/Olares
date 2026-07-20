@@ -10,7 +10,7 @@ doc_version: "1.1"
 doc_updated: "2026-06-02"
 ---
 
-# Enable web search
+# Enable web search in Open WebUI
 
 Add web search capabilities to Open WebUI to allow your local AI models to retrieve up-to-date information from the internet. This integration requires an active embedding model to process documents and SearXNG to fetch web results.
 

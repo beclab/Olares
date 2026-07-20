@@ -369,7 +369,14 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		return cleanupAndReturn()
 	}
 	GPUType := computeReq.Mode
-	if computeReq.RequiredGPU == 0 {
+	// A zero RequiredGPU means "app dropped its GPU need" ONLY for nvidia
+	// discrete/HAMi mode (installed with requiredGpu>0, then upgraded to 0),
+	// so we clean up the previously-injected GPU keys. The unified-memory
+	// modes (nvidia-gb10/amd/intel/apple-m/moore-soc) legitimately carry
+	// RequiredGPU==0 by design (their manifests must not declare requiredGpu),
+	// and must still fall through to be injected (gb10 -> nvidia.com/gpu) or
+	// get their nodeSelector, so they must NOT be cleaned up here.
+	if computeReq.RequiredGPU == 0 && GPUType == utils.NvidiaCardType {
 		return cleanupAndReturn()
 	}
 
@@ -427,7 +434,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	if !compute.IsHAMIMode(GPUType) && GPUType != utils.CPUType {
+	if !compute.UsesGPUExtendedResource(GPUType) && GPUType != utils.CPUType {
 		allocations, err := compute.FindAllocationsForApp(ctx, h.ctrlClient, appName, appcfg.OwnerName)
 		if err != nil {
 			klog.Errorf("find compute allocation for app %s failed %v", appName, err)
@@ -460,6 +467,10 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 		return constants.NvidiaGPU
 	case utils.GB10ChipType:
 		return constants.NvidiaGPU
+	case utils.AMDType, utils.AMDGPUType:
+		return constants.AMDGPU
+	case utils.IntelType:
+		return constants.IntelGPU
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")
 		return ""

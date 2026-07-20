@@ -113,7 +113,6 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 					return err
 				}
 			}
-			pre_reqs += " ntpdate "
 		}
 
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s update -qq", pkgManager), false, true); err != nil {
@@ -122,6 +121,14 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 		}
 
 		logger.Debug("apt update success")
+
+		// ntpdate has been dropped from newer Ubuntu releases (e.g. 26.04) where
+		// it no longer has an installation candidate. Resolve the time-sync
+		// package after the package index is refreshed so we can fall back to
+		// systemd-timesyncd, which the time-sync tasks already handle at runtime.
+		if systemInfo.IsUbuntu() {
+			pre_reqs += " " + getTimeSyncPackage(runtime) + " "
+		}
 
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s install -y -qq %s", pkgManager, pre_reqs), false, true); err != nil {
 			logger.Errorf("install deps %s error %v", pre_reqs, err)
@@ -150,6 +157,20 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 	}
 
 	return nil
+}
+
+// getTimeSyncPackage returns the package used to keep the system clock in sync.
+// Historically Olares relied on ntpdate, but it has been removed from newer
+// distributions (e.g. Ubuntu 26.04) where it has no installation candidate.
+// When ntpdate is unavailable we fall back to systemd-timesyncd, which the
+// time-sync tasks already use when the ntpdate binary is absent. This must be
+// called after the apt package index has been refreshed.
+func getTimeSyncPackage(runtime connector.Runtime) string {
+	out, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("apt-cache policy %s", common.CommandNtpdate), false, false)
+	if err == nil && strings.Contains(out, "Candidate:") && !strings.Contains(out, "Candidate: (none)") {
+		return common.CommandNtpdate
+	}
+	return "systemd-timesyncd"
 }
 
 type CorrectHostname struct {
@@ -310,5 +331,30 @@ func (t *DisableLocalDNSTask) configResolvConf(runtime connector.Runtime) error 
 		logger.Errorf("exec %s error %v", cmd, err)
 		return err
 	}
+	return nil
+}
+
+// patch nfs script to fix the issue that when nfs mounting systemd reloading will cause the GPU driver to fail in the running containers
+type PatchNfsScriptTask struct {
+	common.KubeAction
+}
+
+func (t *PatchNfsScriptTask) Execute(runtime connector.Runtime) error {
+	if utils.IsExist("/lib/systemd/system/rpc-statd.service") ||
+		utils.IsExist("/etc/systemd/system/rpc-statd.service") {
+		if _, err := runtime.GetRunner().SudoCmd("systemctl add-wants --runtime remote-fs.target rpc-statd.service", false, true); err != nil {
+			logger.Errorf("exec systemctl add-wants error %v", err)
+			return err
+		}
+
+	}
+
+	if utils.IsExist("/usr/sbin/start-statd") {
+		if _, err := runtime.GetRunner().SudoCmd("sed -i 's/systemctl add-wants/#systemctl add-wants/' /usr/sbin/start-statd", false, true); err != nil {
+			logger.Errorf("exec sed error %v", err)
+			return err
+		}
+	}
+
 	return nil
 }

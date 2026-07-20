@@ -1,7 +1,7 @@
 ---
 description: Olares 专业术语词汇表，提供系统中常见技术概念的标准定义和解释。按字母顺序排列，便于查找和理解 Olares 生态中的专业术语。
 ---
-# Glossary
+# 术语表
 <div style="text-align: center; font-size: 18px; margin-bottom: 20px;">
   <a href="#c" style="text-decoration: none; color: #007BFF;">C</a>
   <span style="margin: 0 10px;">|</span>

@@ -131,13 +131,13 @@ func CheckCurrentStatus(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := utils.ManagedAllDevices(ctx); err != nil {
-		klog.Error("managed all devices error, ", err)
-	}
-
-	devices, err := utils.GetAllDevice(ctx)
+	// Use a single lightweight enumeration that also switches unmanaged
+	// devices to managed. CheckCurrentStatus only reads Name/Type/Connection
+	// below, so the expensive per-device detail queries are intentionally
+	// skipped here to avoid hammering NetworkManager on this 5s poll.
+	devices, err := utils.ManagedDeviceStatus(ctx)
 	if err != nil {
-		klog.Error(err)
+		klog.Error("managed device status error, ", err)
 	}
 
 	// clear value
@@ -186,6 +186,9 @@ func CheckCurrentStatus(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+		} else {
+			// no internal ip, clear host ip
+			hostIp = ""
 		}
 		return nil
 	}

@@ -59,10 +59,10 @@ func (p *UpgradingApp) State() string {
 	return p.GetManager().Status.State.String()
 }
 
-func NewUpgradingApp(c client.Client,
+func NewUpgradingApp(deps Deps,
 	manager *appsv1.ApplicationManager, downloadTTL, ttl time.Duration) (StatefulApp, StateError) {
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &UpgradingApp{
 				baseOperationApp: &baseOperationApp{
@@ -73,7 +73,7 @@ func NewUpgradingApp(c client.Client,
 					},
 				},
 				downloadTTL: downloadTTL,
-				imageClient: images.NewImageManager(c),
+				imageClient: deps.NewImageManager(c),
 			}
 		})
 }
@@ -82,7 +82,7 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 	p.finallyCh = make(chan func(), 1)
 
 	opCtx, cancel := context.WithCancel(context.Background())
-	return appFactory.execAndWatch(opCtx, p,
+	return p.deps.Factory.execAndWatch(opCtx, p,
 		func(c context.Context) (StatefulInProgressApp, error) {
 			in := upgradingInProgressApp{
 				UpgradingApp: p,
@@ -128,7 +128,15 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 						}
 						p.finallyCh <- func() {
 							klog.Infof("upgrade app %s landed in state %s (reason=%s)", p.manager.Name, landed, reason)
-							updateErr := p.updateStatus(context.TODO(), p.manager, landed, nil, landed.String(), reason)
+							// Append an op record for the completed upgrade so the
+							// installed version advances to the new chart version.
+							// Upgrade-from-Stopped lands here without ever passing
+							// through Running, so without this record the op ledger
+							// would keep reporting the pre-upgrade version while the
+							// app stays Stopped (makeRecord takes the version from
+							// the already-bumped AppVersionKey annotation).
+							opRecord := makeRecord(p.manager, landed, fmt.Sprintf(constants.UpgradeOperationCompletedTpl, p.manager.Spec.Type.String(), p.manager.Spec.AppName))
+							updateErr := p.updateStatus(context.TODO(), p.manager, landed, opRecord, landed.String(), reason)
 							if updateErr != nil {
 								klog.Errorf("update appmgr state to %s failed %v", landed, updateErr)
 							}
@@ -155,7 +163,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	var err error
 	var version string
 	var actionConfig *action.Configuration
-	kubeConfig, err := getKubeConfig()
+	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
@@ -188,7 +196,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 		klog.Errorf("get admin username failed %v", err)
 		return err
 	}
-	isAdmin, err := kubesphere.IsAdmin(ctx, kubeConfig, p.manager.Spec.AppOwner)
+	isAdmin, err := p.deps.IsAdmin(ctx, kubeConfig, p.manager.Spec.AppOwner)
 	if err != nil {
 		klog.Errorf("failed check is admin user %v", err)
 		return err
@@ -254,13 +262,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 		}
 	}
 
-	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true)
-	if err != nil {
-		klog.Errorf("build base helm values failed %v", err)
-		return err
-	}
-
-	refs, err := GetRefsForImageManager(appConfig, values)
+	refs, err := p.deps.ResolveImageRefs(ctx, p.manager, appConfig)
 	if err != nil {
 		klog.Errorf("get image refs from resources failed %v", err)
 		return err
@@ -286,7 +288,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	preState := p.manager.Annotations[api.AppPreUpgradeStateKey]
 
 	skipWaitForStartUp := preState == appsv1.Stopped.String()
-	ops, err := newHelmOps(ctx, kubeConfig, appConfig, token,
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appConfig, token,
 		appinstaller.Opt{
 			Source:             p.manager.Spec.Source,
 			MarketSource:       appcfg.GetMarketSource(p.manager),
@@ -326,16 +328,17 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 }
 
 func (p *UpgradingApp) Cancel(ctx context.Context) error {
-	var err error
-	klog.Infof("execute upgrading cancel operation appName=%s", p.manager.Spec.AppName)
-	err = p.imageClient.UpdateStatus(ctx, p.manager.Name, appsv1.DownloadingCanceled.String(), appsv1.DownloadingCanceled.String())
+	// Move to the canceling state and let UpgradingCancelingApp perform the
+	// actual teardown (mark the image manager canceled, stop the in-progress
+	// upgrade goroutine, then settle on Stopping). This mirrors every other
+	// operating state's cancel path (Operating -> *Canceling -> Stopping) and
+	// matches the declared StateTransitions[Upgrading] = {..., UpgradingCanceling}.
+	// Doing the teardown here instead (the previous behaviour) left the AM in
+	// Upgrading because the status was never advanced to UpgradingCanceling.
+	err := p.updateStatus(ctx, p.manager, appsv1.UpgradingCanceling, nil, constants.UpgradeCanceledByTimeout, constants.UpgradeCancelBySystem)
 	if err != nil {
-		klog.Errorf("update im name=%s to downloadingCanceled state failed %v", p.manager.Name, err)
+		klog.Errorf("update appmgr state to upgradingCanceling state failed %v", err)
 		return err
-	}
-
-	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
-		klog.Errorf("app %s cancel operation is not allowed", p.manager.Name)
 	}
 	return nil
 }

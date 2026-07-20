@@ -121,18 +121,7 @@ func (imc *ImageManagerClient) PollDownloadProgress(ctx context.Context, am *app
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	var lastProgress float64 = -1
-	imageList := make([]Image, 0)
-	err := json.Unmarshal([]byte(am.Annotations[constants.ApplicationImageLabel]), &imageList)
-	if err != nil {
-		klog.Errorf("failed unmarshal to images %v", err)
-	}
-	for i, ref := range imageList {
-		name, err := refdocker.ParseDockerRef(ref.Name)
-		if err != nil {
-			continue
-		}
-		imageList[i].Name = name.String()
-	}
+	imageList := parseImageList(am)
 
 	for {
 		select {
@@ -144,62 +133,12 @@ func (imc *ImageManagerClient) PollDownloadProgress(ctx context.Context, am *app
 				return err
 			}
 
-			if im.Status.State == "failed" {
+			if im.Status.State == "failed" || im.Status.State == appv1alpha1.DownloadingCanceled.String() {
 				return errors.New(im.Status.Message)
 			}
 
-			type progress struct {
-				offset int64
-				total  int64
-			}
-			maxImageSize := int64(5086840033)
-
-			nodeMap := make(map[string]*progress)
-			for _, nodeName := range im.Spec.Nodes {
-				for _, ref := range im.Spec.Refs {
-					t := im.Status.Conditions[nodeName][ref.Name]["total"]
-					if t == "" {
-						imageSize := maxImageSize
-						info := findImageSize(imageList, ref.Name)
-						if info != nil && info.Size != 0 {
-							//klog.Infof("get image:%s size:%d", ref.Name, info.Size)
-							imageSize = info.Size
-						}
-						t = strconv.FormatInt(imageSize, 10)
-					}
-
-					total, _ := strconv.ParseInt(t, 10, 64)
-
-					t = im.Status.Conditions[nodeName][ref.Name]["offset"]
-					if t == "" {
-						t = "0"
-					}
-					offset, _ := strconv.ParseInt(t, 10, 64)
-
-					if _, ok := nodeMap[nodeName]; ok {
-						nodeMap[nodeName].offset += offset
-						nodeMap[nodeName].total += total
-					} else {
-						nodeMap[nodeName] = &progress{offset: offset, total: total}
-					}
-				}
-			}
-			ret := math.MaxFloat64
-			for n, p := range nodeMap {
-				var nodeProgress float64
-				if p.total != 0 {
-					nodeProgress = float64(p.offset) / float64(p.total)
-				}
-				if len(nodeMap) > 1 {
-					klog.Infof("node: %s,app: %s, progress: %.2f", n, am.Spec.AppNamespace, nodeProgress)
-				}
-
-				if nodeProgress < ret {
-					ret = nodeProgress
-				}
-
-			}
-			err = imc.updateProgress(ctx, am, &lastProgress, ret*100, am.Spec.OpType == appv1alpha1.UpgradeOp)
+			progress := aggregateDownloadProgress(&im, imageList)
+			err = imc.updateProgress(ctx, am, &lastProgress, progress, am.Spec.OpType == appv1alpha1.UpgradeOp)
 			if err == nil {
 				return nil
 			}
@@ -208,6 +147,98 @@ func (imc *ImageManagerClient) PollDownloadProgress(ctx context.Context, am *app
 			return context.Canceled
 		}
 	}
+}
+
+// GetDownloadProgress reads the ImageManager CR for am and returns the aggregate
+// download percentage in [0,100]. It is a pure read: a single Get with no status
+// write, so callers such as the app status HTTP endpoint can surface live
+// download progress without triggering controller reconciles or etcd writes.
+// found is false when no ImageManager CR exists for am yet (e.g. the download
+// has not started or has already finished and the CR was garbage-collected).
+func GetDownloadProgress(ctx context.Context, cli client.Client, am *appv1alpha1.ApplicationManager) (progress float64, found bool, err error) {
+	var im appv1alpha1.ImageManager
+	if e := cli.Get(ctx, types.NamespacedName{Name: am.Name}, &im); e != nil {
+		if apierrors.IsNotFound(e) {
+			return 0, false, nil
+		}
+		return 0, false, e
+	}
+	return aggregateDownloadProgress(&im, parseImageList(am)), true, nil
+}
+
+// parseImageList decodes the per-app image list annotation and normalizes each
+// ref to its canonical docker form (matching the keys used in ImageManager
+// status conditions).
+func parseImageList(am *appv1alpha1.ApplicationManager) []Image {
+	imageList := make([]Image, 0)
+	if err := json.Unmarshal([]byte(am.Annotations[constants.ApplicationImageLabel]), &imageList); err != nil {
+		klog.Errorf("failed unmarshal to images %v", err)
+	}
+	for i, ref := range imageList {
+		name, err := refdocker.ParseDockerRef(ref.Name)
+		if err != nil {
+			continue
+		}
+		imageList[i].Name = name.String()
+	}
+	return imageList
+}
+
+// aggregateDownloadProgress computes the overall download percentage in [0,100]
+// from the ImageManager status. It sums offset/total per node across all refs
+// and takes the slowest node as the overall progress, falling back to a fixed
+// per-image size estimate when a ref has not reported its total yet. Pure
+// function: no I/O, safe to call from both the poll loop and read-only callers.
+func aggregateDownloadProgress(im *appv1alpha1.ImageManager, imageList []Image) float64 {
+	type progress struct {
+		offset int64
+		total  int64
+	}
+	maxImageSize := int64(5086840033)
+
+	nodeMap := make(map[string]*progress)
+	for _, nodeName := range im.Spec.Nodes {
+		for _, ref := range im.Spec.Refs {
+			t := im.Status.Conditions[nodeName][ref.Name]["total"]
+			if t == "" {
+				imageSize := maxImageSize
+				info := findImageSize(imageList, ref.Name)
+				if info != nil && info.Size != 0 {
+					imageSize = info.Size
+				}
+				t = strconv.FormatInt(imageSize, 10)
+			}
+
+			total, _ := strconv.ParseInt(t, 10, 64)
+
+			t = im.Status.Conditions[nodeName][ref.Name]["offset"]
+			if t == "" {
+				t = "0"
+			}
+			offset, _ := strconv.ParseInt(t, 10, 64)
+
+			if _, ok := nodeMap[nodeName]; ok {
+				nodeMap[nodeName].offset += offset
+				nodeMap[nodeName].total += total
+			} else {
+				nodeMap[nodeName] = &progress{offset: offset, total: total}
+			}
+		}
+	}
+	ret := math.MaxFloat64
+	for _, p := range nodeMap {
+		var nodeProgress float64
+		if p.total != 0 {
+			nodeProgress = float64(p.offset) / float64(p.total)
+		}
+		if nodeProgress < ret {
+			ret = nodeProgress
+		}
+	}
+	if ret == math.MaxFloat64 {
+		return 0
+	}
+	return ret * 100
 }
 
 func (imc *ImageManagerClient) updateProgress(ctx context.Context, am *appv1alpha1.ApplicationManager, lastProgress *float64, progress float64, isUpgrade bool) error {

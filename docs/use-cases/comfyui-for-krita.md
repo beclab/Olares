@@ -33,7 +33,7 @@ In this guide, you will learn how to:
 Open ComfyUI Launcher and click **START** to make sure the service is running.
 
 :::tip Maximize GPU performance
-You can set the GPU mode to **App exclusive** and assign ComfyUI full GPU access in **Settings** > **GPU** to ensure maximum performance.
+You can set the GPU mode to **Exclusive** and assign ComfyUI full GPU access in **Settings** > **Accelerator** to ensure maximum performance.
 :::
 
 ## Get the endpoint for ComfyUI
