@@ -317,6 +317,18 @@ func formatSelected(sel []int) string {
 	return strings.Join(parts, ",")
 }
 
+// joinIndicesCSV renders indices as a plain CSV (e.g. "1,3,5") for the
+// create path's extra.selected_files. Unlike formatSelected it never emits the
+// "all" sentinel: callers must handle the empty case (omit the key) themselves,
+// since on create an absent selected_files already means "all files".
+func joinIndicesCSV(sel []int) string {
+	parts := make([]string, len(sel))
+	for i, n := range sel {
+		parts[i] = strconv.Itoa(n)
+	}
+	return strings.Join(parts, ",")
+}
+
 func newTorrentSeedCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "seed",

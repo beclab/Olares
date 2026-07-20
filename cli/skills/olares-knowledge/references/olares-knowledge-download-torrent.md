@@ -57,5 +57,8 @@ olares-cli knowledge download create --torrent ./x.torrent --select-files 1,3
 
 A magnet link is an ordinary URL argument. `--torrent` uploads a local
 `.torrent` (base64, `extra.torrent_file_b64`) and lets the URL argument be
-omitted. `--select-files` passes 1-based indices through as
-`extra.selected_files`.
+omitted. `--select-files` takes 1-based indices, normalised into
+`extra.selected_files` through the same validator as `torrent files --select`:
+`all` (or omitting the flag) downloads every file, and bad tokens (`0`,
+negatives, non-integers) are rejected locally rather than round-tripping to a
+server 400.

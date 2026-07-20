@@ -87,7 +87,7 @@ func runSync(ctx context.Context, f *cmdutil.Factory, app string, limit int, sin
 		if err := renderTasksTable(os.Stdout, res.Items); err != nil {
 			return err
 		}
-		if res.HasMore {
+		if shouldPrintNextCursor(res) {
 			nextSince, nextID := res.NextCursor()
 			fmt.Printf("\nmore available; next --since %s --since-id %d\n",
 				nextSince.UTC().Format(time.RFC3339Nano), nextID)
@@ -132,6 +132,16 @@ func parseSince(raw string) (time.Time, error) {
 		}
 	}
 	return time.Time{}, fmt.Errorf("invalid --since %q (want local time e.g. 2026-07-15T23:03 or \"2026-07-15 23:03\", a date 2026-07-15, or RFC3339 2026-07-15T15:03:00Z)", raw)
+}
+
+// shouldPrintNextCursor reports whether a fetched page warrants printing the
+// next --since / --since-id hint: only when the server says there is more AND
+// this page actually carried rows. NextCursor derives from the last item, so an
+// empty page (a misbehaving server sending has_more=true with no list) would
+// otherwise print the zero-value cursor 0001-01-01T00:00:00Z / 0, which
+// advances nothing and stalls manual paging.
+func shouldPrintNextCursor(res SyncResult) bool {
+	return res.HasMore && len(res.Items) > 0
 }
 
 func fetchSyncPage(ctx context.Context, pc *preparedClient, app string, limit int, since time.Time, sinceID int64) (SyncResult, error) {

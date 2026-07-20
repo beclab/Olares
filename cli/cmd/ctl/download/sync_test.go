@@ -47,3 +47,23 @@ func TestParseSince(t *testing.T) {
 		t.Fatal("expected error for garbage input")
 	}
 }
+
+func TestShouldPrintNextCursor(t *testing.T) {
+	rows := []DownloadTask{{ID: 7, UpdatedAt: time.Now()}}
+	cases := []struct {
+		name string
+		res  SyncResult
+		want bool
+	}{
+		{name: "more with rows hints", res: SyncResult{HasMore: true, Items: rows}, want: true},
+		// has_more=true with an empty list must NOT hint: NextCursor would be
+		// the zero-value cursor and stall paging.
+		{name: "more but empty does not hint", res: SyncResult{HasMore: true, Items: nil}, want: false},
+		{name: "no more does not hint", res: SyncResult{HasMore: false, Items: rows}, want: false},
+	}
+	for _, tc := range cases {
+		if got := shouldPrintNextCursor(tc.res); got != tc.want {
+			t.Fatalf("%s: shouldPrintNextCursor=%v want %v", tc.name, got, tc.want)
+		}
+	}
+}

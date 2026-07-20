@@ -42,7 +42,10 @@ Torrent / magnet:
     olares-cli knowledge download create --torrent ./x.torrent --select-files 1,3
 --torrent reads a local .torrent file and sends it as extra.torrent_file_b64.
 --select-files takes a comma-separated list of 1-based file indices (as
-reported by "torrent inspect"), passed through as extra.selected_files.
+reported by "torrent inspect"), normalised into extra.selected_files. Pass
+--select-files all (or omit the flag) to download every file. Bad tokens
+(0, negatives, non-integers) are rejected locally, same as
+"torrent files --select".
 
 --quality maps to extra.ytdlp_quality (one of: ` + ytdlpQualityValues + `).
 --format-id maps to extra.format_id.
@@ -83,8 +86,29 @@ Note wise defaults HF to cache; this CLI defaults to local unless you pass _hf_d
 	cmd.Flags().StringVar(&formatID, "format-id", "", "yt-dlp format_id override")
 	cmd.Flags().StringVar(&extraRaw, "extra", "", "JSON object merged into extra (string values)")
 	cmd.Flags().StringVar(&torrentFile, "torrent", "", "local .torrent file to upload (base64); the URL argument may be omitted")
-	cmd.Flags().StringVar(&selectFiles, "select-files", "", "comma-separated 1-based file indices for a multi-file torrent (e.g. 1,3,5)")
+	cmd.Flags().StringVar(&selectFiles, "select-files", "", "comma-separated 1-based file indices for a multi-file torrent (e.g. 1,3,5), or \"all\" (= omit = every file)")
 	return cmd
+}
+
+// normalizeSelectFiles validates and normalises the --select-files flag into
+// the extra.selected_files CSV, using the same validator as
+// `torrent files --select` so both paths agree. It returns ok=false (omit the
+// key) for a blank input or an empty/"all" selection — on create an absent
+// selected_files already means "download every file" — and a non-nil error for
+// bad tokens (0, negatives, non-integers), which fail locally instead of
+// round-tripping to a server 400.
+func normalizeSelectFiles(raw string) (csv string, ok bool, err error) {
+	if strings.TrimSpace(raw) == "" {
+		return "", false, nil
+	}
+	sel, err := parseSelectedIndices(raw)
+	if err != nil {
+		return "", false, err
+	}
+	if len(sel) == 0 {
+		return "", false, nil
+	}
+	return joinIndicesCSV(sel), true, nil
 }
 
 func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles, outputRaw string) error {
@@ -128,8 +152,12 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 		}
 		extra["torrent_file_b64"] = base64.StdEncoding.EncodeToString(raw)
 	}
-	if sf := strings.TrimSpace(selectFiles); sf != "" {
-		extra["selected_files"] = sf
+	csv, ok, err := normalizeSelectFiles(selectFiles)
+	if err != nil {
+		return err
+	}
+	if ok {
+		extra["selected_files"] = csv
 	}
 
 	req := NewDownloadReq{
