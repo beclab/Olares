@@ -55,6 +55,7 @@ Pick the row that matches the reported symptom; each reference carries the locat
 | Command | What it does | Reference |
 |---|---|---|
 | `doctor images` | Lists local containerd images annotated with how many workloads reference each one; `--unused` shows zero-reference prune candidates (largest-first, with reclaimable size). Always full-scans the control node; `-n` / `-l` scope the workload reference count. | [references/olares-doctor-image.md](references/olares-doctor-image.md) |
+| `doctor thirdleveldomain` | Audits Application `customDomain.third_level_domain` per user zone (kubeconfig): flags duplicate prefixes and reserved names (`auth` / `desktop` / `wizard`). `--force-dedupe` keeps one duplicate per zone, clears the rest, and clears reserved names. | — |
 
 ## How doctor gathers evidence (orchestration, not ownership)
 

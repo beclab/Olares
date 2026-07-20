@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: 在 Olares 中管理 AI 算力资源，包括资源模式、应用资源需求、应用恢复和资源释放。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, GPU, AI 算力, 算力资源, 时间切片, 显存切片, 独占模式, 显存
 ---
 # 管理 AI 算力资源
 
@@ -138,3 +142,8 @@ Olares 可以展示以下加速器类型：
 :::info
 资源释放需要一点时间。如果移除后仍没有可分配给该应用的资源，刷新资源列表后再查看。
 :::
+
+## 资源
+
+- [监控资源使用情况](../resources-usage.md)：在仪表盘中跟踪 GPU 和系统使用情况。
+- [GPU 要求](../../get-started/gpu-requirements.md)：查看支持的 GPU 和驱动要求。

@@ -14,7 +14,7 @@ doc_updated: "2026-04-09"
 本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/immich-import-from-nas.md)。
 :::
 
-# 从 NAS 导入照片
+# 将 NAS 中的照片导入 Immich
 
 如果你有存储在 NAS 设备上的照片，可以在 Olares 中挂载 NAS 共享文件夹，并将其导入 Immich 作为外部库。
 

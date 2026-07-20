@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: API reference for managing and interacting with AI applications on Olares, covering app management, text generation, chat, and usage statistics.
 outline: [2, 3]
 ---
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
-description: Complete guide to managing Olares applications - install from Market, update system and community apps, handle custom installations, and properly uninstall applications.
+description: Manage Olares apps in Market. Install and update system or community apps, add custom apps, and safely uninstall software.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Market, install apps, update apps, uninstall apps, self-hosted app store, custom app chart
 ---
 
 # Manage applications in Market
@@ -276,3 +280,9 @@ In Olares 1.12.4 and earlier versions, to fully release resources, you must use 
 Olares 1.12.6 introduces a new V3 shared application architecture. Legacy V2 shared applications can still be started, stopped, paused, and resumed, but they cannot be upgraded directly to V3. To use the V3 version, uninstall the V2 app first, then install the V3 version. Existing data must be migrated manually.
 
 For a full explanation of the architecture change and the migration workflow, see [Shared applications](shared-apps.md).
+
+## Resources
+
+- [Clone applications](clone-apps.md): Run multiple instances of the same app.
+- [Shared applications](shared-apps.md): Understand and manage cluster-wide shared apps.
+- [Application concepts](../../../developer/concepts/application.md): Learn how system, community, and shared apps work.

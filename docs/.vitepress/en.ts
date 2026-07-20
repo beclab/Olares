@@ -217,10 +217,10 @@ const side = {
               text: "Clone applications",
               link: "/manual/olares/market/clone-apps",
             },
-            {
+            /*{
               text: "Manage paid applications",
               link: "/manual/olares/market/purchase-paid-apps",
-            },
+            },*/
             {
               text: "Shared applications",
               link: "/manual/olares/market/shared-apps",
@@ -513,7 +513,7 @@ const side = {
           link: "/manual/space/manage-accounts",
         },
         {
-          text: "Manage Olares",
+          text: "Monitor Olares",
           link: "/manual/space/manage-olares",
         },
         {

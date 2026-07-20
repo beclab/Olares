@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -30,10 +29,10 @@ func (r *downloadingInProgressApp) poll(ctx context.Context) error {
 }
 
 func (r *downloadingInProgressApp) WaitAsync(ctx context.Context) {
-	appFactory.waitForPolling(ctx, r, func(err error) {
+	r.deps.Factory.waitForPolling(ctx, r, func(err error) {
 		if err != nil {
 			if !errors.Is(err, context.Canceled) {
-				updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.DownloadFailed, nil, err.Error(), "")
+				updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.DownloadFailed, nil, err.Error(), appsv1.DownloadFailed.String())
 				if updateErr != nil {
 					klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.DownloadFailed.String(), updateErr)
 					return
@@ -46,7 +45,7 @@ func (r *downloadingInProgressApp) WaitAsync(ctx context.Context) {
 		// No resource gate here. For workloadReplicas apps the pressure
 		// and allocation chain runs in installing_app.go after helm
 		// install (release at replicas=0) and before Scale(-1).
-		updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.Installing, nil, appsv1.Installing.String(), "")
+		updateErr := r.updateStatus(context.TODO(), r.manager, appsv1.Installing, nil, "start to install", appsv1.Installing.String())
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", r.manager.Name, appsv1.Installing.String(), updateErr)
 			return
@@ -66,13 +65,13 @@ type DownloadingApp struct {
 	imageClient images.ImageManager
 }
 
-func NewDownloadingApp(c client.Client,
+func NewDownloadingApp(deps Deps,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 	// TODO: check app state
 
 	//
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &DownloadingApp{
 				baseOperationApp: &baseOperationApp{
@@ -82,7 +81,7 @@ func NewDownloadingApp(c client.Client,
 					},
 					ttl: ttl,
 				},
-				imageClient: images.NewImageManager(c),
+				imageClient: deps.NewImageManager(c),
 			}
 		})
 }
@@ -90,7 +89,7 @@ func NewDownloadingApp(c client.Client,
 func (p *DownloadingApp) Cancel(ctx context.Context) error {
 	// only cancel the downloading operation when the app is timeout
 	klog.Infof("call timeout downloadingApp cancel....")
-	err := p.updateStatus(ctx, p.manager, appsv1.DownloadingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.DownloadingCanceling.String())
+	err := p.updateStatus(ctx, p.manager, appsv1.DownloadingCanceling, nil, constants.DownloadCanceledByTimeout, constants.DownloadCancelBySystem)
 	if err != nil {
 		klog.Errorf("update app manager name=%s to downloadingCanceling state failed %v", p.manager.Name, err)
 		return err
@@ -118,26 +117,20 @@ func (p *DownloadingApp) Exec(ctx context.Context) (StatefulInProgressApp, error
 }
 
 func (p *DownloadingApp) exec(ctx context.Context) error {
-	var err error
 	var appConfig *appcfg.ApplicationConfig
-	kubeConfig, err := getKubeConfig()
-	if err != nil {
-		klog.Errorf("get kube config failed %v", err)
-		return err
-	}
+	err := json.Unmarshal([]byte(p.manager.Spec.Config), &appConfig)
+	//kubeConfig, err := getKubeConfig()
+	//if err != nil {
+	//	klog.Errorf("get kube config failed %v", err)
+	//	return err
+	//}
 	err = json.Unmarshal([]byte(p.manager.Spec.Config), &appConfig)
 	if err != nil {
 		klog.Errorf("unmarshal to appConfig failed %v", err)
 		return err
 	}
 
-	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true)
-	if err != nil {
-		klog.Errorf("build base helm values failed %v", err)
-		return err
-	}
-
-	refs, err := GetRefsForImageManager(appConfig, values)
+	refs, err := p.deps.ResolveImageRefs(ctx, p.manager, appConfig)
 	if err != nil {
 		klog.Errorf("get image refs from resources failed %v", err)
 		return err

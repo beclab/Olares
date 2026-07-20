@@ -1,5 +1,5 @@
 ---
-description: Olares Space provides infrastructure services for your Olares environment, including account management, custom domain configuration, data backup, and shared GPU resources.
+description: Explore Olares Space services for cloud hosting, account management, custom domains, data backup, traffic, and shared GPU resources.
 ---
 # Olares Space overview
 
@@ -10,7 +10,7 @@ Your Olares Space account is associated with your Olares IDs or DIDs. You can lo
 This section walks you through using Olares Space:
 
 - [Log in and manage accounts](manage-accounts.md)
-- [Manage Olares](manage-olares.md)
+- [Monitor Olares](manage-olares.md)
 - [Set up a custom domain](host-domain.md)
 - [Manage domain members](manage-domain.md)
 - [Back up & restore Olares](backup-restore.md)

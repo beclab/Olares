@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install and use the Olares CLI Agent Skill bundles from AI runtimes such as Cursor and Claude Code, or from Olares apps such as Hermes Agent and OpenClaw. Covers the bundles, the shared-first install order, and end-to-end usage.
+description: Install Olares CLI Agent Skills for Cursor, Claude Code, Hermes Agent, and OpenClaw. Learn bundle contents, install order, and end-to-end usage.
 ---
 
 # Install and use Agent Skills

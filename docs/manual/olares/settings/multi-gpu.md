@@ -1,1 +1,0 @@
-<!--@include: ./gpu-resource.md-->
