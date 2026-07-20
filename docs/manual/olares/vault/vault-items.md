@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
-description: Understand Vault basics in Olares. Learn to set up vaults, manage vault items, organize sensitive data with tags, and protect your information with local passwords and encryption.
+description: Learn Olares Vault basics. Create vaults, manage and tag sensitive items, and protect data with local passwords and encryption.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Vault, password manager, store passwords, manage credentials, secure notes, two-factor authentication
 ---
 
 # Vault basics
@@ -171,3 +175,9 @@ You can use quick filters or search box to locate the vault item you need.
 
 ### Keyword search
 Click <i class="material-symbols-outlined">search</i> to directly search for target items using keywords.
+
+## Resources
+
+- [Share vault items](share-vault-items.md): Manage team vaults and shared items.
+- [Use autofill with LarePass](../../larepass/autofill.md): Autofill logins across your devices.
+- [Set up two-factor authentication codes](../../larepass/two-factor-verification.md): Generate and store 2FA codes.

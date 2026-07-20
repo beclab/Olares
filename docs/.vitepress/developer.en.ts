@@ -374,11 +374,11 @@ export const developerSidebar: DefaultTheme.Sidebar = {
           text: "Promote your apps",
           link:"/developer/develop/promote-apps"
         },
-        {
+        /*{
           text: "Publish paid apps",
           link: "/developer/develop/paid-apps",
-        },
-        
+        },*/
+
       ],
     },
     {

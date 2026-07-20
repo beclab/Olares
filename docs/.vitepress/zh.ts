@@ -190,7 +190,7 @@ const side = {
         },
         {
           text: "安全访问 Olares",
-          link: "zh/manual/get-started/local-access",
+          link: "/zh/manual/get-started/local-access",
         },
         {
           text: "探索",
@@ -215,10 +215,10 @@ const side = {
               text: "克隆应用",
               link: "/zh/manual/olares/market/clone-apps",
             },
-            {
+            /*{
               text: "管理付费应用",
               link: "/zh/manual/olares/market/purchase-paid-apps",
-            },
+            },*/
             {
               text: "共享应用",
               link: "/zh/manual/olares/market/shared-apps",
@@ -510,7 +510,7 @@ const side = {
             link: "/zh/manual/space/manage-accounts",
           },
           {
-            text: "管理 Olares",
+            text: "监控 Olares",
             link: "/zh/manual/space/manage-olares",
           },
           {
@@ -578,15 +578,16 @@ const side = {
         {
           text: "连接 AI 应用",
           link: "/zh/manual/best-practices/connect-ai-apps",
-        },        
+        },
       ],
     },
-    { text: "术语", link: "/zh/manual/glossary" },
+    { text: "术语表", link: "/zh/manual/glossary" },
   ],
 };
 
 export const zh = defineConfig({
   lang: "zh",
+  titleTemplate: ":title | Olares 中文文档",
   themeConfig: {
     editLink: {
       pattern: "https://github.com/beclab/Olares/edit/main/docs/:path",

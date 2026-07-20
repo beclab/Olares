@@ -1,5 +1,6 @@
 ---
 outline: [2, 3]
+title: Use TensorZero as an AI model gateway
 description: Set up TensorZero on Olares to connect your apps to your AI models, monitor their performance, and manage your setup in one place.
 head:
   - - meta

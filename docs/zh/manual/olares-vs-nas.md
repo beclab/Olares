@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: 对比 Olares 与通用 NAS 系统，展现它们在存储方案、应用生态、虚拟机支持、网络配置及 AI 能力等方面的关键区别。
 ---

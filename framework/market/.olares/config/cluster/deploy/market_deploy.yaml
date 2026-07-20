@@ -91,15 +91,6 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: market-secrets
-  namespace: {{ .Release.Namespace }}
-type: Opaque
-data:
-  redis-passwords: {{ $redis_password }}
----
-apiVersion: v1
-kind: Secret
-metadata:
   name: market-pg-secrets
   namespace: {{ .Release.Namespace }}
 type: Opaque
@@ -151,7 +142,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.75
+        image: beclab/market-backend:v0.6.78
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -162,6 +153,8 @@ spec:
             value: "443"
           - name: APP_SERVICE_SERVICE_HOST
             value: app-service
+          - name: IMAGE_INFOS
+            value: /opt/app/data/v3/images-info
           - name: MODULE_ENABLE_STATUS_CORRECTION_CHECKER
             value: 'true'
           - name: APP_SERVICE_SERVICE_PORT
@@ -209,7 +202,7 @@ spec:
           - name: API_DETAIL_PATH
             value: /api/v1/applications/info
           - name: CHART_ROOT
-            value: /opt/app/data/v3
+            value: /opt/app/data
           - name: NATS_SUBJECT_SYSTEM_USER_STATE
             value: os.users
           - name: GO_ENV
@@ -218,6 +211,14 @@ spec:
             value: localhost:82
           - name: IS_ACCOUNT_FROM_HEADER
             value: 'true'
+        volumeMounts:
+          - name: opt-data
+            mountPath: /opt/app/data
+      volumes:
+      - name: opt-data
+        hostPath:
+          path: '{{ .Values.rootPath }}/userdata/Cache/chartrepo'
+          type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service
@@ -237,23 +238,6 @@ spec:
       port: 82
       protocol: TCP
       targetPort: 82
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: MiddlewareRequest
-metadata:
-  name: market-redis
-  namespace: {{ .Release.Namespace }}
-spec:
-  app: market
-  appNamespace: {{ .Release.Namespace }}
-  middleware: redis
-  redis:
-    password:
-      valueFrom:
-        secretKeyRef:
-          key: redis-passwords
-          name: market-secrets
-    namespace: market
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest

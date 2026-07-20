@@ -1,6 +1,6 @@
 ---
 outline: deep
-description: Install and use Open Notebook on Olares to collect sources, generate AI insights, chat with your knowledge base, create notes, and generate podcasts from your research materials.
+description: Run Open Notebook on Olares to collect research sources, generate AI insights, chat with your knowledge base, take notes, and create podcasts.
 head:
   - - meta
     - name: keywords

@@ -35,6 +35,10 @@ func (u UbuntuVersion) String() string {
 		return "22."
 	case Ubuntu24:
 		return "24."
+	case Ubuntu25:
+		return "25."
+	case Ubuntu26:
+		return "26."
 	}
 	return ""
 }
@@ -56,6 +60,7 @@ const (
 	Ubuntu22   UbuntuVersion = "22."
 	Ubuntu24   UbuntuVersion = "24."
 	Ubuntu25   UbuntuVersion = "25."
+	Ubuntu26   UbuntuVersion = "26."
 	Ubuntu2204 UbuntuVersion = "22.04"
 	Ubuntu2404 UbuntuVersion = "24.04"
 
@@ -146,7 +151,7 @@ func (s *SystemInfo) IsSupport() error {
 	//}
 
 	if s.IsUbuntu() {
-		if !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) && !s.IsUbuntuVersionEqual(Ubuntu25) {
+		if !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) && !s.IsUbuntuVersionEqual(Ubuntu25) && !s.IsUbuntuVersionEqual(Ubuntu26) {
 			return fmt.Errorf("unsupported ubuntu os version '%s'", s.GetOsVersion())
 		}
 	}

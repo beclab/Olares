@@ -27,10 +27,10 @@ type StoppedApp struct {
 	*baseOperationApp
 }
 
-func NewStoppedApp(c client.Client,
+func NewStoppedApp(deps Deps,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
-	return appFactory.New(c, manager, 0,
+	return deps.Factory.New(deps, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &StoppedApp{
 				&baseOperationApp{

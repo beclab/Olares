@@ -66,6 +66,7 @@ func (h *Handler) appApplyEnv(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      appv1alpha1.ApplyingEnv,
 		Message:    "waiting for applying env",
+		Reason:     appv1alpha1.ApplyingEnv.String(),
 		StatusTime: &now,
 		UpdateTime: &now,
 	}
