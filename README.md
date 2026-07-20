@@ -30,7 +30,7 @@
 
 Powered by Kubernetes, it turns your machines into a self-hosted AI platform accessible from any browser, giving everyone from individual users to small teams a unified place for compute, storage, networking, and apps.
 
-https://github.com/user-attachments/assets/eb75468b-ff36-429f-bd83-483d9a59e0a3
+https://github.com/user-attachments/assets/01490c33-41ce-46fe-8450-6939b40db98e
 
 > 🌟 *If Olares is useful to you, consider giving the project a star. Your support encourages us to keep improving it.*
 
