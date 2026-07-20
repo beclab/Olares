@@ -176,6 +176,8 @@ spec:
           value: download-cluster-view
         - name: YTDLP_SERVER_URL
           value: http://ytdlp-svc.ytdlpv3-shared:3082
+        - name: INTEGRATION_PROVIDER_URL
+          value: http://integration-provider-svc.os-protected:28080
         - name: ARIA2_RPC_URL
           value: http://download-svc:6800/jsonrpc
         - name: PG_USERNAME
