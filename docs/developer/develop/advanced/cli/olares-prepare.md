@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The olares prepare command sets up the environment required for Olares to function.
+---
 # `olares prepare`
 
 ## Synopsis

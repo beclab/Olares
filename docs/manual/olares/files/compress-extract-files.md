@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Compress and extract files in the Olares Files app. Supports ZIP, 7z, TAR, and more formats, with additional options for compression level, password protection, and split archives.
+description: Compress and extract files in Olares Files with ZIP, 7z, TAR, and other formats. Set compression level, passwords, and split archives.
 ---
 
 # Compress and extract files

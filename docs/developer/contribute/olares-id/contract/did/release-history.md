@@ -1,3 +1,6 @@
+---
+description: Release history and changelog for the TerminusDID contract module.
+---
 # Release History
 
 ## V2.0.0

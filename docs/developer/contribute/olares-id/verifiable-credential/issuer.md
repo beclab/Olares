@@ -1,3 +1,6 @@
+---
+description: How the Issuer service issues verifiable credentials in the Olares ID system.
+---
 # Issuer
 
 ![alt text](/images/developer/contribute/issuer.png)

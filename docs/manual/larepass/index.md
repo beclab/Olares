@@ -1,5 +1,5 @@
 ---
-description: User documentation for LarePass. Learn how to access and manage Olares through the LarePass client, including account management, file synchronization, device management, system upgrade, password management, and content collection.
+description: Use LarePass to access and manage Olares accounts, files, devices, system updates, passwords, integrations, and saved content.
 outline: [2, 3]
 ---
 

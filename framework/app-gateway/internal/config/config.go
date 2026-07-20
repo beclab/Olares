@@ -24,9 +24,6 @@ type Defaults struct {
 	TLS struct {
 		Enabled bool `yaml:"enabled"`
 	} `yaml:"tls"`
-	Vendor struct {
-		LinkerdNamespace string `yaml:"linkerdNamespace"`
-	} `yaml:"vendor"`
 }
 
 var (
@@ -51,13 +48,4 @@ func Namespace() string {
 		return "os-gateway"
 	}
 	return d.Namespace
-}
-
-// LinkerdNamespace returns the Linkerd control plane namespace.
-func LinkerdNamespace() string {
-	d, err := Load()
-	if err != nil || d.Vendor.LinkerdNamespace == "" {
-		return "os-mesh"
-	}
-	return d.Vendor.LinkerdNamespace
 }

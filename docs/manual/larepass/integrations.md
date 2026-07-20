@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Connect Olares with third-party services to enhance functionality. Learn how to integrate, authorize, and manage connected services for seamless data synchronization.
+description: Connect and manage third-party integrations in LarePass, including authorization and data synchronization with Olares.
 ---
 
 # Manage integrations in LarePass

@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: Alphabetical reference for every olares-cli command that runs on the Olares host. Syntax, structure, and links to per-command pages with options and examples.
 ---

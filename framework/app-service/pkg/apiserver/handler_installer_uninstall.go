@@ -84,6 +84,8 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 	status := v1alpha1.ApplicationManagerStatus{
 		OpType:     v1alpha1.UninstallOp,
 		State:      v1alpha1.Uninstalling,
+		Message:    "start to uninstall",
+		Reason:     v1alpha1.Uninstalling.String(),
 		OpID:       opID,
 		Progress:   "0.00",
 		StatusTime: &now,

@@ -1,3 +1,7 @@
+---
+noindex: true
+description: reset-password 子命令用于通过认证服务强制重置指定用户的登录密码。
+---
 # `reset-password`
 
 ## 命令说明

@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上设置 AnythingLLM，使用 RAG 构建本地知识库。上传文档，使用本地模型进行嵌入，并用自然语言查询你的知识。
+description: 在 Olares 上部署 AnythingLLM，用 RAG 构建私有、自托管的知识库。上传文档、用本地模型做嵌入，并用自然语言查询。
 head:
   - - meta
     - name: keywords
-      content: Olares, AnythingLLM, RAG, knowledge base, local LLM, embedding, Ollama
+      content: Olares, AnythingLLM, self-hosted rag, private knowledge base, anythingllm ollama, local LLM, embedding, anythingllm on olares
 app_version: "1.0.13"
 doc_version: "1.0"
 doc_updated: "2026-04-13"

@@ -47,6 +47,7 @@ func newFakeInProgress(name string, state appsv1.ApplicationManagerState) *fakeI
 // once; the rest must observe the already in-progress app.
 func TestExecAndWatchDedupsConcurrent(t *testing.T) {
 	app := newFakeInProgress("dedup-app", appsv1.Installing)
+	factory := newStatefulAppFactory()
 
 	var execCount int32
 	exec := func(ctx context.Context) (StatefulInProgressApp, error) {
@@ -59,7 +60,7 @@ func TestExecAndWatchDedupsConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := appFactory.execAndWatch(context.Background(), app, exec); err != nil {
+			if _, err := factory.execAndWatch(context.Background(), app, exec); err != nil {
 				t.Errorf("execAndWatch: %v", err)
 			}
 		}()
@@ -69,16 +70,16 @@ func TestExecAndWatchDedupsConcurrent(t *testing.T) {
 	if got := atomic.LoadInt32(&execCount); got != 1 {
 		t.Fatalf("exec called %d times, want exactly 1", got)
 	}
-	if got := appFactory.countInProgressApp(appsv1.Installing.String()); got != 1 {
+	if got := factory.countInProgressApp(appsv1.Installing.String()); got != 1 {
 		t.Fatalf("in-progress count=%d, want 1", got)
 	}
 
 	// Releasing the app removes it from the registry.
-	if !appFactory.cancelOperation("dedup-app") {
+	if !factory.cancelOperation("dedup-app") {
 		t.Fatal("cancelOperation returned false for registered app")
 	}
 	testutil.Eventually(t, time.Second, 10*time.Millisecond, func() bool {
-		return appFactory.countInProgressApp(appsv1.Installing.String()) == 0
+		return factory.countInProgressApp(appsv1.Installing.String()) == 0
 	})
 }
 
@@ -86,8 +87,9 @@ func TestExecAndWatchDedupsConcurrent(t *testing.T) {
 // once and clean up the app exactly once.
 func TestCancelOperationConcurrent(t *testing.T) {
 	app := newFakeInProgress("cancel-app", appsv1.Upgrading)
+	factory := newStatefulAppFactory()
 
-	if _, err := appFactory.execAndWatch(context.Background(), app, func(ctx context.Context) (StatefulInProgressApp, error) {
+	if _, err := factory.execAndWatch(context.Background(), app, func(ctx context.Context) (StatefulInProgressApp, error) {
 		return app, nil
 	}); err != nil {
 		t.Fatalf("register app: %v", err)
@@ -99,7 +101,7 @@ func TestCancelOperationConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if appFactory.cancelOperation("cancel-app") {
+			if factory.cancelOperation("cancel-app") {
 				atomic.AddInt32(&trueCount, 1)
 			}
 		}()
@@ -112,7 +114,7 @@ func TestCancelOperationConcurrent(t *testing.T) {
 	if got := atomic.LoadInt32(&app.cleaned); got != 1 {
 		t.Fatalf("Cleanup called %d times, want exactly 1", got)
 	}
-	if got := appFactory.countInProgressApp(appsv1.Upgrading.String()); got != 0 {
+	if got := factory.countInProgressApp(appsv1.Upgrading.String()); got != 0 {
 		t.Fatalf("in-progress count=%d after cancel, want 0", got)
 	}
 }
