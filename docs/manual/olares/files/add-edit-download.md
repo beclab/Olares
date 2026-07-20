@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn basic file operations in Olares, such as uploading, previewing, editing, and downloading files.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Files, upload files, download files, preview files, edit files, file management
 ---
 
 # Basic file operations
@@ -162,3 +166,10 @@ To select multiple files:
 
 * **On Windows**: Control + click
 * **On Mac**: Command + click
+
+## Resources
+
+- [Share files](share-files.md): Share files and folders with others.
+- [Sync files to local](sync-files.md): Keep files in sync across your devices.
+- [Mount SMB shares](mount-SMB.md): Access network shares directly in Files.
+- [Mount cloud storage](mount-cloud-storage.md): Manage Google Drive, Dropbox, and S3 in Files.
