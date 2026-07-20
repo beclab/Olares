@@ -152,21 +152,14 @@ func (w *applicationWatcher) loadServerConfig(ctx context.Context, nodeIp string
 		}
 	}
 
-	dynamicClient, err := utils.GetDynamicClient()
-	if err != nil {
-		err = fmt.Errorf("failed to get dynamic client: %v", err)
-		klog.Error(err.Error())
-		return nil, err
-	}
-
-	users, err := utils.ListUsers(ctx, dynamicClient)
+	users, err := utils.ListUsers(ctx)
 	if err != nil {
 		err = fmt.Errorf("failed to list users: %v", err)
 		klog.Error(err.Error())
 		return nil, err
 	}
 
-	adminUser, err := utils.GetAdminUser(ctx, dynamicClient)
+	adminUser, err := utils.GetAdminUser(ctx)
 	if err != nil {
 		err = fmt.Errorf("failed to get admin user: %v", err)
 		klog.Error(err.Error())
