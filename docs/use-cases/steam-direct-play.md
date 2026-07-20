@@ -11,10 +11,10 @@ head:
 
 While Olares is typically used as a headless system, you can connect a monitor, keyboard, and mouse to play games directly on the device.
 
-However, simply plugging in a monitor is not enough. Because Steam Headless is optimized for remote streaming by default, you must manually configure the display and audio settings for local gameplay.
+On most Olares devices, simply plugging in a monitor is not enough. Because Steam Headless is optimized for remote streaming by default, you must manually configure the display and audio settings for local gameplay.
 
 :::tip Olares One users
-Olares One has display and audio pre-configured for local gaming, so no manual setup is required. For Olares One, see [Play Steam games locally on Olares One](../one/steam-direct-play.md).
+Olares One comes with display and audio pre-configured for local gaming. If you are using Olares One, complete only Step 1 below to install and set up Steam Headless. You can skip the manual sound card, display, and audio configuration (Steps 2–4), then go straight to [Download and play games](#_5-download-and-play-games).
 :::
 
 ## Learning objectives
@@ -62,6 +62,11 @@ If Steam installation or update fails due to network issues, go to the top-left 
    ![Sign in to Steam](/images/manual/use-cases/steam-sign-in-to-steam.png#bordered)
 
 ## 2. Grant sound card permissions
+
+:::info Olares One
+Skip Steps 2–4. Display and audio are pre-configured on Olares One. Go to [Download and play games](#_5-download-and-play-games).
+:::
+
 To output audio to your monitor, the Steam container needs direct access to your sound card. You must edit the deployment configuration to "pass through" these hardware components.
 
 :::warning Edit with caution
@@ -240,6 +245,12 @@ Finally, you must manually select the correct audio output channel.
    amixer -c 0 sset 'IEC958' on
    ```
 Audio now plays directly from your monitor or speakers. You are ready to play.
+
+## 5. Download and play games
+
+1. In Steam, go to **Library** to view your games.
+2. Select a game you want to play and click **Install**.
+3. When the download completes, click **Play**.
 
 ## Optional: Enable audio for remote streaming
 :::info

@@ -1,13 +1,10 @@
 ---
 outline: [2, 3]
-description: Manage Olares instances in Olares Space. Monitor system health, storage and traffic, manage worker nodes, and use shared GPUs.
+description: Monitor your Olares system status in Olares Space, including storage usage and traffic consumption.
 ---
-:::warning Documentation does not match current experience
-We are currently updating this documentation to match the latest experience on the Olares Space platform. If there are differences, follow the actual platform.
-:::
-# Manage Olares 
+# Monitor Olares in Olares Space
 
-This page covers Olares management tasks in Olares Space, including monitoring system data, adding worker nodes, and managing cloud services.
+This page covers how to monitor your Olares system status in Olares Space, including storage usage and traffic consumption.
 
 ## View system status
 
@@ -24,31 +21,24 @@ You can monitor the system status of Olares through **Olares Space**:
 For self-hosted Olares users, it's important to monitor **Traffic statistics** for intranet penetration services, and **Storage usage** for backup services. These services may incur charges based on usage.
 :::
 
-## Add worker nodes
+## Check traffic usage
 
-For cloud Olares users, you can improve performance by adding worker nodes:
+Monitor how much data you have used for remote access to avoid exceeding the monthly limit of your subscription plan.
 
-1. Click <i class="material-symbols-outlined">more_horiz</i> in the upper right corner, and select **Add Worker**.
-2. On the guide page, choose your preferred hardware configuration.
-3. Review the fees for storage and traffic.
-4. Confirm your order and submit.
+1. Log in to [Olares Space](https://space.olares.com/).
+2. From the left navigation pane, click **Usage & billing**.
 
-## Return Olares
+   ![Olares Space traffic details](/images/one/olares-space-traffic-usage.png#bordered)
 
-If you no longer need your Olares service, you can return the instance by following these steps:
+3. On the **Usage** tab, check the **Traffic details** section. By default, the traffic details of the latest billing cycle are displayed.
 
-1. Click <i class="material-symbols-outlined">more_horiz</i> in the upper right corner.
-2. Select **Destroy Olares**.
-3. Confirm the action and settle your usage:
-   - If you are eligible for a refund, the amount will be credited back to your account balance.
-   - If additional payment is required, please confirm and settle the payment.
+   - **Progress bar**: Shows how much data you have consumed against your plan's limit. For example, 0.05 GB/2.0 GB.
+   - **Daily chart**: A bar chart displaying your data usage day by day, helping you spot sudden increases in activity.
 
-## Shared GPU solution
+4. To check usage from a previous billing cycle:
 
-Currently, we do not offer cloud instances that include GPUs. However, for users who need GPU capabilities, we provide a shared GPU solution via rCuda. This solution is ideal for applications like Stable Diffusion, costing approximately $0.02 per image.
+   a. Click the date range dropdown list.
 
-:::info
-For Large Language Models (LLMs), the shared GPU solution is still under development and may require further enhancements.
-:::
+      ![Olares Space traffic by month](/images/one/space-traffic-filter.png#bordered)
 
-If you need GPU support, please reach us on [Discord](https://discord.gg/olares).
+   b. Select a specific billing period to view the traffic history for that month. For example, 2025-12-02 ~ 2026-01-02.

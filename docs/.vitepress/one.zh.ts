@@ -28,14 +28,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/first-boot",
         },
         {
-          text: "通过 VPN 访问 Olares",
-          link: "/zh/one/access-olares-via-vpn",
-        },
-        {
-          text: "通过 .local 域名访问 Olares",
-          link: "/zh/one/access-olares-via-local-domain",
-        },
-        {
           text: "兑换会员",
           link: "/zh/one/redeem-membership",
         },
@@ -48,110 +40,14 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "通过自然语言管理 Olares",
           link: "/zh/one/olares-onboarding",
         },
-        /*{
-          text: "与本地 LLM 对话",
-          link: "/zh/one/open-webui",
+        {
+          text: "通过 VPN 访问 Olares",
+          link: "/zh/one/access-olares-via-vpn",
         },
         {
-          text: "使用 ComfyUI 生成图片和视频",
-          link: "/zh/one/comfyui",
-        },*/
-        {
-          text: "管理 AI 算力资源",
-          link: "/zh/one/gpu",
+          text: "通过 .local 域名访问 Olares",
+          link: "/zh/one/access-olares-via-local-domain",
         },
-      ]
-    },
-    {
-      text: "使用",
-      items: [
-        {
-          text: "自定义 Olares",
-          link: "/zh/one/customize",
-        },
-        {
-          text: "管理文件",
-          link: "/zh/one/files",
-        },
-        {
-          text: "备份与恢复数据",
-          link: "/zh/one/backup-restore",
-        },        
-        {
-          text: "安装与更新应用",
-          link: "/zh/one/market",
-        },
-        {
-          text: "安全密码",
-          link: "/zh/one/vault",
-        },
-        /*{
-          text: "下载 YouTube 视频",
-          link: "/zh/one/wise-download",
-        },*/
-        /*
-        {
-          text: "部署应用",
-          link: "/zh/one/deploy",
-        },
-        */
-      ]
-    },
-    {
-       text: "管理",
-       items: [
-        {
-          text: "添加与管理用户",
-          link: "/zh/one/create-users",
-        },
-         {
-           text: "配置应用访问",
-           link: "/zh/one/config-app-access",
-         },
-       ]
-     },
-    {
-      text: "监控",
-      items: [
-        {
-          text: "系统资源",
-          link: "/zh/one/dashboard",
-        },
-        {
-          text: "流量",
-          link: "/zh/one/space",
-        },
-      ]
-    },
-    {
-      text: "探索",
-      items: [
-        {
-          text: "玩 Steam 游戏",
-          collapsed: true,
-          items: [
-            {
-              text: "串流",
-              link: "/zh/one/steam-stream"
-            },
-            {
-              text: "直连游玩",
-              link: "/zh/one/steam-direct-play",
-            }]
-        },
-        {
-          text: "在 Olares 中使用 Windows",
-          link: "/zh/one/windows",
-        },
-        /*{
-          text: "使用 ACE-Step 生成音乐",
-          link: "/zh/one/ace-step",
-        },*/
-
-        // {
-        //   text: "Deep research with DeerFlow",
-        //   link: "/zh/one/deerflow",
-        // },
       ]
     },
     {

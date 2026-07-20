@@ -28,7 +28,7 @@ This guide explains how to install Olares on a physical machine using the offici
 
 ## Create a bootable USB drive
 
-1. Download [the latest official Olares ISO image](https://cdn.olares.com/olares-latest-amd64.iso).
+1. Download [the latest official Olares ISO image](https://cdn.olares.com/olares-v1.12.6-amd64.iso).
 2. Download and install [**Balena Etcher**](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
 4. Launch Etcher and follow these steps:
