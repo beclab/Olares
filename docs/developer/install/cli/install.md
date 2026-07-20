@@ -1,7 +1,3 @@
----
-noindex: true
-description: Use the olares-cli install command to deploy Olares with custom directories, Kubernetes distributions, Minikube profiles, and other options.
----
 # `install`
 
 ## Synopsis

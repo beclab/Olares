@@ -1,5 +1,5 @@
 ---
-description: Explore Olares Space services for cloud hosting, account management, custom domains, data backup, traffic, and shared GPU resources.
+description: Olares Space provides infrastructure services for your Olares environment, including account management, custom domain configuration, data backup, and shared GPU resources.
 ---
 # Olares Space overview
 

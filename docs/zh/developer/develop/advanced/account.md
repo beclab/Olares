@@ -1,7 +1,3 @@
----
-noindex: true
-description: 如果安装在 Olares 中的应用，需要同步系统的用户信息，以此作为应用中的用户，可以在应用 chart 中申明SysEventRegistry来获得系统中用户事件的回调。
----
 # 订阅 Olares 用户事件
 
 如果安装在 Olares 中的应用，需要同步系统的用户信息，以此作为应用中的用户，可以在应用 chart 中申明`SysEventRegistry`来获得系统中用户事件的回调。

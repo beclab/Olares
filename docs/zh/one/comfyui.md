@@ -1,5 +1,4 @@
 ---
-noindex: true
 outline: [2,3]
 description: 了解如何安装 ComfyUI，通过 ComfyUI Launcher 管理模型，以及在 Olares One 上生成高性能图像和视频。
 head:

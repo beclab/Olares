@@ -1,11 +1,6 @@
 ---
 outline: [2, 4]
-title: Translate scientific PDFs in PDFMathTranslate
-description: Run PDFMathTranslate on Olares with Ollama to translate scientific PDFs while preserving page layouts, formulas, and other technical content.
-head:
-  - - meta
-    - name: keywords
-      content: Olares, PDFMathTranslate, translate PDF, scientific PDF translation, self-hosted PDF translator, PDFMathTranslate on Olares
+description: Learn how to install and configure PDFMathTranslate on Olares. This tutorial guides you through using the local AI model Ollama to translate scientific PDFs, preserving original layouts and mathematical formulas.
 ---
 
 # Translate scientific PDFs while preserving layout

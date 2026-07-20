@@ -1,5 +1,5 @@
 ---
-description: Explore the Olares Home directory structure for images, logs, dependencies, versions, and the default installation path.
+description: Internal structure of Olares Home directory organizing images, logs, dependencies and version management. Details about the default installation directory architecture.
 ---
 # Olares Home
 

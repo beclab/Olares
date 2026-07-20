@@ -73,5 +73,5 @@ Remove applications that you no longer need to save storage space.
 ## Resources
 
 - [Clone applications](../manual/olares/market/clone-apps.md)
-<!-- - [Manage paid applications](../manual/olares/market/purchase-paid-apps.md) -->
+- [Manage paid applications](../manual/olares/market/purchase-paid-apps.md)
 - [Installation FAQs](../manual/olares/market/market.md#faqs)

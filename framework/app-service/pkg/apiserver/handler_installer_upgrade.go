@@ -529,7 +529,6 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      appv1alpha1.Upgrading,
 		Message:    fmt.Sprintf("app %s was upgrade by user %s", appCopy.Spec.AppName, appCopy.Spec.AppOwner),
-		Reason:     appv1alpha1.Upgrading.String(),
 		StatusTime: &now,
 		UpdateTime: &now,
 	}

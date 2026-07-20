@@ -1,6 +1,4 @@
 ---
-noindex: true
-description: The backup subcommand allows you to back up data to the specified storage backend.
 outline: [2, 3]
 ---
 # `backup`

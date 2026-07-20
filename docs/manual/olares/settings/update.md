@@ -1,5 +1,4 @@
 ---
-noindex: true
 description: Learn how to safely update your Olares system, check for new versions, install system updates, and manually update olaresd for optimal performance and security.
 ---
 # Update Olares

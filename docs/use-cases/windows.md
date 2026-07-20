@@ -1,10 +1,6 @@
 ---
 outline: [2, 4]
-description: Install and run a Windows VM on Olares. Set credentials, connect with browser VNC or Remote Desktop (RDP), and transfer files between systems.
-head:
-  - - meta
-    - name: keywords
-      content: Olares, Windows VM, run Windows on Olares, Windows virtual machine, self-hosted Windows, Windows RDP, Windows VM on Olares
+description: A comprehensive guide to installing and running a Windows virtual machine on Olares. Learn how to configure initial credentials, connect via browser-based VNC or Microsoft Remote Desktop (RDP), and transfer files between your computer and the VM.
 ---
 
 # Run a Windows VM on your Olares device

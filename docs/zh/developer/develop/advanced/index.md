@@ -1,7 +1,3 @@
----
-noindex: true
-description: 开发 Olares 应用的进阶指南，涵盖 CLI、服务提供方、数据库、Cookie、密钥、WebSocket 等主题。
----
 # Advanced
 
 1. [Terminus Info](./terminus-info)

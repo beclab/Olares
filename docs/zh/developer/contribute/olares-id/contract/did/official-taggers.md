@@ -1,6 +1,3 @@
----
-description: TerminusDID 中定义的官方标签，以及负责管理这些标签的 RootTagger。
----
 # 官方 Tagger
 
 ## RootTagger

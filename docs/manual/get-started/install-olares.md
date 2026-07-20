@@ -1,5 +1,5 @@
 ---
-description: Compare Olares installation methods for Linux, macOS, Windows, PVE, and Raspberry Pi, including recommended production and testing options.
+description: Overview of supported Olares installation methods. Recommended for Linux environments via ISO image or installation script. Other platforms like macOS, Windows, PVE, and Raspberry Pi are supported for testing and development.
 outline: [2,4]
 ---
 

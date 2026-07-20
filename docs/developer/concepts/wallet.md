@@ -1,6 +1,3 @@
----
-description: Understand the Olares Identity Wallet and how it manages decentralized identifiers (DIDs), verifiable credentials, and digital identity interactions.
----
 # Identity Wallet App
 
 A Digital Identity Wallet is an essential tool in the self-sovereign identity ecosystem, allowing users to manage their decentralized identifiers (DIDs), credentials, and interactions with digital services, without relying on centralized entities for authentication or data sharing. 

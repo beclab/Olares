@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Share files in Olares through internal, public, or SMB sharing. Configure access permissions and collaborate securely with teams or over a LAN.
+description: A comprehensive guide to sharing files in Olares using Internal, Public, and SMB methods. Learn how to configure access permissions, manage shared content, and facilitate secure collaboration within your team or via LAN.
 ---
 
 # Share files

@@ -1,7 +1,3 @@
----
-noindex: true
-description: status 命令通过调用本机 olaresd 守护进程的 /system/status HTTP 接口，输出当前 Olares 系统的状态。
----
 # `status`
 
 ## 命令说明

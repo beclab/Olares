@@ -1,7 +1,3 @@
----
-noindex: true
-description: Olares 集成了 Kubesphere 的许多高级功能，如多用户系统和集群数据监控。要从 Kubesphere 安装官方 console 工具，请从 Olares 代码存储库下载并安装它。
----
 # Kubesphere
 
 Olares 集成了 Kubesphere 的许多高级功能，如多用户系统和集群数据监控。要从 Kubesphere** 安装官方 console 工具，请从 Olares 代码存储库下载并安装它。

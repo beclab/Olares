@@ -1,7 +1,3 @@
----
-noindex: true
-description: The region subcommand is used to retrieve the cloud name and region ID.
----
 # `region`
 
 ## Synopsis

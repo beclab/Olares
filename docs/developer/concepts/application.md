@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Understand Olares applications, including app identifiers, four application types, cluster scope, service providers, and application dependencies.
+description: Fundamental concepts of Olares application system, explaining application identifiers and characteristics of four application types such as cluster-scoped applications. Includes service provider mechanisms and application dependencies.
 ---
 
 # Applications

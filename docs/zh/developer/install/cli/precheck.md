@@ -1,7 +1,3 @@
----
-noindex: true
-description: precheck 命令用于检查系统环境是否满足安装 Olares 的所有前置条件。
----
 # `precheck`
 
 ## 命令说明

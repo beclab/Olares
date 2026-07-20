@@ -1,10 +1,6 @@
 ---
 outline: [2, 4]
 description: 在 Olares 上安装和运行 Windows 虚拟机的综合指南。学习如何配置初始凭据、通过基于浏览器的 VNC 或 Microsoft 远程桌面（RDP）连接，以及在计算机和 VM 之间传输文件。
-head:
-  - - meta
-    - name: keywords
-      content: Olares, Windows VM, run Windows on Olares, Windows virtual machine, self-hosted Windows, Windows RDP, Windows VM on Olares
 ---
 
 :::warning

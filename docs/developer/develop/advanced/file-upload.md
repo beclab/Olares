@@ -1,6 +1,4 @@
 ---
-noindex: true
-description: There are many situations where you might need to upload local files to your edge when using Olares.
 outline: [2, 3]
 ---
 

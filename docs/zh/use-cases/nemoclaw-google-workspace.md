@@ -10,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-05-08"
 ---
 
-# 将 NemoClaw 与 Google Workspace 集成
+# 集成 Google Workspace
 
 gog 技能可以让 NemoClaw Agent 与 Gmail、Google Calendar、Google Drive 等 Google Workspace 服务交互。配置完成后，你可以用自然语言让 Agent 搜索邮件、安排会议或访问文件。本文以 Google Calendar 为例。
 

@@ -1,6 +1,5 @@
 ---
 search: false
-noindex: true
 ---
 ## 激活 Olares
 

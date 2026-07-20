@@ -1,6 +1,5 @@
 ---
 search: false
-noindex: true
 ---
 ## 管理 Olares 容器
 

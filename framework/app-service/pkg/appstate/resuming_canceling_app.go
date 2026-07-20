@@ -20,10 +20,10 @@ func (p *ResumingCancelingApp) IsAppCreated() bool {
 	return true
 }
 
-func NewResumingCancelingApp(deps Deps,
+func NewResumingCancelingApp(c client.Client,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
-	return deps.Factory.New(deps, manager, 0,
+	return appFactory.New(c, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &ResumingCancelingApp{
 				&baseOperationApp{
@@ -38,11 +38,11 @@ func NewResumingCancelingApp(deps Deps,
 }
 
 func (p *ResumingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
-	if ok := p.deps.Factory.cancelOperation(p.manager.Name); !ok {
+	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
-	err := p.finishCancelToStopping(ctx, p.manager)
+	err := p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), appsv1.Stopping.String())
 	if err != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Stopping.String(), err)
 		return nil, err

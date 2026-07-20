@@ -1,7 +1,3 @@
----
-noindex: true
-description: 基于本地 Olares 代码仓库构建发布版本。此命令需要在 Olares 代码仓库的根目录下运行。
----
 # `release`
 
 ## 命令说明

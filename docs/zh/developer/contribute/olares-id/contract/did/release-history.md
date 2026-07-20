@@ -1,6 +1,3 @@
----
-description: TerminusDID 合约模块的发布历史与更新记录。
----
 # 发布历史
 
 ## V2.0.0

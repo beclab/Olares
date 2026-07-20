@@ -7,8 +7,6 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 )
 
-// All lists every ApplicationManager state referenced by controllers, APIs,
-// and the transition maps below.
 var All = []appv1alpha1.ApplicationManagerState{
 	appv1alpha1.Pending,
 	appv1alpha1.Downloading,
@@ -39,10 +37,6 @@ var All = []appv1alpha1.ApplicationManagerState{
 	appv1alpha1.PendingCanceled,
 	appv1alpha1.DownloadingCanceled,
 	appv1alpha1.InstallingCanceled,
-	appv1alpha1.InitializingCanceled,
-	appv1alpha1.UpgradingCanceled,
-	appv1alpha1.ApplyingEnvCanceled,
-	appv1alpha1.ResumingCanceled,
 
 	appv1alpha1.Stopped,
 	appv1alpha1.Uninstalled,
@@ -132,7 +126,6 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 		appv1alpha1.Uninstalled,
 		appv1alpha1.UninstallFailed,
 	},
-
 	appv1alpha1.PendingCanceling: {
 		appv1alpha1.PendingCanceled,
 		appv1alpha1.PendingCancelFailed,
@@ -175,7 +168,6 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 		appv1alpha1.Stopping,
 		appv1alpha1.ApplyingEnvCancelFailed,
 	},
-
 	appv1alpha1.Stopped: {
 		appv1alpha1.Resuming,
 		appv1alpha1.Uninstalling,
@@ -261,104 +253,6 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 	appv1alpha1.Uninstalled: {
 		appv1alpha1.Pending,
 	},
-}
-
-// ReconcileDrivenTransitions enumerates every (from -> to) edge that the
-// ApplicationManager Reconcile loop is responsible for driving on its own
-// (i.e. via *App.Exec, the IsTimeout/Cancel branch, or the polling Finally),
-// as opposed to edges driven by external API handlers (install/upgrade/
-// uninstall/cancel/resume/applyEnv/suspend) or by the GC controller.
-//
-// It exists so the controller-level state-flow tests can fail loudly when an
-// edge is added to a *App without a matching flow case — see
-// TestStateFlow_Lineages_CoversReconcileEdges in
-// controllers/state_flow_lineages_test.go. Every edge in this list MUST also appear in
-// StateTransitions; the test enforces both.
-//
-// When you add a new reconcile-driven edge (a new updateStatus call inside an
-// *App, a new poll-finalizer state, or a new Cancel target) you must:
-//  1. add the edge to StateTransitions so updateStatus stops rejecting it;
-//  2. add a lineage step (or extend an existing lineage) in
-//     controllers/state_flow_lineages_test.go that exercises it end-to-end;
-//  3. append the edge here so the coverage test pins it.
-//
-// If the edge is intentionally inexpressible against today's seams (e.g.
-// UpgradingApp's pre-helm cluster calls), add an entry to edgesBlockedOnSeams
-// in the lineage test instead of a lineage step, with a documented reason.
-var ReconcileDrivenTransitions = [][2]appv1alpha1.ApplicationManagerState{
-	// --- forward Exec paths -------------------------------------------------
-	{appv1alpha1.Pending, appv1alpha1.Downloading},
-	{appv1alpha1.Downloading, appv1alpha1.Installing},
-	{appv1alpha1.Downloading, appv1alpha1.DownloadFailed},
-	{appv1alpha1.Installing, appv1alpha1.Initializing},
-	{appv1alpha1.Installing, appv1alpha1.Running},
-	{appv1alpha1.Installing, appv1alpha1.InstallFailed},
-	{appv1alpha1.Installing, appv1alpha1.Stopping},
-	{appv1alpha1.Initializing, appv1alpha1.Running},
-	{appv1alpha1.Initializing, appv1alpha1.InitializingCanceling},
-	{appv1alpha1.Stopping, appv1alpha1.Stopped},
-	{appv1alpha1.Stopping, appv1alpha1.StopFailed},
-	{appv1alpha1.Resuming, appv1alpha1.Initializing},
-	{appv1alpha1.Resuming, appv1alpha1.ResumeFailed},
-	{appv1alpha1.Upgrading, appv1alpha1.Initializing},
-	{appv1alpha1.Upgrading, appv1alpha1.Stopped},
-	{appv1alpha1.Upgrading, appv1alpha1.UpgradeFailed},
-	{appv1alpha1.ApplyingEnv, appv1alpha1.Initializing},
-	{appv1alpha1.ApplyingEnv, appv1alpha1.ApplyEnvFailed},
-	{appv1alpha1.Uninstalling, appv1alpha1.Uninstalled},
-	{appv1alpha1.Uninstalling, appv1alpha1.UninstallFailed},
-
-	// --- self-heal paths (terminal-ish states whose Exec runs a guarded
-	//     forceDeleteApp on every reconcile) ---------------------------------
-	// running_app.go: Application CR disappeared while AM was still Running.
-	{appv1alpha1.Running, appv1alpha1.Uninstalled},
-	// uninstall_failed_app.go: retry the cleanup until it sticks.
-	{appv1alpha1.UninstallFailed, appv1alpha1.Uninstalled},
-
-	// --- IsTimeout -> Cancel (active operations canceled by the reconcile
-	//     loop after their TTL elapses) -----------------------------------
-	{appv1alpha1.Pending, appv1alpha1.PendingCanceling},
-	{appv1alpha1.Downloading, appv1alpha1.DownloadingCanceling},
-	{appv1alpha1.Installing, appv1alpha1.InstallingCanceling},
-	{appv1alpha1.Resuming, appv1alpha1.ResumingCanceling},
-	{appv1alpha1.Upgrading, appv1alpha1.UpgradingCanceling},
-	{appv1alpha1.ApplyingEnv, appv1alpha1.ApplyingEnvCanceling},
-
-	// --- *Canceling Exec resolves to *Canceled / Stopping -------------------
-	{appv1alpha1.PendingCanceling, appv1alpha1.PendingCanceled},
-	{appv1alpha1.DownloadingCanceling, appv1alpha1.DownloadingCanceled},
-	{appv1alpha1.InstallingCanceling, appv1alpha1.InstallingCanceled},
-	{appv1alpha1.InitializingCanceling, appv1alpha1.Stopping},
-	{appv1alpha1.ResumingCanceling, appv1alpha1.Stopping},
-	{appv1alpha1.UpgradingCanceling, appv1alpha1.Stopping},
-	{appv1alpha1.ApplyingEnvCanceling, appv1alpha1.Stopping},
-
-	// --- *Canceling failure paths driven from inside *CancelingApp.Exec
-	//     (a side-effect failed; the app writes *CancelFailed itself) --------
-	//
-	// Pending/Initializing/ResumingCanceling are intentionally absent: their
-	// Exec paths have no failure branch that writes *CancelFailed, and the
-	// Cancel() path (which does) is only invoked from the IsTimeout->Cancel
-	// branch of Reconcile, which can never fire because those apps are
-	// constructed with ttl=0. Those edges remain in StateTransitions because
-	// handler_cancel.go can still drive them via direct Cancel() invocation,
-	// but they are NOT reconcile-driven and so are not listed here.
-	//
-	// Upgrading/ApplyingEnvCanceling -> *CancelFailed are also intentionally
-	// absent for a different reason: their Exec writes *CancelFailed only as
-	// a fallback if the first updateStatus(Stopping) Patch fails, and then
-	// re-Patches *CancelFailed in the same call. Reaching that branch from
-	// the reconcile loop requires injecting a fake client whose Patch fails
-	// for Stopping but succeeds for *CancelFailed, which is contrived enough
-	// that we cover the happy path (-> Stopping) in flow tests and rely on
-	// pkg/appstate-level unit tests for the patch-failure fallback. The
-	// edges remain in StateTransitions for handler_cancel.go.
-	//
-	// See state_flow_lineages_test.go::allLineages (cancel-*-fail lineages)
-	// for the rationale: only DownloadingCanceling and InstallingCanceling
-	// expose seamed errors that lineage tests can trigger today.
-	{appv1alpha1.DownloadingCanceling, appv1alpha1.DownloadingCancelFailed},
-	{appv1alpha1.InstallingCanceling, appv1alpha1.InstallingCancelFailed},
 }
 
 var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1alpha1.OpType]bool{
@@ -470,6 +364,7 @@ var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1a
 		appv1alpha1.CancelOp:    true,
 		appv1alpha1.UninstallOp: true,
 	},
+
 	appv1alpha1.UpgradingCancelFailed: {
 		appv1alpha1.CancelOp:    true,
 		appv1alpha1.UninstallOp: true,
@@ -477,9 +372,6 @@ var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1a
 	appv1alpha1.ApplyingEnvCancelFailed: {
 		appv1alpha1.CancelOp:    true,
 		appv1alpha1.UninstallOp: true,
-	},
-	appv1alpha1.ResumingCancelFailed: {
-		appv1alpha1.CancelOp: true,
 	},
 	appv1alpha1.Running: {
 		appv1alpha1.UninstallOp: true,

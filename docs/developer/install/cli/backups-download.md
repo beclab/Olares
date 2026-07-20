@@ -1,7 +1,3 @@
----
-noindex: true
-description: The download subcommand downloads the Restic dependency tool.
----
 # `download`
 
 ## Synopsis

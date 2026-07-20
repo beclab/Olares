@@ -1,5 +1,4 @@
 ---
-noindex: true
 description: 了解如何升级 Olares 版本，保持系统功能和安全性。
 ---
 # 更新 Olares

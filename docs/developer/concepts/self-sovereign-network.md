@@ -1,7 +1,3 @@
----
-noindex: true
-description: Leveraging DID and Blockchain Registry, we have established a self-sovereign peer-to-peer network using a Blockchain-Edge-Client (BEC) architecture.
----
 # Self-Sovereign Network
 
 Leveraging [**DID**](did.md) and [**Blockchain Registry**](registry.md), we have established a self-sovereign peer-to-peer network using a Blockchain-Edge-Client (BEC) architecture. It eliminates the need for third-party trust, enabling direct information exchange and trustless value exchange between any two entities.

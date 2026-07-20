@@ -1,7 +1,3 @@
----
-noindex: true
-description: The osinfo command provides detailed information about the operating system of the current device.
----
 # `osinfo`
 
 ## Synopsis

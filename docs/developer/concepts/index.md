@@ -1,5 +1,5 @@
 ---
-description: Explore core Olares concepts for developers, including system architecture, identity, application management, networking, and data security.
+description: Core concepts documentation of Olares system, covering architecture design, identity authentication, application management, network configuration and data security fundamentals for developers.
 ---
 # Overview
 
@@ -19,4 +19,5 @@ Understand Olares with the following concepts:
 - [Network](network.md)
 - [Data](data.md)
 - [Secrets](secrets.md)
+
 

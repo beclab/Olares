@@ -10,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-06-09"
 ---
 
-# 将 OpenClaw 与 WhatsApp 集成
+# 与 WhatsApp 集成
 
 将 OpenClaw 智能体连接到 WhatsApp，实现远程交互。
 

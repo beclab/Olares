@@ -1,10 +1,10 @@
 ---
 outline: [2, 4]
-description: 在 Olares 上部署 Open WebUI，作为自托管的 ChatGPT 替代方案。连接本地 Ollama 后端，与私有大模型对话，所有会话都留在你自己的设备上。
+description: 在 Olares 上安装 Open WebUI，并将其连接到本地模型后端。你可以使用 Ollama 从 Ollama Registry 拉取模型，也可以使用预配置的模型应用。
 head:
   - - meta
     - name: keywords
-      content: Olares, Open WebUI, self-hosted chatgpt, open webui alternative, local LLM, Ollama, open webui on olares
+      content: Olares, Open WebUI, 本地 LLM, AI 聊天机器人, Ollama
 app_version: "1.0.29"
 doc_version: "2.0"
 doc_updated: "2026-05-13"

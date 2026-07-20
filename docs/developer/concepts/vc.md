@@ -1,6 +1,3 @@
----
-description: DIDs represent both tangible or intangible entities across physical and digital realms.
----
 # Verifiable Credential
 
 DIDs represent both tangible or intangible entities across physical and digital realms. Each entity can have multiple claims, and the documents that support these claims are called **Verifiable Credentials (VCs)**. VCs are fully ratified W3C standard designed to work together with DIDs to enable trustless, secure interactions.

@@ -10,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-05-13"
 ---
 
-# 在 Open WebUI 中设置多用户访问
+# 设置多用户访问
 
 在 Open WebUI 中配置多用户账号，以共享本地模型和 AI 资源。此项配置允许多人使用各自独立的账号，访问 Olares 设备上的同一 Open WebUI 实例。
 

@@ -25,10 +25,10 @@ func (p *PendingCancelingApp) IsAppCreated() bool {
 	return false
 }
 
-func NewPendingCancelingApp(deps Deps,
+func NewPendingCancelingApp(c client.Client,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
-	return deps.Factory.New(deps, manager, 0,
+	return appFactory.New(c, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &PendingCancelingApp{
 				&baseOperationApp{
@@ -43,7 +43,7 @@ func NewPendingCancelingApp(deps Deps,
 }
 
 func (p *PendingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
-	if ok := p.deps.Factory.cancelOperation(p.manager.Name); !ok {
+	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
@@ -62,7 +62,7 @@ func (p *PendingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp, 
 		}
 	}
 
-	err := p.finishCancelToCanceled(ctx, p.manager, appsv1.PendingCanceled, false)
+	err := p.updateStatus(ctx, p.manager, appsv1.PendingCanceled, nil, appsv1.PendingCanceled.String(), appsv1.PendingCanceled.String())
 	if err != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.PendingCanceled, err)
 		return nil, err
@@ -116,7 +116,7 @@ func (p *pendingCancelInProgressApp) poll(ctx context.Context) error {
 }
 
 func (p *pendingCancelInProgressApp) WaitAsync(ctx context.Context) {
-	p.deps.Factory.waitForPolling(ctx, p, func(err error) {
+	appFactory.waitForPolling(ctx, p, func(err error) {
 		if err != nil {
 			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.PendingCancelFailed, nil, appsv1.PendingCancelFailed.String(), appsv1.PendingCancelFailed.String())
 			if updateErr != nil {
@@ -127,7 +127,7 @@ func (p *pendingCancelInProgressApp) WaitAsync(ctx context.Context) {
 			return
 		}
 
-		updateErr := p.finishCancelToCanceled(context.TODO(), p.manager, appsv1.PendingCanceled, false)
+		updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.PendingCanceled, nil, appsv1.PendingCanceled.String(), appsv1.PendingCanceled.String())
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.PendingCanceled.String(), updateErr)
 			return

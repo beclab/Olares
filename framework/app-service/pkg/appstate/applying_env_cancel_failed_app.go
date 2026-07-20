@@ -4,6 +4,7 @@ import (
 	"context"
 
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ StatefulApp = &ApplyingEnvCancelFailedApp{}
@@ -12,14 +13,13 @@ type ApplyingEnvCancelFailedApp struct {
 	*baseStatefulApp
 }
 
-func NewApplyingEnvCancelFailedApp(deps Deps,
+func NewApplyingEnvCancelFailedApp(c client.Client,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
 	return &ApplyingEnvCancelFailedApp{
 		baseStatefulApp: &baseStatefulApp{
 			manager: manager,
-			client:  deps.Client,
-			deps:    deps,
+			client:  c,
 		},
 	}, nil
 }

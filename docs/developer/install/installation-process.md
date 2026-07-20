@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Follow each phase of Olares deployment, including system validation, downloads, environment preparation, and service installation.
+description: Technical breakdown of Olares deployment phases covering system validation, component downloads, environment preparation and service deployment. In-depth look at each installation stage.
 ---
 # Olares installation breakdown
 This document explains the Olares installation process from the perspective of its four main phases. It is aimed at developers and system administrators who want to understand the installation in detail, including the underlying commands, configurations, and logic behind each phase.

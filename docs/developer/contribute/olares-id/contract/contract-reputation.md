@@ -1,6 +1,3 @@
----
-description: Design of the on-chain reputation system in the Olares ID contracts and the solutions to its core requirements.
----
 # Reputation
 
 #### Extra requirements: Abstract Reputation System

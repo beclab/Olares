@@ -1,7 +1,3 @@
----
-noindex: true
-description: Olares has integrated many advanced features of Kubesphere like the multi-user system and cluster data monitoring.
----
 # Kubesphere
 
 Olares has integrated many advanced features of Kubesphere like the multi-user system and cluster data monitoring. To install the official console tool from **Kubesphere**, download and install it from the **Olares** code repository.

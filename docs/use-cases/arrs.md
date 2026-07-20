@@ -1,7 +1,6 @@
 ---
 outline: deep
-title: Automate media management with the *Arrs
-description: Configure Sonarr, Radarr, Prowlarr, Bazarr, and qBittorrent on Olares to automate media downloads and library management.
+description: Learn how to connect and configure the *Arrs family of applications (Sonarr, Radarr, Prowlarr, Bazarr, and qBittorrent) on Olares for automated media management.
 head:
   - - meta
     - name: keywords

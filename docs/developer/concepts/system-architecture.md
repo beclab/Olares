@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Explore Olares system architecture across infrastructure, platform services, and the app framework, including orchestration, storage, and networking.
+description: Comprehensive guide to Olares architecture covering infrastructure, platform services, and application framework. Learn about container orchestration, storage, networking, and system components.
 ---
 
 # Olares system architecture

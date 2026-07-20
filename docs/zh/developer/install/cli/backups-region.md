@@ -1,7 +1,3 @@
----
-noindex: true
-description: region 子命令用于获取云名称和区域 ID。该命令专门用于存储后端为 Olares Space 的场景。
----
 # `region`
 
 ## 命令说明

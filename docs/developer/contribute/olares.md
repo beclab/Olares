@@ -1,7 +1,3 @@
----
-noindex: true
-description: The repository structure of Olares and how to install, build, and run a debug version from source.
----
 # Olares
 
 ## Directory structure

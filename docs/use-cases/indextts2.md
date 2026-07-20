@@ -1,6 +1,6 @@
 ---
 outline: deep
-description: Run IndexTTS2 on Olares for zero-shot voice cloning. Provide a short audio sample and generate natural speech that matches the reference voice.
+description: Use IndexTTS2 on Olares to generate natural-sounding speech from text with zero-shot voice cloning. Provide a short audio sample, type your text, and get speech that matches the reference voice.
 head:
   - - meta
     - name: keywords

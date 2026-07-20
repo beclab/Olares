@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上自托管 Plane，作为开源的 Jira 和 Asana 替代方案。用模块、迭代周期和多种视图组织工作，实现私有的团队项目管理。
+description: 在 Olares 上部署自托管的 Plane 进行项目管理。通过模块、迭代周期、多种视图和团队协作来组织工作。
 head:
   - - meta
     - name: keywords
-      content: Olares, Plane, open source jira alternative, jira alternative, self-hosted project management, kanban, team collaboration, plane on olares
+      content: Olares, Plane, project management, self-hosted, kanban, Gantt chart, team collaboration, task tracking
 app_version: "1.0.9"
 doc_version: "1.0"
 doc_updated: "2026-04-14"

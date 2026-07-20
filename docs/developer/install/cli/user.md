@@ -1,7 +1,3 @@
----
-noindex: true
-description: The user command provides a set of tools to manage users in the Olares system.
----
 # `user`
 The `user` command provides a set of tools to manage users in the Olares system. It allows administrators to create, activate, query, and remove users, as well as reset user passwords.
 

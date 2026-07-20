@@ -1,10 +1,6 @@
 ---
 outline: [2,3]
-description: Troubleshoot known Windows VM issues on Olares, including Remote Desktop connection failures after an upgrade, with causes and workarounds.
-head:
-  - - meta
-    - name: keywords
-      content: Olares, Windows VM, Windows on Olares issues, Windows VM troubleshooting, RDP connection failed, Windows VM known issues
+description: This page documents the known issues and unexpected behaviors you might encounter when using Windows on Olares, along with their corresponding solutions or workarounds.
 ---
 
 # Windows VM known issues

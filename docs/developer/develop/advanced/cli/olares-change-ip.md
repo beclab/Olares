@@ -1,7 +1,3 @@
----
-noindex: true
-description: Change the local IP address for all Olares components.
----
 # `olares change-ip`
 :::warning When manually updating IP address is required
 When Olares is deployed _inside_ a virtualized environment, such as macOS (via Minikube) or Windows (via WSL), a change in the host system's IP address (e.g., due to switching Wi-Fi networks) may cause Olares to become inaccessible. This happens because the NAT gateway and DNS configuration no longer match the new IP. In such cases, you need to manually update the IP address to ensure that Olares can route traffic correctly.

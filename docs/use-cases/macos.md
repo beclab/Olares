@@ -1,6 +1,6 @@
 ---
 outline: deep
-description: Run a macOS VM on Olares. Install it from Market, complete the initial setup, and connect through browser-based VNC or a VNC client.
+description: Run macOS as a virtual machine on Olares. Learn how to install macOS from the Market, configure initial settings, and connect via browser-based VNC or VNC client.
 head:
   - - meta
     - name: keywords

@@ -1,6 +1,5 @@
 ---
 outline: [2, 3]
-title: Manage shared AI models in Common
 description: Use the Common directory in Olares to manage AI models shared across applications and users.
 ---
 

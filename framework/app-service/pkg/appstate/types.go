@@ -36,27 +36,10 @@ type baseStatefulApp struct {
 	app     *appsv1.Application
 	manager *appsv1.ApplicationManager
 	client  client.Client
-	deps    Deps
 }
 
 func (b *baseStatefulApp) GetManager() *appsv1.ApplicationManager {
 	return b.manager
-}
-
-// setDeps injects the dependency container. It is promoted to every
-// stateful app via embedding so the factory can wire deps centrally
-// instead of every constructor populating the struct literal.
-func (b *baseStatefulApp) setDeps(d Deps) {
-	b.deps = d
-	if b.client == nil {
-		b.client = d.Client
-	}
-}
-
-// depsSetter is implemented (via embedded *baseStatefulApp) by every
-// stateful app so statefulAppFactory.New can inject Deps.
-type depsSetter interface {
-	setDeps(Deps)
 }
 
 func (b *baseStatefulApp) State() string {
@@ -119,75 +102,6 @@ func (b *baseStatefulApp) updateStatus(ctx context.Context, am *appsv1.Applicati
 	})
 }
 
-// finishCancelToStopping transitions an ApplicationManager from one of the
-// *Canceling states (InitializingCanceling, ApplyingEnvCanceling,
-// ResumingCanceling, UpgradingCanceling) to Stopping while preserving the
-// (message, reason) tuple that the source state's Cancel() / IsTimeout
-// path pushed when entering the *Canceling state.
-//
-// Without this helper the cancel-cleanup write at the *CancelingApp.Exec
-// boundary used to hardcode ("stopping", "stopping"), erasing context like
-// "Operation canceled by user" / "Operation timed out." / "InitFailed".
-// Downstream consumers (UI status banner, NATS push subscribers, audit
-// log) need to know which kind of cancel led to this Stopping rather than
-// seeing a generic "stopping"/"stopping" tuple.
-//
-// We pass the prior Message explicitly (updateStatus always overwrites
-// Message, so empty would wipe the field) and pass reason="" to lean on
-// updateStatus's preserve-on-empty Reason semantics. The fallback to
-// appsv1.Stopping.String() only fires if the prior Message is unexpectedly
-// empty — every *App.Cancel() path is supposed to write a non-empty
-// message, but the fallback keeps the field meaningful even if a future
-// caller forgets.
-func (b *baseStatefulApp) finishCancelToStopping(ctx context.Context, am *appsv1.ApplicationManager) error {
-	msg := am.Status.Message
-	if msg == "" {
-		msg = appsv1.Stopping.String()
-	}
-	return b.updateStatus(ctx, am, appsv1.Stopping, nil, msg, "")
-}
-
-// finishCancelToCanceled transitions an ApplicationManager from one of the
-// install-pipeline *Canceling states (PendingCanceling, DownloadingCanceling,
-// InstallingCanceling) to its terminal *Canceled counterpart (PendingCanceled,
-// DownloadingCanceled, InstallingCanceled) while preserving the (Message,
-// Reason) tuple the source state's Cancel() / handler path pushed.
-//
-// Mirrors finishCancelToStopping's semantics for the non-running cancel
-// branch: the install pipeline never enters Stopping (there's no
-// running workload to tear down yet), it goes directly *Canceled.
-// Without this helper the *CancelingApp.WaitAsync / Exec writes used to
-// hardcode (canceledState.String(), canceledState.String()), erasing the
-// "Install canceled. Operation by user." / "installCancelByUser" context
-// that the prior *Canceling state already carried. Downstream consumers
-// (NATS push, UI status banner, opRecord history) need that context, not
-// the generic state-name tuple.
-//
-// withOpRecord opts in to appending an OpRecord whose Message matches the
-// preserved Status.Message — install-pipeline cancel completion is logged
-// in op history (InstallingCanceled), while the earlier-stage cancels
-// (PendingCanceled, DownloadingCanceled) currently don't, matching the
-// pre-helper behaviour. The opRecord's Message is taken from the same
-// preserved value so the two are kept in lockstep.
-//
-// We pass the prior Message explicitly (updateStatus always overwrites
-// Message, so empty would wipe the field) and pass reason="" to lean on
-// updateStatus's preserve-on-empty Reason semantics. The fallback to
-// canceledState.String() only fires if the prior Message is unexpectedly
-// empty.
-func (b *baseStatefulApp) finishCancelToCanceled(ctx context.Context, am *appsv1.ApplicationManager,
-	canceledState appsv1.ApplicationManagerState, withOpRecord bool) error {
-	msg := am.Status.Message
-	if msg == "" {
-		msg = canceledState.String()
-	}
-	var opRecord *appsv1.OpRecord
-	if withOpRecord {
-		opRecord = makeRecord(am, canceledState, msg)
-	}
-	return b.updateStatus(ctx, am, canceledState, opRecord, msg, "")
-}
-
 func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 	token := p.manager.Annotations[api.AppTokenKey]
 	if p.manager.Spec.Config == "" && p.manager.Spec.Source == "system" {
@@ -208,7 +122,7 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 		return err
 	}
 
-	kubeConfig, err := p.deps.KubeConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
@@ -217,7 +131,7 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 		return p.oldMongodbUninstall(ctx, kubeConfig)
 	}
 
-	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
+	ops, err := newHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err

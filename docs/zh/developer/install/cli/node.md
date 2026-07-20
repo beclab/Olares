@@ -1,7 +1,3 @@
----
-noindex: true
-description: node 命令用于管理节点相关的操作。
----
 # `node`
 
 ## 命令说明

@@ -1,5 +1,4 @@
 ---
-noindex: true
 description: 介绍 Olares 基于 DID 与区块链的自主主权网络及 BEC 架构，实现去信任的信息与价值交换。
 ---
 

@@ -14,7 +14,7 @@ doc_updated: "2026-05-27"
 本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openclaw-integration.md)。
 :::
 
-# 将 OpenClaw 与 Discord 集成
+# 与 Discord 集成
 
 将 OpenClaw 智能体连接到 Discord 机器人，实现远程对话。
 

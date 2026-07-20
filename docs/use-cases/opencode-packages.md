@@ -7,7 +7,7 @@ head:
       content: Olares, OpenCode, pkg-install, package management, Alpine Linux, self-hosted
 ---
 
-# Manage packages in OpenCode
+# Manage packages
 
 You can install additional packages in the OpenCode environment:
 

@@ -1,7 +1,3 @@
----
-noindex: true
-description: The stop command is used to stop the components of an installed (or partially installed) Olares system.
----
 # `stop`
 
 ## Synopsis

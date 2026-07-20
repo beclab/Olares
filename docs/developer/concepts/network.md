@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Understand Olares network architecture, including application entrances, local access, endpoint configuration, and internal network security policies.
+description: Olares network architecture principles, covering application entrance types, local access mechanisms, endpoint configurations and internal network security policies.
 ---
 # Network
 

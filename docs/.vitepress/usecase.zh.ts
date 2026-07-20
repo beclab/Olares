@@ -336,7 +336,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Jellyfin",
-              link: "/zh/use-cases/jellyfin",
+              link: "/zh/use-cases/stream-media",
             },
             {
               text: "Steam",
@@ -344,11 +344,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               items: [
                 {
                   text: "在 Olares 本机游玩",
-                  link: "/zh/use-cases/steam-direct-play",
+                  link: "/zh/use-cases/play-games-directly",
                 },
                 {
                   text: "串流到其他设备",
-                  link: "/zh/use-cases/steam-stream",
+                  link: "/zh/use-cases/stream-game",
                 }
               ]
             },

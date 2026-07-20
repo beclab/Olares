@@ -1,7 +1,3 @@
----
-noindex: true
-description: The Olares system provides three most popular data storage cluster for all APPs, covering RDS, NoSQL, and Cache data storage use cases.
----
 # Database
 
 The Olares system provides three most popular data storage cluster for all APPs, covering `RDS`, `NoSQL`, and `Cache` data storage use cases.

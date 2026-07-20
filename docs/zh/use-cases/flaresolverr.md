@@ -1,6 +1,5 @@
 ---
 outline: [2, 3]
-title: 使用 FlareSolverr 访问 Cloudflare 站点
 description: 在 Olares 上设置 FlareSolverr，绕过 Cloudflare 保护，在 Prowlarr 中访问被阻止的索引器站点。
 head:
   - - meta

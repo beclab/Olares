@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Build a multi-node Olares cluster with Olares One. Configure the master node, resolve hostname conflicts, and join worker nodes.
+description: A technical guide for deploying a scalable Olares cluster. Learn how to configure a master node, resolve hostname conflicts, and join worker nodes to the cluster.
 head:
   - - meta
     - name: keywords

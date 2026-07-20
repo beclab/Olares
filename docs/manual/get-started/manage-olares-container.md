@@ -1,6 +1,5 @@
 ---
 search: false
-noindex: true
 ---
 ## Manage the Olares container
 

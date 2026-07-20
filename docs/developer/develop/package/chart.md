@@ -1,6 +1,3 @@
----
-description: The Olares Application Chart builds on the standard Helm Chart structure and adds extensions to support Olares-specific information.
----
 # Olares Application Chart Structure
 
 The Olares Application Chart builds on the standard **Helm Chart** structure and adds extensions to support Olares-specific information. Typically, a standard application chart directory for both `App` and `Middleware` will include the following files:

@@ -21,11 +21,11 @@ type InitializingApp struct {
 	*baseOperationApp
 }
 
-func NewInitializingApp(deps Deps,
+func NewInitializingApp(c client.Client,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 	// TODO: check app state
 
-	return deps.Factory.New(deps, manager, ttl,
+	return appFactory.New(c, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &InitializingApp{
 				baseOperationApp: &baseOperationApp{
@@ -50,7 +50,7 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 		klog.Errorf("unmarshal to appConfig failed %v", err)
 		return nil, err
 	}
-	kubeConfig, err := p.deps.KubeConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return nil, err
@@ -58,7 +58,7 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 
 	opCtx, cancel := context.WithCancel(context.Background())
 
-	ops, err := p.deps.NewHelmOps(opCtx, kubeConfig, appCfg, token,
+	ops, err := newHelmOps(opCtx, kubeConfig, appCfg, token,
 		appinstaller.Opt{Source: p.manager.Spec.Source, MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
@@ -66,7 +66,7 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 		return nil, err
 	}
 
-	return p.deps.Factory.execAndWatch(opCtx, p,
+	return appFactory.execAndWatch(opCtx, p,
 		func(c context.Context) (StatefulInProgressApp, error) {
 			in := initializingInProgressApp{
 				InitializingApp: p,
@@ -98,7 +98,7 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 					klog.Error("wait for launch error: ", err, ", ", p.manager.Name)
 					p.finally = func() {
 						klog.Info("update app manager status to initializing canceling, ", p.manager.Name)
-						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InitializingCanceling, nil, constants.InitializeCancelDueToWaitForLaunchTimedOut, constants.AppStopDueToInitFailed)
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InitializingCanceling, nil, appsv1.InitializingCanceling.String(), constants.AppStopDueToInitFailed)
 						if updateErr != nil {
 							klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InitializingCanceling, updateErr)
 							return
@@ -133,7 +133,7 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 }
 
 func (p *InitializingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(ctx, p.manager, appsv1.InitializingCanceling, nil, constants.InitializeCanceledByTimeout, constants.InitializeCancelBySystem)
+	err := p.updateStatus(ctx, p.manager, appsv1.InitializingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.InitializingCanceling.String())
 	if err != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InitializingCanceling, err)
 		return err

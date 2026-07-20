@@ -1,7 +1,3 @@
----
-noindex: true
-description: The disk command provides a set of tools to manage storage resources in the Olares system.
----
 # `disk`
 
 ## Synopsis

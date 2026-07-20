@@ -13,10 +13,10 @@ type ApplyEnvFailedApp struct {
 	*baseStatefulApp
 }
 
-func NewApplyEnvFailedApp(deps Deps,
+func NewApplyEnvFailedApp(c client.Client,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
-	return deps.Factory.New(deps, manager, 0,
+	return appFactory.New(c, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &ApplyEnvFailedApp{
 				baseStatefulApp: &baseStatefulApp{

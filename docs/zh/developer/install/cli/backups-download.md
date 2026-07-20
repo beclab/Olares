@@ -1,7 +1,3 @@
----
-noindex: true
-description: download 子命令用于下载 Restic 工具。Restic 是执行备份和恢复操作的必需工具，该命令可确保系统上已安装此工具。
----
 # `download`
 
 ## 命令说明
