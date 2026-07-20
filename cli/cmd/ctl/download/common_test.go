@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
@@ -186,13 +187,20 @@ func TestParseSelectedIndices(t *testing.T) {
 }
 
 func TestDoMutateSyncEnvelope(t *testing.T) {
-	d := &fakeDoer{resp: []byte(`{"code":200,"data":{"items":[{"id":7,"status":"downloading","app":"wise"}],"has_more":true,"next_cursor":7}}`)}
+	// The manager returns the top-level {code, list, has_more} envelope
+	// (same "list" slot as the list endpoint), NOT {data:{items,next_cursor}}.
+	// The composite cursor is derived client-side from the last row.
+	d := &fakeDoer{resp: []byte(`{"code":200,"has_more":true,"list":[{"id":7,"status":"downloading","app":"wise","updated_at":"2026-07-20T14:00:00Z"}]}`)}
 	var res SyncResult
 	if err := doGet(context.Background(), d, "/api/download/sync?limit=100", &res); err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Items) != 1 || res.Items[0].ID != 7 || !res.HasMore || res.NextCursor != 7 {
+	if len(res.Items) != 1 || res.Items[0].ID != 7 || !res.HasMore {
 		t.Fatalf("unexpected sync result: %+v", res)
+	}
+	gotSince, gotID := res.NextCursor()
+	if gotID != 7 || !gotSince.Equal(time.Date(2026, 7, 20, 14, 0, 0, 0, time.UTC)) {
+		t.Fatalf("unexpected next cursor: %s / %d", gotSince, gotID)
 	}
 }
 

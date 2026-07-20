@@ -167,6 +167,20 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 		}
 		return nil
 	}
+	// Sync-shaped responses: top-level {list, has_more}. Same "list" slot
+	// as the list endpoint, so decode from env.List (not env.Data) plus the
+	// has_more flag; the composite cursor is derived client-side.
+	if sr, ok := out.(*SyncResult); ok {
+		if len(env.List) > 0 {
+			if err := json.Unmarshal(env.List, &sr.Items); err != nil {
+				return fmt.Errorf("%s %s: decode list: %w", method, path, err)
+			}
+		}
+		if env.HasMore != nil {
+			sr.HasMore = *env.HasMore
+		}
+		return nil
+	}
 	if len(env.Data) == 0 || string(env.Data) == "null" {
 		return nil
 	}

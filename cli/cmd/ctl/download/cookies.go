@@ -194,7 +194,8 @@ func runCookiesDelete(ctx context.Context, f *cmdutil.Factory, domain, outputRaw
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if _, err := parseFormat(outputRaw); err != nil {
+	format, err := parseFormat(outputRaw)
+	if err != nil {
 		return err
 	}
 	domain = strings.TrimSpace(domain)
@@ -213,8 +214,13 @@ func runCookiesDelete(ctx context.Context, f *cmdutil.Factory, domain, outputRaw
 	if err := doMutate(ctx, pc.doer, "DELETE", path, nil, nil); err != nil {
 		return err
 	}
-	fmt.Printf("removed cookie for %s\n", domain)
-	return nil
+	switch format {
+	case FormatJSON:
+		return printJSON(os.Stdout, RemoveActionResult{Removed: true, Domain: domain})
+	default:
+		fmt.Printf("removed cookie for %s\n", domain)
+		return nil
+	}
 }
 
 func newCookiesRetrieveCommand(f *cmdutil.Factory) *cobra.Command {

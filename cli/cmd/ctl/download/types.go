@@ -162,13 +162,40 @@ type FileCheckResult struct {
 	Exist bool `json:"exist"`
 }
 
-// SyncResult is GET /api/download/sync data: {items, has_more, next_cursor}.
-// Unlike list responses, has_more/next_cursor live inside data, not at the top
-// level. Tasks are ordered by ascending id; next_cursor is the last item's id.
+// RemoveActionResult is the -o json body for mutating verbs whose server
+// response carries no payload (file remove, cookies delete). It mirrors, in
+// machine-readable form, the plain-text acknowledgement printed in table mode
+// so `--output json` is honoured consistently with the other verbs. Exactly one
+// of Path / Domain is set, depending on the verb.
+type RemoveActionResult struct {
+	Removed bool   `json:"removed"`
+	Path    string `json:"path,omitempty"`
+	Domain  string `json:"domain,omitempty"`
+}
+
+// SyncResult holds GET /api/download/sync's success body, whose wire shape is
+// the top-level {code, list, has_more} envelope (same "list" slot as the list
+// endpoint, plus has_more) — NOT a {data:{items,next_cursor}} object. Rows come
+// back in (updated_at, id) ascending order.
+//
+// The server uses a composite cursor (updated_at, id) via the `since` /
+// `since_id` query params and does NOT echo a next_cursor: the client derives
+// the next cursor from the last returned row (see NextCursor). Items maps from
+// the envelope's "list" and is populated by doMutate's *SyncResult special case.
 type SyncResult struct {
-	Items      []DownloadTask `json:"items"`
-	HasMore    bool           `json:"has_more"`
-	NextCursor int64          `json:"next_cursor"`
+	Items   []DownloadTask `json:"items"`
+	HasMore bool           `json:"has_more"`
+}
+
+// NextCursor returns the composite (updated_at, id) cursor to pass as
+// --since / --since-id on the next page: the last returned row's values. It
+// yields the zero time and 0 when the page is empty.
+func (r SyncResult) NextCursor() (time.Time, int64) {
+	if len(r.Items) == 0 {
+		return time.Time{}, 0
+	}
+	last := r.Items[len(r.Items)-1]
+	return last.UpdatedAt, last.ID
 }
 
 // CookieSummary is a row of GET /api/integration/cookies. It never carries the

@@ -183,7 +183,8 @@ func runFileRemove(ctx context.Context, f *cmdutil.Factory, path, outputRaw stri
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if _, err := parseFormat(outputRaw); err != nil {
+	format, err := parseFormat(outputRaw)
+	if err != nil {
 		return err
 	}
 	path = strings.TrimSpace(path)
@@ -204,6 +205,11 @@ func runFileRemove(ctx context.Context, f *cmdutil.Factory, path, outputRaw stri
 	if err := doMutate(ctx, pc.doer, "DELETE", "/api/download/file_remove/none"+encodeQuery(q), nil, nil); err != nil {
 		return err
 	}
-	fmt.Printf("removed %s\n", path)
-	return nil
+	switch format {
+	case FormatJSON:
+		return printJSON(os.Stdout, RemoveActionResult{Removed: true, Path: path})
+	default:
+		fmt.Printf("removed %s\n", path)
+		return nil
+	}
 }
