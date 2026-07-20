@@ -130,5 +130,5 @@ When your complimentary Basic plan expires:
 
 ## Resources
 
-- [Monitor traffic in Olares Space](space.md)
+- [Monitor traffic in Olares Space](../manual/space/manage-olares.md#check-traffic-usage)
 - [Olares Space introduction](../manual/space/index.md)
