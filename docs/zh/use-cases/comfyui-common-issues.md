@@ -85,22 +85,51 @@ ComfyUI 无法启动、意外停止或行为异常。
 
 ## 工作流无法找到存储在 `/Common/comfyui/model/` 中的模型
 
-迁移到 ComfyUI v3（Olares 1.12.6+）后，工作流可能报告模型缺失，即使模型文件确实存在于 `/Common/comfyui/model/` 中。这通常意味着模型搜索路径未正确配置。
+迁移到 ComfyUI v3（Olares 1.12.6+）后，工作流可能报告模型缺失，即使模型文件确实存在于 `/Common/comfyui/model/` 中。主要有以下两种原因：
 
-### 检查 `extra_model_paths.yaml` 配置
+- **原因 1**：`extra_model_paths.yaml` 中未注册模型的子目录，导致 ComfyUI 未扫描该目录。
+- **原因 2**：模型已在 ComfyUI 模型目录中，但自定义节点定义的搜索路径不匹配。
 
-`extra_model_paths.yaml` 文件告诉 ComfyUI 在哪里查找模型。迁移后，此文件应已配置为指向 `/Common/comfyui/model/`。但是，如果模型未被识别，请验证配置：
+### 步骤 1：检查模型的子目录是否被识别
+
+1. 在 ComfyUI 中，打开 **Model Library** 侧边栏，搜索模型文件名。
+2. 如果模型未出现在列表中，说明其子目录未在 `extra_model_paths.yaml` 中注册。
+
+### 步骤 2：将缺失的子目录添加到 `extra_model_paths.yaml`
 
 1. 打开 Files 并导航到 `/Data/comfyuisharev3/comfyui/user/`。
-2. 打开 `extra_model_paths.yaml` 并检查 `base_path` 是否设置为 `/Common/comfyui/model`。
+2. 打开 `extra_model_paths.yaml`。顶部的 `base_path` 指向 `/mnt/olares-shared-model`，对应容器内的 `/Common/comfyui/model/`。
 
-   文件应如下所示：
+   例如，如果你将模型放在 `/Common/comfyui/model/detection/mediapipe_face_fp32.safetensors`，但该模型未出现在 Model Library 中，需添加 `detection` 子目录的映射：
+
    ```yaml
-   base_path: /Common/comfyui/model
+   base_path: /mnt/olares-shared-model
+   detection: detection
    ```
 
-3. 如果 `base_path` 缺失或错误，请添加或更正并保存文件。
-4. 重启 ComfyUI 以使更改生效。
+   键（`detection`）为 `/Common/comfyui/model/` 下的子目录名称，值（`detection`）为 ComfyUI 模型搜索路径中的显示名称。
+
+3. 保存文件，并在 ComfyUI Launcher 中点击 **Restart** 重启 ComfyUI。
+4. 在启动日志中查找类似 `Adding extra search path detection /mnt/olares-shared-model/detection` 的行，确认路径已注册。
+5. 刷新 ComfyUI 页面，再次检查 Model Library。
+
+### 步骤 3：排查自定义节点路径不匹配
+
+如果模型已出现在 Model Library，但特定工作流节点仍无法找到模型，说明该自定义节点使用的搜索路径与模型实际位置不同。
+
+1. 查看该自定义节点的文档或源代码，确认其使用的具体搜索路径。
+
+   例如，`ImpactPack/UltralyticsDetectorProvider` 节点监听的路径为 `ultralytics_bbox` 和 `ultralytics_segm`，而非标准的 `ultralytics/` 文件夹。
+
+2. 将所需路径映射添加到 `extra_model_paths.yaml`。例如，要让 bbox YOLO 模型可被该节点使用：
+
+   ```yaml
+   base_path: /mnt/olares-shared-model
+   ultralytics_bbox:
+     models: /Common/comfyui/model/ultralytics/bbox
+   ```
+
+3. 重启 ComfyUI 并重新加载工作流。
 
 ### 验证模型文件位置
 

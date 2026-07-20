@@ -123,6 +123,23 @@ The default configuration includes:
 
 You may need to edit this file if workflows do not recognize models stored in `/Common/comfyui/model/`, or if you install custom plugins that require additional model search paths.
 
+By default, `base_path` makes all top-level subdirectories under `/Common/comfyui/model/` available to ComfyUI. However, models in nested subdirectories (for example, `/Common/comfyui/model/ultralytics/bbox/face_yolov8m.pt`) may not be automatically detected. In this case, you need to add an explicit subdirectory mapping.
+
+For example, to register a `detection` subdirectory:
+
+```yaml
+base_path: /mnt/olares-shared-model
+detection: detection
+```
+
+To register a path for a custom node that uses a non-standard directory (such as `ultralytics_bbox` for ImpactPack's bbox YOLO models):
+
+```yaml
+base_path: /mnt/olares-shared-model
+ultralytics_bbox:
+  models: /Common/comfyui/model/ultralytics/bbox
+```
+
 The file is located at:
 ```
 /Data/comfyuisharev3/comfyui/user/extra_model_paths.yaml
@@ -132,7 +149,7 @@ To edit it:
 
 1. Open Files and navigate to the file location above.
 2. Open `extra_model_paths.yaml` in a text editor.
-3. Modify `base_path` to point to your model directory.
+3. Add or modify paths as needed. See examples above.
 4. Save the file and restart ComfyUI for changes to take effect.
 
 :::warning

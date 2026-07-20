@@ -84,22 +84,51 @@ If ComfyUI starts successfully, most of these messages do not require action. In
 
 ## Workflow cannot find models stored in `/Common/comfyui/model/`
 
-After migrating to ComfyUI v3 (Olares 1.12.6+), a workflow may report missing models even though the model files exist in `/Common/comfyui/model/`. This usually means the model search path is not configured correctly.
+After migrating to ComfyUI v3 (Olares 1.12.6+), a workflow may report missing models even though the model files exist in `/Common/comfyui/model/`. There are two main causes:
 
-### Check the `extra_model_paths.yaml` configuration
+- **Cause 1**: The model's subdirectory is not registered in `extra_model_paths.yaml`, so ComfyUI does not scan it.
+- **Cause 2**: The model is in ComfyUI's model directory, but a custom node's defined search path does not match.
 
-The `extra_model_paths.yaml` file tells ComfyUI where to look for models. After migration, this file should already be configured to point to `/Common/comfyui/model/`. However, if models are not being recognized, verify the configuration:
+### Step 1: Check if the model's subdirectory is recognized
+
+1. In ComfyUI, open the **Model Library** sidebar and search for the model file name.
+2. If the model does not appear in the list, its subdirectory has not been registered in `extra_model_paths.yaml`.
+
+### Step 2: Add the missing subdirectory to `extra_model_paths.yaml`
 
 1. Open Files and navigate to `/Data/comfyuisharev3/comfyui/user/`. 
-2. Open `extra_model_paths.yaml` and check that `base_path` is set to `/Common/comfyui/model`.
+2. Open `extra_model_paths.yaml`. The `base_path` at the top points to `/mnt/olares-shared-model`, which corresponds to `/Common/comfyui/model/` inside the container.
 
-   The file should look like this:
+   For example, if you placed a model at `/Common/comfyui/model/detection/mediapipe_face_fp32.safetensors` and it does not appear in the Model Library, add a mapping for the `detection` subdirectory:
+
    ```yaml
-   base_path: /Common/comfyui/model
+   base_path: /mnt/olares-shared-model
+   detection: detection
    ```
 
-3. If `base_path` is missing or incorrect, add or correct it and save the file.
-4. Restart ComfyUI for changes to take effect.
+   The key (`detection`) is the subdirectory name under `/Common/comfyui/model/`, and the value (`detection`) is how it appears in ComfyUI's model search path.
+
+3. Save the file and restart ComfyUI from ComfyUI Launcher.
+4. In the startup log, look for a line like `Adding extra search path detection /mnt/olares-shared-model/detection` to confirm the path was registered.
+5. Refresh the ComfyUI page and check the Model Library again.
+
+### Step 3: Check for custom node path mismatches
+
+If the model appears in the Model Library but a specific workflow node still cannot find it, the custom node may be looking in a different subdirectory.
+
+1. Check the custom node's documentation or source code to find the exact search path it uses.
+   
+   For example, the `ImpactPack/UltralyticsDetectorProvider` node listens for models under `ultralytics_bbox` and `ultralytics_segm` — not the standard `ultralytics/` folder.
+
+2. Add the required path mapping to `extra_model_paths.yaml`. For instance, to make bbox YOLO models available to the node:
+
+   ```yaml
+   base_path: /mnt/olares-shared-model
+   ultralytics_bbox:
+     models: /Common/comfyui/model/ultralytics/bbox
+   ```
+
+3. Restart ComfyUI and reload the workflow.
 
 ### Verify model file locations
 
