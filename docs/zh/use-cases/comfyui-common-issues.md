@@ -95,10 +95,17 @@ ComfyUI 无法启动、意外停止或行为异常。
 1. 在 ComfyUI 中，打开 **Model Library** 侧边栏，搜索模型文件名。
 2. 如果模型未出现在列表中，说明其子目录未在 `extra_model_paths.yaml` 中注册。
 
+   以下面的例子，`ultralytics/bbox/face_yolov8m.pt` 被检测到，但 `detection/mediapipe_face_fp32.safetensors` 未被识别：
+
+   ![模型检测到 vs 未检测到](../public/images/manual/use-cases/comfyui-common-model-detected.png#bordered){width=49%}
+   ![模型未检测到](../public/images/manual/use-cases/comfyui-common-model-missing.png#bordered){width=49%}
+
 ### 步骤 2：将缺失的子目录添加到 `extra_model_paths.yaml`
 
 1. 打开 Files 并导航到 `/Data/comfyuisharev3/comfyui/user/`。
 2. 打开 `extra_model_paths.yaml`。顶部的 `base_path` 指向 `/mnt/olares-shared-model`，对应容器内的 `/Common/comfyui/model/`。
+
+   ![extra_model_paths.yaml 文件](../public/images/manual/use-cases/comfyui-extra-model-paths-file.png#bordered)
 
    例如，如果你将模型放在 `/Common/comfyui/model/detection/mediapipe_face_fp32.safetensors`，但该模型未出现在 Model Library 中，需添加 `detection` 子目录的映射：
 
@@ -109,9 +116,16 @@ ComfyUI 无法启动、意外停止或行为异常。
 
    键（`detection`）为 `/Common/comfyui/model/` 下的子目录名称，值（`detection`）为 ComfyUI 模型搜索路径中的显示名称。
 
+   ![添加 detection 映射](../public/images/manual/use-cases/comfyui-extra-model-paths-add-detection.png#bordered)
+
 3. 保存文件，并在 ComfyUI Launcher 中点击 **Restart** 重启 ComfyUI。
 4. 在启动日志中查找类似 `Adding extra search path detection /mnt/olares-shared-model/detection` 的行，确认路径已注册。
+
+   ![启动日志确认 detection 路径已添加](../public/images/manual/use-cases/comfyui-detection-path-added-log.png#bordered)
+
 5. 刷新 ComfyUI 页面，再次检查 Model Library。
+
+   ![重启后模型已被识别](../public/images/manual/use-cases/comfyui-model-recognized-after-restart.png#bordered)
 
 ### 步骤 3：排查自定义节点路径不匹配
 
@@ -129,7 +143,11 @@ ComfyUI 无法启动、意外停止或行为异常。
      models: /Common/comfyui/model/ultralytics/bbox
    ```
 
+   ![添加 ultralytics_bbox 映射](../public/images/manual/use-cases/comfyui-ultralytics-bbox-mapping.png#bordered)
+
 3. 重启 ComfyUI 并重新加载工作流。
+
+   ![face_yolov8m.pt 现已被识别](../public/images/manual/use-cases/comfyui-face-yolov8m-recognized.png#bordered)
 
 ### 验证模型文件位置
 

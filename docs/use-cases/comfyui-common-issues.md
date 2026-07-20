@@ -94,10 +94,17 @@ After migrating to ComfyUI v3 (Olares 1.12.6+), a workflow may report missing mo
 1. In ComfyUI, open the **Model Library** sidebar and search for the model file name.
 2. If the model does not appear in the list, its subdirectory has not been registered in `extra_model_paths.yaml`.
 
+   In the example below, `ultralytics/bbox/face_yolov8m.pt` is detected, but `detection/mediapipe_face_fp32.safetensors` is not:
+
+   ![Model detected vs missing](../public/images/manual/use-cases/comfyui-common-model-detected.png#bordered){width=49%}
+   ![Model not detected](../public/images/manual/use-cases/comfyui-common-model-missing.png#bordered){width=49%}
+
 ### Step 2: Add the missing subdirectory to `extra_model_paths.yaml`
 
-1. Open Files and navigate to `/Data/comfyuisharev3/comfyui/user/`. 
+1. Open Files and navigate to `/Data/comfyuisharev3/comfyui/user/`.
 2. Open `extra_model_paths.yaml`. The `base_path` at the top points to `/mnt/olares-shared-model`, which corresponds to `/Common/comfyui/model/` inside the container.
+
+   ![extra_model_paths.yaml file](../public/images/manual/use-cases/comfyui-extra-model-paths-file.png#bordered)
 
    For example, if you placed a model at `/Common/comfyui/model/detection/mediapipe_face_fp32.safetensors` and it does not appear in the Model Library, add a mapping for the `detection` subdirectory:
 
@@ -108,9 +115,16 @@ After migrating to ComfyUI v3 (Olares 1.12.6+), a workflow may report missing mo
 
    The key (`detection`) is the subdirectory name under `/Common/comfyui/model/`, and the value (`detection`) is how it appears in ComfyUI's model search path.
 
+   ![Adding detection mapping](../public/images/manual/use-cases/comfyui-extra-model-paths-add-detection.png#bordered)
+
 3. Save the file and restart ComfyUI from ComfyUI Launcher.
 4. In the startup log, look for a line like `Adding extra search path detection /mnt/olares-shared-model/detection` to confirm the path was registered.
+
+   ![Startup log confirming detection path](../public/images/manual/use-cases/comfyui-detection-path-added-log.png#bordered)
+
 5. Refresh the ComfyUI page and check the Model Library again.
+
+   ![Model now recognized after restart](../public/images/manual/use-cases/comfyui-model-recognized-after-restart.png#bordered)
 
 ### Step 3: Check for custom node path mismatches
 
@@ -128,7 +142,11 @@ If the model appears in the Model Library but a specific workflow node still can
      models: /Common/comfyui/model/ultralytics/bbox
    ```
 
+   ![Adding ultralytics_bbox mapping](../public/images/manual/use-cases/comfyui-ultralytics-bbox-mapping.png#bordered)
+
 3. Restart ComfyUI and reload the workflow.
+
+   ![face_yolov8m.pt now recognized](../public/images/manual/use-cases/comfyui-face-yolov8m-recognized.png#bordered)
 
 ### Verify model file locations
 
