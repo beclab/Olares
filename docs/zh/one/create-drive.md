@@ -27,7 +27,7 @@ head:
    :::info 已安装的 OS 版本
    附带 USB 驱动器上的 OS 镜像可能是较早版本，具体取决于设备的出厂时间。你仍可以用它重新安装系统，如有需要，激活后再更新 Olares OS。
 
-   如果你需要最新的 OS 镜像，可以从 [Olares One ISO](https://cdn.olares.com/one/olares-latest-amd64.iso) 创建新的可启动 USB 驱动器。详细步骤请参阅[创建 Olares One 可启动 USB 驱动器](create-bootable-usb.md)。
+   如果你需要最新的 OS 镜像，可以从 [Olares One ISO](https://cdn.olares.com/one/olares-v1.12.6-amd64.iso) 创建新的可启动 USB 驱动器。详细步骤请参阅[创建 Olares One 可启动 USB 驱动器](create-bootable-usb.md)。
 
 ## 步骤 1：从 USB 驱动器启动
 
