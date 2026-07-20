@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: Learn the different methods to access Olares services locally for improved speed and offline capability.
+description: 了解本地访问 Olares 服务的不同方式，以提升访问速度和离线可用性。
 ---
 # 本地访问 Olares 服务
 
