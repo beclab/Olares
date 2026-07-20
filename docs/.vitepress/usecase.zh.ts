@@ -181,6 +181,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Vane (Perplexica)",
                   link: "/zh/use-cases/perplexica",
                 },
+                {
+                  text: "Dify",
+                  link: "/zh/use-cases/dify-upgrade",
+                },
               ],
             },
             {
@@ -241,6 +245,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "引擎基座",
+                  link: "/zh/use-cases/llm-base-apps",
+                },
+                {
                   text: "Ollama",
                   link: "/zh/use-cases/ollama",
                 },
@@ -259,6 +267,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "LLMFit",
                   link: "/zh/use-cases/llmfit",
+                },
+                {
+                  text: "Xinference",
+                  link: "/zh/use-cases/xinference",
                 },
                 // {
                 //   text: "Dify",
@@ -324,7 +336,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Jellyfin",
-              link: "/zh/use-cases/stream-media",
+              link: "/zh/use-cases/jellyfin",
             },
             {
               text: "Steam",
@@ -332,11 +344,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               items: [
                 {
                   text: "在 Olares 本机游玩",
-                  link: "/zh/use-cases/play-games-directly",
+                  link: "/zh/use-cases/steam-direct-play",
                 },
                 {
                   text: "串流到其他设备",
-                  link: "/zh/use-cases/stream-game",
+                  link: "/zh/use-cases/steam-stream",
                 }
               ]
             },
@@ -362,6 +374,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "*Arrs",
               link: "/zh/use-cases/arrs",
+              collapsed: true,
+              items: [
+                {
+                  text: "升级 *Arrs",
+                  link: "/zh/use-cases/arrs-upgrade",
+                },
+                {
+                  text: "升级下载客户端",
+                  link: "/zh/use-cases/download-clients-upgrade",
+                },
+              ]
             },
           ]
         },
@@ -388,6 +411,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "RNA Sequencing",
               link: "/zh/use-cases/rna-sequencing",
+            },
+            {
+              text: "OnlyOffice",
+              link: "/zh/use-cases/onlyoffice",
             },
             // {
             //   text: "Stirling PDF",
@@ -428,6 +455,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "FlareSolverr",
               link: "/zh/use-cases/flaresolverr",
+            },
+            {
+              text: "SearXNG",
+              link: "/zh/use-cases/searxng",
+            },
+            {
+              text: "Home Assistant",
+              link: "/zh/use-cases/home-assistant",
             },
           ],
         },

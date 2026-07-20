@@ -1,3 +1,6 @@
+---
+description: DIDs and VCs provide ways to identify yourself in a decentralized network, but how about ratings about others?
+---
 # Autonomous Reputation System
 
 **DIDs** and **VCs** provide ways to identify yourself in a decentralized network, but how about ratings about others? This is where we need a reputation system. Reputation systems are very common in online platforms and communities. Consider the rating systems we use today, such as those found on popular review sites.

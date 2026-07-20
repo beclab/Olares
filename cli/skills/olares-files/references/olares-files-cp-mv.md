@@ -11,7 +11,7 @@ Copy / move one or more entries between locations. Same wire endpoint (`PATCH /a
 - **`<dst> MUST end with `/` (drop-into-directory mode).** Each `<src>`'s basename is appended; preserves the dir / file marker.
 - **Renaming via `cp` / `mv` is not supported** — use `files rename` for in-place basename changes, or rename first and then `mv`.
 - **Directory sources require `-r`** (Unix-style refusal otherwise).
-- **`mv` source rejects protected names** ([quirk #4](../SKILL.md#4-drivehomepictures-music-movies-downloads-documents-code-cache-data-home-ollama-huggingface-are-system-managed)): `mv drive/Home/Pictures/ ...` is refused because moving would unlink a dir that apps depend on. **`cp` (copy) is intentionally NOT gated** — duplicating bytes (e.g. `cp -r drive/Home/Pictures/ drive/Home/Pictures-Backup/`) preserves the original and is fine.
+- **`mv` source rejects protected names** ([quirk #4](../SKILL.md#4-the-system-managed-drivehome-directories-are-protected)): `mv drive/Home/Pictures/ ...` is refused because moving would unlink a dir that apps depend on. **`cp` (copy) is intentionally NOT gated** — duplicating bytes (e.g. `cp -r drive/Home/Pictures/ drive/Home/Pictures-Backup/`) preserves the original and is fine.
 - **`external/<node>/` destinations are rejected** ([quirk #3](../SKILL.md#3-externalnode-is-a-virtual-volume-listing-layer-read-only)) — point at `external/<node>/<volume>/<sub>/`.
 
 ## Examples

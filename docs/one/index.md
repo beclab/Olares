@@ -18,7 +18,6 @@ Primary use cases include:
 * **Personal knowledge base**: Allow AI models to learn from private documents to function as a personal assistant.
 * **Unified file storage**: Use the Files app to manage, sync, and share files.
 * **Self-hosted workspace**: Run a private suite of productivity and collaboration tools on the local device.
-* **App development**: Use Olares Studio to develop and deploy applications for the Olares environment.
 * **Private media server**: Host and stream movie and music collections using apps like Jellyfin.
 
 :::info
@@ -47,8 +46,9 @@ Follow the path from first boot to everyday use and advanced customization.
     <div class="vpath-body">
       <div class="vpath-title">Onboarding</div>
       <div class="vpath-links">
-        <a href="./open-webui">Chat with local LLMs</a>
-        <a href="./comfyui">Generate images and videos with ComfyUI</a>
+        <!-- <a href="./open-webui">Chat with local LLMs</a> -->
+        <a href="./olares-onboarding">Manage Olares through natural language</a>
+        <!-- <a href="./comfyui">Generate images and videos with ComfyUI</a> -->
         <a href="./gpu">Switch GPU mode</a>
       </div>
     </div>
@@ -64,7 +64,6 @@ Follow the path from first boot to everyday use and advanced customization.
         <a href="./market">Install &amp; update apps</a>
         <a href="./vault">Secure passwords</a>
         <!-- <a href="./wise-download">Download YouTube videos</a> -->
-        <a href="./deploy">Deploy an app</a>
         <div class="vpath-seealso">See also: <a href="../manual/olares/">All system app guides in the Olares OS manual</a></div>
       </div>
     </div>
@@ -139,4 +138,3 @@ Follow the path from first boot to everyday use and advanced customization.
     </div>
   </div>
 </div>
-

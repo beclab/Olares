@@ -190,33 +190,6 @@
       }
     },
     {
-      "name": "app_bob_desktop_desktop-frontend",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "app_bob_desktop_desktop-frontend",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "desktop-svc.desktop-bob.svc.cluster.local",
-                      "portValue": 80
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
       "name": "nonapp_auth_bob",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -1250,29 +1223,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -1313,29 +1263,6 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1380,29 +1307,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -1443,29 +1347,6 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1615,29 +1496,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -1708,124 +1566,6 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            },
-            "envoy.filters.http.rbac": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute",
-              "rbac": {
-                "rules": {
-                  "policies": {
-                    "allow_cidrs": {
-                      "permissions": [
-                        {
-                          "any": true
-                        }
-                      ],
-                      "principals": [
-                        {
-                          "remoteIp": {
-                            "addressPrefix": "100.64.0.0",
-                            "prefixLen": 16
-                          }
-                        },
-                        {
-                          "remoteIp": {
-                            "addressPrefix": "10.0.0.5",
-                            "prefixLen": 32
-                          }
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "app_bob_desktop_desktop-frontend",
-          "domains": [
-            "desktop.bob.snowinning.com",
-            "desktop.bob.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_bob_desktop_desktop-frontend",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_bob_desktop_desktop-frontend",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "bob"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -1900,29 +1640,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -1995,29 +1712,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -2088,29 +1782,6 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2290,29 +1961,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -2353,29 +2001,6 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2420,29 +2045,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -2483,29 +2085,6 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2655,29 +2234,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -2748,124 +2304,6 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            },
-            "envoy.filters.http.rbac": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute",
-              "rbac": {
-                "rules": {
-                  "policies": {
-                    "allow_cidrs": {
-                      "permissions": [
-                        {
-                          "any": true
-                        }
-                      ],
-                      "principals": [
-                        {
-                          "remoteIp": {
-                            "addressPrefix": "100.64.0.0",
-                            "prefixLen": 16
-                          }
-                        },
-                        {
-                          "remoteIp": {
-                            "addressPrefix": "10.0.0.5",
-                            "prefixLen": 32
-                          }
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "app_bob_desktop_desktop-frontend",
-          "domains": [
-            "desktop.bob.snowinning.com",
-            "desktop.bob.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_bob_desktop_desktop-frontend",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_bob_desktop_desktop-frontend",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "bob"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {
@@ -2940,29 +2378,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -3035,29 +2450,6 @@
               ]
             }
           ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            }
-          ],
           "typedPerFilterConfig": {
             "envoy.filters.http.ext_authz": {
               "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
@@ -3128,29 +2520,6 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
-            }
-          ],
-          "responseHeadersToAdd": [
-            {
-              "header": {
-                "key": "access-control-allow-headers",
-                "value": "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization,x-archive-password"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-methods",
-                "value": "PUT, GET, DELETE, POST, OPTIONS"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-            },
-            {
-              "header": {
-                "key": "access-control-allow-origin",
-                "value": "*"
-              },
-              "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
             }
           ],
           "typedPerFilterConfig": {

@@ -1,5 +1,5 @@
 ---
-description: Learn how to use Olares system applications with step-by-step guides covering personalization, application management, file handling, security setup, and team collaboration features. Updated regularly with the latest Olares functionality.
+description: Explore Olares system apps with guides to Desktop, Market, Files, Vault, Settings, Wise, Profile, Control Hub, and team collaboration.
 aside: false
 ---
 

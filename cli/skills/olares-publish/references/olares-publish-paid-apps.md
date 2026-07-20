@@ -1,6 +1,6 @@
 # Paid apps: price.yaml, on-chain RSA, Merchant
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md), [olares-publish-targets.md](olares-publish-targets.md), and [olares-publish-submit.md](olares-publish-submit.md) first.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first and follow its paid-listing flow order.
 > A paid app is a **public-Market** app plus pricing + license enforcement. Everything in the public-distribution path still applies; this file adds only the paid extras. Official docs: [Publish paid applications](https://docs.olares.com/developer/develop/paid-apps.html).
 
 ## What "paid" adds to a normal market app
@@ -10,7 +10,7 @@ A paid (pay-to-download) app is **almost identical** to a free market app. Only 
 1. A `price.yaml` at the OAC root.
 2. The `VERIFIABLE_CREDENTIAL` env exposed to the workload so it can read the buyer's purchase credential.
 
-Only pay-to-download is supported today. In-app purchases and subscriptions are not implemented (`products: []`).
+Only pay-to-download is supported. In-app purchases and subscriptions are not implemented (`products: []`).
 
 ## Prerequisites
 
@@ -72,7 +72,7 @@ The app reads the buyer's purchase credential from an injected env var. Add it t
   value: "{{ .Values.olaresEnv.VERIFIABLE_CREDENTIAL }}"
 ```
 
-Declare it in `OlaresManifest.yaml` (env rules — [`../../olares-chart/references/olares-chart-env.md`](../../olares-chart/references/olares-chart-env.md)):
+Declare it in `OlaresManifest.yaml` (env rules — see the env reference under [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md)):
 
 ```yaml
 envs:
@@ -85,7 +85,7 @@ envs:
 
 ### Submit
 
-Submit through the standard flow — see [olares-publish-submit.md](olares-publish-submit.md). No extra PR type for paid; it is a normal `NEW`/`UPDATE` PR whose OAC happens to contain `price.yaml`.
+Submit through the standard flow — follow the parent SKILL's submit route. No extra PR type for paid; it is a normal `NEW`/`UPDATE` PR whose OAC happens to contain `price.yaml`.
 
 ## Step 3 — Merchant app (checkout + license management)
 
@@ -101,7 +101,7 @@ Merchant is the developer-side panel that issues licenses and verifies them when
 
 To change RSA keys, product info, pricing, or receiving wallet:
 
-1. Regenerate keys / edit the OAC, submit an `UPDATE` PR ([olares-publish-submit.md](olares-publish-submit.md)), wait for merge.
+1. Regenerate keys / edit the OAC, submit an `UPDATE` PR (the submit route), wait for merge.
 2. Reopen Merchant; when prompted, click **Update / Re-install** to apply the latest config.
 
 ## Agent boundaries

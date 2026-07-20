@@ -93,21 +93,34 @@ func maskYAMLStringRegions(content []byte) []byte {
 			lineEnd++
 		}
 
+		// CRLF-authored manifests (common when files are produced or
+		// round-tripped on Windows) leave a trailing `\r` before each
+		// `\n`. Treat it as part of the line terminator: a `\r` sitting
+		// after a `|` / `>` block-scalar header would otherwise look
+		// like garbage to isBlockScalarHeaderTail, suppress the header,
+		// and leak braces inside the body. contentEnd is the slice
+		// bound the per-line scanners see; lineEnd is still the
+		// next-line cursor so byte offsets remain stable.
+		contentEnd := lineEnd
+		if contentEnd > lineStart && out[contentEnd-1] == '\r' {
+			contentEnd--
+		}
+
 		indent := 0
-		for lineStart+indent < lineEnd && out[lineStart+indent] == ' ' {
+		for lineStart+indent < contentEnd && out[lineStart+indent] == ' ' {
 			indent++
 		}
-		blank := lineStart+indent == lineEnd
+		blank := lineStart+indent == contentEnd
 
 		switch {
 		case blockScalarIndent >= 0 && (blank || indent > blockScalarIndent):
-			maskBracesInRange(out, lineStart, lineEnd)
+			maskBracesInRange(out, lineStart, contentEnd)
 		default:
 			if blockScalarIndent >= 0 {
 				blockScalarIndent = -1
 			}
 			if !blank {
-				if openedBlockScalar := maskQuotedRegionsOnLine(out, lineStart, lineEnd); openedBlockScalar {
+				if openedBlockScalar := maskQuotedRegionsOnLine(out, lineStart, contentEnd); openedBlockScalar {
 					blockScalarIndent = indent
 				}
 			}

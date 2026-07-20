@@ -217,9 +217,13 @@ const side = {
               text: "Clone applications",
               link: "/manual/olares/market/clone-apps",
             },
-            {
+            /*{
               text: "Manage paid applications",
               link: "/manual/olares/market/purchase-paid-apps",
+            },*/
+            {
+              text: "Shared applications",
+              link: "/manual/olares/market/shared-apps",
             },
           ],
         },
@@ -231,6 +235,10 @@ const side = {
             {
               text: "Basic file operations",
               link: "/manual/olares/files/add-edit-download",
+            },
+            {
+              text: "Compress and extract files",
+              link: "/manual/olares/files/compress-extract-files",
             },
             //   {
             //      text: "Sync and share",
@@ -249,8 +257,16 @@ const side = {
               link: "/manual/olares/files/mount-SMB",
             },
             {
+              text: "Mount NFS",
+              link: "/manual/olares/files/mount-nfs",
+            },
+            {
               text: "Mount cloud storage",
               link: "/manual/olares/files/mount-cloud-storage",
+            },
+            {
+              text: "Manage shared AI models with the Common directory",
+              link: "/manual/olares/files/files-common",
             },
           ],
         },
@@ -408,22 +424,15 @@ const side = {
                   text: "Set up hosts file",
                   link: "/manual/olares/settings/set-up-hosts",
                 },
+                {
+                  text: "Manage Overlay Gateway",
+                  link: "/manual/olares/settings/overlay-gateway",
+                },
               ],
             },
-            { 
-              text: "Manage GPU", 
-              collapsed: true,
+            {
+              text: "Manage accelerator resources",
               link: "/manual/olares/settings/gpu-resource",
-              items:[
-                {
-                  text: "Manage single-GPU resources",
-                  link: "/manual/olares/settings/single-gpu" 
-                },
-                {
-                  text: "Manage multi-GPU resources",
-                  link: "/manual/olares/settings/multi-gpu"
-                },
-              ]
             },
             { text: "Set video playback", link: "/manual/olares/settings/video" },
             { text: "Manage search rules", link: "/manual/olares/settings/search" },

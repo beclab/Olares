@@ -122,6 +122,7 @@ spec:
         openebs.io/component-name: openebs-localpv-provisioner
         openebs.io/version: 3.3.0
     spec:
+      priorityClassName: system-cluster-critical
       serviceAccountName: openebs-maya-operator
       containers:
       - name: openebs-provisioner-hostpath

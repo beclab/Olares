@@ -1,5 +1,6 @@
 ---
-outline: [1, 5]
+description: How the Olares ID smart contracts are structured, covering DID management and the on-chain reputation system.
+outline: [2, 4]
 ---
 
 # Smart Contract
@@ -20,13 +21,13 @@ Snowinning Protocol's smart contract has two parts.
 
 
 
-# TerminusDID
+## TerminusDID
 
 The TerminusDID contract manages a hierarchical structure derived from [Domain](/developer/concepts/olares-id.md#domain-types.
 
 ![alt text](/images/developer/contribute/smart-contract-tree.jpg)
 
-## Node
+### Node
 
 Each node possesses several default attributes.
 
@@ -51,7 +52,7 @@ The following is an illustrative example that specifies the default attributes o
 }
 ```
 
-## Owner
+### Owner
 
 Ownership of different nodes is as follows:
 
@@ -73,7 +74,7 @@ Ownership of different nodes is as follows:
 After the project stabilizes, ownership will be transferred to the multisig address of the DAO organization by the Terminus team.
 :::
 
-## Tag
+### Tag
 
 The [Tag](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TagRegistry.sol) mechanism allows the [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) contract to extend the metadata stored on nodes.
 
@@ -86,7 +87,7 @@ Tag system allows you to freely store data types such as `uint`, `int`, `address
 For complex structures or arrays, as well as cases where complex structures and arrays are nested within each other, if data is written in units of Tags each time, it will result in huge useless gas consumption. Therefore, we have implemented the functionality of updating a single field or operating a single array separately in the system. When performing single updates, in addition to **definer, user, and Tag name**, you also need to provide the **path** of the data, which is the variable name inside the structure.
 :::
 
-### Customized Tags
+#### Customized Tags
 
 | Field      | Description                                                                                                             |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -100,7 +101,7 @@ For complex structures or arrays, as well as cases where complex structures and 
 Owner/did as a custom tag is only effective for the node and its sub nodes.
 :::
 
-### Tagger
+#### Tagger
 
 Tagger is one of the necessary pieces of information inside each Tag. It represents the unique entity with permission to modify the Tag value, which can be a wallet address or a contract. Tagger may change frequently.
 
@@ -111,7 +112,7 @@ Tagger is one of the necessary pieces of information inside each Tag. It represe
 > - Referring to the official implementations of several Taggers, you can utilize DID contracts for comprehensive operator identity authentication and also achieve more refined custom permission controls.
 > - For complex Tag structures or data content with special specifications, setting the Tagger as a contract can verify the data format on-chain or establish more comprehensive custom rules. For example, for the value of RSAPubKey in the official Tag, we perform validation of bytes data in Pkcs8 ASN.1 format on-chain to prevent setting values that cannot be parsed.
 
-## Use Cases
+### Use Cases
 
 Some Taggers are provided under the Root node:
 
@@ -147,7 +148,7 @@ Use the declared address and DID owner to sign the following information in comp
 :::
 
 
-# Reputation
+## Reputation
 
 We can create highly flexible [reputation](/developer/concepts/reputation.md) protocols based on Taggers.
 
@@ -159,7 +160,7 @@ In implementing an on-chain Reputation system, the most crucial elements are:
 
 Regarding these elements, TerminusDID provides a comprehensive solution. We can use Individual and Entity types of DID to represent the object to be evaluated, use Tags to store extended metadata, and utilize TerminusDID's built-in permission management features to verify identities. Learn more in the following two cases.
 
-## Otmoic Trader Reputation
+### Otmoic Trader Reputation
 
 Otmoic's reputation contract uses DID owner's EIP712 signature for identity verification, and then stores the complain did in the `complaints` field of the `otmoic.reputation` Entity.
 
@@ -194,7 +195,7 @@ Otmoic's reputation contract uses DID owner's EIP712 signature for identity veri
 ```
 :::
 
-## Application Reputation
+### Application Reputation
 
 1. Define the Tag named `ratings` and set Tagger as the Application Reputation contract
 2. When there is a new version for an app, create **`<version>.<appname>.app.myterminus.com`** on the blockchain.

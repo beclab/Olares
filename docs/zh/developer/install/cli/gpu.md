@@ -1,3 +1,7 @@
+---
+noindex: true
+description: gpu 命令用于管理 GPU 功能，包括安装、启用、禁用和卸载 GPU 驱动及相关组件，以及查看 GPU 安装状态。
+---
 # `gpu`
 
 ## 命令说明

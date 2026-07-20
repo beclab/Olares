@@ -6,11 +6,6 @@ head:
     - name: keywords
       content: Olares, ComfyUI, troubleshooting, common issues, self-hosted
 ---
-
-:::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/comfyui-common-issues.md)。
-:::
-
 # ComfyUI 常见问题
 
 使用本页面识别和解决 Olares 上 ComfyUI 的常见问题。
@@ -19,6 +14,43 @@ head:
 如果你遇到的问题未在此处列出，请参阅[故障排查流程](./comfyui-launcher#故障排查流程)。
 :::
 
+## 升级到 Olares 1.12.6 后如何迁移到新版 ComfyUI
+
+如果你已升级到 Olares 1.12.6，且之前安装过 ComfyUI Shared，可参考本节完成迁移。如果你是在 Olares 1.12.6 或更高版本上首次安装 ComfyUI，直接从应用市场安装 ComfyUI 即可。
+
+Olares 1.12.6 更新了共享应用架构。旧版 ComfyUI Shared 在升级后仍可继续运行，但无法接收后续更新。要继续获取更新，需在保留本地数据的情况下卸载旧版应用，然后从应用市场安装新版 ComfyUI。
+
+:::warning
+卸载旧版应用时，不要勾选**同时删除所有本地数据**。如果勾选此项，你的模型、插件、工作流以及输入/输出文件会被删除。
+:::
+
+
+### 迁移步骤
+
+1. 打开应用市场，进入**我的 Olares**。
+2. 找到 ComfyUI Shared，点击操作按钮旁的下拉箭头，然后选择**卸载**。
+3. 在卸载窗口中，确保未勾选**同时删除所有本地数据**，然后点击**确认**。
+4. 返回应用市场，搜索 “ComfyUI”，然后点击**安装**。
+5. 在应用详情页，查看**信息**下的**兼容性**。如果显示 `Olares >=1.12.6-0`，说明这是新版 ComfyUI。
+6. 安装完成后，打开 ComfyUI，确认模型、插件、工作流以及输入/输出文件是否可正常使用。
+
+### 迁移内容说明
+
+新版 ComfyUI 安装后，将自动完成数据的迁移工作，具体规则如下：
+
+| 数据类型 | 原路径 | 新路径 |
+|:---|:---|:---|
+| ComfyUI 核心数据（插件、工作流等） | `External/<your_hostname>/ai/comfyui/` | `/Data/comfyuisharev3/comfyui/` |
+| 模型数据 | `External/<your_hostname>/ai/model/` | `Common/comfyui/model/` |
+| 输出文件 | `External/<your_hostname>/ai/output/comfyui/` | `Common/comfyui/output/` |
+| 输入文件 | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
+
+:::warning
+迁移完成后，需将新的模型和输入文件上传到 `Common/comfyui/` 下的新路径。新版 ComfyUI 不再将 `External/<your_hostname>/ai/` 作为当前使用的文件位置。
+:::
+
+数据迁移会在每次 ComfyUI 重启时运行。如果你之后又将文件添加到旧路径，ComfyUI 会在下次重启时将这些文件移动到新路径，并删除 `External/<your_hostname>/ai/` 下的原文件。为避免混淆，需直接使用新路径上传文件。
+
 ## ComfyUI 无法启动
 
 ComfyUI 无法启动、意外停止或行为异常。
@@ -26,9 +58,9 @@ ComfyUI 无法启动、意外停止或行为异常。
 这通常由资源不足或 GPU 分配不正确引起。要解决此问题：
 
 1. 检查你的系统资源。如果你的 CPU 或内存使用率已满，请停止其他资源密集型应用。
-2. 如果系统资源看起来正常，请前往 **Settings** > **GPU** 检查你的 GPU 模式：
-   - 如果你使用 **Memory slicing**，请确保 ComfyUI 已绑定到 GPU 并有足够的 VRAM 分配。
-   - 如果你使用 **App exclusive**，请确保独占应用设置为 ComfyUI。
+2. 如果系统资源看起来正常，前往**设置** > **AI 算力**检查你的 GPU 模式：
+   - 如果你使用的是**容量分片**，需确保 ComfyUI 已绑定到 GPU 并有足够的显存分配。
+   - 如果你使用的是**独占分配**，需确保独占应用设置为 ComfyUI。
 3. 等待片刻，然后再次尝试启动 ComfyUI。
 
 ## 启动器日志显示错误
@@ -95,21 +127,35 @@ main.py: error: unrecognized arguments: --normalvram
 
 当工作流需要的 VRAM 超过显卡所拥有的容量时，系统会将重负载放在单个 CPU 核心上进行数据交换，导致温度升高。
 
-长期解决方案是减少工作流的 VRAM 占用（例如，降低分辨率、使用更小的模型或启用模型卸载）。作为临时解决方法，你可以降低最大 CPU 频率。
+长期解决方案是减少工作流的 VRAM 占用，例如降低分辨率、使用更小的模型或启用模型卸载。作为临时解决方法，可以在工作负载运行期间限制最大 CPU 频率。
 
-Olares One 配备的 CPU 默认最大频率为 5.4 GHz。以下步骤在工作负载期间将其降低到 5.0 GHz，然后恢复。
+### Olares OS 1.12.6 或更高版本
 
-1. 打开 Control Hub 应用。
-2. 在左侧边栏中，**Terminal** 下，点击 **Olares**。
+Olares One 配备的 CPU 默认最大频率为 5.4 GHz。使用**限制 CPU 频率**开关，可在工作负载期间将其降至 5.0 GHz。工作负载完成后，再关闭该开关。
 
-   ![打开终端](/images/manual/use-cases/comfyui-ts-terminal.png#bordered){width=90%}
+1. 打开**设置**。
+2. 点击左上角头像，打开**我的 Olares**。
+3. 在**硬件**下，开启**限制 CPU 频率**。
+4. 在 ComfyUI 中运行任务。
+5. 工作负载完成后，关闭**限制 CPU 频率**。
+
+更多信息请参阅[限制 CPU 频率](/zh/manual/olares/settings/my-olares#limit-cpu-frequency)。
+
+### Olares OS 1.12.5 或更早版本
+
+如果设备运行 Olares OS 1.12.5 或更早版本，请使用终端命令在工作负载期间降低最大 CPU 频率，并在完成后恢复。
+
+1. 打开控制面板。
+2. 在左侧边栏的**终端**下，点击 **Olares**。
+
+   ![打开终端](/images/zh/manual/use-cases/comfyui-ts-terminal.png#bordered){width=90%}
 
 3. 运行以下命令将最大 CPU 频率降低到 5.0 GHz：
     ```bash
     echo 5000000 | sudo tee /sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq
     ```
-   在其他设备上，根据你的 CPU 最大频率调整目标值。先运行 `cat /sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq` 来检查。
-4. 在 ComfyUI 中运行你的任务。
+   在其他设备上，根据 CPU 最大频率调整目标值。先运行 `cat /sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq` 来检查。
+4. 在 ComfyUI 中运行任务。
 5. 工作负载完成后，运行以下命令恢复默认的 5.4 GHz 最大 CPU 频率：
     ```bash
     echo 5400000 | sudo tee /sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq

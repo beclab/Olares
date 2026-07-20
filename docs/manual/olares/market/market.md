@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Complete guide to managing Olares applications - install from Market, update system and community apps, handle custom installations, and properly uninstall applications.
+description: Manage Olares apps in Market. Install and update system or community apps, add custom apps, and safely uninstall software.
 ---
 
 # Manage applications in Market
@@ -10,13 +10,14 @@ description: Complete guide to managing Olares applications - install from Marke
 This guide helps users understand how to install, update, and uninstall applications through the Market. We'll also cover how to install custom applications.
 
 ## Before you begin
+
 Before you start, it is recommended to familiarize yourself with a few concepts for Olares applications:
 
 | Terminology | Description   |
 |:------------|:--------------|
 | [System application](../../../developer/concepts/application.md#system-applications)   | Built-in applications that come pre-installed with Olares,<br/> such as Profile, Files, and Vault. |
 | [Community application](../../../developer/concepts/application.md#community-applications)  | Applications that are created and maintained by third-party<br/> developers.   |
-| [Shared application](../../../developer/concepts/application.md#shared-applications) | A special category of community applications on Olares designed<br/> to provide unified, shared resources or services to all users within<br/> an Olares cluster. <br/><br/>Shared applications expose standard APIs or shared entrances that<br/> can be directly invoked by any application in the cluster. |
+| [Shared application](shared-apps.md) | A special type of community application, deployed centrally by the<br/> administrator, that provides shared resources or services to all users<br/> in a cluster. <br/><br/>Applications with a UI can be opened directly from the Launchpad.<br/> Headless backend services expose a standard API for client connections. |
 | [Dependencies](../../../developer/concepts/application.md#dependencies) | Prerequisite applications that must already be<br/> installed before a user can access an application <br/>that requires them.  | 
 
 ## Find applications
@@ -24,7 +25,6 @@ Before you start, it is recommended to familiarize yourself with a few concepts 
 The Olares Market offers various ways to discover and browse applications.
 
 ![Market](/images/manual/olares/market-discover1.png#bordered)
-
 
 ### Browse by categories
 
@@ -37,10 +37,10 @@ Upon launching the Market app, the **Discover** page serves as your central hub 
 You can also browse applications based on their functionality:
 * **Creativity**: Apps for creating and publishing digital content, from AI-generated art and 3D models to blogs and design projects.
 * **Productivity**: Apps for team collaboration, project management, data organization, and building custom AI-powered agents.
-* **Developer Tools**: Toolchain for the software development lifecycle, including code hosting, CI/CD, observability, and database management.
-* **Fun**: Self-hosted applications for entertainment and fun such as gaming, video streaming, and connecting with people. 
+* **Fun**: Self-hosted applications for entertainment and fun such as gaming, video streaming, and connecting with people.
 * **Lifestyle**: Self-hosted applications for managing your smart home, personal photo libraries, and AI identity.
-* **Utilities**: Tools for system management, file sharing, data backup, and running local AI models.
+* **Utilities**: Tools for system management, file sharing, data backup, and running local AI models. 
+* **Developer Tools**: Toolchain for the software development lifecycle, including code hosting, CI/CD, observability, and database management.
 * **AI**: Latest open-source LLMs and generative tools for text, audio, and 3D assets.
 
 ### Search using keywords 
@@ -51,17 +51,17 @@ To search an app in the market:
 2. In the **Manage** submenu on the left, click **Search**.
 3. Enter the keywords. The relevant results will appear as you type.
 
-![Search app](/images/manual/olares/search-app.png#bordered)
+    ![Search app](/images/manual/olares/search-app.png#bordered)
 
 ### Switch market source
 
-You can switch market sources to speed up browsing, searching, and downloading, or to install apps exclusive to a particular source. To switch market sources:
+You can switch market sources to speed up browsing, searching, and downloading, or to install apps exclusive to a particular source.
 
-1.  Open **Market**, and navigate to **My Olares** > **Settings** from the left sidebar.
+1.  Open **Market**, and navigate to **My Olares** > **Settings**.
 2.  Under **Market sources**, click **Add source** to add a new app source. The current official sources include:
     * Global: `https://api.olares.com/market`
     * China: `https://api.olares.cn/market`
-3.  Fill in the source name, URL, and description as required, then click **Confirm** to finish adding.
+3.  Fill in the source name, URL, and description as required, then click **Confirm**.
 4.  In the source list, select the target source to activate it. Wait for about 10 minutes for the store page to switch.
 
 :::info
@@ -72,39 +72,51 @@ Applications from different installation sources will generate corresponding tab
 
 To install an application from Market:
 
-1. Open Market from Dock or Launchpad.
-2. Navigate to the app you want, and click **Get**.
-3. When the operation button changes to **Install**, click it to start the installation.
-4. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
-5. Once finished, the button will change to **Open**.
+1. Open Market from the Dock or Launchpad.
+2. Find your target application, and double-click it to view its details.
+3. If the application supports multiple hardware accelerators, configure your deployment in the **RESOURCES** section:
+
+    ![Accelerator resources](/images/manual/olares/market-accelerator1.png#bordered)
+
+    a. Select your preferred computing resource from the drop-down list. For example, **NVIDIA GPU**, **NVIDIA GB10**, or **CPU**.
+
+    b. Review the **CPU**, **Memory**, **Required disk**, and **VRAM** requirements for the selected computing resource, and make sure your hardware meets them.
+
+4. Click **Get**.
+5. When the operation button changes to **Install**, click it.
+6. If prompted, confirm your hardware accelerator choice. The installation starts.
+7. (Optional) To cancel the installation, click <i class="material-symbols-outlined">close_small</i> on the right of the button.
+8. When the installation finishes, the button changes to **Open**.
 
 ### Install shared applications
 
-To ensure a shared service is running and accessible within the cluster, follow the installation process based on the type of shared application:
+Shared applications are deployed centrally by the administrator, and cluster members do not need to install them themselves. To ensure a shared service is running and accessible within the cluster, follow the installation process based on the type of shared application.
 
-* **Headless backend service**:
+::: info Manage shared applications
+The administrator is responsible for upgrading, stopping, resuming, and uninstalling shared applications. These operations affect all members in the cluster, so please confirm before proceeding.
+:::
 
-    This type of shared application provides API services and does not include a graphical user interface. No dedicated reference application is required. Any client that supports the corresponding API can directly invoke the service. Take Ollama as an example:
+#### Headless backend service
 
-    1. The administrator installs Ollama first. Once installed, the shared service starts within the cluster and exposes a standard API endpoint.
-    
-    2. Cluster members access the shared service:
+This type of shared application provides only API services without a graphical user interface. Any client that supports the corresponding API can invoke the service. Take a model instance created on **Ollama Engine Base** as an example:
 
-        a. Retrieve the access address of Ollama in Olares **Settings** > **Applications** > **Ollama** > **Shared entrances**.
+1. **Administrator deploys the model**: The administrator creates a model instance from **Ollama Engine Base** in Market. Once deployed, the model instance starts as a shared service within the cluster, and a model application entry with the same name is generated on the Launchpad.
+2. **Members configure and use it**:
 
-        b. Install a third-party client that supports the Ollama API, such as LobeChat or Open WebUI, and enter the access address in the client's configuration settings.
+    a. Get the access address: On the Launchpad, open the model application entry to enter the model console, and copy the **Base URL** displayed on the page.
 
-* **Applications with built-in UI**:
+    b. Configure the client: Install any third-party client that supports the corresponding API, such as LobeChat or Open WebUI, and enter the address above in the client's configuration settings to start using it.
 
-    This type of shared applications include both a backend service and a Web UI. They can provide services to users independently. Typical examples are Dify Shared and ComfyUI Shared.
-    
-    1. The administrator installs the shared application first. This not only launches the shared service for the cluster, but also installs the client-side interface as the access point.
-    
-       ::: tip ComfyUI Launcher
-       ComfyUI Shared contains a web launcher component to facilitate the management of related services and resources. The administrator needs to configure and start the service from the ComfyUI Launcher.
-       :::
+#### Application with built-in UI
 
-    2. Cluster members install the same application. For these users, only the access point to the shared application is installed.
+This type of shared application includes both a backend service and a web UI, and can provide services to users independently. Typical examples are Dify Shared and ComfyUI Shared.
+
+1. **Administrator installs the application**: The administrator installs the shared application in Market. Once installed, the shared service starts within the cluster, and an application entry with the same name is added to the Launchpad.
+
+    ::: tip ComfyUI Launcher
+    ComfyUI Shared contains a desktop launcher component to manage ComfyUI services and related resources. The administrator needs to configure and start the service from the ComfyUI Launcher.
+    :::
+2. **Members use it directly**: Cluster members find the application entry on the Launchpad and click to open it directly, without installing any additional client.
 
 ### Install custom applications
 
@@ -128,6 +140,7 @@ During app installation, if an environment variable is required for the app but 
 After completing the environment variable setup, you can continue the installation.
 
 ## Update applications
+
 To update an application from Market:
 
 1. Open Market from the Dock or Launchpad.
@@ -189,6 +202,7 @@ You can also click the <i class="material-symbols-outlined">download</i> button 
 ## FAQs
 
 ### Why can't I install an application?
+
 If you can't install an application, it might be due to:
 * **Insufficient system resources**: Try freeing up system resources, or increasing your resource quota.
 * **Missing dependencies**: Check the **Dependency** section on the application details page and make sure all required apps are installed.
@@ -256,3 +270,9 @@ In Olares 1.12.4 and earlier versions, to fully release resources, you must use 
 - Stop the app in Market and ensure that the **Also stop the shared server (affects all users)** option is selected.
 - If the user-facing application has already been stopped through Settings, you must first resume it in Market, and then stop the shared application while ensuring the **Also stop the shared server (affects all users)** option is selected. 
 :::
+
+### What happens to my previously installed shared applications after upgrading to V1.12.6?
+
+Olares 1.12.6 introduces a new V3 shared application architecture. Legacy V2 shared applications can still be started, stopped, paused, and resumed, but they cannot be upgraded directly to V3. To use the V3 version, uninstall the V2 app first, then install the V3 version. Existing data must be migrated manually.
+
+For a full explanation of the architecture change and the migration workflow, see [Shared applications](shared-apps.md).

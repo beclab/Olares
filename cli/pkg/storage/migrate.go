@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -36,6 +37,80 @@ var MigrationTempMountPoint = path.Join(OlaresRootDir, ".rootfs-jfs-migrate")
 // deleted) so that the migration can be rolled back manually if needed.
 var RootFSLocalBackupDir = path.Join(OlaresRootDir, "rootfs.local.bak")
 
+// MigrateStateFile records how far the JuiceFS rootfs migration has progressed.
+// It exists so that an interrupted `enable-juicefs` can be resumed safely:
+// without it, the only signal of progress is the juicefs.service file, which
+// cannot distinguish "data synced", "rootfs swapped", "service enabled" and
+// "fully finalized". That single boolean creates two hazards on a re-run:
+//   - between the swap and the service-file write, the local rootfs is already
+//     an empty directory, so re-running the --delete sync would mirror that
+//     emptiness onto JuiceFS and destroy the just-migrated data;
+//   - after the service file exists but before the post-swap finalization
+//     (rootfs-type flip + fsnotify re-render) completes, the run would be
+//     treated as "already done" and the finalization would never happen.
+//
+// The marker lives under /olares (NOT under the rootfs that gets swapped) so it
+// survives the swap and persists across runs.
+var MigrateStateFile = path.Join(OlaresRootDir, ".jfs-migrate.state")
+
+// migratePhase enumerates the ordered checkpoints of the rootfs migration.
+type migratePhase int
+
+const (
+	phaseNone      migratePhase = iota // nothing recorded yet
+	phaseSynced                        // local rootfs data fully synced into JuiceFS
+	phaseSwapped                       // original rootfs backed up; rootfs dir replaced with the JuiceFS mount point
+	phaseEnabled                       // juicefs.service written and JuiceFS mounted on the rootfs
+	phaseFinalized                     // rootfs type flipped to jfs + fsnotify charts re-rendered
+)
+
+var migratePhaseNames = map[migratePhase]string{
+	phaseSynced:    "synced",
+	phaseSwapped:   "swapped",
+	phaseEnabled:   "enabled",
+	phaseFinalized: "finalized",
+}
+
+func migratePhaseFromName(name string) migratePhase {
+	switch strings.TrimSpace(name) {
+	case "synced":
+		return phaseSynced
+	case "swapped":
+		return phaseSwapped
+	case "enabled":
+		return phaseEnabled
+	case "finalized":
+		return phaseFinalized
+	default:
+		return phaseNone
+	}
+}
+
+// readMigratePhase returns the furthest checkpoint the migration has reached,
+// or phaseNone if the marker is missing/unreadable.
+func readMigratePhase() migratePhase {
+	data, err := os.ReadFile(MigrateStateFile)
+	if err != nil {
+		return phaseNone
+	}
+	return migratePhaseFromName(string(data))
+}
+
+// advanceMigratePhase records that the migration reached phase p. It never
+// rewinds: if a later phase was already recorded it is kept, so the marker
+// stays monotonic even when a resumed run re-executes an earlier idempotent
+// step.
+func advanceMigratePhase(p migratePhase) error {
+	if readMigratePhase() >= p {
+		return nil
+	}
+	name := migratePhaseNames[p]
+	if name == "" {
+		return nil
+	}
+	return util.WriteFile(MigrateStateFile, []byte(name), 0644)
+}
+
 // IsJuiceFSEnabled reports whether this node has already been switched over to a
 // JuiceFS-backed rootfs.
 //
@@ -49,6 +124,24 @@ var RootFSLocalBackupDir = path.Join(OlaresRootDir, "rootfs.local.bak")
 // JuiceFS with --delete, destroying all data.
 func IsJuiceFSEnabled() bool {
 	return util.IsExist(JuiceFsServiceFile)
+}
+
+// IsMigrationFinalized reports whether the JuiceFS rootfs migration has fully
+// completed, including the post-swap finalization (rootfs-type flip + fsnotify
+// chart re-render). Only then is there genuinely nothing left to do.
+//
+// This is deliberately stricter than IsJuiceFSEnabled: a node that already has
+// the juicefs.service file but was interrupted before finalization still needs
+// the remaining steps, so callers must resume those rather than treat the node
+// as complete.
+func IsMigrationFinalized() bool {
+	return readMigratePhase() >= phaseFinalized
+}
+
+// MarkMigrationFinalized records that the migration has fully completed. After
+// this, enable-juicefs treats the node as done and exits early on later runs.
+func MarkMigrationFinalized() error {
+	return advanceMigratePhase(phaseFinalized)
 }
 
 // isOlaresRunning reports whether the kubernetes/container layer of Olares
@@ -98,6 +191,18 @@ func isPathMounted(runtime connector.Runtime, target string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// isDirEmpty reports whether dir contains no entries at all (including
+// dotfiles). It is used as a defensive guard so we never run a destructive
+// --delete sync from, or a swap of, an unexpectedly empty rootfs.
+func isDirEmpty(runtime connector.Runtime, dir string) (bool, error) {
+	cmd := fmt.Sprintf("find %s -mindepth 1 -maxdepth 1 2>/dev/null | head -n 1", dir)
+	out, err := runtime.GetRunner().SudoCmd(cmd, false, false)
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) == "", nil
 }
 
 // CheckMigrationPrecheck validates that the node is in a state where the
@@ -238,6 +343,16 @@ type SyncRootFSData struct {
 }
 
 func (t *SyncRootFSData) Execute(runtime connector.Runtime) error {
+	// If the rootfs has already been swapped (its data now lives in JuiceFS and
+	// the local rootfs directory was replaced with a fresh/empty mount point),
+	// there is nothing left to sync. Re-running the --delete sync here would
+	// mirror the now-empty source onto JuiceFS and destroy the just-migrated
+	// data, so a resumed run must skip it.
+	if readMigratePhase() >= phaseSwapped {
+		logger.Infof("rootfs has already been migrated and swapped onto JuiceFS, skipping data sync to avoid wiping migrated data")
+		return nil
+	}
+
 	// Safety: the source must be the real local rootfs, never a JuiceFS mount.
 	// Otherwise a --delete sync from an (empty) JuiceFS into JuiceFS could wipe data.
 	srcMounted, err := isJuiceFSMounted(runtime, OlaresJuiceFSRootDir)
@@ -255,6 +370,29 @@ func (t *SyncRootFSData) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("refusing to sync: destination %s is not mounted", MigrationTempMountPoint)
 	}
 
+	// Defensive guard in case the phase marker was lost: a --delete sync from an
+	// empty source into a non-empty JuiceFS destination would destroy data. The
+	// Olares rootfs is never legitimately empty, so an empty source means the
+	// swap most likely already happened; refuse rather than risk wiping the
+	// migrated data.
+	if t.Delete {
+		srcEmpty, err := isDirEmpty(runtime, OlaresJuiceFSRootDir)
+		if err != nil {
+			return err
+		}
+		if srcEmpty {
+			dstEmpty, err := isDirEmpty(runtime, MigrationTempMountPoint)
+			if err != nil {
+				return err
+			}
+			if !dstEmpty {
+				return fmt.Errorf("refusing to run a destructive sync: source rootfs %s is empty while JuiceFS at %s already holds data; "+
+					"this usually means the rootfs was already migrated and swapped, aborting to avoid wiping migrated data",
+					OlaresJuiceFSRootDir, MigrationTempMountPoint)
+			}
+		}
+	}
+
 	flags := "-aHAX --numeric-ids"
 	// JuiceFS exposes internal control files at the mount root (.accesslog,
 	// .config, .stats, .trash, .control). They exist only on the destination
@@ -269,6 +407,9 @@ func (t *SyncRootFSData) Execute(runtime connector.Runtime) error {
 	cmd := fmt.Sprintf("rsync %s %s/ %s/", flags, OlaresJuiceFSRootDir, MigrationTempMountPoint)
 	if _, err := runtime.GetRunner().SudoCmd(cmd, true, true); err != nil {
 		return errors.Wrap(err, "failed to sync rootfs data into JuiceFS")
+	}
+	if err := advanceMigratePhase(phaseSynced); err != nil {
+		return errors.Wrap(err, "failed to record migration phase after syncing rootfs data")
 	}
 	return nil
 }
@@ -302,6 +443,10 @@ type BackupAndSwapRootFS struct {
 }
 
 func (t *BackupAndSwapRootFS) Execute(runtime connector.Runtime) error {
+	if readMigratePhase() >= phaseSwapped {
+		logger.Info("rootfs has already been backed up and swapped, skipping")
+		return nil
+	}
 	if IsJuiceFSEnabled() {
 		logger.Info("JuiceFS is already enabled, skipping rootfs backup and swap")
 		return nil
@@ -315,6 +460,17 @@ func (t *BackupAndSwapRootFS) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
+	// Refuse to swap an empty rootfs: that means the data was never synced (or
+	// the rootfs was already swapped without the marker being recorded), and
+	// swapping it would leave the running system on an empty JuiceFS.
+	srcEmpty, err := isDirEmpty(runtime, OlaresJuiceFSRootDir)
+	if err != nil {
+		return err
+	}
+	if srcEmpty {
+		return fmt.Errorf("refusing to swap rootfs: %s is empty, the data migration does not appear to have completed", OlaresJuiceFSRootDir)
+	}
+
 	backup := RootFSLocalBackupDir
 	if util.IsExist(backup) {
 		backup = fmt.Sprintf("%s.%d", RootFSLocalBackupDir, time.Now().Unix())
@@ -325,6 +481,9 @@ func (t *BackupAndSwapRootFS) Execute(runtime connector.Runtime) error {
 	}
 	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s", OlaresJuiceFSRootDir), false, false); err != nil {
 		return errors.Wrap(err, "failed to recreate the rootfs mount point")
+	}
+	if err := advanceMigratePhase(phaseSwapped); err != nil {
+		return errors.Wrap(err, "failed to record migration phase after swapping rootfs")
 	}
 	return nil
 }

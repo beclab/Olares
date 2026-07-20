@@ -51,14 +51,9 @@ echo -n "my-secret-password" | olares-cli settings backup password set my-plan -
 - **Default reads from a TTY without echo.** `--password-stdin` reads once from stdin (newline-terminated; trim newline if your producer adds one).
 - **Losing the password means losing the ability to decrypt existing snapshots.** The upstream cannot recover this password — make sure the user has it stored somewhere safe (password manager) BEFORE the call.
 
-## Plan create / update — out of scope (today)
+## Plan create / update
 
-`plans create` and `plans update` are **not implemented yet**. They need either:
-
-- A `--from-file plan.json` mode (still pending design — the full `BackupPolicy` + `LocationConfig` vector is large), or
-- An upstream "create from defaults" shortcut that doesn't yet exist.
-
-Until then, **create / update backup plans via the SPA** (Settings → Backup). The CLI's read verbs can still inspect plans created via the SPA.
+The CLI does **not** create or update backup plans — the only backup verbs are the read paths (`plans list`, `snapshots list`) plus `password set`. **Create / edit plans in the SPA** (Settings → Backup); the CLI's read verbs then inspect what the SPA created.
 
 ## Agent best practices
 
@@ -74,5 +69,4 @@ Until then, **create / update backup plans via the SPA** (Settings → Backup). 
 | `plan '<name>' not found` | Wrong backup-id or name | `plans list` to enumerate |
 | `snapshots list: backup-id required` | Missing positional | Provide the backup-id from `plans list` |
 | `failed to read password from stdin: EOF` | `--password-stdin` invoked without piped input | Pipe from `echo -n` / a file / a secret manager |
-| `experimental: this verb is not yet smoke-verified` (stderr) | UNVERIFIED (`password set`) | Proceed with caution; verify result manually |
 | `GET /apis/backup/v1/plans/backup: upstream returned code N` | Backup-server unreachable / 5xx | Check `settings advanced status` for backup-server health |

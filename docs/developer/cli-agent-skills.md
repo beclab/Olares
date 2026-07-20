@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install and use the Olares CLI Agent Skill bundles from AI runtimes such as Cursor and Claude Code, or from Olares apps such as Hermes Agent and OpenClaw. Covers the bundles, the shared-first install order, and end-to-end usage.
+description: Install Olares CLI Agent Skills for Cursor, Claude Code, Hermes Agent, and OpenClaw. Learn bundle contents, install order, and end-to-end usage.
 ---
 
 # Install and use Agent Skills
@@ -17,12 +17,15 @@ The bundles are located in [`cli/skills/`](https://github.com/beclab/Olares/tree
 
 | Skill | Description |
 |-------|--------|
-| `olares-shared` | Profile model, log-in flows, token storage, automatic refresh, and<br> auth-error recovery. Foundation for every other skill. |
-| `olares-files` | List, upload, download, edit, share, mount SMB, and manage Sync repos. |
-| `olares-market` | Browse, install, upgrade, uninstall, and upload local charts. |
-| `olares-settings` | Read and modify settings that the web UI exposes. |
-| `olares-dashboard` | Overview and application metrics, with a stable JSON schema. |
-| `olares-cluster` | Read and modify pods, workloads, nodes, jobs, cronjobs, and<br>  middleware passwords. |
+| `olares-shared` | Log in to Olares, manage profiles and tokens, and recover from auth errors. Load this skill first. |
+| `olares-chart` | Turn your own repo, docker-compose, or Helm chart into an Olares app and deploy it. |
+| `olares-files` | Manage Olares files: upload, download, compress, extract, share, and mount SMB/NFS. Covers drive, sync, cache, and external namespaces. |
+| `olares-market` | Install, upgrade, uninstall, clone, stop, resume, and restart Olares apps; browse the catalog; check status; and upload local charts. |
+| `olares-settings` | Change Olares settings such as users, apps, VPN, network, backup, integrations, GPU, and search. |
+| `olares-dashboard` | View system resource usage including CPU, memory, disk, network, pods, GPU, fan, and application ranking. |
+| `olares-cluster` | Inspect K8s runtime state including pods, containers, workloads, jobs, cronjobs, nodes, and middleware. Read logs, exec, scale, restart, and suspend/resume cronjobs. |
+| `olares-doctor` | Find out why an app is broken, such as stuck installs, crashes, image pull failures, running-but-unreachable apps, or slowdowns. Pulls evidence from cluster, dashboard, and market. |
+| `olares-search` | Search files and apps. Full-content search across Drive files and Sync libraries, plus search installed apps by title. |
 
 :::warning Always install `olares-shared` first
 All other bundles assume `olares-shared` is already loaded. It owns the profile model, the token refresh logic, and the auth-error recovery hints that the other skills rely on. An agent that loads only `olares-files`, for example, encounters auth errors with no recovery path.
@@ -32,7 +35,7 @@ All other bundles assume `olares-shared` is already loaded. It owns the profile 
 
 If you set up the CLI with `npx @olares/cli@latest install`, the skills are already installed and you can skip this step.
 
-Otherwise, install all six bundles into your active agent with the following command:
+Otherwise, install the bundles into your active agent with the following command:
 
 ```bash
 npx skills add beclab/Olares -y -g
@@ -45,6 +48,28 @@ The skills are also published on ClawHub. Both channels read the same `SKILL.md`
 :::
 
 Some AI agent apps on Olares bundle these skills, so the agent can manage Olares out of the box. To use the skills from such an app, see [Manage Olares with your Hermes Agent](../use-cases/hermes.md#manage-olares-with-your-hermes-agent) or [Manage Olares with your OpenClaw agent](../use-cases/openclaw-olares-skills.md).
+
+## Update the skills
+
+`olares-cli` and the Agent Skills are updated frequently. When a new version is available, use the path that matches your setup.
+
+### Update skills bundled with an Olares agent app
+
+AI agent apps on Olares, such as OpenCode and Hermes Agent, ship with the Olares CLI Agent Skills built in. Updating the app also updates the bundled skills. You don't need to run any extra CLI commands.
+
+### Update locally installed skills
+
+Before updating the skills, make sure `olares-cli` is [up to date](./cli-install.md#update-olares-cli). Then re-run the install command to overwrite your installed skills with the latest version.
+
+```bash
+npx skills add beclab/Olares -y -g
+```
+
+This pulls the latest `SKILL.md` files from the repository and overwrites your installed copies.
+
+:::tip
+You can also ask your AI agent to run these commands for you.
+:::
 
 ## Use the skills
 
@@ -62,5 +87,5 @@ Show me which apps are using more than 1 GB of memory
 ```
 
 :::tip
-If the agent doesn't load the Olares skills, explicitly invoke them with a slash command.
+If the agent doesn't load the Olares skills, explicitly invoke them with a slash (`/`) command.
 :::

@@ -160,6 +160,9 @@ olares-cli cluster workload images docker.io/library/nginx:latest
 olares-cli doctor images -o json
 # Orphans only, biggest first, with reclaimable-size footer.
 olares-cli doctor images --unused
+# Per-user third_level_domain duplicates / reserved names (kubeconfig).
+olares-cli doctor thirdleveldomain
+olares-cli doctor thirdleveldomain --force-dedupe
 ```
 
 ## Output formats

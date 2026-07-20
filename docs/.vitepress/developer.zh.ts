@@ -140,6 +140,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
           text: "开发 Olares 应用",
           link: "/zh/developer/develop/",
           items: [
+            /*
             {
               text: "使用 Studio 开发",
               collapsed: true,
@@ -163,6 +164,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                 },
               ],
             },
+            */
             {
               text: "应用包管理",
               collapsed: true,
@@ -402,16 +404,17 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               text: "推广应用",
               link:"/zh/developer/develop/promote-apps"
             },
-            {
+            /*{
               text: "发布付费应用",
               link: "/zh/developer/develop/paid-apps",
-            },
-            
+            },*/
+
           ],
         },
         {
           text: "参与贡献",
           items: [
+            /*
             {
               text: "开发系统应用",
               collapsed: true,
@@ -438,6 +441,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                 },
               ],
             },
+            */
             {
               text: "开发协议",
               collapsed: true,

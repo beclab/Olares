@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Version management system in Olares covering release types, branch strategies and upgrade specifications. Details about semantic versioning implementation and compatibility.
+description: Understand Olares versioning, including release types, branch strategy, semantic versioning, upgrade rules, and compatibility.
 ---
 # Olares versioning
 

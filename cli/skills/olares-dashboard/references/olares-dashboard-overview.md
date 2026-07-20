@@ -86,15 +86,10 @@ For `gpu tasks <ref>`, `<ref>` accepts EITHER the TASK column (`name`) OR the PO
 ## Agent notes
 
 - For "give me a single-screen vital-signs view", **`olares-cli dashboard overview -o json` is the right verb** (Shape B envelope with physical + user + ranking).
-- For "tail CPU / memory live", **add `--watch -o json`** to a per-section command. The output is NDJSON, one envelope per iteration. See [olares-dashboard-watch.md](olares-dashboard-watch.md).
+- For "tail CPU / memory live", **add `--watch -o json`** to a per-section command. The output is NDJSON, one envelope per iteration. See the dashboard watch (NDJSON streaming) reference.
 - For "what apps are using the most CPU", **`overview ranking --sort desc --head 10`** is the right entry point — it returns a workload-grain ranking with both `raw` (machine-friendly) and `display` (human-friendly) columns.
 - For `--user <other>` cross-tenant queries, **only platform-admins succeed**; non-admins get an immediate error. Run `cluster context` first if you need to confirm the active role.
 
 ## Common errors
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `not_olares_one` empty envelope on `fan *` | Hard gate | Don't ask for fan data on this device |
-| `(advisory) ...` line on stderr from `gpu *` | Soft gate; data still returned | Surface the note to the user as informational |
-| `--user requires platform-admin role` | Non-admin tried `--user <other>` | Use the active profile only |
-| 404 / 5xx on `overview gpu *` | HAMI absent or unhealthy (`no_vgpu_integration` / `vgpu_unavailable`) | Branch on `meta.empty_reason` |
+The fan / GPU gate, `--user` admin-only, and HAMI-absent errors are in the consolidated [Common errors](../SKILL.md#common-errors) table in the parent skill.

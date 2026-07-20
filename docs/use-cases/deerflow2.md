@@ -1,5 +1,6 @@
 ---
 outline: deep
+title: Set up DeerFlow 2.0 for AI research
 description: Set up DeerFlow 2.0 on your Olares device and configure it with a local model app for deep research.
 head:
   - - meta
@@ -128,4 +129,3 @@ To enable it:
    ![Enable follow-up suggestions](/images/manual/use-cases/deerflow2-enable-followup-suggestions.png#bordered)
 
 5. Click **Confirm** to apply the changes.
-

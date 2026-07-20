@@ -167,6 +167,10 @@ func (v *PatchVelero) Execute(runtime connector.Runtime) error {
 		logger.Errorf("velero plugin patched error %s", stdout)
 	}
 
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s patch deploy velero -n %s --type=merge -p='{\"spec\":{\"template\":{\"spec\":{\"priorityClassName\":\"system-cluster-critical\"}}}}'", kubectl, ns), false, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "patch velero priorityClassName failed")
+	}
+
 	return nil
 }
 

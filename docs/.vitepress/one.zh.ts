@@ -45,15 +45,19 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "入门使用",
       items: [
         {
+          text: "通过自然语言管理 Olares",
+          link: "/zh/one/olares-onboarding",
+        },
+        /*{
           text: "与本地 LLM 对话",
           link: "/zh/one/open-webui",
         },
         {
           text: "使用 ComfyUI 生成图片和视频",
           link: "/zh/one/comfyui",
-        },
+        },*/
         {
-          text: "切换 GPU 模式",
+          text: "管理 AI 算力资源",
           link: "/zh/one/gpu",
         },
       ]
@@ -85,11 +89,12 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "下载 YouTube 视频",
           link: "/zh/one/wise-download",
         },*/
+        /*
         {
           text: "部署应用",
           link: "/zh/one/deploy",
         },
-
+        */
       ]
     },
     {
@@ -197,7 +202,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           // items:
           //   [
           //     {
-          //       text: "Manage GPU",
+          //       text: "Manage accelerator resources",
           //       link: "/zh/one/two-one-gpu",
           //     },
           //     {

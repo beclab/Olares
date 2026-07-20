@@ -12,7 +12,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ OperationApp = &UninstalledApp{}
@@ -21,12 +20,12 @@ type UninstalledApp struct {
 	*baseOperationApp
 }
 
-func NewUninstalledApp(ctx context.Context, client client.Client,
+func NewUninstalledApp(ctx context.Context, deps Deps,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
 	var err error
 	var app appsv1.Application
-	err = client.Get(ctx, types.NamespacedName{Name: manager.Name}, &app)
+	err = deps.Client.Get(ctx, types.NamespacedName{Name: manager.Name}, &app)
 
 	if err != nil && !apierrors.IsNotFound(err) {
 		klog.Errorf("get application %s failed %v", manager.Name, err)
@@ -38,7 +37,8 @@ func NewUninstalledApp(ctx context.Context, client client.Client,
 			ttl: 0,
 			baseStatefulApp: &baseStatefulApp{
 				manager: manager,
-				client:  client,
+				client:  deps.Client,
+				deps:    deps,
 			},
 		},
 	}

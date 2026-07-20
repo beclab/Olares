@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -65,6 +66,10 @@ type installedAppRow struct {
 	Source  string
 	State   string
 	Version string
+	// StatusTime is the backend-generated statusTime on the matched row
+	// (RFC3339, verbatim). restart captures it before POST /apps/restart as
+	// the --watch baseline; empty when the backend omits it.
+	StatusTime string
 }
 
 // lookupInstalledApp finds the active profile's per-user state row
@@ -101,6 +106,20 @@ type installedAppRow struct {
 // up the source app for clones — same trick fetchInstalledApps and
 // preflightUpgrade use for the /apps lookup key. RawName is data on
 // the return path, never a match key on the lookup path.
+//
+// MULTI-SOURCE RESOLUTION — prefer an INSTALLED row, mirroring the SPA's
+// findAppByName (apps/.../stores/market/appStore.ts): when the same name
+// exists in more than one source (e.g. an `uninstalled` row in
+// market.olares AND a `stopped` row in market.test), the SPA skips
+// uninstalled rows (`!uninstalledApp(status)`) and keeps searching, so
+// resume / stop resolve to the live instance. We do the same in two
+// passes (Name pass, then legacy-RawName pass), each preferring an
+// installed row, and we iterate sources in sorted order so the result is
+// deterministic (Go map iteration is randomized). When NO installed row
+// matches we fall back to the first not-installed match (Name beats
+// legacy-RawName) so uninstall / cancel can still clean up a lingering
+// failed row, and resolveInstalledSource still emits its "state %q;
+// nothing to operate on" message for resume / stop.
 func lookupInstalledApp(ctx context.Context, mc *MarketClient, appName string) (*installedAppRow, error) {
 	resp, err := mc.GetMarketState(ctx)
 	if err != nil {
@@ -115,40 +134,82 @@ func lookupInstalledApp(ctx context.Context, mc *MarketClient, appName string) (
 		return nil, nil
 	}
 
-	for sourceName, sourceData := range data.UserData.Sources {
-		sourceName = strings.TrimSpace(sourceName)
-		if sourceName == "" || sourceData == nil {
+	sourceNames := make([]string, 0, len(data.UserData.Sources))
+	for sourceName := range data.UserData.Sources {
+		sourceNames = append(sourceNames, sourceName)
+	}
+	sort.Strings(sourceNames)
+
+	var nameFallback, rawFallback *installedAppRow
+
+	// Pass 1: exact Name match. Return the first installed row; remember
+	// the first not-installed Name match as a fallback.
+	for _, sourceName := range sourceNames {
+		sn := strings.TrimSpace(sourceName)
+		sourceData := data.UserData.Sources[sourceName]
+		if sn == "" || sourceData == nil {
+			continue
+		}
+		for _, appState := range sourceData.AppStateLatest {
+			if strings.TrimSpace(appState.Status.Name) != appName {
+				continue
+			}
+			row := &installedAppRow{
+				Name:       appName,
+				RawName:    strings.TrimSpace(appState.Status.RawName),
+				Source:     sn,
+				State:      appState.Status.State,
+				Version:    strings.TrimSpace(appState.Version),
+				StatusTime: strings.TrimSpace(appState.Status.StatusTime),
+			}
+			if isInstalledState(row.State) {
+				return row, nil
+			}
+			if nameFallback == nil {
+				nameFallback = row
+			}
+		}
+	}
+
+	// Pass 2: legacy / malformed rows that omit Name but carry
+	// RawName == appName. We only accept this when Name is empty — never
+	// when Name is populated with something else (that would be a clone
+	// whose source app happens to match the user's input; see the doc
+	// above). Again prefer an installed row.
+	for _, sourceName := range sourceNames {
+		sn := strings.TrimSpace(sourceName)
+		sourceData := data.UserData.Sources[sourceName]
+		if sn == "" || sourceData == nil {
 			continue
 		}
 		for _, appState := range sourceData.AppStateLatest {
 			rowName := strings.TrimSpace(appState.Status.Name)
 			rawName := strings.TrimSpace(appState.Status.RawName)
-			if rowName != appName {
-				// Defensive: legacy / malformed rows that omit Name
-				// but populate RawName can still be identified IF
-				// no other row in the same source is going to claim
-				// this name first. We only accept that fallback
-				// when Name is empty — never when Name is populated
-				// with something else (which would mean this is a
-				// clone whose source app happens to match the
-				// user's input, the exact ambiguity documented in
-				// the lookupInstalledApp doc above).
-				if rowName != "" || rawName != appName {
-					continue
-				}
+			if rowName != "" || rawName != appName {
+				continue
 			}
-			canonical := rowName
-			if canonical == "" {
-				canonical = rawName
+			row := &installedAppRow{
+				Name:       rawName,
+				RawName:    rawName,
+				Source:     sn,
+				State:      appState.Status.State,
+				Version:    strings.TrimSpace(appState.Version),
+				StatusTime: strings.TrimSpace(appState.Status.StatusTime),
 			}
-			return &installedAppRow{
-				Name:    canonical,
-				RawName: rawName,
-				Source:  sourceName,
-				State:   appState.Status.State,
-				Version: strings.TrimSpace(appState.Version),
-			}, nil
+			if isInstalledState(row.State) {
+				return row, nil
+			}
+			if rawFallback == nil {
+				rawFallback = row
+			}
 		}
+	}
+
+	if nameFallback != nil {
+		return nameFallback, nil
+	}
+	if rawFallback != nil {
+		return rawFallback, nil
 	}
 	return nil, nil
 }
