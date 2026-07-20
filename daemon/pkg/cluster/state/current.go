@@ -186,6 +186,9 @@ func CheckCurrentStatus(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+		} else {
+			// no internal ip, clear host ip
+			hostIp = ""
 		}
 		return nil
 	}
