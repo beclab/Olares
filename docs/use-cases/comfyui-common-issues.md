@@ -145,7 +145,7 @@ If the model appears in the Model Library but a specific workflow node still can
 
 3. Restart ComfyUI and reload the workflow.
 
-   ![face_yolov8m.pt now recognized](../../public/images/manual/use-cases/comfyui-face-yolov8m-recognized.png#bordered)
+   ![face_yolov8m.pt now recognized](../public/images/manual/use-cases/comfyui-face-yolov8m-recognized.png#bordered)
 
 ## ComfyUI fails to start after upgrading to v1.0.37 or later
 
