@@ -344,7 +344,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	if CurrentState.InstallFinishedTime != nil {
 		CurrentState.InstalledTime = pointer.Int64(CurrentState.InstallFinishedTime.Unix())
 	} else {
-		CurrentState.InstalledTime, err = utils.GetTerminusInstalledTime(ctx, dynamicClient, kubeClient)
+		CurrentState.InstalledTime, err = utils.GetTerminusInstalledTime(ctx, kubeClient)
 		if err != nil {
 			klog.Error(err)
 		}
@@ -369,7 +369,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	} else if tmsrunning {
 		currentTerminusState = Uninitialized
 
-		terminusName, err := utils.GetAdminUserTerminusName(ctx, dynamicClient)
+		terminusName, err := utils.GetAdminUserTerminusName(ctx)
 		if err != nil {
 			klog.Error("get user olares name error, ", err)
 		} else {
@@ -419,7 +419,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 			return nil
 		}
 
-		initing, err := utils.IsTerminusInitializing(ctx, dynamicClient)
+		initing, err := utils.IsTerminusInitializing(ctx)
 		if err != nil {
 			return err
 		}
