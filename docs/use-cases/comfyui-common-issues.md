@@ -40,9 +40,9 @@ After the new ComfyUI is installed, data is migrated automatically as follows:
 | Data type | Old location | New location |
 |:---|:---|:---|
 | ComfyUI core (plugins, workflows, etc.) | `External/<your_hostname>/ai/comfyui/` | `/Data/comfyuisharev3/comfyui/` |
-| Models | `External/<your_hostname>/ai/model/` | `Common/comfyui/model/` |
-| Output files | `External/<your_hostname>/ai/output/comfyui/` | `Common/comfyui/output/` |
-| Input files | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
+| Models | `External/<your_hostname>/ai/model/` | `/Common/comfyui/model/` |
+| Output files | `External/<your_hostname>/ai/output/comfyui/` | `/Common/comfyui/output/` |
+| Input files | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `/Common/comfyui/input/` |
 
 :::warning
 After migration, upload new models and input files to the new locations under `Common/comfyui/`. The new ComfyUI no longer uses `External/<your_hostname>/ai/` as its active file location.
@@ -50,6 +50,19 @@ After migration, upload new models and input files to the new locations under `C
 
 The migration runs each time ComfyUI restarts. If files are later added to the old locations, ComfyUI will move them to the new locations on the next restart and delete the originals from `External/<your_hostname>/ai/`. To avoid confusion, upload new files directly to the new locations.
 
+### Setting up `extra_model_paths.yaml` after migration
+
+After migration, ComfyUI automatically generates the `extra_model_paths.yaml` configuration file, which tells ComfyUI where to find models in the shared model hub.
+
+The file is pre-configured with:
+- **`base_path`**: Points to `/Common/comfyui/model` (the shared model directory).
+
+You do not normally need to edit this file. However, if you have custom plugins or external resources that require additional paths, you can manually edit it at:
+```
+/Data/comfyuisharev3/comfyui/user/extra_model_paths.yaml
+```
+
+For details on editing this file, see [Manage files and directories](/use-cases/comfyui-launcher#about-extra_model_pathsyaml).
 
 ## ComfyUI cannot start
 
@@ -68,6 +81,42 @@ This is usually caused by insufficient resources or incorrect GPU allocation. To
 `Error` messages in the Launcher logs do not necessarily indicate a system failure. During startup and plugin scanning, ComfyUI often logs non-fatal errors for missing optional dependencies or environment checks, even when running normally.
 
 If ComfyUI starts successfully, most of these messages do not require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
+
+## Workflow cannot find models stored in `/Common/comfyui/model/`
+
+After migrating to ComfyUI v3 (Olares 1.12.6+), a workflow may report missing models even though the model files exist in `/Common/comfyui/model/`. This usually means the model search path is not configured correctly.
+
+### Check the `extra_model_paths.yaml` configuration
+
+The `extra_model_paths.yaml` file tells ComfyUI where to look for models. After migration, this file should already be configured to point to `/Common/comfyui/model/`. However, if models are not being recognized, verify the configuration:
+
+1. Open Files and navigate to `/Data/comfyuisharev3/comfyui/user/`. 
+2. Open `extra_model_paths.yaml` and check that `base_path` is set to `/Common/comfyui/model`.
+
+   The file should look like this:
+   ```yaml
+   base_path: /Common/comfyui/model
+   ```
+
+3. If `base_path` is missing or incorrect, add or correct it and save the file.
+4. Restart ComfyUI for changes to take effect.
+
+### Verify model file locations
+
+Make sure model files are placed in the correct subfolders under `/Common/comfyui/model/`. ComfyUI distinguishes model types by folder name. For example:
+
+| Model type | Expected folder |
+|--|--|
+| Checkpoint models (SD 1.5, SDXL, Flux) | `/Common/comfyui/model/checkpoints/` |
+| LoRA weights | `/Common/comfyui/model/lora/` |
+| VAE models | `/Common/comfyui/model/vae/` |
+| ControlNet models | `/Common/comfyui/model/controlnet/` |
+
+For a complete list of model types and their expected folders, see [Understand the `model` directory structure](/use-cases/comfyui-launcher#understand-the-model-directory-structure).
+
+### Refresh ComfyUI
+
+After verifying the configuration and file locations, refresh the ComfyUI page (F5 or Ctrl+R) and try the workflow again.
 
 ## ComfyUI fails to start after upgrading to v1.0.37 or later
 
