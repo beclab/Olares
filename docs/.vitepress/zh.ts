@@ -587,6 +587,7 @@ const side = {
 
 export const zh = defineConfig({
   lang: "zh",
+  titleTemplate: ":title | Olares 中文文档",
   themeConfig: {
     editLink: {
       pattern: "https://github.com/beclab/Olares/edit/main/docs/:path",
