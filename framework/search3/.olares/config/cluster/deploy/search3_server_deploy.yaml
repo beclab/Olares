@@ -245,7 +245,7 @@ spec:
             value: os_framework_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.3.4
+        image: beclab/search3:v0.3.5
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -306,7 +306,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: search3monitor
-        image: beclab/search3monitor:v0.3.4
+        image: beclab/search3monitor:v0.3.5
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8081
@@ -435,10 +435,17 @@ spec:
           key: nats_password
           name: search-server-nats-secret
     subjects:
+      # os.search.* — one token after search (e.g. os.search.<user>)
       - name: "search.*"
         permission:
           pub: allow
           sub: allow
+      # os.search.> — multi-level under search (e.g. os.search.<user>.<reqid> for federated search)
+      - name: "search.>"
+        permission:
+          pub: allow
+          sub: allow
+      # exact os.search
       - name: search
         permission:
           pub: allow
