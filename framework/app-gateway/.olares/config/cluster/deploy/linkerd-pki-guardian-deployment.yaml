@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkerd-pki-guardian
+  namespace: os-mesh
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app-gateway
+      app.kubernetes.io/component: linkerd-pki-guardian
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-gateway
+        app.kubernetes.io/component: linkerd-pki-guardian
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        linkerd.io/inject: disabled
+    spec:
+      serviceAccountName: linkerd-pki-guardian
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: guardian
+          image: beclab/linkerd-pki-guardian@sha256:3dbde1a3829034216e72b7ef332c09f62a96b22ef408ab4aae1a63fd2162f72e
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: GUARDIAN_INTERVAL
+              value: "24h"
+            - name: GUARDIAN_LINKERD_NS
+              value: os-mesh
+            - name: GUARDIAN_HTTP_ADDR
+              value: ":8080"
+            - name: GOMEMLIMIT
+              value: "32MiB"
+            - name: GOGC
+              value: "50"
+          startupProbe:
+            httpGet:
+              path: /startupz
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            periodSeconds: 60
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            periodSeconds: 30
+            failureThreshold: 2
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
