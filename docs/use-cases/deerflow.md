@@ -1,11 +1,6 @@
 ---
 outline: [2, 3]
-title: Build a local research agent with DeerFlow
 description: Learn how to set up DeerFlow on your Olares device, complete with Ollama integration and Tavily for web research.
-head:
-  - - meta
-    - name: keywords
-      content: Olares, DeerFlow, deep research agent, self-hosted DeerFlow, DeerFlow Ollama, local research agent, DeerFlow on Olares
 ---
 
 # Build a local deep research agent with DeerFlow

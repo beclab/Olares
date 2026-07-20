@@ -1,7 +1,3 @@
----
-noindex: true
-description: upgrade命令提供一组用于升级 Olares，检查升级准备情况与兼容性的工具。
----
 # `upgrade`
 
 ## 命令说明

@@ -19,8 +19,8 @@ If you have Docker experience, you can package apps not listed in the Olares Mar
 
 Yes. Install the Steam Headless app to transform your Olares device into a gaming server.
 
-* [**Streaming**](../../use-cases/steam-stream.md): Run games locally on Olares and stream them to devices like phones and tablets.
-* [**Direct play**](../../use-cases/steam-direct-play.md): Connect a monitor, keyboard, and mouse directly to the Olares device to play games without streaming.
+* [**Streaming**](../../use-cases/stream-game.md): Run games locally on Olares and stream them to devices like phones and tablets.
+* [**Direct play**](../../use-cases/play-games-directly.md): Connect a monitor, keyboard, and mouse directly to the Olares device to play games without streaming.
 
 ### How do I access the Windows environment in Olares?
 

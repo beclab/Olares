@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Run TradingAgents on Olares to simulate a multi-agent trading firm. Configure local models, analyze financial markets, and generate strategies.
+description: Run TradingAgents on Olares to simulate a professional financial trading firm with multiple AI agents. Configure local models, run market analysis, and generate trading strategies.
 head:
   - - meta
     - name: keywords

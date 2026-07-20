@@ -1,7 +1,3 @@
----
-noindex: true
-description: The status command prints the current Olares system state by calling the local olaresd daemon's /system/status HTTP endpoint.
----
 # `status`
 
 ## Synopsis

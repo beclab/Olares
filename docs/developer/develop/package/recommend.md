@@ -1,7 +1,3 @@
----
-noindex: true
-description: Configure an Olares Recommend application chart with embedding, prerank, rank, and train templates for recommendation workflows.
----
 # Configuration Guideline for Recommend
 
 When creating an application chart for `recommend`, you'll primarily need to configure the four files located in the `templates/` folder: `embedding.yaml`, `prerank.yaml`, `rank.yaml`, `train.yaml`.

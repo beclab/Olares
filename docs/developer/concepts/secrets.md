@@ -1,5 +1,5 @@
 ---
-description: Understand Olares secret management, including vault items, credentials, integration credentials, classifications, and secure storage strategies.
+description: Olares secrets management system principles, detailing vault items, credentials, secrets and integration credentials classification. Explains sensitive data storage strategies.
 ---
 # Secret management
 

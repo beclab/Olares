@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install a multi-node Olares cluster with master and worker nodes. Configure JuiceFS, add workers, and handle network changes.
+description: Technical guide for installing and configuring a multi-node Olares cluster. Learn how to set up master nodes with JuiceFS support, add worker nodes, and handle network changes in your cluster environment.
 ---
 
 # Install a multi-node Olares cluster <Badge type="warning" text="Alpha" />

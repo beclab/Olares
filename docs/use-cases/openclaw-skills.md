@@ -10,7 +10,7 @@ doc_version: "1.1"
 doc_updated: "2026-05-29"      
 ---
 
-# Manage OpenClaw skills and plugins
+# Manage skills and plugins
 
 OpenClaw can be extended using skills and plugins:
 - Skills add new capabilities to the AI. For example, managing Model Context Protocol servers.

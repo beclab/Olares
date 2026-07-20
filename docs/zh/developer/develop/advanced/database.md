@@ -1,7 +1,3 @@
----
-noindex: true
-description: Olares 系统中为所有应用提供了三种最流行的数据存储集群，覆盖 RDS、NoSQL、Cache 三种数据存储场景。
----
 # 数据库
 
 Olares 系统中为所有应用提供了三种最流行的数据存储集群，覆盖 RDS、NoSQL、Cache 三种数据存储场景。

@@ -16,10 +16,10 @@ type InstallFailedApp struct {
 	*baseOperationApp
 }
 
-func NewInstallFailedApp(deps Deps,
+func NewInstallFailedApp(c client.Client,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
-	return deps.Factory.New(deps, manager, 0,
+	return appFactory.New(c, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &InstallFailedApp{
 				&baseOperationApp{

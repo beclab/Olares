@@ -10,6 +10,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
@@ -28,10 +29,10 @@ type ResumingApp struct {
 
 var errStopRequestedDueToPendingPod = errors.New("stop requested due to pending pod")
 
-func NewResumingApp(deps Deps,
+func NewResumingApp(c client.Client,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 
-	return deps.Factory.New(deps, manager, ttl,
+	return appFactory.New(c, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &ResumingApp{
 				&baseOperationApp{
@@ -92,12 +93,12 @@ func (p *ResumingApp) scaleOrPatchResume(ctx context.Context, resumeServer bool)
 
 	token := p.manager.Annotations[api.AppTokenKey]
 
-	kubeConfig, err := p.deps.KubeConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
 	}
-	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, &appCfg, token,
+	ops, err := newHelmOps(ctx, kubeConfig, &appCfg, token,
 		appinstaller.Opt{
 			Source:       p.manager.Spec.Source,
 			MarketSource: appcfg.GetMarketSource(p.manager),
@@ -129,7 +130,7 @@ func (p *ResumingApp) resumeViaPatch(ctx context.Context, resumeServer bool) err
 }
 
 func (p *ResumingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(ctx, p.manager, appsv1.ResumingCanceling, nil, constants.ResumeCanceledByTimeout, constants.ResumeCancelBySystem)
+	err := p.updateStatus(ctx, p.manager, appsv1.ResumingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.ResumingCanceling.String())
 	if err != nil {
 		klog.Errorf("update appmgr state to resumingCanceling state failed %v", err)
 		return err
@@ -153,7 +154,7 @@ func (p *resumingInProgressApp) Exec(ctx context.Context) (StatefulInProgressApp
 
 // WaitAsync implements PollableStatefulInProgressApp.
 func (p *resumingInProgressApp) WaitAsync(ctx context.Context) {
-	p.deps.Factory.waitForPolling(ctx, p, func(err error) {
+	appFactory.waitForPolling(ctx, p, func(err error) {
 		if err != nil {
 			if errors.Is(err, errStopRequestedDueToPendingPod) {
 				klog.Infof("app %s stop requested while resuming, skip setting ResumeFailed", p.manager.Spec.AppName)
@@ -227,7 +228,7 @@ func (p *resumingInProgressApp) stopRequested(ctx context.Context) (bool, error)
 }
 
 func (p *ResumingApp) execMiddleware(ctx context.Context) error {
-	op := p.deps.NewMiddlewareOp(ctx, kbopv1alpha1.StartType, p.manager, p.client)
+	op := kubeblocks.NewOperation(ctx, kbopv1alpha1.StartType, p.manager, p.client)
 	err := op.Start()
 	if err != nil {
 		klog.Errorf("failed to resume middleware %s,err=%v", p.manager.Spec.AppName, err)

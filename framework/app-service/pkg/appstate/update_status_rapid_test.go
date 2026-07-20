@@ -56,7 +56,7 @@ func TestUpdateStatusInvariantsUnderRandomSequence(t *testing.T) {
 			}
 			cur = st
 
-			got := getAM(t, c, "nginx-rapid")
+			got := getAM(t, b, "nginx-rapid")
 			if got.Status.OpGeneration != int64(i+1) {
 				rt.Fatalf("after call %d OpGeneration=%d, want %d", i, got.Status.OpGeneration, i+1)
 			}
@@ -111,7 +111,7 @@ func TestUpdateStatusRejectsInvalidTransitionAndPreservesInvariants(t *testing.T
 			rt.Fatalf("updateStatus(Pending -> %s) returned nil, want error", target)
 		}
 
-		got := getAM(t, c, "nginx-rapid-bad")
+		got := getAM(t, b, "nginx-rapid-bad")
 		if got.Status.State != appsv1.Pending {
 			rt.Fatalf("state=%s want Pending (rejected write must not mutate)", got.Status.State)
 		}

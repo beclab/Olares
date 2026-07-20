@@ -1,6 +1,3 @@
----
-description: The official tags defined in TerminusDID and the RootTagger that manages them, including DNSARecord, RSAPubKey, LatestDid, and AuthAddress.
----
 # Official Taggers
 
 ## RootTagger

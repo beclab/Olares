@@ -1,10 +1,6 @@
 ---
 outline: [2, 4]
 description: 学习如何在 Olares 上为 Windows 虚拟机启用 Intel 集成显卡直通，包括支持的设备、主机配置、Windows 应用设置、驱动安装和验证。
-head:
-  - - meta
-    - name: keywords
-      content: Olares, Windows VM, Intel GPU passthrough, iGPU passthrough, Windows VM GPU, Intel graphics passthrough, Olares Windows GPU
 ---
 
 :::warning

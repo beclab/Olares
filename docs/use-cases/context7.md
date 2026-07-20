@@ -1,7 +1,6 @@
 ---
 outline: [2, 3]
-title: Connect AI coding tools to docs with Context7
-description: Run Context7 on Olares to give AI coding assistants current library documentation through MCP, including Olares-hosted agents and Cursor.
+description: Set up Context7 on Olares to provide AI coding assistants with up-to-date library documentation via MCP. Connect it to Olares-hosted agents or external tools like Cursor.
 head:
   - - meta
     - name: keywords

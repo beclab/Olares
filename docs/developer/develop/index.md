@@ -1,6 +1,3 @@
----
-description: Developing applications on Olares leverages standard web technologies and containerization.
----
 # Develop Olares applications
 
 Developing applications on Olares leverages standard web technologies and containerization. If you are familiar with building web applications or Docker containers, you already have the skills needed to build for Olares.

@@ -1,5 +1,4 @@
 ---
-noindex: true
 outline: [2, 3]
 description: 使用 redroid 在 Olares 上部署云端 Android 模拟器，并通过 macOS 和 Windows 上的 adb 和 scrcpy 访问 Android 主机。
 ---

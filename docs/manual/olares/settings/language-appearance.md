@@ -1,5 +1,5 @@
 ---
-description: Set the Olares system language, theme, Desktop widgets, wallpaper, and layout to personalize your workspace.
+description: Personalize your Olares experience by setting system language preferences, switching themes, managing Desktop widgets, customizing wallpapers, and resetting the Desktop layout.
 ---
 # Set language and appearance
 

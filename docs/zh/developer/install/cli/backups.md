@@ -1,7 +1,3 @@
----
-noindex: true
-description: backups 命令提供了一组数据备份、恢复和快照管理工具。它支持多种存储后端，包括腾讯云对象存储、Amazon S3、本地文件系统和 Olares Space。
----
 # `backups`
 `backups` 命令提供了一组数据备份、恢复和快照管理工具。它支持多种存储后端，包括腾讯云对象存储、Amazon S3、本地文件系统和 Olares Space。
 

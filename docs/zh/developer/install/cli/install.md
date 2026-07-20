@@ -1,7 +1,3 @@
----
-noindex: true
-description: install 命令用于在系统上安装 Olares。通过各种选项可以自定义安装过程，比如指定安装目录、Kubernetes 类型或 Minikube 配置文件等。
----
 # `install`
 
 ## 命令说明

@@ -1,14 +1,13 @@
 ---
 outline: [2,3]
-title: Access Olares One with LarePass VPN
-description: Access Olares One securely with LarePass VPN and verify the connection type on local or remote networks.
+description: Learn how to access your Olares services securely using the LarePass VPN.
 head:
   - - meta
     - name: keywords
       content: Olares, LarePass VPN, local access
 ---
 
-# Access Olares One services securely using LarePass VPN
+# Access Olares services securely using LarePass VPN
 
 Typically, you access Olares services through a browser using a URL like `https://desktop.<username>.olares.com`. This way, you can reach your services from any device at any time.
 

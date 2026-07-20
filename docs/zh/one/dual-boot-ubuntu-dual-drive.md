@@ -1,5 +1,4 @@
 ---
-noindex: true
 outline: [2,3]
 description: 在 Olares One 的第二块 SSD 上安装 Ubuntu，并设置与 Olares OS 的双系统启动。
 head:

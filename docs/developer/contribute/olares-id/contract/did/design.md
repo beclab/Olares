@@ -1,5 +1,4 @@
 ---
-description: Each DID is also a NFT (following ERC-721 standard) and id is its unique identifier calculated by keccak256(name).
 outline: [2, 3]
 ---
 

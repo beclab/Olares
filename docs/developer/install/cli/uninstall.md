@@ -1,7 +1,3 @@
----
-noindex: true
-description: The uninstall command removes Olares and all of its components from your machine.
----
 # `uninstall`
 
 ## Synopsis

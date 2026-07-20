@@ -1,6 +1,3 @@
----
-description: The purpose of this documentation is to help you understand how to configure various schemas and create Issuers and Verifiers for your own scenarios using
----
 # VC Service
 
 The purpose of this documentation is to help you understand how to configure various schemas and create Issuers and Verifiers for your own scenarios using:

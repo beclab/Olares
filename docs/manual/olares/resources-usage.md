@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Monitor your Olares system and application performance with comprehensive dashboards tracking CPU, memory, and disk usage for optimal resource management.
 ---
 
-# Monitor resource usage
+# Monitor system and application status
 The Dashboard app in Olares provides a centralized and intuitive view of your system's status, offering deep insights without requiring extensive technical expertise. From the dashboard, you can monitor key resource usage patterns and access detailed real-time metrics across your cluster.
 
 ## Access monitoring dashboards

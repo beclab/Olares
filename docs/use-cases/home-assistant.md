@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: Run Home Assistant on Olares as a self-hosted smart home hub. Discover devices on your local network and build automations without a separate server.
+description: Learn how to install Home Assistant on Olares, connect it to your local network, and add smart home devices both automatically and manually.
 head:
   - - meta
     - name: keywords
-      content: Olares, Home Assistant, home assistant on olares, home assistant docker, home assistant raspberry pi, smart home, home automation, HACS
+      content: Olares, Home Assistant, smart home, local discovery, home automation, overlay gateway, Dahua, IP camera, RTSP, HACS
 app_version: "1.0.23"
 doc_version: "1.0"
 doc_updated: "2026-07-03"

@@ -1,7 +1,3 @@
----
-noindex: true
-description: The node command manages node-related operations.
----
 # `node`
 
 ## Synopsis

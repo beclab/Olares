@@ -75,14 +75,6 @@ export const redirects = {
     '/use-cases/openwebui-ollama': '/use-cases/openwebui',
     '/zh/use-cases/openwebui-ollama': '/zh/use-cases/openwebui',
 
-    // Rename: descriptive slugs → brand slugs (permanent: old names retired)
-    '/use-cases/stream-media': '/use-cases/jellyfin',
-    '/zh/use-cases/stream-media': '/zh/use-cases/jellyfin',
-    '/use-cases/stream-game': '/use-cases/steam-stream',
-    '/zh/use-cases/stream-game': '/zh/use-cases/steam-stream',
-    '/use-cases/play-games-directly': '/use-cases/steam-direct-play',
-    '/zh/use-cases/play-games-directly': '/zh/use-cases/steam-direct-play',
-
     // Refactor: /manual/concepts/** → /developer/concepts/**
     '/manual/system-architecture': '/developer/concepts/system-architecture',
     '/manual/concepts/': '/developer/concepts/',
@@ -147,41 +139,6 @@ export const redirects = {
     
     // Refactor: /zh/manual/docs-home → /zh/manual/overview
     '/zh/manual/docs-home': '/zh/manual/overview',
-
-    // Removed: legacy developer install-step pages (onboarding docs that once lived
-    // under /developer/install/) → the real Get started install overview. Note:
-    // /developer/install/ is now the "Cluster management" (olares-cli) page, so these
-    // must NOT redirect there. No zh installation-troubleshooting: it never existed in zh.
-    '/developer/install/activate-olares': '/manual/get-started/install-olares',
-    '/developer/install/install-and-activate-olares': '/manual/get-started/install-olares',
-    '/developer/install/log-in-to-olares': '/manual/get-started/install-olares',
-    '/developer/install/installation-troubleshooting': '/manual/get-started/install-olares',
-    '/developer/install/reusables': '/manual/get-started/install-olares',
-    '/zh/developer/install/activate-olares': '/zh/manual/get-started/install-olares',
-    '/zh/developer/install/install-and-activate-olares': '/zh/manual/get-started/install-olares',
-    '/zh/developer/install/log-in-to-olares': '/zh/manual/get-started/install-olares',
-    '/zh/developer/install/reusables': '/zh/manual/get-started/install-olares',
-
-    // Removed: empty advanced-dev stub pages → advanced overview
-    '/developer/develop/advanced/rss': '/developer/develop/advanced/',
-    '/developer/develop/advanced/frontend': '/developer/develop/advanced/',
-    '/developer/develop/advanced/notification': '/developer/develop/advanced/',
-    '/zh/developer/develop/advanced/rss': '/zh/developer/develop/advanced/',
-    '/zh/developer/develop/advanced/frontend': '/zh/developer/develop/advanced/',
-    '/zh/developer/develop/advanced/notification': '/zh/developer/develop/advanced/',
-
-    // Removed: empty contribute overview stub → contribute landing
-    '/developer/contribute/overview': '/developer/contribute/olares',
-    '/zh/developer/contribute/overview': '/zh/developer/contribute/olares',
-
-    // Removed: stale olares-id section hero page → first olares-id doc
-    '/developer/contribute/olares-id/': '/developer/contribute/olares-id/contract/contract',
-
-    // Removed: single-gpu/multi-gpu were noindex include-only fragments of gpu-resource → consolidated page
-    '/manual/olares/settings/single-gpu': '/manual/olares/settings/gpu-resource',
-    '/manual/olares/settings/multi-gpu': '/manual/olares/settings/gpu-resource',
-    '/zh/manual/olares/settings/single-gpu': '/zh/manual/olares/settings/gpu-resource',
-    '/zh/manual/olares/settings/multi-gpu': '/zh/manual/olares/settings/gpu-resource',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.

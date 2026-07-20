@@ -1,7 +1,3 @@
----
-noindex: true
-description: get 子命令用于获取 Olares 指定用户的详细信息。输出结果以表格或 JSON 格式显示。
----
 # `get`
 
 ## 命令说明

@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Use Files on Olares One to upload, preview, edit, and search files, then connect external cloud storage such as Google Drive.
+description: Get started with the Files app on your Olares One. Learn the interface layout, how to upload your first files, preview and edit content, search your drive, and connect external cloud storage like Google Drive.
 head:
   - - meta
     - name: keywords

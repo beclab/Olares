@@ -1,5 +1,4 @@
 ---
-noindex: true
 outline: [2, 3]
 description: 使用 Olares 中文件管理器的同步和共享功能，设置跨设备同步和管理共享权限，提升团队协作效率。
 ---

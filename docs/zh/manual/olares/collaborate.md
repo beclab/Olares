@@ -1,5 +1,4 @@
 ---
-noindex: true
 description: 了解如何在 Olares 中共享文件和密钥、设置应用入口、使用专用网络，在保护数据隐私的同时实现高效团队协作。
 ---
 # 在 Olares 中协作

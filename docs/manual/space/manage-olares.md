@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Manage Olares instances in Olares Space. Monitor system health, storage and traffic, manage worker nodes, and use shared GPUs.
+description: Control your Olares instances through system monitoring, worker node management, and shared GPU solutions. Track storage usage, traffic consumption and maintain instance health.
 ---
 :::warning Documentation does not match current experience
 We are currently updating this documentation to match the latest experience on the Olares Space platform. If there are differences, follow the actual platform.

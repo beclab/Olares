@@ -1,7 +1,3 @@
----
-noindex: true
-description: start 命令用于启动已停止的 Olares 系统，包括其所有组件和服务。
----
 # `start`
 
 ## 命令说明

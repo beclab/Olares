@@ -10,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-05-08"
 ---
 
-# Integrate NemoClaw with Google Workspace
+# Integrate with Google Workspace
 
 The gog skill lets your NemoClaw agent interact with Google Workspace services such as Gmail, Google Calendar, and Google Drive. Once configured, you can ask your agent to search emails, schedule meetings, or access files in natural language. This guide uses Google Calendar as the example.
 

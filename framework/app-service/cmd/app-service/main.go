@@ -13,7 +13,6 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/controllers"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
@@ -157,7 +156,6 @@ func main() {
 		Client:      mgr.GetClient(),
 		KubeConfig:  config,
 		ImageClient: images.NewImageManager(mgr.GetClient()),
-		Deps:        appstate.DefaultDeps(mgr.GetClient()),
 		//Manager:    make(map[string]context.CancelFunc),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "Application Manager")

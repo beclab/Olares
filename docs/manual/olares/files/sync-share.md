@@ -1,5 +1,4 @@
 ---
-noindex: true
 description: Keep files synchronized across devices and share content securely with other Olares members using built-in file sharing capabilities.
 ---
 # Sync and share files with Files

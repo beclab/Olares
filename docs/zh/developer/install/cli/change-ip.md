@@ -1,7 +1,3 @@
----
-noindex: true
-description: 更新所有 Olares 组件使用的本地 IP 地址。
----
 # `change-ip`
 :::warning IP 地址需要手动更新的情况
 当 Olares 部署在虚拟化环境中时（如 macOS 上的 Minikube 或 Windows 上的 WSL），如果宿主系统的 IP 地址发生变化（比如切换 Wi-Fi 网络），可能会导致 Olares 无法访问。这是因为 NAT 网关和 DNS 配置与新的 IP 地址不匹配。此时需要手动更新 IP 地址，以确保 Olares 能够正确路由流量。

@@ -1,5 +1,5 @@
 ---
-description: Configure Olares in Settings. Personalize your system, secure access, manage users, and connect storage or third-party services.
+description: Configure and manage Olares with Settings, your central hub for personalizing your experience, securing your environment, integrating essential services, and more. 
 ---
 
 # Configure and manage Olares with Settings

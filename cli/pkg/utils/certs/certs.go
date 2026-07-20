@@ -61,15 +61,17 @@ func (k *KubekeyCert) CreateFromCA(kubeConf *common.KubeConf, pkiPath string, ca
 	if err != nil {
 		return errors.Wrapf(err, "couldn't create %q certificate", k.Name)
 	}
-
-	err = ensureCertificateFiles(
+	cert, key, err := NewCertAndKey(caCert, caKey, cfg)
+	if err != nil {
+		return err
+	}
+	err = writeCertificateFilesIfNotExist(
 		pkiPath,
 		k.BaseName,
 		caCert,
+		cert,
+		key,
 		cfg,
-		func() (*x509.Certificate, crypto.Signer, error) {
-			return NewCertAndKey(caCert, caKey, cfg)
-		},
 	)
 
 	if err != nil {
@@ -122,6 +124,31 @@ func CreateCACertAndKeyFiles(certSpec *KubekeyCert, pkiPath string, kubeConf *co
 	)
 }
 
+func GenerateCerts(cert *KubekeyCert, caCert *KubekeyCert, pkiPath string, kubeConf *common.KubeConf) error {
+	// TODO: if using external etcd, skips etcd certificates generation
+
+	if certData, intermediates, err := TryLoadCertChainFromDisk(pkiPath, cert.BaseName); err == nil {
+		CheckCertificatePeriodValidity(cert.BaseName, certData)
+
+		caCertData, err := TryLoadCertFromDisk(pkiPath, caCert.BaseName)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load CA certificate %s", caCert.Name)
+		}
+
+		CheckCertificatePeriodValidity(caCert.BaseName, caCertData)
+
+		if err := VerifyCertChain(certData, intermediates, caCertData); err != nil {
+			return errors.Wrapf(err, "[certs] certificate %s not signed by CA certificate %s", cert.BaseName, caCert.BaseName)
+		}
+
+		fmt.Printf("[certs] Using existing %s certificate and key on disk\n", cert.BaseName)
+		return nil
+	}
+
+	// create the new certificate (or use existing)
+	return CreateCertAndKeyFilesWithCA(caCert, cert, pkiPath, kubeConf)
+}
+
 // CreateCertAndKeyFilesWithCA loads the given certificate authority from disk, then generates and writes out the given certificate and key.
 // The certSpec and caCertSpec should both be one of the variables from this package.
 func CreateCertAndKeyFilesWithCA(caCertSpec *KubekeyCert, certSpec *KubekeyCert, pkiPath string, kubeConf *common.KubeConf) error {
@@ -129,30 +156,12 @@ func CreateCertAndKeyFilesWithCA(caCertSpec *KubekeyCert, certSpec *KubekeyCert,
 		return errors.Errorf("expected CAname for %s to be %q, but was %s", certSpec.Name, certSpec.CAName, caCertSpec.Name)
 	}
 
-	caCert, err := TryLoadCertFromDisk(pkiPath, caCertSpec.BaseName)
+	caCert, caKey, err := LoadCertificateAuthority(pkiPath, caCertSpec.BaseName)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load CA certificate %s", caCertSpec.Name)
 	}
-	CheckCertificatePeriodValidity(caCertSpec.BaseName, caCert)
 
-	cfg, err := certSpec.GetConfig(kubeConf)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't create %q certificate", certSpec.Name)
-	}
-
-	return ensureCertificateFiles(
-		pkiPath,
-		certSpec.BaseName,
-		caCert,
-		cfg,
-		func() (*x509.Certificate, crypto.Signer, error) {
-			loadedCACert, caKey, err := LoadCertificateAuthority(pkiPath, caCertSpec.BaseName)
-			if err != nil {
-				return nil, nil, errors.Wrapf(err, "couldn't load CA certificate %s", caCertSpec.Name)
-			}
-			return NewCertAndKey(loadedCACert, caKey, cfg)
-		},
-	)
+	return certSpec.CreateFromCA(kubeConf, pkiPath, caCert, caKey)
 }
 
 // LoadCertificateAuthority tries to load a CA in the given directory with the given name.
@@ -278,52 +287,47 @@ func CheckCertificatePeriodValidity(baseName string, cert *x509.Certificate) {
 	}
 }
 
-// ensureCertificateFiles preserves valid certificate files and generates
-// replacements only when they are missing, invalid, or stale.
-func ensureCertificateFiles(
-	pkiDir string,
-	baseName string,
-	signingCert *x509.Certificate,
-	cfg *CertConfig,
-	generate func() (*x509.Certificate, crypto.Signer, error),
-) error {
+// writeCertificateFilesIfNotExist write a new certificate to the given path.
+// If there already is a certificate file at the given path; kubeadm tries to load it and check if the values in the
+// existing and the expected certificate equals. If they do; kubeadm will just skip writing the file as it's up-to-date,
+// otherwise this function returns an error.
+func writeCertificateFilesIfNotExist(pkiDir string, baseName string, signingCert *x509.Certificate, cert *x509.Certificate, key crypto.Signer, cfg *CertConfig) error {
+
+	// Checks if the signed certificate exists in the PKI directory
 	if CertOrKeyExist(pkiDir, baseName) {
-		validationErr := validateCertificateFiles(pkiDir, baseName, signingCert, cfg)
-		if validationErr == nil {
-			fmt.Printf("[certs] Using the existing %q certificate and key\n", baseName)
-			return nil
+		// Try to load key from the PKI directory
+		_, err := TryLoadKeyFromDisk(pkiDir, baseName)
+		if err != nil {
+			return errors.Wrapf(err, "failure loading %s key", baseName)
 		}
 
-		fmt.Printf("[certs] Replacing invalid or stale %q certificate and key: %v\n", baseName, validationErr)
-	}
+		// Try to load certificate from the PKI directory
+		signedCert, intermediates, err := TryLoadCertChainFromDisk(pkiDir, baseName)
+		if err != nil {
+			return errors.Wrapf(err, "failure loading %s certificate", baseName)
+		}
+		// Validate period
+		CheckCertificatePeriodValidity(baseName, signedCert)
 
-	cert, key, err := generate()
-	if err != nil {
-		return errors.Wrapf(err, "failure while generating %s certificate and key", baseName)
-	}
-	if err := WriteCertAndKey(pkiDir, baseName, cert, key); err != nil {
-		return errors.Wrapf(err, "failure while saving %s certificate and key", baseName)
-	}
-	if HasServerAuth(cert) {
-		fmt.Printf("[certs] %s serving cert is signed for DNS names %v and IPs %v\n", baseName, cert.DNSNames, cert.IPAddresses)
+		// Check if the existing cert is signed by the given CA
+		if err := VerifyCertChain(signedCert, intermediates, signingCert); err != nil {
+			return errors.Errorf("certificate %s is not signed by corresponding CA", baseName)
+		}
+
+		// Check if the certificate has the correct attributes
+		if err := validateCertificateWithConfig(signedCert, baseName, cfg); err != nil {
+			return err
+		}
+
+		fmt.Printf("[certs] Using the existing %q certificate and key\n", baseName)
+	} else {
+		if err := WriteCertAndKey(pkiDir, baseName, cert, key); err != nil {
+			return errors.Wrapf(err, "failure while saving %s certificate and key", baseName)
+		}
+		if HasServerAuth(cert) {
+			fmt.Printf("[certs] %s serving cert is signed for DNS names %v and IPs %v\n", baseName, cert.DNSNames, cert.IPAddresses)
+		}
 	}
 
 	return nil
-}
-
-func validateCertificateFiles(pkiDir string, baseName string, signingCert *x509.Certificate, cfg *CertConfig) error {
-	if _, err := TryLoadKeyFromDisk(pkiDir, baseName); err != nil {
-		return errors.Wrapf(err, "failure loading %s key", baseName)
-	}
-
-	signedCert, intermediates, err := TryLoadCertChainFromDisk(pkiDir, baseName)
-	if err != nil {
-		return errors.Wrapf(err, "failure loading %s certificate", baseName)
-	}
-	CheckCertificatePeriodValidity(baseName, signedCert)
-
-	if err := VerifyCertChain(signedCert, intermediates, signingCert); err != nil {
-		return errors.Wrapf(err, "certificate %s is not signed by corresponding CA", baseName)
-	}
-	return validateCertificateWithConfig(signedCert, baseName, cfg)
 }

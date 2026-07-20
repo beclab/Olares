@@ -1,7 +1,3 @@
----
-noindex: true
-description: disk命令提供了一组用于管理 Olares 系统存储资源的工具，主要用于基于 LVM 的存储配置管理。
----
 # `disk`
 
 ## 命令说明

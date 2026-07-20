@@ -1,15 +1,15 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上自托管 Vane（前身为 Perplexica），作为私有的 Perplexity 替代方案。用本地 Ollama 模型和 SearXNG 搜索后端，获得带引用的 AI 回答。
+description: 在 Olares 上部署 Vane（前身为 Perplexica），实现私有的 AI 驱动搜索与问答。使用 Ollama 本地大模型和 SearXNG 作为搜索后端。
 head:
   - - meta
     - name: keywords
-      content: Olares, Vane, Perplexica, perplexity alternative, self-hosted perplexity, AI search, SearXNG, vane on olares
+      content: Olares, Vane, Perplexica, AI search, privacy, Ollama, SearXNG, self-hosted
 app_version: "1.12.0"
 doc_version: "1.2"
 doc_updated: "2026-04-17"
 ---
-# 自托管私人 AI 搜索引擎 Vane
+# 配置注重隐私的 AI 搜索引擎：Vane
 
 :::warning
 当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../use-cases/perplexica.md)。

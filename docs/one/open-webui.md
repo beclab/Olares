@@ -1,5 +1,4 @@
 ---
-noindex: true
 outline: [2, 3]
 description: Learn how to set up Open WebUI on your Olares One to chat with local LLMs using Ollama.
 head:

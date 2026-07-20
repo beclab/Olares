@@ -129,14 +129,13 @@ const (
 	// AppEnvSyncAnnotation triggers AppEnvController to sync environment values from SystemEnv or UserEnv changes
 	AppEnvSyncAnnotation = "appenv.bytetrade.io/sync-triggered-by"
 
-	AppForceUninstall         = "ForceUninstall"
-	AppForceUninstalled       = "ForceUninstalled"
-	AppUnschedulable          = "Unschedulable"
-	AppHamiSchedulable        = "HamiUnschedulable"
-	AppStopByUser             = "StopByUser"
-	AppStopDueToInitFailed    = "InitFailed"
-	AppStopDueToStartUpFailed = "StartUpFailed"
-	AppStopDueToEvicted       = "Evicted"
+	AppForceUninstall      = "ForceUninstall"
+	AppForceUninstalled    = "ForceUninstalled"
+	AppUnschedulable       = "Unschedulable"
+	AppHamiSchedulable     = "HamiUnschedulable"
+	AppStopByUser          = "StopByUser"
+	AppStopDueToInitFailed = "InitFailed"
+	AppStopDueToEvicted    = "Evicted"
 
 	AppSharedEntrancesLabel = "app.bytetrade.io/shared-entrance"
 	AppMiddlewareLabel      = "app.bytetrade.io/middleware"

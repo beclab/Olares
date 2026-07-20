@@ -1,11 +1,6 @@
 ---
-noindex: true
 outline: [2, 3]
 description: Learn to deploy Duix.Avatar on Olares, from model training to video synthesis, to create text-driven digital avatar videos.
-head:
-  - - meta
-    - name: keywords
-      content: Olares, Duix.Avatar, HeyGem, digital avatar, AI avatar video, self-hosted digital human, Duix.Avatar on Olares
 ---
 
 # Create a digital avatar with Duix.Avatar

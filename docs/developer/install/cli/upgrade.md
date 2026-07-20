@@ -1,7 +1,3 @@
----
-noindex: true
-description: The upgrade command provides a set of tools for upgrading Olares and checking upgrade readiness and compatibility.
----
 # `upgrade`
 
 ## Synopsis

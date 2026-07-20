@@ -1,7 +1,3 @@
----
-noindex: true
-description: Advanced guides for developing Olares applications, covering the CLI, service providers, databases, cookies, secrets, WebSocket, and more.
----
 # Advanced
 
 1. [Olares CLI](cli/olares-cli.md)

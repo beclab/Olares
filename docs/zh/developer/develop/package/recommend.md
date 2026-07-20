@@ -1,7 +1,3 @@
----
-noindex: true
-description: 为 recommend 创建应用程序图表时，主要需要配置位于 templates/ 文件夹中的四个文件：embedding.yaml 、prerank.yaml 、rank.yaml 和 train.yaml。
----
 # 推荐算法配置指导
 
 为 `recommend` 创建应用程序图表时，主要需要配置位于 `templates/` 文件夹中的四个文件：`embedding.yaml` 、`prerank.yaml` 、`rank.yaml` 和 `train.yaml`。

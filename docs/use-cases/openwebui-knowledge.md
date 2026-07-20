@@ -1,6 +1,5 @@
 ---
 outline: deep
-title: Chat with documents in Open WebUI
 description: Upload documents and create a knowledge base in Open WebUI on Olares for retrieval-augmented generation (RAG).
 head:
   - - meta
@@ -11,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-05-14"
 ---
 
-# Chat with documents and knowledge bases in Open WebUI
+# Chat with documents and knowledge bases
 
 Open WebUI supports retrieval-augmented generation (RAG) to help local AI models answer questions based on your uploaded documents or curated knowledge bases.
 

@@ -93,7 +93,7 @@ func (m *Manager) packageModule(mod string) error {
 			return err
 		}
 
-		// Package cluster CRDs
+		// Package cluster CRDs (EG + Linkerd + others → settings)
 		crdPath := filepath.Join(path, "config/cluster/crds")
 		if err := util.CopyDirectoryIfExists(crdPath, filepath.Join(m.distPath, "wizard/config/settings/templates/crds")); err != nil {
 			return err

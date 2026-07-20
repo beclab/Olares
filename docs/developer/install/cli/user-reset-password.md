@@ -1,7 +1,3 @@
----
-noindex: true
-description: The reset-password subcommand forcefully resets the login password for a specific user via the authentication provider.
----
 # `reset-password`
 
 ## Synopsis

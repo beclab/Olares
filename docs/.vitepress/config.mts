@@ -3,31 +3,11 @@ import { withMermaid } from "vitepress-plugin-mermaid";
 import { en } from "./en";
 import { zh } from "./zh";
 import _ from "lodash";
-import { redirects, temporaryRedirects } from "./theme/redirects";
 //import defaultConfig from 'vitepress-versioning-plugin';
 
 // Paths collected during transformPageData so sitemap.transformItems can
 // filter them out without re-reading frontmatter from disk.
 const noindexPaths = new Set<string>();
-
-// Normalize a route/path to the extensionless, slash-trimmed form used for
-// sitemap comparisons (works regardless of cleanUrls or trailing slashes).
-const normalizeRoute = (p: string) =>
-  p.replace(/^\/+/, "").replace(/\.html$/, "").replace(/\/$/, "");
-
-// Every path that 301/302-redirects at the edge (see theme/redirects.ts) must
-// be kept out of sitemap.xml: a sitemap URL that redirects is flagged by Google
-// as "Page with redirect" and wastes crawl budget.
-const redirectSources = new Set<string>(
-  [...Object.keys(redirects), ...Object.keys(temporaryRedirects)].map(normalizeRoute)
-);
-
-// Deep, low-value reference pages that inflate "Discovered – currently not
-// indexed" without real search demand. noindex them in both locales so crawl
-// budget concentrates on the pages users actually search for. Matched against
-// the locale-stripped route (so it covers /docs/... and /docs/zh/... alike).
-const noindexRoutePattern =
-  /^developer\/contribute\/olares-id\/(contract|verifiable-credential)\//;
 
 // Archived (non-latest) versioned doc builds deploy under /docs/<version>/
 // (e.g. /docs/1.12.4/...) and duplicate the latest docs almost verbatim,
@@ -84,7 +64,6 @@ function defineVersionedConfig2(
 // https://vitepress.dev/reference/site-config
 export default defineVersionedConfig2(withMermaid({
   title: "Olares",
-  titleTemplate: ":title | Olares Docs",
   description: "Let people own their data again",
   lang: "en",
   locales: {
@@ -166,9 +145,7 @@ export default defineVersionedConfig2(withMermaid({
     // we don't shift source line numbers, which would break `@include` ranges
     // in files that embed this one as a snippet.
     // Archived versioned builds noindex every page (see isArchivedVersionBuild).
-    const localeStrippedRoute = pageData.relativePath.replace(/^zh\//, "");
-    const noindexByPath = noindexRoutePattern.test(localeStrippedRoute);
-    if (isArchivedVersionBuild || pageData.frontmatter?.noindex || noindexByPath) {
+    if (isArchivedVersionBuild || pageData.frontmatter?.noindex) {
       pageData.frontmatter.head ??= [];
       pageData.frontmatter.head.push([
         'meta',
@@ -203,47 +180,10 @@ export default defineVersionedConfig2(withMermaid({
     // Keep og:url identical to the canonical URL. A mismatch between the two
     // sends conflicting signals to crawlers and social scrapers about the
     // page's authoritative address.
-    const isZh = pageData.relativePath.startsWith('zh/');
-    const siteName = isZh ? 'Olares 文档' : 'Olares Docs';
-    const defaultDescription = isZh
-      ? '让人们重新拥有自己的数据'
-      : 'Let people own their data again';
-    const ogTitle = pageData.title
-      ? `${pageData.title} | ${siteName}`
-      : siteName;
-    const ogDescription =
-      pageData.description?.trim() || defaultDescription;
-    // Same brand OG asset as marketing (from Olares One / Shopify, 1200×630).
-    const ogImage = 'https://www.olares.com/docs/olares-og.jpg';
-    const ogLocale = isZh ? 'zh_CN' : 'en_US';
-    for (const [property, content] of [
-      ['og:url', canonicalHref],
-      ['og:title', ogTitle],
-      ['og:description', ogDescription],
-      ['og:image', ogImage],
-      ['og:image:width', '1200'],
-      ['og:image:height', '630'],
-      ['og:image:type', 'image/jpeg'],
-      ['og:type', 'website'],
-      ['og:site_name', siteName],
-      ['og:locale', ogLocale],
-    ] as const) {
-      pageData.frontmatter.head.push([
-        'meta',
-        { property, content },
-      ]);
-    }
-    for (const [name, content] of [
-      ['twitter:card', 'summary_large_image'],
-      ['twitter:title', ogTitle],
-      ['twitter:description', ogDescription],
-      ['twitter:image', ogImage],
-    ] as const) {
-      pageData.frontmatter.head.push([
-        'meta',
-        { name, content },
-      ]);
-    }
+    pageData.frontmatter.head.push([
+      'meta',
+      { property: 'og:url', content: canonicalHref },
+    ]);
   },
 
   // Archived versioned builds noindex every page, so their sitemap would be
@@ -264,9 +204,6 @@ export default defineVersionedConfig2(withMermaid({
         // Repo READMEs are srcExclude'd above, but guard the sitemap too so a
         // stray /docs/README (or nested README) can never leak back in.
         if (p === 'README' || p.endsWith('/README')) return false;
-        // Drop URLs that 301/302-redirect at the edge — a sitemap entry that
-        // redirects is what Google reports as "Page with redirect".
-        if (redirectSources.has(p.replace(/\/$/, ''))) return false;
         return !noindexPaths.has(p);
       }),
   },
@@ -282,13 +219,6 @@ export default defineVersionedConfig2(withMermaid({
     "**/reusables.md",
     "**/reusables-*.md",
     "**/*.reusables.md",
-    // Get-started snippets (included by host pages only)
-    "manual/get-started/activate-olares.md",
-    "manual/get-started/log-in-to-olares.md",
-    "manual/get-started/install-and-activate-olares.md",
-    "zh/manual/get-started/activate-olares.md",
-    "zh/manual/get-started/log-in-to-olares.md",
-    "zh/manual/get-started/install-and-activate-olares.md",
   ],
   base: process.env.BASE_URL || "/",
   vite: {
@@ -312,31 +242,6 @@ export default defineVersionedConfig2(withMermaid({
         rel: "icon",
         href: (process.env.BASE_URL || "/") + "icon1.png",
       },
-    ],
-    // Organization schema (shared with olares.com; single #organization entity).
-    [
-      "script",
-      { type: "application/ld+json" },
-      JSON.stringify({
-        "@context": "https://schema.org",
-        "@id": "https://www.olares.com/#organization",
-        "@type": "Organization",
-        name: "Olares",
-        url: "https://www.olares.com/",
-        logo: {
-          "@type": "ImageObject",
-          url: "https://www.olares.com/olares-logo.png",
-          width: 1000,
-          height: 236,
-        },
-        sameAs: [
-          "https://github.com/beclab/Olares",
-          "https://x.com/Olares_OS",
-          "https://www.linkedin.com/company/olarestech/",
-          "https://www.youtube.com/@OlaresOS/featured",
-          "https://www.facebook.com/people/Olares/61579156063357/",
-        ],
-      }),
     ],
     [
       "script",

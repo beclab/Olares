@@ -1,7 +1,3 @@
----
-noindex: true
-description: stop 命令用于停止已安装（或部分安装）的 Olares 系统中的各个组件。
----
 # `stop`
 
 ## 命令说明

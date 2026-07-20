@@ -1,6 +1,5 @@
 ---
 outline: [2, 3]
-title: Memory not freed after stopping an app
 description: Troubleshoot memory not freeing after stopping apps.
 ---
 

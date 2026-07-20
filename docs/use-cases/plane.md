@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: Self-host Plane on Olares as a private Jira and Asana alternative. Manage projects with modules, cycles, and multiple work views.
+description: Set up Plane on Olares for self-hosted project management. Organize work with modules, cycles, multiple views, and team collaboration.
 head:
   - - meta
     - name: keywords
-      content: Olares, Plane, open source jira alternative, jira alternative, self-hosted project management, kanban, team collaboration, plane on olares
+      content: Olares, Plane, project management, self-hosted, kanban, Gantt chart, team collaboration, task tracking
 app_version: "1.0.9"
 doc_version: "1.0"
 doc_updated: "2026-04-14"

@@ -8,7 +8,17 @@ import (
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
+
+func getAM(t *testing.T, b *baseStatefulApp, name string) *appsv1.ApplicationManager {
+	t.Helper()
+	var am appsv1.ApplicationManager
+	if err := b.client.Get(context.TODO(), types.NamespacedName{Name: name}, &am); err != nil {
+		t.Fatalf("get AM %s: %v", name, err)
+	}
+	return &am
+}
 
 func TestUpdateStatusIncrementsGenerationAndPrependsRecord(t *testing.T) {
 	am := testutil.NewAppManager("nginx", testutil.WithState(appsv1.Installing))
@@ -24,7 +34,7 @@ func TestUpdateStatusIncrementsGenerationAndPrependsRecord(t *testing.T) {
 		t.Fatalf("updateStatus: %v", err)
 	}
 
-	got := getAM(t, c, "nginx")
+	got := getAM(t, b, "nginx")
 	if got.Status.State != appsv1.Running {
 		t.Errorf("state=%q want Running", got.Status.State)
 	}
@@ -59,7 +69,7 @@ func TestUpdateStatusCapsRecordsAt20(t *testing.T) {
 		t.Fatalf("updateStatus: %v", err)
 	}
 
-	got := getAM(t, c, "nginx")
+	got := getAM(t, b, "nginx")
 	if len(got.Status.OpRecords) != 20 {
 		t.Fatalf("OpRecords len=%d want 20 (capped)", len(got.Status.OpRecords))
 	}
@@ -77,7 +87,7 @@ func TestUpdateStatusNilRecordKeepsRecords(t *testing.T) {
 	if err := b.updateStatus(context.TODO(), am, appsv1.Running, nil, "msg", ""); err != nil {
 		t.Fatalf("updateStatus: %v", err)
 	}
-	got := getAM(t, c, "nginx")
+	got := getAM(t, b, "nginx")
 	if len(got.Status.OpRecords) != 1 {
 		t.Errorf("OpRecords len=%d want 1 (unchanged)", len(got.Status.OpRecords))
 	}
@@ -97,7 +107,7 @@ func TestUpdateStatusRejectsInvalidTransition(t *testing.T) {
 		t.Fatalf("updateStatus(Pending -> Uninstalled) returned nil, want error")
 	}
 
-	got := getAM(t, c, "nginx")
+	got := getAM(t, b, "nginx")
 	if got.Status.State != appsv1.Pending {
 		t.Errorf("state=%s want Pending (rejected write must not mutate)", got.Status.State)
 	}
@@ -118,7 +128,7 @@ func TestUpdateStatusAllowsSelfWrite(t *testing.T) {
 	if err := b.updateStatus(context.TODO(), am, appsv1.InstallFailed, nil, "updated msg", "updated reason"); err != nil {
 		t.Fatalf("updateStatus self-write rejected: %v", err)
 	}
-	got := getAM(t, c, "nginx")
+	got := getAM(t, b, "nginx")
 	if got.Status.State != appsv1.InstallFailed {
 		t.Errorf("state=%s want InstallFailed", got.Status.State)
 	}

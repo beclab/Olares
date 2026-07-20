@@ -1,5 +1,4 @@
 ---
-noindex: true
 outline: [2, 3]
 description: Understand how application distribution works in Olares.
 ---

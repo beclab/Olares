@@ -1,5 +1,4 @@
 ---
-noindex: true
 description: 在 Olares 中导入区块链钱包、关联 NFT 藏品并设置为个性化头像，展现独特的数字身份标识。
 ---
 # 使用 NFT 图像作为个人头像

@@ -1,10 +1,10 @@
 ---
 outline: deep
-description: 在 Olares 上自托管 Immich，作为开源的 Google Photos 替代方案。用 AI 备份、整理和搜索照片与视频，数据始终留在你自己的设备上。
+description: 学习如何在 Olares 上安装和使用 Immich，通过内置的 AI 智能搜索和人脸识别来备份、整理和分享你的照片和视频。
 head:
   - - meta
     - name: keywords
-      content: Olares, Immich, google photos alternative, immich vs google photos, self-hosted photos, photo backup, immich synology, immich on olares
+      content: Olares, Immich, photo backup, self-hosted photos, photo management, face recognition, smart search
 app_version: "1.0.15"
 doc_version: "1.0"
 doc_updated: "2026-03-26"
@@ -14,7 +14,7 @@ doc_updated: "2026-03-26"
 本页面为 AI 翻译版本，内容仅供快速参考。关键信息建议以[英文原文](../../use-cases/immich.md)为准。
 :::
 
-# 用 Immich 自托管你的照片
+# 使用 Immich 管理照片
 
 Immich 是一个开源、自托管的照片和视频备份解决方案。它支持自动备份、原始质量存储和时间线浏览。借助内置的机器学习模型，Immich 可以自动识别照片中的人物、地点和物体，让照片管理更智能、更高效。
 

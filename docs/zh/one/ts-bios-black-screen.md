@@ -1,5 +1,4 @@
 ---
-noindex: true
 outline: [2, 3]
 description: 排查 Olares One 启动时黑屏且无法进入 BIOS 设置界面的问题。
 ---

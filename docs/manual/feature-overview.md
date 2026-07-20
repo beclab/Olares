@@ -1,7 +1,3 @@
----
-noindex: true
-description: Compare Olares with Synology, TrueNAS, CasaOS, and Unraid across apps, networking, storage, and multi-user features to see how this personal cloud OS differs.
----
 # Feature comparison
 :::tip Legend
 - 🚀: **Auto**, indicates that the system completes the task automatically.

@@ -23,6 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -59,10 +60,10 @@ func (p *UpgradingApp) State() string {
 	return p.GetManager().Status.State.String()
 }
 
-func NewUpgradingApp(deps Deps,
+func NewUpgradingApp(c client.Client,
 	manager *appsv1.ApplicationManager, downloadTTL, ttl time.Duration) (StatefulApp, StateError) {
 
-	return deps.Factory.New(deps, manager, ttl,
+	return appFactory.New(c, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &UpgradingApp{
 				baseOperationApp: &baseOperationApp{
@@ -73,7 +74,7 @@ func NewUpgradingApp(deps Deps,
 					},
 				},
 				downloadTTL: downloadTTL,
-				imageClient: deps.NewImageManager(c),
+				imageClient: images.NewImageManager(c),
 			}
 		})
 }
@@ -82,7 +83,7 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 	p.finallyCh = make(chan func(), 1)
 
 	opCtx, cancel := context.WithCancel(context.Background())
-	return p.deps.Factory.execAndWatch(opCtx, p,
+	return appFactory.execAndWatch(opCtx, p,
 		func(c context.Context) (StatefulInProgressApp, error) {
 			in := upgradingInProgressApp{
 				UpgradingApp: p,
@@ -163,7 +164,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	var err error
 	var version string
 	var actionConfig *action.Configuration
-	kubeConfig, err := p.deps.KubeConfig()
+	kubeConfig, err := getKubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
@@ -196,7 +197,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 		klog.Errorf("get admin username failed %v", err)
 		return err
 	}
-	isAdmin, err := p.deps.IsAdmin(ctx, kubeConfig, p.manager.Spec.AppOwner)
+	isAdmin, err := kubesphere.IsAdmin(ctx, kubeConfig, p.manager.Spec.AppOwner)
 	if err != nil {
 		klog.Errorf("failed check is admin user %v", err)
 		return err
@@ -262,7 +263,13 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 		}
 	}
 
-	refs, err := p.deps.ResolveImageRefs(ctx, p.manager, appConfig)
+	values, err := appinstaller.BuildBaseHelmValues(ctx, kubeConfig, appConfig, p.manager.Spec.AppOwner, true)
+	if err != nil {
+		klog.Errorf("build base helm values failed %v", err)
+		return err
+	}
+
+	refs, err := GetRefsForImageManager(appConfig, values)
 	if err != nil {
 		klog.Errorf("get image refs from resources failed %v", err)
 		return err
@@ -288,7 +295,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	preState := p.manager.Annotations[api.AppPreUpgradeStateKey]
 
 	skipWaitForStartUp := preState == appsv1.Stopped.String()
-	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appConfig, token,
+	ops, err := newHelmOps(ctx, kubeConfig, appConfig, token,
 		appinstaller.Opt{
 			Source:             p.manager.Spec.Source,
 			MarketSource:       appcfg.GetMarketSource(p.manager),
@@ -328,17 +335,23 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 }
 
 func (p *UpgradingApp) Cancel(ctx context.Context) error {
-	// Move to the canceling state and let UpgradingCancelingApp perform the
-	// actual teardown (mark the image manager canceled, stop the in-progress
-	// upgrade goroutine, then settle on Stopping). This mirrors every other
-	// operating state's cancel path (Operating -> *Canceling -> Stopping) and
-	// matches the declared StateTransitions[Upgrading] = {..., UpgradingCanceling}.
-	// Doing the teardown here instead (the previous behaviour) left the AM in
-	// Upgrading because the status was never advanced to UpgradingCanceling.
-	err := p.updateStatus(ctx, p.manager, appsv1.UpgradingCanceling, nil, constants.UpgradeCanceledByTimeout, constants.UpgradeCancelBySystem)
+	var err error
+	klog.Infof("execute upgrading cancel operation appName=%s", p.manager.Spec.AppName)
+	err = p.imageClient.UpdateStatus(ctx, p.manager.Name, appsv1.DownloadingCanceled.String(), appsv1.DownloadingCanceled.String())
 	if err != nil {
-		klog.Errorf("update appmgr state to upgradingCanceling state failed %v", err)
-		return err
+		// IM may  has already been cleaned up.
+		// Either way, there is no IM status to mark canceled; the in-process
+		// cancel below is still required so the running upgrade goroutine
+		// observes context.Canceled and unwinds.
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("update im name=%s to downloadingCanceled state failed %v", p.manager.Name, err)
+			return err
+		}
+		klog.Infof("im name=%s not found while canceling upgrade (timeout), treating as already canceled", p.manager.Name)
+	}
+
+	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
+		klog.Errorf("app %s cancel operation is not allowed", p.manager.Name)
 	}
 	return nil
 }

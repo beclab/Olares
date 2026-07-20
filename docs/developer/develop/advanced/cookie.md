@@ -1,7 +1,3 @@
----
-noindex: true
-description: Single Sign-On (SSO) mode is utilized for authorization and authentication across the Olares, including all installed apps.
----
 # Cookie
 
 **Single Sign-On (SSO)** mode is utilized for authorization and authentication across the **Olares**, including all installed apps. **SSO** authentication is non-intrusive, using cookies as the authentication credential.

@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Configure Olares with environment variables for networking, authentication, GPU support, and other installation features, with examples.
+description: Environment variables available in Olares for customizing networking, authentication, GPU support and other features. Includes configuration examples and specifications.
 ---
 # Olares environment variables
 

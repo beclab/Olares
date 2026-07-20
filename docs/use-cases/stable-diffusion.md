@@ -1,12 +1,7 @@
 ---
-noindex: true
-description: Run Stable Diffusion locally on Olares. Self-host the SD WebUI for text-to-image generation with multi-user support, no per-image fees, and full data privacy.
-head:
-  - - meta
-    - name: keywords
-      content: Olares, Stable Diffusion, stable diffusion webui, self-hosted stable diffusion, run stable diffusion locally, stable diffusion on olares
+description: Comprehensive guide to using Stable Diffusion in Olares. Learn about text-to-image generation, and how to optimize your SD Web UI deployment for multi-user environments.
 ---
-# Run Stable Diffusion locally
+# Stable Diffusion
 Stable Diffusion represents a groundbreaking implementation of latent diffusion models (LDMs) in AI image synthesis. This deep learning architecture operates by decomposing the image generation process into a lower-dimensional latent space, significantly reducing computational requirements while maintaining high-fidelity output.
 
 Olares simplifies the deployment and management of Stable Diffusion. Unlike traditional deployments that require manual configuration of file systems and databases, Olares shields developers from these infrastructure complexities, allowing you to focus solely on using the model for image generation.

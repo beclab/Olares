@@ -1,6 +1,4 @@
 ---
-noindex: true
-description: Olares 作为一个云端系统，存在很多将本地文件上传到云端的场景。Olares 应用运行时提供了一个通用的 file-upload 组件。
 outline: [2, 3]
 ---
 

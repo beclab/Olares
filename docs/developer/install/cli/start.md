@@ -1,7 +1,3 @@
----
-noindex: true
-description: The start command is used to start the Olares system, including its components and services, after it has been stopped.
----
 # `start`
 
 ## Synopsis

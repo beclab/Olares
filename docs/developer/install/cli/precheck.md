@@ -1,7 +1,3 @@
----
-noindex: true
-description: The precheck command verifies whether the system environment satisfies all prerequisites required for Olares installation.
----
 # `precheck`
 
 ## Synopsis

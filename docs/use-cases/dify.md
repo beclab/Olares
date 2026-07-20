@@ -1,9 +1,5 @@
 ---
-description: Self-host Dify on Olares to build local AI apps and assistants. Deploy Dify, connect Ollama models, and add a personal knowledge base for private RAG workflows.
-head:
-  - - meta
-    - name: keywords
-      content: Olares, Dify, dify self hosted, dify vs n8n, dify ollama, dify on olares
+description: Guide to leveraging Dify on Olares for building AI applications. Learn how to deploy Dify and add personal knowledge base with ease.
 ---
 # Customize your local AI assistant using Dify
 

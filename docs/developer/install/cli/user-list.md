@@ -1,7 +1,3 @@
----
-noindex: true
-description: The list subcommand displays a list of all registered users in the Olares system.
----
 # `list`
 
 ## Synopsis

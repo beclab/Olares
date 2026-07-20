@@ -1,10 +1,6 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 设备上设置 DeerFlow，集成 Ollama 和 Tavily 搜索引擎，实现本地深度研究代理。
-head:
-  - - meta
-    - name: keywords
-      content: Olares, DeerFlow, deep research agent, self-hosted DeerFlow, DeerFlow Ollama, local research agent, DeerFlow on Olares
 ---
 
 :::warning

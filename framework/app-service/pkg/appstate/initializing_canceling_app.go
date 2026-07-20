@@ -19,10 +19,10 @@ func (p *InitializingCancelingApp) IsAppCreated() bool {
 	return true
 }
 
-func NewInitializingCancelingApp(deps Deps,
+func NewInitializingCancelingApp(c client.Client,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
-	return deps.Factory.New(deps, manager, 0,
+	return appFactory.New(c, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &InitializingCancelingApp{
 				baseOperationApp: &baseOperationApp{
@@ -40,11 +40,11 @@ func NewInitializingCancelingApp(deps Deps,
 func (p *InitializingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 	klog.Infof("execute initializing operation appName=%s", p.manager.Spec.AppName)
 
-	if ok := p.deps.Factory.cancelOperation(p.manager.Name); !ok {
+	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
-	err := p.finishCancelToStopping(ctx, p.manager)
+	err := p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), appsv1.Stopping.String())
 	if err != nil {
 		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Stopping.String(), err)
 		return nil, err

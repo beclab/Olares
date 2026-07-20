@@ -1,5 +1,4 @@
 ---
-noindex: true
 outline: [2,3]
 description: Learn how to install ComfyUI, manage models via the ComfyUI Launcher, and generate high-performance images and videos on Olares One.
 head:

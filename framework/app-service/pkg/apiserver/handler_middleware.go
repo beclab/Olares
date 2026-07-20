@@ -219,8 +219,11 @@ func (h *Handler) installMiddleware(req *restful.Request, resp *restful.Response
 						return
 					}
 					if mgr.Status.OpType == v1alpha1.CancelOp {
-						opRecord.Message = "Install canceled"
-
+						if mgr.Status.Message == "timeout" {
+							opRecord.Message = constants.OperationCanceledByTerminusTpl
+						} else {
+							opRecord.Message = constants.OperationCanceledByUserTpl
+						}
 					}
 					opRecord.OpType = v1alpha1.CancelOp
 					opRecord.Status = v1alpha1.InstallingCanceled
