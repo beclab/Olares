@@ -553,7 +553,9 @@ const (
 
 // bridgeReadyTimeout bounds how long CreateBridgeConnection waits for the bridge
 // to obtain an IPv4 lease before treating the switch as failed and rolling back.
-const bridgeReadyTimeout = 45 * time.Second
+// 90s covers slow home/office DHCP renewals and switch MAC learning while still
+// failing closed if a competing profile steals the NIC (no IPv4 will ever appear).
+const bridgeReadyTimeout = 90 * time.Second
 
 // nmConnection is a minimal view of a NetworkManager connection profile.
 type nmConnection struct {
