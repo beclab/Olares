@@ -60,6 +60,11 @@ func main() {
 
 	mainCtx, cancel := context.WithCancel(context.Background())
 
+	// Set up the shared informers' lifecycle context. The factory itself starts
+	// lazily once the cluster is reachable; readers fall back to live Lists
+	// until the cache has synced.
+	utils.InitInformers(mainCtx)
+
 	apis := apiserver.NewServer(mainCtx, port)
 
 	if err := state.CheckCurrentStatus(mainCtx); err != nil {
