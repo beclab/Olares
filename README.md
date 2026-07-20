@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="#get-started">Install Olares</a> ·
-  <a href="https://www.olares.com/docs/one/olares-onboarding">Manage Olares with AI</a> ·
+  <a href="https://www.olares.com/docs/developer/cli-agent-skills">Manage Olares with AI</a> ·
   <a href="#contributing">Contribute</a>
 </p>
 
@@ -26,28 +26,29 @@
 </div>
 
 
-**Olares is an open-source personal cloud operating system you operate in plain language, built to run AI agents and LLMs on hardware you own.** 
+**Olares is an open-source personal cloud OS you operate in plain language, built to run AI agents and LLMs on hardware you own.** 
 
 Powered by Kubernetes, it turns your machines into a self-hosted AI platform accessible from any browser, giving everyone from individual users to small teams a unified place for compute, storage, networking, and apps.
 
-> 🌟 *If Olares is useful to you, consider giving the project a star. Your support encourages us to keep improving it.*
+https://github.com/user-attachments/assets/eb75468b-ff36-429f-bd83-483d9a59e0a3
 
+> 🌟 *If Olares is useful to you, consider giving the project a star. Your support encourages us to keep improving it.*
 
 ## Why Olares
 
-Great AI needs to know you. That requires access to your files, messages, and history. Cloud services store this sensitive data on third-party servers and charge based on usage.
+Great AI needs to know you. That requires access to your files, messages, and history. Many cloud AI services store this sensitive data on third-party servers and charge based on usage.
 
-Olares brings AI home, so you can run agents like [OpenClaw](https://www.olares.com/docs/use-cases/openclaw) locally while still enjoying the access and convenience of the cloud.
+Olares brings AI home, so you can run agents like [OpenClaw](https://www.olares.com/docs/use-cases/openclaw) with local LLMs on hardware you own while still enjoying the access and convenience of the cloud.
 
 ![Comparison of a digital life built on public cloud services with one powered by open-source apps on an Olares personal cloud](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 
 Features include:
 
-- **One-click local AI:** Deploy open-source AI apps and models from [Olares Market](https://www.olares.com/market/).
+- **One-click local AI:** Install open-source AI apps and models from [Olares Market](https://www.olares.com/market/) with one click.
 - **Accelerated computing management:** Pool GPUs and other accelerators across nodes, with time-slicing, memory-slicing, and exclusive GPU modes for AI, media, and gaming workloads.
-- **[Managed storage and files](https://www.olares.com/docs/manual/olares/files/):** Access local files, synced data, connected cloud storage, and external SMB/NFS shares through the built-in Files app, with [configurable backups](https://www.olares.com/docs/manual/olares/settings/backup).
+- **[Files and storage management](https://www.olares.com/docs/manual/olares/files/):** Access local files, synced data, connected cloud storage, and external SMB/NFS shares through the built-in Files app, with [configurable backups](https://www.olares.com/docs/manual/olares/settings/backup).
 - **[Private networking and access controls](https://www.olares.com/docs/developer/concepts/network):** Use a private VPN, reverse proxy, and public, private, or internal entrances to give apps HTTPS endpoints without manually exposing individual ports.
-- **Anytime, anywhere access:** A single Olares ID and the LarePass client reach all your services from any phone, desktop, or browser.
+- **Anytime, anywhere access:** Use your Olares ID and LarePass to access all your services from a phone, desktop, or browser.
 - **A suite of system apps:** Files, Vault, Market, Dashboard, Control Hub, and more, ready the moment you log in.
 
 ## Get started
@@ -73,23 +74,23 @@ A dedicated GPU is optional and enables local AI acceleration.
     curl -fsSL https://olares.sh | bash -
     ```
 
-    This command downloads the official installer from `olares.sh` and runs it with Bash. Review the [Linux script installation guide](https://www.olares.com/docs/manual/get-started/install-linux-script) for the complete process, requirements, and troubleshooting before running it.
+    This command downloads the official installer from `olares.sh` and runs it with Bash. For complete requirements, platform-specific instructions, and troubleshooting, see the [Linux script installation guide](https://www.olares.com/docs/manual/get-started/install-linux-script).
 
     For Windows, macOS, Raspberry Pi, or a VM, choose your platform in the [installation guide](https://www.olares.com/docs/manual/get-started/install-olares).
 
 3. Follow the guided web wizard, or do it entirely from the terminal with the [Activate using the Olares CLI](https://www.olares.com/docs/manual/best-practices/activate-olares-using-cli) tutorial.
 
-Once activated, you can reach Olares from any browser at your Olares ID, in the format like `https://desktop.marvin123.olares.com`.
+Once activated, you can access Olares from any browser using your Olares ID. For example: `https://desktop.marvin123.olares.com`.
 
 ## Key use cases
 
-- **Run AI agents that operate your cloud.** Hand tasks to a personal agent in plain language, from coding to everyday automation, and let it act on your behalf.
-- **Host local LLMs and generative AI.** Chat, generate images and video, and serve open models locally through the Model Console (llama.cpp, Ollama, vLLM, SGLang), keeping data and inference on your own hardware.
-- **Build a smart home and media hub.** Make Olares the local brain for your IoT devices, home automation, and personal media collection.
-- **Develop and host agentic apps.** Build, test, and run agentic apps and workflows in a secure, sandboxed environment.
-- **Keep audio private.** Run meeting transcription, translation, and text-to-speech locally, without handing your recordings to a third party.
-- **Collaborate on your own terms.** Stand up a free, self-hosted workspace for your team with open-source alternatives to costly SaaS.
-- **Own your data repository.** Store, sync, and manage your files, photos, and documents across every device and location.
+- **Use a personal AI agent.** Delegate research, coding, file management, and routine automation through plain language.
+- **Run generative AI locally.** Chat with open models, generate images and video, and connect local models to other apps, all from your own hardware.
+- **Manage smart home devices and media.** Connect home automation tools and stream your personal music and video libraries.
+- **Build and host agentic apps.** Develop, test, and run AI agents and workflows in isolated environments on Olares.
+- **Process audio locally.** Transcribe meetings, translate recordings, and generate speech without uploading audio to a third-party service.
+- **Create a self-hosted workspace.** Give your family or team tools for documents, automation, project management, and communication.
+- **Manage your personal data.** Store, sync, back up, and access files, photos, and documents across your devices.
 
 ## System architecture
 
@@ -145,4 +146,4 @@ Olares welcomes contributions across the project. Choose the path that best matc
 
 ## Acknowledgements
 
-The Olares project has incorporated numerous third-party open source projects, including: [Kubernetes](https://kubernetes.io/), [Kubesphere](https://github.com/kubesphere/kubesphere), [Padloc](https://padloc.app/), [K3S](https://k3s.io/), [JuiceFS](https://github.com/juicedata/juicefs), [MinIO](https://github.com/minio/minio), [Envoy](https://github.com/envoyproxy/envoy), [Authelia](https://github.com/authelia/authelia), [Infisical](https://github.com/Infisical/infisical), [Dify](https://github.com/langgenius/dify), [Seafile](https://github.com/haiwen/seafile),[HeadScale](https://headscale.net/), [tailscale](https://tailscale.com/), [Redis Operator](https://github.com/spotahome/redis-operator), [Nitro](https://nitro.jan.ai/), [RssHub](http://rsshub.app/), [predixy](https://github.com/joyieldInc/predixy), [nvshare](https://github.com/grgalex/nvshare), [LangChain](https://www.langchain.com/), [Quasar](https://quasar.dev/), [TrustWallet](https://trustwallet.com/), [Restic](https://restic.net/), [ZincSearch](https://zincsearch-docs.zinc.dev/), [filebrowser](https://filebrowser.org/), [lego](https://go-acme.github.io/lego/), [Velero](https://velero.io/), [s3rver](https://github.com/jamhall/s3rver), [Citusdata](https://www.citusdata.com/).
+The Olares project has incorporated numerous third-party open source projects, including: [Kubernetes](https://kubernetes.io/), [Kubesphere](https://github.com/kubesphere/kubesphere), [Padloc](https://padloc.app/), [K3S](https://k3s.io/), [JuiceFS](https://github.com/juicedata/juicefs), [MinIO](https://github.com/minio/minio), [Envoy](https://github.com/envoyproxy/envoy), [Authelia](https://github.com/authelia/authelia), [Infisical](https://github.com/Infisical/infisical), [Dify](https://github.com/langgenius/dify), [Seafile](https://github.com/haiwen/seafile), [HeadScale](https://headscale.net/), [Tailscale](https://tailscale.com/), [Redis Operator](https://github.com/spotahome/redis-operator), [Nitro](https://nitro.jan.ai/), [RSSHub](http://rsshub.app/), [predixy](https://github.com/joyieldInc/predixy), [nvshare](https://github.com/grgalex/nvshare), [LangChain](https://www.langchain.com/), [Quasar](https://quasar.dev/), [TrustWallet](https://trustwallet.com/), [Restic](https://restic.net/), [ZincSearch](https://zincsearch-docs.zinc.dev/), [filebrowser](https://filebrowser.org/), [lego](https://go-acme.github.io/lego/), [Velero](https://velero.io/), [s3rver](https://github.com/jamhall/s3rver), [Citusdata](https://www.citusdata.com/).
