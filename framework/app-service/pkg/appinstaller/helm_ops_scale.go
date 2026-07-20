@@ -13,10 +13,11 @@ import (
 // workloads to their final size.
 //
 // The implementation only sends the .workloads sub-tree and relies on
-// helm UpgradeCharts(reuseValue=true) to merge it over the previous
-// release's values — every other input (admin / userspace / domain /
-// service) is preserved by helm's reuse-values semantics. Behavior by
-// argument:
+// helm UpgradeCharts(ReuseValues) to merge it over the previous release's
+// values — every other input (admin / userspace / domain / service) is
+// preserved. ReuseValues (not ResetThenReuseValues) is intentional: Scale
+// must not pick up new chart defaults (e.g. image) just because the chart
+// on disk changed. Behavior by argument:
 //
 //   - replicas >= 0: every workload is forced to this exact value. Used
 //     by suspending_app to scale to 0, and by upgrading_app to land an
@@ -46,7 +47,7 @@ func (h *HelmOps) Scale(replicas int32) error {
 
 	if err := helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings,
 		h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace,
-		values, true /* reuseValue */); err != nil {
+		values, helm.ReuseValues); err != nil {
 		klog.Errorf("Failed to scale chart appName=%s replicas=%d err=%v", h.app.AppName, replicas, err)
 		return err
 	}
