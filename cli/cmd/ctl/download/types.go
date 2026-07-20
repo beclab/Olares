@@ -210,8 +210,8 @@ type CookieSummary struct {
 // CookieListResult is the GET /api/integration/cookies success body
 // (top-level {code, total, list} of CookieSummary).
 type CookieListResult struct {
-	List  []CookieSummary
-	Total int64
+	List  []CookieSummary `json:"list"`
+	Total int64           `json:"total"`
 }
 
 // UpsertCookieReq is PUT /api/integration/cookies body. Cookie is the full
