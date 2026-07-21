@@ -26,7 +26,7 @@
 </div>
 
 
-**Olares is an open-source personal cloud OS you operate in plain language, built to run AI agents and LLMs on hardware you own.** 
+**Olares is an open-source personal cloud OS you operate in plain language, built to run AI agents and LLMs on hardware you own.**
 
 Powered by Kubernetes, it turns your machines into a self-hosted AI platform accessible from any browser, giving everyone from individual users to small teams a unified place for compute, storage, networking, and apps.
 
@@ -48,7 +48,7 @@ Features include:
 - **Accelerated computing management:** Pool GPUs and other accelerators across nodes, with time-slicing, memory-slicing, and exclusive GPU modes for AI, media, and gaming workloads.
 - **[Files and storage management](https://www.olares.com/docs/manual/olares/files/):** Access local files, synced data, connected cloud storage, and external SMB/NFS shares through the built-in Files app, with [configurable backups](https://www.olares.com/docs/manual/olares/settings/backup).
 - **[Private networking and access controls](https://www.olares.com/docs/developer/concepts/network):** Use a private VPN, reverse proxy, and public, private, or internal entrances to give apps HTTPS endpoints without manually exposing individual ports.
-- **Anytime, anywhere access:** Use your Olares ID and LarePass to access all your services from a phone, desktop, or browser.
+- **Anytime, anywhere access:** Use your Olares ID and [LarePass](https://www.olares.com/docs/manual/larepass/) to access all your services from a phone, desktop, or browser.
 - **A suite of system apps:** Files, Vault, Market, Dashboard, Control Hub, and more, ready the moment you log in.
 
 ## Get started
@@ -59,14 +59,14 @@ Olares installs on a Linux host (bare metal or VM), with dedicated installation 
 
 - **CPU:** At least 4 cores
 - **RAM:** At least 8 GB of available memory
-- **Storage:** At least 150 GB of available SSD storage; installation fails on an HDD
+- **Storage:** At least 150 GB of available SSD storage; installation will fail on an HDD
 - **OS:** Ubuntu 22.04 to 25.04, or Debian 12 or 13
 
 A dedicated GPU is optional and enables local AI acceleration.
 
 ### Install and activate
 
-1. Create your Olares ID in [LarePass](https://www.olares.com/larepass), the client app that adds secure login, a built-in VPN, and file sync.
+1. Create your Olares ID in [LarePass](https://www.olares.com/docs/manual/larepass/), the client app that adds secure login, a built-in VPN, and file sync.
 
 2. On your Linux host, run:
 
@@ -80,14 +80,14 @@ A dedicated GPU is optional and enables local AI acceleration.
 
 3. Follow the guided web wizard, or do it entirely from the terminal with the [Activate using the Olares CLI](https://www.olares.com/docs/manual/best-practices/activate-olares-using-cli) tutorial.
 
-Once activated, you can access Olares from any browser using your Olares ID. For example: `https://desktop.marvin123.olares.com`.
+Once activated, you can access Olares from any browser at an address based on your Olares ID. For example, if your Olares ID is `marvin123`, your desktop is at `https://desktop.marvin123.olares.com`.
 
 ## Key use cases
 
 - **Use a personal AI agent.** Delegate research, coding, file management, and routine automation through plain language.
 - **Run generative AI locally.** Chat with open models, generate images and video, and connect local models to other apps, all from your own hardware.
 - **Manage smart home devices and media.** Connect home automation tools and stream your personal music and video libraries.
-- **Build and host agentic apps.** Develop, test, and run AI agents and workflows in isolated environments on Olares.
+- **Build and host agentic apps.** Develop, test, and run apps and workflows in isolated environments on Olares.
 - **Process audio locally.** Transcribe meetings, translate recordings, and generate speech without uploading audio to a third-party service.
 - **Create a self-hosted workspace.** Give your family or team tools for documents, automation, project management, and communication.
 - **Manage your personal data.** Store, sync, back up, and access files, photos, and documents across your devices.
@@ -96,13 +96,13 @@ Once activated, you can access Olares from any browser using your Olares ID. For
 
 Just as public clouds offer IaaS, PaaS, and SaaS layers, Olares provides open-source alternatives to each of these layers.
 
-  ![Olares architecture mapping open-source components to IaaS, PaaS, and SaaS layers alongside public cloud equivalents](https://app.cdn.olares.com/github/olares/olares-architecture.jpg)
+![Olares architecture mapping open-source components to IaaS, PaaS, and SaaS layers alongside public cloud equivalents](https://app.cdn.olares.com/github/olares/olares-architecture.jpg)
 
- For a detailed description of each component, refer to [Olares architecture](https://www.olares.com/docs/developer/concepts/system-architecture).
+For a detailed description of each component, refer to [Olares architecture](https://www.olares.com/docs/developer/concepts/system-architecture).
 
 > 🔍 **How is Olares different from traditional NAS?**
 >
-> Olares focuses on building an all-in-one self-hosted personal cloud experience. Its core features and target users differ significantly from traditional Network Attached Storage (NAS) systems, which primarily focus on network storage. For more details, see [Compare Olares and NAS](https://www.olares.com/blog/compare-olares-and-nas/).
+> Olares focuses on building an all-in-one self-hosted personal cloud experience. Its core features and target users differ significantly from Network Attached Storage (NAS) systems, which primarily focus on network storage. For more details, see [Compare Olares and NAS](https://www.olares.com/blog/compare-olares-and-nas/).
 
 ## Project navigation
 
@@ -146,4 +146,4 @@ Olares welcomes contributions across the project. Choose the path that best matc
 
 ## Acknowledgements
 
-The Olares project has incorporated numerous third-party open source projects, including: [Kubernetes](https://kubernetes.io/), [Kubesphere](https://github.com/kubesphere/kubesphere), [Padloc](https://padloc.app/), [K3S](https://k3s.io/), [JuiceFS](https://github.com/juicedata/juicefs), [MinIO](https://github.com/minio/minio), [Envoy](https://github.com/envoyproxy/envoy), [Authelia](https://github.com/authelia/authelia), [Infisical](https://github.com/Infisical/infisical), [Dify](https://github.com/langgenius/dify), [Seafile](https://github.com/haiwen/seafile), [HeadScale](https://headscale.net/), [Tailscale](https://tailscale.com/), [Redis Operator](https://github.com/spotahome/redis-operator), [Nitro](https://nitro.jan.ai/), [RSSHub](http://rsshub.app/), [predixy](https://github.com/joyieldInc/predixy), [nvshare](https://github.com/grgalex/nvshare), [LangChain](https://www.langchain.com/), [Quasar](https://quasar.dev/), [TrustWallet](https://trustwallet.com/), [Restic](https://restic.net/), [ZincSearch](https://zincsearch-docs.zinc.dev/), [filebrowser](https://filebrowser.org/), [lego](https://go-acme.github.io/lego/), [Velero](https://velero.io/), [s3rver](https://github.com/jamhall/s3rver), [Citusdata](https://www.citusdata.com/).
+The Olares project has incorporated numerous third-party open-source projects, including: [Kubernetes](https://kubernetes.io/), [Kubesphere](https://github.com/kubesphere/kubesphere), [Padloc](https://padloc.app/), [K3S](https://k3s.io/), [JuiceFS](https://github.com/juicedata/juicefs), [MinIO](https://github.com/minio/minio), [Envoy](https://github.com/envoyproxy/envoy), [Authelia](https://github.com/authelia/authelia), [Infisical](https://github.com/Infisical/infisical), [Dify](https://github.com/langgenius/dify), [Seafile](https://github.com/haiwen/seafile), [HeadScale](https://headscale.net/), [Tailscale](https://tailscale.com/), [Redis Operator](https://github.com/spotahome/redis-operator), [Nitro](https://nitro.jan.ai/), [RSSHub](http://rsshub.app/), [predixy](https://github.com/joyieldInc/predixy), [nvshare](https://github.com/grgalex/nvshare), [LangChain](https://www.langchain.com/), [Quasar](https://quasar.dev/), [TrustWallet](https://trustwallet.com/), [Restic](https://restic.net/), [ZincSearch](https://zincsearch-docs.zinc.dev/), [filebrowser](https://filebrowser.org/), [lego](https://go-acme.github.io/lego/), [Velero](https://velero.io/), [s3rver](https://github.com/jamhall/s3rver), [Citusdata](https://www.citusdata.com/).
