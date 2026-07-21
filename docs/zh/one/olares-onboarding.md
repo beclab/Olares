@@ -209,4 +209,4 @@ Deploy this app to Olares: https://github.com/dockersamples/101-tutorial
 
 - [将 OpenCode 设置为你的 AI 编码代理](../use-cases/opencode.md)：完整的 OpenCode 设置使用指南。
 - [安装与使用 Agent Skills](../developer/cli-agent-skills.md)：Olares CLI 技能包详情。
-- [管理加速器资源](gpu.md)：了解如何在 Olares One 上查看 GPU 使用情况、切换 GPU 模式以及释放加速器资源。
+- [管理加速器资源](../manual/olares/settings/gpu-resource.md)：了解如何查看 GPU 使用情况、切换 GPU 模式以及释放加速器资源。

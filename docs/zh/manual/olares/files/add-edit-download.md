@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解在 Olares 中执行基础文件操作的步骤，如上传、预览、编辑和下载文件。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 文件管理器, 上传文件, 下载文件, 预览文件, 编辑文件, 文件管理
 ---
 # 基础文件操作
 
@@ -159,3 +163,10 @@ LarePass 支持通过手机的分享选项快速上传文件或媒体内容。
 
 - **Windows**：按住 **Control** 并点击目标文件
 - **Mac**：按住 **Command** 并点击目标文件
+
+## 资源
+
+- [共享文件](share-files.md)：与他人共享文件和文件夹。
+- [同步文件到本地](sync-files.md)：在多设备间保持文件同步。
+- [挂载 SMB 共享](mount-SMB.md)：在文件管理器中访问网络共享。
+- [挂载云存储](mount-cloud-storage.md)：在文件管理器中管理 Google Drive、Dropbox 和 S3。
