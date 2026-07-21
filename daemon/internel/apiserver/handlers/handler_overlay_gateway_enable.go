@@ -42,7 +42,12 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 	// create the lock file synchronously while holding the mutex so that a
 	// concurrent enable request observes it and returns "activating" instead of
 	// starting a second switch (single-flight).
-	os.Create(OverlayGatewayEnableLockFile)
+	f, err := os.Create(OverlayGatewayEnableLockFile)
+	if err != nil {
+		klog.Errorf("overlay gateway enable: create lock file failed: %v", err)
+		return h.ErrJSON(ctx, http.StatusInternalServerError, "failed to create overlay gateway enable lock")
+	}
+	_ = f.Close()
 	enableOverlayGatewayError = ""
 	disableOverlayGatewayError = ""
 

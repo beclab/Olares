@@ -572,6 +572,58 @@ var (
 	nmCheckpointRollbackFn = nmCheckpointRollback
 )
 
+// nmcliCombinedOutput runs nmcli (or any argv[0]) and returns combined stdout.
+// Tests replace this to assert argv without talking to NetworkManager.
+var nmcliCombinedOutput = func(ctx context.Context, name string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Env = os.Environ()
+	return cmd.Output()
+}
+
+// bridgeAddArgs builds the nmcli argv for creating br-olares with PHY MAC clone
+// and DHCP on the bridge (INV-MAC-01).
+func bridgeAddArgs(mac string) []string {
+	return []string{
+		"connection", "add", "type", "bridge", "con-name", bridgeConnectionName, "ifname", bridgeConnectionName,
+		"connection.autoconnect", "yes", "bridge.stp", "no",
+		"ethernet.cloned-mac-address", mac,
+		"ipv4.method", "auto",
+		"ipv6.method", "ignore",
+	}
+}
+
+// classifyBridgeResetUUIDs partitions NM profiles into br-olares / slave /
+// original-connection UUID lists used by ResetBridgeConnection. Unrelated
+// bridges (e.g. docker0, br0) are ignored.
+func classifyBridgeResetUUIDs(conns []nmConnection) (bridgeUUIDs, slaveUUIDs, originalUUIDs []string) {
+	for _, c := range conns {
+		switch {
+		case c.Name == bridgeConnectionName:
+			bridgeUUIDs = append(bridgeUUIDs, c.UUID)
+		case strings.HasPrefix(c.Name, bridgeSlavePrefix):
+			slaveUUIDs = append(slaveUUIDs, c.UUID)
+		case c.Name == originalConnectionName:
+			originalUUIDs = append(originalUUIDs, c.UUID)
+		}
+	}
+	return bridgeUUIDs, slaveUUIDs, originalUUIDs
+}
+
+// activateBridgeSwitch enables the slave, downs the physical profile, then ups
+// the bridge — three discrete nmcli invocations (no sh -c).
+func activateBridgeSwitch(ctx context.Context, nmcli, slaveUUID, ifUUID, bridgeUUID string) error {
+	if _, err := nmcliCombinedOutput(ctx, nmcli, "connection", "modify", "uuid", slaveUUID, "connection.autoconnect", "yes"); err != nil {
+		return fmt.Errorf("failed to enable autoconnect on bridge slave %s: %w", slaveUUID, err)
+	}
+	if _, err := nmcliCombinedOutput(ctx, nmcli, "connection", "down", "uuid", ifUUID); err != nil {
+		return fmt.Errorf("failed to down original connection %s: %w", ifUUID, err)
+	}
+	if _, err := nmcliCombinedOutput(ctx, nmcli, "connection", "up", "uuid", bridgeUUID); err != nil {
+		return fmt.Errorf("failed to up bridge connection %s: %w", bridgeUUID, err)
+	}
+	return nil
+}
+
 // nmConnection is a minimal view of a NetworkManager connection profile.
 type nmConnection struct {
 	UUID string
@@ -759,16 +811,7 @@ func ResetBridgeConnection(ctx context.Context) error {
 	}
 
 	var bridgeUUIDs, slaveUUIDs, originalUUIDs []string
-	for _, c := range conns {
-		switch {
-		case c.Name == bridgeConnectionName:
-			bridgeUUIDs = append(bridgeUUIDs, c.UUID)
-		case strings.HasPrefix(c.Name, bridgeSlavePrefix):
-			slaveUUIDs = append(slaveUUIDs, c.UUID)
-		case c.Name == originalConnectionName:
-			originalUUIDs = append(originalUUIDs, c.UUID)
-		}
-	}
+	bridgeUUIDs, slaveUUIDs, originalUUIDs = classifyBridgeResetUUIDs(conns)
 	if len(slaveUUIDs) > 1 || len(bridgeUUIDs) > 1 {
 		klog.Warningf("unexpected leftover bridge profiles: bridges=%d slaves=%d", len(bridgeUUIDs), len(slaveUUIDs))
 	}
@@ -917,15 +960,7 @@ func CreateBridgeConnection(ctx context.Context) error {
 
 	// create the bridge connection; the cloned MAC preserves the DHCP lease/IP
 	klog.Infof("create bridge connection [%s]", bridgeConnectionName)
-	cmd := exec.CommandContext(ctx, nmcli,
-		"connection", "add", "type", "bridge", "con-name", bridgeConnectionName, "ifname", bridgeConnectionName,
-		"connection.autoconnect", "yes", "bridge.stp", "no",
-		"ethernet.cloned-mac-address", mac,
-		"ipv4.method", "auto",
-		"ipv6.method", "ignore",
-	)
-	cmd.Env = os.Environ()
-	if _, err = cmd.Output(); err != nil {
+	if _, err = nmcliCombinedOutput(ctx, nmcli, bridgeAddArgs(mac)...); err != nil {
 		return rollback(fmt.Errorf("failed to create bridge connection: %w", err))
 	}
 	if bridgeUUID, err = connectionUUIDByName(ctx, nmcli, bridgeConnectionName); err != nil {
@@ -935,12 +970,10 @@ func CreateBridgeConnection(ctx context.Context) error {
 	// create the bridge slave connection on the physical interface
 	slaveConnectionName := fmt.Sprintf("%s%s", bridgeSlavePrefix, iface)
 	klog.Infof("create bridge slave connection [%s]", slaveConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli,
+	if _, err = nmcliCombinedOutput(ctx, nmcli,
 		"connection", "add", "type", "ethernet", "con-name", slaveConnectionName, "ifname", iface,
 		"master", bridgeConnectionName, "slave-type", "bridge", "connection.autoconnect", "yes",
-	)
-	cmd.Env = os.Environ()
-	if _, err = cmd.Output(); err != nil {
+	); err != nil {
 		return rollback(fmt.Errorf("failed to create bridge slave connection: %w", err))
 	}
 	if slaveUUID, err = connectionUUIDByName(ctx, nmcli, slaveConnectionName); err != nil {
@@ -963,15 +996,11 @@ func CreateBridgeConnection(ctx context.Context) error {
 		disabledUUIDs = append(disabledUUIDs, c.UUID)
 	}
 
-	// atomic switch: enslave the physical NIC to the bridge in a single shot to
-	// minimise the default-route gap. All references are by UUID.
+	// Switch the physical NIC onto the bridge with three separate nmcli shots
+	// (no shell). Failures are attributed per step; down failure skips up.
 	klog.Infof("turn on the bridge connection [%s]", bridgeConnectionName)
-	cmd = exec.CommandContext(ctx, "sh", "-c",
-		fmt.Sprintf("%s connection modify uuid %s connection.autoconnect yes && %s connection down uuid %s && %s connection up uuid %s",
-			nmcli, slaveUUID, nmcli, ifUUID, nmcli, bridgeUUID))
-	cmd.Env = os.Environ()
-	if _, err = cmd.Output(); err != nil {
-		return rollback(fmt.Errorf("failed to activate bridge connection: %w", err))
+	if err := activateBridgeSwitch(ctx, nmcli, slaveUUID, ifUUID, bridgeUUID); err != nil {
+		return rollback(err)
 	}
 
 	// verify the bridge really came up with an IPv4 address; otherwise roll back
