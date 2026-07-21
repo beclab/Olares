@@ -30,7 +30,7 @@ func (e *enableOverlayGateway) Execute(ctx context.Context, p any) (res any, err
 	cmd.Env = os.Environ()
 	_, err = cmd.Output()
 	if err != nil {
-		klog.Error("failed to enable and start the CNI-DHCP service: %w", err)
+		klog.Errorf("overlay gateway enable: enable cni-dhcp.service failed: %v", err)
 		return nil, err
 	}
 
@@ -38,6 +38,7 @@ func (e *enableOverlayGateway) Execute(ctx context.Context, p any) (res any, err
 	err = utils.CreateBridgeConnection(ctx)
 	utils.NotifyNetworkChanged()
 	if err != nil {
+		klog.Errorf("overlay gateway enable: create bridge connection failed: %v", err)
 		return nil, err
 	}
 
