@@ -813,7 +813,11 @@ func ResetBridgeConnection(ctx context.Context) error {
 
 	conns, err := listNMConnections(ctx, nmcli)
 	if err != nil {
+		// Without a connection list we cannot safely identify br-olares /
+		// original-connection UUIDs. Fail closed so disable does not proceed to
+		// stop cni-dhcp / clear app settings while the bridge may still be up.
 		klog.Errorf("overlay bridge reset: list connections error: %v", err)
+		return fmt.Errorf("list NM connections for bridge reset: %w", err)
 	}
 
 	var bridgeUUIDs, slaveUUIDs, originalUUIDs []string
