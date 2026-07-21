@@ -3,7 +3,14 @@
 
 package utils
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+
+	"github.com/godbus/dbus/v5"
+)
 
 func TestParseNMConnections(t *testing.T) {
 	output := []byte(
@@ -65,5 +72,156 @@ func TestParseNMConnectionsBridgeClassification(t *testing.T) {
 	}
 	if bridges != 1 || slaves != 1 {
 		t.Fatalf("expected 1 bridge and 1 slave, got bridges=%d slaves=%d", bridges, slaves)
+	}
+}
+
+func TestBridgeAddArgsClonedMAC(t *testing.T) {
+	mac := "aa:bb:cc:dd:ee:ff"
+	args := bridgeAddArgs(mac)
+
+	joined := strings.Join(args, " ")
+	if !strings.Contains(joined, "ethernet.cloned-mac-address "+mac) {
+		t.Fatalf("expected cloned-mac-address %q in argv, got %v", mac, args)
+	}
+	if !strings.Contains(joined, "ipv4.method auto") {
+		t.Fatalf("expected ipv4.method auto in argv, got %v", args)
+	}
+	if mac == "" {
+		t.Fatal("test mac must be non-empty")
+	}
+	// ensure the mac token itself is present as a dedicated argv element
+	found := false
+	for i, a := range args {
+		if a == "ethernet.cloned-mac-address" && i+1 < len(args) && args[i+1] == mac {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("cloned-mac-address value missing or empty in %v", args)
+	}
+}
+
+func TestClassifyBridgeResetUUIDsIgnoresForeignBridges(t *testing.T) {
+	conns := []nmConnection{
+		{UUID: "b1", Type: "bridge", Name: bridgeConnectionName},
+		{UUID: "s1", Type: "802-3-ethernet", Name: bridgeSlavePrefix + "eth0"},
+		{UUID: "o1", Type: "802-3-ethernet", Name: originalConnectionName},
+		{UUID: "docker", Type: "bridge", Name: "docker0"},
+		{UUID: "br0", Type: "bridge", Name: "br0"},
+		{UUID: "other", Type: "802-3-ethernet", Name: "Wired connection 1"},
+	}
+	bridges, slaves, originals := classifyBridgeResetUUIDs(conns)
+	if len(bridges) != 1 || bridges[0] != "b1" {
+		t.Fatalf("unexpected bridges: %v", bridges)
+	}
+	if len(slaves) != 1 || slaves[0] != "s1" {
+		t.Fatalf("unexpected slaves: %v", slaves)
+	}
+	if len(originals) != 1 || originals[0] != "o1" {
+		t.Fatalf("unexpected originals: %v", originals)
+	}
+	for _, u := range append(append(bridges, slaves...), originals...) {
+		if u == "docker" || u == "br0" || u == "other" {
+			t.Fatalf("foreign UUID %q must not be selected for reset delete", u)
+		}
+	}
+}
+
+func TestActivateBridgeSwitchSkipsUpWhenDownFails(t *testing.T) {
+	orig := nmcliCombinedOutput
+	t.Cleanup(func() { nmcliCombinedOutput = orig })
+
+	var calls [][]string
+	nmcliCombinedOutput = func(ctx context.Context, name string, args ...string) ([]byte, error) {
+		cp := append([]string{name}, args...)
+		calls = append(calls, cp)
+		if len(args) >= 2 && args[1] == "down" {
+			return nil, errors.New("down failed")
+		}
+		return []byte{}, nil
+	}
+
+	err := activateBridgeSwitch(context.Background(), "nmcli", "slave-u", "if-u", "br-u")
+	if err == nil {
+		t.Fatal("expected error when down fails")
+	}
+	if !strings.Contains(err.Error(), "down original connection") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, c := range calls {
+		joined := strings.Join(c, " ")
+		if strings.Contains(joined, "connection up") {
+			t.Fatalf("up must not be called after down failure; calls=%v", calls)
+		}
+	}
+	if len(calls) != 2 {
+		t.Fatalf("expected modify+down only, got %d calls: %v", len(calls), calls)
+	}
+}
+
+func TestCommitNMCheckpointDestroyFailureTriggersRollback(t *testing.T) {
+	origDestroy := nmCheckpointDestroyFn
+	origRollback := nmCheckpointRollbackFn
+	t.Cleanup(func() {
+		nmCheckpointDestroyFn = origDestroy
+		nmCheckpointRollbackFn = origRollback
+	})
+
+	destroyCalls := 0
+	rollbackCalls := 0
+	manualCalls := 0
+	nmCheckpointDestroyFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath) error {
+		destroyCalls++
+		return errors.New("destroy boom")
+	}
+	nmCheckpointRollbackFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath) error {
+		rollbackCalls++
+		return nil
+	}
+
+	err := commitNMCheckpoint(context.Background(), nil, dbus.ObjectPath("/org/freedesktop/NetworkManager/Checkpoint/1"), func() {
+		manualCalls++
+	})
+	if err == nil {
+		t.Fatal("expected commit failure error")
+	}
+	if !strings.Contains(err.Error(), "checkpoint commit failed") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if destroyCalls != checkpointDestroyRetries {
+		t.Fatalf("expected %d destroy attempts, got %d", checkpointDestroyRetries, destroyCalls)
+	}
+	if rollbackCalls != 1 {
+		t.Fatalf("expected 1 rollback, got %d", rollbackCalls)
+	}
+	if manualCalls != 0 {
+		t.Fatalf("manual rollback should not run when CheckpointRollback succeeds, got %d", manualCalls)
+	}
+}
+
+func TestCommitNMCheckpointDestroyFailureManualWhenRollbackFails(t *testing.T) {
+	origDestroy := nmCheckpointDestroyFn
+	origRollback := nmCheckpointRollbackFn
+	t.Cleanup(func() {
+		nmCheckpointDestroyFn = origDestroy
+		nmCheckpointRollbackFn = origRollback
+	})
+
+	nmCheckpointDestroyFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath) error {
+		return errors.New("destroy boom")
+	}
+	nmCheckpointRollbackFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath) error {
+		return errors.New("rollback boom")
+	}
+	manualCalls := 0
+	err := commitNMCheckpoint(context.Background(), nil, dbus.ObjectPath("/cp/1"), func() {
+		manualCalls++
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if manualCalls != 1 {
+		t.Fatalf("expected manual rollback once, got %d", manualCalls)
 	}
 }
