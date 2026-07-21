@@ -245,7 +245,7 @@ spec:
             value: os_framework_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.3.5
+        image: beclab/search3:v0.3.7
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -285,6 +285,10 @@ spec:
           value: os.users
         - name: NATS_SUBJECT_SYSTEM_GROUPS
           value: os.groups
+        - name: NATS_SEARCH_ENABLED
+          value: "true"
+        - name: NATS_SEARCH_CACHE_HITS
+          value: "true"
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -306,7 +310,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: search3monitor
-        image: beclab/search3monitor:v0.3.5
+        image: beclab/search3monitor:v0.3.7
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8081
