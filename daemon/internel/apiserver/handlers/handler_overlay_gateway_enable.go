@@ -17,6 +17,7 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 
 	s, err := h.getOverlayGatewayStatus(ctx.Context())
 	if err != nil {
+		klog.Errorf("overlay gateway enable: get status failed: %v", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
 
@@ -61,6 +62,7 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 		// the original network. Surface the failure so the UI stops spinning.
 		_, err := cmd.Execute(ctx, nil)
 		if err != nil {
+			klog.Errorf("overlay gateway enable: execute failed: %v", err)
 			enableOverlayGatewayError = err.Error()
 			return
 		}
@@ -75,6 +77,7 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 			case <-t.C:
 				s, err := h.getOverlayGatewayStatus(ctx)
 				if err != nil {
+					klog.Errorf("overlay gateway enable: status poll failed: %v", err)
 					enableOverlayGatewayError = err.Error()
 					return
 				}

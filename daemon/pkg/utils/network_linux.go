@@ -613,12 +613,15 @@ func classifyBridgeResetUUIDs(conns []nmConnection) (bridgeUUIDs, slaveUUIDs, or
 // the bridge — three discrete nmcli invocations (no sh -c).
 func activateBridgeSwitch(ctx context.Context, nmcli, slaveUUID, ifUUID, bridgeUUID string) error {
 	if _, err := nmcliCombinedOutput(ctx, nmcli, "connection", "modify", "uuid", slaveUUID, "connection.autoconnect", "yes"); err != nil {
+		klog.Errorf("overlay bridge activate: enable autoconnect on slave %s failed: %v", slaveUUID, err)
 		return fmt.Errorf("failed to enable autoconnect on bridge slave %s: %w", slaveUUID, err)
 	}
 	if _, err := nmcliCombinedOutput(ctx, nmcli, "connection", "down", "uuid", ifUUID); err != nil {
+		klog.Errorf("overlay bridge activate: down original connection %s failed: %v", ifUUID, err)
 		return fmt.Errorf("failed to down original connection %s: %w", ifUUID, err)
 	}
 	if _, err := nmcliCombinedOutput(ctx, nmcli, "connection", "up", "uuid", bridgeUUID); err != nil {
+		klog.Errorf("overlay bridge activate: up bridge connection %s failed: %v", bridgeUUID, err)
 		return fmt.Errorf("failed to up bridge connection %s: %w", bridgeUUID, err)
 	}
 	return nil
@@ -730,10 +733,12 @@ func connectionUUIDByName(ctx context.Context, nmcli, name string) (string, erro
 	cmd.Env = os.Environ()
 	output, err := cmd.Output()
 	if err != nil {
+		klog.Errorf("overlay bridge: resolve uuid for connection %s failed: %v", name, err)
 		return "", err
 	}
 	uuid := strings.TrimSpace(string(output))
 	if uuid == "" {
+		klog.Errorf("overlay bridge: connection %s has empty uuid", name)
 		return "", fmt.Errorf("connection %s has no uuid", name)
 	}
 	return uuid, nil
@@ -802,12 +807,13 @@ rollback:
 func ResetBridgeConnection(ctx context.Context) error {
 	nmcli, err := findCommand(ctx, "nmcli")
 	if err != nil {
+		klog.Errorf("overlay bridge reset: find nmcli failed: %v", err)
 		return err
 	}
 
 	conns, err := listNMConnections(ctx, nmcli)
 	if err != nil {
-		klog.Errorf("list connections error: %v", err)
+		klog.Errorf("overlay bridge reset: list connections error: %v", err)
 	}
 
 	var bridgeUUIDs, slaveUUIDs, originalUUIDs []string
@@ -858,6 +864,7 @@ func ResetBridgeConnection(ctx context.Context) error {
 func CreateBridgeConnection(ctx context.Context) error {
 	nmcli, err := findCommand(ctx, "nmcli")
 	if err != nil {
+		klog.Errorf("overlay bridge create: find nmcli failed: %v", err)
 		return err
 	}
 
@@ -876,6 +883,7 @@ func CreateBridgeConnection(ctx context.Context) error {
 	}
 	mac := strings.TrimSpace(string(mdata))
 	if mac == "" {
+		klog.Errorf("overlay bridge create: interface %s MAC address is empty", iface)
 		return fmt.Errorf("interface %s MAC address is empty", iface)
 	}
 
@@ -890,6 +898,7 @@ func CreateBridgeConnection(ctx context.Context) error {
 		cmd := exec.CommandContext(ctx, nmcli, "connection", "modify", "uuid", ifUUID, "con-name", originalConnectionName)
 		cmd.Env = os.Environ()
 		if _, err = cmd.Output(); err != nil {
+			klog.Errorf("overlay bridge create: backup original connection %s failed: %v", ifUUID, err)
 			return fmt.Errorf("failed to backup original connection: %w", err)
 		}
 	}

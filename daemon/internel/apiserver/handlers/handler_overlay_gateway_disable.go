@@ -17,6 +17,7 @@ func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface)
 
 	s, err := h.getOverlayGatewayStatus(ctx.Context())
 	if err != nil {
+		klog.Errorf("overlay gateway disable: get status failed: %v", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
 
@@ -58,6 +59,7 @@ func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface)
 
 		_, err := cmd.Execute(bgCtx, nil)
 		if err != nil {
+			klog.Errorf("overlay gateway disable: execute failed: %v", err)
 			disableOverlayGatewayError = err.Error()
 			return
 		}
@@ -71,6 +73,7 @@ func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface)
 			case <-t.C:
 				s, err := h.getOverlayGatewayStatus(bgCtx)
 				if err != nil {
+					klog.Errorf("overlay gateway disable: status poll failed: %v", err)
 					disableOverlayGatewayError = err.Error()
 					return
 				}
