@@ -557,6 +557,21 @@ const (
 // failing closed if a competing profile steals the NIC (no IPv4 will ever appear).
 const bridgeReadyTimeout = 90 * time.Second
 
+// checkpointDestroyRetries / checkpointDestroyRetryDelay bound how hard we try
+// to commit (CheckpointDestroy) after the bridge is already ready. A failed
+// destroy must not be treated as success: NetworkManager would still auto-roll
+// back when the checkpoint timeout expires ("UI on, then silently off").
+const (
+	checkpointDestroyRetries    = 3
+	checkpointDestroyRetryDelay = 200 * time.Millisecond
+)
+
+// Injectable for unit tests; production defaults to the real D-Bus helpers.
+var (
+	nmCheckpointDestroyFn  = nmCheckpointDestroy
+	nmCheckpointRollbackFn = nmCheckpointRollback
+)
+
 // nmConnection is a minimal view of a NetworkManager connection profile.
 type nmConnection struct {
 	UUID string
@@ -688,6 +703,45 @@ func waitBridgeReady(ctx context.Context, timeout time.Duration) bool {
 		case <-time.After(2 * time.Second):
 		}
 	}
+}
+
+// commitNMCheckpoint discards the checkpoint after a successful bridge switch
+// (NM "commit"). On persistent Destroy failure it rolls the network back and
+// returns an error so callers never report success while NM still holds an
+// auto-rollback timer.
+func commitNMCheckpoint(ctx context.Context, conn *dbus.Conn, checkpoint dbus.ObjectPath, manualRollback func()) error {
+	if checkpoint == "" {
+		return nil
+	}
+	var lastErr error
+	for attempt := 1; attempt <= checkpointDestroyRetries; attempt++ {
+		if err := nmCheckpointDestroyFn(ctx, conn, checkpoint); err != nil {
+			lastErr = err
+			klog.Errorf("NM checkpoint destroy failed (attempt %d/%d): %v", attempt, checkpointDestroyRetries, err)
+			if attempt < checkpointDestroyRetries {
+				select {
+				case <-ctx.Done():
+					lastErr = ctx.Err()
+					klog.Errorf("NM checkpoint destroy aborted by context: %v", lastErr)
+					goto rollback
+				case <-time.After(checkpointDestroyRetryDelay):
+				}
+				continue
+			}
+			break
+		}
+		return nil
+	}
+
+rollback:
+	klog.Errorf("NM checkpoint commit failed after retries, rolling back bridged state: %v", lastErr)
+	if e := nmCheckpointRollbackFn(ctx, conn, checkpoint); e != nil {
+		klog.Errorf("NM checkpoint rollback failed (%v), applying manual rollback", e)
+		if manualRollback != nil {
+			manualRollback()
+		}
+	}
+	return fmt.Errorf("checkpoint commit failed: %w", lastErr)
 }
 
 // ResetBridgeConnection tears down the overlay bridge and restores the original
@@ -851,7 +905,7 @@ func CreateBridgeConnection(ctx context.Context) error {
 	rollback := func(cause error) error {
 		klog.Errorf("create bridge connection failed, rolling back: %v", cause)
 		if checkpoint != "" {
-			if e := nmCheckpointRollback(ctx, dbusConn, checkpoint); e != nil {
+			if e := nmCheckpointRollbackFn(ctx, dbusConn, checkpoint); e != nil {
 				klog.Errorf("NM checkpoint rollback failed (%v), applying manual rollback", e)
 				manualRollback()
 			}
@@ -926,10 +980,9 @@ func CreateBridgeConnection(ctx context.Context) error {
 	}
 
 	// commit: discard the checkpoint so NetworkManager keeps the bridged state.
-	if checkpoint != "" {
-		if e := nmCheckpointDestroy(ctx, dbusConn, checkpoint); e != nil {
-			klog.Errorf("NM checkpoint destroy failed: %v", e)
-		}
+	// Destroy failure must not succeed the call — NM would still auto-roll back.
+	if err := commitNMCheckpoint(ctx, dbusConn, checkpoint, manualRollback); err != nil {
+		return err
 	}
 
 	klog.Infof("bridge connection [%s] is active", bridgeConnectionName)
