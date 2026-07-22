@@ -1,19 +1,19 @@
-package egressagent
+package meshoutagent
 
 import (
 	"fmt"
 	"strings"
 )
 
-// EgressRoute describes one provider domain/path → system-server upstream.
-type EgressRoute struct {
+// MeshOutRoute describes one provider domain/path → system-server upstream.
+type MeshOutRoute struct {
 	Domain       string
 	Paths        []string
 	UpstreamHost string
 }
 
-// RenderEgressNginxConf builds nginx http{} config for SA Bearer inject (E-1～E-4).
-func RenderEgressNginxConf(saTokenPath string, routes []EgressRoute) string {
+// RenderMeshOutNginxConf builds nginx http{} config for SA Bearer inject (E-1～E-4).
+func RenderMeshOutNginxConf(saTokenPath string, routes []MeshOutRoute) string {
 	if saTokenPath == "" {
 		saTokenPath = SATokenMountPath + "/token"
 	}
@@ -22,7 +22,7 @@ func RenderEgressNginxConf(saTokenPath string, routes []EgressRoute) string {
 	b.WriteString("events { worker_connections 1024; }\n")
 	b.WriteString("http {\n")
 	b.WriteString(fmt.Sprintf("  # SA token: %s\n", saTokenPath))
-	b.WriteString("  # fail-closed when token missing (EGRESS_SA_TOKEN_MISSING)\n")
+	b.WriteString("  # fail-closed when token missing (MESH_OUT_SA_TOKEN_MISSING)\n")
 	b.WriteString(fmt.Sprintf("  server {\n    listen %d;\n", ListenPort))
 	if len(routes) == 0 {
 		b.WriteString("    location / {\n")

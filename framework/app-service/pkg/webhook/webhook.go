@@ -17,8 +17,8 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
-	"github.com/beclab/Olares/framework/app-service/pkg/gateway/calleragent"
-	"github.com/beclab/Olares/framework/app-service/pkg/gateway/egressagent"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshoutagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
@@ -154,7 +154,7 @@ func (wh *Webhook) CreatePatch(
 	ctx context.Context,
 	pod *corev1.Pod,
 	req *admissionv1.AdmissionRequest,
-	proxyUUID uuid.UUID, injectPolicy, injectWs, injectUpload, injectCallerAgent, injectEgressAgent bool,
+	proxyUUID uuid.UUID, injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool,
 	injectSharedPod *bool,
 	appmgr *v1alpha1.ApplicationManager,
 	appConfig *appcfg.ApplicationConfig,
@@ -228,20 +228,20 @@ func (wh *Webhook) CreatePatch(
 				pod.Spec.Containers = append(pod.Spec.Containers, *uploadSidecar)
 			}
 		}
-		if injectCallerAgent {
+		if injectMeshInAgent {
 			pod.Spec.Volumes = append(pod.Spec.Volumes,
-				calleragent.JWTSecretVolume(),
-				calleragent.CertsVolume(),
-				calleragent.SharedHostsVolume(),
-				calleragent.ConfVolume(),
+				meshinagent.JWTSecretVolume(),
+				meshinagent.CertsVolume(),
+				meshinagent.SharedHostsVolume(),
+				meshinagent.ConfVolume(),
 			)
-			pod.Spec.InitContainers = append(pod.Spec.InitContainers, calleragent.InitContainerSpec())
-			pod.Spec.Containers = append(pod.Spec.Containers, calleragent.ContainerSpec())
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshinagent.InitContainerSpec())
+			pod.Spec.Containers = append(pod.Spec.Containers, meshinagent.ContainerSpec())
 		}
-		if injectEgressAgent {
-			pod.Spec.Volumes = append(pod.Spec.Volumes, egressagent.SATokenVolume(), egressagent.ConfVolume())
-			pod.Spec.InitContainers = append(pod.Spec.InitContainers, egressagent.InitContainerSpec())
-			pod.Spec.Containers = append(pod.Spec.Containers, egressagent.ContainerSpec())
+		if injectMeshOutAgent {
+			pod.Spec.Volumes = append(pod.Spec.Volumes, meshoutagent.SATokenVolume(), meshoutagent.ConfVolume())
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshoutagent.InitContainerSpec())
+			pod.Spec.Containers = append(pod.Spec.Containers, meshoutagent.ContainerSpec())
 		}
 	} // end of inject sidecar
 
@@ -385,7 +385,7 @@ func (wh *Webhook) AdmissionError(uid types.UID, err error) *admissionv1.Admissi
 
 // MustInject checks which inject operation should do for a pod.
 func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace string) (
-	injectPolicy, injectWs, injectUpload, injectCallerAgent, injectEgressAgent bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
+	injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
 	appConfig *appcfg.ApplicationConfig, appMgr *v1alpha1.ApplicationManager, err error) {
 	var isShared bool
 
@@ -493,15 +493,15 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		}
 	}
 
-	injectCallerAgent, err = wh.shouldInjectCallerAgent(ctx, appConfig, namespace, isShared)
+	injectMeshInAgent, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isShared)
 	if err != nil {
 		return false, false, false, false, false, nil, perms, nil, nil, err
 	}
-	injectEgressAgent = egressagent.ShouldInject(isShared, perms)
+	injectMeshOutAgent = meshoutagent.ShouldInject(isShared, perms)
 	return
 }
 
-func (wh *Webhook) shouldInjectCallerAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isShared bool) (bool, error) {
+func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isShared bool) (bool, error) {
 	if appConfig == nil || isShared {
 		return false, nil
 	}
@@ -516,7 +516,7 @@ func (wh *Webhook) shouldInjectCallerAgent(ctx context.Context, appConfig *appcf
 		}
 		return false, err
 	}
-	return calleragent.ShouldInject(app, isShared), nil
+	return meshinagent.ShouldInject(app, isShared), nil
 }
 
 func (wh *Webhook) isAppEntrancePod(ctx context.Context, appname, host string, pod *corev1.Pod, namespace string) (bool, error) {

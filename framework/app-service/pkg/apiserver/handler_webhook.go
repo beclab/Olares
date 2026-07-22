@@ -107,19 +107,19 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		return h.sidecarWebhook.AdmissionError(req.UID, errors.New("HostNetwork Enabled Unsupported"))
 	}
 	var (
-		injectPolicy, injectWs, injectUpload, injectCallerAgent, injectEgressAgent bool
+		injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool
 		injectSharedPod                                                            *bool
 		appMgr                                                                     *v1alpha1.ApplicationManager
 		appCfg                                                                     *appcfg_mod.ApplicationConfig
 		perms                                                                      []appcfg.ProviderPermission
 	)
-	if injectPolicy, injectWs, injectUpload, injectCallerAgent, injectEgressAgent, injectSharedPod, perms, appCfg, appMgr, err = h.sidecarWebhook.MustInject(ctx, &pod, req.Namespace); err != nil {
+	if injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, perms, appCfg, appMgr, err = h.sidecarWebhook.MustInject(ctx, &pod, req.Namespace); err != nil {
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectCallerAgent=%v, injectEgressAgent=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectCallerAgent, injectEgressAgent, injectSharedPod, perms)
+	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectMeshInAgent=%v, injectMeshOutAgent=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, perms)
 
 	shared := appCfg != nil && appCfg.IsShared()
-	nothingToInject := !injectPolicy && !injectWs && !injectUpload && !injectCallerAgent && !injectEgressAgent && injectSharedPod == nil && len(perms) == 0
+	nothingToInject := !injectPolicy && !injectWs && !injectUpload && !injectMeshInAgent && !injectMeshOutAgent && injectSharedPod == nil && len(perms) == 0
 
 	if shared {
 		if injectSharedPod != nil {
@@ -143,7 +143,7 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		return resp
 	}
 
-	patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectWs, injectUpload, injectCallerAgent, injectEgressAgent, injectSharedPod, appMgr, appCfg, perms)
+	patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, appMgr, appCfg, perms)
 	if err != nil {
 		klog.Errorf("Failed to create patch for pod uuid=%s name=%s namespace=%s err=%v", proxyUUID, pod.Name, req.Namespace, err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)

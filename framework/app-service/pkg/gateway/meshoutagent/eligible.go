@@ -1,21 +1,21 @@
-package egressagent
+package meshoutagent
 
 import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 )
 
 const (
-	// ContainerName is the minimal egress agent replacing outbound :15001 envoy.
-	ContainerName = "olares-egress-agent"
+	// ContainerName is the minimal mesh-out agent replacing outbound :15001 envoy.
+	ContainerName = "olares-mesh-out-agent"
 
-	SATokenVolumeName = "egress-sa-token"
+	SATokenVolumeName = "mesh-out-sa-token"
 	SATokenMountPath  = "/var/run/secrets/olares.io/serviceaccount"
 
 	ListenPort     = 15001
-	ListenPortName = "egress-http"
+	ListenPortName = "mesh-out-http"
 
 	// FailClosedEnv prevents forwarding when the projected SA token is missing.
-	FailClosedEnv = "EGRESS_AGENT_FAIL_CLOSED"
+	FailClosedEnv = "MESH_OUT_AGENT_FAIL_CLOSED"
 )
 
 // HasProviderPermission reports whether the pod should receive outbound
@@ -24,7 +24,7 @@ func HasProviderPermission(perms []appcfg.ProviderPermission) bool {
 	return len(perms) > 0
 }
 
-// ShouldInject reports whether the egress agent should replace envoy outbound
+// ShouldInject reports whether the mesh-out agent should replace envoy outbound
 // for this workload. Shared inbound-only pods never receive the agent.
 func ShouldInject(isSharedApp bool, perms []appcfg.ProviderPermission) bool {
 	if isSharedApp {

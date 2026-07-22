@@ -1,4 +1,4 @@
-package egressagent
+package meshoutagent
 
 import (
 	"testing"
@@ -6,23 +6,23 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 )
 
-func TestShouldInjectEgressAgentProviderPod(t *testing.T) {
+func TestShouldInjectMeshOutAgentProviderPod(t *testing.T) {
 	perms := []appcfg.ProviderPermission{{AppName: "system-server", ProviderName: "api"}}
 	if !ShouldInject(false, perms) {
-		t.Fatal("T-EGR-1: provider pod should receive egress agent")
+		t.Fatal("T-EGR-1: provider pod should receive mesh-out agent")
 	}
 }
 
 func TestShouldInjectSkipsWithoutProviderPermission(t *testing.T) {
 	if ShouldInject(false, nil) {
-		t.Fatal("T-EGR-2: pod without provider permission must not receive egress agent")
+		t.Fatal("T-EGR-2: pod without provider permission must not receive mesh-out agent")
 	}
 }
 
 func TestShouldInjectSkipsSharedApp(t *testing.T) {
 	perms := []appcfg.ProviderPermission{{AppName: "shared", ProviderName: "api"}}
 	if ShouldInject(true, perms) {
-		t.Fatal("shared inbound-only app must not receive egress agent")
+		t.Fatal("shared inbound-only app must not receive mesh-out agent")
 	}
 }
 
@@ -42,7 +42,7 @@ func TestContainerSpecFailClosedAndRoutes(t *testing.T) {
 			if env.Value == "true" {
 				foundFailClosed = true
 			}
-		case "EGRESS_SYSTEM_SERVER_HOST":
+		case "MESH_OUT_SYSTEM_SERVER_HOST":
 			if env.Value == "system-server.user-system" {
 				foundHost = true
 			}

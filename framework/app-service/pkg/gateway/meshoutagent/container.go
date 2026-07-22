@@ -1,4 +1,4 @@
-package egressagent
+package meshoutagent
 
 import (
 	"os"
@@ -9,21 +9,21 @@ import (
 )
 
 const (
-	egressAgentImageEnv = "EGRESS_AGENT_IMAGE"
-	// DefaultImage is the R2 nginx alpine-slim agent (digest pin in charts).
-	DefaultImage       = "beclab/nginx:1.30.0-alpine-slim-olares-r2"
+	meshOutAgentImageEnv = "MESH_OUT_AGENT_IMAGE"
+	// DefaultImage is the R2 mesh-out-agent product image (engine: nginx alpine-slim) (digest pin in charts).
+	DefaultImage       = "beclab/mesh-out-agent:1.30.0-r2"
 	systemServerHost   = "system-server.user-system"
 	systemServerPort   = "28080"
-	InitContainerName  = "olares-egress-agent-iptables"
-	ConfVolumeName     = "olares-egress-agent-conf"
+	InitContainerName  = "olares-mesh-out-agent-iptables"
+	ConfVolumeName     = "olares-mesh-out-agent-conf"
 	ConfMountPath      = "/etc/nginx"
 )
 
-// ContainerSpec returns the egress agent sidecar (WI-OC-EGRESS-01 / IWO-OC-L2B-01).
+// ContainerSpec returns the mesh-out agent sidecar (WI-OC-EGRESS-01 / IWO-OC-L2B-01).
 func ContainerSpec() corev1.Container {
 	return corev1.Container{
 		Name:            ContainerName,
-		Image:           egressAgentImage(),
+		Image:           meshOutAgentImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"nginx", "-g", "daemon off;"},
 		Ports: []corev1.ContainerPort{
@@ -35,8 +35,8 @@ func ContainerSpec() corev1.Container {
 		},
 		Env: []corev1.EnvVar{
 			{Name: FailClosedEnv, Value: "true"},
-			{Name: "EGRESS_SYSTEM_SERVER_HOST", Value: systemServerHost},
-			{Name: "EGRESS_SYSTEM_SERVER_PORT", Value: systemServerPort},
+			{Name: "MESH_OUT_SYSTEM_SERVER_HOST", Value: systemServerHost},
+			{Name: "MESH_OUT_SYSTEM_SERVER_PORT", Value: systemServerPort},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: SATokenVolumeName, MountPath: SATokenMountPath, ReadOnly: true},
@@ -54,13 +54,13 @@ func ContainerSpec() corev1.Container {
 	}
 }
 
-// InitContainerSpec redirects outbound TCP/80 and TCP/8080 into the egress agent.
+// InitContainerSpec redirects outbound TCP/80 and TCP/8080 into the mesh-out agent.
 func InitContainerSpec() corev1.Container {
 	script := "iptables -t nat -A OUTPUT -p tcp --dport 80 -m owner ! --uid-owner 101 -j REDIRECT --to-ports 15001 || true; " +
 		"iptables -t nat -A OUTPUT -p tcp --dport 8080 -m owner ! --uid-owner 101 -j REDIRECT --to-ports 15001 || true"
 	return corev1.Container{
 		Name:            InitContainerName,
-		Image:           egressAgentImage(),
+		Image:           meshOutAgentImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c", script},
 		SecurityContext: &corev1.SecurityContext{
@@ -90,7 +90,7 @@ func SATokenVolume() corev1.Volume {
 	}
 }
 
-// ConfVolume holds RenderEgressNginxConf output.
+// ConfVolume holds RenderMeshOutNginxConf output.
 func ConfVolume() corev1.Volume {
 	return corev1.Volume{
 		Name: ConfVolumeName,
@@ -100,8 +100,8 @@ func ConfVolume() corev1.Volume {
 	}
 }
 
-func egressAgentImage() string {
-	if img := strings.TrimSpace(os.Getenv(egressAgentImageEnv)); img != "" {
+func meshOutAgentImage() string {
+	if img := strings.TrimSpace(os.Getenv(meshOutAgentImageEnv)); img != "" {
 		return img
 	}
 	return DefaultImage
