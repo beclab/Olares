@@ -291,6 +291,7 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 		appid = appcfg.AppName(name).GetAppID()
 	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
+	meshinagent.ApplyDecide(name, settings, meshinagent.DefaultRules())
 
 	rawAppName := name
 	if deployment.GetLabels()[constants.ApplicationRawAppNameLabel] != "" {
@@ -426,6 +427,22 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		appid = appcfg.AppName(name).GetAppID()
 	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
+	// Preserve callee / intent already stored on the Application CR (chart may omit them on rebuild).
+	if app.Spec.Settings != nil {
+		for _, k := range []string{
+			meshinagent.SettingSharedAppDeps,
+			meshinagent.SettingClusterAppRef,
+			meshinagent.SettingAppRef,
+			meshinagent.SettingNeedsSharedAccess,
+		} {
+			if strings.TrimSpace(settings[k]) == "" {
+				if v := strings.TrimSpace(app.Spec.Settings[k]); v != "" {
+					settings[k] = v
+				}
+			}
+		}
+	}
+	meshinagent.ApplyDecide(name, settings, meshinagent.DefaultRules())
 
 	appCopy.Spec.Name = name
 	appCopy.Spec.Namespace = deployment.GetNamespace()
@@ -785,9 +802,6 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 			settings["mobileSupported"] = mobileSupported
 		}
 	}
-
-	// SharedCallerDecide: write named callee facts (ARCH-SH-MESH-IN-AUTO-01).
-	_ = meshinagent.ApplyDecide(appName, settings, meshinagent.DefaultRules())
 
 	return
 }
