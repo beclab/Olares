@@ -645,6 +645,104 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	assert.NotEmpty(t, clusterSet)
 }
 
+// A "dev" entrance answers on both its normal hostname and a
+// `<appid>-<port>.<zone>` alias, both routed to the same upstream cluster.
+func TestBuildAppVirtualHosts_DevEntranceAlias(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "devapp",
+		Appid:     "28f57292",
+		Namespace: "devapp-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			// A dev entrance's Host is the backing pod IP (set by proxylistener).
+			{Name: "web", Host: "10.244.1.23", Port: 9999, Type: "dev"},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+
+	assert.Contains(t, vhosts[0].Domains, "28f57292.alice.example.com", "primary hostname must remain")
+	assert.Contains(t, vhosts[0].Domains, "28f57292-9999.alice.example.com", "dev alias must be added")
+
+	// The alias shares the single upstream cluster of the entrance, which points
+	// straight at the pod IP as a STATIC cluster.
+	require.Len(t, vhosts[0].Routes, 1)
+	cl := clusterSet[vhosts[0].Routes[0].Cluster]
+	require.NotNil(t, cl)
+	assert.Equal(t, "10.244.1.23", cl.Host, "dev entrance must route straight to the pod IP in Host")
+	assert.False(t, cl.UseDNS, "dev entrance must be a STATIC cluster")
+	assert.Equal(t, uint32(9999), cl.Port)
+}
+
+// A non-dev entrance uses the Kubernetes service DNS host (STRICT_DNS).
+func TestBuildAppVirtualHosts_NonDevEntranceUsesDNS(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "app",
+		Appid:     "28f57292",
+		Namespace: "app-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "app-svc", Port: 9999},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+
+	cl := clusterSet[vhosts[0].Routes[0].Cluster]
+	require.NotNil(t, cl)
+	assert.Equal(t, "app-svc.app-alice.svc.cluster.local", cl.Host)
+	assert.True(t, cl.UseDNS)
+}
+
+// An entrance with an empty Host has no usable upstream and is skipped.
+func TestBuildAppVirtualHosts_EmptyHostSkipped(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "devapp",
+		Appid:     "1f47cd9b",
+		Namespace: "devapp-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "", Port: 8080, Type: "dev"},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	assert.Empty(t, vhosts, "entrance with empty host must be skipped")
+	assert.Empty(t, clusterSet)
+}
+
+// A non-dev entrance must NOT get the `<appid>-<port>.<zone>` alias.
+func TestBuildAppVirtualHosts_NonDevEntranceNoAlias(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "app",
+		Appid:     "28f57292",
+		Namespace: "app-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "app-svc", Port: 9999},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	assert.NotContains(t, vhosts[0].Domains, "28f57292-9999.alice.example.com")
+}
+
 // Custom domains for shared apps are also open to every user.
 func TestBuildCustomDomainVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 	for _, name := range []string{"admin", "alice"} {
