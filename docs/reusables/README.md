@@ -17,4 +17,4 @@ Use stable, descriptive region names so source line changes do not break referen
 - **sync-files.md**: Sync files to local (intro, Create a library, Enable synchronization, Manage synchronization). Used by `manual/larepass/manage-files.md` and `manual/olares/files/sync-files.md`.
 - **export-system-logs.md**: Steps to export system logs via Settings > Advanced > Logs. Used by `manual/olares/settings/developer.md` and `manual/help/request-technical-support.md`.
 - **custom-domain.md**: Custom domain setup procedures (Create DID, Add domain with TXT/NS verification, Create organization, Add user, Join organization). Used by `manual/best-practices/set-custom-domain.md`, `manual/larepass/create-org-account.md`, `manual/space/host-domain.md`, and `manual/space/manage-domain.md`.
-
+- **ai-service-connections.md**: Reusable explanations and steps for connecting AI clients to models or apps. Use `model-connection-overview` and `get-model-connection-details` when connecting a standalone model on Olares; use `app-endpoint-overview` when connecting another Olares app through its endpoint.

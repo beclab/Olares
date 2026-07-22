@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Open Notebook, AI notebook, research assistant, sources, notes, RAG, knowledge base, podcast, transformations
 app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-05-07"
+doc_version: "2.0"
+doc_updated: "2026-07-22"
 ---
 
 # Build a research notebook with Open Notebook
@@ -21,7 +21,7 @@ This guide walks you through your first complete Open Notebook workflow using an
 In this guide, you will learn how to:
 
 - Install Open Notebook on Olares.
-- Connect AI models for chat, summaries, retrieval, and podcast generation.
+- Set up AI models for chat, summaries, retrieval, and podcast generation.
 - Create a research notebook.
 - Add and process research sources.
 - Review AI-generated insights.
@@ -38,7 +38,7 @@ Before you begin, make sure you have access to the models you want to use.
 - Optional: A speech-to-text (STT) model for processing audio or video sources.
 
 :::info Recommended local AI services
-For local AI workflows on Olares, you can use local language or embedding model services exposed through an **Ollama-compatible** endpoint, and [Speaches](speaches.md) for speech-to-text and text-to-speech.
+For local AI workflows on Olares, you can use local language or embedding model services, and [Speaches](speaches.md) for speech-to-text and text-to-speech.
 :::
 
 ## How Open Notebook works
@@ -62,69 +62,75 @@ In this guide, you will create a sample AI research notebook, add sources, gener
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
-After installation, configure the required models before starting your first research notebook.
+After installation, configure the required providers and models before starting your first research notebook.
 
-## Connect AI models
+## Set up AI models
 
 Open Notebook uses AI models for summaries, chat, retrieval, and podcast generation. You only need to set them up once.
 
-Go to **Manage** > **Models**. Setting up models has four main steps:
+### Get provider connection details
 
-### Get provider endpoints
+How you get the connection details depends on whether you connect a standalone model or another Olares app.
 
-If you use local Olares model services, copy their endpoints first.
+#### Connect a standalone model
 
-1. Go to Olares **Settings** > **Applications** and click the model service app.
-2. Look for **Shared entrances** and copy the endpoint.
-3. If **Shared entrances** is not available for the app, copy its **API Entrance** or standard entrance instead.
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-### Add a provider configuration
+For each standalone model used in this guide:
 
-In Open Notebook, add the configuration under the provider type that matches the model service:
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-- Use **Ollama** if the model service app name, app page, or icon shows **Ollama**.
+In this case, we use `qwen3.5-9b` and `qwen3-embedding:0.6b`. Open Notebook connects to them through the **Ollama** provider, so view the **Ollama** format in each Model Console and copy the corresponding Base URL.
 
-   ![Ollama-compatible model service](/images/manual/use-cases/open-notebook-ollama-compatible-service.png#bordered){width=90%}
+#### Connect an app
 
-- If the service does not show **Ollama**, use another matching provider type, such as **OpenAI Compatible**.
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-1. Go to **Manage** > **Models** and find the provider you want to use.
-2. Click **Add Configuration** under the provider.
-3. Enter a name for the configuration.
-4. In **Base URL**, paste the endpoint you copied.
-   - If the example URL includes `/v1`, append `/v1` to the endpoint.
-   - If the example URL does not include `/v1`, paste the endpoint exactly as copied.
-5. Enter an API key if required.
-6. Click **Add Configuration**.
+This guide uses Speaches as the TTS and STT provider:
+
+1. Go to Olares **Settings** > **Applications** > **Speaches** > **Entrances**.
+2. Select **Speaches API**, then copy the **Endpoint** URL.
+
+### Add provider configurations
+
+Go to **Manage** > **Models**. For each service, find the matching provider and click **Add Configuration**.
+
+| Service | Provider | Base URL |
+| :-- | :-- | :-- |
+| Qwen language model | **Ollama** | Base URL from its Model Console |
+| Qwen embedding model | **Ollama** | Base URL from its Model Console |
+| Speaches | **OpenAI Compatible** | Speaches endpoint with `/v1` appended |
+
+Enter a recognizable configuration name and the Base URL. If an API key is required, enter `olares`, then save the configuration.
 
 ### Add models
 
-After adding a provider configuration, add the models that Open Notebook can use from it.
+In each configuration, click **Models** and add the following models:
 
-1. In the provider configuration you added, click **Models**.
-2. Select the model type, such as **Language**, **Embedding**, **TTS**, or **STT**.
-3. Select the available models you want to use.
-4. Click **Add**.
-
-### Set default models
-
-Go back to **Default Model Assignments** at the top of **Manage** > **Models**, then assign models to the slots you need.
-
-The examples below match the setup used in this guide. You can replace them with other local or cloud models based on your hardware and use case.
-
-| Slot | What to select | Example for this guide |
+| Configuration | Type | Model ID |
 | :-- | :-- | :-- |
-| Chat Model | A language model. | `qwen3:14b` |
-| Embedding Model | An embedding model. | `qwen3-embedding:0.6b` |
-| Text-to-Speech Model | A TTS model, if you generate podcasts. | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
-| Speech-to-Text Model | An STT model, if you process audio or video. | `Systran/faster-whisper-small` |
-| Transformation Model | A language model. | `qwen3:14b` |
-| Tools Model | A language model, if you use tool-based tasks. | `qwen3:14b` |
-| Large Context Model | A language model suitable for long documents. | `qwen3:14b` |
+| Qwen language model | **Language** | `qwen3.5-9b` |
+| Qwen embedding model | **Embedding** | `qwen3-embedding:0.6b` |
+| Speaches | **TTS** | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
+| Speaches | **STT** | `Systran/faster-whisper-small` |
 
-If **Auto-assign Defaults** is available, you can use it to fill available slots automatically, then review the selections.
+### Assign default models
 
-![Model assignments](/images/manual/use-cases/open-notebook-set-models-result.png#bordered)
+Under **Default Model Assignments**, assign the models as follows:
+
+| Slot | Model |
+| :-- | :-- |
+| Chat Model | `qwen3.5-9b` |
+| Embedding Model | `qwen3-embedding:0.6b` |
+| Text-to-Speech Model | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
+| Speech-to-Text Model | `Systran/faster-whisper-small` |
+| Transformation Model | `qwen3.5-9b` |
+| Tools Model | `qwen3.5-9b` |
+| Large Context Model | `qwen3.5-9b` |
+
+If **Auto-assign Defaults** is available, you can use it to fill the slots automatically, then review the selections.
+
+![Model assignments](/images/manual/use-cases/open-notebook-set-models-result1.png#bordered)
 
 ## Create your first research notebook
 
