@@ -13,19 +13,15 @@ func TestApplicationDeclaresSharedAccess(t *testing.T) {
 		app  *appv1alpha1.Application
 		want bool
 	}{
+		{name: "nil app", app: nil, want: false},
 		{
-			name: "nil app",
-			app:  nil,
-			want: false,
-		},
-		{
-			name: "needsSharedAccess true",
+			name: "needsSharedAccess alone must not inject",
 			app: &appv1alpha1.Application{
 				Spec: appv1alpha1.ApplicationSpec{
 					Settings: map[string]string{SettingNeedsSharedAccess: "true"},
 				},
 			},
-			want: true,
+			want: false,
 		},
 		{
 			name: "sharedAppDeps",
@@ -64,13 +60,21 @@ func TestApplicationDeclaresSharedAccess(t *testing.T) {
 }
 
 func TestShouldInjectMeshInAgent(t *testing.T) {
-	consumer := &appv1alpha1.Application{
+	intentOnly := &appv1alpha1.Application{
 		Spec: appv1alpha1.ApplicationSpec{
 			Settings: map[string]string{SettingNeedsSharedAccess: "true"},
 		},
 	}
+	if ShouldInject(intentOnly, false) {
+		t.Fatal("needsSharedAccess alone must not inject")
+	}
+	consumer := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{
+			Settings: map[string]string{SettingSharedAppDeps: "ollama"},
+		},
+	}
 	if !ShouldInject(consumer, false) {
-		t.Fatal("expected inject for shared consumer app")
+		t.Fatal("expected inject for named callee")
 	}
 	if ShouldInject(consumer, true) {
 		t.Fatal("shared provider app must not receive mesh-in agent")

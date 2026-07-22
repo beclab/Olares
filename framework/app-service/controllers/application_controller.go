@@ -14,6 +14,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -333,6 +334,10 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	if tailScale != nil {
 		newapp.Spec.TailScale = *tailScale
 	}
+	if newapp.Annotations == nil {
+		newapp.Annotations = map[string]string{}
+	}
+	newapp.Annotations = meshinagent.WriteDecideAnnotations(newapp.Annotations, settings)
 	if err := gateway.ApplyRouteModeAnnotation(ctx, r.Client, newapp); err != nil {
 		klog.Warningf("apply gateway route-mode for new app %s err=%v", name, err)
 	}
@@ -458,6 +463,12 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	if v := settings["version"]; v != "" {
 		appCopy.Spec.Settings["version"] = v
 	}
+	for _, k := range meshinagent.DecideSettingKeys() {
+		if v, ok := settings[k]; ok {
+			appCopy.Spec.Settings[k] = v
+		}
+	}
+	appCopy.Annotations = meshinagent.WriteDecideAnnotations(appCopy.Annotations, settings)
 
 	// Record deployment resourceVersion to detect app-only modifications
 	if appCopy.Annotations == nil {
@@ -675,6 +686,9 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 			} else if appCfg.IsShared() {
 				sharedEntrances = appCfg.SharedEntrances
 			}
+			if appCfg.NeedsSharedAccess {
+				settings[meshinagent.SettingNeedsSharedAccess] = "true"
+			}
 			if appCfg.MobileSupported {
 				settings["mobileSupported"] = "true"
 			} else {
@@ -771,6 +785,9 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 			settings["mobileSupported"] = mobileSupported
 		}
 	}
+
+	// SharedCallerDecide: write named callee facts (ARCH-SH-MESH-IN-AUTO-01).
+	_ = meshinagent.ApplyDecide(appName, settings, meshinagent.DefaultRules())
 
 	return
 }
