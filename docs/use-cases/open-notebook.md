@@ -33,7 +33,7 @@ In this guide, you will learn how to:
 
 Before you begin, make sure you have access to the models you want to use.
 
-- Required: At least one language model and an embedding model for vector search.
+- Required: At least one language model and an embedding model for vector search. You can install pre-built model apps from Market or [host models with Engine Base apps](llm-base-apps.md).
 - Required for podcast generation: A text-to-speech (TTS) model.
 - Optional: A speech-to-text (STT) model for processing audio or video sources.
 
