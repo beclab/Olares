@@ -108,7 +108,7 @@ In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service
 
     ![LobeHub connected to a model instance](/images/manual/tutorials/connect-app-eg-lobehub2.png#bordered)
 
-## FAQs
+## FAQ
 
 ### How to connect non-AI apps?
 
