@@ -21,19 +21,13 @@ const (
 	FailClosedEnv = "MESH_IN_AGENT_FAIL_CLOSED"
 )
 
-// ApplicationDeclaresSharedAccess reports whether the Application manifest
-// declares a dependency on Shared apps (P1 declarative deps contract).
+// ApplicationDeclaresSharedAccess reports whether named caller→callee edges exist.
+// needsSharedAccess alone is NOT sufficient (ARCH Q13 / ADR-IC-08).
 func ApplicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
-	if app == nil || app.Spec.Settings == nil {
+	if app == nil {
 		return false
 	}
-	if strings.EqualFold(strings.TrimSpace(app.Spec.Settings[SettingNeedsSharedAccess]), "true") {
-		return true
-	}
-	if strings.TrimSpace(app.Spec.Settings[SettingSharedAppDeps]) != "" {
-		return true
-	}
-	return strings.TrimSpace(app.Spec.Settings[SettingClusterAppRef]) != ""
+	return DeclaresSharedCaller(app.Spec.Settings)
 }
 
 // ShouldInject reports whether the mesh-in agent should be injected into a pod.
@@ -42,5 +36,16 @@ func ShouldInject(app *appv1alpha1.Application, isSharedApp bool) bool {
 	if isSharedApp || app == nil {
 		return false
 	}
-	return ApplicationDeclaresSharedAccess(app)
+	return DeclaresSharedCaller(app.Spec.Settings)
+}
+
+// HasIntentOnly reports needsSharedAccess without named callees (must not inject).
+func HasIntentOnly(settings map[string]string) bool {
+	if settings == nil {
+		return false
+	}
+	if !strings.EqualFold(strings.TrimSpace(settings[SettingNeedsSharedAccess]), "true") {
+		return false
+	}
+	return len(ParseCallees(settings)) == 0
 }
