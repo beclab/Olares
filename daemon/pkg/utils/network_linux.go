@@ -568,8 +568,9 @@ const (
 
 // Injectable for unit tests; production defaults to the real D-Bus helpers.
 var (
-	nmCheckpointDestroyFn  = nmCheckpointDestroy
-	nmCheckpointRollbackFn = nmCheckpointRollback
+	nmCheckpointDestroyFn               = nmCheckpointDestroy
+	nmCheckpointRollbackFn              = nmCheckpointRollback
+	nmCheckpointAdjustRollbackTimeoutFn = nmCheckpointAdjustRollbackTimeout
 )
 
 // nmcliCombinedOutput runs nmcli (or any argv[0]) and returns combined stdout.
@@ -762,6 +763,30 @@ func waitBridgeReady(ctx context.Context, timeout time.Duration) bool {
 	}
 }
 
+// disarmNMCheckpoint cancels a leftover NetworkManager auto-rollback timer.
+// Successful CheckpointRollback already removes the checkpoint inside NM;
+// Destroy then fails with "does not exist" and is ignored. When Rollback fails
+// (or never ran) the timer stays armed — Destroy (or timeout=0) clears it so a
+// later successful enable cannot be undone by the stale snapshot.
+func disarmNMCheckpoint(ctx context.Context, conn *dbus.Conn, checkpoint dbus.ObjectPath) {
+	if checkpoint == "" {
+		return
+	}
+	if err := nmCheckpointDestroyFn(ctx, conn, checkpoint); err == nil {
+		return
+	} else {
+		klog.Errorf("NM checkpoint disarm destroy failed for %s: %v", checkpoint, err)
+	}
+	if err := nmCheckpointAdjustRollbackTimeoutFn(ctx, conn, checkpoint, 0); err != nil {
+		klog.Errorf("NM checkpoint disarm adjust-timeout failed for %s: %v", checkpoint, err)
+		return
+	}
+	klog.Warningf("NM checkpoint %s auto-rollback disabled after destroy failure", checkpoint)
+	if err := nmCheckpointDestroyFn(ctx, conn, checkpoint); err != nil {
+		klog.Errorf("NM checkpoint disarm destroy after timeout-disable failed for %s: %v", checkpoint, err)
+	}
+}
+
 // commitNMCheckpoint discards the checkpoint after a successful bridge switch
 // (NM "commit"). On persistent Destroy failure it rolls the network back and
 // returns an error so callers never report success while NM still holds an
@@ -797,6 +822,9 @@ rollback:
 		if manualRollback != nil {
 			manualRollback()
 		}
+		// Rollback failure (often a D-Bus transport error) leaves the NM
+		// auto-rollback timer armed; disarm so a later enable cannot be undone.
+		disarmNMCheckpoint(ctx, conn, checkpoint)
 	}
 	return fmt.Errorf("checkpoint commit failed: %w", lastErr)
 }
@@ -964,6 +992,7 @@ func CreateBridgeConnection(ctx context.Context) error {
 			if e := nmCheckpointRollbackFn(ctx, dbusConn, checkpoint); e != nil {
 				klog.Errorf("NM checkpoint rollback failed (%v), applying manual rollback", e)
 				manualRollback()
+				disarmNMCheckpoint(ctx, dbusConn, checkpoint)
 			}
 			return cause
 		}

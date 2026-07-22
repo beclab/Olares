@@ -88,3 +88,13 @@ func nmCheckpointRollback(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPa
 	}
 	return nil
 }
+
+// nmCheckpointAdjustRollbackTimeout resets how long NetworkManager waits before
+// auto-rolling back. addTimeout is seconds from now; 0 disables the timer.
+func nmCheckpointAdjustRollbackTimeout(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath, addTimeout uint32) error {
+	if cp == "" {
+		return nil
+	}
+	obj := conn.Object(nmDBusDest, nmDBusPath)
+	return obj.CallWithContext(ctx, nmDBusInterface+".CheckpointAdjustRollbackTimeout", 0, cp, addTimeout).Err
+}
