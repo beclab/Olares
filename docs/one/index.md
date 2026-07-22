@@ -1,5 +1,5 @@
 ---
-description: A brief introduction to Olares One and its integration with Olares OS for local AI processing.
+description: Set up and manage Olares One, run AI agents and LLMs locally, and operate your personal AI cloud through plain language.
 aside: false
 head:
   - - meta
@@ -7,22 +7,13 @@ head:
       content: Olares One, Olares, personal AI cloud, local AI, edge computing, data privacy
 ---
 
-
 # Olares One documentation
 
-Welcome to Olares One, a dedicated hardware device that runs a personal AI cloud. It pairs workstation-grade hardware with Olares OS so you can run AI tools and manage your data locally, on hardware you physically control instead of sending personal data and prompts to centralized servers.
+Olares One combines workstation-grade hardware with Olares OS to give you a personal AI cloud you control. Run AI agents and LLMs locally, and operate your cloud simply by describing what you want in plain language.
 
-Primary use cases include:
-* **Edge AI**: Run open-source AI models for text or media generation directly on the hardware with complete data privacy.
-* **Gaming**: Turn the device into a gaming server with the Steam Headless app to play titles on Olares One, or on any compatible devices.
-* **Personal knowledge base**: Allow AI models to learn from private documents to function as a personal assistant.
-* **Unified file storage**: Use the Files app to manage, sync, and share files.
-* **Self-hosted workspace**: Run a private suite of productivity and collaboration tools on the local device.
-* **Private media server**: Host and stream movie and music collections using apps like Jellyfin.
+This documentation focuses on Olares One-specific workflows, from first boot and natural-language onboarding to device access, system updates, storage and eGPU expansion, recovery, and dual-boot configurations. For general Olares features, applications, and use cases, see [Olares OS](../manual/overview) or [Use cases](../use-cases/).
 
-:::info
-This documentation focuses on usage scenarios specific to Olares One. For general operating system features or broader use cases, select the **Olares OS** or **Use cases** tabs in the top navigation.
-:::
+New to Olares One? Start with [First boot](./first-boot), then learn how to [manage Olares through natural language](./olares-onboarding).
 
 ## Your Olares One journey
 
