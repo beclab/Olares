@@ -108,4 +108,25 @@ func TestContainerSpecFailClosed(t *testing.T) {
 	if !foundJWT {
 		t.Fatalf("missing JWT mount %s in %#v", JWTSecretMountPath, c.VolumeMounts)
 	}
+	for _, m := range c.VolumeMounts {
+		if m.MountPath == ConfMountPath {
+			t.Fatalf("must not mount empty ConfVolume over %s until seed/render is wired", ConfMountPath)
+		}
+	}
+}
+
+func TestConfSeedInitContainerSpec(t *testing.T) {
+	c := ConfSeedInitContainerSpec()
+	if c.Name == "" || c.Image == "" {
+		t.Fatalf("seed init incomplete: %#v", c)
+	}
+	found := false
+	for _, m := range c.VolumeMounts {
+		if m.Name == ConfVolumeName && m.MountPath == "/conf" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("seed init must mount %s at /conf: %#v", ConfVolumeName, c.VolumeMounts)
+	}
 }

@@ -44,11 +44,13 @@ func ContainerSpec() corev1.Container {
 			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: "app-gateway-data.app-gateway.svc"},
 			{Name: "MESH_IN_AGENT_GATEWAY_HTTP_PORT", Value: "80"},
 		},
+		// Do not mount ConfVolume over /etc/nginx until an init seeds it
+		// (RenderNginxConf or image copy). An emptyDir here shadows the
+		// product image's nginx.conf and crash-loops the sidecar.
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: JWTSecretVolumeName, MountPath: JWTSecretMountPath, ReadOnly: true},
 			{Name: CertsVolumeName, MountPath: CertsMountPath, ReadOnly: true},
 			{Name: HostsVolumeName, MountPath: HostsMountPath, ReadOnly: true},
-			{Name: ConfVolumeName, MountPath: ConfMountPath, ReadOnly: true},
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
@@ -115,14 +117,32 @@ func SharedHostsVolume() corev1.Volume {
 	}
 }
 
-// ConfVolume carries RenderNginxConf output as an emptyDir populated by an
-// upstream controller or init; for scaffold the emptyDir holds the rendered file
-// via annotation-driven admission in a follow-up.
+// ConfVolume is reserved for a follow-up that seeds RenderNginxConf (or copies
+// image defaults) into an emptyDir before mounting at ConfMountPath. Callers
+// must not mount it empty over /etc/nginx.
 func ConfVolume() corev1.Volume {
 	return corev1.Volume{
 		Name: ConfVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	}
+}
+
+// ConfSeedInitContainerSpec copies the product image /etc/nginx into ConfVolume
+// so a later mount at ConfMountPath does not start empty. Prefer this (or
+// writing RenderNginxConf) before remounting ConfVolume on the sidecar.
+func ConfSeedInitContainerSpec() corev1.Container {
+	return corev1.Container{
+		Name:            "olares-mesh-in-agent-conf-seed",
+		Image:           meshInAgentImage(),
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command: []string{
+			"/bin/sh", "-c",
+			"cp -a /etc/nginx/. /conf/ && chmod -R a+rX /conf",
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{Name: ConfVolumeName, MountPath: "/conf"},
 		},
 	}
 }
