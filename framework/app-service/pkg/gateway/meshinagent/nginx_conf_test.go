@@ -1,4 +1,4 @@
-package calleragent
+package meshinagent
 
 import (
 	"strings"
@@ -13,7 +13,7 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		"app-gateway-data.app-gateway.svc",
 		"ssl_preread",
 		"fail-closed",
-		"js_set $caller_jwt",
+		"js_set $mesh_in_jwt",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("RenderNginxConf missing %q in:\n%s", want, got)

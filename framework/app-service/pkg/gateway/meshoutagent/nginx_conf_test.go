@@ -1,4 +1,4 @@
-package egressagent
+package meshoutagent
 
 import (
 	"strings"
@@ -7,8 +7,8 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 )
 
-func TestRenderEgressNginxConf(t *testing.T) {
-	got := RenderEgressNginxConf("", []EgressRoute{{
+func TestRenderMeshOutNginxConf(t *testing.T) {
+	got := RenderMeshOutNginxConf("", []MeshOutRoute{{
 		Domain:       "provider.example",
 		Paths:        []string{"/api/*"},
 		UpstreamHost: "system-server.user-system-alice:28080",
@@ -18,7 +18,7 @@ func TestRenderEgressNginxConf(t *testing.T) {
 		SATokenMountPath + "/token",
 		"Temp-Authorization",
 		"system-server.user-system-alice:28080",
-		"EGRESS_SA_TOKEN_MISSING",
+		"MESH_OUT_SA_TOKEN_MISSING",
 		"location /api",
 	} {
 		if !strings.Contains(got, want) {

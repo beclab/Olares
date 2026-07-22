@@ -1,4 +1,4 @@
-package calleragent
+package meshinagent
 
 import (
 	"fmt"
@@ -54,8 +54,8 @@ func RenderNginxConf(in NginxConfInput) string {
 	b.WriteString("  server {\n")
 	b.WriteString("    listen 15080;\n")
 	b.WriteString("    location / {\n")
-	b.WriteString("      js_set $caller_jwt main.readJWT;\n")
-	b.WriteString("      proxy_set_header Authorization \"Bearer $caller_jwt\";\n")
+	b.WriteString("      js_set $mesh_in_jwt main.readJWT;\n")
+	b.WriteString("      proxy_set_header Authorization \"Bearer $mesh_in_jwt\";\n")
 	b.WriteString(fmt.Sprintf("      proxy_pass http://%s:%d;\n", in.GatewayHost, in.GatewayHTTPPort))
 	b.WriteString("    }\n")
 	b.WriteString("  }\n")

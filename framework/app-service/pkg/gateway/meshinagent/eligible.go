@@ -1,4 +1,4 @@
-package calleragent
+package meshinagent
 
 import (
 	"strings"
@@ -7,18 +7,18 @@ import (
 )
 
 const (
-	// ContainerName is the caller agent sidecar injected into Shared consumer pods.
-	ContainerName = "olares-caller-agent"
+	// ContainerName is the mesh-in agent sidecar injected into Shared consumer pods.
+	ContainerName = "olares-mesh-in-agent"
 
 	SettingNeedsSharedAccess = "needsSharedAccess"
 	SettingSharedAppDeps     = "sharedAppDeps"
 	SettingClusterAppRef     = "clusterAppRef"
 
-	JWTSecretVolumeName = "caller-jwt"
-	JWTSecretMountPath  = "/var/run/olares/caller-jwt"
+	JWTSecretVolumeName = "mesh-in-jwt"
+	JWTSecretMountPath  = "/var/run/olares/mesh-in-jwt"
 
 	// FailClosedEnv tells the agent to reject traffic when no valid JWT is present.
-	FailClosedEnv = "CALLER_AGENT_FAIL_CLOSED"
+	FailClosedEnv = "MESH_IN_AGENT_FAIL_CLOSED"
 )
 
 // ApplicationDeclaresSharedAccess reports whether the Application manifest
@@ -36,7 +36,7 @@ func ApplicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 	return strings.TrimSpace(app.Spec.Settings[SettingClusterAppRef]) != ""
 }
 
-// ShouldInject reports whether the caller agent should be injected into a pod.
+// ShouldInject reports whether the mesh-in agent should be injected into a pod.
 // Shared provider apps and middleware workloads never receive the agent.
 func ShouldInject(app *appv1alpha1.Application, isSharedApp bool) bool {
 	if isSharedApp || app == nil {

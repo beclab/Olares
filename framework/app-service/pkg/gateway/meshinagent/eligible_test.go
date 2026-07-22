@@ -1,4 +1,4 @@
-package calleragent
+package meshinagent
 
 import (
 	"testing"
@@ -63,7 +63,7 @@ func TestApplicationDeclaresSharedAccess(t *testing.T) {
 	}
 }
 
-func TestShouldInjectCallerAgent(t *testing.T) {
+func TestShouldInjectMeshInAgent(t *testing.T) {
 	consumer := &appv1alpha1.Application{
 		Spec: appv1alpha1.ApplicationSpec{
 			Settings: map[string]string{SettingNeedsSharedAccess: "true"},
@@ -73,7 +73,7 @@ func TestShouldInjectCallerAgent(t *testing.T) {
 		t.Fatal("expected inject for shared consumer app")
 	}
 	if ShouldInject(consumer, true) {
-		t.Fatal("shared provider app must not receive caller agent")
+		t.Fatal("shared provider app must not receive mesh-in agent")
 	}
 	if ShouldInject(nil, false) {
 		t.Fatal("nil app must not inject")

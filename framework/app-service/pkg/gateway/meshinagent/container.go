@@ -1,4 +1,4 @@
-package calleragent
+package meshinagent
 
 import (
 	"os"
@@ -9,26 +9,26 @@ import (
 )
 
 const (
-	callerAgentImageEnv = "CALLER_AGENT_IMAGE"
-	// DefaultImage is the R1 nginx+njs agent image (digest pin in charts; no :latest).
-	DefaultImage = "beclab/nginx:1.30.0-alpine-njs-olares-r1"
+	meshInAgentImageEnv = "MESH_IN_AGENT_IMAGE"
+	// DefaultImage is the R1 mesh-in-agent product image (engine: nginx+njs) (digest pin in charts; no :latest).
+	DefaultImage = "beclab/mesh-in-agent:1.30.0-r1"
 	listenPort   = 15443
-	listenPortName = "caller-https"
+	listenPortName = "mesh-in-https"
 
-	CertsVolumeName  = "olares-caller-certs"
-	CertsMountPath   = "/var/run/olares/caller-certs"
-	HostsVolumeName  = "olares-caller-shared-hosts"
-	HostsMountPath   = "/var/run/olares/caller-shared-hosts"
-	ConfVolumeName   = "olares-caller-agent-conf"
+	CertsVolumeName  = "olares-mesh-in-certs"
+	CertsMountPath   = "/var/run/olares/mesh-in-certs"
+	HostsVolumeName  = "olares-mesh-in-shared-hosts"
+	HostsMountPath   = "/var/run/olares/mesh-in-shared-hosts"
+	ConfVolumeName   = "olares-mesh-in-agent-conf"
 	ConfMountPath    = "/etc/nginx"
-	InitContainerName = "olares-caller-agent-iptables"
+	InitContainerName = "olares-mesh-in-agent-iptables"
 )
 
-// ContainerSpec returns the caller agent sidecar (WI-OC-CALLER-01 / IWO-OC-L1C-01).
+// ContainerSpec returns the mesh-in agent sidecar (WI-OC-CALLER-01 / IWO-OC-L1C-01).
 func ContainerSpec() corev1.Container {
 	return corev1.Container{
 		Name:            ContainerName,
-		Image:           callerAgentImage(),
+		Image:           meshInAgentImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"nginx", "-g", "daemon off;"},
 		Ports: []corev1.ContainerPort{
@@ -40,9 +40,9 @@ func ContainerSpec() corev1.Container {
 		},
 		Env: []corev1.EnvVar{
 			{Name: FailClosedEnv, Value: "true"},
-			{Name: "CALLER_AGENT_LISTEN_PORT", Value: "15443"},
-			{Name: "CALLER_AGENT_GATEWAY_HOST", Value: "app-gateway-data.app-gateway.svc"},
-			{Name: "CALLER_AGENT_GATEWAY_HTTP_PORT", Value: "80"},
+			{Name: "MESH_IN_AGENT_LISTEN_PORT", Value: "15443"},
+			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: "app-gateway-data.app-gateway.svc"},
+			{Name: "MESH_IN_AGENT_GATEWAY_HTTP_PORT", Value: "80"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: JWTSecretVolumeName, MountPath: JWTSecretMountPath, ReadOnly: true},
@@ -62,12 +62,12 @@ func ContainerSpec() corev1.Container {
 	}
 }
 
-// InitContainerSpec redirects outbound TCP/443 into the caller agent listen port.
+// InitContainerSpec redirects outbound TCP/443 into the mesh-in agent listen port.
 func InitContainerSpec() corev1.Container {
 	script := "iptables -t nat -A OUTPUT -p tcp --dport 443 -m owner ! --uid-owner 101 -j REDIRECT --to-ports 15443 || true"
 	return corev1.Container{
 		Name:            InitContainerName,
-		Image:           callerAgentImage(),
+		Image:           meshInAgentImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c", script},
 		SecurityContext: &corev1.SecurityContext{
@@ -76,13 +76,13 @@ func InitContainerSpec() corev1.Container {
 	}
 }
 
-// JWTSecretVolume returns the projected JWT secret volume for the caller agent.
+// JWTSecretVolume returns the projected JWT secret volume for the mesh-in agent.
 func JWTSecretVolume() corev1.Volume {
 	return corev1.Volume{
 		Name: JWTSecretVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName: "caller-jwt",
+				SecretName: "mesh-in-jwt",
 				Optional:   boolPtr(true),
 			},
 		},
@@ -95,7 +95,7 @@ func CertsVolume() corev1.Volume {
 		Name: CertsVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName: "olares-caller-certs",
+				SecretName: "olares-mesh-in-certs",
 				Optional:   boolPtr(true),
 			},
 		},
@@ -108,7 +108,7 @@ func SharedHostsVolume() corev1.Volume {
 		Name: HostsVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{Name: "olares-caller-shared-hosts"},
+				LocalObjectReference: corev1.LocalObjectReference{Name: "olares-mesh-in-shared-hosts"},
 				Optional:             boolPtr(true),
 			},
 		},
@@ -127,8 +127,8 @@ func ConfVolume() corev1.Volume {
 	}
 }
 
-func callerAgentImage() string {
-	if img := strings.TrimSpace(os.Getenv(callerAgentImageEnv)); img != "" {
+func meshInAgentImage() string {
+	if img := strings.TrimSpace(os.Getenv(meshInAgentImageEnv)); img != "" {
 		return img
 	}
 	return DefaultImage
