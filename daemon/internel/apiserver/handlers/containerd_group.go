@@ -13,10 +13,10 @@ func init() {
 	registry := containerd.Group("registry")
 	mirrors := registry.Group("mirrors")
 
-	mirrors.Get("/", handlers.RequireLocal(handlers.GetRegistryMirrors))
-	mirrors.Get("/:registry", handlers.RequireLocal(handlers.GetRegistryMirror))
-	mirrors.Put("/:registry", handlers.RequireLocal(handlers.UpdateRegistryMirror))
-	mirrors.Delete("/:registry", handlers.RequireLocal(handlers.DeleteRegistryMirror))
+	mirrors.Get("/", handlers.RequireAuthorization(handlers.RequireLocal(handlers.GetRegistryMirrors)))
+	mirrors.Get("/:registry", handlers.RequireAuthorization(handlers.RequireLocal(handlers.GetRegistryMirror)))
+	mirrors.Put("/:registry", handlers.RequireAuthorization(handlers.RequireLocal(handlers.UpdateRegistryMirror)))
+	mirrors.Delete("/:registry", handlers.RequireAuthorization(handlers.RequireLocal(handlers.DeleteRegistryMirror)))
 
 	image := containerd.Group("images")
 
