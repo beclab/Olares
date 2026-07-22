@@ -72,7 +72,7 @@ For AI service apps deployed locally on Olares, a real API key is usually not re
 
 However, most AI client apps still require a value in the API key field. Enter any placeholder text such as `olares` or `local` to proceed.
 
-## Examples
+## Example
 
 The following examples demonstrate how to gather and apply the connection parameters in real client applications. Ensure that the relevant apps are installed before starting.
 
