@@ -163,20 +163,27 @@ func TestActivateBridgeSwitchSkipsUpWhenDownFails(t *testing.T) {
 func TestCommitNMCheckpointDestroyFailureTriggersRollback(t *testing.T) {
 	origDestroy := nmCheckpointDestroyFn
 	origRollback := nmCheckpointRollbackFn
+	origAdjust := nmCheckpointAdjustRollbackTimeoutFn
 	t.Cleanup(func() {
 		nmCheckpointDestroyFn = origDestroy
 		nmCheckpointRollbackFn = origRollback
+		nmCheckpointAdjustRollbackTimeoutFn = origAdjust
 	})
 
 	destroyCalls := 0
 	rollbackCalls := 0
 	manualCalls := 0
+	adjustCalls := 0
 	nmCheckpointDestroyFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath) error {
 		destroyCalls++
 		return errors.New("destroy boom")
 	}
 	nmCheckpointRollbackFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath) error {
 		rollbackCalls++
+		return nil
+	}
+	nmCheckpointAdjustRollbackTimeoutFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath, addTimeout uint32) error {
+		adjustCalls++
 		return nil
 	}
 
@@ -198,21 +205,36 @@ func TestCommitNMCheckpointDestroyFailureTriggersRollback(t *testing.T) {
 	if manualCalls != 0 {
 		t.Fatalf("manual rollback should not run when CheckpointRollback succeeds, got %d", manualCalls)
 	}
+	if adjustCalls != 0 {
+		t.Fatalf("disarm should not run when CheckpointRollback succeeds, got %d adjust calls", adjustCalls)
+	}
 }
 
 func TestCommitNMCheckpointDestroyFailureManualWhenRollbackFails(t *testing.T) {
 	origDestroy := nmCheckpointDestroyFn
 	origRollback := nmCheckpointRollbackFn
+	origAdjust := nmCheckpointAdjustRollbackTimeoutFn
 	t.Cleanup(func() {
 		nmCheckpointDestroyFn = origDestroy
 		nmCheckpointRollbackFn = origRollback
+		nmCheckpointAdjustRollbackTimeoutFn = origAdjust
 	})
 
+	destroyCalls := 0
+	adjustCalls := 0
 	nmCheckpointDestroyFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath) error {
-		return errors.New("destroy boom")
+		destroyCalls++
+		if destroyCalls <= checkpointDestroyRetries {
+			return errors.New("destroy boom")
+		}
+		return nil // disarm succeeds
 	}
 	nmCheckpointRollbackFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath) error {
 		return errors.New("rollback boom")
+	}
+	nmCheckpointAdjustRollbackTimeoutFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath, addTimeout uint32) error {
+		adjustCalls++
+		return nil
 	}
 	manualCalls := 0
 	err := commitNMCheckpoint(context.Background(), nil, dbus.ObjectPath("/cp/1"), func() {
@@ -223,5 +245,39 @@ func TestCommitNMCheckpointDestroyFailureManualWhenRollbackFails(t *testing.T) {
 	}
 	if manualCalls != 1 {
 		t.Fatalf("expected manual rollback once, got %d", manualCalls)
+	}
+	if destroyCalls != checkpointDestroyRetries+1 {
+		t.Fatalf("expected %d commit destroys + 1 disarm destroy, got %d", checkpointDestroyRetries, destroyCalls)
+	}
+	if adjustCalls != 0 {
+		t.Fatalf("adjust-timeout should not run when disarm destroy succeeds, got %d", adjustCalls)
+	}
+}
+
+func TestDisarmNMCheckpointFallsBackToDisableTimeout(t *testing.T) {
+	origDestroy := nmCheckpointDestroyFn
+	origAdjust := nmCheckpointAdjustRollbackTimeoutFn
+	t.Cleanup(func() {
+		nmCheckpointDestroyFn = origDestroy
+		nmCheckpointAdjustRollbackTimeoutFn = origAdjust
+	})
+
+	destroyCalls := 0
+	var gotTimeout uint32 = 99
+	nmCheckpointDestroyFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath) error {
+		destroyCalls++
+		return errors.New("destroy still failing")
+	}
+	nmCheckpointAdjustRollbackTimeoutFn = func(ctx context.Context, conn *dbus.Conn, cp dbus.ObjectPath, addTimeout uint32) error {
+		gotTimeout = addTimeout
+		return nil
+	}
+
+	disarmNMCheckpoint(context.Background(), nil, dbus.ObjectPath("/cp/leftover"))
+	if destroyCalls != 2 {
+		t.Fatalf("expected destroy then retry after timeout-disable, got %d", destroyCalls)
+	}
+	if gotTimeout != 0 {
+		t.Fatalf("expected adjust-timeout 0, got %d", gotTimeout)
 	}
 }
