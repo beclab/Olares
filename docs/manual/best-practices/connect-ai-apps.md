@@ -74,7 +74,7 @@ However, most AI client apps still require a value in the API key field. Enter a
 
 ## Example
 
-The following examples demonstrate how to gather and apply the connection parameters in real client applications. Ensure that the relevant apps are installed before starting.
+The following example demonstrates how to gather and apply the connection parameters in a real client application. Ensure that the relevant apps are installed before starting.
 
 ### Connect an LLM service app to LobeHub
 
