@@ -25,6 +25,10 @@ const (
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
 
+	// entranceTypeDev marks a development entrance, which gets an extra
+	// `<appid>-<port>.<zone>` alias routed to the same upstream.
+	entranceTypeDev = "dev"
+
 	// systemServicePriority makes system-service virtual hosts (auth/desktop/
 	// wizard) outrank apps and custom domains when a domain is claimed by more
 	// than one virtual host in the same route config.
@@ -534,11 +538,37 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			}
 		}
 
-		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
-		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
-		clusterSet[clusterName] = &ir.ClusterIR{
-			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
+		// A "dev" entrance additionally answers on `<appid>-<port>.<zone>`
+		// (plus its .olares.local alias), routed to the same upstream as the
+		// entrance's primary hostname.
+		if entrance.Type == entranceTypeDev {
+			devPrefix := fmt.Sprintf("%s-%d", app.Appid, entrance.Port)
+			devHostname := fmt.Sprintf("%s.%s", devPrefix, zone)
+
+			domains = append(domains, devHostname)
+			if devLocal := toLocalDomain(devHostname); devLocal != devHostname {
+				domains = append(domains, devLocal)
+			}
 		}
+
+		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
+		cluster := &ir.ClusterIR{
+			Name:   clusterName,
+			Host:   fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace),
+			Port:   uint32(entrance.Port),
+			UseDNS: true,
+		}
+		// A "dev" entrance's Host is already the backing pod IP (set by
+		// proxylistener), so route straight to it as a STATIC cluster rather
+		// than a Kubernetes service DNS name. Dev apps often have no
+		// stable/ready service endpoint, which makes a STRICT_DNS cluster
+		// resolve to nothing and return 503 no_healthy_upstream; hitting the
+		// pod IP directly avoids that.
+		if entrance.Type == entranceTypeDev {
+			cluster.Host = entrance.Host
+			cluster.UseDNS = false
+		}
+		clusterSet[clusterName] = cluster
 
 		_, enableOIDC := app.Settings["oidc.client.id"]
 

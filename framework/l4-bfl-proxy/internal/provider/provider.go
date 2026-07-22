@@ -456,6 +456,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 				Port:            e.Port,
 				AuthLevel:       e.AuthLevel,
 				WindowPushState: e.WindowPushState,
+				Type:            e.Type,
 			})
 		}
 
