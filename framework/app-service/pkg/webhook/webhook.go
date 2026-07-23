@@ -18,11 +18,8 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/calleragent"
-<<<<<<< HEAD
-	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
-=======
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/egressagent"
->>>>>>> d3de57fba (feat(egressagent): non-stub agent, nginx render, webhook inject)
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
