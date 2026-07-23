@@ -13,8 +13,8 @@ import (
 
 const (
 	meshInAgentImageEnv = "MESH_IN_AGENT_IMAGE"
-	// DefaultImage is the R1 mesh-in-agent product image (engine: nginx+njs) (digest pin in charts; no :latest).
-	DefaultImage   = "beclab/mesh-in-agent:1.30.0-r2"
+	// DefaultImage is the mesh-in-agent product image (engine: nginx+njs) (digest pin in charts; no :latest).
+	DefaultImage = "beclab/mesh-in-agent:1.30.0-r3"
 	listenPort     = HTTPListenPort
 	listenPortName = "mesh-in-http"
 
