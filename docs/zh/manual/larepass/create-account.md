@@ -30,5 +30,5 @@ Olares ID 只能在 LarePass 移动端创建。
 ## 了解更多
 
 - [使用自定义域名创建 Olares ID](create-org-account.md)
-- [导入已有账户](import-account.md)
+- [管理账户](manage-accounts.md)
 - [备份助记词](back-up-mnemonics.md)

@@ -60,7 +60,7 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 ## 设置账户
 
 - 在移动设备上，你可以使用 LarePass 直接[创建 Olares ID](/zh/manual/larepass/create-account.md#创建-olares-id)。
-- 在桌面客户端<!--或 Chrome 扩展-->上，你需要[导入 Olares 账户](/zh/manual/larepass/create-account.md#导入账户)。
+- 在桌面客户端<!--或 Chrome 扩展-->上，你需要[导入 Olares 账户](manage-accounts.md#导入账户)。
 
 ## 功能对比
 
