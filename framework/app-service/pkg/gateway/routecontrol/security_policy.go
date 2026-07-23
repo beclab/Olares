@@ -23,7 +23,7 @@ const (
 	CallerJWTViewerClaim            = "olares.viewer"
 	CallerJWTViewerHeader           = "X-BFL-USER"
 	CallerJWTJWKSServiceName        = "caller-jwt-jwks"
-	CallerJWTJWKSServiceNamespace   = "os-app-service"
+	CallerJWTJWKSServiceNamespace   = "os-framework"
 	CallerJWTJWKSServicePort        = int32(443)
 	CallerJWTJWKSURI                  = "https://caller-jwt.olares.system/.well-known/jwks.json"
 	AuthorizationHeaderName         = "Authorization"

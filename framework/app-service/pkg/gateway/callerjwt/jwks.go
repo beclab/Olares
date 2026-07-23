@@ -15,7 +15,8 @@ import (
 
 const (
 	JWKSServiceName      = "caller-jwt-jwks"
-	JWKSServiceNamespace = "os-app-service"
+	// JWKS Service must live with app-service pods (selector is namespaced).
+	JWKSServiceNamespace = "os-framework"
 	JWKSPath             = "/.well-known/jwks.json"
 	jwksListenEnv        = "CALLER_JWT_JWKS_LISTEN"
 	defaultJWKSListen    = ":8444"
@@ -76,13 +77,26 @@ func JWKSHandler(issuer *Issuer) http.Handler {
 
 // JWKSServer serves JWKS over HTTPS for EG remoteJWKS backendRefs.
 type JWKSServer struct {
-	Issuer *Issuer
-	Addr   string
+	Issuer     *Issuer
+	Reconciler *IssuerReconciler
+	Addr       string
 }
 
-// Start implements manager.Runnable.
+// Start implements manager.Runnable. Cache is synced before Start, so key
+// materialization is safe here (unlike SetupWithManager).
 func (s *JWKSServer) Start(ctx context.Context) error {
-	if s == nil || s.Issuer == nil {
+	if s == nil {
+		<-ctx.Done()
+		return nil
+	}
+	issuer := s.Issuer
+	if issuer == nil && s.Reconciler != nil {
+		if err := s.Reconciler.ensureIssuer(ctx); err != nil {
+			return fmt.Errorf("init caller jwt issuer for jwks: %w", err)
+		}
+		issuer = s.Reconciler.Issuer()
+	}
+	if issuer == nil {
 		<-ctx.Done()
 		return nil
 	}
@@ -93,7 +107,7 @@ func (s *JWKSServer) Start(ctx context.Context) error {
 	certFile, keyFile := tlsCertPaths()
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           JWKSHandler(s.Issuer),
+		Handler:           JWKSHandler(issuer),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go func() {

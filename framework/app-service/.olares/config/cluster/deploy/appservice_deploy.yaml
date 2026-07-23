@@ -177,6 +177,8 @@ spec:
           name: api
         - containerPort: 8433
           name: webhook
+        - containerPort: 8444
+          name: jwks
         securityContext:
           runAsUser: 0
         env:
@@ -313,6 +315,10 @@ spec:
     port: 8433
     protocol: TCP
     targetPort: 8433
+  - name: jwks
+    port: 8444
+    protocol: TCP
+    targetPort: jwks
   selector:
     tier: app-service
   type: ClusterIP

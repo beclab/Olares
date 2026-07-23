@@ -123,7 +123,7 @@ func (r *IssuerReconciler) reconcileJWKSService(ctx context.Context) error {
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"app": "app-service",
+				"tier": "app-service",
 			},
 			Ports: []corev1.ServicePort{
 				{
@@ -165,6 +165,8 @@ func (r *IssuerReconciler) Issuer() *Issuer {
 }
 
 // SetupWithManager registers the issuer reconciler and JWKS HTTPS server.
+// Do not touch the API/cache here: controller-runtime cache is not started
+// until mgr.Start, and eager ensureIssuer caused CrashLoopBackOff (P8).
 func (r *IssuerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r == nil {
 		return nil
@@ -175,10 +177,7 @@ func (r *IssuerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.Scheme == nil {
 		r.Scheme = mgr.GetScheme()
 	}
-	if err := r.ensureIssuer(context.Background()); err != nil {
-		return fmt.Errorf("init caller jwt issuer: %w", err)
-	}
-	if err := mgr.Add(&JWKSServer{Issuer: r.issuer}); err != nil {
+	if err := mgr.Add(&JWKSServer{Reconciler: r}); err != nil {
 		return fmt.Errorf("add jwks server: %w", err)
 	}
 	return ctrl.NewControllerManagedBy(mgr).
