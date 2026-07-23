@@ -4,8 +4,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -82,10 +84,18 @@ exec nginx -c /tmp/mesh-in/nginx.conf -g 'daemon off;'
 
 // InitContainerSpec redirects outbound TCP/80 toward the shared gateway into the mesh-in HTTP listener.
 // Rules are inserted at the head of OUTPUT so they take precedence over olares-envoy PROXY_OUTBOUND.
+//
+// Loop avoidance: olares-envoy steals OUTPUT dport 80/8080 into :15001 for every uid except 1555.
+// mesh-in nginx (uid 101) must RETURN before that jump, otherwise proxy_pass→gateway:80 is
+// stolen by envoy; envoy's own connect to gateway:80 (!uid 101) then hits our REDIRECT back
+// to :16080 (worker_connections exhaustion / EG "connection termination").
 func InitContainerSpec() corev1.Container {
+	envoyUID := strconv.FormatInt(constants.EnvoyUID, 10)
 	script := fmt.Sprintf(`set -eu
 GW_HOST="${MESH_IN_AGENT_GATEWAY_HOST:-%s}"
 GW_IP=""
+NGINX_UID="%s"
+ENVOY_UID="%s"
 # Prefer configured host; fall back to legacy app-gateway NS for older installs.
 for h in "$GW_HOST" "app-gateway-data.os-gateway.svc" "app-gateway-data.os-gateway.svc.cluster.local" \
   "app-gateway-data.app-gateway.svc" "app-gateway-data.app-gateway.svc.cluster.local"; do
@@ -104,10 +114,14 @@ if [ -z "$GW_IP" ]; then
   echo "mesh-in-agent: cannot resolve gateway host $GW_HOST" >&2
   exit 1
 fi
-echo "mesh-in-agent: redirect $GW_IP:80 -> %d (skip uid %s)"
-iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner %s -j REDIRECT --to-ports %d 2>/dev/null \
-  || iptables -t nat -I OUTPUT 1 -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner %s -j REDIRECT --to-ports %d
-`, DefaultGatewayHost, HTTPListenPort, NginxWorkerUID, NginxWorkerUID, HTTPListenPort, NginxWorkerUID, HTTPListenPort)
+# mesh-in nginx upstream must leave the pod directly (skip envoy PROXY_OUTBOUND).
+iptables -t nat -C OUTPUT -m owner --uid-owner "$NGINX_UID" -j RETURN 2>/dev/null \
+  || iptables -t nat -I OUTPUT 1 -m owner --uid-owner "$NGINX_UID" -j RETURN
+echo "mesh-in-agent: redirect $GW_IP:80 -> %d (skip uid $NGINX_UID and envoy $ENVOY_UID)"
+# Do not REDIRECT envoy→gateway:80 (uid 1555) or we bounce back into mesh-in.
+iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports %d 2>/dev/null \
+  || iptables -t nat -I OUTPUT 2 -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports %d
+`, DefaultGatewayHost, NginxWorkerUID, envoyUID, HTTPListenPort, HTTPListenPort, HTTPListenPort)
 
 	return corev1.Container{
 		Name:            InitContainerName,
