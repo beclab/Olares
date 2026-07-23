@@ -1,12 +1,3 @@
-{{- $market_secret := (lookup "v1" "Secret" .Release.Namespace "market-secrets") -}}
-
-{{- $redis_password := "" -}}
-{{ if $market_secret -}}
-{{ $redis_password = (index $market_secret "data" "redis-passwords") }}
-{{ else -}}
-{{ $redis_password = randAlphaNum 16 | b64enc }}
-{{- end -}}
-
 {{- $market_backend_nats_secret := (lookup "v1" "Secret" .Release.Namespace "market-backend-nats-secret") -}}
 {{- $nats_password := "" -}}
 {{ if $market_backend_nats_secret -}}
@@ -95,7 +86,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
-  pg-passwords: {{ $redis_password }}
+  pg-passwords: {{ $pg_password }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -142,7 +133,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.78
+        image: beclab/market-backend:v0.6.79
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
