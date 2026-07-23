@@ -198,20 +198,20 @@ type InstallNvidiaContainerToolkit struct {
 }
 
 func (t *InstallNvidiaContainerToolkit) Execute(runtime connector.Runtime) error {
-	containerdDropInDir := "/etc/containerd/config.d"
-	containerdConfigFile := "/etc/containerd/config.toml"
-	if util.IsExist(containerdDropInDir) {
-		if err := os.RemoveAll(containerdDropInDir); err != nil {
-			return errors.Wrap(errors.WithStack(err), "Failed to remove containerd drop-in directory")
-		}
-	}
-	if util.IsExist(containerdConfigFile) {
-		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("sed -i '/^import/d' %s", containerdConfigFile), false, false); err != nil {
-			return errors.Wrap(errors.WithStack(err), "Failed to remove import section from containerd config file")
+	// Clean up any stale drop-in from the buggy nvidia-ctk `config.d` location
+	// (nvidia-container-toolkit <=1.18.0 mistakenly wrote 99-nvidia.toml to
+	// /etc/containerd/config.d instead of conf.d). We no longer strip `imports`
+	// from config.toml: the base containerd config (v3) owns
+	// `imports = ["/etc/containerd/conf.d/*.toml"]`, and nvidia-ctk writes its
+	// drop-in under conf.d (see ConfigureContainerdRuntime).
+	staleDropInDir := "/etc/containerd/config.d"
+	if util.IsExist(staleDropInDir) {
+		if err := os.RemoveAll(staleDropInDir); err != nil {
+			return errors.Wrap(errors.WithStack(err), "Failed to remove stale containerd drop-in directory")
 		}
 	}
 	logger.Debugf("install nvidia-container-toolkit")
-	if _, err := runtime.GetRunner().SudoCmd("apt-get update && sudo apt-get install -y --allow-downgrades nvidia-container-toolkit=1.17.9-1 nvidia-container-toolkit-base=1.17.9-1 jq", false, true); err != nil {
+	if _, err := runtime.GetRunner().SudoCmd("apt-get update && sudo apt-get install -y --allow-downgrades nvidia-container-toolkit=1.19.1-1 nvidia-container-toolkit-base=1.19.1-1 jq", false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to apt-get install nvidia-container-toolkit")
 	}
 	return nil
@@ -279,7 +279,12 @@ type ConfigureContainerdRuntime struct {
 }
 
 func (t *ConfigureContainerdRuntime) Execute(runtime connector.Runtime) error {
-	if _, err := runtime.GetRunner().SudoCmd("nvidia-ctk runtime configure --runtime=containerd --set-as-default --config-source=file", false, true); err != nil {
+	// Write nvidia's runtime settings to a drop-in imported by config.toml
+	// (imports = conf.d/*.toml) rather than editing config.toml in place. This
+	// keeps the Olares-managed registry config (config_path/certs.d) untouched, so
+	// docker.io mirrors survive an `nvidia-ctk runtime configure`. The drop-in path
+	// is set explicitly to avoid the nvidia-ctk <=1.18.0 conf.d/config.d bug.
+	if _, err := runtime.GetRunner().SudoCmd("nvidia-ctk runtime configure --runtime=containerd --set-as-default --config-source=file --drop-in-config=/etc/containerd/conf.d/99-nvidia.toml", false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "Failed to nvidia-ctk runtime configure")
 	}
 

@@ -224,7 +224,7 @@ func (d *DisableContainerd) Execute(runtime connector.Runtime) error {
 		"/lib/systemd/system/containerd.service", // apt installed
 		"/run/containerd",                        //
 		filepath.Join("/etc/systemd/system", templates.ContainerdService.Name()),
-		filepath.Join("/etc/containerd", templates.ContainerdConfig.Name()),
+		"/etc/containerd",
 		filepath.Join("/etc", templates.CrictlConfig.Name()),
 	}
 	if d.KubeConf.Cluster.Registry.DataRoot != "" {

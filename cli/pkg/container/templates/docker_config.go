@@ -56,6 +56,13 @@ func Mirrors(kubeConf *common.KubeConf) string {
 	return mirrors
 }
 
+// MirrorList returns the configured registry mirror endpoints as a raw slice
+// (unquoted). It is used to render containerd's certs.d/docker.io/hosts.toml
+// host entries, where each endpoint becomes a `[host."<url>"]` mirror.
+func MirrorList(kubeConf *common.KubeConf) []string {
+	return kubeConf.Cluster.Registry.RegistryMirrors
+}
+
 func InsecureRegistries(kubeConf *common.KubeConf) string {
 	var insecureRegistries string
 	if kubeConf.Cluster.Registry.InsecureRegistries != nil {
