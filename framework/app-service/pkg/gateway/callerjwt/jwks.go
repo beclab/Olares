@@ -26,6 +26,15 @@ const (
 	defaultKeyPath       = "/etc/certs/server.key"
 	jwksServicePort      = int32(443)
 	jwksTargetPortName   = "jwks"
+
+	// JWKSIngressNPName is the NetworkPolicy that allows Envoy Gateway pods
+	// in os-gateway to fetch JWKS on the app-service container port.
+	JWKSIngressNPName           = "allow-app-gateway-caller-jwt-jwks"
+	JWKSIngressNPFromNamespace  = "os-gateway"
+	JWKSIngressNPComponentValue = "caller-jwt"
+	jwksAppServiceSelectorKey   = "tier"
+	jwksAppServiceSelectorValue = "app-service"
+	managedByComponentLabel     = "app.kubernetes.io/component"
 )
 
 // BuildJWKS returns the JSON Web Key Set for the issuer key ring.

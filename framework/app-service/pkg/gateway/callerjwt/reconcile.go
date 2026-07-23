@@ -54,7 +54,7 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		if err := r.reloadIssuer(ctx); err != nil {
 			return reconcile.Result{}, err
 		}
-		if err := r.reconcileJWKSService(ctx); err != nil {
+		if err := r.reconcileJWKSSurface(ctx); err != nil {
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{}, nil
@@ -105,7 +105,14 @@ func (r *IssuerReconciler) ensureIssuer(ctx context.Context) error {
 		return err
 	}
 	r.issuer = issuer
-	return r.reconcileJWKSService(ctx)
+	return r.reconcileJWKSSurface(ctx)
+}
+
+func (r *IssuerReconciler) reconcileJWKSSurface(ctx context.Context) error {
+	if err := r.reconcileJWKSService(ctx); err != nil {
+		return err
+	}
+	return r.reconcileJWKSIngressNP(ctx)
 }
 
 func (r *IssuerReconciler) reloadIssuer(ctx context.Context) error {
