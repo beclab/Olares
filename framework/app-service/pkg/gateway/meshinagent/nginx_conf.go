@@ -7,7 +7,9 @@ import (
 
 const (
 	// HTTPListenPort receives redirected outbound TCP/80 toward the shared gateway.
-	HTTPListenPort = 15080
+	// Use 16xxx to stay clear of the envoy sidecar band (15000-15008, listener_image 15080)
+	// and d2 loopback (15090) / stream (15443).
+	HTTPListenPort = 16080
 )
 
 // NginxConfInput feeds RenderNginxConf.

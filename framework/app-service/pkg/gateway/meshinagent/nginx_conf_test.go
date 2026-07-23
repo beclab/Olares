@@ -10,7 +10,7 @@ import (
 func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 	got := RenderNginxConf(NginxConfInput{FailClosed: true})
 	for _, want := range []string{
-		"listen 15080",
+		"listen 16080",
 		JWTSecretMountPath + "/token",
 		"app-gateway-data.os-gateway.svc",
 		"fail-closed",
@@ -73,7 +73,7 @@ func TestInitContainerSpec(t *testing.T) {
 		t.Fatal("expected NET_ADMIN capabilities")
 	}
 	script := strings.Join(c.Command, " ")
-	for _, want := range []string{"iptables", "-I OUTPUT", "--dport 80", "REDIRECT", "15080", "os-gateway"} {
+	for _, want := range []string{"iptables", "-I OUTPUT", "--dport 80", "REDIRECT", "16080", "os-gateway"} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("init script missing %q in %#v", want, c.Command)
 		}
