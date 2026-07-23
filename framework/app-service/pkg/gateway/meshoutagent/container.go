@@ -14,7 +14,7 @@ import (
 const (
 	meshOutAgentImageEnv = "MESH_OUT_AGENT_IMAGE"
 	// DefaultImage is the mesh-out-agent product image (engine: nginx alpine-slim) (digest pin in charts).
-	DefaultImage      = "beclab/mesh-out-agent:1.30.0-r3"
+	DefaultImage      = "beclab/mesh-out-agent:1.30.0-r4"
 	systemServerHost  = "system-server.user-system"
 	systemServerPort  = "28080"
 	InitContainerName = "olares-mesh-out-agent-iptables"

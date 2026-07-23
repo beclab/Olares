@@ -9,6 +9,7 @@ ARG MESH_OUT_UID=1652
 
 FROM nginx:${NGINX_ALPINE_SLIM_TAG}
 
+ARG NGINX_ALPINE_SLIM_TAG=1.30.0-alpine-slim
 ARG NGINX_VERSION=1.30.0
 ARG MESH_OUT_OLARES_REV=dev
 ARG SOURCE_COMMIT=unknown
@@ -31,7 +32,19 @@ RUN set -eux; \
     chown -R meshout:meshout /var/cache/nginx /var/log/nginx; \
     if grep -qE '^[[:space:]]*user[[:space:]]+' /etc/nginx/nginx.conf; then \
       sed -i "s/^[[:space:]]*user[[:space:]].*/user  meshout;/" /etc/nginx/nginx.conf; \
-    fi
+    fi; \
+    NGINX_VER="$(nginx -v 2>&1 | sed -n 's/^nginx version: nginx\///p')"; \
+    mkdir -p /usr/share/doc/mesh-out-agent; \
+    { \
+      echo "base_image=nginx:${NGINX_ALPINE_SLIM_TAG}"; \
+      echo "nginx_version=${NGINX_VER}"; \
+      echo "mesh_out_uid=${MESH_OUT_UID}"; \
+      echo "nginx_git=https://github.com/nginx/nginx"; \
+      echo "nginx_checkout=git clone https://github.com/nginx/nginx.git && git -C nginx checkout release-${NGINX_VER}"; \
+      echo "nginx_tarball=https://nginx.org/download/nginx-${NGINX_VER}.tar.gz"; \
+      echo "njs=absent (alpine-slim; mesh-out is http-only)"; \
+      echo "extra_apk=iptables"; \
+    } > /usr/share/doc/mesh-out-agent/UPSTREAM_SOURCES.txt
 
 USER root
 
