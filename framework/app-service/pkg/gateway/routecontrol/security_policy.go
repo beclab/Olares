@@ -12,22 +12,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
 const (
-	SecurityPolicySuffix          = "-jwt-authn"
-	CallerJWTIssuer                 = "https://caller-jwt.olares.system/"
-	CallerJWTAudience               = "app-gateway-data"
-	CallerJWTProviderName           = "caller-jwt"
-	CallerJWTViewerClaim            = "olares.viewer"
-	CallerJWTViewerHeader           = "X-BFL-USER"
-	CallerJWTJWKSServiceName        = "caller-jwt-jwks"
-	CallerJWTJWKSServiceNamespace   = "os-framework"
-	CallerJWTJWKSServicePort        = int32(443)
-	CallerJWTJWKSURI                  = "https://caller-jwt.olares.system/.well-known/jwks.json"
-	AuthorizationHeaderName         = "Authorization"
-	AuthorizationBearerValuePrefix  = "Bearer "
+	SecurityPolicySuffix         = "-jwt-authn"
+	CallerJWTIssuer              = callerjwt.IssuerURL
+	CallerJWTAudience            = "app-gateway-data"
+	CallerJWTProviderName        = "caller-jwt"
+	CallerJWTViewerClaim         = "olares.viewer"
+	CallerJWTViewerHeader        = "X-BFL-USER"
+	CallerJWTJWKSServiceName     = "caller-jwt-jwks"
+	CallerJWTJWKSServiceNamespace = "os-framework"
+	CallerJWTJWKSServicePort     = int32(443)
+	CallerJWTJWKSURI             = callerjwt.JWKSURI
+	AuthorizationHeaderName      = "Authorization"
+	AuthorizationBearerValuePrefix = "Bearer "
 )
 
 var securityPolicyGVK = schema.GroupVersionKind{

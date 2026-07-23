@@ -125,6 +125,7 @@ data:
 
     [bytetrade]
     DNS.1 = app-service.os-framework.svc
+    DNS.2 = authz.olares.system
 
 ---
 apiVersion: apps/v1

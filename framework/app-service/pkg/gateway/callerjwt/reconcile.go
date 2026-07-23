@@ -112,7 +112,10 @@ func (r *IssuerReconciler) reconcileJWKSSurface(ctx context.Context) error {
 	if err := r.reconcileJWKSService(ctx); err != nil {
 		return err
 	}
-	return r.reconcileJWKSIngressNP(ctx)
+	if err := r.reconcileJWKSIngressNP(ctx); err != nil {
+		return err
+	}
+	return r.reconcileJWKSTrust(ctx)
 }
 
 func (r *IssuerReconciler) reloadIssuer(ctx context.Context) error {

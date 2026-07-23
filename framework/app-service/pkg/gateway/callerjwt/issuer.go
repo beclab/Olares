@@ -15,7 +15,12 @@ import (
 )
 
 const (
-	IssuerURL           = "https://caller-jwt.olares.system/"
+	// IssuerHost is the cluster-internal unified authz issuer DNS name.
+	IssuerHost = "authz.olares.system"
+	// IssuerURL is the JWT iss value and logical issuer base URL.
+	IssuerURL = "https://" + IssuerHost + "/"
+	// JWKSURI is the HTTPS URL EG remoteJWKS uses (hostname must match TLS SAN).
+	JWKSURI             = "https://" + IssuerHost + JWKSPath
 	Audience            = "app-gateway-data"
 	ClaimAppRef         = "olares.caller.appRef"
 	ClaimEntrance       = "olares.entrance"
