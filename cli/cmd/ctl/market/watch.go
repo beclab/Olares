@@ -137,6 +137,22 @@ type watchTarget struct {
 	// alone, so we keep the strict gate for those.
 	idempotentSuccess bool
 
+	// stoppedTerminalSuccess treats a `stopped` row as a terminal SUCCESS,
+	// op-agnostically, but ONLY when its statusTime is strictly newer than
+	// baselineStatusTime. This is the resume watcher's cancel escape hatch:
+	// a resume that gets cancelled (by the user via `market cancel`, or by
+	// the backend's TTL) walks resuming -> resumingCanceling -> stopping ->
+	// stopped, so `stopped` is the settled outcome — but it is ALSO the
+	// pre-resume resting state (you resume a stopped app), byte-identical at
+	// tick zero. We reuse restart's statusTime-baseline trick to tell the
+	// freshly-cancelled `stopped` from the stale pre-resume row (strict `>`;
+	// a missing/unparseable statusTime -> effectiveTime 0 -> never terminal,
+	// mirroring the SPA). Unlike requireNewerThanBaseline this is scoped to
+	// the single `stopped` state, so the `running` success path (incl. the
+	// idempotentSuccess no-op shortcut) is unaffected. Only watchResume sets
+	// it; captured baseline comes from runResume, same as restart.
+	stoppedTerminalSuccess bool
+
 	// requireNewerThanBaseline gates BOTH success and failure on the row's
 	// statusTime being strictly newer than baselineStatusTime. This is the
 	// crux of the restart watcher: a completed restart rests at
@@ -200,14 +216,22 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 		t.idempotentSuccess = true
 	case watchResume:
 		t.successSet = map[string]bool{"running": true}
+		// resumingCanceled is intentionally omitted: that transition does
+		// not exist (a cancelled resume settles at `stopped`, handled by
+		// stoppedTerminalSuccess below). Failure is the resume dying
+		// (resumeFailed) or the cancel request itself being rejected
+		// (resumingCancelFailed).
 		t.failureSet = map[string]bool{
 			"resumeFailed":         true,
-			"resumingCanceled":     true,
 			"resumingCancelFailed": true,
 		}
 		// Symmetric to stop: `resume` on an already-running row is a
 		// backend no-op and would otherwise hang the watcher.
 		t.idempotentSuccess = true
+		// A resume that gets cancelled lands on `stopped`; accept it as a
+		// terminal (baseline-gated so the pre-resume stopped row at tick
+		// zero is not a false positive). See stoppedTerminalSuccess.
+		t.stoppedTerminalSuccess = true
 	case watchRestart:
 		// restart = backend stop THEN resume once stop succeeds. The row
 		// therefore passes through `OpType=stop` (stop phase) and
@@ -446,6 +470,13 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 			rowCopy := row
 			last = &rowCopy
 
+			// Resume-cancel escape hatch: a cancelled resume settles at
+			// `stopped`, op-agnostically, but only a row strictly newer
+			// than the pre-resume baseline is the fresh cancel (the tick-
+			// zero pre-resume `stopped` row shares the baseline statusTime).
+			if t.stoppedTerminalSuccess && row.State == appStateStopped && effectiveTime(row) > t.baselineStatusTime {
+				return row, nil
+			}
 			if t.successSet[row.State] && t.passesBaseline(row) {
 				switch {
 				case t.matchesOpType(row):
