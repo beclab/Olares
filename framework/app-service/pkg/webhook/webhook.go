@@ -16,12 +16,9 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-<<<<<<< HEAD
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
-	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
-=======
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/calleragent"
->>>>>>> ed949b076 (feat(app-service): scaffold Shared HTTPS caller agent webhook injection)
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
