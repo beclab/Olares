@@ -10,7 +10,7 @@
 {{- $pg_secret := (lookup "v1" "Secret" .Release.Namespace "market-pg-secrets") -}}
 {{- $pg_password := "" -}}
 {{ if $pg_secret -}}
-{{ $pg_password = (index $pg_secret "data" "pg_password") }}
+{{ $pg_password = (index $pg_secret "data" "pg-passwords") }}
 {{ else -}}
 {{ $pg_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
