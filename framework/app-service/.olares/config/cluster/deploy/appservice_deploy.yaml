@@ -170,7 +170,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.6.7
+        image: beclab/app-service:1.12.8-202607231224
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
@@ -202,6 +202,10 @@ spec:
           value: "beclab/upload:v1.0.3"
         - name: JOB_IMAGE
           value: "beclab/upgrade-job:0.1.7"
+        - name: MESH_IN_AGENT_IMAGE
+          value: "beclab/mesh-in-agent:1.30.0-r1"
+        - name: MESH_OUT_AGENT_IMAGE
+          value: "beclab/mesh-out-agent:1.30.0-r2"
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
         - name: CLUSTER_CPU_THRESHOLD
