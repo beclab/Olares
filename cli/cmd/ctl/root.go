@@ -12,6 +12,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/doctor"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
+	"github.com/beclab/Olares/cli/cmd/ctl/knowledge"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/market"
 	"github.com/beclab/Olares/cli/cmd/ctl/node"
@@ -108,6 +109,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(chart.NewChartCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
+	cmds.AddCommand(knowledge.NewKnowledgeCommand(factory))
 	cmds.AddCommand(files.NewFilesCommand(factory))
 	cmds.AddCommand(doctor.NewDoctorCommand(factory))
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))

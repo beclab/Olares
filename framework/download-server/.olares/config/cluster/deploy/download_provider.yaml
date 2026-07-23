@@ -30,6 +30,7 @@ rules:
       - "/api/user/*"
       - "/api/system/*"
       - "/api/url/*"
+      - "/api/integration/*"
     verbs: ["*"]
 
 ---
