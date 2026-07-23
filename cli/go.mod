@@ -3,6 +3,7 @@ module github.com/beclab/Olares/cli
 go 1.24.11
 
 replace (
+	github.com/beclab/Olares/framework/app-gateway => ../framework/app-gateway
 	github.com/beclab/Olares/framework/oac => ../framework/oac
 	github.com/estesp/manifest-tool/v2 => github.com/estesp/manifest-tool/v2 v2.0.3
 	olares.com/backups-sdk => github.com/Above-Os/backups-sdk v0.1.40
@@ -83,6 +84,7 @@ require (
 	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/alecthomas/repr v0.4.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
+	github.com/beclab/Olares/framework/app-gateway v0.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
