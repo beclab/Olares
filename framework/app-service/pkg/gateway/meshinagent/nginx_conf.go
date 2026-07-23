@@ -5,22 +5,25 @@ import (
 	"strings"
 )
 
+const (
+	// HTTPListenPort receives redirected outbound TCP/80 toward the shared gateway.
+	HTTPListenPort = 15080
+)
+
 // NginxConfInput feeds RenderNginxConf.
 type NginxConfInput struct {
-	ListenPort      int
+	HTTPListenPort  int
 	GatewayHost     string
 	GatewayHTTPPort int
 	JWTTokenPath    string
-	CertDir         string
-	SharedHostsFile string
 	FailClosed      bool
 }
 
-// RenderNginxConf builds a minimal nginx+njs config for HTTP Bearer inject and
-// HTTPS CT-1 termination on ListenPort (default 15443).
+// RenderNginxConf builds a runnable nginx+njs config that injects
+// Authorization: Bearer <caller JWT> on HTTP traffic to the shared gateway.
 func RenderNginxConf(in NginxConfInput) string {
-	if in.ListenPort <= 0 {
-		in.ListenPort = listenPort
+	if in.HTTPListenPort <= 0 {
+		in.HTTPListenPort = HTTPListenPort
 	}
 	if in.GatewayHost == "" {
 		in.GatewayHost = "app-gateway-data.app-gateway.svc"
@@ -31,39 +34,40 @@ func RenderNginxConf(in NginxConfInput) string {
 	if in.JWTTokenPath == "" {
 		in.JWTTokenPath = JWTSecretMountPath + "/token"
 	}
-	if in.CertDir == "" {
-		in.CertDir = CertsMountPath
-	}
-	if in.SharedHostsFile == "" {
-		in.SharedHostsFile = HostsMountPath + "/hosts"
-	}
 
-	failClosedNote := "# fail-closed: missing jwt refuses upstream"
+	failClosedNote := "# fail-closed: empty jwt returns 401"
 	if !in.FailClosed {
-		failClosedNote = "# fail-open (dev only)"
+		failClosedNote = "# fail-open (dev only): empty jwt still proxied"
 	}
 
 	var b strings.Builder
+	b.WriteString("load_module /usr/lib/nginx/modules/ngx_http_js_module.so;\n")
 	b.WriteString("worker_processes 1;\n")
+	b.WriteString("error_log /var/log/nginx/error.log warn;\n")
+	b.WriteString("pid /tmp/nginx-mesh-in.pid;\n")
 	b.WriteString("events { worker_connections 1024; }\n")
 	b.WriteString(failClosedNote + "\n")
 	b.WriteString("http {\n")
-	b.WriteString("  js_import main from bearer.js;\n")
+	b.WriteString("  access_log off;\n")
+	b.WriteString("  js_import main from /tmp/mesh-in/bearer.js;\n")
 	b.WriteString(fmt.Sprintf("  # jwt path: %s\n", in.JWTTokenPath))
-	b.WriteString(fmt.Sprintf("  # shared hosts: %s\n", in.SharedHostsFile))
 	b.WriteString("  server {\n")
-	b.WriteString("    listen 15080;\n")
+	b.WriteString(fmt.Sprintf("    listen %d;\n", in.HTTPListenPort))
+	b.WriteString("    server_name _;\n")
 	b.WriteString("    location / {\n")
 	b.WriteString("      js_set $mesh_in_jwt main.readJWT;\n")
+	if in.FailClosed {
+		b.WriteString("      if ($mesh_in_jwt = \"\") { return 401; }\n")
+	}
+	b.WriteString("      proxy_http_version 1.1;\n")
+	b.WriteString("      proxy_set_header Host $host;\n")
+	b.WriteString("      proxy_set_header X-Forwarded-Proto $scheme;\n")
+	b.WriteString("      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n")
 	b.WriteString("      proxy_set_header Authorization \"Bearer $mesh_in_jwt\";\n")
+	b.WriteString("      proxy_pass_request_headers on;\n")
 	b.WriteString(fmt.Sprintf("      proxy_pass http://%s:%d;\n", in.GatewayHost, in.GatewayHTTPPort))
 	b.WriteString("    }\n")
 	b.WriteString("  }\n")
-	b.WriteString("}\n")
-	b.WriteString("stream {\n")
-	b.WriteString(fmt.Sprintf("  # CT-1 certs: %s\n", in.CertDir))
-	b.WriteString(fmt.Sprintf("  server { listen %d; ssl_preread on; proxy_pass %s:%d; }\n",
-		in.ListenPort, in.GatewayHost, in.GatewayHTTPPort))
 	b.WriteString("}\n")
 	return b.String()
 }

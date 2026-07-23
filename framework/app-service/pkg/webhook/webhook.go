@@ -229,8 +229,8 @@ func (wh *Webhook) CreatePatch(
 			}
 		}
 		if injectMeshInAgent {
-			// Skip ConfVolume until seed/render init is wired; emptyDir over
-			// /etc/nginx would hide the image nginx.conf and crash the sidecar.
+			// Conf is materialized at sidecar start (base64 → /tmp/mesh-in); do not
+			// mount an emptyDir over /etc/nginx (would hide image modules path).
 			pod.Spec.Volumes = append(pod.Spec.Volumes,
 				meshinagent.JWTSecretVolume(),
 				meshinagent.CertsVolume(),

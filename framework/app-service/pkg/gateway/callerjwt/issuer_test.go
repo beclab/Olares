@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func testScheme(t *testing.T) *runtime.Scheme {
@@ -175,6 +176,52 @@ func TestIssuerReconcilerCreatesJWTSecretT_C2_1(t *testing.T) {
 	if claims.Viewer != "alice" {
 		t.Fatalf("viewer = %q", claims.Viewer)
 	}
+}
+
+func TestIssuerReconcileRequeuesForJWTRefresh(t *testing.T) {
+	scheme := testScheme(t)
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+	keys := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      IssuerKeysSecretName,
+			Namespace: JWKSServiceNamespace,
+		},
+		Data: map[string][]byte{
+			SigningKeyPEM:   encodePrivateKeyPEM(ring.Active),
+			SigningKeyIDKey: []byte(ring.Active.KID),
+		},
+	}
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "user-space-alice"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "demo",
+			Namespace: "user-space-alice-demo",
+			Owner:     "alice",
+			Settings: map[string]string{
+				settingSharedAppDeps: "web",
+			},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(keys, app).Build()
+	r := &IssuerReconciler{Client: c, Scheme: scheme, issuer: issuer}
+	res, err := r.Reconcile(context.Background(), reconcileRequest(app))
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != JWTRefreshInterval {
+		t.Fatalf("RequeueAfter = %v, want %v", res.RequeueAfter, JWTRefreshInterval)
+	}
+}
+
+func reconcileRequest(app *appv1alpha1.Application) reconcile.Request {
+	return reconcile.Request{NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace}}
 }
 
 func TestIssuerReconcilerDeletesSecretWithoutDependency(t *testing.T) {

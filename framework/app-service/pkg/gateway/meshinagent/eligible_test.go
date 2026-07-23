@@ -113,6 +113,10 @@ func TestContainerSpecFailClosed(t *testing.T) {
 			t.Fatalf("must not mount empty ConfVolume over %s until seed/render is wired", ConfMountPath)
 		}
 	}
+	v := JWTSecretVolume()
+	if v.Secret == nil || v.Secret.SecretName != "caller-jwt" {
+		t.Fatalf("JWT volume must mount caller-jwt secret, got %#v", v.Secret)
+	}
 }
 
 func TestConfSeedInitContainerSpec(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"strings"
+	"time"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+)
+
+const (
+	// JWTRefreshInterval re-issues caller JWT-SVIDs before MaxTTL expiry.
+	JWTRefreshInterval = 30 * time.Minute
 )
 
 const (
@@ -57,7 +63,14 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	if err := r.Client.Get(ctx, req.NamespacedName, app); err != nil {
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
-	return reconcile.Result{}, r.reconcileApplication(ctx, app)
+	if err := r.reconcileApplication(ctx, app); err != nil {
+		klog.Errorf("callerjwt: reconcile application %s/%s failed: %v", app.Namespace, app.Name, err)
+		return reconcile.Result{}, err
+	}
+	if applicationDeclaresSharedAccess(app) {
+		return reconcile.Result{RequeueAfter: JWTRefreshInterval}, nil
+	}
+	return reconcile.Result{}, nil
 }
 
 func (r *IssuerReconciler) reconcileApplication(ctx context.Context, app *appv1alpha1.Application) error {
