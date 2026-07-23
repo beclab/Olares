@@ -14,11 +14,12 @@ import (
 )
 
 func linkerdReadyKube() *fake.Clientset {
+	ns := mesh.LinkerdNamespace
 	objs := []runtime.Object{
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "linkerd-destination", Namespace: "linkerd"}, Status: appsv1.DeploymentStatus{ReadyReplicas: 1}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "linkerd-identity", Namespace: "linkerd"}, Status: appsv1.DeploymentStatus{ReadyReplicas: 1}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "linkerd-proxy-injector", Namespace: "linkerd"}, Status: appsv1.DeploymentStatus{ReadyReplicas: 1}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "linkerd-pki-guardian", Namespace: "linkerd"}, Status: appsv1.DeploymentStatus{ReadyReplicas: 1}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "linkerd-destination", Namespace: ns}, Status: appsv1.DeploymentStatus{ReadyReplicas: 1}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "linkerd-identity", Namespace: ns}, Status: appsv1.DeploymentStatus{ReadyReplicas: 1}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "linkerd-proxy-injector", Namespace: ns}, Status: appsv1.DeploymentStatus{ReadyReplicas: 1}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "linkerd-pki-guardian", Namespace: ns}, Status: appsv1.DeploymentStatus{ReadyReplicas: 1}},
 	}
 	return fake.NewSimpleClientset(objs...)
 }

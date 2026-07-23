@@ -463,7 +463,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 			if isEntrancePod {
 				skip, skipErr := wh.shouldSkipInboundEntranceSidecar(ctx, appConfig, namespace, e.Name)
 				if skipErr != nil {
-					return false, false, false, nil, perms, nil, nil, skipErr
+					return false, false, false, false, false, nil, perms, nil, nil, skipErr
 				}
 				if !skip {
 					injectPolicy = true
