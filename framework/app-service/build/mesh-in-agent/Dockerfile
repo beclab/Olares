@@ -13,13 +13,15 @@ ARG SOURCE_COMMIT=unknown
 ARG BUILD_DATE=unknown
 
 RUN set -eux; \
-    apk add --no-cache nginx-module-njs; \
+    apk add --no-cache nginx-module-njs iptables bind-tools; \
     nginx -V 2>&1 | tr ' ' '\n' | grep -E -- '--with-stream(_ssl(_module|_preread_module))?$|--with-http_ssl_module|--with-http_v2_module' >/dev/null \
         || (echo "FATAL: required nginx modules missing in base image" >&2; exit 1); \
     test -f /etc/nginx/modules/ngx_stream_js_module.so \
         || (echo "FATAL: ngx_stream_js_module.so not installed by nginx-module-njs" >&2; exit 1); \
     test -f /etc/nginx/modules/ngx_http_js_module.so \
-        || (echo "FATAL: ngx_http_js_module.so not installed by nginx-module-njs" >&2; exit 1)
+        || (echo "FATAL: ngx_http_js_module.so not installed by nginx-module-njs" >&2; exit 1); \
+    command -v iptables >/dev/null \
+        || (echo "FATAL: iptables missing (required by mesh-in iptables init)" >&2; exit 1)
 
 LABEL org.opencontainers.image.title="beclab/mesh-in-agent" \
       org.opencontainers.image.description="Olares mesh-in-agent (engine: nginx ${NGINX_VERSION} alpine + njs)" \

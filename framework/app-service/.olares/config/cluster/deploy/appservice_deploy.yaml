@@ -205,7 +205,7 @@ spec:
         - name: JOB_IMAGE
           value: "beclab/upgrade-job:0.1.7"
         - name: MESH_IN_AGENT_IMAGE
-          value: "beclab/mesh-in-agent:1.30.0-r1"
+          value: "beclab/mesh-in-agent:1.30.0-r2"
         - name: MESH_OUT_AGENT_IMAGE
           value: "beclab/mesh-out-agent:1.30.0-r2"
         - name: SHARED_LIB_PATH
