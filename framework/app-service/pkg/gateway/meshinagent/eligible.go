@@ -17,6 +17,9 @@ const (
 	JWTSecretVolumeName = "mesh-in-jwt"
 	JWTSecretMountPath  = "/var/run/olares/mesh-in-jwt"
 
+	// DefaultGatewayHost is the Shared HTTP data-plane Service (namespace os-gateway).
+	DefaultGatewayHost = "app-gateway-data.os-gateway.svc"
+
 	// FailClosedEnv tells the agent to reject traffic when no valid JWT is present.
 	FailClosedEnv = "MESH_IN_AGENT_FAIL_CLOSED"
 )

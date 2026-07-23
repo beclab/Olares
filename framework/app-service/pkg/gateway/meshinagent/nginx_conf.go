@@ -26,7 +26,7 @@ func RenderNginxConf(in NginxConfInput) string {
 		in.HTTPListenPort = HTTPListenPort
 	}
 	if in.GatewayHost == "" {
-		in.GatewayHost = "app-gateway-data.app-gateway.svc"
+		in.GatewayHost = DefaultGatewayHost
 	}
 	if in.GatewayHTTPPort <= 0 {
 		in.GatewayHTTPPort = 80

@@ -47,7 +47,7 @@ func ContainerSpec() corev1.Container {
 		Env: []corev1.EnvVar{
 			{Name: FailClosedEnv, Value: "true"},
 			{Name: "MESH_IN_AGENT_LISTEN_PORT", Value: fmt.Sprintf("%d", HTTPListenPort)},
-			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: "app-gateway-data.app-gateway.svc"},
+			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: DefaultGatewayHost},
 			{Name: "MESH_IN_AGENT_GATEWAY_HTTP_PORT", Value: "80"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -84,9 +84,11 @@ exec nginx -c /tmp/mesh-in/nginx.conf -g 'daemon off;'
 // Rules are inserted at the head of OUTPUT so they take precedence over olares-envoy PROXY_OUTBOUND.
 func InitContainerSpec() corev1.Container {
 	script := fmt.Sprintf(`set -eu
-GW_HOST="${MESH_IN_AGENT_GATEWAY_HOST:-app-gateway-data.app-gateway.svc}"
+GW_HOST="${MESH_IN_AGENT_GATEWAY_HOST:-%s}"
 GW_IP=""
-for h in "$GW_HOST" "${GW_HOST}.cluster.local"; do
+# Prefer configured host; fall back to legacy app-gateway NS for older installs.
+for h in "$GW_HOST" "app-gateway-data.os-gateway.svc" "app-gateway-data.os-gateway.svc.cluster.local" \
+  "app-gateway-data.app-gateway.svc" "app-gateway-data.app-gateway.svc.cluster.local"; do
   if command -v getent >/dev/null 2>&1; then
     GW_IP=$(getent ahosts "$h" 2>/dev/null | awk '{print $1; exit}')
   fi
@@ -94,6 +96,7 @@ for h in "$GW_HOST" "${GW_HOST}.cluster.local"; do
     GW_IP=$(nslookup "$h" 2>/dev/null | awk '/^Address: / { a=$2 } END { print a }')
   fi
   if [ -n "$GW_IP" ]; then
+    echo "mesh-in-agent: resolved $h -> $GW_IP"
     break
   fi
 done
@@ -104,7 +107,7 @@ fi
 echo "mesh-in-agent: redirect $GW_IP:80 -> %d (skip uid %s)"
 iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner %s -j REDIRECT --to-ports %d 2>/dev/null \
   || iptables -t nat -I OUTPUT 1 -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner %s -j REDIRECT --to-ports %d
-`, HTTPListenPort, NginxWorkerUID, NginxWorkerUID, HTTPListenPort, NginxWorkerUID, HTTPListenPort)
+`, DefaultGatewayHost, HTTPListenPort, NginxWorkerUID, NginxWorkerUID, HTTPListenPort, NginxWorkerUID, HTTPListenPort)
 
 	return corev1.Container{
 		Name:            InitContainerName,
@@ -112,7 +115,7 @@ iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner %
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c", script},
 		Env: []corev1.EnvVar{
-			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: "app-gateway-data.app-gateway.svc"},
+			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: DefaultGatewayHost},
 		},
 		SecurityContext: &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"}},
