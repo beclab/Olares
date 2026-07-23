@@ -21,6 +21,9 @@ func testSchemeWithSecurityPolicy(t *testing.T) *runtime.Scheme {
 	eg := schema.GroupVersion{Group: "gateway.envoyproxy.io", Version: "v1alpha1"}
 	s.AddKnownTypeWithName(eg.WithKind("SecurityPolicy"), &unstructured.Unstructured{})
 	s.AddKnownTypeWithName(eg.WithKind("SecurityPolicyList"), &unstructured.UnstructuredList{})
+	rg := schema.GroupVersion{Group: "gateway.networking.k8s.io", Version: "v1beta1"}
+	s.AddKnownTypeWithName(rg.WithKind("ReferenceGrant"), &unstructured.Unstructured{})
+	s.AddKnownTypeWithName(rg.WithKind("ReferenceGrantList"), &unstructured.UnstructuredList{})
 	return s
 }
 
@@ -140,6 +143,31 @@ func TestReconcileSharedRouteGatewayModeCreatesSecurityPolicy(t *testing.T) {
 	if err := c.Get(ctx, types.NamespacedName{Namespace: "demo-shared", Name: "demo-shared-jwt-authn"}, got); err != nil {
 		t.Fatalf("get SecurityPolicy: %v", err)
 	}
+
+	grant := &unstructured.Unstructured{}
+	grant.SetGroupVersionKind(referenceGrantGVK)
+	if err := c.Get(ctx, types.NamespacedName{
+		Namespace: CallerJWTJWKSServiceNamespace,
+		Name:      jwksReferenceGrantName(srr),
+	}, grant); err != nil {
+		t.Fatalf("get JWKS ReferenceGrant: %v", err)
+	}
+	from, found, err := unstructured.NestedSlice(grant.Object, "spec", "from")
+	if err != nil || !found || len(from) != 1 {
+		t.Fatalf("spec.from = %#v err=%v", from, err)
+	}
+	from0, ok := from[0].(map[string]any)
+	if !ok || from0["kind"] != "SecurityPolicy" || from0["namespace"] != "demo-shared" {
+		t.Fatalf("spec.from[0] = %#v", from0)
+	}
+	to, found, err := unstructured.NestedSlice(grant.Object, "spec", "to")
+	if err != nil || !found || len(to) != 1 {
+		t.Fatalf("spec.to = %#v err=%v", to, err)
+	}
+	to0, ok := to[0].(map[string]any)
+	if !ok || to0["kind"] != "Service" || to0["name"] != CallerJWTJWKSServiceName {
+		t.Fatalf("spec.to[0] = %#v", to0)
+	}
 }
 
 func TestReconcileSharedRouteDirectModeDeletesSecurityPolicy(t *testing.T) {
@@ -153,7 +181,16 @@ func TestReconcileSharedRouteDirectModeDeletesSecurityPolicy(t *testing.T) {
 		},
 	}
 	policy := desiredSharedRouteSecurityPolicy(srr)
-	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(srr, policy).Build()
+	grant := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": referenceGrantAPIVersion,
+		"kind":       "ReferenceGrant",
+		"metadata": map[string]any{
+			"name":      jwksReferenceGrantName(srr),
+			"namespace": CallerJWTJWKSServiceNamespace,
+		},
+	}}
+	grant.SetGroupVersionKind(referenceGrantGVK)
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(srr, policy, grant).Build()
 
 	res, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
 	if err != nil {
@@ -167,5 +204,13 @@ func TestReconcileSharedRouteDirectModeDeletesSecurityPolicy(t *testing.T) {
 	got.SetGroupVersionKind(securityPolicyGVK)
 	if err := c.Get(ctx, types.NamespacedName{Namespace: "demo-shared", Name: "demo-shared-jwt-authn"}, got); err == nil {
 		t.Fatal("expected SecurityPolicy to be deleted")
+	}
+	gotGrant := &unstructured.Unstructured{}
+	gotGrant.SetGroupVersionKind(referenceGrantGVK)
+	if err := c.Get(ctx, types.NamespacedName{
+		Namespace: CallerJWTJWKSServiceNamespace,
+		Name:      jwksReferenceGrantName(srr),
+	}, gotGrant); err == nil {
+		t.Fatal("expected JWKS ReferenceGrant to be deleted")
 	}
 }
