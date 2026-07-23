@@ -301,7 +301,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: olares-app-init
-          image: beclab/system-frontend:v1.11.14
+          image: beclab/system-frontend:v1.11.15
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -423,7 +423,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.1.5
+          image: beclab/user-service:v0.1.6
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
