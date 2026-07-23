@@ -424,6 +424,7 @@ var (
 		"/usr/local/bin/kubelet",
 		"/usr/local/bin/kubeadm",
 		"/usr/bin/kubelet",
+		"/root/.kube",
 		"/var/lib/rook",
 		"/tmp/kubekey",
 		"/etc/kubekey",

@@ -8,13 +8,17 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// olaresd manages THIS node's local containerd images and its registry mirror
+// config (containerd v3 config_path -> /etc/containerd/certs.d/<registry>/hosts.toml).
+// Writing a mirror needs no containerd restart, since hosts.toml is read per-pull.
+
 func (h *Handlers) ListRegistries(ctx *fiber.Ctx) error {
-	images, err := containerd.ListRegistries(ctx)
+	registries, err := containerd.ListRegistries(ctx)
 	if err != nil {
 		klog.Error("list registries error, ", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
-	return h.OkJSON(ctx, "success", images)
+	return h.OkJSON(ctx, "success", registries)
 }
 
 func (h *Handlers) GetRegistryMirrors(ctx *fiber.Ctx) error {
@@ -23,7 +27,6 @@ func (h *Handlers) GetRegistryMirrors(ctx *fiber.Ctx) error {
 		klog.Error("get registry mirrors error, ", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
-
 	return h.OkJSON(ctx, "success", mirrors)
 }
 
@@ -33,7 +36,6 @@ func (h *Handlers) GetRegistryMirror(ctx *fiber.Ctx) error {
 		klog.Error("get registry mirror error, ", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
-
 	return h.OkJSON(ctx, "success", mirror)
 }
 
@@ -43,7 +45,6 @@ func (h *Handlers) UpdateRegistryMirror(ctx *fiber.Ctx) error {
 		klog.Error("update registry mirror error, ", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
-
 	return h.OkJSON(ctx, "success", mirror)
 }
 
@@ -52,7 +53,6 @@ func (h *Handlers) DeleteRegistryMirror(ctx *fiber.Ctx) error {
 		klog.Error("delete registry mirror error, ", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
-
 	return h.OkJSON(ctx, "success")
 }
 
