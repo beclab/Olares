@@ -49,6 +49,9 @@ func TestContainerSpecNonStub(t *testing.T) {
 	if len(c.Ports) != 1 || c.Ports[0].ContainerPort != HTTPListenPort {
 		t.Fatalf("listen port = %#v, want %d", c.Ports, HTTPListenPort)
 	}
+	if c.SecurityContext == nil || c.SecurityContext.RunAsUser == nil || *c.SecurityContext.RunAsUser != 1651 {
+		t.Fatalf("runAsUser = %#v, want 1651", c.SecurityContext)
+	}
 	foundFailClosed := false
 	for _, env := range c.Env {
 		if env.Name == FailClosedEnv && env.Value == "true" {
@@ -72,11 +75,15 @@ func TestInitContainerSpec(t *testing.T) {
 	if c.SecurityContext == nil || c.SecurityContext.Capabilities == nil {
 		t.Fatal("expected NET_ADMIN capabilities")
 	}
+	if c.SecurityContext == nil || c.SecurityContext.RunAsUser == nil || *c.SecurityContext.RunAsUser != 0 {
+		t.Fatal("iptables init must run as root")
+	}
 	script := strings.Join(c.Command, " ")
 	for _, want := range []string{
 		"iptables", "-I OUTPUT", "--dport 80", "REDIRECT", "16080", "os-gateway",
 		"--uid-owner \"$NGINX_UID\" -j RETURN",
 		"! --uid-owner \"$ENVOY_UID\"",
+		`NGINX_UID="1651"`,
 	} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("init script missing %q in %#v", want, c.Command)

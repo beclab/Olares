@@ -38,6 +38,9 @@ func TestContainerSpecNonStub(t *testing.T) {
 	if len(c.Ports) != 1 || c.Ports[0].ContainerPort != ListenPort {
 		t.Fatalf("ports = %#v", c.Ports)
 	}
+	if c.SecurityContext == nil || c.SecurityContext.RunAsUser == nil || *c.SecurityContext.RunAsUser != 1652 {
+		t.Fatalf("runAsUser = %#v, want 1652", c.SecurityContext)
+	}
 }
 
 func TestShouldInject(t *testing.T) {
@@ -56,5 +59,14 @@ func TestInitContainerSpec(t *testing.T) {
 	c := InitContainerSpec()
 	if c.Name != InitContainerName {
 		t.Fatalf("name = %q", c.Name)
+	}
+	if c.SecurityContext == nil || c.SecurityContext.RunAsUser == nil || *c.SecurityContext.RunAsUser != 0 {
+		t.Fatal("iptables init must run as root")
+	}
+	script := strings.Join(c.Command, " ")
+	for _, want := range []string{`NGINX_UID="1652"`, "REDIRECT", "--dport", "15001", "ENVOY_UID"} {
+		if !strings.Contains(script, want) {
+			t.Fatalf("init script missing %q", want)
+		}
 	}
 }

@@ -58,6 +58,11 @@ const (
 	UserChartsPath = "./userapps"
 
 	EnvoyUID                        int64 = 1555
+	// Mesh agent UIDs (16xx band; orthogonal to Envoy 1555 / d2 1556 / linkerd 2102 / nginx:alpine 101).
+	MeshInAgentUID                  int64 = 1651
+	MeshOutAgentUID                 int64 = 1652
+	// MeshAgentUIDReservedStart marks 1653+ for future mesh-* sidecars (do not reuse for apps).
+	MeshAgentUIDReservedStart       int64 = 1653
 	DefaultEnvoyLogLevel                  = "debug"
 	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
 	EnvoyContainerName                    = "olares-envoy-sidecar"

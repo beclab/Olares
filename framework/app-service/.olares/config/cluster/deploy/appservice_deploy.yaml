@@ -205,9 +205,9 @@ spec:
         - name: JOB_IMAGE
           value: "beclab/upgrade-job:0.1.7"
         - name: MESH_IN_AGENT_IMAGE
-          value: "beclab/mesh-in-agent:1.30.0-r3"
+          value: "beclab/mesh-in-agent:1.30.0-r4"
         - name: MESH_OUT_AGENT_IMAGE
-          value: "beclab/mesh-out-agent:1.30.0-r2"
+          value: "beclab/mesh-out-agent:1.30.0-r3"
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
         - name: CLUSTER_CPU_THRESHOLD

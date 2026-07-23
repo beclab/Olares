@@ -16,7 +16,7 @@ import (
 const (
 	meshInAgentImageEnv = "MESH_IN_AGENT_IMAGE"
 	// DefaultImage is the mesh-in-agent product image (engine: nginx+njs) (digest pin in charts; no :latest).
-	DefaultImage = "beclab/mesh-in-agent:1.30.0-r3"
+	DefaultImage = "beclab/mesh-in-agent:1.30.0-r4"
 	listenPort     = HTTPListenPort
 	listenPortName = "mesh-in-http"
 
@@ -27,13 +27,18 @@ const (
 	ConfVolumeName    = "olares-mesh-in-agent-conf"
 	ConfMountPath     = "/etc/nginx"
 	InitContainerName = "olares-mesh-in-agent-iptables"
-
-	// NginxWorkerUID is the alpine nginx image worker uid; OUTPUT redirects skip this owner to avoid loops.
-	NginxWorkerUID = "101"
 )
+
+// NginxWorkerUID is the mesh-in process uid (constants.MeshInAgentUID); iptables skips this owner.
+func NginxWorkerUID() string {
+	return strconv.FormatInt(constants.MeshInAgentUID, 10)
+}
 
 // ContainerSpec returns the mesh-in agent sidecar (WI-OC-JWT-INJECT-01).
 func ContainerSpec() corev1.Container {
+	uid := constants.MeshInAgentUID
+	nonRoot := true
+	noEsc := false
 	return corev1.Container{
 		Name:            ContainerName,
 		Image:           meshInAgentImage(),
@@ -56,6 +61,12 @@ func ContainerSpec() corev1.Container {
 			{Name: JWTSecretVolumeName, MountPath: JWTSecretMountPath, ReadOnly: true},
 			{Name: CertsVolumeName, MountPath: CertsMountPath, ReadOnly: true},
 			{Name: HostsVolumeName, MountPath: HostsMountPath, ReadOnly: true},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			RunAsUser:                &uid,
+			RunAsGroup:               &uid,
+			RunAsNonRoot:             &nonRoot,
+			AllowPrivilegeEscalation: &noEsc,
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
@@ -86,11 +97,11 @@ exec nginx -c /tmp/mesh-in/nginx.conf -g 'daemon off;'
 // Rules are inserted at the head of OUTPUT so they take precedence over olares-envoy PROXY_OUTBOUND.
 //
 // Loop avoidance: olares-envoy steals OUTPUT dport 80/8080 into :15001 for every uid except 1555.
-// mesh-in nginx (uid 101) must RETURN before that jump, otherwise proxy_pass→gateway:80 is
-// stolen by envoy; envoy's own connect to gateway:80 (!uid 101) then hits our REDIRECT back
-// to :16080 (worker_connections exhaustion / EG "connection termination").
+// mesh-in (MeshInAgentUID) must RETURN before that jump, otherwise proxy_pass→gateway:80 is
+// stolen by envoy; envoy's own connect to gateway:80 then hits our REDIRECT back to :16080.
 func InitContainerSpec() corev1.Container {
 	envoyUID := strconv.FormatInt(constants.EnvoyUID, 10)
+	root := int64(0)
 	script := fmt.Sprintf(`set -eu
 GW_HOST="${MESH_IN_AGENT_GATEWAY_HOST:-%s}"
 GW_IP=""
@@ -121,7 +132,7 @@ echo "mesh-in-agent: redirect $GW_IP:80 -> %d (skip uid $NGINX_UID and envoy $EN
 # Do not REDIRECT envoy→gateway:80 (uid 1555) or we bounce back into mesh-in.
 iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports %d 2>/dev/null \
   || iptables -t nat -I OUTPUT 2 -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports %d
-`, DefaultGatewayHost, NginxWorkerUID, envoyUID, HTTPListenPort, HTTPListenPort, HTTPListenPort)
+`, DefaultGatewayHost, NginxWorkerUID(), envoyUID, HTTPListenPort, HTTPListenPort, HTTPListenPort)
 
 	return corev1.Container{
 		Name:            InitContainerName,
@@ -132,6 +143,7 @@ iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner "
 			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: DefaultGatewayHost},
 		},
 		SecurityContext: &corev1.SecurityContext{
+			RunAsUser: &root,
 			Capabilities: &corev1.Capabilities{Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"}},
 		},
 	}
