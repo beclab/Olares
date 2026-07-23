@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	linkerdNamespace            = "linkerd"
+	// Align with RP Linkerd foundation install (os-mesh), not upstream default "linkerd".
+	linkerdNamespace            = "os-mesh"
 	linkerdPKIGuardianDeploy    = "linkerd-pki-guardian"
 	EntranceExtAuthPolicySuffix = "-entrance-ext-auth"
 )
