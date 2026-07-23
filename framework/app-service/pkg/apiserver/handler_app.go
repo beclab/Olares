@@ -425,7 +425,7 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			if v.Spec.Settings["version"] != version && version != "" {
 				v.Spec.Settings["version"] = version
 			}
-			v.Spec.Entrances = a.Spec.Entrances
+			v.Spec.Entrances = a.EffectiveEntrances(a.Spec.Owner)
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}
@@ -702,7 +702,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			if v.Spec.Settings["version"] != version && version != "" {
 				v.Spec.Settings["version"] = version
 			}
-			v.Spec.Entrances = a.Spec.Entrances
+			v.Spec.Entrances = a.EffectiveEntrances(a.Spec.Owner)
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}
