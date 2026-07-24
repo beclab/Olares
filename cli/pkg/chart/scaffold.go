@@ -24,6 +24,7 @@ import (
 const (
 	defaultIcon    = "https://app.cdn.olares.com/appstore/default/defaulticon.webp"
 	appCfgFileName = "OlaresManifest.yaml"
+	appAPIVersion  = "v3"
 
 	// configVersion is the olaresManifest.version every scaffold emits:
 	// resources live under spec.accelerator[mode=cpu].
@@ -239,6 +240,7 @@ func writeManifest(opts Options, entranceHost string, entrancePort int32, totalR
 	memLim := totalLimits[corev1.ResourceMemory]
 
 	appcfg := manifest.AppConfiguration{
+		APIVersion:    appAPIVersion,
 		ConfigVersion: configVersion,
 		ConfigType:    opts.Type,
 		Metadata: manifest.AppMetaData{

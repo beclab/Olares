@@ -1,7 +1,7 @@
 ---
 name: olares-chart
-version: 4.10.0
-description: "Use when deploying a repo, docker-compose, or generic Helm chart to your own Olares, packaging an Olares app image, authoring or validating an OlaresManifest, wiring storage / system middleware / entrances / env / GPU, or fixing a failed install (ImagePullBackOff, permission denied / EACCES, app won't start or won't reach running). Publishing to the public Olares Market is the olares-publish skill."
+version: 4.10.2
+description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, deploy needs login
 metadata:
   openclaw:
@@ -16,12 +16,14 @@ metadata:
 
 > **Porting baseline: Olares >= 1.12.6.** Check the target with `olares-cli profile list` (VERSION column). Full version rules — `apiVersion: v3`, the chart version fields, the `olares` `type: system` dependency — are in [references/olares-chart-versioning.md](references/olares-chart-versioning.md).
 
+> **Canonical manifest combination:** new ports use `OlaresManifest.yaml apiVersion: v3` + `olaresManifest.version: 0.12.0` + an `olares` `type: system` dependency at `>=1.12.6-0`; current `from-compose` emits all three. Never downgrade these to satisfy `lint`—check for an old CLI or skill. `Chart.yaml apiVersion: v2` is a separate Helm field and remains `v2`.
+
 > **Platform model (read once, no login needed for authoring).** Porting decisions rely on the Olares storage model, uid-1000 run identity, app/namespace & networking, system middleware, and version model — all defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md). Packaging an image and authoring/validating the chart need no login; only **deploy to your Olares** (`market upload` + `install`) does.
 
 ## When to use
 
 - Turn a repo / docker-compose / generic Helm chart into an Olares app, or validate an OlaresManifest; package its image; wire storage / middleware / entrances / env / GPU
-- Deploy / run the app on **your own** Olares (`market upload` + `install`), or fix a failed install (`ImagePullBackOff`, `EACCES`, app won't start)
+- Deploy / run the app on **your own** Olares (`market upload` + `install`); after `olares-doctor` identifies a chart-owned root cause, edit, lint, and redeploy the chart
 - Serve a specific LLM / embedding model (HF or Ollama) with no chart authoring — clone an `llm-init` base app and fill env ([llm-models.md](references/olares-chart-llm-models.md)); capability/context tuning + day-2 ops in [llm-ops.md](references/olares-chart-llm-ops.md)
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
