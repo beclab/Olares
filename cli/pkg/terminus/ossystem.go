@@ -12,6 +12,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils"
+	agwconfig "github.com/beclab/Olares/framework/app-gateway/pkg/config"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/storage"
@@ -369,6 +370,21 @@ func (m *InstallOsSystemModule) Init() {
 		Delay: 10 * time.Second,
 	}
 
+	checkLinkerdControlPlane := &task.LocalTask{
+		Name: "CheckLinkerdControlPlane",
+		Action: &CheckPodsRunning{
+			labels: map[string][]string{
+				agwconfig.LinkerdNamespace(): {
+					"linkerd.io/control-plane-component=destination",
+					"linkerd.io/control-plane-component=identity",
+					"linkerd.io/control-plane-component=proxy-injector",
+				},
+			},
+		},
+		Retry: 20,
+		Delay: 10 * time.Second,
+	}
+
 	patchOs := &task.LocalTask{
 		Name:   "PatchOs",
 		Action: &Patch{},
@@ -384,6 +400,7 @@ func (m *InstallOsSystemModule) Init() {
 		installOsSystem,
 		createBackupConfigMap,
 		checkSystemService,
+		checkLinkerdControlPlane,
 		patchOs,
 	}
 }
