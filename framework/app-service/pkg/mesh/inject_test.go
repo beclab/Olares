@@ -47,6 +47,9 @@ func TestEnsureCallerNamespaceMeshAccess(t *testing.T) {
 	if got.Labels[security.NamespaceInClusterCallerLabel] != "true" {
 		t.Fatalf("label = %#v", got.Labels)
 	}
+	if got.Annotations[LinkerdInjectAnnotation] != LinkerdInjectEnabled {
+		t.Fatalf("inject = %#v", got.Annotations)
+	}
 
 	if err := EnsureCallerNamespaceMeshAccess(context.Background(), c, "caller-ns", false); err != nil {
 		t.Fatalf("disable: %v", err)
@@ -54,5 +57,8 @@ func TestEnsureCallerNamespaceMeshAccess(t *testing.T) {
 	_ = c.Get(context.Background(), types.NamespacedName{Name: "caller-ns"}, got)
 	if _, ok := got.Labels[security.NamespaceInClusterCallerLabel]; ok {
 		t.Fatalf("label should be removed: %#v", got.Labels)
+	}
+	if _, ok := got.Annotations[LinkerdInjectAnnotation]; ok {
+		t.Fatalf("inject annotation should be removed: %#v", got.Annotations)
 	}
 }
