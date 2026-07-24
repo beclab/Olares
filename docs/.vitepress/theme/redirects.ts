@@ -148,6 +148,14 @@ export const redirects = {
     // Refactor: /zh/manual/docs-home → /zh/manual/overview
     '/zh/manual/docs-home': '/zh/manual/overview',
 
+    // Consolidated LarePass account-management guides
+    '/manual/larepass/import-account': '/manual/larepass/manage-accounts#import-an-account',
+    '/manual/larepass/switch-account': '/manual/larepass/manage-accounts#switch-accounts',
+    '/manual/larepass/delete-account': '/manual/larepass/manage-accounts#delete-accounts',
+    '/zh/manual/larepass/import-account': '/zh/manual/larepass/manage-accounts#导入账户',
+    '/zh/manual/larepass/switch-account': '/zh/manual/larepass/manage-accounts#切换账户',
+    '/zh/manual/larepass/delete-account': '/zh/manual/larepass/manage-accounts#删除账户',
+
     // Removed: legacy developer install-step pages (onboarding docs that once lived
     // under /developer/install/) → the real Get started install overview. Note:
     // /developer/install/ is now the "Cluster management" (olares-cli) page, so these

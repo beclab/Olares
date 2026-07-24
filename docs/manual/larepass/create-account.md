@@ -28,5 +28,5 @@ After you get your Olares ID, wait for [Olares installation](../get-started/inst
 ## Learn more
 
 - [Create an Olares ID with a custom domain](create-org-account.md)
-- [Import an existing account](import-account.md)
+- [Manage accounts](manage-accounts.md)
 - [Back up mnemonics](back-up-mnemonics.md)
