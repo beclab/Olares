@@ -246,6 +246,11 @@ func (wh *Webhook) CreatePatch(
 			)
 			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshinagent.InitContainerSpec())
 			pod.Spec.Containers = append(pod.Spec.Containers, meshinagent.ContainerSpec())
+			// ARCH S6: mesh-in and linkerd-proxy share the same admission predicate.
+			if mesh.ShouldInjectLinkerdProxy(injectMeshInAgent) {
+				mesh.AnnotatePodForLinkerdInject(pod, true)
+				klog.Infof("mesh-xport: annotate pod=%s/%s linkerd.io/inject=enabled", req.Namespace, pod.Name)
+			}
 		}
 		if injectMeshOutAgent {
 			pod.Spec.Volumes = append(pod.Spec.Volumes, meshoutagent.SATokenVolume(), meshoutagent.ConfVolume())

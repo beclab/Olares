@@ -17,6 +17,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -345,6 +346,11 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	app, err := r.AppClientset.AppV1alpha1().Applications().Create(ctx, newapp, metav1.CreateOptions{})
 	if err != nil {
 		ctrl.Log.Error(err, "create application error")
+	} else {
+		inject := strings.EqualFold(strings.TrimSpace(settings[meshinagent.AnnotDecide]), "true")
+		if merr := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, req.Namespace, inject); merr != nil {
+			klog.Errorf("mesh-xport: caller ns mesh access after create %s: %v", req.Namespace, merr)
+		}
 	}
 	now := metav1.Now()
 	appCopy := app.DeepCopy()
@@ -533,6 +539,11 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		klog.Infof("update spec failed %v", err)
 		return err
 	}
+	inject := strings.EqualFold(strings.TrimSpace(settings[meshinagent.AnnotDecide]), "true")
+	if merr := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, appCopy.Spec.Namespace, inject); merr != nil {
+		klog.Errorf("mesh-xport: caller ns mesh access after update %s: %v", appCopy.Spec.Namespace, merr)
+		return merr
+	}
 
 	klog.Infof("appCopy.Status: %v", appCopy.Status)
 	newAppState := r.calAppState(&appCopy.Status)
@@ -606,6 +617,12 @@ func (r *ApplicationReconciler) syncSharedCallerDecide(ctx context.Context, app 
 		}
 	}
 	if !needPatch {
+		inject := strings.EqualFold(strings.TrimSpace(curAnn[meshinagent.AnnotDecide]), "true") ||
+			strings.EqualFold(strings.TrimSpace(app.Spec.Settings[meshinagent.AnnotDecide]), "true")
+		if err := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, app.Spec.Namespace, inject); err != nil {
+			klog.Errorf("syncSharedCallerDecide mesh access ns=%s: %v", app.Spec.Namespace, err)
+			return err
+		}
 		return nil
 	}
 
@@ -630,6 +647,12 @@ func (r *ApplicationReconciler) syncSharedCallerDecide(ctx context.Context, app 
 	}
 	klog.Infof("syncSharedCallerDecide updated %s decide=%s edges=%s",
 		app.Name, settings[meshinagent.AnnotDecide], settings[meshinagent.AnnotDecideEdges])
+
+	inject := strings.EqualFold(strings.TrimSpace(settings[meshinagent.AnnotDecide]), "true")
+	if err := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, app.Spec.Namespace, inject); err != nil {
+		klog.Errorf("syncSharedCallerDecide mesh access ns=%s: %v", app.Spec.Namespace, err)
+		return err
+	}
 	return nil
 }
 
