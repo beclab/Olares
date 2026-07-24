@@ -69,6 +69,20 @@ const (
 	MeshOutAgentUID                 int64 = 1652
 	// MeshAgentUIDReservedStart marks 1653+ for future mesh-* sidecars (do not reuse for apps).
 	MeshAgentUIDReservedStart       int64 = 1653
+
+	// Mesh-in CT-1 control-plane object names (WI-OC-MESH-IN-CT1-02).
+	MeshInSharedHostsCMName         = "olares-mesh-in-shared-hosts"
+	MeshInSharedHostsFileName       = "shared-hosts.txt"
+	MeshInSharedHostsManagedByLabel = "gateway.olares.io/mesh-in-shared-hosts-managed-by"
+	MeshInTLSSecretNamePrefix       = "olares-mesh-in-tls-"
+	MeshInCertsVolumeName           = "olares-mesh-in-certs"
+	MeshInAgentContainerName        = "olares-mesh-in-agent"
+	MeshInCertCacheMax              = 16
+	MeshInCertCacheInactive         = "10m"
+	MeshInCertCacheValid            = "1m"
+	MeshInProxyReadTimeout          = "600s"
+	MeshInProxySendTimeout          = "600s"
+	LabelTLSReplica                 = "gateway.olares.io/tls-replica"
 	DefaultEnvoyLogLevel                  = "debug"
 	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
 	EnvoyContainerName                    = "olares-envoy-sidecar"
