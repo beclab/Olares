@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, AnythingLLM, self-hosted rag, private knowledge base, anythingllm ollama, local LLM, embedding, anythingllm on olares
 app_version: "1.0.13"
-doc_version: "1.0"
-doc_updated: "2026-04-13"
+doc_version: "2.0"
+doc_updated: "2026-07-22"
 ---
 
 # Build a local knowledge base with AnythingLLM
@@ -17,92 +17,60 @@ AnythingLLM is an open-source, all-in-one AI application that lets you chat with
 ## Learning objectives
 
 In this guide, you will learn how to:
-- Install a chat model and an embedding model from Market.
-- Configure AnythingLLM to use these models via shared endpoints.
+- Install AnythingLLM on Olares.
+- Connect AnythingLLM to both models through their Model Consoles.
 - Create a workspace and upload documents to build a knowledge base.
 - Query your knowledge base using natural language.
 
 ## Prerequisites
 
 - An Olares device with sufficient disk space and memory
-- Admin privileges to install shared apps from Market
+- Admin privileges to install apps from Market
+- A chat model and an embedding model. This guide uses Qwen3.5 9B and Qwen3 Embedding 0.6B. You can install pre-built model apps from Market or [host models with Engine Base apps](llm-base-apps.md).
 
-## Install AnythingLLM and model apps
-
-To build a local knowledge base, three components are required: AnythingLLM, a chat model for generating responses, and an embedding model for processing documents. 
-
-This guide uses "Qwen3.5 9B" as the chat model and "Nomic Embed v1.5" as the embedding model.
+## Install AnythingLLM
 
 1. Open Market and search for "AnythingLLM".
 
    ![Install AnythingLLM](/images/manual/use-cases/anythingllm.png#bordered)
 
-2. Click **Get**, and then click **Install**.
+2. Click **Get**, then **Install**, and wait for installation to complete.
 
-3. Search for "Qwen3.5 9B" and install it.
+## Get model connection details
 
-   ![Install Qwen3.5 9B](/images/manual/use-cases/qwen35-9b.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-4. Search for "Nomic Embed v1.5" and install it.
+For each model used in this guide:
 
-   ![Install Nomic Embed v1.5](/images/manual/use-cases/nomic-embed.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-5. Wait for all installations to finish.
-
-## Download models and get shared endpoints
-
-After installation, each model app downloads its model automatically. You must obtain the shared endpoint URL for each model to connect AnythingLLM to these models.
-
-### Get the chat model endpoint
-
-1. Open the Qwen3.5 9B Q4_K_M (Ollama) app from Launchpad and wait for the model download to complete.
-2. Open Settings, and then go to **Applications** > **Qwen3.5 9B Q4_K_M (Ollama)**.
-3. In **Shared entrances**, select **Qwen3.5 9B Q4_K_M** to view the endpoint URL.
-
-   ![Qwen3.5 9B shared entrance](/images/manual/use-cases/anythingllm-qwen359b-shared-entrance.png#bordered){width=80%}
-
-4. Copy the shared endpoint URL. For example:
-   ```plain
-   http://bd5355000.shared.olares.com
-   ```
-### Get the embedding model endpoint
-
-1. Open the Nomic Embed v1.5 app from Launchpad and wait for the model download to complete.
-2. Open Settings, and then go to **Applications** > **Nomic Embed v1.5**.
-3. In **Shared entrances**, select **Nomic Embed v1.5** to view the endpoint URL.
-
-   ![Nomic Embed v1.5 shared entrance](/images/manual/use-cases/anythingllm-nomic-shared-entrance.png#bordered){width=80%}
-
-4. Copy the shared endpoint URL. For example:
-   ```plain
-   http://8298761c0.shared.olares.com
-   ```
+In this case, we use `qwen3.5:9b` for chat and `qwen3-embedding:0.6b` for embeddings. AnythingLLM connects to both through the **Ollama** provider, so view the **Ollama** format in each Model Console and copy the corresponding Base URL.
 
 ## Configure AnythingLLM
 
-By default, AnythingLLM connects to the Ollama app's shared endpoint for both the chat model and the embedder. Because you installed dedicated model apps, you must update these endpoints to point to the correct models.
-
-These settings apply as the system default for all workspaces. You can also customize individual workspaces to use different models.
+Configure the chat and embedding models separately. These settings become the system defaults for all workspaces.
 
 ### Set up the chat model
 
-1. Open the AnythingLLM app from Launchpad.
+1. Open AnythingLLM from Launchpad.
 2. On the home page, click the **Open settings** icon in the bottom-left.
 3. In the left sidebar, select **AI Providers** > **LLM**, and then select **Ollama** as the LLM provider.
-4. In the **Ollama Base URL** field, paste the shared endpoint URL for Qwen3.5 9B. **qwen3.5:9b** is automatically displayed in **Ollama Model**.
+4. In **Ollama Base URL**, paste the Base URL from the Qwen3.5 9B Model Console.
+5. In **Ollama Model**, select `qwen3.5:9b`.
    
    ![Configure chat model](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
 
-5. Click **Save changes**. The "LLM preferences saved successfully" message is displayed.
+6. Click **Save changes**. The "LLM preferences saved successfully" message is displayed.
 
 ### Set up the embedding model
 
 1. In the left sidebar, select **Embedder**, and then select **Ollama** as the embedding provider.
-2. In the **Ollama Base URL** field, paste the shared endpoint URL for Nomic Embed v1.5. **nomic-embed-text:v1.5** is automatically displayed in **Ollama Embedding Model**.
+2. In **Ollama Base URL**, paste the Base URL from the Qwen3 Embedding 0.6B Model Console.
+3. In **Ollama Embedding Model**, select `qwen3-embedding:0.6b`.
 
-   ![Configure embedding model](/images/manual/use-cases/anythingllm-configure-embedding.png#bordered)
+   ![Configure embedding model](/images/manual/use-cases/anythingllm-configure-embedding1.png#bordered) 
 
-3. Click **Save changes**. The "Embedding preferences saved successfully" message is displayed.
+4. Click **Save changes**. The "Embedding preferences saved successfully" message is displayed.
 <!--
 :::info Default embedding model
 AnythingLLM includes a built-in embedding model (all-MiniLM-L6-v2) that works without additional setup and is primarily trained on English documents. If you prefer a zero-configuration option, you can use the default embedder instead.
@@ -152,5 +120,5 @@ Ask questions about your documents.
    ![Query result](/images/manual/use-cases/anythingllm-query-result.png#bordered)
 
 ## Learn more
-- [Download and run local AI models via Ollama](ollama.md)
+- [Host local models with Engine Base apps](llm-base-apps.md)
 - [Official AnythingLLM documentation](https://docs.anythingllm.com/)
