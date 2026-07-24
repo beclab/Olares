@@ -151,6 +151,8 @@ spec:
             runAsUser: 0
             privileged: true
           volumeMounts:
+            - mountPath: /appcommon/
+              name: common-data
             - mountPath: /data/appcache/
               name: upload-appdata
             - name: fb-data
@@ -210,7 +212,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.190
+          image: beclab/files-server:v0.2.191
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
