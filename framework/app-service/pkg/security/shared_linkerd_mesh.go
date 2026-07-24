@@ -18,6 +18,7 @@ var SharedLinkerdMeshIngressPeerNamespaces = []string{"os-mesh"}
 
 // NewSharedLinkerdControlPlaneIngressNetworkPolicy allows Linkerd control-plane
 // pods to reach meshed proxies in a shared workload namespace.
+// podSelector nil/empty selects all pods (required when multiple SRRs share one NP).
 func NewSharedLinkerdControlPlaneIngressNetworkPolicy(namespace string, podSelector map[string]string) *netv1.NetworkPolicy {
 	from := make([]netv1.NetworkPolicyPeer, 0, len(SharedLinkerdMeshIngressPeerNamespaces))
 	for _, peer := range SharedLinkerdMeshIngressPeerNamespaces {
