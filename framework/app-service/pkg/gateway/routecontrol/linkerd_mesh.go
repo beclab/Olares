@@ -36,13 +36,16 @@ func applySharedLinkerdMeshNetworkPolicy(ctx context.Context, c client.Client, s
 			srr.Namespace, srr.Name, npNS)
 		return nil
 	}
-	desired := security.NewSharedLinkerdControlPlaneIngressNetworkPolicy(npNS, svc.Spec.Selector)
+	// Empty PodSelector: one NP per shared NS admits os-mesh to all pods.
+	// Do not attach SRR OwnerReferences (Controller=true): multiple gateway-mode
+	// SRRs share this singleton; dual controllers are rejected by the API.
+	desired := security.NewSharedLinkerdControlPlaneIngressNetworkPolicy(npNS, nil)
 	if desired.Labels == nil {
 		desired.Labels = map[string]string{}
 	}
 	desired.Labels[ManagedByLabel] = ManagedByValue
-	desired.Labels[InstanceLabel] = srr.Name
-	setOwnerSRR(desired, srr)
+	desired.Labels[RouteControlComponentLabel] = RouteControlComponentValue
+	delete(desired.Labels, InstanceLabel)
 
 	current := &networkingv1.NetworkPolicy{}
 	err = c.Get(ctx, types.NamespacedName{Namespace: npNS, Name: security.SharedLinkerdMeshIngressNPName}, current)
@@ -63,8 +66,9 @@ func applySharedLinkerdMeshNetworkPolicy(ctx context.Context, c client.Client, s
 		current.Labels = map[string]string{}
 	}
 	current.Labels[ManagedByLabel] = ManagedByValue
-	current.Labels[InstanceLabel] = srr.Name
-	setOwnerSRR(current, srr)
+	current.Labels[RouteControlComponentLabel] = RouteControlComponentValue
+	delete(current.Labels, InstanceLabel)
+	current.SetOwnerReferences(nil)
 	if err := c.Update(ctx, current); err != nil {
 		klog.Errorf("mesh-xport: update mesh NP %s/%s failed: %v", npNS, current.Name, err)
 		return err

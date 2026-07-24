@@ -38,8 +38,10 @@ func AnnotatePodForLinkerdInject(pod *corev1.Pod, enable bool) {
 }
 
 // EnsureCallerNamespaceMeshAccess labels the caller namespace so static
-// app-gateway-mesh-np (os-mesh) admits its proxies to the control plane.
-// When enable is false, the in-cluster-caller label is removed.
+// app-gateway-mesh-np (os-mesh) admits its proxies to the control plane, and
+// sets linkerd.io/inject at namespace scope so the Linkerd injector runs even
+// when the sandbox webhook annotates pods after the injector in the admission chain.
+// When enable is false, the in-cluster-caller label and inject annotation are cleared.
 func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, namespace string, enable bool) error {
 	if c == nil || namespace == "" {
 		return nil
@@ -56,22 +58,39 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 	if ns.Labels == nil {
 		ns.Labels = map[string]string{}
 	}
-	cur := ns.Labels[security.NamespaceInClusterCallerLabel]
+	if ns.Annotations == nil {
+		ns.Annotations = map[string]string{}
+	}
+	curLabel := ns.Labels[security.NamespaceInClusterCallerLabel]
+	curInject := ns.Annotations[LinkerdInjectAnnotation]
+	changed := false
 	if enable {
-		if cur == "true" {
-			return nil
+		if curLabel != "true" {
+			ns.Labels[security.NamespaceInClusterCallerLabel] = "true"
+			changed = true
 		}
-		ns.Labels[security.NamespaceInClusterCallerLabel] = "true"
+		if curInject != LinkerdInjectEnabled {
+			ns.Annotations[LinkerdInjectAnnotation] = LinkerdInjectEnabled
+			changed = true
+		}
 	} else {
-		if cur == "" {
-			return nil
+		if curLabel != "" {
+			delete(ns.Labels, security.NamespaceInClusterCallerLabel)
+			changed = true
 		}
-		delete(ns.Labels, security.NamespaceInClusterCallerLabel)
+		if curInject != "" {
+			delete(ns.Annotations, LinkerdInjectAnnotation)
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
 	}
 	if err := c.Update(ctx, &ns); err != nil {
-		klog.Errorf("mesh-xport: update caller ns %s label failed: %v", namespace, err)
+		klog.Errorf("mesh-xport: update caller ns %s label/inject failed: %v", namespace, err)
 		return err
 	}
-	klog.Infof("mesh-xport: caller ns=%s in-cluster-caller=%v", namespace, enable)
+	klog.Infof("mesh-xport: caller ns=%s in-cluster-caller=%v linkerd.io/inject=%q",
+		namespace, enable, ns.Annotations[LinkerdInjectAnnotation])
 	return nil
 }
