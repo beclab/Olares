@@ -403,7 +403,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
         - name: image-service
-          image: beclab/image-service:0.5.63
+          image: beclab/image-service:0.6.9
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
