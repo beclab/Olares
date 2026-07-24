@@ -62,6 +62,8 @@ const (
 	UserChartsPath = "./userapps"
 
 	EnvoyUID                        int64 = 1555
+	// LinkerdProxyUID is the upstream linkerd-proxy default runAsUser.
+	LinkerdProxyUID                 int64 = 2102
 	// Mesh agent UIDs (16xx band; orthogonal to Envoy 1555 / d2 1556 / linkerd 2102 / nginx:alpine 101).
 	MeshInAgentUID                  int64 = 1651
 	MeshOutAgentUID                 int64 = 1652

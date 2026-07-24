@@ -15,10 +15,10 @@ import (
 
 const (
 	meshInAgentImageEnv = "MESH_IN_AGENT_IMAGE"
-	// DefaultImage is the mesh-in-agent product image (engine: nginx+njs) (digest pin in charts; no :latest).
-	DefaultImage = "beclab/mesh-in-agent:1.30.0-r4"
-	listenPort     = HTTPListenPort
-	listenPortName = "mesh-in-http"
+	// DefaultImage is the mesh-in-agent product image (engine: nginx+njs+stream) (digest pin in charts; no :latest).
+	DefaultImage       = "beclab/mesh-in-agent:1.30.0-r4"
+	listenPortName     = "mesh-in-http"
+	httpsListenPortName = "mesh-in-https"
 
 	CertsVolumeName   = "olares-mesh-in-certs"
 	CertsMountPath    = "/var/run/olares/mesh-in-certs"
@@ -29,12 +29,12 @@ const (
 	InitContainerName = "olares-mesh-in-agent-iptables"
 )
 
-// NginxWorkerUID is the mesh-in process uid (constants.MeshInAgentUID); iptables skips this owner.
+// NginxWorkerUID is the mesh-in process uid (constants.MeshInAgentUID).
 func NginxWorkerUID() string {
 	return strconv.FormatInt(constants.MeshInAgentUID, 10)
 }
 
-// ContainerSpec returns the mesh-in agent sidecar (WI-OC-JWT-INJECT-01).
+// ContainerSpec returns the mesh-in agent sidecar (JWT inject + CT-1 TLS offload).
 func ContainerSpec() corev1.Container {
 	uid := constants.MeshInAgentUID
 	nonRoot := true
@@ -47,13 +47,19 @@ func ContainerSpec() corev1.Container {
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          listenPortName,
-				ContainerPort: listenPort,
+				ContainerPort: HTTPListenPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+			{
+				Name:          httpsListenPortName,
+				ContainerPort: HTTPSListenPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 		},
 		Env: []corev1.EnvVar{
 			{Name: FailClosedEnv, Value: "true"},
 			{Name: "MESH_IN_AGENT_LISTEN_PORT", Value: fmt.Sprintf("%d", HTTPListenPort)},
+			{Name: "MESH_IN_AGENT_HTTPS_LISTEN_PORT", Value: fmt.Sprintf("%d", HTTPSListenPort)},
 			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: DefaultGatewayHost},
 			{Name: "MESH_IN_AGENT_GATEWAY_HTTP_PORT", Value: "80"},
 		},
@@ -85,28 +91,55 @@ func agentStartScript() string {
 	js := BearerJS()
 	confB64 := base64.StdEncoding.EncodeToString([]byte(conf))
 	jsB64 := base64.StdEncoding.EncodeToString([]byte(js))
+	hostsFile := HostsMountPath + "/" + SharedHostsFileName
 	return fmt.Sprintf(`set -eu
 mkdir -p /tmp/mesh-in /var/log/nginx
 echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
 echo '%s' | base64 -d > /tmp/mesh-in/bearer.js
+# SNI allowlist map (N6 shared-hosts.txt); empty → all HTTPS SNI rejected.
+: > /tmp/mesh-in/sni_map.conf
+HOSTS_FILE="%s"
+if [ -f "$HOSTS_FILE" ]; then
+  while IFS= read -r line || [ -n "$line" ]; do
+    line=$(printf '%%s' "$line" | sed 's/#.*//;s/^[[:space:]]*//;s/[[:space:]]*$//' | tr 'A-Z' 'a-z')
+    [ -z "$line" ] && continue
+    printf '    %%s 127.0.0.1:%d;\n' "$line" >> /tmp/mesh-in/sni_map.conf
+  done < "$HOSTS_FILE"
+fi
+# TLS material: prefer projected Secret; else ephemeral so nginx can start (HTTPS fail-closed for real clients).
+CERT_DIR="%s"
+if [ ! -s "$CERT_DIR/tls.crt" ] || [ ! -s "$CERT_DIR/tls.key" ]; then
+  mkdir -p /tmp/mesh-in/certs
+  if command -v openssl >/dev/null 2>&1; then
+    openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+      -subj '/CN=mesh-in-ephemeral' \
+      -keyout /tmp/mesh-in/certs/tls.key \
+      -out /tmp/mesh-in/certs/tls.crt >/dev/null 2>&1
+    sed -i 's|%s/tls.crt|/tmp/mesh-in/certs/tls.crt|;s|%s/tls.key|/tmp/mesh-in/certs/tls.key|' /tmp/mesh-in/nginx.conf
+  fi
+fi
 exec nginx -c /tmp/mesh-in/nginx.conf -g 'daemon off;'
-`, confB64, jsB64)
+`, confB64, jsB64, hostsFile, HTTPSTerminatePort, CertsMountPath, CertsMountPath, CertsMountPath)
 }
 
-// InitContainerSpec redirects outbound TCP/80 toward the shared gateway into the mesh-in HTTP listener.
-// Rules are inserted at the head of OUTPUT so they take precedence over olares-envoy PROXY_OUTBOUND.
+// InitContainerSpec installs OUTPUT REDIRECT rules for Shared gateway HTTP and
+// all outbound HTTPS. mesh-in upstream to gateway:80 must NOT use a blanket
+// uid RETURN so Linkerd (uid 2102) can intercept plaintext after JWT inject.
 //
-// Loop avoidance: olares-envoy steals OUTPUT dport 80/8080 into :15001 for every uid except 1555.
-// mesh-in (MeshInAgentUID) must RETURN before that jump, otherwise proxy_pass→gateway:80 is
-// stolen by envoy; envoy's own connect to gateway:80 then hits our REDIRECT back to :16080.
+// Exclusions on REDIRECT owners: mesh-in 1651 (no self-loop), linkerd 2102,
+// envoy 1555 (legacy oes coexistence).
 func InitContainerSpec() corev1.Container {
 	envoyUID := strconv.FormatInt(constants.EnvoyUID, 10)
+	linkerdUID := strconv.FormatInt(constants.LinkerdProxyUID, 10)
 	root := int64(0)
 	script := fmt.Sprintf(`set -eu
 GW_HOST="${MESH_IN_AGENT_GATEWAY_HOST:-%s}"
 GW_IP=""
 NGINX_UID="%s"
 ENVOY_UID="%s"
+LINKERD_UID="%s"
+HTTP_PORT="%d"
+HTTPS_PORT="%d"
 # Prefer configured host; fall back to legacy app-gateway NS for older installs.
 for h in "$GW_HOST" "app-gateway-data.os-gateway.svc" "app-gateway-data.os-gateway.svc.cluster.local" \
   "app-gateway-data.app-gateway.svc" "app-gateway-data.app-gateway.svc.cluster.local"; do
@@ -125,14 +158,13 @@ if [ -z "$GW_IP" ]; then
   echo "mesh-in-agent: cannot resolve gateway host $GW_HOST" >&2
   exit 1
 fi
-# mesh-in nginx upstream must leave the pod directly (skip envoy PROXY_OUTBOUND).
-iptables -t nat -C OUTPUT -m owner --uid-owner "$NGINX_UID" -j RETURN 2>/dev/null \
-  || iptables -t nat -I OUTPUT 1 -m owner --uid-owner "$NGINX_UID" -j RETURN
-echo "mesh-in-agent: redirect $GW_IP:80 -> %d (skip uid $NGINX_UID and envoy $ENVOY_UID)"
-# Do not REDIRECT envoy→gateway:80 (uid 1555) or we bounce back into mesh-in.
-iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports %d 2>/dev/null \
-  || iptables -t nat -I OUTPUT 2 -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports %d
-`, DefaultGatewayHost, NginxWorkerUID(), envoyUID, HTTPListenPort, HTTPListenPort, HTTPListenPort)
+OWNER_SKIP="-m owner ! --uid-owner $NGINX_UID -m owner ! --uid-owner $ENVOY_UID -m owner ! --uid-owner $LINKERD_UID"
+echo "mesh-in-agent: redirect $GW_IP:80 -> $HTTP_PORT; *:443 -> $HTTPS_PORT (skip uid $NGINX_UID/$ENVOY_UID/$LINKERD_UID)"
+iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT" 2>/dev/null \
+  || iptables -t nat -I OUTPUT 1 -p tcp -d "$GW_IP" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT"
+iptables -t nat -C OUTPUT -p tcp --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT" 2>/dev/null \
+  || iptables -t nat -I OUTPUT 2 -p tcp --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT"
+`, DefaultGatewayHost, NginxWorkerUID(), envoyUID, linkerdUID, HTTPListenPort, HTTPSListenPort)
 
 	return corev1.Container{
 		Name:            InitContainerName,
@@ -162,7 +194,7 @@ func JWTSecretVolume() corev1.Volume {
 	}
 }
 
-// CertsVolume mounts WI-N4 caller cert replicas (optional until N4 Ready).
+// CertsVolume mounts caller TLS material for CT-1 (optional until replica Ready).
 func CertsVolume() corev1.Volume {
 	return corev1.Volume{
 		Name: CertsVolumeName,
@@ -175,7 +207,7 @@ func CertsVolume() corev1.Volume {
 	}
 }
 
-// SharedHostsVolume mounts WI-N6 shared-hosts allowlist ConfigMap.
+// SharedHostsVolume mounts SNI allowlist ConfigMap (key shared-hosts.txt).
 func SharedHostsVolume() corev1.Volume {
 	return corev1.Volume{
 		Name: HostsVolumeName,
@@ -183,6 +215,9 @@ func SharedHostsVolume() corev1.Volume {
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{Name: "olares-mesh-in-shared-hosts"},
 				Optional:             boolPtr(true),
+				Items: []corev1.KeyToPath{
+					{Key: SharedHostsFileName, Path: SharedHostsFileName},
+				},
 			},
 		},
 	}
