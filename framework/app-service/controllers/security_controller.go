@@ -377,9 +377,8 @@ func (r *SecurityReconciler) createOrUpdateNetworkPolicy(ctx context.Context,
 			found = true
 		} else {
 			if namespaceNetworkPolicies != nil && !namespaceNetworkPolicies.Contains(&np) {
-				// routecontrol reconcilers (e.g. WI-LITE-6 caller ingress NP on
-				// os-gateway) write NP outside security templates; do not prune.
-				if security.IsRouteControlManagedNP(&np) {
+				// Keep NetworkPolicies owned by routecontrol or callerjwt.
+				if security.IsAppServiceManagedExternalNP(&np) {
 					continue
 				}
 				if err := r.Delete(ctx, &np); err != nil {
