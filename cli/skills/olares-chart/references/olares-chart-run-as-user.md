@@ -23,17 +23,17 @@ Verify before pushing:
 
 ```bash
 docker inspect <registry-ref>:<tag> --format '{{.Config.User}}'
-docker run --rm --entrypoint id <registry-ref>:<tag>    # expect uid=1000
+docker run --rm --entrypoint /bin/sh <registry-ref>:<tag> -c 'exec id'    # expect uid=1000
 ```
 
 ## Third-party images — inspect before editing the chart
 
 ```bash
 docker inspect <third-party-image> --format '{{.Config.User}}'
-docker run --rm --entrypoint id <third-party-image>
+docker run --rm --entrypoint /bin/sh <third-party-image> -c 'exec id'
 ```
 
-The inspect result is the image's declared `USER`; empty means the runtime starts as root. The second command bypasses the image entrypoint and asks the image directly for its effective identity. Do **not** use `docker run <image> id` for this check: Docker still runs the image's entrypoint first, so a root-init wrapper may consume or transform `id`, perform initialization, or fail before the probe runs. If the image does not contain `id`, inspect its Dockerfile/entrypoint instead.
+The inspect result is the image's declared `USER`; empty means the runtime starts as root. The shell probe replaces both the image entrypoint and its baked-in `CMD` arguments. If `/bin/sh` is absent, run `docker run --rm --entrypoint id <image> -u` and repeat with `-g`; if `id` is also absent, inspect the Dockerfile/entrypoint. Do **not** use `docker run <image> id`: the image entrypoint still runs first and may consume or transform the probe.
 
 | Image `USER` | Typical handling |
 |---|---|

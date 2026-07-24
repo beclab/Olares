@@ -1,6 +1,6 @@
 # Serve a generation model from the official Market
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. This workflow clones one of four published generation templates from the default `market.olares` source. Embeddings use the dedicated application instead: follow [`../../olares-market/SKILL.md`](../../olares-market/SKILL.md) and run `olares-cli market install embeddinggemmav3`.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. This workflow clones one of four published generation templates from the default `market.olares` source. Embeddings use the dedicated admin-only, shared application instead: let [`olares-market`](../../olares-market/SKILL.md) own its lifecycle with `olares-cli market install embeddinggemmav3`, add no arbitrary model env, and for a non-interactive install pass an explicit `--compute-mode` when required, choosing only `cpu`, `intel`, `nvidia`, or `nvidia-gb10`.
 
 ## 1. Confirm the target
 
