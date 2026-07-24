@@ -22,6 +22,10 @@ const (
 	CallerJWTAudience            = "app-gateway-data"
 	CallerJWTProviderName        = "caller-jwt"
 	CallerJWTViewerClaim         = "olares.viewer"
+	// CallerJWTViewerHeader is the trusted identity header injected from the
+	// JWT claim. Envoy Gateway jwt claimToHeaders overwrites any client-supplied
+	// value of the same header after successful authn (WI-OC-C2-01 T-C2-4 /
+	// eg_strip_spoofed_user_header). Do not accept client X-BFL-USER as identity.
 	CallerJWTViewerHeader        = "X-BFL-USER"
 	CallerJWTJWKSServiceName     = "caller-jwt-jwks"
 	CallerJWTJWKSServiceNamespace = "os-framework"
@@ -44,6 +48,12 @@ func securityPolicyName(srr *srrv1alpha1.SharedRouteRegistry) string {
 
 // desiredSharedRouteSecurityPolicy builds the JWT authn SecurityPolicy for a
 // gateway-mode Shared HTTPRoute (WI-OC-C2-01 L1-b).
+//
+// Identity header contract (T-C2-4): claimToHeaders maps olares.viewer →
+// X-BFL-USER. Envoy Gateway overwrites a client-supplied X-BFL-USER with the
+// claim value after successful jwt_authn; failed/missing Bearer is fail-closed
+// (no upstream with a spoofed header). A separate requestHeaderModifier remove
+// is not required while EG claimToHeaders overwrite semantics hold.
 func desiredSharedRouteSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *unstructured.Unstructured {
 	routeName := httpRouteName(srr)
 	return &unstructured.Unstructured{Object: map[string]any{

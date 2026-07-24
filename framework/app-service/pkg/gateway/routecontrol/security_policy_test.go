@@ -81,6 +81,12 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	if claimMap["claim"] != CallerJWTViewerClaim || claimMap["header"] != CallerJWTViewerHeader {
 		t.Fatalf("claimToHeaders[0] = %#v", claimMap)
 	}
+	// T-C2-4 / F5: spoofed client X-BFL-USER is overwritten by claimToHeaders
+	// after jwt_authn; do not drop this mapping or rename the header without
+	// an alternate strip/overwrite path.
+	if claimMap["header"] != "X-BFL-USER" {
+		t.Fatalf("viewer header must remain X-BFL-USER for EG overwrite strip, got %#v", claimMap["header"])
+	}
 
 	extractFrom, ok := provider["extractFrom"].(map[string]any)
 	if !ok {
