@@ -42,6 +42,7 @@ type (
 	Application             = appv1alpha1.Application
 	ApplicationSpec         = appv1alpha1.ApplicationSpec
 	AppEnvVar               = manifestsysv1alpha1.AppEnvVar
+	AppSecret               = manifest.AppSecret
 	ACL                     = appv1alpha1.ACL
 	ApplicationManager      = appv1alpha1.ApplicationManager
 	ApplicationManagerState = appv1alpha1.ApplicationManagerState
@@ -49,6 +50,11 @@ type (
 	OverlayGateway          = manifest.OverlayGateway
 	WorkloadReplicas        = manifest.WorkloadReplicas
 )
+
+// AppSecretValueKey is the data key each generated app Secret stores its value
+// under. Re-exported from the shared manifest package so chart-facing callers
+// don't need to import it directly.
+const AppSecretValueKey = manifest.AppSecretValueKey
 
 func ChartNamespace(c *Chart, owner string) string {
 	if c.Shared {

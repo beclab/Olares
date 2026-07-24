@@ -943,9 +943,18 @@ func (h *installHandlerHelper) setAppEnv(overrides []sysv1alpha1.AppEnvVar) (err
 	return nil
 }
 
+// applyAppEnv resolves the app's Olares-provided configuration before the chart
+// is installed: envs[] into the AppEnv CR (surfaced to the chart as plaintext
+// .Values.olaresEnv) and secrets[] into Kubernetes Secrets in the app namespace
+// (referenced by the chart via a plain secretKeyRef). Both must run here, ahead
+// of the helm install, so the values exist by the time pods start.
 func (h *installHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	_, err = apputils.ApplyAppEnv(ctx, h.h.ctrlClient, h.appConfig)
 	if err != nil {
+		api.HandleError(h.resp, h.req, err)
+		return
+	}
+	if err = apputils.ApplySecrets(ctx, h.h.ctrlClient, h.appConfig); err != nil {
 		api.HandleError(h.resp, h.req, err)
 	}
 	return

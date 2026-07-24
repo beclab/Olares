@@ -318,6 +318,134 @@ func ApplyAppEnv(ctx context.Context, c client.Client, appConfig *appcfg.Applica
 	return appEnv, nil
 }
 
+// ApplySecrets materializes the manifest's secrets[] block into Kubernetes
+// Secrets in the app namespace. Each entry pulls one Olares-provided env var
+// (a SystemEnv or UserEnv, referenced exactly like envs[].valueFrom) into its
+// own Secret, named verbatim after the entry, holding the value under
+// manifest.AppSecretValueKey. The chart then consumes it with a plain
+// secretKeyRef, so the value never lands in the pod spec as a literal env var
+// the way olaresEnv values do.
+//
+// Unlike ApplyAppEnv, nothing is persisted into an AppEnv CR: the Secret is
+// the storage. Values are re-resolved and rewritten on every install/upgrade
+// so a changed SystemEnv/UserEnv propagates.
+//
+// TODO(structured-secrets): one entry == one single-valued Secret. Once the
+// Olares UX can author multi-key secrets, group entries sharing a name into a
+// single Secret with one key each.
+func ApplySecrets(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) error {
+	if appConfig == nil {
+		return fmt.Errorf("app config is nil")
+	}
+
+	if len(appConfig.Secrets) == 0 {
+		klog.Infof("No secrets found for app: %s owner: %s, skip app secret apply", appConfig.AppName, appConfig.OwnerName)
+		return nil
+	}
+
+	refEnvs, err := listReferenceableEnvs(ctx, c, appConfig.OwnerName)
+	if err != nil {
+		return fmt.Errorf("failed to list referenced envs: %w", err)
+	}
+
+	// The namespace normally already exists (ApplyAppEnv creates it), but an
+	// app may declare secrets[] without any envs[], so ensure it here too.
+	appNS := new(corev1.Namespace)
+	appNS.SetName(appConfig.Namespace)
+	if err := c.Create(ctx, appNS); err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+
+	seen := make(map[string]struct{}, len(appConfig.Secrets))
+	for _, s := range appConfig.Secrets {
+		if s.Name == "" {
+			return fmt.Errorf("app %s declares a secret without a name", appConfig.AppName)
+		}
+		if _, dup := seen[s.Name]; dup {
+			// Two entries writing the same Secret would silently clobber each
+			// other, so reject rather than pick a winner.
+			return fmt.Errorf("app %s declares secret %q more than once", appConfig.AppName, s.Name)
+		}
+		seen[s.Name] = struct{}{}
+
+		if s.ValueFrom == nil || s.ValueFrom.EnvName == "" {
+			return fmt.Errorf("secret %q of app %s must set valueFrom.envName", s.Name, appConfig.AppName)
+		}
+		value, ok := refEnvs[s.ValueFrom.EnvName]
+		if !ok {
+			return fmt.Errorf("secret %q of app %s references unknown env %q", s.Name, appConfig.AppName, s.ValueFrom.EnvName)
+		}
+
+		if err := createOrUpdateAppSecret(ctx, c, appConfig, s.Name, value); err != nil {
+			return fmt.Errorf("failed to apply secret %q of app %s: %w", s.Name, appConfig.AppName, err)
+		}
+	}
+
+	klog.Infof("applied %d secret(s) for app: %s, owner: %s", len(appConfig.Secrets), appConfig.AppName, appConfig.OwnerName)
+	return nil
+}
+
+// listReferenceableEnvs returns the Olares-provided env vars a manifest may
+// pull from, keyed by env name: cluster-scoped SystemEnvs overlaid with the
+// owner's UserEnvs. Mirrors the resolution the AppEnv handler performs for
+// envs[].valueFrom so both pull mechanisms see the same value space.
+func listReferenceableEnvs(ctx context.Context, c client.Client, owner string) (map[string]string, error) {
+	refEnvs := make(map[string]string)
+
+	sysenvs := new(sysv1alpha1.SystemEnvList)
+	if err := c.List(ctx, sysenvs); err != nil {
+		return nil, err
+	}
+	for _, sysenv := range sysenvs.Items {
+		refEnvs[sysenv.EnvName] = sysenv.GetEffectiveValue()
+	}
+
+	userenvs := new(sysv1alpha1.UserEnvList)
+	if err := c.List(ctx, userenvs, client.InNamespace(utils.UserspaceName(owner))); err != nil {
+		return nil, err
+	}
+	for _, userenv := range userenvs.Items {
+		refEnvs[userenv.EnvName] = userenv.GetEffectiveValue()
+	}
+
+	return refEnvs, nil
+}
+
+// createOrUpdateAppSecret writes a single-valued Opaque Secret into the app
+// namespace. On update only Data is replaced, so labels or annotations added
+// by anything else survive.
+func createOrUpdateAppSecret(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig, name, value string) error {
+	data := map[string][]byte{appcfg.AppSecretValueKey: []byte(value)}
+
+	existing := new(corev1.Secret)
+	err := c.Get(ctx, client.ObjectKey{Namespace: appConfig.Namespace, Name: name}, existing)
+	if err == nil {
+		original := existing.DeepCopy()
+		existing.Data = data
+		return c.Patch(ctx, existing, client.MergeFrom(original))
+	}
+	if !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: appConfig.Namespace,
+			Labels: map[string]string{
+				constants.ApplicationNameLabel:  appConfig.AppName,
+				constants.ApplicationOwnerLabel: appConfig.OwnerName,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: data,
+	}
+	if err := c.Create(ctx, secret); err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
+}
+
 // GetDeployedReleaseVersion check whether app has been deployed and return release chart version
 func GetDeployedReleaseVersion(actionConfig *action.Configuration, appName string) (string, int, error) {
 	client := action.NewGet(actionConfig)
@@ -1112,6 +1240,7 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		Provider:             cfg.Provider,
 		Type:                 cfg.ConfigType,
 		Envs:                 cfg.Envs,
+		Secrets:              cfg.Secrets,
 		Images:               cfg.Options.Images,
 		AllowMultipleInstall: cfg.Options.AllowMultipleInstall,
 		PodsSelectors:        podSelectors,
