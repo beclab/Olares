@@ -62,7 +62,7 @@ The target is a `lint`-passing Olares chart. `from-compose` (kompose) is **just 
 
 ## Deploy to your Olares (the done step)
 
-Both axes ready → **deploy to the current Olares automatically**. `lint` proves the chart is structurally valid; it does **not** prove the app pulls its images, wires its middleware, and reaches `running` — the deploy loop does. **After `lint` passes, proceed without asking:** check login → package → `market upload` → `market install --source upload --watch` → on failure fetch logs → diagnose → fix chart + re-lint → retry. Only stop to ask when the profile fails olares-shared's [auth-readiness gate](../olares-shared/SKILL.md#auth-readiness-gate) (`invalidated` / `never`) — `logged-in` / `expired` both proceed. Full procedure: [references/olares-chart-deploy.md](references/olares-chart-deploy.md).
+Both axes ready → **deploy to the current Olares automatically**. `lint` proves the chart is structurally valid; it does **not** prove the app pulls its images, wires its middleware, and reaches `running` — the deploy loop does. **After `lint` passes, proceed without asking:** check login → package → `market upload` → `market install -s upload --watch` → on failure fetch logs → diagnose → fix chart + re-lint → retry. Only stop to ask when the profile fails olares-shared's [auth-readiness gate](../olares-shared/SKILL.md#auth-readiness-gate) (`invalidated` / `never`) — `logged-in` / `expired` both proceed. Full procedure: [references/olares-chart-deploy.md](references/olares-chart-deploy.md).
 
 For deploying to your own Olares, **metadata can stay a stub** as long as `lint` passes; functional refinement (storage / middleware / entrances) is still required.
 
