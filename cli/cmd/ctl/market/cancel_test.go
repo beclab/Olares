@@ -12,8 +12,8 @@ import (
 
 // TestGateResumeCancel pins the 1.12.7 fail-closed gate for cancelling a
 // resuming app. The gate reuses cmdutil.RequireMinVersion, whose version
-// resolution short-circuits on the --olares-version override (viper key
-// FlagOlaresVersion) BEFORE any profile / network access — so a zero-value
+// resolution short-circuits on the version override viper key
+// (FlagOlaresVersion) BEFORE any profile / network access — so a zero-value
 // Factory plus a viper override is enough to drive every branch without a
 // fake backend. A fresh Factory per scenario avoids the per-Factory
 // memoization (backendVersionOnce) leaking a version across cases.

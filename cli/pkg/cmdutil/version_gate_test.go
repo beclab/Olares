@@ -11,9 +11,9 @@ import (
 )
 
 // factoryWithVersion returns a fresh Factory whose backend version resolves to
-// `v` via the --olares-version override (which short-circuits before any
+// `v` via the viper override key (which short-circuits before any
 // profile/network lookup). Pass an unparseable string (e.g. "bad") to simulate
-// an undetectable version. The override is reset when the test finishes.
+// an undetectable version. The key is reset when the test finishes.
 func factoryWithVersion(t *testing.T, v string) *cmdutil.Factory {
 	t.Helper()
 	prev := viper.GetString(cmdutil.FlagOlaresVersion)
@@ -52,14 +52,16 @@ func TestRequireMinVersion(t *testing.T) {
 		}
 	})
 
-	t.Run("undetectable version is fail-closed and suggests the flag", func(t *testing.T) {
+	t.Run("undetectable version is fail-closed and suggests profile refresh", func(t *testing.T) {
 		err := cmdutil.RequireMinVersion(context.Background(), factoryWithVersion(t, "not-a-version"), gate)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
-		if !strings.Contains(err.Error(), "could not be determined") ||
-			!strings.Contains(err.Error(), cmdutil.FlagOlaresVersion) {
-			t.Fatalf("error %q should mention undetectable + --%s", err.Error(), cmdutil.FlagOlaresVersion)
+		msg := err.Error()
+		for _, want := range []string{"could not be determined", "profile login", "profile list --refresh-version"} {
+			if !strings.Contains(msg, want) {
+				t.Fatalf("error %q missing %q", msg, want)
+			}
 		}
 	})
 

@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/viper"
+
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
 
@@ -17,6 +20,47 @@ type fakeDoer struct {
 	lastBody   interface{}
 	resp       []byte
 	err        error
+}
+
+func TestPrepareVersionGate(t *testing.T) {
+	prev := viper.GetString(cmdutil.FlagOlaresVersion)
+	t.Cleanup(func() { viper.Set(cmdutil.FlagOlaresVersion, prev) })
+
+	t.Run("1.12.6 is rejected before profile preparation", func(t *testing.T) {
+		viper.Set(cmdutil.FlagOlaresVersion, "1.12.6")
+		pc, err := prepare(context.Background(), cmdutil.NewFactory())
+		if err == nil || pc != nil {
+			t.Fatalf("expected version-gate failure, got client=%v err=%v", pc, err)
+		}
+		if !strings.Contains(err.Error(), "knowledge download") ||
+			!strings.Contains(err.Error(), "requires Olares >= 1.12.7") {
+			t.Fatalf("unexpected gate error: %v", err)
+		}
+	})
+
+	for _, version := range []string{"1.12.7", "1.12.7-20260723"} {
+		t.Run(version+" passes the gate", func(t *testing.T) {
+			viper.Set(cmdutil.FlagOlaresVersion, version)
+			_, err := prepare(context.Background(), cmdutil.NewFactory())
+			if err != nil && (strings.Contains(err.Error(), "requires Olares") ||
+				strings.Contains(err.Error(), "backend version could not be determined")) {
+				t.Fatalf("version %s should pass the gate: %v", version, err)
+			}
+		})
+	}
+
+	t.Run("undetectable version fails closed with profile refresh", func(t *testing.T) {
+		viper.Set(cmdutil.FlagOlaresVersion, "not-a-version")
+		pc, err := prepare(context.Background(), cmdutil.NewFactory())
+		if err == nil || pc != nil {
+			t.Fatalf("expected fail-closed version error, got client=%v err=%v", pc, err)
+		}
+		for _, want := range []string{"could not be determined", "profile login", "profile list --refresh-version"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Fatalf("error %q missing %q", err, want)
+			}
+		}
+	})
 }
 
 func (f *fakeDoer) DoJSON(_ context.Context, method, path string, body, out interface{}) error {

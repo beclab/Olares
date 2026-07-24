@@ -30,7 +30,7 @@ const overlayMinOlaresVersion = "1.12.6"
 // surfaces an opaque HTTP 404 from the daemon route instead of an actionable
 // error. It is a thin wrapper that supplies this area's gate copy to the shared
 // preflight.RequireMinVersion helper (fail-closed: an undetectable version is
-// rejected, with --olares-version as the escape hatch), mirroring
+// rejected with the shared profile-refresh hint), mirroring
 // `settings compute`'s requireComputeBackendVersion.
 func requireOverlayBackendVersion(ctx context.Context, f *cmdutil.Factory) error {
 	return preflight.RequireMinVersion(ctx, f, preflight.MinVersionGate{
