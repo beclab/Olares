@@ -96,6 +96,10 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = wh.CreateOrUpdateTLSReplicaMountValidatingWebhook()
+	if err != nil {
+		return nil, err
+	}
 	err = wh.CreateOrUpdateGpuLimitMutatingWebhook()
 	if err != nil {
 		return nil, err
