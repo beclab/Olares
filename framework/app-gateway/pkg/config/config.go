@@ -7,3 +7,5 @@ type Defaults = internal.Defaults
 func Load() (Defaults, error) { return internal.Load() }
 
 func Namespace() string { return internal.Namespace() }
+
+func LinkerdNamespace() string { return internal.LinkerdNamespace() }
