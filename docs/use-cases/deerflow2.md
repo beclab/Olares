@@ -6,9 +6,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, DeerFlow, AI agent, deep research, multi-agent, self-hosted, LLM
-doc_version: "1.0"
-app_version: "1.0.0"
-doc_updated: "2026-03-24"
+doc_version: "1.1"
+app_version: "1.0.6"
+doc_updated: "2026-07-24"
 ---
 
 # Set up DeerFlow 2.0 for AI-powered research and tasks
@@ -91,15 +91,24 @@ DeerFlow 2.0 uses a `config.yaml` file for its core configuration. To connect it
 
 Once the model is configured, you can start using DeerFlow 2.0.
 
-1. Open DeerFlow 2.0 from Launchpad and click **Get Started with 2.0** to access the chat interface.
+1. Open DeerFlow 2.0 from Launchpad and click **Get Started with 2.0**.
 
-2. Select your preferred execution mode.
+2. On the first launch, create the administrator account:
+    - **Email:** Enter the email address for the administrator account.
+    - **Password:** Enter a password with at least eight characters.
+    - **Confirm Password:** Enter the password again.
+
+   Click **Create Admin Account** to access the chat interface.
+
+   ![Create the DeerFlow administrator account](/images/manual/use-cases/deerflow2-create-admin-account.png#bordered)
+
+3. Select your preferred execution mode.
 
    ![Select execution mode](/images/manual/use-cases/deerflow2-select-mode.png#bordered)
 
    DeerFlow 2.0 offers several execution modes that control how the agent processes your request, from quick single-pass answers to multi-step research with sub-agents.
 
-3. Enter your prompt in the chat box, or select a suggested topic for inspiration.
+4. Enter your prompt in the chat box, or select a suggested topic for inspiration.
 
    For example, you can conduct deep research on a topic:
    ![Deep research example](/images/manual/use-cases/deerflow2-research.png#bordered)
