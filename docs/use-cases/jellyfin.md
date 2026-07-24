@@ -7,7 +7,7 @@ head:
       content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
 app_version: "1.0.19"
 doc_version: "1.1"
-doc_updated: "2026-07-01"
+doc_updated: "2026-07-20"
 ---
 
 # Build your private media server with Jellyfin
@@ -105,33 +105,30 @@ To ensure smooth playback for high-resolution videos, enable hardware accelerati
 
 You can install plugins to improve metadata, fetch better artwork, and add new features.
 
+The process for installing plugins is the same for all. The following example uses **Skin Manager**, available from: `https://github.com/danieladov/jellyfin-plugin-skin-manager`.
 
-The process for installing plugins is the same for all. Here's an example using **Skin Manager**:
-1. In the Dashboard, go to **Plugins** > **Catalog**.
+1. Click **Dashboard**, then scroll down to **Plugins**.
 
-   ![Catalog](/images/manual/use-cases/jellyfin-catalog.png#bordered){width=90%}
+   ![Jellyfin plugins](/images/manual/use-cases/jellyfin-plugin.png#bordered){width=90%}
 
-2. Click the <span style="font-size: 1.1em;">&#9881;</span> icon to go to **Repositories** page, then click **+** to add a new repository.
-3. Enter the **Repository Name** and **Repository URL** of the plugin, and click **Save**.
+2. Click **Manage Repositories** in the upper-right corner to go to the **Repositories** page, then click **+ New Repository** to add a new repository.
+3. Enter the **Repository Name** and **Repository URL** of the plugin, and click **Add**.
 
-   ![Add plugin repository](/images/manual/use-cases/jellyfin-plugin-repo.png#bordered){width=90%}
+   ![Add plugin repository](/images/manual/use-cases/jellyfin-plugin-repo1.png#bordered){width=90%}
 
-4. Click **Ok** to confirm the installation.
+4. Return to **Plugins**, search for "Skin Manager", and open it. Then click **Install**. If it does not appear, refresh the page.
 
-   ![Confirm plug installation](/images/manual/use-cases/jellyfin-confirm-plug.png#bordered){width=90%}
+   ![Find target plugin](/images/manual/use-cases/jellyfin-plugin-skin-manager.png#bordered){width=90%}
+   ![Install plugin](/images/manual/use-cases/jellyfin-plug-install1.png#bordered){width=90%}
 
-5. Return to the **Catalog** tab, find your desired plugin (you may need to refresh) and click **Install**.
-   
-   ![Catalog plugin](/images/manual/use-cases/jellyfin-catalog-plug.png#bordered){width=90%}
-   ![Install plugin](/images/manual/use-cases/jellyfin-plug-install.png#bordered){width=90%}
-
+5. When the confirmation dialog appears, review the warning, then click **Install**.
 6. After installation, a prompt will appear to restart Jellyfin. Go to the **Dashboard** page and click **Restart**.
 
-   ![Restart Jellyfin](/images/manual/use-cases/jellyfin-restart.png#bordered){width=90%}
+   ![Restart Jellyfin](/images/manual/use-cases/jellyfin-restart1.png#bordered){width=90%}
 
-7. After it restarts, return to **Dashboard** > **Plugins** > **My Plugins** to confirm the plugin you installed is listed and has an **Active** status.
+7. After Jellyfin restarts, go to **Dashboard** > **Plugins**, select **Installed**, and verify that Skin Manager is marked **Active**.
    
-   ![Plugin status](/images/manual/use-cases/jellyfin-plug-status.png#bordered){width=90%}
+   ![Plugin status](/images/manual/use-cases/jellyfin-plug-status1.png#bordered){width=90%}
 
 After installing plugins, you may need to enable or configure them before they take effect.
 Since each plugin behaves differently, check the plugin's **GitHub repository** or **README** for setup details.

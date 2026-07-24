@@ -26,6 +26,9 @@ import (
 // helper local avoids growing the package's exported surface just for unit
 // coverage.
 func classifyForTest(t watchTarget, row statusRow) string {
+	if t.stoppedTerminalSuccess && row.State == appStateStopped && effectiveTime(row) > t.baselineStatusTime {
+		return "success"
+	}
 	if t.successSet[row.State] && t.passesBaseline(row) {
 		if t.matchesOpType(row) {
 			return "success"
@@ -364,6 +367,57 @@ func TestClassifierStopAlreadyStopped(t *testing.T) {
 	// must not be misclassified as a fresh failure of our request.
 	if got := classifyForTest(stopT, statusRow{State: "stopFailed", OpType: ""}); got != "progressing" {
 		t.Fatalf("stopFailed with empty op should stay progressing (no idempotent shortcut for failure), got %s", got)
+	}
+}
+
+// resumeTarget builds a watchResume target with the given baseline statusTime,
+// mirroring what runResume does (capture the pre-resume row's statusTime, then
+// stamp it onto the target so the stopped-terminal gate can tell a freshly-
+// cancelled stopped from the pre-resume resting row).
+func resumeTarget(baseline string) watchTarget {
+	tgt := newWatchTarget(watchResume, "myapp", "market.olares")
+	tgt.baselineStatusTime = parseStatusTime(baseline)
+	return tgt
+}
+
+func TestClassifierResumeCancelStoppedBaselineGate(t *testing.T) {
+	const baseline = "2026-07-01T08:28:00Z"
+	tgt := resumeTarget(baseline)
+	if !tgt.stoppedTerminalSuccess {
+		t.Fatalf("watchResume must enable stoppedTerminalSuccess")
+	}
+	// resumingCanceled must NOT be a failure state (the transition doesn't
+	// exist; a cancelled resume lands on stopped).
+	if tgt.failureSet["resumingCanceled"] {
+		t.Fatalf("watchResume failureSet must not contain the dead state resumingCanceled")
+	}
+
+	// tick-zero pre-resume stopped row (SAME statusTime as baseline) is the
+	// exact false-positive the baseline gate exists to prevent — strict `>`.
+	if got := classifyForTest(tgt, statusRow{State: "stopped", OpType: "", StatusTime: baseline}); got != "progressing" {
+		t.Fatalf("pre-resume stopped at baseline must be progressing, got %s", got)
+	}
+	// Older stopped → not terminal.
+	if got := classifyForTest(tgt, statusRow{State: "stopped", OpType: "", StatusTime: "2026-07-01T08:27:00Z"}); got != "progressing" {
+		t.Fatalf("stopped older than baseline must be progressing, got %s", got)
+	}
+	// Missing statusTime (effectiveTime 0) → not terminal (mirrors the SPA).
+	if got := classifyForTest(tgt, statusRow{State: "stopped", OpType: ""}); got != "progressing" {
+		t.Fatalf("stopped with missing statusTime must be progressing, got %s", got)
+	}
+	// A strictly-newer stopped = the resume was cancelled and settled;
+	// op-agnostic (the cancel-driven row may carry any/empty OpType).
+	if got := classifyForTest(tgt, statusRow{State: "stopped", OpType: "cancel", StatusTime: "2026-07-01T08:29:03Z"}); got != "success" {
+		t.Fatalf("newer stopped (cancelled resume) must be success, got %s", got)
+	}
+	// running remains success via the normal successSet path, regardless of
+	// statusTime (resume is not baseline-gated for its running terminal).
+	if got := classifyForTest(tgt, statusRow{State: "running", OpType: "resume", StatusTime: baseline}); got != "success" {
+		t.Fatalf("running must remain success regardless of baseline, got %s", got)
+	}
+	// The cancel request being rejected still fails the resume watch.
+	if got := classifyForTest(tgt, statusRow{State: "resumingCancelFailed", OpType: "resume", StatusTime: "2026-07-01T08:29:03Z"}); got != "failure" {
+		t.Fatalf("resumingCancelFailed must be failure, got %s", got)
 	}
 }
 
@@ -928,6 +982,89 @@ func TestWaitForTerminalResumeOnAlreadyRunning(t *testing.T) {
 	}
 	if row.State != "running" || row.OpType != "" {
 		t.Fatalf("expected running/empty-op terminal row, got %+v", row)
+	}
+}
+
+func TestWaitForTerminalResumeCancelledLandsOnStopped(t *testing.T) {
+	// A resume that gets cancelled walks resuming -> resumingCanceling ->
+	// stopping -> stopped, each row strictly newer than the pre-resume
+	// baseline. The watcher must accept the final `stopped` as terminal
+	// success instead of hanging until --watch-timeout (the old watchResume
+	// had no `stopped` terminal at all).
+	baseline := "2026-07-01T08:28:00Z"
+	seq := []statusRow{
+		{State: "resuming", OpType: "resume", StatusTime: "2026-07-01T08:28:10Z"},
+		{State: "resumingCanceling", OpType: "cancel", StatusTime: "2026-07-01T08:28:20Z"},
+		{State: "stopping", OpType: "cancel", StatusTime: "2026-07-01T08:28:30Z"},
+		{State: "stopped", OpType: "", StatusTime: "2026-07-01T08:28:40Z"},
+	}
+	srv := newFakeStateServer(t, "myapp", "market.olares", seq)
+	mc := newTestMarketClient(t, srv.srv.URL)
+	opts := quietOpts(5*time.Second, 5*time.Millisecond)
+
+	tgt := newWatchTarget(watchResume, "myapp", "market.olares")
+	tgt.baselineStatusTime = parseStatusTime(baseline)
+
+	row, err := waitForTerminal(context.Background(), mc, opts, tgt)
+	if err != nil {
+		t.Fatalf("expected cancelled-resume to settle at stopped (success), got %v", err)
+	}
+	if row.State != "stopped" {
+		t.Fatalf("expected terminal stopped row, got %s", row.State)
+	}
+}
+
+func TestWaitForTerminalResumeStalePreResumeStoppedTimesOut(t *testing.T) {
+	// The false-positive guard end-to-end: if the resume POST silently
+	// no-op'd and the row never advances past its pre-resume `stopped`
+	// resting state (statusTime stuck at the baseline), the watcher must
+	// NOT report success — it should time out.
+	baseline := "2026-07-01T08:28:00Z"
+	seq := []statusRow{
+		{State: "stopped", OpType: "", StatusTime: baseline},
+	}
+	srv := newFakeStateServer(t, "myapp", "market.olares", seq)
+	mc := newTestMarketClient(t, srv.srv.URL)
+	opts := quietOpts(120*time.Millisecond, 10*time.Millisecond)
+
+	tgt := newWatchTarget(watchResume, "myapp", "market.olares")
+	tgt.baselineStatusTime = parseStatusTime(baseline)
+
+	_, err := waitForTerminal(context.Background(), mc, opts, tgt)
+	if err == nil {
+		t.Fatalf("expected timeout on stale pre-resume stopped row, got nil (false success)")
+	}
+	var to *watchTimeoutError
+	if !errors.As(err, &to) {
+		t.Fatalf("expected watchTimeoutError, got %T: %v", err, err)
+	}
+}
+
+func TestWaitForTerminalResumeCancelRequestRejected(t *testing.T) {
+	// The cancel request itself being rejected surfaces as a resume-watch
+	// failure (non-zero exit), not a hang.
+	baseline := "2026-07-01T08:28:00Z"
+	seq := []statusRow{
+		{State: "resuming", OpType: "resume", StatusTime: "2026-07-01T08:28:10Z"},
+		{State: "resumingCancelFailed", OpType: "resume", StatusTime: "2026-07-01T08:28:20Z", Message: "cannot cancel"},
+	}
+	srv := newFakeStateServer(t, "myapp", "market.olares", seq)
+	mc := newTestMarketClient(t, srv.srv.URL)
+	opts := quietOpts(5*time.Second, 5*time.Millisecond)
+
+	tgt := newWatchTarget(watchResume, "myapp", "market.olares")
+	tgt.baselineStatusTime = parseStatusTime(baseline)
+
+	_, err := waitForTerminal(context.Background(), mc, opts, tgt)
+	if err == nil {
+		t.Fatalf("expected resumingCancelFailed to surface as failure, got nil")
+	}
+	var fail *watchFailureError
+	if !errors.As(err, &fail) {
+		t.Fatalf("expected watchFailureError, got %T: %v", err, err)
+	}
+	if fail.row.State != "resumingCancelFailed" {
+		t.Fatalf("expected resumingCancelFailed in error row, got %s", fail.row.State)
 	}
 }
 

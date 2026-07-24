@@ -23,7 +23,6 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
 	"github.com/beclab/Olares/cli/pkg/manifest"
-	"github.com/beclab/Olares/cli/pkg/registry"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/container/templates"
@@ -156,13 +155,32 @@ func InstallContainerd(m *InstallContainerModule) []task.Interface {
 			Template: templates.ContainerdConfig,
 			Dst:      filepath.Join("/etc/containerd/", templates.ContainerdConfig.Name()),
 			Data: util.Data{
-				"Mirrors":            templates.Mirrors(m.KubeConf),
-				"InsecureRegistries": m.KubeConf.Cluster.Registry.InsecureRegistries,
-				"SandBoxImage":       images.GetImage(m.Runtime, m.KubeConf, "pause").ImageName(),
-				"Auths":              registry.DockerRegistryAuthEntries(m.KubeConf.Cluster.Registry.Auths),
-				"DataRoot":           templates.DataRoot(m.KubeConf),
-				"FsType":             m.KubeConf.Arg.SystemInfo.GetFsType(),
-				"ZfsRootPath":        cc.ZfsSnapshotter,
+				// Registry mirrors/auth are no longer inlined here (config v3 uses
+				// config_path/certs.d; see ContainerdConfig). They are seeded via the
+				// GenerateContainerdRegistryHosts task below and reconciled by olaresd.
+				"SandBoxImage": images.GetImage(m.Runtime, m.KubeConf, "pause").ImageName(),
+				"DataRoot":     templates.DataRoot(m.KubeConf),
+				"FsType":       m.KubeConf.Arg.SystemInfo.GetFsType(),
+				"ZfsRootPath":  cc.ZfsSnapshotter,
+			},
+		},
+		Parallel: true,
+	}
+
+	generateContainerdRegistryHosts := &task.RemoteTask{
+		Name:  "GenerateContainerdRegistryHosts",
+		Desc:  "Generate containerd docker.io registry hosts.toml",
+		Hosts: m.Runtime.GetHostsByRole(common.K8s),
+		Prepare: &prepare.PrepareCollection{
+			&kubernetes.NodeInCluster{Not: true, NoneCluster: m.NoneCluster},
+			&ContainerdExist{Not: true},
+		},
+		Action: &action.Template{
+			Name:     "GenerateContainerdRegistryHosts",
+			Template: templates.ContainerdRegistryHosts,
+			Dst:      "/etc/containerd/certs.d/docker.io/hosts.toml",
+			Data: util.Data{
+				"Mirrors": templates.MirrorList(m.KubeConf),
 			},
 		},
 		Parallel: true,
@@ -211,6 +229,7 @@ func InstallContainerd(m *InstallContainerModule) []task.Interface {
 		syncCrictlBinaries,
 		generateContainerdService,
 		generateContainerdConfig,
+		generateContainerdRegistryHosts,
 		generateCrictlConfig,
 		enableContainerd,
 	}

@@ -10,6 +10,34 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
+const (
+	// stateResuming mirrors the SPA's APP_STATUS.RESUME.DEFAULT: the
+	// per-user state-row value while a resume is in flight.
+	stateResuming = "resuming"
+	// resumeCancelMinVersion is the first Olares line whose resume-cancel
+	// UX the CLI mirrors. The SPA exposed the cancel button on a resuming
+	// app in 1.12.7 (reusing DELETE /apps/{name}/install); cancelling a
+	// resuming app on older / undetectable backends is rejected fail-closed
+	// so the CLI stays in lockstep with that rollout.
+	resumeCancelMinVersion = "1.12.7"
+)
+
+// gateResumeCancel enforces the 1.12.7 minimum for cancelling a *resuming*
+// app. It is a no-op for every other state — only resume cancellation is
+// version-gated; the rest of the in-flight pipeline (pending / downloading /
+// installing / upgrading / ...) cancels on any backend. Fail-closed on
+// older / undetectable backends via cmdutil.RequireMinVersion.
+func gateResumeCancel(ctx context.Context, f *cmdutil.Factory, state string) error {
+	if strings.TrimSpace(state) != stateResuming {
+		return nil
+	}
+	return cmdutil.RequireMinVersion(ctx, f, cmdutil.MinVersionGate{
+		Verb:       "market cancel",
+		MinVersion: resumeCancelMinVersion,
+		Reason:     "canceling a resuming app",
+	})
+}
+
 func NewCmdMarketCancel(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
 	cmd := &cobra.Command{
@@ -31,6 +59,12 @@ a cancel races with downloadFailed / partial-rollback-to-stopped.
 The terminal row carries the *underlying* op (install / upgrade / ...)
 as its opType, not "cancel" — matchOpType is off, no race-tracking
 gate applies.
+
+Cancelling an app that is *resuming* requires Olares >= 1.12.7 (the
+resume-cancel UX the SPA shipped in 1.12.7, reusing this same DELETE).
+On older or undetectable backends the CLI rejects it fail-closed (pass
+--olares-version to override). Every other in-flight state is
+unaffected.
 
 Examples:
   olares-cli market cancel firefox                         # fire-and-forget; returns once backend accepts
@@ -88,6 +122,12 @@ func runCancel(opts *MarketOptions, appName string) error {
 			source = strings.TrimSpace(row.Source)
 		}
 		version = strings.TrimSpace(row.Version)
+		// Cancelling a resuming app is a 1.12.7 UX; reject it fail-closed
+		// on older/undetectable backends. Other in-flight states are
+		// unaffected (gateResumeCancel no-ops for them).
+		if err := gateResumeCancel(ctx, opts.factory, row.State); err != nil {
+			return opts.failOp("cancel", appName, err)
+		}
 	}
 
 	if atLeast126 && source == "" {

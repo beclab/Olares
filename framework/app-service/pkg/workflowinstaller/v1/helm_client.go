@@ -99,5 +99,5 @@ func (h *HelmClient) Uninstall(workflowName string) error {
 
 // Upgrade upgrade a release with specified values.
 func (h *HelmClient) Upgrade(workflowName, chartsName, repoURL, namespace string, vals map[string]interface{}) error {
-	return helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, workflowName, chartsName, repoURL, namespace, vals, false)
+	return helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, workflowName, chartsName, repoURL, namespace, vals, helm.NoReuseValues)
 }

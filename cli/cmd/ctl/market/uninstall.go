@@ -25,7 +25,7 @@ var inFlightCancelableStates = map[string]bool{
 	"initializing": true,
 	"upgrading":    true,
 	"applyingEnv":  true,
-	"resuming":     true,
+	stateResuming:  true,
 }
 
 func NewCmdMarketUninstall(f *cmdutil.Factory) *cobra.Command {
