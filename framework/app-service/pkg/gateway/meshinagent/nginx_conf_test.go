@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 )
 
@@ -14,7 +15,12 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		"listen 16443",
 		"listen 16444 ssl",
 		"ssl_preread on",
-		"sni_map.conf",
+		"resolver kube-dns.kube-system.svc.cluster.local",
+		"decideOffload",
+		"ssl_certificate_cache",
+		"proxy_buffering off",
+		"proxy_read_timeout 600s",
+		"return 421",
 		JWTSecretMountPath + "/token",
 		"app-gateway-data.os-gateway.svc",
 		"proxy_pass http://app-gateway-data.os-gateway.svc:80",
@@ -22,6 +28,7 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		"js_set $mesh_in_jwt",
 		"Authorization",
 		"load_module /usr/lib/nginx/modules/ngx_http_js_module.so",
+		"load_module /usr/lib/nginx/modules/ngx_stream_js_module.so",
 		`if ($mesh_in_jwt = "") { return 401; }`,
 		"ssl_certificate",
 		"stream {",
@@ -29,6 +36,9 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("RenderNginxConf missing %q in:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, "sni_map.conf") {
+		t.Fatal("static sni_map must not be used; njs hosts hot-read replaces it")
 	}
 	if strings.Count(got, "proxy_pass http://app-gateway-data.os-gateway.svc:80") < 2 {
 		t.Fatal("expected HTTP and HTTPS terminate servers both proxy to gateway:80")
@@ -47,13 +57,21 @@ func TestRenderNginxConfHTTPOnlyOmitsSSL(t *testing.T) {
 	}
 }
 
-func TestBearerJSReadsTokenPath(t *testing.T) {
+func TestBearerJSDecideAndHostsHotRead(t *testing.T) {
 	got := BearerJS()
-	if !strings.Contains(got, JWTSecretMountPath+"/token") {
-		t.Fatalf("BearerJS missing token path:\n%s", got)
-	}
-	if !strings.Contains(got, "readJWT") {
-		t.Fatal("BearerJS missing readJWT")
+	for _, want := range []string{
+		JWTSecretMountPath + "/token",
+		"readJWT",
+		"decideOffload",
+		"reloadHostsIfNeeded",
+		"CACHE_TTL_MS",
+		"passthrough",
+		"checkHost",
+		HostsMountPath + "/" + SharedHostsFileName,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("BearerJS missing %q", want)
+		}
 	}
 }
 
@@ -91,8 +109,8 @@ func TestContainerSpecNonStub(t *testing.T) {
 	if !strings.Contains(cmd, "base64 -d") || !strings.Contains(cmd, "nginx -c") {
 		t.Fatalf("start command must materialize conf then exec nginx: %#v", c.Command)
 	}
-	if !strings.Contains(cmd, "sni_map.conf") || !strings.Contains(cmd, SharedHostsFileName) {
-		t.Fatalf("start command must build SNI map from hosts file: %#v", c.Command)
+	if strings.Contains(cmd, "sni_map.conf") {
+		t.Fatal("start script must not build static sni_map")
 	}
 	if !strings.Contains(cmd, "HTTP-only mode") || !strings.Contains(cmd, "CT-1 HTTPS enabled") {
 		t.Fatalf("start command must select HTTP-only vs CT-1 by cert presence: %#v", c.Command)
@@ -148,10 +166,21 @@ func TestSharedHostsVolumeProjectsSharedHostsTxt(t *testing.T) {
 	if v.ConfigMap == nil {
 		t.Fatal("expected configMap volume")
 	}
-	if v.ConfigMap.Name != "olares-mesh-in-shared-hosts" {
+	if v.ConfigMap.Name != constants.MeshInSharedHostsCMName {
 		t.Fatalf("name = %q", v.ConfigMap.Name)
 	}
 	if len(v.ConfigMap.Items) != 1 || v.ConfigMap.Items[0].Key != SharedHostsFileName {
 		t.Fatalf("items = %#v, want key %s", v.ConfigMap.Items, SharedHostsFileName)
+	}
+}
+
+func TestCertsVolumeForViewer(t *testing.T) {
+	v := CertsVolumeForViewer("Alice")
+	if v.Secret == nil || v.Secret.SecretName != "olares-mesh-in-tls-alice" {
+		t.Fatalf("secret = %#v", v.Secret)
+	}
+	v2 := CertsVolumeForViewer("")
+	if v2.Secret == nil || v2.Secret.SecretName != "olares-mesh-in-certs" {
+		t.Fatalf("empty viewer secret = %#v", v2.Secret)
 	}
 }
