@@ -1,7 +1,7 @@
 ---
 name: olares-knowledge
-version: 1.0.0
-description: "Olares knowledge CLI via olares-cli knowledge — download-server task centre (create / list / pause / resume / cancel / remove, inspect URLs, yt-dlp prefs). Use for download task, pause download, yt-dlp, download-server, wise download, knowledge download."
+version: 1.0.1
+description: "Olares Knowledge via olares-cli knowledge — manage download-server URL, yt-dlp, aria2, torrent, HuggingFace, and Wise download tasks: create/list/inspect/pause/resume/cancel/remove, prefs, sync, and file probes. Requires Olares 1.12.7+. Not for installer download or copying a Drive file with files download."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
   openclaw:
@@ -48,7 +48,7 @@ Requires **Olares >= 1.12.7** (settings `/download` edge + download provider). B
 `knowledge download` requires Olares >= 1.12.7 (settings /download edge + download provider), but this backend is …
 ```
 
-Escape hatch when version detection fails: `--olares-version 1.12.7` (same flag as other gated trees).
+If version detection fails, confirm the active profile is logged in and run `olares-cli profile list --refresh-version`. If the detected version is below 1.12.7, upgrade Olares.
 
 ## Verb index
 
@@ -69,7 +69,8 @@ Universal: `-o table|json`. Identity/cluster from the active profile only (`prof
 
 | Symptom | Fix |
 |---|---|
-| `requires Olares >= 1.12.7` | Upgrade, or pass `--olares-version` only when you know the edge is present |
+| Backend version could not be determined | Confirm `profile login`, then run `olares-cli profile list --refresh-version` |
+| `requires Olares >= 1.12.7`, with a detected older version | Upgrade Olares; the Settings `/download` edge is not available on older releases |
 | `server rejected the access token` / 401 / 403 | `olares-cli profile login` (see olares-shared Auth-readiness gate) |
 | `task not found` on pause/info/remove | Wrong id, or task owned by another user (ownership is header-only) |
 | create / prefs `ytdlp_quality must be one of…` | Use `best`, `2160p`, `1080p`, `720p`, `480p`, `360p`, or `audio` |

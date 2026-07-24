@@ -59,12 +59,10 @@ func isCommonFrontendPath(fileType, extend string) bool {
 //   - version detected and >= 1.12.6   → allowed
 //   - version detected but < 1.12.6    → rejected (suggest upgrade)
 //   - version undetectable (offline,
-//     no cache, no --olares-version)   → rejected (suggest --olares-version)
+//     no cache)                       → rejected (suggest profile refresh)
 //
-// The --olares-version flag (cmdutil.FlagOlaresVersion) is the escape
-// hatch for all three — it sets the version explicitly with no network
-// round-trip. In the common case the version was cached eagerly at
-// `profile login`, so this gate adds no extra request.
+// In the common case the version was cached eagerly at `profile login`, so
+// this gate adds no extra request.
 func requireCommonBackendVersion(ctx context.Context, f *cmdutil.Factory, touchesCommon bool) error {
 	if !touchesCommon {
 		return nil
@@ -73,10 +71,8 @@ func requireCommonBackendVersion(ctx context.Context, f *cmdutil.Factory, touche
 	if err != nil {
 		return fmt.Errorf(
 			"drive/Common (the app common data area) requires Olares >= %s, but the backend "+
-				"version could not be determined: %v; pass --%s <version> to set it manually "+
-				"(e.g. --%s %s)",
-			commonNamespaceMinOlaresVersion, err,
-			cmdutil.FlagOlaresVersion, cmdutil.FlagOlaresVersion, commonNamespaceMinOlaresVersion)
+				"version could not be determined: %v",
+			commonNamespaceMinOlaresVersion, err)
 	}
 	if !ok {
 		got := "unknown"
@@ -101,10 +97,8 @@ func requireArchiveBackendVersion(ctx context.Context, f *cmdutil.Factory) error
 	if err != nil {
 		return fmt.Errorf(
 			"`files compress` / `files extract` / `files archive` require Olares >= %s (archive APIs), but the backend "+
-				"version could not be determined: %v; pass --%s <version> to set it manually "+
-				"(e.g. --%s %s)",
-			archiveMinOlaresVersion, err,
-			cmdutil.FlagOlaresVersion, cmdutil.FlagOlaresVersion, archiveMinOlaresVersion)
+				"version could not be determined: %v",
+			archiveMinOlaresVersion, err)
 	}
 	if !ok {
 		got := "unknown"
@@ -125,10 +119,8 @@ func requireNFSBackendVersion(ctx context.Context, f *cmdutil.Factory) error {
 	ok, err := f.OlaresBackendAtLeast(ctx, nfsMinOlaresVersion)
 	if err != nil {
 		return fmt.Errorf(
-			"`files nfs` requires Olares >= %s, but the backend version could not be determined: %v; "+
-				"pass --%s <version> to set it manually (e.g. --%s %s)",
-			nfsMinOlaresVersion, err,
-			cmdutil.FlagOlaresVersion, cmdutil.FlagOlaresVersion, nfsMinOlaresVersion)
+			"`files nfs` requires Olares >= %s, but the backend version could not be determined: %v",
+			nfsMinOlaresVersion, err)
 	}
 	if !ok {
 		got := "unknown"

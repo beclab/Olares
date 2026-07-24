@@ -12,6 +12,7 @@
 | `clone` | `running` on the new clone name | — |
 | `stop` | `stopped` | Already stopped → returns immediately |
 | `resume` | `running` | Already running → returns immediately |
+| `restart` | `running` with `statusTime` newer than the pre-request baseline | — (the initial `running` row must not short-circuit the stop-then-resume cycle) |
 | `cancel` | Any "stopped moving" state | — |
 
 ### Per-op foreground watch windows
@@ -20,7 +21,7 @@
 
 | Verb / phase | Suggested foreground `--watch-timeout` | After timeout |
 |---|---|---|
-| `stop` / `cancel` / `resume` / `uninstall` | `30s` | poll `market status <app> --watch --watch-interval 5s` |
+| `stop` / `cancel` / `resume` / `restart` / `uninstall` | `30s` | poll `market status <app> --watch --watch-interval 5s` |
 | `install` deploy phase (post-download) / `upgrade` / `clone` | `1m` | poll `status`, then diagnose if STATE doesn't move |
 | `install` while STATE is `downloading` | judge by pull progress, not a timeout (see below) | keep polling patiently — a 30-day TTL means it won't self-fail |
 

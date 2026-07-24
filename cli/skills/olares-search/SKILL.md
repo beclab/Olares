@@ -1,7 +1,7 @@
 ---
 name: olares-search
-version: 1.2.0
-description: "Olares search via olares-cli search — the Desktop global search over Drive files, Sync (Seafile) libraries, and installed applications, with paging and JSON output. Use for Olares search, full-text search, find a file by content, Text Search, global search, search apps."
+version: 1.2.1
+description: "Olares Search via olares-cli search — query the Desktop global index for Drive/Sync filenames and content or installed app titles, with paging and JSON output. Use for full-text search, Text Search, global search, finding a file by content, or finding an app by title; not for configuring indexed directories or rebuilding the index (olares-settings)."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:

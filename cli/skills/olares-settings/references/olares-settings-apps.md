@@ -5,7 +5,7 @@
 
 The **post-install** surface for an Olares app. Inspect the app, list its entrances, edit per-entrance domain / policy / auth-level / env vars, suspend / resume.
 
-> **NOT for install / uninstall / upgrade / clone / stop / resume** — use [`olares-market`](../../olares-market/SKILL.md) for app lifecycle. `settings apps` is for tweaking an app that's already installed.
+> **Primary lifecycle belongs to `olares-market`**: use it for install / uninstall / upgrade / clone / stop / resume. `settings apps` is primarily post-install configuration; its `suspend` / `resume` verbs are thin Settings-SPA aliases over `market stop` / `market resume`.
 
 ## Verbs at a glance
 

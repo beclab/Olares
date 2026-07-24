@@ -166,17 +166,14 @@ const execMinOlaresVersion = "1.12.7"
 // requireExecBackendVersion is the client-side version preflight for exec. It
 // mirrors the files feature gates: >= 1.12.7 allowed; a detected-but-older
 // backend is rejected with an upgrade hint; an undetectable version is rejected
-// with a hint to (re-)establish the profile so the version is cached. The
-// backend version is cached per profile at login, so in the common case this
-// adds no network round-trip. (--olares-version lives on the `profile` tree,
-// not here, so it's intentionally not suggested.)
+// with the shared profile-refresh hint. The backend version is cached per
+// profile at login, so in the common case this adds no network round-trip.
 func requireExecBackendVersion(ctx context.Context, f *cmdutil.Factory) error {
 	ok, err := f.OlaresBackendAtLeast(ctx, execMinOlaresVersion)
 	if err != nil {
 		return fmt.Errorf(
 			"`cluster exec` requires Olares >= %s (the ControlHub exec route was added then), but the backend "+
-				"version could not be determined: %v; ensure you are logged in (`olares-cli profile login`) "+
-				"and refresh it with `olares-cli profile list --refresh-version`",
+				"version could not be determined: %v",
 			execMinOlaresVersion, err)
 	}
 	if !ok {

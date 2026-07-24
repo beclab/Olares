@@ -115,7 +115,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 `clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` is valid semver, that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
-./cli/skills/publish.sh --dry-run                  # validate all 10
+./cli/skills/publish.sh --dry-run                  # validate all 11
 ./cli/skills/publish.sh --dry-run olares-shared    # validate one
 ```
 
@@ -137,7 +137,7 @@ Note: `clawhub sync` defaults to bumping the patch version on updates. For deter
 ### Publish
 
 ```bash
-./cli/skills/publish.sh                            # publish all 10
+./cli/skills/publish.sh                            # publish all 11
 ./cli/skills/publish.sh olares-files olares-market # publish a subset
 ```
 
@@ -145,12 +145,13 @@ Versions come from each skill's frontmatter `version:` field — bump the field 
 
 ## Slug policy
 
-The 10 skills publish under their canonical short names:
+The 11 skills publish under their canonical short names:
 
 | Slug              | Display name                                |
 |-------------------|---------------------------------------------|
 | `olares-shared`   | Olares Shared (olares-cli foundation)       |
 | `olares-files`    | Olares Files (olares-cli files)             |
+| `olares-knowledge`| Olares Knowledge (olares-cli knowledge)     |
 | `olares-search`   | Olares Search (olares-cli search)           |
 | `olares-market`   | Olares Market (olares-cli market)           |
 | `olares-settings` | Olares Settings (olares-cli settings)       |

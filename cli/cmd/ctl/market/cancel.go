@@ -62,9 +62,9 @@ gate applies.
 
 Cancelling an app that is *resuming* requires Olares >= 1.12.7 (the
 resume-cancel UX the SPA shipped in 1.12.7, reusing this same DELETE).
-On older or undetectable backends the CLI rejects it fail-closed (pass
---olares-version to override). Every other in-flight state is
-unaffected.
+On an older backend the CLI rejects it; when the version is unknown,
+refresh the active profile with "olares-cli profile list
+--refresh-version". Every other in-flight state is unaffected.
 
 Examples:
   olares-cli market cancel firefox                         # fire-and-forget; returns once backend accepts

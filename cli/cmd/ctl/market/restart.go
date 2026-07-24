@@ -130,14 +130,13 @@ func runRestart(opts *MarketOptions, appName string) error {
 // set that landed in 1.12.6; on 1.12.5 the endpoint doesn't exist and the call
 // would 404. Fail-closed (mirrors settings' RequireMinVersion / files'
 // requireArchiveBackendVersion): an undetectable version is rejected because
-// the feature provably doesn't exist on anything older, with --olares-version
-// as the escape hatch.
+// the feature provably doesn't exist on anything older.
 func requireRestartBackendVersion(ctx context.Context, opts *MarketOptions) error {
 	ok, err := opts.factory.OlaresBackendAtLeast(ctx, restartMinOlaresVersion)
 	if err != nil {
 		return fmt.Errorf(
-			"market restart requires Olares >= %s (the overlay feature set), but the backend version could not be determined: %w; pass --%s <version> to set it manually (e.g. --%s %s)",
-			restartMinOlaresVersion, err, cmdutil.FlagOlaresVersion, cmdutil.FlagOlaresVersion, restartMinOlaresVersion)
+			"market restart requires Olares >= %s (the overlay feature set), but the backend version could not be determined: %w",
+			restartMinOlaresVersion, err)
 	}
 	if !ok {
 		got := "unknown"

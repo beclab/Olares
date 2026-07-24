@@ -19,12 +19,11 @@ func NewCmdMarketGet(f *cmdutil.Factory) *cobra.Command {
 		Short:   "Show detailed catalog info for an app (read /apps/{name})",
 		Long: `Get detailed catalog information about an app from a market source.
 
-Table output shows a curated summary. JSON output (-o json) emits the
-full upstream payload — that's where to look for fields the table view
-doesn't surface, e.g. 'cloneable: true' (whether the app supports
-'olares-cli market clone'), 'app_simple_info.app_labels' (the same
-suspend/remove labels 'market upgrade' pre-flight checks) and the
-declared env-var spec.
+Table output shows a curated summary and computes Cloneable from
+allowMultipleInstall or templateOnly. JSON output (-o json) emits the
+complete upstream response for raw metadata the table view doesn't
+surface, including 'app_simple_info.app_labels' (the same suspend/remove
+labels 'market upgrade' pre-flight checks) and the declared env-var spec.
 
 Source resolution: -s pins the source; omitting it falls back to the
 auto-selected source (typically 'market.olares').
@@ -33,7 +32,6 @@ Examples:
   olares-cli market get firefox
   olares-cli market get firefox -o json
   olares-cli market get firefox -s market.olares
-  olares-cli market get firefox -o json | jq '.cloneable'    # is this app cloneable?
 
 Note: --no-headers is intentionally NOT exposed on this verb. The
 table view here is a key:value detail layout (similar to

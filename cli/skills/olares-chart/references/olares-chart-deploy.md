@@ -3,7 +3,7 @@
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; pass `chart lint` before starting any of this.
 > This is the **deploy** capability — the done step of the two axes. Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
 
-> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile clears olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate), drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the gate says stop, or when a failure is clearly **not** a chart problem. During the install wait, if you can multitask, proactively tail the app's own pod status + logs in parallel rather than only watching the coarse market row (see [§3 Don't just wait](#dont-just-wait--diagnose-the-apps-own-pods-in-parallel)).
+> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile clears olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate), drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the gate says stop, or when a failure is clearly **not** a chart problem. Start app workload inspection in parallel as soon as install/upgrade begins; never wait only on the coarse market row (see [§3 Don't just wait](#dont-just-wait--diagnose-the-apps-own-pods-in-parallel)).
 
 `lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This loop does — by pushing the chart to the developer's Olares and watching it install.
 
@@ -64,7 +64,7 @@ olares-cli market install <app> -s upload --version <version> --watch --watch-ti
   ```
   Bump `metadata.version` (= `Chart.yaml` `version`), re-package, and re-upload, then upgrade to the new number. This is the canonical loop for iterating on an installed app and for recovering one stuck in `upgradeFailed`. **Fallback:** the upload source also permits a **same-version** upgrade (the CLI's strict-newer gate is waived there; app-service gates on `>= deployed`), so re-uploading the same version overwrites the stored chart — use this only when the chart didn't change (a *lower* version is always rejected).
 - Parse `.finalState`: `running` = deployed. A short `--watch-timeout` is not failure; if the row is still `downloading`, wait/poll because image pull can be legitimately long. Once it leaves `downloading`, a 1m window without STATE movement or any `*Failed` state means stop passively watching and diagnose. The lifecycle state machine is the platform **application state machine**; verb-level watch behavior is in the market watch reference and `missing required env var(s)` handling means re-run with `--env KEY=VALUE`.
-- **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in the chart repo immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. This is the one install failure you *should* retry: wait for hydration, then re-run the same `install`. The chart didn't change here, so there's nothing to re-`upload` or bump — the chart is already stored and re-uploading the same bytes wouldn't speed up hydration. Confirm hydration finished via the `appstore-backend` log (`isAppHydrationComplete RETURNING TRUE ... appID=<app>` → `Added new app to latest: <app>` → `new_app_ready`), or poll `olares-cli market get <app> -s upload` until it resolves:
+- **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in Market's embedded DCR immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. This is the one install failure you *should* retry: wait for hydration, then re-run the same `install`. The chart didn't change here, so there's nothing to re-`upload` or bump — the chart is already stored and re-uploading the same bytes wouldn't speed up hydration. Confirm hydration finished via the `appstore-backend` log (`isAppHydrationComplete RETURNING TRUE ... appID=<app>` → `Added new app to latest: <app>` → `new_app_ready`), or poll `olares-cli market get <app> -s upload` until it resolves:
   ```bash
   until olares-cli market get <app> -s upload -o json 2>/dev/null | grep -q '"name"'; do sleep 2; done
   olares-cli market install <app> -s upload --version <version> --watch --watch-timeout 1m -o json
@@ -72,7 +72,14 @@ olares-cli market install <app> -s upload --version <version> --watch --watch-ti
 
 ### Don't just wait — diagnose the app's own pods in parallel
 
-The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal, and a crashlooping main container is NOT fast-failed for several minutes (the 5-minute `hasUnrecoverablePod` grace). If you can multitask, kick off `market install ... --watch` AND, in parallel, inspect the app's own workload directly rather than waiting for the row to flip.
+The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal, and a crashlooping main container is not fast-failed for several minutes (the 5-minute `hasUnrecoverablePod` grace). Treat parallel workload inspection as a required part of the deploy loop:
+
+1. Start `market install ... --watch` or `market upgrade ... --watch`.
+2. As soon as the app namespace/workload appears, inspect its Pod status and container logs in parallel.
+3. Keep waiting only for recoverable progress such as image pulling, scheduling, or container creation.
+4. On `CrashLoopBackOff`, `CreateContainerConfigError`, `RunContainerError`, an admission rejection, or a fatal application log, stop the passive market wait immediately. Capture the Pod state, events, current logs, and previous-container logs when available, then diagnose and fix the chart.
+
+A market timeout is not the trigger for diagnosis; direct runtime evidence is. Do not spend the remainder of the five-minute grace period watching a state that the Pod has already proved cannot recover without a chart or image change.
 
 **The runtime diagnosis itself lives in [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing (stalled image pull, crashlooping / non-starting container, `running`-but-unreachable) shared by catalog and dev apps. Doctor diagnoses the root cause; **for a chart you author, it points back here** — the fix is a manifest/template edit (§4b below), then re-lint + re-deploy.
 
@@ -80,12 +87,12 @@ The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal
 
 ### 4a. Deploy-pipeline log sources (specific to pushing your chart)
 
-When the failure is in the **deploy pipeline** (not the app's own runtime), read the platform backend that rejected it. All live in `os-framework`; resolve dynamic pod names first with `olares-cli cluster pod list -n os-framework` (filter for `market` / `chartrepo`):
+When the failure is in the **deploy pipeline** (not the app's own runtime), read the platform backend that rejected it. All live in `os-framework`; resolve dynamic pod names first with `olares-cli cluster pod list -n os-framework` (filter for `market` / `app-service`):
 
 | What you suspect | Where to look (`os-framework`) | Command |
 |---|---|---|
 | Upload / ingest rejected the chart | Deployment `market-deployment`, container `appstore-backend` | `olares-cli cluster container logs os-framework/<market-deployment-pod>/appstore-backend` |
-| Install can't fetch the chart | Deployment `chartrepo-deployment`, container `chartrepo` | `olares-cli cluster container logs os-framework/<chartrepo-deployment-pod>/chartrepo` |
+| Install can't fetch the chart / Helm index | Deployment `market-deployment`, container `appstore-backend` (embedded DCR serves port 82) | `olares-cli cluster container logs os-framework/<market-deployment-pod>/appstore-backend` |
 | Install failed (orchestration error, or the chart/manifest was rejected at install) | StatefulSet pod `app-service-0`, container `app-service` | `olares-cli cluster container logs os-framework/app-service-0/app-service` — read the error and fix the chart per the Manifest refinement areas |
 
 - **Admin caveat:** `os-framework` system pods are typically visible only to an **admin** profile. On `HTTP 403` / `HTTP 404`, the active developer profile isn't admin — fall back to the app's own pod logs.

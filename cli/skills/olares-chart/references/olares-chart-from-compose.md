@@ -35,13 +35,13 @@ olares-cli chart from-compose --name myapp -f base.yml -f override.yml      # me
 | `-o, --output` | chart root dir (default `./<name>`) |
 | `--title` | human title (default = name) |
 | `--type` | `app` (default) / `recommend` / `middleware` |
-| `--new-schema` | **deprecated no-op** — the scaffold always emits `olaresManifest.version: 0.12.0` (resources under `spec.accelerator[mode=cpu]`; the flat `spec.requiredCpu/...` envelope is the equivalent no-mode form — see the Accelerator sizing §A.1) |
+| `--new-schema` | **deprecated no-op** — the scaffold always emits the canonical `apiVersion: v3` + `olaresManifest.version: 0.12.0` manifest (resources under `spec.accelerator[mode=cpu]`; the flat `spec.requiredCpu/...` envelope is the equivalent no-mode form — see the Accelerator sizing §A.1) |
 
 ## Reading the output
 
 The command prints the absolute chart path and a reminder to refine + lint. Then inspect:
 
-- `OlaresManifest.yaml` — the stub you will refine (see the Manifest refinement areas; metadata can stay a stub for local deploy). It already carries `workloadReplicas` for every rendered Deployment/StatefulSet plus the `olares` system dependency.
+- `OlaresManifest.yaml` — the stub you will refine (see the Manifest refinement areas; metadata can stay a stub for local deploy). It already carries the canonical version block (`apiVersion: v3`, `olaresManifest.version: 0.12.0`, and `olares >=1.12.6-0` as a `system` dependency) plus `workloadReplicas` for every rendered Deployment/StatefulSet.
 - `templates/deployment-<app>.yaml` — the primary workload (renamed to the app name; required by lint). Its `spec.replicas` is wired to `{{ .Values.workloads.<name>.replicaCount }}` (seeded in `values.yaml`) so app-service can scale it for install / suspend / resume.
 - `templates/service-*.yaml` — exposed services; the entrance `host` points at one of these service names.
 - `templates/persistentvolumeclaim-*.yaml` — one per compose volume; **these are the storage decisions you must revisit** (most should become userspace volumes; PVCs belonging to a bundled db must be deleted along with that db's workload — see middleware below).
@@ -54,6 +54,7 @@ The command prints the absolute chart path and a reminder to refine + lint. Then
 - **`depends_on`, healthchecks, restart policies** don't all map 1:1; verify the rendered templates.
 - **Workloads you add by hand** (extra Deployments/StatefulSets beyond what kompose rendered) must each be added to `workloadReplicas`, get a `values.yaml` `workloads.<name>.replicaCount`, and wire `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — otherwise suspend/resume won't control them (see manifest Workloads & replicas).
 - The conversion clears the **local structural `lint`**, but a passing local `lint` is not proof the target Olares accepts it and not proof it is production-ready — confirm `workloadReplicas` and the other required manifest fields yourself (see manifest Workloads & replicas), and the four refinement areas in the parent skill are mandatory before the app will run well. Metadata (§1) can stay a stub for local deploy; functional refine (§2–§4) is always required.
+- If a fresh scaffold fails on version fields, do **not** change `OlaresManifest.yaml` to `v1`/`v2`, lower `olaresManifest.version`, or lower the Olares dependency. Check that you are running the current `olares-cli` and current skill. Remember that `Chart.yaml apiVersion: v2` is correct Helm metadata and is independent of `OlaresManifest.yaml apiVersion: v3`.
 
 ## Next step
 

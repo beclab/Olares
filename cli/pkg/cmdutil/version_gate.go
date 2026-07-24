@@ -21,9 +21,8 @@ import (
 //     version is let through so the server stays authoritative and older
 //     backends where the endpoint still works keep behaving as before.
 //
-// Both consult the version cached by `profile login` / `profile whoami` (or
-// the --olares-version override), so in the common case they add no network
-// round-trip.
+// Both consult the version cached by `profile login` / `profile whoami`, so in
+// the common case they add no network round-trip.
 
 // MinVersionGate describes a verb gated to a minimum Olares backend version.
 type MinVersionGate struct {
@@ -40,8 +39,8 @@ type MinVersionGate struct {
 }
 
 // RequireMinVersion fails fast when the backend is below the gate's minimum,
-// or when the version is undetectable (fail-closed). The --olares-version flag
-// is suggested as the escape hatch for the undetectable case.
+// or when the version is undetectable (fail-closed). The undetectable case
+// points callers to the profile refresh flow.
 func RequireMinVersion(ctx context.Context, f *Factory, gate MinVersionGate) error {
 	if f == nil {
 		return nil
@@ -53,10 +52,8 @@ func RequireMinVersion(ctx context.Context, f *Factory, gate MinVersionGate) err
 	ok, err := f.OlaresBackendAtLeast(ctx, gate.MinVersion)
 	if err != nil {
 		return fmt.Errorf(
-			"`%s` requires Olares >= %s%s, but the backend version could not be determined: %v; "+
-				"pass --%s <version> to set it manually (e.g. --%s %s)",
-			gate.Verb, gate.MinVersion, reason, err,
-			FlagOlaresVersion, FlagOlaresVersion, gate.MinVersion)
+			"`%s` requires Olares >= %s%s, but the backend version could not be determined: %v",
+			gate.Verb, gate.MinVersion, reason, err)
 	}
 	if !ok {
 		got := "unknown"
