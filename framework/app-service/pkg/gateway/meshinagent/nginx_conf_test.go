@@ -15,7 +15,7 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		"listen 16443",
 		"listen 16444 ssl",
 		"ssl_preread on",
-		"resolver kube-dns.kube-system.svc.cluster.local",
+		"resolver coredns.kube-system.svc.cluster.local",
 		"decideOffload",
 		"ssl_certificate_cache",
 		"proxy_buffering off",

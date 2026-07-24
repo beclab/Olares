@@ -41,11 +41,19 @@ func ensureNetworkPolicy(ctx context.Context, c client.Client, desired *networki
 	switch {
 	case apierrors.IsNotFound(err):
 		if err := c.Create(ctx, desired); err != nil {
-			klog.Errorf("mesh-xport: create NP %s/%s failed: %v", desired.Namespace, desired.Name, err)
-			return err
+			if !apierrors.IsAlreadyExists(err) {
+				klog.Errorf("mesh-xport: create NP %s/%s failed: %v", desired.Namespace, desired.Name, err)
+				return err
+			}
+			// Concurrent Ensure* (Application + SharedRoute) raced Create; refresh and Update.
+			if err := c.Get(ctx, key, current); err != nil {
+				klog.Errorf("mesh-xport: get NP %s/%s after AlreadyExists failed: %v", desired.Namespace, desired.Name, err)
+				return err
+			}
+		} else {
+			klog.Infof("mesh-xport: created NP %s/%s", desired.Namespace, desired.Name)
+			return nil
 		}
-		klog.Infof("mesh-xport: created NP %s/%s", desired.Namespace, desired.Name)
-		return nil
 	case err != nil:
 		klog.Errorf("mesh-xport: get NP %s/%s failed: %v", desired.Namespace, desired.Name, err)
 		return err

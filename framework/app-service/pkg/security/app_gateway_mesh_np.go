@@ -26,11 +26,7 @@ func NewAppGatewayMeshNPOsMesh() *netv1.NetworkPolicy {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      AppGatewayMeshNPName,
 			Namespace: MeshControlPlaneNamespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":       "app-gateway",
-				"app.kubernetes.io/component":  "linkerd-mesh",
-				"app.kubernetes.io/managed-by": "app-service",
-			},
+			Labels: appGatewayMeshNPLabels(),
 		},
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{},
@@ -62,11 +58,7 @@ func NewAppGatewayMeshNPOsGateway() *netv1.NetworkPolicy {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      AppGatewayMeshNPName,
 			Namespace: AppGatewayNamespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":       "app-gateway",
-				"app.kubernetes.io/component":  "linkerd-mesh",
-				"app.kubernetes.io/managed-by": "app-service",
-			},
+			Labels:    appGatewayMeshNPLabels(),
 		},
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{},
@@ -79,6 +71,14 @@ func NewAppGatewayMeshNPOsGateway() *netv1.NetworkPolicy {
 				},
 			}},
 		},
+	}
+}
+
+func appGatewayMeshNPLabels() map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/name":     "app-gateway",
+		RouteControlComponentLabel:   AppGatewayMeshComponentValue,
+		RouteControlManagedByLabel:   RouteControlManagedByValue,
 	}
 }
 

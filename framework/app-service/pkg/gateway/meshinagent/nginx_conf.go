@@ -144,7 +144,8 @@ func RenderNginxConf(in NginxConfInput) string {
 		b.WriteString("stream {\n")
 		b.WriteString("  js_import stream_main from /tmp/mesh-in/bearer.js;\n")
 		b.WriteString("  js_set $mesh_in_upstream stream_main.decideOffload;\n")
-		b.WriteString("  resolver kube-dns.kube-system.svc.cluster.local ipv6=off valid=30s;\n")
+		// Olares / modern k8s name CoreDNS as Service "coredns" (not legacy "kube-dns").
+		b.WriteString("  resolver coredns.kube-system.svc.cluster.local ipv6=off valid=30s;\n")
 		b.WriteString("  server {\n")
 		b.WriteString(fmt.Sprintf("    listen %d;\n", in.HTTPSListenPort))
 		b.WriteString("    ssl_preread on;\n")

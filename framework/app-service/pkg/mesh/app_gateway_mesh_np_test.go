@@ -46,6 +46,9 @@ func TestEnsureAppGatewayMeshNetworkPolicies(t *testing.T) {
 	if len(meshNP.Spec.Ingress[0].Ports) != 5 {
 		t.Fatalf("ports = %+v", meshNP.Spec.Ingress[0].Ports)
 	}
+	if !security.IsAppGatewayMeshManagedNP(meshNP) {
+		t.Fatalf("os-mesh NP labels must be security-sweep exempt: %+v", meshNP.Labels)
+	}
 
 	gwNP := &networkingv1.NetworkPolicy{}
 	if err := c.Get(context.Background(), types.NamespacedName{
