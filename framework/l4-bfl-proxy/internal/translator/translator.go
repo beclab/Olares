@@ -652,6 +652,19 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 		},
 	}
 
+	// Pass 1: node-scoped routes for every node. These carry the node name in
+	// the path (e.g. /api/resources/external/<node>/ or the regex share form
+	// ^/api/resources/share/<node>_.*) and are the MORE SPECIFIC matches.
+	//
+	// They MUST all be emitted before the master's generic catch-all prefixes
+	// (pass 2), because Envoy evaluates routes top-to-bottom and stops at the
+	// first match. A generic master prefix like /api/resources/external/ is a
+	// strict prefix of /api/resources/external/<node>/, so if it came first it
+	// would swallow every non-master node's request and misroute it to the
+	// master node. The old single-pass loop emitted the master routes right
+	// after the master node's own scoped routes, which — since FileserverNodes
+	// is sorted by name and the master usually sorts first — placed them ahead
+	// of later nodes' scoped routes and caused exactly that misrouting.
 	for _, node := range user.FileserverNodes {
 		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
 		proxyHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, user.Name)
@@ -688,22 +701,29 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				WebSocketUpgrade: true,
 			})
 		}
+	}
 
-		if node.IsMaster {
-			for _, pfx := range masterLocationPrefixes {
-				routes = append(routes, &ir.HTTPRouteIR{
-					Name:       fmt.Sprintf("files_master_%s_%s", user.Name, sanitizeName(pfx)),
-					PathPrefix: pfx,
-					Cluster:    proxyCluster,
-					RequestHeaders: map[string]string{
-						"X-BFL-USER":       user.Name,
-						"X-Terminus-Node":  node.NodeName,
-						"X-Provider-Proxy": proxyHost,
-					},
-					ExtAuth:          extAuthCfg,
-					WebSocketUpgrade: true,
-				})
-			}
+	// Pass 2: master node generic catch-all prefixes (no node name), emitted
+	// last so the node-scoped routes above always take precedence.
+	for _, node := range user.FileserverNodes {
+		if !node.IsMaster {
+			continue
+		}
+		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
+		proxyHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, user.Name)
+		for _, pfx := range masterLocationPrefixes {
+			routes = append(routes, &ir.HTTPRouteIR{
+				Name:       fmt.Sprintf("files_master_%s_%s", user.Name, sanitizeName(pfx)),
+				PathPrefix: pfx,
+				Cluster:    proxyCluster,
+				RequestHeaders: map[string]string{
+					"X-BFL-USER":       user.Name,
+					"X-Terminus-Node":  node.NodeName,
+					"X-Provider-Proxy": proxyHost,
+				},
+				ExtAuth:          extAuthCfg,
+				WebSocketUpgrade: true,
+			})
 		}
 	}
 

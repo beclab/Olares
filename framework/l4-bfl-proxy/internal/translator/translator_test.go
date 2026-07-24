@@ -2,6 +2,7 @@ package translator
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
@@ -759,5 +760,73 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 			assert.NotEmpty(t, clusterSet)
 			assert.Equal(t, []string{"shareme.example.io"}, vhosts[0].Domains)
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// buildFileserverRoutes
+// ---------------------------------------------------------------------------
+
+// Regression: a non-master node's scoped prefix (e.g.
+// /api/resources/external/olares-work/) overlaps with the master node's
+// generic catch-all prefix (/api/resources/external/). Envoy matches routes
+// top-to-bottom and stops at the first match, so every node-scoped route MUST
+// be emitted before the generic master routes — otherwise the master prefix
+// swallows the request and misroutes it to the master node.
+func TestBuildFileserverRoutes_NodeScopedBeforeMasterGeneric(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+
+	// "olares" sorts first and is the master; "olares-work" is a worker node.
+	// (buildFileserverRoutes relies on FileserverNodes being pre-sorted, which
+	// is what triggered the original bug — the master's generic routes landed
+	// ahead of the worker's scoped routes.)
+	user := &message.UserInfo{
+		Name: "testip162",
+		FileserverNodes: []*message.FileserverNodeInfo{
+			{NodeName: "olares", IsMaster: true},
+			{NodeName: "olares-work", IsMaster: false},
+		},
+	}
+
+	clusterSet := make(map[string]*ir.ClusterIR)
+	routes := tr.buildFileserverRoutes(user, clusterSet)
+
+	indexOfPrefix := func(prefix string) int {
+		for i, r := range routes {
+			if r.PathPrefix == prefix {
+				return i
+			}
+		}
+		return -1
+	}
+
+	nodeExternal := indexOfPrefix("/api/resources/external/olares-work/")
+	masterExternal := indexOfPrefix("/api/resources/external/")
+	require.GreaterOrEqual(t, nodeExternal, 0, "olares-work node route must exist")
+	require.GreaterOrEqual(t, masterExternal, 0, "master generic route must exist")
+	assert.Less(t, nodeExternal, masterExternal,
+		"node-scoped /api/resources/external/olares-work/ must be ordered before the generic /api/resources/external/")
+
+	// The node-scoped route must target the worker node's cluster, and the
+	// generic master route the master node's cluster.
+	assert.Equal(t, "files_testip162_olares-work", routes[nodeExternal].Cluster)
+	assert.Equal(t, "files_testip162_olares", routes[masterExternal].Cluster)
+	assert.Equal(t, "olares-work", routes[nodeExternal].RequestHeaders["X-Terminus-Node"])
+
+	// Every node-scoped prefix that overlaps a master prefix must precede ALL
+	// master generic routes. Compute the first master-route index and assert
+	// no node-scoped route appears after it.
+	firstMaster := len(routes)
+	for i, r := range routes {
+		if strings.HasPrefix(r.Name, "files_master_") {
+			firstMaster = i
+			break
+		}
+	}
+	for i, r := range routes {
+		if strings.HasPrefix(r.Name, "files_node_") {
+			assert.Less(t, i, firstMaster,
+				"node-scoped route %q must come before any master generic route", r.Name)
+		}
 	}
 }
