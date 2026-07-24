@@ -62,9 +62,9 @@ func syncPerViewerTLS(ctx context.Context, c client.Client, cm *corev1.ConfigMap
 	if cm == nil || cm.Name != zoneSSLConfigMapName {
 		return nil
 	}
-	// if cm.Data != nil && cm.Data["ephemeral"] == "true" {
-	// 	return deletePerViewerTLSSecret(ctx, c, viewer)
-	// }
+	if cm.Data != nil && cm.Data["ephemeral"] == "true" {
+		return deletePerViewerTLSSecret(ctx, c, viewer)
+	}
 	cert := strings.TrimSpace(cm.Data["cert"])
 	key := strings.TrimSpace(cm.Data["key"])
 	if cert == "" || key == "" {

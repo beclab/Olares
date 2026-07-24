@@ -15,8 +15,12 @@ import (
 )
 
 var (
-	containerdConfigDir  = "/etc/containerd"
-	containerdConfigFile = filepath.Join(containerdConfigDir, "config.toml")
+	// Registry mirrors live in containerd's certs.d hosts.toml (config v3
+	// config_path), not the inline registry.mirrors of config.toml. Watch the
+	// docker.io host dir + hosts.toml so app-service picks up mirror changes made
+	// by the CLI (install seed) or olaresd (runtime reconcile).
+	containerdConfigDir  = "/etc/containerd/certs.d/docker.io"
+	containerdConfigFile = filepath.Join(containerdConfigDir, "hosts.toml")
 
 	instance *MirrorWatcher
 	once     sync.Once

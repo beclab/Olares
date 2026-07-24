@@ -112,6 +112,12 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteReferenceGrant(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete ReferenceGrant: %w", err)
 		}
+		if err := deleteSecurityPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete SecurityPolicy: %w", err)
+		}
+		if err := deleteJWKSReferenceGrant(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete JWKS ReferenceGrant: %w", err)
+		}
 		return ReconcileResult{
 			Status:  metav1.ConditionTrue,
 			Reason:  ReasonDirectMode,
@@ -172,6 +178,12 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	}
 	if err := applyNetworkPolicy(ctx, c, gw, srr, svc, port); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply NetworkPolicy: %w", err)
+	}
+	if err := applySecurityPolicy(ctx, c, srr); err != nil {
+		return ReconcileResult{}, fmt.Errorf("apply SecurityPolicy: %w", err)
+	}
+	if err := applyJWKSReferenceGrant(ctx, c, srr); err != nil {
+		return ReconcileResult{}, fmt.Errorf("apply JWKS ReferenceGrant: %w", err)
 	}
 	return ReconcileResult{
 		Status:        metav1.ConditionTrue,

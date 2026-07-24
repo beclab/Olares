@@ -35,7 +35,9 @@ func (h *HelmOps) upgrade() error {
 		return err
 	}
 
-	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, true)
+	// ResetThenReuseValues: absorb new chart defaults (image/template) while
+	// keeping prior user overrides that SetValues does not re-emit.
+	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, helm.ResetThenReuseValues)
 	if err != nil {
 		klog.Errorf("Failed to upgrade chart name=%s err=%v", h.app.AppName, err)
 		return err

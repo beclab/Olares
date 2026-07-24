@@ -1,0 +1,63 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: market-provider-svc
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  type: ClusterIP
+  selector:
+    app: system-provider
+  ports:
+    - name: server
+      protocol: TCP
+      port: 28080
+      targetPort: 28080
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backend:market-provider
+  annotations:
+    provider-registry-ref: {{ .Release.Namespace }}/market-provider-svc
+    provider-service-ref: appstore-svc.{{ .Release.Namespace }}:81
+rules:
+  - nonResourceURLs:
+      - "/healthz"
+      - "/app-store/api/v2/applications"
+      - "/app-store/api/v2/applications/*"
+      - "/app-store/api/v2/tasks"
+      - "/app-store/api/v2/tasks/*"
+      - "/app-store/api/v2/llm-providers"
+      - "/app-store/api/v2/llm-providers/*"
+    verbs: ["*"]
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: market-provider-nginx-config
+  namespace: "{{ .Release.Namespace }}"
+  annotations:
+    kubesphere.io/creator: bytetrade.io
+data:
+  market.conf: |-
+    server {
+        listen 8080;
+        server_name  market-provider-svc.{{ .Release.Namespace }};
+        # Gzip Settings
+        gzip on;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        index index.html;
+        location / {
+          proxy_pass http://appstore-svc.{{ .Release.Namespace }}:81;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection '$connection_upgrade';
+        }
+    }

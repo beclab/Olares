@@ -1,10 +1,15 @@
+<h1 align="center">Olares</h1>
+
+<p align="center"><strong>你的 AI Agent。你的数据。你的硬件。</strong></p>
+
+<p align="center">
+  <a href="#快速开始">安装 Olares</a> ·
+  <a href="https://www.olares.com/docs/zh/developer/cli-agent-skills">用 AI 管理 Olares</a> ·
+  <a href="#参与贡献">参与贡献</a>
+</p>
+
 <div align="center">
 
-# Olares：助您重获数据主权的开源个人云
-
-[![Mission](https://img.shields.io/badge/Mission-Let%20people%20own%20their%20data%20again-purple)](#)<br/>
-[![Last Commit](https://img.shields.io/github/last-commit/beclab/Olares)](https://github.com/beclab/olares/commits/main)
-![Build Status](https://github.com/beclab/olares/actions/workflows/release-daily.yaml/badge.svg)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/beclab/Olares)](https://github.com/beclab/olares/releases)
 [![GitHub Repo stars](https://img.shields.io/github/stars/beclab/Olares?style=social)](https://github.com/beclab/Olares/stargazers)
 [![Discord](https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white)](https://discord.gg/olares)
@@ -20,126 +25,125 @@
 
 </div>
 
-<p align="center">
-  <a href="https://olares.com">网站</a> ·
-  <a href="https://docs.olares.com">文档</a> ·
-  <a href="https://www.olares.cn/larepass">下载 LarePass</a> ·
-  <a href="https://github.com/beclab/apps">Olares 应用</a> ·
-  <a href="https://space.olares.com">Olares Space</a>
-</p>
 
-> *基于公有云构建的现代互联网日益威胁着您的个人数据隐私。随着您对 ChatGPT、Midjourney 和脸书等服务的依赖加深，您对数字自主权的掌控也在减弱。您的数据存储在他人服务器上，受其条款约束，被追踪并审查。*
->
-> *是时候做出改变了。*
+**Olares 是一款可以用自然语言操作的开源个人云操作系统，让你在自己的硬件上运行 AI Agent 和大模型。**
 
-![个人云](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
+Olares 基于 Kubernetes 构建，能把你手中的设备变成一个自托管的 AI 平台，打开浏览器就能用。无论是个人用户还是小型团队，都能在这里统一管理算力、存储、网络和应用。
 
-我们坚信，**您拥有掌控自己数字生活的基本权利**。维护这一权利最有效的方式，就是将您的数据托管在本地，在您自己的硬件上。
+https://github.com/user-attachments/assets/01490c33-41ce-46fe-8450-6939b40db98e
 
-Olares 是一款开源个人云操作系统，旨在让您能够轻松在本地拥有并管理自己的数字资产。您无需再依赖公有云服务，而可以在 Olares 上本地部署强大的开源平替服务或应用，例如可以使用 Ollama 托管大语言模型，使用 ComfyUI 生成图像，以及使用 Vane（原 Perplexica）打造本地化、注重隐私的 AI 搜索与问答体验。Olares 让您坐拥云计算的强大威力，又能完全将其置于自己掌控之下。
+> 🌟 *如果 Olares 对你有帮助，欢迎点亮 Star。你的支持会激励我们不断把它打磨得更好。*
 
-> 为 Olares 点亮 🌟 以及时获取新版本和更新的通知。
+## 为什么选择 Olares
 
-## 系统架构
+真正好用的 AI，得足够懂你，而这意味着它要能读到你的文件、消息和过往记录。可是不少云端 AI 服务，会把这些敏感数据存在第三方服务器上，还要按用量向你收费。
 
-公有云具有基础设施即服务（IaaS）、平台即服务（PaaS）和软件即服务（SaaS）等层级。Olares 为这些层级提供了开源替代方案。
+Olares 把 AI 带回本地：你可以在自己的硬件上，用本地大模型运行像 [OpenClaw](https://www.olares.com/docs/zh/use-cases/openclaw) 这样的 Agent，同时依然保有云端那份随时随地、开箱即用的便利。
 
-  ![技术栈](https://app.cdn.olares.com/github/olares/olares-architecture.jpg)
+![公有云服务构建的数字生活，与由 Olares 个人云上开源应用驱动的数字生活对比](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 
-详细描述请参考 [Olares 架构](https://docs.olares.cn/zh/developer/concepts/system-architecture.html)文档。
+主要能力包括：
 
->🔍**Olares 和 NAS 有什么不同？**
->
-> Olares 致力于打造一站式的自托管个人云体验。其核心功能与用户定位，均与专注于网络存储的传统 NAS 有着显著的不同，详情请参考 [Olares 与 NAS 对比](https://blog.olares.com/compare-olares-and-nas/)。
-
-
-## 功能特性
-
-Olares 提供了一系列功能，旨在提升安全性、使用便捷性以及开发的灵活性：
-
-- **企业级安全**：使用 Tailscale、Headscale、Cloudflare Tunnel 和 FRP 简化网络配置，确保安全连接。
-- **安全且无需许可的应用生态系统**：应用通过沙箱化技术实现隔离，保障应用运行的安全性。
-- **统一文件系统和数据库**：提供自动扩展、数据备份和高可用性功能，确保数据的持久安全。
-- **单点登录**：用户仅需一次登录，即可访问 Olares 中所有应用的共享认证服务。
-- **AI 功能**：包括全面的 GPU 管理、本地 AI 模型托管及私有知识库，同时严格保护数据隐私。
-- **内置应用程序**：涵盖文件管理器、同步驱动器、密钥管理器、阅读器、应用市场、设置和面板等，提供全面的应用支持。
-- **无缝访问**：通过移动端、桌面端和网页浏览器客户端，从全球任何地方访问设备。
-- **开发工具**：提供全面的工具支持，便于开发和移植应用，加速开发进程。
-
-以下是用户界面的一些截图预览：
-
-| **桌面：熟悉高效的访问入口**     |  **文件管理器：安全存储数据**
-| :--------: | :-------: |
-| ![桌面](https://app.cdn.olares.com/github/terminus/v2/desktop.jpg) | ![文件](https://app.cdn.olares.com/github/terminus/v2/files.jpg) |
-| **Vault：密码无忧管理**|**市场：可控的应用生态系统** |
-| ![vault](https://app.cdn.olares.com/github/terminus/v2/vault.jpg) | ![市场](https://app.cdn.olares.com/github/terminus/v2/market.jpg) |
-|**Wise：数字后花园** | **设置：高效管理 Olares** |
-| ![设置](https://app.cdn.olares.com/github/terminus/v2/wise.jpg) | ![](https://app.cdn.olares.com/github/terminus/v2/settings.jpg) |
-|**仪表盘：持续监控 Olares**  | **Profile：独特的个人主页** |
-| ![面板](https://app.cdn.olares.com/github/terminus/v2/dashboard.jpg) | ![profile](https://app.cdn.olares.com/github/terminus/v2/profile.jpg) |
-| **Studio：一站式开发、调试和部署**|**控制面板：轻松管理 Kubernetes 集群**  |
-| ![Devbox](https://app.cdn.olares.com/github/terminus/v2/devbox.jpg) | ![控制中心](https://app.cdn.olares.com/github/terminus/v2/controlhub.jpg)|
-
-## 使用场景
-
-在以下场景中，Olares 为您带来私密、强大且安全的私有云体验：
-
-🤖**本地 AI 助手**：在本地部署运行顶级开源 AI 模型，涵盖语言处理、图像生成和语音识别等领域。根据个人需求定制 AI 助手，确保数据隐私和控制权均处于自己手中。<br>
-
-💻**个人数据仓库**：所有个人文件，包括照片、文档和重要资料，都可以在这个安全的统一平台上存储和同步，随时随地都能方便地访问。<br>
-
-🛠️**自托管工作空间**：利用开源 SaaS 平替方案，无需成本即可为家庭或工作团队搭建一个功能强大的工作空间。<br>
-
-🎥**私人媒体服务器**：用自己的视频和音乐库搭建一个私人流媒体服务，随时享受个性化的娱乐体验。<br>
-
-🏡**智能家居中心**：将所有智能设备和自动化系统集中在一个易于管理的控制中心，实现家庭智能化的简便操作。<br>
-
-🤝**独立的社交媒体平台**：在 Olares 上部署去中心化社交媒体应用，如 Mastodon、Ghost 和 WordPress，自由建立和扩展个人品牌，无需担忧封号或支付额外费用。<br>
-
-📚**学习探索**：深入学习自托管服务、容器技术和云计算，并上手实践。<br>
+- **一键部署本地 AI**：在 [Olares 应用市场](https://www.olares.com/market/)一键安装开源 AI 应用和模型。
+- **加速计算管理**：把多个节点上的 GPU 和加速器统一调度，支持时间切片、显存切片和 GPU 独占模式，兼顾 AI、媒体和游戏等不同负载。
+- **[文件与存储管理](https://www.olares.com/docs/zh/manual/olares/files/)**：用内置的「文件」应用，统一管理本地文件、同步数据、已接入的云存储，以及外部的 SMB/NFS 共享，还能[自定义备份](https://www.olares.com/docs/zh/manual/olares/settings/backup)。
+- **[私有网络与访问控制](https://www.olares.com/docs/zh/developer/concepts/network)**：内置私有 VPN 和反向代理，配合公开、私有、内部三种访问入口，为每个应用自动分配 HTTPS 地址，无需手动开放端口。
+- **随时随地访问**：一个 Olares ID 加上 [LarePass](https://www.olares.com/docs/zh/manual/larepass/)，就能从手机、电脑或浏览器访问你的全部服务。
+- **完整的系统应用**：文件、Vault、应用市场、仪表盘、控制中心等一应俱全，登录即用。
 
 ## 快速开始
 
-### 系统兼容性
+### Linux 脚本安装要求
 
-Olares 已在以下 Linux 平台完成测试与验证：
+Olares 可以装在 Linux 主机上（物理机或虚拟机），也为 Windows、macOS 和树莓派准备了专门的安装方式。不同平台、不同方式的要求各有差异。下面这个 Linux 脚本的要求如下：
 
-- Ubuntu 24.04 LTS 及以上版本
-- Debian 11 及以上版本
+- **CPU**：4 核及以上
+- **内存**：8 GB 及以上可用内存
+- **存储**：150 GB 及以上可用 SSD 空间（用机械硬盘会导致安装失败）
+- **操作系统**：Ubuntu 22.04 ～ 25.04，或 Debian 12 / 13
 
-### 安装 Olares
- 
-参考[快速上手指南](https://docs.olares.cn/zh/manual/get-started/)安装并激活 Olares。
+独立显卡为可选项，装上后可加速本地 AI。
+
+### 安装并激活
+
+1. 先在 [LarePass](https://www.olares.com/docs/zh/manual/larepass/) 里创建你的 Olares ID。LarePass 是配套客户端，提供安全登录、内置 VPN 和文件同步。
+
+2. 在 Linux 主机上运行：
+
+    ```bash
+    curl -fsSL https://olares.sh | bash -
+    ```
+
+    这条命令会从 `olares.sh` 下载官方安装程序，并交给 Bash 运行。完整要求、各平台的具体步骤和常见问题，请看 [Linux 脚本安装指南](https://www.olares.com/docs/zh/manual/get-started/install-linux-script)。
+
+    想装在 Windows、macOS、树莓派或虚拟机上？在[安装指南](https://www.olares.com/docs/zh/manual/get-started/install-olares)里选择对应平台即可。
+
+3. 按照网页向导一步步操作，或者干脆全程用命令行，参考[用 Olares CLI 激活](https://www.olares.com/docs/zh/manual/best-practices/activate-olares-using-cli)教程。
+
+激活完成后，你就能在任意浏览器里，通过与 Olares ID 关联的地址访问 Olares。比如 Olares ID 是 `marvin123`，桌面地址就是 `https://desktop.marvin123.olares.com`。
+
+## 主要使用场景
+
+- **交给个人 AI Agent**：用自然语言，把调研、编程、文件整理和日常自动化都交给它。
+- **在本地跑生成式 AI**：与开源模型对话、生成图像和视频，还能把本地模型接入其他应用，全程都在自己的硬件上完成。
+- **管理智能家居与媒体**：接入家庭自动化设备，随时串流播放自己的音乐和影片库。
+- **开发和托管应用**：在 Olares 的隔离环境里开发、测试、运行应用和工作流。
+- **在本地处理音频**：会议转写、录音翻译、语音合成，全都不必把音频上传到第三方。
+- **搭建自托管工作空间**：为家人或团队提供文档协作、自动化、项目管理和沟通工具。
+- **管理个人数据**：在各种设备之间，存储、同步、备份和取用文件、照片与文档。
+
+## 系统架构
+
+就像公有云分成 IaaS、PaaS、SaaS 几层，Olares 也为每一层提供了开源替代方案。
+
+  ![Olares 架构：将开源组件对应到 IaaS、PaaS、SaaS 各层，并与公有云的同类服务并列对比](https://app.cdn.olares.com/github/olares/olares-architecture.jpg)
+
+各组件的详细说明，参见 [Olares 架构](https://www.olares.com/docs/zh/developer/concepts/system-architecture)文档。
+
+> 🔍 **Olares 和传统 NAS 有什么不同？**
+>
+> Olares 想做的是一站式、自托管的个人云体验。它的核心能力和目标用户，都和主打网络存储的传统 NAS 有明显区别。详情见 [Olares 与 NAS 对比](https://www.olares.com/blog/compare-olares-and-nas/)。
 
 ## 项目目录
-Olares 代码库中的主要目录如下：
 
-* **[`apps`](./apps)**: 用于存放系统应用，主要是 `larepass` 的代码。
-* **[`cli`](./cli)**: 用于存放 `olares-cli`（Olares 的命令行界面工具）的代码。
-* **[`daemon`](./daemon)**: 用于存放 `olaresd`（系统守护进程）的代码。
-* **[`docs`**](./docs)**: 用于存放 Olares 项目的文档。
-* **[`framework`](./framework)**: 用来存放 Olares 系统服务代码。
-* **[`infrastructure`](./infrastructure)**: 用于存放计算，存储，网络，GPU 等基础设施的代码。
-* **[`platform`](./platform)**: 用于存放数据库、消息队列等云原生组件的代码。
-* **`vendor`**: 用于存放来自第三方硬件供应商的代码。
+Olares 代码库中的主要目录：
 
-## 社区贡献
+```
+Olares/
+├── apps/            # Olares 内置系统应用
+├── cli/             # olares-cli：面向 AI Agent 的命令行工具，内置 Agent Skills，用于安装和操作 Olares
+├── daemon/          # olaresd 系统守护进程
+├── docs/            # 项目文档
+├── framework/       # Olares 系统服务
+├── infrastructure/  # 计算、存储、网络、GPU 等基础组件
+├── platform/        # 数据库、消息队列等云原生组件
+└── vendor/          # Olares 设备的硬件相关代码
+```
 
-我们欢迎任何形式的贡献！
+## 参与贡献
 
-- 如果您想在 Olares 上开发自己的应用，请参考：<br>
-https://docs.olares.com/developer/develop/
+Olares 欢迎各种形式的贡献，你可以按自己想改进的方向来选择：
 
+- **核心开发**：先看看[待处理的 issue](https://github.com/beclab/Olares/issues)；如果改动较大，建议先开一个 issue 聊聊思路再动手。
+- **文档**：完善 [`docs/`](./docs) 里的内容，可参考[文档贡献指南](./docs/README.md)和[内容与风格规范](https://github.com/beclab/Olares/wiki/General-style-reference)。
+- **应用分发**：把你的应用[打包并提交](https://www.olares.com/docs/zh/developer/develop/distribute-index)到 Olares 应用市场。
+- **反馈问题、提功能建议**：开一个 [GitHub issue](https://github.com/beclab/Olares/issues)，尽量写清背景，方便我们排查或评估。
+- **安全问题**：请按[安全策略](./SECURITY.md)处理，不要在公开的 issue、讨论区或社区渠道里披露漏洞。
 
-- 如果您想帮助改进 Olares，请参考：<br>
-https://docs.olares.com/developer/contribute/olares.html
+## 了解更多
 
-## 社区支持
+- **[安装指南](https://www.olares.com/docs/zh/manual/get-started/install-olares)**：选择安装方式并激活 Olares。
+- **[使用场景](https://www.olares.com/docs/zh/use-cases/)**：了解本地 AI、媒体、办公和自托管等玩法。
+- **[CLI 指南](https://www.olares.com/docs/zh/developer/install/cli/olares-cli)**：从命令行安装、管理和诊断 Olares。
+- **[Agent Skills](https://www.olares.com/docs/zh/developer/cli-agent-skills)**：让 AI Agent 通过 `olares-cli` 操作 Olares。
+- **[进阶教程](https://www.olares.com/docs/zh/manual/best-practices/)**：配置 GPU、多节点部署、自定义域名、扩容存储等。
 
-* [**GitHub Discussion**](https://github.com/beclab/olares/discussions) - 讨论 Olares 使用过程中的疑问。
-* [**GitHub Issues**](https://github.com/beclab/olares/issues) - 报告 Olares 的遇到的问题或提出功能改进建议。
-* [**Discord**](https://discord.gg/olares) - 日常交流，分享经验，或讨论与 Olares 相关的任何主题。
+## 社区
 
-## 特别感谢
+- **[Discord](https://discord.gg/olares)**：获取社区支持，交流部署经验和 Agent 玩法。
+- **[Olares 论坛](https://www.olares.com/forum/)**：反馈产品建议，参与更深入的讨论。
+- 关注我们的 [X](https://x.com/Olares_OS) 和 [YouTube](https://www.youtube.com/@OlaresOS)。
 
-Olares 项目整合了许多第三方开源项目，包括：[Kubernetes](https://kubernetes.io/)、[Kubesphere](https://github.com/kubesphere/kubesphere)、[Padloc](https://padloc.app/)、[K3S](https://k3s.io/)、[JuiceFS](https://github.com/juicedata/juicefs)、[MinIO](https://github.com/minio/minio)、[Envoy](https://github.com/envoyproxy/envoy)、[Authelia](https://github.com/authelia/authelia)、[Infisical](https://github.com/Infisical/infisical)、[Dify](https://github.com/langgenius/dify)、[Seafile](https://github.com/haiwen/seafile)、[HeadScale](https://headscale.net/)、 [tailscale](https://tailscale.com/)、[Redis Operator](https://github.com/spotahome/redis-operator)、[Nitro](https://nitro.jan.ai/)、[RssHub](http://rsshub.app/)、[predixy](https://github.com/joyieldInc/predixy)、[nvshare](https://github.com/grgalex/nvshare)、[LangChain](https://www.langchain.com/)、[Quasar](https://quasar.dev/)、[TrustWallet](https://trustwallet.com/)、[Restic](https://restic.net/)、[ZincSearch](https://zincsearch-docs.zinc.dev/)、[filebrowser](https://filebrowser.org/)、[lego](https://go-acme.github.io/lego/)、[Velero](https://velero.io/)、[s3rver](https://github.com/jamhall/s3rver)、[Citusdata](https://www.citusdata.com/)。
+## 致谢
+
+Olares 站在众多优秀开源项目的肩膀上，在此一并致谢：[Kubernetes](https://kubernetes.io/)、[Kubesphere](https://github.com/kubesphere/kubesphere)、[Padloc](https://padloc.app/)、[K3S](https://k3s.io/)、[JuiceFS](https://github.com/juicedata/juicefs)、[MinIO](https://github.com/minio/minio)、[Envoy](https://github.com/envoyproxy/envoy)、[Authelia](https://github.com/authelia/authelia)、[Infisical](https://github.com/Infisical/infisical)、[Dify](https://github.com/langgenius/dify)、[Seafile](https://github.com/haiwen/seafile)、[HeadScale](https://headscale.net/)、[Tailscale](https://tailscale.com/)、[Redis Operator](https://github.com/spotahome/redis-operator)、[Nitro](https://nitro.jan.ai/)、[RSSHub](http://rsshub.app/)、[predixy](https://github.com/joyieldInc/predixy)、[nvshare](https://github.com/grgalex/nvshare)、[LangChain](https://www.langchain.com/)、[Quasar](https://quasar.dev/)、[TrustWallet](https://trustwallet.com/)、[Restic](https://restic.net/)、[ZincSearch](https://zincsearch-docs.zinc.dev/)、[filebrowser](https://filebrowser.org/)、[lego](https://go-acme.github.io/lego/)、[Velero](https://velero.io/)、[s3rver](https://github.com/jamhall/s3rver)、[Citusdata](https://www.citusdata.com/)。

@@ -30,12 +30,22 @@ func TestEnsureInClusterCallerIngressNP_creates(t *testing.T) {
 	if np.Labels[ManagedByLabel] != ManagedByValue {
 		t.Fatalf("managed-by = %q", np.Labels[ManagedByLabel])
 	}
-	if len(np.Spec.Ingress) != 1 || len(np.Spec.Ingress[0].From) != 1 {
+	if len(np.Spec.Ingress) != 2 {
 		t.Fatalf("ingress rules = %+v", np.Spec.Ingress)
+	}
+	if len(np.Spec.Ingress[0].From) != 2 {
+		t.Fatalf("caller/system ingress = %+v", np.Spec.Ingress[0])
 	}
 	expr := np.Spec.Ingress[0].From[0].NamespaceSelector.MatchExpressions
 	if len(expr) != 1 || expr[0].Key != NamespaceOwnerLabel || expr[0].Operator != metav1.LabelSelectorOpExists {
 		t.Fatalf("namespace selector = %+v", expr)
+	}
+	sys := np.Spec.Ingress[0].From[1].NamespaceSelector.MatchExpressions
+	if len(sys) != 1 || sys[0].Key != "bytetrade.io/ns-type" || sys[0].Operator != metav1.LabelSelectorOpIn {
+		t.Fatalf("system selector = %+v", sys)
+	}
+	if len(np.Spec.Ingress[1].From) < 1 {
+		t.Fatalf("node tunnel ingress missing: %+v", np.Spec.Ingress[1])
 	}
 	if len(np.Spec.PolicyTypes) != 1 || np.Spec.PolicyTypes[0] != networkingv1.PolicyTypeIngress {
 		t.Fatalf("policy types = %+v", np.Spec.PolicyTypes)

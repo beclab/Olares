@@ -377,9 +377,8 @@ func (r *SecurityReconciler) createOrUpdateNetworkPolicy(ctx context.Context,
 			found = true
 		} else {
 			if namespaceNetworkPolicies != nil && !namespaceNetworkPolicies.Contains(&np) {
-				// routecontrol reconcilers (e.g. WI-LITE-6 caller ingress NP on
-				// os-gateway) write NP outside security templates; do not prune.
-				if security.IsRouteControlManagedNP(&np) {
+				// Keep NetworkPolicies owned by routecontrol or callerjwt.
+				if security.IsAppServiceManagedExternalNP(&np) {
 					continue
 				}
 				if err := r.Delete(ctx, &np); err != nil {
@@ -670,19 +669,6 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 
 			} // end of func npFix
 
-		} else if security.IsAppGatewayMeshNamespace(ns.Name) {
-			peerNS := security.AppGatewayMeshPeerNamespace(ns.Name)
-			meshNP := security.NewAppGatewayMeshNetworkPolicy(ns.Name, peerNS)
-			networkPolicy = security.NetworkPolicies{
-				security.NPDenyAll.DeepCopy(),
-				meshNP,
-				security.NewLinkerdMeshPrometheusScrapeNetworkPolicy(ns.Name),
-			}
-			networkPolicy.SetName("others-np")
-			networkPolicy.SetNamespace(ns.Name)
-			npFix = func(np *netv1.NetworkPolicy) {
-				logger.Info("Update network policy", "name", networkPolicy.Name())
-			}
 		} else {
 			networkPolicy = security.NetworkPolicies{security.NPDenyAll.DeepCopy()}
 			networkPolicy.SetName("others-np")

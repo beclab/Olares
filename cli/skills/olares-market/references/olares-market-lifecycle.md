@@ -143,6 +143,7 @@ olares-cli market cancel firefox --watch               # block until row stops m
 ```
 
 - Source is normally implicit (read from the per-user state row). On **1.12.6+** the cancel body requires a source; if the row is gone (or `/market/state` is unreadable) the CLI reports an idempotent `nothing to cancel` — pass `--source <id>` to still send the request. On 1.12.5 the body needs no source, so a failed state read never blocks cancel.
+- **Cancelling a `resuming` app requires Olares >= 1.12.7** (the resume-cancel UX the SPA shipped in 1.12.7, reusing this same `DELETE /apps/{name}/install`). On older / undetectable backends the CLI rejects it fail-closed (pass `--olares-version` to override). Every other in-flight state (`pending` / `downloading` / `installing` / `upgrading` / ...) is unaffected and cancels on any backend. A cancelled resume settles at `stopped` (it never reaches a `resumingCanceled` state — that transition does not exist); a rejected cancel request lands at `resumingCancelFailed`.
 - **The widest watcher in the tree**: any "row stopped moving" state counts as success, including `*Canceled`, `*Failed` (the underlying op died, cancel "won by default"), and stable resting states `running` / `stopped` / `uninstalled` (cancel raced and lost, OR rollback landed).
 - Failure is ONLY surfaced for `*CancelFailed` (the cancel request itself was rejected).
 - The terminal row carries the **underlying op** (install / upgrade / ...) as its `opType`, not `cancel`. `matchOpType` is OFF — no race-tracking gate applies.
