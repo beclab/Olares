@@ -34,9 +34,9 @@ Before you begin, make sure:
 
 Before setting up Jellyfin, you need to make sure your media is already available on Olares. You can add it in several ways:
 - **Upload files directly**<br>
-Upload your media to the `/home/Movies/` folder in Files. For better speed and progress visibility, [use the LarePass desktop client to upload](../manual/olares/files/add-edit-download.md#upload-via-larepass-desktop).
+Upload your media to the `/Home/` folder in Files. For better speed and progress visibility, [use the LarePass desktop client to upload](../manual/olares/files/add-edit-download.md#upload-via-larepass-desktop).
 - **Mount an external drive**<br>
-After you insert a USB drive to your Olares device, it will be automatically mounted and accessible. Files in it are under the `/external/` directory.
+After you insert a USB drive to your Olares device, it will be automatically mounted and accessible. Files in it are under the `/External/` directory.
 - **Mount a network share**<br> 
 If your media is on a NAS or other network server, you can connect it to Olares. For detailed instructions, see [Mount SMB shares](../manual/olares/files/mount-SMB.md).
 
@@ -87,19 +87,42 @@ With Jellyfin installed and running, the next step is to tell it where your medi
    - **Content type**: Choose the type of media (e.g., Movies, Shows, Music). For folders containing both movies and TV shows, choose **Mixed Movies and Shows**.
    - **Display name**: Enter the name to display for the library.<br>
    - **Folders**: Click + to add the path to your media.<br>
-      - **Olares Files**: `/home/movies/<YourMediaFolder>`
-      - **External storage**: `/external/<YourMediaFolder>`
+      - **Olares Files**: `/olares/userdata/home/<YourMediaFolder>`
+      - **External storage**: `/olares/userdata/external/<YourMediaFolder>`
 4. Click **Ok** to save, and repeat for other media types (e.g., one for "Movies", one for "TV Shows").
 
 Once saved, Jellyfin will automatically scan your folders and begin building your library. This process may take several minutes, depending on the size of your collection.
 
-## Enable transcoding 
+## Enable hardware acceleration for transcoding 
 
-To ensure smooth playback for high-resolution videos, enable hardware acceleration. This allows Jellyfin to use your device's hardware for faster, more efficient transcoding.
-1. In the Jellyfin **Dashboard** (click the ≡ icon > Dashboard), go to **Playback** > **Transcoding**.
-2. Under **Hardware acceleration**, choose your preferred method based on your Olares device's hardware.
+When you enable Jellyfin’s hardware acceleration, the server will use your CPU’s built-in GPU multimedia engine for video decoding, encoding, scaling, and certain tone mapping tasks when transcoding is needed. This reduces the load on the CPU compared to software-only decoding, and is especially useful for playing 4K high-bitrate sources, downscaling resolution or bitrate, handling media formats not supported by the client, converting HDR to SDR, or embedding subtitles. Note that by default, Jellyfin will prefer Direct Play or Remux; hardware acceleration is only used when the device is not compatible or network bandwidth is insufficient and transcoding is required.
+
+
+Here’s how to enable Intel QSV hardware acceleration on an Olares One device:
+
+1. First, update Jellyfin in the Olares Market to version 1.0.21 or above.
+2. Navigate to **Settings** > **Applications** > **Jellyfin** > **Manage Environment Variables**.
+   - Set the `ENABLE_HW_ACCEL` variable to `true`.
+   - Enter the values for `VIDEO_GID` and `RENDER_GID` from your host system. For Olares One, these default to `44` and `994`. If you are using a different device, open the terminal from the **Control Hub** and run the following commands to check the correct values:
+      ```bash
+      getent group video
+      getent group render
+      ls -ln /dev/dri
+      ```
+    ![Get GID](/images/manual/use-cases/jellyfin-gid.png#bordered){width=90%}
+   - After saving the settings, the system will automatically restart the Jellyfin container.
+
+3. In the Jellyfin **Dashboard** (click the ≡ icon > Dashboard), go to **Playback** > **Transcoding**.
+4. Under **Hardware acceleration**, select the appropriate options based on your Olares device's hardware. For example, on Olares One with Intel QSV, it is recommended to enable `H264`, `HEVC`, and `HEVC 10bit`, and keep the other options as default. For more detailed configuration guidance, refer to the official [Jellyfin transcoding docs](https://jellyfin.org/docs/general/post-install/transcoding/).
+
    
    ![Enable transcoding](/images/manual/use-cases/jellyfin-transcoding.png#bordered){width=90%}
+
+:::tip Best Practices
+For a home theater setup, it's best to ensure your main TV or media player supports popular formats such as HEVC Main10, HDR10, SRT subtitles, and mainstream audio codecs. This allows Jellyfin to use Direct Play as much as possible, delivering media without unnecessary transcoding. Hardware acceleration and transcoding are intended to solve compatibility issues or support playback over remote or weak networks, not to replace Direct Play.
+
+Additionally, enabling `ENABLE_HW_ACCEL` gives Jellyfin extra permissions to access DRM. For security reasons, only enable this option when you actually need hardware acceleration.
+:::
 
 ## Enhance experience with community plugins
 
