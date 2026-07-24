@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
@@ -97,7 +98,7 @@ func userEnv(owner, name, value string) *sysv1alpha1.UserEnv {
 	}
 }
 
-func secretsAppConfig(secrets ...appcfg.AppSecret) *appcfg.ApplicationConfig {
+func secretsAppConfig(secrets ...appcfg.AppSecretVar) *appcfg.ApplicationConfig {
 	return &appcfg.ApplicationConfig{
 		AppName:   testAppName,
 		OwnerName: testOwner,
@@ -106,8 +107,8 @@ func secretsAppConfig(secrets ...appcfg.AppSecret) *appcfg.ApplicationConfig {
 	}
 }
 
-func appSecret(name, envName string) appcfg.AppSecret {
-	return appcfg.AppSecret{
+func appSecret(name, envName string) appcfg.AppSecretVar {
+	return appcfg.AppSecretVar{
 		Name:      name,
 		ValueFrom: &sysv1alpha1.ValueFrom{EnvName: envName},
 	}
@@ -207,25 +208,25 @@ func TestApplySecretsUserEnvOverridesSystemEnv(t *testing.T) {
 func TestApplySecretsErrors(t *testing.T) {
 	cases := []struct {
 		name    string
-		secrets []appcfg.AppSecret
+		secrets []appcfg.AppSecretVar
 	}{
 		{
 			name:    "unknown env reference",
-			secrets: []appcfg.AppSecret{appSecret("api-token", "NOPE")},
+			secrets: []appcfg.AppSecretVar{appSecret("api-token", "NOPE")},
 		},
 		{
 			name:    "missing valueFrom",
-			secrets: []appcfg.AppSecret{{Name: "api-token"}},
+			secrets: []appcfg.AppSecretVar{{Name: "api-token"}},
 		},
 		{
 			name:    "empty name",
-			secrets: []appcfg.AppSecret{appSecret("", "OLARES_API_TOKEN")},
+			secrets: []appcfg.AppSecretVar{appSecret("", "OLARES_API_TOKEN")},
 		},
 		{
 			// Two entries targeting one Secret would clobber each other; the
 			// single-value-per-Secret model has no way to merge them.
 			name: "duplicate secret name",
-			secrets: []appcfg.AppSecret{
+			secrets: []appcfg.AppSecretVar{
 				appSecret("api-token", "OLARES_API_TOKEN"),
 				appSecret("api-token", "OLARES_API_TOKEN"),
 			},
@@ -239,6 +240,135 @@ func TestApplySecretsErrors(t *testing.T) {
 				t.Fatal("expected an error, got nil")
 			}
 		})
+	}
+}
+
+// TestApplySecretsForReportsOnlyRealChanges pins the change-detection contract
+// the AppEnv controller relies on to decide whether a rotation warrants a
+// redeploy. Re-applying identical data must report nothing, otherwise every
+// no-op reconcile would trigger a spurious helm upgrade.
+func TestApplySecretsForReportsOnlyRealChanges(t *testing.T) {
+	ctx := context.Background()
+	c := newSecretsTestClient(
+		systemEnv("OLARES_API_TOKEN", "tok"),
+		systemEnv("OLARES_OTHER", "other"),
+	)
+	secrets := []appcfg.AppSecretVar{
+		appSecret("api-token", "OLARES_API_TOKEN"),
+		appSecret("other", "OLARES_OTHER"),
+	}
+
+	changed, err := ApplySecretsFor(ctx, c, testNamespace, testAppName, testOwner, secrets)
+	if err != nil {
+		t.Fatalf("first apply: %v", err)
+	}
+	if len(changed) != 2 {
+		t.Fatalf("first apply changed = %v, want both secrets created", changed)
+	}
+
+	changed, err = ApplySecretsFor(ctx, c, testNamespace, testAppName, testOwner, secrets)
+	if err != nil {
+		t.Fatalf("second apply: %v", err)
+	}
+	if len(changed) != 0 {
+		t.Fatalf("re-applying identical data changed = %v, want none", changed)
+	}
+
+	env := new(sysv1alpha1.SystemEnv)
+	if err := c.Get(ctx, client.ObjectKey{Name: "OLARES_API_TOKEN"}, env); err != nil {
+		t.Fatalf("get systemenv: %v", err)
+	}
+	env.Value = "rotated"
+	if err := c.Update(ctx, env); err != nil {
+		t.Fatalf("update systemenv: %v", err)
+	}
+
+	changed, err = ApplySecretsFor(ctx, c, testNamespace, testAppName, testOwner, secrets)
+	if err != nil {
+		t.Fatalf("third apply: %v", err)
+	}
+	if len(changed) != 1 || changed[0] != "api-token" {
+		t.Fatalf("after rotating one env, changed = %v, want [api-token]", changed)
+	}
+}
+
+// TestApplyAppEnvRecordsSecretDeclarations covers the link that makes live
+// propagation possible at all: the declarations must land on the AppEnv CR,
+// because that is the only thing the SystemEnv/UserEnv controllers can scan to
+// discover which apps reference a rotated variable.
+func TestApplyAppEnvRecordsSecretDeclarations(t *testing.T) {
+	ctx := context.Background()
+	c := newSecretsTestClient(systemEnv("OLARES_API_TOKEN", "tok"))
+
+	cfg := secretsAppConfig(appSecret("api-token", "OLARES_API_TOKEN"))
+	appEnv, err := ApplyAppEnv(ctx, c, cfg)
+	if err != nil {
+		t.Fatalf("ApplyAppEnv: %v", err)
+	}
+	if appEnv == nil {
+		t.Fatal("ApplyAppEnv returned nil for an app declaring only secrets")
+	}
+
+	stored := new(sysv1alpha1.AppEnv)
+	key := client.ObjectKey{Namespace: testNamespace, Name: FormatAppEnvName(testAppName, testOwner)}
+	if err := c.Get(ctx, key, stored); err != nil {
+		t.Fatalf("get appenv: %v", err)
+	}
+	if len(stored.Secrets) != 1 {
+		t.Fatalf("appEnv.Secrets = %+v, want one declaration", stored.Secrets)
+	}
+	if stored.Secrets[0].Name != "api-token" {
+		t.Errorf("recorded name = %q, want api-token", stored.Secrets[0].Name)
+	}
+	if stored.Secrets[0].ValueFrom == nil || stored.Secrets[0].ValueFrom.EnvName != "OLARES_API_TOKEN" {
+		t.Errorf("recorded valueFrom = %+v, want OLARES_API_TOKEN", stored.Secrets[0].ValueFrom)
+	}
+}
+
+// TestApplyAppEnvDoesNotRecordSecretValues is the guard on the core privacy
+// property: the AppEnv CR must never carry a resolved secret value. AppSecretVar
+// has no value field today; this fails loudly if one is ever added and populated.
+func TestApplyAppEnvDoesNotRecordSecretValues(t *testing.T) {
+	ctx := context.Background()
+	const secretValue = "super-secret-value"
+	c := newSecretsTestClient(systemEnv("OLARES_API_TOKEN", secretValue))
+
+	cfg := secretsAppConfig(appSecret("api-token", "OLARES_API_TOKEN"))
+	if _, err := ApplyAppEnv(ctx, c, cfg); err != nil {
+		t.Fatalf("ApplyAppEnv: %v", err)
+	}
+	if err := ApplySecrets(ctx, c, cfg); err != nil {
+		t.Fatalf("ApplySecrets: %v", err)
+	}
+
+	stored := new(sysv1alpha1.AppEnv)
+	key := client.ObjectKey{Namespace: testNamespace, Name: FormatAppEnvName(testAppName, testOwner)}
+	if err := c.Get(ctx, key, stored); err != nil {
+		t.Fatalf("get appenv: %v", err)
+	}
+
+	serialized, err := yaml.Marshal(stored)
+	if err != nil {
+		t.Fatalf("marshal appenv: %v", err)
+	}
+	if strings.Contains(string(serialized), secretValue) {
+		t.Fatalf("resolved secret value leaked into the AppEnv CR:\n%s", serialized)
+	}
+}
+
+// TestApplyAppEnvSecretsDoNotMutateConfig guards against writing the pending
+// status through the shared ValueFrom pointer, which would mutate the caller's
+// ApplicationConfig.
+func TestApplyAppEnvSecretsDoNotMutateConfig(t *testing.T) {
+	ctx := context.Background()
+	c := newSecretsTestClient(systemEnv("OLARES_API_TOKEN", "tok"))
+
+	cfg := secretsAppConfig(appSecret("api-token", "OLARES_API_TOKEN"))
+	if _, err := ApplyAppEnv(ctx, c, cfg); err != nil {
+		t.Fatalf("ApplyAppEnv: %v", err)
+	}
+	if s := cfg.Secrets[0].ValueFrom.Status; s != "" {
+		t.Errorf("caller's config was mutated: ValueFrom.Status = %q, want empty", s)
 	}
 }
 

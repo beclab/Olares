@@ -103,10 +103,12 @@ type ApplicationConfig struct {
 	Envs                 []manifestsysv1alpha1.AppEnvVar
 	// Secrets mirrors the top-level secrets[] block of OlaresManifest.yaml.
 	// Each entry is materialized into its own Kubernetes Secret in the app
-	// namespace at install/upgrade time (see pkg/utils/app.ApplySecrets), so
-	// the chart can reference the value with a plain secretKeyRef rather than
-	// receiving it as a plaintext env var via olaresEnv.
-	Secrets              []AppSecret
+	// namespace (see pkg/utils/app.ApplySecrets), so the chart can reference
+	// the value with a plain secretKeyRef rather than receiving it as a
+	// plaintext env var via olaresEnv. The declarations are also recorded on
+	// the AppEnv CR so the SystemEnv/UserEnv controllers can propagate later
+	// changes to the referenced variables.
+	Secrets              []AppSecretVar
 	Images               []string
 	AllowMultipleInstall bool
 	RawAppName           string
