@@ -3,7 +3,6 @@ package cmdutil
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -16,18 +15,16 @@ import (
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
-// Flag / viper keys for command-side version awareness. Registered as
-// persistent flags on the root command (see cmd/ctl/root.go) and bound to
-// viper there.
-const (
-	// FlagOlaresVersion overrides the detected backend version. Useful when
-	// /api/olares-info is unreachable, or to force a specific code path for
-	// debugging. Value is any Olares semver, e.g. 1.12.6 or 1.12.6-20260603.
-	FlagOlaresVersion = "olares-version"
-	// FlagRefreshVersion forces a fresh /api/olares-info read, bypassing the
-	// persisted per-profile cache.
-	FlagRefreshVersion = "refresh-version"
-)
+// FlagOlaresVersion overrides the detected backend version. Useful when
+// /api/olares-info is unreachable, or to force a specific code path for
+// debugging. Value is any Olares semver, e.g. 1.12.6 or 1.12.6-20260603.
+// Registered as a persistent flag on the profile command tree (see
+// cmd/ctl/profile/root.go) and bound to viper there.
+//
+// There is no force-refresh flag: a fresh read happens automatically when the
+// cache is empty, and `profile whoami --refresh` / `profile list --refresh`
+// re-detect (location + role + version) on demand.
+const FlagOlaresVersion = "olares-version"
 
 // OlaresBackendVersion returns the Olares OS version of the target instance,
 // memoized for the lifetime of this Factory. Resolution order:
@@ -154,11 +151,10 @@ func (f *Factory) resolveBackendVersion(ctx context.Context) (*semver.Version, e
 		return nil, err
 	}
 
-	// 2. Per-profile cache (no TTL; skipped only when a refresh is forced).
-	if !viper.GetBool(FlagRefreshVersion) {
-		if cached, _ := loadCachedBackendVersion(rp.OlaresID); cached != nil {
-			return cached, nil
-		}
+	// 2. Per-profile cache (no TTL). Re-detection is on demand via
+	// `profile whoami --refresh` / `profile list --refresh`.
+	if cached, _ := loadCachedBackendVersion(rp.OlaresID); cached != nil {
+		return cached, nil
 	}
 
 	// 3. Fetch from the backend (writes the cache as a side effect).
@@ -169,9 +165,14 @@ func (f *Factory) resolveBackendVersion(ctx context.Context) (*semver.Version, e
 	return fetched, nil
 }
 
-// fetchBackendVersion reads osVersion from /api/olares-info on the profile's
-// desktop ingress (through the shared whoami.FetchOlaresInfo path) using the
-// Factory's auth-injecting http.Client, then best-effort caches it.
+// fetchBackendVersion reads + parses + caches osVersion via the single shared
+// whoami.FetchAndCacheVersion path (the same fetcher the eager post-login
+// detect and `profile whoami --refresh` use), so there is exactly one place
+// that owns "read the version and remember it".
+//
+// The cache write is best-effort: env-only profiles (resolved by the
+// EnvProvider, not present in config.json) would make SetBackendVersion fail,
+// so we pass cfg=nil for them and still return the freshly-parsed version.
 func (f *Factory) fetchBackendVersion(ctx context.Context, rp *credential.ResolvedProfile) (*semver.Version, error) {
 	hc, err := f.HTTPClient(ctx)
 	if err != nil {
@@ -179,27 +180,15 @@ func (f *Factory) fetchBackendVersion(ctx context.Context, rp *credential.Resolv
 	}
 	doer := whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID)
 
-	info, err := whoami.FetchOlaresInfo(ctx, doer)
+	var cfgArg *cliconfig.MultiProfileConfig
+	if cfg, lerr := cliconfig.LoadMultiProfileConfig(); lerr == nil && cfg.FindByOlaresID(rp.OlaresID) != nil {
+		cfgArg = cfg
+	}
+	res, err := whoami.FetchAndCacheVersion(ctx, doer, cfgArg, rp.OlaresID, time.Now)
 	if err != nil {
 		return nil, err
 	}
-	osVersion := strings.TrimSpace(info.OsVersion)
-	if osVersion == "" {
-		return nil, fmt.Errorf("/api/olares-info returned an empty osVersion")
-	}
-	v, err := utils.ParseOlaresVersionString(osVersion)
-	if err != nil {
-		return nil, fmt.Errorf("parse backend osVersion %q: %w", osVersion, err)
-	}
-
-	// Persist best-effort; a write failure (e.g. an env-only profile that
-	// isn't in config.json) must not break the command.
-	if cfg, lerr := cliconfig.LoadMultiProfileConfig(); lerr == nil {
-		if _, serr := cfg.SetBackendVersion(rp.OlaresID, v.Original(), time.Now().Unix()); serr != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not cache Olares backend version: %v\n", serr)
-		}
-	}
-	return v, nil
+	return res.Version, nil
 }
 
 func loadCachedBackendVersion(olaresID string) (*semver.Version, int64) {

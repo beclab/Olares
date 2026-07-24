@@ -10,6 +10,7 @@ import (
 
 	"github.com/beclab/Olares/cli/internal/lockfile"
 	"github.com/beclab/Olares/cli/pkg/auth"
+	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
 // Refresher is the runtime token-refresh primitive: given a (likely-expired)
@@ -88,6 +89,7 @@ func (r *Refresher) Refresh(
 	ctx context.Context,
 	olaresID, authURL, currentAccessToken string,
 	insecureSkipVerify bool,
+	location olares.Location,
 ) (string, error) {
 	if olaresID == "" {
 		return "", errors.New("olaresID is required")
@@ -153,6 +155,7 @@ func (r *Refresher) Refresh(
 		AccessToken:        stored.AccessToken,
 		InsecureSkipVerify: insecureSkipVerify,
 		Timeout:            15 * time.Second,
+		Location:           location,
 	})
 	if err != nil {
 		// 401/403 from /api/refresh = the grant itself is dead. Mark
