@@ -7,8 +7,7 @@ metadata:
   namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: os-mesh
----
+    linkerd.io/control-plane-ns: os-mesh---
 # Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
 kind: ServiceAccount
 apiVersion: v1
@@ -17,8 +16,7 @@ metadata:
   namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: heartbeat
-    linkerd.io/control-plane-ns: os-mesh
----
+    linkerd.io/control-plane-ns: os-mesh---
 # Source: linkerd-control-plane/templates/identity-rbac.yaml
 kind: ServiceAccount
 apiVersion: v1
@@ -27,8 +25,7 @@ metadata:
   namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: identity
-    linkerd.io/control-plane-ns: os-mesh
----
+    linkerd.io/control-plane-ns: os-mesh---
 # Source: linkerd-control-plane/templates/proxy-injector-rbac.yaml
 kind: ServiceAccount
 apiVersion: v1
@@ -37,56 +34,7 @@ metadata:
   namespace: os-mesh
   labels:
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: os-mesh
----
-# Source: linkerd-control-plane/templates/destination-rbac.yaml
-kind: Secret
-apiVersion: v1
-metadata:
-  name: linkerd-sp-validator-k8s-tls
-  namespace: os-mesh
-  labels:
-    linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: os-mesh
-  annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
-type: kubernetes.io/tls
-data:
-  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURtRENDQW9DZ0F3SUJBZ0lVT2tlN2FkYzMrWkdvZHNoMWZnd2tIV1VnV1owd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0t6RXBNQ2NHQTFVRUF3d2diR2x1YTJWeVpDMXpjQzEyWVd4cFpHRjBiM0l1YjNNdGJXVnphQzV6ZG1NdwpJQmNOTWpZd056STBNRGt6TXpVMVdoZ1BNakV5TmpBMk16QXdPVE16TlRWYU1Dc3hLVEFuQmdOVkJBTU1JR3hwCmJtdGxjbVF0YzNBdGRtRnNhV1JoZEc5eUxtOXpMVzFsYzJndWMzWmpNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUYKQUFPQ0FROEFNSUlCQ2dLQ0FRRUEwR1ppa21zZzJYREFSZmhoWWdZZHFyb1pqNTZFT1lmbjJJd0Ixb2RUYjVCdQpLRGJKU2ZtNVNGMDNJcTBDMlRRT2tJMDMzSTJ0OGtlampWZjNWbStSSVBiQWZIVUVWcG02cDE5MUtmRXVlRTlFCmNTQkN3MG9KN1h6QVJ4ME01Snc4ODZvRC8xZEI2ZTJ2WXhqVmN3SXk4U1ZKelF3OHh2V2hIQmJ1S1NUcGpyMjcKcDRJckhpb00wNjNpMit1T3Q3N0E0NkRpa2tKWmY4aktNUEtzU1pGOEwxbUtUUlRoc3U0UkxIYmp5QVNueHltTQpkYVdtZkxjTWF6VlFTZnNQK3BiODdKSjJ6STIwMmY1cjZYZXloeUc1WkVja2dEeFFzUGs4Y21ZcVcyQUQvSHJsCkxxWXcwV0czOVRKeEFuZDJIRFo3ZmF5N0h2ZEY4aTRmbzBsTzVSTGg4d0lEQVFBQm80R3hNSUd1TUIwR0ExVWQKRGdRV0JCUlo1WlhNY2lFMXdyYmFJOTRRU2tyWWQ3SnJVakFmQmdOVkhTTUVHREFXZ0JSWjVaWE1jaUUxd3JiYQpJOTRRU2tyWWQ3SnJVakFQQmdOVkhSTUJBZjhFQlRBREFRSC9NRnNHQTFVZEVRUlVNRktDSUd4cGJtdGxjbVF0CmMzQXRkbUZzYVdSaGRHOXlMbTl6TFcxbGMyZ3VjM1pqZ2k1c2FXNXJaWEprTFhOd0xYWmhiR2xrWVhSdmNpNXYKY3kxdFpYTm9Mbk4yWXk1amJIVnpkR1Z5TG14dlkyRnNNQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUF2bm1vcwpBSnhna092OG85YUtuU3hHbUpiS1JNc284Tm85QWg2T2RNVk5ITlVjbHYxU2t3S3U4M3l1SFAweFdGN2EwRUV1ClVOWDgvZTMrR0pCK0N5dC9IUTlWOXVQU1haWkZDc1hVbjYwTjRLNWVMcVhlOWFQdUh4NWpKNjRubHZmZmJyNjQKdW1Hb3FTWnUwY0JldEg3N29DOU9ncHVGSTZSM3dqbWxyQlRmQUVleW5Jb21VaTZwdWRjSk9Ta2gyQStVZSsvNApSYm81a1NOamdrZUpka1FSQ0NNeWZ4cU4xeXFwYXp3WmJpWjB5d2dLUGhPdXpMeUFYK09lbDhOM2lQRUpwOU9WCjkzZEhiNjFheEUvVkxCcEV0Rm1sTDlHTTNVUUFQb3IyODROOVFsR3J5VTRDejNVK3VBUjI0UlRnNUd6SGZwSzUKTmpaYzVEUHNNcmUyVmI5ZQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
-  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktrd2dnU2xBZ0VBQW9JQkFRRFFabUtTYXlEWmNNQkYKK0dGaUJoMnF1aG1Qbm9RNWgrZllqQUhXaDFOdmtHNG9Oc2xKK2JsSVhUY2lyUUxaTkE2UWpUZmNqYTN5UjZPTgpWL2RXYjVFZzlzQjhkUVJXbWJxblgzVXA4UzU0VDBSeElFTERTZ250Zk1CSEhRemtuRHp6cWdQL1YwSHA3YTlqCkdOVnpBakx4SlVuTkREekc5YUVjRnU0cEpPbU92YnVuZ2lzZUtnelRyZUxiNjQ2M3ZzRGpvT0tTUWxsL3lNb3cKOHF4SmtYd3ZXWXBORk9HeTdoRXNkdVBJQktmSEtZeDFwYVo4dHd4ck5WQkordy82bHZ6c2tuYk1qYlRaL212cApkN0tISWJsa1J5U0FQRkN3K1R4eVppcGJZQVA4ZXVVdXBqRFJZYmYxTW5FQ2QzWWNObnQ5ckxzZTkwWHlMaCtqClNVN2xFdUh6QWdNQkFBRUNnZ0VBRlhMRUtGK2dOT0RXMlJ5MElSdVNDQlU1TmovUlNmNkR6UlN6eDdtTHk4cW8KbTdqdnhJNVFGSE9MamlVU1N2cUJtVHovaDlLSkdZdG4rTThaNUtwODNGQ3BCT1lpT1N0L08yU21zVmRpT2YybQpoS0lXWFBVTXlvVnhZS0JMeUdlUUdsL2dJM0orbFMzaVJDZTFLQzRNd2liZFRwNDR6eDFPcEk1em1vWnpCejZ1CkVrN3oxTDgvOFJqSzRtK0NTMVMvUTduREhQWk9Cdzd5RWFtUVQzT21nVk1nRzdsbERTZ0gyeDZBNXE0VExLeDMKeWhieWV0b3VvRlNVSnU5cUtuVHpWWW9FWWxXOFFuY1dXVmJ2YWtQalAxZFVNSFlzZlU4TE9URG1na2RXdFFBTgp0NFhGSG1iOVJ3MjZobVozS3NQV1JVT014WjErT3JqV3JQcjlMclgrNFFLQmdRRDZzWmN1dzV6YURRVzFVU1FxCmlTTUJzQjVxTFJLN29ubW80TjUxV0Z3VXo3UHZJS1hKYTZxRXJBZDJxTjZyQWlEeGRxZzNTOVd0VmNkUlVIZFAKTWMwRjhHN3loTUxSUWpPK2NNQmNtaDJ3dFE4WFVodVQ0VmlaRjhlT3VuZFcwNElyeFhUcTBVREl0a0lTR2lOWApOZS9sM2ZXV0YrZ3ZZSFhZQlBQRnJETWQ4UUtCZ1FEVXo1OFNoOEJ5dHlUUjFpUUNheVM5QlJkQm1aOWtSa0RIClZySm9lTDUxSFNwYVdwRWw2OERwR3BkRytJelBka3Jrd2U2U25CTk0vNFc4cGtLTFQ5enBhcTkrZjRFbzQ2L0cKZDVFV1dHQlJsZUc1VDBreXlyWVAydzBrTitWV1JUZnRzSkRIaC9aSlR5VWtrVGwwbDBzUHkwc2dSdXp2ZCtpVQpoUzd1T3JCcUl3S0JnUUNQeTBPVFlFSmMxREZkQWpERGNTdXlNU29RN3MrYTdxUG4yU3ZnbFJFa0lzcnJzNGRFCmxFd1hrM0VvZjg1UXVvVFkyNTI3TWZWYldpTmNvZEg5aSt3MHB1ZU1sZGdGSFhyK2xqL1FIZG8vM0dyT2pwc2cKNUpYa0lqNmx3SkRwTGFLeHBxM2NickJCTUVHUGpveU0zblEvSG1SYWRsWUlyc1NKWnJYSXdYQUVrUUtCZ1FDcgovTU85Y1JMYVl5TVJwdlBoTklBemR2ck5uSDhSeGlreU1PSHN4ckI5NjcwLzJuUDE1cXM0ZUxJTHZISG9kTnlnCk5nOCtVMzdSdXF4MXd4U0NqRitvRVAyVnlTdzBSSmJaV2VaYTNiK3lEK1NtSStxdmJ0NW13QXpGMlpxeDl5ejEKSHI1VFU1RjZ1OGp6M1o1R21NTWtGNU0ybWJ1QTZUS0JYWVdKS010TWF3S0JnUURmTXU4ZGNLUy9IZjkwS1J6VgpLUXNCQ2NPMlA5TGdTU2NwQkhGajcxNHdOVWVQWnNFTUkvTUFJR2ZwUjlpOGhTNDdnNENwb0dhMi9VZmxjNkNkCndPYjZPbS9yNTBxTnp5YkpwaThpQ0xoQWlZd2l4eStZdy95Q2pqODRNSS91TWRTQWpoN1VmakMzeHdjSlFCM3EKN1huOVdnZElrNnEwZWNKaE00dHlDTnE5SHc9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==
----
-# Source: linkerd-control-plane/templates/destination-rbac.yaml
-kind: Secret
-apiVersion: v1
-metadata:
-  name: linkerd-policy-validator-k8s-tls
-  namespace: os-mesh
-  labels:
-    linkerd.io/control-plane-component: destination
-    linkerd.io/control-plane-ns: os-mesh
-  annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
-type: kubernetes.io/tls
-data:
-  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURxRENDQXBDZ0F3SUJBZ0lVY3FuWHFrdGQvckRmVFNNNndVRXUwR20zblVFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0x6RXRNQ3NHQTFVRUF3d2tiR2x1YTJWeVpDMXdiMnhwWTNrdGRtRnNhV1JoZEc5eUxtOXpMVzFsYzJndQpjM1pqTUNBWERUSTJNRGN5TkRBNU16TTFOVm9ZRHpJeE1qWXdOak13TURrek16VTFXakF2TVMwd0t3WURWUVFECkRDUnNhVzVyWlhKa0xYQnZiR2xqZVMxMllXeHBaR0YwYjNJdWIzTXRiV1Z6YUM1emRtTXdnZ0VpTUEwR0NTcUcKU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLQW9JQkFRRDIveVNYS0YwMkZmWExmSVZoNWFOVGswWDhUU1RHR3RPRgpPTHRkS094VjZRZEMxS1doL0E1Z25kR3JKZWEyUGhTUUZkUkphYWxZeDFZYm9YM3ZtM3Bpb0V2dWlNSHNZR1UrClV0QmpnSitkUXpTVjdMcU5MUG1SN0hGc2tNQkpLZUhYMHIyMkZYYUErbVRGRnNQM2RPVVcrNVUxSFRxRGtGOGIKZ0dBVDdZaTBDV3Y1TkJsYjRYRTRUaVl4SXpMckY5NlF3MjlDZG0yM3NRQmpRaDlNdUE2ZWdaTGV2c0s3Qzg1dwpYNW1kYVhkd1pteWZtQVh1c3VxNEVKN2FFaW15UDh6Tkdyamw0SzFsazU1aWs4TTc2bHdiTDAxd0ZiV0Q2a0YwCkxnL0xianRVTlJVS3hTbzNwWW1VSW56Rm9ZSS9tN0wrUXNKajRWVHYvQmJLazQzdHIzTmRBZ01CQUFHamdia3cKZ2JZd0hRWURWUjBPQkJZRUZOMjR2eUxvRjczVXRjQWNhWUdLNkU4cGNmMTZNQjhHQTFVZEl3UVlNQmFBRk4yNAp2eUxvRjczVXRjQWNhWUdLNkU4cGNmMTZNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdZd1lEVlIwUkJGd3dXb0lrCmJHbHVhMlZ5WkMxd2IyeHBZM2t0ZG1Gc2FXUmhkRzl5TG05ekxXMWxjMmd1YzNaamdqSnNhVzVyWlhKa0xYQnYKYkdsamVTMTJZV3hwWkdGMGIzSXViM010YldWemFDNXpkbU11WTJ4MWMzUmxjaTVzYjJOaGJEQU5CZ2txaGtpRwo5dzBCQVFzRkFBT0NBUUVBYXNXdS9iZlRiRWVVQVdJNmxZaEY0SXA3eldOenZESWhhMmpaR3FicFRvbUVFeHpnCitwQ2ZCRExVT2dDMEc2OUgxZXFidG5EckppN3NnQkRQNkR6WkoyNU03VWFFQldFdm9FMXlhWWF1a2tJOFZESUwKcTgyOUlPWlBTL1hZQWN6dVduaEc5UHFaRVJjVHRFNDVYbjdvYlBZTEJ4MVVhNkhOTjgxZ2Z6NzliRkVzSjlRcAoyOWo3ZmF5SjN6WnBwQkRLRFhvcUN1eHdrbWF2MUZrclU5cGxRVU1hVFFvRW9uQXhNMXlreERqVE4xdzZyVjBECnV2OE5ncUY4Lys2TjY3UFVjRUhuWFp2czlJeVJtSnAvY2pqSmtJdEhWRzVlNExjUVlzaXF3emVXMXdwbXRRUWQKT1E5WDVHV2RIcDNybVVmRThBSVA5ZlpiNlZuSFJZTnYvVVFnK2c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
-  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRRDIveVNYS0YwMkZmWEwKZklWaDVhTlRrMFg4VFNUR0d0T0ZPTHRkS094VjZRZEMxS1doL0E1Z25kR3JKZWEyUGhTUUZkUkphYWxZeDFZYgpvWDN2bTNwaW9FdnVpTUhzWUdVK1V0QmpnSitkUXpTVjdMcU5MUG1SN0hGc2tNQkpLZUhYMHIyMkZYYUErbVRGCkZzUDNkT1VXKzVVMUhUcURrRjhiZ0dBVDdZaTBDV3Y1TkJsYjRYRTRUaVl4SXpMckY5NlF3MjlDZG0yM3NRQmoKUWg5TXVBNmVnWkxldnNLN0M4NXdYNW1kYVhkd1pteWZtQVh1c3VxNEVKN2FFaW15UDh6Tkdyamw0SzFsazU1aQprOE03Nmx3YkwwMXdGYldENmtGMExnL0xianRVTlJVS3hTbzNwWW1VSW56Rm9ZSS9tN0wrUXNKajRWVHYvQmJLCms0M3RyM05kQWdNQkFBRUNnZ0VBSW8yWDYxT0RhQUpveVJ6ZTRLUDA2M0lDQzQvVDNLamxFcWFEUTVSQUxRRTEKVHYvdzVJNXozbkthNGNsTmFMZWFQZEU5U2tDRXB5aEtYMWJYWE5LUWdPL3hkTDhKK0tKQVFrTTk1dEJDeEFmTQorVXBOaTF3UmY5SDhIaGJKUE9oUWhxdWR6RFZkY2lGVlFUaDBRQS9Jei9uRnFsRmFuYmJGTDFPUUIvUlF1RXF3CnhjMWpNcmJxL0dvOWVjeGx5ZEt0QnI2V29ialZQV3NtWmdLWFhlOFYyTlpNVGlXVHRJQUNlU1htRlAwdmlNOUcKd0dXR1IzWFhnWCtYTHh5OVhYbTlQTnBBRUM0cXQzeDJVU0V2MHlmTndLY1BLZWZWNmRsM3hCV1Q5TmlYUmo4dQpjbGZ5QVVheG1janVCbmZWS2FoUUY2TzFKem53RmFqUWZ6KzQ3Y3FqdXdLQmdRRDk4RFVYUzZ2QXBMb20vcHJJCm5SZXhYeHM4MFJuK3c2MDFMRG5xQUVZZFZ6bkhUT00zNDlnQzFVcUN4VkdqZ3B5U2JRMS9LRWJBUHk0RytMMVQKbTc2OEdQbk1tdzdmNFVTbXZZNDBsUUVPY1g4M05XWCthM0drUzFxSWF5UHBtVnJZaVM4NUlVUWhBR0ZpUmdldwo5bXJFZklhb1NiWStaMk5waW5jTW1DTklSd0tCZ1FENUFJSC9nODFFWjJoS3BMbnZDZFZEZUIzajJiREorV05yCmswTFRkMC83QzFPTDh3enRnejM0SVBoOWJqdzcxck9pS21yT1YyWUNpSUtGSndGY3Exa09MSTgvZXdmdDNzMEwKT3RZU1FGNzFUOTJpUnN1cFhjMUlHSjNxaEkrQ0kzQXVOcmJJZDdrSnZRRXRiYUNUYU5MVzBnSkNSb2p5TjZhNwpRYTJlZzFSZE93S0JnUUM2cUUrT0lSeE5qWWdiMDdpWTBBZ3pZOUpVb09zM3ZrUGFPdmtURFVKOG5Mb215bGlXCm80OExmaGE0Q3l5WVFSQ3YvU01YbmRacng4VWdjTVJSNmNDSTZON3RTK2ppSGVibG5aNGkvb2Y1UXVvYy9jNUwKOWxSaFROWnVRanJ5b2J3S1FNU0tmTzVrUjdCTm1XWmI2TFhRV2l4dEZVbTFreStheTZINGl2Z2NUd0tCZ0FUSApsN2M1NW5UTHIxclBjcW85L0JRQmVFRnBhbFZXTGl4Z2RVWHQ0bUVsUklOSk5SUlNFcHh5dFpKaXpWRXd1OTMvCkJuSFRoNmZBeXhDWFFSVndUSk5URTZUYVRicXBMakpxL0xUNCsxbW1JTkQrbnVZdllNTmpoWlI4MnV4YWxjcXQKVGpEbTYyeGVibWxhMDF4QkJOc095UEJRdmt3MytVRmE3MlE5alI4RkFvR0FLRVF4OW9yWW9tRVFTejEzNG1jaApSMWJYb3FidklUOEhOMThVMGNoQkdMcGxOOHZycDc4bDZaUkM2WS9ORkxRb0VMdHRyN1RUM0Z4ei8yei83dEZuCnJ5akdwdHpTdkR3WnY2a1ViNm41V25vcFRtMURaQitLZTBlRkhLSTVqbmc2R1EwZGs4WlhzeHNzRFBKUGJhNWkKRWRYempBRVBXOGxDbTFaYkdLYWsxalE9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
----
-# Source: linkerd-control-plane/templates/proxy-injector-rbac.yaml
-kind: Secret
-apiVersion: v1
-metadata:
-  name: linkerd-proxy-injector-k8s-tls
-  namespace: os-mesh
-  labels:
-    linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: os-mesh
-  annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
-type: kubernetes.io/tls
-data:
-  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURvRENDQW9pZ0F3SUJBZ0lVVzUxcUJUNXhvZkkvZ3FxYU9HaFdGaU5KUjRJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURXJNQ2tHQTFVRUF3d2liR2x1YTJWeVpDMXdjbTk0ZVMxcGJtcGxZM1J2Y2k1dmN5MXRaWE5vTG5OMgpZekFnRncweU5qQTNNalF3T1RNek5UVmFHQTh5TVRJMk1EWXpNREE1TXpNMU5Wb3dMVEVyTUNrR0ExVUVBd3dpCmJHbHVhMlZ5WkMxd2NtOTRlUzFwYm1wbFkzUnZjaTV2Y3kxdFpYTm9Mbk4yWXpDQ0FTSXdEUVlKS29aSWh2Y04KQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQUx6ajB1WTFlbGhacFNsNmZyMDMvcVM2bFliWWtHWWVySFA2VHRpeQplS0dmSlNueGg4QXhBK2cycFdhcnpUNU02K2xXeGJtS0RtTDhNYUdneHdENHlOUkcvZFU1cTBqbzdiLzV6Rk1lCkRuZzhDUkVCbVZxbHM3THhiY0dyT2V3SkNyVnY0allBTU13cENKeVB6ZGcwWXlVRG9sdVIxQ1dvWnkreitEK1QKZm9CU3ZGa2oxTDlpa1NYM0c0bmtobXUyTlk2RGdQdUQrTHQ0cXNSdE5xUTY5Q2dMM1RmV09Xbmc2RklFODdEZQo2TTliUG9IN3Z4WDlFblo3VzFyMzJHMTgzNWlpZnBqSXpCT0FlTTRHTlJETkRVSEgyZnRoNVhybkVHTFlpcWVKClY1a0xseEVxdmZSY2txRVNSeWl0M2d3YVdWNkl1NmdWUld1NUdwTkhSa0QwRzBNQ0F3RUFBYU9CdFRDQnNqQWQKQmdOVkhRNEVGZ1FVU1phc2NmMnhiN2tDdHdHQ2VJYUtITnlxOVBrd0h3WURWUjBqQkJnd0ZvQVVTWmFzY2YyeApiN2tDdHdHQ2VJYUtITnlxOVBrd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pCZkJnTlZIUkVFV0RCV2dpSnNhVzVyClpYSmtMWEJ5YjNoNUxXbHVhbVZqZEc5eUxtOXpMVzFsYzJndWMzWmpnakJzYVc1clpYSmtMWEJ5YjNoNUxXbHUKYW1WamRHOXlMbTl6TFcxbGMyZ3VjM1pqTG1Oc2RYTjBaWEl1Ykc5allXd3dEUVlKS29aSWh2Y05BUUVMQlFBRApnZ0VCQUZSakgxeXcxdlVqN0hlWFRSay84cHVYeThXMmNSSUZvU29kS09Cclp0VndXNmtySGtWZHFGNlBYU0t4CkRVN1l5aG5xaUcwaXJNc2xsb1JFYi95TDhWR25BZS9obGo2RzlNTWhlUVFHeDhhMnFGS0VCUTIrYTFmbjBTaFkKOWszejN4d3ZBVVY2anErWmttMDE1VHF3TkdISTAwUVVvOWo3aWcwc1VJWFRsR3JaV2ZZL21oeTI3akhVSnJ6cAplS0VnYzlzL3pQWnVLWE50S1BuSFlLY1dMMmtzQ0hPb3J0NXpYOFRSWmNpdndnaDkvd2NlSERUWk1qcE90VzFzCnZhdlZSUVRwMW01dVlkbTNMd1ZhVXVGL1kzVStlVzlTbmVUVlk0c2tKWlNEZmszOFpTTlROU2haMnlQYVNDRHoKcUZvTUw0aHdXTlN3ZXZMK2FmVkVLcVBIOWlvPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
-  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktrd2dnU2xBZ0VBQW9JQkFRQzg0OUxtTlhwWVdhVXAKZW42OU4vNmt1cFdHMkpCbUhxeHorazdZc25paG55VXA4WWZBTVFQb05xVm1xODArVE92cFZzVzVpZzVpL0RHaApvTWNBK01qVVJ2M1ZPYXRJNk8yLytjeFRIZzU0UEFrUkFabGFwYk95OFczQnF6bnNDUXExYitJMkFERE1LUWljCmo4M1lOR01sQTZKYmtkUWxxR2N2cy9nL2szNkFVcnhaSTlTL1lwRWw5eHVKNUlacnRqV09nNEQ3Zy9pN2VLckUKYlRha092UW9DOTAzMWpscDRPaFNCUE93M3VqUFd6NkIrNzhWL1JKMmUxdGE5OWh0Zk4rWW9uNll5TXdUZ0hqTwpCalVRelExQng5bjdZZVY2NXhCaTJJcW5pVmVaQzVjUktyMzBYSktoRWtjb3JkNE1HbGxlaUx1b0ZVVnJ1UnFUClIwWkE5QnREQWdNQkFBRUNnZ0VBRE1wcFJHdk5va0JHY0xCdlRFcUhqMG02aUxHUExFM0ZHV3Rva3hXWmJwUlQKYWhZd0U1Y2VHbkkzaHJsNUxLVlNla1ZhYyszQjBLUEppK3Q5Q1BkUHlNbHYzeW1kdHRKZHV4aTVaSGdqWndmbApzMFdiblZSSUtWb0k0bldXVEFIeFp0emNnV2RIa1U1R3NOZGFDekJzOVp1R2p5aCtVdmg4TFp6dkRBVzYvMThTCk9qYVRCM0dyMTZ5S1U3dlNWcm9MdmFtdlR1NkNTbCt4enJKU2pDTFpsY2V2OEJwOEc2bU9selFUWFl4VVYyaWcKMmtBNklWUmxzRXIvejJ3WlFHUGlPMGlyUXFaTE10cDREMnNJTGt5Rm5WOWNLSmtGR2pFR1RZV0Y3M1QzbXg3NwpnWkdWOVU0a0g5QmhjZjMzTzJwTkpYaHhVYVZFUXlqbGVRenM5aUt0elFLQmdRRDI5ajZEK01oZzVpWlphenJnCm5zbUtMZHZCRWVpZnQzN0MramY3UnZZQllBNVQwMlZ3TUJYc3FnRlhwV05Ob2N3Zm5wMkdYSHlhVUFPS2UrT3oKNnVlanFSSU5Ca3NMMUJycmE3WmJ0OEJDeitveks5bEMzQ1MwTlMzQ1BTMENsTlFhNFFjOEgzWXE3YUgzY1N4RQpBUHlMZXdXS1dHb2ozQjhUbWdnMTBweG1oUUtCZ1FERHpZSzA5eUlqTEZNTkhXQWFpMDNOK2gwSlEwOG1zM2VHCmFiT2k0a2VNK2p6ODlXMit6aE1KaUxEVGtlWVUwR0VHTktJV0Q5RkVVWFpERlk3K1prOGhGVCtZTEt3eVlWRGUKQnBPWVpNNWhOblhrYSt0VmJ4Z0RvenN4TVhwOUVJY09LeXdqcFlqRUR2bm42eVpaWFlKUmRzZDUxaDZhcXJ2Uwp6enBrRk4rWkp3S0JnUURrNkhZbHlWR2lUM0c0YkdZVWtkbnBWSHhleHdUQ0ZrbE8zTE5MSEFrbVdTeXVra0Z4CjdZQkU3NGR5Ly8rOWszMHF5ZERsRzVEN1Q3TVloNkVWd1dTWUZEeUJDaFpCam9hdE5CZkJoOTZUanpoYjJnYjEKckN2eFJXRjJxMUd2Rk5oTldjdGs5UnlJeWQ3WkJuT3JUT2JKT214MlFXR1FmNVhtaTEyVTFmVFdLUUtCZ1FDQgpnbWsxOFZDdkd4NUR5bTVLb0dGeUlFRWNZMXp6S0RtaXVqK0xPVWhDUXpJYnp1b3NEbm9oRUR5RmREZFBCUlZuCjJXQnNYMEgzZ2pwSzNQT2I2V2ZsWmZ5T1Z0Mys1TWRzVThWRVEwa09tOHNXcnhzVmcwbksvaWlrdlNsYmw1YjkKRkNrNTJyKy9qbmhWb2YvWGxEWWlWQUpVMy8rV0pkL2Q3QnVmSHY5V2VRS0JnUUNGd1Z6KzlncmJMWXRWb1dsbwo3Z3M2UGdCRkdzaStONisveFJiK3ZUYkZRMFZzNG1GZVRiMWJEcExkdVMwdFVuTjVFZFN1SlJNb0Z6eS9XMXpqCitxaCtWTHdEV25na0VKUVJEdU53UWFmbG1nYW96QXVEcXpkQkZmd2MybFgzeE11SnRxY3M4S3FpbzFKR2xIc3gKVlIzYjFPVTlmSmZ2NnlPZFRCRjFnYlF6V1E9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==
----
+    linkerd.io/control-plane-ns: os-mesh---
 # Source: linkerd-control-plane/templates/config.yaml
 kind: ConfigMap
 apiVersion: v1
@@ -420,8 +368,7 @@ data:
         timeoutSeconds: 1
       readinessProbe:
         timeoutSeconds: 1
-    webhookFailurePolicy: Ignore
----
+    webhookFailurePolicy: Ignore---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 ###
 ### Destination Controller Service
@@ -454,8 +401,7 @@ rules:
   verbs: ["create", "get", "update", "patch"]
 - apiGroups: ["discovery.k8s.io"]
   resources: ["endpointslices"]
-  verbs: ["list", "get", "watch", "create", "update", "patch", "delete"]
----
+  verbs: ["list", "get", "watch", "create", "update", "patch", "delete"]---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -538,8 +484,7 @@ rules:
     verbs:
       - create
       - get
-      - patch
----
+      - patch---
 # Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -553,8 +498,7 @@ rules:
   verbs: ["list"]
 - apiGroups: ["linkerd.io"]
   resources: ["serviceprofiles"]
-  verbs: ["list"]
----
+  verbs: ["list"]---
 # Source: linkerd-control-plane/templates/identity-rbac.yaml
 ###
 ### Identity Controller Service RBAC
@@ -574,8 +518,7 @@ rules:
 # https://github.com/linkerd/linkerd2/issues/9367
 - apiGroups: [""]
   resources: ["events"]
-  verbs: ["create", "patch"]
----
+  verbs: ["create", "patch"]---
 # Source: linkerd-control-plane/templates/proxy-injector-rbac.yaml
 ###
 ### Proxy Injector RBAC
@@ -602,8 +545,7 @@ rules:
   verbs: ["list", "get", "watch"]
 - apiGroups: ["extensions", "batch"]
   resources: ["cronjobs", "jobs"]
-  verbs: ["list", "get", "watch"]
----
+  verbs: ["list", "get", "watch"]---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -619,8 +561,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: linkerd-destination
-  namespace: os-mesh
----
+  namespace: os-mesh---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -637,8 +578,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: linkerd-destination
-    namespace: os-mesh
----
+    namespace: os-mesh---
 # Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -653,8 +593,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: linkerd-heartbeat
-  namespace: os-mesh
----
+  namespace: os-mesh---
 # Source: linkerd-control-plane/templates/identity-rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -670,8 +609,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: linkerd-identity
-  namespace: os-mesh
----
+  namespace: os-mesh---
 # Source: linkerd-control-plane/templates/proxy-injector-rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -688,8 +626,7 @@ subjects:
 roleRef:
   kind: ClusterRole
   name: linkerd-linkerd-proxy-injector
-  apiGroup: rbac.authorization.k8s.io
----
+  apiGroup: rbac.authorization.k8s.io---
 # Source: linkerd-control-plane/templates/config-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -704,8 +641,7 @@ rules:
 - apiGroups: [""]
   resources: ["configmaps"]
   verbs: ["get"]
-  resourceNames: ["linkerd-config"]
----
+  resourceNames: ["linkerd-config"]---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -724,8 +660,7 @@ rules:
     verbs:
       - get
       - list
-      - watch
----
+      - watch---
 # Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
 ###
 ### Heartbeat RBAC
@@ -741,8 +676,7 @@ rules:
 - apiGroups: [""]
   resources: ["configmaps"]
   verbs: ["get"]
-  resourceNames: ["linkerd-config"]
----
+  resourceNames: ["linkerd-config"]---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -760,8 +694,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: linkerd-destination
-    namespace: os-mesh
----
+    namespace: os-mesh---
 # Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -777,8 +710,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: linkerd-heartbeat
-  namespace: os-mesh
----
+  namespace: os-mesh---
 # Source: linkerd-control-plane/templates/destination.yaml
 ###
 ### Destination Controller Service
@@ -800,8 +732,7 @@ spec:
   ports:
   - name: grpc
     port: 8086
-    targetPort: 8086
----
+    targetPort: 8086---
 # Source: linkerd-control-plane/templates/destination.yaml
 kind: Service
 apiVersion: v1
@@ -820,8 +751,7 @@ spec:
   ports:
   - name: grpc
     port: 8086
-    targetPort: 8086
----
+    targetPort: 8086---
 # Source: linkerd-control-plane/templates/destination.yaml
 kind: Service
 apiVersion: v1
@@ -840,8 +770,7 @@ spec:
   ports:
   - name: sp-validator
     port: 443
-    targetPort: sp-validator
----
+    targetPort: sp-validator---
 # Source: linkerd-control-plane/templates/destination.yaml
 kind: Service
 apiVersion: v1
@@ -860,8 +789,7 @@ spec:
   ports:
   - name: grpc
     port: 8090
-    targetPort: 8090
----
+    targetPort: 8090---
 # Source: linkerd-control-plane/templates/destination.yaml
 kind: Service
 apiVersion: v1
@@ -880,8 +808,7 @@ spec:
   ports:
   - name: policy-https
     port: 443
-    targetPort: policy-https
----
+    targetPort: policy-https---
 # Source: linkerd-control-plane/templates/identity.yaml
 kind: Service
 apiVersion: v1
@@ -900,8 +827,7 @@ spec:
   ports:
   - name: grpc
     port: 8080
-    targetPort: 8080
----
+    targetPort: 8080---
 # Source: linkerd-control-plane/templates/identity.yaml
 kind: Service
 apiVersion: v1
@@ -920,8 +846,7 @@ spec:
   ports:
   - name: grpc
     port: 8080
-    targetPort: 8080
----
+    targetPort: 8080---
 # Source: linkerd-control-plane/templates/proxy-injector.yaml
 kind: Service
 apiVersion: v1
@@ -941,8 +866,7 @@ spec:
   ports:
   - name: proxy-injector
     port: 443
-    targetPort: proxy-injector
----
+    targetPort: proxy-injector---
 # Source: linkerd-control-plane/templates/destination.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -1387,8 +1311,7 @@ spec:
               audience: identity.l5d.io
       - emptyDir:
           medium: Memory
-        name: linkerd-identity-end-entity
----
+        name: linkerd-identity-end-entity---
 # Source: linkerd-control-plane/templates/identity.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -1732,8 +1655,7 @@ spec:
               audience: identity.l5d.io
       - emptyDir:
           medium: Memory
-        name: linkerd-identity-end-entity
----
+        name: linkerd-identity-end-entity---
 # Source: linkerd-control-plane/templates/proxy-injector.yaml
 ###
 ### Proxy Injector
@@ -2083,8 +2005,7 @@ spec:
               audience: identity.l5d.io
       - emptyDir:
           medium: Memory
-        name: linkerd-identity-end-entity
----
+        name: linkerd-identity-end-entity---
 # Source: linkerd-control-plane/templates/heartbeat.yaml
 ###
 ### Heartbeat
@@ -2169,8 +2090,7 @@ spec:
                   - fieldRef:
                       apiVersion: v1
                       fieldPath: metadata.namespace
-                    path: namespace
----
+                    path: namespace---
 # Source: linkerd-control-plane/templates/proxy-injector-rbac.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
@@ -2203,7 +2123,7 @@ webhooks:
       name: linkerd-proxy-injector
       namespace: os-mesh
       path: "/"
-    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURvRENDQW9pZ0F3SUJBZ0lVVzUxcUJUNXhvZkkvZ3FxYU9HaFdGaU5KUjRJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURXJNQ2tHQTFVRUF3d2liR2x1YTJWeVpDMXdjbTk0ZVMxcGJtcGxZM1J2Y2k1dmN5MXRaWE5vTG5OMgpZekFnRncweU5qQTNNalF3T1RNek5UVmFHQTh5TVRJMk1EWXpNREE1TXpNMU5Wb3dMVEVyTUNrR0ExVUVBd3dpCmJHbHVhMlZ5WkMxd2NtOTRlUzFwYm1wbFkzUnZjaTV2Y3kxdFpYTm9Mbk4yWXpDQ0FTSXdEUVlKS29aSWh2Y04KQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQUx6ajB1WTFlbGhacFNsNmZyMDMvcVM2bFliWWtHWWVySFA2VHRpeQplS0dmSlNueGg4QXhBK2cycFdhcnpUNU02K2xXeGJtS0RtTDhNYUdneHdENHlOUkcvZFU1cTBqbzdiLzV6Rk1lCkRuZzhDUkVCbVZxbHM3THhiY0dyT2V3SkNyVnY0allBTU13cENKeVB6ZGcwWXlVRG9sdVIxQ1dvWnkreitEK1QKZm9CU3ZGa2oxTDlpa1NYM0c0bmtobXUyTlk2RGdQdUQrTHQ0cXNSdE5xUTY5Q2dMM1RmV09Xbmc2RklFODdEZQo2TTliUG9IN3Z4WDlFblo3VzFyMzJHMTgzNWlpZnBqSXpCT0FlTTRHTlJETkRVSEgyZnRoNVhybkVHTFlpcWVKClY1a0xseEVxdmZSY2txRVNSeWl0M2d3YVdWNkl1NmdWUld1NUdwTkhSa0QwRzBNQ0F3RUFBYU9CdFRDQnNqQWQKQmdOVkhRNEVGZ1FVU1phc2NmMnhiN2tDdHdHQ2VJYUtITnlxOVBrd0h3WURWUjBqQkJnd0ZvQVVTWmFzY2YyeApiN2tDdHdHQ2VJYUtITnlxOVBrd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pCZkJnTlZIUkVFV0RCV2dpSnNhVzVyClpYSmtMWEJ5YjNoNUxXbHVhbVZqZEc5eUxtOXpMVzFsYzJndWMzWmpnakJzYVc1clpYSmtMWEJ5YjNoNUxXbHUKYW1WamRHOXlMbTl6TFcxbGMyZ3VjM1pqTG1Oc2RYTjBaWEl1Ykc5allXd3dEUVlKS29aSWh2Y05BUUVMQlFBRApnZ0VCQUZSakgxeXcxdlVqN0hlWFRSay84cHVYeThXMmNSSUZvU29kS09Cclp0VndXNmtySGtWZHFGNlBYU0t4CkRVN1l5aG5xaUcwaXJNc2xsb1JFYi95TDhWR25BZS9obGo2RzlNTWhlUVFHeDhhMnFGS0VCUTIrYTFmbjBTaFkKOWszejN4d3ZBVVY2anErWmttMDE1VHF3TkdISTAwUVVvOWo3aWcwc1VJWFRsR3JaV2ZZL21oeTI3akhVSnJ6cAplS0VnYzlzL3pQWnVLWE50S1BuSFlLY1dMMmtzQ0hPb3J0NXpYOFRSWmNpdndnaDkvd2NlSERUWk1qcE90VzFzCnZhdlZSUVRwMW01dVlkbTNMd1ZhVXVGL1kzVStlVzlTbmVUVlk0c2tKWlNEZmszOFpTTlROU2haMnlQYVNDRHoKcUZvTUw0aHdXTlN3ZXZMK2FmVkVLcVBIOWlvPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    caBundle: Cg==
   failurePolicy: Ignore
   admissionReviewVersions: ["v1", "v1beta1"]
   rules:
@@ -2213,8 +2133,7 @@ webhooks:
     resources: ["pods", "services"]
     scope: "Namespaced"
   sideEffects: None
-  timeoutSeconds: 10
----
+  timeoutSeconds: 10---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -2244,8 +2163,7 @@ webhooks:
     apiGroups: ["linkerd.io"]
     apiVersions: ["v1alpha1", "v1alpha2"]
     resources: ["serviceprofiles"]
-  sideEffects: None
----
+  sideEffects: None---
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -2292,4 +2210,3 @@ webhooks:
     - tlsroutes
     - tcproutes
   sideEffects: None
-

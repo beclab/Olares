@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: linkerd-webhook-certgen
+  namespace: os-mesh
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: linkerd-webhook-certgen
+  namespace: os-mesh
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: linkerd-webhook-certgen
+  namespace: os-mesh
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+subjects:
+  - kind: ServiceAccount
+    name: linkerd-webhook-certgen
+    namespace: os-mesh
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: linkerd-webhook-certgen
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: linkerd-webhook-certgen
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+rules:
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
+    verbs: ["get", "list", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: linkerd-webhook-certgen
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+subjects:
+  - kind: ServiceAccount
+    name: linkerd-webhook-certgen
+    namespace: os-mesh
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: linkerd-webhook-certgen
+---
+# Install-time oneshot: per-cluster webhook TLS (100y) + caBundle sync.
+# Reuses linkerd-pki-guardian image (subcommand webhook-certgen).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: linkerd-webhook-certgen
+  namespace: os-mesh
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-gateway
+        app.kubernetes.io/component: linkerd-webhook-certgen
+      annotations:
+        linkerd.io/inject: disabled
+    spec:
+      serviceAccountName: linkerd-webhook-certgen
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: webhook-certgen
+          image: beclab/linkerd-pki-guardian@sha256:3dbde1a3829034216e72b7ef332c09f62a96b22ef408ab4aae1a63fd2162f72e
+          imagePullPolicy: IfNotPresent
+          command:
+            - /usr/local/bin/linkerd-pki-guardian
+            - webhook-certgen
+          env:
+            - name: GUARDIAN_LINKERD_NS
+              value: os-mesh
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
