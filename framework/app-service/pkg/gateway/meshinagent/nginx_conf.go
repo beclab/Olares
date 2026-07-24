@@ -33,11 +33,14 @@ type NginxConfInput struct {
 	CertDir            string
 	SNIMapInclude      string
 	FailClosed         bool
+	// EnableHTTPS includes CT-1 stream + ssl terminate. When false, HTTP JWT only
+	// (used when tls Secret is absent so nginx can still start).
+	EnableHTTPS bool
 }
 
 // RenderNginxConf builds nginx+njs config for:
 //   - HTTP :16080 JWT inject → gateway:80 (Linkerd mTLS on the wire)
-//   - stream :16443 ssl_preread → allowlisted SNI to :16444 TLS terminate + JWT → gateway:80
+//   - when EnableHTTPS: stream :16443 ssl_preread → :16444 TLS terminate + JWT → gateway:80
 //   - non-allowlist SNI → :16445 reject
 func RenderNginxConf(in NginxConfInput) string {
 	if in.HTTPListenPort <= 0 {
@@ -109,32 +112,36 @@ func RenderNginxConf(in NginxConfInput) string {
 	b.WriteString(locationBody())
 	b.WriteString("    }\n")
 	b.WriteString("  }\n")
-	// HTTPS CT-1 terminate then JWT → plaintext gateway:80.
-	b.WriteString("  server {\n")
-	b.WriteString(fmt.Sprintf("    listen %d ssl;\n", in.HTTPSTerminatePort))
-	b.WriteString("    server_name _;\n")
-	b.WriteString(fmt.Sprintf("    ssl_certificate %s/tls.crt;\n", in.CertDir))
-	b.WriteString(fmt.Sprintf("    ssl_certificate_key %s/tls.key;\n", in.CertDir))
-	b.WriteString("    ssl_protocols TLSv1.2 TLSv1.3;\n")
-	b.WriteString("    location / {\n")
-	b.WriteString(locationBody())
-	b.WriteString("    }\n")
-	b.WriteString("  }\n")
+	if in.EnableHTTPS {
+		// HTTPS CT-1 terminate then JWT → plaintext gateway:80.
+		b.WriteString("  server {\n")
+		b.WriteString(fmt.Sprintf("    listen %d ssl;\n", in.HTTPSTerminatePort))
+		b.WriteString("    server_name _;\n")
+		b.WriteString(fmt.Sprintf("    ssl_certificate %s/tls.crt;\n", in.CertDir))
+		b.WriteString(fmt.Sprintf("    ssl_certificate_key %s/tls.key;\n", in.CertDir))
+		b.WriteString("    ssl_protocols TLSv1.2 TLSv1.3;\n")
+		b.WriteString("    location / {\n")
+		b.WriteString(locationBody())
+		b.WriteString("    }\n")
+		b.WriteString("  }\n")
+	}
 	b.WriteString("}\n")
-	b.WriteString("stream {\n")
-	b.WriteString("  map $ssl_preread_server_name $mesh_in_backend {\n")
-	b.WriteString(fmt.Sprintf("    include %s;\n", in.SNIMapInclude))
-	b.WriteString(fmt.Sprintf("    default 127.0.0.1:%d;\n", in.HTTPSRejectPort))
-	b.WriteString("  }\n")
-	b.WriteString("  server {\n")
-	b.WriteString(fmt.Sprintf("    listen %d;\n", in.HTTPSListenPort))
-	b.WriteString("    ssl_preread on;\n")
-	b.WriteString("    proxy_pass $mesh_in_backend;\n")
-	b.WriteString("  }\n")
-	b.WriteString("  server {\n")
-	b.WriteString(fmt.Sprintf("    listen %d;\n", in.HTTPSRejectPort))
-	b.WriteString("    return;\n")
-	b.WriteString("  }\n")
-	b.WriteString("}\n")
+	if in.EnableHTTPS {
+		b.WriteString("stream {\n")
+		b.WriteString("  map $ssl_preread_server_name $mesh_in_backend {\n")
+		b.WriteString(fmt.Sprintf("    include %s;\n", in.SNIMapInclude))
+		b.WriteString(fmt.Sprintf("    default 127.0.0.1:%d;\n", in.HTTPSRejectPort))
+		b.WriteString("  }\n")
+		b.WriteString("  server {\n")
+		b.WriteString(fmt.Sprintf("    listen %d;\n", in.HTTPSListenPort))
+		b.WriteString("    ssl_preread on;\n")
+		b.WriteString("    proxy_pass $mesh_in_backend;\n")
+		b.WriteString("  }\n")
+		b.WriteString("  server {\n")
+		b.WriteString(fmt.Sprintf("    listen %d;\n", in.HTTPSRejectPort))
+		b.WriteString("    return;\n")
+		b.WriteString("  }\n")
+		b.WriteString("}\n")
+	}
 	return b.String()
 }

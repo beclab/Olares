@@ -87,14 +87,17 @@ func ContainerSpec() corev1.Container {
 }
 
 func agentStartScript() string {
-	conf := RenderNginxConf(NginxConfInput{FailClosed: true})
+	// Two confs: image has no openssl, so missing tls Secret must not include ssl listen
+	// or nginx exits and the whole Pod stays NotReady (blocks rollout).
+	confHTTP := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: false})
+	confHTTPS := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: true})
 	js := BearerJS()
-	confB64 := base64.StdEncoding.EncodeToString([]byte(conf))
+	httpB64 := base64.StdEncoding.EncodeToString([]byte(confHTTP))
+	httpsB64 := base64.StdEncoding.EncodeToString([]byte(confHTTPS))
 	jsB64 := base64.StdEncoding.EncodeToString([]byte(js))
 	hostsFile := HostsMountPath + "/" + SharedHostsFileName
 	return fmt.Sprintf(`set -eu
 mkdir -p /tmp/mesh-in /var/log/nginx
-echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
 echo '%s' | base64 -d > /tmp/mesh-in/bearer.js
 # SNI allowlist map (N6 shared-hosts.txt); empty → all HTTPS SNI rejected.
 : > /tmp/mesh-in/sni_map.conf
@@ -106,20 +109,16 @@ if [ -f "$HOSTS_FILE" ]; then
     printf '    %%s 127.0.0.1:%d;\n' "$line" >> /tmp/mesh-in/sni_map.conf
   done < "$HOSTS_FILE"
 fi
-# TLS material: prefer projected Secret; else ephemeral so nginx can start (HTTPS fail-closed for real clients).
 CERT_DIR="%s"
-if [ ! -s "$CERT_DIR/tls.crt" ] || [ ! -s "$CERT_DIR/tls.key" ]; then
-  mkdir -p /tmp/mesh-in/certs
-  if command -v openssl >/dev/null 2>&1; then
-    openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
-      -subj '/CN=mesh-in-ephemeral' \
-      -keyout /tmp/mesh-in/certs/tls.key \
-      -out /tmp/mesh-in/certs/tls.crt >/dev/null 2>&1
-    sed -i 's|%s/tls.crt|/tmp/mesh-in/certs/tls.crt|;s|%s/tls.key|/tmp/mesh-in/certs/tls.key|' /tmp/mesh-in/nginx.conf
-  fi
+if [ -s "$CERT_DIR/tls.crt" ] && [ -s "$CERT_DIR/tls.key" ]; then
+  echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
+  echo "mesh-in-agent: CT-1 HTTPS enabled (certs present)"
+else
+  echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
+  echo "mesh-in-agent: HTTP-only mode (no tls.crt/key under $CERT_DIR)"
 fi
 exec nginx -c /tmp/mesh-in/nginx.conf -g 'daemon off;'
-`, confB64, jsB64, hostsFile, HTTPSTerminatePort, CertsMountPath, CertsMountPath, CertsMountPath)
+`, jsB64, hostsFile, HTTPSTerminatePort, CertsMountPath, httpsB64, httpB64)
 }
 
 // InitContainerSpec installs OUTPUT REDIRECT rules for Shared gateway HTTP and

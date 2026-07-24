@@ -8,7 +8,7 @@ import (
 )
 
 func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
-	got := RenderNginxConf(NginxConfInput{FailClosed: true})
+	got := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: true})
 	for _, want := range []string{
 		"listen 16080",
 		"listen 16443",
@@ -32,6 +32,18 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 	}
 	if strings.Count(got, "proxy_pass http://app-gateway-data.os-gateway.svc:80") < 2 {
 		t.Fatal("expected HTTP and HTTPS terminate servers both proxy to gateway:80")
+	}
+}
+
+func TestRenderNginxConfHTTPOnlyOmitsSSL(t *testing.T) {
+	got := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: false})
+	if !strings.Contains(got, "listen 16080") {
+		t.Fatal("HTTP listen missing")
+	}
+	for _, ban := range []string{"ssl_preread", "listen 16444 ssl", "ssl_certificate", "stream {"} {
+		if strings.Contains(got, ban) {
+			t.Fatalf("HTTP-only conf must not contain %q", ban)
+		}
 	}
 }
 
@@ -81,6 +93,9 @@ func TestContainerSpecNonStub(t *testing.T) {
 	}
 	if !strings.Contains(cmd, "sni_map.conf") || !strings.Contains(cmd, SharedHostsFileName) {
 		t.Fatalf("start command must build SNI map from hosts file: %#v", c.Command)
+	}
+	if !strings.Contains(cmd, "HTTP-only mode") || !strings.Contains(cmd, "CT-1 HTTPS enabled") {
+		t.Fatalf("start command must select HTTP-only vs CT-1 by cert presence: %#v", c.Command)
 	}
 }
 
