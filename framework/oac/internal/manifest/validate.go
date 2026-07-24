@@ -53,6 +53,7 @@ var (
 	validDependencyTypes = []any{"system", "application", "middleware"}
 	validAuthLevels      = []any{"", "public", "private", "internal"}
 	validOpenMethods     = []any{"", "default", "iframe", "window"}
+	validPortProtocols   = []any{"", "tcp", "udp"}
 	// validOverlayProtocols enumerates the protocols an overlayGateway
 	// entrance may declare. An empty value is allowed and means the
 	// entrance is reachable over both tcp and udp.
@@ -99,6 +100,10 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 			validation.Length(1, 10).Error("entrances must have between 1 and 10 items"),
 			validation.Each(validation.By(validateEntranceValue)),
 			validation.By(uniqueEntranceNames),
+		),
+		validation.Field(&c.Ports,
+			validation.Each(validation.By(validateServicePortValue)),
+			validation.By(uniquePortNames),
 		),
 		validation.Field(&c.Spec,
 			validation.Required.Error("spec is required"),
@@ -202,6 +207,39 @@ func validateEntranceValue(v interface{}) error {
 		),
 		validation.Field(&e.OpenMethod,
 			validation.In(validOpenMethods...).Error(`entrance.openMethod must be one of "", "default", "iframe", "window"`),
+		),
+	)
+}
+
+func validateServicePortValue(v interface{}) error {
+	p, ok := v.(appv1.ServicePort)
+	if !ok {
+		return fmt.Errorf("port: unexpected type %T", v)
+	}
+	return validation.ValidateStruct(&p,
+		validation.Field(&p.Name,
+			validation.Required.Error("port.name is required"),
+			validation.Match(entranceNameRegex).Error("port.name must match ^[a-z0-9A-Z-]*$"),
+			validation.Length(1, 63).Error("port.name must be 1-63 characters"),
+		),
+		validation.Field(&p.Host,
+			validation.Required.Error("port.host is required"),
+			validation.Match(entranceHostRegex).Error("port.host must match ^[a-z]([-a-z0-9]*[a-z0-9])$"),
+			validation.Length(1, 63).Error("port.host must be 1-63 characters"),
+		),
+		validation.Field(&p.Port,
+			validation.Required.Error("port.port is required"),
+			validation.Min(int32(1)).Error("port.port must be between 1 and 65535"),
+			validation.Max(int32(65535)).Error("port.port must be between 1 and 65535"),
+		),
+		validation.Field(&p.ExposePort,
+			validation.When(p.ExposePort != 0,
+				validation.Min(int32(1)).Error("port.exposePort must be between 1 and 65535"),
+				validation.Max(int32(65535)).Error("port.exposePort must be between 1 and 65535"),
+			),
+		),
+		validation.Field(&p.Protocol,
+			validation.In(validPortProtocols...).Error(`port.protocol must be one of "", "tcp", "udp"`),
 		),
 	)
 }
@@ -970,6 +1008,21 @@ func uniqueEntranceNames(value interface{}) error {
 			return fmt.Errorf("entrances[%d].name: duplicate entrance name %q", i, e.Name)
 		}
 		seen[e.Name] = struct{}{}
+	}
+	return nil
+}
+
+func uniquePortNames(value interface{}) error {
+	ports, ok := value.([]appv1.ServicePort)
+	if !ok {
+		return fmt.Errorf("ports: unexpected type %T", value)
+	}
+	seen := make(map[string]struct{}, len(ports))
+	for i, p := range ports {
+		if _, dup := seen[p.Name]; dup {
+			return fmt.Errorf("ports[%d].name: duplicate port name %q", i, p.Name)
+		}
+		seen[p.Name] = struct{}{}
 	}
 	return nil
 }
