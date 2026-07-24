@@ -7,7 +7,7 @@ head:
       content: Olares, Obsidian LiveSync, Obsidian, Self-hosted LiveSync, CouchDB, Markdown notes, knowledge management, vault sync, cross-device sync
 app_version: "1.0.16"
 doc_version: "1.0"
-doc_updated: "2026-07-09"
+doc_updated: "2026-07-24"
 ---
 
 # Sync Obsidian notes with Obsidian LiveSync
@@ -29,7 +29,7 @@ In this guide, you will learn how to:
 ## Prerequisites
 
 - Obsidian installed on your computer and phone. Download it from the [official website](https://obsidian.md/download).
-- A local Obsidian vault on the computer you want to use as the primary device.
+- A local folder where you want to store the primary Obsidian vault.
 - LarePass installed on your computer and phone.
 
 ## Install Obsidian LiveSync
@@ -55,7 +55,13 @@ Before configuring your Obsidian clients, create a database in Obsidian LiveSync
 
    ![Sign in to Obsidian LiveSync](/images/manual/use-cases/obsidian-livesync-sign-in.png#bordered)
 
-3. Change the default password after signing in.
+3. (Optional) Change the default password:
+
+   a. In the left sidebar, click the user management icon at the bottom.
+
+   ![Change password in Obsidian LiveSync](/images/manual/use-cases/obsidian-change-password.png#bordered)
+
+   b. On the **Change Password** tab, enter and verify a new password, then click **Change**.
 
 4. In the left sidebar, click <i class="material-symbols-outlined">database</i> icon.
 
@@ -79,9 +85,13 @@ The Self-hosted LiveSync plugin connects directly to the CouchDB endpoint hosted
 
 1. Open Olares Settings, and then go to **Applications** > **Obsidian LiveSync** > **Entrances**.
 
-2. Set **Authentication level** to **Public** and **Authentication method** to **None**, and then click **Submit**.
+2. Set **Authentication level** to **Internal**, and then click **Submit**.
 
    ![Set Obsidian LiveSync authentication level](/images/manual/use-cases/obsidian-livesync-authentication-level.png#bordered)
+
+   :::warning Public access risk
+   Setting **Authentication level** to **Public** can also make the connection work, but anyone who gets the endpoint can try to connect to CouchDB. Keep it set to **Internal** unless you have a specific reason to expose the endpoint.
+   :::
 
 3. Copy the **Endpoint** URL from the same entrance page. You will use it as the CouchDB URL in Obsidian.
 
@@ -91,18 +101,29 @@ The Self-hosted LiveSync plugin connects directly to the CouchDB endpoint hosted
    https://8591294e.{username}.olares.com
    ```
 
-:::warning Direct database access
-Setting **Authentication method** to **None** lets the Obsidian plugin connect without an Olares login prompt. Keep the database password strong, keep LarePass enabled for client access, and avoid sharing the endpoint publicly.
-:::
-
 ## Configure the primary device
 
 Use your computer as the primary device. This device initializes the remote database, so start from the vault that you want to use as the source of truth.
 
 ### Prepare Obsidian
 
-1. Enable LarePass VPN on your computer to connect to Olares.
-2. Open Obsidian on your computer, and then set the vault you want to sync.
+:::info LarePass VPN required
+Before configuring desktop Obsidian, enable LarePass VPN in the LarePass desktop app.
+:::
+
+1. Open Obsidian on your computer.
+2. Create or open the vault you want to sync. This guide creates a new vault named `Olares` from the vault selection screen:
+
+   a. Next to **Create new vault**, click **Create**.
+
+   ![Create a vault](/images/manual/use-cases/obsidian-vault-selection.png#bordered)
+
+   b. In **Vault name**, enter `Olares`.
+
+   c. Click **Browse**, and then choose the local folder where you want to store the vault.
+
+   d. Click **Create**.
+
 3. In Obsidian, go to **Settings** > **Community plugins**, then click **Browse**.
 
    ![Browse plugin](/images/manual/use-cases/obsidian-livesync-plugin-browse.png#bordered)
@@ -205,9 +226,12 @@ Use the setup URI from the primary device to import the same LiveSync configurat
 
 ### Prepare the phone
 
-1. Enable LarePass VPN on your phone.
-2. Open Obsidian on your phone, and create a new local vault for synced notes.
-3. Install and enable Self-hosted LiveSync in **Settings** > **Community plugins**. The process is the same as on the primary device.
+:::info LarePass VPN required
+Before configuring mobile Obsidian, enable LarePass VPN in the LarePass mobile app.
+:::
+
+1. Open Obsidian on your phone, and create a new local vault for synced notes.
+2. Install and enable Self-hosted LiveSync in **Settings** > **Community plugins**. The process is the same as on the primary device.
 
 ### Copy the setup URI from the primary device
 
@@ -241,7 +265,7 @@ When both devices use LiveSync mode, changes made in one vault sync to the other
 1. Create or edit a note on the primary device.
 2. Wait a few moments.
 3. Open the same vault on your phone. The note should appear with the latest changes.
-4. Edit the note on your phone, and then check that the change appears on your computer.
+4. Edit the note on your phone, and then check that the change appears on your computer. You can view the sync status in the upper-right status bar.
 
    ![Check Obsidian LiveSync result](/images/manual/use-cases/obsidian-livesync-sync-result.png#bordered)
 
