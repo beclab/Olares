@@ -239,9 +239,13 @@ func (wh *Webhook) CreatePatch(
 		if injectMeshInAgent {
 			// Conf is materialized at sidecar start (base64 → /tmp/mesh-in); do not
 			// mount an emptyDir over /etc/nginx (would hide image modules path).
+			viewer := ""
+			if appConfig != nil {
+				viewer = appConfig.OwnerName
+			}
 			pod.Spec.Volumes = append(pod.Spec.Volumes,
 				meshinagent.JWTSecretVolume(),
-				meshinagent.CertsVolume(),
+				meshinagent.CertsVolumeForViewer(viewer),
 				meshinagent.SharedHostsVolume(),
 			)
 			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshinagent.InitContainerSpec())

@@ -20,9 +20,9 @@ const (
 	listenPortName     = "mesh-in-http"
 	httpsListenPortName = "mesh-in-https"
 
-	CertsVolumeName   = "olares-mesh-in-certs"
+	CertsVolumeName   = constants.MeshInCertsVolumeName
 	CertsMountPath    = "/var/run/olares/mesh-in-certs"
-	HostsVolumeName   = "olares-mesh-in-shared-hosts"
+	HostsVolumeName   = constants.MeshInSharedHostsCMName
 	HostsMountPath    = "/var/run/olares/mesh-in-shared-hosts"
 	ConfVolumeName    = "olares-mesh-in-agent-conf"
 	ConfMountPath     = "/etc/nginx"
@@ -95,30 +95,19 @@ func agentStartScript() string {
 	httpB64 := base64.StdEncoding.EncodeToString([]byte(confHTTP))
 	httpsB64 := base64.StdEncoding.EncodeToString([]byte(confHTTPS))
 	jsB64 := base64.StdEncoding.EncodeToString([]byte(js))
-	hostsFile := HostsMountPath + "/" + SharedHostsFileName
 	return fmt.Sprintf(`set -eu
 mkdir -p /tmp/mesh-in /var/log/nginx
 echo '%s' | base64 -d > /tmp/mesh-in/bearer.js
-# SNI allowlist map (N6 shared-hosts.txt); empty → all HTTPS SNI rejected.
-: > /tmp/mesh-in/sni_map.conf
-HOSTS_FILE="%s"
-if [ -f "$HOSTS_FILE" ]; then
-  while IFS= read -r line || [ -n "$line" ]; do
-    line=$(printf '%%s' "$line" | sed 's/#.*//;s/^[[:space:]]*//;s/[[:space:]]*$//' | tr 'A-Z' 'a-z')
-    [ -z "$line" ] && continue
-    printf '    %%s 127.0.0.1:%d;\n' "$line" >> /tmp/mesh-in/sni_map.conf
-  done < "$HOSTS_FILE"
-fi
 CERT_DIR="%s"
 if [ -s "$CERT_DIR/tls.crt" ] && [ -s "$CERT_DIR/tls.key" ]; then
   echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
-  echo "mesh-in-agent: CT-1 HTTPS enabled (certs present)"
+  echo "mesh-in-agent: CT-1 HTTPS enabled (certs present; hosts hot-read via njs)"
 else
   echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
   echo "mesh-in-agent: HTTP-only mode (no tls.crt/key under $CERT_DIR)"
 fi
 exec nginx -c /tmp/mesh-in/nginx.conf -g 'daemon off;'
-`, jsB64, hostsFile, HTTPSTerminatePort, CertsMountPath, httpsB64, httpB64)
+`, jsB64, CertsMountPath, httpsB64, httpB64)
 }
 
 // InitContainerSpec installs OUTPUT REDIRECT rules for Shared gateway HTTP and
@@ -194,12 +183,24 @@ func JWTSecretVolume() corev1.Volume {
 }
 
 // CertsVolume mounts caller TLS material for CT-1 (optional until replica Ready).
+// When viewer is non-empty, secretName is olares-mesh-in-tls-<viewer>.
 func CertsVolume() corev1.Volume {
+	return CertsVolumeForViewer("")
+}
+
+// CertsVolumeForViewer mounts olares-mesh-in-tls-<viewer> (or the legacy
+// olares-mesh-in-certs name when viewer is empty).
+func CertsVolumeForViewer(viewer string) corev1.Volume {
+	secretName := "olares-mesh-in-certs"
+	viewer = strings.ToLower(strings.TrimSpace(viewer))
+	if viewer != "" {
+		secretName = constants.MeshInTLSSecretNamePrefix + viewer
+	}
 	return corev1.Volume{
 		Name: CertsVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName: "olares-mesh-in-certs",
+				SecretName: secretName,
 				Optional:   boolPtr(true),
 			},
 		},
