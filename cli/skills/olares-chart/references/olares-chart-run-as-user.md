@@ -23,34 +23,39 @@ Verify before pushing:
 
 ```bash
 docker inspect <registry-ref>:<tag> --format '{{.Config.User}}'
-docker run --rm <registry-ref>:<tag> id    # expect uid=1000
+docker run --rm --entrypoint id <registry-ref>:<tag>    # expect uid=1000
 ```
 
 ## Third-party images — inspect before editing the chart
 
 ```bash
 docker inspect <third-party-image> --format '{{.Config.User}}'
+docker run --rm --entrypoint id <third-party-image>
 ```
+
+The inspect result is the image's declared `USER`; empty means the runtime starts as root. The second command bypasses the image entrypoint and asks the image directly for its effective identity. Do **not** use `docker run <image> id` for this check: Docker still runs the image's entrypoint first, so a root-init wrapper may consume or transform `id`, perform initialization, or fail before the probe runs. If the image does not contain `id`, inspect its Dockerfile/entrypoint instead.
 
 | Image `USER` | Typical handling |
 |---|---|
 | `1000` (or numeric 1000) | Set `spec.runAsUser: true`; usually sufficient |
 | Non-root but **not** 1000 (e.g. `nginx` / uid 101) | Try `securityContext.runAsUser: 1000`; if the app breaks, use initContainer `chown` (below) |
-| Root, empty, or `0` | Main container **must not** stay root on non-trusted images — OPA rejects third-party + root. Use chart-side fixes below |
+| Root, empty, or `0`; entrypoint supports `PUID`/`PGID` and drops privileges | Leave `spec.runAsUser` false/absent, omit an explicit root `securityContext`, set `PUID=1000` / `PGID=1000`, and verify the final app process runs as 1000 |
+| Root, empty, or `0`; process stays root | Rebuild/fork the image to run non-root; current OPA does not detect an implicit image user, but a root application process violates the platform run-identity convention |
 
 ## Chart-side fixes (decision tree)
 
 ```mermaid
 flowchart TD
   start["Third-party or root image + writes userspace volume"]
-  start --> canNonRoot{"Can main process run as UID 1000?"}
+  start --> rootInit{"Does entrypoint require root then drop via PUID/PGID?"}
+  rootInit -->|yes| solC["C: keep runAsUser false/absent; set PUID/PGID 1000; no explicit root SC"]
+  rootInit -->|no| canNonRoot{"Can main process run as UID 1000?"}
   canNonRoot -->|yes| solA["A: spec.runAsUser true + optional securityContext"]
-  canNonRoot -->|no — internal init needs root| solC["C: initContainer chown only; main still 1000 if possible"]
+  canNonRoot -->|no| rebuild["Rebuild image so app does not stay root"]
   solA --> needChown{"Volume has root-owned files?"}
   needChown -->|yes| solB["B: initContainer chown 1000:1000"]
   needChown -->|no| fsGroup["Optional fsGroup 1000 for new files"]
   solB --> busyboxImg["Image: beclab/aboveos-busybox:1.37.0"]
-  solC --> busyboxImg
 ```
 
 ### A — `spec.runAsUser` + optional `securityContext` (preferred)
@@ -111,20 +116,35 @@ Also set `spec.runAsUser: true` in `OlaresManifest.yaml`. Run `chown` for **each
 >
 > **Practical rule:** For `appData` / `appCache` with `permission.appData: true`, Olares already creates the root dir with uid 1000 ownership. If the app creates its own subdirectories at runtime (e.g. `os.makedirs("/data/models")` in Python), the whole tree stays uid 1000 and **no initContainer is needed**. Only reach for initContainer `chown` when the upstream image's entrypoint writes root-owned files before the process drops to uid 1000.
 
-### C — image must start as root internally
+### C — root-init entrypoint that drops to `PUID`/`PGID`
 
-If the upstream entrypoint **requires** root for its own initialization, you cannot set `runAsUser: 1000` on the main container without breaking it.
+Some third-party images deliberately start as root, prepare files or networking, then use `PUID`/`PGID` to launch the application as a non-root user. For these images, forcing Pod-level uid 1000 prevents the entrypoint from completing its initialization.
 
-- Use B's initContainer to fix volume ownership **before** the main container starts.
-- If the main container still runs as root with a **non-trusted** image, OPA **will reject** the Pod — loop back to the Image capability and rebuild or fork the image so the main process can run non-root.
+Use this pattern:
+
+```yaml
+# OlaresManifest.yaml
+spec:
+  runAsUser: false
+```
+
+```yaml
+# Deployment env; names vary by image
+- name: PUID
+  value: "1000"
+- name: PGID
+  value: "1000"
+```
+
+Omitting `spec.runAsUser` is equivalent for webhook injection. Do not set Pod/container `securityContext.runAsUser: 0`; leave the security context absent so the image entrypoint controls its startup identity. Verify from startup logs or a running container that the final application process drops to uid 1000. If it remains root, rebuild or fork the image instead of treating this exception as permission to run the app as root.
 
 ## OPA and lint boundaries
 
 | Layer | Rule |
 |---|---|
-| **OPA** (runtime) | Non-trusted image + root / `privileged` / `runAsNonRoot: false` → admission denied |
+| **OPA** (runtime) | For a non-trusted image, deny an explicitly root-equivalent Pod/container `securityContext`: `runAsUser: 0`, `runAsNonRoot: false`, or `privileged: true`. It does not inspect the image's declared `USER` or runtime privilege drop |
 | **initContainer fix** | Use `beclab/aboveos-busybox:1.37.0` — `beclab/` is trusted; init may run as root |
-| **`chart lint --with-security-context`** | Non-`beclab/` main image must not use root-equivalent securityContext (off by default) |
+| **`chart lint` security-context check** | Mirrors the explicit-securityContext rule for non-`beclab/` images and is on by default in OAC; `--with-security-context` is retained as an explicit compatibility flag |
 
 ## Symptoms → fix
 
@@ -132,7 +152,7 @@ If the upstream entrypoint **requires** root for its own initialization, you can
 |---|---|---|
 | CrashLoop, `Permission denied` writing data dir | uid ≠ 1000 or dir owned by root | A or B above |
 | Install OK but config/data not persisted | Writes go to container-local path, or EACCES silently ignored | Check mount paths + run identity |
-| Admission denied: untrusted image + root | Third-party main container runs as root | A (force 1000) or B; never root main on third-party |
-| OPA OK but app still can't write | `spec.runAsUser` not set, or volume pre-dates chown | `spec.runAsUser: true` + B |
+| Admission denied: untrusted image + root | Chart explicitly sets a root-equivalent Pod/container securityContext | Remove the explicit root context; use A, B, or the verified PUID/PGID pattern C |
+| OPA OK but app still can't write | Final process uid is not 1000, or volume pre-dates chown | Use A + B for ordinary images; for pattern C verify `PUID`/`PGID` and the post-init process identity |
 
 After any template change, re-run `olares-cli chart lint ./<app>` (the Validate-local (lint) step).

@@ -3,7 +3,7 @@
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; pass `chart lint` before starting any of this.
 > This is the **deploy** capability — the done step of the two axes. Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
 
-> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile clears olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate), drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the gate says stop, or when a failure is clearly **not** a chart problem. During the install wait, if you can multitask, proactively tail the app's own pod status + logs in parallel rather than only watching the coarse market row (see [§3 Don't just wait](#dont-just-wait--diagnose-the-apps-own-pods-in-parallel)).
+> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile clears olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate), drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the gate says stop, or when a failure is clearly **not** a chart problem. Start app workload inspection in parallel as soon as install/upgrade begins; never wait only on the coarse market row (see [§3 Don't just wait](#dont-just-wait--diagnose-the-apps-own-pods-in-parallel)).
 
 `lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This loop does — by pushing the chart to the developer's Olares and watching it install.
 
@@ -72,7 +72,14 @@ olares-cli market install <app> -s upload --version <version> --watch --watch-ti
 
 ### Don't just wait — diagnose the app's own pods in parallel
 
-The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal, and a crashlooping main container is NOT fast-failed for several minutes (the 5-minute `hasUnrecoverablePod` grace). If you can multitask, kick off `market install ... --watch` AND, in parallel, inspect the app's own workload directly rather than waiting for the row to flip.
+The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal, and a crashlooping main container is not fast-failed for several minutes (the 5-minute `hasUnrecoverablePod` grace). Treat parallel workload inspection as a required part of the deploy loop:
+
+1. Start `market install ... --watch` or `market upgrade ... --watch`.
+2. As soon as the app namespace/workload appears, inspect its Pod status and container logs in parallel.
+3. Keep waiting only for recoverable progress such as image pulling, scheduling, or container creation.
+4. On `CrashLoopBackOff`, `CreateContainerConfigError`, `RunContainerError`, an admission rejection, or a fatal application log, stop the passive market wait immediately. Capture the Pod state, events, current logs, and previous-container logs when available, then diagnose and fix the chart.
+
+A market timeout is not the trigger for diagnosis; direct runtime evidence is. Do not spend the remainder of the five-minute grace period watching a state that the Pod has already proved cannot recover without a chart or image change.
 
 **The runtime diagnosis itself lives in [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing (stalled image pull, crashlooping / non-starting container, `running`-but-unreachable) shared by catalog and dev apps. Doctor diagnoses the root cause; **for a chart you author, it points back here** — the fix is a manifest/template edit (§4b below), then re-lint + re-deploy.
 

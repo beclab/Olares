@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.10.2
+version: 4.11.0
 description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, deploy needs login
 metadata:
@@ -73,7 +73,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | Axis | Concern | Get this right | Loop back when | Reference |
 |---|---|---|---|---|
 | packaging | **Image** | pullable, pinned to a version tag (never `:latest`), arch-correct for **this node** | `ImagePullBackOff` / wrong arch, or a deploy constraint forces a rebuild | [image.md](references/olares-chart-image.md) |
-| packaging+deployment | **Run identity** | uid 1000; `spec.runAsUser: true`; initContainer `chown` for root-owned volumes; no root main on non-trusted images (OPA) | EACCES on appData/appCache/userData; admission denies a root third-party image | [run-as-user.md](references/olares-chart-run-as-user.md) |
+| packaging+deployment | **Run identity** | final app process uid 1000; normally `spec.runAsUser: true`; for verified PUID/PGID root-init images leave it false/absent so the entrypoint can initialize then drop privileges; use initContainer `chown` only for root-owned volumes | EACCES on appData/appCache/userData; forced uid breaks a root-init entrypoint; admission denies an explicit root securityContext | [run-as-user.md](references/olares-chart-run-as-user.md) |
 | deployment | **Storage** | every compose volume → the right userspace area (Data/Cache/Home/Common/External), matching `permission`, leftover kompose PVCs deleted | a volume isn't persisting or lands in the wrong area | [manifest.md](references/olares-chart-manifest.md) §2 |
 | deployment | **Middleware & deps** | no bundled `postgres`/`redis`/`mongo`/…; wire to system middleware; SQLite→Postgres where supported; companion apps as `type: application` deps | a bundled db/queue remains, or a companion should be a dependency | [middleware.md](references/olares-chart-middleware.md) |
 | deployment | **Env** | app config in `envs[]` (v3 `valueFrom`, no inline `OLARES_USER`); install-time `required` prompts; middleware/system/user vars via `.Values.olaresEnv`; platform context via `.Values.*` | install fails on `appenv` 422, or config must be user-supplied | [env.md](references/olares-chart-env.md), [env-defaults.md](references/olares-chart-env-defaults.md), [system-values.md](references/olares-chart-system-values.md) |
