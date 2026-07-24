@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
@@ -67,127 +67,47 @@ type ReplicaTarget struct {
 	DemandSource    string // server | caller
 }
 
-// BuildDemandIndex builds the desired caller-namespace replica demand set.
+// BuildDemandIndex builds the desired mesh-in TLS replica demand set.
+// Destinations are opted-in caller namespaces (gateway.olares.io/in-cluster-caller),
+// not Shared server namespaces. CertViewer is the caller NS owner (CT-1 per-viewer
+// public cert), matching webhook CertsVolumeForViewer(OwnerName).
 func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain string) ([]ReplicaTarget, error) {
 	if c == nil {
 		return nil, nil
 	}
 	_ = platformDomain
 
-	var podList corev1.PodList
-	if err := c.List(ctx, &podList, client.MatchingLabels{
-		constants.AppSharedEntrancesLabel: "true",
+	var nsList corev1.NamespaceList
+	if err := c.List(ctx, &nsList, client.MatchingLabels{
+		security.NamespaceInClusterCallerLabel: "true",
 	}); err != nil {
-		recordReplicaError("index_failed", replicaDemandSourceServer)
+		recordReplicaError("index_failed", replicaDemandSourceCaller)
 		return nil, err
 	}
 
 	var appList appv1alpha1.ApplicationList
 	if err := c.List(ctx, &appList); err != nil {
-		recordReplicaError("index_failed", replicaDemandSourceServer)
+		recordReplicaError("index_failed", replicaDemandSourceCaller)
 		return nil, err
-	}
-	var nsList corev1.NamespaceList
-	if err := c.List(ctx, &nsList); err != nil {
-		recordReplicaError("index_failed", replicaDemandSourceServer)
-		return nil, err
-	}
-
-	ownerIdx := gateway.BuildClusterAppOwnerIndex(appList.Items)
-	nsOwnerIdx := make(map[string]string, len(nsList.Items))
-	for i := range nsList.Items {
-		ns := nsList.Items[i]
-		owner := strings.ToLower(strings.TrimSpace(ns.Labels[nsOwnerLabel]))
-		if owner == "" {
-			continue
-		}
-		nsOwnerIdx[strings.TrimSpace(ns.Name)] = owner
-	}
-	appsByNS := make(map[string][]appv1alpha1.Application)
-	for i := range appList.Items {
-		app := appList.Items[i]
-		ns := strings.TrimSpace(app.Spec.Namespace)
-		if ns == "" {
-			ns = strings.TrimSpace(app.Namespace)
-		}
-		if ns == "" {
-			continue
-		}
-		appsByNS[ns] = append(appsByNS[ns], app)
 	}
 
 	demandSet := make(map[string]ReplicaTarget)
-	for i := range podList.Items {
-		pod := podList.Items[i]
-		callerNS := strings.TrimSpace(pod.Namespace)
-		viewer, ok := viewerFromUserSpaceNS(callerNS)
-		if !ok {
-			owner, hasOwner := nsOwnerIdx[callerNS]
-			if hasOwner {
-				addReplicaTarget(demandSet, ReplicaTarget{
-					CallerNamespace: callerNS,
-					CertViewer:      owner,
-					DemandSource:    replicaDemandSourceServer,
-				})
-			}
+	for i := range nsList.Items {
+		ns := &nsList.Items[i]
+		callerNS := strings.TrimSpace(ns.Name)
+		if callerNS == "" {
 			continue
 		}
-
+		viewer := certViewerForCallerNamespace(ns, appList.Items)
+		if viewer == "" {
+			recordReplicaError("caller_viewer_unresolved", replicaDemandSourceCaller)
+			continue
+		}
 		addReplicaTarget(demandSet, ReplicaTarget{
 			CallerNamespace: callerNS,
 			CertViewer:      viewer,
-			DemandSource:    replicaDemandSourceServer,
+			DemandSource:    replicaDemandSourceCaller,
 		})
-
-		for _, app := range appsByNS[callerNS] {
-			refs := gateway.SplitClusterAppRefs(app.Spec.Settings["clusterAppRef"])
-			for _, ref := range refs {
-				owners := gateway.SplitClusterAppRefs(gateway.ResolveClusterAppOwner(ownerIdx, ref))
-				if len(owners) == 0 {
-					recordReplicaError("app_ref_unresolved", replicaDemandSourceServer)
-					continue
-				}
-				for _, owner := range owners {
-					addReplicaTarget(demandSet, ReplicaTarget{
-						CallerNamespace: callerNS,
-						CertViewer:      owner,
-						DemandSource:    replicaDemandSourceServer,
-					})
-				}
-			}
-		}
-	}
-
-	for i := range appList.Items {
-		app := appList.Items[i]
-		callerNS := strings.TrimSpace(app.Spec.Namespace)
-		if callerNS == "" {
-			callerNS = strings.TrimSpace(app.Namespace)
-		}
-		if callerNS == "" {
-			continue
-		}
-		if !strings.EqualFold(strings.TrimSpace(app.Annotations[gateway.AnnotationInCluster]), gateway.InClusterGateway) {
-			continue
-		}
-		refs := gateway.SplitClusterAppRefs(app.Spec.Settings["clusterAppRef"])
-		if len(refs) == 0 {
-			continue
-		}
-		for _, ref := range refs {
-			owners := gateway.SplitClusterAppRefs(gateway.ResolveClusterAppOwner(ownerIdx, ref))
-			if len(owners) == 0 {
-				recordReplicaError("app_ref_unresolved", replicaDemandSourceCaller)
-				continue
-			}
-			for _, owner := range owners {
-				addReplicaTarget(demandSet, ReplicaTarget{
-					CallerNamespace: callerNS,
-					CertViewer:      owner,
-					DemandSource:    replicaDemandSourceCaller,
-				})
-			}
-		}
 	}
 
 	out := make([]ReplicaTarget, 0, len(demandSet))
@@ -201,6 +121,35 @@ func BuildDemandIndex(ctx context.Context, c client.Client, platformDomain strin
 		return out[i].CallerNamespace < out[j].CallerNamespace
 	})
 	return out, nil
+}
+
+// certViewerForCallerNamespace picks the CT-1 TLS replica suffix for a caller NS:
+// bytetrade.io/ns-owner, else Application Spec.Owner in that NS, else user-space-*.
+func certViewerForCallerNamespace(ns *corev1.Namespace, apps []appv1alpha1.Application) string {
+	if ns == nil {
+		return ""
+	}
+	if owner := strings.ToLower(strings.TrimSpace(ns.Labels[nsOwnerLabel])); owner != "" {
+		return owner
+	}
+	callerNS := strings.TrimSpace(ns.Name)
+	for i := range apps {
+		app := &apps[i]
+		appNS := strings.TrimSpace(app.Spec.Namespace)
+		if appNS == "" {
+			appNS = strings.TrimSpace(app.Namespace)
+		}
+		if appNS != callerNS {
+			continue
+		}
+		if owner := strings.ToLower(strings.TrimSpace(app.Spec.Owner)); owner != "" {
+			return owner
+		}
+	}
+	if viewer, ok := viewerFromUserSpaceNS(callerNS); ok {
+		return viewer
+	}
+	return ""
 }
 
 // ReconcileReplica reconciles one replica target from app-gateway source Secret.

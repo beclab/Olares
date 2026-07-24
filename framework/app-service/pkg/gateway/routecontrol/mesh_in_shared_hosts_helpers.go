@@ -10,6 +10,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -117,7 +118,44 @@ func isClusterScopedOrCallerApp(obj client.Object) bool {
 	if appcfg.IsSharedServerApp(app) {
 		return true
 	}
-	return strings.TrimSpace(app.Spec.Settings["clusterAppRef"]) != ""
+	return len(callerSharedAppRefs(app)) > 0
+}
+
+// callerSharedAppRefs collects Shared callee refs from clusterAppRef / sharedAppDeps
+// and Decide edges (annotation or settings). Empty when the app has no Shared edges.
+func callerSharedAppRefs(app *appv1alpha1.Application) []string {
+	if app == nil {
+		return nil
+	}
+	const (
+		settingSharedAppDeps = "sharedAppDeps"
+		annotDecideEdges     = "gateway.olares.io/shared-caller-edges"
+	)
+	seen := map[string]struct{}{}
+	var out []string
+	add := func(raw string) {
+		for _, p := range gateway.SplitClusterAppRefs(raw) {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			if _, ok := seen[p]; ok {
+				continue
+			}
+			seen[p] = struct{}{}
+			out = append(out, p)
+		}
+	}
+	if app.Spec.Settings != nil {
+		add(app.Spec.Settings["clusterAppRef"])
+		add(app.Spec.Settings[settingSharedAppDeps])
+		add(app.Spec.Settings[annotDecideEdges])
+	}
+	if app.Annotations != nil {
+		add(app.Annotations[annotDecideEdges])
+	}
+	sort.Strings(out)
+	return out
 }
 func inClusterCallerNamespacePredicate() predicate.Predicate {
 	return predicate.Funcs{

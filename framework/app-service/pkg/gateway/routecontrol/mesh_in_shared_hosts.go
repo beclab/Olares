@@ -229,7 +229,7 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 	for i := range nsList.Items {
 		callerNS := nsList.Items[i].Name
 		for _, app := range appsByNS[callerNS] {
-			refs := gateway.SplitClusterAppRefs(app.Spec.Settings["clusterAppRef"])
+			refs := callerSharedAppRefs(&app)
 			if len(refs) == 0 {
 				continue
 			}
