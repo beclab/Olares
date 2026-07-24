@@ -118,8 +118,19 @@ func main() {
 		lpvpndns.NewWatcher(),
 	}, func() {
 		if s != nil {
-			if err := s.Restart(); err != nil {
-				klog.Error(err)
+			startMDNS := true
+			if client, err := utils.GetKubeClient(); err == nil {
+				if _, _, nodeRole, err := utils.GetThisNodeName(mainCtx, client); err == nil && nodeRole != "master" {
+					startMDNS = false
+				}
+			}
+
+			if startMDNS {
+				if err := s.Restart(); err != nil {
+					klog.Error(err)
+				}
+			} else {
+				s.Close()
 			}
 		}
 
