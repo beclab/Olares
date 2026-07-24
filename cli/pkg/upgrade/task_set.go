@@ -1121,7 +1121,7 @@ func labelIntelAMDGPUNode() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
 			Name:   "LabelIntelGPUNode",
-			Action: new(intelgpu.UpdateNodeIntelGPUInfo),
+			Action: new(intelgpu.LabelIntelGPUs),
 			Retry:  3,
 			Delay:  5 * time.Second,
 		},
