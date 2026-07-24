@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.11.0
+version: 4.12.0
 description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, deploy needs login
 metadata:
@@ -24,7 +24,7 @@ metadata:
 
 - Turn a repo / docker-compose / generic Helm chart into an Olares app, or validate an OlaresManifest; package its image; wire storage / middleware / entrances / env / GPU
 - Deploy / run the app on **your own** Olares (`market upload` + `install`); after `olares-doctor` identifies a chart-owned root cause, edit, lint, and redeploy the chart
-- Serve a specific LLM / embedding model (HF or Ollama) with no chart authoring — clone an `llm-init` base app and fill env ([llm-models.md](references/olares-chart-llm-models.md)); capability/context tuning + day-2 ops in [llm-ops.md](references/olares-chart-llm-ops.md)
+- Serve a generation/chat model with an official base app ([llm-models.md](references/olares-chart-llm-models.md), then [llm-ops.md](references/olares-chart-llm-ops.md)); embed `llm-init` in a custom chart ([llm-init-integration.md](references/olares-chart-llm-init-integration.md)); or install the dedicated EmbeddingGemma app through [`olares-market`](../olares-market/SKILL.md) with `market install embeddinggemmav3`
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
@@ -62,7 +62,7 @@ The target is a `lint`-passing Olares chart. `from-compose` (kompose) is **just 
 
 ## Deploy to your Olares (the done step)
 
-Both axes ready → **deploy to the current Olares automatically**. `lint` proves the chart is structurally valid; it does **not** prove the app pulls its images, wires its middleware, and reaches `running` — the deploy loop does. **After `lint` passes, proceed without asking:** check login → package → `market upload` → `market install -s upload --watch` → on failure fetch logs → diagnose → fix chart + re-lint → retry. Only stop to ask when the profile fails olares-shared's [auth-readiness gate](../olares-shared/SKILL.md#auth-readiness-gate) (`invalidated` / `never`) — `logged-in` / `expired` both proceed. Full procedure: [references/olares-chart-deploy.md](references/olares-chart-deploy.md).
+Both axes ready → **deploy to the current Olares automatically**. `lint` proves the chart is structurally valid; it does **not** prove the app pulls its images, wires its middleware, and reaches `running` — the deploy loop does. **After `lint` passes, proceed without asking:** check login → package → `market upload` → `market install --source upload --watch` → on failure fetch logs → diagnose → fix chart + re-lint → retry. Only stop to ask when the profile fails olares-shared's [auth-readiness gate](../olares-shared/SKILL.md#auth-readiness-gate) (`invalidated` / `never`) — `logged-in` / `expired` both proceed. Full procedure: [references/olares-chart-deploy.md](references/olares-chart-deploy.md).
 
 For deploying to your own Olares, **metadata can stay a stub** as long as `lint` passes; functional refinement (storage / middleware / entrances) is still required.
 
@@ -79,7 +79,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | deployment | **Env** | app config in `envs[]` (v3 `valueFrom`, no inline `OLARES_USER`); install-time `required` prompts; middleware/system/user vars via `.Values.olaresEnv`; platform context via `.Values.*` | install fails on `appenv` 422, or config must be user-supplied | [env.md](references/olares-chart-env.md), [env-defaults.md](references/olares-chart-env-defaults.md), [system-values.md](references/olares-chart-system-values.md) |
 | deployment | **Entrances & ports** | ≥1 `entrances[]`; HTTP via entrances, non-HTTP via `ports[]`; internal-only services `invisible: true` | a service is unreachable, or an internal port is exposed as a desktop entrance | [manifest.md](references/olares-chart-manifest.md) §4 |
 | packaging+deployment | **GPU / models** | build a CUDA image without a local GPU; download model weights via initContainer into the shared `appCommon` Hugging Face cache | AI app needs a CUDA build, model provisioning, or a shared model cache | [gpu.md](references/olares-chart-gpu.md) |
-| deployment | **LLM model serving** | serve any HF/Ollama model without authoring — pick an engine by format, fill env, clone an `llm-init` base app (llama.cpp / Ollama / vLLM / SGLang); set `MODEL_SUPPORTS` from the model card | user wants to run/serve a specific LLM or embedding model, not author a new app | [llm-models.md](references/olares-chart-llm-models.md) + [llm-ops.md](references/olares-chart-llm-ops.md) |
+| deployment | **LLM model serving** | generation/chat: clone an official base app; custom chart: integrate `llm-init`; embedding: install `embeddinggemmav3` through `olares-market` | a model-serving request needs routing before chart work | [llm-models.md](references/olares-chart-llm-models.md), [llm-ops.md](references/olares-chart-llm-ops.md), [llm-init-integration.md](references/olares-chart-llm-init-integration.md) |
 | deployment | **Accelerator** | **GPU/accelerator apps only:** declare `spec.accelerator` modes per repo support; set `requiredGPUMemory`. A non-accelerator app needs no `mode` — use the flat `spec.requiredCpu/limitedCpu/requiredMemory/limitedMemory/requiredDisk` envelope (mutually exclusive with `spec.accelerator`) | app targets a GPU/accelerator device, or `lint` flags `spec.resources` | [accelerator.md](references/olares-chart-accelerator.md) |
 | packaging+deployment | **DinD** | a privileged `beclab/docker` daemon sidecar (`ENABLE_DIND`, `DOCKER_HOST`); main container stays non-privileged | a terminal/agent app must run `docker` / `docker compose` | [dind.md](references/olares-chart-dind.md) |
 | deployment | **Shared backend** | `options.shared: true` (on a v3 app) ⇒ admin-only install into `<app>-shared`; consumers reach it via cross-namespace Service DNS; flag the admin-install | a heavy/accelerator backend serves many users over shared data | [shared.md](references/olares-chart-shared.md) |
