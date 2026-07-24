@@ -29,7 +29,7 @@ The parent skill must not duplicate engine selection, environment tables, or mod
 
 Own the official generation workflow:
 
-1. Confirm a logged-in admin profile and Olares `>=1.12.6`.
+1. Confirm a logged-in admin profile and Olares `>=1.12.6-0`.
 2. Inspect the model format and the real accelerator capacity.
 3. Select one of the four generation templates.
 4. Populate only the environment variables exposed by the published chart.
