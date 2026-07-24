@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/framework/app-gateway/pkg/linkerdpki"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,10 +32,38 @@ func main() {
 		}
 		os.Exit(0)
 	}
+	if len(os.Args) > 1 && os.Args[1] == "webhook-certgen" {
+		overwrite := false
+		for _, a := range os.Args[2:] {
+			if a == "--overwrite" {
+				overwrite = true
+			}
+		}
+		if err := runWebhookCertgenOneshot(overwrite); err != nil {
+			slog.Error("linkerd-pki-guardian webhook-certgen fatal", "error", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 	if err := run(); err != nil {
 		slog.Error("linkerd-pki-guardian fatal", "error", err)
 		os.Exit(1)
 	}
+}
+
+func runWebhookCertgenOneshot(overwrite bool) error {
+	ns := getenv("GUARDIAN_LINKERD_NS", linkerdpki.DefaultLinkerdNamespace)
+	cl, err := buildClient()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	if err := linkerdpki.EnsureWebhookCerts(ctx, cl, ns, overwrite); err != nil {
+		return err
+	}
+	slog.Info("linkerd-pki-guardian webhook-certgen complete",
+		"op", "webhook-certgen", "namespace", ns, "overwrite", overwrite)
+	return nil
 }
 
 func runBootstrapOneshot() error {
@@ -116,6 +145,9 @@ func buildClient() (client.Client, error) {
 		return nil, err
 	}
 	if err := appsv1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := admissionregistrationv1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 	cl, err := client.New(cfg, client.Options{Scheme: scheme})
