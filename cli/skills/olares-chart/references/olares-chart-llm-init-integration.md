@@ -47,7 +47,7 @@ MODEL_SOURCE=https://models.example/model.gguf
 MODEL_SOURCE_LOCAL=/cache/manual/model.gguf
 ```
 
-Raw integration also supports comma-separated sources and 1-based indexed sources. These are chart-author features: choose one form, keep exactly one main source, and mount every explicit local destination.
+Raw integration also supports comma-separated sources and 1-based indexed sources. These are chart-author features: choose one form, keep exactly one main source, and mount every explicit local destination. In comma form, the first source is the main source and every later source is an extra download.
 
 ```text
 MODEL_SOURCE=hf://org/main,hf://org/extra
