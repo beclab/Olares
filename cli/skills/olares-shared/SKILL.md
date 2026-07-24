@@ -1,6 +1,6 @@
 ---
 name: olares-shared
-version: 4.3.0
+version: 4.3.1
 description: "Set up and manage the Olares login/identity that every other olares-cli skill depends on — one profile per Olares ID, keychain-stored tokens, transparent token refresh, and auth-error recovery. Use for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, and auth errors (token rejected / invalidated / not logged in)."
 compatibility: Requires olares-cli on PATH
 metadata:
@@ -34,7 +34,7 @@ The olares-cli skills ship and install as one suite; each owns a distinct slice.
 | Skill | Owns | Reach for it when |
 |---|---|---|
 | [`olares-shared`](SKILL.md) | Profile / login / token refresh / auth-error recovery; hosts the platform model | logging in, switching Olares ID, any auth error |
-| [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle: install / uninstall / upgrade / clone / stop / resume / cancel; `--mine`; chart upload | installing or managing an app's lifecycle |
+| [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle: install / uninstall / upgrade / clone / stop / resume / restart / cancel; `--mine`; chart upload | installing or managing an app's lifecycle |
 | [`olares-settings`](../olares-settings/SKILL.md) | Post-install config (Settings SPA): app entrance / domain / env / policy, users, VPN, network, backup / restore, integrations | changing config of an installed app or the system |
 | [`olares-cluster`](../olares-cluster/SKILL.md) | K8s runtime view: pods / workloads / jobs / cronjobs / nodes / namespaces; logs; scale / restart / delete | inspecting or operating running K8s objects |
 | [`olares-dashboard`](../olares-dashboard/SKILL.md) | Resource metrics & health: CPU / memory / disk / network / pods / GPU / fan / ranking | "what's the usage / what's eating CPU" |

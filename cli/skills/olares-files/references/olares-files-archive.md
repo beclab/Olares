@@ -69,7 +69,8 @@ GET /api/archive/<node>/entry?source=<archive>&path=<inner-path>  (application/o
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `require Olares >= 1.12.6` | Backend predates the archive surface | Upgrade, or `--olares-version` |
+| Backend version could not be determined | Profile version cache is missing or stale | Confirm `profile login`, then run `olares-cli profile list --refresh-version` |
+| `require Olares >= 1.12.6`, with a detected older version | Backend predates the archive surface | Upgrade Olares |
 | `previewing "bzip2"/"xz" archives is not supported` | Raw single-stream compressor, no entries | `files extract` it instead |
 | `entry not found inside the archive` | Wrong `<inner-path>` | `files archive entries` to list members |
 | `archive requires a password` / `password is incorrect` | Encrypted zip / 7z | Supply via `--password-stdin` |

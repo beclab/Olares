@@ -1,7 +1,7 @@
 ---
 name: olares-publish
-version: 4.3.1
-description: "Publish an Olares app that already runs on your own Olares to the public Olares Market — the release-target requirements matrix, the market-ready metadata/image/arch checklist, the PR to beclab/apps (GitBot rules + lifecycle), and pay-to-download (paid) listings. Use when the user wants to submit / list / distribute / 上架 an app to the public Market, open a beclab/apps PR, or sell a paid app. Authoring and deploying the chart itself lives in olares-chart; this skill is the public-distribution step that comes after the app already installs and runs locally."
+version: 4.3.2
+description: "Publish an Olares app that already runs locally to a public Olares Market listing — release targets, market-ready metadata/images/architectures, the beclab/apps PR and GitBot lifecycle, and paid listings. Use for submitting, distributing, 上架, opening a beclab/apps PR, or selling an app; not for browsing `market list` or managing installed apps."
 compatibility: Requires olares-cli on PATH; PR submission needs a GitHub account
 metadata:
   openclaw:
@@ -18,7 +18,7 @@ metadata:
 
 ## When to use
 
-- Publish / list / submit / distribute / 上架 an app to the **public** Olares Market
+- Publish / publicly list / submit / distribute / 上架 an app to the **public** Olares Market
 - Open or fix a PR to [`beclab/apps`](https://github.com/beclab/apps)
 - Sell an app (pay-to-download / paid listing)
 - Keywords: publish to Market, submit to beclab/apps, app store listing, `featuredImage` / `promoteImage`, `spec.supportArch`, multi-arch, GitBot, `owners` file, `price.yaml`, paid app

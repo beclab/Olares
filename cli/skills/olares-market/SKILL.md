@@ -1,6 +1,6 @@
 ---
 name: olares-market
-version: 4.5.1
+version: 4.5.2
 description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume, restart apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, restart app, upload chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -42,7 +42,8 @@ For verb-specific behavior, **always start with `olares-cli market <verb> --help
 | Family | Reference |
 |---|---|
 | catalog + runtime | [references/olares-market-list.md](references/olares-market-list.md) (`list` / `--mine` / `categories` / `get` / `status`) |
-| lifecycle | [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md) (`install` / `upgrade` / `uninstall` / `clone` / `stop` / `resume` / `cancel`). `restart` (POST `/apps/restart`, version-agnostic body `{app_name, source}`) shares the `resume` watch bucket (`running`) and, like `stop`/`resume`, exposes no `-s`; it also backs the auto-restart in `settings network overlay app enable/disable` |
+| lifecycle | [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md) (`install` / `upgrade` / `uninstall` / `clone` / `stop` / `resume` / `cancel`) |
+| `restart` | [references/olares-market-restart.md](references/olares-market-restart.md) (Olares 1.12.6+, implicit source, compute binding, statusTime-baseline watch); it also backs the auto-restart in `settings network overlay app enable/disable` |
 | `--watch` / stuck / errors | [references/olares-market-watch.md](references/olares-market-watch.md) (per-verb watch buckets, foreground windows, stuck-state handling, common errors) |
 | charts | [references/olares-market-charts.md](references/olares-market-charts.md) (`upload` / `delete`) |
 
@@ -103,7 +104,7 @@ The same `State` can mean different things depending on which mutation is in fli
 - `--watch-timeout D` caps total wall-clock time.
 - One-shot (no `--watch`) returns as soon as the backend ACKs the mutation request — the row may still be `progressing` for minutes.
 - With `--watch`, the CLI blocks until the row reaches a terminal bucket (success OR failure) matching the OpType safety rules above.
-- **Idempotent no-ops — `stop` / `resume` only**: `stop` on an already-`stopped` row and `resume` on an already-`running` row return immediately with success (the watcher recognizes the backend's no-op `opType=""` instead of hanging). `install` / `upgrade` / `clone` have **no** such shortcut — they require the matching `OpType` before declaring success. `restart` reuses the `resume` watch bucket (terminal `running`), so its `--watch` inherits the same idempotent-`running` shortcut.
+- **Idempotent no-ops — `stop` / `resume` only**: `stop` on an already-`stopped` row and `resume` on an already-`running` row return immediately with success (the watcher recognizes the backend's no-op `opType=""` instead of hanging). `install` / `upgrade` / `clone` have **no** such shortcut — they require the matching `OpType` before declaring success. `restart` also has no shortcut: it requires a `running` row with a `statusTime` newer than the pre-request baseline.
 - `--watch-timeout` / `--watch-interval` are **no-ops without `--watch`** (silently ignored, not rejected). There is no `--watch-iterations` flag on market verbs.
 
 ### Agent watch discipline (don't block on a long watch)

@@ -1,7 +1,7 @@
 ---
 name: olares-cluster
-version: 4.4.0
-description: "Olares ControlHub K8s view via olares-cli cluster — pods, workloads, logs, scale/restart, jobs, cronjobs, middleware. Not for app lifecycle (market) or host install (node/os/gpu). Use for ControlHub, pods, logs, workloads."
+version: 4.4.1
+description: "Olares ControlHub K8s runtime view via olares-cli cluster — inspect pods, containers, workloads, logs, jobs, cronjobs, namespaces, nodes, and middleware; exec, scale, restart, or delete K8s objects. Use for raw runtime objects and logs, not app lifecycle (market), resource metrics (dashboard), or host install."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
