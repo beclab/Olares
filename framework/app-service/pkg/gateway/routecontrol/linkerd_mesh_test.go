@@ -54,6 +54,44 @@ func meshSharedNamespace() *corev1.Namespace {
 	}
 }
 
+func TestApplySharedLinkerdMeshNetworkPolicy_MultiSRRNoDualController(t *testing.T) {
+	srrA := meshGatewaySRR()
+	srrB := meshGatewaySRR()
+	srrB.Name = "shared-ollama-b"
+	srrB.UID = "uid-mesh-2"
+	srrB.Namespace = sharedNS
+	srrA.Namespace = sharedNS
+	srrA.Spec.Upstream.ServiceNamespace = sharedNS
+	srrB.Spec.Upstream.ServiceNamespace = sharedNS
+
+	svcB := meshGatewaySvc().DeepCopy()
+	svcB.Name = "sharedentrances-other"
+	svcB.Spec.Selector = map[string]string{"app": "other"}
+
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).
+		WithObjects(meshGatewaySvc(), svcB, srrA, srrB, meshSharedNamespace()).Build()
+
+	if err := applySharedLinkerdMeshNetworkPolicy(context.Background(), c, srrA, meshGatewaySvc()); err != nil {
+		t.Fatalf("apply A: %v", err)
+	}
+	if err := applySharedLinkerdMeshNetworkPolicy(context.Background(), c, srrB, svcB); err != nil {
+		t.Fatalf("apply B (must not dual-controller fail): %v", err)
+	}
+
+	meshNP := &networkingv1.NetworkPolicy{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: sharedNS, Name: security.SharedLinkerdMeshIngressNPName,
+	}, meshNP); err != nil {
+		t.Fatalf("mesh NP missing: %v", err)
+	}
+	if len(meshNP.OwnerReferences) != 0 {
+		t.Fatalf("singleton mesh NP must not carry SRR owners: %#v", meshNP.OwnerReferences)
+	}
+	if len(meshNP.Spec.PodSelector.MatchLabels) != 0 {
+		t.Fatalf("podSelector must be empty for multi-SRR NS: %#v", meshNP.Spec.PodSelector)
+	}
+}
+
 func TestReconcileSharedRoute_GatewayMode_AddsMeshNPAndInject(t *testing.T) {
 	srr := meshGatewaySRR()
 	c := fake.NewClientBuilder().WithScheme(testScheme(t)).

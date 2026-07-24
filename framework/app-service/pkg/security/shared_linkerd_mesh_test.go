@@ -13,6 +13,10 @@ func TestNewSharedLinkerdControlPlaneIngressNetworkPolicy(t *testing.T) {
 	if got := np.Spec.PodSelector.MatchLabels["app"]; got != "ollama" {
 		t.Fatalf("podSelector app = %q", got)
 	}
+	empty := NewSharedLinkerdControlPlaneIngressNetworkPolicy("ollama-shared", nil)
+	if len(empty.Spec.PodSelector.MatchLabels) != 0 {
+		t.Fatalf("nil podSelector must select all pods, got %#v", empty.Spec.PodSelector)
+	}
 	if len(np.Spec.Ingress) != 1 || len(np.Spec.Ingress[0].From) != 1 {
 		t.Fatalf("ingress peers = %#v", np.Spec.Ingress)
 	}
