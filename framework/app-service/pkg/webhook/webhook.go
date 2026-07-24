@@ -16,6 +16,10 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshoutagent"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
@@ -60,7 +64,7 @@ var (
 
 // Webhook used to implement a webhook.
 type Webhook struct {
-	kubeClient    *kubernetes.Clientset
+	kubeClient    kubernetes.Interface
 	dynamicClient *versioned.Clientset
 }
 
@@ -150,7 +154,7 @@ func (wh *Webhook) CreatePatch(
 	ctx context.Context,
 	pod *corev1.Pod,
 	req *admissionv1.AdmissionRequest,
-	proxyUUID uuid.UUID, injectPolicy, injectWs, injectUpload bool,
+	proxyUUID uuid.UUID, injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool,
 	injectSharedPod *bool,
 	appmgr *v1alpha1.ApplicationManager,
 	appConfig *appcfg.ApplicationConfig,
@@ -166,6 +170,16 @@ func (wh *Webhook) CreatePatch(
 
 	// inject sidecar only for the app's namespace
 	if req.Namespace == appmgr.Spec.AppNamespace {
+		needsEnvoySidecar := wh.shouldInjectEnvoySidecar(ctx, injectPolicy, appConfig, pod)
+		// Shared callers with mesh-in skip the whole oes container (including
+		// entrance pods) when Linkerd is ready and provider outbound is covered
+		// (no provider, or mesh-out will be injected).
+		if wh != nil && wh.kubeClient != nil && mesh.ShouldSkipOesForSharedCaller(
+			ctx, wh.kubeClient, injectMeshInAgent, len(perms) > 0, injectMeshOutAgent,
+		) {
+			needsEnvoySidecar = false
+		}
+
 		configMapName, err := wh.createSidecarConfigMap(ctx, pod, proxyUUID.String(), req.Namespace, injectPolicy, injectWs, injectUpload, appmgr, appConfig, perms)
 		if err != nil {
 			return nil, err
@@ -177,17 +191,17 @@ func (wh *Webhook) CreatePatch(
 			pod.Spec.Volumes = []corev1.Volume{}
 		}
 
-		pod.Spec.Volumes = append(pod.Spec.Volumes, volume, sidecar.GetEnvoyConfigWorkVolume())
+		if needsEnvoySidecar {
+			pod.Spec.Volumes = append(pod.Spec.Volumes, volume, sidecar.GetEnvoyConfigWorkVolume())
 
-		clusterID := fmt.Sprintf("%s.%s", pod.Spec.ServiceAccountName, req.Name)
-		envoyFilename := constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigFileName
-		// pod is not an entrance pod, just inject outbound proxy
-		if !injectPolicy {
-			envoyFilename = constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigOnlyOutBoundFileName
-		}
-		appKey, appSecret, _ := wh.getAppKeySecret(req.Namespace)
+			clusterID := fmt.Sprintf("%s.%s", pod.Spec.ServiceAccountName, req.Name)
+			envoyFilename := constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigFileName
+			// pod is not an entrance pod, just inject outbound proxy
+			if !injectPolicy {
+				envoyFilename = constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigOnlyOutBoundFileName
+			}
+			appKey, appSecret, _ := wh.getAppKeySecret(req.Namespace)
 
-		if injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod) {
 			// If the owning Application enables overlay-gateway, multus will
 			// attach a macvlan NIC (net1) to the pod. Tell the iptables init
 			// container to install bypass RETURN rules for that interface so
@@ -208,6 +222,8 @@ func (wh *Webhook) CreatePatch(
 					sidecar.GetInitContainerSpecForRenderEnvoyConfig(),
 				},
 				pod.Spec.InitContainers...)
+		} else if injectWs || injectUpload {
+			pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
 		}
 
 		if injectWs {
@@ -219,6 +235,22 @@ func (wh *Webhook) CreatePatch(
 			if uploadSidecar != nil {
 				pod.Spec.Containers = append(pod.Spec.Containers, *uploadSidecar)
 			}
+		}
+		if injectMeshInAgent {
+			// Conf is materialized at sidecar start (base64 → /tmp/mesh-in); do not
+			// mount an emptyDir over /etc/nginx (would hide image modules path).
+			pod.Spec.Volumes = append(pod.Spec.Volumes,
+				meshinagent.JWTSecretVolume(),
+				meshinagent.CertsVolume(),
+				meshinagent.SharedHostsVolume(),
+			)
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshinagent.InitContainerSpec())
+			pod.Spec.Containers = append(pod.Spec.Containers, meshinagent.ContainerSpec())
+		}
+		if injectMeshOutAgent {
+			pod.Spec.Volumes = append(pod.Spec.Volumes, meshoutagent.SATokenVolume(), meshoutagent.ConfVolume())
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshoutagent.InitContainerSpec())
+			pod.Spec.Containers = append(pod.Spec.Containers, meshoutagent.ContainerSpec())
 		}
 	} // end of inject sidecar
 
@@ -246,6 +278,40 @@ func (wh *Webhook) CreatePatch(
 		return nil, err
 	}
 	return makePatches(req, pod)
+}
+
+func (wh *Webhook) shouldInjectEnvoySidecar(ctx context.Context, injectPolicy bool, appConfig *appcfg.ApplicationConfig, pod *corev1.Pod) bool {
+	// R1 does not blanket-retire outbound oes when Linkerd is ready
+	// (ShouldSkipEnvoySidecar stays false until L2-c). Shared-caller skip is
+	// applied in CreatePatch via ShouldSkipOesForSharedCaller.
+	_ = ctx
+	if appConfig == nil {
+		return injectPolicy
+	}
+	return injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod)
+}
+
+func (wh *Webhook) shouldSkipInboundEntranceSidecar(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns, entranceName string) (bool, error) {
+	if appConfig == nil || wh == nil || wh.kubeClient == nil {
+		return false, nil
+	}
+	applicationName, err := apputils.FmtAppMgrName(appConfig.AppName, appConfig.OwnerName, ns)
+	if err != nil {
+		return false, err
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+	if appid == "" {
+		return false, nil
+	}
+	srrName := gateway.ResourceNameForEntranceApp(appid, entranceName)
+	return mesh.ShouldSkipInboundEntranceSidecar(ctx, wh.kubeClient, app.Spec.Namespace, srrName), nil
 }
 
 func (wh *Webhook) getProbeUA(ctx context.Context, pod *corev1.Pod) (string, error) {
@@ -327,7 +393,7 @@ func (wh *Webhook) AdmissionError(uid types.UID, err error) *admissionv1.Admissi
 
 // MustInject checks which inject operation should do for a pod.
 func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace string) (
-	injectPolicy, injectWs, injectUpload bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
+	injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
 	appConfig *appcfg.ApplicationConfig, appMgr *v1alpha1.ApplicationManager, err error) {
 	var isShared bool
 
@@ -398,11 +464,17 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 			isEntrancePod, err = wh.isAppEntrancePod(ctx, appConfig.AppName, e.Host, pod, namespace)
 			klog.Infof("entranceName=%s isEntrancePod=%v", e.Name, isEntrancePod)
 			if err != nil {
-				return false, false, false, nil, perms, nil, nil, err
+				return false, false, false, false, false, nil, perms, nil, nil, err
 			}
 
 			if isEntrancePod {
-				injectPolicy = true
+				skip, skipErr := wh.shouldSkipInboundEntranceSidecar(ctx, appConfig, namespace, e.Name)
+				if skipErr != nil {
+					return false, false, false, false, false, nil, perms, nil, nil, skipErr
+				}
+				if !skip {
+					injectPolicy = true
+				}
 				break
 			}
 		}
@@ -413,7 +485,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		isEntrancePod, err = wh.isAppEntrancePod(ctx, appConfig.AppName, e.Host, pod, namespace)
 		klog.Infof("entranceName=%s isEntrancePod=%v", e.Name, isEntrancePod)
 		if err != nil {
-			return false, false, false, nil, perms, nil, nil, err
+			return false, false, false, false, false, nil, perms, nil, nil, err
 		}
 
 		if isEntrancePod {
@@ -429,7 +501,30 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		}
 	}
 
+	injectMeshInAgent, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isShared)
+	if err != nil {
+		return false, false, false, false, false, nil, perms, nil, nil, err
+	}
+	injectMeshOutAgent = meshoutagent.ShouldInject(isShared, perms)
 	return
+}
+
+func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isShared bool) (bool, error) {
+	if appConfig == nil || isShared {
+		return false, nil
+	}
+	applicationName, err := apputils.FmtAppMgrName(appConfig.AppName, appConfig.OwnerName, ns)
+	if err != nil {
+		return false, err
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return meshinagent.ShouldInject(app, isShared), nil
 }
 
 func (wh *Webhook) isAppEntrancePod(ctx context.Context, appname, host string, pod *corev1.Pod, namespace string) (bool, error) {
