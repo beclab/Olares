@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,6 +35,7 @@ func TestAnnotatePodForLinkerdInject(t *testing.T) {
 func TestEnsureCallerNamespaceMeshAccess(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
+	_ = networkingv1.AddToScheme(scheme)
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "caller-ns"}}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ns).Build()
 
@@ -49,6 +51,12 @@ func TestEnsureCallerNamespaceMeshAccess(t *testing.T) {
 	}
 	if got.Annotations[LinkerdInjectAnnotation] != LinkerdInjectEnabled {
 		t.Fatalf("inject = %#v", got.Annotations)
+	}
+	meshNP := &networkingv1.NetworkPolicy{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: security.MeshControlPlaneNamespace, Name: security.AppGatewayMeshNPName,
+	}, meshNP); err != nil {
+		t.Fatalf("expected app-gateway-mesh-np on enable: %v", err)
 	}
 
 	if err := EnsureCallerNamespaceMeshAccess(context.Background(), c, "caller-ns", false); err != nil {

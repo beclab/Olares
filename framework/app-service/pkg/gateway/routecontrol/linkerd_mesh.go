@@ -39,6 +39,10 @@ func applySharedLinkerdMeshNetworkPolicy(ctx context.Context, c client.Client, s
 	// Empty PodSelector: one NP per shared NS admits os-mesh to all pods.
 	// Do not attach SRR OwnerReferences (Controller=true): multiple gateway-mode
 	// SRRs share this singleton; dual controllers are rejected by the API.
+	if err := mesh.EnsureAppGatewayMeshNetworkPolicies(ctx, c); err != nil {
+		return err
+	}
+
 	desired := security.NewSharedLinkerdControlPlaneIngressNetworkPolicy(npNS, nil)
 	if desired.Labels == nil {
 		desired.Labels = map[string]string{}

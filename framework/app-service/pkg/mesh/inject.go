@@ -37,10 +37,12 @@ func AnnotatePodForLinkerdInject(pod *corev1.Pod, enable bool) {
 	pod.Annotations[LinkerdInjectAnnotation] = LinkerdInjectEnabled
 }
 
-// EnsureCallerNamespaceMeshAccess labels the caller namespace so static
+// EnsureCallerNamespaceMeshAccess labels the caller namespace so
 // app-gateway-mesh-np (os-mesh) admits its proxies to the control plane, and
 // sets linkerd.io/inject at namespace scope so the Linkerd injector runs even
 // when the sandbox webhook annotates pods after the injector in the admission chain.
+// When enable is true it also ensures app-gateway-mesh-np exists in os-mesh and
+// os-gateway (controller-managed; chart YAML alone is not enough on brownfield).
 // When enable is false, the in-cluster-caller label and inject annotation are cleared.
 func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, namespace string, enable bool) error {
 	if c == nil || namespace == "" {
@@ -84,6 +86,9 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 		}
 	}
 	if !changed {
+		if enable {
+			return EnsureAppGatewayMeshNetworkPolicies(ctx, c)
+		}
 		return nil
 	}
 	if err := c.Update(ctx, &ns); err != nil {
@@ -92,5 +97,10 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 	}
 	klog.Infof("mesh-xport: caller ns=%s in-cluster-caller=%v linkerd.io/inject=%q",
 		namespace, enable, ns.Annotations[LinkerdInjectAnnotation])
+	if enable {
+		if err := EnsureAppGatewayMeshNetworkPolicies(ctx, c); err != nil {
+			return err
+		}
+	}
 	return nil
 }
