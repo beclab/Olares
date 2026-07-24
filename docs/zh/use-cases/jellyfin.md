@@ -30,9 +30,9 @@ Jellyfin 是一款强大的开源媒体服务器软件，让你完全掌控自�
 
 在设置 Jellyfin 之前，需要确保已可以在 Olares 上访问媒体文件。你可以通过以下几种方式添加文件：
 - **直接上传文件**<br>
-  将你的媒体上传到文件管理器中的 `/home/Movies/` 文件夹。为了获得更好的速度和进度可见性，[使用 LarePass 桌面客户端上传](../manual/olares/files/add-edit-download.md#upload-via-larepass-desktop)。
+  将你的媒体上传到文件管理器中的 `/Home` 文件夹下。为了获得更好的速度和进度可见性，[使用 LarePass 桌面客户端上传](../manual/olares/files/add-edit-download.md#upload-via-larepass-desktop)。
 - **挂载外部硬盘**<br>
-  将 USB 硬盘插入 Olares 设备后，它会自动挂载并可供访问。其中的文件位于 `/external/` 目录下。
+  将 USB 硬盘插入 Olares 设备后，它会自动挂载并可供访问。其中的文件位于 `/External/` 目录下。
 - **挂载网络共享**<br>
   如果你的媒体存储在 NAS 或其他网络服务器上，可以将其连接到 Olares。有关详细说明，可参阅[挂载 SMB 共享](../manual/olares/files/mount-SMB.md)。
 
@@ -83,19 +83,51 @@ Jellyfin 安装并运行后，下一步是告诉它你的媒体存储在哪里�
    - **Content type**：选择媒体类型（例如 Movies、Shows、Music）。对于同时包含电影和剧集的文件夹，选择 **Mixed Movies and Shows**。
    - **Display name**：输入要在库中显示的名称。<br>
    - **Folders**：点击 + 添加你的媒体路径。<br>
-      - **Olares Files**：`/home/movies/<YourMediaFolder>`
-      - **External storage**：`/external/<YourMediaFolder>`
+      - **Olares Files**：`/olares/userdata/home/<YourMediaFolder>`
+      - **External storage**：`/olares/userdata/external/<YourMediaFolder>`
 4. 点击 **Ok** 保存，并为其他媒体类型重复操作（例如，分别创建一个 "Movies" 和一个 "TV Shows"）。
 
 保存后，Jellyfin 将自动扫描你的文件夹并开始构建媒体库。根据你的收藏规模，此过程可能需要几分钟。
 
-## 启用转码
+## 启用转码硬件加速
 
-为了确保高分辨率视频能流畅播放，需启用硬件加速。启用后，Jellyfin 会调用你设备的底层硬件，更快速高效地转码。
-1. 在 Jellyfin 的 **Dashboard** 中（点击 ≡ 图标 > Dashboard），进入 **Playback** > **Transcoding**。
-2. 在 **Hardware acceleration** 下，根据你的 Olares 设备硬件配置选择对应的加速方案。
+当 Jellyfin 需要转码视频时，硬件加速可以降低 CPU 占用。客户端不支持原始格式、需要降低分辨率或码率、需要将 HDR 内容转换为 SDR，或需要将字幕烧录到视频中时，可能会触发转码。
+
+Jellyfin 仍会优先使用 Direct Play 或 Remux，仅在需要转码时使用硬件加速。
+
+下面以在 Olares One 设备上启用 Intel QSV 硬件加速为例，介绍具体操作步骤：
+
+1. 在 Olares Market 中将 Jellyfin 更新至 1.0.21 或更高版本。
+2. 进入 **设置** > **应用** > **Jellyfin** > **管理环境变量**。
+   - 将 `ENABLE_HW_ACCEL` 变量设置为 `true`；
+   - 将 `VIDEO_GID` 设置为 `44`，将 `RENDER_GID` 设置为 `994`。这些是 Olares One 的默认 GID 值。
+   在其他设备上，从**控制面板**打开 Olares 终端并运行：
+      ``` bash
+      getent group video
+      getent group render
+      ls -ln /dev/dri
+      ```
+
+    ![获取 GID](/images/manual/use-cases/jellyfin-gid.png#bordered){width=90%}
+
+3. 保存更改。Olares 会自动重启 Jellyfin。
+
+4. 在 Jellyfin **Dashboard** 中，进入 **Playback** > **Transcoding**。
+5. 在 **Hardware acceleration** 选项下，根据Olares 设备的硬件配置选择相应选项。例如，在 Olares One 上：
+   - 选择 **Intel QuickSync (QSV)**。
+   - 为 `H264`、`HEVC`、`HEVC 10bit` 启用硬件解码。
+   - 其余选项保持默认设置。
+
+不同设备支持的硬件功能可能有所不同。更多详细配置请参考 Jellyfin 官方[转码文档](https://jellyfin.org/docs/general/post-install/transcoding/)。
 
    ![启用转码](/images/manual/use-cases/jellyfin-transcoding.png#bordered){width=90%}
+
+:::tip 最佳实践
+对于家庭影院，建议使用支持 HEVC Main 10、HDR10、SRT 字幕及常见音频格式的电视或播放器，让 Jellyfin 尽可能使用 Direct Play。硬件加速转码主要用于解决格式兼容问题，或改善远程及带宽受限网络下的播放体验，不应替代 Direct Play。
+:::
+:::warning 设备访问权限
+启用 `ENABLE_HW_ACCEL` 后，Jellyfin 将获得访问主机 `/dev/dri` 图形设备的额外权限。仅在需要硬件加速时启用此选项。
+:::
 
 ## 安装社区插件提升体验
 
