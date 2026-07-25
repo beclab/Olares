@@ -151,17 +151,26 @@ func TestReconcileSharedRoute_DirectMode_RemovesMeshNPAndDisablesInject(t *testi
 	}
 }
 
-func TestEnsureSharedNamespaceLinkerdInject_SkipsNonSharedNamespace(t *testing.T) {
+func TestEnsureSharedNamespaceLinkerdInject_EnableErrorsWithoutSharedLabel(t *testing.T) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "os-framework"}}
 	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(ns).Build()
 
-	if err := ensureSharedNamespaceLinkerdInject(context.Background(), c, "os-framework", true); err != nil {
-		t.Fatalf("non-shared namespace should be a soft-skip, got %v", err)
+	if err := ensureSharedNamespaceLinkerdInject(context.Background(), c, "os-framework", true); err == nil {
+		t.Fatal("enable=true without ns-shared must error to requeue")
 	}
 	got := &corev1.Namespace{}
 	_ = c.Get(context.Background(), types.NamespacedName{Name: "os-framework"}, got)
 	if _, ok := got.Annotations[mesh.LinkerdInjectAnnotation]; ok {
-		t.Fatalf("controller mutated non-shared namespace: %#v", got.Annotations)
+		t.Fatalf("controller must not mutate non-shared namespace: %#v", got.Annotations)
+	}
+}
+
+func TestEnsureSharedNamespaceLinkerdInject_DisableSkipsNonSharedNamespace(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "os-framework"}}
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(ns).Build()
+
+	if err := ensureSharedNamespaceLinkerdInject(context.Background(), c, "os-framework", false); err != nil {
+		t.Fatalf("disable on non-shared should soft-skip, got %v", err)
 	}
 }
 
@@ -194,6 +203,39 @@ func TestEnsureSharedNamespaceLinkerdInject_NoOpWhenAlreadyAtDesired(t *testing.
 	_ = c.Get(context.Background(), types.NamespacedName{Name: sharedNS}, got)
 	if got.ResourceVersion != rv {
 		t.Fatalf("no-op should not bump ResourceVersion: %q -> %q", rv, got.ResourceVersion)
+	}
+}
+
+func TestReconcileSharedRoute_DirectMode_KeepsInjectWhenOtherGatewaySRR(t *testing.T) {
+	srrA := meshGatewaySRR()
+	srrA.Namespace = sharedNS
+	srrA.Spec.Upstream.ServiceNamespace = sharedNS
+	srrB := meshGatewaySRR()
+	srrB.Name = "shared-ollama-b"
+	srrB.UID = "uid-mesh-2"
+	srrB.Namespace = sharedNS
+	srrB.Spec.Upstream.ServiceNamespace = sharedNS
+
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).
+		WithObjects(meshGatewaySvc(), srrA, srrB, meshSharedNamespace()).Build()
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srrA); err != nil {
+		t.Fatalf("seed gateway A: %v", err)
+	}
+
+	srrA.Spec.RouteMode = srrv1alpha1.RouteModeDirect
+	if err := c.Update(context.Background(), srrA); err != nil {
+		t.Fatalf("update A to direct: %v", err)
+	}
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srrA); err != nil {
+		t.Fatalf("reconcile direct A: %v", err)
+	}
+
+	ns := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: sharedNS}, ns); err != nil {
+		t.Fatalf("get ns: %v", err)
+	}
+	if got := ns.Annotations[mesh.LinkerdInjectAnnotation]; got != mesh.LinkerdInjectEnabled {
+		t.Fatalf("linkerd.io/inject = %q, want %q (other gateway SRR remains)", got, mesh.LinkerdInjectEnabled)
 	}
 }
 
