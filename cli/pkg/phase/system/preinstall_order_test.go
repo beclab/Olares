@@ -3,6 +3,7 @@ package system
 import (
 	"testing"
 
+	olarescommon "github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/gpu"
@@ -10,6 +11,19 @@ import (
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/preinstall"
 )
+
+func TestMacosPhaseBuilderSkipsOfflinePreinstallWiring(t *testing.T) {
+	builder := &macOsPhaseBuilder{runtime: &olarescommon.KubeRuntime{}}
+	modules := builder.build()
+	for _, module := range modules {
+		switch module.(type) {
+		case *images.PreloadImagesModule:
+			t.Fatalf("macOS phase must not include PreloadImagesModule: offline preinstall only supports Linux/WSL")
+		case *preinstall.MaterializeModule:
+			t.Fatalf("macOS phase must not include MaterializeModule: offline preinstall only supports Linux/WSL")
+		}
+	}
+}
 
 func TestMarketPreinstallModulesFollowImagePreload(t *testing.T) {
 	selections := preinstall.ProfileSelections{

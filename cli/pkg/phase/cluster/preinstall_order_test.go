@@ -44,6 +44,15 @@ func TestLinuxInstallMaterializesHFCacheAfterCommonBeforeApps(t *testing.T) {
 	}
 }
 
+func TestMacosInstallTerminusNeverMaterializesHFCache(t *testing.T) {
+	modules := (&macosInstallPhaseBuilder{}).installTerminus()
+	for _, module := range modules {
+		if _, ok := module.(*preinstall.HFCacheMaterializeModule); ok {
+			t.Fatalf("macOS installTerminus must not wire HFCacheMaterializeModule: offline preinstall only supports Linux/WSL, modules=%#v", modules)
+		}
+	}
+}
+
 func TestLinuxBuildPlacesHFCacheBeforeInstalledModule(t *testing.T) {
 	data, err := os.ReadFile("linux.go")
 	if err != nil {

@@ -140,7 +140,7 @@ func TestLoadDirectoryRejectsSymlinks(t *testing.T) {
 		}
 	})
 
-	t.Run("ancestor", func(t *testing.T) {
+	t.Run("ancestor is allowed", func(t *testing.T) {
 		dir := writeContractDirectory(t)
 		root := canonicalTempDir(t)
 		link := filepath.Join(root, "linked-parent")
@@ -148,8 +148,8 @@ func TestLoadDirectoryRejectsSymlinks(t *testing.T) {
 			t.Fatal(err)
 		}
 		linkedDir := filepath.Join(link, filepath.Base(dir))
-		if _, err := LoadDirectory(linkedDir); err == nil || !strings.Contains(err.Error(), "symlink") {
-			t.Fatalf("LoadDirectory() error = %v", err)
+		if _, err := LoadDirectory(linkedDir); err != nil {
+			t.Fatalf("LoadDirectory() through symlinked ancestor error = %v", err)
 		}
 	})
 }

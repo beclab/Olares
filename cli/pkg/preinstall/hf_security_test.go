@@ -10,7 +10,59 @@ import (
 	"testing"
 )
 
-func TestLockHFCacheRootTightensWorldWritableDirectoryBeforeChown(t *testing.T) {
+func TestLockHFCacheRootNeverChangesOwner(t *testing.T) {
+	rootPath := filepath.Join(t.TempDir(), "huggingface")
+	if err := os.Mkdir(rootPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	beforeInfo, err := os.Stat(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beforeUID, uidKnown := fileOwnerUID(beforeInfo)
+
+	root, err := os.OpenRoot(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+
+	restore, err := lockHFCacheRoot(root)
+	if err != nil {
+		t.Fatalf("lockHFCacheRoot() error = %v", err)
+	}
+
+	lockedInfo, statErr := os.Stat(rootPath)
+	if statErr != nil {
+		t.Fatal(statErr)
+	}
+	if lockedInfo.Mode().Perm()&0o222 != 0 {
+		t.Fatalf("locked mode = %o, want no write bits for anyone", lockedInfo.Mode().Perm())
+	}
+	if uidKnown {
+		if lockedUID, ok := fileOwnerUID(lockedInfo); !ok || lockedUID != beforeUID {
+			t.Fatalf("owner changed while locked: before=%d locked=%d ok=%v", beforeUID, lockedUID, ok)
+		}
+	}
+
+	if err := restore(); err != nil {
+		t.Fatalf("restore() error = %v", err)
+	}
+	afterInfo, statErr := os.Stat(rootPath)
+	if statErr != nil {
+		t.Fatal(statErr)
+	}
+	if afterInfo.Mode().Perm() != 0o755 {
+		t.Fatalf("restored mode = %o, want 755", afterInfo.Mode().Perm())
+	}
+	if uidKnown {
+		if afterUID, ok := fileOwnerUID(afterInfo); !ok || afterUID != beforeUID {
+			t.Fatalf("owner changed after restore: before=%d after=%d ok=%v", beforeUID, afterUID, ok)
+		}
+	}
+}
+
+func TestLockHFCacheRootWithOpsUsesChmodOnlyNoChown(t *testing.T) {
 	rootPath := filepath.Join(t.TempDir(), "huggingface")
 	if err := os.Mkdir(rootPath, 0o755); err != nil {
 		t.Fatal(err)
@@ -29,14 +81,6 @@ func TestLockHFCacheRootTightensWorldWritableDirectoryBeforeChown(t *testing.T) 
 			operations = append(operations, fmt.Sprintf("chmod:%o", mode))
 			return file.Chmod(mode)
 		},
-		chown: func(file *os.File, uid, gid int) error {
-			info, err := file.Stat()
-			if err != nil {
-				return err
-			}
-			operations = append(operations, fmt.Sprintf("chown:%d:%d:mode=%o", uid, gid, info.Mode().Perm()))
-			return nil
-		},
 		sync: func(file *os.File) error {
 			operations = append(operations, "sync")
 			return file.Sync()
@@ -47,18 +91,22 @@ func TestLockHFCacheRootTightensWorldWritableDirectoryBeforeChown(t *testing.T) 
 	if err != nil {
 		t.Fatalf("lockHFCacheRootWithOps() error = %v", err)
 	}
-	wantLock := []string{"chmod:700", "chown:0:0:mode=700", "chmod:755", "sync"}
+	wantLock := []string{"chmod:555", "sync"}
 	if got := operations[:len(wantLock)]; !reflect.DeepEqual(got, wantLock) {
 		t.Fatalf("lock operations = %v, want %v", got, wantLock)
 	}
 	if err := restore(); err != nil {
 		t.Fatalf("restore() error = %v", err)
 	}
+	wantAll := []string{"chmod:555", "sync", "chmod:755", "sync"}
+	if !reflect.DeepEqual(operations, wantAll) {
+		t.Fatalf("operations = %v, want %v", operations, wantAll)
+	}
 }
 
-func TestLockHFCacheRootRestoresSafelyWhenOwnershipFails(t *testing.T) {
+func TestLockHFCacheRootWithOpsRestoresSafelyWhenLockFails(t *testing.T) {
 	rootPath := filepath.Join(t.TempDir(), "huggingface")
-	if err := os.Mkdir(rootPath, 0o777); err != nil {
+	if err := os.Mkdir(rootPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	root, err := os.OpenRoot(rootPath)
@@ -70,14 +118,10 @@ func TestLockHFCacheRootRestoresSafelyWhenOwnershipFails(t *testing.T) {
 	ops := hfRootLockOps{
 		chmod: func(file *os.File, mode os.FileMode) error {
 			operations = append(operations, fmt.Sprintf("chmod:%o", mode))
-			return file.Chmod(mode)
-		},
-		chown: func(_ *os.File, uid, gid int) error {
-			operations = append(operations, fmt.Sprintf("chown:%d:%d", uid, gid))
-			if uid == 0 {
-				return fmt.Errorf("injected chown failure")
+			if mode == 0o555 {
+				return fmt.Errorf("injected chmod failure")
 			}
-			return nil
+			return file.Chmod(mode)
 		},
 		sync: func(file *os.File) error {
 			operations = append(operations, "sync")
@@ -87,13 +131,13 @@ func TestLockHFCacheRootRestoresSafelyWhenOwnershipFails(t *testing.T) {
 
 	restore, err := lockHFCacheRootWithOps(root, ops)
 
-	if err == nil || !strings.Contains(err.Error(), "injected chown failure") {
+	if err == nil || !strings.Contains(err.Error(), "injected chmod failure") {
 		t.Fatalf("lockHFCacheRootWithOps() error = %v", err)
 	}
 	if restore != nil {
 		t.Fatal("restore callback returned after failed lock")
 	}
-	want := []string{"chmod:700", "chown:0:0", "chmod:700", "chown:1000:1000", "chmod:755", "sync"}
+	want := []string{"chmod:555", "chmod:755", "sync"}
 	if !reflect.DeepEqual(operations, want) {
 		t.Fatalf("operations = %v, want %v", operations, want)
 	}

@@ -68,11 +68,25 @@ func openDirectoryNoSymlink(name string) (*os.Root, error) {
 	return openDirectoryPath(name, false)
 }
 
+// openDirectoryPath opens name as a trusted entry root. Ancestors of name may
+// legitimately be symlinks (e.g. macOS /var -> /private/var) and are
+// canonicalized once via filepath.EvalSymlinks; name's final component and
+// everything below it still go through os.Root's no-symlink checks.
 func openDirectoryPath(name string, create bool) (*os.Root, error) {
-	absolute, anchor, components, err := rootedPathComponents(name)
+	absolute, err := canonicalDirectoryPath(name)
 	if err != nil {
 		return nil, err
 	}
+	parent := filepath.Dir(absolute)
+	leaf := filepath.Base(absolute)
+	if parent == absolute {
+		return nil, fmt.Errorf("directory path %q has no parent", name)
+	}
+	anchor, components, err := existingAncestor(parent)
+	if err != nil {
+		return nil, err
+	}
+	components = append(components, leaf)
 	current, err := os.OpenRoot(anchor)
 	if err != nil {
 		return nil, fmt.Errorf("open path anchor %q: %w", anchor, err)
@@ -139,35 +153,43 @@ func openDirectoryPath(name string, create bool) (*os.Root, error) {
 	return absoluteRoot, nil
 }
 
-func rootedPathComponents(name string) (string, string, []string, error) {
+func canonicalDirectoryPath(name string) (string, error) {
 	if name == "" || filepath.Clean(name) != name {
-		return "", "", nil, fmt.Errorf("directory path must be non-empty and clean")
+		return "", fmt.Errorf("directory path must be non-empty and clean")
 	}
 	for _, component := range strings.Split(filepath.ToSlash(name), "/") {
 		if component == "." || component == ".." {
-			return "", "", nil, fmt.Errorf("directory path must not contain %q", component)
+			return "", fmt.Errorf("directory path must not contain %q", component)
 		}
 	}
 	absolute, err := filepath.Abs(name)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("resolve directory path %q: %w", name, err)
+		return "", fmt.Errorf("resolve directory path %q: %w", name, err)
 	}
-	volume := filepath.VolumeName(absolute)
-	rest := strings.TrimPrefix(absolute, volume)
-	separator := string(filepath.Separator)
-	if !strings.HasPrefix(rest, separator) {
-		return "", "", nil, fmt.Errorf("directory path %q has no absolute volume anchor", name)
-	}
-	anchor := volume + separator
-	rest = strings.TrimLeft(rest, separator)
-	if rest == "" {
-		return absolute, anchor, nil, nil
-	}
-	components := strings.Split(rest, separator)
-	for _, component := range components {
-		if component == "" || component == "." || component == ".." {
-			return "", "", nil, fmt.Errorf("directory path %q contains invalid component", name)
+	return absolute, nil
+}
+
+// existingAncestor walks upward until it finds an existing path, canonicalizes
+// it via filepath.EvalSymlinks, and returns it plus the not-yet-existing
+// components below it (still subject to os.Root's symlink checks).
+func existingAncestor(absolute string) (string, []string, error) {
+	current := absolute
+	var pending []string
+	for {
+		if _, err := os.Lstat(current); err == nil {
+			resolved, err := filepath.EvalSymlinks(current)
+			if err != nil {
+				return "", nil, fmt.Errorf("resolve directory path %q: %w", current, err)
+			}
+			return resolved, pending, nil
+		} else if !os.IsNotExist(err) {
+			return "", nil, fmt.Errorf("inspect directory path %q: %w", current, err)
 		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", nil, fmt.Errorf("directory path %q has no existing ancestor", absolute)
+		}
+		pending = append([]string{filepath.Base(current)}, pending...)
+		current = parent
 	}
-	return absolute, anchor, components, nil
 }

@@ -489,6 +489,69 @@ func TestMaterializeHFArtifactsNoOpsWithoutArtifacts(t *testing.T) {
 	}
 }
 
+func TestMaterializeHFArtifactsSelfHealsStaleLockedRootWithoutArtifact(t *testing.T) {
+	installerDir, targetRoot := writeBundleWithoutHFArtifact(t)
+	if err := os.Chmod(targetRoot, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(targetRoot, 0o755) })
+
+	if err := materializeHFArtifacts(installerDir, targetRoot, nil); err != nil {
+		t.Fatalf("materializeHFArtifacts() error = %v", err)
+	}
+
+	assertMode(t, targetRoot, 0o755)
+}
+
+func TestMaterializeHFArtifactsSelfHealsStaleLockedRootBeforeMaterializingArtifact(t *testing.T) {
+	installerDir, targetRoot, _, _ := writeHFArtifactFixture(t)
+	if err := os.Chmod(targetRoot, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(targetRoot, 0o755) })
+
+	if err := materializeHFArtifacts(installerDir, targetRoot, nil); err != nil {
+		t.Fatalf("materializeHFArtifacts() error = %v", err)
+	}
+
+	assertMode(t, targetRoot, 0o755)
+	assertFileContent(t, filepath.Join(targetRoot, "models--acme--tiny-model", "refs", "main"), testHFRevision)
+}
+
+func TestMaterializeHFArtifactsNoOpsWhenTargetRootDoesNotExistAndNoArtifact(t *testing.T) {
+	root := canonicalTempDir(t)
+	installerDir := filepath.Join(root, "installer")
+	staticDir := filepath.Join(installerDir, StaticRelativeDir)
+	writeBundleFile(t, staticDir, BundleArtifactV1{})
+	targetRoot := filepath.Join(root, "huggingface")
+
+	if err := materializeHFArtifacts(installerDir, targetRoot, nil); err != nil {
+		t.Fatalf("materializeHFArtifacts() error = %v", err)
+	}
+	if _, err := os.Stat(targetRoot); !os.IsNotExist(err) {
+		t.Fatalf("target root should remain absent, stat error = %v", err)
+	}
+}
+
+func TestMaterializeHFArtifactsAllowsSymlinkedAncestorDirectories(t *testing.T) {
+	installerDir, targetRoot, _, _ := writeHFArtifactFixture(t)
+	root := filepath.Dir(installerDir)
+	linkParent := canonicalTempDir(t)
+	link := filepath.Join(linkParent, "linked-root")
+	if err := os.Symlink(root, link); err != nil {
+		t.Fatal(err)
+	}
+	linkedInstaller := filepath.Join(link, filepath.Base(installerDir))
+	linkedTarget := filepath.Join(link, filepath.Base(targetRoot))
+
+	if err := materializeHFArtifacts(linkedInstaller, linkedTarget, nil); err != nil {
+		t.Fatalf("materializeHFArtifacts() through symlinked ancestor error = %v", err)
+	}
+
+	modelRoot := filepath.Join(targetRoot, "models--acme--tiny-model")
+	assertFileContent(t, filepath.Join(modelRoot, "refs", "main"), testHFRevision)
+}
+
 func writeHFArtifactFixture(t *testing.T) (string, string, BundleArtifactV1, ArtifactManifestV1) {
 	t.Helper()
 	root := canonicalTempDir(t)

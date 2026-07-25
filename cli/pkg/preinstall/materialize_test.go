@@ -511,7 +511,7 @@ func TestMaterializeRejectsSymlinkedInstallerAndBasePaths(t *testing.T) {
 	})
 }
 
-func TestMaterializeRejectsSymlinkedAncestors(t *testing.T) {
+func TestMaterializeAllowsSymlinkedAncestorDirectories(t *testing.T) {
 	t.Run("installer ancestor", func(t *testing.T) {
 		realInstaller, baseDir := writeStaticBundle(t)
 		root := canonicalTempDir(t)
@@ -520,11 +520,13 @@ func TestMaterializeRejectsSymlinkedAncestors(t *testing.T) {
 			t.Fatal(err)
 		}
 		installerDir := filepath.Join(link, filepath.Base(realInstaller))
+		t.Cleanup(func() { _ = makeWritable(baseDir) })
 
-		err := Materialize(installerDir, baseDir, ProfileSelections{})
-
-		if err == nil || !strings.Contains(err.Error(), "symlink") {
-			t.Fatalf("Materialize() error = %v, want ancestor symlink rejection", err)
+		if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
+			t.Fatalf("Materialize() through symlinked installer ancestor error = %v", err)
+		}
+		if _, err := os.Stat(filepath.Join(baseDir, RuntimeRelativeDir, BundleFileName)); err != nil {
+			t.Fatalf("materialized bundle missing: %v", err)
 		}
 	})
 
@@ -537,14 +539,13 @@ func TestMaterializeRejectsSymlinkedAncestors(t *testing.T) {
 			t.Fatal(err)
 		}
 		baseDir := filepath.Join(link, "base")
+		t.Cleanup(func() { _ = makeWritable(realParent) })
 
-		err := Materialize(installerDir, baseDir, ProfileSelections{})
-
-		if err == nil || !strings.Contains(err.Error(), "symlink") {
-			t.Fatalf("Materialize() error = %v, want ancestor symlink rejection", err)
+		if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
+			t.Fatalf("Materialize() through symlinked base ancestor error = %v", err)
 		}
-		if _, statErr := os.Lstat(filepath.Join(realParent, "base")); !os.IsNotExist(statErr) {
-			t.Fatalf("base directory was created through symlink: %v", statErr)
+		if _, err := os.Stat(filepath.Join(realParent, "base", RuntimeRelativeDir, BundleFileName)); err != nil {
+			t.Fatalf("materialized bundle missing under real base: %v", err)
 		}
 	})
 }

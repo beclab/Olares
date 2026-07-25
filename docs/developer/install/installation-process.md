@@ -155,6 +155,8 @@ The container runtime is a critical component for running containerized applicat
 :::
 ### Materialize the Market preinstall bundle
 
+Offline preinstall currently supports Linux and WSL only. On macOS/minikube installs, the whole pipeline described in this section is skipped: no bundle is published to the host, no Hugging Face cache is copied, and the three production preinstall apps are never triggered; the macOS install otherwise proceeds normally through minikube.
+
 Official offline Market bootstrap data may be included in the installation package at `<installerDir>/preinstall/market`. If that directory is absent, preparation is a no-op: an ordinary release continues normally and preserves any existing managed overlay. With preinstall enabled, Market's runtime bootstrap state reports an importer-confirmed missing bundle as `overall_status="no_bundle"` and a fresh malformed importer failure as `overall_status="preinstall_degraded"`, including before any database row exists. After a successful import, persisted bundle revision and managed app rows are authoritative. `enabled=false` separately means the feature is disabled. The initial production target is a three-app shared chain: a model app with an inference engine and `llm-init` sidecar, `llm-gateway`, and an agent WebUI. The installer and Market read app IDs from the bundle; they do not hard-code those production IDs.
 
 After `PreloadImagesModule` imports and pins every image from `installation.manifest`, the prepare phase validates the V1 bundle and atomically publishes the Market JSON files, including `bundle.json`, the generated `install-profile.json`, and artifact manifests, plus selected files under `charts/` to `<baseDir>/userdata/Cache/market-preinstall`. Market mounts that lightweight directory read-only at `/opt/app/preinstall`. A large model payload, for example approximately 20 GB, remains under `<installerDir>/preinstall/market/artifacts`; it is not copied into the Market mount.
@@ -198,7 +200,7 @@ Market mount contains no `artifacts/model/...` Source payload:
 The artifact payload is read from installer media during the install phase. Its
 small manifest is available in the Market mount for contract validation.
 
-On WSL, `<baseDir>` is the existing WSL package-directory mapping used by the rest of the prepare phase. On Linux and WSL, all staged Market directories use mode `0555`; on macOS, the staging and target root uses `0755` because Darwin cannot rename a `0555` directory as a non-root user, while every file remains `0444` and every child directory remains `0555`. Market's `readOnly: true` mount is the runtime write boundary on every platform; its existing `/opt/app/data` volume remains writable. If the hostPath is empty, the Market importer fails open and normal Market startup continues.
+On WSL, `<baseDir>` is the existing WSL package-directory mapping used by the rest of the prepare phase. On Linux and WSL, all staged Market directories use mode `0555`, every file remains `0444`, and every child directory remains `0555`. Market's `readOnly: true` mount is the runtime write boundary; its existing `/opt/app/data` volume remains writable. If the hostPath is empty, the Market importer fails open and normal Market startup continues. This whole materialization step is Linux/WSL only; macOS/minikube installs skip it entirely and never create this directory (see "Materialize the Market preinstall bundle" above).
 
 Each bundle app may declare `defaultEnvs`. For an air-gapped model app, these
 defaults include `HF_HUB_OFFLINE=1` and llm-init source syntax such as
@@ -356,6 +358,10 @@ local (default)   openebs.io/local   Delete   WaitForFirstConsumer   false   31s
 :::
 
 ### Materialize an offline Hugging Face cache
+
+Like the rest of offline preinstall, this step is Linux/WSL only. On
+macOS/minikube installs, `HFCacheMaterializeModule` is never wired into the
+install phase, so no Hugging Face cache is copied there.
 
 Model acquisition and model-app installation are separate operations. During
 the install phase, `InstallOsSystemModule` creates Common and deploys the

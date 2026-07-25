@@ -68,6 +68,9 @@ func materializeHFArtifacts(installerDir, targetRootPath string, ownership *hfOw
 }
 
 func materializeHFArtifactsWithHooks(installerDir, targetRootPath string, ownership *hfOwnership, hooks hfMaterializeHooks) (retErr error) {
+	if err := healHFCacheRootMode(targetRootPath); err != nil {
+		return err
+	}
 	staticPath := filepath.Join(installerDir, filepath.FromSlash(StaticRelativeDir))
 	if _, err := os.Lstat(staticPath); os.IsNotExist(err) {
 		return nil
@@ -683,22 +686,54 @@ func secureHFMarkerOwnership(file *os.File) error {
 
 type hfRootLockOps struct {
 	chmod func(*os.File, os.FileMode) error
-	chown func(*os.File, int, int) error
 	sync  func(*os.File) error
 }
 
+// lockHFCacheRoot never chowns the root (normally owned by uid 1000, see
+// storage.CreateAppCommonDir): a crash mid-chown could strand it under root
+// with no unprivileged process able to reclaim it. It only chmods away write
+// bits, so a crash mid-lock leaves it self-healable by uid 1000.
 func lockHFCacheRoot(root *os.Root) (func() error, error) {
 	return lockHFCacheRootWithOps(root, hfRootLockOps{
 		chmod: func(file *os.File, mode os.FileMode) error {
 			return file.Chmod(mode)
 		},
-		chown: func(file *os.File, uid, gid int) error {
-			return file.Chown(uid, gid)
-		},
 		sync: func(file *os.File) error {
 			return file.Sync()
 		},
 	})
+}
+
+// healHFCacheRootMode restores a stale 0o555 lock left by a crash between
+// lockHFCacheRoot's chmod and its deferred restore. It runs unconditionally
+// (even with no HF artifact in the bundle) and only touches mode, never
+// ownership, and completes before this run's own lock cycle begins.
+func healHFCacheRootMode(targetRootPath string) error {
+	root, err := openDirectoryNoSymlink(targetRootPath)
+	if err != nil {
+		// os.IsNotExist doesn't unwrap arbitrary %w chains; errors.Is does.
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("open Hugging Face cache root for self-heal: %w", err)
+	}
+	defer root.Close()
+	directory, err := root.Open(".")
+	if err != nil {
+		return fmt.Errorf("open Hugging Face cache root handle for self-heal: %w", err)
+	}
+	defer directory.Close()
+	info, err := directory.Stat()
+	if err != nil {
+		return fmt.Errorf("inspect Hugging Face cache root mode: %w", err)
+	}
+	if info.Mode().Perm() != 0o555 {
+		return nil
+	}
+	if err := directory.Chmod(0o755); err != nil {
+		return fmt.Errorf("self-heal Hugging Face cache root mode: %w", err)
+	}
+	return directory.Sync()
 }
 
 func lockHFCacheRootWithOps(root *os.Root, ops hfRootLockOps) (func() error, error) {
@@ -707,17 +742,13 @@ func lockHFCacheRootWithOps(root *os.Root, ops hfRootLockOps) (func() error, err
 		return nil, fmt.Errorf("open Hugging Face cache root for locking: %w", err)
 	}
 	restore := func() error {
-		if err := ops.chmod(directory, 0o700); err != nil {
-			return fmt.Errorf("retighten Hugging Face cache root: %w", errors.Join(err, directory.Close()))
-		}
 		err := errors.Join(
-			ops.chown(directory, 1000, 1000),
 			ops.chmod(directory, 0o755),
 			ops.sync(directory),
 			directory.Close(),
 		)
 		if err != nil {
-			return fmt.Errorf("restore Hugging Face cache root ownership: %w", err)
+			return fmt.Errorf("restore Hugging Face cache root permissions: %w", err)
 		}
 		return nil
 	}
@@ -725,9 +756,7 @@ func lockHFCacheRootWithOps(root *os.Root, ops hfRootLockOps) (func() error, err
 		name string
 		run  func() error
 	}{
-		{name: "tighten permissions", run: func() error { return ops.chmod(directory, 0o700) }},
-		{name: "take ownership", run: func() error { return ops.chown(directory, 0, 0) }},
-		{name: "set controlled permissions", run: func() error { return ops.chmod(directory, 0o755) }},
+		{name: "deny writes for every principal", run: func() error { return ops.chmod(directory, 0o555) }},
 		{name: "sync metadata", run: func() error { return ops.sync(directory) }},
 	}
 	for _, step := range lockSteps {
@@ -736,13 +765,7 @@ func lockHFCacheRootWithOps(root *os.Root, ops hfRootLockOps) (func() error, err
 			return nil, fmt.Errorf("lock Hugging Face cache root during %s: %w", step.name, errors.Join(err, restoreErr))
 		}
 	}
-	return func() error {
-		err := restore()
-		if err != nil {
-			return err
-		}
-		return nil
-	}, nil
+	return restore, nil
 }
 
 func secureHFOwnership(root *os.Root) error {

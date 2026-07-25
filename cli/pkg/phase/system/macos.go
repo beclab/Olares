@@ -17,14 +17,9 @@ type macOsPhaseBuilder struct {
 
 func (m *macOsPhaseBuilder) build() []module.Module {
 	// TODO: install minikube
+	// Offline preinstall only supports Linux/WSL; see linux.go/wsl.go.
 	modules := []module.Module{
 		&kubesphere.CreateMinikubeClusterModule{},
 	}
-	modules = append(modules, marketPreinstallModules(
-		m.manifestMap,
-		m.runtime.GetInstallerDir(),
-		m.runtime.GetBaseDir(),
-		productionPreinstallSelections(m.runtime),
-	)...)
 	return append(modules, &terminus.PreparedModule{})
 }
