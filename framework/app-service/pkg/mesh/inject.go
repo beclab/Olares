@@ -42,6 +42,8 @@ func AnnotatePodForLinkerdInject(pod *corev1.Pod, enable bool) {
 // sets linkerd.io/inject at namespace scope so the Linkerd injector runs even
 // when the sandbox webhook annotates pods after the injector in the admission chain.
 // When enable is false, the in-cluster-caller label and inject annotation are cleared.
+// Shared workload namespaces are skipped: their inject annotation is owned by
+// SharedRouteRegistry reconcile (ensureSharedNamespaceLinkerdInject).
 func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, namespace string, enable bool) error {
 	if c == nil || namespace == "" {
 		return nil
@@ -54,6 +56,10 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 		}
 		klog.Errorf("mesh-xport: get caller ns %s failed: %v", namespace, err)
 		return err
+	}
+	if ns.Labels[security.NamespaceSharedLabel] == "true" {
+		klog.V(2).Infof("mesh-xport: skip caller mesh access on shared ns %q", namespace)
+		return nil
 	}
 	if ns.Labels == nil {
 		ns.Labels = map[string]string{}
