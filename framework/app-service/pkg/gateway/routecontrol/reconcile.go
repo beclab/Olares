@@ -125,7 +125,13 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if disableNS == "" {
 			disableNS = srr.Namespace
 		}
-		if err := ensureSharedNamespaceLinkerdInject(ctx, c, disableNS, false); err != nil {
+		stillNeeded, err := hasOtherGatewayModeSRRForUpstream(ctx, c, srr, disableNS)
+		if err != nil {
+			return ReconcileResult{}, fmt.Errorf("check other gateway SRR for linkerd inject: %w", err)
+		}
+		if stillNeeded {
+			klog.Infof("mesh-xport: keep inject on %s: other gateway SRR present", disableNS)
+		} else if err := ensureSharedNamespaceLinkerdInject(ctx, c, disableNS, false); err != nil {
 			return ReconcileResult{}, fmt.Errorf("disable shared namespace linkerd inject: %w", err)
 		}
 		return ReconcileResult{

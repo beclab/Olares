@@ -2,6 +2,7 @@ package routecontrol
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -119,7 +120,15 @@ func ensureSharedNamespaceLinkerdInject(ctx context.Context, c client.Client, na
 		return err
 	}
 	if !isSharedWorkloadNamespace(&ns) {
-		klog.V(2).Infof("mesh-xport: skip inject on ns %q: missing %s=true",
+		if enable {
+			// Return error so SRR reconcile requeues until ns-shared is set;
+			// soft-skip here previously left Ready=True with no inject forever.
+			klog.Errorf("mesh-xport: enable inject on %s: missing %s=true",
+				namespace, security.NamespaceSharedLabel)
+			return fmt.Errorf("mesh-xport: enable inject on %s: missing %s=true",
+				namespace, security.NamespaceSharedLabel)
+		}
+		klog.V(2).Infof("mesh-xport: skip disable inject on ns %q: missing %s=true",
 			namespace, security.NamespaceSharedLabel)
 		return nil
 	}
