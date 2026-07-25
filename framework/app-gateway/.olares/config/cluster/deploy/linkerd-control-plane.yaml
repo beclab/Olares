@@ -429,7 +429,7 @@ data:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: linkerd-linkerd-destination
+  name: linkerd-os-mesh-destination
   labels:
     linkerd.io/control-plane-component: destination
     linkerd.io/control-plane-ns: os-mesh
@@ -562,7 +562,7 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: linkerd-linkerd-identity
+  name: linkerd-os-mesh-identity
   labels:
     linkerd.io/control-plane-component: identity
     linkerd.io/control-plane-ns: os-mesh
@@ -583,7 +583,7 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: linkerd-linkerd-proxy-injector
+  name: linkerd-os-mesh-proxy-injector
   labels:
     linkerd.io/control-plane-component: proxy-injector
     linkerd.io/control-plane-ns: os-mesh
@@ -608,14 +608,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: linkerd-linkerd-destination
+  name: linkerd-os-mesh-destination
   labels:
     linkerd.io/control-plane-component: destination
     linkerd.io/control-plane-ns: os-mesh
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: linkerd-linkerd-destination
+  name: linkerd-os-mesh-destination
 subjects:
 - kind: ServiceAccount
   name: linkerd-destination
@@ -659,14 +659,14 @@ subjects:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: linkerd-linkerd-identity
+  name: linkerd-os-mesh-identity
   labels:
     linkerd.io/control-plane-component: identity
     linkerd.io/control-plane-ns: os-mesh
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: linkerd-linkerd-identity
+  name: linkerd-os-mesh-identity
 subjects:
 - kind: ServiceAccount
   name: linkerd-identity
@@ -676,7 +676,7 @@ subjects:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: linkerd-linkerd-proxy-injector
+  name: linkerd-os-mesh-proxy-injector
   labels:
     linkerd.io/control-plane-component: proxy-injector
     linkerd.io/control-plane-ns: os-mesh
@@ -687,7 +687,7 @@ subjects:
   apiGroup: ""
 roleRef:
   kind: ClusterRole
-  name: linkerd-linkerd-proxy-injector
+  name: linkerd-os-mesh-proxy-injector
   apiGroup: rbac.authorization.k8s.io
 ---
 # Source: linkerd-control-plane/templates/config-rbac.yaml
