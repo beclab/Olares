@@ -44,6 +44,8 @@ func AnnotatePodForLinkerdInject(pod *corev1.Pod, enable bool) {
 // When enable is true it also ensures app-gateway-mesh-np exists in os-mesh and
 // os-gateway (controller-managed; chart YAML alone is not enough on brownfield).
 // When enable is false, the in-cluster-caller label and inject annotation are cleared.
+// Shared workload namespaces are skipped: their inject annotation is owned by
+// SharedRouteRegistry reconcile (ensureSharedNamespaceLinkerdInject).
 func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, namespace string, enable bool) error {
 	if c == nil || namespace == "" {
 		return nil
@@ -56,6 +58,10 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 		}
 		klog.Errorf("mesh-xport: get caller ns %s failed: %v", namespace, err)
 		return err
+	}
+	if ns.Labels[security.NamespaceSharedLabel] == "true" {
+		klog.V(2).Infof("mesh-xport: skip caller mesh access on shared ns %q", namespace)
+		return nil
 	}
 	if ns.Labels == nil {
 		ns.Labels = map[string]string{}
