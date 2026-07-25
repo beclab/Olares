@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1",
+  "sourceId": "market.olares",
+  "catalogHash": "golden-catalog",
+  "generatedAt": "2026-07-25T00:00:00Z",
+  "apps": [
+    {
+      "appId": "47ca2f42",
+      "appName": "shared-model",
+      "version": "1.0.0",
+      "chart": "chart/shared-model-1.0.0.tgz",
+      "chartSha256": "f294e0262193f1eb209bcdf21734ef55c0e66bb5871e21facf6bfa957e6d80a9",
+      "installOrder": 10,
+      "allowedEnvs": [
+        "HF_HUB_OFFLINE"
+      ],
+      "defaultEnvs": {
+        "HF_HUB_OFFLINE": "1"
+      },
+      "allowedGpuTypes": [
+        "nvidia"
+      ],
+      "artifacts": [
+        {
+          "kind": "hf-cache",
+          "source": "artifacts/fixture--tiny-model",
+          "repo": "fixture/tiny-model",
+          "revision": "1111111111111111111111111111111111111111",
+          "manifest": "manifests/fixture--tiny-model.json",
+          "manifestSha256": "c99148234882ec5b346cabcd0417fad15cacbb53d38035e8ff35e177de1d4cf9",
+          "totalSize": 5
+        }
+      ],
+      "appEntry": {
+        "id": "47ca2f42",
+        "appID": "47ca2f42",
+        "name": "shared-model",
+        "version": "1.0.0",
+        "cfgType": "app"
+      }
+    }
+  ]
+}
