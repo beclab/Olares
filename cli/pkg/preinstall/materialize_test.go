@@ -79,12 +79,13 @@ func TestMaterializeRejectsOversizedChartTotal(t *testing.T) {
 	for i := 0; i < chartCount; i++ {
 		name := fmt.Sprintf("charts/app-%d.tgz", i)
 		app := BundleAppV1{
-			AppID:       fmt.Sprintf("app-%d", i),
-			AppName:     fmt.Sprintf("app-%d", i),
-			Version:     "1.0.0",
-			Chart:       name,
-			ChartSHA256: strings.Repeat("0", 64),
-			AppEntry:    json.RawMessage(`{}`),
+			AppID:        fmt.Sprintf("app-%d", i),
+			AppName:      fmt.Sprintf("app-%d", i),
+			Version:      "1.0.0",
+			InstallScope: InstallScopeShared,
+			Chart:        name,
+			ChartSHA256:  strings.Repeat("0", 64),
+			AppEntry:     json.RawMessage(`{}`),
 		}
 		bundle.Apps = append(bundle.Apps, app)
 		chart := filepath.Join(staticDir, filepath.FromSlash(name))

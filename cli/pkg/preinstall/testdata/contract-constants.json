@@ -13,5 +13,9 @@
     "maxArtifactTotalSize": 1099511627776
   },
   "artifactKindHFCache": "hf-cache",
-  "defaultEnvsJSONKey": "defaultEnvs"
+  "defaultEnvsJSONKey": "defaultEnvs",
+  "installScopes": [
+    "shared",
+    "per-user"
+  ]
 }

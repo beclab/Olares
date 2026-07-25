@@ -24,8 +24,9 @@ type contractConstantsFixture struct {
 		MaxArtifactEntries       int   `json:"maxArtifactEntries"`
 		MaxArtifactTotalSize     int64 `json:"maxArtifactTotalSize"`
 	} `json:"limits"`
-	ArtifactKindHFCache string `json:"artifactKindHFCache"`
-	DefaultEnvsJSONKey  string `json:"defaultEnvsJSONKey"`
+	ArtifactKindHFCache string   `json:"artifactKindHFCache"`
+	DefaultEnvsJSONKey  string   `json:"defaultEnvsJSONKey"`
+	InstallScopes       []string `json:"installScopes"`
 }
 
 func TestContractConstantsFixtureMatchesGoContract(t *testing.T) {
@@ -59,6 +60,16 @@ func TestContractConstantsFixtureMatchesGoContract(t *testing.T) {
 	}
 	if got, want := field.Tag.Get("json"), fixture.DefaultEnvsJSONKey+",omitempty"; got != want {
 		t.Fatalf("BundleAppV1.DefaultEnvs JSON tag = %q, want %q", got, want)
+	}
+	if !reflect.DeepEqual(fixture.InstallScopes, []string{string(InstallScopeShared), string(InstallScopePerUser)}) {
+		t.Fatalf("installScopes = %q", fixture.InstallScopes)
+	}
+	field, ok = reflect.TypeOf(BundleAppV1{}).FieldByName("InstallScope")
+	if !ok {
+		t.Fatal("BundleAppV1.InstallScope field is missing")
+	}
+	if got := field.Tag.Get("json"); got != "installScope" {
+		t.Fatalf("BundleAppV1.InstallScope JSON tag = %q, want %q", got, "installScope")
 	}
 }
 

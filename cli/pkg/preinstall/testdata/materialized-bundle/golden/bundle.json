@@ -8,6 +8,7 @@
       "appId": "47ca2f42",
       "appName": "shared-model",
       "version": "1.0.0",
+      "installScope": "shared",
       "chart": "chart/shared-model-1.0.0.tgz",
       "chartSha256": "f294e0262193f1eb209bcdf21734ef55c0e66bb5871e21facf6bfa957e6d80a9",
       "installOrder": 10,

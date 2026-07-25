@@ -18,6 +18,8 @@ const (
 	MaxArtifactEntries       = 1_000_000
 	MaxArtifactTotalSize     = 1 << 40
 	ArtifactKindHFCache      = "hf-cache"
+	InstallScopeShared       = InstallScope("shared")
+	InstallScopePerUser      = InstallScope("per-user")
 )
 
 type BundleV1 struct {
@@ -32,6 +34,7 @@ type BundleAppV1 struct {
 	AppID           string             `json:"appId"`
 	AppName         string             `json:"appName"`
 	Version         string             `json:"version"`
+	InstallScope    InstallScope       `json:"installScope"`
 	Chart           string             `json:"chart"`
 	ChartSHA256     string             `json:"chartSha256"`
 	InstallOrder    int                `json:"installOrder"`
@@ -40,6 +43,12 @@ type BundleAppV1 struct {
 	AllowedGPUTypes []string           `json:"allowedGpuTypes,omitempty"`
 	Artifacts       []BundleArtifactV1 `json:"artifacts,omitempty"`
 	AppEntry        json.RawMessage    `json:"appEntry"`
+}
+
+type InstallScope string
+
+func (s InstallScope) Valid() bool {
+	return s == InstallScopeShared || s == InstallScopePerUser
 }
 
 type BundleArtifactV1 struct {

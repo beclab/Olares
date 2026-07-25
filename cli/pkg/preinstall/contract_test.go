@@ -38,6 +38,40 @@ func TestDecodeBundleAcceptsDefaultEnvs(t *testing.T) {
 	}
 }
 
+func TestValidateInstallScope(t *testing.T) {
+	tests := []struct {
+		name         string
+		installScope string
+		wantErr      bool
+	}{
+		{name: "shared", installScope: "shared"},
+		{name: "per-user", installScope: "per-user"},
+		{name: "missing", wantErr: true},
+		{name: "unknown", installScope: "cluster", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw := validBundleJSON
+			if tt.installScope == "" {
+				raw = strings.Replace(raw, `    "installScope":"shared",`+"\n", "", 1)
+			} else {
+				raw = strings.Replace(raw, `"installScope":"shared"`, `"installScope":"`+tt.installScope+`"`, 1)
+			}
+			bundle := decodeBundle(t, raw)
+
+			err := Validate(bundle, InstallProfileV1{SchemaVersion: SupportedSchemaVersion})
+
+			if tt.wantErr {
+				if err == nil || !strings.Contains(err.Error(), "installScope") {
+					t.Fatalf("Validate() error = %v, want installScope rejection", err)
+				}
+			} else if err != nil {
+				t.Fatalf("Validate() error = %v", err)
+			}
+		})
+	}
+}
+
 func TestValidateRejectsInvalidDefaultEnvs(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -456,6 +490,7 @@ const validBundleJSON = `{
     "appId":"app-a",
     "appName":"app-a",
     "version":"1.0.0",
+    "installScope":"shared",
     "chart":"charts/app-a-1.0.0.tgz",
     "chartSha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "installOrder":10,

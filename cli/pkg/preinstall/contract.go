@@ -139,6 +139,9 @@ func validateBundle(bundle BundleV1) (map[string]BundleAppV1, error) {
 		if strings.TrimSpace(app.Version) == "" {
 			return nil, fmt.Errorf("%s version is required", prefix)
 		}
+		if !app.InstallScope.Valid() {
+			return nil, fmt.Errorf("%s installScope must be %q or %q", prefix, InstallScopeShared, InstallScopePerUser)
+		}
 		if err := validateChartPath(app.Chart); err != nil {
 			return nil, fmt.Errorf("%s chart: %w", prefix, err)
 		}

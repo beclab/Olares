@@ -33,6 +33,9 @@ func TestMaterializeMatchesGoldenRuntimeBundle(t *testing.T) {
 	if len(contract.Profile.Apps) != 1 {
 		t.Fatalf("profile apps = %#v", contract.Profile.Apps)
 	}
+	if contract.Bundle.Apps[0].InstallScope != InstallScopeShared {
+		t.Fatalf("bundle installScope = %q", contract.Bundle.Apps[0].InstallScope)
+	}
 	app := contract.Profile.Apps[0]
 	if app.Envs["HF_HUB_OFFLINE"] != "1" {
 		t.Fatalf("profile HF_HUB_OFFLINE = %q", app.Envs["HF_HUB_OFFLINE"])
