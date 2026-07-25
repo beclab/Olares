@@ -70,3 +70,32 @@ func TestEnsureCallerNamespaceMeshAccess(t *testing.T) {
 		t.Fatalf("inject annotation should be removed: %#v", got.Annotations)
 	}
 }
+
+func TestEnsureCallerNamespaceMeshAccess_SkipsSharedNamespace(t *testing.T) {
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	_ = networkingv1.AddToScheme(scheme)
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ollama-shared",
+			Labels: map[string]string{
+				security.NamespaceSharedLabel: "true",
+			},
+			Annotations: map[string]string{
+				LinkerdInjectAnnotation: LinkerdInjectEnabled,
+			},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ns).Build()
+
+	if err := EnsureCallerNamespaceMeshAccess(context.Background(), c, "ollama-shared", false); err != nil {
+		t.Fatalf("shared ns must soft-skip: %v", err)
+	}
+	got := &corev1.Namespace{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: "ollama-shared"}, got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Annotations[LinkerdInjectAnnotation] != LinkerdInjectEnabled {
+		t.Fatalf("shared inject must be preserved, got %#v", got.Annotations)
+	}
+}
