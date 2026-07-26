@@ -11,7 +11,7 @@ import (
 type MaterializeModule struct {
 	common.KubeModule
 	InstallerDir      string
-	BaseDir           string
+	RootDir           string
 	ProfileSelections ProfileSelections
 }
 
@@ -22,7 +22,7 @@ func (m *MaterializeModule) Init() {
 			Name: "MaterializeMarketPreinstall",
 			Action: &MaterializeAction{
 				InstallerDir:      m.InstallerDir,
-				BaseDir:           m.BaseDir,
+				RootDir:           m.RootDir,
 				ProfileSelections: m.ProfileSelections,
 			},
 		},
@@ -32,12 +32,16 @@ func (m *MaterializeModule) Init() {
 type MaterializeAction struct {
 	action.BaseAction
 	InstallerDir      string
-	BaseDir           string
+	RootDir           string
 	ProfileSelections ProfileSelections
 }
 
 func (a *MaterializeAction) Execute(_ connector.Runtime) error {
-	return Materialize(a.InstallerDir, a.BaseDir, a.ProfileSelections)
+	rootDir := a.RootDir
+	if rootDir == "" {
+		rootDir = storage.OlaresRootDir
+	}
+	return Materialize(a.InstallerDir, rootDir, a.ProfileSelections)
 }
 
 type HFCacheMaterializeModule struct {

@@ -17,7 +17,10 @@ import (
 	"strings"
 )
 
-func Materialize(installerDir, baseDir string, selections ProfileSelections) error {
+// Materialize publishes the bundle under rootDir/RuntimeRelativeDir. rootDir
+// must be the Olares root directory the market chart mounts from, not the
+// installer base directory.
+func Materialize(installerDir, rootDir string, selections ProfileSelections) error {
 	source := filepath.Join(installerDir, filepath.FromSlash(StaticRelativeDir))
 	sourceInfo, err := os.Lstat(source)
 	if os.IsNotExist(err) {
@@ -60,19 +63,20 @@ func Materialize(installerDir, baseDir string, selections ProfileSelections) err
 		return err
 	}
 
-	baseRoot, err := openOrCreateDirectoryNoSymlink(baseDir)
+	olaresRoot, err := openOrCreateDirectoryNoSymlink(rootDir)
 	if err != nil {
-		return fmt.Errorf("open base root: %w", err)
+		return fmt.Errorf("open olares root: %w", err)
 	}
-	defer baseRoot.Close()
-	const parentRelative = "userdata/Cache"
-	if err := baseRoot.MkdirAll(parentRelative, 0o755); err != nil {
+	defer olaresRoot.Close()
+	parentRelative := path.Dir(RuntimeRelativeDir)
+	targetName := path.Base(RuntimeRelativeDir)
+	if err := olaresRoot.MkdirAll(parentRelative, 0o755); err != nil {
 		return fmt.Errorf("create preinstall parent: %w", err)
 	}
-	if err := rejectRootSymlinkComponents(baseRoot, parentRelative); err != nil {
+	if err := rejectRootSymlinkComponents(olaresRoot, parentRelative); err != nil {
 		return err
 	}
-	parentPath := filepath.Join(baseDir, filepath.FromSlash(parentRelative))
+	parentPath := filepath.Join(rootDir, filepath.FromSlash(parentRelative))
 	parentRoot, err := openDirectoryNoSymlink(parentPath)
 	if err != nil {
 		return fmt.Errorf("open preinstall parent: %w", err)
@@ -81,7 +85,7 @@ func Materialize(installerDir, baseDir string, selections ProfileSelections) err
 	if err := rejectRootSymlinkComponents(parentRoot, "."); err != nil {
 		return err
 	}
-	if _, err := directoryStateRoot(parentRoot, "market-preinstall"); err != nil {
+	if _, err := directoryStateRoot(parentRoot, targetName); err != nil {
 		return err
 	}
 
@@ -102,7 +106,7 @@ func Materialize(installerDir, baseDir string, selections ProfileSelections) err
 		return fmt.Errorf("close preinstall staging root: %w", err)
 	}
 	stagingRoot = nil
-	return replaceDirectoryRoot(parentRoot, "market-preinstall", stagingName)
+	return replaceDirectoryRoot(parentRoot, targetName, stagingName)
 }
 
 func buildProfile(bundle BundleV1, selections ProfileSelections) InstallProfileV1 {

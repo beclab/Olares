@@ -168,7 +168,7 @@ The install version differs by account. The owner's first install is pinned to t
 
 An account may uninstall its own copy of a per-user app, which records that account as opted out; nothing reinstalls it afterwards. The decision is bound to the account's User CR uid rather than its name, so deleting an account and creating a new one with the same name gives the new account a fresh install rather than the previous holder's opt-out. `installOrder` is still a barrier, but a per-user app releases the apps ordered behind it once its bundled snapshot is frozen and the owner has answered — installed or opted out — which Market reports as `bootstrap_settled`. Accounts that join later continue installing behind that release, and Market's preinstall status reports both the per-app rollout counts and, to an administrator only, the per-account detail.
 
-After `PreloadImagesModule` imports and pins every image from `installation.manifest`, the prepare phase validates the V1 bundle and atomically publishes the Market JSON files, including `bundle.json`, the generated `install-profile.json`, and artifact manifests, plus selected files under `charts/` to `<baseDir>/userdata/Cache/market-preinstall`. Market mounts that lightweight directory read-only at `/opt/app/preinstall`. A large model payload, for example approximately 20 GB, remains under `<installerDir>/preinstall/market/artifacts`; it is not copied into the Market mount.
+After `PreloadImagesModule` imports and pins every image from `installation.manifest`, the prepare phase validates the V1 bundle and atomically publishes the Market JSON files, including `bundle.json`, the generated `install-profile.json`, and artifact manifests, plus selected files under `charts/` to `/olares/userdata/Cache/market-preinstall`. Market mounts that lightweight directory read-only at `/opt/app/preinstall`. A large model payload, for example approximately 20 GB, remains under `<installerDir>/preinstall/market/artifacts`; it is not copied into the Market mount.
 
 Each bundle app may declare one optional artifact. The implemented artifact kind is `hf-cache`, with `source`, `repo`, a fixed 40-hex `revision`, `manifest`, `manifestSha256`, and `totalSize`. The manifest lists every entry as `directory`, `file`, or `symlink`; files carry `size` and SHA-256, while symlinks carry a safe relative `target`.
 
@@ -195,7 +195,7 @@ Prepare copies the manifest's original bytes and generates the profile. The
 Market mount contains no `artifacts/model/...` Source payload:
 
 ```text
-<baseDir>/userdata/Cache/market-preinstall/
+/olares/userdata/Cache/market-preinstall/
   bundle.json
   install-profile.json
   charts/
@@ -209,7 +209,7 @@ Market mount contains no `artifacts/model/...` Source payload:
 The artifact payload is read from installer media during the install phase. Its
 small manifest is available in the Market mount for contract validation.
 
-On WSL, `<baseDir>` is the existing WSL package-directory mapping used by the rest of the prepare phase. On Linux and WSL, all staged Market directories use mode `0555`, every file remains `0444`, and every child directory remains `0555`. Market's `readOnly: true` mount is the runtime write boundary; its existing `/opt/app/data` volume remains writable. If the hostPath is empty, the Market importer fails open and normal Market startup continues. This whole materialization step is Linux/WSL only; macOS/minikube installs skip it entirely and never create this directory (see "Materialize the Market preinstall bundle" above).
+The publish root is the Olares root directory (`storage.OlaresRootDir`, `/olares`), which is also what the market chart renders as `.Values.rootPath` for its hostPath mount; it is not the installer base directory. On Linux and WSL, all staged Market directories use mode `0555`, every file remains `0444`, and every child directory remains `0555`. Market's `readOnly: true` mount is the runtime write boundary; its existing `/opt/app/data` volume remains writable. If the hostPath is empty, the Market importer fails open and normal Market startup continues. This whole materialization step is Linux/WSL only; macOS/minikube installs skip it entirely and never create this directory (see "Materialize the Market preinstall bundle" above).
 
 Each bundle app may declare `defaultEnvs`. For an air-gapped model app, these
 defaults include `HF_HUB_OFFLINE=1` and llm-init source syntax such as

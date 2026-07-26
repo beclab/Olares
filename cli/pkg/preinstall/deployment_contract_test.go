@@ -1,6 +1,7 @@
 package preinstall
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,9 +28,15 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 			t.Errorf("appstore-backend container missing contract:\n%s", required)
 		}
 	}
+	// The mount is derived from RuntimeRelativeDir so that moving the publish
+	// target in the CLI cannot silently diverge from what the pod mounts.
+	preinstallVolume := fmt.Sprintf(
+		"- name: market-preinstall\n        hostPath:\n          path: '{{ .Values.rootPath }}/%s'\n          type: DirectoryOrCreate",
+		RuntimeRelativeDir,
+	)
 	for _, required := range []string{
 		"- name: opt-data\n        hostPath:\n          path: '{{ .Values.rootPath }}/userdata/Cache/chartrepo'\n          type: DirectoryOrCreate",
-		"- name: market-preinstall\n        hostPath:\n          path: '{{ .Values.rootPath }}/userdata/Cache/market-preinstall'\n          type: DirectoryOrCreate",
+		preinstallVolume,
 	} {
 		if !strings.Contains(volumes, required) {
 			t.Errorf("market deployment volumes missing contract:\n%s", required)

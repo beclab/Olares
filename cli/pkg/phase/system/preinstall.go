@@ -8,6 +8,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/preinstall"
+	"github.com/beclab/Olares/cli/pkg/storage"
 )
 
 func marketPreinstallModules(
@@ -24,7 +25,7 @@ func marketPreinstallModules(
 		},
 		&preinstall.MaterializeModule{
 			InstallerDir:      installerDir,
-			BaseDir:           baseDir,
+			RootDir:           storage.OlaresRootDir,
 			ProfileSelections: selections,
 		},
 	}

@@ -2,6 +2,7 @@ package preinstall
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -13,7 +14,7 @@ func TestMaterializeModuleUsesProvidedPathsAndSelections(t *testing.T) {
 	selections := ProfileSelections{HardwareProfile: "fixture"}
 	module := &MaterializeModule{
 		InstallerDir:      "/installer",
-		BaseDir:           "/base",
+		RootDir:           "/olares",
 		ProfileSelections: selections,
 	}
 
@@ -34,9 +35,22 @@ func TestMaterializeModuleUsesProvidedPathsAndSelections(t *testing.T) {
 	if !ok {
 		t.Fatalf("action type = %T", localTask.Action)
 	}
-	if action.InstallerDir != "/installer" || action.BaseDir != "/base" ||
+	if action.InstallerDir != "/installer" || action.RootDir != "/olares" ||
 		action.ProfileSelections.HardwareProfile != "fixture" {
 		t.Fatalf("action = %#v", action)
+	}
+}
+
+func TestMaterializeRuntimeDirIsRelativeToOlaresRoot(t *testing.T) {
+	// The market chart mounts {{ .Values.rootPath }}/RuntimeRelativeDir, and
+	// rootPath is rendered from storage.OlaresRootDir. Publishing anywhere else
+	// (notably under the installer base directory) makes the pod mount an empty
+	// directory and silently disables offline preinstall.
+	if !strings.HasPrefix(storage.OlaresRootDir, "/") {
+		t.Fatalf("olares root = %q, want an absolute host path", storage.OlaresRootDir)
+	}
+	if strings.HasPrefix(RuntimeRelativeDir, "/") {
+		t.Fatalf("runtime dir = %q, want a path relative to the olares root", RuntimeRelativeDir)
 	}
 }
 

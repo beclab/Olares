@@ -7,7 +7,11 @@ const (
 	OfficialSourceID         = "market.olares"
 	BundleFileName           = "bundle.json"
 	ProfileFileName          = "install-profile.json"
-	StaticRelativeDir        = "preinstall/market"
+	StaticRelativeDir = "preinstall/market"
+	// RuntimeRelativeDir is relative to the Olares root directory
+	// (storage.OlaresRootDir), which is what the market chart renders as
+	// .Values.rootPath for its read-only hostPath mount. It is not relative to
+	// the installer base directory.
 	RuntimeRelativeDir       = "userdata/Cache/market-preinstall"
 	MaxBundleJSONBytes       = 8 << 20
 	MaxProfileJSONBytes      = 8 << 20

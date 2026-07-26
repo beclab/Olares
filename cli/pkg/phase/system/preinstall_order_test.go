@@ -10,6 +10,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/preinstall"
+	"github.com/beclab/Olares/cli/pkg/storage"
 )
 
 func TestMacosPhaseBuilderSkipsOfflinePreinstallWiring(t *testing.T) {
@@ -41,7 +42,7 @@ func TestMarketPreinstallModulesFollowImagePreload(t *testing.T) {
 	if !ok {
 		t.Fatalf("second module = %T", modules[1])
 	}
-	if materialize.InstallerDir != "/installer" || materialize.BaseDir != "/base" {
+	if materialize.InstallerDir != "/installer" || materialize.RootDir != storage.OlaresRootDir {
 		t.Fatalf("materialize paths = %#v", materialize)
 	}
 	if materialize.ProfileSelections.HardwareProfile != gpu.IntelType ||
