@@ -7,13 +7,23 @@
 | Verb | Terminal-success buckets | Idempotent shortcut |
 |---|---|---|
 | `install` | `running` | — (no watcher shortcut; requires `OpType=install`) |
-| `upgrade` | `running` (matchOpType=upgrade) | — (handled by pre-flight) |
+| `upgrade` | `running` (matchOpType=upgrade), or `stopped` with a `statusTime` newer than the pre-request baseline — see below | — (handled by pre-flight) |
 | `uninstall` | `uninstalled`, row disappears (or `*Canceled` when an in-flight app was auto-canceled) | App already uninstalled → returns immediately; in-flight apps are canceled first, then uninstalled if still present |
 | `clone` | `running` on the new clone name | — |
 | `stop` | `stopped` | Already stopped → returns immediately |
 | `resume` | `running` | Already running → returns immediately |
 | `restart` | `running` with `statusTime` newer than the pre-request baseline | — (the initial `running` row must not short-circuit the stop-then-resume cycle) |
 | `cancel` | Any "stopped moving" state | — |
+
+### `upgrade` can settle on `stopped`, and `reason` decides the verdict
+
+An upgrade does not always end on `running`. Upgrading an already-`stopped` app re-renders at `replicas=0` and returns to `stopped`, and a **cancelled** upgrade lands there too — same state, opposite verdicts. The watcher separates them the way `restart` does, plus one extra field:
+
+1. It captures the row's `statusTime` during the upgrade pre-flight, so the pre-request row cannot short-circuit the watch at tick zero.
+2. A `stopped` row newer than that baseline is terminal.
+3. `reason` picks the verdict: `upgradeCancelByUser` / `upgradeCancelBySystem` (the backend TTL fired) report **failure** — the app is still on its previous version; anything else is a normal upgrade-from-stopped **success**.
+
+`version` cannot substitute for `reason` here: the state row's version is the upgrade *target*, and it does not roll back when the upgrade is cancelled.
 
 ### Per-op foreground watch windows
 
@@ -62,6 +72,8 @@ A long `installing` / `initializing` is NOT a failure — app-service polls a lo
 | `chart is marked 'suspend' or 'remove' in source 'X' ...` | Pre-flight gate 4 (`app_simple_info.app_labels` contains `suspend` or `remove`) | Upstream withdrew the app; the SPA hides its Upgrade button too. Contact the app maintainer |
 | `app 'X' is not cloneable` | `clone` against an app that is neither multi-instance nor a template | Check `market get X -o json` for `allowMultipleInstall` / `templateOnly` |
 | `--title is required` | `clone` without `--title` | Add `--title "..."` |
+| `upgrade --watch` reports failed with STATE `stopped` | The upgrade was cancelled (`reason=upgradeCancelByUser`, or `upgradeCancelBySystem` when the backend TTL fired) | Not a broken app — it is still installed on its **previous** version. Re-run `market upgrade` when ready |
+| `market cancel` on an `upgrading` / `resuming` app is rejected with `requires Olares >= 1.12.7` | Cancel support for these two states landed in 1.12.7 | Upgrade the backend; if the version reads unknown, run `olares-cli profile list --refresh-version` |
 | Watcher hangs near `*Failed` | Backend op failed | `market status <app>` to inspect; `market cancel <app>` if applicable |
 | `--cascade auto-enabled ...` (stderr) | 1.12.5 C/S v2 single-user cluster | Informational; override with `--cascade=false` if needed |
 | `--cascade force-enabled ... (CS/shared apps always cascade)` (stderr) | 1.12.6 CS/shared app | Informational; `--cascade=false` cannot disable cascade on 1.12.6 |

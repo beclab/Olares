@@ -49,6 +49,8 @@ app-service rejects any operation not allowed in the current state (`OperationAl
 
 Key consequences: an **in-flight** app accepts only `cancel` (never a direct `uninstall` — the CLI auto-cancels first); `install` against an already-existing settled app is rejected (use `upgrade`).
 
+> **This table is app-service's gate, not the whole story for `cancel`.** Requests reach app-service through Market, which keeps its own whitelist of states a cancel may operate on; both have to allow it. Market's whitelist grew `resuming` and `upgrading` in 1.12.7, so on older backends a cancel for those two states is refused by Market with a 404 (`App not found or current state does not allow operation`) even though app-service itself would accept it.
+
 Used by: `market` (verb pre-flight gating), `chart` (install-vs-upgrade verb choice), `doctor` ("why was my operation rejected?").
 
 ## Backend fail TTLs (how long a state can sit before app-service gives up)
@@ -106,5 +108,6 @@ Used by: `market` (don't poll on progress), `doctor` (where real pull progress a
 
 - **A scheduling failure does not become `installFailed`.** When a pod can't be scheduled (stays `Pending`), app-service tears the install down through `Stopping -> stopped`, not `installFailed`. A watcher that only looks for `*Failed` will miss it — a fresh install that ends in `stopped` is a red flag, not a success.
 - **`cancel` is teardown-vs-stop depending on phase.** Canceling `pending` / `downloading` / `installing` **tears the partial install down (namespace deleted)** — functionally equivalent to uninstalled. Canceling `initializing` / `upgrading` / `applyingEnv` / `resuming` only **stops** the app (it lands in `stopped`, still installed). `market uninstall` relies on this split when it auto-orchestrates an in-flight uninstall.
+- **`stopped` alone cannot tell a cancelled upgrade from a finished one** — `status.reason` can. A cancelled upgrade carries `upgradeCancelByUser` (or `upgradeCancelBySystem` when the backend TTL fired) and leaves the app on its **previous** version, while an upgrade of an already-`stopped` app legitimately re-renders at `replicas=0` and returns to a reason-less `stopped`. The row's version is the upgrade *target* in both cases and does not roll back on cancel, so it is not a usable discriminator.
 
 Used by: `market` (uninstall auto-orchestration, cancel outcome), `doctor` (a just-installed app sitting in `stopped` is the scheduling-failure trap).

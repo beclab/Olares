@@ -23,7 +23,7 @@ var inFlightCancelableStates = map[string]bool{
 	"downloading":  true,
 	"installing":   true,
 	"initializing": true,
-	"upgrading":    true,
+	stateUpgrading: true,
 	"applyingEnv":  true,
 	stateResuming:  true,
 }
