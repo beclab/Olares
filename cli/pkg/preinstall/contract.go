@@ -533,7 +533,8 @@ func validateRelativePath(value string) error {
 	if strings.Contains(value, `\`) {
 		return fmt.Errorf("path must use forward slashes")
 	}
-	if value == "." || path.IsAbs(value) || path.Clean(value) != value || strings.HasPrefix(value, "../") {
+	if value == "." || value == ".." || path.IsAbs(value) ||
+		path.Clean(value) != value || strings.HasPrefix(value, "../") {
 		return fmt.Errorf("path must be clean and relative")
 	}
 	return nil

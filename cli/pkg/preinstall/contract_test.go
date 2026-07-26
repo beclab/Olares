@@ -199,6 +199,20 @@ func TestValidateRejectsTooManyApps(t *testing.T) {
 	}
 }
 
+// path.Clean("..") is ".." and does not start with "../", so the parent
+// directory itself used to pass the only traversal gate the bundle contract
+// has. Artifact entry paths are written under the model root by the installer.
+func TestValidateRelativePathRejectsParentTraversal(t *testing.T) {
+	for _, value := range []string{"", ".", "..", "../", "../escape", "/absolute", "a/../b", `a\b`} {
+		if err := validateRelativePath(value); err == nil {
+			t.Errorf("validateRelativePath(%q) = nil, want an error", value)
+		}
+	}
+	if err := validateRelativePath("artifacts/models/owner--repo"); err != nil {
+		t.Fatalf("validateRelativePath() rejected a clean relative path: %v", err)
+	}
+}
+
 func TestValidateRejectsOverlappingCharts(t *testing.T) {
 	bundle := decodeBundle(t, validBundleJSON)
 	second := bundle.Apps[0]
