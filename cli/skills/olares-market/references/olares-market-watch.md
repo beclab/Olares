@@ -27,19 +27,19 @@ An upgrade does not always end on `running`. Upgrading an already-`stopped` app 
 
 ### Per-op foreground watch windows
 
-`--watch` defaults to a 15m timeout, but progressing states have very long backend TTLs (`downloading` = 30 days; `installing` 30m; `initializing`/`upgrading` 1h — see the shared **application state machine**). Don't sit on the default. Use a short foreground window sized to the verb, then switch to polling:
+`--watch` defaults to a 15m timeout, but progressing states have much longer backend TTLs (`downloading` = 24h; `installing` 30m; `initializing` 60m; `upgrading` 24h while pulling images, then 30m — see the shared **application state machine**). Don't sit on the default. Use a short foreground window sized to the verb, then switch to polling:
 
 | Verb / phase | Suggested foreground `--watch-timeout` | After timeout |
 |---|---|---|
 | `stop` / `cancel` / `resume` / `restart` / `uninstall` | `30s` | poll `market status <app> --watch --watch-interval 5s` |
 | `install` deploy phase (post-download) / `upgrade` / `clone` | `1m` | poll `status`, then diagnose if STATE doesn't move |
-| `install` while STATE is `downloading` | judge by pull progress, not a timeout (see below) | keep polling patiently — a 30-day TTL means it won't self-fail |
+| `install` while STATE is `downloading` | judge by pull progress, not a timeout (see below) | keep polling patiently — the 24h TTL means it won't self-fail inside a normal session |
 
 A timed-out short window is **not** a failure — it just means "not terminal yet". Re-judge by the STATE row, never by the PROGRESS number (unreliable).
 
 ### `install` download phase is special
 
-When STATE is `downloading`, the app is pulling images and may legitimately stay there for many minutes (multi-GB images), with a 30-day backend TTL — so it will not self-fail. Poll patiently (`market status <app> --watch --watch-interval 5s`); only once it **leaves** `downloading` (into `installing`/`initializing`) do the 1m deploy-phase window and the "stuck" rules apply. A `downloading` row that never advances AND whose byte-level pull progress is flat is a *stalled* pull, not a slow one — diagnose via [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md) (it shows where real pull progress lives). Judge by STATE, not PROGRESS.
+When STATE is `downloading`, the app is pulling images and may legitimately stay there for many minutes (multi-GB images), with a 24h backend TTL — so it will not self-fail inside a normal session. Poll patiently (`market status <app> --watch --watch-interval 5s`); only once it **leaves** `downloading` (into `installing`/`initializing`) do the 1m deploy-phase window and the "stuck" rules apply. A `downloading` row that never advances AND whose byte-level pull progress is flat is a *stalled* pull, not a slow one — diagnose via [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md) (it shows where real pull progress lives). Judge by STATE, not PROGRESS.
 
 ### Verifying an app is actually healthy
 

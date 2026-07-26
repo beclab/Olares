@@ -109,7 +109,7 @@ The same `State` can mean different things depending on which mutation is in fli
 
 ### Agent watch discipline (don't block on a long watch)
 
-`--watch` defaults to a 15-minute timeout, and progressing states have very long backend TTLs (`downloading` is **30 days** — see the appstate reference). A foreground `--watch` can therefore block far longer than an agent should sit idle. Discipline:
+`--watch` defaults to a 15-minute timeout, and progressing states have much longer backend TTLs (`downloading` is **24h** — see the appstate reference). A foreground `--watch` can therefore block far longer than an agent should sit idle. Discipline:
 
 1. **Use a short foreground window, not the 15m default.** Pass a small `--watch-timeout` sized to the verb (see [references/olares-market-watch.md](references/olares-market-watch.md#per-op-foreground-watch-windows)): ~30s for `stop`/`cancel`/`resume`/`uninstall`, ~1m for the `install` deploy phase / `upgrade` / `clone`.
 2. **Timeout is NOT failure.** A `--watch` that times out only means "not terminal yet". Don't report failure — switch to polling `market status <app> --watch --watch-interval 5s` (or fire-and-forget + periodic `market status <app>`), or hand off to diagnosis.
