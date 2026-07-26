@@ -29,6 +29,12 @@ func classifyForTest(t watchTarget, row statusRow) string {
 	if t.stoppedTerminalSuccess && row.State == appStateStopped && effectiveTime(row) > t.baselineStatusTime {
 		return "success"
 	}
+	if t.upgradeStoppedTerminal && row.State == appStateStopped && effectiveTime(row) > t.baselineStatusTime {
+		if upgradeCanceledReasons[row.Reason] {
+			return "failure"
+		}
+		return "success"
+	}
 	if t.successSet[row.State] && t.passesBaseline(row) {
 		if t.matchesOpType(row) {
 			return "success"
@@ -101,6 +107,108 @@ func TestClassifierUpgradeWaitsForOpTypeFlip(t *testing.T) {
 	failed := statusRow{State: "upgradeFailed", OpType: "upgrade"}
 	if got := classifyForTest(target, failed); got != "failure" {
 		t.Fatalf("upgradeFailed should be failure, got %s", got)
+	}
+}
+
+// upgradeTarget builds a watchUpgrade target with the given baseline
+// statusTime, mirroring runUpgrade: preflight resolves the pre-upgrade row,
+// its statusTime is stamped on the target, then the PUT goes out.
+func upgradeTarget(baseline string) watchTarget {
+	tgt := newWatchTarget(watchUpgrade, "myapp", "market.olares")
+	tgt.baselineStatusTime = parseStatusTime(baseline)
+	return tgt
+}
+
+func TestClassifierUpgradeStoppedTerminal(t *testing.T) {
+	const baseline = "2026-07-01T08:28:00Z"
+	tgt := upgradeTarget(baseline)
+	if !tgt.upgradeStoppedTerminal {
+		t.Fatalf("watchUpgrade must enable upgradeStoppedTerminal")
+	}
+
+	// Upgrading a stopped app: the tick-zero row is the pre-upgrade resting
+	// one, byte-identical to the landed row except for statusTime.
+	preUpgrade := statusRow{State: "stopped", OpType: "stop", Reason: "StopByUser", StatusTime: baseline}
+	if got := classifyForTest(tgt, preUpgrade); got != "progressing" {
+		t.Fatalf("pre-upgrade stopped at baseline must be progressing, got %s", got)
+	}
+	if got := classifyForTest(tgt, statusRow{State: "stopped", OpType: "stop", StatusTime: "2026-07-01T08:27:00Z"}); got != "progressing" {
+		t.Fatalf("stopped older than baseline must be progressing, got %s", got)
+	}
+
+	// Landed upgrade-from-stopped: newer than baseline, no cancel reason.
+	// Never reaches `running`, so this branch is its only terminal.
+	landed := statusRow{State: "stopped", OpType: "upgrade", StatusTime: "2026-07-01T08:31:00Z"}
+	if got := classifyForTest(tgt, landed); got != "success" {
+		t.Fatalf("landed upgrade-from-stopped must be success, got %s", got)
+	}
+
+	// Cancelled upgrade: same state, told apart only by Reason. The op did
+	// not happen, so the exit code must be non-zero.
+	for _, reason := range []string{"upgradeCancelByUser", "upgradeCancelBySystem"} {
+		canceled := statusRow{State: "stopped", OpType: "cancel", Reason: reason, StatusTime: "2026-07-01T08:31:00Z"}
+		if got := classifyForTest(tgt, canceled); got != "failure" {
+			t.Fatalf("upgrade cancelled with reason %s must be failure, got %s", reason, got)
+		}
+	}
+
+	// A cancel reason from some OTHER op must not be mistaken for ours.
+	other := statusRow{State: "stopped", OpType: "cancel", Reason: "resumeCancelByUser", StatusTime: "2026-07-01T08:31:00Z"}
+	if got := classifyForTest(tgt, other); got != "success" {
+		t.Fatalf("non-upgrade cancel reason must not be classified as an upgrade cancel, got %s", got)
+	}
+}
+
+func TestWaitForTerminalUpgradeCanceled(t *testing.T) {
+	// Full cancel walk: the user cancels an upgrade stuck pulling images, so
+	// the row goes upgrading -> upgradingCanceling -> stopping -> stopped
+	// carrying the cancel reason. Before upgradeStoppedTerminal this hung
+	// until --watch-timeout because `stopped` was in neither terminal set.
+	baseline := "2026-07-01T08:28:00Z"
+	seq := []statusRow{
+		{State: "upgrading", OpType: "upgrade", StatusTime: "2026-07-01T08:29:00Z"},
+		{State: "upgradingCanceling", OpType: "cancel", Reason: "upgradeCancelByUser", StatusTime: "2026-07-01T08:30:00Z"},
+		{State: "stopping", OpType: "cancel", Reason: "upgradeCancelByUser", StatusTime: "2026-07-01T08:30:30Z"},
+		{State: "stopped", OpType: "cancel", Reason: "upgradeCancelByUser", StatusTime: "2026-07-01T08:31:00Z"},
+	}
+	srv := newFakeStateServer(t, "myapp", "market.olares", seq)
+	mc := newTestMarketClient(t, srv.srv.URL)
+	opts := quietOpts(5*time.Second, 5*time.Millisecond)
+
+	tgt := upgradeTarget(baseline)
+	_, err := waitForTerminal(context.Background(), mc, opts, tgt)
+	if err == nil {
+		t.Fatalf("expected a cancelled upgrade to be reported as failure, got nil")
+	}
+	var fail *watchFailureError
+	if !errors.As(err, &fail) {
+		t.Fatalf("expected watchFailureError, got %T: %v", err, err)
+	}
+	if fail.row.State != appStateStopped || fail.row.Reason != "upgradeCancelByUser" {
+		t.Fatalf("expected stopped/upgradeCancelByUser in error row, got %s/%s", fail.row.State, fail.row.Reason)
+	}
+}
+
+func TestWaitForTerminalUpgradeFromStopped(t *testing.T) {
+	// An upgrade started from a stopped app is redeployed stopped, so the
+	// watcher must settle on the landed `stopped` row rather than wait for a
+	// `running` that never comes. The tick-zero row is the pre-upgrade one.
+	baseline := "2026-07-01T08:28:00Z"
+	seq := []statusRow{
+		{State: "stopped", OpType: "stop", Reason: "StopByUser", StatusTime: baseline},
+		{State: "upgrading", OpType: "upgrade", StatusTime: "2026-07-01T08:29:00Z"},
+		{State: "stopped", OpType: "upgrade", StatusTime: "2026-07-01T08:31:00Z"},
+	}
+	srv := newFakeStateServer(t, "myapp", "market.olares", seq)
+	mc := newTestMarketClient(t, srv.srv.URL)
+	opts := quietOpts(5*time.Second, 5*time.Millisecond)
+
+	row, err := waitForTerminal(context.Background(), mc, opts, upgradeTarget(baseline))
+	if err != nil {
+		t.Fatalf("expected upgrade-from-stopped success, got error: %v", err)
+	}
+	if row.State != appStateStopped || row.StatusTime != "2026-07-01T08:31:00Z" {
+		t.Fatalf("expected landed stopped row at 08:31, got state=%s statusTime=%s", row.State, row.StatusTime)
 	}
 }
 
@@ -725,6 +833,7 @@ func (f *fakeStateServer) envelope(row statusRow) []byte {
 				"opType":     row.OpType,
 				"progress":   row.Progress,
 				"message":    row.Message,
+				"reason":     row.Reason,
 				"statusTime": row.StatusTime,
 			},
 		})

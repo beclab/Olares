@@ -104,12 +104,12 @@ The same `State` can mean different things depending on which mutation is in fli
 - `--watch-timeout D` caps total wall-clock time.
 - One-shot (no `--watch`) returns as soon as the backend ACKs the mutation request — the row may still be `progressing` for minutes.
 - With `--watch`, the CLI blocks until the row reaches a terminal bucket (success OR failure) matching the OpType safety rules above.
-- **Idempotent no-ops — `stop` / `resume` only**: `stop` on an already-`stopped` row and `resume` on an already-`running` row return immediately with success (the watcher recognizes the backend's no-op `opType=""` instead of hanging). `install` / `upgrade` / `clone` have **no** such shortcut — they require the matching `OpType` before declaring success. `restart` also has no shortcut: it requires a `running` row with a `statusTime` newer than the pre-request baseline.
+- **Idempotent no-ops — `stop` / `resume` only**: `stop` on an already-`stopped` row and `resume` on an already-`running` row return immediately with success (the watcher recognizes the backend's no-op `opType=""` instead of hanging). `install` / `upgrade` / `clone` have **no** such shortcut — they require the matching `OpType` before declaring success. `restart` also has no shortcut: it requires a `running` row with a `statusTime` newer than the pre-request baseline. `upgrade` uses that same baseline for its second landing state — a `stopped` row newer than the baseline, whose verdict then turns on `reason` (see [references/olares-market-watch.md](references/olares-market-watch.md#upgrade-can-settle-on-stopped-and-reason-decides-the-verdict)).
 - `--watch-timeout` / `--watch-interval` are **no-ops without `--watch`** (silently ignored, not rejected). There is no `--watch-iterations` flag on market verbs.
 
 ### Agent watch discipline (don't block on a long watch)
 
-`--watch` defaults to a 15-minute timeout, and progressing states have very long backend TTLs (`downloading` is **30 days** — see the appstate reference). A foreground `--watch` can therefore block far longer than an agent should sit idle. Discipline:
+`--watch` defaults to a 15-minute timeout, and progressing states have much longer backend TTLs (`downloading` is **24h** — see the appstate reference). A foreground `--watch` can therefore block far longer than an agent should sit idle. Discipline:
 
 1. **Use a short foreground window, not the 15m default.** Pass a small `--watch-timeout` sized to the verb (see [references/olares-market-watch.md](references/olares-market-watch.md#per-op-foreground-watch-windows)): ~30s for `stop`/`cancel`/`resume`/`uninstall`, ~1m for the `install` deploy phase / `upgrade` / `clone`.
 2. **Timeout is NOT failure.** A `--watch` that times out only means "not terminal yet". Don't report failure — switch to polling `market status <app> --watch --watch-interval 5s` (or fire-and-forget + periodic `market status <app>`), or hand off to diagnosis.

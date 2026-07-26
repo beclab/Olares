@@ -7,7 +7,7 @@
 | Verb | Terminal-success buckets | Idempotent shortcut |
 |---|---|---|
 | `install` | `running` | — (no watcher shortcut; requires `OpType=install`) |
-| `upgrade` | `running` (matchOpType=upgrade) | — (handled by pre-flight) |
+| `upgrade` | `running` (matchOpType=upgrade), or `stopped` with a `statusTime` newer than the pre-request baseline — see below | — (handled by pre-flight) |
 | `uninstall` | `uninstalled`, row disappears (or `*Canceled` when an in-flight app was auto-canceled) | App already uninstalled → returns immediately; in-flight apps are canceled first, then uninstalled if still present |
 | `clone` | `running` on the new clone name | — |
 | `stop` | `stopped` | Already stopped → returns immediately |
@@ -15,21 +15,31 @@
 | `restart` | `running` with `statusTime` newer than the pre-request baseline | — (the initial `running` row must not short-circuit the stop-then-resume cycle) |
 | `cancel` | Any "stopped moving" state | — |
 
+### `upgrade` can settle on `stopped`, and `reason` decides the verdict
+
+An upgrade does not always end on `running`. Upgrading an already-`stopped` app re-renders at `replicas=0` and returns to `stopped`, and a **cancelled** upgrade lands there too — same state, opposite verdicts. The watcher separates them the way `restart` does, plus one extra field:
+
+1. It captures the row's `statusTime` during the upgrade pre-flight, so the pre-request row cannot short-circuit the watch at tick zero.
+2. A `stopped` row newer than that baseline is terminal.
+3. `reason` picks the verdict: `upgradeCancelByUser` / `upgradeCancelBySystem` (the backend TTL fired) report **failure** — the app is still on its previous version; anything else is a normal upgrade-from-stopped **success**.
+
+`version` cannot substitute for `reason` here: the state row's version is the upgrade *target*, and it does not roll back when the upgrade is cancelled.
+
 ### Per-op foreground watch windows
 
-`--watch` defaults to a 15m timeout, but progressing states have very long backend TTLs (`downloading` = 30 days; `installing` 30m; `initializing`/`upgrading` 1h — see the shared **application state machine**). Don't sit on the default. Use a short foreground window sized to the verb, then switch to polling:
+`--watch` defaults to a 15m timeout, but progressing states have much longer backend TTLs (`downloading` = 24h; `installing` 30m; `initializing` 60m; `upgrading` 24h while pulling images, then 30m — see the shared **application state machine**). Don't sit on the default. Use a short foreground window sized to the verb, then switch to polling:
 
 | Verb / phase | Suggested foreground `--watch-timeout` | After timeout |
 |---|---|---|
 | `stop` / `cancel` / `resume` / `restart` / `uninstall` | `30s` | poll `market status <app> --watch --watch-interval 5s` |
 | `install` deploy phase (post-download) / `upgrade` / `clone` | `1m` | poll `status`, then diagnose if STATE doesn't move |
-| `install` while STATE is `downloading` | judge by pull progress, not a timeout (see below) | keep polling patiently — a 30-day TTL means it won't self-fail |
+| `install` while STATE is `downloading` | judge by pull progress, not a timeout (see below) | keep polling patiently — the 24h TTL means it won't self-fail inside a normal session |
 
 A timed-out short window is **not** a failure — it just means "not terminal yet". Re-judge by the STATE row, never by the PROGRESS number (unreliable).
 
 ### `install` download phase is special
 
-When STATE is `downloading`, the app is pulling images and may legitimately stay there for many minutes (multi-GB images), with a 30-day backend TTL — so it will not self-fail. Poll patiently (`market status <app> --watch --watch-interval 5s`); only once it **leaves** `downloading` (into `installing`/`initializing`) do the 1m deploy-phase window and the "stuck" rules apply. A `downloading` row that never advances AND whose byte-level pull progress is flat is a *stalled* pull, not a slow one — diagnose via [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md) (it shows where real pull progress lives). Judge by STATE, not PROGRESS.
+When STATE is `downloading`, the app is pulling images and may legitimately stay there for many minutes (multi-GB images), with a 24h backend TTL — so it will not self-fail inside a normal session. Poll patiently (`market status <app> --watch --watch-interval 5s`); only once it **leaves** `downloading` (into `installing`/`initializing`) do the 1m deploy-phase window and the "stuck" rules apply. A `downloading` row that never advances AND whose byte-level pull progress is flat is a *stalled* pull, not a slow one — diagnose via [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md) (it shows where real pull progress lives). Judge by STATE, not PROGRESS.
 
 ### Verifying an app is actually healthy
 
@@ -62,6 +72,8 @@ A long `installing` / `initializing` is NOT a failure — app-service polls a lo
 | `chart is marked 'suspend' or 'remove' in source 'X' ...` | Pre-flight gate 4 (`app_simple_info.app_labels` contains `suspend` or `remove`) | Upstream withdrew the app; the SPA hides its Upgrade button too. Contact the app maintainer |
 | `app 'X' is not cloneable` | `clone` against an app that is neither multi-instance nor a template | Check `market get X -o json` for `allowMultipleInstall` / `templateOnly` |
 | `--title is required` | `clone` without `--title` | Add `--title "..."` |
+| `upgrade --watch` reports failed with STATE `stopped` | The upgrade was cancelled (`reason=upgradeCancelByUser`, or `upgradeCancelBySystem` when the backend TTL fired) | Not a broken app — it is still installed on its **previous** version. Re-run `market upgrade` when ready |
+| `market cancel` on an `upgrading` / `resuming` app is rejected with `requires Olares >= 1.12.7` | Cancel support for these two states landed in 1.12.7 | Upgrade the backend; if the version reads unknown, run `olares-cli profile list --refresh-version` |
 | Watcher hangs near `*Failed` | Backend op failed | `market status <app>` to inspect; `market cancel <app>` if applicable |
 | `--cascade auto-enabled ...` (stderr) | 1.12.5 C/S v2 single-user cluster | Informational; override with `--cascade=false` if needed |
 | `--cascade force-enabled ... (CS/shared apps always cascade)` (stderr) | 1.12.6 CS/shared app | Informational; `--cascade=false` cannot disable cascade on 1.12.6 |
