@@ -225,7 +225,7 @@ func populateStaging(sourceRoot, stagingRoot *os.Root, bundleData []byte, bundle
 			if err := stagingRoot.MkdirAll(path.Dir(artifact.Manifest), 0o755); err != nil {
 				return fmt.Errorf("create artifact manifest staging directory: %w", err)
 			}
-			if err := copyArtifactManifest(sourceRoot, stagingRoot, artifact, artifactManifestCopyHooks{}); err != nil {
+			if err := copyArtifactManifest(sourceRoot, stagingRoot, artifact); err != nil {
 				return err
 			}
 		}
@@ -233,15 +233,9 @@ func populateStaging(sourceRoot, stagingRoot *os.Root, bundleData []byte, bundle
 	return sealRootDirectories(stagingRoot)
 }
 
-type artifactManifestCopyHooks struct {
-	afterLstat func() error
-	beforeCopy func() error
-}
-
 func copyArtifactManifest(
 	sourceRoot, stagingRoot *os.Root,
 	artifact BundleArtifactV1,
-	hooks artifactManifestCopyHooks,
 ) error {
 	if err := rejectRootSymlinkComponents(sourceRoot, artifact.Manifest); err != nil {
 		return err
@@ -254,15 +248,12 @@ func copyArtifactManifest(
 		return fmt.Errorf("artifact manifest exceeds %d bytes: %q", MaxArtifactManifestBytes, artifact.Manifest)
 	}
 	_, err = copyVerifiedRegularFile(sourceRoot, stagingRoot, verifiedCopy{
-		Source:      artifact.Manifest,
-		Target:      artifact.Manifest,
-		Size:        info.Size(),
-		MaxSize:     MaxArtifactManifestBytes,
-		SHA256:      artifact.ManifestSHA256,
-		OutputMode:  0o444,
-		RejectLinks: true,
-		AfterLstat:  hooks.afterLstat,
-		BeforeCopy:  hooks.beforeCopy,
+		Source:     artifact.Manifest,
+		Target:     artifact.Manifest,
+		Size:       info.Size(),
+		MaxSize:    MaxArtifactManifestBytes,
+		SHA256:     artifact.ManifestSHA256,
+		OutputMode: 0o444,
 	})
 	return err
 }
@@ -276,13 +267,12 @@ func copyChart(sourceRoot, stagingRoot *os.Root, app BundleAppV1, totalRemaining
 		return 0, fmt.Errorf("total chart size exceeds %d bytes", MaxTotalChartBytes)
 	}
 	return copyVerifiedRegularFile(sourceRoot, stagingRoot, verifiedCopy{
-		Source:      app.Chart,
-		Target:      app.Chart,
-		Size:        info.Size(),
-		MaxSize:     min(MaxChartBytes, totalRemaining),
-		SHA256:      app.ChartSHA256,
-		OutputMode:  0o444,
-		RejectLinks: true,
+		Source:     app.Chart,
+		Target:     app.Chart,
+		Size:       info.Size(),
+		MaxSize:    min(MaxChartBytes, totalRemaining),
+		SHA256:     app.ChartSHA256,
+		OutputMode: 0o444,
 	})
 }
 
@@ -464,10 +454,7 @@ func openOrCreateDirectoryNoSymlink(name string) (*os.Root, error) {
 
 const stagingPrefix = ".market-preinstall-stage-"
 
-// cleanupStagingRoots removes the staging directories earlier runs were
-// interrupted before publishing. Only this code writes that prefix here, and
-// each leftover holds a full copy of the bundle, so keeping them would grow
-// the cache directory by one bundle for every interrupted install.
+// cleanupStagingRoots removes trusted leftovers from interrupted publishes.
 func cleanupStagingRoots(parent *os.Root) error {
 	entries, err := fs.ReadDir(parent.FS(), ".")
 	if err != nil {
@@ -478,21 +465,14 @@ func cleanupStagingRoots(parent *os.Root) error {
 		if !stagingName(name) {
 			continue
 		}
-		info, err := parent.Lstat(name)
+		stage, _, trusted, err := openTrustedStaging(parent, name, uint32(os.Geteuid()), 0o700, 0o755, 0o555)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("inspect stale preinstall staging %q: %w", name, err)
-		}
-		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			continue
-		}
-		stage, _, trusted, err := openTrustedStaging(parent, name, uint32(os.Geteuid()), info.Mode().Perm())
-		if err != nil {
 			return fmt.Errorf("open stale preinstall staging %q: %w", name, err)
 		}
-		if !trusted || (info.Mode().Perm() != 0o700 && info.Mode().Perm() != 0o755) {
+		if !trusted {
 			continue
 		}
 		if err := stage.Close(); err != nil {

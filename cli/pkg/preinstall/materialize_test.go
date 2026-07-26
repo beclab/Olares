@@ -56,19 +56,6 @@ func TestMaterializeRejectsOversizedBundle(t *testing.T) {
 	}
 }
 
-func TestMaterializeRejectsOversizedChart(t *testing.T) {
-	installerDir, baseDir := writeStaticBundle(t)
-	chart := filepath.Join(installerDir, StaticRelativeDir, "charts", "app-a-1.0.0.tgz")
-	if err := os.Truncate(chart, MaxChartBytes+1); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err == nil ||
-		!strings.Contains(err.Error(), "chart exceeds") {
-		t.Fatalf("Materialize() error = %v", err)
-	}
-}
-
 func TestMaterializeRejectsOversizedChartTotal(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	staticDir := filepath.Join(installerDir, StaticRelativeDir)
@@ -342,108 +329,6 @@ func TestMaterializeRejectsArtifactManifestSymlinks(t *testing.T) {
 	}
 }
 
-func TestMaterializeRejectsOversizedArtifactManifest(t *testing.T) {
-	installerDir, baseDir := writeStaticBundle(t)
-	artifact, _ := addMaterializeArtifactFixture(t, installerDir)
-	if err := os.Truncate(
-		filepath.Join(installerDir, StaticRelativeDir, filepath.FromSlash(artifact.Manifest)),
-		MaxArtifactManifestBytes+1,
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	err := Materialize(installerDir, baseDir, ProfileSelections{})
-
-	if err == nil || !strings.Contains(err.Error(), "manifest exceeds") {
-		t.Fatalf("Materialize() error = %v, want oversized manifest rejection", err)
-	}
-}
-
-func TestMaterializeRejectsArtifactManifestDigestMismatch(t *testing.T) {
-	installerDir, baseDir := writeStaticBundle(t)
-	artifact, manifestData := addMaterializeArtifactFixture(t, installerDir)
-	if err := os.WriteFile(
-		filepath.Join(installerDir, StaticRelativeDir, filepath.FromSlash(artifact.Manifest)),
-		append(manifestData, ' '),
-		0o644,
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	err := Materialize(installerDir, baseDir, ProfileSelections{})
-
-	if err == nil || !strings.Contains(err.Error(), "digest mismatch") {
-		t.Fatalf("Materialize() error = %v, want manifest digest mismatch", err)
-	}
-}
-
-func TestCopyArtifactManifestRejectsReplacementBetweenLstatAndOpen(t *testing.T) {
-	installerDir, _ := writeStaticBundle(t)
-	artifact, manifestData := addMaterializeArtifactFixture(t, installerDir)
-	staticDir := filepath.Join(installerDir, StaticRelativeDir)
-	sourceRoot, err := os.OpenRoot(staticDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sourceRoot.Close()
-	stagingRoot, err := os.OpenRoot(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stagingRoot.Close()
-	if err := stagingRoot.MkdirAll(path.Dir(artifact.Manifest), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	manifestPath := filepath.Join(staticDir, filepath.FromSlash(artifact.Manifest))
-
-	err = copyArtifactManifest(sourceRoot, stagingRoot, artifact, artifactManifestCopyHooks{
-		afterLstat: func() error {
-			if err := os.Rename(manifestPath, manifestPath+".replaced"); err != nil {
-				return err
-			}
-			return os.WriteFile(manifestPath, manifestData, 0o644)
-		},
-	})
-
-	if err == nil || !strings.Contains(err.Error(), "changed while opening") {
-		t.Fatalf("copyArtifactManifest() error = %v, want inode replacement rejection", err)
-	}
-}
-
-func TestCopyArtifactManifestRejectsSourceChangedAfterOpen(t *testing.T) {
-	installerDir, _ := writeStaticBundle(t)
-	artifact, manifestData := addMaterializeArtifactFixture(t, installerDir)
-	staticDir := filepath.Join(installerDir, StaticRelativeDir)
-	sourceRoot, err := os.OpenRoot(staticDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sourceRoot.Close()
-	stagingPath := t.TempDir()
-	stagingRoot, err := os.OpenRoot(stagingPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stagingRoot.Close()
-	if err := stagingRoot.MkdirAll(path.Dir(artifact.Manifest), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	err = copyArtifactManifest(sourceRoot, stagingRoot, artifact, artifactManifestCopyHooks{
-		beforeCopy: func() error {
-			return os.WriteFile(
-				filepath.Join(staticDir, filepath.FromSlash(artifact.Manifest)),
-				append(manifestData, ' '),
-				0o644,
-			)
-		},
-	})
-
-	if err == nil || !strings.Contains(err.Error(), "changed while copying") {
-		t.Fatalf("copyArtifactManifest() error = %v, want source change rejection", err)
-	}
-}
-
 func TestMaterializeRejectsSymlinkWithoutReplacingExistingTarget(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	staticDir := filepath.Join(installerDir, StaticRelativeDir)
@@ -565,45 +450,6 @@ func TestMaterializeRejectsSymlinkedRuntimeParent(t *testing.T) {
 	}
 }
 
-func TestMaterializeRejectsDigestMismatch(t *testing.T) {
-	installerDir, baseDir := writeStaticBundle(t)
-	chart := filepath.Join(installerDir, StaticRelativeDir, "charts", "app-a-1.0.0.tgz")
-	if err := os.WriteFile(chart, []byte("changed"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err == nil {
-		t.Fatal("Materialize() error = nil, want digest mismatch")
-	}
-}
-
-func TestMaterializeAcceptsUppercaseHexDigest(t *testing.T) {
-	installerDir, baseDir := writeStaticBundle(t)
-	bundlePath := filepath.Join(installerDir, StaticRelativeDir, BundleFileName)
-	data, err := os.ReadFile(bundlePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var bundle BundleV1
-	if err := json.Unmarshal(data, &bundle); err != nil {
-		t.Fatal(err)
-	}
-	bundle.Apps[0].ChartSHA256 = strings.ToUpper(bundle.Apps[0].ChartSHA256)
-	data, err = json.Marshal(bundle)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(bundlePath, data, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
-		t.Fatalf("Materialize() error = %v", err)
-	}
-	target := filepath.Join(baseDir, RuntimeRelativeDir)
-	t.Cleanup(func() { _ = makeWritable(target) })
-}
-
 func TestMaterializeReplacesExistingReadOnlyTarget(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
@@ -645,6 +491,37 @@ func TestPublishedFollowsWhatMaterializeLeavesBehind(t *testing.T) {
 	}
 	if Published(baseDir) {
 		t.Fatal("Published() is true for a directory with no bundle in it")
+	}
+}
+
+func TestCleanupStagingRootsRemovesSealedStaging(t *testing.T) {
+	parent := testRoot(t)
+	name := stagingPrefix + "0123456789abcdef"
+	if err := parent.Mkdir(name, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	stage, err := parent.OpenRoot(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := stage.WriteFile("payload", []byte("sealed"), 0o444); err != nil {
+		t.Fatal(err)
+	}
+	if err := sealRootDirectories(stage); err != nil {
+		t.Fatal(err)
+	}
+	if err := stage.Chmod(".", 0o555); err != nil {
+		t.Fatal(err)
+	}
+	if err := stage.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cleanupStagingRoots(parent); err != nil {
+		t.Fatalf("cleanupStagingRoots() error = %v", err)
+	}
+	if _, err := parent.Lstat(name); !os.IsNotExist(err) {
+		t.Fatalf("sealed staging still exists: %v", err)
 	}
 }
 

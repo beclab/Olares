@@ -1,5 +1,5 @@
 # Offline preinstall convergence
 
-- Task 5: Olares production `+358/-362` (net `-4`); tests/fixtures `+98/-166` (net `-68`); code total net `-72`.
+- Task 5: Olares production `+369/-375` (net `-6`); tests/fixtures `+241/-278` (net `-37`); repository total `+640/-653` (net `-13`).
 - Shared secure filesystem primitives now serve bundle and HF materialization while their publish policies remain separate.
-- Local contract-constants mirroring was removed; golden bundle and explicit contract tests remain.
+- Minimal cross-repository contract constants remain because Market and Olares CI cannot share one generated artifact.

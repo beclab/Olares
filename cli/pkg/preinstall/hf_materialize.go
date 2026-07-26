@@ -350,6 +350,9 @@ func hfInterruptedPublish(root *os.Root, target, repo string) (bool, error) {
 }
 
 func materializeHFEntry(sourceRoot, stagingRoot *os.Root, entry ArtifactManifestEntryV1) error {
+	if err := rejectHFReservedTarget(entry.Path); err != nil {
+		return err
+	}
 	if parent := path.Dir(entry.Path); parent != "." {
 		if err := rejectRootSymlinkComponents(sourceRoot, parent); err != nil {
 			return err
@@ -407,15 +410,21 @@ func copyHFFile(sourceRoot, stagingRoot *os.Root, entry ArtifactManifestEntryV1,
 		return fmt.Errorf("artifact file %q size mismatch: got %d, want %d", entry.Path, lstatInfo.Size(), entry.Size)
 	}
 	_, err := copyVerifiedRegularFile(sourceRoot, stagingRoot, verifiedCopy{
-		Source:      entry.Path,
-		Target:      entry.Path,
-		Size:        entry.Size,
-		MaxSize:     entry.Size,
-		SHA256:      entry.SHA256,
-		OutputMode:  0o644,
-		RejectLinks: true,
+		Source:     entry.Path,
+		Target:     entry.Path,
+		Size:       entry.Size,
+		MaxSize:    entry.Size,
+		SHA256:     entry.SHA256,
+		OutputMode: 0o644,
 	})
 	return err
+}
+
+func rejectHFReservedTarget(name string) error {
+	if name == hfCacheMarkerFileName || name == hfStageMarkerFileName {
+		return fmt.Errorf("artifact file %q uses a reserved Hugging Face marker name", name)
+	}
+	return nil
 }
 
 func writeHFFile(root *os.Root, name string, data []byte) error {

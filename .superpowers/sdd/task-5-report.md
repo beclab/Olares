@@ -1,42 +1,25 @@
 # Task 5 Report
 
 ## Status
-
 DONE_WITH_CONCERNS
 
-Commit: `refactor(preinstall): reuse secure materialization primitives`
+Commits: `refactor(preinstall): reuse secure materialization primitives`; `fix(preinstall): tighten shared filesystem policies`.
 
-## Result
-
-- Bundle publish and HF materialization now share secure static-bundle open, verified regular-file copy, trusted staging creation/open, sealed marker write/read, and single-entry rename validation.
-- Bundle retains replace/backup/rollback. HF retains atomic no-replace publish, stage/completion markers, ownership transfer, and interrupted-publish recovery.
-- Removed the local `contract-constants.json` mirror and its decoder test. Golden runtime bundle, deployment contract, and typed contract tests remain the drift boundary.
-
-## Security invariants
-
-- Root-relative traversal and symlink components fail closed; regular-file copies also reject hardlinks and special files.
-- Copy validates inode identity, type, size limit, exact size, metadata stability, SHA-256, exclusive destination creation, final mode, sync, and close.
-- HF marker names are reserved from payload copy. Marker writes are exclusive, synced, and removed on incomplete completion-marker persistence.
-- Staging names use cryptographic tokens. Cleanup opens only same-inode directories with expected mode and trusted euid ownership; untrusted HF staging remains untouched.
-- Bundle replace rollback and directory fsync windows are unchanged. HF no-replace, marker ordering, parent/tree fsync, and stale/interrupted recovery are unchanged.
+## Result and invariants
+- Bundle and HF share static-bundle open, verified regular-file copy, trusted staging, marker I/O, and entry validation while retaining their separate publish protocols.
+- Copies reject traversal, symlink, hardlink, special files, size/digest changes, and non-exclusive output; mode and fsync guarantees remain.
+- Staging trust requires a known matching euid, accepted mode, and stable inode. Bundle cleanup accepts active `0700`, legacy `0755`, and sealed `0555` roots; every opened root is closed before removal or return.
+- HF alone rejects its reserved stage/completion marker paths through copy policy. The generic copy primitive and bundle path do not know HF filenames.
+- Bundle rollback/fsync and HF no-replace, marker ordering, ownership, and interrupted-publish recovery remain unchanged.
+- The minimal `contract-constants.json` mirror is retained because Market and Olares CI cannot consume one generated artifact across repositories. It covers schema/source/file names, JSON/app/chart/manifest/entry/artifact limits, artifact kind, JSON tag, and scopes; golden bundles do not cover numeric drift.
 
 ## TDD and line delta
-
-- RED: shared copy policy tests failed on missing `verifiedCopy` / `copyVerifiedRegularFile`; GREEN covers bundle/HF modes, size, digest, limit, reserved marker, and Unix hardlink rejection.
-- Existing crash, TOCTOU, symlink, forged/replaced staging, no-replace, ownership, and interrupted-publish tests stayed green during refactoring.
-- Production: `+358/-362`, net `-4`.
-- Tests/fixtures: `+98/-166`, net `-68`.
-- Code total: `+456/-528`, net `-72`.
+- RED covered sealed `0555` cleanup, unknown-owner fail-closed policy, and bundle/HF reserved-marker contrast; shared copy tests cover modes, size, digest, limits, TOCTOU, and Unix hardlinks.
+- Production: `+369/-375`, net `-6`; tests/fixtures: `+241/-278`, net `-37`; repository total: `+640/-653`, net `-13`.
 
 ## Verification
-
-- `go test ./pkg/preinstall -count=1`: pass.
-- `go test -race ./pkg/preinstall -count=1`: pass; existing macOS linker warning only.
-- `go test -vet=off ./pkg/terminus ./pkg/common -count=1`: pass (`common` has no tests).
-- `go vet ./pkg/preinstall`: pass.
-- `go build ./...`: pass from `cli/`.
-- `git diff --check` and IDE diagnostics: pass.
+- `go test ./pkg/preinstall -count=1` and `go test -race ./pkg/preinstall -count=1`: pass.
+- `go test -vet=off ./pkg/terminus ./pkg/common -count=1`, `go vet ./pkg/preinstall`, `go build ./...`, `git diff --check`, and IDE diagnostics: pass.
 
 ## Concern
-
-Default `go test ./pkg/terminus ./pkg/common` and broad `go vet` remain blocked by pre-existing vet findings in `kube_runtime.go`, `natgateway.go`, and `tasks.go`; none is touched by this task.
+Default terminus/common tests and broad vet remain blocked by pre-existing findings in `kube_runtime.go`, `natgateway.go`, and `tasks.go`.

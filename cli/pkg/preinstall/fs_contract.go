@@ -18,7 +18,6 @@ type verifiedCopy struct {
 	Size, MaxSize  int64
 	SHA256         string
 	OutputMode     os.FileMode
-	RejectLinks    bool
 	AfterLstat     func() error
 	BeforeCopy     func() error
 }
@@ -54,15 +53,12 @@ func createTrustedStaging(parent *os.Root, prefix string, tokenBytes int, mode o
 	return "", "", nil, nil, fmt.Errorf("create unique staging directory")
 }
 
-func openTrustedStaging(parent *os.Root, name string, trustedUID uint32, mode os.FileMode) (*os.Root, os.FileInfo, bool, error) {
+func openTrustedStaging(parent *os.Root, name string, trustedUID uint32, modes ...os.FileMode) (*os.Root, os.FileInfo, bool, error) {
 	info, err := parent.Lstat(name)
 	if err != nil {
 		return nil, nil, false, err
 	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() || info.Mode().Perm() != mode {
-		return nil, info, false, nil
-	}
-	if uid, ok := fileOwnerUID(info); ok && uid != trustedUID {
+	if !trustedStagingInfo(info, trustedUID, modes, fileOwnerUID) {
 		return nil, info, false, nil
 	}
 	root, err := parent.OpenRoot(name)
@@ -75,6 +71,22 @@ func openTrustedStaging(parent *os.Root, name string, trustedUID uint32, mode os
 		return nil, info, false, errors.Join(fmt.Errorf("staging %q changed while opening", name), err)
 	}
 	return root, info, true, nil
+}
+
+func trustedStagingInfo(info os.FileInfo, trustedUID uint32, modes []os.FileMode, owner func(os.FileInfo) (uint32, bool)) bool {
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return false
+	}
+	uid, known := owner(info)
+	if !known || uid != trustedUID {
+		return false
+	}
+	for _, mode := range modes {
+		if info.Mode().Perm() == mode {
+			return true
+		}
+	}
+	return false
 }
 
 func writeRootFile(root *os.Root, name string, data []byte, options rootFileWrite) error {
@@ -101,9 +113,6 @@ func writeRootFile(root *os.Root, name string, data []byte, options rootFileWrit
 }
 
 func copyVerifiedRegularFile(sourceRoot, targetRoot *os.Root, spec verifiedCopy) (int64, error) {
-	if spec.Target == hfCacheMarkerFileName || spec.Target == hfStageMarkerFileName {
-		return 0, fmt.Errorf("target %q is reserved", spec.Target)
-	}
 	if err := rejectRootSymlinkComponents(sourceRoot, spec.Source); err != nil {
 		return 0, err
 	}
@@ -114,7 +123,7 @@ func copyVerifiedRegularFile(sourceRoot, targetRoot *os.Root, spec verifiedCopy)
 	if !lstatInfo.Mode().IsRegular() {
 		return 0, fmt.Errorf("%q must be a regular file", spec.Source)
 	}
-	if spec.RejectLinks && hasMultipleLinks(lstatInfo) {
+	if hasMultipleLinks(lstatInfo) {
 		return 0, fmt.Errorf("%q must not be a hardlink", spec.Source)
 	}
 	if spec.Size < 0 || spec.Size > spec.MaxSize {
@@ -134,7 +143,7 @@ func copyVerifiedRegularFile(sourceRoot, targetRoot *os.Root, spec verifiedCopy)
 	if err != nil {
 		return 0, fmt.Errorf("fstat %q: %w", spec.Source, err)
 	}
-	if !os.SameFile(lstatInfo, info) || !info.Mode().IsRegular() || (spec.RejectLinks && hasMultipleLinks(info)) {
+	if !os.SameFile(lstatInfo, info) || !info.Mode().IsRegular() || hasMultipleLinks(info) {
 		return 0, fmt.Errorf("%q changed while opening", spec.Source)
 	}
 	if info.Size() != spec.Size {

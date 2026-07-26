@@ -49,7 +49,7 @@ func TestCopyVerifiedRegularFileRejectsHardlink(t *testing.T) {
 	defer targetRoot.Close()
 
 	_, err = copyVerifiedRegularFile(sourceRoot, targetRoot, verifiedCopy{
-		Source: "source", Target: "target", Size: 1, MaxSize: 1, OutputMode: 0o644, RejectLinks: true,
+		Source: "source", Target: "target", Size: 1, MaxSize: 1, OutputMode: 0o644,
 	})
 	if err == nil || !strings.Contains(err.Error(), "hardlink") {
 		t.Fatalf("copyVerifiedRegularFile() error = %v, want hardlink rejection", err)
