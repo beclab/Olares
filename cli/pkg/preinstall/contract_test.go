@@ -11,30 +11,21 @@ import (
 )
 
 func TestDecodeBundleV1Strictly(t *testing.T) {
-	bundle, err := DecodeBundle([]byte(validBundleJSON))
+	raw := strings.Replace(validBundleJSON, `"allowedEnvs":["WORKER_COUNT"]`, `"allowedEnvs":["HF_HUB_OFFLINE","MODEL_PATH","MODEL_REVISION"],"defaultEnvs":{"HF_HUB_OFFLINE":"1","MODEL_PATH":"/models/default","MODEL_REVISION":""}`, 1)
+	bundle, err := DecodeBundle([]byte(raw))
 	if err != nil {
 		t.Fatalf("DecodeBundle() error = %v", err)
 	}
 	if bundle.SourceID != OfficialSourceID || bundle.Apps[0].AllowedGPUTypes[0] != "nvidia" {
 		t.Fatalf("DecodeBundle() = %#v", bundle)
 	}
-
-	_, err = DecodeBundle([]byte(strings.Replace(validBundleJSON, `"sourceId"`, `"unknown":true,"sourceId"`, 1)))
-	if err == nil || !strings.Contains(err.Error(), "unknown field") {
-		t.Fatalf("DecodeBundle() unknown field error = %v", err)
-	}
-}
-
-func TestDecodeBundleAcceptsDefaultEnvs(t *testing.T) {
-	raw := strings.Replace(validBundleJSON, `"allowedEnvs":["WORKER_COUNT"]`, `"allowedEnvs":["HF_HUB_OFFLINE","MODEL_PATH","MODEL_REVISION"],"defaultEnvs":{"HF_HUB_OFFLINE":"1","MODEL_PATH":"/models/default","MODEL_REVISION":""}`, 1)
-
-	bundle, err := DecodeBundle([]byte(raw))
-
-	if err != nil {
-		t.Fatalf("DecodeBundle() error = %v", err)
-	}
 	if got := bundle.Apps[0].DefaultEnvs; len(got) != 3 || got["HF_HUB_OFFLINE"] != "1" || got["MODEL_REVISION"] != "" {
 		t.Fatalf("DecodeBundle() defaultEnvs = %#v", got)
+	}
+
+	_, err = DecodeBundle([]byte(strings.Replace(raw, `"sourceId"`, `"unknown":true,"sourceId"`, 1)))
+	if err == nil || !strings.Contains(err.Error(), "unknown field") {
+		t.Fatalf("DecodeBundle() unknown field error = %v", err)
 	}
 }
 
