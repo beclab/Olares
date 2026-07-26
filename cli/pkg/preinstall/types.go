@@ -3,11 +3,11 @@ package preinstall
 import "encoding/json"
 
 const (
-	SupportedSchemaVersion   = "1"
-	OfficialSourceID         = "market.olares"
-	BundleFileName           = "bundle.json"
-	ProfileFileName          = "install-profile.json"
-	StaticRelativeDir = "preinstall/market"
+	SupportedSchemaVersion = "1"
+	OfficialSourceID       = "market.olares"
+	BundleFileName         = "bundle.json"
+	ProfileFileName        = "install-profile.json"
+	StaticRelativeDir      = "preinstall/market"
 	// RuntimeRelativeDir is relative to the Olares root directory
 	// (storage.OlaresRootDir), which is what the market chart renders as
 	// .Values.rootPath for its read-only hostPath mount. It is not relative to
