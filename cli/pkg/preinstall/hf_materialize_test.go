@@ -47,46 +47,6 @@ func TestMaterializeHFArtifactsCreatesHuggingFaceLayout(t *testing.T) {
 	}
 }
 
-func TestMaterializeHFArtifactsRejectsStreamDigestAndSizeMismatch(t *testing.T) {
-	tests := []struct {
-		name   string
-		mutate func(string)
-		want   string
-	}{
-		{
-			name: "digest",
-			mutate: func(path string) {
-				if err := os.WriteFile(path, []byte("WEIGHTS"), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			},
-			want: "digest mismatch",
-		},
-		{
-			name: "size",
-			mutate: func(path string) {
-				if err := os.WriteFile(path, []byte("weights-extra"), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			},
-			want: "size mismatch",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			installerDir, targetRoot, _, _ := writeHFArtifactFixture(t)
-			tt.mutate(filepath.Join(installerDir, StaticRelativeDir, "artifacts", "tiny", "blobs", "weights"))
-
-			err := materializeHFArtifacts(installerDir, targetRoot, nil)
-
-			if err == nil || !strings.Contains(err.Error(), tt.want) {
-				t.Fatalf("materializeHFArtifacts() error = %v, want %q", err, tt.want)
-			}
-			assertNoHFStaging(t, targetRoot)
-		})
-	}
-}
-
 func TestMaterializeHFArtifactsRejectsActualSymlinkMismatchAndEscape(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -1,13 +1,10 @@
 package preinstall
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -21,40 +18,14 @@ import (
 // must be the Olares root directory the market chart mounts from, not the
 // installer base directory.
 func Materialize(installerDir, rootDir string, selections ProfileSelections) error {
-	source := filepath.Join(installerDir, filepath.FromSlash(StaticRelativeDir))
-	sourceInfo, err := os.Lstat(source)
-	if os.IsNotExist(err) {
+	sourceRoot, bundleData, bundle, found, err := openStaticBundle(installerDir)
+	if err != nil {
+		return err
+	}
+	if !found {
 		return nil
 	}
-	if err != nil {
-		return fmt.Errorf("inspect preinstall source: %w", err)
-	}
-	installerRoot, err := openDirectoryNoSymlink(installerDir)
-	if err != nil {
-		return fmt.Errorf("open installer root: %w", err)
-	}
-	defer installerRoot.Close()
-	if err := rejectRootSymlinkComponents(installerRoot, StaticRelativeDir); err != nil {
-		return err
-	}
-	if !sourceInfo.IsDir() || sourceInfo.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("preinstall source must be a directory")
-	}
-
-	sourceRoot, err := installerRoot.OpenRoot(StaticRelativeDir)
-	if err != nil {
-		return fmt.Errorf("open preinstall source root: %w", err)
-	}
 	defer sourceRoot.Close()
-
-	bundleData, err := readRootFileLimited(sourceRoot, BundleFileName, MaxBundleJSONBytes)
-	if err != nil {
-		return err
-	}
-	bundle, err := DecodeBundle(bundleData)
-	if err != nil {
-		return err
-	}
 	profile := buildProfile(bundle, selections)
 	if err := Validate(bundle, profile); err != nil {
 		return err
@@ -275,149 +246,48 @@ func copyArtifactManifest(
 	if err := rejectRootSymlinkComponents(sourceRoot, artifact.Manifest); err != nil {
 		return err
 	}
-	lstatInfo, err := sourceRoot.Lstat(artifact.Manifest)
+	info, err := sourceRoot.Lstat(artifact.Manifest)
 	if err != nil {
 		return fmt.Errorf("lstat artifact manifest %q: %w", artifact.Manifest, err)
-	}
-	if !lstatInfo.Mode().IsRegular() {
-		return fmt.Errorf("artifact manifest %q must be a regular file", artifact.Manifest)
-	}
-	if hooks.afterLstat != nil {
-		if err := hooks.afterLstat(); err != nil {
-			return fmt.Errorf("after artifact manifest lstat: %w", err)
-		}
-	}
-	input, err := sourceRoot.Open(artifact.Manifest)
-	if err != nil {
-		return fmt.Errorf("open artifact manifest %q: %w", artifact.Manifest, err)
-	}
-	defer input.Close()
-	info, err := input.Stat()
-	if err != nil {
-		return fmt.Errorf("fstat artifact manifest %q: %w", artifact.Manifest, err)
-	}
-	if !os.SameFile(lstatInfo, info) || !info.Mode().IsRegular() {
-		return fmt.Errorf("artifact manifest %q changed while opening", artifact.Manifest)
 	}
 	if info.Size() > MaxArtifactManifestBytes {
 		return fmt.Errorf("artifact manifest exceeds %d bytes: %q", MaxArtifactManifestBytes, artifact.Manifest)
 	}
-	if hooks.beforeCopy != nil {
-		if err := hooks.beforeCopy(); err != nil {
-			return fmt.Errorf("before artifact manifest copy: %w", err)
-		}
-	}
-	output, err := stagingRoot.OpenFile(artifact.Manifest, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("create artifact manifest %q: %w", artifact.Manifest, err)
-	}
-	hasher := sha256.New()
-	copied, copyErr := io.Copy(
-		io.MultiWriter(output, hasher),
-		io.LimitReader(input, info.Size()+1),
-	)
-	if copied != info.Size() {
-		copyErr = errors.Join(copyErr, fmt.Errorf("artifact manifest %q changed while copying", artifact.Manifest))
-	}
-	afterInfo, statErr := input.Stat()
-	if statErr != nil {
-		copyErr = errors.Join(copyErr, fmt.Errorf("fstat artifact manifest %q after copy: %w", artifact.Manifest, statErr))
-	} else if artifactManifestMetadataChanged(info, afterInfo) {
-		copyErr = errors.Join(copyErr, fmt.Errorf("artifact manifest %q changed while copying", artifact.Manifest))
-	}
-	currentInfo, lstatErr := sourceRoot.Lstat(artifact.Manifest)
-	if lstatErr != nil {
-		copyErr = errors.Join(copyErr, fmt.Errorf("lstat artifact manifest %q after copy: %w", artifact.Manifest, lstatErr))
-	} else if artifactManifestMetadataChanged(info, currentInfo) {
-		copyErr = errors.Join(copyErr, fmt.Errorf("artifact manifest %q was replaced while copying", artifact.Manifest))
-	}
-	if !strings.EqualFold(hex.EncodeToString(hasher.Sum(nil)), artifact.ManifestSHA256) {
-		copyErr = errors.Join(copyErr, fmt.Errorf("artifact manifest %q digest mismatch", artifact.Manifest))
-	}
-	sealErr := sealOpenFile(output, artifact.Manifest)
-	if err := errors.Join(copyErr, sealErr); err != nil {
-		return err
-	}
-	return nil
-}
-
-func artifactManifestMetadataChanged(before, after fs.FileInfo) bool {
-	return !os.SameFile(before, after) ||
-		!after.Mode().IsRegular() ||
-		before.Mode() != after.Mode() ||
-		before.Size() != after.Size() ||
-		!before.ModTime().Equal(after.ModTime())
+	_, err = copyVerifiedRegularFile(sourceRoot, stagingRoot, verifiedCopy{
+		Source:      artifact.Manifest,
+		Target:      artifact.Manifest,
+		Size:        info.Size(),
+		MaxSize:     MaxArtifactManifestBytes,
+		SHA256:      artifact.ManifestSHA256,
+		OutputMode:  0o444,
+		RejectLinks: true,
+		AfterLstat:  hooks.afterLstat,
+		BeforeCopy:  hooks.beforeCopy,
+	})
+	return err
 }
 
 func copyChart(sourceRoot, stagingRoot *os.Root, app BundleAppV1, totalRemaining int64) (int64, error) {
-	if err := rejectRootSymlinkComponents(sourceRoot, app.Chart); err != nil {
-		return 0, err
-	}
-	input, err := openRootRegularFile(sourceRoot, app.Chart)
+	info, err := sourceRoot.Lstat(app.Chart)
 	if err != nil {
-		return 0, err
-	}
-	defer input.Close()
-	info, err := input.Stat()
-	if err != nil {
-		return 0, fmt.Errorf("fstat chart %q: %w", app.Chart, err)
-	}
-	if !info.Mode().IsRegular() {
-		return 0, fmt.Errorf("chart %q must be a regular file", app.Chart)
-	}
-	if info.Size() > MaxChartBytes {
-		return 0, fmt.Errorf("chart exceeds %d bytes: %q", MaxChartBytes, app.Chart)
+		return 0, fmt.Errorf("inspect chart %q: %w", app.Chart, err)
 	}
 	if info.Size() > totalRemaining {
 		return 0, fmt.Errorf("total chart size exceeds %d bytes", MaxTotalChartBytes)
 	}
-
-	output, err := stagingRoot.OpenFile(app.Chart, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-	if err != nil {
-		return 0, fmt.Errorf("create %q: %w", app.Chart, err)
-	}
-	hasher := sha256.New()
-	readLimit := min(MaxChartBytes, totalRemaining) + 1
-	copied, copyErr := io.Copy(io.MultiWriter(output, hasher), io.LimitReader(input, readLimit))
-	if copied > MaxChartBytes {
-		copyErr = errors.Join(copyErr, fmt.Errorf("chart exceeds %d bytes: %q", MaxChartBytes, app.Chart))
-	}
-	if copied > totalRemaining {
-		copyErr = errors.Join(copyErr, fmt.Errorf("total chart size exceeds %d bytes", MaxTotalChartBytes))
-	}
-	if copied != info.Size() {
-		copyErr = errors.Join(copyErr, fmt.Errorf("chart %q size changed while copying", app.Chart))
-	}
-	if !strings.EqualFold(hex.EncodeToString(hasher.Sum(nil)), app.ChartSHA256) {
-		copyErr = errors.Join(copyErr, fmt.Errorf("chart %q digest mismatch", app.Chart))
-	}
-	sealErr := sealOpenFile(output, app.Chart)
-	if err := errors.Join(copyErr, sealErr); err != nil {
-		return 0, err
-	}
-	return copied, nil
+	return copyVerifiedRegularFile(sourceRoot, stagingRoot, verifiedCopy{
+		Source:      app.Chart,
+		Target:      app.Chart,
+		Size:        info.Size(),
+		MaxSize:     min(MaxChartBytes, totalRemaining),
+		SHA256:      app.ChartSHA256,
+		OutputMode:  0o444,
+		RejectLinks: true,
+	})
 }
 
 func writeSealedRootFile(root *os.Root, name string, data []byte) error {
-	file, err := root.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("create %q: %w", name, err)
-	}
-	if _, err := file.Write(data); err != nil {
-		_ = file.Close()
-		return fmt.Errorf("write %q: %w", name, err)
-	}
-	return sealOpenFile(file, name)
-}
-
-func sealOpenFile(file *os.File, path string) error {
-	chmodErr := file.Chmod(0o444)
-	syncErr := file.Sync()
-	closeErr := file.Close()
-	if err := errors.Join(chmodErr, syncErr, closeErr); err != nil {
-		return fmt.Errorf("seal %q: %w", path, err)
-	}
-	return nil
+	return writeRootFile(root, name, data, rootFileWrite{Mode: 0o444})
 }
 
 func sealRootDirectories(root *os.Root) error {
@@ -466,9 +336,8 @@ func materializedRootModeFor(goos string) os.FileMode {
 
 func renameRootEntry(parent *os.Root, oldName, newName string) error {
 	for _, name := range []string{oldName, newName} {
-		if name == "" || name == "." || name == ".." ||
-			filepath.Clean(name) != name || filepath.Base(name) != name {
-			return fmt.Errorf("rename path %q must be a clean single entry", name)
+		if err := validateSingleEntry(name); err != nil {
+			return fmt.Errorf("rename %w", err)
 		}
 	}
 	return parent.Rename(oldName, newName)
@@ -619,6 +488,16 @@ func cleanupStagingRoots(parent *os.Root) error {
 		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 			continue
 		}
+		stage, _, trusted, err := openTrustedStaging(parent, name, uint32(os.Geteuid()), info.Mode().Perm())
+		if err != nil {
+			return fmt.Errorf("open stale preinstall staging %q: %w", name, err)
+		}
+		if !trusted || (info.Mode().Perm() != 0o700 && info.Mode().Perm() != 0o755) {
+			continue
+		}
+		if err := stage.Close(); err != nil {
+			return fmt.Errorf("close stale preinstall staging %q: %w", name, err)
+		}
 		if err := removeRootTree(parent, name); err != nil {
 			return fmt.Errorf("remove stale preinstall staging %q: %w", name, err)
 		}
@@ -638,26 +517,8 @@ func stagingName(name string) bool {
 }
 
 func createStagingRoot(parent *os.Root) (string, *os.Root, error) {
-	for range 100 {
-		random := make([]byte, 8)
-		if _, err := rand.Read(random); err != nil {
-			return "", nil, fmt.Errorf("generate staging name: %w", err)
-		}
-		name := stagingPrefix + hex.EncodeToString(random)
-		if err := parent.Mkdir(name, 0o755); err != nil {
-			if os.IsExist(err) {
-				continue
-			}
-			return "", nil, fmt.Errorf("create preinstall staging: %w", err)
-		}
-		root, err := parent.OpenRoot(name)
-		if err != nil {
-			_ = parent.Remove(name)
-			return "", nil, fmt.Errorf("open preinstall staging: %w", err)
-		}
-		return name, root, nil
-	}
-	return "", nil, fmt.Errorf("create unique preinstall staging directory")
+	name, _, root, _, err := createTrustedStaging(parent, stagingPrefix, 8, 0o700)
+	return name, root, err
 }
 
 func makeWritable(root string) error {

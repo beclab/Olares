@@ -27,3 +27,31 @@ func TestMaterializeHFArtifactsRejectsSpecialFile(t *testing.T) {
 	}
 	assertNoHFStaging(t, targetRoot)
 }
+
+func TestCopyVerifiedRegularFileRejectsHardlink(t *testing.T) {
+	sourcePath := t.TempDir()
+	original := filepath.Join(sourcePath, "source")
+	if err := os.WriteFile(original, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Link(original, filepath.Join(sourcePath, "alias")); err != nil {
+		t.Fatal(err)
+	}
+	sourceRoot, err := os.OpenRoot(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sourceRoot.Close()
+	targetRoot, err := os.OpenRoot(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer targetRoot.Close()
+
+	_, err = copyVerifiedRegularFile(sourceRoot, targetRoot, verifiedCopy{
+		Source: "source", Target: "target", Size: 1, MaxSize: 1, OutputMode: 0o644, RejectLinks: true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "hardlink") {
+		t.Fatalf("copyVerifiedRegularFile() error = %v, want hardlink rejection", err)
+	}
+}

@@ -1,13 +1,9 @@
 package preinstall
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -73,26 +69,14 @@ func materializeHFArtifactsWithHooks(installerDir, targetRootPath string, owners
 	if err := healHFCacheRootMode(targetRootPath); err != nil {
 		return err
 	}
-	staticPath := filepath.Join(installerDir, filepath.FromSlash(StaticRelativeDir))
-	if _, err := os.Lstat(staticPath); os.IsNotExist(err) {
-		return nil
-	} else if err != nil {
-		return fmt.Errorf("inspect preinstall source: %w", err)
-	}
-	staticRoot, err := openDirectoryNoSymlink(staticPath)
+	staticRoot, _, bundle, found, err := openStaticBundle(installerDir)
 	if err != nil {
-		return fmt.Errorf("open preinstall source: %w", err)
+		return err
+	}
+	if !found {
+		return nil
 	}
 	defer staticRoot.Close()
-
-	bundleData, err := readRootFileLimited(staticRoot, BundleFileName, MaxBundleJSONBytes)
-	if err != nil {
-		return err
-	}
-	bundle, err := DecodeBundle(bundleData)
-	if err != nil {
-		return err
-	}
 	artifacts := bundleHFArtifacts(bundle)
 	if len(artifacts) == 0 {
 		return nil
@@ -357,16 +341,10 @@ func hfInterruptedPublish(root *os.Root, target, repo string) (bool, error) {
 		return false, err
 	}
 	defer publishedRoot.Close()
-	data, err := readRootFileLimited(publishedRoot, hfStageMarkerFileName, 4096)
-	if errors.Is(err, fs.ErrNotExist) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
 	var got hfStageMarker
-	if err := strictDecode(data, &got); err != nil {
-		return false, nil
+	ok, err := readMarker(publishedRoot, hfStageMarkerFileName, &got)
+	if err != nil || !ok {
+		return false, err
 	}
 	return got.Target == target && got.Repo == repo, nil
 }
@@ -425,74 +403,36 @@ func materializeHFEntry(sourceRoot, stagingRoot *os.Root, entry ArtifactManifest
 }
 
 func copyHFFile(sourceRoot, stagingRoot *os.Root, entry ArtifactManifestEntryV1, lstatInfo fs.FileInfo) error {
-	input, err := sourceRoot.Open(entry.Path)
-	if err != nil {
-		return fmt.Errorf("open artifact file %q: %w", entry.Path, err)
+	if lstatInfo.Size() != entry.Size {
+		return fmt.Errorf("artifact file %q size mismatch: got %d, want %d", entry.Path, lstatInfo.Size(), entry.Size)
 	}
-	defer input.Close()
-	info, err := input.Stat()
-	if err != nil {
-		return fmt.Errorf("fstat artifact file %q: %w", entry.Path, err)
-	}
-	if !info.Mode().IsRegular() || !os.SameFile(lstatInfo, info) {
-		return fmt.Errorf("artifact entry %q changed or is not a regular file", entry.Path)
-	}
-	output, err := stagingRoot.OpenFile(entry.Path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("create artifact file %q: %w", entry.Path, err)
-	}
-	hasher := sha256.New()
-	copied, copyErr := io.Copy(io.MultiWriter(output, hasher), io.LimitReader(input, entry.Size+1))
-	if copied != entry.Size {
-		copyErr = errors.Join(copyErr, fmt.Errorf("artifact file %q size mismatch: got %d, want %d", entry.Path, copied, entry.Size))
-	}
-	if got := hex.EncodeToString(hasher.Sum(nil)); !strings.EqualFold(got, entry.SHA256) {
-		copyErr = errors.Join(copyErr, fmt.Errorf("artifact file %q digest mismatch", entry.Path))
-	}
-	chmodErr := output.Chmod(0o644)
-	syncErr := output.Sync()
-	closeErr := output.Close()
-	return errors.Join(copyErr, chmodErr, syncErr, closeErr)
+	_, err := copyVerifiedRegularFile(sourceRoot, stagingRoot, verifiedCopy{
+		Source:      entry.Path,
+		Target:      entry.Path,
+		Size:        entry.Size,
+		MaxSize:     entry.Size,
+		SHA256:      entry.SHA256,
+		OutputMode:  0o644,
+		RejectLinks: true,
+	})
+	return err
 }
 
 func writeHFFile(root *os.Root, name string, data []byte) error {
-	file, err := root.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("create %q: %w", name, err)
-	}
-	_, writeErr := file.Write(data)
-	chmodErr := file.Chmod(0o644)
-	syncErr := file.Sync()
-	closeErr := file.Close()
-	if err := errors.Join(writeErr, chmodErr, syncErr, closeErr); err != nil {
-		return fmt.Errorf("write %q: %w", name, err)
-	}
-	return nil
+	return writeRootFile(root, name, data, rootFileWrite{Mode: 0o644})
 }
 
 func writeHFCompletionMarker(root *os.Root, data []byte, ownership *hfOwnership) error {
-	file, err := root.OpenFile(hfCacheMarkerFileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("create completion marker: %w", err)
+	var beforeSeal func(*os.File) error
+	if ownership != nil {
+		beforeSeal = ownership.marker
 	}
-	_, writeErr := file.Write(data)
-	var ownershipErr error
-	if ownership != nil && ownership.marker != nil && writeErr == nil {
-		ownershipErr = ownership.marker(file)
-	}
-	chmodErr := file.Chmod(0o644)
-	syncErr := file.Sync()
-	closeErr := file.Close()
-	if err := errors.Join(writeErr, ownershipErr, chmodErr, syncErr, closeErr); err != nil {
-		removeErr := root.Remove(hfCacheMarkerFileName)
-		return fmt.Errorf("write completion marker: %w", errors.Join(err, removeErr))
-	}
-	if err := syncRootDirectory(root, "."); err != nil {
-		removeErr := root.Remove(hfCacheMarkerFileName)
-		syncErr := syncRootDirectory(root, ".")
-		return fmt.Errorf("sync completion marker: %w", errors.Join(err, removeErr, syncErr))
-	}
-	return nil
+	return writeRootFile(root, hfCacheMarkerFileName, data, rootFileWrite{
+		Mode:          0o644,
+		BeforeSeal:    beforeSeal,
+		SyncDirectory: true,
+		RemoveOnError: true,
+	})
 }
 
 func hfMarkerMatches(root *os.Root, target string, want hfCacheMarker) (bool, error) {
@@ -501,19 +441,10 @@ func hfMarkerMatches(root *os.Root, target string, want hfCacheMarker) (bool, er
 		return false, err
 	}
 	defer targetRoot.Close()
-	data, err := readRootFileLimited(targetRoot, hfCacheMarkerFileName, 4096)
-	// The reader wraps its errors, which os.IsNotExist does not unwrap: without
-	// errors.Is a missing marker reads as a read failure and the caller aborts
-	// instead of treating the tree as unmarked.
-	if errors.Is(err, fs.ErrNotExist) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
 	var got hfCacheMarker
-	if err := strictDecode(data, &got); err != nil {
-		return false, nil
+	ok, err := readMarker(targetRoot, hfCacheMarkerFileName, &got)
+	if err != nil || !ok {
+		return false, err
 	}
 	return got == want, nil
 }
@@ -527,52 +458,29 @@ func createHFStaging(
 	target, repo string,
 	syncDirectory, syncParentDirectory func(*os.Root) error,
 ) (string, *os.Root, fs.FileInfo, error) {
-	for range 100 {
-		random := make([]byte, 16)
-		if _, err := rand.Read(random); err != nil {
-			return "", nil, nil, fmt.Errorf("generate Hugging Face staging name: %w", err)
-		}
-		token := hex.EncodeToString(random)
-		name := hfStagingPrefix(target) + token
-		if err := root.Mkdir(name, 0o700); err != nil {
-			if os.IsExist(err) {
-				continue
-			}
-			return "", nil, nil, fmt.Errorf("create Hugging Face staging: %w", err)
-		}
-		stagingRoot, err := root.OpenRoot(name)
-		if err != nil {
-			_ = root.Remove(name)
-			return "", nil, nil, fmt.Errorf("open Hugging Face staging: %w", err)
-		}
-		info, err := stagingRoot.Stat(".")
-		if err != nil {
-			_ = stagingRoot.Close()
-			_ = root.RemoveAll(name)
-			return "", nil, nil, fmt.Errorf("stat Hugging Face staging: %w", err)
-		}
-		markerData, err := json.Marshal(hfStageMarker{Target: target, Repo: repo, Token: token})
-		if err == nil {
-			err = writeHFFile(stagingRoot, hfStageMarkerFileName, append(markerData, '\n'))
-		}
-		if err != nil {
-			_ = stagingRoot.Close()
-			_ = root.RemoveAll(name)
-			return "", nil, nil, fmt.Errorf("write Hugging Face staging marker: %w", err)
-		}
-		if err := syncDirectory(stagingRoot); err != nil {
-			_ = stagingRoot.Close()
-			_ = root.RemoveAll(name)
-			return "", nil, nil, fmt.Errorf("sync Hugging Face staging marker: %w", err)
-		}
-		if err := syncParentDirectory(root); err != nil {
-			_ = stagingRoot.Close()
-			_ = root.RemoveAll(name)
-			return "", nil, nil, fmt.Errorf("sync Hugging Face cache root after staging creation: %w", err)
-		}
-		return name, stagingRoot, info, nil
+	name, token, stagingRoot, info, err := createTrustedStaging(root, hfStagingPrefix(target), 16, 0o700)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("create Hugging Face staging: %w", err)
 	}
-	return "", nil, nil, fmt.Errorf("create unique Hugging Face staging directory")
+	fail := func(err error) (string, *os.Root, fs.FileInfo, error) {
+		_ = stagingRoot.Close()
+		_ = root.RemoveAll(name)
+		return "", nil, nil, err
+	}
+	markerData, err := json.Marshal(hfStageMarker{Target: target, Repo: repo, Token: token})
+	if err == nil {
+		err = writeHFFile(stagingRoot, hfStageMarkerFileName, append(markerData, '\n'))
+	}
+	if err != nil {
+		return fail(fmt.Errorf("write Hugging Face staging marker: %w", err))
+	}
+	if err := syncDirectory(stagingRoot); err != nil {
+		return fail(fmt.Errorf("sync Hugging Face staging marker: %w", err))
+	}
+	if err := syncParentDirectory(root); err != nil {
+		return fail(fmt.Errorf("sync Hugging Face cache root after staging creation: %w", err))
+	}
+	return name, stagingRoot, info, nil
 }
 
 func cleanupHFStaging(root *os.Root, target, repo string, trustedUID uint32) error {
@@ -586,34 +494,13 @@ func cleanupHFStaging(root *os.Root, target, repo string, trustedUID uint32) err
 		if !ok {
 			continue
 		}
-		info, err := root.Lstat(entry.Name())
-		if err != nil {
-			return fmt.Errorf("inspect Hugging Face staging %q: %w", entry.Name(), err)
-		}
-		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			continue
-		}
-		// A directory this process did not create is left where it is: it is
-		// not ours to delete, and refusing to continue over it would let
-		// anyone who can write into the cache root stop the install.
-		uid, ok := fileOwnerUID(info)
-		if !ok || uid != trustedUID {
-			warnf("leaving Hugging Face staging %q alone: it is not owned by this process", entry.Name())
-			continue
-		}
-		if info.Mode().Perm() != 0o700 {
-			warnf("leaving Hugging Face staging %q alone: mode %s is not the one this process creates",
-				entry.Name(), info.Mode().Perm())
-			continue
-		}
-		stageRoot, err := root.OpenRoot(entry.Name())
+		stageRoot, info, trusted, err := openTrustedStaging(root, entry.Name(), trustedUID, 0o700)
 		if err != nil {
 			return fmt.Errorf("open Hugging Face staging %q: %w", entry.Name(), err)
 		}
-		openedInfo, statErr := stageRoot.Stat(".")
-		if statErr != nil || !os.SameFile(info, openedInfo) {
-			_ = stageRoot.Close()
-			return errors.Join(fmt.Errorf("Hugging Face staging %q changed while opening", entry.Name()), statErr)
+		if !trusted {
+			warnf("leaving untrusted Hugging Face staging %q alone", entry.Name())
+			continue
 		}
 		matches := hfStageMarkerMatches(stageRoot, hfStageMarker{Target: target, Repo: repo, Token: token})
 		closeErr := stageRoot.Close()
@@ -647,12 +534,9 @@ func hfStagingToken(name, prefix string) (string, bool) {
 }
 
 func hfStageMarkerMatches(root *os.Root, want hfStageMarker) bool {
-	data, err := readRootFileLimited(root, hfStageMarkerFileName, 4096)
-	if err != nil {
-		return false
-	}
 	var got hfStageMarker
-	return strictDecode(data, &got) == nil && got == want
+	ok, err := readMarker(root, hfStageMarkerFileName, &got)
+	return err == nil && ok && got == want
 }
 
 func removeKnownHFStaging(root *os.Root, name string, expected fs.FileInfo) error {

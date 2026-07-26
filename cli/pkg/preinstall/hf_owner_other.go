@@ -7,3 +7,7 @@ import "io/fs"
 func fileOwnerUID(fs.FileInfo) (uint32, bool) {
 	return 0, false
 }
+
+func hasMultipleLinks(fs.FileInfo) bool {
+	return false
+}
