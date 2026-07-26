@@ -89,6 +89,10 @@ func Materialize(installerDir, rootDir string, selections ProfileSelections) err
 		return err
 	}
 
+	if err := cleanupStagingRoots(parentRoot); err != nil {
+		return err
+	}
+
 	stagingName, stagingRoot, err := createStagingRoot(parentRoot)
 	if err != nil {
 		return err
@@ -578,13 +582,57 @@ func openOrCreateDirectoryNoSymlink(name string) (*os.Root, error) {
 	return openDirectoryPath(name, true)
 }
 
+const stagingPrefix = ".market-preinstall-stage-"
+
+// cleanupStagingRoots removes the staging directories earlier runs were
+// interrupted before publishing. Only this code writes that prefix here, and
+// each leftover holds a full copy of the bundle, so keeping them would grow
+// the cache directory by one bundle for every interrupted install.
+func cleanupStagingRoots(parent *os.Root) error {
+	entries, err := fs.ReadDir(parent.FS(), ".")
+	if err != nil {
+		return fmt.Errorf("list preinstall parent: %w", err)
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if !stagingName(name) {
+			continue
+		}
+		info, err := parent.Lstat(name)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("inspect stale preinstall staging %q: %w", name, err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			continue
+		}
+		if err := removeRootTree(parent, name); err != nil {
+			return fmt.Errorf("remove stale preinstall staging %q: %w", name, err)
+		}
+	}
+	return nil
+}
+
+// stagingName reports whether the name is one createStagingRoot could have
+// produced, so cleanup never touches a directory that merely starts the same.
+func stagingName(name string) bool {
+	suffix, found := strings.CutPrefix(name, stagingPrefix)
+	if !found || len(suffix) != 16 {
+		return false
+	}
+	_, err := hex.DecodeString(suffix)
+	return err == nil
+}
+
 func createStagingRoot(parent *os.Root) (string, *os.Root, error) {
 	for range 100 {
 		random := make([]byte, 8)
 		if _, err := rand.Read(random); err != nil {
 			return "", nil, fmt.Errorf("generate staging name: %w", err)
 		}
-		name := ".market-preinstall-stage-" + hex.EncodeToString(random)
+		name := stagingPrefix + hex.EncodeToString(random)
 		if err := parent.Mkdir(name, 0o755); err != nil {
 			if os.IsExist(err) {
 				continue

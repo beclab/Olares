@@ -620,6 +620,36 @@ func TestMaterializeReplacesExistingReadOnlyTarget(t *testing.T) {
 	}
 }
 
+// Every interrupted run leaves a staging directory holding a full copy of the
+// bundle. Nothing else writes that name, so the next run clears them; a
+// directory that only looks similar is left where it is.
+func TestMaterializeRemovesStagingLeftBehindByAnInterruptedRun(t *testing.T) {
+	installerDir, baseDir := writeStaticBundle(t)
+	parent := filepath.Join(baseDir, filepath.FromSlash(path.Dir(RuntimeRelativeDir)))
+	if err := os.MkdirAll(parent, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stale := filepath.Join(parent, stagingPrefix+strings.Repeat("a", 16))
+	unrelated := filepath.Join(parent, stagingPrefix+"not-a-staging-token")
+	for _, dir := range []string{stale, unrelated} {
+		if err := os.MkdirAll(filepath.Join(dir, "charts"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
+		t.Fatalf("Materialize() error = %v", err)
+	}
+	t.Cleanup(func() { _ = makeWritable(filepath.Join(baseDir, RuntimeRelativeDir)) })
+
+	if _, err := os.Lstat(stale); !os.IsNotExist(err) {
+		t.Fatalf("stale staging survived: %v", err)
+	}
+	if _, err := os.Lstat(unrelated); err != nil {
+		t.Fatalf("directory outside the staging naming scheme was removed: %v", err)
+	}
+}
+
 func TestMaterializeSupportsNestedChartPaths(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	staticDir := filepath.Join(installerDir, StaticRelativeDir)

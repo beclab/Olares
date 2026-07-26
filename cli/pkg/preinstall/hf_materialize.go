@@ -13,6 +13,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 )
 
 const (
@@ -591,12 +593,18 @@ func cleanupHFStaging(root *os.Root, target, repo string, trustedUID uint32) err
 		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 			continue
 		}
+		// A directory this process did not create is left where it is: it is
+		// not ours to delete, and refusing to continue over it would let
+		// anyone who can write into the cache root stop the install.
 		uid, ok := fileOwnerUID(info)
 		if !ok || uid != trustedUID {
-			return fmt.Errorf("untrusted staging owner for %q", entry.Name())
+			warnf("leaving Hugging Face staging %q alone: it is not owned by this process", entry.Name())
+			continue
 		}
 		if info.Mode().Perm() != 0o700 {
-			return fmt.Errorf("untrusted staging mode for %q", entry.Name())
+			warnf("leaving Hugging Face staging %q alone: mode %s is not the one this process creates",
+				entry.Name(), info.Mode().Perm())
+			continue
 		}
 		stageRoot, err := root.OpenRoot(entry.Name())
 		if err != nil {
@@ -831,10 +839,22 @@ func secureHFOwnership(root *os.Root) error {
 
 func productionHFOwnership() *hfOwnership {
 	return &hfOwnership{
-		lockRoot:  lockHFCacheRoot,
-		tree:      secureHFOwnership,
-		marker:    secureHFMarkerOwnership,
-		trustedID: 0,
+		lockRoot: lockHFCacheRoot,
+		tree:     secureHFOwnership,
+		marker:   secureHFMarkerOwnership,
+		// Staging is created by this process, so the only owner it can trust
+		// its own leftovers to carry is the one it runs as. Hard-coding root
+		// makes an installer running as anyone else refuse to clean up after
+		// its own interrupted run.
+		trustedID: uint32(os.Geteuid()),
+	}
+}
+
+// warnf logs through the CLI logger when one has been installed. This package
+// also runs under tests, which never call logger.InitLog.
+func warnf(format string, args ...any) {
+	if log := logger.GetLogger(); log != nil {
+		log.Warnf(format, args...)
 	}
 }
 

@@ -385,11 +385,17 @@ func TestMaterializeHFArtifactsPreservesForgedUserOwnedStaging(t *testing.T) {
 
 	err = materializeHFArtifactsWithHooks(installerDir, targetRoot, nil, hooks)
 
-	if err == nil || !strings.Contains(err.Error(), "untrusted staging owner") {
+	// A directory this process did not create is neither deleted nor allowed
+	// to stop the install: whoever can write into the cache root would
+	// otherwise be able to block every future run by leaving one behind.
+	if err != nil {
 		t.Fatalf("materializeHFArtifactsWithHooks() error = %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(stage, hfStageMarkerFileName)); err != nil {
 		t.Fatalf("forged staging was removed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(targetRoot, target, hfCacheMarkerFileName)); err != nil {
+		t.Fatalf("artifact was not published beside the forged staging: %v", err)
 	}
 }
 
