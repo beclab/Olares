@@ -241,11 +241,65 @@ func TestMaterializeHFArtifactsRejectsExistingTargetWithoutMatchingMarker(t *tes
 
 			err := materializeHFArtifacts(installerDir, targetRoot, nil)
 
-			if err == nil || !strings.Contains(err.Error(), "existing target") {
+			// A tree nothing here published must be reported as such rather
+			// than through whatever error reading its marker happened to
+			// produce, which is what an unwrapped ENOENT check turned it into.
+			if err == nil || !strings.Contains(err.Error(), "marker is missing or different") {
 				t.Fatalf("materializeHFArtifacts() error = %v", err)
 			}
 		})
 	}
+}
+
+// The rename lands before the completion marker is written, so a crash in
+// between leaves a tree that is complete in content and unmarked on disk. It
+// carries this artifact's staging marker, which is what lets the next run
+// recognise its own unfinished work and redo it instead of refusing to run.
+func TestMaterializeHFArtifactsRedoesItsOwnInterruptedPublish(t *testing.T) {
+	installerDir, targetRoot, _, _ := writeHFArtifactFixture(t)
+	target := "models--acme--tiny-model"
+	staged := stageInterruptedPublish(t, targetRoot, target)
+
+	if err := materializeHFArtifacts(installerDir, targetRoot, nil); err != nil {
+		t.Fatalf("materializeHFArtifacts() error = %v", err)
+	}
+
+	if _, err := os.Lstat(filepath.Join(targetRoot, target, hfStageMarkerFileName)); !os.IsNotExist(err) {
+		t.Fatalf("staging marker survived the redo: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(targetRoot, target, hfCacheMarkerFileName)); err != nil {
+		t.Fatalf("completion marker missing after the redo: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(targetRoot, target, staged)); !os.IsNotExist(err) {
+		t.Fatalf("interrupted tree was reused instead of redone: %v", err)
+	}
+	assertNoHFStaging(t, targetRoot)
+}
+
+// stageInterruptedPublish writes the tree an interrupted publish leaves: the
+// artifact content, this artifact's staging marker, and no completion marker.
+// It returns the name of a file only this tree carries, so the caller can tell
+// a redo apart from a reused directory.
+func stageInterruptedPublish(t *testing.T, targetRoot, target string) string {
+	t.Helper()
+	published := filepath.Join(targetRoot, target)
+	if err := os.MkdirAll(filepath.Join(published, "snapshots"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marker, err := json.Marshal(hfStageMarker{
+		Target: target, Repo: "acme/tiny-model", Token: strings.Repeat("a", 32),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(published, hfStageMarkerFileName), append(marker, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const leftover = "interrupted-leftover"
+	if err := os.WriteFile(filepath.Join(published, leftover), []byte("stale"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return leftover
 }
 
 func TestMaterializeHFArtifactsRejectsDuplicateRepoBeforeCopy(t *testing.T) {

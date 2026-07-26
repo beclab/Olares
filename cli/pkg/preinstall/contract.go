@@ -292,6 +292,13 @@ func validateArtifactManifest(manifest ArtifactManifestV1, artifact BundleArtifa
 		if err := validateRelativePath(entry.Path); err != nil {
 			return fmt.Errorf("%s path: %w", prefix, err)
 		}
+		// The publisher writes these two names itself: the staging marker says
+		// a publish is unfinished and the completion marker says the tree is
+		// the artifact it claims to be. An entry allowed to carry either name
+		// could forge both answers.
+		if base := path.Base(entry.Path); base == hfCacheMarkerFileName || base == hfStageMarkerFileName {
+			return fmt.Errorf("%s path must not use the reserved name %q", prefix, base)
+		}
 		if _, exists := seen[entry.Path]; exists {
 			return fmt.Errorf("artifact manifest duplicate path %q", entry.Path)
 		}

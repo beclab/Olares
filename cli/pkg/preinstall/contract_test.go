@@ -474,6 +474,35 @@ func TestLoadArtifactManifestRejectsSizeAndEntryLimits(t *testing.T) {
 	})
 }
 
+// The publisher owns both marker names: one says a publish is unfinished, the
+// other says the tree is the artifact it claims to be. A manifest entry that
+// could write either name could tell both lies.
+func TestValidateArtifactManifestRejectsTheMarkerNames(t *testing.T) {
+	artifact := validHFCacheArtifact(validArtifactManifestJSON())
+	for _, name := range []string{
+		hfCacheMarkerFileName,
+		hfStageMarkerFileName,
+		"snapshots/" + hfCacheMarkerFileName,
+		"snapshots/" + hfStageMarkerFileName,
+	} {
+		t.Run(name, func(t *testing.T) {
+			manifest := ArtifactManifestV1{
+				SchemaVersion: 1, Repo: artifact.Repo, Revision: artifact.Revision,
+				Entries: []ArtifactManifestEntryV1{{
+					Path: name, Type: "file", Size: 0,
+					SHA256: strings.Repeat("0", 64),
+				}},
+			}
+
+			err := validateArtifactManifest(manifest, artifact)
+
+			if err == nil || !strings.Contains(err.Error(), "reserved name") {
+				t.Fatalf("validateArtifactManifest() error = %v, want a reserved name rejection", err)
+			}
+		})
+	}
+}
+
 func TestLoadArtifactManifestRejectsInvalidDeclarationBeforeIO(t *testing.T) {
 	dir := canonicalTempDir(t)
 	root, err := openDirectoryNoSymlink(dir)

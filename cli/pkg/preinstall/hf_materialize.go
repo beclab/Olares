@@ -191,9 +191,24 @@ func materializeOneHFArtifact(staticRoot, targetRoot *os.Root, target string, ar
 		if matches {
 			return nil
 		}
-		return fmt.Errorf("existing target %q marker is missing or different", target)
-	}
-	if !os.IsNotExist(err) {
+		// A tree that still carries this artifact's staging marker and no
+		// completion marker is a publish this program was interrupted in: the
+		// rename landed, the completion marker did not. Redoing it is the only
+		// way the host recovers without a human clearing the directory.
+		interrupted, err := hfInterruptedPublish(targetRoot, target, artifact.Repo)
+		if err != nil {
+			return fmt.Errorf("inspect existing target %q: %w", target, err)
+		}
+		if !interrupted {
+			return fmt.Errorf("existing target %q marker is missing or different", target)
+		}
+		if err := targetRoot.RemoveAll(target); err != nil {
+			return fmt.Errorf("remove interrupted publish %q: %w", target, err)
+		}
+		if err := syncRootDirectory(targetRoot, "."); err != nil {
+			return err
+		}
+	} else if !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("inspect target %q: %w", target, err)
 	}
 
@@ -292,10 +307,6 @@ func materializeOneHFArtifact(staticRoot, targetRoot *os.Root, target string, ar
 	if err != nil {
 		return fmt.Errorf("open published Hugging Face cache %q: %w", target, err)
 	}
-	if err := publishedRoot.Remove(hfStageMarkerFileName); err != nil {
-		_ = publishedRoot.Close()
-		return fmt.Errorf("remove published staging marker: %w", err)
-	}
 	if err := syncHFTree(publishedRoot, 0o755); err != nil {
 		_ = publishedRoot.Close()
 		return err
@@ -310,11 +321,52 @@ func materializeOneHFArtifact(staticRoot, targetRoot *os.Root, target string, ar
 	if err == nil {
 		err = writeHFCompletionMarker(publishedRoot, append(markerData, '\n'), ownership)
 	}
+	// The staging marker is what tells the next run this tree is a publish
+	// that was interrupted, so it is dropped only once the completion marker
+	// says the publish finished. A crash before this point is recoverable; a
+	// crash after it leaves a complete tree.
+	if err == nil {
+		err = removePublishedHFStageMarker(publishedRoot)
+	}
 	closeErr = publishedRoot.Close()
 	if err := errors.Join(err, closeErr); err != nil {
 		return fmt.Errorf("complete published Hugging Face cache %q: %w", target, err)
 	}
 	return nil
+}
+
+func removePublishedHFStageMarker(publishedRoot *os.Root) error {
+	if err := publishedRoot.Remove(hfStageMarkerFileName); err != nil {
+		return fmt.Errorf("remove published staging marker: %w", err)
+	}
+	if err := syncRootDirectory(publishedRoot, "."); err != nil {
+		return err
+	}
+	return nil
+}
+
+// hfInterruptedPublish reports whether the published tree is one this program
+// renamed into place but never finished. The staging marker survives the
+// rename and is removed only after the completion marker lands, so finding it
+// beside a missing completion marker names exactly that window.
+func hfInterruptedPublish(root *os.Root, target, repo string) (bool, error) {
+	publishedRoot, err := root.OpenRoot(target)
+	if err != nil {
+		return false, err
+	}
+	defer publishedRoot.Close()
+	data, err := readRootFileLimited(publishedRoot, hfStageMarkerFileName, 4096)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	var got hfStageMarker
+	if err := strictDecode(data, &got); err != nil {
+		return false, nil
+	}
+	return got.Target == target && got.Repo == repo, nil
 }
 
 func materializeHFEntry(sourceRoot, stagingRoot *os.Root, entry ArtifactManifestEntryV1) error {
@@ -448,7 +500,10 @@ func hfMarkerMatches(root *os.Root, target string, want hfCacheMarker) (bool, er
 	}
 	defer targetRoot.Close()
 	data, err := readRootFileLimited(targetRoot, hfCacheMarkerFileName, 4096)
-	if os.IsNotExist(err) {
+	// The reader wraps its errors, which os.IsNotExist does not unwrap: without
+	// errors.Is a missing marker reads as a read failure and the caller aborts
+	// instead of treating the tree as unmarked.
+	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil
 	}
 	if err != nil {
