@@ -68,6 +68,17 @@ var (
 		"applyEnvFailed":  true,
 		"failed":          true,
 	}
+
+	// upgradeCanceledReasons are the two Status.Reason tags app-service
+	// stamps when an upgrade is cancelled — by the user through
+	// `market cancel`, or by the backend's own download TTL. Verbatim from
+	// framework/app-service/pkg/constants/operate_msg.go. They are the only
+	// signal that separates a cancelled upgrade from a completed one once
+	// both are resting on `stopped`; see upgradeStoppedTerminal.
+	upgradeCanceledReasons = map[string]bool{
+		"upgradeCancelByUser":   true,
+		"upgradeCancelBySystem": true,
+	}
 )
 
 // watchTarget captures everything waitForTerminal needs to decide whether a
@@ -153,6 +164,25 @@ type watchTarget struct {
 	// it; captured baseline comes from runResume, same as restart.
 	stoppedTerminalSuccess bool
 
+	// upgradeStoppedTerminal makes `stopped` terminal for the upgrade
+	// watcher, which is the one op where that state is BOTH outcomes:
+	//   - an upgrade started from `stopped` lands back on `stopped` at the
+	//     new version (upgrading_app.go keeps the pre-upgrade landed state),
+	//     so it never reaches `running`;
+	//   - a cancelled upgrade also settles on `stopped`, still on the OLD
+	//     version, via upgrading -> upgradingCanceling -> stopping.
+	// Reason is what tells them apart: app-service stamps
+	// upgradeCancelByUser / upgradeCancelBySystem when the cancel is
+	// accepted and SuspendingApp deliberately re-reads and preserves it
+	// while writing `stopped`, so it survives to the row we poll. The row's
+	// version cannot be used instead — it tracks the AM's target version,
+	// which a cancel does not roll back.
+	//
+	// Baseline-gated like stoppedTerminalSuccess: for an upgrade started
+	// from `stopped` the tick-zero row is the pre-upgrade resting one, and
+	// only statusTime separates it from the landed row.
+	upgradeStoppedTerminal bool
+
 	// requireNewerThanBaseline gates BOTH success and failure on the row's
 	// statusTime being strictly newer than baselineStatusTime. This is the
 	// crux of the restart watcher: a completed restart rests at
@@ -194,6 +224,10 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 	case watchUpgrade:
 		t.successSet = map[string]bool{"running": true}
 		t.failureSet = unionStateSets(operationFailedStates, canceledStates)
+		// `running` alone never settles an upgrade that started from a
+		// stopped app, nor one that gets cancelled — both end on `stopped`.
+		// See upgradeStoppedTerminal for how the two are told apart.
+		t.upgradeStoppedTerminal = true
 	case watchUninstall:
 		t.successSet = map[string]bool{"uninstalled": true}
 		t.failureSet = map[string]bool{"uninstallFailed": true}
@@ -475,6 +509,16 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 			// than the pre-resume baseline is the fresh cancel (the tick-
 			// zero pre-resume `stopped` row shares the baseline statusTime).
 			if t.stoppedTerminalSuccess && row.State == appStateStopped && effectiveTime(row) > t.baselineStatusTime {
+				return row, nil
+			}
+			// Upgrade settling on `stopped`: a cancel is a failure (the
+			// upgrade we asked for did not happen — same verdict a cancelled
+			// install gets), anything else is the landed upgrade-from-stopped.
+			// See upgradeStoppedTerminal.
+			if t.upgradeStoppedTerminal && row.State == appStateStopped && effectiveTime(row) > t.baselineStatusTime {
+				if upgradeCanceledReasons[row.Reason] {
+					return row, &watchFailureError{target: t, row: row}
+				}
 				return row, nil
 			}
 			if t.successSet[row.State] && t.passesBaseline(row) {
