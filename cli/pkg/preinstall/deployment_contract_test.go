@@ -18,15 +18,26 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 	container := between(t, deployment, "      - name: appstore-backend\n", "      volumes:\n")
 	volumes := after(t, deployment, "      volumes:\n")
 
+	// The two preinstall variables are rendered only for an installer that
+	// published a bundle, so an ordinary install does not have Market open an
+	// empty mount on every boot. They are asserted as one block for that
+	// reason: an enabled flag without a directory turns the importer on with
+	// nothing to read.
+	preinstallEnv := "{{ if .Values.preinstall }}\n" +
+		"          - name: PREINSTALL_ENABLED\n            value: 'true'\n" +
+		"          - name: PREINSTALL_BUNDLE_DIR\n            value: /opt/app/preinstall\n" +
+		"{{ end }}"
 	for _, required := range []string{
-		"- name: PREINSTALL_ENABLED\n            value: 'true'",
-		"- name: PREINSTALL_BUNDLE_DIR\n            value: /opt/app/preinstall",
+		preinstallEnv,
 		"- name: opt-data\n            mountPath: /opt/app/data",
 		"- name: market-preinstall\n            mountPath: /opt/app/preinstall\n            readOnly: true",
 	} {
 		if !strings.Contains(container, required) {
 			t.Errorf("appstore-backend container missing contract:\n%s", required)
 		}
+	}
+	if strings.Count(container, "PREINSTALL_ENABLED") != 1 {
+		t.Errorf("PREINSTALL_ENABLED must be rendered from one gated block")
 	}
 	// The mount is derived from RuntimeRelativeDir so that moving the publish
 	// target in the CLI cannot silently diverge from what the pod mounts.

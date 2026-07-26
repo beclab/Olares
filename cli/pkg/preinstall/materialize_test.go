@@ -620,6 +620,34 @@ func TestMaterializeReplacesExistingReadOnlyTarget(t *testing.T) {
 	}
 }
 
+// Published is what turns the market deployment's importer on, so it must
+// answer for the tree Materialize leaves behind and for nothing else.
+func TestPublishedFollowsWhatMaterializeLeavesBehind(t *testing.T) {
+	installerDir, baseDir := writeStaticBundle(t)
+	if Published(baseDir) {
+		t.Fatal("Published() is true before anything was published")
+	}
+
+	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
+		t.Fatalf("Materialize() error = %v", err)
+	}
+	target := filepath.Join(baseDir, RuntimeRelativeDir)
+	t.Cleanup(func() { _ = makeWritable(target) })
+
+	if !Published(baseDir) {
+		t.Fatal("Published() is false for a bundle this run published")
+	}
+	if err := makeWritable(target); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(target, BundleFileName)); err != nil {
+		t.Fatal(err)
+	}
+	if Published(baseDir) {
+		t.Fatal("Published() is true for a directory with no bundle in it")
+	}
+}
+
 // Every interrupted run leaves a staging directory holding a full copy of the
 // bundle. Nothing else writes that name, so the next run clears them; a
 // directory that only looks similar is left where it is.

@@ -113,6 +113,17 @@ func Materialize(installerDir, rootDir string, selections ProfileSelections) err
 	return replaceDirectoryRoot(parentRoot, targetName, stagingName)
 }
 
+// Published reports whether rootDir carries a published bundle, which is what
+// decides whether the market deployment is rendered with preinstall turned on.
+// It answers on the presence of the bundle file rather than on a full load:
+// telling Market a bundle is there and letting it report what is wrong with it
+// is more useful than turning the feature off over a detail this program did
+// not manage to parse.
+func Published(rootDir string) bool {
+	info, err := os.Lstat(filepath.Join(rootDir, filepath.FromSlash(RuntimeRelativeDir), BundleFileName))
+	return err == nil && info.Mode().IsRegular()
+}
+
 func buildProfile(bundle BundleV1, selections ProfileSelections) InstallProfileV1 {
 	defaultsByApp := make(map[string]map[string]string, len(bundle.Apps))
 	allowedGPUByApp := make(map[string][]string, len(bundle.Apps))
