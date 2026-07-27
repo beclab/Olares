@@ -823,6 +823,89 @@ func TestRoundTrip_RetrySuccessClearsCooldown(t *testing.T) {
 	}
 }
 
+// TestRoundTrip_RetryAfterSwitchStillRefreshesOn401: the two failures this
+// exercises travel together in practice — a laptop that moved off the LAN has
+// usually been asleep long enough for its access token to expire — so the
+// connection-method switch must not consume the request's one shot at a
+// refresh. The retry used to be returned to the caller as-is, turning a
+// recoverable expiry into an auth error precisely when we had just found a
+// working route.
+func TestRoundTrip_RetryAfterSwitchStillRefreshesOn401(t *testing.T) {
+	authSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"status":"OK","data":{"access_token":"AT-NEW","refresh_token":"RT","session_id":"S"}}`)
+	}))
+	defer authSrv.Close()
+
+	store := &fakeStore{}
+	_ = store.Set(auth.StoredToken{
+		OlaresID:     "alice@olares.com",
+		AccessToken:  "AT-OLD",
+		RefreshToken: "RT",
+	})
+	tr, _ := newTransport(t, store, authSrv.URL, "AT-OLD")
+
+	var (
+		calls     int
+		seenAuth  []string
+		seenHosts []string
+	)
+	tr.loc.base = fakeRoundTripper(func(r *http.Request) (*http.Response, error) {
+		calls++
+		seenAuth = append(seenAuth, r.Header.Get("X-Authorization"))
+		seenHosts = append(seenHosts, r.URL.Host)
+		switch calls {
+		case 1:
+			// A peer switched the shared cell while our request was in
+			// flight, so ensureSwitched adopts that without a real probe.
+			tr.loc.mu.Lock()
+			tr.loc.loc = olares.LocationLAN
+			tr.loc.mu.Unlock()
+			return nil, &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}
+		case 2:
+			return &http.Response{
+				StatusCode: http.StatusUnauthorized,
+				Body:       io.NopCloser(strings.NewReader("unauth")),
+				Header:     make(http.Header),
+			}, nil
+		default:
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader("ok")),
+				Header:     make(http.Header),
+			}, nil
+		}
+	})
+
+	body := bytes.NewReader([]byte("payload"))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "https://desktop.alice.olares.com/x", body)
+	resp, err := tr.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("RoundTrip: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("final status = %d, want 200 — the expired token should have been rotated", resp.StatusCode)
+	}
+	if calls != 3 {
+		t.Fatalf("sends = %d, want 3 (failed send, retry on the new method, replay after refresh)", calls)
+	}
+	if seenAuth[1] != "AT-OLD" || seenAuth[2] != "AT-NEW" {
+		t.Errorf("X-Authorization timeline = %v, want the replay to carry AT-NEW", seenAuth)
+	}
+	if got := tr.token.snapshot(); got != "AT-NEW" {
+		t.Errorf("token cell = %q, want AT-NEW", got)
+	}
+	// The replay must follow the request we switched to, not the original:
+	// re-sending to the host that just refused the connection would fail.
+	if seenHosts[2] != seenHosts[1] {
+		t.Errorf("replay host = %q, want the rebased %q", seenHosts[2], seenHosts[1])
+	}
+	if seenHosts[1] == seenHosts[0] {
+		t.Fatalf("test is not exercising a switch: host stayed %q", seenHosts[0])
+	}
+}
+
 // TestRoundTrip_NonSwitchableErrorPassthrough: a non-switchable transport error
 // (here a TLS failure) is NOT dressed up as unreachable — it surfaces verbatim,
 // since the network path is clearly up.

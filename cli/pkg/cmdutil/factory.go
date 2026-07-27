@@ -642,25 +642,38 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 				retryReq.URL = t.id.RebaseURL(retryReq.URL, newLoc, t.localPrefix)
 				retryReq.Host = ""
 				retryResp, retryErr := t.send(newBase, retryReq, snap)
-				if retryErr != nil && access.IsSwitchableNetErr(retryErr, req.Context()) {
-					// The method we switched to died the same way, and one
-					// retry is all we get. That's the same "nothing here is
-					// reachable" verdict as the branch below, so report it
-					// the same way instead of leaking a raw dial/DNS error.
-					return nil, access.NewUnreachable(t.olaresID, retryErr)
+				if retryErr != nil {
+					if access.IsSwitchableNetErr(retryErr, req.Context()) {
+						// The method we switched to died the same way, and
+						// one retry is all we get. That's the same "nothing
+						// here is reachable" verdict as the branch below, so
+						// report it the same way instead of leaking a raw
+						// dial/DNS error.
+						return nil, access.NewUnreachable(t.olaresID, retryErr)
+					}
+					return nil, retryErr
 				}
-				if retryErr == nil {
-					// Same rule as the first-attempt success below: a real
-					// response means the path is up, so lift any outage
-					// cooldown. ensureSwitched only clears the stamp when the
-					// position actually MOVED (via persistLocation); a
-					// transient blip recovered at the same position, or a
-					// switch a peer goroutine had already made, would
-					// otherwise leave a stale stamp behind and keep failing
-					// later requests fast.
-					t.clearUnreachable()
-				}
-				return retryResp, retryErr
+				// Same rules as the first-attempt success below, because from
+				// here on this IS the attempt: a real response means the path
+				// is up, so lift any outage cooldown, and a 401/403 on it
+				// still deserves the refresh-and-replay treatment. Switching
+				// connection methods says nothing about token freshness — the
+				// two failures routinely coincide (a laptop that moved off the
+				// LAN has usually been asleep long enough for the access token
+				// to expire), and without this the user would get an auth
+				// error right after we found them a working route.
+				//
+				// clearUnreachable is not folded into ensureSwitched: that
+				// only clears the stamp when the position actually MOVED (via
+				// persistLocation), so a transient blip recovered at the same
+				// position, or a switch a peer goroutine had already made,
+				// would leave a stale stamp behind and keep failing later
+				// requests fast.
+				t.clearUnreachable()
+				// Everything downstream must describe the attempt that
+				// produced retryResp: the rebased request, and the transport
+				// and Location we switched TO.
+				return t.refreshOnAuthFailure(retryReq, retryResp, newBase, newLoc, snap)
 			}
 			// No connection method worked (cooldown, or every probe failed):
 			// surface the friendly, classified "unreachable" message while
@@ -672,6 +685,31 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	// A real HTTP response means the path is up; lift any outage cooldown.
 	t.clearUnreachable()
 
+	return t.refreshOnAuthFailure(req, resp, base, curLoc, snap)
+}
+
+// refreshOnAuthFailure is the reactive half of the token lifecycle: given a
+// response that came back from the server, it passes anything but 401/403
+// straight through, and otherwise rotates the access token and replays the
+// request exactly once.
+//
+// req, base and loc must all describe the attempt that produced resp — after a
+// connection-method switch that means the rebased request and the transport /
+// Location we switched to, not the originals RoundTrip started with. Using the
+// pre-switch values would refresh against an auth endpoint we just found
+// unreachable and replay to the URL that already failed.
+//
+// snap is the access token the attempt was sent with, and is what the refresh
+// is keyed on: passing the token we actually used lets the Refresher tell "my
+// token is stale" apart from "a peer already rotated it", so concurrent 401s
+// collapse into a single /api/refresh round-trip.
+func (t *refreshingTransport) refreshOnAuthFailure(
+	req *http.Request,
+	resp *http.Response,
+	base http.RoundTripper,
+	loc olares.Location,
+	snap string,
+) (*http.Response, error) {
 	if !isAuthFailureStatus(resp.StatusCode) {
 		return resp, nil
 	}
@@ -684,7 +722,7 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	// Drain + close so the underlying connection can be reused.
 	drainAndClose(resp)
 
-	newAT, rerr := t.refresher.Refresh(req.Context(), t.olaresID, t.authURL(curLoc), snap, t.insecureSkipVerify, curLoc)
+	newAT, rerr := t.refresher.Refresh(req.Context(), t.olaresID, t.authURL(loc), snap, t.insecureSkipVerify, loc)
 	if rerr != nil {
 		// Refresh itself failed (network, 5xx) or the grant is dead
 		// (ErrTokenInvalidated, ErrNotLoggedIn). Surface the typed
