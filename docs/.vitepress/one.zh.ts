@@ -166,7 +166,11 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "更新 OS",
           link: "/zh/one/update",
-        },       
+        },
+        {
+          text: "升级双节点 Olares 集群",
+          link: "/zh/one/upgrade-multi-node-cluster",
+        },
         {
           text: "恢复 Olares One",
           items: [
