@@ -13,8 +13,8 @@ import (
 // VPNSubnet is the CGNAT range Olares' headscale/tailscale overlay hands out
 // (USER_SUBNET defaults to 100.64.0.0/20, comfortably inside this /10). When a
 // connection to the public hostname — resolved via the in-cluster DNS — has a
-// source address in this range, the CLI is running on the Olares host itself;
-// otherwise it's inside a cluster pod. See ProbeLocation.
+// source address in this range, the CLI is running on the Olares host itself.
+// Any other address is inconclusive on its own — see ProbeLocation.
 const VPNSubnet = "100.64.0.0/10"
 
 // clusterResolver resolves names through the in-cluster DNS (olares.ClusterDNS)
