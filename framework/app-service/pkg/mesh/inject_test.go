@@ -66,7 +66,6 @@ func TestEnsureCallerNamespaceMeshAccess(t *testing.T) {
 func TestEnsureCallerNamespaceMeshAccess_SkipsSharedNamespace(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
-	_ = networkingv1.AddToScheme(scheme)
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ollama-shared",
