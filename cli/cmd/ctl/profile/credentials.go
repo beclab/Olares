@@ -113,42 +113,78 @@ func ensureProfileWritable(
 		// overwrite it.
 	}
 
-	// 2. Build the ProfileConfig we're about to upsert. If one already
-	// exists, preserve its overrides unless the caller explicitly passed a
-	// new value.
-	if existing := cfg.FindByOlaresID(flags.olaresID); existing != nil {
-		out := *existing
-		if flags.name != "" {
-			out.Name = flags.name
-		}
-		if flags.authURLOverride != "" {
-			out.AuthURLOverride = flags.authURLOverride
-		}
-		if flags.localURLPrefix != "" {
-			out.LocalURLPrefix = flags.localURLPrefix
-		}
-		if flags.insecureSkipVerify {
-			out.InsecureSkipVerify = true
-		}
-		return out, nil
-	}
-	return cliconfig.ProfileConfig{
-		Name:               flags.name,
-		OlaresID:           flags.olaresID,
-		AuthURLOverride:    flags.authURLOverride,
-		LocalURLPrefix:     flags.localURLPrefix,
-		InsecureSkipVerify: flags.insecureSkipVerify,
-	}, nil
+	// 2. Build the ProfileConfig the caller will use for the auth round-trips.
+	// The record that actually lands on disk is rebuilt from a fresh read
+	// inside persistTokenAndProfile's lock — see profileWrite.
+	return mergeProfileFlags(cfg.FindByOlaresID(flags.olaresID), flags), nil
 }
 
-// persistResult reports what happened to the active-profile pointer as a side
-// effect of persistTokenAndProfile, so callers can print accurate UX.
+// mergeProfileFlags applies the user-supplied flags onto the profile as it
+// exists on disk (nil for a first-time login), and is the single definition of
+// which fields login / import own. Everything the flags don't speak for is
+// carried over untouched: the URL overrides the user didn't repeat this time,
+// and every cached fact other commands maintain (role, backend version,
+// cluster context, outage stamp).
+func mergeProfileFlags(existing *cliconfig.ProfileConfig, flags commonCredFlags) cliconfig.ProfileConfig {
+	if existing == nil {
+		return cliconfig.ProfileConfig{
+			Name:               flags.name,
+			OlaresID:           flags.olaresID,
+			AuthURLOverride:    flags.authURLOverride,
+			LocalURLPrefix:     flags.localURLPrefix,
+			InsecureSkipVerify: flags.insecureSkipVerify,
+		}
+	}
+	out := *existing
+	if flags.name != "" {
+		out.Name = flags.name
+	}
+	if flags.authURLOverride != "" {
+		out.AuthURLOverride = flags.authURLOverride
+	}
+	if flags.localURLPrefix != "" {
+		out.LocalURLPrefix = flags.localURLPrefix
+	}
+	if flags.insecureSkipVerify {
+		out.InsecureSkipVerify = true
+	}
+	return out
+}
+
+// profileWrite is what login / import ask persistTokenAndProfile to record:
+// the flag-derived fields plus the network position they just probed. It is
+// deliberately NOT a finished ProfileConfig — the record is assembled under
+// the config lock against a fresh read, so a role, version or cluster-context
+// write that landed while we waited on the probe, the password prompt or a
+// TOTP code isn't rolled back by a pre-auth snapshot.
+type profileWrite struct {
+	flags    commonCredFlags
+	location olares.Location
+	probedAt int64
+}
+
+// apply builds the record to persist from the profile as it exists on disk
+// right now (nil for a first-time login).
+func (w profileWrite) apply(existing *cliconfig.ProfileConfig) cliconfig.ProfileConfig {
+	out := mergeProfileFlags(existing, w.flags)
+	out.Location = string(w.location)
+	out.LocationProbedAt = w.probedAt
+	// We just reached the instance, so any outage cooldown another command
+	// stamped meanwhile is stale (mirrors cliconfig.applyLocation).
+	out.LocationUnreachableAt = 0
+	return out
+}
+
+// persistResult reports what persistTokenAndProfile wrote, so callers can
+// print accurate UX and run their post-login steps against the record that
+// actually landed on disk rather than their own pre-auth snapshot.
 //
 // Switched is true exactly when CurrentProfile changed during this call. In
 // that case PreviousCurrent holds whatever CurrentProfile pointed at before
 // the switch (may be empty when the just-persisted profile is the very first
 // one).
 type persistResult struct {
+	Profile         cliconfig.ProfileConfig
 	Switched        bool
 	PreviousCurrent string
 }
@@ -168,12 +204,13 @@ type persistResult struct {
 func persistTokenAndProfile(
 	cfg *cliconfig.MultiProfileConfig,
 	store auth.TokenStore,
-	profile cliconfig.ProfileConfig,
+	write profileWrite,
 	tok *auth.Token,
 	switchCurrent bool,
 ) (persistResult, error) {
+	olaresID := write.flags.olaresID
 	stored := auth.StoredToken{
-		OlaresID:     profile.OlaresID,
+		OlaresID:     olaresID,
 		AccessToken:  tok.AccessToken,
 		RefreshToken: tok.RefreshToken,
 		SessionID:    tok.SessionID,
@@ -185,10 +222,14 @@ func persistTokenAndProfile(
 
 	// Persist the profile under the config lock, re-reading inside so a
 	// concurrent background location write can't clobber the upsert (and
-	// vice-versa). The upsert + current-pointer logic runs on the fresh copy.
+	// vice-versa). The record itself is assembled from that fresh copy too:
+	// login and import own only their flags plus the probed location, and
+	// authentication is slow enough (probe, password prompt, TOTP code) that
+	// another command may well have cached a role or version in the meantime.
 	res := persistResult{}
 	if err := cliconfig.UpdateLocked(func(c *cliconfig.MultiProfileConfig) error {
-		persisted := c.Upsert(profile)
+		persisted := c.Upsert(write.apply(c.FindByOlaresID(olaresID)))
+		res.Profile = *persisted
 		newName := persisted.DisplayName()
 		prevCurrent := c.CurrentProfile
 		switch {

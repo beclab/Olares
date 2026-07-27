@@ -2,6 +2,7 @@ package profile
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -113,16 +114,18 @@ func runWhoami(ctx context.Context, f *cmdutil.Factory, refresh bool, outputRaw 
 	})
 	// DetectAndCache returns a nil display only when the probe itself failed
 	// (every connection method down) — that's a hard error with nothing to
-	// show. When the probe succeeded but a role/version fetch failed, it
-	// returns a populated display AND has already persisted the location plus
-	// any successful fields; mirror eagerDetect and render that partial result
-	// with a warning rather than failing the command outright.
+	// show. Otherwise the display holds real server-side facts even if a
+	// role/version fetch or the cache write failed; mirror eagerDetect and
+	// render that partial result with a warning rather than failing outright.
+	// The follow-up line only holds when the cache write itself landed.
 	if d == nil {
 		return derr
 	}
 	if derr != nil {
 		fmt.Fprintf(os.Stderr, "warning: re-detect did not fully complete: %v\n", derr)
-		fmt.Fprintln(os.Stderr, "         (location and any successfully fetched fields were still cached)")
+		if !errors.Is(derr, whoami.ErrCacheWrite) {
+			fmt.Fprintln(os.Stderr, "         (location and any successfully fetched fields were still cached)")
+		}
 	}
 	return whoami.RenderDetect(os.Stdout, d, format)
 }

@@ -3,6 +3,7 @@ package whoami
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -77,12 +78,25 @@ func ConnectionLabel(loc olares.Location) string {
 	}
 }
 
+// ErrCacheWrite marks a detect pass whose server-side facts are sound but
+// could not be written to config.json (lock timeout, I/O error, ...). Callers
+// can test for it with errors.Is to tell "the backend didn't answer" apart
+// from "we know the answer but couldn't remember it".
+var ErrCacheWrite = errors.New("detected values could not be cached")
+
+// newDetectClient indirects client construction so tests can drive a detect
+// pass without a network; production never reassigns it.
+var newDetectClient = func(desktopURL, olaresID, accessToken string, insecure bool, loc olares.Location) Doer {
+	return NewHTTPClientWithToken(desktopURL, olaresID, accessToken, insecure, loc)
+}
+
 // DetectAndCache runs a full detect: it resolves the Location (probing unless
-// KnownLocation is set), persists it, then fetches role + version through a
-// client bound to that Location and caches both. It returns the assembled
-// display plus the first hard error encountered while fetching role/version
-// (the location + whatever else succeeded are still cached). A probe failure
-// (every method down) is returned as-is with a nil display.
+// KnownLocation is set), then fetches role + version through a client bound to
+// that Location and persists all three in one locked write. It returns the
+// assembled display plus any hard error encountered: a role/version fetch
+// failure (the other facts are still cached), and/or ErrCacheWrite when the
+// cache write itself failed. A probe failure (every method down) is returned
+// as-is with a nil display.
 func DetectAndCache(ctx context.Context, in DetectInput) (*DetectDisplay, error) {
 	now := in.Now
 	if now == nil {
@@ -111,7 +125,7 @@ func DetectAndCache(ctx context.Context, in DetectInput) (*DetectDisplay, error)
 	}
 
 	ep := id.Endpoints(loc, in.LocalPrefix)
-	client := NewHTTPClientWithToken(ep.Desktop, in.OlaresID, in.AccessToken, in.Insecure, loc)
+	client := newDetectClient(ep.Desktop, in.OlaresID, in.AccessToken, in.Insecure, loc)
 
 	d := &DetectDisplay{
 		OlaresID:   in.OlaresID,
@@ -150,7 +164,13 @@ func DetectAndCache(ctx context.Context, in DetectInput) (*DetectDisplay, error)
 	}
 
 	if in.Cfg != nil {
-		_ = in.Cfg.SetDetectResults(in.OlaresID, string(loc), now().Unix(), role, roleAt, version, versionAt)
+		if serr := in.Cfg.SetDetectResults(in.OlaresID, string(loc), now().Unix(), role, roleAt, version, versionAt); serr != nil {
+			// The facts we're about to return are real, but nothing reached
+			// config.json — every later command will still see the old
+			// values. Report it rather than letting the caller print
+			// "re-detected just now" over an unchanged cache.
+			firstErr = errors.Join(firstErr, fmt.Errorf("%w: %w", ErrCacheWrite, serr))
+		}
 	}
 	return d, firstErr
 }

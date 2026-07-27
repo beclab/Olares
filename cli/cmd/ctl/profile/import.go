@@ -83,8 +83,7 @@ func runImport(ctx context.Context, o *importOptions) error {
 	if err != nil {
 		return err
 	}
-	profile.Location = string(loc)
-	profile.LocationProbedAt = time.Now().Unix()
+	probedAt := time.Now().Unix()
 
 	tok, err := auth.Refresh(ctx, auth.RefreshRequest{
 		AuthURL:      authURL,
@@ -101,14 +100,18 @@ func runImport(ctx context.Context, o *importOptions) error {
 		return err
 	}
 
-	res, err := persistTokenAndProfile(cfg, store, profile, tok, !o.noSwitch)
+	res, err := persistTokenAndProfile(cfg, store, profileWrite{
+		flags:    o.commonCredFlags,
+		location: loc,
+		probedAt: probedAt,
+	}, tok, !o.noSwitch)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("imported credentials for %s (profile: %s)\n", o.olaresID, profile.DisplayName())
-	printSwitchNotice(res, profile.DisplayName())
-	printStorageNotice(profile.OlaresID)
-	eagerDetect(ctx, cfg, profile, tok.AccessToken)
+	fmt.Printf("imported credentials for %s (profile: %s)\n", o.olaresID, res.Profile.DisplayName())
+	printSwitchNotice(res, res.Profile.DisplayName())
+	printStorageNotice(res.Profile.OlaresID)
+	eagerDetect(ctx, cfg, res.Profile, tok.AccessToken)
 	return nil
 }

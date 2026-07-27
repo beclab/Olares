@@ -100,7 +100,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 
 	// Detect where we sit relative to this Olares before authenticating, so
 	// the auth round-trips (and every later command) use the fastest reachable
- 	// connection method. Use the merged profile's AuthURLOverride (not the raw
+	// connection method. Use the merged profile's AuthURLOverride (not the raw
 	// CLI flag): a profile that already pins its auth endpoint in config keeps
 	// it on re-login even when --auth-url-override isn't passed again, so the
 	// probe is skipped (external) and the pinned URL is used — matching
@@ -109,8 +109,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	if err != nil {
 		return err
 	}
-	profile.Location = string(loc)
-	profile.LocationProbedAt = time.Now().Unix()
+	probedAt := time.Now().Unix()
 
 	tok, err := loginWithTOTPPrompt(ctx, auth.LoginRequest{
 		AuthURL:   authURL,
@@ -145,20 +144,24 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 		return err
 	}
 
-	res, err := persistTokenAndProfile(cfg, store, profile, tok, !o.noSwitch)
+	res, err := persistTokenAndProfile(cfg, store, profileWrite{
+		flags:    o.commonCredFlags,
+		location: loc,
+		probedAt: probedAt,
+	}, tok, !o.noSwitch)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("logged in as %s (profile: %s)\n", olaresID, profile.DisplayName())
-	printSwitchNotice(res, profile.DisplayName())
-	printStorageNotice(profile.OlaresID)
+	fmt.Printf("logged in as %s (profile: %s)\n", olaresID, res.Profile.DisplayName())
+	printSwitchNotice(res, res.Profile.DisplayName())
+	printStorageNotice(res.Profile.OlaresID)
 	// Best-effort: run the unified detect (role + backend version) at the
 	// just-probed location so `settings` preflight + version-aware command
 	// visibility are accurate from the first command, without a follow-up
 	// `profile whoami --refresh`. Failures downgrade to a stderr warning so a
 	// transient backend blip doesn't shadow a successful login.
-	eagerDetect(ctx, cfg, profile, tok.AccessToken)
+	eagerDetect(ctx, cfg, res.Profile, tok.AccessToken)
 	return nil
 }
 
