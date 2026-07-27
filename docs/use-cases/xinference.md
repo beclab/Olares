@@ -7,7 +7,7 @@ head:
       content: Olares, Xinference, migration, shared app, Olares 1.12.6
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-07-13"
+doc_updated: "2026-07-27"
 ---
 
 # Migrate Xinference to the new architecture
@@ -39,6 +39,10 @@ Therefore, your existing models cannot be migrated automatically. You must reins
    d. Click **Get**, then **Install**, and wait for the installation to finish.
 
 3. Open the new Xinference app, and then re-download all models you need. The system will store them to the correct locations automatically.
+
+## Clean up legacy data
+
+After you confirm the migration is successful and the new app works as expected, you can manually delete the legacy app data folder to free up disk space. Open Files, go to **Cache** > **xinferencesv2**, and delete the folder.
 
 ## Learn more
 

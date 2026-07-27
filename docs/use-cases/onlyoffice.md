@@ -7,7 +7,7 @@ head:
       content: Olares, OnlyOffice, migration, shared app, Olares 1.12.6
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-07-08"
+doc_updated: "2026-07-27"
 ---
 
 # Migrate OnlyOffice to the new architecture
@@ -46,6 +46,10 @@ OnlyOffice currently ships with the Document Server only. The web interface is t
     c. Open OnlyOffice from the Launchpad, and verify that the files appear on the home page.
 
 Your OnlyOffice documents are now migrated to the new app.
+
+## Clean up legacy data
+
+After you confirm the migration is successful and the new app works as expected, you can manually delete the legacy app data folder to free up disk space. Open Files, go to **Application** > **Data** > **onlyofficev2**, and delete the folder.
 
 ## Learn more
 
