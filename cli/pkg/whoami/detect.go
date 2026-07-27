@@ -59,6 +59,12 @@ type DetectDisplay struct {
 	RoleLabel      string `json:"roleLabel,omitempty"`
 	BackendVersion string `json:"backendVersion,omitempty"`
 	Source         string `json:"source"` // "server" (re-detected) or "cache"
+	// CacheWriteFailed marks a "server" pass whose values never reached
+	// config.json. Without it stdout would be indistinguishable from a fully
+	// successful re-detect — same fields, same source — while every later
+	// command still reads the previous values. omitempty keeps the happy-path
+	// JSON byte-identical for existing consumers.
+	CacheWriteFailed bool `json:"cacheWriteFailed,omitempty"`
 }
 
 // ConnectionLabel renders a human-readable description of the connection
@@ -167,8 +173,10 @@ func DetectAndCache(ctx context.Context, in DetectInput) (*DetectDisplay, error)
 		if serr := in.Cfg.SetDetectResults(in.OlaresID, string(loc), now().Unix(), role, roleAt, version, versionAt); serr != nil {
 			// The facts we're about to return are real, but nothing reached
 			// config.json — every later command will still see the old
-			// values. Report it rather than letting the caller print
-			// "re-detected just now" over an unchanged cache.
+			// values. Say so on both channels: the error for callers that
+			// branch on it, the display flag so the rendered output can't
+			// claim a cache update that didn't happen.
+			d.CacheWriteFailed = true
 			firstErr = errors.Join(firstErr, fmt.Errorf("%w: %w", ErrCacheWrite, serr))
 		}
 	}
@@ -241,8 +249,11 @@ func renderDetectTable(w io.Writer, d *DetectDisplay) error {
 	if _, err := fmt.Fprintf(w, "version: %s\n", version); err != nil {
 		return err
 	}
-	switch d.Source {
-	case "server":
+	switch {
+	case d.Source == "server" && d.CacheWriteFailed:
+		_, err := fmt.Fprintln(w, "(re-detected just now, but NOT cached — other commands still see the previous values)")
+		return err
+	case d.Source == "server":
 		_, err := fmt.Fprintln(w, "(re-detected just now)")
 		return err
 	default:

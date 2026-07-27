@@ -1,6 +1,7 @@
 package whoami
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -105,6 +106,56 @@ func TestDetectAndCacheReportsFailedCacheWrite(t *testing.T) {
 	}
 	if !errors.Is(err, ErrCacheWrite) {
 		t.Errorf("error = %v, want one matching ErrCacheWrite", err)
+	}
+	// The error only reaches stderr. Rendered output goes to stdout, so it
+	// needs its own signal or `-o json` consumers can't tell this apart from a
+	// fully successful re-detect.
+	if !d.CacheWriteFailed {
+		t.Error("display must record that the values were never cached")
+	}
+}
+
+// TestRenderDetectFlagsUncachedResult: neither output format may present an
+// uncached re-detect as a completed one. The table footer says so in words;
+// the JSON carries the flag (and stays byte-identical when the write landed,
+// so existing consumers are unaffected).
+func TestRenderDetectFlagsUncachedResult(t *testing.T) {
+	d := &DetectDisplay{
+		OlaresID:         "alice@olares.com",
+		Location:         string(olares.LocationHost),
+		RoleLabel:        "Owner",
+		BackendVersion:   "1.12.6",
+		Source:           "server",
+		CacheWriteFailed: true,
+	}
+
+	var table bytes.Buffer
+	if err := RenderDetect(&table, d, OutputTable); err != nil {
+		t.Fatalf("render table: %v", err)
+	}
+	if strings.Contains(table.String(), "(re-detected just now)") {
+		t.Errorf("table claims a completed re-detect:\n%s", table.String())
+	}
+	if !strings.Contains(table.String(), "NOT cached") {
+		t.Errorf("table should say the values were not cached:\n%s", table.String())
+	}
+
+	var out bytes.Buffer
+	if err := RenderDetect(&out, d, OutputJSON); err != nil {
+		t.Fatalf("render json: %v", err)
+	}
+	if !strings.Contains(out.String(), `"cacheWriteFailed": true`) {
+		t.Errorf("json should carry the flag:\n%s", out.String())
+	}
+
+	// Happy path: the field is omitted entirely.
+	d.CacheWriteFailed = false
+	out.Reset()
+	if err := RenderDetect(&out, d, OutputJSON); err != nil {
+		t.Fatalf("render json: %v", err)
+	}
+	if strings.Contains(out.String(), "cacheWriteFailed") {
+		t.Errorf("a successful pass must not add the field:\n%s", out.String())
 	}
 }
 
