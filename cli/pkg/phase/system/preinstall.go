@@ -5,7 +5,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/gpu"
-	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/preinstall"
 	"github.com/beclab/Olares/cli/pkg/storage"
@@ -17,12 +16,6 @@ func marketPreinstallModules(
 	selections preinstall.ProfileSelections,
 ) []module.Module {
 	return []module.Module{
-		&images.PreloadImagesModule{
-			ManifestModule: manifest.ManifestModule{
-				Manifest: manifestMap,
-				BaseDir:  baseDir,
-			},
-		},
 		&preinstall.MaterializeModule{
 			InstallerDir:      installerDir,
 			RootDir:           storage.OlaresRootDir,

@@ -12,6 +12,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/daemon"
 	"github.com/beclab/Olares/cli/pkg/gpu"
 	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
+	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/storage"
@@ -105,6 +106,14 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 			}
 
 		}).withGPU(l.runtime)...).
+		addModule(
+			&images.PreloadImagesModule{
+				ManifestModule: manifest.ManifestModule{
+					Manifest: l.manifestMap,
+					BaseDir:  l.runtime.GetBaseDir(), // l.runtime.Arg.BaseDir,
+				},
+			},
+		).
 		addModule(marketPreinstallModules(
 			l.manifestMap,
 			l.runtime.GetInstallerDir(),
