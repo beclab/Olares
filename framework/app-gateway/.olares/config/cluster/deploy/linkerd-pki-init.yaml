@@ -97,7 +97,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: linkerd-pki-init
-          image: beclab/linkerd-pki-guardian@sha256:3dbde1a3829034216e72b7ef332c09f62a96b22ef408ab4aae1a63fd2162f72e
+          image: beclab/linkerd-pki-guardian@sha256:0e45311245b70b6f2b04c0577e32f7408cfb38915e2731b82f1d55583380a83f
           imagePullPolicy: IfNotPresent
           command:
             - /usr/local/bin/linkerd-pki-guardian
