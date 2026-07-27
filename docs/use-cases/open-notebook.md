@@ -4,10 +4,10 @@ description: Run Open Notebook on Olares to collect research sources, generate A
 head:
   - - meta
     - name: keywords
-      content: Olares, Open Notebook, AI notebook, research assistant, sources, notes, RAG, knowledge base, podcast, transformations
+      content: Olares, Open Notebook, AI notebook, research assistant, NotebookLLM alternative, RAG, knowledge base, podcast, transformations
 app_version: "1.0.4"
-doc_version: "2.0"
-doc_updated: "2026-07-22"
+doc_version: "2.1"
+doc_updated: "2026-07-27"
 ---
 
 # Build a research notebook with Open Notebook
@@ -20,26 +20,27 @@ This guide walks you through your first complete Open Notebook workflow using an
 
 In this guide, you will learn how to:
 
-- Install Open Notebook on Olares.
-- Set up AI models for chat, summaries, retrieval, and podcast generation.
-- Create a research notebook.
-- Add and process research sources.
-- Review AI-generated insights.
-- Chat with your research materials.
-- Save useful AI responses as editable notes.
+- Set up the AI models Open Notebook needs for chat, search, and podcast generation.
+- Create a notebook and add research sources.
+- Generate, review, and chat with AI insights.
+- Save useful responses as editable notes.
 - Generate a podcast episode from selected sources and notes.
 
 ## Prerequisites
 
-Before you begin, make sure you have access to the models you want to use.
+Before you begin, you need:
 
-- Required: At least one language model and an embedding model for vector search. You can install pre-built model apps from Market or [host models with Engine Base apps](llm-base-apps.md).
-- Required for podcast generation: A text-to-speech (TTS) model.
-- Optional: A speech-to-text (STT) model for processing audio or video sources.
+- An Olares device with sufficient disk space and memory.
+- The following models:
 
-:::info Recommended local AI services
-For local AI workflows on Olares, you can use local language or embedding model services, and [Speaches](speaches.md) for speech-to-text and text-to-speech.
-:::
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Embedding | EmbeddingGemma | Install from Market |
+  | TTS | `speaches-ai/Kokoro-82M-v1.0-ONNX` | Install [Speaches](speaches.md) from Market |
+  | STT | `Systran/faster-whisper-small` | Install Speaches from Market. Optional if you will not process audio or video sources |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## How Open Notebook works
 
@@ -68,40 +69,36 @@ After installation, configure the required providers and models before starting 
 
 Open Notebook uses AI models for summaries, chat, retrieval, and podcast generation. You only need to set them up once.
 
-### Get provider connection details
+### Get model connection details
 
-How you get the connection details depends on whether you connect a standalone model or another Olares app.
-
-#### Connect a standalone model
+#### Standalone models
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-For each standalone model used in this guide:
+For Qwen3.6-27B (llama.cpp) and EmbeddingGemma:
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-In this case, we use `qwen3.5-9b` and `qwen3-embedding:0.6b`. Open Notebook connects to them through the **Ollama** provider, so view the **Ollama** format in each Model Console and copy the corresponding Base URL.
+Both models use the **OpenAI-Compatible** API format.
 
-#### Connect an app
+#### Speaches
 
 <!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-This guide uses Speaches as the TTS and STT provider:
+For Speaches:
 
 1. Go to Olares **Settings** > **Applications** > **Speaches** > **Entrances**.
 2. Select **Speaches API**, then copy the **Endpoint** URL.
 
 ### Add provider configurations
 
-Go to **Manage** > **Models**. For each service, find the matching provider and click **Add Configuration**.
+On Open Notebook, go to **Manage** > **Models**. For each service, find the matching provider and click **Add Configuration**.
 
-| Service | Provider | Base URL |
-| :-- | :-- | :-- |
-| Qwen language model | **Ollama** | Base URL from its Model Console |
-| Qwen embedding model | **Ollama** | Base URL from its Model Console |
-| Speaches | **OpenAI Compatible** | Speaches endpoint with `/v1` appended |
-
-Enter a recognizable configuration name and the Base URL. If an API key is required, enter `olares`, then save the configuration.
+| Service | Provider | Configuration name | Base URL |
+| :-- | :-- | :-- | :-- |
+| Qwen3.6-27B (llama.cpp) | **OpenAI Compatible** | Any recognizable name, e.g. `Qwen3.6-27B` | From the Qwen3.6-27B (llama.cpp) Model Console |
+| EmbeddingGemma | **OpenAI Compatible** | Any recognizable name, e.g. `EmbeddingGemma` | From the EmbeddingGemma Model Console |
+| Speaches | **OpenAI Compatible** | Any recognizable name, e.g. `Speaches` | Speaches API endpoint with `/v1` appended |
 
 ### Add models
 
@@ -109,8 +106,8 @@ In each configuration, click **Models** and add the following models:
 
 | Configuration | Type | Model ID |
 | :-- | :-- | :-- |
-| Qwen language model | **Language** | `qwen3.5-9b` |
-| Qwen embedding model | **Embedding** | `qwen3-embedding:0.6b` |
+| Qwen3.6-27B (llama.cpp) | **Language** | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+| EmbeddingGemma | **Embedding** | `embeddinggemma-300m` |
 | Speaches | **TTS** | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
 | Speaches | **STT** | `Systran/faster-whisper-small` |
 
@@ -120,13 +117,13 @@ Under **Default Model Assignments**, assign the models as follows:
 
 | Slot | Model |
 | :-- | :-- |
-| Chat Model | `qwen3.5-9b` |
-| Embedding Model | `qwen3-embedding:0.6b` |
+| Chat Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+| Embedding Model | `embeddinggemma-300m` |
 | Text-to-Speech Model | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
 | Speech-to-Text Model | `Systran/faster-whisper-small` |
-| Transformation Model | `qwen3.5-9b` |
-| Tools Model | `qwen3.5-9b` |
-| Large Context Model | `qwen3.5-9b` |
+| Transformation Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+| Tools Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+| Large Context Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
 
 If **Auto-assign Defaults** is available, you can use it to fill the slots automatically, then review the selections.
 
@@ -134,7 +131,9 @@ If **Auto-assign Defaults** is available, you can use it to fill the slots autom
 
 ## Create your first research notebook
 
-A notebook is the workspace for one topic, project, course, or research question. In this guide, you will create a notebook for learning about generative AI.
+A notebook is the workspace for one topic, project, course, or research question. In this guide, you will create a notebook for learning about generative AI, add a text source, generate an insight, and create a manual note.
+
+### Create a notebook
 
 1. Go to **Process** > **Notebooks**.
 2. Click **New** > **Notebook**.
@@ -144,15 +143,13 @@ A notebook is the workspace for one topic, project, course, or research question
     :::
 4. Click **Create New Notebook**.
 
-![Create a notebook](/images/manual/use-cases/open-notebook-create-a-notebook.png#bordered){width=70%}
+![Create a notebook](/images/manual/use-cases/open-notebook-create-a-notebook.png#bordered){width=60%}
 
-## Add your first sources
+### Add a sample text source
 
 Sources are the original materials you want Open Notebook to process. For your first run, use a lightweight text source so you can avoid failures caused by external websites, large PDFs, or unavailable video transcripts.
 
 This guide provides sample text about generative AI. Add it as a **Text** source. After the first workflow succeeds, you can add more text sources or try external URLs, PDFs, YouTube videos, or audio/video files.
-
-### Add a text source
 
 1. Open the notebook you just created.
 2. In the **Source** area, click **Add Source** > **Add Source**.
@@ -195,9 +192,7 @@ This guide provides sample text about generative AI. Add it as a **Text** source
 
 ![Add first source](/images/manual/use-cases/open-notebook-add-first-source.png#bordered){width=70%}
 
-Open Notebook starts processing the source. When processing finishes, you can use it for insights, chat, notes, and citations.
-
-### Add other source types
+Open Notebook starts processing the source and generates the Dense Summary insight. When processing finishes, you can review the insight and use the source for chat, notes, and citations.
 
 After the first workflow succeeds, you can add other materials in a similar way.
 
@@ -213,35 +208,39 @@ When using local models, process one source with one transformation first. Proce
 You can generate additional insights later from the source's **Insights** tab by using **Generate New Insight**.
 :::
 
-## Review generated insights
+### Review the generated insight
 
-Insights are AI-generated outputs created from sources. For example, **Dense Summary** helps you quickly understand what a source is about before reading it in detail.
-
-### View an insight
-
-1. Open a processed source.
-2. Click the **Insights** tab.
-3. Click **View Insight** to review the generated insight.
-
-![Review insight](/images/manual/use-cases/open-notebook-review-insight.png#bordered){width=90%}
-
-Use the insight to decide whether the source is useful and whether it should be included in notebook chat.
-
-### Generate another insight
-
-If you want to analyze the same source in another way:
+Open Notebook generated a **Dense Summary** when it processed the source.
 
 1. Open the processed source.
 2. Click the **Insights** tab.
-3. Under **Generate New Insight**, select a transformation.
+3. Click **View Insight** to review the result.
 
-   ![New insight](/images/manual/use-cases/open-notebook-new-insight.png#bordered){width=90%}
+![Review insight](/images/manual/use-cases/open-notebook-review-insight.png#bordered){width=90%}
 
-4. Click **New**.
+:::tip Generate another insight
+Use **Generate New Insight** in the **Insights** tab to create another insight from the same source.
+:::
 
-## Chat with your research materials
+### Create a note manually
 
-After your sources are processed, you can ask questions based on the materials in your notebook.
+Notes are editable items for summaries, outlines, questions, drafts, or conclusions.
+
+1. Open your notebook.
+2. Go to the **Notes** area.
+3. Click **Write Note**.
+4. Enter a title and write the note content. Markdown is supported.
+5. Click **Create Note**.
+
+Your note appears in the **Notes** area with a `Human` tag.
+
+![Manually created note](/images/manual/use-cases/open-notebook-manual-note.png#bordered){width=50%}
+
+## Chat with your notebook and save notes
+
+After your sources are processed, you can ask questions based on the materials in your notebook. You can also save useful AI responses as notes.
+
+### Ask a question about your sources
 
 1. Open your notebook.
 2. In **Chat with Notebook**, select the model you want to use.
@@ -262,62 +261,36 @@ Open Notebook answers based on the sources included in the current chat context.
 When an answer includes citations, click them to open the referenced source passages. Compare the answer with the original content to check whether the AI response is supported by your sources.
 :::
 
-## Create notes
-
-Notes are editable items for summaries, outlines, questions, drafts, or conclusions.
-
-### Save an AI answer as a note
+### Save a useful AI response as a note
 
 When you receive a useful answer in chat:
 
 1. Click the <i class="material-symbols-outlined">save</i> icon under the AI response.
 2. In the **Notes** area, click the saved note with the `AI Generated` tag to review it.
   
-   ![AI generated note](/images/manual/use-cases/open-notebook-ai-note.png#bordered){width=70%}
+   ![AI generated note](/images/manual/use-cases/open-notebook-ai-note.png#bordered){width=50%}
 
 3. Update the title or content when needed, then click **Save Note**.
 
 You can use saved notes as part of future notebook context, or include them in podcast generation.
 
-### Create a note manually
-
-You can also create notes manually.
-
-1. Open your notebook.
-2. Go to the **Notes** area.
-3. Click **Write Note**.
-4. Enter a title and write the note content. Markdown is supported.
-5. Click **Create Note**.
-
-Your note appears in the **Notes** area with a `Human` tag.
-
-![Manually created note](/images/manual/use-cases/open-notebook-manual-note.png#bordered){width=70%}
-
 ## Generate a podcast
 
 After you have sources, insights, and notes, you can turn your research materials into a podcast episode.
-
-Podcast generation requires:
-
-- A language model for outline generation.
-- A language model for transcript generation.
-- A text-to-speech model for audio generation.
-- Processed sources or notes to use as context.
 
 ### Configure podcast profiles
 
 Before generating a podcast, configure the required models and voices in podcast profiles.
 
 1. Go to **Create** > **Podcasts**, then click the **Profiles** tab.
-2. Open any profile marked with **Needs Configuration** or a warning icon.
-3. For a **Speaker Profile**, select a voice model and enter a voice ID supported by that model.
+2. For a **Speaker Profile**, open a profile that suits your needs. Select a voice model and enter a voice ID supported by that model.
 
    :::warning Use a voice ID supported by the selected TTS model
    The default voice ID in a speaker profile may not be supported by your selected TTS model. For example, `nova` is not available in `speaches-ai/Kokoro-82M-v1.0-ONNX`. Use a supported Kokoro voice ID such as `af_heart` instead.
    :::
 
-4. For an **Episode Profile**, select the speaker profile, outline model, transcript model, language, segment count, and briefing.
-5. Save your changes.
+3. For an **Episode Profile**, open a profile that suits your needs. Select the speaker profile, outline model, transcript model, language, segment count, and briefing.
+4. Save your changes.
 
 ### Generate the audio
 

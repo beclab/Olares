@@ -1,32 +1,41 @@
 ---
 outline: [2, 3]
-description: Build a private knowledge base with AnythingLLM on Olares. Add documents, create embeddings with a local model, and query them with RAG.
+description: Build a private knowledge base with AnythingLLM on Olares. Add documents, create embeddings, and query them with RAG.
 head:
   - - meta
     - name: keywords
       content: Olares, AnythingLLM, self-hosted rag, private knowledge base, anythingllm ollama, local LLM, embedding, anythingllm on olares
 app_version: "1.0.13"
 doc_version: "2.0"
-doc_updated: "2026-07-22"
+doc_updated: "2026-07-27"
 ---
 
 # Build a local knowledge base with AnythingLLM
 
-AnythingLLM is an open-source, all-in-one AI application that lets you chat with documents using Retrieval-Augmented Generation (RAG). It supports multiple LLM providers, embedding engines, and vector databases, all running locally on your Olares device.
+AnythingLLM is an open-source, all-in-one AI application that lets you chat with documents using Retrieval-Augmented Generation (RAG). It supports multiple LLM providers and vector databases, all running locally on your Olares device.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 - Install AnythingLLM on Olares.
-- Connect AnythingLLM to both models through their Model Consoles.
+- Configure the chat model and embedding provider in AnythingLLM.
 - Create a workspace and upload documents to build a knowledge base.
 - Query your knowledge base using natural language.
 
 ## Prerequisites
 
-- An Olares device with sufficient disk space and memory
-- Admin privileges to install apps from Market
-- A chat model and an embedding model. This guide uses Qwen3.5 9B and Qwen3 Embedding 0.6B. You can install pre-built model apps from Market or [host models with Engine Base apps](llm-base-apps.md).
+Before you begin, you need:
+
+- An Olares device with sufficient disk space and memory.
+- Admin privileges to install apps from Market.
+- The following models:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Embedding | all-MiniLM-L6-v2 | The built-in embedder from AnythingLLM |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install AnythingLLM
 
@@ -40,42 +49,29 @@ In this guide, you will learn how to:
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-For each model used in this guide:
-
+For Qwen3.6-27B (llama.cpp):
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-In this case, we use `qwen3.5:9b` for chat and `qwen3-embedding:0.6b` for embeddings. AnythingLLM connects to both through the **Ollama** provider, so view the **Ollama** format in each Model Console and copy the corresponding Base URL.
 
 ## Configure AnythingLLM
 
-Configure the chat and embedding models separately. These settings become the system defaults for all workspaces.
+Configure the chat model and embedding provider. These settings become the system defaults for all workspaces.
 
 ### Set up the chat model
 
 1. Open AnythingLLM from Launchpad.
 2. On the home page, click the **Open settings** icon in the bottom-left.
-3. In the left sidebar, select **AI Providers** > **LLM**, and then select **Ollama** as the LLM provider.
-4. In **Ollama Base URL**, paste the Base URL from the Qwen3.5 9B Model Console.
-5. In **Ollama Model**, select `qwen3.5:9b`.
-   
+3. In the left sidebar, select **AI Providers** > **LLM**, and then select **OpenAI** as the LLM provider.
+4. In **OpenAI Base URL**, paste the Base URL from the Qwen3.6-27B (llama.cpp) Model Console.
+5. In **OpenAI Model**, enter `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+
    ![Configure chat model](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
 
 6. Click **Save changes**. The "LLM preferences saved successfully" message is displayed.
 
 ### Set up the embedding model
 
-1. In the left sidebar, select **Embedder**, and then select **Ollama** as the embedding provider.
-2. In **Ollama Base URL**, paste the Base URL from the Qwen3 Embedding 0.6B Model Console.
-3. In **Ollama Embedding Model**, select `qwen3-embedding:0.6b`.
-
-   ![Configure embedding model](/images/manual/use-cases/anythingllm-configure-embedding1.png#bordered) 
-
-4. Click **Save changes**. The "Embedding preferences saved successfully" message is displayed.
-<!--
-:::info Default embedding model
-AnythingLLM includes a built-in embedding model (all-MiniLM-L6-v2) that works without additional setup and is primarily trained on English documents. If you prefer a zero-configuration option, you can use the default embedder instead.
-:::
--->
+1. In the left sidebar, select **Embedder**, and then select **all-MiniLM-L6-v2** as the embedding provider.
+2. Click **Save changes**. The "Embedding preferences saved successfully" message is displayed.
 
 ## Create a workspace
 
