@@ -761,6 +761,68 @@ func TestRoundTrip_RetryFailureSurfacedAsUnreachable(t *testing.T) {
 	}
 }
 
+// TestRoundTrip_RetrySuccessClearsCooldown: a retry that lands after a
+// switchable failure is proof the path is up, so it must lift the outage
+// cooldown exactly like a first-attempt success does. ensureSwitched only
+// clears the stamp when the position actually moved, so a recovery at the
+// same position (or one a peer goroutine had already switched to) used to
+// leave the stamp behind and keep failing later requests fast.
+func TestRoundTrip_RetrySuccessClearsCooldown(t *testing.T) {
+	const id = "alice@olares.com"
+	store := &fakeStore{}
+	tr, _ := newTransport(t, store, "unused", "AT-1")
+
+	// An outage stamped long enough ago that the cooldown has lapsed (so
+	// ensureSwitched is willing to act) but the stamp itself is still on disk.
+	now := time.Unix(1_000_000, 0)
+	tr.now = func() time.Time { return now }
+	cfg := &cliconfig.MultiProfileConfig{}
+	cfg.Upsert(cliconfig.ProfileConfig{OlaresID: id, LocationUnreachableAt: now.Unix() - 300})
+	if err := cliconfig.SaveMultiProfileConfig(cfg); err != nil {
+		t.Fatalf("seed stamp: %v", err)
+	}
+	// As sharedLocationState would seed it from that stamp.
+	tr.loc.unreachableMarked.Store(true)
+
+	var calls int
+	tr.loc.base = fakeRoundTripper(func(*http.Request) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			// A peer switched the shared cell while our request was in
+			// flight, so ensureSwitched hands us a retry without probing —
+			// and without persisting a location, which is what would
+			// otherwise have cleared the stamp.
+			tr.loc.mu.Lock()
+			tr.loc.loc = olares.LocationLAN
+			tr.loc.mu.Unlock()
+			return nil, &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("{}")),
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://desktop.alice.olares.com/", nil)
+	resp, err := tr.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("RoundTrip: %v", err)
+	}
+	resp.Body.Close()
+	if calls != 2 {
+		t.Fatalf("expected the original send plus one retry, got %d", calls)
+	}
+
+	persisted, err := cliconfig.LoadMultiProfileConfig()
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if got := persisted.FindByOlaresID(id).LocationUnreachableAt; got != 0 {
+		t.Errorf("outage stamp = %d, want 0 — a successful retry must lift the cooldown", got)
+	}
+}
+
 // TestRoundTrip_NonSwitchableErrorPassthrough: a non-switchable transport error
 // (here a TLS failure) is NOT dressed up as unreachable — it surfaces verbatim,
 // since the network path is clearly up.

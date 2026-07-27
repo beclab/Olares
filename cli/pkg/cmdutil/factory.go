@@ -649,6 +649,17 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 					// the same way instead of leaking a raw dial/DNS error.
 					return nil, access.NewUnreachable(t.olaresID, retryErr)
 				}
+				if retryErr == nil {
+					// Same rule as the first-attempt success below: a real
+					// response means the path is up, so lift any outage
+					// cooldown. ensureSwitched only clears the stamp when the
+					// position actually MOVED (via persistLocation); a
+					// transient blip recovered at the same position, or a
+					// switch a peer goroutine had already made, would
+					// otherwise leave a stale stamp behind and keep failing
+					// later requests fast.
+					t.clearUnreachable()
+				}
 				return retryResp, retryErr
 			}
 			// No connection method worked (cooldown, or every probe failed):
