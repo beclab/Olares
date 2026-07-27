@@ -10,6 +10,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/gpu/mtgpu"
 	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
 	"github.com/beclab/Olares/cli/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/preinstall"
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 )
@@ -90,6 +91,7 @@ func (l *linuxInstallPhaseBuilder) installTerminus() phase {
 		&terminus.InstallAccountModule{},
 		&terminus.InstallSettingsModule{},
 		&terminus.InstallOsSystemModule{},
+		&preinstall.HFCacheMaterializeModule{},
 		&terminus.InstallLauncherModule{},
 		&terminus.InstallAppsModule{},
 	}
