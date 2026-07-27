@@ -39,13 +39,14 @@ Now, you can access Jellyfin from your new URL: `https://jellyfin.alexmiles.olar
 Instead of using the default Olares domain, you can use your own domain name to access your applications. To configure a custom domain name for an app:
 
 :::info
-Only applications with the authentication level set to **Internal** or **Public** support custom third-party domains.
+Custom third-party domains do not support Olares authentication. Only application entrances with **Authentication level** set to **Public** support custom third-party domains.
 :::
 
-1. On Olares, open Settings, then go to **Application** > *AppName*.
+1. On Olares, open **Settings**, then go to **Application** > **[AppName]**.
 2. Under **Entrances**, click the target entrance.
-3. Under **Endpoint settings**, next to **Set custom domain**, click <i class="material-symbols-outlined">add</i>.
-4. In the **Third-party domain** pop-up, enter your custom domain, and click **Confirm** to submit.
+3. Under **Access policies**, set **Authentication level** to **Public**, then click **Submit**.
+4. Under **Endpoint settings**, next to **Set custom domain**, click <i class="material-symbols-outlined">add</i>.
+5. In the **Third-party domain** pop-up, enter your custom domain, and click **Confirm** to submit.
 
    ![Submit third-party domain](/images/manual/olares/add-custom-domain.jpeg#bordered)
 
@@ -53,11 +54,11 @@ Only applications with the authentication level set to **Internal** or **Public*
    If you are using Olares Tunnel or Self-built FRP for reverse proxy, you must also upload a valid HTTPS certificate and its private key for your custom domain.
    :::
 
-5. Click the **Activation** button to open the activation instruction pop-up.
+6. Click the **Activation** button to open the activation instruction pop-up.
 
    ![Activate third-party domain](/images/manual/olares/activate-custom-domain.jpeg#bordered)
 
-6. Follow the instructions in the pop-up to create a CNAME record with your domain hosting provider.
+7. Follow the instructions in the pop-up to create a CNAME record with your domain hosting provider.
 
    ![Add CNAME](/images/manual/olares/add-cname.jpeg#bordered)
 
@@ -65,7 +66,7 @@ Only applications with the authentication level set to **Internal** or **Public*
    If you are using Cloudflare Tunnel, disable the **Proxy status** option next to your DNS record. This allows Olares to receive timely updates on your domain's resolution status.
    :::
 
-7. Click **Confirm** on the activation pop-up to finish the activation.
+8. Click **Confirm** on the activation pop-up to finish the activation.
 
 At this stage, the custom domain status will display as "Waiting for CNAME Activation". You will need to wait for it to take effect. DNS propagation typically takes a few minutes or hours, depending on your domain provider.
 
