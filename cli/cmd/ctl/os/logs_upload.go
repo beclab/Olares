@@ -30,8 +30,9 @@ type logUploadOptions struct {
 }
 
 const (
-	ticketEndpointEnv = "OLARES_TICKET_API"
-	gzipMimeType      = "application/gzip"
+	ticketEndpointEnv     = "OLARES_TICKET_API"
+	defaultTicketEndpoint = "https://ticket.olares.com"
+	gzipMimeType          = "application/gzip"
 	presignPath       = "/v1/olares-cli/attachments/presigned-upload"
 	ticketPath        = "/v1/olares-cli/tickets"
 )
@@ -85,12 +86,7 @@ upload, no login token is needed.
 If --file is omitted, logs are collected first (requires root) and the
 resulting archive is uploaded.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if options.Endpoint == "" {
-				options.Endpoint = os.Getenv(ticketEndpointEnv)
-			}
-			if options.Endpoint == "" {
-				log.Fatalf("error: ticket endpoint is required, set --ticket-endpoint or %s", ticketEndpointEnv)
-			}
+			options.Endpoint = resolveTicketEndpoint(options.Endpoint)
 			if err := runLogsUpload(options); err != nil {
 				log.Fatalf("error: %v", err)
 			}
@@ -99,7 +95,7 @@ resulting archive is uploaded.`,
 
 	cmd.Flags().StringVar(&options.OlaresID, "olares-id", "", "Olares ID the logs belong to, e.g. alice@olares.com (required)")
 	cmd.Flags().StringVar(&options.Code, "code", "", "Pairing code from the AssistHub web UI (required)")
-	cmd.Flags().StringVar(&options.Endpoint, "ticket-endpoint", "", fmt.Sprintf("Ticket platform base URL, e.g. https://api.olares.com (or set %s)", ticketEndpointEnv))
+	cmd.Flags().StringVar(&options.Endpoint, "ticket-endpoint", "", fmt.Sprintf("Ticket platform base URL (default %s, or set %s)", defaultTicketEndpoint, ticketEndpointEnv))
 	cmd.Flags().StringVar(&options.File, "file", "", "Path to an existing log archive to upload; if empty, logs are collected first")
 	cmd.Flags().StringVar(&options.Description, "description", "", "Optional ticket description")
 	cmd.Flags().StringVar(&options.OlaresVersion, "olares-version", "", "Optional Olares version recorded on the ticket")
@@ -109,6 +105,18 @@ resulting archive is uploaded.`,
 	_ = cmd.MarkFlagRequired("code")
 
 	return cmd
+}
+
+// resolveTicketEndpoint picks the ticket API base URL: explicit flag, then
+// OLARES_TICKET_API, then the production default.
+func resolveTicketEndpoint(flagValue string) string {
+	if endpoint := strings.TrimSpace(flagValue); endpoint != "" {
+		return endpoint
+	}
+	if endpoint := strings.TrimSpace(os.Getenv(ticketEndpointEnv)); endpoint != "" {
+		return endpoint
+	}
+	return defaultTicketEndpoint
 }
 
 func runLogsUpload(options *logUploadOptions) error {

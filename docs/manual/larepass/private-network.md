@@ -1,6 +1,7 @@
 ---
 outline: [2, 3]
-description: Learn how to securely access your Olares from anywhere.
+title: Use LarePass VPN for remote Olares access
+description: Use LarePass VPN to access Olares remotely, understand connection status, and troubleshoot common VPN issues.
 ---
 # Access Olares services remotely via LarePass VPN
 Your Olares device hosts critical applications intended for personal or internal use, such as Vault and Ollama. To ensure security, these applications are accessed via [private or internal entrances](../../developer/concepts/network.md#private-entrance).

@@ -43,7 +43,7 @@ A wrong-architecture image installs but never runs (`ImagePullBackOff` with `no 
 
 ## GPU / CUDA images
 
-Building a CUDA image (no GPU needed on the build box, custom-kernel arch flags, the amd64 / `nvidia`-mode constraint) and provisioning model weights (initContainer + shared Hugging Face cache) are covered in their own reference: [olares-chart-gpu.md](olares-chart-gpu.md).
+Building a CUDA image (no GPU needed on the build box, custom-kernel arch flags, the amd64 / `nvidia`-mode constraint) and provisioning model weights (initContainer + shared Hugging Face cache) are covered in the GPU / models capability.
 
 ## Registry + build/push (agent-driven)
 
@@ -52,7 +52,7 @@ You drive this end to end — ask the registry, check login, build, push, verify
 1. **Ask which registry the developer uses + the target `<user>/<repo>`** before anything else (don't assume one):
    - **Docker Hub** — image ref `<dockerhub-user>/<repo>`
    - **GitHub Container Registry (ghcr)** — image ref `ghcr.io/<owner>/<repo>`
-   > Olares-local private registry is not supported here yet (planned). Until then the image must live on a registry the Olares node can pull from publicly.
+   > An Olares-local private registry is not supported here — the image must live on a registry the Olares node can pull from publicly.
 
 2. **Check docker is usable:**
    ```bash
@@ -86,13 +86,13 @@ You drive this end to end — ask the registry, check login, build, push, verify
 
 ## Handoff: wire the image into the compose
 
-In the compose ([olares-chart-compose.md](olares-chart-compose.md)), replace every `build:` block (and any local-only `image:` tag like `image: app`) with the pushed `<registry-ref>:<tag>`. Now every service is pullable and arch-correct, so proceed to scaffold:
+In the compose (the compose-input capability), replace every `build:` block (and any local-only `image:` tag like `image: app`) with the pushed `<registry-ref>:<tag>`. Now every service is pullable and arch-correct, so proceed to scaffold:
 
 ```bash
 olares-cli chart from-compose --name <app> -f docker-compose.yml
 ```
 
-Then continue with the four refinement areas ([olares-chart-manifest.md](olares-chart-manifest.md)) and `chart lint`.
+Then continue with the four refinement areas (the Manifest refinement areas) and `chart lint`.
 
 ## Run identity (UID/GID 1000)
 
@@ -101,7 +101,7 @@ Olares userspace volumes expect the app process as **uid/gid 1000**. When **auth
 - Create a user with uid/gid 1000 and `USER 1000`
 - `chown -R 1000:1000` every path the app writes before switching user
 
-When using a **third-party** image, inspect `docker inspect <ref> --format '{{.Config.User}}'` before wiring it in. Root or non-1000 uids that create directories on userspace mounts need chart-side fixes (`spec.runAsUser`, `securityContext`, or an initContainer) — full decision tree in [olares-chart-run-as-user.md](olares-chart-run-as-user.md).
+When using a **third-party** image, inspect `docker inspect <ref> --format '{{.Config.User}}'` before wiring it in. Root or non-1000 uids that create directories on userspace mounts need chart-side fixes (`spec.runAsUser`, `securityContext`, or an initContainer) — full decision tree in the run identity (uid 1000) guidance.
 
 ## Hard rules
 

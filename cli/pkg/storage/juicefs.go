@@ -161,6 +161,10 @@ func (t *EnableJuiceFsService) Execute(runtime connector.Runtime) error {
 		return err
 	}
 
+	if err := advanceMigratePhase(phaseEnabled); err != nil {
+		return errors.Wrap(err, "failed to record migration phase after enabling the juicefs service")
+	}
+
 	return nil
 }
 

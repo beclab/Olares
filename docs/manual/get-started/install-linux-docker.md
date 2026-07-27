@@ -1,8 +1,9 @@
 ---
 outline: [2, 3]
-description: Learn how to deploy Olares on a Linux server using Docker Compose. This step-by-step guide covers system requirements, configuration, installation, activation, and container management.
+title: Install Olares on Linux with Docker Compose
+description: Install Olares on a Linux server with Docker Compose. Check requirements, configure and activate Olares, and manage its containers.
 ---
-# Install Olares on Linux using Docker Compose
+# Install Olares on Linux with Docker Compose
 You can use Docker to install and run Olares in a containerized environment. This guide walks you through setting up Olares with Docker, preparing the installation environment, completing the activation process, and managing the container lifecycle.
 
 <!--@include: ./reusables.md#installation-troubleshooting-tip-->

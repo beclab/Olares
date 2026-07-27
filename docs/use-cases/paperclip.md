@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Run Paperclip on Olares to coordinate multiple AI agents on the same set of tasks. Add agents backed by Claude Code, Codex, OpenCode, Cursor, or other providers, and file issues for them to work on.
+description: Run Paperclip on Olares to coordinate AI agents backed by Claude Code, Codex, OpenCode, Cursor, and other providers through shared issues.
 head:
   - - meta
     - name: keywords

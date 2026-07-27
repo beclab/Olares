@@ -1,5 +1,5 @@
 ---
-description: Learn how to use advanced filters in Wise to organize, prioritize, and rediscover your saved content. These examples cover practical use cases like focusing on unread entries and revisiting old content.
+description: Use Wise advanced filters to organize and rediscover saved content, with examples for unread items, older entries, tags, and custom views.
 ---
 
 # Filtered view examples

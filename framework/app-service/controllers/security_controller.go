@@ -277,6 +277,11 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 				updated = true
 			}
 		}
+
+		if label, ok := ns.Labels[security.NamespaceSharedLabel]; !ok || label != "true" {
+			ns.Labels[security.NamespaceSharedLabel] = "true"
+			updated = true
+		}
 	} else {
 		owner, internal, system, shared, isMiddleware, err := r.findOwnerOfNamespace(ctx, ns)
 		if err != nil {

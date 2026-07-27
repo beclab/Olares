@@ -143,6 +143,12 @@ type CloneRequest struct {
 	Sync      bool          `json:"sync"`
 	Envs      []AppEnvVar   `json:"envs,omitempty"`
 	Entrances []AppEntrance `json:"entrances,omitempty"`
+	// SelectedGpuType pins the compute mode (cpu / nvidia / ...) the clone
+	// should schedule against, mirroring InstallRequest.SelectedGpuType and
+	// the Market SPA's clone payload field of the same name. Only honored by
+	// Olares 1.12.6+ (the auto-select / computeModeSelect surface); omitempty
+	// keeps a 1.12.5 clone — where the CLI never sets it — byte-identical.
+	SelectedGpuType string `json:"selectedGpuType,omitempty"`
 	// TemplateClone marks an instance created from a template app (no
 	// installable body), mirroring the SPA's onClone() which sets
 	// templateClone:true for templateOnly apps (1.12.6+). omitempty keeps
@@ -221,6 +227,13 @@ type AppStatus struct {
 	Progress string `json:"progress,omitempty"`
 	Message  string `json:"message,omitempty"`
 	Reason   string `json:"reason,omitempty"`
+	// StatusTime is the backend-generated timestamp the SPA uses as the
+	// canonical ordering key for a status row (getEffectiveTime in
+	// apps/.../constant/constants.ts prefers statusTime; updateTime is
+	// commented out and lastTransitionTime is not used for ordering). The
+	// restart watcher uses it as a baseline to tell a freshly-completed
+	// restart apart from the identical-looking pre-restart resting row.
+	StatusTime string `json:"statusTime,omitempty"`
 }
 
 type SourceInfoData struct {

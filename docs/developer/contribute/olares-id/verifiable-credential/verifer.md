@@ -1,3 +1,6 @@
+---
+description: How the Verifier service validates verifiable credentials using Presentation Exchange in Olares ID.
+---
 # Verifer Service
 
 Refer to [Presentation Exchange](https://identity.foundation/presentation-exchange/)

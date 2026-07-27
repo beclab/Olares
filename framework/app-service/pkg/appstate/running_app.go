@@ -18,11 +18,11 @@ type RunningApp struct {
 	baseStatefulApp
 }
 
-func NewRunningApp(ctx context.Context, c client.Client,
+func NewRunningApp(ctx context.Context, deps Deps,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 	// check state
 	var app appsv1.Application
-	err := c.Get(ctx, types.NamespacedName{Name: manager.Name}, &app)
+	err := deps.Client.Get(ctx, types.NamespacedName{Name: manager.Name}, &app)
 
 	if err != nil && !apierrors.IsNotFound(err) {
 		klog.Errorf("get application %s failed %v", manager.Name, err)
@@ -32,11 +32,12 @@ func NewRunningApp(ctx context.Context, c client.Client,
 	r := &RunningApp{
 		baseStatefulApp: baseStatefulApp{
 			manager: manager,
-			client:  c,
+			client:  deps.Client,
+			deps:    deps,
 		},
 	}
 
-	sapp, serr := appFactory.New(c, manager, 0,
+	sapp, serr := deps.Factory.New(deps, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return r
 		})

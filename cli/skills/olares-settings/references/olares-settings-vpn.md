@@ -70,7 +70,7 @@ Every `--tcp` / `--udp` / `--any-proto` value is a **Headscale destination spec 
 | `'*:8000-8100'` | Port range (Headscale accepts; CLI doesn't validate ranges specifically) |
 | `'*:*'` | Allow everything (Headscale accepts) |
 
-**Bare port numbers are rejected** by the Headscale policy parser with `invalid port format`. The CLI now pre-validates the `<host>:<port>` shape and surfaces a copy-pasteable suggestion rather than letting BFL reject the POST.
+**Bare port numbers are rejected** by the Headscale policy parser with `invalid port format`. The CLI pre-validates the `<host>:<port>` shape and surfaces a copy-pasteable suggestion rather than letting BFL reject the POST.
 
 ### `--any-proto` = SPA "Add ACL" parity
 
@@ -110,7 +110,7 @@ olares-cli settings vpn acl add olares-app --any-proto '*:8080'
 olares-cli settings vpn public-domain-policy get
 ```
 
-Returns the `deny_all` flag (0 or 1). The write side stays in the SPA today.
+Returns the `deny_all` flag (0 or 1). The write side stays in the SPA.
 
 ## Agent best practices
 

@@ -10,6 +10,48 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
+const (
+	// stateResuming mirrors the SPA's APP_STATUS.RESUME.DEFAULT: the
+	// per-user state-row value while a resume is in flight.
+	stateResuming = "resuming"
+	// stateUpgrading mirrors the SPA's APP_STATUS.UPGRADE.DEFAULT: the
+	// per-user state-row value while an upgrade is in flight.
+	stateUpgrading = "upgrading"
+)
+
+type inFlightCancelGate struct {
+	minVersion string
+	reason     string
+}
+
+// cancelGateByState lists the in-flight states whose cancel support landed
+// later than the rest of the pipeline. Both arrived in 1.12.7: the SPA
+// exposed the cancel button on a resuming app there, and Market's cancel
+// state whitelist gained its "upgrading" entry on the same line. Every other
+// in-flight state (pending / downloading / installing / ...) cancels on any
+// backend and is deliberately absent here.
+var cancelGateByState = map[string]inFlightCancelGate{
+	stateResuming:  {minVersion: "1.12.7", reason: "canceling a resuming app"},
+	stateUpgrading: {minVersion: "1.12.7", reason: "canceling an upgrading app"},
+}
+
+// gateInFlightCancel enforces the per-state backend floor from
+// cancelGateByState, and is a no-op for unlisted states. Fail-closed on
+// older / undetectable backends via cmdutil.RequireMinVersion: an older
+// backend answers such a cancel with a bare 404 ("App not found or current
+// state does not allow operation"), so the CLI rejects it up front instead.
+func gateInFlightCancel(ctx context.Context, f *cmdutil.Factory, state string) error {
+	gate, ok := cancelGateByState[strings.TrimSpace(state)]
+	if !ok {
+		return nil
+	}
+	return cmdutil.RequireMinVersion(ctx, f, cmdutil.MinVersionGate{
+		Verb:       "market cancel",
+		MinVersion: gate.minVersion,
+		Reason:     gate.reason,
+	})
+}
+
 func NewCmdMarketCancel(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
 	cmd := &cobra.Command{
@@ -31,6 +73,13 @@ a cancel races with downloadFailed / partial-rollback-to-stopped.
 The terminal row carries the *underlying* op (install / upgrade / ...)
 as its opType, not "cancel" — matchOpType is off, no race-tracking
 gate applies.
+
+Cancelling an app that is *resuming* or *upgrading* requires Olares
+>= 1.12.7 (the resume-cancel UX the SPA shipped in 1.12.7, and Market's
+cancel state whitelist gained "upgrading" on the same line; both reuse
+this same DELETE). On an older backend the CLI rejects it; when the
+version is unknown, refresh the active profile with "olares-cli profile
+list --refresh". Every other in-flight state is unaffected.
 
 Examples:
   olares-cli market cancel firefox                         # fire-and-forget; returns once backend accepts
@@ -88,6 +137,12 @@ func runCancel(opts *MarketOptions, appName string) error {
 			source = strings.TrimSpace(row.Source)
 		}
 		version = strings.TrimSpace(row.Version)
+		// Cancelling a resuming / upgrading app arrived in 1.12.7; reject
+		// it fail-closed on older/undetectable backends. Other in-flight
+		// states are unaffected (gateInFlightCancel no-ops for them).
+		if err := gateInFlightCancel(ctx, opts.factory, row.State); err != nil {
+			return opts.failOp("cancel", appName, err)
+		}
 	}
 
 	if atLeast126 && source == "" {

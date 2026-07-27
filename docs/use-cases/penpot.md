@@ -1,5 +1,6 @@
 ---
 outline: [2, 3]
+title: Edit Penpot files with Cursor via MCP
 description: Use Penpot on Olares as a self-hosted design workspace, then connect Cursor through MCP to inspect and modify an active Penpot design file.
 head:
   - - meta

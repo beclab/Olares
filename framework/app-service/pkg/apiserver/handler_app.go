@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
@@ -62,6 +63,17 @@ func (h *Handler) status(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	now := metav1.Now()
+	// While a download is in flight, am.Status.Progress is not refreshed
+	// (progress is published out-of-band over NATS). Compute it live from the
+	// ImageManager CR so pollers of this endpoint see real download progress.
+	// Pure read; no status write, so it triggers no reconcile or etcd write.
+	progress := am.Status.Progress
+	switch am.Status.State {
+	case v1alpha1.Downloading, v1alpha1.Upgrading:
+		if p, found, e := images.GetDownloadProgress(req.Request.Context(), h.ctrlClient, &am); e == nil && found {
+			progress = strconv.FormatFloat(p, 'f', 2, 64)
+		}
+	}
 	sts := appinstaller.Status{
 		Name:              am.Spec.AppName,
 		AppID:             appcfg.AppName(am.Spec.AppName).GetAppID(),
@@ -70,7 +82,7 @@ func (h *Handler) status(req *restful.Request, resp *restful.Response) {
 		Source:            am.Spec.Source,
 		AppStatus: v1alpha1.ApplicationStatus{
 			State:      am.Status.State.String(),
-			Progress:   am.Status.Progress,
+			Progress:   progress,
 			StatusTime: &now,
 			UpdateTime: &now,
 		},
@@ -357,6 +369,7 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 				Settings: map[string]string{
 					"title":         am.Annotations[constants.ApplicationTitleLabel],
 					"market_source": am.Annotations[constants.AppMarketSourceKey],
+					"version":       am.Annotations[api.AppVersionKey],
 				},
 			},
 			Status: v1alpha1.ApplicationStatus{
@@ -397,6 +410,8 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			// synthesized values so they are not lost on overwrite.
 			title := v.Spec.Settings["title"]
 			marketSource := v.Spec.Settings["market_source"]
+			version := v.Spec.Settings["version"]
+
 			v.Spec.Settings = a.Spec.Settings
 			if v.Spec.Settings == nil {
 				v.Spec.Settings = map[string]string{}
@@ -407,7 +422,13 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			if _, ok := v.Spec.Settings["market_source"]; !ok {
 				v.Spec.Settings["market_source"] = marketSource
 			}
-			v.Spec.Entrances = a.Spec.Entrances
+			if v.Spec.Settings["version"] != version && version != "" {
+				v.Spec.Settings["version"] = version
+			}
+			// Resolve the effective view for the request viewer (owner), not the
+			// app's install owner, so a non-owner listing a shared app sees their
+			// own authLevel / added-entrance overlays — matching handler_service.
+			v.Spec.Entrances = a.EffectiveEntrances(owner)
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}
@@ -635,6 +656,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 				Settings: map[string]string{
 					"title":         am.Annotations[constants.ApplicationTitleLabel],
 					"market_source": am.Annotations[constants.AppMarketSourceKey],
+					"version":       am.Annotations[api.AppVersionKey],
 				},
 			},
 			Status: v1alpha1.ApplicationStatus{
@@ -669,6 +691,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			// synthesized values so they are not lost on overwrite.
 			title := v.Spec.Settings["title"]
 			marketSource := v.Spec.Settings["market_source"]
+			version := v.Spec.Settings["version"]
 			v.Spec.Settings = a.Spec.Settings
 			if v.Spec.Settings == nil {
 				v.Spec.Settings = map[string]string{}
@@ -679,7 +702,10 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			if _, ok := v.Spec.Settings["market_source"]; !ok {
 				v.Spec.Settings["market_source"] = marketSource
 			}
-			v.Spec.Entrances = a.Spec.Entrances
+			if v.Spec.Settings["version"] != version && version != "" {
+				v.Spec.Settings["version"] = version
+			}
+			v.Spec.Entrances = a.EffectiveEntrances(a.Spec.Owner)
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}

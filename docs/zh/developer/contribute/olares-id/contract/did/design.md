@@ -1,4 +1,5 @@
 ---
+description: 每个 DID 同时也是一个 NFT（遵循 ERC-721 标准），id 是通过 keccak256(name) 计算得出的其唯一标识符。
 outline: [2, 3]
 ---
 

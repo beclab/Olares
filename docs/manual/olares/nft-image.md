@@ -1,4 +1,5 @@
 ---
+noindex: true
 description: Add unique NFT images as your Olares profile picture by connecting your blockchain wallet, importing NFTs, and setting them as custom avatars.
 ---
 # Add NFT image as profile picture

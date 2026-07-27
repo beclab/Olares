@@ -55,17 +55,31 @@ func resolveInstalledSource(ctx context.Context, opts *MarketOptions, mc *Market
 	if s := strings.TrimSpace(opts.Source); s != "" {
 		return s, nil
 	}
-	row, err := lookupInstalledApp(ctx, mc, appName)
+	row, err := resolveInstalledRow(ctx, mc, appName)
 	if err != nil {
 		return "", err
 	}
+	return row.Source, nil
+}
+
+// resolveInstalledRow returns the full per-user state row for an installed
+// app, applying the same "must be installed" guards as resolveInstalledSource
+// (no --source override path — callers that need the whole row, like restart's
+// --watch baseline capture, always resolve the row from /market/state). It is
+// the single source of truth for the not-installed / wrong-state error
+// messages so resolveInstalledSource and restart stay in lockstep.
+func resolveInstalledRow(ctx context.Context, mc *MarketClient, appName string) (*installedAppRow, error) {
+	row, err := lookupInstalledApp(ctx, mc, appName)
+	if err != nil {
+		return nil, err
+	}
 	if row == nil || strings.TrimSpace(row.Source) == "" {
-		return "", fmt.Errorf("%q is not installed for this user (run `olares-cli market list --mine` to see installed apps)", appName)
+		return nil, fmt.Errorf("%q is not installed for this user (run `olares-cli market list --mine` to see installed apps)", appName)
 	}
 	if !isInstalledState(row.State) {
-		return "", fmt.Errorf("%q is not an installed app (state %q); nothing to operate on (run `olares-cli market list --mine` to see installed apps)", appName, row.State)
+		return nil, fmt.Errorf("%q is not an installed app (state %q); nothing to operate on (run `olares-cli market list --mine` to see installed apps)", appName, row.State)
 	}
-	return row.Source, nil
+	return row, nil
 }
 
 func validateVersion(version string) error {

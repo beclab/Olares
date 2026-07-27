@@ -1,6 +1,10 @@
 ---
 outline: deep
 description: 在 Olares 上管理 ComfyUI 的管理员指南，涵盖服务控制、网络配置、模型和插件管理、Python 依赖以及故障排查。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, ComfyUI Launcher, manage ComfyUI, ComfyUI models, ComfyUI plugins, self-hosted ComfyUI, ComfyUI on Olares
 ---
 
 :::warning
@@ -69,17 +73,28 @@ ComfyUI Launcher 提供对关键目录的快速访问，并使用共享的 `mode
 
 | 条目 | Files 中的位置 | 描述 |
 |--|--|--|
-| **Root** | `/Files/External/olares/ai/`<br /> `comfyui/ComfyUI` | ComfyUI 安装的根目录。 |
-| **Plugin** | `/Files/External/olares/ai/`<br /> `comfyui/ComfyUI/custom_nodes` | 存储已安装的插件（自定义节点和扩展）。                    |
-| **Model**  | `/Files/External/olares/ai/model` | 由 ComfyUI 和其他 AI 应用共享的 AI 模型的集中存储。    |
-| **Output** | `/Files/External/olares/ai/`<br /> `output/comfyui` | ComfyUI 生成的图像和其他资产的默认目标位置。     |
-| **Input**  | `/Files/External/olares/ai/`<br /> `comfyui/ComfyUI/input`  | 用于图生图或内绘工作流程的源图像文件夹。 |
+| **Root** | `/Files/Data/comfyuisharev3`<br /> `/comfyui/ComfyUI` | ComfyUI 安装的根目录。 |
+| **Plugin** | `/Files/Data/comfyuisharev3`<br /> `/comfyui/ComfyUI/custom_nodes` | 存储已安装的插件（自定义节点和扩展）。 |
+| **Model**  | `/Files/Common/comfyui/model` | 由 ComfyUI 和其他 AI 应用共享的 AI 模型的集中存储。 |
+| **Output** | `/Files/Common/comfyui/output` | ComfyUI 生成的图像和其他资产的默认目标位置。 |
+| **Input**  | `/Files/Common/comfyui/input` | 用于图生图或内绘工作流程的源图像文件夹。 |
 
 点击任何这些条目都会直接在相应的目录中打开 Files 应用。
 
+:::info Olares 1.12.6 之前版本的文件路径
+早期版本的 ComfyUI 使用以下文件目录：
+
+- Root: `/Files/External/olares/ai/comfyui/ComfyUI`
+- Model: `/Files/External/olares/ai/model`
+- Output: `/Files/External/olares/ai/output/comfyui`
+- Input: `/Files/External/olares/ai/comfyui/ComfyUI/input`
+
+安装新版 ComfyUI 后，系统会自动将支持的数据迁移到新位置。
+:::
+
 ### 理解 `model` 目录结构
 
-Olares 中的 ComfyUI 使用与标准安装不同的文件结构。此更改允许模型在 ComfyUI 和 SD Web UI 之间共享。
+Olares 中的 ComfyUI 使用与标准安装不同的文件结构。此更改允许模型在 ComfyUI 和其他应用之间共享。
 
 手动上传外部模型或在 **Custom Download** 中选择目标时，将文件放入正确的子文件夹。
 
@@ -89,7 +104,7 @@ Olares 中的 ComfyUI 使用与标准安装不同的文件结构。此更改允�
 
 | 标准 ComfyUI 目录 | Files 中的目录 | 模型类型 |
 |--|--|--|
-| `checkpoints/` | `main/` | 基础 checkpoints（SD 1.5, SDXL, Flux） |
+| `checkpoints/` | `checkpoints/` | 基础 checkpoints（SD 1.5, SDXL, Flux） |
 | `loras/` | `lora/` | LoRA 权重 |
 | `vae/` | `vae/` | VAE 模型 |
 | `embeddings/` | `embeddings/` | Textual Inversion 嵌入 |
@@ -104,6 +119,80 @@ Olares 中的 ComfyUI 使用与标准安装不同的文件结构。此更改允�
 | `text_encoders/` | `clip/`, `text_encoders/` | 文本编码器模型（例如，CLIP 和 T5 编码器） |
 | `diffusion_models/` | `unet/`, `diffusion_models/` | 扩散模型权重，包括基于 UNet 的模型 |
 
+:::tip 适用于在 Olares 1.12.6 之前安装 ComfyUI 的用户
+ComfyUI的早期版本中,`checkpoints/`对应的文件夹名称为`main/`，新版 ComfyUI 会在迁移时，自动将 `main/` 文件夹重命名为`checkpoints/`。
+:::
+
+### 配置其他模型路径
+
+通常无需编辑 `extra_model_paths.yaml`。仅当模型已存储在 `/Files/Common/comfyui/model/` 下，但 ComfyUI 或自定义节点无法找到该模型时，才需要添加映射。
+
+#### 配置说明
+
+ComfyUI 使用 `extra_model_paths.yaml` 将模型类别映射到默认模型目录之外的文件夹。在 Olares 中，该文件由系统自动生成，以便 ComfyUI 能从共享模型目录加载模型。
+
+配置文件位于 `/Files/Data/comfyuisharev3/comfyui/ComfyUI/user/extra_model_paths.yaml`。
+
+共享模型目录有两种路径表示：
+
+- 在 Files 中：`/Files/Common/comfyui/model/`
+- 在 ComfyUI 内部：`/mnt/olares-shared-model`
+
+自动生成的配置以类似以下内容的片段开头：
+
+```yaml
+olares_shared_models:
+  base_path: /mnt/olares-shared-model
+  checkpoints: checkpoints
+  loras: lora
+  vae: vae
+```
+
+`olares_shared_models` 下的每一项都将一个模型类别映射到相对于 `base_path` 的文件夹：
+
+```yaml
+<模型类别>: <相对于 base_path 的文件夹>
+```
+
+- 左侧的键是 ComfyUI 或自定义节点查找的类别。
+- 右侧的值是 `/Files/Common/comfyui/model/` 下用于存储该类别模型的文件夹。
+
+模型类别必须与 ComfyUI 或自定义节点预期的值一致。不要自行创建类别名称。需使用节点文档或错误消息中指定的准确类别。
+
+例如，假设某个自定义节点查找 `detection` 类别模型，而模型存储在 `/Files/Common/comfyui/model/detection/mediapipe_face_fp32.safetensors`。
+
+在 `olares_shared_models` 下添加以下映射：
+
+```yaml
+olares_shared_models:
+  base_path: /mnt/olares-shared-model
+  # 已有映射...
+  detection: detection
+```
+
+该映射会让 ComfyUI 在 `/Files/Common/comfyui/model/detection/` 中查找 `detection` 类别的模型。
+
+模型类别和文件夹路径无需相同。例如：
+
+```yaml
+olares_shared_models:
+  base_path: /mnt/olares-shared-model
+  # 已有映射...
+  ultralytics_bbox: ultralytics/bbox
+```
+
+该映射会让请求 `ultralytics_bbox` 类别的自定义节点在 `/Files/Common/comfyui/model/ultralytics/bbox/` 中查找模型。
+
+#### 添加映射
+
+1. 打开 Files，前往 `Data/comfyuisharev3/comfyui/ComfyUI/user/`。
+2. 打开 `extra_model_paths.yaml`。
+3. 在 `olares_shared_models:` 下，检查所需类别是否已存在，然后使用与现有条目相同的缩进添加或更新映射。
+4. 保存文件并重启 ComfyUI。
+5. 重新打开受影响的工作流或节点，确认模型已出现在对应的选择列表中。
+
+如果模型仍未出现，需检查模型类别、相对文件夹路径、YAML 缩进和模型文件位置。
+
 ## 管理模型
 
 ComfyUI 支持多种添加模型的方式。选择最适合模型来源和你工作流程的方法。
@@ -112,7 +201,7 @@ ComfyUI 支持多种添加模型的方式。选择最适合模型来源和你工
 |--|--|--|
 | **使用 ComfyUI Launcher 下载** | 公共模型、资源包或<br/> 不需要登录、访问批准或令牌的直接模型 URL。 | 将标准模型直接下载到 Olares 的最简单方式。 |
 | **使用 Server Download** | ComfyUI 客户端中列出的<br/> 具有直接可下载 URL 的缺失模型。 | 直接下载到 Olares 主机。不支持需要登录、访问批准、令牌或其他授权的模型。 |
-| **从库中使用** | 你已安装兼容替代方案的<br/> 缺失模型。 | 使用 `External/olares/ai/model` 中的模型。无需下载，但你需要自行验证兼容性。 |
+| **从库中使用** | 你已安装兼容替代方案的<br/> 缺失模型。 | 使用 `/Common/comfyui/model/` 中的模型。无需下载，但你需要自行验证兼容性。 |
 | **上传本地模型** | 需要登录、<br/>访问批准、令牌或手动下载的受限模型，或来自不受支持<br/> 来源的模型。 | 先将文件下载到本地设备，然后通过 Files 或 LarePass 上传。 |
 | **使用下载器节点** | 提供自己的<br/>内置模型下载器的自定义节点。 | 遵循节点文档。设置、存储位置和要求可能因节点而异。 |
 
@@ -195,13 +284,13 @@ Server Download 是 ComfyUI 1.0.32 及更高版本中默认启用的 ComfyUI 插
 
 6. 下载完成后，刷新 ComfyUI 页面。你现在可以在工作流中使用该模型。
 
-要验证或管理下载的文件，请打开 Files 并前往 `External/olares/ai/comfyui/ComfyUI/models` 下的相应子文件夹。
+要验证或管理下载的文件，请打开 Files 并前往 `/Common/comfyui/model/` 下的相应子文件夹。
 
 ### 从库中使用现有模型
 
 当工作流报告模型缺失，但你在模型库中已有兼容的替代方案时，使用此方法。
 
-**Use from Library** 允许你从 `External/olares/ai/model` 中选择模型。仅当相应的模型类型文件夹存在且包含模型文件时，该按钮才可用。
+**从库中使用** 允许你从 `/Common/comfyui/model/` 中选择模型。仅当相应的模型类型文件夹存在且包含模型文件时，该按钮才可用。
 
 1. 在 ComfyUI 客户端中，点击画布中的空白区域以打开 **Workflow Overview**，然后前往 **Errors** 选项卡并找到 **Missing Models** 部分。
 2. 在缺失模型下，点击 **Use from Library** 下拉菜单。
@@ -227,7 +316,7 @@ Server Download 是 ComfyUI 1.0.32 及更高版本中默认启用的 ComfyUI 插
 
 1. 将模型文件下载到你的本地设备。如果需要，请参阅[模型无法直接下载到 Olares](./comfyui-common-issues#模型无法直接下载到-olares)。
 2. 从 Launchpad 打开 Files。
-3. 导航到 `External/olares/ai/model`。
+3. 导航到 `/Common/comfyui/model/`。
 4. 打开与模型类型匹配的文件夹。如果你不确定使用哪个文件夹，请参阅[理解 `model` 目录结构](#理解-model-目录结构)。
 5. 将模型文件上传到目标文件夹。
 
@@ -412,7 +501,7 @@ ComfyUI 运行在一组 Python 库上。在 **Environment** 页面上管理它�
 1. 前往 **Market** > **My Olares**。
 2. 点击 ComfyUI 操作按钮旁边的下拉箭头并选择 **Uninstall**。
 3. 在 **Uninstall** 窗口中，选择 **Also remove all local data**，然后点击 **Confirm**。
-4. 从 Launchpad 打开 Files 并前往 `External/olares/ai`。
+4. 从 Launchpad 打开 Files 并前往 `/Data/comfyuisharev3/comfyui/`。
 5. 删除 `comfyui` 文件夹。
 6. 从 Market 重新安装 ComfyUI。
 7. 安装完成后，打开 ComfyUI Launcher 并启动服务。

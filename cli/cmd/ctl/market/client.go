@@ -270,18 +270,24 @@ func (c *MarketClient) InstallApp(ctx context.Context, appName, version, source,
 	})
 }
 
-func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title string, envs []AppEnvVar, entrances []AppEntrance, templateClone bool) (*APIResponse, error) {
+// CloneApp issues POST /apps/{name}/clone. selectedGpuType pins the compute
+// mode on Olares 1.12.6+ (CloneRequest.SelectedGpuType, omitempty), mirroring
+// InstallApp: callers pass "" on 1.12.5 so the wire stays byte-identical, and
+// the 1.12.6 path passes either the --compute-mode value or the mode resolved
+// from a computeModeSelect 422 retry.
+func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title, selectedGpuType string, envs []AppEnvVar, entrances []AppEntrance, templateClone bool) (*APIResponse, error) {
 	if source == "" {
 		source = c.source
 	}
 	return c.doRequest(ctx, http.MethodPost, "/apps/"+appName+"/clone", CloneRequest{
-		Source:        source,
-		AppName:       appName,
-		Title:         title,
-		Sync:          true,
-		Envs:          envs,
-		Entrances:     entrances,
-		TemplateClone: templateClone,
+		Source:          source,
+		AppName:         appName,
+		Title:           title,
+		Sync:            true,
+		Envs:            envs,
+		Entrances:       entrances,
+		SelectedGpuType: selectedGpuType,
+		TemplateClone:   templateClone,
 	})
 }
 

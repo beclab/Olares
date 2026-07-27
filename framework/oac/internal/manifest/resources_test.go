@@ -36,13 +36,10 @@ func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 }
 
 // newOlaresSystemDep returns the canonical options.dependencies entry
-// that satisfies validateOlaresDependency for c. It mirrors the validator
-// rules: apiVersion=v3 OR any 1.12.6-only feature field on the config
-// selects the post-v3 (>=1.12.6-0) constraint, otherwise the legacy
-// pre-v3 (>=1.12.3-0,<1.12.6) constraint is used. Callers should set
-// every relevant config field (workloadReplicas, overlayGateway, etc.)
-// before invoking this helper so the picked constraint stays in sync
-// with the validator's view of the same config.
+// that satisfies validateOlaresDependency for c. apiVersion=v3 selects
+// the post-v3 (>=1.12.6-0) constraint; apiVersion in {empty, v1, v2}
+// always selects the pre-v3 (>=1.12.3-0,<1.12.6) constraint regardless
+// of 1.12.6-only feature fields.
 func newOlaresSystemDep(c *AppConfiguration) Dependency {
 	rule, _ := pickOlaresDepRule(c)
 	return Dependency{

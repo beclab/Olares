@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -16,13 +18,17 @@ import (
 	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/container"
+	containertemplates "github.com/beclab/Olares/cli/pkg/container/templates"
 	"github.com/beclab/Olares/cli/pkg/core/action"
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
+	clistate "github.com/beclab/Olares/cli/pkg/daemon/state"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/amdgpu"
+	"github.com/beclab/Olares/cli/pkg/gpu/intelgpu"
 	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	k3stemplates "github.com/beclab/Olares/cli/pkg/k3s/templates"
@@ -39,6 +45,8 @@ import (
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
+	srvconfig "github.com/containerd/containerd/services/server/config"
+	"github.com/pelletier/go-toml"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kkubernetes "k8s.io/client-go/kubernetes"
@@ -78,6 +86,190 @@ func upgradeContainerd() []task.Interface {
 		&task.LocalTask{
 			Name:   "UpgradeContainerd",
 			Action: new(upgradeContainerdAction),
+		},
+		&task.LocalTask{
+			Name:   "RestartContainerd",
+			Action: new(container.RestartContainerd),
+		},
+	}
+}
+
+// migrateContainerdConfigV3Action migrates an existing node's containerd config
+// from the legacy v2 layout (inline registry.mirrors + inline nvidia runtime) to
+// the v3 layout: a minimal config.toml with config_path=/etc/containerd/certs.d
+// and imports=conf.d/*.toml, docker.io mirrors seeded into
+// certs.d/docker.io/hosts.toml, and (on GPU nodes) the nvidia runtime moved to a
+// conf.d/99-nvidia.toml drop-in. The v3 config has no per-node dynamic state, so
+// it is safe to regenerate and overwrite: registry mirrors live in certs.d
+// (reconciled by olaresd), and nvidia's runtime lives in its own drop-in.
+type migrateContainerdConfigV3Action struct {
+	common.KubeAction
+}
+
+func (a *migrateContainerdConfigV3Action) Execute(runtime connector.Runtime) error {
+	// Read the node's currently-configured docker.io mirror(s) BEFORE overwriting
+	// config.toml, so they can be carried over: prefer what is actually on the node
+	// (an already-migrated certs.d, or the legacy v2 inline registry.mirrors), and
+	// fall back to the CLI-configured default only when the node has none.
+	mirrors := existingDockerMirrors()
+	if len(mirrors) == 0 {
+		mirrors = containertemplates.MirrorList(a.KubeConf)
+	} else {
+		logger.Infof("preserving existing docker.io mirror(s) across containerd v3 migration: %v", mirrors)
+	}
+
+	configData := util.Data{
+		"SandBoxImage": images.GetImage(runtime, a.KubeConf, "pause").ImageName(),
+		"DataRoot":     containertemplates.DataRoot(a.KubeConf),
+		"FsType":       a.KubeConf.Arg.SystemInfo.GetFsType(),
+		"ZfsRootPath":  cc.ZfsSnapshotter,
+	}
+	if err := (&action.Template{
+		Name:     "MigrateContainerdConfig",
+		Template: containertemplates.ContainerdConfig,
+		Dst:      "/etc/containerd/config.toml",
+		Data:     configData,
+	}).Execute(runtime); err != nil {
+		return errors.Wrap(errors.WithStack(err), "regenerate containerd v3 config failed")
+	}
+	if err := (&action.Template{
+		Name:     "MigrateContainerdRegistryHosts",
+		Template: containertemplates.ContainerdRegistryHosts,
+		Dst:      "/etc/containerd/certs.d/docker.io/hosts.toml",
+		Data:     util.Data{"Mirrors": mirrors},
+	}).Execute(runtime); err != nil {
+		return errors.Wrap(errors.WithStack(err), "seed containerd docker.io hosts.toml failed")
+	}
+
+	// On GPU nodes the old inline nvidia runtime was just overwritten; re-apply it
+	// as a conf.d drop-in via the (drop-in aware) nvidia-container-toolkit.
+	model, _, err := utils.DetectNvidiaModelAndArch(runtime)
+	if err != nil {
+		// A detection error means the probe command itself could not run (infra /
+		// sudo failure); "no GPU" instead returns an empty model with no error.
+		// Since the v2->v3 rewrite just removed any inline nvidia runtime, silently
+		// skipping on error would leave a GPU node without a default runtime, so
+		// fail loudly and let the upgrade be retried.
+		return errors.Wrap(errors.WithStack(err), "detect nvidia gpu for containerd v3 migration failed")
+	}
+	if strings.TrimSpace(model) == "" {
+		return nil
+	}
+	logger.Infof("nvidia gpu detected (%s), migrating nvidia container runtime to a conf.d drop-in", model)
+	if err := (&gpu.InstallNvidiaContainerToolkit{}).Execute(runtime); err != nil {
+		return errors.Wrap(errors.WithStack(err), "install nvidia-container-toolkit failed")
+	}
+	if err := (&gpu.ConfigureContainerdRuntime{}).Execute(runtime); err != nil {
+		return errors.Wrap(errors.WithStack(err), "configure nvidia containerd runtime failed")
+	}
+	return nil
+}
+
+const (
+	legacyContainerdConfigPath = "/etc/containerd/config.toml"
+	dockerCertsDHostsPath      = "/etc/containerd/certs.d/docker.io/hosts.toml"
+)
+
+// existingDockerMirrors returns the docker.io mirror endpoints currently
+// configured on this node so a v2->v3 migration can carry them over. It prefers
+// an already-migrated certs.d hosts.toml, then falls back to the legacy config v2
+// inline registry.mirrors."docker.io" (excluding the canonical docker.io upstream,
+// which becomes the hosts.toml `server` rather than a mirror host).
+func existingDockerMirrors() []string {
+	return existingDockerMirrorsFrom(dockerCertsDHostsPath, legacyContainerdConfigPath)
+}
+
+func existingDockerMirrorsFrom(certsDHostsPath, legacyConfigPath string) []string {
+	// already migrated (v3): preserve whatever mirror hosts certs.d already has.
+	if data, err := os.ReadFile(certsDHostsPath); err == nil {
+		if hosts := parseHostsTOMLMirrors(data); len(hosts) > 0 {
+			return hosts
+		}
+	}
+
+	// legacy v2: read inline registry.mirrors."docker.io".endpoint.
+	if _, err := os.Stat(legacyConfigPath); err != nil {
+		return nil
+	}
+	cfg := &srvconfig.Config{}
+	if err := srvconfig.LoadConfig(legacyConfigPath, cfg); err != nil {
+		logger.Warnf("read existing containerd config for mirror preservation failed: %v", err)
+		return nil
+	}
+	plugins, ok := cfg.Plugins["io.containerd.grpc.v1.cri"]
+	if !ok {
+		return nil
+	}
+	raw := plugins.GetPath([]string{"registry", "mirrors", "docker.io", "endpoint"})
+	eps, ok := raw.([]interface{})
+	if !ok {
+		return nil
+	}
+	var mirrors []string
+	for _, e := range eps {
+		s, ok := e.(string)
+		if !ok {
+			continue
+		}
+		if s = strings.TrimSpace(s); s == "" || isDockerCanonicalEndpoint(s) {
+			continue
+		}
+		mirrors = append(mirrors, s)
+	}
+	return mirrors
+}
+
+// isDockerCanonicalEndpoint reports whether ep is a canonical docker.io upstream
+// (the fallback, not a mirror) that should not be carried over as a mirror host.
+func isDockerCanonicalEndpoint(ep string) bool {
+	u, err := url.Parse(ep)
+	if err != nil {
+		return false
+	}
+	switch u.Hostname() {
+	case "registry-1.docker.io", "index.docker.io", "docker.io":
+		return true
+	}
+	return false
+}
+
+// parseHostsTOMLMirrors returns the [host."<url>"] mirror endpoints from a
+// containerd certs.d hosts.toml, ordered by their position in the file (highest
+// priority first). TOML tables are unordered as a data model, so — like
+// containerd's own resolver — we recover precedence from each host table's source
+// line number rather than map iteration order.
+func parseHostsTOMLMirrors(data []byte) []string {
+	tree, err := toml.LoadBytes(data)
+	if err != nil {
+		return nil
+	}
+	hostTree, ok := tree.Get("host").(*toml.Tree)
+	if !ok {
+		return nil
+	}
+	hosts := hostTree.Keys()
+	// Note: use GetPath (single path element), not Get — Get treats the key as a
+	// dot-separated path, which would mangle host URLs that contain dots/colons.
+	sort.SliceStable(hosts, func(i, j int) bool {
+		ti, _ := hostTree.GetPath([]string{hosts[i]}).(*toml.Tree)
+		tj, _ := hostTree.GetPath([]string{hosts[j]}).(*toml.Tree)
+		if ti == nil || tj == nil {
+			return false
+		}
+		return ti.Position().Line < tj.Position().Line
+	})
+	return hosts
+}
+
+// migrateContainerdConfigV3 regenerates the v3 containerd config (+ nvidia
+// drop-in on GPU nodes) and restarts containerd to load it.
+func migrateContainerdConfigV3() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "MigrateContainerdConfigV3",
+			Action: new(migrateContainerdConfigV3Action),
+			Retry:  3,
+			Delay:  10 * time.Second,
 		},
 		&task.LocalTask{
 			Name:   "RestartContainerd",
@@ -317,6 +509,15 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 	if !(sys.IsUbuntu() || sys.IsDebian()) {
 		return nil
 	}
+	// NVIDIA DGX Spark / GB10 OEM systems ship and manage their own GPU driver
+	// stack as part of the OS. The driver is intertwined with vendor packages
+	// and an nvidia-branded kernel, so reusing the generic uninstall/runfile
+	// upgrade flow here is unsafe (it can purge unrelated system packages and
+	// break the machine). Skip the driver upgrade entirely on these systems.
+	if sys.IsGB10Chip() {
+		logger.Info("detected NVIDIA DGX Spark / GB10 system, skipping GPU driver upgrade")
+		return nil
+	}
 
 	model, _, err := utils.DetectNvidiaModelAndArch(runtime)
 	if err != nil {
@@ -408,6 +609,17 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 
 	needReboot := changed || (status != nil && status.Mismatch)
 	a.PipelineCache.Set(cacheRebootNeeded, needReboot)
+	if needReboot {
+		// Drop a tmpfs marker now, before the OlaresVersion CR is flipped in
+		// the next task. While it exists, olaresd keeps reporting the system
+		// as upgrading-and-rebooting instead of briefly reporting the upgrade
+		// as complete during the window between the version flip and the
+		// actual reboot. The marker lives under /run and is cleared
+		// automatically once the machine reboots.
+		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("touch %s", clistate.UpgradeRebootMarkFile), false, false); err != nil {
+			logger.Warnf("failed to write upgrade reboot marker %s: %v", clistate.UpgradeRebootMarkFile, err)
+		}
+	}
 	return nil
 }
 
@@ -576,6 +788,25 @@ func (w *waitForStatefulSetReady) Execute(_ connector.Runtime) error {
 	return nil
 }
 
+// newComputeFormatManifestVersion is the OlaresManifest (CfgFileVersion)
+// version from which apps declare their compute needs through the per-mode
+// resource matrix (spec.resources / accelerator) instead of the scalar
+// spec.requiredGpu. From this version on, SelectedGpuType is chosen
+// authoritatively by the install-time auto-selector.
+var newComputeFormatManifestVersion = semver.MustParse("0.12.0")
+
+// isNewComputeFormatManifest reports whether cfgFileVersion is a new-format
+// (>= 0.12.0) manifest. An empty or unparseable version is treated as legacy
+// (older manifests predate reliable CfgFileVersion stamping), so the legacy
+// backfill heuristics still apply to them.
+func isNewComputeFormatManifest(cfgFileVersion string) bool {
+	v, err := semver.NewVersion(strings.TrimSpace(cfgFileVersion))
+	if err != nil {
+		return false
+	}
+	return v.Compare(newComputeFormatManifestVersion) >= 0
+}
+
 type backfillAppGPUConfig struct {
 	common.KubeAction
 }
@@ -632,6 +863,19 @@ func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 		var appCfg appcfg.ApplicationConfig
 		if err := json.Unmarshal([]byte(am.Spec.Config), &appCfg); err != nil {
 			return errors.Wrapf(errors.WithStack(err), "failed to unmarshal config for applicationmanager %s", am.Name)
+		}
+
+		// The heuristics below are for legacy manifests only: they infer GPU
+		// need from the scalar spec.requiredGpu (appCfg.RequiredGPU) and fix up
+		// a SelectedGpuType that predates the compute model. New-format
+		// (>= 0.12.0) manifests declare GPU need in the per-mode resource
+		// matrix (spec.requiredGpu stays empty) and already carry an
+		// authoritative SelectedGpuType chosen by the install-time
+		// auto-selector. Running the requiredGpu-scalar heuristics against them
+		// would misread RequiredGPU == "" as "no GPU needed" and wrongly clear
+		// a correctly-selected GPU mode, so skip them entirely.
+		if isNewComputeFormatManifest(appCfg.CfgFileVersion) {
+			continue
 		}
 
 		modified := false
@@ -862,6 +1106,32 @@ func (u *upgradeUserReverseProxyAgent) Execute(runtime connector.Runtime) error 
 	}
 
 	return nil
+}
+
+// labelIntelAMDGPUNode detects whether the current node carries an Intel
+// integrated GPU or an AMD Ryzen AI Max APU and, if so, sets the corresponding
+// gpu.bytetrade.io/<mode> existence label. Devices that gained Intel/AMD GPU
+// support before the per-mode (multi-mode) labeling scheme existed never got
+// these labels, so after an upgrade their GPU mode wouldn't be advertised to
+// the scheduler. Reusing the install-time actions here backfills the labels
+// without a fresh install. Both actions are idempotent and no-op on nodes
+// without the respective GPU (and the AMD one additionally requires ROCm to be
+// present, matching the install behavior).
+func labelIntelAMDGPUNode() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "LabelIntelGPUNode",
+			Action: new(intelgpu.LabelIntelGPUs),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+		&task.LocalTask{
+			Name:   "LabelAMDGPUNode",
+			Action: new(amdgpu.UpdateNodeAMDInfo),
+			Retry:  3,
+			Delay:  5 * time.Second,
+		},
+	}
 }
 
 func upgradeUserReverseProxy() []task.Interface {

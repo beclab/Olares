@@ -1,5 +1,6 @@
 ---
-description: Olares One 的简要介绍，以及它与 Olares OS 的集成，用于本地 AI 处理。
+description: 设置和管理 Olares One，在本地运行 AI Agent 和大模型，并通过自然语言操作你的个人 AI 云。
+aside: false
 head:
   - - meta
     - name: keywords
@@ -8,33 +9,75 @@ head:
 
 # Olares One 文档
 
-:::warning
-本页面内容经 AI 翻译生成，仅供参考。具体细节请以[英文原文](../../one/index.md)为准。
-:::
+Olares One 将工作站级硬件与 Olares OS 集成在一台设备中，为你提供由自己掌控的个人 AI 云。你可以在本地运行 AI Agent 和大模型，只需用自然语言描述需求，就能操作你的个人云。
 
-欢迎使用 Olares One！本文档帮助你从首次启动到日常使用以及高级系统定制，导航 Olares One 的旅程。
+本文档聚焦 Olares One 专属的使用与维护流程，包括首次启动、自然语言操作、设备访问、系统更新、存储与 eGPU 扩展、系统恢复及双系统配置。通用的 Olares 功能、应用和使用场景，请参阅 [Olares OS](../manual/overview) 或[应用示例](../use-cases/)。
 
-:::info
-本文档专注于 Olares One 特定的使用场景。如需了解通用操作系统功能或更广泛的使用场景，请选择顶部导航中的 **Olares OS** 或 **Use cases** 标签。
-:::
+第一次使用 Olares One？请先完成[首次启动](./first-boot)，然后了解如何[通过自然语言管理 Olares](./olares-onboarding)。
 
-## 什么是 Olares One？
+## 开启你的 Olares One 之旅
 
-Olares One 是一款专为运行个人 AI 云而设计的硬件设备。它将工作站级别的硬件与 Olares OS 相结合，为在本地运行 AI 工具和管理数据提供平台。
+请跟随以下指南，从首次开机起步，一步步解锁从日常基础使用到极客高级玩法的完整体验。
 
-现代数字生活通常通过将个人数据和 AI 提示发送到集中式服务器来用隐私换取便利。Olares One 用你物理控制的硬件取代了这一模式，允许对 AI 代理和文件存储进行本地数据处理。
-
-主要使用场景包括：
-* **边缘 AI**：在硬件上直接运行开源 AI 模型进行文本或媒体生成，完全保护数据隐私。
-* **游戏**：通过 Steam Headless 应用将设备变成游戏服务器，在 Olares One 上或任何兼容设备上玩游戏。
-* **个人知识库**：让 AI 模型从私人文档中学习，充当个人助手。
-* **统一文件存储**：使用 Files 应用管理、同步和共享文件。
-* **自托管工作空间**：在本地设备上运行一套私有的生产力和协作工具。
-* **应用开发**：使用 Olares Studio 为 Olares 环境开发和部署应用。
-* **私有媒体服务器**：使用 Jellyfin 等应用托管和串流电影和音乐收藏。
-
-## 什么是 Olares OS？
-
-Olares 是一个基于 Kubernetes 的开源个人云操作系统，旨在让用户能够在本地拥有和管理自己的数字资产。
-
-虽然 Olares One 默认包含该软件，但 Olares OS 也可以安装在其他硬件上。详细信息请参阅[安装 Olares](../manual/get-started/install-olares.md)。
+<div class="vpath">
+  <div class="vpath-stage">
+    <div class="vpath-marker"><span class="vpath-icon"><span class="material-symbols-outlined">power_settings_new</span></span></div>
+    <div class="vpath-body">
+      <div class="vpath-title">初始设置</div>
+      <div class="vpath-links">
+        <a href="./first-boot">首次启动</a>
+        <a href="./redeem-membership">兑换会员</a>
+      </div>
+    </div>
+  </div>
+  <div class="vpath-stage">
+    <div class="vpath-marker"><span class="vpath-icon"><span class="material-symbols-outlined">waving_hand</span></span></div>
+    <div class="vpath-body">
+      <div class="vpath-title">快速上手</div>
+      <div class="vpath-links">
+        <a href="./olares-onboarding">通过自然语言管理 Olares</a>
+        <a href="./access-olares-via-vpn">通过 VPN 访问 Olares</a>
+        <a href="./access-olares-via-local-domain">通过 .local 域名访问 Olares</a>
+        <div class="vpath-seealso">另见：<a href="../manual/olares/">Olares OS 手册中的所有系统应用指南</a></div>
+        <div class="vpath-seealso">另见：<a href="../use-cases/">浏览所有使用场景</a></div>
+      </div>
+    </div>
+  </div>
+  <div class="vpath-stage">
+    <div class="vpath-marker"><span class="vpath-icon"><span class="material-symbols-outlined">build</span></span></div>
+    <div class="vpath-body">
+      <div class="vpath-title">高级</div>
+      <div class="vpath-links">
+        <a href="./access-overview">访问 Olares One 终端</a>
+        <a href="./expand-storage-usb-drive">扩展存储</a>
+        <a href="./connect-two-olares-one">连接两台 Olares One</a>
+        <a href="./egpu">搭配 eGPU 使用</a>
+        <a href="./dual-boot-dual-drive">与 Windows 双系统启动</a>
+        <a href="./dual-boot-ubuntu-dual-drive">与 Ubuntu 双系统启动</a>
+        <a href="./install-windows-primary-drive">在 Olares One 上安装 Windows</a>
+        <a href="./install-ubuntu-server">在 Olares One 上安装 Ubuntu</a>
+      </div>
+    </div>
+  </div>
+  <div class="vpath-stage">
+    <div class="vpath-marker"><span class="vpath-icon"><span class="material-symbols-outlined">update</span></span></div>
+    <div class="vpath-body">
+      <div class="vpath-title">系统更新</div>
+      <div class="vpath-links">
+        <a href="./update">更新系统</a>
+        <a href="./factory-reset">恢复 Olares One</a>
+      </div>
+    </div>
+  </div>
+  <div class="vpath-stage">
+    <div class="vpath-marker"><span class="vpath-icon"><span class="material-symbols-outlined">menu_book</span></span></div>
+    <div class="vpath-body">
+      <div class="vpath-title">参考</div>
+      <div class="vpath-links">
+        <a href="./spec">技术规格</a>
+        <a href="./faq">常见问题</a>
+        <a href="./known-issues">已知问题</a>
+      </div>
+    </div>
+  </div>
+</div>

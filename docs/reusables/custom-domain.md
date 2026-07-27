@@ -85,10 +85,10 @@ Once TXT and NS records are verified, you can proceed to create an organization 
    Once an organization is created for a domain, the domain cannot be removed from Olares Space.
    :::
 
-4. Enter the username for your Olares ID. For example, if you enter `alex`, your Olares ID will be `alex@space.n1.monster`.
+4. Enter the username for your Olares ID. For example, if you enter `alex2026`, your Olares ID will be `alex2026@space.n1.monster`.
 
    :::info
-   The username part of your Olares ID should be 1-63 characters long, with lowercase alphanumeric characters only.
+   The username part of your Olares ID should be 8-24 characters long, with lowercase alphanumeric characters only.
    :::
    ![Create an Olares ID with admin privileges](/images/manual/tutorials/custom-domain-create-olares-id-as-admin.png)
 

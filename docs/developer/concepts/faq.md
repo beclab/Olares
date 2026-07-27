@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: Find answers to common Olares ID questions, including how it relates to World ID and how DID metadata, verifiable credentials, and reputation differ.
 outline: [2, 3]
 ---
 

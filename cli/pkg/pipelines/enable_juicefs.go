@@ -23,13 +23,25 @@ func EnableJuiceFSPipeline(ctx context.Context) error {
 		os.Exit(1)
 	}
 
-	// If JuiceFS has already been migrated/enabled on this node, there is
+	// If the migration has fully completed (data synced, rootfs swapped, the
+	// juicefs service enabled AND the post-swap finalization done), there is
 	// nothing left to do. We deliberately do NOT start Olares here: the user
 	// manages the Olares lifecycle themselves now. This check runs before the
 	// console logger is initialized (SetConsoleLog below), so print directly.
-	if storage.IsJuiceFSEnabled() {
-		fmt.Println("JuiceFS is already enabled on this node, the rootfs migration is already complete, nothing to do")
+	if storage.IsMigrationFinalized() {
+		fmt.Println("JuiceFS is already enabled and the rootfs migration is fully complete on this node, nothing to do")
 		return nil
+	}
+
+	// If the juicefs service is already enabled but the migration was not fully
+	// finalized (a previous run was interrupted after the rootfs swap, e.g.
+	// before the rootfs-type flip / fsnotify re-render), resume from where it
+	// left off. The migration steps themselves are skipped (the data is already
+	// on JuiceFS); only the idempotent finalization steps are re-run. Crucially
+	// we must NOT treat this as "already done", or those steps would be skipped
+	// forever.
+	if storage.IsJuiceFSEnabled() {
+		fmt.Println("JuiceFS is already enabled but the migration was not fully finalized, resuming the remaining post-migration steps")
 	}
 
 	kubeType := phase.GetKubeType()

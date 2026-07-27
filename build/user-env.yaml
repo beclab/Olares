@@ -30,6 +30,16 @@ userEnvs:
       value: "en-US"
     - title: "简体中文"
       value: "zh-CN"
+    - title: "Deutsch"
+      value: "de-DE"
+    - title: "Español"
+      value: "es-ES"
+    - title: "Italiano"
+      value: "it-IT"
+    - title: "Français"
+      value: "fr-FR"
+    - title: "日本語"
+      value: "ja-JP"
   - envName: OLARES_USER_THEME
     type: string
     editable: true

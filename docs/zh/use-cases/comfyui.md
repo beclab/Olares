@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上安装 ComfyUI，通过 ComfyUI Launcher 下载基本模型包，并使用默认工作流生成你的第一张 AI 图像。
+description: 在 Olares 上本地运行 ComfyUI：一键部署 ComfyUI 和模型，用默认工作流生成 AI 图像，所有产出都保留在你自己的设备上。
 head:
   - - meta
     - name: keywords
-      content: Olares, ComfyUI, Stable Diffusion, AI image generation, self-hosted, ComfyUI Launcher
+      content: Olares, ComfyUI, Stable Diffusion, AI image generation, self-hosted comfyui, comfyui alternative, comfyui workflow, comfyui on olares
 app_version: "1.0.34"
 doc_version: "1.0"
 doc_updated: "2026-05-13"
@@ -14,7 +14,7 @@ doc_updated: "2026-05-13"
 本页面由 AI 自动翻译，部分技术术语可能与中文习惯存在差异。如有疑问，请以[英文原文](../../use-cases/comfyui.md)为准。
 :::
 
-# ComfyUI
+# 本地运行 ComfyUI 进行 AI 图像生成
 
 ComfyUI 是一个强大的、基于节点的 Stable Diffusion 界面，将 AI 图像生成转化为可视化编程体验。通过像积木一样连接不同的节点，你可以精确控制生成过程的每个方面，从提示词和模型到后处理效果。
 

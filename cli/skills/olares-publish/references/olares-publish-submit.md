@@ -1,17 +1,18 @@
 # Submit: PR to beclab/apps
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) and [olares-publish-targets.md](olares-publish-targets.md) first.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first and follow its public-listing flow order.
 > This is the final step for a public Market listing. Official docs: [Submit applications](https://docs.olares.com/developer/develop/submit-apps.html), [Distribute index](https://docs.olares.com/developer/develop/distribute-index.html).
 
 ## Before you start
 
-**The app must already run locally first.** Upload + install on the developer's Olares and confirm `running` — see [`../../olares-chart/references/olares-chart-deploy.md`](../../olares-chart/references/olares-chart-deploy.md). Market submission without a working install wastes GitBot cycles and reviewer time.
+**The app must already run locally first.** Upload + install on the developer's Olares and confirm `running` — see the [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md) deploy flow. Market submission without a working install wastes GitBot cycles and reviewer time.
 
-**Market-ready checklist must be complete** — see [olares-publish-targets.md](olares-publish-targets.md#market-ready-checklist). In particular:
+**Clear the hard gates first** — the market-ready tiers from the parent SKILL. What blocks you here specifically:
 
 - Dual-version `metadata.categories` (GitBot rejects invalid values; local `lint` does not enum-check)
-- Multi-arch images + matching `spec.supportArch`
-- Full metadata and listing images
+- `metadata.icon` present and a valid `http(s)` URL — `lint` requires it outright
+
+Multi-arch images, listing images, and the marketing fields are **not** gates. Missing ones cost you installs, not the merge — ship without them and refresh via a later `UPDATE` PR if you prefer.
 
 ## Agent boundaries
 
@@ -114,21 +115,9 @@ All post-publish actions are PRs to `beclab/apps:main`. See [Manage the app life
 
 Before any lifecycle PR: sync the fork and rebase onto latest `main` to reduce conflicts.
 
-## Optimize listing (optional, post-merge)
+## Common errors (GitBot rejection)
 
-Improve Market presentation with [promote-apps](https://docs.olares.com/developer/develop/promote-apps.html):
-
-- `metadata.icon` — **required**; PNG/WEBP, 256x256, <=512 KB
-- `spec.promoteImage[]` — screenshot carousel on the detail page; JPEG/PNG/WEBP, 1440x900, <=8 MB each, up to 8 (>=2 recommended)
-- `spec.featuredImage` — hero image (recommendations / "My Olares"); JPEG/PNG/WEBP, 1440x900, <=8 MB, exactly one
-
-Host assets yourself or use the **Olares Market image hosting** service (pick app icon / featured / promotional, upload, copy the generated URL into `OlaresManifest.yaml`).
-
-Submit these via an `UPDATE` PR with a version bump.
-
-## Troubleshooting GitBot rejection
-
-| Symptom | Likely cause | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
 | Invalid categories | stub `Utilities` only, or wrong enum value | Add both 1.11 + 1.12 category values per [manifest docs](https://docs.olares.com/developer/develop/package/manifest.html#categories) |
 | Name/version mismatch in title | PR title folder or version != chart | Align PR title with folder name and `Chart.yaml` / `metadata.version` |
@@ -138,4 +127,4 @@ Submit these via an `UPDATE` PR with a version bump.
 
 For chart content issues surfaced during ingest (not GitBot title/scope), fix the OAC locally, re-run `lint`, push to the PR branch.
 
-**Selling the app?** A pay-to-download listing is a public-Market app plus `price.yaml` + license enforcement — see [olares-publish-paid-apps.md](olares-publish-paid-apps.md).
+**Selling the app?** A pay-to-download listing is a public-Market app plus `price.yaml` + license enforcement — follow the parent SKILL's paid-app route.

@@ -197,7 +197,15 @@ func GenSharedEntranceURL(ctx context.Context, app *Application) ([]Entrance, er
 		sharedZone := strings.Join(tokens, ".")
 
 		appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
-		sharedEntrancesForZone := appv1alpha1.Entrances(app.Spec.SharedEntrances).SharedForZone(appid, sharedZone)
+		sharedEntrancesForZone := make(appv1alpha1.Entrances, 0)
+		isShared := appv1alpha1.IsShared(app)
+
+		if isShared {
+			sharedEntrancesForZone = appv1alpha1.Entrances(app.Spec.SharedEntrances).SharedForZone(appid, sharedZone)
+		} else {
+			sharedEntrancesForZone = appv1alpha1.Entrances(app.Spec.SharedEntrances).SharedForZoneV2(appid, sharedZone)
+		}
+
 		for i := range sharedEntrancesForZone {
 			app.Spec.SharedEntrances[i] = sharedEntrancesForZone[i]
 			if app.Spec.SharedEntrances[i].Port > 0 {

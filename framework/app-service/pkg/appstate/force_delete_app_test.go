@@ -22,7 +22,7 @@ func TestForceDeleteAppSystemEmptyConfig(t *testing.T) {
 	if err := b.forceDeleteApp(context.TODO()); err != nil {
 		t.Fatalf("forceDeleteApp: %v", err)
 	}
-	got := getAM(t, b, "nginx")
+	got := getAM(t, c, "nginx")
 	if got.Status.State != appsv1.Uninstalled {
 		t.Errorf("state=%q want Uninstalled", got.Status.State)
 	}
@@ -36,9 +36,9 @@ func TestForceDeleteAppNormalUninstalls(t *testing.T) {
 		testutil.WithState(appsv1.Uninstalling),
 	)
 	c := testutil.NewFakeClient(am)
-	b := &baseStatefulApp{manager: am, client: c}
-
 	fake := testutil.NewFakeHelmOps()
+	b := &baseStatefulApp{manager: am, client: c, deps: fakeDeps(fake)}
+
 	injectHelmOps(t, fake)
 
 	if err := b.forceDeleteApp(context.TODO()); err != nil {
@@ -47,7 +47,7 @@ func TestForceDeleteAppNormalUninstalls(t *testing.T) {
 	if fake.CallCount("Uninstall") != 1 {
 		t.Errorf("Uninstall called %d times, want 1", fake.CallCount("Uninstall"))
 	}
-	if got := getAM(t, b, "nginx"); got.Status.State != appsv1.Uninstalled {
+	if got := getAM(t, c, "nginx"); got.Status.State != appsv1.Uninstalled {
 		t.Errorf("state=%q want Uninstalled", got.Status.State)
 	}
 }
@@ -60,16 +60,16 @@ func TestForceDeleteAppToleratesNotFound(t *testing.T) {
 		testutil.WithState(appsv1.Uninstalling),
 	)
 	c := testutil.NewFakeClient(am)
-	b := &baseStatefulApp{manager: am, client: c}
-
 	fake := testutil.NewFakeHelmOps()
 	fake.UninstallErr = errors.New("release: not found")
+	b := &baseStatefulApp{manager: am, client: c, deps: fakeDeps(fake)}
+
 	injectHelmOps(t, fake)
 
 	if err := b.forceDeleteApp(context.TODO()); err != nil {
 		t.Fatalf("forceDeleteApp should tolerate not-found: %v", err)
 	}
-	if got := getAM(t, b, "nginx"); got.Status.State != appsv1.Uninstalled {
+	if got := getAM(t, c, "nginx"); got.Status.State != appsv1.Uninstalled {
 		t.Errorf("state=%q want Uninstalled", got.Status.State)
 	}
 }
@@ -82,16 +82,16 @@ func TestForceDeleteAppPropagatesHelmError(t *testing.T) {
 		testutil.WithState(appsv1.Uninstalling),
 	)
 	c := testutil.NewFakeClient(am)
-	b := &baseStatefulApp{manager: am, client: c}
-
 	fake := testutil.NewFakeHelmOps()
 	fake.UninstallErr = errors.New("helm boom")
+	b := &baseStatefulApp{manager: am, client: c, deps: fakeDeps(fake)}
+
 	injectHelmOps(t, fake)
 
 	if err := b.forceDeleteApp(context.TODO()); err == nil {
 		t.Fatal("forceDeleteApp should propagate non-not-found helm error")
 	}
-	if got := getAM(t, b, "nginx"); got.Status.State == appsv1.Uninstalled {
+	if got := getAM(t, c, "nginx"); got.Status.State == appsv1.Uninstalled {
 		t.Error("state should not be Uninstalled when uninstall failed")
 	}
 }

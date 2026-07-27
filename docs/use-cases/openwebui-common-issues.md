@@ -18,10 +18,10 @@ Use this page to identify and resolve common issues with Open WebUI on Olares.
 
 If the model app stays in these states for more than a few minutes:
 
-1. Go to **Settings** > **GPU**.
+1. Go to **Settings** > **Accelerator**.
 2. Check your GPU mode:
    - If you are using **Memory slicing**, make sure the model app is linked to the GPU and has enough VRAM allocated.
-   - If you are using **App exclusive**, make sure the exclusive app is set to your model app.
+   - If you are using **Exclusive**, make sure the model app has full GPU access.
 3. Restart the model app from Launchpad and check the status again.
 
 ## Download progress disappears

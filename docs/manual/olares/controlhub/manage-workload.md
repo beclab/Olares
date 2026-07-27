@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to use Control Hub to manage Olares workloads and configurations. This doc covers project and namespace concepts, managing different workload types, and monitoring resource usage through detailed dashboards.
+description: Manage Olares workloads in Control Hub. Understand projects and namespaces, configure workload types, and monitor resource usage.
 ---
 
 # Manage workloads 

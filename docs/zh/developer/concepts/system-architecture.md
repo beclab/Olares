@@ -210,10 +210,6 @@ Olares 预装了用于管理文件、知识、密码和系统本身的应用。
 
 Olares 的控制台，提供对系统及其环境的精确和自主控制。
 
-### Studio
-
-用于构建和部署 Olares 应用的开发工具。
-
 ## 了解更多
 - 要开始使用 Olares，请参阅[快速开始](../../manual/get-started/index.md)。
 - 要深入了解 Olares 的内部原理，请参阅[概念](index.md)中的主题。

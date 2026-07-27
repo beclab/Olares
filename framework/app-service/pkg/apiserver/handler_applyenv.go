@@ -47,6 +47,11 @@ func (h *Handler) appApplyEnv(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	appCopy.Annotations[api.AppTokenKey] = token
+	// Refresh the pre-op state on every applyEnv so the applyEnv flow
+	// (applying_env_app.go) sees the actual state right before this operation.
+	// Without this, a stale Stopped value left by a previous applyEnv/upgrade
+	// would make a Running app incorrectly land back in Stopped.
+	appCopy.Annotations[api.AppPreUpgradeStateKey] = string(appMgr.Status.State)
 
 	err = h.ctrlClient.Patch(req.Request.Context(), appCopy, client.MergeFrom(&appMgr))
 	if err != nil {
@@ -61,6 +66,7 @@ func (h *Handler) appApplyEnv(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      appv1alpha1.ApplyingEnv,
 		Message:    "waiting for applying env",
+		Reason:     appv1alpha1.ApplyingEnv.String(),
 		StatusTime: &now,
 		UpdateTime: &now,
 	}

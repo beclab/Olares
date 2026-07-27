@@ -11,6 +11,7 @@ Resumable chunked upload of a local file or directory tree into the per-user fil
 |---|---|
 | `drive/Home/<sub>` | Olares Home volume. Upload `<node>` defaults to the first entry from `/api/nodes/` |
 | `drive/Data/<sub>` | Olares Data volume. Same default node |
+| `drive/Common/<sub>` | App common data area (`appCommon`). Needs Olares >= 1.12.6 |
 | `sync/<repo_id>/<sub>` | Seafile library. Chunk POST hits `/seafhttp/upload-aj/<token>`; the form's `parent_dir` is the **in-repo** path (no `sync/<repo>/` prefix) |
 | `cache/<node>/<sub>` | Node-local cache. `<node>` IS the upload node — CLI skips `/api/nodes/` |
 | `external/<node>/<volume>/<sub>` | Attached external storage. Same `<node>` short-circuit as cache |
@@ -106,4 +107,4 @@ The per-file errgroup slot stays held during stage 2 so `--parallel N` remains h
 | `is the volume listing layer (read-only)` | `external/<node>/` destination | Add `<volume>`: `external/<node>/<volume>/<sub>/` |
 | `Documents (1)` materialized instead of `Documents` | Destination dir not pre-created; auto-rename (quirk #1) | Delete the dup; `files mkdir -p` next time |
 | Stage-2 `failed` with `failed_reason` | Cloud-side rejection (account scopes, bucket policy, quota) | Read `failed_reason`, fix the cloud-side configuration; re-run `upload` (resumes from 0 since stage-1 already completed) |
-| 401/403 mid-upload | Pre-flight refresh failed | See [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) — only `profile login` will help |
+| 401/403 mid-upload | Pre-flight refresh failed (streaming body can't be replayed) | Apply the [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate): `ErrTokenInvalidated` / `ErrNotLoggedIn` → `profile login`; a transient refresh failure → just re-run `upload` |

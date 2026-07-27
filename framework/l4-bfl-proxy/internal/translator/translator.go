@@ -24,6 +24,15 @@ const (
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
+
+	// entranceTypeDev marks a development entrance, which gets an extra
+	// `<appid>-<port>.<zone>` alias routed to the same upstream.
+	entranceTypeDev = "dev"
+
+	// systemServicePriority makes system-service virtual hosts (auth/desktop/
+	// wizard) outrank apps and custom domains when a domain is claimed by more
+	// than one virtual host in the same route config.
+	systemServicePriority = 100
 )
 
 var nodeLocationPrefixes = []string{
@@ -462,6 +471,7 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 				"X-BFL-USER": user.Name,
 			},
 		}},
+		Priority: systemServicePriority,
 	}
 	vhosts = append(vhosts, profileVHost)
 
@@ -528,11 +538,37 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			}
 		}
 
-		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
-		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
-		clusterSet[clusterName] = &ir.ClusterIR{
-			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
+		// A "dev" entrance additionally answers on `<appid>-<port>.<zone>`
+		// (plus its .olares.local alias), routed to the same upstream as the
+		// entrance's primary hostname.
+		if entrance.Type == entranceTypeDev {
+			devPrefix := fmt.Sprintf("%s-%d", app.Appid, entrance.Port)
+			devHostname := fmt.Sprintf("%s.%s", devPrefix, zone)
+
+			domains = append(domains, devHostname)
+			if devLocal := toLocalDomain(devHostname); devLocal != devHostname {
+				domains = append(domains, devLocal)
+			}
 		}
+
+		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
+		cluster := &ir.ClusterIR{
+			Name:   clusterName,
+			Host:   fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace),
+			Port:   uint32(entrance.Port),
+			UseDNS: true,
+		}
+		// A "dev" entrance's Host is already the backing pod IP (set by
+		// proxylistener), so route straight to it as a STATIC cluster rather
+		// than a Kubernetes service DNS name. Dev apps often have no
+		// stable/ready service endpoint, which makes a STRICT_DNS cluster
+		// resolve to nothing and return 503 no_healthy_upstream; hitting the
+		// pod IP directly avoids that.
+		if entrance.Type == entranceTypeDev {
+			cluster.Host = entrance.Host
+			cluster.UseDNS = false
+		}
+		clusterSet[clusterName] = cluster
 
 		_, enableOIDC := app.Settings["oidc.client.id"]
 
@@ -544,6 +580,9 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			Language:              user.Language,
 			UserZone:              zone,
 			UserName:              user.Name,
+			// Only the (files,settings apps) vhost needs Envoy-level CORS
+			IsFileserver: fileserverPatchApps[prefix],
+			Priority:     systemAppPriority(app.Name),
 		}
 
 		var routes []*ir.HTTPRouteIR
@@ -613,6 +652,19 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 		},
 	}
 
+	// Pass 1: node-scoped routes for every node. These carry the node name in
+	// the path (e.g. /api/resources/external/<node>/ or the regex share form
+	// ^/api/resources/share/<node>_.*) and are the MORE SPECIFIC matches.
+	//
+	// They MUST all be emitted before the master's generic catch-all prefixes
+	// (pass 2), because Envoy evaluates routes top-to-bottom and stops at the
+	// first match. A generic master prefix like /api/resources/external/ is a
+	// strict prefix of /api/resources/external/<node>/, so if it came first it
+	// would swallow every non-master node's request and misroute it to the
+	// master node. The old single-pass loop emitted the master routes right
+	// after the master node's own scoped routes, which — since FileserverNodes
+	// is sorted by name and the master usually sorts first — placed them ahead
+	// of later nodes' scoped routes and caused exactly that misrouting.
 	for _, node := range user.FileserverNodes {
 		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
 		proxyHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, user.Name)
@@ -649,22 +701,29 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				WebSocketUpgrade: true,
 			})
 		}
+	}
 
-		if node.IsMaster {
-			for _, pfx := range masterLocationPrefixes {
-				routes = append(routes, &ir.HTTPRouteIR{
-					Name:       fmt.Sprintf("files_master_%s_%s", user.Name, sanitizeName(pfx)),
-					PathPrefix: pfx,
-					Cluster:    proxyCluster,
-					RequestHeaders: map[string]string{
-						"X-BFL-USER":       user.Name,
-						"X-Terminus-Node":  node.NodeName,
-						"X-Provider-Proxy": proxyHost,
-					},
-					ExtAuth:          extAuthCfg,
-					WebSocketUpgrade: true,
-				})
-			}
+	// Pass 2: master node generic catch-all prefixes (no node name), emitted
+	// last so the node-scoped routes above always take precedence.
+	for _, node := range user.FileserverNodes {
+		if !node.IsMaster {
+			continue
+		}
+		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
+		proxyHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, user.Name)
+		for _, pfx := range masterLocationPrefixes {
+			routes = append(routes, &ir.HTTPRouteIR{
+				Name:       fmt.Sprintf("files_master_%s_%s", user.Name, sanitizeName(pfx)),
+				PathPrefix: pfx,
+				Cluster:    proxyCluster,
+				RequestHeaders: map[string]string{
+					"X-BFL-USER":       user.Name,
+					"X-Terminus-Node":  node.NodeName,
+					"X-Provider-Proxy": proxyHost,
+				},
+				ExtAuth:          extAuthCfg,
+				WebSocketUpgrade: true,
+			})
 		}
 	}
 
@@ -694,6 +753,9 @@ func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemSe
 		Language: user.Language,
 		UserZone: zone,
 		UserName: user.Name,
+		// System services (auth/desktop/wizard) outrank apps and custom domains
+		// when claiming a domain, so a misconfigured app cannot hijack them.
+		Priority: systemServicePriority,
 		Routes: []*ir.HTTPRouteIR{{
 			Name:       fmt.Sprintf("nonapp_%s_root_%s", def.Name, user.Name),
 			PathPrefix: "/",
@@ -869,4 +931,11 @@ func sanitizeName(s string) string {
 		s = s[:40]
 	}
 	return s
+}
+
+func systemAppPriority(appName string) int {
+	if appName == "olares-app" {
+		return systemServicePriority
+	}
+	return 0
 }

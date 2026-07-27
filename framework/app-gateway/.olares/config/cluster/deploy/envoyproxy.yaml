@@ -10,6 +10,10 @@ metadata:
 spec:
   provider:
     type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        pod:
+          priorityClassName: system-cluster-critical
   telemetry:
     accessLog:
       settings:

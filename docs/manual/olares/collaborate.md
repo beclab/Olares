@@ -1,5 +1,6 @@
 ---
-description: Collaborate effectively in Olares using shared file storage, secure vault sharing, customized application access, and VPN capabilities for seamless remote team workflows.
+noindex: true
+description: Collaborate in Olares with shared files, Vault items, custom app access, and VPN connectivity for secure remote teamwork.
 ---
 # Collaborate in Olares
 Olares helps teams work together efficiently while maintaining data privacy. Set up your collaborative workspace with some essential features.
@@ -38,7 +39,6 @@ When your team works remotely, accessing Olares usually requires going through p
 * Instead of going through public networks, connections stay within internal network, making it faster and reducing your public network usage costs.
 
 For details, see [Access Olares applications on other devices via VPN](/manual/larepass/private-network.md).
-
 
 
 

@@ -1,5 +1,6 @@
 ---
 outline: [2, 3]
+title: App status differs across interfaces
 description: Troubleshoot inconsistent app status between Control Hub and Desktop, Settings, or Market.
 ---
 # App status differs after starting or stopping an app in Control Hub

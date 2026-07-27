@@ -1,16 +1,16 @@
 ---
 outline: deep
-description: Learn how to install and use Immich on Olares to back up, organize, and share your photos and videos with built-in AI-powered search and face recognition.
+description: Self-host Immich on Olares as a Google Photos alternative. Back up, organize, and search photos and videos with AI while keeping data private.
 head:
   - - meta
     - name: keywords
-      content: Olares, Immich, photo backup, self-hosted photos, photo management, face recognition, smart search
+      content: Olares, Immich, google photos alternative, immich vs google photos, self-hosted photos, photo backup, immich synology, immich on olares
 app_version: "1.0.15"
 doc_version: "1.0"
 doc_updated: "2026-03-26"
 ---
 
-# Manage photos with Immich
+# Self-host your photos with Immich
 
 Immich is an open-source, self-hosted photo and video backup solution. It supports automatic backup, original-quality storage, and timeline browsing. With built-in machine learning models, Immich can automatically recognize people, places, and objects in your photos, making photo management smarter and efficient.
 

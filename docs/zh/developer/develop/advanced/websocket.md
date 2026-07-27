@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: WebSocket 是现代前端开发中使用最广泛的技术之一。为了简化 Olares 应用的使用与开发，Olares 应用程序运行时提供了一个通用的 WebSocket 组件。
 outline: [2, 3]
 ---
 

@@ -443,7 +443,7 @@ Open Notebook 根据知识库中的匹配内容返回综合答案。
 要提高性能：
 
 1. 先处理一个来源并使用一个转换。
-2. 停止或暂停其他 GPU 密集型应用。仅保持 **Manage** > **Models** 中分配的模型服务运行。有关详细信息，请参阅 [管理 GPU 资源](/zh/manual/olares/settings/single-gpu.md)。
+2. 停止或暂停其他 GPU 密集型应用。仅保持 **Manage** > **Models** 中分配的模型服务运行。有关详细信息，请参阅 [管理 GPU 资源](/zh/manual/olares/settings/gpu-resource.md)。
 
 ### 为什么向量搜索返回无有用的结果？
 
@@ -478,4 +478,4 @@ Open Notebook 根据知识库中的匹配内容返回综合答案。
 
 - [Ollama](ollama.md)：在 Olares 上下载并运行本地语言模型。
 - [Speaches](speaches.md)：设置本地语音转文本和文本转语音服务。
-- [管理 GPU 资源](/zh/manual/olares/settings/single-gpu.md)：为本地 AI 应用分配 GPU 资源。
+- [管理 GPU 资源](/zh/manual/olares/settings/gpu-resource.md)：为本地 AI 应用分配 GPU 资源。

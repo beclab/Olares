@@ -32,8 +32,10 @@ JuiceFS mount, regenerates the cluster services, and starts Olares back up.
 After it completes, the master satisfies the JuiceFS precondition required to
 add worker nodes, so you can run "olares-cli node add" on the workers.
 
-If JuiceFS is already enabled, the command reports that the migration is
-already complete and exits without touching Olares.`,
+The command is resumable: if a previous run was interrupted, re-running it
+continues safely from where it left off without re-migrating already-migrated
+data. Once the migration is fully complete it reports that there is nothing to
+do and exits without touching Olares.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := pipelines.EnableJuiceFSPipeline(cmd.Context()); err != nil {
 				log.Fatalf("error: %v", err)

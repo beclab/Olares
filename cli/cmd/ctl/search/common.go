@@ -23,6 +23,17 @@ const (
 
 	searchTypeAggregate = "aggregate"
 	searchTypeFileName  = "file_name"
+
+	// initPageSize is the fixed number of hits /search/init returns (it
+	// ignores the requested limit). moreMaxLimit is the upper bound the
+	// backend enforces on /search/more's limit.
+	initPageSize = 20
+	moreMaxLimit = 100
+
+	// codeNoMoreResults is the envelope code /search/more returns when the
+	// requested offset is past the end of the cached result set. It carries an
+	// empty data array and should be treated as "no results", not an error.
+	codeNoMoreResults = -3
 )
 
 type Format string
@@ -115,13 +126,25 @@ type bflEnvelope struct {
 // message, data} envelope into out. out may be nil for fire-and-forget
 // calls (e.g. cancel).
 func doEnvelope(ctx context.Context, d *whoami.HTTPClient, method, path string, body, out interface{}) error {
+	return doEnvelopeAllowing(ctx, d, method, path, body, out)
+}
+
+// doEnvelopeAllowing behaves like doEnvelope but additionally treats the given
+// soft codes as success, decoding whatever data they carry. This lets callers
+// tolerate non-fatal upstream codes (e.g. /search/more's "no more results").
+func doEnvelopeAllowing(ctx context.Context, d *whoami.HTTPClient, method, path string, body, out interface{}, softCodes ...int) error {
 	var env bflEnvelope
 	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
-	switch env.Code {
-	case 0, 200:
-	default:
+	ok := env.Code == 0 || env.Code == 200
+	for _, c := range softCodes {
+		if env.Code == c {
+			ok = true
+			break
+		}
+	}
+	if !ok {
 		msg := strings.TrimSpace(env.Message)
 		if msg == "" {
 			return fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
@@ -154,6 +177,39 @@ func (it resultItem) location() string {
 		return it.ResourceURI
 	}
 	return it.Path
+}
+
+// paginateRaw applies client-side offset/limit windowing to raw result
+// rows. It exists for endpoints that do not paginate server-side (sync), and
+// for trimming an over-sized server page down to the requested limit (drive
+// init). Callers must pass offset >= 0 and limit > 0 (pagingOptions.validate
+// guarantees this).
+func paginateRaw(rows []json.RawMessage, offset, limit int) []json.RawMessage {
+	if offset >= len(rows) {
+		return nil
+	}
+	end := len(rows)
+	if limit > 0 && offset+limit < end {
+		end = offset + limit
+	}
+	return rows[offset:end]
+}
+
+// needsMorePage reports whether the requested [offset, offset+limit) window
+// extends beyond what /search/init already returned and therefore requires a
+// /search/more call. A short init page (fewer than initPageSize hits) means
+// the cached result set is exhausted, so the window can always be served from
+// the init rows.
+func needsMorePage(offset, limit, initLen int) bool {
+	return offset+limit > initLen && initLen >= initPageSize
+}
+
+// clampMoreLimit caps a requested limit to the backend's /search/more maximum.
+func clampMoreLimit(limit int) int {
+	if limit > moreMaxLimit {
+		return moreMaxLimit
+	}
+	return limit
 }
 
 func decodeResultRows(rawRows []json.RawMessage) ([]resultItem, error) {

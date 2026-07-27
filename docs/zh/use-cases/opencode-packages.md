@@ -11,7 +11,7 @@ head:
 本页面内容经 AI 翻译生成，仅供参考。具体细节请以[英文原文](../../use-cases/opencode-packages.md)为准。
 :::
 
-# 管理包
+# 在 OpenCode 中管理包
 
 你可以在 OpenCode 环境中安装额外的包：
 

@@ -184,7 +184,7 @@ func (s *StorageRestore) prepareRestoreParams() error {
 	var locationConfig = make(map[string]string)
 	var err error
 	var token string
-	var external, cache bool
+	var external, cache, common bool
 
 	if s.RestoreType.Type == constant.RestoreTypeSnapshot {
 		token, err = integration.IntegrationService.GetAuthToken(s.Backup.Spec.Owner, fmt.Sprintf("user-system-%s", s.Backup.Spec.Owner), constant.DefaultServiceAccountSettings)
@@ -210,11 +210,13 @@ func (s *StorageRestore) prepareRestoreParams() error {
 		location := locationConfig["location"]
 		if location == constant.BackupLocationFileSystem.String() {
 			locPath := locationConfig["path"]
-			external, cache, locPath = handlers.TrimPathPrefix(locPath)
+			external, cache, common, locPath = handlers.TrimPathPrefix(locPath)
 			if external {
 				locationConfig["path"] = path.Join(constant.ExternalPath, locPath)
 			} else if cache {
 				locationConfig["path"] = path.Join(s.AppcachePvcPath, locPath)
+			} else if common {
+				locationConfig["path"] = path.Join(constant.CommonPath, locPath)
 			} else {
 				locationConfig["path"] = path.Join(s.UserspacePvcPath, locPath)
 			}
@@ -254,16 +256,19 @@ func (s *StorageRestore) prepareRestoreParams() error {
 	if s.BackupType == constant.BackupTypeFile {
 		var dotRestorePath = path.Join(s.RestoreType.Path, fmt.Sprintf("%s.restore-%d", s.RestoreType.SubPath, s.RestoreType.SubPathTimestamp)) + "/"
 		var dotRestoreRootPath = path.Join(s.RestoreType.Path)
-		var tmpRestoreExternal, tmpRestoreCache, tmpRestorePath = handlers.TrimPathPrefix(dotRestorePath)
+		var tmpRestoreExternal, tmpRestoreCache, tmpRestoreCommon, tmpRestorePath = handlers.TrimPathPrefix(dotRestorePath)
 		log.Infof("Restore %s, dotRPath: %s, dotRRootPath: %s, tmpRestorePath: %s", s.RestoreId, dotRestorePath, dotRestoreRootPath, tmpRestorePath)
 		log.Infof("Restore %s, cachePvcPath: %s, userPvcPath: %s,", s.RestoreId, s.AppcachePvcPath, s.UserspacePvcPath)
-		var _, _, tmpRootRestorePath = handlers.TrimPathPrefix(dotRestoreRootPath)
+		var _, _, _, tmpRootRestorePath = handlers.TrimPathPrefix(dotRestoreRootPath)
 		if tmpRestoreExternal {
 			restorePath = path.Join(constant.ExternalPath, tmpRestorePath)
 			rootRestorePath = path.Join(constant.ExternalPath, tmpRootRestorePath)
 		} else if tmpRestoreCache {
 			restorePath = path.Join(s.AppcachePvcPath, tmpRestorePath)
 			rootRestorePath = path.Join(s.AppcachePvcPath, tmpRootRestorePath)
+		} else if tmpRestoreCommon {
+			restorePath = path.Join(constant.CommonPath, tmpRestorePath)
+			rootRestorePath = path.Join(constant.CommonPath, tmpRootRestorePath)
 		} else {
 			restorePath = path.Join(s.UserspacePvcPath, tmpRestorePath)
 			rootRestorePath = path.Join(s.UserspacePvcPath, tmpRootRestorePath)

@@ -166,7 +166,7 @@ curl -sSfL https://olares.sh | bash
 ### TERMINUS_OS_USERNAME 
 
 在安装前预先设置用户名，会跳过安装过程中的对应交互式提示。
-- **可选值**：任意有效用户名（长度 2～250，且不与保留关键词冲突）
+- **可选值**：任意有效用户名（长度 8-24 个字符，且不与保留关键词冲突）
 - **默认值**：无（若不设置则会提示输入用户名）
 - **验证规则**：保留关键词包括 `user`、`system`、`space`、`default`、`os`、`kubesphere`、`kube`、`kubekey`、`kubernetes`、`gpu`、`tapr`、`bfl`、`bytetrade`、`project`、`pod`
 

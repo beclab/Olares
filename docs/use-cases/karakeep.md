@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Run Karakeep on Olares to save links, notes, images, and PDFs in one self-hosted workspace. Access your collection from a phone and add AI auto-tagging with a local model.
+description: Self-host Karakeep on Olares to save links, notes, images, and PDFs. Access your library on mobile and add AI auto-tagging with a local model.
 head:
   - - meta
     - name: keywords

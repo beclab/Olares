@@ -100,13 +100,20 @@ user asks: "is <app> installed yet?" / "wait for <app> to be running"
   → market status <app> --watch  (single-app runtime; cross-source fallback)
 
 user asks: "which apps are running right now"
-  → market status                (all rows in resolved source; -a for every source)
+  → market status [-a], then filter STATE=running
+    (status is lifecycle inventory, not a running-only view)
+
+user asks: "which installed app title matches <keyword>"
+  → search app <keyword>         (visible installed apps by title)
+
+user asks: "which apps are using resources"
+  → dashboard applications       (resource ranking, not lifecycle inventory)
 
 user asks: "browse the catalog" / "what apps are available"
   → market list                  (no --mine; /market/data, not /market/state)
 ```
 
-`list --mine` and `status` overlap but are NOT interchangeable — see the parent SKILL.md "What apps do I have?" table for the full distinction.
+`list --mine`, `status`, `search app`, and `dashboard applications` overlap but are NOT interchangeable — see the parent SKILL.md "What apps do I have?" table for the full distinction.
 
 ## Common errors
 

@@ -98,6 +98,17 @@ func desiredInClusterCallerIngressNP() *networkingv1.NetworkPolicy {
 								},
 							},
 						},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      "bytetrade.io/ns-type",
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{"system"},
+									},
+								},
+							},
+						},
 					},
 				},
 				{

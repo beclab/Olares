@@ -894,6 +894,7 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 		OpType:     v1alpha1.InstallOp,
 		State:      v1alpha1.Pending,
 		OpID:       opID,
+		Reason:     v1alpha1.Pending.String(),
 		Message:    "waiting for install",
 		Progress:   "0.00",
 		StatusTime: &now,

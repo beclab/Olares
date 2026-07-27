@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: 在应用中，通常需要保存一些重要的用户信息，例如外部系统的“密码”和“访问令牌”。Olares 提供了一个统一的 Vault 安全存储各种密钥（基于 Infisical）。
 outline: [2, 3]
 ---
 

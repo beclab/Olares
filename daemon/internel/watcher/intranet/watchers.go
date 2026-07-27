@@ -2,7 +2,10 @@ package intranet
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -12,7 +15,6 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/miekg/dns"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 )
 
@@ -20,10 +22,35 @@ var _ watcher.Watcher = &applicationWatcher{}
 
 type applicationWatcher struct {
 	intranetServer *intranet.Server
+	// lastAppliedSig is the signature of the ServerOptions last successfully
+	// applied to the intranet server. It lets us skip the per-tick Reload
+	// (DNS SetHosts/StartAll + DSR reconfigure) when nothing changed.
+	lastAppliedSig string
 }
 
 func NewApplicationWatcher() *applicationWatcher {
 	return &applicationWatcher{}
+}
+
+// optionsSignature returns a stable hash of the ServerOptions so we can detect
+// whether anything that affects the intranet server config has changed.
+func optionsSignature(o *intranet.ServerOptions) string {
+	if o == nil {
+		return ""
+	}
+	domains := make([]string, 0, len(o.Hosts))
+	for _, h := range o.Hosts {
+		domains = append(domains, h.Domain)
+	}
+	sort.Strings(domains)
+
+	h := sha256.New()
+	for _, d := range domains {
+		h.Write([]byte(d))
+		h.Write([]byte{0})
+	}
+	fmt.Fprintf(h, "|%s|%s|%s|%s|%s", o.NodeIp, o.NodeIface, o.DnsPodIp, o.DnsPodMac, o.DnsPodCalicoIface)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (w *applicationWatcher) Watch(ctx context.Context) {
@@ -33,6 +60,7 @@ func (w *applicationWatcher) Watch(ctx context.Context) {
 		if w.intranetServer != nil {
 			w.intranetServer.Close()
 			w.intranetServer = nil
+			w.lastAppliedSig = ""
 			klog.Info("Intranet server stopped due to cluster state: ", state.CurrentState.TerminusState)
 		}
 	default:
@@ -60,7 +88,7 @@ func (w *applicationWatcher) Watch(ctx context.Context) {
 				klog.Error("failed to create intranet server: ", err)
 				return
 			}
-
+			w.lastAppliedSig = ""
 		}
 
 		o, err := w.loadServerConfig(ctx, nodeIp)
@@ -69,16 +97,27 @@ func (w *applicationWatcher) Watch(ctx context.Context) {
 			return
 		}
 
+		sig := optionsSignature(o)
+
 		if w.intranetServer.IsStarted() {
+			// Skip the reconfigure work when nothing relevant changed.
+			if sig == w.lastAppliedSig {
+				klog.V(8).Info("Intranet server config unchanged, skip reload")
+				return
+			}
 			// Reload the intranet server config
 			err = w.intranetServer.Reload(o)
 			if err != nil {
 				klog.Error("reload intranet server config error, ", err)
 				return
 			}
+			w.lastAppliedSig = sig
 			klog.V(8).Info("Intranet server config reloaded")
 		} else {
-			// Start the intranet server
+			// Start the intranet server. Start only brings up the DNS/proxy/DSR
+			// goroutines; the DSR backend, VIP and reconfigure are applied by
+			// Reload. Leave lastAppliedSig empty so the next tick performs that
+			// first Reload instead of treating the server as fully configured.
 			err = w.intranetServer.Start(o)
 			if err != nil {
 				klog.Error("start intranet server error, ", err)
@@ -113,21 +152,14 @@ func (w *applicationWatcher) loadServerConfig(ctx context.Context, nodeIp string
 		}
 	}
 
-	dynamicClient, err := utils.GetDynamicClient()
-	if err != nil {
-		err = fmt.Errorf("failed to get dynamic client: %v", err)
-		klog.Error(err.Error())
-		return nil, err
-	}
-
-	users, err := utils.ListUsers(ctx, dynamicClient)
+	users, err := utils.ListUsers(ctx)
 	if err != nil {
 		err = fmt.Errorf("failed to list users: %v", err)
 		klog.Error(err.Error())
 		return nil, err
 	}
 
-	adminUser, err := utils.GetAdminUser(ctx, dynamicClient)
+	adminUser, err := utils.GetAdminUser(ctx)
 	if err != nil {
 		err = fmt.Errorf("failed to get admin user: %v", err)
 		klog.Error(err.Error())
@@ -185,13 +217,7 @@ var adguardHealth bool
 
 func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.ServerOptions) error {
 	// try to find adguard dns pod ip and mac
-	k8sClient, err := utils.GetKubeClient()
-	if err != nil {
-		klog.Error("get kube client error, ", err)
-		return err
-	}
-
-	dnsPods, err := k8sClient.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	dnsPods, err := utils.ListPods(ctx)
 	if err != nil {
 		klog.Error("list pods error, ", err)
 		return err
@@ -199,7 +225,7 @@ func (w *applicationWatcher) loadDnsPodConfig(ctx context.Context, o *intranet.S
 
 	var dnsPodIp, dnsPodMac, calicoRouteIface string
 	const adguardDnsAppLabel = "applications.app.bytetrade.io/name"
-	for _, pod := range dnsPods.Items {
+	for _, pod := range dnsPods {
 		switch {
 		case pod.Labels[adguardDnsAppLabel] == "adguardhome":
 			dnsPodIp = pod.Status.PodIP

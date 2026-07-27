@@ -28,14 +28,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/first-boot",
         },
         {
-          text: "Access Olares via VPN",
-          link: "/one/access-olares-via-vpn",
-        },
-        {
-          text: "Access Olares via .local domain",
-          link: "/one/access-olares-via-local-domain",
-        },
-        {
           text: "Redeem membership",
           link: "/one/redeem-membership",
         },
@@ -45,107 +37,17 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "Onboarding",
       items: [
         {
-          text: "Chat with local LLMs",
-          link: "/one/open-webui",
+          text: "Manage Olares through natural language",
+          link: "/one/olares-onboarding",
         },
         {
-          text: "Generate images and videos with ComfyUI",
-          link: "/one/comfyui",
+          text: "Access Olares via VPN",
+          link: "/one/access-olares-via-vpn",
         },
         {
-          text: "Switch GPU mode",
-          link: "/one/gpu",
+          text: "Access Olares via .local domain",
+          link: "/one/access-olares-via-local-domain",
         },
-      ]
-    },
-    {
-      text: "Use",
-      items: [
-        {
-          text: "Customize Olares",
-          link: "/one/customize",
-        },
-        {
-          text: "Manage files",
-          link: "/one/files",
-        },
-        {
-          text: "Back up & restore data",
-          link: "/one/backup-restore",
-        },
-        {
-          text: "Install & update apps",
-          link: "/one/market",
-        },
-        {
-          text: "Secure passwords",
-          link: "/one/vault",
-        },
-        /*{
-          text: "Download YouTube videos",
-          link: "/one/wise-download",
-        },*/
-        {
-          text: "Deploy an app",
-          link: "/one/deploy",
-        },
-      ]
-    },
-    {
-       text: "Manage",
-       items: [
-        {
-          text: "Add and manage users",
-          link: "/one/create-users",
-        },
-         {
-           text: "Configure application access",
-           link: "/one/config-app-access",
-         },
-       ]
-     },
-    {
-      text: "Monitor",
-      items: [
-        {
-          text: "System resources",
-          link: "/one/dashboard",
-        },
-        {
-          text: "Traffic",
-          link: "/one/space",
-        },
-      ]
-    },
-    {
-      text: "Explore",
-      items: [
-        {
-          text: "Play Steam games",
-          collapsed: true,
-          items: [
-            {
-              text: "Streaming",
-              link: "/one/steam-stream"
-            },
-            {
-              text: "Direct play",
-              link: "/one/steam-direct-play",
-            }]
-        },
-        {
-          text: "Access Windows in Olares",
-          link: "/one/windows",
-        },
-        /*{
-          text: "Generate music with ACE-Step",
-          link: "/one/ace-step",
-        },*/
-
-        // {
-        //   text: "Deep research with DeerFlow",
-        //   link: "/one/deerflow",
-        // },
       ]
     },
     {
@@ -196,7 +98,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           // items:
           //   [
           //     {
-          //       text: "Manage GPU",
+          //       text: "Manage accelerator resources",
           //       link: "/one/two-one-gpu",
           //     },
           //     {

@@ -1,3 +1,7 @@
+---
+noindex: true
+description: osinfo 命令用于获取当前设备操作系统的详细信息。它能够检索并显示元数据信息，包括 OSTYPE、OSPLATFORM、OSARCH、OSVERSION、OSKERNEL 和 OSINFO 等。
+---
 # `osinfo`
 
 ## 命令说明

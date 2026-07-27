@@ -1,3 +1,7 @@
+---
+noindex: true
+description: 通过命令行安装、卸载和迁移 Olares 的进阶操作，包括更换 IP、添加节点与硬盘，以及从快照恢复。
+---
 # CLI
 
 

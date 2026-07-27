@@ -131,13 +131,13 @@ func CheckCurrentStatus(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := utils.ManagedAllDevices(ctx); err != nil {
-		klog.Error("managed all devices error, ", err)
-	}
-
-	devices, err := utils.GetAllDevice(ctx)
+	// Use a single lightweight enumeration that also switches unmanaged
+	// devices to managed. CheckCurrentStatus only reads Name/Type/Connection
+	// below, so the expensive per-device detail queries are intentionally
+	// skipped here to avoid hammering NetworkManager on this 5s poll.
+	devices, err := utils.ManagedDeviceStatus(ctx)
 	if err != nil {
-		klog.Error(err)
+		klog.Error("managed device status error, ", err)
 	}
 
 	// clear value
@@ -186,6 +186,9 @@ func CheckCurrentStatus(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+		} else {
+			// no internal ip, clear host ip
+			hostIp = ""
 		}
 		return nil
 	}
@@ -225,6 +228,18 @@ func CheckCurrentStatus(ctx context.Context) error {
 	if shutdown, err := IsSystemShuttingdown(); err != nil {
 		return err
 	} else if shutdown {
+		// If this shutdown is the reboot triggered at the end of an upgrade
+		// (olares-cli writes the reboot marker before flipping the
+		// OlaresVersion CR to the target), keep reporting the system as
+		// Upgrading rather than Shutdown, so the frontend keeps showing the
+		// upgrade as in progress (about to reboot) instead of briefly
+		// reporting it complete. Gating on the real shutdown signal here -
+		// instead of on the marker alone - means a stale marker left behind by
+		// a reboot that never happened cannot wedge the state in Upgrading.
+		if _, statErr := os.Stat(UpgradeRebootMarkFile); statErr == nil {
+			currentTerminusState = Upgrading
+			return nil
+		}
 		currentTerminusState = Shutdown
 		return nil
 	}
@@ -329,7 +344,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	if CurrentState.InstallFinishedTime != nil {
 		CurrentState.InstalledTime = pointer.Int64(CurrentState.InstallFinishedTime.Unix())
 	} else {
-		CurrentState.InstalledTime, err = utils.GetTerminusInstalledTime(ctx, dynamicClient, kubeClient)
+		CurrentState.InstalledTime, err = utils.GetTerminusInstalledTime(ctx, kubeClient)
 		if err != nil {
 			klog.Error(err)
 		}
@@ -354,7 +369,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 	} else if tmsrunning {
 		currentTerminusState = Uninitialized
 
-		terminusName, err := utils.GetAdminUserTerminusName(ctx, dynamicClient)
+		terminusName, err := utils.GetAdminUserTerminusName(ctx)
 		if err != nil {
 			klog.Error("get user olares name error, ", err)
 		} else {
@@ -404,7 +419,7 @@ func CheckCurrentStatus(ctx context.Context) error {
 			return nil
 		}
 
-		initing, err := utils.IsTerminusInitializing(ctx, dynamicClient)
+		initing, err := utils.IsTerminusInitializing(ctx)
 		if err != nil {
 			return err
 		}

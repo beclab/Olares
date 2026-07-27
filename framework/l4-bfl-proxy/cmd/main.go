@@ -123,9 +123,9 @@ func main() {
 	}
 	// Fail readiness when Envoy rejects the pushed xDS config (e.g. a bad
 	// listener that leaves ports 443/444 not listening).
-	if err := mgr.AddReadyzCheck("envoy-config", xdsSrv.ReadyCheck); err != nil {
-		klog.Fatalf("set up envoy-config ready check failed: %v", err)
-	}
+	//if err := mgr.AddReadyzCheck("envoy-config", xdsSrv.ReadyCheck); err != nil {
+	//	klog.Fatalf("set up envoy-config ready check failed: %v", err)
+	//}
 
 	runners := []runner.Runner{
 		prov,

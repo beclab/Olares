@@ -1,5 +1,9 @@
 ---
-description: Dify 在 Olares 上的部署教程，帮助你快速构建和管理 AI 应用，打造专属的智能服务生态系统。
+description: 在 Olares 上自托管 Dify，构建本地 AI 应用与助手。部署 Dify、接入 Ollama 模型，并添加个人知识库，实现私有的 RAG 工作流。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Dify, dify self hosted, dify vs n8n, dify ollama, dify on olares
 ---
 # Dify 定制 AI 助手
 Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目之一，帮助你构建和管理 AI 应用，同时确保数据完全由自己掌控。

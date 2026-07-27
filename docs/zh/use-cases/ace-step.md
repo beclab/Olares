@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 Olares 上安装 ACE-Step AI 的分步指南，使用歌词或器乐生成歌曲，通过 retake 和 repainting 优化音频，以及使用 Audio2Audio 将参考音频转化为新音乐。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, ACE-Step, self-hosted ACE-Step, AI music generation, text to music, run ACE-Step locally, ACE-Step on Olares
 ---
 
 :::warning

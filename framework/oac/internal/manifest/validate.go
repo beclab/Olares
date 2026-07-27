@@ -53,6 +53,7 @@ var (
 	validDependencyTypes = []any{"system", "application", "middleware"}
 	validAuthLevels      = []any{"", "public", "private", "internal"}
 	validOpenMethods     = []any{"", "default", "iframe", "window"}
+	validPortProtocols   = []any{"", "tcp", "udp"}
 	// validOverlayProtocols enumerates the protocols an overlayGateway
 	// entrance may declare. An empty value is allowed and means the
 	// entrance is reachable over both tcp and udp.
@@ -100,6 +101,10 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 			validation.Each(validation.By(validateEntranceValue)),
 			validation.By(uniqueEntranceNames),
 		),
+		validation.Field(&c.Ports,
+			validation.Each(validation.By(validateServicePortValue)),
+			validation.By(uniquePortNames),
+		),
 		validation.Field(&c.Spec,
 			validation.Required.Error("spec is required"),
 			validation.By(validateAppSpecFor(c)),
@@ -113,6 +118,7 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 		validatePermission(c.ConfigVersion, c.Permission),
 		validateRootProvider(c.ConfigVersion, c.Provider),
 		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
+		validateModernFieldRequiresManifestVersion(c),
 		validateOlaresDependency(c),
 		validateSharedAppRequirements(c),
 		validateV3Configuration(c),
@@ -201,6 +207,39 @@ func validateEntranceValue(v interface{}) error {
 		),
 		validation.Field(&e.OpenMethod,
 			validation.In(validOpenMethods...).Error(`entrance.openMethod must be one of "", "default", "iframe", "window"`),
+		),
+	)
+}
+
+func validateServicePortValue(v interface{}) error {
+	p, ok := v.(appv1.ServicePort)
+	if !ok {
+		return fmt.Errorf("port: unexpected type %T", v)
+	}
+	return validation.ValidateStruct(&p,
+		validation.Field(&p.Name,
+			validation.Required.Error("port.name is required"),
+			validation.Match(entranceNameRegex).Error("port.name must match ^[a-z0-9A-Z-]*$"),
+			validation.Length(1, 63).Error("port.name must be 1-63 characters"),
+		),
+		validation.Field(&p.Host,
+			validation.Required.Error("port.host is required"),
+			validation.Match(entranceHostRegex).Error("port.host must match ^[a-z]([-a-z0-9]*[a-z0-9])$"),
+			validation.Length(1, 63).Error("port.host must be 1-63 characters"),
+		),
+		validation.Field(&p.Port,
+			validation.Required.Error("port.port is required"),
+			validation.Min(int32(1)).Error("port.port must be between 1 and 65535"),
+			validation.Max(int32(65535)).Error("port.port must be between 1 and 65535"),
+		),
+		validation.Field(&p.ExposePort,
+			validation.When(p.ExposePort != 0,
+				validation.Min(int32(1)).Error("port.exposePort must be between 1 and 65535"),
+				validation.Max(int32(65535)).Error("port.exposePort must be between 1 and 65535"),
+			),
+		),
+		validation.Field(&p.Protocol,
+			validation.In(validPortProtocols...).Error(`port.protocol must be one of "", "tcp", "udp"`),
 		),
 	)
 }
@@ -468,8 +507,11 @@ func validateFlatResourceQuantities(spec *AppSpec, templateOnly bool) error {
 //     modern manifest must leave it empty so the platform can finish
 //     migrating callers away from it.
 //
-// permission.appCommon (access to the Common directory) is accepted at
-// every version and needs no extra validation here.
+// permission.appCommon (access to the cross-app Common directory) is a
+// >= 1.12.6 field and is gated by validateModernFieldRequiresManifestVersion
+// (requires olaresManifest.version >= 0.12.0 + Olares dep locked to
+// >=1.12.6-0), so this function deliberately leaves it alone — adding a
+// check here would emit a duplicate error.
 func validatePermission(configVersion string, p Permission) error {
 	var errs []error
 	if p.ExternalData && !resourcesCheckApplies(configVersion) {
@@ -576,11 +618,56 @@ func pickOlaresDepRule(c *AppConfiguration) (rule olaresDepConstraintRule, featu
 	if api == APIVersionV3 {
 		return olaresDepRulePostV3, nil
 	}
+	if api == APIVersionV1 || api == APIVersionV2 || len(api) == 0 {
+		return olaresDepRulePreV3, nil
+	}
 	triggers := detectOlares1126OnlyFields(c)
 	if len(triggers) > 0 {
 		return olaresDepRulePostV3, triggers
 	}
 	return olaresDepRulePreV3, nil
+}
+
+// validateModernFieldRequiresManifestVersion is the inverse gate of
+// validateOlaresDependency: it fires only on LEGACY manifests
+// (olaresManifest.version < 0.12.0) and rejects any manifest that
+// declares a field whose semantics only exist on Olares 1.12.6+.
+//
+// Two trigger sources are checked:
+//
+//   - apiVersion=v3 — the v3 runtime itself ships with Olares 1.12.6+.
+//   - any field returned by detectOlares1126OnlyFields (spec.accelerator,
+//     workloadReplicas, overlayGateway, options.LLMGatewaySupported,
+//     options.templateOnly, options.shared, permission.appCommon).
+//
+// When any trigger is declared the manifest must bump
+// olaresManifest.version to at least 0.12.0 AND lock
+// options.dependencies[name=olares].version to ">=1.12.6-0". The
+// dependency-side check itself is owned by validateOlaresDependency
+// (which only runs on modern manifests), so this function deliberately
+// stays out of the legacy-but-no-triggers branch: pre-existing legacy
+// manifests with no modern fields keep their historical freedom to
+// declare any (or no) Olares dependency. The error message names the
+// triggers so a manifest that backslid on multiple fields surfaces them
+// all in one Lint run, and explicitly states the >=1.12.6-0 requirement
+// to spare the user a second round trip once they bump the version.
+func validateModernFieldRequiresManifestVersion(c *AppConfiguration) error {
+	if resourcesCheckApplies(c.ConfigVersion) {
+		return nil
+	}
+	var triggers []string
+	if normalizeAPIVersion(c.APIVersion) == APIVersionV3 {
+		triggers = append(triggers, "apiVersion=v3")
+	}
+	triggers = append(triggers, detectOlares1126OnlyFields(c)...)
+	if len(triggers) == 0 {
+		return nil
+	}
+	return fmt.Errorf(
+		"olaresManifest.version must be >= %s when the manifest declares %s; bump olaresManifest.version to >= %s and lock options.dependencies[name=%s].version to \">=1.12.6-0\"",
+		minResourcesManifestVersion, strings.Join(triggers, " / "),
+		minResourcesManifestVersion, olaresSystemDepName,
+	)
 }
 
 // validateOlaresDependency enforces the rules on the Olares system
@@ -610,9 +697,9 @@ func pickOlaresDepRule(c *AppConfiguration) (rule olaresDepConstraintRule, featu
 // manifests — the platform always pins the host Olares version, so
 // omitting it makes the manifest non-portable.
 func validateOlaresDependency(c *AppConfiguration) error {
-	if !resourcesCheckApplies(c.ConfigVersion) {
-		return nil
-	}
+	//if !resourcesCheckApplies(c.ConfigVersion) {
+	//	return nil
+	//}
 	var olaresDep *Dependency
 	for i := range c.Options.Dependencies {
 		d := &c.Options.Dependencies[i]
@@ -921,6 +1008,21 @@ func uniqueEntranceNames(value interface{}) error {
 			return fmt.Errorf("entrances[%d].name: duplicate entrance name %q", i, e.Name)
 		}
 		seen[e.Name] = struct{}{}
+	}
+	return nil
+}
+
+func uniquePortNames(value interface{}) error {
+	ports, ok := value.([]appv1.ServicePort)
+	if !ok {
+		return fmt.Errorf("ports: unexpected type %T", value)
+	}
+	seen := make(map[string]struct{}, len(ports))
+	for i, p := range ports {
+		if _, dup := seen[p.Name]; dup {
+			return fmt.Errorf("ports[%d].name: duplicate port name %q", i, p.Name)
+		}
+		seen[p.Name] = struct{}{}
 	}
 	return nil
 }

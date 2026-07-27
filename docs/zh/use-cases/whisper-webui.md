@@ -343,7 +343,7 @@ hf download Systran/faster-whisper-large-v3 \
 解决此问题：
 
 - 等待首次模型下载完成，然后重试任务。
-- 在 Memory slicing 模式下为 Whisper-WebUI [分配更多 VRAM](/zh/manual/olares/settings/single-gpu.md#adjust-vram-allocation)。
+- 在 Memory slicing 模式下为 Whisper-WebUI [分配更多 VRAM](/zh/manual/olares/settings/gpu-resource.md#恢复应用并分配资源)。
 - 将 GPU 切换到另一种合适的模式。
 - 选择较小的模型。
 

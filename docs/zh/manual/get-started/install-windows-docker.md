@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: 了解如何通过 WSL 2 和 Docker 在 Windows 上安装和运行 Olares，包括系统准备、环境配置以及容器管理。
 ---

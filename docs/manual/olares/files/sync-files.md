@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Guide to synchronizing files between your local devices and Olares. Learn how to set up two-way sync tasks, manage sync status, and ensure seamless data access across all your platforms.
+description: Sync files between Olares and your computer. Set up two-way sync, monitor task status, and keep files available across devices.
 ---
 
 # Sync files to local computer

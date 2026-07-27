@@ -35,6 +35,10 @@ func (u UbuntuVersion) String() string {
 		return "22."
 	case Ubuntu24:
 		return "24."
+	case Ubuntu25:
+		return "25."
+	case Ubuntu26:
+		return "26."
 	}
 	return ""
 }
@@ -56,6 +60,7 @@ const (
 	Ubuntu22   UbuntuVersion = "22."
 	Ubuntu24   UbuntuVersion = "24."
 	Ubuntu25   UbuntuVersion = "25."
+	Ubuntu26   UbuntuVersion = "26."
 	Ubuntu2204 UbuntuVersion = "22.04"
 	Ubuntu2404 UbuntuVersion = "24.04"
 
@@ -84,6 +89,7 @@ type Systems interface {
 	IsMThreadsM1000() bool
 	IsRyzenAIMax() bool
 	IsIntelGPU() bool
+	IsIntelDGPU() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -97,6 +103,7 @@ type Systems interface {
 	GetHostname() string
 	GetOsType() string
 	GetOsArch() string
+	GetOsKernel() string
 	GetUsername() string
 	GetHomeDir() string
 	GetOsVersion() string
@@ -146,7 +153,7 @@ func (s *SystemInfo) IsSupport() error {
 	//}
 
 	if s.IsUbuntu() {
-		if !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) && !s.IsUbuntuVersionEqual(Ubuntu25) {
+		if !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) && !s.IsUbuntuVersionEqual(Ubuntu25) && !s.IsUbuntuVersionEqual(Ubuntu26) {
 			return fmt.Errorf("unsupported ubuntu os version '%s'", s.GetOsVersion())
 		}
 	}
@@ -201,6 +208,10 @@ func (s *SystemInfo) IsOsArchInvalid() bool {
 
 func (s *SystemInfo) GetOsVersion() string {
 	return s.HostInfo.OsVersion
+}
+
+func (s *SystemInfo) GetOsKernel() string {
+	return s.HostInfo.OsKernel
 }
 
 func (s *SystemInfo) GetOsPlatformFamily() string {
@@ -262,10 +273,16 @@ func (s *SystemInfo) IsRyzenAIMax() bool {
 	return s.CpuInfo.IsRyzenAIMax
 }
 
-// IsIntelGPU reports whether the node exposes an Intel GPU (drives the "intel"
-// node mode label)
+// IsIntelGPU reports whether the node exposes an Intel integrated GPU (drives
+// the "intel" unified-memory node mode label)
 func (s *SystemInfo) IsIntelGPU() bool {
 	return s.CpuInfo.IsIntelGPU
+}
+
+// IsIntelDGPU reports whether the node exposes an Intel discrete GPU (drives the
+// "intel-gpu" node mode label)
+func (s *SystemInfo) IsIntelDGPU() bool {
+	return s.CpuInfo.IsIntelDGPU
 }
 
 func (s *SystemInfo) IsAmdGPUOrAPU() bool {
@@ -491,6 +508,7 @@ type CpuInfo struct {
 	IsMThreadsM1000  bool   `json:"is_mthreads_m1000,omitempty"`
 	IsRyzenAIMax     bool   `json:"is_ryzen_ai_max,omitempty"`
 	IsIntelGPU       bool   `json:"is_intel_gpu,omitempty"`
+	IsIntelDGPU      bool   `json:"is_intel_dgpu,omitempty"`
 }
 
 // Not considering the case where AMD GPU and AMD APU coexist.
@@ -566,8 +584,11 @@ func getCpu() *CpuInfo {
 		isRyzenAIMax = false
 	}
 
-	// check if it has an Intel GPU
-	isIntelGPU := HasIntelGPULocal()
+	// check if it has an Intel integrated GPU (unified-memory "intel" mode) and
+	// an Intel discrete GPU ("intel-gpu" mode)
+	intelGPUs := IntelGPUsLocal()
+	isIntelGPU := hasIntelIGPU(intelGPUs)
+	isIntelDGPU := hasIntelDGPU(intelGPUs)
 
 	// check if it is mthreads m1000
 	ret.IsMThreadsM1000 = IsMThreadsAIBookM1000Local()
@@ -576,6 +597,7 @@ func getCpu() *CpuInfo {
 	ret.HasAmdAPU = hasAmdAPU
 	ret.IsRyzenAIMax = isRyzenAIMax
 	ret.IsIntelGPU = isIntelGPU
+	ret.IsIntelDGPU = isIntelDGPU
 
 	return ret
 }

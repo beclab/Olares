@@ -13,7 +13,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
-	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
@@ -28,11 +27,11 @@ type InstallingApp struct {
 	*baseOperationApp
 }
 
-func NewInstallingApp(c client.Client,
+func NewInstallingApp(deps Deps,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 	// TODO: check app state
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &InstallingApp{
 				baseOperationApp: &baseOperationApp{
@@ -56,12 +55,12 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 		klog.Errorf("unmarshal to appConfig failed %v", err)
 		return nil, err
 	}
-	kubeConfig, err := getKubeConfig()
+	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return nil, err
 	}
-	err = apputils.SetExposePorts(ctx, appCfg, nil)
+	err = p.deps.SetExposePorts(ctx, appCfg, nil)
 	if err != nil {
 		klog.Errorf("set expose ports failed %v", err)
 		return nil, err
@@ -82,7 +81,7 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 
 	opCtx, cancel := context.WithCancel(context.Background())
 
-	return appFactory.execAndWatch(opCtx, p,
+	return p.deps.Factory.execAndWatch(opCtx, p,
 		func(c context.Context) (StatefulInProgressApp, error) {
 			in := installingInProgressApp{
 				InstallingApp: p,
@@ -155,7 +154,7 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 				}
 
 				runValidation := func() (validation.Decision, error) {
-					return validation.Run(c, valIn, validation.InstallRuntimePressureValidators()...)
+					return p.deps.RunInstallValidation(c, valIn)
 				}
 
 				if !twoPhase {
@@ -172,7 +171,7 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 				}
 
 				var ops appinstaller.HelmOpsInterface
-				ops, err = newHelmOps(c, kubeConfig, appCfg, token,
+				ops, err = p.deps.NewHelmOps(c, kubeConfig, appCfg, token,
 					appinstaller.Opt{
 						Source:       p.manager.Spec.Source,
 						MarketSource: appcfg.GetMarketSource(p.manager),
@@ -335,7 +334,7 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 						}
 
 						klog.Errorf("wait for app %s startup after scale-up failed %v", p.manager.Spec.AppName, waitErr)
-						reason := constants.AppStopDueToInitFailed
+						reason := constants.AppStopDueToStartUpFailed
 						wrappedWaitErr := errors.Wrapf(waitErr, "wait for app %s startup after scale-up failed", p.manager.Spec.AppName)
 						if errors.Is(waitErr, errcode.ErrPodPending) || errors.Is(waitErr, errcode.ErrServerSidePodPending) {
 							reason = constants.AppUnschedulable
@@ -374,7 +373,7 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 						klog.Errorf("wait for middleware %s launch failed %v", p.manager.Spec.AppName, err)
 						p.finally = func() {
 							klog.Info("update app manager status to installing canceling, ", p.manager.Name)
-							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCanceling, nil, appsv1.InstallingCanceling.String(), constants.AppStopDueToInitFailed)
+							updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCanceling, nil, appsv1.InstallingCanceling.String(), constants.AppStopDueToStartUpFailed)
 							if updateErr != nil {
 								klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InstallingCanceling, updateErr)
 								return
@@ -411,7 +410,7 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 }
 
 func (p *InstallingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(ctx, p.manager, appsv1.InstallingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.InstallingCanceling.String())
+	err := p.updateStatus(ctx, p.manager, appsv1.InstallingCanceling, nil, constants.InstallCanceledByTimeout, constants.InstallCancelBySystem)
 	if err != nil {
 		klog.Errorf("update appmgr state to installingCanceling state failed %v", err)
 		return err

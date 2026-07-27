@@ -1,3 +1,7 @@
+---
+noindex: true
+description: create 子命令用于在 Olares 中创建一个新的用户。管理员可以在创建时设置用户名、初始密码、角色权限以及资源限制等初始配置。
+---
 # `create`
 
 ## 命令说明

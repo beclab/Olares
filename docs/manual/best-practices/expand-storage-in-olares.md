@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Complete guide to expanding storage in Olares. Learn how to connect to SMB servers, use USB auto-mount, use CLI commands, and manually mount HDDs or SSDs to increase local storage capacity and manage large AI model files efficiently.
+description: Expand Olares storage with SMB servers, USB auto-mount, CLI commands, and manually mounted HDDs or SSDs for files and large AI models.
 ---
 # Expand storage in Olares
 

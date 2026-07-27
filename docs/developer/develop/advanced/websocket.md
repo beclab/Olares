@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: WebSocket is one of the most widely used technologies in modern front-end development.
 outline: [2, 3]
 ---
 

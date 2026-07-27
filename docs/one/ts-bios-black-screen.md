@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: Troubleshoot the issue where your Olares One experiences a black screen, and you cannot access the BIOS setup interface.
 ---

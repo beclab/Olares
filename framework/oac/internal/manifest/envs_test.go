@@ -5,9 +5,20 @@ import (
 	"testing"
 )
 
+// v3EnvManifest returns a modern (>= 0.12.0) v3 manifest pre-populated
+// with the trigger-side prerequisites — workloadReplicas and the Olares
+// system dependency locked to the post-v3 window — so the assertion in
+// each test focuses on v3 env semantics rather than the manifest-version
+// gate (apiVersion=v3 is itself a 1.12.6-only trigger, so the legacy
+// fixture would otherwise trip validateModernFieldRequiresManifestVersion
+// before envs are even inspected).
 func v3EnvManifest(envs []AppEnvVar) *AppConfiguration {
 	c := newValidConfig()
+	c.ConfigVersion = "0.13.0"
 	c.APIVersion = APIVersionV3
+	wr := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
 	c.Envs = envs
 	return c
 }

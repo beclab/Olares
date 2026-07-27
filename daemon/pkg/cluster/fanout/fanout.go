@@ -99,7 +99,7 @@ func ListReadyNodes(ctx context.Context) ([]NodeTarget, error) {
 	var targets []NodeTarget
 	for i := range nodes.Items {
 		n := &nodes.Items[i]
-		if !isNodeReady(n) {
+		if !utils.IsNodeReady(n) {
 			continue
 		}
 		ip := internalIP(n)
@@ -111,7 +111,7 @@ func ListReadyNodes(ctx context.Context) ([]NodeTarget, error) {
 			Name:     n.Name,
 			IP:       ip,
 			IsSelf:   self,
-			IsMaster: isMaster(n),
+			IsMaster: utils.IsMasterNode(n),
 		})
 	}
 	return targets, nil
@@ -198,15 +198,6 @@ func (d *Dispatcher) call(ctx context.Context, t NodeTarget, payload any, timeou
 	return res
 }
 
-func isNodeReady(n *corev1.Node) bool {
-	for _, c := range n.Status.Conditions {
-		if c.Type == corev1.NodeReady {
-			return c.Status == corev1.ConditionTrue
-		}
-	}
-	return false
-}
-
 func internalIP(n *corev1.Node) string {
 	for _, addr := range n.Status.Addresses {
 		if addr.Type == corev1.NodeInternalIP {
@@ -214,14 +205,4 @@ func internalIP(n *corev1.Node) string {
 		}
 	}
 	return ""
-}
-
-func isMaster(n *corev1.Node) bool {
-	if cp, ok := n.Labels["node-role.kubernetes.io/control-plane"]; ok && cp != "false" {
-		return true
-	}
-	if m, ok := n.Labels["node-role.kubernetes.io/master"]; ok && m != "false" {
-		return true
-	}
-	return false
 }

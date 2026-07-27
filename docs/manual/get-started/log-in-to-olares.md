@@ -1,5 +1,6 @@
 ---
 search: false
+noindex: true
 ---
 ## Log in to Olares
 

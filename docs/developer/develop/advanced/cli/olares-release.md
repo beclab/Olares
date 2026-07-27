@@ -1,3 +1,7 @@
+---
+noindex: true
+description: Build a release version based on a local Olares repository. This command should be run in the root directory of the Olares repository.
+---
 # `olares release`
 
 ## Synopsis

@@ -31,6 +31,37 @@ func TestInstallRequestWireFormat(t *testing.T) {
 	}
 }
 
+func TestCloneRequestWireFormat(t *testing.T) {
+	// Without a compute mode the field is omitted entirely (1.12.5 clone wire
+	// stays byte-identical to before SelectedGpuType existed).
+	b, _ := json.Marshal(CloneRequest{Source: "market.olares", AppName: "firefox", Title: "Firefox Dev", Sync: true})
+	if strings.Contains(string(b), "selectedGpuType") {
+		t.Fatalf("clone body must omit selectedGpuType when empty: %s", b)
+	}
+	// With a mode the field is present.
+	b, _ = json.Marshal(CloneRequest{Source: "market.olares", AppName: "comfyui", Title: "ComfyUI Dev", Sync: true, SelectedGpuType: "nvidia"})
+	if !strings.Contains(string(b), `"selectedGpuType":"nvidia"`) {
+		t.Fatalf("clone body must carry selectedGpuType when set: %s", b)
+	}
+}
+
+// TestCloneComputeModeRecoveryChain documents that `market clone` reuses the
+// same computeModeSelect 422 recovery chain as `market install`: a clone-shaped
+// failed-check response is classified by parseFailedCheck + isComputeModeSelect
+// and resolved by resolveComputeMode.
+func TestCloneComputeModeRecoveryChain(t *testing.T) {
+	resp := failedCheckResp(checkTypeComputeModeSelect,
+		`[{"computeType":"cpu","status":"installable"},{"computeType":"nvidia","status":"installable"}]`)
+	checkType, raw := parseFailedCheck(resp)
+	if !isComputeModeSelect(checkType) {
+		t.Fatalf("clone 422 should classify as computeModeSelect, got %q", checkType)
+	}
+	// preset that is installable -> returned verbatim (the --compute-mode path).
+	if mode, err := resolveComputeMode(raw, "comfyui", "nvidia", false); err != nil || mode != "nvidia" {
+		t.Fatalf("clone preset nvidia: got (%q, %v), want (nvidia, nil)", mode, err)
+	}
+}
+
 func TestParseFailedCheck(t *testing.T) {
 	checkType, raw := parseFailedCheck(failedCheckResp(checkTypeComputeModeSelect,
 		`[{"computeType":"cpu","status":"installable"}]`))

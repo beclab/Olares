@@ -1,5 +1,5 @@
 ---
-description: A brief introduction to Olares One and its integration with Olares OS for local AI processing.
+description: Set up and manage Olares One, run AI agents and LLMs locally, and operate your personal AI cloud through plain language.
 aside: false
 head:
   - - meta
@@ -7,23 +7,13 @@ head:
       content: Olares One, Olares, personal AI cloud, local AI, edge computing, data privacy
 ---
 
-
 # Olares One documentation
 
-Welcome to Olares One, a dedicated hardware device that runs a personal AI cloud. It pairs workstation-grade hardware with Olares OS so you can run AI tools and manage your data locally, on hardware you physically control instead of sending personal data and prompts to centralized servers.
+Olares One combines workstation-grade hardware with Olares OS to give you a personal AI cloud you control. Run AI agents and LLMs locally, and operate your cloud simply by describing what you want in plain language.
 
-Primary use cases include:
-* **Edge AI**: Run open-source AI models for text or media generation directly on the hardware with complete data privacy.
-* **Gaming**: Turn the device into a gaming server with the Steam Headless app to play titles on Olares One, or on any compatible devices.
-* **Personal knowledge base**: Allow AI models to learn from private documents to function as a personal assistant.
-* **Unified file storage**: Use the Files app to manage, sync, and share files.
-* **Self-hosted workspace**: Run a private suite of productivity and collaboration tools on the local device.
-* **App development**: Use Olares Studio to develop and deploy applications for the Olares environment.
-* **Private media server**: Host and stream movie and music collections using apps like Jellyfin.
+This documentation focuses on Olares One-specific workflows, from first boot and natural-language onboarding to device access, system updates, storage and eGPU expansion, recovery, and dual-boot configurations. For general Olares features, applications, and use cases, see [Olares OS](../manual/overview) or [Use cases](../use-cases/).
 
-:::info
-This documentation focuses on usage scenarios specific to Olares One. For general operating system features or broader use cases, select the **Olares OS** or **Use cases** tabs in the top navigation.
-:::
+New to Olares One? Start with [First boot](./first-boot), then learn how to [manage Olares through natural language](./olares-onboarding).
 
 ## Your Olares One journey
 
@@ -36,8 +26,6 @@ Follow the path from first boot to everyday use and advanced customization.
       <div class="vpath-title">Initial setup</div>
       <div class="vpath-links">
         <a href="./first-boot">First boot</a>
-        <a href="./access-olares-via-vpn">Access Olares via VPN</a>
-        <a href="./access-olares-via-local-domain">Access Olares via .local domain</a>
         <a href="./redeem-membership">Redeem membership</a>
       </div>
     </div>
@@ -47,56 +35,10 @@ Follow the path from first boot to everyday use and advanced customization.
     <div class="vpath-body">
       <div class="vpath-title">Onboarding</div>
       <div class="vpath-links">
-        <a href="./open-webui">Chat with local LLMs</a>
-        <a href="./comfyui">Generate images and videos with ComfyUI</a>
-        <a href="./gpu">Switch GPU mode</a>
-      </div>
-    </div>
-  </div>
-  <div class="vpath-stage">
-    <div class="vpath-marker"><span class="vpath-icon"><span class="material-symbols-outlined">apps</span></span></div>
-    <div class="vpath-body">
-      <div class="vpath-title">Use</div>
-      <div class="vpath-links">
-        <a href="./customize">Customize Olares</a>
-        <a href="./files">Manage files</a>
-        <a href="./backup-restore">Back up &amp; restore data</a>
-        <a href="./market">Install &amp; update apps</a>
-        <a href="./vault">Secure passwords</a>
-        <!-- <a href="./wise-download">Download YouTube videos</a> -->
-        <a href="./deploy">Deploy an app</a>
+        <a href="./olares-onboarding">Manage Olares through natural language</a>
+        <a href="./access-olares-via-vpn">Access Olares via VPN</a>
+        <a href="./access-olares-via-local-domain">Access Olares via .local domain</a>
         <div class="vpath-seealso">See also: <a href="../manual/olares/">All system app guides in the Olares OS manual</a></div>
-      </div>
-    </div>
-  </div>
-  <div class="vpath-stage">
-    <div class="vpath-marker"><span class="vpath-icon"><span class="material-symbols-outlined">manage_accounts</span></span></div>
-    <div class="vpath-body">
-      <div class="vpath-title">Manage</div>
-      <div class="vpath-links">
-        <a href="./create-users">Add and manage users</a>
-        <a href="./config-app-access">Configure application access</a>
-      </div>
-    </div>
-  </div>
-  <div class="vpath-stage">
-    <div class="vpath-marker"><span class="vpath-icon"><span class="material-symbols-outlined">monitoring</span></span></div>
-    <div class="vpath-body">
-      <div class="vpath-title">Monitor</div>
-      <div class="vpath-links">
-        <a href="./dashboard">System resources</a>
-        <a href="./space">Traffic</a>
-      </div>
-    </div>
-  </div>
-  <div class="vpath-stage">
-    <div class="vpath-marker"><span class="vpath-icon"><span class="material-symbols-outlined">explore</span></span></div>
-    <div class="vpath-body">
-      <div class="vpath-title">Explore</div>
-      <div class="vpath-links">
-        <a href="./steam-direct-play">Play Steam games</a>
-        <a href="./windows">Access Windows in Olares</a>
-        <a href="./ace-step">Generate music with ACE-Step</a>
         <div class="vpath-seealso">See also: <a href="../use-cases/">Browse all use cases</a></div>
       </div>
     </div>
@@ -139,4 +81,3 @@ Follow the path from first boot to everyday use and advanced customization.
     </div>
   </div>
 </div>
-

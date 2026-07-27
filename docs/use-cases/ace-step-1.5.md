@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to install ACE-Step 1.5 on Olares, generate music from prompts or lyrics, and refine your ideas with reference audio, Cover, Repaint, and LoRA-based workflows.
+description: Install ACE-Step 1.5 on Olares to generate music from prompts or lyrics and refine tracks with reference audio, Cover, Repaint, and LoRA workflows.
 head:
   - - meta
     - name: keywords

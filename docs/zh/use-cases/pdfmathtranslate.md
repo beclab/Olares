@@ -1,6 +1,10 @@
 ---
 outline: [2, 4]
 description: 学习如何在 Olares 上安装和配置 PDFMathTranslate。本教程将指导你使用本地 AI 模型 Ollama 翻译学术 PDF，同时保留原始排版和数学公式。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, PDFMathTranslate, translate PDF, scientific PDF translation, self-hosted PDF translator, PDFMathTranslate on Olares
 ---
 
 :::warning

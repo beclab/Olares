@@ -16,6 +16,7 @@ import (
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/internel/watcher/cert"
 	intranetwatcher "github.com/beclab/Olares/daemon/internel/watcher/intranet"
+	"github.com/beclab/Olares/daemon/internel/watcher/lpvpndns"
 	mountwatcher "github.com/beclab/Olares/daemon/internel/watcher/mount"
 	"github.com/beclab/Olares/daemon/internel/watcher/system"
 	"github.com/beclab/Olares/daemon/internel/watcher/systemenv"
@@ -58,6 +59,11 @@ func main() {
 	commands.Init()
 
 	mainCtx, cancel := context.WithCancel(context.Background())
+
+	// Set up the shared informers' lifecycle context. The factory itself starts
+	// lazily once the cluster is reachable; readers fall back to live Lists
+	// until the cache has synced.
+	utils.InitInformers(mainCtx)
 
 	apis := apiserver.NewServer(mainCtx, port)
 
@@ -109,10 +115,22 @@ func main() {
 		systemenv.NewSystemEnvWatcher(),
 		intranetwatcher.NewApplicationWatcher(),
 		mountwatcher.NewMountWatcher(),
+		lpvpndns.NewWatcher(),
 	}, func() {
 		if s != nil {
-			if err := s.Restart(); err != nil {
-				klog.Error(err)
+			startMDNS := true
+			if client, err := utils.GetKubeClient(); err == nil {
+				if _, _, nodeRole, err := utils.GetThisNodeName(mainCtx, client); err == nil && nodeRole != "master" {
+					startMDNS = false
+				}
+			}
+
+			if startMDNS {
+				if err := s.Restart(); err != nil {
+					klog.Error(err)
+				}
+			} else {
+				s.Close()
 			}
 		}
 
@@ -131,17 +149,19 @@ func main() {
 		if state.CurrentState.TerminusState == state.TerminusRunning {
 			found := false
 			if client, err := utils.GetKubeClient(); err == nil {
-				if deployments, err := client.AppsV1().Deployments("").List(mainCtx, metav1.ListOptions{}); err == nil {
-					for _, d := range deployments.Items {
-						if d.Name == "steamheadless" {
-							found = true
-							if err := sunshine.Restart(); err != nil {
-								klog.Error(err)
-							}
-							break
+				// Use a name field selector so the apiserver returns only the
+				// steamheadless deployment instead of every deployment in the
+				// cluster, which the status loop otherwise listed and
+				// deserialized on every tick.
+				if deployments, err := client.AppsV1().Deployments("").List(mainCtx, metav1.ListOptions{
+					FieldSelector: "metadata.name=steamheadless",
+				}); err == nil {
+					if len(deployments.Items) > 0 {
+						found = true
+						if err := sunshine.Restart(); err != nil {
+							klog.Error(err)
 						}
 					}
-
 				}
 			}
 

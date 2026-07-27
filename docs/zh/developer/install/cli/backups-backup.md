@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: backup 子命令用于将数据备份到指定的存储后端。它能确保数据安全存储，以便在需要时进行恢复。
 outline: [2, 3]
 ---
 # `backup`

@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Comprehensive guide to Olares architecture covering infrastructure, platform services, and application framework. Learn about container orchestration, storage, networking, and system components.
+description: Explore Olares system architecture across infrastructure, platform services, and the app framework, including orchestration, storage, and networking.
 ---
 
 # Olares system architecture
@@ -209,10 +209,6 @@ An app for monitoring system resource usage.
 ### Control Hub
 
 The console for Olares, providing precise and autonomous control over the system and its environment.
-
-### Studio
-
-A development tool for building and deploying Olares applications.
 
 ## Learn more
 - To get started with Olares, see the [Getting Started guide](../../manual/get-started/index.md).

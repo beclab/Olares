@@ -1,3 +1,7 @@
+---
+noindex: true
+description: Uninstall Olares from your machine.
+---
 # `olares uninstall`
 
 ## Synopsis

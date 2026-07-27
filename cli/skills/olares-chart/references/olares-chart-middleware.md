@@ -1,6 +1,6 @@
 # Middleware & dependencies (refinement area 3)
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) and [olares-chart-manifest.md](olares-chart-manifest.md) first. This is refinement area 3 — the database/queue and companion-app half of the manifest. Env wiring of the `.Values.<mw>.*` values below is in [olares-chart-env.md](olares-chart-env.md).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. This is refinement area 3 of the Manifest — the database/queue and companion-app half. Env wiring of the `.Values.<mw>.*` values below belongs to the Env area.
 
 > **Functional requirement, not cosmetic** — always required.
 
@@ -48,8 +48,8 @@ middleware:
     namespace: db0           # logical Redis db namespace for this app
 options:
   dependencies:
-  - name: olares
-    version: ">=1.0.0-0"
+  - name: olares             # required system dep — author per the Manifest refinement areas (System dependency: olares)
+    version: ">=1.12.6-0"
     type: system
   - name: mysql              # middleware deps: set mandatory when install must wait for it
     version: ">=8.0.0-0"
@@ -93,7 +93,7 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
           value: "{{ .Values.postgres.databases.myapp }}"
 ```
 
-> **Env wiring is its own topic.** The `.Values.<mw>.*` mappings above, plus app config the user supplies at install (admin credentials), reused `OLARES_SYSTEM_*`/`OLARES_USER_*` vars, and the `envs[]` `required`/`type`/`regex` rules, are all covered in [olares-chart-env.md](olares-chart-env.md).
+> **Env wiring is its own topic.** The `.Values.<mw>.*` mappings above, plus app config the user supplies at install (admin credentials), reused `OLARES_SYSTEM_*`/`OLARES_USER_*` vars, and the `envs[]` `required`/`type`/`regex` rules, are all covered in the Env area.
 
 > **Which middleware is always available vs admin-installed** is the platform **System middleware model** (loaded via the SKILL.md prerequisite): PostgreSQL + Redis are always on; MongoDB/MySQL/MariaDB/MinIO/RabbitMQ/NATS need an admin install first. Given the extension catalog above, the system postgres covers nearly every app, so reach for it by default.
 >
@@ -108,8 +108,8 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
    ```yaml
    options:
      dependencies:
-     - name: olares
-       version: ">=1.0.0-0"
+     - name: olares            # required system dep — author per the Manifest refinement areas (System dependency: olares)
+       version: ">=1.12.6-0"
        type: system
      - name: searxng           # exact Market app name
        version: ">=1.0.0-0"    # semver constraint matched against the installed app
@@ -120,6 +120,6 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
 
 > **Reaching the dependency:** it runs as its own app in its own namespace; your app talks to it over the endpoint that app exposes, not an in-chart Service. The exact env/URL wiring is app-specific — copy it from that app's official chart in [beclab/apps](https://github.com/beclab/apps) rather than guessing a cluster DNS name.
 
-> **If the dependency is a v3 shared backend** (a cluster-wide ollama / vLLM / LLM gateway), app-service injects its Services into your chart as `.Values.svcs.<svc>_host` / `.Values.svcs.<svc>_ports`, so you reach it by cross-namespace Service DNS — no entrance/URL. Authoring the shared backend itself (admin-only, `<app>-shared` namespace) is covered in [olares-chart-shared.md](olares-chart-shared.md).
+> **If the dependency is a v3 shared backend** (a cluster-wide ollama / vLLM / LLM gateway), app-service injects its Services into your chart as `.Values.svcs.<svc>_host` / `.Values.svcs.<svc>_ports`, so you reach it by cross-namespace Service DNS — no entrance/URL. Authoring the shared backend itself (admin-only, `<app>-shared` namespace) is covered in the Shared backend pattern.
 
 > **middleware vs application:** `type: middleware` = an Olares-managed datastore wired via `.Values.<mw>.*`; `type: application` = a separate, full Olares app you depend on. Use middleware for databases/queues, application for companion apps.

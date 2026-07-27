@@ -1,5 +1,6 @@
 ---
 outline: [2, 3]
+title: Use FlareSolverr for Cloudflare in Prowlarr
 description: Set up FlareSolverr on Olares to bypass Cloudflare protection and access blocked indexer sites in Prowlarr.
 head:
   - - meta

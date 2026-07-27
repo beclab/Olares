@@ -23,7 +23,7 @@ This will permanently delete all accounts, settings, and data on the device. Thi
    :::info Installed OS version
    The OS image on the included USB drive may be an earlier version, depending on when your device was shipped. You can still use it to reinstall the system, then update Olares OS after activation if needed.
 
-   If you need the latest OS image, create a new bootable USB drive from the [Olares One ISO](https://cdn.olares.com/one/olares-latest-amd64.iso). For detailed steps, see [Create an Olares One bootable USB drive](create-bootable-usb.md).
+   If you need the latest OS image, create a new bootable USB drive from the [Olares One ISO](https://cdn.olares.com/one/olares-v1.12.6-amd64.iso). For detailed steps, see [Create an Olares One bootable USB drive](create-bootable-usb.md).
 
 ## Step 1: Boot from the USB drive
 

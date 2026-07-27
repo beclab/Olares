@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: 了解如何在 Olares 上安装 Ollama，使用 CLI 管理模型，并将其配置为其他应用的中央 AI 服务。
+description: 在 Olares 上安装 Ollama，本地运行私有大模型。用 CLI 管理模型，并把 Ollama 作为中央 AI 后端，供其他自托管应用调用。
 head:
   - - meta
     - name: keywords
-      content: Olares, Ollama, local LLM, AI model, CLI, self-hosted, open source models
+      content: Olares, Ollama, private llm, run llama locally, ollama vs lm studio, self-hosted llm, ollama on olares
 ---
 
 :::warning

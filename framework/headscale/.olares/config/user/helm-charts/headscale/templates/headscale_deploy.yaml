@@ -136,6 +136,8 @@ spec:
   selector:
     matchLabels:
       app: headscale
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -251,14 +253,14 @@ spec:
                           fi
                       done
                       sleep 2
-                      headscale apikeys create -e 3650d > /etc/headscale/apikey
+                      headscale apikeys create -e 3650d > /etc/headscale/apikey.new
                       headscale users create default
                       USER_ID=$(headscale users list | awk '/default/ {print $1; exit}')
                       [ -n "$USER_ID" ] || { echo "user default not found"; exit 1; }
                       headscale preauthkeys create -e 3650d --reusable -u "$USER_ID" \
-                          > /etc/headscale/preauthkey
-                      if ! test -s /etc/headscale/apikey; then echo apikey-empty; exit 1; fi
-                      if ! test -s /etc/headscale/preauthkey; then echo preauthkey-empty; exit 1; fi
+                          > /etc/headscale/preauthkey.new
+                      if ! test -s /etc/headscale/apikey.new; then echo apikey.new-empty; exit 1; fi
+                      if ! test -s /etc/headscale/preauthkey.new; then echo preauthkey.new-empty; exit 1; fi
                   ) > /etc/headscale/.headscale.log 2>&1
         volumeMounts:
         - name: config
@@ -288,7 +290,7 @@ spec:
           name: headscale-nginx-config
           readOnly: true
       - args:
-        - APIKEY=$(cat /etc/headscale/apikey) exec /headscale-api-wrapper
+        - APIKEY=$(cat /etc/headscale/apikey.new) exec /headscale-api-wrapper
         command:
         - /bin/sh
         - -c
@@ -381,7 +383,7 @@ spec:
           - >-
             cp /certs/ca.crt /usr/local/share/ca-certificates/headscale-ca.crt &&
             update-ca-certificates &&
-            TS_AUTHKEY=$(cat /etc/headscale/preauthkey)
+            TS_AUTHKEY=$(cat /etc/headscale/preauthkey.new)
             exec /usr/local/bin/containerboot
         securityContext:
           capabilities:

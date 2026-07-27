@@ -36,7 +36,7 @@ func UpdateDeviceSupportType(ctx context.Context, c client.Client, nodeName, dev
 	if err != nil {
 		return Device{}, err
 	}
-	if !IsHAMIMode(device.Mode) {
+	if len(device.AvailableSupportTypes) <= 1 {
 		return Device{}, fmt.Errorf("device mode switching is not supported for gpu type %s", device.Mode)
 	}
 	if !SupportTypeAvailable(device.AvailableSupportTypes, supportType) {
