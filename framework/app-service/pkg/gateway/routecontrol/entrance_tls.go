@@ -62,9 +62,9 @@ func syncPerViewerTLS(ctx context.Context, c client.Client, cm *corev1.ConfigMap
 	if cm == nil || cm.Name != zoneSSLConfigMapName {
 		return nil
 	}
-	// if cm.Data != nil && cm.Data["ephemeral"] == "true" {
-	// 	return deletePerViewerTLSSecret(ctx, c, viewer)
-	// }
+	if cm.Data != nil && cm.Data["ephemeral"] == "true" {
+		return deletePerViewerTLSSecret(ctx, c, viewer)
+	}
 	cert := strings.TrimSpace(cm.Data["cert"])
 	key := strings.TrimSpace(cm.Data["key"])
 	if cert == "" || key == "" {
@@ -78,12 +78,15 @@ func syncPerViewerTLS(ctx context.Context, c client.Client, cm *corev1.ConfigMap
 	err := c.Get(ctx, types.NamespacedName{Namespace: defaultGatewayNS, Name: secretName}, current)
 	switch {
 	case apierrors.IsNotFound(err):
-		return c.Create(ctx, desiredPerViewerTLSSecret(viewer, cm.Namespace, cert, key, hash))
+		if err := c.Create(ctx, desiredPerViewerTLSSecret(viewer, cm.Namespace, cert, key, hash)); err != nil {
+			return err
+		}
+		return fanOutMeshInTLSReplicas(ctx, c, viewer)
 	case err != nil:
 		return err
 	}
 	if current.Annotations != nil && current.Annotations[annotationTLSContentHash] == hash {
-		return nil
+		return fanOutMeshInTLSReplicas(ctx, c, viewer)
 	}
 	current.Type = corev1.SecretTypeTLS
 	if current.Labels == nil {
@@ -101,7 +104,10 @@ func syncPerViewerTLS(ctx context.Context, c client.Client, cm *corev1.ConfigMap
 		corev1.TLSCertKey:       cert,
 		corev1.TLSPrivateKeyKey: key,
 	}
-	return c.Update(ctx, current)
+	if err := c.Update(ctx, current); err != nil {
+		return err
+	}
+	return fanOutMeshInTLSReplicas(ctx, c, viewer)
 }
 
 func desiredPerViewerTLSSecret(viewer, sourceNS, cert, key, hash string) *corev1.Secret {
@@ -135,7 +141,24 @@ func deletePerViewerTLSSecret(ctx context.Context, c client.Client, viewer strin
 	if sec.Labels[ManagedByLabel] != ManagedByValue {
 		return nil
 	}
-	return client.IgnoreNotFound(c.Delete(ctx, sec))
+	if err := client.IgnoreNotFound(c.Delete(ctx, sec)); err != nil {
+		return err
+	}
+	return SyncReplicasForViewer(ctx, c, viewer, nil)
+}
+
+// fanOutMeshInTLSReplicas copies the gateway per-viewer TLS Secret into caller
+// namespaces as olares-mesh-in-tls-<viewer> (WI-OC-MESH-IN-CT1-02).
+func fanOutMeshInTLSReplicas(ctx context.Context, c client.Client, viewer string) error {
+	index, err := BuildDemandIndex(ctx, c, "")
+	if err != nil {
+		klog.Warningf("mesh-in tls replica: BuildDemandIndex failed viewer=%s: %v", viewer, err)
+		return nil // warn-only; gateway Secret is already correct
+	}
+	if err := SyncReplicasForViewer(ctx, c, viewer, index); err != nil {
+		klog.Warningf("mesh-in tls replica: SyncReplicasForViewer viewer=%s: %v", viewer, err)
+	}
+	return nil
 }
 
 func sharedEntranceTLSName(viewer string) string {

@@ -93,6 +93,14 @@ func TestGatewayInClusterIngressNPReconciler_reconcile(t *testing.T) {
 	}, np); err != nil {
 		t.Fatalf("NP not created: %v", err)
 	}
+	for _, ns := range []string{"os-mesh", "os-gateway"} {
+		meshNP := &networkingv1.NetworkPolicy{}
+		if err := c.Get(context.Background(), types.NamespacedName{
+			Namespace: ns, Name: "app-gateway-mesh-np",
+		}, meshNP); err != nil {
+			t.Fatalf("mesh NP %s/app-gateway-mesh-np: %v", ns, err)
+		}
+	}
 }
 
 func TestGatewayInClusterIngressNPReconciler_gatewayMissing(t *testing.T) {

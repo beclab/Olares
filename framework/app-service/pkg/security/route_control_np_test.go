@@ -89,8 +89,17 @@ func TestIsCallerJWTManagedNPAndExternal(t *testing.T) {
 	if IsCallerJWTManagedNP(routeControl) {
 		t.Fatal("route-control must not match caller-jwt")
 	}
-	if !IsAppServiceManagedExternalNP(callerJWT) || !IsAppServiceManagedExternalNP(routeControl) {
-		t.Fatal("both external writers must be skipped by prune")
+	meshNP := NewAppGatewayMeshNPOsMesh()
+	if !IsAppGatewayMeshManagedNP(meshNP) {
+		t.Fatal("expected app-gateway-mesh NP")
+	}
+	if IsAppGatewayMeshManagedNP(routeControl) {
+		t.Fatal("route-control must not match app-gateway-mesh")
+	}
+	if !IsAppServiceManagedExternalNP(callerJWT) ||
+		!IsAppServiceManagedExternalNP(routeControl) ||
+		!IsAppServiceManagedExternalNP(meshNP) {
+		t.Fatal("external writers must be skipped by prune")
 	}
 	if IsAppServiceManagedExternalNP(&netv1.NetworkPolicy{}) {
 		t.Fatal("empty NP must not be external-managed")

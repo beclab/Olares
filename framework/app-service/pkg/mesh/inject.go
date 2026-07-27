@@ -90,6 +90,9 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 		}
 	}
 	if !changed {
+		if enable {
+			return EnsureAppGatewayMeshNetworkPolicies(ctx, c)
+		}
 		return nil
 	}
 	if err := c.Update(ctx, &ns); err != nil {
@@ -98,5 +101,10 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 	}
 	klog.Infof("mesh-xport: caller ns=%s in-cluster-caller=%v linkerd.io/inject=%q",
 		namespace, enable, ns.Annotations[LinkerdInjectAnnotation])
+	if enable {
+		if err := EnsureAppGatewayMeshNetworkPolicies(ctx, c); err != nil {
+			return err
+		}
+	}
 	return nil
 }
