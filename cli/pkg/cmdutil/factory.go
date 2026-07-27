@@ -147,11 +147,10 @@ type Factory struct {
 	uploadClient     *http.Client
 
 	// backendVersion memoizes the detected Olares backend version (see
-	// olares_version.go). backendVersionMu guards the cell because
-	// RefreshOlaresBackendVersion may overwrite it after the initial
-	// sync.Once resolution.
+	// olares_version.go). Write-once under the sync.Once: on-demand
+	// re-detection is `profile whoami --refresh` / `profile list --refresh`,
+	// which persist to config.json and leave this process's value alone.
 	backendVersionOnce sync.Once
-	backendVersionMu   sync.Mutex
 	backendVersion     *semver.Version
 	backendVersionErr  error
 }

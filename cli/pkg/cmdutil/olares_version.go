@@ -50,13 +50,8 @@ const (
 // reachable backend.
 func (f *Factory) OlaresBackendVersion(ctx context.Context) (*semver.Version, error) {
 	f.backendVersionOnce.Do(func() {
-		v, err := f.resolveBackendVersion(ctx)
-		f.backendVersionMu.Lock()
-		f.backendVersion, f.backendVersionErr = v, err
-		f.backendVersionMu.Unlock()
+		f.backendVersion, f.backendVersionErr = f.resolveBackendVersion(ctx)
 	})
-	f.backendVersionMu.Lock()
-	defer f.backendVersionMu.Unlock()
 	return f.backendVersion, f.backendVersionErr
 }
 
@@ -116,29 +111,6 @@ func (f *Factory) CachedOlaresBackendVersion() (*semver.Version, bool) {
 		return nil, false
 	}
 	return v, true
-}
-
-// RefreshOlaresBackendVersion forces a fresh /api/olares-info read, updates the
-// per-profile cache, and resets the in-process memoization so subsequent
-// OlaresBackendVersion calls observe the new value. Returns (newVersion,
-// changed, err) where changed reports whether the version differs from what
-// was previously cached.
-func (f *Factory) RefreshOlaresBackendVersion(ctx context.Context) (*semver.Version, bool, error) {
-	rp, err := f.ResolveProfile(ctx)
-	if err != nil {
-		return nil, false, err
-	}
-	prev, _ := loadCachedBackendVersion(rp.OlaresID)
-	fetched, err := f.fetchBackendVersion(ctx, rp)
-	if err != nil {
-		return nil, false, err
-	}
-	changed := prev == nil || prev.Original() != fetched.Original()
-	f.backendVersionMu.Lock()
-	f.backendVersion = fetched
-	f.backendVersionErr = nil
-	f.backendVersionMu.Unlock()
-	return fetched, changed, nil
 }
 
 func (f *Factory) resolveBackendVersion(ctx context.Context) (*semver.Version, error) {
