@@ -9,7 +9,7 @@ head:
 
 # Upgrade a two-node Olares cluster
 
-This guide walks you through manually upgrading a two-node Olares cluster from 1.12.5 to 1.12.6.
+This guide walks you through manually upgrading a two-node Olares cluster from version 1.12.5 to 1.12.6.
 
 The procedure involves downloading upgrade packages on both nodes, upgrading the Olares CLI and daemon, and upgrading the master and worker nodes separately.
 
@@ -27,13 +27,13 @@ The procedure involves downloading upgrade packages on both nodes, upgrading the
 
 Open two separate terminal windows or tabs on your computer. Use SSH to connect to each node in its own window.
 
-1. In the first window, connect to the master node:
+1. In the first window, connect to the master node via SSH using its local IP address:
 
    ```bash
    ssh olares@<master-node-ip-address>
    ```
 
-2. In the second window, connect to the worker node:
+2. In the second window, connect to the worker node via SSH using its local IP address:
 
    ```bash
    ssh olares@<worker-node-ip-address>
@@ -79,7 +79,7 @@ Before proceeding to Step 3, ensure that `upgradingDownloadState` shows `complet
 
 After the downloads finish, import the new images and update the core management tools, including the Olares CLI and the `olaresd` daemon. Run the following commands in both your master and worker SSH windows.
 
-1. Ensure you are still logged in as root:
+1. Ensure that you are still logged in as root:
 
    ```bash
    sudo su
@@ -119,7 +119,7 @@ With both nodes prepared, upgrade the master node first.
    sudo olares-cli upgrade
    ```
 
-   The master node will automatically reboot once the upgrade script finishes. Your SSH session will disconnect.
+   The master node reboots when the upgrade finishes.
 
 2. After the reboot, verify that all system services have successfully restarted and are in the `Running` status:
 
@@ -135,7 +135,7 @@ With both nodes prepared, upgrade the master node first.
 
 ## Step 5: Upgrade the worker node
 
-Now that the master node is upgraded and patched, you can upgrade the worker.
+Now that the master node is upgraded and patched, you can upgrade the worker node.
 
 1. In the worker node SSH window, start the upgrade:
 
@@ -143,11 +143,11 @@ Now that the master node is upgraded and patched, you can upgrade the worker.
    sudo olares-cli upgrade
    ```
 
-2. The worker node reboots when the upgrade finishes. Wait for the rebooting to finish.
+2. The worker node reboots when the upgrade finishes. Wait for the reboot to finish.
 
 ## Step 6: Restore the cluster version on the master node
 
-After the worker node has finished upgrading, restore the version on the master node to `1.12.6` to complete the process.
+After the worker node finishes upgrading, restore the version on the master node to `1.12.6` to complete the process.
 
 1. In the master node SSH window, run the following command:
 
