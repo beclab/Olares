@@ -12,18 +12,18 @@ const (
 	// (storage.OlaresRootDir), which is what the market chart renders as
 	// .Values.rootPath for its read-only hostPath mount. It is not relative to
 	// the installer base directory.
-	RuntimeRelativeDir       = "userdata/Cache/market-preinstall"
-	MaxBundleJSONBytes       = 8 << 20
-	MaxProfileJSONBytes      = 8 << 20
-	MaxBundleApps            = 256
-	MaxChartBytes            = 256 << 20
-	MaxTotalChartBytes       = 1 << 30
-	MaxArtifactManifestBytes = 64 << 20
-	MaxArtifactEntries       = 1_000_000
-	MaxArtifactTotalSize     = 1 << 40
-	ArtifactKindHFCache      = "hf-cache"
-	InstallScopeShared       = InstallScope("shared")
-	InstallScopePerUser      = InstallScope("per-user")
+	RuntimeRelativeDir             = "userdata/Cache/market-preinstall"
+	MaxBundleJSONBytes             = 8 << 20
+	MaxProfileJSONBytes            = 8 << 20
+	MaxBundleApps                  = 256
+	MaxChartBytes            int64 = 256 << 20
+	MaxTotalChartBytes             = 1 << 30
+	MaxArtifactManifestBytes int64 = 64 << 20
+	MaxArtifactEntries             = 1_000_000
+	MaxArtifactTotalSize     int64 = 1 << 40
+	ArtifactKindHFCache            = "hf-cache"
+	InstallScopeShared             = InstallScope("shared")
+	InstallScopePerUser            = InstallScope("per-user")
 )
 
 type BundleV1 struct {
