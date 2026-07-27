@@ -81,13 +81,15 @@ func runningInClusterPod() bool {
 //  2. host/cluster — https://<svc>.<terminus> resolved via the in-cluster DNS.
 //     Reaching it is not by itself evidence of an intranet position, so the
 //     answer is classified from the connection's addresses — see
-//     locationFromProbe. An inconclusive success falls through to (3).
+//     locationFromProbe. An inconclusive success falls through to (3), but is
+//     remembered: if (3) then fails, it is returned as `host` rather than
+//     discarded, since it remains the one route we've actually seen work.
 //  3. external  — https://<svc>.<terminus> via the system resolver
 //
 // "Reachable" means the probe established a connection and got back any HTTP
-// status (including 3xx/4xx) — auth/permission is irrelevant here. When every
-// probe fails it returns ("", *UnreachableError) carrying the last failure's
-// classification for messaging.
+// status (including 3xx/4xx) — auth/permission is irrelevant here. Only when
+// no probe reached the instance at all does it return ("", *UnreachableError),
+// carrying the last failure's classification for messaging.
 //
 // localPrefix is the dev-only URL label (pass "" in production); insecure
 // mirrors the profile's TLS opt-in.
@@ -116,11 +118,15 @@ func ProbeLocation(ctx context.Context, id olares.ID, localPrefix string, insecu
 	// to the external probe when the addresses don't corroborate a position —
 	// that public path is exactly what `external` is.
 	intranetURL := id.Endpoints(olares.LocationHost, localPrefix).Desktop
-	var addrs connAddrs
+	var (
+		addrs           connAddrs
+		intranetReached bool
+	)
 	if err := probeFn(ctx, olares.LocationHost, intranetURL, insecure, &addrs, probeTimeoutHost); err == nil {
 		if loc, ok := locationFromProbe(addrs); ok {
 			return loc, nil
 		}
+		intranetReached = true
 	} else {
 		lastKind = classifyNetErr(err)
 		if lastKind == KindLocalNetDown {
@@ -143,6 +149,17 @@ func ProbeLocation(ctx context.Context, id olares.ID, localPrefix string, insecu
 		lastKind = classifyNetErr(err)
 	}
 
+	if intranetReached {
+		// The external probe was meant to confirm the public path the
+		// inconclusive intranet probe appeared to ride, and it didn't — but
+		// that intranet probe did get an HTTP response, so we have first-hand
+		// evidence of a working route and no business calling the instance
+		// unreachable. The two methods differ only in how the name is
+		// resolved, so keep the resolver that answered: whatever made the
+		// system one fail here (no/blocked resolver, a blip within the 3s
+		// budget) would fail the same way for every later request.
+		return olares.LocationHost, nil
+	}
 	return "", &UnreachableError{OlaresID: id.String(), LastKind: lastKind}
 }
 

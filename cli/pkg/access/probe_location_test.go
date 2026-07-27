@@ -136,6 +136,21 @@ func TestProbeLocationOrdering(t *testing.T) {
 			wantCalls: []olares.Location{olares.LocationLAN, olares.LocationHost, olares.LocationExternal},
 		},
 		{
+			// Same inconclusive intranet success, but the confirming public
+			// probe fails (system resolver blocked, or a blip inside its 3s
+			// budget). We already got an HTTP response through ClusterDNS, so
+			// declaring the instance unreachable would throw away the only
+			// route we have evidence for.
+			name: "host: inconclusive intranet success survives a failed external probe",
+			outcomes: map[olares.Location]probeOutcome{
+				olares.LocationLAN:      {err: syscall.ECONNREFUSED},
+				olares.LocationHost:     {srcIP: net.ParseIP("192.168.1.20"), remoteIP: net.ParseIP("42.193.109.3")},
+				olares.LocationExternal: {err: syscall.ECONNREFUSED},
+			},
+			want:      olares.LocationHost,
+			wantCalls: []olares.Location{olares.LocationLAN, olares.LocationHost, olares.LocationExternal},
+		},
+		{
 			name: "external fallback",
 			outcomes: map[olares.Location]probeOutcome{
 				olares.LocationLAN:      {err: syscall.ECONNREFUSED},
