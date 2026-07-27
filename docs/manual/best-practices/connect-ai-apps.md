@@ -20,7 +20,7 @@ By the end of this tutorial, you will be able to:
 
 Before configuring a connection, determine which app is providing the AI capabilities and which app is using them. This step ensures you know whether to look for your connection details in the Model Console or in Olares Settings later in this guide.
 
-- **AI client apps**: They provide the front-end chat interface or workflow canvas you interact with directly, such as LobeHub and Open WebUI. They rely on an AI service app (often called a **provider**) to perform AI tasks, such as generating text and extracting data.
+- **AI client apps**: They provide the front-end chat interface or workflow canvas you interact with directly, such as LobeHub. They rely on an AI service app (often called a **provider**) to perform AI tasks, such as generating text and extracting data.
 - **AI service apps**: They provide AI capabilities for compatible clients over an API, such as chat, search, and speech recognition. Some AI service apps have their own web interface for management, while others run primarily as headless backend services.
 
     On Olares, AI service apps fall into two categories:
@@ -72,9 +72,9 @@ For AI service apps deployed locally on Olares, a real API key is usually not re
 
 However, most AI client apps still require a value in the API key field. Enter any placeholder text such as `olares` or `local` to proceed.
 
-## Examples
+## Example
 
-The following examples demonstrate how to gather and apply the connection parameters in real client applications. Ensure that the relevant apps are installed before starting.
+The following example demonstrates how to gather and apply the connection parameters in a real client application. Ensure that the relevant apps are installed before starting.
 
 ### Connect an LLM service app to LobeHub
 
@@ -108,31 +108,7 @@ In this example, the pre-built model app Gemma 4 26B (Ollama) is the LLM service
 
     ![LobeHub connected to a model instance](/images/manual/tutorials/connect-app-eg-lobehub2.png#bordered)
 
-### Connect PaddleOCR to Open WebUI
-
-In this example, PaddleOCR is the AI service app that provides image text recognition capabilities, and Open WebUI is the client app.
-
-1. Open Olares Settings, and then go to **Applications** > **PaddleOCR** > **Entrances** > **PaddleOCR**.
-
-   ![PaddleOCR entrance](/images/manual/use-cases/paddleocr-entrances.png#bordered){width=75%}
-
-2. Ensure the **Authentication level** is set to **Internal**.
-3. Copy the endpoint URL. For example, `https://17b4c78a.alice2026.olares.com`.
-
-   ![PaddleOCR endpoint](/images/manual/use-cases/paddleocr-endpoint.png#bordered){width=75%}
-
-4. In Open WebUI, click the profile icon, and then go to **Admin Panel** > **Settings** > **Documents**.
-5. In the **General** section, configure the settings as follows:
-
-    - **Content Extraction Engine**: Select **PaddleOCR-vl**.
-    - **API Base URL**: Enter the PaddleOCR endpoint URL you just copied. 
-    - **API Token**: Enter any placeholder text. Do not leave this field empty.
-   
-   ![PaddleOCR config in Open WebUI](/images/manual/use-cases/openwebui-paddleocr-config1.png#bordered)
-
-6. Click **Save**.
-
-## FAQs
+## FAQ
 
 ### How to connect non-AI apps?
 
