@@ -119,15 +119,21 @@ With both nodes prepared, upgrade the master node first.
    sudo olares-cli upgrade
    ```
 
-   The master node reboots when the upgrade finishes.
+   The master node reboots when the upgrade finishes, and your SSH session will disconnect.
 
-2. After the reboot, verify that all system services have successfully restarted and are in the `Running` status:
+2. After the reboot, reconnect to the master node via SSH:
+
+   ```bash
+   ssh olares@<master-node-ip-address>
+   ```
+
+3. Verify that all system services have successfully restarted and are in the `Running` status:
 
    ```bash
    kubectl get pod -o wide -A
    ```
 
-3. Temporarily set the cluster version back to `1.12.5` so the worker node can be upgraded:
+4. Temporarily set the cluster version back to `1.12.5` so the worker node can be upgraded:
 
    ```bash
    kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"1.12.5"}}'
@@ -148,6 +154,8 @@ Now that the master node is upgraded and patched, you can upgrade the worker nod
 ## Step 6: Restore the cluster version on the master node
 
 After the worker node finishes upgrading, restore the version on the master node to `1.12.6` to complete the process.
+
+If your SSH session to the master node times out, reconnect before proceeding.
 
 1. In the master node SSH window, run the following command:
 
