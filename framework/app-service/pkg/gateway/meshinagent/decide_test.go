@@ -13,11 +13,15 @@ func TestDecideExplicitCallees(t *testing.T) {
 	}
 }
 
-func TestDecideNeedsSharedAccessAlone(t *testing.T) {
+func TestDecideEligibilityWithoutCallees(t *testing.T) {
 	s := map[string]string{SettingNeedsSharedAccess: "true"}
 	r := Decide("myapp", s, nil)
-	if r.Inject {
-		t.Fatalf("intent-only must not inject: %+v", r)
+	if !r.Inject || r.Source != DecideSourceEligibility || len(r.Callees) != 0 {
+		t.Fatalf("eligibility must inject without callees: %+v", r)
+	}
+	r2 := Decide("plain-app", map[string]string{}, nil)
+	if !r2.Inject || r2.Source != DecideSourceEligibility {
+		t.Fatalf("empty settings eligibility: %+v", r2)
 	}
 }
 
@@ -61,10 +65,16 @@ func TestApplyDecideIdempotent(t *testing.T) {
 
 func TestDeclaresSharedCaller(t *testing.T) {
 	if DeclaresSharedCaller(map[string]string{SettingNeedsSharedAccess: "true"}) {
-		t.Fatal("intent only")
+		t.Fatal("intent alone without decide annotate is not declare until ApplyDecide")
 	}
 	if !DeclaresSharedCaller(map[string]string{SettingAppRef: "x"}) {
 		t.Fatal("appRef")
+	}
+	if !DeclaresSharedCaller(map[string]string{AnnotDecide: "true", AnnotDecideSource: DecideSourceEligibility}) {
+		t.Fatal("decide=true eligibility must declare")
+	}
+	if DeclaresSharedCaller(map[string]string{AnnotDecide: "false"}) {
+		t.Fatal("decide=false must not declare")
 	}
 }
 

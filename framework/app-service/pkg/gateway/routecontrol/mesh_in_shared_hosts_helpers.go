@@ -11,8 +11,9 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
-	"github.com/beclab/Olares/framework/app-service/pkg/security"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
@@ -118,7 +119,10 @@ func isClusterScopedOrCallerApp(obj client.Object) bool {
 	if appcfg.IsSharedServerApp(app) {
 		return true
 	}
-	return len(callerSharedAppRefs(app)) > 0
+	if len(callerSharedAppRefs(app)) > 0 {
+		return true
+	}
+	return meshinagent.DeclaresSharedCaller(app.Spec.Settings)
 }
 
 // callerSharedAppRefs collects Shared callee refs from clusterAppRef / sharedAppDeps

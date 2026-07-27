@@ -15,13 +15,22 @@ func TestApplicationDeclaresSharedAccess(t *testing.T) {
 	}{
 		{name: "nil app", app: nil, want: false},
 		{
-			name: "needsSharedAccess alone must not inject",
+			name: "needsSharedAccess alone without decide annotate",
 			app: &appv1alpha1.Application{
 				Spec: appv1alpha1.ApplicationSpec{
 					Settings: map[string]string{SettingNeedsSharedAccess: "true"},
 				},
 			},
 			want: false,
+		},
+		{
+			name: "eligibility decide=true",
+			app: &appv1alpha1.Application{
+				Spec: appv1alpha1.ApplicationSpec{
+					Settings: map[string]string{AnnotDecide: "true", AnnotDecideSource: DecideSourceEligibility},
+				},
+			},
+			want: true,
 		},
 		{
 			name: "sharedAppDeps",
@@ -60,13 +69,15 @@ func TestApplicationDeclaresSharedAccess(t *testing.T) {
 }
 
 func TestShouldInjectMeshInAgent(t *testing.T) {
-	intentOnly := &appv1alpha1.Application{
+	eligibility := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "chat"},
 		Spec: appv1alpha1.ApplicationSpec{
+			Name:     "chat",
 			Settings: map[string]string{SettingNeedsSharedAccess: "true"},
 		},
 	}
-	if ShouldInject(intentOnly, false) {
-		t.Fatal("needsSharedAccess alone must not inject")
+	if !ShouldInject(eligibility, false) {
+		t.Fatal("eligibility without named callees must inject")
 	}
 	consumer := &appv1alpha1.Application{
 		Spec: appv1alpha1.ApplicationSpec{
@@ -81,6 +92,12 @@ func TestShouldInjectMeshInAgent(t *testing.T) {
 	}
 	if ShouldInject(nil, false) {
 		t.Fatal("nil app must not inject")
+	}
+	denied := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{Name: "middleware-x", Settings: map[string]string{}},
+	}
+	if ShouldInject(denied, false) {
+		t.Fatal("R-DENY middleware must not inject")
 	}
 }
 

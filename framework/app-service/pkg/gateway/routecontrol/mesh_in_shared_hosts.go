@@ -10,6 +10,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -226,11 +227,29 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 	}
 	type key struct{ ns, viewer string }
 	hostsByKey := map[key]map[string]struct{}{}
+	addViewerHosts := func(callerNS, viewer string) {
+		viewer = strings.ToLower(strings.TrimSpace(viewer))
+		if viewer == "" {
+			return
+		}
+		k := key{ns: callerNS, viewer: viewer}
+		if hostsByKey[k] == nil {
+			hostsByKey[k] = map[string]struct{}{}
+		}
+		for _, h := range enumerateHostsForViewer(viewer, srrByOwner[viewer], platformDomain) {
+			hostsByKey[k][h] = struct{}{}
+		}
+	}
 	for i := range nsList.Items {
 		callerNS := nsList.Items[i].Name
 		for _, app := range appsByNS[callerNS] {
 			refs := callerSharedAppRefs(&app)
 			if len(refs) == 0 {
+				// B′ eligibility: project viewer_srr from Application owner when decide=true.
+				if !meshinagent.DeclaresSharedCaller(app.Spec.Settings) {
+					continue
+				}
+				addViewerHosts(callerNS, app.Spec.Owner)
 				continue
 			}
 			if len(refs) > 1 {
@@ -242,17 +261,7 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 				continue
 			}
 			for _, owner := range owners {
-				viewer := strings.ToLower(strings.TrimSpace(owner))
-				if viewer == "" {
-					continue
-				}
-				k := key{ns: callerNS, viewer: viewer}
-				if hostsByKey[k] == nil {
-					hostsByKey[k] = map[string]struct{}{}
-				}
-				for _, h := range enumerateHostsForViewer(viewer, srrByOwner[viewer], platformDomain) {
-					hostsByKey[k][h] = struct{}{}
-				}
+				addViewerHosts(callerNS, owner)
 			}
 		}
 	}

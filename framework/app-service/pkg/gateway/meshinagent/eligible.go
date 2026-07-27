@@ -24,8 +24,8 @@ const (
 	FailClosedEnv = "MESH_IN_AGENT_FAIL_CLOSED"
 )
 
-// ApplicationDeclaresSharedAccess reports whether named caller→callee edges exist.
-// needsSharedAccess alone is NOT sufficient (ARCH Q13 / ADR-IC-08).
+// ApplicationDeclaresSharedAccess reports whether the app is a Shared caller
+// (persisted decide=true or named edges). Shared provider apps are filtered by callers.
 func ApplicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 	if app == nil {
 		return false
@@ -34,15 +34,24 @@ func ApplicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 }
 
 // ShouldInject reports whether the mesh-in agent should be injected into a pod.
-// Shared provider apps and middleware workloads never receive the agent.
+// Shared provider apps never receive the agent. Prefer persisted decide; else run Decide.
 func ShouldInject(app *appv1alpha1.Application, isSharedApp bool) bool {
 	if isSharedApp || app == nil {
 		return false
 	}
-	return DeclaresSharedCaller(app.Spec.Settings)
+	if DeclaresSharedCaller(app.Spec.Settings) {
+		return true
+	}
+	name := strings.TrimSpace(app.Spec.Name)
+	if name == "" {
+		name = app.Name
+	}
+	return Decide(name, app.Spec.Settings, DefaultRules()).Inject
 }
 
-// HasIntentOnly reports needsSharedAccess without named callees (must not inject).
+// HasIntentOnly reports needsSharedAccess without named callees.
+// Under B′ eligibility, intent-only apps still inject after Decide; this helper
+// remains for diagnostics distinguishing named edges from intent.
 func HasIntentOnly(settings map[string]string) bool {
 	if settings == nil {
 		return false

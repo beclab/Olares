@@ -6,15 +6,16 @@ import (
 )
 
 const (
-	AnnotDecide          = "gateway.olares.io/shared-caller-decide"
-	AnnotDecideSource    = "gateway.olares.io/shared-caller-decide-source"
-	AnnotDecideEdges     = "gateway.olares.io/shared-caller-edges"
-	AnnotDecideRuleID    = "gateway.olares.io/shared-caller-rule-id"
-	SettingOptOutMesh    = "mesh-inject"
-	SettingAppRef        = "appRef"
-	DecideSourceExplicit = "explicit"
-	DecideSourceRule     = "rule"
-	DecideSourceNone     = "none"
+	AnnotDecide             = "gateway.olares.io/shared-caller-decide"
+	AnnotDecideSource       = "gateway.olares.io/shared-caller-decide-source"
+	AnnotDecideEdges        = "gateway.olares.io/shared-caller-edges"
+	AnnotDecideRuleID       = "gateway.olares.io/shared-caller-rule-id"
+	SettingOptOutMesh       = "mesh-inject"
+	SettingAppRef           = "appRef"
+	DecideSourceExplicit    = "explicit"
+	DecideSourceRule        = "rule"
+	DecideSourceEligibility = "eligibility"
+	DecideSourceNone        = "none"
 )
 
 // Rule maps an application name (or prefix*) to named Shared callees.
@@ -109,8 +110,8 @@ func isOptOut(settings map[string]string) bool {
 	return v == "disabled" || v == "false"
 }
 
-// Decide runs SharedCallerDecide: explicit named edges > rules; no callees => no inject.
-// needsSharedAccess alone never injects (Q13).
+// Decide runs SharedCallerDecide: explicit named edges > rules > eligibility.
+// Eligibility injects without named callees (OPEN-01 B′); deny/opt-out still win.
 func Decide(appName string, settings map[string]string, rules RuleSet) DecideResult {
 	if rules == nil {
 		rules = DefaultRules()
@@ -136,17 +137,24 @@ func Decide(appName string, settings map[string]string, rules RuleSet) DecideRes
 		res.Callees = callees
 		res.Source = DecideSourceRule
 		res.RuleID = ruleID
+		return res
 	}
+	// B′ gateway-open: eligible caller may inject with empty callees.
+	res.Inject = true
+	res.Source = DecideSourceEligibility
 	return res
 }
 
-// DeclaresSharedCaller is the admission predicate: non-empty named callees (and not opt-out).
+// DeclaresSharedCaller is the admission predicate: decide=true or named callees, not opt-out.
 func DeclaresSharedCaller(settings map[string]string) bool {
 	if settings == nil || isOptOut(settings) {
 		return false
 	}
 	if d := strings.TrimSpace(settings[AnnotDecide]); strings.EqualFold(d, "false") {
 		return false
+	}
+	if strings.EqualFold(strings.TrimSpace(settings[AnnotDecide]), "true") {
+		return true
 	}
 	return len(ParseCallees(settings)) > 0
 }
