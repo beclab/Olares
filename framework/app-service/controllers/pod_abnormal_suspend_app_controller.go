@@ -43,11 +43,13 @@ const (
 // when a Pod is Evicted, or when Pending and Unschedulable beyond a timeout.
 type PodAbnormalSuspendAppController struct {
 	client.Client
-	pendingTimeout  time.Duration
-	minRequeueDelay time.Duration
+	pendingTimeout      time.Duration
+	minRequeueDelay     time.Duration
+	controllerStartedAt time.Time
 }
 
 func (r *PodAbnormalSuspendAppController) SetUpWithManager(mgr ctrl.Manager) error {
+	r.controllerStartedAt = time.Now()
 	r.pendingTimeout = parseTimeWithDefault(envPendingPodSuspendAppTimeout, 3*time.Minute)
 	r.minRequeueDelay = parseTimeWithDefault(envPendingPodMinRequeueDelay, 3*time.Second)
 	if r.minRequeueDelay > r.pendingTimeout {
@@ -60,7 +62,7 @@ func (r *PodAbnormalSuspendAppController) SetUpWithManager(mgr ctrl.Manager) err
 		return err
 	}
 
-	klog.Infof("pod-abnormal-suspend-app-controller initialized, pendingTimeout=%v, minRequeueDelay=%v", r.pendingTimeout, r.minRequeueDelay)
+	klog.Infof("pod-abnormal-suspend-app-controller initialized, startedAt=%s, pendingTimeout=%v, minRequeueDelay=%v", r.controllerStartedAt.Format(time.RFC3339), r.pendingTimeout, r.minRequeueDelay)
 
 	err = c.Watch(source.Kind(
 		mgr.GetCache(),
@@ -166,24 +168,31 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
-	if pendingSince, found := pendingUnschedulableSince(&pod); found || pendingKind == utils.PendingKindInSufficientGPU {
-		elapsed := time.Since(pendingSince)
-		klog.Infof("pod pending unschedulable name=%s namespace=%s since=%s elapsed=%v timeout=%v", pod.Name, pod.Namespace, pendingSince.Format(time.RFC3339), elapsed, r.pendingTimeout)
-		if elapsed < r.pendingTimeout && pendingKind != utils.PendingKindInSufficientGPU {
-			delay := r.pendingTimeout - elapsed
-			if delay > r.minRequeueDelay {
-				delay = r.minRequeueDelay
+	_, found := pendingUnschedulableSince(&pod)
+	insufficientGPU := pendingKind == utils.PendingKindInSufficientGPU
+	if found || insufficientGPU {
+		reason := constants.AppUnschedulable
+		if insufficientGPU {
+			reason = constants.AppHamiSchedulable
+		} else {
+			now := time.Now()
+			pendingSince := pendingTimeoutStart(&pod, r.controllerStartedAt)
+			elapsed := now.Sub(pendingSince)
+			if elapsed < 0 {
+				elapsed = 0
 			}
-			klog.Infof("requeue pod name=%s namespace=%s after %v until timeout", pod.Name, pod.Namespace, delay)
-			return ctrl.Result{RequeueAfter: delay}, nil
+			klog.Infof("pod pending unschedulable name=%s namespace=%s since=%s elapsed=%v timeout=%v", pod.Name, pod.Namespace, pendingSince.Format(time.RFC3339), elapsed, r.pendingTimeout)
+			if elapsed < r.pendingTimeout {
+				delay := r.pendingTimeout - elapsed
+				if delay > r.minRequeueDelay {
+					delay = r.minRequeueDelay
+				}
+				klog.Infof("requeue pod name=%s namespace=%s after %v until timeout", pod.Name, pod.Namespace, delay)
+				return ctrl.Result{RequeueAfter: delay}, nil
+			}
 		}
 
 		klog.Infof("attempting to suspend app=%s owner=%s due to pending unschedulable timeout", appName, owner)
-		reason := constants.AppUnschedulable
-
-		if pendingKind == utils.PendingKindInSufficientGPU {
-			reason = constants.AppHamiSchedulable
-		}
 		ok, err := r.trySuspendApp(ctx, owner, appName, reason, "pending unschedulable timeout on pod: "+pod.Namespace+"/"+pod.Name, pod.Namespace)
 		if err != nil {
 			klog.Errorf("suspend attempt failed for app=%s owner=%s: %v", appName, owner, err)
@@ -196,6 +205,13 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func pendingTimeoutStart(pod *corev1.Pod, controllerStartedAt time.Time) time.Time {
+	if pod.CreationTimestamp.IsZero() || pod.CreationTimestamp.Time.Before(controllerStartedAt) {
+		return controllerStartedAt
+	}
+	return pod.CreationTimestamp.Time
 }
 
 func isScheduled(pod *corev1.Pod) bool {

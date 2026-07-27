@@ -256,6 +256,75 @@ func TestEntrance_PortNegative(t *testing.T) {
 	}
 }
 
+func TestServicePortsValidation(t *testing.T) {
+	validPort := ServicePort{Name: "api", Host: "api", Port: 4712}
+	cases := []struct {
+		name    string
+		ports   []ServicePort
+		wantErr string
+	}{
+		{name: "omitted"},
+		{name: "default protocol and automatic expose port", ports: []ServicePort{validPort}},
+		{name: "tcp with explicit expose port", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, ExposePort: 4712, Protocol: "tcp",
+		}}},
+		{name: "udp", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, Protocol: "udp",
+		}}},
+		{name: "missing name", ports: []ServicePort{{
+			Host: "api", Port: 4712,
+		}}, wantErr: "port.name is required"},
+		{name: "invalid name", ports: []ServicePort{{
+			Name: "bad_name", Host: "api", Port: 4712,
+		}}, wantErr: "port.name must match"},
+		{name: "missing host", ports: []ServicePort{{
+			Name: "api", Port: 4712,
+		}}, wantErr: "port.host is required"},
+		{name: "invalid host", ports: []ServicePort{{
+			Name: "api", Host: "API", Port: 4712,
+		}}, wantErr: "port.host must match"},
+		{name: "missing port", ports: []ServicePort{{
+			Name: "api", Host: "api",
+		}}, wantErr: "port.port is required"},
+		{name: "port above range", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 65536,
+		}}, wantErr: "port.port must be between 1 and 65535"},
+		{name: "negative expose port", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, ExposePort: -1,
+		}}, wantErr: "port.exposePort must be between 1 and 65535"},
+		{name: "expose port above range", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, ExposePort: 65536,
+		}}, wantErr: "port.exposePort must be between 1 and 65535"},
+		{name: "uppercase protocol", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, Protocol: "TCP",
+		}}, wantErr: `port.protocol must be one of "", "tcp", "udp"`},
+		{name: "duplicate name", ports: []ServicePort{
+			validPort,
+			{Name: "api", Host: "peer", Port: 4713},
+		}, wantErr: `duplicate port name "api"`},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newValidConfig()
+			c.Ports = tc.ports
+			err := ValidateAppConfiguration(c)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error containing %q", tc.wantErr)
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("error should contain %q, got: %v", tc.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestAppSpec_QuantityFields(t *testing.T) {
 	c := newValidConfig()
 	c.Spec.RequiredMemory = "not-a-quantity"

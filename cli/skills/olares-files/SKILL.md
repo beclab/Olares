@@ -1,7 +1,7 @@
 ---
 name: olares-files
-version: 4.3.1
-description: "Olares Files via olares-cli files — ls, upload, download, edit, share, SMB/NFS mount, compress/extract archives, Seafile sync on drive/Home, drive/Data, drive/Common, cache, external, cloud. Use for Olares Files, drive, upload, download, share, SMB, NFS, compress, extract, archive, LarePass Files."
+version: 4.3.2
+description: "Olares Files via olares-cli files — browse known paths; upload or download file bytes; edit, share, mount SMB/NFS, compress/extract archives, and manage Seafile sync across Drive/cache/external/cloud. Use for Olares Files and LarePass Files operations, not URL/yt-dlp/torrent download tasks (olares-knowledge)."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -77,7 +77,7 @@ The archive surface (`compress` / `extract` / `archive`), the `nfs` verbs, and t
 
 - Before reaching for these, check the backend version: the `VERSION` column of `olares-cli profile list`, or live `olares-cli settings me version` (see [olares-shared](../olares-shared/SKILL.md) and [platform.md → version model](../olares-shared/references/olares-platform.md#olares-version--semver-model)).
 - Comparison is on `major.minor.patch` only, so a daily build like `1.12.6-20260603` still counts as `>= 1.12.6`.
-- If detection fails (`/api/olares-info` unreachable), pass `--olares-version <ver>` to set it manually.
+- If detection fails, confirm the active profile is logged in and run `olares-cli profile list --refresh-version`.
 
 ## Authentication transport
 
@@ -120,7 +120,8 @@ For flags, examples, and wire shapes, **always start with `olares-cli files <ver
 | `tencent upload is not supported` (or similar) | Tencent's octet protocol is not implemented | Use the LarePass web app for tencent uploads |
 | `<src> does not exist on the server` (from `cp`/`mv`/`rm`) | Preflight Stat failed | `files ls` the parent and confirm the path |
 | `HTTP 500` from `/api/resources/<file>` | Quirk #2 — backend tried to embed file bytes | Use `files cat` / `files download` instead |
-| `require Olares >= 1.12.6` (from `compress`/`extract`/`archive`/`nfs`) or `drive/Common ... requires Olares >= 1.12.6` | Version gate — backend predates the feature | Upgrade Olares, or pass `--olares-version` if detection misfired |
+| Backend version could not be determined | Profile cache is missing/stale or `/api/olares-info` is unreachable | Confirm `profile login`, then run `olares-cli profile list --refresh-version` |
+| `require Olares >= 1.12.6` with a detected older version | Backend predates `compress`/`extract`/`archive`/`nfs` or `drive/Common` | Upgrade Olares |
 | `files compress` does not support the "sync"/"<cloud>" namespace | Archive allow-list (drive/cache/external only) | Stage into `drive/Home` first, or use the LarePass web app for cloud |
 | `archive requires a password` / `archive password is incorrect` | Encrypted zip / 7z | Supply it via `--password-stdin` (or answer the interactive prompt) |
 | `previewing "bzip2"/"xz" archives is not supported` | Raw single-stream compressor, no entry table | `files extract` it instead of `archive entries` / `archive cat` |

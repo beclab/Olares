@@ -20,6 +20,9 @@ cli/skills/
 │       ├── olares-files-ls.md
 │       ├── olares-files-upload.md
 │       └── ...
+├── olares-knowledge/  # olares-cli knowledge (download-server task centre under knowledge download; Olares >= 1.12.7)
+│   ├── SKILL.md
+│   └── references/    # knowledge download lifecycle / inspect+prefs
 ├── olares-search/     # olares-cli search (Desktop global / full-content search; single leaf command)
 ├── olares-market/     # olares-cli market
 ├── olares-settings/   # olares-cli settings
@@ -33,7 +36,8 @@ cli/skills/
 │   └── references/    # one file per refinement area / capability
 └── olares-publish/    # public Olares Market distribution (beclab/apps PR, paid apps)
     ├── SKILL.md
-    └── references/    # market-ready targets / submit / paid-apps
+    ├── references/    # market-ready targets / submit / paid-apps / listing assets
+    └── scripts/       # executable helpers for producing listing assets
 ```
 
 **Install the whole suite together.** These skills are designed as one set and cross-reference each other by relative path (e.g. `../olares-shared/SKILL.md`, `../olares-shared/references/olares-platform.md`). Installing only a subset leaves those links dangling. `olares-shared` is the foundation — every runtime skill cross-references it for profile selection, login, and HTTP 401/403 recovery, **and it hosts the cross-skill platform model** ([`olares-shared/references/olares-platform.md`](olares-shared/references/olares-platform.md)) that `files` / `chart` / `cluster` link to (one hop from their `SKILL.md`) instead of re-describing it.
@@ -41,6 +45,8 @@ cli/skills/
 `olares-chart` is a partial exception on **login**, not on linking: its authoring verbs (`from-compose` / `lint` / `package`) are local-only and need **no profile / login / cluster**, so it never logs in to author a chart. It still reads `olares-platform.md` for platform facts (no login needed) and only requires `olares-shared` login when **deploying a chart to a real Olares** (`market upload` + `install`). `olares-publish` is the public-distribution counterpart: it picks up after the app already runs locally (via `olares-chart`) and covers market-ready polish, the `beclab/apps` PR, and paid apps.
 
 ClawHub publishes the entire skill directory (including `references/`), so reference files ship automatically without any change to `publish.sh`.
+
+**`olares-publish/scripts/` is the one deliberate exception to markdown-only.** Producing a Market icon is deterministic pixel work — corner sampling, edge flood-fill to strip a white backplate, gradient backplate, safe-zone fit — and prose that asks each agent to re-derive it yields a different icon every run. Shipping the script makes the output reproducible. Same mechanism as `references/`: `publish.sh` runs `clawhub skill publish "$dir"` on the whole folder, so scripts upload with no change to the publish helper. Keep this rare — a script earns its place only when the task is exactly specified and the agent would otherwise improvise.
 
 ## Writing style
 
@@ -112,7 +118,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 `clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` is valid semver, that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
-./cli/skills/publish.sh --dry-run                  # validate all 10
+./cli/skills/publish.sh --dry-run                  # validate all 11
 ./cli/skills/publish.sh --dry-run olares-shared    # validate one
 ```
 
@@ -134,7 +140,7 @@ Note: `clawhub sync` defaults to bumping the patch version on updates. For deter
 ### Publish
 
 ```bash
-./cli/skills/publish.sh                            # publish all 10
+./cli/skills/publish.sh                            # publish all 11
 ./cli/skills/publish.sh olares-files olares-market # publish a subset
 ```
 
@@ -142,12 +148,13 @@ Versions come from each skill's frontmatter `version:` field — bump the field 
 
 ## Slug policy
 
-The 10 skills publish under their canonical short names:
+The 11 skills publish under their canonical short names:
 
 | Slug              | Display name                                |
 |-------------------|---------------------------------------------|
 | `olares-shared`   | Olares Shared (olares-cli foundation)       |
 | `olares-files`    | Olares Files (olares-cli files)             |
+| `olares-knowledge`| Olares Knowledge (olares-cli knowledge)     |
 | `olares-search`   | Olares Search (olares-cli search)           |
 | `olares-market`   | Olares Market (olares-cli market)           |
 | `olares-settings` | Olares Settings (olares-cli settings)       |

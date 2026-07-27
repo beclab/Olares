@@ -450,7 +450,7 @@ func TestPreflightUpgrade(t *testing.T) {
 			mc := newTestMarketClient(t, fb.srv.URL)
 			opts := &MarketOptions{Source: c.source, Output: "json", Quiet: true}
 
-			err := preflightUpgrade(context.Background(), opts, mc, c.appName, c.target, c.source)
+			_, err := preflightUpgrade(context.Background(), opts, mc, c.appName, c.target, c.source)
 			switch {
 			case c.wantErrSub == "" && !c.wantSoftWar:
 				if err != nil {
@@ -710,8 +710,11 @@ func TestPreflightUpgrade_SourceMismatchWarns(t *testing.T) {
 	mc := newTestMarketClient(t, fb.srv.URL)
 	opts := &MarketOptions{Source: "market.olares", Output: "json", Quiet: true}
 
-	err := preflightUpgrade(context.Background(), opts, mc, "firefox", "1.0.12", "market.olares")
+	row, err := preflightUpgrade(context.Background(), opts, mc, "firefox", "1.0.12", "market.olares")
 	if err != nil {
 		t.Fatalf("preflightUpgrade returned error on source mismatch: %v", err)
+	}
+	if row == nil {
+		t.Fatalf("preflightUpgrade must return the pre-upgrade row (runUpgrade uses its statusTime as the --watch baseline)")
 	}
 }

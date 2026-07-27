@@ -33,7 +33,7 @@ spec:
             - --insecure-listen-address=:28080
             - --upstream=http://127.0.0.1:8080/
             - -v
-            - '6'
+            - "6"
           ports:
             - containerPort: 28080
           resources:
@@ -61,6 +61,12 @@ spec:
             - name: system-app-nginx-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
+            - name: market-provider-nginx-config
+              mountPath: /etc/nginx/conf.d/market.conf
+              subPath: market.conf
+            - name: lldap-provider-nginx-config
+              mountPath: /etc/nginx/conf.d/lldap.conf
+              subPath: lldap.conf
             - name: download-provider-nginx-config
               mountPath: /etc/nginx/conf.d/download.conf
               subPath: download.conf
@@ -77,6 +83,18 @@ spec:
             items:
               - key: nginx.conf
                 path: nginx.conf
+        - name: market-provider-nginx-config
+          configMap:
+            name: market-provider-nginx-config
+            items:
+              - key: market.conf
+                path: market.conf
+        - name: lldap-provider-nginx-config
+          configMap:
+            name: lldap-provider-nginx-config
+            items:
+              - key: lldap.conf
+                path: lldap.conf
         - name: download-provider-nginx-config
           configMap:
             name: download-provider-nginx-config
@@ -223,5 +241,3 @@ data:
 
         include /etc/nginx/conf.d/*.conf;
     }
-
-

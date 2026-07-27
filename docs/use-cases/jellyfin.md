@@ -7,7 +7,7 @@ head:
       content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
 app_version: "1.0.19"
 doc_version: "1.1"
-doc_updated: "2026-07-01"
+doc_updated: "2026-07-20"
 ---
 
 # Build your private media server with Jellyfin
@@ -34,9 +34,9 @@ Before you begin, make sure:
 
 Before setting up Jellyfin, you need to make sure your media is already available on Olares. You can add it in several ways:
 - **Upload files directly**<br>
-Upload your media to the `/home/Movies/` folder in Files. For better speed and progress visibility, [use the LarePass desktop client to upload](../manual/olares/files/add-edit-download.md#upload-via-larepass-desktop).
+Upload your media to the `/Home/` folder in Files. For better speed and progress visibility, [use the LarePass desktop client to upload](../manual/olares/files/add-edit-download.md#upload-via-larepass-desktop).
 - **Mount an external drive**<br>
-After you insert a USB drive to your Olares device, it will be automatically mounted and accessible. Files in it are under the `/external/` directory.
+After you insert a USB drive to your Olares device, it will be automatically mounted and accessible. Files in it are under the `/External/` directory.
 - **Mount a network share**<br> 
 If your media is on a NAS or other network server, you can connect it to Olares. For detailed instructions, see [Mount SMB shares](../manual/olares/files/mount-SMB.md).
 
@@ -87,51 +87,80 @@ With Jellyfin installed and running, the next step is to tell it where your medi
    - **Content type**: Choose the type of media (e.g., Movies, Shows, Music). For folders containing both movies and TV shows, choose **Mixed Movies and Shows**.
    - **Display name**: Enter the name to display for the library.<br>
    - **Folders**: Click + to add the path to your media.<br>
-      - **Olares Files**: `/home/movies/<YourMediaFolder>`
-      - **External storage**: `/external/<YourMediaFolder>`
+      - **Olares Files**: `/olares/userdata/home/<YourMediaFolder>`
+      - **External storage**: `/olares/userdata/external/<YourMediaFolder>`
 4. Click **Ok** to save, and repeat for other media types (e.g., one for "Movies", one for "TV Shows").
 
 Once saved, Jellyfin will automatically scan your folders and begin building your library. This process may take several minutes, depending on the size of your collection.
 
-## Enable transcoding 
+## Enable hardware acceleration for transcoding 
 
-To ensure smooth playback for high-resolution videos, enable hardware acceleration. This allows Jellyfin to use your device's hardware for faster, more efficient transcoding.
-1. In the Jellyfin **Dashboard** (click the ≡ icon > Dashboard), go to **Playback** > **Transcoding**.
-2. Under **Hardware acceleration**, choose your preferred method based on your Olares device's hardware.
+Hardware acceleration reduces CPU usage when Jellyfin needs to transcode video. Transcoding may be required when the client does not support the original format, the resolution or bitrate must be reduced, HDR content must be converted to SDR, or subtitles need to be burned into the video.
+
+Jellyfin still prioritizes Direct Play and Remux. Hardware acceleration is used only when transcoding is required.
+
+
+To enable Intel Quick Sync Video (QSV) on Olares One:
+
+1. In Olares Market, update Jellyfin to version 1.0.21 or later.
+2. Navigate to **Settings** > **Applications** > **Jellyfin** > **Manage Environment Variables**.
+   - Set `ENABLE_HW_ACCEL` to `true`.
+   - Set `VIDEO_GID` to `44`, and `RENDER_GID` to `994`. These GID values are the defaults for Olares One. 
+   On other devices, open Olares terminal from **Control Hub** and run:
+      ```bash
+      getent group video
+      getent group render
+      ls -ln /dev/dri
+      ```
+    ![Get GID](/images/manual/use-cases/jellyfin-gid.png#bordered){width=90%}
+3. Save the changes. Olares automatically restarts Jellyfin.
+
+4. In the Jellyfin **Dashboard**, go to **Playback** > **Transcoding**.
+5. Under **Hardware acceleration**, select the appropriate options based on your Olares device's hardware. For example, on Olares One:
+   - Select **Intel QuickSync (QSV)**.
+   - Enable hardware coding for `H264`, `HEVC`, and `HEVC 10bit`. 
+   - Keep the other options at their default values. 
+
+Hardware capabilities vary by device. For configuration details, refer to the official [Jellyfin transcoding docs](https://jellyfin.org/docs/general/post-install/transcoding/).
+
    
    ![Enable transcoding](/images/manual/use-cases/jellyfin-transcoding.png#bordered){width=90%}
+
+:::tip Best practices
+For a home theater setup, use a TV or media player that supports HEVC Main 10, HDR10, SRT subtitles, and common audio formats so Jellyfin can use Direct Play whenever possible. Hardware-accelerated transcoding is mainly intended to resolve format compatibility issues or improve playback over remote or bandwidth-limited networks. It should not replace Direct Play.
+:::
+::: warning Device access
+Enabling `ENABLE_HW_ACCEL` gives Jellyfin additional access to the host’s `/dev/dri` graphics devices. Enable this option only when hardware acceleration is needed.
+:::
 
 ## Enhance experience with community plugins
 
 You can install plugins to improve metadata, fetch better artwork, and add new features.
 
+The process for installing plugins is the same for all. The following example uses **Skin Manager**, available from: `https://github.com/danieladov/jellyfin-plugin-skin-manager`.
 
-The process for installing plugins is the same for all. Here's an example using **Skin Manager**:
-1. In the Dashboard, go to **Plugins** > **Catalog**.
+1. Click **Dashboard**, then scroll down to **Plugins**.
 
-   ![Catalog](/images/manual/use-cases/jellyfin-catalog.png#bordered){width=90%}
+   ![Jellyfin plugins](/images/manual/use-cases/jellyfin-plugin.png#bordered){width=90%}
 
-2. Click the <span style="font-size: 1.1em;">&#9881;</span> icon to go to **Repositories** page, then click **+** to add a new repository.
-3. Enter the **Repository Name** and **Repository URL** of the plugin, and click **Save**.
+2. Click **Manage Repositories** in the upper-right corner to go to the **Repositories** page, then click **+ New Repository** to add a new repository.
+3. Enter the **Repository Name** and **Repository URL** of the plugin, and click **Add**.
 
-   ![Add plugin repository](/images/manual/use-cases/jellyfin-plugin-repo.png#bordered){width=90%}
+   ![Add plugin repository](/images/manual/use-cases/jellyfin-plugin-repo1.png#bordered){width=90%}
 
-4. Click **Ok** to confirm the installation.
+4. Return to **Plugins**, search for "Skin Manager", and open it. Then click **Install**. If it does not appear, refresh the page.
 
-   ![Confirm plug installation](/images/manual/use-cases/jellyfin-confirm-plug.png#bordered){width=90%}
+   ![Find target plugin](/images/manual/use-cases/jellyfin-plugin-skin-manager.png#bordered){width=90%}
+   ![Install plugin](/images/manual/use-cases/jellyfin-plug-install1.png#bordered){width=90%}
 
-5. Return to the **Catalog** tab, find your desired plugin (you may need to refresh) and click **Install**.
-   
-   ![Catalog plugin](/images/manual/use-cases/jellyfin-catalog-plug.png#bordered){width=90%}
-   ![Install plugin](/images/manual/use-cases/jellyfin-plug-install.png#bordered){width=90%}
-
+5. When the confirmation dialog appears, review the warning, then click **Install**.
 6. After installation, a prompt will appear to restart Jellyfin. Go to the **Dashboard** page and click **Restart**.
 
-   ![Restart Jellyfin](/images/manual/use-cases/jellyfin-restart.png#bordered){width=90%}
+   ![Restart Jellyfin](/images/manual/use-cases/jellyfin-restart1.png#bordered){width=90%}
 
-7. After it restarts, return to **Dashboard** > **Plugins** > **My Plugins** to confirm the plugin you installed is listed and has an **Active** status.
+7. After Jellyfin restarts, go to **Dashboard** > **Plugins**, select **Installed**, and verify that Skin Manager is marked **Active**.
    
-   ![Plugin status](/images/manual/use-cases/jellyfin-plug-status.png#bordered){width=90%}
+   ![Plugin status](/images/manual/use-cases/jellyfin-plug-status1.png#bordered){width=90%}
 
 After installing plugins, you may need to enable or configure them before they take effect.
 Since each plugin behaves differently, check the plugin's **GitHub repository** or **README** for setup details.

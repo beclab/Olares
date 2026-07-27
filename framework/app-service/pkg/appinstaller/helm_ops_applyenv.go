@@ -21,7 +21,8 @@ func (h *HelmOps) ApplyEnv() error {
 		return err
 	}
 
-	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, true)
+	// ReuseValues: only env-related overrides change; do not absorb new chart defaults.
+	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, helm.ReuseValues)
 	if err != nil {
 		klog.Errorf("Failed to upgrade chart name=%s err=%v", h.app.AppName, err)
 		return err

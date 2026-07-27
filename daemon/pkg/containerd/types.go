@@ -1,13 +1,22 @@
 package containerd
 
 import (
-	"github.com/containerd/containerd/pkg/cri/config"
 	criruntimev1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
-// Mirror is an alias for the containerd CRI plugin Mirror type for convenience
-type Mirror = config.Mirror
+// DefaultContainerdRootPath is containerd's default data root, used by the
+// upgrade disk-space precheck.
+const DefaultContainerdRootPath = "/var/lib/containerd"
 
+// Mirror lists the pull-through mirror endpoints for a registry. The JSON shape
+// ({"endpoint": [...]}) matches the containerd CRI Mirror type used by the
+// previous (config v2) olaresd interface, kept for API compatibility.
+type Mirror struct {
+	Endpoints []string `json:"endpoint" toml:"endpoint"`
+}
+
+// Registry is a registry view merged from configured mirrors and locally cached
+// images (used by the ListRegistries endpoint).
 type Registry struct {
 	Name       string   `json:"name"`
 	Endpoints  []string `json:"endpoints"`

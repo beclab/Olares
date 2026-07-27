@@ -430,19 +430,17 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	appCopy.Spec.SharedEntrances = sharedEntrances
 	appCopy.Spec.Ports = servicePortsMap[name]
 
-	// Merge entrances: preserve authLevel from existing, update other fields
-	appCopy.Spec.Entrances = mergeEntrances(app.Spec.Entrances, entrancesMap[name])
+	// Base entrances follow chart truth from the deployment annotation. User
+	// edits live in Spec.Settings (non-shared) or Spec.UserSettings (shared)
+	// and are layered at read-time via EffectiveEntrances, so they survive this
+	// overwrite.
+	appCopy.Spec.Entrances = entrancesMap[name]
 
 	if appCopy.Spec.Settings == nil {
 		appCopy.Spec.Settings = make(map[string]string)
 	}
 	if settings["defaultThirdLevelDomainConfig"] != "" {
 		appCopy.Spec.Settings["defaultThirdLevelDomainConfig"] = settings["defaultThirdLevelDomainConfig"]
-	}
-
-	if incomingPolicy := settings[applicationSettingsPolicyKey]; incomingPolicy != "" {
-		existingPolicy := appCopy.Spec.Settings[applicationSettingsPolicyKey]
-		appCopy.Spec.Settings[applicationSettingsPolicyKey] = mergePolicySettings(existingPolicy, incomingPolicy)
 	}
 
 	if tailScale != nil {

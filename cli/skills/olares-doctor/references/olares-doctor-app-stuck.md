@@ -18,7 +18,7 @@ Then branch on STATE.
 
 ## `downloading` — slow pull vs stalled pull
 
-A `downloading` row has a **30-day** backend TTL, so it will never self-fail — judge it by byte-level pull progress, not by waiting. The market PROGRESS field is unreliable; real progress is in the per-node `image-service` DaemonSet (it pulls via containerd):
+A `downloading` row has a **24h** backend TTL, so it will not self-fail inside a normal session — judge it by byte-level pull progress, not by waiting. The market PROGRESS field is unreliable; real progress is in the per-node `image-service` DaemonSet (it pulls via containerd):
 
 ```bash
 olares-cli cluster pod list -n os-framework | grep image-service

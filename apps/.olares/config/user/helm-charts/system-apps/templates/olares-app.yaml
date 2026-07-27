@@ -301,7 +301,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: olares-app-init
-          image: beclab/system-frontend:v1.11.9
+          image: beclab/system-frontend:v1.11.15
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -420,10 +420,12 @@ spec:
               value: os.files.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_KNOWLEDGE
               value: os.knowledge.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_DOWNLOAD_STATUS
+              value: os.download_status
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.1.4
+          image: beclab/user-service:v0.1.8
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -475,6 +477,8 @@ spec:
               value: os.application.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_USER_NOTIFICATION
               value: os.notification.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_DOWNLOAD_STATUS
+              value: os.download_status
             - name: NATS_SUBJECT_FILES
               value: os.files.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_KNOWLEDGE
@@ -1389,6 +1393,10 @@ spec:
           pub: allow
           sub: allow
       - name: seahub.{{ .Values.bfl.username }}
+        permission:
+          sub: allow
+          pub: allow
+      - name: download_status
         permission:
           sub: allow
           pub: allow

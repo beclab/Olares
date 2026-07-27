@@ -18,10 +18,10 @@ func NewCmdMarketClone(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clone {app-name}",
 		Short: "Clone a multi-instance app under a new desktop title",
-		Long: `Clone an installed application to create a new instance with a
-different title (POST /apps/{name}/clone). Only apps that advertise
-'cloneable: true' in 'olares-cli market get <app> -o json' support this
-flow — pre-flight check the source app first if you're unsure.
+		Long: `Clone a catalog application to create a new instance with a
+different title (POST /apps/{name}/clone). The source app does not need
+to be installed. An app is cloneable when allowMultipleInstall or
+templateOnly is true; pre-flight check the source app first if unsure.
 
 --title is REQUIRED and feeds the cloned app's desktop shortcut title.
 For apps that expose multiple entrances, use --entrance-title NAME=TITLE
@@ -29,7 +29,7 @@ For apps that expose multiple entrances, use --entrance-title NAME=TITLE
 visible entrance, the entrance title defaults to --title.
 
 The backend mints a per-instance app name (e.g. 'firefoxe992') —
-the CLI surfaces it as 'cloneTarget' in the operation result so
+the CLI surfaces it as 'targetApp' in the operation result so
 scripted callers can chain follow-up commands. Use --watch to block
 until the cloned row reaches a terminal state ('running' on success);
 the watcher tracks the new clone name, not the source app name.
@@ -49,7 +49,7 @@ with the flag. On Olares 1.12.5 the clone path is unchanged and
 Examples:
   olares-cli market clone firefox --title "Firefox Dev"
   olares-cli market clone firefox --title "Firefox Dev" --watch                   # block until clone reaches running
-  olares-cli market clone firefox --title "Firefox Dev" --watch -o json | jq '.cloneTarget'   # capture new app name
+  olares-cli market clone firefox --title "Firefox Dev" --watch -o json | jq '.targetApp'     # capture new app name
   olares-cli market clone myapp --title "MyApp Dev" --env API_URL=http://dev.example.com
   olares-cli market clone myapp --title "MyApp Dev" --entrance-title ui="New UI" --entrance-title api="New API"
   olares-cli market clone comfyui --title "ComfyUI Dev" --compute-mode nvidia     # pin GPU mode (1.12.6+)

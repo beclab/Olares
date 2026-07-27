@@ -15,10 +15,7 @@ const (
 	NamespaceTypeLabel       = "bytetrade.io/ns-type"
 	NamespaceOwnerLabel      = "bytetrade.io/ns-owner"
 	NamespaceSharedLabel     = "bytetrade.io/ns-shared"
-	// NamespaceInClusterCallerLabel marks opted-in caller namespaces whose meshed
-	// proxies must reach the linkerd control plane during startup.
-	NamespaceInClusterCallerLabel = "gateway.olares.io/in-cluster-caller"
-	NamespaceMiddlewareLabel      = "bytetrade.io/ns-middleware"
+	NamespaceMiddlewareLabel = "bytetrade.io/ns-middleware"
 	System                   = "system"
 	Network                  = "network"
 	Internal                 = "user-internal"

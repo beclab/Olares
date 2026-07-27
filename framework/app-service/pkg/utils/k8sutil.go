@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/pelletier/go-toml"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
@@ -24,7 +26,6 @@ import (
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 
-	srvconfig "github.com/containerd/containerd/services/server/config"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -163,22 +164,45 @@ func IsNodeReady(node *corev1.Node) bool {
 	return false
 }
 
+// dockerHostsTOMLPath is containerd's registry hosts config for docker.io under
+// config_path (/etc/containerd/certs.d). Registry mirrors moved here in the
+// containerd v3 config; the inline registry.mirrors in config.toml is deprecated
+// and ignored by containerd 2.x once config_path is set.
+const dockerHostsTOMLPath = "/etc/containerd/certs.d/docker.io/hosts.toml"
+
+// GetMirrorsEndpoint returns the docker.io pull-through mirror endpoints
+// configured for containerd, in priority (file) order. They are read from
+// containerd's certs.d hosts.toml `[host."<url>"]` entries, the containerd v3
+// replacement for the deprecated inline registry.mirrors config.
 func GetMirrorsEndpoint() (ep []string) {
-	config := &srvconfig.Config{}
-	err := srvconfig.LoadConfig("/etc/containerd/config.toml", config)
+	data, err := os.ReadFile(dockerHostsTOMLPath)
 	if err != nil {
-		klog.Infof("load mirrors endpoint failed err=%v", err)
+		klog.Infof("load mirrors endpoint from %s failed err=%v", dockerHostsTOMLPath, err)
 		return
 	}
-	plugins := config.Plugins["io.containerd.grpc.v1.cri"]
-	r := plugins.GetPath([]string{"registry", "mirrors", "docker.io", "endpoint"})
-	if r == nil {
+	tree, err := toml.LoadBytes(data)
+	if err != nil {
+		klog.Infof("parse %s failed err=%v", dockerHostsTOMLPath, err)
 		return
 	}
-	for _, e := range r.([]interface{}) {
-		ep = append(ep, e.(string))
+	hostTree, ok := tree.Get("host").(*toml.Tree)
+	if !ok {
+		return
 	}
-	return ep
+	// TOML tables are unordered; recover mirror precedence from source line number,
+	// the same way containerd's own resolver orders hosts.
+	hosts := hostTree.Keys()
+	// Note: use GetPath (single path element), not Get — Get treats the key as a
+	// dot-separated path, which would mangle host URLs that contain dots/colons.
+	sort.SliceStable(hosts, func(i, j int) bool {
+		ti, _ := hostTree.GetPath([]string{hosts[i]}).(*toml.Tree)
+		tj, _ := hostTree.GetPath([]string{hosts[j]}).(*toml.Tree)
+		if ti == nil || tj == nil {
+			return false
+		}
+		return ti.Position().Line < tj.Position().Line
+	})
+	return hosts
 }
 
 // ReplacedImageRef return replaced image ref and true if mirror is support http

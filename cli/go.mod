@@ -1,9 +1,8 @@
 module github.com/beclab/Olares/cli
 
-go 1.24.11
+go 1.25.0
 
 replace (
-	github.com/beclab/Olares/framework/app-gateway => ../framework/app-gateway
 	github.com/beclab/Olares/framework/oac => ../framework/oac
 	github.com/estesp/manifest-tool/v2 => github.com/estesp/manifest-tool/v2 v2.0.3
 	olares.com/backups-sdk => github.com/Above-Os/backups-sdk v0.1.40
@@ -13,7 +12,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/alecthomas/assert/v2 v2.11.0
-	github.com/beclab/Olares/framework/app-gateway v0.0.0-00010101000000-000000000000
 	github.com/beclab/Olares/framework/app-service v0.0.0-20260311124303-23a6533bc2ad
 	github.com/beclab/Olares/framework/oac v0.0.0-00010101000000-000000000000
 	github.com/beclab/api v0.0.17
@@ -30,6 +28,7 @@ require (
 	github.com/kubernetes/kompose v1.37.0
 	github.com/libp2p/go-netroute v0.2.2
 	github.com/lithammer/dedent v1.1.0
+	github.com/mattn/go-runewidth v0.0.16
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-varint v0.0.7
 	github.com/pelletier/go-toml v1.9.5
@@ -49,11 +48,11 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/zalando/go-keyring v0.2.8
 	go.uber.org/zap v1.27.0
-	golang.org/x/crypto v0.47.0
-	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.40.0
-	golang.org/x/term v0.39.0
-	golang.org/x/text v0.33.0
+	golang.org/x/crypto v0.54.0
+	golang.org/x/sync v0.22.0
+	golang.org/x/sys v0.47.0
+	golang.org/x/term v0.45.0
+	golang.org/x/text v0.40.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.19.5
@@ -166,7 +165,6 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/mattn/go-sqlite3 v1.14.30 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
@@ -235,7 +233,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools/godoc v0.1.0-deprecated // indirect

@@ -75,7 +75,8 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 			return true
 		}()},
 		&intelgpu.InstallIntelPluginModule{Skip: func() bool {
-			if l.runtime.GetSystemInfo().IsIntelGPU() {
+			si := l.runtime.GetSystemInfo()
+			if si.IsIntelGPU() || si.IsIntelDGPU() {
 				return false
 			}
 			return true
