@@ -719,6 +719,48 @@ func TestRoundTrip_UnreachableSurfaced(t *testing.T) {
 	}
 }
 
+// TestRoundTrip_RetryFailureSurfacedAsUnreachable: when the switched-to
+// connection method dies the same way as the first one, the second failure
+// must get the same friendly *access.UnreachableError treatment as a failed
+// switch. Before the fix the retry's raw dial/DNS error leaked out, so the
+// exact same "nothing is reachable" situation was reported two different ways
+// depending on whether the re-probe happened to find another method to try.
+func TestRoundTrip_RetryFailureSurfacedAsUnreachable(t *testing.T) {
+	store := &fakeStore{}
+	tr, _ := newTransport(t, store, "unused", "AT-1")
+
+	cause := &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}
+	var calls int
+	tr.loc.base = fakeRoundTripper(func(*http.Request) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			// Simulate a peer switching the shared cell while our request was
+			// in flight: ensureSwitched adopts that result and hands us a
+			// retry (against this same fake) without running a real probe.
+			tr.loc.mu.Lock()
+			tr.loc.loc = olares.LocationLAN
+			tr.loc.mu.Unlock()
+		}
+		return nil, cause
+	})
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://desktop.alice.olares.com/", nil)
+	resp, err := tr.RoundTrip(req)
+	if resp != nil {
+		resp.Body.Close()
+		t.Fatal("expected no response when both connection methods fail")
+	}
+	if calls != 2 {
+		t.Fatalf("expected the original send plus exactly one retry, got %d", calls)
+	}
+	if !access.IsUnreachable(err) {
+		t.Errorf("error = %v (%T), want a friendly *access.UnreachableError", err, err)
+	}
+	if !errors.Is(err, syscall.ECONNREFUSED) {
+		t.Error("the raw transport cause should remain reachable via errors.Is")
+	}
+}
+
 // TestRoundTrip_NonSwitchableErrorPassthrough: a non-switchable transport error
 // (here a TLS failure) is NOT dressed up as unreachable — it surfaces verbatim,
 // since the network path is clearly up.

@@ -49,6 +49,10 @@ const locationCooldown = 30 * time.Second
 // final external probe when those timeouts change.
 var locationProbeBudget = access.MaxProbeDuration() + time.Second
 
+// probeLocationFn indirects access.ProbeLocation so tests can force a probe
+// result without touching the network; production never reassigns it.
+var probeLocationFn = access.ProbeLocation
+
 // statusAuthFailureOlares459 is the non-standard status code Olares' edge
 // stack (Authelia ext-authz wired through l4-bfl-proxy) returns when an
 // otherwise-valid request fails authentication — typically because the
@@ -106,9 +110,19 @@ type Factory struct {
 	credentialErr  error
 	credential     *credential.CredentialProvider
 
+	// resolveMu guards resolved/resolveErr: retryLocationBackfill may
+	// republish resolved after the initial sync.Once resolution.
 	resolveOnce sync.Once
+	resolveMu   sync.Mutex
 	resolveErr  error
 	resolved    *credential.ResolvedProfile
+
+	// locationBackfillPending is armed when maybeBackfillLocation had to
+	// defer to the outage cooldown, so a later ResolveProfile can retry once
+	// the window lapses. locationBackfillMu serializes those retries and is
+	// held across the (slow) probe.
+	locationBackfillMu      sync.Mutex
+	locationBackfillPending atomic.Bool
 
 	refresherOnce sync.Once
 	refresher     *credential.Refresher
@@ -165,7 +179,9 @@ func (f *Factory) Credential() (*credential.CredentialProvider, error) {
 }
 
 // ResolveProfile returns the active profile fully resolved (URLs + token).
-// Memoized; subsequent calls return the same ResolvedProfile.
+// The credential lookup is memoized. The returned pointer is stable except
+// when a location backfill that the outage cooldown deferred later succeeds:
+// retryLocationBackfill then republishes a copy carrying the probed URLs.
 func (f *Factory) ResolveProfile(ctx context.Context) (*credential.ResolvedProfile, error) {
 	f.resolveOnce.Do(func() {
 		cred, err := f.Credential()
@@ -182,43 +198,157 @@ func (f *Factory) ResolveProfile(ctx context.Context) (*credential.ResolvedProfi
 			f.resolveErr = err
 			return
 		}
+		// Mutating rp in place is safe here and only here: Do blocks every
+		// other caller until it returns, so nothing else holds the pointer
+		// yet. That same happens-before publishes these two fields to every
+		// post-Do reader below.
 		f.maybeBackfillLocation(ctx, rp)
 		f.resolved = rp
 	})
-	return f.resolved, f.resolveErr
+
+	f.resolveMu.Lock()
+	rp, err := f.resolved, f.resolveErr
+	f.resolveMu.Unlock()
+	if rp == nil {
+		return nil, err
+	}
+	if f.locationBackfillPending.Load() {
+		rp = f.retryLocationBackfill(ctx, rp)
+	}
+	return rp, err
 }
 
 // maybeBackfillLocation lazily probes + persists the network position for a
 // pre-existing profile that predates the Location field (rp.Location empty /
 // invalid). It is a no-op for env-resolved profiles (nothing local to write),
-// for profiles with a pinned auth URL override, for already-known locations,
-// and while a recent outage cooldown is in effect (use the external defaults
-// and fail fast). On a successful probe it re-derives rp's URLs in place and
+// for profiles with a pinned auth URL override, and for already-known
+// locations. On a successful probe it re-derives rp's URLs in place and
 // writes the result to config.json best-effort. On ErrUnreachable it leaves
 // the external defaults and does NOT persist, so the next command re-probes.
+//
+// A recent outage cooldown defers the probe rather than cancelling it: we use
+// the external defaults now and arm retryLocationBackfill, because the window
+// may well lapse while this process is still running.
 func (f *Factory) maybeBackfillLocation(ctx context.Context, rp *credential.ResolvedProfile) {
-	if rp == nil || rp.Source != "default" || rp.AuthURLOverride != "" {
-		return
-	}
-	if rp.Location.Valid() {
+	if !needsLocationBackfill(rp) {
 		return
 	}
 	if inLocationCooldown(rp.OlaresID, time.Now()) {
+		f.locationBackfillPending.Store(true)
 		return
 	}
-	id, err := olares.ParseID(rp.OlaresID)
-	if err != nil {
-		return
-	}
-	probeCtx, cancel := context.WithTimeout(ctx, locationProbeBudget)
-	defer cancel()
-	loc, err := access.ProbeLocation(probeCtx, id, rp.LocalURLPrefix, rp.InsecureSkipVerify)
-	if err != nil {
+	loc, ok := probeLocationFor(ctx, rp)
+	if !ok {
 		return
 	}
 	rp.ApplyLocation(loc)
+	saveLocation(rp.OlaresID, loc, time.Now().Unix())
+}
+
+// retryLocationBackfill re-attempts a backfill that maybeBackfillLocation
+// deferred to the outage cooldown. Without it that single skipped probe would
+// be the process's only chance — ResolveProfile is memoized — so a command
+// that happens to start inside the 30s window would stay on the slow external
+// defaults for its whole run, however long that is (--watch, cluster exec and
+// chunked uploads all comfortably outlive the window).
+//
+// The probed profile is published as a COPY. ApplyLocation rewrites every
+// service URL, and by now the original pointer is shared with whoever called
+// ResolveProfile before us, so mutating it in place would be a data race.
+// Holders of the old profile keep working — its external URLs are reachable
+// from every position — and pick up the new one on their next call.
+//
+// At most one probe per process: if it fails we stop retrying rather than
+// re-paying a multi-second probe on every subsequent call. Recovery from that
+// point on is refreshingTransport.ensureSwitched's job, driven by an actual
+// request failure.
+func (f *Factory) retryLocationBackfill(ctx context.Context, rp *credential.ResolvedProfile) *credential.ResolvedProfile {
+	// Held across the probe so concurrent callers don't each run one: they
+	// block here, then see the cleared flag and take the published result.
+	f.locationBackfillMu.Lock()
+	defer f.locationBackfillMu.Unlock()
+
+	cur := f.currentResolved(rp)
+	if !f.locationBackfillPending.Load() {
+		return cur
+	}
+	if inLocationCooldown(cur.OlaresID, time.Now()) {
+		// Still inside the window. Stay armed and retry on a later call.
+		return cur
+	}
+	f.locationBackfillPending.Store(false)
+	loc, ok := probeLocationFor(ctx, cur)
+	if !ok {
+		return cur
+	}
+
+	next := *cur
+	next.ApplyLocation(loc)
+	saveLocation(next.OlaresID, loc, time.Now().Unix())
+
+	f.resolveMu.Lock()
+	f.resolved = &next
+	f.resolveMu.Unlock()
+
+	// Move an already-built http.Client onto the probed position too,
+	// otherwise it would keep using the external transport it was seeded
+	// with until a network error triggered ensureSwitched. Passing &next
+	// means a cell that doesn't exist yet is created at the new location
+	// instead of the stale one.
+	ls := f.sharedLocationState(&next)
+	ls.mu.Lock()
+	if ls.loc != loc {
+		ls.loc = loc
+		ls.base = access.Transport(loc, next.InsecureSkipVerify)
+	}
+	ls.mu.Unlock()
+	return &next
+}
+
+// currentResolved returns the latest published profile, falling back to the
+// caller's copy if resolution somehow left the cell empty.
+func (f *Factory) currentResolved(fallback *credential.ResolvedProfile) *credential.ResolvedProfile {
+	f.resolveMu.Lock()
+	defer f.resolveMu.Unlock()
+	if f.resolved == nil {
+		return fallback
+	}
+	return f.resolved
+}
+
+// needsLocationBackfill reports whether rp's network position is both unknown
+// and worth probing: env-resolved profiles have nothing local to write back,
+// and a pinned auth URL means the user chose the endpoint themselves.
+func needsLocationBackfill(rp *credential.ResolvedProfile) bool {
+	return rp != nil &&
+		rp.Source == "default" &&
+		rp.AuthURLOverride == "" &&
+		!rp.Location.Valid()
+}
+
+// probeLocationFor probes rp's network position under the standard budget,
+// reporting false when the ID doesn't parse or every connection method failed
+// (leaving the caller on its external defaults).
+func probeLocationFor(ctx context.Context, rp *credential.ResolvedProfile) (olares.Location, bool) {
+	id, err := olares.ParseID(rp.OlaresID)
+	if err != nil {
+		return "", false
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, locationProbeBudget)
+	defer cancel()
+	loc, err := probeLocationFn(probeCtx, id, rp.LocalURLPrefix, rp.InsecureSkipVerify)
+	if err != nil {
+		return "", false
+	}
+	return loc, true
+}
+
+// saveLocation best-effort records a determined Location in config.json.
+// SetLocation re-reads config under the config lock (so an empty receiver is
+// fine) and clears any outage cooldown stamp along the way.
+func saveLocation(olaresID string, loc olares.Location, now int64) {
 	var cfg cliconfig.MultiProfileConfig
-	_ = cfg.SetLocation(rp.OlaresID, string(loc), time.Now().Unix())
+	_ = cfg.SetLocation(olaresID, string(loc), now)
 }
 
 // inLocationCooldown reports whether the profile keyed by olaresID recorded an
@@ -511,7 +641,15 @@ func (t *refreshingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 				}
 				retryReq.URL = t.id.RebaseURL(retryReq.URL, newLoc, t.localPrefix)
 				retryReq.Host = ""
-				return t.send(newBase, retryReq, snap)
+				retryResp, retryErr := t.send(newBase, retryReq, snap)
+				if retryErr != nil && access.IsSwitchableNetErr(retryErr, req.Context()) {
+					// The method we switched to died the same way, and one
+					// retry is all we get. That's the same "nothing here is
+					// reachable" verdict as the branch below, so report it
+					// the same way instead of leaking a raw dial/DNS error.
+					return nil, access.NewUnreachable(t.olaresID, retryErr)
+				}
+				return retryResp, retryErr
 			}
 			// No connection method worked (cooldown, or every probe failed):
 			// surface the friendly, classified "unreachable" message while
@@ -582,7 +720,7 @@ func (t *refreshingTransport) ensureSwitched(ctx context.Context, failedLoc olar
 	// blocking for the whole probe budget behind us.
 	probeCtx, cancel := context.WithTimeout(ctx, locationProbeBudget)
 	defer cancel()
-	newLoc, probeErr := access.ProbeLocation(probeCtx, t.id, t.localPrefix, t.insecureSkipVerify)
+	newLoc, probeErr := probeLocationFn(probeCtx, t.id, t.localPrefix, t.insecureSkipVerify)
 
 	// Commit under the lock, re-checking for a switch that landed while we
 	// probed (mirrors the Refresher's "lock then re-compare").
@@ -620,11 +758,9 @@ func (t *refreshingTransport) ensureSwitched(ctx context.Context, failedLoc olar
 }
 
 // persistLocation best-effort writes a freshly switched-to Location to
-// config.json (and clears any outage cooldown via SetLocation). SetLocation
-// re-reads config under the config lock, so an empty receiver is fine.
+// config.json (and clears any outage cooldown via SetLocation).
 func (t *refreshingTransport) persistLocation(loc olares.Location) {
-	var cfg cliconfig.MultiProfileConfig
-	_ = cfg.SetLocation(t.olaresID, string(loc), t.clock().Unix())
+	saveLocation(t.olaresID, loc, t.clock().Unix())
 }
 
 // markUnreachable best-effort stamps the outage cooldown after an
