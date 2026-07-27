@@ -141,3 +141,4 @@ olares-worker   Ready    worker                        50m   v1.33.3+k3s1
 ## Resources
 - [Olares CLI](../developer/install/cli/node.md): Explore the Olares CLI.
 - [Olares environment variables](../developer/install/environment-variables.md): Learn about the environment variables that enable advanced configurations of Olares.
+- [Upgrade a two-node Olares cluster](./upgrade-multi-node-cluster): Learn how to manually upgrade a two-node cluster from version 1.12.5 to 1.12.6.

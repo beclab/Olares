@@ -172,3 +172,7 @@ worker 节点升级完成后，将 master 节点上的版本号恢复为 `1.12.6
    ```bash
    kubectl get nodes
    ```
+
+## 参考资料
+
+- [连接两台 Olares One](./connect-two-olares-one)：了解如何搭建双节点 Olares 集群。

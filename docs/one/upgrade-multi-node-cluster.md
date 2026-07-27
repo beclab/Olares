@@ -170,3 +170,7 @@ If your SSH session to the master node times out, reconnect before proceeding.
    ```bash
    kubectl get nodes
    ```
+
+## Resources
+
+- [Connect two Olares One](./connect-two-olares-one): Learn how to set up a two-node Olares cluster.
