@@ -1,98 +1,12 @@
-# Linkerd admission webhook TLS: helm pre-install/pre-upgrade hooks.
-# Order (after linkerd-pki-init weight -5):
-#   -3  SA/RBAC + Mutating/ValidatingWebhookConfiguration (placeholder caBundle)
-#   -2  Job writes Secrets + patches caBundle; Helm waits for Job success
-# Then the main release starts linkerd-control-plane Deployments.
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: linkerd-webhook-certgen
-  namespace: os-mesh
-  labels:
-    app.kubernetes.io/name: app-gateway
-    app.kubernetes.io/component: linkerd-webhook-certgen
-  annotations:
-    helm.sh/hook: pre-install, pre-upgrade
-    helm.sh/hook-weight: "-3"
-    helm.sh/hook-delete-policy: before-hook-creation
+# Linkerd admission webhook TLS.
+#
+# - Webhook CR: main release (Helm owns; placeholder caBundle).
+# - *-k8s-tls Secret: Job-generated only (do not bake PEMs into the chart).
+# - Job/SA/RBAC: post-install,post-upgrade — needs Webhook CR from the main
+#   release, and must run after Helm may orphan-delete old baked Secrets.
+#
+# Do not put webhook TLS Secrets or these Webhook CRs in linkerd-control-plane.yaml.
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: linkerd-webhook-certgen
-  namespace: os-mesh
-  labels:
-    app.kubernetes.io/name: app-gateway
-    app.kubernetes.io/component: linkerd-webhook-certgen
-  annotations:
-    helm.sh/hook: pre-install, pre-upgrade
-    helm.sh/hook-weight: "-3"
-    helm.sh/hook-delete-policy: before-hook-creation
-rules:
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list", "create", "update", "patch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: linkerd-webhook-certgen
-  namespace: os-mesh
-  labels:
-    app.kubernetes.io/name: app-gateway
-    app.kubernetes.io/component: linkerd-webhook-certgen
-  annotations:
-    helm.sh/hook: pre-install, pre-upgrade
-    helm.sh/hook-weight: "-3"
-    helm.sh/hook-delete-policy: before-hook-creation
-subjects:
-  - kind: ServiceAccount
-    name: linkerd-webhook-certgen
-    namespace: os-mesh
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: linkerd-webhook-certgen
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: linkerd-webhook-certgen
-  labels:
-    app.kubernetes.io/name: app-gateway
-    app.kubernetes.io/component: linkerd-webhook-certgen
-  annotations:
-    helm.sh/hook: pre-install, pre-upgrade
-    helm.sh/hook-weight: "-3"
-    helm.sh/hook-delete-policy: before-hook-creation
-rules:
-  - apiGroups: ["admissionregistration.k8s.io"]
-    resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
-    verbs: ["get", "list", "update", "patch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: linkerd-webhook-certgen
-  labels:
-    app.kubernetes.io/name: app-gateway
-    app.kubernetes.io/component: linkerd-webhook-certgen
-  annotations:
-    helm.sh/hook: pre-install, pre-upgrade
-    helm.sh/hook-weight: "-3"
-    helm.sh/hook-delete-policy: before-hook-creation
-subjects:
-  - kind: ServiceAccount
-    name: linkerd-webhook-certgen
-    namespace: os-mesh
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: linkerd-webhook-certgen
----
-# Webhook configs are hooks (EG-style) so the Job can patch caBundle before
-# control-plane Deployments start. Do not also declare them in
-# linkerd-control-plane.yaml.
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -102,9 +16,6 @@ metadata:
     linkerd.io/control-plane-ns: os-mesh
     app.kubernetes.io/name: app-gateway
     app.kubernetes.io/component: linkerd-webhook-certgen
-  annotations:
-    helm.sh/hook: pre-install, pre-upgrade
-    helm.sh/hook-weight: "-3"
 webhooks:
 - name: linkerd-proxy-injector.linkerd.io
   namespaceSelector:
@@ -150,9 +61,6 @@ metadata:
     linkerd.io/control-plane-ns: os-mesh
     app.kubernetes.io/name: app-gateway
     app.kubernetes.io/component: linkerd-webhook-certgen
-  annotations:
-    helm.sh/hook: pre-install, pre-upgrade
-    helm.sh/hook-weight: "-3"
 webhooks:
 - name: linkerd-sp-validator.linkerd.io
   namespaceSelector:
@@ -185,9 +93,6 @@ metadata:
     linkerd.io/control-plane-ns: os-mesh
     app.kubernetes.io/name: app-gateway
     app.kubernetes.io/component: linkerd-webhook-certgen
-  annotations:
-    helm.sh/hook: pre-install, pre-upgrade
-    helm.sh/hook-weight: "-3"
 webhooks:
 - name: linkerd-policy-validator.linkerd.io
   namespaceSelector:
@@ -227,8 +132,94 @@ webhooks:
     - tcproutes
   sideEffects: None
 ---
-# Install-time oneshot: per-cluster webhook TLS (100y) + caBundle sync.
-# Reuses linkerd-pki-guardian image (subcommand webhook-certgen).
+# Post hooks: write *-k8s-tls Secrets and patch webhook caBundle.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: linkerd-webhook-certgen
+  namespace: os-mesh
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+  annotations:
+    helm.sh/hook: post-install, post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: linkerd-webhook-certgen
+  namespace: os-mesh
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+  annotations:
+    helm.sh/hook: post-install, post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: linkerd-webhook-certgen
+  namespace: os-mesh
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+  annotations:
+    helm.sh/hook: post-install, post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+subjects:
+  - kind: ServiceAccount
+    name: linkerd-webhook-certgen
+    namespace: os-mesh
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: linkerd-webhook-certgen
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: linkerd-webhook-certgen
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+  annotations:
+    helm.sh/hook: post-install, post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+rules:
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
+    verbs: ["get", "list", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: linkerd-webhook-certgen
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-webhook-certgen
+  annotations:
+    helm.sh/hook: post-install, post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+subjects:
+  - kind: ServiceAccount
+    name: linkerd-webhook-certgen
+    namespace: os-mesh
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: linkerd-webhook-certgen
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -238,8 +229,8 @@ metadata:
     app.kubernetes.io/name: app-gateway
     app.kubernetes.io/component: linkerd-webhook-certgen
   annotations:
-    helm.sh/hook: pre-install, pre-upgrade
-    helm.sh/hook-weight: "-2"
+    helm.sh/hook: post-install, post-upgrade
+    helm.sh/hook-weight: "2"
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 3
