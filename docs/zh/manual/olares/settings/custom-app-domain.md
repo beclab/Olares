@@ -24,7 +24,7 @@ Olares 提供两种方式来自定义应用的访问地址：
 
 Olares 为预装的系统应用分配了易记的路由 ID。对于社区应用，你可以自定义路由 ID，获得更简洁的 URL。以 Jellyfin 为例：
 
-1. 在 Olares 上，打开**设置**，前往 **应用** > **Jellyfin**。
+1. 在 Olares 上，打开**设置**，前往**应用** > **Jellyfin**。
 2. 在**入口**下，点击 **Jellyfin**。
 3. 在**端点配置**下，点击**设置自定义路由 ID** 旁的 <i class="material-symbols-outlined">add</i>。
 4. 输入一个更易记的路由 ID，例如 `jellyfin`。
@@ -39,7 +39,7 @@ Olares 为预装的系统应用分配了易记的路由 ID。对于社区应用�
 除了使用默认的 Olares 域名，你也可以用自己的域名访问应用。
 
 :::info
-自定义三方域名不支持 Olares 身份认证。仅认证级别为**公开**的应用入口支持自定义三方域名。
+自定义域名不支持 Olares 身份认证。仅认证级别为**公开**的应用入口支持自定义域名。
 :::
 
 :::info
@@ -48,34 +48,40 @@ Olares 为预装的系统应用分配了易记的路由 ID。对于社区应用�
 - 如果使用自建 FRP 作为反向代理，请在工信部完成备案。
 :::
 
-要为应用配置自定义域名：
+以 DeerFlow 2.0 为例：
 
-1. 在 Olares 上，打开**设置**，前往 **应用** > 目标应用。
-2. 在**入口**下，点击目标入口。
+1. 在 Olares 上，打开**设置**，前往**应用** > **DeerFlow 2.0**。
+2. 在**入口**下，点击 **deerflow2**。
 3. 在**访问策略**下，将**认证级别**设置为**公开**，然后点击**提交**。
+
+   ![更改认证级别](/images/zh/manual/olares/set-auth-level-to-pub.png#bordered){width=90%}
+
 4. 在**端点配置**下，点击**设置自定义域名**旁的 <i class="material-symbols-outlined">add</i>。
-5. 在**第三方域名**对话框中，输入你的自定义域名，上传该域名的有效 HTTPS 证书和私钥，然后点击**确认**。
+5. 在**第三方域名**对话框中，输入你的自定义域名，HTTPS 证书和私钥，然后点击**确认**。
 
    :::tip 注意
    如果反向代理使用 Cloudflare Tunnel，只需填写域名，无需上传证书。
    :::
 
-   ![输入三方域名及证书](/images/zh/manual/olares/enter-custom-domain.jpeg#bordered)
+   ![输入三方域名及证书](/images/zh/manual/olares/enter-custom-domain.png#bordered){width=70%}
 
-6. 点击**激活**，打开激活引导弹窗。
+6. 点击**激活**，打开激活弹窗。
 
-   ![激活第三方域名](/images/zh/manual/olares/activate-custom-domain.jpeg#bordered)
+   ![激活第三方域名](/images/zh/manual/olares/activate-custom-domain.png#bordered){width=90%}
 
-7. 按照弹窗中的说明，在你的域名托管服务商处创建一条 CNAME 记录。
+7. 弹窗中会显示激活自定义域名所需的 CNAME 记录。按照弹窗提示，在域名服务商的 DNS 设置中添加该记录。
 
-   ![添加 CNAME](/images/zh/manual/olares/add-cname.png#bordered)
+
+   ![添加 CNAME](/images/zh/manual/olares/add-cname2.png#bordered){width=90%}
 
    :::tip 为 Cloudflare 关闭代理状态
    如果反向代理使用 Cloudflare Tunnel，请关闭 DNS 记录旁的代理状态选项，以便 Olares 及时获取域名解析状态。
    :::
 
-8. 在激活引导弹窗中点击**确认**，完成激活。
+8. 点击**确认**。弹窗关闭后，**端点配置**下的**状态**显示为**等待 CName 激活**。
 
-此时自定义域名状态显示为“等待 CName 激活”。DNS 解析生效时间通常从几分钟到 48 小时不等。
+   ![等待 CNAME 激活](/images/zh/manual/olares/add-cname-status.png#bordered){width=90%}
 
-Olares 会自动验证 DNS 记录。验证通过后，自定义域名状态将更新为“已激活”，你就可以通过自定义 URL 访问应用了。
+   Olares 会自动验证 CNAME 记录。DNS 解析生效时间通常从几分钟到 48 小时不等。
+
+   验证通过后，状态将更新为**已激活**，你就可以通过自定义 URL 访问应用了。

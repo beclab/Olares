@@ -24,7 +24,7 @@ Route ID is part of the URL used to access your Olares applications in a web bro
 
 Olares uses easy-to-remember route IDs for pre-installed system applications. For community applications, you can get a simpler URL by setting a custom route ID. Using Jellyfin as an example:
 
-1. On Olares, open Settings, then go to **Application** > **Jellyfin**.
+1. On Olares, open **Settings**, then go to **Applications** > **Jellyfin**.
 2. Under **Entrances**, click **Jellyfin**.
 3. Under **Endpoint settings**, next to **Set custom route ID**, click <i class="material-symbols-outlined">add</i>.
 4. Enter a route ID that is more memorable and recognizable. For example, `jellyfin`.
@@ -36,38 +36,46 @@ Now, you can access Jellyfin from your new URL: `https://jellyfin.alexmiles.olar
 
 ## Custom domain name
 
-Instead of using the default Olares domain, you can use your own domain name to access your applications. To configure a custom domain name for an app:
+Instead of using the default Olares domain, you can use your own domain name to access your applications.
 
 :::info
-Custom third-party domains do not support Olares authentication. Only application entrances with **Authentication level** set to **Public** support custom third-party domains.
+Custom domains do not support Olares authentication. Only application entrances with **Authentication level** set to **Public** support custom domains.
 :::
 
-1. On Olares, open **Settings**, then go to **Application** > **[AppName]**.
-2. Under **Entrances**, click the target entrance.
-3. Under **Access policies**, set **Authentication level** to **Public**, then click **Submit**.
-4. Under **Endpoint settings**, next to **Set custom domain**, click <i class="material-symbols-outlined">add</i>.
-5. In the **Third-party domain** pop-up, enter your custom domain, and click **Confirm** to submit.
+Using DeerFlow 2.0 as an example:
 
-   ![Submit third-party domain](/images/manual/olares/add-custom-domain.jpeg#bordered)
+1. On Olares, open **Settings**, then go to **Applications** > **DeerFlow 2.0**.
+2. Under **Entrances**, click **DeerFlow 2.0**.
+3. Under **Access policies**, set **Authentication level** to **Public**, then click **Submit**.
+
+   ![Set authenticationn level to public](/images/manual/olares/set-auth-level-to-pub.png#bordered){width=90%}
+
+4. Under **Endpoint settings**, next to **Set custom domain**, click <i class="material-symbols-outlined">add</i>.
+5. In the **Set custom domain** pop-up, enter your custom domain, HTTPS certificate and HTTPS private key, and click **Confirm** to submit.
+
+   ![Submit third-party domain](/images/manual/olares/add-custom-domain2.png#bordered){width=70%}
 
    ::: tip Note
    If you are using Olares Tunnel or Self-built FRP for reverse proxy, you must also upload a valid HTTPS certificate and its private key for your custom domain.
    :::
 
-6. Click the **Activation** button to open the activation instruction pop-up.
+6. Click **Activation** to open the activation pop-up.
 
-   ![Activate third-party domain](/images/manual/olares/activate-custom-domain.jpeg#bordered)
+   ![Activate third-party domain](/images/manual/olares/activate-custom-domain2.png#bordered){width=90%}
 
-7. Follow the instructions in the pop-up to create a CNAME record with your domain hosting provider.
+7. The pop-up shows the CNAME record required to activate your custom domain. Follow the instructions to add the record in your domain provider's DNS settings.
 
-   ![Add CNAME](/images/manual/olares/add-cname.jpeg#bordered)
+
+   ![Add CNAME](/images/manual/olares/add-cname1.png#bordered){width=90%}
 
    :::tip Disable Proxy status for Cloudflare Tunnel
    If you are using Cloudflare Tunnel, disable the **Proxy status** option next to your DNS record. This allows Olares to receive timely updates on your domain's resolution status.
    :::
 
-8. Click **Confirm** on the activation pop-up to finish the activation.
+8. Click **Confirm**. The pop-up closes, and **Status** displays **Wait for CNAME to be activated**.
 
-At this stage, the custom domain status will display as "Waiting for CNAME Activation". You will need to wait for it to take effect. DNS propagation typically takes a few minutes or hours, depending on your domain provider.
+   ![Wait for CNAME to be activated](/images/manual/olares/add-cname-status.png#bordered){width=90%}
 
-Once the CNAME record is verified, the custom domain status will automatically update to "Activated".
+   Olares automatically verifies the CNAME record. DNS propagation may take a few minutes to 48 hours.
+
+   Once the record is verified, the status changes to **Activated**.
