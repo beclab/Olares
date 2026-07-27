@@ -30,8 +30,11 @@ const (
 	settingNeedsSharedAccess = "needsSharedAccess"
 	settingSharedAppDeps     = "sharedAppDeps"
 	settingClusterAppRef     = "clusterAppRef"
-	managedByLabel           = "app.kubernetes.io/managed-by"
-	managedByValue           = "app-service"
+	// settingSharedCallerDecide mirrors meshinagent.AnnotDecide. callerjwt cannot
+	// import meshinagent (meshinagent → callerjwt), so the key is duplicated here.
+	settingSharedCallerDecide = "gateway.olares.io/shared-caller-decide"
+	managedByLabel            = "app.kubernetes.io/managed-by"
+	managedByValue            = "app-service"
 )
 
 // IssuerReconciler issues caller JWT-SVID secrets for Shared consumer apps and
@@ -209,17 +212,28 @@ func (r *IssuerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+// applicationDeclaresSharedAccess decides whether to issue caller-jwt in the app NS.
+// Must stay aligned with meshinagent.DeclaresSharedCaller for decide=true / named
+// edges, plus legacy needsSharedAccess / clusterAppRef so B′ eligibility callers
+// (e.g. LiteLLM) get a Secret before mesh-in mounts mesh-in-jwt.
 func applicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 	if app == nil || app.Spec.Settings == nil {
 		return false
 	}
-	if strings.EqualFold(strings.TrimSpace(app.Spec.Settings[settingNeedsSharedAccess]), "true") {
+	s := app.Spec.Settings
+	if d := strings.TrimSpace(s[settingSharedCallerDecide]); strings.EqualFold(d, "false") {
+		return false
+	}
+	if strings.EqualFold(strings.TrimSpace(s[settingSharedCallerDecide]), "true") {
 		return true
 	}
-	if strings.TrimSpace(app.Spec.Settings[settingSharedAppDeps]) != "" {
+	if strings.EqualFold(strings.TrimSpace(s[settingNeedsSharedAccess]), "true") {
 		return true
 	}
-	return strings.TrimSpace(app.Spec.Settings[settingClusterAppRef]) != ""
+	if strings.TrimSpace(s[settingSharedAppDeps]) != "" {
+		return true
+	}
+	return strings.TrimSpace(s[settingClusterAppRef]) != ""
 }
 
 func issueRequestFromApplication(app *appv1alpha1.Application) IssueRequest {

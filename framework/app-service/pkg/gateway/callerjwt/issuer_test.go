@@ -178,6 +178,50 @@ func TestIssuerReconcilerCreatesJWTSecretT_C2_1(t *testing.T) {
 	}
 }
 
+func TestIssuerReconcilerCreatesJWTSecretWhenDecideTrue(t *testing.T) {
+	scheme := testScheme(t)
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "litellm",
+			Namespace: "user-space-alice",
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "litellm",
+			Namespace: "litellm-alice",
+			Owner:     "alice",
+			Settings: map[string]string{
+				settingSharedCallerDecide: "true",
+			},
+		},
+	}
+
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(app).Build()
+	r := &IssuerReconciler{Client: c, Scheme: scheme, issuer: issuer}
+	if err := r.reconcileApplication(context.Background(), app); err != nil {
+		t.Fatalf("reconcileApplication: %v", err)
+	}
+
+	secret := &corev1.Secret{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: app.Spec.Namespace,
+		Name:      AppJWTSecretName,
+	}, secret); err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	if len(secret.Data[AppJWTSecretDataKey]) == 0 {
+		t.Fatalf("secret token is empty")
+	}
+}
+
 func TestIssuerReconcileRequeuesForJWTRefresh(t *testing.T) {
 	scheme := testScheme(t)
 	ring, err := NewKeyRingForTest(false)
