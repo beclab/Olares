@@ -81,6 +81,7 @@ func (h *Handler) authenticate(req *restful.Request, resp *restful.Response, cha
 		"/app-service/v1/apidocs.json",
 		"/app-service/v1/sandbox/inject",
 		"/app-service/v1/appns/validate",
+		"/app-service/v1/tls-replica-mount/validate",
 		"/app-service/v1/gpulimit/inject",
 		"/app-service/v1/backup/new",
 		"/app-service/v1/backup/finish",
