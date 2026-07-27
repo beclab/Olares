@@ -15,26 +15,26 @@ import (
 
 const (
 	meshInAgentImageEnv = "MESH_IN_AGENT_IMAGE"
-	// DefaultImage is the mesh-in-agent product image (engine: nginx+njs) (digest pin in charts; no :latest).
-	DefaultImage = "beclab/mesh-in-agent:1.30.0-r4"
-	listenPort     = HTTPListenPort
-	listenPortName = "mesh-in-http"
+	// DefaultImage is the mesh-in-agent product image (engine: nginx+njs+stream) (digest pin in charts; no :latest).
+	DefaultImage       = "beclab/mesh-in-agent:1.30.0-r4"
+	listenPortName     = "mesh-in-http"
+	httpsListenPortName = "mesh-in-https"
 
-	CertsVolumeName   = "olares-mesh-in-certs"
+	CertsVolumeName   = constants.MeshInCertsVolumeName
 	CertsMountPath    = "/var/run/olares/mesh-in-certs"
-	HostsVolumeName   = "olares-mesh-in-shared-hosts"
+	HostsVolumeName   = constants.MeshInSharedHostsCMName
 	HostsMountPath    = "/var/run/olares/mesh-in-shared-hosts"
 	ConfVolumeName    = "olares-mesh-in-agent-conf"
 	ConfMountPath     = "/etc/nginx"
 	InitContainerName = "olares-mesh-in-agent-iptables"
 )
 
-// NginxWorkerUID is the mesh-in process uid (constants.MeshInAgentUID); iptables skips this owner.
+// NginxWorkerUID is the mesh-in process uid (constants.MeshInAgentUID).
 func NginxWorkerUID() string {
 	return strconv.FormatInt(constants.MeshInAgentUID, 10)
 }
 
-// ContainerSpec returns the mesh-in agent sidecar (WI-OC-JWT-INJECT-01).
+// ContainerSpec returns the mesh-in agent sidecar (JWT inject + CT-1 TLS offload).
 func ContainerSpec() corev1.Container {
 	uid := constants.MeshInAgentUID
 	nonRoot := true
@@ -47,13 +47,19 @@ func ContainerSpec() corev1.Container {
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          listenPortName,
-				ContainerPort: listenPort,
+				ContainerPort: HTTPListenPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+			{
+				Name:          httpsListenPortName,
+				ContainerPort: HTTPSListenPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 		},
 		Env: []corev1.EnvVar{
 			{Name: FailClosedEnv, Value: "true"},
 			{Name: "MESH_IN_AGENT_LISTEN_PORT", Value: fmt.Sprintf("%d", HTTPListenPort)},
+			{Name: "MESH_IN_AGENT_HTTPS_LISTEN_PORT", Value: fmt.Sprintf("%d", HTTPSListenPort)},
 			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: DefaultGatewayHost},
 			{Name: "MESH_IN_AGENT_GATEWAY_HTTP_PORT", Value: "80"},
 		},
@@ -81,32 +87,47 @@ func ContainerSpec() corev1.Container {
 }
 
 func agentStartScript() string {
-	conf := RenderNginxConf(NginxConfInput{FailClosed: true})
+	// Two confs: image has no openssl, so missing tls Secret must not include ssl listen
+	// or nginx exits and the whole Pod stays NotReady (blocks rollout).
+	confHTTP := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: false})
+	confHTTPS := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: true})
 	js := BearerJS()
-	confB64 := base64.StdEncoding.EncodeToString([]byte(conf))
+	httpB64 := base64.StdEncoding.EncodeToString([]byte(confHTTP))
+	httpsB64 := base64.StdEncoding.EncodeToString([]byte(confHTTPS))
 	jsB64 := base64.StdEncoding.EncodeToString([]byte(js))
 	return fmt.Sprintf(`set -eu
 mkdir -p /tmp/mesh-in /var/log/nginx
-echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
 echo '%s' | base64 -d > /tmp/mesh-in/bearer.js
+CERT_DIR="%s"
+if [ -s "$CERT_DIR/tls.crt" ] && [ -s "$CERT_DIR/tls.key" ]; then
+  echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
+  echo "mesh-in-agent: CT-1 HTTPS enabled (certs present; hosts hot-read via njs)"
+else
+  echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
+  echo "mesh-in-agent: HTTP-only mode (no tls.crt/key under $CERT_DIR)"
+fi
 exec nginx -c /tmp/mesh-in/nginx.conf -g 'daemon off;'
-`, confB64, jsB64)
+`, jsB64, CertsMountPath, httpsB64, httpB64)
 }
 
-// InitContainerSpec redirects outbound TCP/80 toward the shared gateway into the mesh-in HTTP listener.
-// Rules are inserted at the head of OUTPUT so they take precedence over olares-envoy PROXY_OUTBOUND.
+// InitContainerSpec installs OUTPUT REDIRECT rules for Shared gateway HTTP and
+// all outbound HTTPS. mesh-in upstream to gateway:80 must NOT use a blanket
+// uid RETURN so Linkerd (uid 2102) can intercept plaintext after JWT inject.
 //
-// Loop avoidance: olares-envoy steals OUTPUT dport 80/8080 into :15001 for every uid except 1555.
-// mesh-in (MeshInAgentUID) must RETURN before that jump, otherwise proxy_pass→gateway:80 is
-// stolen by envoy; envoy's own connect to gateway:80 then hits our REDIRECT back to :16080.
+// Exclusions on REDIRECT owners: mesh-in 1651 (no self-loop), linkerd 2102,
+// envoy 1555 (legacy oes coexistence).
 func InitContainerSpec() corev1.Container {
 	envoyUID := strconv.FormatInt(constants.EnvoyUID, 10)
+	linkerdUID := strconv.FormatInt(constants.LinkerdProxyUID, 10)
 	root := int64(0)
 	script := fmt.Sprintf(`set -eu
 GW_HOST="${MESH_IN_AGENT_GATEWAY_HOST:-%s}"
 GW_IP=""
 NGINX_UID="%s"
 ENVOY_UID="%s"
+LINKERD_UID="%s"
+HTTP_PORT="%d"
+HTTPS_PORT="%d"
 # Prefer configured host; fall back to legacy app-gateway NS for older installs.
 for h in "$GW_HOST" "app-gateway-data.os-gateway.svc" "app-gateway-data.os-gateway.svc.cluster.local" \
   "app-gateway-data.app-gateway.svc" "app-gateway-data.app-gateway.svc.cluster.local"; do
@@ -125,14 +146,13 @@ if [ -z "$GW_IP" ]; then
   echo "mesh-in-agent: cannot resolve gateway host $GW_HOST" >&2
   exit 1
 fi
-# mesh-in nginx upstream must leave the pod directly (skip envoy PROXY_OUTBOUND).
-iptables -t nat -C OUTPUT -m owner --uid-owner "$NGINX_UID" -j RETURN 2>/dev/null \
-  || iptables -t nat -I OUTPUT 1 -m owner --uid-owner "$NGINX_UID" -j RETURN
-echo "mesh-in-agent: redirect $GW_IP:80 -> %d (skip uid $NGINX_UID and envoy $ENVOY_UID)"
-# Do not REDIRECT envoy→gateway:80 (uid 1555) or we bounce back into mesh-in.
-iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports %d 2>/dev/null \
-  || iptables -t nat -I OUTPUT 2 -p tcp -d "$GW_IP" --dport 80 -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports %d
-`, DefaultGatewayHost, NginxWorkerUID(), envoyUID, HTTPListenPort, HTTPListenPort, HTTPListenPort)
+OWNER_SKIP="-m owner ! --uid-owner $NGINX_UID -m owner ! --uid-owner $ENVOY_UID -m owner ! --uid-owner $LINKERD_UID"
+echo "mesh-in-agent: redirect $GW_IP:80 -> $HTTP_PORT; *:443 -> $HTTPS_PORT (skip uid $NGINX_UID/$ENVOY_UID/$LINKERD_UID)"
+iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT" 2>/dev/null \
+  || iptables -t nat -I OUTPUT 1 -p tcp -d "$GW_IP" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT"
+iptables -t nat -C OUTPUT -p tcp --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT" 2>/dev/null \
+  || iptables -t nat -I OUTPUT 2 -p tcp --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT"
+`, DefaultGatewayHost, NginxWorkerUID(), envoyUID, linkerdUID, HTTPListenPort, HTTPSListenPort)
 
 	return corev1.Container{
 		Name:            InitContainerName,
@@ -162,20 +182,32 @@ func JWTSecretVolume() corev1.Volume {
 	}
 }
 
-// CertsVolume mounts WI-N4 caller cert replicas (optional until N4 Ready).
+// CertsVolume mounts caller TLS material for CT-1 (optional until replica Ready).
+// When viewer is non-empty, secretName is olares-mesh-in-tls-<viewer>.
 func CertsVolume() corev1.Volume {
+	return CertsVolumeForViewer("")
+}
+
+// CertsVolumeForViewer mounts olares-mesh-in-tls-<viewer> (or the legacy
+// olares-mesh-in-certs name when viewer is empty).
+func CertsVolumeForViewer(viewer string) corev1.Volume {
+	secretName := "olares-mesh-in-certs"
+	viewer = strings.ToLower(strings.TrimSpace(viewer))
+	if viewer != "" {
+		secretName = constants.MeshInTLSSecretNamePrefix + viewer
+	}
 	return corev1.Volume{
 		Name: CertsVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName: "olares-mesh-in-certs",
+				SecretName: secretName,
 				Optional:   boolPtr(true),
 			},
 		},
 	}
 }
 
-// SharedHostsVolume mounts WI-N6 shared-hosts allowlist ConfigMap.
+// SharedHostsVolume mounts SNI allowlist ConfigMap (key shared-hosts.txt).
 func SharedHostsVolume() corev1.Volume {
 	return corev1.Volume{
 		Name: HostsVolumeName,
@@ -183,6 +215,9 @@ func SharedHostsVolume() corev1.Volume {
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{Name: "olares-mesh-in-shared-hosts"},
 				Optional:             boolPtr(true),
+				Items: []corev1.KeyToPath{
+					{Key: SharedHostsFileName, Path: SharedHostsFileName},
+				},
 			},
 		},
 	}

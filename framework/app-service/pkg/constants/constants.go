@@ -62,11 +62,27 @@ const (
 	UserChartsPath = "./userapps"
 
 	EnvoyUID                        int64 = 1555
+	// LinkerdProxyUID is the upstream linkerd-proxy default runAsUser.
+	LinkerdProxyUID                 int64 = 2102
 	// Mesh agent UIDs (16xx band; orthogonal to Envoy 1555 / d2 1556 / linkerd 2102 / nginx:alpine 101).
 	MeshInAgentUID                  int64 = 1651
 	MeshOutAgentUID                 int64 = 1652
 	// MeshAgentUIDReservedStart marks 1653+ for future mesh-* sidecars (do not reuse for apps).
 	MeshAgentUIDReservedStart       int64 = 1653
+
+	// Mesh-in CT-1 control-plane object names (WI-OC-MESH-IN-CT1-02).
+	MeshInSharedHostsCMName         = "olares-mesh-in-shared-hosts"
+	MeshInSharedHostsFileName       = "shared-hosts.txt"
+	MeshInSharedHostsManagedByLabel = "gateway.olares.io/mesh-in-shared-hosts-managed-by"
+	MeshInTLSSecretNamePrefix       = "olares-mesh-in-tls-"
+	MeshInCertsVolumeName           = "olares-mesh-in-certs"
+	MeshInAgentContainerName        = "olares-mesh-in-agent"
+	MeshInCertCacheMax              = 16
+	MeshInCertCacheInactive         = "10m"
+	MeshInCertCacheValid            = "1m"
+	MeshInProxyReadTimeout          = "600s"
+	MeshInProxySendTimeout          = "600s"
+	LabelTLSReplica                 = "gateway.olares.io/tls-replica"
 	DefaultEnvoyLogLevel                  = "debug"
 	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
 	EnvoyContainerName                    = "olares-envoy-sidecar"
