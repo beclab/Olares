@@ -7,7 +7,7 @@ head:
       content: Olares One, multi-node, two-node, upgrade, 1.12.5, 1.12.6
 ---
 
-# Upgrade a two-node Olares cluster
+# Upgrade a two-node Olares cluster from 1.12.5 to 1.12.6
 
 This guide walks you through manually upgrading a two-node Olares cluster from version 1.12.5 to 1.12.6.
 

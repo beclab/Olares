@@ -7,7 +7,7 @@ head:
       content: Olares One, 多节点, 双节点, 升级, 1.12.5, 1.12.6
 ---
 
-# 升级双节点 Olares 集群
+# 将双节点 Olares 集群从 1.12.5 升级到 1.12.6
 
 :::warning
 当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/upgrade-multi-node-cluster.md)。
