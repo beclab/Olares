@@ -69,6 +69,25 @@ func (r *AppEnvController) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+// appEnvReferences reports whether the AppEnv references the named
+// SystemEnv/UserEnv, through either an envs[] entry or a secrets[] declaration.
+// Shared by the SystemEnv and UserEnv controllers so both propagate changes to
+// secret-backed variables as well as plain ones; missing the secrets[] half
+// would mean a rotated credential silently never reaches the app.
+func appEnvReferences(appEnv *sysv1alpha1.AppEnv, envName string) bool {
+	for _, envVar := range appEnv.Envs {
+		if envVar.ValueFrom != nil && envVar.ValueFrom.EnvName == envName {
+			return true
+		}
+	}
+	for _, secret := range appEnv.Secrets {
+		if secret.ValueFrom != nil && secret.ValueFrom.EnvName == envName {
+			return true
+		}
+	}
+	return false
+}
+
 // appEnvRequestForAppMgr maps an ApplicationManager to its backing AppEnv so a
 // pending env change can be re-evaluated when the app's state changes.
 func appEnvRequestForAppMgr(_ context.Context, obj client.Object) []reconcile.Request {
@@ -121,6 +140,13 @@ func (r *AppEnvController) reconcileAppEnv(ctx context.Context, appEnv *sysv1alp
 		return ctrl.Result{}, err
 	}
 
+	// Must run before the NeedApply check below so a rotated secret can request
+	// the same redeploy an env change would.
+	if err := r.syncSecretValues(ctx, appEnv); err != nil {
+		klog.Errorf("Failed to sync secrets for AppEnv %s/%s: %v", appEnv.Namespace, appEnv.Name, err)
+		return ctrl.Result{}, err
+	}
+
 	if appEnv.NeedApply {
 		appMgr, err := r.getAppMgr(ctx, appEnv)
 		if err != nil {
@@ -165,6 +191,57 @@ func (r *AppEnvController) reconcileAppEnv(ctx context.Context, appEnv *sysv1alp
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// syncSecretValues re-resolves the app's secrets[] declarations and rewrites the
+// backing Kubernetes Secrets, so rotating a SystemEnv/UserEnv reaches apps that
+// consume it as a secret rather than as a plain env var.
+//
+// The resolved value is deliberately never written back onto the AppEnv — that
+// is the whole point of declaring the variable as a secret, and AppSecretVar has
+// no field to hold it. Change detection instead compares against the existing
+// Secret, which already holds the previous value.
+//
+// A changed secret only requests a redeploy when the declaration opted in via
+// applyOnChange. Secret values are injected into pods at start time, so without
+// that redeploy the Secret is refreshed while running pods keep serving the old
+// value until they restart for some other reason.
+func (r *AppEnvController) syncSecretValues(ctx context.Context, appEnv *sysv1alpha1.AppEnv) error {
+	if len(appEnv.Secrets) == 0 {
+		return nil
+	}
+
+	changed, err := apputils.ApplySecretsFor(ctx, r.Client, appEnv.Namespace, appEnv.AppName, appEnv.AppOwner, appEnv.Secrets)
+	if err != nil {
+		return err
+	}
+
+	changedSet := make(map[string]struct{}, len(changed))
+	for _, name := range changed {
+		changedSet[name] = struct{}{}
+	}
+
+	original := appEnv.DeepCopy()
+	updated := false
+	for i := range appEnv.Secrets {
+		secret := &appEnv.Secrets[i]
+		if _, didChange := changedSet[secret.Name]; didChange && secret.ApplyOnChange {
+			appEnv.NeedApply = true
+			updated = true
+		}
+		if secret.ValueFrom != nil && secret.ValueFrom.Status != constants.EnvRefStatusSynced {
+			secret.ValueFrom.Status = constants.EnvRefStatusSynced
+			updated = true
+		}
+	}
+
+	if !updated {
+		return nil
+	}
+	if err := r.Patch(ctx, appEnv, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("failed to update AppEnv %s/%s secrets: %v", appEnv.Namespace, appEnv.Name, err)
+	}
+	return nil
 }
 
 func (r *AppEnvController) syncEnvValues(ctx context.Context, appEnv *sysv1alpha1.AppEnv) error {

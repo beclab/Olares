@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -232,14 +233,36 @@ func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, m
 // ApplyAppEnv applies the environment variable configuration of the app:
 // if no existing AppEnv is found for the app, the AppEnv is created
 // if existing AppEnv is found for the app, any new configured env is added to the AppEnv
+//
+// The app's secrets[] declarations are recorded here too. Their values are NOT
+// stored on the AppEnv — only the declaration — but keeping them alongside Envs
+// is what lets the SystemEnv/UserEnv controllers discover which apps reference a
+// changed variable and drive the existing sync/apply chain for secrets as well.
 func ApplyAppEnv(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) (*sysv1alpha1.AppEnv, error) {
 	if appConfig == nil {
 		return nil, fmt.Errorf("app config is nil")
 	}
 
-	if len(appConfig.Envs) == 0 {
-		klog.Infof("No envs found for app: %s owner: %s, skip app env apply", appConfig.AppName, appConfig.OwnerName)
+	if len(appConfig.Envs) == 0 && len(appConfig.Secrets) == 0 {
+		klog.Infof("No envs or secrets found for app: %s owner: %s, skip app env apply", appConfig.AppName, appConfig.OwnerName)
 		return nil, nil
+	}
+
+	if err := validateAppSecretDecls(appConfig.Secrets, appConfig.AppName); err != nil {
+		return nil, err
+	}
+
+	desiredAppSecrets := make([]sysv1alpha1.AppSecretVar, 0, len(appConfig.Secrets))
+	for _, s := range appConfig.Secrets {
+		// Copy the reference rather than writing through the shared pointer,
+		// which would mutate the caller's appConfig. Status is tracked on the
+		// reference mirroring envs[]: it starts pending and moves to synced
+		// once the Secret has been written.
+		s.ValueFrom = &sysv1alpha1.ValueFrom{
+			EnvName: s.ValueFrom.EnvName,
+			Status:  constants.EnvRefStatusPending,
+		}
+		desiredAppSecrets = append(desiredAppSecrets, s)
 	}
 
 	var desiredAppEnvs []sysv1alpha1.AppEnvVar
@@ -284,6 +307,7 @@ func ApplyAppEnv(ctx context.Context, c client.Client, appConfig *appcfg.Applica
 			AppName:  appConfig.AppName,
 			AppOwner: appConfig.OwnerName,
 			Envs:     desiredAppEnvs,
+			Secrets:  desiredAppSecrets,
 		}
 		if err := c.Create(ctx, newAppEnv); err != nil {
 			return nil, err
@@ -307,6 +331,22 @@ func ApplyAppEnv(ctx context.Context, c client.Client, appConfig *appcfg.Applica
 		}
 	}
 
+	// Secret declarations are reconciled by name the same way: new ones are
+	// appended, existing ones left alone. Nothing here carries a value, so
+	// there is no user-set state to preserve — only the declaration itself.
+	if len(desiredAppSecrets) > 0 {
+		existingSecrets := make(map[string]struct{}, len(appEnv.Secrets))
+		for _, s := range appEnv.Secrets {
+			existingSecrets[s.Name] = struct{}{}
+		}
+		for _, s := range desiredAppSecrets {
+			if _, ok := existingSecrets[s.Name]; !ok {
+				appEnv.Secrets = append(appEnv.Secrets, s)
+				updated = true
+			}
+		}
+	}
+
 	if !updated {
 		return appEnv, nil
 	}
@@ -316,6 +356,170 @@ func ApplyAppEnv(ctx context.Context, c client.Client, appConfig *appcfg.Applica
 	}
 	klog.Infof("patched app env for app: %s, owner: %s", appConfig.AppName, appConfig.OwnerName)
 	return appEnv, nil
+}
+
+// validateAppSecretDecls rejects declarations that cannot be materialized.
+// Shared by the install path and the controller path so a declaration is never
+// recorded on the AppEnv that ApplySecrets would then refuse to act on.
+func validateAppSecretDecls(secrets []sysv1alpha1.AppSecretVar, appName string) error {
+	seen := make(map[string]struct{}, len(secrets))
+	for _, s := range secrets {
+		if s.Name == "" {
+			return fmt.Errorf("app %s declares a secret without a name", appName)
+		}
+		if _, dup := seen[s.Name]; dup {
+			// Two entries writing the same Secret would silently clobber each
+			// other, so reject rather than pick a winner.
+			return fmt.Errorf("app %s declares secret %q more than once", appName, s.Name)
+		}
+		seen[s.Name] = struct{}{}
+
+		if s.ValueFrom == nil || s.ValueFrom.EnvName == "" {
+			return fmt.Errorf("secret %q of app %s must set valueFrom.envName", s.Name, appName)
+		}
+	}
+	return nil
+}
+
+// ApplySecrets materializes an app's secrets[] declarations into Kubernetes
+// Secrets in its namespace, from the app config. See ApplySecretsFor.
+func ApplySecrets(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) error {
+	if appConfig == nil {
+		return fmt.Errorf("app config is nil")
+	}
+	_, err := ApplySecretsFor(ctx, c, appConfig.Namespace, appConfig.AppName, appConfig.OwnerName, appConfig.Secrets)
+	return err
+}
+
+// ApplySecretsFor materializes the given secret declarations into Kubernetes
+// Secrets in namespace. Each declaration pulls one Olares-provided env var (a
+// SystemEnv or UserEnv, referenced exactly like envs[].valueFrom) into its own
+// Secret, named verbatim, holding the value under AppSecretValueKey. The chart
+// consumes it with a plain secretKeyRef, so the value never lands in the pod
+// spec as a literal env var the way olaresEnv values do.
+//
+// It returns the names of the Secrets whose data actually changed. That is what
+// lets the AppEnv controller decide whether a redeploy is warranted after a
+// referenced variable is rotated: the existing Secret holds the previous value,
+// so it doubles as the change-detection store and no value (or hash of one)
+// needs to be persisted anywhere else.
+//
+// Safe to call repeatedly: rewriting identical data reports no change.
+//
+// TODO(structured-secrets): one declaration == one single-valued Secret. Once
+// the Olares UX can author multi-key secrets, group declarations sharing a name
+// into a single Secret with one key each.
+func ApplySecretsFor(ctx context.Context, c client.Client, namespace, appName, owner string, secrets []sysv1alpha1.AppSecretVar) ([]string, error) {
+	if len(secrets) == 0 {
+		klog.Infof("No secrets found for app: %s owner: %s, skip app secret apply", appName, owner)
+		return nil, nil
+	}
+
+	if err := validateAppSecretDecls(secrets, appName); err != nil {
+		return nil, err
+	}
+
+	refEnvs, err := listReferenceableEnvs(ctx, c, owner)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list referenced envs: %w", err)
+	}
+
+	// The namespace normally already exists (ApplyAppEnv creates it), but an
+	// app may declare secrets[] without any envs[], so ensure it here too.
+	appNS := new(corev1.Namespace)
+	appNS.SetName(namespace)
+	if err := c.Create(ctx, appNS); err != nil && !apierrors.IsAlreadyExists(err) {
+		return nil, err
+	}
+
+	var changed []string
+	for _, s := range secrets {
+		value, ok := refEnvs[s.ValueFrom.EnvName]
+		if !ok {
+			return nil, fmt.Errorf("secret %q of app %s references unknown env %q", s.Name, appName, s.ValueFrom.EnvName)
+		}
+
+		didChange, err := createOrUpdateAppSecret(ctx, c, namespace, appName, owner, s.Name, value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply secret %q of app %s: %w", s.Name, appName, err)
+		}
+		if didChange {
+			changed = append(changed, s.Name)
+		}
+	}
+
+	klog.Infof("applied %d secret(s) (%d changed) for app: %s, owner: %s", len(secrets), len(changed), appName, owner)
+	return changed, nil
+}
+
+// listReferenceableEnvs returns the Olares-provided env vars a manifest may
+// pull from, keyed by env name: cluster-scoped SystemEnvs overlaid with the
+// owner's UserEnvs. Mirrors the resolution the AppEnv handler performs for
+// envs[].valueFrom so both pull mechanisms see the same value space.
+func listReferenceableEnvs(ctx context.Context, c client.Client, owner string) (map[string]string, error) {
+	refEnvs := make(map[string]string)
+
+	sysenvs := new(sysv1alpha1.SystemEnvList)
+	if err := c.List(ctx, sysenvs); err != nil {
+		return nil, err
+	}
+	for _, sysenv := range sysenvs.Items {
+		refEnvs[sysenv.EnvName] = sysenv.GetEffectiveValue()
+	}
+
+	userenvs := new(sysv1alpha1.UserEnvList)
+	if err := c.List(ctx, userenvs, client.InNamespace(utils.UserspaceName(owner))); err != nil {
+		return nil, err
+	}
+	for _, userenv := range userenvs.Items {
+		refEnvs[userenv.EnvName] = userenv.GetEffectiveValue()
+	}
+
+	return refEnvs, nil
+}
+
+// createOrUpdateAppSecret writes a single-valued Opaque Secret into the app
+// namespace, reporting whether the stored value actually changed. On update
+// only Data is replaced, so labels or annotations added by anything else
+// survive. A write with identical data is skipped entirely, so a no-op
+// reconcile never reports a change and cannot trigger a spurious redeploy.
+func createOrUpdateAppSecret(ctx context.Context, c client.Client, namespace, appName, owner, name, value string) (bool, error) {
+	data := map[string][]byte{appcfg.AppSecretValueKey: []byte(value)}
+
+	existing := new(corev1.Secret)
+	err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, existing)
+	if err == nil {
+		if bytes.Equal(existing.Data[appcfg.AppSecretValueKey], data[appcfg.AppSecretValueKey]) &&
+			len(existing.Data) == len(data) {
+			return false, nil
+		}
+		original := existing.DeepCopy()
+		existing.Data = data
+		if err := c.Patch(ctx, existing, client.MergeFrom(original)); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	if !apierrors.IsNotFound(err) {
+		return false, err
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				constants.ApplicationNameLabel:  appName,
+				constants.ApplicationOwnerLabel: owner,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: data,
+	}
+	if err := c.Create(ctx, secret); err != nil && !apierrors.IsAlreadyExists(err) {
+		return false, err
+	}
+	return true, nil
 }
 
 // GetDeployedReleaseVersion check whether app has been deployed and return release chart version
@@ -1112,6 +1316,7 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		Provider:             cfg.Provider,
 		Type:                 cfg.ConfigType,
 		Envs:                 cfg.Envs,
+		Secrets:              cfg.Secrets,
 		Images:               cfg.Options.Images,
 		AllowMultipleInstall: cfg.Options.AllowMultipleInstall,
 		PodsSelectors:        podSelectors,
