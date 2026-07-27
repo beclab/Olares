@@ -121,15 +121,21 @@ head:
    sudo olares-cli upgrade
    ```
 
-   升级脚本执行完毕后，master 节点会自动重启。
+   升级脚本执行完毕后，master 节点会自动重启，SSH 连接会断开。
 
-2. 重启后，验证所有系统服务是否已成功重启并处于 `Running` 状态：
+2. 重启后，重新通过 SSH 连接到 master 节点：
+
+   ```bash
+   ssh olares@<master-node-ip-address>
+   ```
+
+3. 验证所有系统服务是否已成功重启并处于 `Running` 状态：
 
    ```bash
    kubectl get pod -o wide -A
    ```
 
-3. 临时将集群版本号改回 `1.12.5`，以便升级 worker 节点：
+4. 临时将集群版本号改回 `1.12.5`，以便升级 worker 节点：
 
    ```bash
    kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"1.12.5"}}'
@@ -150,6 +156,8 @@ master 节点升级完成并临时修改版本号后，即可升级 worker 节�
 ## 步骤 6：在 master 节点上恢复集群版本
 
 worker 节点升级完成后，将 master 节点上的版本号恢复为 `1.12.6`，以完成整个升级过程。
+
+如果到 master 节点的 SSH 连接已超时，请先重新连接再继续。
 
 1. 在 master 节点的 SSH 窗口中，执行以下命令：
 
