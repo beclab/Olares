@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/images"
 
 	"github.com/beclab/Olares/cli/pkg/daemon"
 
@@ -100,6 +101,12 @@ func (l *wslPhaseBuilder) build() []module.Module {
 			}
 
 		}).withGPU(l.runtime)...).
+		addModule(&images.PreloadImagesModule{
+			ManifestModule: manifest.ManifestModule{
+				Manifest: l.manifestMap,
+				BaseDir:  l.baseDir,
+			},
+		}).
 		addModule(marketPreinstallModules(
 			l.manifestMap,
 			l.runtime.GetInstallerDir(),
