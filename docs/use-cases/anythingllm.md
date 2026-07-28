@@ -60,9 +60,9 @@ Configure the chat model and embedding provider. These settings become the syste
 
 1. Open AnythingLLM from Launchpad.
 2. On the home page, click the **Open settings** icon in the bottom-left.
-3. In the left sidebar, select **AI Providers** > **LLM**, and then select **OpenAI** as the LLM provider.
-4. In **OpenAI Base URL**, paste the Base URL from the Qwen3.6-27B (llama.cpp) Model Console.
-5. In **OpenAI Model**, enter `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+3. In the left sidebar, select **AI Providers** > **LLM**, and then select **Generic OpenAI** as the LLM provider.
+4. In **Base URL**, paste the Base URL from the Qwen3.6-27B (llama.cpp) Model Console.
+5. In **Selected Model**, select `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
 
    ![Configure chat model](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
 
@@ -70,8 +70,12 @@ Configure the chat model and embedding provider. These settings become the syste
 
 ### Set up the embedding model
 
-1. In the left sidebar, select **Embedder**, and then select **all-MiniLM-L6-v2** as the embedding provider.
-2. Click **Save changes**. The "Embedding preferences saved successfully" message is displayed.
+1. In the left sidebar, select **Embedder**, and then select **AnythingLLM Embedder** as the embedding provider.
+2. In **Model Preference**, select **all-MiniLM-L6-v2** as the embedding model.
+
+   ![Configure embedding model](/images/manual/use-cases/anythingllm-configure-embedding-model.png#bordered)
+
+3. Click **Save changes**. The "Embedding preferences saved successfully" message is displayed.
 
 ## Create a workspace
 

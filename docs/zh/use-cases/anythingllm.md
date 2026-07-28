@@ -1,13 +1,13 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上部署 AnythingLLM，用 RAG 构建私有、自托管的知识库。上传文档、用本地模型做嵌入，并用自然语言查询。
+description: 在 Olares 上使用 AnythingLLM 构建私有知识库。添加文档、创建嵌入，并使用 RAG 进行查询。
 head:
   - - meta
     - name: keywords
       content: Olares, AnythingLLM, self-hosted rag, private knowledge base, anythingllm ollama, local LLM, embedding, anythingllm on olares
 app_version: "1.0.13"
 doc_version: "2.0"
-doc_updated: "2026-07-22"
+doc_updated: "2026-07-27"
 ---
 
 :::warning
@@ -16,21 +16,30 @@ doc_updated: "2026-07-22"
 
 # 使用 AnythingLLM 构建本地知识库
 
-AnythingLLM 是一个开源的、一体化 AI 应用，让你可以使用检索增强生成（RAG）与文档进行对话。它支持多个 LLM 提供商、嵌入引擎和向量数据库，全部在 Olares 设备上本地运行。
+AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增强生成（RAG）与文档对话。它支持多个 LLM 提供方和向量数据库，并可在 Olares 设备上本地运行。
 
 ## 学习目标
 
 在本指南中，你将学习如何：
 - 在 Olares 上安装 AnythingLLM。
-- 通过模型控制台将 AnythingLLM 连接到这两个模型。
+- 在 AnythingLLM 中配置聊天模型和嵌入提供方。
 - 创建工作空间并上传文档以构建知识库。
 - 使用自然语言查询你的知识库。
 
 ## 前提条件
 
-- 具有足够磁盘空间和内存的 Olares 设备
-- 从 Market 安装应用的管理员权限
-- 一个聊天模型和一个嵌入模型。本指南使用 Qwen3.5 9B 和 Qwen3 Embedding 0.6B。你可以从 Market 安装预构建模型应用，或[使用引擎基座应用托管模型](llm-base-apps.md)。
+开始前，你需要：
+
+- 一台具有足够磁盘空间和内存的 Olares 设备。
+- 从 Market 安装应用的管理员权限。
+- 以下模型：
+
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 嵌入 | all-MiniLM-L6-v2 | AnythingLLM 内置的嵌入模型 |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 AnythingLLM
 
@@ -44,23 +53,21 @@ AnythingLLM 是一个开源的、一体化 AI 应用，让你可以使用检索�
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-对于本指南中使用的每个模型：
+对于 Qwen3.6-27B (llama.cpp)：
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-本例使用 `qwen3.5:9b` 进行聊天，使用 `qwen3-embedding:0.6b` 生成嵌入。AnythingLLM 通过 **Ollama** 提供方连接这两个模型，因此请在各自的模型控制台中查看 **Ollama** 格式并复制对应的 Base URL。
-
 ## 配置 AnythingLLM
 
-分别配置聊天模型和嵌入模型。这些设置将成为所有工作空间的系统默认值。
+配置聊天模型和嵌入提供方。这些设置将成为所有工作空间的系统默认值。
 
 ### 设置聊天模型
 
 1. 从 Launchpad 打开 AnythingLLM。
 2. 在主页上，点击左下角的 **Open settings** 图标。
-3. 在左侧边栏中，选择 **AI Providers** > **LLM**，然后选择 **Ollama** 作为 LLM 提供商。
-4. 在 **Ollama Base URL** 中，粘贴 Qwen3.5 9B 模型控制台中的 Base URL。
-5. 在 **Ollama Model** 中选择 `qwen3.5:9b`。
+3. 在左侧边栏中，选择 **AI Providers** > **LLM**，然后选择 **Generic OpenAI** 作为 LLM 提供方。
+4. 在 **Base URL** 中，粘贴 Qwen3.6-27B (llama.cpp) 模型控制台中的 Base URL。
+5. 在 **Selected Model** 中选择 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
 
    ![配置聊天模型](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
 
@@ -68,18 +75,12 @@ AnythingLLM 是一个开源的、一体化 AI 应用，让你可以使用检索�
 
 ### 设置嵌入模型
 
-1. 在左侧边栏中，选择 **Embedder**，然后选择 **Ollama** 作为嵌入提供商。
-2. 在 **Ollama Base URL** 中，粘贴 Qwen3 Embedding 0.6B 模型控制台中的 Base URL。
-3. 在 **Ollama Embedding Model** 中选择 `qwen3-embedding:0.6b`。
+1. 在左侧边栏中选择 **Embedder**，然后选择 **AnythingLLM Embedder** 作为嵌入提供方。
+2. 在 **Model Preference** 中选择 **all-MiniLM-L6-v2** 作为嵌入模型。
 
-   ![配置嵌入模型](/images/manual/use-cases/anythingllm-configure-embedding1.png#bordered)
+   ![配置嵌入模型](/images/manual/use-cases/anythingllm-configure-embedding-model.png#bordered)
 
-4. 点击 **Save changes**。显示 "Embedding preferences saved successfully" 消息。
-<!--
-:::info 默认嵌入模型
-AnythingLLM 包含一个内置的嵌入模型（all-MiniLM-L6-v2），无需额外设置即可工作，主要针对英文文档进行训练。如果你更喜欢零配置选项，可以使用默认嵌入器。
-:::
--->
+3. 点击 **Save changes**。显示 "Embedding preferences saved successfully" 消息。
 
 ## 创建工作空间
 
