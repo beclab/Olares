@@ -38,8 +38,9 @@ import (
 //     reads.
 //
 // Only when all three checks agree the token is still stale do we POST
-// /api/refresh. On 401/403 from refresh we stamp InvalidatedAt and return
-// ErrTokenInvalidated; on transport errors we surface them verbatim so the
+// /api/refresh. When Authelia rejects the grant we stamp InvalidatedAt and
+// return ErrTokenInvalidated; on transport errors — including a gateway that
+// refuses to forward the request at all — we surface them verbatim so the
 // caller can retry the whole command.
 type Refresher struct {
 	store auth.TokenStore
@@ -158,9 +159,10 @@ func (r *Refresher) Refresh(
 		Location:           location,
 	})
 	if err != nil {
-		// 401/403 from /api/refresh = the grant itself is dead. Mark
-		// it so subsequent commands skip the network round-trip and
-		// go straight to "run profile login".
+		// Authelia rejected the grant itself, so it is dead — a
+		// gateway-level denial does not reach here, see
+		// auth.isAppRejection. Mark it so subsequent commands skip the
+		// network round-trip and go straight to "run profile login".
 		if errors.Is(err, auth.ErrRefreshUnauthorized) {
 			at := r.now()
 			// MarkInvalidated is best-effort: failing to persist

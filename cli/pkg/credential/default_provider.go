@@ -20,7 +20,7 @@ import (
 //
 //  1. profile nil                    → return (nil, nil); orchestrator surfaces ErrNoProfile
 //  2. no token stored                → ErrNotLoggedIn
-//  3. stored.InvalidatedAt > 0       → ErrTokenInvalidated  (refresher writes this on /api/refresh 401/403)
+//  3. stored.InvalidatedAt > 0       → ErrTokenInvalidated  (refresher writes this when Authelia rejects the grant)
 //  4. otherwise                      → ResolvedProfile, even if the JWT exp is in the past
 //
 // We deliberately do NOT short-circuit on a stale JWT exp claim: cli/pkg/cmdutil's
@@ -71,8 +71,8 @@ func (e *ErrTokenExpired) Error() string {
 // marked unusable via TokenStore.MarkInvalidated. The grant cannot be
 // recovered locally — the user must re-authenticate.
 //
-// Refresher.Refresh stamps InvalidatedAt when /api/refresh returns 401/403,
-// so subsequent commands skip the network round-trip and surface this CTA
+// Refresher.Refresh stamps InvalidatedAt when Authelia rejects the grant, so
+// subsequent commands skip the network round-trip and surface this CTA
 // directly.
 type ErrTokenInvalidated struct {
 	OlaresID      string
