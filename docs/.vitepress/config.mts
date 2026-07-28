@@ -272,13 +272,13 @@ export default defineVersionedConfig2(withMermaid({
     let zhHref: string | undefined;
     if (isZh) {
       const enRoute = zhToEnMap.get(route);
-      if (enRoute) {
+      if (enRoute !== undefined) {
         enHref = `https://www.olares.com/docs/${enRoute}`;
         zhHref = canonicalHref;
       }
     } else {
       const zhRoute = enToZhMap.get(route);
-      if (zhRoute) {
+      if (zhRoute !== undefined) {
         enHref = canonicalHref;
         zhHref = `https://www.olares.com/docs/${zhRoute}`;
       }
