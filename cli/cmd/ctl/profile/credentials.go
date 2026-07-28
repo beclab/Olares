@@ -1,11 +1,13 @@
 package profile
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/beclab/Olares/cli/internal/keychain"
+	"github.com/beclab/Olares/cli/pkg/access"
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
 	"github.com/beclab/Olares/cli/pkg/olares"
@@ -41,6 +43,28 @@ func (f *commonCredFlags) validateAndDeriveAuthURL() (id olares.ID, terminusName
 		authURL = id.AuthURL(f.localURLPrefix)
 	}
 	return id, terminusName, authURL, nil
+}
+
+// probeProfileLocation determines the CLI's network position relative to the
+// target Olares for a fresh `profile login` / `profile import`, and returns
+// both that Location and the auth URL to use for it.
+//
+//   - An explicit --auth-url-override short-circuits to LocationExternal with
+//     the override URL (the user pinned the endpoint; we don't second-guess
+//     it with a probe).
+//   - Otherwise it runs access.ProbeLocation. Because login/import are
+//     explicit user actions, a total failure (every connection method down)
+//     is fatal — there's no point persisting a profile we can't reach. The
+//     outage cooldown does NOT apply here; the user asked for this round-trip.
+func probeProfileLocation(ctx context.Context, id olares.ID, localPrefix string, insecure bool, authURLOverride string) (olares.Location, string, error) {
+	if authURLOverride != "" {
+		return olares.LocationExternal, authURLOverride, nil
+	}
+	loc, err := access.ProbeLocation(ctx, id, localPrefix, insecure)
+	if err != nil {
+		return "", "", err
+	}
+	return loc, id.Endpoints(loc, localPrefix).Auth, nil
 }
 
 // ensureProfileWritable enforces the "auto-create-or-reuse, reject if valid
@@ -158,32 +182,42 @@ func persistTokenAndProfile(
 	if err := store.Set(stored); err != nil {
 		return persistResult{}, fmt.Errorf("save token: %w", err)
 	}
-	persisted := cfg.Upsert(profile)
 
+	// Persist the profile under the config lock, re-reading inside so a
+	// concurrent background location write can't clobber the upsert (and
+	// vice-versa). The upsert + current-pointer logic runs on the fresh copy.
 	res := persistResult{}
-	newName := persisted.DisplayName()
-	prevCurrent := cfg.CurrentProfile
-	switch {
-	case switchCurrent && prevCurrent != newName:
-		// SetCurrent handles the empty-current case (no PreviousProfile
-		// update), and updates PreviousProfile when current actually moves.
-		// The lookup can only fail if the upsert above didn't land — treat
-		// that as an internal invariant violation.
-		if _, err := cfg.SetCurrent(newName); err != nil {
-			return persistResult{}, fmt.Errorf("activate profile %q: %w", newName, err)
+	if err := cliconfig.UpdateLocked(func(c *cliconfig.MultiProfileConfig) error {
+		persisted := c.Upsert(profile)
+		newName := persisted.DisplayName()
+		prevCurrent := c.CurrentProfile
+		switch {
+		case switchCurrent && prevCurrent != newName:
+			// SetCurrent handles the empty-current case (no PreviousProfile
+			// update), and updates PreviousProfile when current actually
+			// moves. The lookup can only fail if the upsert above didn't
+			// land — treat that as an internal invariant violation.
+			if _, err := c.SetCurrent(newName); err != nil {
+				return fmt.Errorf("activate profile %q: %w", newName, err)
+			}
+			res.Switched = true
+			res.PreviousCurrent = prevCurrent
+		case !switchCurrent && prevCurrent == "":
+			// Bootstrap path when --no-switch was passed but there's literally
+			// no current to preserve. Still no PreviousProfile bookkeeping
+			// (there was nothing to demote).
+			c.CurrentProfile = newName
+			res.Switched = true
 		}
-		res.Switched = true
-		res.PreviousCurrent = prevCurrent
-	case !switchCurrent && prevCurrent == "":
-		// Bootstrap path when --no-switch was passed but there's literally no
-		// current to preserve. Still no PreviousProfile bookkeeping (there
-		// was nothing to demote).
-		cfg.CurrentProfile = newName
-		res.Switched = true
+		return nil
+	}); err != nil {
+		return persistResult{}, err
 	}
 
-	if err := cliconfig.SaveMultiProfileConfig(cfg); err != nil {
-		return persistResult{}, fmt.Errorf("save config: %w", err)
+	// Reflect the persisted state into the caller's cfg so post-login steps
+	// (e.g. eagerDetect) see the just-added profile.
+	if reloaded, err := cliconfig.LoadMultiProfileConfig(); err == nil {
+		*cfg = *reloaded
 	}
 	return res, nil
 }

@@ -25,16 +25,19 @@ func NewUseCommand() *cobra.Command {
 }
 
 func runUse(key string) error {
-	cfg, err := cliconfig.LoadMultiProfileConfig()
-	if err != nil {
+	// Take the config lock + re-read inside the mutation so a concurrent
+	// background location write (during a long-running command) can't clobber
+	// the current-profile switch, and vice-versa.
+	var target *cliconfig.ProfileConfig
+	if err := cliconfig.UpdateLocked(func(cfg *cliconfig.MultiProfileConfig) error {
+		t, err := cfg.SetCurrent(key)
+		if err != nil {
+			return err
+		}
+		target = t
+		return nil
+	}); err != nil {
 		return err
-	}
-	target, err := cfg.SetCurrent(key)
-	if err != nil {
-		return err
-	}
-	if err := cliconfig.SaveMultiProfileConfig(cfg); err != nil {
-		return fmt.Errorf("save config: %w", err)
 	}
 	fmt.Printf("switched to profile %s (%s)\n", target.DisplayName(), target.OlaresID)
 	return nil

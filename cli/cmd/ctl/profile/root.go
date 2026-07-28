@@ -42,15 +42,15 @@ HKCU\Software\OlaresCli\keychain on windows. The plaintext
 ~/.olares-cli/tokens.json from earlier builds is no longer used.`,
 	}
 
-	// Backend-version controls live on the profile tree because the version
-	// is a per-profile property (cached in config.json, eagerly fetched at
-	// login). As persistent flags they reach every profile subcommand —
-	// `profile login`/`import` honor them for the eager fetch, and
-	// `profile list --refresh-version` re-reads /api/olares-info. The root
-	// PersistentPreRun binds them into viper so
-	// cmdutil.Factory.resolveBackendVersion picks them up.
+	// The backend-version override lives on the profile tree because the
+	// version is a per-profile property (cached in config.json, detected at
+	// login). As a persistent flag it reaches every profile subcommand; the
+	// root PersistentPreRun binds it into viper so
+	// cmdutil.Factory.resolveBackendVersion picks it up. On-demand
+	// re-detection is via `profile whoami --refresh` / `profile list
+	// --refresh` (location + role + version), so there is no force-refresh
+	// flag here.
 	cmd.PersistentFlags().String(cmdutil.FlagOlaresVersion, "", "override the detected Olares backend version (e.g. 1.12.6, 1.12.6-20260603); skips /api/olares-info detection")
-	cmd.PersistentFlags().Bool(cmdutil.FlagRefreshVersion, false, "force a fresh backend-version read from /api/olares-info, ignoring the cached value")
 
 	for _, sub := range []*cobra.Command{
 		NewListCommand(f),
