@@ -6,18 +6,16 @@ head:
   - - meta
     - name: keywords
       content: Olares, DeerFlow, AI agent, deep research, multi-agent, self-hosted, LLM
-doc_version: "1.0"
-app_version: "1.0.0"
-doc_updated: "2026-03-24"
+doc_version: "1.2"
+app_version: "1.0.6"
+doc_updated: "2026-07-27"
 ---
 
 # Set up DeerFlow 2.0 for AI-powered research and tasks
 
 DeerFlow is an open-source agent harness by ByteDance, built on LangGraph and LangChain. It orchestrates sub-agents, memory, and sandboxes to handle complex tasks through extensible skills.
 
-DeerFlow 2.0 is a ground-up rewrite of the original [DeerFlow](./deerflow.md). While version 1.0 was a deep research framework, version 2.0 is a general-purpose agent platform.
-
-This guide covers installing DeerFlow 2.0 on Olares and configuring it with a local model, using Qwen3.5 27B Q4_K_M (Ollama) as an example.
+DeerFlow 2.0 is a ground-up rewrite of the original [DeerFlow](https://github.com/bytedance/deer-flow). While version 1.0 was a deep research framework, version 2.0 is a general-purpose agent platform.
 
 ## Learning objectives
 
@@ -27,7 +25,16 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- A model app installed from Market with the model fully downloaded.
+Before you begin, you need:
+
+- An Olares device with sufficient disk space and memory.
+- The following model:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install DeerFlow 2.0
 
@@ -38,42 +45,33 @@ In this guide, you will learn how to:
 
 ## Configure the model
 
-DeerFlow 2.0 uses a `config.yaml` file for its core configuration. To connect it to your local model, add a model entry that points to your model app's shared endpoint.
+DeerFlow 2.0 uses a `config.yaml` file for its core configuration. To connect it to a local model, add the model and its connection details to this file.
 
-### Get the model endpoint and model name
+### Get model connection details
 
-1. Open the model app from Launchpad. The model name is displayed on the page (e.g., `qwen3.5:27b-q4_K_M`). Note it for later.
-   ![Get model name](/images/manual/use-cases/deerflow2-get-model-name.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-2. Open Settings, then navigate to **Application** > your model app (e.g., **Qwen3.5 27B Q4_K_M (Ollama)**).
-3. Under **Shared entrances**, select the model app to view the endpoint URL.
+For Qwen3.6-27B (llama.cpp):
 
-   ![Get shared endpoint](/images/manual/use-cases/deerflow2-shared-entrance.png#bordered){width=70%}
-
-4. Copy the shared endpoint. For example:
-   ```text
-   http://94a553e00.shared.olares.com
-   ```
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### Edit config.yaml
 
-1. Open Files and navigate to the DeerFlow 2.0 app data directory: `Application/Data/deerflowv2/config/`.
-
+1. Open Files and navigate to the DeerFlow 2.0 app data directory: `/Data/deerflowv2/config/`.
 2. Open `config.yaml`, and click <span class="material-symbols-outlined">edit_square</span> in the top-right corner to open the editor.
-
-3. Under the `models:` section, add your model configuration using the shared endpoint you copied. For example:
+3. Under the `models:` section, add the model configuration below. Replace `PASTE_BASE_URL_FROM_MODEL_CONSOLE` with the Base URL copied from the Qwen3.6-27B Model Console.
 
    ```yaml
    models:
-     - name: qwen3.5:27b-q4_K_M            # Unique identifier for the model
-       display_name: Qwen3.5 27B            # Name shown in the UI
-       use: langchain_openai:ChatOpenAI     # LangChain class for OpenAI-compatible APIs
-       model: qwen3.5:27b-q4_K_M           # Model ID
-       api_key: ollama                      # Use any non-empty text
-       base_url: http://94a553e00.shared.olares.com/v1  # Shared endpoint with /v1 suffix
-       supports_thinking: true              # Set to true if the model supports extended thinking
+     - name: unsloth/Qwen3.6-27B-GGUF:Q4_K_M      # Unique identifier for the model
+       display_name: Qwen3.6-27B      # Name shown in the UI
+       use: langchain_openai:ChatOpenAI      # LangChain class for OpenAI-compatible APIs
+       model: unsloth/Qwen3.6-27B-GGUF:Q4_K_M      # Model ID
+       api_key: olares      # Use any non-empty text
+       base_url: https://e46e044d.laresprime.olares.com/v1      # Base URL from MOdel Console
+       supports_thinking: true      # Set to true if the model supports extended thinking
    ```
-   ![Edit config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml.png#bordered)
+   ![Edit config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml1.png#bordered)
 
 4. Click <span class="material-symbols-outlined">save</span> to save the changes.
 
@@ -91,15 +89,26 @@ DeerFlow 2.0 uses a `config.yaml` file for its core configuration. To connect it
 
 Once the model is configured, you can start using DeerFlow 2.0.
 
-1. Open DeerFlow 2.0 from Launchpad and click **Get Started with 2.0** to access the chat interface.
+1. Open DeerFlow 2.0 from Launchpad and click **Get Started with 2.0**.
 
-2. Select your preferred execution mode.
+2. On the first launch, create the administrator account used to access and manage the current DeerFlow 2.0 instance:
+    - **Email:** Enter the email address for the administrator account.
+    - **Password:** Enter a password with at least eight characters.
+    - **Confirm Password:** Enter the password again.
+
+   Account data, including login details, stays within the current DeerFlow 2.0 instance. Account creation and sign-in do not connect to an external account service.
+
+   Click **Create Admin Account** to access the chat interface.
+
+   ![Create the DeerFlow administrator account](/images/manual/use-cases/deerflow2-create-admin-account.png#bordered)
+
+3. Select your preferred execution mode.
 
    ![Select execution mode](/images/manual/use-cases/deerflow2-select-mode.png#bordered)
 
    DeerFlow 2.0 offers several execution modes that control how the agent processes your request, from quick single-pass answers to multi-step research with sub-agents.
 
-3. Enter your prompt in the chat box, or select a suggested topic for inspiration.
+4. Enter your prompt in the chat box, or select a suggested topic for inspiration.
 
    For example, you can conduct deep research on a topic:
    ![Deep research example](/images/manual/use-cases/deerflow2-research.png#bordered)
@@ -114,7 +123,7 @@ Once the model is configured, you can start using DeerFlow 2.0.
 If the agent fails to start or hangs:
 
 - **Check model compatibility**: Ensure the model you selected is properly configured in `config.yaml`. Verify the endpoint URL is correct.
-- **Check endpoint configuration**: Check that the API endpoint includes the `/v1` suffix.
+- **Check connection details**: Make sure the Model name and Base URL match the values displayed in the Model Console.
 
 ### How do I enable follow-up suggestions?
 
