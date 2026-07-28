@@ -9,14 +9,27 @@ import (
 // BearerJS is the njs module for JWT reads, Host allowlist checks, and stream
 // SNI decideOffload (allowlist → loopback terminate; else host:443 passthrough).
 func BearerJS() string {
-	return BearerJSWith(JWTSecretMountPath+"/token", HostsMountPath+"/"+SharedHostsFileName, HTTPSTerminatePort, "olares.com")
+	return BearerJSWith(
+		JWTSecretMountPath+"/token",
+		HostsMountPath+"/"+SharedHostsFileName,
+		HTTPSTerminatePort,
+		"olares.com",
+		CertsMountPath,
+		PlaceholderCertDir,
+	)
 }
 
 // BearerJSWith builds the njs module with explicit paths (tests / render).
-func BearerJSWith(jwtPath, hostsFile string, terminatePort int, platformDomain string) string {
+func BearerJSWith(jwtPath, hostsFile string, terminatePort int, platformDomain, certDir, placeholderDir string) string {
 	escapedDomain := regexp.QuoteMeta(strings.ToLower(strings.TrimSpace(platformDomain)))
 	if escapedDomain == "" {
 		escapedDomain = "olares\\.com"
+	}
+	if certDir == "" {
+		certDir = CertsMountPath
+	}
+	if placeholderDir == "" {
+		placeholderDir = PlaceholderCertDir
 	}
 	return fmt.Sprintf(`var fs = require('fs');
 
@@ -26,10 +39,16 @@ const TERMINATE = '127.0.0.1:%d';
 const CACHE_TTL_MS = 5000;
 const PLATFORM_SUFFIX = '.%s';
 const V2_GUARD = new RegExp('^[a-z0-9-]+\\.shared\\.%s$', 'i');
+const REAL_CERT = '%s/tls.crt';
+const REAL_KEY = '%s/tls.key';
+const PH_CERT = '%s/tls.crt';
+const PH_KEY = '%s/tls.key';
 
 let cachedHosts = null;
 let cachedMtimeMs = 0;
 let cachedAtMs = 0;
+let tlsModeCached = null;
+let tlsModeAtMs = 0;
 
 function nowMs() { return Date.now(); }
 
@@ -80,6 +99,34 @@ function reloadHostsIfNeeded() {
   }
 }
 
+function realCertReady() {
+  try {
+    const c = fs.statSync(REAL_CERT);
+    const k = fs.statSync(REAL_KEY);
+    return c.size > 0 && k.size > 0;
+  } catch (e) {
+    return false;
+  }
+}
+
+function tlsMode(r) {
+  const now = nowMs();
+  if (tlsModeCached !== null && now - tlsModeAtMs < CACHE_TTL_MS) {
+    return tlsModeCached;
+  }
+  tlsModeCached = realCertReady() ? 'real' : 'placeholder';
+  tlsModeAtMs = now;
+  return tlsModeCached;
+}
+
+function pickCert(r) {
+  return tlsMode(r) === 'real' ? REAL_CERT : PH_CERT;
+}
+
+function pickKey(r) {
+  return tlsMode(r) === 'real' ? REAL_KEY : PH_KEY;
+}
+
 function readJWT(r) {
   try {
     var t = fs.readFileSync(JWT_PATH);
@@ -109,6 +156,6 @@ function decideOffload(s) {
   return passthrough(host);
 }
 
-export default {readJWT, checkHost, decideOffload};
-`, jwtPath, hostsFile, terminatePort, escapedDomain, escapedDomain)
+export default {readJWT, checkHost, decideOffload, tlsMode, pickCert, pickKey};
+`, jwtPath, hostsFile, terminatePort, escapedDomain, escapedDomain, certDir, certDir, placeholderDir, placeholderDir)
 }

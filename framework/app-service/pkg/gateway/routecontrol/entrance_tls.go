@@ -151,7 +151,7 @@ func deletePerViewerTLSSecret(ctx context.Context, c client.Client, viewer strin
 }
 
 // fanOutMeshInTLSReplicas copies the gateway per-viewer TLS Secret into caller
-// namespaces as olares-mesh-in-tls-<viewer> (WI-OC-MESH-IN-CT1-02).
+// namespaces as olares-mesh-in-tls-<viewer>.
 func fanOutMeshInTLSReplicas(ctx context.Context, c client.Client, viewer string) error {
 	index, err := BuildDemandIndex(ctx, c, "")
 	if err != nil {
