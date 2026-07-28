@@ -2,23 +2,29 @@ package mesh
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
-func linkerdReadyClient() *fake.Clientset {
-	objs := make([]runtime.Object, 0, 4)
+func linkerdControlPlaneObjects() []runtime.Object {
+	objs := make([]runtime.Object, 0, len(linkerdControlPlaneDeployments)+1)
 	for _, name := range linkerdControlPlaneDeployments {
 		objs = append(objs, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: linkerdNamespace},
 			Status:     appsv1.DeploymentStatus{ReadyReplicas: 1},
 		})
 	}
-	objs = append(objs, &appsv1.Deployment{
+	return objs
+}
+
+func linkerdReadyClient() *fake.Clientset {
+	objs := append(linkerdControlPlaneObjects(), &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: linkerdPKIGuardianDeploy, Namespace: linkerdNamespace},
 		Status:     appsv1.DeploymentStatus{ReadyReplicas: 1},
 	})
@@ -34,6 +40,39 @@ func TestIsLinkerdLayer1ReadyFalseWithoutDeployments(t *testing.T) {
 func TestIsLinkerdLayer1ReadyTrueWhenControlPlaneReady(t *testing.T) {
 	if !IsLinkerdLayer1Ready(context.Background(), linkerdReadyClient()) {
 		t.Fatal("expected Linkerd ready when control plane deployments are available")
+	}
+}
+
+func TestIsLinkerdLayer1ReadyFalseWhenPKIGuardianAbsent(t *testing.T) {
+	client := fake.NewSimpleClientset(linkerdControlPlaneObjects()...)
+	if IsLinkerdLayer1Ready(context.Background(), client) {
+		t.Fatal("expected Linkerd not ready when linkerd-pki-guardian is missing")
+	}
+	if ShouldSkipOesForSharedCaller(context.Background(), client, true, false, false) {
+		t.Fatal("must not skip Shared-caller oes without a ready PKI guardian")
+	}
+}
+
+func TestIsLinkerdLayer1ReadyFalseWhenPKIGuardianHasNoReadyReplica(t *testing.T) {
+	objs := append(linkerdControlPlaneObjects(), &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: linkerdPKIGuardianDeploy, Namespace: linkerdNamespace},
+		Status:     appsv1.DeploymentStatus{ReadyReplicas: 0},
+	})
+	if IsLinkerdLayer1Ready(context.Background(), fake.NewSimpleClientset(objs...)) {
+		t.Fatal("expected Linkerd not ready when linkerd-pki-guardian has no ready replica")
+	}
+}
+
+func TestIsLinkerdLayer1ReadyFalseWhenPKIGuardianLookupFails(t *testing.T) {
+	client := linkerdReadyClient()
+	client.PrependReactor("get", "deployments", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.(k8stesting.GetAction).GetName() == linkerdPKIGuardianDeploy {
+			return true, nil, errors.New("apiserver unavailable")
+		}
+		return false, nil, nil
+	})
+	if IsLinkerdLayer1Ready(context.Background(), client) {
+		t.Fatal("expected Linkerd not ready when the guardian lookup fails")
 	}
 }
 

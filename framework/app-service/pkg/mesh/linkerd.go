@@ -39,6 +39,9 @@ func linkerdLayer1Enabled() bool {
 }
 
 // IsLinkerdLayer1Ready reports whether core Linkerd control plane deployments are Available.
+// linkerd-pki-guardian is part of the readiness set: it keeps the identity issuer valid, so
+// treating an unreachable guardian as ready would let Shared callers drop olares-envoy-sidecar
+// before mesh auth can be trusted. Every lookup failure therefore fails closed.
 func IsLinkerdLayer1Ready(ctx context.Context, kube kubernetes.Interface) bool {
 	if !linkerdLayer1Enabled() || kube == nil {
 		return false
@@ -57,7 +60,13 @@ func IsLinkerdLayer1Ready(ctx context.Context, kube kubernetes.Interface) bool {
 		}
 	}
 	guardian, err := kube.AppsV1().Deployments(linkerdNamespace).Get(ctx, linkerdPKIGuardianDeploy, metav1.GetOptions{})
-	if err == nil && guardian.Status.ReadyReplicas < 1 {
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.V(2).Infof("mesh: get deployment %s/%s failed: %v", linkerdNamespace, linkerdPKIGuardianDeploy, err)
+		}
+		return false
+	}
+	if guardian.Status.ReadyReplicas < 1 {
 		return false
 	}
 	return true
