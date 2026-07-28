@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -181,7 +184,8 @@ func tlsMaterialHash(cert, key string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// SetupWithManager registers the reconciler against zone-ssl-config ConfigMaps.
+// SetupWithManager registers the reconciler against zone-ssl-config ConfigMaps
+// and in-cluster-caller Namespace labels (level-triggered TLS replica fan-out).
 func (r *EntranceTLSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r == nil {
 		return nil
@@ -195,5 +199,41 @@ func (r *EntranceTLSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("entrance-tls").
 		For(&corev1.ConfigMap{}, builder.WithPredicates(onlyZoneSSL)).
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(r.mapCallerNamespaceToZoneSSL),
+			builder.WithPredicates(inClusterCallerNamespacePredicate())).
 		Complete(r)
+}
+
+// mapCallerNamespaceToZoneSSL requeues the caller's zone-ssl-config (viewer =
+// ns-owner) so fanOutMeshInTLSReplicas runs after late in-cluster-caller labels.
+func (r *EntranceTLSReconciler) mapCallerNamespaceToZoneSSL(ctx context.Context, obj client.Object) []reconcile.Request {
+	if r == nil || r.Client == nil || obj == nil {
+		return nil
+	}
+	ns, ok := obj.(*corev1.Namespace)
+	if !ok || ns == nil {
+		return nil
+	}
+	if !strings.EqualFold(strings.TrimSpace(ns.Labels[security.NamespaceInClusterCallerLabel]), "true") {
+		return nil
+	}
+	var appList appv1alpha1.ApplicationList
+	if err := r.Client.List(ctx, &appList); err != nil {
+		klog.Warningf("entrance-tls: list apps for caller ns=%s fan-out map failed: %v", ns.Name, err)
+		return nil
+	}
+	viewer := certViewerForCallerNamespace(ns, appList.Items)
+	if viewer == "" {
+		klog.Warningf("entrance-tls: caller ns=%s has in-cluster-caller but unresolved viewer", ns.Name)
+		return nil
+	}
+	// Prefer fan-out immediately when gateway Secret already exists (common
+	// after late label); also requeue zone-ssl so Reconcile path stays level-triggered.
+	if err := fanOutMeshInTLSReplicas(ctx, r.Client, viewer); err != nil {
+		klog.Warningf("entrance-tls: fan-out on caller ns=%s viewer=%s: %v", ns.Name, viewer, err)
+	}
+	userSpaceNS := userSpacePrefix + viewer
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{Namespace: userSpaceNS, Name: zoneSSLConfigMapName},
+	}}
 }
