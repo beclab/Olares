@@ -10,10 +10,17 @@ Olares 上的独立模型作为与客户端应用分开的服务运行。要连�
 
 <!-- #region get-model-connection-details -->
 1. 从启动台打开模型应用。其模型控制台会自动打开。
-2. 等待 **Model** 显示 **READY**，且 **Engine** 显示 **RUNNING**。
-3. 在 **Service status** 下，确保已选择 **Apps in Olares**。按显示内容原样复制 **Model name** 和 **Base URL**。
+2. 等待**模型**显示**就绪**，且**引擎**显示**运行中**。
+3. 在**模型**部分，按显示内容原样复制**模型名称**。
+4. 在**引擎**部分：
 
-   ![Qwen3.6-27B 模型控制台](/images/one/qwen3.6-27b-model-console.png#bordered){width=90%}
+   a. **连接来源**：选择 **Olares 内应用**。
+
+   b. **API 格式**：选择 **OpenAI-Compatible**。
+
+   c.按显示内容原样复制 **Base URL** 地址。
+
+   ![Qwen3.6-27B 模型控制台](/images/zh/manual/use-cases/qwen3.6-27b-model-console1.png#bordered)
 <!-- #endregion get-model-connection-details -->
 
 <!-- #region use-different-model -->
