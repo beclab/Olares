@@ -18,7 +18,7 @@ doc_updated: "2026-07-27"
 
 DeerFlow 是字节跳动开源的智能代理框架，基于 LangGraph 和 LangChain 构建。它通过可扩展的 skill 编排子代理、记忆和沙盒来处理复杂任务。
 
-DeerFlow 2.0 是原版 [DeerFlow](./deerflow.md) 的彻底重写。虽然 1.0 版本是一个深度研究框架，但 2.0 版本是一个通用智能代理平台。
+DeerFlow 2.0 是原版 [DeerFlow](https://github.com/bytedance/deer-flow) 的彻底重写。虽然 1.0 版本是一个深度研究框架，但 2.0 版本是一个通用智能代理平台。
 
 ## 学习目标
 
@@ -94,10 +94,12 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
 
 1. 从 Launchpad 打开 DeerFlow 2.0，点击 **Get Started with 2.0**。
 
-2. 首次启动时，创建管理员账号：
+2. 首次启动时，创建用于访问和管理当前 DeerFlow 2.0 实例的管理员账号：
     - **Email**：输入管理员账号的电子邮箱地址。
     - **Password**：输入至少包含八个字符的密码。
     - **Confirm Password**：再次输入密码。
+
+   账号数据，包括登录信息，仅保存在当前 DeerFlow 2.0 实例中。创建账号和登录均不连接外部账号服务。
 
    点击 **Create Admin Account** 进入聊天界面。
 

@@ -15,7 +15,7 @@ doc_updated: "2026-07-27"
 
 DeerFlow is an open-source agent harness by ByteDance, built on LangGraph and LangChain. It orchestrates sub-agents, memory, and sandboxes to handle complex tasks through extensible skills.
 
-DeerFlow 2.0 is a ground-up rewrite of the original [DeerFlow](./deerflow.md). While version 1.0 was a deep research framework, version 2.0 is a general-purpose agent platform.
+DeerFlow 2.0 is a ground-up rewrite of the original [DeerFlow](https://github.com/bytedance/deer-flow). While version 1.0 was a deep research framework, version 2.0 is a general-purpose agent platform.
 
 ## Learning objectives
 
@@ -91,10 +91,12 @@ Once the model is configured, you can start using DeerFlow 2.0.
 
 1. Open DeerFlow 2.0 from Launchpad and click **Get Started with 2.0**.
 
-2. On the first launch, create the administrator account:
+2. On the first launch, create the administrator account used to access and manage the current DeerFlow 2.0 instance:
     - **Email:** Enter the email address for the administrator account.
     - **Password:** Enter a password with at least eight characters.
     - **Confirm Password:** Enter the password again.
+
+   Account data, including login details, stays within the current DeerFlow 2.0 instance. Account creation and sign-in do not connect to an external account service.
 
    Click **Create Admin Account** to access the chat interface.
 
