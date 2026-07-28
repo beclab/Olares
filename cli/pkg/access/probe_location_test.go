@@ -11,11 +11,13 @@ import (
 	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
-// probeOutcome scripts one probe result: err==nil means "reachable"; srcIP
-// (host probe only) is written back so locationFromSrcIP gets exercised.
+// probeOutcome scripts one probe result: err==nil means "reachable"; srcIP /
+// remoteIP (host probe only) are written into *connAddrs so locationFromProbe
+// gets exercised.
 type probeOutcome struct {
-	err   error
-	srcIP net.IP
+	err      error
+	srcIP    net.IP
+	remoteIP net.IP
 }
 
 // installProbeStub swaps probeFn for a deterministic, per-Location script and
@@ -25,15 +27,20 @@ func installProbeStub(t *testing.T, outcomes map[olares.Location]probeOutcome) *
 	calls := &[]olares.Location{}
 	orig := probeFn
 	t.Cleanup(func() { probeFn = orig })
-	probeFn = func(_ context.Context, loc olares.Location, _ string, _ bool, srcIP *net.IP, _ time.Duration) error {
+	probeFn = func(_ context.Context, loc olares.Location, _ string, _ bool, addrs *connAddrs, _ time.Duration) error {
 		*calls = append(*calls, loc)
 		out, ok := outcomes[loc]
 		if !ok {
 			// Default: unreachable (connection refused).
 			return syscall.ECONNREFUSED
 		}
-		if out.err == nil && srcIP != nil && out.srcIP != nil {
-			*srcIP = out.srcIP
+		if out.err == nil && addrs != nil {
+			if out.srcIP != nil {
+				addrs.src = out.srcIP
+			}
+			if out.remoteIP != nil {
+				addrs.remote = out.remoteIP
+			}
 		}
 		return out.err
 	}
@@ -72,7 +79,7 @@ func TestProbeLocationOrdering(t *testing.T) {
 			name: "host: intranet reachable with VPN source IP",
 			outcomes: map[olares.Location]probeOutcome{
 				olares.LocationLAN:  {err: syscall.ECONNREFUSED},
-				olares.LocationHost: {srcIP: net.ParseIP("100.64.0.9")},
+				olares.LocationHost: {srcIP: net.ParseIP("100.64.0.9"), remoteIP: net.ParseIP("100.64.0.1")},
 			},
 			want:      olares.LocationHost,
 			wantCalls: []olares.Location{olares.LocationLAN, olares.LocationHost},
@@ -81,10 +88,43 @@ func TestProbeLocationOrdering(t *testing.T) {
 			name: "cluster: intranet reachable with pod source IP",
 			outcomes: map[olares.Location]probeOutcome{
 				olares.LocationLAN:  {err: syscall.ECONNREFUSED},
-				olares.LocationHost: {srcIP: net.ParseIP("10.233.1.2")},
+				olares.LocationHost: {srcIP: net.ParseIP("10.233.104.86"), remoteIP: net.ParseIP("192.168.31.104")},
 			},
 			want:      olares.LocationCluster,
 			wantCalls: []olares.Location{olares.LocationLAN, olares.LocationHost},
+		},
+		{
+			name: "host: LAN src with intranet remote (node IP)",
+			outcomes: map[olares.Location]probeOutcome{
+				olares.LocationLAN:  {err: syscall.ECONNREFUSED},
+				olares.LocationHost: {srcIP: net.ParseIP("192.168.50.202"), remoteIP: net.ParseIP("192.168.31.104")},
+			},
+			want:      olares.LocationHost,
+			wantCalls: []olares.Location{olares.LocationLAN, olares.LocationHost},
+		},
+		{
+			// ClusterDNS answered with a public address (hijacked / forwarded
+			// upstream) — inconclusive, so ProbeLocation continues to external.
+			name: "inconclusive host + external reachable -> external",
+			outcomes: map[olares.Location]probeOutcome{
+				olares.LocationLAN:      {err: syscall.ECONNREFUSED},
+				olares.LocationHost:     {srcIP: net.ParseIP("192.168.50.202"), remoteIP: net.ParseIP("42.193.109.3")},
+				olares.LocationExternal: {},
+			},
+			want:      olares.LocationExternal,
+			wantCalls: []olares.Location{olares.LocationLAN, olares.LocationHost, olares.LocationExternal},
+		},
+		{
+			// Same inconclusive host probe, but external also fails — current
+			// code surfaces UnreachableError (no host fallback).
+			name: "inconclusive host + external fail -> unreachable",
+			outcomes: map[olares.Location]probeOutcome{
+				olares.LocationLAN:      {err: syscall.ECONNREFUSED},
+				olares.LocationHost:     {srcIP: net.ParseIP("192.168.50.202"), remoteIP: net.ParseIP("42.193.109.3")},
+				olares.LocationExternal: {err: syscall.ECONNREFUSED},
+			},
+			wantErr:   true,
+			wantCalls: []olares.Location{olares.LocationLAN, olares.LocationHost, olares.LocationExternal},
 		},
 		{
 			name: "external fallback",

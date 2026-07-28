@@ -11,11 +11,18 @@ import (
 )
 
 // VPNSubnet is the CGNAT range Olares' headscale/tailscale overlay hands out
-// (USER_SUBNET defaults to 100.64.0.0/20, comfortably inside this /10). When a
-// connection to the public hostname — resolved via the in-cluster DNS — has a
-// source address in this range, the CLI is running on the Olares host itself;
-// otherwise it's inside a cluster pod. See ProbeLocation.
+// (USER_SUBNET defaults to 100.64.0.0/20, comfortably inside this /10). A
+// connection sourced from this range was made over the overlay, which only
+// happens from the Olares host. See locationFromProbe.
 const VPNSubnet = "100.64.0.0/10"
+
+// ClusterSubnet covers the cluster's own addresses — both the Service CIDR and
+// the Pod CIDR, which kubekey derives from this same /16 by default
+// (10.233.0.0/18 for Services, 10.233.64.0/18 for Pods). A connection sourced
+// from here was made from inside a cluster pod. Note that a cluster installed
+// with custom CIDRs falls outside this constant, in which case the probe simply
+// classifies from the remote address instead. See locationFromProbe.
+const ClusterSubnet = "10.233.0.0/16"
 
 // clusterResolver resolves names through the in-cluster DNS (olares.ClusterDNS)
 // rather than the system resolver, so the public `<svc>.<terminus>` hostnames
@@ -43,12 +50,24 @@ func clusterResolver() *net.Resolver {
 // disables TLS verification (dev-only profile opt-in).
 func Transport(loc olares.Location, insecure bool) *http.Transport {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
-	if loc.UsesClusterResolver() {
+	switch {
+	case loc.UsesClusterResolver():
 		tr.DialContext = (&net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
 			Resolver:  clusterResolver(),
 		}).DialContext
+	case loc.UsesLocalDomain():
+		// The .olares.local names resolve over mDNS, where a missing record
+		// draws no response at all — the query just waits out the full ~5s
+		// window. A dual-stack lookup therefore pays that 5s for the absent
+		// AAAA even when the A record came back in milliseconds, which alone
+		// exceeds probeTimeoutLAN. Pin the dial to IPv4 so only the A record
+		// is looked up.
+		d := &net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}
+		tr.DialContext = func(ctx context.Context, _, addr string) (net.Conn, error) {
+			return d.DialContext(ctx, "tcp4", addr)
+		}
 	}
 	if insecure {
 		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- explicit profile opt-in

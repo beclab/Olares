@@ -35,18 +35,37 @@ var vpnNet = func() *net.IPNet {
 	return n
 }()
 
+var clusterNet = func() *net.IPNet {
+	_, n, err := net.ParseCIDR(ClusterSubnet)
+	if err != nil {
+		return nil
+	}
+	return n
+}()
+
 // probeFn is the single-probe function ProbeLocation drives. It indirects
 // through a package var purely so tests can substitute a deterministic stub
 // (the real probeOnce dials the network); production never reassigns it.
 var probeFn = probeOnce
+
+// connAddrs records both ends of the connection a probe established. The
+// intranet probe classifies its position from these: `remote` says whether the
+// in-cluster DNS actually handed back an intranet address, `src` whether we
+// reached it over the overlay.
+type connAddrs struct {
+	src    net.IP
+	remote net.IP
+}
 
 // ProbeLocation determines where the CLI sits relative to id's Olares instance
 // by trying each connection method in order and returning the first that yields
 // any HTTP response:
 //
 //  1. lan       — http://<svc>.<local>.olares.local
-//  2. host/cluster — https://<svc>.<terminus> resolved via the in-cluster DNS;
-//     a connection source IP inside VPNSubnet means `host`, otherwise `cluster`
+//  2. host/cluster — https://<svc>.<terminus> resolved via the in-cluster DNS,
+//     classified from both ends of the connection (see locationFromProbe); a
+//     probe that only proves the public path stays inconclusive and falls
+//     through
 //  3. external  — https://<svc>.<terminus> via the system resolver
 //
 // "Reachable" means the probe established a connection and got back any HTTP
@@ -74,11 +93,15 @@ func ProbeLocation(ctx context.Context, id olares.ID, localPrefix string, insecu
 		}
 	}
 
-	// 2. host / cluster — same URL, intranet DNS, distinguished by source IP.
+	// 2. host / cluster — same URL, intranet DNS, told apart by the addresses
+	// the connection ended up with.
 	intranetURL := id.Endpoints(olares.LocationHost, localPrefix).Desktop
-	var srcIP net.IP
-	if err := probeFn(ctx, olares.LocationHost, intranetURL, insecure, &srcIP, probeTimeoutHost); err == nil {
-		return locationFromSrcIP(srcIP), nil
+
+	var addrs connAddrs
+	if err := probeFn(ctx, olares.LocationHost, intranetURL, insecure, &addrs, probeTimeoutHost); err == nil {
+		if loc, ok := locationFromProbe(addrs); ok {
+			return loc, nil
+		}
 	} else {
 		lastKind = classifyNetErr(err)
 		if lastKind == KindLocalNetDown {
@@ -104,30 +127,68 @@ func ProbeLocation(ctx context.Context, id olares.ID, localPrefix string, insecu
 	return "", &UnreachableError{OlaresID: id.String(), LastKind: lastKind}
 }
 
-// locationFromSrcIP maps the source address of a successful intranet probe to
-// a position: an address inside VPNSubnet means the CLI is on the Olares host
-// (and needs the in-cluster DNS resolver), otherwise it's inside a cluster pod
-// (which already has cluster DNS). A nil source IP defaults to cluster — the
-// safer of the two, since cluster uses the plain (system) resolver.
-func locationFromSrcIP(srcIP net.IP) olares.Location {
-	if srcIP != nil && vpnNet != nil && vpnNet.Contains(srcIP) {
-		return olares.LocationHost
+// locationFromProbe classifies a successful intranet probe, reporting false
+// when the connection says nothing about our position.
+//
+// The decisive question is whether the in-cluster DNS answered from its own
+// zone or merely forwarded the lookup upstream, and the resolved address is
+// what settles it. Olares' CoreDNS hands back an intranet address (the
+// l4-bfl-proxy pod IP, the control-plane node IP, or the user's overlay
+// address, depending on which view matches the querying client), while an
+// unrelated cluster's CoreDNS forwards and yields the instance's public
+// address. So:
+//
+//   - source inside VPNSubnet — we reached it over the overlay, which only
+//     happens from the Olares host;
+//   - otherwise, inside a pod — `cluster`, whose runtime resolver is the pod's
+//     own /etc/resolv.conf rather than an explicit ClusterDNS dial;
+//   - otherwise, an intranet remote address — `host`: ClusterDNS gave us a
+//     private route to the instance, so the runtime client should keep using
+//     it instead of going out over the public path;
+//   - otherwise inconclusive: the probe rode the public path.
+func locationFromProbe(a connAddrs) (olares.Location, bool) {
+	if isOverlayIP(a.src) {
+		return olares.LocationHost, true
 	}
-	return olares.LocationCluster
+	if inClusterPod(a.src) {
+		return olares.LocationCluster, true
+	}
+	if isIntranetIP(a.remote) {
+		return olares.LocationHost, true
+	}
+	return "", false
+}
+
+func isOverlayIP(ip net.IP) bool {
+	return ip != nil && vpnNet != nil && vpnNet.Contains(ip)
+}
+
+func inClusterPod(ip net.IP) bool {
+	return ip != nil && clusterNet != nil && clusterNet.Contains(ip)
+}
+
+// isIntranetIP reports whether ip is anything other than a public unicast
+// address: RFC1918 / RFC4193, loopback, link-local, or the overlay's CGNAT
+// range (which net.IP.IsPrivate deliberately excludes).
+func isIntranetIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	return ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || isOverlayIP(ip)
 }
 
 // probeOnce performs a single reachability probe of rawURL using a transport
-// configured for loc. When srcIP is non-nil, the dialer records the local
-// (source) address of the established connection into it — used by the
-// host/cluster discrimination. Returns nil on any HTTP response, or the
-// transport error when the connection could not be established.
-func probeOnce(ctx context.Context, loc olares.Location, rawURL string, insecure bool, srcIP *net.IP, timeout time.Duration) error {
+// configured for loc. When addrs is non-nil, the dialer records both ends of
+// the established connection into it — used by the host/cluster
+// discrimination. Returns nil on any HTTP response, or the transport error when
+// the connection could not be established.
+func probeOnce(ctx context.Context, loc olares.Location, rawURL string, insecure bool, addrs *connAddrs, timeout time.Duration) error {
 	// Reuse the same transport builder runtime clients use, so a probe can't
 	// drift from how loc actually connects (cluster resolver for host, the
 	// insecure TLS opt-in, etc.). The per-probe timeout is enforced by reqCtx
 	// + client.Timeout below rather than the dialer.
 	tr := Transport(loc, insecure)
-	if srcIP != nil {
+	if addrs != nil {
 		inner := tr.DialContext
 		tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 			conn, err := inner(ctx, network, addr)
@@ -135,7 +196,10 @@ func probeOnce(ctx context.Context, loc olares.Location, rawURL string, insecure
 				return nil, err
 			}
 			if la, ok := conn.LocalAddr().(*net.TCPAddr); ok {
-				*srcIP = la.IP
+				addrs.src = la.IP
+			}
+			if ra, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+				addrs.remote = ra.IP
 			}
 			return conn, nil
 		}
