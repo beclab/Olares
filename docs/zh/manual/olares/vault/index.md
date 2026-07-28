@@ -31,11 +31,11 @@ Vault 的服务器组件运行在 Olares 上，同步单个用户的多个客户
 </div>
 
 <div>
-<h4><a href="./two-factor-verification">设置双因素认证代码</a></h4>
+<h4><a href="/zh/manual/larepass/two-factor-verification">设置双因素认证代码</a></h4>
 学习如何生成并存储 2FA 代码以增强安全性。
 </div>
 
 <div>
-<h4><a href="./autofill">使用 LarePass 的自动填充功能</a></h4>
+<h4><a href="/zh/manual/larepass/autofill">使用 LarePass 的自动填充功能</a></h4>
 学习如何设置和使用自动填充功能，适配不同的 LarePass 客户端。
 </div>

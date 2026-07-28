@@ -35,5 +35,5 @@ head:
 
 ## 了解更多
 
-- [Olares CLI](../developer/install/cli/olares-cli.md)
+- [Olares CLI](../developer/cli-overview.md)
 - [使用 Control Hub 管理 Olares](../manual/olares/controlhub/index.md)

@@ -36,7 +36,7 @@ Olares 聚焦于高性能计算：
 - **资源编排**：原生管理 GPU 等硬件资源，为本地 AI 工作负载提供算力支持。
 - **沙箱**：强制执行严格的应用隔离，安全防护能力远超标准文件服务器。
 
-详细对比参见 [Olares 与 NAS 的对比](../olares-vs-nas.md)。
+详细对比参见 Olares 与 NAS 的对比。
 <!-- #region faq-why-olares-id -->
 ### 为什么需要 Olares ID？
 

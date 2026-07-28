@@ -65,7 +65,7 @@ Olares 支持多用户，并为管理员和普通成员用户提供两个不同�
 
   系统应用和用户的内置应用通常不允许第三方应用直接访问。
 
-  但如果数据库集群和内置应用通过[ Service Provider](../develop/advanced/provider.md) 开放了某些接口，社区应用可以通过[声明访问权限](../develop/package/manifest.md)来使用这些服务。
+  但如果数据库集群和内置应用通过 Service Provider 开放了某些接口，社区应用可以通过[声明访问权限](../develop/package/manifest.md)来使用这些服务。
 
   在这种情况下，系统会在 `user-system` 命名空间下为这些资源提供网络代理，并对来自第三方应用的网络请求进行鉴权。
 
@@ -95,10 +95,10 @@ Service Provider 机制使社区应用能够与系统应用、其他社区应用
 
 该机制包含三个步骤：
 
-1. Provider 声明：开发者必须[将其应用声明为特定服务接口的 Provider](../../developer/develop/advanced/provider#申明-Provider)。
+1. Provider 声明：开发者必须将其应用声明为特定服务接口的 Provider。
    系统包含内置的 Provider。
 
-2. 权限请求：需要使用 Service 接口的应用必须明确[申请 Provider 的权限](../../developer/develop/advanced/provider#申请-Provider-的访问权限)。
+2. 权限请求：需要使用 Service 接口的应用必须明确申请 Provider 的权限。
 
 3. 请求处理：调用时，`user-system` 下的 `system-server` 服务作为代理，处理传入请求并执行必要的权限验证。
 

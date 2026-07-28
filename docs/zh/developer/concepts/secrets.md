@@ -18,9 +18,9 @@ Olares 根据使用场景对密钥进行分类并采用不同的管理方式。
 - 登录 Olares Space 后，备份服务可以请求令牌用于自动后台备份
 - 登录 Google 后，文件功能可以与 Google Drive 中的数据同步
 
-Olares 中的应用程序可以通过[Service Provider](../develop/advanced/provider.md) 获取这些第三方服务凭据。
+Olares 中的应用程序可以通过 Service Provider 获取这些第三方服务凭据。
 
 ## 应用凭据
 
-- Olares 中的应用可以通过系统提供的接口管理和使用[密钥](../develop/advanced/secret.md)
+- Olares 中的应用可以通过系统提供的接口管理和使用密钥
 - 应用生成的凭据仅限该应用程序使用

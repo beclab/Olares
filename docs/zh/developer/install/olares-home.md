@@ -61,6 +61,6 @@ Olares Home 的结构设计旨在优化文件管理、版本控制和资源共�
 - 不同版本会共享 `images` 和 `pkg` 目录下的文件，避免重复下载，节省磁盘空间。
 
 ## 了解更多
-- [`olares-cli` 命令行参考](../install/cli/olares-cli.md)
+- [`olares-cli` 命令行参考](../cli-overview.md)
 - [Olares 安装流程详解](installation-process.md)
 - [Olares 环境变量](environment-variables.md)

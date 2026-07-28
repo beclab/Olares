@@ -30,7 +30,7 @@ Olares 采用 [JuiceFS](https://juicefs.com) 作为底层的多物理节点共�
 
 针对 JuiceFS 的后端对象存储方案，我们提供了 S3 和 MinIO 两种选择。
 
-默认情况下，Olares 在本地安装时使用本地文件系统（FS）。不过，如果在运行 [`olares-cli prepare`](../install/cli/prepare.md) 命令时指定了 `--with-juicefs=true` 选项，系统就会安装并使用 JuiceFS，同时会搭建一个 MinIO 实例作为后端存储。
+默认情况下，Olares 在本地安装时使用本地文件系统（FS）。不过，如果在运行 `olares-cli prepare` 命令时指定了 `--with-juicefs=true` 选项，系统就会安装并使用 JuiceFS，同时会搭建一个 MinIO 实例作为后端存储。
 
 ### 本地磁盘
 
@@ -60,19 +60,19 @@ Olares 提供的最佳实践是充分利用节点的本地硬盘作为文件缓�
 
 应用可以在 `OlaresManifest.yaml` 中申请 [AppCache](../develop/package/manifest.md#appcache) 权限。
 
-## [PostgreSQL](../develop/advanced/database.md#rds)
+## PostgreSQL
 
 作为最受欢迎的开源关系型数据库之一，PostgreSQL 具有出色的性能和丰富的插件功能。Olares 在系统中部署了 PostgreSQL，同时集成了广受欢迎的 Citus 分布式数据库插件。通过 Olares 应用运行时组件中的 PG Operator 进行集群管理，用户可以轻松扩展 PostgreSQL 节点数量，并随整个 Olares 系统进行备份或恢复。
 
 如果开发者在应用中声明的 PostgreSQL 数据库为分布式类型，那么 Olares 会在 Citus 上构建其数据库，让应用充分利用分布式 PG 数据库的能力。
 
-## [MongoDB](../develop/advanced/database.md#nosql)
+## MongoDB
 
 MongoDB 作为 NoSQL 的代表，在物联网领域有着广泛的应用场景。通过部署 [Percona Operator for MongoDB](https://github.com/percona/percona-server-mongodb-operator)，开发者在 Olares 中就拥有了云原生版本的 MongoDB 集群。
 
 与 PostgreSQL 一样，Olares 也统一管理 MongoDB 的备份和恢复。用户无需具备任何 DBA 技术能力，就能轻松实现定时备份、增量备份、定点恢复等功能。
 
-## [Redis](../develop/advanced/database.md#cache)
+## Redis
 
 毫无疑问，Redis 可以说是目前最受欢迎的内存缓存软件。它拥有丰富的指令，并基于 Key-Value 数据衍生出多种数据类型。很多系统甚至将其作为 KV 数据存储使用。Olares 也在系统中部署了定制的 [Redis Cluster Operator](https://github.com/beclab/redis-cluster-operator)，提供云原生版本的 Redis 集群。
 
@@ -109,4 +109,4 @@ Olares 同样接管了 Redis 集群的备份和恢复工作，用户无需为 Re
 
 - 开发者
 
-  [文件上传](../develop/advanced/file-upload.md)<br>
+  文件上传<br>

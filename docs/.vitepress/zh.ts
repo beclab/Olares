@@ -556,10 +556,6 @@ const side = {
           link: "/zh/manual/best-practices/install-olares-multi-node",
         },
         {
-          text: "设置 SMTP",
-          link: "/zh/manual/best-practices/set-up-SMTP-service",
-        },
-        {
           text: "在启用显卡直通的 PVE 上安装 Olares",
           link: "/zh/manual/best-practices/install-olares-gpu-passthrough",
         },

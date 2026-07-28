@@ -220,4 +220,4 @@ You can now log into Olares using your Olares ID and the login password you spec
 ## Learn more
 
 - [Create an Olares ID](../get-started/create-olares-id.md)
-- [Olares CLI](../../developer/install/cli/olares-cli.md)
+- [Olares CLI](../../developer/cli-overview.md)

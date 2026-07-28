@@ -144,6 +144,5 @@ olares-worker   Ready    worker                        50m   v1.33.3+k3s1
 ```
 
 ## 资源
-- [Olares CLI](../developer/install/cli/node.md)：探索 Olares CLI。
 - [Olares 环境变量](../developer/install/environment-variables.md)：了解支持 Olares 高级配置的环境变量。
 - [升级双节点 Olares 集群](./upgrade-multi-node-cluster)：了解如何手动将双节点集群从 1.12.5 升级到 1.12.6。
