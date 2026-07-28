@@ -1,10 +1,12 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上安装 Ollama，本地运行私有大模型。用 CLI 管理模型，并把 Ollama 作为中央 AI 后端，供其他自托管应用调用。
+description: 独立 Ollama 应用已从 Olares 1.12.6 的 Market 下架。已安装的实例仍可继续使用，但新部署请使用 Ollama Engine Base。
 head:
   - - meta
     - name: keywords
       content: Olares, Ollama, private llm, run llama locally, ollama vs lm studio, self-hosted llm, ollama on olares
+doc_version: "1.1"
+doc_updated: "2026-07-28"
 ---
 
 :::warning
@@ -12,6 +14,13 @@ head:
 :::
 
 # 通过 Ollama 下载和运行本地 AI 模型
+
+:::warning Ollama 应用已从 Olares 1.12.6 下架
+自 Olares 1.12.6 起，独立 Ollama 应用已从 Market 下架。
+
+- 如果你已在 Olares 1.12.5 或更早版本上安装 Ollama，升级到 1.12.6 后该应用仍可继续使用。你仍然可以通过 Ollama CLI 拉取和运行模型，并使用 Ollama API 端点。但无法从 Market 更新 Ollama 应用本身。
+- 在 Olares 1.12.6 及更高版本上新部署时，请改用 [Ollama Engine Base](./llm-base-apps.md)。它通过 Olares Model Console 提供相同的 Ollama 推理引擎。
+:::
 
 Ollama 是一个轻量级平台，允许你直接在机器上运行 `gemma3` 和 `deepseek-r1` 等开源 AI 模型。在 Olares 中，你可以将 Ollama 与 Open WebUI 等图形界面或其他智能体集成，以添加更多功能并简化交互。
 
@@ -23,13 +32,24 @@ Ollama 是一个轻量级平台，允许你直接在机器上运行 `gemma3` 和
 
 ## 前提条件
 
-在开始之前，请确保你具有 Olares 管理员权限。
+- Olares 管理员权限。
+- 如果你使用的是 Olares 1.12.6，需已安装 Ollama 应用。新用户请部署 [Ollama Engine Base](./llm-base-apps.md)。
 
 ## 安装 Ollama
 
-1. 打开 **Market**，并搜索 "Ollama"。
+:::info Olares 1.12.6+ 不再支持新安装
+自 Olares 1.12.6 起，独立 Ollama 应用已从 Market 移除。如果你已经安装，请跳至下一节。如果你正在搭建新的模型后端，请参阅[使用 Engine Base 应用托管本地大语言模型](./llm-base-apps.md)。
+:::
+
+在 Olares 1.12.5 及更早版本上：
+
+1. 打开 Market，并搜索 "Ollama"。
 2. 点击 **获取**，然后 **安装**，等待安装完成。
    ![安装 Ollama](/images/manual/use-cases/ollama.png#bordered)
+
+## 新部署请使用 Ollama Engine Base
+
+如果你从 Olares 1.12.6 或更高版本开始全新部署，请从 Market 安装 [Ollama Engine Base](./llm-base-apps.md)。Engine Base 应用通过 Model Console 管理，无需依赖已下架的独立 Ollama 应用，即可获得相同的 Ollama 引擎。
 
 ## 使用 Ollama CLI 管理模型
 
@@ -38,11 +58,11 @@ Ollama CLI 允许你直接从 Olares 终端管理和与 AI 模型交互。以下
 ### 下载模型
 
 :::tip 查看 Ollama 库
-
 如果你不确定要下载哪个模型，请查看 [Ollama Library](https://ollama.com/library) 以探索可用模型。
 :::
 
 要下载模型，请使用以下命令：
+
 ```bash
 ollama pull [model]
 ```
@@ -54,6 +74,7 @@ ollama pull [model]
 :::
 
 要运行模型，请使用以下命令：
+
 ```bash
 ollama run [model]
 ```
@@ -61,14 +82,17 @@ ollama run [model]
 运行命令后，你可以直接在 CLI 中输入查询，模型将生成响应。
 
 当你完成与模型的交互后，输入：
+
 ```bash
 /bye
 ```
+
 这将退出会话并返回到标准终端界面。
 
 ### 停止模型
 
 要停止当前正在运行的模型，请使用以下命令：
+
 ```bash
 ollama stop [model]
 ```
@@ -76,6 +100,7 @@ ollama stop [model]
 ### 列出模型
 
 要查看你已下载的所有模型，请使用：
+
 ```bash
 ollama list
 ```
@@ -83,6 +108,7 @@ ollama list
 ### 删除模型
 
 如果你需要删除模型，可以使用以下命令：
+
 ```bash
 ollama rm [model]
 ```
@@ -90,6 +116,7 @@ ollama rm [model]
 ### 显示模型信息
 
 要显示有关模型的详细信息，请使用：
+
 ```bash
 ollama show [model]
 ```
@@ -97,6 +124,7 @@ ollama show [model]
 ### 列出正在运行的模型
 
 要查看所有当前正在运行的模型，请使用：
+
 ```bash
 ollama ps
 ```
@@ -113,8 +141,8 @@ ollama ps
    ![Ollama 端点](/images/manual/use-cases/lp-endpoint-entrances-ollama-api.png#bordered){width=90%}
 
 :::tip 对于 OpenAI 兼容端点
-
 某些应用期望 OpenAI 兼容的 API。如果标准端点失败，请尝试在你的地址后附加 `/v1`。例如：
+
 ```
 https://a5be22681.{YOURUSERNAME}.olares.com/v1
 ```
@@ -126,10 +154,11 @@ https://a5be22681.{YOURUSERNAME}.olares.com/v1
 
 因为你将认证设置为 "内部"，你的应用必须与 Olares 在同一本地网络上才能连接。
 
-* **本地网络**：如果你的设备（或运行在 Olares 上的应用）在同一 Wi-Fi 或局域网上，你可以直接使用前端地址连接。
-* **远程访问**：如果你正在远程访问 Olares，你必须在客户端设备上启用 [LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass)。这会创建一个安全隧道，有效地将你的设备放置在与 Olares 相同的网络上。
+- **本地网络**：如果你的设备（或运行在 Olares 上的应用）在同一 Wi-Fi 或局域网上，你可以直接使用前端地址连接。
+- **远程访问**：如果你正在远程访问 Olares，你必须在客户端设备上启用 [LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass)。这会创建一个安全隧道，有效地将你的设备放置在与 Olares 相同的网络上。
 
 ## 了解更多
 
+- [使用 Engine Base 应用托管本地大语言模型](./llm-base-apps.md)
 - [使用 Open WebUI 运行 Ollama 模型](./openwebui.md)
 - [将 Ollama 与 DeerFlow 集成](./deerflow.md)
