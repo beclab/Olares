@@ -5,25 +5,24 @@ description: Personalize how your Olares applications are accessed by setting a 
 
 # Customize application URLs
 
-Olares provides two ways to personalize how your applications are accessed:
-- Custom route ID
-- Custom domain name
+Use this guide when you want to make your Olares applications easier to access. Olares provides two ways to personalize application URLs:
 
-## Before you begin
+- **Custom route ID**: Replace the auto-generated route ID in your Olares URL with a memorable name.
+- **Custom domain name**: Use your own domain name instead of the default Olares domain.
 
-Familiarize yourself with these concepts for Olares applications:
+## Prerequisites
 
-- [Endpoints](../../../developer/concepts/network.md#endpoints)
-- [Route ID](../../../developer/concepts/network.md#route-id)
+To use a custom domain name, you need:
 
-## Custom route ID
+- A registered domain name that you control.
+- Access to your domain's DNS settings to create a CNAME record.
+- A valid HTTPS certificate and its RSA private key in PEM format.
 
-Route ID is part of the URL used to access your Olares applications in a web browser:
+## Set a custom route ID
 
-`https://{routeID}.{OlaresDomainName}`
+A [route ID](../../../developer/concepts/network.md#route-id) is the part of an Olares application URL that identifies the app, such as `7e89d2a1` in `https://7e89d2a1.laresprime.olares.com`. By default, Olares assigns community applications a random route ID made of numbers and letters, which is hard to remember.
 
-Olares uses easy-to-remember route IDs for pre-installed system applications. For community applications, you can get a simpler URL by setting a custom route ID. Using Jellyfin as an example:
-
+You can get a simpler URL by setting a custom route ID. Using Jellyfin as an example:
 1. On Olares, open Settings, then go to **Application** > **Jellyfin**.
 2. Under **Entrances**, click **Jellyfin**.
 3. Under **Endpoint settings**, next to **Set custom route ID**, click <i class="material-symbols-outlined">add</i>.
@@ -32,41 +31,38 @@ Olares uses easy-to-remember route IDs for pre-installed system applications. Fo
 
    ![Custom route ID](/images/manual/olares/custom-route-id1.png#bordered){width=90%}
 
-Now, you can access Jellyfin from your new URL: `https://jellyfin.alexmiles.olares.com`.
+Now, you can access Jellyfin from both URLs: `https://7e89d2a1.laresprime.olares.com` or `https://jellyfin.laresprime.olares.com`.
 
-## Custom domain name
-
-Instead of using the default Olares domain, you can use your own domain name to access your applications. To configure a custom domain name for an app:
-
-:::info
-Only applications with the authentication level set to **Internal** or **Public** support custom third-party domains.
+## Set a custom domain name
+:::warning Custom domains disable Olares authentication
+Apps with custom domains do not support Olares authentication. Only application entrances with **Authentication level** set to **Public** support custom domains.
 :::
 
-1. On Olares, open Settings, then go to **Application** > *AppName*.
-2. Under **Entrances**, click the target entrance.
-3. Under **Endpoint settings**, next to **Set custom domain**, click <i class="material-symbols-outlined">add</i>.
-4. In the **Third-party domain** pop-up, enter your custom domain, and click **Confirm** to submit.
+You can assign a custom domain to a single application. To use the same custom domain across all Olares services, set it up in Olares Space before activating your device. See [Set up a custom domain for your Olares](../../best-practices/set-custom-domain.md).
 
-   ![Submit third-party domain](/images/manual/olares/add-custom-domain.jpeg#bordered)
+For example, change Jellyfin's access URL from `https://7e89d2a1.laresprime.olares.com` to `https://media.n1.monster`.
 
-   ::: tip Note
-   If you are using Olares Tunnel or Self-built FRP for reverse proxy, you must also upload a valid HTTPS certificate and its private key for your custom domain.
-   :::
+1. On Olares, open **Settings**, then go to **Application** > **Jellyfin**.
+2. Under **Entrances**, click **Jellyfin**.
+3. Under **Access policies**, set **Authentication level** to **Public**, then click **Submit** to apply changes.
+4. Under **Endpoint settings**, next to **Set custom domain**, click <i class="material-symbols-outlined">add</i>.
+5. In the **Set custom domain** pop-up, enter your custom domain, and paste the valid HTTPS certificate and private key. Both files should start with a `-----BEGIN-----` line and end with a `-----END-----` line.
 
-5. Click the **Activation** button to open the activation instruction pop-up.
+   ![Submit custom domain](/images/manual/olares/settings-add-custom-domain.png#bordered)
 
-   ![Activate third-party domain](/images/manual/olares/activate-custom-domain.jpeg#bordered)
+6. Click **Confirm** to submit.
 
-6. Follow the instructions in the pop-up to create a CNAME record with your domain hosting provider.
+7. Click the **Activation** button to open the activation instruction pop-up.
 
-   ![Add CNAME](/images/manual/olares/add-cname.jpeg#bordered)
+8. Follow the instructions in the pop-up to add a CNAME record with your domain registrar. In this example, add a CNAME record with Name set to `media` and Value set to `laresprime.olares.com`.
+   ![Add CNAME record](/images/manual/olares/settings-add-cname.png#bordered)
 
-   :::tip Disable Proxy status for Cloudflare Tunnel
-   If you are using Cloudflare Tunnel, disable the **Proxy status** option next to your DNS record. This allows Olares to receive timely updates on your domain's resolution status.
-   :::
+9. Click **Confirm** to close the activation pop-up. The custom domain status should display "Wait for CNAME to be activated".
 
-7. Click **Confirm** on the activation pop-up to finish the activation.
-
-At this stage, the custom domain status will display as "Waiting for CNAME Activation". You will need to wait for it to take effect. DNS propagation typically takes a few minutes or hours, depending on your domain provider.
+DNS propagation typically takes a few minutes or hours, depending on your domain registrar.
 
 Once the CNAME record is verified, the custom domain status will automatically update to "Activated".
+
+Now, you can access Jellyfin from both URLs: the original Olares URL `https://7e89d2a1.laresprime.olares.com` and the custom domain `https://media.n1.monster`.
+
+![Custom domain activated](/images/manual/olares/settings-custom-domain-activated.png#bordered)
