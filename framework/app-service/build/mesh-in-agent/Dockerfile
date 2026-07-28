@@ -1,20 +1,29 @@
 # syntax=docker/dockerfile:1.7
 #
-# Product image: beclab/mesh-in-agent (engine: nginx alpine + njs).
-# Product name: beclab/mesh-in-agent:<ver>-<rev> (REF-SH-AGENT-STACK-01 §2).
-# Process UID: 1651 (MeshInAgentUID); 1652=mesh-out; 1653+ reserved.
+# beclab/mesh-in-agent — nginx alpine + njs; process UID 1651.
+# Build context: framework/app-service/build/mesh-in-agent
 
 ARG NGINX_ALPINE_TAG=1.30.0-alpine
 ARG MESH_IN_UID=1651
+ARG GO_VERSION=1.24.3
+
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS ensure-placeholder-cert
+ARG TARGETARCH
+WORKDIR /src
+COPY ensure-placeholder-cert/go.mod ensure-placeholder-cert/main.go ./
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" \
+      -o /out/ensure-placeholder-cert .
 
 FROM nginx:${NGINX_ALPINE_TAG}
 
 ARG NGINX_ALPINE_TAG=1.30.0-alpine
 ARG NGINX_VERSION=1.30.0
-ARG NJS_OLARES_REV=dev
+ARG NJS_OLARES_REV=r5
 ARG SOURCE_COMMIT=unknown
 ARG BUILD_DATE=unknown
 ARG MESH_IN_UID=1651
+
+COPY --from=ensure-placeholder-cert /out/ensure-placeholder-cert /usr/local/bin/ensure-placeholder-cert
 
 RUN set -eux; \
     apk add --no-cache nginx-module-njs iptables bind-tools; \
@@ -34,10 +43,12 @@ RUN set -eux; \
         || (echo "FATAL: ngx_http_js_module.so not installed by nginx-module-njs" >&2; exit 1); \
     command -v iptables >/dev/null \
         || (echo "FATAL: iptables missing (required by mesh-in iptables init)" >&2; exit 1); \
+    test -x /usr/local/bin/ensure-placeholder-cert \
+        || (echo "FATAL: ensure-placeholder-cert missing" >&2; exit 1); \
     addgroup -g "${MESH_IN_UID}" -S meshin; \
     adduser -u "${MESH_IN_UID}" -S -G meshin -H -D -h /var/cache/nginx -s /sbin/nologin meshin; \
-    mkdir -p /tmp/mesh-in /var/log/nginx /var/cache/nginx /var/run; \
-    chown -R meshin:meshin /var/cache/nginx /var/log/nginx /tmp/mesh-in; \
+    mkdir -p /tmp/mesh-in /tmp/olares/mesh-in-placeholder /var/log/nginx /var/cache/nginx /var/run; \
+    chown -R meshin:meshin /var/cache/nginx /var/log/nginx /tmp/mesh-in /tmp/olares; \
     if grep -qE '^[[:space:]]*user[[:space:]]+' /etc/nginx/nginx.conf; then \
       sed -i "s/^[[:space:]]*user[[:space:]].*/user  meshin;/" /etc/nginx/nginx.conf; \
     fi; \
@@ -50,21 +61,16 @@ RUN set -eux; \
       echo "base_image=nginx:${NGINX_ALPINE_TAG}"; \
       echo "nginx_version=${NGINX_VER}"; \
       echo "mesh_in_uid=${MESH_IN_UID}"; \
-      echo "nginx_git=https://github.com/nginx/nginx"; \
-      echo "nginx_checkout=git clone https://github.com/nginx/nginx.git && git -C nginx checkout release-${NGINX_VER}"; \
-      echo "nginx_tarball=https://nginx.org/download/nginx-${NGINX_VER}.tar.gz"; \
       echo "nginx_module_njs_apk=${NJS_APK}"; \
       echo "njs_version=${NJS_VER}"; \
-      echo "njs_git=https://github.com/nginx/njs"; \
-      echo "njs_checkout=git clone https://github.com/nginx/njs.git && git -C njs checkout ${NJS_VER}"; \
       echo "extra_apk=iptables,bind-tools"; \
+      echo "helper=ensure-placeholder-cert"; \
     } > /usr/share/doc/mesh-in-agent/UPSTREAM_SOURCES.txt
 
-# Sidecar runs as MESH_IN_UID via Pod securityContext; init keeps root for iptables.
 USER root
 
 LABEL org.opencontainers.image.title="beclab/mesh-in-agent" \
-      org.opencontainers.image.description="Olares mesh-in-agent (engine: nginx ${NGINX_VERSION} alpine + njs)" \
+      org.opencontainers.image.description="Olares mesh-in-agent (nginx ${NGINX_VERSION} alpine + njs)" \
       org.opencontainers.image.vendor="beclab / Olares" \
       org.opencontainers.image.source="https://github.com/beclab/Olares" \
       org.opencontainers.image.version="${NGINX_VERSION}-${NJS_OLARES_REV}" \
@@ -73,5 +79,4 @@ LABEL org.opencontainers.image.title="beclab/mesh-in-agent" \
       org.opencontainers.image.licenses="BSD-2-Clause" \
       io.olares.image.role="mesh-in-agent" \
       io.olares.image.engine="nginx-njs" \
-      io.olares.image.uid="${MESH_IN_UID}" \
-      io.olares.image.wi="WI-OC-L1C-01"
+      io.olares.image.uid="${MESH_IN_UID}"

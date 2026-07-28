@@ -17,6 +17,8 @@ const (
 
 	// SharedHostsFileName is the ConfigMap data key / projected file (N6 line format).
 	SharedHostsFileName = "shared-hosts.txt"
+
+	placeholderJSONBody = `{"error":"mesh_in_tls_placeholder","message":"Platform TLS replica not ready; using pod-local placeholder certificate. Retry or use http:// for in-cluster Shared access.","tlsMode":"placeholder","retryAfterSeconds":5}`
 )
 
 // NginxConfInput feeds RenderNginxConf.
@@ -28,6 +30,7 @@ type NginxConfInput struct {
 	GatewayHTTPPort    int
 	JWTTokenPath       string
 	CertDir            string
+	PlaceholderCertDir string
 	HostsFile          string
 	PlatformDomain     string
 	FailClosed         bool
@@ -61,6 +64,9 @@ func RenderNginxConf(in NginxConfInput) string {
 	if in.CertDir == "" {
 		in.CertDir = CertsMountPath
 	}
+	if in.PlaceholderCertDir == "" {
+		in.PlaceholderCertDir = PlaceholderCertDir
+	}
 	if in.HostsFile == "" {
 		in.HostsFile = HostsMountPath + "/" + SharedHostsFileName
 	}
@@ -80,8 +86,10 @@ func RenderNginxConf(in NginxConfInput) string {
 			lb.WriteString("      if ($mesh_in_jwt = \"\") { return 401; }\n")
 		}
 		if https {
+			lb.WriteString("      js_set $mesh_in_tls_mode main.tlsMode;\n")
 			lb.WriteString("      js_set $mesh_in_host_ok main.checkHost;\n")
 			lb.WriteString("      if ($mesh_in_host_ok = \"0\") { return 421; }\n")
+			lb.WriteString("      if ($mesh_in_tls_mode = \"placeholder\") { return 503; }\n")
 		}
 		lb.WriteString("      proxy_http_version 1.1;\n")
 		lb.WriteString("      proxy_buffering off;\n")
@@ -111,13 +119,10 @@ func RenderNginxConf(in NginxConfInput) string {
 	b.WriteString("  js_import main from /tmp/mesh-in/bearer.js;\n")
 	b.WriteString(fmt.Sprintf("  # jwt path: %s\n", in.JWTTokenPath))
 	b.WriteString(fmt.Sprintf("  # certs: %s\n", in.CertDir))
+	b.WriteString(fmt.Sprintf("  # placeholder: %s\n", in.PlaceholderCertDir))
 	b.WriteString(fmt.Sprintf("  # hosts: %s\n", in.HostsFile))
-	b.WriteString("  map $ssl_server_name $tls_cert_path {\n")
-	b.WriteString(fmt.Sprintf("    default %s/tls.crt;\n", in.CertDir))
-	b.WriteString("  }\n")
-	b.WriteString("  map $ssl_server_name $tls_key_path {\n")
-	b.WriteString(fmt.Sprintf("    default %s/tls.key;\n", in.CertDir))
-	b.WriteString("  }\n")
+	b.WriteString("  js_set $tls_cert_path main.pickCert;\n")
+	b.WriteString("  js_set $tls_key_path main.pickKey;\n")
 	b.WriteString("  server {\n")
 	b.WriteString(fmt.Sprintf("    listen %d;\n", in.HTTPListenPort))
 	b.WriteString("    server_name _;\n")
@@ -134,8 +139,16 @@ func RenderNginxConf(in NginxConfInput) string {
 		b.WriteString(fmt.Sprintf("    ssl_certificate_cache max=%d inactive=%s valid=%s;\n",
 			constants.MeshInCertCacheMax, constants.MeshInCertCacheInactive, constants.MeshInCertCacheValid))
 		b.WriteString("    ssl_protocols TLSv1.2 TLSv1.3;\n")
+		b.WriteString("    error_page 503 = @mesh_in_placeholder;\n")
 		b.WriteString("    location / {\n")
 		b.WriteString(locationBody(true))
+		b.WriteString("    }\n")
+		b.WriteString("    location @mesh_in_placeholder {\n")
+		b.WriteString("      default_type application/json;\n")
+		b.WriteString("      add_header X-Olares-Mesh-In-TLS placeholder always;\n")
+		b.WriteString("      add_header X-Olares-Mesh-In-TLS-Reason waiting-replica always;\n")
+		b.WriteString("      add_header Retry-After 5 always;\n")
+		b.WriteString(fmt.Sprintf("      return 503 '%s';\n", placeholderJSONBody))
 		b.WriteString("    }\n")
 		b.WriteString("  }\n")
 	}

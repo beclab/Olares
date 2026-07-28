@@ -30,7 +30,12 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		"load_module /usr/lib/nginx/modules/ngx_http_js_module.so",
 		"load_module /usr/lib/nginx/modules/ngx_stream_js_module.so",
 		`if ($mesh_in_jwt = "") { return 401; }`,
-		"ssl_certificate",
+		"ssl_certificate $tls_cert_path",
+		"js_set $tls_cert_path main.pickCert",
+		"js_set $mesh_in_tls_mode main.tlsMode",
+		"@mesh_in_placeholder",
+		"X-Olares-Mesh-In-TLS",
+		"mesh_in_tls_placeholder",
 		"stream {",
 	} {
 		if !strings.Contains(got, want) {
@@ -67,6 +72,11 @@ func TestBearerJSDecideAndHostsHotRead(t *testing.T) {
 		"CACHE_TTL_MS",
 		"passthrough",
 		"checkHost",
+		"tlsMode",
+		"pickCert",
+		"pickKey",
+		"realCertReady",
+		PlaceholderCertDir,
 		HostsMountPath + "/" + SharedHostsFileName,
 	} {
 		if !strings.Contains(got, want) {
@@ -112,8 +122,15 @@ func TestContainerSpecNonStub(t *testing.T) {
 	if strings.Contains(cmd, "sni_map.conf") {
 		t.Fatal("start script must not build static sni_map")
 	}
-	if !strings.Contains(cmd, "HTTP-only mode") || !strings.Contains(cmd, "CT-1 HTTPS enabled") {
-		t.Fatalf("start command must select HTTP-only vs CT-1 by cert presence: %#v", c.Command)
+	if !strings.Contains(cmd, "ensure-placeholder-cert") || !strings.Contains(cmd, "TLS mode=placeholder") {
+		t.Fatalf("start command must ensure placeholder and always enable HTTPS: %#v", c.Command)
+	}
+	realCheck := `[ -s "$CERT_DIR/tls.crt" ] && [ -s "$CERT_DIR/tls.key" ]`
+	if realPos, ensurePos := strings.Index(cmd, realCheck), strings.Index(cmd, "ensure-placeholder-cert -dir"); realPos < 0 || ensurePos < 0 || realPos > ensurePos {
+		t.Fatalf("start command must check real certs before generating placeholder: %#v", c.Command)
+	}
+	if strings.Contains(cmd, "HTTP-only mode") {
+		t.Fatal("HTTP-only mode must be removed")
 	}
 }
 

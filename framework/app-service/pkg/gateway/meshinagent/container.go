@@ -16,8 +16,8 @@ import (
 const (
 	meshInAgentImageEnv = "MESH_IN_AGENT_IMAGE"
 	// DefaultImage is the mesh-in-agent product image (engine: nginx+njs+stream) (digest pin in charts; no :latest).
-	DefaultImage       = "beclab/mesh-in-agent:1.30.0-r4"
-	listenPortName     = "mesh-in-http"
+	DefaultImage        = "beclab/mesh-in-agent:1.30.0-r5"
+	listenPortName      = "mesh-in-http"
 	httpsListenPortName = "mesh-in-https"
 
 	CertsVolumeName   = constants.MeshInCertsVolumeName
@@ -87,27 +87,31 @@ func ContainerSpec() corev1.Container {
 }
 
 func agentStartScript() string {
-	// Two confs: image has no openssl, so missing tls Secret must not include ssl listen
-	// or nginx exits and the whole Pod stays NotReady (blocks rollout).
-	confHTTP := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: false})
+	// Always enable HTTPS. Generate a pod-local placeholder only when real TLS
+	// material is absent at startup; njs hot-switches new connections to real
+	// files when they appear.
 	confHTTPS := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: true})
 	js := BearerJS()
-	httpB64 := base64.StdEncoding.EncodeToString([]byte(confHTTP))
 	httpsB64 := base64.StdEncoding.EncodeToString([]byte(confHTTPS))
 	jsB64 := base64.StdEncoding.EncodeToString([]byte(js))
 	return fmt.Sprintf(`set -eu
-mkdir -p /tmp/mesh-in /var/log/nginx
+mkdir -p /tmp/mesh-in /var/log/nginx %s
 echo '%s' | base64 -d > /tmp/mesh-in/bearer.js
+echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
 CERT_DIR="%s"
 if [ -s "$CERT_DIR/tls.crt" ] && [ -s "$CERT_DIR/tls.key" ]; then
-  echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
-  echo "mesh-in-agent: CT-1 HTTPS enabled (certs present; hosts hot-read via njs)"
+  echo "mesh-in-agent: HTTPS listeners up; TLS mode=real (certs present under $CERT_DIR)"
 else
-  echo '%s' | base64 -d > /tmp/mesh-in/nginx.conf
-  echo "mesh-in-agent: HTTP-only mode (no tls.crt/key under $CERT_DIR)"
+  if command -v ensure-placeholder-cert >/dev/null 2>&1; then
+    ensure-placeholder-cert -dir %s
+  else
+    echo "mesh-in-agent: ensure-placeholder-cert missing; HTTPS cannot start without real certs" >&2
+    exit 1
+  fi
+  echo "mesh-in-agent: HTTPS listeners up; TLS mode=placeholder"
 fi
 exec nginx -c /tmp/mesh-in/nginx.conf -g 'daemon off;'
-`, jsB64, CertsMountPath, httpsB64, httpB64)
+`, PlaceholderCertDir, jsB64, httpsB64, CertsMountPath, PlaceholderCertDir)
 }
 
 // InitContainerSpec installs OUTPUT REDIRECT rules for Shared gateway HTTP and
@@ -163,7 +167,7 @@ iptables -t nat -C OUTPUT -p tcp --dport 443 $OWNER_SKIP -j REDIRECT --to-ports 
 			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: DefaultGatewayHost},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			RunAsUser: &root,
+			RunAsUser:    &root,
 			Capabilities: &corev1.Capabilities{Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"}},
 		},
 	}
