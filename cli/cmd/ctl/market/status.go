@@ -84,6 +84,11 @@ type statusRow struct {
 	CfgType  string `json:"cfgType,omitempty"`
 	Message  string `json:"message,omitempty"`
 	Source   string `json:"source"`
+	// Reason is app-service's machine-readable tag for how the row reached
+	// its current state (e.g. "upgradeCancelByUser"). The upgrade watcher
+	// needs it because `stopped` is both its success and its cancel terminal
+	// and only Reason tells the two apart (see upgradeStoppedTerminal).
+	Reason string `json:"reason,omitempty"`
 	// StatusTime carries the backend-generated statusTime verbatim (RFC3339).
 	// The restart watcher parses it (see effectiveTime) to compare against a
 	// pre-restart baseline; empty/unparseable means "no reliable timestamp".
@@ -132,6 +137,7 @@ func parseStatusRows(resp *APIResponse, source string, showAll bool) ([]statusRo
 				CfgType:    appState.Status.CfgType,
 				Message:    appState.Status.Message,
 				Source:     sourceName,
+				Reason:     strings.TrimSpace(appState.Status.Reason),
 				StatusTime: strings.TrimSpace(appState.Status.StatusTime),
 			})
 		}

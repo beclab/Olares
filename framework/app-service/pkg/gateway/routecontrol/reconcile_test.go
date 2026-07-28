@@ -70,9 +70,14 @@ func testScheme(t *testing.T) *runtime.Scheme {
 	gw := schema.GroupVersion{Group: "gateway.networking.k8s.io", Version: "v1"}
 	s.AddKnownTypeWithName(gw.WithKind("HTTPRoute"), &unstructured.Unstructured{})
 	s.AddKnownTypeWithName(gw.WithKind("HTTPRouteList"), &unstructured.UnstructuredList{})
+	rg := schema.GroupVersion{Group: "gateway.networking.k8s.io", Version: "v1beta1"}
+	s.AddKnownTypeWithName(rg.WithKind("ReferenceGrant"), &unstructured.Unstructured{})
+	s.AddKnownTypeWithName(rg.WithKind("ReferenceGrantList"), &unstructured.UnstructuredList{})
 	eg := schema.GroupVersion{Group: "gateway.envoyproxy.io", Version: "v1alpha1"}
 	s.AddKnownTypeWithName(eg.WithKind("BackendTrafficPolicy"), &unstructured.Unstructured{})
 	s.AddKnownTypeWithName(eg.WithKind("BackendTrafficPolicyList"), &unstructured.UnstructuredList{})
+	s.AddKnownTypeWithName(eg.WithKind("SecurityPolicy"), &unstructured.Unstructured{})
+	s.AddKnownTypeWithName(eg.WithKind("SecurityPolicyList"), &unstructured.UnstructuredList{})
 	return s
 }
 

@@ -107,19 +107,19 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		return h.sidecarWebhook.AdmissionError(req.UID, errors.New("HostNetwork Enabled Unsupported"))
 	}
 	var (
-		injectPolicy, injectWs, injectUpload bool
-		injectSharedPod                      *bool
-		appMgr                               *v1alpha1.ApplicationManager
-		appCfg                               *appcfg_mod.ApplicationConfig
-		perms                                []appcfg.ProviderPermission
+		injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool
+		injectSharedPod                                                            *bool
+		appMgr                                                                     *v1alpha1.ApplicationManager
+		appCfg                                                                     *appcfg_mod.ApplicationConfig
+		perms                                                                      []appcfg.ProviderPermission
 	)
-	if injectPolicy, injectWs, injectUpload, injectSharedPod, perms, appCfg, appMgr, err = h.sidecarWebhook.MustInject(ctx, &pod, req.Namespace); err != nil {
+	if injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, perms, appCfg, appMgr, err = h.sidecarWebhook.MustInject(ctx, &pod, req.Namespace); err != nil {
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectSharedPod, perms)
+	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectMeshInAgent=%v, injectMeshOutAgent=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, perms)
 
 	shared := appCfg != nil && appCfg.IsShared()
-	nothingToInject := !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0
+	nothingToInject := !injectPolicy && !injectWs && !injectUpload && !injectMeshInAgent && !injectMeshOutAgent && injectSharedPod == nil && len(perms) == 0
 
 	if shared {
 		if injectSharedPod != nil {
@@ -143,7 +143,7 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		return resp
 	}
 
-	patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectWs, injectUpload, injectSharedPod, appMgr, appCfg, perms)
+	patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, appMgr, appCfg, perms)
 	if err != nil {
 		klog.Errorf("Failed to create patch for pod uuid=%s name=%s namespace=%s err=%v", proxyUUID, pod.Name, req.Namespace, err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
@@ -248,6 +248,48 @@ func (h *Handler) validate(ctx context.Context, req *admissionv1.AdmissionReques
 	}
 	klog.Infof("Done validate with UID=%s in protected namespace, that's APPROVE", object.GetUID())
 	return resp
+}
+
+
+// tlsReplicaMountValidate is the validating admission entrypoint that blocks
+// tls-replica private-key bypass mounts. Decode/unmarshal failures fail closed.
+func (h *Handler) tlsReplicaMountValidate(req *restful.Request, resp *restful.Response) {
+	admissionReqBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	if _, _, err := webhook.Deserializer.Decode(admissionReqBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode tls-replica-mount admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.validateTLSReplicaMount(req.Request.Context(), admissionReq.Request)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+	if err := resp.WriteAsJson(&admissionResp); err != nil {
+		klog.Errorf("Failed to write tls-replica-mount admission response err=%v", err)
+	}
+}
+
+func (h *Handler) validateTLSReplicaMount(ctx context.Context, req *admissionv1.AdmissionRequest) *admissionv1.AdmissionResponse {
+	if req == nil {
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal pod for tls-replica-mount validate namespace=%s err=%v", req.Namespace, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	allowed, code := h.sidecarWebhook.ValidateTLSReplicaMount(ctx, &pod, req.Namespace)
+	respObj := &admissionv1.AdmissionResponse{
+		Allowed: allowed,
+		UID:     req.UID,
+	}
+	if !allowed {
+		respObj.Result = &metav1.Status{Message: code}
+	}
+	return respObj
 }
 
 func (h *Handler) gpuLimitInject(req *restful.Request, resp *restful.Response) {
@@ -470,6 +512,8 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 	case utils.AMDType, utils.AMDGPUType:
 		return constants.AMDGPU
 	case utils.IntelType:
+		return constants.IntelIGPU
+	case utils.IntelGPUType:
 		return constants.IntelGPU
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")

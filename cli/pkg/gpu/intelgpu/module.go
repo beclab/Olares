@@ -23,11 +23,21 @@ func (m *InstallIntelPluginModule) IsSkip() bool {
 func (m *InstallIntelPluginModule) Init() {
 	m.Name = "InstallIntelPlugin"
 
-	// update node with Intel GPU label
-	updateNode := &task.LocalTask{
-		Name:   "UpdateNodeIntelGPUInfo",
-		Action: new(UpdateNodeIntelGPUInfo),
+	// label the node with the intel / intel-gpu modes based on the detected
+	// integrated / discrete Intel GPUs that meet the kernel requirement
+	labelNode := &task.LocalTask{
+		Name:   "LabelIntelGPUs",
+		Action: new(LabelIntelGPUs),
 		Retry:  1,
+	}
+
+	// install the discrete-GPU host driver stack; only runs when a discrete Intel
+	// GPU is present, in-tree and kernel-supported
+	installDGPUDrivers := &task.LocalTask{
+		Name:    "InstallIntelDGPUDrivers",
+		Action:  new(InstallIntelDGPUDrivers),
+		Prepare: new(HasQualifyingIntelDGPU),
+		Retry:   1,
 	}
 
 	// nfd.yaml installs CRDs; keep it in its own task and retry so the CRDs are
@@ -62,7 +72,8 @@ func (m *InstallIntelPluginModule) Init() {
 	}
 
 	m.Tasks = []task.Interface{
-		updateNode,
+		labelNode,
+		installDGPUDrivers,
 		applyNFD,
 		applyNodeFeatureRules,
 		applyGPUPlugin,

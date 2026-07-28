@@ -5,8 +5,8 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
 	"golang.org/x/crypto/ssh"
@@ -69,10 +69,11 @@ func SetSSHPassword(user, password string) error {
 		return errors.New(err)
 	}
 
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("echo '%s:%s' | chpasswd", user, password))
-	err := cmd.Run()
+	cmd := exec.Command("chpasswd")
+	cmd.Stdin = strings.NewReader(user + ":" + password + "\n")
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		klog.Error("set ssh password error: ", err)
+		klog.Errorf("set ssh password error: %v, output: %s", err, string(output))
 	}
 
 	return err

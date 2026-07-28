@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/godbus/dbus/v5"
 	"github.com/vishvananda/netlink"
 	"k8s.io/klog/v2"
 )
@@ -550,243 +551,512 @@ const (
 	originalConnectionName = "original-connection"
 )
 
-func ResetBridgeConnection(ctx context.Context) error {
-	nmcli, err := findCommand(ctx, "nmcli")
-	if err != nil {
-		return err
-	}
+// bridgeReadyTimeout bounds how long CreateBridgeConnection waits for the bridge
+// to obtain an IPv4 lease before treating the switch as failed and rolling back.
+// 90s covers slow home/office DHCP renewals and switch MAC learning while still
+// failing closed if a competing profile steals the NIC (no IPv4 will ever appear).
+const bridgeReadyTimeout = 90 * time.Second
 
-	// find the bridge slave connections
-	// it should be only one bridge slave connection
-	var slaveConnections []string
-	cmd := exec.CommandContext(ctx, nmcli, "-g", "NAME", "connection", "show")
+// checkpointDestroyRetries / checkpointDestroyRetryDelay bound how hard we try
+// to commit (CheckpointDestroy) after the bridge is already ready. A failed
+// destroy must not be treated as success: NetworkManager would still auto-roll
+// back when the checkpoint timeout expires ("UI on, then silently off").
+const (
+	checkpointDestroyRetries    = 3
+	checkpointDestroyRetryDelay = 200 * time.Millisecond
+)
+
+// Injectable for unit tests; production defaults to the real D-Bus helpers.
+var (
+	nmCheckpointDestroyFn               = nmCheckpointDestroy
+	nmCheckpointRollbackFn              = nmCheckpointRollback
+	nmCheckpointAdjustRollbackTimeoutFn = nmCheckpointAdjustRollbackTimeout
+)
+
+// nmcliCombinedOutput runs nmcli (or any argv[0]) and returns combined stdout.
+// Tests replace this to assert argv without talking to NetworkManager.
+var nmcliCombinedOutput = func(ctx context.Context, name string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = os.Environ()
-	output, err := cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	} else {
-		lines := bytes.Split(output, []byte("\n"))
-		for _, line := range lines {
-			cname := strings.TrimSpace(string(line))
-			if cname == bridgeConnectionName {
-				continue
-			}
-
-			if strings.HasPrefix(cname, bridgeSlavePrefix) {
-				slaveConnections = append(slaveConnections, cname)
-			}
-		}
-	}
-	if len(slaveConnections) > 1 {
-		klog.Warningf("unexpected number of bridge slave connections: %d", len(slaveConnections))
-	}
-
-	// shutdown the bridge connection
-	klog.Infof("turn off the bridge connection [%s]", bridgeConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "down", bridgeConnectionName)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	}
-
-	// turn on the original connection
-	klog.Infof("turn on the original connection [%s]", originalConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", originalConnectionName, "connection.autoconnect", "yes")
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	}
-
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "up", originalConnectionName)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	}
-
-	// delete the bridge slave connections
-	for _, cname := range slaveConnections {
-		klog.Infof("delete the bridge slave connection [%s]", cname)
-		cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", cname)
-		cmd.Env = os.Environ()
-		_, err = cmd.Output()
-		if err != nil {
-			klog.Error("failed to execute nmcli: %w", err)
-		}
-	}
-
-	// delete the bridge connection
-	klog.Infof("delete the bridge connection [%s]", bridgeConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", bridgeConnectionName)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to execute nmcli: %w", err)
-	}
-
-	return nil
+	return cmd.Output()
 }
 
-func CreateBridgeConnection(ctx context.Context) error {
-	nmcli, err := findCommand(ctx, "nmcli")
-	if err != nil {
-		return err
-	}
-
-	// backup the original connection
-	iface, ifUUID, _, err := GetEthernetConnection(ctx)
-	if err != nil {
-		klog.Error("get ethernet connection error, ", err)
-		return err
-	}
-
-	// clear unexpected bridge connections
-	cmd := exec.CommandContext(ctx, nmcli, "-g", "NAME", "connection", "show")
-	cmd.Env = os.Environ()
-	output, err := cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	} else {
-		lines := bytes.Split(output, []byte("\n"))
-		for _, line := range lines {
-			cname := strings.TrimSpace(string(line))
-			if cname == bridgeConnectionName || strings.HasPrefix(cname, bridgeSlavePrefix) {
-				klog.Infof("clear unexpected bridge connection: %s", cname)
-				cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", cname)
-				cmd.Env = os.Environ()
-				_, err = cmd.Output()
-				if err != nil {
-					klog.Error("failed to execute nmcli: %w", err)
-				}
-			}
-		}
-	}
-
-	// modify the original connection
-	klog.Infof("backup the original connection [%s] to [%s]", ifUUID, originalConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", ifUUID, "con-name", originalConnectionName)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-		return fmt.Errorf("failed to execute nmcli: %w", err)
-	}
-
-	// find the interface MAC address
-	mdata, err := os.ReadFile(fmt.Sprintf("/sys/class/net/%s/address", iface))
-	if err != nil {
-		klog.Error("read interface MAC address error, ", err)
-		return err
-	}
-
-	mac := strings.TrimSpace(string(mdata))
-	if mac == "" {
-		klog.Error("interface MAC address is empty")
-		return err
-	}
-
-	// create the bridge connection
-	/*
-		sudo nmcli connection add type bridge con-name br-olares ifname br-olares \
-		connection.autoconnect yes bridge.stp no \
-		ethernet.cloned-mac-address "$PHY_MAC" \
-		ipv4.method auto ipv6.method ignore
-	*/
-	klog.Infof("create bridge connection [%s]", bridgeConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli,
+// bridgeAddArgs builds the nmcli argv for creating br-olares with PHY MAC clone
+// and DHCP on the bridge (INV-MAC-01).
+func bridgeAddArgs(mac string) []string {
+	return []string{
 		"connection", "add", "type", "bridge", "con-name", bridgeConnectionName, "ifname", bridgeConnectionName,
 		"connection.autoconnect", "yes", "bridge.stp", "no",
 		"ethernet.cloned-mac-address", mac,
 		"ipv4.method", "auto",
 		"ipv6.method", "ignore",
-	)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-		return fmt.Errorf("failed to execute nmcli: %w", err)
 	}
+}
 
-	// create the bridge slave connections
-	/*
-				sudo nmcli connection add type ethernet con-name "$SLAVE_CON" ifname "$PHY" \
-		  		master br-olares slave-type bridge connection.autoconnect yes
-	*/
-	slaveConnectionName := fmt.Sprintf("%s%s", bridgeSlavePrefix, iface)
-	klog.Infof("create bridge slave connection [%s]", slaveConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli,
-		"connection", "add", "type", "ethernet", "con-name", slaveConnectionName, "ifname", iface,
-		"master", bridgeConnectionName, "slave-type", "bridge", "connection.autoconnect", "yes",
-	)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-		// clean up the connection
-		klog.Info("clean up the connection")
-		cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", bridgeConnectionName)
-		cmd.Env = os.Environ()
-		_, err = cmd.Output()
-		if err != nil {
-			klog.Error("failed to execute nmcli: %w", err)
+// classifyBridgeResetUUIDs partitions NM profiles into br-olares / slave /
+// original-connection UUID lists used by ResetBridgeConnection. Unrelated
+// bridges (e.g. docker0, br0) are ignored.
+func classifyBridgeResetUUIDs(conns []nmConnection) (bridgeUUIDs, slaveUUIDs, originalUUIDs []string) {
+	for _, c := range conns {
+		switch {
+		case c.Name == bridgeConnectionName:
+			bridgeUUIDs = append(bridgeUUIDs, c.UUID)
+		case strings.HasPrefix(c.Name, bridgeSlavePrefix):
+			slaveUUIDs = append(slaveUUIDs, c.UUID)
+		case c.Name == originalConnectionName:
+			originalUUIDs = append(originalUUIDs, c.UUID)
 		}
-
-		cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", slaveConnectionName)
-		cmd.Env = os.Environ()
-		_, err = cmd.Output()
-		if err != nil {
-			klog.Error("failed to execute nmcli: %w", err)
-		}
-
-		return fmt.Errorf("failed to execute nmcli: %w", err)
 	}
+	return bridgeUUIDs, slaveUUIDs, originalUUIDs
+}
 
-	// turn on the bridge connection
-	// modify all ethernet connections to disable auto connect first
-	cmd = exec.CommandContext(ctx, nmcli, "-g", "NAME,TYPE", "connection", "show")
+// activateBridgeSwitch enables the slave, downs the physical profile, then ups
+// the bridge — three discrete nmcli invocations (no sh -c).
+func activateBridgeSwitch(ctx context.Context, nmcli, slaveUUID, ifUUID, bridgeUUID string) error {
+	if _, err := nmcliCombinedOutput(ctx, nmcli, "connection", "modify", "uuid", slaveUUID, "connection.autoconnect", "yes"); err != nil {
+		klog.Errorf("overlay bridge activate: enable autoconnect on slave %s failed: %v", slaveUUID, err)
+		return fmt.Errorf("failed to enable autoconnect on bridge slave %s: %w", slaveUUID, err)
+	}
+	if _, err := nmcliCombinedOutput(ctx, nmcli, "connection", "down", "uuid", ifUUID); err != nil {
+		klog.Errorf("overlay bridge activate: down original connection %s failed: %v", ifUUID, err)
+		return fmt.Errorf("failed to down original connection %s: %w", ifUUID, err)
+	}
+	if _, err := nmcliCombinedOutput(ctx, nmcli, "connection", "up", "uuid", bridgeUUID); err != nil {
+		klog.Errorf("overlay bridge activate: up bridge connection %s failed: %v", bridgeUUID, err)
+		return fmt.Errorf("failed to up bridge connection %s: %w", bridgeUUID, err)
+	}
+	return nil
+}
+
+// nmConnection is a minimal view of a NetworkManager connection profile.
+type nmConnection struct {
+	UUID string
+	Type string
+	Name string
+}
+
+// parseNMConnections parses the terse output of
+// `nmcli -t -f UUID,TYPE,NAME connection show`. UUID and TYPE never contain ':',
+// so the line can be split into three fields; NetworkManager escapes ':' inside
+// the NAME field as '\:'.
+func parseNMConnections(output []byte) []nmConnection {
+	var conns []nmConnection
+	lines := bytes.Split(output, []byte("\n"))
+	for _, line := range lines {
+		s := strings.TrimSpace(string(line))
+		if s == "" {
+			continue
+		}
+		fields := strings.SplitN(s, ":", 3)
+		if len(fields) < 3 {
+			continue
+		}
+		conns = append(conns, nmConnection{
+			UUID: strings.TrimSpace(fields[0]),
+			Type: strings.TrimSpace(fields[1]),
+			Name: strings.ReplaceAll(strings.TrimSpace(fields[2]), "\\:", ":"),
+		})
+	}
+	return conns
+}
+
+// listNMConnections returns all NetworkManager connection profiles.
+func listNMConnections(ctx context.Context, nmcli string) ([]nmConnection, error) {
+	cmd := exec.CommandContext(ctx, nmcli, "-t", "-f", "UUID,TYPE,NAME", "connection", "show")
 	cmd.Env = os.Environ()
-	output, err = cmd.Output()
+	output, err := cmd.Output()
 	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
+		return nil, err
+	}
+	return parseNMConnections(output), nil
+}
+
+// deleteNMConnection removes a connection profile by UUID (best-effort).
+func deleteNMConnection(ctx context.Context, nmcli, uuid string) {
+	cmd := exec.CommandContext(ctx, nmcli, "connection", "delete", "uuid", uuid)
+	cmd.Env = os.Environ()
+	if _, err := cmd.Output(); err != nil {
+		klog.Errorf("failed to delete connection %s: %v", uuid, err)
+	}
+}
+
+// setNMAutoconnect toggles connection.autoconnect for a profile by UUID (best-effort).
+func setNMAutoconnect(ctx context.Context, nmcli, uuid string, enabled bool) {
+	value := "no"
+	if enabled {
+		value = "yes"
+	}
+	cmd := exec.CommandContext(ctx, nmcli, "connection", "modify", "uuid", uuid, "connection.autoconnect", value)
+	cmd.Env = os.Environ()
+	if _, err := cmd.Output(); err != nil {
+		klog.Errorf("failed to set autoconnect=%s for connection %s: %v", value, uuid, err)
+	}
+}
+
+// cleanupBridgeConnections deletes every leftover br-olares / br-olares-slave-*
+// profile by UUID. It is idempotent and prevents stale profiles from accumulating
+// across repeated enable/disable cycles.
+func cleanupBridgeConnections(ctx context.Context, nmcli string) {
+	conns, err := listNMConnections(ctx, nmcli)
+	if err != nil {
+		klog.Errorf("list connections error: %v", err)
+		return
+	}
+	for _, c := range conns {
+		if c.Name == bridgeConnectionName || strings.HasPrefix(c.Name, bridgeSlavePrefix) {
+			klog.Infof("clear bridge connection [%s] (%s)", c.Name, c.UUID)
+			deleteNMConnection(ctx, nmcli, c.UUID)
+		}
+	}
+}
+
+// removeStaleOriginalConnections deletes duplicate "original-connection" backup
+// profiles, keeping only keepUUID. Duplicate backups (same name, different UUID)
+// are the root cause of the auto-activation race that steals the physical NIC from
+// the bridge slave, so they must be pruned before every switch.
+func removeStaleOriginalConnections(ctx context.Context, nmcli, keepUUID string) {
+	conns, err := listNMConnections(ctx, nmcli)
+	if err != nil {
+		klog.Errorf("list connections error: %v", err)
+		return
+	}
+	for _, c := range conns {
+		if c.Name == originalConnectionName && c.UUID != keepUUID {
+			klog.Infof("remove stale original connection (%s)", c.UUID)
+			deleteNMConnection(ctx, nmcli, c.UUID)
+		}
+	}
+}
+
+// connectionUUIDByName resolves a connection profile UUID from its name.
+func connectionUUIDByName(ctx context.Context, nmcli, name string) (string, error) {
+	cmd := exec.CommandContext(ctx, nmcli, "-g", "connection.uuid", "connection", "show", name)
+	cmd.Env = os.Environ()
+	output, err := cmd.Output()
+	if err != nil {
+		klog.Errorf("overlay bridge: resolve uuid for connection %s failed: %v", name, err)
+		return "", err
+	}
+	uuid := strings.TrimSpace(string(output))
+	if uuid == "" {
+		klog.Errorf("overlay bridge: connection %s has empty uuid", name)
+		return "", fmt.Errorf("connection %s has no uuid", name)
+	}
+	return uuid, nil
+}
+
+// waitBridgeReady blocks until br-olares is active with an IPv4 address, or timeout.
+func waitBridgeReady(ctx context.Context, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for {
+		if c, err := FindBridgeConnection(ctx); err == nil && c != nil && c.Active && c.Ipv4Address != "" {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(2 * time.Second):
+		}
+	}
+}
+
+// disarmNMCheckpoint cancels a leftover NetworkManager auto-rollback timer.
+// Successful CheckpointRollback already removes the checkpoint inside NM;
+// Destroy then fails with "does not exist" and is ignored. When Rollback fails
+// (or never ran) the timer stays armed — Destroy (or timeout=0) clears it so a
+// later successful enable cannot be undone by the stale snapshot.
+func disarmNMCheckpoint(ctx context.Context, conn *dbus.Conn, checkpoint dbus.ObjectPath) {
+	if checkpoint == "" {
+		return
+	}
+	if err := nmCheckpointDestroyFn(ctx, conn, checkpoint); err == nil {
+		return
 	} else {
-		lines := bytes.Split(output, []byte("\n"))
-		for _, line := range lines {
-			fields := bytes.SplitN(line, []byte(":"), 2)
-			if len(fields) < 2 {
+		klog.Errorf("NM checkpoint disarm destroy failed for %s: %v", checkpoint, err)
+	}
+	if err := nmCheckpointAdjustRollbackTimeoutFn(ctx, conn, checkpoint, 0); err != nil {
+		klog.Errorf("NM checkpoint disarm adjust-timeout failed for %s: %v", checkpoint, err)
+		return
+	}
+	klog.Warningf("NM checkpoint %s auto-rollback disabled after destroy failure", checkpoint)
+	if err := nmCheckpointDestroyFn(ctx, conn, checkpoint); err != nil {
+		klog.Errorf("NM checkpoint disarm destroy after timeout-disable failed for %s: %v", checkpoint, err)
+	}
+}
+
+// commitNMCheckpoint discards the checkpoint after a successful bridge switch
+// (NM "commit"). On persistent Destroy failure it rolls the network back and
+// returns an error so callers never report success while NM still holds an
+// auto-rollback timer.
+func commitNMCheckpoint(ctx context.Context, conn *dbus.Conn, checkpoint dbus.ObjectPath, manualRollback func()) error {
+	if checkpoint == "" {
+		return nil
+	}
+	var lastErr error
+	for attempt := 1; attempt <= checkpointDestroyRetries; attempt++ {
+		if err := nmCheckpointDestroyFn(ctx, conn, checkpoint); err != nil {
+			lastErr = err
+			klog.Errorf("NM checkpoint destroy failed (attempt %d/%d): %v", attempt, checkpointDestroyRetries, err)
+			if attempt < checkpointDestroyRetries {
+				select {
+				case <-ctx.Done():
+					lastErr = ctx.Err()
+					klog.Errorf("NM checkpoint destroy aborted by context: %v", lastErr)
+					goto rollback
+				case <-time.After(checkpointDestroyRetryDelay):
+				}
 				continue
 			}
-			cname := strings.TrimSpace(string(fields[0]))
-			ctype := strings.TrimSpace(string(fields[1]))
-			if cname != slaveConnectionName && strings.Contains(ctype, "ethernet") {
-				klog.Infof("disable auto connect for connection [%s]", cname)
-				cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", cname, "connection.autoconnect", "no")
-				cmd.Env = os.Environ()
-				_, err = cmd.Output()
-				if err != nil {
-					klog.Error("failed to execute nmcli: %w", err)
-				}
-			}
+			break
 		}
+		return nil
 	}
 
-	klog.Infof("turn on the bridge connection [%s]", bridgeConnectionName)
-	cmd = exec.CommandContext(ctx, "sh", "-c",
-		fmt.Sprintf("%s connection modify %s connection.autoconnect yes && %s connection down %s && %s connection up %s",
-			nmcli, slaveConnectionName, nmcli, originalConnectionName, nmcli, bridgeConnectionName))
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
+rollback:
+	klog.Errorf("NM checkpoint commit failed after retries, rolling back bridged state: %v", lastErr)
+	if e := nmCheckpointRollbackFn(ctx, conn, checkpoint); e != nil {
+		klog.Errorf("NM checkpoint rollback failed (%v), applying manual rollback", e)
+		if manualRollback != nil {
+			manualRollback()
+		}
+		// Rollback failure (often a D-Bus transport error) leaves the NM
+		// auto-rollback timer armed; disarm so a later enable cannot be undone.
+		disarmNMCheckpoint(ctx, conn, checkpoint)
+	}
+	return fmt.Errorf("checkpoint commit failed: %w", lastErr)
+}
+
+// ResetBridgeConnection tears down the overlay bridge and restores the original
+// physical connection. It operates by UUID so that duplicate/leftover profiles are
+// fully cleaned up, leaving no residual br-olares* profiles behind.
+func ResetBridgeConnection(ctx context.Context) error {
+	nmcli, err := findCommand(ctx, "nmcli")
 	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-		// clean up the connection
-		klog.Info("failed to turn on the bridge connection, reset the bridge connection")
-		err = ResetBridgeConnection(ctx)
-		if err != nil {
-			klog.Error("failed to reset bridge connection: %w", err)
+		klog.Errorf("overlay bridge reset: find nmcli failed: %v", err)
+		return err
+	}
+
+	conns, err := listNMConnections(ctx, nmcli)
+	if err != nil {
+		// Without a connection list we cannot safely identify br-olares /
+		// original-connection UUIDs. Fail closed so disable does not proceed to
+		// stop cni-dhcp / clear app settings while the bridge may still be up.
+		klog.Errorf("overlay bridge reset: list connections error: %v", err)
+		return fmt.Errorf("list NM connections for bridge reset: %w", err)
+	}
+
+	var bridgeUUIDs, slaveUUIDs, originalUUIDs []string
+	bridgeUUIDs, slaveUUIDs, originalUUIDs = classifyBridgeResetUUIDs(conns)
+	if len(slaveUUIDs) > 1 || len(bridgeUUIDs) > 1 {
+		klog.Warningf("unexpected leftover bridge profiles: bridges=%d slaves=%d", len(bridgeUUIDs), len(slaveUUIDs))
+	}
+
+	// shut down the bridge connection(s)
+	for _, u := range bridgeUUIDs {
+		klog.Infof("turn off the bridge connection [%s]", u)
+		cmd := exec.CommandContext(ctx, nmcli, "connection", "down", "uuid", u)
+		cmd.Env = os.Environ()
+		if _, err := cmd.Output(); err != nil {
+			klog.Errorf("failed to turn off bridge %s: %v", u, err)
 		}
 	}
 
+	// restore the original physical connection(s)
+	for _, u := range originalUUIDs {
+		klog.Infof("turn on the original connection [%s]", u)
+		setNMAutoconnect(ctx, nmcli, u, true)
+		cmd := exec.CommandContext(ctx, nmcli, "connection", "up", "uuid", u)
+		cmd.Env = os.Environ()
+		if _, err := cmd.Output(); err != nil {
+			klog.Errorf("failed to restore original connection %s: %v", u, err)
+		}
+	}
+
+	// delete slave then bridge profiles by UUID
+	for _, u := range slaveUUIDs {
+		klog.Infof("delete the bridge slave connection [%s]", u)
+		deleteNMConnection(ctx, nmcli, u)
+	}
+	for _, u := range bridgeUUIDs {
+		klog.Infof("delete the bridge connection [%s]", u)
+		deleteNMConnection(ctx, nmcli, u)
+	}
+
+	return nil
+}
+
+// CreateBridgeConnection atomically switches the node's primary networking from
+// the physical ethernet interface onto the br-olares bridge. It either fully
+// succeeds (bridge active with an IPv4 address) or rolls back to the original
+// physical connection and returns an error; it never leaves a half-bridged state
+// or leftover/duplicate NetworkManager profiles behind.
+func CreateBridgeConnection(ctx context.Context) error {
+	nmcli, err := findCommand(ctx, "nmcli")
+	if err != nil {
+		klog.Errorf("overlay bridge create: find nmcli failed: %v", err)
+		return err
+	}
+
+	// snapshot the physical ethernet connection currently carrying the node IP
+	iface, ifUUID, connName, err := GetEthernetConnection(ctx)
+	if err != nil {
+		klog.Error("get ethernet connection error, ", err)
+		return err
+	}
+
+	// read the physical MAC up front so we can abort before mutating anything
+	mdata, err := os.ReadFile(fmt.Sprintf("/sys/class/net/%s/address", iface))
+	if err != nil {
+		klog.Error("read interface MAC address error, ", err)
+		return err
+	}
+	mac := strings.TrimSpace(string(mdata))
+	if mac == "" {
+		klog.Errorf("overlay bridge create: interface %s MAC address is empty", iface)
+		return fmt.Errorf("interface %s MAC address is empty", iface)
+	}
+
+	// pre-clean leftover bridge profiles and duplicate backups by UUID (idempotent)
+	cleanupBridgeConnections(ctx, nmcli)
+	removeStaleOriginalConnections(ctx, nmcli, ifUUID)
+
+	// back up the original connection in place (UUID is stable across the rename);
+	// skip when it is already backed up to avoid a rename-to-same-name error.
+	if connName != originalConnectionName {
+		klog.Infof("backup the original connection [%s] to [%s]", ifUUID, originalConnectionName)
+		cmd := exec.CommandContext(ctx, nmcli, "connection", "modify", "uuid", ifUUID, "con-name", originalConnectionName)
+		cmd.Env = os.Environ()
+		if _, err = cmd.Output(); err != nil {
+			klog.Errorf("overlay bridge create: backup original connection %s failed: %v", ifUUID, err)
+			return fmt.Errorf("failed to backup original connection: %w", err)
+		}
+	}
+
+	// Crash-safe rollback net: wrap the switch in a NetworkManager checkpoint so
+	// that even if olaresd is killed/panics mid-switch, NetworkManager itself
+	// restores the original network after the rollback timeout. Best-effort: on
+	// hosts where the checkpoint API is unavailable we fall back to the manual
+	// (in-process) rollback below.
+	var (
+		dbusConn   *dbus.Conn
+		checkpoint dbus.ObjectPath
+	)
+	if c, e := nmSystemBus(); e != nil {
+		klog.Warningf("connect system bus for NM checkpoint failed, using manual rollback only: %v", e)
+	} else {
+		dbusConn = c
+		defer dbusConn.Close()
+		// timeout must outlast the whole switch (add/slave/up + bridge verify).
+		if cp, e := nmCheckpointCreate(ctx, dbusConn, bridgeReadyTimeout+2*time.Minute); e != nil {
+			klog.Warningf("NM checkpoint create failed, using manual rollback only: %v", e)
+		} else {
+			checkpoint = cp
+			klog.Infof("created NM checkpoint %s as crash-safe rollback net", cp)
+		}
+	}
+
+	// transaction state used by the manual (fallback) rollback
+	var (
+		bridgeUUID    string
+		slaveUUID     string
+		disabledUUIDs []string
+	)
+	manualRollback := func() {
+		if slaveUUID != "" {
+			deleteNMConnection(ctx, nmcli, slaveUUID)
+		}
+		if bridgeUUID != "" {
+			deleteNMConnection(ctx, nmcli, bridgeUUID)
+		}
+		// re-enable autoconnect for every profile we disabled during the switch
+		for _, u := range disabledUUIDs {
+			setNMAutoconnect(ctx, nmcli, u, true)
+		}
+		// bring the original physical connection back online
+		setNMAutoconnect(ctx, nmcli, ifUUID, true)
+		up := exec.CommandContext(ctx, nmcli, "connection", "up", "uuid", ifUUID)
+		up.Env = os.Environ()
+		if _, e := up.Output(); e != nil {
+			klog.Errorf("failed to restore original connection %s: %v", ifUUID, e)
+		}
+	}
+	// rollback prefers the NM checkpoint (atomic, covers all touched devices and
+	// connections); it degrades to the manual rollback if no checkpoint exists
+	// or the checkpoint rollback itself fails.
+	rollback := func(cause error) error {
+		klog.Errorf("create bridge connection failed, rolling back: %v", cause)
+		if checkpoint != "" {
+			if e := nmCheckpointRollbackFn(ctx, dbusConn, checkpoint); e != nil {
+				klog.Errorf("NM checkpoint rollback failed (%v), applying manual rollback", e)
+				manualRollback()
+				disarmNMCheckpoint(ctx, dbusConn, checkpoint)
+			}
+			return cause
+		}
+		manualRollback()
+		return cause
+	}
+
+	// create the bridge connection; the cloned MAC preserves the DHCP lease/IP
+	klog.Infof("create bridge connection [%s]", bridgeConnectionName)
+	if _, err = nmcliCombinedOutput(ctx, nmcli, bridgeAddArgs(mac)...); err != nil {
+		return rollback(fmt.Errorf("failed to create bridge connection: %w", err))
+	}
+	if bridgeUUID, err = connectionUUIDByName(ctx, nmcli, bridgeConnectionName); err != nil {
+		return rollback(fmt.Errorf("failed to resolve bridge uuid: %w", err))
+	}
+
+	// create the bridge slave connection on the physical interface
+	slaveConnectionName := fmt.Sprintf("%s%s", bridgeSlavePrefix, iface)
+	klog.Infof("create bridge slave connection [%s]", slaveConnectionName)
+	if _, err = nmcliCombinedOutput(ctx, nmcli,
+		"connection", "add", "type", "ethernet", "con-name", slaveConnectionName, "ifname", iface,
+		"master", bridgeConnectionName, "slave-type", "bridge", "connection.autoconnect", "yes",
+	); err != nil {
+		return rollback(fmt.Errorf("failed to create bridge slave connection: %w", err))
+	}
+	if slaveUUID, err = connectionUUIDByName(ctx, nmcli, slaveConnectionName); err != nil {
+		return rollback(fmt.Errorf("failed to resolve bridge slave uuid: %w", err))
+	}
+
+	// disable autoconnect for every other ethernet profile BY UUID so that no
+	// competing/duplicate profile can auto-activate and steal the physical NIC
+	// from the bridge slave during the switch (root cause of the enable timeout).
+	conns, err := listNMConnections(ctx, nmcli)
+	if err != nil {
+		return rollback(fmt.Errorf("failed to list connections: %w", err))
+	}
+	for _, c := range conns {
+		if c.UUID == slaveUUID || !strings.Contains(c.Type, "ethernet") {
+			continue
+		}
+		klog.Infof("disable auto connect for connection [%s] (%s)", c.Name, c.UUID)
+		setNMAutoconnect(ctx, nmcli, c.UUID, false)
+		disabledUUIDs = append(disabledUUIDs, c.UUID)
+	}
+
+	// Switch the physical NIC onto the bridge with three separate nmcli shots
+	// (no shell). Failures are attributed per step; down failure skips up.
+	klog.Infof("turn on the bridge connection [%s]", bridgeConnectionName)
+	if err := activateBridgeSwitch(ctx, nmcli, slaveUUID, ifUUID, bridgeUUID); err != nil {
+		return rollback(err)
+	}
+
+	// verify the bridge really came up with an IPv4 address; otherwise roll back
+	if !waitBridgeReady(ctx, bridgeReadyTimeout) {
+		return rollback(fmt.Errorf("bridge %s did not become active with an IPv4 address within %s", bridgeConnectionName, bridgeReadyTimeout))
+	}
+
+	// commit: discard the checkpoint so NetworkManager keeps the bridged state.
+	// Destroy failure must not succeed the call — NM would still auto-roll back.
+	if err := commitNMCheckpoint(ctx, dbusConn, checkpoint, manualRollback); err != nil {
+		return err
+	}
+
+	klog.Infof("bridge connection [%s] is active", bridgeConnectionName)
 	return nil
 }
 

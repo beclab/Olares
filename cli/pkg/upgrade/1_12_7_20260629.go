@@ -34,7 +34,6 @@ var systemNamespacesForPriorityPatch = []string{
 	"kubesphere-system",
 	"os-framework",
 	"os-gateway",
-	"os-mesh",
 	"os-gpu",
 	"os-network",
 	"os-protected",

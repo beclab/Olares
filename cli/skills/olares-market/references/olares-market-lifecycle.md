@@ -62,6 +62,13 @@ Mirrors the SPA's `canUpgrade()`. Bails locally with a self-contained error (for
 3. **Newer chart available** — `targetVersion > installedVersion` (semver compare). **Exception for `-s upload`:** `targetVersion == installedVersion` is allowed — re-uploading the same version overwrites the stored chart, and app-service permits a same-version upgrade (it gates on `>= deployed`). This is the sanctioned way to re-apply an edited upload chart or recover an `upgradeFailed` upload app **without** bumping the version. A true downgrade (`target < installed`) is still rejected for every source.
 4. **Catalog row not withdrawn** — `app_simple_info.app_labels` must not contain `suspend` or `remove` (the only two labels `isAppSuspended` checks; mirrors the SPA hiding the Upgrade button). On a transient catalog-probe error this gate soft-fails (warns, lets the upgrade proceed)
 
+### Where an upgrade lands
+
+Two outcomes settle on `stopped` rather than `running`, and `--watch` tells them apart by `reason` (see [olares-market-watch.md](olares-market-watch.md#--watch-interaction-with-each-verb)):
+
+- **Upgrading an already-`stopped` app** re-renders the chart at `replicas=0` and returns to `stopped` — a normal success, nothing to launch.
+- **A cancelled upgrade** also settles at `stopped`, but the row carries `reason=upgradeCancelByUser` (or `upgradeCancelBySystem` when the backend TTL fired). The app stays on its **previous** version, and `--watch` reports failure.
+
 ## `uninstall`
 
 ```bash
@@ -143,6 +150,8 @@ olares-cli market cancel firefox --watch               # block until row stops m
 ```
 
 - Source is normally implicit (read from the per-user state row). On **1.12.6+** the cancel body requires a source; if the row is gone (or `/market/state` is unreadable) the CLI reports an idempotent `nothing to cancel` — pass `--source <id>` to still send the request. On 1.12.5 the body needs no source, so a failed state read never blocks cancel.
+- **Cancelling a `resuming` or an `upgrading` app requires Olares >= 1.12.7.** Both reuse this same `DELETE /apps/{name}/install`, and both arrived on that line: the SPA shipped the resume-cancel UX in 1.12.7, and Market's cancel state whitelist gained its `upgrading` entry there. On an older backend the request comes back as a bare 404 (`App not found or current state does not allow operation`), so the CLI rejects it up front; on an undetectable backend, confirm the active profile is logged in and run `olares-cli profile list --refresh-version`. Every other in-flight state (`pending` / `downloading` / `installing` / `initializing` / `applyingEnv`) is unaffected and cancels on any backend.
+- A cancelled resume settles at `stopped` (it never reaches a `resumingCanceled` state — that transition does not exist); a rejected cancel request lands at `resumingCancelFailed`. A cancelled upgrade likewise settles at `stopped`, on the **previous** version, with `reason=upgradeCancelByUser`; a rejected one lands at `upgradingCancelFailed`.
 - **The widest watcher in the tree**: any "row stopped moving" state counts as success, including `*Canceled`, `*Failed` (the underlying op died, cancel "won by default"), and stable resting states `running` / `stopped` / `uninstalled` (cancel raced and lost, OR rollback landed).
 - Failure is ONLY surfaced for `*CancelFailed` (the cancel request itself was rejected).
 - The terminal row carries the **underlying op** (install / upgrade / ...) as its `opType`, not `cancel`. `matchOpType` is OFF — no race-tracking gate applies.

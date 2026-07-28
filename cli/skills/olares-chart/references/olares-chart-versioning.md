@@ -12,16 +12,20 @@ The semver scheme (stable / RC / daily), `.Values.sysVersion`, the `-0` prerelea
 
 ## apiVersion: v3
 
-Every chart sets `apiVersion: v3` at the top of `OlaresManifest.yaml`. `from-compose` does not write it, so hand-add it after scaffolding:
+Every newly ported chart uses this canonical block. Current `from-compose` writes it directly:
 
 ```yaml
 apiVersion: v3
 olaresManifest.version: '0.12.0'
 olaresManifest.type: app
-metadata:
-  name: myapp
-  ...
+options:
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
 ```
+
+It also writes `workloadReplicas` for every generated Deployment and StatefulSet. If `lint` appears to require `v1`, `v2`, a schema older than `0.12.0`, or an Olares dependency below `1.12.6`, do not downgrade the manifest. Verify that both `olares-cli` and this skill are current, regenerate or restore the canonical block, and lint again.
 
 What `apiVersion: v3` governs (schema only — it does NOT gate admin or namespace):
 
@@ -47,7 +51,7 @@ A chart carries several "version" fields with different jobs. Their values are f
 
 > **Bump on every upload:** raise `metadata.version` (= `Chart.yaml` `version`, kept equal) before each `market upload` — a patch bump (e.g. `0.0.1 → 0.0.2`) by default. The upload gate only requires `>=` the stored version, but presenting a strictly-newer version keeps each upload distinct; same-version overwrite is a fallback for when the chart didn't change. See the Deploy step §2.
 
-> **Name clash:** `Chart.yaml` has its own `apiVersion` (Helm's chart API) — unrelated to the OlaresManifest `apiVersion`. Don't copy one into the other.
+> **Name clash:** `Chart.yaml apiVersion: v2` is Helm's chart API. It is separate from `OlaresManifest.yaml apiVersion: v3`; both values are correct and neither should be copied over the other.
 
 ### olaresManifest.version: 0.12.0
 

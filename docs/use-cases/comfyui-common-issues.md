@@ -39,10 +39,10 @@ After the new ComfyUI is installed, data is migrated automatically as follows:
 
 | Data type | Old location | New location |
 |:---|:---|:---|
-| ComfyUI core (plugins, workflows, etc.) | `External/<your_hostname>/ai/comfyui/` | `/Data/comfyuisharev3/comfyui/` |
-| Models | `External/<your_hostname>/ai/model/` | `Common/comfyui/model/` |
-| Output files | `External/<your_hostname>/ai/output/comfyui/` | `Common/comfyui/output/` |
-| Input files | `External/<your_hostname>/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
+| ComfyUI core (plugins, workflows, etc.) | `External/<your_hostname>/`<br /> `ai/comfyui/` | `Data/comfyuisharev3/comfyui/` |
+| Models | `External/<your_hostname>`<br /> `/ai/model/` | `Common/comfyui/model/` |
+| Output files | `External/<your_hostname>`<br /> `/ai/output/comfyui/` | `Common/comfyui/output/` |
+| Input files | `External/<your_hostname>`<br /> `/ai/comfyui/ComfyUI/input/` | `Common/comfyui/input/` |
 
 :::warning
 After migration, upload new models and input files to the new locations under `Common/comfyui/`. The new ComfyUI no longer uses `External/<your_hostname>/ai/` as its active file location.
@@ -50,6 +50,11 @@ After migration, upload new models and input files to the new locations under `C
 
 The migration runs each time ComfyUI restarts. If files are later added to the old locations, ComfyUI will move them to the new locations on the next restart and delete the originals from `External/<your_hostname>/ai/`. To avoid confusion, upload new files directly to the new locations.
 
+:::info Model paths after migration
+The new ComfyUI generates `extra_model_paths.yaml` automatically and maps its standard model categories to the shared model directory. You normally do not need to configure this file after migration.
+
+Custom or node-specific model categories might not be included in the generated mappings. If a migrated model exists under `/Files/Common/comfyui/model/` but ComfyUI or a custom node cannot find it, see [Configure additional model paths](./comfyui-launcher#configure-additional-model-paths).
+:::
 
 ## ComfyUI cannot start
 
@@ -68,6 +73,95 @@ This is usually caused by insufficient resources or incorrect GPU allocation. To
 `Error` messages in the Launcher logs do not necessarily indicate a system failure. During startup and plugin scanning, ComfyUI often logs non-fatal errors for missing optional dependencies or environment checks, even when running normally.
 
 If ComfyUI starts successfully, most of these messages do not require action. Investigate logs only if ComfyUI fails to start, a workflow cannot run, or a plugin stops working.
+
+## ComfyUI cannot find a model in the shared model directory
+
+After migrating to ComfyUI v3 or installing the new ComfyUI directly on Olares 1.12.6 or later, a workflow may report a missing model even though the model file exists under `/Files/Common/comfyui/model/`.
+
+This usually happens for one of two reasons:
+
+- The model category is not mapped in `extra_model_paths.yaml`, so ComfyUI does not load models from that folder.
+- ComfyUI detects the model, but the custom node looks up a different model category.
+
+The following examples use two models that are already stored in the shared model directory:
+
+```text
+/Files/Common/comfyui/model/
+├── detection/
+│   └── mediapipe_face_fp32.safetensors
+└── ultralytics/
+    └── bbox/
+        └── face_yolov8m.pt
+```
+
+The models demonstrate two different issues:
+
+- `mediapipe_face_fp32.safetensors` does not appear in **Model Library** because the `detection` category is not mapped.
+- `face_yolov8m.pt` appears in **Model Library**, but `UltralyticsDetectorProvider` cannot find it because the node looks up the `ultralytics_bbox` category.
+
+
+### Model does not appear in Model Library
+
+In this example, **Model Library** shows no models under `detection`, even though `mediapipe_face_fp32.safetensors` exists in the corresponding folder.
+
+![No models detected in the detection category](/images/manual/use-cases/comfyui-common-shared-model-not-detected.png#bordered)
+
+To resolve the issue:
+
+1. Add the following mapping under `olares_shared_models` in `extra_model_paths.yaml`:
+
+   ```yaml
+   detection: detection
+   ```
+
+   ![Adding detection mapping](/images/manual/use-cases/comfyui-extra-model-paths-add-detection.png#bordered)
+
+   For instructions on editing the configuration, see [Configure additional model paths](./comfyui-launcher#configure-additional-model-paths).
+
+2. Save the configuration and restart ComfyUI.
+3. In ComfyUI startup log, look for the following entry to confirm that the mapping was loaded:
+
+   ```text
+   Adding extra search path detection /mnt/olares-shared-model/detection
+   ```
+
+   ![Startup log confirming detection path](/images/manual/use-cases/comfyui-detection-path-added-log.png#bordered)
+
+4. Refresh ComfyUI and search for the model again. It should appear under `detection` and become available to the workflow node.
+
+   ![Detection model recognized after restart](/images/manual/use-cases/comfyui-model-recognized-after-restart.png#bordered)
+
+:::info If the model still does not appear
+- If the log entry is missing, check the category name, relative folder path, YAML indentation, and the location of `extra_model_paths.yaml`.
+- If the log entry appears, check the model file location, file name, and file format.
+:::
+
+### Model appears but a custom node cannot find it
+
+In this example, ComfyUI detects `face_yolov8m.pt` under `ultralytics/bbox`, but the `ImpactPack/UltralyticsDetectorProvider` node looks up the `ultralytics_bbox` category.
+
+![Model detected but unavailable to the custom node](/images/manual/use-cases/comfyui-common-model-detected.png#bordered)
+
+To resolve the issue:
+
+1. Check the custom node documentation or error message for the category it expects.
+2. Compare that category with the model's current category in **Model Library**.
+3. If the categories differ, map the category expected by the node to the model's existing folder.
+
+   For this example, add the following mapping under `olares_shared_models`:
+
+   ```yaml
+   ultralytics_bbox: ultralytics/bbox
+   ```
+
+   This mapping allows the node to load the model from its existing folder. You do not need to move or duplicate the model file.
+
+   For instructions on adding the mapping, see [Configure additional model paths](./comfyui-launcher#configure-additional-model-paths).
+
+4. Save the configuration and restart ComfyUI.
+5. Reopen the workflow and confirm that `face_yolov8m.pt` appears in the `UltralyticsDetectorProvider` model selector.
+
+   ![Ultralytics model available to the custom node](/images/manual/use-cases/comfyui-common-model-recognized.png#bordered)
 
 ## ComfyUI fails to start after upgrading to v1.0.37 or later
 

@@ -64,4 +64,3 @@ metadata:
     linkerd.io/control-plane-ns: os-mesh
   annotations:
     bytetrade.io/ns-type: platform
-

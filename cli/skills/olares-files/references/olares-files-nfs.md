@@ -80,7 +80,8 @@ DELETE /api/smb_history/<node>/  body: array of {url}  (history rm)
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `require Olares >= 1.12.6` | Backend predates NFS support | Upgrade, or `--olares-version` |
+| Backend version could not be determined | Profile version cache is missing or stale | Confirm `profile login`, then run `olares-cli profile list --refresh-version` |
+| `require Olares >= 1.12.6`, with a detected older version | Backend predates NFS support | Upgrade Olares |
 | `looks like a URL scheme` / `is an SMB-style path` | `nfs://...` or `//host/share` passed | Use bare host or `host:/export`; use `files smb` for `//` shares |
 | `nfs mount returned an export list` | Bare host → discovery | Re-run with one of the printed `host:/export` paths |
 | `entry name ... must not contain '/'` | `unmount` got a path, not the entry name | Pass the bare name from `files ls external/<node>/` |

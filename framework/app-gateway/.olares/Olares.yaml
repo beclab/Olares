@@ -11,4 +11,4 @@ output:
     - 
       name: cr.l5d.io/linkerd/controller:edge-26.5.1
     - 
-      name: beclab/linkerd-pki-guardian@sha256:3dbde1a3829034216e72b7ef332c09f62a96b22ef408ab4aae1a63fd2162f72e
+      name: beclab/linkerd-pki-guardian@sha256:0e45311245b70b6f2b04c0577e32f7408cfb38915e2731b82f1d55583380a83f

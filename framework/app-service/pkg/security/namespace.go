@@ -37,31 +37,7 @@ var (
 	OSProtectedNamespaces = []string{
 		"os-protected",
 	}
-
-	// AppGatewayMeshNamespaces are namespaces used by the Olares app-gateway stack.
-	AppGatewayMeshNamespaces = []string{
-		"os-mesh",
-		"os-gateway",
-		"os-mesh-viz",
-	}
 )
-
-// IsAppGatewayMeshNamespace reports whether ns is reconciled by the app-gateway mesh NP flow.
-func IsAppGatewayMeshNamespace(ns string) bool {
-	return funk.Contains(AppGatewayMeshNamespaces, ns)
-}
-
-// AppGatewayMeshPeerNamespace returns the paired namespace for app-gateway-mesh-np ingress.
-func AppGatewayMeshPeerNamespace(ns string) string {
-	switch ns {
-	case "os-mesh":
-		return "os-gateway"
-	case "os-gateway", "os-mesh-viz":
-		return "os-mesh"
-	default:
-		return ""
-	}
-}
 
 // IsUserInternalNamespaces returns true if namespace is user level namespace for a user application, false otherwise.
 func IsUserInternalNamespaces(ns string) (bool, string) {

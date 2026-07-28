@@ -239,7 +239,7 @@ func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, 
 					if supportType != "" && device.SupportType != supportType {
 						continue
 					}
-					fits, amount := deviceFitsLevel(req, node, device, pressure, level, false)
+					fits, amount := deviceFitsLevel(req, node, device, pressure, level, false, 0)
 					if fits {
 						assigned := requiredTargetForMode(req)
 						if assigned == 0 {
@@ -284,16 +284,18 @@ func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requiremen
 	fitRemaining := target
 	allocationRemaining := allocationTarget
 	var out []Allocation
+	timeSliceMemoryByNode := make(map[string]int64)
 	for _, supportType := range supportTypeOrder(req.Mode) {
 		for _, node := range nodes {
 			for _, device := range node.Devices {
 				if supportType != "" && device.SupportType != supportType {
 					continue
 				}
-				fits, amount := deviceFitsLevel(req, node, device, pressure, level, true)
+				fits, amount := deviceFitsLevel(req, node, device, pressure, level, true, timeSliceMemoryByNode[node.NodeName])
 				if !fits || amount <= 0 {
 					continue
 				}
+				timeSliceMemoryByNode[node.NodeName] += timeSliceAddedMemory(device)
 				if allocationRemaining > 0 {
 					assigned := minInt64(amount, allocationRemaining)
 					out = append(out, buildAllocation(appConfig, req, node, device, assigned))
@@ -309,7 +311,7 @@ func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requiremen
 	return nil, false
 }
 
-func deviceFitsLevel(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool) (bool, int64) {
+func deviceFitsLevel(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64) (bool, int64) {
 	if device.Health != "" && device.Health != deviceHealthYes {
 		return false, 0
 	}
@@ -328,10 +330,7 @@ func deviceFitsLevel(req Requirement, node Node, device Device, pressure Pressur
 	if available < required && !(allowPartial && req.Mode == utils.NvidiaCardType) {
 		return false, available
 	}
-	addedGPU := int64(0)
-	if req.Mode == utils.NvidiaCardType && device.SupportType == SupportTypeTimeSlice {
-		addedGPU = minInt64(available, required)
-	}
+	addedGPU := priorTimeSliceMemory + timeSliceAddedMemory(device)
 	if pressure.WouldPressure(node, AddedResources{
 		CPU:    req.RequiredCPU,
 		Memory: levelMemory(req, level) + addedGPU,
@@ -340,6 +339,25 @@ func deviceFitsLevel(req Requirement, node Node, device Device, pressure Pressur
 		return false, available
 	}
 	return true, available
+}
+
+// timeSliceAddedMemory returns the extra host RAM that must be reserved on the
+// node for a time-slice GPU card.
+//
+// A HAMI time-slice pod is handed the whole card during its slice
+// (buildAllocation records Memory=0, so HAMI leaves it unrestricted), so the
+// node needs system-memory headroom equal to the card's full physical memory,
+// regardless of the app's requiredGPU or limitedGPU. Non-time-slice devices
+// carry no such host-memory backing requirement.
+//
+// This is the single source of truth shared by the install scheduler
+// (deviceFitsLevel) and the resume/binding validator
+// (nodeTimeSliceAddedMemory) so the two paths can never drift.
+func timeSliceAddedMemory(device Device) int64 {
+	if device.SupportType != SupportTypeTimeSlice {
+		return 0
+	}
+	return device.Memory
 }
 
 func targetForMode(req Requirement, level string) int64 {

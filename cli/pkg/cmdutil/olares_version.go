@@ -16,23 +16,27 @@ import (
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
-// Flag / viper keys for command-side version awareness. Registered as
-// persistent flags on the root command (see cmd/ctl/root.go) and bound to
-// viper there.
+// Flag / viper keys for command-side version awareness. They are registered
+// on the profile command tree (see cmd/ctl/profile/root.go); other command
+// trees consume the persisted per-profile version cache.
 const (
-	// FlagOlaresVersion overrides the detected backend version. Useful when
-	// /api/olares-info is unreachable, or to force a specific code path for
-	// debugging. Value is any Olares semver, e.g. 1.12.6 or 1.12.6-20260603.
+	// FlagOlaresVersion overrides detection within the profile command tree.
+	// Tests may also seed the viper key directly to exercise version branches.
 	FlagOlaresVersion = "olares-version"
 	// FlagRefreshVersion forces a fresh /api/olares-info read, bypassing the
 	// persisted per-profile cache.
 	FlagRefreshVersion = "refresh-version"
+
+	// OlaresVersionRefreshHint is the recovery path for version-gated command
+	// trees. Those trees do not expose --olares-version themselves.
+	OlaresVersionRefreshHint = "ensure the active profile is logged in (`olares-cli profile login`) and refresh its cached version with `olares-cli profile list --refresh-version`"
 )
 
 // OlaresBackendVersion returns the Olares OS version of the target instance,
 // memoized for the lifetime of this Factory. Resolution order:
 //
-//  1. --olares-version flag (explicit override; never hits the network).
+//  1. The profile tree's --olares-version override (or the same viper key in
+//     tests; never hits the network).
 //  2. Per-profile cache in ~/.olares-cli/config.json, when present and
 //     --refresh-version was not set. There is no TTL: the cache is populated
 //     eagerly at login and only re-read on demand (--refresh-version) or when
@@ -71,10 +75,10 @@ func (f *Factory) OlaresBackendVersion(ctx context.Context) (*semver.Version, er
 func (f *Factory) OlaresBackendAtLeast(ctx context.Context, min string) (bool, error) {
 	v, err := f.OlaresBackendVersion(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("%w; %s", err, OlaresVersionRefreshHint)
 	}
 	if v == nil {
-		return false, fmt.Errorf("Olares backend version is unknown (pass --%s <version> to set it manually)", FlagOlaresVersion)
+		return false, fmt.Errorf("Olares backend version is unknown; %s", OlaresVersionRefreshHint)
 	}
 	minV, err := semver.NewVersion(min)
 	if err != nil {
@@ -164,7 +168,7 @@ func (f *Factory) resolveBackendVersion(ctx context.Context) (*semver.Version, e
 	// 3. Fetch from the backend (writes the cache as a side effect).
 	fetched, err := f.fetchBackendVersion(ctx, rp)
 	if err != nil {
-		return nil, fmt.Errorf("detect Olares backend version: %w (pass --%s <version> to set it manually)", err, FlagOlaresVersion)
+		return nil, fmt.Errorf("detect Olares backend version: %w", err)
 	}
 	return fetched, nil
 }

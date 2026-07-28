@@ -425,7 +425,10 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			if v.Spec.Settings["version"] != version && version != "" {
 				v.Spec.Settings["version"] = version
 			}
-			v.Spec.Entrances = a.Spec.Entrances
+			// Resolve the effective view for the request viewer (owner), not the
+			// app's install owner, so a non-owner listing a shared app sees their
+			// own authLevel / added-entrance overlays — matching handler_service.
+			v.Spec.Entrances = a.EffectiveEntrances(owner)
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}
@@ -702,7 +705,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			if v.Spec.Settings["version"] != version && version != "" {
 				v.Spec.Settings["version"] = version
 			}
-			v.Spec.Entrances = a.Spec.Entrances
+			v.Spec.Entrances = a.EffectiveEntrances(a.Spec.Owner)
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}

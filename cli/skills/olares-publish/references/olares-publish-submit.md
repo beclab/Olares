@@ -7,11 +7,12 @@
 
 **The app must already run locally first.** Upload + install on the developer's Olares and confirm `running` — see the [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md) deploy flow. Market submission without a working install wastes GitBot cycles and reviewer time.
 
-**Market-ready checklist must be complete** before this final step. In particular:
+**Clear the hard gates first** — the market-ready tiers from the parent SKILL. What blocks you here specifically:
 
 - Dual-version `metadata.categories` (GitBot rejects invalid values; local `lint` does not enum-check)
-- Multi-arch images + matching `spec.supportArch`
-- Full metadata and listing images
+- `metadata.icon` present and a valid `http(s)` URL — `lint` requires it outright
+
+Multi-arch images, listing images, and the marketing fields are **not** gates. Missing ones cost you installs, not the merge — ship without them and refresh via a later `UPDATE` PR if you prefer.
 
 ## Agent boundaries
 
@@ -113,18 +114,6 @@ All post-publish actions are PRs to `beclab/apps:main`. See [Manage the app life
 **REMOVE is irreversible** — after merge the chart **folder name can no longer be reused by the owners**. Existing installs keep working; the app just disappears from the catalog and the name is burned.
 
 Before any lifecycle PR: sync the fork and rebase onto latest `main` to reduce conflicts.
-
-## Optimize listing (optional, post-merge)
-
-Improve Market presentation with [promote-apps](https://docs.olares.com/developer/develop/promote-apps.html):
-
-- `metadata.icon` — **required**; PNG/WEBP, 256x256, <=512 KB
-- `spec.promoteImage[]` — screenshot carousel on the detail page; JPEG/PNG/WEBP, 1440x900, <=8 MB each, up to 8 (>=2 recommended)
-- `spec.featuredImage` — hero image (recommendations / "My Olares"); JPEG/PNG/WEBP, 1440x900, <=8 MB, exactly one
-
-Host assets yourself or use the **Olares Market image hosting** service (pick app icon / featured / promotional, upload, copy the generated URL into `OlaresManifest.yaml`).
-
-Submit these via an `UPDATE` PR with a version bump.
 
 ## Common errors (GitBot rejection)
 

@@ -17,6 +17,7 @@ func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface)
 
 	s, err := h.getOverlayGatewayStatus(ctx.Context())
 	if err != nil {
+		klog.Errorf("overlay gateway disable: get status failed: %v", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
 
@@ -39,16 +40,28 @@ func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface)
 		return h.ErrJSON(ctx, http.StatusBadRequest, "overlay gateway is already disabled")
 	}
 
+	// create the lock file synchronously while holding the mutex so that a
+	// concurrent disable request observes it and returns "deactivating"
+	// instead of starting a second teardown (single-flight).
+	f, err := os.Create(OverlayGatewayDisableLockFile)
+	if err != nil {
+		klog.Errorf("overlay gateway disable: create lock file failed: %v", err)
+		return h.ErrJSON(ctx, http.StatusInternalServerError, "failed to create overlay gateway disable lock")
+	}
+	_ = f.Close()
+	disableOverlayGatewayError = ""
+	enableOverlayGatewayError = ""
+
 	go func() {
-		os.Create(OverlayGatewayDisableLockFile)
 		defer os.Remove(OverlayGatewayDisableLockFile)
-		disableOverlayGatewayError = ""
-		enableOverlayGatewayError = ""
-		ctx, cancel := context.WithCancel(context.Background())
+		bgCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		_, err = cmd.Execute(ctx, nil)
+
+		_, err := cmd.Execute(bgCtx, nil)
 		if err != nil {
+			klog.Errorf("overlay gateway disable: execute failed: %v", err)
 			disableOverlayGatewayError = err.Error()
+			return
 		}
 
 		t := time.NewTicker(2 * time.Second)
@@ -58,8 +71,10 @@ func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface)
 		for {
 			select {
 			case <-t.C:
-				s, err = h.getOverlayGatewayStatus(ctx)
+				s, err := h.getOverlayGatewayStatus(bgCtx)
 				if err != nil {
+					klog.Errorf("overlay gateway disable: status poll failed: %v", err)
+					disableOverlayGatewayError = err.Error()
 					return
 				}
 				if s.Status == OverlayGatewayOff {
@@ -68,6 +83,7 @@ func (h *Handlers) DisableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface)
 				}
 			case <-timeout.C:
 				klog.Error("overlay gateway disable timeout")
+				disableOverlayGatewayError = "overlay gateway disable timeout"
 				return
 			}
 		}
