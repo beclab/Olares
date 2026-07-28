@@ -1,0 +1,228 @@
+apiVersion: app.bytetrade.io/v1alpha1
+kind: Application
+metadata:
+  name: getloodagents
+  namespace: "{{ .Values.userspace }}"
+spec:
+  metadata:
+    title: Getlood Agents
+    description: Autonomous AI agents runtime powered by SmythOS
+    icon: https://file.bttcdn.com/appstore/getlood/getloodagents.webp
+    appid: getloodagents
+    version: 1.0.0
+    categories:
+      - AI
+      - Automation
+      - Productivity
+    author: Getlood
+    website: https://getlood.com
+    sourceCode: https://github.com/Getlood/getlood-smythos
+    submitter: Getlood
+    language:
+      - en
+    requiredMemory: 2Gi
+    requiredDisk: 20Gi
+    requiredCpu: 1000m
+    supportClient:
+      edge: "N/A"
+
+  entrances:
+    - name: api
+      host: api
+      port: 8080
+      title: Getlood Agents API
+      authLevel: private
+      invisible: false
+    - name: ui
+      host: ui
+      port: 3000
+      title: Getlood Agents Studio
+      authLevel: private
+      invisible: false
+
+  permission:
+    appData: true
+    appCache: true
+    userData:
+      - Home/Documents
+      - Home/Downloads
+    sysData:
+      - dataType: legacy_api
+        appName: getloodagents
+        port: 8080
+        group: api.getloodagents
+        version: v1
+        ops:
+          - POST
+          - GET
+          - PUT
+          - DELETE
+
+  middleware:
+    postgres:
+      username: getloodagents
+      password: "{{ randAlphaNum 16 }}"
+      databases:
+        - name: getloodagents
+          distributed: false
+    redis:
+      password: "{{ randAlphaNum 16 }}"
+      namespace: getloodagents
+
+  options:
+    dependencies:
+      - name: getloodbrain
+        type: application
+        version: ">=1.0.0"
+      - name: getloodllm
+        type: application
+        version: ">=1.0.0"
+
+  deployment:
+    - name: getloodagents-runtime
+      image: getlood/smythos-runtime:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+      volumeMounts:
+        - name: appdata
+          mountPath: /app/agents
+      env:
+        - name: BRAIN_API_URL
+          value: "http://getloodbrain-api.{{ .Values.userspace }}:8080"
+        - name: LLM_API_URL
+          value: "http://getloodllm-svc.{{ .Values.userspace }}:11434"
+        - name: LLM_MANAGER_URL
+          value: "http://getloodagents-llm-manager:8081"
+        - name: WORKFLOW_ENGINE_URL
+          value: "http://getloodagents-workflow:8082"
+        - name: POSTGRES_HOST
+          value: "{{ .Values.postgres.host }}"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgres.port }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgres.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgres.password }}"
+        - name: POSTGRES_DB
+          value: "getloodagents"
+        - name: REDIS_HOST
+          value: "{{ .Values.redis.host }}"
+        - name: REDIS_PORT
+          value: "{{ .Values.redis.port }}"
+        - name: REDIS_PASSWORD
+          value: "{{ .Values.redis.password }}"
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+
+    - name: getloodagents-llm-manager
+      image: getlood/smythos-llm-manager:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8081
+          protocol: TCP
+      env:
+        - name: OLLAMA_URL
+          value: "http://getloodllm-svc.{{ .Values.userspace }}:11434"
+        - name: BRAIN_LLM_URL
+          value: "http://getloodbrain-llm.{{ .Values.userspace }}:8004"
+        - name: REDIS_HOST
+          value: "{{ .Values.redis.host }}"
+        - name: REDIS_PORT
+          value: "{{ .Values.redis.port }}"
+        - name: REDIS_PASSWORD
+          value: "{{ .Values.redis.password }}"
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+
+    - name: getloodagents-workflow
+      image: getlood/smythos-workflow:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8082
+          protocol: TCP
+      volumeMounts:
+        - name: appdata
+          mountPath: /app/workflows
+      env:
+        - name: RUNTIME_URL
+          value: "http://getloodagents-runtime:8080"
+        - name: POSTGRES_HOST
+          value: "{{ .Values.postgres.host }}"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgres.port }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgres.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgres.password }}"
+        - name: POSTGRES_DB
+          value: "getloodagents"
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+
+    - name: getloodagents-tool-manager
+      image: getlood/smythos-tool-manager:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8083
+          protocol: TCP
+      env:
+        - name: RUNTIME_URL
+          value: "http://getloodagents-runtime:8080"
+        - name: POSTGRES_HOST
+          value: "{{ .Values.postgres.host }}"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgres.port }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgres.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgres.password }}"
+        - name: POSTGRES_DB
+          value: "getloodagents"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+
+    - name: getloodagents-ui
+      image: getlood/smythos-ui:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+      env:
+        - name: API_URL
+          value: "http://getloodagents-runtime:8080"
+        - name: WORKFLOW_URL
+          value: "http://getloodagents-workflow:8082"
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi

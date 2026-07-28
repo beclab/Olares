@@ -1,0 +1,277 @@
+apiVersion: app.bytetrade.io/v1alpha1
+kind: Application
+metadata:
+  name: getloodbrain
+  namespace: "{{ .Values.userspace }}"
+spec:
+  metadata:
+    title: Getlood Brain
+    description: AI Kernel for intelligent orchestration and resource management
+    icon: https://file.bttcdn.com/appstore/getlood/getloodbrain.webp
+    appid: getloodbrain
+    version: 1.0.0
+    categories:
+      - AI
+      - Productivity
+      - Utilities
+    author: Getlood
+    website: https://getlood.com
+    sourceCode: https://github.com/Getlood/getlood-aios
+    submitter: Getlood
+    language:
+      - en
+    requiredMemory: 2Gi
+    requiredDisk: 10Gi
+    requiredCpu: 1000m
+    supportClient:
+      edge: "N/A"
+
+  entrances:
+    - name: api
+      host: api
+      port: 8080
+      title: Getlood Brain API
+      authLevel: private
+      invisible: false
+    - name: ui
+      host: ui
+      port: 3000
+      title: Getlood Brain Dashboard
+      authLevel: private
+      invisible: false
+
+  permission:
+    appData: true
+    appCache: true
+    userData:
+      - Home/Documents
+      - Home/Downloads
+    sysData:
+      - dataType: legacy_api
+        appName: getloodbrain
+        port: 8080
+        group: api.getloodbrain
+        version: v1
+        ops:
+          - POST
+          - GET
+          - PUT
+          - DELETE
+
+  middleware:
+    postgres:
+      username: getloodbrain
+      password: "{{ randAlphaNum 16 }}"
+      databases:
+        - name: getloodbrain
+          distributed: false
+    redis:
+      password: "{{ randAlphaNum 16 }}"
+      namespace: getloodbrain
+
+  options:
+    dependencies:
+      - name: getloodllm
+        type: application
+        version: ">=1.0.0"
+      - name: getloodvectordb
+        type: application
+        version: ">=1.0.0"
+
+  deployment:
+    - name: getloodbrain-scheduler
+      image: getlood/aios-scheduler:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8001
+          protocol: TCP
+      env:
+        - name: AIOS_MODE
+          value: "scheduler"
+        - name: CONTEXT_MANAGER_URL
+          value: "http://getloodbrain-context:8002"
+        - name: MEMORY_MANAGER_URL
+          value: "http://getloodbrain-memory:8003"
+        - name: LLM_CORE_URL
+          value: "http://getloodbrain-llm:8004"
+        - name: STORAGE_MANAGER_URL
+          value: "http://getloodbrain-storage:8005"
+        - name: POSTGRES_HOST
+          value: "{{ .Values.postgres.host }}"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgres.port }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgres.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgres.password }}"
+        - name: POSTGRES_DB
+          value: "getloodbrain"
+        - name: REDIS_HOST
+          value: "{{ .Values.redis.host }}"
+        - name: REDIS_PORT
+          value: "{{ .Values.redis.port }}"
+        - name: REDIS_PASSWORD
+          value: "{{ .Values.redis.password }}"
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+
+    - name: getloodbrain-context
+      image: getlood/aios-context-manager:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8002
+          protocol: TCP
+      volumeMounts:
+        - name: appdata
+          mountPath: /data/context
+      env:
+        - name: REDIS_HOST
+          value: "{{ .Values.redis.host }}"
+        - name: REDIS_PORT
+          value: "{{ .Values.redis.port }}"
+        - name: REDIS_PASSWORD
+          value: "{{ .Values.redis.password }}"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+
+    - name: getloodbrain-memory
+      image: getlood/aios-memory-manager:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8003
+          protocol: TCP
+      volumeMounts:
+        - name: appdata
+          mountPath: /data/memory
+      env:
+        - name: QDRANT_URL
+          value: "http://getloodvectordb-svc.{{ .Values.userspace }}:6333"
+        - name: POSTGRES_HOST
+          value: "{{ .Values.postgres.host }}"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgres.port }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgres.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgres.password }}"
+        - name: POSTGRES_DB
+          value: "getloodbrain"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+
+    - name: getloodbrain-llm
+      image: getlood/aios-llm-core:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8004
+          protocol: TCP
+      env:
+        - name: OLLAMA_URL
+          value: "http://getloodllm-svc.{{ .Values.userspace }}:11434"
+        - name: REDIS_HOST
+          value: "{{ .Values.redis.host }}"
+        - name: REDIS_PORT
+          value: "{{ .Values.redis.port }}"
+        - name: REDIS_PASSWORD
+          value: "{{ .Values.redis.password }}"
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+
+    - name: getloodbrain-storage
+      image: getlood/aios-storage-manager:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8005
+          protocol: TCP
+      volumeMounts:
+        - name: userdata
+          mountPath: /userdata
+        - name: appdata
+          mountPath: /appdata
+      env:
+        - name: POSTGRES_HOST
+          value: "{{ .Values.postgres.host }}"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgres.port }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgres.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgres.password }}"
+        - name: POSTGRES_DB
+          value: "getloodbrain"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+
+    - name: getloodbrain-api
+      image: getlood/aios-api-gateway:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+      env:
+        - name: SCHEDULER_URL
+          value: "http://getloodbrain-scheduler:8001"
+        - name: CONTEXT_MANAGER_URL
+          value: "http://getloodbrain-context:8002"
+        - name: MEMORY_MANAGER_URL
+          value: "http://getloodbrain-memory:8003"
+        - name: LLM_CORE_URL
+          value: "http://getloodbrain-llm:8004"
+        - name: STORAGE_MANAGER_URL
+          value: "http://getloodbrain-storage:8005"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+
+    - name: getloodbrain-ui
+      image: getlood/aios-ui:1.0.0
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+      env:
+        - name: API_URL
+          value: "http://getloodbrain-api:8080"
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
