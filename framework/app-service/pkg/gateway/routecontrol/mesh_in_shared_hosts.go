@@ -38,7 +38,10 @@ import (
 // waits for the webhook placeholder; GC on NS opt-out, NS delete, or viewer
 // gone; managed-by label rules out third-party same-name ConfigMaps.
 type MeshInSharedHostsReconciler struct {
-	Client         client.Client
+	Client client.Client
+	// platformDomain pins the domain used for host materialization. Empty means
+	// resolve it per reconcile via cluster.GetPlatformDomain; tests set it to
+	// avoid the live lookup.
 	platformDomain string
 }
 
@@ -65,7 +68,18 @@ func (r *MeshInSharedHostsReconciler) Reconcile(ctx context.Context, req reconci
 		}
 		return reconcile.Result{}, nil
 	}
-	demand, err := BuildSharedHostsDemand(ctx, r.Client, r.platformDomain)
+	platformDomain := r.resolvePlatformDomain(ctx)
+	if platformDomain == "" {
+		// Materializing with an empty domain drops every SRR pattern as
+		// non-platform, which would blank an already correct allowlist and send
+		// mesh-in back to SNI passthrough. Retry instead of writing that.
+		sharedHostsReconcileTotal.WithLabelValues(rResPlatformDomainUnavailable).Inc()
+		sharedHostsPlatformDomainReady.Set(0)
+		warnPlatformDomainUnavailable(req.Namespace)
+		return reconcile.Result{RequeueAfter: sharedHostsPlatformDomainRequeue}, nil
+	}
+	sharedHostsPlatformDomainReady.Set(1)
+	demand, err := BuildSharedHostsDemand(ctx, r.Client, platformDomain)
 	if err != nil {
 		sharedHostsReconcileTotal.WithLabelValues(rResListFailed).Inc()
 		return reconcile.Result{}, err
@@ -78,6 +92,20 @@ func (r *MeshInSharedHostsReconciler) Reconcile(ctx context.Context, req reconci
 	}
 	sharedHostsTargetCount.WithLabelValues(hashCallerNS(req.Namespace)).Set(float64(len(nsTargets)))
 	return reconcile.Result{}, r.ReconcileNamespace(ctx, req.Namespace, nsTargets)
+}
+
+// resolvePlatformDomain returns the domain used to materialize viewer hosts.
+// It is resolved per reconcile rather than captured once at manager setup: the
+// lookup depends on the cluster owner User carrying bytetrade.io/zone, which is
+// not guaranteed to exist yet while app-service starts during a fresh install.
+// A one-shot capture that lost that race pinned the reconciler to "" for the
+// whole process lifetime. cluster.GetPlatformDomain caches for a short TTL, and
+// this reads without mutating shared state, so per-reconcile is cheap and safe.
+func (r *MeshInSharedHostsReconciler) resolvePlatformDomain(ctx context.Context) string {
+	if d := strings.ToLower(strings.TrimSpace(r.platformDomain)); d != "" {
+		return d
+	}
+	return strings.ToLower(strings.TrimSpace(cluster.GetPlatformDomain(ctx)))
 }
 
 // ReconcileNamespace upserts the per-NS olares-mesh-in-shared-hosts ConfigMap.
@@ -292,9 +320,6 @@ func (r *MeshInSharedHostsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
-	}
-	if d := cluster.GetPlatformDomain(context.Background()); d != "" {
-		r.platformDomain = d
 	}
 	return builder.ControllerManagedBy(mgr).
 		Named("mesh-in-shared-hosts").

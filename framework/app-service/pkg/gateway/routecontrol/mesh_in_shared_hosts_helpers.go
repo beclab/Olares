@@ -17,6 +17,7 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -38,6 +39,9 @@ const (
 	rResUpdateFailed     = "update_failed"
 	rResUpdateConflict   = "update_conflict_retried"
 	rResSkippedUnmanaged = "skipped_unmanaged"
+	// rResPlatformDomainUnavailable means host materialization was skipped and
+	// requeued because the platform domain did not resolve.
+	rResPlatformDomainUnavailable = "platform_domain_unavailable"
 	// drop reason label values.
 	rDropOwnerUnresolved  = "owner_unresolved"
 	rDropMultiRef         = "multi_ref_unsupported"
@@ -50,6 +54,16 @@ const (
 	rGCNSOptOut  = "ns_opt_out"
 	rGCNSDeleted = "ns_deleted"
 	rGCViewer    = "viewer_gone"
+)
+
+const (
+	// sharedHostsPlatformDomainRequeue paces retries while the platform domain
+	// is unresolvable, so a caller installed during that window converges
+	// without operator action.
+	sharedHostsPlatformDomainRequeue = 15 * time.Second
+	// platformDomainWarnInterval throttles the unavailability warning: the
+	// condition fans out over every opt-in namespace on each retry.
+	platformDomainWarnInterval = time.Minute
 )
 
 var (
@@ -77,10 +91,31 @@ var (
 		Name: "olares_mesh_in_shared_hosts_content_hash_age_seconds",
 		Help: "Seconds since the shared-hosts content hash last changed.",
 	}, []string{"caller_ns"})
+	sharedHostsPlatformDomainReady = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "olares_mesh_in_shared_hosts_platform_domain_ready",
+		Help: "1 when the platform domain resolves for host materialization, 0 while it is unavailable.",
+	})
 
 	sharedHostsHashStateMu sync.Mutex
 	sharedHostsHashState   = map[string]meshInHashSnapshot{}
+
+	platformDomainWarnMu   sync.Mutex
+	platformDomainWarnedAt time.Time
 )
+
+// warnPlatformDomainUnavailable logs at default verbosity, throttled to one line
+// per platformDomainWarnInterval. The previous klog.V(2) call sites made this
+// failure invisible on a default-verbosity deployment.
+func warnPlatformDomainUnavailable(callerNS string) {
+	platformDomainWarnMu.Lock()
+	defer platformDomainWarnMu.Unlock()
+	if !platformDomainWarnedAt.IsZero() && time.Since(platformDomainWarnedAt) < platformDomainWarnInterval {
+		return
+	}
+	platformDomainWarnedAt = time.Now()
+	klog.Warningf("shared_hosts: platform domain unavailable, requeue in %s and keep existing allowlist ns=%s",
+		sharedHostsPlatformDomainRequeue, hashCallerNS(callerNS))
+}
 
 type meshInHashSnapshot struct {
 	hash string
@@ -91,6 +126,7 @@ func init() {
 	prometheus.MustRegister(
 		sharedHostsReconcileTotal, sharedHostsDropTotal, sharedHostsGCTotal,
 		sharedHostsTargetCount, sharedHostsCount, sharedHostsContentHashAgeSeconds,
+		sharedHostsPlatformDomainReady,
 	)
 }
 
