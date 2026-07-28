@@ -35,6 +35,14 @@ var (
 
 	UserAnnotationIsEphemeral = fmt.Sprintf("%s/is-ephemeral", AnnotationGroup)
 
+	// Locale preferences set during activation / via the locale settings page.
+	// These act as the source of truth for the matching OLARES_USER_* envs,
+	// which UserEnvSyncController keeps in sync one-way.
+	UserAnnotationLanguage = fmt.Sprintf("%s/language", AnnotationGroup)
+	UserAnnotationLocation = fmt.Sprintf("%s/location", AnnotationGroup)
+	UserAnnotationTimezone = fmt.Sprintf("%s/timezone", AnnotationGroup)
+	UserAnnotationTheme    = fmt.Sprintf("%s/theme", AnnotationGroup)
+
 	EnableSSLTaskResultAnnotationKey = fmt.Sprintf("%s/task-enable-ssl", AnnotationGroup)
 	UserLauncherAuthPolicy           = fmt.Sprintf("%s/launcher-auth-policy", AnnotationGroup)
 	UserLauncherAccessLevel          = fmt.Sprintf("%s/launcher-access-level", AnnotationGroup)

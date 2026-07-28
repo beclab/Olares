@@ -8,7 +8,13 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
+	"time"
+
+	"k8s.io/klog"
 
 	bflconst "bytetrade.io/web3os/bfl/pkg/constants"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -22,14 +28,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/api/manifest"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
@@ -40,10 +47,131 @@ const (
 	RoleOwner = "owner"
 )
 
-func GetKubeClient() (kubernetes.Interface, error) {
+// K8s clients and the rest.Config are safe for concurrent use and do not need
+// to be rebuilt on every call. olaresd's status loop reconstructs them many
+// times per 5s tick; caching them removes the repeated ctrl.GetConfig +
+// NewForConfig (REST/HTTP/TLS transport) churn. Each value is memoized only on
+// success, so a failure before the cluster is reachable is retried on the next
+// call instead of being cached permanently.
+var (
+	clientCacheMu           sync.Mutex
+	cachedConfig            *rest.Config
+	cachedKubeClient        kubernetes.Interface
+	cachedDynamicClient     dynamic.Interface
+	cachedAppClientSet      *versioned.Clientset
+	cachedApixClient        apixclientset.Interface
+	cachedKubeconfigPath    string
+	cachedKubeconfigModTime time.Time
+)
+
+// kubeconfigPaths resolves the kubeconfig files backing ctrl.GetConfig,
+// mirroring the env/default lookup. ctrl.GetConfig merges every file listed in
+// KUBECONFIG, so all of them are tracked for freshness. It returns nil when no
+// file applies (e.g. in-cluster), in which case the freshness check is skipped.
+func kubeconfigPaths() []string {
+	if v := os.Getenv("KUBECONFIG"); v != "" {
+		if parts := filepath.SplitList(v); len(parts) > 0 {
+			return parts
+		}
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	return []string{filepath.Join(home, ".kube", "config")}
+}
+
+func configChanged() (bool, string, time.Time) {
+	paths := append([]string{"/etc/hosts"}, kubeconfigPaths()...)
+	if len(paths) == 0 {
+		return false, cachedKubeconfigPath, cachedKubeconfigModTime
+	}
+	key := strings.Join(paths, string(os.PathListSeparator))
+	var modTime time.Time
+	for _, p := range paths {
+		info, err := os.Stat(p)
+		if err != nil {
+			continue
+		}
+		if mt := info.ModTime(); mt.After(modTime) {
+			modTime = mt
+		}
+	}
+	if modTime.IsZero() {
+		// None of the tracked files are readable right now; keep any cached
+		// clients. A momentarily-missing file (e.g. during an atomic rewrite)
+		// should not tear down a working in-memory client.
+		return false, cachedKubeconfigPath, cachedKubeconfigModTime
+	}
+	if cachedConfig == nil {
+		cachedKubeconfigPath = key
+		cachedKubeconfigModTime = modTime
+		return false, cachedKubeconfigPath, cachedKubeconfigModTime
+	}
+	if key == cachedKubeconfigPath && modTime.Equal(cachedKubeconfigModTime) {
+		return false, cachedKubeconfigPath, cachedKubeconfigModTime
+	}
+
+	return true, key, modTime
+}
+
+// ensureFreshLocked invalidates the cached config and clients when any tracked
+// kubeconfig or hosts file changes (e.g. IP change or k3s cert rotation), so
+// olaresd recovers without a restart instead of pinning a stale config forever.
+// Callers must hold clientCacheMu. Informer teardown is coordinated via
+// rebuildInformers (takes informerMu briefly; see that function's lock notes).
+func ensureFreshLocked() {
+	changed, key, modTime := configChanged()
+	if !changed {
+		return
+	}
+
+	klog.Info("kubeconfig changed, rebuilding k8s clients")
+	cachedConfig = nil
+	cachedKubeClient = nil
+	cachedDynamicClient = nil
+	cachedAppClientSet = nil
+	cachedApixClient = nil
+	cachedKubeconfigPath = key
+	cachedKubeconfigModTime = modTime
+	clientGeneration.Add(1)
+
+	klog.Info("rebuilding informers")
+	rebuildInformers()
+}
+
+// configLocked returns the cached rest.Config, loading it once on first
+// success. Callers must hold clientCacheMu.
+func configLocked() (*rest.Config, error) {
+	if cachedConfig != nil {
+		return cachedConfig, nil
+	}
 	config, err := ctrl.GetConfig()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
+		return nil, err
+	}
+	cachedConfig = config
+	return config, nil
+}
+
+// GetConfig returns the cached rest.Config, loading it once on first success.
+func GetConfig() (*rest.Config, error) {
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	return configLocked()
+}
+
+func GetKubeClient() (kubernetes.Interface, error) {
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedKubeClient != nil {
+		return cachedKubeClient, nil
+	}
+
+	config, err := configLocked()
+	if err != nil {
 		return nil, err
 	}
 
@@ -53,13 +181,20 @@ func GetKubeClient() (kubernetes.Interface, error) {
 		return nil, err
 	}
 
+	cachedKubeClient = client
 	return client, nil
 }
 
 func GetDynamicClient() (dynamic.Interface, error) {
-	config, err := ctrl.GetConfig()
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedDynamicClient != nil {
+		return cachedDynamicClient, nil
+	}
+
+	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return nil, err
 	}
 
@@ -69,13 +204,20 @@ func GetDynamicClient() (dynamic.Interface, error) {
 		return nil, err
 	}
 
+	cachedDynamicClient = client
 	return client, nil
 }
 
 func GetAppClientSet() (versioned.Clientset, error) {
-	config, err := ctrl.GetConfig()
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedAppClientSet != nil {
+		return *cachedAppClientSet, nil
+	}
+
+	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return versioned.Clientset{}, err
 	}
 
@@ -85,11 +227,15 @@ func GetAppClientSet() (versioned.Clientset, error) {
 		return versioned.Clientset{}, err
 	}
 
+	cachedAppClientSet = client
 	return *client, nil
 }
 
+// IsTerminusInitialized reports whether the owner user finished initialization.
+// The client argument is retained for signature compatibility; user reads now
+// go through the shared informer cache.
 func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initialized bool, failed bool, err error) {
-	users, err := client.Resource(UserGVR).List(ctx, metav1.ListOptions{})
+	users, err := listUsersRaw(ctx)
 	if err != nil {
 		klog.Error("list user error, ", err)
 		initialized = false
@@ -97,7 +243,7 @@ func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initi
 		return
 	}
 
-	for _, u := range users.Items {
+	for _, u := range users {
 		role, ok := u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
 		if !ok {
 			continue
@@ -120,8 +266,8 @@ func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initi
 	return
 }
 
-func IsTerminusInitializing(ctx context.Context, client dynamic.Interface) (bool, error) {
-	user, err := GetAdminUser(ctx, client)
+func IsTerminusInitializing(ctx context.Context) (bool, error) {
+	user, err := GetAdminUser(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -138,17 +284,25 @@ func IsTerminusInitializing(ctx context.Context, client dynamic.Interface) (bool
 	return status != string(bflconst.Completed), nil
 }
 
+// IsTerminusRunning reports whether all key pods are ready. The client argument
+// is retained for signature compatibility; pod reads now go through the shared
+// informer cache.
 func IsTerminusRunning(ctx context.Context, client kubernetes.Interface) (bool, error) {
-	pods, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	pods, err := ListPods(ctx)
 	if err != nil {
 		klog.Error("list pods error, ", err)
 		return false, err
 	}
 
-	for _, pod := range pods.Items {
-		if isKeyPod(&pod) {
+	for _, pod := range pods {
+		if isKeyPod(pod) {
 			switch pod.Status.Phase {
-			case corev1.PodRunning, corev1.PodSucceeded:
+			case corev1.PodRunning:
+				if !isPodReady(pod) {
+					return false, nil
+				}
+				continue
+			case corev1.PodSucceeded:
 				continue
 			default:
 				return false, nil
@@ -314,8 +468,8 @@ func MasterNodeIp(installed bool) (addr string, err error) {
 	}
 }
 
-func GetAdminUserJws(ctx context.Context, client dynamic.Interface) (string, error) {
-	user, err := GetAdminUser(ctx, client)
+func GetAdminUserJws(ctx context.Context) (string, error) {
+	user, err := GetAdminUser(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -333,8 +487,8 @@ func GetAdminUserJws(ctx context.Context, client dynamic.Interface) (string, err
 
 }
 
-func GetAdminUserTerminusName(ctx context.Context, client dynamic.Interface) (string, error) {
-	user, err := GetAdminUser(ctx, client)
+func GetAdminUserTerminusName(ctx context.Context) (string, error) {
+	user, err := GetAdminUser(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -354,8 +508,8 @@ func GetAdminUserTerminusName(ctx context.Context, client dynamic.Interface) (st
 
 type Filter func(u *unstructured.Unstructured) bool
 
-func GetAdminUser(ctx context.Context, client dynamic.Interface) (*unstructured.Unstructured, error) {
-	u, err := ListUsers(ctx, client, func(u *unstructured.Unstructured) bool {
+func GetAdminUser(ctx context.Context) (*unstructured.Unstructured, error) {
+	u, err := ListUsers(ctx, func(u *unstructured.Unstructured) bool {
 		role, ok := u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
 		if !ok {
 			return false
@@ -375,18 +529,22 @@ func GetAdminUser(ctx context.Context, client dynamic.Interface) (*unstructured.
 	return u[0], nil
 }
 
-func ListUsers(ctx context.Context, client dynamic.Interface, filters ...Filter) ([]*unstructured.Unstructured, error) {
-	users, err := client.Resource(UserGVR).List(ctx, metav1.ListOptions{})
+// ListUsers returns user CRs matching the given filters. The client argument is
+// retained for signature compatibility; reads come from the shared informer
+// cache. The returned objects are shared read-only cache references, so callers
+// must DeepCopy before mutating.
+func ListUsers(ctx context.Context, filters ...Filter) ([]*unstructured.Unstructured, error) {
+	users, err := listUsersRaw(ctx)
 	if err != nil {
 		klog.Error("list user error, ", err)
 		return nil, err
 	}
 
 	var userList []*unstructured.Unstructured
-	for _, u := range users.Items {
+	for _, u := range users {
 		var skip bool
 		for _, filter := range filters {
-			if !filter(&u) {
+			if !filter(u) {
 				skip = true
 				break
 			}
@@ -395,7 +553,7 @@ func ListUsers(ctx context.Context, client dynamic.Interface, filters ...Filter)
 			continue
 		}
 
-		userList = append(userList, &u)
+		userList = append(userList, u)
 	}
 
 	return userList, nil
@@ -442,9 +600,9 @@ func GetTerminusVersion(ctx context.Context, client dynamic.Interface) (*string,
 	return &terminus.Spec.Version, nil
 }
 
-func GetTerminusInstalledTime(ctx context.Context, dynamicClient dynamic.Interface, client kubernetes.Interface) (*int64, error) {
+func GetTerminusInstalledTime(ctx context.Context, client kubernetes.Interface) (*int64, error) {
 	// FIXME: record the time
-	adminUser, err := GetAdminUser(ctx, dynamicClient)
+	adminUser, err := GetAdminUser(ctx)
 	if err != nil {
 		klog.Error("get admin user error, ", err)
 		return nil, err
@@ -476,7 +634,7 @@ func GetTerminusInitializedTime(ctx context.Context, client kubernetes.Interface
 }
 
 func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName, nodeIp, nodeRole string, err error) {
-	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodes, err := ListNodes(ctx)
 	if err != nil {
 		klog.Error("list nodes error, ", err)
 		return
@@ -488,7 +646,7 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 		return
 	}
 
-	for _, node := range nodes.Items {
+	for _, node := range nodes {
 		var foundIp bool
 		for _, address := range node.Status.Addresses {
 			switch address.Type {
@@ -538,14 +696,14 @@ func GetUserspacePvcHostPath(ctx context.Context, user string, client kubernetes
 }
 
 func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[string][]NodePressure, error) {
-	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodes, err := ListNodes(ctx)
 	if err != nil {
 		klog.Error("list nodes error, ", err)
 		return nil, err
 	}
 
 	status := make(map[string][]NodePressure)
-	for _, node := range nodes.Items {
+	for _, node := range nodes {
 		for _, condition := range node.Status.Conditions {
 			if condition.Type != corev1.NodeReady && condition.Status == corev1.ConditionTrue {
 				status[node.Name] = append(status[node.Name], NodePressure{Type: string(condition.Type), Message: condition.Message})
@@ -556,35 +714,112 @@ func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[str
 	return status, nil
 }
 
-func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
-	var urls []string
+var (
+	appUrlMu    sync.Mutex
+	appUrlSig   string
+	appUrlCache []string
+)
 
-	clientset, err := GetAppClientSet()
-	if err != nil {
-		klog.Error("get app clientset error, ", err)
-		return nil, err
+// appUrlSignature returns a stable signature of the inputs that determine the
+// application entrance URLs: the set of applications and the set of users (whose
+// zone annotation feeds the URLs). Any change to an app spec or a user bumps its
+// resourceVersion, so this detects when GetApplicationUrlAll must recompute.
+func appUrlSignature(apps []*appv1alpha1.Application, users []*unstructured.Unstructured) string {
+	appSigs := make([]string, 0, len(apps))
+	for i := range apps {
+		appSigs = append(appSigs, apps[i].Name+":"+apps[i].ResourceVersion)
 	}
+	sort.Strings(appSigs)
 
-	apps, err := clientset.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	userSigs := make([]string, 0, len(users))
+	for _, u := range users {
+		userSigs = append(userSigs, u.GetName()+":"+u.GetResourceVersion())
+	}
+	sort.Strings(userSigs)
+
+	var b strings.Builder
+	b.WriteString("apps\n")
+	for _, s := range appSigs {
+		b.WriteString(s)
+		b.WriteByte('\n')
+	}
+	b.WriteString("users\n")
+	for _, s := range userSigs {
+		b.WriteString(s)
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
+func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
+	apps, err := ListApplications(ctx)
 	if err != nil {
 		klog.Error("list applications error, ", err)
 		return nil, err
 	}
 
-	for _, app := range apps.Items {
+	users, err := ListUsers(ctx)
+	if err != nil {
+		klog.Error("list users error, ", err)
+		return nil, err
+	}
+
+	// Skip the per-app entrance URL recompute (each app otherwise triggers
+	// GetUserZone/GenEntranceURL API calls) when neither the apps nor the users
+	// changed since the last successful computation.
+	sig := appUrlSignature(apps, users)
+	appUrlMu.Lock()
+	if appUrlCache != nil && sig == appUrlSig {
+		cached := make([]string, len(appUrlCache))
+		copy(cached, appUrlCache)
+		appUrlMu.Unlock()
+		return cached, nil
+	}
+	appUrlMu.Unlock()
+
+	// Owner zone is just the user's zone annotation, so read it from the user
+	// list instead of building an IAM REST client and doing a per-app lookup.
+	zoneMap := make(map[string]string, len(users))
+	for _, u := range users {
+		zoneMap[u.GetName()] = u.GetAnnotations()[iamv1alpha2.UserAnnotationZoneKey]
+	}
+
+	urls := make([]string, 0)
+	hadError := false
+	for _, cached := range apps {
+		// Objects from the informer cache are shared and read-only, and
+		// GenEntranceURL mutates the application spec, so work on a copy.
+		app := cached.DeepCopy()
 		var entrances []appcfg.Entrance
 		var err error
-		if !isV3(&app) {
-			entrances, err = appcfg.GenEntranceURL(ctx, &app)
+		zone, ok := zoneMap[app.Spec.Owner]
+		if !ok {
+			continue
+		}
+		if !appv1alpha1.IsShared(app) {
+			entrances, err = appcfg.GenEntranceURL(ctx, app)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
+				hadError = true
 				continue
+			}
+			if zone == "" {
+				continue
+			}
+			// GenEntranceURL / BatchGenSharedAppEntranceURL only fill in the
+			// default appid-based URLs. User-customized third-level domains live
+			// in the "customDomain" setting, so without this the intranet (.local)
+			// layer never learns about custom subdomains and cannot resolve them.
+			thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, app.Spec.Owner)
+			for _, tl := range thirdLevelURLs {
+				entrances = append(entrances, appcfg.Entrance{URL: tl})
 			}
 		} else {
 
-			entrances, err = BatchGenSharedAppEntranceURL(ctx, &app)
+			entrances, err = BatchGenSharedAppEntranceURL(ctx, app)
 			if err != nil {
 				klog.Error("generate shared application entrance url error, ", err, ", ", app.Name)
+				hadError = true
 				continue
 			}
 		}
@@ -594,13 +829,30 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		}
 	}
 
+	// Only memoize a complete computation. If any app failed to generate its
+	// entrance URLs, return the best-effort result for this tick but leave the
+	// cache untouched so the next tick retries instead of pinning a partial list
+	// until an app or user resourceVersion changes.
+	if !hadError {
+		appUrlMu.Lock()
+		appUrlSig = sig
+		appUrlCache = urls
+		appUrlMu.Unlock()
+	}
+
 	return urls, nil
 }
 
 func GetApixClient() (apixclientset.Interface, error) {
-	config, err := ctrl.GetConfig()
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedApixClient != nil {
+		return cachedApixClient, nil
+	}
+
+	config, err := configLocked()
 	if err != nil {
-		klog.Error("get k8s config error, ", err)
 		return nil, err
 	}
 
@@ -610,6 +862,7 @@ func GetApixClient() (apixclientset.Interface, error) {
 		return nil, err
 	}
 
+	cachedApixClient = client
 	return client, nil
 }
 
@@ -655,7 +908,7 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 				continue
 			}
 
-			sharedApp := appv1alpha1.IsV3(app)
+			sharedApp := appv1alpha1.IsShared(app)
 			if !sharedApp {
 				if user != "" && app.Spec.Owner != user {
 					continue
@@ -784,27 +1037,12 @@ func GetWorkloadNameFromPod(pod *corev1.Pod) string {
 	return podNameTokens[0]
 }
 
-const (
-	AppApiVersionLabel = "app.bytetrade.io/api-version"
-	AppVersionV3       = "v3"
-)
-
-func isV3(a *appv1alpha1.Application) bool {
-	return a.Labels != nil && a.Labels[AppApiVersionLabel] == AppVersionV3
-}
-
 func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Application) ([]appcfg.Entrance, error) {
-	if !isV3(app) {
+	if !appv1alpha1.IsShared(app) {
 		return nil, nil
 	}
 
-	client, err := GetDynamicClient()
-	if err != nil {
-		klog.Error("get dynamic client error, ", err)
-		return nil, err
-	}
-
-	users, err := ListUsers(ctx, client, func(u *unstructured.Unstructured) bool {
+	users, err := ListUsers(ctx, func(u *unstructured.Unstructured) bool {
 		return true
 	})
 	if err != nil {
@@ -823,6 +1061,14 @@ func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Applicat
 		}
 
 		entrances = append(entrances, a.Spec.Entrances...)
+		zone := u.GetAnnotations()["bytetrade.io/zone"]
+		if zone == "" {
+			continue
+		}
+		thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, u.GetName())
+		for _, tl := range thirdLevelURLs {
+			entrances = append(entrances, appcfg.Entrance{URL: tl})
+		}
 	}
 
 	return entrances, nil
@@ -841,4 +1087,86 @@ func GetUserRole(ctx context.Context, username string, client dynamic.Interface)
 	}
 
 	return role, nil
+}
+
+func isPodReady(pod *corev1.Pod) bool {
+	hasReadyCondition := false
+	for _, cond := range pod.Status.Conditions {
+		// K8s 1.28+
+		if cond.Type == "PodReadyToStartContainers" && cond.Status != corev1.ConditionTrue {
+			return false
+		}
+		if cond.Type == corev1.PodReady {
+			if cond.Status == corev1.ConditionTrue {
+				hasReadyCondition = true
+			}
+		}
+	}
+
+	if !hasReadyCondition {
+		return false
+	}
+
+	if len(pod.Status.ContainerStatuses) == 0 {
+		return false
+	}
+
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Running == nil {
+			if containerStatus.State.Waiting != nil {
+				return false
+			}
+			return false
+		}
+
+		if !containerStatus.Ready {
+			return false
+		}
+
+		if containerStatus.State.Running.StartedAt.IsZero() {
+			return false
+		}
+	}
+	return true
+}
+
+func IsMasterNode(n *corev1.Node) bool {
+	if cp, ok := n.Labels["node-role.kubernetes.io/control-plane"]; ok && cp != "false" {
+		return true
+	}
+	if m, ok := n.Labels["node-role.kubernetes.io/master"]; ok && m != "false" {
+		return true
+	}
+	return false
+}
+
+func IsNodeReady(n *corev1.Node) bool {
+	for _, c := range n.Status.Conditions {
+		if c.Type == corev1.NodeReady {
+			return c.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
+func GetMasterNodeIpInCluster(ctx context.Context, client kubernetes.Interface) (string, error) {
+	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", fmt.Errorf("error listing nodes: %s", err)
+	}
+	for _, node := range nodes.Items {
+		if !IsMasterNode(&node) {
+			continue
+		}
+		if !IsNodeReady(&node) {
+			continue
+		}
+		for _, address := range node.Status.Addresses {
+			if address.Type == corev1.NodeInternalIP {
+				return address.Address, nil
+			}
+		}
+	}
+
+	return "", errors.New("no master node found")
 }

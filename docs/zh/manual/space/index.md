@@ -10,7 +10,7 @@ Olares Space 账户与你的 Olares ID 或 DID 关联。你可以通过 LarePass
 本章节介绍 Olares Space 的使用方法：
 
 - [登录和管理账户](manage-accounts.md)
-- [管理 Olares](manage-olares.md)
+- [监控 Olares](manage-olares.md)
 - [设置自定义域名](host-domain.md)
 - [管理域名成员](manage-domain.md)
 - [备份与恢复](backup-restore.md)

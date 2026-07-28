@@ -106,6 +106,13 @@ spec:
     spec:
       priorityClassName: "system-cluster-critical"
       serviceAccountName: coredns
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       tolerations:
         - key: "CriticalAddonsOnly"
           operator: "Exists"

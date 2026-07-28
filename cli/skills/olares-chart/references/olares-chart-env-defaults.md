@@ -1,6 +1,6 @@
 # Environment variables — worked examples & default variables
 
-> **Prerequisite:** read [olares-chart-env.md](olares-chart-env.md) first for the three levels, declaration fields, and validation semantics. This file is the reference half: copy-pasteable examples plus the default `OLARES_SYSTEM_*` / `OLARES_USER_*` variables you can map via `valueFrom`.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; this is the worked-examples half of the Env area (three levels, declaration fields, and validation semantics). It adds copy-pasteable examples plus the default `OLARES_SYSTEM_*` / `OLARES_USER_*` variables you can map via `valueFrom`.
 
 ## Worked examples
 

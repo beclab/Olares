@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"slices"
 	"strconv"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -55,11 +57,12 @@ type upgradeHandlerHelperV2 struct {
 	*upgradeHandlerHelper
 }
 
-// upgradeHandlerHelperV3 reuses the v1 upgrade flow but treats the caller as
-// admin (v3 apps are admin-managed; the gate above
-// already verified that). Concretely it overrides getAppConfig to always
-// pass IsAdmin=true and Admin=h.owner so GetAppConfig doesn't try to install
-// the upgrade as a different user.
+// upgradeHandlerHelperV3 covers both v3 shared apps and v3 per-user apps.
+// For shared apps it treats the caller as admin (admin-only lifecycle;
+// the gate above already verified that) and overrides getAppConfig to
+// pass IsAdmin=true / Admin=h.owner so GetAppConfig resolves the cluster
+// owner. For v3 per-user apps it falls through to the v1 upgrade flow
+// unchanged.
 type upgradeHandlerHelperV3 struct {
 	*upgradeHandlerHelper
 }
@@ -110,6 +113,7 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 		MarketSource: marketSource,
 		IsAdmin:      prevCfg.AppScope.ClusterScoped,
 		SelectedGpu:  prevCfg.SelectedGpuType,
+		ChartOwner:   prevCfg.ChartOwner,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -210,11 +214,11 @@ func (h *upgradeHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	return
 }
 
-func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, _ bool) (*appcfg.ApplicationConfig, error) {
-	klog.Info("Getting app config for V3")
+func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig, adminUsers []string, marketSource string, isAdmin bool) (*appcfg.ApplicationConfig, error) {
+	klog.Info("Getting app config for V3 shared app")
 	appConfig, chartPath, err := apputils.GetAppConfig(h.req.Request.Context(), &apputils.ConfigOptions{
 		App:          h.app,
-		Owner:        h.owner,
+		Owner:        prevCfg.OwnerName,
 		RepoURL:      h.request.RepoURL,
 		Version:      h.request.Version,
 		Token:        h.token,
@@ -223,6 +227,7 @@ func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		IsAdmin:      true,
 		RawAppName:   h.rawAppName,
 		SelectedGpu:  prevCfg.SelectedGpuType,
+		ChartOwner:   prevCfg.ChartOwner,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -295,7 +300,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	}
 
 	var appMgr appv1alpha1.ApplicationManager
-	appMgrName, isV3, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
+	appMgrName, isShared, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -305,15 +310,26 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
+	var prevCfg appcfg.ApplicationConfig
+	err = appcfg.GetAppConfig(&appMgr, &prevCfg)
+	if err != nil {
+		klog.Errorf("Failed to get previous app config err=%v", err)
+		api.HandleError(resp, req, err)
+		return
+	}
 
-	if isV3 || appcfg.IsV3(&appMgr) {
+	// Shared apps are admin-managed: the resolver picks the shared AM name
+	// and the AM carries the shared label; either signal flips us into
+	// admin gating. v3 per-user apps fall through and follow the regular
+	// per-user path.
+	if isShared || appcfg.IsShared(&appMgr) {
 		isAdmin, ierr := kubesphere.IsAdmin(req.Request.Context(), h.kubeConfig, owner)
 		if ierr != nil {
 			api.HandleError(resp, req, ierr)
 			return
 		}
 		if !isAdmin {
-			api.HandleForbidden(resp, req, fmt.Errorf("only admin users can upgrade v3 app %q", app))
+			api.HandleForbidden(resp, req, fmt.Errorf("only admin users can upgrade shared app %q", app))
 			return
 		}
 	}
@@ -342,7 +358,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
-		Owner:        owner,
+		Owner:        prevCfg.OwnerName,
 		RepoURL:      request.RepoURL,
 		MarketSource: marketSource,
 	})
@@ -363,7 +379,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 			request:    request,
 			app:        app,
 			rawAppName: rawAppName,
-			owner:      owner,
+			owner:      prevCfg.OwnerName,
 			token:      token,
 		}
 
@@ -378,7 +394,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 				request:    request,
 				app:        app,
 				rawAppName: rawAppName,
-				owner:      owner,
+				owner:      prevCfg.OwnerName,
 				token:      token,
 			},
 		}
@@ -394,7 +410,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 				request:    request,
 				app:        app,
 				rawAppName: rawAppName,
-				owner:      owner,
+				owner:      prevCfg.OwnerName,
 				token:      token,
 			},
 		}
@@ -412,15 +428,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	var prevCfg appcfg.ApplicationConfig
-	err = appcfg.GetAppConfig(&appMgr, &prevCfg)
-	if err != nil {
-		klog.Errorf("Failed to get previous app config err=%v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
-	_, err = helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
+	appCfg, err := helper.getAppConfig(&prevCfg, adminUsers, marketSource, isAdmin)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return
@@ -438,9 +446,36 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	// Reject upgrades whose new chart's declared resource requirements
+	// exceed the cluster's total schedulable capacity, before we acquire
+	// any env-batch lease or kick off helm. Mirrors the install handler's
+	// cluster-capacity gate (handler_installer_install.go) but uses the
+	// upgrade-specific chain — UpgradabilityValidators currently only
+	// runs clusterCapacityValidator (see that function for why the other
+	// install-time checks are intentionally skipped on upgrade).
+	decision, err := validation.Run(req.Request.Context(), validation.Input{
+		Client:    h.ctrlClient,
+		AppConfig: appCfg,
+		Op:        appv1alpha1.UpgradeOp,
+		Token:     token,
+	}, validation.UpgradabilityValidators()...)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	if !decision.OK {
+		resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
+			Response: api.Response{Code: 400},
+			Resource: decision.Resource.String(),
+			Message:  decision.Message,
+			Reason:   decision.Reason.String(),
+		})
+		return
+	}
+
 	// hold env batch lease during upgrade kickoff
 	// to avoid AppEnv controller racing and switching app manager op/state to ApplyEnv in this window
-	userNamespace := utils.UserspaceName(owner)
+	userNamespace := utils.UserspaceName(prevCfg.OwnerName)
 	releaseLease, err := h.acquireUserEnvBatchLease(req.Request.Context(), userNamespace)
 	if err != nil {
 		klog.Errorf("Failed to acquire user env batch lease err=%v", err)
@@ -494,6 +529,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      appv1alpha1.Upgrading,
 		Message:    fmt.Sprintf("app %s was upgrade by user %s", appCopy.Spec.AppName, appCopy.Spec.AppOwner),
+		Reason:     appv1alpha1.Upgrading.String(),
 		StatusTime: &now,
 		UpdateTime: &now,
 	}

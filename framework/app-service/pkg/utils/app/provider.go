@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -110,16 +109,18 @@ func (c ProviderPermissionsConvertor) findProviderInMarket(ctx context.Context, 
 	var appCfg *appcfg.ApplicationConfig
 	for _, m := range marketSources {
 		o := ConfigOptions{
-			App:          appName,
-			RepoURL:      constants.CHART_REPO_URL,
-			Owner:        owner,
-			Version:      "",
-			Token:        token,
-			Admin:        owner,
-			MarketSource: m,
-			IsAdmin:      false,
-			RawAppName:   appName,
+			App:               appName,
+			RepoURL:           constants.CHART_REPO_URL,
+			Owner:             owner,
+			Version:           "",
+			Token:             token,
+			Admin:             owner,
+			MarketSource:      m,
+			IsAdmin:           false,
+			RawAppName:        appName,
+			NeedDownloadChart: true,
 		}
+
 		appCfg, _, err = GetAppConfig(ctx, &o)
 		if err != nil {
 			klog.Errorf("Failed to get app config for %s: %v", appName, err)

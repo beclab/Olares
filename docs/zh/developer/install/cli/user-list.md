@@ -1,3 +1,7 @@
+---
+noindex: true
+description: list 子命令用于显示 Olares 系统中所有注册用户列表。你可以根据需要筛选用户并排序，以表格或 JSON 格式显示结果。
+---
 # `list`
 
 ## 命令说明

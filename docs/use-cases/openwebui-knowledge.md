@@ -1,5 +1,6 @@
 ---
 outline: deep
+title: Chat with documents in Open WebUI
 description: Upload documents and create a knowledge base in Open WebUI on Olares for retrieval-augmented generation (RAG).
 head:
   - - meta
@@ -10,7 +11,7 @@ doc_version: "1.0"
 doc_updated: "2026-05-14"
 ---
 
-# Chat with documents and knowledge bases
+# Chat with documents and knowledge bases in Open WebUI
 
 Open WebUI supports retrieval-augmented generation (RAG) to help local AI models answer questions based on your uploaded documents or curated knowledge bases.
 
@@ -37,11 +38,11 @@ Before you begin, ensure you have the following in place:
 
 Document understanding requires an embedding model to convert text into vector data. To configure Open WebUI, you must first retrieve your embedding model details.
 
-<!--@include: ./openwebui-search.md{38,46}-->
+<!--@include: ./openwebui-search.md{40,46}-->
 
 ### Apply embedding settings in Open WebUI
 
-<!--@include: ./openwebui-search.md{61,69}-->
+<!--@include: ./openwebui-search.md{62,69}-->
 
 ## Analyze individual documents
 

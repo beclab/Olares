@@ -22,61 +22,74 @@ import (
 	"github.com/lithammer/dedent"
 )
 
+// ContainerdConfig renders /etc/containerd/config.toml in containerd config
+// version 3 (containerd 2.x) format. It is intentionally minimal.
+//
+// Registry mirrors and auth are NOT inlined here: config version 2's
+// registry.mirrors / registry.configs are DEPRECATED and ignored by containerd
+// 2.x whenever config_path is set (and it is an error to specify both). Instead:
+//
+//   - Mirrors live under config_path (/etc/containerd/certs.d/<host>/hosts.toml),
+//     seeded by the CLI at install (docker.io -> configured dockerhub mirror,
+//     consistent across all nodes) and reconciled by olaresd at runtime. Because
+//     hosts.toml is read per-pull, mirror changes need no containerd restart.
+//   - Drop-in files under /etc/containerd/conf.d/*.toml are imported. This is
+//     where nvidia-container-toolkit writes its runtime settings
+//     (conf.d/99-nvidia.toml) via `nvidia-ctk runtime configure --drop-in-config`.
+//     Those only touch the runtime section, so Olares-managed registry config in
+//     certs.d always survives an nvidia configure, and nodes without a GPU (which
+//     never run nvidia configure) get an identical base config.
 var ContainerdConfig = template.Must(template.New("config.toml").Parse(
-	dedent.Dedent(`version = 2
+	dedent.Dedent(`version = 3
 {{- if .DataRoot }}
 root = {{ .DataRoot }}
-{{ else }}
+{{- else }}
 root = "/var/lib/containerd"
 {{- end }}
 
+imports = ["/etc/containerd/conf.d/*.toml"]
+
 [plugins]
 
-  [plugins."io.containerd.grpc.v1.cri"]
-    sandbox_image = "{{ .SandBoxImage }}"
+  [plugins.'io.containerd.cri.v1.images']
+    snapshotter = "{{ .FsType }}"
 
-    [plugins."io.containerd.grpc.v1.cri".containerd]
-      default_runtime_name = "runc"
+    [plugins.'io.containerd.cri.v1.images'.pinned_images]
+      sandbox = "{{ .SandBoxImage }}"
 
-      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+    [plugins.'io.containerd.cri.v1.images'.registry]
+      config_path = "/etc/containerd/certs.d"
 
-        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-          runtime_type = 'io.containerd.runc.v2'
-          sandboxer = 'podsandbox'
-          snapshotter = "{{ .FsType }}"
+  [plugins.'io.containerd.cri.v1.runtime'.containerd]
+    default_runtime_name = "runc"
 
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-            SystemdCgroup = true
+    [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc]
+      runtime_type = 'io.containerd.runc.v2'
+      sandboxer = 'podsandbox'
 
-    [plugins."io.containerd.grpc.v1.cri".registry]
-
-      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-        {{- if .Mirrors }}
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-          endpoint = [{{ .Mirrors }}, "https://registry-1.docker.io"]
-        {{ else }}
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-          endpoint = ["https://registry-1.docker.io"]
-        {{- end}}
-        {{- range $value := .InsecureRegistries }}
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{$value}}"]
-          endpoint = ["http://{{$value}}"]
-        {{- end}}
-
-        {{- if .Auths }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs]
-          {{- range $repo, $entry := .Auths }}
-          [plugins."io.containerd.grpc.v1.cri".registry.configs."{{$repo}}".auth]
-            username = "{{$entry.Username}}"
-            password = "{{$entry.Password}}"
-            [plugins."io.containerd.grpc.v1.cri".registry.configs."{{$repo}}".tls]
-              ca_file = "{{$entry.CAFile}}"
-              cert_file = "{{$entry.CertFile}}"
-              key_file = "{{$entry.KeyFile}}"
-              insecure_skip_verify = {{$entry.SkipTLSVerify}}
-          {{- end}}
-        {{- end}}
+      [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]
+        SystemdCgroup = true
 
   [plugins."io.containerd.snapshotter.v1.zfs"]
     root_path = "{{ .ZfsRootPath }}"
+`)))
+
+// ContainerdRegistryHosts renders /etc/containerd/certs.d/docker.io/hosts.toml,
+// the initial docker.io pull-through configuration written at install/prepare
+// time. It points docker.io at the configured dockerhub mirror(s) (the same on
+// every node) and falls back to the canonical upstream. olaresd may reconcile
+// this file at runtime (e.g. prepend a higher-priority mirror).
+//
+// Note: `server` is the canonical fallback upstream; each `[host."..."]` is a
+// mirror tried before it, in order. For docker.io the upstream registry host is
+// registry-1.docker.io (NOT docker.io, which does not serve the /v2 API);
+// containerd only auto-maps docker.io -> registry-1.docker.io when `server` is
+// empty, so we must spell it out here since we always write `server`.
+var ContainerdRegistryHosts = template.Must(template.New("hosts.toml").Parse(
+	dedent.Dedent(`server = "https://registry-1.docker.io"
+{{- range .Mirrors }}
+
+[host."{{ . }}"]
+  capabilities = ["pull", "resolve"]
+{{- end }}
 `)))

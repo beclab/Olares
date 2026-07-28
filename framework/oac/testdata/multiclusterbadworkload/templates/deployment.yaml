@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multiclusterbadworkload
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.multiclusterbadworkload.replicaCount }}
+  selector:
+    matchLabels:
+      app: multiclusterbadworkload
+  template:
+    metadata:
+      labels:
+        app: multiclusterbadworkload
+    spec:
+      containers:
+        - name: main
+          image: nginx:1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

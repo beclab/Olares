@@ -5,18 +5,14 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
-	helmrelease "helm.sh/helm/v3/pkg/release"
 	"k8s.io/klog/v2"
 )
 
 func (h *HelmOps) ApplyEnv() error {
-	status, err := h.status()
+	_, err := h.status()
 	if err != nil {
 		klog.Errorf("get release status failed %v", err)
 		return err
-	}
-	if status.Info.Status != helmrelease.StatusDeployed {
-		return fmt.Errorf("cannot upgrade release %s/%s, current state is %s", h.app.Namespace, h.app.AppName, status.Info.Status)
 	}
 
 	values := make(map[string]interface{})
@@ -25,7 +21,8 @@ func (h *HelmOps) ApplyEnv() error {
 		return err
 	}
 
-	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, true)
+	// ReuseValues: only env-related overrides change; do not absorb new chart defaults.
+	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, helm.ReuseValues)
 	if err != nil {
 		klog.Errorf("Failed to upgrade chart name=%s err=%v", h.app.AppName, err)
 		return err
@@ -35,6 +32,12 @@ func (h *HelmOps) ApplyEnv() error {
 		return err
 	}
 	if h.app.Type == appv1alpha1.Middleware.String() {
+		return nil
+	}
+	if h.options.SkipWaitForStartUp {
+		// App was Stopped (release scaled to zero); the env upgrade keeps it at
+		// zero replicas, so there are no pods to wait for.
+		klog.Infof("App %s applyenv with skipWaitForStartUp, not waiting for pods", h.app.AppName)
 		return nil
 	}
 	ok, err := h.WaitForStartUp()

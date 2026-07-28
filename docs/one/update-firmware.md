@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to manage the BIOS and EC firmware on your Olares One, including checking firmware versions, downloading firmware update packages, executing updates, unlocking advanced mode, and troubleshooting issues such as black screen.
+description: Manage Olares One BIOS and EC firmware. Check versions, download and install updates, unlock advanced mode, and troubleshoot black screens.
 head:
   - - meta
     - name: keywords
@@ -37,7 +37,8 @@ If your current versions are older than the ones listed below, download the corr
 
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
-| [1.04 (Download)](http://cdn.olares.com/common/OlaresOne_BIOS_1.04.zip) | 2026-05-09 | <ul><li>Add a warning prompt when changing the **Primary Display** setting to **HG**.</li><li>Fix the issue where the GPU unexpectedly disconnects by locking the GPU PCIe speed to Gen4.</li><li>Fix the issue where performance degrades and power consumption is abnormally limited after prolonged use by disabling the function that puts the GPU into sleep mode when the product is idle.</li></ul> |
+| [1.05 (Download)](https://cdn.olares.com/common/OlaresOne_BIOS_1.05.zip) | 2026-07-06 | <ul><li>Fix the Thunderbolt port issue by disabling the D3 (D3Cold) low-power state only for the GPU. Previously, D3 was disabled for all devices to address the abnormal power consumption issue.</li></ul> |
+| 1.04 | 2026-05-09 | <ul><li>Add a warning prompt when changing the **Primary Display** setting to **HG**.</li><li>Fix the issue where the GPU unexpectedly disconnects by locking the GPU PCIe speed to Gen4.</li><li>Fix the issue where performance degrades and power consumption is abnormally limited after prolonged use by disabling the function that puts the GPU into sleep mode when the product is idle.</li></ul> |
 | 1.03  | 2026-03-19 | <ul><li>Fix the ACPI error that occurs during Ubuntu system boot.</li><li>Update the Intel CPU microcode to version 0x121.</li></ul> |
 | 1.01  | 2025-12-04 | <ul><li>Fix the issue where SSDs unexpectedly disconnect by disabling ASPM and L-state power management for SSD1 and SSD2.</li></ul> |
 | 1.00 | 2025-11-28 | <ul><li>Update version naming convention.</li></ul> |
@@ -47,7 +48,8 @@ If your current versions are older than the ones listed below, download the corr
 
 | Version | Release date | Changelog |
 |:--------|:-------------|:----------|
-| [1.02 (Download)](http://cdn.olares.com/common/OlaresOne_EC_1.02.zip) | 2026-01-19 | <ul><li>Fix the issue where the keyboard fails to wake the system from sleep mode.</li></ul> |
+| [1.03 (Download)](https://cdn.olares.com/common/OlaresOne_EC_1.03.zip) | 2026-05-29 | <ul><li>Add the port for automatic power-on after connecting the adapter, enabling the <strong>Automatic startup</strong> feature in Settings.</li><li>**Note**: Olares OS 1.12.6 or later is required.</li></ul> |
+| [1.02 (Download)](https://cdn.olares.com/common/OlaresOne_EC_1.02.zip) | 2026-01-19 | <ul><li>Fix the issue where the keyboard fails to wake the system from sleep mode.</li></ul> |
 | 1.01 | 2026-01-13 | <ul><li>Add support for Wake-on-LAN (WOL).</li><li>Disable the white breathing LED indicator during the sleep mode.</li></ul> |
 | 1.00 | 2025-12-01 | <ul><li>Enable the white breathing LED indicator during the sleep mode.</li></ul> |
 | C3.00 | 2025-11-25 | <ul><li>Fix the issue where the fan fails to spin after waking from the sleep mode.</li></ul> |

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
+	"github.com/beclab/Olares/cli/pkg/dashboard/format"
 )
 
 // RunPartitions is the cmd-side entry point for `dashboard overview
@@ -89,10 +90,17 @@ func BuildPartitionsEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pk
 			if e.Metric["name"] == device && node == "" {
 				node = e.Metric["node"]
 			}
+			// pkname falls back to the `parent` label when absent,
+			// mirroring `metricFromSample` (config.ts:254) — some exporter
+			// versions emit `parent` instead of `pkname`.
+			pkname := e.Metric["pkname"]
+			if pkname == "" {
+				pkname = e.Metric["parent"]
+			}
 			allRows = append(allRows, pkgdashboard.LsblkRow{
 				Name:         e.Metric["name"],
 				Node:         e.Metric["node"],
-				Pkname:       e.Metric["pkname"],
+				Pkname:       pkname,
 				Size:         e.Metric["size"],
 				Fstype:       e.Metric["fstype"],
 				Mountpoint:   e.Metric["mountpoint"],
@@ -109,16 +117,34 @@ func BuildPartitionsEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pk
 		}
 	}
 
-	var subset []pkgdashboard.LsblkRow
-	if pkgdashboard.HasPknameLabels(scoped) {
-		subset = pkgdashboard.CollectSubtreeByPkname(scoped, device)
-	} else {
-		subset = subset[:0]
-		for _, r := range scoped {
-			if r.Name == device || strings.HasPrefix(r.Name, device) {
-				subset = append(subset, r)
-			}
+	// A row belongs to the selected disk if it is reachable via the
+	// pkname chain OR it is a partition of the disk by kernel naming
+	// convention. Using the union of both strategies (mirroring
+	// getDiskPartitionRows in config.ts:443) avoids dropping partitions
+	// whose pkname/parent chain is not populated — which the old
+	// all-or-nothing toggle on HasPknameLabels would otherwise omit —
+	// while still capturing chain-only descendants such as dm/LVM
+	// devices whose names don't share the disk prefix.
+	matchesByName := make([]pkgdashboard.LsblkRow, 0, len(scoped))
+	for _, r := range scoped {
+		if pkgdashboard.IsPartitionOfDisk(r.Name, device) {
+			matchesByName = append(matchesByName, r)
 		}
+	}
+	var candidates []pkgdashboard.LsblkRow
+	if pkgdashboard.HasPknameLabels(scoped) {
+		candidates = append(pkgdashboard.CollectSubtreeByPkname(scoped, device), matchesByName...)
+	} else {
+		candidates = matchesByName
+	}
+	seenNames := map[string]bool{}
+	subset := make([]pkgdashboard.LsblkRow, 0, len(candidates))
+	for _, r := range candidates {
+		if seenNames[r.Name] {
+			continue
+		}
+		seenNames[r.Name] = true
+		subset = append(subset, r)
 	}
 	flat := pkgdashboard.FlattenLsblkHierarchy(subset, device)
 
@@ -137,10 +163,10 @@ func BuildPartitionsEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pk
 		}
 		disp := map[string]any{
 			"name":          fr.TreePrefix + fr.Row.Name,
-			"size":          orDash(fr.Row.Size),
+			"size":          formatLsblkDiskValue(fr.Row.Size),
 			"fstype":        orDash(fr.Row.Fstype),
 			"mountpoint":    orDash(fr.Row.Mountpoint),
-			"fsused":        orDash(fr.Row.Fsused),
+			"fsused":        formatLsblkDiskValue(fr.Row.Fsused),
 			"fsuse_percent": orDash(fr.Row.FsusePercent),
 		}
 		items = append(items, pkgdashboard.Item{Raw: raw, Display: disp})
@@ -160,6 +186,20 @@ func orDash(v string) string {
 		return "-"
 	}
 	return t
+}
+
+// formatLsblkDiskValue mirrors `formatLsblkDiskValue(raw, 'auto')` in
+// Overview2/Disk/config.ts:49: empty / "-" / non-numeric inputs render
+// as "-", and a numeric byte count runs through the disk-unit converter
+// (getSuitableValue) so the size / used columns display "631.51 Gi"
+// instead of the raw byte string. The SPA's partition table applies the
+// same auto-unit conversion in DiskLsblkTable.vue.
+func formatLsblkDiskValue(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" || s == "-" {
+		return "-"
+	}
+	return format.GetSuitableValue(s, format.UnitTypeDisk, "-")
 }
 
 // WritePartitionsTable renders the lsblk subtree. NAME carries the

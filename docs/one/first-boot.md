@@ -1,5 +1,5 @@
 ---
-description: Learn how to set up your Olares One for the first time, including setting up hardware, installing the client app, creating your Olares account, connecting to your device, installing & activating the system, and logging into your Olares.
+description: Set up Olares One for the first time. Connect the hardware, install LarePass, create an account, activate the system, and log in.
 head:
   - - meta
     - name: keywords

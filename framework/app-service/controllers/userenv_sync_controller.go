@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
@@ -31,6 +32,82 @@ const (
 type userEnvFile struct {
 	APIVersion string                   `yaml:"apiVersion"`
 	UserEnvs   []sysv1alpha1.EnvVarSpec `yaml:"userEnvs"`
+}
+
+// localeEnvAnnotations maps a user env to the user CR annotation that owns its
+// value. These locale preferences are written during activation and via the
+// locale settings page; the controller mirrors them into the env Value so apps
+// referencing them through valueFrom always see the user's current choice.
+var localeEnvAnnotations = map[string]string{
+	"OLARES_USER_LANGUAGE": users.UserAnnotationLanguage,
+	"OLARES_USER_THEME":    users.UserAnnotationTheme,
+	"OLARES_USER_TIMEZONE": users.UserAnnotationTimezone,
+}
+
+// userEnvTypeLabel categorizes a UserEnv so other components can select it by
+// type. For example, l4-bfl-proxy lists the language preference env via the
+// label selector sys.bytetrade.io/env-type=language.
+const userEnvTypeLabel = "sys.bytetrade.io/env-type"
+
+// envTypeLabels maps a user env to the value of the userEnvTypeLabel that the
+// controller stamps on it when creating or syncing the env, so downstream
+// consumers can discover it by type.
+var envTypeLabels = map[string]string{
+	"OLARES_USER_LANGUAGE": "language",
+}
+
+// ensureEnvTypeLabel stamps the env-type label on envs that declare one in
+// envTypeLabels, adding it when missing or correcting a stale value. Envs not in
+// the map are left untouched. Returns true if ue.Labels was changed.
+func ensureEnvTypeLabel(ue *sysv1alpha1.UserEnv) bool {
+	envType, ok := envTypeLabels[ue.EnvName]
+	if !ok {
+		return false
+	}
+	if ue.Labels[userEnvTypeLabel] == envType {
+		return false
+	}
+	if ue.Labels == nil {
+		ue.Labels = make(map[string]string)
+	}
+	ue.Labels[userEnvTypeLabel] = envType
+	return true
+}
+
+// syncLocaleValue reconciles a locale-backed env's Value from the user CR
+// annotation that owns it. The direction is driven by the env's Editable flag:
+//
+//   - editable == false (default): the annotation is the single source of
+//     truth, so Value always tracks it. The env settings page rejects edits to
+//     non-editable envs, so there is no conflicting second writer.
+//   - editable == true: the value may be edited directly in settings, so the
+//     annotation only seeds it when empty and never clobbers a user-set value.
+//
+// This lets us switch between the two models purely by flipping `editable` in
+// user-env.yaml. Returns true if ue.Value was changed.
+func syncLocaleValue(ue *sysv1alpha1.UserEnv, annotations map[string]string) bool {
+	annoKey, ok := localeEnvAnnotations[ue.EnvName]
+	if !ok {
+		return false
+	}
+	desired := annotations[annoKey]
+	if desired == "" {
+		return false
+	}
+	if ue.Editable && ue.Value != "" {
+		// user-editable and already set: respect the user's edit
+		return false
+	}
+	if ue.Value == desired {
+		return false
+	}
+	// never write a value outside the declared type/options
+	if err := ue.ValidateValue(desired); err != nil {
+		klog.Warningf("UserEnvSync: skip locale sync for %s/%s: invalid value %q: %v", ue.Namespace, ue.Name, desired, err)
+		return false
+	}
+	ue.Value = desired
+	return true
 }
 
 type UserEnvSyncController struct {
@@ -104,7 +181,7 @@ func (r *UserEnvSyncController) reconcileAllUsers(ctx context.Context) (ctrl.Res
 		if string(user.Status.State) != "Created" {
 			continue
 		}
-		if _, err := r.syncUserEnvForUser(ctx, user.Name, base.UserEnvs); err != nil {
+		if _, err := r.syncUserEnvForUser(ctx, user.Name, user.Annotations, base.UserEnvs); err != nil {
 			klog.Errorf("UserEnvSync: failed to sync for user %s: %v", user.Name, err)
 			failed++
 		}
@@ -137,7 +214,7 @@ func (r *UserEnvSyncController) reconcileSingleUser(ctx context.Context, usernam
 		return ctrl.Result{}, nil
 	}
 
-	_, err = r.syncUserEnvForUser(ctx, username, base.UserEnvs)
+	_, err = r.syncUserEnvForUser(ctx, username, u.Annotations, base.UserEnvs)
 	return ctrl.Result{}, err
 }
 
@@ -157,7 +234,7 @@ func (r *UserEnvSyncController) loadBaseUserEnvFromConfigMap(ctx context.Context
 	return &cfg, nil
 }
 
-func (r *UserEnvSyncController) syncUserEnvForUser(ctx context.Context, username string, base []sysv1alpha1.EnvVarSpec) (int, error) {
+func (r *UserEnvSyncController) syncUserEnvForUser(ctx context.Context, username string, userAnnotations map[string]string, base []sysv1alpha1.EnvVarSpec) (int, error) {
 	userNs := apputils.UserspaceName(username)
 	var existing sysv1alpha1.UserEnvList
 	if err := r.List(ctx, &existing, client.InNamespace(userNs)); err != nil {
@@ -215,6 +292,21 @@ func (r *UserEnvSyncController) syncUserEnvForUser(ctx context.Context, username
 				}
 			}
 
+			// Keep the declared editability in sync for locale-managed envs so
+			// flipping `editable` in user-env.yaml takes effect on already
+			// provisioned users. Do this before syncLocaleValue, which reads
+			// ue.Editable to decide whether to overwrite or merely seed.
+			if _, isLocale := localeEnvAnnotations[spec.EnvName]; isLocale && ue.Editable != spec.Editable {
+				ue.Editable = spec.Editable
+				updated = true
+			}
+			if syncLocaleValue(ue, userAnnotations) {
+				updated = true
+			}
+			if ensureEnvTypeLabel(ue) {
+				updated = true
+			}
+
 			if updated {
 				if err := r.Patch(ctx, ue, client.MergeFrom(original)); err != nil {
 					return created, fmt.Errorf("patch userenv %s/%s failed: %w", ue.Namespace, ue.Name, err)
@@ -232,6 +324,9 @@ func (r *UserEnvSyncController) syncUserEnvForUser(ctx context.Context, username
 		ue.Name = name
 		ue.Namespace = userNs
 		ue.EnvVarSpec = spec
+		ensureEnvTypeLabel(ue)
+		// seed locale-managed envs from the user CR annotation on first creation
+		syncLocaleValue(ue, userAnnotations)
 		if err := r.Create(ctx, ue); err != nil {
 			return created, fmt.Errorf("create userenv %s/%s failed: %w", userNs, name, err)
 		}

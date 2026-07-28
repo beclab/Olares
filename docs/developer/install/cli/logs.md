@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The logs command retrieves logs from Olares components and services found on the local machine.
+---
 # `logs`
 
 ## Synopsis

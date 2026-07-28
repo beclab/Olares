@@ -14,6 +14,7 @@ package apps
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/cmd/ctl/market"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -47,8 +48,22 @@ because the wire shape is shared with the VPN ACL family.
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewGetCommand(f))
-	cmd.AddCommand(NewSuspendCommand(f))
-	cmd.AddCommand(NewResumeCommand(f))
+	// suspend / resume hold NO settings-side logic: 1.12.6's settings page
+	// routes stop/resume through the Market flow (findAppByName ->
+	// AppService.stopApp/resumeApp). We mirror that by reusing the market
+	// stop/resume commands verbatim (single source of truth for the
+	// shared/csv2 cascade), only renaming the verb. They talk to the
+	// app-store v2 API via the active profile, same as `market stop/resume`.
+	suspend := market.NewCmdMarketStop(f)
+	suspend.Use = "suspend <name>"
+	suspend.Aliases = nil
+	suspend.Short = "Suspend (stop) a running app (delegates to `market stop`)"
+	cmd.AddCommand(suspend)
+	resume := market.NewCmdMarketResume(f)
+	resume.Use = "resume <name>"
+	resume.Aliases = nil
+	resume.Short = "Resume a suspended app (delegates to `market resume`)"
+	cmd.AddCommand(resume)
 	cmd.AddCommand(NewEnvCommand(f))
 	cmd.AddCommand(NewEntrancesCommand(f))
 	cmd.AddCommand(NewDomainCommand(f))

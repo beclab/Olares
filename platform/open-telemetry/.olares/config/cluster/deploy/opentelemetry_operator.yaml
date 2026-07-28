@@ -9906,6 +9906,7 @@ spec:
               name: https
               protocol: TCP
       serviceAccountName: opentelemetry-operator
+      priorityClassName: "system-cluster-critical"
       terminationGracePeriodSeconds: 10
       volumes:
         - name: cert

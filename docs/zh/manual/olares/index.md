@@ -1,22 +1,58 @@
 ---
 description: 通过 Olares 系统应用文档了解如何使用 Olares，包括个性化设置、应用管理、文件处理、安全配置和团队协作功能。
+aside: false
 ---
 
 # Olares 系统应用文档
-Olares 系统应用是 Olares 生态的核心组成部分，它们预装在你的 Olares 系统中，旨在提供一套基础且强大的工具集，帮助你高效地管理文件、应用、设置系统，管理知识、以及完成更多日常任务。理解这些系统应用的功能和价值，将使你能够充分利用 Olares 的潜力，打造一个符合你个人需求的工作和生活环境。
 
-本文档将帮助你全面掌握 Olares 系统应用的使用方法，打造一个符合个人工作和生活需求的个人云环境。
+Olares 系统应用是 Olares 生态的核心组成部分，预装在你的 Olares 系统中，提供管理文件、应用、安全和设置等基础能力。
 
-## 系统应用能做什么？
+## 探索系统应用
 
-探索以下指南，充分发挥 Olares 内置应用的价值：
-
-- **[导航并自定义桌面](./desktop.md)**：启动应用、整理工作区并在 Olares 中全局搜索。  
-- **[安装和管理应用](./market/market.md)**：发现、安装、更新、卸载、克隆应用，以及购买和恢复付费应用。  
-- **[存储、同步与访问文件](./files/)**：在集中式存储中安全上传、下载、组织与共享文件，并实现实时同步。  
-- **[使用 Vault 管理密码](./vault/)**：安全存储凭据、管理数字身份并生成一次性验证码。  
-- **[使用 Wise 收集与整理知识](./wise/)**：从多平台收集、消费并管理内容，获取个性化推荐，构建个人信息中心。  
-- **[使用设置配置系统](./settings/)**：在单一界面完成用户、应用、网络、集成、安全、外观、备份等设置。  
-- **[通过控制面板监控、管理应用](./controlhub/)**：在单一控制台监控系统状态、管理应用服务并优化 Olares 环境。  
-- **[通过仪表盘了解系统状态](./resources-usage.md)**：以直观界面查看实时资源使用和性能指标。  
-- **[设计专属 Olares 个人主页](profile.md)**：定制个人主页，展示身份并与他人分享。
+<div class="doc-map">
+  <a class="doc-map-card" href="./desktop">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">desktop_windows</span></span>
+    <span class="doc-map-title">桌面</span>
+    <span class="doc-map-desc">启动应用、整理工作区并在 Olares 中全局搜索</span>
+  </a>
+  <a class="doc-map-card" href="./market/market">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">storefront</span></span>
+    <span class="doc-map-title">应用市场</span>
+    <span class="doc-map-desc">发现、安装、更新与克隆应用</span>
+  </a>
+  <a class="doc-map-card" href="./files/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">folder</span></span>
+    <span class="doc-map-title">文件管理器</span>
+    <span class="doc-map-desc">安全地跨设备存储、同步与共享文件</span>
+  </a>
+  <a class="doc-map-card" href="./vault/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">lock</span></span>
+    <span class="doc-map-title">Vault</span>
+    <span class="doc-map-desc">存储凭据、管理身份并生成一次性验证码</span>
+  </a>
+  <!-- <a class="doc-map-card" href="./wise/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
+    <span class="doc-map-title">Wise</span>
+    <span class="doc-map-desc">收集、阅读并整理内容，打造个人信息中心</span>
+  </a> -->
+  <a class="doc-map-card" href="./settings/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">settings</span></span>
+    <span class="doc-map-title">设置</span>
+    <span class="doc-map-desc">配置用户、应用、网络、安全与外观</span>
+  </a>
+  <a class="doc-map-card" href="./controlhub/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">tune</span></span>
+    <span class="doc-map-title">控制面板</span>
+    <span class="doc-map-desc">监控系统状态并管理应用服务</span>
+  </a>
+  <a class="doc-map-card" href="./resources-usage">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">monitoring</span></span>
+    <span class="doc-map-title">仪表盘</span>
+    <span class="doc-map-desc">查看实时资源使用与性能指标</span>
+  </a>
+  <a class="doc-map-card" href="./profile">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">badge</span></span>
+    <span class="doc-map-title">Profile</span>
+    <span class="doc-map-desc">自定义你的 Olares 个人主页</span>
+  </a>
+</div>

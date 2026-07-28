@@ -2,6 +2,8 @@ package apiserver
 
 import (
 	"context"
+	"errors"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -12,7 +14,6 @@ import (
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-openapi/spec"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -77,7 +78,6 @@ func (s *APIServer) PrepareRun(ksHost string, kubeConfig *rest.Config, client cl
 
 	err = apiHandler.Run(stopCh)
 	if err != nil {
-		klog.Infof("wait for cache sync failed %v", err)
 		return err
 	}
 	err = addServiceToContainer(s.container, apiHandler)
@@ -93,8 +93,8 @@ func (s *APIServer) PrepareRun(ksHost string, kubeConfig *rest.Config, client cl
 	return nil
 }
 
-// Run running a server.
-func (s *APIServer) Run() error {
+// Run starts the webhook TLS listener first, signals webhookReady, then serves the API.
+func (s *APIServer) Run(webhookReady chan<- struct{}) error {
 	shutdownCtx, cancel := context.WithTimeout(s.serverCtx, 2*time.Minute)
 	defer cancel()
 
@@ -105,16 +105,27 @@ func (s *APIServer) Run() error {
 		ctrl.Log.Info("Shutdown apiserver for app-service")
 	}()
 
+	tlsCert, tlsKey := defaultCertPath, defaultKeyPath
+	if os.Getenv(tlsCertEnv) != "" && os.Getenv(tlsKeyEnv) != "" {
+		tlsCert, tlsKey = os.Getenv(tlsCertEnv), os.Getenv(tlsKeyEnv)
+	}
+
+	ln, err := net.Listen("tcp", constants.WebhookServerListenAddress)
+	if err != nil {
+		return err
+	}
+	ctrl.Log.Info("Starting webhook server for app-service", "listen", constants.WebhookServerListenAddress)
+
 	go func() {
-		tlsCert, tlsKey := defaultCertPath, defaultKeyPath
-		if os.Getenv(tlsCertEnv) != "" && os.Getenv(tlsKeyEnv) != "" {
-			tlsCert, tlsKey = os.Getenv(tlsCertEnv), os.Getenv(tlsKeyEnv)
-		}
-		ctrl.Log.Info("Starting webhook server for app-service", "listen", constants.WebhookServerListenAddress)
-		if err := s.SSLServer.ListenAndServeTLS(tlsCert, tlsKey); err != nil {
+		if err := s.SSLServer.ServeTLS(ln, tlsCert, tlsKey); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			ctrl.Log.Error(err, "Failed to start webhook server for app-service")
 		}
 	}()
+	time.Sleep(time.Second)
+	if webhookReady != nil {
+		close(webhookReady)
+	}
+
 	ctrl.Log.Info("Starting server for app-service", "listen", constants.APIServerListenAddress)
 
 	return s.Server.ListenAndServe()

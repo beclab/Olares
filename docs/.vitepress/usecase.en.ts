@@ -181,6 +181,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Vane (Perplexica)",
                   link: "/use-cases/perplexica",
                 },
+                {
+                  text: "Dify",
+                  link: "/use-cases/dify-upgrade",
+                },
               ],
             },
             {
@@ -241,6 +245,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "Engine Base apps",
+                  link: "/use-cases/llm-base-apps",
+                },
+                {
                   text: "Ollama",
                   link: "/use-cases/ollama",
                 },
@@ -259,6 +267,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "LLMFit",
                   link: "/use-cases/llmfit",
+                },
+                {
+                  text: "Xinference",
+                  link: "/use-cases/xinference",
                 },
                 // {
                 //   text: "Dify",
@@ -324,7 +336,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Jellyfin",
-              link: "/use-cases/stream-media",
+              link: "/use-cases/jellyfin",
             },
             {
               text: "Steam",
@@ -332,11 +344,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               items: [
                 {
                   text: "Play directly on Olares",
-                  link: "/use-cases/play-games-directly",
+                  link: "/use-cases/steam-direct-play",
                 },
                 {
                   text: "Stream to other devices",
-                  link: "/use-cases/stream-game",
+                  link: "/use-cases/steam-stream",
                 }
               ]
             },
@@ -362,6 +374,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "*Arrs",
               link: "/use-cases/arrs",
+              collapsed: true,
+              items: [
+                {
+                  text: "Upgrade *Arrs",
+                  link: "/use-cases/arrs-upgrade",
+                },
+                {
+                  text: "Upgrade download clients",
+                  link: "/use-cases/download-clients-upgrade",
+                },
+              ]
             },
           ]
         },
@@ -388,6 +411,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "RNA Sequencing",
               link: "/use-cases/rna-sequencing",
+            },
+            {
+              text: "OnlyOffice",
+              link: "/use-cases/onlyoffice",
             },
             // {
             //   text: "Stirling PDF",
@@ -428,6 +455,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "FlareSolverr",
               link: "/use-cases/flaresolverr",
+            },
+            {
+              text: "SearXNG",
+              link: "/use-cases/searxng",
+            },
+            {
+              text: "Home Assistant",
+              link: "/use-cases/home-assistant",
             },
           ]
         },

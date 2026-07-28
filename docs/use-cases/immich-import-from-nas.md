@@ -10,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-04-09"
 ---
 
-# Import photos from NAS
+# Import photos from a NAS into Immich
 
 If you have photos stored on a NAS device, you can mount the NAS shared folder in Olares and import them into Immich as an external library.
 

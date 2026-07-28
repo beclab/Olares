@@ -116,18 +116,29 @@ func (h *HelmOpsV3) Install() error {
 // data builder, layers the v3-only labels onto the in-memory payload, then
 // hands it back to v1's applier so each resource is patched exactly once.
 //
-// v3-only labels:
+// Labels stamped:
 //   - app.bytetrade.io/api-version=v3 on the namespace and on the main
-//     deployment/statefulset, so reconcileNetworkPolicy can pick the
-//     v3-specific branch instead of the v1/v2 app-np branch.
+//     deployment/statefulset for every v3 app (schema marker; both shared
+//     and per-user v3 apps carry it).
+//   - app.bytetrade.io/shared=true on top of the api-version label only
+//     for shared apps (apiVersion: v3 + options.shared: true). Drives the
+//     security_controller shared namespace fast path, downstream
+//     visibility / NATS fan-out / etc.
 func (h *HelmOpsV3) AddApplicationLabelsToDeployment() error {
 	nsLabels, workloadPatchData := h.BuildDeploymentLabelPatchData()
 
 	nsLabels[constants.AppApiVersionLabel] = constants.AppVersionV3
 
+	if h.App().IsShared() {
+		nsLabels[constants.AppSharedLabel] = constants.AppSharedTrue
+	}
+
 	if meta, ok := workloadPatchData["metadata"].(map[string]interface{}); ok {
 		if labels, ok := meta["labels"].(map[string]string); ok {
 			labels[constants.AppApiVersionLabel] = constants.AppVersionV3
+			if h.App().IsShared() {
+				labels[constants.AppSharedLabel] = constants.AppSharedTrue
+			}
 		}
 	}
 

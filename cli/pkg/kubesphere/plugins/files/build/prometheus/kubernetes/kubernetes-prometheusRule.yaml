@@ -985,11 +985,20 @@ spec:
             label_replace(label_replace(avg by (instance) (node_hwmon_temp_celsius{chip=~".*"} * on(chip,instance) group_left(chip_name) node_hwmon_chip_names{chip_name="coretemp"}),"metric", "cpu_temperature", "", ""),"node","$1","instance","(.*)")
           record: node:node_cpu_temp_celsius
         - expr: |
+            label_replace(label_replace(avg by (instance) (node_hwmon_temp_celsius{sensor="temp0"} * on(chip,instance) group_left(chip_name) node_hwmon_chip_names{chip_name="acpitz"}),"metric", "acpitz_temperature", "", ""),"node","$1","instance","(.*)")
+          record: node:node_acpitz_temp_celsius
+        - expr: |
             label_replace(node_network_address_info{job="node-exporter", device!~"lo|docker.*|tailscale.*|veth.*|br.*|bond.*|flannel.*|cni.*|tun.*|virbr.*|vnet.*|cali.*|cilium.*|weave.*|vxlan.*|ovs-system|dummy.*|kube.*"},"node","$1","instance","(.*)")
           record: node:node_network_address_info
         - expr: |
             label_replace(max by (instance, job) (node_cpu_base_frequency_hertz),"node","$1","instance","(.*)")
           record: node:node_cpu_base_frequency_hertz:max
+        - expr: |
+            label_replace(max by (instance, job) (node_cpu_frequency_max_hertz),"node","$1","instance","(.*)")
+          record: node:node_cpu_frequency_max_hertz
+        - expr: |
+            label_replace(node_cpu_dmidecode_info, "node", "$1", "instance", "(.*)")
+          record: node:node_cpu_dmidecode_info
         - expr: |
             label_replace(node_disk_power_on_hours{job="node-exporter"},"node","$1","instance","(.*)")
           record: node:node_disk_power_on_hours

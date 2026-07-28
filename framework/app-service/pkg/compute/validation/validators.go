@@ -55,16 +55,22 @@ type clusterCapacityValidator struct{}
 
 func (clusterCapacityValidator) Name() string { return NameClusterCapacity }
 
-// AppliesTo install only. Resume reuses the placement chosen at
-// install — the cluster's total schedulable capacity hasn't shrunk
+// AppliesTo install and upgrade. Resume reuses the placement chosen
+// at install — the cluster's total schedulable capacity hasn't shrunk
 // between install and resume in any normal flow, and in pathological
 // "cluster shrank while the app was stopped" cases the runtime gate
 // (k8s-request / node-pressure) will catch the failure with a more
-// actionable message. UpgradeOp is excluded: upgrade does not use this
-// validation package (see validators in this file — none apply to upgrade).
+// actionable message.
+//
+// Upgrade is included so we reject an upgrade whose new chart declares
+// resource requirements the cluster can never satisfy (e.g. the new
+// version raised CPU/memory/disk past the cluster's total schedulable
+// capacity) at HTTP submit time, before any helm work happens. None
+// of the other validators in this file apply to UpgradeOp — runtime
+// pressure / per-user quota are handled separately on the upgrade path.
 func (clusterCapacityValidator) AppliesTo(op Op) bool {
 	switch op {
-	case v1alpha1.InstallOp:
+	case v1alpha1.InstallOp, v1alpha1.UpgradeOp:
 		return true
 	}
 	return false
@@ -389,9 +395,11 @@ func (computeAllocationValidator) Validate(ctx context.Context, in Input) (Decis
 //
 // Used at HTTP submit time (install handler) to reject requests the
 // cluster fundamentally cannot accommodate before any helm work starts.
-// Upgrade does not use this package. They are intentionally NOT re-run
-// in installing_app — runtime pressure and allocation run once after
-// helm install and before Scale(-1).
+// They are intentionally NOT re-run in installing_app — runtime pressure
+// and allocation run once after helm install and before Scale(-1).
+//
+// Upgrade uses its own chain (UpgradabilityValidators) instead of this
+// one — see that function for the rationale.
 //
 // Ordering matches the user-facing failure mode they reveal:
 //
@@ -403,6 +411,38 @@ func InstallabilityValidators() []Validator {
 		clusterCapacityValidator{},
 		computeModeValidator{},
 		userQuotaValidator{},
+	}
+}
+
+// UpgradabilityValidators returns the structural feasibility chain
+// applied at HTTP submit time by the upgrade handler. The upgrade flow
+// only needs to ask "is the cluster big enough to host the NEW chart's
+// declared requirements at all?", because:
+//
+//   - compute-mode: the existing app already has an allocation, the
+//     upgrade reuses prevCfg.SelectedGpuType. Re-running the planner
+//     would either no-op or spuriously fail on a transiently-degraded
+//     node.
+//   - user-quota: the running deployment is already counted against
+//     the owner's quota, so re-checking on upgrade would double-count
+//     for templates whose new version raises requests only marginally.
+//   - runtime-pressure / k8s-request / node-pressure: the upgrade goes
+//     through helm upgrade which schedules its own replacement pods;
+//     kubelet/kube-scheduler are the authoritative gate there.
+//
+// So the chain is intentionally just clusterCapacityValidator. We keep
+// it as a separate exported chain (rather than letting callers pass a
+// single validator inline) so that:
+//
+//   - The "what validates on upgrade?" answer lives in one place that
+//     matches the InstallabilityValidators / RuntimePressureValidators
+//     pattern.
+//   - The clusterCapacityValidator type stays unexported.
+//   - Adding another upgrade-time gate later only touches this file
+//     and TestChainShapes, not every upgrade call site.
+func UpgradabilityValidators() []Validator {
+	return []Validator{
+		clusterCapacityValidator{},
 	}
 }
 

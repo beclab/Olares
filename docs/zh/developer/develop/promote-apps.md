@@ -43,7 +43,7 @@ description: 使用图片和图标优化你在 Olares 应用市场中的应用�
 
 你可以将图片托管在自己的服务器上，或使用 Olares 图片托管服务：
 
-1. 打开 [Olares Market 图片托管](https://imghost.olares.cn/)。
+1. 打开 [Olares Market 图片托管](https://imghost.olares.com/)。
 2. 选择图片类型：**应用图标**、**头图**或**宣传图**。
 3. 上传并预览图片。
 4. 复制生成的 URL，并粘贴到 `OlaresManifest.yaml` 对应字段中。

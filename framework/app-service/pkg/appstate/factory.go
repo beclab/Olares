@@ -15,19 +15,18 @@ type statefulAppFactory struct {
 	mu         sync.Mutex
 }
 
-var once sync.Once
-var appFactory statefulAppFactory
-
-func init() {
-	once.Do(func() {
-		appFactory = statefulAppFactory{
-			inProgress: make(map[string]StatefulInProgressApp),
-		}
-	})
+// newStatefulAppFactory creates an isolated factory instance. Production
+// creates one per controller (held in Deps.Factory for the controller's
+// lifetime so in-progress operations persist across reconciles); tests
+// create a fresh one per case to avoid cross-test interference.
+func newStatefulAppFactory() *statefulAppFactory {
+	return &statefulAppFactory{
+		inProgress: make(map[string]StatefulInProgressApp),
+	}
 }
 
 func (f *statefulAppFactory) New(
-	client client.Client,
+	deps Deps,
 	manager *appsv1.ApplicationManager,
 	ttl time.Duration,
 	create func(client client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp,
@@ -35,10 +34,20 @@ func (f *statefulAppFactory) New(
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
+	// newApp builds a stateful app and injects the dependency container
+	// (helm/kubeconfig/kubeblocks/image seams + this factory) centrally.
+	newApp := func() StatefulApp {
+		a := create(deps.Client, manager, ttl)
+		if ds, ok := a.(depsSetter); ok {
+			ds.setDeps(deps)
+		}
+		return a
+	}
+
 	inProgressApp, ok := f.inProgress[manager.Name]
 	if ok {
 		if inProgressApp.State() != manager.Status.State.String() {
-			a := create(client, manager, ttl)
+			a := newApp()
 			if cancelOperation, ok := a.(CancelOperationApp); ok {
 				return cancelOperation, nil
 			}
@@ -62,7 +71,7 @@ func (f *statefulAppFactory) New(
 		return inProgressApp, nil
 	}
 
-	return create(client, manager, ttl), nil
+	return newApp(), nil
 }
 
 func (f *statefulAppFactory) waitForPolling(ctx context.Context, app PollableStatefulInProgressApp, finally func(err error)) {

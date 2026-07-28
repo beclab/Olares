@@ -170,16 +170,13 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.5.33
+        image: beclab/app-service:0.6.9
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
-        readinessProbe:
-          failureThreshold: 5
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          tcpSocket:
-            port: 6755
+          name: api
+        - containerPort: 8433
+          name: webhook
         securityContext:
           runAsUser: 0
         env:
@@ -215,6 +212,8 @@ spec:
           value: "0"
         - name: USER_MEMORY_THRESHOLD
           value: "0"
+        - name: SHARED_BACKEND_RESPONSE_TIMEOUT
+          value: "600s"
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT
@@ -237,7 +236,7 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         - name: OLARESD_HOST
-          value: $(HOSTIP):18088
+          value: master-node:18088
         volumeMounts:
         - mountPath: /charts
           name: charts-store
@@ -245,7 +244,7 @@ spec:
           name: user-apps-template
         - mountPath: /etc/certs
           name: certs
-        - mountPath: /etc/containerd/config.toml
+        - mountPath: /etc/containerd
           name: configtoml
         - mountPath: /Cache
           name: app-cache
@@ -278,7 +277,8 @@ spec:
           type: DirectoryOrCreate
       - name: configtoml
         hostPath:
-          path: /etc/containerd/config.toml
+          path: /etc/containerd
+          type: Directory
       - name: charts-store
         persistentVolumeClaim:
           claimName: {{ default $charts_pvc .Values.charts_pvc }}
@@ -403,7 +403,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
         - name: image-service
-          image: beclab/image-service:0.4.65
+          image: beclab/image-service:0.6.9
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0

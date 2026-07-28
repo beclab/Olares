@@ -8,7 +8,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/gpu"
-	"k8s.io/utils/ptr"
 
 	"github.com/pkg/errors"
 )
@@ -32,7 +31,7 @@ func (u *UpdateNodeMThreadsGPUInfo) Execute(runtime connector.Runtime) error {
 	}
 
 	if runtime.GetSystemInfo().IsMThreadsM1000() {
-		return gpu.UpdateNodeGpuLabel(context.Background(), client.Kubernetes(), nil, nil, nil, ptr.To(gpu.MThreadsM1000Type))
+		return gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.MooreSocType, nil, nil, nil)
 	}
 
 	return nil

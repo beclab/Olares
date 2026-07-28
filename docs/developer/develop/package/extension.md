@@ -1,3 +1,6 @@
+---
+description: During installation, Olares injects extended field into the APP, using the configuration from OlaresManifest.yaml.
+---
 # Extensions field to Helm in Olares
 
 During installation, Olares injects extended field into the APP, using the configuration from [OlaresManifest.yaml](manifest.md).

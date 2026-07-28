@@ -27,15 +27,16 @@ import (
 // loadAuthorizedLifecycleAM is the shared prelude for mutating lifecycle
 // handlers (uninstall, suspend, resume, applyenv, cancel). It:
 //  1. Resolves the ApplicationManager name via apputils.ResolveAppMgrName so
-//     admins can target a v3 AM regardless of who installed it.
+//     admins can target a shared AM regardless of who installed it.
 //  2. Loads that ApplicationManager from the API.
-//  3. If the AM is v3, requires cluster admin; otherwise non-v3
-//     AMs remain scoped by ResolveAppMgrName/FmtAppMgrName to the caller.
+//  3. If the AM is shared, requires cluster admin; otherwise non-shared
+//     AMs (v1 and v3+per-user) remain scoped by
+//     ResolveAppMgrName / FmtAppMgrName to the caller.
 //
 // On any error or rejection it writes the response and returns ok=false; the
 // caller should simply `return`.
 func (h *Handler) loadAuthorizedLifecycleAM(ctx context.Context, req *restful.Request, resp *restful.Response, app, owner string) (name string, am *v1alpha1.ApplicationManager, ok bool) {
-	resolved, isV3, err := apputils.ResolveAppMgrName(ctx, app, owner)
+	resolved, isShared, err := apputils.ResolveAppMgrName(ctx, app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return "", nil, false
@@ -45,17 +46,17 @@ func (h *Handler) loadAuthorizedLifecycleAM(ctx context.Context, req *restful.Re
 		api.HandleError(resp, req, err)
 		return "", nil, false
 	}
-	// Treat the AM as shared if either the resolver picked the v3 name OR
-	// the AM carries the scope label (defense in depth in case of weird
-	// install state).
-	if isV3 || appcfg.IsV3(&got) {
+	// Treat the AM as shared if either the resolver picked the shared name
+	// OR the AM carries the shared label (defense in depth in case of
+	// weird install state).
+	if isShared || appcfg.IsShared(&got) {
 		isAdmin, ierr := kubesphere.IsAdmin(ctx, h.kubeConfig, owner)
 		if ierr != nil {
 			api.HandleError(resp, req, ierr)
 			return "", nil, false
 		}
 		if !isAdmin {
-			api.HandleForbidden(resp, req, fmt.Errorf("only admin users can manage v3 / shared app %q", app))
+			api.HandleForbidden(resp, req, fmt.Errorf("only admin users can manage shared app %q", app))
 			return "", nil, false
 		}
 	}
@@ -66,11 +67,13 @@ func (h *Handler) loadAuthorizedLifecycleAM(ctx context.Context, req *restful.Re
 // decide whether an Application / ApplicationManager is visible to `viewer`.
 //
 // Visibility model:
-//   - v3 / shared apps: visible to ALL authenticated users (admin or not);
-//     any user may open the app. Lifecycle handlers
-//     (install/uninstall/upgrade/...) enforce admin-only management.
-//   - v1 / v2 apps: legacy owner-by-namespace check is preserved unchanged
-//     (only the installer sees them in their own list).
+//   - Shared apps (apiVersion: v3 + options.shared: true): visible to ALL
+//     authenticated users (admin or not); any user may open the app.
+//     Lifecycle handlers (install/uninstall/upgrade/...) enforce admin-only
+//     management.
+//   - Per-user apps (v1 and v3+per-user): legacy owner-by-namespace check
+//     is preserved unchanged (only the installer sees them in their own
+//     list).
 type listVisibilityCtx struct {
 	Viewer string
 }
@@ -91,7 +94,7 @@ func (v *listVisibilityCtx) VisibleAM(am *v1alpha1.ApplicationManager) bool {
 	if am == nil {
 		return false
 	}
-	if appcfg.IsV3(am) {
+	if appcfg.IsShared(am) {
 		return true
 	}
 	return am.Spec.AppOwner == v.Viewer
@@ -102,7 +105,7 @@ func (v *listVisibilityCtx) VisibleApp(a *v1alpha1.Application) bool {
 	if a == nil {
 		return false
 	}
-	if appcfg.IsV3(a) {
+	if appcfg.IsShared(a) {
 		return true
 	}
 	return a.Spec.Owner == v.Viewer
@@ -124,11 +127,12 @@ func (h *Handler) requireAdmin(req *restful.Request, resp *restful.Response, cal
 	return true
 }
 
-// gateSharedAppWrite enforces admin-only mutation on v3 Applications.
-// v1/v2 apps pass through unchanged. On rejection it writes
-// the 403 response and returns ok=false so the caller can simply `return`.
+// gateSharedAppWrite enforces admin-only mutation on shared Applications.
+// Per-user apps (v1 and v3+per-user) pass through unchanged. On rejection
+// it writes the 403 response and returns ok=false so the caller can simply
+// `return`.
 func (h *Handler) gateSharedAppWrite(req *restful.Request, resp *restful.Response, app *v1alpha1.Application) (ok bool) {
-	if !appcfg.IsV3(app) {
+	if !appcfg.IsShared(app) {
 		return true
 	}
 	caller, _ := req.Attribute(constants.UserContextAttribute).(string)

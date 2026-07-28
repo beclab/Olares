@@ -186,7 +186,7 @@ expected_vendor="main"
 if [[ "$(basename "$REPO_PATH")" == "olares-one" ]]; then
     expected_vendor="OlaresOne"
 fi
-if command_exists olares-cli && [[ "$(olares-cli -v | awk '{print $3}')" == "$VERSION" ]] && [[ "$(olares-cli --vendor)" == "$expected_vendor" ]]; then
+if command_exists olares-cli && [[ "$(olares-cli -v | awk 'NR==1{print $3}')" == "$VERSION" ]] && [[ "$(olares-cli --vendor)" == "$expected_vendor" ]]; then
     INSTALL_OLARES_CLI=$(which olares-cli)
     echo "olares-cli already installed and is the expected version"
     echo ""

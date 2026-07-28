@@ -37,7 +37,8 @@ Verb families:
   catalog (read-only)   list, categories, get         browse /market/data
   runtime (read-only)   status                        read /market/state
   lifecycle (mutating)  install, upgrade, uninstall,  POST/PUT/DELETE on
-                        clone, stop, resume, cancel    /apps/{name}/*
+                        clone, stop, resume, restart,  /apps/{name}/*
+                        cancel
   charts (mutating)     upload, delete                 SPA Local Sources
 
 Universal flags:
@@ -82,6 +83,7 @@ cli/skills/olares-market/SKILL.md.`,
 	cmd.AddCommand(NewCmdMarketCancel(f))
 	cmd.AddCommand(NewCmdMarketStop(f))
 	cmd.AddCommand(NewCmdMarketResume(f))
+	cmd.AddCommand(NewCmdMarketRestart(f))
 	cmd.AddCommand(NewCmdMarketUpload(f))
 	cmd.AddCommand(NewCmdMarketDelete(f))
 	cmd.AddCommand(NewCmdMarketStatus(f))

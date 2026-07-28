@@ -1,3 +1,7 @@
+---
+noindex: true
+description: Olares 系统中采用 SSO 的模式来为整个系统（包括所有安装的应用）实现授权认证。SSO 认证模式采用无侵入设计，使用 cookie 作为认证的凭证。
+---
 # Cookie
 
 Olares 系统中采用 SSO 的模式来为整个系统（包括所有安装的应用）实现授权认证。SSO 认证模式采用无侵入设计，使用 cookie 作为认证的凭证。

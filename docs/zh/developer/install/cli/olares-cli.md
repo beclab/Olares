@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: 在 Olares 主机上运行的所有 olares-cli 命令的字母顺序参考。包含语法、结构，以及指向各命令详情页（含选项和示例）的链接。
 ---

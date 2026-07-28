@@ -1,0 +1,297 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: backends.gateway.envoyproxy.io
+spec:
+  group: gateway.envoyproxy.io
+  names:
+    categories:
+    - envoy-gateway
+    kind: Backend
+    listKind: BackendList
+    plural: backends
+    shortNames:
+    - be
+    singular: backend
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              appProtocols:
+                items:
+                  enum:
+                  - gateway.envoyproxy.io/h2c
+                  - gateway.envoyproxy.io/ws
+                  - gateway.envoyproxy.io/wss
+                  type: string
+                type: array
+              endpoints:
+                items:
+                  properties:
+                    fqdn:
+                      properties:
+                        hostname:
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        port:
+                          format: int32
+                          maximum: 65535
+                          minimum: 0
+                          type: integer
+                      required:
+                      - hostname
+                      - port
+                      type: object
+                    hostname:
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    ip:
+                      properties:
+                        address:
+                          maxLength: 45
+                          minLength: 3
+                          pattern: ^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){1,7}[0-9a-fA-F]{1,4}|::|(([0-9a-fA-F]{1,4}:){0,5})?(:[0-9a-fA-F]{1,4}){1,2})$
+                          type: string
+                        port:
+                          format: int32
+                          maximum: 65535
+                          minimum: 0
+                          type: integer
+                      required:
+                      - address
+                      - port
+                      type: object
+                    unix:
+                      properties:
+                        path:
+                          type: string
+                          x-kubernetes-validations:
+                          - message: unix domain socket path must not exceed 108 characters
+                            rule: size(self) <= 108
+                      required:
+                      - path
+                      type: object
+                    zone:
+                      type: string
+                  type: object
+                  x-kubernetes-validations:
+                  - message: one of fqdn, ip or unix must be specified
+                    rule: (has(self.fqdn) || has(self.ip) || has(self.unix))
+                  - message: only one of fqdn, ip or unix can be specified
+                    rule: ((has(self.fqdn) && !(has(self.ip) || has(self.unix))) ||
+                      (has(self.ip) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix)
+                      && !(has(self.ip) || has(self.fqdn))))
+                maxItems: 256
+                minItems: 1
+                type: array
+                x-kubernetes-validations:
+                - message: fqdn addresses cannot be mixed with other address types
+                  rule: self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))
+              fallback:
+                type: boolean
+              tls:
+                properties:
+                  alpnProtocols:
+                    items:
+                      type: string
+                    type: array
+                  caCertificateRefs:
+                    items:
+                      properties:
+                        group:
+                          maxLength: 253
+                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        kind:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                          type: string
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      required:
+                      - group
+                      - kind
+                      - name
+                      type: object
+                    maxItems: 8
+                    type: array
+                  ciphers:
+                    items:
+                      type: string
+                    type: array
+                  clientCertificateRef:
+                    properties:
+                      group:
+                        default: ''
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Secret
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  ecdhCurves:
+                    items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    items:
+                      enum:
+                      - JA3
+                      - JA4
+                      type: string
+                    type: array
+                  insecureSkipVerify:
+                    default: false
+                    type: boolean
+                  maxVersion:
+                    enum:
+                    - Auto
+                    - '1.0'
+                    - '1.1'
+                    - '1.2'
+                    - '1.3'
+                    type: string
+                  minVersion:
+                    enum:
+                    - Auto
+                    - '1.0'
+                    - '1.1'
+                    - '1.2'
+                    - '1.3'
+                    type: string
+                  signatureAlgorithms:
+                    items:
+                      type: string
+                    type: array
+                  sni:
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  wellKnownCACertificates:
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^(System|([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/([A-Za-z0-9][-A-Za-z0-9_.]{0,61})?[A-Za-z0-9]))$
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: must not contain both CACertificateRefs and WellKnownCACertificates
+                  rule: '!(has(self.caCertificateRefs) && size(self.caCertificateRefs)
+                    > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates
+                    != "")'
+                - message: must not contain either CACertificateRefs or WellKnownCACertificates
+                    when InsecureSkipVerify is enabled
+                  rule: '!((has(self.insecureSkipVerify) && self.insecureSkipVerify)
+                    && ((has(self.caCertificateRefs) && size(self.caCertificateRefs)
+                    > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates
+                    != "")))'
+                - message: setting ciphers has no effect if the minimum possible TLS
+                    version is 1.3
+                  rule: 'has(self.minVersion) && self.minVersion == ''1.3'' ? !has(self.ciphers)
+                    : true'
+                - message: minVersion must be smaller or equal to maxVersion
+                  rule: 'has(self.minVersion) && has(self.maxVersion) ? {"Auto":0,"1.0":1,"1.1":2,"1.2":3,"1.3":4}[self.minVersion]
+                    <= {"1.0":1,"1.1":2,"1.2":3,"1.3":4,"Auto":5}[self.maxVersion]
+                    : !has(self.minVersion) && has(self.maxVersion) ? 3 <= {"1.0":1,"1.1":2,"1.2":3,"1.3":4,"Auto":5}[self.maxVersion]
+                    : true'
+              type:
+                default: Endpoints
+                enum:
+                - Endpoints
+                - DynamicResolver
+                type: string
+            type: object
+            x-kubernetes-validations:
+            - message: DynamicResolver type cannot have endpoints specified
+              rule: self.type != 'DynamicResolver' || !has(self.endpoints)
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      enum:
+                      - 'True'
+                      - 'False'
+                      - Unknown
+                      type: string
+                    type:
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 8
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -12,38 +12,48 @@ import (
 )
 
 const (
-	ResourceModeCPU           = "cpu"
-	ResourceModeAMDAPU        = "amd-apu"
-	ResourceModeAMDGPU        = "amd-gpu"
-	ResourceModeAppleM        = "apple-m"
-	ResourceModeNvidia        = "nvidia"
-	ResourceModeNvidiaGB10    = "nvidia-gb10"
-	ResourceModeMThreadsM1000 = "mthreads-m1000"
-	ResourceModeStrixHalo     = "strix-halo"
+	ResourceModeCPU        = "cpu"
+	ResourceModeNvidia     = "nvidia"
+	ResourceModeNvidiaGB10 = "nvidia-gb10"
+	ResourceModeAppleM     = "apple-m"
+	ResourceModeIntel      = "intel"     // Intel integrated GPU
+	ResourceModeAMD        = "amd"       // AMD integrated GPU
+	ResourceModeIntelGPU   = "intel-gpu" // Intel discrete GPU
+	ResourceModeAMDGPU     = "amd-gpu"   // AMD discrete GPU
+	ResourceModeMooreSoc   = "moore-soc" // Moore Threads SoC
 )
 
 var validResourceModes = []any{
 	ResourceModeCPU,
-	ResourceModeStrixHalo,
-	ResourceModeAMDGPU,
-	ResourceModeAppleM,
 	ResourceModeNvidia,
 	ResourceModeNvidiaGB10,
-	ResourceModeMThreadsM1000,
-	ResourceModeStrixHalo,
+	ResourceModeAppleM,
+	ResourceModeIntel,
+	ResourceModeAMD,
+	ResourceModeIntelGPU,
+	ResourceModeAMDGPU,
+	ResourceModeMooreSoc,
 }
 
 var modeArchRequirement = map[string]string{
-	ResourceModeAMDGPU:        "amd64",
-	ResourceModeNvidia:        "amd64",
-	ResourceModeNvidiaGB10:    "arm64",
-	ResourceModeMThreadsM1000: "arm64",
-	ResourceModeStrixHalo:     "amd64",
+	ResourceModeNvidia:     "amd64",
+	ResourceModeNvidiaGB10: "arm64",
+	ResourceModeAppleM:     "arm64",
+	ResourceModeIntel:      "amd64",
+	ResourceModeAMD:        "amd64",
+	ResourceModeIntelGPU:   "amd64",
+	ResourceModeAMDGPU:     "amd64",
+	ResourceModeMooreSoc:   "arm64",
 }
 
+// gpuMemoryModes are the modes that expose a standalone GPU memory pool, so a
+// manifest may declare requiredGpu / limitedGpu for them. These are the
+// discrete-GPU / HAMi flavors; the unified-memory SoCs (apple-m, intel, amd,
+// nvidia-gb10, moore-soc) draw from system RAM and must not.
 var gpuMemoryModes = map[string]struct{}{
-	ResourceModeNvidia: {},
-	ResourceModeAMDGPU: {},
+	ResourceModeNvidia:   {},
+	ResourceModeAMDGPU:   {},
+	ResourceModeIntelGPU: {},
 }
 
 var minResourcesManifestVersion = semver.MustParse("0.12.0")
@@ -51,7 +61,10 @@ var minResourcesManifestVersion = semver.MustParse("0.12.0")
 // ValidateResourceMode applies per-element rules to a single ResourceMode:
 // the `mode` enum, quantity validity, completeness of the inline envelope
 // once any field is populated, and the limit >= required pairing.
-func ValidateResourceMode(r ResourceMode) error {
+//
+// When templateOnly is true, non-disk quantity fields may use AutoResourceValue
+// ("-1"); requiredDisk and limitedDisk must still be explicit quantities.
+func ValidateResourceMode(r ResourceMode, templateOnly bool) error {
 	modeInvalid := validation.ValidateStruct(&r,
 		validation.Field(&r.Mode,
 			validation.Required.Error("resources[].mode is required"),
@@ -65,7 +78,7 @@ func ValidateResourceMode(r ResourceMode) error {
 
 	_, gpuAllowed := gpuMemoryModes[r.Mode]
 	var errs []error
-	if err := validateQuantities("", r.ResourceRequirement); err != nil {
+	if err := validateQuantities("", r.ResourceRequirement, templateOnly); err != nil {
 		errs = append(errs, err)
 	}
 	if err := ensureSectionComplete("", r.Mode, r.ResourceRequirement, gpuAllowed); err != nil {
@@ -329,11 +342,45 @@ func ensureNoGPUSection(sectionPath, mode string, rr ResourceRequirement) error 
 // treat it as a valid, deferred value rather than rejecting it.
 const AutoResourceValue = "-1"
 
-func isAutoResourceQuantity(s string) bool {
+func IsAutoResourceQuantity(s string) bool {
 	return strings.TrimSpace(s) == AutoResourceValue
 }
 
-func validateQuantities(prefix string, rr ResourceRequirement) error {
+func isDiskQuantityField(field string) bool {
+	return strings.HasSuffix(field, "requiredDisk") || strings.HasSuffix(field, "limitedDisk")
+}
+
+// resourceQuantityValid reports whether value is an acceptable quantity for
+// field. allowAuto enables the existing auto-resolve sentinel (-1) on
+// spec.resources[] entries; flat-field callers pass false. When templateOnly
+// is true, non-disk fields may also use "-1"; disk fields must stay explicit.
+func resourceQuantityValid(value, field string, templateOnly, allowAuto bool) bool {
+	if value == "" {
+		return true
+	}
+	if IsAutoResourceQuantity(value) {
+		if templateOnly && isDiskQuantityField(field) {
+			return false
+		}
+		return allowAuto || templateOnly
+	}
+	return k8sQuantity.MatchString(value)
+}
+
+func validateResourceQuantity(value, field string, templateOnly, allowAuto bool) error {
+	if resourceQuantityValid(value, field, templateOnly, allowAuto) {
+		return nil
+	}
+	if IsAutoResourceQuantity(value) && templateOnly && isDiskQuantityField(field) {
+		return fmt.Errorf(
+			"%s cannot be %q for template-only apps; disk quantities must be explicit",
+			field, AutoResourceValue,
+		)
+	}
+	return fmt.Errorf("%s must be a valid Kubernetes quantity (got %q)", field, value)
+}
+
+func validateQuantities(prefix string, rr ResourceRequirement, templateOnly bool) error {
 	pairs := []struct {
 		field string
 		value string
@@ -349,11 +396,11 @@ func validateQuantities(prefix string, rr ResourceRequirement) error {
 	}
 	var errs []error
 	for _, p := range pairs {
-		if p.value == "" || isAutoResourceQuantity(p.value) {
+		if p.value == "" {
 			continue
 		}
-		if !k8sQuantity.MatchString(p.value) {
-			errs = append(errs, fmt.Errorf("%s%s must be a valid Kubernetes quantity (got %q)", prefix, p.field, p.value))
+		if err := validateResourceQuantity(p.value, prefix+p.field, templateOnly, true); err != nil {
+			errs = append(errs, err)
 		}
 	}
 	return errors.Join(errs...)
@@ -377,7 +424,7 @@ func checkLimitGERequired(prefix string, rr ResourceRequirement) error {
 		}
 		// An auto-compute sentinel on either side is resolved at install time;
 		// the limit >= required ordering cannot be checked yet, so skip it.
-		if isAutoResourceQuantity(d.required) || isAutoResourceQuantity(d.limited) {
+		if IsAutoResourceQuantity(d.required) || IsAutoResourceQuantity(d.limited) {
 			continue
 		}
 		req, err := resource.ParseQuantity(d.required)

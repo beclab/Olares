@@ -11,7 +11,7 @@ Olares-managed databases / queues / object stores. **NOT a K8s native resource**
 |---|---|
 | `list` | TYPE / NAME / NAMESPACE / NODES / ADMIN-USER (read-only inventory) |
 
-> The CLI exposes **only** the read-only inventory verb today. Password rotation, instance creation, and other mutations are not in `olares-cli cluster middleware`; manage those from LarePass / ControlHub SPA, or the per-middleware admin tooling (psql, mongosh, redis-cli, etc.) once you know the connection details.
+> The CLI exposes **only** the read-only inventory verb. Password rotation, instance creation, and other mutations are not in `olares-cli cluster middleware`; manage those from LarePass / ControlHub SPA, or the per-middleware admin tooling (psql, mongosh, redis-cli, etc.) once you know the connection details.
 
 ## Sensitive-field handling on `list`
 

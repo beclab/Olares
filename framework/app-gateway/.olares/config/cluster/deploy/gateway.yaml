@@ -1,0 +1,35 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: app-gateway
+  namespace: os-gateway
+  labels:
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  gatewayClassName: olares-app-gateway
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: app-gateway-envoy-proxy
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: https
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        # Placeholder cert ref so the Gateway is accepted before app-service syncs
+        # the per-viewer entrance TLS Secret onto this listener.
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: app-gateway-tls

@@ -1,7 +1,12 @@
 ---
-description: Comprehensive guide to using Stable Diffusion in Olares. Learn about text-to-image generation, and how to optimize your SD Web UI deployment for multi-user environments.
+noindex: true
+description: Run Stable Diffusion locally on Olares. Self-host the SD WebUI for text-to-image generation with multi-user support, no per-image fees, and full data privacy.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Stable Diffusion, stable diffusion webui, self-hosted stable diffusion, run stable diffusion locally, stable diffusion on olares
 ---
-# Stable Diffusion
+# Run Stable Diffusion locally
 Stable Diffusion represents a groundbreaking implementation of latent diffusion models (LDMs) in AI image synthesis. This deep learning architecture operates by decomposing the image generation process into a lower-dimensional latent space, significantly reducing computational requirements while maintaining high-fidelity output.
 
 Olares simplifies the deployment and management of Stable Diffusion. Unlike traditional deployments that require manual configuration of file systems and databases, Olares shields developers from these infrastructure complexities, allowing you to focus solely on using the model for image generation.
@@ -67,13 +72,17 @@ Only Olares admin can adjust system parameters through the Control Hub app.
 
 ## Gallery
 
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
 <table>
   <tr>
-    <td><img src="/images/manual/use-cases/sd-example1.png" alt="Image 1" width="200" /></td>
-    <td><img src="/images/manual/use-cases/sd-example2.png" alt="Image 2" width="200" /></td>
+    <td><img :src="withBase('/images/manual/use-cases/sd-example1.png')" alt="Image 1" width="200" /></td>
+    <td><img :src="withBase('/images/manual/use-cases/sd-example2.png')" alt="Image 2" width="200" /></td>
   </tr>
   <tr>
-    <td><img src="/images/manual/use-cases/sd-example3.png" alt="Image 3" width="200" /></td>
-    <td><img src="/images/manual/use-cases/sd-example4.png" alt="Image 4" width="200" /></td>
+    <td><img :src="withBase('/images/manual/use-cases/sd-example3.png')" alt="Image 3" width="200" /></td>
+    <td><img :src="withBase('/images/manual/use-cases/sd-example4.png')" alt="Image 4" width="200" /></td>
   </tr>
 </table>

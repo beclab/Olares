@@ -12,6 +12,7 @@ import (
 	"os"
 
 	"bytetrade.io/web3os/bfl/pkg/constants"
+	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"k8s.io/klog/v2"
@@ -40,211 +41,132 @@ func (c *Client) getAppInfoFromData(data map[string]interface{}) (*AppInfo, erro
 		Owner:          appSpec["owner"].(string)}, nil
 }
 
-func (c *Client) getAppListFromData(apps []map[string]interface{}) ([]*AppInfo, error) {
+func (c *Client) getAppListFromData(apps []appv1.Application) ([]*AppInfo, error) {
 
 	var res []*AppInfo
-	for _, data := range apps {
+	for _, app := range apps {
 		var appEntrances []Entrance
 		var appSharedEntrances []Entrance
 		appPorts := make([]ServicePort, 0)
 		appACLs := make([]ACL, 0)
 
-		appSpec, ok := data["spec"].(map[string]interface{})
-		if !ok {
-			klog.Error("get app info error: ", data)
-			return nil, errors.New("app info is invalid")
-		}
+		appSpec := app.Spec
 
-		isSysApp := appSpec["isSysApp"].(bool)
+		isSysApp := appSpec.IsSysApp
 
 		// get app settings to filter system service not to list
 		var title, target, state, requiredGPU, defaultThirdLevelDomainConfig string
 		isClusterScoped, mobileSupported := false, false
-		settings, ok := appSpec["settings"]
-		if ok {
-			settingsMap := settings.(map[string]interface{})
-			_, ok = settingsMap["system_service"]
-			if ok {
+		settingsMap := appSpec.Settings
+		if settingsMap != nil {
+			if _, ok := settingsMap["system_service"]; ok {
 				// It is the system service, not app
 				continue
-			} // end ok
+			}
 
 			if t, ok := settingsMap["title"]; ok {
-				title = t.(string)
+				title = t
 			}
 			if t, ok := settingsMap["clusterScoped"]; ok && t == "true" {
 				isClusterScoped = true
 			}
 			if t, ok := settingsMap["defaultThirdLevelDomainConfig"]; ok {
-				defaultThirdLevelDomainConfig = t.(string)
+				defaultThirdLevelDomainConfig = t
 			}
 
 			if t, ok := settingsMap["target"]; ok {
-				target = t.(string)
+				target = t
 			}
 			if t, ok := settingsMap["mobileSupported"]; ok && t == "true" {
 				mobileSupported = true
 			}
 			if t, ok := settingsMap["requiredGPU"]; ok {
-				requiredGPU = t.(string)
+				requiredGPU = t
 			}
 		}
 
-		entranceStatusesMap := make(map[string]map[string]interface{})
-		status, ok := data["status"].(map[string]interface{})
-		if ok {
-			if t, ok := status["state"]; ok {
-				state = t.(string)
-			}
-			entranceStatuses, ok := status["entranceStatuses"].([]interface{})
-			if ok {
-				for _, es := range entranceStatuses {
-					if e, ok := es.(map[string]interface{}); ok {
-						entranceStatusesMap[e["name"].(string)] = e
-					}
-
-				}
-			} else {
-				klog.Infof("error: data[entranceStatues], %v", ok)
-			}
+		entranceStatusesMap := make(map[string]appv1.EntranceStatus)
+		state = app.Status.State
+		for _, es := range app.Status.EntranceStatuses {
+			entranceStatusesMap[es.Name] = es
 		}
 		klog.Infof("entranceStatusesMap: %v", entranceStatusesMap)
 
-		entrances, ok := appSpec["entrances"]
-		if ok {
-			entrancesInterface := entrances.([]interface{})
-			for _, entranceInterface := range entrancesInterface {
-				entranceMap := entranceInterface.(map[string]interface{})
-				var appEntrance Entrance
-				if t, ok := entranceMap["name"]; ok {
-					appEntrance.Name = stringOrEmpty(t)
-				}
-
-				if t, ok := entranceMap["title"]; ok {
-					appEntrance.Title = stringOrEmpty(t)
-				}
-
-				if t, ok := entranceMap["icon"]; ok {
-					appEntrance.Icon = stringOrEmpty(t)
-				}
-				if t, ok := entranceMap["invisible"]; ok && t.(bool) == true {
-					appEntrance.Invisible = true
-				}
-				if t, ok := entranceMap["authLevel"]; ok {
-					appEntrance.AuthLevel = stringOrEmpty(t)
-				}
-				if t, ok := entranceMap["openMethod"]; ok {
-					appEntrance.OpenMethod = stringOrEmpty(t)
-				} else {
-					appEntrance.OpenMethod = "default"
-				}
-				if t, ok := entranceStatusesMap[appEntrance.Name]; ok {
-					entranceState := t["state"]
-					appEntrance.State = stringOrEmpty(entranceState)
-					appEntrance.Reason = stringOrEmpty(t["reason"])
-					appEntrance.Message = stringOrEmpty(t["message"])
-				} else {
-					appEntrance.State = state
-				}
-
-				appEntrances = append(appEntrances, appEntrance)
+		for _, entrance := range appSpec.Entrances {
+			var appEntrance Entrance
+			appEntrance.Name = entrance.Name
+			appEntrance.Title = entrance.Title
+			appEntrance.Icon = entrance.Icon
+			if entrance.Invisible {
+				appEntrance.Invisible = true
 			}
+			appEntrance.AuthLevel = entrance.AuthLevel
+			if entrance.OpenMethod != "" {
+				appEntrance.OpenMethod = entrance.OpenMethod
+			} else {
+				appEntrance.OpenMethod = "default"
+			}
+			if t, ok := entranceStatusesMap[appEntrance.Name]; ok {
+				appEntrance.State = t.State.String()
+				appEntrance.Reason = t.Reason
+				appEntrance.Message = t.Message
+			} else {
+				appEntrance.State = state
+			}
+
+			appEntrances = append(appEntrances, appEntrance)
 		}
 
-		sharedEntrances, ok := appSpec["sharedEntrances"]
-		if ok {
-			entrancesInterface := sharedEntrances.([]interface{})
-			for _, entranceInterface := range entrancesInterface {
-				entranceMap := entranceInterface.(map[string]interface{})
-				var appEntrance Entrance
-				if t, ok := entranceMap["name"]; ok {
-					appEntrance.Name = stringOrEmpty(t)
-				}
-				if t, ok := entranceMap["url"]; ok {
-					appEntrance.URL = stringOrEmpty(t)
-				}
-				if t, ok := entranceMap["title"]; ok {
-					appEntrance.Title = stringOrEmpty(t)
-				}
-				if t, ok := entranceMap["icon"]; ok {
-					appEntrance.Icon = stringOrEmpty(t)
-				}
-				if t, ok := entranceMap["invisible"]; ok && t.(bool) == true {
-					appEntrance.Invisible = true
-				}
-				if t, ok := entranceMap["authLevel"]; ok {
-					appEntrance.AuthLevel = stringOrEmpty(t)
-				}
-				// appEntrance.State = state
-
-				appSharedEntrances = append(appSharedEntrances, appEntrance)
+		for _, entrance := range appSpec.SharedEntrances {
+			var appEntrance Entrance
+			appEntrance.Name = entrance.Name
+			appEntrance.URL = entrance.URL
+			appEntrance.Title = entrance.Title
+			appEntrance.Icon = entrance.Icon
+			if entrance.Invisible {
+				appEntrance.Invisible = true
 			}
+			appEntrance.AuthLevel = entrance.AuthLevel
+			// appEntrance.State = state
+
+			appSharedEntrances = append(appSharedEntrances, appEntrance)
 		}
 
-		ports, ok := appSpec["ports"]
-		if ok {
-			portsInterface := ports.([]interface{})
-			for _, p := range portsInterface {
-				portsMap := p.(map[string]interface{})
-				var appPort ServicePort
-				if t, ok := portsMap["exposePort"]; ok {
-					appPort.ExposePort = int32(t.(float64))
-				}
-				if t, ok := portsMap["host"]; ok {
-					appPort.Host = stringOrEmpty(t)
-				}
-				if t, ok := portsMap["name"]; ok {
-					appPort.Name = stringOrEmpty(t)
-				}
-				if t, ok := portsMap["port"]; ok {
-					appPort.Port = int32(t.(float64))
-				}
-				if t, ok := portsMap["protocol"]; ok {
-					appPort.Protocol = stringOrEmpty(t)
-				}
-				appPorts = append(appPorts, appPort)
-			}
+		for _, p := range appSpec.Ports {
+			var appPort ServicePort
+			appPort.ExposePort = p.ExposePort
+			appPort.Host = p.Host
+			appPort.Name = p.Name
+			appPort.Port = p.Port
+			appPort.Protocol = p.Protocol
+			appPorts = append(appPorts, appPort)
 		}
-		acls, ok := appSpec["tailscaleAcls"]
-		if ok {
-			aclInterface := acls.([]interface{})
-			for _, a := range aclInterface {
-				aclMap := a.(map[string]interface{})
-				var tailscaleACL ACL
-				if t, ok := aclMap["action"]; ok {
-					tailscaleACL.Action = stringOrEmpty(t)
-				}
-				if t, ok := aclMap["src"]; ok {
-					srcInterface := t.([]interface{})
-					src := make([]string, 0)
-					for _, s := range srcInterface {
-						src = append(src, s.(string))
-					}
-					tailscaleACL.Src = src
-				}
-				if t, ok := aclMap["proto"]; ok {
-					tailscaleACL.Proto = stringOrEmpty(t)
-				}
-				if t, ok := aclMap["dst"]; ok {
-					dstInterface := t.([]interface{})
-					dst := make([]string, 0)
-					for _, d := range dstInterface {
-						dst = append(dst, d.(string))
-					}
-					tailscaleACL.Dst = dst
-				}
-				appACLs = append(appACLs, tailscaleACL)
+
+		for _, a := range appSpec.TailScaleACLs {
+			var tailscaleACL ACL
+			tailscaleACL.Action = a.Action
+			if a.Src != nil {
+				src := make([]string, 0)
+				src = append(src, a.Src...)
+				tailscaleACL.Src = src
 			}
+			tailscaleACL.Proto = a.Proto
+			if a.Dst != nil {
+				dst := make([]string, 0)
+				dst = append(dst, a.Dst...)
+				tailscaleACL.Dst = dst
+			}
+			appACLs = append(appACLs, tailscaleACL)
 		}
 
 		res = append(res, &AppInfo{
-			ID:                            genAppID(appSpec),
-			Name:                          stringOrEmpty(appSpec["name"]),
-			RawAppName:                    stringOrEmpty(appSpec["rawAppName"]),
-			Namespace:                     stringOrEmpty(appSpec["namespace"]),
-			DeploymentName:                stringOrEmpty(appSpec["deployment"]),
-			Owner:                         stringOrEmpty(appSpec["owner"]),
-			Icon:                          stringOrEmpty(appSpec["icon"]),
+			ID:                            appSpec.Appid,
+			Name:                          appSpec.Name,
+			RawAppName:                    appSpec.RawAppName,
+			Namespace:                     appSpec.Namespace,
+			DeploymentName:                appSpec.DeploymentName,
+			Owner:                         appSpec.Owner,
+			Icon:                          appSpec.Icon,
 			Title:                         title,
 			Target:                        target,
 			Entrances:                     appEntrances,
@@ -257,6 +179,8 @@ func (c *Client) getAppListFromData(apps []map[string]interface{}) ([]*AppInfo, 
 			RequiredGpu:                   requiredGPU,
 			DefaultThirdLevelDomainConfig: defaultThirdLevelDomainConfig,
 			SharedEntrances:               appSharedEntrances,
+			IsShared:                      app.Labels["app.bytetrade.io/app-shared"] == "true",
+			ClonedFrom:                    app.Labels["app.bytetrade.io/app-cloned-from"],
 		})
 
 	}
@@ -370,6 +294,27 @@ func (c *Client) doHttpGetList(urlStr, token string) ([]map[string]interface{}, 
 	}
 
 	return c.readHttpResponseList(resp)
+}
+
+func (c *Client) doHttpGetApplicationList(urlStr, token string) ([]appv1.Application, error) {
+	resp, err := c.doHttpGetResponse(urlStr, token)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var apps []appv1.Application
+	if err := json.Unmarshal(data, &apps); err != nil {
+		klog.Error("parse response error: ", err, string(data))
+		return nil, err
+	}
+
+	return apps, nil
 }
 
 func (c *Client) doHttpPost(urlStr, token string, bodydata interface{}) (map[string]interface{}, error) {

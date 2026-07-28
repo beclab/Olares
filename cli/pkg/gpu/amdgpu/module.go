@@ -79,8 +79,8 @@ func (m *InstallAmdPluginModule) Init() {
 
 	// update node with AMD GPU labels
 	updateNode := &task.LocalTask{
-		Name:   "UpdateNodeStrixHaloInfo",
-		Action: new(UpdateNodeStrixHaloInfo),
+		Name:   "UpdateNodeAMDInfo",
+		Action: new(UpdateNodeAMDInfo),
 		Retry:  1,
 	}
 

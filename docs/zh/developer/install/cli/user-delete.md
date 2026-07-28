@@ -1,3 +1,7 @@
+---
+noindex: true
+description: delete 子命令用于从 Olares 系统中永久删除一个已有的用户账号。
+---
 # `delete`
 
 ## 命令说明

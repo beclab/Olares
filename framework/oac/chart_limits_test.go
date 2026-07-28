@@ -33,8 +33,13 @@ func TestCheckResourceLimits_ModernV1_InlineMismatchFails(t *testing.T) {
 	if limErr == nil {
 		t.Fatal("expected error: container requests exceed inline spec.requiredCpu")
 	}
-	if !strings.Contains(limErr.Error(), "spec.requiredCpu") {
-		t.Fatalf("expected spec.requiredCpu in error, got: %v", limErr)
+	// Aggregate-cap messages reference the limit field by its bare
+	// name (e.g. "requiredCpu") rather than the dotted "spec." path,
+	// so the assertion uses the unqualified substring. The "must be <="
+	// fragment pins us to the aggregate-cap rule.
+	msg := limErr.Error()
+	if !strings.Contains(msg, "requiredCpu") || !strings.Contains(msg, "must be <=") {
+		t.Fatalf("expected requiredCpu cap violation in error, got: %v", limErr)
 	}
 }
 

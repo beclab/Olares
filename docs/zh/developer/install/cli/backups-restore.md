@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: restore 子命令用于从指定的备份仓库和快照中恢复数据到目标目录。
 outline: [2, 3]
 ---
 # `restore`

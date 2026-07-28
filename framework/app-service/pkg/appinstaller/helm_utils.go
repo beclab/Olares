@@ -72,16 +72,25 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 	}
 	values["nodes"] = nodeInfo
 
-	deviceName, err := utils.GetDeviceName()
-	if err != nil {
-		return values, err
-	}
-	values["deviceName"] = deviceName
-
 	kClient, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		return values, err
 	}
+
+	isOnMinikube, err := utils.IsRunningOnMinikube(ctx, kClient)
+	if err != nil {
+		return values, err
+	}
+	if isOnMinikube {
+		values["deviceName"] = "selfhosted"
+	} else {
+		deviceName, err := utils.GetDeviceName()
+		if err != nil {
+			return values, err
+		}
+		values["deviceName"] = deviceName
+	}
+
 	nodes, err := kClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return values, err

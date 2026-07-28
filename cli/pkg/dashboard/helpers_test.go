@@ -101,6 +101,10 @@ func podDeploymentName(pod string) string { return PodDeploymentName(pod) }
 
 func hasPknameLabels(rows []LsblkRow) bool { return HasPknameLabels(rows) }
 
+func isPartitionOfDisk(childName, diskName string) bool {
+	return IsPartitionOfDisk(childName, diskName)
+}
+
 func collectSubtreeByPkname(allRows []LsblkRow, rootName string) []LsblkRow {
 	return CollectSubtreeByPkname(allRows, rootName)
 }

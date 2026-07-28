@@ -188,5 +188,11 @@ func GenerateHosts(runtime connector.ModuleRuntime, kubeConf *common.KubeConf) [
 	}
 
 	hostsList = append(hostsList, lbHost)
+
+	masterHosts := runtime.GetHostsByRole(common.Master)
+	if len(masterHosts) > 0 {
+		hostsList = append(hostsList, fmt.Sprintf("%s  %s", masterHosts[0].GetInternalAddress(), "master-node"))
+	}
+
 	return hostsList
 }

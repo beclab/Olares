@@ -30,6 +30,22 @@ const (
 	InProgress ProcessingState = "in-progress"
 )
 
+const (
+	// UpgradeRebootMarkFile is a tmpfs marker written by olares-cli when an
+	// upgrade has determined a reboot is required, before it flips the
+	// OlaresVersion CR to the target version. While this marker exists,
+	// olaresd keeps reporting the system as Upgrading (with the upgrade step
+	// set to UpgradeStepRebooting) instead of briefly reporting the upgrade
+	// as complete during the window between the version flip and the actual
+	// reboot. Being under /run (tmpfs), it is cleared automatically once the
+	// machine reboots.
+	UpgradeRebootMarkFile = "/run/olares-upgrade-rebooting"
+
+	// UpgradeStepRebooting is the UpgradingStep value reported while a
+	// post-upgrade reboot is pending.
+	UpgradeStepRebooting = "Rebooting"
+)
+
 // TerminusState is the high-level state machine value for the Olares
 // system as observed from this node. Use Describe() to obtain a
 // human-readable, one-line summary suitable for end-user output.

@@ -35,6 +35,11 @@ func ManagedAllDevices(ctx context.Context) (map[string]Device, error) {
 	return nil, nil
 }
 
+func ManagedDeviceStatus(ctx context.Context) (map[string]Device, error) {
+	klog.Warning("not implement")
+	return nil, nil
+}
+
 func UpdateNetworkTraffic(ctx context.Context) {
 	klog.Warning("not implement")
 }

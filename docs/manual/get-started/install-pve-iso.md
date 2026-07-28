@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Guide to installing Olares on Proxmox VE (PVE) using ISO image with system requirements, VM configuration, installation, and step-by-step activation instructions.
+description: Install Olares on Proxmox VE (PVE) from an ISO image. Check requirements, configure the virtual machine, install, and activate Olares.
 ---
 # Install Olares on PVE with ISO image
 You can install Olares directly on Proxmox Virtual Environment (PVE) using an ISO image. This guide walks you through downloading the Olares ISO, configuring PVE environment, completing the installation, and getting your Olares up and running.
@@ -33,7 +33,7 @@ To use the GPU within Olares on PVE, you must configure GPU passthrough first. R
 :::
 
 ## Download Olares ISO image
-Download [the latest official Olares ISO image](https://cdn.olares.com/olares-latest-amd64.iso).
+Download [the latest official Olares ISO image](https://cdn.olares.com/olares-v1.12.6-amd64.iso).
 
 ## Configure VM in PVE
 

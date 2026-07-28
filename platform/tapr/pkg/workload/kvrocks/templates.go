@@ -51,6 +51,7 @@ var (
 				},
 
 				Spec: corev1.PodSpec{
+					PriorityClassName: "system-cluster-critical",
 					Affinity: &corev1.Affinity{
 						NodeAffinity: &corev1.NodeAffinity{
 							RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{

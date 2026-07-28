@@ -146,7 +146,7 @@ func (s *Subscriber) removeCustomDomainRetry(request *appv1.Application) error {
 
 func (s *Subscriber) checkCustomDomainStatus(app *appv1.Application) error {
 	var err error
-	// For v3 apps the customDomain blob lives in
+	// For shared apps the customDomain blob lives in
 	// Spec.UserSettings[constants.Username]; for v1/v2 it's still
 	// Spec.Settings. EffectiveSettings hides the difference.
 	effective := app.EffectiveSettings(constants.Username)
@@ -210,9 +210,9 @@ func (s *Subscriber) checkCustomDomainStatus(app *appv1.Application) error {
 	if err != nil {
 		return err
 	}
-	// Write back into the same slot we read from: v3 → UserSettings[u],
+	// Write back into the same slot we read from: shared → UserSettings[u],
 	// v1/v2 → Spec.Settings.
-	if appv1.IsV3(app) {
+	if appv1.IsShared(app) {
 		if app.Spec.UserSettings == nil {
 			app.Spec.UserSettings = make(map[string]map[string]string)
 		}
@@ -409,7 +409,7 @@ func (s *Subscriber) removeCustomDomainCnameData(app *appv1.Application) error {
 		return nil
 	}
 
-	// Reflect v3 per-user storage when reading the customDomain blob so
+	// Reflect per-user storage when reading the customDomain blob so
 	// we delete the right user's cloudflare CNAMEs on app delete.
 	customDomainData := app.EffectiveSettings(constants.Username)[constants.ApplicationCustomDomain]
 	if customDomainData == "" {
@@ -483,11 +483,11 @@ func (s *Subscriber) getObj(appName string) (*appv1.Application, error) {
 }
 
 // isOwnerApp reports whether this BFL instance should react to the given
-// Application. For v1/v2 it's the legacy Spec.Owner check; for v3 the CR
+// Application. For v1/v2 it's the legacy Spec.Owner check; for shared the CR
 // is cluster-wide and every BFL instance is a stake-holder (each BFL
 // manages its own user's per-user overlay).
 func (s *Subscriber) isOwnerApp(app *appv1.Application) bool {
-	if appv1.IsV3(app) {
+	if appv1.IsShared(app) {
 		return true
 	}
 	return app.Spec.Owner == constants.Username

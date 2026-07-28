@@ -1,5 +1,5 @@
 ---
-description: Comprehensive guide to managing teams in Olares, including creating accounts, assigning roles, setting permissions, and maintaining efficient team collaboration within your Olares cluster.
+description: Manage an Olares team by creating accounts, assigning roles and resource limits, setting permissions, and maintaining member access.
 ---
 # Manage your team
 As an administrator, you can create and manage users in your team while ensuring system security and resource efficiency.
@@ -39,7 +39,7 @@ You can verify whether they have completed the activation in the **Users** page.
 
 :::tip
 New users can activate their account through the wizard without installing Olares locally.
-For detailed instructions, see [Activate Olares](../../get-started/activate-olares).
+For detailed instructions, see [Join an Olares cluster](../../get-started/join-olares.md#step-2-activate-your-account).
 :::
 
 ## Remove a user
@@ -74,4 +74,3 @@ You can adjust the allocated resources for users in your Olares cluster.
 * Ensure the new user has obtained their Olares ID. See [Create an Olares ID](../../get-started/create-olares-id).
 * The name you entered is correctly spelled.
 * There are sufficient system resources to allocate.
-

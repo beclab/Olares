@@ -1,3 +1,7 @@
+---
+noindex: true
+description: Use the Olares Market API to install or uninstall apps during development, including apps that extend Market with third-party packages.
+---
 # Market
 
 To install or uninstall apps in developing applications (for example, third-party Market extensions), developers can use the `install` and `uninstall` API provided by the **Market**.

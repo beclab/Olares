@@ -1,3 +1,6 @@
+---
+description: 在安装过程中，Olares 使用 OlaresManifest.yaml 中的配置将扩展字段注入到应用程序中。
+---
 # Olares 对 Helm 进行的字段扩展
 
 在安装过程中，Olares 使用 [OlaresManifest.yaml](manifest.md) 中的配置将扩展字段注入到应用程序中。

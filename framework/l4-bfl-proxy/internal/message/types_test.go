@@ -30,6 +30,34 @@ func TestResourcesSort(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Resources.DeepCopy
+// ---------------------------------------------------------------------------
+
+// DeepCopy must produce the same number of slice entries (no doubling) and must
+// not share backing pointers with the original.
+func TestResourcesDeepCopy_NoDoubling(t *testing.T) {
+	orig := &Resources{
+		Users: []*UserInfo{{
+			Name:              "alice",
+			CustomDomainCerts: []*CertInfo{{Domain: "a.example.com"}, {Domain: "b.example.com"}},
+			FileserverNodes:   []*FileserverNodeInfo{{NodeName: "n1"}, {NodeName: "n2"}, {NodeName: "n3"}},
+		}},
+	}
+
+	cp := orig.DeepCopy()
+
+	u := cp.Users[0]
+	assert.Len(t, u.CustomDomainCerts, len(orig.Users[0].CustomDomainCerts))
+	assert.Len(t, u.FileserverNodes, len(orig.Users[0].FileserverNodes))
+
+	// Mutating the copy must not affect the original (deep, not shallow).
+	u.CustomDomainCerts[0].Domain = "mutated"
+	u.FileserverNodes[0].NodeName = "mutated"
+	assert.Equal(t, "a.example.com", orig.Users[0].CustomDomainCerts[0].Domain)
+	assert.Equal(t, "n1", orig.Users[0].FileserverNodes[0].NodeName)
+}
+
+// ---------------------------------------------------------------------------
 // Resources.Equal
 // ---------------------------------------------------------------------------
 

@@ -118,22 +118,22 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	}
 	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectSharedPod, perms)
 
-	v3 := appCfg != nil && appCfg.IsV3()
+	shared := appCfg != nil && appCfg.IsShared()
 	nothingToInject := !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0
 
-	if v3 {
+	if shared {
 		if injectSharedPod != nil {
 			patchBytes, err := patchSharedEntranceLabel(req, &pod, *injectSharedPod)
 			if err != nil {
-				klog.Errorf("Failed to patch shared-entrance label for v3 pod uuid=%s name=%s namespace=%s err=%v",
+				klog.Errorf("Failed to patch shared-entrance label for shared-app pod uuid=%s name=%s namespace=%s err=%v",
 					proxyUUID, pod.Name, req.Namespace, err)
 				return h.sidecarWebhook.AdmissionError(req.UID, err)
 			}
 			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
-			klog.Infof("Patched shared-entrance label for v3 pod uuid=%s namespace=%s injectSharedPod=%v",
+			klog.Infof("Patched shared-entrance label for shared-app pod uuid=%s namespace=%s injectSharedPod=%v",
 				proxyUUID, req.Namespace, *injectSharedPod)
 		} else {
-			klog.Infof("Skipping sidecar injection for v3 pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+			klog.Infof("Skipping sidecar injection for shared-app pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		}
 		return resp
 	}
@@ -323,6 +323,29 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		UID:     req.UID,
 	}
 
+	// cleanupAndReturn emits remove patches for any GPU-related fields the
+	// gpu-limit webhook may have injected on a prior install/upgrade. We
+	// call this on every "no GPU injection" branch below, so that Helm 3-way
+	// strategic merge can drop the previously-injected GPU keys (otherwise
+	// they survive as "live-only" fields because the chart template never
+	// declared them).
+	cleanupAndReturn := func() *admissionv1.AdmissionResponse {
+		if tpl == nil {
+			return resp
+		}
+		patchBytes, cleanupErr := webhook.CreateCleanupPatchForDeployment(tpl)
+		if cleanupErr != nil {
+			klog.Errorf("create gpu cleanup patch error %v", cleanupErr)
+			return h.sidecarWebhook.AdmissionError(req.UID, cleanupErr)
+		}
+		if len(patchBytes) > 0 {
+			klog.Infof("[gpu-limit] emitting cleanup patch namespace=%s name=%s kind=%s patch=%s",
+				req.Namespace, req.Name, req.Kind.Kind, string(patchBytes))
+			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+		}
+		return resp
+	}
+
 	_, appcfg, _, err := h.sidecarWebhook.GetAppConfig(req.Namespace)
 	if err != nil {
 		klog.Error(err)
@@ -341,13 +364,26 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 
 	computeReq, ok := compute.SelectedRequirement(appcfg)
 	if !ok {
-		return resp
+		// app declares no compute resource mode at all (e.g., legacy app
+		// dropped its GPU declaration). Clean up any stale GPU keys.
+		return cleanupAndReturn()
 	}
 	GPUType := computeReq.Mode
+	// A zero RequiredGPU means "app dropped its GPU need" ONLY for nvidia
+	// discrete/HAMi mode (installed with requiredGpu>0, then upgraded to 0),
+	// so we clean up the previously-injected GPU keys. The unified-memory
+	// modes (nvidia-gb10/amd/intel/apple-m/moore-soc) legitimately carry
+	// RequiredGPU==0 by design (their manifests must not declare requiredGpu),
+	// and must still fall through to be injected (gb10 -> nvidia.com/gpu) or
+	// get their nodeSelector, so they must NOT be cleaned up here.
+	if computeReq.RequiredGPU == 0 && GPUType == utils.NvidiaCardType {
+		return cleanupAndReturn()
+	}
 
-	// no gpu found, no need to inject env, just return.
+	// app is CPU-only (no GPU mode selected). Clean up any GPU keys that
+	// might still be on the live workload from a previous GPU-mode install.
 	if GPUType == "" || GPUType == utils.CPUType {
-		return resp
+		return cleanupAndReturn()
 	}
 
 	var injectContainer []string
@@ -398,7 +434,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	if !compute.IsHAMIMode(GPUType) && GPUType != utils.CPUType {
+	if !compute.UsesGPUExtendedResource(GPUType) && GPUType != utils.CPUType {
 		allocations, err := compute.FindAllocationsForApp(ctx, h.ctrlClient, appName, appcfg.OwnerName)
 		if err != nil {
 			klog.Errorf("find compute allocation for app %s failed %v", appName, err)
@@ -431,6 +467,12 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 		return constants.NvidiaGPU
 	case utils.GB10ChipType:
 		return constants.NvidiaGPU
+	case utils.AMDType, utils.AMDGPUType:
+		return constants.AMDGPU
+	case utils.IntelType:
+		return constants.IntelIGPU
+	case utils.IntelGPUType:
+		return constants.IntelGPU
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")
 		return ""

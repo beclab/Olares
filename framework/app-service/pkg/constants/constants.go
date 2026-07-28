@@ -3,6 +3,8 @@ package constants
 import (
 	"flag"
 	"os"
+	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -19,28 +21,32 @@ const (
 	ApplicationMiddlewareLabel         = "applications.app.bytetrade.io/middleware"
 	ApplicationIconLabel               = "applications.app.bytetrade.io/icon"
 	ApplicationEntrancesKey            = "applications.app.bytetrade.io/entrances"
-	ApplicationPortsKey                = "applications.app.bytetrade.io/ports"
-	ApplicationSystemServiceLabel      = "applications.app.bytetrade.io/system_service"
-	ApplicationTitleLabel              = "applications.app.bytetrade.io/title"
-	ApplicationImageLabel              = "applications.app.bytetrade.io/images"
-	ApplicationTargetLabel             = "applications.app.bytetrade.io/target"
-	ApplicationRunAsUserLabel          = "applications.apps.bytetrade.io/runasuser"
-	ApplicationVersionLabel            = "applications.app.bytetrade.io/version"
-	ApplicationSourceLabel             = "applications.app.bytetrade.io/source"
-	ApplicationTailScaleKey            = "applications.app.bytetrade.io/tailscale"
-	ApplicationRequiredGPU             = "applications.app.bytetrade.io/required_gpu"
-	AppPodGPUConsumePolicy             = "gpu.bytetrade.io/app-pod-consume-policy"
-	ApplicationPolicies                = "applications.app.bytetrade.io/policies"
-	ApplicationMobileSupported         = "applications.app.bytetrade.io/mobile_supported"
-	ApplicationClusterDep              = "applications.app.bytetrade.io/need_cluster_scoped_app"
-	ApplicationGroupClusterDep         = "applications.app.bytetrade.io/need_cluster_scoped_group"
-	UserContextAttribute               = "username"
-	KubeSphereClientAttribute          = "ksclient"
-	MarketSource                       = "X-Market-Source"
-	MarketUser                         = "X-Market-User"
-	StudioSource                       = "devbox"
-	ApplicationInstallUserLabel        = "applications.app.bytetrade.io/install_user"
-	BflUserKey                         = "X-Bfl-User"
+	// EntranceTypeDev marks a development-only entrance (e.g. direct pod-IP
+	// access created by background processes). Dev entrances are excluded from
+	// entrance-status tracking since they have no backing Service to resolve.
+	EntranceTypeDev               = "dev"
+	ApplicationPortsKey           = "applications.app.bytetrade.io/ports"
+	ApplicationSystemServiceLabel = "applications.app.bytetrade.io/system_service"
+	ApplicationTitleLabel         = "applications.app.bytetrade.io/title"
+	ApplicationImageLabel         = "applications.app.bytetrade.io/images"
+	ApplicationTargetLabel        = "applications.app.bytetrade.io/target"
+	ApplicationRunAsUserLabel     = "applications.apps.bytetrade.io/runasuser"
+	ApplicationVersionLabel       = "applications.app.bytetrade.io/version"
+	ApplicationSourceLabel        = "applications.app.bytetrade.io/source"
+	ApplicationTailScaleKey       = "applications.app.bytetrade.io/tailscale"
+	ApplicationRequiredGPU        = "applications.app.bytetrade.io/required_gpu"
+	AppPodGPUConsumePolicy        = "gpu.bytetrade.io/app-pod-consume-policy"
+	ApplicationPolicies           = "applications.app.bytetrade.io/policies"
+	ApplicationMobileSupported    = "applications.app.bytetrade.io/mobile_supported"
+	ApplicationClusterDep         = "applications.app.bytetrade.io/need_cluster_scoped_app"
+	ApplicationGroupClusterDep    = "applications.app.bytetrade.io/need_cluster_scoped_group"
+	UserContextAttribute          = "username"
+	KubeSphereClientAttribute     = "ksclient"
+	MarketSource                  = "X-Market-Source"
+	MarketUser                    = "X-Market-User"
+	StudioSource                  = "devbox"
+	ApplicationInstallUserLabel   = "applications.app.bytetrade.io/install_user"
+	BflUserKey                    = "X-Bfl-User"
 
 	InstanceIDLabel         = "workflows.argoproj.io/controller-instanceid"
 	WorkflowOwnerLabel      = "workflows.app.bytetrade.io/owner"
@@ -82,14 +88,17 @@ const (
 	ByteTradeAuthor = "bytetrade.io"
 	PatchOpAdd      = "add"
 	PatchOpReplace  = "replace"
+	PatchOpRemove   = "remove"
 	EnvGPUType      = "GPU_TYPE"
 
 	// gpu resource keys
 	NvidiaGPU    = "nvidia.com/gpu"
 	NvidiaGPUMem = "nvidia.com/gpumem"
 	//	NvidiaGB10GPU = "nvidia.com/gb10"
-	AMDAPU = "amd.com/apu"
-	AMDGPU = "amd.com/gpu"
+	AMDAPU    = "amd.com/apu"
+	AMDGPU    = "amd.com/gpu"
+	IntelIGPU = "gpu.intel.com/i915"
+	IntelGPU  = "gpu.intel.com/xe"
 
 	AuthorizationLevelOfPublic   = "public"
 	AuthorizationLevelOfPrivate  = "private"
@@ -107,6 +116,12 @@ const (
 
 	AppMarketSourceKey = "bytetrade.io/market-source"
 
+	// AppChartOwnerKey records the user who uploaded the chart the app was
+	// installed from. It is only meaningful for uploaded (non-market) apps;
+	// market apps leave it empty and fall back to the installing user. Stamped
+	// at install time and read when building push events (chartOwner field).
+	AppChartOwnerKey = "app.bytetrade.io/chart-owner"
+
 	// EnvRefStatus* constants for AppEnvVar.ValueFrom.Status (used for both SystemEnv and UserEnv references)
 	EnvRefStatusPending  = "pending"
 	EnvRefStatusSynced   = "synced"
@@ -119,21 +134,39 @@ const (
 	// AppEnvSyncAnnotation triggers AppEnvController to sync environment values from SystemEnv or UserEnv changes
 	AppEnvSyncAnnotation = "appenv.bytetrade.io/sync-triggered-by"
 
-	AppForceUninstall      = "ForceUninstall"
-	AppForceUninstalled    = "ForceUninstalled"
-	AppUnschedulable       = "Unschedulable"
-	AppHamiSchedulable     = "HamiUnschedulable"
-	AppStopByUser          = "StopByUser"
-	AppStopDueToInitFailed = "InitFailed"
-	AppStopDueToEvicted    = "Evicted"
+	AppForceUninstall         = "ForceUninstall"
+	AppForceUninstalled       = "ForceUninstalled"
+	AppUnschedulable          = "Unschedulable"
+	AppHamiSchedulable        = "HamiUnschedulable"
+	AppStopByUser             = "StopByUser"
+	AppStopDueToInitFailed    = "InitFailed"
+	AppStopDueToStartUpFailed = "StartUpFailed"
+	AppStopDueToEvicted       = "Evicted"
 
 	AppSharedEntrancesLabel = "app.bytetrade.io/shared-entrance"
 	AppMiddlewareLabel      = "app.bytetrade.io/middleware"
 
-	// AppApiVersionLabel marks an Application / ApplicationManager as a v3
-	// app (cluster-wide, admin-managed).
+	// AppApiVersionLabel marks an Application / ApplicationManager / namespace
+	// / workload with the OlaresManifest schema version (currently only v3 is
+	// stamped). This is a SCHEMA marker — a v3 app may be either a shared
+	// cluster-wide singleton or a regular per-user app, depending on
+	// options.shared in the manifest. Use AppSharedLabel to discriminate
+	// between those two; api-version=v3 alone does NOT imply shared.
 	AppApiVersionLabel = "app.bytetrade.io/api-version"
 	AppVersionV3       = "v3"
+
+	// AppSharedLabel marks an Application / ApplicationManager / namespace /
+	// workload as a shared cluster-wide app. Stamped at install time by the
+	// v3 install handler when ApplicationConfig.Shared is true (i.e.
+	// apiVersion: v3 + options.shared: true) and propagated by the
+	// Application controller. Drives admin-only lifecycle, cluster-wide
+	// visibility, NATS fan-out, NetworkPolicy fast-path, etc. Per-user v3
+	// apps do NOT carry this label and are handled like v1 apps.
+	AppSharedLabel        = "app.bytetrade.io/app-shared"
+	AppSharedTrue         = "true"
+	AppClonedFromKey      = "app.bytetrade.io/app-cloned-from"
+	AppClonedFromTemplate = "template"
+	AppClonedFromApp      = "app"
 
 	OneContainerMultiDeviceSplitSymbol = ":"
 	ArchLabelKey                       = "kubernetes.io/arch"
@@ -160,7 +193,57 @@ var (
 	CHART_REPO_URL string = "http://chart-repo-service.os-framework:82/"
 
 	OLARES_APP_NAME = "olares-app"
+
+	// RemoteOptionsDomainWhitelist restricts which domains the remote-options
+	// proxy (proxyRemoteOptions) may fetch from. The proxy lets any normal user
+	// have app-service issue an outbound GET, so without a whitelist it becomes
+	// an open proxy / SSRF vector to arbitrary URLs. Validating only against the
+	// remoteOptions URL declared in the app manifest is insufficient, because a
+	// user can bypass that by uploading a custom chart, so we gate on an
+	// explicit domain whitelist instead. Currently only the Olares app CDN is
+	// used, but it is kept as a list for future entries. Override at runtime
+	// with the comma-separated REMOTE_OPTIONS_DOMAIN_WHITELIST env var.
+	RemoteOptionsDomainWhitelist = []string{"app.cdn.olares.com"}
 )
+
+// IsRemoteOptionsHostAllowed reports whether host is permitted by the
+// remote-options domain whitelist. A whitelist entry matches the exact host or
+// any of its subdomains (both compared case-insensitively). An empty whitelist
+// denies everything.
+func IsRemoteOptionsHostAllowed(host string) bool {
+	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	if host == "" {
+		return false
+	}
+	for _, d := range RemoteOptionsDomainWhitelist {
+		d = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(d), "."))
+		if d == "" {
+			continue
+		}
+		if host == d || strings.HasSuffix(host, "."+d) {
+			return true
+		}
+	}
+	return false
+}
+
+// AppMgrTerminalRetention bounds how long an ApplicationManager is allowed to
+// linger in a safely-deletable terminal state (Uninstalled / InstallingCanceled
+// / PendingCanceled / DownloadingCanceled / DownloadFailed / InstallFailed)
+// before the GC controller reclaims it. The retention gives operators a window
+// to inspect the failure reason / op record and gives the install-failure
+// cleanup helper plenty of time to converge the rare NS-finalizer-stuck case
+// before the AM disappears. 60min is conservative enough for both; the
+// retention can be overridden at runtime via the APPMGR_TERMINAL_RETENTION
+// env var on the controller pod.
+var AppMgrTerminalRetention = func() time.Duration {
+	if v := os.Getenv("APPMGR_TERMINAL_RETENTION"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
+		}
+	}
+	return 60 * time.Minute
+}()
 
 type ResourceConditionType string
 
@@ -245,5 +328,17 @@ func init() {
 	url := os.Getenv("CHART_REPO_URL")
 	if url != "" {
 		CHART_REPO_URL = url
+	}
+
+	if wl := os.Getenv("REMOTE_OPTIONS_DOMAIN_WHITELIST"); wl != "" {
+		domains := make([]string, 0)
+		for _, d := range strings.Split(wl, ",") {
+			if d = strings.TrimSpace(d); d != "" {
+				domains = append(domains, d)
+			}
+		}
+		if len(domains) > 0 {
+			RemoteOptionsDomainWhitelist = domains
+		}
 	}
 }

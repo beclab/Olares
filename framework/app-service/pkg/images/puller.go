@@ -176,7 +176,16 @@ func (is *imageService) PullImage(ctx context.Context, ref appv1alpha1.Ref, opts
 		return "", err
 	}
 
-	<-progress
+	// Even on success, do not block forever on showProgress: it can be stuck
+	// in retries (e.g. resolving manifest from a content store that has not
+	// yet been populated). If the parent context is canceled we must return
+	// promptly so the caller's wg.Wait()/reconcile can unwind.
+	select {
+	case <-progress:
+	case <-ctx.Done():
+		klog.Infof("fetch image name=%s pull ok but ctx canceled before progress drained err=%v", ref, ctx.Err())
+		return "", ctx.Err()
+	}
 	return originNamed.String(), nil
 }
 

@@ -171,10 +171,11 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 		}
 
 		// Visibility for non-owners:
-		//   • v3 apps: always visible (vis.VisibleSharedApp == true).
-		//   • v1/v2 apps: legacy SharedEntrances feature (untouched).
+		//   • Shared apps: always visible (vis.VisibleSharedApp == true).
+		//   • Per-user apps (v1 and v3+per-user): legacy SharedEntrances
+		//     feature (untouched).
 		if am.Spec.AppOwner != owner {
-			if appcfg.IsV3(am) {
+			if appcfg.IsShared(am) {
 				if !vis.VisibleSharedApp(am.Spec.AppName) {
 					continue
 				}
@@ -185,10 +186,20 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 
 		now := metav1.Now()
 		name, _ := apputils.FmtAppMgrName(am.Spec.AppName, owner, appconfig.Namespace)
+		// Mirror the AM's clone-origin label onto the synthesized ("fake")
+		// Application so callers see it before the real Application CR exists.
+		appLabels := map[string]string{}
+		if v, ok := am.Labels[constants.AppClonedFromKey]; ok {
+			appLabels[constants.AppClonedFromKey] = v
+		}
+		if v, ok := am.Labels[constants.AppChartOwnerKey]; ok {
+			appLabels[constants.AppChartOwnerKey] = v
+		}
 		app := &appv1alpha1.Application{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              name,
+				Labels:            appLabels,
 				CreationTimestamp: am.CreationTimestamp,
 			},
 			Spec: appv1alpha1.ApplicationSpec{
@@ -198,12 +209,15 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
+				TailScale:       appconfig.TailScale,
 				Entrances:       appconfig.Entrances,
 				Ports:           appconfig.Ports,
 				SharedEntrances: appconfig.SharedEntrances,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
-					"title": am.Annotations[constants.ApplicationTitleLabel],
+					"title":         am.Annotations[constants.ApplicationTitleLabel],
+					"market_source": am.Annotations[constants.AppMarketSourceKey],
+					"version":       am.Annotations[api.AppVersionKey],
 				},
 			},
 			Status: appv1alpha1.ApplicationStatus{
@@ -215,12 +229,12 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 		}
 
 		switch {
-		case appcfg.IsV3(am):
-			// v3 apps expose the full entrance list to every
-			// viewer; lifecycle handlers enforce admin-only management.
+		case appcfg.IsShared(am):
+			// Shared apps expose the full entrance list to every viewer;
+			// lifecycle handlers enforce admin-only management.
 			appsMap[app.Name] = app
 		case am.Spec.AppOwner != owner:
-			// v1/v2 non-owner: legacy SharedEntrances behaviour — only
+			// Per-user non-owner: legacy SharedEntrances behaviour — only
 			// expose the shared subset, mask everything else.
 			app.Spec.Entrances = []appv1alpha1.Entrance{}
 			if _, ok := sharedEntranceApps[app.Spec.Appid]; !ok {
@@ -266,9 +280,28 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			continue
 		}
 		if v, ok := appsMap[a.Name]; ok {
+			// title and market_source come from AM annotations and may not
+			// be present in the Application CR's Settings. Fall back to the
+			// synthesized values so they are not lost on overwrite.
+			title := v.Spec.Settings["title"]
+			marketSource := v.Spec.Settings["market_source"]
+			version := v.Spec.Settings["version"]
 			v.Spec.Settings = a.EffectiveSettings(owner)
+			if v.Spec.Settings == nil {
+				v.Spec.Settings = map[string]string{}
+			}
+			if _, ok := v.Spec.Settings["title"]; !ok {
+				v.Spec.Settings["title"] = title
+			}
+			if _, ok := v.Spec.Settings["market_source"]; !ok {
+				v.Spec.Settings["market_source"] = marketSource
+			}
+			if v.Spec.Settings["version"] != version && version != "" {
+				v.Spec.Settings["version"] = version
+			}
 			v.Spec.Entrances = a.EffectiveEntrances(owner)
 			v.Spec.Ports = a.Spec.Ports
+			v.Labels = a.Labels
 		}
 	}
 	for _, app := range appsMap {

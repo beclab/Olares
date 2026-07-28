@@ -323,10 +323,10 @@ func (h *Handler) listEntrancesWithCustomDomain(req *restful.Request, resp *rest
 	var entrances app_service.EntrancesWithCustomDomain
 	for i := range appList.Items {
 		app := &appList.Items[i]
-		isV3 := appv1.IsV3(app)
-		// v1/v2: only this user's apps. v3: every app is shared but the
+		isShared := appv1.IsShared(app)
+		// v1/v2: only this user's apps. shared: every app is shared but the
 		// caller's customDomain blob lives under UserSettings[Username].
-		if !isV3 && app.Spec.Owner != constants.Username {
+		if !isShared && app.Spec.Owner != constants.Username {
 			continue
 		}
 
@@ -341,7 +341,7 @@ func (h *Handler) listEntrancesWithCustomDomain(req *restful.Request, resp *rest
 			log.Errorf("failed to unmarshal custom domain settings of app %s: %w", app.Name, err)
 			continue
 		}
-		// EffectiveEntrances picks up per-user AuthLevel overlays for v3.
+		// EffectiveEntrances picks up per-user AuthLevel overlays for shared.
 		for _, entrance := range app.EffectiveEntrances(constants.Username) {
 			entranceSetting := customDomainSettings[entrance.Name]
 			if entranceSetting == nil {

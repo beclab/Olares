@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/beclab/Olares/framework/oac/internal/manifest"
 	"helm.sh/helm/v3/pkg/kube"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,10 +39,18 @@ func CheckResourceLimits(list kube.ResourceList, limits ResourceLimits) error {
 	appLCPU, _ := resource.ParseQuantity(limits.LimitedCPU)
 	appLMem, _ := resource.ParseQuantity(limits.LimitedMemory)
 
-	if appRCPU.Cmp(appLCPU) > 0 {
+	// Auto-compute ("-1") envelope fields are resolved at install time from the
+	// rendered chart; their value is unknown at author/lint time, so the
+	// comparisons that involve them are skipped.
+	autoRCPU := manifest.IsAutoResourceQuantity(limits.RequiredCPU)
+	autoRMem := manifest.IsAutoResourceQuantity(limits.RequiredMemory)
+	autoLCPU := manifest.IsAutoResourceQuantity(limits.LimitedCPU)
+	autoLMem := manifest.IsAutoResourceQuantity(limits.LimitedMemory)
+
+	if !autoRCPU && !autoLCPU && appRCPU.Cmp(appLCPU) > 0 {
 		errs = append(errs, fmt.Errorf("spec.requiredCpu should be <= spec.limitedCpu"))
 	}
-	if appRMem.Cmp(appLMem) > 0 {
+	if !autoRMem && !autoLMem && appRMem.Cmp(appLMem) > 0 {
 		errs = append(errs, fmt.Errorf("spec.requiredMemory should be <= spec.limitedMemory"))
 	}
 
@@ -77,20 +86,63 @@ func CheckResourceLimits(list kube.ResourceList, limits ResourceLimits) error {
 			sumLimCPU.Add(*cLimits.Cpu())
 		}
 	})
-
-	if sumLimCPU.Cmp(appLCPU) > 0 {
-		errs = append(errs, fmt.Errorf("sum of container resources.limits.cpu must be <= spec.limitedCpu"))
+	exceed := false
+	if !autoLCPU && sumLimCPU.Cmp(appLCPU) > 0 {
+		if !exceed {
+			errs = append(errs, fmt.Errorf("The total requested container resources exceed the allocated spec in OlaresManifest.yaml\n"))
+			exceed = true
+		}
+		errs = append(errs, fmt.Errorf(
+			"sum of container resources.limits.cpu (%s) must be <= limitedCpu (%s)",
+			sumLimCPU.String(), quantityDisplay(limits.LimitedCPU, appLCPU),
+		))
 	}
-	if sumLimMem.Cmp(appLMem) > 0 {
-		errs = append(errs, fmt.Errorf("sum of container resources.limits.memory must be <= spec.limitedMemory"))
+	if !autoLMem && sumLimMem.Cmp(appLMem) > 0 {
+		if !exceed {
+			errs = append(errs, fmt.Errorf("The total requested container resources exceed the allocated spec in OlaresManifest.yaml\n"))
+			exceed = true
+		}
+		errs = append(errs, fmt.Errorf(
+			"sum of container resources.limits.memory (%s) must be <= limitedMemory (%s)",
+			sumLimMem.String(), quantityDisplay(limits.LimitedMemory, appLMem),
+		))
 	}
-	if sumReqCPU.Cmp(appRCPU) > 0 {
-		errs = append(errs, fmt.Errorf("sum of container resources.requests.cpu must be <= spec.requiredCpu"))
+	if !autoRCPU && sumReqCPU.Cmp(appRCPU) > 0 {
+		if !exceed {
+			errs = append(errs, fmt.Errorf("The total requested container resources exceed the allocated spec in OlaresManifest.yaml\n"))
+			exceed = true
+		}
+		errs = append(errs, fmt.Errorf(
+			"sum of container resources.requests.cpu (%s) must be <= requiredCpu (%s)",
+			sumReqCPU.String(), quantityDisplay(limits.RequiredCPU, appRCPU),
+		))
 	}
-	if sumReqMem.Cmp(appRMem) > 0 {
-		errs = append(errs, fmt.Errorf("sum of container resources.requests.memory must be <= spec.requiredMemory"))
+	if !autoRMem && sumReqMem.Cmp(appRMem) > 0 {
+		if !exceed {
+			errs = append(errs, fmt.Errorf("The total requested container resources exceed the allocated spec in OlaresManifest.yaml\n"))
+			exceed = true
+		}
+		errs = append(errs, fmt.Errorf(
+			"sum of container resources.requests.memory (%s) must be <= requiredMemory (%s)",
+			sumReqMem.String(), quantityDisplay(limits.RequiredMemory, appRMem),
+		))
 	}
 	return errors.Join(errs...)
+}
+
+// quantityDisplay picks the most readable rendering for a manifest-side
+// resource quantity: when the manifest text parses cleanly, we surface
+// the author's exact spelling (e.g. "200m" or "1Gi") rather than the
+// canonical form Quantity.String() produces, because the same number
+// can render either way and matching the manifest helps the reader
+// locate the offending field. We fall back to the parsed Quantity's
+// String() when the raw text is empty or unparseable so the error
+// message never shows an empty parenthesis pair.
+func quantityDisplay(raw string, parsed resource.Quantity) string {
+	if raw != "" {
+		return raw
+	}
+	return parsed.String()
 }
 
 // CheckUploadConfig ensures that, if the manifest declares an options.upload

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
@@ -40,6 +41,14 @@ type MarketOptions struct {
 	EntranceTitles []string
 	DeleteData     bool
 	Title          string
+
+	// ComputeMode pins the install compute mode (--compute-mode) and maps
+	// to InstallRequest.SelectedGpuType. ComputeBinding holds the raw
+	// --compute-binding values (<node>:<device>[:<mem>]) for resume. Both
+	// are 1.12.6+ only; on 1.12.5 they are rejected (the backend uses a
+	// different, untouched code path).
+	ComputeMode    string
+	ComputeBinding []string
 
 	// Mine narrows the catalog list verb to the active profile's apps —
 	// the same set the Market UI's "My Terminus" tab shows. This is
@@ -73,6 +82,18 @@ func newMarketOptions(f *cmdutil.Factory) *MarketOptions {
 
 func (o *MarketOptions) isJSON() bool {
 	return strings.EqualFold(strings.TrimSpace(o.Output), "json")
+}
+
+// isInteractive reports whether the CLI may prompt the user on stdin for a
+// compute mode / binding selection. We only prompt when stdin is a real TTY
+// and the invocation isn't asking for machine output (-q) or JSON (-o json) —
+// otherwise we fail with an actionable "pass --compute-mode/--compute-binding"
+// message so scripts and pipes never hang on a read.
+func (o *MarketOptions) isInteractive() bool {
+	if o.Quiet || o.isJSON() {
+		return false
+	}
+	return term.IsTerminal(int(os.Stdin.Fd()))
 }
 
 // info prints an informational message to stderr.
@@ -146,15 +167,38 @@ func (o *MarketOptions) addAllSourcesFlag(cmd *cobra.Command) {
 
 func (o *MarketOptions) addCascadeFlag(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Cascade, "cascade", false,
-		"apply to shared sub-charts on v2 multi-chart apps (auto-enabled for single-user CS apps when omitted; pass --cascade=false to override)")
+		"apply to shared sub-charts on v2 multi-chart apps (auto-enabled for single-user CS apps when omitted; pass --cascade=false to override). On Olares 1.12.6+ CS/shared apps are force-cascaded and --cascade=false cannot disable it")
 }
 
 func (o *MarketOptions) addEnvFlag(cmd *cobra.Command) {
-	cmd.Flags().StringSliceVar(&o.Envs, "env", nil, "set env var in KEY=VALUE format (repeatable)")
+	// StringArrayVar (not StringSliceVar) so a single value may contain commas
+	// (e.g. MODEL_SUPPORTS=tools,thinking). StringSliceVar splits on commas,
+	// which corrupts comma-bearing env values; matches the settings env commands.
+	cmd.Flags().StringArrayVar(&o.Envs, "env", nil, "set env var in KEY=VALUE format (repeatable; value may contain commas)")
+}
+
+// addComputeModeFlag wires --compute-mode on install (Olares 1.12.6+). When
+// omitted on an app that supports several compute modes, an interactive TTY
+// prompts a choice from the backend's computeModeSelect 422; non-interactive
+// sessions are told to pass this flag. On 1.12.5 the flag is rejected.
+func (o *MarketOptions) addComputeModeFlag(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&o.ComputeMode, "compute-mode", "",
+		"compute mode to install with (e.g. cpu, nvidia); only on Olares 1.12.6+. Omit to be prompted when the app supports multiple modes")
+}
+
+// addComputeBindingFlag wires --compute-binding on resume (Olares 1.12.6+).
+// Repeatable; each value is <node>:<device>[:<mem>] where the optional mem is
+// a MemorySlice allocation (Gi by default, or a Gi/Mi suffix, e.g. 8, 8Gi,
+// 512Mi). When omitted on an app that needs a binding, an interactive TTY
+// prompts a selection from the backend's computeBindingRequired 422;
+// non-interactive sessions are told to pass this flag. On 1.12.5 it is rejected.
+func (o *MarketOptions) addComputeBindingFlag(cmd *cobra.Command) {
+	cmd.Flags().StringArrayVar(&o.ComputeBinding, "compute-binding", nil,
+		"bind a compute device in <node>:<device>[:<mem>] form; mem accepts Gi/Mi (e.g. node:gpu-0:8 or node:gpu-0:512Mi). Repeatable; only on Olares 1.12.6+")
 }
 
 func (o *MarketOptions) addEntranceTitleFlag(cmd *cobra.Command) {
-	cmd.Flags().StringSliceVar(&o.EntranceTitles, "entrance-title", nil, "set cloned entrance title in NAME=TITLE format (repeatable)")
+	cmd.Flags().StringArrayVar(&o.EntranceTitles, "entrance-title", nil, "set cloned entrance title in NAME=TITLE format (repeatable; title may contain commas)")
 }
 
 func (o *MarketOptions) addDeleteDataFlag(cmd *cobra.Command) {

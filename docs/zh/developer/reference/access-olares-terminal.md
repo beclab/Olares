@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: 通过控制面板或 SSH 访问 Olares 主机终端。
 ---

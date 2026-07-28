@@ -22,7 +22,3 @@ spec:
             limits:
               cpu: 200m
               memory: 256Mi
-      volumes:
-        - name: aa
-          hostPath:
-            path: {{ .Values.sharedlib }}

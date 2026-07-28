@@ -29,6 +29,8 @@ type AppInfo struct {
 	MobileSupported               bool          `json:"mobileSupported"`
 	DefaultThirdLevelDomainConfig string        `json:"defaultThirdLevelDomainConfig"`
 	SharedEntrances               []Entrance    `json:"sharedEntrances,omitempty"`
+	IsShared                      bool          `json:"isShared"`
+	ClonedFrom                    string        `json:"clonedFrom"`
 }
 
 type Entrance struct {

@@ -21,6 +21,7 @@ spec:
       serviceAccountName: os-internal
       serviceAccount: os-internal
       hostNetwork: true
+      priorityClassName: "system-cluster-critical"
       containers:
       - name: daemon
         image: beclab/osnode-init:v0.0.13

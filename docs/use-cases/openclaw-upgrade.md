@@ -5,14 +5,46 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw upgrade, upgrade troubleshooting
-app_version: "1.0.2"
-doc_version: "1.1"
-doc_updated: "2026-05-28"
+app_version: "1.0.8"
+doc_version: "1.2"
+doc_updated: "2026-06-10"
 ---
 
 # Upgrade OpenClaw
 
 Before upgrading an existing OpenClaw installation, review the version-specific changes and troubleshooting steps on this page to ensure a smooth transition.
+
+## Upgrade to 2026.06.05
+
+The OpenClaw 2026.06.05 update migrates auth profiles, auth state, and cron jobs from legacy JSON files into an internal SQLite database. The gateway now reads these configurations from SQLite instead of raw JSON.
+
+:::warning Mandatory data migration
+Following the upgrade, you must run the automated repair utility to migrate your data. If you use cloud-hosted model providers, your agent might fail to communicate with external APIs and report the following error until this migration is completed:
+
+```text
+Missing API key for the selected provider on the gateway. Configure provider 
+auth, then try again.
+```
+:::
+
+When the upgrade is completed, perform the following steps to migrate your data and restore full gateway functionality:
+1. Open the OpenClaw CLI from the Launchpad.
+2. Run the automated repair command:
+
+    ```bash
+    openclaw doctor --fix
+    ```
+
+3. Verify the output logs in your terminal. A successful migration will show confirmation lines matching the following structures:
+
+    ```text
+    |  Migrated auth profile JSON for ~/.openclaw/agents/main/agent/auth-profiles.json into  |
+    |  SQLite (backups:                                                                      |
+    |  ~/.openclaw/agents/main/agent/auth-profiles.json.sqlite-import.1781088154476.bak,     |
+    |  ~/.openclaw/agents/main/agent/auth-state.json.sqlite-import.1781088154484.bak).       |
+    ```  
+
+For more information, see the [OpenClaw release notes](https://github.com/openclaw/openclaw/releases/tag/v2026.6.5).
 
 ## Upgrade to 2026.05.26
 

@@ -55,17 +55,31 @@ func resolveInstalledSource(ctx context.Context, opts *MarketOptions, mc *Market
 	if s := strings.TrimSpace(opts.Source); s != "" {
 		return s, nil
 	}
-	row, err := lookupInstalledApp(ctx, mc, appName)
+	row, err := resolveInstalledRow(ctx, mc, appName)
 	if err != nil {
 		return "", err
 	}
+	return row.Source, nil
+}
+
+// resolveInstalledRow returns the full per-user state row for an installed
+// app, applying the same "must be installed" guards as resolveInstalledSource
+// (no --source override path — callers that need the whole row, like restart's
+// --watch baseline capture, always resolve the row from /market/state). It is
+// the single source of truth for the not-installed / wrong-state error
+// messages so resolveInstalledSource and restart stay in lockstep.
+func resolveInstalledRow(ctx context.Context, mc *MarketClient, appName string) (*installedAppRow, error) {
+	row, err := lookupInstalledApp(ctx, mc, appName)
+	if err != nil {
+		return nil, err
+	}
 	if row == nil || strings.TrimSpace(row.Source) == "" {
-		return "", fmt.Errorf("%q is not installed for this user (run `olares-cli market list --mine` to see installed apps)", appName)
+		return nil, fmt.Errorf("%q is not installed for this user (run `olares-cli market list --mine` to see installed apps)", appName)
 	}
 	if !isInstalledState(row.State) {
-		return "", fmt.Errorf("%q is not an installed app (state %q); nothing to operate on (run `olares-cli market list --mine` to see installed apps)", appName, row.State)
+		return nil, fmt.Errorf("%q is not an installed app (state %q); nothing to operate on (run `olares-cli market list --mine` to see installed apps)", appName, row.State)
 	}
-	return row.Source, nil
+	return row, nil
 }
 
 func validateVersion(version string) error {
@@ -123,9 +137,15 @@ func fetchAppInfo(ctx context.Context, mc *MarketClient, appName, source string)
 	return appInfo, nil
 }
 
+// appSupportsClone reports whether an app can be cloned. A regular
+// multi-instance app advertises allowMultipleInstall (isMultiInstanceApp); a
+// template body advertises templateOnly (isTemplateApp) and is cloned to create
+// instances even though its body is never installed. Either qualifies.
 func appSupportsClone(appInfo map[string]interface{}) bool {
-	supported, ok := deepFindBoolValue(appInfo, "allowMultipleInstall")
-	return ok && supported
+	if supported, ok := deepFindBoolValue(appInfo, "allowMultipleInstall"); ok && supported {
+		return true
+	}
+	return appIsTemplateOnly(appInfo)
 }
 
 // isCSV2 mirrors apps/packages/app/src/constant/constants.ts `isCSV2(fullInfo)`:
@@ -160,6 +180,51 @@ func isCSV2(appInfo map[string]interface{}) bool {
 		return false
 	}
 	return len(subCharts) > 0
+}
+
+// isCsOrSharedFromSimple mirrors the 1.12.6 SPA's CS/shared detection, which
+// moved off the full-info app_entry onto the per-app simpleInfo
+// (apps/.../constant/constants.ts):
+//
+//	isCSV2(simple)        -> simple.app_simple_info.apiVersion === 'v2'
+//	isSharedV3(simple)    -> simple.app_simple_info.shared === true
+//	isCsOrSharedApp(simple) -> apiVersion === 'v2' || shared
+//
+// Note this is a DIFFERENT predicate from the 1.12.5 isCSV2() above, which
+// reads app_info.app_entry.{apiVersion,subCharts} from the full info. On
+// 1.12.6 the "also tear down / stop the shared server" cascade (the DELETE /
+// stop `all` flag) is gated on this simpleInfo predicate instead. The full
+// info response the CLI already fetches via fetchAppInfo carries app_simple_info
+// as a sibling of app_info, so no extra endpoint is needed.
+func isCsOrSharedFromSimple(appInfo map[string]interface{}) bool {
+	simple, ok := appInfo["app_simple_info"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	if apiVersion, _ := simple["apiVersion"].(string); apiVersion == "v2" {
+		return true
+	}
+	shared, _ := simple["shared"].(bool)
+	return shared
+}
+
+// appIsTemplateOnly mirrors the SPA's isTemplateApp(simple) predicate
+// (apps/.../constant/config.ts): a "template body" advertises
+// app_simple_info.templateOnly === true. Template apps have no installable
+// body — instances are created from them via clone — so they support the
+// clone/create flow even when allowMultipleInstall is not set.
+func appIsTemplateOnly(appInfo map[string]interface{}) bool {
+	simple, ok := appInfo["app_simple_info"].(map[string]interface{})
+	if !ok {
+		// Fall back to a top-level flag in case the catalog item is the
+		// bare simpleInfo rather than the full-info envelope.
+		if v, ok2 := appInfo["templateOnly"].(bool); ok2 {
+			return v
+		}
+		return false
+	}
+	v, _ := simple["templateOnly"].(bool)
+	return v
 }
 
 func getNestedValue(m map[string]interface{}, keys ...string) interface{} {

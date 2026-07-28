@@ -53,6 +53,7 @@ var (
 	validDependencyTypes = []any{"system", "application", "middleware"}
 	validAuthLevels      = []any{"", "public", "private", "internal"}
 	validOpenMethods     = []any{"", "default", "iframe", "window"}
+	validPortProtocols   = []any{"", "tcp", "udp"}
 	// validOverlayProtocols enumerates the protocols an overlayGateway
 	// entrance may declare. An empty value is allowed and means the
 	// entrance is reachable over both tcp and udp.
@@ -100,14 +101,28 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 			validation.Each(validation.By(validateEntranceValue)),
 			validation.By(uniqueEntranceNames),
 		),
+		validation.Field(&c.Ports,
+			validation.Each(validation.By(validateServicePortValue)),
+			validation.By(uniquePortNames),
+		),
 		validation.Field(&c.Spec,
 			validation.Required.Error("spec is required"),
 			validation.By(validateAppSpecFor(c)),
 		),
-		validation.Field(&c.Options, validation.By(validateOptions)),
+		validation.Field(&c.Options, validation.By(validateOptionsFor(c))),
 		validation.Field(&c.OverlayGateway, validation.By(validateOverlayGateway)),
 	)
-	return errors.Join(structErr, checkSubCharts(c), validatePermission(c.ConfigVersion, c.Permission), validateV3Configuration(c))
+	return errors.Join(
+		structErr,
+		checkSubCharts(c),
+		validatePermission(c.ConfigVersion, c.Permission),
+		validateRootProvider(c.ConfigVersion, c.Provider),
+		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
+		validateModernFieldRequiresManifestVersion(c),
+		validateOlaresDependency(c),
+		validateSharedAppRequirements(c),
+		validateV3Configuration(c),
+	)
 }
 
 func validateAppMetaData(v interface{}) error {
@@ -135,7 +150,32 @@ func validateAppMetaData(v interface{}) error {
 			validation.Required.Error("metadata.version is required"),
 			isSemver.Error("metadata.version must be a valid semantic version (e.g. 1.2.3)"),
 		),
+		validation.Field(&m.AppID,
+			validation.By(validateMetadataAppID),
+		),
 	)
+}
+
+// validateMetadataAppID rejects a metadata.appid value that collides with a
+// reserved built-in system app id. Empty appid is permitted -- the loader
+// normalizes it to md5(metadata.name)[:8] at LoadAppConfiguration time, and
+// downstream consumers that require a non-empty appid surface their own
+// errors (e.g. "market upload" rejects a missing field).
+func validateMetadataAppID(v interface{}) error {
+	s, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("metadata.appid: unexpected type %T", v)
+	}
+	if s == "" {
+		return nil
+	}
+	if IsReservedSystemAppID(s) {
+		return fmt.Errorf(
+			"metadata.appid %q collides with a reserved system app id; choose a different value (the loader normalizes appid to md5(metadata.name)[:8] anyway, so leaving the field empty is also fine)",
+			s,
+		)
+	}
+	return nil
 }
 
 func validateEntranceValue(v interface{}) error {
@@ -171,6 +211,39 @@ func validateEntranceValue(v interface{}) error {
 	)
 }
 
+func validateServicePortValue(v interface{}) error {
+	p, ok := v.(appv1.ServicePort)
+	if !ok {
+		return fmt.Errorf("port: unexpected type %T", v)
+	}
+	return validation.ValidateStruct(&p,
+		validation.Field(&p.Name,
+			validation.Required.Error("port.name is required"),
+			validation.Match(entranceNameRegex).Error("port.name must match ^[a-z0-9A-Z-]*$"),
+			validation.Length(1, 63).Error("port.name must be 1-63 characters"),
+		),
+		validation.Field(&p.Host,
+			validation.Required.Error("port.host is required"),
+			validation.Match(entranceHostRegex).Error("port.host must match ^[a-z]([-a-z0-9]*[a-z0-9])$"),
+			validation.Length(1, 63).Error("port.host must be 1-63 characters"),
+		),
+		validation.Field(&p.Port,
+			validation.Required.Error("port.port is required"),
+			validation.Min(int32(1)).Error("port.port must be between 1 and 65535"),
+			validation.Max(int32(65535)).Error("port.port must be between 1 and 65535"),
+		),
+		validation.Field(&p.ExposePort,
+			validation.When(p.ExposePort != 0,
+				validation.Min(int32(1)).Error("port.exposePort must be between 1 and 65535"),
+				validation.Max(int32(65535)).Error("port.exposePort must be between 1 and 65535"),
+			),
+		),
+		validation.Field(&p.Protocol,
+			validation.In(validPortProtocols...).Error(`port.protocol must be one of "", "tcp", "udp"`),
+		),
+	)
+}
+
 // validateAppSpecFor binds olaresManifest.version so spec validation can
 // branch: below 0.12.0 it checks legacy flat quantities; from 0.12.0 onward it
 // checks spec.resources[] (per-element rules) plus Rule 7 and mode→arch via
@@ -181,7 +254,7 @@ func validateAppSpecFor(cfg *AppConfiguration) validation.RuleFunc {
 		if !ok {
 			return fmt.Errorf("spec: unexpected type %T", v)
 		}
-		return validateAppSpec(cfg.ConfigVersion, cfg.APIVersion, s)
+		return validateAppSpec(cfg.ConfigVersion, cfg.APIVersion, cfg.Options.TemplateOnly, s)
 	}
 }
 
@@ -230,11 +303,10 @@ func normalizeAPIVersion(api string) string {
 // only validated as Kubernetes quantities. They live at the spec level for
 // backwards compatibility but should be expressed inside a
 // spec.resources[] entry on modern manifests.
-func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
-	quantityRule := validation.Match(k8sQuantity).Error("must be a valid Kubernetes quantity")
-	optionalGPUQuantity := validation.When(s.RequiredGPU != "", quantityRule)
-	optionalLimitedGPUQuantity := validation.When(s.LimitedGPU != "", quantityRule)
-	optionalLimitedDiskQuantity := validation.When(s.LimitedDisk != "", quantityRule)
+func validateAppSpec(configVersion, apiVersion string, templateOnly bool, s AppSpec) error {
+	optionalGPUQuantity := validation.When(s.RequiredGPU != "", flatResourceQuantityRule("spec.requiredGpu", templateOnly))
+	optionalLimitedGPUQuantity := validation.When(s.LimitedGPU != "", flatResourceQuantityRule("spec.limitedGpu", templateOnly))
+	optionalLimitedDiskQuantity := validation.When(s.LimitedDisk != "", flatResourceQuantityRule("spec.limitedDisk", templateOnly))
 
 	fields := []*validation.FieldRules{
 		validation.Field(&s.RequiredGPU, optionalGPUQuantity),
@@ -268,7 +340,7 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 	case modern:
 		fields = append(fields,
 			validation.Field(&s.Accelerator,
-				validation.By(validateResourceModeValueFor(&s)),
+				validation.By(validateResourceModeValueFor(templateOnly, &s)),
 			),
 		)
 	case isLegacyEnvelopeMissing(&s):
@@ -279,7 +351,7 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 			validation.Field(&s.LimitedDisk, optionalLimitedDiskQuantity),
 		)
 	default:
-		fields = append(fields, legacyEnvelopeFieldRules(&s, quantityRule, optionalLimitedDiskQuantity)...)
+		fields = append(fields, legacyEnvelopeFieldRules(&s, templateOnly)...)
 	}
 
 	structErr := validation.ValidateStruct(&s, fields...)
@@ -294,25 +366,35 @@ func validateAppSpec(configVersion, apiVersion string, s AppSpec) error {
 // Factored out of validateAppSpec so the legacy branch can install it with
 // a single append, and so any future caller (or test) that wants the same
 // shape doesn't have to redeclare every Field rule.
-func legacyEnvelopeFieldRules(s *AppSpec, quantityRule, optionalLimitedDiskQuantity validation.Rule) []*validation.FieldRules {
+func legacyEnvelopeFieldRules(s *AppSpec, templateOnly bool) []*validation.FieldRules {
 	return []*validation.FieldRules{
 		validation.Field(&s.RequiredMemory,
 			validation.Required.Error("spec.requiredMemory is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
+			flatResourceQuantityRule("spec.requiredMemory", templateOnly)),
 		validation.Field(&s.RequiredDisk,
 			validation.Required.Error("spec.requiredDisk is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
+			flatResourceQuantityRule("spec.requiredDisk", templateOnly)),
 		validation.Field(&s.RequiredCPU,
 			validation.Required.Error("spec.requiredCpu is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
+			flatResourceQuantityRule("spec.requiredCpu", templateOnly)),
 		validation.Field(&s.LimitedMemory,
 			validation.Required.Error("spec.limitedMemory is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
+			flatResourceQuantityRule("spec.limitedMemory", templateOnly)),
 		validation.Field(&s.LimitedCPU,
 			validation.Required.Error("spec.limitedCpu is required for olaresManifest.version < 0.12.0"),
-			quantityRule),
-		validation.Field(&s.LimitedDisk, optionalLimitedDiskQuantity),
+			flatResourceQuantityRule("spec.limitedCpu", templateOnly)),
+		validation.Field(&s.LimitedDisk,
+			validation.When(s.LimitedDisk != "", flatResourceQuantityRule("spec.limitedDisk", templateOnly))),
 	}
+}
+
+// flatResourceQuantityRule validates a legacy flat spec.* quantity field.
+// When templateOnly is true, non-disk fields may use AutoResourceValue ("-1").
+func flatResourceQuantityRule(field string, templateOnly bool) validation.Rule {
+	return validation.By(func(value interface{}) error {
+		s, _ := value.(string)
+		return validateResourceQuantity(s, field, templateOnly, false)
+	})
 }
 
 // validateResourceModeValueFor binds spec so the modern (>= 0.12.0,
@@ -339,16 +421,16 @@ func legacyEnvelopeFieldRules(s *AppSpec, quantityRule, optionalLimitedDiskQuant
 // fields) is still enforced by ensureLegacyAndResourcesAreMutuallyExclusive
 // from specResourceCrossFieldRules, which runs for every version, so this
 // closure does not need to repeat it.
-func validateResourceModeValueFor(spec *AppSpec) validation.RuleFunc {
+func validateResourceModeValueFor(templateOnly bool, spec *AppSpec) validation.RuleFunc {
 	return func(v interface{}) error {
 		var errs []error
 		for i, rm := range spec.Accelerator {
-			if err := ValidateResourceMode(rm); err != nil {
+			if err := ValidateResourceMode(rm, templateOnly); err != nil {
 				errs = append(errs, fmt.Errorf("spec.resources[%d]: %w", i, err))
 			}
 		}
 		if len(spec.Accelerator) == 0 {
-			if err := validateFlatResourceQuantities(spec); err != nil {
+			if err := validateFlatResourceQuantities(spec, templateOnly); err != nil {
 				errs = append(errs, err)
 			}
 			if !hasAnyFlatResourceQuantity(spec) {
@@ -390,7 +472,7 @@ func hasAnyFlatResourceQuantity(spec *AppSpec) bool {
 // quantities, so a manifest that mixes any of them will get format
 // feedback before Rule 7 weighs in on whether they were allowed to be
 // set at all.
-func validateFlatResourceQuantities(spec *AppSpec) error {
+func validateFlatResourceQuantities(spec *AppSpec, templateOnly bool) error {
 	pairs := []struct {
 		name  string
 		value string
@@ -406,28 +488,369 @@ func validateFlatResourceQuantities(spec *AppSpec) error {
 	}
 	var errs []error
 	for _, p := range pairs {
-		if p.value == "" {
+		if err := validateResourceQuantity(p.value, p.name, templateOnly, false); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// validatePermission gates the manifest-level permission flags whose
+// acceptance changes across olaresManifest.version boundaries:
+//
+//   - permission.externalData (grants access to the External directory) was
+//     introduced with olaresManifest.version 0.12.0; declaring it on an
+//     older manifest is rejected.
+//   - permission.provider (cross-app provider access) was retired starting
+//     with olaresManifest.version 0.12.0; the field is still accepted
+//     structurally for backwards compatibility on legacy manifests, but a
+//     modern manifest must leave it empty so the platform can finish
+//     migrating callers away from it.
+//
+// permission.appCommon (access to the cross-app Common directory) is a
+// >= 1.12.6 field and is gated by validateModernFieldRequiresManifestVersion
+// (requires olaresManifest.version >= 0.12.0 + Olares dep locked to
+// >=1.12.6-0), so this function deliberately leaves it alone — adding a
+// check here would emit a duplicate error.
+func validatePermission(configVersion string, p Permission) error {
+	var errs []error
+	if p.ExternalData && !resourcesCheckApplies(configVersion) {
+		errs = append(errs, fmt.Errorf(
+			"permission.externalData is only supported for olaresManifest.version >= %s",
+			minResourcesManifestVersion,
+		))
+	}
+	if len(p.Provider) > 0 && resourcesCheckApplies(configVersion) {
+		errs = append(errs, fmt.Errorf(
+			"permission.provider must be empty for olaresManifest.version >= %s; cross-app provider access is no longer granted via permission.provider",
+			minResourcesManifestVersion,
+		))
+	}
+	return errors.Join(errs...)
+}
+
+// olaresSystemDepName is the canonical name of the Olares system entry
+// inside options.dependencies. validateOlaresDependency uses this exact
+// (name, type) tuple — name="olares", type="system" — to locate the entry
+// whose version constraint is gated by the rules below.
+const olaresSystemDepName = "olares"
+
+// olaresDepConstraintRule describes the version-constraint range that the
+// options.dependencies[name=olares].version must stay inside on a modern
+// (olaresManifest.version >= 0.12.0) manifest. The check works by sampling
+// representative versions just outside the allowed range and asserting
+// none of them satisfy the manifest's constraint — anything that does
+// would leak the supported Olares range outside the documented window.
+type olaresDepConstraintRule struct {
+	// requirement is the human-readable constraint expression embedded in
+	// error messages, e.g. ">=1.12.3-0,<1.12.6".
+	requirement string
+	// forbidden lists versions that are JUST outside the required range
+	// (one or two below the floor, one at/above the ceiling, plus a wide-
+	// margin sample). A constraint that allows any of these would be too
+	// permissive for the active rule.
+	forbidden []string
+}
+
+// olaresDepRulePreV3 is the constraint window for legacy-schema modern
+// manifests (apiVersion in {empty, v1, v2} AND no 1.12.6-only feature
+// is declared). The floor 1.12.3-0 is the minimum Olares that ships
+// olaresManifest.version 0.12.0; the ceiling 1.12.6 locks these manifests
+// out of systems that ship the v3 runtime.
+var olaresDepRulePreV3 = olaresDepConstraintRule{
+	requirement: ">=1.12.3-0,<1.12.6",
+	forbidden:   []string{"1.12.2", "1.12.6", "2.0.0"},
+}
+
+// olaresDepRulePostV3 is the constraint window selected when the manifest
+// either is apiVersion=v3 or declares any of the 1.12.6-only feature
+// fields enumerated in detectOlares1126OnlyFields. 1.12.6-0 is the first
+// Olares release that ships those features.
+var olaresDepRulePostV3 = olaresDepConstraintRule{
+	requirement: ">=1.12.6-0",
+	forbidden:   []string{"1.12.5", "1.12.0", "0.1.0"},
+}
+
+// detectOlares1126OnlyFields returns the set of manifest field labels
+// that — when declared on c — pin the Olares system requirement to
+// >=1.12.6-0 regardless of apiVersion (rule 4). apiVersion=v3 itself is
+// intentionally not in this list: it is handled as a separate trigger by
+// the caller so the error message can distinguish "v3 manifest demands
+// 1.12.6+" from "v1/v2 manifest opts into a 1.12.6-only feature".
+//
+// Labels are the user-facing names the manifest author writes, so they
+// can be threaded straight into error messages.
+func detectOlares1126OnlyFields(c *AppConfiguration) []string {
+	var fields []string
+	if len(c.Spec.Accelerator) > 0 {
+		fields = append(fields, "spec.accelerator")
+	}
+	if c.WorkloadReplicas != nil && len(*c.WorkloadReplicas) > 0 {
+		fields = append(fields, "workloadReplicas")
+	}
+	if c.OverlayGateway.Enable || len(c.OverlayGateway.Entrances) > 0 {
+		fields = append(fields, "overlayGateway")
+	}
+	if c.Options.LLMGatewaySupported {
+		fields = append(fields, "options.LLMGatewaySupported")
+	}
+	if c.Options.TemplateOnly {
+		fields = append(fields, "options.templateOnly")
+	}
+	if c.Options.Shared {
+		fields = append(fields, "options.shared")
+	}
+	if c.Permission.AppCommon {
+		fields = append(fields, "permission.appCommon")
+	}
+	return fields
+}
+
+// pickOlaresDepRule selects the constraint window that applies to c.
+// apiVersion=v3 or any 1.12.6-only feature field forces the post-v3
+// (>=1.12.6-0) window; everything else falls back to the legacy
+// pre-v3 (>=1.12.3-0,<1.12.6) window. The returned trigger list is
+// non-empty iff a feature field promoted a v1/v2 manifest into the
+// post-v3 window; callers use it to explain the promotion in error
+// messages without surprising users whose manifests are already v3.
+func pickOlaresDepRule(c *AppConfiguration) (rule olaresDepConstraintRule, featureTriggers []string) {
+	api := normalizeAPIVersion(c.APIVersion)
+	if api == APIVersionV3 {
+		return olaresDepRulePostV3, nil
+	}
+	if api == APIVersionV1 || api == APIVersionV2 || len(api) == 0 {
+		return olaresDepRulePreV3, nil
+	}
+	triggers := detectOlares1126OnlyFields(c)
+	if len(triggers) > 0 {
+		return olaresDepRulePostV3, triggers
+	}
+	return olaresDepRulePreV3, nil
+}
+
+// validateModernFieldRequiresManifestVersion is the inverse gate of
+// validateOlaresDependency: it fires only on LEGACY manifests
+// (olaresManifest.version < 0.12.0) and rejects any manifest that
+// declares a field whose semantics only exist on Olares 1.12.6+.
+//
+// Two trigger sources are checked:
+//
+//   - apiVersion=v3 — the v3 runtime itself ships with Olares 1.12.6+.
+//   - any field returned by detectOlares1126OnlyFields (spec.accelerator,
+//     workloadReplicas, overlayGateway, options.LLMGatewaySupported,
+//     options.templateOnly, options.shared, permission.appCommon).
+//
+// When any trigger is declared the manifest must bump
+// olaresManifest.version to at least 0.12.0 AND lock
+// options.dependencies[name=olares].version to ">=1.12.6-0". The
+// dependency-side check itself is owned by validateOlaresDependency
+// (which only runs on modern manifests), so this function deliberately
+// stays out of the legacy-but-no-triggers branch: pre-existing legacy
+// manifests with no modern fields keep their historical freedom to
+// declare any (or no) Olares dependency. The error message names the
+// triggers so a manifest that backslid on multiple fields surfaces them
+// all in one Lint run, and explicitly states the >=1.12.6-0 requirement
+// to spare the user a second round trip once they bump the version.
+func validateModernFieldRequiresManifestVersion(c *AppConfiguration) error {
+	if resourcesCheckApplies(c.ConfigVersion) {
+		return nil
+	}
+	var triggers []string
+	if normalizeAPIVersion(c.APIVersion) == APIVersionV3 {
+		triggers = append(triggers, "apiVersion=v3")
+	}
+	triggers = append(triggers, detectOlares1126OnlyFields(c)...)
+	if len(triggers) == 0 {
+		return nil
+	}
+	return fmt.Errorf(
+		"olaresManifest.version must be >= %s when the manifest declares %s; bump olaresManifest.version to >= %s and lock options.dependencies[name=%s].version to \">=1.12.6-0\"",
+		minResourcesManifestVersion, strings.Join(triggers, " / "),
+		minResourcesManifestVersion, olaresSystemDepName,
+	)
+}
+
+// validateOlaresDependency enforces the rules on the Olares system
+// dependency (the options.dependencies entry with name="olares" and
+// type="system"). The gate fires only on modern manifests
+// (olaresManifest.version >= 0.12.0); legacy manifests retain their
+// existing freedom to declare any version constraint they like.
+//
+// Four rules combine into a per-manifest required range, captured by
+// pickOlaresDepRule:
+//
+//  1. apiVersion in {empty, v1, v2}: legacy schemas default to <1.12.6
+//     (must not install on systems that ship the v3 runtime).
+//  2. apiVersion=v3: the constraint must restrict Olares to >=1.12.6-0
+//     (the release that introduced the v3 runtime).
+//  3. Across every apiVersion the constraint's lower bound must be at
+//     least 1.12.3-0, the floor under which modern manifests are not
+//     supported at all.
+//  4. If the manifest declares any 1.12.6-only feature field
+//     (spec.accelerator, workloadReplicas, overlayGateway,
+//     options.LLMGatewaySupported, options.templateOnly, options.shared,
+//     permission.appCommon), the constraint must restrict to >=1.12.6-0
+//     even on a v1/v2 manifest — those fields are not honoured by older
+//     Olares releases.
+//
+// A missing Olares system dependency is itself an error on modern
+// manifests — the platform always pins the host Olares version, so
+// omitting it makes the manifest non-portable.
+func validateOlaresDependency(c *AppConfiguration) error {
+	//if !resourcesCheckApplies(c.ConfigVersion) {
+	//	return nil
+	//}
+	var olaresDep *Dependency
+	for i := range c.Options.Dependencies {
+		d := &c.Options.Dependencies[i]
+		if d.Name == olaresSystemDepName && d.Type == "system" {
+			olaresDep = d
+			break
+		}
+	}
+	if olaresDep == nil {
+		return fmt.Errorf(
+			"options.dependencies must declare an entry with name=%q and type=\"system\" for olaresManifest.version >= %s",
+			olaresSystemDepName, minResourcesManifestVersion,
+		)
+	}
+	constraint, err := semver.NewConstraint(olaresDep.Version)
+	if err != nil {
+		return fmt.Errorf(
+			"options.dependencies[name=%s].version %q is not a valid semver constraint: %w",
+			olaresSystemDepName, olaresDep.Version, err,
+		)
+	}
+	api := normalizeAPIVersion(c.APIVersion)
+	if _, knownAPI := map[string]struct{}{
+		APIVersionV1: {}, APIVersionV2: {}, APIVersionV3: {},
+	}[api]; !knownAPI {
+		// apiVersion outside the supported set; the struct-level validator
+		// already surfaces "not supported version" elsewhere.
+		return nil
+	}
+	rule, triggers := pickOlaresDepRule(c)
+	promotion := ""
+	if len(triggers) > 0 {
+		promotion = fmt.Sprintf(
+			" because the manifest declares %s, which requires Olares 1.12.6+",
+			strings.Join(triggers, " / "),
+		)
+	}
+	var errs []error
+	for _, v := range rule.forbidden {
+		sv, parseErr := semver.NewVersion(v)
+		if parseErr != nil {
 			continue
 		}
-		if !k8sQuantity.MatchString(p.value) {
+		if constraint.Check(sv) {
 			errs = append(errs, fmt.Errorf(
-				"%s must be a valid Kubernetes quantity (got %q)",
-				p.name, p.value,
+				"options.dependencies[name=%s].version %q must restrict the Olares system version to %q for apiVersion=%s%s; the constraint currently allows %s, which is outside the supported range",
+				olaresSystemDepName, olaresDep.Version, rule.requirement, api, promotion, sv.String(),
 			))
 		}
 	}
 	return errors.Join(errs...)
 }
 
-// validatePermission gates the manifest-level permission flags. Only
-// permission.externalData carries a version constraint: it grants access to
-// the External directory, a capability introduced with olaresManifest.version
-// 0.12.0, so declaring it on an older manifest is rejected. permission.appCommon
-// (access to the Common directory) is accepted at every version and needs no
-// extra validation here.
-func validatePermission(configVersion string, p Permission) error {
-	if p.ExternalData && !resourcesCheckApplies(configVersion) {
-		return fmt.Errorf("permission.externalData is only supported for olaresManifest.version >= %s", minResourcesManifestVersion)
+// validateSharedAppRequirements enforces the cross-field rules that an
+// options.shared=true manifest must satisfy. A shared install services
+// every user on the cluster from a single deployment, which is only
+// compatible with a narrow shape:
+//
+//   - spec.onlyAdmin must be true — shared apps span every user, so the
+//     installer must be restricted to admins; allowing a regular user to
+//     install one would let them install on behalf of everyone else.
+//   - spec.subCharts must be empty — subCharts is the v2-only multi-chart
+//     delivery mechanism. Shared apps require apiVersion=v3 (enforced in
+//     validateOptions), and v3 ships every workload in a single chart;
+//     declaring subCharts here is meaningless and almost certainly a
+//     manifest authored against the wrong schema.
+//   - options.appScope.clusterScoped must be false AND
+//     options.appScope.appRef must be empty — both fields express a
+//     scoping intent (cluster-wide singleton, or shared access with
+//     specific other apps) that overlaps with "shared". Declaring them
+//     together makes the install topology ambiguous. The two are
+//     checked independently so the error message pinpoints the offender
+//     instead of forcing the user to clear the whole appScope block to
+//     discover which field tripped the rule.
+//
+// The apiVersion=v3 requirement on shared apps is enforced separately in
+// validateOptions; these gates run alongside it so a manifest that
+// violates multiple constraints surfaces every offender in a single Lint
+// run.
+func validateSharedAppRequirements(c *AppConfiguration) error {
+	if !c.Options.Shared {
+		return nil
+	}
+	var errs []error
+	if !c.Spec.OnlyAdmin {
+		errs = append(errs, fmt.Errorf(
+			"spec.onlyAdmin must be true when options.shared=true; shared apps service every user on the cluster and may only be installed by an admin",
+		))
+	}
+	if len(c.Spec.SubCharts) > 0 {
+		errs = append(errs, fmt.Errorf(
+			"spec.subCharts must be empty when options.shared=true; shared apps require apiVersion=v3 and deliver every workload in a single chart",
+		))
+	}
+	if c.Options.AppScope.ClusterScoped {
+		errs = append(errs, fmt.Errorf(
+			"options.appScope.clusterScoped must be false when options.shared=true; the shared scope already covers every user and is incompatible with cluster scoping",
+		))
+	}
+	if len(c.Options.AppScope.AppRef) > 0 {
+		errs = append(errs, fmt.Errorf(
+			"options.appScope.appRef must be empty when options.shared=true; shared apps do not declare cross-app scoping",
+		))
+	}
+	return errors.Join(errs...)
+}
+
+// validateRootProvider enforces that the top-level AppConfiguration.Provider
+// section (the per-app published interfaces, declared at the document root
+// rather than under permission) is empty on olaresManifest.version >= 0.12.0.
+// The section was retired alongside permission.provider once the platform
+// stopped granting cross-app access through manifest-declared provider lists;
+// legacy manifests still accept arbitrary entries for backwards
+// compatibility.
+func validateRootProvider(configVersion string, providers []Provider) error {
+	if !resourcesCheckApplies(configVersion) {
+		return nil
+	}
+	if len(providers) == 0 {
+		return nil
+	}
+	return fmt.Errorf(
+		"provider must be empty for olaresManifest.version >= %s; the top-level provider section is no longer accepted on modern manifests",
+		minResourcesManifestVersion,
+	)
+}
+
+// validateWorkloadReplicas enforces that workloadReplicas is declared (non-nil
+// and non-empty) on modern manifests (olaresManifest.version >= 0.12.0). The
+// rule mirrors the install-time convention that every Deployment/StatefulSet's
+// replica count is sourced from .Values.workloads.<name>.replicaCount, so a
+// modern app that omits the field would have no way to express its replica
+// envelope.
+//
+// apiVersion=v2 is exempt: v2 manifests render workloads inside subCharts, so
+// the parent-level workloadReplicas does not apply. Below the 0.12.0 gate the
+// field stays optional. Whenever the field is declared, the existing
+// chart-render lint phase still verifies the per-entry name/values.yaml
+// correspondence — this check only adds the "must be declared" gate.
+func validateWorkloadReplicas(configVersion, apiVersion string, wr *WorkloadReplicas) error {
+	if !resourcesCheckApplies(configVersion) {
+		return nil
+	}
+	if normalizeAPIVersion(apiVersion) == APIVersionV2 {
+		return nil
+	}
+	if wr == nil || len(*wr) == 0 {
+		return fmt.Errorf(
+			"workloadReplicas is required for olaresManifest.version >= %s; declare a workloadReplicas.<workload>: <count> entry for every Deployment/StatefulSet",
+			minResourcesManifestVersion,
+		)
 	}
 	return nil
 }
@@ -468,18 +891,56 @@ func validateOverlayGateway(v interface{}) error {
 	return errors.Join(errs...)
 }
 
-func validateOptions(v interface{}) error {
-	o, ok := v.(Options)
-	if !ok {
-		return fmt.Errorf("options: unexpected type %T", v)
+// validateOptionsFor binds the manifest's apiVersion so options-level
+// cross-field checks (templateOnly => allowMultipleInstall, shared => v3)
+// can reach it. ozzo's validation.By only sees the Options value, so the
+// outer AppConfiguration must be captured here in a closure.
+func validateOptionsFor(cfg *AppConfiguration) validation.RuleFunc {
+	return func(v interface{}) error {
+		o, ok := v.(Options)
+		if !ok {
+			return fmt.Errorf("options: unexpected type %T", v)
+		}
+		return validateOptions(cfg.APIVersion, o)
 	}
-	return validation.ValidateStruct(&o,
+}
+
+// validateOptions runs the options-level validation. It is parameterised on
+// apiVersion because two cross-field rules depend on it:
+//
+//   - options.templateOnly=true requires options.allowMultipleInstall=true.
+//     Template-only apps are installed as multiple clones from a single
+//     template chart; without allowMultipleInstall the platform would only
+//     ever install a single instance, defeating the purpose of the flag.
+//   - options.shared=true is only meaningful on apiVersion=v3. v3 is the
+//     only schema where a single install services multiple users, so a
+//     shared install on v1/v2 would be silently ignored at install time
+//     and is rejected here to avoid the foot-gun.
+//
+// Both cross-field errors are aggregated alongside the existing per-field
+// struct validation so a manifest that violates more than one rule sees
+// every offender in a single Lint run.
+func validateOptions(apiVersion string, o Options) error {
+	structErr := validation.ValidateStruct(&o,
 		validation.Field(&o.Policies, validation.Each(validation.By(validatePolicyValue))),
 		validation.Field(&o.ResetCookie),
 		validation.Field(&o.Dependencies, validation.Each(validation.By(validateDependencyValue))),
 		validation.Field(&o.AppScope),
 		validation.Field(&o.WsConfig),
 	)
+	var crossErrs []error
+	if o.TemplateOnly && !o.AllowMultipleInstall {
+		crossErrs = append(crossErrs, fmt.Errorf(
+			"options.allowMultipleInstall must be true when options.templateOnly is true; template-only apps are installed as multiple clones",
+		))
+	}
+	if o.Shared && normalizeAPIVersion(apiVersion) != APIVersionV3 {
+		crossErrs = append(crossErrs, fmt.Errorf(
+			"options.shared=true is only supported for apiVersion=v3 (got %q)",
+			apiVersion,
+		))
+	}
+	return errors.Join(structErr, errors.Join(crossErrs...))
 }
 
 func validatePolicyValue(v interface{}) error {
@@ -547,6 +1008,21 @@ func uniqueEntranceNames(value interface{}) error {
 			return fmt.Errorf("entrances[%d].name: duplicate entrance name %q", i, e.Name)
 		}
 		seen[e.Name] = struct{}{}
+	}
+	return nil
+}
+
+func uniquePortNames(value interface{}) error {
+	ports, ok := value.([]appv1.ServicePort)
+	if !ok {
+		return fmt.Errorf("ports: unexpected type %T", value)
+	}
+	seen := make(map[string]struct{}, len(ports))
+	for i, p := range ports {
+		if _, dup := seen[p.Name]; dup {
+			return fmt.Errorf("ports[%d].name: duplicate port name %q", i, p.Name)
+		}
+		seen[p.Name] = struct{}{}
 	}
 	return nil
 }

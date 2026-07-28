@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Core architecture of Olares deployment across native system layer, Kubernetes orchestration and containerized services. Technical insights into how Olares layers interact.
+description: Understand Olares installation architecture across the native system layer, Kubernetes orchestration, and containerized services.
 ---
 # Olares installation architecture 
 

@@ -10,7 +10,7 @@ doc_version: "2.0"
 doc_updated: "2026-05-27"
 ---
 
-# Integrate with Discord
+# Integrate OpenClaw with Discord
 
 Connect your agent to a Discord bot to chat with it remotely.
 

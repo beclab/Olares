@@ -154,10 +154,10 @@ func TestIsAppSuspended(t *testing.T) {
 type fakeMarketBackend struct {
 	t          *testing.T
 	srv        *httptest.Server
-	stateRows  map[string]fakeStateRow         // by sourceName
-	appLabels  map[string][]string             // by appName: returned via /apps
-	appMissing map[string]bool                 // appName -> 404-ish empty apps list
-	appsCalls  []map[string]interface{}        // POST /apps payloads received
+	stateRows  map[string]fakeStateRow  // by sourceName
+	appLabels  map[string][]string      // by appName: returned via /apps
+	appMissing map[string]bool          // appName -> 404-ish empty apps list
+	appsCalls  []map[string]interface{} // POST /apps payloads received
 	stateErr   bool
 	appsHook   func(payload map[string]interface{}) (map[string]interface{}, error)
 }
@@ -360,6 +360,30 @@ func TestPreflightUpgrade(t *testing.T) {
 			wantErrSub: "is older than installed",
 		},
 		{
+			// upload bucket overwrites in place; re-applying the same
+			// version is the sanctioned re-deploy / recovery path, so
+			// the same-version no-op gate must NOT fire here.
+			name:    "upload source: target == installed → allowed (re-apply)",
+			appName: "psitransfer",
+			target:  "3.0.9",
+			source:  "upload",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["upload"] = fakeStateRow{name: "psitransfer", state: "upgradeFailed", version: "3.0.9"}
+			},
+		},
+		{
+			// The upload carve-out is same-version only — a true
+			// downgrade is still rejected (app-service rejects it too).
+			name:    "upload source: target < installed → still bail (downgrade)",
+			appName: "psitransfer",
+			target:  "3.0.8",
+			source:  "upload",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["upload"] = fakeStateRow{name: "psitransfer", state: "upgradeFailed", version: "3.0.9"}
+			},
+			wantErrSub: "is older than installed",
+		},
+		{
 			name:    "invalid installed version → comparison error",
 			appName: "firefox",
 			target:  "1.0.12",
@@ -426,7 +450,7 @@ func TestPreflightUpgrade(t *testing.T) {
 			mc := newTestMarketClient(t, fb.srv.URL)
 			opts := &MarketOptions{Source: c.source, Output: "json", Quiet: true}
 
-			err := preflightUpgrade(context.Background(), opts, mc, c.appName, c.target, c.source)
+			_, err := preflightUpgrade(context.Background(), opts, mc, c.appName, c.target, c.source)
 			switch {
 			case c.wantErrSub == "" && !c.wantSoftWar:
 				if err != nil {
@@ -590,6 +614,90 @@ func TestLookupInstalledAppDisambiguatesPrimaryFromClones(t *testing.T) {
 	})
 }
 
+// TestLookupInstalledAppPrefersInstalledAcrossSources is the regression
+// test for the multi-source masking bug: the same app name exists in two
+// sources, one in a not-installed terminal state (`uninstalled`) and one
+// live (`stopped`). lookupInstalledApp used to return whichever the
+// randomized Go map iteration surfaced first, so `resume firefox` could
+// fail with "state uninstalled" even though an installed firefox existed
+// in another source. The fix mirrors the SPA findAppByName: skip
+// uninstalled rows and prefer the installed one, deterministically.
+func TestLookupInstalledAppPrefersInstalledAcrossSources(t *testing.T) {
+	// market.olares sorts before market.test, so the uninstalled row is
+	// visited first; the resolver must still skip it and return the
+	// installed market.test row.
+	state := `{
+        "user_data": {
+            "sources": {
+                "market.olares": {
+                    "type": "market",
+                    "app_state_latest": [
+                        {"version": "1.0.11", "status": {"name": "firefox", "rawAppName": "firefox", "state": "uninstalled"}}
+                    ]
+                },
+                "market.test": {
+                    "type": "market",
+                    "app_state_latest": [
+                        {"version": "1.2.11", "status": {"name": "firefox", "rawAppName": "firefox", "state": "stopped"}}
+                    ]
+                }
+            }
+        }
+    }`
+
+	srv := newFakeMarketDataServer(t, stateAndDataResponses{state: state})
+	mc := newTestMarketClient(t, srv.URL)
+
+	// Run several times: with the deterministic sorted-source iteration
+	// the answer must be stable regardless of Go's randomized map order.
+	for i := 0; i < 8; i++ {
+		row, err := lookupInstalledApp(context.Background(), mc, "firefox")
+		if err != nil {
+			t.Fatalf("lookupInstalledApp: %v", err)
+		}
+		if row == nil {
+			t.Fatalf("lookupInstalledApp returned nil while an installed firefox exists")
+		}
+		if row.Source != "market.test" || row.State != "stopped" {
+			t.Fatalf("must prefer the installed row: got source=%q state=%q, want market.test/stopped", row.Source, row.State)
+		}
+	}
+}
+
+// TestLookupInstalledAppFallsBackToNotInstalled confirms that when NO
+// installed row matches, the lenient fallback still returns a
+// not-installed row so uninstall / cancel can clean up a lingering failed
+// row (and resolveInstalledSource can surface its "nothing to operate on"
+// message for resume / stop).
+func TestLookupInstalledAppFallsBackToNotInstalled(t *testing.T) {
+	state := `{
+        "user_data": {
+            "sources": {
+                "market.olares": {
+                    "type": "market",
+                    "app_state_latest": [
+                        {"version": "1.0.0", "status": {"name": "ghost", "rawAppName": "ghost", "state": "installFailed"}}
+                    ]
+                }
+            }
+        }
+    }`
+
+	srv := newFakeMarketDataServer(t, stateAndDataResponses{state: state})
+	mc := newTestMarketClient(t, srv.URL)
+
+	row, err := lookupInstalledApp(context.Background(), mc, "ghost")
+	if err != nil {
+		t.Fatalf("lookupInstalledApp: %v", err)
+	}
+	if row == nil {
+		t.Fatalf("lenient fallback must return the lingering failed row, got nil")
+	}
+	if row.State != "installFailed" || row.Source != "market.olares" {
+		t.Fatalf("fallback row wrong: source=%q state=%q (want market.olares/installFailed)", row.Source, row.State)
+	}
+}
+
 // TestPreflightUpgrade_SourceMismatchWarns confirms that preflight does
 // NOT fail when the user passes -s pointing at a different source from
 // the one the app is currently installed from — it should only emit a
@@ -602,8 +710,11 @@ func TestPreflightUpgrade_SourceMismatchWarns(t *testing.T) {
 	mc := newTestMarketClient(t, fb.srv.URL)
 	opts := &MarketOptions{Source: "market.olares", Output: "json", Quiet: true}
 
-	err := preflightUpgrade(context.Background(), opts, mc, "firefox", "1.0.12", "market.olares")
+	row, err := preflightUpgrade(context.Background(), opts, mc, "firefox", "1.0.12", "market.olares")
 	if err != nil {
 		t.Fatalf("preflightUpgrade returned error on source mismatch: %v", err)
+	}
+	if row == nil {
+		t.Fatalf("preflightUpgrade must return the pre-upgrade row (runUpgrade uses its statusTime as the --watch baseline)")
 	}
 }

@@ -65,6 +65,65 @@ func TestCheckWorkloadReplicas_UnknownEntry(t *testing.T) {
 	}
 }
 
+func TestCheckReleaseNameWorkload_Deployment(t *testing.T) {
+	probeA, probeB := "probe-a", "probe-b"
+	listA := kube.ResourceList{newDeployment(probeA), newDeployment("static")}
+	listB := kube.ResourceList{newDeployment(probeB), newDeployment("static")}
+	if err := CheckReleaseNameWorkload(listA, listB, probeA, probeB); err != nil {
+		t.Fatalf("a {{ .Release.Name }} Deployment must satisfy the check: %v", err)
+	}
+}
+
+func TestCheckReleaseNameWorkload_StatefulSet(t *testing.T) {
+	probeA, probeB := "probe-a", "probe-b"
+	listA := kube.ResourceList{newStatefulSet(probeA)}
+	listB := kube.ResourceList{newStatefulSet(probeB)}
+	if err := CheckReleaseNameWorkload(listA, listB, probeA, probeB); err != nil {
+		t.Fatalf("a {{ .Release.Name }} StatefulSet must satisfy the check: %v", err)
+	}
+}
+
+func TestCheckReleaseNameWorkload_NoMatch(t *testing.T) {
+	probeA, probeB := "probe-a", "probe-b"
+	// Both lists contain only fixed-name workloads -- no metadata.name is
+	// templated on the release name, so neither rendered list contains a
+	// workload whose name equals the probe.
+	listA := kube.ResourceList{newDeployment("fixed")}
+	listB := kube.ResourceList{newDeployment("fixed")}
+	err := CheckReleaseNameWorkload(listA, listB, probeA, probeB)
+	if err == nil {
+		t.Fatal("expected error when no Deployment/StatefulSet uses {{ .Release.Name }}")
+	}
+	if !strings.Contains(err.Error(), "{{ .Release.Name }}") {
+		t.Fatalf("error should reference the {{ .Release.Name }} remediation, got: %v", err)
+	}
+}
+
+func TestCheckReleaseNameWorkload_DaemonSetIgnored(t *testing.T) {
+	probeA, probeB := "probe-a", "probe-b"
+	// A DaemonSet whose name happens to render to the release name does
+	// not satisfy the rule -- the check is about Deployment/StatefulSet
+	// primary workloads only, which mirrors CollectWorkloadNames.
+	listA := kube.ResourceList{newDaemonSet(probeA)}
+	listB := kube.ResourceList{newDaemonSet(probeB)}
+	if err := CheckReleaseNameWorkload(listA, listB, probeA, probeB); err == nil {
+		t.Fatal("DaemonSet alone must not satisfy the release-name workload rule")
+	}
+}
+
+func TestCheckReleaseNameWorkload_PartialMatch(t *testing.T) {
+	probeA, probeB := "probe-a", "probe-b"
+	// listA carries a release-named Deployment but listB does not -- this
+	// only happens when a chart conditionally emits a release-named
+	// workload. The check must fail closed (require both) because we
+	// cannot prove a single template uses {{ .Release.Name }} otherwise.
+	listA := kube.ResourceList{newDeployment(probeA)}
+	listB := kube.ResourceList{newDeployment("fixed")}
+	if err := CheckReleaseNameWorkload(listA, listB, probeA, probeB); err == nil {
+		t.Fatal("expected error when only one render contains a release-named workload")
+	}
+}
+
 func TestCheckOverlayGatewayWorkloads(t *testing.T) {
 	list := kube.ResourceList{
 		newDeployment("jellyfin"),

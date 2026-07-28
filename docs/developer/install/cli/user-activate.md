@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The activate subcommand activates an existing Olares account.
+---
 # `activate`
 
 ## Synopsis

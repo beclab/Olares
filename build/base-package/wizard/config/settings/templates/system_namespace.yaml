@@ -42,5 +42,14 @@ metadata:
     openpolicyagent.org/webhook: ignore
   name: os-protected
 
-
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: os-gateway
+  labels:
+    app.kubernetes.io/name: app-gateway
+    applications.app.bytetrade.io/author: bytetrade.io
+  annotations:
+    bytetrade.io/ns-type: platform
 

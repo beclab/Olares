@@ -4,7 +4,7 @@ go 1.24.11
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/beclab/api v0.0.12
+	github.com/beclab/api v0.0.14
 	github.com/beclab/lldap-client v0.0.11
 	github.com/emicklei/go-restful v2.16.0+incompatible
 	github.com/emicklei/go-restful-openapi/v2 v2.11.0

@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw web search
-app_version: "1.0.2"
-doc_version: "2.0"
-doc_updated: "2026-05-28"
+app_version: "1.0.8"
+doc_version: "2.1"
+doc_updated: "2026-06-10"
 ---
 
 # Optional: Enable web search in OpenClaw
@@ -49,13 +49,25 @@ Install SearXNG and obtain its shared endpoint URL.
 Connect OpenClaw to SearXNG.
 
 1. Open the OpenClaw CLI.
-2. Run the following command to start the configuration wizard:
+2. Run the following command to download and install the `searxng` plugin:
+
+   ```bash
+   openclaw plugins install searxng
+   ```
+
+3. Run the following command to restart the gateway to load the newly installed plugin:
+
+   ```bash
+   restart-gateway
+   ```
+
+4. When the gateway is ready, run the following command to start the configuration wizard:
 
     ```bash
     openclaw configure --section web
     ```
 
-3. Configure the settings as follows:
+5. Configure the settings as follows:
 
    | Settings | Option |
    |:---------|:-------|

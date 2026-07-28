@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Learn how to use Whisper-WebUI on Olares for speech-to-text transcription, subtitle generation, real-time recording, subtitle translation, and vocal separation across 96 languages.
+description: Run Whisper-WebUI on Olares for speech-to-text, recording, subtitles, translation, and vocal separation across 96 languages.
 head:
   - - meta
     - name: keywords
@@ -339,7 +339,7 @@ A task may fail after you switch models for one of these reasons:
 To fix this issue:
 
 - Wait for the first-time model download to complete, then retry the task.
-- [Assign more VRAM](/manual/olares/settings/single-gpu.md#adjust-vram-allocation) to Whisper-WebUI in Memory slicing mode.
+- [Assign more VRAM](/manual/olares/settings/gpu-resource.md#resume-an-app-and-assign-resources) to Whisper-WebUI in Memory slicing mode.
 - Switch the GPU to another suitable mode.
 - Choose a smaller model.
 

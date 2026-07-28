@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The backups command provides a set of tools to manage data backups, restores, and snapshots.
+---
 # `backups`
 The `backups` command provides a set of tools to manage data backups, restores, and snapshots. It supports multiple storage backends, including Tencent COS, Amazon S3, the local filesystem, and Olares Space.
 

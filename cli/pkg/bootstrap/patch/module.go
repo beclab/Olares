@@ -81,3 +81,37 @@ func (m *InstallDepsModule) Init() {
 		enableSSHTask,
 	}
 }
+
+type CorrectHostnameModule struct {
+	common.KubeModule
+}
+
+func (m *CorrectHostnameModule) Init() {
+	m.Name = "CorrectHostname"
+
+	correctHostname := &task.LocalTask{
+		Name:   "CorrectHostname",
+		Action: new(CorrectHostname),
+	}
+
+	m.Tasks = []task.Interface{
+		correctHostname,
+	}
+}
+
+type PatchNfsScriptModule struct {
+	common.KubeModule
+}
+
+func (m *PatchNfsScriptModule) Init() {
+	m.Name = "PatchNfsScript"
+
+	patchNfsScript := &task.LocalTask{
+		Name:   "PatchNfsScript",
+		Action: new(PatchNfsScriptTask),
+	}
+
+	m.Tasks = []task.Interface{
+		patchNfsScript,
+	}
+}

@@ -3,7 +3,7 @@ target: prebuilt
 output:
   containers:
     - 
-      name: bytetrade/envoy:v1.25.11.1
+      name: beclab/envoy:v1.25.11.1
 
 
       

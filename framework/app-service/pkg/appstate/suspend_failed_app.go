@@ -2,11 +2,13 @@ package appstate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
@@ -21,10 +23,10 @@ type SuspendFailedApp struct {
 	*baseOperationApp
 }
 
-func NewSuspendFailedApp(c client.Client,
+func NewSuspendFailedApp(deps Deps,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
-	return appFactory.New(c, manager, 0,
+	return deps.Factory.New(deps, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &SuspendFailedApp{
 				&baseOperationApp{
@@ -63,12 +65,22 @@ func (p *SuspendFailedApp) StateReconcile(ctx context.Context) error {
 	}
 
 	if p.manager.Spec.Type == "middleware" && userspace.IsKbMiddlewares(p.manager.Spec.AppName) {
-		op := kubeblocks.NewOperation(ctx, kbopv1alpha1.StopType, p.manager, p.client)
+		op := p.deps.NewMiddlewareOp(ctx, kbopv1alpha1.StopType, p.manager, p.client)
 		err := op.Stop()
 		if err != nil {
 			klog.Errorf("stop-failed-middleware %s state reconcile failed %v", p.manager.Spec.AppName, err)
 			return err
 		}
+	}
+
+	var appCfg appcfg.ApplicationConfig
+	if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
+		klog.Errorf("unmarshal app config for compute cleanup of app %s failed %v", p.manager.Spec.AppName, err)
+		return err
+	}
+	if err := compute.DeleteAllocationsForComputeTarget(ctx, p.client, &appCfg, stopServer); err != nil {
+		klog.Errorf("delete compute allocation for suspend-failed app %s failed %v", p.manager.Spec.AppName, err)
+		return err
 	}
 	return nil
 }

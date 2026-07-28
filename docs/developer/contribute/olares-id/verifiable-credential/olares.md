@@ -1,3 +1,6 @@
+---
+description: While DIDs solve the issue of identity in a decentralized network, they are typically difficult for humans to remember or use in daily situations.
+---
 # Use case with Olares
 
 While DIDs solve the issue of identity in a decentralized network, they are typically difficult for humans to remember or use in daily situations. Olares ID provides a familiar, easy-to-remember format similar to email addresses, while still leveraging the power and security of DIDs. Each Olares ID is bound to a DID.

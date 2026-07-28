@@ -1,6 +1,7 @@
 ---
 outline: [2, 3]
-description: Enable oh-my-openagent (OMO) in OpenCode on Olares to orchestrate multiple AI agents. Trigger multi-agent collaboration with ultrawork, configure local or external models, and use built-in MCP servers.
+title: Run multi-agent workflows with oh-my-openagent
+description: Run oh-my-openagent with OpenCode on Olares to orchestrate multiple AI agents, choose local or external models, and use built-in MCP servers.
 head:
   - - meta
     - name: keywords

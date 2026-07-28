@@ -183,6 +183,75 @@ func TestValidateAppConfiguration_PackageLevelShortcut(t *testing.T) {
 	}
 }
 
+// TestLoadAppConfigurationContent_NormalizesAppID pins the loader contract
+// that metadata.appid is overwritten with md5(metadata.name)[:8] regardless
+// of what the manifest declared. The value matches
+// framework/app-service/pkg/appcfg.(AppName).GetAppID for non-system apps,
+// so callers can rely on the load layer producing the same id the runtime
+// computes downstream.
+func TestLoadAppConfigurationContent_NormalizesAppID(t *testing.T) {
+	const content = `olaresManifest.version: 0.12.0
+olaresManifest.type: app
+apiVersion: v1
+metadata:
+  name: demo
+  title: Demo
+  version: 1.0.0
+  appid: whatever-user-wrote
+spec:
+  versionName: v1
+`
+	cfg, err := oac.LoadAppConfigurationContent([]byte(content))
+	if err != nil {
+		t.Fatalf("LoadAppConfigurationContent: %v", err)
+	}
+	// md5("demo") = "fe01ce2a7fbac8fafaed7c982a04e229" -> first 8 hex chars.
+	const want = "fe01ce2a"
+	if cfg.Metadata.AppID != want {
+		t.Fatalf("metadata.appid = %q, want %q (md5(metadata.name)[:8])", cfg.Metadata.AppID, want)
+	}
+}
+
+// TestLoadAppConfigurationContent_EmptyNameLeavesAppIDEmpty pins the
+// edge-case branch of normalizeAppID: when metadata.name is missing the
+// loader returns an empty appid rather than md5("")[:8] (a meaningless
+// constant). The follow-up validation error will then key off the missing
+// name instead of confusing the user with a synthetic hash.
+func TestLoadAppConfigurationContent_EmptyNameLeavesAppIDEmpty(t *testing.T) {
+	const content = `olaresManifest.version: 0.12.0
+olaresManifest.type: app
+apiVersion: v1
+metadata:
+  title: Demo
+  version: 1.0.0
+spec:
+  versionName: v1
+`
+	cfg, err := oac.LoadAppConfigurationContent([]byte(content))
+	if err != nil {
+		t.Fatalf("LoadAppConfigurationContent: %v", err)
+	}
+	if cfg.Metadata.AppID != "" {
+		t.Fatalf("metadata.appid = %q, want empty when metadata.name is missing", cfg.Metadata.AppID)
+	}
+}
+
+// TestLoadAppConfiguration_NormalizesAppID exercises the file-based loader
+// against the firefox fixture: the manifest declares appid: firefox (see
+// testdata/firefox/OlaresManifest.yaml), which the load layer must
+// overwrite with md5("firefox")[:8].
+func TestLoadAppConfiguration_NormalizesAppID(t *testing.T) {
+	cfg, err := oac.LoadAppConfiguration(testdataFirefox, oac.WithOwnerAdmin("alice"))
+	if err != nil {
+		t.Fatalf("LoadAppConfiguration: %v", err)
+	}
+	// md5("firefox") = "d6a5c9544eca9b5ce2266d1c34a93222" -> first 8 hex chars.
+	const want = "d6a5c954"
+	if cfg.Metadata.AppID != want {
+		t.Fatalf("metadata.appid = %q, want %q (md5(metadata.name)[:8])", cfg.Metadata.AppID, want)
+	}
+}
+
 // TestLoadAppConfiguration_PropagatesParseError ensures that file-IO and
 // parser errors surface via the convenience loader (we don't swallow them
 // or wrap them in errAppConfigUnavailable by mistake).

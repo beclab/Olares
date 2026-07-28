@@ -31,8 +31,9 @@ var AllImageRenderModes = []string{
 	"apple-m",
 	"nvidia",
 	"nvidia-gb10",
-	"mthreads-m1000",
-	"strix-halo",
+	"moore-soc",
+	"amd",
+	"intel",
 }
 
 // ListImages returns the sorted, deduplicated set of container images used by

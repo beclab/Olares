@@ -62,9 +62,9 @@ func TestScaleOrPatchResumeUsesHelmScaleUp(t *testing.T) {
 		testutil.WithConfig(t, cfgWithReplicas()),
 	)
 	c := testutil.NewFakeClient(am)
-	p := &ResumingApp{&baseOperationApp{baseStatefulApp: &baseStatefulApp{manager: am, client: c}}}
-
 	fake := testutil.NewFakeHelmOps()
+	p := &ResumingApp{&baseOperationApp{baseStatefulApp: &baseStatefulApp{manager: am, client: c, deps: fakeDeps(fake)}}}
+
 	injectHelmOps(t, fake)
 
 	if err := p.scaleOrPatchResume(context.TODO(), false); err != nil {
@@ -81,9 +81,9 @@ func TestScaleOrPatchSuspendUsesHelmScaleToZero(t *testing.T) {
 		testutil.WithConfig(t, cfgWithReplicas()),
 	)
 	c := testutil.NewFakeClient(am)
-	p := &SuspendingApp{&baseOperationApp{baseStatefulApp: &baseStatefulApp{manager: am, client: c}}}
-
 	fake := testutil.NewFakeHelmOps()
+	p := &SuspendingApp{&baseOperationApp{baseStatefulApp: &baseStatefulApp{manager: am, client: c, deps: fakeDeps(fake)}}}
+
 	injectHelmOps(t, fake)
 
 	if err := p.scaleOrPatchSuspend(context.TODO(), false); err != nil {
@@ -100,10 +100,10 @@ func TestScaleOrPatchResumePropagatesScaleError(t *testing.T) {
 		testutil.WithConfig(t, cfgWithReplicas()),
 	)
 	c := testutil.NewFakeClient(am)
-	p := &ResumingApp{&baseOperationApp{baseStatefulApp: &baseStatefulApp{manager: am, client: c}}}
-
 	fake := testutil.NewFakeHelmOps()
 	fake.ScaleErr = errors.New("scale boom")
+	p := &ResumingApp{&baseOperationApp{baseStatefulApp: &baseStatefulApp{manager: am, client: c, deps: fakeDeps(fake)}}}
+
 	injectHelmOps(t, fake)
 
 	if err := p.scaleOrPatchResume(context.TODO(), false); err == nil {

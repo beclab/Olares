@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The olares download command downloads the necessary packages and components required to install Olares on your local machine.
+---
 # `olares download`
 
 ## Synopsis

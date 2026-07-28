@@ -1,7 +1,7 @@
 # Compose: obtain or author a docker-compose (deployment-input axis)
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first.
-> `chart from-compose` needs a docker-compose as input. This is the **deployment-input** capability: get a compose, then hand it to [olares-chart-from-compose.md](olares-chart-from-compose.md). It is orthogonal to packaging — see [olares-chart-image.md](olares-chart-image.md) for making each service's image pullable. Metadata polish depth depends on release target — [olares-chart-publish-targets.md](olares-chart-publish-targets.md).
+> `chart from-compose` needs a docker-compose as input. This is the **deployment-input** capability: get a compose, then hand it to the from-compose scaffold. It is orthogonal to packaging — see the Image capability for making each service's image pullable.
 
 You either already have a compose, are handed several, or have only source:
 
@@ -13,7 +13,7 @@ You either already have a compose, are handed several, or have only source:
 Projects often ship several composes (dev, full, minimal, ha, ...). Prefer the one that is:
 
 - **single-host** (no Swarm `deploy.replicas` clusters, no multi-node assumptions);
-- built on **published images**, not `build:` (or minimally so — you only have to build the few that are build-only, via [olares-chart-image.md](olares-chart-image.md));
+- built on **published images**, not `build:` (or minimally so — you only have to build the few that are build-only, via the Image capability);
 - **without** `privileged`, `network_mode: host`, `cap_add`, or host-device mounts (Olares won't allow these);
 - explicit about **ports, volumes, env** so the four refinement areas are tractable.
 
@@ -23,7 +23,7 @@ A "self-host" / "production" compose is usually closer to Olares than a "dev" co
 
 When there is no compose, read the code and write a minimal one. For each service capture:
 
-- **image** — the published, arch-correct image (build+push it first if missing — [olares-chart-image.md](olares-chart-image.md));
+- **image** — the published, arch-correct image (build+push it first if missing — the Image capability);
 - **ports** — the port(s) the process listens on (becomes the entrance / service);
 - **environment** — required config/secrets the app reads at startup;
 - **volumes** — directories the app writes to and must persist;
@@ -32,7 +32,7 @@ When there is no compose, read the code and write a minimal one. For each servic
 ```yaml
 services:
   app:
-    image: <user>/<repo>:<tag>     # pullable + arch-correct (see olares-chart-image.md)
+    image: <user>/<repo>:<tag>     # pullable + arch-correct (see the Image capability)
     ports:
       - "8080:8080"
     environment:
@@ -55,5 +55,5 @@ Keep it faithful to how the app actually runs; the refinement (userspace volumes
 ## Next step
 
 ```bash
-olares-cli chart from-compose --name <app> -f docker-compose.yml   # olares-chart-from-compose.md
+olares-cli chart from-compose --name <app> -f docker-compose.yml   # the from-compose scaffold
 ```

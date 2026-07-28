@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 使用官方 ISO 镜像在 NVIDIA DGX Spark 上安装 Olares，包括制作启动盘、安装步骤和激活流程。
 ---
 
-# 通过 ISO 镜像安装 Olares
+# 在 Spark 上通过 ISO 镜像安装 Olares
 
 本文介绍如何使用官方 ISO 镜像在 NVIDIA DGX Spark 上安装 Olares。
 
@@ -18,7 +18,7 @@ description: 使用官方 ISO 镜像在 NVIDIA DGX Spark 上安装 Olares，包�
 
 ## 制作启动盘
 
-1. 下载[适用于 DGX Spark 的官方 Olares ISO 镜像](https://cdn.olares.cn/spark/olares-latest-arm64.iso)。
+1. 下载[适用于 DGX Spark 的官方 Olares ISO 镜像](https://cdn.olares.cn/spark/olares-v1.12.6-arm64.iso)。
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/) 工具。
 3. 将 U 盘插入电脑。
 4. 打开 Balena Etcher，依次选择：
@@ -105,7 +105,7 @@ description: 使用官方 ISO 镜像在 NVIDIA DGX Spark 上安装 Olares，包�
 
 DGX Spark 采用统一内存架构，CPU 和 GPU 共享 128 GB 的 LPDDR5x 内存。与传统 GPU 拥有独立显存不同，DGX Spark 不区分系统内存和 GPU 显存。
 
-在 DGX Spark 上，Olares 默认使用**显存分片**模式进行 GPU 资源管理。当你安装 AI 应用时，Olares 会自动分配最低所需的内存，以确保应用能够正常启动和运行。
+在 DGX Spark 上，Olares 默认使用**容量分片**模式进行 GPU 资源管理。当你安装 AI 应用时，Olares 会自动分配最低所需的内存，以确保应用能够正常启动和运行。
 
 如需调整某个应用的内存分配，可以手动修改：
 

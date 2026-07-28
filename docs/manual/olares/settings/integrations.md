@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Centralize third-party service connections, SMB network storage credentials, and website cookies in Olares. Extend file storage capabilities and ensure smooth access to subscriptions and automated tasks.
+description: Manage third-party services, SMB storage credentials, and website cookies in Olares Settings for connected storage, subscriptions, and automations.
 ---
 
 # Manage integrations in Settings

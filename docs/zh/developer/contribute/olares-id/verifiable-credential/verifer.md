@@ -1,3 +1,6 @@
+---
+description: Olares ID 系统中验证方（Verifier）通过 Presentation Exchange 校验可验证凭证的流程。
+---
 # 验证方服务 (Verifier Service)
 
 关于此流程，请参考[呈现交换 (Presentation Exchange)](https://identity.foundation/presentation-exchange/)

@@ -354,10 +354,10 @@ func (f *FrpcController) getApps(parentCtx context.Context) (*v1alpha1App.Applic
 func (f *FrpcController) getCustomDomains(apps *v1alpha1App.ApplicationList) (customDomains []string, err error) {
 	for i := range apps.Items {
 		app := &apps.Items[i]
-		// For v3 apps, the customDomain blob lives in
+		// For shared apps, the customDomain blob lives in
 		// Spec.UserSettings[constants.Username]; for v1/v2 it stays in
 		// Spec.Settings. EffectiveSettings hides the difference. We
-		// reject v3 apps that this BFL has no overlay for so we don't
+		// reject shared apps that this BFL has no overlay for so we don't
 		// publish another user's domains via this user's frpc.
 		settings := app.EffectiveSettings(constants.Username)
 		if len(settings) == 0 {
@@ -385,7 +385,7 @@ func (f *FrpcController) getCustomDomains(apps *v1alpha1App.ApplicationList) (cu
 
 // isOwnerApp gates which Applications this BFL's frpc reacts to:
 //   - v1/v2: only the apps owned by constants.Username (legacy).
-//   - v3: every BFL needs to see CR-level changes because each user
+//   - shared: every BFL needs to see CR-level changes because each user
 //     manages their own UserSettings.
 func isOwnerApp(objs ...client.Object) bool {
 	var isTrue = len(objs) != 0
@@ -394,7 +394,7 @@ func isOwnerApp(objs ...client.Object) bool {
 		if !ok {
 			return false
 		}
-		if v1alpha1App.IsV3(app) {
+		if v1alpha1App.IsShared(app) {
 			continue
 		}
 		isTrue = app.Spec.Owner == constants.Username && isTrue

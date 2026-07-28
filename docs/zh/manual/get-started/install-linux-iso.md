@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括系统要求、安装命令和激活流程。
 ---
 
-# 通过 ISO 镜像安装 Olares
+# 在 Linux 设备上通过 ISO 镜像安装 Olares
 
 本文介绍如何通过官方 ISO 镜像在物理机上安装 Olares 系统。
 
@@ -28,7 +28,7 @@ description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括
 
 ## 制作启动盘
 
-1. 下载[最新官方 Olares ISO 镜像](https://cdn.olares.cn/olares-latest-amd64.iso)。
+1. 下载[最新官方 Olares ISO 镜像](https://cdn.olares.cn/olares-v1.12.6-amd64.iso)。
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/) 工具。
 3. 将 U 盘插入电脑。
 4. 打开 Etcher，依次选择：

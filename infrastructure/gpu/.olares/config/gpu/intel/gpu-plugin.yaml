@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: intel-gpu-plugin
+  name: intel-gpu-plugin
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: intel-gpu-plugin
+  template:
+    metadata:
+      labels:
+        app: intel-gpu-plugin
+    spec:
+      containers:
+      - args:
+        - -enable-monitoring
+        - -shared-dev-num=50
+        - -v=4
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        image: beclab/intel-device-plugin:1.1
+        imagePullPolicy: IfNotPresent
+        name: intel-gpu-plugin
+        resources:
+          limits:
+            cpu: 100m
+            memory: 90Mi
+          requests:
+            cpu: 40m
+            memory: 45Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          seLinuxOptions:
+            type: container_device_plugin_t
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts:
+        - mountPath: /dev/dri
+          name: dev-dri-fs
+          readOnly: true
+        - mountPath: /sys/class/drm
+          name: sysfsdrm
+          readOnly: true
+        - mountPath: /var/lib/kubelet/device-plugins
+          name: kubeletsockets
+        - mountPath: /var/run/cdi
+          name: cdipath
+        - mountPath: /dev/accel
+          name: dev-accel-fs
+          readOnly: true
+        - mountPath: /sys/class/accel
+          name: sysfsaccel
+      nodeSelector:
+        intel.feature.node.kubernetes.io/gpu: "true"
+        kubernetes.io/arch: amd64
+      volumes:
+      - hostPath:
+          path: /dev/dri
+        name: dev-dri-fs
+      - hostPath:
+          path: /sys/class/drm
+        name: sysfsdrm
+      - hostPath:
+          path: /var/lib/kubelet/device-plugins
+        name: kubeletsockets
+      - hostPath:
+          path: /var/run/cdi
+          type: DirectoryOrCreate
+        name: cdipath
+      - hostPath:
+          path: /dev/accel
+        name: dev-accel-fs
+      - hostPath:
+          path: /sys/class/accel
+        name: sysfsaccel
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate

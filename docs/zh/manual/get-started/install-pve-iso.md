@@ -33,7 +33,7 @@ PVE 中如需使用 GPU，必须配置显卡直通。详细步骤见[在 PVE 中
 
 ## 下载 Olares ISO 镜像
 
-下载[最新官方 Olares ISO 镜像](https://cdn.olares.cn/olares-latest-amd64.iso)。
+下载[最新官方 Olares ISO 镜像](https://cdn.olares.cn/olares-v1.12.6-amd64.iso)。
 
 ## 配置 PVE 虚拟机
 在 PVE 运行 Olares 时，请确保虚拟机满足以下配置要求。你可以在**创建新虚拟机**时应用这些设置，也可以**调整已有虚拟机**以符合要求。

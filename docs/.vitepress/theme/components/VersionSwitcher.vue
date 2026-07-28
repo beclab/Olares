@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useData, useRouter,inBrowser } from "vitepress"
+import { useData, inBrowser } from "vitepress"
 import { computed, ref } from 'vue'
 import VPMenuLink from 'vitepress/dist/client/theme-default/components/VPMenuLink.vue'
 import VPFlyout from 'vitepress/dist/client/theme-default/components/VPFlyout.vue'
@@ -9,40 +9,97 @@ const props = defineProps<{
   latestVersion: string
 }>();
 
-const router = useRouter();
-const { site } = useData();
+const { site, page } = useData();
 
-const localUrl = computed(() => {
-  let url = "/";
-  if( inBrowser ) {
-    url =  window.location.href.split('/').slice(0,3).join('/');
-    if( !url.endsWith('/') ) {
-      url = url + '/';
+declare const __SITE_PATH_PREFIX__: string;
+declare const __CURRENT_DOC_VERSION__: string;
+
+function normalizePrefix(raw: string): string {
+  if (!raw) return "/";
+  let p = raw.startsWith("/") ? raw : `/${raw}`;
+  if (!p.endsWith("/")) p += "/";
+  return p;
+}
+
+function stripTrailingVersionSegment(base: string): string {
+  let b = base || "/";
+  if (!b.endsWith("/")) b += "/";
+  for (const v of props.versions) {
+    const segment = `${v}/`;
+    if (b.endsWith(segment)) {
+      return normalizePrefix(b.slice(0, b.length - segment.length));
     }
-  } 
-  
-  //console.log('localUrl', url);
-  return url;
+  }
+  return normalizePrefix(b);
+}
+
+// Deploy prefix (e.g. /docs/). Driven by the build-time SITE_PATH_PREFIX, with
+// site.base as the fallback. site.base is the authoritative deploy root baked
+// into this build (e.g. /docs/ or /docs/1.12.4/), so we never scan the live
+// pathname — a semver-looking segment inside a page slug must not be mistaken
+// for the deploy/version segment.
+const pathPrefix = computed(() => {
+  if (typeof __SITE_PATH_PREFIX__ === "string" && __SITE_PATH_PREFIX__) {
+    return normalizePrefix(__SITE_PATH_PREFIX__);
+  }
+  return stripTrailingVersionSegment(site.value.base || "/");
+});
+
+const originUrl = computed(() => {
+  if (!inBrowser) return "";
+  const url = window.location.origin;
+  return url.endsWith("/") ? url : `${url}/`;
 });
 
 const currentVersion = computed(() => {
-  let version = props.latestVersion;
-
-  for (const v of props.versions) {
-    const u = `/${v}/`;
-    // console.log('u', u);
-    // console.log('router.route.path', router.route.path);
-    if (router.route.path.startsWith(u)) {
-      //console.log('match version', v);
-      version = v;
-      break;
-    }
+  if (
+    typeof __CURRENT_DOC_VERSION__ === "string" &&
+    __CURRENT_DOC_VERSION__ &&
+    props.versions.includes(__CURRENT_DOC_VERSION__)
+  ) {
+    return __CURRENT_DOC_VERSION__;
   }
 
-  return version;
+  // Derive from site.base (the deploy root of this build), not the live
+  // pathname: on a versioned build site.base ends with the version segment
+  // (e.g. /docs/1.12.4/), while page slugs may contain unrelated semver-like
+  // segments that must not be treated as the active version.
+  const trimmed = (site.value.base || "/").replace(/\/+$/, "");
+  const lastSegment = trimmed.slice(trimmed.lastIndexOf("/") + 1);
+  if (props.versions.includes(lastSegment)) {
+    return lastSegment;
+  }
+
+  return props.latestVersion;
 });
 
-const customLink = (path) => path.replace(site.value.base || '', '');
+// Path after the version segment (e.g. /manual/overview), for same-page jumps
+// across versions. Derived from page.relativePath, which is reactive AND
+// available during SSR prerender — so the built HTML keeps the current page
+// instead of collapsing to each version root. relativePath is already relative
+// to the docs (version) root, so there is no fragile base/version slicing.
+const pathSuffixAfterVersion = computed(() => {
+  const rel = page.value.relativePath || "";
+  // Drop the source extension and map index pages to their directory.
+  let p = rel.replace(/\.(md|html)$/i, "").replace(/(^|\/)index$/i, "$1");
+  if (!p) return "/";
+  return p.startsWith("/") ? p : `/${p}`;
+});
+
+const versionHref = (version: string) => {
+  const prefix = pathPrefix.value;
+  const base =
+    version === props.latestVersion ? prefix : `${prefix}${version}/`;
+
+  const suffix = pathSuffixAfterVersion.value;
+  let path = base;
+  if (suffix && suffix !== "/") {
+    const tail = suffix.startsWith("/") ? suffix.slice(1) : suffix;
+    path = base.endsWith("/") ? `${base}${tail}` : `${base}/${tail}`;
+  }
+
+  return inBrowser ? `${originUrl.value}${path.replace(/^\//, "")}` : path;
+};
 
 const isOpen = ref(false);
 const toggle = () => {
@@ -65,7 +122,12 @@ const toggle = () => {
           target: '_blank',
           rel: 'a'
         }" />   -->
-       <a v-if="currentVersion != version" :href="`${localUrl}${version}/`" target="_blank">{{ version }}</a>
+       <a
+         v-if="currentVersion != version"
+         :href="versionHref(version)"
+         target="_blank"
+         rel="noopener noreferrer"
+       >{{ version }}</a>
       </template>
     </div>
   </VPFlyout>

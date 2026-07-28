@@ -1,6 +1,7 @@
 ---
 outline: [2, 3]
-description: Use LLMFit on Olares to find the best LLM models for your hardware. It benchmarks your system and scores models on quality, speed, compatibility, and context length.
+title: Match LLMs to your hardware with LLMFit
+description: Run LLMFit on Olares to benchmark your hardware and find compatible LLMs, scored by model quality, speed, fit, and context length.
 head:
   - - meta
     - name: keywords

@@ -75,9 +75,18 @@ func init() {
 			handlers.WaitServerRunning(
 				handlers.RunCommand(handlers.PostUmountUsbInCluster, umountusb.New)))))
 
-	cmd.Post("/collect-logs", handlers.RequireLocal(
+	cmd.Post("/collect-logs", handlers.RequireAuthorization(
+		handlers.RequireAdmin(
+			handlers.RequireMaster(
+				handlers.WaitServerRunning(
+					handlers.RunCommand(handlers.PostCollectLogs, collectlogs.New))))))
+
+	cmd.Get("/collect-logs/:runID", handlers.RequireAuthorization(
+		handlers.RequireMaster(handlers.GetCollectLogsStatus)))
+
+	cmd.Post("/collect-logs-node", handlers.RequireAuthorization(
 		handlers.WaitServerRunning(
-			handlers.RunCommand(handlers.PostCollectLogs, collectlogs.New))))
+			handlers.RunCommand(handlers.PostCollectLogsNode, collectlogs.NewNode))))
 
 	cmd.Post("/mount-samba", handlers.RequireMaster(
 		handlers.RequireLocal(

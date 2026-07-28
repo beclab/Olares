@@ -23,13 +23,17 @@ func TestBuildPartitionsEnvelope_PknameTreeAndPrefix(t *testing.T) {
 			noUnexpectedPath(t, w, r.URL.Path)
 			return
 		}
+		// size / fsused are raw byte counts (lsblk -b style), as the real
+		// exporter emits — the table converts them to disk units.
+		// sda=1Ti, sda1=100Gi (fsused 50Gi), sda2=900Gi,
+		// sda2p1=500Gi (fsused 200Gi), nvme0n1=512Gi.
 		_, _ = w.Write([]byte(`{"results":[
           {"metric_name":"node_disk_lsblk_info","data":{"result":[
-            {"metric":{"node":"olares-1","name":"sda","pkname":"","size":"1T","fstype":"","mountpoint":"","fsused":"","fsuse_percent":""},"value":[1714600000,"1"]},
-            {"metric":{"node":"olares-1","name":"sda1","pkname":"sda","size":"100G","fstype":"ext4","mountpoint":"/boot","fsused":"50G","fsuse_percent":"50%"},"value":[1714600000,"1"]},
-            {"metric":{"node":"olares-1","name":"sda2","pkname":"sda","size":"900G","fstype":"LVM2_member","mountpoint":"","fsused":"","fsuse_percent":""},"value":[1714600000,"1"]},
-            {"metric":{"node":"olares-1","name":"sda2p1","pkname":"sda2","size":"500G","fstype":"ext4","mountpoint":"/","fsused":"200G","fsuse_percent":"40%"},"value":[1714600000,"1"]},
-            {"metric":{"node":"olares-2","name":"nvme0n1","pkname":"","size":"512G","fstype":"","mountpoint":"","fsused":"","fsuse_percent":""},"value":[1714600000,"1"]}
+            {"metric":{"node":"olares-1","name":"sda","pkname":"","size":"1099511627776","fstype":"","mountpoint":"","fsused":"","fsuse_percent":""},"value":[1714600000,"1"]},
+            {"metric":{"node":"olares-1","name":"sda1","pkname":"sda","size":"107374182400","fstype":"ext4","mountpoint":"/boot","fsused":"53687091200","fsuse_percent":"50%"},"value":[1714600000,"1"]},
+            {"metric":{"node":"olares-1","name":"sda2","pkname":"sda","size":"966367641600","fstype":"LVM2_member","mountpoint":"","fsused":"","fsuse_percent":""},"value":[1714600000,"1"]},
+            {"metric":{"node":"olares-1","name":"sda2p1","pkname":"sda2","size":"536870912000","fstype":"ext4","mountpoint":"/","fsused":"214748364800","fsuse_percent":"40%"},"value":[1714600000,"1"]},
+            {"metric":{"node":"olares-2","name":"nvme0n1","pkname":"","size":"549755813888","fstype":"","mountpoint":"","fsused":"","fsuse_percent":""},"value":[1714600000,"1"]}
           ]}}
         ]}`))
 	}))
@@ -82,5 +86,20 @@ func TestBuildPartitionsEnvelope_PknameTreeAndPrefix(t *testing.T) {
 	}
 	if env.Items[1].Display["mountpoint"] != "/boot" {
 		t.Errorf("sda1 mountpoint = %v, want /boot", env.Items[1].Display["mountpoint"])
+	}
+	// size / fsused run through the disk-unit converter (matching the
+	// SPA's formatLsblkDiskValue auto mode): raw byte counts become
+	// "1 Ti" / "100 Gi" etc., and empty fsused stays "-".
+	if env.Items[0].Display["size"] != "1 Ti" {
+		t.Errorf("sda size = %v, want \"1 Ti\"", env.Items[0].Display["size"])
+	}
+	if env.Items[1].Display["size"] != "100 Gi" {
+		t.Errorf("sda1 size = %v, want \"100 Gi\"", env.Items[1].Display["size"])
+	}
+	if env.Items[1].Display["fsused"] != "50 Gi" {
+		t.Errorf("sda1 fsused = %v, want \"50 Gi\"", env.Items[1].Display["fsused"])
+	}
+	if env.Items[2].Display["fsused"] != "-" {
+		t.Errorf("sda2 fsused = %v, want \"-\" (empty)", env.Items[2].Display["fsused"])
 	}
 }

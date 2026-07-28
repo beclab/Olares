@@ -26,7 +26,6 @@ import pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
 var (
 	sampleFloat       = pkgdashboard.SampleFloat
 	formatFloat       = pkgdashboard.FormatFloat
-	percentString     = pkgdashboard.PercentString
 	safeRatio         = pkgdashboard.SafeRatio
 	lastSampleFromRow = pkgdashboard.LastSampleFromRow
 )

@@ -23,9 +23,13 @@ func getCurrentCliVersion() (*semver.Version, error) {
 		return nil, fmt.Errorf("failed to execute olares-cli -v: %v", err)
 	}
 
-	// parse version from output
-	// expected format: "olares-cli version ${VERSION}"
-	parts := strings.Split(string(output), " ")
+	// parse version from output.
+	// Only the first line carries the version and is stable across releases:
+	//   old format: "olares-cli version ${VERSION}"
+	//   new format: same first line, followed by extra "Git commit: ..." /
+	//               "Build time: ..." lines that we deliberately ignore here.
+	firstLine := strings.TrimSpace(strings.SplitN(string(output), "\n", 2)[0])
+	parts := strings.Fields(firstLine)
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("unexpected version output format: %s", string(output))
 	}

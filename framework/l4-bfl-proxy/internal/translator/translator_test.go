@@ -1,6 +1,8 @@
 package translator
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
@@ -596,8 +598,28 @@ func TestBuildAppVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 			assert.Nil(t, r.DirectResponse, "no 403 gate is emitted; shared apps are open")
 			assert.NotEmpty(t, r.Cluster, "every user must reach the upstream cluster")
 			assert.NotEmpty(t, clusterSet, "an upstream cluster must be registered")
+
+			require.NotNil(t, r.ExtAuth, "shared apps must be gated behind Authelia ext_auth")
+			assert.Equal(t, fmt.Sprintf("authelia_backend_%s", name), r.ExtAuth.Cluster)
+			assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
+			assert.False(t, r.ExtAuth.Disabled)
 		})
 	}
+}
+
+// Shared apps reached via a custom domain are also gated behind Authelia.
+func TestBuildCustomDomainVirtualHosts_SharedApp_ExtAuth(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", Zone: "alice.example.com"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	vhosts := tr.buildCustomDomainVirtualHosts(user, makeSharedAppWithCustom(), clusterSet)
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	r := vhosts[0].Routes[0]
+	require.NotNil(t, r.ExtAuth, "shared apps must stay gated even on a custom domain")
+	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
 }
 
 // v1/v2 (non-shared) apps continue to reach their upstream cluster directly.
@@ -620,7 +642,106 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
 	assert.Nil(t, vhosts[0].Routes[0].DirectResponse)
+	assert.Nil(t, vhosts[0].Routes[0].ExtAuth, "non-shared apps must not be gated behind ext_auth")
 	assert.NotEmpty(t, clusterSet)
+}
+
+// A "dev" entrance answers on both its normal hostname and a
+// `<appid>-<port>.<zone>` alias, both routed to the same upstream cluster.
+func TestBuildAppVirtualHosts_DevEntranceAlias(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "devapp",
+		Appid:     "28f57292",
+		Namespace: "devapp-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			// A dev entrance's Host is the backing pod IP (set by proxylistener).
+			{Name: "web", Host: "10.244.1.23", Port: 9999, Type: "dev"},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+
+	assert.Contains(t, vhosts[0].Domains, "28f57292.alice.example.com", "primary hostname must remain")
+	assert.Contains(t, vhosts[0].Domains, "28f57292-9999.alice.example.com", "dev alias must be added")
+
+	// The alias shares the single upstream cluster of the entrance, which points
+	// straight at the pod IP as a STATIC cluster.
+	require.Len(t, vhosts[0].Routes, 1)
+	cl := clusterSet[vhosts[0].Routes[0].Cluster]
+	require.NotNil(t, cl)
+	assert.Equal(t, "10.244.1.23", cl.Host, "dev entrance must route straight to the pod IP in Host")
+	assert.False(t, cl.UseDNS, "dev entrance must be a STATIC cluster")
+	assert.Equal(t, uint32(9999), cl.Port)
+}
+
+// A non-dev entrance uses the Kubernetes service DNS host (STRICT_DNS).
+func TestBuildAppVirtualHosts_NonDevEntranceUsesDNS(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "app",
+		Appid:     "28f57292",
+		Namespace: "app-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "app-svc", Port: 9999},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+
+	cl := clusterSet[vhosts[0].Routes[0].Cluster]
+	require.NotNil(t, cl)
+	assert.Equal(t, "app-svc.app-alice.svc.cluster.local", cl.Host)
+	assert.True(t, cl.UseDNS)
+}
+
+// An entrance with an empty Host has no usable upstream and is skipped.
+func TestBuildAppVirtualHosts_EmptyHostSkipped(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "devapp",
+		Appid:     "1f47cd9b",
+		Namespace: "devapp-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "", Port: 8080, Type: "dev"},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	assert.Empty(t, vhosts, "entrance with empty host must be skipped")
+	assert.Empty(t, clusterSet)
+}
+
+// A non-dev entrance must NOT get the `<appid>-<port>.<zone>` alias.
+func TestBuildAppVirtualHosts_NonDevEntranceNoAlias(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "app",
+		Appid:     "28f57292",
+		Namespace: "app-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "app-svc", Port: 9999},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	assert.NotContains(t, vhosts[0].Domains, "28f57292-9999.alice.example.com")
 }
 
 // Custom domains for shared apps are also open to every user.
@@ -639,5 +760,73 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 			assert.NotEmpty(t, clusterSet)
 			assert.Equal(t, []string{"shareme.example.io"}, vhosts[0].Domains)
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// buildFileserverRoutes
+// ---------------------------------------------------------------------------
+
+// Regression: a non-master node's scoped prefix (e.g.
+// /api/resources/external/olares-work/) overlaps with the master node's
+// generic catch-all prefix (/api/resources/external/). Envoy matches routes
+// top-to-bottom and stops at the first match, so every node-scoped route MUST
+// be emitted before the generic master routes — otherwise the master prefix
+// swallows the request and misroutes it to the master node.
+func TestBuildFileserverRoutes_NodeScopedBeforeMasterGeneric(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+
+	// "olares" sorts first and is the master; "olares-work" is a worker node.
+	// (buildFileserverRoutes relies on FileserverNodes being pre-sorted, which
+	// is what triggered the original bug — the master's generic routes landed
+	// ahead of the worker's scoped routes.)
+	user := &message.UserInfo{
+		Name: "testip162",
+		FileserverNodes: []*message.FileserverNodeInfo{
+			{NodeName: "olares", IsMaster: true},
+			{NodeName: "olares-work", IsMaster: false},
+		},
+	}
+
+	clusterSet := make(map[string]*ir.ClusterIR)
+	routes := tr.buildFileserverRoutes(user, clusterSet)
+
+	indexOfPrefix := func(prefix string) int {
+		for i, r := range routes {
+			if r.PathPrefix == prefix {
+				return i
+			}
+		}
+		return -1
+	}
+
+	nodeExternal := indexOfPrefix("/api/resources/external/olares-work/")
+	masterExternal := indexOfPrefix("/api/resources/external/")
+	require.GreaterOrEqual(t, nodeExternal, 0, "olares-work node route must exist")
+	require.GreaterOrEqual(t, masterExternal, 0, "master generic route must exist")
+	assert.Less(t, nodeExternal, masterExternal,
+		"node-scoped /api/resources/external/olares-work/ must be ordered before the generic /api/resources/external/")
+
+	// The node-scoped route must target the worker node's cluster, and the
+	// generic master route the master node's cluster.
+	assert.Equal(t, "files_testip162_olares-work", routes[nodeExternal].Cluster)
+	assert.Equal(t, "files_testip162_olares", routes[masterExternal].Cluster)
+	assert.Equal(t, "olares-work", routes[nodeExternal].RequestHeaders["X-Terminus-Node"])
+
+	// Every node-scoped prefix that overlaps a master prefix must precede ALL
+	// master generic routes. Compute the first master-route index and assert
+	// no node-scoped route appears after it.
+	firstMaster := len(routes)
+	for i, r := range routes {
+		if strings.HasPrefix(r.Name, "files_master_") {
+			firstMaster = i
+			break
+		}
+	}
+	for i, r := range routes {
+		if strings.HasPrefix(r.Name, "files_node_") {
+			assert.Less(t, i, firstMaster,
+				"node-scoped route %q must come before any master generic route", r.Name)
+		}
 	}
 }

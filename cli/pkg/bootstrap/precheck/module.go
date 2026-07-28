@@ -75,6 +75,7 @@ func (m *RunPrechecksModule) Init() {
 
 	checkers := []Checker{
 		new(SystemSupportCheck),
+		new(HostnameCheck),
 		new(SystemdCheck),
 		new(RequiredPortsCheck),
 		new(ConflictingContainerdCheck),

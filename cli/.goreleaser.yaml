@@ -22,7 +22,14 @@ builds:
     ldflags:
       - -s
       - -w
-      - -X github.com/beclab/Olares/cli/version.VERSION={{ .Version }}
+      - >-
+        {{- if index .Env "BINARY_VERSION" }}
+        -X github.com/beclab/Olares/cli/version.VERSION={{ .Env.BINARY_VERSION }}
+        {{- else }}
+        -X github.com/beclab/Olares/cli/version.VERSION={{ .Version }}
+        {{- end }}
+      - -X github.com/beclab/Olares/cli/version.GitCommit={{ .FullCommit }}
+      - -X github.com/beclab/Olares/cli/version.BuildTime={{ .Date }}
       - >-
         {{- if index .Env "OLARES_VENDOR_TYPE" }}
         -X github.com/beclab/Olares/cli/version.VENDOR={{ .Env.OLARES_VENDOR_TYPE }}

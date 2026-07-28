@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/pelletier/go-toml"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
@@ -24,7 +26,6 @@ import (
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 
-	srvconfig "github.com/containerd/containerd/services/server/config"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,9 +41,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CalicoTunnelAddrAnnotation annotation key for calico tunnel address.
-const CalicoTunnelAddrAnnotation = "projectcalico.org/IPv4IPIPTunnelAddr"
-const DefaultRegistry = "https://registry-1.docker.io"
+const (
+	// CalicoTunnelAddrAnnotation annotation key for calico tunnel address.
+	CalicoTunnelAddrAnnotation = "projectcalico.org/IPv4IPIPTunnelAddr"
+	DefaultRegistry            = "https://registry-1.docker.io"
+
+	minikubeLabelPrefix = "minikube.k8s.io/"
+	// docker or  podman driver's providerID prefix
+	minikubeKICProvider = "kic://"
+)
 
 // GetAllNodesPodCIDRs returns all node pod's cidr.
 func GetAllNodesPodCIDRs() (cidrs []string) {
@@ -125,25 +132,25 @@ func GetAllNodesTunnelIPCIDRs() (cidrs []string) {
 // 	return gpuType, nil
 // }
 
-// GetAllGpuTypesFromNodes returns the set of explicit GPU types declared by
-// node labels (gpu.bytetrade.io/type). Nodes without the label, or with the
-// label set to an empty string / "none", contribute nothing to the result,
-// so a pure-CPU cluster returns an empty map. Callers that need to surface
-// "CPU" as a user-selectable option should add it on top of this set
-// themselves; mixing it in here would break the chart-render auto-detect
-// path which expects len(gpuTypes)==1 to mean "this cluster has exactly
-// one GPU flavour".
+// GetAllGpuTypesFromNodes returns the set of non-cpu GPU modes declared across
+// the cluster's nodes. Each node may advertise several modes at once via the
+// existence-based per-mode labels gpu.bytetrade.io/<mode> (and the legacy
+// single-value gpu.bytetrade.io/type label is still honored for backward
+// compatibility) — see NodeSupportedGPUTypes. Nodes without any GPU label
+// contribute nothing, so a pure-CPU cluster returns an empty map. Callers that
+// need to surface "CPU" as a user-selectable option should add it on top of
+// this set themselves; mixing it in here would break the chart-render
+// auto-detect path which expects len(gpuTypes)==1 to mean "this cluster has
+// exactly one GPU flavour".
 func GetAllGpuTypesFromNodes(nodes *corev1.NodeList) (map[string]struct{}, error) {
 	gpuTypes := make(map[string]struct{})
 	if nodes == nil {
 		return gpuTypes, errors.New("empty node list")
 	}
-	for _, n := range nodes.Items {
-		typeLabel, ok := n.Labels[NodeGPUTypeLabel]
-		if IsCPUOnlyNodeLabel(typeLabel, ok) {
-			continue
+	for i := range nodes.Items {
+		for _, mode := range NodeSupportedGPUTypes(&nodes.Items[i]) {
+			gpuTypes[mode] = struct{}{} // TODO: add driver version info
 		}
-		gpuTypes[typeLabel] = struct{}{} // TODO: add driver version info
 	}
 	return gpuTypes, nil
 }
@@ -157,22 +164,45 @@ func IsNodeReady(node *corev1.Node) bool {
 	return false
 }
 
+// dockerHostsTOMLPath is containerd's registry hosts config for docker.io under
+// config_path (/etc/containerd/certs.d). Registry mirrors moved here in the
+// containerd v3 config; the inline registry.mirrors in config.toml is deprecated
+// and ignored by containerd 2.x once config_path is set.
+const dockerHostsTOMLPath = "/etc/containerd/certs.d/docker.io/hosts.toml"
+
+// GetMirrorsEndpoint returns the docker.io pull-through mirror endpoints
+// configured for containerd, in priority (file) order. They are read from
+// containerd's certs.d hosts.toml `[host."<url>"]` entries, the containerd v3
+// replacement for the deprecated inline registry.mirrors config.
 func GetMirrorsEndpoint() (ep []string) {
-	config := &srvconfig.Config{}
-	err := srvconfig.LoadConfig("/etc/containerd/config.toml", config)
+	data, err := os.ReadFile(dockerHostsTOMLPath)
 	if err != nil {
-		klog.Infof("load mirrors endpoint failed err=%v", err)
+		klog.Infof("load mirrors endpoint from %s failed err=%v", dockerHostsTOMLPath, err)
 		return
 	}
-	plugins := config.Plugins["io.containerd.grpc.v1.cri"]
-	r := plugins.GetPath([]string{"registry", "mirrors", "docker.io", "endpoint"})
-	if r == nil {
+	tree, err := toml.LoadBytes(data)
+	if err != nil {
+		klog.Infof("parse %s failed err=%v", dockerHostsTOMLPath, err)
 		return
 	}
-	for _, e := range r.([]interface{}) {
-		ep = append(ep, e.(string))
+	hostTree, ok := tree.Get("host").(*toml.Tree)
+	if !ok {
+		return
 	}
-	return ep
+	// TOML tables are unordered; recover mirror precedence from source line number,
+	// the same way containerd's own resolver orders hosts.
+	hosts := hostTree.Keys()
+	// Note: use GetPath (single path element), not Get — Get treats the key as a
+	// dot-separated path, which would mangle host URLs that contain dots/colons.
+	sort.SliceStable(hosts, func(i, j int) bool {
+		ti, _ := hostTree.GetPath([]string{hosts[i]}).(*toml.Tree)
+		tj, _ := hostTree.GetPath([]string{hosts[j]}).(*toml.Tree)
+		if ti == nil || tj == nil {
+			return false
+		}
+		return ti.Position().Line < tj.Position().Line
+	})
+	return hosts
 }
 
 // ReplacedImageRef return replaced image ref and true if mirror is support http
@@ -516,4 +546,42 @@ func GetPendingKind(ctrlClient client.Client, pod *corev1.Pod) (string, error) {
 		}
 	}
 	return pendingKind, nil
+}
+
+func IsMinikubeNode(node *corev1.Node) bool {
+	if node == nil {
+		return false
+	}
+	for k := range node.Labels {
+		if strings.HasPrefix(k, minikubeLabelPrefix) {
+			return true
+		}
+	}
+	if strings.HasPrefix(node.Spec.ProviderID, minikubeKICProvider) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(node.Name), "minikube") {
+		return true
+	}
+	return false
+}
+
+func IsRunningOnMinikube(ctx context.Context, client kubernetes.Interface) (bool, error) {
+	if nodeName := os.Getenv("NODE_NAME"); nodeName != "" {
+		node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		return IsMinikubeNode(node), nil
+	}
+	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+	for i := range nodes.Items {
+		if IsMinikubeNode(&nodes.Items[i]) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

@@ -34,6 +34,7 @@ type ApplicationManagerController struct {
 	client.Client
 	KubeConfig  *rest.Config
 	ImageClient images.ImageManager
+	Deps        appstate.Deps
 }
 
 // SetupWithManager sets up the ApplicationManagerController with the provided controller manager
@@ -199,7 +200,8 @@ func (r *ApplicationManagerController) publishStateChangeEvent(am *appv1alpha1.A
 		Reason:       am.Status.Reason,
 		Message:      am.Status.Message,
 		MarketSource: am.Annotations[constants.AppMarketSourceKey],
-		IsV3:         appcfg.IsV3(am),
+		ChartOwner:   appcfg.GetChartOwner(am),
+		IsShared:     appcfg.IsShared(am),
 	})
 }
 

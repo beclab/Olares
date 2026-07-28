@@ -1,4 +1,5 @@
 ---
+description: Deployed TerminusDID, RootTagger, and LibABI contract addresses on the Optimistic and Sepolia Optimistic networks.
 outline: [2, 3]
 ---
 
