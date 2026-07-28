@@ -146,4 +146,3 @@ Olares 可以展示以下加速器类型：
 ## 资源
 
 - [监控资源使用情况](../resources-usage.md)：在仪表盘中跟踪 GPU 和系统使用情况。
-- [GPU 要求](../../get-started/gpu-requirements.md)：查看支持的 GPU 和驱动要求。

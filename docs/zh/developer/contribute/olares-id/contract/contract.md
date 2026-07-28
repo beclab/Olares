@@ -7,7 +7,7 @@ outline: [2, 4]
 
 Olares ID 的智能合约包含两个部分。
 
-- [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 合约扮演着关键角色，并作为 [DID Registry (DID 注册表)](/developer/concepts/registry.md)。查看[合约](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d)。
+- [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 合约扮演着关键角色，并作为 [DID Registry (DID 注册表)](/zh/developer/concepts/registry.md)。查看[合约](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d)。
 - 第三方协议可以基于 [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 扩展信誉系统。目前，已部署以下信誉协议：
     - [Otmoic Trader Reputation](https://github.com/otmoic/reputation-contract-evm/blob/main/contracts/Reputation.sol)。查看[合约](https://optimistic.etherscan.io/address/0xE924F7f68D1dcd004720e107F62c6303aF271ed3)。
     - [Application Reputation](https://github.com/beclab/terminusdid-contract-system/blob/main/src/taggers/TerminusAppMarketReputation.sol)。查看[合约](https://optimistic.etherscan.io/address/0x08065353D266121938B93D4B1071Bb52CD0C0EE4)。
@@ -137,7 +137,7 @@ Tagger 是每个标签内部的必要信息之一。它代表有权修改标签�
 
 ## 信誉 (Reputation)
 
-我们可以基于 Tagger 创建高度灵活的[信誉](/developer/concepts/reputation.md)协议。
+我们可以基于 Tagger 创建高度灵活的[信誉](/zh/developer/concepts/reputation.md)协议。
 
 在实现链上信誉系统时，最关键的要素是：
 

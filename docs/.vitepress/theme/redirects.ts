@@ -83,6 +83,10 @@ export const redirects = {
     '/use-cases/play-games-directly': '/use-cases/steam-direct-play',
     '/zh/use-cases/play-games-directly': '/zh/use-cases/steam-direct-play',
 
+    // Removed: host-cloud-android use case → docs overview.
+    '/use-cases/host-cloud-android': '/manual/overview',
+    '/zh/use-cases/host-cloud-android': '/zh/manual/overview',
+
     // Refactor: /manual/concepts/** → /developer/concepts/**
     '/manual/system-architecture': '/developer/concepts/system-architecture',
     '/manual/concepts/': '/developer/concepts/',
@@ -91,7 +95,6 @@ export const redirects = {
     '/manual/concepts/architecture': '/developer/concepts/architecture',
     '/manual/concepts/data': '/developer/concepts/data',
     '/manual/concepts/did': '/developer/concepts/did',
-    '/manual/concepts/faq': '/developer/concepts/faq',
     '/manual/concepts/network': '/developer/concepts/network',
     '/manual/concepts/olares-id': '/developer/concepts/olares-id',
     '/manual/concepts/registry': '/developer/concepts/registry',
@@ -113,6 +116,9 @@ export const redirects = {
     '/developer/install/cli/olares-logs': '/developer/install/cli/logs',
     '/developer/install/cli/olares-backups': '/developer/install/cli/backups',
 
+    // Removed: legacy alphabetical host-mode command reference → CLI overview.
+    '/developer/install/cli/olares-cli': '/developer/cli-overview',
+
     // Rename: /zh/developer/install/cli/olares-* → /zh/developer/install/cli/*
     '/zh/developer/install/cli/olares-info': '/zh/developer/install/cli/info',
     '/zh/developer/install/cli/olares-start': '/zh/developer/install/cli/start',
@@ -123,6 +129,9 @@ export const redirects = {
     '/zh/developer/install/cli/olares-download': '/zh/developer/install/cli/download',
     '/zh/developer/install/cli/olares-logs': '/zh/developer/install/cli/logs',
     '/zh/developer/install/cli/olares-backups': '/zh/developer/install/cli/backups',
+
+    // Removed: legacy alphabetical host-mode command reference → CLI overview.
+    '/zh/developer/install/cli/olares-cli': '/zh/developer/cli-overview',
 
     // Refactor: /zh/manual/concepts/** → /zh/developer/concepts/**
     '/zh/manual/system-architecture': '/zh/developer/concepts/system-architecture',

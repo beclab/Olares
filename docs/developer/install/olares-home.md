@@ -61,6 +61,6 @@ The structure of Olares Home is designed to optimize file management, version co
 - The `images` and `pkg` directories are shared across all Olares versions. This design reduces redundancy, minimizes duplicate downloads, and saves disk space.
 
 ## Learn more
-- [Olares CLI](../install/cli/olares-cli.md)
+- [Olares CLI](../cli-overview.md)
 - [Olares installation breakdown](installation-process.md)
 - [Olares environment variables](environment-variables.md)

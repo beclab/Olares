@@ -212,7 +212,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 ### 开始之前
 
 - 将外部硬盘连接到 Olares 主机。
-- [SSH](/zh/developer/reference/access-olares-terminal.md) 登录到 Olares 主机终端。
+- SSH 登录到 Olares 主机终端。
 
 ### 识别未挂载的磁盘
 
@@ -318,4 +318,4 @@ nvme1n1     259:3    0 931.5G  0 disk
 ![Check disk volume in Dashboard](/images/zh/manual/tutorials/expand-dashboard-disk.png#bordered)
 
 
-如需查看完整用法与选项，请参考 [`disk`](/zh/developer/install/cli/disk.md)。
+如需查看完整用法与选项，请参考 `disk` 命令文档。

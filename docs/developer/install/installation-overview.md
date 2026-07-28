@@ -62,7 +62,7 @@ olaresd is the system daemon that runs in the background, providing essential ma
 - **Remote system management**: Executes remote system operations, such as Olares installation and activation, based on requests issued from the LarePass client or `olares-cli`.
 
 ### CUDA support
-To enable GPU acceleration for local AI models and applications, Olares supports automatic installation of the CUDA toolkit and drivers through [`olares-cli`](./cli/gpu.md). 
+To enable GPU acceleration for local AI models and applications, Olares supports automatic installation of the CUDA toolkit and drivers through `olares-cli`. 
 
 ## Container orchestration layer
 The container orchestration layer integrates system components into an efficient runtime environment using Kubernetes.
@@ -92,5 +92,5 @@ Once Olares is installed and activated, you can view the running containers thro
 
 - [Olares installation breakdown](installation-process.md)
 - [Olares Home](olares-home.md)
-- [Olares CLI](../install/cli/olares-cli.md)
+- [Olares CLI](../cli-overview.md)
 - [Olares environment variables](environment-variables.md)
