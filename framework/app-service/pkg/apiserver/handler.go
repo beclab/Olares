@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	computevalidation "github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	"github.com/beclab/api/pkg/generated/informers/externalversions"
 	lister_v1alpha1 "github.com/beclab/api/pkg/generated/listers/app.bytetrade.io/v1alpha1"
@@ -22,18 +24,20 @@ import (
 
 // Handler include several fields that used for managing interactions with associated services.
 type Handler struct {
-	kubeHost         string
-	serviceCtx       context.Context
-	userspaceManager *userspace.Manager
-	kubeConfig       *rest.Config // helm's kubeConfig. TODO: insecure
-	sidecarWebhook   *webhook.Webhook
-	ctrlClient       client.Client
-	informer         externalversions.SharedInformerFactory
-	appLister        lister_v1alpha1.ApplicationLister
-	appmgrLister     lister_v1alpha1.ApplicationManagerLister
-	appSynced        cache.InformerSynced
-	appmgrSynced     cache.InformerSynced
-	opController     *OpController
+	kubeHost           string
+	serviceCtx         context.Context
+	userspaceManager   *userspace.Manager
+	kubeConfig         *rest.Config // helm's kubeConfig. TODO: insecure
+	sidecarWebhook     *webhook.Webhook
+	ctrlClient         client.Client
+	informer           externalversions.SharedInformerFactory
+	appLister          lister_v1alpha1.ApplicationLister
+	appmgrLister       lister_v1alpha1.ApplicationManagerLister
+	appSynced          cache.InformerSynced
+	appmgrSynced       cache.InformerSynced
+	opController       *OpController
+	preflightCollector preflightSnapshotCollector
+	preflightIsAdmin   func(context.Context, string) (bool, error)
 }
 
 type handlerBuilder struct {
@@ -142,18 +146,22 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 	}
 
 	return &Handler{
-		kubeHost:         b.ksHost,
-		serviceCtx:       b.ctx,
-		kubeConfig:       b.kubeConfig,
-		userspaceManager: userspace.NewManager(b.ctx),
-		sidecarWebhook:   wh,
-		ctrlClient:       b.ctrlClient,
-		informer:         b.informer,
-		appLister:        b.informer.App().V1alpha1().Applications().Lister(),
-		appmgrLister:     b.informer.App().V1alpha1().ApplicationManagers().Lister(),
-		appSynced:        b.informer.App().V1alpha1().Applications().Informer().HasSynced,
-		appmgrSynced:     b.informer.App().V1alpha1().ApplicationManagers().Informer().HasSynced,
-		opController:     NewQueue(b.ctx),
+		kubeHost:           b.ksHost,
+		serviceCtx:         b.ctx,
+		kubeConfig:         b.kubeConfig,
+		userspaceManager:   userspace.NewManager(b.ctx),
+		sidecarWebhook:     wh,
+		ctrlClient:         b.ctrlClient,
+		informer:           b.informer,
+		appLister:          b.informer.App().V1alpha1().Applications().Lister(),
+		appmgrLister:       b.informer.App().V1alpha1().ApplicationManagers().Lister(),
+		appSynced:          b.informer.App().V1alpha1().Applications().Informer().HasSynced,
+		appmgrSynced:       b.informer.App().V1alpha1().ApplicationManagers().Informer().HasSynced,
+		opController:       NewQueue(b.ctx),
+		preflightCollector: computevalidation.NewPreflightSnapshotCollector(b.ctrlClient),
+		preflightIsAdmin: func(ctx context.Context, user string) (bool, error) {
+			return kubesphere.IsAdmin(ctx, b.kubeConfig, user)
+		},
 	}, nil
 
 }

@@ -34,6 +34,19 @@ func FetchNodeComputeAllocations(ctx context.Context, c client.Client) ([]Node, 
 	return nodes, nil
 }
 
+func FetchSchedulableNodeComputeAllocations(ctx context.Context, c client.Client) ([]Node, error) {
+	nodes, err := loadSchedulableNodeResources(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	allocations, err := loadAllocations(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	attachBindings(nodes, allocations)
+	return nodes, nil
+}
+
 // FetchNodeComputeAllocationsExcludingApp returns the node view with the given
 // app's own allocation rows excluded, so a re-allocation / re-binding of that
 // app does not count its current claim against availability (an exclusive card
@@ -196,6 +209,21 @@ func loadNodeResources(ctx context.Context, c client.Client) ([]Node, error) {
 	}
 	out := make([]Node, 0, len(nodes.Items))
 	for i := range nodes.Items {
+		out = append(out, buildNodeResource(&nodes.Items[i]))
+	}
+	return out, nil
+}
+
+func loadSchedulableNodeResources(ctx context.Context, c client.Client) ([]Node, error) {
+	var nodes corev1.NodeList
+	if err := c.List(ctx, &nodes); err != nil {
+		return nil, err
+	}
+	out := make([]Node, 0, len(nodes.Items))
+	for i := range nodes.Items {
+		if !utils.IsNodeReady(&nodes.Items[i]) || nodes.Items[i].Spec.Unschedulable {
+			continue
+		}
 		out = append(out, buildNodeResource(&nodes.Items[i]))
 	}
 	return out, nil

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -39,6 +40,204 @@ import (
 )
 
 var getNodeInfo = utils.GetNodeInfo
+
+const resourcePressureThreshold = 0.9
+const minimumDiskAvailable int64 = 5 << 30
+
+type ResourceState struct{ CPU, Memory, Disk int64 }
+
+type ResourceDimensions struct{ CPU, Memory, Disk bool }
+
+var AllResourceDimensions = ResourceDimensions{CPU: true, Memory: true, Disk: true}
+
+// MetricsUnavailableError identifies an invalid resource metric.
+type MetricsUnavailableError struct {
+	Resource constants.ResourceType
+	Detail   string
+}
+
+func (e *MetricsUnavailableError) Error() string {
+	return fmt.Sprintf("%s %s is invalid", e.Resource, e.Detail)
+}
+
+// MetricsFailureResource extracts the resource dimension from a metric error.
+func MetricsFailureResource(err error) (constants.ResourceType, bool) {
+	var target *MetricsUnavailableError
+	if errors.As(err, &target) {
+		return target.Resource, true
+	}
+	return "", false
+}
+
+func metricRequirementFailure(err error, op v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error, bool) {
+	resourceType, ok := MetricsFailureResource(err)
+	if !ok {
+		return "", "", nil, false
+	}
+	return resourceType, constants.MetricsUnavailable, fmt.Errorf(constants.MetricsUnavailableMessage, op), true
+}
+
+type ResourcePressure struct {
+	Resource  string `json:"resource"`
+	Required  int64  `json:"required"`
+	Used      int64  `json:"used"`
+	Capacity  int64  `json:"capacity"`
+	Available int64  `json:"available"`
+	Pressured bool   `json:"pressured"`
+}
+
+func EvaluatePhysicalCapacity(required ResourceState, metrics *prometheus.ClusterMetrics, dimensions ResourceDimensions) ([]ResourcePressure, error) {
+	if metrics == nil {
+		return nil, fmt.Errorf("metrics are nil")
+	}
+	values := []struct {
+		enabled      bool
+		resource     constants.ResourceType
+		required     int64
+		total, scale float64
+	}{
+		{dimensions.CPU, constants.CPU, required.CPU, metrics.CPU.Total, 1000},
+		{dimensions.Memory, constants.Memory, required.Memory, metrics.Memory.Total, 1},
+		{dimensions.Disk, constants.Disk, required.Disk, metrics.Disk.Total, 1},
+	}
+	var out []ResourcePressure
+	for _, value := range values {
+		if !value.enabled {
+			continue
+		}
+		capacity, err := metricValue(value.resource, "total", value.total, value.scale, false)
+		if err != nil {
+			return nil, err
+		}
+		appendPressure(&out, resourcePressure(string(value.resource), value.required, 0, capacity, false), true)
+	}
+	return out, nil
+}
+
+func EvaluateClusterPressure(required ResourceState, metrics *prometheus.ClusterMetrics, dimensions ResourceDimensions) ([]ResourcePressure, error) {
+	if metrics == nil {
+		return nil, fmt.Errorf("metrics are nil")
+	}
+	cpuTotal, cpuUsed, err := metricState(dimensions.CPU, constants.CPU, metrics.CPU, 1000, false)
+	if err != nil {
+		return nil, err
+	}
+	memoryTotal, memoryUsed, err := metricState(dimensions.Memory, constants.Memory, metrics.Memory, 1, false)
+	if err != nil {
+		return nil, err
+	}
+	diskTotal, diskUsed, err := metricState(true, constants.Disk, metrics.Disk, 1, false)
+	if err != nil {
+		return nil, err
+	}
+	disk := resourcePressure(string(constants.Disk), required.Disk, diskUsed, thresholdValue(diskTotal), false)
+	disk.Pressured = disk.Pressured && dimensions.Disk || disk.Available < minimumDiskAvailable
+	memory := resourcePressure(string(constants.Memory), required.Memory, memoryUsed, thresholdValue(memoryTotal), false)
+	cpu := resourcePressure(string(constants.CPU), required.CPU, cpuUsed, thresholdValue(cpuTotal), false)
+	var out []ResourcePressure
+	appendPressure(&out, disk, true)
+	appendPressure(&out, memory, dimensions.Memory)
+	appendPressure(&out, cpu, dimensions.CPU)
+	return out, nil
+}
+
+func EvaluateOwnerPressure(required ResourceState, metrics *prometheus.ClusterMetrics, dimensions ResourceDimensions) ([]ResourcePressure, error) {
+	if metrics == nil {
+		return nil, fmt.Errorf("metrics are nil")
+	}
+	cpuTotal, cpuUsed, err := metricState(dimensions.CPU, constants.CPU, metrics.CPU, 1000, true)
+	if err != nil {
+		return nil, err
+	}
+	memoryTotal, memoryUsed, err := metricState(dimensions.Memory, constants.Memory, metrics.Memory, 1, true)
+	if err != nil {
+		return nil, err
+	}
+	memory := resourcePressure(string(constants.Memory), required.Memory, memoryUsed, thresholdValue(memoryTotal), false)
+	cpu := resourcePressure(string(constants.CPU), required.CPU, cpuUsed, thresholdValue(cpuTotal), false)
+	var out []ResourcePressure
+	appendPressure(&out, memory, dimensions.Memory && memoryTotal > 0)
+	appendPressure(&out, cpu, dimensions.CPU && cpuTotal > 0)
+	return out, nil
+}
+
+func EvaluateK8sRequest(required ResourceState, dimensions ResourceDimensions, cpu, memory resource.Quantity) ([]ResourcePressure, error) {
+	if cpu.Sign() < 0 || memory.Sign() < 0 {
+		return nil, fmt.Errorf("kubernetes available resources must not be negative")
+	}
+	maxCPU := resource.NewMilliQuantity(math.MaxInt64, resource.DecimalSI)
+	maxMemory := resource.NewQuantity(math.MaxInt64, resource.DecimalSI)
+	if cpu.Cmp(*maxCPU) > 0 || memory.Cmp(*maxMemory) > 0 {
+		return nil, fmt.Errorf("kubernetes available resources overflow int64")
+	}
+	cpuPressure := resourcePressure(string(constants.CPU), required.CPU, 0, cpu.MilliValue(), true)
+	memoryPressure := resourcePressure(string(constants.Memory), required.Memory, 0, memory.Value(), true)
+	var out []ResourcePressure
+	appendPressure(&out, cpuPressure, dimensions.CPU)
+	appendPressure(&out, memoryPressure, dimensions.Memory)
+	return out, nil
+}
+
+func metricState(enabled bool, resource constants.ResourceType, metric prometheus.Value, scale float64, allowZero bool) (int64, int64, error) {
+	if !enabled {
+		return 0, 0, nil
+	}
+	total, err := metricValue(resource, "total", metric.Total, scale, allowZero)
+	if err != nil || total == 0 && allowZero {
+		return total, 0, err
+	}
+	used, err := metricValue(resource, "usage", metric.Usage, scale, true)
+	return total, used, err
+}
+
+func metricValue(resource constants.ResourceType, detail string, value, multiplier float64, allowZero bool) (int64, error) {
+	scaled := value * multiplier
+	if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || !allowZero && value == 0 ||
+		math.IsNaN(scaled) || math.IsInf(scaled, 0) || scaled >= math.MaxInt64 {
+		return 0, &MetricsUnavailableError{Resource: resource, Detail: detail}
+	}
+	return int64(scaled), nil
+}
+
+func thresholdValue(value int64) int64 {
+	return value/10*9 + value%10*9/10
+}
+
+func resourcePressure(name string, required, used, capacity int64, strict bool) ResourcePressure {
+	headroom := capacity - used
+	if headroom < 0 {
+		headroom = 0
+	}
+	pressured := used > capacity || required > headroom
+	if strict {
+		pressured = required >= headroom
+	}
+	return ResourcePressure{Resource: name, Required: required, Used: used, Capacity: capacity, Available: headroom, Pressured: pressured}
+}
+
+func appendPressure(out *[]ResourcePressure, pressure ResourcePressure, enabled bool) {
+	if enabled && pressure.Pressured {
+		*out = append(*out, pressure)
+	}
+}
+
+func resourceStateFromConfig(appConfig *appcfg.ApplicationConfig) (ResourceState, ResourceDimensions) {
+	if appConfig == nil {
+		return ResourceState{}, ResourceDimensions{}
+	}
+	var state ResourceState
+	var dimensions ResourceDimensions
+	if appConfig.Requirement.CPU != nil {
+		state.CPU, dimensions.CPU = appConfig.Requirement.CPU.MilliValue(), true
+	}
+	if appConfig.Requirement.Memory != nil {
+		state.Memory, dimensions.Memory = appConfig.Requirement.Memory.Value(), true
+	}
+	if appConfig.Requirement.Disk != nil {
+		state.Disk, dimensions.Disk = appConfig.Requirement.Disk.Value(), true
+	}
+	return state, dimensions
+}
 
 func CheckChartSource(source api.AppSource) error {
 	if source != api.Market && source != api.Custom && source != api.DevBox && source != api.System {
@@ -218,28 +417,25 @@ func CheckAppRequirement(token string, appConfig *appcfg.ApplicationConfig, op v
 	klog.Infof("Current resource=%s", utils.PrettyJSON(metrics))
 	klog.Infof("App required resource=%s", utils.PrettyJSON(appConfig.Requirement))
 
-	if appConfig.Requirement.Disk != nil &&
-		appConfig.Requirement.Disk.CmpInt64(int64(metrics.Disk.Total*0.9-metrics.Disk.Usage)) > 0 ||
-		int64(metrics.Disk.Total*0.9-metrics.Disk.Usage) < 5*1024*1024*1024 {
-		return constants.Disk, constants.DiskPressure, fmt.Errorf(constants.DiskPressureMessage, op)
-	}
-
-	if appConfig.Requirement.Memory != nil &&
-		appConfig.Requirement.Memory.CmpInt64(int64(metrics.Memory.Total*0.9-metrics.Memory.Usage)) > 0 {
-		return constants.Memory, constants.SystemMemoryPressure, fmt.Errorf(constants.SystemMemoryPressureMessage, op)
-	}
-	if appConfig.Requirement.CPU != nil {
-		availableCPU, _ := resource.ParseQuantity(strconv.FormatFloat(metrics.CPU.Total*0.9-metrics.CPU.Usage, 'f', -1, 64))
-		if appConfig.Requirement.CPU.Cmp(availableCPU) > 0 {
-			return constants.CPU, constants.SystemCPUPressure, fmt.Errorf(constants.SystemCPUPressureMessage, op)
+	required, dimensions := resourceStateFromConfig(appConfig)
+	pressure, err := EvaluateClusterPressure(required, metrics, dimensions)
+	if err != nil {
+		if resourceType, reason, responseErr, ok := metricRequirementFailure(err, op); ok {
+			return resourceType, reason, responseErr
 		}
+		return "", "", err
 	}
-
-	// GPU availability (per-mode, per-node) is now checked upfront by
-	// compute.BuildInstallComputePlan during install pre-check, so we no
-	// longer reject installs here based on aggregate cluster GPU memory.
-
-	return CheckAppK8sRequestResource(appConfig, op)
+	if len(pressure) == 0 {
+		return "", "", nil
+	}
+	switch pressure[0].Resource {
+	case string(constants.Disk):
+		return constants.Disk, constants.DiskPressure, fmt.Errorf(constants.DiskPressureMessage, op)
+	case string(constants.Memory):
+		return constants.Memory, constants.SystemMemoryPressure, fmt.Errorf(constants.SystemMemoryPressureMessage, op)
+	default:
+		return constants.CPU, constants.SystemCPUPressure, fmt.Errorf(constants.SystemCPUPressureMessage, op)
+	}
 }
 
 func GetRequestResources() (map[string]resources, error) {
@@ -406,17 +602,21 @@ func CheckUserResRequirement(ctx context.Context, appConfig *appcfg.ApplicationC
 	if err != nil {
 		return "", "", err
 	}
-	switch {
-	case appConfig.Requirement.Memory != nil && metrics.Memory.Total != 0 &&
-		appConfig.Requirement.Memory.CmpInt64(int64(metrics.Memory.Total*0.9-metrics.Memory.Usage)) > 0:
-		return constants.Memory, constants.UserMemoryPressure, fmt.Errorf(constants.UserMemoryPressureMessage, op)
-	case appConfig.Requirement.CPU != nil && metrics.CPU.Total != 0:
-		availableCPU, _ := resource.ParseQuantity(strconv.FormatFloat(metrics.CPU.Total*0.9-metrics.CPU.Usage, 'f', -1, 64))
-		if appConfig.Requirement.CPU.Cmp(availableCPU) > 0 {
-			return constants.CPU, constants.UserCPUPressure, fmt.Errorf(constants.UserCPUPressureMessage, op)
+	required, dimensions := resourceStateFromConfig(appConfig)
+	pressure, err := EvaluateOwnerPressure(required, metrics, dimensions)
+	if err != nil {
+		if resourceType, reason, responseErr, ok := metricRequirementFailure(err, op); ok {
+			return resourceType, reason, responseErr
 		}
+		return "", "", err
 	}
-	return "", "", nil
+	if len(pressure) == 0 {
+		return "", "", nil
+	}
+	if pressure[0].Resource == string(constants.Memory) {
+		return constants.Memory, constants.UserMemoryPressure, fmt.Errorf(constants.UserMemoryPressureMessage, op)
+	}
+	return constants.CPU, constants.UserCPUPressure, fmt.Errorf(constants.UserCPUPressureMessage, op)
 }
 
 func CheckMiddlewareRequirement(ctx context.Context, ctrlClient client.Client, middleware *tapr.Middleware) (bool, error) {
@@ -732,6 +932,14 @@ func GetClusterAvailableResource() (*resources, error) {
 	return &availableResources, nil
 }
 
+func GetClusterAvailableResourceQuantities() (resource.Quantity, resource.Quantity, error) {
+	available, err := GetClusterAvailableResource()
+	if err != nil {
+		return resource.Quantity{}, resource.Quantity{}, err
+	}
+	return available.cpu.allocatable.DeepCopy(), available.memory.allocatable.DeepCopy(), nil
+}
+
 func CheckAppK8sRequestResource(appConfig *appcfg.ApplicationConfig, op v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
 	availableResources, err := GetClusterAvailableResource()
 	if err != nil {
@@ -741,25 +949,16 @@ func CheckAppK8sRequestResource(appConfig *appcfg.ApplicationConfig, op v1alpha1
 		return "", "", errors.New("nil appConfig")
 	}
 
-	sufficientCPU, sufficientMemory := false, false
-
-	if appConfig.Requirement.CPU == nil {
-		sufficientCPU = true
+	required, dimensions := resourceStateFromConfig(appConfig)
+	pressure, err := EvaluateK8sRequest(required, dimensions, *availableResources.cpu.allocatable, *availableResources.memory.allocatable)
+	if err != nil {
+		return "", "", err
 	}
-	if appConfig.Requirement.Memory == nil {
-		sufficientMemory = true
+	if len(pressure) == 0 {
+		return "", "", nil
 	}
-	if appConfig.Requirement.CPU != nil && availableResources.cpu.allocatable.Cmp(*appConfig.Requirement.CPU) > 0 {
-		sufficientCPU = true
-	}
-	if appConfig.Requirement.Memory != nil && availableResources.memory.allocatable.Cmp(*appConfig.Requirement.Memory) > 0 {
-		sufficientMemory = true
-	}
-	if !sufficientCPU {
+	if pressure[0].Resource == string(constants.CPU) {
 		return constants.CPU, constants.K8sRequestCPUPressure, fmt.Errorf(constants.K8sRequestCPUPressureMessage, op)
 	}
-	if !sufficientMemory {
-		return constants.Memory, constants.K8sRequestMemoryPressure, fmt.Errorf(constants.K8sRequestMemoryPressureMessage, op)
-	}
-	return "", "", nil
+	return constants.Memory, constants.K8sRequestMemoryPressure, fmt.Errorf(constants.K8sRequestMemoryPressureMessage, op)
 }

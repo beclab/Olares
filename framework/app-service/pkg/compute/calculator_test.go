@@ -432,6 +432,82 @@ func TestPickAggregateAllocationsAcrossNodes(t *testing.T) {
 	}
 }
 
+func TestPickAllocationsSkipsUnhealthyDevices(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "llm", OwnerName: "alice"}
+	req := Requirement{Mode: utils.NvidiaCardType, RequiredGPU: 8 * gi, LimitedGPU: 8 * gi}
+	nodes := []Node{
+		nvidiaNode("unhealthy", Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthNo, SupportType: SupportTypeExclusive}),
+		nvidiaNode("healthy", Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeExclusive}),
+	}
+
+	picked, ok := PickAllocations(app, req, nodes, PressureSnapshot{})
+	if !ok || len(picked) != 1 || picked[0].NodeName != "healthy" {
+		t.Fatalf("expected only the healthy device to be selected, got ok=%v picked=%#v", ok, picked)
+	}
+}
+
+func TestPickAllocationsHonorsDeviceMemoryAndBindings(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "llm", OwnerName: "alice"}
+	req := Requirement{Mode: utils.NvidiaCardType, RequiredGPU: 8 * gi, LimitedGPU: 8 * gi}
+	cases := []struct {
+		name   string
+		device Device
+	}{
+		{
+			name: "exclusive device already bound",
+			device: Device{
+				ID:          "gpu0",
+				Memory:      16 * gi,
+				Health:      deviceHealthYes,
+				SupportType: SupportTypeExclusive,
+				Bindings:    []Allocation{{AppName: "other", Memory: 1}},
+			},
+		},
+		{
+			name: "memory slice has insufficient remaining memory",
+			device: Device{
+				ID:          "gpu0",
+				Memory:      16 * gi,
+				Health:      deviceHealthYes,
+				SupportType: SupportTypeMemorySlice,
+				Bindings:    []Allocation{{AppName: "other", Memory: 9 * gi}},
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if picked, ok := PickAllocations(app, req, []Node{nvidiaNode("nvidia-a", tc.device)}, PressureSnapshot{}); ok || len(picked) != 0 {
+				t.Fatalf("expected allocation to fail, got ok=%v picked=%#v", ok, picked)
+			}
+		})
+	}
+}
+
+func TestPickAllocationsReturnsFailureWhenPressureRejectsFittingDevice(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "llm", OwnerName: "alice"}
+	req := Requirement{
+		Mode:           utils.NvidiaCardType,
+		RequiredGPU:    8 * gi,
+		LimitedGPU:     8 * gi,
+		RequiredMemory: gi,
+		LimitedMemory:  gi,
+	}
+	nodes := []Node{
+		nvidiaNode("nvidia-a", Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeExclusive}),
+	}
+	pressure := PressureSnapshot{
+		Threshold: 0.9,
+		UsageByNode: map[string]prometheus.NodeResourceUsage{
+			"nvidia-a": {MemoryCapacity: 8 * gi, MemoryAvailable: 0},
+		},
+	}
+
+	picked, ok := PickAllocations(app, req, nodes, pressure)
+	if ok || len(picked) != 0 {
+		t.Fatalf("expected pressure to reject an otherwise fitting device, got ok=%v picked=%#v", ok, picked)
+	}
+}
+
 // TestPickSingleAllocationGB10MemorySlice guards the GB10 single-card
 // allocation path: a GB10 node's device is decoded with the MemorySlice
 // support type by default (shareModeToSupportType), so PickAllocations must

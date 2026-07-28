@@ -19,6 +19,9 @@ import (
 // Mirroring apputils.GetClusterResource's signature exactly keeps the
 // indirection lossless — same return shape, same error semantics.
 var clusterMetricsProvider = apputils.GetClusterResource
+var checkAppRequirement = apputils.CheckAppRequirement
+var checkUserResRequirement = apputils.CheckUserResRequirement
+var checkAppK8sRequestResource = apputils.CheckAppK8sRequestResource
 
 // clusterCapacityValidator answers the most fundamental feasibility
 // question: "is the cluster physically big enough to host this app at
@@ -98,28 +101,42 @@ func (clusterCapacityValidator) Validate(ctx context.Context, in Input) (Decisio
 		return Decision{}, fmt.Errorf("cluster metrics provider returned nil result with no error")
 	}
 
-	totalCPUMilli := int64(metrics.CPU.Total * 1000) // cores → milli
-	totalMemBytes := int64(metrics.Memory.Total)
-	totalDiskBytes := int64(metrics.Disk.Total)
-
 	op := string(in.Op)
-	if added.CPU > totalCPUMilli {
+	pressure, err := apputils.EvaluatePhysicalCapacity(apputils.ResourceState{
+		CPU: added.CPU, Memory: added.Memory, Disk: added.Disk,
+	}, metrics, apputils.ResourceDimensions{
+		CPU: added.CPU > 0, Memory: added.Memory > 0, Disk: added.Disk > 0,
+	})
+	if err != nil {
+		if resourceType, ok := apputils.MetricsFailureResource(err); ok {
+			return Decision{
+				OK:       false,
+				Resource: resourceType,
+				Reason:   constants.MetricsUnavailable,
+				Message:  fmt.Sprintf(constants.MetricsUnavailableMessage, op),
+			}, nil
+		}
+		return Decision{}, fmt.Errorf("evaluate cluster capacity: %w", err)
+	}
+	if len(pressure) == 0 {
+		return ok(), nil
+	}
+	switch pressure[0].Resource {
+	case string(constants.CPU):
 		return Decision{
 			OK:       false,
 			Resource: constants.CPU,
 			Reason:   constants.ClusterCPUInsufficient,
 			Message:  fmt.Sprintf(constants.ClusterCPUInsufficientMessage, op),
 		}, nil
-	}
-	if added.Memory > totalMemBytes {
+	case string(constants.Memory):
 		return Decision{
 			OK:       false,
 			Resource: constants.Memory,
 			Reason:   constants.ClusterMemoryInsufficient,
 			Message:  fmt.Sprintf(constants.ClusterMemoryInsufficientMessage, op),
 		}, nil
-	}
-	if added.Disk > totalDiskBytes {
+	default:
 		return Decision{
 			OK:       false,
 			Resource: constants.Disk,
@@ -127,7 +144,6 @@ func (clusterCapacityValidator) Validate(ctx context.Context, in Input) (Decisio
 			Message:  fmt.Sprintf(constants.ClusterDiskInsufficientMessage, op),
 		}, nil
 	}
-	return ok(), nil
 }
 
 // clusterPressureValidator wraps apputils.CheckAppRequirement which
@@ -149,7 +165,7 @@ func (clusterPressureValidator) AppliesTo(op Op) bool {
 }
 
 func (clusterPressureValidator) Validate(ctx context.Context, in Input) (Decision, error) {
-	resource, reason, err := apputils.CheckAppRequirement(in.Token, in.AppConfig, in.Op)
+	resource, reason, err := checkAppRequirement(in.Token, in.AppConfig, in.Op)
 	if err != nil {
 		// CheckAppRequirement returns an empty resource/reason only when
 		// the check itself couldn't be evaluated (e.g. the kubesphere
@@ -188,7 +204,7 @@ func (userQuotaValidator) AppliesTo(op Op) bool {
 }
 
 func (userQuotaValidator) Validate(ctx context.Context, in Input) (Decision, error) {
-	resource, reason, err := apputils.CheckUserResRequirement(ctx, in.AppConfig, in.Op)
+	resource, reason, err := checkUserResRequirement(ctx, in.AppConfig, in.Op)
 	if err != nil {
 		// Empty resource/reason means the prometheus user-metrics call
 		// failed, not that the user is over quota. Treat it as a fatal
@@ -226,7 +242,7 @@ func (k8sRequestValidator) AppliesTo(op Op) bool {
 }
 
 func (k8sRequestValidator) Validate(ctx context.Context, in Input) (Decision, error) {
-	resource, reason, err := apputils.CheckAppK8sRequestResource(in.AppConfig, in.Op)
+	resource, reason, err := checkAppK8sRequestResource(in.AppConfig, in.Op)
 	if err != nil {
 		// Empty resource/reason means the node/allocatable lookup failed
 		// (or appConfig was nil), not that the cluster lacks room. Surface

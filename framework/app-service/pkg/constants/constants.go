@@ -266,6 +266,7 @@ const (
 	ClusterCPUInsufficient    ResourceConditionType = "ClusterCPUInsufficient"
 	ClusterMemoryInsufficient ResourceConditionType = "ClusterMemoryInsufficient"
 	ClusterDiskInsufficient   ResourceConditionType = "ClusterDiskInsufficient"
+	MetricsUnavailable        ResourceConditionType = "MetricsUnavailable"
 
 	// ComputeAllocationFailed is emitted by computeAllocationValidator
 	// when compute.AllocateForInstall cannot place the app's
@@ -295,6 +296,7 @@ const (
 	ClusterCPUInsufficientMessage    string = "Cluster total schedulable CPU is smaller than the app's request. Unable to %s this application."
 	ClusterMemoryInsufficientMessage string = "Cluster total schedulable memory is smaller than the app's request. Unable to %s this application."
 	ClusterDiskInsufficientMessage   string = "Cluster total schedulable ephemeral storage is smaller than the app's request. Unable to %s this application."
+	MetricsUnavailableMessage        string = "Resource metrics are temporarily unavailable. Unable to %s the application. Please try again later."
 )
 
 func (rct ResourceConditionType) String() string {
