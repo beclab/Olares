@@ -5,16 +5,16 @@ head:
   - - meta
     - name: keywords
       content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
-app_version: "1.3.9"
-doc_version: "2.0"
-doc_updated: "2026-05-29"
+app_version: "1.3.33"
+doc_version: "3.0"
+doc_updated: "2026-07-28"
 ---
 
 # Set up a self-directed AI agent with Hermes
 
 Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions.
 
-In Olares, you can install specialized skills that allow your agent to manage your device's files and applications. You can also interact with your agent remotely via messaging platforms like Discord, or integrate it with other applications like Open WebUI.
+In Olares, you can use the built-in skills that allow your agent to manage your device's files and applications. You can also interact with your agent remotely via messaging platforms like Discord, or integrate it with other applications like Open WebUI.
 
 ## Learning objectives
 
@@ -23,14 +23,26 @@ In this guide, you will learn how to:
 - Configure Hermes Agent to connect to a local model.
 - Interact with your agent directly via the terminal.
 - Integrate with Discord for remote chat.
-- Install Olares skills to manage files and applications via the agent.
+- Use Olares skills to manage files and applications via the agent.
 - Enable the Gateway API to connect Hermes Agent with other applications like Open WebUI.
 
 ## Prerequisites
 
-- Local model: [Ollama is installed](./ollama.md) with at least one tool-capable model downloaded and running. This tutorial uses `qwen3.5:9b`.
+Before you begin, you need:
+
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
+- The following model:
+
+    | Model type | Model | How to get it |
+    | :--- | :--- | :--- |
+    | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+
+    :::tip
+    Hermes Agent requires a model with a context window of at least 64K tokens.
+    :::
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Hermes Agent
 
@@ -53,25 +65,13 @@ Olares supports app cloning. If you want to run multiple independent AI agents f
 
 Run a quick setup to connect Hermes Agent to your local model.
 
-### Step 1: Get model and endpoint details
+### Step 1: Get model connection details
 
-1. Open the Ollama app from the Launchpad.
-2. Check the installed models by running the following command:
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-    ```bash
-    ollama list
-    ```
-3. Copy and save your model name exactly as shown in the **NAME** column. For example, `qwen3.5:9b`.
-4. Check the context window of the model by running the following command:
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-    ```bash
-    ollama ps
-    ```
-
-5. Copy and save the value as shown in the **CONTEXT** column. For example, `32768`.
-6. Open Settings, go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint address. For example, `http://d54536a50.shared.olares.com`.
-
-    ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint1.png#bordered){width=65%}
+5. Go to the **Configuration** tab, expand **Advanced parameters**, and then note down the `--ctx-size` value, `131072`. This is the context size, and you will need it later.
 
 ### Step 2: Run the setup wizard
 
@@ -86,14 +86,19 @@ Run a quick setup to connect Hermes Agent to your local model.
 
     | Settings   | Option   |
     |:-----------|:---------|
-    | How would you like to set up Hermes | Select **Quick setup - provider, model & messaging (recommended)**. |
+    | How would you like to set up Hermes | Select **Full setup — configure every provider, tool & option yourself (bring your own keys)**. |
     | Select provider | Select **Custom endpoint (enter URL manually)**.  |
-    | API base URL  | Enter your model's API address and append `/v1` to the end.<br>For example, `http://d54536a50.shared.olares.com/v1`.  |
-    | API key  | Enter any text as a placeholder value, such as `ollama-local`.<br>The input remains hidden for security. |
-    | Available models | Enter the number corresponding to your target model<br> from the generated list. |
-    | Context length in tokens | <ul><li>If your model's context window is less than `65536`,<br>enter a value greater than `65536`.</li><li>If your model's context window is more than `65536`,<br>leave this field blank to auto-detect.</li></ul> |
-    | Display name |  Enter a name for easy identification, such as `ollama-local`.|
-    | Connect a messaging platform | Select **Skip - set up later with `hermes setup gateway`**. |
+    | API base URL  | Enter the **Base URL** you copied from the Model Console.<br>For example, `https://e46e044d.laresprime.olares.com/v1`.  |
+    | API key  | Enter any text as a placeholder value, such as `local`.<br>The input remains hidden for security. |
+    | Select API compatibility mode | Enter `1` to select **Auto-detect [current]**. This option uses Hermes URL heuristics and works best for standard OpenAI-compatible endpoints. |
+    | Use this model | Check that the detected model name is correct, and then enter `y`. |
+    | Context length in tokens | Leave this field blank to auto-detect.<br><br>**Note**: If your model's context window is less than `65536`, enter a value greater than `65536`. Hermes Agent requires a minimum context window of 64K tokens. |
+    | Display name |  Enter a name to identify this model, such as `qwen3.6-27b-local`.|
+    | Select terminal backend | Select **Local - run directly on this machine**. |
+    | Select platforms to configure | Press **ESC** to skip for now. |
+    | Tools for CLI | Press **ESC** to skip for now. |
+    | Choose a provider | Select **Skip - keep defaults / configure later**. |
+    | Select Search Provider | Select **Skip - keep defaults / configure later**. |
 
 4. Keep the Hermes CLI window open for the next step.
 
@@ -103,19 +108,23 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 The Terminal User Interface (TUI) runs directly in the Hermes CLI with no extra setup. It is ideal for quick tests.
 
-1. When the setup wizard completes, it prompts you to launch `hermes chat`. Type `y` and press **Enter** to start the TUI.
+1. When the setup wizard completes, it shows the available commands:
+
+    - `hermes`: Start chatting.
+    - `hermes gateway`: Start the messaging gateway.
+    - `hermes doctor`: Check for issues.
+
+2. Type `hermes` and press **Enter** to launch the TUI.
 
    :::tip
-   If you exited the wizard, manually start the chat by entering `hermes chat` in the Hermes CLI.
+   If you exited the wizard, manually start the chat by entering `hermes` in the Hermes CLI.
    :::
 
-    ![Hermes setup complete](/images/manual/use-cases/hermes-setup-complete.png#bordered)
+3. Send a message, such as `what can you do`, to verify that the agent responds correctly.
 
-2. Send a message, such as `what can you do`, to verify that the agent responds correctly.
+    ![Hermes TUI chat](/images/manual/use-cases/hermes-tui1.png#bordered)
 
-    ![Hermes TUI chat](/images/manual/use-cases/hermes-tui.png#bordered)
-
-3. To close the TUI and return to the standard CLI, type `/exit`, and then press **Enter**.
+4. To close the TUI and return to the standard CLI, type `/exit`, and then press **Enter**.
 
 ### Option 2: Remote chat via Discord
 
@@ -203,10 +212,10 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 
 ## Manage Olares with your Hermes Agent
 
-Use the Olares CLI skills in Hermes Agent so your agent can manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
+Use the pre-installed Olares CLI skills directly in Hermes Agent to manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
 
 1. Open the Hermes CLI from the Launchpad.
-2. Run the following commands one by one to confirm that both olares-cli and its skills are properly installed and enabled:
+2. Run the following commands one by one to confirm that both `olares-cli` and its skills are properly installed and enabled:
 
    ```bash
    olares-cli -v
