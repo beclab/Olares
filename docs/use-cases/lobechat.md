@@ -304,4 +304,4 @@ If you encounter the `Error requesting Ollama service` error, troubleshoot as fo
 1. Check the Model Console to confirm that the Model shows **READY** and the Engine shows **RUNNING**.
 2. Ensure the **Use Client Request Mode** option on the Ollama settings page is disabled.
 
-   ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode2.png#bordered)
+   ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode3.png#bordered)
