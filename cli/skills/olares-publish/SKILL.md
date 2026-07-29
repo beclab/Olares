@@ -1,6 +1,6 @@
 ---
 name: olares-publish
-version: 4.4.0
+version: 4.5.0
 description: "Publish an Olares app that already runs locally to a public Olares Market listing — release targets, market-ready metadata/architectures, producing the listing assets (256x256 icon, 1440x900 featured/promote images), the beclab/apps PR and GitBot lifecycle, and paid listings. Use for submitting, distributing, 上架, opening a beclab/apps PR, generating an app icon or Market screenshots, or selling an app; not for browsing `market list` or managing installed apps."
 compatibility: Requires olares-cli on PATH; PR submission needs a GitHub account
 metadata:
@@ -43,7 +43,7 @@ A chart that installs and runs locally is **functionally** done (storage / middl
 | **Market-ready metadata** | full `metadata.*` + `spec.{developer,website,sourceCode,submitter,fullDescription}`, dual-version `categories`, `spec.locale` — sorted there by what actually blocks a merge | [olares-publish-targets.md](references/olares-publish-targets.md) |
 | **Listing assets** | the 256x256 app icon (`lint`-required), and the 1440x900 hero + screenshot set (optional, deferrable) — fetched and composited, never invented | [olares-publish-icon.md](references/olares-publish-icon.md), [olares-publish-listing-images.md](references/olares-publish-listing-images.md), [olares-publish-listing-layout.md](references/olares-publish-listing-layout.md) |
 | **Multi-arch images** | build `--platform linux/amd64,linux/arm64` and declare matching `spec.supportArch` (local deploy only needs this node's arch) | [olares-publish-targets.md](references/olares-publish-targets.md) |
-| **The `beclab/apps` PR** | `owners` file, strict PR title, GitBot rules, lifecycle (`NEW`/`UPDATE`/`SUSPEND`/`REMOVE`) | [olares-publish-submit.md](references/olares-publish-submit.md) |
+| **The `beclab/apps` PR** | `owners` file, strict PR title, GitBot rules, lifecycle (`NEW`/`UPDATE`/`SUSPEND`/`REMOVE`), and a public folder whose credentials all come from install-time env, middleware or chart generation | [olares-publish-submit.md](references/olares-publish-submit.md) |
 
 > **Assets are fetched, not generated.** Icons and screenshots must come from the project's repo, its site, or your own running instance — a public catalog entry showing an invented mark or a fabricated UI misrepresents the upstream project, and no reviewer will catch it. Diagrams are the one thing you may draw.
 
