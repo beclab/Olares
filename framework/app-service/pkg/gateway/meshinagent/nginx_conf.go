@@ -16,8 +16,10 @@ const (
 	// HTTPSTerminatePort is the loopback HTTPS server after SNI allowlist match.
 	HTTPSTerminatePort = 16444
 
-	// SharedHostsFileName is the ConfigMap data key / projected file (N6 line format).
+	// SharedHostsFileName is the auth-hosts ConfigMap key / projected file.
 	SharedHostsFileName = "shared-hosts.txt"
+	// TLSHostsFileName is the TLS-offload allowlist ConfigMap key / projected file.
+	TLSHostsFileName = "tls-hosts.txt"
 
 	placeholderJSONBody = `{"error":"mesh_in_tls_placeholder","message":"Platform TLS replica not ready; using pod-local placeholder certificate. Retry or use http:// for in-cluster Shared access.","tlsMode":"placeholder","retryAfterSeconds":5}`
 )
@@ -33,6 +35,7 @@ type NginxConfInput struct {
 	CertDir            string
 	PlaceholderCertDir string
 	HostsFile          string
+	TLSHostsFile       string
 	PlatformDomain     string
 	FailClosed         bool
 	// EnableHTTPS includes stream + ssl terminate. When false, HTTP JWT only.
@@ -70,6 +73,9 @@ func RenderNginxConf(in NginxConfInput) string {
 	}
 	if in.HostsFile == "" {
 		in.HostsFile = HostsMountPath + "/" + SharedHostsFileName
+	}
+	if in.TLSHostsFile == "" {
+		in.TLSHostsFile = HostsMountPath + "/" + TLSHostsFileName
 	}
 	if in.PlatformDomain == "" {
 		in.PlatformDomain = "olares.com"
@@ -122,7 +128,8 @@ func RenderNginxConf(in NginxConfInput) string {
 	b.WriteString(fmt.Sprintf("  # jwt path: %s\n", in.JWTTokenPath))
 	b.WriteString(fmt.Sprintf("  # certs: %s\n", in.CertDir))
 	b.WriteString(fmt.Sprintf("  # placeholder: %s\n", in.PlaceholderCertDir))
-	b.WriteString(fmt.Sprintf("  # hosts: %s\n", in.HostsFile))
+	b.WriteString(fmt.Sprintf("  # auth-hosts: %s\n", in.HostsFile))
+	b.WriteString(fmt.Sprintf("  # tls-hosts: %s\n", in.TLSHostsFile))
 	b.WriteString("  js_set $tls_cert_path main.pickCert;\n")
 	b.WriteString("  js_set $tls_key_path main.pickKey;\n")
 	b.WriteString("  server {\n")

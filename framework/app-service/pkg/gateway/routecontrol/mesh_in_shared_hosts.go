@@ -164,7 +164,7 @@ func (r *MeshInSharedHostsReconciler) ReconcileNamespace(ctx context.Context, ca
 		return nil
 	}
 	for key := range cm.Data {
-		if key == constants.MeshInSharedHostsFileName {
+		if key == constants.MeshInSharedHostsFileName || key == constants.MeshInTLSHostsFileName {
 			continue
 		}
 		if _, ok := desiredData[key]; !ok {
@@ -254,18 +254,26 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 		appsByNS[ns] = append(appsByNS[ns], app)
 	}
 	type key struct{ ns, viewer string }
-	hostsByKey := map[key]map[string]struct{}{}
+	authByKey := map[key]map[string]struct{}{}
+	tlsByKey := map[key]map[string]struct{}{}
 	addViewerHosts := func(callerNS, viewer string) {
 		viewer = strings.ToLower(strings.TrimSpace(viewer))
 		if viewer == "" {
 			return
 		}
 		k := key{ns: callerNS, viewer: viewer}
-		if hostsByKey[k] == nil {
-			hostsByKey[k] = map[string]struct{}{}
+		if authByKey[k] == nil {
+			authByKey[k] = map[string]struct{}{}
 		}
-		for _, h := range enumerateHostsForViewer(viewer, srrByOwner[viewer], platformDomain) {
-			hostsByKey[k][h] = struct{}{}
+		if tlsByKey[k] == nil {
+			tlsByKey[k] = map[string]struct{}{}
+		}
+		auth, tlsHosts := enumerateHostsForViewer(viewer, srrByOwner[viewer], platformDomain)
+		for _, h := range auth {
+			authByKey[k][h] = struct{}{}
+		}
+		for _, h := range tlsHosts {
+			tlsByKey[k][h] = struct{}{}
 		}
 	}
 	for i := range nsList.Items {
@@ -293,14 +301,24 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 			}
 		}
 	}
-	out := make([]SharedHostsTarget, 0, len(hostsByKey))
-	for k, hosts := range hostsByKey {
+	out := make([]SharedHostsTarget, 0, len(authByKey))
+	for k, hosts := range authByKey {
 		list := make([]string, 0, len(hosts))
 		for h := range hosts {
 			list = append(list, h)
 		}
 		sort.Strings(list)
-		out = append(out, SharedHostsTarget{CallerNamespace: k.ns, Viewer: k.viewer, Hosts: list})
+		tlsList := make([]string, 0, len(tlsByKey[k]))
+		for h := range tlsByKey[k] {
+			tlsList = append(tlsList, h)
+		}
+		sort.Strings(tlsList)
+		out = append(out, SharedHostsTarget{
+			CallerNamespace: k.ns,
+			Viewer:          k.viewer,
+			Hosts:           list,
+			TLSHosts:        tlsList,
+		})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].CallerNamespace == out[j].CallerNamespace {

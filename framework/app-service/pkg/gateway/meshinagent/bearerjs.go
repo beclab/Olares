@@ -6,12 +6,13 @@ import (
 	"strings"
 )
 
-// BearerJS is the njs module for JWT reads, Host allowlist checks, and stream
-// SNI decideOffload (allowlist → loopback terminate; else host:443 passthrough).
+// BearerJS is the njs module for JWT reads, auth/tls host allowlists, and stream
+// SNI decideOffload (tls-hosts → loopback terminate; else host:443 passthrough).
 func BearerJS() string {
 	return BearerJSWith(
 		JWTSecretMountPath+"/token",
 		HostsMountPath+"/"+SharedHostsFileName,
+		HostsMountPath+"/"+TLSHostsFileName,
 		HTTPSTerminatePort,
 		"olares.com",
 		CertsMountPath,
@@ -20,7 +21,7 @@ func BearerJS() string {
 }
 
 // BearerJSWith builds the njs module with explicit paths (tests / render).
-func BearerJSWith(jwtPath, hostsFile string, terminatePort int, platformDomain, certDir, placeholderDir string) string {
+func BearerJSWith(jwtPath, authHostsFile, tlsHostsFile string, terminatePort int, platformDomain, certDir, placeholderDir string) string {
 	escapedDomain := regexp.QuoteMeta(strings.ToLower(strings.TrimSpace(platformDomain)))
 	if escapedDomain == "" {
 		escapedDomain = "olares\\.com"
@@ -34,19 +35,22 @@ func BearerJSWith(jwtPath, hostsFile string, terminatePort int, platformDomain, 
 	return fmt.Sprintf(`var fs = require('fs');
 
 const JWT_PATH = '%s';
-const HOSTS_FILE = '%s';
+const AUTH_HOSTS_FILE = '%s';
+const TLS_HOSTS_FILE = '%s';
 const TERMINATE = '127.0.0.1:%d';
 const CACHE_TTL_MS = 5000;
 const PLATFORM_SUFFIX = '.%s';
-const V2_GUARD = new RegExp('^[a-z0-9-]+\\.shared\\.%s$', 'i');
 const REAL_CERT = '%s/tls.crt';
 const REAL_KEY = '%s/tls.key';
 const PH_CERT = '%s/tls.crt';
 const PH_KEY = '%s/tls.key';
 
-let cachedHosts = null;
-let cachedMtimeMs = 0;
-let cachedAtMs = 0;
+let cachedAuthHosts = null;
+let cachedAuthMtimeMs = 0;
+let cachedAuthAtMs = 0;
+let cachedTLSHosts = null;
+let cachedTLSMtimeMs = 0;
+let cachedTLSAtMs = 0;
 let tlsModeCached = null;
 let tlsModeAtMs = 0;
 
@@ -77,26 +81,37 @@ function parseHosts(content) {
   return out;
 }
 
-function reloadHostsIfNeeded() {
+function reloadHostsFile(path, cached, mtimeMs, atMs) {
   const now = nowMs();
-  if (cachedHosts !== null && now - cachedAtMs < CACHE_TTL_MS) {
-    return cachedHosts;
+  if (cached !== null && now - atMs < CACHE_TTL_MS) {
+    return { hosts: cached, mtimeMs: mtimeMs, atMs: atMs };
   }
   try {
-    const st = fs.statSync(HOSTS_FILE);
-    if (cachedHosts !== null && st.mtimeMs === cachedMtimeMs && now - cachedAtMs < CACHE_TTL_MS) {
-      return cachedHosts;
+    const st = fs.statSync(path);
+    if (cached !== null && st.mtimeMs === mtimeMs && now - atMs < CACHE_TTL_MS) {
+      return { hosts: cached, mtimeMs: mtimeMs, atMs: atMs };
     }
-    const content = fs.readFileSync(HOSTS_FILE, 'utf8');
-    cachedHosts = parseHosts(content);
-    cachedMtimeMs = st.mtimeMs;
-    cachedAtMs = now;
-    return cachedHosts;
+    const content = fs.readFileSync(path, 'utf8');
+    return { hosts: parseHosts(content), mtimeMs: st.mtimeMs, atMs: now };
   } catch (e) {
-    cachedAtMs = now;
-    if (cachedHosts === null) { cachedHosts = {}; }
-    return cachedHosts;
+    return { hosts: cached === null ? {} : cached, mtimeMs: mtimeMs, atMs: now };
   }
+}
+
+function reloadAuthHosts() {
+  const r = reloadHostsFile(AUTH_HOSTS_FILE, cachedAuthHosts, cachedAuthMtimeMs, cachedAuthAtMs);
+  cachedAuthHosts = r.hosts;
+  cachedAuthMtimeMs = r.mtimeMs;
+  cachedAuthAtMs = r.atMs;
+  return cachedAuthHosts;
+}
+
+function reloadTLSHosts() {
+  const r = reloadHostsFile(TLS_HOSTS_FILE, cachedTLSHosts, cachedTLSMtimeMs, cachedTLSAtMs);
+  cachedTLSHosts = r.hosts;
+  cachedTLSMtimeMs = r.mtimeMs;
+  cachedTLSAtMs = r.atMs;
+  return cachedTLSHosts;
 }
 
 function realCertReady() {
@@ -137,22 +152,29 @@ function readJWT(r) {
   }
 }
 
+function jwtEligible(host) {
+  if (!host) { return false; }
+  const hosts = reloadAuthHosts();
+  return !!hosts[host];
+}
+
 function checkHost(r) {
   const host = normalizeHost(r.headersIn.host || r.variables.host || '');
   if (!host) { return '0'; }
-  if (V2_GUARD.test(host)) { return '0'; }
-  const hosts = reloadHostsIfNeeded();
+  const hosts = reloadTLSHosts();
   if (hosts[host]) { return '1'; }
   return '0';
 }
 
 function callerJwt(r) {
-  if (checkHost(r) !== '1') { return ''; }
+  const host = normalizeHost(r.headersIn.host || r.variables.host || '');
+  if (!jwtEligible(host)) { return ''; }
   return readJWT(r);
 }
 
 function authDeny(r) {
-  if (checkHost(r) !== '1') { return '0'; }
+  const host = normalizeHost(r.headersIn.host || r.variables.host || '');
+  if (!jwtEligible(host)) { return '0'; }
   if (!readJWT(r)) { return '1'; }
   return '0';
 }
@@ -160,13 +182,12 @@ function authDeny(r) {
 function decideOffload(s) {
   const host = normalizeHost(s.variables.ssl_preread_server_name);
   if (!host) { return passthrough(host); }
-  if (V2_GUARD.test(host)) { return passthrough(host); }
   if (!isPlatformHost(host)) { return passthrough(host); }
-  const hosts = reloadHostsIfNeeded();
+  const hosts = reloadTLSHosts();
   if (hosts[host]) { return TERMINATE; }
   return passthrough(host);
 }
 
 export default {readJWT, checkHost, callerJwt, authDeny, decideOffload, tlsMode, pickCert, pickKey};
-`, jwtPath, hostsFile, terminatePort, escapedDomain, escapedDomain, certDir, certDir, placeholderDir, placeholderDir)
+`, jwtPath, authHostsFile, tlsHostsFile, terminatePort, escapedDomain, certDir, certDir, placeholderDir, placeholderDir)
 }

@@ -59,9 +59,71 @@ func TestMaterializeHostLogicalPattern(t *testing.T) {
 	if reason != "" || h != "abcd1234.alice.olares.com" {
 		t.Fatalf("got host=%q reason=%q", h, reason)
 	}
-	_, reason = materializeHost("x.shared.olares.com", "alice", "olares.com")
-	if reason == "" {
-		t.Fatal("expected v2 guard drop reason")
+	h, reason = materializeHost("x.shared.olares.com", "alice", "olares.com")
+	if reason != "" || h != "x.shared.olares.com" {
+		t.Fatalf("shared exact host=%q reason=%q, want kept", h, reason)
+	}
+}
+
+func TestEnumerateHostsSplitsAuthAndTLSByEntranceClass(t *testing.T) {
+	srrs := []srrv1alpha1.SharedRouteRegistry{
+		{
+			Spec: srrv1alpha1.SharedRouteRegistrySpec{
+				EntranceClass: srrv1alpha1.EntranceClassApplication,
+				HostPatterns:  []string{"abcd1234.*.olares.com"},
+				RouteMode:     srrv1alpha1.RouteModeGateway,
+			},
+		},
+		{
+			Spec: srrv1alpha1.SharedRouteRegistrySpec{
+				EntranceClass: srrv1alpha1.EntranceClassShared,
+				HostPatterns:  []string{"deadbeef.shared.olares.com"},
+				RouteMode:     srrv1alpha1.RouteModeGateway,
+			},
+		},
+		{
+			Spec: srrv1alpha1.SharedRouteRegistrySpec{
+				HostPatterns: []string{"cafebabe.shared.olares.com"},
+				RouteMode:    srrv1alpha1.RouteModeGateway,
+			},
+		},
+	}
+	auth, tlsHosts := enumerateHostsForViewer("alice", srrs, "olares.com")
+	wantAuth := map[string]bool{
+		"abcd1234.alice.olares.com":  true,
+		"deadbeef.shared.olares.com": true,
+		"cafebabe.shared.olares.com": true,
+	}
+	if len(auth) != 3 {
+		t.Fatalf("auth=%v", auth)
+	}
+	for _, h := range auth {
+		if !wantAuth[h] {
+			t.Fatalf("unexpected auth host %q", h)
+		}
+	}
+	if len(tlsHosts) != 1 || tlsHosts[0] != "abcd1234.alice.olares.com" {
+		t.Fatalf("tls=%v, want only application viewer host", tlsHosts)
+	}
+}
+
+func TestBuildSharedHostsConfigMapDataWritesTLSKey(t *testing.T) {
+	data := buildSharedHostsConfigMapData([]SharedHostsTarget{{
+		CallerNamespace: "chat-alice",
+		Viewer:          "alice",
+		Hosts:           []string{"abcd1234.alice.olares.com", "deadbeef.shared.olares.com"},
+		TLSHosts:        []string{"abcd1234.alice.olares.com"},
+	}})
+	authBody := data[constants.MeshInSharedHostsFileName]
+	tlsBody := data[constants.MeshInTLSHostsFileName]
+	if !strings.Contains(authBody, "deadbeef.shared.olares.com") || !strings.Contains(authBody, "abcd1234.alice.olares.com") {
+		t.Fatalf("auth body=%q", authBody)
+	}
+	if !strings.Contains(tlsBody, "abcd1234.alice.olares.com") {
+		t.Fatalf("tls body missing application host: %q", tlsBody)
+	}
+	if strings.Contains(tlsBody, "deadbeef.shared.olares.com") {
+		t.Fatalf("tls body must not include shared host: %q", tlsBody)
 	}
 }
 

@@ -84,20 +84,28 @@ func TestBearerJSDecideAndHostsHotRead(t *testing.T) {
 		"callerJwt",
 		"authDeny",
 		"decideOffload",
-		"reloadHostsIfNeeded",
+		"reloadAuthHosts",
+		"reloadTLSHosts",
+		"AUTH_HOSTS_FILE",
+		"TLS_HOSTS_FILE",
 		"CACHE_TTL_MS",
 		"passthrough",
 		"checkHost",
+		"jwtEligible",
 		"tlsMode",
 		"pickCert",
 		"pickKey",
 		"realCertReady",
 		PlaceholderCertDir,
 		HostsMountPath + "/" + SharedHostsFileName,
+		HostsMountPath + "/" + TLSHostsFileName,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("BearerJS missing %q", want)
 		}
+	}
+	if strings.Contains(got, "V2_GUARD") {
+		t.Fatal("entrance class must not be inferred from .shared. domain regex")
 	}
 }
 
@@ -194,7 +202,7 @@ func TestJWTSecretVolumeUsesCallerJWT(t *testing.T) {
 	}
 }
 
-func TestSharedHostsVolumeProjectsSharedHostsTxt(t *testing.T) {
+func TestSharedHostsVolumeProjectsAuthAndTLSHosts(t *testing.T) {
 	v := SharedHostsVolume()
 	if v.ConfigMap == nil {
 		t.Fatal("expected configMap volume")
@@ -202,8 +210,15 @@ func TestSharedHostsVolumeProjectsSharedHostsTxt(t *testing.T) {
 	if v.ConfigMap.Name != constants.MeshInSharedHostsCMName {
 		t.Fatalf("name = %q", v.ConfigMap.Name)
 	}
-	if len(v.ConfigMap.Items) != 1 || v.ConfigMap.Items[0].Key != SharedHostsFileName {
-		t.Fatalf("items = %#v, want key %s", v.ConfigMap.Items, SharedHostsFileName)
+	if len(v.ConfigMap.Items) != 2 {
+		t.Fatalf("items = %#v, want 2 keys", v.ConfigMap.Items)
+	}
+	keys := map[string]bool{}
+	for _, it := range v.ConfigMap.Items {
+		keys[it.Key] = true
+	}
+	if !keys[SharedHostsFileName] || !keys[TLSHostsFileName] {
+		t.Fatalf("items = %#v, want %s and %s", v.ConfigMap.Items, SharedHostsFileName, TLSHostsFileName)
 	}
 }
 

@@ -211,7 +211,7 @@ func CertsVolumeForViewer(viewer string) corev1.Volume {
 	}
 }
 
-// SharedHostsVolume mounts SNI allowlist ConfigMap (key shared-hosts.txt).
+// SharedHostsVolume mounts auth-hosts and tls-hosts allowlists from ConfigMap.
 func SharedHostsVolume() corev1.Volume {
 	return corev1.Volume{
 		Name: HostsVolumeName,
@@ -221,6 +221,7 @@ func SharedHostsVolume() corev1.Volume {
 				Optional:             boolPtr(true),
 				Items: []corev1.KeyToPath{
 					{Key: SharedHostsFileName, Path: SharedHostsFileName},
+					{Key: TLSHostsFileName, Path: TLSHostsFileName},
 				},
 			},
 		},

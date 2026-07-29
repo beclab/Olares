@@ -43,13 +43,13 @@ const (
 	// requeued because the platform domain did not resolve.
 	rResPlatformDomainUnavailable = "platform_domain_unavailable"
 	// drop reason label values.
-	rDropOwnerUnresolved  = "owner_unresolved"
-	rDropMultiRef         = "multi_ref_unsupported"
-	rDropNonPlatformHost  = "non_platform_host"
-	rDropV2PatternGuarded = "v2_pattern_guarded"
-	rDropMultiWildcard    = "multi_wildcard"
-	rDropInvalidChars     = "invalid_chars"
-	rDropEmptyPatterns    = "empty_patterns"
+	rDropOwnerUnresolved = "owner_unresolved"
+	rDropMultiRef        = "multi_ref_unsupported"
+	rDropNonPlatformHost = "non_platform_host"
+	rDropMultiWildcard   = "multi_wildcard"
+	rDropInvalidChars    = "invalid_chars"
+	rDropEmptyPatterns   = "empty_patterns"
+	rDropSharedAuthOnly  = "shared_auth_only"
 	// GC reason label values.
 	rGCNSOptOut  = "ns_opt_out"
 	rGCNSDeleted = "ns_deleted"
@@ -130,11 +130,12 @@ func init() {
 	)
 }
 
-// SharedHostsTarget is one (callerNS, viewer) -> hosts demand entry.
+// SharedHostsTarget is one (callerNS, viewer) → auth/tls host demand entry.
 type SharedHostsTarget struct {
 	CallerNamespace string
 	Viewer          string
-	Hosts           []string
+	Hosts           []string // auth-hosts (shared-hosts.txt)
+	TLSHosts        []string // tls-hosts (tls-hosts.txt); application only
 }
 
 func isSharedHostsConfigMap(obj client.Object) bool {
@@ -236,14 +237,17 @@ func sharedHostsManagedByUs(cm *corev1.ConfigMap) bool {
 	return strings.EqualFold(strings.TrimSpace(v), sharedHostsManagedByValue)
 }
 
-func enumerateHostsForViewer(viewer string, srrs []srrv1alpha1.SharedRouteRegistry, platformDomain string) []string {
-	seen := map[string]struct{}{}
+func enumerateHostsForViewer(viewer string, srrs []srrv1alpha1.SharedRouteRegistry, platformDomain string) (auth, tls []string) {
+	authSeen := map[string]struct{}{}
+	tlsSeen := map[string]struct{}{}
 	for i := range srrs {
 		patterns := srrs[i].Spec.HostPatterns
 		if len(patterns) == 0 {
 			sharedHostsDropTotal.WithLabelValues(rDropEmptyPatterns).Inc()
 			continue
 		}
+		// Empty EntranceClass matches HTTPRoute parent selection: treat as shared.
+		allowTLS := srrs[i].Spec.EntranceClass == srrv1alpha1.EntranceClassApplication
 		for _, pattern := range patterns {
 			h, reason := materializeHost(pattern, viewer, platformDomain)
 			if h == "" {
@@ -252,10 +256,15 @@ func enumerateHostsForViewer(viewer string, srrs []srrv1alpha1.SharedRouteRegist
 				}
 				continue
 			}
-			seen[h] = struct{}{}
+			authSeen[h] = struct{}{}
+			if allowTLS {
+				tlsSeen[h] = struct{}{}
+			} else {
+				sharedHostsDropTotal.WithLabelValues(rDropSharedAuthOnly).Inc()
+			}
 		}
 	}
-	return sortedKeys(seen)
+	return sortedKeys(authSeen), sortedKeys(tlsSeen)
 }
 
 func materializeHost(pattern, viewer, platformDomain string) (string, string) {
@@ -272,11 +281,7 @@ func materializeHost(pattern, viewer, platformDomain string) (string, string) {
 		if lp.PlatformDomain != domLower {
 			return "", rDropNonPlatformHost
 		}
-		h := lp.Prefix + "." + viewerLower + "." + lp.PlatformDomain
-		if matchesV2GuardGo(h, lp.PlatformDomain) {
-			return "", rDropV2PatternGuarded
-		}
-		return h, ""
+		return lp.Prefix + "." + viewerLower + "." + lp.PlatformDomain, ""
 	}
 	p := strings.ToLower(pattern)
 	if strings.Contains(p, "*") {
@@ -288,9 +293,6 @@ func materializeHost(pattern, viewer, platformDomain string) (string, string) {
 	if !isPlatformHostGo(p, domLower) {
 		return "", rDropNonPlatformHost
 	}
-	if matchesV2GuardGo(p, domLower) {
-		return "", rDropV2PatternGuarded
-	}
 	return p, ""
 }
 
@@ -299,14 +301,6 @@ func isPlatformHostGo(host, platformDomain string) bool {
 		return false
 	}
 	return strings.HasSuffix(host, "."+platformDomain) && host != "."+platformDomain
-}
-func matchesV2GuardGo(host, platformDomain string) bool {
-	if !isPlatformHostGo(host, platformDomain) {
-		return false
-	}
-	rest := strings.TrimSuffix(host, "."+platformDomain)
-	parts := strings.Split(rest, ".")
-	return len(parts) == 2 && parts[1] == "shared"
 }
 func validDNSChars(s string) bool {
 	if s == "" {
@@ -327,7 +321,8 @@ func validDNSChars(s string) bool {
 func buildSharedHostsConfigMapData(targets []SharedHostsTarget) map[string]string {
 	data := map[string]string{}
 	perViewer := map[string]map[string]struct{}{}
-	all := map[string]struct{}{}
+	allAuth := map[string]struct{}{}
+	allTLS := map[string]struct{}{}
 	for _, t := range targets {
 		viewer := strings.ToLower(strings.TrimSpace(t.Viewer))
 		if viewer == "" || viewer == constants.MeshInSharedHostsFileName {
@@ -337,11 +332,15 @@ func buildSharedHostsConfigMapData(targets []SharedHostsTarget) map[string]strin
 			perViewer[viewer] = map[string]struct{}{}
 		}
 		for _, h := range t.Hosts {
-			all[h] = struct{}{}
+			allAuth[h] = struct{}{}
 			perViewer[viewer][h] = struct{}{}
 		}
+		for _, h := range t.TLSHosts {
+			allTLS[h] = struct{}{}
+		}
 	}
-	data[constants.MeshInSharedHostsFileName] = sharedHostsFileText(sortedKeys(all))
+	data[constants.MeshInSharedHostsFileName] = sharedHostsFileText(sortedKeys(allAuth))
+	data[constants.MeshInTLSHostsFileName] = sharedHostsFileText(sortedKeys(allTLS))
 	for viewer, set := range perViewer {
 		data[viewer] = sharedHostsFileText(sortedKeys(set))
 	}
