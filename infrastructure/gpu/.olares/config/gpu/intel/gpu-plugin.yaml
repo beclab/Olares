@@ -85,6 +85,7 @@ spec:
       - args:
         - -enable-monitoring
         - -shared-dev-num=50
+        - -health-management
         - -v=4
         env:
         - name: NODE_NAME

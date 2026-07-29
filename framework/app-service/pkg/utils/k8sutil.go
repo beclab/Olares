@@ -478,6 +478,7 @@ type SystemStatusResponse struct {
 		OsVersion                 string `json:"os_version"`
 		CpuInfo                   string `json:"cpu_info"`
 		GpuInfo                   string `json:"gpu_info"`
+		GPUList                   []string `json:"gpu_list"`
 		Memory                    string `json:"memory"`
 		Disk                      string `json:"disk"`
 		WifiConnected             bool   `json:"wifiConnected"`
