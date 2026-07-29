@@ -272,3 +272,20 @@ func TestIsSharedEntranceWorkload(t *testing.T) {
 		t.Fatal("nil signals must not mark entrance")
 	}
 }
+
+func TestApplyOutboundMeshInGate(t *testing.T) {
+	labels := map[string]string{constants.AppSharedEntrancesLabel: "true"}
+	if applyOutboundMeshInGate(false, true, true, labels) {
+		t.Fatal("no inject candidate must stay false")
+	}
+	if !applyOutboundMeshInGate(true, true, true, nil) {
+		t.Fatal("Shared+Decide entrance must keep mesh-in")
+	}
+	if applyOutboundMeshInGate(true, true, false, nil) {
+		t.Fatal("entrance without DeclaresSharedCaller must clear mesh-in")
+	}
+	deny := map[string]string{"gateway.olares.io/shared-caller-outbound": "false"}
+	if applyOutboundMeshInGate(true, true, true, deny) {
+		t.Fatal("outbound=false must clear mesh-in even with DeclaresSharedCaller")
+	}
+}

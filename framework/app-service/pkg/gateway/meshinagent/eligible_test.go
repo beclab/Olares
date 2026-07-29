@@ -118,20 +118,27 @@ func TestShouldInjectMeshInAgent(t *testing.T) {
 }
 
 func TestAllowOutboundMeshIn(t *testing.T) {
-	if AllowOutboundMeshIn(true, nil) {
-		t.Fatal("entrance pod must not receive mesh-in")
+	cases := []struct {
+		name     string
+		entrance bool
+		declares bool
+		labels   map[string]string
+		want     bool
+	}{
+		{name: "entrance without declares", entrance: true, declares: false, want: false},
+		{name: "entrance with declares", entrance: true, declares: true, want: true},
+		{name: "non-entrance without labels", entrance: false, declares: false, want: true},
+		{name: "outbound true non-entrance", entrance: false, labels: map[string]string{LabelSharedCallerOutbound: "true"}, want: true},
+		{name: "outbound false non-entrance", entrance: false, labels: map[string]string{LabelSharedCallerOutbound: "false"}, want: false},
+		{name: "outbound true lifts entrance", entrance: true, declares: false, labels: map[string]string{LabelSharedCallerOutbound: "true"}, want: true},
+		{name: "outbound false blocks declares entrance", entrance: true, declares: true, labels: map[string]string{LabelSharedCallerOutbound: "false"}, want: false},
 	}
-	if !AllowOutboundMeshIn(false, nil) {
-		t.Fatal("non-entrance without outbound label must inject")
-	}
-	if !AllowOutboundMeshIn(false, map[string]string{LabelSharedCallerOutbound: "true"}) {
-		t.Fatal("outbound=true must allow")
-	}
-	if AllowOutboundMeshIn(false, map[string]string{LabelSharedCallerOutbound: "false"}) {
-		t.Fatal("outbound=false must deny")
-	}
-	if AllowOutboundMeshIn(true, map[string]string{LabelSharedCallerOutbound: "true"}) {
-		t.Fatal("entrance wins over outbound label")
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := AllowOutboundMeshIn(tc.entrance, tc.declares, tc.labels); got != tc.want {
+				t.Fatalf("AllowOutboundMeshIn() = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 
