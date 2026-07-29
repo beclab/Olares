@@ -17,9 +17,11 @@ import (
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
@@ -27,6 +29,7 @@ import (
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	kbopv1alphav1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -124,7 +127,13 @@ func main() {
 	}
 
 	appClient := versioned.NewForConfigOrDie(config)
+	kubeClient := kubernetes.NewForConfigOrDie(config)
 	ictx, cancelFunc := context.WithCancel(context.Background())
+
+	rolloutWorker := meshinagent.NewRolloutWorker(mgr.GetClient(), meshinagent.DefaultRolloutQueue)
+	meshinagent.SetDefaultWorker(rolloutWorker)
+	meshinagent.SetMeshControlPlaneReadyCheck(mesh.IsControlPlaneReady)
+	rolloutWorker.Start(ictx)
 
 	if err = (&controllers.ApplicationReconciler{
 		Client:       mgr.GetClient(),
@@ -133,6 +142,15 @@ func main() {
 		Kubeconfig:   config,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "Application")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.MeshInjectRolloutReconciler{
+		Client: mgr.GetClient(),
+		Kube:   kubeClient,
+		Worker: rolloutWorker,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "MeshInjectRollout")
 		os.Exit(1)
 	}
 

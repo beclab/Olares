@@ -72,6 +72,11 @@ func IsLinkerdLayer1Ready(ctx context.Context, kube kubernetes.Interface) bool {
 	return true
 }
 
+// IsControlPlaneReady is the preferred name for mesh control-plane readiness checks.
+func IsControlPlaneReady(ctx context.Context, kube kubernetes.Interface) bool {
+	return IsLinkerdLayer1Ready(ctx, kube)
+}
+
 // EntranceExtAuthPolicyName returns the entrance SecurityPolicy object name.
 func EntranceExtAuthPolicyName(srrName string) string {
 	return srrName + EntranceExtAuthPolicySuffix

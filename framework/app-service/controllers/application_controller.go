@@ -351,6 +351,7 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 		if merr := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, req.Namespace, inject); merr != nil {
 			klog.Errorf("mesh-xport: caller ns mesh access after create %s: %v", req.Namespace, merr)
 		}
+		meshinagent.EnqueueCreateIfInject(ctx, app)
 	}
 	now := metav1.Now()
 	appCopy := app.DeepCopy()
@@ -450,6 +451,17 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 			}
 		}
 	}
+	prevInject := meshinagent.DeclaresSharedCaller(app.Spec.Settings)
+	if !prevInject && app.Annotations != nil {
+		prevInject = strings.EqualFold(strings.TrimSpace(app.Annotations[meshinagent.AnnotDecide]), "true")
+	}
+	prevEdges := ""
+	if app.Spec.Settings != nil {
+		prevEdges = strings.TrimSpace(app.Spec.Settings[meshinagent.AnnotDecideEdges])
+	}
+	if prevEdges == "" && app.Annotations != nil {
+		prevEdges = strings.TrimSpace(app.Annotations[meshinagent.AnnotDecideEdges])
+	}
 	meshinagent.ApplyDecide(name, settings, meshinagent.DefaultRules())
 
 	appCopy.Spec.Name = name
@@ -544,6 +556,8 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		klog.Errorf("mesh-xport: caller ns mesh access after update %s: %v", appCopy.Spec.Namespace, merr)
 		return merr
 	}
+	meshinagent.MaybeEnqueueAfterDecide(ctx, appCopy, prevInject, inject, prevEdges,
+		strings.TrimSpace(settings[meshinagent.AnnotDecideEdges]), "")
 
 	klog.Infof("appCopy.Status: %v", appCopy.Status)
 	newAppState := r.calAppState(&appCopy.Status)
@@ -582,6 +596,8 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 
 // syncSharedCallerDecide re-runs Decide from Application.Spec.Settings and
 // patches decide annotations/settings when facts drift (app-only reconcile).
+// On Decide false→true (and related inject intent changes) it enqueues a
+// rate-limited workload rollout — never on the user request path.
 func (r *ApplicationReconciler) syncSharedCallerDecide(ctx context.Context, app *appv1alpha1.Application) error {
 	settings := map[string]string{}
 	if app.Spec.Settings != nil {
@@ -589,6 +605,21 @@ func (r *ApplicationReconciler) syncSharedCallerDecide(ctx context.Context, app 
 			settings[k] = v
 		}
 	}
+	prevInject := false
+	if app.Annotations != nil {
+		prevInject = strings.EqualFold(strings.TrimSpace(app.Annotations[meshinagent.AnnotDecide]), "true")
+	}
+	if !prevInject && app.Spec.Settings != nil {
+		prevInject = strings.EqualFold(strings.TrimSpace(app.Spec.Settings[meshinagent.AnnotDecide]), "true")
+	}
+	prevEdges := ""
+	if app.Annotations != nil {
+		prevEdges = strings.TrimSpace(app.Annotations[meshinagent.AnnotDecideEdges])
+	}
+	if prevEdges == "" && app.Spec.Settings != nil {
+		prevEdges = strings.TrimSpace(app.Spec.Settings[meshinagent.AnnotDecideEdges])
+	}
+
 	meshinagent.ApplyDecide(app.Spec.Name, settings, meshinagent.DefaultRules())
 
 	desiredAnn := meshinagent.WriteDecideAnnotations(map[string]string{}, settings)
@@ -653,6 +684,8 @@ func (r *ApplicationReconciler) syncSharedCallerDecide(ctx context.Context, app 
 		klog.Errorf("syncSharedCallerDecide mesh access ns=%s: %v", app.Spec.Namespace, err)
 		return err
 	}
+	edges := strings.TrimSpace(settings[meshinagent.AnnotDecideEdges])
+	meshinagent.MaybeEnqueueAfterDecide(ctx, appCopy, prevInject, inject, prevEdges, edges, "")
 	return nil
 }
 
