@@ -81,11 +81,9 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	if claimMap["claim"] != CallerJWTViewerClaim || claimMap["header"] != CallerJWTViewerHeader {
 		t.Fatalf("claimToHeaders[0] = %#v", claimMap)
 	}
-	// T-C2-4 / F5: spoofed client X-BFL-USER is overwritten by claimToHeaders
-	// after jwt_authn; do not drop this mapping or rename the header without
-	// an alternate strip/overwrite path.
+	// Spoofed client X-BFL-USER is overwritten after JWT authn; keep this mapping.
 	if claimMap["header"] != "X-BFL-USER" {
-		t.Fatalf("viewer header must remain X-BFL-USER for EG overwrite strip, got %#v", claimMap["header"])
+		t.Fatalf("viewer header must remain X-BFL-USER for gateway overwrite, got %#v", claimMap["header"])
 	}
 	appidMap := claimToHeaders[1].(map[string]any)
 	if appidMap["claim"] != CallerJWTAppidClaim || appidMap["header"] != CallerJWTAppidHeader {
@@ -94,8 +92,7 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	if appidMap["header"] != "X-Shared-Appid" {
 		t.Fatalf("shared appid header must remain X-Shared-Appid, got %#v", appidMap["header"])
 	}
-	// RR-8: both mappings exist; mutual exclusion is claim presence (issuer
-	// never emits viewer+appid together), not dropping one mapping.
+	// Both mappings stay configured; a given token carries only one identity claim.
 
 	extractFrom, ok := provider["extractFrom"].(map[string]any)
 	if !ok {

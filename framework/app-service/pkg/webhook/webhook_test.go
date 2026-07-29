@@ -254,3 +254,21 @@ func TestJSONPointerEscape(t *testing.T) {
 		}
 	}
 }
+
+func TestIsSharedEntranceWorkload(t *testing.T) {
+	if !isSharedEntranceWorkload(ptr.To(true), nil) {
+		t.Fatal("selector-matched entrance must be true")
+	}
+	if isSharedEntranceWorkload(ptr.To(false), nil) {
+		t.Fatal("explicit non-entrance must be false")
+	}
+	if !isSharedEntranceWorkload(nil, map[string]string{constants.AppSharedEntrancesLabel: "true"}) {
+		t.Fatal("shared-entrance label must mark entrance when selector unset")
+	}
+	if isSharedEntranceWorkload(nil, map[string]string{constants.AppSharedEntrancesLabel: "false"}) {
+		t.Fatal("shared-entrance=false must not mark entrance")
+	}
+	if isSharedEntranceWorkload(nil, nil) {
+		t.Fatal("nil signals must not mark entrance")
+	}
+}

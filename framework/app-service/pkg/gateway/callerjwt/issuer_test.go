@@ -82,6 +82,27 @@ func TestIssueCallerJWTClaimsAndVerify(t *testing.T) {
 	}
 }
 
+func TestIssueRejectsViewerAndAppidTogether(t *testing.T) {
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+	_, err = issuer.Issue(IssueRequest{
+		Namespace:          "ns",
+		ServiceAccountName: "sa",
+		AppRef:             "demo",
+		Viewer:             "alice",
+		Appid:              "deadbeef",
+	})
+	if err == nil {
+		t.Fatal("expected error when viewer and appid are both set")
+	}
+}
+
 func TestIssueSharedCallerAppidOmitsViewer(t *testing.T) {
 	ring, err := NewKeyRingForTest(false)
 	if err != nil {
@@ -109,6 +130,49 @@ func TestIssueSharedCallerAppidOmitsViewer(t *testing.T) {
 	}
 	if claims.Viewer != "" {
 		t.Fatalf("shared caller must omit viewer, got %q", claims.Viewer)
+	}
+}
+
+func TestShouldIssueCallerJWTSharedAppRefAndOptOut(t *testing.T) {
+	sharedLabels := map[string]string{"app.bytetrade.io/app-shared": "true"}
+	appRefOnly := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "agg", Labels: sharedLabels},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "agg",
+			Appid:     "deadbeef",
+			Namespace: "shared-agg",
+			Settings:  map[string]string{settingAppRef: "ollama"},
+		},
+	}
+	if !shouldIssueCallerJWT(appRefOnly) {
+		t.Fatal("shared app with only appRef must issue JWT")
+	}
+	optOut := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "agg", Labels: sharedLabels},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "agg",
+			Appid:     "deadbeef",
+			Namespace: "shared-agg",
+			Settings: map[string]string{
+				settingSharedAppDeps: "ollama",
+				settingOptOutMesh:    "disabled",
+			},
+		},
+	}
+	if shouldIssueCallerJWT(optOut) {
+		t.Fatal("shared app with mesh-inject opt-out must not issue JWT")
+	}
+	intentOnly := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "agg", Labels: sharedLabels},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "agg",
+			Appid:     "deadbeef",
+			Namespace: "shared-agg",
+			Settings:  map[string]string{settingNeedsSharedAccess: "true"},
+		},
+	}
+	if shouldIssueCallerJWT(intentOnly) {
+		t.Fatal("shared app with needsSharedAccess alone must not issue JWT")
 	}
 }
 
@@ -155,7 +219,7 @@ func TestJWKSHandlerReturns200(t *testing.T) {
 	}
 }
 
-func TestIssuerReconcilerCreatesJWTSecretT_C2_1(t *testing.T) {
+func TestIssuerReconcilerCreatesJWTSecretForCaller(t *testing.T) {
 	scheme := testScheme(t)
 	ring, err := NewKeyRingForTest(false)
 	if err != nil {
