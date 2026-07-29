@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 通过自定义路由 ID 或自定义域名，让 Olares 应用的访问地址更简洁、更易记。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 自定义域名, 自定义路由 ID, 应用 URL, HTTPS 证书, CNAME 记录
 ---
 
 # 自定义应用 URL

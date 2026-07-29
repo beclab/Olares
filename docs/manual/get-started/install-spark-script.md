@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Install Olares on NVIDIA DGX Spark using the command-line installation script for quick deployment.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DGX Spark script, NVIDIA DGX Spark, command line install, GPU memory
 ---
 
 # Install Olares on DGX Spark via script

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 网络架构设计说明，阐述应用入口类型、本地访问机制、端点配置和内部网络安全策略的基本原理。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 网络, 入口, 端点, 路由 ID, 私有入口, 内部网络, 命名空间隔离
 ---
 # 网络
 

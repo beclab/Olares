@@ -1,6 +1,10 @@
 ---
 description: Olares 文档：在自有硬件上运行 AI Agent 和大模型的开源个人云操作系统。
 aside: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares 文档, 个人云操作系统, AI Agent, 大模型, 安装激活, 使用指南
 ---
 # Olares 文档
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 全面了解 Olares 架构，涵盖基础设施、平台服务和应用框架。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 系统架构, Kubernetes, 容器编排, 分布式存储, 平台服务, 应用框架
 ---
 
 # Olares 系统架构

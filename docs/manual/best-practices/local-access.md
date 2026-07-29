@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: Learn the different methods to access Olares services locally for improved speed and offline capability.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, local access, LarePass VPN, local DNS, hosts file, local domain, offline access
 ---
 # Access Olares services locally
 

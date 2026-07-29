@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: 当 LarePass 的系统区域显示“系统错误”时，诊断并收集相关信息。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 系统错误, Pod 状态, SSH, 故障排查, kubectl
 ---
 # LarePass 显示“系统错误”
 

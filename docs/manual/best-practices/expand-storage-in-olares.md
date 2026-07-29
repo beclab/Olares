@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Expand Olares storage with SMB servers, USB auto-mount, CLI commands, and manually mounted HDDs or SSDs for files and large AI models.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, expand storage, SMB, USB mount, HDD SSD, LVM, disk extend, external storage
 ---
 # Expand storage in Olares
 

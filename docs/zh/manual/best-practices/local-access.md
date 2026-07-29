@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: 了解本地访问 Olares 服务的不同方式，以提升访问速度和离线可用性。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 本地访问, LarePass 专用网络, DNS, hosts 文件, .local 域名
 ---
 # 本地访问 Olares 服务
 

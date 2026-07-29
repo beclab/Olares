@@ -1,5 +1,9 @@
 ---
 description: 使用 Olares 文件管理器进行文件存储、同步和访问，实现高效的文件管理和团队协作。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 文件管理器, 文件存储, 文件同步, 云存储, 外部设备, 团队协作
 ---
 # 管理文件
 

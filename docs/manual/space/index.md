@@ -1,5 +1,9 @@
 ---
 description: Explore Olares Space services for cloud hosting, account management, custom domains, data backup, traffic, and shared GPU resources.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, cloud hosting, backup, custom domain, reverse proxy, GPU
 ---
 # Olares Space overview
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to integrate your app with MinIO service in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MinIO integration, integrate with MinIO, Olares middleware, object storage integration
 ---
 # Integrate with MinIO
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Create an Olares ID with a custom domain. Set up your domain for the first time or join as a member using credentials from the domain admin.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, custom domain, organization, Olares ID, DID, LarePass
 ---
 
 # Create an Olares ID with a custom domain

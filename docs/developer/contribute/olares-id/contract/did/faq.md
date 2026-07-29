@@ -1,5 +1,9 @@
 ---
 description: When you apply for an Olares ID, we can afford the transaction fee for calling the contract.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DID FAQ, Olares ID application, transaction fee, contract call, DID questions
 ---
 # DID FAQ
 

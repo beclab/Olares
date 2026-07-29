@@ -1,6 +1,10 @@
 ---
 description: 有时出于统计或其他原因，我们需要完整的数据。以下 fetchAll 方法利用合约接口来获取完整数据。虽然它直接从链上接口获取结果，而不是遍历以太坊事件，但由于数据量大，这可能会非常耗时。
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, SDK, DID 管理, 标签操作, fetchAll, TypeScript
 ---
 
 # 使用 SDK 进行管理

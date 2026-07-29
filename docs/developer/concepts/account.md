@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Understand the Olares account system, from account stages and synchronization to unified authentication, multi-factor security, and multi-device sync.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares account, account system, unified authentication, multi-factor security, multi-device sync
 ---
 
 # Olares account system

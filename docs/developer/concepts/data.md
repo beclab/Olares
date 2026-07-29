@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Explore Olares data architecture, including file system types, app storage paths, databases, and support for JuiceFS, PostgreSQL, MongoDB, and Redis.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares data architecture, app storage, JuiceFS, PostgreSQL, MongoDB, Redis
 ---
 
 # Data

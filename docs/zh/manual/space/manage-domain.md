@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 Olares Space 中管理组织成员，为自定义域名添加或移除用户。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, 域名成员, 组织管理, 添加用户, 自定义域名
 ---
 
 # 管理域名成员

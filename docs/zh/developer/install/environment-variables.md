@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 提供了丰富的环境变量以满足定制化安装需求。通过修改这些变量，你可以覆盖默认安装设置，实现灵活的个性化安装配置。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 环境变量, 安装配置, 自定义安装, olares.sh, FRP, GPU
 ---
 # Olares 环境变量参考
 

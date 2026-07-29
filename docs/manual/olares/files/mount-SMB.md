@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to mount and access SMB shared folders from NAS devices or network servers directly in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Files, SMB share, NAS, network storage, mount
 ---
 
 # Mount SMB shares

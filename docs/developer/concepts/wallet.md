@@ -1,5 +1,9 @@
 ---
 description: Understand the Olares Identity Wallet and how it manages decentralized identifiers (DIDs), verifiable credentials, and digital identity interactions.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Identity Wallet, Olares Wallet, DID, Verifiable Credential, digital identity
 ---
 # Identity Wallet App
 

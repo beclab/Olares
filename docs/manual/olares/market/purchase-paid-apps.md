@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to purchase paid applications on Olares Market and restore previously purchased applications.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Market, paid applications, purchase apps, restore apps, MetaMask, LarePass
 ---
 
 # Manage paid applications

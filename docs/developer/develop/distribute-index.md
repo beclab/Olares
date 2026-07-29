@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Understand how application distribution works in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, distribute Olares applications, app distribution, Olares Market, publish app
 ---
 # Distribute Olares applications
 

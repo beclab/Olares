@@ -1,5 +1,9 @@
 ---
 description: 用 olares-cli 进行集群管理。Olares 如何安装、文件存储在哪里、哪些环境变量可调整安装、Olares 如何版本化，以及字母顺序的命令参考。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 集群管理, olares-cli, 安装架构, 命令参考
 ---
 # 集群管理
 

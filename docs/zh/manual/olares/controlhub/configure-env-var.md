@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Control Hub 中定位和修改应用环境变量，用于调试、更新或配置更改。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 控制面板, 环境变量, ConfigMap, Secret, 应用配置, YAML
 ---
 
 # 配置环境变量

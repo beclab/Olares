@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares One, reset SSH password, SSH login, Vault, LarePass
 ---
 ## Reset SSH password
 

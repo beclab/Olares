@@ -1,5 +1,9 @@
 ---
 description: Explore the Olares Home directory structure for images, logs, dependencies, versions, and the default installation path.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Home, installation directory, base directory, versions, logs, ~/.olares
 ---
 # Olares Home
 

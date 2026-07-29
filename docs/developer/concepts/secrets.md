@@ -1,5 +1,9 @@
 ---
 description: Understand Olares secret management, including vault items, credentials, integration credentials, classifications, and secure storage strategies.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, secret management, Vault, credentials, integration credentials, secure storage
 ---
 # Secret management
 

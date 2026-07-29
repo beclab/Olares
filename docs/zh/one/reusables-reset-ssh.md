@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares One, 重置 SSH 密码, SSH 访问, Vault, LarePass, 激活时重置
 ---
 
 :::warning

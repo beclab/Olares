@@ -1,5 +1,9 @@
 ---
 description: Manage Olares clusters with olares-cli. Learn installation paths, environment variables, versioning, and available cluster commands.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, cluster management, olares-cli, installation guide, Olares Home, versioning, command reference
 ---
 # Cluster management
 

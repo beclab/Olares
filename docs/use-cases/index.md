@@ -1,6 +1,10 @@
 ---
 description: Explore Olares use cases for AI agents, local models, creative tools, productivity, media, virtual machines, and self-hosted apps.
 aside: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, use cases, open-source apps, local AI, media server, self-hosting
 ---
 
 # Use cases

@@ -1,5 +1,9 @@
 ---
 description: 了解如何在 Olares 设置中更改反向代理选项，保证安全稳定的对外访问。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 反向代理, 网络设置, Olares Tunnel, 自建 FRP, 远程访问, 外网访问
 ---
 
 # 更改反向代理选项

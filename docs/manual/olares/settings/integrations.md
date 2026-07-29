@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Manage third-party services, SMB storage credentials, and website cookies in Olares Settings for connected storage, subscriptions, and automations.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, integrations, cloud storage, AWS S3, Tencent COS, cookies, SMB
 ---
 
 # Manage integrations in Settings

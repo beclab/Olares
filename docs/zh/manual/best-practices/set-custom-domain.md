@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 详细指导如何为 Olares 设置自定义域名，包括域名验证、组织创建、成员管理和 Olares ID 激活的完整流程。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 自定义域名, Olares Space, 组织, LarePass, 域名验证
 ---
 
 # 为 Olares 设置自定义域名

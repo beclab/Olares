@@ -1,5 +1,9 @@
 ---
 description: 使用 Wise 智能内容聚合平台，利用本地优先和 AI 驱动功能，在 Olares 中创建个性化信息中心，实现跨平台内容的智能管理与推荐。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, 内容聚合, RSS 阅读器, 信息管理, 个人信息中心, 阅读管理
 ---
 # 使用 Wise 一站式聚合、管理内容
 

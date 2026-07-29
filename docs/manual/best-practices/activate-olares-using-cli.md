@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Technical guide for installing and activating an Olares device using Olares CLI.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares CLI, activate device, Olares One, FRP, wizard activate, LarePass
 ---
 
 # Activate an Olares device using the Olares CLI

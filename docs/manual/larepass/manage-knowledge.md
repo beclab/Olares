@@ -1,6 +1,10 @@
 ---
 title: Manage Knowledge with LarePass
 description: Use LarePass to collect web content, videos, and RSS feeds across devices.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, knowledge management, Wise, RSS, collect content
 ---
 
 # Manage knowledge with LarePass

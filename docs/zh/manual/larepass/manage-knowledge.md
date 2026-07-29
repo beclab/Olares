@@ -1,5 +1,9 @@
 ---
 description: 使用 LarePass 在多设备间收集网页内容、视频和 RSS 源。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 收藏内容, Wise, 浏览器扩展, RSS 订阅, 知识管理
 ---
 
 # 使用 LarePass 收藏内容

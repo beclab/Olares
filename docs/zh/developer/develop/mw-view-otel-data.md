@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 集群中启用 OpenTelemetry 自动注入，并在 Jaeger 中查看 Trace 数据。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, OpenTelemetry, Jaeger, Trace 数据, 自动注入, 链路追踪
 ---
 # 查看 OpenTelemetry 数据
 

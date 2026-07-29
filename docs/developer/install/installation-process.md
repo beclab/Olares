@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Follow each phase of Olares deployment, including system validation, downloads, environment preparation, and service installation.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, installation process, precheck, download, prepare, install, KubeSphere, olares-cli
 ---
 # Olares installation breakdown
 This document explains the Olares installation process from the perspective of its four main phases. It is aimed at developers and system administrators who want to understand the installation in detail, including the underlying commands, configurations, and logic behind each phase.

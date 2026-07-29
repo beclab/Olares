@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 使用 12 个助记词将已有的 Olares ID 导入到 LarePass，在新设备或其他客户端上访问 Olares 服务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 导入账户, 助记词, 多设备, 恢复 Olares ID
 ---
 
 # 导入账户

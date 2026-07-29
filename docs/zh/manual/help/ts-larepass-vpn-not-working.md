@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 排查 LarePass 专用网络在 macOS、Windows 和移动设备上无法使用的问题。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 专用网络, VPN, 无法连接, 故障排查, 网络扩展
 ---
 
 # LarePass 专用网络无法使用

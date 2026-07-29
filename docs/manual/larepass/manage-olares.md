@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to use the LarePass app to manage your Olares device.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, device management, system update, remote shutdown, Wi-Fi
 ---
 # Manage Olares with LarePass
 

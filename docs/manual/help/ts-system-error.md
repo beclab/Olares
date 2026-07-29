@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Diagnose and collect information when LarePass shows "System error" in the System section.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, system error, LarePass, pod status, kubectl, troubleshoot
 ---
 
 # "System error" in LarePass

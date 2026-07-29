@@ -1,5 +1,9 @@
 ---
 description: Olares ID 系统中发行方（Issuer）签发可验证凭证的流程。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, VC, Issuer, 发行方, 可验证凭证, Manifest, Application
 ---
 # 发行方 (Issuer)
 

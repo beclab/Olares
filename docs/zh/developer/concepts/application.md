@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 应用系统的核心概念，包括应用标识符、类型分类和权限体系。阐述系统应用、社区应用和集群范围应用的特性及依赖关系。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用, 系统应用, 社区应用, 共享应用, Service Provider, 命名空间, 应用标识符
 ---
 
 # 应用

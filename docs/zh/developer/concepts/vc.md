@@ -1,5 +1,9 @@
 ---
 description: 介绍可验证凭证（VC）的定义、相关角色与六步验证流程，以及 VC 与 DID 的协同工作方式。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, VC, 可验证凭证, DID, Issuer, Holder, Verifier, Verifiable Presentation
 ---
 
 # 可验证凭证（Verifiable Credential）

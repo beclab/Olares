@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 通过 npm 或 npx 安装和更新 olares-cli。涵盖首次安装向导、持久安装、免安装运行，以及机器上已运行 Olares OS 的特殊情况。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, npm, npx, 安装 CLI, Agent Skills, 更新 CLI, Linux 安装
 ---
 
 # 安装 olares-cli

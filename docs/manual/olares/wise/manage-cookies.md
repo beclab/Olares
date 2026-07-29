@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Manage cookies in Wise to access protected sites and feeds. Learn supported formats, how to obtain cookies, and how to upload and maintain them.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, cookies, protected sites, batch upload, LarePass extension
 ---
 
 # Manage cookies for Wise

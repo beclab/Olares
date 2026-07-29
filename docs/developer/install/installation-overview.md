@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Understand Olares installation architecture across the native system layer, Kubernetes orchestration, and containerized services.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, installation architecture, K3s, Kubernetes, containerd, olaresd, JuiceFS, native layer
 ---
 # Olares installation architecture 
 

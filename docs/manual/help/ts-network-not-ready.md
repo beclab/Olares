@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Troubleshoot the issue where your Olares One is connected to the network but remains unreachable through standard access methods.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, network not ready, connection error, Olares One, SSH, pod status
 ---
 
 # Network not ready or olares connection error

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 排查并重置忘记的 Olares 桌面登录密码。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 忘记密码, 重置密码, 桌面登录, olares-cli, SSH
 ---
 
 # 忘记桌面登录密码

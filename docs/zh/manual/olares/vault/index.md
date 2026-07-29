@@ -1,5 +1,9 @@
 ---
 description: 使用 Vault 安全存储和管理敏感数据。了解端到端加密功能和跨设备同步，轻松管理密码、数字身份和一次性密码。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Vault, 密码管理器, 敏感数据, 端到端加密, OTP, 2FA, 双因素认证
 ---
 # 使用 Vault 保护敏感数据
 

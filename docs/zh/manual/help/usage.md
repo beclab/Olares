@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 查找关于 Olares 日常使用、应用及系统管理的常见问题解答。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 使用问题, 应用市场, Ollama, ComfyUI, 存储, 多节点集群
 ---
 
 # 使用常见问题
