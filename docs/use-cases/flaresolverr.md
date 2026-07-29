@@ -1,21 +1,23 @@
 ---
 outline: [2, 3]
-title: Use FlareSolverr for Cloudflare in Prowlarr
-description: Set up FlareSolverr on Olares to bypass Cloudflare protection and access blocked indexer sites in Prowlarr.
+title: Set up FlareSolverr with Prowlarr on Olares
+description: Set up FlareSolverr with Prowlarr on Olares to bypass Cloudflare protection and access blocked indexer sites for your media stack.
 head:
   - - meta
     - name: keywords
-      content: Olares, FlareSolverr, Prowlarr, Cloudflare, indexer, proxy, self-hosted
+      content: Olares, FlareSolverr, Prowlarr, Cloudflare, indexer, proxy, self-hosted, setup FlareSolverr with Prowlarr, FlareSolverr Prowlarr, Prowlarr FlareSolverr, FlareSolverr Kodi, ghcr.io FlareSolverr
 app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-04-03"
+doc_version: "1.1"
+doc_updated: "2026-07-29"
 ---
 
 # Access Cloudflare-protected sites in Prowlarr with FlareSolverr
 
-FlareSolverr is a proxy server that bypasses Cloudflare and DDoS-GUARD protection. Many indexer sites use Cloudflare's anti-bot measures, which can block automated access from apps like Prowlarr.
+FlareSolverr is a proxy server that solves Cloudflare and DDoS-GUARD challenges on behalf of apps like Prowlarr. When an indexer site shows a CAPTCHA or JavaScript challenge, FlareSolverr uses a headless browser to complete the challenge and return the valid response.
 
-On Olares, you can use FlareSolverr as a proxy for Prowlarr to help access indexers protected by Cloudflare or similar anti-bot services.
+On Olares, you can set up FlareSolverr as an indexer proxy for Prowlarr. Once configured, Prowlarr routes requests for protected indexers through FlareSolverr, so your *arr apps can keep searching and downloading content.
+
+This guide walks you through installing both apps, connecting them, and adding Cloudflare-protected indexers such as 1337x.
 
 ## Learning objectives
 
@@ -24,6 +26,12 @@ In this guide, you will learn how to:
 - Configure FlareSolverr as an indexer proxy in Prowlarr.
 - Add Cloudflare-protected indexer sites.
 - Verify that FlareSolverr is solving challenges correctly.
+
+## Prerequisites
+
+- An Olares device that is set up and running.
+- Basic familiarity with Prowlarr and torrent or Usenet indexers.
+- Enough free storage for FlareSolverr's container image. The app is based on the `ghcr.io/flaresolverr/flaresolverr:latest` image and runs as a background service.
 
 ## Install FlareSolverr
 
@@ -107,15 +115,15 @@ You can check FlareSolverr's logs to confirm it is receiving and solving Cloudfl
 6. Search for content in Prowlarr's search bar. If results appear, FlareSolverr is working correctly.
    ![Prowlarr search results](/images/manual/use-cases/prowlarr-search-results.png#bordered){width=80%}
 
-## Use FlareSolverr with other indexers
+## Use FlareSolverr with your media stack
 
-When adding other indexers in Prowlarr, look for the following message:
+FlareSolverr is most commonly used with Prowlarr, but the same proxy setup benefits other parts of a self-hosted media workflow:
 
-> This site may use Cloudflare DDoS Protection, therefore Prowlarr requires FlareSolverr to access it.
-   
-   ![Cloudflare warning on indexer](/images/manual/use-cases/prowlarr-cloudflare-warning.png#bordered){width=80%}
+- **Prowlarr** sends indexer queries through FlareSolverr when an indexer tag matches the proxy tag.
+- **Sonarr**, **Radarr**, and **Lidarr** rely on Prowlarr's indexers, so they indirectly benefit from FlareSolverr without extra configuration.
+- Media centers such as **Kodi**, **Jellyfin**, and **Plex** use the files that Sonarr and Radarr grab, which means a working FlareSolverr setup helps keep your entire media stack fed with new content.
 
-For any indexer showing this warning, add the same FlareSolverr proxy tag (e.g., `flaresolverr`) in the indexer's **Tags** field.
+If you run into Cloudflare-protected indexers in other *arr apps, make sure the indexer is managed through Prowlarr and tagged correctly.
 
 ## FAQ
 
@@ -135,3 +143,19 @@ To force-save:
 6. If Prowlarr keeps the edit page open and displays a warning (e.g., `Unable to access 1337x.to, blocked by CloudFlare Protection`), the **Save** button will change to a red warning icon. Click this icon again to save the indexer despite the failed connection check.
 
 After re-enabling, try searching in Prowlarr. If results appear, the indexer is working despite the failed test.
+
+### FlareSolverr is not receiving requests from Prowlarr
+
+Check the following:
+
+- The **Host** field in Prowlarr's FlareSolverr proxy settings matches the API endpoint you copied from Olares Settings.
+- The indexer **Tags** field contains the same tag assigned to the FlareSolverr proxy.
+- The FlareSolverr pod is running in Control Hub.
+
+### How do I update FlareSolverr
+
+When a new version of FlareSolverr is published to the Olares Market, open Market, go to **My Olares**, and click **Update** next to FlareSolverr. Olares pulls the latest `ghcr.io/flaresolverr/flaresolverr:latest` image automatically.
+
+## Learn more
+
+- [Stream your media with Jellyfin](jellyfin.md): Host and stream movies, shows, and music from your Olares device.

@@ -1,14 +1,14 @@
 ---
 outline: [2, 3]
-title: 使用 FlareSolverr 访问 Cloudflare 站点
-description: 在 Olares 上设置 FlareSolverr，绕过 Cloudflare 保护，在 Prowlarr 中访问被阻止的索引器站点。
+title: 在 Olares 上设置 FlareSolverr 与 Prowlarr
+description: 在 Olares 上设置 FlareSolverr 与 Prowlarr，绕过 Cloudflare 防护，为媒体栈访问被阻止的索引器站点。
 head:
   - - meta
     - name: keywords
-      content: Olares, FlareSolverr, Prowlarr, Cloudflare, indexer, proxy, self-hosted
+      content: Olares, FlareSolverr, Prowlarr, Cloudflare, indexer, proxy, self-hosted, 设置 FlareSolverr 与 Prowlarr, FlareSolverr Prowlarr, Prowlarr FlareSolverr, FlareSolverr Kodi, ghcr.io FlareSolverr
 app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-04-03"
+doc_version: "1.1"
+doc_updated: "2026-07-29"
 ---
 
 :::warning
@@ -17,9 +17,11 @@ doc_updated: "2026-04-03"
 
 # 在 Prowlarr 中使用 FlareSolverr 访问 Cloudflare 保护的站点
 
-FlareSolverr 是一个代理服务器，可以绕过 Cloudflare 和 DDoS-GUARD 保护。许多索引器站点使用 Cloudflare 的反机器人措施，这可能会阻止来自 Prowlarr 等应用的自动访问。
+FlareSolverr 是一个代理服务器，可以代替 Prowlarr 等应用解决 Cloudflare 和 DDoS-GUARD 挑战。当索引器站点显示 CAPTCHA 或 JavaScript 挑战时，FlareSolverr 会使用无头浏览器完成挑战并返回有效响应。
 
-在 Olares 上，你可以将 FlareSolverr 用作 Prowlarr 的代理，以帮助访问受 Cloudflare 或类似反机器人服务保护的索引器。
+在 Olares 上，你可以将 FlareSolverr 设置为 Prowlarr 的索引器代理。配置完成后，Prowlarr 会将受保护索引器的请求路由到 FlareSolverr，让你的 *arr 应用能够继续搜索和下载内容。
+
+本文档将引导你安装这两个应用、连接它们，并添加受 Cloudflare 保护的索引器（例如 1337x）。
 
 ## 学习目标
 
@@ -28,6 +30,12 @@ FlareSolverr 是一个代理服务器，可以绕过 Cloudflare 和 DDoS-GUARD �
 - 将 FlareSolverr 配置为 Prowlarr 中的索引器代理。
 - 添加受 Cloudflare 保护的索引器站点。
 - 验证 FlareSolverr 是否正确解决挑战。
+
+## 前提条件
+
+- 已设置并运行 Olares 设备。
+- 对 Prowlarr 以及 BT 或 Usenet 索引器有基本了解。
+- 有足够的存储空间用于 FlareSolverr 容器镜像。该应用基于 `ghcr.io/flaresolverr/flaresolverr:latest` 镜像，以后台服务方式运行。
 
 ## 安装 FlareSolverr
 
@@ -111,17 +119,17 @@ FlareSolverr 作为后台服务运行，因此不会出现在 Launchpad 上。
 6. 在 Prowlarr 的搜索栏中搜索内容。如果结果出现，FlareSolverr 正在正常工作。
    ![Prowlarr 搜索结果](/images/manual/use-cases/prowlarr-search-results.png#bordered){width=80%}
 
-## 将 FlareSolverr 与其他索引器一起使用
+## 将 FlareSolverr 用于你的媒体栈
 
-在 Prowlarr 中添加其他索引器时，查找以下消息：
+FlareSolverr 最常与 Prowlarr 一起使用，但同样的代理设置也让自托管媒体工作流的其他部分受益：
 
-> This site may use Cloudflare DDoS Protection, therefore Prowlarr requires FlareSolverr to access it.
+- **Prowlarr** 在索引器标签与代理标签匹配时，会通过 FlareSolverr 发送索引器查询。
+- **Sonarr**、**Radarr** 和 **Lidarr** 依赖 Prowlarr 的索引器，因此它们会间接受益于 FlareSolverr，无需额外配置。
+- **Kodi**、**Jellyfin** 和 **Plex** 等媒体中心使用 Sonarr 和 Radarr 获取的文件，因此正常运行的 FlareSolverr 设置有助于为整个媒体栈持续提供新内容。
 
-   ![索引器上的 Cloudflare 警告](/images/manual/use-cases/prowlarr-cloudflare-warning.png#bordered){width=80%}
+如果在其他 *arr 应用中遇到受 Cloudflare 保护的索引器，请确保该索引器通过 Prowlarr 管理并正确标记。
 
-对于任何显示此警告的索引器，在索引器的 **Tags** 字段中添加相同的 FlareSolverr 代理标签（例如 `flaresolverr`）。
-
-## FAQ
+## 常见问题
 
 ### Prowlarr 测试失败，但 FlareSolverr 日志显示 "Challenge solved"
 
@@ -133,9 +141,25 @@ FlareSolverr 作为后台服务运行，因此不会出现在 Launchpad 上。
 2. 取消选中 **Enable** 复选框，然后点击 **Save**。索引器现在将以禁用状态添加到列表中。
 3. 在 **Indexers** 页面上，在列表中找到该索引器，点击最右侧的扳手图标进行编辑。
    ![从 Indexers 列表编辑索引器](/images/manual/use-cases/prowlarr-cloudflare-edit-indexer.png#bordered){width=80%}
-
+   
 4. 选中 **Enable** 复选框。
 5. 点击 **Save**。
 6. 如果 Prowlarr 保持编辑页面打开并显示警告（例如 `Unable to access 1337x.to, blocked by CloudFlare Protection`），**Save** 按钮将变为红色警告图标。再次点击此图标以保存索引器，尽管连接检查失败。
 
 重新启用后，尝试在 Prowlarr 中搜索。如果结果出现，则索引器正在工作，尽管测试失败。
+
+### FlareSolverr 没有收到 Prowlarr 的请求
+
+请检查以下内容：
+
+- Prowlarr 的 FlareSolverr 代理设置中的 **Host** 字段与你从 Olares Settings 复制的 API 端点一致。
+- 索引器的 **Tags** 字段包含分配给 FlareSolverr 代理的相同标签。
+- FlareSolverr pod 正在 Control Hub 中运行。
+
+### 如何更新 FlareSolverr
+
+当 Olares Market 发布 FlareSolverr 新版本时，打开 Market，前往 **My Olares**，然后点击 FlareSolverr 旁的 **Update**。Olares 会自动拉取最新的 `ghcr.io/flaresolverr/flaresolverr:latest` 镜像。
+
+## 了解更多
+
+- [使用 Jellyfin 流媒体播放](jellyfin.md)：在 Olares 设备上托管和播放电影、剧集和音乐。

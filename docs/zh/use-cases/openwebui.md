@@ -178,3 +178,4 @@ Open WebUI 会自动检测并连接到本地 Ollama。下载的模型出现在�
 - [配置音频](openwebui-audio.md)：启用语音转文字和文字转语音。
 - [启用网页搜索](openwebui-search.md)：为聊天增加网页搜索能力。
 - [使用知识库](openwebui-knowledge.md)：上传文档并创建用于 RAG 的知识库。
+- [使用 LobeHub 构建本地 AI 智能体](lobechat.md)：通过 Ollama 在 Olares 上创建专门的 AI 智能体和助手。

@@ -161,4 +161,5 @@ https://a5be22681.{YOURUSERNAME}.olares.com/v1
 
 - [使用 Engine Base 应用托管本地大语言模型](./llm-base-apps.md)
 - [使用 Open WebUI 运行 Ollama 模型](./openwebui.md)
+- [使用 LobeHub 构建本地 AI 智能体](./lobechat.md)
 - [将 Ollama 与 DeerFlow 2.0 集成](./deerflow2.md)

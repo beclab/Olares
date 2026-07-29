@@ -126,4 +126,5 @@ AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增�
 
 ## 了解更多
 - [使用引擎基座应用托管本地模型](llm-base-apps.md)
+- [使用 LobeHub 构建本地 AI 智能体](lobechat.md)：通过 Ollama 在 Olares 上创建专门的 AI 智能体。
 - [官方 AnythingLLM 文档](https://docs.anythingllm.com/)
