@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, DeerFlow, AI agent, deep research, multi-agent, self-hosted, LLM
-doc_version: "1.0"
-app_version: "1.0.0"
-doc_updated: "2026-03-24"
+doc_version: "1.2"
+app_version: "1.0.6"
+doc_updated: "2026-07-27"
 ---
 
 :::warning
@@ -18,9 +18,7 @@ doc_updated: "2026-03-24"
 
 DeerFlow 是字节跳动开源的智能代理框架，基于 LangGraph 和 LangChain 构建。它通过可扩展的 skill 编排子代理、记忆和沙盒来处理复杂任务。
 
-DeerFlow 2.0 是原版 [DeerFlow](./deerflow.md) 的彻底重写。虽然 1.0 版本是一个深度研究框架，但 2.0 版本是一个通用智能代理平台。
-
-本指南介绍如何在 Olares 上安装 DeerFlow 2.0，并将其与本地模型配置。以 Qwen3.5 27B Q4_K_M（Ollama）为例。
+DeerFlow 2.0 是原版 [DeerFlow](https://github.com/bytedance/deer-flow) 的彻底重写。虽然 1.0 版本是一个深度研究框架，但 2.0 版本是一个通用智能代理平台。
 
 ## 学习目标
 
@@ -28,9 +26,18 @@ DeerFlow 2.0 是原版 [DeerFlow](./deerflow.md) 的彻底重写。虽然 1.0 �
 - 在 Olares 上安装 DeerFlow 2.0 并配置本地模型。
 - 运行深度研究等任务。
 
-## Prerequisites
+## 前提条件
 
-- 已从 Market 安装模型应用，且模型已完全下载。
+开始前，你需要：
+
+- 一台具有足够磁盘空间和内存的 Olares 设备。
+- 以下模型：
+
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 DeerFlow 2.0
 
@@ -41,42 +48,33 @@ DeerFlow 2.0 是原版 [DeerFlow](./deerflow.md) 的彻底重写。虽然 1.0 �
 
 ## 配置模型
 
-DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到本地模型，需要添加一个指向模型应用共享端点的模型条目。
+DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到本地模型，请在该文件中添加模型及其连接信息。
 
-### 获取模型端点和模型名称
+### 获取模型连接信息
 
-1. 从 Launchpad 打开模型应用。页面会显示模型名称（例如 `qwen3.5:27b-q4_K_M`）。记录下来以备后用。
-   ![获取模型名称](/images/manual/use-cases/deerflow2-get-model-name.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-2. 打开 Settings，然后导航至 **Application** > 你的模型应用（例如 **Qwen3.5 27B Q4_K_M (Ollama)**）。
-3. 在 **Shared entrances** 下，选择模型应用以查看端点 URL。
+对于 Qwen3.6-27B (llama.cpp)：
 
-   ![获取共享端点](/images/manual/use-cases/deerflow2-shared-entrance.png#bordered){width=70%}
-
-4. 复制共享端点。例如：
-   ```text
-   http://94a553e00.shared.olares.com
-   ```
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### 编辑 config.yaml
 
-1. 打开 Files，导航至 DeerFlow 2.0 应用数据目录：`Application/Data/deerflowv2/config/`。
-
+1. 打开 Files，导航至 DeerFlow 2.0 应用数据目录：`/Data/deerflowv2/config/`。
 2. 打开 `config.yaml`，然后点击右上角的 <span class="material-symbols-outlined">edit_square</span> 打开编辑器。
-
-3. 在 `models:` 部分下，使用你复制的共享端点添加模型配置。例如：
+3. 在 `models:` 部分下添加以下模型配置。
 
    ```yaml
    models:
-     - name: qwen3.5:27b-q4_K_M            # 模型的唯一标识符
-       display_name: Qwen3.5 27B            # UI 中显示的名称
-       use: langchain_openai:ChatOpenAI     # 用于 OpenAI 兼容 API 的 LangChain 类
-       model: qwen3.5:27b-q4_K_M           # 模型 ID
-       api_key: ollama                      # 使用任意非空文本
-       base_url: http://94a553e00.shared.olares.com/v1  # 带 /v1 后缀的共享端点
-       supports_thinking: true              # 如果模型支持扩展思考，设为 true
+     - name: unsloth/Qwen3.6-27B-GGUF:Q4_K_M      # 模型的唯一标识符
+       display_name: Qwen3.6-27B      # UI 中显示的名称
+       use: langchain_openai:ChatOpenAI      # 用于 OpenAI-compatible API 的 LangChain 类
+       model: unsloth/Qwen3.6-27B-GGUF:Q4_K_M      # 模型 ID
+       api_key: olares      # 使用任意非空文本
+       base_url: https://e46e044d.laresprime.olares.com/v1      # 模型控制台中的 Base URL
+       supports_thinking: true      # 如果模型支持扩展思考，则设为 true
    ```
-   ![编辑 config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml.png#bordered)
+   ![编辑 config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml1.png#bordered)
 
 4. 点击 <span class="material-symbols-outlined">save</span> 保存更改。
 
@@ -94,15 +92,26 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
 
 模型配置完成后，你就可以开始使用 DeerFlow 2.0 了。
 
-1. 从 Launchpad 打开 DeerFlow 2.0，点击 **Get Started with 2.0** 进入聊天界面。
+1. 从 Launchpad 打开 DeerFlow 2.0，点击 **Get Started with 2.0**。
 
-2. 选择你喜欢的执行模式。
+2. 首次启动时，创建用于访问和管理当前 DeerFlow 2.0 实例的管理员账号：
+    - **Email**：输入管理员账号的电子邮箱地址。
+    - **Password**：输入至少包含八个字符的密码。
+    - **Confirm Password**：再次输入密码。
+
+   账号数据，包括登录信息，仅保存在当前 DeerFlow 2.0 实例中。创建账号和登录均不连接外部账号服务。
+
+   点击 **Create Admin Account** 进入聊天界面。
+
+   ![创建 DeerFlow 管理员账号](/images/manual/use-cases/deerflow2-create-admin-account.png#bordered)
+
+3. 选择你喜欢的执行模式。
 
    ![选择执行模式](/images/manual/use-cases/deerflow2-select-mode.png#bordered)
 
    DeerFlow 2.0 提供多种执行模式，控制代理如何处理你的请求，从快速单次回答到多步骤研究（含子代理）。
 
-3. 在聊天框中输入你的提示，或选择一个建议主题作为灵感。
+4. 在聊天框中输入你的提示，或选择一个建议主题作为灵感。
 
    例如，你可以对某个主题进行深度研究：
    ![深度研究示例](/images/manual/use-cases/deerflow2-research.png#bordered)
@@ -117,7 +126,7 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
 如果代理无法启动或卡住：
 
 - **检查模型兼容性**：确保你选择的模型已在 `config.yaml` 中正确配置。验证端点 URL 是否正确。
-- **检查端点配置**：检查 API 端点是否包含 `/v1` 后缀。
+- **检查连接信息**：确保 Model name 和 Base URL 与模型控制台中显示的值一致。
 
 ### 如何启用后续建议？
 

@@ -41,7 +41,7 @@ Olares 的安装从原生层开始，确保底层 Linux 环境支持分布式存
 - **JuiceFS**：为多节点集群提供分布式文件系统。文件数据可以存储在本地安装的 MinIO 实例中，也可以存储在 Amazon S3 这一类远程存储桶中。该配置支持不同存储节点共享统一的存储视图。
 
 :::tip 启用 JuiceFS
-JuiceFS 和 MinIO 默认不会安装。如需启用，需在安装前设置必要的[环境变量](environment-variables.md#juicefs)或用 [olares-cli 命令](cli/prepare#选项)配合 JuiceFS 相应参数安装。
+JuiceFS 和 MinIO 默认不会安装。如需启用，需在安装前设置必要的[环境变量](environment-variables.md#juicefs)或用 olares-cli 命令配合 JuiceFS 相应参数安装。
 :::
 
 ### 容器运行时：containerd
@@ -62,7 +62,7 @@ olaresd 是系统守护进程，在后台运行，提供以下关键管理功能
 - **远程系统管理**：根据来自 LarePass 客户端或 `olares-cli` 的命令执行远程系统操作，例如 Olares 安装和激活。
 
 ### CUDA 支持
-为了让本地 AI 模型和应用启用 GPU 加速，Olares 支持通过 [`olares-cli`](./cli/gpu.md) 自动检测并安装 CUDA 工具包和相关驱动程序。
+为了让本地 AI 模型和应用启用 GPU 加速，Olares 支持通过 `olares-cli` 自动检测并安装 CUDA 工具包和相关驱动程序。
 
 ## 容器编排层
 容器编排层通过 Kubernetes 将系统组件集成到高效的运行时环境中。
@@ -92,5 +92,5 @@ Olares 支持以下 Kubernetes 部署方式：
 
 - [Olares 安装流程详解](installation-process.md)
 - [Olares Home 概述](olares-home.md)
-- [`olares-cli` 命令行参考](../install/cli/olares-cli.md)
+- [`olares-cli` 命令行参考](../cli-overview.md)
 - [Olares 环境变量](environment-variables.md)

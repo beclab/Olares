@@ -3,7 +3,6 @@ module github.com/beclab/Olares/cli
 go 1.25.0
 
 replace (
-	github.com/beclab/Olares/framework/app-gateway => ../framework/app-gateway
 	github.com/beclab/Olares/framework/oac => ../framework/oac
 	github.com/estesp/manifest-tool/v2 => github.com/estesp/manifest-tool/v2 v2.0.3
 	olares.com/backups-sdk => github.com/Above-Os/backups-sdk v0.1.40

@@ -319,4 +319,5 @@ func SetSystemEnv(key, value string) {
 
 const (
 	HelmValuesKeyOlaresRootFSPath = "rootPath"
+	HelmValuesKeyPreinstall       = "preinstall"
 )

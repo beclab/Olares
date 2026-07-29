@@ -58,7 +58,7 @@ func TestRequireMinVersion(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 		msg := err.Error()
-		for _, want := range []string{"could not be determined", "profile login", "profile list --refresh-version"} {
+		for _, want := range []string{"could not be determined", "profile login", "profile list --refresh"} {
 			if !strings.Contains(msg, want) {
 				t.Fatalf("error %q missing %q", msg, want)
 			}

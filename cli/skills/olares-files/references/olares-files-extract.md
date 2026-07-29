@@ -76,7 +76,7 @@ POST /api/archive/<node>/extract
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Backend version could not be determined | Profile version cache is missing or stale | Confirm `profile login`, then run `olares-cli profile list --refresh-version` |
+| Backend version could not be determined | Profile version cache is missing or stale | Confirm `profile login`, then run `olares-cli profile list --refresh` |
 | `require Olares >= 1.12.6`, with a detected older version | Backend predates the archive surface | Upgrade Olares |
 | `must end with '/' to declare directory intent` | `<dst-dir>` had no trailing slash | Add `/` |
 | `archive ... does not exist on the server` | Wrong source path | `files ls` the parent and confirm |

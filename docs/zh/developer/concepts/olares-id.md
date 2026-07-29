@@ -66,4 +66,3 @@ Olares ID 采用类似邮箱的可读格式，使 DID 更易用，同时保持�
 
 - [创建 Olares ID](../../manual/larepass/create-account.md)
 - [去中心化标识符 (DID)](did.md)
-- [Gmail issuer 服务](/zh/developer/contribute/olares-id/verifiable-credential/olares.md#gmail-issuer-service)

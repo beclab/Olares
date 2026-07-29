@@ -301,7 +301,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
         - name: olares-app-init
-          image: beclab/system-frontend:v1.11.15
+          image: beclab/system-frontend:v1.11.17
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh

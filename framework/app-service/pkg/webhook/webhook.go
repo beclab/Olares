@@ -696,6 +696,8 @@ var gpuResourceKeys = []string{
 	constants.NvidiaGPUMem,
 	constants.AMDGPU,
 	constants.AMDAPU,
+	constants.IntelIGPU,
+	constants.IntelGPU,
 }
 
 // jsonPointerEscape escapes a string per RFC 6901 so it is safe to use

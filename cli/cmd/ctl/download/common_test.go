@@ -55,7 +55,7 @@ func TestPrepareVersionGate(t *testing.T) {
 		if err == nil || pc != nil {
 			t.Fatalf("expected fail-closed version error, got client=%v err=%v", pc, err)
 		}
-		for _, want := range []string{"could not be determined", "profile login", "profile list --refresh-version"} {
+		for _, want := range []string{"could not be determined", "profile login", "profile list --refresh"} {
 			if !strings.Contains(err.Error(), want) {
 				t.Fatalf("error %q missing %q", err, want)
 			}

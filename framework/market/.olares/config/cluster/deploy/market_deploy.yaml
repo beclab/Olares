@@ -133,7 +133,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.79
+        image: beclab/market-backend:v0.6.82
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -148,6 +148,12 @@ spec:
             value: /opt/app/data/v3/images-info
           - name: MODULE_ENABLE_STATUS_CORRECTION_CHECKER
             value: 'true'
+{{ if .Values.preinstall }}
+          - name: PREINSTALL_ENABLED
+            value: 'true'
+          - name: PREINSTALL_BUNDLE_DIR
+            value: /opt/app/preinstall
+{{ end }}
           - name: APP_SERVICE_SERVICE_PORT
             value: "6755"
           - name: REPO_URL_PORT
@@ -205,10 +211,17 @@ spec:
         volumeMounts:
           - name: opt-data
             mountPath: /opt/app/data
+          - name: market-preinstall
+            mountPath: /opt/app/preinstall
+            readOnly: true
       volumes:
       - name: opt-data
         hostPath:
           path: '{{ .Values.rootPath }}/userdata/Cache/chartrepo'
+          type: DirectoryOrCreate
+      - name: market-preinstall
+        hostPath:
+          path: '{{ .Values.rootPath }}/userdata/Cache/market-preinstall'
           type: DirectoryOrCreate
 ---
 apiVersion: v1

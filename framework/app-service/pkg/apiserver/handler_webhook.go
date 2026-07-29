@@ -464,11 +464,16 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
 		hamiGpuMemory = ptr.To(hamiFormatGpuRequired.String())
 	}
+	gpuResourceKey, err := h.resolveIntelDriverResource(ctx, GPUType)
+	if err != nil {
+		klog.Errorf("resolve intel driver resource error %v", err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
 	patchBytes, err := webhook.CreatePatchForDeployment(
 		tpl,
 		injectAll,
 		injectContainer,
-		h.getGPUResourceTypeKey(GPUType),
+		gpuResourceKey,
 		hamiGpuMemory,
 		envs,
 	)
@@ -518,6 +523,95 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")
 		return ""
+	default:
+		return ""
+	}
+}
+
+// resolveIntelDriverResource picks the correct Intel extended resource
+// (gpu.intel.com/i915 vs gpu.intel.com/xe) for the given compute mode by
+// reading the real bound driver from the cluster's node register annotations
+// (bytetrade.io/node-intel-register), instead of assuming intel(igpu)->i915 /
+// intel-gpu(dgpu)->xe. iGPU and dGPU can each be bound to either driver, so the
+// hardcoded mapping is wrong.
+//
+// For non-Intel modes it delegates to getGPUResourceTypeKey. When no matching
+// card is found in the cluster, it falls back to the legacy mapping so
+// behaviour degrades gracefully rather than dropping the resource. Listing the
+// nodes is a hard dependency, so a list failure is returned as an error rather
+// than silently resolved to a possibly-wrong resource.
+func (h *Handler) resolveIntelDriverResource(ctx context.Context, mode string) (string, error) {
+	var wantKind string
+	switch mode {
+	case utils.IntelType:
+		wantKind = utils.IntelGPUKindIntegrated
+	case utils.IntelGPUType:
+		wantKind = utils.IntelGPUKindDiscrete
+	default:
+		return h.getGPUResourceTypeKey(mode), nil
+	}
+
+	var nodes corev1.NodeList
+	if err := h.ctrlClient.List(ctx, &nodes); err != nil {
+		return "", fmt.Errorf("[gpu-limit] list nodes for intel driver resolution (mode %s) failed: %w", mode, err)
+	}
+
+	resource, distinct := selectIntelDriverResource(nodes.Items, wantKind)
+	if resource == "" {
+		klog.Warningf("[gpu-limit] no intel %s (mode %s) card found in cluster register; falling back to legacy mapping", wantKind, mode)
+		return h.getGPUResourceTypeKey(mode), nil
+	}
+
+	if len(distinct) > 1 {
+		klog.Warningf("[gpu-limit] intel %s cards use multiple drivers %v across the cluster; a single extended resource can't express both, picking deterministically -> %s", wantKind, distinct, resource)
+	}
+
+	return resource, nil
+}
+
+// selectIntelDriverResource scans node register entries for cards of the given
+// kind (igpu/dgpu) and returns the extended resource for the chosen driver plus
+// the sorted set of distinct drivers seen (len>1 means a mixed cluster). The
+// driver is picked by a fixed priority (xe then i915) so the decision is stable
+// across scheduling passes. It returns ("", nil) when no matching card exists.
+func selectIntelDriverResource(nodes []corev1.Node, wantKind string) (string, []string) {
+	seen := make(map[string]struct{})
+	for i := range nodes {
+		entries, err := utils.IntelRegisterFromNode(&nodes[i])
+		if err != nil {
+			klog.Warningf("[gpu-limit] node %s has malformed %s annotation: %v", nodes[i].Name, constants.NodeIntelRegisterKey, err)
+			continue
+		}
+		for _, e := range entries {
+			if e.Kind == wantKind {
+				seen[e.Driver] = struct{}{}
+			}
+		}
+	}
+
+	if len(seen) == 0 {
+		return "", nil
+	}
+
+	distinct := make([]string, 0, len(seen))
+	// Fixed priority so both the returned resource and the reported set order
+	// are deterministic.
+	for _, drv := range []string{utils.IntelDriverXe, utils.IntelDriverI915} {
+		if _, ok := seen[drv]; ok {
+			distinct = append(distinct, drv)
+		}
+	}
+
+	return intelDriverResource(distinct[0]), distinct
+}
+
+// intelDriverResource maps a bound Intel kernel driver to its extended resource.
+func intelDriverResource(driver string) string {
+	switch driver {
+	case utils.IntelDriverI915:
+		return constants.IntelIGPU
+	case utils.IntelDriverXe:
+		return constants.IntelGPU
 	default:
 		return ""
 	}

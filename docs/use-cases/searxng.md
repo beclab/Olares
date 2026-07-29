@@ -7,7 +7,7 @@ head:
       content: Olares, SearXNG, migration, shared app, Olares 1.12.6
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-07-07"
+doc_updated: "2026-07-27"
 ---
 
 # Migrate SearXNG to the new architecture
@@ -56,6 +56,10 @@ The preferences hash is an encoded string that contains all your SearXNG setting
    d. Paste the hash code you saved earlier, and then click **Save**.
 
 Your SearXNG preference settings are now migrated to the new app.
+
+## Clean up legacy data
+
+After you confirm the migration is successful and the new app works as expected, you can manually delete the legacy app data folder to free up disk space. Open Files, go to **Application** > **Data** > **searxngv2**, and delete the folder.
 
 ## Learn more
 

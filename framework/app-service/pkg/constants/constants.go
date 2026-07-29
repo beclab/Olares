@@ -120,6 +120,13 @@ const (
 	AMDGPU    = "amd.com/gpu"
 	IntelIGPU = "gpu.intel.com/i915"
 	IntelGPU  = "gpu.intel.com/xe"
+	// NodeIntelRegisterKey is the node annotation written by the Intel GPU
+	// device plugin. Its value lists each Intel card as
+	// "<igpu|dgpu>,<cardN>,<i915|xe>,<name>,<architecture>,<codename>,<mem>"
+	// entries joined by ':' (mem is discrete VRAM bytes, 0 for integrated). It
+	// lets the gpu-limit webhook pick gpu.intel.com/i915 vs gpu.intel.com/xe
+	// from the real bound driver instead of guessing from integrated/discrete.
+	NodeIntelRegisterKey = "bytetrade.io/node-intel-register"
 
 	AuthorizationLevelOfPublic   = "public"
 	AuthorizationLevelOfPrivate  = "private"

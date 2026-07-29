@@ -53,7 +53,6 @@ Follow the path from first boot to everyday use and advanced customization.
         <a href="./connect-two-olares-one">Connect two Olares One</a>
         <a href="./egpu">Set up with eGPU</a>
         <a href="./dual-boot-dual-drive">Dual-boot with Windows</a>
-        <a href="./dual-boot-ubuntu-dual-drive">Dual-boot with Ubuntu</a>
         <a href="./install-windows-primary-drive">Install Windows on Olares One</a>
         <a href="./install-ubuntu-server">Install Ubuntu on Olares One</a>
       </div>

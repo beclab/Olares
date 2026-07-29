@@ -57,7 +57,7 @@ One profile = one Olares instance + one user identity, keyed by **olaresId** (e.
 |---------|---------|
 | `olares-cli profile login` | Mode A — password (+ TOTP if 2FA is on); auto-creates the profile on first run |
 | `olares-cli profile import` | Mode B — bootstrap an access_token from an existing refresh_token |
-| `olares-cli profile list` | List every profile (NAME / OLARES-ID / STATUS / VERSION), mark the current one, show login status; `--refresh-version` re-reads the current profile's cached backend version |
+| `olares-cli profile list` | List every profile (NAME / OLARES-ID / STATUS / VERSION), mark the current one, show login status; `--refresh` re-detects the current profile's location, role and backend version |
 | `olares-cli profile use <name\|->` | Switch the current profile; `-` reverts to the previous one (like `cd -`) |
 | `olares-cli profile remove <name>` | Delete a profile and its stored token in one shot |
 
@@ -106,7 +106,7 @@ When you (an AI agent) drive the login on the user's behalf, do NOT pass passwor
 | `never` | No token has ever been stored | `profile login` or `profile import` |
 | `unknown` / `logged-in (unparseable token)` | Token store couldn't be read / the JWT couldn't be parsed | re-run `profile login` if it persists |
 
-STATUS reflects only what the local token store can prove without a network call (no `(Xh Ym)` time-to-expiry is printed). The `VERSION` column is the cached Olares backend version (`-` until a login eager-fetch or a version-aware command populates it; `--refresh-version` re-reads it). The leading `*` marks the current profile; `profile use` accepts either the NAME alias or the olaresId.
+STATUS reflects only what the local token store can prove without a network call (no `(Xh Ym)` time-to-expiry is printed). The `VERSION` column is the cached Olares backend version (`-` until a login eager-fetch or a version-aware command populates it; `--refresh` re-reads it). The leading `*` marks the current profile; `profile use` accepts either the NAME alias or the olaresId.
 
 ## Auth-readiness gate
 

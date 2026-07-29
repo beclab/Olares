@@ -171,7 +171,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:1.12.8-202607232019
+        image: beclab/app-service:0.6.10
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755

@@ -28,7 +28,7 @@ Olares 内置的文件应用为用户提供了安全高效的文件存储与同�
 </div>
 
 <div>
-<h4><a href="./common">使用公共目录</a></h4>
+<h4><a href="./files-common">使用公共目录</a></h4>
 了解应用如何在 Common 目录中共享 AI 模型和缓存数据。
 </div>
 

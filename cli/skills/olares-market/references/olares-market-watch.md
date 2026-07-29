@@ -73,7 +73,7 @@ A long `installing` / `initializing` is NOT a failure — app-service polls a lo
 | `app 'X' is not cloneable` | `clone` against an app that is neither multi-instance nor a template | Check `market get X -o json` for `allowMultipleInstall` / `templateOnly` |
 | `--title is required` | `clone` without `--title` | Add `--title "..."` |
 | `upgrade --watch` reports failed with STATE `stopped` | The upgrade was cancelled (`reason=upgradeCancelByUser`, or `upgradeCancelBySystem` when the backend TTL fired) | Not a broken app — it is still installed on its **previous** version. Re-run `market upgrade` when ready |
-| `market cancel` on an `upgrading` / `resuming` app is rejected with `requires Olares >= 1.12.7` | Cancel support for these two states landed in 1.12.7 | Upgrade the backend; if the version reads unknown, run `olares-cli profile list --refresh-version` |
+| `market cancel` on an `upgrading` / `resuming` app is rejected with `requires Olares >= 1.12.7` | Cancel support for these two states landed in 1.12.7 | Upgrade the backend; if the version reads unknown, run `olares-cli profile list --refresh` |
 | Watcher hangs near `*Failed` | Backend op failed | `market status <app>` to inspect; `market cancel <app>` if applicable |
 | `--cascade auto-enabled ...` (stderr) | 1.12.5 C/S v2 single-user cluster | Informational; override with `--cascade=false` if needed |
 | `--cascade force-enabled ... (CS/shared apps always cascade)` (stderr) | 1.12.6 CS/shared app | Informational; `--cascade=false` cannot disable cascade on 1.12.6 |

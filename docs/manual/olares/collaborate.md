@@ -13,7 +13,7 @@ Files provides both personal and shared storage spaces:
 * Set granular access permissions for different team members.
 * Access files seamlessly across desktop and mobile devices.
 
-For details, see [Sync and share files](./files/sync-share.md).
+For details, see [Share files](./files/share-files.md).
 
 ## Store and share sensitive information in Vault
 Vault lets you store and share sensitive data within your team:

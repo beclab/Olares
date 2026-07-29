@@ -48,7 +48,7 @@ Requires **Olares >= 1.12.7** (settings `/download` edge + download provider). B
 `knowledge download` requires Olares >= 1.12.7 (settings /download edge + download provider), but this backend is …
 ```
 
-If version detection fails, confirm the active profile is logged in and run `olares-cli profile list --refresh-version`. If the detected version is below 1.12.7, upgrade Olares.
+If version detection fails, confirm the active profile is logged in and run `olares-cli profile list --refresh`. If the detected version is below 1.12.7, upgrade Olares.
 
 ## Verb index
 
@@ -69,7 +69,7 @@ Universal: `-o table|json`. Identity/cluster from the active profile only (`prof
 
 | Symptom | Fix |
 |---|---|
-| Backend version could not be determined | Confirm `profile login`, then run `olares-cli profile list --refresh-version` |
+| Backend version could not be determined | Confirm `profile login`, then run `olares-cli profile list --refresh` |
 | `requires Olares >= 1.12.7`, with a detected older version | Upgrade Olares; the Settings `/download` edge is not available on older releases |
 | `server rejected the access token` / 401 / 403 | `olares-cli profile login` (see olares-shared Auth-readiness gate) |
 | `task not found` on pause/info/remove | Wrong id, or task owned by another user (ownership is header-only) |
