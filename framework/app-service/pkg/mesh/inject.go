@@ -78,9 +78,10 @@ func NamespaceHasDecideTrueCaller(ctx context.Context, c client.Client, namespac
 // EnsureCallerNamespaceMeshAccess labels the caller namespace so static
 // app-gateway-mesh-np (os-mesh) admits its proxies to the control plane.
 // It does not set namespace-scoped linkerd.io/inject; workload templates own inject.
-// When enable is true, any stale NS inject annotation is deleted.
+// When enable is true, any stale NS inject annotation is deleted (non-Shared only).
 // When enable is false, the in-cluster-caller label and inject annotation are cleared.
-// Shared workload namespaces are skipped: their inject annotation is owned by
+// Shared namespaces still receive the in-cluster-caller label when enable is true
+// (hosts ConfigMap / NP), but their linkerd.io/inject annotation remains owned by
 // SharedRouteRegistry reconcile (ensureSharedNamespaceLinkerdInject).
 func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, namespace string, enable bool) error {
 	if c == nil || namespace == "" {
@@ -95,10 +96,7 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 		klog.Errorf("mesh-xport: get caller ns %s failed: %v", namespace, err)
 		return err
 	}
-	if ns.Labels[security.NamespaceSharedLabel] == "true" {
-		klog.V(2).Infof("mesh-xport: skip caller mesh access on shared ns %q", namespace)
-		return nil
-	}
+	isSharedNS := ns.Labels[security.NamespaceSharedLabel] == "true"
 	if ns.Labels == nil {
 		ns.Labels = map[string]string{}
 	}
@@ -113,7 +111,8 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 			ns.Labels[security.NamespaceInClusterCallerLabel] = "true"
 			changed = true
 		}
-		if curInject != "" {
+		// Shared NS inject annotation is owned by SharedRouteRegistry; do not clear it.
+		if !isSharedNS && curInject != "" {
 			delete(ns.Annotations, LinkerdInjectAnnotation)
 			changed = true
 		}
@@ -122,7 +121,7 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 			delete(ns.Labels, security.NamespaceInClusterCallerLabel)
 			changed = true
 		}
-		if curInject != "" {
+		if !isSharedNS && curInject != "" {
 			delete(ns.Annotations, LinkerdInjectAnnotation)
 			changed = true
 		}
@@ -137,8 +136,8 @@ func EnsureCallerNamespaceMeshAccess(ctx context.Context, c client.Client, names
 		klog.Errorf("mesh-xport: update caller ns %s label/inject failed: %v", namespace, err)
 		return err
 	}
-	klog.Infof("mesh-xport: caller ns=%s in-cluster-caller=%v (ns inject not written)",
-		namespace, enable)
+	klog.Infof("mesh-xport: caller ns=%s in-cluster-caller=%v sharedNS=%v (ns inject not written)",
+		namespace, enable, isSharedNS)
 	if enable {
 		if err := EnsureAppGatewayMeshNetworkPolicies(ctx, c); err != nil {
 			return err

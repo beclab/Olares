@@ -78,9 +78,10 @@ func TestEnsureCallerNamespaceMeshAccess(t *testing.T) {
 	}
 }
 
-func TestEnsureCallerNamespaceMeshAccess_SkipsSharedNamespace(t *testing.T) {
+func TestEnsureCallerNamespaceMeshAccess_SharedNSSetsCallerLabelPreservesInject(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
+	_ = networkingv1.AddToScheme(scheme)
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ollama-shared",
@@ -94,15 +95,31 @@ func TestEnsureCallerNamespaceMeshAccess_SkipsSharedNamespace(t *testing.T) {
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ns).Build()
 
-	if err := EnsureCallerNamespaceMeshAccess(context.Background(), c, "ollama-shared", false); err != nil {
-		t.Fatalf("shared ns must soft-skip: %v", err)
+	if err := EnsureCallerNamespaceMeshAccess(context.Background(), c, "ollama-shared", true); err != nil {
+		t.Fatalf("shared ns enable: %v", err)
 	}
 	got := &corev1.Namespace{}
 	if err := c.Get(context.Background(), types.NamespacedName{Name: "ollama-shared"}, got); err != nil {
 		t.Fatal(err)
 	}
+	if got.Labels[security.NamespaceInClusterCallerLabel] != "true" {
+		t.Fatalf("shared caller ns must get in-cluster-caller, got %#v", got.Labels)
+	}
 	if got.Annotations[LinkerdInjectAnnotation] != LinkerdInjectEnabled {
 		t.Fatalf("shared inject must be preserved, got %#v", got.Annotations)
+	}
+
+	if err := EnsureCallerNamespaceMeshAccess(context.Background(), c, "ollama-shared", false); err != nil {
+		t.Fatalf("shared ns disable: %v", err)
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: "ollama-shared"}, got); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := got.Labels[security.NamespaceInClusterCallerLabel]; ok {
+		t.Fatalf("in-cluster-caller must be cleared on disable, got %#v", got.Labels)
+	}
+	if got.Annotations[LinkerdInjectAnnotation] != LinkerdInjectEnabled {
+		t.Fatalf("shared inject must still be preserved after disable, got %#v", got.Annotations)
 	}
 }
 
