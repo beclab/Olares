@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
-app_version: "0.1.3"
-doc_version: "1.0"
-doc_updated: "2026-05-19"
+app_version: "0.1.13"
+doc_version: "2.0"
+doc_updated: "2026-07-29"
 ---
 
 # Write code using Claude Code
@@ -24,19 +24,23 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
+Before you begin, you need:
+
 - An Olares device with sufficient disk space and memory.
 - An active Claude Pro or Max subscription, if you plan to use remote model connectivity.
-- A local model optimized for coding running on your Olares device, if you plan to use local execution.
+- A local model optimized for coding running on your Olares device, if you plan to use local execution. This guide uses the following model:
 
-   You can install local models using one of the following methods:
-   - **Ollama application**: One app that hosts multiple models. Ensure [Ollama is installed](ollama.md) with at least one model downloaded, such as `qwen3-coder:30b`.
-   - **Single-model application**: Runs one specific model as a standalone application. Ensure the model app is installed from Market with the model fully downloaded. This guide uses **Qwen3-Coder 30B (Ollama)**.
+   | Model type | Model | How to get it |
+   | :--- | :--- | :--- |
+   | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Claude Code
 
 1. Open Market, and search for "Claude Code".
    
-   ![Claude Code](/images/manual/use-cases/claude-code.png#bordered)
+   ![Claude Code](/images/manual/use-cases/claude-code1.png#bordered)
 
 2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
@@ -70,29 +74,20 @@ Use this method if you hold an active Claude Pro or Max subscription.
 
 ### Connect using a local model
 
-Use this method to run Claude Code locally. This example uses the model app **Qwen3-Coder 30B (Ollama)**.
+Use this method to run Claude Code locally. This example uses the model app **Qwen3.6-27B (llama.cpp)**.
 
-1. Install the model app **Qwen3-Coder 30B (Ollama)** from Market.
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-   ![Qwen3-Coder 30B (Ollama)](/images/manual/use-cases/qwen3-coder-30b.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-anthropic-->
 
-2. Open the model app from the Launchpad and wait for the download to complete.
-3. Note down the exact model name displayed on the page. For example, `qwen3-coder:30b`.
+5. Open Olares Settings, and then go to **Applications** > **Claude Code** > **Manage environment variables**.
+6. Specify the following environment variables:
 
-   ![Model name on the model app page](/images/manual/use-cases/qwen3-coder-model-name.png#bordered){width=50%}
+   - **ANTHROPIC_AUTH_TOKEN**: Enter any text, such as `local`. The model app does not verify this value, but Claude Code requires a populated authentication token.
+   - **ANTHROPIC_BASE_URL**: Enter the **Base URL** you copied from the Model Console. For example, `https://e46e044d.laresprime.olares.com`.
+   - **ANTHROPIC_MODEL**: Enter the **Model name** you copied from the Model Console. For example, `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
 
-4. Open Settings, and then go to **Applications** > **Qwen3-Coder 30B (Ollama)** > **Shared entrances**.
-
-   ![Model app endpoint in Settings](/images/manual/use-cases/qwen3-coder-30b-endpoint.png#bordered){width=70%}
-
-5. Click **Qwen3-Coder 30B**, and then note down the endpoint URL. For example, `http://609c5d0c0.shared.olares.com`.
-6. Go to **Applications** > **Claude Code** > **Manage environment variables**, and then specify the following environment variables:
-
-   - **ANTHROPIC_AUTH_TOKEN**: Enter any text, such as `ollama`. The model app does not verify this value, but Claude Code requires a populated authentication token.
-   - **ANTHROPIC_BASE_URL**: Enter the model app's endpoint URL. For example, `http://609c5d0c0.shared.olares.com`.
-   - **ANTHROPIC_MODEL**: Enter the model name you noted down earlier. For example, `qwen3-coder:30b`.
-
-   ![Claude Code environment variables settings](/images/manual/use-cases/claude-env-var.png#bordered){width=70%}  
+   ![Claude Code environment variables settings](/images/manual/use-cases/claude-env-var1.png#bordered){width=70%}  
 
 7. Click **Apply**. Wait about 10 seconds for the container to restart.
 8. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
@@ -111,8 +106,10 @@ The following examples demonstrate how to interact with Claude Code to complete 
    claude
    ```
 
-2. Review the **Accessing workspace: /opt/data** security prompt, and then select **Yes, I trust this folder** to grant Claude Code read, edit, and execute permissions.
-3. (Optional) In the TUI, run the `/clear` command to start a new session with empty context.
+2. Choose the text style that looks best with your terminal, such as dark mode.
+3. Review the security notes,  and then press **Enter** to continue.
+4. Review the **Accessing workspace: /opt/data** security prompt, and then select **Yes, I trust this folder** to grant Claude Code read, edit, and execute permissions.
+5. (Optional) In the TUI, run the `/clear` command to start a new session with empty context.
 
    ![Claude Code first chat](/images/manual/use-cases/claude-first-chat.png#bordered)
 
@@ -120,7 +117,7 @@ The following examples demonstrate how to interact with Claude Code to complete 
    If you switch between remote and local models, run `/clear` in Claude Code first before starting a new session. This prevents context from the previous model from affecting the new workspace.
    :::
 
-4. Describe your task in natural language. For example:
+6. Describe your task in natural language. For example:
 
    ```text
    List the files in the current directory
@@ -128,9 +125,9 @@ The following examples demonstrate how to interact with Claude Code to complete 
 
    The assistant automatically executes the necessary internal commands to explore the directory and returns a detailed list of your files.
 
-   ![Claude Code first chat result](/images/manual/use-cases/claude-first-chat-result.png#bordered)
+   ![Claude Code first chat result](/images/manual/use-cases/claude-first-chat-result1.png#bordered)
 
-5. Review the results.
+7. Review the results.
 
 ### Build a full-stack project
 
