@@ -27,7 +27,7 @@ func IsSharedServerApp(app *appv1alpha1.Application) bool {
 	if IsClusterScoped(app) {
 		return true
 	}
-	return IsV3(app) && (IsShared(app) || len(app.Spec.SharedEntrances) > 0)
+	return IsShared(app) || len(app.Spec.SharedEntrances) > 0
 }
 
 // LogicalHostPattern returns the canonical shared gateway host pattern:
