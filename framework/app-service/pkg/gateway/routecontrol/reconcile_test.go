@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
@@ -440,6 +441,38 @@ func TestApplyHTTPRouteMaterializesTimeouts(t *testing.T) {
 	}
 	if got := timeouts["request"]; got != "600s" {
 		t.Fatalf("timeouts.request=%v, want 600s", got)
+	}
+	mustHTTPRouteRemovesCallerJWTHeader(t, rule)
+}
+
+func mustHTTPRouteRemovesCallerJWTHeader(t *testing.T, rule map[string]any) {
+	t.Helper()
+	filters, ok := rule["filters"].([]any)
+	if !ok || len(filters) == 0 {
+		t.Fatalf("filters = %#v, want RequestHeaderModifier remove %q", rule["filters"], callerjwt.CallerJWTHeaderName)
+	}
+	found := false
+	for _, f := range filters {
+		fm, ok := f.(map[string]any)
+		if !ok || fm["type"] != "RequestHeaderModifier" {
+			continue
+		}
+		mod, ok := fm["requestHeaderModifier"].(map[string]any)
+		if !ok {
+			continue
+		}
+		remove, ok := mod["remove"].([]any)
+		if !ok {
+			continue
+		}
+		for _, h := range remove {
+			if h == callerjwt.CallerJWTHeaderName {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("filters = %#v, want remove %q", filters, callerjwt.CallerJWTHeaderName)
 	}
 }
 

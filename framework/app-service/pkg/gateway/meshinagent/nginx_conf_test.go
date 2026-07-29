@@ -25,11 +25,16 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		"app-gateway-data.os-gateway.svc",
 		"proxy_pass http://app-gateway-data.os-gateway.svc:80",
 		"fail-closed",
-		"js_set $mesh_in_jwt",
-		"Authorization",
+		"js_set $mesh_in_host_ok",
+		"js_set $mesh_in_caller_jwt",
+		"js_set $mesh_in_auth_deny",
+		"main.callerJwt",
+		"main.authDeny",
+		"main.checkHost",
+		callerjwt.CallerJWTHeaderName,
 		"load_module /usr/lib/nginx/modules/ngx_http_js_module.so",
 		"load_module /usr/lib/nginx/modules/ngx_stream_js_module.so",
-		`if ($mesh_in_jwt = "") { return 401; }`,
+		`if ($mesh_in_auth_deny = "1") { return 401; }`,
 		"ssl_certificate $tls_cert_path",
 		"js_set $tls_cert_path main.pickCert",
 		"js_set $mesh_in_tls_mode main.tlsMode",
@@ -41,6 +46,15 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("RenderNginxConf missing %q in:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, `proxy_set_header Authorization`) {
+		t.Fatal("must not overwrite Authorization; app credentials must pass through")
+	}
+	if strings.Contains(got, `if ($mesh_in_jwt = "") { return 401; }`) {
+		t.Fatal("fail-closed must use authDeny (allowlist-gated), not bare empty jwt")
+	}
+	if strings.Count(got, "js_set $mesh_in_host_ok") < 2 {
+		t.Fatal("HTTP and HTTPS terminate locations must both checkHost")
 	}
 	if strings.Contains(got, "sni_map.conf") {
 		t.Fatal("static sni_map must not be used; njs hosts hot-read replaces it")
@@ -67,6 +81,8 @@ func TestBearerJSDecideAndHostsHotRead(t *testing.T) {
 	for _, want := range []string{
 		JWTSecretMountPath + "/token",
 		"readJWT",
+		"callerJwt",
+		"authDeny",
 		"decideOffload",
 		"reloadHostsIfNeeded",
 		"CACHE_TTL_MS",

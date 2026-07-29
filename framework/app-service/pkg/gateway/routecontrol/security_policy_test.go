@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
@@ -103,8 +104,11 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 		t.Fatalf("extractFrom.headers = %#v", extractFrom["headers"])
 	}
 	hdr := headers[0].(map[string]any)
-	if hdr["name"] != AuthorizationHeaderName || hdr["valuePrefix"] != AuthorizationBearerValuePrefix {
-		t.Fatalf("extractFrom header = %#v", hdr)
+	if hdr["name"] != callerjwt.CallerJWTHeaderName {
+		t.Fatalf("extractFrom header = %#v, want name %q", hdr, callerjwt.CallerJWTHeaderName)
+	}
+	if _, hasPrefix := hdr["valuePrefix"]; hasPrefix {
+		t.Fatalf("caller JWT header must be bare JWT without valuePrefix, got %#v", hdr)
 	}
 
 	remoteJWKS, ok := provider["remoteJWKS"].(map[string]any)
