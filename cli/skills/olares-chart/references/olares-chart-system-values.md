@@ -87,5 +87,6 @@ When the manifest declares a `middleware:` block, app-service injects each datas
 ## Caveats
 
 - **Map it in the template.** A value in `.Values.*` does nothing until you write it into the workload (env / volume / connection string).
+- **Injected credentials go through a Secret.** `.Values.<mw>.password`, `.Values.os.appSecret` and `.Values.oidc.client.secret` are credentials: write them into a Secret and reference that from the workload ([secrets.md](olares-chart-secrets.md)).
 - **Conditional keys.** `oidc.*` only exists when OIDC is enabled; `userspace.*` keys only for the permissions actually granted; `dep.*` / `svcs.*` only when the app depends on the relevant app; `workloads.*` only with declared `WorkloadReplicas`. Guard optional keys in templates.
 - **`lint` won't catch a missing/typo'd mapping.** As with env, only an actual install surfaces a wrong key.
