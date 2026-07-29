@@ -12,7 +12,6 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/doctor"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
-	"github.com/beclab/Olares/cli/cmd/ctl/knowledge"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
 	"github.com/beclab/Olares/cli/cmd/ctl/knowledge"
 	"github.com/beclab/Olares/cli/cmd/ctl/market"
