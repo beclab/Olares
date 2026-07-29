@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.12.0
+version: 4.13.0
 description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, deploy needs login
 metadata:
@@ -58,6 +58,7 @@ The target is a `lint`-passing Olares chart. `from-compose` (kompose) is **just 
 | Source only (no compose) | author a docker-compose from the code ([compose.md](references/olares-chart-compose.md)) | — |
 | A docker-compose | `chart from-compose` then refine ([from-compose.md](references/olares-chart-from-compose.md)) | — |
 | A generic Helm chart (no OlaresManifest) | hand-author `OlaresManifest.yaml` + refine (skip `from-compose`) | — |
+| Uploaded to the Olares, but no local copy left | `market download <app>` + unpack the `.tgz`, then refine that ([olares-market-charts.md](../olares-market/references/olares-market-charts.md#download)) | — |
 | Already an Olares chart | go straight to validation | a chart that passes `chart lint` |
 
 ## Deploy to your Olares (the done step)

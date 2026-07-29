@@ -39,14 +39,15 @@ Verb families:
   lifecycle (mutating)  install, upgrade, uninstall,  POST/PUT/DELETE on
                         clone, stop, resume, restart,  /apps/{name}/*
                         cancel
-  charts (mutating)     upload, delete                 SPA Local Sources
+  charts                upload, download, delete       SPA Local Sources
+                        (download is read-only)
 
 Universal flags:
 
   -o, --output {table,json}   every verb. JSON output is parseable.
   -q, --quiet                 every verb. Suppress output; exit code wins.
   -s, --source <id>           source-aware verbs (catalog + install /
-                              upgrade / clone / upload / delete).
+                              upgrade / clone / download).
                               Valid ids: market.olares, cli, upload, studio.
   -a, --all-sources           list, categories, status.
       --no-headers            list, categories (row-oriented browse only;
@@ -85,6 +86,7 @@ cli/skills/olares-market/SKILL.md.`,
 	cmd.AddCommand(NewCmdMarketResume(f))
 	cmd.AddCommand(NewCmdMarketRestart(f))
 	cmd.AddCommand(NewCmdMarketUpload(f))
+	cmd.AddCommand(NewCmdMarketDownload(f))
 	cmd.AddCommand(NewCmdMarketDelete(f))
 	cmd.AddCommand(NewCmdMarketStatus(f))
 	return cmd

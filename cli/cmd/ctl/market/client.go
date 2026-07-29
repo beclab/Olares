@@ -9,6 +9,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -125,6 +126,125 @@ func (c *MarketClient) doMultipart(ctx context.Context, path, filename string, d
 	// http.NewRequest sets GetBody automatically — refresh+retry on 401
 	// works here.
 	return c.executeRequest(c.uploadClient, req)
+}
+
+// ChartPackage is an open stream of a chart .tgz served by
+// GET /apps/{name}/package. Body is the caller's to close.
+type ChartPackage struct {
+	Body io.ReadCloser
+
+	// Filename is the name the backend suggested through
+	// Content-Disposition (`<chart>-<version>.tgz`), empty when the header
+	// is absent or unparseable.
+	Filename string
+
+	// Size is the announced Content-Length, or -1 when the response was
+	// chunked.
+	Size int64
+}
+
+// downloadStream issues a GET whose success body is bytes rather than the
+// app-store JSON envelope, so it cannot go through executeRequest: that
+// helper reads the whole body into memory and insists on parsing it as
+// APIResponse. Failures still arrive as the envelope, and are decoded here
+// with the same wording so a 404 reads the same whichever verb hit it.
+//
+// The caller closes the returned body.
+func (c *MarketClient) downloadStream(ctx context.Context, path string, query url.Values) (*http.Response, error) {
+	endpoint := c.baseURL + path
+	if len(query) > 0 {
+		endpoint += "?" + query.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	// The error path answers JSON, the success path octet-stream.
+	req.Header.Set("Accept", "application/octet-stream, application/json")
+
+	// The no-timeout client, for the same reason uploads use it: a chart is
+	// large enough that the standard 30s deadline can cut a healthy transfer
+	// off partway through.
+	resp, err := c.uploadClient.Do(req)
+	if err != nil {
+		var inv *credential.ErrTokenInvalidated
+		if errors.As(err, &inv) {
+			return nil, inv
+		}
+		var nli *credential.ErrNotLoggedIn
+		if errors.As(err, &nli) {
+			return nil, nli
+		}
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, errorBodyLimit))
+		resp.Body.Close()
+		return nil, reformatMarketAuthErr(resp.StatusCode, body, c.olaresID)
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, errorBodyLimit))
+		resp.Body.Close()
+		return nil, fmt.Errorf("API error (HTTP %d): %s", resp.StatusCode, envelopeMessage(body, resp.StatusCode))
+	}
+	// A 200 carrying the JSON envelope means the backend answered a
+	// different question than the one asked. Writing that to a .tgz would
+	// produce a file that only fails later, at `helm install` time.
+	if ct := resp.Header.Get("Content-Type"); strings.Contains(strings.ToLower(ct), "application/json") {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, errorBodyLimit))
+		resp.Body.Close()
+		return nil, fmt.Errorf("expected chart bytes but got a JSON response: %s", envelopeMessage(body, http.StatusOK))
+	}
+	return resp, nil
+}
+
+// errorBodyLimit caps how much of a failure body is read for the message.
+// The edge proxy can answer an HTML page, and a whole one in a terminal
+// buries the line that matters.
+const errorBodyLimit = 8 << 10
+
+// envelopeMessage extracts the human-readable part of an app-store error
+// body: the envelope's `message` when it parses, the trimmed body when it
+// doesn't, and the bare status when there is nothing at all.
+func envelopeMessage(body []byte, status int) string {
+	var apiResp APIResponse
+	if err := json.Unmarshal(body, &apiResp); err == nil {
+		if msg := strings.TrimSpace(apiResp.Message); msg != "" {
+			return msg
+		}
+	}
+	if msg := strings.TrimSpace(string(body)); msg != "" {
+		return msg
+	}
+	return fmt.Sprintf("HTTP %d", status)
+}
+
+// DownloadChart opens GET /apps/{name}/package for reading. An empty version
+// lets the backend pick the current one; an empty source falls back to the
+// client's default, and then to the backend's (`upload`).
+//
+// The returned ChartPackage owns an open connection — close its Body.
+func (c *MarketClient) DownloadChart(ctx context.Context, appName, source, version string) (*ChartPackage, error) {
+	if source == "" {
+		source = c.source
+	}
+	query := url.Values{}
+	if source != "" {
+		query.Set("source", source)
+	}
+	if version != "" {
+		query.Set("version", version)
+	}
+	resp, err := c.downloadStream(ctx, "/apps/"+url.PathEscape(appName)+"/package", query)
+	if err != nil {
+		return nil, err
+	}
+	return &ChartPackage{
+		Body:     resp.Body,
+		Filename: parseContentDispositionFilename(resp.Header.Get("Content-Disposition")),
+		Size:     resp.ContentLength,
+	}, nil
 }
 
 func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIResponse, error) {
