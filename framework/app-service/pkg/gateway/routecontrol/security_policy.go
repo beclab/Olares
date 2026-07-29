@@ -32,8 +32,6 @@ const (
 	CallerJWTJWKSServiceNamespace = "os-framework"
 	CallerJWTJWKSServicePort     = int32(443)
 	CallerJWTJWKSURI             = callerjwt.JWKSURI
-	AuthorizationHeaderName      = "Authorization"
-	AuthorizationBearerValuePrefix = "Bearer "
 )
 
 var securityPolicyGVK = schema.GroupVersionKind{
@@ -79,8 +77,7 @@ func desiredSharedRouteSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *uns
 						"extractFrom": map[string]any{
 							"headers": []any{
 								map[string]any{
-									"name":        AuthorizationHeaderName,
-									"valuePrefix": AuthorizationBearerValuePrefix,
+									"name": callerjwt.CallerJWTHeaderName,
 								},
 							},
 						},

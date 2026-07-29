@@ -146,6 +146,17 @@ function checkHost(r) {
   return '0';
 }
 
+function callerJwt(r) {
+  if (checkHost(r) !== '1') { return ''; }
+  return readJWT(r);
+}
+
+function authDeny(r) {
+  if (checkHost(r) !== '1') { return '0'; }
+  if (!readJWT(r)) { return '1'; }
+  return '0';
+}
+
 function decideOffload(s) {
   const host = normalizeHost(s.variables.ssl_preread_server_name);
   if (!host) { return passthrough(host); }
@@ -156,6 +167,6 @@ function decideOffload(s) {
   return passthrough(host);
 }
 
-export default {readJWT, checkHost, decideOffload, tlsMode, pickCert, pickKey};
+export default {readJWT, checkHost, callerJwt, authDeny, decideOffload, tlsMode, pickCert, pickKey};
 `, jwtPath, hostsFile, terminatePort, escapedDomain, escapedDomain, certDir, certDir, placeholderDir, placeholderDir)
 }

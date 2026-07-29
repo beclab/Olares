@@ -17,6 +17,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	gatewaytimeout "github.com/beclab/Olares/framework/app-service/pkg/gateway/timeout"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
@@ -292,6 +293,14 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 		"timeouts": map[string]any{
 			"backendRequest": effective,
 			"request":        effective,
+		},
+		"filters": []any{
+			map[string]any{
+				"type": "RequestHeaderModifier",
+				"requestHeaderModifier": map[string]any{
+					"remove": []any{callerjwt.CallerJWTHeaderName},
+				},
+			},
 		},
 	}
 	desired := &unstructured.Unstructured{Object: map[string]any{

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 )
 
 const (
@@ -74,22 +75,23 @@ func RenderNginxConf(in NginxConfInput) string {
 		in.PlatformDomain = "olares.com"
 	}
 
-	failClosedNote := "# fail-closed: empty jwt returns 401"
+	failClosedNote := "# fail-closed: allowlisted host + empty jwt returns 401"
 	if !in.FailClosed {
 		failClosedNote = "# fail-open (dev only): empty jwt still proxied"
 	}
 
 	locationBody := func(https bool) string {
 		var lb strings.Builder
-		lb.WriteString("      js_set $mesh_in_jwt main.readJWT;\n")
-		if in.FailClosed {
-			lb.WriteString("      if ($mesh_in_jwt = \"\") { return 401; }\n")
-		}
+		lb.WriteString("      js_set $mesh_in_host_ok main.checkHost;\n")
+		lb.WriteString("      js_set $mesh_in_caller_jwt main.callerJwt;\n")
 		if https {
 			lb.WriteString("      js_set $mesh_in_tls_mode main.tlsMode;\n")
-			lb.WriteString("      js_set $mesh_in_host_ok main.checkHost;\n")
 			lb.WriteString("      if ($mesh_in_host_ok = \"0\") { return 421; }\n")
 			lb.WriteString("      if ($mesh_in_tls_mode = \"placeholder\") { return 503; }\n")
+		}
+		if in.FailClosed {
+			lb.WriteString("      js_set $mesh_in_auth_deny main.authDeny;\n")
+			lb.WriteString("      if ($mesh_in_auth_deny = \"1\") { return 401; }\n")
 		}
 		lb.WriteString("      proxy_http_version 1.1;\n")
 		lb.WriteString("      proxy_buffering off;\n")
@@ -98,7 +100,7 @@ func RenderNginxConf(in NginxConfInput) string {
 		lb.WriteString("      proxy_set_header Host $host;\n")
 		lb.WriteString("      proxy_set_header X-Forwarded-Proto $scheme;\n")
 		lb.WriteString("      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n")
-		lb.WriteString("      proxy_set_header Authorization \"Bearer $mesh_in_jwt\";\n")
+		lb.WriteString(fmt.Sprintf("      proxy_set_header %s $mesh_in_caller_jwt;\n", callerjwt.CallerJWTHeaderName))
 		lb.WriteString("      proxy_pass_request_headers on;\n")
 		lb.WriteString(fmt.Sprintf("      proxy_pass http://%s:%d;\n", in.GatewayHost, in.GatewayHTTPPort))
 		return lb.String()

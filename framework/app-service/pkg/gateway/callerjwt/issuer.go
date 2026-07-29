@@ -26,6 +26,9 @@ const (
 	ClaimEntrance       = "olares.entrance"
 	ClaimViewer         = "olares.viewer"
 	ClaimAppid          = "olares.caller.appid"
+	// CallerJWTHeaderName is the platform caller-jwt transport header (bare JWT,
+	// no Bearer prefix). Distinct from Authorization so app credentials pass through.
+	CallerJWTHeaderName = "X-Olares-Caller-Jwt"
 	AppJWTSecretName    = "caller-jwt"
 	AppJWTSecretDataKey = "token"
 	IssuerKeysSecretName = "caller-jwt-issuer-keys"
