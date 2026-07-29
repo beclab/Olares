@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 宿主机上安装特定版本的 NVIDIA CUDA 驱动，以满足不同场景下的版本需求。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, CUDA, NVIDIA 驱动, GPU, 驱动安装, runfile
 ---
 
 # 安装特定版本的 CUDA

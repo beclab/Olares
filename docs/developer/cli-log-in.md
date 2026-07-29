@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Log in to Olares with olares-cli and manage profiles. Learn interactive login, profile switching and removal, and where authentication tokens are stored.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, log in to Olares, profile management, interactive login, authentication token
 ---
 
 # Log in to Olares

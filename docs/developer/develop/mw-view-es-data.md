@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to connect to and manage Elasticsearch data in Olares using Bytebase.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, view Elasticsearch data, Bytebase, manage Elasticsearch, Olares middleware
 ---
 # View Elasticsearch data
 

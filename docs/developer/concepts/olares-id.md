@@ -1,5 +1,9 @@
 ---
 description: Understand Olares ID, including its structure, personal ID types, domain categories, and relationship to decentralized identifiers (DIDs).
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares ID, Olares identity, decentralized identifier, personal ID, domain categories
 ---
 # Olares ID
 

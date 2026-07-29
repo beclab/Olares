@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Understand Olares applications, including app identifiers, four application types, cluster scope, service providers, and application dependencies.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares applications, app identifiers, application types, cluster scope, app dependencies
 ---
 
 # Applications

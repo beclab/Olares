@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中使用 NATS CLI 订阅和发布消息，并理解 NATS 主题的命名规则与权限模型。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, NATS, 消息订阅, 消息发布, nats-box, 主题命名, 权限模型
 ---
 # 使用 NATS 订阅与发布消息
 

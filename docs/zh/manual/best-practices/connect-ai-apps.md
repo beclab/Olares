@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 学习如何在 Olares 上使用模型控制台和应用入口连接 AI 客户端应用到 AI 服务应用。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, AI 应用连接, 模型控制台, LLM, LobeHub, Base URL, API 格式
 ---
 
 :::warning

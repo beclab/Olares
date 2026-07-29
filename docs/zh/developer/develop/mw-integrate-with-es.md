@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中将你的应用接入 Elasticsearch 服务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Elasticsearch, 中间件集成, OlaresManifest, 环境变量映射, 索引
 ---
 # 集成 Elasticsearch
 

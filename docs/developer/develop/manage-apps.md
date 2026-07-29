@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to update, suspend, or remove your application from Olares Market.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, app lifecycle management, update app, suspend app, remove app, Olares Market
 ---
 # Manage the app lifecycle
 

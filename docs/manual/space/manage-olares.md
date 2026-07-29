@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Monitor your Olares system status in Olares Space, including storage usage and traffic consumption.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, monitor Olares, system status, storage usage, traffic usage
 ---
 # Monitor Olares in Olares Space
 

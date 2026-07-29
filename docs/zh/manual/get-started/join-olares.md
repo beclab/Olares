@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何通过管理员提供的向导链接和一次性密码，作为新成员加入现有的 Olares 集群。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 加入集群, 创建 Olares ID, 激活账号, LarePass, 成员账户
 ---
 
 # 加入 Olares 集群

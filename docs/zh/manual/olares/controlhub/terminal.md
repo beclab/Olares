@@ -1,5 +1,9 @@
 ---
 description: 通过终端模块一键登入 Olares 宿主机终端，执行故障排查，日志查看和导出，以及修改系统配置等任务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 控制面板, 终端, 宿主机, olares-cli, 故障排查, 日志查看
 ---
 # 访问终端
 

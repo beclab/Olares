@@ -1,5 +1,9 @@
 ---
 description: Use Wise advanced filters to organize and rediscover saved content, with examples for unread items, older entries, tags, and custom views.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, filter examples, filtered views, search queries, content organization
 ---
 
 # Filtered view examples

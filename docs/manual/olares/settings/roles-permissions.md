@@ -1,5 +1,9 @@
 ---
 description: Understand Olares team roles and permissions. Learn about administrator responsibilities, user access levels, and effective team management structures.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, user roles, permissions, Super Admin, Admin, Member
 ---
 # User roles and permissions
 

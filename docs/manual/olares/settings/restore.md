@@ -1,5 +1,9 @@
 ---
 description: Restore files to a specific directory or recover application data using backup snapshots. Learn how to restore data from local paths, Olares Space, or AWS S3.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, restore backup, snapshots, AWS S3, Olares Space, data recovery
 ---
 
 # Restore backup data

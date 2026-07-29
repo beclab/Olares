@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Organize your Wise library with filtered views. Create tag-based views and use advanced query parameters to find and manage saved content.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, filtered views, smart folders, tags, feeds, pin views
 ---
 # Organize your knowledge with filtered views
 

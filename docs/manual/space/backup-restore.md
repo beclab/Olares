@@ -1,5 +1,9 @@
 ---
 description: Protect your Olares instances with cloud backup and restore features. Handle snapshots, perform restore operations, and manage storage quotas in Olares Space.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, backup, restore, snapshots, cloud backup
 ---
 :::warning Documentation does not match current experience
 We are currently updating this documentation to match the latest experience on the Olares Space platform. If there are differences, follow the actual platform.

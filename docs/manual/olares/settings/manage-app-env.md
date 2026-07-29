@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to manage application environment variables in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, environment variables, app configuration, container variables
 ---
 
 # Manage application environment variables

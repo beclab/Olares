@@ -1,5 +1,9 @@
 ---
 description: Once a DID is generated, users need to register their ownership in a DID Registry.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DID Registry, blockchain registry, DID ownership, register DID, decentralized identifier
 ---
 # DID Registry on Blockchains
 

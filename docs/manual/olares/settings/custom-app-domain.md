@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Personalize how your Olares applications are accessed by setting a custom route ID or your own domain name.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, custom domain, custom route ID, application URL, CNAME, HTTPS certificate
 ---
 
 # Customize application URLs

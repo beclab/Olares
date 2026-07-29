@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: 在 Olares 中配置文件索引，控制搜索范围、管理排除规则，并为特定目录启用全文搜索。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 文件搜索, 搜索索引, 全文搜索, 排除规则, 全局搜索, 正则表达式
 ---
 # 配置文件搜索
 

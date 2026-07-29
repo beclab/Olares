@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何使用 LarePass 应用管理你的 Olares 设备。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 管理 Olares, 系统升级, 远程重启, 网络设置, Olares One
 ---
 # 使用 LarePass 管理 Olares
 

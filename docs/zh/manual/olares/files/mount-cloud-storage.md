@@ -1,5 +1,9 @@
 ---
 description: 了解如何在 Olares 中挂载并访问各类云存储服务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 文件管理器, 云存储, Google Drive, AWS S3, Dropbox, 挂载云盘
 ---
 
 # 挂载与使用云存储

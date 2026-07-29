@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何用 olares-cli 管理集群、诊断系统，以及让 AI Agent 代你操作 Olares。涵盖主机、用户和集群内三种模式。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, 命令行工具, 主机模式, 用户模式, 集群内模式, AI Agent, 集群管理
 ---
 
 # Olares CLI

@@ -1,5 +1,9 @@
 ---
 description: Design of the on-chain reputation system in the Olares ID contracts and the solutions to its core requirements.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, on-chain reputation, Olares ID contracts, reputation system, decentralized reputation, smart contract
 ---
 # Reputation
 

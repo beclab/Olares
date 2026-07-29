@@ -1,5 +1,9 @@
 ---
 description: Set the Olares system language, theme, Desktop widgets, wallpaper, and layout to personalize your workspace.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, language, appearance, theme, widgets, wallpaper, desktop layout
 ---
 # Set language and appearance
 

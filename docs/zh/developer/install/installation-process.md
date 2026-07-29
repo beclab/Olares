@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 部署阶段的技术细节，包括预检、下载、准备和安装四个阶段。详细说明每个安装阶段的具体实现。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 安装流程, 预检, 下载, 准备, 安装, KubeSphere
 ---
 # Olares 安装流程详解
 本文档从四个主要阶段详细说明 Olares 的安装流程，包括各阶段的底层命令、配置和逻辑。文档适用于希望深入了解安装过程的开发者和系统管理员。

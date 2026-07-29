@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Switch between multiple Olares IDs on your LarePass mobile app or desktop client.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, switch account, Olares ID, multiple accounts
 ---
 # Switch between Olares IDs
 

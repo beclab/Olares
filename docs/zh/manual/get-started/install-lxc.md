@@ -1,5 +1,9 @@
 ---
 description: 在 LXC 容器环境中安装配置 Olares 的完整步骤，包括容器设置、系统要求和激活方法。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LXC, PVE, 容器安装, Linux 容器
 ---
 # 在 Linux 容器（LXC）中安装 Olares
 LXC 是一种轻量级的虚拟化技术，可以在隔离的容器中运行应用程序。在 PVE 环境下使用 LXC 部署 Olares 能够避免完整虚拟机的额外开销，提供了一种更高效的部署方式。

@@ -1,5 +1,9 @@
 ---
 description: Olares 密钥管理体系说明，包括 Vault 项目、凭据、密钥和集成凭据的分类与安全机制，以及讲解敏感数据的存储策略。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 密钥管理, Vault, Infisical, 凭证, 集成凭据, 应用凭据
 ---
 # 密钥管理
 

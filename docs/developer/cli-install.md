@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Install or update olares-cli with npm or npx. Follow the first-run wizard, choose persistent or one-off use, and handle hosts already running Olares OS.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, install Olares CLI, npm install, npx, first-run wizard, update CLI
 ---
 
 # Install olares-cli

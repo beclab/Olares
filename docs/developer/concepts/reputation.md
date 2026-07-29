@@ -1,5 +1,9 @@
 ---
 description: DIDs and VCs provide ways to identify yourself in a decentralized network, but how about ratings about others?
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Autonomous Reputation System, DID, VC, decentralized reputation, identity reputation
 ---
 # Autonomous Reputation System
 

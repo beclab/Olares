@@ -1,6 +1,10 @@
 ---
 description: 每一个 Olares 应用的 Chart 根目录下都必须有一个名为 OlaresManifest.yaml 的文件。OlaresManifest.yaml 描述了一个 Olares 应用的所有基本信息。
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, OlaresManifest, 应用规范, YAML 配置, 应用市场, 权限声明
 ---
 
 # OlaresManifest 规范

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 账户系统的同步机制、账户阶段和统一认证原理。包括多因素认证机制、密码系统及多设备账户同步原理。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 账户系统, LarePass, Olares Space, 多因素认证, 统一认证, 账户同步
 ---
 
 # Olares 账户系统

@@ -1,5 +1,9 @@
 ---
 description: 在 Vault 中设置和使用双因素身份验证。生成安全的 2FA 代码，增强账户安全性，实现与主流验证器的兼容。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, Vault, 双因素认证, 2FA, TOTP, 验证码
 ---
 # 生成双因素身份验证（2FA）代码
 

@@ -1,6 +1,10 @@
 ---
 description: TerminusDID、RootTagger 和 LibABI 合约在 Optimistic 与 Sepolia Optimistic 网络上的部署地址。
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, 合约地址, Optimistic, Sepolia, RootTagger, LibABI
 ---
 
 # 环境
