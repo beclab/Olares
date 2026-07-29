@@ -87,6 +87,10 @@ type State struct {
 	// GpuInfo is the GPU model name when one is detected.
 	GpuInfo *string `json:"gpu_info,omitempty"`
 
+	// GPUList lists all detected GPU model names as "Vendor Product".
+	// Empty when no GPU is detected; always present as an array on the wire.
+	GPUList []string `json:"gpu_list"`
+
 	// Memory is the total physical memory, formatted as "<n> G".
 	Memory string `json:"memory"`
 
