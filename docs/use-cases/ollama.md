@@ -157,4 +157,4 @@ Because you set the authentication to "Internal", your application must be on th
 
 - [Host local large language models with Engine Base apps](./llm-base-apps.md)
 - [Run Ollama models with Open WebUI](./openwebui.md)
-- [Integrate Ollama with DeerFlow](./deerflow.md)
+- [Integrate Ollama with DeerFlow 2.0](./deerflow2.md)
