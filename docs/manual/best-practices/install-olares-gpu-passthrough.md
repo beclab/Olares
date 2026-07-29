@@ -2,6 +2,10 @@
 outline: [2, 3]
 title: Install Olares on PVE via ISO with GPU passthrough
 description: Step-by-step tutorial on configuring GPU passthrough in Proxmox VE and installing Olares from ISO in a VM with GPU acceleration.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, GPU passthrough, Proxmox VE, PVE, NVIDIA, IOMMU, VFIO, ISO installation
 ---
 
 # Install Olares on PVE via ISO with GPU passthrough

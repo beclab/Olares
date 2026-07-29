@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 Olares 中安全共享 Vault 项目。了解团队角色权限设置，管理共享 Vault 访问权限，实现团队成员间的安全协作。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Vault, 共享 Vault, 团队 Vault, 密码共享, 访问权限, 团队协作
 ---
 
 # 共享 Vault 项目

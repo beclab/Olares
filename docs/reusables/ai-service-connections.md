@@ -11,9 +11,18 @@ You can get both values from the model's console. For more details, see [Connect
 <!-- #region get-model-connection-details -->
 1. Open the model app from Launchpad. Its Model Console opens automatically.
 2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
-3. Under **Service status**, make sure **Apps in Olares** is selected. Copy the **Model name** and **Base URL** exactly as shown.
 
-   ![Qwen3.6-27B model console](/images/one/qwen3.6-27b-model-console.png#bordered){width=90%}
+   ![Qwen3.6-27B model console](/images/manual/use-cases/qwen3.6-27b-model-console1.png#bordered)
+
+3. Under **Model**, copy the **Model name** exactly as shown.
+4. Under **Engine**:
+
+   a. **Connection source**: Select **Apps in Olares**. 
+   
+   b. **API format**: Select **OpenAI-Compatible**.
+   
+   c. Copy the provided **Base URL** exactly as shown.
+
 <!-- #endregion get-model-connection-details -->
 
 <!-- #region use-different-model -->

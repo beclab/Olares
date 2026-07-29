@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中通过 CLI 或 Bytebase 查看并管理 MariaDB 数据。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MariaDB, Bytebase, 数据库管理, CLI 访问, 连接信息, 可视化管理
 ---
 # 查看 MariaDB 数据
 

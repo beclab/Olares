@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Explore Olares system architecture across infrastructure, platform services, and the app framework, including orchestration, storage, and networking.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares system architecture, infrastructure, platform services, app framework, orchestration
 ---
 
 # Olares system architecture

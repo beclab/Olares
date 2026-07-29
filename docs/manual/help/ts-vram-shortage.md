@@ -2,6 +2,10 @@
 outline: [2, 3]
 title: GPU app stays stopped after install or resume
 description: Troubleshoot GPU-dependent apps that remain stopped after installation or resume in Memory slicing mode.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, GPU app, VRAM shortage, Memory slicing, stopped app, troubleshoot
 ---
 
 # GPU app remains stopped after installation or resume

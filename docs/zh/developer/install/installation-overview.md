@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 部署的核心架构，涵盖系统原生层、容器编排曾和容器化层。深入解析 Olares 各层级之间的技术交互。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 安装概述, 系统架构, Kubernetes, containerd, K3s
 ---
 # Olares 安装概述 
 

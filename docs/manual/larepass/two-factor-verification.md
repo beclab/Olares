@@ -1,5 +1,9 @@
 ---
 description: Set up and use two-factor authentication in Olares' Vault to generate secure TOTP codes for your online accounts, enhancing login security across your services.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Vault, two-factor authentication, TOTP, authenticator app, 2FA
 ---
 # Generate two-factor authentication codes
 Two-factor authentication (2FA) requires both your password and an authentication code when signing in. These codes are generated using Time-Based One-Time Password (TOTP), which creates temporary codes that refresh automatically. Similar to Google Authenticator or Microsoft Authenticator, Vault can generate secure 2FA codes for your online accounts.

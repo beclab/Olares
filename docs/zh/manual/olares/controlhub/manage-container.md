@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 控制面板中管理容器和排查应用问题。本文档涵盖如何查看容器组详情、检查容器状态以及导出容器日志以进行故障诊断。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 控制面板, 容器, Pod, 容器日志, 故障排查, CrashLoopBack
 ---
 # 管理容器
 

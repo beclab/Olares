@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Manage Olares workloads in Control Hub. Understand projects and namespaces, configure workload types, and monitor resource usage.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Control Hub, workloads, Deployment, StatefulSet, DaemonSet
 ---
 
 # Manage workloads 

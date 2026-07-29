@@ -2,6 +2,10 @@
 outline: [2, 3]
 title: Memory not freed after stopping an app
 description: Troubleshoot memory not freeing after stopping apps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, free memory, shared app, stop app, Market, memory usage
 ---
 
 # Memory insufficient or not freed after stopping an app

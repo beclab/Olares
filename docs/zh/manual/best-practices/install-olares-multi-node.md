@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 多节点集群部署教程，包括主节点配置、工作节点添加和网络变更处理，助你搭建可扩展的分布式环境。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 多节点集群, JuiceFS, 主节点, 子节点, 分布式存储
 ---
 
 # 安装多节点 Olares 集群 <Badge type="warning" text="Alpha" />

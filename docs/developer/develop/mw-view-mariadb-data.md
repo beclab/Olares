@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to connect to and manage MariaDB data in Olares using CLI or Bytebase.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MariaDB, Bytebase, middleware, database management, CLI access, Control Hub
 ---
 # View MariaDB data
 

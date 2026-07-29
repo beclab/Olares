@@ -1,5 +1,9 @@
 ---
 description: 介绍在区块链上注册 DID 的机制，涵盖智能合约实现、去中心化优势与当前部署方案。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DID Registry, 区块链, 智能合约, Optimistic Rollups, 去中心化注册
 ---
 
 # 区块链上的 DID Registry

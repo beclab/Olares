@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to enable OpenTelemetry auto-instrumentation in an Olares cluster and view trace data in Jaeger.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, OpenTelemetry, Jaeger, distributed tracing, observability, auto-instrumentation, telemetry
 ---
 # View OpenTelemetry data
 

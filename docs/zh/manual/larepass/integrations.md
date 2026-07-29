@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 将 Olares Space 与第三方服务连接，扩展系统功能。了解如何集成、授权并管理已连接的服务，实现数据的无缝同步。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 集成, Olares Space, Google Drive, Dropbox, AWS S3, 腾讯云 COS
 ---
 
 # 在 LarePass 中管理集成

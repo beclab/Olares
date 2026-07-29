@@ -1,5 +1,9 @@
 ---
 description: Olares 应用 Chart 基于标准 Helm Chart 结构，并扩展了 Olares 独有的信息。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Helm Chart, 应用 Chart 结构, OlaresManifest, 应用打包
 ---
 # Olares 应用 Chart 结构
 

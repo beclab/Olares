@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何使用 Docker Compose 在 Linux 服务器上部署 Olares。本安装指南涵盖系统要求、配置、安装、激活以及容器管理的相关内容。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Docker Compose, Linux 安装, Docker, GPU 驱动
 ---
 # 使用 Docker Compose 在 Linux 上安装 Olares
 通过 Docker 可以在容器化环境中安装和运行 Olares。本文将介绍如何使用 Docker 设置 Olares、准备安装环境、完成激活过程以及管理容器生命周期。

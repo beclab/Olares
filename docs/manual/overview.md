@@ -1,6 +1,10 @@
 ---
 description: Documentation for Olares, the open-source personal cloud OS that runs AI agents and LLMs on your own hardware.
 aside: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, documentation, personal cloud OS, AI agents, LLMs, self-hosting
 ---
 # Olares documentation
 

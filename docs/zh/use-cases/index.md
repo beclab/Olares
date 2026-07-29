@@ -1,6 +1,10 @@
 ---
 description: 了解 Olares 在 AI 流程、创意工具和自托管应用中的实际用例，充分释放 Olares 的潜力。
 aside: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用示例, 使用案例, 本地 AI, 自托管应用, 媒体服务器, 开发者工具
 ---
 
 # 应用示例

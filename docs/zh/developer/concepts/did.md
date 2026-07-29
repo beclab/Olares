@@ -1,5 +1,9 @@
 ---
 description: 了解去中心化标识符（DID）的定义、结构与在 Olares ID 中的助记词派生流程。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DID, 去中心化标识符, W3C, 助记词, 私钥, 公钥
 ---
 
 # 去中心化标识符（Decentralized Identifier，DID）

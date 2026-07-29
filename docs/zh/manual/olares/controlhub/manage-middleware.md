@@ -1,5 +1,9 @@
 ---
 description: 通过控制面板管理 Olares 中间件。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 控制面板, 中间件, Postgres, MongoDB, Redis, 数据库管理
 ---
 # 管理中间件
 

@@ -1,5 +1,9 @@
 ---
 description: Learn using Terminal in Olares to check Olares component status, export logs, and update system settings. 
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Control Hub, Terminal, SSH, olares-cli, system logs
 ---
 # Access Terminal
 

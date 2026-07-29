@@ -563,38 +563,13 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	meshinagent.MaybeEnqueueAfterDecide(ctx, appCopy, prevInject, inject, prevEdges,
 		strings.TrimSpace(settings[meshinagent.AnnotDecideEdges]), "")
 
-	klog.Infof("appCopy.Status: %v", appCopy.Status)
-	newAppState := r.calAppState(&appCopy.Status)
-	klog.Infof("application controller newAppState: %v", newAppState)
-	klog.Infof("application controller oldAppState: %v", appCopy.Status.State)
-
-	if appCopy.Status.State != newAppState {
-		klog.Infof("set appCopy.State:.......new: %v", newAppState)
-		appCopy.Status.State = newAppState
-		now := metav1.Now()
-		appCopy.Status.LastTransitionTime = &now
-
-		err = r.Status().Patch(ctx, appCopy, client.MergeFrom(app))
-		if err != nil {
-			klog.Infof("update xxx error: %v", err)
-			return err
-		}
-	}
-
-	// merge settings
-	//for k, v := range settings {
-	//	if setting, ok := appCopy.Spec.Settings[k]; !ok || setting != v {
-	//		appCopy.Spec.Settings[k] = v
-	//	}
-	//}
-
-	//var a appv1alpha1.Application
-	//err = r.Get(ctx, types.NamespacedName{Name: app.Name}, &a)
-	//if err != nil {
-	//	klog.Infof("get app failed %v", err)
-	//	return err
-	//}
-	//klog.Infof("appState: ..%v", a.Status.State)
+	// NOTE: the aggregate Status.State is intentionally NOT recomputed here.
+	// It is derived from the entrance statuses and converged by the
+	// EntranceStatusManagerController whenever it updates EntranceStatuses
+	// (see calAppState usage there). Recomputing it on Deployment changes was
+	// both redundant and buggy: this path is short-circuited when the
+	// deployment is unchanged, so the last entrance-ready transition after a
+	// rollout could leave State stuck (entrances running but State=notReady).
 	return err
 }
 
@@ -1007,7 +982,7 @@ func (r *ApplicationReconciler) getAppTailScale(deployment client.Object) (*appv
 	return &tailScale, nil
 }
 
-func (r *ApplicationReconciler) calAppState(status *appv1alpha1.ApplicationStatus) string {
+func calAppState(status *appv1alpha1.ApplicationStatus) string {
 	entranceLen := len(status.EntranceStatuses)
 	klog.Infof("entranceLen: %v", entranceLen)
 	if entranceLen == 0 {

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 配置 Olares 的视频播放、转码和硬件加速相关参数，以优化媒体播放性能和兼容性。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 视频设置, 硬件加速, 视频转码, GPU 加速, 编码设置, H.264, H.265
 ---
 
 # 视频设置

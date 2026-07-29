@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Install a multi-node Olares cluster with master and worker nodes. Configure JuiceFS, add workers, and handle network changes.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, multi-node cluster, worker nodes, JuiceFS, joincluster.sh, master node, distributed storage
 ---
 
 # Install a multi-node Olares cluster <Badge type="warning" text="Alpha" />

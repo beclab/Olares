@@ -1,5 +1,9 @@
 ---
 description: 说明 Olares Space 的收费项目和计费规则，包含账单周期、付费方式、优惠政策。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, 计费说明, 付费方式, 账单, 优惠券, 自动扣费
 ---
 :::warning 文档与当前体验不完全一致
 我们正在更新本页面内容以匹配 Olares Space 最新的实际体验。如果存在差异，以平台的实际操作界面为准。

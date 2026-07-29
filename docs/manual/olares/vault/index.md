@@ -1,5 +1,9 @@
 ---
 description: Use Olares Vault to manage passwords and sensitive data with end-to-end encryption, shared vaults, sync, autofill, and two-factor authentication.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Vault, password manager, sensitive data, OTP, 2FA, autofill, shared vault
 ---
 # Secure sensitive data with Vault
 

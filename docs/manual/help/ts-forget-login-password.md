@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Reset the Olares desktop login password from the host terminal.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, reset password, forgot login password, olares-cli, host terminal
 ---
 
 # Forgotten desktop login password

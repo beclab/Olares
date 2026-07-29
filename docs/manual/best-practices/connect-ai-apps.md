@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to connect AI client apps to AI service apps on Olares using the Model Console and application entrances.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, AI apps, LobeHub, Model Console, LLM service, API format, Base URL, Ollama
 ---
 
 # Connect AI apps <Badge type="tip" text="^ 1.12.6" />

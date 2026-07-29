@@ -1,6 +1,10 @@
 ---
 description: Every Olares Application Chart should include an OlaresManifest.yaml file in the root directory.
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, OlaresManifest.yaml, manifest specification, app metadata, permissions, entrances, middleware
 ---
 
 # OlaresManifest Specification

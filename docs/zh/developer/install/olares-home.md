@@ -1,5 +1,9 @@
 ---
 description: Olares Home 目录的内部结构，用于组织镜像、日志、依赖项和版本管理。详细介绍默认安装目录的架构设计。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Home, 安装目录, 目录结构, 版本管理
 ---
 # Olares Home
 

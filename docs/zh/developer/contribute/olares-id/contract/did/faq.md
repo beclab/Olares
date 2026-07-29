@@ -1,5 +1,9 @@
 ---
 description: 当你申请 Olares ID 时，我们可以为你支付调用合约的交易费用。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, 交易费用, Gas, MetaMask, LarePass, Olares Space
 ---
 # 常见问题 (FAQ)
 

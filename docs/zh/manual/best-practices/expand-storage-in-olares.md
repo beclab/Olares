@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 存储扩展指南，涵盖 SMB 服务器连接、USB 自动挂载与 HDD/SSD 手动挂载设置，助你灵活扩展本地存储空间，高效管理大型 AI 模型与数据资源。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 扩展存储, SMB, USB 挂载, HDD, SSD, LVM, 文件管理器
 ---
 # 在 Olares 中扩展存储空间
 

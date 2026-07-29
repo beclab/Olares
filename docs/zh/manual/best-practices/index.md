@@ -1,5 +1,9 @@
 ---
 description: 通过最佳实践与进阶指南，深入挖掘 Olares 的性能、安全与高级定制能力。.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares 教程, 最佳实践, 性能优化, 高级定制
 ---
 # Olares 教程
 

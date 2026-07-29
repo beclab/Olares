@@ -1,5 +1,9 @@
 ---
 description: Manage files efficiently in Olares with secure storage, seamless synchronization across devices, and centralized file management capabilities.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Files, file management, Drive, Sync, cloud storage, Common
 ---
 # Manage files in Olares
 

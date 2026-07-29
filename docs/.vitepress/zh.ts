@@ -502,7 +502,7 @@ const side = {
     },
       {
         text: "Olares Space",
-        link: "/zh/manual/space/index",
+        link: "/zh/manual/space/",
         collapsed: true,
         items: [
           {

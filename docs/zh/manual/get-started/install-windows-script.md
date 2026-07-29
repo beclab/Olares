@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 通过 WSL 在 Windows 系统安装配置 Olares 的完整步骤，包括环境要求和激活设置。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Windows 安装, WSL 安装, 安装脚本, PowerShell, 系统要求, 激活设置
 ---
 # 在 Windows 上使用脚本安装 Olares
 本文介绍如何在 Windows （WSL 2）上使用脚本安装 Olares。

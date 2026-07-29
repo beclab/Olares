@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 自定义域名, DID, 域名验证, DNS 配置, 组织创建, 添加用户
 ---
 <!--
   自定义域名设置的复用内容块。请通过命名 region 引用。

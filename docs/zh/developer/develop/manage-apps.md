@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 学习如何更新、暂停或移除你的应用。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用生命周期, Olares Market, 更新应用, 暂停分发, 下架应用, Terminus-Gitbot
 ---
 # 管理应用生命周期
 

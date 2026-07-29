@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Compress and extract files in Olares Files with ZIP, 7z, TAR, and other formats. Set compression level, passwords, and split archives.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Files, compress files, extract files, ZIP, 7z, archive
 ---
 
 # Compress and extract files

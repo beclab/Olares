@@ -1,5 +1,9 @@
 ---
 description: Learn how to mount and access cloud storage services in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Files, cloud storage, Google Drive, Dropbox, AWS S3
 ---
 # Mount and use cloud storage
 

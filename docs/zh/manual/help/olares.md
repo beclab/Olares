@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 查找关于 Olares 平台的常见问题解答。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 常见问题, 个人云, LarePass, Olares ID, 开源, 数据隐私
 ---
 
 # Olares 常见问题

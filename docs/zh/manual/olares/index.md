@@ -1,6 +1,10 @@
 ---
 description: 通过 Olares 系统应用文档了解如何使用 Olares，包括个性化设置、应用管理、文件处理、安全配置和团队协作功能。
 aside: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 系统应用, 应用文档, 文件管理器, 应用市场, Vault, 设置, 控制面板
 ---
 
 # Olares 系统应用文档

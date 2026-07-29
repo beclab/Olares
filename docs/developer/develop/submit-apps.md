@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to submit applications in Olares Market.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, submit apps, Olares Market, Pull Request, Terminus-Gitbot, beclab apps, app submission
 ---
 # Submit applications
 

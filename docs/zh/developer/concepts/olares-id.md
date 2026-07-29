@@ -1,5 +1,9 @@
 ---
 description: 了解 Olares ID 的定义、结构及其用途，涵盖个人/组织/实体域名类型，并阐释与去中心化标识符 (DID) 的关系。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares ID, 去中心化身份, DID, 个人域名, 组织域名, 可验证凭证
 ---
 
 # Olares ID

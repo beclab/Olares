@@ -1,6 +1,10 @@
 ---
 description: Olares ID 智能合约的结构说明，涵盖 DID 管理与链上信誉系统。
 outline: [2, 4]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, 智能合约, DID Registry, 标签系统, Tagger, 声誉协议
 ---
 
 # 智能合约

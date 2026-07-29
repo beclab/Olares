@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中通过 Bytebase 查看并管理 Elasticsearch 数据。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Elasticsearch, Bytebase, 查看数据, 中间件管理, 控制面板, MongoDB
 ---
 # 查看 Elasticsearch 数据
 

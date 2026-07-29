@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何首次激活 Olares、在重新安装后重新激活，以及使用 LarePass 移动端完成安全的双因素登录。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 激活 Olares, 登录, 双因素验证, 蓝牙配网, 重新激活
 ---
 
 # 激活与登录 Olares

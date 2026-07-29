@@ -1,6 +1,10 @@
 ---
 description: There are two interfaces for fetching the metadata of a DID - getMetadata(tokenId) and getMetadata(name).
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, call DID contract, getMetadata, TerminusDID contract, DID metadata, smart contract interface
 ---
 
 # Call the contract directly

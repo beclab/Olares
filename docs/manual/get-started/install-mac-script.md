@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Step-by-step instructions for installing Olares on macOS systems including prerequisites, installation commands, and activation process.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Mac script, macOS, Docker Desktop, MiniKube, one-line install
 ---
 # Install Olares on Mac via the script
 This guide explains how to install Olares on macOS using the provided installation script.
