@@ -226,6 +226,19 @@ func (r *EntranceStatusManagerController) updateEntranceStatus(ctx context.Conte
 				}
 			}
 		}
+
+		// Recompute the aggregate app state from the just-updated entrance
+		// statuses. The ApplicationReconciler only recomputes it on Deployment
+		// changes and skips when the deployment is unchanged, so a pod becoming
+		// ready after a rollout settles would otherwise leave State stuck (e.g.
+		// entrances all running but State=notReady). Converging it here keeps
+		// State consistent with the entrance statuses this controller owns.
+		if newState := calAppState(&appCopy.Status); appCopy.Status.State != newState {
+			appCopy.Status.State = newState
+			now := metav1.Now()
+			appCopy.Status.LastTransitionTime = &now
+		}
+
 		patchApp := client.MergeFrom(&selectedApp)
 		err = r.Status().Patch(ctx, appCopy, patchApp)
 		klog.Infof("updateEntrances ...:name: %v", appCopy.Name)
