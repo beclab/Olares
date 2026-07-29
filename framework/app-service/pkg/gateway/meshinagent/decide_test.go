@@ -35,12 +35,30 @@ func TestDecideRuleAllow(t *testing.T) {
 
 func TestDecideRuleDeny(t *testing.T) {
 	r := Decide("middleware-x", map[string]string{SettingSharedAppDeps: "x"}, DefaultRules())
-	// explicit edges still win over deny on name — deny only when no explicit
+	if r.Inject {
+		t.Fatalf("deny must win over explicit callees: %+v", r)
+	}
 	r2 := Decide("middleware-x", map[string]string{}, DefaultRules())
 	if r2.Inject {
 		t.Fatalf("deny must block: %+v", r2)
 	}
-	_ = r
+}
+
+func TestDecidePlatformShellDeny(t *testing.T) {
+	for _, name := range []string{"olares-app", "bfl"} {
+		r := Decide(name, map[string]string{}, DefaultRules())
+		if r.Inject {
+			t.Fatalf("%s must be denied: %+v", name, r)
+		}
+		r2 := Decide(name, map[string]string{SettingAppRef: "ollama"}, DefaultRules())
+		if r2.Inject {
+			t.Fatalf("%s deny must win over appRef: %+v", name, r2)
+		}
+	}
+	r3 := Decide("olares-application", map[string]string{}, DefaultRules())
+	if !r3.Inject {
+		t.Fatalf("olares-application must not match exact deny olares-app: %+v", r3)
+	}
 }
 
 func TestDecideOptOut(t *testing.T) {
