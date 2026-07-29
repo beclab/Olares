@@ -58,7 +58,7 @@ olares-cli market download mychart -o json             # {app, source, version, 
 - **`--version` omitted → whatever version the market currently holds.** Resolution happens server-side against the stored artifact, so it does **not** depend on the app being installed, or on the install having succeeded: a chart behind an `installFailed` / `installingCanceled` row is still downloadable.
 - **Local path rules mirror `files download`:** omitted → `./<chart>-<version>.tgz` (the name the server suggests); an existing directory (or a path ending in `/`) → that directory with the server-chosen name; anything else → the exact target path.
 - **An existing local file is never silently replaced.** Without `--overwrite` the command fails and leaves the file alone. The write goes to `<path>.tmp` and renames on success, so an interrupted transfer cannot truncate a chart you still needed.
-- Streams through the no-timeout HTTP client, like `upload`, so a large chart over a slow WAN link is not cut off at 30s.
+- Streams through the no-timeout HTTP client, like `upload`.
 
 ## `delete`
 
@@ -121,6 +121,7 @@ olares-cli market list -s upload                                   # confirm
 | `chart not found in source 'upload'` (delete) | The chart was never uploaded, or was uploaded to a different bucket | `market list -s upload` to confirm |
 | `API error (HTTP 404): Chart not found` (download) | No stored chart for that app in that source | `market list -s upload` to confirm the bucket; pass `-s <id>` for another source |
 | `API error (HTTP 501)` (download) | The Olares predates the chart-package endpoint | Upgrade the Olares; there is no client-side fallback |
+| `unexpected EOF` partway through a download | The transfer outlived the market's write timeout — an Olares that predates the longer deadline on this route | Retry on a faster link, or upgrade the Olares; no partial file is left behind |
 | `<path> already exists (pass --overwrite to replace it)` | A local file is already at the destination | Pass `--overwrite`, or give a different local path |
 | `expected chart bytes but got a JSON response` (download) | The request reached something other than the package route (proxy or version mismatch) | Verify the profile's market URL and the Olares version |
 | `delete` removed the chart but the app keeps running | `delete` only removes the chart from the `upload` bucket; it never uninstalls | Expected — run `market uninstall X` separately to stop/remove the app |

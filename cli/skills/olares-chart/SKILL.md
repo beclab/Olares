@@ -58,6 +58,7 @@ The target is a `lint`-passing Olares chart. `from-compose` (kompose) is **just 
 | Source only (no compose) | author a docker-compose from the code ([compose.md](references/olares-chart-compose.md)) | — |
 | A docker-compose | `chart from-compose` then refine ([from-compose.md](references/olares-chart-from-compose.md)) | — |
 | A generic Helm chart (no OlaresManifest) | hand-author `OlaresManifest.yaml` + refine (skip `from-compose`) | — |
+| Uploaded to the Olares, but no local copy left | `market download <app>` + unpack the `.tgz`, then refine that ([olares-market-charts.md](../olares-market/references/olares-market-charts.md#download)) | — |
 | Already an Olares chart | go straight to validation | a chart that passes `chart lint` |
 
 ## Deploy to your Olares (the done step)
