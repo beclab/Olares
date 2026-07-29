@@ -268,18 +268,64 @@ func (t *RemoveReleaseFile) Execute(runtime connector.Runtime) error {
 type CheckPrepared struct {
 	common.KubeAction
 	Force bool
+	// ForJoin tightens the check for a node that is about to join an existing
+	// cluster: such a node must be prepared for exactly the cluster's version
+	// and must not already run Olares itself. The install path deliberately
+	// keeps the laxer existence-only behavior so a partially completed install
+	// can still be resumed.
+	ForJoin bool
 }
 
 func (t *CheckPrepared) Execute(runtime connector.Runtime) error {
-	var preparedPath = filepath.Join(runtime.GetBaseDir(), common.TerminusStateFilePrepared)
+	baseDir := runtime.GetBaseDir()
+	preparedPath := filepath.Join(baseDir, common.TerminusStateFilePrepared)
+	installedPath := filepath.Join(baseDir, common.TerminusStateFileInstalled)
 
-	if utils.IsExist(preparedPath) {
-		t.PipelineCache.Set(common.CachePreparedState, true)
-	} else if t.Force {
-		return errors.New("Olares dependencies is not prepared, refuse to continue")
+	// A completed installation also retains the prepare marker, so it must be
+	// checked first. Joining an already-running Olares node is never safe.
+	//
+	// The plain uninstall is enough: it reverts to the prepare state, which the
+	// join can then reuse as is when the version matches, or tear down further
+	// on its own when it does not. Asking for --all here would throw away a
+	// usable prepare state and force another full download.
+	if t.ForJoin && utils.IsExist(installedPath) {
+		return errors.Errorf(
+			"this node already has Olares installed (version: %s); refusing to join it to another cluster\n"+
+				"run 'sudo olares-cli uninstall' on this node first",
+			utils.StateFileVersion(installedPath))
 	}
 
-	return nil
+	if utils.IsExist(preparedPath) {
+		if !t.ForJoin {
+			t.PipelineCache.Set(common.CachePreparedState, true)
+			return nil
+		}
+		targetVersion := t.KubeConf.Arg.OlaresVersion
+		preparedVersion := utils.StateFileVersion(preparedPath)
+		if preparedVersion == targetVersion {
+			t.PipelineCache.Set(common.CachePreparedState, true)
+			return nil
+		}
+		if preparedVersion == "" {
+			preparedVersion = "unknown"
+		}
+		return errors.Errorf(
+			"this node was prepared for Olares %s, but %s is required to join this cluster\n"+
+				"run 'sudo olares-cli node join' instead: it replaces an incompatible prepare state with the cluster's version on its own",
+			preparedVersion, targetVersion)
+	}
+
+	if !t.Force {
+		return nil
+	}
+
+	if t.ForJoin {
+		return errors.New(
+			"this node is not prepared; Olares dependencies must be installed to the 'prepare' state before joining a cluster\n" +
+				"run 'sudo olares-cli node join' instead: it prepares this node for the cluster's version on its own")
+	}
+
+	return errors.New("Olares dependencies is not prepared, refuse to continue")
 }
 
 type CheckInstalled struct {
@@ -645,7 +691,7 @@ func (a *UpdateKubeKeyHosts) Execute(runtime connector.Runtime) error {
 		},
 	}
 	if err := tplAction.Execute(runtime); err != nil {
-		return errors.Wrapf(err, fmt.Sprintf("failed to generate update hosts script: %s", scriptPath))
+		return errors.Wrapf(err, "failed to generate update hosts script: %s", scriptPath)
 	}
 	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("chmod +x %s", scriptPath), false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to chmod +x update hosts script")
@@ -897,6 +943,9 @@ LOOP:
 type GetMasterInfo struct {
 	common.KubeAction
 	Print bool
+	// Out, when non-nil, receives a copy of the probed info for callers outside
+	// the pipeline (the pipeline cache does not outlive the run).
+	Out *MasterInfo
 }
 
 type MasterInfo struct {
@@ -907,7 +956,19 @@ type MasterInfo struct {
 	OlaresVersion       string
 	MasterNodeName      string
 	AllNodes            []string
+	// CDNService is the cluster's OLARES_SYSTEM_CDN_SERVICE setting. It is
+	// region-specific and only known to the cluster, so a joining worker adopts
+	// the master's value instead of falling back to the compiled-in default.
+	CDNService string
 }
+
+// clusterCDNServiceCmd prints the effective value of the cluster's
+// OLARES_SYSTEM_CDN_SERVICE system environment variable, or nothing at all when
+// the cluster is too old to declare it. go-template is used over jsonpath to
+// keep the command free of double quotes, which survive neither the sudo
+// wrapper nor the SSH shell unscathed.
+const clusterCDNServiceCmd = "kubectl get systemenvs olares-system-cdn-service " +
+	"-o go-template='{{if .value}}{{.value}}{{else}}{{.default}}{{end}}' 2>/dev/null || true"
 
 func (t *GetMasterInfo) Execute(runtime connector.Runtime) (err error) {
 	masterInfo := &MasterInfo{}
@@ -916,10 +977,13 @@ func (t *GetMasterInfo) Execute(runtime connector.Runtime) (err error) {
 			return
 		}
 		if t.Print {
-			logger.Infof("Got master info:\nOlaresVersion: %s\nJuiceFSEnabled: %t\nKubernetesType: %s\nMasterNodeName: %s\nAllNodes: %s\n",
-				masterInfo.OlaresVersion, masterInfo.JuiceFSEnabled, masterInfo.KubernetesType, masterInfo.MasterNodeName, strings.Join(masterInfo.AllNodes, ","))
+			logger.Infof("Got master info:\nMasterHost: %s\nOlaresVersion: %s\nJuiceFSEnabled: %t\nKubernetesType: %s\nMasterNodeName: %s\nAllNodes: %s\nCDNService: %s\n",
+				t.KubeConf.Arg.MasterHost, masterInfo.OlaresVersion, masterInfo.JuiceFSEnabled, masterInfo.KubernetesType, masterInfo.MasterNodeName, strings.Join(masterInfo.AllNodes, ","), masterInfo.CDNService)
 		}
 
+		if t.Out != nil {
+			*t.Out = *masterInfo
+		}
 		t.PipelineCache.Set(common.MasterInfo, masterInfo)
 	}()
 	exist, err := runtime.GetRunner().FileExist(storage.JuiceFsServiceFile)
@@ -982,12 +1046,24 @@ func (t *GetMasterInfo) Execute(runtime connector.Runtime) (err error) {
 	}
 	masterInfo.OlaresInstalled = true
 	masterInfo.OlaresVersion = strings.TrimSpace(output)
-	return nil
 
+	output, err = runtime.GetRunner().SudoCmd(clusterCDNServiceCmd, false, false)
+	if err != nil {
+		// The CDN endpoint is an optimization, not a requirement: a worker that
+		// cannot learn it falls back to its own configuration.
+		logger.Warnf("failed to read the cluster's CDN endpoint from the master, "+
+			"the worker will use its own setting: %v", err)
+	} else {
+		masterInfo.CDNService = strings.TrimRight(strings.TrimSpace(output), "/")
+	}
+	return nil
 }
 
 type AddNodePrecheck struct {
 	common.KubeAction
+	// Bootstrapping marks the run at the very start of `node join`, before this
+	// machine has been brought into a joinable shape. See CheckJoinEligibility.
+	Bootstrapping bool
 }
 
 func (a *AddNodePrecheck) Execute(runtime connector.Runtime) error {
@@ -995,31 +1071,63 @@ func (a *AddNodePrecheck) Execute(runtime connector.Runtime) error {
 	if !ok {
 		return errors.New("failed to get master info")
 	}
-	masterInfo := v.(*MasterInfo)
-	var errs []error
-	defer func() {
-		if len(errs) > 0 {
-			var errStr string
-			for _, err := range errs {
-				errStr += err.Error() + "\n"
-			}
-			logger.Errorf("precheck failed, unable to add current node to the cluster:\n%s", errStr)
-			os.Exit(1)
-		}
-	}()
+	return CheckJoinEligibility(
+		v.(*MasterInfo),
+		a.KubeConf.Arg.OlaresVersion,
+		runtime.GetSystemInfo().GetHostname(),
+		a.KubeConf.Arg.OlaresCDNService,
+		a.Bootstrapping,
+	)
+}
+
+// CheckJoinEligibility reports every reason this worker cannot join the cluster
+// described by masterInfo, as a single aggregated error so the operator sees all
+// of them at once instead of fixing them one round trip at a time.
+//
+// This is the one definition of join policy. It runs twice per join: once at the
+// start, to fail before anything is downloaded, and again inside the add-node
+// pipeline once the node has been brought into shape.
+//
+// bootstrapping selects the first of those two runs, where the node name is not
+// checked yet because the join flow is about to rename this machine if it
+// collides.
+func CheckJoinEligibility(masterInfo *MasterInfo, workerVersion, workerHostname, cdnService string, bootstrapping bool) error {
+	var errs []string
 	if !masterInfo.JuiceFSEnabled {
-		errs = append(errs, errors.New("[JuiceFS] the master node has not enabled JuiceFS, which is required for multi nodes to share a same view of FileSystem"))
+		errs = append(errs, "[JuiceFS] the master node has not enabled JuiceFS, which is required for multi nodes "+
+			"to share a same view of FileSystem\n"+
+			"          run 'sudo olares-cli node enable-juicefs' on the master first")
 	}
 	if !masterInfo.KubernetesInstalled {
-		errs = append(errs, errors.New("[Kubernetes] the master node has not installed Kubernetes"))
+		errs = append(errs, "[Kubernetes] the master node has not installed Kubernetes")
 	}
 	if !masterInfo.OlaresInstalled {
-		errs = append(errs, errors.New("[Olares] the master node has not installed Olares"))
+		errs = append(errs, "[Olares] the master node has not installed Olares")
 	}
-	for _, node := range masterInfo.AllNodes {
-		if strings.EqualFold(node, runtime.GetSystemInfo().GetHostname()) {
-			errs = append(errs, fmt.Errorf("[NodeName] the node name: \"%s\" has already been occupied by another node", node))
+	if masterInfo.OlaresInstalled && masterInfo.OlaresVersion != "" && workerVersion != "" &&
+		masterInfo.OlaresVersion != workerVersion {
+		// Matching versions means matching olares-cli binaries, which only the
+		// bootstrap script can arrange, so the remedy is to (re)run the command
+		// the master generates rather than to fix anything up by hand.
+		errs = append(errs, fmt.Sprintf(
+			"[Version] the master node is running Olares %s, but this node's installer is %s\n"+
+				"          to join the cluster, this node must use the same version as the master\n"+
+				"          regenerate the join command on the master with 'sudo olares-cli node join-command'\n"+
+				"          and run it on this node",
+			masterInfo.OlaresVersion, workerVersion))
+	}
+	if !bootstrapping {
+		for _, node := range masterInfo.AllNodes {
+			if strings.EqualFold(node, workerHostname) {
+				errs = append(errs, fmt.Sprintf(
+					"[NodeName] the node name: %q has already been occupied by another node", node))
+			}
 		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf(
+			"precheck failed, unable to add current node to the cluster:\n%s",
+			strings.Join(errs, "\n"))
 	}
 	return nil
 }
@@ -1031,12 +1139,13 @@ type SaveMasterHostConfig struct {
 func (a *SaveMasterHostConfig) Execute(runtime connector.Runtime) error {
 	if a.KubeConf.Arg.MasterHost == "" {
 		logger.Info("master host is empty, skip saving to master config")
+		return nil
 	}
 	content, err := json.MarshalIndent(a.KubeConf.Arg.MasterHostConfig, "", "    ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(runtime.GetBaseDir(), common.MasterHostConfigFile), content, 0644)
+	return os.WriteFile(filepath.Join(runtime.GetBaseDir(), common.MasterHostConfigFile), content, 0600)
 }
 
 type WaitTimeSyncTask struct {
