@@ -354,6 +354,10 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig, injectMacvlan bo
 		}
 	}
 
+	// Bypass linkerd probe/admin/inbound so oes PREROUTING does not steal them.
+	cmd += fmt.Sprintf("-A PROXY_INBOUND -p tcp -m multiport --dports %d,%d,%d -j RETURN\n",
+		constants.LinkerdTapPort, constants.LinkerdAdminPort, constants.LinkerdInboundPort)
+
 	// Bypass envoy for traffic arriving on the macvlan NIC; must come before
 	// the catch-all redirect to PROXY_IN_REDIRECT.
 	if injectMacvlan {

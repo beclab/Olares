@@ -29,11 +29,13 @@ type Rule struct {
 // RuleSet is the phase-1 decide rule table.
 type RuleSet []Rule
 
-// DefaultRules provides a minimal deny for platform middleware names.
+// DefaultRules provides a minimal deny for platform middleware names and shells.
 func DefaultRules() RuleSet {
 	return RuleSet{
 		{ID: "R-DENY-middleware", Match: "middleware*", Deny: true},
 		{ID: "R-DENY-os-", Match: "os-", Deny: true},
+		{ID: "R-DENY-olares-app", Match: "olares-app", Deny: true},
+		{ID: "R-DENY-bfl", Match: "bfl", Deny: true},
 	}
 }
 
@@ -84,22 +86,57 @@ func matchRule(appName string, r Rule) bool {
 	return appName == m || strings.HasPrefix(appName, m)
 }
 
+// matchDenyExact matches deny rules by exact name or prefix* only (no bare HasPrefix),
+// so "olares-app" does not deny "olares-application".
+func matchDenyExact(appName string, r Rule) bool {
+	m := strings.TrimSpace(r.Match)
+	if m == "" {
+		return false
+	}
+	if strings.HasSuffix(m, "*") {
+		return strings.HasPrefix(appName, strings.TrimSuffix(m, "*"))
+	}
+	return appName == m
+}
+
 // ApplyRules returns generated callees or deny hit.
 func ApplyRules(appName string, rules RuleSet) (callees []string, ruleID string, deny bool) {
+	if id, hit := DenyRuleHit(appName, rules); hit {
+		return nil, id, true
+	}
+	callees, ruleID = AllowRuleCallees(appName, rules)
+	return callees, ruleID, false
+}
+
+// DenyRuleHit reports an exact/prefix* platform deny match.
+func DenyRuleHit(appName string, rules RuleSet) (ruleID string, deny bool) {
 	for _, r := range rules {
-		if !matchRule(appName, r) {
+		if !r.Deny {
 			continue
 		}
+		if matchDenyExact(appName, r) {
+			return r.ID, true
+		}
+	}
+	return "", false
+}
+
+// AllowRuleCallees returns callees from the first matching non-deny rule.
+func AllowRuleCallees(appName string, rules RuleSet) (callees []string, ruleID string) {
+	for _, r := range rules {
 		if r.Deny {
-			return nil, r.ID, true
+			continue
+		}
+		if !matchRule(appName, r) {
+			continue
 		}
 		if len(r.Callees) > 0 {
 			cp := append([]string(nil), r.Callees...)
 			sort.Strings(cp)
-			return cp, r.ID, false
+			return cp, r.ID
 		}
 	}
-	return nil, "", false
+	return nil, ""
 }
 
 func isOptOut(settings map[string]string) bool {
@@ -110,14 +147,18 @@ func isOptOut(settings map[string]string) bool {
 	return v == "disabled" || v == "false"
 }
 
-// Decide chooses mesh-in for a caller: named callees first, then rules, then
-// inject with an empty callee list when none of those apply. Deny and opt-out win.
+// Decide chooses mesh-in for a caller: deny and opt-out win, then named callees,
+// then allow rules, then inject with an empty callee list when none of those apply.
 func Decide(appName string, settings map[string]string, rules RuleSet) DecideResult {
 	if rules == nil {
 		rules = DefaultRules()
 	}
 	res := DecideResult{Source: DecideSourceNone}
 	if isOptOut(settings) {
+		return res
+	}
+	if denyID, deny := DenyRuleHit(appName, rules); deny {
+		res.RuleID = denyID
 		return res
 	}
 	explicit := ParseCallees(settings)
@@ -127,11 +168,7 @@ func Decide(appName string, settings map[string]string, rules RuleSet) DecideRes
 		res.Source = DecideSourceExplicit
 		return res
 	}
-	callees, ruleID, deny := ApplyRules(appName, rules)
-	if deny {
-		res.RuleID = ruleID
-		return res
-	}
+	callees, ruleID := AllowRuleCallees(appName, rules)
 	if len(callees) > 0 {
 		res.Inject = true
 		res.Callees = callees

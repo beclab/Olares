@@ -64,6 +64,10 @@ const (
 	EnvoyUID                        int64 = 1555
 	// LinkerdProxyUID is the upstream linkerd-proxy default runAsUser.
 	LinkerdProxyUID                 int64 = 2102
+	// Linkerd admin / inbound / tap ports (align with linkerd-init inbound-ports-to-ignore).
+	LinkerdTapPort                  = 4190
+	LinkerdAdminPort                = 4191
+	LinkerdInboundPort              = 4143
 	// Mesh agent UIDs (16xx band; orthogonal to Envoy 1555 / d2 1556 / linkerd 2102 / nginx:alpine 101).
 	MeshInAgentUID                  int64 = 1651
 	MeshOutAgentUID                 int64 = 1652
@@ -73,6 +77,7 @@ const (
 	// Mesh-in CT-1 control-plane object names (WI-OC-MESH-IN-CT1-02).
 	MeshInSharedHostsCMName         = "olares-mesh-in-shared-hosts"
 	MeshInSharedHostsFileName       = "shared-hosts.txt"
+	MeshInTLSHostsFileName          = "tls-hosts.txt"
 	MeshInSharedHostsManagedByLabel = "gateway.olares.io/mesh-in-shared-hosts-managed-by"
 	MeshInTLSSecretNamePrefix       = "olares-mesh-in-tls-"
 	MeshInCertsVolumeName           = "olares-mesh-in-certs"

@@ -348,7 +348,7 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 		ctrl.Log.Error(err, "create application error")
 	} else {
 		inject := strings.EqualFold(strings.TrimSpace(settings[meshinagent.AnnotDecide]), "true")
-		if merr := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, req.Namespace, inject); merr != nil {
+		if merr := r.syncCallerMeshAccess(ctx, req.Namespace, name, inject); merr != nil {
 			klog.Errorf("mesh-xport: caller ns mesh access after create %s: %v", req.Namespace, merr)
 		}
 		meshinagent.EnqueueCreateIfInject(ctx, app)
@@ -552,7 +552,7 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		return err
 	}
 	inject := strings.EqualFold(strings.TrimSpace(settings[meshinagent.AnnotDecide]), "true")
-	if merr := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, appCopy.Spec.Namespace, inject); merr != nil {
+	if merr := r.syncCallerMeshAccess(ctx, appCopy.Spec.Namespace, appCopy.Spec.Name, inject); merr != nil {
 		klog.Errorf("mesh-xport: caller ns mesh access after update %s: %v", appCopy.Spec.Namespace, merr)
 		return merr
 	}
@@ -650,7 +650,7 @@ func (r *ApplicationReconciler) syncSharedCallerDecide(ctx context.Context, app 
 	if !needPatch {
 		inject := strings.EqualFold(strings.TrimSpace(curAnn[meshinagent.AnnotDecide]), "true") ||
 			strings.EqualFold(strings.TrimSpace(app.Spec.Settings[meshinagent.AnnotDecide]), "true")
-		if err := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, app.Spec.Namespace, inject); err != nil {
+		if err := r.syncCallerMeshAccess(ctx, app.Spec.Namespace, app.Spec.Name, inject); err != nil {
 			klog.Errorf("syncSharedCallerDecide mesh access ns=%s: %v", app.Spec.Namespace, err)
 			return err
 		}
@@ -680,13 +680,28 @@ func (r *ApplicationReconciler) syncSharedCallerDecide(ctx context.Context, app 
 		app.Name, settings[meshinagent.AnnotDecide], settings[meshinagent.AnnotDecideEdges])
 
 	inject := strings.EqualFold(strings.TrimSpace(settings[meshinagent.AnnotDecide]), "true")
-	if err := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, app.Spec.Namespace, inject); err != nil {
+	if err := r.syncCallerMeshAccess(ctx, app.Spec.Namespace, app.Spec.Name, inject); err != nil {
 		klog.Errorf("syncSharedCallerDecide mesh access ns=%s: %v", app.Spec.Namespace, err)
 		return err
 	}
 	edges := strings.TrimSpace(settings[meshinagent.AnnotDecideEdges])
 	meshinagent.MaybeEnqueueAfterDecide(ctx, appCopy, prevInject, inject, prevEdges, edges, "")
 	return nil
+}
+
+// syncCallerMeshAccess updates NS in-cluster-caller via OR across Applications in the
+// namespace, clears stale NS linkerd inject, and syncs this app's workload template inject.
+func (r *ApplicationReconciler) syncCallerMeshAccess(ctx context.Context, appNS, appName string, appDecide bool) error {
+	nsEnable := appDecide
+	if has, err := mesh.NamespaceHasDecideTrueCaller(ctx, r.Client, appNS, meshinagent.DeclaresSharedCaller); err != nil {
+		return err
+	} else if has {
+		nsEnable = true
+	}
+	if err := mesh.EnsureCallerNamespaceMeshAccess(ctx, r.Client, appNS, nsEnable); err != nil {
+		return err
+	}
+	return mesh.EnsureCallerWorkloadLinkerdInject(ctx, r.Client, appNS, appName, appDecide)
 }
 
 func (r *ApplicationReconciler) getEntranceServiceAddress(ctx context.Context, deployment client.Object, isMultiApp bool) (map[string][]appv1alpha1.Entrance, error) {
