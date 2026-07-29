@@ -44,6 +44,18 @@ func TestIsRouteControlManagedNP(t *testing.T) {
 			},
 			want: true,
 		},
+		{
+			name: "caller-jwt not routecontrol",
+			np: &netv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						RouteControlManagedByLabel: RouteControlManagedByValue,
+						RouteControlComponentLabel: CallerJWTComponentValue,
+					},
+				},
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -51,5 +63,45 @@ func TestIsRouteControlManagedNP(t *testing.T) {
 				t.Fatalf("IsRouteControlManagedNP() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestIsCallerJWTManagedNPAndExternal(t *testing.T) {
+	callerJWT := &netv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				RouteControlManagedByLabel: RouteControlManagedByValue,
+				RouteControlComponentLabel: CallerJWTComponentValue,
+			},
+		},
+	}
+	routeControl := &netv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				RouteControlManagedByLabel: RouteControlManagedByValue,
+				RouteControlComponentLabel: RouteControlComponentValue,
+			},
+		},
+	}
+	if !IsCallerJWTManagedNP(callerJWT) {
+		t.Fatal("expected caller-jwt NP")
+	}
+	if IsCallerJWTManagedNP(routeControl) {
+		t.Fatal("route-control must not match caller-jwt")
+	}
+	meshNP := NewAppGatewayMeshNPOsMesh()
+	if !IsAppGatewayMeshManagedNP(meshNP) {
+		t.Fatal("expected app-gateway-mesh NP")
+	}
+	if IsAppGatewayMeshManagedNP(routeControl) {
+		t.Fatal("route-control must not match app-gateway-mesh")
+	}
+	if !IsAppServiceManagedExternalNP(callerJWT) ||
+		!IsAppServiceManagedExternalNP(routeControl) ||
+		!IsAppServiceManagedExternalNP(meshNP) {
+		t.Fatal("external writers must be skipped by prune")
+	}
+	if IsAppServiceManagedExternalNP(&netv1.NetworkPolicy{}) {
+		t.Fatal("empty NP must not be external-managed")
 	}
 }

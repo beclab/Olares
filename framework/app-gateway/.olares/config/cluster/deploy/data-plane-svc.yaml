@@ -26,3 +26,7 @@ spec:
       port: 443
       targetPort: 10443
       protocol: TCP
+    - name: incluster-strong
+      port: 8081
+      targetPort: 10080
+      protocol: TCP
