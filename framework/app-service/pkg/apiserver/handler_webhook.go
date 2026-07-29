@@ -121,7 +121,10 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	shared := appCfg != nil && appCfg.IsShared()
 	nothingToInject := !injectPolicy && !injectWs && !injectUpload && !injectMeshInAgent && !injectMeshOutAgent && injectSharedPod == nil && len(perms) == 0
 
-	if shared {
+	// Shared apps historically skipped CreatePatch (label-only) to avoid oes on
+	// pure callees. Composite Shared callers with mesh-in/mesh-out must use
+	// CreatePatch; ShouldSkipOesForSharedCaller still drops oes when appropriate.
+	if shared && !sharedAppNeedsSidecarPatch(injectMeshInAgent, injectMeshOutAgent) {
 		if injectSharedPod != nil {
 			patchBytes, err := patchSharedEntranceLabel(req, &pod, *injectSharedPod)
 			if err != nil {
@@ -155,8 +158,14 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	return resp
 }
 
+// sharedAppNeedsSidecarPatch reports whether a Shared app must run CreatePatch
+// (mesh-in / mesh-out) instead of the label-only shared-entrance path.
+func sharedAppNeedsSidecarPatch(injectMeshInAgent, injectMeshOutAgent bool) bool {
+	return injectMeshInAgent || injectMeshOutAgent
+}
+
 // patchSharedEntranceLabel applies only the shared-entrance pod label, without
-// sidecar injection. Used for v3 apps where CreatePatch would also inject envoy.
+// sidecar injection. Used for Shared callees that do not declare outbound mesh-in.
 func patchSharedEntranceLabel(req *admissionv1.AdmissionRequest, pod *corev1.Pod, inject bool) ([]byte, error) {
 	if inject {
 		if pod.Labels == nil {
