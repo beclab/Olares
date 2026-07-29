@@ -55,22 +55,23 @@ func ShouldInject(app *appv1alpha1.Application, isSharedApp bool) bool {
 	if name == "" {
 		name = app.Name
 	}
-	return Decide(name, app.Spec.Settings, DefaultRules()).Inject
+	return Decide(name, app.Spec.Settings, DefaultRules(), false).Inject
 }
 
 // AllowOutboundMeshIn reports whether a pod that already passed ShouldInject
-// may receive mesh-in. Shared entrance / callee entry pods never get mesh-in.
-// When LabelSharedCallerOutbound is set, only the literal value "true" allows injection.
-func AllowOutboundMeshIn(isEntrancePod bool, podLabels map[string]string) bool {
-	if isEntrancePod {
-		return false
-	}
+// may receive mesh-in. Explicit LabelSharedCallerOutbound wins (false is an
+// escape hatch). Non-entrance pods inject. Entrance pods inject only when the
+// Application DeclaresSharedCaller (composite Shared caller).
+func AllowOutboundMeshIn(isEntrancePod, declaresSharedCaller bool, podLabels map[string]string) bool {
 	if podLabels != nil {
 		if v, ok := podLabels[LabelSharedCallerOutbound]; ok {
 			return strings.EqualFold(strings.TrimSpace(v), "true")
 		}
 	}
-	return true
+	if !isEntrancePod {
+		return true
+	}
+	return declaresSharedCaller
 }
 
 // HasIntentOnly reports needsSharedAccess without named callees.

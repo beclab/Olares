@@ -292,7 +292,7 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 		appid = appcfg.AppName(name).GetAppID()
 	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
-	meshinagent.ApplyDecide(name, settings, meshinagent.DefaultRules())
+	meshinagent.ApplyDecide(name, settings, meshinagent.DefaultRules(), appcfg.IsShared(deployment))
 
 	rawAppName := name
 	if deployment.GetLabels()[constants.ApplicationRawAppNameLabel] != "" {
@@ -436,13 +436,17 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		appid = appcfg.AppName(name).GetAppID()
 	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
-	// Preserve callee / intent already stored on the Application CR (chart may omit them on rebuild).
+	// Preserve callee / intent / explicit decide already stored on the Application CR.
 	if app.Spec.Settings != nil {
 		for _, k := range []string{
 			meshinagent.SettingSharedAppDeps,
 			meshinagent.SettingClusterAppRef,
 			meshinagent.SettingAppRef,
 			meshinagent.SettingNeedsSharedAccess,
+			meshinagent.AnnotDecide,
+			meshinagent.AnnotDecideSource,
+			meshinagent.AnnotDecideEdges,
+			meshinagent.AnnotDecideRuleID,
 		} {
 			if strings.TrimSpace(settings[k]) == "" {
 				if v := strings.TrimSpace(app.Spec.Settings[k]); v != "" {
@@ -462,7 +466,7 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	if prevEdges == "" && app.Annotations != nil {
 		prevEdges = strings.TrimSpace(app.Annotations[meshinagent.AnnotDecideEdges])
 	}
-	meshinagent.ApplyDecide(name, settings, meshinagent.DefaultRules())
+	meshinagent.ApplyDecide(name, settings, meshinagent.DefaultRules(), appcfg.IsShared(app))
 
 	appCopy.Spec.Name = name
 	appCopy.Spec.Namespace = deployment.GetNamespace()
@@ -620,7 +624,7 @@ func (r *ApplicationReconciler) syncSharedCallerDecide(ctx context.Context, app 
 		prevEdges = strings.TrimSpace(app.Spec.Settings[meshinagent.AnnotDecideEdges])
 	}
 
-	meshinagent.ApplyDecide(app.Spec.Name, settings, meshinagent.DefaultRules())
+	meshinagent.ApplyDecide(app.Spec.Name, settings, meshinagent.DefaultRules(), appcfg.IsShared(app))
 
 	desiredAnn := meshinagent.WriteDecideAnnotations(map[string]string{}, settings)
 	needPatch := false

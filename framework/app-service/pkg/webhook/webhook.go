@@ -510,34 +510,45 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		}
 	}
 
-	injectMeshInAgent, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isShared)
+	var declaresSharedCaller bool
+	injectMeshInAgent, declaresSharedCaller, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isShared)
 	if err != nil {
 		return false, false, false, false, false, nil, perms, nil, nil, err
 	}
 	isEntrancePod := isSharedEntranceWorkload(injectSharedPod, pod.GetLabels())
-	if injectMeshInAgent && !meshinagent.AllowOutboundMeshIn(isEntrancePod, pod.GetLabels()) {
-		injectMeshInAgent = false
-	}
+	injectMeshInAgent = applyOutboundMeshInGate(injectMeshInAgent, isEntrancePod, declaresSharedCaller, pod.GetLabels())
 	injectMeshOutAgent = meshoutagent.ShouldInject(isShared, perms)
 	return
 }
 
-func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isShared bool) (bool, error) {
+// applyOutboundMeshInGate clears mesh-in when AllowOutboundMeshIn denies the pod.
+func applyOutboundMeshInGate(injectMeshInAgent, isEntrancePod, declaresSharedCaller bool, podLabels map[string]string) bool {
+	if !injectMeshInAgent {
+		return false
+	}
+	if !meshinagent.AllowOutboundMeshIn(isEntrancePod, declaresSharedCaller, podLabels) {
+		return false
+	}
+	return true
+}
+
+func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isShared bool) (inject bool, declaresSharedCaller bool, err error) {
 	if appConfig == nil {
-		return false, nil
+		return false, false, nil
 	}
 	applicationName, err := apputils.FmtAppMgrName(appConfig.AppName, appConfig.OwnerName, ns)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return false, nil
+			return false, false, nil
 		}
-		return false, err
+		return false, false, err
 	}
-	return meshinagent.ShouldInject(app, isShared), nil
+	declaresSharedCaller = meshinagent.DeclaresSharedCaller(app.Spec.Settings)
+	return meshinagent.ShouldInject(app, isShared), declaresSharedCaller, nil
 }
 
 // isSharedEntranceWorkload reports whether the pod is a Shared entrance (callee
