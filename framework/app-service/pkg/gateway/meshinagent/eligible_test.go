@@ -87,8 +87,24 @@ func TestShouldInjectMeshInAgent(t *testing.T) {
 	if !ShouldInject(consumer, false) {
 		t.Fatal("expected inject for named callee")
 	}
-	if ShouldInject(consumer, true) {
-		t.Fatal("shared provider app must not receive mesh-in agent")
+	if !ShouldInject(consumer, true) {
+		t.Fatal("shared composite caller with named deps must inject")
+	}
+	sharedIntentOnly := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{
+			Settings: map[string]string{SettingNeedsSharedAccess: "true"},
+		},
+	}
+	if ShouldInject(sharedIntentOnly, true) {
+		t.Fatal("shared app must not inject on B' eligibility alone")
+	}
+	sharedDecide := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{
+			Settings: map[string]string{AnnotDecide: "true", AnnotDecideSource: DecideSourceEligibility},
+		},
+	}
+	if !ShouldInject(sharedDecide, true) {
+		t.Fatal("shared app with decide=true must inject")
 	}
 	if ShouldInject(nil, false) {
 		t.Fatal("nil app must not inject")
@@ -100,6 +116,25 @@ func TestShouldInjectMeshInAgent(t *testing.T) {
 		t.Fatal("R-DENY middleware must not inject")
 	}
 }
+
+func TestAllowOutboundMeshIn(t *testing.T) {
+	if AllowOutboundMeshIn(true, nil) {
+		t.Fatal("entrance pod must not receive mesh-in")
+	}
+	if !AllowOutboundMeshIn(false, nil) {
+		t.Fatal("non-entrance without outbound label must inject")
+	}
+	if !AllowOutboundMeshIn(false, map[string]string{LabelSharedCallerOutbound: "true"}) {
+		t.Fatal("outbound=true must allow")
+	}
+	if AllowOutboundMeshIn(false, map[string]string{LabelSharedCallerOutbound: "false"}) {
+		t.Fatal("outbound=false must deny")
+	}
+	if AllowOutboundMeshIn(true, map[string]string{LabelSharedCallerOutbound: "true"}) {
+		t.Fatal("entrance wins over outbound label")
+	}
+}
+
 
 func TestContainerSpecFailClosed(t *testing.T) {
 	c := ContainerSpec()

@@ -74,7 +74,7 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	}
 
 	claimToHeaders, ok := provider["claimToHeaders"].([]any)
-	if !ok || len(claimToHeaders) != 1 {
+	if !ok || len(claimToHeaders) != 2 {
 		t.Fatalf("claimToHeaders = %#v", provider["claimToHeaders"])
 	}
 	claimMap := claimToHeaders[0].(map[string]any)
@@ -87,6 +87,15 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	if claimMap["header"] != "X-BFL-USER" {
 		t.Fatalf("viewer header must remain X-BFL-USER for EG overwrite strip, got %#v", claimMap["header"])
 	}
+	appidMap := claimToHeaders[1].(map[string]any)
+	if appidMap["claim"] != CallerJWTAppidClaim || appidMap["header"] != CallerJWTAppidHeader {
+		t.Fatalf("claimToHeaders[1] = %#v", appidMap)
+	}
+	if appidMap["header"] != "X-Shared-Appid" {
+		t.Fatalf("shared appid header must remain X-Shared-Appid, got %#v", appidMap["header"])
+	}
+	// RR-8: both mappings exist; mutual exclusion is claim presence (issuer
+	// never emits viewer+appid together), not dropping one mapping.
 
 	extractFrom, ok := provider["extractFrom"].(map[string]any)
 	if !ok {

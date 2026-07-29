@@ -74,8 +74,41 @@ func TestIssueCallerJWTClaimsAndVerify(t *testing.T) {
 	if claims.Viewer != "alice" {
 		t.Fatalf("viewer = %q", claims.Viewer)
 	}
+	if claims.Appid != "" {
+		t.Fatalf("ordinary caller must omit appid, got %q", claims.Appid)
+	}
 	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
 		t.Fatalf("exp missing or in the past")
+	}
+}
+
+func TestIssueSharedCallerAppidOmitsViewer(t *testing.T) {
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+	token, err := issuer.Issue(IssueRequest{
+		Namespace:          "shared-agg",
+		ServiceAccountName: "agg",
+		AppRef:             "agg",
+		Appid:              "a1b2c3d4",
+	})
+	if err != nil {
+		t.Fatalf("Issue: %v", err)
+	}
+	claims, err := issuer.ParseClaims(token)
+	if err != nil {
+		t.Fatalf("ParseClaims: %v", err)
+	}
+	if claims.Appid != "a1b2c3d4" {
+		t.Fatalf("appid = %q", claims.Appid)
+	}
+	if claims.Viewer != "" {
+		t.Fatalf("shared caller must omit viewer, got %q", claims.Viewer)
 	}
 }
 
@@ -288,8 +321,37 @@ func TestIssueRequestFromApplicationOmitsCalleeAsEntrance(t *testing.T) {
 	if req.AppRef != "demo" || req.Viewer != "alice" || req.ServiceAccountName != "demo-sa" {
 		t.Fatalf("unexpected request: %+v", req)
 	}
+	if req.Appid != "" {
+		t.Fatalf("ordinary caller Appid = %q, want empty", req.Appid)
+	}
 	if req.Namespace != "user-space-alice-demo" {
 		t.Fatalf("Namespace = %q", req.Namespace)
+	}
+}
+
+func TestIssueRequestFromSharedApplicationUsesAppid(t *testing.T) {
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "agg",
+			Namespace: "user-system-alice",
+			Labels:    map[string]string{"app.bytetrade.io/app-shared": "true"},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "agg",
+			Appid:     "deadbeef",
+			Namespace: "shared-agg",
+			Owner:     "alice",
+			Settings: map[string]string{
+				settingSharedAppDeps: "ollama",
+			},
+		},
+	}
+	req := issueRequestFromApplication(app)
+	if req.Appid != "deadbeef" {
+		t.Fatalf("Appid = %q", req.Appid)
+	}
+	if req.Viewer != "" {
+		t.Fatalf("Viewer = %q, want empty for shared caller", req.Viewer)
 	}
 }
 
