@@ -49,6 +49,17 @@ olares-cli market upload ./<app>-<version>.tgz   # use the new <version> in the 
 - `upload` always lands the chart in the `upload` source (see [`../../olares-market/SKILL.md`](../../olares-market/SKILL.md)). `-s` is intentionally not exposed.
 - Upload runs the server-side ingest, so a chart that passed local `lint` can still be rejected here (e.g. cluster-specific checks). Surface that message as a chart problem and go back to refine.
 
+### Lost the local chart? Download the stored one instead of re-authoring it
+
+When the app exists in the `upload` source but the local working copy is gone — deleted, or uploaded from another machine — **pull the stored `.tgz` back** rather than reconstructing the chart from scratch. It is the same archive the installer is served, so unpacking it recovers the manifest and templates exactly as uploaded:
+
+```bash
+olares-cli market download <app> ./recovered/        # -> ./recovered/<app>-<version>.tgz
+tar -xzf ./recovered/<app>-<version>.tgz -C ./recovered/
+```
+
+Then continue the normal loop: edit, `chart lint`, bump the version, `chart package`, `market upload`, and re-apply with `upgrade` (§3). This works regardless of the app's install state — the chart is read from the stored artifact, so a chart behind an `installFailed` / `installingCanceled` row is still recoverable. Details and flags: [`../../olares-market/references/olares-market-charts.md`](../../olares-market/references/olares-market-charts.md#download).
+
 ## 3. Actually run it
 
 Upload only stores the chart; installing it is what proves it runs:
