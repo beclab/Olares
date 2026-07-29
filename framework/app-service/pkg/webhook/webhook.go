@@ -514,7 +514,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 	if err != nil {
 		return false, false, false, false, false, nil, perms, nil, nil, err
 	}
-	isEntrancePod := injectSharedPod != nil && *injectSharedPod
+	isEntrancePod := isSharedEntranceWorkload(injectSharedPod, pod.GetLabels())
 	if injectMeshInAgent && !meshinagent.AllowOutboundMeshIn(isEntrancePod, pod.GetLabels()) {
 		injectMeshInAgent = false
 	}
@@ -538,6 +538,20 @@ func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcf
 		return false, err
 	}
 	return meshinagent.ShouldInject(app, isShared), nil
+}
+
+// isSharedEntranceWorkload reports whether the pod is a Shared entrance (callee
+// entrypoint). Prefer the Service-selector result from MustInject; also honor an
+// existing shared-entrance label so mesh-in is not injected when selector lookup
+// is temporarily unavailable.
+func isSharedEntranceWorkload(injectSharedPod *bool, podLabels map[string]string) bool {
+	if injectSharedPod != nil && *injectSharedPod {
+		return true
+	}
+	if podLabels == nil {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(podLabels[constants.AppSharedEntrancesLabel]), "true")
 }
 
 func (wh *Webhook) isAppEntrancePod(ctx context.Context, appname, host string, pod *corev1.Pod, namespace string) (bool, error) {

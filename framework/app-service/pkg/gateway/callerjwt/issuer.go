@@ -36,8 +36,9 @@ const (
 	MaxTTL              = time.Hour
 )
 
-// IssueRequest carries workload identity inputs for a caller JWT-SVID (WI-OC-C2-01).
-// Ordinary callers set Viewer; Shared composite callers set Appid and leave Viewer empty.
+// IssueRequest carries workload identity for a caller JWT.
+// Ordinary callers set Viewer (user); Shared callers set Appid and leave Viewer empty.
+// Viewer and Appid must not both be set.
 type IssueRequest struct {
 	Namespace          string
 	ServiceAccountName string
@@ -48,7 +49,7 @@ type IssueRequest struct {
 	TTL                time.Duration
 }
 
-// Claims is the frozen C2 v1 JWT claim schema.
+// Claims is the caller JWT claim schema published to Envoy Gateway.
 type Claims struct {
 	jwt.RegisteredClaims
 	AppRef   string `json:"olares.caller.appRef"`
@@ -63,7 +64,7 @@ type KeyPair struct {
 	PrivateKey *rsa.PrivateKey
 }
 
-// KeyRing supports overlapping RS256 keys for rotation (WI-OC-C2-01 §8).
+// KeyRing holds the active signing key and an optional previous key during rotation.
 type KeyRing struct {
 	Active   KeyPair
 	Previous *KeyPair
@@ -101,6 +102,11 @@ func (i *Issuer) Issue(req IssueRequest) (string, error) {
 	if ns == "" || sa == "" || appRef == "" {
 		return "", errors.New("callerjwt: namespace, service account, and appRef are required")
 	}
+	viewer := strings.TrimSpace(req.Viewer)
+	appid := strings.TrimSpace(req.Appid)
+	if viewer != "" && appid != "" {
+		return "", errors.New("callerjwt: viewer and appid identity claims are mutually exclusive")
+	}
 	ttl := req.TTL
 	if ttl <= 0 {
 		ttl = MaxTTL
@@ -123,11 +129,11 @@ func (i *Issuer) Issue(req IssueRequest) (string, error) {
 	if v := strings.TrimSpace(req.Entrance); v != "" {
 		claims.Entrance = v
 	}
-	if v := strings.TrimSpace(req.Viewer); v != "" {
-		claims.Viewer = v
+	if viewer != "" {
+		claims.Viewer = viewer
 	}
-	if v := strings.TrimSpace(req.Appid); v != "" {
-		claims.Appid = v
+	if appid != "" {
+		claims.Appid = appid
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = i.keys.Active.KID
@@ -176,7 +182,7 @@ func audienceContains(aud jwt.ClaimStrings, want string) bool {
 	return false
 }
 
-// SPIFFESubject returns the SPIFFE-style workload subject for C2 v1.
+// SPIFFESubject returns the SPIFFE-style workload subject used in JWT sub.
 func SPIFFESubject(namespace, serviceAccount string) string {
 	return fmt.Sprintf("spiffe://olares/ns/%s/sa/%s", namespace, serviceAccount)
 }

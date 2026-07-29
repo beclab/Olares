@@ -22,10 +22,9 @@ const (
 	CallerJWTAudience            = "app-gateway-data"
 	CallerJWTProviderName        = "caller-jwt"
 	CallerJWTViewerClaim         = "olares.viewer"
-	// CallerJWTViewerHeader is the trusted identity header injected from the
-	// JWT claim. Envoy Gateway jwt claimToHeaders overwrites any client-supplied
-	// value of the same header after successful authn (WI-OC-C2-01 T-C2-4 /
-	// eg_strip_spoofed_user_header). Do not accept client X-BFL-USER as identity.
+	// CallerJWTViewerHeader is filled from the verified JWT viewer claim after
+	// gateway authn. Client-supplied X-BFL-USER is overwritten and must not be
+	// trusted as identity on its own.
 	CallerJWTViewerHeader        = "X-BFL-USER"
 	CallerJWTAppidClaim          = "olares.caller.appid"
 	CallerJWTAppidHeader         = "X-Shared-Appid"
@@ -48,15 +47,10 @@ func securityPolicyName(srr *srrv1alpha1.SharedRouteRegistry) string {
 	return srr.Name + SecurityPolicySuffix
 }
 
-// desiredSharedRouteSecurityPolicy builds the JWT authn SecurityPolicy for a
-// gateway-mode Shared HTTPRoute (WI-OC-C2-01 L1-b).
-//
-// Identity header contract (T-C2-4 / RR-1): claimToHeaders maps
-// olares.viewer → X-BFL-USER (ordinary callers) and olares.caller.appid →
-// X-Shared-Appid (Shared composite callers). EG only writes a header when the
-// claim is present, so ordinary and Shared JWTs remain mutually exclusive at
-// runtime (RR-8). Envoy Gateway overwrites client-supplied values of the same
-// header after successful jwt_authn; failed/missing Bearer is fail-closed.
+// desiredSharedRouteSecurityPolicy builds JWT authn for a Shared HTTPRoute.
+// After verification, the gateway copies olares.viewer → X-BFL-USER for ordinary
+// callers and olares.caller.appid → X-Shared-Appid for Shared callers. A header
+// is written only when that claim exists in the token; missing Bearer is rejected.
 func desiredSharedRouteSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *unstructured.Unstructured {
 	routeName := httpRouteName(srr)
 	return &unstructured.Unstructured{Object: map[string]any{

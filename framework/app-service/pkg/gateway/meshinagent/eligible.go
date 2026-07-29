@@ -38,9 +38,9 @@ func ApplicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 }
 
 // ShouldInject reports whether the mesh-in agent may be considered for a pod.
-// Shared apps inject only when DeclaresSharedCaller (decide=true or named edges);
-// eligibility-only (B′) is forbidden for Shared. Ordinary apps keep Decide/B′.
-// Entrance vs outbound gating is applied separately via AllowOutboundMeshIn.
+// Shared apps inject only with decide=true or named callee refs; needsSharedAccess
+// alone is not enough. Ordinary apps may still inject via Decide when there are
+// no named callees. Entrance vs outbound gating uses AllowOutboundMeshIn.
 func ShouldInject(app *appv1alpha1.Application, isSharedApp bool) bool {
 	if app == nil {
 		return false
@@ -74,8 +74,7 @@ func AllowOutboundMeshIn(isEntrancePod bool, podLabels map[string]string) bool {
 }
 
 // HasIntentOnly reports needsSharedAccess without named callees.
-// Under B′ eligibility, intent-only apps still inject after Decide; this helper
-// remains for diagnostics distinguishing named edges from intent.
+// Ordinary apps may still inject via Decide; this helper is for diagnostics.
 func HasIntentOnly(settings map[string]string) bool {
 	if settings == nil {
 		return false

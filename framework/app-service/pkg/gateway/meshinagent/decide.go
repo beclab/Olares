@@ -110,8 +110,8 @@ func isOptOut(settings map[string]string) bool {
 	return v == "disabled" || v == "false"
 }
 
-// Decide runs SharedCallerDecide: explicit named edges > rules > eligibility.
-// Eligibility injects without named callees (OPEN-01 B′); deny/opt-out still win.
+// Decide chooses mesh-in for a caller: named callees first, then rules, then
+// inject with an empty callee list when none of those apply. Deny and opt-out win.
 func Decide(appName string, settings map[string]string, rules RuleSet) DecideResult {
 	if rules == nil {
 		rules = DefaultRules()
@@ -139,7 +139,7 @@ func Decide(appName string, settings map[string]string, rules RuleSet) DecideRes
 		res.RuleID = ruleID
 		return res
 	}
-	// B′ gateway-open: eligible caller may inject with empty callees.
+	// No named callees or matching rule: still inject (empty callee list).
 	res.Inject = true
 	res.Source = DecideSourceEligibility
 	return res

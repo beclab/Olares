@@ -273,7 +273,7 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 		for _, app := range appsByNS[callerNS] {
 			refs := callerSharedAppRefs(&app)
 			if len(refs) == 0 {
-				// B′ eligibility: project viewer_srr from Application owner when decide=true.
+				// No named callee refs: still project viewer hosts when the app is a caller.
 				if !meshinagent.DeclaresSharedCaller(app.Spec.Settings) {
 					continue
 				}

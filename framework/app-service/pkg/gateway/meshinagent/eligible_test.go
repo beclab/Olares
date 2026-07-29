@@ -24,7 +24,7 @@ func TestApplicationDeclaresSharedAccess(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "eligibility decide=true",
+			name: "decide=true",
 			app: &appv1alpha1.Application{
 				Spec: appv1alpha1.ApplicationSpec{
 					Settings: map[string]string{AnnotDecide: "true", AnnotDecideSource: DecideSourceEligibility},
@@ -69,15 +69,15 @@ func TestApplicationDeclaresSharedAccess(t *testing.T) {
 }
 
 func TestShouldInjectMeshInAgent(t *testing.T) {
-	eligibility := &appv1alpha1.Application{
+	needsAccessOnly := &appv1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{Name: "chat"},
 		Spec: appv1alpha1.ApplicationSpec{
 			Name:     "chat",
 			Settings: map[string]string{SettingNeedsSharedAccess: "true"},
 		},
 	}
-	if !ShouldInject(eligibility, false) {
-		t.Fatal("eligibility without named callees must inject")
+	if !ShouldInject(needsAccessOnly, false) {
+		t.Fatal("ordinary app with needsSharedAccess and no named callees must inject")
 	}
 	consumer := &appv1alpha1.Application{
 		Spec: appv1alpha1.ApplicationSpec{
@@ -88,15 +88,15 @@ func TestShouldInjectMeshInAgent(t *testing.T) {
 		t.Fatal("expected inject for named callee")
 	}
 	if !ShouldInject(consumer, true) {
-		t.Fatal("shared composite caller with named deps must inject")
+		t.Fatal("shared caller with named deps must inject")
 	}
-	sharedIntentOnly := &appv1alpha1.Application{
+	sharedNeedsAccessOnly := &appv1alpha1.Application{
 		Spec: appv1alpha1.ApplicationSpec{
 			Settings: map[string]string{SettingNeedsSharedAccess: "true"},
 		},
 	}
-	if ShouldInject(sharedIntentOnly, true) {
-		t.Fatal("shared app must not inject on B' eligibility alone")
+	if ShouldInject(sharedNeedsAccessOnly, true) {
+		t.Fatal("shared app must not inject on needsSharedAccess alone")
 	}
 	sharedDecide := &appv1alpha1.Application{
 		Spec: appv1alpha1.ApplicationSpec{

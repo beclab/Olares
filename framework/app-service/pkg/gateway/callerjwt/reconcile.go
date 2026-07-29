@@ -32,15 +32,15 @@ const (
 	settingNeedsSharedAccess = "needsSharedAccess"
 	settingSharedAppDeps     = "sharedAppDeps"
 	settingClusterAppRef     = "clusterAppRef"
-	// settingSharedCallerDecide mirrors meshinagent.AnnotDecide. callerjwt cannot
-	// import meshinagent (meshinagent → callerjwt), so the key is duplicated here.
+	settingAppRef            = "appRef"
+	settingOptOutMesh        = "mesh-inject"
+	// settingSharedCallerDecide is duplicated from meshinagent to avoid an import cycle.
 	settingSharedCallerDecide = "gateway.olares.io/shared-caller-decide"
 	managedByLabel            = "app.kubernetes.io/managed-by"
 	managedByValue            = "app-service"
 )
 
-// IssuerReconciler issues caller JWT-SVID secrets for Shared consumer apps and
-// maintains the cluster JWKS service (WI-OC-C2-01 L1-a).
+// IssuerReconciler issues per-app caller JWT secrets and publishes JWKS for gateway verification.
 type IssuerReconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
@@ -220,15 +220,16 @@ func (r *IssuerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// applicationDeclaresSharedAccess decides whether to issue caller-jwt in the app NS.
-// Must stay aligned with meshinagent.DeclaresSharedCaller for decide=true / named
-// edges, plus legacy needsSharedAccess / clusterAppRef so B′ eligibility callers
-// (e.g. LiteLLM) get a Secret before mesh-in mounts mesh-in-jwt.
+// applicationDeclaresSharedAccess decides whether an ordinary (non-Shared) app
+// gets a caller-jwt Secret: decide=true, named callee refs, or needsSharedAccess.
 func applicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 	if app == nil || app.Spec.Settings == nil {
 		return false
 	}
 	s := app.Spec.Settings
+	if meshInjectOptedOut(s) {
+		return false
+	}
 	if d := strings.TrimSpace(s[settingSharedCallerDecide]); strings.EqualFold(d, "false") {
 		return false
 	}
@@ -238,16 +239,14 @@ func applicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 	if strings.EqualFold(strings.TrimSpace(s[settingNeedsSharedAccess]), "true") {
 		return true
 	}
-	if strings.TrimSpace(s[settingSharedAppDeps]) != "" {
-		return true
-	}
-	return strings.TrimSpace(s[settingClusterAppRef]) != ""
+	return hasNamedSharedCallee(s)
 }
 
-// sharedDeclaresCaller mirrors meshinagent.DeclaresSharedCaller without importing
-// meshinagent (import cycle). Shared apps must not issue JWT on B' alone.
+// sharedDeclaresCaller is the Shared-app gate for issuing caller-jwt: decide=true
+// or named callee refs only (needsSharedAccess alone is not enough). Kept in this
+// package because importing meshinagent would create a cycle.
 func sharedDeclaresCaller(settings map[string]string) bool {
-	if settings == nil {
+	if settings == nil || meshInjectOptedOut(settings) {
 		return false
 	}
 	if d := strings.TrimSpace(settings[settingSharedCallerDecide]); strings.EqualFold(d, "false") {
@@ -256,10 +255,28 @@ func sharedDeclaresCaller(settings map[string]string) bool {
 	if strings.EqualFold(strings.TrimSpace(settings[settingSharedCallerDecide]), "true") {
 		return true
 	}
+	return hasNamedSharedCallee(settings)
+}
+
+func meshInjectOptedOut(settings map[string]string) bool {
+	if settings == nil {
+		return false
+	}
+	v := strings.ToLower(strings.TrimSpace(settings[settingOptOutMesh]))
+	return v == "disabled" || v == "false"
+}
+
+func hasNamedSharedCallee(settings map[string]string) bool {
+	if settings == nil {
+		return false
+	}
 	if strings.TrimSpace(settings[settingSharedAppDeps]) != "" {
 		return true
 	}
-	return strings.TrimSpace(settings[settingClusterAppRef]) != ""
+	if strings.TrimSpace(settings[settingClusterAppRef]) != "" {
+		return true
+	}
+	return strings.TrimSpace(settings[settingAppRef]) != ""
 }
 
 func shouldIssueCallerJWT(app *appv1alpha1.Application) bool {
@@ -285,7 +302,7 @@ func issueRequestFromApplication(app *appv1alpha1.Application) IssueRequest {
 		AppRef:             app.Spec.Name,
 	}
 	if appcfg.IsShared(app) {
-		// Shared composite callers use appid identity; never put Owner into viewer.
+		// Shared callers authenticate as appid; do not put the user Owner into viewer.
 		req.Appid = strings.TrimSpace(app.Spec.Appid)
 		return req
 	}
