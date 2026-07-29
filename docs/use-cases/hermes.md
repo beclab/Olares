@@ -91,7 +91,7 @@ Run a quick setup to connect Hermes Agent to your local model.
     | API base URL  | Enter the **Base URL** you copied from the Model Console.<br>For example, `https://e46e044d.laresprime.olares.com/v1`.  |
     | API key  | Enter any text as a placeholder value, such as `local`.<br>The input remains hidden for security. |
     | Select API compatibility mode | Enter `1` to select **Auto-detect [current]**. This option uses Hermes URL heuristics and works best for standard OpenAI-compatible endpoints. |
-    | Use this model | Check that the detected model name is correct, and then enter `y`. |
+    | Use this model | Verify that the detected model name is correct, and then enter `y`. |
     | Context length in tokens | Leave this field blank to auto-detect.<br><br>**Note**: If your model's context window is less than `65536`, enter a value greater than `65536`. Hermes Agent requires a minimum context window of 64K tokens. |
     | Display name |  Enter a name to identify this model, such as `qwen3.6-27b-local`.|
     | Select terminal backend | Select **Local - run directly on this machine**. |
@@ -108,7 +108,7 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 The Terminal User Interface (TUI) runs directly in the Hermes CLI with no extra setup. It is ideal for quick tests.
 
-1. When the setup wizard completes, it shows the available commands:
+1. When the setup wizard completes, it shows `Ready to go` with the available commands:
 
     - `hermes`: Start chatting.
     - `hermes gateway`: Start the messaging gateway.
