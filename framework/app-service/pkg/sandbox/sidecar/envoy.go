@@ -375,6 +375,7 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig, injectMacvlan bo
 	cmd += fmt.Sprintf(`-A PROXY_OUTBOUND -o lo ! -d 127.0.0.1/32 -m owner --uid-owner 1555 -j PROXY_IN_REDIRECT
 -A PROXY_OUTBOUND -o lo -m owner ! --uid-owner 1555 -j RETURN
 -A PROXY_OUTBOUND -m owner --uid-owner 1555 -j RETURN
+-A PROXY_OUTBOUND -m owner --uid-owner %d -j RETURN
 -A PROXY_OUTBOUND -d 127.0.0.1/32 -j RETURN
 -A PROXY_OUTBOUND -p tcp -m multiport ! --dports 80,8080 -j RETURN
 -A PROXY_OUTBOUND -j PROXY_OUT_REDIRECT
@@ -383,6 +384,7 @@ func generateIptablesCommands(appCfg *appcfg.ApplicationConfig, injectMacvlan bo
 COMMIT
 EOF
 `,
+		constants.LinkerdProxyUID,
 		constants.EnvoyOutboundListenerPort,
 	)
 

@@ -27,6 +27,8 @@ const (
 	// value of the same header after successful authn (WI-OC-C2-01 T-C2-4 /
 	// eg_strip_spoofed_user_header). Do not accept client X-BFL-USER as identity.
 	CallerJWTViewerHeader        = "X-BFL-USER"
+	CallerJWTAppidClaim          = "olares.caller.appid"
+	CallerJWTAppidHeader         = "X-Shared-Appid"
 	CallerJWTJWKSServiceName     = "caller-jwt-jwks"
 	CallerJWTJWKSServiceNamespace = "os-framework"
 	CallerJWTJWKSServicePort     = int32(443)
@@ -49,11 +51,12 @@ func securityPolicyName(srr *srrv1alpha1.SharedRouteRegistry) string {
 // desiredSharedRouteSecurityPolicy builds the JWT authn SecurityPolicy for a
 // gateway-mode Shared HTTPRoute (WI-OC-C2-01 L1-b).
 //
-// Identity header contract (T-C2-4): claimToHeaders maps olares.viewer →
-// X-BFL-USER. Envoy Gateway overwrites a client-supplied X-BFL-USER with the
-// claim value after successful jwt_authn; failed/missing Bearer is fail-closed
-// (no upstream with a spoofed header). A separate requestHeaderModifier remove
-// is not required while EG claimToHeaders overwrite semantics hold.
+// Identity header contract (T-C2-4 / RR-1): claimToHeaders maps
+// olares.viewer → X-BFL-USER (ordinary callers) and olares.caller.appid →
+// X-Shared-Appid (Shared composite callers). EG only writes a header when the
+// claim is present, so ordinary and Shared JWTs remain mutually exclusive at
+// runtime (RR-8). Envoy Gateway overwrites client-supplied values of the same
+// header after successful jwt_authn; failed/missing Bearer is fail-closed.
 func desiredSharedRouteSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *unstructured.Unstructured {
 	routeName := httpRouteName(srr)
 	return &unstructured.Unstructured{Object: map[string]any{
@@ -91,6 +94,10 @@ func desiredSharedRouteSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *uns
 							map[string]any{
 								"claim":  CallerJWTViewerClaim,
 								"header": CallerJWTViewerHeader,
+							},
+							map[string]any{
+								"claim":  CallerJWTAppidClaim,
+								"header": CallerJWTAppidHeader,
 							},
 						},
 						"remoteJWKS": map[string]any{

@@ -22,6 +22,10 @@ const (
 
 	// FailClosedEnv tells the agent to reject traffic when no valid JWT is present.
 	FailClosedEnv = "MESH_IN_AGENT_FAIL_CLOSED"
+
+	// LabelSharedCallerOutbound optionally narrows mesh-in to workloads that
+	// initiate Shared calls. When absent, non-entrance pods of a caller app inject.
+	LabelSharedCallerOutbound = "gateway.olares.io/shared-caller-outbound"
 )
 
 // ApplicationDeclaresSharedAccess reports whether the app is a Shared caller
@@ -33,11 +37,16 @@ func ApplicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 	return DeclaresSharedCaller(app.Spec.Settings)
 }
 
-// ShouldInject reports whether the mesh-in agent should be injected into a pod.
-// Shared provider apps never receive the agent. Prefer persisted decide; else run Decide.
+// ShouldInject reports whether the mesh-in agent may be considered for a pod.
+// Shared apps inject only when DeclaresSharedCaller (decide=true or named edges);
+// eligibility-only (B′) is forbidden for Shared. Ordinary apps keep Decide/B′.
+// Entrance vs outbound gating is applied separately via AllowOutboundMeshIn.
 func ShouldInject(app *appv1alpha1.Application, isSharedApp bool) bool {
-	if isSharedApp || app == nil {
+	if app == nil {
 		return false
+	}
+	if isSharedApp {
+		return DeclaresSharedCaller(app.Spec.Settings)
 	}
 	if DeclaresSharedCaller(app.Spec.Settings) {
 		return true
@@ -47,6 +56,21 @@ func ShouldInject(app *appv1alpha1.Application, isSharedApp bool) bool {
 		name = app.Name
 	}
 	return Decide(name, app.Spec.Settings, DefaultRules()).Inject
+}
+
+// AllowOutboundMeshIn reports whether a pod that already passed ShouldInject
+// may receive mesh-in. Shared entrance / callee entry pods never get mesh-in.
+// When LabelSharedCallerOutbound is set, only the literal value "true" allows injection.
+func AllowOutboundMeshIn(isEntrancePod bool, podLabels map[string]string) bool {
+	if isEntrancePod {
+		return false
+	}
+	if podLabels != nil {
+		if v, ok := podLabels[LabelSharedCallerOutbound]; ok {
+			return strings.EqualFold(strings.TrimSpace(v), "true")
+		}
+	}
+	return true
 }
 
 // HasIntentOnly reports needsSharedAccess without named callees.

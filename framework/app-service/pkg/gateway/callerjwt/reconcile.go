@@ -19,6 +19,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 )
 
 const (
@@ -70,7 +72,7 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		klog.Errorf("callerjwt: reconcile application %s/%s failed: %v", app.Namespace, app.Name, err)
 		return reconcile.Result{}, err
 	}
-	if applicationDeclaresSharedAccess(app) {
+	if shouldIssueCallerJWT(app) {
 		return reconcile.Result{RequeueAfter: JWTRefreshInterval}, nil
 	}
 	return reconcile.Result{}, nil
@@ -80,10 +82,16 @@ func (r *IssuerReconciler) reconcileApplication(ctx context.Context, app *appv1a
 	if app == nil || app.Spec.Namespace == "" {
 		return nil
 	}
-	if !applicationDeclaresSharedAccess(app) {
+	if !shouldIssueCallerJWT(app) {
 		return deleteAppJWTSecret(ctx, r.Client, app.Spec.Namespace)
 	}
-	token, err := r.issuer.Issue(issueRequestFromApplication(app))
+	req := issueRequestFromApplication(app)
+	if appcfg.IsShared(app) && strings.TrimSpace(req.Appid) == "" {
+		err := fmt.Errorf("callerjwt: shared caller requires spec.appid")
+		klog.Warningf("caller_jwt_issue_fail app=%s ns=%s err=%v", app.Spec.Name, app.Spec.Namespace, err)
+		return err
+	}
+	token, err := r.issuer.Issue(req)
 	if err != nil {
 		klog.Warningf("caller_jwt_issue_fail app=%s ns=%s err=%v", app.Spec.Name, app.Spec.Namespace, err)
 		return err
@@ -236,6 +244,34 @@ func applicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 	return strings.TrimSpace(s[settingClusterAppRef]) != ""
 }
 
+// sharedDeclaresCaller mirrors meshinagent.DeclaresSharedCaller without importing
+// meshinagent (import cycle). Shared apps must not issue JWT on B' alone.
+func sharedDeclaresCaller(settings map[string]string) bool {
+	if settings == nil {
+		return false
+	}
+	if d := strings.TrimSpace(settings[settingSharedCallerDecide]); strings.EqualFold(d, "false") {
+		return false
+	}
+	if strings.EqualFold(strings.TrimSpace(settings[settingSharedCallerDecide]), "true") {
+		return true
+	}
+	if strings.TrimSpace(settings[settingSharedAppDeps]) != "" {
+		return true
+	}
+	return strings.TrimSpace(settings[settingClusterAppRef]) != ""
+}
+
+func shouldIssueCallerJWT(app *appv1alpha1.Application) bool {
+	if app == nil {
+		return false
+	}
+	if appcfg.IsShared(app) {
+		return sharedDeclaresCaller(app.Spec.Settings)
+	}
+	return applicationDeclaresSharedAccess(app)
+}
+
 func issueRequestFromApplication(app *appv1alpha1.Application) IssueRequest {
 	sa := strings.TrimSpace(app.Spec.Name)
 	if app.Spec.Settings != nil {
@@ -243,15 +279,18 @@ func issueRequestFromApplication(app *appv1alpha1.Application) IssueRequest {
 			sa = v
 		}
 	}
-	viewer := strings.TrimSpace(app.Spec.Owner)
-	// olares.entrance is the caller's entrance name for per-entrance policy.
-	// Do not map sharedAppDeps (callee refs) into this claim.
-	return IssueRequest{
+	req := IssueRequest{
 		Namespace:          app.Spec.Namespace,
 		ServiceAccountName: sa,
 		AppRef:             app.Spec.Name,
-		Viewer:             viewer,
 	}
+	if appcfg.IsShared(app) {
+		// Shared composite callers use appid identity; never put Owner into viewer.
+		req.Appid = strings.TrimSpace(app.Spec.Appid)
+		return req
+	}
+	req.Viewer = strings.TrimSpace(app.Spec.Owner)
+	return req
 }
 
 func upsertAppJWTSecret(ctx context.Context, c client.Client, scheme *runtime.Scheme, app *appv1alpha1.Application, token string) error {

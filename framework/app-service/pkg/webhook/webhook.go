@@ -514,12 +514,16 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 	if err != nil {
 		return false, false, false, false, false, nil, perms, nil, nil, err
 	}
+	isEntrancePod := injectSharedPod != nil && *injectSharedPod
+	if injectMeshInAgent && !meshinagent.AllowOutboundMeshIn(isEntrancePod, pod.GetLabels()) {
+		injectMeshInAgent = false
+	}
 	injectMeshOutAgent = meshoutagent.ShouldInject(isShared, perms)
 	return
 }
 
 func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isShared bool) (bool, error) {
-	if appConfig == nil || isShared {
+	if appConfig == nil {
 		return false, nil
 	}
 	applicationName, err := apputils.FmtAppMgrName(appConfig.AppName, appConfig.OwnerName, ns)

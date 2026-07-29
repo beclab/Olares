@@ -25,6 +25,7 @@ const (
 	ClaimAppRef         = "olares.caller.appRef"
 	ClaimEntrance       = "olares.entrance"
 	ClaimViewer         = "olares.viewer"
+	ClaimAppid          = "olares.caller.appid"
 	AppJWTSecretName    = "caller-jwt"
 	AppJWTSecretDataKey = "token"
 	IssuerKeysSecretName = "caller-jwt-issuer-keys"
@@ -36,12 +37,14 @@ const (
 )
 
 // IssueRequest carries workload identity inputs for a caller JWT-SVID (WI-OC-C2-01).
+// Ordinary callers set Viewer; Shared composite callers set Appid and leave Viewer empty.
 type IssueRequest struct {
 	Namespace          string
 	ServiceAccountName string
 	AppRef             string
 	Entrance           string
 	Viewer             string
+	Appid              string
 	TTL                time.Duration
 }
 
@@ -51,6 +54,7 @@ type Claims struct {
 	AppRef   string `json:"olares.caller.appRef"`
 	Entrance string `json:"olares.entrance,omitempty"`
 	Viewer   string `json:"olares.viewer,omitempty"`
+	Appid    string `json:"olares.caller.appid,omitempty"`
 }
 
 // KeyPair holds one RS256 signing key and its JWKS key ID.
@@ -121,6 +125,9 @@ func (i *Issuer) Issue(req IssueRequest) (string, error) {
 	}
 	if v := strings.TrimSpace(req.Viewer); v != "" {
 		claims.Viewer = v
+	}
+	if v := strings.TrimSpace(req.Appid); v != "" {
+		claims.Appid = v
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = i.keys.Active.KID
