@@ -87,7 +87,7 @@ Use this method to run Claude Code locally. This example uses the model app **Qw
    - **ANTHROPIC_BASE_URL**: Enter the **Base URL** you copied from the Model Console. For example, `https://e46e044d.laresprime.olares.com`.
    - **ANTHROPIC_MODEL**: Enter the **Model name** you copied from the Model Console. For example, `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
 
-   ![Claude Code environment variables settings](/images/manual/use-cases/claude-env-var1.png#bordered){width=70%}  
+   ![Claude Code environment variables settings](/images/manual/use-cases/claude-env-var1.png#bordered){width=70%}
 
 7. Click **Apply**. Wait about 10 seconds for the container to restart.
 8. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
@@ -107,7 +107,7 @@ The following examples demonstrate how to interact with Claude Code to complete 
    ```
 
 2. Choose the text style that looks best with your terminal, such as dark mode.
-3. Review the security notes,  and then press **Enter** to continue.
+3. Review the security notes, and then press **Enter** to continue.
 4. Review the **Accessing workspace: /opt/data** security prompt, and then select **Yes, I trust this folder** to grant Claude Code read, edit, and execute permissions.
 5. (Optional) In the TUI, run the `/clear` command to start a new session with empty context.
 
@@ -149,7 +149,7 @@ The following example demonstrates how to build a lightweight "Hello Olares" web
 
 2. Wait for Claude Code to process the prompt. The assistant automatically initializes the project, installs Express, writes the code, starts the server, and performs a live curl integration check.
 3. When the assistant prompts you for permission to proceed, select **Yes, and don't ask again...**. You might need to approve several prompts for different types of actions.
-4.	Review the final summary report returned by the assistant. It outlines the newly created project structure, the configured backend API, the frontend setup, and the successful curl test results.
+4. Review the final summary report returned by the assistant. It outlines the newly created project structure, the configured backend API, the frontend setup, and the successful curl test results.
 
       ![Claude Code coding project result](/images/manual/use-cases/claude-code-report.png#bordered)
 
