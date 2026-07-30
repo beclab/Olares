@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, OpenCode, oh-my-openagent, OMO, multi-agent, AI coding agent, ultrawork, MCP, self-hosted
 app_version: "1.0.10"
-doc_version: "1.0"
-doc_updated: "2026-04-21"
+doc_version: "1.1"
+doc_updated: "2026-07-29"
 ---
 
 :::warning
@@ -19,65 +19,40 @@ doc_updated: "2026-04-21"
 oh-my-openagent (OMO) 是 OpenCode 的多模型代理编排插件。启用后，你可以在 OpenCode 中使用关键词 `ultrawork`（或别名 `ulw`）触发多代理协作。Sisyphus、Hephaestus、Oracle 和 Atlas 等专业代理分工协作，共同处理复杂的编码任务。
 
 :::warning
-本指南侧重于本地模型设置。与付费云模型相比，完全在本地模型上运行 OMO 会明显降低编排质量和多代理协作速度。对于实际工作，我们推荐混合设置：为主代理使用付费云模型，为子代理使用 Ollama 本地模型。
+本指南侧重于本地模型设置。与付费云模型相比，完全在本地模型上运行 OMO 会明显降低编排质量和多代理协作速度。对于实际工作，我们推荐混合设置：为主代理使用付费云模型，为子代理使用本地模型。
 :::
 
 ## 学习目标
 
 在本教程结束时，你将学习如何：
 - 在 Olares 上的 OpenCode 中启用 OMO。
-- 将 OMO 配置为与本地 Ollama 模型、云模型或两者混合使用。
+- 将 OMO 配置为与本地模型、云模型或两者混合使用。
 - 使用 `ultrawork` 关键词触发多代理协作。
 - 使用内置的 context7、grep_app 和 websearch MCP 服务器。
 - 将文档查询路由到自托管的 Context7， alongside OMO。
 
 ## 前提条件
+
+开始前，你需要：
+
 - 你的 Olares 设备必须具有互联网访问权限。
 - 在 Olares 上[安装 OpenCode](opencode.md)，chart 版本 1.0.6 或更高。
-- 支持工具使用的本地模型，[已连接到 OpenCode](opencode.md#connect-to-a-custom-provider)。本指南以 Qwen3.5 27B Q4_K_M 和 Qwen3.5 9B Q4_K_M 为例。在 Olares 中，这些模型中的每一个都是单独的单一模型应用，因此你需要将它们添加为两个模型提供方。
+- 以下模型：
 
-  :::details 模型提供方配置
+  | 用途 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 核心代理 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 轻量子代理 | Qwen3.5-9B (Ollama) | [通过 Ollama Engine Base 应用创建](llm-base-apps.md#创建新的模型实例) |
 
-  ```json
-  {
-    "$schema": "https://opencode.ai/config.json",
-    "disabled_providers": [],
-    "provider": {
-      "ollama-27b": {
-        "name": "Olares Ollama Qwen3.5 27B",
-        "npm": "@ai-sdk/openai-compatible",
-        "models": {
-          "qwen3.5:27b-q4_K_M": {
-            "name": "Qwen3.5 27B"
-          }
-        },
-        "options": {
-          "baseURL": "http://94a553e00.shared.olares.com/v1"
-        }
-      },
-      "ollama-9b": {
-        "name": "Olares Ollama Qwen3.5 9B",
-        "npm": "@ai-sdk/openai-compatible",
-        "models": {
-          "qwen3.5:9b": {
-            "name": "Qwen3.5 9B"
-          }
-        },
-        "options": {
-          "baseURL": "http://bd5355000.shared.olares.com/v1"
-        }
-      }
-    }
-  }
-  ```
+配置 OMO 前，请先[将两个模型连接到 OpenCode](opencode.md#连接到自定义提供方)。
 
-  :::
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
-  :::info 模型能力要求
-  - 参数少于 7B 的本地模型通常无法正确处理 `tool_use` 或结构化输出。避免将它们用于任何代理。
-  - 建议上下文窗口至少为 32K token。核心代理（Sisyphus、Hephaestus、Prometheus、Atlas）使用 64K 或更多时效果更好。
-  - 本地模型，尤其是 Qwen 系列，有时无法正确生成 `write` 工具调用。这是已知的 Ollama 限制。
-  :::
+:::info 模型能力要求
+- 参数少于 7B 的本地模型通常无法正确处理 `tool_use` 或结构化输出。避免将它们用于任何代理。
+- 建议上下文窗口至少为 32K token。核心代理（Sisyphus、Hephaestus、Prometheus、Atlas）使用 64K 或更多时效果更好。
+- 本地模型有时无法正确生成 `write` 工具调用。
+:::
 
 ## 了解 Olares 上的 OMO
 
@@ -163,186 +138,336 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
 
 ### 配置本地模型
 
-编辑 `~/.config/opencode/oh-my-openagent.json`，使 OMO 将子代理工作委托给你的本地 Ollama 模型。你可以在以下两种情况下跳过此步骤：
+配置 `~/.config/opencode/oh-my-openagent.json`，让 OMO 将任务委派给本地模型。以下两种情况可以跳过本节：
 
-- **仅云**：你只计划使用云模型。在 OpenCode **Providers** 下添加你的 API key，然后继续。
-- **仅免费回退**：你不想付费或自托管模型。OMO 使用 OpenCode 附带的免费回退模型，但预计响应会更慢且有限额。
+- **仅使用云模型**：在 OpenCode 的**提供方**中添加 API 密钥并使用云模型。
+- **仅使用免费回退模型**：使用 OpenCode 自带的免费回退模型，但响应速度可能较慢，并受到额度限制。
+
+OMO 在两个位置使用模型：
+
+- **主代理**：在 OpenCode 模型选择器中单独选择模型。本节不会更改该选择。
+- **子代理和任务类别**：将 Qwen3.6-27B 分配给核心代理和高负载任务，将 Qwen3.5-9B 用于 Explore、Librarian 和轻量任务。
 
 :::tip 需要重启
-每次编辑 `oh-my-openagent.json` 后重启 OpenCode 以应用更改。
+每次编辑 `oh-my-openagent.json` 后，都需重启 OpenCode 才能使更改生效。
 :::
 
-1. 打开 Olares Files，导航到 `Application/Data/opencode/.config/opencode/`，并找到 `oh-my-openagent.json`。
-   ![Locate oh-my-openagent.json](/images/manual/use-cases/opencode-config-file.png#bordered)
+1. 打开文件管理器，前往 `Application/Data/opencode/.config/opencode/`，找到 `oh-my-openagent.json`。
 
-2. 打开 `oh-my-openagent.json` 并点击 <i class="material-symbols-outlined">edit_square</i> 打开编辑器。
+   ![找到 oh-my-openagent.json](/images/manual/use-cases/opencode-config-file.png#bordered)
 
-3. 更新 `agents` 部分，使子代理委托使用你的本地 Ollama 模型：
+2. 打开 `oh-my-openagent.json`，点击 <i class="material-symbols-outlined">edit_square</i> 进入编辑模式。
+3. 更新 `agents` 部分，让子代理委派使用本地模型：
 
-   a. 将每个代理的 `model` 字段指向你的 Ollama 模型。模型名称必须包含提供方前缀，该前缀必须与你在 `opencode.json` 中定义的提供方名称匹配。
+   a. 设置每个代理的 `model` 字段。该值必须包含 OpenCode 中使用的 provider 前缀，后接准确的模型名称。
 
-   b. 为每个代理添加 `"stream": false`。
+   b. 将 Qwen3.6-27B 分配给核心代理，将 Qwen3.5-9B 分配给 Explore 和 Librarian。为使用 Ollama 模型的代理添加 `"stream": false`。
 
-   例如，如果你的提供方名为 `ollama-27b` 和 `ollama-9b`：
+   例如，如果 provider 名称分别为 `qwen3.6-27b` 和 `qwen3.5-9b`：
 
    ```json
    {
      "agents": {
-       "sisyphus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "hephaestus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "prometheus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "atlas": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "explore": { "model": "ollama-9b/qwen3.5:9b", "stream": false },
-       "librarian": { "model": "ollama-9b/qwen3.5:9b", "stream": false }
+       "sisyphus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+       "hephaestus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+       "prometheus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+       "atlas": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+       "explore": { "model": "qwen3.5-9b/qwen3.5:9b", "stream": false },
+       "librarian": { "model": "qwen3.5-9b/qwen3.5:9b", "stream": false }
      }
    }
    ```
 
    :::info `"stream": false` 要求
-   Ollama 的流式模式返回 NDJSON，SDK 无法解析。使用工具的代理（尤其是 Librarian 和 Explore）如果缺少 `"stream": false`，会静默回退到链中的下一个模型。这是已知的 Ollama 限制。
+   Ollama 的流式模式返回 SDK 无法解析的 NDJSON。如果缺少 `"stream": false`，使用工具的代理，尤其是 Librarian 和 Explore，会静默回退到模型链中的下一个模型。这是 Ollama 的已知限制。
    :::
 
-4. 在 `categories` 部分，更新每个类别的 `model` 和 `fallback_models` 列表，使本地模型排在前面。例如：
-  ```json
-   "categories": {
-     "visual-engineering": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-     "ultrabrain": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-   }
-   ```
+4. 在 `categories` 部分，为 `quick` 和 `writing` 使用 Qwen3.5-9B，其他类别使用 Qwen3.6-27B。保留现有的 `fallback_models` 条目。例如：
 
-  :::details `categories` 部分
-   ```json
-   "categories": {
-     "visual-engineering": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" },
-         { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
-         { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
-         { "model": "anthropic/claude-opus-4-6", "variant": "max" },
-         { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
-         { "model": "opencode/big-pickle" }
-       ]
-     },
-     "ultrabrain": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" },
-         { "model": "openai/gpt-5.4", "variant": "xhigh" },
-         { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
-         { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
-         { "model": "anthropic/claude-opus-4-6", "variant": "max" },
-         { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
-         { "model": "opencode/big-pickle" }
-       ]
-     },
-     "deep": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" },
-         { "model": "openai/gpt-5.4", "variant": "medium" },
-         { "model": "github-copilot/gpt-5.4", "variant": "medium" },
-         { "model": "anthropic/claude-opus-4-6", "variant": "max" },
-         { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
-         { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
-         { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
-         { "model": "opencode/big-pickle" }
-       ]
-     },
-     "artistry": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" },
-         { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
-         { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
-         { "model": "anthropic/claude-opus-4-6", "variant": "max" },
-         { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
-         { "model": "openai/gpt-5.4" },
-         { "model": "github-copilot/gpt-5.4" },
-         { "model": "opencode/big-pickle" }
-       ]
-     },
-     "quick": {
-       "model": "ollama-9b/qwen3.5:9b",
-       "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-         { "model": "openai/gpt-5.4-mini" },
-         { "model": "github-copilot/gpt-5.4-mini" },
-         { "model": "anthropic/claude-haiku-4-5" },
-         { "model": "github-copilot/claude-haiku-4.5" },
-         { "model": "google/gemini-3-flash-preview" },
-         { "model": "github-copilot/gemini-3-flash-preview" },
-         { "model": "opencode/gpt-5-nano" }
-       ]
-     },
-     "unspecified-low": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" },
-         { "model": "anthropic/claude-sonnet-4-6" },
-         { "model": "github-copilot/claude-sonnet-4.6" },
-         { "model": "openai/gpt-5.3-codex", "variant": "medium" },
-         { "model": "google/gemini-3-flash-preview" },
-         { "model": "github-copilot/gemini-3-flash-preview" },
-         { "model": "opencode/big-pickle" }
-       ]
-     },
-     "unspecified-high": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" },
-         { "model": "anthropic/claude-sonnet-4-6" },
-         { "model": "github-copilot/claude-sonnet-4.6" },
-         { "model": "openai/gpt-5.3-codex", "variant": "medium" },
-         { "model": "google/gemini-3-flash-preview" },
-         { "model": "github-copilot/gemini-3-flash-preview" },
-         { "model": "opencode/big-pickle" }
-       ]
-     },
-     "writing": {
-       "model": "ollama-9b/qwen3.5:9b",
-       "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-         { "model": "google/gemini-3-flash-preview" },
-         { "model": "github-copilot/gemini-3-flash-preview" },
-         { "model": "anthropic/claude-sonnet-4-6" },
-         { "model": "github-copilot/claude-sonnet-4.6" },
-         { "model": "opencode/big-pickle" }
-       ]
-     }
-   }
-   ```
-  :::
-5. 在同一文件中添加并发限制。本地 Ollama 服务器资源有限，多个代理同时访问它可能会耗尽 VRAM 或导致显著减速。
-
-   ```json
+   ```jsonc
    {
-     "background_task": {
-       "providerConcurrency": {
-         "ollama-27b": 1,
-         "ollama-9b": 1
+     "categories": {
+       "visual-engineering": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           // 保留现有的 fallback 条目
+         ]
        },
-       "modelConcurrency": {
-         "ollama-27b/qwen3.5:27b-q4_K_M": 1,
-         "ollama-9b/qwen3.5:9b": 2
+       "quick": {
+         "model": "qwen3.5-9b/qwen3.5:9b",
+         "fallback_models": [
+           // 保留现有的 fallback 条目
+         ]
+       },
+       "writing": {
+         "model": "qwen3.5-9b/qwen3.5:9b",
+         "fallback_models": [
+           // 保留现有的 fallback 条目
+         ]
        }
      }
    }
    ```
 
-   这将大型模型限制为一个并发请求，并防止内存不足崩溃。
+  :::details `categories` 部分
+   ```json
+   {
+     "categories": {
+       "visual-engineering": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "google/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "github-copilot/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "anthropic/claude-opus-4-6",
+             "variant": "max"
+           },
+           {
+             "model": "github-copilot/claude-opus-4.6",
+             "variant": "max"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "ultrabrain": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "openai/gpt-5.4",
+             "variant": "xhigh"
+           },
+           {
+             "model": "google/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "github-copilot/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "anthropic/claude-opus-4-6",
+             "variant": "max"
+           },
+           {
+             "model": "github-copilot/claude-opus-4.6",
+             "variant": "max"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "deep": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "openai/gpt-5.4",
+             "variant": "medium"
+           },
+           {
+             "model": "github-copilot/gpt-5.4",
+             "variant": "medium"
+           },
+           {
+             "model": "anthropic/claude-opus-4-6",
+             "variant": "max"
+           },
+           {
+             "model": "github-copilot/claude-opus-4.6",
+             "variant": "max"
+           },
+           {
+             "model": "google/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "github-copilot/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "artistry": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "google/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "github-copilot/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "anthropic/claude-opus-4-6",
+             "variant": "max"
+           },
+           {
+             "model": "github-copilot/claude-opus-4.6",
+             "variant": "max"
+           },
+           {
+             "model": "openai/gpt-5.4"
+           },
+           {
+             "model": "github-copilot/gpt-5.4"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "quick": {
+         "model": "qwen3.5-9b/qwen3.5:9b",
+         "fallback_models": [
+           {
+             "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
+           },
+           {
+             "model": "openai/gpt-5.4-mini"
+           },
+           {
+             "model": "github-copilot/gpt-5.4-mini"
+           },
+           {
+             "model": "anthropic/claude-haiku-4-5"
+           },
+           {
+             "model": "github-copilot/claude-haiku-4.5"
+           },
+           {
+             "model": "google/gemini-3-flash-preview"
+           },
+           {
+             "model": "github-copilot/gemini-3-flash-preview"
+           },
+           {
+             "model": "opencode/gpt-5-nano"
+           }
+         ]
+       },
+       "unspecified-low": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "anthropic/claude-sonnet-4-6"
+           },
+           {
+             "model": "github-copilot/claude-sonnet-4.6"
+           },
+           {
+             "model": "openai/gpt-5.3-codex",
+             "variant": "medium"
+           },
+           {
+             "model": "google/gemini-3-flash-preview"
+           },
+           {
+             "model": "github-copilot/gemini-3-flash-preview"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "unspecified-high": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "anthropic/claude-sonnet-4-6"
+           },
+           {
+             "model": "github-copilot/claude-sonnet-4.6"
+           },
+           {
+             "model": "openai/gpt-5.3-codex",
+             "variant": "medium"
+           },
+           {
+             "model": "google/gemini-3-flash-preview"
+           },
+           {
+             "model": "github-copilot/gemini-3-flash-preview"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "writing": {
+         "model": "qwen3.5-9b/qwen3.5:9b",
+         "fallback_models": [
+           {
+             "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
+           },
+           {
+             "model": "google/gemini-3-flash-preview"
+           },
+           {
+             "model": "github-copilot/gemini-3-flash-preview"
+           },
+           {
+             "model": "anthropic/claude-sonnet-4-6"
+           },
+           {
+             "model": "github-copilot/claude-sonnet-4.6"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       }
+     }
+   }
+   ```
+  :::
+
+5. 为两个本地模型添加并发限制：
+
+   ```json
+   {
+     "background_task": {
+       "providerConcurrency": {
+         "qwen3.6-27b": 1,
+         "qwen3.5-9b": 1
+       },
+       "modelConcurrency": {
+         "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M": 1,
+         "qwen3.5-9b/qwen3.5:9b": 2
+       }
+     }
+   }
+   ```
+
+   这样会将大模型限制为一个并发请求，同时允许轻量模型最多处理两个请求。
 
   :::details 本地模型的 `oh-my-openagent.json`
 
@@ -354,18 +479,18 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
       "max_fallback_attempts": 7
     },
     "agents": {
-      "sisyphus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-      "hephaestus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-      "prometheus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-      "atlas": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-      "explore": { "model": "ollama-9b/qwen3.5:9b", "stream": false },
-      "librarian": { "model": "ollama-9b/qwen3.5:9b", "stream": false }
+      "sisyphus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+      "hephaestus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+      "prometheus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+      "atlas": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+      "explore": { "model": "qwen3.5-9b/qwen3.5:9b" },
+      "librarian": { "model": "qwen3.5-9b/qwen3.5:9b" }
     },
     "categories": {
       "visual-engineering": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -374,9 +499,9 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
         ]
       },
       "ultrabrain": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "openai/gpt-5.4", "variant": "xhigh" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
@@ -386,9 +511,9 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
         ]
       },
       "deep": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "openai/gpt-5.4", "variant": "medium" },
           { "model": "github-copilot/gpt-5.4", "variant": "medium" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -399,9 +524,9 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
         ]
       },
       "artistry": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -412,9 +537,9 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
         ]
       },
       "quick": {
-        "model": "ollama-9b/qwen3.5:9b",
+        "model": "qwen3.5-9b/qwen3.5:9b",
         "fallback_models": [
-          { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
+          { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
           { "model": "openai/gpt-5.4-mini" },
           { "model": "github-copilot/gpt-5.4-mini" },
           { "model": "anthropic/claude-haiku-4-5" },
@@ -425,9 +550,9 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
         ]
       },
       "unspecified-low": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "anthropic/claude-sonnet-4-6" },
           { "model": "github-copilot/claude-sonnet-4.6" },
           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
@@ -437,9 +562,9 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
         ]
       },
       "unspecified-high": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "anthropic/claude-sonnet-4-6" },
           { "model": "github-copilot/claude-sonnet-4.6" },
           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
@@ -449,9 +574,9 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
         ]
       },
       "writing": {
-        "model": "ollama-9b/qwen3.5:9b",
+        "model": "qwen3.5-9b/qwen3.5:9b",
         "fallback_models": [
-          { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
+          { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
           { "model": "google/gemini-3-flash-preview" },
           { "model": "github-copilot/gemini-3-flash-preview" },
           { "model": "anthropic/claude-sonnet-4-6" },
@@ -462,24 +587,25 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
     },
     "background_task": {
       "providerConcurrency": {
-        "ollama-27b": 1,
-        "ollama-9b": 1
+        "qwen3.6-27b": 1,
+        "qwen3.5-9b": 1
       },
       "modelConcurrency": {
-        "ollama-27b/qwen3.5:27b-q4_K_M": 1,
-        "ollama-9b/qwen3.5:9b": 2
+        "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M": 1,
+        "qwen3.5-9b/qwen3.5:9b": 2
       }
     }
   }
   ```
 
   :::
+
 6. 保存文件。
-7. 重启 OpenCode 以应用更改。
+7. 重启 OpenCode：
 
-   a. 打开 Settings 并导航到 **Applications** > **OpenCode**。
+   a. 打开设置，前往**应用** > **OpenCode**。
 
-   b. 点击 **Stop**，然后 **Resume**。
+   b. 点击**停止**，然后点击**恢复**。
 
 
 ### 确认插件已加载

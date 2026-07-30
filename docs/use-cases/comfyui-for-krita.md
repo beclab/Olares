@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, ComfyUI, Krita, AI art, digital painting, Krita AI Diffusion, image generation
 app_version: "1.0.21"
-doc_version: "1.0"
-doc_updated: "2026-03-20"
+doc_version: "1.1"
+doc_updated: "2026-07-28"
 ---
 
 # Create AI art with ComfyUI and Krita
@@ -24,7 +24,7 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- A working Olares installation with [ComfyUI Shared installed and running](comfyui.md).
+- [ComfyUI installed](comfyui.md) on Olares with the service running.
 - [Krita](https://krita.org/en/download/) installed on your computer.
 - Sufficient system resources on your Olares device to download models.
 
@@ -36,14 +36,15 @@ Open ComfyUI Launcher and click **START** to make sure the service is running.
 You can set the GPU mode to **Exclusive** and assign ComfyUI full GPU access in **Settings** > **Accelerator** to ensure maximum performance.
 :::
 
-## Get the endpoint for ComfyUI
+## Get ComfyUI connection details
 
-1. On Olares, open Settings, then go to **Application** > **ComfyUI Shared**.
-2. Under **Entrances**, click **ComfyUI**.
-3. Make sure its **Authentication level** is set to **Internal**.
-4. Next to **Endpoint**, click <i class="material-symbols-outlined">content_copy</i> to copy the endpoint URL displayed.
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-   ![Set up endpoint](/images/manual/use-cases/comfyui-set-up-endpoint1.png#bordered){width=90%}
+For ComfyUI:
+
+1. Go to Olares **Settings** > **Applications** > **ComfyUI** > **Entrances**.
+2. Select **ComfyUI** and set **Authentication level** to **Internal**.
+3. Copy the **Endpoint** URL.
 
 ## Download and enable AI Diffusion plugin
 1. Download the [Krita AI Diffusion plugin](https://github.com/Acly/krita-ai-diffusion/releases).
@@ -297,7 +298,7 @@ If Krita shows a connection error:
 | Check | What to do |
 |:------|:-----------|
 | Network connectivity | Make sure your computer and Olares are on the same network. |
-| ComfyUI authentication level | In **Settings** > **Application** > **ComfyUI Shared**, confirm it is set to **Internal**. |
+| ComfyUI authentication level | In **Settings** > **Applications** > **ComfyUI** > **Entrances** > **ComfyUI**, confirm it is set to **Internal**. |
 | LarePass VPN for `.com` URLs | Enable **VPN connection** in the LarePass desktop app. |
 | Interfering proxy/VPN | Temporarily disable other VPN or proxy software. |
 | ComfyUI service status | Open ComfyUI Launcher and verify the service is **Running**. |

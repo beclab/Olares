@@ -7,8 +7,8 @@ head:
     - name: keywords
       content: Olares, FlareSolverr, Prowlarr, Cloudflare, indexer, proxy, self-hosted
 app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-04-03"
+doc_version: "1.1"
+doc_updated: "2026-07-28"
 ---
 
 :::warning
@@ -54,12 +54,14 @@ FlareSolverr 作为后台服务运行，因此不会出现在 Launchpad 上。
 
 ## 在 Prowlarr 中配置 FlareSolverr
 
-### 获取 FlareSolverr API 地址
+### 获取 FlareSolverr Endpoint
 
-1. 打开 Settings，然后导航至 **Applications** > **FlareSolverr**。
-2. 在 **Entrances** 下，点击 **FlareSolverr**。
-3. 在 **Endpoint settings** 下，找到 API 端点，然后点击 <i class="material-symbols-outlined">content_copy</i> 复制地址。
-   ![FlareSolverr 入口](/images/manual/use-cases/flaresolverr-endpoint.png#bordered){width=80%}
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
+
+对于 FlareSolverr：
+
+1. 前往 Olares **Settings** > **Applications** > **FlareSolverr** > **Entrances**。
+2. 选择 **FlareSolverr**，然后复制 **Endpoint** URL。
 
 ### 将 FlareSolverr 添加为索引器代理
 
@@ -74,7 +76,7 @@ FlareSolverr 作为后台服务运行，因此不会出现在 Launchpad 上。
 
 4. 配置代理设置：
     - **Tags**：输入小写标签名称，例如 `flaresolverr`。Prowlarr 使用此标签来决定哪些索引器应通过 FlareSolverr 路由请求。
-    - **Host**：粘贴你之前复制的 FlareSolverr API 地址。
+    - **Host**：粘贴你之前复制的 FlareSolverr Endpoint。
 5. 点击齿轮图标，将 **Request Timeout** 设为 `180` 秒。
 6. 点击 **Test** 验证连接，然后点击 **Save**。
    ![FlareSolverr 代理设置](/images/manual/use-cases/prowlarr-flaresolverr-settings.png#bordered){width=80%}

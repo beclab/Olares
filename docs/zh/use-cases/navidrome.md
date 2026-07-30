@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Navidrome, self-hosted spotify, home music server, self-hosted music server, Subsonic, navidrome on synology, navidrome on olares
 app_version: "1.0.0"
-doc_version: "1.0"
-doc_updated: "2026-05-26"
+doc_version: "1.1"
+doc_updated: "2026-07-29"
 ---
 
 :::warning
@@ -85,36 +85,37 @@ Navidrome 自动扫描音乐文件夹。如果新上传的歌曲没有出现，�
 
 ## 连接移动音乐客户端
 
-要从手机流媒体播放，请允许客户端访问 Navidrome，启用 LarePass VPN，并从 Subsonic 兼容客户端登录。
+要从手机流媒体播放，请获取 Navidrome Endpoint、启用 LarePass VPN，并从 Subsonic 兼容客户端登录。
 
-1. 更新 Navidrome 的访问策略并复制其端点：
+### 获取 Navidrome Endpoint
 
-   a. 打开 **设置**，然后前往 **应用** > **Navidrome**。
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-   b. 在 **入口** 下，点击 **Navidrome**。
+对于 Navidrome：
 
-   c. 将 **认证级别** 设置为 **内部**，然后点击 **提交**。
+1. 前往 Olares **Settings** > **Applications** > **Navidrome** > **Entrances**。
+2. 选择 **Navidrome**，然后复制 **Endpoint** URL。
 
-   d. 在 **端点设置** 下，复制 **端点** 中显示的 URL。
+在移动客户端中，将该 Endpoint 用作 **Host address**。
 
-   ![将 Navidrome 认证级别设置为内部](/images/manual/use-cases/alex-navidrome-endpoint.png#bordered){width=95%}
+### 通过 Stream Music 连接
 
-2. 在手机上启用 LarePass VPN。
+1. 在手机上启用 LarePass VPN。
 
    ![在移动设备上启用 LarePass VPN](/images/manual/get-started/larepass-vpn-mobile.png#bordered){width=95%}
 
-3. 在手机上打开 Stream Music，然后选择连接 Navidrome 的选项。
+2. 在手机上打开 Stream Music，然后选择连接 Navidrome 的选项。
 
    ![将 Stream Music 连接到 Navidrome](/images/manual/use-cases/navidrome-music-stream-connect.png#bordered){width=95%}
 
-4. 在登录页面，输入你的信息：
-   - **主机地址**：你从 Olares 设置复制的 Navidrome 端点。
-   - **用户名**：你的 Navidrome 用户名。
-   - **密码**：你的 Navidrome 密码。
+3. 在登录页面，输入以下信息：
+   - **Host address**：从 Olares Settings 复制的 Navidrome Endpoint。
+   - **Username**：Navidrome 用户名。
+   - **Password**：Navidrome 密码。
 
    ![登录 Navidrome](/images/manual/use-cases/navidrome-log-in.png#bordered){width=95%}
 
-5. 点击 **登录**。
+4. 点击 **Login**。
 
 当应用显示登录成功消息时，返回主页。你的 Navidrome 库应该出现在移动客户端中。
 

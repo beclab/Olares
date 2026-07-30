@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Karakeep, Hoarder, bookmark manager, self-hosted, AI auto-tag, mobile app, Ollama, video download
 app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-05-15"
+doc_version: "1.1"
+doc_updated: "2026-07-29"
 ---
 
 # Save and organize bookmarks with Karakeep
@@ -26,6 +26,14 @@ In this guide, you will learn how to:
 - Enable AI auto-tagging with a local model.
 - Enable video downloads for bookmarked links.
 - Configure SMTP for email invitations.
+
+## Prerequisites
+
+To complete the AI auto-tagging section, prepare the following model:
+
+| Model type | Model | How to get it |
+| :--- | :--- | :--- |
+| Chat | Gemma 4 26B (Ollama) | Install from Market |
 
 ## Install Karakeep
 
@@ -76,13 +84,11 @@ Use a strong account password and keep your API key secure.
 
 ### Get your Karakeep endpoint URL
 
-On the same **Entrances** page, copy the endpoint URL shown for Karakeep. For example:
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-```text
-https://abc123.{username}.olares.com
-```
+On the same **Entrances** page, copy the **Endpoint** URL shown for Karakeep.
 
-Save this URL for later.
+Use this Endpoint as the **Server Address** in the Karakeep mobile app.
 
 ### Generate an API key
 
@@ -102,7 +108,7 @@ Save this URL for later.
 2. Open the Karakeep app, and then select **Use API key instead**.
 3. Enter your details:
 
-   - **Server Address**: Paste the endpoint URL you copied earlier.
+   - **Server Address**: Paste the Karakeep Endpoint you copied earlier.
    - **API Key**: Paste the API key you generated.
 
 4. Tap **Sign in**. You can now save images and links from your phone.
@@ -113,43 +119,30 @@ Karakeep also supports browser extensions and other clients. For the full list, 
 
 ## Auto-tag bookmarks with a local model
 
-Karakeep can use a local model hosted on Olares to generate tags for your saved content. This guide uses Qwen3.5 27B Q4_K_M (Ollama) as the text model.
+Karakeep can use a local model hosted on Olares to generate tags for your saved content. It currently connects to local models through the Ollama API.
 
-### Prerequisites
+This guide uses the pre-built Gemma 4 26B (Ollama) model app from Market.
 
-- A local model app installed from Market with the model fully downloaded. For image tagging, also install [Ollama](ollama.md) and pull a vision model such as `llava`.
+### Get the model connection details
 
-### Get the model endpoint and name
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-1. Open your model app from the Launchpad. The model name appears on the page (for example, `qwen3.5:27b-q4_K_M`). Note it for later.
+For Gemma 4 26B (Ollama):
 
-   ![Get model name](/images/manual/use-cases/deerflow2-get-model-name.png#bordered)
+1. Open the model app from Launchpad. Its Model Console opens automatically.
+2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
+3. Under **Service status**, select **Apps in Olares** and **Ollama**, then copy the **Model name** and **Base URL** exactly as shown.
 
-2. Open Settings, and then go to **Applications** > **Qwen3.5 27B Q4_K_M (Ollama)**.
-3. Under **Shared entrances**, select the model app to view the endpoint URL.
-
-   ![Get shared endpoint](/images/manual/use-cases/ollama-shared.png#bordered){width=70%}
-
-4. Copy the shared endpoint. For example:
-
-   ```text
-   http://94a553e00.shared.olares.com
-   ```
+   ![Gemma4-26B model console](/images/manual/use-cases/gemma4-26b-model-console.png#bordered){width=90%}
 
 ### Connect Karakeep to the local model
 
 1. Open Settings, and then go to **Applications** > **Karakeep** > **Manage environment variables**.
 2. Click <i class="material-symbols-outlined">edit_square</i> next to each variable, enter the value, and then click **Confirm**:
 
-   - **OLLAMA_BASE_URL**: The shared endpoint URL from the previous step. For example:
-     ```text
-     http://94a553e00.shared.olares.com
-     ```
-   - **INFERENCE_TEXT_MODEL**: The model name from the previous step. For example:
-     ```text
-     qwen3.5:27b-q4_K_M
-     ```
-   - **INFERENCE_IMAGE_MODEL** (optional): The name of a vision model pulled in Ollama. Set this only if you want Karakeep to tag images.
+   - **OLLAMA_BASE_URL**: The Base URL copied from the Gemma 4 26B Model Console.
+   - **INFERENCE_TEXT_MODEL**: The Model name copied from the Model Console. In this example, it is `gemma4:26b`.
+   - **INFERENCE_IMAGE_MODEL** (optional): To tag images, install [Ollama](ollama.md), pull a vision model such as `llava`, and enter its model name.
 
 3. Click **Apply**, and wait for Karakeep to restart.
 

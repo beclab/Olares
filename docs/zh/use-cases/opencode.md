@@ -1,13 +1,13 @@
 ---
 outline: deep
-description: 在 Olares 上设置 OpenCode 以运行 AI 编码代理。将其连接到 Ollama 托管的模型或 OpenAI，并使用自然语言编写、测试和管理代码。
+description: 在 Olares 上设置 OpenCode 以运行 AI 编码代理。将其连接到本地模型或 OpenAI，并使用自然语言编写、测试和管理代码。
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenCode, AI coding agent, Ollama, OpenAI, ChatGPT, self-hosted, code generation, TUI
+      content: Olares, OpenCode, AI coding agent, Qwen3.6, OpenAI, ChatGPT, self-hosted, code generation, TUI
 app_version: "1.0.11"
-doc_version: "1.2"
-doc_updated: "2026-07-10"
+doc_version: "1.3"
+doc_updated: "2026-07-29"
 ---
 
 :::warning
@@ -21,12 +21,12 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
 在 Olares 上，你可以通过两种方式使用 OpenCode：
 
 - **浏览器**：在 Olares 上将 OpenCode 安装为应用，并通过浏览器访问它。
-- **本地 CLI**：在你的计算机上安装 OpenCode，并将其连接到 Olares 上的 Ollama，以获得原生终端体验。
+- **本地 CLI**：在你的计算机上安装 OpenCode，并将其连接到 Olares 上的模型，以获得原生终端体验。
 
 ## 学习目标
 
 在本教程结束时，你将学习如何：
-- 在 Olares 上安装 OpenCode，并将其连接到 Ollama 托管的模型或 OpenAI。
+- 在 Olares 上安装 OpenCode，并将其连接到本地模型或 OpenAI。
 - 通过聊天界面或基于终端的 UI（TUI）创建项目和运行编码任务。
 - 通过 LarePass VPN 从你的本地计算机使用 OpenCode，或从 VS Code 内部使用。
 - 编辑 OpenCode 配置文件以管理提供方、模型和工具。
@@ -34,10 +34,14 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
 ## 前提条件
 
 - 具有足够磁盘空间和内存的 Olares 设备
-- 如果你计划使用本地模型，[Ollama 已安装](./ollama.md)在 Olares 上，并至少下载了一个模型
-- 如果你计划使用 OpenAI，ChatGPT Plus/Pro 账户或 OpenAI API key
 - 从 Market 安装应用的管理员权限
-- 你的计算机上启用了 LarePass VPN（仅用于本地 CLI 使用）
+- 其他条件取决于 OpenCode 的使用方式：
+
+| 使用方式 | 所需条件 |
+| :--- | :--- |
+| 在浏览器中使用本地模型 | 从 Market 安装 Qwen3.6-27B (llama.cpp) |
+| 在浏览器中使用 OpenAI | ChatGPT Plus/Pro 账号或 OpenAI API key |
+| 在计算机上使用 OpenCode CLI | 在 Olares 上安装 [Ollama](./ollama.md) 并下载 `qwen3.6:27b`，同时在计算机上启用 LarePass VPN |
 
 ## 在浏览器中运行 OpenCode
 
@@ -54,48 +58,21 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
 - OpenCode：OpenCode 的主界面。
 - OpenCode Terminal：OpenCode 的命令行终端。如果你更喜欢在 TUI 中工作，请使用此选项。
 
-### 获取模型端点
-
-Olares 提供两种提供本地模型的方式：
-
-- **Ollama 应用**：一个应用，在单个共享端点后面托管多个模型。
-- **单一模型应用**：每个应用打包一个特定模型并暴露其自己的共享端点。
-
-OpenCode 通过共享入口 URL 连接到两者。
+### 获取模型连接信息
 
 :::tip 计划使用 oh-my-openagent？
 对于 [oh-my-openagent](opencode-omo.md) 下的多本地模型设置，请使用单一模型应用。每个模型都有自己的端点，这允许你将其注册为单独的提供方，并调整每个模型的设置（如并发限制）。
 :::
 
-#### Ollama
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-要将 OpenCode 连接到 Ollama，请获取共享入口 URL：
+本示例中，OpenCode 通过 OpenAI-compatible API 格式连接 Qwen3.6-27B：
 
-1. 打开 Settings，然后导航到 **Applications** > **Ollama**。
-2. 在 **Shared entrances** 中，选择 **Ollama API** 以查看共享端点 URL。
-   ![Ollama shared entrance in Settings](/images/manual/use-cases/ollama-shared.png#bordered){width=80%}
-
-3. 复制共享端点。例如：
-   ```plain
-   http://d54536a50.shared.olares.com
-   ```
-
-#### 单一模型应用
-
-要将 OpenCode 连接到单一模型应用，请获取其共享入口 URL。下面的示例使用 Qwen3.5 9B Q4_K_M：
-
-1. 打开 Settings，前往 **Applications** > **Qwen3.5 9B Q4_K_M (Ollama)**，然后点击 **Shared entrances** 下的模型名称。
-
-   ![Qwen3.5 9B Q4_K_M shared entrance in Settings](/images/manual/use-cases/litellm-model-endpoint.png#bordered){width=80%}
-
-2. 复制共享端点。例如：
-   ```plain
-   http://bd5355000.shared.olares.com
-   ```
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### 连接到自定义提供方
 
-在 OpenCode 中将你的端点添加为自定义提供方。Ollama 应用和单一模型应用的步骤相同，但你输入的 Model ID 因应用类型而异。
+在 OpenCode 中将 Qwen3.6-27B 添加为自定义提供方。
 
 1. 在 OpenCode 中，点击左下角的 <i class="material-symbols-outlined">settings</i>。
    ![Open OpenCode settings](/images/manual/use-cases/opencode-settings.png#bordered)
@@ -104,18 +81,14 @@ OpenCode 通过共享入口 URL 连接到两者。
    ![Select custom provider](/images/manual/use-cases/opencode-custom-provider.png#bordered)
 
 3. 输入以下详细信息：
-   - **Provider ID**：此提供方的唯一标识符。例如，Ollama 应用为 `olares-ollama`，单一模型应用为 `ollama-9b`。
-   - **Display name**：提供方列表中显示的名称。例如，`Olares Ollama` 或 `Ollama 9B`。
-   - **Base URL**：你上面复制的端点 URL，追加 `/v1`。
+   - **Provider ID**：输入唯一标识符，例如 `qwen3.6-27b`。
+   - **Display name**：输入提供方列表中显示的名称，例如 `Qwen3.6 27B`。
+   - **Base URL**：粘贴从 Model Console 复制的 Base URL，并按显示内容原样使用。
    - **Models**：
-     - **Model ID**：要使用的模型。对于 Ollama 应用，输入你下载的任何模型的 ID，例如 `qwen3.5:9b`。对于单一模型应用，输入应用显示的确切模型名称，因为该应用仅提供该模型。
-     - **Display Name**：此模型显示的名称。例如，`Qwen3.5 9B`。
+     - **Model ID**：输入从 Model Console 复制的准确 Model name。本示例中为 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+     - **Display Name**：输入该模型的显示名称，例如 `Qwen3.6 27B`。
 
-   ![Provider configuration](/images/manual/use-cases/opencode-provider-config.png#bordered){width=70%}
-
-4. 要在同一 Ollama 应用提供方下添加更多模型，请点击 **Add model** 并输入模型 ID 和显示名称。对于单一模型应用提供方，跳过此步骤。
-
-5. 点击 **Submit** 保存配置。你新添加的提供方将出现在提供方列表中。
+4. 点击 **Submit** 保存配置。你新添加的提供方将出现在提供方列表中。
    ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered)
 
 ### 连接到 OpenAI
@@ -215,7 +188,7 @@ OpenCode 支持两种连接 OpenAI 的实用方式：
 你现在可以通过聊天界面与 OpenCode 交互。
 
 1. 选择一个项目以打开编码代理界面。
-2. 在聊天框下方，选择 **Big Pickle** 打开模型选择器，然后从列表中选择 **Qwen3.5 9B**。
+2. 在聊天框下方，选择 **Big Pickle** 打开模型选择器，然后从列表中选择 **Qwen3.6 27B**。
 3. 用自然语言输入编码任务。
    ![Code generation](/images/manual/use-cases/opencode-code-generation.png#bordered)
 
@@ -241,7 +214,7 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
 2. 在终端面板中，运行 `opencode` 启动 TUI。
    ![Launch TUI in the OpenCode UI](/images/manual/use-cases/opencode-web-launch-tui.png#bordered)
 
-3. 使用 `/models` 命令切换到 Qwen3.5 9B。
+3. 使用 `/models` 命令切换到 Qwen3.6 27B。
    ![Select model in TUI](/images/manual/use-cases/opencode-web-tui-select-model.png#bordered)
 
 4. 直接输入你的提示。例如，要求 OpenCode 改进代码。
@@ -255,7 +228,7 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
 2. 运行 `opencode` 启动 TUI。
    ![Launch TUI in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-launch-tui.png#bordered)
 
-3. 使用 `/models` 命令切换到 Qwen3.5 9B。
+3. 使用 `/models` 命令切换到 Qwen3.6 27B。
    ![Select model in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-select-model.png#bordered)
 
 4. 直接输入你的提示。例如，使用 `@` 提及文件并向 OpenCode 询问它。
@@ -266,7 +239,7 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
 
 ## 从你的计算机运行 OpenCode
 
-此选项在你的本地机器上安装 OpenCode CLI，并通过 LarePass VPN 将其连接到 Olares 上的 Ollama，以获得原生终端体验。
+此可选流程在你的计算机上安装 OpenCode CLI，并通过 LarePass VPN 将其连接到 Olares 上的 Ollama。
 
 ### 安装 OpenCode CLI
 
@@ -311,18 +284,14 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
 
    配置文件在 `~/.config/opencode/opencode.jsonc` 创建。
 
-### 获取 Ollama 端点
+### 获取 Ollama 服务 Endpoint
 
-本地 CLI 需要 Ollama API 端点。共享入口 URL 对 CLI 连接不起作用。
+OpenCode CLI 将 Ollama 应用作为服务提供方进行连接。
 
-1. 打开 Settings，然后导航到 **Applications** > **Ollama**。
-2. 在 **Entrances** 中，选择 **Ollama API** 以查看端点 URL。
-   ![Ollama API endpoint](/images/manual/use-cases/ollama-api.png#bordered){width=70%}
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-3. 复制端点 URL。例如：
-   ```plain
-   https://a5be22681.laresprime.olares.com
-   ```
+1. 前往 Olares **设置** > **应用** > **Ollama** > **入口**。
+2. 选择 **Ollama API**，然后复制 **Endpoint** URL。
 
 ### 配置连接
 
@@ -330,7 +299,7 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
    ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
    :::tip 在同一本地网络？
-   如果你的计算机和 Olares 在同一 LAN 上，你可以跳过 VPN 并使用 `.local` 域。在下面的配置中将 `https://a5be22681.{username}.olares.com` 替换为 `http://a5be22681.{username}.olares.local`。有关详细信息，请参阅 [使用 `.local` 域](/zh/manual/best-practices/local-access.md#method-2-use-local-domain)。
+   如果你的计算机和 Olares 在同一 LAN 上，可以跳过 VPN 并使用 `.local` 域。有关详细信息，请参阅[使用 `.local` 域](/zh/manual/best-practices/local-access.md#method-2-use-local-domain)。
    :::
 
 2. 在文本编辑器中打开 `~/.config/opencode/opencode.jsonc` 处的 OpenCode 配置文件。添加一个自定义提供方，包含你的 Ollama 端点和模型。一般格式为：
@@ -355,7 +324,7 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
    }
    ```
 
-   例如，要使用 Qwen3.5 9B 模型连接到 Olares 上的 Ollama：
+   例如，要使用 Qwen3.6 27B 模型连接到 Olares 上的 Ollama：
 
    ```json
    {
@@ -364,13 +333,13 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
        "olares-ollama": {
          "name": "olares-ollama",
          "npm": "@ai-sdk/openai-compatible",
-         "models": {
-           "qwen3.5:9b": {
-             "name": "Qwen3.5 9B"
+        "models": {
+           "qwen3.6:27b": {
+             "name": "Qwen3.6 27B"
            }
          },
          "options": {
-           "baseURL": "https://a5be22681.laresprime.olares.com/v1"
+           "baseURL": "<Ollama-Endpoint>/v1"
          }
        }
      }
@@ -388,7 +357,7 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
 1. 在你的终端中，运行 `opencode` 启动 TUI：
    ![Launch OpenCode TUI in terminal](/images/manual/use-cases/opencode-terminal-tui.png#bordered)
 
-2. 使用 `/models` 命令切换到 Qwen3.5 9B。
+2. 使用 `/models` 命令切换到 Qwen3.6 27B。
    ![Select model in terminal TUI](/images/manual/use-cases/opencode-terminal-tui-select-model.png#bordered)
 
 3. 开始与你的自托管模型聊天。

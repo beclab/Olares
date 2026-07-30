@@ -1,7 +1,7 @@
 ---
 outline: [2, 4]
 title: Translate scientific PDFs in PDFMathTranslate
-description: Run PDFMathTranslate on Olares with Ollama to translate scientific PDFs while preserving page layouts, formulas, and other technical content.
+description: Run PDFMathTranslate on Olares with a local OpenAI-compatible model to translate scientific PDFs while preserving page layouts, formulas, and other technical content.
 head:
   - - meta
     - name: keywords
@@ -12,7 +12,7 @@ head:
 
 PDFMathTranslate is an application designed to translate scientific PDF documents while retaining the original layout and mathematical formulas.
 
-This tutorial provides instructions on how to install and use PDFMathTranslate on Olares, using the local AI model Ollama for translation.
+This tutorial uses a local OpenAI-compatible model to translate PDFs on Olares.
 
 ## Learning objectives
 
@@ -22,9 +22,11 @@ By the end of this tutorial, you are able to:
 
 ## Prerequisites
 
-Before you begin, make sure:
-- Ollama is installed and running in your Olares environment.
-- At least one model is installed using Ollama. For more information, see [Ollama](ollama.md).
+Before you begin, you need the following model:
+
+| Used for | Model | How to get it |
+| :--- | :--- | :--- |
+| Translation | Qwen3.6-27B (llama.cpp) | Install from Market |
 
 ## Install PDFMathTranslate
 
@@ -54,26 +56,24 @@ In the **File** area, select your input **Type**:
 
     The **Preview** pane remains blank during this step. The document content only appears in this area after the translation is completed.
 
+### Get model connection details
+
+PDFMathTranslate connects to Qwen3.6-27B through its OpenAI-compatible API.
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+
+For Qwen3.6-27B (llama.cpp):
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+Use the **OpenAI-Compatible** API format. The model name is `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+
 ### Configure the translation service
 
-To use the local AI service Ollama for translation, configure the following settings:
-
-1. From the **Service** list, select **Ollama**.
-2. (Optional) To obtain the Ollama host address:
-
-    a. Go to Olares **Settings** > **Application** > **Ollama**.
-    
-    b. In the **Entrances** section, click **Ollama API**.
-
-    c. Click **Set up endpoint**, and then click <i class="material-symbols-outlined">content_copy</i> to copy the endpoint address.
-
-    ![Obtain Ollama host address](/images/manual/use-cases/onetest02-endpoint-entrances-ollama-api.png#bordered){width=80%}
-    
-
-3. In the **OLLAMA_HOST** field, enter the Ollama host address. 
-4. In the **OLLAMA_MODEL** field, enter the exact identifier of the Ollama model you have downloaded. For example, `gemma3:4b`.
-
-    ![Open PDFMathTranslate](/images/manual/use-cases/local-model-setup.png#bordered)
+1. In PDFMathTranslate, select **OpenAI** from the **Service** list.
+2. In the **OPENAI_BASE_URL** field, enter the Base URL copied from Model Console.
+3. In the **OPENAI_API_KEY** field, enter any non-empty value, such as `none`. The local model endpoint does not require an API key.
+4. In the **OPENAI_MODEL** field, enter the copied Model name.
 
 ### Select languages and scope
 

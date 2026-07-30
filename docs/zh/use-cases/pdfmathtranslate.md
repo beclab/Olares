@@ -1,6 +1,6 @@
 ---
 outline: [2, 4]
-description: 学习如何在 Olares 上安装和配置 PDFMathTranslate。本教程将指导你使用本地 AI 模型 Ollama 翻译学术 PDF，同时保留原始排版和数学公式。
+description: 学习如何在 Olares 上安装和配置 PDFMathTranslate。本教程将指导你使用兼容 OpenAI API 的本地模型翻译学术 PDF，同时保留原始排版和数学公式。
 head:
   - - meta
     - name: keywords
@@ -15,7 +15,7 @@ head:
 
 PDFMathTranslate 是一款用于翻译学术 PDF 文档的应用，能够在保留原始排版和数学公式的同时完成翻译。
 
-本教程提供在 Olares 上安装和使用 PDFMathTranslate 的说明，使用本地 AI 模型 Ollama 进行翻译。
+本教程使用兼容 OpenAI API 的本地模型在 Olares 上翻译 PDF。
 
 ## 学习目标
 
@@ -25,9 +25,11 @@ PDFMathTranslate 是一款用于翻译学术 PDF 文档的应用，能够在保�
 
 ## 前提条件
 
-开始前，请确保：
-- Ollama 已安装并在你的 Olares 环境中运行。
-- 已使用 Ollama 安装至少一个模型。更多信息，请参阅 [Ollama](ollama.md)。
+开始前，你需要以下模型：
+
+| 用途 | 模型 | 获取方式 |
+| :--- | :--- | :--- |
+| 翻译 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
 
 ## 安装 PDFMathTranslate
 
@@ -57,26 +59,24 @@ PDFMathTranslate 是一款用于翻译学术 PDF 文档的应用，能够在保�
 
     此步骤中 **Preview** 窗格保持空白。翻译完成后，文档内容才会显示在该区域。
 
+### 获取模型连接信息
+
+PDFMathTranslate 通过 Qwen3.6-27B 的 OpenAI-compatible API 与其连接。
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+
+对于 Qwen3.6-27B (llama.cpp)：
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+使用 **OpenAI-Compatible** API 格式。模型名称为 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+
 ### 配置翻译服务
 
-要使用本地 AI 服务 Ollama 进行翻译，请配置以下设置：
-
-1. 从 **Service** 列表中，选择 **Ollama**。
-2. （可选）获取 Ollama 主机地址：
-
-    a. 前往 Olares **Settings** > **Application** > **Ollama**。
-
-    b. 在 **Entrances** 部分，点击 **Ollama API**。
-
-    c. 点击 **Set up endpoint**，然后点击 <i class="material-symbols-outlined">content_copy</i> 复制端点地址。
-
-    ![Obtain Ollama host address](/images/manual/use-cases/onetest02-endpoint-entrances-ollama-api.png#bordered){width=80%}
-
-
-3. 在 **OLLAMA_HOST** 字段中，输入 Ollama 主机地址。
-4. 在 **OLLAMA_MODEL** 字段中，输入你已下载的 Ollama 模型的精确标识符。例如，`gemma3:4b`。
-
-    ![Open PDFMathTranslate](/images/manual/use-cases/local-model-setup.png#bordered)
+1. 在 PDFMathTranslate 中，从 **Service** 列表选择 **OpenAI**。
+2. 在 **OPENAI_BASE_URL** 字段中，输入从模型控制台复制的 Base URL。
+3. 在 **OPENAI_API_KEY** 字段中，输入任意非空值，例如 `none`。本地模型 endpoint 不需要 API key。
+4. 在 **OPENAI_MODEL** 字段中，输入复制的 Model name。
 
 ### 选择语言和范围
 

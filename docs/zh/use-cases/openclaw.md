@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
 app_version: "1.0.3"
-doc_version: "2.0"
-doc_updated: "2026-05-29"
+doc_version: "2.1"
+doc_updated: "2026-07-29"
 ---
 
 :::warning
@@ -32,11 +32,15 @@ OpenClaw 是一款专为本地设备设计的个人 AI 助手，可接入 Discor
 
 ## 前提条件
 
-- 本地模型：Ollama 或其他模型提供方须已安装并运行。
+- 以下模型：
 
-    :::tip 模型提供方
-    本教程使用 Ollama 作为模型提供方。如使用其他提供方或本地代理，请参阅 [OpenClaw 关于使用自定义模型提供商的文档](https://docs.openclaw.ai/zh-CN/concepts/model-providers#%E9%80%9A%E8%BF%87-models.providers-%E4%BD%BF%E7%94%A8%E6%8F%90%E4%BE%9B%E5%95%86%EF%BC%88%E8%87%AA%E5%AE%9A%E4%B9%89%2F%E5%9F%BA%E7%A1%80-url%EF%BC%89)了解配置详情。
-    :::
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.6-27B (llama.cpp) | 从 Market 安装，并等待模型下载完成 |
+
+  :::tip 模型提供方
+  本教程通过 OpenAI-compatible API 使用 Qwen3.6-27B。如使用其他提供方或本地代理，请参阅 [OpenClaw 关于自定义模型提供方的文档](https://docs.openclaw.ai/zh-CN/concepts/model-providers#%E9%80%9A%E8%BF%87-models.providers-%E4%BD%BF%E7%94%A8%E6%8F%90%E4%BE%9B%E5%95%86%EF%BC%88%E8%87%AA%E5%AE%9A%E4%B9%89%2F%E5%9F%BA%E7%A1%80-url%EF%BC%89)。
+  :::
 - Discord 账号：用于创建机器人应用。
 - Discord 服务器：确保你在这个服务器上有添加机器人的权限。
 
@@ -64,110 +68,49 @@ Olares 支持克隆应用。如需同时运行多个独立的 AI 助手处理不
 
 快速完成助手的初始化配置。
 
-### 步骤 1：安装模型
+### 步骤 1：获取模型连接信息
 
-安装一个支持工具调用的模型，例如 `glm-4.7-flash`、`qwen3.5:35b` 或 `gpt-oss:20b`。本教程使用的是 `qwen3.5:35b`。
+本教程使用 Market 中支持工具调用的 Qwen3.6-27B (llama.cpp)。
 
 :::tip
 OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理复杂任务而不会忘记之前的指令。如使用本地模型，建议选择原生支持至少 64K token 上下文窗口的模型。
 :::
 
-<Tabs>
-<template #(推荐)-从应用市场下载>
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-1. 在应用市场中，搜索 "Qwen3.5 35B A3B UD-Q4 (Ollama)"。
+对于 Qwen3.6-27B (llama.cpp)，OpenClaw 使用 OpenAI-compatible API 格式：
 
-    ![在应用市场中查找模型应用](/images/zh/manual/use-cases/qwen35b.png#bordered)    
-2. 点击**获取**，然后点击**安装**。
-3. 安装完成后，点击**打开**。模型将自动开始下载。
-4. 模型下载完成后，准确记录 **Model Name** 处显示的模型名称。例如，`qwen3.5:35b-a3b-ud-q4_K_L`。后续配置将用到该名称。
-
-    ![记录模型详细信息](/images/manual/use-cases/obtain-model-details2.png#bordered)
-
-5. 打开设置，进入**应用** > **Qwen3.5 35B A3B UD-Q4 (Ollama)** > **共享入口**。
-
-    ![在设置中获取模型的共享端点](/images/zh/manual/use-cases/obtain-model-details3.png#bordered){width=70%}
-
-6. 点击 **Qwen3.5 35B A3B UD-Q4_K_L**，然后记录共享端点的 URL。例如，`http://026076110.shared.olares.com`。
-
-:::tip 为什么不使用模型应用页面显示的 URL？
-模型应用页面显示的 URL 与用户绑定，且依赖浏览器前端调用。当设备与 Olares 不在同一本地网络时，这些调用可能会触发 Olares 登录，并受跨域限制（CORS）的影响。为避免上述问题，建议使用共享端点 URL。
-:::
-</template>
-<template #通过-Ollama-下载>
-
-1. 运行以下命令，查看已安装的模型列表：
-
-    ```bash
-    ollama list
-    ```
-2. 复制并保存 **NAME** 列中显示的模型名称。例如，`qwen3.5:27b`。
-3. 如模型未安装，请先下载并运行。详细步骤，参见 [Ollama](ollama.md)。
-4. 打开设置，进入**应用** > **Ollama** > **共享入口**。
-
-   ![设置中的 Ollama 端点](/images/zh/manual/use-cases/ollama-endpoint.png#bordered){width=80%}
-
-5. 点击 **Ollama API**，然后记录共享端点的 URL。例如，`http://d54536a50.shared.olares.com`。
-</template>
-</Tabs>
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### 步骤 2：验证模型的可访问性
 
 在配置 OpenClaw 之前，先验证模型是否可通过 API 正常访问和响应。
 
 1. 从启动台打开 OpenClaw CLI 应用。
-2. 输入以下命令验证 API 地址，并获取可用模型列表。将 `{Your-Model-API}` 替换为[步骤 1](#步骤-1-安装模型)中获取的共享端点 URL。
+2. 运行以下命令。将 `{Model-Base-URL}` 替换为[步骤 1](#步骤-1获取模型连接信息)中复制的 Base URL。
 
     ```bash
-    curl {Your-Model-API}/api/tags
+    curl {Model-Base-URL}/models
     ```
 
-    例如：
-    ```bash
-    curl http://026076110.shared.olares.com/api/tags
-    ```
-
-    终端将返回可用模型的详细信息，表明 API 可访问。例如：
-
-    ```text
-    {"models":[{"capabilities":["completion","tools","thinking"],"details":{"context_length":262144,"embedding_length":2048,"families":["qwen35moe"],"family":"qwen35moe","format":"gguf","parameter_size":"34.7B","parent_model":"qwen3.5:35b-a3b-ud-q4_K_L-base","quantization_level":"Q8_0"},"digest":"e8cb37adef5d1325d7fed17ec8124d37cb6ba5f2f357887811d75a139ddb79dc","model":"qwen3.5:35b-a3b-ud-q4_K_L","modified_at":"2026-05-27T07:07:06.19481654Z","name":"qwen3.5:35b-a3b-ud-q4_K_L","size":20205634377}]}
-    ```    
+    终端返回可用模型，即表示 API 可访问。
  
-3. 输入以下命令，强制将模型加载到内存中并测试其响应速度。将 `{Your-Model-API}` 和 `{Your-Model-Name}` 替换为[步骤 1](#步骤-1-安装模型)中获取的详细信息。
-
-    :::info 为什么要在初始化前执行此操作？
-    Ollama 默认在模型空闲 5 分钟后将其从内存中卸载。重新加载大型模型需要一定时间，可能导致后续初始化验证超时。此命令可"唤醒"模型，确保初始化顺利完成。
-    ::: 
+3. 运行以下命令测试聊天响应。将占位符替换为步骤 1 中复制的 Base URL 和 Model name。
 
     ```bash
-    curl {Your-Model-API}/api/generate -d '{
-    "model": "{Your-Model-Name}",
-    "prompt": "say hello world",
-    "stream": false
-    }'
-    ```
-    例如：
-
-    ```bash
-    curl http://026076110.shared.olares.com/api/generate -d '{
-    "model": "qwen3.5:35b-a3b-ud-q4_K_L",
-    "prompt": "say hello world",
-    "stream": false
-    }'
+    curl {Model-Base-URL}/chat/completions \
+      -H "Content-Type: application/json" \
+      -d '{
+        "model": "{Model-Name}",
+        "messages": [{"role": "user", "content": "Say hello world"}]
+      }'
     ```
 
-    终端将返回包含 `Hello World!` 的响应，表明模型已就绪。例如：
-
-    ```text
-    {"model":"qwen3.5:35b-a3b-ud-q4_K_L","created_at":"2026-05-27T07:17:52.542888337Z","response":"Hello, World! 🌍","done":true,"done_reason":"stop","context":[248045,846,198,35571,23066,1814,593,26003,248046,198,248045,74455,198,248068,271,248069,271,9419,11,4196,0,10838,234,235],"total_duration":22384074696,"load_duration":197437036,"prompt_eval_count":13,"prompt_eval_duration":22064969000,"eval_count":12,"eval_duration":73444000}
-    ```
+    返回包含 `Hello World!` 的响应，即表示模型已就绪。
 
 ### 步骤 3：运行安装向导
 
-你可以通过交互式向导分步配置 OpenClaw，或直接运行命令完成设置。
-
-<Tabs>
-<template #交互式设置>
+使用交互式向导配置 OpenClaw。
 
 1. 从启动台打开 OpenClaw CLI 应用。
 2. 输入以下命令，启动安装向导：
@@ -185,10 +128,14 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | I understand this is<br>personal-by-default and shared/multi-user use<br>requires lock-down. <br>Continue? | 选择 **Yes**。  |
     | Setup mode   | 选择 **QuickStart**。  |
     | Config handling  | 选择 **Keep current values**。    |
-    | Model/auth provider  | 选择 **More**，然后选择 **Ollama**。    |
-    | Ollama mode | 选择 **Local only**。 |
-    | Ollama base URL  | 删除默认占位符文本，然后输入[步骤 1](#步骤-1-安装模型)中获取<br>的共享端点 URL。<br>例如，`http://026076110.shared.olares.com`。 |
-    | Default model | 选择 **Browse all models**，然后选择你安装的模型。<br>例如，**ollama/qwen3.5:35b-a3b-ud-q4_K_L**。 |
+    | Model/auth provider | 选择 **Custom Provider**。 |
+    | API Base URL | 输入[步骤 1](#步骤-1获取模型连接信息)中复制的 Base URL。 |
+    | How do you want to provide this API key? | 选择 **Paste API key now**。 |
+    | API Key | 输入占位值，例如 `local`。 |
+    | Endpoint compatibility | 选择 **OpenAI-compatible**。 |
+    | Model ID | 输入步骤 1 中复制的 Model name。本示例中为 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。 |
+    | Endpoint ID | 输入易于识别的名称，例如 `qwen3.6-27b`。 |
+    | Model alias (optional) | 输入简短别名，例如 `qwen3.6`。 |
     | Select channel  | 选择 **Skip for now**。<br>（可稍后配置聊天平台）  |
     | Search provider | 选择 **Skip for now**。<br>（可稍后配置网络搜索提供方）|
     | Configure skills now   | 选择 **No**。<br>（可稍后安装技能）       |
@@ -202,56 +149,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 
     ![获取 gateway token](/images/manual/use-cases/obtain-gateway-token3.png#bordered)
 
-6. 保持 OpenClaw CLI 窗口开启。后续步骤仍需使用。
-</template>
-<template #命令行设置>
-
-1. 从启动台打开 OpenClaw CLI 应用。
-2. 输入以下命令，启动安装向导。将 `{Your-Model-API}` 和 `{Your-Model-Name}` 替换为[步骤 1](#步骤-1-安装模型)中获取的详细信息。
-
-    ```bash
-    openclaw onboard --non-interactive \
-    --auth-choice ollama \
-    --custom-base-url "{Your-Model-API}" \
-    --custom-model-id "{Your-Model-Name}" \
-    --accept-risk
-    ```
-
-    例如：
-
-    ```text
-    openclaw onboard --non-interactive \
-    --auth-choice ollama \
-    --custom-base-url "http://026076110.shared.olares.com" \
-    --custom-model-id "qwen3.5:35b-a3b-ud-q4_K_L" \
-    --accept-risk
-    ```
-
-    终端将显示包含助手信息的成功消息。例如：
-
-    ```text
-    Agents: main (default)
-    Heartbeat interval: 30m (main)
-    Session store (main): /home/node/.openclaw/agents/main/sessions/sessions.json (0 entries)
-    Tip: run `openclaw configure --section web` to store your Brave API key for web_search. Docs: https://docs.openclaw.ai/tools/web
-    ```
-
-3. 输入以下命令验证模型配置是否正确：
-
-    ```bash
-    openclaw models status --probe
-    ```
-
-    **Auth probes** 表格中 **Status** 列显示 `ok`，表示模型已成功连接并可用。
-    
-4. 打开文件管理器，进入**应用** > **数据** > **clawdbot** > **config**，然后打开 `openclaw.json` 文件。
-5. 找到 `gateway` 部分，记录 `auth` 中的 token。例如，`YrzY5wk1WYWIfcTHFodyO43Ge6n1JY4T`。
-
-    ![在配置文件中获取 gateway token](/images/manual/use-cases/obtain-gateway-token-in-config.png#bordered)
-
 6. 保持 OpenClaw CLI 窗口打开。后续步骤仍需使用。
-</template>
-</Tabs>
 
 ### 步骤 4：配对设备
 

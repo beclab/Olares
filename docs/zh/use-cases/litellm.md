@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, LiteLLM, AI gateway, model proxy, OpenAI-compatible, Ollama, Open WebUI, self-hosted
 app_version: "1.0.8"
-doc_version: "1.0"
-doc_updated: "2026-04-09"
+doc_version: "1.1"
+doc_updated: "2026-07-29"
 ---
 
 :::warning
@@ -24,7 +24,7 @@ LiteLLM 是一个 AI 网关，将来自不同模型提供商（如 OpenAI、Anth
 
 在本指南中，你将学习如何：
 - 安装 LiteLLM。
-- 在 LiteLLM 中添加和配置来自 Ollama 等提供商的 AI 模型。
+- 在 LiteLLM 中添加和配置 OpenAI-compatible 本地模型。
 - 使用内置 Playground 测试模型连接。
 - 生成虚拟密钥并将 LiteLLM 连接到 Open WebUI。
 - 监控 API 调用日志和模型使用统计。
@@ -42,8 +42,14 @@ LiteLLM 位于你的应用和模型提供商之间，充当代理层：
 
 ## 前提条件
 
-- 一个或多个从 Market 安装的模型应用。本教程使用 **Qwen3.5 9B Q4_K_M (Ollama)** 应用作为示例。
+开始前，你需要：
+
 - Olares 管理员权限。
+- 以下模型：
+
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
 
 ## 安装 LiteLLM
 
@@ -60,41 +66,34 @@ LiteLLM 位于你的应用和模型提供商之间，充当代理层：
 
 ## 添加模型
 
-本示例使用模型应用 "Qwen3.5 9B Q4_K_M (Ollama)"。其他提供商的流程类似。
+### 获取模型连接信息
 
-1. 从 Launchpad 打开 Qwen3.5 9B Q4_K_M (Ollama) 应用，然后准确记下页面上显示的模型名称。在本例中，它是 `qwen3.5:9b`。
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-   ![模型应用页面上的模型名称](/images/manual/use-cases/litellm-model-name.png#bordered){width=55%}
+对于 Qwen3.6-27B (llama.cpp)，LiteLLM 使用 OpenAI-compatible API 格式。在模型控制台中选择 **OpenAI-Compatible**，然后按照以下步骤操作：
 
-2. 打开 **设置**，前往 **应用** > **Qwen3.5 9B Q4_K_M (Ollama)**，点击 **共享入口** 下的模型名称，然后记下端点 URL。在本例中，它是 `http://bd5355000.shared.olares.com`。
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-   ![设置页面上的模型端点](/images/manual/use-cases/litellm-model-endpoint.png#bordered){width=80%}
+### 将模型添加到 LiteLLM
 
-3. 从 Launchpad 打开 LiteLLM，然后使用安装时设置的管理员凭据登录。
+1. 从 Launchpad 打开 LiteLLM，然后使用安装时设置的管理员凭据登录。
 
-4. 从左侧边栏选择 **模型 + 端点**，然后点击 **添加模型** 标签页。
+2. 从左侧边栏选择 **Models + Endpoints**，然后点击 **Add Model** 标签页。
 
    ![添加模型标签页](/images/manual/use-cases/litellm-add-model-tab.png#bordered)
 
-5. 配置以下设置：
+3. 配置以下设置：
 
-   - **提供商**：选择驱动模型应用的引擎。例如，如果模型应用名称包含 "Ollama"，选择 **Ollama**。
-   - **LiteLLM 模型名称**：输入你记下的确切模型名称。在本例中，它是 `qwen3.5:9b`。
-   - （可选）**公共模型名称**：指定一个更短的别名，用于外部客户端应用。
-   - **API 基础地址**：输入你记下的模型应用共享端点 URL。在本例中，它是 `http://bd5355000.shared.olares.com`。
+   - **Provider**：选择 **OpenAI**。
+   - **LiteLLM Model Name(s)**：输入从模型控制台复制的准确 Model name。本示例中为 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+   - **Public Model Name**：输入容易识别的别名，例如 `qwen3.6-27b`。
+   - **API Base**：粘贴从 Qwen3.6-27B 模型控制台复制的 Base URL。请按显示内容原样使用。
+   - **API Key**：输入占位值，例如 `local`。
 
-      :::warning
-      不要在 API 基础地址 URL 后附加 `/v1`。添加它会导致连接失败。
-      :::
+4. 点击页面底部的 **Test Connect**。
+5. 当 **Connection Test Results** 窗口显示连接成功消息时，关闭窗口。
 
-6. 点击页面底部的 **测试连接**。
-7. 当 **连接测试结果** 窗口显示连接成功消息时，关闭窗口。
-
-   ![测试连接](/images/manual/use-cases/litellm-test-connection.png#bordered){width=60%}
-
-8. 点击 **测试连接** 旁边的 **添加模型**。你现在可以在 **所有模型** 标签页上查看新添加的模型。
-
-   ![所有模型](/images/manual/use-cases/litellm-all-models.png#bordered)
+6. 点击 **Test Connect** 旁边的 **Add Model**。你现在可以在 **All Models** 标签页中查看新添加的模型。
 
 ## 测试模型
 
@@ -103,9 +102,7 @@ LiteLLM 位于你的应用和模型提供商之间，充当代理层：
    - **虚拟密钥来源**：保持默认的 **当前 UI 会话**。
    - **自定义代理基础地址**：留空。填写它会导致错误。
    - **端点类型**：选择与你的模型匹配的模式。对于聊天模型，选择 **v1/chat/completions**。
-   - **选择模型**：选择你刚刚添加的模型。在本例中，它是 **qwen3.5:9b**。
-
-   ![Playground 配置](/images/manual/use-cases/litellm-playground.png#bordered)
+   - **Select Model**：选择刚刚添加的模型。本示例中为 **qwen3.6-27b**。
 
 3. 在 **测试密钥** 面板中，在聊天中发送提示以评估模型的性能。
 
@@ -117,15 +114,9 @@ LiteLLM 位于你的应用和模型提供商之间，充当代理层：
 
    你可以查看首 token 时间（TTFT）、总延迟以及输入/输出 token 数等指标。
 
-   ![Playground 测试结果](/images/manual/use-cases/litellm-playground-test.png#bordered)
-
 4. 要检查模型支持的功能和参数，从左侧边栏选择 **AI Hub**，然后在 **模型中心** 标签页上点击 **详情**。
 
-   ![查看模型详情](/images/manual/use-cases/litellm-view-model-details.png#bordered)
-
    你可以在模型概览页面上查看详情。
-
-   ![模型概览](/images/manual/use-cases/litellm-model-overview.png#bordered)
 
 ## 将 LiteLLM 与 Open WebUI 一起使用
 
@@ -143,20 +134,20 @@ LiteLLM 位于你的应用和模型提供商之间，充当代理层：
    ![创建虚拟密钥](/images/manual/use-cases/litellm-create-key.png#bordered)
 
 3. 点击 **创建密钥**。
-4. 在 **保存你的密钥** 窗口中，复制虚拟密钥供后续使用。在本例中，它是 `sk-ZSkc399qrcc3VXutDfxhpA`。
+4. 在 **Save your Key** 窗口中，复制虚拟密钥供后续使用。
 
    ![复制虚拟密钥](/images/manual/use-cases/litellm-copy-key.png#bordered){width=60%}
 
-### 获取 LiteLLM API 端点
+### 获取 LiteLLM API Endpoint
 
-1. 打开 **设置**，前往 **应用** > **LiteLLM** > **入口** > **LiteLLM API**。
-2. 复制 **端点** URL。在本例中，它是 `https://6aead52a1.laresprime.olares.com`。
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-   ![LiteLLM API 入口](/images/manual/use-cases/litellm-api-entrance.png#bordered){width=80%}
+对于 LiteLLM：
 
-:::info 内部与公开访问
-LiteLLM API 端点的 **认证级别** 默认设置为 **内部**，这意味着只有同一本地网络上的应用才能访问它。如果你需要从本地网络外部访问 LiteLLM，请将认证级别更改为 **公开**。LiteLLM 的 API 密钥认证将控制访问。
-:::
+1. 前往 Olares **Settings** > **Applications** > **LiteLLM** > **Entrances**。
+2. 选择 **LiteLLM API**，然后复制 **Endpoint** URL。
+
+在 Open WebUI 中，将该 Endpoint 用作 **API Base URL**。
 
 ### 将 Open WebUI 连接到 LiteLLM
 
@@ -178,8 +169,6 @@ LiteLLM API 端点的 **认证级别** 默认设置为 **内部**，这意味着
 6. 当你看到 "Server connection verified" 消息时，点击 **保存**。
 7. 在 **连接** 下，选择 **模型** 以确认 LiteLLM 中配置的模型现在可用，并显示你之前设置的公共模型名称。
 
-   ![Open WebUI 中的模型](/images/manual/use-cases/litellm-openwebui-models.png#bordered)
-
 ### 聊天和监控使用情况
 
 1. 在 Open WebUI 中开始新聊天并选择你的 LiteLLM 管理模型，以验证它在对话中正确响应。
@@ -198,6 +187,6 @@ LiteLLM API 端点的 **认证级别** 默认设置为 **内部**，这意味着
 
 ## 了解更多
 
-- [通过 Ollama 下载和运行本地 AI 模型](ollama.md)
+- [使用引擎基座应用托管本地大语言模型](llm-base-apps.md)
 - [使用 Open WebUI 与本地 LLM 聊天](openwebui.md)
 - [LiteLLM 官方文档](https://docs.litellm.ai/docs/)

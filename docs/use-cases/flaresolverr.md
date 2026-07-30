@@ -7,8 +7,8 @@ head:
     - name: keywords
       content: Olares, FlareSolverr, Prowlarr, Cloudflare, indexer, proxy, self-hosted
 app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-04-03"
+doc_version: "1.1"
+doc_updated: "2026-07-28"
 ---
 
 # Access Cloudflare-protected sites in Prowlarr with FlareSolverr
@@ -50,12 +50,14 @@ You can find it in **Settings** > **Applications** or **Market** > **My Olares**
 
 ## Configure FlareSolverr in Prowlarr
 
-### Get the FlareSolverr API address
+### Get the FlareSolverr endpoint
 
-1. Open Settings, then navigate to **Applications** > **FlareSolverr**.
-2. Under **Entrances**, click **FlareSolverr**.
-3. Under **Endpoint settings**, locate the API endpoint and click <i class="material-symbols-outlined">content_copy</i> to copy the address.
-   ![FlareSolverr entrance](/images/manual/use-cases/flaresolverr-endpoint.png#bordered){width=80%}
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
+
+For FlareSolverr:
+
+1. Go to Olares **Settings** > **Applications** > **FlareSolverr** > **Entrances**.
+2. Select **FlareSolverr**, then copy the **Endpoint** URL.
 
 ### Add FlareSolverr as an indexer proxy
 
@@ -70,7 +72,7 @@ You can find it in **Settings** > **Applications** or **Market** > **My Olares**
 
 4. Configure the proxy settings:
     - **Tags**: Enter a lowercase tag name such as `flaresolverr`. Prowlarr uses this tag to decide which indexers should route requests through FlareSolverr.
-    - **Host**: Paste the FlareSolverr API address you copied earlier.
+    - **Host**: Paste the FlareSolverr Endpoint you copied earlier.
 5. Click the gear icon and set **Request Timeout** to `180` seconds.
 6. Click **Test** to verify the connection, then click **Save**.
    ![FlareSolverr proxy settings](/images/manual/use-cases/prowlarr-flaresolverr-settings.png#bordered){width=80%}

@@ -198,49 +198,62 @@ Consider using a hybrid configuration: assign high-performance cloud models to c
 Carefully assess the capabilities of each model and your workflow requirements to determine the optimal setup.
 :::
 
-### Use OpenCode to call local models
+### Prepare a local model
+
+This optional workflow uses the following model:
+
+| Model | How to get it |
+| :--- | :--- |
+| Qwen3.6-27B (llama.cpp) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+The model name is `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+
+### Configure the local model in OpenCode
 
 :::info Independent OpenCode instance
 This OpenCode runs inside the Paperclip container and is separate from the OpenCode app installed from the Olares Market. You need to configure it independently.
 :::
 
-1. Install a model app from the Market. For this example, we’ll use `gemma4:26b`.
-2. When creating an agent, choose **OpenCode** as the runtime. Select a temporary model such as **big-pickle** to finish the initial setup. You will replace it with the local model configuration in the next step.
-3. After initialization, configure the local model:
+1. When creating an agent, choose **OpenCode** as the runtime. Select a temporary model such as **big-pickle** to finish the initial setup. You will replace it with the local model configuration in the next step.
+2. After initialization, configure the local model:
 
    a. Open the Files app, and go to **Data** > **paperclip** > **paperclip** > **.config** > **opencode**.
 
    b. Rename `opencode.jsonc` to `opencode.json` and open it in edit mode.
 
-   c. Replace the default configuration with the following example (using gemma4:26b as the model):
-
-   - Replace `<your-olares-id>` in the configuration with your specific Olares ID.
-   - If you are not using Gemma4 26B Q4_K_M (Ollama), replace `2b46296c` with your actual application route ID.
-   - Ensure that the `baseURL` ends with `/v1` to provide OpenAI-compatible API access through Ollama.
+   c. Replace the default configuration with the following example. Replace `<base-url>` with the Base URL copied from Model Console. If Model Console shows a different model name, replace every occurrence of `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` with that exact value.
 
    ```json {wrap}
    {
      "$schema": "https://opencode.ai/config.json",
-     "model": "olares/gemma4:26b",
+     "model": "olares/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
      "provider": {
        "olares": {
-         "name": "Gemma4:26b (Ollama)",
+         "name": "Qwen3.6-27B",
          "npm": "@ai-sdk/openai-compatible",
          "models": {
-           "gemma4:26b": {
-             "name": "gemma4:26b"
+           "unsloth/Qwen3.6-27B-GGUF:Q4_K_M": {
+             "name": "Qwen3.6-27B"
            }
          },
          "options": {
-           "baseURL": "https://2b46296c.<your-olares-id>.olares.com/v1"
+           "baseURL": "<base-url>"
          }
        }
      }
    }
    ```
 
-4. Restart the Paperclip container.
-5. In Paperclip, go to **Agents** > **Configuration** > **Permissions & Configuration** to verify the newly added local model.
+   :::tip OpenAI-compatible Base URL
+   The Base URL for Qwen3.6-27B already ends with `/v1`. If you use an Ollama-based model instead, select **OpenAI-Compatible** in Model Console and copy the Base URL displayed there. If you use an Ollama-format Base URL obtained elsewhere, append `/v1` so OpenCode can access its OpenAI-compatible API.
+   :::
+
+3. Restart the Paperclip container.
+4. In Paperclip, go to **Agents** > **Configuration** > **Permissions & Configuration** to verify the newly added local model.
 
    ![OpenCode local model in agent config](/images/manual/use-cases/paperclip-opencode-model-config.png#bordered)
 
@@ -254,7 +267,7 @@ You can monitor the execution process and result in the task's **Activity** > **
 
 - Ask the CEO to hire a new agent:
    - **Task title:** Hire a CMO
-   - **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/gemma4:26b as the model.
+   - **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/unsloth/Qwen3.6-27B-GGUF:Q4_K_M as the model.
 
    ![Agent run activity](/images/manual/use-cases/paperclip-agent-run-activity.png#bordered)
 

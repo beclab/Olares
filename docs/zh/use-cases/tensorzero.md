@@ -4,7 +4,7 @@ description: 在 Olares 上安装 TensorZero，将应用连接到 AI 模型，�
 head:
   - - meta
     - name: keywords
-      content: Olares, TensorZero, LLMOps, AI gateway, observability, evaluation, MCP, Ollama, self-hosted
+      content: Olares, TensorZero, LLMOps, AI gateway, observability, evaluation, MCP, self-hosted
 app_version: "1.0.5"
 doc_version: "1.0"
 doc_updated: "2026-05-09"
@@ -31,7 +31,13 @@ TensorZero 是一个一体化平台，用于管理、连接和监控你的 AI �
 
 ## 前提条件
 
-- 确保已[安装 Ollama](ollama.md)，并至少下载了一个聊天模型（例如 `qwen3.5:9b`）和一个嵌入模型（例如 `nomic-embed-text`）。
+- 安装以下模型：
+
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 嵌入 | EmbeddingGemma | 从 Market 安装。如果客户端应用不需要嵌入功能，则无需安装 |
+
 - 确保你的客户端应用（如 OpenCode 和 AgentZero）已经安装并完全可用。本指南仅涵盖将它们连接到 TensorZero 所需的特定设置。
 
 ## 安装 TensorZero
@@ -47,14 +53,22 @@ TensorZero 是一个一体化平台，用于管理、连接和监控你的 AI �
 TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑它的配置文件来管理所有设置。
 
 在编辑文件之前，请查看以下规则以避免错误：
-- **严格的权限控制**：TensorZero 拒绝直接请求原始模型名称，如 `gpt-4o` 和 `qwen3.5`。你必须为每个要使用的模型定义一个别名。不要在别名中使用点号或冒号。例如，使用 `qwen3_5_9b`，而不是 `qwen3.5:9b`。
+- **严格的权限控制**：TensorZero 拒绝直接请求原始模型名称，如 `gpt-4o` 和 `Qwen3.6-27B`。你必须为每个要使用的模型定义一个别名。不要在别名中使用点号或冒号。例如，使用 `qwen3_6_27b`，而不是 `qwen3.6:27b`。
 - **精确命名**：当你将其他应用连接到 TensorZero 时，必须在模型别名前添加特定前缀，例如 `tensorzero::model_name::<alias>` 和 `tensorzero::function_name::<alias>`。
 
     :::tip
-    对于使用 LiteLLM 框架的应用，你必须在模型名称中包含 `openai/` 前缀。例如，AgentZero 的嵌入功能需要格式为 `openai/tensorzero::embedding_model_name::nomic_embed` 的嵌入模型名称。
+    对于使用 LiteLLM 框架的应用，你必须在模型名称中包含 `openai/` 前缀。例如，AgentZero 的嵌入功能需要格式为 `openai/tensorzero::embedding_model_name::embeddinggemma` 的嵌入模型名称。
     :::
 
 - **格式规则**：配置文件使用 TOML 文本格式。你必须在不同部分之间保持至少一个空行，例如在 `[models]` 和 `[functions]` 之间。如果删除空行，应用可能无法启动。
+
+## 获取模型连接信息
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+
+对于 Qwen3.6-27B (llama.cpp) 和 EmbeddingGemma，选择 **OpenAI-Compatible** API 格式：
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ## 配置聊天模型和功能
 
@@ -62,27 +76,22 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
 
 你需要定义模型来告诉 TensorZero AI 在哪里，然后将它链接到一个功能来处理请求。
 
-本示例连接一个本地 Ollama 模型。
+本示例连接 Qwen3.6-27B (llama.cpp)。
 
-1. 打开 Settings，进入 **Applications** > **Ollama** > **Shared entrances** > **Ollama API**，然后复制端点 URL。例如，`http://d54536a50.shared.olares.com`。
-2. 打开 Files，然后进入 **Data** > **tensorzero** > **config**。
-3. 右键点击 `tensorzero.toml`，然后将其重命名为 `tensorzero.toml.txt`。
-4. 双击 `tensorzero.toml.txt`，然后点击 <i class="material-symbols-outlined">edit_square</i>。
-5. 在编辑器中，添加以下代码片段：
+1. 打开 Files，然后进入 **Data** > **tensorzero** > **config**。
+2. 右键点击 `tensorzero.toml`，然后点击 <i class="material-symbols-outlined">edit_square</i>。
+3. 在编辑器中添加以下代码片段。将 `<qwen-base-url>` 替换为从 Qwen3.6-27B 模型控制台复制的 Base URL。
 
-    - 将 `api_base` 替换为你复制的 Ollama 端点 URL，并追加 `/v1`。
-    - 将 `model_name` 替换为你在 Ollama 中下载的模型的确切名称。
-
-    此配置将你的 Ollama 模型注册为别名 `qwen3_5_9b`，并创建一个面向客户端的功能 `general_chat`，将传入的应用请求路由到该模型。
+    此配置将模型注册为别名 `qwen3_6_27b`，并创建一个名为 `general_chat` 的客户端功能，将传入的应用请求路由到该模型。
 
     ```toml
     # models
-    [models.qwen3_5_9b]
-    routing = ["ollama"]
-    [models.qwen3_5_9b.providers.ollama]
+    [models.qwen3_6_27b]
+    routing = ["qwen"]
+    [models.qwen3_6_27b.providers.qwen]
     type = "openai"
-    api_base = "<ollama-shared-entrance>/v1"
-    model_name = "qwen3.5:9b"
+    api_base = "<qwen-base-url>"
+    model_name = "unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
     api_key_location = "none"
 
     # functions
@@ -90,14 +99,12 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
     type = "chat"
     [functions.general_chat.variants.my_default_variant]
     type = "chat_completion"
-    model = "qwen3_5_9b"
+    model = "qwen3_6_27b"
     ```
 
-    ![连接到 Ollama](/images/manual/use-cases/tensorzero-config-ollama.png#bordered)
-
-6. 点击 <i class="material-symbols-outlined">save</i>，然后关闭文件。
-7. 将 `tensorzero.toml.txt` 重命名回 `tensorzero.toml`。
-8. 打开 Control Hub，进入 **Browse** > **tensorzero-{username}** > **Deployments** > **tensorzero**，然后点击 **Restart** 以应用新设置。
+4. 点击 <i class="material-symbols-outlined">save</i>，然后关闭文件。
+5. 将 `tensorzero.toml.txt` 重命名回 `tensorzero.toml`。
+6. 打开 Control Hub，进入 **Browse** > **tensorzero-{username}** > **Deployments** > **tensorzero**，然后点击 **Restart** 以应用新设置。
 
     ![TensorZero pod 重启](/images/manual/use-cases/tensorzero-pod-restart.png#bordered)
 
@@ -107,29 +114,24 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
 
 1. 在 `tensorzero.toml` 中添加以下代码片段以定义一个嵌入模型：
 
-    - 将 `api_base` 替换为你复制的 Ollama 端点 URL，并追加 `/v1`。
-    - 将 `model_name` 替换为你在 Ollama 中下载的嵌入模型的确切名称。
-
-    此配置将你的 Ollama 嵌入模型注册为别名 `nomic_embed`。
+    将 `<embedding-base-url>` 替换为从 EmbeddingGemma 模型控制台复制的 Base URL。此配置将模型注册为别名 `embeddinggemma`。
 
     ```toml
     # embedding_models
-    [embedding_models.nomic_embed]
-    routing = ["ollama"]
-    [embedding_models.nomic_embed.providers.ollama]
+    [embedding_models.embeddinggemma]
+    routing = ["embeddinggemma"]
+    [embedding_models.embeddinggemma.providers.embeddinggemma]
     type = "openai"
-    api_base = "<ollama-shared-entrance>/v1"
-    model_name = "nomic-embed-text"
+    api_base = "<embedding-base-url>"
+    model_name = "embeddinggemma-300m"
     api_key_location = "none"
     ```
-
-    ![连接到嵌入模型](/images/manual/use-cases/tensorzero-config-embedding.png#bordered)    
 
 2. 在 Control Hub 中重启 **tensorzero** 容器以应用新设置。
 
 ## 验证连接
 
-使用内置的 Playground 测试你的功能是否正常工作。
+使用内置的 Playground 测试功能是否能够正常调用聊天模型。
 
 Playground 需要至少一个测试用例（称为 Datapoint）来显示聊天界面。如果你还没有，必须手动创建一个。
 
@@ -154,13 +156,15 @@ Playground 需要至少一个测试用例（称为 Datapoint）来显示聊天�
 
 ## 获取 TensorZero 端点
 
-要将其他应用连接到 TensorZero，请获取其入口地址。
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
+
+对于 TensorZero：
 
 1. 打开 Settings，然后进入 **Applications** > **TensorZero** > **Entrances** > **TensorZero**。
 
     ![TensorZero 端点地址](/images/manual/use-cases/tensorzero-endpoint.png#bordered){width=70%} 
 
-2. 复制端点 URL。例如，`https://ea581361.laresprime.olares.com`。对于兼容 OpenAI 的客户端，你必须在此 URL 后追加 `/openai/v1`。
+2. 复制 **Endpoint** URL。对于 OpenAI-compatible 客户端，需要在该 URL 后追加 `/openai/v1`。
 
 ## 将模型路由到客户端应用
 
@@ -173,12 +177,12 @@ Playground 需要至少一个测试用例（称为 Datapoint）来显示聊天�
 | 资源类型 | 必需的字符串格式 | 示例 |
 | :--- | :--- | :--- |
 | **功能** | `tensorzero::function_name::<alias>` | `tensorzero::function_name::general_chat` |
-| **模型** | `tensorzero::model_name::<alias>` | `tensorzero::model_name::qwen3_5_9b` |
-| **嵌入** | `tensorzero::embedding_model_name::<alias>` | `tensorzero::embedding_model_name::nomic_embed` |
+| **模型** | `tensorzero::model_name::<alias>` | `tensorzero::model_name::qwen3_6_27b` |
+| **嵌入** | `tensorzero::embedding_model_name::<alias>` | `tensorzero::embedding_model_name::embeddinggemma` |
 
 :::tip
-- 不要在别名中使用点号或冒号。例如，使用 `qwen3_5_9b`，而不是 `qwen3.5:9b`。
-- 如果模型名称不起作用，请在前面添加 `openai/` 以满足 LiteLLM 框架的要求，然后重试。例如，使用 `openai/tensorzero::embedding_model_name::nomic_embed`。
+- 不要在别名中使用点号或冒号。例如，使用 `qwen3_6_27b`，而不是 `qwen3.6:27b`。
+- 如果模型名称不起作用，请在前面添加 `openai/` 以满足 LiteLLM 框架的要求，然后重试。例如，使用 `openai/tensorzero::embedding_model_name::embeddinggemma`。
 :::
 
 ### 连接你的客户端应用
@@ -195,9 +199,9 @@ Playground 需要至少一个测试用例（称为 Datapoint）来显示聊天�
    ![选择自定义提供商](/images/manual/use-cases/opencode-custom-provider.png#bordered)
 
 3. 输入以下详细信息，然后点击 **Submit**。
-   - **Provider ID**：模型提供商的唯一标识符。例如，`olares-ollama-tensorzero`。
+   - **Provider ID**：模型提供商的唯一标识符。例如，`olares-tensorzero`。
    - **Display name**：在提供商列表中显示的名称。例如，`Olares TensorZero`。
-    - **Base URL**：输入以 `/openai/v1` 结尾的 TensorZero 端点 URL。例如，`https://ea581361.laresprime.olares.com/openai/v1`。
+    - **Base URL**：输入 TensorZero Endpoint URL，并在末尾追加 `/openai/v1`。
     - **API key**：输入任意文本。此字段不能为空。
     - **Models**：
         - **Model ID**：输入确切的功能字符串，`tensorzero::function_name::general_chat`。
@@ -229,7 +233,7 @@ Playground 需要至少一个测试用例（称为 Datapoint）来显示聊天�
 
     - **Chat model provider**：选择 **Other OpenAI compatible**。
     - **Chat model name**：输入 `tensorzero::function_name::general_chat`。
-    - **Chat model API base URL**：输入以 `/openai/v1` 结尾的 TensorZero 端点 URL。例如，`https://ea581361.laresprime.olares.com/openai/v1`。
+    - **Chat model API base URL**：输入 TensorZero Endpoint URL，并在末尾追加 `/openai/v1`。
     - **API key**：输入任意文本。此字段不能为空。
 
     ![AgentZero 中的 TensorZero 配置](/images/manual/use-cases/tensorzero-agentzero.png#bordered)
@@ -237,14 +241,14 @@ Playground 需要至少一个测试用例（称为 Datapoint）来显示聊天�
 3. 点击 **Embedding Model**，按如下方式配置，然后点击 **Save**。
 
     - **Embedding model provider**：选择 **Other OpenAI compatible**。
-    - **Embedding model name**：输入 `openai/tensorzero::embedding_model_name::nomic_embed`。
+    - **Embedding model name**：输入 `openai/tensorzero::embedding_model_name::embeddinggemma`。
 
         :::tip
         对于使用 LiteLLM 框架的应用（如 AgentZero 的嵌入功能），你必须在模型名称中包含 `openai/` 前缀。
         :::
 
     - **API key**：输入任意文本。此字段不能为空。
-    - **Embedding model API base URL**：输入以 `/openai/v1` 结尾的 TensorZero 端点 URL。例如，`https://ea581361.laresprime.olares.com/openai/v1`。
+    - **Embedding model API base URL**：输入 TensorZero Endpoint URL，并在末尾追加 `/openai/v1`。
 
     ![AgentZero 中的 TensorZero 配置，嵌入模型配置](/images/manual/use-cases/tensorzero-agentzero-embed.png#bordered)    
 
@@ -310,15 +314,15 @@ TensorZero 在 `/mcp` 端点包含一个内置的 Model Context Protocol (MCP) �
 
 ### 错误：model field must start with `tensorzero::function_name::...`
 
-**原因**：你在客户端的模型字段中输入了原始模型名称（如 `qwen3.5:9b`）或格式不正确。
+**原因**：你在客户端的模型字段中输入了原始模型名称（如 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`）或格式不正确。
 
 **解决方法**：根据你要连接的内容，始终使用以下三种精确格式之一：
 
 | 你要调用 | 格式 | 示例 |
 | :--- | :--- | :--- |
 | 功能 | `tensorzero::function_name::<alias>` | `tensorzero::function_name::general_chat` |
-| 直接调用模型 | `tensorzero::model_name::<alias>` | `tensorzero::model_name::qwen3_5_9b` |
-| 嵌入模型 | `tensorzero::embedding_model_name::<alias>` | `tensorzero::embedding_model_name::nomic_embed` |
+| 直接调用模型 | `tensorzero::model_name::<alias>` | `tensorzero::model_name::qwen3_6_27b` |
+| 嵌入模型 | `tensorzero::embedding_model_name::<alias>` | `tensorzero::embedding_model_name::embeddinggemma` |
 
 ### 错误：`litellm.BadRequestError: LLM Provider NOT provided`
 
@@ -327,7 +331,7 @@ TensorZero 在 `/mcp` 端点包含一个内置的 Model Context Protocol (MCP) �
 **解决方法**：
 查看错误消息详情以确定具体哪个模型失败。打开你的应用设置，并在该模型名称的最前面添加 `openai/`。
 
-例如，如果错误提到 `model=tensorzero::embedding_model_name::nomic_embed`，你必须将你的嵌入模型名称或 ID 更改为 `openai/tensorzero::embedding_model_name::nomic_embed`。保存设置并重试请求。
+例如，如果错误提到 `model=tensorzero::embedding_model_name::embeddinggemma`，你必须将嵌入模型名称或 ID 更改为 `openai/tensorzero::embedding_model_name::embeddinggemma`。保存设置并重试请求。
 
 ### 编辑配置文件后 TensorZero 无法启动
 
@@ -342,8 +346,8 @@ TensorZero 在 `/mcp` 端点包含一个内置的 Model Context Protocol (MCP) �
 3. 查找以下常见错误：
 
     - `Failed to parse tensorzero.toml`：语法错误。确保在每个部分块（`# models`、`# functions`、`# embedding_models`）之间恰好有一个空行。如果你在粘贴代码时删除了空行，应用将无法启动。
-    - `unknown field`：设置名称不正确，例如别名中包含点号或冒号。使用下划线，如 `qwen3_5_9b`，而不是 `qwen3.5:9b`。
-    - `provider...not found`：`routing = ["name"]` 行中的提供商名称与紧接其下方定义的块 `[models.alias.providers.name]` 不匹配。例如，如果你写 `routing = ["ollama"]`，你必须有一个匹配的 `[models.xxx.providers.ollama]` 块。
+    - `unknown field`：设置名称不正确，例如别名中包含点号或冒号。使用下划线，如 `qwen3_6_27b`，而不是 `qwen3.6:27b`。
+    - `provider...not found`：`routing = ["name"]` 行中的提供商名称与紧接其下方定义的块 `[models.alias.providers.name]` 不匹配。例如，如果你写 `routing = ["qwen"]`，则必须有对应的 `[models.xxx.providers.qwen]` 配置块。
 
 4. 修复语法后，重启 TensorZero 容器。
 

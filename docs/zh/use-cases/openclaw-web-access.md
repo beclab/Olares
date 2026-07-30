@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 学习, OpenClaw 网页搜索
 app_version: "1.0.8"
-doc_version: "2.1"
-doc_updated: "2026-06-10"
+doc_version: "2.2"
+doc_updated: "2026-07-29"
 ---
 
 # 可选：在 OpenClaw 中启用网页搜索
@@ -20,31 +20,30 @@ doc_updated: "2026-06-10"
 
 在本指南中，你将学习如何：
 - 从 Olares 应用市场安装 SearXNG。
-- 获取 SearXNG 的共享端点 URL。
+- 获取 SearXNG 的 Endpoint。
 - 配置 OpenClaw 使用 SearXNG 进行网页搜索并获取搜索结果。
 - 验证网页搜索工具是否正常工作。
 
 ## 步骤 1：安装 SearXNG
 
-安装 SearXNG 并获取其共享端点 URL。
+从应用市场安装 SearXNG。
 
 1. 打开应用市场，搜索 "SearXNG"。
 
    ![SearXNG](/images/zh/manual/use-cases/searxng.png#bordered)
 
 2. 点击**获取**，然后点击**安装**。等待安装完成。
-3. 打开设置，进入**应用** > **SearXNG**。
-4. 在**共享入口**中，点击 **SearXNG**。
 
-   ![获取 SearXNG 共享端点](/images/zh/manual/use-cases/searxng-shared-laresprime.png#bordered){width=90%}
+## 步骤 2：获取 SearXNG Endpoint
 
-5. 复制保存共享端点 URL。例如：
+OpenClaw 需要使用 SearXNG Endpoint 连接其搜索服务。
 
-   ```text
-   http://d1236e020.shared.olares.com
-   ```
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-## 步骤 2：配置 OpenClaw
+1. 前往 Olares **设置** > **应用** > **SearXNG** > **入口**。
+2. 选择 **SearXNG**，然后复制 **Endpoint** URL。
+
+## 步骤 3：配置 OpenClaw
 
 将 OpenClaw 连接到 SearXNG。
 
@@ -74,10 +73,10 @@ doc_updated: "2026-06-10"
     | Where will the Gateway run | 选择 **Local (this machine)**。 |
     | Enable web_search | 选择 **Yes**。 |
     | Search provider | 选择 **SearXNG Search** 。|
-    | SearXNG Base URL | 填写[步骤 1](#步骤-1-安装-searxng) 中获取的 SearXNG 共享端点 URL。 |
+    | SearXNG Base URL | 填写步骤 2 中复制的 SearXNG Endpoint URL。 |
     | Enable web_fetch (keyless HTTP fetch) | 选择 **Yes**。 |
 
-## 步骤 3：验证网页搜索
+## 步骤 4：验证网页搜索
 
 测试助手是否能够从互联网获取实时信息。
 

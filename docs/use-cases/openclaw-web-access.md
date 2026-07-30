@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw web search
 app_version: "1.0.8"
-doc_version: "2.1"
-doc_updated: "2026-06-10"
+doc_version: "2.2"
+doc_updated: "2026-07-29"
 ---
 
 # Optional: Enable web search in OpenClaw
@@ -20,31 +20,30 @@ This guide uses SearXNG, a privacy-focused meta-search engine that aggregates re
 
 In this guide, you will learn how to:
 - Install SearXNG from the Olares Market.
-- Obtain the shared endpoint URL for SearXNG.
+- Get the SearXNG endpoint.
 - Configure OpenClaw to use SearXNG for web search and fetching.
 - Verify that the web search tool is working.
 
 ## Step 1: Install SearXNG
 
-Install SearXNG and obtain its shared endpoint URL.
+Install SearXNG from Market.
 
 1. Open Market, and search for "SearXNG".
 
    ![SearXNG](/images/manual/use-cases/perplexica-searxng.png#bordered)
 
 2. Click **Get**, and then click **Install**. Wait for the installation to finish.
-3. Open Settings, and then go to **Applications** > **SearXNG**.
-4. In **Shared entrances**, click **SearXNG**.
 
-   ![Get SearXNG shared endpoint](/images/manual/use-cases/searxng-shared-laresprime.png#bordered){width=90%}
+## Step 2: Get the SearXNG endpoint
 
-5. Copy the shared endpoint URL. For example:
+OpenClaw needs the SearXNG endpoint to connect to its search service.
 
-   ```text
-   http://d1236e020.shared.olares.com
-   ```
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-## Step 2: Configure OpenClaw
+1. Go to Olares **Settings** > **Applications** > **SearXNG** > **Entrances**.
+2. Select **SearXNG**, then copy the **Endpoint** URL.
+
+## Step 3: Configure OpenClaw
 
 Connect OpenClaw to SearXNG.
 
@@ -74,10 +73,10 @@ Connect OpenClaw to SearXNG.
    | Where will the Gateway run | Local (this machine) |
    | Enable web_search | Yes |
    | Search provider | SearXNG Search |
-   | SearXNG Base URL | Paste the shared SearXNG endpoint URL you copied earlier. |
+   | SearXNG Base URL | Paste the SearXNG Endpoint URL copied in Step 2. |
    | Enable web_fetch (keyless HTTP fetch) | Yes |
 
-## Step 3: Verify web search
+## Step 4: Verify web search
 
 Test that your agent can retrieve real-time information from the internet.
 

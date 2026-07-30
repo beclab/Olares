@@ -30,13 +30,14 @@ Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语�
 
 ## 前提条件
 
-- 一台具有足够磁盘空间和内存的 Olares 设备。
-- 一个 Poolside 账户，如果你计划使用云端 API 服务。
-- 一台在 Olares 设备上运行的、针对编码优化的本地模型，如果你计划在本地运行任务。
+开始前，你需要：
 
-   你可以通过以下方法之一安装本地模型：
-   - **单模型应用**：一个运行特定模型的应用。本指南使用 **Qwen3-Coder 30B (Ollama)**。
-   - **Ollama 应用**：一个托管多个模型的应用。确保已安装 [Ollama](ollama.md)，并且至少下载了一个模型，例如 `qwen3-coder:30b`。
+- 一台具有足够磁盘空间和内存的 Olares 设备。
+- 以下模型：
+
+  | 用途 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 连接本地模型 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
 
 ## 安装 Pool CLI
 
@@ -53,6 +54,8 @@ Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语�
 ### 使用 Poolside 云端服务连接
 
 使用此方法可以利用 Poolside 的云端推理 API。
+
+开始前，请创建 Poolside 账户并获取 API key。
 
 1. 从 Launchpad 打开 Pool CLI。
 2. 输入以下命令触发登录认证：
@@ -99,30 +102,26 @@ Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语�
 
 ### 使用本地模型连接
 
-使用此方法可以完全离线使用本地模型运行 Pool CLI。本示例使用模型应用 **Qwen3-Coder 30B (Ollama)**。
+使用此方法可以通过 Qwen3.6-27B 完全离线运行 Pool CLI。
 
-1. 从 Market 安装模型应用 **Qwen3-Coder 30B (Ollama)**。
+#### 获取模型连接信息
 
-   ![Qwen3-Coder 30B (Ollama)](/images/manual/use-cases/qwen3-coder-30b.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-2. 从 Launchpad 打开模型应用，等待下载完成。
-3. 记下页面上显示的精确模型名称。例如，`qwen3-coder:30b`。
+对于 Qwen3.6-27B (llama.cpp)：
 
-   ![模型应用页面上的模型名称](/images/manual/use-cases/qwen3-coder-model-name.png#bordered){width=50%}
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-4. 打开 Settings，然后进入 **Applications** > **Qwen3-Coder 30B (Ollama)** > **Shared entrances**。
+#### 配置 Pool CLI
 
-   ![Settings 中的模型应用端点](/images/manual/use-cases/qwen3-coder-30b-endpoint.png#bordered){width=70%}
-
-5. 点击 **Qwen3-Coder 30B**，然后记下端点 URL。例如，`http://609c5d0c0.shared.olares.com`。
-6. 进入 **Applications** > **Pool CLI** > **Manage environment variables**，然后点击 <i class="material-symbols-outlined">edit</i> 配置以下变量：
+1. 前往 **Settings** > **Applications** > **Pool CLI** > **Manage environment variables**，然后点击 <i class="material-symbols-outlined">edit</i> 配置以下变量：
 
    - **USE_LOCAL_LLM**：设置为 `true` 以启用本地模型模式。
-   - **POOLSIDE_STANDALONE_BASE_URL**：输入模型应用的端点 URL，并追加 `/v1`。例如，`http://609c5d0c0.shared.olares.com/v1`。
-   - **POOL_MODEL**：输入你之前记下的模型名称。例如，`qwen3-coder:30b`。
+   - **POOLSIDE_STANDALONE_BASE_URL**：输入从模型控制台复制的 Base URL，并按显示内容原样使用。
+   - **POOL_MODEL**：输入从模型控制台复制的 Model name。
 
-7. 点击 **Apply**。等待 Pool CLI 容器重启。
-8. 从 Launchpad 打开 Pool CLI，然后输入以下命令启动会话。
+2. 点击 **Apply**，等待 Pool CLI 容器重启。
+3. 从启动台打开 Pool CLI，然后输入以下命令启动会话：
 
    ```bash
    pool-local
