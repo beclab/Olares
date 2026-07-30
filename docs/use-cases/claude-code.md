@@ -111,7 +111,7 @@ The following examples demonstrate how to interact with Claude Code to complete 
 4. Review the **Accessing workspace: /opt/data** security prompt, and then select **Yes, I trust this folder** to grant Claude Code read, edit, and execute permissions.
 5. (Optional) In the TUI, run the `/clear` command to start a new session with empty context.
 
-   ![Claude Code first chat](/images/manual/use-cases/claude-first-chat1.png#bordered)
+   ![Claude Code first chat](/images/manual/use-cases/claude-first-chat.png#bordered)
 
    :::info Switching between modes
    If you switch between remote and local models, run `/clear` in Claude Code first before starting a new session. This prevents context from the previous model from affecting the new workspace.
