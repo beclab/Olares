@@ -114,7 +114,7 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 4. 查看 **Accessing workspace: /opt/data** 安全提示，然后选择 **Yes, I trust this folder** 以授予 Claude Code 读取、编辑和执行权限。
 5. （可选）在 TUI 中，运行 `/clear` 命令以使用空上下文开始新会话。
 
-   ![Claude Code 首次聊天](/images/manual/use-cases/claude-first-chat.png#bordered)
+   ![Claude Code 首次聊天](/images/manual/use-cases/claude-first-chat1.png#bordered)
 
    :::info 在模式之间切换
    如果你在远程和本地模型之间切换，先在 Claude Code 中运行 `/clear` 再开始新会话。这可以防止先前模型的上下文影响新工作空间。
