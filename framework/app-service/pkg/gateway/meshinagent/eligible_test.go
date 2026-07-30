@@ -76,8 +76,9 @@ func TestShouldInjectMeshInAgent(t *testing.T) {
 			Settings: map[string]string{SettingNeedsSharedAccess: "true"},
 		},
 	}
-	if !ShouldInject(needsAccessOnly, false) {
-		t.Fatal("ordinary app with needsSharedAccess and no named callees must inject")
+	// Live Decide eligibility removed: needsSharedAccess alone is not persisted decide.
+	if ShouldInject(needsAccessOnly, false) {
+		t.Fatal("ordinary app with needsSharedAccess alone must not inject without decide")
 	}
 	consumer := &appv1alpha1.Application{
 		Spec: appv1alpha1.ApplicationSpec{
@@ -105,6 +106,22 @@ func TestShouldInjectMeshInAgent(t *testing.T) {
 	}
 	if !ShouldInject(sharedDecide, true) {
 		t.Fatal("shared app with decide=true must inject")
+	}
+	ordinaryDecide := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{
+			Settings: map[string]string{AnnotDecide: "true", AnnotDecideSource: DecideSourceEligibility},
+		},
+	}
+	if !ShouldInject(ordinaryDecide, false) {
+		t.Fatal("ordinary app with persisted decide=true must inject")
+	}
+	sharedPureCallee := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{
+			Settings: map[string]string{AnnotDecide: "false"},
+		},
+	}
+	if ShouldInject(sharedPureCallee, true) {
+		t.Fatal("shared pure callee with decide=false must not inject")
 	}
 	if ShouldInject(nil, false) {
 		t.Fatal("nil app must not inject")
