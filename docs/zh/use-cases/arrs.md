@@ -226,4 +226,5 @@ doc_updated: "2026-07-03"
 
 ## 了解更多
 
+- [在 Prowlarr 中使用 FlareSolverr 访问 Cloudflare 保护的站点](flaresolverr.md)：绕过索引器站点的 Cloudflare 挑战。
 - [Servarr Wiki](https://wiki.servarr.com/)
