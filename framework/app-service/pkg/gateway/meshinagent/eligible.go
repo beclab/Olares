@@ -20,6 +20,13 @@ const (
 	// DefaultGatewayHost is the Shared HTTP data-plane Service (namespace os-gateway).
 	DefaultGatewayHost = "app-gateway-data.os-gateway.svc"
 
+	// GatewayIPsEnv carries comma/space-separated gateway data-plane ClusterIPs
+	// injected by admission (preferred over in-pod DNS for iptables -d).
+	GatewayIPsEnv = "MESH_IN_AGENT_GATEWAY_IPS"
+
+	// GatewayDataServiceName is the ClusterIP Service for Shared HTTP/HTTPS data plane.
+	GatewayDataServiceName = "app-gateway-data"
+
 	// FailClosedEnv tells the agent to reject traffic when no valid JWT is present.
 	FailClosedEnv = "MESH_IN_AGENT_FAIL_CLOSED"
 
