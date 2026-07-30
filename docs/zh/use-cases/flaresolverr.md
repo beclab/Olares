@@ -21,12 +21,12 @@ FlareSolverr 是一个代理服务器，可以代替 Prowlarr 等应用解决 Cl
 
 在 Olares 上，你可以将 FlareSolverr 设置为 Prowlarr 的索引器代理。配置完成后，Prowlarr 会将受保护索引器的请求路由到 FlareSolverr，让你的 *arr 应用能够继续搜索和下载内容。
 
-本文档将引导你安装这两个应用、连接它们，并添加受 Cloudflare 保护的索引器（例如 1337x）。
+本文档将引导你安装 FlareSolverr、将其连接到 Prowlarr，并添加受 Cloudflare 保护的索引器（例如 1337x）。
 
 ## 学习目标
 
 在本指南中，你将学习如何：
-- 在 Olares 上安装 FlareSolverr 和 Prowlarr。
+- 在 Olares 上安装 FlareSolverr。
 - 将 FlareSolverr 配置为 Prowlarr 中的索引器代理。
 - 添加受 Cloudflare 保护的索引器站点。
 - 验证 FlareSolverr 是否正确解决挑战。
@@ -34,8 +34,7 @@ FlareSolverr 是一个代理服务器，可以代替 Prowlarr 等应用解决 Cl
 ## 前提条件
 
 - 已设置并运行 Olares 设备。
-- 对 Prowlarr 以及 BT 或 Usenet 索引器有基本了解。
-- 有足够的存储空间用于 FlareSolverr 容器镜像。该应用基于 `ghcr.io/flaresolverr/flaresolverr:latest` 镜像，以后台服务方式运行。
+- Prowlarr 已安装并运行。安装步骤请参考[设置 *Arrs 媒体栈](./arrs.md)。
 
 ## 安装 FlareSolverr
 
@@ -50,15 +49,14 @@ FlareSolverr 作为后台服务运行，因此不会出现在 Launchpad 上。
 
 你可以在 **Settings** > **Applications** 或 **Market** > **My Olares** 中找到它。
 :::
-   ![Settings 中的 FlareSolverr](/images/manual/use-cases/flaresolverr-installed-in-settings.png#bordered){width=80%}
-   ![My Olares 中的 FlareSolverr](/images/manual/use-cases/flaresolverr-installed-in-market.png#bordered){width=80%}
 
-## 安装 Prowlarr
+在 **Settings** > **Applications** 的应用列表中找到 FlareSolverr。
 
-1. 打开 Market，搜索 "Prowlarr"。
-  ![安装 Prowlarr](/images/manual/use-cases/install-prowlarr.png#bordered){width=80%}
+![Settings 中的 FlareSolverr](/images/manual/use-cases/flaresolverr-installed-in-settings.png#bordered){width=60%}
 
-2. 点击 **获取**，然后点击 **安装**，等待安装完成。
+或者在 **Market** > **My Olares** 的已安装应用列表中查看 FlareSolverr。
+
+![My Olares 中的 FlareSolverr](/images/manual/use-cases/flaresolverr-installed-in-market.png#bordered){width=60%}
 
 ## 在 Prowlarr 中配置 FlareSolverr
 

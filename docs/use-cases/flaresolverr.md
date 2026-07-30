@@ -17,12 +17,12 @@ FlareSolverr is a proxy server that solves Cloudflare and DDoS-GUARD challenges 
 
 On Olares, you can set up FlareSolverr as an indexer proxy for Prowlarr. Once configured, Prowlarr routes requests for protected indexers through FlareSolverr, so your *arr apps can keep searching and downloading content.
 
-This guide walks you through installing both apps, connecting them, and adding Cloudflare-protected indexers such as 1337x.
+This guide walks you through installing FlareSolverr, connecting it to Prowlarr, and adding Cloudflare-protected indexers such as 1337x.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
-- Install FlareSolverr and Prowlarr on Olares.
+- Install FlareSolverr on Olares.
 - Configure FlareSolverr as an indexer proxy in Prowlarr.
 - Add Cloudflare-protected indexer sites.
 - Verify that FlareSolverr is solving challenges correctly.
@@ -30,8 +30,7 @@ In this guide, you will learn how to:
 ## Prerequisites
 
 - An Olares device that is set up and running.
-- Basic familiarity with Prowlarr and torrent or Usenet indexers.
-- Enough free storage for FlareSolverr's container image. The app is based on the `ghcr.io/flaresolverr/flaresolverr:latest` image and runs as a background service.
+- Prowlarr installed and running. See [Set up the *Arrs stack](./arrs.md) for installation steps.
 
 ## Install FlareSolverr
 
@@ -46,15 +45,14 @@ FlareSolverr runs as a background service, so it does not appear on Launchpad.
 
 You can find it in **Settings** > **Applications** or **Market** > **My Olares**.
 :::
-   ![FlareSolverr in Settings](/images/manual/use-cases/flaresolverr-installed-in-settings.png#bordered){width=80%}
-   ![FlareSolverr in My Olares](/images/manual/use-cases/flaresolverr-installed-in-market.png#bordered){width=80%}
 
-## Install Prowlarr
+In **Settings** > **Applications**, look for FlareSolverr in the app list.
 
-1. Open Market and search for "Prowlarr".
-  ![Install Prowlarr](/images/manual/use-cases/install-prowlarr.png#bordered){width=80%}
+![FlareSolverr in Settings](/images/manual/use-cases/flaresolverr-installed-in-settings.png#bordered){width=60%}
 
-2. Click **Get**, then **Install**, and wait for installation to complete.
+Or open **Market** > **My Olares** to see FlareSolverr among your installed apps.
+
+![FlareSolverr in My Olares](/images/manual/use-cases/flaresolverr-installed-in-market.png#bordered){width=60%}
 
 ## Configure FlareSolverr in Prowlarr
 
