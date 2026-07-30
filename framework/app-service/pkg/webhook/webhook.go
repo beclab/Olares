@@ -270,7 +270,8 @@ func (wh *Webhook) CreatePatch(
 				meshinagent.CertsVolumeForViewer(viewer),
 				meshinagent.SharedHostsVolume(),
 			)
-			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshinagent.InitContainerSpec())
+			gatewayIPs := wh.lookupMeshInGatewayIPs(ctx)
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshinagent.InitContainerSpecWithGatewayIPs(gatewayIPs))
 			pod.Spec.Containers = append(pod.Spec.Containers, meshinagent.ContainerSpec())
 			// ARCH S6: mesh-in and linkerd-proxy share the same admission predicate.
 			if mesh.ShouldInjectLinkerdProxy(injectMeshInAgent) {
@@ -572,6 +573,30 @@ func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcf
 	}
 	declaresSharedCaller = meshinagent.DeclaresSharedCaller(app.Spec.Settings)
 	return meshinagent.ShouldInject(app, isSharedApp), declaresSharedCaller, nil
+}
+
+// lookupMeshInGatewayIPs returns the app-gateway-data ClusterIP for iptables -d.
+// Empty means init falls back to the os-gateway Service DNS name.
+func (wh *Webhook) lookupMeshInGatewayIPs(ctx context.Context) string {
+	if wh == nil || wh.kubeClient == nil {
+		return ""
+	}
+	ns := security.AppGatewayNamespace
+	svc, err := wh.kubeClient.CoreV1().Services(ns).Get(ctx, meshinagent.GatewayDataServiceName, metav1.GetOptions{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.Warningf("mesh-in: get %s/%s: %v", ns, meshinagent.GatewayDataServiceName, err)
+		}
+		klog.Warningf("mesh-in: gateway ClusterIP unavailable; iptables init will fall back to DNS")
+		return ""
+	}
+	ip := strings.TrimSpace(svc.Spec.ClusterIP)
+	if ip == "" || ip == corev1.ClusterIPNone {
+		klog.Warningf("mesh-in: %s/%s has no ClusterIP; iptables init will fall back to DNS", ns, meshinagent.GatewayDataServiceName)
+		return ""
+	}
+	klog.V(4).Infof("mesh-in: gateway ClusterIP %s from %s/%s", ip, ns, meshinagent.GatewayDataServiceName)
+	return ip
 }
 
 // isSharedEntranceWorkload reports whether the pod is a Shared entrance (callee
