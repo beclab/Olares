@@ -10,6 +10,10 @@ doc_version: "3.0"
 doc_updated: "2026-07-30"
 ---
 
+:::warning
+本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openwebui.md)。
+:::
+
 # 设置 Open WebUI 与本地 AI 对话
 
 Open WebUI 是一个自托管的聊天界面，让你在 Olares 设备上与本地模型进行私密对话。

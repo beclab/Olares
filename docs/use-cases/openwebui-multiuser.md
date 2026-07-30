@@ -6,7 +6,7 @@ head:
     - name: keywords
       content: Olares, Open WebUI, multi-user, shared access, local LLM
 app_version: "1.0.38"
-doc_version: "1.1"
+doc_version: "2.0"
 doc_updated: "2026-07-30"
 ---
 
