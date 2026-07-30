@@ -174,13 +174,15 @@ iptables -t nat -C OUTPUT -p tcp --dport 443 $OWNER_SKIP -j REDIRECT --to-ports 
 }
 
 // JWTSecretVolume mounts the caller JWT-SVID Secret issued by callerjwt (name must match AppJWTSecretName).
+// Optional is true so a missing Secret does not block Pod startup; fail-closed for
+// allowlisted hosts is enforced by njs authDeny (401) when the token file is absent.
 func JWTSecretVolume() corev1.Volume {
 	return corev1.Volume{
 		Name: JWTSecretVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName: callerjwt.AppJWTSecretName,
-				Optional:   boolPtr(false),
+				Optional:   boolPtr(true),
 			},
 		},
 	}

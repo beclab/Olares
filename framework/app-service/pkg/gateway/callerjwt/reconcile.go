@@ -87,8 +87,9 @@ func (r *IssuerReconciler) reconcileApplication(ctx context.Context, app *appv1a
 	}
 	req := issueRequestFromApplication(app)
 	if appcfg.IsShared(app) && strings.TrimSpace(req.Appid) == "" {
-		err := fmt.Errorf("callerjwt: shared caller requires spec.appid")
-		klog.Warningf("caller_jwt_issue_fail app=%s ns=%s err=%v", app.Spec.Name, app.Spec.Namespace, err)
+		err := fmt.Errorf("callerjwt: shared app requires spec.appid")
+		klog.Errorf("caller_jwt_issue_fail app=%s ns=%s err=%v", app.Spec.Name, app.Spec.Namespace, err)
+		RecordIssueFail(app.Spec.Namespace)
 		return err
 	}
 	token, err := r.issuer.Issue(req)
@@ -99,7 +100,11 @@ func (r *IssuerReconciler) reconcileApplication(ctx context.Context, app *appv1a
 	if err := upsertAppJWTSecret(ctx, r.Client, r.Scheme, app, token); err != nil {
 		return err
 	}
-	klog.V(1).Infof("caller jwt issued app=%s ns=%s", app.Spec.Name, app.Spec.Namespace)
+	if appcfg.IsShared(app) {
+		klog.V(1).Infof("caller_jwt_issued_all shared=true ns=%s app=%s", app.Spec.Namespace, app.Spec.Name)
+	} else {
+		klog.V(1).Infof("caller jwt issued app=%s ns=%s", app.Spec.Name, app.Spec.Namespace)
+	}
 	return nil
 }
 
@@ -242,22 +247,6 @@ func applicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 	return hasNamedSharedCallee(s)
 }
 
-// sharedDeclaresCaller is the Shared-app gate for issuing caller-jwt: decide=true
-// or named callee refs only (needsSharedAccess alone is not enough). Kept in this
-// package because importing meshinagent would create a cycle.
-func sharedDeclaresCaller(settings map[string]string) bool {
-	if settings == nil || meshInjectOptedOut(settings) {
-		return false
-	}
-	if d := strings.TrimSpace(settings[settingSharedCallerDecide]); strings.EqualFold(d, "false") {
-		return false
-	}
-	if strings.EqualFold(strings.TrimSpace(settings[settingSharedCallerDecide]), "true") {
-		return true
-	}
-	return hasNamedSharedCallee(settings)
-}
-
 func meshInjectOptedOut(settings map[string]string) bool {
 	if settings == nil {
 		return false
@@ -279,12 +268,15 @@ func hasNamedSharedCallee(settings map[string]string) bool {
 	return strings.TrimSpace(settings[settingAppRef]) != ""
 }
 
+// shouldIssueCallerJWT reports whether caller-jwt must exist for this Application.
+// Shared apps always issue: decide only controls mesh-in inject, not JWT issuance.
+// Ordinary apps issue when they declare shared access.
 func shouldIssueCallerJWT(app *appv1alpha1.Application) bool {
 	if app == nil {
 		return false
 	}
 	if appcfg.IsShared(app) {
-		return sharedDeclaresCaller(app.Spec.Settings)
+		return true
 	}
 	return applicationDeclaresSharedAccess(app)
 }
