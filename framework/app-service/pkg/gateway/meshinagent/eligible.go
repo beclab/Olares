@@ -38,24 +38,12 @@ func ApplicationDeclaresSharedAccess(app *appv1alpha1.Application) bool {
 }
 
 // ShouldInject reports whether the mesh-in agent may be considered for a pod.
-// Shared apps inject only with decide=true or named callee refs; needsSharedAccess
-// alone is not enough. Ordinary apps may still inject via Decide when there are
-// no named callees. Entrance vs outbound gating uses AllowOutboundMeshIn.
+// Injection follows only persisted decide / named callee facts (DeclaresSharedCaller).
+// Live Decide eligibility is no longer evaluated here; the controller persists
+// decide via ApplyDecide. isSharedApp is retained for admission call sites.
 func ShouldInject(app *appv1alpha1.Application, isSharedApp bool) bool {
-	if app == nil {
-		return false
-	}
-	if isSharedApp {
-		return DeclaresSharedCaller(app.Spec.Settings)
-	}
-	if DeclaresSharedCaller(app.Spec.Settings) {
-		return true
-	}
-	name := strings.TrimSpace(app.Spec.Name)
-	if name == "" {
-		name = app.Name
-	}
-	return Decide(name, app.Spec.Settings, DefaultRules(), false).Inject
+	_ = isSharedApp
+	return ApplicationDeclaresSharedAccess(app)
 }
 
 // AllowOutboundMeshIn reports whether a pod that already passed ShouldInject
