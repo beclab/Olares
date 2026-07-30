@@ -5,15 +5,14 @@ head:
   - - meta
     - name: keywords
       content: Olares, Open WebUI, STT, TTS, voice, Speaches, audio
-app_version: "1.0.20"
-doc_version: "1.0"
-doc_updated: "2026-05-14"
+app_version: "1.0.38"
+doc_version: "2.0"
+doc_updated: "2026-07-30"
 ---
 
 # Configure voice interactions in Open WebUI
 
 Enable hands-free communication in Open WebUI by connecting it to the Speaches application. This integration provides speech-to-text (STT) for dictating prompts and text-to-speech (TTS) for hearing AI responses aloud.
-
 
 ## Learning objectives
 
@@ -27,7 +26,7 @@ In this guide, you will learn how to:
 
 Before you begin, ensure you have the following in place:
 
-- [Open WebUI](openwebui.md) installed and configured with at least one active model backend.
+- [Open WebUI](openwebui.md) installed and configured with at least one connected local model.
 - [Speaches](speaches.md#install-speaches) installed.
 - Administrator privileges for the Open WebUI instance.
 - Approximately 14 GB of available VRAM to run the LLM, STT, and TTS models simultaneously.
@@ -41,9 +40,9 @@ To link Open WebUI and Speaches, you must obtain the Speaches shared endpoint UR
 1. Open Olares Settings, and then go to **Applications** > **Speaches**.
 2. In **Shared entrances**, click **Speaches API**, and then note down the endpoint URL.
 
-   For example, `http://edd26bab0.shared.olares.com`.
+   For example, `http://7c6f50e7.shared.olares.com`.
 
-   ![Speaches shared entrance](/images/manual/use-cases/openwebui-speaches-shared-entrance.png#bordered){width=70%}
+   ![Speaches shared entrance](/images/manual/use-cases/openwebui-speaches-shared-entrance1.png#bordered){width=70%}
 
 ### Find model and voice names
 
@@ -52,29 +51,30 @@ To link Open WebUI and Speaches, you must obtain the Speaches shared endpoint UR
 3. Go to the **Text-to-Speech** tab, click the **Model** drop-down list, select the default TTS model `speaches-ai/Kokoro-82M-v1.0-ONNX`, and then note down the model name.
 4. From the **Voice** drop-down list, select a voice for the AI to use when reading responses aloud, and then note down the voice name. For example, `am_eric`.
 
-   ![Text-to-speech generation](/images/manual/use-cases/speaches-tts.png#bordered){width=90%}   
+   ![Text-to-speech generation](/images/manual/use-cases/speaches-tts.png#bordered){width=90%}
 
 ## Configure audio settings in Open WebUI
 
-1. In Open WebUI, click your profile icon, and then go to **Admin Panel** > **Settings** > **Audio**.
-2. In the **Speech-to-Text** section, specify the following settings:
+1. In Open WebUI, click your profile icon, and then go to **Admin Panel** > **Settings**.
+2. On the left sidebar, locate the **Experience** section, and then select **Audio**.
+3. In the **Speech-to-Text** section, specify the following settings:
 
    - **Speech-to-Text Engine**: Select **OpenAI**.
-   - **API Base URL**: Enter the Speaches shared endpoint URL and append `/v1` to the end. For example, `http://edd26bab0.shared.olares.com/v1`.
+   - **API Base URL**: Enter the Speaches shared endpoint URL and append `/v1` to the end. For example, `http://7c6f50e7.shared.olares.com/v1`.
    - **API Key**: Enter any text. Do not leave it empty.
    - **STT Model**: Enter the STT model name you noted down earlier. That is `Systran/faster-whisper-small`.
 
-3. In the **Text-to-Speech** section, specify the following settings:
+4. In the **Text-to-Speech** section, specify the following settings:
 
    - **Text-to-Speech Engine**: Select **OpenAI**.
-   - **API Base URL**: Enter the Speaches shared endpoint URL and append `/v1` to the end. For example, `http://edd26bab0.shared.olares.com/v1`.
+   - **API Base URL**: Enter the Speaches shared endpoint URL and append `/v1` to the end. For example, `http://7c6f50e7.shared.olares.com/v1`.
    - **API Key**: Enter any text. Do not leave it empty.
    - **TTS Voice**: Enter the voice name you noted down earlier. For example, `am_eric`.
    - **TTS Model**: Enter the TTS model name you noted earlier. That is, `speaches-ai/Kokoro-82M-v1.0-ONNX`.
 
-   ![Audio settings in Open WebUI](/images/manual/use-cases/openwebui-audio-settings.png#bordered)
+   ![Audio settings in Open WebUI](/images/manual/use-cases/openwebui-audio-settings1.png#bordered)
 
-4. Click **Save**.
+5. Click **Save**.
 
 ## Verify the configuration
 
@@ -88,9 +88,9 @@ Modern web browsers block microphone access for applications running inside the 
 
 1. Start a new chat in Open WebUI.
 2. Select a model.
-3. Click <i class="material-symbols-outlined">mic</i> next to the message input field.
+3. Click <i class="material-symbols-outlined">mic</i>.
 
-   ![Dictate button](/images/manual/use-cases/openwebui-dictate-button.png#bordered)
+   ![Dictate button](/images/manual/use-cases/openwebui-dictate-button1.png#bordered)
 
 4. Allow browser microphone access when prompted.
 5. Speak into your microphone. Your speech is transcribed into the text box.
@@ -99,23 +99,23 @@ Modern web browsers block microphone access for applications running inside the 
 
 1. Send a message to the model and wait for a response.
 2. Click <i class="material-symbols-outlined">volume_up</i> under the response. The response is spoken aloud.
-   
-   ![Read aloud](/images/manual/use-cases/openwebui-read-aloud.png#bordered)
+
+   ![Read aloud](/images/manual/use-cases/openwebui-read-aloud1.png#bordered)
 
 ### Test continuous voice mode
 
 1. In the chat interface, click <i class="material-symbols-outlined">graphic_eq</i>. The first load might take a few moments as models initialize.
 
-   ![Voice mode](/images/manual/use-cases/openwebui-voice-mode.png#bordered)
+   ![Voice mode](/images/manual/use-cases/openwebui-voice-mode1.png#bordered)
 
 2. Speak naturally. The system will transcribe your speech, generate a response, and read it back automatically.
 
-:::warning Resource usage
-Using audio features invokes the LLM, STT, and TTS models simultaneously. Make sure your device has enough VRAM and memory for all three models to load and switch smoothly. If resources run low, Olares might stop apps to protect the system, causing brief unavailability.
+   :::warning Resource usage
+   Using audio features invokes the LLM, STT, and TTS models simultaneously. Make sure your device has enough VRAM and memory for all three models to load and switch smoothly. If resources run low, Olares might stop apps to protect the system, causing brief unavailability.
 
-For production use, consider setting the GPU mode to **Memory slicing** to prevent resource contention between models.
-:::
+   For production use, consider setting the GPU mode to **Memory slicing** to prevent resource contention between models.
+   :::
 
-:::tip Non-English speech
-The default STT and TTS models might not perform well for non-English languages. You can switch to different models in the Speaches Playground if needed. For instructions on changing models, see [Manage models in Speaches](speaches.md#manage-models).
-:::
+   :::tip Non-English speech
+   The default STT and TTS models might not perform well for non-English languages. You can switch to different models in the Speaches Playground if needed. For instructions on changing models, see [Manage models in Speaches](speaches.md#manage-models).
+   :::
