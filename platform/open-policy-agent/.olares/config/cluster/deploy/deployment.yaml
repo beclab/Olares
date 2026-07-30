@@ -257,6 +257,7 @@ data:
         not startswith(image, "kldtks/")
         not startswith(image, "alpine:")
         not startswith(image, "mariadb:")
+        not startswith(image, "cr.l5d.io/linkerd/proxy")
     }
         
     is_root_user(ctx) if {
