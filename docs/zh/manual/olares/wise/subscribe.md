@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Wise 中添加和管理 RSS 订阅、使用 OPML 导入订阅源，以及高效组织内容来源。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, RSS 订阅, 订阅源管理, OPML 导入, LarePass 扩展, 内容源
 ---
 
 # 订阅和管理订阅源

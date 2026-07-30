@@ -515,13 +515,13 @@ type CpuInfo struct {
 func getAmdGPU() (bool, error) {
 	APUOrGPUExists, err := HasAmdAPUOrGPULocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD APU/GPU: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD APU/GPU: %v\n", err)
 		return false, err
 	}
 
 	hasAmdAPU, err := HasAmdAPULocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD APU: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD APU: %v\n", err)
 		return false, err
 	}
 
@@ -573,14 +573,14 @@ func getCpu() *CpuInfo {
 	// check if it has amd igpu
 	hasAmdAPU, err := HasAmdAPULocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD iGPU: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD iGPU: %v\n", err)
 		hasAmdAPU = false
 	}
 
 	// check if it is an AMD Ryzen AI Max APU
 	isRyzenAIMax, err := HasRyzenAIMaxLocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD Ryzen AI Max: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD Ryzen AI Max: %v\n", err)
 		isRyzenAIMax = false
 	}
 

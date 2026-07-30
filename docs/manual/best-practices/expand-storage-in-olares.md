@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Expand Olares storage with SMB servers, USB auto-mount, CLI commands, and manually mounted HDDs or SSDs for files and large AI models.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, expand storage, SMB, USB mount, HDD SSD, LVM, disk extend, external storage
 ---
 # Expand storage in Olares
 
@@ -210,7 +214,7 @@ Make sure the disk does not contain important data, or back up the data before c
 ### Before you begin
 
 - Connect the external drive to the Olares host machine.
-- [SSH](/developer/reference/access-olares-terminal.md) into the Olares terminal.
+- SSH into the Olares terminal.
 
 ### Identify the unmounted disk
 
@@ -314,4 +318,4 @@ Open Dashboard from Launchpad and confirm that total system storage capacity has
 
 ![Check disk volume in Dashboard](/images/manual/tutorials/expand-dashboard-disk.png#bordered)
 
-For full command usage and options, please refer to [`disk`](/developer/install/cli/disk.md).
+For full command usage and options, please refer to the `disk` command documentation.

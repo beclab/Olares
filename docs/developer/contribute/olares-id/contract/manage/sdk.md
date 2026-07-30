@@ -1,6 +1,10 @@
 ---
 description: Sometimes we need complete data for statistical or other reasons.
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID SDK, DID management SDK, contract SDK, manage DID data
 ---
 
 # Management with SDK

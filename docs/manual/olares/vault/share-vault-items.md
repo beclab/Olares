@@ -1,6 +1,10 @@
 ---
 outline: [2, 3] 
 description: Share Olares Vault items securely. Configure team roles and permissions, manage shared access, and collaborate without exposing sensitive data.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Vault, shared vault, team access, permissions, secure sharing
 ---
 
 # Manage shared Vaults

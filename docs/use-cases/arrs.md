@@ -223,4 +223,5 @@ For the full list of supported download clients and integrations, refer to the o
 
 ## Learn more
 
+- [Access Cloudflare-protected sites in Prowlarr with FlareSolverr](flaresolverr.md): Bypass Cloudflare challenges for indexer sites.
 - [Servarr Wiki](https://wiki.servarr.com/)

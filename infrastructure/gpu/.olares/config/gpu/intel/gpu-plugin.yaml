@@ -1,3 +1,37 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: intel-gpu-plugin
+  name: intel-gpu-plugin
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: intel-gpu-plugin
+  name: intel-gpu-plugin-node-register
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: intel-gpu-plugin
+  name: intel-gpu-plugin-node-register
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: intel-gpu-plugin-node-register
+subjects:
+  - kind: ServiceAccount
+    name: intel-gpu-plugin
+    namespace: kube-system
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -14,10 +48,44 @@ spec:
       labels:
         app: intel-gpu-plugin
     spec:
+      serviceAccountName: intel-gpu-plugin
       containers:
+      - args:
+        - -v=4
+        image: beclab/intel-gpu-levelzero:1.1.1
+        imagePullPolicy: IfNotPresent
+        name: intel-gpu-levelzero
+        resources:
+          limits:
+            cpu: 50m
+            memory: 100Mi
+          requests:
+            cpu: 25m
+            memory: 50Mi
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+          privileged: true
+        volumeMounts:
+        - mountPath: /var/lib/levelzero
+          name: levelzerosocket
+        - mountPath: /dev/dri
+          name: dev-dri-fs
+        - mountPath: /sys/class/drm
+          name: sysfsdrm
+        - mountPath: /var/lib/kubelet/device-plugins
+          name: kubeletsockets
+        - mountPath: /var/run/cdi
+          name: cdipath
+        - mountPath: /dev/accel
+          name: dev-accel-fs
+        - mountPath: /sys/class/accel
+          name: sysfsaccel
       - args:
         - -enable-monitoring
         - -shared-dev-num=50
+        - -health-management
         - -v=4
         env:
         - name: NODE_NAME
@@ -28,7 +96,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        image: beclab/intel-device-plugin:1.1
+        image: beclab/intel-device-plugin:1.1.1
         imagePullPolicy: IfNotPresent
         name: intel-gpu-plugin
         resources:
@@ -64,6 +132,8 @@ spec:
           readOnly: true
         - mountPath: /sys/class/accel
           name: sysfsaccel
+        - mountPath: /var/lib/levelzero
+          name: levelzerosocket
       nodeSelector:
         intel.feature.node.kubernetes.io/gpu: "true"
         kubernetes.io/arch: amd64
@@ -87,6 +157,8 @@ spec:
       - hostPath:
           path: /sys/class/accel
         name: sysfsaccel
+      - emptyDir: {}
+        name: levelzerosocket
   updateStrategy:
     rollingUpdate:
       maxSurge: 0

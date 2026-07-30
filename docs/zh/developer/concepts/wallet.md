@@ -1,5 +1,9 @@
 ---
 description: 了解数字身份钱包 LarePass 的核心功能，包括 Olares ID（去中心化身份证明）与 VC 的管理及与 Olares 的无缝交互。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 身份钱包, DID, VC, Olares ID, 助记词备份
 ---
 
 # 身份钱包应用（Identity Wallet App）

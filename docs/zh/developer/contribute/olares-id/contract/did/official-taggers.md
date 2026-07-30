@@ -1,5 +1,9 @@
 ---
 description: TerminusDID 中定义的官方标签，以及负责管理这些标签的 RootTagger。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, RootTagger, 官方标签, rsaPubKey, dnsARecord, authAddresses, AppStoreReputation
 ---
 # 官方 Tagger
 

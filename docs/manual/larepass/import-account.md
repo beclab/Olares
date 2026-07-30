@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Import an existing Olares ID to LarePass using your 12-word mnemonic phrase. Access your Olares services on a new device or another LarePass client.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, import account, LarePass, mnemonic phrase, restore
 ---
 
 # Import an account

@@ -246,4 +246,3 @@ Windows 安装向导将引导你完成新系统的配置。
 ## 相关资源
 
 - [在 Windows 上安装驱动](install-nvidia-driver.md)
-- [在第二块 SSD 上双系统启动 Ubuntu](dual-boot-ubuntu-dual-drive.md)

@@ -216,6 +216,7 @@ func NewArgument() *Argument {
 	// so master host config can be loaded from ${base-dir}/master.conf reliably.
 	arg.SetBaseDir(viper.GetString(FlagBaseDir))
 	arg.loadMasterHostConfig()
+	arg.applyConsoleLogOverride()
 	return arg
 }
 
@@ -315,7 +316,7 @@ func (a *Argument) SetMinikubeProfile(profile string) {
 	a.MinikubeProfile = profile
 	if profile == "" && a.SystemInfo.IsDarwin() {
 		fmt.Printf("\nNote: Minikube profile is not set, will try to use the default profile: \"%s\"\n", MinikubeDefaultProfile)
-		fmt.Println("if this is not expected, please specify it explicitly by setting the --profile/-p option\n")
+		fmt.Print("if this is not expected, please specify it explicitly by setting the --profile/-p option\n\n")
 		a.MinikubeProfile = MinikubeDefaultProfile
 	}
 }
@@ -324,7 +325,7 @@ func (a *Argument) SetWSLDistribution(distribution string) {
 	a.WSLDistribution = distribution
 	if distribution == "" && a.SystemInfo.IsWindows() {
 		fmt.Printf("\nNote: WSL distribution is not set, will try to use the default distribution: \"%s\"\n", WSLDefaultDistribution)
-		fmt.Println("if this is not expected, please specify it explicitly by setting the --distribution/-d option\n")
+		fmt.Print("if this is not expected, please specify it explicitly by setting the --distribution/-d option\n\n")
 		a.WSLDistribution = WSLDefaultDistribution
 	}
 }
@@ -397,9 +398,55 @@ func (a *Argument) SetManifest(manifest string) {
 	a.Manifest = manifest
 }
 
+// consoleLogOverride pins the console log file for every Argument built in this
+// process. See SetConsoleLogOverride.
+var consoleLogOverride string
+
+// SetConsoleLogOverride routes the console log of every Argument built from now
+// on to fileName.
+//
+// A command that drives several pipelines in sequence (`node join` runs the
+// master probe, precheck, two downloads, prepare and add-node) would otherwise
+// scatter one operation across five log files, because each of those pipelines
+// builds its own Argument and picks its own name. The owning command truncates
+// its log once and then pins it, so the whole operation lands in one file that
+// can be read top to bottom.
+func SetConsoleLogOverride(fileName string) {
+	consoleLogOverride = fileName
+}
+
+// applyConsoleLogOverride pins the console log when the owning command asked for
+// one. It is applied both from NewArgument and from SetConsoleLog, because some
+// pipelines never call the latter and would otherwise fall back to the default
+// log file, leaving a hole in the middle of the operation's log.
+func (a *Argument) applyConsoleLogOverride() bool {
+	if consoleLogOverride == "" {
+		return false
+	}
+	a.ConsoleLogFileName = consoleLogOverride
+	// Appending is not optional here: truncating would discard everything the
+	// earlier pipelines of the same operation wrote.
+	a.ConsoleLogTruncate = false
+	return true
+}
+
 func (a *Argument) SetConsoleLog(fileName string, truncate bool) {
+	if a.applyConsoleLogOverride() {
+		return
+	}
 	a.ConsoleLogFileName = fileName
 	a.ConsoleLogTruncate = truncate
+}
+
+// ConsoleLogPath is where the human-readable log for this Argument ends up, so a
+// command can point the operator at it when something fails mid-flow. It mirrors
+// the layout BaseRuntime.InitLogger uses.
+func (a *Argument) ConsoleLogPath() string {
+	fileName := a.ConsoleLogFileName
+	if fileName == "" {
+		fileName = common.InstallLogFile
+	}
+	return filepath.Join(a.BaseDir, "versions", fmt.Sprintf("v%s", a.OlaresVersion), common.LogsDir, fileName)
 }
 
 func (a *Argument) SetSwapConfig(config SwapConfig) {

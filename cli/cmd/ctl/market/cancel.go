@@ -79,7 +79,7 @@ Cancelling an app that is *resuming* or *upgrading* requires Olares
 cancel state whitelist gained "upgrading" on the same line; both reuse
 this same DELETE). On an older backend the CLI rejects it; when the
 version is unknown, refresh the active profile with "olares-cli profile
-list --refresh-version". Every other in-flight state is unaffected.
+list --refresh". Every other in-flight state is unaffected.
 
 Examples:
   olares-cli market cancel firefox                         # fire-and-forget; returns once backend accepts

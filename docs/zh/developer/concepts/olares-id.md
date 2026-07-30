@@ -1,5 +1,9 @@
 ---
 description: 了解 Olares ID 的定义、结构及其用途，涵盖个人/组织/实体域名类型，并阐释与去中心化标识符 (DID) 的关系。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares ID, 去中心化身份, DID, 个人域名, 组织域名, 可验证凭证
 ---
 
 # Olares ID
@@ -66,4 +70,3 @@ Olares ID 采用类似邮箱的可读格式，使 DID 更易用，同时保持�
 
 - [创建 Olares ID](../../manual/larepass/create-account.md)
 - [去中心化标识符 (DID)](did.md)
-- [Gmail issuer 服务](/zh/developer/contribute/olares-id/verifiable-credential/olares.md#gmail-issuer-service)

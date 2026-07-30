@@ -442,11 +442,15 @@ func addEnvironmentVariables(ctx context.Context, kubeConfig *rest.Config, appCo
 		return err
 	}
 
+	envNames := make([]string, 0, len(appEnv.Envs))
 	for _, env := range appEnv.Envs {
 		values[constants.OlaresEnvHelmValuesKey].(map[string]interface{})[env.EnvName] = env.GetEffectiveValue()
+		envNames = append(envNames, env.EnvName)
 	}
 
-	klog.Infof("Added environment variables to Helm values: %+v", values[constants.OlaresEnvHelmValuesKey])
+	// Names only: an env declared type=password carries what the user typed at install.
+	klog.Infof("Added %d environment variables to Helm values for %s/%s: %v",
+		len(envNames), appConfig.Namespace, appConfig.AppName, envNames)
 	return nil
 }
 

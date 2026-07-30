@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中将你的应用接入 MongoDB 服务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MongoDB, 中间件集成, OlaresManifest, NoSQL, 环境变量映射
 ---
 # 集成 MongoDB
 

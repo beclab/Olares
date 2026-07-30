@@ -90,7 +90,7 @@ export const useCases: UseCase[] = [
   { title: "Context7", link: "/use-cases/context7", category: "Utilities", description: "Give AI coding assistants up-to-date docs via MCP", descriptionZh: "通过 MCP 为 AI 编程助手提供最新文档" },
   { title: "Falco", link: "/use-cases/falco", category: "Utilities", description: "Runtime security monitoring for hosts and containers", descriptionZh: "面向主机和容器的运行时安全监控" },
   { title: "Firecrawl", link: "/use-cases/firecrawl", category: "Utilities", description: "Web page loader and scraper for apps", descriptionZh: "面向应用的网页加载与抓取工具" },
-  { title: "FlareSolverr", link: "/use-cases/flaresolverr", category: "Utilities", description: "Bypass Cloudflare protection in Prowlarr", descriptionZh: "在 Prowlarr 中绕过 Cloudflare 防护" },
+  { title: "FlareSolverr", link: "/use-cases/flaresolverr", category: "Utilities", description: "Set up FlareSolverr with Prowlarr to bypass Cloudflare", descriptionZh: "设置 FlareSolverr 与 Prowlarr，绕过 Cloudflare" },
   { title: "SearXNG", link: "/use-cases/searxng", category: "Utilities", description: "Privacy-focused meta search engine", descriptionZh: "注重隐私的元搜索引擎" },
   { title: "Home Assistant", link: "/use-cases/home-assistant", category: "Utilities", description: "Build your smart home hub with local device discovery and automation", descriptionZh: "搭建智能家居中枢，支持本地设备发现与自动化" },
 ];

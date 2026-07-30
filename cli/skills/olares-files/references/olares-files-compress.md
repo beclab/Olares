@@ -83,7 +83,7 @@ POST /api/archive/<node>/compress
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Backend version could not be determined | Profile version cache is missing or stale | Confirm `profile login`, then run `olares-cli profile list --refresh-version` |
+| Backend version could not be determined | Profile version cache is missing or stale | Confirm `profile login`, then run `olares-cli profile list --refresh` |
 | `require Olares >= 1.12.6`, with a detected older version | Backend predates the archive surface | Upgrade Olares |
 | `does not support the "sync"/"<cloud>" namespace` | Outside the archive allow-list | Stage into `drive/Home` first |
 | `cannot derive --format from destination` | No canonical suffix on `<dst>` | Pass `--format` |

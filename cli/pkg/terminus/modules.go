@@ -107,6 +107,9 @@ func (m *RemoveReleaseFileModule) Init() {
 type CheckPreparedModule struct {
 	common.KubeModule
 	Force bool
+	// ForJoin applies the stricter rules a node must satisfy to join an
+	// existing cluster. See CheckPrepared.
+	ForJoin bool
 }
 
 func (m *CheckPreparedModule) Init() {
@@ -114,7 +117,7 @@ func (m *CheckPreparedModule) Init() {
 
 	checkPrepared := &task.LocalTask{
 		Name:   "CheckPrepared",
-		Action: &CheckPrepared{Force: m.Force},
+		Action: &CheckPrepared{Force: m.Force, ForJoin: m.ForJoin},
 	}
 
 	checkTimeSync := &task.LocalTask{
@@ -839,19 +842,31 @@ func (m *ChangeHostIPModule) Init() {
 type GetMasterInfoModule struct {
 	common.KubeModule
 	Print bool
+	// Out, when non-nil, receives the probed master info. The pipeline cache is
+	// cleared once a run finishes, so this is how a caller outside the pipeline
+	// gets hold of the result.
+	Out *MasterInfo
+	// Bootstrapping marks the probe that runs at the start of `node join`,
+	// before this machine has been brought into a joinable shape. See
+	// CheckJoinEligibility.
+	Bootstrapping bool
 }
 
 func (m *GetMasterInfoModule) Init() {
 	m.Name = "GetMasterInfo"
 	m.Tasks = append(m.Tasks,
+		&task.LocalTask{
+			Name:   "CheckMasterReachable",
+			Action: new(CheckMasterReachable),
+		},
 		&task.RemoteTask{
 			Name:   "GetMasterInfo",
-			Action: &GetMasterInfo{Print: m.Print},
+			Action: &GetMasterInfo{Print: m.Print, Out: m.Out},
 			Hosts:  m.Runtime.GetHostsByRole(common.Master),
 		},
 		&task.LocalTask{
 			Name:   "AddNodePrecheck",
-			Action: new(AddNodePrecheck),
+			Action: &AddNodePrecheck{Bootstrapping: m.Bootstrapping},
 		},
 	)
 }

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Guide to installing Olares on Windows using WSL (Windows Subsystem for Linux) including setup requirements and activation steps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Windows script, WSL 2, PowerShell, Windows 10 11, WSL install
 ---
 # Install Olares on Windows via the script
 This guide explains how to install Olares on Windows (WSL 2) using the provided installation script.

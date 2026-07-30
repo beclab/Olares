@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解 Olares 中应用分发的整体机制。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用分发, Olares Market, OAC, Terminus-Gitbot, 应用索引, 应用生命周期
 ---
 # 分发 Olares 应用
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Understand Olares network architecture, including application entrances, local access, endpoint configuration, and internal network security policies.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares network, network architecture, application entrance, endpoint configuration, network security
 ---
 # Network
 

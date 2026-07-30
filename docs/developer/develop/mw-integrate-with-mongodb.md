@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to integrate your app with MongoDB service in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MongoDB integration, integrate with MongoDB, Olares middleware, NoSQL database
 ---
 # Integrate with MongoDB
 

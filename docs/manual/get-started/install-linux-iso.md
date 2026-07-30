@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Install Olares on a physical machine using the official ISO image, including system requirements, installation steps, and activation process.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Linux ISO, physical machine, bootable USB, Balena Etcher, Ubuntu
 ---
 
 # Install Olares via ISO

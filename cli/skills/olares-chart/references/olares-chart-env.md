@@ -14,9 +14,11 @@ Olares exposes configuration to an app through env vars at **three levels**. The
 >
 > ```yaml
 > env:
->   - name: APP_TOKEN
->     value: "{{ .Values.olaresEnv.APP_TOKEN }}"
+>   - name: APP_SITE_TITLE
+>     value: "{{ .Values.olaresEnv.APP_SITE_TITLE }}"
 > ```
+>
+> A credential is mapped the same way in principle, but travels through a Secret instead of a literal value ([secrets.md](olares-chart-secrets.md)).
 >
 > This is different from system-injected Helm values like `.Values.postgres.*` / `.Values.userspace.*` / `.Values.os.*` (full catalogue in the system-injected Helm values reference) — those are not env vars and also need explicit mapping.
 
@@ -67,7 +69,7 @@ How `required`, `type`, and `regex` actually behave at install:
 
 ### Field types (`type`)
 
-`int` | `bool` | `url` | `ip` | `domain` | `email` | `string` | `password`. `password` is rendered masked in the UI. The type is used to format-validate the value before it is accepted.
+`int` | `bool` | `url` | `ip` | `domain` | `email` | `string` | `password`. `password` is rendered masked in the UI. The type is used to format-validate the value before it is accepted. Declare it for every credential the user supplies, and hand the value to the container through a Secret — see [secrets.md](olares-chart-secrets.md).
 
 ### Choice types
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to visualize Prometheus metrics in Olares using Grafana dashboards.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Grafana dashboards, Prometheus metrics, visualize metrics, Olares monitoring
 ---
 # Use Grafana dashboards
 

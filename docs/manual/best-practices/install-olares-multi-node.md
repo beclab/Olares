@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Install a multi-node Olares cluster with master and worker nodes. Configure JuiceFS, add workers, and handle network changes.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, multi-node cluster, worker nodes, JuiceFS, joincluster.sh, master node, distributed storage
 ---
 
 # Install a multi-node Olares cluster <Badge type="warning" text="Alpha" />
@@ -174,6 +178,6 @@ Once your cluster is set up, changes in network configurations can disrupt the m
 - [Olares system architecture](../../developer/concepts/system-architecture.md#distributed-file-system): Understand the distributed file system that underpins Olares, ensuring scalability, high availability, and seamless data management.
 - [The system daemon: olaresd](../../developer/install/installation-overview.md#system-daemon-olaresd): Learn about the central system process that orchestrates and manages core Olares functions.
 - [Data](../../developer/concepts/data.md#juicefs): Dive into how Olares leverages JuiceFS to provide a unified file system for efficient data storage and retrieval.
-- [Olares CLI](../../developer/install/cli/olares-cli.md): Explore the command-line interface for managing Olares installation.
+- [Olares CLI](../../developer/cli-overview.md): Explore the command-line interface for managing Olares installation.
 - [Olares environment variables](../../developer/install/environment-variables.md): Learn about the environment variables that enable advanced configurations of Olares.
 - [Install Olares](../get-started/install-olares.md): Understand how to install and activate Olares.

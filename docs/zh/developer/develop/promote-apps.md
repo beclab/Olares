@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 使用图片和图标优化你在 Olares 应用市场中的应用展示。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用推广, 应用素材, 应用图标, 宣传图, 图片托管
 ---
 # 推广你的应用
 

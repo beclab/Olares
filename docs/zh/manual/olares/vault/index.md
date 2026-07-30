@@ -1,5 +1,9 @@
 ---
 description: 使用 Vault 安全存储和管理敏感数据。了解端到端加密功能和跨设备同步，轻松管理密码、数字身份和一次性密码。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Vault, 密码管理器, 敏感数据, 端到端加密, OTP, 2FA, 双因素认证
 ---
 # 使用 Vault 保护敏感数据
 
@@ -31,11 +35,11 @@ Vault 的服务器组件运行在 Olares 上，同步单个用户的多个客户
 </div>
 
 <div>
-<h4><a href="./two-factor-verification">设置双因素认证代码</a></h4>
+<h4><a href="/zh/manual/larepass/two-factor-verification">设置双因素认证代码</a></h4>
 学习如何生成并存储 2FA 代码以增强安全性。
 </div>
 
 <div>
-<h4><a href="./autofill">使用 LarePass 的自动填充功能</a></h4>
+<h4><a href="/zh/manual/larepass/autofill">使用 LarePass 的自动填充功能</a></h4>
 学习如何设置和使用自动填充功能，适配不同的 LarePass 客户端。
 </div>

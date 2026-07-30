@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Complete guide to installing Olares on Raspberry Pi including hardware requirements, installation process, and system activation steps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Raspberry Pi, ARM, Raspbian, Pi 4B, Pi 5, single board computer
 ---
 # Install Olares on Raspberry Pi
 This guide explains how to install Olares on a Raspberry Pi.

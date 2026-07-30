@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中使用克隆功能，以独立配置运行同一应用程序的多个实例。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 克隆应用, 应用市场, 多实例, 应用管理, 应用配置
 ---
 
 # 克隆应用

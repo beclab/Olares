@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 文件分享操作指南，详解内部成员协作、公开链接分享及 SMB 局域网访问的设置步骤。本文涵盖权限管理与安全配置，助力高效实现跨设备与跨团队的文件共享。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 文件分享, 文件管理器, 内部分享, 公开分享, SMB 分享, 共享文件夹
 ---
 
 # 分享文件

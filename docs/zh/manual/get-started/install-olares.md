@@ -1,6 +1,10 @@
 ---
 description: 概览 Olares 支持的安装方式。推荐在 Linux 环境下通过 ISO 镜像或一行命令安装。其他平台（如 macOS、Windows、PVE、Raspberry Pi）适用于测试和开发。
 outline: [2,4]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 安装方式, 平台选择, Linux, macOS, PVE, DGX Spark
 ---
 
 # 安装 Olares

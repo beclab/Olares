@@ -7,17 +7,28 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
+	"github.com/beclab/Olares/cli/pkg/access"
 	"github.com/beclab/Olares/cli/pkg/auth"
+	"github.com/beclab/Olares/cli/pkg/cliconfig"
 	"github.com/beclab/Olares/cli/pkg/credential"
+	"github.com/beclab/Olares/cli/pkg/olares"
 )
+
+// fakeRoundTripper adapts a func to an http.RoundTripper for base-transport
+// substitution in transport tests.
+type fakeRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f fakeRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 // fakeStore is a minimal in-memory TokenStore for transport tests.
 // We deliberately re-declare it here (rather than reaching into the
@@ -71,12 +82,19 @@ func newTransport(t *testing.T, store *fakeStore, authURL, accessToken string) (
 	t.Helper()
 	t.Setenv("OLARES_CLI_HOME", t.TempDir())
 	r := credential.NewRefresherWith(store, time.Now)
+	id, _ := olares.ParseID("alice@olares.com")
 	tr := &refreshingTransport{
-		base:      http.DefaultTransport,
-		olaresID:  "alice@olares.com",
-		authURL:   authURL,
-		refresher: r,
-		token:     &tokenCell{token: accessToken},
+		id:       id,
+		olaresID: "alice@olares.com",
+		// Pin the refresh endpoint to the test server via the override so
+		// authURL(loc) returns it regardless of the (external) Location.
+		authURLOverride: authURL,
+		refresher:       r,
+		token:           &tokenCell{token: accessToken},
+		loc: &locationState{
+			loc:  olares.LocationExternal,
+			base: http.DefaultTransport,
+		},
 	}
 	return tr, r
 }
@@ -655,5 +673,70 @@ func TestRoundTrip_AuthCookieAndUnauthErrorInjected(t *testing.T) {
 	}
 	if seenUnauth != "Non-Redirect" {
 		t.Errorf("X-Unauth-Error = %q, want Non-Redirect (without it, edge returns HTML 302 → JSON parse failure)", seenUnauth)
+	}
+}
+
+// TestRoundTrip_UnreachableSurfaced: a switchable transport error that can't be
+// recovered (we sit inside the outage cooldown, so ensureSwitched returns
+// switched=false WITHOUT a slow real-network probe) must be surfaced as a
+// friendly *access.UnreachableError, with the raw cause still reachable via
+// errors.Is.
+func TestRoundTrip_UnreachableSurfaced(t *testing.T) {
+	const id = "alice@olares.com"
+	store := &fakeStore{}
+	tr, _ := newTransport(t, store, "unused", "AT-1") // also sets OLARES_CLI_HOME
+
+	// Pin the clock and pre-stamp a recent outage so inCooldown() is true and
+	// ensureSwitched's fast path bails out (switched=false) without probing.
+	now := time.Unix(1_000_000, 0)
+	tr.now = func() time.Time { return now }
+	cfg := &cliconfig.MultiProfileConfig{}
+	cfg.Upsert(cliconfig.ProfileConfig{OlaresID: id, LocationUnreachableAt: now.Unix() - 5})
+	if err := cliconfig.SaveMultiProfileConfig(cfg); err != nil {
+		t.Fatalf("seed cooldown: %v", err)
+	}
+
+	// Base transport always fails with a switchable (connection-refused) error.
+	cause := &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}
+	tr.loc.base = fakeRoundTripper(func(*http.Request) (*http.Response, error) {
+		return nil, cause
+	})
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://desktop.alice.olares.com/", nil)
+	resp, err := tr.RoundTrip(req)
+	if resp != nil {
+		resp.Body.Close()
+		t.Fatal("expected no response on an unrecoverable outage")
+	}
+	if err == nil {
+		t.Fatal("expected an error on an unrecoverable outage")
+	}
+	if !access.IsUnreachable(err) {
+		t.Errorf("error = %v (%T), want a friendly *access.UnreachableError", err, err)
+	}
+	if !errors.Is(err, syscall.ECONNREFUSED) {
+		t.Error("the raw transport cause should remain reachable via errors.Is")
+	}
+}
+
+// TestRoundTrip_NonSwitchableErrorPassthrough: a non-switchable transport error
+// (here a TLS failure) is NOT dressed up as unreachable — it surfaces verbatim,
+// since the network path is clearly up.
+func TestRoundTrip_NonSwitchableErrorPassthrough(t *testing.T) {
+	store := &fakeStore{}
+	tr, _ := newTransport(t, store, "unused", "AT-1")
+
+	cause := errors.New("tls: handshake failure")
+	tr.loc.base = fakeRoundTripper(func(*http.Request) (*http.Response, error) {
+		return nil, cause
+	})
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://desktop.alice.olares.com/", nil)
+	_, err := tr.RoundTrip(req)
+	if access.IsUnreachable(err) {
+		t.Errorf("a TLS error must not be wrapped as unreachable; got %v", err)
+	}
+	if !errors.Is(err, cause) {
+		t.Errorf("expected the raw TLS error to pass through, got %v", err)
 	}
 }

@@ -1,5 +1,9 @@
 ---
 description: Olares 应用开发依托于通用的 Web 技术与容器化方案。如果你熟悉 Web 应用构建或 Docker 容器技术，即可直接上手开发 Olares 应用，无需额外的技能储备。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用开发, OAC, OlaresManifest, Helm, 应用打包, 提交应用
 ---
 # 开发 Olares 应用
 

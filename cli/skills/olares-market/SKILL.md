@@ -1,7 +1,7 @@
 ---
 name: olares-market
-version: 4.5.2
-description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume, restart apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, restart app, upload chart."
+version: 4.6.0
+description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume, restart apps; catalog, status, chart upload/download, --watch. Use for Olares app store, my apps, 我的应用, install app, restart app, upload chart, download an app chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -35,7 +35,7 @@ metadata:
 | **catalog** | `list`, `get`, `categories` | no |
 | **runtime** | `status` | no |
 | **lifecycle** | `install`, `upgrade`, `uninstall`, `clone`, `stop`, `resume`, `restart`, `cancel` | yes |
-| **charts** | `upload`, `delete` | yes |
+| **charts** | `upload`, `download`, `delete` | `upload` / `delete` only (`download` reads) |
 
 For verb-specific behavior, **always start with `olares-cli market <verb> --help`**. Then drill into a reference if listed:
 
@@ -45,7 +45,7 @@ For verb-specific behavior, **always start with `olares-cli market <verb> --help
 | lifecycle | [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md) (`install` / `upgrade` / `uninstall` / `clone` / `stop` / `resume` / `cancel`) |
 | `restart` | [references/olares-market-restart.md](references/olares-market-restart.md) (Olares 1.12.6+, implicit source, compute binding, statusTime-baseline watch); it also backs the auto-restart in `settings network overlay app enable/disable` |
 | `--watch` / stuck / errors | [references/olares-market-watch.md](references/olares-market-watch.md) (per-verb watch buckets, foreground windows, stuck-state handling, common errors) |
-| charts | [references/olares-market-charts.md](references/olares-market-charts.md) (`upload` / `delete`) |
+| charts | [references/olares-market-charts.md](references/olares-market-charts.md) (`upload` / `download` / `delete`) |
 
 ## Source resolution (cross-cutting)
 
@@ -54,7 +54,7 @@ The market backend serves multiple "sources" of charts. The CLI resolves which o
 | Source id | What it is | Used by |
 |---|---|---|
 | `market.olares` | Public catalog (read-only browse) | default for `list`, `get`, `categories`, `install`, `upgrade`, `clone`, `status` |
-| `upload` | SPA "Local Sources → Upload" bucket | **hard-coded for `upload` / `delete`** — `-s` is intentionally NOT exposed on those two verbs |
+| `upload` | SPA "Local Sources → Upload" bucket | **hard-coded for `upload` / `delete`** — `-s` is intentionally NOT exposed on those two verbs; **default (overridable) for `download`** |
 | `cli` | Legacy CLI-upload bucket | read-only (`list`, `status`) |
 | `studio` | Devbox / Studio bucket | read-only (`list`, `status`) |
 
@@ -66,7 +66,7 @@ The market backend serves multiple "sources" of charts. The CLI resolves which o
 
 | Flag | Read-only browse | Lifecycle (mutating) | Chart management |
 |---|---|---|---|
-| `-s / --source` | `list`, `categories`, `status`, `get` | `install`, `upgrade`, `clone` | — (hard-coded `upload`) |
+| `-s / --source` | `list`, `categories`, `status`, `get` | `install`, `upgrade`, `clone` | `download` (defaults to `upload`); NOT on `upload` / `delete` (hard-coded `upload`) |
 | `-a / --all-sources` | `list`, `categories`, `status` | — | — |
 
 > **`-s` is NOT on `uninstall` / `stop` / `resume` / `restart`:** they act on whichever per-user state row matches the app name, regardless of source.

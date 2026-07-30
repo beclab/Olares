@@ -228,7 +228,7 @@ You can use Speaches as the STT/TTS backend for Open Notebook.
 
 3. Configure STT and TTS separately under the new provider, selecting the models you have downloaded in Speaches.
 
-   ![Configure STT/TTS in Open Notebook](/images/manual/use-cases/speaches-open-notebook-config.png#bordered) -->
+   <!--![Configure STT/TTS in Open Notebook](/images/manual/use-cases/speaches-open-notebook-config.png#bordered)-->
 
 ## Manage models
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to integrate your app with MySQL service in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MySQL integration, integrate with MySQL, Olares middleware, relational database
 ---
 # Integrate with MySQL
 

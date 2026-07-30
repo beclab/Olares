@@ -1,5 +1,9 @@
 ---
 description: 使用设置应用管理和配置你的 Olares，包括个性化体验、安全设置、服务集成等功能。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 设置, 系统设置, 用户管理, 网络配置, 备份恢复, 应用管理, 集成
 ---
 
 # 设置和管理 Olares

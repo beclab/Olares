@@ -1,6 +1,10 @@
 ---
 description: Every Olares Application Chart should include an OlaresManifest.yaml file in the root directory.
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, OlaresManifest.yaml, manifest specification, app metadata, permissions, entrances, middleware
 ---
 
 # OlaresManifest Specification
@@ -307,7 +311,7 @@ entrances:
 ### name
 
 - Type: `string`
-- Accepted Value: `[a-z]([-a-z0-9]*[a-z0-9])?`
+- Accepted Value: ``[a-z]([-a-z0-9]*[a-z0-9])?``
 
   Name of the Entrance. It can be up to `63` characters, and needs to be unique in an app.
 
@@ -319,7 +323,7 @@ entrances:
 ### host
 
 - Type: `string`
-- Accepted Value: `[a-z]([-a-z0-9]*[a-z0-9])?`
+- Accepted Value: ``[a-z]([-a-z0-9]*[a-z0-9])?``
 
   Ingress name of current entrance, lowercase alphanumeric characters and `-` only. It can be up to `63` characters.
 

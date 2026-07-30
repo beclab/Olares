@@ -4,6 +4,8 @@ import { en } from "./en";
 import { zh } from "./zh";
 import _ from "lodash";
 import { redirects, temporaryRedirects } from "./theme/redirects";
+import fs from 'node:fs';
+import path from 'node:path';
 //import defaultConfig from 'vitepress-versioning-plugin';
 
 // Paths collected during transformPageData so sitemap.transformItems can
@@ -39,7 +41,65 @@ const noindexRoutePattern =
 // never match the latest deploy, whose base is "/docs/" or "/" (no version).
 const isArchivedVersionBuild = /\/\d+\.\d+/.test(process.env.BASE_URL || "");
 
- 
+// Build a map of routable EN route -> ZH route so we can inject hreflang
+// alternate links for pages that exist in both locales. Scanned once at
+// config load time; srcExclude fragments are ignored because they are not
+// real routes.
+const docsRoot = path.resolve(__dirname, '..');
+const srcExcludeGlobs = new Set([
+  '**/README.md',
+  '**/reusables/**',
+  '**/reusables.md',
+  '**/reusables-*.md',
+  '**/*.reusables.md',
+  'manual/get-started/activate-olares.md',
+  'manual/get-started/log-in-to-olares.md',
+  'manual/get-started/install-and-activate-olares.md',
+  'zh/manual/get-started/activate-olares.md',
+  'zh/manual/get-started/log-in-to-olares.md',
+  'zh/manual/get-started/install-and-activate-olares.md',
+]);
+function isExcludedRoute(relPath: string) {
+  const base = path.basename(relPath);
+  if (base === 'README.md') return true;
+  if (relPath.startsWith('reusables/') || relPath.includes('/reusables/')) return true;
+  if (base === 'reusables.md' || /^reusables-.*\.md$/.test(base) || /\.reusables\.md$/.test(base)) {
+    return true;
+  }
+  return srcExcludeGlobs.has(relPath);
+}
+function routeFromRelativePath(relPath: string) {
+  return relPath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '');
+}
+function buildLocaleMaps() {
+  const enToZh = new Map<string, string>();
+  const zhToEn = new Map<string, string>();
+  const mdFiles: string[] = [];
+  function walk(dir: string, base = '') {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const rel = base ? `${base}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === '.vitepress' || entry.name === 'public') continue;
+        walk(path.join(dir, entry.name), rel);
+      } else if (entry.isFile() && entry.name.endsWith('.md') && !isExcludedRoute(rel)) {
+        mdFiles.push(rel);
+      }
+    }
+  }
+  walk(docsRoot);
+  const enFiles = new Set(mdFiles.filter((f) => !f.startsWith('zh/')));
+  for (const f of mdFiles) {
+    if (!f.startsWith('zh/')) continue;
+    const enPath = f.replace(/^zh\//, '');
+    if (!enFiles.has(enPath)) continue;
+    const enRoute = routeFromRelativePath(enPath);
+    const zhRoute = `zh/${enRoute}`;
+    enToZh.set(enRoute, zhRoute);
+    zhToEn.set(zhRoute, enRoute);
+  }
+  return { enToZh, zhToEn };
+}
+const { enToZh: enToZhMap, zhToEn: zhToEnMap } = buildLocaleMaps();
 
 function defineVersionedConfig2(
   defaultConfig: UserConfig<DefaultTheme.Config>
@@ -184,6 +244,10 @@ export default defineVersionedConfig2(withMermaid({
       return;
     }
 
+    // Locale is needed for canonical, hreflang, and OG tags. Compute it once
+    // before any of those blocks so every consumer sees the same value.
+    const isZh = pageData.relativePath.startsWith('zh/');
+
     // Self-referencing canonical for every indexable doc page. Built from the
     // *unversioned* route on the production origin (matches the sitemap
     // hostname below) so versioned (/docs/<version>/...) duplicates consolidate
@@ -200,10 +264,38 @@ export default defineVersionedConfig2(withMermaid({
       'link',
       { rel: 'canonical', href: canonicalHref },
     ]);
+
+    // Hreflang alternate links for pages available in both EN and ZH.
+    // Each indexable page points to itself and its translated counterpart;
+    // x-default points to the English version. Skip when no counterpart exists.
+    let enHref: string | undefined;
+    let zhHref: string | undefined;
+    if (isZh) {
+      const enRoute = zhToEnMap.get(route);
+      if (enRoute !== undefined) {
+        enHref = `https://www.olares.com/docs/${enRoute}`;
+        zhHref = canonicalHref;
+      }
+    } else {
+      const zhRoute = enToZhMap.get(route);
+      if (zhRoute !== undefined) {
+        enHref = canonicalHref;
+        zhHref = `https://www.olares.com/docs/${zhRoute}`;
+      }
+    }
+    if (enHref && zhHref) {
+      for (const alt of [
+        { hreflang: 'en', href: enHref },
+        { hreflang: 'zh', href: zhHref },
+        { hreflang: 'x-default', href: enHref },
+      ]) {
+        pageData.frontmatter.head.push(['link', { rel: 'alternate', hreflang: alt.hreflang, href: alt.href }]);
+      }
+    }
+
     // Keep og:url identical to the canonical URL. A mismatch between the two
     // sends conflicting signals to crawlers and social scrapers about the
     // page's authoritative address.
-    const isZh = pageData.relativePath.startsWith('zh/');
     const siteName = isZh ? 'Olares 文档' : 'Olares Docs';
     const defaultDescription = isZh
       ? '让人们重新拥有自己的数据'

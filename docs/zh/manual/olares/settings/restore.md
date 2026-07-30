@@ -1,5 +1,9 @@
 ---
 description: 通过已有的备份快照将文件恢复至指定目录，或恢复应用数据。文档介绍如何从本地、Olares Space 或 Tencent COS 等位置执行数据还原操作。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 数据恢复, 恢复备份, 还原, 备份快照, Tencent COS, AWS S3
 ---
 
 # 恢复数据

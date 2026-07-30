@@ -77,7 +77,7 @@ The archive surface (`compress` / `extract` / `archive`), the `nfs` verbs, and t
 
 - Before reaching for these, check the backend version: the `VERSION` column of `olares-cli profile list`, or live `olares-cli settings me version` (see [olares-shared](../olares-shared/SKILL.md) and [platform.md → version model](../olares-shared/references/olares-platform.md#olares-version--semver-model)).
 - Comparison is on `major.minor.patch` only, so a daily build like `1.12.6-20260603` still counts as `>= 1.12.6`.
-- If detection fails, confirm the active profile is logged in and run `olares-cli profile list --refresh-version`.
+- If detection fails, confirm the active profile is logged in and run `olares-cli profile list --refresh`.
 
 ## Authentication transport
 
@@ -120,7 +120,7 @@ For flags, examples, and wire shapes, **always start with `olares-cli files <ver
 | `tencent upload is not supported` (or similar) | Tencent's octet protocol is not implemented | Use the LarePass web app for tencent uploads |
 | `<src> does not exist on the server` (from `cp`/`mv`/`rm`) | Preflight Stat failed | `files ls` the parent and confirm the path |
 | `HTTP 500` from `/api/resources/<file>` | Quirk #2 — backend tried to embed file bytes | Use `files cat` / `files download` instead |
-| Backend version could not be determined | Profile cache is missing/stale or `/api/olares-info` is unreachable | Confirm `profile login`, then run `olares-cli profile list --refresh-version` |
+| Backend version could not be determined | Profile cache is missing/stale or `/api/olares-info` is unreachable | Confirm `profile login`, then run `olares-cli profile list --refresh` |
 | `require Olares >= 1.12.6` with a detected older version | Backend predates `compress`/`extract`/`archive`/`nfs` or `drive/Common` | Upgrade Olares |
 | `files compress` does not support the "sync"/"<cloud>" namespace | Archive allow-list (drive/cache/external only) | Stage into `drive/Home` first, or use the LarePass web app for cloud |
 | `archive requires a password` / `archive password is incorrect` | Encrypted zip / 7z | Supply it via `--password-stdin` (or answer the interactive prompt) |

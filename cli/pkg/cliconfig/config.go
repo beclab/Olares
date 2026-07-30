@@ -114,11 +114,12 @@ type ProfileConfig struct {
 	// every invocation.
 	//
 	// The cache is populated eagerly on `profile login` / `profile import`
-	// and refreshed on demand (`--refresh-version`, or auto-fetched the
-	// first time a command needs the version and the cache is empty). There
-	// is deliberately no TTL: a backend upgrade is a rare, explicit event,
-	// so a stale value is corrected by the user re-running with
-	// --refresh-version rather than by silently re-fetching on a timer.
+	// and refreshed on demand (`profile whoami --refresh` / `profile list
+	// --refresh`, or auto-fetched the first time a command needs the version
+	// and the cache is empty). There is deliberately no TTL: a backend
+	// upgrade is a rare, explicit event, so a stale value is corrected by the
+	// user re-running with --refresh rather than by silently re-fetching on a
+	// timer.
 	//
 	// Empty for pre-existing profiles or before the first version-aware
 	// command runs. Treated as "unknown — detect on next use".
@@ -128,6 +129,28 @@ type ProfileConfig struct {
 	// successful /api/olares-info read that wrote BackendVersion. Surfaced
 	// for diagnostics ("last refreshed" hints); it does NOT drive any TTL.
 	BackendVersionRefreshedAt int64 `json:"backendVersionRefreshedAt,omitempty"`
+
+	// Location records where the CLI sits relative to this Olares instance:
+	// one of pkg/olares.Location's wire values ("external" / "lan" / "host" /
+	// "cluster"). It selects the connection method (URL scheme + host + DNS
+	// resolver) at runtime — see pkg/olares.ID.Endpoints and pkg/access.
+	//
+	// Empty means "unknown — probe on next use": pre-existing profiles
+	// created before this field existed, or a login/import where every probe
+	// failed. An empty value triggers a one-off ProbeLocation backfill the
+	// next time a command resolves this profile (cmdutil.Factory).
+	Location string `json:"location,omitempty"`
+
+	// LocationProbedAt is the unix-second timestamp of the last successful
+	// ProbeLocation that wrote Location.
+	LocationProbedAt int64 `json:"locationProbedAt,omitempty"`
+
+	// LocationUnreachableAt is the unix-second timestamp of the most recent
+	// "every probe failed" (access.ErrUnreachable) result. It acts as a
+	// short cooldown so back-to-back commands during a network outage fail
+	// fast instead of re-running the full (slow) probe each time. Cleared to
+	// 0 by the next successful request or probe.
+	LocationUnreachableAt int64 `json:"locationUnreachableAt,omitempty"`
 }
 
 // ClusterContextCache is the per-profile snapshot of /capi/app/detail
@@ -276,6 +299,19 @@ func (m *MultiProfileConfig) Upsert(p ProfileConfig) *ProfileConfig {
 // passed in (rather than re-read here) so test code and replay-style
 // flows can pin it deterministically.
 func (m *MultiProfileConfig) SetOwnerRole(olaresID, role string, refreshedAt int64) (changed bool, err error) {
+	err = m.updateLockedInto(func(c *MultiProfileConfig) error {
+		ch, e := c.applyOwnerRole(olaresID, role, refreshedAt)
+		changed = ch
+		return e
+	})
+	return changed, err
+}
+
+// applyOwnerRole mutates the in-memory role + timestamp for the profile keyed
+// by olaresID WITHOUT persisting. It returns the same "changed" semantics as
+// SetOwnerRole. Used under the config lock by SetOwnerRole and the batched
+// SetDetectResults.
+func (m *MultiProfileConfig) applyOwnerRole(olaresID, role string, refreshedAt int64) (bool, error) {
 	target := m.FindByOlaresID(olaresID)
 	if target == nil {
 		return false, fmt.Errorf("profile %q not found", olaresID)
@@ -283,9 +319,6 @@ func (m *MultiProfileConfig) SetOwnerRole(olaresID, role string, refreshedAt int
 	prev := target.OwnerRole
 	target.OwnerRole = role
 	target.WhoamiRefreshedAt = refreshedAt
-	if err := SaveMultiProfileConfig(m); err != nil {
-		return false, fmt.Errorf("save config: %w", err)
-	}
 	return role != "" && prev != role, nil
 }
 
@@ -306,6 +339,18 @@ func (m *MultiProfileConfig) SetOwnerRole(olaresID, role string, refreshedAt int
 // only — the cache MUST NOT be consulted to decide whether a verb is
 // allowed to run. See ProfileConfig.ClusterContext doc.
 func (m *MultiProfileConfig) SetClusterContext(olaresID string, ctx *ClusterContextCache, refreshedAt int64) (changed bool, err error) {
+	err = m.updateLockedInto(func(c *MultiProfileConfig) error {
+		ch, e := c.applyClusterContext(olaresID, ctx, refreshedAt)
+		changed = ch
+		return e
+	})
+	return changed, err
+}
+
+// applyClusterContext mutates the in-memory cluster-context snapshot for the
+// profile keyed by olaresID WITHOUT persisting. Same "changed" semantics as
+// SetClusterContext. Used under the config lock.
+func (m *MultiProfileConfig) applyClusterContext(olaresID string, ctx *ClusterContextCache, refreshedAt int64) (bool, error) {
 	target := m.FindByOlaresID(olaresID)
 	if target == nil {
 		return false, fmt.Errorf("profile %q not found", olaresID)
@@ -316,9 +361,6 @@ func (m *MultiProfileConfig) SetClusterContext(olaresID string, ctx *ClusterCont
 	}
 	target.ClusterContext = ctx
 	target.ClusterContextRefreshedAt = refreshedAt
-	if err := SaveMultiProfileConfig(m); err != nil {
-		return false, fmt.Errorf("save config: %w", err)
-	}
 	newRole := ""
 	if ctx != nil {
 		newRole = ctx.GlobalRole
@@ -340,6 +382,19 @@ func (m *MultiProfileConfig) SetClusterContext(olaresID string, ctx *ClusterCont
 // success at; passed in (rather than re-read here) so test code can pin it
 // deterministically.
 func (m *MultiProfileConfig) SetBackendVersion(olaresID, version string, refreshedAt int64) (changed bool, err error) {
+	err = m.updateLockedInto(func(c *MultiProfileConfig) error {
+		ch, e := c.applyBackendVersion(olaresID, version, refreshedAt)
+		changed = ch
+		return e
+	})
+	return changed, err
+}
+
+// applyBackendVersion mutates the in-memory version + timestamp for the
+// profile keyed by olaresID WITHOUT persisting. Same "changed" semantics as
+// SetBackendVersion. Used under the config lock by SetBackendVersion and the
+// batched SetDetectResults.
+func (m *MultiProfileConfig) applyBackendVersion(olaresID, version string, refreshedAt int64) (bool, error) {
 	target := m.FindByOlaresID(olaresID)
 	if target == nil {
 		return false, fmt.Errorf("profile %q not found", olaresID)
@@ -347,10 +402,95 @@ func (m *MultiProfileConfig) SetBackendVersion(olaresID, version string, refresh
 	prev := target.BackendVersion
 	target.BackendVersion = version
 	target.BackendVersionRefreshedAt = refreshedAt
-	if err := SaveMultiProfileConfig(m); err != nil {
-		return false, fmt.Errorf("save config: %w", err)
-	}
 	return version != "" && prev != version, nil
+}
+
+// SetLocation atomically updates the Location + LocationProbedAt fields for
+// the profile keyed by olaresID and persists config.json. A successful probe
+// implies the instance is reachable, so this also clears
+// LocationUnreachableAt (resetting any outage cooldown).
+//
+// probedAt is the wall-clock the caller observed the probe success at;
+// passed in (rather than re-read here) so tests can pin it deterministically.
+func (m *MultiProfileConfig) SetLocation(olaresID, location string, probedAt int64) error {
+	return m.updateLockedInto(func(c *MultiProfileConfig) error {
+		return c.applyLocation(olaresID, location, probedAt)
+	})
+}
+
+// applyLocation mutates the in-memory location fields (and clears the outage
+// cooldown) for the profile keyed by olaresID WITHOUT persisting. Used under
+// the config lock by SetLocation and the batched SetDetectResults.
+func (m *MultiProfileConfig) applyLocation(olaresID, location string, probedAt int64) error {
+	target := m.FindByOlaresID(olaresID)
+	if target == nil {
+		return fmt.Errorf("profile %q not found", olaresID)
+	}
+	target.Location = location
+	target.LocationProbedAt = probedAt
+	target.LocationUnreachableAt = 0
+	return nil
+}
+
+// SetDetectResults atomically persists the outcome of a unified detect pass in
+// a SINGLE locked config write: the location (always), plus the role and
+// backend version when they were fetched this pass (empty = "not fetched",
+// left untouched). Collapsing the three writes detect used to do into one
+// avoids redundant load+save cycles and keeps the trio consistent on disk.
+func (m *MultiProfileConfig) SetDetectResults(
+	olaresID, location string, probedAt int64,
+	role string, roleAt int64,
+	version string, versionAt int64,
+) error {
+	return m.updateLockedInto(func(c *MultiProfileConfig) error {
+		if err := c.applyLocation(olaresID, location, probedAt); err != nil {
+			return err
+		}
+		if role != "" {
+			if _, err := c.applyOwnerRole(olaresID, role, roleAt); err != nil {
+				return err
+			}
+		}
+		if version != "" {
+			if _, err := c.applyBackendVersion(olaresID, version, versionAt); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// SetLocationUnreachable stamps LocationUnreachableAt for the profile keyed
+// by olaresID and persists config.json. The Location field is intentionally
+// left unchanged — we keep the last-known-good value so a transient outage
+// doesn't lose the previously-detected position (see the reprobe design).
+func (m *MultiProfileConfig) SetLocationUnreachable(olaresID string, at int64) error {
+	return m.updateLockedInto(func(c *MultiProfileConfig) error {
+		target := c.FindByOlaresID(olaresID)
+		if target == nil {
+			return fmt.Errorf("profile %q not found", olaresID)
+		}
+		target.LocationUnreachableAt = at
+		return nil
+	})
+}
+
+// ClearLocationUnreachable resets LocationUnreachableAt to 0 (lifting the
+// outage cooldown) and persists config.json. It is a no-op — including no
+// disk write — when the field is already 0, so the common "request
+// succeeded, nothing was in cooldown" path stays cheap.
+func (m *MultiProfileConfig) ClearLocationUnreachable(olaresID string) error {
+	return m.updateLockedInto(func(c *MultiProfileConfig) error {
+		target := c.FindByOlaresID(olaresID)
+		if target == nil {
+			return fmt.Errorf("profile %q not found", olaresID)
+		}
+		if target.LocationUnreachableAt == 0 {
+			return errNoConfigChange
+		}
+		target.LocationUnreachableAt = 0
+		return nil
+	})
 }
 
 // Remove deletes a profile by Name or OlaresID. If the removed profile was

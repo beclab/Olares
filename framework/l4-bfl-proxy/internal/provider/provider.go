@@ -43,16 +43,13 @@ const (
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
+	settingsCustomDomainCert             = "cert"
+	settingsCustomDomainKey              = "key"
 	applicationAuthLevelPublic           = "public"
 
-	nameSSLConfigMapName                     = "zone-ssl-config"
-	applicationThirdPartyDomainCertKeySuffix = "-domain-ssl-config"
-	appEntranceCertConfigMapLabel            = "app.bytetrade.io/custom-domain-cert"
-	appEntranceCertConfigMapCertKey          = "cert"
-	appEntranceCertConfigMapKeyKey           = "key"
-	appEntranceCertConfigMapZoneKey          = "zone"
-	userEnvLanguage                          = "olares-user-language"
-	defaultUserLanguage                      = "en-US"
+	nameSSLConfigMapName = "zone-ssl-config"
+	userEnvLanguage      = "olares-user-language"
+	defaultUserLanguage  = "en-US"
 )
 
 type Config struct {
@@ -122,7 +119,7 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 			if !ok {
 				return false
 			}
-			return isSSLConfigMap(cm, p.cfg.UserNamespacePrefix) || isCustomDomainCertConfigMap(cm)
+			return isSSLConfigMap(cm, p.cfg.UserNamespacePrefix)
 		},
 		Handler: baseHandler,
 	}); err != nil {
@@ -500,10 +497,6 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 	var result []*message.UserInfo
 
 	// Fetch cluster-wide data once; reused for every user below.
-	allCerts, err := p.getCustomDomainCerts(ctx)
-	if err != nil {
-		return nil, err
-	}
 	fsGlobal, err := p.getFileserverGlobalData(ctx)
 	if err != nil {
 		return nil, err
@@ -640,7 +633,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			Language:          language,
 			Apps:              p.buildAppInfos(user.Name, rawAppsMap[user.Name]),
 			SSL:               sslConfig,
-			CustomDomainCerts: allCerts[user.Name],
+			CustomDomainCerts: customDomainCertsForUser(user.Name, rawAppsMap[user.Name]),
 			FileserverNodes:   fileserverNodes,
 			MasterNodeCIDR:    masterNodeCIDR,
 		}
@@ -650,38 +643,45 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 	return result, nil
 }
 
-func (p *Provider) getCustomDomainCerts(ctx context.Context) (map[string][]*message.CertInfo, error) {
-	var cmList corev1.ConfigMapList
-	if err := p.cache.List(ctx, &cmList, client.MatchingLabels{
-		appEntranceCertConfigMapLabel: "true",
-	}); err != nil {
-		return nil, fmt.Errorf("list custom domain cert configmaps: %w", err)
-	}
-
-	certs := make(map[string][]*message.CertInfo)
-	for _, cm := range cmList.Items {
-		owner := strings.TrimPrefix(cm.Namespace, "user-space-")
-		domain := cm.Data[appEntranceCertConfigMapZoneKey]
-		certData := cm.Data[appEntranceCertConfigMapCertKey]
-		keyData := cm.Data[appEntranceCertConfigMapKeyKey]
-		if domain == "" || certData == "" || keyData == "" {
-			continue
+// customDomainCertsForUser derives the user's custom-domain TLS certs from the
+// per-user `customDomain` settings on their apps, instead of from standalone
+// cert ConfigMaps. Sourcing the cert (and therefore the filter-chain SNI) from
+// the same JSON that drives the routing virtual host guarantees the two never
+// desync: a domain the app no longer configures (empty third_party_domain) or
+// one whose cert has not been issued yet (empty cert/key) produces no cert and
+// thus no filter chain, so it can never 421 nor steal another user's SNI.
+//
+// Certs are de-duped by domain (first wins) and sorted by domain for stable
+// output. CreatedAt is the app's creation time, feeding the xDS de-dup
+// tie-break when two users legitimately claim the same domain.
+func customDomainCertsForUser(username string, appList []*appv1alpha1.Application) []*message.CertInfo {
+	var certs []*message.CertInfo
+	seen := make(map[string]bool)
+	for _, app := range appList {
+		customDomainMap := getSettingsKeyMap(app, username, settingsCustomDomain)
+		for _, entranceCustomDomain := range customDomainMap {
+			domain := entranceCustomDomain[settingsCustomDomainThirdPartyDomain]
+			certData := entranceCustomDomain[settingsCustomDomainCert]
+			keyData := entranceCustomDomain[settingsCustomDomainKey]
+			if domain == "" || certData == "" || keyData == "" {
+				continue
+			}
+			if seen[domain] {
+				continue
+			}
+			seen[domain] = true
+			certs = append(certs, &message.CertInfo{
+				Domain:    domain,
+				CertData:  certData,
+				KeyData:   keyData,
+				CreatedAt: app.CreationTimestamp.Time,
+			})
 		}
-		certs[owner] = append(certs[owner], &message.CertInfo{
-			Domain:    domain,
-			CertData:  certData,
-			KeyData:   keyData,
-			CreatedAt: cm.CreationTimestamp.Time,
-		})
 	}
-	for owner := range certs {
-		ownerCerts := certs[owner]
-		sort.Slice(ownerCerts, func(i, j int) bool {
-			return ownerCerts[i].Domain < ownerCerts[j].Domain
-		})
-	}
-
-	return certs, nil
+	sort.Slice(certs, func(i, j int) bool {
+		return certs[i].Domain < certs[j].Domain
+	})
+	return certs
 }
 
 func (p *Provider) getSSLConfig(ctx context.Context, username string) (*message.SSLConfig, error) {
@@ -903,10 +903,6 @@ func parseAllowCIDRs(raw string) []string {
 
 func isSSLConfigMap(cm *corev1.ConfigMap, namespacePrefix string) bool {
 	return strings.HasPrefix(cm.Namespace, namespacePrefix) && cm.Name == nameSSLConfigMapName
-}
-
-func isCustomDomainCertConfigMap(cm *corev1.ConfigMap) bool {
-	return strings.Contains(cm.Name, applicationThirdPartyDomainCertKeySuffix)
 }
 
 func isFileServerPod(pod *corev1.Pod) bool {

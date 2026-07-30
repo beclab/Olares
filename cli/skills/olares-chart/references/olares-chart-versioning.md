@@ -4,11 +4,11 @@
 
 ## Olares system version
 
-The semver scheme (stable / RC / daily), `.Values.sysVersion`, the `-0` prerelease-matching rule, and how to read the target version (`profile list` VERSION column, `--refresh-version`, `settings me version`) are the platform **Olares version & semver model** (loaded via the SKILL.md prerequisite).
+The semver scheme (stable / RC / daily), `.Values.sysVersion`, the `-0` prerelease-matching rule, and how to read the target version (`profile list` VERSION column, `--refresh`, `settings me version`) are the platform **Olares version & semver model** (loaded via the SKILL.md prerequisite).
 
 ## Porting baseline: Olares >= 1.12.6
 
-**This skill (porting apps) targets Olares >= 1.12.6.** This baseline applies only to porting — other `olares-cli` features have no such floor. The reason: the userspace backends a ported app commonly relies on — `drive/Common` (`appCommon`), archive, and NFS — are gated at `1.12.6`. Check the target before porting (`olares-cli profile list` VERSION column; `--refresh-version` or `settings me version` for a live re-fetch).
+**This skill (porting apps) targets Olares >= 1.12.6.** This baseline applies only to porting — other `olares-cli` features have no such floor. The reason: the userspace backends a ported app commonly relies on — `drive/Common` (`appCommon`), archive, and NFS — are gated at `1.12.6`. Check the target before porting (`olares-cli profile list` VERSION column; `--refresh` or `settings me version` for a live re-fetch).
 
 ## apiVersion: v3
 
@@ -76,4 +76,4 @@ Every chart declares the `olares` `type: system` dependency in `options.dependen
 ## Caveats
 
 - The `>= 1.12.6` baseline is a **porting** concern; it does not apply to other `olares-cli` commands.
-- `profile list`'s version is **cached** — use `--refresh-version` (or `settings me version`) if the target was just upgraded.
+- `profile list`'s version is **cached** — use `--refresh` (or `settings me version`) if the target was just upgraded.

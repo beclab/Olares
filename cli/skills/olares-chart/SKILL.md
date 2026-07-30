@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.12.0
+version: 4.14.0
 description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, deploy needs login
 metadata:
@@ -58,6 +58,7 @@ The target is a `lint`-passing Olares chart. `from-compose` (kompose) is **just 
 | Source only (no compose) | author a docker-compose from the code ([compose.md](references/olares-chart-compose.md)) | — |
 | A docker-compose | `chart from-compose` then refine ([from-compose.md](references/olares-chart-from-compose.md)) | — |
 | A generic Helm chart (no OlaresManifest) | hand-author `OlaresManifest.yaml` + refine (skip `from-compose`) | — |
+| Uploaded to the Olares, but no local copy left | `market download <app>` + unpack the `.tgz`, then refine that ([olares-market-charts.md](../olares-market/references/olares-market-charts.md#download)) | — |
 | Already an Olares chart | go straight to validation | a chart that passes `chart lint` |
 
 ## Deploy to your Olares (the done step)
@@ -77,6 +78,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | deployment | **Storage** | every compose volume → the right userspace area (Data/Cache/Home/Common/External), matching `permission`, leftover kompose PVCs deleted | a volume isn't persisting or lands in the wrong area | [manifest.md](references/olares-chart-manifest.md) §2 |
 | deployment | **Middleware & deps** | no bundled `postgres`/`redis`/`mongo`/…; wire to system middleware; SQLite→Postgres where supported; companion apps as `type: application` deps | a bundled db/queue remains, or a companion should be a dependency | [middleware.md](references/olares-chart-middleware.md) |
 | deployment | **Env** | app config in `envs[]` (v3 `valueFrom`, no inline `OLARES_USER`); install-time `required` prompts; middleware/system/user vars via `.Values.olaresEnv`; platform context via `.Values.*` | install fails on `appenv` 422, or config must be user-supplied | [env.md](references/olares-chart-env.md), [env-defaults.md](references/olares-chart-env-defaults.md), [system-values.md](references/olares-chart-system-values.md) |
+| deployment | **Secrets** | passwords, API keys and generated keys reach the container from a Secret via `secretKeyRef` / `envFrom`; install-time values declared `type: password`; middleware credentials left to the platform (no `password` in `middleware:`); chart-generated keys wrapped in `lookup` so an upgrade keeps the same value | a credential sits in a ConfigMap, `values.yaml` or a literal `env: value:`; an upgrade signs every user out or leaves stored data unreadable | [secrets.md](references/olares-chart-secrets.md) |
 | deployment | **Entrances & ports** | ≥1 `entrances[]`; HTTP via entrances, non-HTTP via `ports[]`; internal-only services `invisible: true` | a service is unreachable, or an internal port is exposed as a desktop entrance | [manifest.md](references/olares-chart-manifest.md) §4 |
 | packaging+deployment | **GPU / models** | build a CUDA image without a local GPU; download model weights via initContainer into the shared `appCommon` Hugging Face cache | AI app needs a CUDA build, model provisioning, or a shared model cache | [gpu.md](references/olares-chart-gpu.md) |
 | deployment | **LLM model serving** | generation/chat: clone an official base app; custom chart: integrate `llm-init`; embedding: install `embeddinggemmav3` through `olares-market` | a model-serving request needs routing before chart work | [llm-models.md](references/olares-chart-llm-models.md), [llm-ops.md](references/olares-chart-llm-ops.md), [llm-init-integration.md](references/olares-chart-llm-init-integration.md) |

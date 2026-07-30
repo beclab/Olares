@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 如何使用 Olares CLI 安装和激活 Olares 设备。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares CLI, 激活设备, FRP, 设备激活, LarePass
 ---
 
 # 使用 Olares CLI 激活 Olares 设备
@@ -220,4 +224,4 @@ description: 如何使用 Olares CLI 安装和激活 Olares 设备。
 ## 了解更多
 
 - [创建 Olares ID](/zh/manual/get-started/create-olares-id.md)
-- [Olares CLI 命令行工具](/zh/developer/install/cli/olares-cli.md)
+- [Olares CLI 命令行工具](/zh/developer/cli-overview.md)

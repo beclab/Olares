@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Share files in Olares through internal, public, or SMB sharing. Configure access permissions and collaborate securely with teams or over a LAN.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Files, share files, public share, internal share, SMB share
 ---
 
 # Share files

@@ -18,6 +18,18 @@ func IsGatewaySharedApp(app *appv1alpha1.Application) bool {
 	return IsShared(app) // || IsClusterScoped(app)
 }
 
+// IsSharedServerApp reports whether the Application is a shared server that
+// participates in mesh-in shared-hosts / TLS-replica demand indexes.
+func IsSharedServerApp(app *appv1alpha1.Application) bool {
+	if app == nil {
+		return false
+	}
+	if IsClusterScoped(app) {
+		return true
+	}
+	return IsShared(app) || len(app.Spec.SharedEntrances) > 0
+}
+
 // LogicalHostPattern returns the canonical shared gateway host pattern:
 // <sharedEntranceID>.shared.<platformDomain>.
 func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platformDomain string, isShared bool) (string, error) {

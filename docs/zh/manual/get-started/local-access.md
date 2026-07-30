@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: 了解如何使用 LarePass 专用网络或 .local 域名安全访问 Olares 服务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 专用网络, 本地访问, .local 域名, 远程访问, 安全连接
 ---
 # 安全访问 Olares 服务
 

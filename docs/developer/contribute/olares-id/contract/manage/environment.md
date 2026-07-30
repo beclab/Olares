@@ -1,6 +1,10 @@
 ---
 description: Deployed TerminusDID, RootTagger, and LibABI contract addresses on the Optimistic and Sepolia Optimistic networks.
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID contract addresses, RootTagger, LibABI, Optimism network, Sepolia Optimism
 ---
 
 # Environment

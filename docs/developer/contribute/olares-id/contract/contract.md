@@ -1,6 +1,10 @@
 ---
 description: How the Olares ID smart contracts are structured, covering DID management and the on-chain reputation system.
 outline: [2, 4]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares ID smart contract, DID management, on-chain reputation, smart contract structure
 ---
 
 # Smart Contract

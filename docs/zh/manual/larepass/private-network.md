@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 本文介绍如何在任意环境安全访问 Olares。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 专用网络, VPN, 远程访问, Tailscale, 连接状态
 ---
 # 通过 LarePass 专用网络随时随地访问 Olares
 Olares 设备上运行着 Vault 和 Ollama 等供个人或内部使用的关键应用。出于安全考量，这些应用只能通过[私有或内部入口](../../developer/concepts/network.md#私有入口)访问。

@@ -1,5 +1,9 @@
 ---
 description: 通过最佳实践与进阶指南，深入挖掘 Olares 的性能、安全与高级定制能力。.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares 教程, 最佳实践, 性能优化, 高级定制
 ---
 # Olares 教程
 
@@ -9,7 +13,6 @@ description: 通过最佳实践与进阶指南，深入挖掘 Olares 的性能�
 - [为 Olares 配置自定义域名](set-custom-domain.md)
 - [安装多节点 Olares 集群](install-olares-multi-node.md)
 <!-- - [使用 Wise 构建知识中心](organize-content.md) -->
-- [设置 SMTP](set-up-SMTP-service.md)
 - [扩展 Olares 存储空间](expand-storage-in-olares.md)
 - [安装 Olares 镜像及配置显卡直通](install-olares-gpu-passthrough.md)
 - [本地访问 Olares 服务](local-access.md)

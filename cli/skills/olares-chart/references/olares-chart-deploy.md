@@ -48,6 +48,7 @@ olares-cli market upload ./<app>-<version>.tgz   # use the new <version> in the 
 
 - `upload` always lands the chart in the `upload` source (see [`../../olares-market/SKILL.md`](../../olares-market/SKILL.md)). `-s` is intentionally not exposed.
 - Upload runs the server-side ingest, so a chart that passed local `lint` can still be rejected here (e.g. cluster-specific checks). Surface that message as a chart problem and go back to refine.
+- Nothing left locally to package? `market download <app>` pulls the stored `.tgz` back — never re-author a chart the Olares still holds ([olares-market-charts.md](../../olares-market/references/olares-market-charts.md#download)).
 
 ## 3. Actually run it
 

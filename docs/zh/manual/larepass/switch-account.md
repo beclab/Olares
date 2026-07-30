@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 LarePass 移动端应用或桌面客户端之间切换多个 Olares ID。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 切换账户, Olares ID, 多账户, 移动端, 桌面端
 ---
 
 # 切换 Olares ID

@@ -1,6 +1,10 @@
 ---
 outline: deep
 description: 排查并解决 Steam Headless 游戏串流卡顿或延迟的问题。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Steam Headless, 游戏串流, 卡顿, 延迟, GPU, Proton
 ---
 # Steam 串流卡顿或延迟
 

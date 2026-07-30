@@ -502,7 +502,7 @@ const side = {
     },
       {
         text: "Olares Space",
-        link: "/zh/manual/space/index",
+        link: "/zh/manual/space/",
         collapsed: true,
         items: [
           {
@@ -554,10 +554,6 @@ const side = {
         {
           text: "安装多节点",
           link: "/zh/manual/best-practices/install-olares-multi-node",
-        },
-        {
-          text: "设置 SMTP",
-          link: "/zh/manual/best-practices/set-up-SMTP-service",
         },
         {
           text: "在启用显卡直通的 PVE 上安装 Olares",

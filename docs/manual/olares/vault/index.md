@@ -1,5 +1,9 @@
 ---
 description: Use Olares Vault to manage passwords and sensitive data with end-to-end encryption, shared vaults, sync, autofill, and two-factor authentication.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Vault, password manager, sensitive data, OTP, 2FA, autofill, shared vault
 ---
 # Secure sensitive data with Vault
 
@@ -31,11 +35,11 @@ Learn how to manage team vault access, and work with shared vaults.
 </div>
 
 <div>
-<h4><a href="./two-factor-verification">Set up two-factor authentication codes</a></h4>
+<h4><a href="/manual/larepass/two-factor-verification">Set up two-factor authentication codes</a></h4>
 Learn how to generate and store 2FA codes for enhanced security.
 </div>
 
 <div>
-<h4><a href="./autofill">Use autofill with LarePass</a></h4>
+<h4><a href="/manual/larepass/autofill">Use autofill with LarePass</a></h4>
 Learn how to set up and use autofill for logins with different LarePass clients.
 </div>

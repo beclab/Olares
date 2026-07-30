@@ -107,21 +107,24 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		return h.sidecarWebhook.AdmissionError(req.UID, errors.New("HostNetwork Enabled Unsupported"))
 	}
 	var (
-		injectPolicy, injectWs, injectUpload bool
-		injectSharedPod                      *bool
-		appMgr                               *v1alpha1.ApplicationManager
-		appCfg                               *appcfg_mod.ApplicationConfig
-		perms                                []appcfg.ProviderPermission
+		injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool
+		injectSharedPod                                                            *bool
+		appMgr                                                                     *v1alpha1.ApplicationManager
+		appCfg                                                                     *appcfg_mod.ApplicationConfig
+		perms                                                                      []appcfg.ProviderPermission
 	)
-	if injectPolicy, injectWs, injectUpload, injectSharedPod, perms, appCfg, appMgr, err = h.sidecarWebhook.MustInject(ctx, &pod, req.Namespace); err != nil {
+	if injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, perms, appCfg, appMgr, err = h.sidecarWebhook.MustInject(ctx, &pod, req.Namespace); err != nil {
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectSharedPod, perms)
+	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectMeshInAgent=%v, injectMeshOutAgent=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, perms)
 
 	shared := appCfg != nil && appCfg.IsShared()
-	nothingToInject := !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0
+	nothingToInject := !injectPolicy && !injectWs && !injectUpload && !injectMeshInAgent && !injectMeshOutAgent && injectSharedPod == nil && len(perms) == 0
 
-	if shared {
+	// Shared apps historically skipped CreatePatch (label-only) to avoid oes on
+	// pure callees. Composite Shared callers with mesh-in/mesh-out must use
+	// CreatePatch; ShouldSkipOesForSharedCaller still drops oes when appropriate.
+	if shared && !sharedAppNeedsSidecarPatch(injectMeshInAgent, injectMeshOutAgent) {
 		if injectSharedPod != nil {
 			patchBytes, err := patchSharedEntranceLabel(req, &pod, *injectSharedPod)
 			if err != nil {
@@ -143,7 +146,7 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		return resp
 	}
 
-	patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectWs, injectUpload, injectSharedPod, appMgr, appCfg, perms)
+	patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, appMgr, appCfg, perms)
 	if err != nil {
 		klog.Errorf("Failed to create patch for pod uuid=%s name=%s namespace=%s err=%v", proxyUUID, pod.Name, req.Namespace, err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
@@ -155,8 +158,14 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	return resp
 }
 
+// sharedAppNeedsSidecarPatch reports whether a Shared app must run CreatePatch
+// (mesh-in / mesh-out) instead of the label-only shared-entrance path.
+func sharedAppNeedsSidecarPatch(injectMeshInAgent, injectMeshOutAgent bool) bool {
+	return injectMeshInAgent || injectMeshOutAgent
+}
+
 // patchSharedEntranceLabel applies only the shared-entrance pod label, without
-// sidecar injection. Used for v3 apps where CreatePatch would also inject envoy.
+// sidecar injection. Used for Shared callees that do not declare outbound mesh-in.
 func patchSharedEntranceLabel(req *admissionv1.AdmissionRequest, pod *corev1.Pod, inject bool) ([]byte, error) {
 	if inject {
 		if pod.Labels == nil {
@@ -248,6 +257,48 @@ func (h *Handler) validate(ctx context.Context, req *admissionv1.AdmissionReques
 	}
 	klog.Infof("Done validate with UID=%s in protected namespace, that's APPROVE", object.GetUID())
 	return resp
+}
+
+
+// tlsReplicaMountValidate is the validating admission entrypoint that blocks
+// tls-replica private-key bypass mounts. Decode/unmarshal failures fail closed.
+func (h *Handler) tlsReplicaMountValidate(req *restful.Request, resp *restful.Response) {
+	admissionReqBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	if _, _, err := webhook.Deserializer.Decode(admissionReqBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode tls-replica-mount admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.validateTLSReplicaMount(req.Request.Context(), admissionReq.Request)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+	if err := resp.WriteAsJson(&admissionResp); err != nil {
+		klog.Errorf("Failed to write tls-replica-mount admission response err=%v", err)
+	}
+}
+
+func (h *Handler) validateTLSReplicaMount(ctx context.Context, req *admissionv1.AdmissionRequest) *admissionv1.AdmissionResponse {
+	if req == nil {
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal pod for tls-replica-mount validate namespace=%s err=%v", req.Namespace, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	allowed, code := h.sidecarWebhook.ValidateTLSReplicaMount(ctx, &pod, req.Namespace)
+	respObj := &admissionv1.AdmissionResponse{
+		Allowed: allowed,
+		UID:     req.UID,
+	}
+	if !allowed {
+		respObj.Result = &metav1.Status{Message: code}
+	}
+	return respObj
 }
 
 func (h *Handler) gpuLimitInject(req *restful.Request, resp *restful.Response) {
@@ -422,11 +473,16 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
 		hamiGpuMemory = ptr.To(hamiFormatGpuRequired.String())
 	}
+	gpuResourceKey, err := h.resolveIntelDriverResource(ctx, GPUType)
+	if err != nil {
+		klog.Errorf("resolve intel driver resource error %v", err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
 	patchBytes, err := webhook.CreatePatchForDeployment(
 		tpl,
 		injectAll,
 		injectContainer,
-		h.getGPUResourceTypeKey(GPUType),
+		gpuResourceKey,
 		hamiGpuMemory,
 		envs,
 	)
@@ -476,6 +532,95 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 	case utils.CPUType:
 		klog.Info("CPU type is selected, no GPU resource will be injected")
 		return ""
+	default:
+		return ""
+	}
+}
+
+// resolveIntelDriverResource picks the correct Intel extended resource
+// (gpu.intel.com/i915 vs gpu.intel.com/xe) for the given compute mode by
+// reading the real bound driver from the cluster's node register annotations
+// (bytetrade.io/node-intel-register), instead of assuming intel(igpu)->i915 /
+// intel-gpu(dgpu)->xe. iGPU and dGPU can each be bound to either driver, so the
+// hardcoded mapping is wrong.
+//
+// For non-Intel modes it delegates to getGPUResourceTypeKey. When no matching
+// card is found in the cluster, it falls back to the legacy mapping so
+// behaviour degrades gracefully rather than dropping the resource. Listing the
+// nodes is a hard dependency, so a list failure is returned as an error rather
+// than silently resolved to a possibly-wrong resource.
+func (h *Handler) resolveIntelDriverResource(ctx context.Context, mode string) (string, error) {
+	var wantKind string
+	switch mode {
+	case utils.IntelType:
+		wantKind = utils.IntelGPUKindIntegrated
+	case utils.IntelGPUType:
+		wantKind = utils.IntelGPUKindDiscrete
+	default:
+		return h.getGPUResourceTypeKey(mode), nil
+	}
+
+	var nodes corev1.NodeList
+	if err := h.ctrlClient.List(ctx, &nodes); err != nil {
+		return "", fmt.Errorf("[gpu-limit] list nodes for intel driver resolution (mode %s) failed: %w", mode, err)
+	}
+
+	resource, distinct := selectIntelDriverResource(nodes.Items, wantKind)
+	if resource == "" {
+		klog.Warningf("[gpu-limit] no intel %s (mode %s) card found in cluster register; falling back to legacy mapping", wantKind, mode)
+		return h.getGPUResourceTypeKey(mode), nil
+	}
+
+	if len(distinct) > 1 {
+		klog.Warningf("[gpu-limit] intel %s cards use multiple drivers %v across the cluster; a single extended resource can't express both, picking deterministically -> %s", wantKind, distinct, resource)
+	}
+
+	return resource, nil
+}
+
+// selectIntelDriverResource scans node register entries for cards of the given
+// kind (igpu/dgpu) and returns the extended resource for the chosen driver plus
+// the sorted set of distinct drivers seen (len>1 means a mixed cluster). The
+// driver is picked by a fixed priority (xe then i915) so the decision is stable
+// across scheduling passes. It returns ("", nil) when no matching card exists.
+func selectIntelDriverResource(nodes []corev1.Node, wantKind string) (string, []string) {
+	seen := make(map[string]struct{})
+	for i := range nodes {
+		entries, err := utils.IntelRegisterFromNode(&nodes[i])
+		if err != nil {
+			klog.Warningf("[gpu-limit] node %s has malformed %s annotation: %v", nodes[i].Name, constants.NodeIntelRegisterKey, err)
+			continue
+		}
+		for _, e := range entries {
+			if e.Kind == wantKind {
+				seen[e.Driver] = struct{}{}
+			}
+		}
+	}
+
+	if len(seen) == 0 {
+		return "", nil
+	}
+
+	distinct := make([]string, 0, len(seen))
+	// Fixed priority so both the returned resource and the reported set order
+	// are deterministic.
+	for _, drv := range []string{utils.IntelDriverXe, utils.IntelDriverI915} {
+		if _, ok := seen[drv]; ok {
+			distinct = append(distinct, drv)
+		}
+	}
+
+	return intelDriverResource(distinct[0]), distinct
+}
+
+// intelDriverResource maps a bound Intel kernel driver to its extended resource.
+func intelDriverResource(driver string) string {
+	switch driver {
+	case utils.IntelDriverI915:
+		return constants.IntelIGPU
+	case utils.IntelDriverXe:
+		return constants.IntelGPU
 	default:
 		return ""
 	}

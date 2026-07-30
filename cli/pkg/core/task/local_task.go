@@ -169,7 +169,7 @@ func (l *LocalTask) Run(runtime connector.Runtime, host connector.Host, resCh ch
 
 func (l *LocalTask) WhenWithRetry(runtime connector.Runtime, host connector.Host) (bool, error) {
 	pass := false
-	err := fmt.Errorf("pre-check exec failed after %d retires ", l.Retry)
+	err := fmt.Errorf("prepare check failed after %d attempt(s): ", l.Retry)
 	for i := 0; i < l.Retry; i++ {
 		if res, e := l.When(runtime); e != nil {
 			logger.Errorf("[P] %s: %s", host.GetName(), e.Error())
@@ -204,8 +204,9 @@ func (l *LocalTask) When(runtime connector.Runtime) (bool, error) {
 }
 
 func (l *LocalTask) ExecuteWithRetry(runtime connector.Runtime, host connector.Host) error {
-	err := fmt.Errorf("[A] %s: %s exec failed after %d retires: ",
-		host.GetName(), l.Name, l.Retry)
+	// The host is not named here: CombineErr attributes every recorded failure
+	// to its host, so repeating it would print the name twice.
+	err := fmt.Errorf("%s exec failed after %d attempt(s): ", l.Name, l.Retry)
 	for i := 0; i < l.Retry; i++ {
 
 		e := l.Action.Execute(runtime)

@@ -1,5 +1,9 @@
 ---
 description: Explore core Olares concepts for developers, including system architecture, identity, application management, networking, and data security.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares developer concepts, system architecture, identity, application management, data security
 ---
 # Overview
 

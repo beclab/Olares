@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Explore Olares data architecture, including file system types, app storage paths, databases, and support for JuiceFS, PostgreSQL, MongoDB, and Redis.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares data architecture, app storage, JuiceFS, PostgreSQL, MongoDB, Redis
 ---
 
 # Data
@@ -30,7 +34,7 @@ Olares OS uses [JuiceFS](https://juicefs.com) as the underlying multi-physical n
 
 As for the back-end object storage solution of JuiceFS, we also provide two solutions: S3 and MinIO.
 
-By default, Olares uses the local file system (FS) when installed locally. However, if the `--with-juicefs=true` option is specified when running the [`olares-cli prepare`](../install/cli/prepare.md) command, JuiceFS will be installed and used. Additionally, a MinIO instance will be set up as the backend storage.
+By default, Olares uses the local file system (FS) when installed locally. However, if the `--with-juicefs=true` option is specified when running the `olares-cli prepare` command, JuiceFS will be installed and used. Additionally, a MinIO instance will be set up as the backend storage.
 
 ### Local disk
 
@@ -60,19 +64,19 @@ The `AppCache` storage path is allocated for applications that directly operate 
 
 Applications can apply for [AppCache](../develop/package/manifest.md#appcache) permissions in `OlaresManifest.yaml`.
 
-## [PostgreSQL](../develop/advanced/database.md#rds)
+## PostgreSQL
 
 As one of the most popular open-source relational databases, PostgreSQL has excellent performance and rich plug-in functions. Olares OS deploys PostgreSQL on the system along with the popular Citus distributed database plug-in. At the same time, its cluster is managed through the PG Operator in the TAPR component. Users can easily expand the number of PostgreSQL nodes, and back up or restore data along with the entire Olares system.
 
 If the PostgreSQL database application declared by the developer in the application is Distributed, then Olares will build its database on Citus, allowing the application to fully utilize the capabilities of the distributed PG database.
 
-## [MongoDB](../develop/advanced/database.md#nosql)
+## MongoDB
 
 MongoDB, as a representative of NoSQL, has a wide range of application scenarios in the Internet of Things field. By deploying [Percona Operator for MongoDB](https://github.com/percona/percona-server-mongodb-operator), developers have a cloud-native version of MongoDB cluster in Olares.
 
 Like PostgreSQL, Olares also manages MongoDB backup and restore in a unified manner. Users do not need to have any DBA technical capabilities to easily implement functions such as scheduled backup, incremental backup, and fixed-point restore.
 
-## [Redis](../develop/advanced/database.md#cache)
+## Redis
 
 There is no doubt that Redis can be regarded as the most popular memory cache software currently. It has rich instructions and derives a variety of data types based on Key-Value data. Many systems even use it as KV data storage. Olares OS also deploys a customized [Redis Cluster Operator](https://github.com/beclab/redis-cluster-operator) in the system, providing a cloud-native version of Redis Cluster.
 
@@ -109,4 +113,4 @@ The Backup component also has data restoration capabilities. You can download a 
 
 - Developer
 
-  [File upload](/developer/develop/advanced/file-upload.md)<br>
+  File upload<br>

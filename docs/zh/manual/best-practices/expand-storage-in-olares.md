@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 存储扩展指南，涵盖 SMB 服务器连接、USB 自动挂载与 HDD/SSD 手动挂载设置，助你灵活扩展本地存储空间，高效管理大型 AI 模型与数据资源。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 扩展存储, SMB, USB 挂载, HDD, SSD, LVM, 文件管理器
 ---
 # 在 Olares 中扩展存储空间
 
@@ -212,7 +216,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 ### 开始之前
 
 - 将外部硬盘连接到 Olares 主机。
-- [SSH](/zh/developer/reference/access-olares-terminal.md) 登录到 Olares 主机终端。
+- SSH 登录到 Olares 主机终端。
 
 ### 识别未挂载的磁盘
 
@@ -318,4 +322,4 @@ nvme1n1     259:3    0 931.5G  0 disk
 ![Check disk volume in Dashboard](/images/zh/manual/tutorials/expand-dashboard-disk.png#bordered)
 
 
-如需查看完整用法与选项，请参考 [`disk`](/zh/developer/install/cli/disk.md)。
+如需查看完整用法与选项，请参考 `disk` 命令文档。

@@ -15,7 +15,7 @@ olares-cli market restart comfyui --compute-binding node-1:gpu-0 --watch
 - Requires **Olares >= 1.12.6**. Older releases do not expose `POST /apps/restart`.
 - Source is implicit: the CLI resolves the installed app's per-user state row and sends its source. `restart` does not expose `-s`.
 - The request body uses the same `{app_name, source, computeBinding?}` shape as the overlay feature's restart path.
-- If the version cannot be determined, confirm the active profile is logged in and run `olares-cli profile list --refresh-version`. If the detected version is below 1.12.6, upgrade Olares.
+- If the version cannot be determined, confirm the active profile is logged in and run `olares-cli profile list --refresh`. If the detected version is below 1.12.6, upgrade Olares.
 
 ## Compute binding
 

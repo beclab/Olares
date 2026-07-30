@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 使用官方 ISO 镜像在 NVIDIA DGX Spark 上安装 Olares，包括制作启动盘、安装步骤和激活流程。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DGX Spark, ISO 镜像, NVIDIA, GPU 显存
 ---
 
 # 在 Spark 上通过 ISO 镜像安装 Olares

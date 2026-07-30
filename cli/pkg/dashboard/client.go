@@ -436,6 +436,7 @@ type SystemStatus struct {
 	HostName   string
 	CPUInfo    string
 	GPUInfo    string
+	GPUList    []string
 }
 
 // IsOlaresOne reports whether this Olares instance is running on an
@@ -463,10 +464,11 @@ func (c *Client) EnsureSystemStatus(ctx context.Context) (*SystemStatus, error) 
 			Code    int    `json:"code"`
 			Message string `json:"message"`
 			Data    struct {
-				DeviceName string `json:"device_name"`
-				HostName   string `json:"host_name"`
-				CPUInfo    string `json:"cpu_info"`
-				GPUInfo    string `json:"gpu_info"`
+				DeviceName string   `json:"device_name"`
+				HostName   string   `json:"host_name"`
+				CPUInfo    string   `json:"cpu_info"`
+				GPUInfo    string   `json:"gpu_info"`
+				GPUList    []string `json:"gpu_list"`
 			} `json:"data"`
 		}
 		if err := c.DoJSON(ctx, http.MethodGet, "/user-service/api/system/status", nil, nil, &raw); err != nil {
@@ -478,6 +480,7 @@ func (c *Client) EnsureSystemStatus(ctx context.Context) (*SystemStatus, error) 
 			HostName:   raw.Data.HostName,
 			CPUInfo:    raw.Data.CPUInfo,
 			GPUInfo:    raw.Data.GPUInfo,
+			GPUList:    raw.Data.GPUList,
 		}
 	})
 	return c.systemStatus, c.systemStatusErr

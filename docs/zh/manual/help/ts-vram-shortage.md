@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 排查在显存分片模式下，依赖 GPU 的应用在安装后或恢复运行后仍处于暂停状态的问题。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, GPU 应用, 显存分片, 显存不足, 暂停状态, 释放显存
 ---
 
 # GPU 应用安装或恢复后处于暂停状态
