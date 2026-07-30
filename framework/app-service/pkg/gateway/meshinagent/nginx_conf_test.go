@@ -172,12 +172,13 @@ func TestInitContainerSpec(t *testing.T) {
 	script := strings.Join(c.Command, " ")
 	for _, want := range []string{
 		"iptables", "-I OUTPUT", "--dport 80", "REDIRECT", "16080", "os-gateway",
-		"--dport 443", "16443",
+		"--dport 443", "16443", `-d "$ip"`,
 		`NGINX_UID="1651"`,
 		`LINKERD_UID="2102"`,
 		`ENVOY_UID="1555"`,
 		"! --uid-owner $NGINX_UID",
 		"! --uid-owner $LINKERD_UID",
+		"exit 0",
 	} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("init script missing %q in %#v", want, c.Command)
@@ -186,6 +187,9 @@ func TestInitContainerSpec(t *testing.T) {
 	if strings.Contains(script, `--uid-owner "$NGINX_UID" -j RETURN`) ||
 		strings.Contains(script, `--uid-owner $NGINX_UID -j RETURN`) {
 		t.Fatal("must not install blanket uid RETURN (blocks Linkerd mTLS)")
+	}
+	if strings.Contains(script, "*:443") {
+		t.Fatal("must not advertise blanket *:443 redirect")
 	}
 }
 
