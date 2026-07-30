@@ -1,5 +1,9 @@
 ---
 description: Manage files efficiently in Olares with secure storage, seamless synchronization across devices, and centralized file management capabilities.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Files, file management, Drive, Sync, cloud storage, Common
 ---
 # Manage files in Olares
 
@@ -30,7 +34,7 @@ Learn the fundamentals of file management in Olares.
 </div>
 
 <div>
-<h4><a href="./common">Use Common directory</a></h4>
+<h4><a href="./files-common">Use Common directory</a></h4>
 Learn how applications share AI models and cache data in the Common directory.
 </div>
 

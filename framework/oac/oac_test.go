@@ -101,11 +101,10 @@ func TestLint_Firefox(t *testing.T) {
 	}
 }
 
-// TestLint_Firefox_SecurityContextCheckOptIn documents that the
-// non-beclab privileged securityContext check is OFF by default. The
-// firefox fixture currently uses third-party images without explicit
-// securityContext; turning the check on must still produce no error
-// because nil securityContext is treated as safe.
+// TestLint_Firefox_SecurityContextCheckOptIn documents that explicitly
+// enabling the default non-beclab privileged securityContext check remains
+// supported. The firefox fixture uses third-party images without explicit
+// securityContext, which the check treats as safe.
 func TestLint_Firefox_SecurityContextCheckOptIn(t *testing.T) {
 	err := oac.Lint(testdataFirefox,
 		oac.WithOwnerAdmin("alice"),

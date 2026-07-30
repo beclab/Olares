@@ -81,14 +81,10 @@ func kubeconfigPaths() []string {
 	return []string{filepath.Join(home, ".kube", "config")}
 }
 
-// ensureFreshLocked invalidates the cached config and clients when any tracked
-// kubeconfig file changes (e.g. IP change or k3s cert rotation), so olaresd
-// recovers without a restart instead of pinning a stale config forever.
-// Callers must hold clientCacheMu.
-func ensureFreshLocked() {
-	paths := kubeconfigPaths()
+func configChanged() (bool, string, time.Time) {
+	paths := append([]string{"/etc/hosts"}, kubeconfigPaths()...)
 	if len(paths) == 0 {
-		return
+		return false, cachedKubeconfigPath, cachedKubeconfigModTime
 	}
 	key := strings.Join(paths, string(os.PathListSeparator))
 	var modTime time.Time
@@ -105,16 +101,31 @@ func ensureFreshLocked() {
 		// None of the tracked files are readable right now; keep any cached
 		// clients. A momentarily-missing file (e.g. during an atomic rewrite)
 		// should not tear down a working in-memory client.
-		return
+		return false, cachedKubeconfigPath, cachedKubeconfigModTime
 	}
 	if cachedConfig == nil {
 		cachedKubeconfigPath = key
 		cachedKubeconfigModTime = modTime
-		return
+		return false, cachedKubeconfigPath, cachedKubeconfigModTime
 	}
 	if key == cachedKubeconfigPath && modTime.Equal(cachedKubeconfigModTime) {
+		return false, cachedKubeconfigPath, cachedKubeconfigModTime
+	}
+
+	return true, key, modTime
+}
+
+// ensureFreshLocked invalidates the cached config and clients when any tracked
+// kubeconfig or hosts file changes (e.g. IP change or k3s cert rotation), so
+// olaresd recovers without a restart instead of pinning a stale config forever.
+// Callers must hold clientCacheMu. Informer teardown is coordinated via
+// rebuildInformers (takes informerMu briefly; see that function's lock notes).
+func ensureFreshLocked() {
+	changed, key, modTime := configChanged()
+	if !changed {
 		return
 	}
+
 	klog.Info("kubeconfig changed, rebuilding k8s clients")
 	cachedConfig = nil
 	cachedKubeClient = nil
@@ -123,6 +134,10 @@ func ensureFreshLocked() {
 	cachedApixClient = nil
 	cachedKubeconfigPath = key
 	cachedKubeconfigModTime = modTime
+	clientGeneration.Add(1)
+
+	klog.Info("rebuilding informers")
+	rebuildInformers()
 }
 
 // configLocked returns the cached rest.Config, loading it once on first

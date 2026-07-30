@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 LarePass 移动端应用或桌面客户端中导入、切换和删除 Olares 账户。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 导入账户, 切换账户, 删除账户, Olares ID, 助记词
 ---
 
 # 在 LarePass 中管理账户

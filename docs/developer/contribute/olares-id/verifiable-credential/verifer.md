@@ -1,5 +1,9 @@
 ---
 description: How the Verifier service validates verifiable credentials using Presentation Exchange in Olares ID.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, VC Verifier, verifiable credential verifier, Presentation Exchange, validate credentials, Olares ID
 ---
 # Verifer Service
 

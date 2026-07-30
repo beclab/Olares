@@ -146,4 +146,3 @@ Resource release may take a short time. If no resource can be assigned to the ap
 ## Resources
 
 - [Monitor resource usage](../resources-usage.md): Track GPU and system usage in the Dashboard.
-- [GPU requirements](../../get-started/gpu-requirements.md): Check supported GPUs and driver requirements.

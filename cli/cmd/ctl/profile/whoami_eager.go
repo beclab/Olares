@@ -11,82 +11,29 @@ import (
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
-// eagerWhoami runs a best-effort GET /api/backend/v1/user-info right after
-// `profile login` / `profile import` has persisted the new credentials. It
-// populates ProfileConfig.OwnerRole / WhoamiRefreshedAt so subsequent
-// `settings` preflight checks have something to compare against without a
-// follow-up `profile whoami --refresh`.
-//
-// "Best-effort" means: any failure is downgraded to a one-line stderr
-// warning and the function returns nil. Login / import succeeded — the
-// user shouldn't have to debug a transient backend hiccup just because
-// the role pre-fetch didn't land. The next time they run `profile whoami`
-// or any `settings` verb, the cache will populate naturally.
-//
-// Why we don't reuse cmdutil.Factory.HTTPClient: that http.Client memoizes
-// the access token from the FIRST ResolveProfile call in the process. In
-// login / import we want to talk to the backend with the JUST-MINTED
-// token, not whatever Factory previously cached (which may be tied to a
-// different active profile when --no-switch was passed). NewHTTPClientWithToken
-// builds a fresh client and injects the new token explicitly, sidestepping
-// the issue entirely.
-func eagerWhoami(
-	ctx context.Context,
-	cfg *cliconfig.MultiProfileConfig,
-	profile cliconfig.ProfileConfig,
-	accessToken string,
-) {
-	if accessToken == "" {
-		return
-	}
-	id, err := olares.ParseID(profile.OlaresID)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: skipped post-login role fetch: %v\n", err)
-		return
-	}
+// eagerDetectTimeout bounds the post-login/import detect. The network position
+// is already known here (no probe), so this only needs to cover the role +
+// backend-version round-trips; keep it short so a slow backend can't stall the
+// otherwise-finished login for long.
+const eagerDetectTimeout = 8 * time.Second
 
-	desktopURL := id.DesktopURL(profile.LocalURLPrefix)
-	client := whoami.NewHTTPClientWithToken(desktopURL, profile.OlaresID, accessToken, profile.InsecureSkipVerify)
-
-	// Tight ceiling: this is a "while you wait" hop. If the backend is
-	// slow we don't want to delay the success message any longer than we
-	// have to — the user has already authenticated, the role can populate
-	// later via `whoami --refresh`.
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	res, err := whoami.FetchAndCache(ctx, client, cfg, profile.OlaresID, time.Now)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: post-login role fetch failed: %v\n", err)
-		fmt.Fprintln(os.Stderr, "         (run `olares-cli profile whoami --refresh` later to populate the role cache)")
-		return
-	}
-	if res != nil && res.Info.OwnerRole != "" {
-		fmt.Printf("role: %s\n", whoami.FriendlyLabel(res.Info.OwnerRole))
-	}
-}
-
-// eagerBackendVersion runs a best-effort GET /api/olares-info right after
+// eagerDetect runs the unified detect (role + backend version) right after
 // `profile login` / `profile import` has persisted the new credentials, and
-// caches the backend osVersion into ProfileConfig.BackendVersion. This is the
-// version-cache analogue of eagerWhoami's role pre-fetch: it makes command-side
-// version branching (e.g. `settings gpu`, `settings network overlay`) accurate
-// from the very first command after login, rather than only after some
-// version-touching command happens to run.
+// prints a one-line-per-fact summary. The network position was already probed
+// during login/import and stored on profile.Location, so it is reused here
+// (no second probe) — the role/version fetches go through that detected
+// connection method rather than a hard-wired public URL.
 //
-// Best-effort means: any failure downgrades to a one-line stderr warning and
-// returns. Login/import already succeeded — a transient backend hiccup must
-// not shadow it; the cache will populate on the next version-aware command.
+// Best-effort: any failure downgrades to a stderr warning and returns.
+// Login/import already succeeded — a transient backend hiccup must not shadow
+// it; the caches populate on the next version/role-aware command (or
+// `profile whoami --refresh`).
 //
-// We can't piggyback on eagerWhoami: /api/backend/v1/user-info returns only
-// {name, owner_role}, not osVersion — the version lives on the separate
-// /api/olares-info endpoint. Like eagerWhoami we use NewHTTPClientWithToken
-// (the just-minted token) rather than cmdutil.Factory.HTTPClient, which
-// memoizes the token from the first ResolveProfile and may be tied to a
-// different active profile under --no-switch. The actual fetch + parse + cache
-// goes through the shared whoami.FetchAndCacheVersion so there is one
-// olares-info implementation.
-func eagerBackendVersion(
+// Why NewHTTPClientWithToken (inside DetectAndCache) rather than the Factory
+// http.Client: the latter memoizes the access token from the first
+// ResolveProfile call, which under --no-switch may be tied to a different
+// active profile. The detect path injects the just-minted token explicitly.
+func eagerDetect(
 	ctx context.Context,
 	cfg *cliconfig.MultiProfileConfig,
 	profile cliconfig.ProfileConfig,
@@ -95,18 +42,32 @@ func eagerBackendVersion(
 	if accessToken == "" || cfg == nil {
 		return
 	}
-	id, err := olares.ParseID(profile.OlaresID)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: skipped post-login version fetch: %v\n", err)
-		return
-	}
-	desktopURL := id.DesktopURL(profile.LocalURLPrefix)
-	client := whoami.NewHTTPClientWithToken(desktopURL, profile.OlaresID, accessToken, profile.InsecureSkipVerify)
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, eagerDetectTimeout)
 	defer cancel()
 
-	if _, err := whoami.FetchAndCacheVersion(ctx, client, cfg, profile.OlaresID, time.Now); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: post-login version fetch failed: %v\n", err)
+	d, err := whoami.DetectAndCache(ctx, whoami.DetectInput{
+		Cfg:           cfg,
+		OlaresID:      profile.OlaresID,
+		LocalPrefix:   profile.LocalURLPrefix,
+		Insecure:      profile.InsecureSkipVerify,
+		AccessToken:   accessToken,
+		KnownLocation: olares.Location(profile.Location),
+		Now:           time.Now,
+	})
+	if d != nil {
+		if d.Location != "" {
+			fmt.Printf("location: %s\n", d.Location)
+		}
+		if d.RoleLabel != "" {
+			fmt.Printf("role: %s\n", d.RoleLabel)
+		}
+		if d.BackendVersion != "" {
+			fmt.Printf("version: %s\n", d.BackendVersion)
+		}
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: post-login detect did not fully complete: %v\n", err)
+		fmt.Fprintln(os.Stderr, "         (run `olares-cli profile whoami --refresh` later to populate the cache)")
 	}
 }

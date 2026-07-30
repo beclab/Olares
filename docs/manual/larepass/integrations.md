@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Connect and manage third-party integrations in LarePass, including authorization and data synchronization with Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, integrations, cloud storage, Olares Space, AWS S3
 ---
 
 # Manage integrations in LarePass

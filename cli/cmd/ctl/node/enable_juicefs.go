@@ -30,7 +30,8 @@ migrates the existing rootfs data into it, swaps the rootfs directory for the
 JuiceFS mount, regenerates the cluster services, and starts Olares back up.
 
 After it completes, the master satisfies the JuiceFS precondition required to
-add worker nodes, so you can run "olares-cli node add" on the workers.
+add worker nodes: run "olares-cli node join-command" here to get the
+command to run on each worker.
 
 The command is resumable: if a previous run was interrupted, re-running it
 continues safely from where it left off without re-migrating already-migrated

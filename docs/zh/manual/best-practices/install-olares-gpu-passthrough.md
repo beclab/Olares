@@ -2,6 +2,10 @@
 outline: [2, 3]
 title: 在启用显卡直通的 PVE 上安装 Olares
 description: 在 Proxmox VE（PVE）中配置 GPU 直通，并在启用 GPU 加速的虚拟机中安装 Olares 的详细教程。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, GPU 直通, PVE, NVIDIA, IOMMU, VFIO, 虚拟机
 ---
 
 # 在启用显卡直通的 PVE 上安装 Olares

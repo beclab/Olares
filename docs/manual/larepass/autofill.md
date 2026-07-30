@@ -1,5 +1,9 @@
 ---
 description: Configure and use LarePass autofill features to securely manage passwords across devices, automatically save credentials, and streamline your login experience.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, password autofill, Vault, Android, iOS
 ---
 # Autofill passwords with LarePass
 

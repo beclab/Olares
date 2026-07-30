@@ -34,8 +34,7 @@ For each db/queue service:
 ```yaml
 middleware:
   postgres:
-    username: myapp
-    password: myapp
+    username: myapp     # omit password — Olares manages it and injects .Values.postgres.password
     databases:
     - name: myapp            # → reference as .Values.postgres.databases.myapp
       extensions:            # optional — only what the upstream app needs (see catalog below)
@@ -87,11 +86,16 @@ Env wiring in the deployment (PostgreSQL example; Redis/Mongo/MySQL/MariaDB/MinI
           value: "{{ .Values.postgres.port }}"
         - name: DB_USER
           value: "{{ .Values.postgres.username }}"
-        - name: DB_PASSWORD
-          value: "{{ .Values.postgres.password }}"
         - name: DB_NAME
           value: "{{ .Values.postgres.databases.myapp }}"
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-app
+              key: DB_PASSWORD
 ```
+
+`.Values.<mw>.password` is a credential, so it travels through a Secret rather than a literal `env:` value — the Secret to write, and how a connection string that embeds the password is handled, are in [secrets.md](olares-chart-secrets.md).
 
 > **Env wiring is its own topic.** The `.Values.<mw>.*` mappings above, plus app config the user supplies at install (admin credentials), reused `OLARES_SYSTEM_*`/`OLARES_USER_*` vars, and the `envs[]` `required`/`type`/`regex` rules, are all covered in the Env area.
 

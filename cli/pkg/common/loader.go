@@ -22,8 +22,10 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 
 	kubekeyapiv1alpha2 "github.com/beclab/Olares/cli/apis/kubekey/v1alpha2"
@@ -70,7 +72,9 @@ func (d *DefaultLoader) Load() (*kubekeyapiv1alpha2.Cluster, error) {
 	// 	return nil, err
 	// }
 
-	fmt.Printf("current: %s\n", user)
+	// Debug level: a single user-facing command can build several runtimes, and
+	// this line is of no use to the operator.
+	logger.Debugf("current user: %s", user)
 
 	allInOne := &kubekeyapiv1alpha2.Cluster{}
 
@@ -164,32 +168,46 @@ func normalizedBuildVersion(version string) string {
 	return ""
 }
 
+// Load() runs once per runtime, and a single user-facing command can build
+// several runtimes -- `node join` drives six pipelines in a row. These two steps
+// are idempotent and their outcome cannot change within one process, so they are
+// memoized instead of re-running (and, for localSSH, rewriting authorized_keys)
+// on every one of them.
+var (
+	sudoOnce    sync.Once
+	sudoErr     error
+	localSSHDo  sync.Once
+	localSSHErr error
+)
+
 func installSUDOIfMissing() error {
-	p, _ := util.GetCommand("sudo")
-	if p != "" {
-		return nil
-	}
-	output, err := exec.Command("/bin/sh", "-c", "apt install -y sudo").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "failed to install the sudo command that's missing: %s", string(output))
-	}
-	return nil
+	sudoOnce.Do(func() {
+		p, _ := util.GetCommand("sudo")
+		if p != "" {
+			return
+		}
+		output, err := exec.Command("/bin/sh", "-c", "apt install -y sudo").CombinedOutput()
+		if err != nil {
+			sudoErr = errors.Wrapf(err, "failed to install the sudo command that's missing: %s", string(output))
+		}
+	})
+	return sudoErr
 }
 
 func localSSH(osType string) error {
-	switch osType {
-	case Windows:
+	if osType == Windows {
 		return nil
-	default:
 	}
-	if output, err := exec.Command("/bin/sh", "-c", "if [ ! -f \"$HOME/.ssh/id_rsa\" ]; then mkdir -p \"$HOME/.ssh\" && ssh-keygen -t rsa-sha2-512 -P \"\" -f $HOME/.ssh/id_rsa && ls $HOME/.ssh;fi;").CombinedOutput(); err != nil {
-		return errors.New(fmt.Sprintf("Failed to generate public key: %v\n%s", err, string(output)))
-	}
-	if output, err := exec.Command("/bin/sh", "-c", "sudo -E /bin/bash -c 'echo \"\n$(cat $HOME/.ssh/id_rsa.pub)\" >> $HOME/.ssh/authorized_keys' && awk ' !x[$0]++{print > \"'$HOME'/.ssh/authorized_keys.tmp\"}' $HOME/.ssh/authorized_keys && mv $HOME/.ssh/authorized_keys.tmp $HOME/.ssh/authorized_keys").CombinedOutput(); err != nil {
-		return errors.New(fmt.Sprintf("Failed to copy public key to authorized_keys: %v\n%s", err, string(output)))
-	}
-
-	return nil
+	localSSHDo.Do(func() {
+		if output, err := exec.Command("/bin/sh", "-c", "if [ ! -f \"$HOME/.ssh/id_rsa\" ]; then mkdir -p \"$HOME/.ssh\" && ssh-keygen -t rsa-sha2-512 -P \"\" -f $HOME/.ssh/id_rsa && ls $HOME/.ssh;fi;").CombinedOutput(); err != nil {
+			localSSHErr = errors.Errorf("Failed to generate public key: %v\n%s", err, string(output))
+			return
+		}
+		if output, err := exec.Command("/bin/sh", "-c", "sudo -E /bin/bash -c 'echo \"\n$(cat $HOME/.ssh/id_rsa.pub)\" >> $HOME/.ssh/authorized_keys' && awk ' !x[$0]++{print > \"'$HOME'/.ssh/authorized_keys.tmp\"}' $HOME/.ssh/authorized_keys && mv $HOME/.ssh/authorized_keys.tmp $HOME/.ssh/authorized_keys").CombinedOutput(); err != nil {
+			localSSHErr = errors.Errorf("Failed to copy public key to authorized_keys: %v\n%s", err, string(output))
+		}
+	})
+	return localSSHErr
 }
 
 // defaultCommonClusterConfig kubernetes version, registry mirrors, container manager, etc.

@@ -1,5 +1,9 @@
 ---
 description: DIDs represent both tangible or intangible entities across physical and digital realms.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Verifiable Credential, VC, DID, digital credential, W3C verifiable credential
 ---
 # Verifiable Credential
 

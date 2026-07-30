@@ -49,23 +49,28 @@ app-service rejects any operation not allowed in the current state (`OperationAl
 
 Key consequences: an **in-flight** app accepts only `cancel` (never a direct `uninstall` — the CLI auto-cancels first); `install` against an already-existing settled app is rejected (use `upgrade`).
 
+> **This table is app-service's gate, not the whole story for `cancel`.** Requests reach app-service through Market, which keeps its own whitelist of states a cancel may operate on; both have to allow it. Market's whitelist grew `resuming` and `upgrading` in 1.12.7, so on older backends a cancel for those two states is refused by Market with a 404 (`App not found or current state does not allow operation`) even though app-service itself would accept it.
+
 Used by: `market` (verb pre-flight gating), `chart` (install-vs-upgrade verb choice), `doctor` ("why was my operation rejected?").
 
 ## Backend fail TTLs (how long a state can sit before app-service gives up)
 
-Each progressing state has its own timeout before the backend itself fails the op (`StateToDurationMap`, default fallback 10m):
+Each progressing state has its own timeout before the backend itself gives up on the op. The live values are the ones app-service's reconciler passes when it loads the state handler (`controllers/load.go`, `LoadStatefulApp`):
 
 | State | Backend TTL |
 |---|---|
 | `pending` | 24h |
-| `downloading` | **30 days** |
+| `downloading` | **24h** |
 | `installing` | 30m |
-| `initializing` | 1h |
-| `upgrading` | 1h |
+| `initializing` | 60m |
+| `upgrading` | **24h** while pulling images, then 30m for the helm phase |
 | `applyingEnv` | 30m |
-| (any other) | 10m |
+| `resuming` | 60m |
+| `stopping` / `uninstalling` | 30m |
 
-The `downloading` 30-day TTL is the headline fact: **a slow/large image pull will never self-fail in any reasonable agent timeframe**, so a foreground `--watch` that sits in `downloading` is not a hang to wait out — judge it by image-pull progress, not by waiting for a terminal state.
+> Do not read these off `StateToDurationMap` in `pkg/appstate/state_transition.go` — that map (which still says 30 days for `downloading`) has no non-test caller; the loader above is what actually runs.
+
+The `downloading` 24h TTL is the headline fact: **a slow/large image pull will not self-fail within any normal agent session**, so a foreground `--watch` that sits in `downloading` is not a hang to wait out — judge it by image-pull progress, not by waiting for a terminal state. It does eventually expire, though: a pull genuinely stuck for a day ends up cancelled rather than parked forever.
 
 Used by: `market` (why `--watch` blocks so long), `doctor` (distinguishing a stalled pull from a slow one).
 
@@ -106,5 +111,6 @@ Used by: `market` (don't poll on progress), `doctor` (where real pull progress a
 
 - **A scheduling failure does not become `installFailed`.** When a pod can't be scheduled (stays `Pending`), app-service tears the install down through `Stopping -> stopped`, not `installFailed`. A watcher that only looks for `*Failed` will miss it — a fresh install that ends in `stopped` is a red flag, not a success.
 - **`cancel` is teardown-vs-stop depending on phase.** Canceling `pending` / `downloading` / `installing` **tears the partial install down (namespace deleted)** — functionally equivalent to uninstalled. Canceling `initializing` / `upgrading` / `applyingEnv` / `resuming` only **stops** the app (it lands in `stopped`, still installed). `market uninstall` relies on this split when it auto-orchestrates an in-flight uninstall.
+- **`stopped` alone cannot tell a cancelled upgrade from a finished one** — `status.reason` can. A cancelled upgrade carries `upgradeCancelByUser` (or `upgradeCancelBySystem` when the backend TTL fired) and leaves the app on its **previous** version, while an upgrade of an already-`stopped` app legitimately re-renders at `replicas=0` and returns to a reason-less `stopped`. The row's version is the upgrade *target* in both cases and does not roll back on cancel, so it is not a usable discriminator.
 
 Used by: `market` (uninstall auto-orchestration, cancel outcome), `doctor` (a just-installed app sitting in `stopped` is the scheduling-failure trap).

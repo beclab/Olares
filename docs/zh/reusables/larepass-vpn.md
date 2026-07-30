@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 专用网络, VPN, 远程访问, 客户端安装
 ---
 <!-- 可复用的 LarePass 专用网络内容。请通过命名 region 引用。 -->
 

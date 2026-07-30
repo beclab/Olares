@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/images"
 
 	"github.com/beclab/Olares/cli/pkg/daemon"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/container"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/gpu"
-	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/terminus"
@@ -107,6 +107,12 @@ func (l *wslPhaseBuilder) build() []module.Module {
 				BaseDir:  l.baseDir,
 			},
 		}).
+		addModule(marketPreinstallModules(
+			l.manifestMap,
+			l.runtime.GetInstallerDir(),
+			l.baseDir,
+			productionPreinstallSelections(l.runtime),
+		)...).
 		addModule(terminusBoxModuleBuilder(func() []module.Module {
 			return []module.Module{
 				&daemon.InstallTerminusdBinaryModule{

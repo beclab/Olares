@@ -1,5 +1,9 @@
 ---
 description: Configure Olares in Settings. Personalize your system, secure access, manage users, and connect storage or third-party services.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, system configuration, users, VPN, network, backup, appearance
 ---
 
 # Configure and manage Olares with Settings

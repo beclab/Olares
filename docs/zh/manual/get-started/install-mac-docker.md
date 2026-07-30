@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Mac 上使用 Docker 容器部署运行 Olares 的完整步骤，包括镜像配置和容器设置说明。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Mac Docker, macOS 安装, Docker 镜像, olaresd-proxy
 ---
 # 使用 Docker 镜像在 Mac 上安装 Olares
 你可以通过 Docker 可以在容器化环境中安装和运行 Olares。本文将带你了解：如何使用 Docker 设置 Olares，准备安装环境，完成激活流程，并管理容器的生命周期。

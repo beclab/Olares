@@ -1,5 +1,9 @@
 ---
 description: Get familiar with Olares Desktop, including the Dock, Launchpad, application windows, widgets, layout reset, and global search.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Desktop, Dock, Launchpad, widgets, global search, appearance
 ---
 
 # Get familiar with Desktop

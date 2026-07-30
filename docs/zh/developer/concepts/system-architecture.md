@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 全面了解 Olares 架构，涵盖基础设施、平台服务和应用框架。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 系统架构, Kubernetes, 容器编排, 分布式存储, 平台服务, 应用框架
 ---
 
 # Olares 系统架构
@@ -65,7 +69,7 @@ Olares 使用轻量级容器运行时 [containerd](../install/installation-overv
 
 Olares 的集群管理通过以下工具实现：
 
-- [olares-cli](../install/cli/olares-cli.md)：命令行工具，用于管理 Olares 集群、应用和硬件节点等。
+- [olares-cli](../cli-overview.md)：命令行工具，用于管理 Olares 集群、应用和硬件节点等。
 - [olaresd](../install/installation-overview.md#系统守护进程olaresd)：Olares 的守护进程，用于监控硬件和网络变更、处理集群升级和重启等。
 
 这些工具简化了 Olares 的安装、维护和扩展过程。

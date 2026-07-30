@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1",
+  "hardwareProfile": "nvidia-cuda",
+  "apps": [
+    {
+      "appId": "47ca2f42",
+      "selectedGpuType": "nvidia",
+      "envs": {
+        "HF_HUB_OFFLINE": "1"
+      }
+    }
+  ]
+}

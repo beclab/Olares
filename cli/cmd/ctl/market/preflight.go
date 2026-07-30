@@ -297,27 +297,30 @@ func appLabels(appInfo map[string]interface{}) []string {
 // gates (state / version) never soft-fail because their inputs come
 // from the /market/state response we already have in hand for the
 // row lookup.
-func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName, targetVersion, source string) error {
+//
+// On success it hands back the pre-upgrade row so runUpgrade can use its
+// statusTime as the --watch baseline without a second round trip.
+func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName, targetVersion, source string) (*installedAppRow, error) {
 	row, err := lookupInstalledApp(ctx, mc, appName)
 	if err != nil {
-		return fmt.Errorf("preflight: %w", err)
+		return nil, fmt.Errorf("preflight: %w", err)
 	}
 	if row == nil {
-		return fmt.Errorf("cannot upgrade '%s': app is not installed (no per-user state row); use 'olares-cli market install %s' first", appName, appName)
+		return nil, fmt.Errorf("cannot upgrade '%s': app is not installed (no per-user state row); use 'olares-cli market install %s' first", appName, appName)
 	}
 
 	if !isUpgradable(row.State) {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"cannot upgrade '%s' in state '%s': upgrade is only allowed from %s; current state may be transient (in-flight install / uninstall) — re-run 'olares-cli market status %s' to confirm",
 			appName, row.State, upgradableStateList(), appName,
 		)
 	}
 
 	if row.Version == "" {
-		return fmt.Errorf("cannot upgrade '%s': no version recorded on the state row (mid-flight install or older backend) — re-run 'olares-cli market status %s --watch' until the row stabilizes, then retry", appName, appName)
+		return nil, fmt.Errorf("cannot upgrade '%s': no version recorded on the state row (mid-flight install or older backend) — re-run 'olares-cli market status %s --watch' until the row stabilizes, then retry", appName, appName)
 	}
 	if targetVersion == "" {
-		return fmt.Errorf("cannot upgrade '%s': target version is empty (internal error — version resolution did not produce a version string)", appName)
+		return nil, fmt.Errorf("cannot upgrade '%s': target version is empty (internal error — version resolution did not produce a version string)", appName)
 	}
 
 	// The "upload" bucket (chartUploadSource) overwrites the stored
@@ -333,13 +336,13 @@ func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient
 	isUpload := strings.TrimSpace(source) == chartUploadSource
 	cmp, err := compareSemver(targetVersion, row.Version)
 	if err != nil {
-		return fmt.Errorf("cannot upgrade '%s': version comparison failed: %w (installed %q, target %q)", appName, err, row.Version, targetVersion)
+		return nil, fmt.Errorf("cannot upgrade '%s': version comparison failed: %w (installed %q, target %q)", appName, err, row.Version, targetVersion)
 	}
 	if cmp == 0 && !isUpload {
-		return fmt.Errorf("cannot upgrade '%s': target version '%s' is already installed — nothing to do", appName, targetVersion)
+		return nil, fmt.Errorf("cannot upgrade '%s': target version '%s' is already installed — nothing to do", appName, targetVersion)
 	}
 	if cmp < 0 {
-		return fmt.Errorf("cannot upgrade '%s': target version '%s' is older than installed version '%s'; downgrade via upgrade is rejected — uninstall and reinstall the older version instead", appName, targetVersion, row.Version)
+		return nil, fmt.Errorf("cannot upgrade '%s': target version '%s' is older than installed version '%s'; downgrade via upgrade is rejected — uninstall and reinstall the older version instead", appName, targetVersion, row.Version)
 	}
 
 	if strings.TrimSpace(source) != "" && row.Source != "" && source != row.Source {
@@ -365,13 +368,13 @@ func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient
 		// passed. Surface as a warning so it's visible without
 		// blocking the operation.
 		opts.info("warning: preflight could not read catalog metadata for '%s' from source '%s' (%v); skipping suspend-label check", lookupName, source, err)
-		return nil
+		return row, nil
 	}
 	if isAppSuspended(appInfo) {
-		return fmt.Errorf("cannot upgrade '%s': chart is marked 'suspend' or 'remove' in source '%s' (the SPA hides the Upgrade button for the same reason); upstream has withdrawn this app", lookupName, source)
+		return nil, fmt.Errorf("cannot upgrade '%s': chart is marked 'suspend' or 'remove' in source '%s' (the SPA hides the Upgrade button for the same reason); upstream has withdrawn this app", lookupName, source)
 	}
 
-	return nil
+	return row, nil
 }
 
 // compareSemver returns -1 / 0 / 1 comparing target vs installed using

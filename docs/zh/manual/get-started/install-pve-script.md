@@ -1,5 +1,9 @@
 ---
 description: 在 PVE 虚拟化平台上安装配置 Olares 的完整步骤，包括系统要求、安装命令和激活过程。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, PVE, 脚本安装, Proxmox VE, 命令行安装
 ---
 # 在 PVE 上使用脚本安装 Olares
 Proxmox 虚拟环境（PVE）是一个基于 Debian Linux 的开源虚拟化平台。本文将介绍如何在 PVE 环境中使用脚本安装 Olares。

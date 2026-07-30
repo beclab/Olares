@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 应用市场购买付费应用，以及如何恢复已购应用而无需重复付费。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 付费应用, 应用市场, 购买应用, 恢复已购应用, 加密货币钱包, MetaMask
 ---
 
 # 管理付费应用

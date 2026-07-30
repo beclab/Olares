@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 专用网络, VPN, 远程访问
 ---
 <tabs>
 <template #LarePass-移动端>

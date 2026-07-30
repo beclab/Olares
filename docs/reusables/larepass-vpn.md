@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass VPN, VPN setup, remote access, Intranet, P2P, DERP
 ---
 <!-- Reusable LarePass VPN content. Include by named region. -->
 

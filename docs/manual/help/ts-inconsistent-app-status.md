@@ -2,6 +2,10 @@
 outline: [2, 3]
 title: App status differs across interfaces
 description: Troubleshoot inconsistent app status between Control Hub and Desktop, Settings, or Market.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, app status, Control Hub, Market, Settings, inconsistent status
 ---
 # App status differs after starting or stopping an app in Control Hub
 

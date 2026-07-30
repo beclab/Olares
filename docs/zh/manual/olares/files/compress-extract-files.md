@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 Olares 文件管理器中压缩和解压缩文件，支持 ZIP、7z、TAR 等多种格式，并可自定义压缩等级、密码保护及分卷压缩等选项。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 文件管理器, 压缩文件, 解压缩, ZIP, 7z, TAR, 分卷压缩
 ---
 
 # 压缩与解压缩文件

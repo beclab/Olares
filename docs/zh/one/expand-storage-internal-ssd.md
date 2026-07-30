@@ -158,4 +158,3 @@ Olares One 主板包含两个 PCIe SSD 插槽：
 ## 相关资源
 - [通过 USB 设备扩展存储](expand-storage-usb-drive.md)
 - [使用外接 SSD 扩展存储](expand-storage-external-ssd.md)
-- [`olares-cli disk`](../developer/install/cli/disk.md)。

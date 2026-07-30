@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to install a specific NVIDIA CUDA driver version on the Olares host when the latest official release does not meet your needs.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, CUDA version, NVIDIA driver, GPU, nvidia-smi, runfile, olares-cli gpu enable
 ---
 
 # Install a specific CUDA version

@@ -1,5 +1,9 @@
 ---
 description: Understand Olares Space billing, including service charges, usage-based pricing, payment workflows, and promotional credits.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, billing, Stripe, payment, credits, coupons
 ---
 :::warning Documentation does not match current experience
 We are currently updating this documentation to match the latest experience on the Olares Space platform. If there are differences, follow the actual platform.

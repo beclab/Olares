@@ -1,5 +1,9 @@
 ---
 description: 在 Olares 中管理团队成员用户。掌握团队成员添加、权限设置和资源分配方法，提升团队运营效率。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 多用户, 团队成员, 用户管理, 资源配额, 创建用户, 删除用户
 ---
 # 管理多用户
 

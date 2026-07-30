@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中挂载和访问来自 NAS 设备或服务器的 NFS 共享目录。包含连接 NFS 共享和管理网络文件的详细步骤。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 挂载 NFS, 文件管理器, NAS, 网络文件系统, NFS 共享, 外部设备
 ---
 
 # 挂载 NFS 共享

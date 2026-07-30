@@ -4,10 +4,10 @@ description: 在 Olares 上安装并使用 Open Notebook，收集来源、生成
 head:
   - - meta
     - name: keywords
-      content: Olares, Open Notebook, AI notebook, research assistant, sources, notes, RAG, knowledge base, podcast, transformations
+      content: Olares, Open Notebook, AI notebook, research assistant, NotebookLLM alternative, RAG, knowledge base, podcast, transformations
 app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-05-07"
+doc_version: "2.1"
+doc_updated: "2026-07-27"
 ---
 
 :::warning
@@ -24,26 +24,27 @@ Open Notebook 是一个 AI 驱动的研究工作空间，用于收集来源材�
 
 在本指南中，你将学习如何：
 
-- 在 Olares 上安装 Open Notebook。
-- 连接 AI 模型，用于聊天、摘要、检索和播客生成。
-- 创建研究笔记。
-- 添加并处理研究来源。
-- 查看 AI 生成的洞察。
-- 与研究材料聊天。
-- 将有用的 AI 回复保存为可编辑的笔记。
+- 设置 Open Notebook 进行聊天、搜索和播客生成所需的 AI 模型。
+- 创建笔记并添加研究来源。
+- 生成和查看 AI 洞察，并与洞察进行对话。
+- 将有用的回复保存为可编辑的笔记。
 - 从选定的来源和笔记生成播客节目。
 
 ## 前提条件
 
-开始前，请确保你可以访问想要使用的模型。
+开始前，你需要：
 
-- 必需：至少一个语言模型和一个用于向量搜索的嵌入模型。
-- 播客生成必需：一个文本转语音（TTS）模型。
-- 可选：一个语音转文本（STT）模型，用于处理音频或视频来源。
+- 一台具有足够磁盘空间和内存的 Olares 设备。
+- 以下模型：
 
-:::info 推荐的本地 AI 服务
-对于 Olares 上的本地 AI 工作流，你可以使用通过 **Ollama 兼容**端点暴露的本地语言或嵌入模型服务，以及 [Speaches](speaches.md) 用于语音转文本和文本转语音。
-:::
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 嵌入 | EmbeddingGemma | 从 Market 安装 |
+  | TTS | `speaches-ai/Kokoro-82M-v1.0-ONNX` | 从 Market 安装 [Speaches](speaches.md) |
+  | STT | `Systran/faster-whisper-small` | 从 Market 安装 Speaches。如果不处理音频或视频来源，则为可选项 |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Open Notebook 的工作原理
 
@@ -66,73 +67,77 @@ Open Notebook 围绕四种主要内容类型组织你的工作：
 
 2. 点击 **Get**，然后点击 **Install**，等待安装完成。
 
-安装完成后，在开始第一个研究笔记之前，配置所需的模型。
+安装完成后，在开始第一个研究笔记之前，配置所需的提供方和模型。
 
-## 连接 AI 模型
+## 设置 AI 模型
 
 Open Notebook 使用 AI 模型进行摘要、聊天、检索和播客生成。你只需要设置一次。
 
-前往 **Manage** > **Models**。设置模型有四个主要步骤：
+### 获取模型连接信息
 
-### 获取提供方端点
+#### 独立模型
 
-如果你使用本地 Olares 模型服务，请先复制它们的端点。
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-1. 前往 Olares **Settings** > **Applications**，然后点击模型服务应用。
-2. 查找 **Shared entrances** 并复制端点。
-3. 如果应用的 **Shared entrances** 不可用，则复制其 **API Entrance** 或标准入口。
+对于 Qwen3.6-27B (llama.cpp) 和 EmbeddingGemma：
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+两个模型均使用 **OpenAI-Compatible** API 格式。
+
+#### Speaches
+
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
+
+对于 Speaches：
+
+1. 前往 Olares **Settings** > **Applications** > **Speaches** > **Entrances**。
+2. 选择 **Speaches API**，然后复制 **Endpoint** URL。
 
 ### 添加提供方配置
 
-在 Open Notebook 中，在与模型服务匹配的提供方类型下添加配置：
+前往 **Manage** > **Models**。针对每个服务，找到匹配的提供方并点击 **Add Configuration**。
 
-- 如果模型服务应用名称、应用页面或图标显示 **Ollama**，请使用 **Ollama**。
-
-   ![Ollama-compatible model service](/images/manual/use-cases/open-notebook-ollama-compatible-service.png#bordered){width=90%}
-
-- 如果服务未显示 **Ollama**，请使用其他匹配的提供方类型，例如 **OpenAI Compatible**。
-
-1. 前往 **Manage** > **Models** 并找到你要使用的提供方。
-2. 在提供方下点击 **Add Configuration**。
-3. 输入配置名称。
-4. 在 **Base URL** 中，粘贴你复制的端点。
-   - 如果示例 URL 包含 `/v1`，请在端点后追加 `/v1`。
-   - 如果示例 URL 不包含 `/v1`，请按原样粘贴端点。
-5. 如果需要，输入 API key。
-6. 点击 **Add Configuration**。
+| 服务 | 提供方 | 配置名称 | Base URL |
+| :-- | :-- | :-- | :-- |
+| Qwen3.6-27B (llama.cpp) | **OpenAI Compatible** | 任意容易识别的名称，例如 `Qwen3.6-27B` | Qwen3.6-27B (llama.cpp) 模型控制台中的 Base URL |
+| EmbeddingGemma | **OpenAI Compatible** | 任意容易识别的名称，例如 `EmbeddingGemma` | EmbeddingGemma 模型控制台中的 Base URL |
+| Speaches | **OpenAI Compatible** | 任意容易识别的名称，例如 `Speaches` | Speaches API endpoint，并在末尾添加 `/v1` |
 
 ### 添加模型
 
-添加提供方配置后，添加 Open Notebook 可以使用的模型。
+在每项配置中点击 **Models**，然后添加以下模型：
 
-1. 在你添加的提供方配置中，点击 **Models**。
-2. 选择模型类型，例如 **Language**、**Embedding**、**TTS** 或 **STT**。
-3. 选择你要使用的可用模型。
-4. 点击 **Add**。
-
-### 设置默认模型
-
-返回 **Manage** > **Models** 顶部的 **Default Model Assignments**，然后将模型分配到所需的插槽。
-
-下面的示例与本指南中使用的设置匹配。你可以根据硬件和用例替换为其他本地或云模型。
-
-| 插槽 | 选择内容 | 本指南示例 |
+| 配置 | 类型 | Model ID |
 | :-- | :-- | :-- |
-| Chat Model | 一个语言模型。 | `qwen3:14b` |
-| Embedding Model | 一个嵌入模型。 | `qwen3-embedding:0.6b` |
-| Text-to-Speech Model | 一个 TTS 模型，如果你生成播客。 | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
-| Speech-to-Text Model | 一个 STT 模型，如果你处理音频或视频。 | `Systran/faster-whisper-small` |
-| Transformation Model | 一个语言模型。 | `qwen3:14b` |
-| Tools Model | 一个语言模型，如果你使用基于工具的任务。 | `qwen3:14b` |
-| Large Context Model | 一个适合长文档的语言模型。 | `qwen3:14b` |
+| Qwen3.6-27B (llama.cpp) | **Language** | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+| EmbeddingGemma | **Embedding** | `embeddinggemma-300m` |
+| Speaches | **TTS** | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
+| Speaches | **STT** | `Systran/faster-whisper-small` |
 
-如果 **Auto-assign Defaults** 可用，你可以使用它自动填充可用插槽，然后查看选择。
+### 分配默认模型
 
-![Model assignments](/images/manual/use-cases/open-notebook-set-models-result.png#bordered)
+在 **Default Model Assignments** 下按如下方式分配模型：
+
+| 插槽 | 模型 |
+| :-- | :-- |
+| Chat Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+| Embedding Model | `embeddinggemma-300m` |
+| Text-to-Speech Model | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
+| Speech-to-Text Model | `Systran/faster-whisper-small` |
+| Transformation Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+| Tools Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+| Large Context Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+
+如果 **Auto-assign Defaults** 可用，可以用它自动填充插槽，然后检查选择。
+
+![Model assignments](/images/manual/use-cases/open-notebook-set-models-result1.png#bordered)
 
 ## 创建你的第一个研究笔记
 
-笔记是一个主题、项目、课程或研究问题的工作空间。在本指南中，你将创建一个关于生成式 AI 的学习笔记。
+笔记是一个主题、项目、课程或研究问题的工作空间。在本指南中，你将创建一个用于学习生成式 AI 的笔记，添加文本来源、生成洞察并手动创建笔记。
+
+### 创建笔记
 
 1. 前往 **Process** > **Notebooks**。
 2. 点击 **New** > **Notebook**。
@@ -142,15 +147,13 @@ Open Notebook 使用 AI 模型进行摘要、聊天、检索和播客生成。�
     :::
 4. 点击 **Create New Notebook**。
 
-![Create a notebook](/images/manual/use-cases/open-notebook-create-a-notebook.png#bordered){width=70%}
+![Create a notebook](/images/manual/use-cases/open-notebook-create-a-notebook.png#bordered){width=60%}
 
-## 添加你的第一个来源
+### 添加示例文本来源
 
-来源是你希望 Open Notebook 处理的原始材料。对于首次运行，请使用轻量级文本来源，以避免因外部网站、大型 PDF 或不可用的视频转录而导致失败。
+来源是你希望 Open Notebook 处理的原始材料。首次运行时，请使用轻量级文本来源，以避免因外部网站、大型 PDF 或不可用的视频转录而导致失败。
 
 本指南提供了关于生成式 AI 的示例文本。将其添加为 **Text** 来源。首次工作流成功后，你可以添加更多文本来源或尝试外部 URL、PDF、YouTube 视频或音频/视频文件。
-
-### 添加文本来源
 
 1. 打开你刚刚创建的笔记。
 2. 在 **Source** 区域，点击 **Add Source** > **Add Source**。
@@ -193,11 +196,9 @@ Open Notebook 使用 AI 模型进行摘要、聊天、检索和播客生成。�
 
 ![Add first source](/images/manual/use-cases/open-notebook-add-first-source.png#bordered){width=70%}
 
-Open Notebook 开始处理来源。处理完成后，你可以将其用于洞察、聊天、笔记和引用。
+Open Notebook 开始处理来源并生成 Dense Summary 洞察。处理完成后，你可以查看洞察，并将来源用于聊天、笔记和引用。
 
-### 添加其他来源类型
-
-首次工作流成功后，你可以以类似方式添加其他材料。
+首次工作流成功后，你可以以类似方式添加其他材料：
 
 | 来源类型 | 支持的内容 |
 | :-- | :-- |
@@ -211,11 +212,9 @@ Open Notebook 开始处理来源。处理完成后，你可以将其用于洞察
 你可以稍后从来源的 **Insights** 标签页使用 **Generate New Insight** 生成额外的洞察。
 :::
 
-## 查看生成的洞察
+### 查看生成的洞察
 
-洞察是从来源创建的 AI 生成输出。例如，**Dense Summary** 帮助你在详细阅读之前快速了解来源的内容。
-
-### 查看洞察
+Open Notebook 在处理来源时生成了 **Dense Summary**。
 
 1. 打开一个已处理的来源。
 2. 点击 **Insights** 标签页。
@@ -223,23 +222,29 @@ Open Notebook 开始处理来源。处理完成后，你可以将其用于洞察
 
 ![Review insight](/images/manual/use-cases/open-notebook-review-insight.png#bordered){width=90%}
 
-使用洞察来决定来源是否有用，以及是否应将其包含在笔记聊天中。
+:::tip 生成其他洞察
+在 **Insights** 标签页中使用 **Generate New Insight**，可以从同一来源生成其他洞察。
+:::
 
-### 生成另一个洞察
+### 手动创建笔记
 
-如果你想以另一种方式分析同一来源：
+笔记是可编辑的项目，可用于保存摘要、大纲、问题、草稿或结论。
 
-1. 打开已处理的来源。
-2. 点击 **Insights** 标签页。
-3. 在 **Generate New Insight** 下，选择一个转换。
+1. 打开你的笔记。
+2. 前往 **Notes** 区域。
+3. 点击 **Write Note**。
+4. 输入标题并编写笔记内容。支持 Markdown。
+5. 点击 **Create Note**。
 
-   ![New insight](/images/manual/use-cases/open-notebook-new-insight.png#bordered){width=90%}
+你的笔记将显示在 **Notes** 区域，并带有 `Human` 标签。
 
-4. 点击 **New**。
+![Manually created note](/images/manual/use-cases/open-notebook-manual-note.png#bordered){width=50%}
 
-## 与研究材料聊天
+## 与笔记聊天并保存笔记
 
-在你的来源处理完成后，你可以基于笔记中的材料提问。
+来源处理完成后，你可以基于笔记中的材料提问，也可以将有用的 AI 回复保存为笔记。
+
+### 针对来源提问
 
 1. 打开你的笔记。
 2. 在 **Chat with Notebook** 中，选择你要使用的模型。
@@ -260,10 +265,6 @@ Open Notebook 根据当前聊天上下文中包含的来源回答。
 当答案包含引用时，点击它们打开引用的来源段落。将答案与原始内容进行比较，以检查 AI 回复是否得到你的来源支持。
 :::
 
-## 创建笔记
-
-笔记是可编辑的项目，用于摘要、大纲、问题、草稿或结论。
-
 ### 将 AI 答案保存为笔记
 
 当你在聊天中收到有用的答案时：
@@ -271,51 +272,29 @@ Open Notebook 根据当前聊天上下文中包含的来源回答。
 1. 点击 AI 回复下方的 <i class="material-symbols-outlined">save</i> 图标。
 2. 在 **Notes** 区域，点击带有 `AI Generated` 标签的保存笔记以查看它。
   
-   ![AI generated note](/images/manual/use-cases/open-notebook-ai-note.png#bordered){width=70%}
+   ![AI generated note](/images/manual/use-cases/open-notebook-ai-note.png#bordered){width=50%}
 
 3. 在需要时更新标题或内容，然后点击 **Save Note**。
 
 你可以将保存的笔记用作未来笔记上下文的一部分，或将其包含在播客生成中。
 
-### 手动创建笔记
-
-你也可以手动创建笔记。
-
-1. 打开你的笔记。
-2. 前往 **Notes** 区域。
-3. 点击 **Write Note**。
-4. 输入标题并编写笔记内容。支持 Markdown。
-5. 点击 **Create Note**。
-
-你的笔记将出现在 **Notes** 区域，带有 `Human` 标签。
-
-![Manually created note](/images/manual/use-cases/open-notebook-manual-note.png#bordered){width=70%}
-
 ## 生成播客
 
 在你拥有来源、洞察和笔记后，你可以将研究材料转化为播客节目。
-
-播客生成需要：
-
-- 一个用于大纲生成的语言模型。
-- 一个用于转录生成的语言模型。
-- 一个用于音频生成的文本转语音模型。
-- 已处理的来源或笔记，用作上下文。
 
 ### 配置播客配置文件
 
 在生成播客之前，在播客配置文件中配置所需的模型和语音。
 
 1. 前往 **Create** > **Podcasts**，然后点击 **Profiles** 标签页。
-2. 打开任何标记为 **Needs Configuration** 或带有警告图标的配置文件。
-3. 对于 **Speaker Profile**，选择一个语音模型并输入该模型支持的语音 ID。
+2. 对于 **Speaker Profile**，打开一个符合需求的配置文件。选择语音模型，并输入该模型支持的语音 ID。
 
    :::warning 使用所选 TTS 模型支持的语音 ID
    扬声器配置文件中的默认语音 ID 可能不受你选择的 TTS 模型支持。例如，`nova` 在 `speaches-ai/Kokoro-82M-v1.0-ONNX` 中不可用。请使用支持的 Kokoro 语音 ID，例如 `af_heart`。
    :::
 
-4. 对于 **Episode Profile**，选择扬声器配置文件、大纲模型、转录模型、语言、片段数和简介。
-5. 保存你的更改。
+3. 对于 **Episode Profile**，打开一个符合需求的配置文件。选择扬声器配置文件、大纲模型、转录模型、语言、片段数和简介。
+4. 保存你的更改。
 
 ### 生成音频
 

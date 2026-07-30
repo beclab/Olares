@@ -2,6 +2,10 @@
 
 outline: [2, 3]
 description: Install Olares on NVIDIA DGX Spark using the official ISO image, including bootable USB creation, installation steps, and activation process.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DGX Spark ISO, NVIDIA DGX Spark, ISO image, GPU memory, memory slicing
 ---
 
 # Install Olares on DGX Spark via ISO

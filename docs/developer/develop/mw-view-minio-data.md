@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to install MinIO and manage object storage in Olares using the MinIO Dashboard.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MinIO, object storage, MinIO Dashboard, middleware, S3-compatible, Control Hub
 ---
 # View MinIO data
 

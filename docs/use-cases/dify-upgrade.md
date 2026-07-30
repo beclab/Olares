@@ -7,7 +7,7 @@ head:
       content: Olares, Dify, migration, shared app, Olares 1.12.6
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-07-08"
+doc_updated: "2026-07-27"
 ---
 
 # Migrate Dify to the new architecture
@@ -84,6 +84,10 @@ Open Market, go to **My Olares**, and uninstall the Dify app. Do not select **Al
 
 1. Create new knowledge bases in the new Dify, and re-upload your documents or reconnect your data sources.
 2. Open an app that uses a knowledge base and test a query to confirm retrieval works.
+
+## Clean up legacy data
+
+After you confirm the migration is successful and the new app works as expected, you can manually delete the legacy app data folder to free up disk space. Open Files, go to **Cache** > **difyv2**, and delete the folder.
 
 ## Learn more
 

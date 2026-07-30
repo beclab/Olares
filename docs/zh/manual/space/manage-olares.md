@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 Olares Space 中监控 Olares 的系统状态，包括存储使用量和流量消耗。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, 监控 Olares, 系统状态, 存储使用, 流量消耗
 ---
 # 在 Olares Space 中监控 Olares
 

@@ -686,13 +686,13 @@ func TestIsPartitionOfDisk(t *testing.T) {
 		child, disk string
 		want        bool
 	}{
-		{"sda", "sda", true},        // disk itself
-		{"sda1", "sda", true},       // plain-suffix partition
-		{"sdaa", "sda", false},      // sibling device, not a partition
-		{"nvme0n1p1", "nvme0n1", true},  // digit-ending disk → "p" separator
-		{"nvme0n1", "nvme0n1", true},    // disk itself
-		{"nvme0n10", "nvme0n1", false},  // sibling, not a partition of nvme0n1
-		{"nvme0n1p", "nvme0n1", false},  // "p" without a number
+		{"sda", "sda", true},                  // disk itself
+		{"sda1", "sda", true},                 // plain-suffix partition
+		{"sdaa", "sda", false},                // sibling device, not a partition
+		{"nvme0n1p1", "nvme0n1", true},        // digit-ending disk → "p" separator
+		{"nvme0n1", "nvme0n1", true},          // disk itself
+		{"nvme0n10", "nvme0n1", false},        // sibling, not a partition of nvme0n1
+		{"nvme0n1p", "nvme0n1", false},        // "p" without a number
 		{"olares--vg-root", "nvme0n1", false}, // LVM device (no prefix match)
 		{"", "sda", false},
 		{"sda1", "", false},
@@ -841,7 +841,7 @@ func TestClient_EnsureSystemStatus_CachesResult(t *testing.T) {
 		}
 		hits++
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"code":0,"message":null,"data":{"device_name":"Olares One","host_name":"box","cpu_info":"i9-14900K","gpu_info":"RTX 4070"}}`))
+		_, _ = w.Write([]byte(`{"code":0,"message":null,"data":{"device_name":"Olares One","host_name":"box","cpu_info":"i9-14900K","gpu_info":"RTX 4070","gpu_list":["RTX 4070","Intel Arc"]}}`))
 	}))
 	defer srv.Close()
 
@@ -856,6 +856,9 @@ func TestClient_EnsureSystemStatus_CachesResult(t *testing.T) {
 		}
 		if !s.IsOlaresOne() {
 			t.Fatalf("iter %d: IsOlaresOne() = false", i)
+		}
+		if s.GPUInfo != "RTX 4070" || len(s.GPUList) != 2 {
+			t.Fatalf("iter %d: GPUInfo = %q, GPUList = %#v", i, s.GPUInfo, s.GPUList)
 		}
 	}
 	if hits != 1 {

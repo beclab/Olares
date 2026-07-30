@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, custom domain, DID, DNS records, organization, Olares Space
 ---
 <!--
   Reusable content blocks for custom domain setup. Include by named region.

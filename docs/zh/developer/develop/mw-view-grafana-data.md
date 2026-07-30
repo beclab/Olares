@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中使用 Grafana 仪表板可视化 Prometheus 指标。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Grafana, Prometheus, 可视化指标, 数据仪表板, 数据源配置, 导入仪表板
 ---
 # 使用 Grafana 查看数据
 

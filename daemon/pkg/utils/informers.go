@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -13,11 +14,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	k8sinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
+
+	"github.com/beclab/api/pkg/generated/clientset/versioned"
 )
 
 // informerResyncPeriod is the shared informer resync period. The cache is kept
@@ -32,8 +37,10 @@ const informerResyncPeriod = 10 * time.Minute
 // Every accessor falls back to a live List while the cache is not yet synced,
 // so the status loop never misjudges cluster health during cache warm-up.
 var (
-	informerMu  sync.Mutex
-	informerCtx context.Context
+	informerMu         sync.Mutex
+	informerCtx        context.Context
+	informerCtxCancel  context.CancelFunc
+	informerCtxCreator func() (context.Context, context.CancelFunc)
 
 	informersStarted bool
 
@@ -65,69 +72,152 @@ func logLiveFallback(resource string) {
 func InitInformers(ctx context.Context) {
 	informerMu.Lock()
 	defer informerMu.Unlock()
-	informerCtx = ctx
+	informerCtxCreator = func() (context.Context, context.CancelFunc) {
+		return context.WithCancel(ctx)
+	}
+	informerCtx, informerCtxCancel = informerCtxCreator()
 }
 
-// ensureStartedLocked lazily creates and starts the shared informer factories on
-// first use, once the cluster is reachable. Callers must hold informerMu. If any
-// client cannot be built yet (cluster not reachable) it returns without marking
-// started, so the next access retries.
+// clientGeneration is bumped whenever cached k8s clients are invalidated so
+// startInformersIfNeeded can detect that clients fetched outside informerMu
+// became stale before factories were started.
+var clientGeneration atomic.Uint64
+
+// rebuildInformers stops running factories and clears listers so subsequent
+// reads fall back to live Lists until the cache is rebuilt.
 //
-// The factories are started once and left running for the process lifetime: they
-// stop only when informerCtx is canceled at shutdown. GetKubeClient and friends
-// build fresh clients on each call, so the factories must not be tied to client
-// identity; a kubeconfig change is instead handled by an olaresd restart.
-func ensureStartedLocked() {
-	if informerCtx == nil || informersStarted {
+// Locking: safe to call while holding clientCacheMu. It takes informerMu only
+// to swap state (never acquires clientCacheMu), then runs Shutdown outside
+// informerMu. Callers that start informers must not hold informerMu while
+// calling GetKubeClient, or clientCacheMu → informerMu here would deadlock.
+func rebuildInformers() {
+	informerMu.Lock()
+	cancel := informerCtxCancel
+	core, app, dyn := coreFactory, appFactory, dynFactory
+
+	coreFactory = nil
+	appFactory = nil
+	dynFactory = nil
+	podLister = nil
+	podsSynced = nil
+	nodeLister = nil
+	nodesSynced = nil
+	appLister = nil
+	appsSynced = nil
+	userLister = nil
+	usersSynced = nil
+	informersStarted = false
+
+	if informerCtxCreator != nil {
+		informerCtx, informerCtxCancel = informerCtxCreator()
+	} else {
+		informerCtx = nil
+		informerCtxCancel = nil
+	}
+	informerMu.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
+	if core != nil {
+		core.Shutdown()
+	}
+	if app != nil {
+		app.Shutdown()
+	}
+	if dyn != nil {
+		dyn.Shutdown()
+	}
+}
+
+// startInformersIfNeeded lazily creates and starts the shared informer factories
+// once the cluster is reachable. Clients are fetched without holding
+// informerMu so rebuildInformers can take informerMu while holding
+// clientCacheMu without deadlocking.
+//
+// Factories are restarted after kubeconfig/hosts changes invalidate clients
+// (see ensureFreshLocked → rebuildInformers).
+func startInformersIfNeeded() {
+	for {
+		informerMu.Lock()
+		if informerCtx == nil || informersStarted {
+			informerMu.Unlock()
+			return
+		}
+		informerMu.Unlock()
+
+		gen := clientGeneration.Load()
+		kubeClient, appClientSet, dynClient, err := informerClients()
+		if err != nil {
+			return
+		}
+		if clientGeneration.Load() != gen {
+			// Clients were invalidated while we were fetching; retry with fresh ones.
+			continue
+		}
+
+		informerMu.Lock()
+		if informerCtx == nil || informersStarted {
+			informerMu.Unlock()
+			return
+		}
+		if clientGeneration.Load() != gen {
+			informerMu.Unlock()
+			continue
+		}
+
+		coreFactory = k8sinformers.NewSharedInformerFactory(kubeClient, informerResyncPeriod)
+		podInformer := coreFactory.Core().V1().Pods()
+		podLister = podInformer.Lister()
+		podsSynced = podInformer.Informer().HasSynced
+		nodeInformer := coreFactory.Core().V1().Nodes()
+		nodeLister = nodeInformer.Lister()
+		nodesSynced = nodeInformer.Informer().HasSynced
+
+		appFactory = appinformers.NewSharedInformerFactory(appClientSet, informerResyncPeriod)
+		applicationInformer := appFactory.App().V1alpha1().Applications()
+		appLister = applicationInformer.Lister()
+		appsSynced = applicationInformer.Informer().HasSynced
+
+		dynFactory = dynamicinformer.NewDynamicSharedInformerFactory(dynClient, informerResyncPeriod)
+		userInformer := dynFactory.ForResource(UserGVR)
+		userLister = userInformer.Lister()
+		usersSynced = userInformer.Informer().HasSynced
+
+		stop := informerCtx.Done()
+		coreFactory.Start(stop)
+		appFactory.Start(stop)
+		dynFactory.Start(stop)
+
+		informersStarted = true
+		informerMu.Unlock()
+		klog.Info("shared informers started")
 		return
 	}
+}
 
+func informerClients() (kubernetes.Interface, *versioned.Clientset, dynamic.Interface, error) {
 	kubeClient, err := GetKubeClient()
 	if err != nil {
-		return
+		return nil, nil, nil, err
 	}
 	appClientSet, err := GetAppClientSet()
 	if err != nil {
-		return
+		return nil, nil, nil, err
 	}
 	dynClient, err := GetDynamicClient()
 	if err != nil {
-		return
+		return nil, nil, nil, err
 	}
-
-	coreFactory = k8sinformers.NewSharedInformerFactory(kubeClient, informerResyncPeriod)
-	podInformer := coreFactory.Core().V1().Pods()
-	podLister = podInformer.Lister()
-	podsSynced = podInformer.Informer().HasSynced
-	nodeInformer := coreFactory.Core().V1().Nodes()
-	nodeLister = nodeInformer.Lister()
-	nodesSynced = nodeInformer.Informer().HasSynced
-
-	appFactory = appinformers.NewSharedInformerFactory(&appClientSet, informerResyncPeriod)
-	applicationInformer := appFactory.App().V1alpha1().Applications()
-	appLister = applicationInformer.Lister()
-	appsSynced = applicationInformer.Informer().HasSynced
-
-	dynFactory = dynamicinformer.NewDynamicSharedInformerFactory(dynClient, informerResyncPeriod)
-	userInformer := dynFactory.ForResource(UserGVR)
-	userLister = userInformer.Lister()
-	usersSynced = userInformer.Informer().HasSynced
-
-	stop := informerCtx.Done()
-	coreFactory.Start(stop)
-	appFactory.Start(stop)
-	dynFactory.Start(stop)
-
-	informersStarted = true
-	klog.Info("shared informers started")
+	return kubeClient, &appClientSet, dynClient, nil
 }
 
 // syncedLister starts the informers if needed and returns the lister together
 // with whether its cache has synced, under informerMu.
 func syncedLister[T any](getLister func() (T, bool)) (T, bool) {
+	startInformersIfNeeded()
 	informerMu.Lock()
 	defer informerMu.Unlock()
-	ensureStartedLocked()
 	return getLister()
 }
 

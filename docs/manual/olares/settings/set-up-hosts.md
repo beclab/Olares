@@ -1,5 +1,9 @@
 ---
 description: Configure and manage your Olares hosts file to customize domain name resolution, map IP addresses, and control access to services with step by step guidance.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, hosts file, DNS, domain resolution, nslookup
 ---
 # Set up hosts file
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 从 Cursor、Claude Code 等 AI 运行时，或 Hermes Agent、OpenClaw 等 Olares 应用中安装和使用 Olares CLI 的 Agent Skills。涵盖各个技能、先装 shared 的顺序，以及完整用法。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, Agent Skills, AI Agent, Cursor, Claude Code, Hermes Agent, OpenClaw, 自然语言管理
 ---
 
 # 安装与使用 Agent Skills

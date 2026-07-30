@@ -1,5 +1,9 @@
 ---
 description: While DIDs solve the issue of identity in a decentralized network, they are typically difficult for humans to remember or use in daily situations.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares ID use case, DID usability, verifiable credential use case, digital identity
 ---
 # Use case with Olares
 

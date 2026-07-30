@@ -1,20 +1,21 @@
 ---
 outline: [2, 4] 
 title: Build a local AI agent with LobeHub
-description: Install LobeHub on Olares and connect it to Ollama to build self-hosted local AI assistants with knowledge bases and multimodal input.
+description: Install LobeHub on Olares and connect it to local models to build self-hosted AI assistants with knowledge bases, skills, and multimodal input.
 head:
   - - meta
     - name: keywords
       content: Olares, LobeHub, LobeChat, self-hosted lobechat, AI agent, lobechat on olares
+app_version: "1.0.14"
+doc_version: "2.0"
+doc_updated: "2026-07-29"      
 ---
 
 # Build your local AI agent with LobeHub
 
-LobeHub (previously LobeChat) is an open‑source framework for building secure, local AI chat experiences. It supports file handling, knowledge bases, and multimodal inputs, and it supports Ollama to run and switch local LLMs.
+LobeHub (previously known as LobeChat) is an open-source platform for building secure, self-hosted AI agents and chat experiences. It connects to your local models, supports file handling and knowledge bases, and allows you to create specialized agents with custom skills.
 
-Olares streamlines and simplifies the deployment of both, allowing you to skip complex manual environment configurations.
-
-This guide covers the installation, configuration, and practical usage of these tools to create your personalized AI agents.
+This guide covers the installation, configuration, and practical usage of LobeHub to create your personalized AI agents.
 
 :::tip About the product name
 LobeHub is the official platform name, but the application is currently listed as "LobeChat" in the Olares Market. We use both names in this guide to match exactly what you will see on your screen. The Market will be updated to reflect the new LobeHub branding in the future release.
@@ -22,20 +23,25 @@ LobeHub is the official platform name, but the application is currently listed a
 
 ## Learning objectives
 
-- Configure LobeHub to communicate with your local Ollama instance.
-- Create specialized agents tailored to specific tasks and equip them with specific skills.
+- Install LobeHub on Olares and connect it to your local model.
+- Chat with Lobe AI for everyday tasks.
+- Create specialized agents using the Agent Builder or custom settings.
 <!--- Create an agent group to enable multiple agents to collaborate on complex workflows.-->
 
 ## Prerequisites
 
-- Ollama is installed and running in your Olares environment.
-- The models you want to use are downloaded and run using Ollama. This tutorial uses `llama3.1:8b` and `qwen2.5`. For more information, see [Download and run local AI models via Ollama](ollama.md).
+Before you begin, you need the following model:
+| Model type | Model | How to get it |
+| :--- | :--- | :--- |
+| Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install LobeHub
 
 1. From the Olares Market, search for "LobeChat".
 
-   ![Search for LobeChat from Market](/images/manual/use-cases/find-lobechat1.png#bordered)
+   ![Search for LobeChat from Market](/images/manual/use-cases/find-lobechat2.png#bordered)
 
 2. Click **Get**, and then click **Install**. Wait for the installation to finish.
 
@@ -44,46 +50,47 @@ LobeHub is the official platform name, but the application is currently listed a
 1. Open **LobeChat** from the Launchpad.
 2. Enter your email address, and then follow the prompts on the page to create a LobeHub account and sign in.
 
-   ![LobeHub home page](/images/manual/use-cases/lobehub-start.png#bordered)
+   ![LobeHub home page](/images/manual/use-cases/lobehub-start1.png#bordered)
 
 ## Configure the connection
 
-Connect LobeHub to Ollama to make the chat interface work.
+Connect LobeHub to your local model to make the chat interface work.
 
-1. From the left sidebar, go to **Settings** > **AI Service Provider** > **Ollama**.
+### Get model connection details
 
-      ![Configure Ollama in LobeHub](/images/manual/use-cases/lobehub-config-ollama.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-2. Obtain and enter your local Ollama address:
+### Configure the connection in LobeHub
 
-   a. Open Olares Settings, and then go to **Applications** > **Ollama**.
-   
-   b. Under **Shared entrances**, click **Ollama API**, and then copy the endpoint address.
+1. From the left sidebar, go to **Settings** > **AI Service Provider** > **OpenAI**.
 
-   ![Obtain Ollama host address from Olares Settings](/images/manual/use-cases/obtain-ollama-hosturl2.png#bordered){width=70%}
+      ![Configure model connection in LobeHub](/images/manual/use-cases/lobehub-config-model.png#bordered)
 
-   c. Return to LobeHub, and then enter the endpoint address in the **Interface proxy address** field.
+2. Configure the following settings:
 
-3. Disable the **Use Client Request Mode** option.
+   - **API Key**: Enter any placeholder text such as `local`.
+   - **API Proxy URL**: Enter the **Base URL** you copied from the Model Console. For example, `https://e46e044d.laresprime.olares.com/v1`.
+   - **Use Responses API Specification**: Ensure this option is disabled.
+   - **Use Client Request Mode**: Ensure this option is disabled.
 
-   :::tip
-   Do not enable the **Use Client Request Mode** option when running local models. This mode is designed for remote API calls and might cause connection errors.
-   :::
-4. In the **Model List** section, click **Fetch models** to pull the list of supported models, and then click <i class="material-symbols-outlined">toggle_off</i> to enable the models you want to use.
+      :::tip
+      Do not enable the **Use Client Request Mode** option when running local models. This mode is designed for remote API calls and might cause connection errors.
+      :::
 
-   ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model.png#bordered){width=85%} 
+3. In the **Model List** section, click **Fetch models** to pull the list of supported models. The model name `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` appears in the list.
 
+   ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered)
+
+4. Click <i class="material-symbols-outlined">toggle_off</i> to enable it.
 5. In the **Connectivity Check** section, select the model you just enabled from the list, and then click **Check** to verify the connection. If the model is large, it might take a little longer to load.
 
-   ![Connectivity check](/images/manual/use-cases/lobehub-connectivity-check1.png#bordered){width=85%} 
+   The button changes to **Check Passed**, indicating that the connection is established. 
 
-   The button changes to **Check Passed**, indicating that the proxy address is correct. 
-
-   ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass1.png#bordered){width=85%}    
+   ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass2.png#bordered)  
 
 6. Click the home icon at the upper-left corner to return to the LobeHub home page.
 
-   ![Return to home page](/images/manual/use-cases/lobehub-return-home.png#bordered){width=45%} 
+   ![Return to home page](/images/manual/use-cases/lobehub-return-home.png#bordered){width=50%} 
 
 ## Use Lobe AI
 
@@ -93,9 +100,9 @@ If Lobe AI does not meet your specific workflow needs, you can build your own sp
 
 1. From the left sidebar, click **Lobe AI**.
    
-   ![Click Lobe AI](/images/manual/use-cases/lobe-ai.png#bordered){width=85%} 
+   ![Click Lobe AI](/images/manual/use-cases/lobe-ai.png#bordered) 
 
-2. In the chat window, click the model selector and select a local language model.
+2. Under the chat window, click the model selector and select the local model.
 3. Chat as you would with any standard conversational AI.
 
 ## Create an agent
@@ -109,28 +116,29 @@ LobeHub allows you to create specialized assistants to handle specific tasks by 
 
 ### Create using Agent Builder
 
-Agent Builder is LobeHub's built-in assistant that helps you create specialized agents through conversations. Describe your needs, and it will automatically generate a complete agent configurations, including role settings, system prompts, and skills.
+Agent Builder is LobeHub's built-in assistant that helps you create specialized agents through conversations. Describe your needs, and it will automatically generate a complete agent configuration, including role settings, system prompts, and skills.
 
 1. On the home page, click **Create Agent** under the chat box.
 
-   ![Create Agent button](/images/manual/use-cases/lobehub-create-agent.png#bordered){width=85%} 
+   ![Create Agent button](/images/manual/use-cases/lobehub-create-agent1.png#bordered)
 
 2. In the chat box, describe the specific task you want the agent to handle. For example,
 
-   ```
+   ```text
    I need an agent to review my daily work items and summarize them.
    The summary should focus on the overall purpose of the tasks and
    highlight specific action items.
    ```
-3. Select the language model. For example, `llama3.1:8b`.
+3. Select the local language model.
 4. Press **Enter**. The profile page of the new agent opens, and you can see the Agent Builder starts configuring your agent automatically.
 
-   ![Agent builder](/images/manual/use-cases/lobehub-agent-builder.png#bordered)
+   ![Agent builder](/images/manual/use-cases/lobehub-agent-builder1.png#bordered)
 
 5. Use the chat interface on the lower right to interact with the Agent Builder. As you provide more details or refine your requirements, the Agent Builder automatically drafts and updates accordingly. 
-6. After the creation is completed, click **Start Conversation** to use the agent.
-7. Provide your text in the chat, and then you can get the refined results. For example, 
-   ```
+6. When the creation is completed, click **Start Conversation** to use the agent.
+7. Provide your text in the chat, and then you can get the refined results. For example:
+
+   ```text
    - fix bug 405 on login
    - discuss with design on new dashboard
    - answer customer question about billing in email.
@@ -138,7 +146,7 @@ Agent Builder is LobeHub's built-in assistant that helps you create specialized 
    ```
    You get the output:
 
-   ![Sample output by agent builder](/images/manual/use-cases/agent-builder-example.png#bordered){width=85%}    
+   ![Sample output by agent builder](/images/manual/use-cases/agent-builder-example1.png#bordered)  
 
 8. If you are satisfied with the agent's performance, pin it for quick access:
 
@@ -154,22 +162,23 @@ Custom agents offer the highest level of personalization. You can set the agent'
 
 1. On the home page, click the robot icon in the upper left corner, and then select **Create Agent**.
 
-   ![Create custom agent](/images/manual/use-cases/lobehub-create-custom-agent.png#bordered){width=40%} 
+   ![Create custom agent](/images/manual/use-cases/lobehub-create-custom-agent.png#bordered){width=50%} 
 
    The **Agent Profile** page opens.
 
-   ![Custom agent profile](/images/manual/use-cases/lobehub-custom-agent-profile.png#bordered)
+   ![Custom agent profile](/images/manual/use-cases/lobehub-custom-agent-profile1.png#bordered)
+
 2. Click the default robot avatar to select a new icon for your agent.
 3. Enter the agent name. For example, `SEO Copywriter`.
-4. Select the language model. For example, `qwen 2.5`.
+4. Select the local model.
 5. Click **+ Add Skill** to equip the agent with additional tools. For example, select **Web Browsing** for gathering SEO data.
 6. Define role and behavior by filling out the structured markdown template to define exactly how the agent operates. For example,
 
-   ```
+   ```text
    #### Goal
    Write SEO-optimized blog posts based on the user-provided topic.
    #### Skills
-   - Keyword research, deployment, and and density optimization
+   - Keyword research, deployment, and density optimization
    - Engaging headline generation
    - Markdown formatting
    #### Workflow
@@ -186,12 +195,12 @@ Custom agents offer the highest level of personalization. You can set the agent'
    ```
 7. Click **Start Conversation** to use it. For example, type the following request:
 
-   ```
+   ```text
    I want to rank for "local AI alternatives"
    ```
 8. Review the proposal and output, and then iterate with it until you are satisfied with the results.
 
-   ![Custom agent result sample](/images/manual/use-cases/lobehub-seo-sample.png#bordered){width=85%} 
+   ![Custom agent result sample](/images/manual/use-cases/lobehub-seo-sample1.png#bordered)
 
 9. If you are satisfied with the agent's performance, pin it for quick access:
 
@@ -291,8 +300,8 @@ For complex workflows, a single agent might not be enough. LobeHub allows you to
 
 If you encounter the `Error requesting Ollama service` error, troubleshoot as follows and retry:
 
-   ![Connectivity error](/images/manual/use-cases/lobehub-connection-error.png#bordered){width=85%} 
-1. Ensure the specific model you are using is downloaded using Ollama.
+   ![Connectivity error](/images/manual/use-cases/lobehub-connection-error.png#bordered)
+1. Check the Model Console to confirm that the Model shows **READY** and the Engine shows **RUNNING**.
 2. Ensure the **Use Client Request Mode** option on the Ollama settings page is disabled.
 
-   ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode2.png#bordered){width=85%} 
+   ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode3.png#bordered)

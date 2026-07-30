@@ -1,5 +1,9 @@
 ---
 description: Review known Olares One issues affecting initial setup and Thunderbolt 5 detection in Windows, with symptoms and workarounds.
+head:
+  - - meta
+    - name: keywords
+      content: Olares One, known issues, setup fails, Thunderbolt 5, USB4, troubleshooting
 ---
 
 # Olares One known issues

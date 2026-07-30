@@ -1,5 +1,9 @@
 ---
 description: Olares 系统核心概念说明文档，阐述架构设计、身份验证、应用管理、网络配置和数据安全等基础理论。适合开发者理解系统运作机制。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 核心概念, 系统架构, Olares ID, 账户, 应用, 网络, 数据, 密钥
 ---
 # 概述
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
@@ -13,6 +12,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/phase/cluster"
 	"github.com/beclab/Olares/cli/pkg/storage"
+	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/beclab/Olares/cli/version"
 )
 
@@ -49,7 +49,7 @@ func EnableJuiceFSPipeline(ctx context.Context) error {
 	// GetOlaresVersion() (which queries the cluster via kubectl). Read the
 	// installed version from the on-disk marker first; only fall back to the
 	// cluster query and then the binary's build version.
-	sysVersion := installedOlaresVersion(arg.BaseDir)
+	sysVersion := utils.StateFileVersion(path.Join(arg.BaseDir, common.TerminusStateFileInstalled))
 	if sysVersion == "" {
 		sysVersion, _ = phase.GetOlaresVersion()
 	}
@@ -78,23 +78,7 @@ func EnableJuiceFSPipeline(ctx context.Context) error {
 		logger.Errorf("failed to enable JuiceFS on the master node: %v", err)
 		return err
 	}
+	logger.Infof("JuiceFS is enabled on this master node (version %s); it is now ready to accept worker nodes.", sysVersion)
+	logger.Infof("Run 'olares-cli node join-command' on this master to print the command for a worker node.")
 	return nil
-}
-
-// installedOlaresVersion reads the Olares version from the on-disk install
-// marker (<baseDir>/.installed), whose content is "<version> <kubetype>".
-// It returns an empty string if the marker is missing or unreadable.
-func installedOlaresVersion(baseDir string) string {
-	if baseDir == "" {
-		return ""
-	}
-	data, err := os.ReadFile(path.Join(baseDir, common.TerminusStateFileInstalled))
-	if err != nil {
-		return ""
-	}
-	fields := strings.Fields(string(data))
-	if len(fields) == 0 {
-		return ""
-	}
-	return fields[0]
 }

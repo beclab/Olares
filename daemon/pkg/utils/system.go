@@ -324,7 +324,7 @@ func computeCPUName() string {
 
 	// try to get AIBOOK M1000 model name
 	if brandName == "" {
-		cmd := exec.Command("sh", "-c", "command -v dmidecode 1>/dev/null && dmidecode -s processor-version")
+		cmd := exec.Command("sh", "-c", "command -v dmidecode 1>/dev/null && dmidecode -s processor-version || true")
 		output, err := cmd.Output()
 		if err != nil {
 			klog.Error("get CPU name error, ", err)

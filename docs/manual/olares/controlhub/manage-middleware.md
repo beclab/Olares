@@ -1,5 +1,9 @@
 ---
 description: Learn managing middleware using ControlHub
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Control Hub, middleware, Postgres, MongoDB, Redis
 ---
 # Manage middleware
 

@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: 当 LarePass 的系统区域显示“系统错误”时，诊断并收集相关信息。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 系统错误, Pod 状态, SSH, 故障排查, kubectl
 ---
 # LarePass 显示“系统错误”
 
@@ -65,7 +69,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
    c. 找到带有 <span class="material-symbols-outlined">terminal</span> 图标的条目，点击查看密码。
 
-      ![在 Vault 中查看保存的 SSH 密码](/public/images/zh/manual/olares/ssh-check-password-in-vault1.png#bordered)
+      ![在 Vault 中查看保存的 SSH 密码](/images/zh/manual/olares/ssh-check-password-in-vault1.png#bordered)
 
 3. 在你的电脑上打开终端，通过 SSH 连接设备。
 

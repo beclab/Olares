@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 通过 olares-cli 登录 Olares 并管理 profile。涵盖交互式登录、查看和切换 profile、删除 profile，以及令牌的存储位置。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, 登录, profile, Olares ID, 两步验证, 令牌管理
 ---
 
 # 登录 Olares

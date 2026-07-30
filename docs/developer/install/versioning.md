@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Understand Olares versioning, including release types, branch strategy, semantic versioning, upgrade rules, and compatibility.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, versioning, semantic versioning, stable release, release candidate, daily build, upgrade policy
 ---
 # Olares versioning
 

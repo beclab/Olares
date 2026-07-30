@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Set up a custom domain for Olares. Add and verify domains, create an organization, manage member access, and issue Olares IDs under your domain.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, custom domain, Olares Space, organization, LarePass, DID, domain verification
 ---
 
 # Set up a custom domain for your Olares

@@ -1,5 +1,9 @@
 ---
 description: Build private, self-hosted content recommendations with Wise to discover personalized topics while keeping control of your data.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, recommendations, self-hosted algorithm, content discovery, For you
 ---
 # Discover themed content
 Most digital platforms control what content you see through centralized recommendation systems that collect and analyze your data. Wise offers a different approach - you choose and run recommendation algorithms directly on your device, keeping your reading preferences and interactions completely private while still enjoying personalized content discovery.

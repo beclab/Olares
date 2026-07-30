@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Install Olares on Proxmox VE (PVE) from an ISO image. Check requirements, configure the virtual machine, install, and activate Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, PVE ISO, Proxmox VE, virtual machine, ISO installer, VM configuration
 ---
 # Install Olares on PVE with ISO image
 You can install Olares directly on Proxmox Virtual Environment (PVE) using an ISO image. This guide walks you through downloading the Olares ISO, configuring PVE environment, completing the installation, and getting your Olares up and running.

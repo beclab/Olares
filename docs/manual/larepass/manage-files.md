@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn essential file operations in Larepass including adding new files, editing existing content, and downloading files across different devices.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, file operations, upload files, download files, sync
 ---
 # Common file operations on LarePass
 

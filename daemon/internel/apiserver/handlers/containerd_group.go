@@ -8,6 +8,8 @@ import (
 func init() {
 	s := server.API
 	containerd := s.App.Group("containerd")
+
+	// Node-level registry mirror config (containerd v3 certs.d/hosts.toml).
 	containerd.Get("/registries", handlers.RequireLocal(handlers.ListRegistries))
 
 	registry := containerd.Group("registry")
@@ -19,7 +21,6 @@ func init() {
 	mirrors.Delete("/:registry", handlers.RequireAuthorization(handlers.RequireLocal(handlers.DeleteRegistryMirror)))
 
 	image := containerd.Group("images")
-
 	image.Get("/", handlers.RequireLocal(handlers.ListImages))
 	image.Delete("/:image", handlers.RequireLocal(handlers.DeleteImage))
 	image.Post("/prune", handlers.RequireLocal(handlers.PruneImages))

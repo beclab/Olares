@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to view and manage Redis data in Olares using CLI or Bytebase.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Redis, Bytebase, middleware, key-value store, CLI access, cache
 ---
 # View Redis data
 

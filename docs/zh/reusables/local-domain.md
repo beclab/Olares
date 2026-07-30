@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 本地域名, .local 域名, 局域网访问, LarePass, hosts 文件
 ---
 <!-- 可复用的 .local 域名内容。请通过命名 region 引用。 -->
 

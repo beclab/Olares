@@ -53,7 +53,6 @@ Olares One 将工作站级硬件与 Olares OS 集成在一台设备中，为你�
         <a href="./connect-two-olares-one">连接两台 Olares One</a>
         <a href="./egpu">搭配 eGPU 使用</a>
         <a href="./dual-boot-dual-drive">与 Windows 双系统启动</a>
-        <a href="./dual-boot-ubuntu-dual-drive">与 Ubuntu 双系统启动</a>
         <a href="./install-windows-primary-drive">在 Olares One 上安装 Windows</a>
         <a href="./install-ubuntu-server">在 Olares One 上安装 Ubuntu</a>
       </div>

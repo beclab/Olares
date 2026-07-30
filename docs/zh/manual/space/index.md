@@ -1,5 +1,9 @@
 ---
 description: Olares Space 为 Olares 提供基础设施服务，包括账户管理、自定义域名配置、数据备份和共享 GPU 资源。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, 基础设施服务, 数据备份, 自定义域名, 反向代理, GPU 资源
 ---
 # Olares Space 概述
 

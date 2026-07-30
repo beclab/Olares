@@ -1,5 +1,9 @@
 ---
 description: Manage an Olares team by creating accounts, assigning roles and resource limits, setting permissions, and maintaining member access.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, team management, create user, roles, resource quotas, reset password
 ---
 # Manage your team
 As an administrator, you can create and manage users in your team while ensuring system security and resource efficiency.

@@ -116,7 +116,7 @@ Olares OS 预装了系统应用。你还可以浏览 **Market** 下载最适合�
 
 <!--@include: ../manual/help/olares.md#custom-domain-->
 
-详细信息，请参阅[为你的 Olares 设置自定义域名](/manual/best-practices/set-custom-domain.md)。
+详细信息，请参阅[为你的 Olares 设置自定义域名](/zh/manual/best-practices/set-custom-domain.md)。
 
 ## 资源
 - [使用本地网络访问 Olares](access-olares-via-vpn.md)

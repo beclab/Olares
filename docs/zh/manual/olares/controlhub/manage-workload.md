@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何使用控制面板管理 Olares 工作负载和配置。本指南涵盖项目和命名空间的概念、不同工作负载类型的管理以及通过详细仪表板监控资源使用情况。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 控制面板, 工作负载, Deployment, StatefulSet, DaemonSet, YAML, 资源监控
 ---
 
 # 管理工作负载和配置

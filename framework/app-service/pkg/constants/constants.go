@@ -21,28 +21,32 @@ const (
 	ApplicationMiddlewareLabel         = "applications.app.bytetrade.io/middleware"
 	ApplicationIconLabel               = "applications.app.bytetrade.io/icon"
 	ApplicationEntrancesKey            = "applications.app.bytetrade.io/entrances"
-	ApplicationPortsKey                = "applications.app.bytetrade.io/ports"
-	ApplicationSystemServiceLabel      = "applications.app.bytetrade.io/system_service"
-	ApplicationTitleLabel              = "applications.app.bytetrade.io/title"
-	ApplicationImageLabel              = "applications.app.bytetrade.io/images"
-	ApplicationTargetLabel             = "applications.app.bytetrade.io/target"
-	ApplicationRunAsUserLabel          = "applications.apps.bytetrade.io/runasuser"
-	ApplicationVersionLabel            = "applications.app.bytetrade.io/version"
-	ApplicationSourceLabel             = "applications.app.bytetrade.io/source"
-	ApplicationTailScaleKey            = "applications.app.bytetrade.io/tailscale"
-	ApplicationRequiredGPU             = "applications.app.bytetrade.io/required_gpu"
-	AppPodGPUConsumePolicy             = "gpu.bytetrade.io/app-pod-consume-policy"
-	ApplicationPolicies                = "applications.app.bytetrade.io/policies"
-	ApplicationMobileSupported         = "applications.app.bytetrade.io/mobile_supported"
-	ApplicationClusterDep              = "applications.app.bytetrade.io/need_cluster_scoped_app"
-	ApplicationGroupClusterDep         = "applications.app.bytetrade.io/need_cluster_scoped_group"
-	UserContextAttribute               = "username"
-	KubeSphereClientAttribute          = "ksclient"
-	MarketSource                       = "X-Market-Source"
-	MarketUser                         = "X-Market-User"
-	StudioSource                       = "devbox"
-	ApplicationInstallUserLabel        = "applications.app.bytetrade.io/install_user"
-	BflUserKey                         = "X-Bfl-User"
+	// EntranceTypeDev marks a development-only entrance (e.g. direct pod-IP
+	// access created by background processes). Dev entrances are excluded from
+	// entrance-status tracking since they have no backing Service to resolve.
+	EntranceTypeDev               = "dev"
+	ApplicationPortsKey           = "applications.app.bytetrade.io/ports"
+	ApplicationSystemServiceLabel = "applications.app.bytetrade.io/system_service"
+	ApplicationTitleLabel         = "applications.app.bytetrade.io/title"
+	ApplicationImageLabel         = "applications.app.bytetrade.io/images"
+	ApplicationTargetLabel        = "applications.app.bytetrade.io/target"
+	ApplicationRunAsUserLabel     = "applications.apps.bytetrade.io/runasuser"
+	ApplicationVersionLabel       = "applications.app.bytetrade.io/version"
+	ApplicationSourceLabel        = "applications.app.bytetrade.io/source"
+	ApplicationTailScaleKey       = "applications.app.bytetrade.io/tailscale"
+	ApplicationRequiredGPU        = "applications.app.bytetrade.io/required_gpu"
+	AppPodGPUConsumePolicy        = "gpu.bytetrade.io/app-pod-consume-policy"
+	ApplicationPolicies           = "applications.app.bytetrade.io/policies"
+	ApplicationMobileSupported    = "applications.app.bytetrade.io/mobile_supported"
+	ApplicationClusterDep         = "applications.app.bytetrade.io/need_cluster_scoped_app"
+	ApplicationGroupClusterDep    = "applications.app.bytetrade.io/need_cluster_scoped_group"
+	UserContextAttribute          = "username"
+	KubeSphereClientAttribute     = "ksclient"
+	MarketSource                  = "X-Market-Source"
+	MarketUser                    = "X-Market-User"
+	StudioSource                  = "devbox"
+	ApplicationInstallUserLabel   = "applications.app.bytetrade.io/install_user"
+	BflUserKey                    = "X-Bfl-User"
 
 	InstanceIDLabel         = "workflows.argoproj.io/controller-instanceid"
 	WorkflowOwnerLabel      = "workflows.app.bytetrade.io/owner"
@@ -58,6 +62,32 @@ const (
 	UserChartsPath = "./userapps"
 
 	EnvoyUID                        int64 = 1555
+	// LinkerdProxyUID is the upstream linkerd-proxy default runAsUser.
+	LinkerdProxyUID                 int64 = 2102
+	// Linkerd admin / inbound / tap ports (align with linkerd-init inbound-ports-to-ignore).
+	LinkerdTapPort                  = 4190
+	LinkerdAdminPort                = 4191
+	LinkerdInboundPort              = 4143
+	// Mesh agent UIDs (16xx band; orthogonal to Envoy 1555 / d2 1556 / linkerd 2102 / nginx:alpine 101).
+	MeshInAgentUID                  int64 = 1651
+	MeshOutAgentUID                 int64 = 1652
+	// MeshAgentUIDReservedStart marks 1653+ for future mesh-* sidecars (do not reuse for apps).
+	MeshAgentUIDReservedStart       int64 = 1653
+
+	// Mesh-in CT-1 control-plane object names (WI-OC-MESH-IN-CT1-02).
+	MeshInSharedHostsCMName         = "olares-mesh-in-shared-hosts"
+	MeshInSharedHostsFileName       = "shared-hosts.txt"
+	MeshInTLSHostsFileName          = "tls-hosts.txt"
+	MeshInSharedHostsManagedByLabel = "gateway.olares.io/mesh-in-shared-hosts-managed-by"
+	MeshInTLSSecretNamePrefix       = "olares-mesh-in-tls-"
+	MeshInCertsVolumeName           = "olares-mesh-in-certs"
+	MeshInAgentContainerName        = "olares-mesh-in-agent"
+	MeshInCertCacheMax              = 16
+	MeshInCertCacheInactive         = "10m"
+	MeshInCertCacheValid            = "1m"
+	MeshInProxyReadTimeout          = "600s"
+	MeshInProxySendTimeout          = "600s"
+	LabelTLSReplica                 = "gateway.olares.io/tls-replica"
 	DefaultEnvoyLogLevel                  = "debug"
 	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
 	EnvoyContainerName                    = "olares-envoy-sidecar"
@@ -91,9 +121,17 @@ const (
 	NvidiaGPU    = "nvidia.com/gpu"
 	NvidiaGPUMem = "nvidia.com/gpumem"
 	//	NvidiaGB10GPU = "nvidia.com/gb10"
-	AMDAPU   = "amd.com/apu"
-	AMDGPU   = "amd.com/gpu"
-	IntelGPU = "gpu.intel.com/i915"
+	AMDAPU    = "amd.com/apu"
+	AMDGPU    = "amd.com/gpu"
+	IntelIGPU = "gpu.intel.com/i915"
+	IntelGPU  = "gpu.intel.com/xe"
+	// NodeIntelRegisterKey is the node annotation written by the Intel GPU
+	// device plugin. Its value lists each Intel card as
+	// "<igpu|dgpu>,<cardN>,<i915|xe>,<name>,<architecture>,<codename>,<mem>"
+	// entries joined by ':' (mem is discrete VRAM bytes, 0 for integrated). It
+	// lets the gpu-limit webhook pick gpu.intel.com/i915 vs gpu.intel.com/xe
+	// from the real bound driver instead of guessing from integrated/discrete.
+	NodeIntelRegisterKey = "bytetrade.io/node-intel-register"
 
 	AuthorizationLevelOfPublic   = "public"
 	AuthorizationLevelOfPrivate  = "private"

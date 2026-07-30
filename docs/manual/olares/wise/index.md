@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Transform your Olares into a powerful information hub with Wise, featuring cross-platform aggregation, and seamless bookmarking capabilities.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, information hub, content aggregation, bookmarking, RSS reader
 ---
 # Curate your information hub with Wise
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 学习如何在 Olares 上使用模型控制台和应用入口连接 AI 客户端应用到 AI 服务应用。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, AI 应用连接, 模型控制台, LLM, LobeHub, Base URL, API 格式
 ---
 
 :::warning
@@ -25,7 +29,7 @@ description: 学习如何在 Olares 上使用模型控制台和应用入口连�
 
 在配置连接之前，先确定哪个应用提供 AI 能力、哪个应用使用这些能力。这样可以确保你在后续步骤中知道是去模型控制台还是 Olares 设置里查找连接信息。
 
-- **AI 客户端应用**：提供你直接交互的前端聊天界面或工作流画布，例如 LobeHub 和 Open WebUI。它们依赖 AI 服务应用（通常称为 **provider**）来执行生成文本、提取数据等 AI 任务。
+- **AI 客户端应用**：提供你直接交互的前端聊天界面或工作流画布，如 LobeHub。它们依赖 AI 服务应用（通常称为 **provider**）来执行生成文本、提取数据等 AI 任务。
 - **AI 服务应用**：通过 API 为兼容的客户端提供 AI 能力，例如聊天、搜索和语音识别。部分 AI 服务应用自带管理 Web 界面，而另一些则主要作为无界面的后端服务运行。
 
     在 Olares 上，AI 服务应用分为两类：
@@ -112,30 +116,6 @@ API key（也称为“Auth Token”或“API Token”）是一种密钥凭证。
 10. 在 **Connectivity Check** 右侧，从下拉列表中选择该模型名称，然后点击 **Check**。当显示 **Check Passed** 时，连接即建立成功。
 
     ![LobeHub 成功连接模型](/images/manual/tutorials/connect-app-eg-lobehub2.png#bordered)
-
-### 将 PaddleOCR 连接到 Open WebUI
-
-在本示例中，PaddleOCR 是提供图片文字识别能力的 AI 服务应用，Open WebUI 是客户端应用。
-
-1. 打开 Olares **设置**，然后进入**应用** > **PaddleOCR** > **入口** > **PaddleOCR**。
-
-   ![PaddleOCR 入口](/images/manual/use-cases/paddleocr-entrances.png#bordered){width=75%}
-
-2. 确保**认证级别**设置为 **Internal**。
-3. 复制端点 URL。例如：`https://17b4c78a.alice2026.olares.com`。
-
-   ![PaddleOCR 端点](/images/manual/use-cases/paddleocr-endpoint.png#bordered){width=75%}
-
-4. 在 Open WebUI 中，点击左下角的头像图标，然后进入 **Admin Panel** > **Settings** > **Documents**。
-5. 在 **General** 区域中，按如下方式配置设置：
-
-    - **Content Extraction Engine**：选择 **PaddleOCR-vl**。
-    - **API Base URL**：输入你刚刚复制的 PaddleOCR 端点 URL。
-    - **API Token**：输入任意占位文本。请勿留空。
-
-   ![Open WebUI 中的 PaddleOCR 配置](/images/manual/use-cases/openwebui-paddleocr-config1.png#bordered)
-
-6. 点击右下角的 **Save**。
 
 ## 常见问题
 

@@ -1,5 +1,9 @@
 ---
 description: 虽然 DID 解决了去中心化网络中的身份问题，但它们通常难以记忆，不便在日常情况下使用。Olares ID 提供了一种类似于电子邮件地址的、易于记忆的熟悉格式，同时仍然利用了 DID 的强大功能和安全性。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares ID, VC, 可验证凭证, Gmail 发行方, 验证方服务, 自主身份
 ---
 # Olares 的案例
 

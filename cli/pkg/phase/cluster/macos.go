@@ -27,6 +27,7 @@ func (m *macosInstallPhaseBuilder) installCluster() phase {
 }
 
 func (m *macosInstallPhaseBuilder) installTerminus() phase {
+	// Offline preinstall (HF cache materialize) only supports Linux/WSL; see linux.go.
 	return []module.Module{
 		&terminus.GetNATGatewayIPModule{},
 		&terminus.InstallAccountModule{},

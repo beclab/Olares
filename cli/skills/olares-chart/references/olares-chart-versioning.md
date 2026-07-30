@@ -4,24 +4,28 @@
 
 ## Olares system version
 
-The semver scheme (stable / RC / daily), `.Values.sysVersion`, the `-0` prerelease-matching rule, and how to read the target version (`profile list` VERSION column, `--refresh-version`, `settings me version`) are the platform **Olares version & semver model** (loaded via the SKILL.md prerequisite).
+The semver scheme (stable / RC / daily), `.Values.sysVersion`, the `-0` prerelease-matching rule, and how to read the target version (`profile list` VERSION column, `--refresh`, `settings me version`) are the platform **Olares version & semver model** (loaded via the SKILL.md prerequisite).
 
 ## Porting baseline: Olares >= 1.12.6
 
-**This skill (porting apps) targets Olares >= 1.12.6.** This baseline applies only to porting — other `olares-cli` features have no such floor. The reason: the userspace backends a ported app commonly relies on — `drive/Common` (`appCommon`), archive, and NFS — are gated at `1.12.6`. Check the target before porting (`olares-cli profile list` VERSION column; `--refresh-version` or `settings me version` for a live re-fetch).
+**This skill (porting apps) targets Olares >= 1.12.6.** This baseline applies only to porting — other `olares-cli` features have no such floor. The reason: the userspace backends a ported app commonly relies on — `drive/Common` (`appCommon`), archive, and NFS — are gated at `1.12.6`. Check the target before porting (`olares-cli profile list` VERSION column; `--refresh` or `settings me version` for a live re-fetch).
 
 ## apiVersion: v3
 
-Every chart sets `apiVersion: v3` at the top of `OlaresManifest.yaml`. `from-compose` does not write it, so hand-add it after scaffolding:
+Every newly ported chart uses this canonical block. Current `from-compose` writes it directly:
 
 ```yaml
 apiVersion: v3
 olaresManifest.version: '0.12.0'
 olaresManifest.type: app
-metadata:
-  name: myapp
-  ...
+options:
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
 ```
+
+It also writes `workloadReplicas` for every generated Deployment and StatefulSet. If `lint` appears to require `v1`, `v2`, a schema older than `0.12.0`, or an Olares dependency below `1.12.6`, do not downgrade the manifest. Verify that both `olares-cli` and this skill are current, regenerate or restore the canonical block, and lint again.
 
 What `apiVersion: v3` governs (schema only — it does NOT gate admin or namespace):
 
@@ -47,7 +51,7 @@ A chart carries several "version" fields with different jobs. Their values are f
 
 > **Bump on every upload:** raise `metadata.version` (= `Chart.yaml` `version`, kept equal) before each `market upload` — a patch bump (e.g. `0.0.1 → 0.0.2`) by default. The upload gate only requires `>=` the stored version, but presenting a strictly-newer version keeps each upload distinct; same-version overwrite is a fallback for when the chart didn't change. See the Deploy step §2.
 
-> **Name clash:** `Chart.yaml` has its own `apiVersion` (Helm's chart API) — unrelated to the OlaresManifest `apiVersion`. Don't copy one into the other.
+> **Name clash:** `Chart.yaml apiVersion: v2` is Helm's chart API. It is separate from `OlaresManifest.yaml apiVersion: v3`; both values are correct and neither should be copied over the other.
 
 ### olaresManifest.version: 0.12.0
 
@@ -72,4 +76,4 @@ Every chart declares the `olares` `type: system` dependency in `options.dependen
 ## Caveats
 
 - The `>= 1.12.6` baseline is a **porting** concern; it does not apply to other `olares-cli` commands.
-- `profile list`'s version is **cached** — use `--refresh-version` (or `settings me version`) if the target was just upgraded.
+- `profile list`'s version is **cached** — use `--refresh` (or `settings me version`) if the target was just upgraded.

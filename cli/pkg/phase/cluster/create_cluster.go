@@ -78,7 +78,6 @@ func NewK3sCreateClusterPhase(runtime *common.KubeRuntime, manifestMap manifest.
 		&network.DeployNetworkPluginModule{},
 		&kubernetes.ConfigureKubernetesModule{},
 		&filesystem.ChownModule{},
-		&certs.AutoRenewCertsModule{Skip: !runtime.Cluster.Kubernetes.EnableAutoRenewCerts()},
 		&storage.DeployLocalVolumeModule{},
 		&kubesphere.DeployModule{},
 		&ksplugins.DeployKsCoreConfigModule{},

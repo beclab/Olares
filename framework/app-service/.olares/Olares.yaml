@@ -1,0 +1,8 @@
+apiVersion: v1
+target: prebuilt
+output:
+  containers:
+    - 
+      name: beclab/mesh-in-agent:1.30.0-r5
+    -
+      name: beclab/mesh-out-agent:1.30.0-r4

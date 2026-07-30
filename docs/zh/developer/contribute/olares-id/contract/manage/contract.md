@@ -1,6 +1,10 @@
 ---
 description: 获取 DID 的元数据有两个接口 - getMetadata(tokenId) 和 getMetadata(name)。
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, 调用合约, 元数据, 标签 CRUD, register DID, SDK
 ---
 
 # 直接调用合约

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: How to use olares-cli for cluster management, system diagnostics, and AI agent integration. Covers host, user, and in-cluster modes of operation.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, CLI overview, cluster management, system diagnostics, AI agent integration
 ---
 
 # Olares CLI overview

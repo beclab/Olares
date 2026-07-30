@@ -166,7 +166,11 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Update OS",
           link: "/one/update",
-        },        
+        },
+        {
+          text: "Upgrade a two-node Olares cluster",
+          link: "/one/upgrade-multi-node-cluster",
+        },
         {
           text: "Restore Olares One",
           items: [

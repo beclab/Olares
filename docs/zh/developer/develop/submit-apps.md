@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 学习如何向 Olares 应用市场提交应用。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 提交应用, Pull Request, Terminus-Gitbot, 应用市场, Chart 校验
 ---
 # 提交 Olares 应用
 

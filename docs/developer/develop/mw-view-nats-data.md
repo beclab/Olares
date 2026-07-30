@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to subscribe to and publish messages in Olares using NATS CLI, and understand the NATS Subject naming rules and permission model.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, NATS, message broker, publish subscribe, middleware, nats-box CLI, subject permissions
 ---
 # Subscribe and publish messages with NATS
 

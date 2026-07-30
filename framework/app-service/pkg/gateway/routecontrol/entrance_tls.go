@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -62,9 +65,9 @@ func syncPerViewerTLS(ctx context.Context, c client.Client, cm *corev1.ConfigMap
 	if cm == nil || cm.Name != zoneSSLConfigMapName {
 		return nil
 	}
-	// if cm.Data != nil && cm.Data["ephemeral"] == "true" {
-	// 	return deletePerViewerTLSSecret(ctx, c, viewer)
-	// }
+	if cm.Data != nil && cm.Data["ephemeral"] == "true" {
+		return deletePerViewerTLSSecret(ctx, c, viewer)
+	}
 	cert := strings.TrimSpace(cm.Data["cert"])
 	key := strings.TrimSpace(cm.Data["key"])
 	if cert == "" || key == "" {
@@ -78,12 +81,15 @@ func syncPerViewerTLS(ctx context.Context, c client.Client, cm *corev1.ConfigMap
 	err := c.Get(ctx, types.NamespacedName{Namespace: defaultGatewayNS, Name: secretName}, current)
 	switch {
 	case apierrors.IsNotFound(err):
-		return c.Create(ctx, desiredPerViewerTLSSecret(viewer, cm.Namespace, cert, key, hash))
+		if err := c.Create(ctx, desiredPerViewerTLSSecret(viewer, cm.Namespace, cert, key, hash)); err != nil {
+			return err
+		}
+		return fanOutMeshInTLSReplicas(ctx, c, viewer)
 	case err != nil:
 		return err
 	}
 	if current.Annotations != nil && current.Annotations[annotationTLSContentHash] == hash {
-		return nil
+		return fanOutMeshInTLSReplicas(ctx, c, viewer)
 	}
 	current.Type = corev1.SecretTypeTLS
 	if current.Labels == nil {
@@ -101,7 +107,10 @@ func syncPerViewerTLS(ctx context.Context, c client.Client, cm *corev1.ConfigMap
 		corev1.TLSCertKey:       cert,
 		corev1.TLSPrivateKeyKey: key,
 	}
-	return c.Update(ctx, current)
+	if err := c.Update(ctx, current); err != nil {
+		return err
+	}
+	return fanOutMeshInTLSReplicas(ctx, c, viewer)
 }
 
 func desiredPerViewerTLSSecret(viewer, sourceNS, cert, key, hash string) *corev1.Secret {
@@ -135,7 +144,24 @@ func deletePerViewerTLSSecret(ctx context.Context, c client.Client, viewer strin
 	if sec.Labels[ManagedByLabel] != ManagedByValue {
 		return nil
 	}
-	return client.IgnoreNotFound(c.Delete(ctx, sec))
+	if err := client.IgnoreNotFound(c.Delete(ctx, sec)); err != nil {
+		return err
+	}
+	return SyncReplicasForViewer(ctx, c, viewer, nil)
+}
+
+// fanOutMeshInTLSReplicas copies the gateway per-viewer TLS Secret into caller
+// namespaces as olares-mesh-in-tls-<viewer>.
+func fanOutMeshInTLSReplicas(ctx context.Context, c client.Client, viewer string) error {
+	index, err := BuildDemandIndex(ctx, c, "")
+	if err != nil {
+		klog.Warningf("mesh-in tls replica: BuildDemandIndex failed viewer=%s: %v", viewer, err)
+		return nil // warn-only; gateway Secret is already correct
+	}
+	if err := SyncReplicasForViewer(ctx, c, viewer, index); err != nil {
+		klog.Warningf("mesh-in tls replica: SyncReplicasForViewer viewer=%s: %v", viewer, err)
+	}
+	return nil
 }
 
 func sharedEntranceTLSName(viewer string) string {
@@ -158,7 +184,8 @@ func tlsMaterialHash(cert, key string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// SetupWithManager registers the reconciler against zone-ssl-config ConfigMaps.
+// SetupWithManager registers the reconciler against zone-ssl-config ConfigMaps
+// and in-cluster-caller Namespace labels (level-triggered TLS replica fan-out).
 func (r *EntranceTLSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r == nil {
 		return nil
@@ -172,5 +199,41 @@ func (r *EntranceTLSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("entrance-tls").
 		For(&corev1.ConfigMap{}, builder.WithPredicates(onlyZoneSSL)).
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(r.mapCallerNamespaceToZoneSSL),
+			builder.WithPredicates(inClusterCallerNamespacePredicate())).
 		Complete(r)
+}
+
+// mapCallerNamespaceToZoneSSL requeues the caller's zone-ssl-config (viewer =
+// ns-owner) so fanOutMeshInTLSReplicas runs after late in-cluster-caller labels.
+func (r *EntranceTLSReconciler) mapCallerNamespaceToZoneSSL(ctx context.Context, obj client.Object) []reconcile.Request {
+	if r == nil || r.Client == nil || obj == nil {
+		return nil
+	}
+	ns, ok := obj.(*corev1.Namespace)
+	if !ok || ns == nil {
+		return nil
+	}
+	if !strings.EqualFold(strings.TrimSpace(ns.Labels[security.NamespaceInClusterCallerLabel]), "true") {
+		return nil
+	}
+	var appList appv1alpha1.ApplicationList
+	if err := r.Client.List(ctx, &appList); err != nil {
+		klog.Warningf("entrance-tls: list apps for caller ns=%s fan-out map failed: %v", ns.Name, err)
+		return nil
+	}
+	viewer := certViewerForCallerNamespace(ns, appList.Items)
+	if viewer == "" {
+		klog.Warningf("entrance-tls: caller ns=%s has in-cluster-caller but unresolved viewer", ns.Name)
+		return nil
+	}
+	// Prefer fan-out immediately when gateway Secret already exists (common
+	// after late label); also requeue zone-ssl so Reconcile path stays level-triggered.
+	if err := fanOutMeshInTLSReplicas(ctx, r.Client, viewer); err != nil {
+		klog.Warningf("entrance-tls: fan-out on caller ns=%s viewer=%s: %v", ns.Name, viewer, err)
+	}
+	userSpaceNS := userSpacePrefix + viewer
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{Namespace: userSpaceNS, Name: zoneSSLConfigMapName},
+	}}
 }

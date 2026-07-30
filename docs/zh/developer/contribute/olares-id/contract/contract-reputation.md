@@ -1,5 +1,9 @@
 ---
 description: Olares ID 合约中链上信誉系统的设计，以及针对各项需求的解决方案。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, 声誉系统, 智能合约, EIP-712, Tagger, OtmoicReputation
 ---
 # 声誉 (Reputation)
 

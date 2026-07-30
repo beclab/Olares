@@ -1,5 +1,9 @@
 ---
 description: TerminusDID 合约模块的发布历史与更新记录。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, 发布历史, 版本更新, 合约模块, DID v2
 ---
 # 发布历史
 

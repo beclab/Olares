@@ -7,7 +7,7 @@ head:
       content: Olares, Xinference, 迁移, 共享应用, Olares 1.12.6
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-07-13"
+doc_updated: "2026-07-27"
 ---
 
 :::warning WARNING
@@ -43,6 +43,10 @@ Olares 1.12.6 引入了[公共目录](/zh/manual/olares/files/files-common.md)�
    d. 点击**获取**，然后点击**安装**，等待安装完成。
 
 3. 打开新版 Xinference 应用，然后重新下载你需要的所有模型。系统会自动将它们存放到正确的位置。
+
+## 清理遗留数据
+
+确认迁移成功且新版应用运行正常后，你可以手动删除遗留应用的数据文件夹以释放磁盘空间。打开**文件管理器**，进入 **Cache** > **xinferencesv2**，删除该文件夹。
 
 ## 了解更多
 

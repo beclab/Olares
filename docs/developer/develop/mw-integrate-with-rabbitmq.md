@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to integrate your app with RabbitMQ service in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, RabbitMQ integration, integrate with RabbitMQ, Olares middleware, message queue
 ---
 # Integrate with RabbitMQ
 

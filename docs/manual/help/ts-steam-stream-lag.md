@@ -1,6 +1,10 @@
 ---
 outline: deep
 description: Troubleshoot slow or delayed game streaming with Steam Headless.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Steam Headless, game streaming, lag, GPU, Proton, troubleshoot
 ---
 # Slow or delayed Steam streaming
 

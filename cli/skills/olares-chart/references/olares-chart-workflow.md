@@ -50,7 +50,8 @@ Step D1 produces a chart that **already passes `lint`** but is NOT yet a good ap
 - Every resource is namespaced with `namespace: '{{ .Release.Namespace }}'`.
 - Default CPU/memory requests+limits are stamped onto every container.
 - One **entrance** is auto-detected (the `olares.service.type: Entrance`-labeled service, else the first service with a port, else a `port: 80` placeholder).
-- `olaresManifest.version` is `0.12.0` (resources under `spec.accelerator`) — see the Manifest refinement areas.
-- The scaffold also emits `workloadReplicas.<workload>: 1` (with the matching `values.yaml` `workloads.<name>.replicaCount`, and each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}` so suspend/resume work) plus the required `options.dependencies` `olares >=1.12.6-0` (`type: system`), so a fresh scaffold passes `lint`.
+- The scaffold emits the complete canonical version combination: `OlaresManifest.yaml apiVersion: v3`, `olaresManifest.version: 0.12.0`, and `options.dependencies` `olares >=1.12.6-0` (`type: system`). `Chart.yaml apiVersion: v2` remains Helm metadata and is intentionally different.
+- The scaffold also emits `workloadReplicas.<workload>: 1` (with the matching `values.yaml` `workloads.<name>.replicaCount`, and each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}` so suspend/resume work), so a fresh scaffold passes `lint`.
+- Never respond to a version-related lint failure by downgrading the canonical combination to manifest v1/v2 or Olares `<1.12.6`; check for an old CLI or old skill instead.
 
 > **Tip:** label the service you want exposed in the compose file with `labels: { olares.service.type: Entrance }` so the right workload becomes the entrance and gets renamed to the app name.

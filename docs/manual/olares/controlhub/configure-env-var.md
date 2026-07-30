@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to locate and modify application environment variables in Control Hub for debugging, updates, or configuration changes.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Control Hub, environment variables, ConfigMap, Secret, app config
 ---
 
 # Configure environment variables

@@ -81,9 +81,27 @@ func InstallCharts(ctx context.Context, actionConfig *action.Configuration, sett
 	return nil
 }
 
+// ValuesReuseMode selects how helm upgrade merges previous release values
+// with the new chart defaults.
+type ValuesReuseMode int
+
+const (
+	// NoReuseValues discards previous release values; only the supplied vals
+	// and the new chart defaults are used.
+	NoReuseValues ValuesReuseMode = iota
+	// ReuseValues keeps the previous release's computed values and merges
+	// supplied vals on top. Chart default changes are NOT picked up.
+	ReuseValues
+	// ResetThenReuseValues resets to the new chart's built-in defaults, then
+	// overlays the previous release's user-supplied values and the new vals.
+	// Suitable for version/image/template upgrades that should absorb chart
+	// default changes while preserving prior overrides.
+	ResetThenReuseValues
+)
+
 // UpgradeCharts upgrades helm chart using action config and environment settings.
 func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, settings *cli.EnvSettings,
-	appName, chartName, repoURL, namespace string, vals map[string]interface{}, reuseValue bool) error {
+	appName, chartName, repoURL, namespace string, vals map[string]interface{}, mode ValuesReuseMode) error {
 	ctrl.Log.Info("helm action config", "reachable", actionConfig.KubeClient.IsReachable())
 	client := action.NewUpgrade(actionConfig)
 	client.Namespace = namespace
@@ -91,8 +109,11 @@ func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, sett
 	client.Recreate = false
 	// Do not use Atomic, this could cause helm wait all resource ready.
 	//client.Atomic = true
-	if reuseValue {
+	switch mode {
+	case ReuseValues:
 		client.ReuseValues = true
+	case ResetThenReuseValues:
+		client.ResetThenReuseValues = true
 	}
 	if repoURL != "" {
 		client.RepoURL = repoURL

@@ -7,7 +7,7 @@ head:
       content: Olares, SearXNG, 迁移, 共享应用, Olares 1.12.6
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-07-07"
+doc_updated: "2026-07-27"
 ---
 
 :::warning
@@ -60,6 +60,10 @@ Preferences hash 是一串包含你所有 SearXNG 设置的编码字符串。复
    d. 粘贴之前保存的 hash code，然后点击 **Save**。
 
 你的 SearXNG 用户偏好设置已迁移到新版应用。
+
+## 清理遗留数据
+
+确认迁移成功且新版应用运行正常后，你可以手动删除遗留应用的数据文件夹以释放磁盘空间。打开**文件管理器**，进入 **Application** > **Data** > **searxngv2**，删除该文件夹。
 
 ## 了解更多
 

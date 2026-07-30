@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn what middleware is in Olares and navigate to access and integration guides for each supported service.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Middleware in Olares, Olares middleware, middleware services, app integration, database middleware
 ---
 # Middleware in Olares
 

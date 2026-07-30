@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to activate Olares for the first time, reactivate it after reinstallation, and complete secure two-factor login using the LarePass mobile app.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, activate Olares, LarePass, two-factor verification, Bluetooth, reactivate
 ---
 
 # Activate and log in to Olares

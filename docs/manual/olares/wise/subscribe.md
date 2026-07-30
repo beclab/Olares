@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Manage content subscriptions in Wise. Add RSS feeds, import OPML, use LarePass, and organize your sources in one library.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, RSS feeds, subscribe feeds, OPML import, LarePass extension
 ---
 
 # Subscribe and manage feeds

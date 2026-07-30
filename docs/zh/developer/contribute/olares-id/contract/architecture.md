@@ -1,6 +1,10 @@
 ---
 description: TerminusDID 合约系统分为两个部分：DID 管理和标签管理。除了标签管理的核心功能外，我们还实现了一个官方 Tagger 和一个信誉系统。
 outline: [2, 4]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, 智能合约, DID 管理, 标签管理, 声誉系统, RootTagger
 ---
 
 # TerminusDID 合约系统

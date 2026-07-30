@@ -46,6 +46,7 @@ func TestBuildSpecForEntrance(t *testing.T) {
 			Name: "demo",
 			Labels: map[string]string{
 				constants.AppApiVersionLabel: "v3",
+				constants.AppSharedLabel:     constants.AppSharedTrue,
 			},
 		},
 

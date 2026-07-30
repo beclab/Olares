@@ -1,5 +1,9 @@
 ---
 description: In-depth guides and proven best practices to help you get the most out of Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, tutorials, best practices, custom domain, multi-node cluster, GPU passthrough, storage expansion
 ---
 # Tutorials
 

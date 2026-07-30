@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -226,14 +227,66 @@ func buildNodeResource(node *corev1.Node) Node {
 	}
 
 	for _, mode := range modes {
-		if IsHAMIMode(mode) {
+		switch {
+		case IsHAMIMode(mode):
 			n.Devices = append(n.Devices, decodeHAMINvidiaDevices(node, mode)...)
-			continue
+		case mode == utils.IntelGPUType:
+			// Discrete Intel GPUs are one Exclusive card each, with their own
+			// VRAM read from the node register annotation. Fall back to the
+			// legacy single system-memory device when the annotation carries no
+			// usable discrete entry, so a node that advertises intel-gpu still
+			// has a schedulable device.
+			if devices := decodeIntelDiscreteDevices(node, mode, totalMemory); len(devices) > 0 {
+				n.Devices = append(n.Devices, devices...)
+			} else {
+				n.Devices = append(n.Devices, nonHAMIDevice(node, mode, totalMemory))
+			}
+		default:
+			n.Devices = append(n.Devices, nonHAMIDevice(node, mode, totalMemory))
 		}
-		n.Devices = append(n.Devices, nonHAMIDevice(node, mode, totalMemory))
 	}
 
 	return n
+}
+
+// decodeIntelDiscreteDevices builds one Exclusive device per discrete Intel GPU
+// (dgpu) advertised in the node's bytetrade.io/node-intel-register annotation,
+// using each card's real VRAM (the entry's mem field, in bytes) as its Memory
+// instead of the node's system RAM. Integrated Intel GPUs (igpu) are unified
+// memory and stay on the nonHAMIDevice path, so they are skipped here. When a
+// discrete entry's VRAM is unknown (mem=0, e.g. the xe driver doesn't expose it
+// via sysfs yet) it falls back to the node's usable system memory so the card
+// remains schedulable. Returns nil when the annotation is missing, malformed,
+// or advertises no discrete card, letting the caller use the legacy device.
+func decodeIntelDiscreteDevices(node *corev1.Node, mode string, totalMemory int64) []Device {
+	entries, err := utils.IntelRegisterFromNode(node)
+	if err != nil {
+		klog.Warningf("compute: node %s has malformed %s annotation: %v", node.Name, constants.NodeIntelRegisterKey, err)
+		return nil
+	}
+
+	var devices []Device
+	for _, e := range entries {
+		if e.Kind != utils.IntelGPUKindDiscrete {
+			continue
+		}
+		deviceID := fmt.Sprintf("%s-%s-%s", node.Name, mode, e.Card)
+		memory := int64(e.Mem)
+		if memory <= 0 {
+			memory = totalMemory * 75 / 100
+		}
+		devices = append(devices, Device{
+			ID:                    deviceID,
+			NodeName:              node.Name,
+			Mode:                  mode,
+			CardModel:             e.Name,
+			Memory:                memory,
+			Health:                nodeHealth(node),
+			SupportType:           nonHAMISupportType(mode, node.Annotations[shareModeAnnotationKey(deviceID)]),
+			AvailableSupportTypes: AvailableSupportTypes(mode),
+		})
+	}
+	return devices
 }
 
 // nonHAMIDevice builds the single synthetic device used for unified-memory

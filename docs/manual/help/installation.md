@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Find answers to common questions during the installation and activation of Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, installation FAQ, activation, login, hardware requirements, troubleshooting
 ---
 # Olares installation, activation & login FAQs
 

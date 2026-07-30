@@ -56,6 +56,29 @@ func isAppLevelSettingKey(k string) bool {
 	return ok
 }
 
+// overridePatch builds a JSON merge-patch that stores the given override
+// key/values in the correct slot: the per-user Spec.UserSettings[caller] map
+// for shared (v3) apps, or the app-global Spec.Settings map for non-shared
+// (v1/v2/v3) apps. This mirrors where EffectiveEntrances/EffectiveSettings read
+// the overrides from, so writes and reads stay consistent. A merge-patch on the
+// scoped sub-map keeps other users' entries and other keys untouched.
+func overridePatch(app *v1alpha1.Application, caller string, kv map[string]string) map[string]interface{} {
+	if v1alpha1.IsShared(app) {
+		return map[string]interface{}{
+			"spec": map[string]interface{}{
+				"userSettings": map[string]interface{}{
+					caller: kv,
+				},
+			},
+		}
+	}
+	return map[string]interface{}{
+		"spec": map[string]interface{}{
+			"settings": kv,
+		},
+	}
+}
+
 func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 	app, err := getAppByName(req, resp)
 	if err != nil {
@@ -82,7 +105,7 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 
 	appCopy := app.DeepCopy()
 	caller := req.Attribute(constants.UserContextAttribute).(string)
-	isShared := appcfg.IsShared(appCopy)
+	shared := v1alpha1.IsShared(appCopy)
 
 	// TODO: validate settings keys
 	for k, v := range settings {
@@ -97,13 +120,11 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 		default:
 			str = []byte(v.(string))
 		}
-		// App-level keys are global to the Application and always land
-		// in Spec.Settings; on shared apps any other key overlays into
-		// Spec.UserSettings[caller] so per-user views stay isolated.
-		// Per-user apps (v1 and v3+per-user) have no UserSettings
-		// concept and keep the legacy behavior of writing everything to
-		// Spec.Settings.
-		if isShared && !isAppLevelSettingKey(k) {
+		// For shared (v3) apps, non-app-level keys are per-user overrides and
+		// land in Spec.UserSettings[caller] so they are layered per user by
+		// EffectiveSettings. App-level keys, and every key on non-shared apps,
+		// live directly in the app-global Spec.Settings.
+		if shared && !isAppLevelSettingKey(k) {
 			if appCopy.Spec.UserSettings == nil {
 				appCopy.Spec.UserSettings = map[string]map[string]string{}
 			}
@@ -142,15 +163,29 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	// Per-user settings handlers do NOT call gateSharedAppWrite: every
 	// authenticated user may set their own customDomain for a v3 shared
 	// app. Global Settings mutations stay admin-only via setupApp.
+	caller := req.Attribute(constants.UserContextAttribute).(string)
 	entranceName := req.PathParameter(ParamEntranceName)
+	// Validate against the caller's effective entrances so user-added entrances
+	// (e.g. proxylistener-managed "dev-<port>" entrances that live only in the
+	// addedEntrances overlay) are accepted too — not just chart-base entrances.
 	validName := false
-	for _, e := range app.Spec.Entrances {
+	isDevEntrance := false
+	for _, e := range app.EffectiveEntrances(caller) {
 		if e.Name == entranceName {
 			validName = true
+			isDevEntrance = e.Type == constants.EntranceTypeDev
+			break
 		}
 	}
 	if !validName {
 		api.HandleBadRequest(resp, req, errors.New("invalid entrance name"))
+		return
+	}
+	// A dev entrance (proxylistener-managed "dev-<port>") is reached directly by
+	// pod IP, so it cannot own a custom third_party_domain / third_level_domain.
+	if isDevEntrance {
+		api.HandleBadRequest(resp, req, fmt.Errorf("entrance %q is a dev entrance and cannot set a custom domain", entranceName))
+		return
 	}
 
 	bodyData, err := ioutil.ReadAll(req.Request.Body)
@@ -166,8 +201,6 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 		return
 	}
 	appCopy := app.DeepCopy()
-	caller := req.Attribute(constants.UserContextAttribute).(string)
-	isShared := appcfg.IsShared(app)
 
 	kclient := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 
@@ -234,29 +267,13 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 		return
 	}
 
-	var patchData map[string]interface{}
-	if isShared {
-		// Patch only Spec.UserSettings[caller]["customDomain"]. JSON
-		// merge-patch leaves other users' entries and other Settings
-		// keys untouched.
-		patchData = map[string]interface{}{
-			"spec": map[string]interface{}{
-				"userSettings": map[string]interface{}{
-					caller: map[string]string{
-						"customDomain": string(settingsBytes),
-					},
-				},
-			},
-		}
-	} else {
-		patchData = map[string]interface{}{
-			"spec": map[string]interface{}{
-				"settings": map[string]string{
-					"customDomain": string(settingsBytes),
-				},
-			},
-		}
-	}
+	// customDomain edits land in the override slot: per-user
+	// (Spec.UserSettings[caller]) for shared apps, or the app-global
+	// Spec.Settings for non-shared apps. A JSON merge-patch leaves other users'
+	// entries and other keys untouched.
+	patchData := overridePatch(appCopy, caller, map[string]string{
+		"customDomain": string(settingsBytes),
+	})
 	patchByte, err := json.Marshal(patchData)
 	if err != nil {
 		api.HandleError(resp, req, err)
@@ -446,7 +463,9 @@ func callerCustomDomainBlob(app *v1alpha1.Application, caller string) string {
 		return app.EffectiveSettings(caller)["customDomain"]
 	}
 	if app.Spec.Owner == caller {
-		return app.Spec.Settings["customDomain"]
+		// Non-shared customDomain lives directly in Spec.Settings;
+		// EffectiveSettings returns a copy of it.
+		return app.EffectiveSettings(caller)["customDomain"]
 	}
 	return ""
 }
@@ -689,8 +708,12 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 		return
 	}
 
+	caller := req.Attribute(constants.UserContextAttribute).(string)
+
+	// Validate against the caller's effective entrances so user-added
+	// entrances (stored in the overlay) are accepted too.
 	entranceValid := false
-	for _, e := range app.Spec.Entrances {
+	for _, e := range app.EffectiveEntrances(caller) {
 		if e.Name == entranceName {
 			entranceValid = true
 			break
@@ -701,7 +724,6 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 		return
 	}
 
-	caller := req.Attribute(constants.UserContextAttribute).(string)
 	kclient := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 
 	var updated *v1alpha1.Application
@@ -712,126 +734,74 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 		}
 		appCopy := current.DeepCopy()
 
-		if appcfg.IsShared(appCopy) {
-			// Shared apps: only Spec.UserSettings[caller]["authLevel"] +
-			// ["policy"] for the affected entrance are touched. The
-			// global Spec.Entrances[*].AuthLevel stays as the install-
-			// time default for everybody else.
-			//
-			// Uses a JSON merge-patch on spec.userSettings.<caller> so
-			// concurrent edits by *other* users (different keys in the
-			// same map) don't fight over resourceVersion.
-			perEntranceLevel := make(map[string]string)
-			if u := appCopy.Spec.UserSettings[caller]; u != nil {
-				if raw := u["authLevel"]; raw != "" {
-					if err := json.Unmarshal([]byte(raw), &perEntranceLevel); err != nil {
-						klog.Warningf("corrupt UserSettings[%s][authLevel] for app %s, resetting: %v", caller, appCopy.Name, err)
-						return err
-					}
-				}
-			}
-
-			// Baseline auth used to decide whether default_policy needs
-			// to flip back from "public" to "system" on a public→private
-			// transition. Prefer the user's previously stored value
-			// (their current effective auth); fall back to the global
-			// install-time default when this is the first toggle.
-			baselineAuth, ok := perEntranceLevel[entranceName]
-			if !ok {
-				for _, e := range appCopy.Spec.Entrances {
-					if e.Name == entranceName {
-						baselineAuth = e.AuthLevel
-						break
-					}
-				}
-			}
-
-			perEntranceLevel[entranceName] = authLevel
-			lvlBytes, err := json.Marshal(perEntranceLevel)
-			if err != nil {
+		// User auth-level edits always live in the override slot — per-user
+		// (Spec.UserSettings[caller]) for shared apps, or the app-global
+		// Spec.Settings["authLevel"] for non-shared apps — so they survive the
+		// reconciler reprojecting chart truth into Spec.Entrances. The base
+		// Spec.Entrances[*].AuthLevel stays the install-time default;
+		// EffectiveEntrances layers the override at read time.
+		perEntranceLevel := make(map[string]string)
+		if raw := appCopy.EffectiveSettings(caller)["authLevel"]; raw != "" {
+			if err := json.Unmarshal([]byte(raw), &perEntranceLevel); err != nil {
+				klog.Warningf("corrupt authLevel override for app %s, resetting: %v", appCopy.Name, err)
 				return err
 			}
+		}
 
-			policy := make(map[string]map[string]interface{})
-			if u := appCopy.Spec.UserSettings[caller]; u != nil {
-				if raw := u["policy"]; raw != "" {
-					if err := json.Unmarshal([]byte(raw), &policy); err != nil {
-						klog.Warningf("corrupt UserSettings[%s][policy] for app %s, resetting: %v", caller, appCopy.Name, err)
-						policy = make(map[string]map[string]interface{})
-					}
-				}
+		// Baseline auth used to decide whether default_policy needs to flip
+		// back from "public" to "system" on a public→private transition. Use
+		// the entrance's current *effective* authLevel: EffectiveEntrances
+		// layers the (not-yet-mutated) authLevel overlay over the base, so this
+		// also covers overlay-only entrances (e.g. proxylistener "dev-<port>"
+		// entries) that never appear in Spec.Entrances.
+		baselineAuth := ""
+		for _, e := range appCopy.EffectiveEntrances(caller) {
+			if e.Name == entranceName {
+				baselineAuth = e.AuthLevel
+				break
 			}
-			if _, ok := policy[entranceName]; !ok {
-				policy[entranceName] = make(map[string]interface{})
-			}
-			switch {
-			case authLevel == constants.AuthorizationLevelOfPublic:
-				policy[entranceName]["default_policy"] = constants.AuthorizationLevelOfPublic
-			case authLevel == constants.AuthorizationLevelOfPrivate &&
-				baselineAuth == constants.AuthorizationLevelOfPublic:
-				policy[entranceName]["default_policy"] = "system"
-			}
-			policyStr, err := json.Marshal(policy)
-			if err != nil {
-				return err
-			}
+		}
 
-			patchData := map[string]interface{}{
-				"spec": map[string]interface{}{
-					"userSettings": map[string]interface{}{
-						caller: map[string]string{
-							"authLevel": string(lvlBytes),
-							"policy":    string(policyStr),
-						},
-					},
-				},
-			}
-			patchByte, err := json.Marshal(patchData)
-			if err != nil {
-				return err
-			}
-			updated, err = kclient.AppClient.AppV1alpha1().Applications().Patch(req.Request.Context(), appCopy.Name, types.MergePatchType, patchByte, metav1.PatchOptions{})
+		perEntranceLevel[entranceName] = authLevel
+		lvlBytes, err := json.Marshal(perEntranceLevel)
+		if err != nil {
 			return err
 		}
 
-		// v1/v2: write Spec.Entrances[i].AuthLevel + Spec.Settings["policy"].
+		// Seed the policy blob from the caller's effective view so existing
+		// per-entrance policies (chart base or prior overlay) are preserved
+		// even before the one-time migration has run.
 		policy := make(map[string]map[string]interface{})
-		if p := appCopy.Spec.Settings["policy"]; p != "" {
-			if err := json.Unmarshal([]byte(p), &policy); err != nil {
-				return err
+		if raw := appCopy.EffectiveSettings(caller)["policy"]; raw != "" {
+			if err := json.Unmarshal([]byte(raw), &policy); err != nil {
+				klog.Warningf("corrupt policy for app %s, resetting: %v", appCopy.Name, err)
+				policy = make(map[string]map[string]interface{})
 			}
 		}
-		for i := range appCopy.Spec.Entrances {
-			e := &appCopy.Spec.Entrances[i]
-			if e.Name != entranceName {
-				continue
-			}
-			// Ensure the per-entrance policy entry exists before
-			// writing into it — a freshly installed app or an entrance
-			// added later may not have one yet, and assigning into a
-			// nil sub-map would panic.
-			if _, ok := policy[e.Name]; !ok {
-				policy[e.Name] = make(map[string]interface{})
-			}
-			switch {
-			case authLevel == constants.AuthorizationLevelOfPublic:
-				policy[e.Name]["default_policy"] = constants.AuthorizationLevelOfPublic
-			case authLevel == constants.AuthorizationLevelOfPrivate &&
-				e.AuthLevel == constants.AuthorizationLevelOfPublic:
-				policy[e.Name]["default_policy"] = "system"
-			}
-			e.AuthLevel = authLevel
-			break
+		if _, ok := policy[entranceName]; !ok {
+			policy[entranceName] = make(map[string]interface{})
+		}
+		switch {
+		case authLevel == constants.AuthorizationLevelOfPublic:
+			policy[entranceName]["default_policy"] = constants.AuthorizationLevelOfPublic
+		case authLevel == constants.AuthorizationLevelOfPrivate &&
+			baselineAuth == constants.AuthorizationLevelOfPublic:
+			policy[entranceName]["default_policy"] = "system"
 		}
 		policyStr, err := json.Marshal(policy)
 		if err != nil {
 			return err
 		}
-		if appCopy.Spec.Settings == nil {
-			appCopy.Spec.Settings = make(map[string]string)
+
+		patchData := overridePatch(appCopy, caller, map[string]string{
+			"authLevel": string(lvlBytes),
+			"policy":    string(policyStr),
+		})
+		patchByte, err := json.Marshal(patchData)
+		if err != nil {
+			return err
 		}
-		appCopy.Spec.Settings["policy"] = string(policyStr)
-		updated, err = kclient.AppClient.AppV1alpha1().Applications().Update(req.Request.Context(), appCopy, metav1.UpdateOptions{})
+		updated, err = kclient.AppClient.AppV1alpha1().Applications().Patch(req.Request.Context(), appCopy.Name, types.MergePatchType, patchByte, metav1.PatchOptions{})
 		return err
 	})
 	if err != nil {
@@ -876,8 +846,12 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 			return err
 		}
 		appCopy := current.DeepCopy()
-		isShared := appcfg.IsShared(appCopy)
 
+		// Policy edits land in the override slot: per-user
+		// (Spec.UserSettings[caller]) for shared apps, or the app-global
+		// Spec.Settings["policy"] for non-shared apps. For non-shared apps the
+		// reconciler no longer reprojects chart policy over it on redeploy, so
+		// the edit persists.
 		effSettings := appCopy.EffectiveSettings(caller)
 
 		originBlob := effSettings["policy"]
@@ -902,26 +876,9 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 			return err
 		}
 
-		var patchData map[string]interface{}
-		if isShared {
-			patchData = map[string]interface{}{
-				"spec": map[string]interface{}{
-					"userSettings": map[string]interface{}{
-						caller: map[string]string{
-							"policy": string(settingsBytes),
-						},
-					},
-				},
-			}
-		} else {
-			patchData = map[string]interface{}{
-				"spec": map[string]interface{}{
-					"settings": map[string]string{
-						"policy": string(settingsBytes),
-					},
-				},
-			}
-		}
+		patchData := overridePatch(appCopy, caller, map[string]string{
+			"policy": string(settingsBytes),
+		})
 		patchByte, err := json.Marshal(patchData)
 		if err != nil {
 			return err

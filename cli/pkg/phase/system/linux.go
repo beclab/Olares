@@ -114,6 +114,12 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 				},
 			},
 		).
+		addModule(marketPreinstallModules(
+			l.manifestMap,
+			l.runtime.GetInstallerDir(),
+			l.runtime.GetBaseDir(),
+			productionPreinstallSelections(l.runtime),
+		)...).
 		addModule(terminusBoxModuleBuilder(func() []module.Module {
 			return []module.Module{
 				&daemon.InstallTerminusdBinaryModule{

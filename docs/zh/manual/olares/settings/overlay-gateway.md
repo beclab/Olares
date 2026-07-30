@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 设置中管理 Overlay 网关，让支持的应用获得专用本地 IP，用于局域网发现和本地访问。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Overlay 网关, 网络设置, 本地 IP, 局域网发现, 虚拟网络, 应用网络
 ---
 # 管理应用的 Overlay 网关
 

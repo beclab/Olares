@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Install Olares CLI Agent Skills for Cursor, Claude Code, Hermes Agent, and OpenClaw. Learn bundle contents, install order, and end-to-end usage.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Agent Skills, olares-cli, Cursor, Claude Code, AI agent integration, install Agent Skills
 ---
 
 # Install and use Agent Skills

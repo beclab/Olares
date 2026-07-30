@@ -57,7 +57,7 @@ func runImport(ctx context.Context, o *importOptions) error {
 	if o.refreshToken == "" {
 		return errors.New("--refresh-token is required")
 	}
-	_, _, authURL, err := o.commonCredFlags.validateAndDeriveAuthURL()
+	id, _, _, err := o.commonCredFlags.validateAndDeriveAuthURL()
 	if err != nil {
 		return err
 	}
@@ -72,10 +72,21 @@ func runImport(ctx context.Context, o *importOptions) error {
 		return err
 	}
 
+	// Detect the network position before exchanging the refresh token, so the
+	// /api/refresh round-trip (and every later command) uses the fastest
+	// reachable connection method. --auth-url-override skips the probe.
+	loc, authURL, err := probeProfileLocation(ctx, id, profile.LocalURLPrefix, profile.InsecureSkipVerify, o.authURLOverride)
+	if err != nil {
+		return err
+	}
+	profile.Location = string(loc)
+	profile.LocationProbedAt = time.Now().Unix()
+
 	tok, err := auth.Refresh(ctx, auth.RefreshRequest{
 		AuthURL:            authURL,
 		RefreshToken:       o.refreshToken,
 		InsecureSkipVerify: o.insecureSkipVerify,
+		Location:           loc,
 	})
 	if err != nil {
 		return err
@@ -89,7 +100,6 @@ func runImport(ctx context.Context, o *importOptions) error {
 	fmt.Printf("imported credentials for %s (profile: %s)\n", o.olaresID, profile.DisplayName())
 	printSwitchNotice(res, profile.DisplayName())
 	printStorageNotice(profile.OlaresID)
-	eagerWhoami(ctx, cfg, profile, tok.AccessToken)
-	eagerBackendVersion(ctx, cfg, profile, tok.AccessToken)
+	eagerDetect(ctx, cfg, profile, tok.AccessToken)
 	return nil
 }

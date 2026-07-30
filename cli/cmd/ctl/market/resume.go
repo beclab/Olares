@@ -21,11 +21,15 @@ func NewCmdMarketResume(f *cmdutil.Factory) *cobra.Command {
 Source is implicit: resume acts on whichever per-user state row matches
 the app name, regardless of source (no -s flag exposed).
 
---watch blocks until the row settles at 'running' (or one of the
-resumeFailed / resumingCanceled / resumingCancelFailed failure states).
-The watcher is idempotent: 'resume' against an already-running row
-returns immediately with success ({state=running, opType=""}), rather
-than hanging until --watch-timeout fires.
+--watch blocks until the row settles. Success is 'running'; a resume
+that gets cancelled (via 'market cancel' or a backend TTL) settles at
+'stopped' and is also treated as a terminal success. Failure is
+'resumeFailed' or 'resumingCancelFailed'. The watcher is idempotent:
+'resume' against an already-running row returns immediately with success
+({state=running, opType=""}), rather than hanging until --watch-timeout
+fires. To distinguish a freshly-cancelled 'stopped' from the app's
+pre-resume 'stopped' resting row, --watch captures the row's statusTime
+before the request and only accepts a strictly-newer 'stopped'.
 
 Compute binding (Olares 1.12.6+ only): apps that use a GPU/accelerator
 may need a device selected when resumed. Use --compute-binding
@@ -67,14 +71,20 @@ func runResume(opts *MarketOptions, appName string) error {
 
 	ctx := context.Background()
 
-	// Resolve the installed app's source: enforces the "only operate on an
+	// Resolve the installed app's row: enforces the "only operate on an
 	// installed app" guard (a bugfix applying to 1.12.5 and 1.12.6 alike)
-	// and yields the source the 1.12.6 body needs (resume exposes no -s).
-	// The resolved source also sharpens the --watch state-row match.
-	source, err := resolveInstalledSource(ctx, opts, mc, appName)
+	// and yields both the source the 1.12.6 body needs (resume exposes no
+	// -s) and the row's current statusTime. The source sharpens the --watch
+	// state-row match; the statusTime is captured as the baseline BEFORE the
+	// resume so the watcher can tell a freshly-cancelled `stopped` (resume
+	// cancelled -> stopped) from the byte-identical pre-resume stopped row
+	// (see watchResume / stoppedTerminalSuccess).
+	row, err := resolveInstalledRow(ctx, mc, appName)
 	if err != nil {
 		return opts.failOp("resume", appName, err)
 	}
+	source := row.Source
+	baselineStatusTime := parseStatusTime(row.StatusTime)
 
 	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
 	if err != nil {
@@ -113,7 +123,9 @@ func runResume(opts *MarketOptions, appName string) error {
 	}
 
 	result := newOperationResult(mc, "resume", appName, "", "", "resume requested", resp)
-	return runWithWatch(opts, mc, result, newWatchTarget(watchResume, appName, source))
+	target := newWatchTarget(watchResume, appName, source)
+	target.baselineStatusTime = baselineStatusTime
+	return runWithWatch(opts, mc, result, target)
 }
 
 // sendResume builds the version-appropriate resume body (1.12.6 moved to

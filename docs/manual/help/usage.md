@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Find answers to common questions about using Olares and community apps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, usage FAQ, apps, storage, multi-node cluster, Control Hub, update app
 ---
 
 # Usage FAQs

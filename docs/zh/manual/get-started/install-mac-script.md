@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 Mac 系统上安装配置 Olares 的完整步骤，包括环境准备、安装过程和系统激活。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Mac 安装, MiniKube, 脚本安装, macOS
 ---
 # 在 Mac 上使用脚本安装 Olares
 本文介绍如何在 Mac 上使用脚本安装 Olares。

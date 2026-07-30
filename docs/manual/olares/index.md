@@ -1,6 +1,10 @@
 ---
 description: Explore Olares system apps with guides to Desktop, Market, Files, Vault, Settings, Wise, Profile, Control Hub, and team collaboration.
 aside: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, system applications, Desktop, Market, Files, Vault, Settings, Control Hub, Dashboard
 ---
 
 # Olares system applications

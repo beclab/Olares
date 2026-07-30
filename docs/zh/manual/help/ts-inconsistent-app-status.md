@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 排查在控制面板与桌面、设置或应用市场之间应用状态显示不一致的问题。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用状态, 控制面板, 状态不一致, 启动应用, 停止应用
 ---
 
 # 在控制面板启动或停止应用后状态不一致

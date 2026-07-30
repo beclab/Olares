@@ -17,6 +17,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	gatewaytimeout "github.com/beclab/Olares/framework/app-service/pkg/gateway/timeout"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
@@ -93,10 +94,10 @@ type ReconcileResult struct {
 }
 
 // ReconcileSharedRoute applies the HTTPRoute (and companion NetworkPolicy +
-// ReferenceGrant) for one SRR. No service mesh.
+// ReferenceGrant + Linkerd mesh inject) for one SRR.
 //
 //   - routeMode=direct  -> remove route objects, Ready=True/DirectMode
-//   - routeMode=gateway -> ensure HTTPRoute + NetworkPolicy, Ready per outcome
+//   - routeMode=gateway -> ensure HTTPRoute + NetworkPolicy + mesh inject, Ready per outcome
 func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (ReconcileResult, error) {
 	if srr == nil {
 		return ReconcileResult{}, fmt.Errorf("srr is nil")
@@ -109,8 +110,24 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteNetworkPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete NetworkPolicy: %w", err)
 		}
+		if err := deleteSharedLinkerdMeshNetworkPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete shared linkerd mesh NetworkPolicy: %w", err)
+		}
 		if err := deleteReferenceGrant(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete ReferenceGrant: %w", err)
+		}
+		if err := deleteSecurityPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete SecurityPolicy: %w", err)
+		}
+		if err := deleteJWKSReferenceGrant(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete JWKS ReferenceGrant: %w", err)
+		}
+		disableNS := srr.Spec.Upstream.ServiceNamespace
+		if disableNS == "" {
+			disableNS = srr.Namespace
+		}
+		if err := ensureSharedNamespaceLinkerdInject(ctx, c, disableNS, false); err != nil {
+			return ReconcileResult{}, fmt.Errorf("disable shared namespace linkerd inject: %w", err)
 		}
 		return ReconcileResult{
 			Status:  metav1.ConditionTrue,
@@ -172,6 +189,19 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	}
 	if err := applyNetworkPolicy(ctx, c, gw, srr, svc, port); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply NetworkPolicy: %w", err)
+	}
+	if err := applySharedLinkerdMeshNetworkPolicy(ctx, c, srr, svc); err != nil {
+		return ReconcileResult{}, fmt.Errorf("apply shared linkerd mesh NetworkPolicy: %w", err)
+	}
+	injectNS := networkPolicyNamespace(srr, svc)
+	if err := ensureSharedNamespaceLinkerdInject(ctx, c, injectNS, true); err != nil {
+		return ReconcileResult{}, fmt.Errorf("enable shared namespace linkerd inject: %w", err)
+	}
+	if err := applySecurityPolicy(ctx, c, srr); err != nil {
+		return ReconcileResult{}, fmt.Errorf("apply SecurityPolicy: %w", err)
+	}
+	if err := applyJWKSReferenceGrant(ctx, c, srr); err != nil {
+		return ReconcileResult{}, fmt.Errorf("apply JWKS ReferenceGrant: %w", err)
 	}
 	return ReconcileResult{
 		Status:        metav1.ConditionTrue,
@@ -263,6 +293,14 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 		"timeouts": map[string]any{
 			"backendRequest": effective,
 			"request":        effective,
+		},
+		"filters": []any{
+			map[string]any{
+				"type": "RequestHeaderModifier",
+				"requestHeaderModifier": map[string]any{
+					"remove": []any{callerjwt.CallerJWTHeaderName},
+				},
+			},
 		},
 	}
 	desired := &unstructured.Unstructured{Object: map[string]any{

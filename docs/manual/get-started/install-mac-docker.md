@@ -2,6 +2,10 @@
 outline: [2, 3]
 title: Install Olares on Mac with Docker
 description: Learn how to run Olares as a containerized application on Mac with Docker, covering image setup and container configuration.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Mac Docker, macOS, olaresd-proxy, Apple Silicon, Intel
 ---
 # Install Olares on Mac with Docker
 You can use Docker to install and run Olares in a containerized environment. This guide walks you through setting up Olares with Docker, preparing the installation environment, completing the activation process, and managing the container lifecycle.

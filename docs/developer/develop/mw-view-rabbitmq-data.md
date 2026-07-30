@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to install RabbitMQ and manage RabbitMQ resources in Olares using RabbitMQ Dashboard.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, RabbitMQ, message queue, RabbitMQ Dashboard, middleware, AMQP
 ---
 # View RabbitMQ data
 

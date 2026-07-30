@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Technical guide for installing and activating an Olares device using Olares CLI.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares CLI, activate device, Olares One, FRP, wizard activate, LarePass
 ---
 
 # Activate an Olares device using the Olares CLI
@@ -220,4 +224,4 @@ You can now log into Olares using your Olares ID and the login password you spec
 ## Learn more
 
 - [Create an Olares ID](../get-started/create-olares-id.md)
-- [Olares CLI](../../developer/install/cli/olares-cli.md)
+- [Olares CLI](../../developer/cli-overview.md)

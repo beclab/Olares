@@ -59,6 +59,11 @@ func (u *UninstallAutoRenewCerts) Execute(runtime connector.Runtime) error {
 		_, _ = runtime.GetRunner().SudoCmd(fmt.Sprintf("rm -rf %s", file), false, false)
 	}
 
+	// a oneshot unit that exited non-zero keeps showing up in `systemctl --failed`
+	// even after its unit file is gone, until its state is explicitly reset
+	_, _ = runtime.GetRunner().SudoCmd("systemctl reset-failed k8s-certs-renew.service k8s-certs-renew.timer 1>/dev/null 2>/dev/null", false, false)
+	_, _ = runtime.GetRunner().SudoCmd("systemctl daemon-reload 1>/dev/null 2>/dev/null", false, false)
+
 	return nil
 }
 

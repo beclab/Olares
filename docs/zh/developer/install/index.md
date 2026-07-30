@@ -1,5 +1,9 @@
 ---
 description: 用 olares-cli 进行集群管理。Olares 如何安装、文件存储在哪里、哪些环境变量可调整安装、Olares 如何版本化，以及字母顺序的命令参考。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 集群管理, olares-cli, 安装架构, 命令参考
 ---
 # 集群管理
 
@@ -10,6 +14,6 @@ description: 用 olares-cli 进行集群管理。Olares 如何安装、文件存
 - [Olares Home](olares-home.md)：Olares 默认安装目录的结构。
 - [环境变量](environment-variables.md)：可用于自定义安装的环境变量。
 - [Olares 版本说明](versioning.md)：版本号规则、版本类型、分支管理实践以及升级策略。
-- [命令参考](cli/olares-cli.md)：所有主机模式命令的字母顺序参考，包含语法、选项和示例。
+- [命令参考](../cli-overview.md)：所有主机模式命令的字母顺序参考，包含语法、选项和示例。
 
 关于 `olares-cli` 的用户模式和集群内模式，包括如何在笔记本上或 Olares 应用内部通过 AI Agent 操作 Olares，参见[搭配 AI Agent 使用](../cli-install.md)。

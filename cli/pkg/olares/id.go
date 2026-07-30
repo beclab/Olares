@@ -73,13 +73,13 @@ func (id ID) TerminusName() string {
 // inserted between the `auth.` subdomain and the terminus name (no trailing
 // dot is added — callers pass e.g. "dev." for "auth.dev.alice.olares.com").
 func (id ID) AuthURL(localPrefix string) string {
-	return fmt.Sprintf("https://auth.%s%s", localPrefix, id.TerminusName())
+	return id.Endpoints(LocationExternal, localPrefix).Auth
 }
 
 // VaultURL returns the per-user vault base URL with the conventional `/server`
 // suffix, e.g. "https://vault.alice.olares.com/server".
 func (id ID) VaultURL(localPrefix string) string {
-	return fmt.Sprintf("https://vault.%s%s/server", localPrefix, id.TerminusName())
+	return id.Endpoints(LocationExternal, localPrefix).Vault
 }
 
 // DesktopURL returns the per-user desktop base URL, e.g.
@@ -94,7 +94,7 @@ func (id ID) VaultURL(localPrefix string) string {
 // "/api/cloud/sign" — must use SettingsURL instead. See KNOWN_ISSUES.md
 // KI-12 / KI-16 for the regression that surfaced this distinction.
 func (id ID) DesktopURL(localPrefix string) string {
-	return fmt.Sprintf("https://desktop.%s%s", localPrefix, id.TerminusName())
+	return id.Endpoints(LocationExternal, localPrefix).Desktop
 }
 
 // SettingsURL returns the per-user settings SPA base URL, e.g.
@@ -115,7 +115,7 @@ func (id ID) DesktopURL(localPrefix string) string {
 // they were hard-wired to DesktopURL (KI-12 vpn devices, KI-16 backup /
 // restore plans, KI-6 apps secrets).
 func (id ID) SettingsURL(localPrefix string) string {
-	return fmt.Sprintf("https://settings.%s%s", localPrefix, id.TerminusName())
+	return id.Endpoints(LocationExternal, localPrefix).Settings
 }
 
 // FilesURL returns the per-user files-backend base URL, e.g.
@@ -123,7 +123,7 @@ func (id ID) SettingsURL(localPrefix string) string {
 // `getModuleSever('files')` derivation in
 // apps/packages/app/src/stores/user.ts.
 func (id ID) FilesURL(localPrefix string) string {
-	return fmt.Sprintf("https://files.%s%s", localPrefix, id.TerminusName())
+	return id.Endpoints(LocationExternal, localPrefix).Files
 }
 
 // MarketURL returns the per-user market base URL, e.g.
@@ -133,7 +133,7 @@ func (id ID) FilesURL(localPrefix string) string {
 // edge auth chain (Authelia + l4-bfl-proxy) accepts the `X-Authorization`
 // header here as it does for files / vault / desktop.
 func (id ID) MarketURL(localPrefix string) string {
-	return fmt.Sprintf("https://market.%s%s", localPrefix, id.TerminusName())
+	return id.Endpoints(LocationExternal, localPrefix).Market
 }
 
 // DashboardURL returns the per-user dashboard BFF base URL, e.g.
@@ -145,7 +145,7 @@ func (id ID) MarketURL(localPrefix string) string {
 // X-Authorization is honored and 401/403 are recoverable via /api/refresh.
 // olares-cli's `dashboard` command tree talks to this URL.
 func (id ID) DashboardURL(localPrefix string) string {
-	return fmt.Sprintf("https://dashboard.%s%s", localPrefix, id.TerminusName())
+	return id.Endpoints(LocationExternal, localPrefix).Dashboard
 }
 
 // ControlHubURL returns the per-user control-hub BFF base URL, e.g.
@@ -176,5 +176,5 @@ func (id ID) DashboardURL(localPrefix string) string {
 // olares-cluster SKILL.md). olares-cli's `cluster` command tree talks
 // to this URL.
 func (id ID) ControlHubURL(localPrefix string) string {
-	return fmt.Sprintf("https://control-hub.%s%s", localPrefix, id.TerminusName())
+	return id.Endpoints(LocationExternal, localPrefix).ControlHub
 }

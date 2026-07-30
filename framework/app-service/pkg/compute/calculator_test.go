@@ -195,6 +195,45 @@ func TestValidateBindingSelectionTopologyAndMemorySlice(t *testing.T) {
 	}
 }
 
+func TestTimeSlicePressureUsesFullMemoryOfEverySelectedCard(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "trainer", OwnerName: "alice"}
+	req := Requirement{
+		Mode:              utils.NvidiaCardType,
+		RequiredGPU:       24 * gi,
+		LimitedGPU:        24 * gi,
+		RequiredMemory:    gi,
+		LimitedMemory:     gi,
+		SupportMultiCards: true,
+	}
+	nodes := []Node{
+		nvidiaNode("nvidia-a",
+			Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeTimeSlice},
+			Device{ID: "gpu1", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeTimeSlice},
+		),
+	}
+	pressure := PressureSnapshot{
+		Threshold: 0.9,
+		UsageByNode: map[string]prometheus.NodeResourceUsage{
+			// 29Gi is already used. The app's 1Gi plus its 24Gi GPU limit
+			// would stay below the 57.6Gi threshold, while reserving both
+			// selected cards' full 32Gi correctly exceeds it.
+			"nvidia-a": {MemoryCapacity: 64 * gi, MemoryAvailable: 35 * gi},
+		},
+	}
+
+	if picked, ok := PickAllocations(app, req, nodes, pressure); ok {
+		t.Fatalf("install scheduling must account for both full time-slice cards, got %#v", picked)
+	}
+
+	result := ValidateBindingSelection(req, []BindingSelection{
+		{NodeName: "nvidia-a", DeviceID: "gpu0"},
+		{NodeName: "nvidia-a", DeviceID: "gpu1"},
+	}, nodes, pressure)
+	if result.OK || result.Code != "node-pressure:nvidia-a" {
+		t.Fatalf("resume validation must account for both full time-slice cards, got %#v", result)
+	}
+}
+
 // TestAllocationsFromResolvedSelectionMultiCardWholeCard is a regression test
 // for the multi-card binding bug: when the frontend submitted two whole-card
 // (Exclusive / TimeSlice) selections, allocationsFromResolvedSelection folded

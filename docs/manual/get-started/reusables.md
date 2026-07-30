@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, installation, system requirements, install script, wizard URL, setup
 ---
 
 <!-- #region install-script-command -->

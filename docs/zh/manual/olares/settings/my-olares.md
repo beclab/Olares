@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何利用“我的 Olares”页面管理账户、设备、安全设置及网络访问策略。 
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 我的 Olares, 账户管理, 硬件信息, 网络访问策略, 重置 SSH 密码, 双因素认证
 ---
 
 # 我的 Olares

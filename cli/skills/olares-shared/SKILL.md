@@ -1,6 +1,6 @@
 ---
 name: olares-shared
-version: 4.3.0
+version: 4.3.1
 description: "Set up and manage the Olares login/identity that every other olares-cli skill depends on — one profile per Olares ID, keychain-stored tokens, transparent token refresh, and auth-error recovery. Use for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, and auth errors (token rejected / invalidated / not logged in)."
 compatibility: Requires olares-cli on PATH
 metadata:
@@ -34,7 +34,7 @@ The olares-cli skills ship and install as one suite; each owns a distinct slice.
 | Skill | Owns | Reach for it when |
 |---|---|---|
 | [`olares-shared`](SKILL.md) | Profile / login / token refresh / auth-error recovery; hosts the platform model | logging in, switching Olares ID, any auth error |
-| [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle: install / uninstall / upgrade / clone / stop / resume / cancel; `--mine`; chart upload | installing or managing an app's lifecycle |
+| [`olares-market`](../olares-market/SKILL.md) | App-store lifecycle: install / uninstall / upgrade / clone / stop / resume / restart / cancel; `--mine`; chart upload | installing or managing an app's lifecycle |
 | [`olares-settings`](../olares-settings/SKILL.md) | Post-install config (Settings SPA): app entrance / domain / env / policy, users, VPN, network, backup / restore, integrations | changing config of an installed app or the system |
 | [`olares-cluster`](../olares-cluster/SKILL.md) | K8s runtime view: pods / workloads / jobs / cronjobs / nodes / namespaces; logs; scale / restart / delete | inspecting or operating running K8s objects |
 | [`olares-dashboard`](../olares-dashboard/SKILL.md) | Resource metrics & health: CPU / memory / disk / network / pods / GPU / fan / ranking | "what's the usage / what's eating CPU" |
@@ -57,7 +57,7 @@ One profile = one Olares instance + one user identity, keyed by **olaresId** (e.
 |---------|---------|
 | `olares-cli profile login` | Mode A — password (+ TOTP if 2FA is on); auto-creates the profile on first run |
 | `olares-cli profile import` | Mode B — bootstrap an access_token from an existing refresh_token |
-| `olares-cli profile list` | List every profile (NAME / OLARES-ID / STATUS / VERSION), mark the current one, show login status; `--refresh-version` re-reads the current profile's cached backend version |
+| `olares-cli profile list` | List every profile (NAME / OLARES-ID / STATUS / VERSION), mark the current one, show login status; `--refresh` re-detects the current profile's location, role and backend version |
 | `olares-cli profile use <name\|->` | Switch the current profile; `-` reverts to the previous one (like `cd -`) |
 | `olares-cli profile remove <name>` | Delete a profile and its stored token in one shot |
 
@@ -106,7 +106,7 @@ When you (an AI agent) drive the login on the user's behalf, do NOT pass passwor
 | `never` | No token has ever been stored | `profile login` or `profile import` |
 | `unknown` / `logged-in (unparseable token)` | Token store couldn't be read / the JWT couldn't be parsed | re-run `profile login` if it persists |
 
-STATUS reflects only what the local token store can prove without a network call (no `(Xh Ym)` time-to-expiry is printed). The `VERSION` column is the cached Olares backend version (`-` until a login eager-fetch or a version-aware command populates it; `--refresh-version` re-reads it). The leading `*` marks the current profile; `profile use` accepts either the NAME alias or the olaresId.
+STATUS reflects only what the local token store can prove without a network call (no `(Xh Ym)` time-to-expiry is printed). The `VERSION` column is the cached Olares backend version (`-` until a login eager-fetch or a version-aware command populates it; `--refresh` re-reads it). The leading `*` marks the current profile; `profile use` accepts either the NAME alias or the olaresId.
 
 ## Auth-readiness gate
 

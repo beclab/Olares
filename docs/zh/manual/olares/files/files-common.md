@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中使用 Common 目录管理跨应用、跨用户共享的 AI 模型。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 文件管理器, 公共目录, AI 模型, Hugging Face, ComfyUI, Ollama, 共享存储
 ---
 
 # 使用公共目录管理共享 AI 模型

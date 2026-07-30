@@ -1,9 +1,13 @@
 ---
 description: Once a DID is generated, users need to register their ownership in a DID Registry.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DID Registry, blockchain registry, DID ownership, register DID, decentralized identifier
 ---
 # DID Registry on Blockchains
 
-Once a DID is generated, users need to register their ownership in a **DID Registry**. Although the W3C standards do not prescribe a specific implementation for this registry, Olares ID utilizes [Smart Contracts](/developer/contribute/olares-id/contract/contract.md#smart-contract.md) to facilitate the registration process. This approach offers several advantages:
+Once a DID is generated, users need to register their ownership in a **DID Registry**. Although the W3C standards do not prescribe a specific implementation for this registry, Olares ID utilizes Smart Contracts to facilitate the registration process. This approach offers several advantages:
 
 - **Decentralization**: There is no reliance on centralized providers or authorities.
 - **Censorship resistance**: The structure is robust against censorship and interference.

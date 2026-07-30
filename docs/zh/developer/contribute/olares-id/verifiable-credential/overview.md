@@ -1,5 +1,9 @@
 ---
 description: 本文档旨在帮助你了解如何使用以下工具，为你自己的场景配置各种 schema 并创建发行方 (Issuers) 和验证方 (Verifiers)
+head:
+  - - meta
+    - name: keywords
+      content: Olares, VC, 可验证凭证, Issuer, Verifier, SSI Service, Presentation Exchange, DID
 ---
 # VC 服务
 

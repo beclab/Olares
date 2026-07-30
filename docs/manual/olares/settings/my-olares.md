@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to manage your Olares account, devices, security settings, and network access policies in My Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, My Olares, hardware, Olares Space, network access policy, OS version
 ---
 
 # My Olares overview

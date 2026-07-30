@@ -1,5 +1,9 @@
 ---
 description: 在 Olares 中设置系统语言、切换明暗主题、管理桌面小组件、自定义壁纸并重置桌面布局，打造符合个人习惯的使用环境。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 语言设置, 外观, 主题, 小组件, 壁纸, 桌面布局
 ---
 # 设置语言和外观
 

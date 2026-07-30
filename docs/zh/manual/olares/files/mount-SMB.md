@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中挂载和访问来自 NAS 设备或网络服务器的 SMB 共享文件夹。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 文件管理器, SMB, 挂载共享, NAS, 网络存储, 外部设备
 ---
 
 # 挂载 SMB 共享

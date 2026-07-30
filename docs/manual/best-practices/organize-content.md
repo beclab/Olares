@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Build a knowledge hub with Wise on Olares. Collect web pages, manage PDFs and e-books, subscribe to RSS feeds, and organize your content library.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, knowledge hub, LarePass extension, collect content, RSS feeds, PDF, EPUB
 ---
 # Build your knowledge hub with Wise
 

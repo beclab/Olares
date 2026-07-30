@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 使用树莓派安装配置 Olares 的完整步骤，包括硬件要求、安装命令和系统设置。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 树莓派, Raspberry Pi, ARM, Raspbian
 ---
 # 在树莓派上安装 Olares
 本文介绍如何在树莓派设备上安装 Olares。

@@ -31,7 +31,7 @@ import (
 // EnableJuiceFS builds the pipeline that converts a single-node Olares master
 // from a local-filesystem rootfs to a JuiceFS-backed shared rootfs, in place,
 // without uninstalling. Once it completes, the master satisfies the JuiceFS
-// precondition required by `olares-cli node add`, so worker nodes can join.
+// precondition required by `olares-cli node join`, so worker nodes can join.
 //
 // The caller must already have checked that JuiceFS is not yet enabled (the
 // "already migrated" case short-circuits earlier, before this pipeline is even

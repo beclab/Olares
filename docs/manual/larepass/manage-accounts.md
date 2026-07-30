@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Import, switch, and delete Olares accounts in the LarePass mobile app or desktop client.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, import account, switch account, delete account, Olares ID, mnemonic phrase
 ---
 
 # Manage accounts in LarePass

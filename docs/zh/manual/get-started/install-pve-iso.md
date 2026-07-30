@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 PVE 虚拟化平台上使用 ISO 镜像安装配置 Olares 的完整步骤，包括系统要求、虚拟机配置、安装和激活过程。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, PVE, ISO 镜像, 虚拟机安装, Proxmox VE
 ---
 # 使用 ISO 镜像在 PVE 上安装 Olares
 你可以使用 ISO 镜像将 Olares 直接安装在 Proxmox 虚拟环境（PVE）上。本指南将带你了解：如何下载 Olares ISO、在 PVE 中配置必要参数、完成安装和激活流程。

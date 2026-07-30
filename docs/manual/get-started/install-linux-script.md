@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Install Olares on Ubuntu or Debian with the Linux installation script. Review requirements, run the setup, and activate your system.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Linux script, one-line install, Ubuntu Debian, installation script
 ---
 # Install Olares on Linux via the script
 This guide explains how to install Olares on Linux using the provided installation script.

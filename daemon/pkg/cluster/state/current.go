@@ -51,6 +51,13 @@ func bToGb(b uint64) string {
 	return fmt.Sprintf("%d G", b/1024/1024/1024)
 }
 
+func primaryGPU(gpuList []string) *string {
+	if len(gpuList) == 0 {
+		return nil
+	}
+	return pointer.String(gpuList[0])
+}
+
 func CheckCurrentStatus(ctx context.Context) error {
 	TerminusStateMu.Lock()
 	name, err := utils.GetOlaresNameFromReleaseFile()
@@ -103,9 +110,12 @@ func CheckCurrentStatus(ctx context.Context) error {
 		klog.Error("get node filesystem total size error, ", err)
 	}
 
-	gpu, err := utils.GetGpuInfo()
+	gpuList, err := utils.GetGpuInfo()
 	if err != nil {
 		klog.Error("get gpu info error, ", err)
+	}
+	if gpuList == nil {
+		gpuList = []string{}
 	}
 
 	hostname, err := os.Hostname()
@@ -121,7 +131,8 @@ func CheckCurrentStatus(ctx context.Context) error {
 	CurrentState.CpuInfo = utils.GetCPUName()
 	CurrentState.Memory = bToGb(memory.TotalMemory())
 	CurrentState.Disk = bToGb(diskSize)
-	CurrentState.GpuInfo = gpu
+	CurrentState.GPUList = gpuList
+	CurrentState.GpuInfo = primaryGPU(gpuList)
 	CurrentState.HostName = &hostname
 
 	// get network info

@@ -1,5 +1,9 @@
 ---
 description: The official tags defined in TerminusDID and the RootTagger that manages them, including DNSARecord, RSAPubKey, LatestDid, and AuthAddress.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Official Taggers, RootTagger, TerminusDID tags, DNSARecord, RSA public key, DID tags
 ---
 # Official Taggers
 

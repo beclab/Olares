@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to securely back up your Olares ID mnemonic phrase for account recovery and protection.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, mnemonic phrase, backup, account recovery
 ---
 
 # Back up mnemonic phrase

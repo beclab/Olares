@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Configure Olares with environment variables for networking, authentication, GPU support, and other installation features, with examples.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, environment variables, installation config, KUBE_TYPE, GPU support, FRP, Cloudflare, olares.sh
 ---
 # Olares environment variables
 

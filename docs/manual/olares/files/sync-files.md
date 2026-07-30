@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Sync files between Olares and your computer. Set up two-way sync, monitor task status, and keep files available across devices.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Files, sync files to local, local sync, sync library, two-way sync, LarePass desktop
 ---
 
 # Sync files to local computer

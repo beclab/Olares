@@ -1,305 +1,201 @@
 #!/usr/bin/env bash
 
+# Bootstrap a worker node into an existing Olares cluster.
+#
+# This script only has one job: install the olares-cli matching the cluster's
+# Olares version, then hand over to "olares-cli node join", which owns the
+# actual flow (validating the master, preparing this machine and joining).
+#
+# It is normally not run by hand: "olares-cli node join-command" on the
+# master prints a ready-to-paste invocation with every value already filled in.
+#
+# Environment:
+#   VERSION                    Olares version to join, must match the master.
+#   MASTER_AUTH_INFO           Master address and SSH credentials, as generated
+#                              by "olares-cli node join-command".
+#   OLARES_SYSTEM_CDN_SERVICE  CDN endpoint to download from; defaults to the
+#                              global endpoint. Regions with their own endpoint
+#                              must set it, and the generated command does.
+#   MASTER_HOST, MASTER_SSH_USER, MASTER_SSH_PASSWORD,
+#   MASTER_SSH_PRIVATE_KEY_PATH, MASTER_SSH_PORT
+#                              Master connection, for use without a payload.
+#                              They also override individual payload fields.
+
 set -o pipefail
 set -e
 
-function command_exists() {
-	  command -v "$@" > /dev/null 2>&1
+DEFAULT_CDN_SERVICE="https://cdn.olares.com"
+
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
 }
 
-if [[ x"$REPO_PATH" == x"" ]]; then
-    export REPO_PATH="#__REPO_PATH__"
-fi
-
-
-if [[ "x${REPO_PATH:3}" == "xREPO_PATH__" ]]; then
-    export REPO_PATH="/"
-fi
-
-function read_tty() {
-    echo -n $1
-    read $2 < /dev/tty
+fail() {
+    echo "error: $*" >&2
+    exit 1
 }
 
-function confirm() {
-    if [[ "$QUIET" == "1" ]]; then
-        return 0
+# read_tty prompts on the controlling terminal rather than stdin, because this
+# script is normally piped into bash and stdin therefore carries the script.
+# Without a usable terminal (CI, "ssh -T", cloud-init) prompting can never
+# succeed, so report what to set instead of failing on a redirection error.
+read_tty() {
+    local label="$1" variable="$2" no_tty_hint="$3" value
+    if ! { : >/dev/tty; } 2>/dev/null; then
+        fail "$no_tty_hint"
     fi
-    answer=""
-    while :; do
-        read_tty "Do you confirm to continue? (y/n): " answer
-        if [[ "$answer" != "y" && "$answer" != "n" ]]; then
-            echo "Please input the letter y or n"
-            continue
-        fi
-        if [[ "$answer" == "y" ]]; then
-            return 0
-        fi
-        if [[ "$answer" == "n" ]]; then
-            exit 0
-        fi
-    done
+    printf "%s" "$label" >/dev/tty
+    IFS= read -r value </dev/tty || fail "$no_tty_hint"
+    printf -v "$variable" "%s" "$value"
 }
 
-function validate_ip() {
-    if [[ ! "$1" ]]; then
-        echo "invalid IP: empty address"
-        return 1
-    elif [[ ! $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "invalid IP: illegal format"
-        return 1
-    elif [[ $1 =~ ^127 ]]; then
-        echo "invalid IP: loopback address"
-        return 1
-    else
-        return 0
+run_root() {
+    if [[ "$(id -u)" == "0" ]]; then
+        "$@"
+        return
     fi
+    command_exists sudo || fail "sudo is required to install and run olares-cli"
+    sudo -E "$@"
 }
 
-MASTER_SSH_OPTIONS=""
-
-function add_master_host_ssh_options() {
-    MASTER_SSH_OPTIONS="$MASTER_SSH_OPTIONS --$1 $2"
-}
-
-function set_master_host_ssh_options() {
-    master_host="$MASTER_HOST"
-    if [[ ! "$master_host" ]]; then
-        read_tty "Enter the master node's IP: " master_host
+# detect_repo_path picks the download path for this hardware. It is normally
+# replaced at build time; the /etc/machine.info fallback exists so a script
+# fetched straight from the repository still finds the Olares One artifacts.
+detect_repo_path() {
+    if [[ -n "$REPO_PATH" ]]; then
+        return
     fi
-
-    while :; do
-        if ! validate_ip "$master_host"; then
-            read_tty "Enter the master node's IP: " master_host
+    REPO_PATH="#__REPO_PATH__"
+    if [[ -z "$REPO_PATH" || "${REPO_PATH:3}" == "REPO_PATH__" ]]; then
+        local machine_info=""
+        if [[ -r /etc/machine.info ]]; then
+            machine_info="$(tr -d '[:space:]' </etc/machine.info)"
+        fi
+        shopt -s nocasematch
+        if [[ "$machine_info" == "olaresone" ]]; then
+            REPO_PATH="/olares-one/"
         else
-            break
+            REPO_PATH="/"
         fi
-    done
-
-    add_master_host_ssh_options master-host "$master_host"
-
-    if [[ "$MASTER_NODE_NAME" ]]; then
-        add_master_host_ssh_options master-node-name "$MASTER_NODE_NAME"
+        shopt -u nocasematch
     fi
+    export REPO_PATH
+}
 
-    if [[ "$MASTER_SSH_USER" ]]; then
-        add_master_host_ssh_options master-ssh-user "$MASTER_SSH_USER"
+resolve_version() {
+    if [[ -z "$VERSION" ]]; then
+        VERSION="#__VERSION__"
+    fi
+    if [[ -z "$VERSION" || "${VERSION:3}" == "VERSION__" ]]; then
+        VERSION=""
+        while [[ -z "$VERSION" ]]; do
+            read_tty "Olares version to join (for example 1.12.7): " VERSION \
+                "the Olares version is unknown; set VERSION to the version running on the master (VERSION=1.12.7), or use the command printed by 'olares-cli node join-command' on the master"
+        done
+    fi
+    if [[ ! "$VERSION" =~ ^[A-Za-z0-9._-]+$ ]]; then
+        fail "invalid Olares version '$VERSION'"
+    fi
+    export VERSION
+}
+
+# detect_arch sets ARCH. It assigns a global rather than echoing, so that a
+# failure here exits the script instead of only the command substitution.
+detect_arch() {
+    local os_arch
+    [[ "$(uname -s)" == "Linux" ]] || fail "only Linux machines can join an Olares cluster"
+    os_arch="$(uname -m)"
+    case "$os_arch" in
+        x86_64|amd64) ARCH="amd64" ;;
+        arm64|aarch64) ARCH="arm64" ;;
+        *) fail "unsupported architecture '$os_arch'" ;;
+    esac
+}
+
+# expected_vendor mirrors the vendor an olares-cli built for this download path
+# reports, so a CLI left over from a different build is never reused.
+expected_vendor() {
+    if [[ "$(basename "$REPO_PATH")" == "olares-one" ]]; then
+        echo "OlaresOne"
     else
-        echo "the environment variable \$MASTER_SSH_USER is not set"
-        echo "the default remote user \"root\" on the master node will be used to authenticate"
-        echo "if this is unexpected, please set it explicitly"
-        confirm
-    fi
-
-    if [[ "$MASTER_SSH_PASSWORD" ]]; then
-        add_master_host_ssh_options master-ssh-password "$MASTER_SSH_PASSWORD"
-    fi
-
-    if [[ "$MASTER_SSH_PRIVATE_KEY_PATH" ]]; then
-        add_master_host_ssh_options master-ssh-private-key-path "$MASTER_SSH_PRIVATE_KEY_PATH"
-    elif [[ ! "$MASTER_SSH_PASSWORD" ]]; then
-        echo "the environment variable \$MASTER_SSH_PRIVATE_KEY_PATH is not set"
-        echo "the default key in the local path /root/.ssh/id_rsa will be used to authenticate to the master"
-        echo "please make sure the key exists and the public key has already been added to the master node"
-        echo "if this is unexpected, please set it explicitly"
-        confirm
-    fi
-
-    if [[ "$MASTER_SSH_PORT" ]]; then
-        add_master_host_ssh_options master-ssh-port "$MASTER_SSH_PORT"
+        echo "main"
     fi
 }
 
-function getmasterinfo() {
-    $sh_c "$INSTALL_OLARES_CLI node masterinfo $MASTER_SSH_OPTIONS" | tee /proc/$$/fd/1
-    if [[ $? -ne 0 ]]; then
-        exit 1
-    fi
-    echo "" > /proc/$$/fd/1
+cli_is_current() {
+    local cli="$1"
+    command_exists "$cli" || return 1
+    [[ "$("$cli" -v 2>/dev/null | awk 'NR==1{print $3}')" == "$VERSION" ]] || return 1
+    [[ "$("$cli" --vendor 2>/dev/null)" == "$(expected_vendor)" ]] || return 1
 }
 
-# check os type and arch
-os_type=$(uname -s)
-os_arch=$(uname -m)
+install_cli() {
+    local target="$1" cdn_url="$2"
+    local release_suffix="" cli_file cli_url
 
-case "$os_arch" in
-    arm64) ARCH=arm64; ;;
-    x86_64) ARCH=amd64; ;;
-    armv7l) ARCH=arm; ;;
-    aarch64) ARCH=arm64; ;;
-    ppc64le) ARCH=ppc64le; ;;
-    s390x) ARCH=s390x; ;;
-    *) echo "error: unsupported arch \"$os_arch\"";
-    exit 1; ;;
-esac
-
-if [[ "$os_type" != "Linux" ]]; then
-    echo "error: only Linux machine can be added to the cluster"
-    exit 1
-fi
-
-# set shell execute command
-user="$(id -un 2>/dev/null || true)"
-sh_c='sh -c'
-if [ "$user" != 'root' ]; then
-    if ! command_exists sudo; then
-        echo "error: the ability to run as root is needed, but the command \"sudo\" can not be found"
-        exit 1
+    if [[ -n "$RELEASE_ID" ]]; then
+        release_suffix=".$RELEASE_ID"
     fi
-    sh_c='sudo -E sh -c'
-fi
 
-if ! command_exists tar; then
-    echo "error: the \"tar\" command is needed to unpack installation files, but can not be found"
-    exit 1
-fi
+    cli_file="olares-cli-v${VERSION}_linux_${ARCH}${release_suffix}.tar.gz"
+    cli_url="${cdn_url}${REPO_PATH}${cli_file}"
 
-export VERSION="#__VERSION__"
+    WORK_DIR="$(mktemp -d)"
+    trap 'rm -rf "$WORK_DIR"' EXIT
 
-if [[ "x${VERSION}" == "x" || "x${VERSION:3}" == "xVERSION__" ]]; then
-    echo "error: Olares version is unspecified, please set the VERSION env var and rerun this script."
-    echo "for example: VERSION=1.12.7-20241124 bash $0"
-    exit 1
-fi
+    echo "Downloading olares-cli ${VERSION} from ${cli_url} ..."
+    curl --fail --show-error --location --retry 3 -o "$WORK_DIR/$cli_file" "$cli_url" ||
+        fail "failed to download olares-cli from $cli_url"
+    gzip -t "$WORK_DIR/$cli_file" 2>/dev/null || fail "the downloaded olares-cli archive is invalid"
+    tar -zxf "$WORK_DIR/$cli_file" -C "$WORK_DIR" olares-cli || fail "failed to unpack olares-cli"
+    run_root install -m 0755 "$WORK_DIR/olares-cli" "$target"
+}
 
-BASE_DIR="$HOME/.olares"
-if [ ! -d $BASE_DIR ]; then
-    mkdir -p $BASE_DIR
-fi
+main() {
+    local cdn_url target base_dir
 
-cdn_url=${OLARES_SYSTEM_CDN_SERVICE}
-if [[ -z "${cdn_url}" ]]; then
-    cdn_url="https://cdn.olares.com"
-fi
+    detect_arch
+    command_exists curl || fail "curl is required to download olares-cli"
+    command_exists tar || fail "tar is required to unpack olares-cli"
+    command_exists gzip || fail "gzip is required to verify olares-cli"
 
-set_master_host_ssh_options
+    detect_repo_path
+    resolve_version
 
-RELEASE_ID="#__RELEASE_ID__"
-if [[ $RELEASE_ID == "" || "${RELEASE_ID:3}" == "RELEASE_ID__" ]]; then
-  RELEASE_ID_SUFFIX=""
-else
-  export RELEASE_ID="$RELEASE_ID"
-  RELEASE_ID_SUFFIX=".$RELEASE_ID"
-fi
-CLI_FILE="olares-cli-v${VERSION}_linux_${ARCH}${RELEASE_ID_SUFFIX}.tar.gz"
-expected_vendor="main"
-if [[ "$(basename "$REPO_PATH")" == "olares-one" ]]; then
-    expected_vendor="OlaresOne"
-fi
-if command_exists olares-cli && [[ "$(olares-cli -v | awk 'NR==1{print $3}')" == "$VERSION" ]] && [[ "$(olares-cli --vendor)" == "$expected_vendor" ]]; then
-    INSTALL_OLARES_CLI=$(which olares-cli)
-    echo "olares-cli already installed and is the expected version"
-    echo ""
-else
-    if [[ ! -f ${CLI_FILE} ]] || ! gzip -t ${CLI_FILE} 2>/dev/null; then
-        CLI_URL="${cdn_url}${REPO_PATH}${CLI_FILE}"
-        echo "downloading Olares installer from ${CLI_URL} ..."
-        echo ""
+    cdn_url="${OLARES_SYSTEM_CDN_SERVICE:-$DEFAULT_CDN_SERVICE}"
+    cdn_url="${cdn_url%/}"
+    export OLARES_SYSTEM_CDN_SERVICE="$cdn_url"
 
-        curl -Lo ${CLI_FILE} ${CLI_URL}
-
-        if [[ $? -ne 0 ]]; then
-            echo "error: failed to download Olares installer"
-            exit 1
-        else
-            echo "Olares installer ${VERSION} download complete!"
-            echo ""
+    if [[ -z "$RELEASE_ID" ]]; then
+        RELEASE_ID="#__RELEASE_ID__"
+        if [[ "${RELEASE_ID:3}" == "RELEASE_ID__" ]]; then
+            RELEASE_ID=""
         fi
     fi
-    INSTALL_OLARES_CLI="/usr/local/bin/olares-cli"
-    echo "unpacking Olares installer to $INSTALL_OLARES_CLI..."
-    echo ""
-    tar -zxf ${CLI_FILE} olares-cli && chmod +x olares-cli
-    $sh_c "mv olares-cli $INSTALL_OLARES_CLI"
+    export RELEASE_ID
 
-    if [[ $? -ne 0 ]]; then
-        echo "error: failed to unpack Olares installer"
-        exit 1
-    fi
-fi
-
-echo "getting master info and checking current machine's eligibility to join the cluster"
-echo ""
-master_olares_version="$( getmasterinfo | grep OlaresVersion | awk '{print $2}' )"
-if [[ ! "$master_olares_version" ]]; then
-    echo "failed to fetch the version of Olares installed on master node"
-    exit 1
-fi
-if [[ "$master_olares_version" != "$VERSION" ]]; then
-    echo "error: The version of Olares installed on the master node ($master_olares_version) does not match the local VERSION ($VERSION)."
-    echo "please ensure the join node and the master node use the same Olares version."
-    exit 1
-fi
-
-PARAMS="--version $master_olares_version --base-dir $BASE_DIR"
-CDN="--cdn-service ${cdn_url}"
-
-if [[ -f $BASE_DIR/.prepared ]]; then
-    if [[ "$(cat $BASE_DIR/.prepared)" == "$master_olares_version" ]]; then
-        echo "file $BASE_DIR/.prepared detected, skip preparing phase"
-        echo ""
+    target="/usr/local/bin/olares-cli"
+    if cli_is_current "$target"; then
+        echo "olares-cli ${VERSION} is already installed, skipping the download"
     else
-        echo "file $BASE_DIR/.prepared detected with version: $(cat $BASE_DIR/.prepared), but the expected version is: $VERSION"
-        echo "if it is left by an unclean uninstallation, please execute a full uninstallation and rerun the installer"
-        exit 1
-    fi
-else
-    echo "running system prechecks ..."
-    echo ""
-    $sh_c "$INSTALL_OLARES_CLI precheck $PARAMS"
-    if [[ $? -ne 0 ]]; then
-        exit 1
+        install_cli "$target" "$cdn_url"
     fi
 
-    echo "downloading installation wizard..."
-    echo ""
-    if [[ ! -z "$RELEASE_ID_SUFFIX" ]]; then
-        DOWNLOAD_WIZARD_RELEASE_ID_PARAM="--release-id $RELEASE_ID"
-    fi
-    $sh_c "$INSTALL_OLARES_CLI download wizard $PARAMS $KUBE_PARAM $CDN $DOWNLOAD_WIZARD_RELEASE_ID_PARAM"
-    if [[ $? -ne 0 ]]; then
-        echo "error: failed to download installation wizard"
-        exit 1
-    fi
+    # Export the base directory rather than passing --base-dir, so that it stays
+    # a default rather than an override.
+    #
+    # The CLI would otherwise fall back to the passwd home of the effective user,
+    # which is root's under sudo. But it must not outrank OLARES_BASE_DIR from
+    # /etc/olares/release either: that file records where this machine's Olares
+    # actually lives, and it has to win. Otherwise a node prepared or installed
+    # by root, joined by a regular user, would be inspected at the wrong path and
+    # look untouched -- and the refusal to join a node that already runs Olares
+    # would silently never trigger. An operator who really does need another
+    # location can still pass --base-dir to `olares-cli node join`.
+    export BASE_DIR="$HOME/.olares"
+    mkdir -p "$BASE_DIR"
 
-    echo "downloading installation packages..."
-    echo ""
-    $sh_c "$INSTALL_OLARES_CLI download component $PARAMS $CDN"
-    if [[ $? -ne 0 ]]; then
-        echo "error: failed to download installation packages"
-        exit 1
-    fi
+    run_root "$target" node join
+}
 
-    echo "preparing installation environment..."
-    echo ""
-    # env 'REGISTRY_MIRRORS' is a docker image cache mirrors, separated by commas
-    if [ x"$REGISTRY_MIRRORS" != x"" ]; then
-        extra="--registry-mirrors $REGISTRY_MIRRORS"
-    fi
-    $sh_c "$INSTALL_OLARES_CLI prepare $PARAMS $extra"
-    if [[ $? -ne 0 ]]; then
-        echo "error: failed to prepare installation environment"
-        exit 1
-    fi
-fi
-
-if [ -f $BASE_DIR/.installed ]; then
-    if grep -q "$VERSION" $BASE_DIR/.installed; then
-        echo "file $BASE_DIR/.installed detected, skip installing"
-        echo ""
-        exit 0
-    else
-        echo "file $BASE_DIR/.installed detected with version: $(cat $BASE_DIR/.installed), but the expected version is: $VERSION"
-        echo "if it is left by an unclean uninstallation, please execute a full uninstallation and rerun the installer"
-        exit 1
-    fi
-fi
-
-echo "installing Kubernetes and joining Olares cluster..."
-echo ""
-$sh_c "$INSTALL_OLARES_CLI node add $PARAMS $MASTER_SSH_OPTIONS"
-
-if [[ $? -ne 0 ]]; then
-    echo "error: failed to install Olares"
-    exit 1
-fi
+main "$@"

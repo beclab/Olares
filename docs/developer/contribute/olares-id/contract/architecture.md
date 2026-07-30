@@ -1,6 +1,10 @@
 ---
 description: "The TerminusDID Contract System is divided into two parts: DID Management and Tag Management."
 outline: [2, 4]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, Contract System, DID Management, Tag Management, smart contract architecture
 ---
 
 # TerminusDID Contract System

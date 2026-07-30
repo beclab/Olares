@@ -196,7 +196,7 @@ func (t *RemoteTask) When(runtime connector.Runtime) (bool, error) {
 
 func (t *RemoteTask) WhenWithRetry(runtime connector.Runtime) (bool, error) {
 	pass := false
-	err := fmt.Errorf("pre-check exec failed after %d retires ", t.Retry)
+	err := fmt.Errorf("prepare check failed after %d attempt(s): ", t.Retry)
 	for i := 0; i < t.Retry; i++ {
 		if res, e := t.When(runtime); e != nil {
 			logger.Errorf("%s %s", runtime.RemoteHost().GetName(), e.Error())
@@ -219,7 +219,10 @@ func (t *RemoteTask) WhenWithRetry(runtime connector.Runtime) (bool, error) {
 }
 
 func (t *RemoteTask) ExecuteWithRetry(runtime connector.Runtime) error {
-	err := fmt.Errorf("[A] %s: %s exec failed after %d retires: ", t.GetName(), t.Name, t.Retry)
+	// The host is not named here: CombineErr attributes every recorded failure
+	// to its host. The first argument used to be t.GetName(), which is the task
+	// name again, so a remote failure never actually named the host at all.
+	err := fmt.Errorf("%s exec failed after %d attempt(s): ", t.Name, t.Retry)
 	for i := 0; i < t.Retry; i++ {
 		e := t.Action.Execute(runtime)
 		if e != nil {

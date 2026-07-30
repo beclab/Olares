@@ -1,5 +1,9 @@
 ---
 description: Understand Olares ID, including its structure, personal ID types, domain categories, and relationship to decentralized identifiers (DIDs).
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares ID, Olares identity, decentralized identifier, personal ID, domain categories
 ---
 # Olares ID
 
@@ -73,4 +77,3 @@ Each Olares ID is bound to a DID. When a user creates an account using Olares, a
 
 * [Create an Olares ID](../../manual/get-started/create-olares-id)
 * [Decentralized identifier (DID)](did.md)
-* [Gmail issuer service](/developer/contribute/olares-id/verifiable-credential/olares.md#gmail-issuer-service)

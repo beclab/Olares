@@ -1,5 +1,9 @@
 ---
 description: Manage Olares clusters with olares-cli. Learn installation paths, environment variables, versioning, and available cluster commands.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, cluster management, olares-cli, installation guide, Olares Home, versioning, command reference
 ---
 # Cluster management
 
@@ -10,6 +14,6 @@ This section covers everything you do with `olares-cli` on the Olares host itsel
 - [Olares Home](olares-home.md): the structure of the base installation directory.
 - [Environment variables](environment-variables.md): the variables you can set to customize the install.
 - [Olares versioning](versioning.md): versioning rules, release types, branch management practices, and upgrade guidelines.
-- [Command reference](cli/olares-cli.md): alphabetical reference for every host-mode command, with syntax, options, and examples.
+- [Command reference](../cli-overview.md): alphabetical reference for every host-mode command, with syntax, options, and examples.
 
 For the user-mode and in-cluster surface of `olares-cli`, including how to drive Olares from an AI agent on your laptop or inside an Olares app, see [Use with AI agents](../cli-install.md).

@@ -1,7 +1,7 @@
 ---
 name: olares-doctor
-version: 1.0.0
-description: "Runtime diagnosis for Olares apps and the system via olares-cli — symptom-to-root-cause routing for an app that won't install, won't start, crashes, is `running` but unreachable, or is slow; plus the `doctor` command tree (images). Use when an app or Olares is misbehaving and you need to find out why; both catalog (market) and dev (chart) apps hand runtime failures here."
+version: 1.0.1
+description: "Runtime diagnosis for Olares apps and the system via olares-cli — find the root cause when an app won't install or start, crashes, cannot pull an image, is `running` but unreachable, or is slow; includes doctor images and thirdleveldomain. Use for diagnosing catalog and dev app failures, not for authoring or editing charts."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -32,7 +32,7 @@ Diagnosing **why** an app or the system misbehaves — not performing lifecycle 
 
 > Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
 
-> **Mental model:** `doctor` answers *"why is this broken and what do I do next?"* It reads evidence, never mutates. The four-skill develop->deploy->debug combo is `chart` + `market` + `olares-shared` + `doctor`.
+> **Mental model:** `doctor` answers *"why is this broken and what do I do next?"* Diagnosis is read-only by default; the only mutation is the explicitly approved `thirdleveldomain --force-dedupe` repair. The four-skill develop->deploy->debug combo is `chart` + `market` + `olares-shared` + `doctor`.
 
 ## Symptom -> reference routing
 
@@ -50,12 +50,12 @@ Pick the row that matches the reported symptom; each reference carries the locat
 
 ## `olares-cli doctor` command tree
 
-`doctor` also hosts read-only diagnostic commands that combine multiple Olares API surfaces. **Source of truth for flags is always `olares-cli doctor <verb> --help`.** They mutate nothing.
+`doctor` also hosts diagnostic commands that combine multiple Olares API surfaces. **Source of truth for flags is always `olares-cli doctor <verb> --help`.** Commands are read-only unless their reference explicitly marks a mutating flag.
 
 | Command | What it does | Reference |
 |---|---|---|
 | `doctor images` | Lists local containerd images annotated with how many workloads reference each one; `--unused` shows zero-reference prune candidates (largest-first, with reclaimable size). Always full-scans the control node; `-n` / `-l` scope the workload reference count. | [references/olares-doctor-image.md](references/olares-doctor-image.md) |
-| `doctor thirdleveldomain` | Audits Application `customDomain.third_level_domain` per user zone (kubeconfig): flags duplicate prefixes and reserved names (`auth` / `desktop` / `wizard`). `--force-dedupe` keeps one duplicate per zone, clears the rest, and clears reserved names. | — |
+| `doctor thirdleveldomain` | Audits Application `customDomain.third_level_domain` per user zone (kubeconfig): flags duplicate prefixes and reserved names (`auth` / `desktop` / `wizard`). `--force-dedupe` writes Application CRs and requires explicit approval. | [references/olares-doctor-thirdleveldomain.md](references/olares-doctor-thirdleveldomain.md) |
 
 ## How doctor gathers evidence (orchestration, not ownership)
 

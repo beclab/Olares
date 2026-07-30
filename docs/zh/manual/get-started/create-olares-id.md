@@ -1,5 +1,9 @@
 ---
 description: 使用 LarePass 移动端应用创建 Olares ID。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 创建 Olares ID, LarePass, 数字身份, 账户注册
 ---
 # 创建 Olares ID
 

@@ -1,5 +1,9 @@
 ---
 description: Developing applications on Olares leverages standard web technologies and containerization.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, develop Olares applications, app development, web technologies, containerization, Olares developer guide
 ---
 # Develop Olares applications
 

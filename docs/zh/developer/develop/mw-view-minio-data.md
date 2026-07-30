@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中安装 MinIO，并通过 MinIO 控制台管理对象存储。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MinIO, 对象存储, MinIO 控制台, 存储桶管理, 连接信息
 ---
 # 查看 MinIO 数据
 

@@ -1,6 +1,10 @@
 ---
 description: Compare Olares installation methods for Linux, macOS, Windows, PVE, and Raspberry Pi, including recommended production and testing options.
 outline: [2,4]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, install Olares, installation methods, Linux, macOS, Windows, PVE, Raspberry Pi, DGX Spark
 ---
 
 # Install Olares

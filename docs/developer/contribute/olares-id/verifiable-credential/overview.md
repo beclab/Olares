@@ -1,5 +1,9 @@
 ---
 description: The purpose of this documentation is to help you understand how to configure various schemas and create Issuers and Verifiers for your own scenarios using
+head:
+  - - meta
+    - name: keywords
+      content: Olares, VC Service, verifiable credential service, Issuer, Verifier, credential schema
 ---
 # VC Service
 

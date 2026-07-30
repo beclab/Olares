@@ -1,6 +1,10 @@
 ---
 description: Use LarePass to access and manage Olares accounts, files, devices, system updates, passwords, integrations, and saved content.
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, client, file sync, password manager, VPN, knowledge
 ---
 
 # LarePass documentation

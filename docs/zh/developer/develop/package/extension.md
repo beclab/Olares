@@ -1,5 +1,9 @@
 ---
 description: 在安装过程中，Olares 使用 OlaresManifest.yaml 中的配置将扩展字段注入到应用程序中。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Helm 扩展, Values 注入, 应用部署, 中间件变量
 ---
 # Olares 对 Helm 进行的字段扩展
 

@@ -73,7 +73,7 @@ Examples:
 	fs.BoolVar(&o.SkipSameVersion, "skip-same-version", false, "skip Chart.yaml <-> OlaresManifest.yaml version match")
 
 	fs.BoolVar(&o.WithRBAC, "with-rbac", false, "enable ServiceAccount RBAC forbidden-rules check (off by default)")
-	fs.BoolVar(&o.WithSecurityContext, "with-security-context", false, "enable non-beclab privileged securityContext check (off by default)")
+	fs.BoolVar(&o.WithSecurityContext, "with-security-context", false, "explicitly enable non-beclab privileged securityContext check (already on by default)")
 
 	return cmd
 }

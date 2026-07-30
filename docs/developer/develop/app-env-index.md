@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how Olares injects app environment variables through declarative .Values.olaresEnv settings and system-provided .Values runtime values.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, app environment variables, .Values.olaresEnv, runtime values, Olares app development
 ---
 
 # Environment variables overview

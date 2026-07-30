@@ -7,7 +7,7 @@ head:
       content: Olares, OnlyOffice, 迁移, 共享应用, Olares 1.12.6
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-07-08"
+doc_updated: "2026-07-27"
 ---
 
 :::warning
@@ -50,6 +50,10 @@ OnlyOffice 目前仅包含 Document Server。Web 界面是官方的 Node.js 演�
    c. 从启动台打开 OnlyOffice，确认文件已在首页显示。
 
 你的 OnlyOffice 文档已迁移到新版应用。
+
+## 清理遗留数据
+
+确认迁移成功且新版应用运行正常后，你可以手动删除遗留应用的数据文件夹以释放磁盘空间。打开**文件管理器**，进入 **Application** > **Data** > **onlyofficev2**，删除该文件夹。
 
 ## 了解更多
 

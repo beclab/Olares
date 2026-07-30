@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 查找有关 Olares 安装、激活、登录过程中的常见问题解答。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 安装问题, 激活问题, 登录问题, 常见问题, 故障排查, 系统要求
 ---
 # Olares 安装、激活与登录常见问题
 

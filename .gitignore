@@ -60,3 +60,7 @@ cli/cmd/ctl/files/scripts/*
 
 # Trellis task-management scaffolding (local workflow state; not product code).
 .trellis/
+
+# Superpowers planning and execution artifacts (local workflow state).
+/.superpowers/
+/docs/superpowers/

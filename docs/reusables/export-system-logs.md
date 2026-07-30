@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, export logs, system logs, troubleshooting, pod logs
 ---
 <!-- Reusable export-system-logs content. Include by named region. -->
 

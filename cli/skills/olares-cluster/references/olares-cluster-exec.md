@@ -72,7 +72,7 @@ olares-cli cluster pod exec user-system-alice/my-pod -c app -it
 | `EROFS` / `EACCES` on writes | read-only or permission-restricted filesystem | can't fix in-container; change the image / spec |
 | `-t/--tty requires an interactive terminal` | `-it` from a non-TTY caller (agent) | drop `-it`, run one-shot with `-- CMD` |
 | command hangs until `[timed out]` | a never-returning command (`watch`, `-f`) under one-shot | bound it (`timeout`, snapshot+poll) or raise `--timeout` |
-| `cluster exec requires Olares >= 1.12.7 ...` | backend older than the ControlHub exec route, or version undetectable | upgrade Olares; if undetectable, log in and `olares-cli profile list --refresh-version` |
+| `cluster exec requires Olares >= 1.12.7 ...` | backend older than the ControlHub exec route, or version undetectable | upgrade Olares; if undetectable, log in and `olares-cli profile list --refresh` |
 | `permission denied: <user> (<role>) may not exec into namespace "..."` | **Permission gate** (above): the target namespace is outside your exec scope (e.g. main account → sub-account) | exec into your own / a system / a `*-shared` namespace, or switch to a profile that owns the target |
 | `cannot verify exec permission: the ControlHub identity ... is empty` | `/capi/app/detail` returned no username | `olares-cli cluster context --refresh`, then retry |
 | `HTTP 403` on dial | gate passed but server still denied (`pods/exec` SAR) | use a profile/role that has exec; server-side audited by ks-apiserver |

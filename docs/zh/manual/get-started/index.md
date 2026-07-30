@@ -1,5 +1,9 @@
 ---
 description: Olares 的上手指南，选择适合个人或团队的使用路径。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 快速上手, Olares 入门, 新用户指南, 安装引导
 ---
 # 快速上手
 嗨！欢迎来到 Olares 的世界！让我们帮你在你喜欢的平台上轻松上手 Olares。

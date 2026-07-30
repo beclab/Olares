@@ -1,5 +1,9 @@
 ---
 description: The Olares Application Chart builds on the standard Helm Chart structure and adds extensions to support Olares-specific information.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Helm Chart, Olares Application Chart, OAC, Chart.yaml, OlaresManifest.yaml, app structure
 ---
 # Olares Application Chart Structure
 

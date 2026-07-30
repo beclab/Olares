@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Understand shared apps in Olares, the Engine Base architecture, differences from v2, and how to migrate legacy shared applications.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Market, shared applications, Engine Base, Ollama, ComfyUI, Dify, app migration
 ---
 
 # Shared applications

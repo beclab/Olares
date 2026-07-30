@@ -20,7 +20,7 @@ import (
 //
 //  1. profile nil                    → return (nil, nil); orchestrator surfaces ErrNoProfile
 //  2. no token stored                → ErrNotLoggedIn
-//  3. stored.InvalidatedAt > 0       → ErrTokenInvalidated  (refresher writes this on /api/refresh 401/403)
+//  3. stored.InvalidatedAt > 0       → ErrTokenInvalidated  (refresher writes this when Authelia rejects the grant)
 //  4. otherwise                      → ResolvedProfile, even if the JWT exp is in the past
 //
 // We deliberately do NOT short-circuit on a stale JWT exp claim: cli/pkg/cmdutil's
@@ -71,8 +71,8 @@ func (e *ErrTokenExpired) Error() string {
 // marked unusable via TokenStore.MarkInvalidated. The grant cannot be
 // recovered locally — the user must re-authenticate.
 //
-// Refresher.Refresh stamps InvalidatedAt when /api/refresh returns 401/403,
-// so subsequent commands skip the network round-trip and surface this CTA
+// Refresher.Refresh stamps InvalidatedAt when Authelia rejects the grant, so
+// subsequent commands skip the network round-trip and surface this CTA
 // directly.
 type ErrTokenInvalidated struct {
 	OlaresID      string
@@ -120,28 +120,43 @@ func (d *DefaultProvider) Resolve(_ context.Context, profile *cliconfig.ProfileC
 // buildResolved is shared between DefaultProvider and any future provider that
 // needs to turn (ProfileConfig, accessToken) into a ResolvedProfile.
 func buildResolved(profile *cliconfig.ProfileConfig, accessToken string, exp time.Time) (*ResolvedProfile, error) {
-	authURL, err := profile.ResolvedAuthURL()
-	if err != nil {
-		return nil, fmt.Errorf("derive auth URL: %w", err)
-	}
 	id, err := olares.ParseID(profile.OlaresID)
 	if err != nil {
 		return nil, err
 	}
+	// rawLoc preserves the stored value verbatim (including "" = never
+	// probed) so the Factory can tell "unknown, please backfill" apart from a
+	// genuine "external". For URL derivation an empty/invalid value falls
+	// back to LocationExternal so the resolved URLs are always usable.
+	rawLoc := olares.Location(profile.Location)
+	derivLoc := rawLoc
+	if !derivLoc.Valid() {
+		derivLoc = olares.LocationExternal
+	}
+	ep := id.Endpoints(derivLoc, profile.LocalURLPrefix)
+
+	authURL := ep.Auth
+	if profile.AuthURLOverride != "" {
+		authURL = profile.AuthURLOverride
+	}
+
 	rp := &ResolvedProfile{
 		Name:               profile.DisplayName(),
 		OlaresID:           profile.OlaresID,
 		UserUID:            profile.UserUID,
 		AuthURL:            authURL,
-		VaultURL:           id.VaultURL(profile.LocalURLPrefix),
-		DesktopURL:         id.DesktopURL(profile.LocalURLPrefix),
-		SettingsURL:        id.SettingsURL(profile.LocalURLPrefix),
-		FilesURL:           id.FilesURL(profile.LocalURLPrefix),
-		MarketURL:          id.MarketURL(profile.LocalURLPrefix),
-		DashboardURL:       id.DashboardURL(profile.LocalURLPrefix),
-		ControlHubURL:      id.ControlHubURL(profile.LocalURLPrefix),
+		VaultURL:           ep.Vault,
+		DesktopURL:         ep.Desktop,
+		SettingsURL:        ep.Settings,
+		FilesURL:           ep.Files,
+		MarketURL:          ep.Market,
+		DashboardURL:       ep.Dashboard,
+		ControlHubURL:      ep.ControlHub,
 		AccessToken:        accessToken,
 		InsecureSkipVerify: profile.InsecureSkipVerify,
+		Location:           rawLoc,
+		LocalURLPrefix:     profile.LocalURLPrefix,
+		AuthURLOverride:    profile.AuthURLOverride,
 	}
 	if !exp.IsZero() {
 		rp.ExpiresAt = exp.Unix()

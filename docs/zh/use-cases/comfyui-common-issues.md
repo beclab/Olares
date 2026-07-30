@@ -187,7 +187,7 @@ main.py: error: unrecognized arguments: --normalvram
 
 某些模型需要登录、访问批准、令牌或手动确认才能下载。这些模型无法通过 ComfyUI Launcher 或 Server Download 直接下载到 Olares。
 
-要解决此问题，请使用以下方法之一找到下载链接。然后手动下载模型并[上传](/use-cases/comfyui-launcher.md#上传本地模型)到 Olares Files 中的正确文件夹。
+要解决此问题，请使用以下方法之一找到下载链接。然后手动下载模型并[上传](/zh/use-cases/comfyui-launcher.md#上传本地模型)到 Olares Files 中的正确文件夹。
 
 ### 方法 1：检查模板备注或 Model Links 部分
 

@@ -89,6 +89,7 @@ type Systems interface {
 	IsMThreadsM1000() bool
 	IsRyzenAIMax() bool
 	IsIntelGPU() bool
+	IsIntelDGPU() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -102,6 +103,7 @@ type Systems interface {
 	GetHostname() string
 	GetOsType() string
 	GetOsArch() string
+	GetOsKernel() string
 	GetUsername() string
 	GetHomeDir() string
 	GetOsVersion() string
@@ -208,6 +210,10 @@ func (s *SystemInfo) GetOsVersion() string {
 	return s.HostInfo.OsVersion
 }
 
+func (s *SystemInfo) GetOsKernel() string {
+	return s.HostInfo.OsKernel
+}
+
 func (s *SystemInfo) GetOsPlatformFamily() string {
 	return s.HostInfo.OsPlatformFamily
 }
@@ -267,10 +273,16 @@ func (s *SystemInfo) IsRyzenAIMax() bool {
 	return s.CpuInfo.IsRyzenAIMax
 }
 
-// IsIntelGPU reports whether the node exposes an Intel GPU (drives the "intel"
-// node mode label)
+// IsIntelGPU reports whether the node exposes an Intel integrated GPU (drives
+// the "intel" unified-memory node mode label)
 func (s *SystemInfo) IsIntelGPU() bool {
 	return s.CpuInfo.IsIntelGPU
+}
+
+// IsIntelDGPU reports whether the node exposes an Intel discrete GPU (drives the
+// "intel-gpu" node mode label)
+func (s *SystemInfo) IsIntelDGPU() bool {
+	return s.CpuInfo.IsIntelDGPU
 }
 
 func (s *SystemInfo) IsAmdGPUOrAPU() bool {
@@ -496,19 +508,20 @@ type CpuInfo struct {
 	IsMThreadsM1000  bool   `json:"is_mthreads_m1000,omitempty"`
 	IsRyzenAIMax     bool   `json:"is_ryzen_ai_max,omitempty"`
 	IsIntelGPU       bool   `json:"is_intel_gpu,omitempty"`
+	IsIntelDGPU      bool   `json:"is_intel_dgpu,omitempty"`
 }
 
 // Not considering the case where AMD GPU and AMD APU coexist.
 func getAmdGPU() (bool, error) {
 	APUOrGPUExists, err := HasAmdAPUOrGPULocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD APU/GPU: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD APU/GPU: %v\n", err)
 		return false, err
 	}
 
 	hasAmdAPU, err := HasAmdAPULocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD APU: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD APU: %v\n", err)
 		return false, err
 	}
 
@@ -560,19 +573,22 @@ func getCpu() *CpuInfo {
 	// check if it has amd igpu
 	hasAmdAPU, err := HasAmdAPULocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD iGPU: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD iGPU: %v\n", err)
 		hasAmdAPU = false
 	}
 
 	// check if it is an AMD Ryzen AI Max APU
 	isRyzenAIMax, err := HasRyzenAIMaxLocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD Ryzen AI Max: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD Ryzen AI Max: %v\n", err)
 		isRyzenAIMax = false
 	}
 
-	// check if it has an Intel GPU
-	isIntelGPU := HasIntelGPULocal()
+	// check if it has an Intel integrated GPU (unified-memory "intel" mode) and
+	// an Intel discrete GPU ("intel-gpu" mode)
+	intelGPUs := IntelGPUsLocal()
+	isIntelGPU := hasIntelIGPU(intelGPUs)
+	isIntelDGPU := hasIntelDGPU(intelGPUs)
 
 	// check if it is mthreads m1000
 	ret.IsMThreadsM1000 = IsMThreadsAIBookM1000Local()
@@ -581,6 +597,7 @@ func getCpu() *CpuInfo {
 	ret.HasAmdAPU = hasAmdAPU
 	ret.IsRyzenAIMax = isRyzenAIMax
 	ret.IsIntelGPU = isIntelGPU
+	ret.IsIntelDGPU = isIntelDGPU
 
 	return ret
 }

@@ -1,7 +1,7 @@
 ---
 name: olares-market
-version: 4.5.1
-description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume, restart apps; catalog, status, chart upload, --watch. Use for Olares app store, my apps, 我的应用, install app, restart app, upload chart."
+version: 4.6.0
+description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume, restart apps; catalog, status, chart upload/download, --watch. Use for Olares app store, my apps, 我的应用, install app, restart app, upload chart, download an app chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -35,16 +35,17 @@ metadata:
 | **catalog** | `list`, `get`, `categories` | no |
 | **runtime** | `status` | no |
 | **lifecycle** | `install`, `upgrade`, `uninstall`, `clone`, `stop`, `resume`, `restart`, `cancel` | yes |
-| **charts** | `upload`, `delete` | yes |
+| **charts** | `upload`, `download`, `delete` | `upload` / `delete` only (`download` reads) |
 
 For verb-specific behavior, **always start with `olares-cli market <verb> --help`**. Then drill into a reference if listed:
 
 | Family | Reference |
 |---|---|
 | catalog + runtime | [references/olares-market-list.md](references/olares-market-list.md) (`list` / `--mine` / `categories` / `get` / `status`) |
-| lifecycle | [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md) (`install` / `upgrade` / `uninstall` / `clone` / `stop` / `resume` / `cancel`). `restart` (POST `/apps/restart`, version-agnostic body `{app_name, source}`) shares the `resume` watch bucket (`running`) and, like `stop`/`resume`, exposes no `-s`; it also backs the auto-restart in `settings network overlay app enable/disable` |
+| lifecycle | [references/olares-market-lifecycle.md](references/olares-market-lifecycle.md) (`install` / `upgrade` / `uninstall` / `clone` / `stop` / `resume` / `cancel`) |
+| `restart` | [references/olares-market-restart.md](references/olares-market-restart.md) (Olares 1.12.6+, implicit source, compute binding, statusTime-baseline watch); it also backs the auto-restart in `settings network overlay app enable/disable` |
 | `--watch` / stuck / errors | [references/olares-market-watch.md](references/olares-market-watch.md) (per-verb watch buckets, foreground windows, stuck-state handling, common errors) |
-| charts | [references/olares-market-charts.md](references/olares-market-charts.md) (`upload` / `delete`) |
+| charts | [references/olares-market-charts.md](references/olares-market-charts.md) (`upload` / `download` / `delete`) |
 
 ## Source resolution (cross-cutting)
 
@@ -53,7 +54,7 @@ The market backend serves multiple "sources" of charts. The CLI resolves which o
 | Source id | What it is | Used by |
 |---|---|---|
 | `market.olares` | Public catalog (read-only browse) | default for `list`, `get`, `categories`, `install`, `upgrade`, `clone`, `status` |
-| `upload` | SPA "Local Sources → Upload" bucket | **hard-coded for `upload` / `delete`** — `-s` is intentionally NOT exposed on those two verbs |
+| `upload` | SPA "Local Sources → Upload" bucket | **hard-coded for `upload` / `delete`** — `-s` is intentionally NOT exposed on those two verbs; **default (overridable) for `download`** |
 | `cli` | Legacy CLI-upload bucket | read-only (`list`, `status`) |
 | `studio` | Devbox / Studio bucket | read-only (`list`, `status`) |
 
@@ -65,7 +66,7 @@ The market backend serves multiple "sources" of charts. The CLI resolves which o
 
 | Flag | Read-only browse | Lifecycle (mutating) | Chart management |
 |---|---|---|---|
-| `-s / --source` | `list`, `categories`, `status`, `get` | `install`, `upgrade`, `clone` | — (hard-coded `upload`) |
+| `-s / --source` | `list`, `categories`, `status`, `get` | `install`, `upgrade`, `clone` | `download` (defaults to `upload`); NOT on `upload` / `delete` (hard-coded `upload`) |
 | `-a / --all-sources` | `list`, `categories`, `status` | — | — |
 
 > **`-s` is NOT on `uninstall` / `stop` / `resume` / `restart`:** they act on whichever per-user state row matches the app name, regardless of source.
@@ -103,12 +104,12 @@ The same `State` can mean different things depending on which mutation is in fli
 - `--watch-timeout D` caps total wall-clock time.
 - One-shot (no `--watch`) returns as soon as the backend ACKs the mutation request — the row may still be `progressing` for minutes.
 - With `--watch`, the CLI blocks until the row reaches a terminal bucket (success OR failure) matching the OpType safety rules above.
-- **Idempotent no-ops — `stop` / `resume` only**: `stop` on an already-`stopped` row and `resume` on an already-`running` row return immediately with success (the watcher recognizes the backend's no-op `opType=""` instead of hanging). `install` / `upgrade` / `clone` have **no** such shortcut — they require the matching `OpType` before declaring success. `restart` reuses the `resume` watch bucket (terminal `running`), so its `--watch` inherits the same idempotent-`running` shortcut.
+- **Idempotent no-ops — `stop` / `resume` only**: `stop` on an already-`stopped` row and `resume` on an already-`running` row return immediately with success (the watcher recognizes the backend's no-op `opType=""` instead of hanging). `install` / `upgrade` / `clone` have **no** such shortcut — they require the matching `OpType` before declaring success. `restart` also has no shortcut: it requires a `running` row with a `statusTime` newer than the pre-request baseline. `upgrade` uses that same baseline for its second landing state — a `stopped` row newer than the baseline, whose verdict then turns on `reason` (see [references/olares-market-watch.md](references/olares-market-watch.md#upgrade-can-settle-on-stopped-and-reason-decides-the-verdict)).
 - `--watch-timeout` / `--watch-interval` are **no-ops without `--watch`** (silently ignored, not rejected). There is no `--watch-iterations` flag on market verbs.
 
 ### Agent watch discipline (don't block on a long watch)
 
-`--watch` defaults to a 15-minute timeout, and progressing states have very long backend TTLs (`downloading` is **30 days** — see the appstate reference). A foreground `--watch` can therefore block far longer than an agent should sit idle. Discipline:
+`--watch` defaults to a 15-minute timeout, and progressing states have much longer backend TTLs (`downloading` is **24h** — see the appstate reference). A foreground `--watch` can therefore block far longer than an agent should sit idle. Discipline:
 
 1. **Use a short foreground window, not the 15m default.** Pass a small `--watch-timeout` sized to the verb (see [references/olares-market-watch.md](references/olares-market-watch.md#per-op-foreground-watch-windows)): ~30s for `stop`/`cancel`/`resume`/`uninstall`, ~1m for the `install` deploy phase / `upgrade` / `clone`.
 2. **Timeout is NOT failure.** A `--watch` that times out only means "not terminal yet". Don't report failure — switch to polling `market status <app> --watch --watch-interval 5s` (or fire-and-forget + periodic `market status <app>`), or hand off to diagnosis.

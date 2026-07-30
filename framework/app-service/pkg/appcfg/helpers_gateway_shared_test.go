@@ -68,6 +68,61 @@ func TestIsGatewaySharedApp(t *testing.T) {
 	})
 }
 
+func TestIsSharedServerApp(t *testing.T) {
+	t.Run("nil app", func(t *testing.T) {
+		if IsSharedServerApp(nil) {
+			t.Fatal("nil app must not be treated as shared server")
+		}
+	})
+
+	t.Run("plain app", func(t *testing.T) {
+		app := &appv1alpha1.Application{
+			Spec: appv1alpha1.ApplicationSpec{
+				Entrances: []appv1alpha1.Entrance{{Name: "web", Host: "svc"}},
+			},
+		}
+		if IsSharedServerApp(app) {
+			t.Fatal("app without shared label or shared entrance must not be a shared server")
+		}
+	})
+
+	t.Run("shared app without v3 label", func(t *testing.T) {
+		app := &appv1alpha1.Application{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{constants.AppSharedLabel: constants.AppSharedTrue},
+			},
+		}
+		if IsV3(app) {
+			t.Fatal("fixture must not carry the v3 label")
+		}
+		if !IsSharedServerApp(app) {
+			t.Fatal("shared app must be a shared server regardless of schema version")
+		}
+	})
+
+	t.Run("shared entrances only", func(t *testing.T) {
+		app := &appv1alpha1.Application{
+			Spec: appv1alpha1.ApplicationSpec{
+				SharedEntrances: []appv1alpha1.Entrance{{Name: "api"}},
+			},
+		}
+		if !IsSharedServerApp(app) {
+			t.Fatal("app exposing shared entrances must be a shared server")
+		}
+	})
+
+	t.Run("cluster scoped app", func(t *testing.T) {
+		app := &appv1alpha1.Application{
+			Spec: appv1alpha1.ApplicationSpec{
+				Settings: map[string]string{"clusterScoped": "true"},
+			},
+		}
+		if !IsSharedServerApp(app) {
+			t.Fatal("cluster scoped app must be a shared server")
+		}
+	})
+}
+
 func TestLogicalHostPattern(t *testing.T) {
 	t.Run("single shared entrance without index suffix", func(t *testing.T) {
 		got, err := LogicalHostPattern("demo1234", 0, 1, "olares.com", true)

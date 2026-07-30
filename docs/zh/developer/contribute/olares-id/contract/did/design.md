@@ -1,6 +1,10 @@
 ---
 description: 每个 DID 同时也是一个 NFT（遵循 ERC-721 标准），id 是通过 keccak256(name) 计算得出的其唯一标识符。
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, DID 设计, ERC-721, 标签系统, Tagger, 智能合约
 ---
 
 # DID

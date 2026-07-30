@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Create an Olares ID using LarePass mobile app. Get started with your Olares account in a few simple steps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, create Olares ID, LarePass, account, sign up
 ---
 
 # Create an Olares ID

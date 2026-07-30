@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 LarePass 移动端创建 Olares ID，几步即可完成。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 创建 Olares ID, 账户注册, 用户名, 移动客户端
 ---
 
 # 在 LarePass 中创建 Olares ID

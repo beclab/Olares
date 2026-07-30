@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to manage overlay gateway in Olares Settings so supported apps can get a dedicated local IP for LAN discovery and local access.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, overlay gateway, LAN discovery, local IP, DLNA, screen mirroring
 ---
 # Manage overlay gateway for applications
 
