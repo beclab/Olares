@@ -51,7 +51,7 @@ To link Open WebUI and Speaches, you must obtain the Speaches shared endpoint UR
 3. Go to the **Text-to-Speech** tab, click the **Model** drop-down list, select the default TTS model `speaches-ai/Kokoro-82M-v1.0-ONNX`, and then note down the model name.
 4. From the **Voice** drop-down list, select a voice for the AI to use when reading responses aloud, and then note down the voice name. For example, `am_eric`.
 
-   ![Text-to-speech generation](/images/manual/use-cases/speaches-tts.png#bordered){width=90%}
+   ![Text-to-speech generation](/images/manual/use-cases/speaches-tts.png#bordered)
 
 ## Configure audio settings in Open WebUI
 
