@@ -19,6 +19,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/routecontrol"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
+	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
@@ -26,6 +27,7 @@ import (
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	kbopv1alphav1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -352,6 +354,24 @@ func main() {
 	case <-webhookReady:
 		setupLog.Info("Webhook server is listening, starting controllers")
 	case <-ictx.Done():
+		os.Exit(1)
+	}
+
+	// Wait until Service Endpoints/EndpointSlice point at this pod before
+	// reconciling stop/scale paths that must pass admission webhooks.
+	kubeClient := kubernetes.NewForConfigOrDie(config)
+	epTimeout, epInterval := webhook.ParseServiceEndpointWaitConfig()
+	if err := webhook.WaitForServiceEndpointReady(
+		ictx,
+		kubeClient,
+		"os-framework",
+		"app-service",
+		webhook.ResolvePodIP(),
+		8433,
+		epTimeout,
+		epInterval,
+	); err != nil {
+		setupLog.Error(err, "Waiting for webhook service endpoint interrupted")
 		os.Exit(1)
 	}
 

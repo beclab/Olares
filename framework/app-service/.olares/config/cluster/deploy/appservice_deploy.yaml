@@ -235,6 +235,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: OLARESD_HOST
           value: master-node:18088
         volumeMounts:

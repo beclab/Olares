@@ -51,6 +51,12 @@ func (p *SuspendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 	err := p.exec(ctx)
 	if err != nil {
 		klog.Errorf("suspend app %s failed %v", p.manager.Spec.AppName, err)
+		if IsRetryableWebhookError(err) {
+			// Keep Stopping so cold-start webhook/Service lag can recover without
+			// permanently landing in StopFailed. TTL Cancel still applies.
+			klog.Infof("suspend app %s hit retryable webhook error, requeue: %v", p.manager.Spec.AppName, err)
+			return nil, NewWaitingInLine(5)
+		}
 		opRecord := makeRecord(p.manager, appsv1.StopFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
 		updateErr := p.updateStatus(ctx, p.manager, appsv1.StopFailed, opRecord, err.Error(), appsv1.StopFailed.String())
 		if updateErr != nil {
