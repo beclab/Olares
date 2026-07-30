@@ -63,7 +63,6 @@ fi
 if [ ! -z $RELEASE_ID ]; then
     sh -c "$SED 's/#__RELEASE_ID__/${RELEASE_ID}/' install.sh"
     sh -c "$SED 's/#__RELEASE_ID__/${RELEASE_ID}/' install.ps1"
-    sh -c "$SED 's/#__RELEASE_ID__/${RELEASE_ID}/' joincluster.sh"
 fi
 
 # replace repo path placeholder in scripts if provided

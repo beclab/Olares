@@ -131,13 +131,8 @@ cli_is_current() {
 
 install_cli() {
     local target="$1" cdn_url="$2"
-    local release_suffix="" cli_file cli_url
-
-    if [[ -n "$RELEASE_ID" ]]; then
-        release_suffix=".$RELEASE_ID"
-    fi
-
-    cli_file="olares-cli-v${VERSION}_linux_${ARCH}${release_suffix}.tar.gz"
+    local cli_file cli_url
+    cli_file="olares-cli-v${VERSION}_linux_${ARCH}.tar.gz"
     cli_url="${cdn_url}${REPO_PATH}${cli_file}"
 
     WORK_DIR="$(mktemp -d)"
@@ -165,14 +160,6 @@ main() {
     cdn_url="${OLARES_SYSTEM_CDN_SERVICE:-$DEFAULT_CDN_SERVICE}"
     cdn_url="${cdn_url%/}"
     export OLARES_SYSTEM_CDN_SERVICE="$cdn_url"
-
-    if [[ -z "$RELEASE_ID" ]]; then
-        RELEASE_ID="#__RELEASE_ID__"
-        if [[ "${RELEASE_ID:3}" == "RELEASE_ID__" ]]; then
-            RELEASE_ID=""
-        fi
-    fi
-    export RELEASE_ID
 
     target="/usr/local/bin/olares-cli"
     if cli_is_current "$target"; then
