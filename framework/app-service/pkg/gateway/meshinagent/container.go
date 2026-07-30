@@ -114,63 +114,111 @@ exec nginx -c /tmp/mesh-in/nginx.conf -g 'daemon off;'
 `, PlaceholderCertDir, jsB64, httpsB64, CertsMountPath, PlaceholderCertDir)
 }
 
-// InitContainerSpec installs OUTPUT REDIRECT rules for Shared gateway HTTP and
-// all outbound HTTPS. mesh-in upstream to gateway:80 must NOT use a blanket
-// uid RETURN so Linkerd (uid 2102) can intercept plaintext after JWT inject.
+// InitContainerSpec installs OUTPUT REDIRECT rules for Shared gateway HTTP/HTTPS.
+// Every REDIRECT must pin -d to the gateway data-plane IP (same constraint for
+// 80 and 443): mesh-in always forwards to the gateway and cannot recover the
+// original destination under REDIRECT when SNI is absent.
 //
 // Exclusions on REDIRECT owners: mesh-in 1651 (no self-loop), linkerd 2102,
 // envoy 1555 (legacy oes coexistence).
+//
+// Resolve failure must not block the workload (exit 0 after retries).
 func InitContainerSpec() corev1.Container {
-	envoyUID := strconv.FormatInt(constants.EnvoyUID, 10)
-	linkerdUID := strconv.FormatInt(constants.LinkerdProxyUID, 10)
+	return InitContainerSpecWithGatewayIPs("")
+}
+
+// InitContainerSpecWithGatewayIPs is InitContainerSpec with an optional
+// comma/space-separated ClusterIP list (admission snapshot). Empty falls back
+// to DNS inside the init script.
+func InitContainerSpecWithGatewayIPs(gatewayIPs string) corev1.Container {
 	root := int64(0)
-	script := fmt.Sprintf(`set -eu
-GW_HOST="${MESH_IN_AGENT_GATEWAY_HOST:-%s}"
-GW_IP=""
-NGINX_UID="%s"
-ENVOY_UID="%s"
-LINKERD_UID="%s"
-HTTP_PORT="%d"
-HTTPS_PORT="%d"
-# Prefer configured host; fall back to legacy app-gateway NS for older installs.
-for h in "$GW_HOST" "app-gateway-data.os-gateway.svc" "app-gateway-data.os-gateway.svc.cluster.local" \
-  "app-gateway-data.app-gateway.svc" "app-gateway-data.app-gateway.svc.cluster.local"; do
-  if command -v getent >/dev/null 2>&1; then
-    GW_IP=$(getent ahosts "$h" 2>/dev/null | awk '{print $1; exit}')
-  fi
-  if [ -z "$GW_IP" ] && command -v nslookup >/dev/null 2>&1; then
-    GW_IP=$(nslookup "$h" 2>/dev/null | awk '/^Address: / { a=$2 } END { print a }')
-  fi
-  if [ -n "$GW_IP" ]; then
-    echo "mesh-in-agent: resolved $h -> $GW_IP"
-    break
-  fi
-done
-if [ -z "$GW_IP" ]; then
-  echo "mesh-in-agent: cannot resolve gateway host $GW_HOST" >&2
-  exit 1
-fi
-OWNER_SKIP="-m owner ! --uid-owner $NGINX_UID -m owner ! --uid-owner $ENVOY_UID -m owner ! --uid-owner $LINKERD_UID"
-echo "mesh-in-agent: redirect $GW_IP:80 -> $HTTP_PORT; *:443 -> $HTTPS_PORT (skip uid $NGINX_UID/$ENVOY_UID/$LINKERD_UID)"
-iptables -t nat -C OUTPUT -p tcp -d "$GW_IP" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT" 2>/dev/null \
-  || iptables -t nat -I OUTPUT 1 -p tcp -d "$GW_IP" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT"
-iptables -t nat -C OUTPUT -p tcp --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT" 2>/dev/null \
-  || iptables -t nat -I OUTPUT 2 -p tcp --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT"
-`, DefaultGatewayHost, NginxWorkerUID(), envoyUID, linkerdUID, HTTPListenPort, HTTPSListenPort)
+	env := []corev1.EnvVar{
+		{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: DefaultGatewayHost},
+	}
+	if ips := strings.TrimSpace(gatewayIPs); ips != "" {
+		env = append(env, corev1.EnvVar{Name: GatewayIPsEnv, Value: ips})
+	}
 
 	return corev1.Container{
 		Name:            InitContainerName,
 		Image:           meshInAgentImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"/bin/sh", "-c", script},
-		Env: []corev1.EnvVar{
-			{Name: "MESH_IN_AGENT_GATEWAY_HOST", Value: DefaultGatewayHost},
-		},
+		Command:         []string{"/bin/sh", "-c", IptablesInitScript()},
+		Env:             env,
 		SecurityContext: &corev1.SecurityContext{
 			RunAsUser:    &root,
 			Capabilities: &corev1.Capabilities{Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"}},
 		},
 	}
+}
+
+// IptablesInitScript renders the mesh-in iptables bootstrap shell (unit-tested).
+func IptablesInitScript() string {
+	envoyUID := strconv.FormatInt(constants.EnvoyUID, 10)
+	linkerdUID := strconv.FormatInt(constants.LinkerdProxyUID, 10)
+	return fmt.Sprintf(`set -u
+GW_HOST="${MESH_IN_AGENT_GATEWAY_HOST:-%s}"
+NGINX_UID="%s"
+ENVOY_UID="%s"
+LINKERD_UID="%s"
+HTTP_PORT="%d"
+HTTPS_PORT="%d"
+GW_IPS=""
+
+normalize_ips() {
+  echo "$1" | tr ',;' '  ' | tr -s '[:space:]' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' '
+}
+
+if [ -n "${MESH_IN_AGENT_GATEWAY_IPS:-}" ]; then
+  GW_IPS=$(normalize_ips "$MESH_IN_AGENT_GATEWAY_IPS")
+  echo "mesh-in-agent: using gateway IPs from env: $GW_IPS"
+fi
+
+if [ -z "$GW_IPS" ]; then
+  attempt=1
+  while [ "$attempt" -le 3 ]; do
+    resolved=""
+    for h in "$GW_HOST" "app-gateway-data.os-gateway.svc.cluster.local"; do
+      ip=""
+      if command -v getent >/dev/null 2>&1; then
+        ip=$(getent ahosts "$h" 2>/dev/null | awk '{print $1; exit}')
+      fi
+      if [ -z "$ip" ] && command -v nslookup >/dev/null 2>&1; then
+        ip=$(nslookup "$h" 2>/dev/null | awk '/^Address: / { a=$2 } END { print a }')
+      fi
+      if [ -n "$ip" ]; then
+        echo "mesh-in-agent: resolved $h -> $ip"
+        resolved="$resolved $ip"
+      fi
+    done
+    GW_IPS=$(normalize_ips "$resolved")
+    if [ -n "$GW_IPS" ]; then
+      break
+    fi
+    echo "mesh-in-agent: gateway resolve attempt $attempt/3 failed" >&2
+    attempt=$((attempt + 1))
+    if [ "$attempt" -le 3 ]; then
+      sleep 1
+    fi
+  done
+fi
+
+if [ -z "$GW_IPS" ]; then
+  echo "mesh-in-agent: cannot resolve gateway host $GW_HOST; continuing without redirects (workload not blocked)" >&2
+  exit 0
+fi
+
+OWNER_SKIP="-m owner ! --uid-owner $NGINX_UID -m owner ! --uid-owner $ENVOY_UID -m owner ! --uid-owner $LINKERD_UID"
+echo "mesh-in-agent: redirect ips=[$GW_IPS] :80->$HTTP_PORT :443->$HTTPS_PORT (skip uid $NGINX_UID/$ENVOY_UID/$LINKERD_UID)"
+for ip in $GW_IPS; do
+  iptables -t nat -C OUTPUT -p tcp -d "$ip" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT" 2>/dev/null \
+    || iptables -t nat -I OUTPUT 1 -p tcp -d "$ip" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT"
+  iptables -t nat -C OUTPUT -p tcp -d "$ip" --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT" 2>/dev/null \
+    || iptables -t nat -I OUTPUT 1 -p tcp -d "$ip" --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT"
+done
+echo "mesh-in-agent: installed OUTPUT redirects:"
+iptables -t nat -S OUTPUT 2>/dev/null || true
+`, DefaultGatewayHost, NginxWorkerUID(), envoyUID, linkerdUID, HTTPListenPort, HTTPSListenPort)
 }
 
 // JWTSecretVolume mounts the caller JWT-SVID Secret issued by callerjwt (name must match AppJWTSecretName).
