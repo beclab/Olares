@@ -86,10 +86,10 @@ func New(config *rest.Config) (*Webhook, error) {
 }
 
 // GetAppConfig get app config by namespace.
-func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared bool, err error) {
+func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared, isSharedApp bool, err error) {
 	list, err := wh.dynamicClient.AppV1alpha1().ApplicationManagers().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, false, false, err
 	}
 	sorted := list.Items
 	sort.Slice(sorted, func(i, j int) bool {
@@ -99,7 +99,7 @@ func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationM
 	ns, err := wh.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 	if err != nil {
 		klog.Error("failed to get namespace, namespace=", namespace, " err=", err)
-		return nil, nil, false, err
+		return nil, nil, false, false, err
 	}
 
 	refAppName := ns.Labels[constants.ApplicationNameLabel]
@@ -115,12 +115,34 @@ func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationM
 				(a.Spec.Type == v1alpha1.App || a.Spec.Type == v1alpha1.Middleware):
 			err = json.Unmarshal([]byte(a.Spec.Config), &appconfig)
 			if err != nil {
-				return nil, nil, false, err
+				return nil, nil, false, false, err
 			}
-			return &a, &appconfig, (sharedNamespace == "true" && a.Spec.AppName == refAppName), nil
+			// isShared keeps the legacy heuristic (ws/upload/oes/mesh-out/appkey).
+			// isSharedApp is the union source for mesh-in only (v2 heuristic + v3 labels).
+			isShared, isSharedApp = resolveSharedFlags(ns, &a)
+			return &a, &appconfig, isShared, isSharedApp, nil
 		}
 	}
-	return nil, nil, false, api.ErrApplicationManagerNotFound
+	return nil, nil, false, false, api.ErrApplicationManagerNotFound
+}
+
+// resolveSharedFlags returns legacy isShared (admission sidecars other than mesh-in)
+// and isSharedApp (mesh-in only). Union: ApplicationManager / Namespace app-shared
+// labels or the v2 ns-shared + name-label heuristic.
+func resolveSharedFlags(ns *corev1.Namespace, mgr *v1alpha1.ApplicationManager) (isShared, isSharedApp bool) {
+	if ns == nil || mgr == nil {
+		return false, false
+	}
+	refAppName := ""
+	if ns.Labels != nil {
+		refAppName = ns.Labels[constants.ApplicationNameLabel]
+	}
+	sharedNamespace := ""
+	if ns.Labels != nil {
+		sharedNamespace = ns.Labels["bytetrade.io/ns-shared"]
+	}
+	legacyShared := sharedNamespace == "true" && mgr.Spec.AppName == refAppName
+	return legacyShared, appcfg.IsShared(mgr) || appcfg.IsShared(ns) || legacyShared
 }
 
 // GetAdmissionRequestBody returns admission request body.
@@ -420,7 +442,8 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		return
 	}
 
-	appMgr, appConfig, isShared, err = wh.GetAppConfig(namespace)
+	var isSharedApp bool
+	appMgr, appConfig, isShared, isSharedApp, err = wh.GetAppConfig(namespace)
 	if err != nil {
 		if errors.Is(err, api.ErrApplicationManagerNotFound) {
 			err = nil
@@ -511,7 +534,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 	}
 
 	var declaresSharedCaller bool
-	injectMeshInAgent, declaresSharedCaller, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isShared)
+	injectMeshInAgent, declaresSharedCaller, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isSharedApp)
 	if err != nil {
 		return false, false, false, false, false, nil, perms, nil, nil, err
 	}
@@ -532,7 +555,7 @@ func applyOutboundMeshInGate(injectMeshInAgent, isEntrancePod, declaresSharedCal
 	return true
 }
 
-func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isShared bool) (inject bool, declaresSharedCaller bool, err error) {
+func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isSharedApp bool) (inject bool, declaresSharedCaller bool, err error) {
 	if appConfig == nil {
 		return false, false, nil
 	}
@@ -548,7 +571,7 @@ func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcf
 		return false, false, err
 	}
 	declaresSharedCaller = meshinagent.DeclaresSharedCaller(app.Spec.Settings)
-	return meshinagent.ShouldInject(app, isShared), declaresSharedCaller, nil
+	return meshinagent.ShouldInject(app, isSharedApp), declaresSharedCaller, nil
 }
 
 // isSharedEntranceWorkload reports whether the pod is a Shared entrance (callee
@@ -917,7 +940,7 @@ func (wh *Webhook) getAppKeySecret(namespace string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	_, appConfig, isShared, err := wh.GetAppConfig(namespace)
+	_, appConfig, isShared, _, err := wh.GetAppConfig(namespace)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return "", "", err
