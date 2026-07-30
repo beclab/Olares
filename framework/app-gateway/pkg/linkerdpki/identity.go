@@ -2,36 +2,48 @@ package linkerdpki
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"log/slog"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func patchIdentityIssuerSecret(ctx context.Context, c client.Client, ns string, mat *Material) error {
-	var sec corev1.Secret
-	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: identityIssuerSecret}, &sec); err != nil {
-		return fmt.Errorf("get linkerd-identity-issuer: %w", err)
-	}
-	if sec.Data == nil {
-		sec.Data = map[string][]byte{}
-	}
-	sec.Data[identityIssuerCrtKey] = mat.IssuerCrt
-	sec.Data[identityIssuerKeyKey] = mat.IssuerKey
-	return c.Update(ctx, &sec)
+func issuerFingerprint(issuerCrt []byte) string {
+	sum := sha256.Sum256(issuerCrt)
+	return fmt.Sprintf("%x", sum)
 }
 
-func restartIdentity(ctx context.Context, c client.Client, ns string) error {
+// ensureIdentityRollout restarts linkerd-identity when its recorded issuer
+// fingerprint does not match the vault. No-op when already matched.
+func ensureIdentityRollout(ctx context.Context, c client.Client, ns string, issuerCrt []byte) error {
 	var dep appsv1.Deployment
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: identityDeployment}, &dep); err != nil {
+		slog.Error("linkerd pki get identity deployment failed",
+			"op", "maintain", "namespace", ns, "error", err)
 		return fmt.Errorf("get linkerd-identity deployment: %w", err)
 	}
+	want := issuerFingerprint(issuerCrt)
+	if dep.Annotations[identityIssuerFingerprintAnnotation] == want {
+		return nil
+	}
+	if dep.Annotations == nil {
+		dep.Annotations = map[string]string{}
+	}
+	dep.Annotations[identityIssuerFingerprintAnnotation] = want
 	if dep.Spec.Template.Annotations == nil {
 		dep.Spec.Template.Annotations = map[string]string{}
 	}
-	dep.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().UTC().Format(time.RFC3339)
-	return c.Update(ctx, &dep)
+	dep.Spec.Template.Annotations[restartedAtAnnotation] = time.Now().UTC().Format(time.RFC3339)
+	if err := c.Update(ctx, &dep); err != nil {
+		slog.Error("linkerd pki identity rollout update failed",
+			"op", "maintain", "namespace", ns, "error", err)
+		return fmt.Errorf("rollout linkerd-identity: %w", err)
+	}
+	slog.Info("linkerd identity rollout scheduled",
+		"op", "maintain", "namespace", ns, "issuer_fingerprint", want)
+	return nil
 }
