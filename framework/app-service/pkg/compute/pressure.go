@@ -64,7 +64,11 @@ func nodeUsedCPU(usage prometheus.NodeResourceUsage) int64 {
 	if util < 0 {
 		util = 0
 	}
-	return int64(float64(usage.CPUCapacity) * util)
+	used := float64(usage.CPUCapacity) * util
+	if used >= math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(used)
 }
 
 func evaluateDimension(resource string, required, used, capacity int64, threshold float64, known bool) DimensionPressure {
