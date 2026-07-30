@@ -26,16 +26,23 @@ const (
 )
 
 const (
-	identityIssuerSecret   = "linkerd-identity-issuer"
-	identityTrustRootsCM   = "linkerd-identity-trust-roots"
+	identityIssuerSecret = "linkerd-identity-issuer"
+	identityTrustRootsCM = "linkerd-identity-trust-roots"
 	// helmResourcePolicyKeep prevents Helm from deleting hook-managed PKI objects when
 	// they are removed from the os-framework chart manifest on brownfield upgrade.
-	helmResourcePolicyKeep = "helm.sh/resource-policy"
+	helmResourcePolicyKeep      = "helm.sh/resource-policy"
 	helmResourcePolicyKeepValue = "keep"
-	identityTrustRootsKey  = "ca-bundle.crt"
-	identityDeployment     = "linkerd-identity"
-	identityIssuerCrtKey   = "crt.pem"
-	identityIssuerKeyKey   = "key.pem"
+	identityTrustRootsKey       = "ca-bundle.crt"
+	identityDeployment          = "linkerd-identity"
+	identityIssuerCrtKey        = "crt.pem"
+	identityIssuerKeyKey        = "key.pem"
+
+	// identityIssuerFingerprintAnnotation records which vault issuer the
+	// linkerd-identity Deployment was last rolled out for. Stored on the
+	// Deployment object (not the pod template) so writing it alone does not
+	// trigger a rollout; restartedAt on the template does.
+	identityIssuerFingerprintAnnotation = "gateway.olares.io/linkerd-issuer-fingerprint"
+	restartedAtAnnotation               = "kubectl.kubernetes.io/restartedAt"
 
 	pkiCACrtKey     = "ca.crt"
 	pkiCAKeyKey     = "ca.key"

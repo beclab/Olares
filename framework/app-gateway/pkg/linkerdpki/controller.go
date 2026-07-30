@@ -135,7 +135,9 @@ func classifyReason(err error) string {
 		return "secret_not_found"
 	case strings.Contains(msg, "rotate"):
 		return "rotate"
-	case strings.Contains(msg, "identity"):
+	case strings.Contains(msg, "sync identity"):
+		return "sync"
+	case strings.Contains(msg, "rollout"), strings.Contains(msg, "identity"):
 		return "identity_restart"
 	case strings.Contains(msg, "patch"), strings.Contains(msg, "update"):
 		return "patch"
