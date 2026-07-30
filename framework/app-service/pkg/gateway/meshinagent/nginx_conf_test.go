@@ -197,8 +197,8 @@ func TestJWTSecretVolumeUsesCallerJWT(t *testing.T) {
 	if v.Secret.SecretName != callerjwt.AppJWTSecretName {
 		t.Fatalf("secretName = %q, want %q", v.Secret.SecretName, callerjwt.AppJWTSecretName)
 	}
-	if v.Secret.Optional == nil || *v.Secret.Optional {
-		t.Fatal("caller-jwt mount must be required (fail closed)")
+	if v.Secret.Optional == nil || !*v.Secret.Optional {
+		t.Fatal("caller-jwt mount must be optional (Pod start); fail-closed via njs authDeny")
 	}
 }
 

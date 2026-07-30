@@ -159,8 +159,8 @@ func TestShouldIssueCallerJWTSharedAppRefAndOptOut(t *testing.T) {
 			},
 		},
 	}
-	if shouldIssueCallerJWT(optOut) {
-		t.Fatal("shared app with mesh-inject opt-out must not issue JWT")
+	if !shouldIssueCallerJWT(optOut) {
+		t.Fatal("shared app always issues JWT even with mesh-inject opt-out")
 	}
 	intentOnly := &appv1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{Name: "agg", Labels: sharedLabels},
@@ -171,8 +171,20 @@ func TestShouldIssueCallerJWTSharedAppRefAndOptOut(t *testing.T) {
 			Settings:  map[string]string{settingNeedsSharedAccess: "true"},
 		},
 	}
-	if shouldIssueCallerJWT(intentOnly) {
-		t.Fatal("shared app with needsSharedAccess alone must not issue JWT")
+	if !shouldIssueCallerJWT(intentOnly) {
+		t.Fatal("shared app always issues JWT even with needsSharedAccess alone")
+	}
+	pureCallee := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "engine", Labels: sharedLabels},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "engine",
+			Appid:     "82f26852",
+			Namespace: "engine-shared",
+			Settings:  map[string]string{settingSharedCallerDecide: "false"},
+		},
+	}
+	if !shouldIssueCallerJWT(pureCallee) {
+		t.Fatal("shared pure callee (decide=false) must still issue JWT")
 	}
 }
 
@@ -416,6 +428,75 @@ func TestIssueRequestFromSharedApplicationUsesAppid(t *testing.T) {
 	}
 	if req.Viewer != "" {
 		t.Fatalf("Viewer = %q, want empty for shared caller", req.Viewer)
+	}
+}
+
+func TestIssuerReconcilerIssuesJWTForSharedPureCallee(t *testing.T) {
+	scheme := testScheme(t)
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "engine",
+			Namespace: "user-system",
+			Labels:    map[string]string{"app.bytetrade.io/app-shared": "true"},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "engine",
+			Appid:     "82f26852",
+			Namespace: "engine-shared",
+			Settings:  map[string]string{settingSharedCallerDecide: "false"},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(app).Build()
+	r := &IssuerReconciler{Client: c, Scheme: scheme, issuer: issuer}
+	if err := r.reconcileApplication(context.Background(), app); err != nil {
+		t.Fatalf("reconcileApplication: %v", err)
+	}
+	secret := &corev1.Secret{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: app.Spec.Namespace,
+		Name:      AppJWTSecretName,
+	}, secret); err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	if len(secret.Data[AppJWTSecretDataKey]) == 0 {
+		t.Fatal("expected non-empty caller-jwt token")
+	}
+}
+
+func TestIssuerReconcilerSharedMissingAppidErrors(t *testing.T) {
+	scheme := testScheme(t)
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "engine",
+			Namespace: "user-system",
+			Labels:    map[string]string{"app.bytetrade.io/app-shared": "true"},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "engine",
+			Namespace: "engine-shared",
+			Settings:  map[string]string{settingSharedCallerDecide: "false"},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(app).Build()
+	r := &IssuerReconciler{Client: c, Scheme: scheme, issuer: issuer}
+	if err := r.reconcileApplication(context.Background(), app); err == nil {
+		t.Fatal("expected error when shared app has empty spec.appid")
 	}
 }
 
