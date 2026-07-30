@@ -45,3 +45,20 @@ Olares 上的独立模型作为与客户端应用分开的服务运行。要连�
 当客户端连接另一个 Olares 应用时，会使用该应用的端点作为网络地址。如果应用提供多个端点，请选择与客户端所需功能或协议相匹配的端点。
 :::
 <!-- #endregion app-endpoint-overview -->
+
+<!-- #region get-model-connection-details-anthropic -->
+1. 从启动台打开模型应用。其模型控制台会自动打开。
+2. 等待**模型**显示**就绪**，且**引擎**显示**运行中**。
+
+   ![Qwen3.6-27B 模型控制台](/images/zh/manual/use-cases/qwen3.6-27b-model-console-anthropic.png#bordered)
+
+3. 在**模型**部分，按显示内容原样复制**模型名称**。
+4. 在**引擎**部分：
+
+   a. **连接来源**：选择 **Olares 内应用**。
+
+   b. **API 格式**：选择 **Anthropic-Compatible**。
+
+   c.按显示内容原样复制 **Base URL** 地址。
+
+<!-- #endregion get-model-connection-details-anthropic -->

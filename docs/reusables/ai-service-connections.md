@@ -45,3 +45,20 @@ Deploy qwen3.5:9b on my Olares using the Ollama Engine Base.
 When a client connects to another Olares app, it uses that app's endpoint as the network address. If the app exposes multiple endpoints, choose the one that matches the feature or protocol the client needs.
 :::
 <!-- #endregion app-endpoint-overview -->
+
+<!-- #region get-model-connection-details-anthropic -->
+1. Open the model app from Launchpad. Its Model Console opens automatically.
+2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
+
+   ![Qwen3.6-27B model console](/images/manual/use-cases/qwen3.6-27b-model-console-anthropic.png#bordered)
+
+3. Under **Model**, copy the **Model name** exactly as shown.
+4. Under **Engine**:
+
+   a. **Connection source**: Select **Apps in Olares**. 
+   
+   b. **API format**: Select **Anthropic-Compatible**.
+   
+   c. Copy the provided **Base URL** exactly as shown.
+
+<!-- #endregion get-model-connection-details-anthropic -->

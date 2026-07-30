@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
-app_version: "0.1.3"
-doc_version: "1.0"
-doc_updated: "2026-05-19"
+app_version: "0.1.13"
+doc_version: "2.0"
+doc_updated: "2026-07-29"
 ---
 
 :::warning
@@ -28,19 +28,22 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 
 ## 前提条件
 
+开始前，你需要：
 - 具有足够磁盘空间和内存的 Olares 设备。
 - 如果你计划使用远程模型连接，需要活跃的 Claude Pro 或 Max 订阅。
-- 如果你计划使用本地执行，需要在 Olares 设备上运行一个针对编码优化的本地模型。
+- 如果你计划使用本地执行，需要在 Olares 设备上运行一个针对编码优化的本地模型。本教程使用以下模型：
 
-   你可以使用以下方法之一安装本地模型：
-   - **Ollama 应用**：一个托管多个模型的应用。确保 [Ollama 已安装](ollama.md) 并至少下载了一个模型，例如 `qwen3-coder:30b`。
-   - **单模型应用**：将特定模型作为独立应用运行。确保从 Market 安装了模型应用且模型已完全下载。本指南使用 **Qwen3-Coder 30B (Ollama)**。
+   | 模型类型 | 模型 | 获取方式 |
+   | :--- | :--- | :--- |
+   | 聊天 | Qwen3.6-27B (llama.cpp) | 从应用市场安装 |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Claude Code
 
 1. 打开 Market，并搜索 "Claude Code"。
    
-   ![Claude Code](/images/manual/use-cases/claude-code.png#bordered)
+   ![Claude Code](/images/manual/use-cases/claude-code1.png#bordered)
 
 2. 点击 **Get**，然后点击 **Install**。等待安装完成。
 
@@ -74,29 +77,20 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 
 ### 使用本地模型连接
 
-使用此方法在本地运行 Claude Code。此示例使用模型应用 **Qwen3-Coder 30B (Ollama)**。
+使用此方法在本地运行 Claude Code。此示例使用模型应用 **Qwen3.6-27B (llama.cpp)**。
 
-1. 从 Market 安装模型应用 **Qwen3-Coder 30B (Ollama)**。
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-   ![Qwen3-Coder 30B (Ollama)](/images/manual/use-cases/qwen3-coder-30b.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-anthropic-->
 
-2. 从 Launchpad 打开模型应用并等待下载完成。
-3. 记下页面上显示的精确模型名称。例如，`qwen3-coder:30b`。
+5. 打开 Olares Settings，前往 **Applications** > **Claude Code** > **Manage environment variables**。
+6. 设置以下环境变量：
 
-   ![模型应用页面上的模型名称](/images/manual/use-cases/qwen3-coder-model-name.png#bordered){width=50%}
+   - **ANTHROPIC_AUTH_TOKEN**: 输入任何文本，例如 `local`。模型应用不会验证此值，但 Claude Code 需要一个填充的认证令牌。
+   - **ANTHROPIC_BASE_URL**: 输入从模型控制台复制的 **Base URL**。例如，`https://e46e044d.laresprime.olares.com`。
+   - **ANTHROPIC_MODEL**: 输入从模型控制台复制的**模型名称**。例如，`unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
 
-4. 打开 Settings，然后前往 **Applications** > **Qwen3-Coder 30B (Ollama)** > **Shared entrances**。
-
-   ![Settings 中的模型应用端点](/images/manual/use-cases/qwen3-coder-30b-endpoint.png#bordered){width=70%}
-
-5. 点击 **Qwen3-Coder 30B**，然后记下端点 URL。例如，`http://609c5d0c0.shared.olares.com`。
-6. 前往 **Applications** > **Claude Code** > **Manage environment variables**，然后指定以下环境变量：
-
-   - **ANTHROPIC_AUTH_TOKEN**: 输入任何文本，例如 `ollama`。模型应用不会验证此值，但 Claude Code 需要一个填充的认证令牌。
-   - **ANTHROPIC_BASE_URL**: 输入模型应用的端点 URL。例如，`http://609c5d0c0.shared.olares.com`。
-   - **ANTHROPIC_MODEL**: 输入你之前记下的模型名称。例如，`qwen3-coder:30b`。
-
-   ![Claude Code 环境变量设置](/images/manual/use-cases/claude-env-var.png#bordered){width=70%}  
+   ![Claude Code 环境变量设置](/images/manual/use-cases/claude-env-var1.png#bordered){width=70%}  
 
 7. 点击 **Apply**。等待约 10 秒让容器重启。
 8. 从 Launchpad 打开 Claude Code CLI，然后在终端中输入 `claude` 以启动你的会话。
@@ -115,16 +109,18 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
    claude
    ```
 
-2. 查看 **Accessing workspace: /opt/data** 安全提示，然后选择 **Yes, I trust this folder** 以授予 Claude Code 读取、编辑和执行权限。
-3. （可选）在 TUI 中，运行 `/clear` 命令以使用空上下文开始新会话。
+2. 选择最适合你终端的文本样式，例如 dark mode。
+3. 查看安全提示，然后按 **Enter** 继续。
+4. 查看 **Accessing workspace: /opt/data** 安全提示，然后选择 **Yes, I trust this folder** 以授予 Claude Code 读取、编辑和执行权限。
+5. （可选）在 TUI 中，运行 `/clear` 命令以使用空上下文开始新会话。
 
-   ![Claude Code 首次聊天](/images/manual/use-cases/claude-first-chat.png#bordered)
+   ![Claude Code 首次聊天](/images/manual/use-cases/claude-first-chat1.png#bordered)
 
    :::info 在模式之间切换
    如果你在远程和本地模型之间切换，先在 Claude Code 中运行 `/clear` 再开始新会话。这可以防止先前模型的上下文影响新工作空间。
    :::
 
-4. 用自然语言描述你的任务。例如：
+6. 用自然语言描述你的任务。例如：
 
    ```text
    List the files in the current directory
@@ -132,9 +128,9 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 
    助手自动执行必要的内部命令来探索目录，并返回你的文件的详细列表。
 
-   ![Claude Code 首次聊天结果](/images/manual/use-cases/claude-first-chat-result.png#bordered)
+   ![Claude Code 首次聊天结果](/images/manual/use-cases/claude-first-chat-result1.png#bordered)
 
-5. 查看结果。
+7. 查看结果。
 
 ### 构建全栈项目
 
