@@ -30,7 +30,6 @@ In this guide, you will learn how to:
 ## Prerequisites
 
 - An Olares device that is set up and running.
-- A browser to open Excalidraw.
 
 ## Install Excalidraw
 

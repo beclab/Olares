@@ -457,5 +457,4 @@ Open Notebook 根据知识库中的匹配内容返回综合答案。
 
 - [Ollama](ollama.md)：在 Olares 上下载并运行本地语言模型。
 - [Speaches](speaches.md)：设置本地语音转文本和文本转语音服务。
-- [使用 Excalidraw 创建手绘风格图表](excalidraw.md)：在 Olares 上绘制线框图、流程图和图表。
 - [管理 GPU 资源](/zh/manual/olares/settings/gpu-resource.md)：为本地 AI 应用分配 GPU 资源。

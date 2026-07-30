@@ -453,5 +453,4 @@ If the error message lists supported voice IDs, update the speaker profile with 
 
 - [Ollama](ollama.md): Download and run local language models on Olares.
 - [Speaches](speaches.md): Set up local speech-to-text and text-to-speech services.
-- [Create hand-drawn diagrams with Excalidraw](excalidraw.md): Sketch wireframes, flowcharts, and diagrams on Olares.
 - [Manage accelerator resources](/manual/olares/settings/gpu-resource.md): Allocate accelerator resources for local AI apps.

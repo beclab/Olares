@@ -39,18 +39,14 @@ In this guide, you will learn how to:
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
-
-:::info
 FlareSolverr runs as a background service, so it does not appear on Launchpad.
 
-You can find it in **Settings** > **Applications** or **Market** > **My Olares**.
-:::
 
-In **Settings** > **Applications**, look for FlareSolverr in the app list.
+In **Settings** > **Applications**, look for FlareSolverr in the app list to confirm it is running.
 
 ![FlareSolverr in Settings](/images/manual/use-cases/flaresolverr-installed-in-settings.png#bordered){width=60%}
 
-Or open **Market** > **My Olares** to see FlareSolverr among your installed apps.
+Or open **Market** > **My Olares** to see FlareSolverr among your installed apps to confirm it is running.
 
 ![FlareSolverr in My Olares](/images/manual/use-cases/flaresolverr-installed-in-market.png#bordered){width=60%}
 

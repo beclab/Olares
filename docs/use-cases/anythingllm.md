@@ -121,5 +121,4 @@ Ask questions about your documents.
 
 ## Learn more
 - [Host local models with Engine Base apps](llm-base-apps.md)
-- [Build a local AI agent with LobeHub](lobechat.md): Create specialized AI agents with Ollama on Olares.
 - [Official AnythingLLM documentation](https://docs.anythingllm.com/)

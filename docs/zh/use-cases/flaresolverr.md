@@ -43,18 +43,13 @@ FlareSolverr 是一个代理服务器，可以代替 Prowlarr 等应用解决 Cl
 
 2. 点击 **获取**，然后点击 **安装**，等待安装完成。
 
-
-:::info
 FlareSolverr 作为后台服务运行，因此不会出现在 Launchpad 上。
 
-你可以在 **Settings** > **Applications** 或 **Market** > **My Olares** 中找到它。
-:::
-
-在 **Settings** > **Applications** 的应用列表中找到 FlareSolverr。
+在 **Settings** > **Applications** 的应用列表中找到 FlareSolverr，确认它正在运行。
 
 ![Settings 中的 FlareSolverr](/images/manual/use-cases/flaresolverr-installed-in-settings.png#bordered){width=60%}
 
-或者在 **Market** > **My Olares** 的已安装应用列表中查看 FlareSolverr。
+或者在 **Market** > **My Olares** 的已安装应用列表中查看 FlareSolverr，确认它正在运行。
 
 ![My Olares 中的 FlareSolverr](/images/manual/use-cases/flaresolverr-installed-in-market.png#bordered){width=60%}
 
