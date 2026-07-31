@@ -17,6 +17,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/podhealth"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -629,11 +630,11 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 		return true, nil
 	}
 	timer := time.NewTicker(1 * time.Second)
-	// unrecoverableSince records when an unrecoverable pod condition was first
-	// observed while the app is still not started. Once it persists past
-	// unrecoverableGrace, startup fails fast instead of polling until the outer
-	// installing TTL expires (which left CrashLoopBackOff apps stuck ~30m).
-	var unrecoverableSince time.Time
+	// health fast-fails startup once a pod hits a condition that will not
+	// self-heal and it persists past that signal's grace, instead of polling
+	// until the outer installing TTL expires (which left CrashLoopBackOff apps
+	// stuck ~30m).
+	var health podhealth.GraceTracker
 	for {
 		select {
 		case <-timer.C:
@@ -651,16 +652,15 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 				return false, err
 			}
 
-			if reason, ok := h.hasUnrecoverablePod(h.ctx); ok {
-				if unrecoverableSince.IsZero() {
-					unrecoverableSince = time.Now()
-					klog.Warningf("app %s has unrecoverable pod (%s); will fail startup if it persists for %s",
-						h.app.AppName, reason, unrecoverableGrace)
-				} else if time.Since(unrecoverableSince) > unrecoverableGrace {
-					return false, fmt.Errorf("app %s failed to start up: %s", h.app.AppName, reason)
+			if in, ok := h.podHealthInput(); ok {
+				sig, fatal, started := health.Observe(podhealth.Run(in))
+				if fatal {
+					return false, fmt.Errorf("app %s failed to start up: %s", h.app.AppName, sig.Message)
 				}
-			} else {
-				unrecoverableSince = time.Time{}
+				if started {
+					klog.Warningf("app %s pod-health signal (%s: %s); will fail startup if it persists for %s",
+						h.app.AppName, sig.Reason, sig.Message, sig.Grace)
+				}
 			}
 
 		case <-h.ctx.Done():
@@ -768,8 +768,6 @@ func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, er
 	if len(pods) == 0 {
 		return false, errors.New("no pod found")
 	}
-	startedPods := 0
-	totalPods := len(pods)
 	for _, pod := range pods {
 		creationTime := pod.GetCreationTimestamp()
 		pendingDuration := time.Since(creationTime.Time)
@@ -790,27 +788,8 @@ func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, er
 			}
 			return false, errcode.ErrPodPending
 		}
-		totalContainers := len(pod.Spec.Containers)
-		startedContainers := 0
-		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
-			container := pod.Status.ContainerStatuses[i]
-			if *container.Started {
-				startedContainers++
-				continue
-			}
-			// job-created pods with completed status are also treated as started
-			if container.State.Terminated != nil && container.State.Terminated.Reason == "Completed" {
-				startedContainers++
-			}
-		}
-		if startedContainers == totalContainers {
-			startedPods++
-		}
 	}
-	if totalPods == startedPods {
-		return true, nil
-	}
-	return false, nil
+	return podhealth.AllPodsStarted(pods), nil
 }
 
 func (h *HelmOps) getPendingKind(pod *corev1.Pod) (string, error) {
@@ -1018,11 +997,6 @@ func (h *HelmOps) WaitForLaunch() (bool, error) {
 			entranceCount++
 		}
 	}
-	// unrecoverableSince records when an unrecoverable pod condition was first
-	// observed while the entrances are still unreachable. Once it persists past
-	// unrecoverableGrace, the launch fails fast instead of polling until the
-	// outer initializing TTL (60m) expires.
-	var unrecoverableSince time.Time
 	for {
 		select {
 		case <-timer.C:
@@ -1041,18 +1015,6 @@ func (h *HelmOps) WaitForLaunch() (bool, error) {
 				return true, nil
 			}
 
-			if reason, ok := h.hasUnrecoverablePod(h.ctx); ok {
-				if unrecoverableSince.IsZero() {
-					unrecoverableSince = time.Now()
-					klog.Warningf("app %s has unrecoverable pod (%s); will fail launch if it persists for %s",
-						h.app.AppName, reason, unrecoverableGrace)
-				} else if time.Since(unrecoverableSince) > unrecoverableGrace {
-					return false, fmt.Errorf("app %s failed to launch: %s", h.app.AppName, reason)
-				}
-			} else {
-				unrecoverableSince = time.Time{}
-			}
-
 		case <-h.ctx.Done():
 			klog.Infof("Waiting for launch canceled appName=%s", h.app.AppName)
 			return false, h.ctx.Err()
@@ -1060,69 +1022,29 @@ func (h *HelmOps) WaitForLaunch() (bool, error) {
 	}
 }
 
-const (
-	// unrecoverableGrace is how long an unrecoverable pod condition must
-	// persist (while entrances remain unreachable) before WaitForLaunch
-	// gives up. It tolerates transient crashes during normal startup.
-	unrecoverableGrace = 5 * time.Minute
-	// crashLoopRestartThreshold is the minimum container restart count for a
-	// CrashLoopBackOff pod to be treated as unrecoverable. CrashLoopBackOff
-	// backoff caps at 300s, so >=5 restarts means several minutes of failing.
-	crashLoopRestartThreshold = 5
-)
-
-// hasUnrecoverablePod inspects pods in the app namespace and reports whether
-// any is in a state that will not heal on its own. It returns a human-readable
-// reason and true when such a pod is found.
-//
-// Two tiers are considered:
-//   - hard errors that never self-heal: ImagePullBackOff, ErrImagePull,
-//     InvalidImageName, CreateContainerConfigError, and Unschedulable pods.
-//   - CrashLoopBackOff with RestartCount >= crashLoopRestartThreshold, which
-//     covers a dependency that keeps crashing (e.g. due to a permission error)
-//     while avoiding false positives on slow-starting apps.
-func (h *HelmOps) hasUnrecoverablePod(ctx context.Context) (string, bool) {
-	pods, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(h.app.Namespace).List(ctx, metav1.ListOptions{})
+// podHealthInput lists the pods in the app namespace and returns a
+// podhealth.Input wired with a clientset-backed event fetcher for the
+// mount-failure checker. ok is false (and the caller skips this tick's health
+// check) when listing fails, so a transient API error neither trips a false
+// positive nor resets an in-flight grace window.
+func (h *HelmOps) podHealthInput() (podhealth.Input, bool) {
+	pods, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(h.app.Namespace).List(h.ctx, metav1.ListOptions{})
 	if err != nil {
-		klog.Warningf("list pods in namespace %s failed, skip unrecoverable check: %v", h.app.Namespace, err)
-		return "", false
+		klog.Warningf("list pods in namespace %s failed, skip pod-health check: %v", h.app.Namespace, err)
+		return podhealth.Input{}, false
 	}
-
-	hardErrorReasons := map[string]bool{
-		"ImagePullBackOff":           true,
-		"ErrImagePull":               true,
-		"InvalidImageName":           true,
-		"CreateContainerConfigError": true,
-	}
-
-	for i := range pods.Items {
-		pod := &pods.Items[i]
-
-		for _, cond := range pod.Status.Conditions {
-			if cond.Type == corev1.PodScheduled && cond.Status == corev1.ConditionFalse &&
-				cond.Reason == corev1.PodReasonUnschedulable {
-				return fmt.Sprintf("pod %s unschedulable: %s", pod.Name, cond.Message), true
+	return podhealth.Input{
+		Pods: pods.Items,
+		FetchEvents: func(pod corev1.Pod) ([]corev1.Event, error) {
+			fieldSelector := fields.OneTermEqualSelector("involvedObject.name", pod.Name).String()
+			events, err := h.client.KubeClient.Kubernetes().CoreV1().Events(pod.Namespace).
+				List(h.ctx, metav1.ListOptions{FieldSelector: fieldSelector})
+			if err != nil {
+				return nil, err
 			}
-		}
-
-		statuses := append([]corev1.ContainerStatus{}, pod.Status.InitContainerStatuses...)
-		statuses = append(statuses, pod.Status.ContainerStatuses...)
-		for _, cs := range statuses {
-			waiting := cs.State.Waiting
-			if waiting == nil {
-				continue
-			}
-			if hardErrorReasons[waiting.Reason] {
-				return fmt.Sprintf("pod %s container %s: %s (%s)", pod.Name, cs.Name, waiting.Reason, waiting.Message), true
-			}
-			if waiting.Reason == "CrashLoopBackOff" && cs.RestartCount >= crashLoopRestartThreshold {
-				return fmt.Sprintf("pod %s container %s: CrashLoopBackOff after %d restarts (%s)",
-					pod.Name, cs.Name, cs.RestartCount, waiting.Message), true
-			}
-		}
-	}
-
-	return "", false
+			return events.Items, nil
+		},
+	}, true
 }
 
 func (h *HelmOps) App() *appcfg.ApplicationConfig {
