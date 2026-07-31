@@ -52,7 +52,7 @@ This example checks the latest GitHub release for n8n and extracts the fields yo
 
 ### Create the workflow
 
-1. On the editor page, click **Start from scratch**.
+1. Click **Build a workflow** to open the editor page.
 2. Click **Add first step**, then in the right panel, select **Trigger manually**.
 3. Click <i class="material-symbols-outlined">add</i> after the Manual Trigger node, search for "HTTP Request", and add it.
 4. In the HTTP Request node, go to the **Parameters** tab and set:
@@ -133,14 +133,13 @@ If you have not created a NocoDB base and table yet, follow [Build a self-hosted
    | `release_notes` | URL |
    | `is_prerelease` | Single line text |
 
-3. Get the NocoDB endpoint:
+### Get NocoDB connection details
 
-   a. Go to Olares **Settings** > **Applications** > **NocoDB** > **Entrances**.
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-   b. Select **NocoDB**.
-
-   c. Ensure **Authentication level** is set to **Internal**, then copy the **Endpoint** URL.
-
+1. Go to Olares **Settings** > **Applications** > **NocoDB** > **Entrances**.
+2. Select **NocoDB**.
+3. Copy the **Endpoint** URL.
 4. In NocoDB, go to **Account Settings** > **API Tokens**, create a token, and copy it.
 
 :::warning Keep your API token secure
@@ -186,11 +185,15 @@ Webhook workflows let external services send events to n8n in real time. This ex
 
 You can only add a GitHub webhook to a repository where you have admin access. To monitor a public repository you do not control, such as `n8n-io/n8n`, use the scheduled HTTP Request workflow earlier in this guide.
 
-:::warning Public access required
-GitHub must be able to reach the n8n webhook from the internet. Go to Olares **Settings** > **Applications** > **n8n** > **Entrances**, select **n8n**, and set **Authentication level** to **Public** before creating the webhook. This exposes the n8n entrance publicly. Keep your n8n account password strong, and switch the entrance back to **Internal** when you no longer need external webhooks.
+:::warning Public entrance security risk
+You can set the n8n entrance to **Public** to use webhooks without LarePass VPN. However, this exposes the n8n entrance to the internet. For better security, keep the default **Internal** authentication level and use LarePass VPN whenever possible.
 :::
 
 ### Create the webhook workflow
+
+:::info Enable LarePass VPN before listening
+When the n8n entrance uses the default **Internal** authentication level, enable LarePass VPN in the desktop client before clicking **Listen for test event**. Keep the VPN connected while configuring and testing the webhook.
+:::
 
 1. In n8n, click <i class="material-symbols-outlined">add</i> in the upper-left corner, then select **Workflow**.
 2. Click **Add first step**, then in the right panel, select **On webhook call**.
@@ -298,11 +301,12 @@ Check the following items:
 - When testing, make sure n8n is still waiting after you click **Listen for test event**.
 - After publishing, make sure the external service uses the **Production URL**, not the test URL.
 - If the external service provides delivery logs, check the response status there.
-- If the external service still cannot reach n8n, open **Settings** > **Applications** > **n8n** > **Entrances** > **n8n** and check **Authentication level**. Use **Public** only when needed because it exposes the n8n entrance to the internet.
+- If the n8n entrance uses **Internal**, enable LarePass VPN on the computer where you are using n8n and keep it connected while testing.
+- If the webhook still fails, you can set the entrance to **Public**. This exposes n8n to the internet, so use this option only if you accept the security risk.
 
 ## Learn more
 
 - [n8n workflow documentation](https://docs.n8n.io/workflows/): Learn how workflows, nodes, templates, executions, and sharing work in n8n.
 - [n8n integrations documentation](https://docs.n8n.io/integrations/): Browse built-in nodes, community nodes, credential-only nodes, and generic API integration options.
 - [HTTP Request node](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.httprequest/): Configure REST API calls or import a `curl` command into n8n.
-- [Build a self-hosted spreadsheet database with NocoDB](nocodb.md): Create tables, import data, configure email, and manage team access.
+- [NocoDB on Olares](nocodb.md): Create tables, import data, configure email, and manage team access.
