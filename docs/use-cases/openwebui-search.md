@@ -56,7 +56,7 @@ To link Open WebUI with your background services, you need to locate the connect
 Apply the details you retrieved to the Open WebUI configuration panel.
 
 ### Set up document embeddings
-<!--Note this section is reused in openwebui-knowledge, from line 61 to 69-->
+<!--Note this section is reused in openwebui-knowledge, from line 63 to 72-->
 
 Configure the embedding model so Open WebUI can convert text into vector representations for retrieval.
 

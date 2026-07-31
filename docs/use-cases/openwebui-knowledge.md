@@ -6,9 +6,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Open WebUI, knowledge base, RAG, document upload, PDF
-app_version: "1.0.20"
-doc_version: "1.0"
-doc_updated: "2026-05-14"
+app_version: "1.0.38"
+doc_version: "2.0"
+doc_updated: "2026-07-31"
 ---
 
 # Chat with documents and knowledge bases in Open WebUI
@@ -30,19 +30,24 @@ In this guide, you will learn how to:
 
 Before you begin, ensure you have the following in place:
 
-- [Open WebUI](openwebui.md) installed and configured with at least one active model backend.
-- An embedding model application installed, such as **Qwen3 Embedding 0.6B (Ollama)**.
+- [Open WebUI](openwebui.md) installed and configured with at least one connected local model.
 - Administrator privileges for the Open WebUI instance.
+- The following model:
+   | Model type | Model | How to get it |
+   | :--- | :--- | :--- |
+   | Embedding | EmbeddingGemma | Install from Market |
 
 ## Configure embedding model
 
 Document understanding requires an embedding model to convert text into vector data. To configure Open WebUI, you must first retrieve your embedding model details.
 
-<!--@include: ./openwebui-search.md{40,46}-->
+### Get embedding model details
+
+<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
 
 ### Apply embedding settings in Open WebUI
 
-<!--@include: ./openwebui-search.md{62,69}-->
+<!--@include: ./openwebui-search.md{63,72}-->
 
 ## Analyze individual documents
 
@@ -52,34 +57,34 @@ Attach documents directly to a chat session for one-off analysis and summarizati
 2. Select the model.
 3. Click <i class="material-symbols-outlined">add_2</i> under the message input field, and then select **Upload Files**.
 
-   ![Upload files in Open WebUI](/images/manual/use-cases/openwebui-upload-files.png#bordered)
+   ![Upload files in Open WebUI](/images/manual/use-cases/openwebui-upload-files1.png#bordered)
 
-3. Upload a PDF or a text file.
-4. Enter a prompt asking the model to analyze the document. For example:
+4. Upload a PDF or a text file.
+5. Enter a prompt asking the model to analyze the document. For example:
 
    ```plain
    Summarize the main points of this document.
    ```
 
-5. Submit the prompt. If the generated response includes file citations, Open WebUI successfully added the document to the context.
+6. Submit the prompt. If the generated response includes file citations, Open WebUI successfully added the document to the context.
 
-   ![File summary](/images/manual/use-cases/openwebui-file-summary.png#bordered)
+   ![File summary](/images/manual/use-cases/openwebui-file-summary1.png#bordered)
 
 ## Build a knowledge base
 
 For documents you want to reuse across multiple chats, create a persistent knowledge base.
 
 1. In Open WebUI, click your profile icon, and then go to **Workspace** > **Knowledge**.
-2. Click **New Knowledge**.
+2. Click **Create**.
 3. In the **What are you working on** field, enter a name for your knowledge base. For example: `Product FAQs`.
 4. In the **What are you trying to achieve** field, enter a description. For example: `Frequently asked questions and support guides for Olares products`.
 
-   ![Create knowledge](/images/manual/use-cases/openwebui-create-knowledge.png#bordered)
+   ![Create knowledge](/images/manual/use-cases/openwebui-create-knowledge1.png#bordered)
 
 5. Click **Create Knowledge** to save the collection.
 6. Click <i class="material-symbols-outlined">add</i> > **Upload files**, and then upload your files to populate the knowledge base.
 
-   ![Populate knowledge base](/images/manual/use-cases/openwebui-populate-knowledge.png#bordered)
+   ![Populate knowledge base](/images/manual/use-cases/openwebui-populate-knowledge1.png#bordered)
 
 ## Attach a knowledge base to a chat
 
@@ -88,11 +93,9 @@ For documents you want to reuse across multiple chats, create a persistent knowl
 3. Click <i class="material-symbols-outlined">add_2</i> under the message input field, and then select **Attach Knowledge**.
 4. Choose the knowledge collection you want to use.
 
-   ![Attach knowledge base to chat](/images/manual/use-cases/openwebui-attach-knowledge-base.png#bordered)
+   ![Attach knowledge base to chat](/images/manual/use-cases/openwebui-attach-knowledge-base1.png#bordered)
 
 5. Ask questions related to the knowledge base content. The model will retrieve relevant passages and cite them in its response.
-
-   ![Search results from attached knowledge base](/images/manual/use-cases/openwebui-search-results-from-knowledge-base.png#bordered)
 
 ## (Optional) Configure an advanced extraction engine
 
@@ -108,15 +111,20 @@ PaddleOCR requires more GPU VRAM and processes documents slower than the default
 
 2. Get the PaddleOCR endpoint URL:
 
-   a. Open Olares Settings, and then go to **Applications** > **PaddleOCR** > **Shared entrances** > **PaddleOCR API**.
+   a. Open Olares Settings, and then go to **Applications** > **PaddleOCR** > **Entrances**.
    
-   b. Copy the endpoint URL. For example, `http://6b2a6fc50.shared.olares.com`.
+   b. Copy the endpoint URL. For example, `https://17b4c78a.laresprime.olares.com`.
 
-3. In Open WebUI, go to **Admin Panel** > **Settings** > **Documents**.
-4. In the **General** section, select **PaddleOCR-vl** for **Content Extraction Engine**.
-5. In **API Base URL**, enter the PaddleOCR endpoint URL. 
-6. In **API Token**, enter any text. Do not leave this field empty.
+3. In Open WebUI, go to **Admin Panel** > **Settings**.
+4. On the left sidebar, locate the **Tools** section, and then select **Documents**.
+5. Under the **Content Extraction** section, configure as follows:
+
+   a. **Content Extraction Engine**: Select **PaddleOCR-vl** in the drop-down list.
+
+   b. **API Base URL**: Enter the PaddleOCR endpoint URL.
+
+   c. **API Token**: Enter any text such as `local`. Do not leave this field empty.
    
-   ![PaddleOCR config in Open WebUI](/images/manual/use-cases/openwebui-paddleocr-config.png#bordered)
+   ![PaddleOCR config in Open WebUI](/images/manual/use-cases/openwebui-paddleocr-config1.png#bordered)
 
-7. Click **Save**.
+6. Click **Save**.
