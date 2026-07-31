@@ -81,6 +81,8 @@ export const useCases: UseCase[] = [
   { title: "*Arrs", link: "/use-cases/arrs", category: "Entertainment", description: "Automated media management with Sonarr, Radarr, and more", descriptionZh: "使用 Sonarr、Radarr 等实现媒体自动化管理" },
   { title: "Excalidraw", link: "/use-cases/excalidraw", category: "Productivity", description: "Hand-drawn style diagrams and whiteboarding", descriptionZh: "手绘风格的图表与白板" },
   { title: "Karakeep", link: "/use-cases/karakeep", category: "Productivity", description: "Save and organize bookmarks, notes, and PDFs", descriptionZh: "保存并整理书签、笔记与 PDF" },
+  { title: "n8n", link: "/use-cases/n8n", category: "Productivity", description: "Build self-hosted visual workflow automations", descriptionZh: "构建自托管的可视化自动化工作流" },
+  { title: "NocoDB", link: "/use-cases/nocodb", category: "Productivity", description: "Manage data in a self-hosted smart spreadsheet", descriptionZh: "使用自托管智能表格管理数据" },
   { title: "Obsidian LiveSync", link: "/use-cases/obsidian-livesync", category: "Productivity", description: "Sync Markdown notes across devices", descriptionZh: "跨设备同步 Markdown 笔记" },
   { title: "Penpot", link: "/use-cases/penpot", category: "Productivity", description: "Self-hosted design workspace, with Cursor via MCP", descriptionZh: "自托管设计工作空间，可通过 MCP 接入 Cursor" },
   { title: "Plane", link: "/use-cases/plane", category: "Productivity", description: "Self-hosted project management", descriptionZh: "自托管的项目管理" },
