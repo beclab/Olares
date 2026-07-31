@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Open WebUI, common issues, troubleshooting, model download
-app_version: "1.0.20"
-doc_version: "1.0"
-doc_updated: "2026-05-14"
+app_version: "1.0.38"
+doc_version: "1.1"
+doc_updated: "2026-07-31"
 ---
 
 # Open WebUI common issues
@@ -23,15 +23,6 @@ If the model app stays in these states for more than a few minutes:
    - If you are using **Memory slicing**, make sure the model app is linked to the GPU and has enough VRAM allocated.
    - If you are using **Exclusive**, make sure the model app has full GPU access.
 3. Restart the model app from Launchpad and check the status again.
-
-## Download progress disappears
-
-When downloading a model via the dropdown menu, the progress bar might sometimes disappear before completion.
-
-To resume the download:
-1. Click the model selector again.
-2. Enter the exact same model name.
-3. Select **Pull from Ollama.com**. The download will resume from where it left off.
 
 ## Microphone "Permission denied" error
 
