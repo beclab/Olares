@@ -41,13 +41,13 @@ Porting an app is **not** a fixed `from-compose → lint → deploy` pipeline �
 
 ## Axis 1 — Packaging (the image)
 
-Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **agent-driven**: ask which registry the developer uses (Docker Hub / ghcr), check docker is usable and logged in, then **build + push yourself** — only `docker login` stays manual, and only when not already authenticated ([references/olares-chart-image.md](references/olares-chart-image.md)). No Olares login needed. Build for **this node's arch** (single-arch); multi-arch is only for publishing.
+Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **agent-driven**: first query the **target Olares node's architecture** with `olares-cli cluster node list`, then ask which registry the developer uses (Docker Hub / ghcr), check docker is usable and logged in, and **build + push yourself** — only `docker login` stays manual, and only when not already authenticated ([references/olares-chart-image.md](references/olares-chart-image.md)). Querying the target needs an Olares profile login; Docker packaging itself does not. Build for the target node's arch (single-arch), never the development host's implicit/default arch; multi-arch is only for publishing.
 
 | Packaging state | Do this | Ready when |
 |---|---|---|
 | No Dockerfile (just source) | author a Dockerfile, then build+push | — |
 | Dockerfile, but no pullable image | build+push (Docker Hub or ghcr) | — |
-| A pullable image exists | check its arch; rebuild if it doesn't match this node (`olares-cli cluster node list`) | every workload has a pullable, arch-correct image |
+| A pullable image exists | check its arch; rebuild if it doesn't match the target Olares node (`olares-cli cluster node list`) | every workload has a pullable, arch-correct image |
 
 ## Axis 2 — Deployment (the chart)
 
@@ -73,7 +73,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 
 | Axis | Concern | Get this right | Loop back when | Reference |
 |---|---|---|---|---|
-| packaging | **Image** | pullable, pinned to a version tag (never `:latest`), arch-correct for **this node** | `ImagePullBackOff` / wrong arch, or a deploy constraint forces a rebuild | [image.md](references/olares-chart-image.md) |
+| packaging | **Image** | pullable, pinned to a version tag (never `:latest`), arch-correct for the **target Olares node**; pass it explicitly through Buildx `--platform` rather than using the development host default | `ImagePullBackOff` / wrong arch, or a deploy constraint forces a rebuild | [image.md](references/olares-chart-image.md) |
 | packaging+deployment | **Run identity** | final app process uid 1000; normally `spec.runAsUser: true`; for verified PUID/PGID root-init images leave it false/absent so the entrypoint can initialize then drop privileges; use initContainer `chown` only for root-owned volumes | EACCES on appData/appCache/userData; forced uid breaks a root-init entrypoint; admission denies an explicit root securityContext | [run-as-user.md](references/olares-chart-run-as-user.md) |
 | deployment | **Storage** | every compose volume → the right userspace area (Data/Cache/Home/Common/External), matching `permission`, leftover kompose PVCs deleted | a volume isn't persisting or lands in the wrong area | [manifest.md](references/olares-chart-manifest.md) §2 |
 | deployment | **Middleware & deps** | no bundled `postgres`/`redis`/`mongo`/…; wire to system middleware; SQLite→Postgres where supported; companion apps as `type: application` deps | a bundled db/queue remains, or a companion should be a dependency | [middleware.md](references/olares-chart-middleware.md) |

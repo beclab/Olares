@@ -7,9 +7,11 @@
 
 ```
  Packaging (agent-driven; only if an image is missing / wrong-arch):
- P1. docker?    docker version && docker buildx version   # else guide install
- P2. registry   ask which registry + <user>/<repo>; check login — if not authed, the developer runs `docker login` (agent can't type their token)
- P3. build+push docker buildx build --platform linux/<node-arch> -t <ref>:<tag> --push <ctx>
+ P1. target     olares-cli cluster node list              # read the target node's ARCHITECTURE; never infer it from the development host
+                -> if nodes have different architectures, identify the scheduled target with `cluster node get <name>`; stop and ask if unknown
+ P2. docker?    docker version && docker buildx version   # else guide install
+ P3. registry   ask which registry + <user>/<repo>; check login — if not authed, the developer runs `docker login` (agent can't type their token)
+ P4. build+push docker buildx build --platform linux/<target-arch> -t <ref>:<tag> --push <ctx>
                 -> you run build+push, then wire <ref>:<tag> into every build-only `image:` in the compose
 
  Deployment authoring (no login):
@@ -25,7 +27,7 @@
  V3. upload     olares-cli market upload ./<app>-<ver>.tgz
  V4. run        olares-cli market install <app> -s upload --version <ver> --watch -o json
  V5. on failure diagnose via olares-doctor (symptom -> root cause), then loop back
- V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; uid/EACCES -> run identity (uid 1000) guidance ; not a chart problem -> break out, report & ask
+ V6. decide     loop back: chart problem -> D2 ; image problem -> P1/P4 ; uid/EACCES -> run identity (uid 1000) guidance ; not a chart problem -> break out, report & ask
  V7. cleanup    olares-cli market uninstall <app> --watch ; olares-cli market delete <app>
 ```
 
