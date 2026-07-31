@@ -139,7 +139,7 @@ spec:
           - containerPort: 81
         env:
           - name: OLARES_VERSION
-            value: "{{ .Values.olaresVersion }}"
+            value: "1.12.7"
           - name: APP_SOTRE_SERVICE_SERVICE_PORT
             value: "443"
           - name: APP_SERVICE_SERVICE_HOST

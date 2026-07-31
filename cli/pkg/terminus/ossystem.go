@@ -65,7 +65,6 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 		common.HelmValuesKeyOlaresRootFSPath: storage.OlaresRootDir,
 		"sharedlib":                          storage.OlaresSharedLibDir,
 		"ensureApps":                         preinstall.EnsureAppsPublished(storage.OlaresRootDir),
-		"olaresVersion":                      t.KubeConf.Arg.OlaresVersion,
 		// Market only reads the preinstall mount when this says a bundle was
 		// published; an installer that ships none leaves the feature off
 		// instead of having Market look into an empty directory every boot.

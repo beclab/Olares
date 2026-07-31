@@ -33,7 +33,7 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 	for _, required := range []string{
 		preinstallEnv,
 		ensureEnv,
-		"- name: OLARES_VERSION\n            value: \"{{ .Values.olaresVersion }}\"",
+		"- name: OLARES_VERSION\n            value: \"1.12.7\"",
 		"- name: opt-data\n            mountPath: /opt/app/data",
 		"- name: market-preinstall\n            mountPath: /opt/app/preinstall\n            readOnly: true",
 		"- name: market-ensure\n            mountPath: /opt/app/ensure\n            readOnly: true",

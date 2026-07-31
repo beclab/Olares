@@ -389,11 +389,7 @@ func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	ctx, cancelPlatform := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancelPlatform()
 	platformChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")
-	vals := map[string]interface{}{
-		"ensureApps":    preinstall.EnsureAppsPublished(storage.OlaresRootDir),
-		"olaresVersion": u.KubeConf.Arg.OlaresVersion,
-	}
-	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSPlatform, platformChartPath, "", common.NamespaceOsPlatform, vals, true); err != nil {
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSPlatform, platformChartPath, "", common.NamespaceOsPlatform, nil, true); err != nil {
 		return err
 	}
 
@@ -404,6 +400,9 @@ func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	ctx, cancelFramework := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancelFramework()
 	frameworkChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-framework")
+	vals := map[string]interface{}{
+		"ensureApps": preinstall.EnsureAppsPublished(storage.OlaresRootDir),
+	}
 	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkChartPath, "", common.NamespaceOsFramework, vals, true); err != nil {
 		return err
 	}

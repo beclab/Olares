@@ -14,7 +14,7 @@ func TestEnsureAppsTaskIsVersionSpecific(t *testing.T) {
 		present bool
 	}{
 		{name: "base", tasks: upgraderBase{}.PrepareForUpgrade()},
-		{name: "stable", tasks: getUpgraderByVersion(semver.MustParse("1.12.7")).PrepareForUpgrade(), present: true},
+		{name: "mainline", tasks: getUpgraderByVersion(upgrader_1_12_7{}.Version()).PrepareForUpgrade(), present: true},
 		{name: "daily", tasks: getUpgraderByVersion(semver.MustParse("1.12.7-20260731")).PrepareForUpgrade(), present: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
