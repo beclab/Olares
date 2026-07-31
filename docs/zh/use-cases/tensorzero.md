@@ -103,8 +103,7 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
     ```
 
 4. 点击 <i class="material-symbols-outlined">save</i>，然后关闭文件。
-5. 将 `tensorzero.toml.txt` 重命名回 `tensorzero.toml`。
-6. 打开 Control Hub，进入 **Browse** > **tensorzero-{username}** > **Deployments** > **tensorzero**，然后点击 **Restart** 以应用新设置。
+5. 打开 Control Hub，进入 **Browse** > **tensorzero-{username}** > **Deployments** > **tensorzero**，然后点击 **Restart** 以应用新设置。
 
     ![TensorZero pod 重启](/images/manual/use-cases/tensorzero-pod-restart.png#bordered)
 

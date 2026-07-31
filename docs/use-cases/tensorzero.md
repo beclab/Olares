@@ -100,8 +100,7 @@ This example connects Qwen3.6-27B (llama.cpp).
     ```
 
 4. Click <i class="material-symbols-outlined">save</i>, and then close the file.
-5. Rename `tensorzero.toml.txt` back to `tensorzero.toml`.
-6. Open Control Hub, go to **Browse** > **tensorzero-{username}** > **Deployments** > **tensorzero**, and then click **Restart** for the application to apply the new settings.
+5. Open Control Hub, go to **Browse** > **tensorzero-{username}** > **Deployments** > **tensorzero**, and then click **Restart** for the application to apply the new settings.
 
     ![TensorZero pod restart](/images/manual/use-cases/tensorzero-pod-restart.png#bordered)
 
