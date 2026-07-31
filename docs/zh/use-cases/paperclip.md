@@ -204,49 +204,62 @@ Paperclip 是一个完全自主的多智能体协作平台。完全在本地模�
 仔细评估每个模型的能力和你的工作流需求，以确定最佳设置。
 :::
 
-### 使用 OpenCode 调用本地模型
+### 准备本地模型
+
+此可选流程使用以下模型：
+
+| 模型 | 获取方式 |
+| :--- | :--- |
+| Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+模型名称为 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+
+### 在 OpenCode 中配置本地模型
 
 :::info 独立的 OpenCode 实例
 此 OpenCode 运行在 Paperclip 容器内部，与从 Olares Market 安装的 OpenCode 应用是分开的。你需要独立配置它。
 :::
 
-1. 从 Market 安装一个模型应用。本示例使用 `gemma4:26b`。
-2. 创建智能体时，选择 **OpenCode** 作为运行时。选择一个临时模型，如 **big-pickle**，以完成初始设置。你将在下一步将其替换为本地模型配置。
-3. 初始化后，配置本地模型：
+1. 创建智能体时，选择 **OpenCode** 作为运行时。选择一个临时模型，如 **big-pickle**，以完成初始设置。你将在下一步将其替换为本地模型配置。
+2. 初始化后，配置本地模型：
 
    a. 打开 Files 应用，进入 **Data** > **paperclip** > **paperclip** > **.config** > **opencode**。
 
    b. 将 `opencode.jsonc` 重命名为 `opencode.json`，并以编辑模式打开。
 
-   c. 将默认配置替换为以下示例（使用 gemma4:26b 作为模型）：
-
-   - 将配置中的 `<your-olares-id>` 替换为你的具体 Olares ID。
-   - 如果你使用的不是 Gemma4 26B Q4_K_M (Ollama)，请将 `2b46296c` 替换为你的实际应用路由 ID。
-   - 确保 `baseURL` 以 `/v1` 结尾，以通过 Ollama 提供 OpenAI 兼容的 API 访问。
+   c. 将默认配置替换为以下示例。将 `<base-url>` 替换为从模型控制台复制的 Base URL。如果模型控制台显示了不同的模型名称，请将所有 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` 替换为该准确值。
 
    ```json {wrap}
    {
      "$schema": "https://opencode.ai/config.json",
-     "model": "olares/gemma4:26b",
+     "model": "olares/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
      "provider": {
        "olares": {
-         "name": "Gemma4:26b (Ollama)",
+         "name": "Qwen3.6-27B",
          "npm": "@ai-sdk/openai-compatible",
          "models": {
-           "gemma4:26b": {
-             "name": "gemma4:26b"
+           "unsloth/Qwen3.6-27B-GGUF:Q4_K_M": {
+             "name": "Qwen3.6-27B"
            }
          },
          "options": {
-           "baseURL": "https://2b46296c.<your-olares-id>.olares.com/v1"
+           "baseURL": "<base-url>"
          }
        }
      }
    }
    ```
 
-4. 重启 Paperclip 容器。
-5. 在 Paperclip 中，进入 **Agents** > **Configuration** > **Permissions & Configuration** 以验证新添加的本地模型。
+   :::tip OpenAI-compatible Base URL
+   Qwen3.6-27B 的 Base URL 已以 `/v1` 结尾。如果改用基于 Ollama 的模型，请在模型控制台中选择 **OpenAI-Compatible**，并复制该格式下显示的 Base URL。如果使用的是从其他位置获得的 Ollama 格式 Base URL，请在末尾添加 `/v1`，以便 OpenCode 访问其 OpenAI-compatible API。
+   :::
+
+3. 重启 Paperclip 容器。
+4. 在 Paperclip 中，进入 **Agents** > **Configuration** > **Permissions & Configuration** 以验证新添加的本地模型。
 
    ![OpenCode local model in agent config](/images/manual/use-cases/paperclip-opencode-model-config.png#bordered)
 
@@ -260,7 +273,7 @@ Paperclip 是一个完全自主的多智能体协作平台。完全在本地模�
 
 - 要求 CEO 雇佣一个新智能体：
    - **Task title:** Hire a CMO
-   - **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/gemma4:26b as the model.
+   - **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/unsloth/Qwen3.6-27B-GGUF:Q4_K_M as the model.
 
    ![Agent run activity](/images/manual/use-cases/paperclip-agent-run-activity.png#bordered)
 

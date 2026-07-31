@@ -34,7 +34,11 @@ Speaches 是一个兼容 OpenAI API 的语音服务器，支持语音转文本�
 ## 前提条件
 
 - Olares 运行在一台带有 NVIDIA GPU 的设备上。
-- [Ollama 已安装并运行](ollama.md)，且至少下载了一个聊天模型（仅 Audio Chat 需要）。
+- 如需使用 Audio Chat，请安装以下聊天模型：
+
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.6-27B (llama.cpp) | 从应用市场安装 |
 
 ## 安装 Speaches
 
@@ -107,16 +111,31 @@ Speaches 可以自动检测音频语言并将其翻译为英文。
 
 使用 **Audio Chat** 可以通过语音、文本或音频文件与 AI 模型对话。Speaches 首先将你的语音转换为文本，然后将文本发送给聊天模型，并可以将回复转换回语音。
 
-
 :::info
-- Audio Chat 需要 Ollama 已安装，且至少下载了一个聊天模型。
 - 音频播放目前仅支持英文回复。对于其他语言，回复仅以文本形式显示。
 :::
+
+#### 获取模型连接信息
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+
+本指南使用 Qwen3.6-27B (llama.cpp) 作为 Audio Chat 的聊天模型，并使用 **OpenAI-Compatible** API 格式。
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+#### 配置 Speaches
+
+1. 前往 Olares **Settings** > **Applications** > **Speaches** > **Manage environment variables**。
+2. 点击 `CHAT_COMPLETION_BASE_URL` 旁边的 <i class="material-symbols-outlined">edit_square</i>。
+3. 将模型控制台中显示的 OpenAI-compatible **Base URL** 原样粘贴，包括末尾的 `/v1`，然后点击 **Confirm**。
+4. 点击 **Apply** 保存更改。
+
+Speaches 会自动重启，并加载该 endpoint 提供的模型。
 
 #### 开始语音对话
 
 1. 打开 Speaches 并点击 **Audio Chat** 标签页。
-2. 在 **Chat Model** 下，选择一个 Ollama 模型，例如 `qwen2.5:7b`。
+2. 在 **Chat Model** 下，选择 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
 3. 使用以下任一方式发送消息：
    - **Audio file**：上传一个音频文件。
    - **Text**：在麦克风图标旁的输入框中输入你的消息并发送。
@@ -286,9 +305,7 @@ Speaches 会自动以 CPU 模式重新部署。与 GPU 模式相比，处理速�
 
 ### 为什么 Audio Chat 显示错误？
 
-Audio Chat 需要 Ollama 正在运行，且至少下载了一个聊天模型。如果 Ollama 未安装或没有可用模型，Audio Chat 将显示错误。
-
-要修复此问题，请安装 Ollama 并按照 [Ollama 指南](ollama.md)下载一个聊天模型。Speaches 会自动检测 Ollama，因此无需重启 Speaches。
+如果 `CHAT_COMPLETION_BASE_URL` 为空、填写错误或无法访问，Audio Chat 将无法加载模型。请确保聊天模型正在运行，然后使用模型控制台中显示的 OpenAI-compatible Base URL [重新配置 Speaches](#配置-speaches)。
 
 ### 为什么切换到更大的模型后任务会失败？
 
@@ -302,24 +319,12 @@ Audio Chat 需要 Ollama 正在运行，且至少下载了一个聊天模型。�
 
 详细说明请参阅[管理 GPU 资源](/zh/manual/olares/settings/gpu-resource.md)。
 
-### 我可以为 Audio Chat 使用不同的 Ollama 实例吗？
+### Audio Chat 可以使用其他聊天模型提供商吗？
 
-可以。更新部署配置中的 `CHAT_COMPLETION_BASE_URL`：
-
-1. 打开 Control Hub 并导航到 **Browse** > **System** > **speachesserver-shared** > **Deployments** > **speaches**。
-2. 点击 <i class="material-symbols-outlined">edit_square</i> 编辑 YAML 文件。
-
-   ![Navigate to Speaches deployment](/images/manual/use-cases/speaches-controlhub-deployment.png#bordered){width=90%}
-
-3. 在 **Edit YAML** 中，找到 `CHAT_COMPLETION_BASE_URL`，并将其值更新为你的 Ollama 端点。确保 URL 以 `/v1` 结尾。
-   
-   ![Edit CHAT_COMPLETION_BASE_URL](/images/manual/use-cases/speaches-edit-base-url.png#bordered){width=90%}
-
-4. 前往 **Settings** > **Applications** > **Speaches**，点击 **Stop**，然后点击 **Resume** 以重启 Speaches。
+可以。将 `CHAT_COMPLETION_BASE_URL` 设置为该提供商的 OpenAI-compatible Base URL。URL 必须以 `/v1` 结尾。
 
 ## 了解更多
 
 - [Speaches 官方文档](https://speaches.ai/)：完整的 API 参考和模型兼容性说明。
-- [Ollama](ollama.md)：下载和运行本地 AI 模型。
 - [Open WebUI](openwebui.md)：可以使用 Speaches 作为语音后端的聊天界面。
 - [IndexTTS2](indextts2.md)：通过零样本语音克隆从文本生成语音。

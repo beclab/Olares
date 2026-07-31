@@ -1,13 +1,13 @@
 ---
 outline: deep
-description: Set up OpenCode on Olares to run an AI coding agent. Connect it to Ollama-hosted models or OpenAI, and use natural language to write, test, and manage code.
+description: Set up OpenCode on Olares to run an AI coding agent. Connect it to a local model or OpenAI, and use natural language to write, test, and manage code.
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenCode, AI coding agent, Ollama, OpenAI, ChatGPT, self-hosted, code generation, TUI
+      content: Olares, OpenCode, AI coding agent, Qwen3.6, OpenAI, ChatGPT, self-hosted, code generation, TUI
 app_version: "1.0.11"
-doc_version: "1.2"
-doc_updated: "2026-07-10"
+doc_version: "1.3"
+doc_updated: "2026-07-29"
 ---
 
 # Set up OpenCode as your AI coding agent
@@ -17,23 +17,27 @@ OpenCode is an AI-powered coding agent that lets you write, test, and manage cod
 On Olares, you can use OpenCode in two ways:
 
 - **Browser**: Install OpenCode as an app on Olares and access it through your browser.
-- **Local CLI**: Install OpenCode on your computer and connect it to Ollama on Olares for a native terminal experience.
+- **Local CLI**: Install OpenCode on your computer and connect it to a model on Olares for a native terminal experience.
 
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:
-- Install OpenCode on Olares and connect it to an Ollama-hosted model or OpenAI.
+- Install OpenCode on Olares and connect it to a local model or OpenAI.
 - Create projects and run coding tasks through the chat interface or the terminal-based UI (TUI).
 - Use OpenCode from your local computer over the LarePass VPN or from inside VS Code.
 - Edit the OpenCode configuration file to manage providers, models, and tools.
 
 ## Prerequisites
 
-- An Olares device with sufficient disk space and memory
-- [Ollama installed](./ollama.md) on Olares with at least one model downloaded, if you plan to use local models
-- A ChatGPT Plus/Pro account or an OpenAI API key, if you plan to use OpenAI
-- Admin privileges to install apps from Market
-- LarePass VPN enabled on your computer (for local CLI usage only)
+- An Olares device with sufficient disk space and memory.
+- Admin privileges to install apps from Market.
+- Additional requirements depend on how you use OpenCode:
+
+   | Usage | Requirements |
+   | :--- | :--- |
+   | Browser with a local model | Qwen3.6-27B (llama.cpp) installed from Market |
+   | Browser with OpenAI | A ChatGPT Plus/Pro account or an OpenAI API key |
+   | OpenCode CLI on your computer | [Ollama](./ollama.md) installed on Olares with at least one model downloaded, and LarePass VPN enabled on your computer.|
 
 ## Run OpenCode in the browser
 
@@ -50,48 +54,21 @@ After installation, you will see two icons on Launchpad:
 - OpenCode: The main interface for OpenCode.
 - OpenCode Terminal: A command-line terminal for OpenCode. Use this if you prefer working in the TUI.
 
-### Get the model endpoint
-
-Olares offers two ways to serve local models:
-
-- **Ollama app**: One app that hosts multiple models behind a single shared endpoint.
-- **Single-model app**: Each app packages one specific model and exposes its own shared endpoint.
-
-OpenCode connects to both through a shared entrance URL.
+### Get model connection details
 
 :::tip Planning to use oh-my-openagent?
 For multi-local-model setups under [oh-my-openagent](opencode-omo.md), use single-model apps. Each model gets its own endpoint, which lets you register it as a separate provider and tune per-model settings like concurrency limits.
 :::
 
-#### Ollama
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-To connect OpenCode to Ollama, get the shared entrance URL:
+In this example, OpenCode connects to Qwen3.6-27B using the OpenAI-compatible API format:
 
-1. Open Settings, then navigate to **Applications** > **Ollama**.
-2. In **Shared entrances**, select **Ollama API** to view the shared endpoint URL.
-   ![Ollama shared entrance in Settings](/images/manual/use-cases/ollama-shared.png#bordered){width=80%}
-
-3. Copy the shared endpoint. For example:
-   ```plain
-   http://d54536a50.shared.olares.com
-   ```
-
-#### Single-model apps
-
-To connect OpenCode to a single-model app, get its shared entrance URL. The example below uses Qwen3.5 9B Q4_K_M:
-
-1. Open Settings, go to **Applications** > **Qwen3.5 9B Q4_K_M (Ollama)**, and then click the model name under **Shared entrances**. 
-
-   ![Qwen3.5 9B Q4_K_M shared entrance in Settings](/images/manual/use-cases/litellm-model-endpoint.png#bordered){width=80%}
-
-2. Copy the shared endpoint. For example:
-   ```plain
-   http://bd5355000.shared.olares.com
-   ```
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### Connect to a custom provider
 
-Add your endpoint as a custom provider in OpenCode. The steps are the same for the Ollama app and single-model apps, but the Model ID you enter differs based on the app type.
+Add Qwen3.6-27B as a custom provider in OpenCode.
 
 1. In OpenCode, click <i class="material-symbols-outlined">settings</i> in the bottom-left corner.
    ![Open OpenCode settings](/images/manual/use-cases/opencode-settings.png#bordered)
@@ -100,18 +77,14 @@ Add your endpoint as a custom provider in OpenCode. The steps are the same for t
    ![Select custom provider](/images/manual/use-cases/opencode-custom-provider.png#bordered)
 
 3. Enter the following details:
-   - **Provider ID**: A unique identifier for this provider. For example, `olares-ollama` for the Ollama app or `ollama-9b` for a single-model app.
-   - **Display name**: The name shown in the provider list. For example, `Olares Ollama` or `Ollama 9B`.
-   - **Base URL**: The endpoint URL you copied above, with `/v1` appended.
+   - **Provider ID**: Enter a unique identifier, such as `qwen3.6-27b`.
+   - **Display name**: Enter the name shown in the provider list, such as `Qwen3.6 27B`.
+   - **Base URL**: Paste the Base URL copied from Model Console. Use it exactly as displayed.
    - **Models**:
-     - **Model ID**: The model to use. For the Ollama app, enter the ID of any model you've downloaded, such as `qwen3.5:9b`. For a single-model app, enter the exact model name shown for the app since the app serves only that model.
-     - **Display Name**: The name shown for this model. For example, `Qwen3.5 9B`.
+     - **Model ID**: Enter the exact Model name copied from Model Console. In this example, it is `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+     - **Display Name**: Enter the name shown for this model, such as `Qwen3.6 27B`.
 
-   ![Provider configuration](/images/manual/use-cases/opencode-provider-config.png#bordered){width=70%}
-
-4. To add more models under the same Ollama app provider, click **Add model** and enter the model ID and display name. Skip this step for single-model app providers.
-
-5. Click **Submit** to save the configuration. Your newly added provider will appear in the provider list.
+4. Click **Submit** to save the configuration. Your newly added provider will appear in the provider list.
    ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered)
 
 ### Connect to OpenAI
@@ -211,7 +184,7 @@ To work with multiple projects, create subfolders under `Home/Code` first:
 You can now interact with OpenCode through the chat interface.
 
 1. Select a project to open the coding agent interface.
-2. Below the chat box, select **Big Pickle** to open the model selector, and select **Qwen3.5 9B** from the list.
+2. Below the chat box, select **Big Pickle** to open the model selector, and select **Qwen3.6 27B** from the list.
 3. Type a coding task in natural language.
    ![Code generation](/images/manual/use-cases/opencode-code-generation.png#bordered)
 
@@ -237,7 +210,7 @@ OpenCode also offers a terminal-based UI (TUI). You can launch it in two ways:
 2. In the terminal panel, run `opencode` to launch the TUI.
    ![Launch TUI in the OpenCode UI](/images/manual/use-cases/opencode-web-launch-tui.png#bordered)
 
-3. Use the `/models` command to switch to Qwen3.5 9B.
+3. Use the `/models` command to switch to Qwen3.6 27B.
    ![Select model in TUI](/images/manual/use-cases/opencode-web-tui-select-model.png#bordered)
 
 4. Type your prompt directly. For example, ask OpenCode to improve the code.
@@ -251,7 +224,7 @@ OpenCode also offers a terminal-based UI (TUI). You can launch it in two ways:
 2. Run `opencode` to launch the TUI.
    ![Launch TUI in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-launch-tui.png#bordered)
 
-3. Use the `/models` command to switch to Qwen3.5 9B.
+3. Use the `/models` command to switch to Qwen3.6 27B.
    ![Select model in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-select-model.png#bordered)
 
 4. Type your prompt directly. For example, use `@` to mention a file and ask OpenCode about it.
@@ -262,7 +235,7 @@ OpenCode also offers a terminal-based UI (TUI). You can launch it in two ways:
 
 ## Run OpenCode from your computer
 
-This option installs the OpenCode CLI on your local machine and connects it to Ollama on Olares via LarePass VPN for a native terminal experience.
+This optional workflow installs the OpenCode CLI on your computer and connects it to Ollama on Olares through LarePass VPN.
 
 ### Install OpenCode CLI
 
@@ -307,18 +280,14 @@ This option installs the OpenCode CLI on your local machine and connects it to O
 
    The config file is created at `~/.config/opencode/opencode.jsonc`.
 
-### Get the Ollama endpoint
+### Get the Ollama service endpoint
 
-The local CLI requires the Ollama API endpoint. The shared entrance URL does not work for CLI connections.
+OpenCode CLI connects to the Ollama app as a service provider.
 
-1. Open Settings, then navigate to **Applications** > **Ollama**.
-2. In **Entrances**, select **Ollama API** to view the endpoint URL.
-   ![Ollama API endpoint](/images/manual/use-cases/ollama-api.png#bordered){width=70%}
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-3. Copy the endpoint URL. For example:
-   ```plain
-   https://a5be22681.laresprime.olares.com
-   ```
+1. Go to Olares **Settings** > **Applications** > **Ollama** > **Entrances**.
+2. Select **Ollama API**, then copy the **Endpoint** URL.
 
 ### Configure the connection
 
@@ -326,7 +295,7 @@ The local CLI requires the Ollama API endpoint. The shared entrance URL does not
    ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
    :::tip On the same local network?
-   If your computer and Olares are on the same LAN, you can skip VPN and use the `.local` domain instead. Replace `https://a5be22681.{username}.olares.com` with `http://a5be22681.{username}.olares.local` in the config below. For details, see [Use `.local` domain](../manual/best-practices/local-access.md#method-2-use-local-domain).
+   If your computer and Olares are on the same LAN, you can skip VPN and use the `.local` domain instead. For details, see [Use `.local` domain](../manual/best-practices/local-access.md#method-2-use-local-domain).
    :::
 
 2. Open the OpenCode config file at `~/.config/opencode/opencode.jsonc` in a text editor. Add a custom provider with your Ollama endpoint and model. The general format is:
@@ -351,7 +320,7 @@ The local CLI requires the Ollama API endpoint. The shared entrance URL does not
    }
    ```
 
-   For example, to connect to Ollama on Olares with the Qwen3.5 9B model:
+   For example, to connect to Ollama on Olares with the Qwen3.6 27B model:
 
    ```json
    {
@@ -360,13 +329,13 @@ The local CLI requires the Ollama API endpoint. The shared entrance URL does not
        "olares-ollama": {
          "name": "olares-ollama",
          "npm": "@ai-sdk/openai-compatible",
-         "models": {
-           "qwen3.5:9b": {
-             "name": "Qwen3.5 9B"
+        "models": {
+           "qwen3.6:27b": {
+             "name": "Qwen3.6 27B"
            }
          },
          "options": {
-           "baseURL": "https://a5be22681.laresprime.olares.com/v1"
+           "baseURL": "<Ollama-Endpoint>/v1"
          }
        }
      }
@@ -384,7 +353,7 @@ The local CLI requires the Ollama API endpoint. The shared entrance URL does not
 1. In your terminal, run `opencode` to launch the TUI:
    ![Launch OpenCode TUI in terminal](/images/manual/use-cases/opencode-terminal-tui.png#bordered)
 
-2. Use the `/models` command to switch to Qwen3.5 9B.
+2. Use the `/models` command to switch to Qwen3.6 27B.
    ![Select model in terminal TUI](/images/manual/use-cases/opencode-terminal-tui-select-model.png#bordered)
 
 3. Start chatting with your self-hosted models.

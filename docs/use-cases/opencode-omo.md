@@ -7,8 +7,8 @@ head:
     - name: keywords
       content: Olares, OpenCode, oh-my-openagent, OMO, multi-agent, AI coding agent, ultrawork, MCP, self-hosted
 app_version: "1.0.10"
-doc_version: "1.0"
-doc_updated: "2026-04-21"
+doc_version: "1.1"
+doc_updated: "2026-07-29"
 ---
 
 # Orchestrate multi-agent workflows with oh-my-openagent
@@ -16,65 +16,40 @@ doc_updated: "2026-04-21"
 oh-my-openagent (OMO) is a multi-model agent orchestration plugin for OpenCode. Once enabled, you can trigger multi-agent collaboration in OpenCode with the keyword `ultrawork` (or the alias `ulw`). Specialized agents such as Sisyphus, Hephaestus, Oracle, and Atlas divide the work and handle complex coding tasks together.
 
 :::warning
-This guide focuses on a local-model setup. Running OMO purely on local models noticeably degrades orchestration quality and multi-agent collaboration speed compared to paid cloud models. For real work, we recommend a hybrid setup: a paid cloud model for the main agent and Ollama local models for subagents.
+This guide focuses on a local-model setup. Running OMO purely on local models noticeably degrades orchestration quality and multi-agent collaboration speed compared to paid cloud models. For real work, we recommend a hybrid setup: a paid cloud model for the main agent and local models for subagents.
 :::
 
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:
 - Enable OMO in OpenCode on Olares.
-- Configure OMO to work with local Ollama models, cloud models, or a hybrid of both.
+- Configure OMO to work with local models, cloud models, or a hybrid of both.
 - Trigger multi-agent collaboration with the `ultrawork` keyword.
 - Use the built-in context7, grep_app, and websearch MCP servers.
 - Route documentation queries to a self-hosted Context7 alongside OMO.
 
 ## Prerequisites
-- Your Olares device must have internet access.
+
+Before you begin, you need:
+
+- Internet access for your Olares device.
 - [OpenCode installed](opencode.md) on Olares, chart version 1.0.6 or later.
-- Local models that support tool use, [connected to OpenCode](opencode.md#connect-to-a-custom-provider). This guide uses Qwen3.5 27B Q4_K_M and Qwen3.5 9B Q4_K_M as an example. In Olares, each of these models is a separate single-model app, so you need to add them as two model providers.
+- The following models:
 
-  :::details Model provider configuration
+  | Used for | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Core agents | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Lightweight subagents | Qwen3.5-9B (Ollama) | [Create with an Ollama Engine Base app](llm-base-apps.md#create-a-new-model-instance) |
 
-  ```json
-  {
-    "$schema": "https://opencode.ai/config.json",
-    "disabled_providers": [],
-    "provider": {
-      "ollama-27b": {
-        "name": "Olares Ollama Qwen3.5 27B",
-        "npm": "@ai-sdk/openai-compatible",
-        "models": {
-          "qwen3.5:27b-q4_K_M": {
-            "name": "Qwen3.5 27B"
-          }
-        },
-        "options": {
-          "baseURL": "http://94a553e00.shared.olares.com/v1"
-        }
-      },
-      "ollama-9b": {
-        "name": "Olares Ollama Qwen3.5 9B",
-        "npm": "@ai-sdk/openai-compatible",
-        "models": {
-          "qwen3.5:9b": {
-            "name": "Qwen3.5 9B"
-          }
-        },
-        "options": {
-          "baseURL": "http://bd5355000.shared.olares.com/v1"
-        }
-      }
-    }
-  }
-  ```
+Before configuring OMO, [connect both models to OpenCode](opencode.md#connect-to-a-custom-provider).
 
-  :::
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
-  :::info Model capability requirements
-  - Local models with fewer than 7B parameters usually can't handle `tool_use` or structured output correctly. Avoid them for any agent.
-  - A context window of at least 32K tokens is recommended. Core agents (Sisyphus, Hephaestus, Prometheus, Atlas) work better with 64K or more.
-  - Local models, especially the Qwen family, sometimes fail to generate `write` tool calls correctly. This is a known Ollama limitation.
-  :::
+:::info Model capability requirements
+- Local models with fewer than 7B parameters usually can't handle `tool_use` or structured output correctly. Avoid them for any agent.
+- A context window of at least 32K tokens is recommended. Core agents (Sisyphus, Hephaestus, Prometheus, Atlas) work better with 64K or more.
+- Local models sometimes fail to generate `write` tool calls correctly.
+:::
 
 ## Understand OMO on Olares
 
@@ -158,147 +133,338 @@ On first launch, OMO needs time to finish its initial configuration. This may ta
 
 To disable OMO later, repeat the steps above and set `OPENCODE_OMO` to `false`. The plugin registration and MCP servers stop, but the npm package and the `oh-my-openagent.json` configuration stay on disk for the next time you turn it back on.
 
-### Configure local models
+### Configure the local models
 
-Edit `~/.config/opencode/oh-my-openagent.json` so OMO delegates subagent work to your local Ollama models. You can skip this step in two cases:
+Configure `~/.config/opencode/oh-my-openagent.json` so OMO delegates work to your local models. You can skip this section in either of these cases:
 
-- **Cloud-only**: You only plan to use cloud models. Add your API keys under OpenCode **Providers** and move on.
-- **Free fallback only**: You don't want to pay or self-host models. OMO uses the free fallback models shipped with OpenCode, but expect slower responses and quota limits.
+- **Cloud-only**: Add your API keys under OpenCode **Providers** and use cloud models.
+- **Free fallback only**: Use the free fallback models included with OpenCode. Expect slower responses and quota limits.
+
+OMO uses models in two places:
+
+- **Main agent**: Select its model separately in the OpenCode model selector. This section does not change that selection.
+- **Subagents and task categories**: Assign Qwen3.6-27B to core agents and demanding tasks. Use Qwen3.5-9B for Explore, Librarian, and lightweight tasks.
 
 :::tip Restart required
 Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes.
 :::
 
 1. Open Olares Files, navigate to `Application/Data/opencode/.config/opencode/`, and locate `oh-my-openagent.json`.
+
    ![Locate oh-my-openagent.json](/images/manual/use-cases/opencode-config-file.png#bordered)
 
 2. Open `oh-my-openagent.json` and click <i class="material-symbols-outlined">edit_square</i> to open the editor.
+3. Update the `agents` section so subagent delegation uses your local models:
 
-3. Update the `agents` section so subagent delegation uses your local Ollama models:
+   a. Set each agent's `model` field. The value must include the provider prefix used in OpenCode, followed by the exact model name.
 
-   a. Point each agent's `model` field to your Ollama model. The model name must include the provider prefix, which must match the provider names you defined in `opencode.json`.
+   b. Assign Qwen3.6-27B to the core agents and Qwen3.5-9B to Explore and Librarian. Add `"stream": false` to agents that use the Ollama model.
 
-   b. Add `"stream": false` to each agent.
-
-   For example, if your providers are named `ollama-27b` and `ollama-9b`:
+   For example, if your providers are named `qwen3.6-27b` and `qwen3.5-9b`:
 
    ```json
    {
      "agents": {
-       "sisyphus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "hephaestus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "prometheus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "atlas": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-       "explore": { "model": "ollama-9b/qwen3.5:9b", "stream": false },
-       "librarian": { "model": "ollama-9b/qwen3.5:9b", "stream": false }
+       "sisyphus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+       "hephaestus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+       "prometheus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+       "atlas": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+       "explore": { "model": "qwen3.5-9b/qwen3.5:9b", "stream": false },
+       "librarian": { "model": "qwen3.5-9b/qwen3.5:9b", "stream": false }
      }
    }
    ```
 
    :::info `"stream": false` requirement
-   Ollama's streaming mode returns NDJSON, which the SDK can't parse. Agents that use tools (especially Librarian and Explore) silently fall back to the next model in the chain if `"stream": false` is missing. This is a known Ollama limitation.
+   Ollama's streaming mode returns NDJSON, which the SDK can't parse. Agents that use tools, especially Librarian and Explore, silently fall back to the next model in the chain if `"stream": false` is missing. This is a known Ollama limitation.
    :::
 
-4. In the `categories` section, update each category's `model` and `fallback_models` list so that local models come first. For example:
-  ```json
-   "categories": {
-     "visual-engineering": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-     "ultrabrain": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-   }
-   ```
+4. In the `categories` section, use Qwen3.5-9B for `quick` and `writing`. Use Qwen3.6-27B for the other categories. Keep the existing `fallback_models` entries unchanged. For example:
 
-  :::details `categories` section
-   ```json
-   "categories": {
-     "visual-engineering": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-     "ultrabrain": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-     "deep": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-     "artistry": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-     "quick": {
-       "model": "ollama-9b/qwen3.5:9b",
-       "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-     "unspecified-low": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-     "unspecified-high": {
-       "model": "ollama-27b/qwen3.5:27b-q4_K_M",
-       "fallback_models": [
-         { "model": "ollama-9b/qwen3.5:9b" }
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     },
-     "writing": {
-       "model": "ollama-9b/qwen3.5:9b",
-       "fallback_models": [
-         { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
-         // ... keep the remaining default fallback entries unchanged
-       ]
-     }
-   }
-   ```
-  :::
-5. Add concurrency limits in the same file. A local Ollama server has limited resources, and multiple agents hitting it at once can exhaust VRAM or cause significant slowdowns.
-
-   ```json
+   ```jsonc
    {
-     "background_task": {
-       "providerConcurrency": {
-         "ollama-27b": 1,
-         "ollama-9b": 1
+     "categories": {
+       "visual-engineering": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           // Keep the existing fallback entries unchanged
+         ]
        },
-       "modelConcurrency": {
-         "ollama-27b/qwen3.5:27b-q4_K_M": 1,
-         "ollama-9b/qwen3.5:9b": 2
+       "quick": {
+         "model": "qwen3.5-9b/qwen3.5:9b",
+         "fallback_models": [
+           // Keep the existing fallback entries unchanged
+         ]
+       },
+       "writing": {
+         "model": "qwen3.5-9b/qwen3.5:9b",
+         "fallback_models": [
+           // Keep the existing fallback entries unchanged
+         ]
        }
      }
    }
    ```
 
-   This limits the large model to one concurrent request and prevents out-of-memory crashes.
+  :::details `categories` section
+   ```json
+   {
+     "categories": {
+       "visual-engineering": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "google/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "github-copilot/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "anthropic/claude-opus-4-6",
+             "variant": "max"
+           },
+           {
+             "model": "github-copilot/claude-opus-4.6",
+             "variant": "max"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "ultrabrain": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "openai/gpt-5.4",
+             "variant": "xhigh"
+           },
+           {
+             "model": "google/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "github-copilot/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "anthropic/claude-opus-4-6",
+             "variant": "max"
+           },
+           {
+             "model": "github-copilot/claude-opus-4.6",
+             "variant": "max"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "deep": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "openai/gpt-5.4",
+             "variant": "medium"
+           },
+           {
+             "model": "github-copilot/gpt-5.4",
+             "variant": "medium"
+           },
+           {
+             "model": "anthropic/claude-opus-4-6",
+             "variant": "max"
+           },
+           {
+             "model": "github-copilot/claude-opus-4.6",
+             "variant": "max"
+           },
+           {
+             "model": "google/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "github-copilot/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "artistry": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "google/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "github-copilot/gemini-3.1-pro-preview",
+             "variant": "high"
+           },
+           {
+             "model": "anthropic/claude-opus-4-6",
+             "variant": "max"
+           },
+           {
+             "model": "github-copilot/claude-opus-4.6",
+             "variant": "max"
+           },
+           {
+             "model": "openai/gpt-5.4"
+           },
+           {
+             "model": "github-copilot/gpt-5.4"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "quick": {
+         "model": "qwen3.5-9b/qwen3.5:9b",
+         "fallback_models": [
+           {
+             "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
+           },
+           {
+             "model": "openai/gpt-5.4-mini"
+           },
+           {
+             "model": "github-copilot/gpt-5.4-mini"
+           },
+           {
+             "model": "anthropic/claude-haiku-4-5"
+           },
+           {
+             "model": "github-copilot/claude-haiku-4.5"
+           },
+           {
+             "model": "google/gemini-3-flash-preview"
+           },
+           {
+             "model": "github-copilot/gemini-3-flash-preview"
+           },
+           {
+             "model": "opencode/gpt-5-nano"
+           }
+         ]
+       },
+       "unspecified-low": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "anthropic/claude-sonnet-4-6"
+           },
+           {
+             "model": "github-copilot/claude-sonnet-4.6"
+           },
+           {
+             "model": "openai/gpt-5.3-codex",
+             "variant": "medium"
+           },
+           {
+             "model": "google/gemini-3-flash-preview"
+           },
+           {
+             "model": "github-copilot/gemini-3-flash-preview"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "unspecified-high": {
+         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "fallback_models": [
+           {
+             "model": "qwen3.5-9b/qwen3.5:9b"
+           },
+           {
+             "model": "anthropic/claude-sonnet-4-6"
+           },
+           {
+             "model": "github-copilot/claude-sonnet-4.6"
+           },
+           {
+             "model": "openai/gpt-5.3-codex",
+             "variant": "medium"
+           },
+           {
+             "model": "google/gemini-3-flash-preview"
+           },
+           {
+             "model": "github-copilot/gemini-3-flash-preview"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       },
+       "writing": {
+         "model": "qwen3.5-9b/qwen3.5:9b",
+         "fallback_models": [
+           {
+             "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
+           },
+           {
+             "model": "google/gemini-3-flash-preview"
+           },
+           {
+             "model": "github-copilot/gemini-3-flash-preview"
+           },
+           {
+             "model": "anthropic/claude-sonnet-4-6"
+           },
+           {
+             "model": "github-copilot/claude-sonnet-4.6"
+           },
+           {
+             "model": "opencode/big-pickle"
+           }
+         ]
+       }
+     }
+   }
+   ```
+  :::
+
+5. Add concurrency limits for both local models:
+
+   ```json
+   {
+     "background_task": {
+       "providerConcurrency": {
+         "qwen3.6-27b": 1,
+         "qwen3.5-9b": 1
+       },
+       "modelConcurrency": {
+         "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M": 1,
+         "qwen3.5-9b/qwen3.5:9b": 2
+       }
+     }
+   }
+   ```
+
+   This limits the large model to one concurrent request and lets the lightweight model handle up to two.
 
   :::details `oh-my-openagent.json` for local models
 
@@ -310,18 +476,18 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
       "max_fallback_attempts": 7
     },
     "agents": {
-      "sisyphus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-      "hephaestus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-      "prometheus": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-      "atlas": { "model": "ollama-27b/qwen3.5:27b-q4_K_M", "stream": false },
-      "explore": { "model": "ollama-9b/qwen3.5:9b", "stream": false },
-      "librarian": { "model": "ollama-9b/qwen3.5:9b", "stream": false }
+      "sisyphus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+      "hephaestus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+      "prometheus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+      "atlas": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+      "explore": { "model": "qwen3.5-9b/qwen3.5:9b" },
+      "librarian": { "model": "qwen3.5-9b/qwen3.5:9b" }
     },
     "categories": {
       "visual-engineering": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -330,9 +496,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "ultrabrain": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "openai/gpt-5.4", "variant": "xhigh" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
@@ -342,9 +508,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "deep": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "openai/gpt-5.4", "variant": "medium" },
           { "model": "github-copilot/gpt-5.4", "variant": "medium" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -355,9 +521,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "artistry": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -368,9 +534,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "quick": {
-        "model": "ollama-9b/qwen3.5:9b",
+        "model": "qwen3.5-9b/qwen3.5:9b",
         "fallback_models": [
-          { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
+          { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
           { "model": "openai/gpt-5.4-mini" },
           { "model": "github-copilot/gpt-5.4-mini" },
           { "model": "anthropic/claude-haiku-4-5" },
@@ -381,9 +547,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "unspecified-low": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "anthropic/claude-sonnet-4-6" },
           { "model": "github-copilot/claude-sonnet-4.6" },
           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
@@ -393,9 +559,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "unspecified-high": {
-        "model": "ollama-27b/qwen3.5:27b-q4_K_M",
+        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
         "fallback_models": [
-          { "model": "ollama-9b/qwen3.5:9b" },
+          { "model": "qwen3.5-9b/qwen3.5:9b" },
           { "model": "anthropic/claude-sonnet-4-6" },
           { "model": "github-copilot/claude-sonnet-4.6" },
           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
@@ -405,9 +571,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "writing": {
-        "model": "ollama-9b/qwen3.5:9b",
+        "model": "qwen3.5-9b/qwen3.5:9b",
         "fallback_models": [
-          { "model": "ollama-27b/qwen3.5:27b-q4_K_M" },
+          { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
           { "model": "google/gemini-3-flash-preview" },
           { "model": "github-copilot/gemini-3-flash-preview" },
           { "model": "anthropic/claude-sonnet-4-6" },
@@ -418,20 +584,21 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
     },
     "background_task": {
       "providerConcurrency": {
-        "ollama-27b": 1,
-        "ollama-9b": 1
+        "qwen3.6-27b": 1,
+        "qwen3.5-9b": 1
       },
       "modelConcurrency": {
-        "ollama-27b/qwen3.5:27b-q4_K_M": 1,
-        "ollama-9b/qwen3.5:9b": 2
+        "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M": 1,
+        "qwen3.5-9b/qwen3.5:9b": 2
       }
     }
   }
   ```
 
   :::
+
 6. Save the file.
-7. Restart OpenCode to apply the changes.
+7. Restart OpenCode:
 
    a. Open Settings and navigate to **Applications** > **OpenCode**.
 
