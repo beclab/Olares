@@ -155,17 +155,27 @@ func EvaluateInstallMode(req Requirement, nodes []Node) ModePlanResult {
 }
 
 func PickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot) ([]Allocation, bool) {
+	return pickAllocations(appConfig, req, nodes, pressure, allocationOptions{checkPressure: true})
+}
+
+type allocationOptions struct {
+	checkPressure bool
+	deterministic bool
+	pressureAdded *AddedResources
+}
+
+func pickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions) ([]Allocation, bool) {
 	if req.Mode == utils.CPUType {
 		return nil, false
 	}
 	matching := matchingNodes(req.Mode, nodes)
 	if req.Mode == utils.NvidiaCardType && req.SupportMultiNodes {
-		return pickAggregateAllocations(appConfig, req, matching, pressure, true)
+		return pickAggregateAllocations(appConfig, req, matching, pressure, pressureOptions, true)
 	}
 	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
-		return pickAggregateAllocations(appConfig, req, matching, pressure, false)
+		return pickAggregateAllocations(appConfig, req, matching, pressure, pressureOptions, false)
 	}
-	return pickSingleAllocation(appConfig, req, matching, pressure)
+	return pickSingleAllocation(appConfig, req, matching, pressure, pressureOptions)
 }
 
 // matchingNodes returns the nodes that support `mode`, each projected onto that
@@ -183,11 +193,18 @@ func matchingNodes(mode string, nodes []Node) []Node {
 
 func evaluateCPUInstallMode(req Requirement, nodes []Node) ModePlanResult {
 	for _, node := range nodes {
-		if node.memoryCapacity*75/100 >= req.RequiredMemory {
+		if usableCPUNodeMemory(node.memoryCapacity) >= req.RequiredMemory {
 			return ModePlanResult{ComputeType: utils.CPUType, Status: StatusInstallable}
 		}
 	}
 	return ModePlanResult{ComputeType: utils.CPUType, Status: StatusInsufficientResources, Reason: "insufficient_resources"}
+}
+
+func usableCPUNodeMemory(capacity int64) int64 {
+	if capacity < 0 {
+		return -1
+	}
+	return capacity/4*3 + (capacity%4)*3/4
 }
 
 func installCapacityFits(req Requirement, nodes []Node) bool {
@@ -230,7 +247,7 @@ func installCapacityFits(req Requirement, nodes []Node) bool {
 	return false
 }
 
-func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot) ([]Allocation, bool) {
+func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions) ([]Allocation, bool) {
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
 		for _, supportType := range supportTypeOrder(req.Mode) {
 			candidates := make([]Allocation, 0)
@@ -239,7 +256,7 @@ func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, 
 					if supportType != "" && device.SupportType != supportType {
 						continue
 					}
-					fits, amount := deviceFitsLevel(req, node, device, pressure, level, false, 0)
+					fits, amount := deviceFitsLevelWithPressure(req, node, device, pressure, level, false, 0, pressureOptions)
 					if fits {
 						assigned := requiredTargetForMode(req)
 						if assigned == 0 {
@@ -250,6 +267,9 @@ func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, 
 				}
 			}
 			if len(candidates) > 0 {
+				if pressureOptions.deterministic {
+					return []Allocation{candidates[0]}, true
+				}
 				return []Allocation{candidates[rand.Intn(len(candidates))]}, true
 			}
 		}
@@ -257,21 +277,21 @@ func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, 
 	return nil, false
 }
 
-func pickAggregateAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, crossNode bool) ([]Allocation, bool) {
+func pickAggregateAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions, crossNode bool) ([]Allocation, bool) {
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
 		target := targetGPU(req, level)
 		if target <= 0 {
 			continue
 		}
 		if crossNode {
-			picked, ok := collectDevicesForTarget(appConfig, req, nodes, pressure, level, target, req.RequiredGPU)
+			picked, ok := collectDevicesForTarget(appConfig, req, nodes, pressure, pressureOptions, level, target, req.RequiredGPU)
 			if ok {
 				return picked, ok
 			}
 			continue
 		}
 		for _, node := range nodes {
-			picked, ok := collectDevicesForTarget(appConfig, req, []Node{node}, pressure, level, target, req.RequiredGPU)
+			picked, ok := collectDevicesForTarget(appConfig, req, []Node{node}, pressure, pressureOptions, level, target, req.RequiredGPU)
 			if ok {
 				return picked, ok
 			}
@@ -280,7 +300,7 @@ func pickAggregateAllocations(appConfig *appcfg.ApplicationConfig, req Requireme
 	return nil, false
 }
 
-func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, level string, target, allocationTarget int64) ([]Allocation, bool) {
+func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions, level string, target, allocationTarget int64) ([]Allocation, bool) {
 	fitRemaining := target
 	allocationRemaining := allocationTarget
 	var out []Allocation
@@ -291,11 +311,15 @@ func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requiremen
 				if supportType != "" && device.SupportType != supportType {
 					continue
 				}
-				fits, amount := deviceFitsLevel(req, node, device, pressure, level, true, timeSliceMemoryByNode[node.NodeName])
+				fits, amount := deviceFitsLevelWithPressure(req, node, device, pressure, level, true, timeSliceMemoryByNode[node.NodeName], pressureOptions)
 				if !fits || amount <= 0 {
 					continue
 				}
-				timeSliceMemoryByNode[node.NodeName] += timeSliceAddedMemory(device)
+				nextMemory, ok := checkedAdd(timeSliceMemoryByNode[node.NodeName], timeSliceAddedMemory(device))
+				if !ok {
+					continue
+				}
+				timeSliceMemoryByNode[node.NodeName] = nextMemory
 				if allocationRemaining > 0 {
 					assigned := minInt64(amount, allocationRemaining)
 					out = append(out, buildAllocation(appConfig, req, node, device, assigned))
@@ -312,16 +336,19 @@ func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requiremen
 }
 
 func deviceFitsLevel(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64) (bool, int64) {
+	return deviceFitsLevelWithPressure(req, node, device, pressure, level, allowPartial, priorTimeSliceMemory, allocationOptions{checkPressure: true})
+}
+
+func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64, pressureOptions allocationOptions) (bool, int64) {
 	if device.Health != "" && device.Health != deviceHealthYes {
 		return false, 0
 	}
 	required := targetForMode(req, level)
 	if required <= 0 {
-		return !pressure.WouldPressure(node, AddedResources{
-			CPU:    req.RequiredCPU,
-			Memory: levelMemory(req, level),
-			Disk:   req.RequiredDisk,
-		}), 0
+		if !pressureOptions.checkPressure {
+			return true, 0
+		}
+		return !pressure.WouldPressure(node, levelAddedResources(req, level, pressureOptions)), 0
 	}
 	available := deviceAvailableMemory(device)
 	if available <= 0 {
@@ -330,29 +357,41 @@ func deviceFitsLevel(req Requirement, node Node, device Device, pressure Pressur
 	if available < required && !(allowPartial && req.Mode == utils.NvidiaCardType) {
 		return false, available
 	}
-	addedGPU := priorTimeSliceMemory + timeSliceAddedMemory(device)
-	if pressure.WouldPressure(node, AddedResources{
-		CPU:    req.RequiredCPU,
-		Memory: levelMemory(req, level) + addedGPU,
-		Disk:   req.RequiredDisk,
-	}) {
+	if allocationWouldPressure(req, node, device, pressure, level, priorTimeSliceMemory, pressureOptions) {
 		return false, available
 	}
 	return true, available
 }
 
-// timeSliceAddedMemory returns the extra host RAM that must be reserved on the
-// node for a time-slice GPU card.
-//
-// A HAMI time-slice pod is handed the whole card during its slice
-// (buildAllocation records Memory=0, so HAMI leaves it unrestricted), so the
-// node needs system-memory headroom equal to the card's full physical memory,
-// regardless of the app's requiredGPU or limitedGPU. Non-time-slice devices
-// carry no such host-memory backing requirement.
-//
-// This is the single source of truth shared by the install scheduler
-// (deviceFitsLevel) and the resume/binding validator
-// (nodeTimeSliceAddedMemory) so the two paths can never drift.
+func allocationWouldPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, priorTimeSliceMemory int64, options allocationOptions) bool {
+	if !options.checkPressure {
+		return false
+	}
+	added := levelAddedResources(req, level, options)
+	timeSliceMemory, ok := checkedAdd(priorTimeSliceMemory, timeSliceAddedMemory(device))
+	if !ok {
+		return true
+	}
+	added.Memory, ok = checkedAdd(added.Memory, timeSliceMemory)
+	if !ok {
+		return true
+	}
+	return pressure.WouldPressure(node, added)
+}
+
+func levelAddedResources(req Requirement, level string, options allocationOptions) AddedResources {
+	if options.pressureAdded != nil {
+		return *options.pressureAdded
+	}
+	return AddedResources{
+		CPU:    req.RequiredCPU,
+		Memory: levelMemory(req, level),
+		Disk:   req.RequiredDisk,
+	}
+}
+
+// A time-slice GPU with a positive target needs host-memory headroom equal to
+// the card's physical memory. Zero-target fit checks preserve legacy behavior.
 func timeSliceAddedMemory(device Device) int64 {
 	if device.SupportType != SupportTypeTimeSlice {
 		return 0

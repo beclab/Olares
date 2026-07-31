@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 )
 
@@ -135,18 +137,105 @@ func TestRun_AppliesToFilter(t *testing.T) {
 // name so caller logs can attribute the failure.
 func TestRun_ErrorPropagates(t *testing.T) {
 	wantErr := errors.New("kubesphere unreachable")
-	var counter int
-	v := newFake("cluster-pressure", []Op{v1alpha1.InstallOp}, Decision{}, wantErr, &counter)
+	var counter, neverCount int
+	v := newFake("cluster-pressure", []Op{v1alpha1.InstallOp}, Decision{
+		Resource: "memory",
+		Reason:   "unknown",
+		Message:  "pressure unavailable",
+	}, wantErr, &counter)
+	never := newFake("later", []Op{v1alpha1.InstallOp}, Decision{OK: true}, nil, &neverCount)
 
-	d, err := Run(context.Background(), Input{Op: v1alpha1.InstallOp}, v)
+	d, err := Run(context.Background(), Input{Op: v1alpha1.InstallOp}, v, never)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected wrapped error, got %v", err)
 	}
 	if d.Validator != "cluster-pressure" {
 		t.Fatalf("Decision.Validator=%q on error path, want %q", d.Validator, "cluster-pressure")
 	}
+	if d.Resource != "memory" || d.Reason != "unknown" || d.Message != "pressure unavailable" {
+		t.Fatalf("Decision fields not propagated on error: %+v", d)
+	}
 	if counter != 1 {
 		t.Fatalf("validator should have run exactly once before erroring, got %d", counter)
+	}
+	if neverCount != 0 {
+		t.Fatalf("validators after an error must not run, got %d calls", neverCount)
+	}
+}
+
+func TestRuntimePressureRunsK8sAfterClusterPressurePasses(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalK8s := checkAppK8sRequestResource
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkAppK8sRequestResource = originalK8s
+	})
+
+	var clusterCalls, k8sCalls int
+	checkAppRequirement = func(string, *appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		clusterCalls++
+		return "", "", nil
+	}
+	checkAppK8sRequestResource = func(*appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		k8sCalls++
+		return constants.CPU, constants.K8sRequestCPUPressure, errors.New("k8s cpu pressure")
+	}
+
+	decision, err := Run(context.Background(), Input{
+		AppConfig: &appcfg.ApplicationConfig{},
+		Op:        v1alpha1.InstallOp,
+	}, RuntimePressureValidators()...)
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if clusterCalls != 1 || k8sCalls != 1 {
+		t.Fatalf("calls cluster=%d k8s=%d", clusterCalls, k8sCalls)
+	}
+	if decision.Validator != NameK8sRequest || decision.Reason != constants.K8sRequestCPUPressure {
+		t.Fatalf("unexpected decision: %#v", decision)
+	}
+}
+
+func TestMetricUnavailableValidatorsReturnFriendlyDecision(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalUser := checkUserResRequirement
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkUserResRequirement = originalUser
+	})
+
+	message := errors.New("Resource metrics are temporarily unavailable. Unable to install the application. Please try again later.")
+	checkAppRequirement = func(string, *appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		return constants.CPU, constants.MetricsUnavailable, message
+	}
+	checkUserResRequirement = func(context.Context, *appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		return constants.Memory, constants.MetricsUnavailable, message
+	}
+
+	tests := []struct {
+		name      string
+		validator Validator
+		resource  constants.ResourceType
+	}{
+		{name: "cluster", validator: clusterPressureValidator{}, resource: constants.CPU},
+		{name: "user", validator: userQuotaValidator{}, resource: constants.Memory},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decision, err := tt.validator.Validate(context.Background(), Input{
+				AppConfig: &appcfg.ApplicationConfig{},
+				Op:        v1alpha1.InstallOp,
+			})
+			if err != nil {
+				t.Fatalf("validate: %v", err)
+			}
+			if decision.OK || decision.Resource != tt.resource || decision.Reason != constants.MetricsUnavailable {
+				t.Fatalf("unexpected decision: %#v", decision)
+			}
+			if decision.Message != message.Error() {
+				t.Fatalf("message=%q, want %q", decision.Message, message)
+			}
+		})
 	}
 }
 

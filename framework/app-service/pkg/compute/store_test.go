@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"context"
 	"sort"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func k8sNode(name string, memory string, labels map[string]string) *corev1.Node {
@@ -139,5 +141,32 @@ func TestBuildNodeResourceDiscreteGPULabel(t *testing.T) {
 	}
 	if len(n.Devices) != 1 || n.Devices[0].Mode != utils.AMDGPUType {
 		t.Fatalf("expected a single amd-gpu device, got %+v", n.Devices)
+	}
+}
+
+func TestFetchSchedulableNodeComputeAllocationsExcludesNotReadyAndCordonedGPU(t *testing.T) {
+	labels := map[string]string{utils.NodeGPUTypeLabelPrefix + utils.NvidiaCardType: "true"}
+	ready := k8sNode("ready", "16Gi", labels)
+	notReady := k8sNode("not-ready", "16Gi", labels)
+	notReady.Status.Conditions[0].Status = corev1.ConditionFalse
+	cordoned := k8sNode("cordoned", "16Gi", labels)
+	cordoned.Spec.Unschedulable = true
+	c := fake.NewClientBuilder().WithObjects(ready, notReady, cordoned).Build()
+
+	all, err := FetchNodeComputeAllocations(context.Background(), c)
+	if err != nil {
+		t.Fatalf("fetch all nodes: %v", err)
+	}
+	if len(all) != 3 {
+		t.Fatalf("install allocation view changed, got nodes %#v", all)
+	}
+
+	schedulable, err := FetchSchedulableNodeComputeAllocations(context.Background(), c)
+	if err != nil {
+		t.Fatalf("fetch schedulable nodes: %v", err)
+	}
+	if len(schedulable) != 1 || schedulable[0].NodeName != "ready" ||
+		!schedulable[0].SupportsMode(utils.NvidiaCardType) {
+		t.Fatalf("schedulable nodes=%#v", schedulable)
 	}
 }
