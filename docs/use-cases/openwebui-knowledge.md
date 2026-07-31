@@ -88,6 +88,8 @@ For documents you want to reuse across multiple chats, create a persistent knowl
 
 ## Attach a knowledge base to a chat
 
+Once you have created a knowledge base, attach it to a chat so the model can reference its content.
+
 1. Start a new chat.
 2. Select the model.
 3. Click <i class="material-symbols-outlined">add_2</i> under the message input field, and then select **Attach Knowledge**.
