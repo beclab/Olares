@@ -33,7 +33,7 @@ func (u upgrader_1_12_7) AddedBreakingChange() bool {
 }
 
 func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
-	tasks := make([]task.Interface, 0)
+	tasks := publishMarketEnsureApps()
 	tasks = append(tasks, migrateContainerdConfigV3()...)
 	tasks = append(tasks, &task.LocalTask{
 		Name:    "CleanupK3sCertsRenewService",

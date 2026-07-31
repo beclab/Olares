@@ -39,6 +39,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/plugins/network"
 	"github.com/beclab/Olares/cli/pkg/plugins/network/templates"
+	"github.com/beclab/Olares/cli/pkg/preinstall"
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
@@ -62,6 +63,15 @@ import (
 )
 
 const cacheRebootNeeded = "reboot.needed"
+
+func publishMarketEnsureApps() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "PublishMarketEnsureApps",
+			Action: new(preinstall.PublishEnsureAppsAction),
+		},
+	}
+}
 
 type upgradeContainerdAction struct {
 	common.KubeAction

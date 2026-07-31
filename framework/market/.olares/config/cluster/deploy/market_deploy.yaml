@@ -133,13 +133,13 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.83
+        image: beclab/market-backend:v0.6.84
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
         env:
           - name: OLARES_VERSION
-            value: "1.12.6"
+            value: "{{ .Values.olaresVersion }}"
           - name: APP_SOTRE_SERVICE_SERVICE_PORT
             value: "443"
           - name: APP_SERVICE_SERVICE_HOST
@@ -153,6 +153,10 @@ spec:
             value: 'true'
           - name: PREINSTALL_BUNDLE_DIR
             value: /opt/app/preinstall
+{{ end }}
+{{ if .Values.ensureApps }}
+          - name: ENSURE_APPS_FILE
+            value: /opt/app/ensure/ensure-apps.json
 {{ end }}
           - name: APP_SERVICE_SERVICE_PORT
             value: "6755"
@@ -214,6 +218,9 @@ spec:
           - name: market-preinstall
             mountPath: /opt/app/preinstall
             readOnly: true
+          - name: market-ensure
+            mountPath: /opt/app/ensure
+            readOnly: true
       volumes:
       - name: opt-data
         hostPath:
@@ -222,6 +229,10 @@ spec:
       - name: market-preinstall
         hostPath:
           path: '{{ .Values.rootPath }}/userdata/Cache/market-preinstall'
+          type: DirectoryOrCreate
+      - name: market-ensure
+        hostPath:
+          path: '{{ .Values.rootPath }}/userdata/Cache/market-ensure'
           type: DirectoryOrCreate
 ---
 apiVersion: v1
