@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/podhealth"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
@@ -195,52 +194,25 @@ func resumeV2AppAll(ctx context.Context, cli client.Client, am *appv1alpha1.Appl
 	return suspendOrResumeApp(ctx, cli, am, 1, true)
 }
 
-func isStartUp(am *appv1alpha1.ApplicationManager, cli client.Client) (bool, error) {
-	var labelSelector string
-	var deployment appsv1.Deployment
-
-	err := cli.Get(context.TODO(), types.NamespacedName{Name: am.Spec.AppName, Namespace: am.Spec.AppNamespace}, &deployment)
-
-	if err == nil {
-		labelSelector = metav1.FormatLabelSelector(deployment.Spec.Selector)
-	}
-
-	if apierrors.IsNotFound(err) {
-		var sts appsv1.StatefulSet
-		err = cli.Get(context.TODO(), types.NamespacedName{Name: am.Spec.AppName, Namespace: am.Spec.AppNamespace}, &sts)
-		if err != nil {
-			return false, err
-
-		}
-		labelSelector = metav1.FormatLabelSelector(sts.Spec.Selector)
-	}
+// listAppPods returns every pod in the app's namespace. Olares gives each app
+// its own namespace
+func listAppPods(am *appv1alpha1.ApplicationManager, cli client.Client) ([]corev1.Pod, error) {
 	var pods corev1.PodList
-	//pods, err := h.client.KubeClient.Kubernetes().CoreV1().Pods(h.app.Namespace).
-	//	List(h.ctx, metav1.ListOptions{LabelSelector: labelSelector})
-	selector, _ := labels.Parse(labelSelector)
-	err = cli.List(context.TODO(), &pods, &client.ListOptions{Namespace: am.Spec.AppNamespace, LabelSelector: selector})
-	if len(pods.Items) == 0 {
+	if err := cli.List(context.TODO(), &pods, client.InNamespace(am.Spec.AppNamespace)); err != nil {
+		return nil, err
+	}
+	return pods.Items, nil
+}
+
+func isStartUp(am *appv1alpha1.ApplicationManager, cli client.Client) (bool, error) {
+	pods, err := listAppPods(am, cli)
+	if err != nil {
+		return false, err
+	}
+	if len(pods) == 0 {
 		return false, errors.New("no pod found..")
 	}
-	for _, pod := range pods.Items {
-		totalContainers := len(pod.Spec.Containers)
-		startedContainers := 0
-		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
-			container := pod.Status.ContainerStatuses[i]
-			if *container.Started == true {
-				startedContainers++
-				continue
-			}
-			// job-created pods with completed status are also treated as started
-			if container.State.Terminated != nil && container.State.Terminated.Reason == "Completed" {
-				startedContainers++
-			}
-		}
-		if startedContainers == totalContainers {
-			return true, nil
-		}
-	}
-	return false, nil
+	return podhealth.AllPodsStarted(pods), nil
 }
 
 func makeRecord(am *appv1alpha1.ApplicationManager, status appv1alpha1.ApplicationManagerState, message string) *appv1alpha1.OpRecord {

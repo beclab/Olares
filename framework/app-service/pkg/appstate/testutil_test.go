@@ -143,6 +143,12 @@ type testFakes struct {
 	kubeConfigErr error
 	newHelmOpsErr error
 
+	// kubeConfig overrides what the KubeConfig seam returns. Needed by tests
+	// whose code path builds a real clientset (kubernetes.NewForConfig rejects a
+	// config with an empty Host); point it at an unreachable host so the
+	// clientset is constructible but every request fails fast.
+	kubeConfig *rest.Config
+
 	// resolveRefs overrides ResolveImageRefs; nil means "return no refs".
 	resolveRefs func(ctx context.Context, am *appv1alpha1.ApplicationManager, cfg *appcfg.ApplicationConfig) ([]appv1alpha1.Ref, error)
 
@@ -167,6 +173,9 @@ func newTestDeps(c client.Client) (Deps, *testFakes) {
 		KubeConfig: func() (*rest.Config, error) {
 			if tf.kubeConfigErr != nil {
 				return nil, tf.kubeConfigErr
+			}
+			if tf.kubeConfig != nil {
+				return tf.kubeConfig, nil
 			}
 			return &rest.Config{}, nil
 		},
