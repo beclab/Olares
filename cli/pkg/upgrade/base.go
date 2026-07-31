@@ -12,6 +12,8 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/preinstall"
+	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
@@ -398,7 +400,10 @@ func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	ctx, cancelFramework := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancelFramework()
 	frameworkChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-framework")
-	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkChartPath, "", common.NamespaceOsFramework, nil, true); err != nil {
+	vals := map[string]interface{}{
+		"ensureApps": preinstall.EnsureAppsPublished(storage.OlaresRootDir),
+	}
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkChartPath, "", common.NamespaceOsFramework, vals, true); err != nil {
 		return err
 	}
 

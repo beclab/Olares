@@ -27,10 +27,16 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 		"          - name: PREINSTALL_ENABLED\n            value: 'true'\n" +
 		"          - name: PREINSTALL_BUNDLE_DIR\n            value: /opt/app/preinstall\n" +
 		"{{ end }}"
+	ensureEnv := "{{ if .Values.ensureApps }}\n" +
+		"          - name: ENSURE_APPS_FILE\n            value: /opt/app/ensure/ensure-apps.json\n" +
+		"{{ end }}"
 	for _, required := range []string{
 		preinstallEnv,
+		ensureEnv,
+		"- name: OLARES_VERSION\n            value: \"1.12.7\"",
 		"- name: opt-data\n            mountPath: /opt/app/data",
 		"- name: market-preinstall\n            mountPath: /opt/app/preinstall\n            readOnly: true",
+		"- name: market-ensure\n            mountPath: /opt/app/ensure\n            readOnly: true",
 	} {
 		if !strings.Contains(container, required) {
 			t.Errorf("appstore-backend container missing contract:\n%s", required)
@@ -45,9 +51,14 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 		"- name: market-preinstall\n        hostPath:\n          path: '{{ .Values.rootPath }}/%s'\n          type: DirectoryOrCreate",
 		RuntimeRelativeDir,
 	)
+	ensureVolume := fmt.Sprintf(
+		"- name: market-ensure\n        hostPath:\n          path: '{{ .Values.rootPath }}/%s'\n          type: DirectoryOrCreate",
+		EnsureRuntimeRelativeDir,
+	)
 	for _, required := range []string{
 		"- name: opt-data\n        hostPath:\n          path: '{{ .Values.rootPath }}/userdata/Cache/chartrepo'\n          type: DirectoryOrCreate",
 		preinstallVolume,
+		ensureVolume,
 	} {
 		if !strings.Contains(volumes, required) {
 			t.Errorf("market deployment volumes missing contract:\n%s", required)
@@ -56,6 +67,10 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 	if strings.Count(container, "- name: market-preinstall\n") != 1 ||
 		strings.Count(volumes, "- name: market-preinstall\n") != 1 {
 		t.Errorf("market-preinstall must have one backend mount and one deployment volume")
+	}
+	if strings.Count(container, "- name: market-ensure\n") != 1 ||
+		strings.Count(volumes, "- name: market-ensure\n") != 1 {
+		t.Errorf("market-ensure must have one backend mount and one deployment volume")
 	}
 }
 

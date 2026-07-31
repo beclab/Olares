@@ -44,6 +44,20 @@ func (a *MaterializeAction) Execute(_ connector.Runtime) error {
 	return Materialize(a.InstallerDir, rootDir, a.ProfileSelections)
 }
 
+// PublishEnsureAppsAction publishes the official apps required after an OS upgrade.
+type PublishEnsureAppsAction struct {
+	action.BaseAction
+	RootDir string
+}
+
+func (a *PublishEnsureAppsAction) Execute(_ connector.Runtime) error {
+	rootDir := a.RootDir
+	if rootDir == "" {
+		rootDir = storage.OlaresRootDir
+	}
+	return PublishEnsureApps(rootDir)
+}
+
 type HFCacheMaterializeModule struct {
 	common.KubeModule
 }

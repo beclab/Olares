@@ -10,9 +10,9 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
+	agwconfig "github.com/beclab/Olares/framework/app-gateway/pkg/config"
 	"github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils"
-	agwconfig "github.com/beclab/Olares/framework/app-gateway/pkg/config"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/preinstall"
@@ -64,6 +64,7 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 		"fs_type":                            storage.GetRootFSType(),
 		common.HelmValuesKeyOlaresRootFSPath: storage.OlaresRootDir,
 		"sharedlib":                          storage.OlaresSharedLibDir,
+		"ensureApps":                         preinstall.EnsureAppsPublished(storage.OlaresRootDir),
 		// Market only reads the preinstall mount when this says a bundle was
 		// published; an installer that ships none leaves the feature off
 		// instead of having Market look into an empty directory every boot.

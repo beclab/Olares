@@ -13,6 +13,8 @@ const (
 	// .Values.rootPath for its read-only hostPath mount. It is not relative to
 	// the installer base directory.
 	RuntimeRelativeDir             = "userdata/Cache/market-preinstall"
+	EnsureRuntimeRelativeDir       = "userdata/Cache/market-ensure"
+	EnsureAppsFileName             = "ensure-apps.json"
 	MaxBundleJSONBytes             = 8 << 20
 	MaxProfileJSONBytes            = 8 << 20
 	MaxBundleApps                  = 256
